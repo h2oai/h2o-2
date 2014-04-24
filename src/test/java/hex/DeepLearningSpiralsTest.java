@@ -83,8 +83,8 @@ public class DeepLearningSpiralsTest extends TestUtil {
           CM.toASCII(sb);
           double error = new ConfusionMatrix(CM.cm).err();
           Log.info(sb);
-          if (error != 0) {
-            Assert.fail("Classification error is not 0, but " + error + ".");
+          if (error >= 0.01) {
+            Assert.fail("Classification error is not less than 0.01, but " + error + ".");
           }
           pred.delete();
           mymodel.delete();

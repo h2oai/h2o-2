@@ -52,8 +52,8 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   // return the most up-to-date model metrics
   Errors last_scored() { return errors[errors.length-1]; }
 
-  public final DeepLearning get_params() { return model_info.get_params(); }
-  public final Request2 job() { return get_params(); }
+  @Override public final DeepLearning get_params() { return model_info.get_params(); }
+  @Override public final Request2 job() { return get_params(); }
 
   public float error() { return (float) (isClassifier() ? (nclasses() == 2 ? (1f - cm().F1()) : cm().err()) : mse()); }
 

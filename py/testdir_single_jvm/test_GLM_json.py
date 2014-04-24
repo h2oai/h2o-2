@@ -29,12 +29,24 @@ class Basic(unittest.TestCase):
         csvPathname = 'logreg' + '/' + csvFilename
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=csvFilename + ".hex", schema='put')
         # columns start at 0
-        y = "4"
+        y = "3"
         # cols 0-13. 3 is output
         # no member id in this one
         for maxx in range(11,14):
             x = range(maxx)
-            x.remove(4) # 4 is output
+            x.remove(3) # 3 is output
+            # 0 and 1 are id-like values
+            x.remove(0) 
+            x.remove(1) 
+
+            # original data and description here:
+            # http://www.mtech.edu/academics/clsps/math/Data%20Links/benign.txt
+            # 
+            # SOURCE: The data are from Appendix 5 of
+            #   Hosmer, D.W. and Lemeshow, S. (1989) Applied Logistic Regression,
+            #   John Wiley and Sons, New York.
+
+
             x = ",".join(map(str,x))
 
             print "\nx:", x
@@ -42,14 +54,21 @@ class Basic(unittest.TestCase):
 
         # Adding values for lambda and max_iter
 
-            kwargs = {'x': x, 'y':  y,'alpha':0.5,'lambda':0.001,'max_iter': 30}
+            kwargs = {
+                'x': x, 
+                'y': y, 
+                'alpha': 0.5, 
+                'lambda': 0.001, 
+                'max_iter': 30,
+                'standardize': 0,
+            }
            
             startime = time.time()
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=15, **kwargs)
             elapsedtime = time.time() - startime
             print("ELAPSED TIME ",elapsedtime)
             pprint(glm['GLMModel']['coefficients'])
-            pprint(glm['GLMModel']['normalized_coefficients'])
+            # pprint(glm['GLMModel']['normalized_coefficients'])
             pprint(glm['GLMModel']['nCols'])
             pprint(glm['GLMModel']['nLines'])
             pprint(glm['GLMModel']['iterations'])

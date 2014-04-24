@@ -149,6 +149,7 @@ public class GLMValidation extends Iced {
       AUC auc = new AUC(_cms,thresholds);
       this.auc = auc.AUC();
       best_threshold = auc.threshold();
+      for(ConfusionMatrix cm:_cms)cm.reComputeErrors();
     }
   }
   /**

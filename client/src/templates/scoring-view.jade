@@ -1,0 +1,40 @@
+.y-scoring-view
+  .clearfix
+    .y-tag Scoring
+    .y-tagline(data-bind='text:timestamp')
+  h1.y-title(data-bind="text:caption")
+  h2.y-subtitle(data-bind='collapse:false') Models
+  table.table.table-condensed.table-hover
+    thead
+      tr
+        th Method
+        th Category
+        th Response Column
+        th Status
+        th Time
+        th Compare
+    tbody
+      // ko foreach:items
+      tr
+        td(data-bind='text:algorithm')
+        td(data-bind='text:category')
+        td(data-bind='text:responseColumn')
+        td(data-bind='text:status')
+        td(data-bind='text:time')
+        td
+          input(type='checkbox' data-bind='checked:isSelected, enable:canSelect')
+      // /ko
+
+  // ko if:hasExecuted
+
+  h2.y-subtitle(data-bind='collapse:false') Scoring Comparison
+  // ko if:hasComparisonTable
+  .y-model-summary(data-bind='geyser:modelSummary')
+  div(data-bind='geyser:comparisonTable')
+  // /ko
+
+  // ko ifnot:hasComparisonTable
+  div Nothing to compare. Please select one or more models from the above table.
+  // /ko
+
+  // /ko

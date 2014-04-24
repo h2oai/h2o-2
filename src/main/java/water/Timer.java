@@ -31,7 +31,7 @@ public class Timer {
 
   /**Return the difference between when the timer was created and the current time as a
    * string along with the time of creation in date format. */
-  public String toString() {
+  @Override public String toString() {
     final long now = System.currentTimeMillis();
     return PrettyPrint.msecs(now - _start, false) + " (Wall: " + dateFormat.get().format(new Date(now)) + ") ";
   }

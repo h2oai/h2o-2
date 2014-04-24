@@ -135,7 +135,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   private transient IterationInfo _lastResult;
 
   @Override
-  protected JsonObject toJSON() {
+  public JsonObject toJSON() {
     JsonObject jo = super.toJSON();
     if (lambda == null) jo.addProperty("lambda", "automatic"); //better than not printing anything if lambda=null
     return jo;

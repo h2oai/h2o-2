@@ -17,7 +17,7 @@ public class ConfusionMatrix extends Iced {
   @API(help = "Prediction error by class")
   public final double[] _classErr;
   @API(help = "Prediction error")
-  public final double _predErr;
+  public double _predErr;
 
   @Override public ConfusionMatrix clone() {
     ConfusionMatrix res = new ConfusionMatrix(0);
@@ -80,6 +80,12 @@ public class ConfusionMatrix extends Iced {
 
   public final int size() {
     return _arr.length;
+  }
+
+  public void reComputeErrors(){
+    for(int i = 0; i < _arr.length; ++i)
+      _classErr[i] = classErr(i);
+    _predErr = err();
   }
 
   public final double classErr(int c) {
