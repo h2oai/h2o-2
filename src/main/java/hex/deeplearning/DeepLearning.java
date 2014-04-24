@@ -944,7 +944,7 @@ public class DeepLearning extends Job.ValidatedJob {
         Log.warn("Enabling training data shuffling, because all nodes train on the full dataset (replicated training data).");
         mp.shuffle_training_data = true;
       }
-      final float rowUsageFraction = computeRowUsageFraction(train.numRows(), mp.actual_train_samples_per_iteration, mp.replicate_training_data, mp.quiet_mode);
+      final float rowUsageFraction = computeRowUsageFraction(train.numRows(), mp.actual_train_samples_per_iteration, mp.replicate_training_data);
 
       if (!mp.quiet_mode) Log.info("Initial model:\n" + model.model_info());
       Log.info("Starting to train the Deep Learning model.");
@@ -1031,13 +1031,13 @@ public class DeepLearning extends Job.ValidatedJob {
   private static long computeTrainSamplesPerIteration(final long train_samples_per_iteration, final long numRows, final boolean replicate_training_data, final boolean single_node_mode, final boolean quiet_mode) {
     long tspi = train_samples_per_iteration;
     assert(tspi == 0 || tspi == -1 || tspi >= 1);
-    if (tspi == 0 || (!replicate_training_data && (tspi == -1 || tspi > numRows)) || (replicate_training_data && single_node_mode)) {
+    if (tspi == 0 || (!replicate_training_data && tspi == -1) ) {
       tspi = numRows;
       if (!quiet_mode) Log.info("Setting train_samples_per_iteration (" + train_samples_per_iteration + ") to one epoch: #rows (" + tspi + ").");
     }
-    else if (tspi == -1 || tspi > H2O.CLOUD.size()*numRows) {
+    else if (tspi == -1) {
       tspi = H2O.CLOUD.size() * numRows;
-      if (!quiet_mode) Log.info("Setting train_samples_per_iteration (" + train_samples_per_iteration + ") to the largest possible number: #nodes x #rows (" + tspi + ").");
+      if (!quiet_mode) Log.info("Setting train_samples_per_iteration (" + train_samples_per_iteration + ") to #nodes x #rows (" + tspi + ").");
     }
     assert(tspi != 0 && tspi != -1 && tspi >= 1);
     return tspi;
@@ -1050,10 +1050,10 @@ public class DeepLearning extends Job.ValidatedJob {
    * @param replicate_training_data whether of not the training data is replicated on each node
    * @return fraction of rows to be used for training during one iteration
    */
-  private static float computeRowUsageFraction(final long numRows, final long train_samples_per_iteration, final boolean replicate_training_data, final boolean quiet_mode) {
+  private static float computeRowUsageFraction(final long numRows, final long train_samples_per_iteration, final boolean replicate_training_data) {
     float rowUsageFraction = (float)train_samples_per_iteration / numRows;
     if (replicate_training_data) rowUsageFraction /= H2O.CLOUD.size();
-    assert(rowUsageFraction > 0 && rowUsageFraction <= 1.);
+    assert(rowUsageFraction > 0);
     return rowUsageFraction;
   }
 
