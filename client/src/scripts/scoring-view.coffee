@@ -87,7 +87,7 @@ Steam.ScoringView = (_, _scoring) ->
 
   renderComparisonTable = (scores) ->
     #TODO thIndent is a HACK. remove.
-    [ table, kvtable, thead, tbody, tr, trExpert, diffSpan, th, thIndent, td] = geyser2.generate words 'table.table.table-condensed table.table-kv thead tbody tr tr.y-expert span.y-diff th th.y-indent td'
+    [ table, kvtable, thead, tbody, tr, trExpert, diffSpan, th, thIndent, td] = geyser.generate words 'table.table.table-condensed table.table-kv thead tbody tr tr.y-expert span.y-diff th th.y-indent td'
 
     transposeGrid = (grid) ->
       transposed = []

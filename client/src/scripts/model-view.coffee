@@ -16,7 +16,7 @@ Steam.ModelView = (_, _model) ->
       value
 
   createDefinitionList = (data) ->
-    [ dl, li, dt, dd ] = geyser2.generate words '.y-summary .y-summary-item .y-summary-key .y-summary-value'
+    [ dl, li, dt, dd ] = geyser.generate words '.y-summary .y-summary-item .y-summary-key .y-summary-value'
 
     dl map data, ([key, value]) ->
       li [ (dt key), (dd stringify value) ]
@@ -43,7 +43,7 @@ Steam.ModelView = (_, _model) ->
     rows = map model.input_column_names, (columnName) -> [ columnName ]
 
     #TODO duplicates logic in FrameView. Refactor.
-    [ table, tbody, tr, td ] = geyser2.generate words 'table.table.table-condensed.table-hover tbody tr td'
+    [ table, tbody, tr, td ] = geyser.generate words 'table.table.table-condensed.table-hover tbody tr td'
     table [
       tbody map rows, (row) ->
         tr map row, td
@@ -63,7 +63,7 @@ Steam.ModelView = (_, _model) ->
       ]
 
     #TODO duplicates logic in FrameView. Refactor.
-    [ table, thead, tbody, tr, th, td ] = geyser2.generate words 'table.table.table-condensed.table-hover thead tbody tr th td'
+    [ table, thead, tbody, tr, th, td ] = geyser.generate words 'table.table.table-condensed.table-hover thead tbody tr th td'
 
     table [
       thead [
