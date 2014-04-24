@@ -126,7 +126,8 @@ public class Tree extends H2OCountedCompleter {
       appendKey(_job.dest(),toKey());
       StringBuilder sb = new StringBuilder("[RF] Tree : ").append(_data_id+1);
       sb.append(" d=").append(_tree.depth()).append(" leaves=").append(_tree.leaves()).append(" done in ").append(timer).append('\n');
-      Log.debug(Sys.RANDF,_tree.toString(sb,  _verbose > 0 ? Integer.MAX_VALUE : 200).toString());
+      Log.info(sb.toString());
+//      Log.info(Sys.RANDF,_tree.toString(sb,  _verbose > 0 ? Integer.MAX_VALUE : 200).toString());
     }
     // Wait for completation
     tryComplete();

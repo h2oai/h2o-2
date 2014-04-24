@@ -4,6 +4,7 @@ import hex.FrameTask;
 import jsr166y.ForkJoinTask;
 import water.*;
 import water.api.Constants;
+import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Log;
@@ -15,7 +16,7 @@ import java.util.Random;
 
 public class SpeeDRF extends Job.ModelJob {
 
-  //  protected final Key _dataKey = source._key;
+//  protected final Key _dataKey = source._key;
 //  protected final H2OHexKey         _dataKey    = new H2OHexKey(DATA_KEY);
 //  protected final HexKeyClassCol    _classCol   = new HexKeyClassCol(CLASS, _dataKey);
 //  public final Key _classCol = response._key;
@@ -46,7 +47,7 @@ public class SpeeDRF extends Job.ModelJob {
   public int bin_limit = 1024;
 
   @API(help = "seed", filter = Default.class, json = true)
-  public long seed = (long) 1728318273;
+  public long seed = 784834182943470027L;
 
   @API(help = "Build trees in parallel", filter = Default.class, json = true)
   public boolean  parallel  = true;
@@ -123,7 +124,7 @@ public class SpeeDRF extends Job.ModelJob {
       for(int i = 0; i < samples.length; ++i) samples[i] = (float)67.0;
 //      for(int i = 0; i < weights.length; ++i) weights[i] = 1.0;
       Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, false, false, false);
-      SpeeDRFModel model = new SpeeDRFModel(dest(), self(), source._key, train, response, new Key[0]);
+      SpeeDRFModel model = new SpeeDRFModel(dest(), self(), source._key, train, response, new Key[0], seed);
       model.bin_limit = bin_limit;
       if (mtry == -1) {
         model.mtry = (int) Math.floor(Math.sqrt(source.numCols()));
@@ -136,12 +137,23 @@ public class SpeeDRF extends Job.ModelJob {
       model.total_trees = num_trees;
       model.strata_samples = samples;
       model.depth = max_depth;
+      model.oobee = oobee;
       return model;
     }
     finally {
       source.unlock(self());
     }
   }
+
+//  float score1( Chunk chks[], float fs[/*nclass*/], int row ) {
+//    float sum=0;
+//    for( int k=0; k<_nclass; k++ ) // Sum across of likelyhoods
+//      sum+=(fs[k+1]=(float)chk_tree(chks,k).at0(row));
+//    if (_nclass == 1) sum /= (float)chk_oobt(chks).at0(row); // for regression average per trees voted for this row (only trees which have row in "out-of-bag"
+//    return sum;
+//  }
+
+  public Frame score( Frame fr ) { return ((SpeeDRFModel)UKV.get(dest())).score(fr);  }
 
   public final static class DRFTask extends water.DRemoteTask {
     /** The RF Model.  Contains the dataset being worked on, the classification

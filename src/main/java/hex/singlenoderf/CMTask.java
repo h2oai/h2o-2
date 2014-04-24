@@ -27,6 +27,7 @@ public class CMTask extends MRTask2<CMTask> {
   public Key _datakey;
   public int _classcol;
   public CM _matrix;
+  public float _sum; //sum of squares Sum_ti((f_ti - delta(oti,i))^2) AKA brier score ~ classification mse
   public CM[] _localMatrices;
   public long[] _errorsPerTree;
   public SpeeDRFModel _model;
@@ -130,6 +131,8 @@ public class CMTask extends MRTask2<CMTask> {
 
     // Votes: we vote each tree on each row, holding on to the votes until the end
     int[][] votes = new int[rows][_N];
+    int[] actual = new int[rows];
+    int[] pred   = new int[rows];
     int[][] localVotes = _computeOOB ? new int[rows][_N] : null;
     // Errors per tree
     _errorsPerTree = new long[_model.treeCount()];
@@ -185,15 +188,32 @@ public class CMTask extends MRTask2<CMTask> {
         int alignedData       = alignDataIdx((int) _data.vecs()[_classcol].at8(row) - cmin);
         if (alignedPrediction != alignedData) _errorsPerTree[ntree]++;
         votes[r][alignedPrediction]++; // Vote the row
+        actual[r] = alignedData;
+        pred[r]   = alignedPrediction;
         if (isLocalTree) localVotes[r][alignedPrediction]++; // Vote
       }
     }
     // Assemble the votes-per-class into predictions & score each row
     _matrix = computeCM(votes, chks); // Make a confusion matrix for this chunk
+    _sum = brierScore(votes, actual, pred);
     if (localVotes!=null) {
       _localMatrices = new CM[H2O.CLOUD.size()];
       _localMatrices[H2O.SELF.index()] = computeCM(localVotes, chks);
     }
+  }
+
+  private float brierScore(int[][] votes, int[] actual, int[] pred) {
+    float sum = 0.f;
+    for (int r = 0; r < votes[0].length; ++r) {
+      int v_sum = 0;
+      for (int v : votes[r])
+        v_sum += v;
+      for (int v : votes[r]) {
+        float s = ((float) v / (float) v_sum) - (actual[r] == pred[r] ? 1.f : 0.f);
+        sum += s*s;
+      }
+    }
+    return sum;
   }
 
   /** Returns true if tree was produced by this node.
@@ -211,6 +231,7 @@ public class CMTask extends MRTask2<CMTask> {
     } else {
       _matrix = _matrix.add(drt._matrix);
     }
+    _sum += drt._sum;
     // Reduce tree errors
     long[] ept1 = _errorsPerTree;
     long[] ept2 = drt._errorsPerTree;
@@ -381,6 +402,8 @@ public class CMTask extends MRTask2<CMTask> {
     final protected long  [] _errorsPerTree;
     final protected boolean  _computedOOB;
     protected boolean        _valid;
+    final protected float _sum;
+
 
     private CMFinal() {
       _valid         = false;
@@ -388,27 +411,30 @@ public class CMTask extends MRTask2<CMTask> {
       _domain        = null;
       _errorsPerTree = null;
       _computedOOB   = false;
+      _sum = 0.f;
     }
-    private CMFinal(CM cm, Key SpeeDRFModelKey, String[] domain, long[] errorsPerTree, boolean computedOOB, boolean valid) {
+    private CMFinal(CM cm, Key SpeeDRFModelKey, String[] domain, long[] errorsPerTree, boolean computedOOB, boolean valid, float sum) {
       _matrix = cm._matrix; _errors = cm._errors; _rows = cm._rows; _skippedRows = cm._skippedRows;
       _SpeeDRFModelKey    = SpeeDRFModelKey;
       _domain        = domain;
       _errorsPerTree = errorsPerTree;
       _computedOOB   = computedOOB;
       _valid         = valid;
+      _sum = sum;
     }
     /** Make non-valid confusion matrix */
     public static CMFinal make() {
       return new CMFinal();
     }
     /** Create a new confusion matrix. */
-    public static CMFinal make(CM cm, SpeeDRFModel model, String[] domain, long[] errorsPerTree, boolean computedOOB) {
-      return new CMFinal(cm, model._key, domain, errorsPerTree, computedOOB, true);
+    public static CMFinal make(CM cm, SpeeDRFModel model, String[] domain, long[] errorsPerTree, boolean computedOOB, float sum) {
+      return new CMFinal(cm, model._key, domain, errorsPerTree, computedOOB, true, sum);
     }
     public String[] domain() { return _domain; }
     public int      dimension() { return _matrix.length; }
     public long     matrix(int i, int j) { return _matrix[i][j]; }
     public boolean  valid() { return _valid; }
+    public float    mse() { return _sum / (float) _rows; }
 
     /** Output information about this RF. */
     public final void report() {

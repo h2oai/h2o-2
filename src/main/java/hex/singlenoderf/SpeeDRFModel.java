@@ -5,12 +5,16 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import water.*;
+import water.api.Constants;
 import water.api.DocGen;
+import water.api.Inspect2;
+import water.api.Predict;
 import water.api.Request.API;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Counter;
+
 import java.util.Arrays;
 import java.util.Random;
 
@@ -69,7 +73,13 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   Key jobKey;
 
   @API(help = "")
+  Key dest_key;
+
+  @API(help = "")
   String current_status;
+
+  @API(help = "MSE by tree")
+  float[] errs;
 
 //  @API(help = "No CM")
 //  boolean _noCM;
@@ -87,6 +97,15 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   @API(help = "Data Key")
   Key dataKey;
 
+  @API(help = "")
+  boolean p;
+
+  @API(help = "")
+  long zeed;
+
+  @API(help = "")
+  CMTask.CMFinal confusion;
+
   public static final String KEY_PREFIX = "__RFModel_";
   public static final String JSON_CONFUSION_KEY   = "confusion_key";
 //  public static final String JSON_CLEAR_CM        = "clear_confusion_matrix";
@@ -102,8 +121,9 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   public static final String JSON_CM_CLASSES_ERRORS = "classes_errors";
 
 
-  public SpeeDRFModel(Key selfKey, Key jobKey, Key dataKey, Frame fr, Vec response, Key[] t_keys) {
+  public SpeeDRFModel(Key selfKey, Key jobKey, Key dataKey, Frame fr, Vec response, Key[] t_keys, long zeed) {
     super(selfKey, dataKey, fr);
+    this.dest_key = selfKey;
     int csize = H2O.CLOUD.size();
     this.fr = fr;
     this.response = response;
@@ -117,6 +137,10 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     this.classcol = fr.find(response);
     this.dataKey = dataKey;
     this.current_status = "Initializing Model";
+    this.p = false;
+    this.confusion = null;
+    this.zeed = zeed;
+    this.errs = new float[t_keys.length];
   }
 
   public Vec get_response() {
@@ -132,12 +156,34 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   }
 
   static public SpeeDRFModel make(SpeeDRFModel old, Key tkey, int nodeIdx) {
+    boolean cm_update = false;
     SpeeDRFModel m = (SpeeDRFModel)old.clone();
     m.t_keys = Arrays.copyOf(old.t_keys, old.t_keys.length + 1);
     m.t_keys[m.t_keys.length-1] = tkey;
 
     m.local_forests[nodeIdx] = Arrays.copyOf(old.local_forests[nodeIdx],old.local_forests[nodeIdx].length+1);
     m.local_forests[nodeIdx][m.local_forests[nodeIdx].length-1] = tkey;
+    double f = (double)m.t_keys.length / (double)m.total_trees;
+    if (f > 0 & !m.p) {
+      cm_update = true;
+      CMTask cmTask = new CMTask(m, m.size(), m.weights, m.oobee);
+      cmTask.doAll(m.fr);
+      m.confusion = CMTask.CMFinal.make(cmTask._matrix, m, cmTask.domain(), cmTask._errorsPerTree, m.oobee, cmTask._sum);
+      m.p = true;
+    }
+    if (f == 1.0) {
+      cm_update = true;
+      CMTask cmTask = new CMTask(m, m.size(), m.weights, m.oobee);
+      cmTask.doAll(m.fr);
+      m.confusion = CMTask.CMFinal.make(cmTask._matrix, m, cmTask.domain(), cmTask._errorsPerTree, m.oobee, cmTask._sum);
+    }
+    if (!cm_update) {
+      m.errs = Arrays.copyOf(old.errs, old.errs.length+1);
+      m.errs[m.t_keys.length - 1] = -1.f;
+    } else {
+      m.errs = Arrays.copyOf(old.errs, old.errs.length+1);
+      m.errs[m.t_keys.length - 1] = m.confusion.mse();
+    }
     return m;
   }
 
@@ -262,66 +308,134 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   }
 
   public void generateHTML(String title, StringBuilder sb) {
-    int tasks;
-    int finished;
-    double[] weights = this.weights;
+    DocGen.HTML.title(sb,title);
+    sb.append("<div class=\"alert\">").append("Actions: ");
+    sb.append(Inspect2.link("Inspect training data (" + _dataKey.toString() + ")", _dataKey)).append(", ");
+    sb.append(Predict.link(_key, "Score on dataset" ));
+    if (this.size() > 0 && this.size() < total_trees) {
+      sb.append(", ");
+      sb.append("<i class=\"icon-stop\"></i>&nbsp;").append("Continue training this model");
+    }
+    sb.append("</div>");
+    DocGen.HTML.paragraph(sb,"Model Key: "+_key);
+    DocGen.HTML.paragraph(sb,"Max depth: "+depth+", Nbins:"+bin_limit+", Trees: " + this.size());
+    DocGen.HTML.paragraph(sb, "Sample Rate: "+sample + ", Seed: "+zeed+", mtry: "+mtry);
+    sb.append("</pre>");
+
+    if (this.size() > 0 && this.size() < total_trees) sb.append("Current Status: ").append("Building Random Forest");
+    else {
+      if (this.size() == total_trees) {
+        sb.append("Current Status: ").append("Complete.");
+      } else {
+        sb.append("Current Status: ").append(this.current_status);
+      }
+    }
+
+//    double[] weights = this.weights;
     // Finish refresh after rf model is done and confusion matrix for all trees is computed
 
-    tasks    = this.total_trees;
-    finished = this.size();
+    //build cm
+    buildCM(sb);
+    sb.append("<br />");
+    if( errs != null && this.size() > 0) {
+      DocGen.HTML.section(sb,"Mean Squared Error by Tree");
+      DocGen.HTML.arrayHead(sb);
+      sb.append("<tr style='min-width:60px'><th>Trees</th>");
+      int last = this.size() - 1;
+      for( int i=last; i>=0; i-- )
+        sb.append("<td style='min-width:60px'>").append(i).append("</td>");
+      sb.append("</tr>");
+      sb.append("<tr><th class='warning'>MSE</th>");
+      for( int i=last; i>=0; i-- )
+        sb.append( (!(Double.isNaN(errs[i]) || errs[i] <= 0.f)) ? String.format("<td style='min-width:60px'>%5.3f</td>",errs[i]) : "<td style='min-width:60px'>---</td>");
+      sb.append("</tr>");
+      DocGen.HTML.arrayTail(sb);
+    }
+    sb.append("<br/>");
+    JsonObject trees = new JsonObject();
+    trees.addProperty(Constants.TREE_COUNT,  this.size());
+    if( this.size() > 0 ) {
+      trees.add(Constants.TREE_DEPTH,  this.depth().toJson());
+      trees.add(Constants.TREE_LEAVES, this.leaves().toJson());
+    }
+    generateHTMLTreeStats(sb, trees);
+  }
 
 
-    if(title != null && !title.isEmpty()) DocGen.HTML.title(sb, title);
-    DocGen.HTML.paragraph(sb, "Model Key: " + _key);
+  static final String NA = "---";
+  protected void generateHTMLTreeStats(StringBuilder sb, JsonObject trees) {
+    DocGen.HTML.section(sb,"Tree stats");
+    DocGen.HTML.arrayHead(sb);
+    sb.append("<tr><th>&nbsp;</th>").append("<th>Min</th><th>Mean</th><th>Max</th></tr>");
 
-    DocGen.HTML.section(sb, "SpeeDRF Output:");
-    sb.append("Current Status: " + this.current_status);
+    double[] depth_stats = stats(trees.get(Constants.TREE_DEPTH));
+    double[] leaf_stats = stats(trees.get(Constants.TREE_LEAVES));
 
+    sb.append("<tr><th>Depth</th>")
+            .append("<td>").append(depth_stats != null ? depth_stats[0]  : NA).append("</td>")
+            .append("<td>").append(depth_stats != null ? depth_stats[1] : NA).append("</td>")
+            .append("<td>").append(depth_stats != null ? depth_stats[2] : NA).append("</td></tr>");
+    sb.append("<th>Leaves</th>")
+            .append("<td>").append(leaf_stats != null ? leaf_stats[0]  : NA).append("</td>")
+            .append("<td>").append(leaf_stats != null ? leaf_stats[1] : NA).append("</td>")
+            .append("<td>").append(leaf_stats != null ? leaf_stats[2]  : NA).append("</td></tr>");
+    DocGen.HTML.arrayTail(sb);
+  }
 
+  private double[] stats(JsonElement json) {
+    if( json == null ) {
+      return null;
+    } else {
+      JsonObject obj = json.getAsJsonObject();
+      return new double[]{
+              obj.get(Constants.MIN).getAsDouble(),
+              obj.get(Constants.MAX).getAsDouble(),
+              obj.get(Constants.MEAN).getAsDouble()};
+    }
+  }
+
+  public void buildCM(StringBuilder sb) {
+    int tasks    = this.total_trees;
+    int finished = this.size();
     int modelSize = tasks * 25/100;
     modelSize = modelSize == 0 || finished==tasks ? finished : modelSize * (finished/modelSize);
 
-
-    if (tasks * 1. / (1.*finished) > 0.50) {
-      CMTask cmTask = new CMTask(this, modelSize, weights, this.oobee);
-      cmTask.doAll(this.fr);
-      CMTask.CMFinal confusion = CMTask.CMFinal.make(cmTask._matrix, this, cmTask.domain(), cmTask._errorsPerTree, this.oobee);
-      if (confusion!=null && confusion.valid() && modelSize > 0) {
-        //finished += 1;
-        JsonObject cm       = new JsonObject();
-        JsonArray  cmHeader = new JsonArray();
-        JsonArray  matrix   = new JsonArray();
-        cm.addProperty(JSON_CM_TYPE, oobee ? "OOB error estimate" : "full scoring");
-        cm.addProperty(JSON_CM_CLASS_ERR, confusion.classError());
-        cm.addProperty(JSON_CM_ROWS_SKIPPED, confusion.skippedRows());
-        cm.addProperty(JSON_CM_ROWS, confusion.rows());
-        // create the header
-        for (String s : cfDomain(confusion, 1024))
-          cmHeader.add(new JsonPrimitive(s));
-        cm.add(JSON_CM_HEADER,cmHeader);
-        // add the matrix
-        final int nclasses = confusion.dimension();
-        JsonArray classErrors = new JsonArray();
-        for (int crow = 0; crow < nclasses; ++crow) {
-          JsonArray row  = new JsonArray();
-          int classHitScore = 0;
-          for (int ccol = 0; ccol < nclasses; ++ccol) {
-            row.add(new JsonPrimitive(confusion.matrix(crow,ccol)));
-            if (crow!=ccol) classHitScore += confusion.matrix(crow,ccol);
-          }
-          // produce infinity members in case of 0.f/0
-          classErrors.add(new JsonPrimitive((float)classHitScore / (classHitScore + confusion.matrix(crow,crow))));
-          matrix.add(row);
+    if (confusion!=null && confusion.valid() && modelSize > 0) {
+      //finished += 1;
+      JsonObject cm       = new JsonObject();
+      JsonArray  cmHeader = new JsonArray();
+      JsonArray  matrix   = new JsonArray();
+      cm.addProperty(JSON_CM_TYPE, oobee ? "OOB error estimate" : "training");
+      cm.addProperty(JSON_CM_CLASS_ERR, confusion.classError());
+      cm.addProperty(JSON_CM_ROWS_SKIPPED, confusion.skippedRows());
+      cm.addProperty(JSON_CM_ROWS, confusion.rows());
+      // create the header
+      for (String s : cfDomain(confusion, 1024))
+        cmHeader.add(new JsonPrimitive(s));
+      cm.add(JSON_CM_HEADER,cmHeader);
+      // add the matrix
+      final int nclasses = confusion.dimension();
+      JsonArray classErrors = new JsonArray();
+      for (int crow = 0; crow < nclasses; ++crow) {
+        JsonArray row  = new JsonArray();
+        int classHitScore = 0;
+        for (int ccol = 0; ccol < nclasses; ++ccol) {
+          row.add(new JsonPrimitive(confusion.matrix(crow,ccol)));
+          if (crow!=ccol) classHitScore += confusion.matrix(crow,ccol);
         }
-        cm.add(JSON_CM_CLASSES_ERRORS, classErrors);
-        cm.add(JSON_CM_MATRIX,matrix);
-        cm.addProperty(JSON_CM_TREES,modelSize);
-        // Signal end only and only if all trees were generated and confusion matrix is valid
+        // produce infinity members in case of 0.f/0
+        classErrors.add(new JsonPrimitive((float)classHitScore / (classHitScore + confusion.matrix(crow,crow))));
+        matrix.add(row);
+      }
+      cm.add(JSON_CM_CLASSES_ERRORS, classErrors);
+      cm.add(JSON_CM_MATRIX,matrix);
+      cm.addProperty(JSON_CM_TREES,modelSize);
+      // Signal end only and only if all trees were generated and confusion matrix is valid
 
       DocGen.HTML.section(sb, "Confusion Matrix:");
+      sb.append("<div class=\"alert\">Reported on ").append(cm.get(JSON_CM_TYPE).getAsString()).append(" data</div>");
 
       if (cm.has(JSON_CM_MATRIX)) {
-        sb.append("<h3>Confusion matrix - ").append(cm.get(JSON_CM_TYPE).getAsString()).append("</h3>");
         sb.append("<dl class='dl-horizontal'>");
         sb.append("<dt>classification error</dt><dd>").append(String.format("%5.3f %%", 100*cm.get(JSON_CM_CLASS_ERR).getAsFloat())).append("</dd>");
         long rows = cm.get(JSON_CM_ROWS).getAsLong();
@@ -375,7 +489,6 @@ public class SpeeDRFModel extends Model implements Job.Progress {
         sb.append("Confusion matrix is being computed into the key:</br>");
         sb.append(cm.get(JSON_CONFUSION_KEY).getAsString());
         sb.append("</div>");
-      }
       }
     }
   }

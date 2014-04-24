@@ -85,7 +85,7 @@ public class DABuilder {
       // building dataset's columns.
       final int[] modelDataMap = colMap(fr._names, rfmodel._names);
       final int totalRows = getRowCount(fr);
-      final DataAdapter dapt = new DataAdapter( fr, rfmodel, modelDataMap,
+      final DataAdapter dapt = new DataAdapter(fr, rfmodel, modelDataMap,
               totalRows,
               getChunkId(fr),
               _drf.drfParams._seed,
