@@ -40,7 +40,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             kwargs = params.copy()
             timeoutSecs = 1800
             start = time.time()
-            GLMResult = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs,**kwargs)
+            glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs,**kwargs)
             elapsed = time.time() - start
             print "GLM training completed in", elapsed, "seconds. On dataset: ", csvFilename
 
@@ -80,7 +80,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
             predictCMResult = h2o.nodes[0].predict_confusion_matrix(
                 actual='airlines_all.hex',
-                vactual='C' + str(y+1),
+                vactual=response,
                 predict=predictKey,
                 vpredict='predict',
                 )
