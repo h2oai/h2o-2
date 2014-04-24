@@ -3,24 +3,20 @@ Steam.ScoringView = (_, _scoring) ->
   _hasExecuted = node$ no
   _comparisonTable = node$ null
   _hasComparisonTable = lift$ _comparisonTable, (table) -> not isNull table
-  _modelSummary = node$ null
+  _modelSummary = nodes$ []
 
   createModelSummary = (scoring) ->
-    aScore = if scoring.scores.length > 0 then head scoring.scores else null
-    if aScore
-      [ dl, li, dt, dd ] = geyser.generate '.y-summary .y-summary-item .y-summary-key .y-summary-value'
-      dl [
-        li [
-          dt 'Model Category'
-          dd aScore.model.model_category
-        ]
-        li [
-          dt 'Response Column'
-          dd aScore.model.response_column_name
-        ]
+    score = if scoring.scores.length > 0 then head scoring.scores else null
+    if score
+      [
+        key: 'Model Category'
+        value: score.model.model_category
+      ,
+        key: 'Response Column'
+        value: score.model.response_column_name
       ]
     else
-      null
+      []
 
   createItem = (score) ->
     status = node$ if isNull score.status then '-' else score.status
