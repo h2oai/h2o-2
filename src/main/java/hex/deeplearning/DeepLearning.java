@@ -40,6 +40,13 @@ public class DeepLearning extends Job.ValidatedJob {
   public Key checkpoint;
 
   /**
+   * A key to store the always-best model under
+   * (as measured by MSE for regression, total error rate for multi-class and F1-score for binary classification)
+   */
+  @API(help = "Key to store the always-best model under.", filter= Default.class, json = true, gridable = false)
+  public Key best_model_key = null;
+
+  /**
    * Unlock expert mode parameters than can affect model building speed,
    * predictive accuracy and scoring. Leaving expert mode parameters at default
    * values is fine for many problems, but best results on complex datasets are often

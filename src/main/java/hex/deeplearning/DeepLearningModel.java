@@ -44,10 +44,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   private Errors[] errors;
 
   // Keep the best model so far, based on a single criterion (overall class. error or MSE)
-  @API(help = "The best model trained so far")
-  private Key _bestModelKey = null;
   private float _bestError = Float.MAX_VALUE;
-  private int _improvedCounter;
 
   // return the most up-to-date model metrics
   Errors last_scored() { return errors[errors.length-1]; }
@@ -619,26 +616,25 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     this.jobKey = jobKey;
     model_info = (DeepLearningModelInfo)cp.model_info.clone(); //this clones the parameters too
     model_info.data_info = dataInfo; //replace previous data_info with updated version that's passed in (contains enum for classification)
-    assert(cp.get_params().classification == get_params().classification);
-    get_params().checkpoint = cp._key;
+    if (jobKey != null) get_params().checkpoint = cp._key;
     get_params().destination_key = destKey;
-    get_params().job_key = jobKey;
+    get_params().job_key = jobKey != null ? jobKey : cp.jobKey;
     start_time = cp.start_time;
     run_time = cp.run_time;
     errors = cp.errors.clone();
     training_rows = cp.training_rows; //copy the value to display the right number on the model page before training has started
     get_params().start_time = System.currentTimeMillis(); //for displaying the model progress
-    _bestModelKey = cp._bestModelKey;
     _bestError = cp._bestError;
     _timeLastScoreEnter = System.currentTimeMillis();
     _timeLastScoreStart = 0;
     _timeLastScoreEnd = 0;
     _timeLastPrintStart = 0;
     model_info().get_params().state = Job.JobState.RUNNING;
+    assert(Arrays.equals(_key._kb, destKey._kb));
   }
 
-  public DeepLearningModel(final Key selfKey, final Key jobKey, final Key dataKey, final DataInfo dinfo, final DeepLearning params, final float[] priorDist) {
-    super(selfKey, dataKey, dinfo._adaptedFrame, priorDist);
+  public DeepLearningModel(final Key destKey, final Key jobKey, final Key dataKey, final DataInfo dinfo, final DeepLearning params, final float[] priorDist) {
+    super(destKey, dataKey, dinfo._adaptedFrame, priorDist);
     this.jobKey = jobKey;
     run_time = 0;
     start_time = System.currentTimeMillis();
@@ -647,6 +643,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     errors = new Errors[1];
     errors[0] = new Errors();
     errors[0].validation = (params.validation != null);
+    assert(Arrays.equals(_key._kb, destKey._kb));
   }
 
   private long _timeLastScoreEnter; //not transient: needed for HTML display page
@@ -773,17 +770,21 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
           errors = err2;
         }
         // always keep a copy of the best model so far (based on the following criterion)
-        if (error() < _bestError) {
-          if (_improvedCounter == 0) _bestModelKey = Key.make("DeepLearning" + Key.rand());
+        if (error() < _bestError && get_params().best_model_key != null) {
+          final Key bestModelKey = get_params().best_model_key;
           _bestError = error();
-          _improvedCounter++;
-          if (!get_params().quiet_mode) Log.info("Saving best model so far under key " + _bestModelKey.toString());
-          DeepLearningModel bestModel = new DeepLearningModel(this, _bestModelKey, jobKey, model_info().data_info());
-          bestModel.delete_and_lock(null);
-          bestModel.unlock(null);
-          assert(UKV.get(_bestModelKey) != null);
+          if (!get_params().quiet_mode) Log.info("Saving best model so far under key " + bestModelKey.toString());
+          final Key job = null;
+          final DeepLearningModel cp = this;
+          Key dest_before = this._key;
+          DeepLearningModel bestModel = new DeepLearningModel(cp, bestModelKey, job, model_info().data_info());
+          Key dest_after = this._key;
+          assert(Arrays.equals(dest_before._kb, dest_after._kb));
+          bestModel.delete_and_lock(job);
+          bestModel.unlock(job);
+          assert(UKV.get(bestModelKey) != null);
           assert(bestModel.compareTo(this) <= 0);
-          assert(((DeepLearningModel)UKV.get(_bestModelKey)).error() == _bestError);
+          assert(((DeepLearningModel)UKV.get(bestModelKey)).error() == _bestError);
         }
 //        else {
 //          // keep output JSON small
@@ -877,20 +878,20 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
     DocGen.HTML.title(sb, title);
 
-    job().toHTML(sb);
     final Key val_key = get_params().validation != null ? get_params().validation._key : null;
+    final Key bestModelKey = get_params().best_model_key;
     sb.append("<div class='alert'>Actions: "
-            + (UKV.get(jobKey) != null && Job.isRunning(jobKey) ? "<i class=\"icon-stop\"></i>" + Cancel.link(jobKey, "Stop training") + ", " : "")
+            + (jobKey != null && UKV.get(jobKey) != null && Job.isRunning(jobKey) ? "<i class=\"icon-stop\"></i>" + Cancel.link(jobKey, "Stop training") + ", " : "")
             + Inspect2.link("Inspect training data (" + _dataKey + ")", _dataKey) + ", "
             + (val_key != null ? (Inspect2.link("Inspect validation data (" + val_key + ")", val_key) + ", ") : "")
             + water.api.Predict.link(_key, "Score on dataset") + ", "
             + DeepLearning.link(_dataKey, "Compute new model", null, responseName(), val_key)
-            + (_bestModelKey != null && UKV.get(_bestModelKey) != null && _bestModelKey != _key ? ", " + DeepLearningModelView.link("Go to best model", _bestModelKey) : "")
-            + (UKV.get(jobKey) != null && Job.isEnded(jobKey) ? ", <i class=\"icon-play\"></i>" + DeepLearning.link(_dataKey, "Continue training this model", _key, responseName(), val_key) : "")
+            + (bestModelKey != null && UKV.get(bestModelKey) != null && bestModelKey != _key ? ", " + DeepLearningModelView.link("Go to best model", bestModelKey) : "")
+            + (jobKey == null || (UKV.get(jobKey) != null && Job.isEnded(jobKey)) ? ", <i class=\"icon-play\"></i>" + DeepLearning.link(_dataKey, "Continue training this model", _key, responseName(), val_key) : "")
             + "</div>");
 
     DocGen.HTML.paragraph(sb, "Model Key: " + _key);
-    DocGen.HTML.paragraph(sb, "Job Key: " + jobKey);
+    if (jobKey != null) DocGen.HTML.paragraph(sb, "Job Key: " + jobKey);
     DocGen.HTML.paragraph(sb, "Model type: " + (get_params().classification ? " Classification" : " Regression") + ", predicting: " + responseName());
     DocGen.HTML.paragraph(sb, "Number of model parameters (weights/biases): " + String.format("%,d", model_info().size()));
 
@@ -991,7 +992,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     int cores = 0; for (H2ONode n : H2O.CLOUD._memary) cores += n._heartbeat._num_cpus;
     DocGen.HTML.paragraph(sb, "Number of compute nodes: " + (model_info.get_params().single_node_mode ? ("1 (" + H2O.NUMCPUS + " threads)") : (H2O.CLOUD.size() + " (" + cores + " threads)")));
     DocGen.HTML.paragraph(sb, "Training samples per iteration: " + String.format("%,d", get_params().actual_train_samples_per_iteration));
-    final boolean isEnded = UKV.get(get_params().self()) != null && Job.isEnded(get_params().self());
+    final boolean isEnded = get_params().self() == null || (UKV.get(get_params().self()) != null && Job.isEnded(get_params().self()));
     final long time_so_far = isEnded ? run_time : run_time + System.currentTimeMillis() - _timeLastScoreEnter;
     if (time_so_far > 0) {
       DocGen.HTML.paragraph(sb, "Training speed: " + String.format("%,d", model_info().get_processed_total() * 1000 / time_so_far) + " samples/s");

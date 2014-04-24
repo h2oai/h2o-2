@@ -74,149 +74,153 @@ public class DeepLearningProstateTest extends TestUtil {
                               1,  //same as source
                               -1, //different validation frame
                       }) {
-                        count++;
-                        if (fraction < rng.nextFloat()) continue;
-                        Log.info("**************************)");
-                        Log.info("Starting test #" + count);
-                        Log.info("**************************)");
-                        Frame valid = null; //no validation
-                        if (vf == 1) valid = frame; //use the same frame for validation
-                        else if (vf == -1) valid = vframe; //different validation frame (here: from the same file)
+                        for (Key best_model_key : new Key[]{null, Key.make()}) {
+                          count++;
+                          if (fraction < rng.nextFloat()) continue;
+                          Log.info("**************************)");
+                          Log.info("Starting test #" + count);
+                          Log.info("**************************)");
+                          Frame valid = null; //no validation
+                          if (vf == 1) valid = frame; //use the same frame for validation
+                          else if (vf == -1) valid = vframe; //different validation frame (here: from the same file)
 
-                        Key dest = Key.make();
+                          Key dest = Key.make();
 
-                        // build the model, with all kinds of shuffling/rebalancing/sampling
-                        {
-                          Log.info("Using seed: " + seed);
-                          DeepLearning p = new DeepLearning();
-                          p.epochs = 1.0 + rng.nextDouble();
-                          p.source = frame;
-                          p.hidden = new int[]{1+rng.nextInt(4), 1+rng.nextInt(6)};
-                          p.response = frame.vecs()[resp];
-                          if (i == 0 && resp == 2) p.classification = false;
-                          p.destination_key = dest;
-                          p.seed = seed;
-                          p.validation = valid;
-                          p.train_samples_per_iteration = 0;
-                          p.force_load_balance = load_balance;
-                          p.replicate_training_data = replicate;
-                          p.shuffle_training_data = shuffle;
-                          p.score_training_samples = scoretraining;
-                          p.score_validation_samples = scorevalidation;
-                          p.balance_classes = balance_classes;
-                          p.quiet_mode = true;
-                          p.score_validation_sampling = csm;
+                          // build the model, with all kinds of shuffling/rebalancing/sampling
+                          {
+                            Log.info("Using seed: " + seed);
+                            DeepLearning p = new DeepLearning();
+                            p.best_model_key = best_model_key;
+                            p.epochs = 1.0 + rng.nextDouble();
+                            p.source = frame;
+                            p.hidden = new int[]{1+rng.nextInt(4), 1+rng.nextInt(6)};
+                            p.response = frame.vecs()[resp];
+                            if (i == 0 && resp == 2) p.classification = false;
+                            p.destination_key = dest;
+                            p.seed = seed;
+                            p.validation = valid;
+                            p.train_samples_per_iteration = 0;
+                            p.force_load_balance = load_balance;
+                            p.replicate_training_data = replicate;
+                            p.shuffle_training_data = shuffle;
+                            p.score_training_samples = scoretraining;
+                            p.score_validation_samples = scorevalidation;
+                            p.balance_classes = balance_classes;
+                            p.quiet_mode = true;
+                            p.score_validation_sampling = csm;
 //                      p.execImpl();
 
-                          // Train the model via checkpointing
-                          DeepLearningModel mymodel = p.initModel();
-                          p.trainModel(mymodel);
-                          p.trainModel(mymodel, p.epochs); //incremental training
-                          p.delete();
-                        }
-
-                        // score and check result (on full data)
-                        final DeepLearningModel mymodel = UKV.get(dest); //this actually *requires* frame to also still be in UKV (because of DataInfo...)
-                        // test HTML
-                        {
-                          StringBuilder sb = new StringBuilder();
-                          mymodel.generateHTML("test", sb);
-                        }
-                        if (valid == null ) valid = frame;
-                        if (mymodel.isClassifier()) {
-                          Frame pred = mymodel.score(valid);
-                          StringBuilder sb = new StringBuilder();
-
-                          AUC auc = new AUC();
-                          double threshold = 0;
-                          double error = 0;
-                          // binary
-                          if (mymodel.nclasses()==2) {
-                            auc.actual = valid;
-                            auc.vactual = valid.vecs()[resp];
-                            auc.predict = pred;
-                            auc.vpredict = pred.vecs()[2];
-                            auc.threshold_criterion = AUC.ThresholdCriterion.maximum_F1;
-                            auc.invoke();
-                            auc.toASCII(sb);
-                            threshold = auc.threshold();
-                            error = auc.err();
-                            Log.info(sb);
-
-                            // check that auc.cm() is the right CM
-                            Assert.assertEquals(new ConfusionMatrix(auc.cm()).err(), error, 1e-15);
-
-                            // check that calcError() is consistent as well (for CM=null, AUC!=null)
-                            Assert.assertEquals(mymodel.calcError(valid, valid.lastVec(), pred, pred, "training", false, 0, null, auc, null), error, 1e-15);
+                            // Train the model via checkpointing
+                            DeepLearningModel mymodel = p.initModel();
+                            p.trainModel(mymodel);
+                            p.trainModel(mymodel, p.epochs); //incremental training
+                            p.delete();
                           }
 
-                          // Compute CM
-                          double CMerrorOrig;
+                          // score and check result (on full data)
+                          final DeepLearningModel mymodel = UKV.get(dest); //this actually *requires* frame to also still be in UKV (because of DataInfo...)
+                          // test HTML
                           {
-                            sb = new StringBuilder();
-                            water.api.ConfusionMatrix CM = new water.api.ConfusionMatrix();
-                            CM.actual = valid;
-                            CM.vactual = valid.vecs()[resp];
-                            CM.predict = pred;
-                            CM.vpredict = pred.vecs()[0];
-                            CM.invoke();
-                            sb.append("\n");
-                            CM.toASCII(sb);
-                            Log.info(sb);
-                            CMerrorOrig = new ConfusionMatrix(CM.cm).err();
+                            StringBuilder sb = new StringBuilder();
+                            mymodel.generateHTML("test", sb);
                           }
+                          if (valid == null ) valid = frame;
+                          if (mymodel.isClassifier()) {
+                            Frame pred = mymodel.score(valid);
+                            StringBuilder sb = new StringBuilder();
 
-                          // confirm that orig CM was made with threshold 0.5
-                          // put pred2 into UKV, and allow access
-                          Frame pred2 = new Frame(Key.make("pred2"), pred.names(), pred.vecs());
-                          pred2.delete_and_lock(null);
-                          pred2.unlock(null);
+                            AUC auc = new AUC();
+                            double threshold = 0;
+                            double error = 0;
+                            // binary
+                            if (mymodel.nclasses()==2) {
+                              auc.actual = valid;
+                              auc.vactual = valid.vecs()[resp];
+                              auc.predict = pred;
+                              auc.vpredict = pred.vecs()[2];
+                              auc.threshold_criterion = AUC.ThresholdCriterion.maximum_F1;
+                              auc.invoke();
+                              auc.toASCII(sb);
+                              threshold = auc.threshold();
+                              error = auc.err();
+                              Log.info(sb);
 
-                          if (mymodel.nclasses()==2) {
-                            // make labels with 0.5 threshold for binary classifier
-                            Env ev = Exec2.exec("pred2[,1]=pred2[,3]>=" + 0.5);
-                            pred2 = ev.popAry();
-                            ev.subRef(pred2, "pred2");
-                            ev.remove_and_unlock();
+                              // check that auc.cm() is the right CM
+                              Assert.assertEquals(new ConfusionMatrix(auc.cm()).err(), error, 1e-15);
 
-                            water.api.ConfusionMatrix CM = new water.api.ConfusionMatrix();
-                            CM.actual = valid;
-                            CM.vactual = valid.vecs()[1];
-                            CM.predict = pred2;
-                            CM.vpredict = pred2.vecs()[0];
-                            CM.invoke();
-                            sb = new StringBuilder();
-                            sb.append("\n");
-                            CM.toASCII(sb);
-                            Log.info(sb);
-                            double threshErr = new ConfusionMatrix(CM.cm).err();
-                            Assert.assertEquals(threshErr, CMerrorOrig, 1e-15);
+                              // check that calcError() is consistent as well (for CM=null, AUC!=null)
+                              Assert.assertEquals(mymodel.calcError(valid, valid.lastVec(), pred, pred, "training", false, 0, null, auc, null), error, 1e-15);
+                            }
 
-                            // make labels with AUC-given threshold for best F1
-                            ev = Exec2.exec("pred2[,1]=pred2[,3]>=" + threshold);
-                            pred2 = ev.popAry();
-                            ev.subRef(pred2, "pred2");
-                            ev.remove_and_unlock();
+                            // Compute CM
+                            double CMerrorOrig;
+                            {
+                              sb = new StringBuilder();
+                              water.api.ConfusionMatrix CM = new water.api.ConfusionMatrix();
+                              CM.actual = valid;
+                              CM.vactual = valid.vecs()[resp];
+                              CM.predict = pred;
+                              CM.vpredict = pred.vecs()[0];
+                              CM.invoke();
+                              sb.append("\n");
+                              CM.toASCII(sb);
+                              Log.info(sb);
+                              CMerrorOrig = new ConfusionMatrix(CM.cm).err();
+                            }
 
-                            CM = new water.api.ConfusionMatrix();
-                            CM.actual = valid;
-                            CM.vactual = valid.vecs()[1];
-                            CM.predict = pred2;
-                            CM.vpredict = pred2.vecs()[0];
-                            CM.invoke();
-                            sb = new StringBuilder();
-                            sb.append("\n");
-                            CM.toASCII(sb);
-                            Log.info(sb);
-                            double threshErr2 = new ConfusionMatrix(CM.cm).err();
-                            Assert.assertEquals(threshErr2, error, 1e-15);
-                          }
-                          pred2.delete();
-                          pred.delete();
-                        } //classifier
-                        mymodel.delete();
-                        UKV.remove(dest);
-                        Log.info("Parameters combination " + count + ": PASS");
+                            // confirm that orig CM was made with threshold 0.5
+                            // put pred2 into UKV, and allow access
+                            Frame pred2 = new Frame(Key.make("pred2"), pred.names(), pred.vecs());
+                            pred2.delete_and_lock(null);
+                            pred2.unlock(null);
+
+                            if (mymodel.nclasses()==2) {
+                              // make labels with 0.5 threshold for binary classifier
+                              Env ev = Exec2.exec("pred2[,1]=pred2[,3]>=" + 0.5);
+                              pred2 = ev.popAry();
+                              ev.subRef(pred2, "pred2");
+                              ev.remove_and_unlock();
+
+                              water.api.ConfusionMatrix CM = new water.api.ConfusionMatrix();
+                              CM.actual = valid;
+                              CM.vactual = valid.vecs()[1];
+                              CM.predict = pred2;
+                              CM.vpredict = pred2.vecs()[0];
+                              CM.invoke();
+                              sb = new StringBuilder();
+                              sb.append("\n");
+                              CM.toASCII(sb);
+                              Log.info(sb);
+                              double threshErr = new ConfusionMatrix(CM.cm).err();
+                              Assert.assertEquals(threshErr, CMerrorOrig, 1e-15);
+
+                              // make labels with AUC-given threshold for best F1
+                              ev = Exec2.exec("pred2[,1]=pred2[,3]>=" + threshold);
+                              pred2 = ev.popAry();
+                              ev.subRef(pred2, "pred2");
+                              ev.remove_and_unlock();
+
+                              CM = new water.api.ConfusionMatrix();
+                              CM.actual = valid;
+                              CM.vactual = valid.vecs()[1];
+                              CM.predict = pred2;
+                              CM.vpredict = pred2.vecs()[0];
+                              CM.invoke();
+                              sb = new StringBuilder();
+                              sb.append("\n");
+                              CM.toASCII(sb);
+                              Log.info(sb);
+                              double threshErr2 = new ConfusionMatrix(CM.cm).err();
+                              Assert.assertEquals(threshErr2, error, 1e-15);
+                            }
+                            pred2.delete();
+                            pred.delete();
+                          } //classifier
+                          if (best_model_key != null) UKV.remove(best_model_key);
+                          mymodel.delete();
+                          UKV.remove(dest);
+                          Log.info("Parameters combination " + count + ": PASS");
+                        }
                       }
                     }
                   }

@@ -11,6 +11,7 @@ import org.junit.Test;
 import water.JUnitRunnerDebug;
 import water.Key;
 import water.TestUtil;
+import water.UKV;
 import water.fvec.Frame;
 import water.fvec.NFSFileVec;
 import water.fvec.ParseDataset2;
@@ -138,6 +139,7 @@ public class DeepLearningIrisTest extends TestUtil {
                             DeepLearningMLPReference ref = new DeepLearningMLPReference();
                             ref.init(activation, Utils.getDeterRNG(seed), holdout_ratio, hidden);
 
+                            p.best_model_key = Key.make("best_DLIris.hex");
                             p.seed = seed;
                             p.hidden = new int[]{hidden};
                             p.adaptive_rate = false;
@@ -292,6 +294,7 @@ public class DeepLearningIrisTest extends TestUtil {
                             Log.info("Scoring: PASS");
 
                             // cleanup
+                            if (p.best_model_key != null) UKV.remove(p.best_model_key);
                             mymodel.delete();
                             _train.delete();
                             _test.delete();
