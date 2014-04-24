@@ -18,6 +18,7 @@ SCRIPTS=\
 	$(BUILD)/scripts/prelude.global.js \
 	$(BUILD)/scripts/typecheck.global.js \
 	$(BUILD)/scripts/hypergraph.global.js \
+	$(BUILD)/scripts/geyser.global.js \
 	$(BUILD)/scripts/main.js
 
 BROWSER_SCRIPTS=\
@@ -87,6 +88,7 @@ TESTS=\
 	$(BUILD)/tests/prelude.tests.js \
 	$(BUILD)/tests/typecheck.tests.js \
 	$(BUILD)/tests/hypergraph.tests.js \
+	$(BUILD)/tests/geyser.tests.js \
 	$(BUILD)/tests/base.tests.js
 
 LIB_JS=\
