@@ -34,7 +34,7 @@ public class ExportFiles extends Request2 {
   boolean force = false;
 
   public static String link(Key k, String content){
-    return  "<a href='/2/ExportFiles.html?src_key=" + k.toString() + "'>" + content + "</a>";
+    return  "<a href='/2/ExportFiles.query?src_key=" + k.toString() + "'>" + content + "</a>";
   }
 
    /**
