@@ -3,7 +3,6 @@ package water.api;
 import hex.*;
 import hex.DGLM.CaseMode;
 import hex.DGLM.Family;
-import hex.DGLM.GLMException;
 import hex.DGLM.GLMJob;
 import hex.DGLM.GLMModel;
 import hex.DGLM.GLMParams;
@@ -35,7 +34,17 @@ public class GLM extends Request {
   protected final LinkArg _link = new LinkArg(_family,LINK);
   protected final Real _lambda = new Real(LAMBDA, 1e-5); // TODO I do not know the bounds
   protected final Real _alpha = new Real(ALPHA, 0.5, 0, 1, "");
-  protected final Real _caseWeight = new Real(WEIGHT,1.0);
+  protected final Real _prior = new Real(PRIOR){
+    @Override public Double defaultValue(){
+      ValueArray.Column col = _key.value()._cols[_y.value()];
+      return 0 <= col._min && col._max <= 1?col._mean:Double.NaN;
+    }
+    @Override protected String queryComment() { return "prior(real) probability of class 1"; }
+
+    @Override protected String queryDescription() {
+      return "Use to override expected mean of the response in case the dataset has been sampled and its mean differs from the expected one. Returned model will be rebalanced to reflect the expected mean.";
+    }
+  };
   protected final Real _tweediePower = new Real(TWEEDIE_POWER, 1.5);
   protected final CaseModeSelect _caseMode = new CaseModeSelect(_key,_y,_family, CASE_MODE,CaseMode.none);
   protected final CaseSelect _case = new CaseSelect(_key,_y,_caseMode,CASE);
@@ -47,9 +56,10 @@ public class GLM extends Request {
   protected final EnumArgument<LSMSolverType> _lsmSolver = new EnumArgument<LSMSolverType>("lsm_solver", LSMSolverType.AUTO);
   protected final Real _betaEps = new Real(BETA_EPS,1e-4);
   protected final Int _maxIter = new Int(MAX_ITER, 50, 1, 1000000);
-  //protected final Bool _reweightGram = new Bool("reweigthed_gram_xval", false, "Set to force reweighted gram matrix for cross-validation (non-reweighted xval is much faster, less precise).");
 
   public GLM() {
+      _prior.addPrerequisite(_key);
+      _prior.addPrerequisite(_y);
       _requestHelp = "Compute generalized linear model with penalized maximum likelihood. Penalties include the lasso (L1 penalty), ridge regression (L2 penalty) or elastic net penalty (combination of L1 and L2) penalties. The penalty function is defined as :<br/>" +
       "<pre>\n" +
       "       P(&beta;) = 0.5*(1 - &alpha;)*||&beta;||<sub>2</sub><sup>2</sup> + &alpha;*||&beta;||<sub>1</sub><br/>"+
@@ -70,7 +80,7 @@ public class GLM extends Request {
     _alpha._requestHelp = "Penalty distribution argument. Controls distribution of penalty between L1 and L2 norm according to the formula above.";
     _betaEps._requestHelp = "Precision of the vector of coefficients. Computation stops when the maximal difference between two beta vectors is below than Beta epsilon.";
     _maxIter._requestHelp = "Number of maximum iterations.";
-    _caseWeight._requestHelp = "All rows for which the predicate is true will be weighted by weight. Weight=1 is neutral. Weight = 0.5 treats negative examples as twice more important than positive ones. Weight = 2.0 does the opposite.";
+    _prior._requestHelp = "Prior probability of positive case (class = 1) for logistic regression. To be used if the data has been sampled.";
     _caseMode._requestHelp = "Predicate selection.";
     _case._requestHelp = "Value to be used to compare against using predicate given by case mode selector to turn the y column into boolean.";
     _thresholds._requestHelp = "Sequence of decision thresholds to be evaluated during validation (used for ROC curce computation and for picking optimal decision threshold of the resulting classifier).";
@@ -135,7 +145,7 @@ public class GLM extends Request {
       if (_family.value() != Family.binomial) {
         _case.disable("Only for family binomial");
         _caseMode.disable("Only for family binomial");
-        _caseWeight.disable("Only for family binomial");
+        _prior.disable("Only for family binomial");
         _thresholds.disable("Only for family binomial");
       }
       if (_family.value() != Family.tweedie){
@@ -210,8 +220,8 @@ public class GLM extends Request {
       res._link = new LinkIced( res._family._family.defaultLink );
     res._maxIter = _maxIter.value();
     res._betaEps = _betaEps.value();
-    if(_caseWeight.valid())
-      res._caseWeight = _caseWeight.value();
+    if(_prior.valid())
+      res._caseWeight = _prior.value();
     if(_case.valid())
       res._caseVal = _case.value();
     res._caseMode = _caseMode.valid()?_caseMode.value():CaseMode.none;
@@ -234,7 +244,6 @@ public class GLM extends Request {
         }
         return Response.error("error reading glm parameters");
       }
-
       if (glmParams._family._family == Family.tweedie){
         double p = _tweediePower.value();
         if ( !(1. < p && p < 2.) ){
@@ -257,7 +266,7 @@ public class GLM extends Request {
       case GenGradient:
         lsm = new GeneralizedGradientSolver(_lambda.value(),_alpha.value());
       }
-      GLMJob job = DGLM.startGLMJob(dest, data, lsm, glmParams, null, _xval.value(), true);
+      GLMJob job = DGLM.startGLMJob(dest, data, lsm, glmParams, null, _prior.value(), _xval.value(), true);
       JsonObject j = new JsonObject();
       j.addProperty(Constants.DEST_KEY, job.dest().toString());
       Response r = GLMProgressPage.redirect(j, job.self(), job.dest(),job.progressKey());

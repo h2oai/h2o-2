@@ -161,8 +161,8 @@ public class StableAPITest {
     regPy(GBM.class, "cols", "destination_key", "learn_rate", "max_depth", "min_rows", "nbins", "ntrees", "response", "source", "validation");
     regPy(GBMModelView.class, "_modelKey");
     regPy(GBMProgressPage.class);
-    regPy(GLM.class, "alpha", "beta_epsilon", "case", "case_mode", "destination_key", "family", "key", "lambda", "link", "lsm_solver", "max_iter", "n_folds", "standardize", "thresholds", "tweedie_power", "weight", "x", "y");
-    regPy(GLMGrid.class, "alpha", "beta_eps", "case", "case_mode", "family", "key", "lambda", "link", "max_iter", "n_folds", "parallel", "thresholds", "weight", "x", "y");
+    regPy(GLM.class, "alpha", "beta_epsilon", "case", "case_mode", "destination_key", "family", "key", "lambda", "link", "lsm_solver", "max_iter", "n_folds", "standardize", "thresholds", "tweedie_power", "x", "y");
+    regPy(GLMGrid.class, "alpha", "beta_eps", "case", "case_mode", "family", "key", "lambda", "link", "max_iter", "n_folds", "parallel", "thresholds", "x", "y");
     regPy(GLMGridProgress.class, "destination_key", "job");
     regPy(GLMProgressPage.class, "destination_key", "job", "progress_key");
     regPy(GLMScore.class, "key", "model_key", "thresholds");

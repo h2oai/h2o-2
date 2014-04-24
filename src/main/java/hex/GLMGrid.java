@@ -92,7 +92,7 @@ public class GLMGrid extends Job {
       try{
         for( int l1 = 1; l1 <= _job._lambdas.length && Job.isRunning(_job.self()); l1++ ) {
           Key mkey = GLMModel.makeKey(false);
-          GLMModel m = DGLM.buildModel(_job,mkey,ary, _job._xs, _standardize, new ADMMSolver(_job._lambdas[N-l1], _job._alphas[_aidx]), _job._glmp,beta,_job._xfold, _parallel);
+          GLMModel m = DGLM.buildModel(_job,mkey,ary, _job._xs, _standardize, new ADMMSolver(_job._lambdas[N-l1], _job._alphas[_aidx]), _job._glmp,beta,1, _job._xfold, _parallel);
           beta = m._normBeta.clone();
           _job.update(m, (_job._lambdas.length-l1) + _aidx * _job._lambdas.length, System.currentTimeMillis() - _job.start_time,fs);
         }

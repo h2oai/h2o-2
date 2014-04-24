@@ -186,7 +186,7 @@ public class GLMProgressPage extends Request {
 
       if( glmp._caseMode != CaseMode.none) {
          parm(sb,"case",glmp._caseMode.exp(glmp._caseVal));
-         parm(sb,"weight",glmp._caseWeight);
+         parm(sb,"prior",glmp._caseWeight);
       }
       return sb.toString();
     }
