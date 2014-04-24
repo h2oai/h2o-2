@@ -208,19 +208,16 @@ Steam.ScoringView = (_, _scoring) ->
 
         headKeys = keys headParameter
 
-        #TODO null keys
-
         areSame = map headKeys, (key) ->
           every tailParameters, (tailParameter) ->
             a = headParameter[key]
             b = tailParameter[key]
             # DRF has array-valued params, so handle that case properly
-            if isArray a and isArray b
+            if (isArray a) and (isArray b)
+              zipCompare a, b
               a.toString() is b.toString() #HACK
             else
               a is b
-
-            tailParameter[key] is headParameter[key]
 
         [
           algorithm
