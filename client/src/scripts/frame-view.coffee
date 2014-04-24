@@ -36,7 +36,7 @@ Steam.FrameView = (_, _frame) ->
           model.state
         ]
 
-      [ table, thead, tbody, tr, th, td ] = geyser.generate 'table.table.table-condensed.table-hover thead tbody tr th td'
+      [ table, thead, tbody, tr, th, td ] = geyser2.generate words 'table.table.table-condensed.table-hover thead tbody tr th td'
 
       table [
         thead [

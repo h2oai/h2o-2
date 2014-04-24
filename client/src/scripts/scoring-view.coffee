@@ -87,7 +87,7 @@ Steam.ScoringView = (_, _scoring) ->
 
   renderComparisonTable = (scores) ->
     #TODO thIndent is a HACK. remove.
-    [ table, kvtable, thead, tbody, tr, trExpert, diffSpan, th, thIndent, td] = geyser.generate 'table.table.table-condensed table.table-kv thead tbody tr tr.y-expert span.y-diff th th.y-indent td'
+    [ table, kvtable, thead, tbody, tr, trExpert, diffSpan, th, thIndent, td] = geyser2.generate words 'table.table.table-condensed table.table-kv thead tbody tr tr.y-expert span.y-diff th th.y-indent td'
 
     transposeGrid = (grid) ->
       transposed = []
@@ -107,7 +107,7 @@ Steam.ScoringView = (_, _scoring) ->
           ]
       ]
 
-    createROCChart = (data) ->
+    renderROC = (data) ->
       margin = top: 20, right: 20, bottom: 20, left: 30
       width = 175
       height = 175
@@ -196,7 +196,7 @@ Steam.ScoringView = (_, _scoring) ->
 
     createROC = (cms) ->
       rates = map cms, computeTPRandFPR
-      createROCChart rates
+      renderROC rates
 
     createInputParameter = (key, value, type) ->
       key: key, value: value, type: type, isDifferent: no

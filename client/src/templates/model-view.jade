@@ -3,14 +3,14 @@
     .y-tag Model
     .y-tagline(data-bind='text:key')
   h1.y-title(data-bind='text:title')
-  .y-section(data-bind='geyser:summary')
+  .y-section(data-bind='geyser2:summary')
   h2.y-subtitle(data-bind='collapse:false') Parameters
-  .y-parameters(data-bind='geyser:parameters')
+  .y-parameters(data-bind='geyser2:parameters')
   h2.y-subtitle(data-bind='collapse:false') Input Column Names
-  .y-input-column(data-bind='geyser:inputColumns')
+  .y-input-column(data-bind='geyser2:inputColumns')
   h2.y-subtitle(data-bind='collapse:false') Compatible Datasets
   div
-    .y-frames(data-bind='geyser:compatibleFrames')
+    .y-frames(data-bind='geyser2:compatibleFrames')
     .y-controls
       button.btn(data-bind='click:loadCompatibleFrames') View These Datasets&hellip;
   h2.y-subtitle(data-bind='collapse:true') JSON
