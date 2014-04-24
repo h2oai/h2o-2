@@ -90,7 +90,8 @@ Steam.ScoringView = (_, _scoring) ->
     renderComparisonTable map selectedItems, (item) -> item.data
 
   renderComparisonTable = (scores) ->
-    [ table, kvtable, thead, tbody, tr, diffSpan, th, td ] = geyser.generate 'table.table.table-condensed table.table-kv thead tbody tr span.bg-info th td'
+    #TODO thIndent is a HACK. remove.
+    [ table, kvtable, thead, tbody, tr, trExpert, diffSpan, th, thIndent, td] = geyser.generate 'table.table.table-condensed table.table-kv thead tbody tr tr.y-expert span.y-diff th th.y-indent td'
 
     transposeGrid = (grid) ->
       transposed = []
@@ -100,13 +101,13 @@ Steam.ScoringView = (_, _scoring) ->
           column[i] = cell
       transposed
 
-    createParameterTable = (parametersAndDifferences) ->
-      { parameters, differences } = parametersAndDifferences
+    createParameterTable = ({ parameters }) ->
       kvtable [
-        tbody mapWithKey parameters, (value, key) ->
-          tr [
-            th key
-            td if differences[key] then value else diffSpan value
+        tbody map parameters, (parameter) ->
+          trow = if parameter.type is 'critical' then tr else trExpert
+          trow [
+            th parameter.key
+            td if parameter.isDifferent then diffSpan parameter.value else parameter.value
           ]
       ]
 
@@ -201,56 +202,74 @@ Steam.ScoringView = (_, _scoring) ->
       rates = map cms, computeTPRandFPR
       createROCChart rates
 
-    compareInputParameters = (modelsByAlgorithm) ->
-      # change to mapValues modelsByAlgorithm, (models) ->
-      zipObject mapWithKey modelsByAlgorithm, (models, algorithm) ->
-        headParameter = (head models).parameters
-        tailParameters = map (tail models), (model) -> model.parameters
+    createInputParameter = (key, value, type) ->
+      key: key, value: value, type: type, isDifferent: no
 
-        headKeys = keys headParameter
+    combineInputParameters = (model) ->
+      critical = mapWithKey model.critical_parameters, (value, key) ->
+        createInputParameter key, value, 'critical'
+      secondary = mapWithKey model.secondary_parameters, (value, key) ->
+        createInputParameter key, value, 'secondary'
+      concat critical, secondary
 
-        areSame = map headKeys, (key) ->
-          every tailParameters, (tailParameter) ->
-            a = headParameter[key]
-            b = tailParameter[key]
-            # DRF has array-valued params, so handle that case properly
-            if (isArray a) and (isArray b)
-              zipCompare a, b
-              a.toString() is b.toString() #HACK
-            else
-              a is b
+    # Side-effects!
+    markAsDifferent = (parameterss, index) ->
+      for parameters in parameterss
+        parameters[index].isDifferent = yes
+      return
 
-        [
-          algorithm
-          zipObject headKeys, areSame
-        ]
+    # Side-effects!
+    compareInputParameters = (parameterss) ->
+      headParameters = head parameterss
+      tailParameterss = tail parameterss
+      for parameters, index in headParameters
+        for tailParameters in tailParameterss
+          a = parameters.value
+          b = tailParameters[index].value
+          # DRF has array-valued params, so handle that case properly
+          if (isArray a) and (isArray b)
+            unless zipCompare a, b
+              markAsDifferent parameterss, index
+              break
+          else
+            if a isnt b
+              markAsDifferent parameterss, index
+              break
+      return
 
     createComparisonGrid = (scores) ->
       header = [
         'Method'
         'Name'
         'ROC Curve'
-        'Input Parameters'
+        'Input Parameters '
         'Error'
         'AUC'
         'Threshold Criterion'
-        'Threshold'
-        'F1'
-        'Accuracy'
-        'Precision'
-        'Recall'
-        'Specificity'
-        'Max per class Error'
+        ' Threshold' #HACK
+        ' F1' #HACK
+        ' Accuracy' #HACK
+        ' Precision' #HACK
+        ' Recall' #HACK
+        ' Specificity' #HACK
+        ' Max per class Error' #HACK
       ]
 
       format4f = d3.format '.4f' # precision = 4
 
       scoreWithLowestError = min scores, (score) -> score.result.metrics.error
+      inputParamsWithAlgorithm = map scores, (score) ->
+        algorithm: score.model.model_algorithm
+        parameters: combineInputParameters score.model
 
-      allModels = map scores, (score) -> score.model
-      parameterDifferences = compareInputParameters groupBy allModels, (model) -> model.model_algorithm
+      inputParamsByScoreIndex = map inputParamsWithAlgorithm, (a) -> a.parameters
 
-      rows = map scores, (score) ->
+      inputParamsByAlgorithm = values groupBy inputParamsWithAlgorithm, (a) -> a.algorithm
+      # Side-effects!
+      forEach inputParamsByAlgorithm, (groups) ->
+        compareInputParameters map groups, (group) -> group.parameters
+
+      rows = map scores, (score, scoreIndex) ->
         model = score.model
         metrics = score.result.metrics
         auc = metrics.auc.members
@@ -260,10 +279,7 @@ Steam.ScoringView = (_, _scoring) ->
           model.model_algorithm
           model.key
           createROC auc.confusion_matrices
-          {
-            parameters: model.parameters
-            differences: parameterDifferences[model.model_algorithm]
-          }
+          { parameters: inputParamsByScoreIndex[scoreIndex] }
           (format4f metrics.error) + errorBadge #TODO change to bootstrap badge
           format4f auc.AUC
           head auc.threshold_criteria
@@ -283,7 +299,11 @@ Steam.ScoringView = (_, _scoring) ->
       table tbody map grid, (row, i) ->
         tr map row, (cell, i) ->
           if i is 0
-            th cell
+            # HACK 
+            if 0 is cell.indexOf ' '
+              thIndent cell
+            else
+              th cell
           else
             if isElement cell
               td cell
