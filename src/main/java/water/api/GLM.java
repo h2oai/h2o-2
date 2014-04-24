@@ -34,7 +34,7 @@ public class GLM extends Request {
   protected final LinkArg _link = new LinkArg(_family,LINK);
   protected final Real _lambda = new Real(LAMBDA, 1e-5); // TODO I do not know the bounds
   protected final Real _alpha = new Real(ALPHA, 0.5, 0, 1, "");
-  protected final Real _prior = new Real(PRIOR){
+  protected final Real _prior = new Real(PRIOR,null){
     @Override public Double defaultValue(){
       ValueArray.Column col = _key.value()._cols[_y.value()];
       return 0 <= col._min && col._max <= 1?col._mean:Double.NaN;
