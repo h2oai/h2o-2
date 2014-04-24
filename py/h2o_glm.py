@@ -157,17 +157,23 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
         lambdas = GLMModel['lambdas']
         # since all our tests?? only use one lambda, the best_lamda_idx should = 1
         best_lambda_idx = GLMModel['best_lambda_idx']
+        print "best_lambda_idx:", best_lambda_idx
         lambda_max = GLMModel['lambda_max']
         print "lambda_max:", lambda_max
 
-        if 1==0:
-            if best_lambda_idx != 1:
-                raise Exception("best_lamda_idx %s should point to the one lamda we specified? %s" % (best_lamda_idx, lamdas[1]))
-            if lambda_max <= lambdas[-1]:
-                raise Exception("lambda_max %s should always be > the lambda result %s we're checking" % (lambda_max, lambdas[1]))
+        if 1==0 and lambda_max <= lambdas[best_lambda_idx]:
+            raise Exception("lambda_max %s should always be > the lambda result %s we're checking" % (lambda_max, lambdas[best_lambda_idx]))
 
-        submodels0 = submodels[0]
-        submodels1 = submodels[-1] # hackery to make it work when there's just one
+        # submodels0 = submodels[0]
+        # submodels1 = submodels[-1] # hackery to make it work when there's just one
+
+        if (best_lambda_idx >= len(lambdas)) or (best_lambda_idx < 0):
+            raise Exception("best_lambda_idx: %s should point to one of lambdas (which has len %s)" % (best_lambda_idx, len(lambdas)))
+
+        if (best_lambda_idx >= len(submodels)) or (best_lambda_idx < 0):
+            raise Exception("best_lambda_idx: %s should point to one of submodels (which has len %s)" % (best_lambda_idx, len(submodels)))
+
+        submodels1 = submodels[best_lambda_idx] # hackery to make it work when there's just one
         iterations = submodels1['iteration']
 
     else:

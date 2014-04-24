@@ -20,7 +20,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM2_covtype_train(self):
+    def test_GLM2_covtype_train_predict_all_all(self):
         h2o.beta_features = True
         importFolderPath = "standard"
         csvFilename = 'covtype.shuffled.data'
@@ -37,7 +37,7 @@ class Basic(unittest.TestCase):
         # will have to live with random extract. will create variance
         # class 4 = 1, everything else 0
         y = 54
-        execExpr="A.hex[,%s]=(A.hex[,%s]==%s)" % (y+1, y+1, 4)
+        execExpr="A.hex[,%s]=(A.hex[,%s]==%s)" % (y+1, y+1, 1) # class 1
         h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
 
         inspect = h2o_cmd.runInspect(key="A.hex")
@@ -45,21 +45,9 @@ class Basic(unittest.TestCase):
             "    numRows:", "{:,}".format(inspect['numRows']), \
             "    numCols:", "{:,}".format(inspect['numCols'])
 
-        # Split Test/Train************************************************
-        # how many rows for each pct?
-        numRows = inspect['numRows']
-        pct10 = int(numRows * .1)
-        rowsForPct = [i * pct10 for i in range(0,11)]
-        # this can be slightly less than 10%
-        last10 = numRows - rowsForPct[9]
-        rowsForPct[10] = last10
-        # use mod below for picking "rows-to-do" in case we do more than 9 trials
-        # use 10 if 0 just to see (we copied 10 to 0 above)
-        rowsForPct[0] = rowsForPct[10]
-
-        print "Creating the key of the last 10% data, for scoring"
-        trainDataKey = "rTrain"
-        testDataKey = "rTest"
+        print "Use same data (full) for train and test"
+        trainDataKey = "A.hex"
+        testDataKey = "A.hex"
         # start at 90% rows + 1
         
         # GLM, predict, CM*******************************************************8
@@ -67,27 +55,42 @@ class Basic(unittest.TestCase):
             'response': 'C' + str(y+1),
             'max_iter': 20, 
             'n_folds': 0, 
-            'alpha': 0.1, 
-            'lambda': 1e-5, 
+            # 'alpha': 0.1, 
+            # 'lambda': 1e-5, 
+            'alpha': 0.0,
+            'lambda': None,
             'family': 'binomial',
         }
         timeoutSecs = 60
 
-        for trial in range(10):
-            # always slice from the beginning
-            rowsToUse = rowsForPct[trial%10] 
+        for trial in range(1):
 
             # test/train split **********************************************8
-            h2o_cmd.createTestTrain(srcKey='A.hex', trainDstKey=trainDataKey, testDstKey=testDataKey, trainPercent=90)
             aHack = {'destination_key': trainDataKey}
-            parseKey = trainDataKey
 
             # GLM **********************************************8
             start = time.time()
             glm = h2o_cmd.runGLM(parseResult=aHack, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
             print "glm end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
+
+
             modelKey = glm['glm_model']['_key']
+            submodels = glm['glm_model']['submodels']
+            # hackery to make it work when there's just one
+            validation = submodels[-1]['validation']
+            best_threshold = validation['best_threshold']
+            thresholds = validation['thresholds']
+            # have to look up the index for the cm, from the thresholds list
+            best_index = None
+            for i,t in enumerate(thresholds):
+                if t == best_threshold:
+                    best_index = i
+                    break
+            cms = validation['_cms']
+            cm = cms[best_index]
+            trainPctWrong = h2o_gbm.pp_cm_summary(cm['_arr']);
+
 
             # Score **********************************************
             predictKey = 'Predict.hex'
@@ -110,12 +113,12 @@ class Basic(unittest.TestCase):
 
             # These will move into the h2o_gbm.py
             pctWrong = h2o_gbm.pp_cm_summary(cm);
-            self.assertLess(pctWrong, 8,"Should see less than 7% error (class = 4)")
+            self.assertEqual(pctWrong, trainPctWrong,"Should see the same error rate on train and predict? (same data set)")
 
             print "\nTest\n==========\n"
             print h2o_gbm.pp_cm(cm)
 
-            print "Trial #", trial, "completed", "using %6.2f" % (rowsToUse*100.0/numRows), "pct. of all rows"
+            print "Trial #", trial, "completed"
 
 if __name__ == '__main__':
     h2o.unit_main()
