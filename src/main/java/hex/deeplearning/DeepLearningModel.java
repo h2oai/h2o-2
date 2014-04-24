@@ -259,6 +259,71 @@ public class DeepLearningModel extends Model {
     // package local helpers
     final int[] units; //number of neurons per layer, extracted from parameters and from datainfo
 
+
+    public static final String[] getCriticalParamNames() {
+      return new String[] {
+        "hidden",
+        "epochs"
+      };
+    }
+
+    public static final String[] getSecondaryParamNames() {
+      return new String[] {
+        "activation",
+        "train_samples_per_iteration",
+        "seed",
+        "adaptive_rate",
+        "rho",
+        "epsilon",
+        "rate",
+        "rate_annealing",
+        "rate_decay",
+        "momentum_start",
+        "momentum_ramp",
+        "momentum_stable",
+        "nesterov_accelerated_gradient",
+        "input_dropout_ratio",
+        "hidden_dropout_ratios",
+        "l1",
+        "l2",
+        "score_interval"
+      };
+    }
+
+    public static final String[] getExpertParamNames() {
+      return new String[] {
+        "max_w2",
+        "initial_weight_distribution",
+        "initial_weight_scale",
+        "loss",
+        "score_training_samples",
+        "score_validation_samples",
+        "score_duty_cycle",
+        "classification_stop",
+        "regression_stop",
+        "max_hit_ratio_k",
+        "balance_classes",
+        "max_after_balance_size",
+        "score_validation_sampling",
+        "fast_mode",
+        "ignore_const_cols",
+        "shuffle_training_data"
+      };
+    }
+
+    // Params that do not affect model quality:
+    //
+    // "checkpoint",
+    // "expert_mode",
+    // "quiet_mode",
+    // "max_confusion_matrix_size",
+    // "diagnostics",
+    // "variable_importances",
+    // "force_load_balance",
+    // "replicate_training_data",
+    // "single_node_mode",
+
+
     public DeepLearningModelInfo(final DeepLearning params, final DataInfo dinfo) {
       data_info = dinfo;
       final int num_input = dinfo.fullN();

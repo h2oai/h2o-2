@@ -78,6 +78,32 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     @API(help = "Number of columns picked at each split") final int mtries;
     @API(help = "Sample rate") final float sample_rate;
     @API(help = "Seed") final long seed;
+
+    public static final String[] getCriticalParamNames() {
+      return new String[] {
+        "ntrees",
+        "max_depth"
+      };
+    }
+
+    public static final String[] getSecondaryParamNames() {
+      return new String[] {
+        "build_tree_one_node",
+        "min_rows",
+        "nbins",
+        "_mtry"
+      };
+    }
+
+    public static final String[] getExpertParamNames() {
+      return new String[] {
+        "_seed"
+      };
+    }
+
+    // Params that do not affect model quality:
+    //
+
     public DRFModel(DRF params, Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, int mtries, float sample_rate, long seed) {
       super(key,dataKey,testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins);
       this.parameters = params;

@@ -49,6 +49,30 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     @Override public final Request2 job() { return get_params(); }
 
     @API(help = "Learning rate, from 0. to 1.0") final double learn_rate;
+
+    public static final String[] getCriticalParamNames() {
+      return new String[] {
+        "ntrees",
+        "max_depth"
+      };
+    }
+
+    public static final String[] getSecondaryParamNames() {
+      return new String[] {
+        "min_rows",
+        "nbins",
+        "learn_rate",
+        "grid_parallelism"
+      };
+    }
+
+    public static final String[] getExpertParamNames() {
+      return new String[0];
+    }
+
+    // Params that do not affect model quality:
+    //
+
     public GBMModel(GBM job, Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, double learn_rate) {
       super(key,dataKey,testKey,names,domains,cmDomain,ntrees,max_depth,min_rows,nbins);
       this.parameters = job;
