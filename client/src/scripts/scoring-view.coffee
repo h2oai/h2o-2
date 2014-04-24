@@ -85,17 +85,134 @@ Steam.ScoringView = (_, _scoring) ->
     selectedItems = filter _items(), (item) -> item.canSelect() and item.isSelected()
     renderComparisonTable map selectedItems, (item) -> item.data
 
-  renderComparisonTable = (scores) ->
-    #TODO thIndent is a HACK. remove.
-    [ table, kvtable, thead, tbody, tr, trExpert, diffSpan, th, thIndent, td] = geyser.generate words 'table.table.table-condensed table.table-kv thead tbody tr tr.y-expert span.y-diff th th.y-indent td'
+  renderRocCurve = (data) ->
+    margin = top: 20, right: 20, bottom: 20, left: 30
+    width = 175
+    height = 175
 
-    transposeGrid = (grid) ->
-      transposed = []
-      for row, i in grid
-        for cell, j in row
-          column = transposed[j] or transposed[j] = []
-          column[i] = cell
-      transposed
+    x = d3.scale.linear()
+      .domain [ 0, 1 ]
+      .range [ 0, width ]
+
+    y = d3.scale.linear()
+      .domain [ 0, 1 ]
+      .range [ height, 0 ]
+
+    axisX = d3.svg.axis()
+      .scale x
+      .orient 'bottom'
+      .ticks 5
+
+    axisY = d3.svg.axis()
+      .scale y
+      .orient 'left'
+      .ticks 5
+
+    line = d3.svg.line()
+      .x (d) -> x d.fpr
+      .y (d) -> y d.tpr
+
+    el = document.createElementNS 'http://www.w3.org/2000/svg', 'svg'
+
+    svg = (d3.select el)
+      .attr 'class', 'y-roc-curve'
+      .attr 'width', width + margin.left + margin.right
+      .attr 'height', height + margin.top + margin.bottom
+      .append 'g'
+      .attr 'transform', "translate(#{margin.left},#{margin.top})"
+    
+    svg.append 'g'
+      .attr 'class', 'x axis'
+      .attr 'transform', "translate(0, #{height})"
+      .call axisX
+      .append 'text'
+      .attr 'x', width
+      .attr 'y', -6
+      .style 'text-anchor', 'end'
+      .text 'FPR'
+
+    svg.append 'g'
+      .attr 'class', 'y axis'
+      .call axisY
+      .append 'text'
+      .attr 'transform', 'rotate(-90)'
+      .attr 'y', 6
+      .attr 'dy', '.71em'
+      .style 'text-anchor', 'end'
+      .text 'TPR'
+
+    svg.append 'line'
+      .attr 'class', 'guide'
+      .attr 'stroke-dasharray', '3,3'
+      .attr
+        x1: x 0
+        y1: y 0
+        x2: x 1
+        y2: y 1
+
+    svg.selectAll '.dot'
+      .data data
+      .enter()
+      .append 'circle'
+      .attr 'class', 'dot'
+      .attr 'r', 1
+      .attr 'cx', (d) -> x d.fpr
+      .attr 'cy', (d) -> y d.tpr
+
+    svg.append 'path'
+      .datum data
+      .attr 'class', 'line'
+      .attr 'd', line
+
+    el
+
+  computeTPRandFPR = (cm) ->
+    [[tn, fp], [fn, tp]] = cm
+
+    tpr: tp / (tp + fn)
+    fpr: fp / (fp + tn)
+
+  createRocCurve = (cms) ->
+    rates = map cms, computeTPRandFPR
+    renderRocCurve rates
+
+  createInputParameter = (key, value, type) ->
+    key: key, value: value, type: type, isDifferent: no
+
+  combineInputParameters = (model) ->
+    critical = mapWithKey model.critical_parameters, (value, key) ->
+      createInputParameter key, value, 'critical'
+    secondary = mapWithKey model.secondary_parameters, (value, key) ->
+      createInputParameter key, value, 'secondary'
+    concat critical, secondary
+
+  # Side-effects!
+  markAsDifferent = (parameterss, index) ->
+    for parameters in parameterss
+      parameters[index].isDifferent = yes
+    return
+
+  # Side-effects!
+  compareInputParameters = (parameterss) ->
+    headParameters = head parameterss
+    tailParameterss = tail parameterss
+    for parameters, index in headParameters
+      for tailParameters in tailParameterss
+        a = parameters.value
+        b = tailParameters[index].value
+        # DRF has array-valued params, so handle that case properly
+        if (isArray a) and (isArray b)
+          unless zipCompare a, b
+            markAsDifferent parameterss, index
+            break
+        else
+          if a isnt b
+            markAsDifferent parameterss, index
+            break
+    return
+
+  renderComparisonTable = (scores) ->
+    [ div, table, kvtable, thead, tbody, tr, trExpert, diffSpan, th, thIndent, td, hyperlink] = geyser.generate words 'div table.table.table-condensed table.table-kv thead tbody tr tr.y-expert span.y-diff th th.y-indent td div.y-link'
 
     createParameterTable = ({ parameters }) ->
       kvtable [
@@ -107,137 +224,16 @@ Steam.ScoringView = (_, _scoring) ->
           ]
       ]
 
-    renderROC = (data) ->
-      margin = top: 20, right: 20, bottom: 20, left: 30
-      width = 175
-      height = 175
-
-      x = d3.scale.linear()
-        .domain [ 0, 1 ]
-        .range [ 0, width ]
-
-      y = d3.scale.linear()
-        .domain [ 0, 1 ]
-        .range [ height, 0 ]
-
-      axisX = d3.svg.axis()
-        .scale x
-        .orient 'bottom'
-        .ticks 5
-
-      axisY = d3.svg.axis()
-        .scale y
-        .orient 'left'
-        .ticks 5
-
-      line = d3.svg.line()
-        .x (d) -> x d.fpr
-        .y (d) -> y d.tpr
-
-      el = document.createElementNS 'http://www.w3.org/2000/svg', 'svg'
-
-      svg = (d3.select el)
-        .attr 'class', 'y-roc-curve'
-        .attr 'width', width + margin.left + margin.right
-        .attr 'height', height + margin.top + margin.bottom
-        .append 'g'
-        .attr 'transform', "translate(#{margin.left},#{margin.top})"
-      
-      svg.append 'g'
-        .attr 'class', 'x axis'
-        .attr 'transform', "translate(0, #{height})"
-        .call axisX
-        .append 'text'
-        .attr 'x', width
-        .attr 'y', -6
-        .style 'text-anchor', 'end'
-        .text 'FPR'
-
-      svg.append 'g'
-        .attr 'class', 'y axis'
-        .call axisY
-        .append 'text'
-        .attr 'transform', 'rotate(-90)'
-        .attr 'y', 6
-        .attr 'dy', '.71em'
-        .style 'text-anchor', 'end'
-        .text 'TPR'
-
-      svg.append 'line'
-        .attr 'class', 'guide'
-        .attr 'stroke-dasharray', '3,3'
-        .attr
-          x1: x 0
-          y1: y 0
-          x2: x 1
-          y2: y 1
-
-      svg.selectAll '.dot'
-        .data data
-        .enter()
-        .append 'circle'
-        .attr 'class', 'dot'
-        .attr 'r', 1
-        .attr 'cx', (d) -> x d.fpr
-        .attr 'cy', (d) -> y d.tpr
-
-      svg.append 'path'
-        .datum data
-        .attr 'class', 'line'
-        .attr 'd', line
-
-      el
-
-    computeTPRandFPR = (cm) ->
-      [[tn, fp], [fn, tp]] = cm
-
-      tpr: tp / (tp + fn)
-      fpr: fp / (fp + tn)
-
-    createROC = (cms) ->
-      rates = map cms, computeTPRandFPR
-      renderROC rates
-
-    createInputParameter = (key, value, type) ->
-      key: key, value: value, type: type, isDifferent: no
-
-    combineInputParameters = (model) ->
-      critical = mapWithKey model.critical_parameters, (value, key) ->
-        createInputParameter key, value, 'critical'
-      secondary = mapWithKey model.secondary_parameters, (value, key) ->
-        createInputParameter key, value, 'secondary'
-      concat critical, secondary
-
-    # Side-effects!
-    markAsDifferent = (parameterss, index) ->
-      for parameters in parameterss
-        parameters[index].isDifferent = yes
-      return
-
-    # Side-effects!
-    compareInputParameters = (parameterss) ->
-      headParameters = head parameterss
-      tailParameterss = tail parameterss
-      for parameters, index in headParameters
-        for tailParameters in tailParameterss
-          a = parameters.value
-          b = tailParameters[index].value
-          # DRF has array-valued params, so handle that case properly
-          if (isArray a) and (isArray b)
-            unless zipCompare a, b
-              markAsDifferent parameterss, index
-              break
-          else
-            if a isnt b
-              markAsDifferent parameterss, index
-              break
-      return
-
-    createComparisonGrid2 = (scores) ->
+    createComparisonGrid = (scores) ->
       algorithmRow = [ th 'Method' ]
       nameRow = [ th 'Name' ]
       rocCurveRow = [ th 'ROC Curve' ]
-      inputParametersRow = [ th 'Input Parameters' ]
+      inputParametersRow = [
+        th [
+          (div 'Input Parameters')
+          (hyperlink 'Show more', 'toggle-advanced-parameters')
+        ]
+      ]
       errorRow = [ th 'Error' ]
       aucRow = [ th 'AUC' ]
       thresholdCriterionRow = [ th 'Threshold Criterion' ]
@@ -273,7 +269,7 @@ Steam.ScoringView = (_, _scoring) ->
 
         algorithmRow.push td model.model_algorithm
         nameRow.push td model.key
-        rocCurveRow.push td createROC auc.confusion_matrices
+        rocCurveRow.push td 'Loading...', "roc-#{scoreIndex}"
         inputParametersRow.push td createParameterTable parameters: inputParamsByScoreIndex[scoreIndex]
         errorRow.push td (format4f metrics.error) + errorBadge #TODO change to bootstrap badge
         aucRow.push td format4f auc.AUC
@@ -286,7 +282,27 @@ Steam.ScoringView = (_, _scoring) ->
         specificityRow.push td format4f head auc.specificity_for_criteria
         maxPerClassErrorRow.push td format4f head auc.max_per_class_error_for_criteria
 
-      table tbody [
+      renderRocCurves = ($element) ->
+        forEach scores, (score, scoreIndex) ->
+          defer ->
+            rocCurve = createRocCurve score.result.metrics.auc.members.confusion_matrices
+            $("#roc-#{scoreIndex}", $element).empty().append rocCurve
+        return
+
+      toggleAdvancedParameters = ($element) ->
+        isHidden = yes
+        $('#toggle-advanced-parameters', $element).click ->
+          if isHidden
+            $('.y-expert', $element).show()
+          else
+            $('.y-expert', $element).hide()
+
+          isHidden = not isHidden
+          return
+        return
+      
+
+      markup: table tbody [
         tr algorithmRow
         tr nameRow
         tr rocCurveRow
@@ -302,8 +318,9 @@ Steam.ScoringView = (_, _scoring) ->
         tr specificityRow
         tr maxPerClassErrorRow
       ]
+      behaviors: [ renderRocCurves, toggleAdvancedParameters ]
 
-    _comparisonTable if scores.length > 0 then createComparisonGrid2 scores else null
+    _comparisonTable if scores.length > 0 then createComparisonGrid scores else null
 
 
   initialize _scoring
