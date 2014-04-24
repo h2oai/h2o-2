@@ -2468,6 +2468,7 @@ class H2O(object):
                 'lsm_solver': None,
                 'expert_settings': None,
                 'thresholds': None,
+                'prior': None, # new
                 # only GLMGrid has these..we should complain about it on GLM?
                 'parallelism': None,
                 'beta_eps': None,
