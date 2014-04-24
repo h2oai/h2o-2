@@ -16,10 +16,7 @@ import water.fvec.Vec;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashMap;
+import java.util.*;
 
 /**
  * A Model models reality (hopefully).
@@ -108,6 +105,30 @@ public abstract class Model extends Lockable<Model> {
     return (isClassifier() ?
             (nclasses() > 2 ? ModelCategory.Multinomial : ModelCategory.Binomial) :
             ModelCategory.Regression);
+  }
+
+  /**
+   * Names of the model parameters which will always be shown in a short description of
+   * the model (e.g., for a tree model it would include ntrees and depth).
+   */
+  public static String[] getCriticalParamNames() {
+    return new String[0];
+  }
+
+  /**
+   * Names of the model parameters which will also be shown in a longer description of
+   * the model (e.g., learning rate).
+   */
+  public static String[] getSecondaryParamNames() {
+    return new String[0];
+  }
+
+  /**
+   * Names of the model parameters which will be shown only in an expert view of
+   * the model (e.g., for Deep Learning it would include initial_weight_scale).
+   */
+  public static String[] getExpertParamNames() {
+    return new String[0];
   }
 
     /** Remove any Model internal Keys */

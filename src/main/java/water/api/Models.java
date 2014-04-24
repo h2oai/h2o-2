@@ -5,9 +5,13 @@ import java.util.*;
 
 import com.google.gson.*;
 import hex.deeplearning.DeepLearning;
+import hex.deeplearning.DeepLearningModel;
 import hex.drf.DRF;
+import hex.drf.DRF.DRFModel;
 import hex.gbm.GBM;
+import hex.gbm.GBM.GBMModel;
 import hex.glm.GLM2;
+import hex.glm.GLMModel;
 import org.apache.commons.math3.util.Pair;
 import water.*;
 import water.fvec.Frame;
@@ -59,7 +63,9 @@ public class Models extends Request2 {
     public Job.JobState state = Job.JobState.CREATED;
     public List<String> input_column_names = new ArrayList<String>();
     public String response_column_name = "unknown";
-    public Map parameters = new HashMap<String, Object>();
+    public Map critical_parameters = new HashMap<String, Object>();
+    public Map secondary_parameters = new HashMap<String, Object>();
+    public Map expert_parameters = new HashMap<String, Object>();
     public Set<String> compatible_frames = new HashSet<String>();
   }
 
@@ -151,10 +157,10 @@ public class Models extends Request2 {
    * Summarize subclasses of water.Model.
    */
   protected static void summarizeAndEnhanceModel(ModelSummary summary, Model model, boolean find_compatible_frames, Map<String, Frame> all_frames, Map<String, Set<String>> all_frames_cols) {
-    if (model instanceof hex.glm.GLMModel) {
-      summarizeGLMModel(summary, (hex.glm.GLMModel) model);
-    } else if (model instanceof hex.drf.DRF.DRFModel) {
-      summarizeDRFModel(summary, (hex.drf.DRF.DRFModel) model);
+    if (model instanceof GLMModel) {
+      summarizeGLMModel(summary, (GLMModel) model);
+    } else if (model instanceof DRF.DRFModel) {
+      summarizeDRFModel(summary, (DRF.DRFModel) model);
     } else if (model instanceof hex.deeplearning.DeepLearningModel) {
       summarizeDeepLearningModel(summary, (hex.deeplearning.DeepLearningModel) model);
     } else if (model instanceof hex.gbm.GBM.GBMModel) {
@@ -192,24 +198,9 @@ public class Models extends Request2 {
   /******
    * GLM2
    ******/
-  private static final String[] GLM_whitelist_array = {
-    "max_iter",
-    "standardize",
-    "n_folds",
-    "family",
-    "_wgiven",
-    "_proximalPenalty",
-    "_beta",
-    "_runAllLambdas",
-    "link",
-    "tweedie_variance_power",
-    "tweedie_link_power",
-    "alpha",
-    "lambda_max",
-    "lambda",
-    "beta_epsilon"
-  };
-  private static final Set<String> GLM_whitelist = new HashSet<String>(Arrays.asList(GLM_whitelist_array));
+  private static final Set<String> GLM_critical_params = new HashSet<String>(Arrays.asList(GLMModel.getCriticalParamNames()));
+  private static final Set<String> GLM_secondary_params = new HashSet<String>(Arrays.asList(GLMModel.getSecondaryParamNames()));
+  private static final Set<String> GLM_expert_params = new HashSet<String>(Arrays.asList(GLMModel.getExpertParamNames()));
 
   /**
    * Summarize fields which are specific to hex.glm.GLMModel.
@@ -221,23 +212,18 @@ public class Models extends Request2 {
     summary.model_algorithm = "GLM";
 
     JsonObject all_params = ((GLM2)model.get_params()).toJSON();
-    summary.parameters = whitelistJsonObject(all_params, GLM_whitelist);
+    summary.critical_parameters = whitelistJsonObject(all_params, GLM_critical_params);
+    summary.secondary_parameters = whitelistJsonObject(all_params, GLM_secondary_params);
+    summary.expert_parameters = whitelistJsonObject(all_params, GLM_expert_params);
   }
 
 
   /******
    * DRF
    ******/
-  private static final String[] DRF_whitelist_array = {
-    "build_tree_one_node",
-    "ntrees",
-    "max_depth",
-    "min_rows",
-    "nbins",
-    "_mtry",
-    "_seed"
-  };
-  private static final Set<String> DRF_whitelist = new HashSet<String>(Arrays.asList(DRF_whitelist_array));
+  private static final Set<String> DRF_critical_params = new HashSet<String>(Arrays.asList(DRF.DRFModel.getCriticalParamNames()));
+  private static final Set<String> DRF_secondary_params = new HashSet<String>(Arrays.asList(DRF.DRFModel.getSecondaryParamNames()));
+  private static final Set<String> DRF_expert_params = new HashSet<String>(Arrays.asList(DRF.DRFModel.getExpertParamNames()));
 
   /**
    * Summarize fields which are specific to hex.drf.DRF.DRFModel.
@@ -249,59 +235,17 @@ public class Models extends Request2 {
     summary.model_algorithm = "DRF";
 
     JsonObject all_params = ((DRF)model.get_params()).toJSON();
-    summary.parameters = whitelistJsonObject(all_params, DRF_whitelist);
+    summary.critical_parameters = whitelistJsonObject(all_params, DRF_critical_params);
+    summary.secondary_parameters = whitelistJsonObject(all_params, DRF_secondary_params);
+    summary.expert_parameters = whitelistJsonObject(all_params, DRF_expert_params);
   }
 
   /***************
    * DeepLearning
    ***************/
-  private static final String[] DL_whitelist_array = { // "checkpoint",
-    // "expert_mode",
-    "activation",
-    "hidden",
-    "epochs",
-    "train_samples_per_iteration",
-    "seed",
-    "adaptive_rate",
-    "rho",
-    "epsilon",
-    "rate",
-    "rate_annealing",
-    "rate_decay",
-    "momentum_start",
-    "momentum_ramp",
-    "momentum_stable",
-    "nesterov_accelerated_gradient",
-    "input_dropout_ratio",
-    "hidden_dropout_ratios;",
-    "l1",
-    "l2",
-    "max_w2",
-    "initial_weight_distribution",
-    "initial_weight_scale",
-    "loss",
-    "score_interval",
-    "score_training_samples",
-    "score_validation_samples",
-    "score_duty_cycle",
-    "classification_stop",
-    "regression_stop",
-    // "quiet_mode",
-    // "max_confusion_matrix_size",
-    "max_hit_ratio_k",
-    "balance_classes",
-    "max_after_balance_size",
-    "score_validation_sampling",
-    // "diagnostics",
-    // "variable_importances",
-    "fast_mode",
-    "ignore_const_cols",
-    // "force_load_balance",
-    // "replicate_training_data",
-    // "single_node_mode",
-    "shuffle_training_data"
-  };
-  private static final Set<String> DL_whitelist = new HashSet<String>(Arrays.asList(DL_whitelist_array));
+  private static final Set<String> DL_critical_params = new HashSet<String>(Arrays.asList(DeepLearningModel.getCriticalParamNames()));
+  private static final Set<String> DL_secondary_params = new HashSet<String>(Arrays.asList(DeepLearningModel.getSecondaryParamNames()));
+  private static final Set<String> DL_expert_params = new HashSet<String>(Arrays.asList(DeepLearningModel.getExpertParamNames()));
 
   /**
    * Summarize fields which are specific to hex.deeplearning.DeepLearningModel.
@@ -313,21 +257,17 @@ public class Models extends Request2 {
     summary.model_algorithm = "DeepLearning";
 
     JsonObject all_params = ((DeepLearning)model.get_params()).toJSON();
-    summary.parameters = whitelistJsonObject(all_params, DL_whitelist);
+    summary.critical_parameters = whitelistJsonObject(all_params, DL_critical_params);
+    summary.secondary_parameters = whitelistJsonObject(all_params, DL_secondary_params);
+    summary.expert_parameters = whitelistJsonObject(all_params, DL_expert_params);
   }
 
   /******
    * GBM
    ******/
-  private static final String[] GBM_whitelist_array = {
-    "ntrees",
-    "max_depth",
-    "min_rows",
-    "nbins",
-    "learn_rate",
-    "grid_parallelism",
-  };
-  private static final Set<String> GBM_whitelist = new HashSet<String>(Arrays.asList(GBM_whitelist_array));
+  private static final Set<String> GBM_critical_params = new HashSet<String>(Arrays.asList(GBMModel.getCriticalParamNames()));
+  private static final Set<String> GBM_secondary_params = new HashSet<String>(Arrays.asList(GBMModel.getSecondaryParamNames()));
+  private static final Set<String> GBM_expert_params = new HashSet<String>(Arrays.asList(GBMModel.getExpertParamNames()));
 
   /**
    * Summarize fields which are specific to hex.gbm.GBM.GBMModel.
@@ -339,8 +279,9 @@ public class Models extends Request2 {
     summary.model_algorithm = "GBM";
 
     JsonObject all_params = ((GBM)model.get_params()).toJSON();
-    summary.parameters = whitelistJsonObject(all_params, GBM_whitelist);
-
+    summary.critical_parameters = whitelistJsonObject(all_params, GBM_critical_params);
+    summary.secondary_parameters = whitelistJsonObject(all_params, GBM_secondary_params);
+    summary.expert_parameters = whitelistJsonObject(all_params, GBM_expert_params);
   }
 
 
