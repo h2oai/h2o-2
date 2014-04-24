@@ -90,7 +90,7 @@ ifneq ($(OS),Windows_NT)
 
 	# Create repo subdirectory for MacOSX Mavericks
 	mkdir -p ../target/R/bin/macosx/mavericks/contrib
-	rm -rf ../target/R/bin/windows/contrib/3.1
+	rm -rf ../target/R/bin/macosx/mavericks/contrib/3.1
 	cp -r ../target/R/$(REPO_PATH_MAC) ../target/R/bin/macosx/mavericks/contrib/3.1
 endif
 

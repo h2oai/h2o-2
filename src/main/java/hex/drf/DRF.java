@@ -72,8 +72,8 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
 
     @API(help = "Model parameters", json = true)
     private final DRF parameters;    // This is used purely for printing values out.
-    public final DRF get_params() { return parameters; }
-    public final Request2 job() { return get_params(); }
+    @Override public final DRF get_params() { return parameters; }
+    @Override public final Request2 job() { return get_params(); }
 
     @API(help = "Number of columns picked at each split") final int mtries;
     @API(help = "Sample rate") final float sample_rate;
@@ -100,6 +100,8 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       this.sample_rate = prior.sample_rate;
       this.seed = prior.seed;
     }
+
+    @Override protected TreeModelType getTreeModelType() { return TreeModelType.GBM; }
 
     @Override protected float[] score0(double data[], float preds[]) {
       float[] p = super.score0(data, preds);

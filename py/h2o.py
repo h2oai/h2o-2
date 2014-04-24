@@ -2575,6 +2575,26 @@ class H2O(object):
             time.sleep(5)
         return a
 
+    def models(self, timeoutSecs=10, **kwargs):
+        params_dict = {
+            'key': None,
+            'find_compatible_frames': 0,
+            'score_frame': None
+        }
+        check_params_update_kwargs(params_dict, kwargs, 'models', True)
+        result = self.__do_json_request('2/Models', timeout=timeoutSecs, params=params_dict)
+        return result
+
+    def frames(self, timeoutSecs=10, **kwargs):
+        params_dict = {
+            'key': None,
+            'find_compatible_models': 0,
+            'score_model': None
+        }
+        check_params_update_kwargs(params_dict, kwargs, 'frames', True)
+        result = self.__do_json_request('2/Frames', timeout=timeoutSecs, params=params_dict)
+        return result
+
     def stabilize(self, test_func, error, timeoutSecs=10, retryDelaySecs=0.5):
         '''Repeatedly test a function waiting for it to return True.
 
