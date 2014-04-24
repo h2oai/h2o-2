@@ -292,6 +292,20 @@ repeat = (count, value) ->
     array.push value
   array
 
+zipCompare = (array1, array2, areEqual) ->
+  return no unless isArray array1
+  return no unless isArray array2
+  return no unless array1.length is array2.length
+  if areEqual
+    for a, i in array1
+      b = array2[i]
+      return no unless areEqual a, b
+  else
+    for a, i in array1
+      b = array2[i]
+      return no if a isnt b
+  yes
+
 # Object ops
 
 mapWithKey = (obj, map) ->

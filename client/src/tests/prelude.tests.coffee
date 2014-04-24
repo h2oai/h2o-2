@@ -137,6 +137,7 @@ describe 'Prelude', ->
         clear
         repeat
         mapWithKey
+        zipCompare
       ]
       for func in funcs
         ok typeof func is 'function'
@@ -313,6 +314,19 @@ describe 'Prelude', ->
     it 'repeat', ->
       deepEqual (repeat 3, 5), [ 5, 5, 5 ]
       deepEqual (repeat 3, 'a'), [ 'a', 'a', 'a' ]
+
+    it 'zipCompare', ->
+      ok not zipCompare undefined, undefined
+      ok not zipCompare null, null
+      ok not zipCompare 1, 2
+      ok not zipCompare 1, 1
+      ok not zipCompare [], [10]
+      ok not zipCompare [], null
+      ok not zipCompare null, []
+      ok zipCompare [10], [10]
+      ok zipCompare [10, 20], [10, 20]
+      ok not zipCompare { foo: 'bar' }, { foo: 'bar' }
+      ok zipCompare [{ foo: 'bar' }], [{ foo: 'bar' }], (a, b) -> a.foo is b.foo
 
   describe 'Object ops', ->
     it 'mapWithKey', ->
