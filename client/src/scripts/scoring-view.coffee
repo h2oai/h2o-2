@@ -291,11 +291,14 @@ Steam.ScoringView = (_, _scoring) ->
 
       toggleAdvancedParameters = ($element) ->
         isHidden = yes
-        $('#toggle-advanced-parameters', $element).click ->
+        $toggleLink = $ '#toggle-advanced-parameters', $element
+        $toggleLink.click ->
           if isHidden
             $('.y-expert', $element).show()
+            $toggleLink.text 'Show less'
           else
             $('.y-expert', $element).hide()
+            $toggleLink.text 'Show more'
 
           isHidden = not isHidden
           return
