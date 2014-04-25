@@ -3,7 +3,7 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
 import h2o_glm, h2o_gbm, h2o_rf # TODO: DeepLearning
 
-class Basic(unittest.TestCase):
+class ModelManagementTestCase(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
 
@@ -22,44 +22,12 @@ class Basic(unittest.TestCase):
         
         # USE FVec!
         h2o.beta_features = True
-        Basic.import_frames()
+        ModelManagementTestCase.import_frames()
 
     @classmethod
     def tearDownClass(cls):
         if h2o.clone_cloud_json is None:
             h2o.tear_down_cloud()
-
-    def followPath(self, d, path_elems):
-        for path_elem in path_elems:
-            if "" != path_elem:
-                idx = -1
-                if path_elem.endswith("]"):
-                    idx = int(path_elem[path_elem.find("[") + 1:path_elem.find("]")])
-                    path_elem = path_elem[:path_elem.find("[")]
-                assert path_elem in d, "Failed to find key: " + path_elem + " in dict: " + repr(d)
-
-                if -1 == idx:
-                    d = d[path_elem]
-                else:
-                    print 'path_elem', path_elem
-                    print 'idx', idx
-                    d = d[path_elem][idx]
-        
-        return d
-
-    def assertKeysExist(self, d, path, keys):
-        path_elems = path.split("/")
-
-        d = self.followPath(d, path_elems)
-        for key in keys:
-            assert key in d, "Failed to find key: " + key + " in dict: " + repr(d)
-
-    def assertKeysDontExist(self, d, path, keys):
-        path_elems = path.split("/")
-
-        d = self.followPath(d, path_elems)
-        for key in keys:
-            assert key not in d, "Unexpectedly found key: " + key + " in dict: " + repr(d)
 
 
     prostate_hex = None
@@ -96,16 +64,15 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def import_frames(cls):
-        Basic.prostate_hex = Basic.import_frame('prostate.hex', 'smalldata', 'prostate.csv', 'logreg', 380, 9)
-        Basic.airlines_train_hex = Basic.import_frame('airlines_train.hex', 'smalldata', 'AirlinesTrain.csv.zip', 'airlines', 24421, 12)
-        Basic.airlines_test_hex = Basic.import_frame('airlines_test.hex', 'smalldata', 'AirlinesTest.csv.zip', 'airlines', 2691, 12)
+        ModelManagementTestCase.prostate_hex = ModelManagementTestCase.import_frame('prostate.hex', 'smalldata', 'prostate.csv', 'logreg', 380, 9)
+        ModelManagementTestCase.airlines_train_hex = ModelManagementTestCase.import_frame('airlines_train.hex', 'smalldata', 'AirlinesTrain.csv.zip', 'airlines', 24421, 12)
+        ModelManagementTestCase.airlines_test_hex = ModelManagementTestCase.import_frame('airlines_test.hex', 'smalldata', 'AirlinesTest.csv.zip', 'airlines', 2691, 12)
         
+    def create_models(self):
 
-    # this is my test!
-    def test_binary_classifiers(self):
-        self.assertIsNotNone(Basic.prostate_hex)
-        self.assertIsNotNone(Basic.airlines_train_hex)
-        self.assertIsNotNone(Basic.airlines_test_hex)
+        self.assertIsNotNone(ModelManagementTestCase.prostate_hex)
+        self.assertIsNotNone(ModelManagementTestCase.airlines_train_hex)
+        self.assertIsNotNone(ModelManagementTestCase.airlines_test_hex)
 
         node = h2o.nodes[0]
         timeoutSecs = 200
@@ -124,7 +91,7 @@ class Basic(unittest.TestCase):
             'lambda': 1.0e-2, 
             'n_folds': 0
         }
-        glm_AirlinesTrain_1 = node.GLM(Basic.airlines_train_hex, timeoutSecs, retryDelaySecs, **glm_AirlinesTrain_1_params)
+        glm_AirlinesTrain_1 = node.GLM(ModelManagementTestCase.airlines_train_hex, timeoutSecs, retryDelaySecs, **glm_AirlinesTrain_1_params)
         h2o_glm.simpleCheckGLM(self, glm_AirlinesTrain_1, None, **glm_AirlinesTrain_1_params)
 
 
@@ -140,7 +107,7 @@ class Basic(unittest.TestCase):
             'classification': 1
             # TODO: what about minobsinnode and shrinkage?!
         }
-        gbm_AirlinesTrain_1 = node.gbm(Basic.airlines_train_hex, timeoutSecs, retryDelaySecs, **gbm_AirlinesTrain_1_params)
+        gbm_AirlinesTrain_1 = node.gbm(ModelManagementTestCase.airlines_train_hex, timeoutSecs, retryDelaySecs, **gbm_AirlinesTrain_1_params)
 
 
         print "#####################################################################"
@@ -155,7 +122,7 @@ class Basic(unittest.TestCase):
             'classification': 1
             # TODO: what about minobsinnode and shrinkage?!
         }
-        gbm_AirlinesTrain_2 = node.gbm(Basic.airlines_train_hex, timeoutSecs, retryDelaySecs, **gbm_AirlinesTrain_2_params)
+        gbm_AirlinesTrain_2 = node.gbm(ModelManagementTestCase.airlines_train_hex, timeoutSecs, retryDelaySecs, **gbm_AirlinesTrain_2_params)
 
 
         print "####################################################################"
@@ -169,7 +136,7 @@ class Basic(unittest.TestCase):
             'max_depth': 2,
             'classification': 1
         }
-        rf_AirlinesTrain_1 = node.random_forest(Basic.airlines_train_hex, timeoutSecs, retryDelaySecs, **rf_AirlinesTrain_1_params)
+        rf_AirlinesTrain_1 = node.random_forest(ModelManagementTestCase.airlines_train_hex, timeoutSecs, retryDelaySecs, **rf_AirlinesTrain_1_params)
 
 
         print "#####################################################################"
@@ -183,7 +150,7 @@ class Basic(unittest.TestCase):
             'max_depth': 10,
             'classification': 1
         }
-        rf_AirlinesTrain_2 = node.random_forest(Basic.airlines_train_hex, timeoutSecs, retryDelaySecs, **rf_AirlinesTrain_2_params)
+        rf_AirlinesTrain_2 = node.random_forest(ModelManagementTestCase.airlines_train_hex, timeoutSecs, retryDelaySecs, **rf_AirlinesTrain_2_params)
 
 
         print "######################################################################"
@@ -196,7 +163,7 @@ class Basic(unittest.TestCase):
             'hidden': [10, 10],
             'classification': 1
         }
-        dl_AirlinesTrain_1 = node.deep_learning(Basic.airlines_train_hex, timeoutSecs, retryDelaySecs, **dl_AirlinesTrain_1_params)
+        dl_AirlinesTrain_1 = node.deep_learning(ModelManagementTestCase.airlines_train_hex, timeoutSecs, retryDelaySecs, **dl_AirlinesTrain_1_params)
 
 
         print "##############################################################################################"
@@ -212,7 +179,7 @@ class Basic(unittest.TestCase):
             'lambda': 1.0e-2, 
             'n_folds': 0
         }
-        glm_AirlinesTrain_A = node.GLM(Basic.airlines_train_hex, timeoutSecs, retryDelaySecs, **glm_AirlinesTrain_A_params)
+        glm_AirlinesTrain_A = node.GLM(ModelManagementTestCase.airlines_train_hex, timeoutSecs, retryDelaySecs, **glm_AirlinesTrain_A_params)
         h2o_glm.simpleCheckGLM(self, glm_AirlinesTrain_A, None, **glm_AirlinesTrain_A_params)
 
 
@@ -227,7 +194,7 @@ class Basic(unittest.TestCase):
             'alpha': 0.5, 
             'n_folds': 0
         }
-        glm_Prostate_1 = node.GLM(Basic.prostate_hex, timeoutSecs, retryDelaySecs, **glm_Prostate_1_params)
+        glm_Prostate_1 = node.GLM(ModelManagementTestCase.prostate_hex, timeoutSecs, retryDelaySecs, **glm_Prostate_1_params)
         h2o_glm.simpleCheckGLM(self, glm_Prostate_1, None, **glm_Prostate_1_params)
 
 
@@ -242,7 +209,7 @@ class Basic(unittest.TestCase):
             'max_depth': 5,
             'classification': 1
         }
-        rf_Prostate_1 = node.random_forest(Basic.prostate_hex, timeoutSecs, retryDelaySecs, **rf_Prostate_1_params)
+        rf_Prostate_1 = node.random_forest(ModelManagementTestCase.prostate_hex, timeoutSecs, retryDelaySecs, **rf_Prostate_1_params)
 
 
         print "##############################################"
@@ -256,9 +223,53 @@ class Basic(unittest.TestCase):
             'alpha': 0.5, 
             'n_folds': 0
         }
-        glm_Prostate_regression_1 = node.GLM(Basic.prostate_hex, timeoutSecs, retryDelaySecs, **glm_Prostate_regression_1_params)
+        glm_Prostate_regression_1 = node.GLM(ModelManagementTestCase.prostate_hex, timeoutSecs, retryDelaySecs, **glm_Prostate_regression_1_params)
         h2o_glm.simpleCheckGLM(self, glm_Prostate_regression_1, None, **glm_Prostate_regression_1_params)
 
+
+
+
+class ApiTestCase(ModelManagementTestCase):
+
+    def followPath(self, d, path_elems):
+        for path_elem in path_elems:
+            if "" != path_elem:
+                idx = -1
+                if path_elem.endswith("]"):
+                    idx = int(path_elem[path_elem.find("[") + 1:path_elem.find("]")])
+                    path_elem = path_elem[:path_elem.find("[")]
+                assert path_elem in d, "Failed to find key: " + path_elem + " in dict: " + repr(d)
+
+                if -1 == idx:
+                    d = d[path_elem]
+                else:
+                    print 'path_elem', path_elem
+                    print 'idx', idx
+                    d = d[path_elem][idx]
+        
+        return d
+
+    def assertKeysExist(self, d, path, keys):
+        path_elems = path.split("/")
+
+        d = self.followPath(d, path_elems)
+        for key in keys:
+            assert key in d, "Failed to find key: " + key + " in dict: " + repr(d)
+
+    def assertKeysDontExist(self, d, path, keys):
+        path_elems = path.split("/")
+
+        d = self.followPath(d, path_elems)
+        for key in keys:
+            assert key not in d, "Unexpectedly found key: " + key + " in dict: " + repr(d)
+
+
+    # this is my test!
+    def test_binary_classifiers(self):
+
+        self.create_models()
+
+        node = h2o.nodes[0]
 
         print "##############################################"
         print "Testing /2/Frames with various options. . ."
@@ -389,6 +400,11 @@ class Basic(unittest.TestCase):
             if model_category is 'Regression':
                 self.assertKeysDontExist(scoring_result, 'metrics[0]', ['cm', 'auc']) # TODO: HitRatio
 
+class SteamTestCase(ModelManagementTestCase):
+    def test_steam(self):
+
+        print "UI tests not implemented. Coming soon!"
+        return
 
 if __name__ == '__main__':
     h2o.unit_main()
