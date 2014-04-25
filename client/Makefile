@@ -117,9 +117,9 @@ LIB_TEST_JS=\
 LIB_TEST_CSS=\
 	$(MODULES)/mocha/mocha.css
 
-all: setup build
+default: build
 
-build: \
+really_build: \
 	$(DEPLOY)/index.html \
 	$(DEPLOY)/fonts/glyphicons-halflings-regular.eot \
 	$(DEPLOY)/fonts/glyphicons-halflings-regular.svg \
@@ -147,6 +147,9 @@ build: \
 	$(DEPLOY)/css/steam.css \
 	$(DEPLOY)/js/lib.js \
 	$(DEPLOY)/js/steam.js
+
+build: setup
+	$(MAKE) really_build
 
 unit: \
 	$(DEPLOY)/lib.test.css \
