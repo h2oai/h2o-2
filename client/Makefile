@@ -225,7 +225,7 @@ smoke: node
 
 test: node
 	$(BIN)/mocha \
-		--reporter dot \
+		--reporter min \
 		--check-leaks \
 		$(DIST)/steam.node.js
 
