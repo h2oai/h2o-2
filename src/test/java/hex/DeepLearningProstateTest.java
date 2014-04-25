@@ -24,7 +24,9 @@ public class DeepLearningProstateTest extends TestUtil {
     stall_till_cloudsize(JUnitRunnerDebug.NODES);
   }
 
-  @Test public void run() {
+  public void runFraction(float fraction) {
+    long seed = 0xDECAF;
+    Random rng = new Random(seed);
     String[] datasets = new String[2];
     int[][] responses = new int[datasets.length][];
     datasets[0] = "smalldata/./logreg/prostate.csv"; responses[0] = new int[]{1,2,8};
@@ -43,11 +45,11 @@ public class DeepLearningProstateTest extends TestUtil {
               false,
       }) {
         for (boolean load_balance : new boolean[]{
-//                true,
+                true,
                 false,
         }) {
           for (boolean shuffle : new boolean[]{
-//                true,
+                  true,
                   false,
           }) {
             for (boolean balance_classes : new boolean[]{
@@ -57,15 +59,15 @@ public class DeepLearningProstateTest extends TestUtil {
               for (int resp : responses[i]) {
                 for (DeepLearning.ClassSamplingMethod csm : new DeepLearning.ClassSamplingMethod[] {
                         DeepLearning.ClassSamplingMethod.Stratified,
-//                        DeepLearning.ClassSamplingMethod.Uniform
+                        DeepLearning.ClassSamplingMethod.Uniform
                 }) {
                   for (int scoretraining : new int[]{
                           200,
-//                      0,
+                          0,
                   }) {
                     for (int scorevalidation : new int[]{
                             200,
-//                        0,
+                            0,
                     }) {
                       for (int vf : new int[]{
                               0,  //no validation
@@ -73,6 +75,7 @@ public class DeepLearningProstateTest extends TestUtil {
                               -1, //different validation frame
                       }) {
                         count++;
+                        if (fraction < rng.nextFloat()) continue;
                         Log.info("**************************)");
                         Log.info("Starting test #" + count);
                         Log.info("**************************)");
@@ -84,12 +87,11 @@ public class DeepLearningProstateTest extends TestUtil {
 
                         // build the model, with all kinds of shuffling/rebalancing/sampling
                         {
-                          final long seed = new Random().nextLong();
                           Log.info("Using seed: " + seed);
                           DeepLearning p = new DeepLearning();
-                          p.epochs = 1.0 + new Random(seed).nextDouble();
+                          p.epochs = 1.0 + rng.nextDouble();
                           p.source = frame;
-                          p.hidden = new int[]{1+new Random(seed).nextInt(4), 1+new Random(seed).nextInt(6)};
+                          p.hidden = new int[]{1+rng.nextInt(4), 1+rng.nextInt(6)};
                           p.response = frame.vecs()[resp];
                           if (i == 0 && resp == 2) p.classification = false;
                           p.destination_key = dest;
@@ -145,7 +147,7 @@ public class DeepLearningProstateTest extends TestUtil {
                             Assert.assertEquals(new ConfusionMatrix(auc.cm()).err(), error, 1e-15);
 
                             // check that calcError() is consistent as well (for CM=null, AUC!=null)
-                            Assert.assertEquals(mymodel.calcError(valid, pred, pred, "training", false, null, auc, null), error, 1e-15);
+                            Assert.assertEquals(mymodel.calcError(valid, valid.lastVec(), pred, pred, "training", false, 0, null, auc, null), error, 1e-15);
                           }
 
                           // Compute CM
@@ -214,6 +216,7 @@ public class DeepLearningProstateTest extends TestUtil {
                         } //classifier
                         mymodel.delete();
                         UKV.remove(dest);
+                        Log.info("Parameters combination " + count + ": PASS");
                       }
                     }
                   }
@@ -226,6 +229,13 @@ public class DeepLearningProstateTest extends TestUtil {
       frame.delete();
       vframe.delete();
     }
-    Log.info("Tested " + count + " parameter combinations.");
+  }
+
+  public static class Long extends DeepLearningProstateTest {
+    @Test public void run() throws Exception { runFraction(1.0f); }
+  }
+
+  public static class Short extends DeepLearningProstateTest {
+    @Test public void run() throws Exception { runFraction(0.01f); }
   }
 }
