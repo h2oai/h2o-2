@@ -211,7 +211,8 @@ public class CMTask extends MRTask2<CMTask> {
       for (int v : votes[r]) {
         float s;
         if (v_sum == 0) {
-          s = (actual[r] == pred[r] ? 1.f : 0.f);
+          s = 1.f / _N;
+          s -= (actual[r] == pred[r] ? 1.f : 0.f);
         } else {
           s = ((float) v / (float) v_sum) - (actual[r] == pred[r] ? 1.f : 0.f);
         }
