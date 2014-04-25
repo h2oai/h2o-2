@@ -35,7 +35,7 @@ class Basic(unittest.TestCase):
         for path_elem in path_elems:
             if "" != path_elem:
                 assert path_elem in d, "Failed to find key: " + path + " in dict: " + repr(d)
-                d = d[path]
+                d = d[path_elem]
         
         for key in keys:
             assert key in d, "Failed to find key: " + key + " in dict: " + repr(d)
@@ -46,7 +46,7 @@ class Basic(unittest.TestCase):
         for path_elem in path_elems:
             if "" != path_elem:
                 assert path_elem in d, "Unexpectedly failed to find key: " + path + " in dict: " + repr(d)
-                d = d[path]
+                d = d[path_elem]
         
         for key in keys:
             assert key not in d, "Unexpectedly found key: " + key + " in dict: " + repr(d)
@@ -336,15 +336,15 @@ class Basic(unittest.TestCase):
             compatible_frames = models['models'][model_key]['compatible_frames']
 
             for frame_key in compatible_frames:
-                print "Scoring: /2/Models?key=" + frame_key + "&score_model=" + model_key
+                print "Scoring: /2/Models?key=" + model_key + "&score_frame=" + frame_key
                 scoring_result = node.models(key=model_key, score_frame=frame_key)
 
                 self.assertKeysExist(scoring_result, '', ['metrics'])
-                self.assertKeysExist(scoring_result, 'metrics', ['model_category'])
-                model_category = scoring_result['metrics']['model_category']
-                self.assertKeysExist(scoring_result, 'metrics', ['model', 'frame', 'duration_in_ms', 'error'])
-                self.assertEqual(scoring_result['metrics']['model'], model_key, "Expected model key: " + model_key + " but got: " + scoring_result['metrics']['model'])
-                self.assertEqual(scoring_result['metrics']['frame'], frame_key, "Expected frame key: " + frame_key + " but got: " + scoring_result['metrics']['frame'])
+                self.assertKeysExist(scoring_result, 'metrics', ['model', 'frame', 'duration_in_ms', 'error_measure'])
+                self.assertKeysExist(scoring_result, 'metrics/model', ['key', 'model_category', 'uuid', 'creation_epoch_time_millis'])
+                model_category = scoring_result['metrics']['model']['model_category']
+                self.assertEqual(scoring_result['metrics']['model']['key'], model_key, "Expected model key: " + model_key + " but got: " + scoring_result['metrics']['model']['key'])
+                self.assertEqual(scoring_result['metrics']['frame']['key'], frame_key, "Expected frame key: " + frame_key + " but got: " + scoring_result['metrics']['frame']['key'])
                 if model_category is 'Binomial':
                     self.assertKeysExist(scoring_result, 'metrics', ['cm', 'auc']) # TODO: HitRatio
                 # TODO: look inside the auc and cm elements
@@ -370,9 +370,9 @@ class Basic(unittest.TestCase):
             self.assertKeysExist(scoring_result, '', ['metrics'])
             self.assertKeysExist(scoring_result, 'metrics', ['model_category'])
             model_category = scoring_result['metrics']['model_category']
-            self.assertKeysExist(scoring_result, 'metrics', ['model', 'frame', 'duration_in_ms', 'error'])
-            self.assertEqual(scoring_result['metrics']['model'], model_key, "Expected model key: " + model_key + " but got: " + scoring_result['metrics']['model'])
-            self.assertEqual(scoring_result['metrics']['frame'], 'prostate.hex', "Expected frame key: " + 'prostate.hex' + " but got: " + scoring_result['metrics']['frame'])
+            self.assertKeysExist(scoring_result, 'metrics', ['model', 'frame', 'duration_in_ms', 'error_measure'])
+            self.assertEqual(scoring_result['metrics']['model']['key'], model_key, "Expected model key: " + model_key + " but got: " + scoring_result['metrics']['model']['key'])
+            self.assertEqual(scoring_result['metrics']['frame']['key'], 'prostate.hex', "Expected frame key: " + 'prostate.hex' + " but got: " + scoring_result['metrics']['frame']['key'])
             if model_category is 'Binomial':
                 self.assertKeysExist(scoring_result, 'metrics', ['cm', 'auc']) # TODO: HitRatio
             # TODO: look inside the auc and cm elements
