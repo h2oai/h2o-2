@@ -1,5 +1,6 @@
 Steam.ModelView = (_, _model) ->
   _compatibleFrames = node$ ''
+  _compatibleFramesCount = node$ ''
 
   initialize = (model) ->
     _.requestModelAndCompatibleFrames model.key, (error, data) ->
@@ -7,7 +8,10 @@ Steam.ModelView = (_, _model) ->
         #TODO handle errors
       else
         #TODO typecheck
-        _compatibleFrames createCompatibleFramesSection (head data.models).compatible_frames
+        unless isEmpty data.models
+          aModel = head data.models
+          _compatibleFrames createCompatibleFramesSection aModel.compatible_frames
+          _compatibleFramesCount "(#{aModel.compatible_frames.length})"
 
   stringify = (value) ->
     if isArray value
@@ -85,7 +89,9 @@ Steam.ModelView = (_, _model) ->
   summary: createSummarySection _model
   parameters: createParametersSection _model
   inputColumns: createInputColumnsSection _model
+  inputColumnsCount: "(#{_model.input_column_names.length})"
   compatibleFrames: _compatibleFrames
+  compatibleFramesCount: _compatibleFramesCount
   loadCompatibleFrames: loadCompatibleFrames
   dispose: ->
   template: 'model-view'
