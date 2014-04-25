@@ -1,16 +1,27 @@
 package hex.drf;
 
 import hex.drf.DRF.DRFModel;
-
-import java.util.Arrays;
-
-import org.junit.*;
-
-import water.*;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import water.Key;
+import water.TestUtil;
+import water.UKV;
+import water.api.DRFModelView;
 import water.fvec.Frame;
 import water.fvec.Vec;
 
+import java.util.Arrays;
+
 public class DRFTest extends TestUtil {
+
+  private final void testHTML(DRF.DRFModel m) {
+    StringBuilder sb = new StringBuilder();
+    DRFModelView drfv = new DRFModelView();
+    drfv.drf_model = m;
+    drfv.toHTML(sb);
+    assert(sb.length() > 0);
+  }
 
   @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
@@ -188,6 +199,7 @@ public class DRFTest extends TestUtil {
       drf.invoke();
       // Get the model
       model = UKV.get(drf.dest());
+      testHTML(model);
       // And compare CMs
       assertCM(expCM, model.cms[model.cms.length-1]._arr);
       Assert.assertEquals("Number of trees differs!", ntree, model.errs.length-1);

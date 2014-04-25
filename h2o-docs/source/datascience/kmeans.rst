@@ -1,7 +1,7 @@
 .. _KMmath:
 
 K-Means
--------
+===========
 
 K-Means falls in the general category of clustering algorithms. 
 
@@ -27,6 +27,10 @@ Defining a K-Means model
   
   The .hex key associated with the data set for use in clustering.
 
+<<<<<<< HEAD
+=======
+**Ignored Columns:**
+>>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
 
 **K**
 
@@ -72,6 +76,10 @@ Defining a K-Means model
   each instance of H\ :sub:`2`\ O, allowing the user to create models with the
   same starting conditions in alternative configurations.
 
+<<<<<<< HEAD
+=======
+**Max Iter** 
+>>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
 
 **Normalize:** 
 

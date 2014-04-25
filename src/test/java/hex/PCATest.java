@@ -1,18 +1,32 @@
 package hex;
 
-import java.io.File;
-import java.util.concurrent.ExecutionException;
-
-import org.junit.*;
-
+import hex.pca.PCA;
+import hex.pca.PCAModel;
+import hex.pca.PCAModelView;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
 import water.*;
 import water.deploy.Node;
 import water.deploy.NodeVM;
-import water.fvec.*;
-import hex.pca.*;
+import water.fvec.FVecTest;
+import water.fvec.Frame;
+import water.fvec.NFSFileVec;
+import water.fvec.ParseDataset2;
+
+import java.io.File;
+import java.util.concurrent.ExecutionException;
 
 public class PCATest extends TestUtil {
   public final double threshold = 0.000001;
+
+  private final void testHTML(PCAModel m) {
+    StringBuilder sb = new StringBuilder();
+    PCAModelView pcav = new PCAModelView();
+    pcav.pca_model = m;
+    pcav.toHTML(sb);
+    assert(sb.length() > 0);
+  }
 
   @BeforeClass public static void stall() { stall_till_cloudsize(3); }
 
@@ -57,7 +71,7 @@ public class PCATest extends TestUtil {
     Key kpca = Key.make("basicdata.pca");
     new PCA("PCA on basic small dataset", kpca, fr, 0.0, standardize).invoke();
     model = DKV.get(kpca).get();
-
+    testHTML(model);
     } finally {
       if( fr    != null ) fr   .delete();
       if( model != null ) model.delete();
@@ -78,6 +92,7 @@ public class PCATest extends TestUtil {
       Key kpca = Key.make("depdata.pca");
       new PCA("PCA on data with dependent cols", kpca, fr, 0.0, true).invoke();
       model = DKV.get(kpca).get();
+      testHTML(model);
 
       for(int i = 0; i < model.sdev().length; i++)
         Assert.assertEquals(sdev_R[i], model.sdev()[i], threshold);
@@ -106,6 +121,7 @@ public class PCATest extends TestUtil {
       Key kdst = Key.make("arrests.pca");
       new PCA("PCA test on USArrests", kdst, fr, tol, standardize).invoke();
       model = DKV.get(kdst).get();
+      testHTML(model);
 
       // Compare standard deviation and eigenvectors to R results
       checkSdev(sdev_R, model.sdev());

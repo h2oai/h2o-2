@@ -134,6 +134,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       Frame fr = new Frame(source._names.clone(), source.vecs().clone());
       if (ignored_cols != null) fr.remove(ignored_cols);
       final Vec[] vecs =  fr.vecs();
+
       // put response to the end (if not already)
       for(int i = 0; i < vecs.length-1; ++i) {
         if(vecs[i] == response){
@@ -154,6 +155,45 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         ArrayList<Integer> constantCols = new ArrayList<Integer>();
         ArrayList<Integer> NACols = new ArrayList<Integer>();
         for(int i = 0; i < vecs.length-1; ++i) {
+          // remove constant cols and cols with too many NAs
+          final boolean dropconstant = dropConstantCols && vecs[i].min() == vecs[i].max();
+          final boolean droptoomanyNAs = dropNACols && vecs[i].naCnt() > vecs[i].length()*0.1;
+          if(dropconstant) {
+            constantCols.add(i);
+          } else if (droptoomanyNAs) {
+            NACols.add(i);
+          }
+        }
+        constantOrNAs.addAll(constantCols);
+        constantOrNAs.addAll(NACols);
+
+        // Report what is dropped
+        String msg = "";
+        if (constantCols.size() > 0) msg += "Dropping constant column(s): ";
+        for (int i : constantCols) msg += fr._names[i] + " ";
+        if (NACols.size() > 0) msg += "Dropping column(s) with too many missing values: ";
+        for (int i : NACols) msg += fr._names[i] + " (" + String.format("%.2f", vecs[i].naCnt() * 100. / vecs[i].length()) + "%) ";
+        for (String s : msg.split("\n")) Log.info(s);
+      }
+      if(!constantOrNAs.isEmpty()){
+        int [] cols = new int[constantOrNAs.size()];
+        for(int i = 0; i < cols.length; ++i)
+          cols[i] = constantOrNAs.get(i);
+        fr.remove(cols);
+      }
+      return fr;
+    }
+
+    public static Frame prepareFrame(Frame source, int[] ignored_cols, boolean toEnum, boolean dropConstantCols, boolean dropNACols) {
+      Frame fr = new Frame(source._names.clone(), source.vecs().clone());
+      if (ignored_cols != null) fr.remove(ignored_cols);
+      final Vec[] vecs =  fr.vecs();
+
+      ArrayList<Integer> constantOrNAs = new ArrayList<Integer>();
+      {
+        ArrayList<Integer> constantCols = new ArrayList<Integer>();
+        ArrayList<Integer> NACols = new ArrayList<Integer>();
+        for(int i = 0; i < vecs.length; ++i) {
           // remove constant cols and cols with too many NAs
           final boolean dropconstant = dropConstantCols && vecs[i].min() == vecs[i].max();
           final boolean droptoomanyNAs = dropNACols && vecs[i].naCnt() > vecs[i].length()*0.2;
@@ -182,11 +222,18 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       }
       return fr;
     }
+
     public static Frame prepareFrame(Frame source, Vec response, int[] ignored_cols, boolean toEnum, boolean dropConstantCols) {
       return prepareFrame(source, response, ignored_cols, toEnum, dropConstantCols, false);
     }
+<<<<<<< HEAD
     public DataInfo(Frame fr, int nResponses, boolean standardize) {
       this(fr, nResponses, standardize, false);
+=======
+
+    public DataInfo(Frame fr, int nResponses, boolean useAllFactors, boolean standardize) {
+      this(fr, nResponses, useAllFactors, standardize, false);
+>>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
     }
     public DataInfo(Frame fr, int nResponses, boolean standardize, boolean standardize_response){
       _nfolds = _foldId = 0;
@@ -310,10 +357,20 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
 
     boolean contiguous = false;
     Random skip_rng = null; //random generator for skipping rows
-    if (_useFraction < 1.0) {
+
+    //Example:
+    // _useFraction = 0.8 -> 1 repeat with fraction = 0.8
+    // _useFraction = 1.0 -> 1 repeat with fraction = 1.0
+    // _useFraction = 1.1 -> 2 repeats with fraction = 0.55
+    // _useFraction = 2.1 -> 3 repeats with fraction = 0.7
+    // _useFraction = 3.0 -> 3 repeats with fraction = 1.0
+    final int repeats = (int)Math.ceil(_useFraction);
+    final float fraction = _useFraction / repeats;
+
+    if (fraction < 1.0) {
       skip_rng = water.util.Utils.getDeterRNG(new Random().nextLong());
       if (contiguous) {
-        final int howmany = (int)Math.ceil(_useFraction*nrows);
+        final int howmany = (int)Math.ceil(fraction*nrows);
         if (howmany > 0) {
           start = skip_rng.nextInt(nrows - howmany);
           end = start + howmany;
@@ -330,6 +387,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         shuf_map[i] = start + i;
       Utils.shuffleArray(shuf_map, new Random().nextLong());
     }
+<<<<<<< HEAD
     OUTER:
     for(int rr = start; rr < end; ++rr){
       final int r = shuf_map != null ? (int)shuf_map[rr-start] : rr;
@@ -350,12 +408,40 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       for(i = 0; i < _dinfo._responses; ++i) {
         response[i] = chunks[chunks.length-_dinfo._responses + i].at0(r);
         if (_dinfo._normRespMul != null) response[i] = (response[i] - _dinfo._normRespSub[i])*_dinfo._normRespMul[i];
+=======
+    for(int rrr = 0; rrr < repeats; ++rrr) {
+      OUTER:
+      for (int rr = start; rr < end; ++rr) {
+        final int r = shuf_map != null ? (int) shuf_map[rr - start] : rr;
+        if ((_dinfo._nfolds > 0 && (r % _dinfo._nfolds) == _dinfo._foldId)
+                || (skip_rng != null && skip_rng.nextFloat() > fraction)) continue;
+        for (Chunk c : chunks) if (c.isNA0(r)) continue OUTER; // skip rows with NAs!
+        int i = 0, ncats = 0;
+        for (; i < _dinfo._cats; ++i) {
+          int c = (int) chunks[i].at80(r);
+          if (_dinfo._useAllFactorLevels)
+            cats[ncats++] = c + _dinfo._catOffsets[i];
+          else if (c != 0)
+            cats[ncats++] = c + _dinfo._catOffsets[i] - 1;
+        }
+        final int n = chunks.length - _dinfo._responses;
+        for (; i < n; ++i) {
+          double d = chunks[i].at0(r);
+          if (_dinfo._normMul != null) d = (d - _dinfo._normSub[i - _dinfo._cats]) * _dinfo._normMul[i - _dinfo._cats];
+          nums[i - _dinfo._cats] = d;
+        }
+        for (i = 0; i < _dinfo._responses; ++i) {
+          response[i] = chunks[chunks.length - _dinfo._responses + i].at0(r);
+          if (_dinfo._normRespMul != null)
+            response[i] = (response[i] - _dinfo._normRespSub[i]) * _dinfo._normRespMul[i];
+        }
+        if (outputs != null && outputs.length > 0)
+          processRow(offset + r, nums, ncats, cats, response, outputs);
+        else
+          processRow(offset + r, nums, ncats, cats, response);
+>>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
       }
-      if(outputs != null && outputs.length > 0)
-        processRow(offset+r, nums, ncats, cats, response, outputs);
-      else
-        processRow(offset+r, nums, ncats, cats, response);
+      chunkDone();
     }
-    chunkDone();
   }
 }

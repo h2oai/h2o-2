@@ -53,7 +53,11 @@ Before modeling, parse data into H\ :sub:`2`\ O as follows:
    header. All other settings can be left in default. Press Submit. 
 
 
+<<<<<<< HEAD
 #. Parsing data into H\ :sub:`2`\ O generates a .hex key ("data name.hex")
+=======
+#. Parsing data into H\ :sub:`2`\ O generates a .hex key of the form  "data name.hex"
+>>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
  
 
 .. image:: GLMparse.png
@@ -80,6 +84,13 @@ Building a Model
 #. In the X field select the columns associated with Sex, Length,
    Diameter, Height, and Rings (all other columns). 
 
+<<<<<<< HEAD
+=======
+#. Leave **Classification** and **Max Iter** in default. Classification is
+   used when the dependent variable is a binomial classifier. Max iter
+   is used to define the maximum number of iterations to be carried
+   out by the algorithm in the event that it fails to converge. 
+>>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
 
 #. Specify the distribution family to be Gaussian. This automatically sets the link
    field to identity. 
@@ -89,6 +100,10 @@ Building a Model
    regularization of GLM models. To find detailed information on the
    specification of tuning parameters see :ref:`GLMmath`.
 
+<<<<<<< HEAD
+=======
+#. Specify **Family** to be *Gaussian*. 
+>>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
 
 #. Leave n-folds at 10. This will produce 10 cross-validation models.
 
@@ -98,6 +113,10 @@ Building a Model
    coefficients, the non-standardized coefficients, and standardized
    coefficients.  
 
+<<<<<<< HEAD
+=======
+#. Set **Lambda** equal to .002
+>>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
 
 .. image:: GLMrequest.png
    :width: 90%
@@ -125,7 +144,6 @@ of the GLM results page in red.
 Users should note that if they wish to replicate results between H\ :sub:`2`\ O
 and R, it is recommended that standardization and cross validation
 either be turned off in H\ :sub:`2`\ O. 
-
 
 .. image:: GLMoutput.png
    :width: 90%

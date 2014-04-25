@@ -103,6 +103,7 @@ h2o.__changeLogPath <- function(path, type) {
 
 .h2o.__PAGE_EXEC2 = "2/Exec2.json"
 .h2o.__PAGE_IMPORTFILES2 = "2/ImportFiles2.json"
+.h2o.__PAGE_EXPORTFILES = "2/ExportFiles.json"
 .h2o.__PAGE_INSPECT2 = "2/Inspect2.json"
 .h2o.__PAGE_PARSE2 = "2/Parse2.json"
 .h2o.__PAGE_PREDICT2 = "2/Predict.json"
@@ -115,6 +116,8 @@ h2o.__changeLogPath <- function(path, type) {
 .h2o.__PAGE_CONFUSION = "2/ConfusionMatrix.json"
 .h2o.__PAGE_AUC = "2/AUC.json"
 .h2o.__PAGE_HITRATIO = "2/HitRatio.json"
+.h2o.__PAGE_GAPSTAT = "2/GapStatistic.json"
+.h2o.__PAGE_GAPSTATVIEW = "2/GapStatisticModelView.json"
 .h2o.__PAGE_QUANTILES = "2/QuantilesPage.json"
 
 .h2o.__PAGE_DRF = "2/DRF.json"

@@ -40,7 +40,7 @@ public class H2ONode extends Iced implements Comparable {
     }
     public int htm_port() { return getPort()-1; }
     public int udp_port() { return getPort()  ; }
-    public String toString() { return getAddress()+":"+htm_port(); }
+    @Override public String toString() { return getAddress()+":"+htm_port(); }
     AutoBuffer write( AutoBuffer ab ) {
       return ab.put4(_ipv4).put2((char)udp_port());
     }
@@ -170,7 +170,7 @@ public class H2ONode extends Iced implements Comparable {
   }
 
   // Happy printable string
-  @Override public String toString() { return _key.toString (); }
+  @Override public String toString() { return _key.toString(); }
   @Override public int hashCode() { return _key.hashCode(); }
   @Override public boolean equals(Object o) { return _key.equals(o); }
   @Override public int compareTo( Object o) { return _key.compareTo(o); }
@@ -334,7 +334,7 @@ public class H2ONode extends Iced implements Comparable {
     // List of DTasks with results ready (and sent!), and awaiting an ACKACK.
     static DelayQueue<RPC.RPCCall> PENDING = new DelayQueue<RPC.RPCCall>();
     // Started by main() on a single thread, handle timing-out UDP packets
-    public void run() {
+    @Override public void run() {
       Thread.currentThread().setPriority(Thread.MAX_PRIORITY-1);
       while( true ) {
         RPC.RPCCall r;
@@ -358,5 +358,10 @@ public class H2ONode extends Iced implements Comparable {
   // This Node rebooted recently; we can quit tracking prior work history
   void rebooted() {
     _work.clear();
+  }
+
+  /** Returns run time for this node based on last heartbeat. */
+  public long runtime() {
+    return _heartbeat!=null ? _heartbeat._jvm_boot_msec==0 ? 0 : System.currentTimeMillis()-_heartbeat._jvm_boot_msec : -1;
   }
 }

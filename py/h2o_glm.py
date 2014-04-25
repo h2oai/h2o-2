@@ -152,26 +152,29 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
 
     if h2o.beta_features:
         # number of submodels = number of lambda
-        # min of 2. lambdaMax is first
+        # min of 2. lambda_max is first
         submodels = GLMModel['submodels']
         lambdas = GLMModel['lambdas']
         # since all our tests?? only use one lambda, the best_lamda_idx should = 1
         best_lambda_idx = GLMModel['best_lambda_idx']
-        lambdaMax = lambdas[0]
-        print "lambdaMax:", lambdaMax
+        print "best_lambda_idx:", best_lambda_idx
+        lambda_max = GLMModel['lambda_max']
+        print "lambda_max:", lambda_max
 
-        if 1==0:
-            if len(submodels) < 2:
-                raise Exception("Always should have a minimum of 2 submodels in GLM2 response", len(submodels))
-            if len(lambdas) < 2:
-                raise Exception("Always should have a minimum of 2 lambdas in GLM2 response", len(submodels))
-            if best_lambda_idx != 1:
-                raise Exception("best_lamda_idx %s should point to the one lamda we specified? %s" % (best_lamda_idx, lamdas[1]))
-            if lambdaMax <= lambdas[-1]:
-                raise Exception("lambdaMax %s should always be < the lambda result %s we're checking" % (lambdaMax, lambdas[1]))
+        # currently lambda_max is not set by tomas. ..i.e.not valid
+        if 1==0 and lambda_max <= lambdas[best_lambda_idx]:
+            raise Exception("lambda_max %s should always be > the lambda result %s we're checking" % (lambda_max, lambdas[best_lambda_idx]))
 
-        submodels0 = submodels[0]
-        submodels1 = submodels[-1] # hackery to make it work when there's just one
+        # submodels0 = submodels[0]
+        # submodels1 = submodels[-1] # hackery to make it work when there's just one
+
+        if (best_lambda_idx >= len(lambdas)) or (best_lambda_idx < 0):
+            raise Exception("best_lambda_idx: %s should point to one of lambdas (which has len %s)" % (best_lambda_idx, len(lambdas)))
+
+        if (best_lambda_idx >= len(submodels)) or (best_lambda_idx < 0):
+            raise Exception("best_lambda_idx: %s should point to one of submodels (which has len %s)" % (best_lambda_idx, len(submodels)))
+
+        submodels1 = submodels[best_lambda_idx] # hackery to make it work when there's just one
         iterations = submodels1['iteration']
 
     else:
@@ -216,11 +219,9 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
                     raise Exception(str(len(xval_models))+" cross validation models returned. Default should be 10")
 
     if h2o.beta_features:
-        print "GLMModel/validations"
-        validations['avg_err'] = h2o_util.cleanseInfNan(validations['avg_err'])
+        print "GLMModel/validations"        
         validations['null_deviance'] = h2o_util.cleanseInfNan(validations['null_deviance'])
-        validations['residual_deviance'] = h2o_util.cleanseInfNan(validations['residual_deviance'])
-        print "%15s %s" % ("avg_err:\t", validations['avg_err'])
+        validations['residual_deviance'] = h2o_util.cleanseInfNan(validations['residual_deviance'])        
         print "%15s %s" % ("null_deviance:\t", validations['null_deviance'])
         print "%15s %s" % ("residual_deviance:\t", validations['residual_deviance'])
 
@@ -238,14 +239,28 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
     if family=="binomial":
         print "%15s %s" % ("auc:\t", validations['auc'])
         if h2o.beta_features:
-            print "%15s %s" % ("best_threshold:\t", validations['best_threshold'])
-            # show the middle one? 
-            print "We're just going to print the middle '_cms' ..that must be threshold 0.5?. this isn't above best_threshold"
+            best_threshold = validations['best_threshold']
+            thresholds = validations['thresholds']
+            print "%15s %s" % ("best_threshold:\t", best_threshold)
+
+            # have to look up the index for the cm, from the thresholds list
+            best_index = None
+            for i,t in enumerate(thresholds):
+                if t == best_threshold:
+                    best_index = i
+                    break
+                
+            assert best_index!=None, "%s %s" % (best_threshold, thresholds)
+            print "Now printing the right 'best_threshold' %s from '_cms" % best_threshold
+
             # cm = glm['glm_model']['submodels'][0]['validation']['_cms'][-1]
-            cms = glm['glm_model']['submodels'][0]['validation']['_cms']
-            # rounds to int
-            mid = len(cms)/2
-            cm = cms[mid]
+            submodels = glm['glm_model']['submodels']
+            cms = submodels[0]['validation']['_cms']
+            assert best_index<len(cms), "%s %s" % (best_index, len(cms))
+            # if we want 0.5..rounds to int
+            # mid = len(cms)/2
+            # cm = cms[mid]
+            cm = cms[best_index]
 
             print "cm:", h2o.dump_json(cm['_arr'])
             predErr = cm['_predErr']

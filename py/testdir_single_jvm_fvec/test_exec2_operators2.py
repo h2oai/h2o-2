@@ -223,8 +223,15 @@ exprBigList = []
 for i in range(1000):
     # expr = ""
     # concatNum = random.randint(1,2)
+<<<<<<< HEAD
     expr = "crunk=function(x){99};"
     concatNum = random.randint(0,2)
+=======
+    # expr = "crunk=function(x){x+98};"
+    expr = ""
+    # expr = "function(x){x+98};"
+    concatNum = random.randint(1,3)
+>>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
     for j in range(concatNum):
         randExpr = random.choice(exprList)
         if DO_FORCE_LHS_ON_MULTI:

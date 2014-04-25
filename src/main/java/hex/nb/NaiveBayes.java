@@ -18,7 +18,11 @@ import water.util.Utils;
  * @author anqi_fu
  *
  */
+<<<<<<< HEAD
 public class NaiveBayes extends ModelJob {
+=======
+public class NaiveBayes extends Job.ModelJobWithoutClassificationField {
+>>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
   static final int API_WEAVER = 1;
   static public DocGen.FieldDoc[] DOC_FIELDS;
   static final String DOC_GET = "naive bayes";

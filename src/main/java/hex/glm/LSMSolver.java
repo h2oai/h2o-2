@@ -229,7 +229,12 @@ public abstract class LSMSolver extends Iced{
         gram.addDiag(_lambda*(1-_alpha) + _addedL2);
       double rho = _rho;
       if(_alpha > 0 && _lambda > 0){
+<<<<<<< HEAD
         if(Double.isNaN(_rho)) rho = _lambda*_alpha;//gram.diagMin()+1e-5;// find rho value as min diag element + constant
+=======
+        if(Double.isNaN(_rho)) rho = Math.max(1e-5,Math.max(_lambda*_alpha,gram.diagMin()));// find rho value as min diag element + constant
+        System.out.println("rho = " + rho);
+>>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
         gram.addDiag(rho);
       }
       if(_proximalPenalty > 0 && _wgiven != null){

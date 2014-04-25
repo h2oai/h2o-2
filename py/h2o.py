@@ -1000,6 +1000,8 @@ class H2O(object):
 
             raise Exception("Could not decode any json from the request. Do you have beta features turned on? beta_features: ", beta_features)
 
+        # TODO: we should really only look in the response object.  This check
+        # prevents us from having a field called "error" (e.g., for a scoring result).
         for e in ['error', 'Error', 'errors', 'Errors']:
             # error can be null (python None). This happens in exec2
             if e in rjson and rjson[e]:
@@ -1009,6 +1011,7 @@ class H2O(object):
                     # well, we print it..so not totally ignore. test can look at rjson returned
                     print emsg
                 else:
+                    print emsg
                     raise Exception(emsg)
 
         for w in ['warning', 'Warning', 'warnings', 'Warnings']:
@@ -1630,6 +1633,17 @@ class H2O(object):
     
         return a
 
+    def frame_split(self, timeoutSecs=120, **kwargs):
+        params_dict = {
+            'source': None,
+            'ratios': None,
+            }
+        browseAlso = kwargs.pop('browseAlso',False)
+        check_params_update_kwargs(params_dict, kwargs, 'frame_split', print_params=True)
+        a = self.__do_json_request('2/FrameSplitPage.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint("\nframe_split result:", dump_json(a))
+        return a
+
     # note ntree in kwargs can overwrite trees! (trees is legacy param)
     def random_forest(self, data_key, trees, 
         timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
@@ -1647,7 +1661,7 @@ class H2O(object):
                 'response': None,
                 'cols': None,
                 'ignored_cols_by_name': None,
-                'classification': None,
+                'classification': 1,
                 'validation': None,
                 'importance': 1, # enable variable importance by default
                 'ntrees': trees,
@@ -2337,7 +2351,8 @@ class H2O(object):
         check_params_update_kwargs(params_dict, kwargs, 'summary_page', print_params=True)
         a = self.__do_json_request('2/SummaryPage2.json' if (beta_features and not useVA) else 'SummaryPage.json', 
             timeout=timeoutSecs, params=params_dict)
-        verboseprint("\nsummary_page result:", dump_json(a))
+        # Too much stuff now!
+        # verboseprint("\nsummary_page result:", dump_json(a))
         
         # FIX!..not there yet for 2
         # if not beta_features:
@@ -2425,7 +2440,9 @@ class H2O(object):
                 # only GLMGrid has this..we should complain about it on GLM?
                 'parallelism': None,
                 'beta_eps': None,
-                'classification': None,
+                'higher_accuracy': None,
+                'use_all_factor_levels': None,
+                'lambda_search': None,
             } 
         else:
             params_dict = {
@@ -2448,6 +2465,7 @@ class H2O(object):
                 'lsm_solver': None,
                 'expert_settings': None,
                 'thresholds': None,
+                'prior': None, # new
                 # only GLMGrid has these..we should complain about it on GLM?
                 'parallelism': None,
                 'beta_eps': None,
@@ -2554,6 +2572,26 @@ class H2O(object):
             h2b.browseJsonHistoryAsUrlLastMatch('GLMScore')
             time.sleep(5)
         return a
+
+    def models(self, timeoutSecs=10, **kwargs):
+        params_dict = {
+            'key': None,
+            'find_compatible_frames': 0,
+            'score_frame': None
+        }
+        check_params_update_kwargs(params_dict, kwargs, 'models', True)
+        result = self.__do_json_request('2/Models', timeout=timeoutSecs, params=params_dict)
+        return result
+
+    def frames(self, timeoutSecs=10, **kwargs):
+        params_dict = {
+            'key': None,
+            'find_compatible_models': 0,
+            'score_model': None
+        }
+        check_params_update_kwargs(params_dict, kwargs, 'frames', True)
+        result = self.__do_json_request('2/Frames', timeout=timeoutSecs, params=params_dict)
+        return result
 
     def stabilize(self, test_func, error, timeoutSecs=10, retryDelaySecs=0.5):
         '''Repeatedly test a function waiting for it to return True.

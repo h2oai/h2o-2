@@ -127,15 +127,40 @@ public class KMeans extends Job {
       task._normalize = res._normalized;
       task.invoke(va._key);
 
-      for( int cluster = 0; cluster < clusters.length; cluster++ ) {
-        if( task._counts[cluster] > 0 ) {
-          for( int column = 0; column < cols.length - 1; column++ ) {
+      double[] betwnSqrs = new double[clusters.length];
+      double[] gm = new double[cols.length - 1];
+      int[] validMeans = new int[cols.length - 1];
+
+      for(int cluster = 0; cluster < clusters.length; cluster++) {
+        if(task._counts[cluster] > 0) {
+          for(int column = 0; column < cols.length - 1; column++) {
             double value = task._sums[cluster][column] / task._counts[cluster];
             clusters[cluster][column] = value;
+            gm[column] += value;
+            validMeans[column]++;
           }
         }
       }
+
+      for(int column = 0; column < cols.length - 1; column++) {
+        if(validMeans[column] != 0)
+          gm[column] /= validMeans[column];
+      }
+
+      for(int cluster = 0; cluster < clusters.length; cluster++) {
+        for(int column = 0; column < cols.length - 1; column++) {
+           double mean_delta = clusters[cluster][column] - gm[column];
+           betwnSqrs[cluster] += task._counts[cluster] * mean_delta * mean_delta;
+        }
+      }
+
+      double between_cluster_SS = 0.0;
+      for(int clu = 0; clu < betwnSqrs.length; clu++)
+          between_cluster_SS += betwnSqrs[clu];
+
+      res._between_cluster_SS = between_cluster_SS;
       res._error = task._error;
+      res._total_SS = res._error + res._between_cluster_SS;
       res._iteration++;
       res.update(self());
       if( res._iteration >= res._maxIter )

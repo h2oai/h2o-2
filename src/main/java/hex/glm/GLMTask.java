@@ -3,13 +3,19 @@ package hex.glm;
 import hex.FrameTask;
 import hex.glm.GLMParams.Family;
 import hex.gram.Gram;
+<<<<<<< HEAD
 import water.Job;
 import water.MemoryManager;
 import water.H2O.H2OCountedCompleter;
 import water.util.Utils;
+=======
+>>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
 
 import java.util.ArrayList;
-import java.util.Arrays;
+
+import water.H2O.H2OCountedCompleter;
+import water.*;
+import water.util.Utils;
 
 /**
  * Contains all GLM related tasks.
@@ -242,8 +248,12 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
         _grad = MemoryManager.malloc8d(_dinfo.fullN()+1); // + 1 is for intercept
     }
     @Override protected void chunkDone(){
+<<<<<<< HEAD
       _gram.mul(_reg);
       if(_val != null)_val.regularize(_reg);
+=======
+      if(_computeGram)_gram.mul(_reg);
+>>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
       for(int i = 0; i < _xy.length; ++i)
         _xy[i] *= _reg;
       _yy *= _reg;

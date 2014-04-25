@@ -17,6 +17,7 @@ import water.H2O.H2OCallback;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ModelJob;
 import water.api.DocGen;
+import water.api.ParamImportance;
 import water.fvec.Frame;
 import water.util.Log;
 import water.util.RString;
@@ -27,24 +28,35 @@ import java.util.Arrays;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class GLM2 extends ModelJob {
+public class GLM2 extends Job.ModelJobWithoutClassificationField {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   public static DocGen.FieldDoc[] DOC_FIELDS;
   public static final String DOC_GET = "GLM2";
   public final String _jobName;
+<<<<<<< HEAD
 //  private transient GLM2 [] _subjobs;
 //  private Key _parentjob;
   @API(help = "max-iterations", filter = Default.class, lmin=1, lmax=1000000, json=true)
   int max_iter = 100;
   @API(help = "Standardize numeric columns to have zero mean and unit variance.", filter = Default.class, json=true)
+=======
+
+  // API input parameters BEGIN ------------------------------------------------------------
+
+  @API(help = "max-iterations", filter = Default.class, lmin=1, lmax=1000000, json=true, importance = ParamImportance.CRITICAL)
+  int max_iter = 100;
+
+  @API(help = "Standardize numeric columns to have zero mean and unit variance.", filter = Default.class, json=true, importance = ParamImportance.CRITICAL)
+>>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
   boolean standardize = true;
 
-  @API(help = "validation folds", filter = Default.class, lmin=0, lmax=100, json=true)
+  @API(help = "validation folds", filter = Default.class, lmin=0, lmax=100, json=true, importance = ParamImportance.CRITICAL)
   int n_folds;
 
-  @API(help = "Family.", filter = Default.class, json=true)
+  @API(help = "Family.", filter = Default.class, json=true, importance = ParamImportance.CRITICAL)
   Family family = Family.gaussian;
 
+<<<<<<< HEAD
   private DataInfo _dinfo;
   public GLMParams _glm;
   @API(help = "", json=true)
@@ -52,12 +64,47 @@ public class GLM2 extends ModelJob {
   @API(help = "", json=true)
   private double _proximalPenalty;
   @API(help = "", json=true)
+=======
+  @API(help = "Tweedie variance power", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
+  double tweedie_variance_power;
+
+  @API(help = "distribution of regularization between L1 and L2.", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
+  double [] alpha = new double[]{0.5};
+
+  @API(help = "regularization strength", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
+  public double [] lambda = new double[]{1e-5};
+
+  @API(help = "beta_eps", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
+  double beta_epsilon = DEFAULT_BETA_EPS;
+
+  @API(help="use line search (slower speed, to be used if glm does not converge otherwise)",filter=Default.class)
+  boolean higher_accuracy;
+
+  @API(help="By default, first factor level is skipped from the possible set of predictors. Set this flag if you want use all of the levels. Needs sufficient regularization to solve!",filter=Default.class)
+  boolean use_all_factor_levels;
+
+  @API(help="use lambda search starting at lambda max, given lambda is then interpreted as lambda min",filter=Default.class)
+  boolean lambda_search;
+
+  // API input parameters END ------------------------------------------------------------
+
+  // API output parameters BEGIN ------------------------------------------------------------
+
+  @API(help = "", json=true, importance = ParamImportance.SECONDARY)
+  private double [] _wgiven;
+
+  @API(help = "", json=true, importance = ParamImportance.SECONDARY)
+  private double _proximalPenalty;
+
+  @API(help = "", json=true, importance = ParamImportance.SECONDARY)
+>>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
   private double [] _beta;
 
-  @API(help = "", json=true)
+  @API(help = "", json=true, importance = ParamImportance.SECONDARY)
   private boolean _runAllLambdas = true;
   private transient boolean _gen_enum; // True if we need to cleanup an enum response column at the end
 
+<<<<<<< HEAD
 //  @API(help = "Link.", filter = Default.class)
   @API(help = "", json=true)
   Link link = Link.identity;
@@ -70,6 +117,15 @@ public class GLM2 extends ModelJob {
   double [] alpha = new double[]{0.5};
 //  @API(help = "lambda", filter = RSeq2.class)
   @API(help = "lambda max", json=true)
+=======
+  @API(help = "", json=true, importance = ParamImportance.SECONDARY)
+  Link link = Link.identity;
+
+  @API(help = "Tweedie link power", json=true, importance = ParamImportance.SECONDARY)
+  double tweedie_link_power;
+
+  @API(help = "lambda max", json=true, importance = ParamImportance.SECONDARY)
+>>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
   double lambda_max;
   @API(help = "regularization strength", filter = Default.class, json=true)
   public double [] lambda = new double[]{1e-5};
@@ -109,7 +165,7 @@ public class GLM2 extends ModelJob {
   private transient IterationInfo _lastResult;
 
   @Override
-  protected JsonObject toJSON() {
+  public JsonObject toJSON() {
     JsonObject jo = super.toJSON();
     if (lambda == null) jo.addProperty("lambda", "automatic"); //better than not printing anything if lambda=null
     return jo;
@@ -429,7 +485,7 @@ public class GLM2 extends ModelJob {
             @Override public void callback(LMAXTask t){
               final double lmax = lambda_max = t.lmax();
               String [] warns = null;
-              if(lambda == null){
+              if(lambda == null || lambda_search){
                 lambda = new double[]{lmax,lmax*0.9,lmax*0.75,lmax*0.66,lmax*0.5,lmax*0.33,lmax*0.25,lmax*1e-1,lmax*1e-2,lmax*1e-3,lmax*1e-4,lmax*1e-5,lmax*1e-6,lmax*1e-7,lmax*1e-8}; // todo - make it a sequence of 100 lamdbas
                 _runAllLambdas = false;
               } else if(alpha[0] > 0) { // make sure we start with lambda max (and discard all lambda > lambda max)

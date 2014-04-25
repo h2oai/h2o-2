@@ -1,4 +1,7 @@
-H\ :sub:`2`\ O + R Console For Developers Using Git
+.. _Rforgit:
+
+
+H\ :sub:`2`\ O + R For Developers Using Git
 ------------------------------------------------------------------
 
 

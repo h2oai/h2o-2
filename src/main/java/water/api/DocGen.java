@@ -1,19 +1,18 @@
 package water.api;
 
+import hex.KMeans2;
+import hex.drf.DRF;
+import hex.gbm.GBM;
+import hex.glm.GLM2;
+
 import java.io.*;
 import java.lang.reflect.Field;
-import java.util.Arrays;
 import java.util.Properties;
 
 import water.*;
+import water.api.ParamImportance;
 import water.api.RequestArguments.Argument;
 import water.util.Log;
-
-import hex.drf.DRF;
-import hex.gbm.*;
-import hex.glm.*;
-import hex.glm.GLMParams.Family;
-import hex.KMeans2;
 
 /**
  * Auto-gen doc support, for JSON and REST API docs
@@ -63,9 +62,10 @@ public abstract class DocGen {
     final int _since, _until; // Min/Max supported-version numbers
     final Class _clazz; // Java type: subtypes of Argument are inputs, otherwise outputs
     final boolean _input, _required;
+    final ParamImportance _importance;
     RequestArguments.Argument _arg; // Lazily filled in, as docs are asked for.
-    public FieldDoc( String name, String help, int min, int max, Class C, boolean input, boolean required ) {
-      _name = name; _help = help; _since = min; _until = max; _clazz = C; _input = input; _required = required;
+    public FieldDoc( String name, String help, int min, int max, Class C, boolean input, boolean required, ParamImportance importance ) {
+      _name = name; _help = help; _since = min; _until = max; _clazz = C; _input = input; _required = required; _importance = importance;
     }
     @Override public String toString() {
       return "{"+_name+", from "+_since+" to "+_until+", "+_clazz.getSimpleName()+", "+_help+"}";
@@ -80,6 +80,10 @@ public abstract class DocGen {
       return _input;
     }
     public final boolean isJSON() { return !isInput(); }
+
+    public final ParamImportance importance() { return _importance; }
+
+    public final String name() { return _name; }
 
     // Specific accessors for input arguments.  Not valid for JSON output fields.
     private RequestArguments.Argument arg(Request R) {
@@ -150,6 +154,7 @@ public abstract class DocGen {
         Argument arg = doc.arg(R); // Legacy
         String help = doc._help;
         boolean required = doc._required;
+        ParamImportance importance = doc.importance();
         String[] errors = null;
         if(arg != null) {
           String description = arg.queryDescription();
@@ -159,7 +164,7 @@ public abstract class DocGen {
           errors = arg.errors();
         }
         listBullet(sb,
-                   bold(doc._name)+", a "+doc._clazz.getSimpleName(),
+                   bold(doc._name)+", a "+doc._clazz.getSimpleName()+", <i>"+importance.title+"</i>",
                    help+".  "+doc.version(), 0);
         if( errors != null || required ) {
           paragraph(sb,"");
@@ -212,7 +217,7 @@ public abstract class DocGen {
       if( doc.isJSON() ) {
         listBullet(sb,
                    bold(doc._name)+", a "+doc._clazz.getSimpleName(),
-                   doc._help+".  "+doc.version(),0);
+                   doc._help+".  "+doc.version()+", "+doc.importance().title,0);
         Class c = doc._clazz.getComponentType();
         if( c==null ) c = doc._clazz;
         if( Iced.class.isAssignableFrom(c) ) {

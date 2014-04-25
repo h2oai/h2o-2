@@ -1,7 +1,8 @@
 .. _GBMmath:
 
 Gradient Boosted Regression and Classification
-----------------------------------------------
+================================================
+
 Gradient boosted regression and gradient boosted classification are
 forward learning ensemble methods. The guiding principal is that good
 predictive results can be obtained through increasingly refined approximations. 
@@ -29,11 +30,18 @@ Defining a GBM Model
 
 **Classification**
 
+<<<<<<< HEAD
   A tic-box option that, when checked, treats the outcome variable as
   categorical, and when unchecked treats the outcome variable as
   continuous. If a continuious real variable has been defined for the
   Response, H\ :sub:`2`\ O will return an error if a classificaiton model is
   requested. 
+=======
+  An option that treats the outcome variable as categorical, and when 
+  unchecked treats the outcome variable as continuous. If a
+  continuous real variable has been defined for the response, H\
+  :sub:`2`\ O will return an error if a classification model is requested. 
+>>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
 
 **Validation** 
 
@@ -44,8 +52,8 @@ Defining a GBM Model
 
   The number of trees to be built. Models with different total numbers
   of trees can be specified by entering the different values as a
-  comma separated list. For example,to specify diffrent models with
-  200, 100 and 50 trees respectivly enter "200, 100, 50".
+  comma separated list. For example,to specify different models with
+  200, 100 and 50 trees respectively enter "200, 100, 50".
 
 **Validation**
 
@@ -93,7 +101,7 @@ Defining a GBM Model
 
   When multiple models are called for through the grid search options
   such as specification of multiple learning rates, selecting this
-  option will build the set of models in paralell rather than
+  option will build the set of models in parallel rather than
   sequentially.
 
 **Treatment of Factors**

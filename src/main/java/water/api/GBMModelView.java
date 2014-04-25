@@ -12,7 +12,7 @@ public class GBMModelView extends Request2 {
   class GBMModelKeyFilter extends H2OKey { public GBMModelKeyFilter() { super("model_key",true); } }
 
   @API(help="GBM Model")
-  GBMModel gbm_model;
+  public GBMModel gbm_model;
 
   public static String link(String txt, Key model) {
     return "<a href='GBMModelView.html?_modelKey=" + model + "'>" + txt + "</a>";

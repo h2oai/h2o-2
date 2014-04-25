@@ -46,8 +46,8 @@ public class DeepLearningModel extends Model {
   // return the most up-to-date model metrics
   Errors last_scored() { return errors[errors.length-1]; }
 
-  public final DeepLearning get_params() { return model_info.get_params(); }
-  public final Request2 job() { return get_params(); }
+  @Override public final DeepLearning get_params() { return model_info.get_params(); }
+  @Override public final Request2 job() { return get_params(); }
 
   // delete anything from the K-V store that's no longer needed after model building is over
   @Override public void delete() {
@@ -186,7 +186,7 @@ public class DeepLearningModel extends Model {
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
     @API(help="Input data info")
-    final private DataInfo data_info;
+    private DataInfo data_info;
     public DataInfo data_info() { return data_info; }
 
     // model is described by parameters and the following 2 arrays
@@ -202,7 +202,13 @@ public class DeepLearningModel extends Model {
     private Neurons.DenseVector[] biases_momenta;
 
     // helpers for AdaDelta
+<<<<<<< HEAD
     private float[][] ada;
+=======
+    private Neurons.DenseRowMatrix[] dense_row_ada_dx_g;
+    private Neurons.DenseColMatrix[] dense_col_ada_dx_g;
+    private Neurons.DenseVector[] biases_ada_dx_g;
+>>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
 
     // compute model size (number of model parameters required for making predictions)
     // momenta are not counted here, but they are needed for model building
@@ -221,7 +227,12 @@ public class DeepLearningModel extends Model {
     public final Neurons.DenseVector get_biases(int i) { return biases[i]; }
     public final Neurons.Matrix get_weights_momenta(int i) { return dense_row_weights_momenta[i] == null ? dense_col_weights_momenta[i] : dense_row_weights_momenta[i]; }
     public final Neurons.DenseVector get_biases_momenta(int i) { return biases_momenta[i]; }
+<<<<<<< HEAD
     public final float[] get_ada(int i) { return ada[i]; }
+=======
+    public final Neurons.Matrix get_ada_dx_g(int i) { return dense_row_ada_dx_g[i] == null ? dense_col_ada_dx_g[i] : dense_row_ada_dx_g[i]; }
+    public final Neurons.DenseVector get_biases_ada_dx_g(int i) { return biases_ada_dx_g[i]; }
+>>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
 
     @API(help = "Model parameters", json = true)
     final private DeepLearning parameters;
@@ -285,8 +296,12 @@ public class DeepLearningModel extends Model {
       dense_col_weights = new Neurons.DenseColMatrix[layers+1];
 
       // decide format of weight matrices row-major or col-major
+<<<<<<< HEAD
       boolean input_col_major = false;//FIXME: should be automatically tuned for whichever is faster
       if (input_col_major) dense_col_weights[0] = new Neurons.DenseColMatrix(units[1], units[0]);
+=======
+      if (params.col_major) dense_col_weights[0] = new Neurons.DenseColMatrix(units[1], units[0]);
+>>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
       else dense_row_weights[0] = new Neurons.DenseRowMatrix(units[1], units[0]);
       for (int i=1; i<=layers; ++i)
         dense_row_weights[i] = new Neurons.DenseRowMatrix(units[i+1] /*rows*/, units[i] /*cols*/);
@@ -318,6 +333,7 @@ public class DeepLearningModel extends Model {
         for (int i=0; i<biases_momenta.length; ++i) biases_momenta[i] = new Neurons.DenseVector(units[i+1]);
       }
       else if (adaDelta()) {
+<<<<<<< HEAD
         //AdaGrad
         if (ada != null) return;
         ada = new float[dense_row_weights.length][];
@@ -330,6 +346,23 @@ public class DeepLearningModel extends Model {
       if (_toDelete!=null) {
         assert(_toDelete == data_info._adaptedFrame.lastVec()._key);
         UKV.remove(_toDelete);
+=======
+        dense_row_ada_dx_g = new Neurons.DenseRowMatrix[dense_row_weights.length];
+        dense_col_ada_dx_g = new Neurons.DenseColMatrix[dense_col_weights.length];
+        //AdaGrad
+        if (dense_row_weights[0] != null) {
+          dense_row_ada_dx_g[0] = new Neurons.DenseRowMatrix(units[1], 2*units[0]);
+        } else {
+          dense_col_ada_dx_g[0] = new Neurons.DenseColMatrix(2*units[1], units[0]);
+        }
+        for (int i=1; i<dense_row_ada_dx_g.length; ++i) {
+          dense_row_ada_dx_g[i] = new Neurons.DenseRowMatrix(units[i+1], 2*units[i]);
+        }
+        biases_ada_dx_g = new Neurons.DenseVector[biases.length];
+        for (int i=0; i<biases_ada_dx_g.length; ++i) {
+          biases_ada_dx_g[i] = new Neurons.DenseVector(2*units[i+1]);
+        }
+>>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
       }
     }
 
@@ -427,7 +460,13 @@ public class DeepLearningModel extends Model {
       }
       if (adaDelta()) {
         assert(other.adaDelta());
+<<<<<<< HEAD
         Utils.add(ada, other.ada);
+=======
+        for (int i=0;i<dense_row_ada_dx_g.length;++i) {
+          Utils.add(get_ada_dx_g(i).raw(), other.get_ada_dx_g(i).raw());
+        }
+>>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
       }
       add_processed_local(other.get_processed_local());
     }
@@ -441,7 +480,13 @@ public class DeepLearningModel extends Model {
         for (Neurons.Vector bias_momenta : biases_momenta) Utils.div(bias_momenta.raw(), N);
       }
       if (adaDelta()) {
+<<<<<<< HEAD
         for (float[] dx2 : ada) Utils.div(dx2, N);
+=======
+        for (int i=0;i<dense_row_ada_dx_g.length;++i) {
+          Utils.div(get_ada_dx_g(i).raw(), N);
+        }
+>>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
       }
     }
     double uniformDist(Random rand, double min, double max) {
@@ -554,8 +599,13 @@ public class DeepLearningModel extends Model {
           if (rate != null) {
 //            final float RMS_dx = (float)Math.sqrt(ada[y-1][2*u]+(float)get_params().epsilon);
 //            final float invRMS_g = (float)(1/Math.sqrt(ada[y-1][2*u+1]+(float)get_params().epsilon));
+<<<<<<< HEAD
             final float RMS_dx = Utils.approxSqrt(ada[y-1][2*u]+(float)get_params().epsilon);
             final float invRMS_g = Utils.approxInvSqrt(ada[y-1][2*u+1]+(float)get_params().epsilon);
+=======
+            final float RMS_dx = Utils.approxSqrt(get_ada_dx_g(y-1).raw()[2*u]+(float)get_params().epsilon);
+            final float invRMS_g = Utils.approxInvSqrt(get_ada_dx_g(y-1).raw()[2*u+1]+(float)get_params().epsilon);
+>>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
             rate[y-1][u] = RMS_dx*invRMS_g; //not exactly right, RMS_dx should be from the previous time step -> but close enough for diagnostics.
             mean_rate[y] += rate[y-1][u];
           }
@@ -597,14 +647,17 @@ public class DeepLearningModel extends Model {
   /**
    * Constructor to restart from a checkpointed model
    * @param cp Checkpoint to restart from
-   * @param selfKey New destination key for the model
+   * @param destKey New destination key for the model
    * @param jobKey New job key (job which updates the model)
    */
-  public DeepLearningModel(DeepLearningModel cp, Key selfKey, Key jobKey) {
-    super(selfKey, cp._dataKey, cp.model_info().data_info()._adaptedFrame, cp._priorClassDist);
+  public DeepLearningModel(final DeepLearningModel cp, final Key destKey, final Key jobKey, final DataInfo dataInfo) {
+    super(destKey, cp._dataKey, dataInfo._adaptedFrame.names(), dataInfo._adaptedFrame.domains(), cp._priorClassDist);
     this.jobKey = jobKey;
-    model_info = (DeepLearningModelInfo)cp.model_info.clone();
-    get_params().destination_key = selfKey;
+    model_info = (DeepLearningModelInfo)cp.model_info.clone(); //this clones the parameters too
+    model_info.data_info = dataInfo; //replace previous data_info with updated version that's passed in (contains enum for classification)
+    assert(cp.get_params().classification == get_params().classification);
+    get_params().checkpoint = cp._key;
+    get_params().destination_key = destKey;
     get_params().job_key = jobKey;
     start_time = cp.start_time;
     run_time = cp.run_time;
@@ -615,9 +668,10 @@ public class DeepLearningModel extends Model {
     _timeLastScoreStart = 0;
     _timeLastScoreEnd = 0;
     _timeLastPrintStart = 0;
+    model_info().get_params().state = Job.JobState.RUNNING;
   }
 
-  public DeepLearningModel(Key selfKey, Key jobKey, Key dataKey, DataInfo dinfo, DeepLearning params, float[] priorDist) {
+  public DeepLearningModel(final Key selfKey, final Key jobKey, final Key dataKey, final DataInfo dinfo, final DeepLearning params, final float[] priorDist) {
     super(selfKey, dataKey, dinfo._adaptedFrame, priorDist);
     this.jobKey = jobKey;
     run_time = 0;
@@ -738,7 +792,11 @@ public class DeepLearningModel extends Model {
 
         // only keep confusion matrices for the last step if there are fewer than specified number of output classes
         if (err.train_confusion_matrix.cm != null
+<<<<<<< HEAD
                 && err.train_confusion_matrix.cm.length >= model_info().get_params().max_confusion_matrix_size) {
+=======
+                && err.train_confusion_matrix.cm.length-1 >= get_params().max_confusion_matrix_size) {
+>>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
           err.train_confusion_matrix = null;
           err.valid_confusion_matrix = null;
         }
@@ -768,6 +826,7 @@ public class DeepLearningModel extends Model {
         keep_running = false;
       }
       update(job_key);
+
 //    System.out.println(this);
       return keep_running;
     }
@@ -893,12 +952,12 @@ public class DeepLearningModel extends Model {
     job().toHTML(sb);
     final Key val_key = get_params().validation != null ? get_params().validation._key : null;
     sb.append("<div class='alert'>Actions: "
-            + (Job.isRunning(jobKey) ? "<i class=\"icon-stop\"></i>" + Cancel.link(jobKey, "Stop training") + ", " : "")
+            + (UKV.get(jobKey) != null && Job.isRunning(jobKey) ? "<i class=\"icon-stop\"></i>" + Cancel.link(jobKey, "Stop training") + ", " : "")
             + Inspect2.link("Inspect training data (" + _dataKey + ")", _dataKey) + ", "
             + (val_key != null ? (Inspect2.link("Inspect validation data (" + val_key + ")", val_key) + ", ") : "")
             + water.api.Predict.link(_key, "Score on dataset") + ", "
             + DeepLearning.link(_dataKey, "Compute new model", null, responseName(), val_key) + ", "
-            + (Job.isEnded(jobKey) ? "<i class=\"icon-play\"></i>" + DeepLearning.link(_dataKey, "Continue training this model", _key, responseName(), val_key) : "")
+            + (UKV.get(jobKey) != null && Job.isEnded(jobKey) ? "<i class=\"icon-play\"></i>" + DeepLearning.link(_dataKey, "Continue training this model", _key, responseName(), val_key) : "")
             + "</div>");
 
     DocGen.HTML.paragraph(sb, "Model Key: " + _key);
@@ -1002,8 +1061,13 @@ public class DeepLearningModel extends Model {
     DocGen.HTML.paragraph(sb, "Epochs: " + String.format("%.3f", epoch_counter) + " / " + String.format("%.3f", get_params().epochs));
     int cores = 0; for (H2ONode n : H2O.CLOUD._memary) cores += n._heartbeat._num_cpus;
     DocGen.HTML.paragraph(sb, "Number of compute nodes: " + (model_info.get_params().single_node_mode ? ("1 (" + H2O.NUMCPUS + " threads)") : (H2O.CLOUD.size() + " (" + cores + " threads)")));
+<<<<<<< HEAD
     DocGen.HTML.paragraph(sb, "Training samples per iteration: " + String.format("%,d", model_info.parameters.train_samples_per_iteration));
     final boolean isEnded = Job.isEnded(model_info().get_params().self());
+=======
+    DocGen.HTML.paragraph(sb, "Training samples per iteration: " + String.format("%,d", get_params().actual_train_samples_per_iteration));
+    final boolean isEnded = UKV.get(get_params().self()) != null && Job.isEnded(get_params().self());
+>>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
     final long time_so_far = isEnded ? run_time : run_time + System.currentTimeMillis() - _timeLastScoreEnter;
     if (time_so_far > 0) {
       DocGen.HTML.paragraph(sb, "Training speed: " + String.format("%,d", model_info().get_processed_total() * 1000 / time_so_far) + " samples/s");

@@ -277,6 +277,39 @@ exprListFull = [
     # "(0 ? + : *)(1,2)",        #  Trinary select
     # "(1? r.1 : (r.1+1))[1,2]",#  True (vs false) test
 
+<<<<<<< HEAD
+=======
+if DO_FUNCTION:
+    exprListFull += [
+        # what is this?
+        ### "function(=){x+1}(2)",
+        # doesn't work?
+        # "function(x,=){x+1}(2)",
+        # doesn't work
+        # "function(x,<-){x+1}(2)",
+        # doesn't work
+        # "function(x,x){x+1}(2)",
+        "function(x,y,z){x[]}(r.1,1,2)",
+        # doesn't work?
+        # "function(x){x[]}(2)",
+        "function(x){x+1}(2)",
+        # doesn't work
+        ## "function(x){y=x+y}(2)",
+        # doesn't work
+        ## "function(x,y){y=x+y}(2)",
+        # doesn't work
+        # "function(x){}(2)",
+        "function(x){y=x*2; y+1}(2)",
+        "function(x){y=1+2}(2)",
+        # doesn't work
+        # "function(a){a[];a=1}",
+        "a=1;a=2;function(x){x=a;a=3}",
+        "a=r.1;function(x){x=a;a=3;nrow(x)*a}(a)",
+        #  Higher-order function typing: fun is typed in the body of function(x)
+        "function(funy){function(x){funy(x)*funy(x)}}(sgn)(-2)",
+    ]
+
+>>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
 # concatenate a lot of random choices to make life harder
 if 1==0:
     exprList = []

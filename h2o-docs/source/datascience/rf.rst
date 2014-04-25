@@ -5,7 +5,7 @@ Random Forest (RF)
 RF is a powerful classification tool. When given a set of data, RF
 generates a forest of classification trees, rather than a single
 classification tree. Each of these trees generates a classification
-for a given set of  attributes. The classification from each H\ :sub:`2`\ Otree
+for a given set of  attributes. The classification from each H\ :sub:`2`\ O tree
 can be thought of as a vote; the most votes determines the
 classification.
  
@@ -100,6 +100,12 @@ Defining a Model
   guarantees that when data are unbalanced, no class is omitted from
   the model by chance. 
 
+<<<<<<< HEAD
+=======
+    A user defined tuning parameter for controlling model complexity.
+    N bins sets the number of groups into which the original data 
+    can be split.
+>>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
 
 **Sample:**
 
@@ -130,6 +136,7 @@ Defining a Model
 
  **Class Weight:**
 
+<<<<<<< HEAD
     When observed classifications in training data are uneven, users
     may wish to correct this by weighting. Weights should be assigned
     so that if chosen at random, an observation of each 
@@ -137,6 +144,13 @@ Defining a Model
     classifications A and B in a data set, such that As occur
     about 10% of the time, and Bs occur the rest, A should given a
     weight of 5, and B of .56. 
+=======
+  An option that allows users to train the model using one node,
+  instead of using a distributed cluster with multiple
+  nodes. Selecting this option can significantly impact the time it
+  takes to train a model, and is recommended only for small data
+  sets. 
+>>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
  
 
 

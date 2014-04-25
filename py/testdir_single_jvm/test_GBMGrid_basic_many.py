@@ -55,7 +55,7 @@ class Basic(unittest.TestCase):
         # for more in range(8):
         # fast
         # for more in range(9):
-        for i in range(50 if DO_FAIL_CASE else 10):
+        for i in range(5):
             kwargs = params.copy()
             kwargs['min_rows'] = '1,2,3'
             if DO_FROM_TO_STEP:

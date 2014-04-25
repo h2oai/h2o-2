@@ -2,12 +2,23 @@
 
 
 Generalized Linear Model (GLM)
+<<<<<<< HEAD
 ------------------------------
 
 GLM includes several flexible algorithms. Each serves a 
 different purpose, and is used under different assumptions.
 Depending on distribution and link function choice, it can be 
 used either for prediction or classification.
+=======
+==================================
+
+Generalized Linear Modeling (GLM) estimates regression models for
+outcomes following exponential distributions in general. In addition
+to the Gaussian distribution, these include Poisson, binomial, gamma
+and Tweedie distributions. Each serves a different purpose, and
+depending on distribution and link function choice, it can be used 
+either for prediction or classification.
+>>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
  
 
 **The GLM suite includes**
@@ -44,9 +55,14 @@ Defining a GLM Model
   *Gamma*
   Y variables are discrete and valued strictly greater than 0.
     
+<<<<<<< HEAD
   
 	
 **X:** 
+=======
+  	
+**Ignored Columns:** 
+>>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
      
      This field will auto populate a list of the columns from the data
      set in use. The user selected set of X are the independent 
@@ -70,12 +86,41 @@ Defining a GLM Model
      users predict on data outside of the range on which the model was
      originally specified. For example, H\ :sub:`2`\ O allows a model
      to be  trained on data with X between (-1, 10), and then applied
-     to precicting  on data where the range of X is (-10, 10) without
-     warning. This is also true in the analgous case for predicting and
+     to predicting  on data where the range of X is (-10, 10) without
+     warning. This is also true in the analogous case for predicting and
      training on factors. It is the user's responsibility to ensure
      that out of data prediction is undertaken with caution, as the
      veracity of the original results are often constrained to the
+<<<<<<< HEAD
      data range used in the original model.   
+=======
+     data range used in the original model.  
+
+    
+**Max Iter:**
+
+     The maximum number of iterations to be performed for training the
+     model via gradient descent. . If Max Iter is set to 100, the
+     algorithm will repeat the gradient descent 100 times, or until
+     the model converges, whichever comes first. If the model will not
+     converge after 100 cycles, modeling will stop. 
+
+**Standardize:** 
+
+     An option that transforms variables into
+     standardized variables, each with mean 0 and unit
+     variance. Variables and coefficients are now expressed in terms
+     of their relative position to 0, and in standard units. 
+
+**N Folds:** 
+
+     N folds specifies the number of cross validation models to be
+     generated simultaneously to training a model on the full data
+     set. If N folds is sent to 10, additional models will be generated
+     with 1/10 of the data used to train each. The purpose of N folds
+     is to evaluate the stability of the parameter estimates produced.
+     
+>>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
   
 
 **Family and Link:**  
@@ -88,9 +133,15 @@ Defining a GLM Model
 
   *Gaussian (identity):* 
      
+<<<<<<< HEAD
      Y are quantitative, continuous (or continuous
      predicted values can be meaningfully interpreted), and expected to
      be normally distributed 
+=======
+     Y are quantitative, continuous (or discrete
+     predicted values can be meaningfully interpreted as approximately
+     continuos).  
+>>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
 
   *Binomial (logit):* 
 
@@ -147,6 +198,7 @@ Defining a GLM Model
  
 **Weight:**
 
+<<<<<<< HEAD
       In binomial regression, weight allows the user to specify
       consideration given to observations based on the observed Y
       value. Weight=1 is neutral. Weight = 0.5 treats negative
@@ -161,6 +213,30 @@ Defining a GLM Model
       can be asked to predict for observations above, below, or equal
       to this value. Used in binomial prediction, where the default
       case is the mean of the Y column. 
+=======
+     Precision of the vector of coefficients. Computation
+     stops when the maximum difference between two beta vectors is
+     below than beta epsilon.
+
+**Higher Accuracy:**
+
+     The higher accuracy option implements line search
+     optimization. Line search is an optimization approach that
+     calculates an adaptive step size at each iteration of the
+     gradient descent. Because line search is a direct search
+     algorithm it can improve model convergence without specification
+     of additional regularization. Line search can slow model
+     training. 
+ 
+**Lambda Search:**
+
+     The lambda search option allows users to start at 0.90*Lambda
+     max, where lambda max is the value for lambda at which the model
+     returned estimates all coefficients as zero. An additional 50 values of
+     lambda are estimated. These values are successively smaller, and
+     are log scaled. Models for each are returned, along with the
+     ratio of the explained deviance to nonzero parameter estimates. 
+>>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
 
 **GLMgrid Models**
  

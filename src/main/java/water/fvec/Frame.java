@@ -24,16 +24,18 @@ public class Frame extends Lockable<Frame> {
   Key[] _keys;          // Keys for the vectors
   private transient Vec[] _vecs;// The Vectors (transient to avoid network traffic)
   private transient Vec _col0;  // First readable vec; fast access to the VectorGroup's Chunk layout
+  private final UniqueId uniqueId;
 
   public Frame( Frame fr ) { this(fr._key,fr._names.clone(), fr.vecs().clone()); _col0 = null; }
   public Frame( Vec... vecs ){ this(null,vecs);}
   public Frame( String[] names, Vec[] vecs ) { this(null,names,vecs); }
   public Frame( Key key, String[] names, Vec[] vecs ) {
     super(key);
+    this.uniqueId = new UniqueId(_key);
     if( names==null ) {
       names = new String[vecs.length];
       for( int i=0; i<vecs.length; i++ ) names[i] = "C"+(i+1);
-    } 
+    }
     assert names.length == vecs.length : "Number of columns does not match to number of cols' names.";
     _names=names;
     _vecs=vecs;
@@ -45,6 +47,11 @@ public class Frame extends Lockable<Frame> {
     }
     assert checkCompatible();
   }
+
+  public UniqueId getUniqueId() {
+    return this.uniqueId;
+  }
+
   public Vec vec(String name){
     Vec [] vecs = vecs();
     for(int i = 0; i < _names.length; ++i)
@@ -426,7 +433,7 @@ public class Frame extends Lockable<Frame> {
     // Across
     Vec vecs[] = _vecs;
     // Do Not Cache _vecs in toString lest IdeaJ variable display cause side-effects
-    if( vecs == null ) vecs = vecs_impl(); 
+    if( vecs == null ) vecs = vecs_impl();
     if( vecs.length==0 ) return "{}";
     String s="{"+(_names==null?"C0":_names[0]);
     long bs=vecs[0].byteSize();
@@ -762,8 +769,8 @@ public class Frame extends Lockable<Frame> {
     final long _rows[];
     final byte _isInt[];
     boolean _ex = true;
-    DeepSlice( long rows[], int cols[], Vec vecs[] ) { 
-      _cols=cols; 
+    DeepSlice( long rows[], int cols[], Vec vecs[] ) {
+      _cols=cols;
       _rows=rows;
       _isInt = new byte[cols.length];
       for( int i=0; i<cols.length; i++ )

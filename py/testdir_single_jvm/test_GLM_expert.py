@@ -31,6 +31,10 @@ class Basic(unittest.TestCase):
         for maxx in range(4,14):
             x = range(maxx)
             x.remove(3) # 3 is output
+            # 0 and 1 are id-like values
+            x.remove(0)
+            x.remove(1)
+
             x = ",".join(map(str,x))
             print "\nx:", x
             print "y:", y
