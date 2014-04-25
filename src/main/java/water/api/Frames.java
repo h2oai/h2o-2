@@ -269,8 +269,10 @@ public class Frames extends Request2 {
     DKV.put(metricsKey, metrics);
 
     JsonObject metricsJson = metrics.toJSON();
+    JsonArray metricsArray = new JsonArray();
+    metricsArray.add(metricsJson);
     JsonObject result = new JsonObject();
-    result.add("metrics", metricsJson);
+    result.add("metrics", metricsArray);
     return Response.done(result);
   }
 

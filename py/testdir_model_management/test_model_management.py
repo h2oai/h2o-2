@@ -29,25 +29,35 @@ class Basic(unittest.TestCase):
         if h2o.clone_cloud_json is None:
             h2o.tear_down_cloud()
 
+    def followPath(self, d, path_elems):
+        for path_elem in path_elems:
+            if "" != path_elem:
+                idx = -1
+                if path_elem.endswith("]"):
+                    idx = int(path_elem[path_elem.find("[") + 1:path_elem.find("]")])
+                    path_elem = path_elem[:path_elem.find("[")]
+                assert path_elem in d, "Failed to find key: " + path_elem + " in dict: " + repr(d)
+
+                if -1 == idx:
+                    d = d[path_elem]
+                else:
+                    print 'path_elem', path_elem
+                    print 'idx', idx
+                    d = d[path_elem][idx]
+        
+        return d
+
     def assertKeysExist(self, d, path, keys):
         path_elems = path.split("/")
 
-        for path_elem in path_elems:
-            if "" != path_elem:
-                assert path_elem in d, "Failed to find key: " + path + " in dict: " + repr(d)
-                d = d[path_elem]
-        
+        d = self.followPath(d, path_elems)
         for key in keys:
             assert key in d, "Failed to find key: " + key + " in dict: " + repr(d)
 
     def assertKeysDontExist(self, d, path, keys):
         path_elems = path.split("/")
 
-        for path_elem in path_elems:
-            if "" != path_elem:
-                assert path_elem in d, "Unexpectedly failed to find key: " + path + " in dict: " + repr(d)
-                d = d[path_elem]
-        
+        d = self.followPath(d, path_elems)
         for key in keys:
             assert key not in d, "Unexpectedly found key: " + key + " in dict: " + repr(d)
 
@@ -340,16 +350,16 @@ class Basic(unittest.TestCase):
                 scoring_result = node.models(key=model_key, score_frame=frame_key)
 
                 self.assertKeysExist(scoring_result, '', ['metrics'])
-                self.assertKeysExist(scoring_result, 'metrics', ['model', 'frame', 'duration_in_ms', 'error_measure'])
-                self.assertKeysExist(scoring_result, 'metrics/model', ['key', 'model_category', 'uuid', 'creation_epoch_time_millis'])
-                model_category = scoring_result['metrics']['model']['model_category']
-                self.assertEqual(scoring_result['metrics']['model']['key'], model_key, "Expected model key: " + model_key + " but got: " + scoring_result['metrics']['model']['key'])
-                self.assertEqual(scoring_result['metrics']['frame']['key'], frame_key, "Expected frame key: " + frame_key + " but got: " + scoring_result['metrics']['frame']['key'])
+                self.assertKeysExist(scoring_result, 'metrics[0]', ['model', 'frame', 'duration_in_ms', 'error_measure'])
+                self.assertKeysExist(scoring_result, 'metrics[0]/model', ['key', 'model_category', 'uuid', 'creation_epoch_time_millis'])
+                model_category = scoring_result['metrics'][0]['model']['model_category']
+                self.assertEqual(scoring_result['metrics'][0]['model']['key'], model_key, "Expected model key: " + model_key + " but got: " + scoring_result['metrics'][0]['model']['key'])
+                self.assertEqual(scoring_result['metrics'][0]['frame']['key'], frame_key, "Expected frame key: " + frame_key + " but got: " + scoring_result['metrics'][0]['frame']['key'])
                 if model_category is 'Binomial':
-                    self.assertKeysExist(scoring_result, 'metrics', ['cm', 'auc']) # TODO: HitRatio
+                    self.assertKeysExist(scoring_result, 'metrics[0]', ['cm', 'auc']) # TODO: HitRatio
                 # TODO: look inside the auc and cm elements
                 if model_category is 'Regression':
-                    self.assertKeysDontExist(scoring_result, 'metrics', ['cm', 'auc']) # TODO: HitRatio
+                    self.assertKeysDontExist(scoring_result, 'metrics[0]', ['cm', 'auc']) # TODO: HitRatio
 
 
         print "##############################################"
@@ -368,16 +378,16 @@ class Basic(unittest.TestCase):
             scoring_result = node.frames(key='prostate.hex', score_model=model_key)
 
             self.assertKeysExist(scoring_result, '', ['metrics'])
-            self.assertKeysExist(scoring_result, 'metrics', ['model_category'])
-            model_category = scoring_result['metrics']['model_category']
-            self.assertKeysExist(scoring_result, 'metrics', ['model', 'frame', 'duration_in_ms', 'error_measure'])
-            self.assertEqual(scoring_result['metrics']['model']['key'], model_key, "Expected model key: " + model_key + " but got: " + scoring_result['metrics']['model']['key'])
-            self.assertEqual(scoring_result['metrics']['frame']['key'], 'prostate.hex', "Expected frame key: " + 'prostate.hex' + " but got: " + scoring_result['metrics']['frame']['key'])
+            self.assertKeysExist(scoring_result, 'metrics[0]', ['model_category'])
+            model_category = scoring_result['metrics'][0]['model_category']
+            self.assertKeysExist(scoring_result, 'metrics[0]', ['model', 'frame', 'duration_in_ms', 'error_measure'])
+            self.assertEqual(scoring_result['metrics'][0]['model']['key'], model_key, "Expected model key: " + model_key + " but got: " + scoring_result['metrics'][0]['model']['key'])
+            self.assertEqual(scoring_result['metrics'][0]['frame']['key'], 'prostate.hex', "Expected frame key: " + 'prostate.hex' + " but got: " + scoring_result['metrics'][0]['frame']['key'])
             if model_category is 'Binomial':
-                self.assertKeysExist(scoring_result, 'metrics', ['cm', 'auc']) # TODO: HitRatio
+                self.assertKeysExist(scoring_result, 'metrics[0]', ['cm', 'auc']) # TODO: HitRatio
             # TODO: look inside the auc and cm elements
             if model_category is 'Regression':
-                self.assertKeysDontExist(scoring_result, 'metrics', ['cm', 'auc']) # TODO: HitRatio
+                self.assertKeysDontExist(scoring_result, 'metrics[0]', ['cm', 'auc']) # TODO: HitRatio
 
 
 if __name__ == '__main__':
