@@ -120,17 +120,17 @@ LIB_TEST_CSS=\
 
 ifeq ($(shell which node),)
 default:
-	@echo Dependency node not found.  Skipping UI build...  Try: brew install node for MacOS or look at h2o/client/README.md for other platforms.
+	@echo Dependency node not found.  Skipping UI build...  Try: brew install node for MacOS or look at h2o/client/README.md for other platforms. 1>&2
 
 else
   ifeq ($(shell which npm),)
 default:
-	@echo Dependency npm not found.  Skipping UI build...  Try: brew install node for MacOS or look at h2o/client/README.md for other platforms.
+	@echo Dependency npm not found.  Skipping UI build...  Try: brew install node for MacOS or look at h2o/client/README.md for other platforms. 1>&2
 
   else
     ifeq ($(shell which bower),)
 default:
-	@echo Dependency bower not found.  Skipping UI build...  Try: npm install -g bower
+	@echo Dependency bower not found.  Skipping UI build...  Try: npm install -g bower 1>&2
 
     else
 default: build
