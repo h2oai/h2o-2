@@ -81,6 +81,15 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   @API(help = "MSE by tree")
   float[] errs;
 
+  @API(help = "Statistic Type")
+  Tree.StatType statType;
+
+  @API(help = "Adapted Validation Frame")
+  Frame test_frame;
+
+  @API(help = "Test Key")
+  Key testKey;
+
 //  @API(help = "No CM")
 //  boolean _noCM;
 //
@@ -105,6 +114,9 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
   @API(help = "")
   CMTask.CMFinal confusion;
+
+  @API(help = "")
+  CMTask.CMFinal[] cms;
 
   public static final String KEY_PREFIX = "__RFModel_";
   public static final String JSON_CONFUSION_KEY   = "confusion_key";
@@ -163,18 +175,18 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
     m.local_forests[nodeIdx] = Arrays.copyOf(old.local_forests[nodeIdx],old.local_forests[nodeIdx].length+1);
     m.local_forests[nodeIdx][m.local_forests[nodeIdx].length-1] = tkey;
+
     double f = (double)m.t_keys.length / (double)m.total_trees;
-    if (f > 0 & !m.p) {
+    if (m.t_keys.length == 1) {
       cm_update = true;
       CMTask cmTask = new CMTask(m, m.size(), m.weights, m.oobee);
-      cmTask.doAll(m.fr);
+      cmTask.doAll(m.test_frame == null ? m.fr : m.test_frame);
       m.confusion = CMTask.CMFinal.make(cmTask._matrix, m, cmTask.domain(), cmTask._errorsPerTree, m.oobee, cmTask._sum);
-      m.p = true;
     }
     if (f == 1.0) {
       cm_update = true;
       CMTask cmTask = new CMTask(m, m.size(), m.weights, m.oobee);
-      cmTask.doAll(m.fr);
+      cmTask.doAll(m.test_frame == null ? m.fr : m.test_frame);
       m.confusion = CMTask.CMFinal.make(cmTask._matrix, m, cmTask.domain(), cmTask._errorsPerTree, m.oobee, cmTask._sum);
     }
     if (!cm_update) {
@@ -311,6 +323,8 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     DocGen.HTML.title(sb,title);
     sb.append("<div class=\"alert\">").append("Actions: ");
     sb.append(Inspect2.link("Inspect training data (" + _dataKey.toString() + ")", _dataKey)).append(", ");
+    if (this.test_frame != null)
+      sb.append(Inspect2.link("Inspect testing data (" + testKey.toString() + ")", testKey)).append(", ");
     sb.append(Predict.link(_key, "Score on dataset" ));
     if (this.size() > 0 && this.size() < total_trees) {
       sb.append(", ");
@@ -343,7 +357,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       sb.append("<tr style='min-width:60px'><th>Trees</th>");
       int last = this.size() - 1;
       for( int i=last; i>=0; i-- )
-        sb.append("<td style='min-width:60px'>").append(i).append("</td>");
+        sb.append("<td style='min-width:60px'>").append(i + 1).append("</td>");
       sb.append("</tr>");
       sb.append("<tr><th class='warning'>MSE</th>");
       for( int i=last; i>=0; i-- )
@@ -433,7 +447,10 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       // Signal end only and only if all trees were generated and confusion matrix is valid
 
       DocGen.HTML.section(sb, "Confusion Matrix:");
-      sb.append("<div class=\"alert\">Reported on ").append(cm.get(JSON_CM_TYPE).getAsString()).append(" data</div>");
+      if (testKey != null)
+        sb.append("<div class=\"alert\">Reported on ").append("testing").append(" data</div>");
+      else
+        sb.append("<div class=\"alert\">Reported on ").append(cm.get(JSON_CM_TYPE).getAsString()).append(" data</div>");
 
       if (cm.has(JSON_CM_MATRIX)) {
         sb.append("<dl class='dl-horizontal'>");
