@@ -50,46 +50,44 @@ public abstract class Neurons {
   /**
    * Parameters (deep-cloned() from the user input, can be modified here, e.g. learning rate decay)
    */
-  protected DeepLearning params;
+  protected transient DeepLearning params;
+  protected transient int _index; //which hidden layer it is
 
   /**
    * Layer state (one per neuron): activity, error
    */
-//  public transient float[] _a, _e;
   public transient Vector _a; //can be sparse for input layer
   public transient DenseVector _e;
 
   /**
    * References for feed-forward connectivity
    */
-  public Neurons _previous; // previous layer of neurons
+  public Neurons _previous;
   DeepLearningModel.DeepLearningModelInfo _minfo; //reference to shared model info
-//  public float[] _w; //reference to _minfo.weights[layer] for convenience
-  public Matrix _w; //reference to _minfo.weights[layer] for convenience
-//  public float[] _b; //reference to _minfo.biases[layer] for convenience
-  public DenseVector _b; //reference to _minfo.biases[layer] for convenience
+  public Matrix _w;
+  public DenseVector _b;
 
-  // momentum
-  //float[] _wm; //reference to _minfo.weights_momenta[layer] for convenience
-  Matrix _wm; //reference to _minfo.weights_momenta[layer] for convenience
-  //private float[] _bm; //reference to _minfo.biases_momenta[layer] for convenience
-  DenseVector _bm; //reference to _minfo.biases_momenta[layer] for convenience
+  /**
+   * References for momentum training
+   */
+  Matrix _wm;
+  DenseVector _bm;
 
-<<<<<<< HEAD
-  // ADADELTA
-  private float[] _ada;
-=======
   /**
    * References for ADADELTA
    */
   private Matrix _ada_dx_g;
   DenseVector _bias_ada_dx_g;
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
 
   /**
    * For Dropout training
    */
   protected Dropout _dropout;
+
+  /**
+   * Helper to shortcut bprop
+   */
+  private boolean _shortcut = false;
 
 //  /**
 //   * We need a way to encode a missing value in the neural net forward/back-propagation scheme.
@@ -115,21 +113,13 @@ public abstract class Neurons {
       if (_minfo.has_momenta()) {
         assert(_wm != null);
         assert(_bm != null);
-<<<<<<< HEAD
-        assert(_ada == null);
-=======
         assert(_ada_dx_g == null);
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
       }
       if (_minfo.adaDelta()) {
         if (params.rho == 0) throw new IllegalArgumentException("rho must be > 0 if epsilon is >0.");
         if (params.epsilon == 0) throw new IllegalArgumentException("epsilon must be > 0 if rho is >0.");
         assert(_minfo.adaDelta());
-<<<<<<< HEAD
-        assert(_ada != null);
-=======
         assert(_bias_ada_dx_g != null);
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
         assert(_wm == null);
         assert(_bm == null);
       }
@@ -148,6 +138,7 @@ public abstract class Neurons {
    * @param training Whether training is done or just testing (no need for dropout)
    */
   public final void init(Neurons[] neurons, int index, DeepLearning p, final DeepLearningModel.DeepLearningModelInfo minfo, boolean training) {
+    _index = index-1;
     params = (DeepLearning)p.clone();
     params.rate *= Math.pow(params.rate_decay, index-1);
     _a = new DenseVector(units);
@@ -168,13 +159,12 @@ public abstract class Neurons {
         _bm = minfo.get_biases_momenta(index-1); //bias for this layer (starting at hidden layer)
       }
       if (minfo.adaDelta()) {
-<<<<<<< HEAD
-        _ada = minfo.get_ada(index-1);
-=======
         _ada_dx_g = minfo.get_ada_dx_g(index-1);
         _bias_ada_dx_g = minfo.get_biases_ada_dx_g(index - 1);
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
       }
+      _shortcut = (params.fast_mode || (
+              // not doing fast mode, but also don't have anything else to update (neither momentum nor ADADELTA history), and no L1/L2
+              !_minfo.get_params().adaptive_rate && !_minfo.has_momenta() && params.l1 == 0.0 && params.l2 == 0.0));
     }
     sanityCheck(training);
   }
@@ -191,6 +181,23 @@ public abstract class Neurons {
    */
   protected abstract void bprop();
 
+  void bprop_sparse(float r, float m) {
+    SparseVector prev_a = (SparseVector) _previous._a;
+    int start = prev_a.begin()._idx;
+    int end = prev_a.end()._idx;
+    for (int it = start; it < end; ++it) {
+      final int col = prev_a._indices[it];
+      final float previous_a = prev_a._values[it];
+      bprop_col(col, previous_a, r, m);
+    }
+    final int rows = _a.size();
+    final float max_w2 = params.max_w2;
+    for (int row = 0; row < rows; row++) {
+      if (max_w2 != Float.POSITIVE_INFINITY)
+        rescale_weights(_w, row, max_w2);
+    }
+  }
+
   /**
    * Backpropagation: w -= rate * dE/dw, where dE/dw = dE/dy * dy/dnet * dnet/dw
    * This method adds the dnet/dw = activation term per unit
@@ -201,32 +208,20 @@ public abstract class Neurons {
    */
   final void bprop(final int row, final float partial_grad, final float rate, final float momentum) {
     // only correct weights if the gradient is large enough
-    if (params.fast_mode || (
-            // not doing fast mode, but also don't have anything else to update (neither momentum nor ADADELTA history), and no L1/L2
-            !_minfo.get_params().adaptive_rate && !_minfo.has_momenta() && params.l1 == 0.0 && params.l2 == 0.0)) {
-      if (partial_grad == 0f) return;
-    }
+    if (_shortcut && partial_grad == 0f) return;
+
     if (_w instanceof DenseRowMatrix && _previous._a instanceof DenseVector)
       bprop_dense_row_dense(
               (DenseRowMatrix)_w, (DenseRowMatrix)_wm, (DenseRowMatrix)_ada_dx_g,
               (DenseVector)_previous._a, _previous._e, _b, _bm, row, partial_grad, rate, momentum);
     else if (_w instanceof DenseRowMatrix && _previous._a instanceof SparseVector)
-<<<<<<< HEAD
-      bprop_dense_row_sparse((DenseRowMatrix)_w, (DenseRowMatrix)_wm, (SparseVector)_previous._a, _previous._e, _b, _bm, row, partial_grad, rate, momentum);
-    else if (_w instanceof DenseColMatrix && _previous._a instanceof SparseVector)
-      bprop_dense_sparse(_w, _wm, (SparseVector)_previous._a, _previous._e, _b, _bm, row, partial_grad, rate, momentum);
-
-=======
       bprop_dense_row_sparse(
               (DenseRowMatrix)_w, (DenseRowMatrix)_wm, (DenseRowMatrix)_ada_dx_g,
               (SparseVector)_previous._a, _previous._e, _b, _bm, row, partial_grad, rate, momentum);
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
     else
       throw new UnsupportedOperationException("bprop for types not yet implemented.");
   }
 
-<<<<<<< HEAD
-=======
   final void bprop_col(final int col, final float previous_a, final float rate, final float momentum) {
     if (_w instanceof DenseColMatrix && _previous._a instanceof SparseVector)
       bprop_dense_col_sparse(
@@ -236,7 +231,6 @@ public abstract class Neurons {
       throw new UnsupportedOperationException("bprop_col for types not yet implemented.");
   }
 
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
   /**
    * Specialization of backpropagation for DenseRowMatrices and DenseVectors
    * @param _w weight matrix
@@ -260,21 +254,16 @@ public abstract class Neurons {
     final float eps = (float)params.epsilon;
     final float l1 = (float)params.l1;
     final float l2 = (float)params.l2;
-<<<<<<< HEAD
-    final double max_w2 = params.max_w2;
-    final boolean have_momenta = _wm != null;
-    final boolean have_ada = _ada != null;
-=======
     final float max_w2 = params.max_w2;
     final boolean have_momenta = _minfo.has_momenta();
     final boolean have_ada = _minfo.adaDelta();
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
     final boolean nesterov = params.nesterov_accelerated_gradient;
     final boolean update_prev = prev_e != null;
     final boolean fast_mode = params.fast_mode;
     final int cols = prev_a.size();
     final int idx = row * cols;
 
+    float avg_grad2 = 0;
     for( int col = 0; col < cols; col++ ) {
       final float weight = _w.get(row,col);
       if( update_prev ) prev_e.add(col, partial_grad * weight); // propagate the error dE/dnet to the previous layer, via connecting weights
@@ -288,19 +277,9 @@ public abstract class Neurons {
       if (have_ada) {
         assert(!have_momenta);
         final float grad2 = grad*grad;
-<<<<<<< HEAD
-        _ada[2*w+1] *= rho;
-        _ada[2*w+1] += (1f-rho)*grad2;
-        final float RMS_dx = Utils.approxSqrt(_ada[2*w] + eps);
-        final float invRMS_g = Utils.approxInvSqrt(_ada[2*w+1] + eps);
-        rate = RMS_dx*invRMS_g;
-        _ada[2*w] = rho * _ada[2*w] + (1f-rho)*rate*rate*grad2;
-        _w.raw()[w] += rate * grad;
-=======
         avg_grad2 += grad2;
         float brate = computeAdaDeltaRateForWeight(grad, w, adaxg, rho, eps);
         _w.raw()[w] += brate * grad;
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
       } else {
         if (!nesterov) {
           final float delta = rate * grad;
@@ -320,16 +299,6 @@ public abstract class Neurons {
         }
       }
     }
-<<<<<<< HEAD
-    if (max_w2 != Double.POSITIVE_INFINITY) rescale_weights(row);
-    update_bias(_b, _bm, row, partial_grad, rate, momentum);
-  }
-
-  /**
-   * Specialization of backpropagation for DenseMatrices and SparseVector for previous layer's activation and DenseVector for everything else
-   * @param _w weight matrix
-   * @param _wm weight momentum matrix
-=======
     if (max_w2 != Float.POSITIVE_INFINITY)
       rescale_weights(_w, row, max_w2);
     if (have_ada) avg_grad2 /= cols;
@@ -341,69 +310,35 @@ public abstract class Neurons {
    * @param w Weight matrix
    * @param wm Momentum matrix
    * @param adaxg ADADELTA matrix (2 floats per weight)
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
    * @param prev_a sparse activation of previous layer
    * @param prev_e error of previous layer
-   * @param _b bias vector
-   * @param _bm bias momentum vector
-   * @param row index of the neuron for which we back-propagate
-   * @param partial_grad partial derivative dE/dnet = dE/dy * dy/net
+   * @param b
+   * @param bm
    * @param rate learning rate
    * @param momentum momentum factor (needed only if ADADELTA isn't used)
    */
-<<<<<<< HEAD
-  private final void bprop_dense_sparse(final Matrix _w, final Matrix _wm, final SparseVector prev_a, final DenseVector prev_e,
-                                           final DenseVector _b, final DenseVector _bm, final int row, final float partial_grad, float rate, final float momentum) {
-=======
   private final void bprop_dense_col_sparse(
           final DenseColMatrix w, final DenseColMatrix wm, final DenseColMatrix adaxg,
           final SparseVector prev_a, final DenseVector prev_e, final DenseVector b, final DenseVector bm,
           final int col, final float previous_a, float rate, final float momentum)
   {
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
     final float rho = (float)params.rho;
     final float eps = (float)params.epsilon;
     final float l1 = (float)params.l1;
     final float l2 = (float)params.l2;
-<<<<<<< HEAD
-    final double max_w2 = params.max_w2;
-    final boolean have_momenta = _wm != null;
-    final boolean have_ada = _ada != null;
-=======
     final boolean have_momenta = _minfo.has_momenta();
     final boolean have_ada = _minfo.adaDelta();
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
     final boolean nesterov = params.nesterov_accelerated_gradient;
     final boolean update_prev = prev_e != null;
-    final boolean fast_mode = params.fast_mode;
     final int cols = prev_a.size();
-    final int idx = row * cols;
 
-    for (SparseVector.Iterator it=prev_a.begin(); !it.equals(prev_a.end()); it.next()) {
-      final int col = it.index();
-      final float weight = _w.get(row,col);
+    final int rows = _a.size();
+    for (int row = 0; row < rows; row++) {
+      final float partial_grad = _e.get(row) * (1f - _a.get(row) * _a.get(row));
+      final float weight = w.get(row,col);
       if( update_prev ) prev_e.add(col, partial_grad * weight); // propagate the error dE/dnet to the previous layer, via connecting weights
-      final float previous_a = it.value();
       assert (previous_a != 0); //only iterate over non-zeros!
 
-<<<<<<< HEAD
-      //this is the actual gradient dE/dw
-      final float grad = partial_grad * previous_a - Math.signum(weight) * l1 - weight * l2;
-      final int w = idx + col;
-
-      // adaptive learning rate r from ADADELTA
-      // http://www.matthewzeiler.com/pubs/googleTR2012/googleTR2012.pdf
-      if (have_ada) {
-        assert(!have_momenta);
-        final float grad2 = grad*grad;
-        _ada[2*w+1] *= rho;
-        _ada[2*w+1] += (1f-rho)*grad2;
-        final float RMS_dx = Utils.approxSqrt(_ada[2*w] + eps);
-        final float invRMS_g = Utils.approxInvSqrt(_ada[2*w+1] + eps);
-        rate = RMS_dx*invRMS_g;
-        _ada[2*w] = rho * _ada[2*w] + (1f-rho)*rate*rate*grad2;
-        _w.add(row, col, rate * grad);
-=======
       if (_shortcut && partial_grad == 0f) continue;
 
       //this is the actual gradient dE/dw
@@ -412,35 +347,30 @@ public abstract class Neurons {
         assert(!have_momenta);
         float brate = computeAdaDeltaRateForWeight(grad, row, col, adaxg, rho, eps);
         w.add(row,col, brate * grad);
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
       } else {
         if (!nesterov) {
           final float delta = rate * grad;
-          _w.add(row, col, delta);
+          w.add(row, col, delta);
+//          Log.info("for row = " + row + ", col = " + col + ", partial_grad = " + partial_grad + ", grad = " + grad);
           if( have_momenta ) {
-            _w.add(row, col, momentum * _wm.get(row, col));
-            _wm.set(row, col, delta);
+            w.add(row, col, momentum * wm.get(row, col));
+            wm.set(row, col, delta);
           }
         } else {
           float tmp = grad;
           if( have_momenta ) {
-            float val = _wm.get(row, col);
+            float val = wm.get(row, col);
             val *= momentum;
             val += tmp;
             tmp = val;
-            _wm.set(row, col, val);
+            wm.set(row, col, val);
           }
-          _w.add(row, col, rate * tmp);
+          w.add(row, col, rate * tmp);
         }
       }
-<<<<<<< HEAD
-=======
       //this is called cols times, so we divide the (repeated) contribution by 1/cols
       update_bias(b, bm, row, partial_grad/cols, grad*grad/cols, rate, momentum);
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
     }
-    if (max_w2 != Double.POSITIVE_INFINITY) rescale_weights(row);
-    update_bias(_b, _bm, row, partial_grad, rate, momentum);
   }
 
  /**
@@ -466,26 +396,22 @@ public abstract class Neurons {
     final float eps = (float)params.epsilon;
     final float l1 = (float)params.l1;
     final float l2 = (float)params.l2;
-<<<<<<< HEAD
-    final double max_w2 = params.max_w2;
-    final boolean have_momenta = _wm != null;
-    final boolean have_ada = _ada != null;
-=======
     final float max_w2 = params.max_w2;
     final boolean have_momenta = _minfo.has_momenta();
     final boolean have_ada = _minfo.adaDelta();
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
     final boolean nesterov = params.nesterov_accelerated_gradient;
     final boolean update_prev = prev_e != null;
-    final boolean fast_mode = params.fast_mode;
     final int cols = prev_a.size();
     final int idx = row * cols;
 
-    for (SparseVector.Iterator it=prev_a.begin(); !it.equals(prev_a.end()); it.next()) {
-      final int col = it.index();
+    float avg_grad2 = 0;
+    int start = prev_a.begin()._idx;
+    int end = prev_a.end()._idx;
+    for (int it = start; it < end; ++it) {
+      final int col = prev_a._indices[it];
       final float weight = _w.get(row,col);
       if( update_prev ) prev_e.add(col, partial_grad * weight); // propagate the error dE/dnet to the previous layer, via connecting weights
-      final float previous_a = it.value();
+      final float previous_a = prev_a._values[it];
       assert (previous_a != 0); //only iterate over non-zeros!
 
       //this is the actual gradient dE/dw
@@ -495,19 +421,9 @@ public abstract class Neurons {
       if (have_ada) {
         assert(!have_momenta);
         final float grad2 = grad*grad;
-<<<<<<< HEAD
-        _ada[2*w+1] *= rho;
-        _ada[2*w+1] += (1f-rho)*grad2;
-        final float RMS_dx = Utils.approxSqrt(_ada[2*w] + eps);
-        final float invRMS_g = Utils.approxInvSqrt(_ada[2*w+1] + eps);
-        rate = RMS_dx*invRMS_g;
-        _ada[2*w] = rho * _ada[2*w] + (1f-rho)*rate*rate*grad2;
-        _w.raw()[w] += rate * grad;
-=======
         avg_grad2 += grad2;
         float brate = computeAdaDeltaRateForWeight(grad, w, adaxg, rho, eps);
         _w.raw()[w] += brate * grad;
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
       } else {
         if (!nesterov) {
           final float delta = rate * grad;
@@ -527,43 +443,17 @@ public abstract class Neurons {
         }
       }
     }
-<<<<<<< HEAD
-    if (max_w2 != Double.POSITIVE_INFINITY) rescale_weights(row);
-    update_bias(_b, _bm, row, partial_grad, rate, momentum);
-=======
     if (max_w2 != Float.POSITIVE_INFINITY)
       rescale_weights(_w, row, max_w2);
     if (have_ada) avg_grad2 /= prev_a.nnz();
     update_bias(_b, _bm, row, partial_grad, avg_grad2, rate, momentum);
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
   }
 
   /**
-   * Helper to scale down incoming weights if their squared sum exceeds a given value (by a factor of 2 -> to avoid doing costly rescaling too often)
+   * Helper to scale down incoming weights if their squared sum exceeds a given value (by a factor of 10 -> to avoid doing costly rescaling too often)
    * C.f. Improving neural networks by preventing co-adaptation of feature detectors
    * @param row index of the neuron for which to scale the weights
    */
-<<<<<<< HEAD
-  final void rescale_weights(final int row) {
-    if (_w instanceof DenseRowMatrix) {
-      final int cols = _previous._a.size();
-      final int idx = row * cols;
-      final double max_w2 = params.max_w2;
-      double r2 = Utils.sumSquares(_w.raw(), idx, idx+cols);
-      if( r2 > max_w2 * 2) {
-        final float scale = Utils.approxSqrt((float)(max_w2 / r2));
-        for( int c = 0; c < cols; c++ ) _w.raw()[idx + c] *= scale;
-      }
-    }
-    else if (_w instanceof DenseColMatrix) {
-      final int cols = _previous._a.size();
-      final double max_w2 = params.max_w2;
-      double r2 = 0;
-      for (int col=0; col<cols;++col) r2 += _w.get(row,col)*_w.get(row,col);
-      if( r2 > max_w2 * 2) {
-        final float scale = Utils.approxSqrt((float)(max_w2 / r2));
-        for( int col=0; col < cols; col++ ) _w.set(row, col, _w.get(row,col) * scale);
-=======
   final private static void rescale_weights(final Matrix w, final int row, final float max_w2) {
     final int cols = w.cols();
     if (w instanceof DenseRowMatrix) {
@@ -575,10 +465,9 @@ public abstract class Neurons {
       if( r2 > max_w2) {
         final float scale = Utils.approxSqrt(max_w2 / r2);
         for( int col=0; col < cols; col++ ) w.set(row, col, w.get(row,col) * scale);
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
       }
     }
-    else throw new UnsupportedOperationException("rescale weights for " + _w.getClass().getSimpleName() + " not yet implemented.");
+    else throw new UnsupportedOperationException("rescale weights for " + w.getClass().getSimpleName() + " not yet implemented.");
   }
 
   // Specialization for DenseRowMatrix
@@ -781,21 +670,26 @@ public abstract class Neurons {
     public Tanh(int units) { super(units); }
     @Override protected void fprop(long seed, boolean training) {
       gemv((DenseVector)_a, _w, _previous._a, _b, _dropout != null ? _dropout.bits() : null);
-
-      for( int o = 0; o < _a.size(); o++ ) {
-        _a.set(o, 1f - 2f / (1f + (float)Math.exp(2*_a.get(o)))); //evals faster than tanh(x), but is slightly less numerically stable - OK
-//        _a[o] = (float)(1 - 2 / (1 + Utils.approxExp(2d*_a[o]))); //even faster, but ~ 4% relative error - not worth it here
+      final int rows = _a.size();
+      for( int row = 0; row < rows; row++ ) {
+        _a.set(row, 1f - 2f / (1f + (float)Math.exp(2*_a.get(row)))); //evals faster than tanh(x), but is slightly less numerically stable - OK
       }
     }
+    // Computing partial derivative g = dE/dnet = dE/dy * dy/dnet, where dE/dy is the backpropagated error
+    // dy/dnet = (1 - a^2) for y(net) = tanh(net)
     @Override protected void bprop() {
       final long processed = _minfo.get_processed_total();
       float m = momentum(processed);
       float r = rate(processed) * (1 - m);
-      for( int u = 0; u < _a.size(); u++ ) {
-        // Computing partial derivative g = dE/dnet = dE/dy * dy/dnet, where dE/dy is the backpropagated error
-        // dy/dnet = (1 - a^2) for y(net) = tanh(net)
-        float g = _e.get(u) * (1f - _a.get(u) * _a.get(u));
-        bprop(u, g, r, m);
+      if (_w instanceof DenseRowMatrix) {
+        final int rows = _a.size();
+        for (int row = 0; row < rows; row++) {
+          float g = _e.get(row) * (1f - _a.get(row) * _a.get(row));
+          bprop(row, g, r, m);
+        }
+      }
+      else {
+        bprop_sparse(r, m);
       }
     }
   }
@@ -813,11 +707,7 @@ public abstract class Neurons {
       }
       else {
         super.fprop(seed, false);
-<<<<<<< HEAD
-        Utils.div(_a.raw(), 2.f);
-=======
         Utils.mult(_a.raw(), (float)params.hidden_dropout_ratios[_index]);
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
       }
     }
   }
@@ -829,50 +719,59 @@ public abstract class Neurons {
     public Maxout(int units) { super(units); }
     @Override protected void fprop(long seed, boolean training) {
       float max = 0;
+      final int rows = _a.size();
       if (_previous._a instanceof DenseVector) {
-        for( int o = 0; o < _a.size(); o++ ) {
-          _a.set(o, 0);
-          if( !training || _dropout == null || _dropout.unit_active(o) ) {
-            _a.set(o, Float.NEGATIVE_INFINITY);
+        for( int row = 0; row < rows; row++ ) {
+          _a.set(row, 0);
+          if( !training || _dropout == null || _dropout.unit_active(row) ) {
+            _a.set(row, Float.NEGATIVE_INFINITY);
             for( int i = 0; i < _previous._a.size(); i++ )
-              _a.set(o, Math.max(_a.get(o), _w.get(o, i) * _previous._a.get(i)));
-            if (Float.isInfinite(-_a.get(o))) _a.set(o, 0); //catch the case where there is dropout (and/or input sparsity) -> no max found!
-            _a.add(o, _b.get(o));
-            max = Math.max(_a.get(o), max);
+              _a.set(row, Math.max(_a.get(row), _w.get(row, i) * _previous._a.get(i)));
+            if (Float.isInfinite(-_a.get(row))) _a.set(row, 0); //catch the case where there is dropout (and/or input sparsity) -> no max found!
+            _a.add(row, _b.get(row));
+            max = Math.max(_a.get(row), max);
           }
         }
         if( max > 1 ) Utils.div(_a.raw(), max);
       }
       else {
         SparseVector x = (SparseVector)_previous._a;
-        for( int o = 0; o < _a.size(); o++ ) {
-          _a.set(o, 0);
-          if( !training || _dropout == null || _dropout.unit_active(o) ) {
-//            _a.set(o, Float.NEGATIVE_INFINITY);
+        for( int row = 0; row < _a.size(); row++ ) {
+          _a.set(row, 0);
+          if( !training || _dropout == null || _dropout.unit_active(row) ) {
+//            _a.set(row, Float.NEGATIVE_INFINITY);
 //            for( int i = 0; i < _previous._a.size(); i++ )
-//              _a.set(o, Math.max(_a.get(o), _w.get(o, i) * _previous._a.get(i)));
+//              _a.set(row, Math.max(_a.get(row), _w.get(row, i) * _previous._a.get(i)));
             float mymax = Float.NEGATIVE_INFINITY;
-            for (SparseVector.Iterator it=x.begin(); !it.equals(x.end()); it.next()) {
-              mymax = Math.max(mymax, _w.get(o, it.index()) * it.value());
+            int start = x.begin()._idx;
+            int end = x.end()._idx;
+            for (int it = start; it < end; ++it) {
+              mymax = Math.max(mymax, _w.get(row, x._indices[it]) * x._values[it]);
             }
-            _a.set(o, mymax);
-            if (Float.isInfinite(-_a.get(o))) _a.set(o, 0); //catch the case where there is dropout (and/or input sparsity) -> no max found!
-            _a.add(o, _b.get(o));
-            max = Math.max(_a.get(o), max);
+            _a.set(row, mymax);
+            if (Float.isInfinite(-_a.get(row))) _a.set(row, 0); //catch the case where there is dropout (and/or input sparsity) -> no max found!
+            _a.add(row, _b.get(row));
+            max = Math.max(_a.get(row), max);
           }
         }
-        if( max > 1 ) Utils.div(_a.raw(), max);
+        if( max > 1f ) Utils.div(_a.raw(), max);
       }
     }
     @Override protected void bprop() {
       final long processed = _minfo.get_processed_total();
       float m = momentum(processed);
       float r = rate(processed) * (1 - m);
-      for( int u = 0; u < _a.size(); u++ ) {
-        float g = _e.get(u);
+      if (_w instanceof DenseRowMatrix) {
+        final int rows = _a.size();
+        for( int row = 0; row < rows; row++ ) {
+          float g = _e.get(row);
 //                if( _a[o] < 0 )   Not sure if we should be using maxout with a hard zero bottom
 //                    g = 0;
-        bprop(u, g, r, m);
+          bprop(row, g, r, m);
+        }
+      }
+      else {
+        bprop_sparse(r, m);
       }
     }
   }
@@ -890,11 +789,7 @@ public abstract class Neurons {
       }
       else {
         super.fprop(seed, false);
-<<<<<<< HEAD
-        Utils.div(_a.raw(), 2.f);
-=======
         Utils.mult(_a.raw(), (float)params.hidden_dropout_ratios[_index]);
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
       }
     }
   }
@@ -906,8 +801,9 @@ public abstract class Neurons {
     public Rectifier(int units) { super(units); }
     @Override protected void fprop(long seed, boolean training) {
       gemv((DenseVector)_a, _w, _previous._a, _b, _dropout != null ? _dropout.bits() : null);
-      for( int o = 0; o < _a.size(); o++ ) {
-        _a.set(o, Math.max(_a.get(o), 0f));
+      final int rows = _a.size();
+      for( int row = 0; row < rows; row++ ) {
+        _a.set(row, Math.max(_a.get(row), 0f));
       }
     }
 
@@ -915,10 +811,16 @@ public abstract class Neurons {
       final long processed = _minfo.get_processed_total();
       float m = momentum(processed);
       float r = rate(processed) * (1 - m);
-      for( int u = 0; u < _a.size(); u++ ) {
-        //(d/dx)(max(0,x)) = 1 if x > 0, otherwise 0
-        final float g = _a.get(u) > 0f ? _e.get(u) : 0;
-        bprop(u, g, r, m);
+      final int rows = _a.size();
+      if (_w instanceof DenseRowMatrix) {
+        for (int row = 0; row < rows; row++) {
+          //(d/dx)(max(0,x)) = 1 if x > 0, otherwise 0
+          final float g = _a.get(row) > 0f ? _e.get(row) : 0f;
+          bprop(row, g, r, m);
+        }
+      }
+      else {
+        bprop_sparse(r, m);
       }
     }
   }
@@ -936,11 +838,7 @@ public abstract class Neurons {
       }
       else {
         super.fprop(seed, false);
-<<<<<<< HEAD
-        Utils.div(_a.raw(), 2.f);
-=======
         Utils.mult(_a.raw(), (float)params.hidden_dropout_ratios[_index]);
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
       }
     }
   }
@@ -965,15 +863,16 @@ public abstract class Neurons {
     @Override protected void fprop() {
       gemv((DenseVector) _a, (DenseRowMatrix) _w, (DenseVector) _previous._a, _b, null);
       final float max = Utils.maxValue(_a.raw());
-      float scale = 0;
-      for( int o = 0; o < _a.size(); o++ ) {
-        _a.set(o, (float)Math.exp(_a.get(o) - max));
-        scale += _a.get(o);
+      float scale = 0f;
+      final float rows = _a.size();
+      for( int row = 0; row < rows; row++ ) {
+        _a.set(row, (float)Math.exp(_a.get(row) - max));
+        scale += _a.get(row);
       }
-      for( int o = 0; o < _a.size(); o++ ) {
-        if (Float.isNaN(_a.get(o)))
+      for( int row = 0; row < rows; row++ ) {
+        if (Float.isNaN(_a.get(row)))
           throw new RuntimeException("Numerical instability, predicted NaN.");
-        _a.raw()[o] /= scale;
+        _a.raw()[row] /= scale;
       }
     }
 
@@ -989,9 +888,10 @@ public abstract class Neurons {
       float m = momentum(processed);
       float r = rate(processed) * (1 - m);
       float g; //partial derivative dE/dy * dy/dnet
-      for( int u = 0; u < _a.size(); u++ ) {
-        final float t = (u == target ? 1 : 0);
-        final float y = _a.get(u);
+      final float rows = _a.size();
+      for( int row = 0; row < rows; row++ ) {
+        final float t = (row == target ? 1f : 0f);
+        final float y = _a.get(row);
         //dy/dnet = derivative of softmax = (1-y)*y
         if (params.loss == Loss.CrossEntropy) {
           //nothing else needed, -dCE/dy * dy/dnet = target - y
@@ -1000,10 +900,10 @@ public abstract class Neurons {
         } else {
           assert(params.loss == Loss.MeanSquare);
           //-dMSE/dy = target-y
-          g = (t - y) * (1 - y) * y;
+          g = (t - y) * (1f - y) * y;
         }
         // this call expects dE/dnet
-        bprop(u, g, r, m);
+        bprop(row, g, r, m);
       }
     }
   }
@@ -1024,13 +924,13 @@ public abstract class Neurons {
     protected void bprop(float target) {
 //      if (target == missing_double_value) return;
       if (params.loss != Loss.MeanSquare) throw new UnsupportedOperationException("Regression is only implemented for MeanSquare error.");
-      final int u = 0;
+      final int row = 0;
       // Computing partial derivative: dE/dnet = dE/dy * dy/dnet = dE/dy * 1
-      final float g = target - _a.get(u); //for MSE -dMSE/dy = target-y
+      final float g = target - _a.get(row); //for MSE -dMSE/dy = target-y
       final long processed = _minfo.get_processed_total();
       float m = momentum(processed);
-      float r = rate(processed) * (1 - m);
-      bprop(u, g, r, m);
+      float r = rate(processed) * (1f - m);
+      bprop(row, g, r, m);
     }
   }
 
@@ -1064,11 +964,7 @@ public abstract class Neurons {
    * @param y vector of length rows
    * @param row_bits if not null, check bits of this byte[] to determine whether a row is used or not
    */
-<<<<<<< HEAD
-  static void gemv_row_optimized(float[] res, float[] a, float[] x, final float[] y, byte[] row_bits) {
-=======
   final static void gemv_row_optimized(final float[] res, final float[] a, final float[] x, final float[] y, final byte[] row_bits) {
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
     final int cols = x.length;
     final int rows = y.length;
     assert(res.length == rows);
@@ -1155,8 +1051,11 @@ public abstract class Neurons {
     for(int r = 0; r<rows; r++) {
       res.set(r, 0);
       if( row_bits != null && (row_bits[r / 8] & (1 << (r % 8))) == 0) continue;
-      for (SparseVector.Iterator it=x.begin(); !it.equals(x.end()); it.next())
-        res.add(r, a.get(r,it.index()) * it.value());
+      int start = x.begin()._idx;
+      int end = x.end()._idx;
+      for (int it = start; it < end; ++it) {
+        res.add(r, a.get(r, x._indices[it]) * x._values[it]);
+      }
       res.add(r, y.get(r));
     }
   }
@@ -1167,12 +1066,14 @@ public abstract class Neurons {
     for(int r = 0; r<rows; r++) {
       res.set(r, 0);
     }
-    for (SparseVector.Iterator it=x.begin(); !it.equals(x.end()); it.next()) {
-      final float val = it.value();
+    int start = x.begin()._idx;
+    int end = x.end()._idx;
+    for (int it = start; it < end; ++it) {
+      final float val = x._values[it];
       if (val == 0f) continue;
       for(int r = 0; r<rows; r++) {
         if( row_bits != null && (row_bits[r / 8] & (1 << (r % 8))) == 0) continue;
-        res.add(r, a.get(r,it.index()) * val);
+        res.add(r, a.get(r,x._indices[it]) * val);
       }
     }
     for(int r = 0; r<rows; r++) {
