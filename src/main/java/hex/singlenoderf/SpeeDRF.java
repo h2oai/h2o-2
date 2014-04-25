@@ -27,7 +27,7 @@ public class SpeeDRF extends Job.ValidatedJob {
   @API(help = "Split Criterion Type", filter = Default.class, json=true)
   public Tree.StatType stat_type = Tree.StatType.ENTROPY;
 
-  @API(help = "Class Weights (e.g. 0:1:0.01 or 0.0,0.2,0.4,0.6,0.8,1.0)", filter = Default.class, displayName = "class weights", json = true)
+  @API(help = "Class Weights (0.0,0.2,0.4,0.6,0.8,1.0)", filter = Default.class, displayName = "class weights", json = true)
   public double[] class_weights;
 
   @API(help = "Sampling Strategy", filter = Default.class, json = true)
