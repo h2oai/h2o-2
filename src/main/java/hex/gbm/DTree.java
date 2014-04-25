@@ -135,7 +135,7 @@ public class DTree extends Iced {
      *
      *
      *  <p>For more information see (35), (45) in the paper
-     *  <a href="www-stat.stanford.edu/~jhf/ftp/trebst.pdf‎"><i>J. Friedman - Greedy Function Approximation: A Gradient boosting machine</i></a></p> */
+     *  <a href="www-stat.stanford.edu/~jhf/ftp/trebst.pdf"><i>J. Friedman - Greedy Function Approximation: A Gradient boosting machine</i></a></p> */
     public final float improvement() {
       double d = (_p0-_p1);
       return (float) ( d*d*_n0*_n1 / (_n0+_n1) );

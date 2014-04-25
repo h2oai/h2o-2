@@ -213,7 +213,7 @@ public class SpeeDRF extends Job.ValidatedJob {
 
   public Frame score( Frame fr ) { return ((SpeeDRFModel)UKV.get(dest())).score(fr);  }
 
-  public final static class DRFTask extends water.DRemoteTask {
+  public final static class DRFTask extends DRemoteTask {
     /** The RF Model.  Contains the dataset being worked on, the classification
      *  column, and the training columns.  */
     public SpeeDRFModel _rfmodel;

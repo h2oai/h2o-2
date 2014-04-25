@@ -21,9 +21,9 @@ import java.util.Random;
  * left stands for the rows with column value equal to the split value and
  * right for all different ones.
  */
-public class GiniStatistic extends hex.singlenoderf.Statistic {
+public class GiniStatistic extends Statistic {
 
-  public GiniStatistic(hex.singlenoderf.Data data, int features, long seed, int exclusiveSplitLimit) { super(data, features, seed, exclusiveSplitLimit); }
+  public GiniStatistic(Data data, int features, long seed, int exclusiveSplitLimit) { super(data, features, seed, exclusiveSplitLimit); }
 
   private double gini(int[] dd, int sum) {
     double result = 1.0;
@@ -35,7 +35,7 @@ public class GiniStatistic extends hex.singlenoderf.Statistic {
     return result;
   }
 
-  @Override protected Split ltSplit(int col, hex.singlenoderf.Data d, int[] dist, int distWeight, Random _) {
+  @Override protected Split ltSplit(int col, Data d, int[] dist, int distWeight, Random _) {
     int[] leftDist = new int[d.classes()];
     int[] riteDist = dist.clone();
     int lW = 0;

@@ -41,18 +41,9 @@ class PerfRunner:
         if self.terminated:
             return
 
+        prefix = ""
         for root, dirs, files in os.walk(self.test_root_dir):
             for d in dirs:
-<<<<<<< HEAD
-                if test_to_run in d:
-                    self.add_test(d)
-
-    def add_test(self, testDir):
-        """
-        Create a Test object and push it onto the queue.
-        """
-        config_file = os.path.abspath(os.path.join(self.test_root_dir,testDir,testDir + ".cfg"))
-=======
                 if "singlenode" in dirs:
                     for root2, dirs2, files2 in os.walk(os.path.join(root, d)):
                         d = os.path.basename(root2)
@@ -74,7 +65,6 @@ class PerfRunner:
         """
         self.pre = "192.168"
         config_file = os.path.abspath(os.path.join(self.test_root_dir,prefix,testDir,testDir + ".cfg"))
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
         print "USING CONFIGURATION FROM THIS FILE: "
         print config_file
         parse_file = "parse.R" #testDir + "_Parse.R"
@@ -83,8 +73,8 @@ class PerfRunner:
         if os.path.exists(os.path.join(self.test_root_dir, testDir, "predict.R")):
             predict_file = "predict.R" 
 
-        test_dir = os.path.join(self.test_root_dir, testDir)
-        test_short_dir = testDir
+        test_dir = os.path.join(self.test_root_dir, prefix, testDir)
+        test_short_dir = os.path.join(prefix, testDir)
 
         self.m = "171"
         test = Test(config_file, test_dir, test_short_dir, 
@@ -113,11 +103,7 @@ class PerfRunner:
             test = self.tests_not_started.pop(0)
             print
             print "Beginning test " + test.test_name
-<<<<<<< HEAD
-
-=======
             print
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
             isEC2 = test.aws
             xmx = test.heap_bytes_per_node
             ip = test.ip
@@ -131,28 +117,6 @@ class PerfRunner:
 
             cloud = H2OCloud(1, hosts_in_cloud, nodes_in_cloud, self.h2o_jar, base_port, self.output_dir, isEC2, test.remote_hosts)
             self.cloud.append(cloud)
-<<<<<<< HEAD
-            PerfUtils.start_cloud(self, test.remote_hosts)
-            test.port = self.cloud[0].get_port()
-            
-            test.test_run = TableRow("test_run", self.perfdb)
-            test.test_run.row.update(PerfUtils.__scrape_h2o_sys_info__(self))
-            test.do_test()
-            test.test_run.row['start_epoch_ms'] = test.start_ms
-            test.test_run.row['end_epoch_ms'] = test.end_ms
-            test.test_run.row['test_name'] = test.test_name
-            contamination = PerfUtils.run_contaminated(self)
-            print "DEBUG: "
-            print contamination
-            print ""
-            print ""
-            test.test_run.row["contaminated"] = contamination[0]
-            test.test_run.row["contamination_message"] = contamination[1]
-            test.test_run.update(True)
-            PerfUtils.stop_cloud(self, test.remote_hosts)
-            self.cloud.pop(0)
-            self.perfdb.this_test_run_id += 1
-=======
             try:
                 PerfUtils.start_cloud(self, test.remote_hosts)
                 test.port = self.cloud[0].get_port()
@@ -212,7 +176,6 @@ class PerfRunner:
     def stop_sys_profiling(self, ssh):
         ssh.exec_command('exit')
         ssh.close()
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
 
     def __get_instance_type__(self):
         return "localhost"

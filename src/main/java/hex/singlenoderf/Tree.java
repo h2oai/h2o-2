@@ -31,7 +31,7 @@ public class Tree extends H2OCountedCompleter {
   public static final int ROWS_FORK_TRESHOLD = 1<<11;
 
   final StatType _type;         // Flavor of split logic
-  final hex.singlenoderf.Data _data;         // Data source
+  final Data _data;         // Data source
   final hex.singlenoderf.Sampling _sampler;      // Sampling strategy
   final int      _data_id;      // Data-subset identifier (so trees built on this subset are not validated on it)
   final int      _maxDepth;     // Tree-depth cutoff
@@ -47,7 +47,7 @@ public class Tree extends H2OCountedCompleter {
   /**
    * Constructor used to define the specs when building the tree from the top.
    */
-  public Tree(final Job job, final hex.singlenoderf.Data data, byte producerId, int maxDepth, StatType stat, int numSplitFeatures, long seed, int treeId, int exclusiveSplitLimit, final hex.singlenoderf.Sampling sampler, int verbose) {
+  public Tree(final Job job, final Data data, byte producerId, int maxDepth, StatType stat, int numSplitFeatures, long seed, int treeId, int exclusiveSplitLimit, final hex.singlenoderf.Sampling sampler, int verbose) {
     _job              = job;
     _data             = data;
     _type             = stat;
@@ -67,7 +67,7 @@ public class Tree extends H2OCountedCompleter {
     return true;
   }
 
-  private hex.singlenoderf.Statistic getStatistic(int index, hex.singlenoderf.Data data, long seed, int exclusiveSplitLimit) {
+  private hex.singlenoderf.Statistic getStatistic(int index, Data data, long seed, int exclusiveSplitLimit) {
     hex.singlenoderf.Statistic result = _stats[index].get();
     if( result==null ) {
       result  = _type == StatType.GINI ?
@@ -109,7 +109,7 @@ public class Tree extends H2OCountedCompleter {
       Timer timer    = new Timer();
       _stats[0]      = new ThreadLocal<hex.singlenoderf.Statistic>();
       _stats[1]      = new ThreadLocal<hex.singlenoderf.Statistic>();
-      hex.singlenoderf.Data d = _sampler.sample(_data, _seed);
+      Data d = _sampler.sample(_data, _seed);
       hex.singlenoderf.Statistic left = getStatistic(0, d, _seed, _exclusiveSplitLimit);
       // calculate the split
       for( Row r : d ) left.addQ(r);
@@ -147,18 +147,18 @@ public class Tree extends H2OCountedCompleter {
 
   private class FJBuild extends RecursiveTask<INode> {
     final hex.singlenoderf.Statistic.Split _split;
-    final hex.singlenoderf.Data _data;
+    final Data _data;
     final int _depth;
     final long _seed;
 
-    FJBuild(hex.singlenoderf.Statistic.Split split, hex.singlenoderf.Data data, int depth, long seed) {
+    FJBuild(hex.singlenoderf.Statistic.Split split, Data data, int depth, long seed) {
       _split = split;  _data = data; _depth = depth; _seed = seed;
     }
 
     @Override public INode compute() {
       hex.singlenoderf.Statistic left = getStatistic(0,_data, _seed + LTSS_INIT, _exclusiveSplitLimit); // first get the statistics
       hex.singlenoderf.Statistic rite = getStatistic(1,_data, _seed + RTSS_INIT, _exclusiveSplitLimit);
-      hex.singlenoderf.Data[] res = new Data[2]; // create the data, node and filter the data
+      Data[] res = new Data[2]; // create the data, node and filter the data
       int c = _split._column, s = _split._split;
       assert c != _data.columns()-1; // Last column is the class column
       SplitNode nd = _split.isExclusion() ?

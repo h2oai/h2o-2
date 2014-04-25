@@ -13,19 +13,19 @@ public class SpeeDRFModelView extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-  @Request.API(help="SpeeDRF Model Key", required = true, filter = SpeeDRFKeyFilter.class)
+  @API(help="SpeeDRF Model Key", required = true, filter = SpeeDRFKeyFilter.class)
   Key _modelKey;
-  class SpeeDRFKeyFilter extends RequestArguments.H2OKey { public SpeeDRFKeyFilter() { super("",true); } }
+  class SpeeDRFKeyFilter extends H2OKey { public SpeeDRFKeyFilter() { super("",true); } }
 
-  @Request.API(help="SpeeDRF Model")
+  @API(help="SpeeDRF Model")
   SpeeDRFModel speedrf_model;
 
   public static String link(String txt, Key model) {
     return "<a href='/2/SpeeDRFModelView.html?_modelKey=" + model + "'>" + txt + "</a>";
   }
 
-  public static RequestBuilders.Response redirect(Request req, Key modelKey) {
-    return RequestBuilders.Response.redirect(req, "/2/SpeeDRFModelView", "_modelKey", modelKey);
+  public static Response redirect(Request req, Key modelKey) {
+    return Response.redirect(req, "/2/SpeeDRFModelView", "_modelKey", modelKey);
   }
 
   @Override public boolean toHTML(StringBuilder sb){
@@ -33,8 +33,8 @@ public class SpeeDRFModelView extends Request2 {
     return true;
   }
 
-  @Override protected RequestBuilders.Response serve() {
+  @Override protected Response serve() {
     speedrf_model = DKV.get(_modelKey).get();
-    return RequestBuilders.Response.done(this);
+    return Response.done(this);
   }
 }

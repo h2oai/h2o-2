@@ -23,27 +23,14 @@ Here are some examples:
 
 Defining a K-Means model
 """"""""""""""""""""""""
-**Source key:**
+**Source:**
   
   The .hex key associated with the data set for use in clustering.
 
-<<<<<<< HEAD
-=======
 **Ignored Columns:**
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
 
-**K**
-
-  The desired  number of clusters. There is no set rule or formula
-  for defining K, it is up to the user and is
-  often based on heuristics. 
-
-
-**Max iter** 
-
-  The maximum number of iterations the algorithm is to go
-  through if no stopping point is reached before then.
- 
+  The set of columns to be omitted from modeling. 
+  
 
 **Initialization**
 
@@ -67,7 +54,24 @@ Defining a K-Means model
    and then calculating the distance from that point to all other
    possible points. The second initial center is chosen to the point
    furthest from the first center in terms of Euclidean distance. 
+
+**K**
+
+  The desired  number of clusters. There is no set rule or formula
+  for defining K, it is up to the user and is
+  often based on heuristics. 
+
+
+**Max Iter** 
+
+  The maximum number of iterations the algorithm is to go
+  through if no stopping point is reached before then.
  
+**Normalize:** 
+
+   Specifies that each attribute be transformed such that it has a mean
+   of 0 and standard deviation of 1, and that this transformation be
+   carried out before the algorithm is applied.
 
 **Seed:**
 
@@ -76,20 +80,6 @@ Defining a K-Means model
   each instance of H\ :sub:`2`\ O, allowing the user to create models with the
   same starting conditions in alternative configurations.
 
-<<<<<<< HEAD
-=======
-**Max Iter** 
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
-
-**Normalize:** 
-
-   Specifies that each attribute be transformed such that it has a mean
-   of 0 and standard deviation of 1, and that this transformation be
-   carried out before the algorithm is applied.
-
-
-**Cols**
-   The columns from the data set that contain the attribute data.
 
 
 

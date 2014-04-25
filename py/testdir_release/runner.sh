@@ -17,7 +17,7 @@ then
     pssh -h /home/0xdiag/hosts_minus_9_22 -i 'rm -f -r /home/0xdiag/ice*'
     python ../four_hour_cloud.py -v -cj pytest_config-jenkins-sm32.json &
 else
-    if [[ $USER == "nojenkins" ]]
+    if [[ $USER == "jenkins" ]]
     then 
         # clean out old ice roots from 0xcust.** (assuming we're going to run as 0xcust..
         # only do this if you're jenksin
@@ -39,12 +39,11 @@ else
                 'find /home/0xcustomer/ice* -ctime +3 | xargs rm -rf; cd /mnt/0xcustomer-datasets'
         done
 
-        python ../four_hour_cloud.py -cj pytest_config-jenkins-172-180.json &
+        python ../four_hour_cloud.py -cj pytest_config-jenkins-175-180.json &
     else
         if [[ $USER == "kevin" ]]
         then
             python ../four_hour_cloud.py -cj pytest_config-kevin.json &
-            # python ../four_hour_cloud.py -cj pytest_config-jenkins-172-180.json &
         else
             python ../four_hour_cloud.py &
         fi

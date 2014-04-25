@@ -41,20 +41,12 @@ public class DeepLearningMnist extends Job {
     p.seed = seed;
     p.hidden = new int[]{1024,1024,2048};
 //    p.hidden = new int[]{128,128,256};
-    p.rate = 0.01;
-    p.rate_annealing = 1e-6;
     p.activation = DeepLearning.Activation.RectifierWithDropout;
     p.loss = DeepLearning.Loss.CrossEntropy;
     p.input_dropout_ratio = 0.2;
     p.epochs = 10000;
     p.l1 = 1e-5;
     p.l2 = 0;
-<<<<<<< HEAD
-    p.adaptive_rate = false;
-    p.momentum_start = 0.5;
-    p.momentum_ramp = 1800000;
-    p.momentum_stable = 0.99;
-=======
 
     if (true) {
       // automatic learning rate
@@ -76,7 +68,6 @@ public class DeepLearningMnist extends Job {
     }
 
 
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
     p.initial_weight_distribution = DeepLearning.InitialWeightDistribution.UniformAdaptive;
 //    p.initial_weight_scale = 0.01
     p.classification = true;
@@ -91,7 +82,7 @@ public class DeepLearningMnist extends Job {
     p.classification_stop = -1;
     p.train_samples_per_iteration = -1;
     p.score_interval = 30;
-
+    p.variable_importances = false;
     p.fast_mode = true; //to match old NeuralNet behavior
     p.ignore_const_cols = true; //to match old NeuralNet behavior
     p.shuffle_training_data = false;

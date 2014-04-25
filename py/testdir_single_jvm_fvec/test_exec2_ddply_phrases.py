@@ -43,20 +43,12 @@ badPhrases = [
     "factor",
 ]
 phrases = [
-<<<<<<< HEAD
-    "function(x) { cbind( mean(x[,1]), mean(x[,2]) ) }",
-    "function(x) { mean( x[,2]) }", 
-    "function(x) { sd( x[,2]) }", 
-    "function(x) { quantile(x[,2] , c(0.9) ) }",
-
-=======
     "func1",
     "func2",
     "func3",
     "func4",
     "func5",
     # "func6",
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
     "nrow",
     "ncol",
     "length",
@@ -84,11 +76,7 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-<<<<<<< HEAD
-            h2o.build_cloud(3)
-=======
             h2o.build_cloud(1, java_heap_GB=12)
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -105,17 +93,6 @@ class Basic(unittest.TestCase):
         hexKey = 'i.hex'
         parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local', hex_key=hexKey)
 
-<<<<<<< HEAD
-        for resultKey, execExpr in initList:
-            h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=resultKey, timeoutSecs=60)
-
-        for p in phrases:
-            execExpr = "ddply(r.hex, c(2,3), " + p + ")" 
-            h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=60)
-
-        
-=======
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
 
         for col in range(1,10):
             initList = [

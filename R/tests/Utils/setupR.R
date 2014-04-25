@@ -16,11 +16,7 @@ checkNLoadPackages()
 Log.info("Loading other required test packages")
 if(!"glmnet" %in% rownames(installed.packages())) install.packages("glmnet")
 if(!"gbm"    %in% rownames(installed.packages())) install.packages("gbm")
-<<<<<<< HEAD
-if(!"ROCR"   %in% rownmaes(installed.packages())) install.packages("ROCR")
-=======
 if(!"ROCR"   %in% rownames(installed.packages())) install.packages("ROCR")
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
 require(glmnet)
 require(gbm)
 require(ROCR)

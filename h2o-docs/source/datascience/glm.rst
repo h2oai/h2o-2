@@ -2,14 +2,6 @@
 
 
 Generalized Linear Model (GLM)
-<<<<<<< HEAD
-------------------------------
-
-GLM includes several flexible algorithms. Each serves a 
-different purpose, and is used under different assumptions.
-Depending on distribution and link function choice, it can be 
-used either for prediction or classification.
-=======
 ==================================
 
 Generalized Linear Modeling (GLM) estimates regression models for
@@ -18,7 +10,6 @@ to the Gaussian distribution, these include Poisson, binomial, gamma
 and Tweedie distributions. Each serves a different purpose, and
 depending on distribution and link function choice, it can be used 
 either for prediction or classification.
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
  
 
 **The GLM suite includes**
@@ -38,10 +29,10 @@ Tweedie regression
 Defining a GLM Model
 """"""""""""""""""""
 
-**Y:**
-  Y is the model dependent variable (DV). In the context of each of
-  the distinct link   functions Y variables are restricted in the
-  following ways:
+**Response:**
+  Response is the model dependent variable, often noted as Y. 
+  The specific features of a dependent variable should be considered
+  when choosing the appropriate distribution for estimating a model. 
 
   *Gaussian* 
   Y variables must be continuous and real valued.
@@ -50,23 +41,24 @@ Defining a GLM Model
   Y variables are discrete and valued only at 0 or 1. 
 
   *Poisson*
-  Y variables are discrete and valued strictly greater than 0. 
+  Y variables are discrete and valued strictly greater than 0. Poisson
+  models are used to model count data.   
 
   *Gamma*
   Y variables are discrete and valued strictly greater than 0.
+
+  *Tweedie*
+  Y variables follow a Poisson-Gamma mixed compound distribution. This
+  is often also called a zero-inflated Poisson, and is used when Y
+  variables follow a distribution with a large mass at 0, and integer valued
+  counts for all non-zero observations. 
     
-<<<<<<< HEAD
-  
-	
-**X:** 
-=======
   	
 **Ignored Columns:** 
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
      
      This field will auto populate a list of the columns from the data
-     set in use. The user selected set of X are the independent 
-     variables on which the model predicts. H\ :sub:`2`\ O omits the dependent
+     set in use. The user selected set of columns will be omitted from
+     the modeling process. H\ :sub:`2`\ O omits the dependent
      variable specified in Y, as well as any columns with a
      constant value. Constant columns are omitted because the variances
      of such columns are 0. In this case Y is independent of X, and X
@@ -91,9 +83,6 @@ Defining a GLM Model
      training on factors. It is the user's responsibility to ensure
      that out of data prediction is undertaken with caution, as the
      veracity of the original results are often constrained to the
-<<<<<<< HEAD
-     data range used in the original model.   
-=======
      data range used in the original model.  
 
     
@@ -120,7 +109,6 @@ Defining a GLM Model
      with 1/10 of the data used to train each. The purpose of N folds
      is to evaluate the stability of the parameter estimates produced.
      
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
   
 
 **Family and Link:**  
@@ -133,43 +121,37 @@ Defining a GLM Model
 
   *Gaussian (identity):* 
      
-<<<<<<< HEAD
-     Y are quantitative, continuous (or continuous
-     predicted values can be meaningfully interpreted), and expected to
-     be normally distributed 
-=======
      Y are quantitative, continuous (or discrete
      predicted values can be meaningfully interpreted as approximately
      continuos).  
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
 
   *Binomial (logit):* 
 
-     Dependent variables take on two values,
-     traditionally coded as 0 and 1, and follow a binomial distribution,
+     Dependent variables take on two values, coded as 0 and 1, and
+     follow a binomial distribution.  Binomial dependent variables 
      can be understood as a categorical Y with two possible outcomes
 
   *Poisson (log):* 
 
      Dependent variable is a count - a quantitative,
      discrete value that expresses the number of times some event 
-     occurred
+     occurred. 
 
   *Gamma (inverse):* 
 
      Dependent variable is a survival measure, or is distributed as
-     Poisson where variance   is greater than the mean of the distribution. 
+     Poisson where variance is greater than the mean of the distribution. 
 
-   *Tweedie Power:* 
+**Tweedie Variance Power:** 
       
     Tweedie distributions are distributions of the dependent variable Y where
     :math:`var(Y)=a[E(Y)]^{p}`
 
     where a and p are constants, and p is determined on the basis of
-    the distribution of Y. Guidelines for selecting Tweedie power and
+    the distribution of Y. Guidelines for selecting Tweedie power are
     given below.   
 
-    Tweedie power characterizes the distribution of the dependent variable. 
+    Tweedie power is chosen based on the distribution of the dependent variable. 
 
     *p*	        *Response distribution*
 
@@ -180,12 +162,6 @@ Defining a GLM Model
     3	        Inverse-Gaussian
     > 2	        Stable, with support on the positive reals 
 
-**Lambda:**
-
-      H\ :sub:`2`\ O provides a default value, but this can also be user
-      defined. Lambda is a regularization parameter that is designed to
-      prevent overfitting. The best value(s) of lambda depends on the
-      desired level of agreement. 
 
 **Alpha:**
 
@@ -195,25 +171,18 @@ Defining a GLM Model
       penalty taken against the estimated fit of the model as the
       number of parameters increases. An Alpha of 1 is the lasso
       penalty, and an alpha of 0 is the ridge penalty.
+
+
+**Lambda:**
+
+      H\ :sub:`2`\ O provides a default value, but this can also be user
+      defined. Lambda is a regularization parameter that is designed to
+      prevent overfitting. The best value(s) of lambda depends on the
+      desired level of agreement. 
+
  
-**Weight:**
+**Beta Epsilon:** 
 
-<<<<<<< HEAD
-      In binomial regression, weight allows the user to specify
-      consideration given to observations based on the observed Y
-      value. Weight=1 is neutral. Weight = 0.5 treats negative
-      examples as twice more important than positive ones. Weight =
-      2.0 does the opposite.
-
-**Case and Casemode:**
-
-      These tuning parameters are used in combination when predicting
-      binomial dependent variables. The default behavior of H\
-      :sub:`2`\ O is to the Y variable can be specified, and the model
-      can be asked to predict for observations above, below, or equal
-      to this value. Used in binomial prediction, where the default
-      case is the mean of the Y column. 
-=======
      Precision of the vector of coefficients. Computation
      stops when the maximum difference between two beta vectors is
      below than beta epsilon.
@@ -236,9 +205,9 @@ Defining a GLM Model
      lambda are estimated. These values are successively smaller, and
      are log scaled. Models for each are returned, along with the
      ratio of the explained deviance to nonzero parameter estimates. 
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
 
-**GLMgrid Models**
+GLMgrid Models
+"""""""""""""""
  
      GLMgrid models can be generated for sets of regularization parameters by 
      entering the parameters either as a list of comma separated
@@ -246,45 +215,7 @@ Defining a GLM Model
      evaluate a model for alpha=(0, .5, 1), entering 0, .5, 1 or
      0:1:.5 will achieve the desired outcome. 
 
-Expert Settings
-"""""""""""""""      
-  Expert settings can be accessed by checking the tic box at the
-  bottom of the model page. 
 
-**Standardize** 
-
-     An option that transforms variables into
-     standardized variables, each with mean 0 and unit
-     variance. Variables and coefficients are now expressed in terms
-     of their relative position to 0, and in standard units. 
-
-**Threshold** 
-
-     An option only for binomial models that allows the user
-     to define the degree to which they prefer to weight the
-     sensitivity (the proportion of correctly classified 1s) and
-     specificity (the proportion of correctly classified 0s). The
-     default option is joint optimization for the overall
-     classification rate. Changing this will alter the confusion
-     matrix and the AUC.
- 
-**LSM Solver** 
-
-     LSM stands for Least Squares Method. Least squares is
-     the optimization criterion for the model residuals.
-
- 
-**Beta Epsilon** 
-
-     Precision of the vector of coefficients. Computation
-     stops when the maximal difference between two beta vectors is
-     below than Beta epsilon
-
-
-**Max iter**
-
-  The maximum number of iterations to be performed for training the
-  model via gradient descent. 
 
 Interpreting a Model
 """"""""""""""""""""
@@ -351,39 +282,7 @@ Interpreting a Model
      from the confusion matrix, which reports actual versus predicted
      classifications, and the error rates of both.
 
-Expert Settings
-"""""""""""""""      
-  Expert settings can be accessed by checking the tic box at the
-  bottom of the model page. 
 
-**Standardize** 
-
-     An option that transforms variables into
-     standardized variables, each with mean 0 and unit
-     variance. Variables and coefficients are now expressed in terms
-     of their relative position to 0, and in standard units. 
-
-**Threshold** 
-
-     An option only for binomial models that allows the user
-     to define the degree to which they prefer to weight the
-     sensitivity (the proportion of correctly classified 1s) and
-     specificity (the proportion of correctly classified 0s). The
-     default option is joint optimization for the overall
-     classification rate. Changing this will alter the confusion
-     matrix and the AUC.
- 
-**LSM Solver** 
-
-     LSM stands for Least Squares Method. Least squares is
-     the optimization criterion for the model residuals.
-
- 
-**Beta Epsilon** 
-
-     Precision of the vector of coefficients. Computation
-     stops when the maximal difference between two beta vectors is
-     below than Beta epsilon
 
 Validate GLM 
 """""""""""""

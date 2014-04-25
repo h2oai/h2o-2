@@ -1429,6 +1429,7 @@ class H2O(object):
             'single_quotes': None,
             'header_from_file': None,
             'exclude': None,
+            'delete_on_done': None,
             'preview': None,
             }
         check_params_update_kwargs(params_dict, kwargs, 'parse', print_params=True)
@@ -2280,6 +2281,7 @@ class H2O(object):
             'momentum_stable'              : None,
             'nesterov_accelerated_gradient': None,
             'input_dropout_ratio'          : None,
+            'hidden_dropout_ratios'        : None,
             'l1'                           : None,
             'l2'                           : None,
             'max_w2'                       : None,
@@ -2294,13 +2296,17 @@ class H2O(object):
             'regression_stop'              : None,
             'quiet_mode'                   : None,
             'max_confusion_matrix_size'    : None,
+            'max_hit_ratio_k'              : None,
             'balance_classes'              : None,
             'max_after_balance_size'       : None,
             'score_validation_sampling'    : None,
             'diagnostics'                  : None,
+            'variable_importances'         : None,
             'fast_mode'                    : None,
             'ignore_const_cols'            : None,
             'force_load_balance'           : None,
+            'replicate_training_data'      : None,
+            'single_node_mode'             : None,
             'shuffle_training_data'        : None,
         }
         # only lets these params thru

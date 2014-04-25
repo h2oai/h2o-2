@@ -72,14 +72,10 @@ then
     cat <<!  >> /tmp/libPaths.cmd
 .libPaths()
 myPackages = rownames(installed.packages())
-if("h2o" %in% myPackages) {
-  # detach("package:h2o", unload=TRUE) 
-  remove.packages("h2o")
-}
-if("h2oRClient" %in% myPackages) {
-  # detach("package:h2oRClient", unload=TRUE) 
-  remove.packages("h2oRClient")
-}
+if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
+# this will only remove from the first library in .libPaths()
+# may need permission to remove from other libraries
+if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
 !
 fi
 

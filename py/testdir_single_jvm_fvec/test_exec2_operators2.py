@@ -1,15 +1,9 @@
-import unittest, random, sys, time
+import unittest, random, sys, time, re
 sys.path.extend(['.','..','py'])
 import h2o, h2o_browse as h2b, h2o_exec as h2e, h2o_hosts, h2o_import as h2i
 
 initList = [
-        ('r0.hex', 'r0.hex=c(1.3,0,1,2,3,4,5)'),
-        ('r1.hex', 'r1.hex=c(2.3,0,1,2,3,4,5)'),
-        ('r2.hex', 'r2.hex=c(3.3,0,1,2,3,4,5)'),
-        ('r3.hex', 'r3.hex=c(4.3,0,1,2,3,4,5)'),
-        ('r4.hex', 'r4.hex=c(5.3,0,1,2,3,4,5)'),
         ('r.hex', 'r.hex=i.hex'),
-        ('z.hex', 'z.hex=c(0)'),
         ]
 
 DO_IFELSE = False
@@ -18,7 +12,6 @@ DO_FAIL1 = False
 DO_TERNARY = False
 DO_APPLY = True
 DO_FUNCTION = False
-
 DO_FORCE_LHS_ON_MULTI = True
 
 exprList = [
@@ -94,14 +87,6 @@ exprList = [
         "r.hex[,1]=3.3; r.hex",
         "r.hex[,1]=r.hex[,1]+1",
 
-        "function(x,y,z){x[]}(r.hex,1,2)",
-        "function(x){x+1}(2)",
-        "function(x){y=x*2; y+1}(2)",
-        "function(x){y=1+2}(2)",
-        "function(funy){function(x){funy(x)*funy(x)}}(sgn)(-2)",
-        "a=1; a=2; function(x){x=a;a=3}",
-        "a=r.hex; function(x){x=a;a=3;nrow(x)*a}(a)",
-
 
         # doesn't work
         # "cbind(c(1), c(2), c(3))",
@@ -149,16 +134,9 @@ exprList = [
         # "max(1,r.hex,3)",
 
         "factor(r.hex[,5])",
-        "r0.hex[,1]==1.0",
-        "runif(r4.hex[,1])",
+        "r.hex[,1]==1.0",
+        "runif(r.hex[,1])",
         "r.hex[,3]=4",
-    
-        # doesn't work
-        # "crnk=function(x){99}",
-        # "crk=function(x){99}",
-        "crunk=function(x){99}",
-        "r.hex[,3]=4",
-        # "crunk=function(x){99}; r.hex[,3]=4",
 
         ]
 
@@ -171,6 +149,19 @@ if DO_APPLY:
 
 if DO_FUNCTION:
     exprList += [
+        # doesn't work
+        # "crnk=function(x){99}",
+        # "crk=function(x){99}",
+        "crunk=function(x){x+99}",
+        # "function(x){x+99}",
+        # "crunk=function(x){99}; r.hex[,3]=4",
+        "function(x,y,z){x[]}(r.hex,1,2)",
+        "function(x){x+1}(2)",
+        "function(x){y=x*2; y+1}(2)",
+        "function(x){y=1+2}(2)",
+        "function(funy){function(x){funy(x)*funy(x)}}(sgn)(-2)",
+        "a=1; a=2; function(x){x=a;a=3}",
+        "a=r.hex; function(x){x=a;a=3;nrow(x)*a}(a)",
         # "mean=function(x){apply(x,1,sum)/nrow(x)};mean(r.hex)",
         # "mean=function(x){apply(x,2,sum)/nrow(x)};mean(r.hex)",
         "mean=function(x){99/nrow(x)};mean(r.hex)",
@@ -223,22 +214,22 @@ exprBigList = []
 for i in range(1000):
     # expr = ""
     # concatNum = random.randint(1,2)
-<<<<<<< HEAD
-    expr = "crunk=function(x){99};"
-    concatNum = random.randint(0,2)
-=======
     # expr = "crunk=function(x){x+98};"
     expr = ""
     # expr = "function(x){x+98};"
     concatNum = random.randint(1,3)
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
     for j in range(concatNum):
         randExpr = random.choice(exprList)
         if DO_FORCE_LHS_ON_MULTI:
-            expr += "d=" + randExpr + ";"
+            # lhs =? 
+            if re.search("=(?!=)", randExpr):
+                expr += randExpr + ";"
+            else:
+                expr += "d=" + randExpr + ";"
         else:
             expr += randExpr + ";"
 
+    assert expr!="r"
     exprBigList.append(expr)
         
 

@@ -24,11 +24,11 @@ import java.util.Random;
  * The same is calculated also for exclusion, where left stands for the rows
  * where column equals to the split point and right stands for all others.
  */
-class EntropyStatistic extends hex.singlenoderf.Statistic {
+class EntropyStatistic extends Statistic {
 
-  public EntropyStatistic(hex.singlenoderf.Data data, int features, long seed, int exclusiveSplitLimit) { super(data, features, seed, exclusiveSplitLimit); }
+  public EntropyStatistic(Data data, int features, long seed, int exclusiveSplitLimit) { super(data, features, seed, exclusiveSplitLimit); }
   /** LessThenEqual splits s*/
-  @Override protected Split ltSplit(int col, hex.singlenoderf.Data d, int[] dist, int distWeight, Random rand) {
+  @Override protected Split ltSplit(int col, Data d, int[] dist, int distWeight, Random rand) {
     final int[] distL = new int[d.classes()], distR = dist.clone();
     final double upperBoundReduction = upperBoundReduction(d.classes());
     double maxReduction = -1;

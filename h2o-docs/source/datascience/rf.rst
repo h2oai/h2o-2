@@ -23,110 +23,78 @@ When to use RF
 Defining a Model
 """"""""""""""""""
 
-**Response Variable:**
+**Source:**
+
+  The parsed data set to be used in training a model. 
+
+
+**Response:**
    
-  The variable on which you would like to classify
+  The dependent variable to be modeled.
 
 
-**N Tree:** 
+**Ignored Columns:**
+
+  The set of features from the source data set to be omitted from
+  training a model. 
+
+**Classification:**
+
+  An option that specifies the model to be a classifier when switched
+  on. 
+
+**Validation:** 
+
+  A .hex key associated with data to be used in validation of the
+  model built using the data specified in **Source**.
+
+**N Trees:** 
   
   The number of trees the user would like to generate for 
-  classification
+  classification.
 
 
-**Features:** 
+**Max Depth:** 
 
   A user defined tuning parameter for controlling model complexity
-  (by number of nodes); the number of features on which the trees are
-  to split. In practice features is bounded between 1 and the total
-  number of features in the data. In different fields features may
-  also be called attributes or traits. 
-
-**Depth:** 
-
-  A  user defined tuning parameter for controlling model complexity
   (by number of edges); depth is the longest path from root to the
-  furthest  leaf. 
+  furthest leaf. Maximum depth also specifies the maximum number of
+  interactions that can be accounted for by the model.
 
-**Stat type:** 
-  A choice of criteria that determines the optimum split at each 
-  node. 
+**Min Rows:**
 
-  *Entropy:* 
-   This is also known as information gain, entropy is a measure of
-   uncertainty in a classification scheme. For example, if a two 
-   class population is 90% class A, and 10% class B, then there is a
-   .90 probability that a randomly selected member of the population
-   is A. This scheme has lower entropy than a population where 50% is
-   class A, and 50% is class B. the objective of using the entropy
-   impurity measure is to minimize this 
-   uncertainty.  
-	
-  *Gini:* 
-   An impurity measure based on the disparities in attribute
-   correlation between the most and least dominant classes in a
-   node. The objective of using this impurity measure is to choose 
-   the feature split that best isolates the dominant class.
+  The minimum number of observations to be included in each terminal
+  node. The maximum possible observations in a terminal node is N-1,
+  where N is the number of observations. The minimum is 1, and is the
+  case where each observation is in a unique terminal node. 
 
-**Ignore:** 
-    
-    Is the set of columns other than the response variable that 
-    should be omitted from building the tree. 
- 
+ **N Bins:**  
 
-**Sampling Strategy:** 
-    
-    This allows the user to define whether or not the model needs to
-    correct for unbalanced data by changing the mechanism through 
-    which training samples are generated. 
-
-    Serves a similar purpose as class weights; It ensures that in
-    unbalanced data the sample split for testing and training 
-    (used to calculate the out of bag error) every class is
-    represented at least once. This insures that every class is
-    included in the model, rather than being omitted by chance. 
-
- *Random Sampling:* 
-
-  Samples subsets on which trees are built such that every 
-  observation has an equal chance of being drawn. 
-
-
- *Stratified Sampling:* 
-  Partitions data set by classification before
-  sampling, and then samples from each subset. This insures
-  that each class will be represented in every split, even if the
-  class being drawn in a random sample was a low probability event. It
-  guarantees that when data are unbalanced, no class is omitted from
-  the model by chance. 
-
-<<<<<<< HEAD
-=======
     A user defined tuning parameter for controlling model complexity.
     N bins sets the number of groups into which the original data 
     can be split.
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
 
-**Sample:**
+**Score each iteration:**
 
-   User defined percentage of the observations in the data set to
-   sample for the building of each tree. 
+   An option that returns an error rate for each iteration of the
+   training process. It is used when models are especially complex. By
+   producing a score for the model at each iteration, users can stop
+   the training process when the cost of continuing to model is
+   greater than the marginal gains in predictive power.   
 
-**Out of Bag Error Estimate:** 
+**Importance:** 
 
-    Every tree RF internally constructs a test/ train split. The Kth
-    tree is built by pulling a sample on the data set, bootstrapping,
-    and using the result to build a tree. Observations not used to
-    build the tree are then run down the tree to see what
-    classification they are assigned. The OOB error rate is 
-    calculated by calculating the error rate for each class and then
-    averaging over all classes. 
+  An option that returns information about the importance of each
+  feature in the overall model. 
 
-  **Bin Limit:**  
+**Mtries:**
 
-    A user defined tuning parameter for controlling model complexity,
-    bin limit caps the the maximum number of groups into which the
-    orginal data are to be categorized.
+  At each iteration a randomly chosen subset of the features in the
+  training data are selected and evaluated to define the optimal split
+  of that subset. Mtries specifies the number of features to be
+  selected from the whole set. When set to -1 the number of features
+  to be chosen is set to the square root of the total number of
+  features, rounded to the nearest integer. 
 
  **Seed:**
  
@@ -134,23 +102,13 @@ Defining a Model
     specifying a starting point for black box processes that would
     otherwise occur at a randomly chosen place within the data.
 
- **Class Weight:**
+**Build tree one node:**
 
-<<<<<<< HEAD
-    When observed classifications in training data are uneven, users
-    may wish to correct this by weighting. Weights should be assigned
-    so that if chosen at random, an observation of each 
-    classification has an equal chance. For example, if there are two
-    classifications A and B in a data set, such that As occur
-    about 10% of the time, and Bs occur the rest, A should given a
-    weight of 5, and B of .56. 
-=======
   An option that allows users to train the model using one node,
   instead of using a distributed cluster with multiple
   nodes. Selecting this option can significantly impact the time it
   takes to train a model, and is recommended only for small data
   sets. 
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
  
 
 

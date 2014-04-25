@@ -79,7 +79,7 @@ class Test:
                 h["isEC2"] = self.aws
                 self.hosts.append(h)
 
-    def do_test(self):
+    def do_test(self, object):
         """
         This call is blocking.
 
@@ -93,11 +93,12 @@ class Test:
         self.parse_process.start(self.ip, self.port)
         self.parse_process.block()
         res = self.parse_process.scrape_phase()
-        self.test_run.row.update(res)   #this piece doesn't make sense to me.
+        self.test_run.row.update(res)
 
         self.model_process.start(self.ip, self.port)
         self.model_process.block()
         self.model_process.scrape_phase()
+        contamination = PerfUtils.run_contaminated(object)
 
         if self.predict_process:
             self.predict_process.start(self.ip, self.port)
@@ -116,6 +117,7 @@ class Test:
         self.test_run.row['instance_type'] = self.instance_type
 
         self.test_is_complete = True
+        return contamination
 
     def contamination_message(self):
         message = "Contamination in phase {}. "

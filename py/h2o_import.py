@@ -161,7 +161,8 @@ def find_folder_and_filename(bucket, pathWithRegex, schema='put', returnFullPath
 # path should point to a file or regex of files. (maybe folder works? but unnecessary
 def import_only(node=None, schema='local', bucket=None, path=None,
     timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=0.5, pollTimeoutSecs=180, noise=None,
-    benchmarkLogging=None, noPoll=False, doSummary=True, src_key=None, noPrint=False, **kwargs):
+    benchmarkLogging=None, noPoll=False, doSummary=True, src_key=None, noPrint=False, 
+    importParentDir=True, **kwargs):
 
     if src_key and schema!='put':
         raise Exception("can only specify a 'src_key' param for schema='put'. You have %s %s" % (schema, src_key))
@@ -181,8 +182,14 @@ def import_only(node=None, schema='local', bucket=None, path=None,
     h2o.verboseprint("pattern:", pattern)
 
     # to train users / okay here
-    if re.search(r"[\*<>{}[\]~`]", head):
-       raise Exception("h2o folder path %s can't be regex. path= was %s" % (head, path))
+    # normally we import the folder above, but if we import exactly, the path can't have regex
+    # the folder can't have regex in any case
+    if importParentDir:
+        if re.search(r"[\*<>{}[\]~`]", head):
+           raise Exception("h2o folder path %s can't be regex. path= was %s" % (head, path))
+    else:
+        if re.search(r"[\*<>{}[\]~`]", path):
+           raise Exception("h2o path %s can't be regex. path= was %s" % (head, path))
 
     if schema=='put':
         # to train users
@@ -218,8 +225,12 @@ def import_only(node=None, schema='local', bucket=None, path=None,
         if h2o.abort_after_import:
             raise Exception("Aborting due to abort_after_import (-aai) argument's effect in import_only()")
 
+          
         folderURI = 'nfs:/' + folderPath
-        importResult = node.import_files(folderPath, timeoutSecs=timeoutSecs)
+        if importParentDir:
+            importResult = node.import_files(folderPath, timeoutSecs=timeoutSecs)
+        else:
+            importResult = node.import_files(folderPath + "/" + pattern, timeoutSecs=timeoutSecs)
 
     else:
         if bucket is not None and re.match("/", head):
@@ -254,7 +265,10 @@ def import_only(node=None, schema='local', bucket=None, path=None,
                 # raise Exception("Something was missing for s3n on the java -jar cmd line when the cloud was built")
                 print "ERROR: Something was missing for s3n on the java -jar cmd line when the cloud was built"
             folderURI = "s3n://" + folderOffset
-            importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
+            if importParentDir:
+                importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
+            else:
+                importResult = node.import_hdfs(folderURI + "/" + pattern, timeoutSecs=timeoutSecs)
 
         elif schema=='maprfs':
             if not n.use_maprfs:
@@ -268,7 +282,10 @@ def import_only(node=None, schema='local', bucket=None, path=None,
             else:
                 # this is different than maprfs? normally we specify the name though
                 folderURI = "maprfs:///" + folderOffset
-            importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
+            if importParentDir:
+                importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
+            else:
+                importResult = node.import_hdfs(folderURI + "/" + pattern, timeoutSecs=timeoutSecs)
 
         elif schema=='hdfs':
             # check that some state from the cloud building time was right
@@ -284,7 +301,10 @@ def import_only(node=None, schema='local', bucket=None, path=None,
             else:
                 # this is different than maprfs? normally we specify the name though
                 folderURI = "hdfs://" + folderOffset
-            importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
+            if importParentDir:
+                importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
+            else:
+                importResult = node.import_hdfs(folderURI + "/" + pattern, timeoutSecs=timeoutSecs)
 
         else: 
             raise Exception("schema not understood: %s" % schema)
@@ -314,7 +334,8 @@ def parse_only(node=None, pattern=None, hex_key=None,
 def import_parse(node=None, schema='local', bucket=None, path=None,
     src_key=None, hex_key=None, 
     timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=0.5, pollTimeoutSecs=180, noise=None,
-    benchmarkLogging=None, noPoll=False, doSummary=True, noPrint=True, **kwargs):
+    benchmarkLogging=None, noPoll=False, doSummary=True, noPrint=True, 
+    importParentDir=True, **kwargs):
 
     ## if h2o.beta_features:
     ##     print "HACK: temporarily disabling Summary always in v2 import_parse"
@@ -324,7 +345,7 @@ def import_parse(node=None, schema='local', bucket=None, path=None,
 
     (importResult, importPattern) = import_only(node, schema, bucket, path,
         timeoutSecs, retryDelaySecs, initialDelaySecs, pollTimeoutSecs, noise, 
-        benchmarkLogging, noPoll, doSummary, src_key, **kwargs)
+        benchmarkLogging, noPoll, doSummary, src_key, noPrint, importParentDir, **kwargs)
 
     h2o.verboseprint("importPattern:", importPattern)
     h2o.verboseprint("importResult", h2o.dump_json(importResult))
@@ -401,12 +422,12 @@ def delete_keys(node=None, pattern=None, timeoutSecs=120):
             if k in triedKeys:
                 print "Already tried to delete %s. Must have failed. Not trying again" % k
             # don't delete the DRF __Tree__ keys. deleting the model does that. causes race conditions
-            elif '__Tree__' in k:
+            elif '__Tree__' in k['key']:
                 print "Not deleting a tree key from DRF: %s" % k
-            elif 'DRF_' in k:
+            elif 'DRF_' in k['key']:
                 print "Not deleting DRF key..they may be problematic in flight: %s" % k
-            elif '_distcp_' in k:
-                print "Not deleting _distcp_ key..got a timeout before trying: %s" % k
+            elif '__RFModel__' in k['key']:
+                print "Not deleting __RFModel__ key..seeing NPE's if I try to delete them: %s" % k
             else:
                 print "Deleting", k['key'], "at", node
                 node.remove_key(k['key'], timeoutSecs=timeoutSecs)

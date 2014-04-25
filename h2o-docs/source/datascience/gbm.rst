@@ -14,65 +14,54 @@ Defining a GBM Model
 
   A user defined name for the model. 
 
-**Source**
+**Source:**
 
   The .hex key associated with the parsed data to be used in the model.
 
-**Response**
+**Response:**
 
-  The response variable.
+  The dependent variable to be modeled. Dependent variables can be
+  binomial indicators, multinomial classes (if the classes are 
 
-**Ignored Columns**
+**Ignored Columns:**
 
   By default all of the information submitted in a data set will be
   used in building the GBM model. Users specify those attributes
   that should be omitted from analysis by highlighting them. 
 
-**Classification**
+**Classification:**
 
-<<<<<<< HEAD
-  A tic-box option that, when checked, treats the outcome variable as
-  categorical, and when unchecked treats the outcome variable as
-  continuous. If a continuious real variable has been defined for the
-  Response, H\ :sub:`2`\ O will return an error if a classificaiton model is
-  requested. 
-=======
   An option that treats the outcome variable as categorical, and when 
   unchecked treats the outcome variable as continuous. If a
   continuous real variable has been defined for the response, H\
   :sub:`2`\ O will return an error if a classification model is requested. 
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
 
-**Validation** 
+**Validation:** 
 
   A .hex key associated with data to be used in validation of the
   model built using the data specified in **Source**.
 
-**NTrees**
+**NTrees:**
 
   The number of trees to be built. Models with different total numbers
   of trees can be specified by entering the different values as a
   comma separated list. For example,to specify different models with
   200, 100 and 50 trees respectively enter "200, 100, 50".
 
-**Validation**
 
-  A holdout data set against which the generated
-  model (or models) will be tested.  
-
-**Max Depth** 
+**Max Depth:** 
 
   The maximum number of edges to be generated between the first node
   and the terminal node. To test different depths, values can be
   specified in a comma separated list.  
 
-**Min Rows** 
+**Min Rows:** 
 
   The minimum number of observations to be included in a terminal
   leaf. If any classification must consist of no fewer than five
   elements, min rows should be set to five. 
 
-**NBins**
+**NBins:**
 
   The number of bins data are partitioned into before the best split
   point is determined. A high number of bins relative to a low number
@@ -81,7 +70,7 @@ Defining a GBM Model
   a column, the analysis approaches evaluation of all possible split
   points 
 
-**Score Each Iteration** 
+**Score Each Iteration:** 
 
   An option that returns error rate information after each tree in the
   requested set is built. This option allows users to evaluate the
@@ -91,20 +80,26 @@ Defining a GBM Model
   this option can slow the model building process, depending on the
   size and shape of both the training data and the testing data. 
 
-**Learn Rate**
+**Importance:**
+
+  An option that returns information about each variable's importance
+  in training the specified model. 
+
+**Learn Rate:**
 
   A number between 0 and 1 that specifies the rate at which the
   algorithm should converge. Learning rate is inversely related to the
   number of iterations taken for the algorithm to complete. 
 
-**Grid Parallelism** 
+**Grid Parallelism:** 
 
   When multiple models are called for through the grid search options
   such as specification of multiple learning rates, selecting this
   option will build the set of models in parallel rather than
   sequentially.
 
-**Treatment of Factors**
+Treatment of Factors
+"""""""""""""""""""""
 
   When the specified GBM model includes factors, those factors are
   analyzed by assigning each distinct factor level an integer, and
