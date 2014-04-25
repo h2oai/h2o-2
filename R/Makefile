@@ -6,7 +6,7 @@ REPO_PATH_MAC = bin/macosx/contrib/$(R_VERSION)
 TMP_BUILD_DIR = tmp_build
 ifneq ($(OS),Windows_NT)
 OS := $(shell uname)
-UNAME_P := $(shell uname -p | sed 's/unknown/x86_64/')
+R_PLATFORM := $(shell R --vanilla -q -e 'options(echo=FALSE); cat(R.Version()$$platform)' | tail -1)
 else
 # For windows NT the shell is odd.  Cygwin 'shell uname' returns CYGWIN_NT-6.1-WOW64
 # which is not really what we want.  The normal CMD shell does something else.
@@ -14,7 +14,7 @@ else
 endif
 
 H2O_R_SOURCE_FILE = h2o_$(PROJECT_VERSION).tar.gz
-H2O_R_LINUX_FILE = h2o_$(PROJECT_VERSION)_R_$(UNAME_P)-pc-linux-gnu.tar.gz
+H2O_R_LINUX_FILE = h2o_$(PROJECT_VERSION)_R_$(R_PLATFORM).tar.gz
 H2O_R_MAC_FILE = h2o_$(PROJECT_VERSION).tgz
 H2O_R_WINDOWS_FILE = h2o_$(PROJECT_VERSION).zip
 

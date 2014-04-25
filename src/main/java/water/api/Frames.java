@@ -52,6 +52,8 @@ public class Frames extends Request2 {
   public static final Gson gson = new GsonBuilder().serializeSpecialFloatingPointValues().setPrettyPrinting().create();
 
   public static final class FrameSummary {
+    public long creation_epoch_time_millis = -1L;
+    public String uuid = null;
     public String[] column_names = { };
     public Set<String> compatible_models = new HashSet<String>();
   }
@@ -146,6 +148,9 @@ public class Frames extends Request2 {
    * Summarize fields in water.fvec.Frame.
    */
   private static void summarizeAndEnhanceFrame(FrameSummary summary, Frame frame, boolean find_compatible_models, Map<String, Model> all_models, Map<String, Set<String>> all_models_cols) {
+    summary.creation_epoch_time_millis = frame.getUniqueId().getCreationEpochTimeMillis();
+    summary.uuid = frame.getUniqueId().getUuid();
+
     summary.column_names = frame._names;
 
     if (find_compatible_models) {
@@ -250,29 +255,24 @@ public class Frames extends Request2 {
     }
 
     // Now call AUC and ConfusionMatrix and maybe HitRatio
-    Map metrics = new LinkedHashMap();
-    metrics.put("model", score_model._key.toString());
-    metrics.put("frame", frame._key.toString());
-    metrics.put("model_category", score_model.getModelCategory());
+    ModelMetrics metrics = new ModelMetrics(score_model.getUniqueId(),
+                                            score_model.getModelCategory(),
+                                            frame.getUniqueId(),
+                                            error,
+                                            after - before,
+                                            after,
+                                            auc,
+                                            cm);
 
-    metrics.put("duration_in_ms", after - before);
+    // Put the metrics into the KV store
+    Key metricsKey = Key.makeUserHidden(Key.make("modelmetrics_" + score_model.getUniqueId().getUuid() + "_on_" + frame.getUniqueId().getUuid()));
+    DKV.put(metricsKey, metrics);
 
-    metrics.put("error", error);
-
-    if (score_model.isClassifier()) {
-      metrics.put("cm", cm.toJSON());
-      metrics.put("auc", auc.toJSON());
-      metrics.put("hr", hr); // TODO: binary only?
-    }
-
-    Map resultsMap = new LinkedHashMap();
-    resultsMap.put("metrics", metrics);
-
-    // TODO: temporary hack to get things going
-    String json = gson.toJson(resultsMap);
-    // Log.info("Json for results: " + json);
-
-    JsonObject result = gson.fromJson(json, JsonElement.class).getAsJsonObject();
+    JsonObject metricsJson = metrics.toJSON();
+    JsonArray metricsArray = new JsonArray();
+    metricsArray.add(metricsJson);
+    JsonObject result = new JsonObject();
+    result.add("metrics", metricsArray);
     return Response.done(result);
   }
 

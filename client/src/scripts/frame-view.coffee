@@ -1,5 +1,6 @@
 Steam.FrameView = (_, _frame) ->
   _compatibleModels = node$ ''
+  _compatibleModelsCount = node$ ''
 
   initialize = (frame) ->
     _.requestFrameAndCompatibleModels frame.key, (error, data) ->
@@ -8,13 +9,15 @@ Steam.FrameView = (_, _frame) ->
       else
         #TODO typecheck
         unless isEmpty data.frames
-          _compatibleModels createCompatibleModelsSection head data.frames
+          aFrame = head data.frames
+          _compatibleModels createCompatibleModelsSection aFrame
+          _compatibleModelsCount "(#{aFrame.compatible_models.length})"
         return
 
   # Columns section
-  createColumnsSection = (frame) ->
-    rows = map frame.column_names, (columnName) -> [ columnName ]
-    [ table, tbody, tr, td ] = geyser.generate 'table.table.table-condensed.table-hover tbody tr td'
+  createColumnsSection = (columnNames) ->
+    rows = map columnNames, (columnName) -> [ columnName ]
+    [ table, tbody, tr, td ] = geyser.generate words 'table.table.table-condensed.table-hover tbody tr td'
     table [
       tbody map rows, (row) ->
         tr map row, td
@@ -55,8 +58,10 @@ Steam.FrameView = (_, _frame) ->
   data: _frame
   key: _frame.key
   title: _frame.key
-  columns: createColumnsSection _frame
+  columns: createColumnsSection _frame.column_names
+  columnCount: "(#{_frame.column_names.length})"
   compatibleModels: _compatibleModels
+  compatibleModelsCount: _compatibleModelsCount
   loadCompatibleModels: loadCompatibleModels
   dispose: ->
   template: 'frame-view'

@@ -117,9 +117,36 @@ LIB_TEST_JS=\
 LIB_TEST_CSS=\
 	$(MODULES)/mocha/mocha.css
 
-all: setup build
 
-build: \
+ifeq ($(shell which node),)
+default:
+	@echo Dependency node not found.  Skipping UI build...  Try: brew install node for MacOS or look at h2o/client/README.md for other platforms. 1>&2
+
+else
+  ifeq ($(shell which npm),)
+default:
+	@echo Dependency npm not found.  Skipping UI build...  Try: brew install node for MacOS or look at h2o/client/README.md for other platforms. 1>&2
+
+  else
+    ifeq ($(shell which bower),)
+default:
+	@echo Dependency bower not found.  Skipping UI build...  Try: npm install -g bower 1>&2
+
+    else
+default: build
+
+    endif
+  endif
+endif
+
+
+setup: check
+	@echo Prerequisites OK. Installing dependencies...
+	npm install
+	bower --config.interactive=false install
+	@echo Done!
+
+really_build: \
 	$(DEPLOY)/index.html \
 	$(DEPLOY)/fonts/glyphicons-halflings-regular.eot \
 	$(DEPLOY)/fonts/glyphicons-halflings-regular.svg \
@@ -147,6 +174,9 @@ build: \
 	$(DEPLOY)/css/steam.css \
 	$(DEPLOY)/js/lib.js \
 	$(DEPLOY)/js/steam.js
+
+build: setup
+	$(MAKE) really_build
 
 unit: \
 	$(DEPLOY)/lib.test.css \
@@ -239,30 +269,6 @@ clean:
 
 check:
 	@echo Checking prerequisites...
-
-ifeq ($(shell which node),)
-	$(error Dependency node not found. Exiting. Try: brew install node)
-else
-	@echo node ... OK
-endif
-
-ifeq ($(shell which npm),)
-	$(error Dependency npm not found. Exiting. Try: brew install node)
-else
-	@echo npm ... OK
-endif
-
-ifeq ($(shell which bower),)
-	$(error Dependency bower not found. Exiting. Try: npm install -g bower)
-else
-	@echo bower ... OK
-endif
-
-setup: check
-	@echo Prerequisites OK. Installing dependencies...
-	npm install
-	bower --config.interactive=false install
-	@echo Done!
 
 reset: clean
 	rm -rf \
