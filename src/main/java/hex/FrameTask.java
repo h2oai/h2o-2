@@ -76,6 +76,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     public final int _responses; // number of responses
     public final boolean _standardize;
     public final boolean _standardize_response;
+    public final boolean _useAllFactorLevels;
     public final int _nums;
     public final int _cats;
     public final int [] _catOffsets;
@@ -100,12 +101,13 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       _normRespSub = dinfo._normRespSub;
       _foldId = foldId;
       _nfolds = nfolds;
+      _useAllFactorLevels = dinfo._useAllFactorLevels;
     }
-    public DataInfo(Frame fr, int hasResponses, double [] normSub, double [] normMul) {
-      this(fr,hasResponses,normSub,normMul,null,null);
+    public DataInfo(Frame fr, int hasResponses, boolean useAllFactorLvls, double [] normSub, double [] normMul) {
+      this(fr,hasResponses,useAllFactorLvls, normSub,normMul,null,null);
     }
-    public DataInfo(Frame fr, int hasResponses, double [] normSub, double [] normMul, double [] normRespSub, double [] normRespMul){
-      this(fr,hasResponses,normSub != null && normMul != null, normRespSub != null && normRespMul != null);
+    public DataInfo(Frame fr, int hasResponses, boolean useAllFactorLvls, double [] normSub, double [] normMul, double [] normRespSub, double [] normRespMul){
+      this(fr,hasResponses,useAllFactorLvls,normSub != null && normMul != null, normRespSub != null && normRespMul != null);
       assert (normSub == null) == (normMul == null);
       assert (normRespSub == null) == (normRespMul == null);
       if(normSub != null && normMul != null){
@@ -226,20 +228,17 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     public static Frame prepareFrame(Frame source, Vec response, int[] ignored_cols, boolean toEnum, boolean dropConstantCols) {
       return prepareFrame(source, response, ignored_cols, toEnum, dropConstantCols, false);
     }
-<<<<<<< HEAD
-    public DataInfo(Frame fr, int nResponses, boolean standardize) {
-      this(fr, nResponses, standardize, false);
-=======
 
     public DataInfo(Frame fr, int nResponses, boolean useAllFactors, boolean standardize) {
       this(fr, nResponses, useAllFactors, standardize, false);
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
     }
-    public DataInfo(Frame fr, int nResponses, boolean standardize, boolean standardize_response){
+
+    public DataInfo(Frame fr, int nResponses, boolean useAllFactorLevels, boolean standardize, boolean standardize_response){
       _nfolds = _foldId = 0;
       _standardize = standardize;
       _standardize_response = standardize_response;
       _responses = nResponses;
+      _useAllFactorLevels = useAllFactorLevels;
       final Vec [] vecs = fr.vecs();
       final int n = vecs.length-_responses;
       if (n < 1) throw new IllegalArgumentException("Training data must have at least one column.");
@@ -270,7 +269,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       for(int i = 0; i < ncats; ++i){
         Vec v = (vecs2[i] = vecs[cats[i]]);
         names[i] = fr._names[cats[i]];
-        _catOffsets[i+1] = (len += v.domain().length - 1);
+        _catOffsets[i+1] = (len += v.domain().length - (useAllFactorLevels?0:1));
       }
       if(standardize){
         _normSub = MemoryManager.malloc8d(nnums);
@@ -315,7 +314,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       String [] res = new String[n];
       final Vec [] vecs = _adaptedFrame.vecs();
       for(int i = 0; i < _cats; ++i)
-        for(int j = 1; j < vecs[i]._domain.length; ++j)
+        for(int j = _useAllFactorLevels?0:1; j < vecs[i]._domain.length; ++j)
           res[k++] = _adaptedFrame._names[i] + "." + vecs[i]._domain[j];
       final int nums = n-k;
       for(int i = 0; i < nums; ++i)
@@ -387,28 +386,6 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         shuf_map[i] = start + i;
       Utils.shuffleArray(shuf_map, new Random().nextLong());
     }
-<<<<<<< HEAD
-    OUTER:
-    for(int rr = start; rr < end; ++rr){
-      final int r = shuf_map != null ? (int)shuf_map[rr-start] : rr;
-      if ((_dinfo._nfolds > 0 && (r % _dinfo._nfolds) == _dinfo._foldId)
-              || (skip_rng != null && skip_rng.nextFloat() > _useFraction))continue;
-      for(Chunk c:chunks)if(c.isNA0(r))continue OUTER; // skip rows with NAs!
-      int i = 0, ncats = 0;
-      for(; i < _dinfo._cats; ++i){
-        int c = (int)chunks[i].at80(r);
-        if(c != 0)cats[ncats++] = c + _dinfo._catOffsets[i] - 1;
-      }
-      final int n = chunks.length-_dinfo._responses;
-      for(;i < n;++i){
-        double d = chunks[i].at0(r);
-        if(_dinfo._normMul != null) d = (d - _dinfo._normSub[i-_dinfo._cats])*_dinfo._normMul[i-_dinfo._cats];
-        nums[i-_dinfo._cats] = d;
-      }
-      for(i = 0; i < _dinfo._responses; ++i) {
-        response[i] = chunks[chunks.length-_dinfo._responses + i].at0(r);
-        if (_dinfo._normRespMul != null) response[i] = (response[i] - _dinfo._normRespSub[i])*_dinfo._normRespMul[i];
-=======
     for(int rrr = 0; rrr < repeats; ++rrr) {
       OUTER:
       for (int rr = start; rr < end; ++rr) {
@@ -439,7 +416,6 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
           processRow(offset + r, nums, ncats, cats, response, outputs);
         else
           processRow(offset + r, nums, ncats, cats, response);
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
       }
       chunkDone();
     }

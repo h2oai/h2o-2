@@ -281,7 +281,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
         final GLMValidation val = _xvals[mid];
         model.score0(row, preds);
         double response = chunks[chunks.length-1].at80(i);
-        val.add(response, model.glm.family == Family.binomial?preds[1]:preds[0]);
+        val.add(response, model.glm.family == Family.binomial?preds[2]:preds[0]);
       }
     }
     @Override public void reduce(GLMXValidationTask gval){
