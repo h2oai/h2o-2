@@ -24,6 +24,9 @@ import hex.pca.PCA;
 import hex.pca.PCAModelView;
 import hex.pca.PCAProgressPage;
 import hex.pca.PCAScore;
+import hex.singlenoderf.SpeeDRF;
+import hex.singlenoderf.SpeeDRFModelView;
+import hex.singlenoderf.SpeeDRFProgressPage;
 import water.Boot;
 import water.H2O;
 import water.NanoHTTPD;
@@ -141,7 +144,8 @@ public class RequestServer extends NanoHTTPD {
       Request.addToNavbar(registerRequest(new ReBalance()),      "ReBalance",            "Beta");
       Request.addToNavbar(registerRequest(new FrameSplitPage()), "Split frame",          "Beta");
       Request.addToNavbar(registerRequest(new Console()),        "Console",              "Beta");
-      Request.addToNavbar(registerRequest(new GapStatistic()),   "Gap Statistic (Beta)", "Beta");
+      Request.addToNavbar(registerRequest(new GapStatistic()),   "Gap Statistic",        "Beta");
+      Request.addToNavbar(registerRequest(new SpeeDRF()),        "SpeeDRF",              "Beta");
 //      Request.addToNavbar(registerRequest(new ExportModel()),    "Export Model",         "Beta (FluidVecs!)");
 //      Request.addToNavbar(registerRequest(new ImportModel()),    "Import Model",         "Beta (FluidVecs!)");
     }
@@ -230,6 +234,8 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new RemoveAll());
     registerRequest(new RemoveAck());
     registerRequest(new SetColumnNames());
+    registerRequest(new SpeeDRFModelView());
+    registerRequest(new SpeeDRFProgressPage());
     registerRequest(new water.api.SetColumnNames2());     // Set colnames for FluidVec objects
     registerRequest(new LogAndEcho());
     registerRequest(new ToEnum());

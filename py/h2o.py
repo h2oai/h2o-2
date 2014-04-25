@@ -1000,6 +1000,8 @@ class H2O(object):
 
             raise Exception("Could not decode any json from the request. Do you have beta features turned on? beta_features: ", beta_features)
 
+        # TODO: we should really only look in the response object.  This check
+        # prevents us from having a field called "error" (e.g., for a scoring result).
         for e in ['error', 'Error', 'errors', 'Errors']:
             # error can be null (python None). This happens in exec2
             if e in rjson and rjson[e]:
@@ -1009,6 +1011,7 @@ class H2O(object):
                     # well, we print it..so not totally ignore. test can look at rjson returned
                     print emsg
                 else:
+                    print emsg
                     raise Exception(emsg)
 
         for w in ['warning', 'Warning', 'warnings', 'Warnings']:
