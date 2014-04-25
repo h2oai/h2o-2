@@ -626,21 +626,17 @@ public abstract class Job extends Func {
   }
 
   /**
-   * A job producing a model.
+   * A columns job that requires a response.
    *
    * INPUT response column from source
    */
-  public static abstract class ModelJob extends ColumnsJob {
+  public static abstract class ColumnsResJob extends ColumnsJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
     @API(help="Column to use as class", required=true, filter=responseFilter.class, json = true)
     public Vec response;
     class responseFilter extends VecClassSelect { responseFilter() { super("source"); } }
-
-    @API(help="Do Classification or regression", filter=myClassFilter.class, json = true)
-    public boolean classification = true;
-    class myClassFilter extends DoClassBoolean { myClassFilter() { super("source"); } }
 
     @Override protected void registered(API_VERSION ver) {
       super.registered(ver);
@@ -672,7 +668,7 @@ public abstract class Job extends Func {
       super.init();
       // Check if it make sense to build a model
       if (source.numRows()==0)
-        throw new IllegalArgumentException("Cannot build a model on empty dataset!");
+        throw new H2OIllegalArgumentException(find("source"), "Cannot build a model on empty dataset!");
       // Does not alter the Response to an Enum column if Classification is
       // asked for: instead use the classification flag to decide between
       // classification or regression.
@@ -684,13 +680,11 @@ public abstract class Job extends Func {
       final boolean has_constant_response = response.isEnum() ?
               response.domain().length <= 1 : response.min() == response.max();
       if (has_constant_response)
-        throw new IllegalArgumentException("Constant response column!");
+        throw new H2OIllegalArgumentException(find("response"), "Constant response column!");
     }
   }
 
   /**
-<<<<<<< HEAD
-=======
    * A job producing a model.
    *
    * INPUT response column from source
@@ -731,7 +725,6 @@ public abstract class Job extends Func {
   }
 
   /**
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
    * Job which produces model and validate it on a given dataset.
    * INPUT validation frame
    */

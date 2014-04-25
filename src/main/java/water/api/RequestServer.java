@@ -24,10 +24,6 @@ import hex.pca.PCA;
 import hex.pca.PCAModelView;
 import hex.pca.PCAProgressPage;
 import hex.pca.PCAScore;
-//import hex.speedrf.SPDRFProgress;
-import hex.singlenoderf.SpeeDRF;
-import hex.singlenoderf.SpeeDRFModelView;
-import hex.singlenoderf.SpeeDRFProgressPage;
 import water.Boot;
 import water.H2O;
 import water.NanoHTTPD;
@@ -141,23 +137,11 @@ public class RequestServer extends NanoHTTPD {
       registerRequest(new FrameSplitPage());
       registerRequest(new GapStatistic());
     } else {
-      Request.addToNavbar(registerRequest(new ImportFiles2()),   "Import Files2",        "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new Parse2()),         "Parse2",               "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new Upload2()),        "Upload2",              "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new Inspect2()),       "Inspect2",             "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new hex.LR2()),        "Linear Regression2",   "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new SummaryPage2()),   "Summary2",             "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new QuantilesPage()),  "Quantiles",            "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new ReBalance()),      "ReBalance",            "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new Console()),        "Console",              "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new ExportModel()),    "Export Model",         "Beta (FluidVecs!)");
-      Request.addToNavbar(registerRequest(new ImportModel()),    "Import Model",         "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new hex.LR2()),        "Linear Regression2",   "Beta");
       Request.addToNavbar(registerRequest(new ReBalance()),      "ReBalance",            "Beta");
       Request.addToNavbar(registerRequest(new FrameSplitPage()), "Split frame",          "Beta");
       Request.addToNavbar(registerRequest(new Console()),        "Console",              "Beta");
       Request.addToNavbar(registerRequest(new GapStatistic()),   "Gap Statistic (Beta)", "Beta");
-      Request.addToNavbar(registerRequest(new SpeeDRF()),        "SpeeDRF!!",            "Beta");
 //      Request.addToNavbar(registerRequest(new ExportModel()),    "Export Model",         "Beta (FluidVecs!)");
 //      Request.addToNavbar(registerRequest(new ImportModel()),    "Import Model",         "Beta (FluidVecs!)");
     }
@@ -241,9 +225,6 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new PutValue());
     registerRequest(new RFTreeView());
     registerRequest(new RFView());
-//    registerRequest(new SPDRFProgress());
-    registerRequest(new SpeeDRFModelView());
-    registerRequest(new SpeeDRFProgressPage());
     registerRequest(new RReaderProgress());
     registerRequest(new Remove());
     registerRequest(new RemoveAll());
