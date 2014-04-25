@@ -5,6 +5,8 @@ import h2o_browse as h2b
 
 print "Create csv with lots of same data (98% 0?), so gz will have high compression ratio"
 
+ONE_RATE = 0.00001
+# ONE_RATE = 0.1
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
     # 8 random generatators, 1 per column
     r1 = random.Random(SEED)
@@ -14,8 +16,7 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
         rowData = []
         for j in range(colCount):
             # r = h2o_util.choice_with_probability([(1.1, .02), (0.1, .98)])
-            ones = .00001
-            r = h2o_util.choice_with_probability([(1, ones), (0, 1-ones)])
+            r = h2o_util.choice_with_probability([(1, ONE_RATE), (0, 1 - ONE_RATE)])
             # make r a many-digit real, so gzip compresses even more better!
             # rowData.append('%#034.32e' % r)
             rowData.append('%.1f' % r)
