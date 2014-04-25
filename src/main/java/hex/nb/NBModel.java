@@ -1,6 +1,6 @@
 package hex.nb;
 
-//import org.apache.commons.math3.distribution.NormalDistribution;
+import org.apache.commons.math3.distribution.NormalDistribution;
 
 import hex.FrameTask.DataInfo;
 import hex.nb.NaiveBayes.NBTask;
@@ -12,8 +12,8 @@ import water.api.Request.Default;
 import water.api.RequestBuilders.ElementBuilder;
 
 /**
-* FIXME comment please
-*/
+ * FIXME comment please
+ */
 public class NBModel extends Model {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
@@ -66,8 +66,8 @@ public class NBModel extends Model {
       // For numeric predictors, assume Gaussian distribution with sample mean and variance from model
       for(int col = ncats; col < data.length; col++) {
         if(Double.isNaN(data[col])) continue;
-//        NormalDistribution nd = new NormalDistribution(pcond[col][rlevel][0], pcond[col][rlevel][1]);
-//        num *= nd.density(data[col]);
+        NormalDistribution nd = new NormalDistribution(pcond[col][rlevel][0], pcond[col][rlevel][1]);
+        num *= nd.density(data[col]);
       }
 
       num *= pprior[rlevel];    // p(x,y) = p(x|y)*p(y)

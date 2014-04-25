@@ -37,8 +37,11 @@ public class GapStatisticModel extends Model implements Job.Progress {
   @API(help = "The current value of B (1 <= b <= B.")
   int b;
 
-  @API(help = "The gap statistic per k.")
-  double[] gaps;
+  @API(help = "The gap statistics per value of k.")
+  double[] gap_stats;
+
+   @API(help = "Optimal number of clusters.")
+   int k_best;
 
   public GapStatisticModel(Key selfKey, Key dataKey, Frame fr, int ks, double[] wks, double[] log_wks, double[] sk, int k_max, int b_max, int k, int b) {
     super(selfKey, dataKey, fr);
@@ -50,13 +53,13 @@ public class GapStatisticModel extends Model implements Job.Progress {
     this.b_max = b_max;
     this.k = k;
     this.b = b;
-    this.gaps = new double[this.wks.length];
+    this.gap_stats = new double[this.wks.length];
   }
 
   public double[] wks() { return wks; }
   public double[] wkbs() { return wkbs; }
   public double[] sk() {return sk; }
-  public double[] gaps() {return gaps;}
+  public double[] gaps() {return gap_stats; }
 
   @Override
   public float progress() {
@@ -155,8 +158,6 @@ public class GapStatisticModel extends Model implements Job.Progress {
     sb.append("<span style='display: inline-block;'>");
     sb.append("<table class='table table-striped table-bordered'>");
 
-    double[] gap_stats = gaps();
-
     sb.append("<tr>");
     for (int i = 0; i < log_wkbs.length; ++i) {
       if (log_wkbs[i] == 0) continue;
@@ -164,48 +165,49 @@ public class GapStatisticModel extends Model implements Job.Progress {
     }
     sb.append("</tr>");
 
+
+    double[] gaps = gaps();
+
     sb.append("<tr>");
-//    double prev_val = Double.NEGATIVE_INFINITY;
 
-    for (int i = 0; i < log_wkbs.length; ++i) {
-      if (log_wkbs[i] == 0) continue;
-
-<<<<<<< HEAD
-      sb.append("<td>").append(gap_stats[i]).append("</td>");
-=======
     for (double gap : gaps) {
       if (gap == 0) continue;
       sb.append("<td>").append(gap).append("</td>");
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
     }
     sb.append("</tr>");
     sb.append("</table></span>");
 
-
-    //compute k optimal: smallest k such that GAP_(k) >= (GAP_(k+1) - s_(k+1)
+    //Compute optimal k: min k such that G_k >= G_(k+1) - s_(k+1)
     int kmin = -1;
-    for(int i = 0; i < gap_stats.length; ++i) {
+    for (int i = 0; i < gaps.length; ++i) {
       int cur_k = i + 1;
-      if( i == gap_stats.length - 1) {
-        kmin = cur_k;
+      if(gaps[cur_k] == 0) {
+        kmin = 0;
+        k_best = kmin;
         break;
       }
-      if (gap_stats[i] >= (gap_stats[i+1] - sks[i+1])) {
+      if (i == gaps.length - 1) {
         kmin = cur_k;
-        break; // every other k is larger...
+        k_best = kmin;
+        break;
+      }
+      if ( gaps[i] >= (gaps[i+1] - sks[i+1])) {
+        kmin = cur_k;
+        k_best = kmin;
+        break;
       }
     }
 
     if (log_wks[log_wks.length -1] != 0) {
       DocGen.HTML.section(sb, "Best k:");
-      if (kmin < 0) {
-        sb.append("k = " + "No k computed!");
+      if (kmin <= 0) {
+        sb.append("k = " + "No k computed yet...");
       } else {
       sb.append("k = ").append(kmin);
       }
     } else {
       DocGen.HTML.section(sb, "Best k so far:");
-      if (kmin < 0) {
+      if (kmin <= 0) {
         sb.append("k = " + "No k computed yet...");
       } else {
       sb.append("k = ").append(kmin);

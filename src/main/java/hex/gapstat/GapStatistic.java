@@ -147,15 +147,8 @@ public class GapStatistic extends Job.ColumnsJob {
         gs_model = UKV.get(dest());
         gs_model.unlock(self());
       }
-<<<<<<< HEAD
-      gs_model.sk[k - 1] = Math.sqrt(sk_2) * Math.sqrt(1 + 1. / (double) b_max);
-      gs_model.k++;
-      for (int i = 0; i < gs_model.wkbs.length; ++i) gs_model.gaps[i] = gs_model.wkbs[i] - gs_model.wks[i];
-      gs_model.update(self());
-=======
       source.unlock(self());
       emptyLTrash();
->>>>>>> b72aab43e263693af20271efc6f6563923ec50d0
     }
   }
 
