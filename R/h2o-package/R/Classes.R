@@ -251,6 +251,12 @@ year.H2OParsedData <- h2o.year
 month <- function(x) UseMethod('month', x)
 month.H2OParsedData <- h2o.month
 
+diff.H2OParsedData <- function(x, lag = 1, differences = 1, ...) {
+  expr = paste("diff(", paste(x@key, lag, differences, sep = ","), ")", sep = "")
+  res = .h2o.__exec2(x@h2o, expr)
+  new("H2OParsedData", h2o=x@h2o, key=res$dest_key, logic=FALSE)
+}
+
 as.h2o <- function(client, object, key = "", header, sep = "") {
   if(missing(client) || class(client) != "H2OClient") stop("client must be a H2OClient object")
   if(missing(object) || !is.numeric(object) && !is.data.frame(object)) stop("object must be numeric or a data frame")

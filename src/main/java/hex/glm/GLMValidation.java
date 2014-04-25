@@ -62,12 +62,19 @@ public class GLMValidation extends Iced {
     public GLMXValidation(GLMModel mainModel, GLMModel [] xvalModels, int lambdaIdx, long nobs) {
       super(mainModel._dataKey, mainModel.ymu, mainModel.glm, mainModel.rank(lambdaIdx));
       xval_models = new Key[xvalModels.length];
+      double t = 0;
+      auc = 0;
       for(int i = 0; i < xvalModels.length; ++i){
-        add(xvalModels[i].validation());
+        GLMValidation val = xvalModels[i].validation();
+        add(val);
+        t += val.best_threshold;
+        auc += val.auc();
         xval_models[i] = xvalModels[i]._key;
       }
+      computeAIC();
+      auc /= xvalModels.length;
+      best_threshold = (float)(t/xvalModels.length);
       this.nobs = nobs;
-      finalize_AIC_AUC();
     }
   }
   public GLMValidation(Key dataKey, double ymu, GLMParams glm, int rank){

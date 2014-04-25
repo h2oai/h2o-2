@@ -503,7 +503,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
             @Override public void callback(LMAXTask t){
               final double lmax = lambda_max = t.lmax();
               String [] warns = null;
-              if(lambda == null){
+              if(lambda == null || lambda_search){
                 lambda = new double[]{lmax,lmax*0.9,lmax*0.75,lmax*0.66,lmax*0.5,lmax*0.33,lmax*0.25,lmax*1e-1,lmax*1e-2,lmax*1e-3,lmax*1e-4,lmax*1e-5,lmax*1e-6,lmax*1e-7,lmax*1e-8}; // todo - make it a sequence of 100 lamdbas
                 _runAllLambdas = false;
               } else if(alpha[0] > 0) { // make sure we start with lambda max (and discard all lambda > lambda max)

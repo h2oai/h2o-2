@@ -159,7 +159,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         for(int i = 0; i < vecs.length-1; ++i) {
           // remove constant cols and cols with too many NAs
           final boolean dropconstant = dropConstantCols && vecs[i].min() == vecs[i].max();
-          final boolean droptoomanyNAs = dropNACols && vecs[i].naCnt() > vecs[i].length()*0.2;
+          final boolean droptoomanyNAs = dropNACols && vecs[i].naCnt() > vecs[i].length()*0.1;
           if(dropconstant) {
             constantCols.add(i);
           } else if (droptoomanyNAs) {
