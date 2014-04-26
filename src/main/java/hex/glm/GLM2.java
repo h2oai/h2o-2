@@ -245,6 +245,22 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     super.init();
     if(lambda_search && lambda.length > 1)
       throw new IllegalArgumentException("Can not supply both lambda_search and multiple lambdas. If lambda_search is on, GLM expects only one value of lambda, representing the lambda min (smallest lambda in the lambda search).");
+    // check the response
+    if( response.isEnum() && family != Family.binomial)throw new IllegalArgumentException("Invalid response variable, trying to run regression with categorical response!");
+    switch( family ) {
+      case poisson:
+      case tweedie:
+        if( response.min() < 0 ) throw new IllegalArgumentException("Illegal response column for family='" + family + "', response must be >= 0.");
+        break;
+      case gamma:
+        if( response.min() <= 0 ) throw new IllegalArgumentException("Invalid response for family='Gamma', response must be > 0!");
+        break;
+      case binomial:
+        if(response.min() < 0 || response.max() > 1) throw new IllegalArgumentException("Illegal response column for family='Binomial', response must in <0,1> range!");
+        break;
+      default:
+        //pass
+    }
     Frame fr = DataInfo.prepareFrame(source, response, ignored_cols, family==Family.binomial, true,true);
     _dinfo = new DataInfo(fr, 1, use_all_factor_levels, standardize,false);
     if(higher_accuracy)setHighAccuracy();
@@ -438,7 +454,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           }
           modelBetaDeNorm[modelBetaDeNorm.length-1] -= norm;
         }
-        _model.setLambdaSubmodel(_lambdaIdx,modelBetaDeNorm == null?modelBeta:modelBetaDeNorm, modelBetaDeNorm==null?null:modelBeta, (_iter+1));
+        _model.setLambdaSubmodel(_lambdaIdx, modelBetaDeNorm == null ? modelBeta : modelBetaDeNorm, modelBetaDeNorm == null ? null : modelBeta, (_iter + 1));
         if(_glm.family == Family.gaussian) { // Gaussian is non-iterative and gradient is ADMMSolver's gradient => just validate and move on to the next lambda
           nextLambda(glmt,newBeta);
         } else if( beta_diff(glmt._beta,newBeta) < beta_epsilon || _iter == max_iter){
