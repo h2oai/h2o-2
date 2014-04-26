@@ -1,6 +1,6 @@
 
 PROJECT_VERSION ?= 99.70
-BUILD_BRANCH ?= master
+BUILD_BRANCH=$(shell git branch | grep '*' | sed 's/* //')
 R_VERSION = 3.0
 REPO_PATH_WIN = bin/windows/contrib/$(R_VERSION)
 REPO_PATH_MAC = bin/macosx/contrib/$(R_VERSION)
