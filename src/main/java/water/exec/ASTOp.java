@@ -5,6 +5,7 @@ import hex.FrameTask.DataInfo;
 import hex.gram.Gram.GramTask;
 import hex.la.Matrix;
 import java.util.*;
+import org.apache.commons.math3.util.*;
 import org.joda.time.DateTime;
 import org.joda.time.MutableDateTime;
 import water.*;
@@ -102,7 +103,8 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTIsTRUE());
     putPrefix(new ASTMTrans());
 
-    putPrefix(new ASTCos());  // Trigonometric functions
+    // Trigonometric functions
+    putPrefix(new ASTCos());
     putPrefix(new ASTSin());
     putPrefix(new ASTTan());
     putPrefix(new ASTACos());
@@ -121,6 +123,9 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTSecond());
     putPrefix(new ASTMillis());
 
+    // Time series operations
+    putPrefix(new ASTDiff  ());
+
     // More generic reducers
     putPrefix(new ASTMin ());
     putPrefix(new ASTMax ());
@@ -132,8 +137,9 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTMaxNaRm());
     putPrefix(new ASTSumNaRm());
     putPrefix(new ASTXorSum ());
+
     // Misc
-    putPrefix(new ASTSeq());
+    putPrefix(new ASTSeq   ());
     putPrefix(new ASTSeqLen());
     putPrefix(new ASTRepLen());
     putPrefix(new ASTQtile ());
@@ -549,6 +555,53 @@ class ASTHour  extends ASTTimeOp { @Override String opStr(){ return "hour" ; } @
 class ASTMinute extends ASTTimeOp { @Override String opStr(){return "minute";} @Override ASTOp make() {return new ASTMinute();} @Override long op(MutableDateTime dt) { return dt.getMinuteOfHour();}}
 class ASTSecond extends ASTTimeOp { @Override String opStr(){return "second";} @Override ASTOp make() {return new ASTSecond();} @Override long op(MutableDateTime dt) { return dt.getSecondOfMinute();}}
 class ASTMillis extends ASTTimeOp { @Override String opStr(){return "millis";} @Override ASTOp make() {return new ASTMillis();} @Override long op(MutableDateTime dt) { return dt.getMillisOfSecond();}}
+
+// Finite backward difference for user-specified lag
+// http://en.wikipedia.org/wiki/Finite_difference
+class ASTDiff extends ASTOp {
+  ASTDiff() { super(new String[]{"diff", "x", "lag", "differences"},
+                      new Type[]{Type.ARY, Type.ARY, Type.DBL, Type.DBL},
+                      OPF_PREFIX,
+                      OPP_PREFIX,
+                      OPA_RIGHT); }
+  @Override String opStr() { return "diff"; }
+  @Override ASTOp make() {return new ASTDiff();}
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    final int diffs = (int)env.popDbl();
+    if(diffs < 0) throw new IllegalArgumentException("differences must be an integer >= 1");
+    final int lag = (int)env.popDbl();
+    if(lag < 0) throw new IllegalArgumentException("lag must be an integer >= 1");
+
+    Frame fr = env.popAry();
+    String skey = env.key();
+    if(fr.vecs().length != 1 || fr.vecs()[0].isEnum())
+      throw new IllegalArgumentException("diff takes a single numeric column vector");
+
+    Frame fr2 = new MRTask2() {
+      @Override public void map(Chunk chk, NewChunk nchk) {
+        int rstart = (int)(diffs*lag - chk._start);
+        if(rstart > chk._len) return;
+        rstart = Math.max(0, rstart);
+
+        // Formula: \Delta_h^n x_t = \sum_{i=0}^n (-1)^i*\binom{n}{k}*x_{t-i*h}
+        for(int r = rstart; r < chk._len; r++) {
+          double x = chk.at0(r);
+          long row = chk._start + r;
+
+          for(int i = 1; i <= diffs; i++) {
+            double x_lag = chk.at_slow(row - i*lag);
+            double coef = ArithmeticUtils.binomialCoefficient(diffs, i);
+            x += (i % 2 == 0) ? coef*x_lag : -coef*x_lag;
+          }
+          nchk.addNum(x);
+        }
+      }
+    }.doAll(1,fr).outputFrame(fr.names(), fr.domains());
+    env.subRef(fr, skey);
+    env.pop();
+    env.push(fr2);
+  }
+}
 
 // ----
 // Class of things that will auto-expand across arrays in a 2-to-1 way:
@@ -1217,7 +1270,7 @@ class ASTVar extends ASTOp {
         sdev[i] = fr.vecs()[i].sigma();
 
       // TODO: Might be more efficient to modify DataInfo to allow for separate standardization of mean and std dev
-      DataInfo dinfo = new DataInfo(fr, 0, true);
+      DataInfo dinfo = new DataInfo(fr, 0, true, true);
       GramTask tsk = new GramTask(null, dinfo, false, false).doAll(dinfo._adaptedFrame);
       double[][] var = tsk._gram.getXX();
       long nobs = tsk._nobs;

@@ -1,18 +1,18 @@
 package water.api;
 
+import hex.deeplearning.DeepLearning;
 import hex.drf.DRF;
 import hex.gbm.GBM;
 import hex.glm.GLM2;
-import hex.deeplearning.DeepLearning;
+import java.text.DecimalFormat;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
+
 import water.*;
 import water.api.Inspect2.ColSummary.ColType;
 import water.fvec.*;
 import water.util.UIUtils;
-import water.util.Utils;
-
 import java.text.DecimalFormat;
 
 public class Inspect2 extends Request2 {
@@ -114,7 +114,8 @@ public class Inspect2 extends Request2 {
               hex.LR2.link(skey, "Linear Regression") + ",<br>"+
               SummaryPage2.link(skey,"Summary")+", "+
               DownloadDataset.link(skey, "Download as CSV")+", "+
-              UIUtils.link(FrameSplitPage.class, skey, "Split frame") +
+              ExportFiles.link(skey, "Export to file")+", "+
+              UIUtils.qlink(FrameSplitPage.class, skey, "Split frame") +
               "</div>");
     String _scrollto = String.valueOf(offset - 1);
       sb.append(
@@ -334,5 +335,4 @@ public class Inspect2 extends Request2 {
     sb.append("</div>");
     return sb.toString();
   }
-
 }

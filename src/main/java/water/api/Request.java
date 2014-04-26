@@ -7,8 +7,7 @@ import hex.pca.PCAModel;
 import hex.rf.RFModel;
 
 import java.io.InputStream;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.*;
 import java.util.*;
 
 import water.*;
@@ -22,6 +21,8 @@ import com.google.gson.JsonObject;
 
 public abstract class Request extends RequestBuilders {
   @Retention(RetentionPolicy.RUNTIME)
+  @Target({ElementType.FIELD, ElementType.METHOD})
+  @Documented
   public @interface API {
     String help();
     /** Must be specified. */
@@ -42,6 +43,7 @@ public abstract class Request extends RequestBuilders {
     String displayName() default "";
     boolean gridable() default true;
     Class<? extends Validator> validator() default NOPValidator.class;
+    ParamImportance importance() default ParamImportance.UNIMPORTANT;
   }
 
   public interface Validator<V> extends Freezable {
@@ -54,7 +56,7 @@ public abstract class Request extends RequestBuilders {
     }
   }
 
-  public interface Filter {
+  public static interface Filter {
     boolean run(Object value);
   }
 

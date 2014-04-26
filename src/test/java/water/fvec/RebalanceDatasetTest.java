@@ -1,14 +1,12 @@
 package water.fvec;
 
-import org.junit.Test;
-import water.H2O;
-import water.Key;
-import water.TestUtil;
-import water.UKV;
+import static org.junit.Assert.assertEquals;
 
 import java.io.File;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+
+import org.junit.Test;
+
+import water.*;
 
 /**
  * Created by tomasnykodym on 4/1/14.

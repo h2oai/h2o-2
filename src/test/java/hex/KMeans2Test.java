@@ -2,19 +2,27 @@ package hex;
 
 import hex.KMeans.Initialization;
 import hex.KMeans2.KMeans2Model;
-
-import java.util.Random;
-
-import org.junit.*;
-
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
 import water.*;
 import water.fvec.Frame;
 import water.util.Log;
 import water.util.Log.Tag.Sys;
 
+import java.util.Random;
+
 public class KMeans2Test extends TestUtil {
   private static final long SEED = 8683452581122892189L;
   private static final double SIGMA = 3;
+
+  private final void testHTML(KMeans2Model m) {
+    StringBuilder sb = new StringBuilder();
+    KMeans2.KMeans2ModelView kmv = new KMeans2.KMeans2ModelView();
+    kmv.model = m;
+    kmv.toHTML(sb);
+    assert(sb.length() > 0);
+  }
 
   @BeforeClass public static void stall() {
     stall_till_cloudsize(JUnitRunnerDebug.NODES);
@@ -37,6 +45,7 @@ public class KMeans2Test extends TestUtil {
       algo.seed = SEED;
       algo.invoke();
       KMeans2Model res = UKV.get(algo.dest());
+      testHTML(res);
       double[][] clusters = res.centers;
       Assert.assertEquals(1.125, clusters[0][0], 0.000001);
       Assert.assertEquals(4.65, clusters[1][0], 0.000001);
@@ -70,6 +79,7 @@ public class KMeans2Test extends TestUtil {
       Timer t = new Timer();
       algo.invoke();
       KMeans2Model res = UKV.get(algo.dest());
+      testHTML(res);
       Log.debug(Sys.KMEAN, " testGaussian rows:" + rows + ", ms:" + t);
       double[][] clusters = res.centers;
 
@@ -138,6 +148,7 @@ public class KMeans2Test extends TestUtil {
     algo.invoke();
     Log.debug(Sys.KMEAN, "ms= " + t);
     KMeans2Model res = UKV.get(algo.dest());
+    testHTML(res);
     Assert.assertEquals(algo.k, res.centers.length);
     frame.delete();
     res.delete();
@@ -156,6 +167,7 @@ public class KMeans2Test extends TestUtil {
     algo.invoke();
     Log.debug(Sys.KMEAN, "ms= " + t);
     KMeans2Model res = UKV.get(algo.dest());
+    testHTML(res);
     Assert.assertEquals(algo.k, res.centers.length);
     frame.delete();
     res.delete();

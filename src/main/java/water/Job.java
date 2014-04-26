@@ -511,7 +511,7 @@ public abstract class Job extends Func {
      * Annotate the number of columns and rows of the training data set in the job parameter JSON
      * @return JsonObject annotated with num_cols and num_rows of the training data set
      */
-    @Override protected JsonObject toJSON() {
+    @Override public JsonObject toJSON() {
       JsonObject jo = super.toJSON();
       if (source != null) {
         jo.getAsJsonObject("source").addProperty("num_cols", source.numCols());
@@ -538,7 +538,7 @@ public abstract class Job extends Func {
     class colsFilter extends MultiVecSelect { public colsFilter() { super("source"); } }
 
     @API(help = "Ignored columns by name and zero-based index", filter=colsNamesIdxFilter.class, displayName="Ignored columns")
-    public int[] ignored_cols = EMPTY;
+    public int[] ignored_cols;
     class colsNamesIdxFilter extends MultiVecSelect { public colsNamesIdxFilter() {super("source", MultiVecSelectType.NAMES_THEN_INDEXES); } }
 
     @API(help = "Ignored columns by name", filter=colsNamesFilter.class, displayName="Ignored columns by name", hide=true)
@@ -553,7 +553,7 @@ public abstract class Job extends Func {
      * If the number of columns is 0, a "N/A" is reported.
      * @return JsonObject annotated with used/ignored columns
      */
-    @Override protected JsonObject toJSON() {
+    @Override public JsonObject toJSON() {
       JsonObject jo = super.toJSON();
       if (!jo.has("source")) return jo;
       HashMap<String, int[]> map = new HashMap<String, int[]>();
@@ -626,21 +626,17 @@ public abstract class Job extends Func {
   }
 
   /**
-   * A job producing a model.
+   * A columns job that requires a response.
    *
    * INPUT response column from source
    */
-  public static abstract class ModelJob extends ColumnsJob {
+  public static abstract class ColumnsResJob extends ColumnsJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
     @API(help="Column to use as class", required=true, filter=responseFilter.class, json = true)
     public Vec response;
     class responseFilter extends VecClassSelect { responseFilter() { super("source"); } }
-
-    @API(help="Do Classification or regression", filter=myClassFilter.class, json = true)
-    public boolean classification = true;
-    class myClassFilter extends DoClassBoolean { myClassFilter() { super("source"); } }
 
     @Override protected void registered(API_VERSION ver) {
       super.registered(ver);
@@ -657,7 +653,7 @@ public abstract class Job extends Func {
      * Annotate the name of the response column in the job parameter JSON
      * @return JsonObject annotated with the name of the response column
      */
-    @Override protected JsonObject toJSON() {
+    @Override public JsonObject toJSON() {
       JsonObject jo = super.toJSON();
       int idx = source.find(response);
       if( idx == -1 ) {
@@ -672,7 +668,7 @@ public abstract class Job extends Func {
       super.init();
       // Check if it make sense to build a model
       if (source.numRows()==0)
-        throw new IllegalArgumentException("Cannot build a model on empty dataset!");
+        throw new H2OIllegalArgumentException(find("source"), "Cannot build a model on empty dataset!");
       // Does not alter the Response to an Enum column if Classification is
       // asked for: instead use the classification flag to decide between
       // classification or regression.
@@ -684,8 +680,48 @@ public abstract class Job extends Func {
       final boolean has_constant_response = response.isEnum() ?
               response.domain().length <= 1 : response.min() == response.max();
       if (has_constant_response)
-        throw new IllegalArgumentException("Constant response column!");
+        throw new H2OIllegalArgumentException(find("response"), "Constant response column!");
     }
+  }
+
+  /**
+   * A job producing a model.
+   *
+   * INPUT response column from source
+   */
+  public static abstract class ModelJob extends ModelJobWithoutClassificationField {
+    static final int API_WEAVER = 1;
+    static public DocGen.FieldDoc[] DOC_FIELDS;
+
+    @API(help="Do classification or regression", filter=myClassFilter.class, json = true)
+    public boolean classification = true; // we need 3-state boolean: unspecified, true/false BUT we solve that by checking UI layer to see if the classification parameter was passed
+    class myClassFilter extends DoClassBoolean { myClassFilter() { super("source"); } }
+
+    @Override protected void init() {
+      super.init();
+      // Reject request if classification is required and response column is float
+      //Argument a4class = find("classification"); // get UI control
+      //String p4class = input("classification");  // get value from HTTP requests
+      // if there is UI control and classification field was passed
+      final boolean classificationFieldSpecified = true; // ROLLBACK: a4class!=null ? p4class!=null : /* we are not in UI so expect that parameter is specified correctly */ true;
+      if (!classificationFieldSpecified) { // can happen if a client sends a request which does not specify classification parameter
+        classification =  response.isEnum();
+        Log.warn("Classification field is not specified - deriving according to response! The classification field set to " + classification);
+      } else {
+        if ( classification && response.isFloat()) throw new H2OIllegalArgumentException(find("classification"), "Requested classification on float column!");
+        if (!classification && response.isEnum() ) throw new H2OIllegalArgumentException(find("classification"), "Requested regression on enum column!");
+      }
+    }
+  }
+
+  /**
+   * A job producing a model that has no notion of Classification or Regression.
+   *
+   * INPUT response column from source
+   */
+  public static abstract class ModelJobWithoutClassificationField extends ColumnsResJob {
+    // This exists to support GLM2, which determines classification/regression using the
+    // family field, not a second separate field.
   }
 
   /**
@@ -722,7 +758,7 @@ public abstract class Job extends Func {
      * Annotate the number of columns and rows of the validation data set in the job parameter JSON
      * @return JsonObject annotated with num_cols and num_rows of the validation data set
      */
-    @Override protected JsonObject toJSON() {
+    @Override public JsonObject toJSON() {
       JsonObject jo = super.toJSON();
       if (validation != null) {
         jo.getAsJsonObject("validation").addProperty("num_cols", validation.numCols());

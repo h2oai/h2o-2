@@ -3,8 +3,11 @@ package water;
 import static water.util.Utils.contains;
 import hex.ConfusionMatrix;
 import hex.VarImp;
+import hex.deeplearning.DeepLearningModel;
 import javassist.*;
+import water.api.AUC;
 import water.api.DocGen;
+import water.api.HitRatio;
 import water.api.Request.API;
 import water.fvec.Chunk;
 import water.fvec.Frame;
@@ -13,10 +16,7 @@ import water.fvec.Vec;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashMap;
+import java.util.*;
 
 /**
  * A Model models reality (hopefully).
@@ -54,6 +54,7 @@ public abstract class Model extends Lockable<Model> {
     _modelClassDist = classdist.clone();
   }
 
+  private final UniqueId uniqueId;
 
   /** Full constructor from frame: Strips out the Vecs to just the names needed
    *  to match columns later for future datasets.  */
@@ -75,6 +76,7 @@ public abstract class Model extends Lockable<Model> {
   /** Full constructor */
   public Model( Key selfKey, Key dataKey, String names[], String domains[][], float[] priorClassDist ) {
     super(selfKey);
+    this.uniqueId = new UniqueId(_key);
     if( domains == null ) domains=new String[names.length+1][];
     assert domains.length==names.length;
     assert names.length > 1;
@@ -85,12 +87,35 @@ public abstract class Model extends Lockable<Model> {
     _priorClassDist = priorClassDist;
   }
 
+  // currently only implemented by GLM2, DeepLearning, GBM and DRF:
+  public Request2 get_params() { throw new UnsupportedOperationException("get_params() has not yet been implemented in class: " + this.getClass()); }
+  public Request2 job() { throw new UnsupportedOperationException("job() has not yet been implemented in class: " + this.getClass()); }
+
   /** Simple shallow copy constructor to a new Key */
   public Model( Key selfKey, Model m ) { this(selfKey,m._dataKey,m._names,m._domains); }
+
+  public enum ModelCategory {
+    Unknown,
+    Binomial,
+    Multinomial,
+    Regression,
+    Clustering;
+  }
+
+  // TODO: override in KMeansModel once that's rewritten on water.Model
+  public ModelCategory getModelCategory() {
+    return (isClassifier() ?
+            (nclasses() > 2 ? ModelCategory.Multinomial : ModelCategory.Binomial) :
+            ModelCategory.Regression);
+  }
 
   /** Remove any Model internal Keys */
   @Override public Futures delete_impl(Futures fs) { return fs; /* None in the default Model */ }
   @Override public String errStr() { return "Model"; }
+
+  public UniqueId getUniqueId() {
+    return this.uniqueId;
+  }
 
   public String responseName() { return   _names[  _names.length-1]; }
   public String[] classNames() { return _domains[_domains.length-1]; }
@@ -280,8 +305,9 @@ public abstract class Model extends Lockable<Model> {
     }
     int n = ridx == -1?_names.length-1:_names.length;
     String [] names = Arrays.copyOf(_names, n);
-    // FIXME: Replacing in non-existant columns with 0s only makes sense for sparse data (SVMLight), otherwise we should either throw an exception or use NaNs...
-    Frame  [] subVfr = vfr.subframe(names, 0); // select only supported columns, if column is missing replace it with zeroes
+    Frame  [] subVfr;
+    // replace missing columns with NaNs (or 0s for DeepLearning with sparse data)
+    subVfr = vfr.subframe(names, (this instanceof DeepLearningModel && ((DeepLearningModel)this).get_params().sparse) ? 0 : Double.NaN);
     vfr = subVfr[0]; // extract only subframe but keep the rest for delete later
     Vec[] frvecs = vfr.vecs();
     boolean[] toEnum = new boolean[frvecs.length];
@@ -386,6 +412,88 @@ public abstract class Model extends Lockable<Model> {
       scored[0] = ModelUtils.getPrediction(scored, tmp);
     }
     return scored;
+  }
+
+  /**
+   * Compute the model error for a given test data set
+   * For multi-class classification, this is the classification error based on assigning labels for the highest predicted per-class probability.
+   * For binary classification, this is the classification error based on assigning labels using the optimal threshold for maximizing the F1 score.
+   * For regression, this is the mean squared error (MSE).
+   * @param ftest Frame containing test data
+   * @param vactual The response column Vec
+   * @param fpreds Frame containing ADAPTED (domain labels from train+test data) predicted data (classification: label + per-class probabilities, regression: target)
+   * @param hitratio_fpreds Frame containing predicted data (domain labels from test data) (classification: label + per-class probabilities, regression: target)
+   * @param label Name for the scored data set to be printed
+   * @param printMe Whether to print the scoring results to Log.info
+   * @param max_conf_mat_size Largest size of Confusion Matrix (#classes) for it to be printed to Log.info
+   * @param cm Confusion Matrix object to populate for multi-class classification (also used for regression)
+   * @param auc AUC object to populate for binary classification
+   * @param hr HitRatio object to populate for classification
+   * @return model error, see description above
+   */
+  public double calcError(final Frame ftest, final Vec vactual,
+                          final Frame fpreds, final Frame hitratio_fpreds,
+                          final String label, final boolean printMe,
+                          final int max_conf_mat_size, final water.api.ConfusionMatrix cm,
+                          final AUC auc,
+                          final HitRatio hr)
+  {
+    StringBuilder sb = new StringBuilder();
+    double error = Double.POSITIVE_INFINITY;
+    // populate AUC
+    if (auc != null) {
+      assert(isClassifier());
+      assert(nclasses() == 2);
+      auc.actual = ftest;
+      auc.vactual = vactual;
+      auc.predict = fpreds;
+      auc.vpredict = fpreds.vecs()[2]; //binary classifier (label, prob0, prob1 (THIS ONE), adaptedlabel)
+      auc.threshold_criterion = AUC.ThresholdCriterion.maximum_F1;
+      auc.invoke();
+      auc.toASCII(sb);
+      error = auc.err(); //using optimal threshold for F1
+    }
+    // populate CM
+    if (cm != null) {
+      cm.actual = ftest;
+      cm.vactual = vactual;
+      cm.predict = fpreds;
+      cm.vpredict = fpreds.vecs()[0]; // prediction (either label or regression target)
+      cm.invoke();
+      if (isClassifier()) {
+        if (auc != null) {
+          //override the CM with the one computed by AUC (using optimal threshold)
+          //Note: must still call invoke above to set the domains etc.
+          cm.cm = new long[3][3]; // 1 extra layer for NaNs (not populated here, since AUC skips them)
+          cm.cm[0][0] = auc.cm()[0][0];
+          cm.cm[1][0] = auc.cm()[1][0];
+          cm.cm[0][1] = auc.cm()[0][1];
+          cm.cm[1][1] = auc.cm()[1][1];
+          assert(new hex.ConfusionMatrix(cm.cm).err() == auc.err()); //check consistency with AUC-computed error
+        } else {
+          error = new hex.ConfusionMatrix(cm.cm).err(); //only set error if AUC didn't already set the error
+        }
+        if (cm.cm.length <= max_conf_mat_size) cm.toASCII(sb);
+      } else {
+        assert(auc == null);
+        error = cm.mse;
+        cm.toASCII(sb);
+      }
+    }
+    // populate HitRatio
+    if (hr != null) {
+      assert(isClassifier());
+      hr.actual = ftest;
+      hr.vactual = vactual;
+      hr.predict = hitratio_fpreds;
+      hr.invoke();
+      hr.toASCII(sb);
+    }
+    if (printMe && sb.length() > 0) {
+      Log.info("Scoring on " + label + " data:");
+      for (String s : sb.toString().split("\n")) Log.info(s);
+    }
+    return error;
   }
 
   /** Subclasses implement the scoring logic.  The data is pre-loaded into a

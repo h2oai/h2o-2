@@ -80,8 +80,7 @@ class Basic(unittest.TestCase):
         norm_beta = submodels['norm_beta']
         iteration = submodels['iteration']
 
-        validation = submodels['validation']
-        avg_err = validation['avg_err']
+        validation = submodels['validation']        
         auc = validation['auc']
         aic = validation['aic']
         null_deviance = validation['null_deviance']
@@ -91,8 +90,7 @@ class Basic(unittest.TestCase):
         print 'coefficients_names', coefficients_names
         # did beta get shortened? the simple check confirms names/beta/norm_beta are same length
         print 'beta', beta
-        print 'iteration', iteration
-        print 'avg_err', avg_err
+        print 'iteration', iteration        
         print 'auc', auc
 
 

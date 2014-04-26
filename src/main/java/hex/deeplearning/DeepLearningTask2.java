@@ -15,7 +15,7 @@ public class DeepLearningTask2 extends DRemoteTask<DeepLearningTask2> {
    * @param sync_fraction Fraction of the training data to use for one SGD iteration
    */
   public DeepLearningTask2(Frame train, DeepLearningModel.DeepLearningModelInfo model_info, float sync_fraction) {
-    assert(sync_fraction > 0 && sync_fraction <= 1.);
+    assert(sync_fraction > 0);
     _fr = train;
     _model_info = model_info;
     _sync_fraction = sync_fraction;

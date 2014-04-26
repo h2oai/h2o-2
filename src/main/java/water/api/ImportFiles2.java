@@ -1,14 +1,13 @@
 package water.api;
 
-import java.io.*;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.ObjectListing;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.apache.hadoop.fs.Path;
-
-import water.*;
+import water.DKV;
+import water.Futures;
+import water.Key;
+import water.Request2;
 import water.api.RequestServer.API_VERSION;
 import water.fvec.S3FileVec;
 import water.fvec.UploadFileVec;
@@ -17,11 +16,13 @@ import water.persist.PersistS3;
 import water.util.FileIntegrityChecker;
 import water.util.Log;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.ObjectListing;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class ImportFiles2 extends Request2 {
   static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
@@ -30,7 +31,7 @@ public class ImportFiles2 extends Request2 {
   // This Request supports the HTML 'GET' command, and this is the help text
   // for GET.
   static final String DOC_GET =
-    "Map a file from the source (either local host filesystem,hdfs, or s3) into H2O memory.  Data is "+
+    "Map a file from the source (either localhost filesystem, HDFS, or S3) into H2O memory.  Data is "+
     "loaded lazily, when the Key is read (usually in a Parse2 command, to build " +
     "a Frame key).  (Warning: Every host in the cluster must have this file visible locally!)";
 

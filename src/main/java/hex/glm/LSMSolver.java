@@ -38,34 +38,23 @@ public abstract class LSMSolver extends Iced{
     _alpha  = alpha;
   }
 
-  public final boolean converged(Gram gram, double [] beta, double [] xy){
-    return converged(gram,beta,xy,1e-8);
-  }
-  public final boolean converged(Gram gram, double [] beta, double [] xy, final double eps){
+  public final double [] grad(Gram gram, double [] beta, double [] xy){
     double [] grad = gram.mul(beta);
-    double l1pen = _alpha*_lambda;
-    double l2pen = (1-_alpha)*_lambda;
-    boolean converged = true;
-    for(int j = 0; j < grad.length-1; ++j){
-      grad[j] = grad[j] - xy[j] + (1-_alpha)*_lambda*beta[j];
-      double g = grad[j];
-      if(beta[j] == 0){
-        g = Math.abs(g);
-        if(g > l1pen && (l1pen-g) > eps){
-//          System.out.println("grad[" + j +"] = " + grad[j] + " > " + l1pen);
-          converged = false;
-        }
-      } else if(beta[j] < 0 && Math.abs(g - l1pen) > eps) {
-//        System.out.println("grad[" + j +"] - " + l1pen + " = " + (g - l1pen) + " > 0");
-        converged = false;
-      } else if(beta[j] > 0 && Math.abs(g + l1pen) > eps){
-        converged = false;
-//        System.out.println("grad[" + j +"] + " + l1pen + " = " + (l1pen + g) + " > 0");
-      }
-    }
-    _converged = converged&&Math.abs(grad[grad.length-1] -= xy[grad.length-1]) < eps;
-    return _converged;
+    for(int i = 0; i < grad.length; ++i)
+      grad[i] -= xy[i];
+    return grad;
   }
+
+
+  public static void subgrad(final double alpha, final double lambda, final double [] beta, final double [] grad){
+    final double l1pen = lambda*alpha;
+    for(int i = 0; i < grad.length-1; ++i) {// add l2 reg. term to the gradient
+      if(beta[i] < 0) grad[i] -= l1pen;
+      else if(beta[i] > 0) grad[i] += l1pen;
+      else grad[i] = LSMSolver.shrinkage(grad[i], l1pen);
+    }
+  }
+
   /**
    *  @param xy - guassian: -X'y binomial: -(1/4)X'(XB + (y-p)/(p*1-p))
    *  @param yy - &lt; y,y &gt; /2
@@ -221,15 +210,38 @@ public abstract class LSMSolver extends Iced{
       return res;
     }
 
-    public boolean solve(Gram gram, double [] xy, double yy, double[] z, double objVal) {
+    private double converged(Gram g, double [] beta, double [] xy){
+      double [] grad = grad(g,beta,xy);
+      subgrad(_alpha,_lambda,beta,grad);
+      double err = 0;
+      for(double d:grad)
+        if(d > err)err = d;
+        else if(d < -err)err = -d;
+      return err;
+    }
+
+    public double grad_err = Double.POSITIVE_INFINITY;
+
+    private double getGrad(int i, Gram gram, double [] beta, double [] xy){
+      double [] g = grad(gram,beta,xy);
+      subgrad(_alpha, _lambda, beta, g);
+      double err = 0;
+      for(double d3:g)
+        if(d3 > err)err = d3;
+        else if(d3 < -err)err = -d3;
+      return err;
+    }
+
+    public boolean solve(Gram gram, double [] xy, double yy, double[] res, double objVal) {
       double d = gram._diagAdded;
       final int N = xy.length;
-      Arrays.fill(z, 0);
+      Arrays.fill(res, 0);
       if(_lambda>0 || _addedL2 > 0)
         gram.addDiag(_lambda*(1-_alpha) + _addedL2);
       double rho = _rho;
       if(_alpha > 0 && _lambda > 0){
-        if(Double.isNaN(_rho)) rho = _lambda*_alpha;//gram.diagMin()+1e-5;// find rho value as min diag element + constant
+        if(Double.isNaN(_rho)) rho = _lambda*_alpha;// find rho value as min diag element + constant
+        System.out.println("rho = " + rho);
         gram.addDiag(rho);
       }
       if(_proximalPenalty > 0 && _wgiven != null){
@@ -250,26 +262,32 @@ public abstract class LSMSolver extends Iced{
         gram.addDiag(_addedL2); // try to add L2 penalty to make the Gram issp
         gram.cholesky(chol);
       }
-      Log.info(_id + ": Cholesky decomp done in " + (t2-t1) + "ms");
+      long decompTIme = (t2-t1);
+
       if(!chol.isSPD()){
         System.out.println("can not solve, got non-spd matrix and adding regularization did not help, matrix = \n" + gram);
         throw new NonSPDMatrixException(gram);
       }
       _rho = rho;
       if(_alpha == 0 || _lambda == 0){ // no l1 penalty
-        System.arraycopy(xy, 0, z, 0, xy.length);
-        chol.solve(z);
+        System.arraycopy(xy, 0, res, 0, xy.length);
+        chol.solve(res);
         gram.addDiag(-gram._diagAdded + d);
         return true;
       }
       long t = System.currentTimeMillis();
-      final double ABSTOL = Math.sqrt(N) * 1e-8;
-      final double RELTOL = 1e-4;
+      final double ABSTOL = Math.sqrt(N) * 1e-4;
+      final double RELTOL = 1e-2;
       double[] u = MemoryManager.malloc8d(N);
       double [] xyPrime = xy.clone();
       double kappa = _lambda*_alpha/rho;
       double [] grad = null;
       int i;
+      int k = 10;
+      double gradientErr = Double.POSITIVE_INFINITY;
+
+      double gerr = Double.POSITIVE_INFINITY;
+      double [] z = res.clone();
       for(i = 0; i < 2500; ++i ) {
         // first compute the x update
         // add rho*(z-u) to A'*y
@@ -277,44 +295,44 @@ public abstract class LSMSolver extends Iced{
         xyPrime[N-1] = xy[N-1];
         // updated x
         chol.solve(xyPrime);
-        // vars to be used for stopping criteria
-        double x_norm = 0;
-        double z_norm = 0;
-        double u_norm = 0;
-        double r_norm = 0;
-        double s_norm = 0;
-        double eps_pri = 0; // epsilon primal
-        double eps_dual = 0;
-
         // compute u and z update
         for( int j = 0; j < N-1; ++j ) {
           double x_hat = xyPrime[j];
-          x_norm += x_hat * x_hat;
           x_hat = x_hat * _orlx + (1 - _orlx) * z[j];
           double zold = z[j];
           z[j] = shrinkage(x_hat + u[j], kappa);
-          z_norm += z[j] * z[j];
-          s_norm += (z[j] - zold) * (z[j] - zold);
-          r_norm += (xyPrime[j] - z[j]) * (xyPrime[j] - z[j]);
           u[j] += x_hat - z[j];
-          u_norm += u[j] * u[j];
         }
         z[N-1] = xyPrime[N-1];
-        // compute variables used for stopping criterium
-        r_norm = Math.sqrt(r_norm);
-        s_norm = rho * Math.sqrt(s_norm);
-        eps_pri = ABSTOL + RELTOL * Math.sqrt(Math.max(x_norm, z_norm));
-        eps_dual = ABSTOL + rho * RELTOL * Math.sqrt(u_norm);
-        if( r_norm < eps_pri && s_norm < eps_dual){
-          double d2 = -gram._diagAdded + d;
-          gram.addDiag(d2);
-          if(_converged = converged(gram,z,xy,_gradientEps)) break;
-          else gram.addDiag(-d2);
+        if(i == k){
+          gerr = getGrad(i,gram,z,xy);
+          if(gerr < _gradientEps){
+            _converged = true;
+            System.arraycopy(z,0,res,0,z.length);
+            break;
+          }
+          // did not converge, check if we can converge in reasonable time
+          double diff = gradientErr - gerr;
+          if(diff < 0 || (gerr/diff) > 1e3){ // we won't ever converge with this setup (maybe change rho and try again?)
+            if(_orlx < 1.8){ //
+              _orlx = Math.min(1.8,_orlx*1.25); // try if over-relaxation helps...
+              Log.info("trying over-relaxation of " + _orlx + " after " + i + " iteartions and gerr = " + gerr);
+            } else {
+              _converged = gerr < 1e-4;
+              break;
+            }
+          } else {
+            System.arraycopy(z,0,res,0,z.length);
+            gradientErr = gerr;
+          }
+          k = i + 10; // test gradient every 10 iterations
         }
       }
-      if(!_converged)gram.addDiag(-gram._diagAdded + d);
+      gram.addDiag(-gram._diagAdded + d);
       assert gram._diagAdded == d;
-      Log.info("ADMM " + (_converged ? "converged" : "done(NOT CONVERGED)") + " in " + i + " iterations and " + (System.currentTimeMillis() - t) + "ms");
+      long solveTime = System.currentTimeMillis()-t;
+      if(Double.isInfinite(gerr)) gerr = getGrad(i,gram,res,xy);
+      Log.info("ADMM finished in " + i + " iterations and (" + decompTIme + " + " + solveTime+ ")ms, max |subgradient| = " + gerr);
       return _converged;
     }
     @Override
@@ -323,7 +341,6 @@ public abstract class LSMSolver extends Iced{
 
   public static final class ProxSolver extends LSMSolver {
     public ProxSolver(double lambda, double alpha){super(lambda,alpha);}
-
 
     /**
      * @param newB
@@ -398,7 +415,6 @@ public abstract class LSMSolver extends Iced{
         converged = true;
       }
       System.out.println("Proximal solver done" + " in " + iter + " iterations and " + (System.currentTimeMillis()-t1) + "ms" + ", objval reduced from " + objval + " to " + lsm_objectiveVal(xy,yy,beta,xb));
-      converged = converged(gram,beta,xy);
       return converged;
     }
     public String name(){return "ProximalGradientSolver";}

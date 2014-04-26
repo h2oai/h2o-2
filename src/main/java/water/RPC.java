@@ -120,8 +120,33 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
   // Make an initial RPC, or re-send a packet.  Always called on 1st send; also
   // called on a timeout.
   public synchronized RPC<V> call() {
+    // completer should be added to the RPC call, not DTask! It will not be carried over to remote
+    assert _dt.getCompleter() == null:"Invoking RPC with DTask with non-null completer! Completer's should be added to the RPC object!";
     // If running on self, just submit to queues & do locally
     if( _target==H2O.SELF ) {
+      _dt.setCompleter(new H2O.H2OCallback<DTask>() {
+        @Override public void callback(DTask dt){
+          synchronized(RPC.this){
+            _done = true;
+            RPC.this.notifyAll();
+            if(_fjtasks != null)
+              for(H2OCountedCompleter fjt:_fjtasks)
+                fjt.tryComplete();
+          }
+        }
+        @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
+          ex.printStackTrace();
+          synchronized(RPC.this) {
+            _dt.setException(ex);
+            _done = true;
+            RPC.this.notifyAll();
+            if(_fjtasks != null)
+              for(H2OCountedCompleter fjt:_fjtasks)
+                fjt.completeExceptionally(ex);
+            return true;
+          }
+        }
+      });
       H2O.submitTask(_dt);
       return this;
     }
@@ -217,15 +242,9 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     while( !isDone() ) { 
       try {
         // Wait for local to complete
-        if( _target==H2O.SELF ) { _dt.get(); _done=true; }
-        else wait();            // Wait for remote to complete
+        wait();            // Wait for remote to complete
       } 
       catch( InterruptedException e ) { }
-      catch(   ExecutionException e ) { // Only fails for local get()
-        _dt.setException(e.getCause());
-        _done = true;
-        break;
-      }
     }
     return true;
   }
@@ -477,6 +496,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     // ACKACK the remote, telling him "we got the answer"
     new AutoBuffer(ab._h2o).putTask(UDP.udp.ackack.ordinal(),task).close(false,false);
   }
+
 
   // Got a response UDP packet, or completed a large TCP answer-receive.
   // Install it as The Answer packet and wake up anybody waiting on an answer.

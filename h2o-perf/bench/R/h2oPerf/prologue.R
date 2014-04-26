@@ -25,10 +25,10 @@ options(echo=F)
 #source("../../../R/h2o-package/R/Classes.R")
 #source("../../../R/h2o-package/R/ParseImport.R")
 
-source("../../../../R/h2o-package/R/Internal.R")
-source("../../../../R/h2o-package/R/Algorithms.R")
-source("../../../../R/h2o-package/R/Classes.R")
-source("../../../../R/h2o-package/R/ParseImport.R")
+source("../../../../../R/h2o-package/R/Internal.R")
+source("../../../../../R/h2o-package/R/Algorithms.R")
+source("../../../../../R/h2o-package/R/Classes.R")
+source("../../../../../R/h2o-package/R/ParseImport.R")
 
 
 #GLOBALS
@@ -37,7 +37,7 @@ auc               <<- "None"
 .binomial         <<- "None"
 cm.json           <<- "None"
 confusion_matrix  <<- "None"
-correct_pass      <<- "None"
+correct_pass      <<- 1 #1 unless otherwise over written by Predict.R
 data_center       <<- "None"
 data_name         <<- "None"    
 data_source       <<- "None" 
@@ -289,15 +289,15 @@ function(centers, cols = '', iter.max = 10, normalize = FALSE) {
   kmeans_withinss <<- model@model$tot.withinss
 }
 
-runNN<-
-function(x, y, classification=T, activation='Tanh', layers=500, 
-         rate=0.01, l1_reg=1e-4, l2_reg=0.0010, epoch=100) {
-  data <- new("H2OParsedData", h2o = h, key = "parsed.hex", logic = TRUE)
-  model <<- h2o.nn(x = x, y = y, data = data, classification = classification,
-                   activation = activation, layers = layers, rate = rate, 
-                   l1_reg = l1_reg, l2_reg = l2_reg, epoch = epoch)
-  model.json <<- .h2o.__remoteSend(h, .h2o.__PAGE_NNModelView, '_modelKey'=model@key)
-}
+#runNN<-
+#function(x, y, classification=T, activation='Tanh', layers=500, 
+#         rate=0.01, l1_reg=1e-4, l2_reg=0.0010, epoch=100) {
+#  data <- new("H2OParsedData", h2o = h, key = "parsed.hex", logic = TRUE)
+#  model <<- h2o.nn(x = x, y = y, data = data, classification = classification,
+#                   activation = activation, layers = layers, rate = rate, 
+#                   l1_reg = l1_reg, l2_reg = l2_reg, epoch = epoch)
+#  model.json <<- .h2o.__remoteSend(h, .h2o.__PAGE_NNModelView, '_modelKey'=model@key)
+#}
 
 runPCA<-
 function(tol = 0, standardize = TRUE, retx = FALSE) {
@@ -324,6 +324,100 @@ function(x, y, ntree=50, depth=50, nodesize=1,
                                 depth = depth, nodesize = nodesize,
                                 sample.rate = sample.rate, nbins = nbins, seed = seed)
   model.json <<- .h2o.__remoteSend(h, .h2o.__PAGE_DRFModelView, '_modelKey'= model@key)
+}
+
+runDL<-
+function(x, y, activation="RectifierWithDropout", 
+hidden=c(1024,1024,2048), 
+epochs=32, 
+train_samples_per_iteration=-1, 
+seed=7514391364823515067, 
+adaptive_rate=TRUE, 
+rho=0.99, 
+epsilon=1E-6, 
+rate = 0.01, 
+rate_annealing=1.0E-6, 
+rate_decay=1.0, 
+momentum_start=0.0, 
+momentum_ramp=1000000, 
+momentum_stable=0.0, 
+nesterov_accelerated_gradient=TRUE, 
+input_dropout_ratio=0.2, 
+hidden_dropout_ratios=c(0.5,0.5,0.5), 
+l1 = 1E-5, 
+l2 = 0.0, 
+max_w2=15, 
+initial_weight_distribution="UniformAdaptive", 
+initial_weight_scale=1.0, 
+loss="CrossEntropy", 
+score_interval=30.0, 
+score_training_samples=1000, 
+score_validation_samples=10000, 
+score_duty_cycle=0.1, 
+classification_stop=-1, 
+regression_stop=1E-6, 
+quiet_mode=FALSE, 
+max_confusion_matrix_size=20, 
+max_hit_ratio_k=10, 
+balance_classes=FALSE, 
+max_after_balance_size=5.0, 
+score_validation_sampling="Uniform", 
+diagnostics=TRUE, 
+variable_importances=FALSE, 
+fast_mode=TRUE, 
+ignore_const_cols=TRUE, 
+force_load_balance=TRUE, 
+replicate_training_data=TRUE, 
+single_node_mode=FALSE, 
+shuffle_training_data=FALSE) {
+  data <- new("H2OParsedData", h2o = h, key = "parsed.hex", logic = TRUE)
+  val  <- new("H2OParsedData", h2o = h, key = "test.hex", logic = TRUE)
+  model <<- h2o.deeplearning(x = x, y = y, data = data, validation = val,
+      activation=activation,
+      hidden=hidden,
+      epochs=epochs,
+      train_samples_per_iteration=train_samples_per_iteration,
+      seed=seed,
+      adaptive_rate=adaptive_rate,
+      rho=rho,
+      epsilon=epsilon,
+      rate=rate,
+      rate_annealing=rate_annealing,
+      rate_decay=rate_decay,
+      momentum_start=momentum_start,
+      momentum_ramp=momentum_ramp,
+      momentum_stable=momentum_stable,
+      nesterov_accelerated_gradient=nesterov_accelerated_gradient,
+      input_dropout_ratio=input_dropout_ratio,
+      hidden_dropout_ratios=hidden_dropout_ratios,
+      l1=l1,
+      l2=l2,
+      max_w2=max_w2,
+      initial_weight_distribution=initial_weight_distribution,
+      initial_weight_scale=initial_weight_scale,
+      loss=loss,
+      score_interval=score_interval,
+      score_training_samples=score_training_samples,
+      score_validation_samples=score_validation_samples,
+      score_duty_cycle=score_duty_cycle,
+      classification_stop=classification_stop,
+      regression_stop=regression_stop,
+      quiet_mode=quiet_mode,
+      max_confusion_matrix_size=max_confusion_matrix_size,
+      max_hit_ratio_k=max_hit_ratio_k,
+      balance_classes=balance_classes,
+      max_after_balance_size=max_after_balance_size,
+      score_validation_sampling=score_validation_sampling,
+      diagnostics=diagnostics,
+      variable_importances=variable_importances,
+      fast_mode=fast_mode,
+      ignore_const_cols=ignore_const_cols,
+      force_load_balance=force_load_balance,
+      replicate_training_data=replicate_training_data,
+      single_node_mode=single_node_mode,
+      shuffle_training_data=shuffle_training_data)
+  
+  model.json <<- .h2o.__remoteSend(h, .h2o.__PAGE_DeepLearningModelView, '_modelKey'= model@key)
 }
 
 #Scoring/Predicting
@@ -357,7 +451,7 @@ function() {
   .predict(model)
 }
 
-runNNScore<-
+runDLScore<-
 function() {
   testData <<- new("H2OParsedData", h2o = h, key = "test.hex", logic = TRUE)
   .predict(model)

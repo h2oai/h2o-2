@@ -30,19 +30,20 @@ else
         echo "Also: Touch all the 0xcustomer-datasets mnt points, to get autofs to mount them."
         echo "Permission rights extend to the top level now, so only 0xcustomer can automount them"
         echo "okay to ls the top level here...no secret info..do all the machines we might be using"
+        echo ""
+        echo "resolve the issue with colliding with other jobs, by only deleting if older than 3 days"
 
         for mr in 171 172 173 174 175 176 177 178 179 180
         do
             ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.$mr  \
-                'echo rm -f -r /home/0xcustomer/ice*; cd /mnt/0xcustomer-datasets'
+                'find /home/0xcustomer/ice* -ctime +3 | xargs rm -rf; cd /mnt/0xcustomer-datasets'
         done
 
-        python ../four_hour_cloud.py -cj pytest_config-jenkins-172-180.json &
+        python ../four_hour_cloud.py -cj pytest_config-jenkins-175-180.json &
     else
         if [[ $USER == "kevin" ]]
         then
             python ../four_hour_cloud.py -cj pytest_config-kevin.json &
-            # python ../four_hour_cloud.py -cj pytest_config-jenkins-172-180.json &
         else
             python ../four_hour_cloud.py &
         fi
@@ -102,6 +103,9 @@ then
     myPy c6 test_c6_hdfs.py
     myPy c8 test_c8_rf_airlines_hdfs.py
     myPy c9 test_c9_GBM_airlines_hdfs.py
+    myPy c9 test_c9_GLM_airlines_hdfs_fvec.py
+    myPy c9 test_c9_GLM_rc_fvec.py
+
     myPy c10  test_c10_rel_gbm.py
     # put known failure last
     # doesn't work. key gets locked. forget about it

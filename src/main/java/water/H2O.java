@@ -5,7 +5,6 @@ import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.util.*;
-import java.util.concurrent.Future;
 
 import jsr166y.*;
 import water.Job.JobCancelledException;
@@ -13,10 +12,10 @@ import water.nbhm.NonBlockingHashMap;
 import water.persist.*;
 import water.util.*;
 import water.util.Log.Tag.Sys;
+import water.license.LicenseManager;
 
 import com.amazonaws.auth.PropertiesCredentials;
 import com.google.common.base.Objects;
-import com.google.common.io.Closeables;
 
 /**
 * Start point for creating or joining an <code>H2O</code> Cloud.
@@ -27,6 +26,7 @@ import com.google.common.io.Closeables;
 public final class H2O {
   public static volatile AbstractEmbeddedH2OConfig embeddedH2OConfig;
   public static volatile ApiIpPortWatchdogThread apiIpPortWatchdog;
+  public static volatile LicenseManager licenseManager;
 
   public static String VERSION = "(unknown)";
   public static long START_TIME_MILLIS = -1;
@@ -290,8 +290,21 @@ public final class H2O {
   // Find the node index for this H2ONode, or a negative number on a miss
   public int nidx( H2ONode h2o ) { return Arrays.binarySearch(_memary,h2o); }
   public boolean contains( H2ONode h2o ) { return nidx(h2o) >= 0; }
+  // BIG WARNING: do you not change this toString() method since cloud hash value depends on it
   @Override public String toString() {
     return Arrays.toString(_memary);
+  }
+  public String toPrettyString() {
+    if (_memary==null || _memary.length==0) return "[]";
+    int iMax = _memary.length - 1;
+    StringBuilder sb = new StringBuilder();
+    sb.append('[');
+    for (int i = 0; ; i++) {
+      sb.append(String.valueOf(_memary[i]));
+      if (_memary[i]!=null) sb.append(" (").append(PrettyPrint.msecs(_memary[i].runtime(),false)).append(')');
+      if (i==iMax) return sb.append(']').toString();
+      sb.append(", ");
+    }
   }
 
   /**
@@ -305,7 +318,7 @@ public final class H2O {
       ArrayList<NetworkInterface> tmpList = Collections.list(nis);
 
       Comparator<NetworkInterface> c = new Comparator<NetworkInterface>() {
-        public int compare(NetworkInterface lhs, NetworkInterface rhs) {
+        @Override public int compare(NetworkInterface lhs, NetworkInterface rhs) {
           // Handle null inputs.
           if ((lhs == null) && (rhs == null)) { return 0; }
           if (lhs == null) { return 1; }
@@ -409,7 +422,6 @@ public final class H2O {
         // Return the first match from the list, if any.
         // If there are no matches, then exit.
         Log.info("Network list was specified by the user.  Searching for a match...");
-        ArrayList<InetAddress> validIps = new ArrayList();
         for( InetAddress ip : ips ) {
           Log.info("    Considering " + ip.getHostAddress() + " ...");
           for ( UserSpecifiedNetwork n : networkList ) {
@@ -722,7 +734,7 @@ public final class H2O {
     // from a remote node, need the remote task to run at a higher priority
     // than themselves.  This field tracks the required priority.
     public byte priority() { return MIN_PRIORITY; }
-    public H2OCountedCompleter clone(){
+    @Override public H2OCountedCompleter clone(){
       try { return (H2OCountedCompleter)super.clone(); }
       catch( CloneNotSupportedException e ) { throw water.util.Log.errRTExcept(e); }
     }
@@ -730,8 +742,10 @@ public final class H2O {
 
 
   public static abstract class H2OCallback<T extends H2OCountedCompleter> extends H2OCountedCompleter{
-    public H2OCallback(){this(null);}
-    public H2OCallback(H2OCountedCompleter cc){super(cc);}
+    final Job _job;
+    public H2OCallback(){this(null,null);}
+    public H2OCallback(Job j){this(j,null);}
+    public H2OCallback(Job j, H2OCountedCompleter cc){super(cc); _job = j;}
     @Override public void compute2(){throw new UnsupportedOperationException();}
     @Override public void onCompletion(CountedCompleter caller){
       try {
@@ -740,6 +754,11 @@ public final class H2O {
         ex.printStackTrace();
         completeExceptionally(ex);
       }
+    }
+    @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
+      if(_job != null) _job.cancel(ex);
+      else ex.printStackTrace();
+      return true;
     }
     public abstract void callback(T t);
   }
@@ -771,6 +790,7 @@ public final class H2O {
     public String no_requests_log = null; // disable logging of Web requests
     public boolean check_rest_params = true; // enable checking unused/unknown REST params e.g., -check_rest_params=false disable control of unknown rest params
     public int    nthreads=4*NUMCPUS; // Max number of F/J threads in each low-priority batch queue
+    public String license; // License file
     public String h = null;
     public String help = null;
     public String version = null;
@@ -819,6 +839,9 @@ public final class H2O {
     "    -nthreads <#threads>\n" +
     "          Maximum number of threads in the low priority batch-work queue.\n" +
     "          (The default is 4*numcpus.)\n" +
+    "\n" +
+    "    -license <licenseFilePath>\n" +
+    "          Path to license file on local filesystem.\n" +
     "\n" +
     "Cloud formation behavior:\n" +
     "\n" +
@@ -890,6 +913,8 @@ public final class H2O {
     Log.info ("Java heap maxMemory: " + String.format("%.2f gb", runtime.maxMemory() / ONE_GB));
     Log.info ("Java version: " + String.format("Java %s (from %s)", System.getProperty("java.version"), System.getProperty("java.vendor")));
     Log.info ("OS   version: " + String.format("%s %s (%s)", System.getProperty("os.name"), System.getProperty("os.version"), System.getProperty("os.arch")));
+    long totalMemory = OSUtils.getTotalPhysicalMemory();
+    Log.info ("Machine physical memory: " + (totalMemory==-1 ? "NA" : String.format("%.2f gb", totalMemory / ONE_GB)));
   }
 
   public static String getVersion() {
@@ -954,7 +979,9 @@ public final class H2O {
 
     // Load up from disk and initialize the persistence layer
     initializePersistence();
-    Log.POST(340,"");
+    Log.POST(340, "");
+    initializeLicenseManager();
+    Log.POST(345, "");
     // Start network services, including heartbeats & Paxos
     startNetworkServices();   // start server services
     Log.POST(350,"");
@@ -1125,7 +1152,7 @@ public final class H2O {
         break;
       } catch (IOException e) {
         try { if( _apiSocket != null ) _apiSocket.close(); } catch( IOException ohwell ) { Log.err(ohwell); }
-        Closeables.closeQuietly(_udpSocket);
+        Utils.close(_udpSocket);
         _apiSocket = null;
         _udpSocket = null;
         if( OPT_ARGS.port != 0 )
@@ -1349,7 +1376,7 @@ public final class H2O {
         list.add(entry);
       }
     } catch( Exception e ) { Log.die(e.toString()); }
-    finally { Closeables.closeQuietly(br); }
+    finally { Utils.close(br); }
     return list;
   }
 
@@ -1363,6 +1390,18 @@ public final class H2O {
     Persist.initialize();
   }
 
+  static void initializeLicenseManager() {
+    licenseManager = new LicenseManager();
+    if (OPT_ARGS.license != null) {
+      LicenseManager.Result r = licenseManager.readLicenseFile(OPT_ARGS.license);
+      if (r == LicenseManager.Result.OK) {
+        Log.info("Successfully read license file ("+ OPT_ARGS.license + ")");
+      }
+      else {
+        Log.err("readLicenseFile failed (" + r + ")");
+      }
+    }
+  }
 
   // Cleaner ---------------------------------------------------------------
 
@@ -1405,7 +1444,7 @@ public final class H2O {
       return space != Persist.UNKNOWN && space < (5 << 10);
     }
 
-    public void run() {
+    @Override public void run() {
       boolean diskFull = false;
       while (true) {
         // Sweep the K/V store, writing out Values (cleaning) and free'ing
@@ -1638,6 +1677,7 @@ public final class H2O {
       }
 
       // Pretty print
+      @Override
       public String toString() {
         long x = _eldest;
         long now = System.currentTimeMillis();
@@ -1708,6 +1748,7 @@ public final class H2O {
     }
 
     // Count the impact of one failure.
+    @SuppressWarnings("unused")
     private void failed() {
       printPossibleCauses();
       if (consecutiveFailures == 0) {
@@ -1763,6 +1804,7 @@ public final class H2O {
     }
 
     // Class main thread.
+    @Override
     public void run() {
       Log.debug (threadName + ": Thread run() started");
       reset();

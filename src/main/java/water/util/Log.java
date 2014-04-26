@@ -492,9 +492,18 @@ public abstract class Log {
     return warn(Sys.WATER, msg, null);
   }
   /** Log an information message to standard out, the log file and the store. */
+  static public void info_no_stdout(Sys t, Object... objects) {
+    Event e =  Event.make(t, Kind.INFO, null, objects);
+    write(e,false);
+  }
+  /** Log an information message to standard out, the log file and the store. */
   static public void info(Sys t, Object... objects) {
     Event e =  Event.make(t, Kind.INFO, null, objects);
     write(e,true);
+  }
+  /** Log an information message to standard out, the log file and the store. */
+  static public void info_no_stdout(Object... objects) {
+    info_no_stdout(Sys.WATER, objects);
   }
   /** Log an information message to standard out, the log file and the store. */
   static public void info(Object... objects) {

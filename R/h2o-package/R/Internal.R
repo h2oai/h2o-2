@@ -103,6 +103,7 @@ h2o.__changeLogPath <- function(path, type) {
 
 .h2o.__PAGE_EXEC2 = "2/Exec2.json"
 .h2o.__PAGE_IMPORTFILES2 = "2/ImportFiles2.json"
+.h2o.__PAGE_EXPORTFILES = "2/ExportFiles.json"
 .h2o.__PAGE_INSPECT2 = "2/Inspect2.json"
 .h2o.__PAGE_PARSE2 = "2/Parse2.json"
 .h2o.__PAGE_PREDICT2 = "2/Predict.json"
@@ -115,6 +116,8 @@ h2o.__changeLogPath <- function(path, type) {
 .h2o.__PAGE_CONFUSION = "2/ConfusionMatrix.json"
 .h2o.__PAGE_AUC = "2/AUC.json"
 .h2o.__PAGE_HITRATIO = "2/HitRatio.json"
+.h2o.__PAGE_GAPSTAT = "2/GapStatistic.json"
+.h2o.__PAGE_GAPSTATVIEW = "2/GapStatisticModelView.json"
 .h2o.__PAGE_QUANTILES = "2/QuantilesPage.json"
 
 .h2o.__PAGE_DRF = "2/DRF.json"
@@ -142,6 +145,25 @@ h2o.__changeLogPath <- function(path, type) {
 .h2o.__PAGE_BAYES = "2/NaiveBayes.json"
 .h2o.__PAGE_NBProgress = "2/NBProgressPage.json"
 .h2o.__PAGE_NBModelView = "2/NBModelView.json"
+
+# client -- Connection object returned from h2o.init().
+# page   -- URL to access within the H2O server.
+# parms  -- List of parameters to send to the server.
+.h2o.__remoteSendWithParms <- function(client, page, parms) {
+  cmd = "rv = .h2o.__remoteSend(client, page"
+
+  for (i in 1:length(parms)) {
+    thisparmname = names(parms)[i]
+    cmd = sprintf("%s, %s=parms$%s", cmd, thisparmname, thisparmname)
+  }
+
+  cmd = sprintf("%s)", cmd)
+  #cat(sprintf("TOM: cmd is %s\n", cmd))
+
+  eval(parse(text=cmd))
+
+  return(rv)
+}
 
 .h2o.__remoteSend <- function(client, page, ...) {
   .h2o.__checkClientHealth(client)
@@ -179,9 +201,7 @@ h2o.__changeLogPath <- function(path, type) {
   #  temp = getForm(myURL, ..., .checkParams = FALSE)   # Some H2O params overlap with Curl params
   
   # after = gsub("\\\\\\\"NaN\\\\\\\"", "NaN", temp[1]) 
-  # after = gsub("NaN", "\"NaN\"", after)
-  # after = gsub("-Infinity", "\"-Inf\"", temp[1])
-  # after = gsub("Infinity", "\"Inf\"", after)
+  # after = gsub("NaN", '"NaN"', after)
   after = gsub('"Infinity"', '"Inf"', temp[1])
   after = gsub('"-Infinity"', '"-Inf"', after)
   res = fromJSON(after)

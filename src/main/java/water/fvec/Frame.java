@@ -24,16 +24,18 @@ public class Frame extends Lockable<Frame> {
   Key[] _keys;          // Keys for the vectors
   private transient Vec[] _vecs;// The Vectors (transient to avoid network traffic)
   private transient Vec _col0;  // First readable vec; fast access to the VectorGroup's Chunk layout
+  private final UniqueId uniqueId;
 
   public Frame( Frame fr ) { this(fr._key,fr._names.clone(), fr.vecs().clone()); _col0 = null; }
   public Frame( Vec... vecs ){ this(null,vecs);}
   public Frame( String[] names, Vec[] vecs ) { this(null,names,vecs); }
   public Frame( Key key, String[] names, Vec[] vecs ) {
     super(key);
+    this.uniqueId = new UniqueId(_key);
     if( names==null ) {
       names = new String[vecs.length];
       for( int i=0; i<vecs.length; i++ ) names[i] = "C"+(i+1);
-    } 
+    }
     assert names.length == vecs.length : "Number of columns does not match to number of cols' names.";
     _names=names;
     _vecs=vecs;
@@ -45,6 +47,11 @@ public class Frame extends Lockable<Frame> {
     }
     assert checkCompatible();
   }
+
+  public UniqueId getUniqueId() {
+    return this.uniqueId;
+  }
+
   public Vec vec(String name){
     Vec [] vecs = vecs();
     for(int i = 0; i < _names.length; ++i)
@@ -124,7 +131,7 @@ public class Frame extends Lockable<Frame> {
           @Override public byte priority(){return H2O.MIN_HI_PRIORITY;}
           @Override public void compute2() {
             Value v = DKV.get(k);
-            if( v==null ) System.err.println("Missing vector during Frame fetch: "+k);
+            if( v==null ) Log.err("Missing vector during Frame fetch: "+k);
             vecs[ii] = v.get();
             tryComplete();
           }
@@ -273,7 +280,7 @@ public class Frame extends Lockable<Frame> {
 
     Vec[] vec = Arrays.copyOfRange(vecs(),startIdx,endIdx);
     _names = names;
-    _vecs = vec;
+    _vecs = vecs;
     _keys = keys;
     _col0 = null;
     return vec;
@@ -426,7 +433,7 @@ public class Frame extends Lockable<Frame> {
     // Across
     Vec vecs[] = _vecs;
     // Do Not Cache _vecs in toString lest IdeaJ variable display cause side-effects
-    if( vecs == null ) vecs = vecs_impl(); 
+    if( vecs == null ) vecs = vecs_impl();
     if( vecs.length==0 ) return "{}";
     String s="{"+(_names==null?"C0":_names[0]);
     long bs=vecs[0].byteSize();
@@ -556,15 +563,21 @@ public class Frame extends Lockable<Frame> {
 
   // Return the entire Frame as a CSV stream
   public InputStream toCSV(boolean headers) {
-    return new CSVStream(headers);
+    return new CSVStream(headers, false);
+  }
+
+  public InputStream toCSV(boolean headers, boolean hex_string) {
+    return new CSVStream(headers, hex_string);
   }
 
   private class CSVStream extends InputStream {
+    private final boolean _hex_string;
     byte[] _line;
     int _position;
     long _row;
 
-    CSVStream(boolean headers) {
+    CSVStream(boolean headers, boolean hex_string) {
+      _hex_string = hex_string;
       StringBuilder sb = new StringBuilder();
       Vec vs[] = vecs();
       if( headers ) {
@@ -587,7 +600,33 @@ public class Frame extends Lockable<Frame> {
           if(!vs[i].isNA(_row)) {
             if(vs[i].isEnum()) sb.append('"' + vs[i]._domain[(int) vs[i].at8(_row)] + '"');
             else if(vs[i].isInt()) sb.append(vs[i].at8(_row));
-            else sb.append(vs[i].at(_row));
+            else {
+              // R 3.1 unfortunately changed the behavior of read.csv().
+              // (Really type.convert()).
+              //
+              // Numeric values with too much precision now trigger a type conversion in R 3.1 into a factor.
+              //
+              // See these discussions:
+              //   https://bugs.r-project.org/bugzilla/show_bug.cgi?id=15751
+              //   https://stat.ethz.ch/pipermail/r-devel/2014-April/068778.html
+              //   http://stackoverflow.com/questions/23072988/preserve-old-pre-3-1-0-type-convert-behavior
+
+              double d = vs[i].at(_row);
+
+              String s;
+              if (_hex_string) {
+                // Used by R's as.data.frame().
+                s = Double.toHexString(d);
+              }
+              else {
+                // To emit CSV files that can be read by R 3.1, limit the number of significant digits.
+                // s = String.format("%.15g", d);
+
+                s = Double.toString(d);
+              }
+
+              sb.append(s);
+            }
           }
         }
         sb.append('\n');
@@ -762,8 +801,8 @@ public class Frame extends Lockable<Frame> {
     final long _rows[];
     final byte _isInt[];
     boolean _ex = true;
-    DeepSlice( long rows[], int cols[], Vec vecs[] ) { 
-      _cols=cols; 
+    DeepSlice( long rows[], int cols[], Vec vecs[] ) {
+      _cols=cols;
       _rows=rows;
       _isInt = new byte[cols.length];
       for( int i=0; i<cols.length; i++ )

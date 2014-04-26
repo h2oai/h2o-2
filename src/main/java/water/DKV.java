@@ -34,7 +34,7 @@ public abstract class DKV {
 
   // Remove this Key
   static public Value remove( Key key ) { return remove(key,null); }
-  static public Value remove( Key key, Futures fs ) { return put(key,(Value)null,fs); }
+  static public Value remove( Key key, Futures fs ) { return put(key,null,fs); }
 
   // Do a PUT, and on success trigger replication.  Some callers need the old
   // value, and some callers need the Futures so we can block later to ensure

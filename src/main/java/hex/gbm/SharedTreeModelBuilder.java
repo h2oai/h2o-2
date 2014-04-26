@@ -4,23 +4,18 @@ import static water.util.ModelUtils.getPrediction;
 import hex.ConfusionMatrix;
 import hex.VarImp;
 import hex.rng.MersenneTwisterRNG;
+
+import java.util.Arrays;
+import java.util.Random;
+
 import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ValidatedJob;
-import water.api.AUC;
-import water.api.DocGen;
-import water.fvec.Chunk;
-import water.fvec.Frame;
-import water.fvec.Vec;
-import water.util.Log;
+import water.api.*;
+import water.fvec.*;
+import water.util.*;
 import water.util.Log.Tag.Sys;
-import water.util.MRUtils;
-import water.util.ModelUtils;
-import water.util.Utils;
-
-import java.util.Arrays;
-import java.util.Random;
 
 // Build (distributed) Trees.  Used for both Gradient Boosted Method and Random
 // Forest, and really could be used for any decision-tree builder.
@@ -37,16 +32,16 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-  @API(help = "Number of trees", filter = Default.class, lmin=1, lmax=1000000, json=true)
+  @API(help = "Number of trees", filter = Default.class, lmin=1, lmax=1000000, json=true, importance=ParamImportance.CRITICAL)
   public int ntrees = 50;
 
-  @API(help = "Maximum tree depth", filter = Default.class, lmin=1, lmax=10000, json=true)
+  @API(help = "Maximum tree depth", filter = Default.class, lmin=1, lmax=10000, json=true, importance=ParamImportance.CRITICAL)
   public int max_depth = 5;
 
-  @API(help = "Fewest allowed observations in a leaf (in R called 'nodesize')", filter = Default.class, lmin=1, json=true)
+  @API(help = "Fewest allowed observations in a leaf (in R called 'nodesize')", filter = Default.class, lmin=1, json=true, importance=ParamImportance.SECONDARY)
   public int min_rows = 10;
 
-  @API(help = "Build a histogram of this many bins, then split at the best point", filter = Default.class, lmin=2, lmax=10000, json=true)
+  @API(help = "Build a histogram of this many bins, then split at the best point", filter = Default.class, lmin=2, lmax=10000, json=true, importance=ParamImportance.SECONDARY)
   public int nbins = 20;
 
   @API(help = "Perform scoring after each iteration (can be slow)", filter = Default.class, json=true)
@@ -113,8 +108,9 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       throw new IllegalArgumentException("Too many levels in response column!");
 
     int usableColumns = 0;
+    assert _ncols == _train.length : "Number of selected train columns does not correspond to a number of columns!";
     for (int i = 0; i < _ncols; i++) {
-      Vec v = source.vec(i);
+      Vec v = _train[i];
       if (v.isBad() || v.isConst()) continue;
       usableColumns++;
     }

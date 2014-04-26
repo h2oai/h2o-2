@@ -20,6 +20,7 @@ import water.util.*;
 
 public class TestUtil {
   private static int _initial_keycnt = 0;
+  private static Timer _testClassTimer;
 
   protected static void startCloud(String[] args, int nnodes) {
     for( int i = 1; i < nnodes; i++ ) {
@@ -34,6 +35,7 @@ public class TestUtil {
     H2O.main(new String[] {});
     _initial_keycnt = H2O.store_size();
     assert Job.all().length == 0;      // No outstanding jobs
+    _testClassTimer = new Timer();
   }
 
   /** Execute this rule before each test to print test name and test class */
@@ -48,7 +50,27 @@ public class TestUtil {
     }
   };
 
+  @Rule public TestRule timerRule = new TestRule() {
+    @Override public Statement apply(Statement base, Description description) {
+      return new TimerStatement(base, description.getClassName()+"#"+description.getMethodName());
+    };
+    class TimerStatement extends Statement {
+      private final Statement base;
+      private final String tname;
+      public TimerStatement(Statement base, String tname) { this.base = base; this.tname = tname;}
+      @Override public void evaluate() throws Throwable {
+        Timer t = new Timer();
+        try {
+          base.evaluate();
+        } finally {
+          Log.info("#### TEST "+tname+" EXECUTION TIME: " + t.toString());
+        }
+      }
+    }
+  };
+
   @AfterClass public static void checkLeakedKeys() {
+    Log.info("## TEST CLASS EXECUTION TIME (sum over all tests): " + _testClassTimer.toString());
     Job[] jobs = Job.all();
     for( Job job : jobs ) {
       assert job.state != JobState.RUNNING : ("UNFINISHED JOB: " + job.job_key + " " + job.description + ", end_time = " + job.end_time + ", state=" + job.state );  // No pending job

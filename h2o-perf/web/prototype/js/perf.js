@@ -78,11 +78,11 @@ function makeGraph(json, svg) {
 
     var test_names = new Array();
     for(i = 0; i < json.data.length; i++) {
-      bv = d3.values(json.data[i])[6].split('.');
+      bv = d3.values(json.data[i])[7].split('.');
       bv = bv[bv.length - 1];
       if (bv == "99999") { continue; }
       if (bv == 99999) { continue; }
-      test_names.push(d3.values(json.data[i])[1]);
+      test_names.push(d3.values(json.data[i])[2]);
     }
     test_names = d3.set(test_names).values();
 
@@ -98,12 +98,12 @@ function makeGraph(json, svg) {
             }
     }
     for(i = 0; i < json.data.length; i++) {
-      build = d3.values(json.data[i])[6].split('.');
+      build = d3.values(json.data[i])[7].split('.');
       build = build[build.length - 1]
       if (build == "99999") { continue; }
       if (build == 99999) { continue; }
-      test  = d3.values(json.data[i])[1];
-      dat   = d3.values(json.data[i])[2];
+      test  = d3.values(json.data[i])[2];
+      dat   = d3.values(json.data[i])[3];
       for(j = 0; j < datas2.length; j++) {
         if (datas2[j].name === test) {
             datas2[j].data.push([build, dat, test])

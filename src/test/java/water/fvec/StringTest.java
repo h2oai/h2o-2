@@ -1,11 +1,8 @@
 package water.fvec;
 
-import static org.junit.Assert.*;
-import java.io.File;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
+
 import water.*;
-import water.parser.ParseDataset;
 
 public class StringTest extends TestUtil {
   @BeforeClass public static void stall() { stall_till_cloudsize(1); }
@@ -27,6 +24,9 @@ public class StringTest extends TestUtil {
     } finally {
       UKV.remove(k);
     }
+  }
+  @Test @Ignore public void dummy_test() {
+    /* this is just a dummy test to avoid JUnit complains about missing test */
   }
 }
 

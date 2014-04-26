@@ -447,6 +447,8 @@ def file_clean_for_R(csvPathname1, csvPathname2):
     outfile = open(csvPathname2,'w') # existing file gets erased
     for line in infile.readlines():
         # 1) remove comments and header???
+        # ignore lines with NA? cheap hack ,, doesn't work for end cols
+        # if not ',,' in line and not line.startswith('#') and not re.match('[A-Za-z]+',line):
         if not line.startswith('#') and not re.match('[A-Za-z]+',line):
             # 2) remove various lineends and whitespace (leading and trailing)..make it unix linend
             line = line.strip(" \n\r") + "\n"

@@ -33,8 +33,9 @@
             <li><a href="#e" data-toggle="tab">KMeans</a></li>
             <li><a href="#f" data-toggle="tab">DRF</a></li>
             <li><a href="#g" data-toggle="tab">GBM</a></li>
-            <li><a href="#h" data-toggle="tab">Neural Net</a></li>
+            <li><a href="#h" data-toggle="tab">Deep Learning</a></li>
             <li><a href="#i" data-toggle="tab">Custom Query</a></li>
+            <li><a href="#m" data-toggle="tab">Misc. Queries</a></li>
         </ul>
         <div class="tab-content">
             <div class="tab-pane active" id="a">
@@ -55,7 +56,8 @@
                                     <div>
                                             <textarea name="parse_1" style="width: 700px; height: 700px;">
 SELECT
-FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_run_id,
+    FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
     (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
@@ -64,6 +66,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
+    tr.total_hosts,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
@@ -91,7 +94,8 @@ ORDER BY tr.start_epoch_ms;
                                     <div>
                                             <textarea name="parse_1" style="width: 700px; height: 700px;">
 SELECT
-FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_run_id,
+    FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
     (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
@@ -100,6 +104,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
+    tr.total_hosts,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
@@ -136,7 +141,8 @@ ORDER BY tr.start_epoch_ms;</textarea>
                                     <div>
                                             <textarea name="parse_1" style="width: 700px; height: 700px;">
 SELECT
-FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_run_id,
+    FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
     (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
@@ -145,6 +151,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
+    tr.total_hosts,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
@@ -172,7 +179,8 @@ ORDER BY tr.start_epoch_ms;</textarea>
                                     <div>
                                             <textarea name="parse_1" style="width: 700px; height: 650px;">
 SELECT
-FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_run_id,
+    FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
     (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
@@ -181,6 +189,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
+    tr.total_hosts,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
@@ -218,7 +227,8 @@ ORDER BY tr.start_epoch_ms;</textarea>
                                     <div>
                                             <textarea name="parse_1" style="width: 700px; height: 700px;">
 SELECT
-FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_run_id,
+    FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
     (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
@@ -227,6 +237,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
+    tr.total_hosts,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
@@ -254,7 +265,8 @@ ORDER BY tr.start_epoch_ms;</textarea>
                                     <div>
                                         <textarea name="parse_1" style="width: 700px; height: 600px;">
 SELECT
-FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_run_id,
+    FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
     (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
@@ -263,6 +275,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
+    tr.total_hosts,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
@@ -301,7 +314,8 @@ ORDER BY tr.start_epoch_ms;</textarea>
                                     <div>
                                         <textarea name="parse_1" style="width: 700px; height: 650px;">
 SELECT
-FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_run_id,
+    FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
     (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
@@ -310,6 +324,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
+    tr.total_hosts,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
@@ -337,7 +352,8 @@ ORDER BY tr.start_epoch_ms;</textarea>
                                     <div>
                                             <textarea name="parse_1" style="width: 700px; height: 600px;">
 SELECT
-FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_run_id,
+    FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
     (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
@@ -346,6 +362,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
+    tr.total_hosts,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
@@ -384,7 +401,8 @@ ORDER BY tr.start_epoch_ms;</textarea>
                                     <div>
                                         <textarea name="parse_1" style="width: 700px; height: 700px;">
 SELECT
-FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_run_id,
+    FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
     (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
@@ -393,6 +411,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
+    tr.total_hosts,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
@@ -420,7 +439,8 @@ ORDER BY tr.start_epoch_ms;</textarea>
                                     <div>
                                         <textarea name="parse_1" style="width: 700px; height: 600px;">
 SELECT
-FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_run_id,
+    FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
     (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
@@ -429,6 +449,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
+    tr.total_hosts,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
@@ -467,7 +488,8 @@ ORDER BY tr.start_epoch_ms;</textarea>
                                     <div>
                                         <textarea name="parse_1" style="width: 700px; height: 700px;">
 SELECT
-FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_run_id,
+    FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
     (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
@@ -476,6 +498,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
+    tr.total_hosts,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
@@ -503,16 +526,17 @@ ORDER BY tr.start_epoch_ms;</textarea>
                                     <div>
                                         <textarea name="parse_1" style="width: 700px; height: 700px;">
 SELECT
+    tr.test_run_id,
     FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
     (p.end_epoch_ms - p.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
-    tr.test_run_id,
     tr.num_train_rows,
-    tr.build_version,
     tr.num_explan_cols,
+    tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
+    tr.total_hosts,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
@@ -551,7 +575,8 @@ ORDER BY tr.test_name, tr.test_run_id;
                                     <div>
                                         <textarea name="parse_1" style="width: 700px; height: 700px;">
 SELECT
-FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_run_id,
+    FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
     (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
@@ -560,6 +585,7 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
+    tr.total_hosts,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
@@ -580,33 +606,24 @@ ORDER BY tr.start_epoch_ms;</textarea>
 
             <div class="tab-pane" id = "h">
                 <div class="page-header">
-                    <h1>Neural Net Performance</h1>
+                    <h1>Deep Learning Performance</h1>
                 </div>
-            
-            <p> <h4><b>No Neural Net Tests Exist Yet</b> </h4></p>
-            </div>
-
-
-
-                       <div class="tab-pane" id="m">
-                <div class="page-header">
-                    <h1>Misc. Queries</h1>
-                </div>
-                <div class="panel-group" id="accordiond">
+                                <div class="panel-group" id="accordionh">
                     <div class="panel panel-default">
                         <div class="panel-heading">
                             <h4 class="panel-title">
-                                <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#paneld1">Show DDPLY results on 1B rows.</a>
+                                <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#panelh1">Show Deep Learning results on MNIST.</a>
                             </h4>
                         </div>
-                        <div id="paneld1" class="panel-collapse collapse">
+                        <div id="panelh1" class="panel-collapse collapse">
                             <div class="panel-body">
 
                                 <form action="../prototype/php/post.php" method="post">
                                     <div>
                                         <textarea name="parse_1" style="width: 700px; height: 650px;">
 SELECT
-FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_run_id,
+    FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.test_name,
     (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
     tr.train_dataset_name,
@@ -615,6 +632,56 @@ FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
     tr.build_version,
     tr.build_branch,
     tr.cpus_per_host,
+    tr.total_hosts,
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
+    tr.contaminated,
+    tr.contamination_message
+FROM test_run tr
+INNER JOIN test_run_phase_result tp
+ON tr.test_run_id = tp.test_run_id
+WHERE tp.phase_name = 'model'
+AND tr.test_name LIKE '%deeplearning%'
+ORDER BY tr.start_epoch_ms;</textarea>
+                                        <button class="btn btn-primary">Submit</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+
+                       <div class="tab-pane" id="m">
+                <div class="page-header">
+                    <h1>Misc. Queries</h1>
+                </div>
+                <div class="panel-group" id="accordionm">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h4 class="panel-title">
+                                <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#panelm1">Show DDPLY results on 1B rows.</a>
+                            </h4>
+                        </div>
+                        <div id="panelm1" class="panel-collapse collapse">
+                            <div class="panel-body">
+
+                                <form action="../prototype/php/post.php" method="post">
+                                    <div>
+                                        <textarea name="parse_1" style="width: 700px; height: 650px;">
+SELECT
+    tr.test_run_id,
+    FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_name,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
+    tr.train_dataset_name,
+    tr.num_train_rows,
+    tr.num_explan_cols,
+    tr.build_version,
+    tr.build_branch,
+    tr.cpus_per_host,
+    tr.total_hosts,
     tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
     tr.contaminated,
     tr.contamination_message
@@ -630,55 +697,8 @@ ORDER BY tr.start_epoch_ms;</textarea>
                             </div>
                         </div>
                     </div>
-
-<!--
-                    <div class="panel panel-default">
-                        <div class="panel-heading">
-                            <h4 class="panel-title">
-                                <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#paneld2">Show results for 1B row GLM (logistic regression).</a>
-                            </h4>
-                        </div>
-                        <div id="paneld2" class="panel-collapse collapse">
-                            <div class="panel-body">
-                                <form action="../prototype/php/post.php" method="post">
-                                    <div>
-                                            <textarea name="parse_1" style="width: 700px; height: 600px;">
-SELECT
-FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
-    tr.test_name,
-    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 time_s,
-    tr.train_dataset_name,
-    tr.num_train_rows,
-    tr.num_explan_cols,
-    tr.build_version,
-    tr.build_branch,
-    tr.cpus_per_host,
-    tr.heap_bytes_per_node / (1024 * 1024) heap_gb,
-    tr.contaminated,
-    tr.contamination_message
-FROM test_run tr
-INNER JOIN test_run_phase_result tp
-ON tr.test_run_id = tp.test_run_id
-WHERE tp.phase_name = 'model'
-AND tr.test_name LIKE '%glm%'
-AND tr.test_name LIKE '%billion%'
-ORDER BY tr.start_epoch_ms;</textarea>
-                                        <button class="btn btn-primary">Submit</button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
---!>
                 </div>
-
             </div>
-
-
-
-
-
-
 
             <div class="tab-pane" id="i">
                 <div class="page-header">
@@ -697,19 +717,8 @@ ORDER BY tr.start_epoch_ms;</textarea>
 
         </div>
     </div>
-
-
-
-
-
-
     <!-- /tabs -->
 </div>
-<!--
-        <form name="query" method="POST" action="../prototype/php/results_page.php">
-            <input type="hidden" name="query">
-        </form>
--->
 </body>
 </html>
 

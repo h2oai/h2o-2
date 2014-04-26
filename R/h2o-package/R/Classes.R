@@ -170,7 +170,8 @@ setMethod("show", "H2ODRFModel", function(object) {
   cat("Distributed Random Forest Model Key:", object@key)
 
   model = object@model
-  cat("\n\nNumber of trees:", model$params$ntree)
+  cat("\n\nClasification:", model$params$classification)
+  cat("\nNumber of trees:", model$params$ntree)
   cat("\nTree statistics:\n"); print(model$forest)
   
   if(model$params$classification) {
@@ -249,6 +250,12 @@ year <- function(x) UseMethod('year', x)
 year.H2OParsedData <- h2o.year
 month <- function(x) UseMethod('month', x)
 month.H2OParsedData <- h2o.month
+
+diff.H2OParsedData <- function(x, lag = 1, differences = 1, ...) {
+  expr = paste("diff(", paste(x@key, lag, differences, sep = ","), ")", sep = "")
+  res = .h2o.__exec2(x@h2o, expr)
+  new("H2OParsedData", h2o=x@h2o, key=res$dest_key, logic=FALSE)
+}
 
 as.h2o <- function(client, object, key = "", header, sep = "") {
   if(missing(client) || class(client) != "H2OClient") stop("client must be a H2OClient object")
@@ -816,7 +823,7 @@ setMethod("var", "H2OParsedData", function(x, y = NULL, na.rm = FALSE, use) {
 })
 
 as.data.frame.H2OParsedData <- function(x, ...) {
-  url <- paste('http://', x@h2o@ip, ':', x@h2o@port, '/2/DownloadDataset?src_key=', URLencode(x@key), sep='')
+  url <- paste('http://', x@h2o@ip, ':', x@h2o@port, '/2/DownloadDataset?src_key=', URLencode(x@key), '&hex_string=1', sep='')
   ttt <- getURL(url)
   n = nchar(ttt)
 
@@ -842,25 +849,21 @@ as.data.frame.H2OParsedData <- function(x, ...) {
       ttt = ttt2
   }
   
-  # Substitute NAs for blank cells rather than skipping.
-  df = read.csv(textConnection(ttt), blank.lines.skip = FALSE)
+  # if((df.ncol = ncol(df)) != (x.ncol = ncol(x)))
+  #  stop("Stopping conversion: Expected ", x.ncol, " columns, but data frame imported with ", df.ncol)
+  # if(x.ncol > .MAX_INSPECT_COL_VIEW)
+  #  warning(x@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
   
-#   if((df.ncol = ncol(df)) != (x.ncol = ncol(x)))
-#     stop("Stopping conversion: Expected ", x.ncol, " columns, but data frame imported with ", df.ncol)
-#   if(x.ncol > .MAX_INSPECT_COL_VIEW)
-#     warning(x@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
-#   
-#   # Set the correct factor levels for each column
-#   if(class(x) == "H2OParsedDataVA")
-#     res = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS, key=x@key, max_column_display=.Machine$integer.max)
-#   else
-#     res = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS2, source=x@key, max_ncols=.Machine$integer.max)
-#   for(i in 1:df.ncol) {
-#     if(!is.null(res$levels[[i]]))
-#       df[,i] <- factor(df[,i], levels = res$levels[[i]])
-#     else if(!is.numeric(df[,i]))
-#       df[,i] <- as.numeric(df[,i])
-#   }
+  # Obtain the correct factor levels for each column
+  # if(class(x) == "H2OParsedDataVA")
+  #  res = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS, key=x@key, max_column_display=.Machine$integer.max)
+  # else
+  #  res = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS2, source=x@key, max_ncols=.Machine$integer.max)
+  # colClasses = sapply(res$levels, function(x) { ifelse(is.null(x), "numeric", "factor") })
+
+  # Substitute NAs for blank cells rather than skipping
+  df = read.csv(textConnection(ttt), blank.lines.skip = FALSE, ...)
+  # df = read.csv(textConnection(ttt), blank.lines.skip = FALSE, colClasses = colClasses, ...)
   return(df)
 }
 
@@ -1030,7 +1033,7 @@ setMethod("ifelse", "H2OParsedData", function(test, yes, no) {
 
 setMethod("levels", "H2OParsedData", function(x) {
   if(ncol(x) != 1) return(NULL)
-  res = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS2, source = x@key)
+  res = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS2, source = x@key, max_ncols = .Machine$integer.max)
   res$levels[[1]]
 })
 
@@ -1207,6 +1210,7 @@ setMethod("show", "H2OKMeansModelVA", function(object) {
   cat("\n\nCluster means:\n"); print(model$centers)
   cat("\nClustering vector:\n"); print(summary(model$cluster))
   cat("\nWithin cluster sum of squares by cluster:\n"); print(model$withinss)
+  cat("(between_SS / total_SS = ", round(100*sum(model$betweenss)/model$totss, 1), "%)\n")
   cat("\nAvailable components:\n"); print(names(model))
 })
 

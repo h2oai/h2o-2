@@ -24,10 +24,19 @@ class Basic(unittest.TestCase):
 
         csvFilename = 'covtype.data'
         csvPathname = 'standard/' + csvFilename
+        hex_key = "covtype.hex"
 
-        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', timeoutSecs=10)
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, hex_key=hex_key, schema='local', timeoutSecs=10)
 
-        # inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
+        print "Gratuitous use of frame splitting. result not used"
+        fs = h2o.nodes[0].frame_split(source=hex_key, ratios=0.75)
+        split0_key = fs['split_keys'][0]
+        split1_key = fs['split_keys'][1]
+        split0_row = fs['split_rows'][0]
+        split1_row = fs['split_rows'][1]
+        split0_ratio = fs['split_ratios'][0]
+        split1_ratio = fs['split_ratios'][1]
+
         # print "\n" + csvPathname, \
         #     "    num_rows:", "{:,}".format(inspect['num_rows']), \
         #     "    num_cols:", "{:,}".format(inspect['num_cols'])

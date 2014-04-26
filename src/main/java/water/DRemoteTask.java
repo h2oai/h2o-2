@@ -56,7 +56,7 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
   public T dfork ( Key... keys ) { keys(keys); _top_level=true; compute2(); return self(); }
   public void keys( Key... keys ) { _keys = flatten(keys); }
   public T invoke( Key... keys ) {
-    try { 
+    try {
       ForkJoinPool.managedBlock(dfork(keys));
     } catch(InterruptedException  iex) { Log.errRTExcept(iex); }
 
@@ -66,11 +66,11 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
   }
 
   // Return true if blocking is unnecessary, which is true if the Task isDone.
-  public boolean isReleasable() {  return isDone();  }
+  @Override public boolean isReleasable() {  return isDone();  }
   // Possibly blocks the current thread.  Returns true if isReleasable would
   // return true.  Used by the FJ Pool management to spawn threads to prevent
   // deadlock is otherwise all threads would block on waits.
-  public boolean block() throws InterruptedException {
+  @Override public boolean block() throws InterruptedException {
     while( !isDone() ) {
       try { get(); }
       catch(ExecutionException eex) { // skip the execution part
@@ -174,6 +174,7 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
   private final RPC<T> remote_compute( ArrayList<Key> keys ) {
     if( keys.size() == 0 ) return null;
     DRemoteTask rpc = clone();
+    rpc.setCompleter(null);
     rpc._keys = keys.toArray(new Key[keys.size()]);
     addToPendingCount(1);       // Block until the RPC returns
     // Set self up as needing completion by this RPC: when the ACK comes back

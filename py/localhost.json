@@ -1,0 +1,30 @@
+{
+    "h2o_nodes": [
+        {
+            "sandbox_error_was_reported": "false", 
+            "sandbox_ignore_errors": "false", 
+            "http_addr": "127.0.0.1", 
+            "node_id": 0, 
+            "hdfs_name_node": "192.168.1.176", 
+            "use_hdfs": true, 
+            "port": 54321, 
+            "hdfs_version": "cdh3", 
+            "delete_keys_at_teardown": "true", 
+            "redirect_import_folder_to_s3_path": "false", 
+            "remoteH2O": "true", 
+            "username": "0xcustomer", 
+            "java_heap_GB": 0, 
+            "use_maprfs": false, 
+            "redirect_import_folder_to_s3n_path": "false"
+        }
+    ], 
+    "cloud_start": {
+        "username": "null", 
+        "ip": "null", 
+        "cwd": "null", 
+        "config_json": "null", 
+        "time": "null", 
+        "python_cmd_line": "null", 
+        "python_test_name": "null"
+    }
+}

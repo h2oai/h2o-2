@@ -6,24 +6,22 @@ import h2o_print
 DO_GLM = True
 LOG_MACHINE_STATS = False
 
+# fails during exec env push ..second import has to do a key delete (the first)
+DO_DOUBLE_IMPORT = False
+
 print "Assumes you ran ../build_for_clone.py in this directory"
 print "Using h2o-nodes.json. Also the sandbox dir"
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
-    def sub_c3_fvec_long(self):
+    def sub_c3_fvec_long(self, csvFilenameList):
         h2o.beta_features = True
         # a kludge
         h2o.setup_benchmark_log()
 
-        avgMichalSize = 116561140 
         bucket = 'home-0xdiag-datasets'
         ### importFolderPath = 'more1_1200_link'
         importFolderPath = 'manyfiles-nflx-gz'
         print "Using .gz'ed files in", importFolderPath
-        csvFilenameList= [
-            ("*[1][0-4][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 1800),
-            # ("*[1][0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 1800),
-        ]
 
         if LOG_MACHINE_STATS:
             benchmarkLogging = ['cpu', 'disk', 'network']
@@ -36,10 +34,11 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         for trial, (csvFilepattern, csvFilename, totalBytes, timeoutSecs) in enumerate(csvFilenameList):
                 csvPathname = importFolderPath + "/" + csvFilepattern
 
-                (importResult, importPattern) = h2i.import_only(bucket=bucket, path=csvPathname, schema='local')
-                importFullList = importResult['files']
-                importFailList = importResult['fails']
-                print "\n Problem if this is not empty: importFailList:", h2o.dump_json(importFailList)
+                if DO_DOUBLE_IMPORT:
+                    (importResult, importPattern) = h2i.import_only(bucket=bucket, path=csvPathname, schema='local')
+                    importFullList = importResult['files']
+                    importFailList = importResult['fails']
+                    print "\n Problem if this is not empty: importFailList:", h2o.dump_json(importFailList)
 
                 # this accumulates performance stats into a benchmark log over multiple runs 
                 # good for tracking whether we're getting slower or faster
@@ -116,9 +115,37 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
     #***********************************************************************
     # these will be tracked individual by jenkins, which is nice
     #***********************************************************************
-    def test_B_c3_fvec_long(self):
+    def test_A_c3_fvec_one(self):
         h2o.beta_features = True
-        self.sub_c3_fvec_long()
+        avgMichalSize = 116561140 
+        csvFilenameList= [
+            ("*[1][0][0].dat.gz", "file_1_A.dat.gz", 1 * avgMichalSize, 1800),
+        ]
+        self.sub_c3_fvec_long(csvFilenameList)
+
+    def test_B_c3_fvec_two(self):
+        h2o.beta_features = True
+        avgMichalSize = 116561140 
+        csvFilenameList= [
+            ("*[1][0][0-1].dat.gz", "file_2_A.dat.gz", 2 * avgMichalSize, 1800),
+        ]
+        self.sub_c3_fvec_long(csvFilenameList)
+
+    def test_C_c3_fvec_ten(self):
+        h2o.beta_features = True
+        avgMichalSize = 116561140 
+        csvFilenameList= [
+            ("*[1][0][0-9].dat.gz", "file_10_A.dat.gz", 10 * avgMichalSize, 1800),
+        ]
+        self.sub_c3_fvec_long(csvFilenameList)
+
+    def test_D_c3_fvec_50(self):
+        h2o.beta_features = True
+        avgMichalSize = 116561140 
+        csvFilenameList= [
+            ("*[1][0-4][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 1800),
+        ]
+        self.sub_c3_fvec_long(csvFilenameList)
 
 if __name__ == '__main__':
     h2o.unit_main()
