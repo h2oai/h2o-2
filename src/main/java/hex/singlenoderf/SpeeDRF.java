@@ -191,6 +191,8 @@ public class SpeeDRF extends Job.ValidatedJob {
       model.bin_limit = bin_limit;
       if (mtry == -1) {
         model.mtry = (int) Math.floor(Math.sqrt(source.numCols()));
+      } else {
+        model.mtry = mtry;
       }
       model.features = source.numCols();
       model.sampling_strategy = sampling_strategy;
@@ -204,6 +206,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       model.statType = stat_type;
       model.test_frame = test;
       model.testKey = validation == null ? null : validation._key;
+
       return model;
     }
     finally {
@@ -232,6 +235,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       int ntrees            = howManyTrees();
       int[] rowsPerChunks   = howManyRPC(_rfmodel.fr);
       updateRFModel(_rfmodel._key, numSplitFeatures);
+      updateRFModelStatus(_rfmodel._key, "Building Forest");
       SpeeDRF.build(_job, _params, localData, ntrees, numSplitFeatures, rowsPerChunks);
       tryComplete();
     }
@@ -243,6 +247,17 @@ public class SpeeDRF extends Job.ValidatedJob {
           if(old == null) return null;
           SpeeDRFModel newModel = (SpeeDRFModel)old.clone();
           newModel.node_split_features[idx] = numSplitFeatures;
+          return newModel;
+        }
+      }.invoke(modelKey);
+    }
+
+    static void updateRFModelStatus(Key modelKey, final String status) {
+      new TAtomic<SpeeDRFModel>() {
+        @Override public SpeeDRFModel atomic(SpeeDRFModel old) {
+          if(old == null) return null;
+          SpeeDRFModel newModel = (SpeeDRFModel)old.clone();
+          newModel.current_status = status;
           return newModel;
         }
       }.invoke(modelKey);

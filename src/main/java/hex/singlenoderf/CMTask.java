@@ -56,7 +56,7 @@ public class CMTask extends MRTask2<CMTask> {
   public CMTask(SpeeDRFModel model, int treesToUse, double[] classWt, boolean computeOOB ) {
     _modelKey   = model._key;
     _datakey    = model._dataKey;
-    _classcol   = model.fr.find(model.responseName());
+    _classcol   = model.test_frame == null ?  (model.fr.numCols() - 1) : (model.test_frame.numCols() - 1);
     _classWt    = classWt != null && classWt.length > 0 ? classWt : null;
     _treesUsed  = treesToUse;
     _computeOOB = computeOOB;
@@ -70,7 +70,7 @@ public class CMTask extends MRTask2<CMTask> {
    confusion matrix. The default seed when deserializing is 42. */
 //    Random _rand = Utils.getRNG(0x92b5023f2cd40b7cL);
 //    _data   = UKV.get(_datakey);
-    _data = _model.fr;
+    _data = _model.test_frame == null ? _model.fr : _model.test_frame;
 
     _modelDataMap = _model.colMap(_model._names);
     assert !_computeOOB || _model._dataKey.equals(_datakey) : !_computeOOB + " || " + _model._dataKey + " equals " + _datakey ;
@@ -420,7 +420,10 @@ public class CMTask extends MRTask2<CMTask> {
       _sum = 0.f;
     }
     private CMFinal(CM cm, Key SpeeDRFModelKey, String[] domain, long[] errorsPerTree, boolean computedOOB, boolean valid, float sum) {
-      _matrix = cm._matrix; _errors = cm._errors; _rows = cm._rows; _skippedRows = cm._skippedRows;
+      _matrix = cm._matrix;
+      _errors = cm._errors;
+      _rows = cm._rows;
+      _skippedRows = cm._skippedRows;
       _SpeeDRFModelKey    = SpeeDRFModelKey;
       _domain        = domain;
       _errorsPerTree = errorsPerTree;

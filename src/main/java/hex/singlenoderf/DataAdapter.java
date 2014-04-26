@@ -40,7 +40,7 @@ final class DataAdapter  {
 
   DataAdapter(Frame fr, SpeeDRFModel model, int[] modelDataMap, int rows,
               long unique, long seed, int binLimit, double[] classWt) {
-    assert model._dataKey == fr._key;
+//    assert model._dataKey == fr._key;
     _seed       = seed+(unique<<16); // This is important to preserve sampling selection!!!
     _binLimit   = binLimit;
     _dataId     = unique;
