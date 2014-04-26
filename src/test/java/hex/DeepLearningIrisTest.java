@@ -293,8 +293,26 @@ public class DeepLearningIrisTest extends TestUtil {
                             compareVal(testErr, myTestErr, abseps, releps);
                             Log.info("Scoring: PASS");
 
+                            if (p.best_model_key != null) {
+                              // get the actual best error on training data
+                              float best_err = Float.MAX_VALUE;
+                              for (DeepLearningModel.Errors err : mymodel.scoring_history()) {
+                                best_err = Math.min(best_err, (float)err.train_err); //multi-class classification
+                              }
+                              Log.info("Actual best error : " + best_err * 100 + "%.");
+
+                              // get the error reported by the stored best model
+                              DeepLearningModel bestmodel = UKV.get(p.best_model_key);
+                              final Frame bestPredict = bestmodel.score(_train, false);
+                              final double bestErr = bestmodel.calcError(_train, _train.lastVec(), bestPredict, bestPredict, "Best error:",
+                                      true, p.max_confusion_matrix_size, new water.api.ConfusionMatrix(), null, null);
+                              Log.info("Best_model's error : " + bestErr * 100 + "%.");
+                              compareVal(bestErr, best_err, abseps, releps);
+                              bestmodel.delete();
+                              bestPredict.delete();
+                            }
+
                             // cleanup
-                            if (p.best_model_key != null) UKV.remove(p.best_model_key);
                             mymodel.delete();
                             _train.delete();
                             _test.delete();
