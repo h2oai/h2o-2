@@ -22,7 +22,7 @@ public class SpeeDRF extends Job.ValidatedJob {
   public int mtry = -1;
 
   @API(help = "Max Depth", filter = Default.class, json = true, lmin = 0, lmax = Integer.MAX_VALUE)
-  public int max_depth = 20;
+  public int max_depth = 50;
 
   @API(help = "Split Criterion Type", filter = Default.class, json=true)
   public Tree.StatType stat_type = Tree.StatType.ENTROPY;
@@ -185,7 +185,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, false, false, false);
       Frame test = null;
       if (validation != null) {
-        test = FrameTask.DataInfo.prepareFrame(validation, response, ignored_cols, false, false, false);
+        test = FrameTask.DataInfo.prepareFrame(validation, validation.vecs()[source.find(response)], ignored_cols, false, false, false);
       }
       SpeeDRFModel model = new SpeeDRFModel(dest(), self(), source._key, train, response, new Key[0], seed);
       model.bin_limit = bin_limit;
