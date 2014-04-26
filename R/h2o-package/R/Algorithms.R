@@ -905,7 +905,16 @@ h2o.pcr <- function(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda 
 
   myScore[,ncomp+1] = data[,args$y_i]    # Bind response to frame of principal components
   myGLMData = new("H2OParsedData", h2o=data@h2o, key=myScore@key)
-  h2o.glm.FV(1:ncomp, ncomp+1, myGLMData, family, nfolds, alpha, lambda, epsilon, standardize = FALSE, tweedie.p)
+  h2o.glm.FV(x = 1:ncomp,
+             y = ncomp+1,
+             data = myGLMData,
+             family = family,
+             nfolds = nfolds,
+             alpha = alpha,
+             lambda = lambda,
+             epsilon = epsilon,
+             standardize = FALSE,
+             tweedie.p = tweedie.p)
 }
 
 .h2o.prcomp.internal <- function(data, x_ignore, dest, max_pc=10000, tol=0, standardize=TRUE) {
