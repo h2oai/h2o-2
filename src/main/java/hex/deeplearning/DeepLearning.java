@@ -520,6 +520,7 @@ public class DeepLearning extends Job.ValidatedJob {
 
   // the following parameters can be modified when restarting from a checkpoint
   transient final String [] cp_modifiable = new String[] {
+          "best_model_key",
           "expert_mode",
           "seed",
           "epochs",
@@ -739,7 +740,7 @@ public class DeepLearning extends Job.ValidatedJob {
             for (Field fB : B.getClass().getDeclaredFields()) {
               if (fA.equals(fB)) {
                 try {
-                  if (!fA.get(A).toString().equals(fB.get(B).toString())) {
+                  if (fB.get(B) == null || fA.get(A) == null || !fA.get(A).toString().equals(fB.get(B).toString())) {
                     Log.info("Applying user-requested modification of '" + fA.getName() + "': " + fA.get(A) + " -> " + fB.get(B));
                     fA.set(A, fB.get(B));
                   }
@@ -872,16 +873,6 @@ public class DeepLearning extends Job.ValidatedJob {
     }
   }
 
-  /**
-   * Incrementally train an existing model
-   * @param model Initial model
-   * @param epochs How many epochs to train for
-   * @return Updated model
-   */
-  public final DeepLearningModel trainModel(DeepLearningModel model, double epochs) {
-    model.model_info().get_params().epochs += epochs;
-    return trainModel(model);
-  }
 
   /**
    * Helper to update a Frame and adding it to the local trash at the same time
