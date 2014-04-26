@@ -25,25 +25,18 @@ final class DataAdapter  {
   private final int _numClasses;
   /** Columns. */
   final Col[]    _c;
-  /** Unique cookie identifying this dataset*/
-  private final long     _dataId;
   /** Seed for sampling */
   private final long     _seed;
   /** Number of rows */
   public  final int      _numRows;
   /** Class weights */
   public  final double[] _classWt;
-  /** Maximum arity for a column (not a hard limit) */
-  private final int      _binLimit;
-  /** Number of ignored columns */
-  private int            _ignoredColumns;
 
   DataAdapter(Frame fr, SpeeDRFModel model, int[] modelDataMap, int rows,
               long unique, long seed, int binLimit, double[] classWt) {
 //    assert model._dataKey == fr._key;
     _seed       = seed+(unique<<16); // This is important to preserve sampling selection!!!
-    _binLimit   = binLimit;
-    _dataId     = unique;
+    /* Maximum arity for a column (not a hard limit) */
     _numRows    = rows;
     _numClasses = model.classes();
 
@@ -54,7 +47,7 @@ final class DataAdapter  {
       if( isByteCol(v,rows,i == _c.length-1) ) // we do not bin for small values
         _c[i] = new Col(fr._names[i], rows, i == _c.length-1);
       else
-        _c[i] = new Col(fr._names[i], rows, i == _c.length-1,_binLimit, !(v.isEnum() || v.isInt()));
+        _c[i] = new Col(fr._names[i], rows, i == _c.length-1, binLimit, !(v.isEnum() || v.isInt()));
     }
     boolean trivial = true;
     if (classWt != null) for(double f: classWt) if (f != 1.0) trivial = false;
@@ -70,15 +63,10 @@ final class DataAdapter  {
    * binning was applied,  or if binning was applied a value that is inbetween
    * the idx and the next value.  If the idx is the last value return (2*idx+1)/2. */
   public float unmap(int col, int idx){ return _c[col].rawSplit(idx); }
-
-  public void computeBins(int col){_c[col].shrink();}
-
   public boolean isFloat(int col) { return _c[col].isFloat(); }
   public long seed()          { return _seed; }
   public int columns()        { return _c.length;}
   public int classOf(int idx) { return _c[_c.length-1].get(idx); }
-  /**Returns true if the row has missing data. */
-  public long dataId()        { return _dataId; }
   /** The number of possible prediction classes. */
   public int classes()        { return _numClasses; }
   /** Transforms given binned index (short) from class column into a value from interval [0..N-1]
@@ -103,15 +91,12 @@ final class DataAdapter  {
 
   public void shrink() {
     for ( Col c: _c) c.shrink();
-    for ( Col c: _c) if (c.isIgnored()) _ignoredColumns++;
   }
 
   public String columnName(int i) { return _c[i].name(); }
 
   public boolean isValid(int col, float f) {
-    if (!_c[col].isFloat()) return true;
-    if (Float.isInfinite(f)) return false;
-    return true;
+    return !_c[col].isFloat() || !Float.isInfinite(f);
   }
 
   public final void    add(float v, int row, int col) {
@@ -196,7 +181,7 @@ final class DataAdapter  {
         // to many NaNs in the column => ignore it
         _ignored = true;
         _raw     = null;
-        Log.warn(Sys.RANDF,"Ignore column: " + this);
+        Log.info(Sys.RANDF, "Ignore column: " + this);
         return;
       }
       int n = vs.length - ndups - nans;
@@ -247,11 +232,10 @@ final class DataAdapter  {
     public float rawSplit(int idx){
       if (_isByte) return idx; // treat index as value
       if (idx == BAD) return Float.NaN;
-      float flo = _binned2raw[idx+0]; // Convert to the original values
+      float flo = _binned2raw[idx]; // Convert to the original values
       float fhi = (idx+1 < _binned2raw.length)? _binned2raw[idx+1] : flo+1.f;
-      float fmid = (flo+fhi)/2.0f; // Compute a split-value
       //assert flo < fmid && fmid < fhi : "Values " + flo +","+fhi ; // Assert that the float will properly split
-      return fmid;
+      return (flo+fhi)/2.0f;
     }
 
     int rows() { return _isByte ? _rawB.length : _binned.length; }

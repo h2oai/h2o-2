@@ -123,6 +123,7 @@ public class DABuilder {
               boolean rowIsValid = false;
               for(int c = 0; c < chks.length; ++c) {
                 //final int col = modelDataMap[c];
+                fr.vecs()[1].isBad();
                 if(naCnts[c] > 0) {
                   if(chks[c].isNA0(j)) {
                     if (c == ncolumns - 1) rowIsValid = false;

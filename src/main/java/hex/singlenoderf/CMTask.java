@@ -34,8 +34,6 @@ public class CMTask extends MRTask2<CMTask> {
   public int[] _modelDataMap;
   public Frame _data;
   public int  _N;
-  public int _MODEL_N;
-  public int _DATA_N;
 
   /** Data to replay the sampling algorithm */
   private int[]     _chunk_row_mapping;
@@ -69,15 +67,17 @@ public class CMTask extends MRTask2<CMTask> {
     /* For reproducibility we can control the randomness in the computation of the
    confusion matrix. The default seed when deserializing is 42. */
 //    Random _rand = Utils.getRNG(0x92b5023f2cd40b7cL);
-//    _data   = UKV.get(_datakey);
     _data = _model.test_frame == null ? _model.fr : _model.test_frame;
 
     _modelDataMap = _model.colMap(_model._names);
     assert !_computeOOB || _model._dataKey.equals(_datakey) : !_computeOOB + " || " + _model._dataKey + " equals " + _datakey ;
     Vec respModel = _model.get_response();
     Vec respData  = _data.vecs()[_classcol];
-    _DATA_N  = (int) (respData.max() - respData.min() + 1);
-    _MODEL_N = (int) (respModel.max() - respModel.min() + 1);
+    int model_max = (int)respModel.max();
+    int model_min = (int)respModel.min();
+    int data_max = (int)respData.max();
+    int data_min = (int)respData.min();
+
     if (respModel._domain!=null) {
       assert respData._domain != null;
       _model_classes_mapping = new int[respModel._domain.length];
@@ -89,9 +89,9 @@ public class CMTask extends MRTask2<CMTask> {
       _model_classes_mapping = null;
       _data_classes_mapping  = null;
       // compute mapping
-      _cmin_model_mapping = (int) (respModel.min() - Math.min(respModel.min(), respData.min()) );
-      _cmin_data_mapping  = (int) (respData.min()  - Math.min(respModel.min(), respData.min()) );
-      _N = (int) (Math.max(respModel.max(), respData.max()) - Math.min(respModel.min(), respData.min()) + 1);
+      _cmin_model_mapping = model_min - Math.min(model_min, data_min);
+      _cmin_data_mapping  = data_min  - Math.min(model_min, data_min);
+      _N = Math.max(model_max, data_max) - Math.min(model_min, data_min) + 1;
     }
     assert _N > 0; // You know...it is good to be sure
     init();
@@ -476,15 +476,6 @@ public class CMTask extends MRTask2<CMTask> {
       sb.append(_rows).append(',');
       sb.append(err).append(',');
     }
-
-//    public static void updateDKV(final Key key, final CMFinal cm) {
-//      new TAtomic<CMFinal>() {
-//        @Override public CMFinal atomic(CMFinal old) {
-//          if(old == null) return null;
-//          return cm;
-//        }
-//      }.invoke(key);
-//    }
   }
 
   /** Produce confusion matrix from given votes. */

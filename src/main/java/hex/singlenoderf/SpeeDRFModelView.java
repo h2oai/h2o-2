@@ -5,8 +5,6 @@ import water.Key;
 import water.Request2;
 import water.api.DocGen;
 import water.api.Request;
-import water.api.RequestArguments;
-import water.api.RequestBuilders;
 
 
 public class SpeeDRFModelView extends Request2 {
