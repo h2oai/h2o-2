@@ -67,6 +67,15 @@ public class ConfusionMatrix extends Iced {
     _predErr = err();
   }
 
+  public ConfusionMatrix(long[][] value, int dim) {
+    _arr = new long[dim][dim];
+    for (int i=0; i<dim; ++i)
+      for (int j=0; j<dim; ++j)
+      _arr[i][j] = value[i][j];
+    _classErr = classErr();
+    _predErr = err();
+  }
+
   public void add(int i, int j) {
     _arr[i][j]++;
   }
