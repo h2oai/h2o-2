@@ -823,7 +823,20 @@ setMethod("var", "H2OParsedData", function(x, y = NULL, na.rm = FALSE, use) {
 })
 
 as.data.frame.H2OParsedData <- function(x, ...) {
-  url <- paste('http://', x@h2o@ip, ':', x@h2o@port, '/2/DownloadDataset?src_key=', URLencode(x@key), '&hex_string=1', sep='')
+  # Versions of R prior to 3.1 should not use hex string.
+  # Versions of R including 3.1 and later should use hex string.
+  use_hex_string = FALSE
+  if (as.numeric(R.Version()$major) >= 3) {
+    if (as.numeric(R.Version()$minor) >= 1) {
+      use_hex_string = TRUE
+    }
+  }
+
+  url <- paste('http://', x@h2o@ip, ':', x@h2o@port,
+               '/2/DownloadDataset',
+               '?src_key=', URLencode(x@key),
+               '&hex_string=', as.numeric(use_hex_string),
+               sep='')
   ttt <- getURL(url)
   n = nchar(ttt)
 
