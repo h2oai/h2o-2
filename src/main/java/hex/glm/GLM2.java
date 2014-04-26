@@ -94,7 +94,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   double tweedie_link_power;
 
   @API(help = "lambda max", json=true, importance = ParamImportance.SECONDARY)
-  double lambda_max;
+  double lambda_max = Double.NaN;
 
   // API output parameters END ------------------------------------------------------------
 
@@ -111,7 +111,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   public GLMParams _glm;
 
   private double ADMM_GRAD_EPS = 1e-4; // default addm gradietn eps
-  private static final double MIN_ADMM_GRAD_EPS = 1e-6; // min admm gradient eps
+  private static final double MIN_ADMM_GRAD_EPS = 1e-5; // min admm gradient eps
 
   int _lambdaIdx = 0;
 
@@ -351,7 +351,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         @Override public void callback(GLMModel.GLMValidationTask v){ nextLambda(glmt, newBeta, v._res);}
       });
     } else {
-      new GLMIterationTask(GLM2.this,_dinfo,_glm,false,true,false,_model.submodels[_lambdaIdx].norm_beta,prior,_reg,new H2OCallback<GLMIterationTask>(GLM2.this){
+      final double [] b = _model.submodels[_lambdaIdx].norm_beta != null?_model.submodels[_lambdaIdx].norm_beta:_model.submodels[_lambdaIdx].beta;
+      new GLMIterationTask(GLM2.this,_dinfo,_glm,false,true,false,b,prior,_reg,new H2OCallback<GLMIterationTask>(GLM2.this){
         @Override public void callback(GLMIterationTask glmt2){nextLambda(glmt, newBeta,glmt2._val);}
       }).asyncExec(_dinfo._adaptedFrame);
     }
@@ -517,7 +518,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     if(highAccuracy() || lambda_search){
       new LMAXTask(GLM2.this, _dinfo, _glm, ymu,alpha[0],new H2OCallback<LMAXTask>(GLM2.this){
         @Override public void callback(LMAXTask t){
-          run(ymu,nobs,t.lmax(),t._val);
+          run(ymu,nobs,lambda_max = t.lmax(),t._val);
         }
       }).asyncExec(_dinfo._adaptedFrame);
     } else run(ymu,nobs,Double.NaN,null); // shortcut for quick & simple
