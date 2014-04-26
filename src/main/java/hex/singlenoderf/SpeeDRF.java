@@ -125,7 +125,8 @@ public class SpeeDRF extends Job.ValidatedJob {
       tsk._rfmodel = model;
       tsk._drf = this;
       tsk.validateInputData();
-      tsk.invokeOnAllNodes();
+
+      tsk.invokeOnAllNodes(); //this is bad when chunks aren't on each node!
     }
     catch(JobCancelledException ex) {
       Log.info("Random Forest building was cancelled.");
@@ -216,6 +217,7 @@ public class SpeeDRF extends Job.ValidatedJob {
 
   public Frame score( Frame fr ) { return ((SpeeDRFModel)UKV.get(dest())).score(fr);  }
 
+
   public final static class DRFTask extends DRemoteTask {
     /** The RF Model.  Contains the dataset being worked on, the classification
      *  column, and the training columns.  */
@@ -230,6 +232,10 @@ public class SpeeDRF extends Job.ValidatedJob {
      * */
     @Override public final void lcompute() {
       final DataAdapter dapt = DABuilder.create(_drf, _rfmodel).build(_rfmodel.fr);
+      if (dapt == null) {
+        tryComplete();
+        return;
+      }
       Data localData        = Data.make(dapt);
       int numSplitFeatures  = howManySplitFeatures();
       int ntrees            = howManyTrees();

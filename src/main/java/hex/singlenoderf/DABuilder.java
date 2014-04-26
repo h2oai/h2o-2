@@ -54,7 +54,7 @@ public class DABuilder {
       for(int i = 0; i < keys.length; ++i) {
         if (keys[i].home()) return i;
       }
-      throw new Error("No key on this node");
+      return -99999; //throw new Error("No key on this node");
     }
 
     private static int find(String n, String[] names) {
@@ -74,6 +74,10 @@ public class DABuilder {
 
     /** Build data adapter for given frame */
     protected DataAdapter inhaleData(Frame fr) {
+      long id = getChunkId(fr);
+      if (id == -99999) {
+        return null;
+      }
       Timer t_inhale = new Timer();
       SpeeDRFModel rfmodel = _rfmodel;
       boolean[] _isByteCol = new boolean[fr.numCols()];
