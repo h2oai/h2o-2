@@ -246,6 +246,18 @@ h2o.clusterStatus <- function(client) {
   stop("Cannot find Java. Please install the latest JDK from http://www.oracle.com/technetwork/java/javase/downloads/index.html")
 }
 
+.h2o.downloadJar <- function(branch = "rel-kahan", version) {
+  if(missing(version))
+    version <- packageVersion("h2o")[1,4]
+  dest_file <- paste(.h2o.pkg.path, "java", "h2o.jar", sep = .Platform$file.sep)
+  if(!file.exists(dest_file)) {
+    if(version == '99999') stop("Cannot find ", dest_file, "\nPlease check that Makefile copied the jar correctly.")
+    h2o_url <- paste("http://s3.amazonaws.com/h2o-release/h2o", branch, version, "h2o.jar", sep = "/")
+    download.file(h2o_url, dest_file, mode = "wb")
+  }
+  return(dest_file)
+}
+
 #-------------------------------- Deprecated --------------------------------#
 # NB: if H2OVersion matches \.99999$ is a development version, so pull package info out of file.  yes this is a hack
 #     but it makes development versions properly prompt upgrade

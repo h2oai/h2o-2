@@ -1,5 +1,6 @@
 
 PROJECT_VERSION ?= 99.70
+BUILD_BRANCH ?= master
 R_VERSION = 3.1
 REPO_PATH_WIN = bin/windows/contrib/$(R_VERSION)
 REPO_PATH_MAC = bin/macosx/contrib/$(R_VERSION)
@@ -35,8 +36,10 @@ endif
 PDFLATEX=$(shell which pdflatex)
 
 build_rh2o:
-	sed 's/SUBST_PROJECT_VERSION/$(PROJECT_VERSION)/' h2o-DESCRIPTION.template > h2o-package/DESCRIPTION
-	sed 's/SUBST_PROJECT_VERSION/$(PROJECT_VERSION)/' h2o-package.template > h2o-package/man/h2o-package.Rd
+	sed -e 's/SUBST_PROJECT_VERSION/$(PROJECT_VERSION)/' -e 's/SUBST_PROJECT_BRANCH/$(BUILD_BRANCH)/' h2o-DESCRIPTION.template > h2o-package/DESCRIPTION
+	sed -e 's/SUBST_PROJECT_VERSION/$(PROJECT_VERSION)/' -e 's/SUBST_PROJECT_BRANCH/$(BUILD_BRANCH)/' h2o-package.template > h2o-package/man/h2o-package.Rd
+	# sed 's/SUBST_PROJECT_BRANCH/$(BUILD_BRANCH)/' h2o-DESCRIPTION.template > h2o-package/DESCRIPTION
+	# sed 's/SUBST_PROJECT_BRANCH/$(BUILD_BRANCH)/' h2o-package.template > h2o-package/man/h2o-package.Rd
 ifeq ($(PDFLATEX),)
 	@echo pdflatex not found, skipping pdf generation...
 else
