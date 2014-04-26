@@ -265,6 +265,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     _dinfo = new DataInfo(fr, 1, use_all_factor_levels, standardize,false);
     if(higher_accuracy)setHighAccuracy();
   }
+  @Override protected boolean filterNaCols(){return true;}
   @Override protected Response serve() {
     init();
     link = family.defaultLink;// TODO

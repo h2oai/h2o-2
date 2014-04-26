@@ -538,7 +538,7 @@ public abstract class Job extends Func {
     class colsFilter extends MultiVecSelect { public colsFilter() { super("source"); } }
 
     @API(help = "Ignored columns by name and zero-based index", filter=colsNamesIdxFilter.class, displayName="Ignored columns")
-    public int[] ignored_cols = EMPTY;
+    public int[] ignored_cols;
     class colsNamesIdxFilter extends MultiVecSelect { public colsNamesIdxFilter() {super("source", MultiVecSelectType.NAMES_THEN_INDEXES); } }
 
     @API(help = "Ignored columns by name", filter=colsNamesFilter.class, displayName="Ignored columns by name", hide=true)
