@@ -179,9 +179,7 @@ h2o.__changeLogPath <- function(path, type) {
   #  temp = getForm(myURL, ..., .checkParams = FALSE)   # Some H2O params overlap with Curl params
   
   # after = gsub("\\\\\\\"NaN\\\\\\\"", "NaN", temp[1]) 
-  # after = gsub("NaN", "\"NaN\"", after)
-  # after = gsub("-Infinity", "\"-Inf\"", temp[1])
-  # after = gsub("Infinity", "\"Inf\"", after)
+  # after = gsub("NaN", '"NaN"', after)
   after = gsub('"Infinity"', '"Inf"', temp[1])
   after = gsub('"-Infinity"', '"-Inf"', after)
   res = fromJSON(after)
