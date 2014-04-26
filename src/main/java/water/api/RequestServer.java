@@ -270,6 +270,7 @@ public class RequestServer extends NanoHTTPD {
     // Pure APIs, no HTML, to support The New World
     registerRequest(new Models());
     registerRequest(new Frames());
+    registerRequest(new ModelMetrics());
   }
 
   /**

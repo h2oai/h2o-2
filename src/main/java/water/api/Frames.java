@@ -195,7 +195,7 @@ public class Frames extends Request2 {
 
 
   /**
-   * Fetch all the Frames from the KV store, sumamrize and enhance them, and return a map of them.
+   * For one or more Frame from the KV store, sumamrize and enhance them and Response containing a map of them.
    */
   private Response serveOneOrAll(Map<String, Frame> framesMap) {
     // returns empty sets if !this.find_compatible_models
@@ -233,40 +233,47 @@ public class Frames extends Request2 {
    * Score a frame with the given model.
    */
   protected static Response scoreOne(Frame frame, Model score_model) {
-    Frame input = frame;
 
-    long before = System.currentTimeMillis();
-    Frame predictions = score_model.score(frame, true); // TODO: for now we're always calling adapt inside score
-    long after = System.currentTimeMillis();
+    water.ModelMetrics metrics = water.ModelMetrics.getFromDKV(score_model, frame);
 
-    ConfusionMatrix cm = new ConfusionMatrix(); // for regression this computes the MSE
-    AUC auc = null;
-    HitRatio hr = null;
-    double error = 0.0d;
+    if (null == metrics) {
+      // have to compute
+      water.util.Log.info("Cache miss: computing ModelMetrics. . .");
+      long before = System.currentTimeMillis();
+      Frame predictions = score_model.score(frame, true); // TODO: for now we're always calling adapt inside score
+      long after = System.currentTimeMillis();
 
-    if (score_model.isClassifier()) {
-      auc = new AUC();
+      ConfusionMatrix cm = new ConfusionMatrix(); // for regression this computes the MSE
+      AUC auc = null;
+      HitRatio hr = null;
+      double error = 0.0d;
+
+      if (score_model.isClassifier()) {
+        auc = new AUC();
 //      hr = new HitRatio();
-      error = score_model.calcError(input, input.vec(score_model.responseName()), predictions, predictions, "Prediction error:",
-                                    true, 20, cm, auc, hr);
+        error = score_model.calcError(frame, frame.vec(score_model.responseName()), predictions, predictions, "Prediction error:",
+                                      true, 20, cm, auc, hr);
+      } else {
+        error = score_model.calcError(frame, frame.vec(score_model.responseName()), predictions, predictions, "Prediction error:",
+                                      true, 20, cm, null, null);
+      }
+
+      // Now call AUC and ConfusionMatrix and maybe HitRatio
+      metrics = new water.ModelMetrics(score_model.getUniqueId(),
+                                       score_model.getModelCategory(),
+                                       frame.getUniqueId(),
+                                       error,
+                                       after - before,
+                                       after,
+                                       auc,
+                                       cm);
+
+      // Put the metrics into the KV store
+      metrics.putInDKV();
     } else {
-      error = score_model.calcError(input, input.vec(score_model.responseName()), predictions, predictions, "Prediction error:",
-                                    true, 20, cm, null, null);
+      // it's already cached in the DKV
+      water.util.Log.info("using ModelMetrics from the cache. . .");
     }
-
-    // Now call AUC and ConfusionMatrix and maybe HitRatio
-    ModelMetrics metrics = new ModelMetrics(score_model.getUniqueId(),
-                                            score_model.getModelCategory(),
-                                            frame.getUniqueId(),
-                                            error,
-                                            after - before,
-                                            after,
-                                            auc,
-                                            cm);
-
-    // Put the metrics into the KV store
-    Key metricsKey = Key.makeUserHidden(Key.make("modelmetrics_" + score_model.getUniqueId().getUuid() + "_on_" + frame.getUniqueId().getUuid()));
-    DKV.put(metricsKey, metrics);
 
     JsonObject metricsJson = metrics.toJSON();
     JsonArray metricsArray = new JsonArray();

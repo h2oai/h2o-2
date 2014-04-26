@@ -22,23 +22,23 @@ public final class ModelMetrics extends Iced {
   static public DocGen.FieldDoc[] DOC_FIELDS;
 
   @API(help="The unique ID (key / uuid / creation timestamp) for the model used for this scoring run.", required=false, filter=Default.class, json=true)
-  private UniqueId model = null;
+  public UniqueId model = null;
   @API(help="The category (e.g., Clustering) for the model used for this scoring run.", required=false, filter=Default.class, json=true)
-  private Model.ModelCategory model_category = null;
+  public Model.ModelCategory model_category = null;
   @API(help="The unique ID (key / uuid / creation timestamp) for the frame used for this scoring run.", required=false, filter=Default.class, json=true)
-  private UniqueId frame = null;
+  public UniqueId frame = null;
 
   @API(help="The error measure for this scoring run.", required=false, filter=Default.class, json=true)
-  private double error_measure = Double.MAX_VALUE;
+  public double error_measure = Double.MAX_VALUE;
   @API(help="The duration in mS for this scoring run.", required=false, filter=Default.class, json=true)
-  private long duration_in_ms =-1L;
+  public long duration_in_ms =-1L;
   @API(help="The time in mS since the epoch for the start of this scoring run.", required=false, filter=Default.class, json=true)
-  private long scoring_time = -1L;
+  public long scoring_time = -1L;
 
   @API(help="The AUC object for this scoring run.", required=false, filter=Default.class, json=true)
-  private AUC auc = null;
+  public AUC auc = null;
   @API(help="The ConfusionMatrix object for this scoring run.", required=false, filter=Default.class, json=true)
-  private ConfusionMatrix cm = null;
+  public ConfusionMatrix cm = null;
 
   public ModelMetrics(UniqueId model, ModelCategory model_category, UniqueId frame, double error_measure, long duration_in_ms, long scoring_time, AUC auc, ConfusionMatrix cm) {
     this.model = model;
@@ -50,6 +50,43 @@ public final class ModelMetrics extends Iced {
 
     this.auc = auc;
     this.cm = cm;
+  }
+
+  public static String keyName(Model model, Frame frame) {
+    return "modelmetrics_" + model.getUniqueId().getUuid() + "_on_" + frame.getUniqueId().getUuid();
+  }
+
+  public static String keyName(UniqueId model, UniqueId frame) {
+    return "modelmetrics_" + model.getUuid() + "_on_" + frame.getUuid();
+  }
+
+  public String keyName() {
+    return "modelmetrics_" + this.model.getUuid() + "_on_" + this.frame.getUuid();
+  }
+
+  public void putInDKV() {
+    String keyname = this.keyName();
+    Key metricsKey = Key.makeUserHidden(Key.make(keyname));
+    DKV.put(metricsKey, this);
+
+  }
+
+  public static ModelMetrics getFromDKV(Model model, Frame frame) {
+    Value v = DKV.get(Key.make(keyName(model, frame)));
+
+    if (null == v)
+      return null;
+
+    return (ModelMetrics)v.get();
+  }
+
+  public static ModelMetrics getFromDKV(UniqueId model, UniqueId frame) {
+    Value v = DKV.get(Key.make(keyName(model, frame)));
+
+    if (null == v)
+      return null;
+
+    return (ModelMetrics)v.get();
   }
 
   public JsonObject toJSON() {
