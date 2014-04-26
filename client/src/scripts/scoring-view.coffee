@@ -247,7 +247,8 @@ Steam.ScoringView = (_, _scoring) ->
 
       format4f = d3.format '.4f' # precision = 4
 
-      scoreWithLowestError = min scores, (score) -> score.result.metrics.error
+      #TODO what does it mean to have > 1 metrics
+      scoreWithLowestError = min scores, (score) -> (head score.result.metrics).error_measure
 
       inputParamsWithAlgorithm = map scores, (score) ->
         algorithm: score.model.model_algorithm
@@ -262,16 +263,17 @@ Steam.ScoringView = (_, _scoring) ->
 
       for score, scoreIndex in scores
         model = score.model
-        metrics = score.result.metrics
-        auc = metrics.auc.members
-        cm = metrics.cm.members
+        #TODO what does it mean to have > 1 metrics
+        metrics = head score.result.metrics
+        auc = metrics.auc
+        cm = metrics.cm
         errorBadge = if scores.length > 1 and score is scoreWithLowestError then ' (Lowest)' else ''
 
         algorithmRow.push td model.model_algorithm
         nameRow.push td model.key
         rocCurveRow.push td 'Loading...', "roc-#{scoreIndex}"
         inputParametersRow.push td createParameterTable parameters: inputParamsByScoreIndex[scoreIndex]
-        errorRow.push td (format4f metrics.error) + errorBadge #TODO change to bootstrap badge
+        errorRow.push td (format4f metrics.error_measure) + errorBadge #TODO change to bootstrap badge
         aucRow.push td format4f auc.AUC
         thresholdCriterionRow.push td head auc.threshold_criteria
         thresholdRow.push td head auc.threshold_for_criteria
@@ -285,7 +287,8 @@ Steam.ScoringView = (_, _scoring) ->
       renderRocCurves = ($element) ->
         forEach scores, (score, scoreIndex) ->
           defer ->
-            rocCurve = createRocCurve score.result.metrics.auc.members.confusion_matrices
+            #TODO what does it mean to have > 1 metrics
+            rocCurve = createRocCurve (head score.result.metrics).auc.confusion_matrices
             $("#roc-#{scoreIndex}", $element).empty().append rocCurve
         return
 

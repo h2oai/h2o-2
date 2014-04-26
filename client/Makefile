@@ -229,6 +229,9 @@ test: node
 		--check-leaks \
 		$(DIST)/steam.node.js
 
+pytest: node
+	(cd ../py && python testdir_model_management/test_model_management.py -ccj localhost.json SteamTestCase)
+
 debug: node
 	$(BIN)/mocha \
 		--reporter dot \

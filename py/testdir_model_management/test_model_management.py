@@ -397,7 +397,8 @@ class ApiTestCase(ModelManagementTestCase):
                 self.assertKeysDontExist(scoring_result, 'metrics[0]', ['cm', 'auc']) # TODO: HitRatio
 
 class SteamTestCase(ModelManagementTestCase):
-    def run_node_tests(self):
+    def test_steam(self):
+        self.create_models(self.import_frames())
         print "----------------------------------------------------------"
         print "                    Testing Steam...                      "
         print "----------------------------------------------------------"
@@ -417,15 +418,6 @@ class SteamTestCase(ModelManagementTestCase):
         print "----------------------------------------------------------"
         print "            Steam tests completed successfully!           "
         print "----------------------------------------------------------"
-
-    # Preloads h2o and runs node tests.
-    def test_full(self):
-        self.create_models(self.import_frames())
-        self.run_node_tests()
-
-    # Runs node tests without preloading h2o.
-    def test_light(self):
-        self.run_node_tests()
 
 if __name__ == '__main__':
     h2o.unit_main()
