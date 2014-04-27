@@ -2,7 +2,7 @@ import unittest, time, sys, time, random, json
 sys.path.extend(['.','..','../..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_common
 
-DO_RANDOM_SAMPLE = True
+DO_RANDOM_SAMPLE = False
 DO_RF = False
 print "Assumes you ran ../build_for_clone.py in this directory"
 print "Using h2o-nodes.json. Also the sandbox dir"
@@ -33,7 +33,8 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             "hhp.unbalanced.012.1x11.data.gz",
             "hhp.unbalanced.012.data.gz",
             "hhp.unbalanced.data.gz",
-            "hhp2.os.noisy.0_1.data",
+            # duplicate column header "A"
+            # "hhp2.os.noisy.0_1.data",
             "hhp2.os.noisy.9_4.data",
             "hhp_9_14_12.data",
             "leads.csv",
@@ -41,10 +42,10 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         ]
 
         # find_cloud.py won't set these correctly. Let's just set them here
-        h2o.nodes[0].use_maprfs = True
-        h2o.nodes[0].use_hdfs = False
-        h2o.nodes[0].hdfs_version = 'mapr3.0.1',
-        h2o.nodes[0].hdfs_name_node = 'mr-0x1.0xdata.loc:7222'
+        # h2o.nodes[0].use_maprfs = True
+        # h2o.nodes[0].use_hdfs = False
+        # h2o.nodes[0].hdfs_version = 'mapr3.0.1',
+        # h2o.nodes[0].hdfs_name_node = 'mr-0x1.0xdata.loc:7222'
 
         h2o.setup_benchmark_log()
 
@@ -84,8 +85,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             if not foundIt:
                 raise Exception("Should have found %s in the imported keys for %s" % (importPattern, csvPathname))
 
-            # no pattern matching, so no multiple files to add up
-            totalBytes = value_size_bytes
 
             #  "succeeded": [
             #    {
@@ -102,12 +101,14 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
             print "parse result:", parseResult['destination_key']
 
+            totalBytes = 0
             elapsed = time.time() - start
             fileMBS = (totalBytes/1e6)/elapsed
             l = '{!s} jvms, {!s}GB heap, {:s} {:s} for {:.2f} secs'.format(
                 len(h2o.nodes), h2o.nodes[0].java_heap_GB, 'Parse', csvPathname, elapsed)
             print "\n"+l
             h2o.cloudPerfH2O.message(l)
+
 
             if DO_RF:
                 print "\n" + csvFilename

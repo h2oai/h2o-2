@@ -20,7 +20,7 @@ mkdir -p sandbox
 # I suppose we could just have a test verify the request cloud size, after buildingk
 MAPR_JOBTRACKER=192.168.1.173:9001
 MAPR_NODES=3
-MAPR_HEAP=4g
+MAPR_HEAP=14g
 # MAPR_JAR=h2odriver_mapr2.1.3.jar
 MAPR_JAR=h2odriver_mapr2.1.3.jar
 
