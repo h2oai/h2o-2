@@ -33,7 +33,8 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             "hhp.unbalanced.012.1x11.data.gz",
             "hhp.unbalanced.012.data.gz",
             "hhp.unbalanced.data.gz",
-            "hhp2.os.noisy.0_1.data",
+            # duplicate column header "A"
+            # "hhp2.os.noisy.0_1.data",
             "hhp2.os.noisy.9_4.data",
             "hhp_9_14_12.data",
             "leads.csv",
@@ -41,10 +42,10 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         ]
 
         # find_cloud.py won't set these correctly. Let's just set them here
-        h2o.nodes[0].use_maprfs = True
-        h2o.nodes[0].use_hdfs = False
-        h2o.nodes[0].hdfs_version = 'mapr3.0.1',
-        h2o.nodes[0].hdfs_name_node = 'mr-0x1.0xdata.loc:7222'
+        # h2o.nodes[0].use_maprfs = True
+        # h2o.nodes[0].use_hdfs = False
+        # h2o.nodes[0].hdfs_version = 'mapr3.0.1',
+        # h2o.nodes[0].hdfs_name_node = '192.168.1.171:7222'
 
         h2o.setup_benchmark_log()
 
@@ -84,9 +85,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             if not foundIt:
                 raise Exception("Should have found %s in the imported keys for %s" % (importPattern, csvPathname))
 
-            # no pattern matching, so no multiple files to add up
-            totalBytes = value_size_bytes
-
+            totalBytes = 0
             #  "succeeded": [
             #    {
             #      "file": "maprfs://192.168.1.171:7222/datasets/prostate_long_1G.csv", 
