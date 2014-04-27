@@ -52,9 +52,12 @@ class Basic(unittest.TestCase):
         tryList = [
             # summary fails with 100000 cols
             # overwrite the key each time to save space?
-            (100, 100, 'cF', 600),
-            (100, 5000, 'cF', 600),
+            # (100, 100, 'cF', 600),
+            # (100, 5000, 'cF', 600),
             (100, 10000, 'cF', 600),
+            (100, 12000, 'cF', 600),
+            (100, 15000, 'cF', 600),
+            (100, 17000, 'cF', 600),
             (100, 20000, 'cF', 600),
             (100, 40000, 'cF', 600),
             ]
