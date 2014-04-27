@@ -15,8 +15,6 @@ def define_params():
         'case': [20],
         'n_folds': [0],
         'max_iter': [9],
-        'weight': [None, 1, 2, 4],
-
         }
     return paramDict
 

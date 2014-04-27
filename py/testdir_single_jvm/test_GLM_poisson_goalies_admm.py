@@ -18,7 +18,6 @@ def define_params():
         'lambda': [0,1e-8],
         'alpha': [0],
         'max_iter': [3],
-        'weight': [None, 1, 2, 4],
         }
     return paramDict
 

@@ -73,7 +73,6 @@ class Basic(unittest.TestCase):
                 'max_iter': 5,
                 'thresholds': 0.5,
                 'n_folds': 1,
-                'weight': 1,
                 'beta_epsilon': 1.0E-4,
                 }
 
