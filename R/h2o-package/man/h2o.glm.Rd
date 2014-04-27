@@ -11,19 +11,19 @@ Fit a generalized linear model, specified by a response variable, a set of predi
 \usage{
 ## Default method:
 h2o.glm(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e-5, epsilon = 1e-4, 
-  standardize = TRUE, tweedie.p = ifelse(family == 'tweedie', 1.5, 
-  as.numeric(NA)), thresholds, version = 1)
+  standardize = TRUE, prior, tweedie.p = ifelse(family == 'tweedie', 1.5, 
+  as.numeric(NA)), thresholds, iter.max, higher_accuracy, lambda_search, version = 2)
 
 ## Import to a ValueArray object:
 h2o.glm.VA(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e-5, epsilon = 1e-4, 
-  standardize = TRUE, tweedie.p = ifelse(family == 'tweedie', 1.5, 
-  as.numeric(NA)), thresholds = ifelse(family=='binomial', seq(0, 1, 0.01), 
+  standardize = TRUE, prior, tweedie.p = ifelse(family == 'tweedie', 1.5, 
+  as.numeric(NA)), thresholds = ifelse(family == 'binomial', seq(0, 1, 0.01), 
   as.numeric(NA)))
 
 ## Import to a FluidVecs object:
 h2o.glm.FV(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e-5, epsilon = 1e-4, 
-  standardize = TRUE, tweedie.p = ifelse(family == 'tweedie', 1.5, 
-  as.numeric(NA)))
+  standardize = TRUE, prior, tweedie.p = ifelse(family == 'tweedie', 1.5, 
+  as.numeric(NA)), iter.max = 100, higher_accuracy = FALSE, lambda_search = FALSE)
 }
 \arguments{
   \item{x}{
@@ -52,11 +52,23 @@ A description of the error distribution and corresponding link function to be us
   \item{standardize}{
 (Optional) Logical value indicating whether the data should be standardized (set to mean = 0, variance = 1) before running GLM.
   }
+  \item{prior}{
+(Optional) Prior probability of class 1. Only used if \code{family = "binomial"}. When omitted, prior will default to the frequency of class 1 in the response column.
+  }
   \item{tweedie.p}{
   (Optional) The index of the power variance function for the tweedie distribution. Only used if \code{family = "tweedie"}.
 }
   \item{thresholds}{
-  (Optional) Degree to which to weight the sensitivity (the proportion of correctly classified 1s) and specificity (the proportion of correctly classified 0s). The default option is joint optimization for the overall classification rate. Changing this will alter the confusion matrix and the AUC. Only used if \code{family = "binomial"}.
+  (Optional) Degree to which to weight the sensitivity (the proportion of correctly classified 1's) and specificity (the proportion of correctly classified 0s). The default option is joint optimization for the overall classification rate. Changing this will alter the confusion matrix and the AUC. Only used if \code{family = "binomial"}.
+  }
+  \item{iter.max}{
+  (Optional) Maximum number of iterations allowed.
+  }
+  \item{higher_accuracy}{
+  (Optional) A logical value indicating whether to use line search. This will cause the algorithm to run slower, so generally, it should only be set to TRUE if GLM does not converge otherwise.
+  }
+  \item{lambda_search}{
+  (Optional) A logical value indicating whether to onduct a search over the space of lambda values, starting from lambda_max. When this is set to TRUE, \code{lambda} will be interpreted as lambda_min.
   }
   \item{version}{
   (Optional) The version of GLM to run. If \code{version = 1}, this will run the more stable ValueArray implementation, while \code{version = 2} runs the faster, but still beta stage FluidVecs implementation.

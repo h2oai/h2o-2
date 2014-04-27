@@ -21,7 +21,6 @@ import water.Job.JobCancelledException;
 import water.ValueArray.Column;
 import water.api.Constants;
 import water.util.*;
-import water.util.Utils.IcedInt;
 import Jama.CholeskyDecomposition;
 import Jama.Matrix;
 
@@ -187,7 +186,7 @@ public abstract class DGLM {
     }
 
     public String toString2(){
-      return String.format("GLMParams: Family(%s) glmparams.Link(%s) _betaEps(%f) _maxIter(%d), _caseVal(%f), _caseWeight(%f), _caseMode(%s), _reweightGram(%s)",
+      return String.format("GLMParams: Family(%s) glmparams.Link(%s) _betaEps(%f) _maxIter(%d), _caseVal(%f), _prior(%f), _caseMode(%s), _reweightGram(%s)",
           _family, _link, _betaEps, _maxIter, _caseVal, _caseWeight, _caseMode, _reweightGram);
     }
   }
@@ -832,9 +831,10 @@ public abstract class DGLM {
     final int _folds;
     Key[] _models;
     boolean _parallel;
+    final double _prior;
 
     public GLMXValTask(Job job, int folds, ValueArray ary, int[] cols, boolean standardize, LSMSolver lsm,
-        GLMParams glmp, double[] betaStart, double[] thresholds, boolean parallel) {
+        GLMParams glmp, double[] betaStart, double prior, double[] thresholds, boolean parallel) {
       _job = job;
       _folds = folds;
       _ary = ary;
@@ -846,6 +846,7 @@ public abstract class DGLM {
       _betaStart = betaStart;
       _thresholds = thresholds;
       _parallel = parallel;
+      _prior = prior;
     }
 
     @Override public void init() {
@@ -861,7 +862,7 @@ public abstract class DGLM {
       Key mkey = _models[setup._id] = GLMModel.makeKey(false);
       DataFrame data = getData(_ary, _cols, s, _standardize);
       try {
-        DGLM.buildModel(_job, mkey, data, _lsm, _glmp,_betaStart.clone(), 0, _parallel);
+        DGLM.buildModel(_job, mkey, data, _lsm, _glmp,_betaStart.clone(), _prior, 0, _parallel);
       } catch( JobCancelledException e ) {
         Lockable.delete(_models[setup._id]);
       }
@@ -908,6 +909,8 @@ public abstract class DGLM {
 
     public double[] _beta;            // The output coefficients!  Main model result.
     public double[] _normBeta;        // normalized coefficients
+
+    final double _prior;
 
     public String[] _warnings;
     public GLMValidation[] _vals;
@@ -988,17 +991,18 @@ public abstract class DGLM {
     }
 
 
-    public GLMModel(Status status, float progress, Key k, DataFrame data, double[] beta, double[] normBeta,
+    public GLMModel(Status status, float progress, Key k, DataFrame data, double prior,  double[] beta, double[] normBeta,
         GLMParams glmp, LSMSolver solver, long nLines, long nCols, boolean converged, int iters, long time,
         String[] warnings) {
       this(status, progress, k, data._ary, data._modelDataMap, data._colCatMap, data._response, data._standardized,
-          data.getSampling(), beta, normBeta, glmp, solver, nLines, nCols, converged, iters, time, warnings);
+          prior,data.getSampling(), beta, normBeta, glmp, solver, nLines, nCols, converged, iters, time, warnings);
     }
 
     public GLMModel(Status status, float progress, Key k, ValueArray ary, int[] colIds, int[] colCatMap, int response,
-        boolean standardized, Sampling s, double[] beta, double[] normBeta, GLMParams glmp, LSMSolver solver,
+        boolean standardized, double prior, Sampling s, double[] beta, double[] normBeta, GLMParams glmp, LSMSolver solver,
         long nLines, long nCols, boolean converged, int iters, long time, String[] warnings) {
       super(k, colIds, ary._key);
+      _prior = prior;
       _status = status;
       _colCatMap = colCatMap;
       assert _va._cols.length == _colCatMap.length-1;
@@ -1044,18 +1048,6 @@ public abstract class DGLM {
       return fs;
     }
 
-    private static class YMUVal extends Iced {
-      private double _val;
-      private long _nobs;
-      public void add(double d){_val += d; ++_nobs;}
-      public double val(){return _nobs == 0?0:_val/_nobs;}
-      public YMUVal add(YMUVal val){
-        _val += val._val;
-        _nobs += val._nobs;
-        return this;
-      }
-    }
-
     public static class GLMValidationTask extends MRTask<GLMValidationTask>{
       final GLMModel _m;
       final OldModel _adaptedModel;
@@ -1065,7 +1057,7 @@ public abstract class DGLM {
       GLMValidation _res;
       final Sampling _sampling;
 
-      public GLMValidationTask(GLMModel m, ValueArray ary, Sampling s,double [] thresholds){
+      public GLMValidationTask(GLMModel m, ValueArray ary, double prior, Sampling s,double [] thresholds){
         _m = m;
         _sampling = s;
         _adaptedModel = m.adapt(ary);
@@ -1077,21 +1069,22 @@ public abstract class DGLM {
             response = i;
         if(response == -1)throw new RuntimeException("Incompatible dataset, missing response '" + responseName + "' in '" + ary._key + "'");
         _response = response;
-        double ymu = ary._cols[response]._mean;
-        if(Double.isNaN(ymu) || m._glmParams._caseMode != CaseMode.none){
-          final CaseMode caseMode = m._glmParams._caseMode;
-          final double caseVal = m._glmParams._caseVal;
-          ymu = new RowFunc<YMUVal>(){
-            @Override public YMUVal newResult() {return new YMUVal();}
-            @Override public void processRow(YMUVal res, double[] x, int[] indexes) {
-              double y = x[0];
-              if(caseMode != CaseMode.none) y = caseMode.isCase(y,caseVal)?1:0;
-              res.add(y);
-            }
-            @Override public YMUVal reduce(YMUVal x, YMUVal y) {return x.add(y);}
-          }.apply(null, new DataFrame(ary,new int[]{response},null, false, false)).val();
-        }
-        _ymu = ymu;
+//
+//        if(Double.isNaN(ymu) || m._glmParams._caseMode != CaseMode.none){
+//          final CaseMode caseMode = m._glmParams._caseMode;
+//          final double caseVal = m._glmParams._caseVal;
+//          ymu = new RowFunc<YMUVal>(){
+//            @Override public YMUVal newResult() {return new YMUVal();}
+//            @Override public void processRow(YMUVal res, double[] x, int[] indexes) {
+//              double y = x[0];
+//              if(caseMode != CaseMode.none) y = caseMode.isCase(y,caseVal)?1:0;
+//              res.add(y);
+//            }
+//            @Override public YMUVal reduce(YMUVal x, YMUVal y) {return x.add(y);}
+//          }.apply(null, new DataFrame(ary,new int[]{response},null, false, false)).val();
+//        }
+        _ymu = prior;
+        System.out.println("validation with y = " + _ymu);
       }
 
       @Override public void map(Key key) {
@@ -1191,7 +1184,7 @@ public abstract class DGLM {
     public GLMValidation validateOn(Job job, ValueArray ary, Sampling s, double[] thresholds)
         throws JobCancelledException {
       long t1 = System.currentTimeMillis();
-      GLMValidationTask valtsk = new GLMValidationTask(this, ary, s,thresholds);
+      GLMValidationTask valtsk = new GLMValidationTask(this, ary, _prior, s,thresholds);
       valtsk.invoke(ary._key);
       GLMValidation res = valtsk._res;
       res._dataKey = ary._key;
@@ -1243,7 +1236,7 @@ public abstract class DGLM {
             keys[i] = Key.make(Key.make()._kb, (byte) 0, Key.DFJ_INTERNAL_USER, H2O.CLOUD._memary[(myNodeId + i)
                 % cloudsize]), new GLMXvalSetup(i));
       DKV.write_barrier();
-      GLMXValTask tsk = new GLMXValTask(job, folds, ary, modelDataMap, _standardized, _solver, _glmParams, _normBeta,
+      GLMXValTask tsk = new GLMXValTask(job, folds, ary, modelDataMap, _standardized, _solver, _glmParams, _normBeta,_prior,
           thresholds, parallel);
       long t1 = System.currentTimeMillis();
       if( parallel ) tsk.invoke(keys);       // Needs a CPS-style transform here
@@ -1252,7 +1245,7 @@ public abstract class DGLM {
         tsk.init();
         for( int i = 0; i < keys.length; i++ ) {
           GLMXValTask child = new GLMXValTask(job, folds, ary, modelDataMap, _standardized, _solver, _glmParams,
-              _normBeta, thresholds, parallel);
+              _normBeta, _prior, thresholds, parallel);
           child.keys(keys);
           child.init();
           child.map(keys[i]);
@@ -1268,7 +1261,6 @@ public abstract class DGLM {
       }
       return res;
     }
-
     @Override public JsonObject toJson() {
       JsonObject res = new JsonObject();
       res.addProperty(Constants.VERSION, H2O.VERSION);
@@ -1904,12 +1896,12 @@ public abstract class DGLM {
   }
 
   public static GLMJob startGLMJob(final DataFrame data, final LSMSolver lsm, final GLMParams params,
-      final double[] betaStart, final int xval, final boolean parallel) {
-    return startGLMJob(null, data, lsm, params, betaStart, xval, parallel);
+      final double[] betaStart, double caseWeight, final int xval, final boolean parallel) {
+    return startGLMJob(null, data, lsm, params, betaStart, caseWeight, xval, parallel);
   }
 
   public static GLMJob startGLMJob(Key dest, final DataFrame data, final LSMSolver lsm, final GLMParams params,
-      final double[] betaStart, final int xval, final boolean parallel) {
+      final double[] betaStart, final double caseWeight, final int xval, final boolean parallel) {
     if( dest == null ) dest = GLMModel.makeKey(true);
     final GLMJob job = new GLMJob(data._ary, dest, xval, params);
     lsm._jobKey = job.self();
@@ -1925,7 +1917,7 @@ public abstract class DGLM {
     final H2OCountedCompleter fjtask = new H2OCountedCompleter() {
       @Override public void compute2() {
         try {
-          buildModel(job, job.dest(), data, lsm, params, beta, xval, parallel);
+          buildModel(job, job.dest(), data, lsm, params, beta, caseWeight, xval, parallel);
           assert Job.isRunning(job.self());
           job.remove();
         } catch( JobCancelledException e ) {
@@ -1959,18 +1951,61 @@ public abstract class DGLM {
     }
   }
   public static GLMModel buildModel(Job job, Key resKey, ValueArray ary, int [] cols, boolean standardize, LSMSolver lsm, GLMParams params,
-      double[] oldBeta, int xval, boolean parallel) throws JobCancelledException {
-    return buildModel(job, resKey, getData(ary, cols, null, standardize), lsm, params, oldBeta, xval, parallel);
+      double[] oldBeta, double caseWeight, int xval, boolean parallel) throws JobCancelledException {
+    return buildModel(job, resKey, getData(ary, cols, null, standardize), lsm, params, oldBeta, caseWeight,  xval, parallel);
   }
+
+  private static class YMUVal extends Iced {
+    private double _val;
+    private long _nobs;
+    public void add(double d){_val += d; ++_nobs;}
+    public double val(){return _nobs == 0?0:_val/_nobs;}
+    public YMUVal add(YMUVal val){
+      _val += val._val;
+      _nobs += val._nobs;
+      return this;
+    }
+  }
+
   private static GLMModel buildModel(Job job, Key resKey, DataFrame data, LSMSolver lsm, GLMParams params,
-                                    double[] oldBeta, int xval, boolean parallel) throws JobCancelledException {
-    Log.info("running GLM on " + data._ary._key + " with " + data.expandedSz() + " predictors in total, " + (data.expandedSz() - data._dense) + " of which are categoricals. Largest categorical has " + data.largestCatSz() + " levels");
+                                    double[] oldBeta, double prior, int xval, boolean parallel) throws JobCancelledException {
+    Log.info("running GLM on " + data._ary._key + " with " + data.expandedSz() + " predictors in total, " + (data.expandedSz() - data._dense) + " of which are categoricals. Largest categorical has " + data.largestCatSz() + " levels, prior = " + prior);
+
     ArrayList<String> warns = new ArrayList<String>();
     long t1 = System.currentTimeMillis();
     // make sure we have a valid response variable for the current family
     int ycolId = data._modelDataMap[data._response];
     Column ycol = data._ary._cols[ycolId];
     params.checkResponseCol(ycol, warns);
+    final double ymu;
+    if(params._caseMode != CaseMode.none){
+      final CaseMode caseMode = params._caseMode;
+      final double caseVal = params._caseVal;
+      ymu = new RowFunc<YMUVal>(){
+        @Override public YMUVal newResult() {return new YMUVal();}
+        @Override public void processRow(YMUVal res, double[] x, int[] indexes) {
+          double y = x[0];
+          if(caseMode != CaseMode.none) y = caseMode.isCase(y,caseVal)?1:0;
+          res.add(y);
+        }
+        @Override public YMUVal reduce(YMUVal x, YMUVal y) {return x.add(y);}
+      }.apply(null, new DataFrame(data._ary,new int[]{ycolId},null, false, false)).val();
+    } else
+      ymu = ycol._mean;
+    final double iceptFix;
+    if(!Double.isNaN(prior) && prior != ymu){
+      double ratio = prior/ymu;
+      double pi0 = 1,pi1 = 1;
+      if(ratio > 1){
+        pi1 = 1.0/ratio;
+      } else if(ratio < 1) {
+        pi0 = ratio;
+      }
+      iceptFix = Math.log(pi0/pi1);
+    } else {
+      iceptFix = 0;
+      prior = ycol._mean;
+    }
     // filter out constant columns...
 //        double ymu = ycol._mean;
 //        if(params._family == Family.binomial && params._caseMode != CaseMode.none){ // wee need to compute the mean of the case predicate applied to the ycol
@@ -1992,7 +2027,7 @@ public abstract class DGLM {
     long t = System.currentTimeMillis();
     solve(lsm,gram, newBeta,warns);
     lsmSolveTime += System.currentTimeMillis() - t;
-    GLMModel currentModel = new GLMModel(Status.ComputingValidation, 0.0f, resKey, data, data.denormalizeBeta(newBeta), newBeta,
+    GLMModel currentModel = new GLMModel(Status.ComputingValidation, 0.0f, resKey, data, prior, data.denormalizeBeta(newBeta), newBeta,
         params, lsm, gram._nobs, newBeta.length, converged, iter, System.currentTimeMillis() - t1, null);
     currentModel.delete_and_lock(job.self()); // Lock the new model
     if( params._family._family != Family.gaussian ) do { // IRLSM
@@ -2012,8 +2047,10 @@ public abstract class DGLM {
       double betaDiff = betaDiff(oldBeta, newBeta);
       converged = (betaDiff < params._betaEps);
       float progress = Math.max((float) iter / params._maxIter, Math.min((float) (params._betaEps / betaDiff), 1.0f));
-      currentModel = new GLMModel(Status.ComputingModel, progress, resKey, data, data.denormalizeBeta(newBeta),
-          newBeta, params, lsm, gram._nobs, newBeta.length, converged, iter, System.currentTimeMillis() - t1, warnings);
+      double [] adjustedBeta = newBeta.clone(); // beta djusted with the prior
+      adjustedBeta[adjustedBeta.length-1] += iceptFix;
+      currentModel = new GLMModel(Status.ComputingModel, progress, resKey, data, prior,  data.denormalizeBeta(adjustedBeta),
+          adjustedBeta, params, lsm, gram._nobs, newBeta.length, converged, iter, System.currentTimeMillis() - t1, warnings);
       currentModel._lsmSolveTime = lsmSolveTime;
       currentModel.store(job.self());
     } while( ++iter < params._maxIter && !converged );

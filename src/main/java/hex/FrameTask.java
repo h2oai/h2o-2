@@ -159,7 +159,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         for(int i = 0; i < vecs.length-1; ++i) {
           // remove constant cols and cols with too many NAs
           final boolean dropconstant = dropConstantCols && vecs[i].min() == vecs[i].max();
-          final boolean droptoomanyNAs = dropNACols && vecs[i].naCnt() > vecs[i].length()*0.2;
+          final boolean droptoomanyNAs = dropNACols && vecs[i].naCnt() > vecs[i].length()*1;
           if(dropconstant) {
             constantCols.add(i);
           } else if (droptoomanyNAs) {
@@ -356,10 +356,20 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
 
     boolean contiguous = false;
     Random skip_rng = null; //random generator for skipping rows
-    if (_useFraction < 1.0) {
+
+    //Example:
+    // _useFraction = 0.8 -> 1 repeat with fraction = 0.8
+    // _useFraction = 1.0 -> 1 repeat with fraction = 1.0
+    // _useFraction = 1.1 -> 2 repeats with fraction = 0.55
+    // _useFraction = 2.1 -> 3 repeats with fraction = 0.7
+    // _useFraction = 3.0 -> 3 repeats with fraction = 1.0
+    final int repeats = (int)Math.ceil(_useFraction);
+    final float fraction = _useFraction / repeats;
+
+    if (fraction < 1.0) {
       skip_rng = water.util.Utils.getDeterRNG(new Random().nextLong());
       if (contiguous) {
-        final int howmany = (int)Math.ceil(_useFraction*nrows);
+        final int howmany = (int)Math.ceil(fraction*nrows);
         if (howmany > 0) {
           start = skip_rng.nextInt(nrows - howmany);
           end = start + howmany;
@@ -376,35 +386,38 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         shuf_map[i] = start + i;
       Utils.shuffleArray(shuf_map, new Random().nextLong());
     }
-    OUTER:
-    for(int rr = start; rr < end; ++rr){
-      final int r = shuf_map != null ? (int)shuf_map[rr-start] : rr;
-      if ((_dinfo._nfolds > 0 && (r % _dinfo._nfolds) == _dinfo._foldId)
-              || (skip_rng != null && skip_rng.nextFloat() > _useFraction))continue;
-      for(Chunk c:chunks)if(c.isNA0(r))continue OUTER; // skip rows with NAs!
-      int i = 0, ncats = 0;
-      for(; i < _dinfo._cats; ++i){
-        int c = (int)chunks[i].at80(r);
-        if(_dinfo._useAllFactorLevels)
-          cats[ncats++] = c + _dinfo._catOffsets[i];
-        else if(c != 0)
-          cats[ncats++] = c + _dinfo._catOffsets[i]-1;
+    for(int rrr = 0; rrr < repeats; ++rrr) {
+      OUTER:
+      for (int rr = start; rr < end; ++rr) {
+        final int r = shuf_map != null ? (int) shuf_map[rr - start] : rr;
+        if ((_dinfo._nfolds > 0 && (r % _dinfo._nfolds) == _dinfo._foldId)
+                || (skip_rng != null && skip_rng.nextFloat() > fraction)) continue;
+        for (Chunk c : chunks) if (c.isNA0(r)) continue OUTER; // skip rows with NAs!
+        int i = 0, ncats = 0;
+        for (; i < _dinfo._cats; ++i) {
+          int c = (int) chunks[i].at80(r);
+          if (_dinfo._useAllFactorLevels)
+            cats[ncats++] = c + _dinfo._catOffsets[i];
+          else if (c != 0)
+            cats[ncats++] = c + _dinfo._catOffsets[i] - 1;
+        }
+        final int n = chunks.length - _dinfo._responses;
+        for (; i < n; ++i) {
+          double d = chunks[i].at0(r);
+          if (_dinfo._normMul != null) d = (d - _dinfo._normSub[i - _dinfo._cats]) * _dinfo._normMul[i - _dinfo._cats];
+          nums[i - _dinfo._cats] = d;
+        }
+        for (i = 0; i < _dinfo._responses; ++i) {
+          response[i] = chunks[chunks.length - _dinfo._responses + i].at0(r);
+          if (_dinfo._normRespMul != null)
+            response[i] = (response[i] - _dinfo._normRespSub[i]) * _dinfo._normRespMul[i];
+        }
+        if (outputs != null && outputs.length > 0)
+          processRow(offset + r, nums, ncats, cats, response, outputs);
+        else
+          processRow(offset + r, nums, ncats, cats, response);
       }
-      final int n = chunks.length-_dinfo._responses;
-      for(;i < n;++i){
-        double d = chunks[i].at0(r);
-        if(_dinfo._normMul != null) d = (d - _dinfo._normSub[i-_dinfo._cats])*_dinfo._normMul[i-_dinfo._cats];
-        nums[i-_dinfo._cats] = d;
-      }
-      for(i = 0; i < _dinfo._responses; ++i) {
-        response[i] = chunks[chunks.length-_dinfo._responses + i].at0(r);
-        if (_dinfo._normRespMul != null) response[i] = (response[i] - _dinfo._normRespSub[i])*_dinfo._normRespMul[i];
-      }
-      if(outputs != null && outputs.length > 0)
-        processRow(offset+r, nums, ncats, cats, response, outputs);
-      else
-        processRow(offset+r, nums, ncats, cats, response);
+      chunkDone();
     }
-    chunkDone();
   }
 }

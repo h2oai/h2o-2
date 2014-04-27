@@ -16,10 +16,7 @@ import water.fvec.Vec;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashMap;
+import java.util.*;
 
 /**
  * A Model models reality (hopefully).
@@ -57,6 +54,7 @@ public abstract class Model extends Lockable<Model> {
     _modelClassDist = classdist.clone();
   }
 
+  private final UniqueId uniqueId;
 
   /** Full constructor from frame: Strips out the Vecs to just the names needed
    *  to match columns later for future datasets.  */
@@ -78,6 +76,7 @@ public abstract class Model extends Lockable<Model> {
   /** Full constructor */
   public Model( Key selfKey, Key dataKey, String names[], String domains[][], float[] priorClassDist ) {
     super(selfKey);
+    this.uniqueId = new UniqueId(_key);
     if( domains == null ) domains=new String[names.length+1][];
     assert domains.length==names.length;
     assert names.length > 1;
@@ -88,12 +87,35 @@ public abstract class Model extends Lockable<Model> {
     _priorClassDist = priorClassDist;
   }
 
+  // currently only implemented by GLM2, DeepLearning, GBM and DRF:
+  public Request2 get_params() { throw new UnsupportedOperationException("get_params() has not yet been implemented in class: " + this.getClass()); }
+  public Request2 job() { throw new UnsupportedOperationException("job() has not yet been implemented in class: " + this.getClass()); }
+
   /** Simple shallow copy constructor to a new Key */
   public Model( Key selfKey, Model m ) { this(selfKey,m._dataKey,m._names,m._domains); }
+
+  public enum ModelCategory {
+    Unknown,
+    Binomial,
+    Multinomial,
+    Regression,
+    Clustering;
+  }
+
+  // TODO: override in KMeansModel once that's rewritten on water.Model
+  public ModelCategory getModelCategory() {
+    return (isClassifier() ?
+            (nclasses() > 2 ? ModelCategory.Multinomial : ModelCategory.Binomial) :
+            ModelCategory.Regression);
+  }
 
   /** Remove any Model internal Keys */
   @Override public Futures delete_impl(Futures fs) { return fs; /* None in the default Model */ }
   @Override public String errStr() { return "Model"; }
+
+  public UniqueId getUniqueId() {
+    return this.uniqueId;
+  }
 
   public String responseName() { return   _names[  _names.length-1]; }
   public String[] classNames() { return _domains[_domains.length-1]; }

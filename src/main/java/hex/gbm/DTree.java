@@ -12,6 +12,7 @@ import water.api.Inspect2;
 import water.api.Predict;
 import water.api.Request.API;
 import water.fvec.Chunk;
+import water.license.LicenseManager;
 import water.util.*;
 
 import java.util.Arrays;
@@ -549,15 +550,15 @@ public class DTree extends Iced {
     @API(help="Tree statistics")                                                      public final TreeStats       treeStats;
     @API(help="AUC for validation dataset")                                           public final AUC             validAUC;
 
-    private transient CompressedTree[/*N*/][/*nclasses OR 1 for regression*/] _treeBitsCache;
+    private transient volatile CompressedTree[/*N*/][/*nclasses OR 1 for regression*/] _treeBitsCache;
 
     public TreeModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins) {
       super(key,dataKey,names,domains);
       this.N = ntrees; this.errs = new double[0];
       this.testKey = testKey; this.cms = new ConfusionMatrix[0];
       this.max_depth = max_depth; this.min_rows = min_rows; this.nbins = nbins;
-      treeKeys = new Key[0][];
-      treeStats = null;
+      this.treeKeys = new Key[0][];
+      this.treeStats = null;
       this.cmDomain = cmDomain!=null ? cmDomain : new String[0];;
       this.varimp = null;
       this.validAUC = null;
@@ -589,6 +590,14 @@ public class DTree extends Iced {
     public TreeModel(TreeModel prior, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
       this(prior, null, Utils.append(prior.errs, err), Utils.append(prior.cms, cm), null, varimp, validAUC);
     }
+
+    public enum TreeModelType {
+      UNKNOWN,
+      GBM,
+      DRF,
+    }
+
+    protected TreeModelType getTreeModelType() { return TreeModelType.UNKNOWN; }
 
     private static final Key[][] append(Key[][] prior, DTree[] tree ) {
       if (tree==null) return prior;
@@ -622,6 +631,8 @@ public class DTree extends Iced {
       } else return Double.NaN;
     }
     @Override protected float[] score0(double data[], float preds[]) {
+      // Prefetch trees into the local cache if it is necessary
+      // Invoke scoring
       Arrays.fill(preds,0);
       for( int tidx=0; tidx<treeKeys.length; tidx++ )
         score0(data, preds, tidx);
@@ -629,15 +640,24 @@ public class DTree extends Iced {
     }
 
     /** Returns i-th tree represented by an array of k-trees. */
-    public final synchronized CompressedTree[] ctree(int tidx) {
-      if (_treeBitsCache!=null && _treeBitsCache[tidx]!=null) return _treeBitsCache[tidx];
-      if (_treeBitsCache==null) _treeBitsCache = new CompressedTree[ntrees()][];
-      Key[] k = treeKeys[tidx];
-      CompressedTree[] ctree = new CompressedTree[nclasses()];
-      for (int i = 0; i < nclasses(); i++) // binary classifiers can contains null for second tree
-        if (k[i]!=null) ctree[i] = UKV.get(k[i]);
-      _treeBitsCache[tidx] = ctree;
-      return ctree;
+    public final CompressedTree[] ctree(int tidx) {
+      if (_treeBitsCache==null) {
+        synchronized(this) {
+          if (_treeBitsCache==null) _treeBitsCache = new CompressedTree[ntrees()][];
+        }
+      }
+      if (_treeBitsCache[tidx]==null) {
+        synchronized(this) {
+          if (_treeBitsCache[tidx]==null) {
+            Key[] k = treeKeys[tidx];
+            CompressedTree[] ctree = new CompressedTree[nclasses()];
+            for (int i = 0; i < nclasses(); i++) // binary classifiers can contains null for second tree
+              if (k[i]!=null) ctree[i] = UKV.get(k[i]);
+            _treeBitsCache[tidx] = ctree;
+          }
+        }
+      }
+      return _treeBitsCache[tidx];
     }
     // Score per line per tree
     public void score0(double data[], float preds[], int treeIdx) {
@@ -931,13 +951,41 @@ public class DTree extends Iced {
     // For GBM: learn_rate.  For DRF: mtries, sample_rate, seed.
     abstract protected void generateModelDescription(StringBuilder sb);
 
+    // Determine whether feature is licensed.
+    private boolean isFeatureAllowed() {
+      boolean featureAllowed = false;
+      try {
+        if (treeStats.numTrees <= 10) {
+          featureAllowed = true;
+        }
+        else {
+          if (getTreeModelType() == TreeModelType.GBM) {
+            H2O.licenseManager.isFeatureAllowed(LicenseManager.FEATURE_GBM_SCORING);
+          }
+          else if (getTreeModelType() == TreeModelType.DRF) {
+            H2O.licenseManager.isFeatureAllowed(LicenseManager.FEATURE_RF_SCORING);
+          }
+        }
+      }
+      catch (Exception xe) {}
+
+      return featureAllowed;
+    }
+
     public void toJavaHtml( StringBuilder sb ) {
       if( treeStats == null ) return; // No trees yet
       sb.append("<br /><br /><div class=\"pull-right\"><a href=\"#\" onclick=\'$(\"#javaModel\").toggleClass(\"hide\");\'" +
                 "class=\'btn btn-inverse btn-mini\'>Java Model</a></div><br /><div class=\"hide\" id=\"javaModel\">"       +
                 "<pre style=\"overflow-y:scroll;\"><code class=\"language-java\">");
 
-      if( ntrees() * treeStats.meanLeaves > 5000 ) {
+      boolean featureAllowed = isFeatureAllowed();
+      if (! featureAllowed) {
+        sb.append("You have requested a premium feature (> 10 trees) and your H2O software is unlicensed.\n");
+        sb.append("\n");
+        sb.append("Please email support@0xdata.com to request a trial license.\n");
+        sb.append("Then restart H2O with the -license option.\n");
+      }
+      else if( ntrees() * treeStats.meanLeaves > 5000 ) {
         String modelName = JCodeGen.toJavaId(_key.toString());
         sb.append("/* Java code is too large to display, download it directly.\n");
         sb.append("   To obtain the code please invoke in your terminal:\n");

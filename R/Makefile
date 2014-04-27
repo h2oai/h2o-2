@@ -1,12 +1,13 @@
 
 PROJECT_VERSION ?= 99.70
+BUILD_BRANCH = $(shell git branch | grep '*' | sed 's/* //')
 R_VERSION = 3.1
 REPO_PATH_WIN = bin/windows/contrib/$(R_VERSION)
 REPO_PATH_MAC = bin/macosx/contrib/$(R_VERSION)
 TMP_BUILD_DIR = tmp_build
 ifneq ($(OS),Windows_NT)
 OS := $(shell uname)
-UNAME_P := $(shell uname -p | sed 's/unknown/x86_64/')
+R_PLATFORM := $(shell R --vanilla -q -e 'options(echo=FALSE); cat(R.Version()$$platform)' | tail -1)
 else
 # For windows NT the shell is odd.  Cygwin 'shell uname' returns CYGWIN_NT-6.1-WOW64
 # which is not really what we want.  The normal CMD shell does something else.
@@ -14,7 +15,7 @@ else
 endif
 
 H2O_R_SOURCE_FILE = h2o_$(PROJECT_VERSION).tar.gz
-H2O_R_LINUX_FILE = h2o_$(PROJECT_VERSION)_R_$(UNAME_P)-pc-linux-gnu.tar.gz
+H2O_R_LINUX_FILE = h2o_$(PROJECT_VERSION)_R_$(R_PLATFORM).tar.gz
 H2O_R_MAC_FILE = h2o_$(PROJECT_VERSION).tgz
 H2O_R_WINDOWS_FILE = h2o_$(PROJECT_VERSION).zip
 
@@ -35,8 +36,8 @@ endif
 PDFLATEX=$(shell which pdflatex)
 
 build_rh2o:
-	sed 's/SUBST_PROJECT_VERSION/$(PROJECT_VERSION)/' h2o-DESCRIPTION.template > h2o-package/DESCRIPTION
-	sed 's/SUBST_PROJECT_VERSION/$(PROJECT_VERSION)/' h2o-package.template > h2o-package/man/h2o-package.Rd
+	sed -e 's/SUBST_PROJECT_VERSION/$(PROJECT_VERSION)/' -e 's/SUBST_PROJECT_BRANCH/$(BUILD_BRANCH)/' h2o-DESCRIPTION.template > h2o-package/DESCRIPTION
+	sed -e 's/SUBST_PROJECT_VERSION/$(PROJECT_VERSION)/' -e 's/SUBST_PROJECT_BRANCH/$(BUILD_BRANCH)/' h2o-package.template > h2o-package/man/h2o-package.Rd
 ifeq ($(PDFLATEX),)
 	@echo pdflatex not found, skipping pdf generation...
 else
@@ -90,7 +91,7 @@ ifneq ($(OS),Windows_NT)
 
 	# Create repo subdirectory for MacOSX Mavericks
 	mkdir -p ../target/R/bin/macosx/mavericks/contrib
-	rm -rf ../target/R/bin/windows/contrib/3.1
+	rm -rf ../target/R/bin/macosx/mavericks/contrib/3.1
 	cp -r ../target/R/$(REPO_PATH_MAC) ../target/R/bin/macosx/mavericks/contrib/3.1
 endif
 

@@ -8,9 +8,7 @@ import water.H2O;
 import water.Job;
 import water.Key;
 import water.UKV;
-import water.api.DeepLearningProgressPage;
-import water.api.DocGen;
-import water.api.RequestServer;
+import water.api.*;
 import water.fvec.Frame;
 import water.fvec.RebalanceDataSet;
 import water.fvec.Vec;
@@ -59,7 +57,7 @@ public class DeepLearning extends Job.ValidatedJob {
    *      training row. This effectively trains exponentially many models at
    *      once, and can improve generalization.
    */
-  @API(help = "Activation function", filter = Default.class, json = true)
+  @API(help = "Activation function", filter = Default.class, json = true, importance = ParamImportance.SECONDARY)
   public Activation activation = Activation.Tanh;
 
   /**
@@ -69,7 +67,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * neurons.To specify a grid search, add parentheses around each
    * model's specification: "(100,100), (50,50,50), (20,20,20,20)".
    */
-  @API(help = "Hidden layer sizes (e.g. 100,100). Grid search: (10,10), (20,20,20)", filter = Default.class, json = true)
+  @API(help = "Hidden layer sizes (e.g. 100,100). Grid search: (10,10), (20,20,20)", filter = Default.class, json = true, importance = ParamImportance.CRITICAL)
   public int[] hidden = new int[] { 200, 200 };
 
   /**
@@ -78,7 +76,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * This value can be modified during checkpoint restarts and allows continuation
    * of selected models.
    */
-  @API(help = "How many times the dataset should be iterated (streamed), can be fractional", filter = Default.class, dmin = 1e-3, json = true)
+  @API(help = "How many times the dataset should be iterated (streamed), can be fractional", filter = Default.class, dmin = 1e-3, json = true, importance = ParamImportance.CRITICAL)
   public double epochs = 10;
 
   /**
@@ -95,7 +93,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * per iteration. If **replicate training data** is enabled, N epochs
    * will be trained per iteration on N nodes, otherwise one epoch.
    */
-  @API(help = "Number of training samples (globally) per MapReduce iteration. Special values are 0: one epoch, -1: all available data (e.g., replicated training data)", filter = Default.class, lmin = -1, json = true)
+  @API(help = "Number of training samples (globally) per MapReduce iteration. Special values are 0: one epoch, -1: all available data (e.g., replicated training data)", filter = Default.class, lmin = -1, json = true, importance = ParamImportance.SECONDARY)
   public long train_samples_per_iteration = -1;
   public long actual_train_samples_per_iteration;
 
@@ -109,7 +107,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * results. Note that deterministic sampling and initialization might
    * still lead to some weak sense of determinism in the model.
    */
-  @API(help = "Seed for random numbers (affects sampling) - Note: only reproducible when running single threaded", filter = Default.class, json = true)
+  @API(help = "Seed for random numbers (affects sampling) - Note: only reproducible when running single threaded", filter = Default.class, json = true, importance = ParamImportance.SECONDARY)
   public long seed = new Random().nextLong();
 
   /*Adaptive Learning Rate*/
@@ -132,7 +130,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * surface with small learning rates, the model can converge far
    * slower than necessary.
    */
-  @API(help = "Adaptive learning rate (ADADELTA)", filter = Default.class, json = true)
+  @API(help = "Adaptive learning rate (ADADELTA)", filter = Default.class, json = true, importance = ParamImportance.SECONDARY)
   public boolean adaptive_rate = true;
 
   /**
@@ -141,7 +139,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * Typical values are between 0.9 and 0.999.
    * This parameter is only active if adaptive learning rate is enabled.
    */
-  @API(help = "Adaptive learning rate time decay factor (similarity to prior updates)", filter = Default.class, dmin = 0.01, dmax = 1, json = true)
+  @API(help = "Adaptive learning rate time decay factor (similarity to prior updates)", filter = Default.class, dmin = 0.01, dmax = 1, json = true, importance = ParamImportance.SECONDARY)
   public double rho = 0.95;
 
   /**
@@ -151,7 +149,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * Typical values are between 1e-10 and 1e-4.
    * This parameter is only active if adaptive learning rate is enabled.
    */
-  @API(help = "Adaptive learning rate smoothing factor (to avoid divisions by zero and allow progress)", filter = Default.class, dmin = 1e-15, dmax = 1, json = true)
+  @API(help = "Adaptive learning rate smoothing factor (to avoid divisions by zero and allow progress)", filter = Default.class, dmin = 1e-15, dmax = 1, json = true, importance = ParamImportance.SECONDARY)
   public double epsilon = 1e-6;
 
   /*Learning Rate*/
@@ -169,7 +167,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * why the momentum is best ramped up slowly.
    * This parameter is only active if adaptive learning rate is disabled.
    */
-  @API(help = "Learning rate (higher => less stable, lower => slower convergence)", filter = Default.class, dmin = 1e-10, dmax = 1, json = true)
+  @API(help = "Learning rate (higher => less stable, lower => slower convergence)", filter = Default.class, dmin = 1e-10, dmax = 1, json = true, importance = ParamImportance.SECONDARY)
   public double rate = .005;
 
   /**
@@ -179,7 +177,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * (e.g., 1e-6 means that it takes 1e6 training samples to halve the learning rate).
    * This parameter is only active if adaptive learning rate is disabled.
    */
-  @API(help = "Learning rate annealing: rate / (1 + rate_annealing * samples)", filter = Default.class, dmin = 0, dmax = 1, json = true)
+  @API(help = "Learning rate annealing: rate / (1 + rate_annealing * samples)", filter = Default.class, dmin = 0, dmax = 1, json = true, importance = ParamImportance.SECONDARY)
   public double rate_annealing = 1e-6;
 
   /**
@@ -190,7 +188,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * and the learning rate for the weights connecting the second and third hidden layer will be 0.0025, etc.
    * This parameter is only active if adaptive learning rate is disabled.
    */
-  @API(help = "Learning rate decay factor between layers (N-th layer: rate*alpha^(N-1))", filter = Default.class, dmin = 0, json = true)
+  @API(help = "Learning rate decay factor between layers (N-th layer: rate*alpha^(N-1))", filter = Default.class, dmin = 0, json = true, importance = ParamImportance.SECONDARY)
   public double rate_decay = 1.0;
 
   /*Momentum*/
@@ -198,7 +196,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * The momentum_start parameter controls the amount of momentum at the beginning of training.
    * This parameter is only active if adaptive learning rate is disabled.
    */
-  @API(help = "Initial momentum at the beginning of training (try 0.5)", filter = Default.class, dmin = 0, dmax = 0.9999999999, json = true)
+  @API(help = "Initial momentum at the beginning of training (try 0.5)", filter = Default.class, dmin = 0, dmax = 0.9999999999, json = true, importance = ParamImportance.SECONDARY)
   public double momentum_start = 0;
 
   /**
@@ -207,7 +205,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * of training samples.
    * This parameter is only active if adaptive learning rate is disabled.
    */
-  @API(help = "Number of training samples for which momentum increases", filter = Default.class, dmin = 1, json = true)
+  @API(help = "Number of training samples for which momentum increases", filter = Default.class, dmin = 1, json = true, importance = ParamImportance.SECONDARY)
   public double momentum_ramp = 1e6;
 
   /**
@@ -215,7 +213,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * The momentum used for training will remain the same for training beyond reaching that point.
    * This parameter is only active if adaptive learning rate is disabled.
    */
-  @API(help = "Final momentum after the ramp is over (try 0.99)", filter = Default.class, dmin = 0, dmax = 0.9999999999, json = true)
+  @API(help = "Final momentum after the ramp is over (try 0.99)", filter = Default.class, dmin = 0, dmax = 0.9999999999, json = true, importance = ParamImportance.SECONDARY)
   public double momentum_stable = 0;
 
   /**
@@ -225,7 +223,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * minimizes the residuals in fewer iterations of the descent.
    * This parameter is only active if adaptive learning rate is disabled.
    */
-  @API(help = "Use Nesterov accelerated gradient (recommended)", filter = Default.class, json = true)
+  @API(help = "Use Nesterov accelerated gradient (recommended)", filter = Default.class, json = true, importance = ParamImportance.SECONDARY)
   public boolean nesterov_accelerated_gradient = true;
 
   /*Regularization*/
@@ -233,14 +231,14 @@ public class DeepLearning extends Job.ValidatedJob {
    * A fraction of the features for each training row to be omitted from training in order
    * to improve generalization (dimension sampling).
    */
-  @API(help = "Input layer dropout ratio (can improve generalization, try 0.1 or 0.2)", filter = Default.class, dmin = 0, dmax = 1, json = true)
+  @API(help = "Input layer dropout ratio (can improve generalization, try 0.1 or 0.2)", filter = Default.class, dmin = 0, dmax = 1, json = true, importance = ParamImportance.SECONDARY)
   public double input_dropout_ratio = 0.0;
 
   /**
    * A fraction of the inputs for each hidden layer to be omitted from training in order
    * to improve generalization. Defaults to 0.5 for each hidden layer if omitted.
    */
-  @API(help = "Hidden layer dropout ratios (can improve generalization), specify one value per hidden layer, defaults to 0.5", filter = Default.class, dmin = 0, dmax = 1, json = true)
+  @API(help = "Hidden layer dropout ratios (can improve generalization), specify one value per hidden layer, defaults to 0.5", filter = Default.class, dmin = 0, dmax = 1, json = true, importance = ParamImportance.SECONDARY)
   public double[] hidden_dropout_ratios;
 
   /**
@@ -248,7 +246,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * has the net effect of dropping some weights (setting them to zero) from a model
    * to reduce complexity and avoid overfitting.
    */
-  @API(help = "L1 regularization (can add stability and improve generalization, causes many weights to become 0)", filter = Default.class, dmin = 0, dmax = 1, json = true)
+  @API(help = "L1 regularization (can add stability and improve generalization, causes many weights to become 0)", filter = Default.class, dmin = 0, dmax = 1, json = true, importance = ParamImportance.SECONDARY)
   public double l1 = 0.0;
 
   /**
@@ -257,7 +255,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * frequently produces substantial gains in modeling as estimate variance is
    * reduced.
    */
-  @API(help = "L2 regularization (can add stability and improve generalization, causes many weights to be small", filter = Default.class, dmin = 0, dmax = 1, json = true)
+  @API(help = "L2 regularization (can add stability and improve generalization, causes many weights to be small", filter = Default.class, dmin = 0, dmax = 1, json = true, importance = ParamImportance.SECONDARY)
   public double l2 = 0.0;
 
   /**
@@ -265,7 +263,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * any one neuron. This tuning parameter is especially useful for unbound
    * activation functions such as Maxout or Rectifier.
    */
-  @API(help = "Constraint for squared sum of incoming weights per unit (e.g. for Rectifier)", filter = Default.class, dmin = 1e-10, json = true)
+  @API(help = "Constraint for squared sum of incoming weights per unit (e.g. for Rectifier)", filter = Default.class, dmin = 1e-10, json = true, importance = ParamImportance.EXPERT)
   public float max_w2 = Float.POSITIVE_INFINITY;
 
   /*Initialization*/
@@ -276,7 +274,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * interval. The "normal" option draws weights from the standard normal
    * distribution with a mean of 0 and given standard deviation.
    */
-  @API(help = "Initial Weight Distribution", filter = Default.class, json = true)
+  @API(help = "Initial Weight Distribution", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
   public InitialWeightDistribution initial_weight_distribution = InitialWeightDistribution.UniformAdaptive;
 
   /**
@@ -284,7 +282,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * For Uniform, the values are drawn uniformly from -initial_weight_scale...initial_weight_scale.
    * For Normal, the values are drawn from a Normal distribution with a standard deviation of initial_weight_scale.
    */
-  @API(help = "Uniform: -value...value, Normal: stddev)", filter = Default.class, dmin = 0, json = true)
+  @API(help = "Uniform: -value...value, Normal: stddev)", filter = Default.class, dmin = 0, json = true, importance = ParamImportance.EXPERT)
   public double initial_weight_scale = 1.0;
 
   /**
@@ -298,7 +296,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * be used for classification as well (where it emphasizes the error on all
    * output classes, not just for the actual class).
    */
-  @API(help = "Loss function", filter = Default.class, json = true)
+  @API(help = "Loss function", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
   public Loss loss = Loss.Automatic;
 
   /*Scoring*/
@@ -306,14 +304,14 @@ public class DeepLearning extends Job.ValidatedJob {
    * The minimum time (in seconds) to elapse between model scoring. The actual
    * interval is determined by the number of training samples per iteration and the scoring duty cycle.
    */
-  @API(help = "Shortest time interval (in secs) between model scoring", filter = Default.class, dmin = 0, json = true)
+  @API(help = "Shortest time interval (in secs) between model scoring", filter = Default.class, dmin = 0, json = true, importance = ParamImportance.SECONDARY)
   public double score_interval = 5;
 
   /**
    * The number of training dataset points to be used for scoring. Will be
    * randomly sampled. Use 0 for selecting the entire training dataset.
    */
-  @API(help = "Number of training set samples for scoring (0 for all)", filter = Default.class, lmin = 0, json = true)
+  @API(help = "Number of training set samples for scoring (0 for all)", filter = Default.class, lmin = 0, json = true, importance = ParamImportance.EXPERT)
   public long score_training_samples = 10000l;
 
   /**
@@ -322,14 +320,14 @@ public class DeepLearning extends Job.ValidatedJob {
    * validation sampling" is set to stratify). Use 0 for selecting the entire
    * training dataset.
    */
-  @API(help = "Number of validation set samples for scoring (0 for all)", filter = Default.class, lmin = 0, json = true)
+  @API(help = "Number of validation set samples for scoring (0 for all)", filter = Default.class, lmin = 0, json = true, importance = ParamImportance.EXPERT)
   public long score_validation_samples = 0l;
 
   /**
    * Maximum fraction of wall clock time spent on model scoring on training and validation samples,
    * and on diagnostics such as computation of feature importances (i.e., not on training).
    */
-  @API(help = "Maximum duty cycle fraction for scoring (lower: more training, higher: more scoring).", filter = Default.class, dmin = 0, dmax = 1, json = true)
+  @API(help = "Maximum duty cycle fraction for scoring (lower: more training, higher: more scoring).", filter = Default.class, dmin = 0, dmax = 1, json = true, importance = ParamImportance.EXPERT)
   public double score_duty_cycle = 0.1;
 
   /**
@@ -337,7 +335,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * training data scoring dataset. When the error is at or below this threshold,
    * training stops.
    */
-  @API(help = "Stopping criterion for classification error fraction on training data (-1 to disable)", filter = Default.class, dmin=-1, dmax=1, json = true, gridable = false)
+  @API(help = "Stopping criterion for classification error fraction on training data (-1 to disable)", filter = Default.class, dmin=-1, dmax=1, json = true, gridable = false, importance = ParamImportance.EXPERT)
   public double classification_stop = 0;
 
   /**
@@ -365,7 +363,7 @@ public class DeepLearning extends Job.ValidatedJob {
   /**
    * The maximum number (top K) of predictions to use for hit ratio computation (for multi-class only, 0 to disable)
    */
-  @API(help = "Max. number (top K) of predictions to use for hit ratio computation (for multi-class only, 0 to disable)", filter = Default.class, lmin=0, json = true, gridable = false)
+  @API(help = "Max. number (top K) of predictions to use for hit ratio computation (for multi-class only, 0 to disable)", filter = Default.class, lmin=0, json = true, gridable = false, importance = ParamImportance.EXPERT)
   public int max_hit_ratio_k = 10;
 
   /*Imbalanced Classes*/
@@ -373,20 +371,20 @@ public class DeepLearning extends Job.ValidatedJob {
    * For imbalanced data, balance training data class counts via
    * over/under-sampling. This can result in improved predictive accuracy.
    */
-  @API(help = "Balance training data class counts via over/under-sampling (for imbalanced data)", filter = Default.class, json = true, gridable = false)
+  @API(help = "Balance training data class counts via over/under-sampling (for imbalanced data)", filter = Default.class, json = true, gridable = false, importance = ParamImportance.EXPERT)
   public boolean balance_classes = false;
 
   /**
    * When classes are balanced, limit the resulting dataset size to the
    * specified multiple of the original dataset size.
    */
-  @API(help = "Maximum relative size of the training data after balancing class counts (can be less than 1.0)", filter = Default.class, json = true, dmin=1e-3, gridable = false)
+  @API(help = "Maximum relative size of the training data after balancing class counts (can be less than 1.0)", filter = Default.class, json = true, dmin=1e-3, gridable = false, importance = ParamImportance.EXPERT)
   public float max_after_balance_size = 5.0f;
 
   /**
    * Method used to sample the validation dataset for scoring, see Score Validation Samples above.
    */
-  @API(help = "Method used to sample validation dataset for scoring", filter = Default.class, json = true, gridable = false)
+  @API(help = "Method used to sample validation dataset for scoring", filter = Default.class, json = true, gridable = false, importance = ParamImportance.EXPERT)
   public ClassSamplingMethod score_validation_sampling = ClassSamplingMethod.Uniform;
 
   /*Misc*/
@@ -408,13 +406,13 @@ public class DeepLearning extends Job.ValidatedJob {
   /**
    * Enable fast mode (minor approximation in back-propagation), should not affect results significantly.
    */
-  @API(help = "Enable fast mode (minor approximation in back-propagation)", filter = Default.class, json = true)
+  @API(help = "Enable fast mode (minor approximation in back-propagation)", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
   public boolean fast_mode = true;
 
   /**
    * Ignore constant training columns (no information can be gained anyway).
    */
-  @API(help = "Ignore constant training columns (no information can be gained anyway)", filter = Default.class, json = true)
+  @API(help = "Ignore constant training columns (no information can be gained anyway)", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
   public boolean ignore_const_cols = true;
 
   /**
@@ -445,7 +443,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * the data. It is automatically enabled if the number of training samples per iteration is set to -1 (or to N
    * times the dataset size or larger).
    */
-  @API(help = "Enable shuffling of training data (recommended if training data is replicated and train_samples_per_iteration is close to #nodes x #rows)", filter = Default.class, json = true)
+  @API(help = "Enable shuffling of training data (recommended if training data is replicated and train_samples_per_iteration is close to #nodes x #rows)", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
   public boolean shuffle_training_data = false;
 
   @API(help = "Sparse data handling (Experimental).", filter = Default.class, json = true)
@@ -944,7 +942,7 @@ public class DeepLearning extends Job.ValidatedJob {
         Log.warn("Enabling training data shuffling, because all nodes train on the full dataset (replicated training data).");
         mp.shuffle_training_data = true;
       }
-      final float rowUsageFraction = computeRowUsageFraction(train.numRows(), mp.actual_train_samples_per_iteration, mp.replicate_training_data, mp.quiet_mode);
+      final float rowUsageFraction = computeRowUsageFraction(train.numRows(), mp.actual_train_samples_per_iteration, mp.replicate_training_data);
 
       if (!mp.quiet_mode) Log.info("Initial model:\n" + model.model_info());
       Log.info("Starting to train the Deep Learning model.");
@@ -1031,13 +1029,13 @@ public class DeepLearning extends Job.ValidatedJob {
   private static long computeTrainSamplesPerIteration(final long train_samples_per_iteration, final long numRows, final boolean replicate_training_data, final boolean single_node_mode, final boolean quiet_mode) {
     long tspi = train_samples_per_iteration;
     assert(tspi == 0 || tspi == -1 || tspi >= 1);
-    if (tspi == 0 || (!replicate_training_data && (tspi == -1 || tspi > numRows)) || (replicate_training_data && single_node_mode)) {
+    if (tspi == 0 || (!replicate_training_data && tspi == -1) ) {
       tspi = numRows;
       if (!quiet_mode) Log.info("Setting train_samples_per_iteration (" + train_samples_per_iteration + ") to one epoch: #rows (" + tspi + ").");
     }
-    else if (tspi == -1 || tspi > H2O.CLOUD.size()*numRows) {
+    else if (tspi == -1) {
       tspi = H2O.CLOUD.size() * numRows;
-      if (!quiet_mode) Log.info("Setting train_samples_per_iteration (" + train_samples_per_iteration + ") to the largest possible number: #nodes x #rows (" + tspi + ").");
+      if (!quiet_mode) Log.info("Setting train_samples_per_iteration (" + train_samples_per_iteration + ") to #nodes x #rows (" + tspi + ").");
     }
     assert(tspi != 0 && tspi != -1 && tspi >= 1);
     return tspi;
@@ -1050,10 +1048,10 @@ public class DeepLearning extends Job.ValidatedJob {
    * @param replicate_training_data whether of not the training data is replicated on each node
    * @return fraction of rows to be used for training during one iteration
    */
-  private static float computeRowUsageFraction(final long numRows, final long train_samples_per_iteration, final boolean replicate_training_data, final boolean quiet_mode) {
+  private static float computeRowUsageFraction(final long numRows, final long train_samples_per_iteration, final boolean replicate_training_data) {
     float rowUsageFraction = (float)train_samples_per_iteration / numRows;
     if (replicate_training_data) rowUsageFraction /= H2O.CLOUD.size();
-    assert(rowUsageFraction > 0 && rowUsageFraction <= 1.);
+    assert(rowUsageFraction > 0);
     return rowUsageFraction;
   }
 

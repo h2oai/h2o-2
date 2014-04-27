@@ -226,7 +226,7 @@ public abstract class Request2 extends Request {
             } else if( d instanceof MultiVecSelect ) {
               FrameClassVec response = classVecs.get(d._ref);
               boolean names = ((MultiVecSelect) d)._namesOnly;
-              arg = new FrameKeyMultiVec(f.getName(), (TypeaheadKey) ref, response, api.help(), names);
+              arg = new FrameKeyMultiVec(f.getName(), (TypeaheadKey) ref, response, api.help(), names,filterNaCols());
             } else if( d instanceof DoClassBoolean ) {
               FrameClassVec response = classVecs.get(d._ref);
               arg = new ClassifyBool(f.getName(), response);
@@ -550,7 +550,7 @@ public abstract class Request2 extends Request {
     this.response_info = response.extractInfo();
   }
 
-  protected JsonObject toJSON() {
+  public JsonObject toJSON() {
     final String json = new String(writeJSON(new AutoBuffer()).buf());
     if (json.length() == 0) return new JsonObject();
     JsonObject jo = (JsonObject)new JsonParser().parse(json);
@@ -577,4 +577,5 @@ public abstract class Request2 extends Request {
     sb.append("</code></pre></div>");
     return true;
   }
+  protected boolean filterNaCols(){return false;}
 }

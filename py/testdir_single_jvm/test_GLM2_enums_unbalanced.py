@@ -160,12 +160,6 @@ class Basic(unittest.TestCase):
 
                 validation = submodels['validation']
 
-                if not validation or 'avg_err' not in validation:
-                    raise Exception("glm: %s" % h2o.dump_json(glm) + \
-                        "\nNo avg_err in validation." + \
-                        "\nLikely if you look back, the job was cancelled, so there's no cross validation.")
-        
-                avg_err = validation['avg_err']
                 auc = validation['auc']
                 aic = validation['aic']
                 null_deviance = validation['null_deviance']
@@ -176,7 +170,6 @@ class Basic(unittest.TestCase):
                 # did beta get shortened? the simple check confirms names/beta/norm_beta are same length
                 print 'beta', beta
                 print 'iteration', iteration
-                print 'avg_err', avg_err
                 print 'auc', auc
 
                 h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)

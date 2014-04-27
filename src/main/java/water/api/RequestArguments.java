@@ -2616,6 +2616,7 @@ public class RequestArguments extends RequestStatics {
     final TypeaheadKey _key;
     final String _description;
     final boolean _namesOnly;
+    final boolean _filterNAs;
     FrameClassVec _response;
     protected transient ThreadLocal<Integer> _colIdx= new ThreadLocal();
     protected Frame fr() {
@@ -2623,11 +2624,12 @@ public class RequestArguments extends RequestStatics {
       if(v == null) throw new H2OIllegalArgumentException(this, "Frame not found");
       return ValueArray.asFrame(v);
     }
-    public FrameKeyMultiVec(String name, TypeaheadKey key, FrameClassVec response, String description, boolean namesOnly) {
+    public FrameKeyMultiVec(String name, TypeaheadKey key, FrameClassVec response, String description, boolean namesOnly, boolean filterNAs) {
       super(name);
       addPrerequisite(_key = key);
       _description = description;
       _namesOnly = namesOnly;
+      _filterNAs = filterNAs;
       if(response != null)
         setResponse(response);
     }
@@ -2635,7 +2637,9 @@ public class RequestArguments extends RequestStatics {
       _response = response;
       addPrerequisite(response);
     }
-    public boolean shouldIgnore(int i, Frame fr ) { return _response != null && _response.value() == fr.vecs()[i]; }
+    public boolean shouldIgnore(int i, Frame fr ) {
+      return _response != null && _response.value() == fr.vecs()[i];
+    }
     public void checkLegality(Vec v) throws IllegalArgumentException { }
     protected Comparator<Integer> colComp(final ValueArray ary){
       return null;
@@ -2691,7 +2695,15 @@ public class RequestArguments extends RequestStatics {
     }
 
     @Override protected int[] defaultValue() {
-      return new int[0];
+      final Vec [] vecs = fr().vecs();
+      int [] res = new int[vecs.length];
+      int j = 0;
+      for(int i = 0; i < vecs.length; ++i){
+        if(!(vecs[i].min() < vecs[i].max()) ||
+          (_filterNAs && ((double)vecs[i].naCnt())/vecs[i].length() > 0.1))
+          res[j++] = i; // ignore constant columns and columns with too many NAs
+      }
+      return Arrays.copyOf(res, j);
     }
 
     @Override protected String queryDescription() {

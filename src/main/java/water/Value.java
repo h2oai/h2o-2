@@ -15,7 +15,8 @@ import water.persist.*;
  * underlying byte[] which may be spilled to disk and freed by the
  * {@link MemoryManager}.
  */
-public class Value extends Iced implements ForkJoinPool.ManagedBlocker {
+public class
+        Value extends Iced implements ForkJoinPool.ManagedBlocker {
 
   // ---
   // Type-id of serialized object; see TypeMap for the list.
