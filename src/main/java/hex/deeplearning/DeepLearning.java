@@ -719,7 +719,8 @@ public class DeepLearning extends Job.ValidatedJob {
         Log.warn("Automatically re-using ignored_cols from the checkpointed model.");
       }
       if ((validation!=null) != (previous.model_info().get_params().validation != null)
-              || (validation != null && !Arrays.equals(validation._key._kb, previous.model_info().get_params().validation._key._kb))) {
+              || (validation != null && validation._key != null && previous.model_info().get_params().validation._key != null
+              && !Arrays.equals(validation._key._kb, previous.model_info().get_params().validation._key._kb))) {
         throw new IllegalArgumentException("validation must be the same as for the checkpointed model.");
       }
       if (classification != previous.model_info().get_params().classification) {
