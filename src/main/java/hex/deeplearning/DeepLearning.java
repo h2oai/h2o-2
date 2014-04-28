@@ -741,7 +741,8 @@ public class DeepLearning extends Job.ValidatedJob {
             for (Field fB : B.getClass().getDeclaredFields()) {
               if (fA.equals(fB)) {
                 try {
-                  if (fB.get(B) == null || fA.get(A) == null || !fA.get(A).toString().equals(fB.get(B).toString())) {
+                  if (fB.get(B) == null || fA.get(A) == null || !fA.get(A).toString().equals(fB.get(B).toString())) { // if either of the two parameters is null, skip the toString()
+                    if (fA.get(A) == null && fB.get(B) == null) continue; //if both parameters are null, we don't need to do anything
                     Log.info("Applying user-requested modification of '" + fA.getName() + "': " + fA.get(A) + " -> " + fB.get(B));
                     fA.set(A, fB.get(B));
                   }
