@@ -1,6 +1,6 @@
 import unittest, time, sys, os
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_exec
 import h2o_glm, h2o_gbm, h2o_rf # TODO: DeepLearning
 
 class ModelManagementTestCase(unittest.TestCase):
@@ -27,6 +27,8 @@ class ModelManagementTestCase(unittest.TestCase):
     def tearDownClass(cls):
         if h2o.clone_cloud_json is None:
             h2o.tear_down_cloud()
+        else:
+            h2o.check_sandbox_for_errors(sandboxIgnoreErrors=False, python_test_name="test_model_management")
 
 
     def import_frame(self, target_key, bucket, csvFilename, csvPathname, expected_rows, expected_cols):
@@ -56,10 +58,32 @@ class ModelManagementTestCase(unittest.TestCase):
         return destination_key
 
 
+    # TODO: generalize by passing in the exec2 expression
+    def create_new_boolean(self, frame, old_col_name, new_col_name):
+        node = h2o.nodes[0]
+
+        # NOTE: 1-based column indexing!
+
+        resultExec, ncols = h2o_exec.exec_expr(execExpr='ncol(' + frame + ')')
+        # print 'before doing anything, ncols: ', int(ncols)
+
+        resultExec, dontcare = h2o_exec.exec_expr(execExpr="{0}[, ncol({0}) + 1] = ({0}${1} == 1)".format(frame, old_col_name))
+        resultExec, ncols = h2o_exec.exec_expr(execExpr="ncol({0})".format(frame))
+
+        ncols = int(ncols)
+        # print 'after allegedly creating new column ncols: ', ncols
+
+        node.set_column_names(source=frame, cols='C' + str(ncols), comma_separated_list=new_col_name)
+
+
     def import_frames(self):
         prostate_hex = self.import_frame('prostate.hex', 'smalldata', 'prostate.csv', 'logreg', 380, 9)
         airlines_train_hex = self.import_frame('airlines_train.hex', 'smalldata', 'AirlinesTrain.csv.zip', 'airlines', 24421, 12)
         airlines_test_hex = self.import_frame('airlines_test.hex', 'smalldata', 'AirlinesTest.csv.zip', 'airlines', 2691, 12)
+
+        self.create_new_boolean('airlines_train.hex', 'IsDepDelayed_REC', 'IsDepDelayed_REC_recoded')
+        self.create_new_boolean('airlines_test.hex', 'IsDepDelayed_REC', 'IsDepDelayed_REC_recoded')
+
         return (prostate_hex, airlines_train_hex, airlines_test_hex)
         
     def create_models(self, frame_keys):
@@ -80,7 +104,7 @@ class ModelManagementTestCase(unittest.TestCase):
         glm_AirlinesTrain_1_params = {
             'destination_key': 'glm_AirlinesTrain_binary_1',
             'response': 'IsDepDelayed', 
-            'ignored_cols': 'IsDepDelayed_REC', 
+            'ignored_cols': 'IsDepDelayed_REC, IsDepDelayed_REC_recoded', 
             'family': 'binomial', 
             'alpha': 0.5, 
             'standardize': 0, 
@@ -97,7 +121,7 @@ class ModelManagementTestCase(unittest.TestCase):
         gbm_AirlinesTrain_1_params = {
             'destination_key': 'gbm_AirlinesTrain_binary_1',
             'response': 'IsDepDelayed', 
-            'ignored_cols_by_name': 'IsDepDelayed_REC', 
+            'ignored_cols_by_name': 'IsDepDelayed_REC, IsDepDelayed_REC_recoded', 
             'ntrees': 3,
             'max_depth': 1,
             'classification': 1
@@ -112,7 +136,7 @@ class ModelManagementTestCase(unittest.TestCase):
         gbm_AirlinesTrain_2_params = {
             'destination_key': 'gbm_AirlinesTrain_binary_2',
             'response': 'IsDepDelayed', 
-            'ignored_cols_by_name': 'IsDepDelayed_REC', 
+            'ignored_cols_by_name': 'IsDepDelayed_REC, IsDepDelayed_REC_recoded', 
             'ntrees': 50,
             'max_depth': 5,
             'classification': 1
@@ -127,7 +151,7 @@ class ModelManagementTestCase(unittest.TestCase):
         rf_AirlinesTrain_1_params = {
             'destination_key': 'rf_AirlinesTrain_binary_1',
             'response': 'IsDepDelayed', 
-            'ignored_cols_by_name': 'IsDepDelayed_REC', 
+            'ignored_cols_by_name': 'IsDepDelayed_REC, IsDepDelayed_REC_recoded', 
             'ntrees': 5,
             'max_depth': 2,
             'classification': 1
@@ -141,7 +165,7 @@ class ModelManagementTestCase(unittest.TestCase):
         rf_AirlinesTrain_2_params = {
             'destination_key': 'rf_AirlinesTrain_binary_2',
             'response': 'IsDepDelayed', 
-            'ignored_cols_by_name': 'IsDepDelayed_REC', 
+            'ignored_cols_by_name': 'IsDepDelayed_REC, IsDepDelayed_REC_recoded', 
             'ntrees': 50,
             'max_depth': 10,
             'classification': 1
@@ -155,7 +179,7 @@ class ModelManagementTestCase(unittest.TestCase):
         dl_AirlinesTrain_1_params = {
             'destination_key': 'dl_AirlinesTrain_binary_1',
             'response': 'IsDepDelayed', 
-            'ignored_cols': 'IsDepDelayed_REC', 
+            'ignored_cols': 'IsDepDelayed_REC, IsDepDelayed_REC_recoded', 
             'hidden': [10, 10],
             'classification': 1
         }
@@ -167,8 +191,8 @@ class ModelManagementTestCase(unittest.TestCase):
         # h2o.glm.FV(y = "IsDepDelayed_REC", x = c("Origin", "Dest", "fDayofMonth", "fYear", "UniqueCarrier", "fDayOfWeek", "fMonth", "DepTime", "ArrTime", "Distance"), data = airlines_train.hex, family = "binomial", alpha=0.05, lambda=1.0e-2, standardize=FALSE, nfolds=0)
         glm_AirlinesTrain_A_params = {
             'destination_key': 'glm_AirlinesTrain_binary_A',
-            'response': 'IsDepDelayed_REC', 
-            'ignored_cols': 'IsDepDelayed', 
+            'response': 'IsDepDelayed_REC_recoded', 
+            'ignored_cols': 'IsDepDelayed, IsDepDelayed_REC', 
             'family': 'binomial', 
             'alpha': 0.5, 
             'standardize': 0, 
