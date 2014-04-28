@@ -42,9 +42,11 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
   @API(help = "Scoring during model building")
   private Errors[] errors;
+  public Errors[] scoring_history() { return errors; }
 
   // Keep the best model so far, based on a single criterion (overall class. error or MSE)
   private float _bestError = Float.MAX_VALUE;
+  private Key _actual_best_model_key;
 
   // return the most up-to-date model metrics
   Errors last_scored() { return errors[errors.length-1]; }
@@ -52,7 +54,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   @Override public final DeepLearning get_params() { return model_info.get_params(); }
   @Override public final Request2 job() { return get_params(); }
 
-  public float error() { return (float) (isClassifier() ? (nclasses() == 2 ? (1f - cm().F1()) : cm().err()) : mse()); }
+  public float error() { return (float) (isClassifier() ? cm().err() : mse()); }
 
   @Override
   public int compareTo(DeepLearningModel o) {
@@ -109,13 +111,16 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     public double train_mse = Double.POSITIVE_INFINITY;
     @API(help = "Validation MSE")
     public double valid_mse = Double.POSITIVE_INFINITY;
-//    @API(help = "Training MCE")
-//    public double train_mce = Double.POSITIVE_INFINITY;
-//    @API(help = "Validation MCE")
-//    public double valid_mce = Double.POSITIVE_INFINITY;
 
     @API(help = "Time taken for scoring")
     public long scoring_time;
+
+    Errors deep_clone() {
+      AutoBuffer ab = new AutoBuffer();
+      this.write(ab);
+      ab.flipForReading();
+      return new Errors().read(ab);
+    }
 
     @Override public String toString() {
       StringBuilder sb = new StringBuilder();
@@ -166,11 +171,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       }
     }
     // cm.cm has NaN padding, reduce it to N-1 size
-    long[][] newcm = new long[cm.cm.length-1][cm.cm.length-1];
-    for (int i=0; i<newcm.length; ++i)
-      for (int j=0; j<newcm.length; ++j)
-        newcm[i][j] = cm.cm[i][j];
-    return new hex.ConfusionMatrix(newcm);
+    return new hex.ConfusionMatrix(cm.cm, cm.cm.length-1);
   }
 
   @Override
@@ -198,7 +199,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     // model is described by parameters and the following 2 arrays
     private Neurons.DenseRowMatrix[] dense_row_weights; //one 2D weight matrix per layer (stored as a 1D array each)
     private Neurons.DenseColMatrix[] dense_col_weights; //one 2D weight matrix per layer (stored as a 1D array each)
-    final private Neurons.DenseVector[] biases; //one 1D bias array per layer
+    private Neurons.DenseVector[] biases; //one 1D bias array per layer
 
     // helpers for storing previous step deltas
     // Note: These two arrays *could* be made transient and then initialized freshly in makeNeurons() and in DeepLearningTask.initLocal()
@@ -233,7 +234,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     public final Neurons.DenseVector get_biases_ada_dx_g(int i) { return biases_ada_dx_g[i]; }
 
     @API(help = "Model parameters", json = true)
-    final private DeepLearning parameters;
+    private DeepLearning parameters;
     public final DeepLearning get_params() { return parameters; }
 
     @API(help = "Mean rate", json = true)
@@ -273,7 +274,9 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     public synchronized long get_processed_total() { return processed_global + processed_local; }
 
     // package local helpers
-    final int[] units; //number of neurons per layer, extracted from parameters and from datainfo
+    int[] units; //number of neurons per layer, extracted from parameters and from datainfo
+
+    public DeepLearningModelInfo() {}
 
     public DeepLearningModelInfo(final DeepLearning params, final DataInfo dinfo) {
       data_info = dinfo;
@@ -310,6 +313,14 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       rms_bias = new float[units.length];
       mean_weight = new float[units.length];
       rms_weight = new float[units.length];
+    }
+
+    // deep clone all weights/biases
+    DeepLearningModelInfo deep_clone() {
+      AutoBuffer ab = new AutoBuffer();
+      this.write(ab);
+      ab.flipForReading();
+      return new DeepLearningModelInfo().read(ab);
     }
 
     void fillHelpers() {
@@ -612,24 +623,39 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
    * @param jobKey New job key (job which updates the model)
    */
   public DeepLearningModel(final DeepLearningModel cp, final Key destKey, final Key jobKey, final DataInfo dataInfo) {
-    super(destKey, cp._dataKey, dataInfo._adaptedFrame.names(), dataInfo._adaptedFrame.domains(), cp._priorClassDist);
+    super(destKey, cp._dataKey, dataInfo._adaptedFrame.names(), dataInfo._adaptedFrame.domains(), cp._priorClassDist != null ? cp._priorClassDist.clone() : null);
+    final boolean store_best_model = (jobKey == null);
     this.jobKey = jobKey;
-    model_info = (DeepLearningModelInfo)cp.model_info.clone(); //this clones the parameters too
-    model_info.data_info = dataInfo; //replace previous data_info with updated version that's passed in (contains enum for classification)
-    if (jobKey != null) get_params().checkpoint = cp._key;
+    if (store_best_model) {
+      model_info = cp.model_info.deep_clone(); //don't want to interfere with model being built, just make a deep copy and store that
+      model_info.data_info = dataInfo.deep_clone(); //replace previous data_info with updated version that's passed in (contains enum for classification)
+      get_params().state = Job.JobState.DONE;
+      get_params().job_key = jobKey; //null
+    } else {
+      model_info = (DeepLearningModelInfo) cp.model_info.clone(); //shallow clone is ok (won't modify the Checkpoint in K-V store during checkpoint restart)
+      model_info.data_info = dataInfo; //shallow clone is ok
+      get_params().state = Job.JobState.RUNNING;
+      get_params().checkpoint = cp._key; //it's only a "real" checkpoint if job != null, otherwise a best model copy
+      get_params().job_key = cp.jobKey;
+    }
     get_params().destination_key = destKey;
-    get_params().job_key = jobKey != null ? jobKey : cp.jobKey;
+    get_params().start_time = System.currentTimeMillis(); //for displaying the model progress
+    _actual_best_model_key = cp.get_params().best_model_key;
     start_time = cp.start_time;
     run_time = cp.run_time;
-    errors = cp.errors.clone();
     training_rows = cp.training_rows; //copy the value to display the right number on the model page before training has started
-    get_params().start_time = System.currentTimeMillis(); //for displaying the model progress
     _bestError = cp._bestError;
+
+    // deep clone scoring history
+    errors = cp.errors.clone();
+    for (int i=0; i<errors.length;++i)
+      errors[i] = cp.errors[i].deep_clone();
+
+    // set proper timing
     _timeLastScoreEnter = System.currentTimeMillis();
     _timeLastScoreStart = 0;
     _timeLastScoreEnd = 0;
     _timeLastPrintStart = 0;
-    model_info().get_params().state = Job.JobState.RUNNING;
     assert(Arrays.equals(_key._kb, destKey._kb));
   }
 
@@ -708,6 +734,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
         trainPredict.delete();
 
+        final boolean adaptCM = (isClassifier() && vadaptor.needsAdaptation2CM());
         if (err.validation) {
           assert ftest != null;
           err.score_validation_samples = ftest.numRows();
@@ -717,7 +744,6 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
             err.valid_hitratio = new HitRatio();
             err.valid_hitratio.set_max_k(hit_k);
           }
-          final boolean adaptCM = (isClassifier() && vadaptor.needsAdaptation2CM());
           final String adaptRespName = vadaptor.adaptedValidationResponse(responseName());
           Vec adaptCMresp = null;
           if (adaptCM) {
@@ -771,20 +797,49 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
         }
         // always keep a copy of the best model so far (based on the following criterion)
         if (error() < _bestError && get_params().best_model_key != null) {
-          final Key bestModelKey = get_params().best_model_key;
+          _actual_best_model_key = get_params().best_model_key;
+          final Key bestModelKey = _actual_best_model_key;
+          if (!get_params().quiet_mode) Log.info("Error reduced from " + _bestError + " to " + error() + ". Storing best model so far under key " + bestModelKey.toString() + ".");
           _bestError = error();
-          if (!get_params().quiet_mode) Log.info("Saving best model so far under key " + bestModelKey.toString());
           final Key job = null;
           final DeepLearningModel cp = this;
-          Key dest_before = this._key;
           DeepLearningModel bestModel = new DeepLearningModel(cp, bestModelKey, job, model_info().data_info());
-          Key dest_after = this._key;
-          assert(Arrays.equals(dest_before._kb, dest_after._kb));
           bestModel.delete_and_lock(job);
           bestModel.unlock(job);
           assert(UKV.get(bestModelKey) != null);
           assert(bestModel.compareTo(this) <= 0);
           assert(((DeepLearningModel)UKV.get(bestModelKey)).error() == _bestError);
+
+          // debugging check
+          if (false) {
+            bestModel = UKV.get(bestModelKey);
+
+            final Frame fr = ftest != null ? ftest : ftrain;
+            final Frame bestPredict = bestModel.score(fr, ftest != null ? adaptCM : false);
+            final Frame hitRatio_bestPredict = new Frame(bestPredict);
+            // Adapt output response domain, in case validation domain is different from training domain
+            // Note: doesn't change predictions, just the *possible* label domain
+            if (adaptCM) {
+              final Vec CMadapted = vadaptor.adaptModelResponse2CM(bestPredict.vecs()[0]);
+              bestPredict.replace(0, CMadapted); //replace label
+              bestPredict.add("to_be_deleted", CMadapted); //keep the Vec around to be deleted later (no leak)
+            }
+            final double err3 = calcError(fr, fr.lastVec(), bestPredict, hitRatio_bestPredict, "cross-check",
+                    printme, get_params().max_confusion_matrix_size, new water.api.ConfusionMatrix(), isClassifier() && nclasses() == 2 ? new AUC() : null, null);
+            if (isClassifier()) {
+              if (ftest != null ? Math.abs(err.valid_err - err3) > 1e-5 : Math.abs(err.train_err - err3) > 1e-5) {
+                Log.info("Should be " + (ftest != null ? err.valid_err : err.train_err) + " but is " + err3);
+              }
+              assert (ftest != null ? Math.abs(err.valid_err - err3) < 1e-5 : Math.abs(err.train_err - err3) < 1e-5);
+            }
+            else {
+              if (ftest != null ? Math.abs(err.valid_mse - err3) > 1e-5 : Math.abs(err.train_mse - err3) > 1e-5) {
+                Log.info("Should be " + (ftest != null ? err.valid_mse : err.train_mse) + " but is " + err3);
+              }
+              assert (ftest != null ? Math.abs(err.valid_mse - err3) < 1e-5 : Math.abs(err.train_mse - err3) < 1e-5);
+            }
+            bestPredict.delete();
+          }
         }
 //        else {
 //          // keep output JSON small
@@ -878,8 +933,9 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
     DocGen.HTML.title(sb, title);
 
+    job().toHTML(sb);
     final Key val_key = get_params().validation != null ? get_params().validation._key : null;
-    final Key bestModelKey = get_params().best_model_key;
+    final Key bestModelKey = _actual_best_model_key;
     sb.append("<div class='alert'>Actions: "
             + (jobKey != null && UKV.get(jobKey) != null && Job.isRunning(jobKey) ? "<i class=\"icon-stop\"></i>" + Cancel.link(jobKey, "Stop training") + ", " : "")
             + Inspect2.link("Inspect training data (" + _dataKey + ")", _dataKey) + ", "
@@ -1021,7 +1077,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       else {
         if (error.validation) {
           RString v_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
-          v_rs.replace("key", get_params().validation._key);
+          v_rs.replace("key", get_params().validation._key != null ? get_params().validation._key : "");
           String cmTitle = "<div class=\"alert\">Scoring results reported on validation data " + v_rs.toString() + (fullvalid ? "" : " (" + score_valid + " samples)") + ":</div>";
           sb.append("<h5>" + cmTitle);
           if (error.valid_confusion_matrix != null && smallenough) {
