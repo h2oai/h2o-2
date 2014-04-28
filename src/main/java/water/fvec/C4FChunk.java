@@ -34,7 +34,11 @@ public class C4FChunk extends Chunk {
     return this;
   }
   @Override NewChunk inflate_impl(NewChunk nc) {
-    throw H2O.unimpl();
+    //nothing to inflate - just copy
+    nc._ds = MemoryManager.malloc8d(_len);
+    for( int i=0; i<_len; i++ ) //use unsafe?
+      nc._ds[i] = UDP.get4f(_mem, (i << 2));
+    return nc;
   }
   // 3.3333333e33
   public int pformat_len0() { return 14; }

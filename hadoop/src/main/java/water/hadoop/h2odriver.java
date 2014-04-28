@@ -12,7 +12,6 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 import java.io.*;
-import java.lang.management.ManagementPermission;
 import java.net.*;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -50,6 +49,10 @@ public class h2odriver extends Configured implements Tool {
   static int basePort = -1;
   static boolean beta = false;
   static boolean enableExceptions = false;
+  static String licenseFileName = null;
+
+  // State filled in as a result of handling options.
+  static String licenseData = null;
 
   // Runtime state that might be touched by different threads.
   volatile ServerSocket driverCallbackSocket = null;
@@ -371,6 +374,7 @@ public class h2odriver extends Configured implements Tool {
                     "          [-nthreads <maximum typical worker threads, i.e. cpus to use>]\n" +
                     "          [-baseport <starting HTTP port for H2O nodes; default is 54321>]\n" +
                     "          [-ea]\n" +
+                    "          [-license <license file name (local filesystem, not hdfs)>]\n" +
                     "          -o | -output <hdfs output dir>\n" +
                     "\n" +
                     "Notes:\n" +
@@ -429,6 +433,28 @@ public class h2odriver extends Configured implements Tool {
   static void error(String s) {
     System.err.printf("\nERROR: " + "%s\n\n", s);
     usage();
+  }
+
+  /**
+   * Read a file into a string.
+   * @param fileName File to read.
+   * @return String contents of file.
+   */
+  static private String readFile(String fileName) throws IOException {
+    BufferedReader br = new BufferedReader(new FileReader(fileName));
+    try {
+      StringBuilder sb = new StringBuilder();
+      String line = br.readLine();
+
+      while (line != null) {
+        sb.append(line);
+        sb.append("\n");
+        line = br.readLine();
+      }
+      return sb.toString();
+    } finally {
+      br.close();
+    }
   }
 
   /**
@@ -501,15 +527,19 @@ public class h2odriver extends Configured implements Tool {
       else if (s.equals("-baseport")) {
         i++; if (i >= args.length) { usage(); }
         basePort = Integer.parseInt(args[i]);
-	if ((basePort < 0) || (basePort > 65535)) {
-	    error("Base port must be between 1 and 65535");
-	}
+        if ((basePort < 0) || (basePort > 65535)) {
+            error("Base port must be between 1 and 65535");
+        }
       }
       else if (s.equals("-beta")) {
         beta = true;
       }
       else if (s.equals("-ea")) {
         enableExceptions = true;
+      }
+      else if (s.equals("-license")) {
+        i++; if (i >= args.length) { usage(); }
+        licenseFileName = args[i];
       }
       else {
         error("Unrecognized option " + s);
@@ -586,6 +616,24 @@ public class h2odriver extends Configured implements Tool {
 
     if ((nthreads >= 0) && (nthreads < 4)) {
       error("nthreads invalid (must be >= 4): " + nthreads);
+    }
+
+    if (licenseFileName != null) {
+      try {
+        licenseData = readFile(licenseFileName);
+      }
+      catch (Exception xe) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Failed to read license file: ");
+        if (xe.getLocalizedMessage() != null) {
+          sb.append(xe.getLocalizedMessage());
+        }
+        else {
+          sb.append(licenseFileName);
+        }
+
+        error(sb.toString());
+      }
     }
   }
 
@@ -763,6 +811,9 @@ public class h2odriver extends Configured implements Tool {
     }
     if (beta) {
         conf.set(h2omapper.H2O_BETA_KEY, "-beta");
+    }
+    if (licenseData != null) {
+        conf.set(h2omapper.H2O_LICENSE_DATA_KEY, licenseData);
     }
 
     // Set up job stuff.

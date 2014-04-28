@@ -1,5 +1,6 @@
 package hex.glm;
 
+import hex.ConfusionMatrix;
 import hex.FrameTask.DataInfo;
 import hex.glm.GLMParams.Family;
 import hex.glm.GLMValidation.GLMXValidation;
@@ -21,13 +22,16 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @API(help="mean of response in the training dataset")
   final double     ymu;
 
+  @API(help="actual expected mean of the response (given by the user before running the model or ymu)")
+  final double prior;
+
   @API(help="job key assigned to the job building this model")
   final Key job_key;
 
   @API(help = "Model parameters", json = true)
   final private GLM2 parameters;
-  public final GLM2 get_params() { return parameters; }
-  public final Request2 job() { return get_params(); }
+  @Override public final GLM2 get_params() { return parameters; }
+  @Override public final Request2 job() { return get_params(); }
 
   @API(help="Input data info")
   DataInfo data_info;
@@ -35,7 +39,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @API(help="warnings")
   String []  warnings;
   @API(help="Decision threshold.")
-  final double     threshold;
+  double     threshold;
   @API(help="glm params")
   final GLMParams  glm;
   @API(help="beta epsilon - stop iterating when beta diff is below this threshold.")
@@ -145,11 +149,12 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @API(help = "lambda sequence")
   final double [] lambdas;
 
-  public GLMModel(GLM2 job, Key selfKey, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double lambda_max, double [] lambda, double ymu) {
+  public GLMModel(GLM2 job, Key selfKey, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double lambda_max, double [] lambda, double ymu, double prior) {
     super(selfKey,null,dinfo._adaptedFrame);
     parameters = job;
     job_key = job.self();
     this.ymu = ymu;
+    this.prior = prior;
     this.glm = glm;
     threshold = 0.5;
     this.data_info = dinfo;
@@ -208,9 +213,15 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     double mu = glm.linkInv(eta);
     preds[0] = (float)mu;
     if( glm.family == Family.binomial ) { // threshold for prediction
-      preds[0] = (mu >= threshold ? 1 : 0);
-      preds[1] = 1.0f - (float)mu; // class 0
-      preds[2] =        (float)mu; // class 1
+      if(Double.isNaN(mu)){
+        preds[0] = Float.NaN;
+        preds[1] = Float.NaN;
+        preds[2] = Float.NaN;
+      } else {
+        preds[0] = (mu >= threshold ? 1 : 0);
+        preds[1] = 1.0f - (float)mu; // class 0
+        preds[2] =        (float)mu; // class 1
+      }
     }
     return preds;
   }
@@ -240,7 +251,6 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
         double response = chunks[chunks.length-1].at0(i);
         _res.add(response, _model.glm.family == Family.binomial?preds[2]:preds[0]);
       }
-      _res.avg_err /= _res.nobs;
     }
     @Override public void reduce(GLMValidationTask gval){_res.add(gval._res);}
     @Override public void postGlobal(){
@@ -277,8 +287,6 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
         double response = chunks[chunks.length-1].at80(i);
         val.add(response, model.glm.family == Family.binomial?preds[2]:preds[0]);
       }
-      for(GLMValidation val:_xvals)
-        if(val.nobs > 0)val.avg_err = val.avg_err/val.nobs;
     }
     @Override public void reduce(GLMXValidationTask gval){
       _nobs += gval._nobs;
@@ -296,6 +304,10 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
       _res = new GLMXValidation(_model, _xmodels,_lambdaIdx,_nobs);
       fs.blockForPending();
     }
+  }
+
+  public GLMParams getParams() {
+      return glm;
   }
 
   @Override
@@ -318,9 +330,16 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
 
   public boolean setAndTestValidation(int lambdaIdx,GLMValidation val ){
     submodels[lambdaIdx].validation = val;
-    if(lambdaIdx == 0 || rank(lambdaIdx) == 1)return true;
+    if(lambdaIdx == 0 || rank(lambdaIdx) == 1){
+      threshold = val.best_threshold;
+      return true;
+    }
     double diff = (submodels[lambdaIdx-1].validation.residual_deviance - val.residual_deviance)/val.null_deviance;
-    if(diff >= 0.01)best_lambda_idx = lambdaIdx;
+    if(diff >= 0.01) {
+      best_lambda_idx = lambdaIdx;
+      threshold = val.best_threshold;
+      System.out.println("setting threshold to " + threshold);
+    }
     return  true;
   }
 

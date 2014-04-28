@@ -81,7 +81,6 @@ class Basic(unittest.TestCase):
                     'max_iter': 10, 
                     'lambda': 1e-8,
                     'alpha': 0.5,
-                    'weight': 1.0,
                     'link': 'familyDefault',
                     'n_folds': 0,
                     'beta_epsilon': 1e-4,

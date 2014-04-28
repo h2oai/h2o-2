@@ -71,7 +71,7 @@ public class GLMRunner {
         System.err.println("Invalid predictor specification " + ARGS.xs);
         H2O.exit(-1);
       }
-      GLMJob j = DGLM.startGLMJob(DGLM.getData(ary, xcols,ycol, null, true), new ADMMSolver(ARGS.lambda,ARGS._alpha), new GLMParams(Family.valueOf(ARGS.family)), null, ARGS.xval, true);
+      GLMJob j = DGLM.startGLMJob(DGLM.getData(ary, xcols,ycol, null, true), new ADMMSolver(ARGS.lambda,ARGS._alpha), new GLMParams(Family.valueOf(ARGS.family)),null, 1, ARGS.xval, true);
       System.out.print("[GLM] computing model...");
       int progress = 0;
       while(!j.isDone()){

@@ -281,7 +281,8 @@ def import_only(node=None, schema='local', bucket=None, path=None,
                 folderURI = "maprfs://" + n.hdfs_name_node + "/" + folderOffset
             else:
                 # this is different than maprfs? normally we specify the name though
-                folderURI = "maprfs:///" + folderOffset
+                # folderURI = "maprfs:///" + folderOffset
+                folderURI = "maprfs:/" + folderOffset
             if importParentDir:
                 importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
             else:

@@ -24,7 +24,6 @@ def define_params():
         'case_mode': ['>','<','=','<=','>='],
         'link': [None, 'logit'],
         'max_iter': [None, 10],
-        'weight': [None, 1, 2, 4],
         }
     return paramDict
     

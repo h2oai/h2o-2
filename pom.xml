@@ -144,12 +144,12 @@
       <scope>compile</scope>
     </dependency>
     <!-- ==Jogamp dependencies for NN== -->
-    <dependency>
+    <!--<dependency>
       <groupId>org.jogamp.gluegen</groupId>
       <artifactId>gluegen-rt-main</artifactId>
       <version>2.0.2-rc12</version>
       <scope>compile</scope>
-    </dependency>
+    </dependency>-->
     <dependency>
       <groupId>org.jogamp.jocl</groupId>
       <artifactId>jocl</artifactId>
@@ -172,6 +172,12 @@
   <!-- Configure build -->
   <build>
     <defaultGoal>package</defaultGoal>
+    <resources>
+      <resource>
+        <directory>lib/resources/</directory>
+        <targetPath>resources/</targetPath>
+      </resource>
+    </resources>
     <!-- Setup plugins for this POM and all kids POMs. -->
     <pluginManagement>
     <plugins>

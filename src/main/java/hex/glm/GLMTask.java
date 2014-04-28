@@ -1,17 +1,14 @@
 package hex.glm;
 
 import hex.FrameTask;
-import hex.GLMTest;
 import hex.glm.GLMParams.Family;
 import hex.gram.Gram;
-import water.Job;
-import water.MemoryManager;
-import water.H2O.H2OCountedCompleter;
-import water.api.GLM;
-import water.util.Utils;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+
+import water.H2O.H2OCountedCompleter;
+import water.*;
+import water.util.Utils;
 
 /**
  * Contains all GLM related tasks.
@@ -58,10 +55,19 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       ++_nobs;
     }
     @Override public void reduce(YMUTask t){
-      _ymu = _ymu*((double)_nobs/(_nobs+t._nobs)) + t._ymu*t._nobs/(_nobs+t._nobs);
-      _nobs += t._nobs;
-      _ymax = Math.max(_ymax,t._ymax);
-      _ymin = Math.min(_ymin,t._ymin);
+      if(t._nobs != 0){
+        if(_nobs == 0){
+          _ymu = t._ymu;
+          _nobs = t._nobs;
+          _ymin = t._ymin;
+          _ymax = t._ymax;
+        } else {
+          _ymu = _ymu*((double)_nobs/(_nobs+t._nobs)) + t._ymu*t._nobs/(_nobs+t._nobs);
+          _nobs += t._nobs;
+          _ymax = Math.max(_ymax,t._ymax);
+          _ymin = Math.min(_ymin,t._ymin);
+        }
+      }
     }
     @Override protected void chunkDone(){_ymu /= _nobs;}
     public double ymu(){return _ymu;}
@@ -71,48 +77,44 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
    * Task to compute Lambda Max for the given dataset.
    * @author tomasnykodym
    */
-  static class LMAXTask extends GLMTask<LMAXTask> {
+  static class LMAXTask extends GLMIterationTask {
     private double[] _z;
-    private final double _ymu;
     private final double _gPrimeMu;
-    private long _nobs;
-    private final int _n;
     private final double _alpha;
-    GLMValidation _val;
+
+    //public GLMIterationTask(Job job, DataInfo dinfo, GLMParams glm, boolean computeGram, boolean validate, boolean computeGradient, double [] beta, double ymu, double reg, H2OCountedCompleter cmp) {
 
 
-    public LMAXTask(Job job, DataInfo dinfo, GLMParams glm, double ymu, double alpha, H2OCountedCompleter cmp) {
-      super(job,dinfo,glm,cmp);
-      _ymu = ymu;
+    public LMAXTask(Job job, DataInfo dinfo, GLMParams glm, double ymu, long nobs, double alpha, H2OCountedCompleter cmp) {
+      super(job, dinfo, glm, false, true, true, glm.nullModelBeta(dinfo,ymu), ymu, 1.0/nobs, cmp);
       _gPrimeMu = glm.linkDeriv(ymu);
-      _n = dinfo.fullN();
+      _nobs = dinfo.fullN();
       _alpha = alpha;
     }
     @Override public void chunkInit(){
-      _z = MemoryManager.malloc8d(_n);
+      super.chunkInit();
+      _z = MemoryManager.malloc8d(_grad.length);
       _val = new GLMValidation(null,_ymu,_glm,0);
+
     }
-    @Override protected void processRow(long gid, double[] nums, int ncats, int[] cats, double [] responses) {
+    @Override public void processRow(long gid, double[] nums, int ncats, int[] cats, double [] responses) {
       double w = (responses[0] - _ymu) * _gPrimeMu;
       for( int i = 0; i < ncats; ++i ) _z[cats[i]] += w;
       final int numStart = _dinfo.numStart();
-      ++_nobs;
       for(int i = 0; i < nums.length; ++i)
         _z[i+numStart] += w*nums[i];
-      _val.add(responses[0],_ymu);
+      super.processRow(gid,nums,ncats,cats,responses);
     }
-    @Override public void reduce(LMAXTask l){
-      Utils.add(_z, l._z); _nobs += l._nobs;
-      _val.add(l._val);
+    @Override public void reduce(GLMIterationTask git){
+      Utils.add(_z, ((LMAXTask)git)._z);
+      super.reduce(git);
     }
     public double lmax(){
       double res = Math.abs(_z[0]);
       for( int i = 1; i < _z.length; ++i )
-        res = Math.max(res, Math.abs(_z[i]));
-      return _glm.variance(_ymu) * res / (_nobs*Math.max(_alpha,1e-3));
-    }
-    @Override public void postGlobal(){
-      if(_val != null)_val.finalize_AIC_AUC();
+        if(res < _z[i])res = _z[i];
+        else if(res < -_z[i])res = -_z[i];
+      return _glm.variance(_ymu) * res / (_nobs * Math.max(_alpha,1e-3));
     }
   }
 
@@ -222,14 +224,14 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
    */
   public static class GLMIterationTask extends GLMTask<GLMIterationTask> {
     final double [] _beta;
-    Gram      _gram;
+    protected Gram      _gram;
     double [] _xy;
-    private double [] _grad;
+    protected double [] _grad;
     double    _yy;
     GLMValidation _val; // validation of previous model
     final double _ymu;
     protected final double _reg;
-    long _n;
+    long _nobs;
     final boolean _validate;
     final boolean _computeGradient;
     final boolean _computeGram;
@@ -245,8 +247,8 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       assert !_computeGradient || validate;
     }
 
-    @Override public final void processRow(long gid, final double [] nums, final int ncats, final int [] cats, double [] responses){
-      ++_n;
+    @Override public void processRow(long gid, final double [] nums, final int ncats, final int [] cats, double [] responses){
+      ++_nobs;
       double y = responses[0];
       assert ((_glm.family != Family.gamma) || y > 0) : "illegal response column, y must be > 0  for family=Gamma.";
       assert ((_glm.family != Family.binomial) || (0 <= y && y <= 1)) : "illegal response column, y must be <0,1>  for family=Binomial. got " + y;
@@ -306,7 +308,6 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
 
     @Override protected void chunkDone(){
       if(_computeGram)_gram.mul(_reg);
-      if(_val != null)_val.regularize(_reg);
       for(int i = 0; i < _xy.length; ++i)
         _xy[i] *= _reg;
       if(_grad != null)
@@ -319,7 +320,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       Utils.add(_xy, git._xy);
       if(_computeGram)_gram.add(git._gram);
       _yy += git._yy;
-      _n += git._n;
+      _nobs += git._nobs;
       if(_validate) _val.add(git._val);
       if(_computeGradient) Utils.add(_grad,git._grad);
       super.reduce(git);

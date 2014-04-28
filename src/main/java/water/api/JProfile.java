@@ -75,6 +75,7 @@ public class JProfile extends Request {
                 && !nodes[i].profile._stacktraces[j].split("\n")[0].equals("java.lang.Object.wait(Native Method)")
                 && !nodes[i].profile._stacktraces[j].split("\n")[0].equals("java.lang.Thread.sleep(Native Method)")
                 && !nodes[i].profile._stacktraces[j].split("\n")[0].equals("java.lang.Thread.yield(Native Method)")
+                && !nodes[i].profile._stacktraces[j].split("\n")[0].equals("java.net.PlainSocketImpl.socketAccept(Native Method)")
                 )
           sorted.put(nodes[i].profile._counts[j], nodes[i].profile._stacktraces[j]);
       }

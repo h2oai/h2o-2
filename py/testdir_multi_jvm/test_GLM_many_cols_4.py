@@ -34,7 +34,6 @@ paramDict = {
     'lambda': [1.0E-5],
     'alpha': [1.0],
     'max_iter': [50],
-    'weight': [1.0],
     'thresholds': [0.5],
     'n_folds': [2],
     'beta_epsilon': [1.0E-4],

@@ -24,6 +24,9 @@ import hex.pca.PCA;
 import hex.pca.PCAModelView;
 import hex.pca.PCAProgressPage;
 import hex.pca.PCAScore;
+import hex.singlenoderf.SpeeDRF;
+import hex.singlenoderf.SpeeDRFModelView;
+import hex.singlenoderf.SpeeDRFProgressPage;
 import water.Boot;
 import water.H2O;
 import water.NanoHTTPD;
@@ -76,10 +79,13 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new ImportFiles2()),  "Import Files",           "Data");
     Request.addToNavbar(registerRequest(new Upload2()),       "Upload",                 "Data");
     Request.addToNavbar(registerRequest(new Parse2()),        "Parse",                  "Data");
-    Request.addToNavbar(registerRequest(new Inspect2()),      "Inspect",                "Data");
+    Request.addToNavbar(registerRequest(new Inspector()),     "Inspect",                "Data");
     Request.addToNavbar(registerRequest(new SummaryPage2()),  "Summary",                "Data");
     Request.addToNavbar(registerRequest(new QuantilesPage()), "Quantiles",              "Data");
     Request.addToNavbar(registerRequest(new StoreView()),     "View All",               "Data");
+    Request.addToNavbar(registerRequest(new ExportFiles()),   "Export Files",           "Data");
+    // Register Inspect2 just for viewing frames
+    registerRequest(new Inspect2());
 
     // Not supported for now
 //    Request.addToNavbar(registerRequest(new ExportS3()),    "Export S3",                  "Data");
@@ -106,6 +112,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new AUC()),         "AUC",                      "Score");
     Request.addToNavbar(registerRequest(new HitRatio()),    "HitRatio",                 "Score");
     Request.addToNavbar(registerRequest(new PCAScore()),    "PCAScore",                 "Score");
+    Request.addToNavbar(registerRequest(new Steam()),    "Multi-model Scoring (Beta)", "Score");
 
     // Admin
     Request.addToNavbar(registerRequest(new Jobs()),        "Jobs",                     "Admin");
@@ -133,12 +140,14 @@ public class RequestServer extends NanoHTTPD {
       registerRequest(new ReBalance());
       registerRequest(new FrameSplitPage());
       registerRequest(new GapStatistic());
+      registerRequest(new SpeeDRF());
     } else {
       Request.addToNavbar(registerRequest(new hex.LR2()),        "Linear Regression2",   "Beta");
       Request.addToNavbar(registerRequest(new ReBalance()),      "ReBalance",            "Beta");
       Request.addToNavbar(registerRequest(new FrameSplitPage()), "Split frame",          "Beta");
       Request.addToNavbar(registerRequest(new Console()),        "Console",              "Beta");
-      Request.addToNavbar(registerRequest(new GapStatistic()),   "Gap Statistic (Beta)", "Beta");
+      Request.addToNavbar(registerRequest(new GapStatistic()),   "Gap Statistic",        "Beta");
+      Request.addToNavbar(registerRequest(new SpeeDRF()),        "SpeeDRF",              "Beta");
 //      Request.addToNavbar(registerRequest(new ExportModel()),    "Export Model",         "Beta (FluidVecs!)");
 //      Request.addToNavbar(registerRequest(new ImportModel()),    "Import Model",         "Beta (FluidVecs!)");
     }
@@ -227,6 +236,8 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new RemoveAll());
     registerRequest(new RemoveAck());
     registerRequest(new SetColumnNames());
+    registerRequest(new SpeeDRFModelView());
+    registerRequest(new SpeeDRFProgressPage());
     registerRequest(new water.api.SetColumnNames2());     // Set colnames for FluidVec objects
     registerRequest(new LogAndEcho());
     registerRequest(new ToEnum());
@@ -256,6 +267,11 @@ public class RequestServer extends NanoHTTPD {
 //    registerRequest(new GLMValidationView());
     registerRequest(new LaunchJar());
     Request.initializeNavBar();
+
+    // Pure APIs, no HTML, to support The New World
+    registerRequest(new Models());
+    registerRequest(new Frames());
+    registerRequest(new ModelMetrics());
   }
 
   /**

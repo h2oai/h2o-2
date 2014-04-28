@@ -149,7 +149,6 @@ def do_h2o_glm(self, bucket, csvPathname, L, family='gaussian'):
     iteration = submodels['iteration']
 
     validation = submodels['validation']
-    avg_err = validation['avg_err']
     auc = validation['auc']
     aic = validation['aic']
     null_deviance = validation['null_deviance']
@@ -160,7 +159,6 @@ def do_h2o_glm(self, bucket, csvPathname, L, family='gaussian'):
     # did beta get shortened? the simple check confirms names/beta/norm_beta are same length
     print 'beta', beta
     print 'iteration', iteration
-    print 'avg_err', avg_err
     print 'auc', auc
 
 #*********************************************************************************

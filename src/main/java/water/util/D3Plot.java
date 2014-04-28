@@ -12,6 +12,8 @@ public class D3Plot {
   private String xaxislabel = "x axis";
   private String yaxislabel = "y axis";
   private String title = "Missing Title";
+  private boolean ordinal_interpolation = false;
+  private boolean hide_toggle = true;
 
   // default values are usually fine - might want to add a formatting method later
   private String link = "Toggle view of plot";
@@ -19,6 +21,18 @@ public class D3Plot {
   private int height = 400;
   private int padding = 40;
   private int font_size = 11;
+
+  public D3Plot(float[] x, float[] y, String xaxislabel, String yaxislabel, String title, boolean ordinal_interpolation, boolean hide_toggle) {
+    this.yaxislabel = yaxislabel;
+    this.xaxislabel = xaxislabel;
+    this.title = title;
+    this.x = x;
+    this.y = y;
+    this.link = "Toggle view of plot of " + title;
+    assert(x.length == y.length);
+    this.ordinal_interpolation = ordinal_interpolation;
+    this.hide_toggle = hide_toggle;
+  }
 
   public D3Plot(float[] x, float[] y, String xaxislabel, String yaxislabel, String title) {
     this.yaxislabel = yaxislabel;
@@ -34,11 +48,16 @@ public class D3Plot {
   public void generate(StringBuilder sb) {
     final String plot = title.replaceAll(" ", "");
     sb.append("<script type=\"text/javascript\" src='/h2o/js/d3.v3.min.js'></script>");
-    sb.append("<span style='display: inline-block;'>");
-    //sb.append("<div class=\"pull-left\">");
-    sb.append("<a href=\"#\" onclick=\'$(\"#" + "plot" + plot
-            + "\").toggleClass(\"hide\");\' class=\'btn btn-inverse btn-mini\'>" + link + "</a></div>");
+    sb.append("<div>");
+    sb.append("<script>\n");
+    sb.append("$(document).on(\"click\", \"#pl" + plot + "\", function() { $(\"#plot" + plot + "\").toggleClass(\"hide\");});\n");
+    sb.append("</script>\n");
+    if (hide_toggle) {
+    sb.append("<button class = 'btn btn-inverse btn-mini' id = \"pl" + plot +"\">" + link + "</button>\n");
     sb.append("<div class=\"hide\" id=\"" + "plot" + plot + "\">");
+    } else {
+      sb.append("<div id=\"" + "plot" + plot + "\">");
+    }
     sb.append("<style type=\"text/css\">");
     sb.append(".axis path," +
             ".axis line {\n" +
@@ -81,6 +100,11 @@ public class D3Plot {
                     "var rScale = d3.scale.linear()"+
                     ".domain([0, d3.max(dataset, function(d) { return d[1]; })])\n"+
                     ".range([2, 5]);\n"+
+
+
+                    "var lineFunction = d3.svg.line().interpolate(\"ordinal\")\n"+
+                   ".x(function(d) {return xScale(d[0]); })\n"+
+                    ".y(function(d) { return yScale(d[1]); });\n"+
 
                     "//Define X axis\n"+
                     "var xAxis = d3.svg.axis()\n"+
@@ -172,10 +196,28 @@ public class D3Plot {
                     ".attr(\"y\",padding - 20)"+
                     ".attr(\"text-anchor\", \"middle\")"+
                     ".text(\"" + title + "\");\n");
+
+    if (ordinal_interpolation) {
+      sb.append("var linesGroup = svg.append(\"g\").attr(\"class\", \"line\");\n"+
+              "linesGroup.append(\"path\")\n"+
+              ".attr(\"d\", lineFunction(dataset))\n"+
+              ".attr(\"class\", \"lines\")\n"+
+              ".attr(\"fill\", \"none\")\n"+
+              ".attr(\"stroke\", function(d, i) {\n"+
+              "return linedata.color;\n"+
+              "});\n");
+    }
     sb.append("</script>");
     sb.append("</div>");
     sb.append("</script>");
     sb.append("</div>");
-    //sb.append("</div>");
+    sb.append("<style>");
+    sb.append(".line {\n" +
+            "          fill: none;\n" +
+            "          stroke: steelblue;\n" +
+            "          stroke-width: 1.5px;\n" +
+            "        }");
+    sb.append("</style>");
+    sb.append("</div>");
   }
 }

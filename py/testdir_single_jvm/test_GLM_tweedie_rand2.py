@@ -25,7 +25,6 @@ def define_params():
         # 'link': [None, 'familyDefault', 'logit','identity', 'log', 'inverse'],
         'link': [None, 'logit'],
         'max_iter': [None, 10],
-        'weight': [None, 1, 2, 4],
         'n_folds': [None, 0, 1, 2],
         'standardize': [None, 0, 1],
         }

@@ -1,0 +1,17 @@
+.y-frame-view
+  .clearfix
+    .y-tag Dataset
+    .y-tagline(data-bind='text:key')
+  h1.y-title(data-bind='text:title')
+  h2.y-subtitle(data-bind='collapse:false') Columns 
+    span(data-bind='text:columnCount')
+  .y-columns(data-bind='geyser:columns')
+  h2.y-subtitle(data-bind='collapse:false') Compatible Models 
+    span(data-bind='text:compatibleModelsCount')
+  div
+    .y-models(data-bind='geyser:compatibleModels')
+    .y-controls
+      button.btn(data-bind='click:loadCompatibleModels') View These Models&hellip;
+  h2.y-subtitle(data-bind='collapse:true') JSON
+  pre(data-bind='json:data')
+

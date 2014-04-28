@@ -7,8 +7,7 @@ import hex.pca.PCAModel;
 import hex.rf.RFModel;
 
 import java.io.InputStream;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.*;
 import java.util.*;
 
 import water.*;
@@ -22,6 +21,8 @@ import com.google.gson.JsonObject;
 
 public abstract class Request extends RequestBuilders {
   @Retention(RetentionPolicy.RUNTIME)
+  @Target({ElementType.FIELD, ElementType.METHOD})
+  @Documented
   public @interface API {
     String help();
     /** Must be specified. */
@@ -42,6 +43,7 @@ public abstract class Request extends RequestBuilders {
     String displayName() default "";
     boolean gridable() default true;
     Class<? extends Validator> validator() default NOPValidator.class;
+    ParamImportance importance() default ParamImportance.UNIMPORTANT;
   }
 
   public interface Validator<V> extends Freezable {
@@ -54,7 +56,7 @@ public abstract class Request extends RequestBuilders {
     }
   }
 
-  public interface Filter {
+  public static interface Filter {
     boolean run(Object value);
   }
 
@@ -109,6 +111,7 @@ public abstract class Request extends RequestBuilders {
     switch( type ) {
       case help:
         return wrap(server, HTMLHelp());
+      case xml:
       case json:
       case www:
         return serveGrid(server, parms, type);
@@ -147,10 +150,25 @@ public abstract class Request extends RequestBuilders {
     // for transition between v1 and v2 API
     if (this instanceof Request2) ((Request2) this).fillResponseInfo(response);
     if (this instanceof Parse2)   ((Parse2)   this).fillResponseInfo(response); // FIXME: Parser2 should inherit from Request2
-    if( type == RequestType.json )
+    if( type == RequestType.json ) {
       return response._req == null ? //
-            wrap(server, response.toJson()) : //
-            wrap(server, new String(response._req.writeJSON(new AutoBuffer()).buf()), RequestType.json);
+              wrap(server, response.toJson()) : //
+              wrap(server, new String(response._req.writeJSON(new AutoBuffer()).buf()), RequestType.json);
+    }
+    else if (type == RequestType.xml) {
+      if (response._req == null) {
+        String xmlString = response.toXml();
+        NanoHTTPD.Response r = wrap(server, xmlString, RequestType.xml);
+        return r;
+      }
+      else {
+        String jsonString = new String(response._req.writeJSON(new AutoBuffer()).buf());
+        org.json.JSONObject jo2 = new org.json.JSONObject(jsonString);
+        String xmlString = org.json.XML.toString(jo2);
+        NanoHTTPD.Response r = wrap(server, xmlString, RequestType.xml);
+        return r;
+      }
+    }
     return wrap(server, build(response));
   }
 
@@ -165,6 +183,8 @@ public abstract class Request extends RequestBuilders {
   }
 
   protected NanoHTTPD.Response wrap(NanoHTTPD server, String value, RequestType type) {
+    if( type == RequestType.xml )
+      return server.new Response(NanoHTTPD.HTTP_OK, NanoHTTPD.MIME_XML, value);
     if( type == RequestType.json )
       return server.new Response(NanoHTTPD.HTTP_OK, NanoHTTPD.MIME_JSON, value);
     if (type == RequestType.java)

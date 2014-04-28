@@ -1,5 +1,4 @@
-
-
+.._Rpdf:
 
 R Package Documentation
 =======================

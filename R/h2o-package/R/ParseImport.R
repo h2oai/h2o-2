@@ -22,7 +22,23 @@ h2o.clusterInfo <- function(client) {
   if(missing(client) || class(client) != "H2OClient") stop("client must be a H2OClient object")
   myURL = paste("http://", client@ip, ":", client@port, "/", .h2o.__PAGE_CLOUD, sep = "")
   if(!url.exists(myURL)) stop("Cannot connect to H2O instance at ", myURL)
-  res = fromJSON(postForm(myURL, style = "POST"))
+
+  res = NULL
+  {
+    res = fromJSON(postForm(myURL, style = "POST"))
+
+    nodeInfo = res$nodes
+    numCPU = sum(sapply(nodeInfo,function(x) as.numeric(x['num_cpus'])))
+
+    if (numCPU == 0) {
+      # If the cloud hasn't been up for a few seconds yet, then query again.
+      # Sometimes the heartbeat info with cores and memory hasn't had a chance
+      # to post it's information yet.
+      threeSeconds = 3
+      Sys.sleep(threeSeconds)
+      res = fromJSON(postForm(myURL, style = "POST"))
+    }
+  }
   
   nodeInfo = res$nodes
   maxMem = sum(sapply(nodeInfo,function(x) as.numeric(x['max_mem_bytes']))) / (1024 * 1024 * 1024)
@@ -374,6 +390,20 @@ h2o.parseRaw.FV <- function(data, key = "", header, sep = "", col.names) {
 }
       
 #-------------------------------- Miscellaneous -----------------------------------#
+h2o.exportFile <- function(data, path, force = FALSE) {
+    canHandle = FALSE
+    if (class(data) == "H2OParsedData") { canHandle = TRUE }
+    if (class(data) == "H2OParsedDataVA") { canHandle = TRUE }
+    if (! canHandle) {
+        stop("h2o.exportFile only works on H2OParsedData or H2OParsedDataVA frames")
+    }
+    if(!is.character(path)) stop("path must be of class character")
+    if(nchar(path) == 0) stop("path must be a non-empty string")
+    if(!is.logical(force)) stop("force must be of class logical")
+    
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_EXPORTFILES, src_key = data@key, path = path, force = as.numeric(force))
+}
+
 h2o.exportHDFS <- function(object, path) {
   if(inherits(object, "H2OModelVA")) stop("h2o.exportHDFS does not work under ValueArray")
   else if(!inherits(object, "H2OModel")) stop("object must be an H2O model")

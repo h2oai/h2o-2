@@ -18,7 +18,7 @@ class Test:
     Each file represents a phase of the test.
     In addition to these R files, there is a config file.
     """
-    def __init__(self, cfg, test_dir, test_short_dir, output_dir, parse_file, model_file, predict_file, perfdb):
+    def __init__(self, cfg, test_dir, test_short_dir, output_dir, parse_file, model_file, predict_file, perfdb, prefix):
         self.ip = ""
         self.port = -1
         self.aws = False
@@ -39,7 +39,7 @@ class Test:
         self.model_file = model_file
         self.predict_file = predict_file
         self.test_run = ""
-        self.test_name = os.path.basename(test_dir)
+        self.test_name = prefix + "_" + os.path.basename(test_dir)
 
         self.test_is_complete = False
         self.test_cancelled = False

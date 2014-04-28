@@ -1,8 +1,10 @@
 package hex.glm;
 
 
+import hex.FrameTask;
 import water.H2O;
 import water.Iced;
+import water.MemoryManager;
 import water.api.DocGen;
 import water.api.Request.API;
 
@@ -45,6 +47,12 @@ public final class GLMParams extends Iced {
       default:
         throw new RuntimeException("unknown family Id " + this);
     }
+  }
+
+  public double [] nullModelBeta(FrameTask.DataInfo dinfo, double ymu){
+    double [] res = MemoryManager.malloc8d(dinfo.fullN()+1);
+    res[res.length-1] = link(ymu);
+    return res;
   }
 
   public final boolean canonical(){
@@ -194,5 +202,9 @@ public final class GLMParams extends Iced {
     if(mu < Double.MIN_NORMAL) mu = Double.MIN_NORMAL;
     return y * Math.log(y / mu);
   }
+
+ public Family getFamily() {
+   return family;
+ }
 
 }
