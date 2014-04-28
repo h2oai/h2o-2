@@ -1893,13 +1893,23 @@ class H2O(object):
         return rfView
 
     def set_column_names(self, timeoutSecs=300, print_params=False, **kwargs):
-        params_dict = {
-            'copy_from': None,
-            'target': None,
-        }
+        if beta_features:
+            params_dict = {
+                'copy_from': None,
+                'source': None,
+                'cols': None,
+                'comma_separated_list': None,
+            }
+        else:
+            params_dict = {
+                'copy_from': None,
+                'target': None,
+                'cols': None,
+                'comma_separated_list': None,
+            }
         # only lets these params thru
         check_params_update_kwargs(params_dict, kwargs, 'set_column_names', print_params)
-        a = self.__do_json_request('SetColumnNames.json', timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request('2/SetColumnNames2.json' if beta_features else 'SetColumnNames.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("\nset_column_names result:", dump_json(a))
         return a
 
