@@ -17,7 +17,7 @@ public class Data implements Iterable<Data.Row> {
     int _index;
     public String toString() {
       StringBuilder sb = new StringBuilder();
-      sb.append(_index).append(" ["+classOf()+"]:");
+      sb.append(_index).append(" [").append(classOf()).append("]:");
       for( int i = 0; i < _dapt.columns(); ++i ) sb.append(_dapt.hasBadValue(_index, i) ? "NA" : _dapt.getEncodedColumnValue(_index, i)).append(',');
       return sb.toString();
     }
@@ -43,12 +43,10 @@ public class Data implements Iterable<Data.Row> {
 
   protected int start()          { return 0;                   }
   protected int end()            { return _dapt._numRows;      }
-
   public final int    rows()           { return end() - start();     }
   public final int    columns()        { return _dapt.columns();     }
   public final int    classes()        { return _dapt.classes();     }
   public final long   seed()           { return _dapt.seed();        }
-  public final long   dataId()         { return _dapt.dataId();      }
   public final String colName(int i)   { return _dapt.columnName(i); }
   public final float  unmap(int col, int split) { return _dapt.unmap(col, split); }
   public final int    columnArity(int colIndex) { return _dapt.columnArity(colIndex); }
@@ -74,7 +72,7 @@ public class Data implements Iterable<Data.Row> {
     int l = start(), r = end() - 1;
     while (l <= r) {
       int permIdx = row._index = permutation[l];
-      boolean putToLeft = true;
+      boolean putToLeft;
       if (node.canDecideAbout(row)) { // are we splitting over existing value
         putToLeft = node.isIn(row);
       } else { // make a random choice about non
@@ -95,14 +93,14 @@ public class Data implements Iterable<Data.Row> {
 
   // Filter a column, with all valid data.  i.e., skip the invalid check
   private int filterVal(Tree.SplitNode node, int[] permutation, Statistic ls, Statistic rs) {
-    final int l =filterVal1(node,permutation,ls,rs);
+    final int l =filterVal1(node,permutation);
     filterVal3(permutation,ls,start(),l);
     filterVal3(permutation,rs,l,end());
     return l;
   }
 
   // Hand-inlining for performance... CNC
-  private int filterVal1(Tree.SplitNode node, int[] permutation, Statistic ls, Statistic rs) {
+  private int filterVal1(Tree.SplitNode node, int[] permutation) {
     int cidx = node._column;    // Decision column guiding the split
     DataAdapter.Col cs[] = _dapt._c;
     short bins[] = cs[cidx]._binned; // Bin#'s for each row
@@ -133,27 +131,26 @@ public class Data implements Iterable<Data.Row> {
 
     // Run this loop by-feature instead of by-row - so that the updates in the
     // inner loops do not need to start from loading the feature array.
-    for( int j=0; j<fs.length; j++ ) {
-      int f = fs[j];            // Feature column
-      if( f == -1) break;       // Short features.
+    for (int f : fs) {
+      if (f == -1) break;       // Short features.
       int cdsf[][] = cds[f];    // Histogram per-column (by value & class)
       short[] bins = cs[f]._binned; // null if byte col, otherwise bin#
 
-      if( bins != null ) {              // binned?
-        for( int i=lo; i<hi; i++ ) {    // Binned-loop
+      if (bins != null) {              // binned?
+        for (int i = lo; i < hi; i++) {    // Binned-loop
           int permIdx = permutation[i]; // Get the row
           int val = bins[permIdx];      // Bin-for-row
-          if( val == DataAdapter.BAD ) continue; // ignore bad rows
+          if (val == DataAdapter.BAD) continue; // ignore bad rows
           int cls = classs[permIdx];    // Class-for-row
-          if( cls == DataAdapter.BAD ) continue; // ignore rows with NA in response column
+          if (cls == DataAdapter.BAD) continue; // ignore rows with NA in response column
           cdsf[val][cls]++;             // Bump histogram
         }
 
       } else {                          // not binned?
         byte[] raw = cs[f]._rawB;       // Raw unbinned byte array
-        for( int i=lo; i<hi; i++ ) {    // not-binned loop
+        for (int i = lo; i < hi; i++) {    // not-binned loop
           int permIdx = permutation[i]; // Get the row
-          int val = (0xFF&raw[permIdx]);// raw byte value, has no bad rows
+          int val = (0xFF & raw[permIdx]);// raw byte value, has no bad rows
           int cls = classs[permIdx];    // Class-for-row
           cdsf[val][cls]++;             // Bump histogram
         }
@@ -181,24 +178,23 @@ public class Data implements Iterable<Data.Row> {
 
   public Data sampleWithReplacement(double bagSizePct, short[] complement) {
     // Make sure that values come in order
-    short[] in = complement;
     int size = (int)(rows() * bagSizePct);
     /* NOTE: Before changing used generator think about which kind of random generator you need:
      * if always deterministic or non-deterministic version - see hex.speedrf.Utils.get{Deter}RNG */
     Random r = Utils.getRNG(seed());
     for( int i = 0; i < size; ++i)
-      in[permute(r.nextInt(rows()))]++;
+      complement[permute(r.nextInt(rows()))]++;
     int[] sample = MemoryManager.malloc4(size);
     for( int i = 0, j = 0; i < sample.length;) {
-      while(in[j]==0) j++;
-      for (int k = 0; k < in[j]; k++) sample[i++] = j;
+      while(complement[j]==0) j++;
+      for (int k = 0; k < complement[j]; k++) sample[i++] = j;
       j++;
     }
     return new Subset(this, sample, 0, sample.length);
   }
 
   public Data complement(Data parent, short[] complement) { throw new RuntimeException("Only for subsets."); }
-  @Override public Data clone() { return this; }
+  @Override public Data clone() throws CloneNotSupportedException { return this; }
   protected int permute(int idx) { return idx; }
   protected int[] getPermutationArray() {
     int[] perm = MemoryManager.malloc4(rows());
@@ -225,8 +221,6 @@ public class Data implements Iterable<Data.Row> {
       res.max = max;
       return res;
     }
-    int min() { return min; }
-    int max() { return max; }
 
     public String toString() { return  col +  "["+ min +","+ max + "]"; }
   }
@@ -242,7 +236,7 @@ class Subset extends Data {
   @Override protected int permute(int idx)        { return _permutation[idx]; }
   @Override protected int start()                 { return _start;            }
   @Override protected int end()                   { return _end;              }
-  @Override public Subset clone()                 { return new Subset(this,_permutation.clone(),_start,_end); }
+  @Override public Subset clone() throws CloneNotSupportedException { return new Subset(this,_permutation.clone(),_start,_end); }
 
   /** Creates new subset of the given data adapter. The permutation is an array
    * of original row indices of the DataAdapter object that will be used.  */
@@ -255,7 +249,7 @@ class Subset extends Data {
 
   @Override public Data complement(Data parent, short[] complement) {
     int size= 0;
-    for(int i=0;i<complement.length; i++) if (complement[i]==0) size++;
+    for (short aComplement : complement) if (aComplement == 0) size++;
     int[] p = MemoryManager.malloc4(size);
     int pos = 0;
     for(int i=0;i<complement.length; i++) if (complement[i]==0) p[pos++] = i;

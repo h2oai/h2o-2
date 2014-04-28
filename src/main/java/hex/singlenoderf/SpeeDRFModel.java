@@ -14,114 +14,50 @@ import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Counter;
+import water.util.ModelUtils;
 
 import java.util.Arrays;
 import java.util.Random;
 
+import static water.util.Utils.div;
+import static water.util.Utils.sum;
+
 
 public class SpeeDRFModel extends Model implements Job.Progress {
+  static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
+  static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-  @API(help = "Number of features these trees are built for.")
-  int features;
+  @API(help = "Number of features these trees are built for.") int features;
+  @API(help = "Sampling strategy used for model") Sampling.Strategy sampling_strategy;
+  @API(help = " Sampling rate used when building trees.") float sample;
+  @API(help = "Strata sampling rate used for local-node strata-sampling") float[] strata_samples;
+  @API(help = "Number of split features defined by user.") int mtry;
+  @API(help = " Number of computed split features per node.") int[] node_split_features;
+  @API(help = "Number of keys the model expects to be built for it.") int total_trees;
+  @API(help = "Max depth to grow trees to") int depth;
+  /* @API(help = "All the trees in the model.") */ Key[] t_keys;
+  /* @API(help = "Local forests produced by nodes.") */ Key[][] local_forests;
+  @API(help = "Total time in seconds to produce the model.") long time;
+  @API(help = "Frame being operated on.") Frame fr;
+  @API(help = "Response Vector.") Vec response;
+  @API(help = "Class weights.") double[] weights;
+  @API(help = "bin limit") int bin_limit;
+ /*  @API(help = "Raw tree data. for faster classification passes.") */ transient byte[][] trees;
+ /* @API(help = "Job key") */ Key jobKey;
+  @API(help = "") Key dest_key;
+  /* @API(help = "Current model status") */ String current_status;
+  @API(help = "MSE by tree") float[] errs;
+  @API(help = "Statistic Type") Tree.StatType statType;
+  /* @API(help = "Adapted Validation Frame")*/ Frame test_frame;
+  /*@API(help = "Test Key") */ Key testKey;
+  @API(help = "Out of bag error estimate.") boolean oobee;
+  /* @API(help = "Class column idx.") */ int classcol;
+  /*@API(help = "Data Key")*/ Key dataKey;
+  @API(help = "Seed") protected long zeed;
+  /* @API(help = "Final Confusion Matrix") */ CMTask.CMFinal confusion;
+  @API(help = "Conusion Matrix") long[][] cm;
 
-  @API(help = "Sampling strategy used for model")
-  Sampling.Strategy sampling_strategy;
-
-  @API(help = " Sampling rate used when building trees.")
-  float sample;
-
-  @API(help = "Strata sampling rate used for local-node strata-sampling")
-  float[] strata_samples;
-
-  @API(help = "Number of split features defined by user.")
-  int mtry;
-
-  @API(help = " Number of computed split features per node.")
-  int[] node_split_features;
-
-  @API(help = "Number of keys the model expects to be built for it.")
-  int total_trees;
-
-  @API(help = "Max depth to grow trees to")
-  int depth;
-
-  @API(help = "All the trees in the model.")
-  Key[]     t_keys;
-
-  @API(help = "Local forests produced by nodes.")
-  Key[][]   local_forests;
-
-  @API(help = "Total time in seconds to produce the model.")
-  long time;
-
-  @API(help = "Frame being operated on.")
-  Frame fr;
-
-  @API(help = "Response Vector.")
-  Vec response;
-
-  @API(help = "Class weights.")
-  double[] weights;
-
-  @API(help = "bin limit")
-  int bin_limit;
-
-  @API(help = "Raw tree data. for faster classification passes.")
-  transient byte[][] trees;
-
-  @API(help = "Job key")
-  Key jobKey;
-
-  @API(help = "")
-  Key dest_key;
-
-  @API(help = "")
-  String current_status;
-
-  @API(help = "MSE by tree")
-  float[] errs;
-
-  @API(help = "Statistic Type")
-  Tree.StatType statType;
-
-  @API(help = "Adapted Validation Frame")
-  Frame test_frame;
-
-  @API(help = "Test Key")
-  Key testKey;
-
-//  @API(help = "No CM")
-//  boolean _noCM;
-//
-//  @API(help = "Iterative CM")
-//  boolean iterative_cm;
-
-
-  @API(help = "Out of bag error estimate.")
-  boolean oobee;
-
-  @API(help = "Class column idx.")
-  int classcol;
-
-  @API(help = "Data Key")
-  Key dataKey;
-
-  @API(help = "")
-  boolean p;
-
-  @API(help = "")
-  long zeed;
-
-  @API(help = "")
-  CMTask.CMFinal confusion;
-
-  @API(help = "")
-  CMTask.CMFinal[] cms;
-
-  public static final String KEY_PREFIX = "__RFModel_";
   public static final String JSON_CONFUSION_KEY   = "confusion_key";
-//  public static final String JSON_CLEAR_CM        = "clear_confusion_matrix";
-//  public static final String JSON_REFRESH_THRESHOLD_CM = "refresh_threshold_cm";
 
   public static final String JSON_CM_TYPE         = "type";
   public static final String JSON_CM_HEADER       = "header";
@@ -131,7 +67,6 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   public static final String JSON_CM_ROWS         = "rows";
   public static final String JSON_CM_ROWS_SKIPPED = "rows_skipped";
   public static final String JSON_CM_CLASSES_ERRORS = "classes_errors";
-
 
   public SpeeDRFModel(Key selfKey, Key jobKey, Key dataKey, Frame fr, Vec response, Key[] t_keys, long zeed) {
     super(selfKey, dataKey, fr);
@@ -149,7 +84,6 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     this.classcol = fr.find(response);
     this.dataKey = dataKey;
     this.current_status = "Initializing Model";
-    this.p = false;
     this.confusion = null;
     this.zeed = zeed;
     this.errs = new float[t_keys.length];
@@ -162,10 +96,6 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   public int treeCount() { return t_keys.length; }
   public int size()      { return t_keys.length; }
   public int classes()   { return (int)(response.max() - response.min() + 1); }
-
-  public static Key makeKey() {
-    return Key.make(KEY_PREFIX + Key.make());
-  }
 
   static public SpeeDRFModel make(SpeeDRFModel old, Key tkey, int nodeIdx) {
     boolean cm_update = false;
@@ -180,14 +110,16 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     if (m.t_keys.length == 1) {
       cm_update = true;
       CMTask cmTask = new CMTask(m, m.size(), m.weights, m.oobee);
-      cmTask.doAll(m.test_frame == null ? m.fr : m.test_frame);
+      cmTask.doAll(m.test_frame == null ? m.fr : m.test_frame, true);
       m.confusion = CMTask.CMFinal.make(cmTask._matrix, m, cmTask.domain(), cmTask._errorsPerTree, m.oobee, cmTask._sum);
+      m.cm = cmTask._matrix._matrix;
     }
     if (f == 1.0) {
       cm_update = true;
       CMTask cmTask = new CMTask(m, m.size(), m.weights, m.oobee);
-      cmTask.doAll(m.test_frame == null ? m.fr : m.test_frame);
+      cmTask.doAll(m.test_frame == null ? m.fr : m.test_frame, true);
       m.confusion = CMTask.CMFinal.make(cmTask._matrix, m, cmTask.domain(), cmTask._errorsPerTree, m.oobee, cmTask._sum);
+      m.cm = cmTask._matrix._matrix;
     }
     if (!cm_update) {
       m.errs = Arrays.copyOf(old.errs, old.errs.length+1);
@@ -302,9 +234,15 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   protected float[] score0(double[] data, float[] preds) {
     int numClasses = classes();
     int votes[] = new int[numClasses + 1/* +1 to catch broken rows */];
+    preds = new float[numClasses + 1];
     for( int i = 0; i < treeCount(); i++ )
       votes[(int) Tree.classify(new AutoBuffer(tree(i)), data, numClasses)]++;
-    return new float[]{(float) (classify(votes, null, null) + get_response().min())};
+
+    float s = sum(votes);
+    for (int i = 0; i < votes.length; ++i) preds[i] = (float)votes[i];
+    if (s>0) div(preds, s); // unify over all classes
+    preds[0] = (float) (classify(votes, null, null) + get_response().min());
+    return preds;
   }
 
   @Override
@@ -345,9 +283,6 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       }
     }
 
-//    double[] weights = this.weights;
-    // Finish refresh after rf model is done and confusion matrix for all trees is computed
-
     //build cm
     buildCM(sb);
     sb.append("<br />");
@@ -361,7 +296,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       sb.append("</tr>");
       sb.append("<tr><th class='warning'>MSE</th>");
       for( int i=last; i>=0; i-- )
-        sb.append( (!(Double.isNaN(errs[i]) || errs[i] <= 0.f)) ? String.format("<td style='min-width:60px'>%5.3f</td>",errs[i]) : "<td style='min-width:60px'>---</td>");
+        sb.append( (!(Double.isNaN(errs[i]) || errs[i] <= 0.f)) ? String.format("<td style='min-width:60px'>%5.5f</td>",errs[i]) : "<td style='min-width:60px'>---</td>");
       sb.append("</tr>");
       DocGen.HTML.arrayTail(sb);
     }
@@ -374,7 +309,6 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     }
     generateHTMLTreeStats(sb, trees);
   }
-
 
   static final String NA = "---";
   protected void generateHTMLTreeStats(StringBuilder sb, JsonObject trees) {
@@ -448,13 +382,13 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
       DocGen.HTML.section(sb, "Confusion Matrix:");
       if (testKey != null)
-        sb.append("<div class=\"alert\">Reported on ").append("testing").append(" data</div>");
+        sb.append("<div class=\"alert\">Reported on ").append(Inspect2.link(testKey.toString(), testKey));
       else
         sb.append("<div class=\"alert\">Reported on ").append(cm.get(JSON_CM_TYPE).getAsString()).append(" data</div>");
 
       if (cm.has(JSON_CM_MATRIX)) {
         sb.append("<dl class='dl-horizontal'>");
-        sb.append("<dt>classification error</dt><dd>").append(String.format("%5.3f %%", 100*cm.get(JSON_CM_CLASS_ERR).getAsFloat())).append("</dd>");
+        sb.append("<dt>classification error</dt><dd>").append(String.format("%5.5f %%", 100*cm.get(JSON_CM_CLASS_ERR).getAsFloat())).append("</dd>");
         long rows = cm.get(JSON_CM_ROWS).getAsLong();
         long skippedRows = cm.get(JSON_CM_ROWS_SKIPPED).getAsLong();
         sb.append("<dt>used / skipped rows </dt><dd>").append(String.format("%d / %d (%3.1f %%)", rows, skippedRows, (double)skippedRows*100/(skippedRows+rows))).append("</dd>");
@@ -490,7 +424,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
             sb.append("</td>");
           }
           sb.append("<td>");
-          sb.append(String.format("%5.3f = %d / %d", (double)error/total, error, total));
+          sb.append(String.format("%5.5f = %d / %d", (double)error/total, error, total));
           sb.append("</td></tr>");
           sumTotal += total;
           sumError += error;
@@ -498,7 +432,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
         sb.append("<tr><th>Totals</th>");
         for (long total : totals) sb.append("<td>").append(total).append("</td>");
         sb.append("<td><b>");
-        sb.append(String.format("%5.3f = %d / %d", (double)sumError/sumTotal, sumError, sumTotal));
+        sb.append(String.format("%5.5f = %d / %d", (double)sumError/sumTotal, sumError, sumTotal));
         sb.append("</b></td></tr>");
         sb.append("</table>");
       } else {

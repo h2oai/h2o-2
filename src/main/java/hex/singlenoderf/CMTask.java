@@ -34,8 +34,6 @@ public class CMTask extends MRTask2<CMTask> {
   public int[] _modelDataMap;
   public Frame _data;
   public int  _N;
-  public int _MODEL_N;
-  public int _DATA_N;
 
   /** Data to replay the sampling algorithm */
   private int[]     _chunk_row_mapping;
@@ -56,7 +54,7 @@ public class CMTask extends MRTask2<CMTask> {
   public CMTask(SpeeDRFModel model, int treesToUse, double[] classWt, boolean computeOOB ) {
     _modelKey   = model._key;
     _datakey    = model._dataKey;
-    _classcol   = model.fr.find(model.responseName());
+    _classcol   = model.test_frame == null ?  (model.fr.numCols() - 1) : (model.test_frame.numCols() - 1);
     _classWt    = classWt != null && classWt.length > 0 ? classWt : null;
     _treesUsed  = treesToUse;
     _computeOOB = computeOOB;
@@ -69,15 +67,17 @@ public class CMTask extends MRTask2<CMTask> {
     /* For reproducibility we can control the randomness in the computation of the
    confusion matrix. The default seed when deserializing is 42. */
 //    Random _rand = Utils.getRNG(0x92b5023f2cd40b7cL);
-//    _data   = UKV.get(_datakey);
-    _data = _model.fr;
+    _data = _model.test_frame == null ? _model.fr : _model.test_frame;
 
     _modelDataMap = _model.colMap(_model._names);
     assert !_computeOOB || _model._dataKey.equals(_datakey) : !_computeOOB + " || " + _model._dataKey + " equals " + _datakey ;
     Vec respModel = _model.get_response();
     Vec respData  = _data.vecs()[_classcol];
-    _DATA_N  = (int) (respData.max() - respData.min() + 1);
-    _MODEL_N = (int) (respModel.max() - respModel.min() + 1);
+    int model_max = (int)respModel.max();
+    int model_min = (int)respModel.min();
+    int data_max = (int)respData.max();
+    int data_min = (int)respData.min();
+
     if (respModel._domain!=null) {
       assert respData._domain != null;
       _model_classes_mapping = new int[respModel._domain.length];
@@ -89,9 +89,9 @@ public class CMTask extends MRTask2<CMTask> {
       _model_classes_mapping = null;
       _data_classes_mapping  = null;
       // compute mapping
-      _cmin_model_mapping = (int) (respModel.min() - Math.min(respModel.min(), respData.min()) );
-      _cmin_data_mapping  = (int) (respData.min()  - Math.min(respModel.min(), respData.min()) );
-      _N = (int) (Math.max(respModel.max(), respData.max()) - Math.min(respModel.min(), respData.min()) + 1);
+      _cmin_model_mapping = model_min - Math.min(model_min, data_min);
+      _cmin_data_mapping  = data_min  - Math.min(model_min, data_min);
+      _N = Math.max(model_max, data_max) - Math.min(model_min, data_min) + 1;
     }
     assert _N > 0; // You know...it is good to be sure
     init();
@@ -136,6 +136,7 @@ public class CMTask extends MRTask2<CMTask> {
     int[][] localVotes = _computeOOB ? new int[rows][_N] : null;
     // Errors per tree
     _errorsPerTree = new long[_model.treeCount()];
+    float sum = 0.f;
     // Replay the Data.java's "sample_fair" sampling algorithm to exclude data
     // we trained on during voting.
     for( int ntree = 0; ntree < _model.treeCount(); ntree++ ) {
@@ -188,6 +189,20 @@ public class CMTask extends MRTask2<CMTask> {
         int alignedData       = alignDataIdx((int) _data.vecs()[_classcol].at8(row) - cmin);
         if (alignedPrediction != alignedData) _errorsPerTree[ntree]++;
         votes[r][alignedPrediction]++; // Vote the row
+        for (int v : votes[r])
+          sum += (float)v;
+
+        float[] fs = new float[votes[r].length];
+        for (int i = 0; i < fs.length; ++i) {
+          fs[i] = sum == 0 ? 0 : (float)votes[r][i] / sum;
+        }
+        float err = 0.f;
+        if(sum == 0) {
+          err = 1.0f-1.0f/_N;
+        } else {
+          err = fs[alignedData] == 0 ? 0.f : 1.0f-fs[alignedData]/sum;
+        }
+        _sum += (1-err)*(1-err);
         actual[r] = alignedData;
         pred[r]   = alignedPrediction;
         if (isLocalTree) localVotes[r][alignedPrediction]++; // Vote
@@ -195,31 +210,11 @@ public class CMTask extends MRTask2<CMTask> {
     }
     // Assemble the votes-per-class into predictions & score each row
     _matrix = computeCM(votes, chks); // Make a confusion matrix for this chunk
-    _sum = brierScore(votes, actual, pred);
+    _sum /= _model.treeCount();
     if (localVotes!=null) {
       _localMatrices = new CM[H2O.CLOUD.size()];
       _localMatrices[H2O.SELF.index()] = computeCM(localVotes, chks);
     }
-  }
-
-  private float brierScore(int[][] votes, int[] actual, int[] pred) {
-    float sum = 0.f;
-    for (int r = 0; r < votes[0].length; ++r) {
-      int v_sum = 0;
-      for (int v : votes[r])
-        v_sum += v;
-      for (int v : votes[r]) {
-        float s;
-        if (v_sum == 0) {
-          s = 1.f / _N;
-          s -= (actual[r] == pred[r] ? 1.f : 0.f);
-        } else {
-          s = ((float) v / (float) v_sum) - (actual[r] == pred[r] ? 1.f : 0.f);
-        }
-        sum += s*s;
-      }
-    }
-    return sum;
   }
 
   /** Returns true if tree was produced by this node.
@@ -420,7 +415,10 @@ public class CMTask extends MRTask2<CMTask> {
       _sum = 0.f;
     }
     private CMFinal(CM cm, Key SpeeDRFModelKey, String[] domain, long[] errorsPerTree, boolean computedOOB, boolean valid, float sum) {
-      _matrix = cm._matrix; _errors = cm._errors; _rows = cm._rows; _skippedRows = cm._skippedRows;
+      _matrix = cm._matrix;
+      _errors = cm._errors;
+      _rows = cm._rows;
+      _skippedRows = cm._skippedRows;
       _SpeeDRFModelKey    = SpeeDRFModelKey;
       _domain        = domain;
       _errorsPerTree = errorsPerTree;
@@ -473,15 +471,6 @@ public class CMTask extends MRTask2<CMTask> {
       sb.append(_rows).append(',');
       sb.append(err).append(',');
     }
-
-//    public static void updateDKV(final Key key, final CMFinal cm) {
-//      new TAtomic<CMFinal>() {
-//        @Override public CMFinal atomic(CMFinal old) {
-//          if(old == null) return null;
-//          return cm;
-//        }
-//      }.invoke(key);
-//    }
   }
 
   /** Produce confusion matrix from given votes. */

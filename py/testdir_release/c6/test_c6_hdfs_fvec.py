@@ -34,7 +34,8 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             "hhp.unbalanced.012.1x11.data.gz",
             "hhp.unbalanced.012.data.gz",
             "hhp.unbalanced.data.gz",
-            "hhp2.os.noisy.0_1.data",
+            # has duplicated col name
+            # "hhp2.os.noisy.0_1.data",
             "hhp2.os.noisy.9_4.data",
             "hhp_9_14_12.data",
             "leads.csv",

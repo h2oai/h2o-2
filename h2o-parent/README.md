@@ -23,5 +23,30 @@ TODO
 For more details please check the page: https://docs.sonatype.org/display/Repository/Sonatype+OSS+Maven+Repository+Usage+Guide.
 
 ==== Making snapshot ====
+Put your Sonatype credentials into .m2/setting.xml file:
+```
+<servers>
+   <server>
+      <id>sonatype-nexus-snapshots</id>
+      <username>your-jira-id</username>
+      <password>your-jira-pwd</password>
+    </server>
+    <server>
+      <id>sonatype-nexus-staging</id>
+      <username>your-jira-id</username>
+      <password>your-jira-pwd</password>
+    </server>
+  </servers>
+
+```
+
+Invoke deploy command:
+```
+mvn clean deploy
+```
 
 ==== Making release ====
+
+```
+mvn clean release
+```

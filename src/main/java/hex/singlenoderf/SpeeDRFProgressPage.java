@@ -6,7 +6,6 @@ import water.Key;
 import water.Value;
 import water.api.Progress2;
 import water.api.Request;
-import water.api.RequestBuilders;
 
 public class SpeeDRFProgressPage extends Progress2 {
   /** Return {@link water.api.RequestBuilders.Response} for finished job. */

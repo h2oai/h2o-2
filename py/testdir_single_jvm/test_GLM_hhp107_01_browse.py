@@ -10,7 +10,6 @@ argcaseList = [
         'family': 'gaussian',
         'lambda': 1.0E-5,
         'max_iter': 50,
-        'weight': 1.0,
         'thresholds': 0.5,
         'link': 'familyDefault',
         'n_folds': 0,

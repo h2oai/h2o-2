@@ -563,15 +563,21 @@ public class Frame extends Lockable<Frame> {
 
   // Return the entire Frame as a CSV stream
   public InputStream toCSV(boolean headers) {
-    return new CSVStream(headers);
+    return new CSVStream(headers, false);
+  }
+
+  public InputStream toCSV(boolean headers, boolean hex_string) {
+    return new CSVStream(headers, hex_string);
   }
 
   private class CSVStream extends InputStream {
+    private final boolean _hex_string;
     byte[] _line;
     int _position;
     long _row;
 
-    CSVStream(boolean headers) {
+    CSVStream(boolean headers, boolean hex_string) {
+      _hex_string = hex_string;
       StringBuilder sb = new StringBuilder();
       Vec vs[] = vecs();
       if( headers ) {
@@ -594,7 +600,33 @@ public class Frame extends Lockable<Frame> {
           if(!vs[i].isNA(_row)) {
             if(vs[i].isEnum()) sb.append('"' + vs[i]._domain[(int) vs[i].at8(_row)] + '"');
             else if(vs[i].isInt()) sb.append(vs[i].at8(_row));
-            else sb.append(vs[i].at(_row));
+            else {
+              // R 3.1 unfortunately changed the behavior of read.csv().
+              // (Really type.convert()).
+              //
+              // Numeric values with too much precision now trigger a type conversion in R 3.1 into a factor.
+              //
+              // See these discussions:
+              //   https://bugs.r-project.org/bugzilla/show_bug.cgi?id=15751
+              //   https://stat.ethz.ch/pipermail/r-devel/2014-April/068778.html
+              //   http://stackoverflow.com/questions/23072988/preserve-old-pre-3-1-0-type-convert-behavior
+
+              double d = vs[i].at(_row);
+
+              String s;
+              if (_hex_string) {
+                // Used by R's as.data.frame().
+                s = Double.toHexString(d);
+              }
+              else {
+                // To emit CSV files that can be read by R 3.1, limit the number of significant digits.
+                // s = String.format("%.15g", d);
+
+                s = Double.toString(d);
+              }
+
+              sb.append(s);
+            }
           }
         }
         sb.append('\n');

@@ -54,7 +54,7 @@ public class DABuilder {
       for(int i = 0; i < keys.length; ++i) {
         if (keys[i].home()) return i;
       }
-      throw new Error("No key on this node");
+      return -99999; //throw new Error("No key on this node");
     }
 
     private static int find(String n, String[] names) {
@@ -74,11 +74,17 @@ public class DABuilder {
 
     /** Build data adapter for given frame */
     protected DataAdapter inhaleData(Frame fr) {
+      long id = getChunkId(fr);
+      if (id == -99999) {
+        return null;
+      }
       Timer t_inhale = new Timer();
       SpeeDRFModel rfmodel = _rfmodel;
       boolean[] _isByteCol = new boolean[fr.numCols()];
+      long[] _naCnts = new long[fr.numCols()];
       for (int i = 0; i < _isByteCol.length; ++i) {
         _isByteCol[i] = DataAdapter.isByteCol(fr.vecs()[i], (int)fr.numRows(), i == _isByteCol.length - 1);
+        _naCnts[i] = fr.vecs()[i].naCnt();
       }
       // The model columns are dense packed - but there will be columns in the
       // data being ignored.  This is a map from the model's columns to the
@@ -97,7 +103,7 @@ public class DABuilder {
       // Collects jobs loading local chunks
       ArrayList<RecursiveAction> dataInhaleJobs = new ArrayList<RecursiveAction>();
       for(int i = 0; i < fr.anyVec().nChunks(); ++i) {
-        dataInhaleJobs.add(loadChunkAction(dapt, fr, i, _isByteCol));
+        dataInhaleJobs.add(loadChunkAction(dapt, fr, i, _isByteCol, _naCnts));
       }
       _rfmodel.current_status = "Inhaling Data";
       _rfmodel.update(_rfmodel.jobKey);
@@ -109,7 +115,7 @@ public class DABuilder {
       return dapt;
     }
 
-    static RecursiveAction loadChunkAction(final DataAdapter dapt, final Frame fr, final int cidx, final boolean[] isByteCol) {
+    static RecursiveAction loadChunkAction(final DataAdapter dapt, final Frame fr, final int cidx, final boolean[] isByteCol, final long[] naCnts) {
       return new RecursiveAction() {
         @Override protected void compute() {
           try {
@@ -121,9 +127,12 @@ public class DABuilder {
               boolean rowIsValid = false;
               for(int c = 0; c < chks.length; ++c) {
                 //final int col = modelDataMap[c];
-                if(chks[c].isNA0(j)) {
-                  if (c == ncolumns - 1) rowIsValid = false;
-                  dapt.addBad(rowNum, c); continue;
+                fr.vecs()[1].isBad();
+                if(naCnts[c] > 0) {
+                  if(chks[c].isNA0(j)) {
+                    if (c == ncolumns - 1) rowIsValid = false;
+                    dapt.addBad(rowNum, c); continue;
+                  }
                 }
                 if (isByteCol[c]) {
                   int val = (int)chks[c].at8(rowNum);

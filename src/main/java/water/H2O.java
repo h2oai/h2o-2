@@ -639,9 +639,11 @@ public final class H2O {
     public int _priority;
     FJWThr(ForkJoinPool pool) {
       super(pool);
-      setPriority( ((ForkJoinPool2)pool)._priority == Thread.MIN_PRIORITY
+      _priority = ((ForkJoinPool2)pool)._priority;
+      setPriority( _priority == Thread.MIN_PRIORITY
                    ? Thread.NORM_PRIORITY-1
                    : Thread. MAX_PRIORITY-1 );
+      setName("FJ-"+_priority+"-"+getPoolIndex());
     }
   }
   // Factory for F/J threads, with cap's that vary with priority.
@@ -656,9 +658,9 @@ public final class H2O {
 
   // A standard FJ Pool, with an expected priority level.
   private static class ForkJoinPool2 extends ForkJoinPool {
-    public final int _priority;
-    ForkJoinPool2(int p, int cap) { super(NUMCPUS,new FJWThrFact(cap),null,p<MIN_HI_PRIORITY); _priority = p; }
-    public H2OCountedCompleter poll() { return (H2OCountedCompleter)pollSubmission(); }
+    final int _priority;
+    private ForkJoinPool2(int p, int cap) { super(NUMCPUS,new FJWThrFact(cap),null,p<MIN_HI_PRIORITY); _priority = p; }
+    private H2OCountedCompleter poll2() { return (H2OCountedCompleter)pollSubmission(); }
   }
 
   // Hi-priority work, sorted into individual queues per-priority.
@@ -673,15 +675,15 @@ public final class H2O {
   }
 
   // Easy peeks at the FJ queues
-  public static int getWrkQueueSize  (int i) { return FJPS[i]==null ? -1 : FJPS[i].getQueuedSubmissionCount();}
-  public static int getWrkThrPoolSize(int i) { return FJPS[i]==null ? -1 : FJPS[i].getPoolSize();             }
+  static int getWrkQueueSize  (int i) { return FJPS[i]==null ? -1 : FJPS[i].getQueuedSubmissionCount();}
+  static int getWrkThrPoolSize(int i) { return FJPS[i]==null ? -1 : FJPS[i].getPoolSize();             }
 
   // Submit to the correct priority queue
   public static H2OCountedCompleter submitTask( H2OCountedCompleter task ) {
     int priority = task.priority();
     assert MIN_PRIORITY <= priority && priority <= MAX_PRIORITY:"priority " + priority + " is out of range, expected range is < " + MIN_PRIORITY + "," + MAX_PRIORITY + ">";
     if( FJPS[priority]==null )
-      synchronized( H2O.class ) { FJPS[priority] = new ForkJoinPool2(priority,-1); }
+      synchronized( H2O.class ) { if( FJPS[priority] == null ) FJPS[priority] = new ForkJoinPool2(priority,-1); }
     FJPS[priority].submit(task);
     return task;
   }
@@ -702,13 +704,14 @@ public final class H2O {
     @Override public final void compute() {
       FJWThr t = (FJWThr)Thread.currentThread();
       int pp = ((ForkJoinPool2)t.getPool())._priority;
-      assert  priority() == pp; // Job went to the correct queue?
-      assert t._priority <= pp; // Thread attempting the job is only a low-priority?
       // Drain the high priority queues before the normal F/J queue
+      H2OCountedCompleter h2o = null;
       try {
+        assert  priority() == pp; // Job went to the correct queue?
+        assert t._priority <= pp; // Thread attempting the job is only a low-priority?
         for( int p = MAX_PRIORITY; p > pp; p-- ) {
-          if( FJPS[p] == null ) break;
-          H2OCountedCompleter h2o = FJPS[p].poll();
+          if( FJPS[p] == null ) continue;
+          h2o = FJPS[p].poll2();
           if( h2o != null ) {     // Got a hi-priority job?
             t._priority = p;      // Set & do it now!
             Thread.currentThread().setPriority(Thread.MAX_PRIORITY-1);
@@ -716,6 +719,10 @@ public final class H2O {
             p++;                  // Check again the same queue
           }
         }
+      } catch( Throwable ex ) {
+        // If the higher priority job popped an exception, complete it
+        // exceptionally...  but then carry on and do the lower priority job.
+        if( h2o != null ) h2o.onExceptionalCompletion(ex, h2o.getCompleter());
       } finally {
         t._priority = pp;
         if( pp == MIN_PRIORITY ) Thread.currentThread().setPriority(Thread.NORM_PRIORITY-1);
@@ -725,7 +732,7 @@ public final class H2O {
     }
     // Do the actually intended work
     public abstract void compute2();
-    @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
+    @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
       if(!(ex instanceof JobCancelledException) && this.getCompleter() == null)
         ex.printStackTrace();
       return true;

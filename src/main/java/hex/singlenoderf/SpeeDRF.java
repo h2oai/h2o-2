@@ -22,7 +22,7 @@ public class SpeeDRF extends Job.ValidatedJob {
   public int mtry = -1;
 
   @API(help = "Max Depth", filter = Default.class, json = true, lmin = 0, lmax = Integer.MAX_VALUE)
-  public int max_depth = 20;
+  public int max_depth = 50;
 
   @API(help = "Split Criterion Type", filter = Default.class, json=true)
   public Tree.StatType stat_type = Tree.StatType.ENTROPY;
@@ -125,7 +125,8 @@ public class SpeeDRF extends Job.ValidatedJob {
       tsk._rfmodel = model;
       tsk._drf = this;
       tsk.validateInputData();
-      tsk.invokeOnAllNodes();
+
+      tsk.invokeOnAllNodes(); //this is bad when chunks aren't on each node!
     }
     catch(JobCancelledException ex) {
       Log.info("Random Forest building was cancelled.");
@@ -185,12 +186,14 @@ public class SpeeDRF extends Job.ValidatedJob {
       Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, false, false, false);
       Frame test = null;
       if (validation != null) {
-        test = FrameTask.DataInfo.prepareFrame(validation, response, ignored_cols, false, false, false);
+        test = FrameTask.DataInfo.prepareFrame(validation, validation.vecs()[source.find(response)], ignored_cols, false, false, false);
       }
       SpeeDRFModel model = new SpeeDRFModel(dest(), self(), source._key, train, response, new Key[0], seed);
       model.bin_limit = bin_limit;
       if (mtry == -1) {
         model.mtry = (int) Math.floor(Math.sqrt(source.numCols()));
+      } else {
+        model.mtry = mtry;
       }
       model.features = source.numCols();
       model.sampling_strategy = sampling_strategy;
@@ -204,6 +207,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       model.statType = stat_type;
       model.test_frame = test;
       model.testKey = validation == null ? null : validation._key;
+
       return model;
     }
     finally {
@@ -212,6 +216,7 @@ public class SpeeDRF extends Job.ValidatedJob {
   }
 
   public Frame score( Frame fr ) { return ((SpeeDRFModel)UKV.get(dest())).score(fr);  }
+
 
   public final static class DRFTask extends DRemoteTask {
     /** The RF Model.  Contains the dataset being worked on, the classification
@@ -227,11 +232,16 @@ public class SpeeDRF extends Job.ValidatedJob {
      * */
     @Override public final void lcompute() {
       final DataAdapter dapt = DABuilder.create(_drf, _rfmodel).build(_rfmodel.fr);
+      if (dapt == null) {
+        tryComplete();
+        return;
+      }
       Data localData        = Data.make(dapt);
       int numSplitFeatures  = howManySplitFeatures();
       int ntrees            = howManyTrees();
       int[] rowsPerChunks   = howManyRPC(_rfmodel.fr);
       updateRFModel(_rfmodel._key, numSplitFeatures);
+      updateRFModelStatus(_rfmodel._key, "Building Forest");
       SpeeDRF.build(_job, _params, localData, ntrees, numSplitFeatures, rowsPerChunks);
       tryComplete();
     }
@@ -243,6 +253,17 @@ public class SpeeDRF extends Job.ValidatedJob {
           if(old == null) return null;
           SpeeDRFModel newModel = (SpeeDRFModel)old.clone();
           newModel.node_split_features[idx] = numSplitFeatures;
+          return newModel;
+        }
+      }.invoke(modelKey);
+    }
+
+    static void updateRFModelStatus(Key modelKey, final String status) {
+      new TAtomic<SpeeDRFModel>() {
+        @Override public SpeeDRFModel atomic(SpeeDRFModel old) {
+          if(old == null) return null;
+          SpeeDRFModel newModel = (SpeeDRFModel)old.clone();
+          newModel.current_status = status;
           return newModel;
         }
       }.invoke(modelKey);

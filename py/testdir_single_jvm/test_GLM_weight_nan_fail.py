@@ -27,7 +27,6 @@ class Basic(unittest.TestCase):
         kwargs = {
             'case': 2, 
             'destination_key': 'GLM_model_python_0_default_0', 
-            'weight': 2, 
             'family': 'tweedie', 
             'tweedie_power': 1.9999999, 
             'max_iter': 10, 

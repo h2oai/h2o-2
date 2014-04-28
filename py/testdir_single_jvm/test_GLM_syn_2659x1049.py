@@ -6,7 +6,6 @@ params = {
     'y': 1049, 
     'family': 'binomial', 
     'link': 'familyDefault', 
-    'weight': 1.0, 
     'beta_epsilon': 0.0001, 
     'thresholds': 0.5, 
     'alpha': 1.0, 
