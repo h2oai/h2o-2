@@ -54,20 +54,18 @@ public class FrameUtils {
    * @param file  file to parse
    * @return a new frame
    */
-  public static Frame parseFrame(Key okey, File file, File...files) {
-    File[] filex = new File[1+files.length];
-    System.arraycopy(files, 0, filex, 1, files.length);
-    filex[0] = file;
-    for (File f : filex)
-      if (!file.exists())
+  public static Frame parseFrame(Key okey, File ...files) {
+    assert files.length > 0 : "Ups. No files to parse!";
+    for (File f : files)
+      if (!f.exists())
         throw new RuntimeException("File not found " + f);
     // Create output key if not specified
     if(okey == null)
-      okey = Key.make(file.getName());
+      okey = Key.make(files[0].getName());
 
-    Key[] fkeys = new Key[filex.length];
+    Key[] fkeys = new Key[files.length];
     int cnt = 0;
-    for (File f : filex) fkeys[cnt++] = NFSFileVec.make(f);
+    for (File f : files) fkeys[cnt++] = NFSFileVec.make(f);
     return ParseDataset2.parse(okey,fkeys);
   }
 
