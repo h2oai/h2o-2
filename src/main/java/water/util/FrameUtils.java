@@ -1,6 +1,9 @@
 package water.util;
 
 import java.io.File;
+import java.util.Arrays;
+
+import com.sun.tools.javac.code.Attribute.Array;
 
 import water.Futures;
 import water.Key;
@@ -51,13 +54,21 @@ public class FrameUtils {
    * @param file  file to parse
    * @return a new frame
    */
-  public static Frame parseFrame(Key okey, File file) {
-    if( !file.exists() )
-      throw new RuntimeException("File not found " + file);
+  public static Frame parseFrame(Key okey, File file, File...files) {
+    File[] filex = new File[1+files.length];
+    System.arraycopy(files, 0, filex, 1, files.length);
+    filex[0] = file;
+    for (File f : filex)
+      if (!file.exists())
+        throw new RuntimeException("File not found " + f);
+    // Create output key if not specified
     if(okey == null)
       okey = Key.make(file.getName());
-    Key fkey = NFSFileVec.make(file);
-    return ParseDataset2.parse(okey, new Key[] { fkey });
+
+    Key[] fkeys = new Key[filex.length];
+    int cnt = 0;
+    for (File f : filex) fkeys[cnt++] = NFSFileVec.make(f);
+    return ParseDataset2.parse(okey,fkeys);
   }
 
 
