@@ -14,9 +14,13 @@ import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Counter;
+import water.util.ModelUtils;
 
 import java.util.Arrays;
 import java.util.Random;
+
+import static water.util.Utils.div;
+import static water.util.Utils.sum;
 
 
 public class SpeeDRFModel extends Model implements Job.Progress {
@@ -106,14 +110,14 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     if (m.t_keys.length == 1) {
       cm_update = true;
       CMTask cmTask = new CMTask(m, m.size(), m.weights, m.oobee);
-      cmTask.doAll(m.test_frame == null ? m.fr : m.test_frame);
+      cmTask.doAll(m.test_frame == null ? m.fr : m.test_frame, true);
       m.confusion = CMTask.CMFinal.make(cmTask._matrix, m, cmTask.domain(), cmTask._errorsPerTree, m.oobee, cmTask._sum);
       m.cm = cmTask._matrix._matrix;
     }
     if (f == 1.0) {
       cm_update = true;
       CMTask cmTask = new CMTask(m, m.size(), m.weights, m.oobee);
-      cmTask.doAll(m.test_frame == null ? m.fr : m.test_frame);
+      cmTask.doAll(m.test_frame == null ? m.fr : m.test_frame, true);
       m.confusion = CMTask.CMFinal.make(cmTask._matrix, m, cmTask.domain(), cmTask._errorsPerTree, m.oobee, cmTask._sum);
       m.cm = cmTask._matrix._matrix;
     }
@@ -230,9 +234,15 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   protected float[] score0(double[] data, float[] preds) {
     int numClasses = classes();
     int votes[] = new int[numClasses + 1/* +1 to catch broken rows */];
+    preds = new float[numClasses + 1];
     for( int i = 0; i < treeCount(); i++ )
       votes[(int) Tree.classify(new AutoBuffer(tree(i)), data, numClasses)]++;
-    return new float[]{(float) (classify(votes, null, null) + get_response().min())};
+
+    float s = sum(votes);
+    for (int i = 0; i < votes.length; ++i) preds[i] = (float)votes[i];
+    if (s>0) div(preds, s); // unify over all classes
+    preds[0] = (float) (classify(votes, null, null) + get_response().min());
+    return preds;
   }
 
   @Override
@@ -378,7 +388,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
       if (cm.has(JSON_CM_MATRIX)) {
         sb.append("<dl class='dl-horizontal'>");
-        sb.append("<dt>classification error</dt><dd>").append(String.format("%5.3f %%", 100*cm.get(JSON_CM_CLASS_ERR).getAsFloat())).append("</dd>");
+        sb.append("<dt>classification error</dt><dd>").append(String.format("%5.5f %%", 100*cm.get(JSON_CM_CLASS_ERR).getAsFloat())).append("</dd>");
         long rows = cm.get(JSON_CM_ROWS).getAsLong();
         long skippedRows = cm.get(JSON_CM_ROWS_SKIPPED).getAsLong();
         sb.append("<dt>used / skipped rows </dt><dd>").append(String.format("%d / %d (%3.1f %%)", rows, skippedRows, (double)skippedRows*100/(skippedRows+rows))).append("</dd>");
@@ -414,7 +424,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
             sb.append("</td>");
           }
           sb.append("<td>");
-          sb.append(String.format("%5.3f = %d / %d", (double)error/total, error, total));
+          sb.append(String.format("%5.5f = %d / %d", (double)error/total, error, total));
           sb.append("</td></tr>");
           sumTotal += total;
           sumError += error;
@@ -422,7 +432,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
         sb.append("<tr><th>Totals</th>");
         for (long total : totals) sb.append("<td>").append(total).append("</td>");
         sb.append("<td><b>");
-        sb.append(String.format("%5.3f = %d / %d", (double)sumError/sumTotal, sumError, sumTotal));
+        sb.append(String.format("%5.5f = %d / %d", (double)sumError/sumTotal, sumError, sumTotal));
         sb.append("</b></td></tr>");
         sb.append("</table>");
       } else {
