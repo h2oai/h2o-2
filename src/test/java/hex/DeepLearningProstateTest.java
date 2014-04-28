@@ -93,22 +93,24 @@ public class DeepLearningProstateTest extends TestUtil {
                             else if (vf == -1) valid = vframe; //different validation frame (here: from the same file)
 
                             Key dest_tmp = Key.make();
-                            Key dest = Key.make();
 
                             // build the model, with all kinds of shuffling/rebalancing/sampling
                             {
                               Log.info("Using seed: " + seed);
                               DeepLearning p = new DeepLearning();
-                              p.best_model_key = best_model_key;
-                              p.epochs = 7 + rng.nextDouble() + rng.nextInt(4);
-                              p.source = frame;
-                              p.hidden = new int[]{1+rng.nextInt(4), 1+rng.nextInt(6)};
-                              p.response = frame.vecs()[resp];
-                              if (i == 0 && resp == 2) p.classification = false;
                               p.checkpoint = null;
                               p.destination_key = dest_tmp;
-                              p.seed = seed;
+
+                              p.source = frame;
+                              p.response = frame.vecs()[resp];
                               p.validation = valid;
+                              p.ignored_cols = new int[]{};
+
+                              p.hidden = new int[]{1 + rng.nextInt(4), 1 + rng.nextInt(6)};
+                              if (i == 0 && resp == 2) p.classification = false;
+                              p.best_model_key = best_model_key;
+                              p.epochs = 7 + rng.nextDouble() + rng.nextInt(4);
+                              p.seed = seed;
                               p.train_samples_per_iteration = train_samples_per_iteration;
                               p.force_load_balance = load_balance;
                               p.replicate_training_data = replicate;
@@ -116,17 +118,33 @@ public class DeepLearningProstateTest extends TestUtil {
                               p.score_training_samples = scoretraining;
                               p.score_validation_samples = scorevalidation;
                               p.balance_classes = balance_classes;
-                              p.quiet_mode = true;
-//                              p.quiet_mode = false;
+//                              p.quiet_mode = true;
+                              p.quiet_mode = false;
                               p.score_validation_sampling = csm;
 
                               // Train the model via checkpointing
                               p.invoke();
+                            }
 
-                              // Do some more training via checkpoint restart
+                            // Do some more training via checkpoint restart
+                            Key dest = Key.make();
+                            {
+
+                              DeepLearning p = new DeepLearning();
                               p.checkpoint = dest_tmp;
                               p.destination_key = dest;
-                              p.state = Job.JobState.CREATED; //HACK (avoid having to set all job parameters again - just restart existing Job)
+
+                              p.source = frame;
+                              p.validation = valid;
+                              p.response = frame.vecs()[resp];
+                              p.ignored_cols = new int[]{};
+
+                              if (i == 0 && resp == 2) p.classification = false;
+                              p.best_model_key = best_model_key;
+                              p.epochs = 7 + rng.nextDouble() + rng.nextInt(4);
+                              p.seed = seed;
+                              p.train_samples_per_iteration = train_samples_per_iteration;
+
                               p.invoke();
                             }
 
