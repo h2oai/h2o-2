@@ -2467,7 +2467,6 @@ class H2O(object):
                 'n_folds': None,
                 'case_mode': None,
                 'case': None, 
-                'weight': None,
                 'lsm_solver': None,
                 'expert_settings': None,
                 'thresholds': None,

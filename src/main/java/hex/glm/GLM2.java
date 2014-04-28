@@ -68,6 +68,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   @API(help="use lambda search starting at lambda max, given lambda is then interpreted as lambda min",filter=Default.class)
   boolean lambda_search;
 
+  @API(help="prior probability for y==1. To be used only for logistic regression iff the data has been sampled and the mean of response does not reflect reality.",filter=Default.class)
+  double prior = -1; // -1 is magic value for default value which is mean(y) computed on the current dataset
+  private transient double _iceptAdjust; // adjustment due to the prior
   // API input parameters END ------------------------------------------------------------
 
   // API output parameters BEGIN ------------------------------------------------------------
@@ -91,7 +94,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   double tweedie_link_power;
 
   @API(help = "lambda max", json=true, importance = ParamImportance.SECONDARY)
-  double lambda_max;
+  double lambda_max = Double.NaN;
 
   // API output parameters END ------------------------------------------------------------
 
@@ -108,7 +111,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   public GLMParams _glm;
 
   private double ADMM_GRAD_EPS = 1e-4; // default addm gradietn eps
-  private static final double MIN_ADMM_GRAD_EPS = 1e-6; // min admm gradient eps
+  private static final double MIN_ADMM_GRAD_EPS = 1e-5; // min admm gradient eps
 
   int _lambdaIdx = 0;
 
@@ -161,9 +164,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     this(desc,jobKey,dest,dinfo,glm,lambda,alpha,nfolds,betaEpsilon,null);
   }
   public GLM2(String desc, Key jobKey, Key dest, DataInfo dinfo, GLMParams glm, double [] lambda, double alpha, int nfolds, double betaEpsilon, Key parentJob){
-    this(desc,jobKey,dest,dinfo,glm,lambda,alpha,nfolds,betaEpsilon,parentJob, null,false,0);
+    this(desc,jobKey,dest,dinfo,glm,lambda,alpha,nfolds,betaEpsilon,parentJob, null,false,-1,0);
   }
-  public GLM2(String desc, Key jobKey, Key dest, DataInfo dinfo, GLMParams glm, double [] lambda, double alpha, int nfolds, double betaEpsilon, Key parentJob, double [] beta, boolean highAccuracy, double proximalPenalty) {
+  public GLM2(String desc, Key jobKey, Key dest, DataInfo dinfo, GLMParams glm, double [] lambda, double alpha, int nfolds, double betaEpsilon, Key parentJob, double [] beta, boolean highAccuracy, double prior, double proximalPenalty) {
     assert beta == null || beta.length == (dinfo.fullN()+1):"unexpected size of beta, got length " + beta.length + ", expected " + dinfo.fullN();
     job_key = jobKey;
     description = desc;
@@ -182,6 +185,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     response = dinfo._adaptedFrame.lastVec();
     _jobName = dest.toString() + ((nfolds > 1)?("[" + dinfo._foldId + "]"):"");
     higher_accuracy = highAccuracy;
+    this.prior = prior;
   }
 
   static String arrayToString (double[] arr) {
@@ -241,10 +245,27 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     super.init();
     if(lambda_search && lambda.length > 1)
       throw new IllegalArgumentException("Can not supply both lambda_search and multiple lambdas. If lambda_search is on, GLM expects only one value of lambda, representing the lambda min (smallest lambda in the lambda search).");
+    // check the response
+    if( response.isEnum() && family != Family.binomial)throw new IllegalArgumentException("Invalid response variable, trying to run regression with categorical response!");
+    switch( family ) {
+      case poisson:
+      case tweedie:
+        if( response.min() < 0 ) throw new IllegalArgumentException("Illegal response column for family='" + family + "', response must be >= 0.");
+        break;
+      case gamma:
+        if( response.min() <= 0 ) throw new IllegalArgumentException("Invalid response for family='Gamma', response must be > 0!");
+        break;
+      case binomial:
+        if(response.min() < 0 || response.max() > 1) throw new IllegalArgumentException("Illegal response column for family='Binomial', response must in <0,1> range!");
+        break;
+      default:
+        //pass
+    }
     Frame fr = DataInfo.prepareFrame(source, response, ignored_cols, family==Family.binomial, true,true);
     _dinfo = new DataInfo(fr, 1, use_all_factor_levels, standardize,false);
     if(higher_accuracy)setHighAccuracy();
   }
+  @Override protected boolean filterNaCols(){return true;}
   @Override protected Response serve() {
     init();
     link = family.defaultLink;// TODO
@@ -334,7 +355,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     _model.clone().update(self());
     if((improved || _runAllLambdas) && _lambdaIdx < (lambda.length-1) ){ // continue with next lambda value?
       ++_lambdaIdx;
-      _model.setLambdaSubmodel(_lambdaIdx,newBeta,newBeta,_iter);
+//      _model.setLambdaSubmodel(_lambdaIdx,newBeta,newBeta,_iter);
       glmt._val = null;
       new Iteration().callback(glmt);
     } else    // nope, we're done
@@ -347,7 +368,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         @Override public void callback(GLMModel.GLMValidationTask v){ nextLambda(glmt, newBeta, v._res);}
       });
     } else {
-      new GLMIterationTask(GLM2.this,_dinfo,_glm,false,true,false,newBeta,_ymu,_reg,new H2OCallback<GLMIterationTask>(GLM2.this){
+      final double [] b = _model.submodels[_lambdaIdx].norm_beta != null?_model.submodels[_lambdaIdx].norm_beta:_model.submodels[_lambdaIdx].beta;
+      new GLMIterationTask(GLM2.this,_dinfo,_glm,false,true,false,b,prior,_reg,new H2OCallback<GLMIterationTask>(GLM2.this){
         @Override public void callback(GLMIterationTask glmt2){nextLambda(glmt, newBeta,glmt2._val);}
       }).asyncExec(_dinfo._adaptedFrame);
     }
@@ -410,7 +432,6 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         _lastResult = new IterationInfo(GLM2.this._iter-1, objval, glmt);
       }
       final double [] newBeta = glmt._beta != null?glmt._beta.clone():MemoryManager.malloc8d(glmt._xy.length);
-      double [] newBetaDeNorm = null;
       ADMMSolver slvr = new ADMMSolver(lambda[_lambdaIdx],alpha[0], ADMM_GRAD_EPS, _addedL2);
       slvr.solve(glmt._gram,glmt._xy,glmt._yy,newBeta);
       _addedL2 = slvr._addedL2;
@@ -419,19 +440,22 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         nextLambda(glmt,glmt._beta);
         return;
       } else {
+        final double [] modelBeta = MemoryManager.arrayCopyOf(newBeta,newBeta.length);
+        modelBeta[modelBeta.length-1] += _iceptAdjust;
+        double [] modelBetaDeNorm = null;
         if(_dinfo._standardize) {
-          newBetaDeNorm = newBeta.clone();
+          modelBetaDeNorm = modelBeta.clone();
           double norm = 0.0;        // Reverse any normalization on the intercept
           // denormalize only the numeric coefs (categoricals are not normalized)
           final int numoff = newBeta.length - _dinfo._nums - 1;
           for( int i=numoff; i< newBeta.length-1; i++ ) {
-            double b = newBetaDeNorm[i]*_dinfo._normMul[i-numoff];
+            double b = modelBetaDeNorm[i]*_dinfo._normMul[i-numoff];
             norm += b*_dinfo._normSub[i-numoff]; // Also accumulate the intercept adjustment
-            newBetaDeNorm[i] = b;
+            modelBetaDeNorm[i] = b;
           }
-          newBetaDeNorm[newBetaDeNorm.length-1] -= norm;
+          modelBetaDeNorm[modelBetaDeNorm.length-1] -= norm;
         }
-        _model.setLambdaSubmodel(_lambdaIdx,newBetaDeNorm == null?newBeta:newBetaDeNorm, newBetaDeNorm==null?null:newBeta, (_iter+1));
+        _model.setLambdaSubmodel(_lambdaIdx, modelBetaDeNorm == null ? modelBeta : modelBetaDeNorm, modelBetaDeNorm == null ? null : modelBeta, (_iter + 1));
         if(_glm.family == Family.gaussian) { // Gaussian is non-iterative and gradient is ADMMSolver's gradient => just validate and move on to the next lambda
           nextLambda(glmt,newBeta);
         } else if( beta_diff(glmt._beta,newBeta) < beta_epsilon || _iter == max_iter){
@@ -447,14 +471,12 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
                   return;
                 }
                 checkGradient(newBeta, glmt2.gradient(l2pen()));
-                if(n_folds > 1) nextLambda(glmt,newBeta); // need to call xval first
-                else  nextLambda(glmt, newBeta, glmt2._val);
+                nextLambda(glmt,newBeta); // need to call xval first
               }
             }).asyncExec(_dinfo._adaptedFrame);
           } else { // already got all the info
             checkGradient(newBeta,glmt.gradient(l2pen()));
-            if(n_folds > 1) nextLambda(glmt,newBeta); // need to call xval first
-            else nextLambda(glmt, glmt._beta, glmt._val);
+            nextLambda(glmt,newBeta);
           }
         } else { // not done yet, launch next iteration
           final boolean validate = higher_accuracy || (currentLambdaIter % 5) == 0;
@@ -477,7 +499,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     run(true);
     return this;
   }
-  // start inside of parent job
+  // start inside of a parent job
   public void run(final H2OCountedCompleter fjt){
     assert GLM2.this._fjtask == null;
     GLM2.this._fjtask = fjt;
@@ -490,69 +512,70 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     if(doLog)logStart();
     assert alpha.length == 1;
     start = System.currentTimeMillis();
-    final double lambda_min = lambda[lambda.length-1];
-    if(lambda_search){ // run as GLMNet - regularization path over several lambdas staring at lambda-max
-      new YMUTask(this, _dinfo, new H2OCallback<YMUTask>() {
-        @Override public void callback(final YMUTask ymut){
-          if(ymut._ymin == ymut._ymax){
-            String msg = "Attempting to run GLM on column with constant value = " + ymut._ymin;
-            GLM2.this.cancel(msg);
-            GLM2.this._fjtask.completeExceptionally(new JobCancelledException(msg));
-          }
-          new LMAXTask(GLM2.this, _dinfo, _glm, ymut.ymu(),alpha[0],new H2OCallback<LMAXTask>(){
-            @Override public void callback(LMAXTask t){
-              final double lmax = lambda_max = t.lmax();
-              String [] warns = null;
-              if(lambda == null || lambda_search){
-                lambda = new double[]{lmax,lmax*0.9,lmax*0.75,lmax*0.66,lmax*0.5,lmax*0.33,lmax*0.25,lmax*1e-1,lmax*1e-2,lmax*1e-3,lmax*1e-4,lmax*1e-5,lmax*1e-6,lmax*1e-7,lmax*1e-8}; // todo - make it a sequence of 100 lamdbas
-                _runAllLambdas = false;
-              } else if(alpha[0] > 0) { // make sure we start with lambda max (and discard all lambda > lambda max)
-                int i = 0; while(i < lambda.length && lambda[i] > lmax)++i;
-                if(i != 0) {
-                  Log.info("GLM: removing " + i + " lambdas > lambda_max: " + Arrays.toString(Arrays.copyOf(lambda,i)));
-                  warns = i == lambda.length?new String[] {"Removed " + i + " lambdas > lambda_max","No lambdas < lambda_max, returning null model."}:new String[] {"Removed " + i + " lambdas > lambda_max"};
-                }
-                lambda = i == lambda.length?new double [] {lambda_max}:Arrays.copyOfRange(lambda, i, lambda.length);
-              }
-              _model = new GLMModel(GLM2.this,dest(),_dinfo, _glm,beta_epsilon,alpha[0],lambda_max,lambda,ymut.ymu());
-              _model.warnings = warns;
-              _model.clone().delete_and_lock(self());
-              if(lambda[0] == lambda_max && alpha[0] > 0){ // fill-in trivial solution for lambda max
-                _beta = MemoryManager.malloc8d(_dinfo.fullN()+1);
-                _beta[_beta.length-1] = _glm.link(ymut.ymu());
-                _model.setLambdaSubmodel(0,_beta,_beta,0);
-                if(t._val != null)
-                  _model.setAndTestValidation(0,t._val);
-                _lambdaIdx = 1;
-              }
-              if(_lambdaIdx == lambda.length) // ran only with one lambda > lambda_max => return null model
-                GLM2.this.complete(); // signal we're done to anyone waiting for the job
-              else {
-                ++_iter;
-                Log.info("GLM2 staring GLM after " + (System.currentTimeMillis()-start) + "ms of preprocessing (mean/lmax computation)");
-                new GLMIterationTask(GLM2.this,_dinfo,_glm,true,false,false,null,_ymu = ymut.ymu(),_reg = 1.0/ymut.nobs(), new Iteration()).asyncExec(_dinfo._adaptedFrame);
-              }
-            }
-            @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter cc){
-              GLM2.this.cancel(ex);
-              return true;
-            }
-          }).asyncExec(_dinfo._adaptedFrame);
-        }
-        @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter cc){
-          GLM2.this.cancel(ex);
-          return true;
-        }
+    if(highAccuracy() || lambda_search) // shortcut for fast & simple mode
+      new YMUTask(GLM2.this,_dinfo,new H2OCallback<YMUTask>(GLM2.this) {
+        @Override public void callback(final YMUTask ymut){ run(ymut.ymu(),ymut.nobs());}
       }).asyncExec(_dinfo._adaptedFrame);
-    } else {
-      Log.info("GLM2: staring GLM after " + (System.currentTimeMillis()-start) + "ms of preprocessing (mean/lmax computation)");
+    else {
       double ymu = _dinfo._adaptedFrame.lastVec().mean();
-      _model = new GLMModel(GLM2.this,dest(),_dinfo, _glm,beta_epsilon,alpha[0],lambda_max,lambda,ymu);
-      _model.warnings = new String[0];
-      _model.clone().delete_and_lock(self());
-      new GLMIterationTask(GLM2.this,_dinfo,_glm,true,false,false,null,_ymu = ymu,_reg = 1.0/_dinfo._adaptedFrame.numRows(), new Iteration()).asyncExec(_dinfo._adaptedFrame);
+      run(ymu, _dinfo._adaptedFrame.numRows()); // shortcut for quick & simple
     }
   }
+  private void run(final double ymu, final long nobs){
+    if(_glm.family == Family.binomial && prior != -1 && prior != ymu && !Double.isNaN(prior)){
+      double ratio = prior/ymu;
+      double pi0 = 1,pi1 = 1;
+      if(ratio > 1){
+        pi1 = 1.0/ratio;
+      } else if(ratio < 1) {
+        pi0 = ratio;
+      }
+      _iceptAdjust = Math.log(pi0/pi1);
+    } else prior  = ymu;
+    if(highAccuracy() || lambda_search){
+      new LMAXTask(GLM2.this, _dinfo, _glm, ymu,alpha[0],new H2OCallback<LMAXTask>(GLM2.this){
+        @Override public void callback(LMAXTask t){
+          run(ymu,nobs,lambda_max = t.lmax(),t._val);
+        }
+      }).asyncExec(_dinfo._adaptedFrame);
+    } else run(ymu,nobs,Double.NaN,null); // shortcut for quick & simple
+  }
+
+  private void run(final double ymu, final long nobs, final double lmax, GLMValidation val){
+    String [] warns = null;
+    if(lambda_search){
+      assert !Double.isNaN(lmax):"running lambda search, but don't know what is the lambda max!";
+      lambda = new double[]{lmax,lmax*0.9,lmax*0.75,lmax*0.66,lmax*0.5,lmax*0.33,lmax*0.25,lmax*1e-1,lmax*1e-2,lmax*1e-3,lmax*1e-4,lmax*1e-5,lmax*1e-6,lmax*1e-7,lmax*1e-8}; // todo - make it a sequence of 100 lamdbas
+      _runAllLambdas = false;
+    } else if(alpha[0] > 0 && !Double.isNaN(lmax)) { // make sure we start with lambda max (and discard all lambda > lambda max)
+      int i = 0; while(i < lambda.length && lambda[i] > lmax)++i;
+      if(i != 0) {
+        Log.info("GLM: removing " + i + " lambdas > lambda_max: " + Arrays.toString(Arrays.copyOf(lambda,i)));
+        warns = i == lambda.length?new String[] {"Removed " + i + " lambdas > lambda_max","No lambdas < lambda_max, returning null model."}:new String[] {"Removed " + i + " lambdas > lambda_max"};
+      }
+      lambda = i == lambda.length?new double [] {lambda_max}:Arrays.copyOfRange(lambda, i, lambda.length);
+    }
+    _model = new GLMModel(GLM2.this,dest(),_dinfo, _glm,beta_epsilon,alpha[0],lambda_max,lambda,ymu,prior);
+    _model.warnings = warns;
+    _model.clone().delete_and_lock(self());
+    if(lambda[0] == lambda_max && alpha[0] > 0){ // fill-in trivial solution for lambda max
+      _beta = MemoryManager.malloc8d(_dinfo.fullN()+1);
+      _beta[_beta.length-1] = _glm.link(ymu) + _iceptAdjust;
+      _model.setLambdaSubmodel(0,_beta,_beta,0);
+      if(val != null)
+        _model.setAndTestValidation(0,val);
+      _lambdaIdx = 1;
+    }
+    if(_lambdaIdx == lambda.length) // ran only with one lambda > lambda_max => return null model
+      GLM2.this.complete(); // signal we're done to anyone waiting for the job
+    else {
+      ++_iter;
+      Log.info("GLM2 staring GLM after " + (System.currentTimeMillis()-start) + "ms of preprocessing (mean/lmax computation)");
+      new GLMIterationTask(GLM2.this,_dinfo,_glm,true,false,false,null,_ymu = ymu,_reg = 1.0/nobs, new Iteration()).asyncExec(_dinfo._adaptedFrame);
+    }
+  }
+
+
 
   private final double l2pen(){return lambda[_lambdaIdx]*(1-alpha[0]);}
   private final double l1pen(){return lambda[_lambdaIdx]*alpha[0];}
@@ -561,7 +584,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     final Key [] keys = new Key[n_folds];
     GLM2 [] glms = new GLM2[n_folds];
     for(int i = 0; i < n_folds; ++i)
-      glms[i] = new GLM2(this.description + "xval " + i, self(), keys[i] = Key.make(destination_key + "_" + _lambdaIdx + "_xval" + i), _dinfo.getFold(i, n_folds),_glm,new double[]{lambda[_lambdaIdx]},model.alpha,0, model.beta_eps,self(),model.norm_beta(lambdaIxd),higher_accuracy,0);
+      glms[i] = new GLM2(this.description + "xval " + i, self(), keys[i] = Key.make(destination_key + "_" + _lambdaIdx + "_xval" + i), _dinfo.getFold(i, n_folds),_glm,new double[]{lambda[_lambdaIdx]},model.alpha,0, model.beta_eps,self(),model.norm_beta(lambdaIxd),higher_accuracy,prior,0);
     H2O.submitTask(new ParallelGLMs(GLM2.this,glms,H2O.CLOUD.size(),new H2OCallback(GLM2.this) {
       @Override public void callback(H2OCountedCompleter t) {
         GLMModel [] models = new GLMModel[keys.length];

@@ -22,7 +22,6 @@ class ModelManagementTestCase(unittest.TestCase):
         
         # USE FVec!
         h2o.beta_features = True
-        ModelManagementTestCase.import_frames()
 
     @classmethod
     def tearDownClass(cls):
@@ -30,12 +29,7 @@ class ModelManagementTestCase(unittest.TestCase):
             h2o.tear_down_cloud()
 
 
-    prostate_hex = None
-    airlines_train_hex = None
-    airlines_test_hex = None
-
-    @classmethod
-    def import_frame(cls, target_key, bucket, csvFilename, csvPathname, expected_rows, expected_cols):
+    def import_frame(self, target_key, bucket, csvFilename, csvPathname, expected_rows, expected_cols):
         path = csvPathname + '/' + csvFilename
         parseResult = h2i.import_parse(bucket=bucket, path=path, hex_key=target_key, schema='put') # upload the file
         destination_key = parseResult['destination_key']  # we block until it's actually ready
@@ -62,17 +56,19 @@ class ModelManagementTestCase(unittest.TestCase):
         return destination_key
 
 
-    @classmethod
-    def import_frames(cls):
-        ModelManagementTestCase.prostate_hex = ModelManagementTestCase.import_frame('prostate.hex', 'smalldata', 'prostate.csv', 'logreg', 380, 9)
-        ModelManagementTestCase.airlines_train_hex = ModelManagementTestCase.import_frame('airlines_train.hex', 'smalldata', 'AirlinesTrain.csv.zip', 'airlines', 24421, 12)
-        ModelManagementTestCase.airlines_test_hex = ModelManagementTestCase.import_frame('airlines_test.hex', 'smalldata', 'AirlinesTest.csv.zip', 'airlines', 2691, 12)
+    def import_frames(self):
+        prostate_hex = self.import_frame('prostate.hex', 'smalldata', 'prostate.csv', 'logreg', 380, 9)
+        airlines_train_hex = self.import_frame('airlines_train.hex', 'smalldata', 'AirlinesTrain.csv.zip', 'airlines', 24421, 12)
+        airlines_test_hex = self.import_frame('airlines_test.hex', 'smalldata', 'AirlinesTest.csv.zip', 'airlines', 2691, 12)
+        return (prostate_hex, airlines_train_hex, airlines_test_hex)
         
-    def create_models(self):
+    def create_models(self, frame_keys):
 
-        self.assertIsNotNone(ModelManagementTestCase.prostate_hex)
-        self.assertIsNotNone(ModelManagementTestCase.airlines_train_hex)
-        self.assertIsNotNone(ModelManagementTestCase.airlines_test_hex)
+        prostate_hex, airlines_train_hex, airlines_test_hex = frame_keys
+
+        self.assertIsNotNone(prostate_hex)
+        self.assertIsNotNone(airlines_train_hex)
+        self.assertIsNotNone(airlines_test_hex)
 
         node = h2o.nodes[0]
         timeoutSecs = 200
@@ -91,7 +87,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'lambda': 1.0e-2, 
             'n_folds': 0
         }
-        glm_AirlinesTrain_1 = node.GLM(ModelManagementTestCase.airlines_train_hex, timeoutSecs, retryDelaySecs, **glm_AirlinesTrain_1_params)
+        glm_AirlinesTrain_1 = node.GLM(airlines_train_hex, timeoutSecs, retryDelaySecs, **glm_AirlinesTrain_1_params)
         h2o_glm.simpleCheckGLM(self, glm_AirlinesTrain_1, None, **glm_AirlinesTrain_1_params)
 
 
@@ -107,7 +103,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'classification': 1
             # TODO: what about minobsinnode and shrinkage?!
         }
-        gbm_AirlinesTrain_1 = node.gbm(ModelManagementTestCase.airlines_train_hex, timeoutSecs, retryDelaySecs, **gbm_AirlinesTrain_1_params)
+        gbm_AirlinesTrain_1 = node.gbm(airlines_train_hex, timeoutSecs, retryDelaySecs, **gbm_AirlinesTrain_1_params)
 
 
         print "#####################################################################"
@@ -122,7 +118,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'classification': 1
             # TODO: what about minobsinnode and shrinkage?!
         }
-        gbm_AirlinesTrain_2 = node.gbm(ModelManagementTestCase.airlines_train_hex, timeoutSecs, retryDelaySecs, **gbm_AirlinesTrain_2_params)
+        gbm_AirlinesTrain_2 = node.gbm(airlines_train_hex, timeoutSecs, retryDelaySecs, **gbm_AirlinesTrain_2_params)
 
 
         print "####################################################################"
@@ -136,7 +132,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'max_depth': 2,
             'classification': 1
         }
-        rf_AirlinesTrain_1 = node.random_forest(ModelManagementTestCase.airlines_train_hex, timeoutSecs, retryDelaySecs, **rf_AirlinesTrain_1_params)
+        rf_AirlinesTrain_1 = node.random_forest(airlines_train_hex, timeoutSecs, retryDelaySecs, **rf_AirlinesTrain_1_params)
 
 
         print "#####################################################################"
@@ -150,7 +146,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'max_depth': 10,
             'classification': 1
         }
-        rf_AirlinesTrain_2 = node.random_forest(ModelManagementTestCase.airlines_train_hex, timeoutSecs, retryDelaySecs, **rf_AirlinesTrain_2_params)
+        rf_AirlinesTrain_2 = node.random_forest(airlines_train_hex, timeoutSecs, retryDelaySecs, **rf_AirlinesTrain_2_params)
 
 
         print "######################################################################"
@@ -163,7 +159,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'hidden': [10, 10],
             'classification': 1
         }
-        dl_AirlinesTrain_1 = node.deep_learning(ModelManagementTestCase.airlines_train_hex, timeoutSecs, retryDelaySecs, **dl_AirlinesTrain_1_params)
+        dl_AirlinesTrain_1 = node.deep_learning(airlines_train_hex, timeoutSecs, retryDelaySecs, **dl_AirlinesTrain_1_params)
 
 
         print "##############################################################################################"
@@ -179,7 +175,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'lambda': 1.0e-2, 
             'n_folds': 0
         }
-        glm_AirlinesTrain_A = node.GLM(ModelManagementTestCase.airlines_train_hex, timeoutSecs, retryDelaySecs, **glm_AirlinesTrain_A_params)
+        glm_AirlinesTrain_A = node.GLM(airlines_train_hex, timeoutSecs, retryDelaySecs, **glm_AirlinesTrain_A_params)
         h2o_glm.simpleCheckGLM(self, glm_AirlinesTrain_A, None, **glm_AirlinesTrain_A_params)
 
 
@@ -194,7 +190,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'alpha': 0.5, 
             'n_folds': 0
         }
-        glm_Prostate_1 = node.GLM(ModelManagementTestCase.prostate_hex, timeoutSecs, retryDelaySecs, **glm_Prostate_1_params)
+        glm_Prostate_1 = node.GLM(prostate_hex, timeoutSecs, retryDelaySecs, **glm_Prostate_1_params)
         h2o_glm.simpleCheckGLM(self, glm_Prostate_1, None, **glm_Prostate_1_params)
 
 
@@ -209,7 +205,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'max_depth': 5,
             'classification': 1
         }
-        rf_Prostate_1 = node.random_forest(ModelManagementTestCase.prostate_hex, timeoutSecs, retryDelaySecs, **rf_Prostate_1_params)
+        rf_Prostate_1 = node.random_forest(prostate_hex, timeoutSecs, retryDelaySecs, **rf_Prostate_1_params)
 
 
         print "##############################################"
@@ -223,7 +219,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'alpha': 0.5, 
             'n_folds': 0
         }
-        glm_Prostate_regression_1 = node.GLM(ModelManagementTestCase.prostate_hex, timeoutSecs, retryDelaySecs, **glm_Prostate_regression_1_params)
+        glm_Prostate_regression_1 = node.GLM(prostate_hex, timeoutSecs, retryDelaySecs, **glm_Prostate_regression_1_params)
         h2o_glm.simpleCheckGLM(self, glm_Prostate_regression_1, None, **glm_Prostate_regression_1_params)
 
 
@@ -267,7 +263,7 @@ class ApiTestCase(ModelManagementTestCase):
     # this is my test!
     def test_binary_classifiers(self):
 
-        self.create_models()
+        self.create_models(self.import_frames())
 
         node = h2o.nodes[0]
 
@@ -402,9 +398,26 @@ class ApiTestCase(ModelManagementTestCase):
 
 class SteamTestCase(ModelManagementTestCase):
     def test_steam(self):
+        self.create_models(self.import_frames())
+        print "----------------------------------------------------------"
+        print "                    Testing Steam...                      "
+        print "----------------------------------------------------------"
 
-        print "UI tests not implemented. Coming soon!"
-        return
+        # Go up two dirs and add '/client'.
+        # Don't know if there's a better way to do this. - Prithvi
+        client_dir = os.path.join(os.path.split(os.path.split(os.path.dirname(os.path.realpath(__file__)))[0])[0], 'client')
+
+        # Run `make test -C path_to_h2o/client`
+        command_string = "make test -C " + client_dir
+
+        # Ideally there should have been some kind of exit code checking or exception handling here. 
+        # However, when `make test` fails, h2o.spawn_wait() fails hard without an exit code. 
+        # Further, if this is trapped in a try/except, the failed tests are not routed to stdout.
+        (ps, outpath, errpath) =  h2o.spawn_cmd('steam_tests', command_string.split())
+        h2o.spawn_wait(ps, outpath, errpath, timeout=1000)
+        print "----------------------------------------------------------"
+        print "            Steam tests completed successfully!           "
+        print "----------------------------------------------------------"
 
 if __name__ == '__main__':
     h2o.unit_main()

@@ -13,6 +13,7 @@ This is a package for running H2O via its REST API from within R. To communicate
 Package: \tab h2o\cr
 Type: \tab Package\cr
 Version: \tab SUBST_PROJECT_VERSION\cr
+Branch: \tab SUBST_PROJECT_BRANCH\cr
 Date: \tab 2013-12-12\cr
 License: \tab Apache License (== 2.0)\cr
 Depends: \tab R (>= 2.13.0), RCurl, rjson, statmod, tools, methods, utils\cr

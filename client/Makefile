@@ -225,9 +225,15 @@ smoke: node
 
 test: node
 	$(BIN)/mocha \
-		--reporter dot \
+		--reporter min \
 		--check-leaks \
 		$(DIST)/steam.node.js
+
+pytest: node
+	(cd ../py && python testdir_model_management/test_model_management.py -ccj localhost.json SteamTestCase)
+
+tags:
+	(cd src/scripts && ctags -R .)
 
 debug: node
 	$(BIN)/mocha \

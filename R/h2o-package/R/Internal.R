@@ -142,6 +142,8 @@ h2o.__changeLogPath <- function(path, type) {
 .h2o.__PAGE_PCASCORE = "2/PCAScore.json"
 .h2o.__PAGE_PCAProgress = "2/PCAProgressPage.json"
 .h2o.__PAGE_PCAModelView = "2/PCAModelView.json"
+.h2o.__PAGE_SpeeDRF = "2/SpeeDRF.json"
+.h2o.__PAGE_SpeeDRFModelView = "2/SpeeDRFModelView.json"
 .h2o.__PAGE_BAYES = "2/NaiveBayes.json"
 .h2o.__PAGE_NBProgress = "2/NBProgressPage.json"
 .h2o.__PAGE_NBModelView = "2/NBModelView.json"
@@ -201,9 +203,7 @@ h2o.__changeLogPath <- function(path, type) {
   #  temp = getForm(myURL, ..., .checkParams = FALSE)   # Some H2O params overlap with Curl params
   
   # after = gsub("\\\\\\\"NaN\\\\\\\"", "NaN", temp[1]) 
-  # after = gsub("NaN", "\"NaN\"", after)
-  # after = gsub("-Infinity", "\"-Inf\"", temp[1])
-  # after = gsub("Infinity", "\"Inf\"", after)
+  # after = gsub("NaN", '"NaN"', after)
   after = gsub('"Infinity"', '"Inf"', temp[1])
   after = gsub('"-Infinity"', '"-Inf"', after)
   res = fromJSON(after)

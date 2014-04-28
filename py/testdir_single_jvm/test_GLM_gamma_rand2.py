@@ -19,7 +19,6 @@ def define_params():
         # inverse and log causing problems
         # 'link': [None, 'logit','identity', 'log', 'inverse'],
         'max_iter': [24],
-        'weight': [None, 1, 2, 4],
         }
     return paramDict
 

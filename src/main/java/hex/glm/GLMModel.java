@@ -22,6 +22,9 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @API(help="mean of response in the training dataset")
   final double     ymu;
 
+  @API(help="actual expected mean of the response (given by the user before running the model or ymu)")
+  final double prior;
+
   @API(help="job key assigned to the job building this model")
   final Key job_key;
 
@@ -146,11 +149,12 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @API(help = "lambda sequence")
   final double [] lambdas;
 
-  public GLMModel(GLM2 job, Key selfKey, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double lambda_max, double [] lambda, double ymu) {
+  public GLMModel(GLM2 job, Key selfKey, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double lambda_max, double [] lambda, double ymu, double prior) {
     super(selfKey,null,dinfo._adaptedFrame);
     parameters = job;
     job_key = job.self();
     this.ymu = ymu;
+    this.prior = prior;
     this.glm = glm;
     threshold = 0.5;
     this.data_info = dinfo;

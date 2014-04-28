@@ -20,9 +20,9 @@ mkdir -p sandbox
 # I suppose we could just have a test verify the request cloud size, after buildingk
 MAPR_JOBTRACKER=192.168.1.173:9001
 MAPR_NODES=3
-MAPR_HEAP=4g
+MAPR_HEAP=14g
 # MAPR_JAR=h2odriver_mapr2.1.3.jar
-MAPR_JAR=h2odriver_mapr3.0.1.jar
+MAPR_JAR=h2odriver_mapr2.1.3.jar
 
 H2O_DOWNLOADED=../../h2o-downloaded
 H2O_HADOOP=$H2O_DOWNLOADED/hadoop
@@ -36,7 +36,7 @@ REMOTE_USER=0xcustomer@$REMOTE_IP
 REMOTE_SCP="scp -i $HOME/.0xcustomer/0xcustomer_id_rsa"
 REMOTE_SSH_USER="ssh -i $HOME/.0xcustomer/0xcustomer_id_rsa $REMOTE_USER"
 
-source ./kill_hadoop_jobs.sh
+# source ./kill_hadoop_jobs.sh
 
 #*****HERE' WHERE WE START H2O ON HADOOP*******************************************
 rm -f /tmp/h2o_on_hadoop_$REMOTE_IP.sh

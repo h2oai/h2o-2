@@ -7,7 +7,6 @@ print "Repeated test of case that timeouts in EC2"
 def define_params():
     paramDict = {
         'y': 54,
-        'weight': None, 
         'family': 'poisson', 
         'beta_epsilon': 0.001, 
         'thresholds': 0.1, 

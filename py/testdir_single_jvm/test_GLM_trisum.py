@@ -8,7 +8,6 @@ def define_params():
         'lambda': [1.0E-4],
         'alpha': [0.5],
         'max_iter': [2000],
-        'weight': [1.0],
         'thresholds': [0.5],
         'n_folds': [1],
         'beta_epsilon': [1.0E-4],
