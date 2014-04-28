@@ -507,6 +507,10 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
           response[i] = chunks[chunks.length-_dinfo._responses + i].at0(r);
           if (_dinfo._normRespMul != null) response[i] = (response[i] - _dinfo._normRespSub[i])*_dinfo._normRespMul[i];
         }
+        if (outputs != null && outputs.length > 0)
+          processRow(offset + r, nums, ncats, cats, response, outputs);
+        else
+          processRow(offset + r, nums, ncats, cats, response);
       }
     }
     chunkDone();

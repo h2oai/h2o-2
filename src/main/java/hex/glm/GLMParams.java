@@ -116,7 +116,7 @@ public final class GLMParams extends Iced {
       case identity:
         return x;
       case logit:
-        assert 0 <= x && x <= 1;
+        assert 0 <= x && x <= 1:"x out of bounds, expected <0,1> range, got " + x;
         return Math.log(x / (1 - x));
       case log:
         return Math.log(x);

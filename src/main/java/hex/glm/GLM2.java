@@ -140,14 +140,17 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     }
 
     public final double [] beta(int [] activeCols){
-      final double [] full = fullN(activeCols[activeCols.length - 1]);
-      final double [] res = MemoryManager.malloc8d(activeCols.length+1);
-      int i = 0;
-      for(int c:activeCols)
-        res[i++] = full[c];
-      assert i == res.length-1;
-      res[i] = full[full.length-1];
-      return res;
+      if(activeCols != null){
+        final double [] full = fullN(activeCols[activeCols.length - 1]);
+        final double [] res = MemoryManager.malloc8d(activeCols.length+1);
+        int i = 0;
+        for(int c:activeCols)
+          res[i++] = full[c];
+        assert i == res.length-1;
+        res[i] = full[full.length-1];
+        return res;
+      } else
+        return _glmt._beta.clone();
     }
     public final double [] fullN(int fullN){
       double [] res = MemoryManager.malloc8d(fullN+1);
@@ -637,7 +640,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 
     if(highAccuracy() || lambda_search) // shortcut for fast & simple mode
       new YMUTask(GLM2.this,_dinfo,new H2OCallback<YMUTask>(GLM2.this) {
-        @Override public void callback(final YMUTask ymut){ run(ymut.ymu(),ymut.nobs());}
+        @Override public void callback(final YMUTask ymut){
+          run(ymut.ymu(),ymut.nobs());
+        }
       }).asyncExec(_dinfo._adaptedFrame);
     else {
       double ymu = _dinfo._adaptedFrame.lastVec().mean();
@@ -667,6 +672,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     if(lambda_search){
       assert lmaxt != null:"running lambda search, but don't know what is the lambda max!";
       final double lmax = lmaxt.lmax();
+      
       lambda = new double[]{lmax,lmax*0.9,lmax*0.75,lmax*0.66,lmax*0.5,lmax*0.33,lmax*0.25,lmax*1e-1,lmax*1e-2,lmax*1e-3,lmax*1e-4,lmax*1e-5,lmax*1e-6,lmax*1e-7,lmax*1e-8}; // todo - make it a sequence of 100 lamdbas
       _runAllLambdas = false;
     } else if(alpha[0] > 0 && lmaxt != null) { // make sure we start with lambda max (and discard all lambda > lambda max)
