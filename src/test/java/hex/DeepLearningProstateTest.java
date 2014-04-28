@@ -92,9 +92,8 @@ public class DeepLearningProstateTest extends TestUtil {
                             if (vf == 1) valid = frame; //use the same frame for validation
                             else if (vf == -1) valid = vframe; //different validation frame (here: from the same file)
 
-                            Key dest_tmp = Key.make();
-
                             // build the model, with all kinds of shuffling/rebalancing/sampling
+                            Key dest_tmp = Key.make();
                             {
                               Log.info("Using seed: " + seed);
                               DeepLearning p = new DeepLearning();
@@ -121,15 +120,12 @@ public class DeepLearningProstateTest extends TestUtil {
 //                              p.quiet_mode = true;
                               p.quiet_mode = false;
                               p.score_validation_sampling = csm;
-
-                              // Train the model via checkpointing
                               p.invoke();
                             }
 
                             // Do some more training via checkpoint restart
                             Key dest = Key.make();
                             {
-
                               DeepLearning p = new DeepLearning();
                               p.checkpoint = dest_tmp;
                               p.destination_key = dest;
@@ -144,7 +140,6 @@ public class DeepLearningProstateTest extends TestUtil {
                               p.epochs = 7 + rng.nextDouble() + rng.nextInt(4);
                               p.seed = seed;
                               p.train_samples_per_iteration = train_samples_per_iteration;
-
                               p.invoke();
                             }
 
