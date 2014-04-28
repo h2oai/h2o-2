@@ -36,14 +36,14 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   @API(help = "Number of keys the model expects to be built for it.") int total_trees;
   @API(help = "Max depth to grow trees to") int depth;
   /* @API(help = "All the trees in the model.") */ Key[] t_keys;
-  @API(help = "Local forests produced by nodes.") Key[][] local_forests;
+  /* @API(help = "Local forests produced by nodes.") */ Key[][] local_forests;
   @API(help = "Total time in seconds to produce the model.") long time;
   @API(help = "Frame being operated on.") Frame fr;
   @API(help = "Response Vector.") Vec response;
   @API(help = "Class weights.") double[] weights;
   @API(help = "bin limit") int bin_limit;
  /*  @API(help = "Raw tree data. for faster classification passes.") */ transient byte[][] trees;
-  @API(help = "Job key") Key jobKey;
+ /* @API(help = "Job key") */ Key jobKey;
   @API(help = "") Key dest_key;
   /* @API(help = "Current model status") */ String current_status;
   @API(help = "MSE by tree") float[] errs;
@@ -51,7 +51,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   /* @API(help = "Adapted Validation Frame")*/ Frame test_frame;
   /*@API(help = "Test Key") */ Key testKey;
   @API(help = "Out of bag error estimate.") boolean oobee;
-  @API(help = "Class column idx.") int classcol;
+  /* @API(help = "Class column idx.") */ int classcol;
   /*@API(help = "Data Key")*/ Key dataKey;
   @API(help = "Seed") protected long zeed;
   /* @API(help = "Final Confusion Matrix") */ CMTask.CMFinal confusion;
