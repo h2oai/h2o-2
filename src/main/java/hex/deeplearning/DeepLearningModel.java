@@ -630,6 +630,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       model_info = cp.model_info.deep_clone(); //don't want to interfere with model being built, just make a deep copy and store that
       model_info.data_info = dataInfo.deep_clone(); //replace previous data_info with updated version that's passed in (contains enum for classification)
       get_params().state = Job.JobState.DONE;
+      _modelClassDist = cp._modelClassDist != null ? cp._modelClassDist.clone() : null;
     } else {
       model_info = (DeepLearningModelInfo) cp.model_info.clone(); //shallow clone is ok (won't modify the Checkpoint in K-V store during checkpoint restart)
       model_info.data_info = dataInfo; //shallow clone is ok
