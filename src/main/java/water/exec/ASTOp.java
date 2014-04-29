@@ -1192,18 +1192,20 @@ class ASTCat extends ASTOp {
 
 class ASTRunif extends ASTOp {
   @Override String opStr() { return "runif"; }
-  ASTRunif() { super(new String[]{"runif","dbls"},
-                     new Type[]{Type.ARY,Type.ARY},
+  ASTRunif() { super(new String[]{"runif","dbls","seed"},
+                     new Type[]{Type.ARY,Type.ARY,Type.DBL},
                      OPF_PREFIX,
                      OPP_PREFIX,
                      OPA_RIGHT); }
   @Override ASTOp make() {return new ASTRunif();}
   @Override void apply(Env env, int argcnt, ASTApply apply) {
+    double temp = env.popDbl();
+    final long seed = (temp == -1) ? System.currentTimeMillis() : (long)temp;
     Frame fr = env.popAry();
     String skey = env.key();
     long [] espc = fr.anyVec()._espc;
     long rem = fr.numRows();
-    if(rem > espc[espc.length-1])throw H2O.unimpl();
+    if(rem > espc[espc.length-1]) throw H2O.unimpl();
     for(int i = 0; i < espc.length; ++i){
       if(rem <= espc[i]){
         espc = Arrays.copyOf(espc, i+1);
@@ -1217,7 +1219,6 @@ class ASTRunif extends ASTOp {
     for(int i = 0; i < espc.length-1; ++i)
       DKV.put(randVec.chunkKey(i),new C0DChunk(0,(int)(espc[i+1]-espc[i])),fs);
     fs.blockForPending();
-    final long seed = System.currentTimeMillis();
     new MRTask2() {
       @Override public void map(Chunk c){
         Random rng = new Random(seed*c.cidx());

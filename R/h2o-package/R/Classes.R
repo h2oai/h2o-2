@@ -381,14 +381,16 @@ h2o.unique <- function(x, incomparables = FALSE, ...){
 }
 unique.H2OParsedData <- h2o.unique
 
-h2o.runif <- function(x, min = 0, max = 1) {
+h2o.runif <- function(x, min = 0, max = 1, seed = -1) {
   if(missing(x)) stop("Must specify data set")
   if(!inherits(x, "H2OParsedData")) stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
   if(!is.numeric(min)) stop("min must be a single number")
   if(!is.numeric(max)) stop("max must be a single number")
   if(length(min) > 1 || length(max) > 1) stop("Unimplemented")
   if(min > max) stop("min must be a number less than or equal to max")
-  expr = paste("runif(", x@key, ")*(", max - min, ")+", min, sep = "")
+  if(!is.numeric(seed)) stop("seed must be an integer >= 0")
+  
+  expr = paste("runif(", x@key, ",", seed, ")*(", max - min, ")+", min, sep = "")
   res = .h2o.__exec2(x@h2o, expr)
   if(res$num_rows == 0 && res$num_cols == 0)
     return(res$scalar)
