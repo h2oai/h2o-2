@@ -110,7 +110,7 @@ build:
 	@echo
 	@echo "PHASE: Building R package..."
 	@echo
-	$(MAKE) -C R PROJECT_VERSION=$(PROJECT_VERSION) 1> target/logs/r_build.log
+	$(MAKE) -C R PROJECT_VERSION=$(PROJECT_VERSION) BUILD_NUMBER=$(BUILD_NUMBER) 1> target/logs/r_build.log
 
 	@echo
 	@echo "PHASE: Building zip package..."

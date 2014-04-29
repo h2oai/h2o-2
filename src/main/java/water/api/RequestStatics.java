@@ -45,6 +45,7 @@ public class RequestStatics extends Constants {
     png(".png"), ///< image, e.g. plot
     txt(".txt"), ///< text, e.g. a script
     java(".java"), ///< java program
+    xml(".xml"), ///< xml request
     ;
     /** Suffix of the request - extension of the URL.
      */
@@ -70,6 +71,8 @@ public class RequestStatics extends Constants {
         return txt;
       if (requestUrl.endsWith(java._suffix))
         return java;
+      if (requestUrl.endsWith(xml._suffix))
+        return xml;
       return json;
     }
 

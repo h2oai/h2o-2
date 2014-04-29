@@ -1,5 +1,6 @@
 
 PROJECT_VERSION ?= 99.70
+BUILD_NUMBER ?= 99999
 BUILD_BRANCH = $(shell git branch | grep '*' | sed 's/* //')
 R_VERSION = 3.1
 REPO_PATH_WIN = bin/windows/contrib/$(R_VERSION)
@@ -46,15 +47,19 @@ else
 	cp -p h2o_package.pdf ../target/R
 endif
 	rm -rf h2o-package/inst/java
-	mkdir -p h2o-package/inst/java/tmp
-	cp -f ../target/h2o.jar h2o-package/inst/java/tmp/h2o_full.jar
-	(cd h2o-package/inst/java/tmp && jar xf h2o_full.jar)
-	(cd h2o-package/inst/java/tmp && rm -fr hadoop/0.* hadoop/1.* hadoop/cdh[35]* hadoop/cdh4_yarn)
-	(cd h2o-package/inst/java/tmp && rm -f h2o_full.jar)
-	(cd h2o-package/inst/java/tmp && cp META-INF/MANIFEST.MF ..)
-	(cd h2o-package/inst/java/tmp && rm -fr META-INF)
-	(cd h2o-package/inst/java/tmp && jar cfm ../h2o.jar ../MANIFEST.MF *)
-	rm -rf h2o-package/inst/java/tmp
+	# mkdir -p h2o-package/inst/java/tmp
+	# cp -f ../target/h2o.jar h2o-package/inst/java/tmp/h2o_full.jar
+	# (cd h2o-package/inst/java/tmp && jar xf h2o_full.jar)
+	# (cd h2o-package/inst/java/tmp && rm -fr hadoop/0.* hadoop/1.* hadoop/cdh[35]* hadoop/cdh4_yarn)
+	# (cd h2o-package/inst/java/tmp && rm -f h2o_full.jar)
+	# (cd h2o-package/inst/java/tmp && cp META-INF/MANIFEST.MF ..)
+	# (cd h2o-package/inst/java/tmp && rm -fr META-INF)
+	# (cd h2o-package/inst/java/tmp && jar cfm ../h2o.jar ../MANIFEST.MF *)
+	# rm -rf h2o-package/inst/java/tmp
+	mkdir -p h2o-package/inst/java
+ifeq ($(BUILD_NUMBER),99999)
+	cp -f ../target/h2o.jar h2o-package/inst/java
+endif
 	R CMD build h2o-package
 
 	# Create file with description of all packages

@@ -1099,6 +1099,86 @@ h2o.randomForest.FV <- function(x, y, data, classification=TRUE, ntree=50, depth
   return(result)
 }
 
+# -------------------------- SpeeDRF -------------------------- #
+h2o.SpeeDRF <- function(x, y, data, classification=TRUE, ntree=50, depth=50, sample.rate=2/3, nbins=1024, seed=78483418294, validation, stat.type="ENTROPY") {
+  args <- .verify_dataxy(data, x, y)
+  if(!is.numeric(ntree)) stop('ntree must be a number')
+  if( any(ntree < 1) ) stop('ntree must be >= 1')
+  if(!is.numeric(depth)) stop('depth must be a number')
+  if( any(depth < 1) ) stop('depth must be >= 1')
+  if(!is.numeric(sample.rate)) stop('sample.rate must be a number')
+  if( any(sample.rate < 0 || sample.rate > 1) ) stop('sample.rate must be between 0 and 1')
+  if(!is.numeric(nbins)) stop('nbins must be a number')
+  if( any(nbins < 1)) stop('nbins must be an integer >= 1')
+  if(!is.numeric(seed)) stop("seed must be an integer >= 0")
+
+  if(missing(validation)) validation <- data 
+  else if(!class(validation) %in% c("H2OParsedData")) stop("validation must be an H2O parsed dataset!")
+
+  # NB: externally, 1 based indexing; internally, 0 based
+  cols <- paste(args$x_i - 1, collapse=',')
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, response=args$y, cols=cols, num_trees=ntree, max_depth=depth, sample=sample.rate, bin_limit=nbins, seed=seed, stat_type = stat.type)
+  params = list(x=args$x, y=args$y, ntree=ntree, depth=depth, sample.rate=sample.rate, bin_limit=nbins, stat.type = stat.type)
+
+  if(length(ntree) == 1 && length(depth) == 1 && length(sample.rate) == 1 && length(nbins) == 1) { 
+    .h2o.__waitOnJob(data@h2o, res$job_key)
+    res2 <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRFModelView, '_modelKey'=res$destination_key)
+
+    result <- .h2o.__getSpeeDRFResults(res2$speedrf_model, params)
+    new("H2OSpeeDRFModel", key=res$destination_key, data=data, model=result, valid=validation)
+  } else {
+    .h2o.gridsearch.internal("SpeeDRF", data, res, validation, params)
+  }
+}
+
+.h2o.__getSpeeDRFSummary <- function(res) {
+  mySum = list()
+  mySum$model_key = res$'_key'
+  mySum$ntrees = res$N
+  mySum$max_depth = res$max_depth
+  mySum$min_rows = res$min_rows
+  mySum$nbins = res$bin_limit
+
+  # temp = matrix(unlist(res$cm), nrow = length(res$cm))
+  # mySum$prediction_error = 1-sum(diag(temp))/sum(temp)
+  return(mySum)
+}
+
+.h2o.__getSpeeDRFResults <- function(res, params) {
+  result = list()
+  params$ntree = res$total_trees
+  params$depth = res$depth
+  params$nbins = res$bin_limit
+  params$sample.rate = res$sample
+  params$classification = TRUE
+  params$oobee = res$oobee
+  params$seed = res$zeed
+  params$stat.type = res$statType
+
+  result$params = params
+  #treeStats = unlist(res$treeStats)
+  #rf_matrix = rbind(treeStats[1:3], treeStats[4:6])
+  #colnames(rf_matrix) = c("Min.", "Max.", "Mean.")
+  #rownames(rf_matrix) = c("Depth", "Leaves")
+  #result$forest = rf_matrix
+  result$mse = as.numeric(res$errs)
+  result$mse <- ifelse(result$mse == -1, NA, result$mse)
+
+  if(params$classification) {
+    #if(!is.null(res$validAUC)) {
+    #  tmp <- .h2o.__getPerfResults(res$validAUC)
+    #  tmp$confusion <- NULL
+    #  result <- c(result, tmp)
+    #}
+
+    class_names = tail(res$'_domains', 1)[[1]]
+    result$confusion = .build_cm(res$'cm', class_names)
+  }
+
+  return(result)
+}
+# ----------------------------------------------------------------------------------- #
+
 # ------------------------------- Prediction ---------------------------------------- #
 h2o.predict <- function(object, newdata) {
   if( missing(object) ) stop('Must specify object')

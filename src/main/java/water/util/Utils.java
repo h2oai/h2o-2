@@ -874,7 +874,10 @@ public class Utils {
 
   static public boolean isEmpty(int[] a) { return a==null || a.length == 0; }
   static public boolean contains(int[] a, int d) { for(int i=0; i<a.length; i++) if (a[i]==d) return true; return false; }
+  // warning: Non-Symmetric! Returns all elements in a that are not in b (but NOT the other way around)
   static public int[] difference(int a[], int b[]) {
+    if (a == null) return new int[]{};
+    if (b == null) return a.clone();
     int[] r = new int[a.length];
     int cnt = 0;
     for (int i=0; i<a.length; i++) {

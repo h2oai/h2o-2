@@ -18,6 +18,7 @@ setClass("H2ODRFModel", contains="H2OModel", representation(valid="H2OParsedData
 setClass("H2ONBModel", contains="H2OModel")
 setClass("H2OPCAModel", contains="H2OModel")
 setClass("H2OGBMModel", contains="H2OModel", representation(valid="H2OParsedData"))
+setClass("H2OSpeeDRFModel", contains="H2OModel", representation(valid="H2OParsedData"))
 
 setClass("H2OGLMGrid", contains="H2OGrid")
 setClass("H2OGBMGrid", contains="H2OGrid")

@@ -2669,7 +2669,11 @@ public class RequestArguments extends RequestStatics {
       Frame fr = fr();
       String [] res = new String[_selectedCols.size()];
       int idx = 0;
-      for(int i:_selectedCols) res[idx++] = fr._names[i];
+      for(int i:_selectedCols) {
+        final Vec v = fr.vec(i);
+        int naRatio = (int)(((double)v.naCnt())/v.length()*100);
+        res[idx++] = fr._names[i] + (naRatio > 0?"(" + naRatio + "% NAs)":"");
+      }
       return res;
     }
 
