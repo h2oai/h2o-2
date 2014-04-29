@@ -1,13 +1,13 @@
 from H2O import *
 from Process import *
-from Table import *
 from PerfTest import *
 import PerfUtils
 
 import traceback
-import re
 import os
 import time
+from multiprocessing import Process
+
 
 class PerfRunner:
     """
@@ -17,12 +17,13 @@ class PerfRunner:
     The tests_not_started is a queue.
     Each test blocks until it completes.
     """
+
     def __init__(self, test_root_dir, output_dir, h2o_jar, perfdb):
         self.test_root_dir = test_root_dir
         self.output_dir = output_dir
         self.h2o_jar = h2o_jar
         self.start_seconds = time.time()
-        
+
         self.jvm_output_file = ""
         self.perfdb = perfdb
 
@@ -47,10 +48,10 @@ class PerfRunner:
                 if "singlenode" in dirs:
                     for root2, dirs2, files2 in os.walk(os.path.join(root, d)):
                         d = os.path.basename(root2)
-                        if d == "singlenode": 
+                        if d == "singlenode":
                             prefix = d
                             continue
-                        if d == "multinode":  
+                        if d == "multinode":
                             prefix = d
                             continue
                         if test_to_run in d:
@@ -64,20 +65,20 @@ class PerfRunner:
         Create a Test object and push it onto the queue.
         """
         self.pre = "192.168"
-        config_file = os.path.abspath(os.path.join(self.test_root_dir,prefix,testDir,testDir + ".cfg"))
+        config_file = os.path.abspath(os.path.join(self.test_root_dir, prefix, testDir, testDir + ".cfg"))
         print "USING CONFIGURATION FROM THIS FILE: "
         print config_file
-        parse_file = "parse.R" #testDir + "_Parse.R"
-        model_file = "model.R" #testDir + "_Model.R"
+        parse_file = "parse.R"  # testDir + "_Parse.R"
+        model_file = "model.R"  # testDir + "_Model.R"
         predict_file = None
         if os.path.exists(os.path.join(self.test_root_dir, testDir, "predict.R")):
-            predict_file = "predict.R" 
+            predict_file = "predict.R"
 
         test_dir = os.path.join(self.test_root_dir, prefix, testDir)
         test_short_dir = os.path.join(prefix, testDir)
 
         self.m = "171"
-        test = Test(config_file, test_dir, test_short_dir, 
+        test = Test(config_file, test_dir, test_short_dir,
                     self.output_dir, parse_file, model_file, predict_file, self.perfdb, prefix)
 
         self.tests.append(test)
@@ -90,7 +91,7 @@ class PerfRunner:
 
         @return: none
         """
-        if (self.terminated):
+        if self.terminated:
             return
 
         num_tests = len(self.tests)
@@ -105,85 +106,67 @@ class PerfRunner:
             print "Beginning test " + test.test_name
             print
             isEC2 = test.aws
-            xmx = test.heap_bytes_per_node
-            ip = test.ip
+            # xmx = test.heap_bytes_per_node
+            # ip = test.ip
             base_port = test.port
             nodes_in_cloud = test.total_nodes
-            hosts_in_cloud = test.hosts  #this will be used to support multi-machine / aws
+            hosts_in_cloud = test.hosts  # this will be used to support multi-machine / aws
             #build h2os... regardless of aws.. just takes host configs and attempts to upload jar then launch
 
             if isEC2:
                 raise Exception("Unimplemented: AWS support coming soon.")
 
-            cloud = H2OCloud(1, hosts_in_cloud, nodes_in_cloud, self.h2o_jar, base_port, self.output_dir, isEC2, test.remote_hosts)
+            cloud = H2OCloud(1, hosts_in_cloud, nodes_in_cloud, self.h2o_jar, base_port,
+                             self.output_dir, isEC2, test.remote_hosts)
             self.cloud.append(cloud)
             try:
                 PerfUtils.start_cloud(self, test.remote_hosts)
                 test.port = self.cloud[0].get_port()
                 test.test_run = TableRow("test_run", self.perfdb)
                 test.test_run.row.update(PerfUtils.__scrape_h2o_sys_info__(self))
-                ssh_ch = self.begin_sys_profiling(test.test_name)
+                p = self.begin_sys_profiling(test.test_name)
                 contamination = test.do_test(self)
                 test.test_run.row['start_epoch_ms'] = test.start_ms
                 test.test_run.row['end_epoch_ms'] = test.end_ms
                 test.test_run.row['test_name'] = test.test_name
-                #contamination = PerfUtils.run_contaminated(self)
-                print "DEBUG: "
-                print contamination
-                print ""
-                print ""
                 test.test_run.row["contaminated"] = contamination[0]
                 test.test_run.row["contamination_message"] = contamination[1]
                 test.test_run.update(True)
-                print "DEBUG: "
-                print ""
-                print "Stopping all profiling for Hound."
-                print ""
-                self.stop_sys_profiling(ssh_ch)
+                p.terminate()
                 print "Successfully stopped profiler..."
-                ssh_ch = None
-                PerfUtils.stop_cloud(self, test.remote_hosts)
                 self.cloud.pop(0)
                 self.perfdb.this_test_run_id += 1
             except:
                 print "Exception caught:"
-                print '-'*60
+                print '-' * 60
                 traceback.print_exc(file=sys.stdout)
-                print '-'*60
+                print '-' * 60
                 PerfUtils.stop_cloud(self, test.remote_hosts)
                 self.cloud.pop(0)
 
     def begin_sys_profiling(self, test_name):
-        addr = self.pre + ".1." + str(self.m)
-        print
-        print
-        ssh = paramiko.SSHClient()
-        policy = paramiko.AutoAddPolicy()
-        ssh.set_missing_host_key_policy(policy)
-        ssh.load_system_host_keys()
-        ssh.connect(addr, username="0xperf", password="0xperf")
-        ssh.get_transport().set_keepalive(300)
-        #ch = ssh.get_transport().open_session()
-        #ch.get_pty()
-        cmd = ["python", "/home/0xperf/HOUND/unleash_the_hounds.py", str(self.perfdb.this_test_run_id), self.cloud[0].all_pids(), self.cloud[0].all_ips(), test_name]
+        this_path = os.path.dirname(os.path.realpath(__file__))
+        hounds_py = os.path.join(this_path, "../unleash_the_hounds.py")
+        cmd = ["python", hounds_py, str(self.perfdb.this_test_run_id),
+               self.cloud[0].all_pids(), self.cloud[0].all_ips(), test_name]
         print
         print "Unleashing the hounds!"
         print ' '.join(cmd)
         print
-        ssh.exec_command(' '.join(cmd))
-        return ssh
-
-    def stop_sys_profiling(self, ssh):
-        ssh.exec_command('exit')
-        ssh.close()
+        out = os.path.join(this_path, "../results", str(self.perfdb.this_test_run_id))
+        out = open(out, 'w')
+        child = subprocess.Popen(args=cmd,
+                                 stdout=out,
+                                 stderr=subprocess.STDOUT)
+        return child
 
     def __get_instance_type__(self):
         return "localhost"
 
     def __get_num_hosts__(self):
         num_hosts = 0
-        for node in self.cloud.nodes:
-            num_hosts += 1 #len(node)
+        for _ in self.cloud.nodes:
+            num_hosts += 1  # len(node)
         return num_hosts
 
     def __get_num_nodes__(self):
