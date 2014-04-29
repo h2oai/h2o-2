@@ -11,6 +11,7 @@ def parseValue(v):
     except ValueError:
         return v
 
+
 def process(line):
   global params
   if line.strip()[0] == '_': return
@@ -25,6 +26,7 @@ def process(line):
   if name[0] == '_': return
 
   params[name] = value
+
 
 def main():
     global params
