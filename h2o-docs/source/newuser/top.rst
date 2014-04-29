@@ -3,8 +3,8 @@
 
 
 
-Starting Downladed Jar, EC2, and Java tips 
-===========================================
+New Users
+=============
 
 .. toctree::
    :maxdepth: 2
@@ -12,3 +12,4 @@ Starting Downladed Jar, EC2, and Java tips
    
    quickstart_jar
    ec2
+   java_help

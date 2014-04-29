@@ -1,6 +1,6 @@
 
-HA considerations for H2O
----------------------------
+HA considerations for H\ :sub:`2`\ O
+--------------------------------------
 
 It’s helpful to think about high availability needs based on different
 stages in your workflow.
