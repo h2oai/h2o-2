@@ -954,12 +954,16 @@ public class DeepLearning extends Job.ValidatedJob {
               new DeepLearningTask(model.model_info(), rowUsageFraction).doAll(train).model_info()); //distributed data (always in multi-node mode)
       while (model.doScoring(train, trainScoreFrame, validScoreFrame, self(), getValidAdaptor()));
 
+      state = JobState.DONE; //for JSON REST response
+      model.get_params().state = state; //for parameter JSON on the HTML page
       Log.info("Finished training the Deep Learning model.");
       return model;
     }
     catch(JobCancelledException ex) {
-      Log.info("Deep Learning model building was cancelled.");
       model = UKV.get(dest());
+      state = JobState.CANCELLED; //for JSON REST response
+      model.get_params().state = state; //for parameter JSON on the HTML page
+      Log.info("Deep Learning model building was cancelled.");
       return model;
     }
     finally {

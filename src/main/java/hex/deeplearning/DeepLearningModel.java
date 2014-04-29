@@ -629,13 +629,13 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     if (store_best_model) {
       model_info = cp.model_info.deep_clone(); //don't want to interfere with model being built, just make a deep copy and store that
       model_info.data_info = dataInfo.deep_clone(); //replace previous data_info with updated version that's passed in (contains enum for classification)
-      get_params().state = Job.JobState.DONE;
+      get_params().state = Job.JobState.DONE; //change the deep_clone'd state to DONE
       _modelClassDist = cp._modelClassDist != null ? cp._modelClassDist.clone() : null;
     } else {
       model_info = (DeepLearningModelInfo) cp.model_info.clone(); //shallow clone is ok (won't modify the Checkpoint in K-V store during checkpoint restart)
       model_info.data_info = dataInfo; //shallow clone is ok
-      get_params().state = Job.JobState.RUNNING;
       get_params().checkpoint = cp._key; //it's only a "real" checkpoint if job != null, otherwise a best model copy
+      get_params().state = ((DeepLearning)UKV.get(jobKey)).state; //make the job state consistent
     }
     get_params().job_key = jobKey;
     get_params().destination_key = destKey;
@@ -666,6 +666,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     start_time = System.currentTimeMillis();
     _timeLastScoreEnter = start_time;
     model_info = new DeepLearningModelInfo(params, dinfo);
+    get_params().state = ((DeepLearning)UKV.get(jobKey)).state; //make the job state consistent
     errors = new Errors[1];
     errors[0] = new Errors();
     errors[0].validation = (params.validation != null);
