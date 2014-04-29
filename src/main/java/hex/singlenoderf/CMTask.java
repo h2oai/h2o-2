@@ -136,6 +136,7 @@ public class CMTask extends MRTask2<CMTask> {
     int[][] localVotes = _computeOOB ? new int[rows][_N] : null;
     // Errors per tree
     _errorsPerTree = new long[_model.treeCount()];
+    float sum = 0.f;
     // Replay the Data.java's "sample_fair" sampling algorithm to exclude data
     // we trained on during voting.
     for( int ntree = 0; ntree < _model.treeCount(); ntree++ ) {
@@ -188,6 +189,20 @@ public class CMTask extends MRTask2<CMTask> {
         int alignedData       = alignDataIdx((int) _data.vecs()[_classcol].at8(row) - cmin);
         if (alignedPrediction != alignedData) _errorsPerTree[ntree]++;
         votes[r][alignedPrediction]++; // Vote the row
+        for (int v : votes[r])
+          sum += (float)v;
+
+        float[] fs = new float[votes[r].length];
+        for (int i = 0; i < fs.length; ++i) {
+          fs[i] = sum == 0 ? 0 : (float)votes[r][i] / sum;
+        }
+        float err = 0.f;
+        if(sum == 0) {
+          err = 1.0f-1.0f/_N;
+        } else {
+          err = fs[alignedData] == 0 ? 0.f : 1.0f-fs[alignedData]/sum;
+        }
+        _sum += (1-err)*(1-err);
         actual[r] = alignedData;
         pred[r]   = alignedPrediction;
         if (isLocalTree) localVotes[r][alignedPrediction]++; // Vote
@@ -195,31 +210,11 @@ public class CMTask extends MRTask2<CMTask> {
     }
     // Assemble the votes-per-class into predictions & score each row
     _matrix = computeCM(votes, chks); // Make a confusion matrix for this chunk
-    _sum = brierScore(votes, actual, pred);
+    _sum /= _model.treeCount();
     if (localVotes!=null) {
       _localMatrices = new CM[H2O.CLOUD.size()];
       _localMatrices[H2O.SELF.index()] = computeCM(localVotes, chks);
     }
-  }
-
-  private float brierScore(int[][] votes, int[] actual, int[] pred) {
-    float sum = 0.f;
-    for (int r = 0; r < votes[0].length; ++r) {
-      int v_sum = 0;
-      for (int v : votes[r])
-        v_sum += v;
-      for (int v : votes[r]) {
-        float s;
-        if (v_sum == 0) {
-          s = 1.f / _N;
-          s -= (actual[r] == pred[r] ? 1.f : 0.f);
-        } else {
-          s = ((float) v / (float) v_sum) - (actual[r] == pred[r] ? 1.f : 0.f);
-        }
-        sum += s*s;
-      }
-    }
-    return sum;
   }
 
   /** Returns true if tree was produced by this node.

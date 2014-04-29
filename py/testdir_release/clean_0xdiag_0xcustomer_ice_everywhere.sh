@@ -9,7 +9,8 @@ ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.162 rm -f -r /home/0
 ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.163 rm -f -r /home/0xcustomer/ice*
 ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.164 rm -f -r /home/0xcustomer/ice*
 
-ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.171 rm -f -r /home/0xcustomer/ice*
+# dead now
+# ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.171 rm -f -r /home/0xcustomer/ice*
 ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.172 rm -f -r /home/0xcustomer/ice*
 ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.173 rm -f -r /home/0xcustomer/ice*
 ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.174 rm -f -r /home/0xcustomer/ice*

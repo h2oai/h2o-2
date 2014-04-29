@@ -11,6 +11,7 @@ import water.api.DocGen;
 import water.api.Request.API;
 import water.api.Request.Default;
 import water.fvec.Frame;
+import water.util.Log;
 
 
 /**
@@ -52,27 +53,34 @@ public final class ModelMetrics extends Iced {
     this.cm = cm;
   }
 
-  public static String keyName(Model model, Frame frame) {
-    return "modelmetrics_" + model.getUniqueId().getUuid() + "_on_" + frame.getUniqueId().getUuid();
+  private static Key makeKey(String keyName) {
+    return Key.makeUserHidden(Key.make(keyName));
   }
 
-  public static String keyName(UniqueId model, UniqueId frame) {
-    return "modelmetrics_" + model.getUuid() + "_on_" + frame.getUuid();
+  public static Key buildKey(Model model, Frame frame) {
+    return makeKey("modelmetrics_" + model.getUniqueId().getUuid() + "_on_" + frame.getUniqueId().getUuid());
   }
 
-  public String keyName() {
-    return "modelmetrics_" + this.model.getUuid() + "_on_" + this.frame.getUuid();
+  public static Key buildKey(UniqueId model, UniqueId frame) {
+    return makeKey("modelmetrics_" + model.getUuid() + "_on_" + frame.getUuid());
+  }
+
+  public Key buildKey() {
+    return makeKey("modelmetrics_" + this.model.getUuid() + "_on_" + this.frame.getUuid());
   }
 
   public void putInDKV() {
-    String keyname = this.keyName();
-    Key metricsKey = Key.makeUserHidden(Key.make(keyname));
-    DKV.put(metricsKey, this);
+    Key metricsKey = this.buildKey();
 
+    Log.debug("Putting ModelMetrics: " + metricsKey.toString());
+    DKV.put(metricsKey, this);
   }
 
   public static ModelMetrics getFromDKV(Model model, Frame frame) {
-    Value v = DKV.get(Key.make(keyName(model, frame)));
+    Key metricsKey = buildKey(model, frame);
+
+    Log.debug("Getting ModelMetrics: " + metricsKey.toString());
+    Value v = DKV.get(metricsKey);
 
     if (null == v)
       return null;
@@ -81,7 +89,9 @@ public final class ModelMetrics extends Iced {
   }
 
   public static ModelMetrics getFromDKV(UniqueId model, UniqueId frame) {
-    Value v = DKV.get(Key.make(keyName(model, frame)));
+    Key metricsKey = buildKey(model, frame);
+    Log.debug("Getting ModelMetrics: " + metricsKey.toString());
+    Value v = DKV.get(metricsKey);
 
     if (null == v)
       return null;

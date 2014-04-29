@@ -41,9 +41,10 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         bucket = 'home-0xdiag-datasets'
         # csvPathname = 'airlines/year2013.csv'
-        csvPathname = '1B/reals_1B_15f.data'
-        csvPathname = 'standard/covtype.data'
-        csvPathname = '1B/reals_1000_15f.data'
+        if getpass.getuser()=='jenkins':
+            csvPathname = 'standard/billion_rows.csv.gz'
+        else:
+            csvPathname = '1B/reals_1B_15f.data'
 
         hex_key = 'r1'
         parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local', 

@@ -90,8 +90,7 @@ class Basic(unittest.TestCase):
             paramDict2 = {}
             for k in paramDict:
                 paramDict2[k] = paramDict[k][0]
-            # since we add the output twice, it's no longer colCount-1
-            y = colCount
+            y = colCount + 1
             kwargs = {'response': 'C' + str(y), 'max_iter': 50}
             kwargs.update(paramDict2)
 

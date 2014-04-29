@@ -1,6 +1,7 @@
 package water.api;
 
 import com.google.gson.*;
+import org.json.JSONObject;
 import water.AutoBuffer;
 import water.H2O;
 import water.Iced;
@@ -546,6 +547,14 @@ public class RequestBuilders extends RequestQueries {
       }
       res.add(RESPONSE, responseToJson());
       return res;
+    }
+
+    public String toXml() {
+      JsonObject jo = this.toJson();
+      String jsonString = jo.toString();
+      org.json.JSONObject jo2 = new org.json.JSONObject(jsonString);
+      String xmlString = org.json.XML.toString(jo2);
+      return xmlString;
     }
 
     public void toJava(StringBuilder sb) {
