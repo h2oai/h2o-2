@@ -34,14 +34,15 @@ public class DeepLearning extends Job.ValidatedJob {
    * model. This option allows users to build a new model as a
    * continuation of a previously generated model (e.g., by a grid search).
    */
-  @API(help = "Model checkpoint to resume training with.", filter= Default.class, json = true, gridable = false)
+  @API(help = "Model checkpoint to resume training with", filter= Default.class, json = true, gridable = false)
   public Key checkpoint;
 
   /**
-   * A key to store the always-best model under
-   * (as measured by MSE for regression, total error rate for multi-class and F1-score for binary classification)
+   * If given, store the best model so far under this key.
+   * Model performance is measured by MSE for regression and overall
+   * error rate for classification (at F1-optimal threshold for binary classification).
    */
-  @API(help = "Key to store the always-best model under.", filter= Default.class, json = true, gridable = false)
+  @API(help = "Key to store the always-best model under", filter= Default.class, json = true, gridable = false)
   public Key best_model_key = null;
 
   /**
