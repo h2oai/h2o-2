@@ -128,7 +128,8 @@ exprListFull = [
         "ifelse(r.hex>3,99,r.hex)",
         "ifelse(0,+,*)(1,2)",
 
-        "(0 ? + : *)(1,2)",
+        # don't allow muxing operators
+        # "(0 ? + : *)(1,2)",
         "(1 ? r.hex : (r.hex+1))[1,2]",
 
         "sum(1,2)",
