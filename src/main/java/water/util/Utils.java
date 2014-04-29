@@ -231,6 +231,26 @@ public class Utils {
     }
   }
 
+  public static String sampleToString(double[] val, int max) {
+    if (val == null || val.length < max) return Arrays.toString(val);
+
+    StringBuilder b = new StringBuilder();
+    b.append('[');
+    max -= 10;
+    int valMax = val.length -1;
+    for (int i = 0; ; i++) {
+        b.append(val[i]);
+        if (i == max) {
+          b.append(", ...");
+          i = val.length - 10;
+        }
+        if ( i == valMax) {
+          return b.append(']').toString();
+        }
+        b.append(", ");
+    }
+  }
+
   /* Always returns a deterministic java.util.Random RNG.
    *
    * The determinism is important for re-playing sampling.

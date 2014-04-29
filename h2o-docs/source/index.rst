@@ -19,8 +19,12 @@ getting started from downloaded versions of  H\ :sub:`2`\ O, and using  H\
 .. toctree::
     :maxdepth: 1
     
+    resources/introduction
     newuser/top
     Ruser/top
+    Ruser/Rpackage
+    newuser/java_help
+    userguide/top
 
 
 Tutorials in H\ :sub:`2`\ O
@@ -32,7 +36,7 @@ Tutorials in H\ :sub:`2`\ O
 
     tutorial/top
     tutorial/videos
-    newuser/java_help
+    
 
 Deployment and Big Data Management
 ==================================
@@ -46,16 +50,17 @@ Deployment and Big Data Management
 Helpful Resources
 =================
 
-Various information related to the H\ :sub:`2`\ O project and data available in the public domain.
+Information related to the H\ :sub:`2`\ O project and data available
+in the public domain.
 
 .. toctree::
     :maxdepth: 1
    
-    resources/introduction
-    resources/algoroadmap
     resources/glossary
+    resources/algoroadmap
     resources/publicdata
     resources/h2odatasheet
+
 
 
 H\ :sub:`2`\ O User Guide
@@ -74,7 +79,7 @@ Data Science
 For information on the details of model specification, and an in-depth look at the math behind our algorithms and tools.
 
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 1
 
     datascience/top
     benchmarks/benchmarks
