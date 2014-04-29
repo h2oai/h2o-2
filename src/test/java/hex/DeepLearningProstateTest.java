@@ -33,6 +33,7 @@ public class DeepLearningProstateTest extends TestUtil {
     datasets[0] = "smalldata/./logreg/prostate.csv"; responses[0] = new int[]{1,2,8};
     datasets[1] = "smalldata/iris/iris.csv";  responses[1] = new int[]{4};
 
+    int testcount = 0;
     int count = 0;
     for (int i =0;i<datasets.length;++i) {
       String dataset = datasets[i];
@@ -88,8 +89,6 @@ public class DeepLearningProstateTest extends TestUtil {
                             final double epochs = 7 + rng.nextDouble() + rng.nextInt(4);
                             final int[] hidden = new int[]{1 + rng.nextInt(4), 1 + rng.nextInt(6)};
 
-                            if (count != 870) continue;
-
                             Log.info("**************************)");
                             Log.info("Starting test #" + count);
                             Log.info("**************************)");
@@ -121,8 +120,8 @@ public class DeepLearningProstateTest extends TestUtil {
                               p.score_training_samples = scoretraining;
                               p.score_validation_samples = scorevalidation;
                               p.balance_classes = balance_classes;
-//                              p.quiet_mode = true;
-                              p.quiet_mode = false;
+                              p.quiet_mode = true;
+//                              p.quiet_mode = false;
                               p.score_validation_sampling = csm;
                               p.invoke();
                             }
@@ -255,7 +254,7 @@ public class DeepLearningProstateTest extends TestUtil {
                             final boolean validation = (vf != 0); //p.validation != null -> DL scores based on validation data set (which can be the same as training data set)
 
                             if (mymodel.get_params().best_model_key != null) {
-                              // get the actual best error on training data
+                              // get the actual best error on (potentially sampled) training data
                               float best_err = Float.MAX_VALUE;
                               long best_samples = 0;
                               for (DeepLearningModel.Errors err : mymodel.scoring_history()) {
@@ -275,7 +274,7 @@ public class DeepLearningProstateTest extends TestUtil {
 
                               // get the error reported by the stored best model
                               DeepLearningModel bestmodel = UKV.get(mymodel.get_params().best_model_key);
-                              Log.info("Best model\n" + bestmodel.toString());
+//                              Log.info("Best model\n" + bestmodel.toString());
                               final Frame fr = valid;
                               Frame bestPredict = bestmodel.score(fr);
                               double bestErr = bestmodel.calcError(fr, fr.vecs()[resp], bestPredict, bestPredict, validation ? "validation" : "training",
@@ -285,14 +284,19 @@ public class DeepLearningProstateTest extends TestUtil {
                               Log.info("Validation: " + validation);
                               Log.info("Best_model's samples : " + bestmodel.model_info().get_processed_total() + ".");
                               Log.info("Best_model's error : " + bestErr + ".");
-                              Assert.assertEquals(bestmodel.model_info().get_processed_total(), best_samples);
-                              if (csm != DeepLearning.ClassSamplingMethod.Stratified && !balance_classes) { //cannot compare scoring if we did stratification inside of DL
-                                if (Math.abs(bestErr - best_err) > 1e-5)
-                                  Log.info("BAD: " + bestErr + " but should be " + best_err);
-                                else
-                                  Log.info("GOOD: " + bestErr + " == " + best_err);
-//                                Assert.assertEquals(bestErr, best_err, 1e-5);
+                              Assert.assertEquals(bestmodel.model_info().get_processed_total(), best_samples); //check that the model was saved at the moment with the lowest error
+
+                              if (validation && (scorevalidation != 0 || csm != DeepLearning.ClassSamplingMethod.Uniform)) {
+                                //don't test since we didn't score on the original validation data
                               }
+                              else if (!validation && (scoretraining != 0 || balance_classes)) {
+                                // don't check results since we cannot reproduce sampling and/or class rebalancing on training data
+                              }
+                              else {
+                                Assert.assertEquals(bestErr, best_err, 1e-5);
+                              }
+
+                              // clean up
                               bestmodel.delete();
                               bestPredict.delete();
                             }
@@ -300,6 +304,7 @@ public class DeepLearningProstateTest extends TestUtil {
                             UKV.remove(dest);
                             UKV.remove(dest_tmp);
                             Log.info("Parameters combination " + count + ": PASS");
+                            testcount++;
                           }
                         }
                       }
@@ -314,13 +319,16 @@ public class DeepLearningProstateTest extends TestUtil {
       frame.delete();
       vframe.delete();
     }
+    Log.info("\n\n=============================================");
+    Log.info("Tested " + testcount + " out of " + count + " parameter combinations.");
+    Log.info("=============================================");
   }
 
   public static class Long extends DeepLearningProstateTest {
-    @Test public void run() throws Exception { runFraction(1.0f); }
+    @Test public void run() throws Exception { runFraction(0.1f); }
   }
 
   public static class Short extends DeepLearningProstateTest {
-    @Test public void run() throws Exception { runFraction(0.01f); }
+    @Test public void run() throws Exception { runFraction(0.003f); }
   }
 }
