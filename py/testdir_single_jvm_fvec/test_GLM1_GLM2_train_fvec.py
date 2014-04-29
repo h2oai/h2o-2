@@ -167,13 +167,15 @@ class Basic(unittest.TestCase):
         #**************************************************************************
 
         modelKey = glm['glm_model']['_key']
-        avg_err = glm['glm_model']['submodels'][0]['validation']['avg_err']
-        best_threshold = glm['glm_model']['submodels'][0]['validation']['best_threshold']
-        iteration = glm['glm_model']['submodels'][0]['iteration']
-        resDev = glm['glm_model']['submodels'][0]['validation']['residual_deviance']
-        nullDev = glm['glm_model']['submodels'][0]['validation']['null_deviance']
+        submodels = glm['glm_model']['submodels'][-1]
+        iteration = submodels['iteration']
+        validation = submodels['validation']
+
+        best_threshold = validation['best_threshold']
+        resDev = validation['residual_deviance']
+        nullDev = validation['null_deviance']
         if FAMILY == 'binomial':
-            auc = glm['glm_model']['submodels'][0]['validation']['auc']
+            auc = validation['auc']
 
         self.assertLess(iterations1, MAX_ITER-1, msg="GLM1: Too many iterations, didn't converge %s" % iterations1)
         self.assertLess(iteration, MAX_ITER-1, msg="GLM2: Too many iterations, didn't converge %s" % iteration)
@@ -212,7 +214,6 @@ class Basic(unittest.TestCase):
         print "intercept pct delta:", 100.0 * (abs(intercept) - abs(interceptExpected))/abs(interceptExpected)
         # self.assertTrue(h2o_util.approxEqual(intercept, interceptExpected, rel=0.5),
         #    msg='GLM2 intercept %s is too different from GLM1 %s' % (intercept, interceptExpected))
-
 
         # avg_errExpected = 0.2463
         avg_errExpected = err1

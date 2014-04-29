@@ -55,10 +55,19 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       ++_nobs;
     }
     @Override public void reduce(YMUTask t){
-      _ymu = _ymu*((double)_nobs/(_nobs+t._nobs)) + t._ymu*t._nobs/(_nobs+t._nobs);
-      _nobs += t._nobs;
-      _ymax = Math.max(_ymax,t._ymax);
-      _ymin = Math.min(_ymin,t._ymin);
+      if(t._nobs != 0){
+        if(_nobs == 0){
+          _ymu = t._ymu;
+          _nobs = t._nobs;
+          _ymin = t._ymin;
+          _ymax = t._ymax;
+        } else {
+          _ymu = _ymu*((double)_nobs/(_nobs+t._nobs)) + t._ymu*t._nobs/(_nobs+t._nobs);
+          _nobs += t._nobs;
+          _ymax = Math.max(_ymax,t._ymax);
+          _ymin = Math.min(_ymin,t._ymin);
+        }
+      }
     }
     @Override protected void chunkDone(){_ymu /= _nobs;}
     public double ymu(){return _ymu;}

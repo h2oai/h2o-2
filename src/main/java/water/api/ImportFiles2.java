@@ -69,6 +69,7 @@ public class ImportFiles2 extends Request2 {
         if( false ) ;
         else if( p2.startsWith("hdfs://" ) ) serveHdfs();
         else if( p2.startsWith("s3n://"  ) ) serveHdfs();
+        else if( p2.startsWith("maprfs:/"  ) ) serveHdfs(); // "maprfs:/datasets" is legal
         else if( p2.startsWith("s3://"   ) ) serveS3();
         else if( p2.startsWith("http://" ) ) serveHttp();
         else if( p2.startsWith("https://") ) serveHttp();

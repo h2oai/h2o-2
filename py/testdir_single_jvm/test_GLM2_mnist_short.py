@@ -78,7 +78,6 @@ class Basic(unittest.TestCase):
                 'alpha': 1e-4,
                 'max_iter': 15,
                 ## 'thresholds': 0.5,
-                ## 'weight': 1.0,
                 'n_folds': 1,
                 'beta_epsilon': 1.0E-4,
                 'destination_key': modelKey,

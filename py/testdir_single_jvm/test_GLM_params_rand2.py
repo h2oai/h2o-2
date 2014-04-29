@@ -17,7 +17,6 @@ def define_params():
         # eliminate case=7 because it's so rare, especially with cross validation
         'case': [1,2,3,4,5,6],
         'max_iter': [None, 10],
-        'weight': [None, 1, 2, 4],
         }
     return paramDict
 

@@ -52,6 +52,8 @@ public class Frames extends Request2 {
   public static final Gson gson = new GsonBuilder().serializeSpecialFloatingPointValues().setPrettyPrinting().create();
 
   public static final class FrameSummary {
+    public long creation_epoch_time_millis = -1L;
+    public String uuid = null;
     public String[] column_names = { };
     public Set<String> compatible_models = new HashSet<String>();
   }
@@ -146,6 +148,9 @@ public class Frames extends Request2 {
    * Summarize fields in water.fvec.Frame.
    */
   private static void summarizeAndEnhanceFrame(FrameSummary summary, Frame frame, boolean find_compatible_models, Map<String, Model> all_models, Map<String, Set<String>> all_models_cols) {
+    summary.creation_epoch_time_millis = frame.getUniqueId().getCreationEpochTimeMillis();
+    summary.uuid = frame.getUniqueId().getUuid();
+
     summary.column_names = frame._names;
 
     if (find_compatible_models) {
@@ -190,7 +195,7 @@ public class Frames extends Request2 {
 
 
   /**
-   * Fetch all the Frames from the KV store, sumamrize and enhance them, and return a map of them.
+   * For one or more Frame from the KV store, sumamrize and enhance them and Response containing a map of them.
    */
   private Response serveOneOrAll(Map<String, Frame> framesMap) {
     // returns empty sets if !this.find_compatible_models
@@ -228,51 +233,53 @@ public class Frames extends Request2 {
    * Score a frame with the given model.
    */
   protected static Response scoreOne(Frame frame, Model score_model) {
-    Frame input = frame;
 
-    long before = System.currentTimeMillis();
-    Frame predictions = score_model.score(frame, true); // TODO: for now we're always calling adapt inside score
-    long after = System.currentTimeMillis();
+    water.ModelMetrics metrics = water.ModelMetrics.getFromDKV(score_model, frame);
 
-    ConfusionMatrix cm = new ConfusionMatrix(); // for regression this computes the MSE
-    AUC auc = null;
-    HitRatio hr = null;
-    double error = 0.0d;
+    if (null == metrics) {
+      // have to compute
+      water.util.Log.info("Cache miss: computing ModelMetrics. . .");
+      long before = System.currentTimeMillis();
+      Frame predictions = score_model.score(frame, true); // TODO: for now we're always calling adapt inside score
+      long after = System.currentTimeMillis();
 
-    if (score_model.isClassifier()) {
-      auc = new AUC();
+      ConfusionMatrix cm = new ConfusionMatrix(); // for regression this computes the MSE
+      AUC auc = null;
+      HitRatio hr = null;
+      double error = 0.0d;
+
+      if (score_model.isClassifier()) {
+        auc = new AUC();
 //      hr = new HitRatio();
-      error = score_model.calcError(input, input.vec(score_model.responseName()), predictions, predictions, "Prediction error:",
-                                    true, 20, cm, auc, hr);
+        error = score_model.calcError(frame, frame.vec(score_model.responseName()), predictions, predictions, "Prediction error:",
+                                      true, 20, cm, auc, hr);
+      } else {
+        error = score_model.calcError(frame, frame.vec(score_model.responseName()), predictions, predictions, "Prediction error:",
+                                      true, 20, cm, null, null);
+      }
+
+      // Now call AUC and ConfusionMatrix and maybe HitRatio
+      metrics = new water.ModelMetrics(score_model.getUniqueId(),
+                                       score_model.getModelCategory(),
+                                       frame.getUniqueId(),
+                                       error,
+                                       after - before,
+                                       after,
+                                       auc,
+                                       cm);
+
+      // Put the metrics into the KV store
+      metrics.putInDKV();
     } else {
-      error = score_model.calcError(input, input.vec(score_model.responseName()), predictions, predictions, "Prediction error:",
-                                    true, 20, cm, null, null);
+      // it's already cached in the DKV
+      water.util.Log.info("using ModelMetrics from the cache. . .");
     }
 
-    // Now call AUC and ConfusionMatrix and maybe HitRatio
-    Map metrics = new LinkedHashMap();
-    metrics.put("model", score_model._key.toString());
-    metrics.put("frame", frame._key.toString());
-    metrics.put("model_category", score_model.getModelCategory());
-
-    metrics.put("duration_in_ms", after - before);
-
-    metrics.put("error", error);
-
-    if (score_model.isClassifier()) {
-      metrics.put("cm", cm.toJSON());
-      metrics.put("auc", auc.toJSON());
-      metrics.put("hr", hr); // TODO: binary only?
-    }
-
-    Map resultsMap = new LinkedHashMap();
-    resultsMap.put("metrics", metrics);
-
-    // TODO: temporary hack to get things going
-    String json = gson.toJson(resultsMap);
-    // Log.info("Json for results: " + json);
-
-    JsonObject result = gson.fromJson(json, JsonElement.class).getAsJsonObject();
+    JsonObject metricsJson = metrics.toJSON();
+    JsonArray metricsArray = new JsonArray();
+    metricsArray.add(metricsJson);
+    JsonObject result = new JsonObject();
+    result.add("metrics", metricsArray);
     return Response.done(result);
   }
 

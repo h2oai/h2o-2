@@ -1,12 +1,14 @@
 
 PROJECT_VERSION ?= 99.70
+BUILD_NUMBER ?= 99999
+BUILD_BRANCH = $(shell git branch | grep '*' | sed 's/* //')
 R_VERSION = 3.1
 REPO_PATH_WIN = bin/windows/contrib/$(R_VERSION)
 REPO_PATH_MAC = bin/macosx/contrib/$(R_VERSION)
 TMP_BUILD_DIR = tmp_build
 ifneq ($(OS),Windows_NT)
 OS := $(shell uname)
-UNAME_P := $(shell uname -p | sed 's/unknown/x86_64/')
+R_PLATFORM := $(shell R --vanilla -q -e 'options(echo=FALSE); cat(R.Version()$$platform)' | tail -1)
 else
 # For windows NT the shell is odd.  Cygwin 'shell uname' returns CYGWIN_NT-6.1-WOW64
 # which is not really what we want.  The normal CMD shell does something else.
@@ -14,7 +16,7 @@ else
 endif
 
 H2O_R_SOURCE_FILE = h2o_$(PROJECT_VERSION).tar.gz
-H2O_R_LINUX_FILE = h2o_$(PROJECT_VERSION)_R_$(UNAME_P)-pc-linux-gnu.tar.gz
+H2O_R_LINUX_FILE = h2o_$(PROJECT_VERSION)_R_$(R_PLATFORM).tar.gz
 H2O_R_MAC_FILE = h2o_$(PROJECT_VERSION).tgz
 H2O_R_WINDOWS_FILE = h2o_$(PROJECT_VERSION).zip
 
@@ -35,8 +37,8 @@ endif
 PDFLATEX=$(shell which pdflatex)
 
 build_rh2o:
-	sed 's/SUBST_PROJECT_VERSION/$(PROJECT_VERSION)/' h2o-DESCRIPTION.template > h2o-package/DESCRIPTION
-	sed 's/SUBST_PROJECT_VERSION/$(PROJECT_VERSION)/' h2o-package.template > h2o-package/man/h2o-package.Rd
+	sed -e 's/SUBST_PROJECT_VERSION/$(PROJECT_VERSION)/' -e 's/SUBST_PROJECT_BRANCH/$(BUILD_BRANCH)/' h2o-DESCRIPTION.template > h2o-package/DESCRIPTION
+	sed -e 's/SUBST_PROJECT_VERSION/$(PROJECT_VERSION)/' -e 's/SUBST_PROJECT_BRANCH/$(BUILD_BRANCH)/' h2o-package.template > h2o-package/man/h2o-package.Rd
 ifeq ($(PDFLATEX),)
 	@echo pdflatex not found, skipping pdf generation...
 else
@@ -45,15 +47,19 @@ else
 	cp -p h2o_package.pdf ../target/R
 endif
 	rm -rf h2o-package/inst/java
-	mkdir -p h2o-package/inst/java/tmp
-	cp -f ../target/h2o.jar h2o-package/inst/java/tmp/h2o_full.jar
-	(cd h2o-package/inst/java/tmp && jar xf h2o_full.jar)
-	(cd h2o-package/inst/java/tmp && rm -fr hadoop/0.* hadoop/1.* hadoop/cdh[35]* hadoop/cdh4_yarn)
-	(cd h2o-package/inst/java/tmp && rm -f h2o_full.jar)
-	(cd h2o-package/inst/java/tmp && cp META-INF/MANIFEST.MF ..)
-	(cd h2o-package/inst/java/tmp && rm -fr META-INF)
-	(cd h2o-package/inst/java/tmp && jar cfm ../h2o.jar ../MANIFEST.MF *)
-	rm -rf h2o-package/inst/java/tmp
+	# mkdir -p h2o-package/inst/java/tmp
+	# cp -f ../target/h2o.jar h2o-package/inst/java/tmp/h2o_full.jar
+	# (cd h2o-package/inst/java/tmp && jar xf h2o_full.jar)
+	# (cd h2o-package/inst/java/tmp && rm -fr hadoop/0.* hadoop/1.* hadoop/cdh[35]* hadoop/cdh4_yarn)
+	# (cd h2o-package/inst/java/tmp && rm -f h2o_full.jar)
+	# (cd h2o-package/inst/java/tmp && cp META-INF/MANIFEST.MF ..)
+	# (cd h2o-package/inst/java/tmp && rm -fr META-INF)
+	# (cd h2o-package/inst/java/tmp && jar cfm ../h2o.jar ../MANIFEST.MF *)
+	# rm -rf h2o-package/inst/java/tmp
+	mkdir -p h2o-package/inst/java
+ifeq ($(BUILD_NUMBER),99999)
+	cp -f ../target/h2o.jar h2o-package/inst/java
+endif
 	R CMD build h2o-package
 
 	# Create file with description of all packages

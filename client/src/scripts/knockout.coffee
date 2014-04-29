@@ -49,10 +49,15 @@ ko.bindingHandlers.json =
 ko.bindingHandlers.geyser =
   update: (element, valueAccessor, allBindings, viewModel, bindingContext) ->
     if data = ko.unwrap valueAccessor()
-      $(element).html geyser.render data
+      $element = $ element
+      markup = data.markup or data
+      $element.html geyser.render markup
+      if data.behaviors
+        for behavior in data.behaviors
+          behavior $element
     else
       $(element).text 'Loading. Please wait..'
-
+    return
 
 ko.bindingHandlers.collapse =
   init: (element, valueAccessor, allBindings, viewModel, bindingContext) ->

@@ -11,8 +11,7 @@ import hex.gbm.DTree.Split;
 import hex.gbm.DTree.TreeModel.TreeStats;
 import hex.gbm.DTree.UndecidedNode;
 import water.*;
-import water.api.DocGen;
-import water.api.GBMProgressPage;
+import water.api.*;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.util.Log;
@@ -30,10 +29,10 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-  @API(help = "Learning rate, from 0. to 1.0", filter = Default.class, dmin=0, dmax=1, json=true)
+  @API(help = "Learning rate, from 0. to 1.0", filter = Default.class, dmin=0, dmax=1, json=true, importance=ParamImportance.SECONDARY)
   public double learn_rate = 0.1;
 
-  @API(help = "Grid search parallelism", filter = Default.class, lmax = 4, gridable=false)
+  @API(help = "Grid search parallelism", filter = Default.class, lmax = 4, gridable=false, importance=ParamImportance.SECONDARY)
   public int grid_parallelism = 1;
 
   /** Sum of variable empirical improvement in squared-error. The value is not scaled! */
@@ -49,6 +48,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     @Override public final Request2 job() { return get_params(); }
 
     @API(help = "Learning rate, from 0. to 1.0") final double learn_rate;
+
     public GBMModel(GBM job, Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, double learn_rate) {
       super(key,dataKey,testKey,names,domains,cmDomain,ntrees,max_depth,min_rows,nbins);
       this.parameters = job;

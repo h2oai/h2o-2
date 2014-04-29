@@ -24,7 +24,9 @@ then
     echo "Permission rights extend to the top level now, so only 0xcustomer can automount them"
     echo "okay to ls the top level here...no secret info..do all the machines we might be using"
 
-    for mr in 171 172 173 174 175 176 177 178 179 180
+    # for mr in 171 172 173 174 175 176 177 178 179 180
+    # 171 dead
+    for mr in 172 173 174 175 176 177 178 179 180
     do
         # only do older dirs, to avoid collisions on running jobs
         ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.$mr  \
@@ -98,6 +100,7 @@ then
 
     # myPy c8 test_c8_rf_airlines_hdfs.py
     myPy c9 test_c9b_GBM_airlines_hdfs.py
+    myPy c9 test_c9_GLM_airlines_hdfs_fvec.py
 
     myPy c1 test_c1_fvec.py
     # myPy c2 test_c2_fvec.py

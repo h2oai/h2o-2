@@ -141,6 +141,7 @@ myPy c6 test_c6_hdfs.py
 myPy c6 test_c6_hdfs_fvec.py
 # myPy c6 test_c6_maprfs_fvec.py
 myPy c8 test_c8_rf_airlines_hdfs_fvec.py
+myPy c9 test_c9_GLM_airlines_hdfs_fvec.py
 
 # If this one fails, fail this script so the bash dies 
 # We don't want to hang waiting for the cloud to terminate.

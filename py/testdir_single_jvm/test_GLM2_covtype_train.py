@@ -64,7 +64,7 @@ class Basic(unittest.TestCase):
         
         # GLM, predict, CM*******************************************************8
         kwargs = {
-            'response': 'C' + str(y),
+            'response': 'C' + str(y+1),
             'max_iter': 20, 
             'n_folds': 0, 
             'alpha': 0.1, 
@@ -101,7 +101,7 @@ class Basic(unittest.TestCase):
 
             predictCMResult = h2o.nodes[0].predict_confusion_matrix(
                 actual=testDataKey,
-                vactual='C' + str(y),
+                vactual='C' + str(y+1),
                 predict=predictKey,
                 vpredict='predict',
                 )

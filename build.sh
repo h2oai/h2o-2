@@ -30,7 +30,20 @@ JAR_ROOT=lib
 
 # additional dependencies, relative to this file, but all dependencies should be
 # inside the JAR_ROOT tree so that they are packed to the jar file properly
-DEPENDENCIES="${JAR_ROOT}/jama/*${SEP}${JAR_ROOT}/apache/*${SEP}${JAR_ROOT}/junit/*${SEP}${JAR_ROOT}/gson/*${SEP}${JAR_ROOT}/javassist.jar${SEP}${JAR_ROOT}/poi/*${SEP}${JAR_ROOT}/s3/*${SEP}${JAR_ROOT}/jets3t/*${SEP}${JAR_ROOT}/log4j/*${SEP}${JAR_ROOT}/joda/*${SEP}${JAR_ROOT}/mockito/*${SEP}${JAR_ROOT}/jogamp/*"
+DEPENDENCIES="\
+${JAR_ROOT}/jama/*\
+${SEP}${JAR_ROOT}/apache/*\
+${SEP}${JAR_ROOT}/junit/*\
+${SEP}${JAR_ROOT}/gson/*\
+${SEP}${JAR_ROOT}/json/*\
+${SEP}${JAR_ROOT}/javassist.jar\
+${SEP}${JAR_ROOT}/poi/*\
+${SEP}${JAR_ROOT}/s3/*\
+${SEP}${JAR_ROOT}/jets3t/*\
+${SEP}${JAR_ROOT}/log4j/*\
+${SEP}${JAR_ROOT}/joda/*\
+${SEP}${JAR_ROOT}/mockito/*\
+${SEP}${JAR_ROOT}/jogamp/*"
 
 DEFAULT_HADOOP_VERSION="cdh3"
 OUTDIR="target"

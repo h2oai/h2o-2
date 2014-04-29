@@ -94,7 +94,7 @@ class Basic(unittest.TestCase):
             # PCA(tolerance iterate)****************************************
             for tolerance in [i/10.0 for i in range(11)]:
                 params = {
-                    'ignored_cols': 'C1',
+                    'ignored_cols': 'C2',
                     'destination_key': modelKey,
                     'tolerance': tolerance,
                     'standardize': 1,

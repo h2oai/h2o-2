@@ -187,6 +187,7 @@ public class Constants extends Iced {
   public static final String VIEW                  = "view";
   public static final String WARNINGS              = "warnings";
   public static final String WEIGHT                = "weight";
+  public static final String PRIOR                 = "prior";
   public static final String WEIGHTS               = "class_weights";
   public static final String WIDTH                 = "width";
   public static final String X                     = "x";

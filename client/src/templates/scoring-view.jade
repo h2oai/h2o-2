@@ -29,7 +29,13 @@
 
   h2.y-subtitle(data-bind='collapse:false') Scoring Comparison
   // ko if:hasComparisonTable
-  .y-model-summary(data-bind='geyser:modelSummary')
+  .y-model-summary
+    .y-summary
+      // ko foreach:modelSummary
+      .y-summary-item
+        .y-summary-key(data-bind='text:key')
+        .y-summary-value(data-bind='text:value')
+      // /ko
   div(data-bind='geyser:comparisonTable')
   // /ko
 

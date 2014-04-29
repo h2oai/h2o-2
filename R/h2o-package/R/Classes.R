@@ -18,6 +18,7 @@ setClass("H2ODRFModel", contains="H2OModel", representation(valid="H2OParsedData
 setClass("H2ONBModel", contains="H2OModel")
 setClass("H2OPCAModel", contains="H2OModel")
 setClass("H2OGBMModel", contains="H2OModel", representation(valid="H2OParsedData"))
+setClass("H2OSpeeDRFModel", contains="H2OModel", representation(valid="H2OParsedData"))
 
 setClass("H2OGLMGrid", contains="H2OGrid")
 setClass("H2OGBMGrid", contains="H2OGrid")
@@ -250,6 +251,12 @@ year <- function(x) UseMethod('year', x)
 year.H2OParsedData <- h2o.year
 month <- function(x) UseMethod('month', x)
 month.H2OParsedData <- h2o.month
+
+diff.H2OParsedData <- function(x, lag = 1, differences = 1, ...) {
+  expr = paste("diff(", paste(x@key, lag, differences, sep = ","), ")", sep = "")
+  res = .h2o.__exec2(x@h2o, expr)
+  new("H2OParsedData", h2o=x@h2o, key=res$dest_key, logic=FALSE)
+}
 
 as.h2o <- function(client, object, key = "", header, sep = "") {
   if(missing(client) || class(client) != "H2OClient") stop("client must be a H2OClient object")
@@ -817,7 +824,20 @@ setMethod("var", "H2OParsedData", function(x, y = NULL, na.rm = FALSE, use) {
 })
 
 as.data.frame.H2OParsedData <- function(x, ...) {
-  url <- paste('http://', x@h2o@ip, ':', x@h2o@port, '/2/DownloadDataset?src_key=', URLencode(x@key), sep='')
+  # Versions of R prior to 3.1 should not use hex string.
+  # Versions of R including 3.1 and later should use hex string.
+  use_hex_string = FALSE
+  if (as.numeric(R.Version()$major) >= 3) {
+    if (as.numeric(R.Version()$minor) >= 1) {
+      use_hex_string = TRUE
+    }
+  }
+
+  url <- paste('http://', x@h2o@ip, ':', x@h2o@port,
+               '/2/DownloadDataset',
+               '?src_key=', URLencode(x@key),
+               '&hex_string=', as.numeric(use_hex_string),
+               sep='')
   ttt <- getURL(url)
   n = nchar(ttt)
 

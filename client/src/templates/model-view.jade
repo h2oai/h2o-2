@@ -6,9 +6,11 @@
   .y-section(data-bind='geyser:summary')
   h2.y-subtitle(data-bind='collapse:false') Parameters
   .y-parameters(data-bind='geyser:parameters')
-  h2.y-subtitle(data-bind='collapse:false') Input Column Names
-  .y-input-column(data-bind='geyser:inputColumns')
-  h2.y-subtitle(data-bind='collapse:false') Compatible Datasets
+  h2.y-subtitle(data-bind='collapse:false') Input Columns 
+    span(data-bind='text:inputColumnsCount')
+  .y-input-columns(data-bind='geyser:inputColumns')
+  h2.y-subtitle(data-bind='collapse:false') Compatible Datasets 
+    span(data-bind='text:compatibleFramesCount')
   div
     .y-frames(data-bind='geyser:compatibleFrames')
     .y-controls

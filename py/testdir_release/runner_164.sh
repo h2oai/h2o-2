@@ -93,6 +93,10 @@ then
     # doesn't work. key gets locked. forget about it
     # myPy c7 test_c7_rel.py
     myPy c8 test_c8_rf_airlines_hdfs.py
+    myPy c8 test_c8_rf_airlines_hdfs_fvec.py
+    myPy c9 test_c9_GLM_rc_fvec.py
+    myPy c9 test_c9_GLM_airlines_fvec.py
+
 
     myPy c1 test_c1_fvec.py
     # myPy c2 test_c2_fvec.py
@@ -105,8 +109,6 @@ then
     # myPy c6 test_c6_maprfs_fvec.py
 
     # causing problems. don't run for now
-    # myPy c7 test_c7_fvec.py
-    myPy c8 test_c8_rf_airlines_hdfs_fvec.py
     myPy c10 test_c10_glm_fvec.py
 else
     myPy $TESTDIR $TEST

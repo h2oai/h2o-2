@@ -135,7 +135,12 @@ class PerfRunner:
                 test.test_run.row["contaminated"] = contamination[0]
                 test.test_run.row["contamination_message"] = contamination[1]
                 test.test_run.update(True)
+                print "DEBUG: "
+                print ""
+                print "Stopping all profiling for Hound."
+                print ""
                 self.stop_sys_profiling(ssh_ch)
+                print "Successfully stopped profiler..."
                 ssh_ch = None
                 PerfUtils.stop_cloud(self, test.remote_hosts)
                 self.cloud.pop(0)

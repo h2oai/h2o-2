@@ -24,6 +24,8 @@ import hex.nb.NBModelView;
 import hex.pca.PCA;
 import hex.pca.PCAModelView;
 import hex.rf.RFModel;
+import hex.singlenoderf.SpeeDRFModel;
+import hex.singlenoderf.SpeeDRFModelView;
 import water.*;
 import water.ValueArray.Column;
 import water.api.GLMProgressPage.GLMBuilder;
@@ -183,6 +185,8 @@ public class Inspect extends Request {
       return DRFModelView.redirect(this, key);
     if (f instanceof GapStatisticModel)
       return GapStatisticModelView.redirect(this, key);
+    if (f instanceof SpeeDRFModel)
+      return SpeeDRFModelView.redirect(this, key);
     return Response.error("No idea how to display a "+f.getClass());
   }
 
@@ -251,10 +255,10 @@ public class Inspect extends Request {
       json.addProperty(SIZE, Math.abs(c._size));
       json.addProperty(BASE, c._base);
       json.addProperty(SCALE, (int) c._scale);
-      json.addProperty(MIN,  c.isEnum() ? Double.NaN : c._min);
-      json.addProperty(MAX,  c.isEnum() ? Double.NaN : c._max);
-      json.addProperty(MEAN, c.isEnum() ? Double.NaN : c._mean);
-      json.addProperty(VARIANCE, c.isEnum() ? Double.NaN : c._sigma);
+      json.addProperty(MIN,  (c.isEnum() || Double.isNaN(c._min)) ? "\"NaN\"" : String.valueOf(c._min));
+      json.addProperty(MAX,  (c.isEnum() || Double.isNaN(c._max)) ? "\"NaN\"" : String.valueOf(c._max));
+      json.addProperty(MEAN,  (c.isEnum() || Double.isNaN(c._mean)) ? "\"NaN\"" : String.valueOf(c._mean));
+      json.addProperty(VARIANCE,  (c.isEnum() || Double.isNaN(c._sigma)) ? "\"NaN\"" : String.valueOf(c._sigma));
       json.addProperty(NUM_MISSING_VALUES, va._numrows - c._n);
       json.addProperty(TYPE, c.isEnum() ? "enum" : (c.isFloat() ? "float" : "int"));
       json.addProperty(ENUM_DOMAIN_SIZE, c.isEnum() ? c._domain.length : 0);

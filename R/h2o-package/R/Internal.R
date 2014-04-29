@@ -103,6 +103,7 @@ h2o.__changeLogPath <- function(path, type) {
 
 .h2o.__PAGE_EXEC2 = "2/Exec2.json"
 .h2o.__PAGE_IMPORTFILES2 = "2/ImportFiles2.json"
+.h2o.__PAGE_EXPORTFILES = "2/ExportFiles.json"
 .h2o.__PAGE_INSPECT2 = "2/Inspect2.json"
 .h2o.__PAGE_PARSE2 = "2/Parse2.json"
 .h2o.__PAGE_PREDICT2 = "2/Predict.json"
@@ -141,6 +142,8 @@ h2o.__changeLogPath <- function(path, type) {
 .h2o.__PAGE_PCASCORE = "2/PCAScore.json"
 .h2o.__PAGE_PCAProgress = "2/PCAProgressPage.json"
 .h2o.__PAGE_PCAModelView = "2/PCAModelView.json"
+.h2o.__PAGE_SpeeDRF = "2/SpeeDRF.json"
+.h2o.__PAGE_SpeeDRFModelView = "2/SpeeDRFModelView.json"
 .h2o.__PAGE_BAYES = "2/NaiveBayes.json"
 .h2o.__PAGE_NBProgress = "2/NBProgressPage.json"
 .h2o.__PAGE_NBModelView = "2/NBModelView.json"
@@ -200,9 +203,7 @@ h2o.__changeLogPath <- function(path, type) {
   #  temp = getForm(myURL, ..., .checkParams = FALSE)   # Some H2O params overlap with Curl params
   
   # after = gsub("\\\\\\\"NaN\\\\\\\"", "NaN", temp[1]) 
-  # after = gsub("NaN", "\"NaN\"", after)
-  # after = gsub("-Infinity", "\"-Inf\"", temp[1])
-  # after = gsub("Infinity", "\"Inf\"", after)
+  # after = gsub("NaN", '"NaN"', after)
   after = gsub('"Infinity"', '"Inf"', temp[1])
   after = gsub('"-Infinity"', '"-Inf"', after)
   res = fromJSON(after)
