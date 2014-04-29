@@ -9,6 +9,8 @@ def parseValue(v):
         float(v)
         return float(v)
     except ValueError:
+        if '.' in v:
+            return v.split('.')[-1]
         return v
 
 
