@@ -111,6 +111,12 @@ def runPredict(node=None, data_key=None, model_key=None, timeoutSecs=500, **kwar
     if not node: node = h2o.nodes[0]
     return node.generate_predictions(data_key, model_key, timeoutSecs=timeoutSecs,**kwargs) 
 
+def runSpeeDRF(node=None, parseResult=None, trees=5, timeoutSecs=20, **kwargs):
+    if not parseResult: raise Exception("No parseResult for SpeeDRF")
+    if not node: node = h2o.nodes[0]
+    Key = parseResult['destination_key']
+    return node.speedrf(Key, trees, timeoutSecs, **kwargs)
+
 # rfView can be used to skip the rf completion view
 # for creating multiple rf jobs
 def runRF(node=None, parseResult=None, trees=5, timeoutSecs=20, **kwargs):

@@ -49,7 +49,7 @@ public class SpeeDRF extends Job.ValidatedJob {
   public int bin_limit = 1024;
 
   @API(help = "seed", filter = Default.class, json = true)
-  public long seed = 784834182943470027L;
+  public long seed = -1;
 
   @API(help = "Build trees in parallel", filter = Default.class, json = true)
   public boolean  parallel  = true;
@@ -62,6 +62,8 @@ public class SpeeDRF extends Job.ValidatedJob {
 
   @API(help = "use non local data")
   public boolean _useNonLocalData = true;
+
+  private static final Random _seedGenerator = Utils.getDeterRNG(0xd280524ad7fe0602L);
 
   /** Return the query link to this page */
 //  public static String link(Key k, String content) {
@@ -182,6 +184,9 @@ public class SpeeDRF extends Job.ValidatedJob {
           System.arraycopy(class_weights, 0, weights, 0, class_weights.length);
           class_weights = weights;
         }
+      }
+      if (seed == -1) {
+        seed = _seedGenerator.nextLong();
       }
       Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, false, false, false);
       Frame test = null;
