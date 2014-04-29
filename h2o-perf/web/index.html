@@ -74,6 +74,11 @@ FROM test_run tr
 INNER JOIN test_run_phase_result tp
 ON tr.test_run_id = tp.test_run_id
 WHERE tp.phase_name = 'parse'
+AND tr.test_name in ('singlenode_summary_one-billion-rows', 
+                     'multinode_summary_one-billion-rows', 
+                     'singlenode_rf_va_mnist', 'multinode_rf_va_mnist',
+                     'singlenode_rf_fv_mnist', 'multinode_rf_fv_mnist', 
+                     'singlenode_gbm_covtype', 'multinode_gbm_covtype')
 ORDER BY tr.start_epoch_ms;
                                             </textarea>
                                         <button class="btn btn-primary">Submit</button>
@@ -112,6 +117,7 @@ FROM test_run tr
 INNER JOIN test_run_phase_result tp
 ON tr.test_run_id = tp.test_run_id
 WHERE tp.phase_name = 'parse'
+AND (tr.test_name LIKE '%singlenode%' OR tr.test_name LIKE '%multinode%')
 AND tr.test_name LIKE '%billion%'
 ORDER BY tr.start_epoch_ms;</textarea>
                                         <button class="btn btn-primary">Submit</button>
@@ -159,6 +165,7 @@ FROM test_run tr
 INNER JOIN test_run_phase_result tp
 ON tr.test_run_id = tp.test_run_id
 WHERE tp.phase_name = 'model'
+AND (tr.test_name LIKE '%singlenode%' OR tr.test_name LIKE '%multinode%')
 AND tr.test_name LIKE '%summary%'
 ORDER BY tr.start_epoch_ms;</textarea>
                                         <button class="btn btn-primary">Submit</button>
@@ -197,6 +204,7 @@ FROM test_run tr
 INNER JOIN test_run_phase_result tp
 ON tr.test_run_id = tp.test_run_id
 WHERE tp.phase_name = 'model'
+AND (tr.test_name LIKE '%singlenode%' OR tr.test_name LIKE '%multinode%')
 AND tr.test_name LIKE '%summary%'
 AND tr.test_name LIKE '%billion%'
 ORDER BY tr.start_epoch_ms;</textarea>
@@ -245,6 +253,7 @@ FROM test_run tr
 INNER JOIN test_run_phase_result tp
 ON tr.test_run_id = tp.test_run_id
 WHERE tp.phase_name = 'model'
+AND (tr.test_name LIKE '%singlenode%' OR tr.test_name LIKE '%multinode%')
 AND tr.test_name LIKE '%pca%'
 ORDER BY tr.start_epoch_ms;</textarea>
                                         <button class="btn btn-primary">Submit</button>
@@ -283,6 +292,7 @@ FROM test_run tr
 INNER JOIN test_run_phase_result tp
 ON tr.test_run_id = tp.test_run_id
 WHERE tp.phase_name = 'model'
+AND (tr.test_name LIKE '%singlenode%' OR tr.test_name LIKE '%multinode%')
 AND tr.test_name LIKE '%pca%'
 AND tr.test_name LIKE '%billion%'
 ORDER BY tr.start_epoch_ms;</textarea>
@@ -332,6 +342,7 @@ FROM test_run tr
 INNER JOIN test_run_phase_result tp
 ON tr.test_run_id = tp.test_run_id
 WHERE tp.phase_name = 'model'
+AND (tr.test_name LIKE '%singlenode%' OR tr.test_name LIKE '%multinode%')
 AND tr.test_name LIKE '%glm%'
 ORDER BY tr.start_epoch_ms;</textarea>
                                         <button class="btn btn-primary">Submit</button>
@@ -370,6 +381,7 @@ FROM test_run tr
 INNER JOIN test_run_phase_result tp
 ON tr.test_run_id = tp.test_run_id
 WHERE tp.phase_name = 'model'
+AND (tr.test_name LIKE '%singlenode%' OR tr.test_name LIKE '%multinode%')
 AND tr.test_name LIKE '%glm%'
 AND tr.test_name LIKE '%billion%'
 ORDER BY tr.start_epoch_ms;</textarea>
@@ -419,6 +431,7 @@ FROM test_run tr
 INNER JOIN test_run_phase_result tp
 ON tr.test_run_id = tp.test_run_id
 WHERE tp.phase_name = 'model'
+AND (tr.test_name LIKE '%singlenode%' OR tr.test_name LIKE '%multinode%')
 AND tr.test_name LIKE '%kmeans%'
 ORDER BY tr.start_epoch_ms;</textarea>
                                         <button class="btn btn-primary">Submit</button>
@@ -457,6 +470,7 @@ FROM test_run tr
 INNER JOIN test_run_phase_result tp
 ON tr.test_run_id = tp.test_run_id
 WHERE tp.phase_name = 'model'
+AND (tr.test_name LIKE '%singlenode%' OR tr.test_name LIKE '%multinode%')
 AND tr.test_name LIKE '%kmeans%'
 AND tr.test_name LIKE '%billion%'
 ORDER BY tr.start_epoch_ms;</textarea>
@@ -506,6 +520,7 @@ FROM test_run tr
 INNER JOIN test_run_phase_result tp
 ON tr.test_run_id = tp.test_run_id
 WHERE tp.phase_name = 'model'
+AND (tr.test_name LIKE '%singlenode%' OR tr.test_name LIKE '%multinode%')
 AND tr.test_name LIKE '%rf%'
 ORDER BY tr.start_epoch_ms;</textarea>
                                         <button class="btn btn-primary">Submit</button>
@@ -593,6 +608,7 @@ FROM test_run tr
 INNER JOIN test_run_phase_result tp
 ON tr.test_run_id = tp.test_run_id
 WHERE tp.phase_name = 'model'
+AND (tr.test_name LIKE '%singlenode%' OR tr.test_name LIKE '%multinode%')
 AND tr.test_name LIKE '%gbm%'
 ORDER BY tr.start_epoch_ms;</textarea>
                                         <button class="btn btn-primary">Submit</button>
@@ -640,6 +656,7 @@ FROM test_run tr
 INNER JOIN test_run_phase_result tp
 ON tr.test_run_id = tp.test_run_id
 WHERE tp.phase_name = 'model'
+AND (tr.test_name LIKE '%singlenode%' OR tr.test_name LIKE '%multinode%')
 AND tr.test_name LIKE '%deeplearning%'
 ORDER BY tr.start_epoch_ms;</textarea>
                                         <button class="btn btn-primary">Submit</button>
@@ -689,6 +706,7 @@ FROM test_run tr
 INNER JOIN test_run_phase_result tp
 ON tr.test_run_id = tp.test_run_id
 WHERE tp.phase_name = 'model'
+AND (tr.test_name LIKE '%singlenode%' OR tr.test_name LIKE '%multinode%')
 AND tr.test_name LIKE '%ddply%'
 ORDER BY tr.start_epoch_ms;</textarea>
                                         <button class="btn btn-primary">Submit</button>

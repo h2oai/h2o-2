@@ -14,6 +14,10 @@
         <script type="text/javascript" src="http://d3js.org/d3.v3.min.js"></script>
     </head>
     <style>
+        @font-face {
+            font-family: 'robotothin';
+            src: url("./Roboto-Medium.ttf");
+        }
         .axis path,
         .axis line {
           fill: none;
@@ -43,19 +47,23 @@
           stroke-width: 1.5px;
         }
 
-
         div.tooltip {   
             position: absolute;           
             text-align: center;           
             width: 90px;
             height: 35px;
             padding: 2px;
-            font: 12px sans-serif;        
-            background: lightsteelblue;   
-            border: 0px;      
-            border-radius: 8px;           
-            pointer-events: none;         
+            font: 12px;        
+            border:2px solid steelblue;
+            background:rgba(255, 255, 255, 1.0);
+            box-shadow:#333333 0px 0px 10px;
+            border-radius: 8px;
+            pointer-events: none;
+            z-index:10500;
+            font-family: 'robotothin';
+            font-weight:bold;
           }
+
   </style>
     <body>
         <script>
