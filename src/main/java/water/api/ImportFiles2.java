@@ -4,23 +4,22 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.apache.hadoop.fs.Path;
-import water.DKV;
-import water.Futures;
-import water.Key;
-import water.Request2;
+
+import tachyon.client.TachyonFS;
+import tachyon.org.apache.thrift.TException;
+import tachyon.thrift.ClientFileInfo;
+import water.*;
 import water.api.RequestServer.API_VERSION;
-import water.fvec.S3FileVec;
-import water.fvec.UploadFileVec;
-import water.persist.PersistHdfs;
-import water.persist.PersistS3;
-import water.util.FileIntegrityChecker;
-import water.util.Log;
+import water.fvec.*;
+import water.persist.*;
+import water.util.*;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -73,6 +72,7 @@ public class ImportFiles2 extends Request2 {
         else if( p2.startsWith("s3://"   ) ) serveS3();
         else if( p2.startsWith("http://" ) ) serveHttp();
         else if( p2.startsWith("https://") ) serveHttp();
+        else if( p2.startsWith("tachyon://")) serveTachyon();
         else serveLocalDisk();
       }
       return Response.done(this);
@@ -162,6 +162,42 @@ public class ImportFiles2 extends Request2 {
       files = new String[0];
       keys = new String[0];
     }
+  }
+
+  private void serveTachyon() {
+    assert path.startsWith(PersistTachyon.PREFIX) : "Path "+path+" is not prefixed by tachyon prefix " + PersistTachyon.PREFIX;
+    TachyonFS client = null;
+    ArrayList<String> succ = new ArrayList<String>();
+    ArrayList<String> fail = new ArrayList<String>();
+    try {
+      String[] pathComponents = PersistTachyon.decode(path);
+      String serverUri = pathComponents[0];
+      client = (TachyonFS) Persist.I[Value.TACHYON].createClient();
+      String rootFolder = pathComponents[1];
+      List<ClientFileInfo> files= client.listStatus(rootFolder); // do a recursive descend
+      Futures fs = new Futures();
+      for (ClientFileInfo f : files ) {
+        try {
+          succ.add(TachyonFileVec.make(serverUri, f, fs).toString());
+        } catch (Throwable t) {
+          fail.add(f.getName());
+          Log.err("Failed to loadfile from Tachyon: path = " + f.path + ", error = " + t.getClass().getName() + ", msg = " + t.getMessage());
+        }
+      }
+    } catch (IOException e) {
+      fillEmpty("Cannot access tachyon, because " + e.getMessage());
+    } finally {
+      if (client!=null) try { client.close(); } catch (TException _ ) {};
+    }
+    keys = succ.toArray(new String[succ.size()]);
+    files = keys;
+    fails = fail.toArray(new String[fail.size()]);
+  }
+
+  private void fillEmpty(String failure) {
+    fails = new String[] {failure};
+    files = new String[0];
+    keys = new String[0];
   }
 
   // HTML builder
