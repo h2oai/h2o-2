@@ -40,7 +40,7 @@ public class PCA extends ColumnsJob {
   @API(help = "If true, data will be standardized on the fly when computing the model.", filter = Default.class, json=true)
   boolean standardize = true;
 
-  public PCA() {tolerance = 0; standardize = true;}
+  public PCA() {}
 
   public PCA(String desc, Key dest, Frame src, double tolerance, boolean standardize) {
     this(desc, dest, src, 10000, tolerance, standardize);
@@ -54,6 +54,8 @@ public class PCA extends ColumnsJob {
     this.tolerance = tolerance;
     this.standardize = standardize;
   }
+
+  @Override public boolean toHTML(StringBuilder sb) { return makeJsonBox(sb); }
 
   @Override protected void execImpl() {
     Frame fr = selectFrame(source);
@@ -124,8 +126,7 @@ public class PCA extends ColumnsJob {
 
     Key dataKey = input("source") == null ? null : Key.make(input("source"));
     int ncomp = Math.min(getNumPC(sdev, tolerance), max_pc);
-    PCAParams params = new PCAParams(max_pc, tolerance, standardize);
-    return new PCAModel(destination_key, dataKey, dinfo, tsk, sdev, propVar, cumVar, eigVec, mySVD.rank(), ncomp, params);
+    return new PCAModel(this, destination_key, dataKey, dinfo, tsk, sdev, propVar, cumVar, eigVec, mySVD.rank(), ncomp);
   }
 
   public static int getNumPC(double[] sdev, double tol) {

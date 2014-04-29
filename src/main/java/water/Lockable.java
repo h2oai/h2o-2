@@ -1,9 +1,10 @@
 package water;
 
-import java.util.Arrays;
 import water.api.DocGen;
 import water.api.Request.API;
 import water.util.Log;
+
+import java.util.Arrays;
 
 /**
  * Lockable Keys - locked during long running jobs, to prevent overwriting
@@ -176,7 +177,7 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
     final Key _job_key;         // Job doing the unlocking
     Unlock( Key job_key ) { _job_key = job_key; }
     @Override public Lockable atomic(Lockable old) {
-      assert old.is_locked(_job_key);
+      assert old.is_locked(_job_key) : old.getClass().getSimpleName() + " cannot be unlocked (not locked by job " + _job_key + ").";
       set_unlocked(old._lockers,_job_key);
       return Lockable.this;
     }
@@ -197,11 +198,11 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
   protected boolean is_unlocked() { return _lockers== null; }
   private void set_write_lock( Key job_key ) { 
     _lockers=new Key[]{job_key}; 
-    assert is_locked(job_key);
+    assert is_locked(job_key) : "Job " + job_key + " must be locked.";
   }
   private void set_read_lock(Key job_key) {
-    assert !is_locked(job_key); // no double locking
-    assert !is_wlocked();       // not write locked
+    assert !is_locked(job_key) : this.getClass().getSimpleName() + " is already locked by job " + job_key + "."; // no double locking
+    assert !is_wlocked() : this.getClass().getSimpleName() + " is already write locked.";       // not write locked
     _lockers = _lockers == null ? new Key[2] : Arrays.copyOf(_lockers,_lockers.length+1);
     _lockers[_lockers.length-1] = job_key;
     assert is_locked(job_key);

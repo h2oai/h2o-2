@@ -38,6 +38,13 @@ public class DeepLearning extends Job.ValidatedJob {
   public Key checkpoint;
 
   /**
+   * A key to store the always-best model under
+   * (as measured by MSE for regression, total error rate for multi-class and F1-score for binary classification)
+   */
+  @API(help = "Key to store the always-best model under.", filter= Default.class, json = true, gridable = false)
+  public Key best_model_key = null;
+
+  /**
    * Unlock expert mode parameters than can affect model building speed,
    * predictive accuracy and scoring. Leaving expert mode parameters at default
    * values is fine for many problems, but best results on complex datasets are often
@@ -401,7 +408,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * input features to the first two hidden layers.
    */
   @API(help = "Compute variable importances for input features (Gedeon method) - can be slow for large networks", filter = Default.class, json = true)
-  public boolean variable_importances = true;
+  public boolean variable_importances = false;
 
   /**
    * Enable fast mode (minor approximation in back-propagation), should not affect results significantly.
@@ -511,6 +518,7 @@ public class DeepLearning extends Job.ValidatedJob {
 
   // the following parameters can be modified when restarting from a checkpoint
   transient final String [] cp_modifiable = new String[] {
+          "best_model_key",
           "expert_mode",
           "seed",
           "epochs",
@@ -709,7 +717,8 @@ public class DeepLearning extends Job.ValidatedJob {
         Log.warn("Automatically re-using ignored_cols from the checkpointed model.");
       }
       if ((validation!=null) != (previous.model_info().get_params().validation != null)
-              || (validation != null && !Arrays.equals(validation._key._kb, previous.model_info().get_params().validation._key._kb))) {
+              || (validation != null && validation._key != null && previous.model_info().get_params().validation._key != null
+              && !Arrays.equals(validation._key._kb, previous.model_info().get_params().validation._key._kb))) {
         throw new IllegalArgumentException("validation must be the same as for the checkpointed model.");
       }
       if (classification != previous.model_info().get_params().classification) {
@@ -730,7 +739,8 @@ public class DeepLearning extends Job.ValidatedJob {
             for (Field fB : B.getClass().getDeclaredFields()) {
               if (fA.equals(fB)) {
                 try {
-                  if (!fA.get(A).toString().equals(fB.get(B).toString())) {
+                  if (fB.get(B) == null || fA.get(A) == null || !fA.get(A).toString().equals(fB.get(B).toString())) { // if either of the two parameters is null, skip the toString()
+                    if (fA.get(A) == null && fB.get(B) == null) continue; //if both parameters are null, we don't need to do anything
                     Log.info("Applying user-requested modification of '" + fA.getName() + "': " + fA.get(A) + " -> " + fB.get(B));
                     fA.set(A, fB.get(B));
                   }
@@ -863,16 +873,6 @@ public class DeepLearning extends Job.ValidatedJob {
     }
   }
 
-  /**
-   * Incrementally train an existing model
-   * @param model Initial model
-   * @param epochs How many epochs to train for
-   * @return Updated model
-   */
-  public final DeepLearningModel trainModel(DeepLearningModel model, double epochs) {
-    model.model_info().get_params().epochs += epochs;
-    return trainModel(model);
-  }
 
   /**
    * Helper to update a Frame and adding it to the local trash at the same time
@@ -954,12 +954,16 @@ public class DeepLearning extends Job.ValidatedJob {
               new DeepLearningTask(model.model_info(), rowUsageFraction).doAll(train).model_info()); //distributed data (always in multi-node mode)
       while (model.doScoring(train, trainScoreFrame, validScoreFrame, self(), getValidAdaptor()));
 
+      state = JobState.DONE; //for JSON REST response
+      model.get_params().state = state; //for parameter JSON on the HTML page
       Log.info("Finished training the Deep Learning model.");
       return model;
     }
     catch(JobCancelledException ex) {
-      Log.info("Deep Learning model building was cancelled.");
       model = UKV.get(dest());
+      state = JobState.CANCELLED; //for JSON REST response
+      model.get_params().state = state; //for parameter JSON on the HTML page
+      Log.info("Deep Learning model building was cancelled.");
       return model;
     }
     finally {
