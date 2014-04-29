@@ -12,7 +12,7 @@ class ssh_connect:
         self.ssh.load_system_host_keys()
         self.ssh.connect("192.168.1.171", username="0xperf", password="0xperf")
         # keep connection - send keepalive packet evety 5minutes
-        self.ssh.get_transport().set_keepalive(300)
+#        self.ssh.get_transport().set_keepalive(300)
 
     def open_channel(self):
         ch = self.ssh.get_transport().open_session()
@@ -26,23 +26,23 @@ def main(test_run_id, ips, pids, name):
 
     cmd = ["python", "/home/0xperf/HOUND/unleash_the_hounds.py", str(test_run_id), pids, ips, name]
 
-    output_file_name = "hound_" + str('_'.join(split_pids))
-    error_file_name = "hound_" + str('_'.join(split_pids))
+#    output_file_name = "hound_" + str('_'.join(split_pids))
+#    error_file_name = "hound_" + str('_'.join(split_pids))
 
     cmd = ' '.join(cmd)
 
-    channel = ssh.open_channel()
+#    channel = open_channel()
 
-    this_path = os.path.dirname(os.path.realpath(__file__))
-    output_dir = os.path.join(this_path, "results")
-    outfd, output_file_name = PerfUtils.tmp_file(prefix="remoteH2O-" + output_file_name,
-                                                 suffix=".out", directory=output_dir)
-    errfd, error_file_name = PerfUtils.tmp_file(prefix="remoteH2O-" + error_file_name,
-                                                suffix=".err", directory=output_dir)
-
-    PerfUtils.drain(channel.makefile(), outfd)
-    PerfUtils.drain(channel.makefile_stderr(), errfd)
-    channel.exec_command(cmd)
+#    this_path = os.path.dirname(os.path.realpath(__file__))
+#    output_dir = os.path.join(this_path, "results")
+#    outfd, output_file_name = PerfUtils.tmp_file(prefix="remoteH2O-" + output_file_name,
+#                                                 suffix=".out", directory=output_dir)
+#    errfd, error_file_name = PerfUtils.tmp_file(prefix="remoteH2O-" + error_file_name,
+#                                                suffix=".err", directory=output_dir)
+#
+#    PerfUtils.drain(channel.makefile(), outfd)
+#    PerfUtils.drain(channel.makefile_stderr(), errfd)
+    ssh.ssh.exec_command(cmd)
 
 if __name__ == "__main__":
     test_run_id = sys.argv[1]

@@ -55,7 +55,7 @@ class PerfRunner:
                             prefix = d
                             continue
                         if test_to_run in d:
-                            if "multi" in prefix: continue
+                            #if "multi" in prefix: continue
                             self.add_test(d, prefix)
                     continue
                 continue
@@ -146,7 +146,7 @@ class PerfRunner:
 
     def begin_sys_profiling(self, test_name):
         this_path = os.path.dirname(os.path.realpath(__file__))
-        hounds_py = os.path.join(this_path, "../unleash_the_hounds.py")
+        hounds_py = os.path.join(this_path, "../hound.py")
         cmd = ["python", hounds_py, str(self.perfdb.this_test_run_id),
                self.cloud[0].all_pids(), self.cloud[0].all_ips(), test_name]
         print

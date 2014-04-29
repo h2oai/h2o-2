@@ -183,6 +183,7 @@ class H2OCloudNode:
         got_url_sys = False
         got_url_proc = False
         while m < max_retries:
+            print "Performing try : " + str(m) + " out of total tries = " + str(max_retries)
             url_sys = "http://{}:{}/stat".format(self.ip, 8000)
             url_proc = "http://{}:{}/{}/stat".format(self.ip, 8000, self.pid)
             r_sys = requests.get(url_sys).text.split('\n')[0]
