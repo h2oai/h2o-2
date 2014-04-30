@@ -65,7 +65,7 @@ public class DeepLearning extends Job.ValidatedJob {
    *      training row. This effectively trains exponentially many models at
    *      once, and can improve generalization.
    */
-  @API(help = "Activation function", filter = Default.class, json = true, importance = ParamImportance.SECONDARY)
+  @API(help = "Activation function", filter = Default.class, json = true, importance = ParamImportance.CRITICAL)
   public Activation activation = Activation.Tanh;
 
   /**
@@ -115,7 +115,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * results. Note that deterministic sampling and initialization might
    * still lead to some weak sense of determinism in the model.
    */
-  @API(help = "Seed for random numbers (affects sampling) - Note: only reproducible when running single threaded", filter = Default.class, json = true, importance = ParamImportance.SECONDARY)
+  @API(help = "Seed for random numbers (affects sampling) - Note: only reproducible when running single threaded", filter = Default.class, json = true)
   public long seed = new Random().nextLong();
 
   /*Adaptive Learning Rate*/
@@ -196,7 +196,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * and the learning rate for the weights connecting the second and third hidden layer will be 0.0025, etc.
    * This parameter is only active if adaptive learning rate is disabled.
    */
-  @API(help = "Learning rate decay factor between layers (N-th layer: rate*alpha^(N-1))", filter = Default.class, dmin = 0, json = true, importance = ParamImportance.SECONDARY)
+  @API(help = "Learning rate decay factor between layers (N-th layer: rate*alpha^(N-1))", filter = Default.class, dmin = 0, json = true, importance = ParamImportance.EXPERT)
   public double rate_decay = 1.0;
 
   /*Momentum*/
@@ -351,7 +351,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * data scoring dataset. When the error is at or below this threshold, training
    * stops.
    */
-  @API(help = "Stopping criterion for regression error (MSE) on training data (-1 to disable)", filter = Default.class, dmin=-1, json = true, gridable = false)
+  @API(help = "Stopping criterion for regression error (MSE) on training data (-1 to disable)", filter = Default.class, dmin=-1, json = true, gridable = false, importance = ParamImportance.EXPERT)
   public double regression_stop = 1e-6;
 
   /**
@@ -433,7 +433,7 @@ public class DeepLearning extends Job.ValidatedJob {
   /**
    * Replicate the entire training dataset onto every node for faster training on small datasets.
    */
-  @API(help = "Replicate the entire training dataset onto every node for faster training on small datasets", filter = Default.class, json = true)
+  @API(help = "Replicate the entire training dataset onto every node for faster training on small datasets", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
   public boolean replicate_training_data = true;
 
   /**
@@ -454,10 +454,10 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Enable shuffling of training data (recommended if training data is replicated and train_samples_per_iteration is close to #nodes x #rows)", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
   public boolean shuffle_training_data = false;
 
-  @API(help = "Sparse data handling (Experimental).", filter = Default.class, json = true)
+  @API(help = "Sparse data handling (Experimental).", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
   public boolean sparse = false;
 
-  @API(help = "Use a column major weight matrix for input layer. Can speed up forward propagation, but might slow down backpropagation (Experimental).", filter = Default.class, json = true)
+  @API(help = "Use a column major weight matrix for input layer. Can speed up forward propagation, but might slow down backpropagation (Experimental).", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
   public boolean col_major = false;
 
   public enum ClassSamplingMethod {
@@ -487,7 +487,6 @@ public class DeepLearning extends Job.ValidatedJob {
   transient final String [] expert_options = new String[] {
           "loss",
           "max_w2",
-          "warmup_samples",
           "score_training_samples",
           "score_validation_samples",
           "initial_weight_distribution",
