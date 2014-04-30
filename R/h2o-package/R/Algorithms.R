@@ -1032,15 +1032,6 @@ h2o.randomForest.FV <- function(x, y, data, classification=TRUE, ntree=50, depth
   if(!is.numeric(seed)) stop("seed must be an integer >= 0")
   if(!is.logical(importance)) stop("importance must be logical (TRUE or FALSE)')")
 
-    
-  print("DEBUG!!")
-  print("VALIDATION:")
-  print(validation)
-  print("IS IT MISSING?")
-  print(missing(validation))
-  print("VALIDATION KEY:")
-  print(validation@key)
-  
   if(missing(validation)) validation = data
   # else if(class(validation) != "H2OParsedData") stop("validation must be an H2O dataset")
   else if(!class(validation) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("validation must be an H2O parsed dataset")
