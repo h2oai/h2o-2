@@ -1180,6 +1180,7 @@ class H2O(object):
                  noise=None, benchmarkLogging=None, noPoll=False, reuseFirstPollUrl=False, noPrint=False):
         ### print "poll_url: pollTimeoutSecs", pollTimeoutSecs
         verboseprint('poll_url input: response:', dump_json(response))
+        print "at top of poll_url, timeoutSec: ", timeoutSecs
 
         # for the rev 2 stuff..the job_key, destination_key and redirect_url are just in the response
         # look for 'response'..if not there, assume the rev 2
@@ -1261,6 +1262,7 @@ class H2O(object):
         # note this doesn't affect polling with Inspect? (since it doesn't redirect ?
         while status == 'poll' or doFirstPoll or (beta_features and status == 'redirect' and 'Inspect' not in url):
             count += 1
+            print "right before check, timeoutSec: ", timeoutSecs
             if ((time.time() - start) > timeoutSecs):
                 # show what we're polling with
                 emsg = "Exceeded timeoutSecs: %d secs while polling." % timeoutSecs + \
@@ -1747,6 +1749,7 @@ class H2O(object):
                       noise=None, benchmarkLogging=None, noPoll=False, rfView=True,
                       print_params=True, noPrint=False, **kwargs):
 
+        print "at top of random_forest, timeoutSec: ", timeoutSecs
         algo = '2/DRF' if beta_features else 'RF'
         algoView = '2/DRFView' if beta_features else 'RFView'
 
@@ -1826,6 +1829,7 @@ class H2O(object):
             # if we want to do noPoll, we have to name the model, so we know what to ask for when we do the completion view
             # HACK: wait more for first poll?
             time.sleep(5)
+            print "right ebfore call to poll_url, timeoutSec: ", timeoutSecs
             rfView = self.poll_url(rf, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                                    initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
                                    noise=noise, benchmarkLogging=benchmarkLogging, noPrint=noPrint)
