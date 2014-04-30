@@ -70,7 +70,6 @@ exprListFull = [
     "s.hex = r.1[!is.na(r.1[,13]),]",
     'r.1=apply(r.1,2,function(x){ifelse(is.na(x),0,x)})',
     'cct.hex=runif(r.1, -1);rTrain=r.1[cct.hex<=0.9,];rTest=r.1[cct.hex>0.9,]',
-    #******************************************************************************
 
     # says you can't use col 0
     # 'r.1[,0] = r.1[,0] * r2.hex[,1]',

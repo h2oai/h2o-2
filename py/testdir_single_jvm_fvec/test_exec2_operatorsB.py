@@ -179,9 +179,10 @@ exprListFull = [
     "!x!=1",
     "(!x)!=1",
     "1+x^2",
-    # not supported **
-    # "x=c(1);1+x**2",
+    "x=c(1);1+x^2",
+    # these currently don't work. although they are legit R
     # "1+x**2",
+    # "x=c(1);1+x**2",
     "x=c(1); y=c(1); x + 2/y",
     "x=c(1); y=c(1); x + (2/y)",
     "x=c(1); y=c(1); -x + y",
