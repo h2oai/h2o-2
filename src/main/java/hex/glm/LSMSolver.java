@@ -315,7 +315,7 @@ public abstract class LSMSolver extends Iced{
           double diff = gradientErr - gerr;
           if(diff < 0 || (gerr/diff) > 1e3){ // we won't ever converge with this setup (maybe change rho and try again?)
             if(_orlx < 1.8 && gerr > 5e-4){ //
-              _orlx = Math.min(1.8,_orlx*1.25); // try if over-relaxation helps...
+              _orlx = 1.8; // try if over-relaxation helps...
               Log.info("trying over-relaxation of " + _orlx + " after " + i + " iteartions and gerr = " + gerr);
             } else {
               _converged = gerr < 1e-4;
@@ -331,8 +331,8 @@ public abstract class LSMSolver extends Iced{
       gram.addDiag(-gram._diagAdded + d);
       assert gram._diagAdded == d;
       long solveTime = System.currentTimeMillis()-t;
-      if(Double.isInfinite(gerr)) gerr = getGrad(i,gram,res,xy);
-      Log.info("ADMM finished in " + i + " iterations and (" + decompTIme + " + " + solveTime+ ")ms, max |subgradient| = " + gerr);
+      if(Double.isInfinite(gradientErr)) gradientErr = getGrad(i,gram,res,xy);
+      Log.info("ADMM finished in " + i + " iterations and (" + decompTIme + " + " + solveTime+ ")ms, max |subgradient| = " + gradientErr);
       return _converged;
     }
     @Override
