@@ -92,11 +92,12 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     this.current_status = "Initializing Model";
     this.confusion = null;
     this.zeed = zeed;
-    this.errs = new float[t_keys.length];
+//    this.errs = new float[t_keys.length];
     this.cmDomain = cmDomain;
     this.varimp = null;
     this.validAUC = null;
-    this.cms = new ConfusionMatrix[0];
+    this.cms = new ConfusionMatrix[1];
+    this.errs = new float[]{-1.f};
   }
 
   public Vec get_response() {
@@ -107,7 +108,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   public int size()      { return t_keys.length; }
   public int classes()   { return (int)(response.max() - response.min() + 1); }
 
-  static public SpeeDRFModel make(SpeeDRFModel old, Key tkey, int nodeIdx) {
+  public static SpeeDRFModel make(SpeeDRFModel old, Key tkey, int nodeIdx) {
     boolean cm_update = false;
     SpeeDRFModel m = (SpeeDRFModel)old.clone();
     m.t_keys = Arrays.copyOf(old.t_keys, old.t_keys.length + 1);
@@ -133,16 +134,37 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     }
     if (!cm_update) {
       m.errs = Arrays.copyOf(old.errs, old.errs.length+1);
-      m.errs[m.t_keys.length - 1] = -1.f;
+      m.errs[m.errs.length - 1] = -1.f;
       m.cms = Arrays.copyOf(old.cms, old.cms.length+1);
       m.cms[m.cms.length-1] = null;
     } else {
       m.errs = Arrays.copyOf(old.errs, old.errs.length+1);
-      m.errs[m.t_keys.length - 1] = m.confusion.mse();
+      m.errs[m.errs.length - 1] = m.confusion.mse();
       m.cms = Arrays.copyOf(old.cms, old.cms.length+1);
       ConfusionMatrix new_cm = new ConfusionMatrix(m.confusion._matrix);
       m.cms[m.cms.length-1] = new_cm;
     }
+    JsonObject trees = new JsonObject();
+    trees.addProperty(Constants.TREE_COUNT,  m.size());
+    if( m.size() > 0 ) {
+      trees.add(Constants.TREE_DEPTH,  m.depth().toJson());
+      trees.add(Constants.TREE_LEAVES, m.leaves().toJson());
+    }
+    TreeStats treeStats = new TreeStats();
+    double[] depth_stats = stats(trees.get(Constants.TREE_DEPTH));
+    double[] leaf_stats = stats(trees.get(Constants.TREE_LEAVES));
+
+    if(depth_stats != null) {
+      treeStats.minDepth = (int)depth_stats[0];
+      treeStats.meanDepth = (float)depth_stats[1];
+      treeStats.maxDepth = (int)depth_stats[2];
+      treeStats.minLeaves = (int)leaf_stats[0];
+      treeStats.meanLeaves = (float)leaf_stats[1];
+      treeStats.maxLeaves = (int)leaf_stats[2];
+    } else {
+      treeStats = null;
+    }
+    m.treeStats = treeStats;
     return m;
   }
 
@@ -293,10 +315,12 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     else {
       if (this.size() == N) {
         sb.append("Current Status: ").append("Complete.");
-      } else  if( Job.findJob(jobKey).isCancelledOrCrashed()) {
-        sb.append("Current Status: ").append("Cancelled.");
-      } else {
-        sb.append("Current Status: ").append(this.current_status);
+      } else  {
+        if( Job.findJob(jobKey).isCancelledOrCrashed()) {
+          sb.append("Current Status: ").append("Cancelled.");
+        } else {
+          sb.append("Current Status: ").append(this.current_status);
+        }
       }
     }
 
@@ -328,7 +352,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   }
 
   static final String NA = "---";
-  protected void generateHTMLTreeStats(StringBuilder sb, JsonObject trees) {
+  public void generateHTMLTreeStats(StringBuilder sb, JsonObject trees) {
     DocGen.HTML.section(sb,"Tree stats");
     DocGen.HTML.arrayHead(sb);
     sb.append("<tr><th>&nbsp;</th>").append("<th>Min</th><th>Mean</th><th>Max</th></tr>");
@@ -336,6 +360,16 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     TreeStats treeStats = new TreeStats();
     double[] depth_stats = stats(trees.get(Constants.TREE_DEPTH));
     double[] leaf_stats = stats(trees.get(Constants.TREE_LEAVES));
+
+    sb.append("<tr><th>Depth</th>")
+            .append("<td>").append(depth_stats != null ? depth_stats[0]  : NA).append("</td>")
+            .append("<td>").append(depth_stats != null ? depth_stats[1] : NA).append("</td>")
+            .append("<td>").append(depth_stats != null ? depth_stats[2] : NA).append("</td></tr>");
+    sb.append("<th>Leaves</th>")
+            .append("<td>").append(leaf_stats != null ? leaf_stats[0]  : NA).append("</td>")
+            .append("<td>").append(leaf_stats != null ? leaf_stats[1] : NA).append("</td>")
+            .append("<td>").append(leaf_stats != null ? leaf_stats[2]  : NA).append("</td></tr>");
+    DocGen.HTML.arrayTail(sb);
 
     if(depth_stats != null) {
       treeStats.minDepth = (int)depth_stats[0];
@@ -348,19 +382,9 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       treeStats = null;
     }
     this.treeStats = treeStats;
-
-    sb.append("<tr><th>Depth</th>")
-            .append("<td>").append(depth_stats != null ? depth_stats[0]  : NA).append("</td>")
-            .append("<td>").append(depth_stats != null ? depth_stats[1] : NA).append("</td>")
-            .append("<td>").append(depth_stats != null ? depth_stats[2] : NA).append("</td></tr>");
-    sb.append("<th>Leaves</th>")
-            .append("<td>").append(leaf_stats != null ? leaf_stats[0]  : NA).append("</td>")
-            .append("<td>").append(leaf_stats != null ? leaf_stats[1] : NA).append("</td>")
-            .append("<td>").append(leaf_stats != null ? leaf_stats[2]  : NA).append("</td></tr>");
-    DocGen.HTML.arrayTail(sb);
   }
 
-  private double[] stats(JsonElement json) {
+  private static double[] stats(JsonElement json) {
     if( json == null ) {
       return null;
     } else {
