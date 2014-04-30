@@ -267,12 +267,11 @@ h2o.clusterStatus <- function(client) {
   if(forceDL || !file.exists(dest_file)) {
     base_url <- paste("https://s3.amazonaws.com/h2o-release/h2o", branch, version, sep = "/")
     h2o_url <- paste(base_url, "h2o.jar", sep = "/")
-    temp_file <- paste(dest_file, "tmp", sep = ".")
     
     # Save to temporary file first to protect against incomplete downloads
+    temp_file <- paste(dest_file, "tmp", sep = ".")
     download.file(h2o_url, temp_file, mode = "wb", method = "curl")
-    file.rename(temp_file, dest_file)
-    if(!file.exists(dest_file))
+    if(!file.exists(temp_file))
       stop("Error: Transfer failed. Please download ", h2o_url, " and place h2o.jar in ", dest_folder)
     
     # Check file integrity using MD5 checksum
@@ -280,8 +279,10 @@ h2o.clusterStatus <- function(client) {
     ttt <- getURLContent(md5_url)
     md5_check <- readLines((tcon <- textConnection(ttt)))
     close(tcon)
-    if(md5sum(dest_file) != md5_check)
-      stop("Error: MD5 checksum of ", dest_file, " does not match ", md5_check)
+    
+    if(md5sum(temp_file) != md5_check)
+      stop("Error: MD5 checksum of ", temp_file, " does not match ", md5_check)
+    file.rename(temp_file, dest_file)
   }
   return(dest_file)
 }
