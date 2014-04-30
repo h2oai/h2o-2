@@ -177,7 +177,12 @@ Steam.ScoringView = (_, _scoring) ->
     renderRocCurve rates
 
   createInputParameter = (key, value, isVisible) ->
-    key: key, value: value, isVisible: isVisible, isDifferent: no
+    formattedValue = if isArray value then value.join ', ' else value
+
+    key: key
+    value: formattedValue
+    isVisible: isVisible
+    isDifferent: no
 
   combineInputParameters = (model) ->
     critical = mapWithKey model.critical_parameters, (value, key) ->
