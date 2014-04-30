@@ -14,7 +14,7 @@ def checkForBadFP(value, name='min_value', nanOkay=False, infOkay=False, json=No
             print h2o.dump_json(json)
         raise Exception("NaN in inspected %s can't be good for: %s" % (str(value), name))
 
-def checkScalarResult(resultExec, resultKey, allowEmptyResult=False):
+def checkScalarResult(resultExec, resultKey, allowEmptyResult=False, nanOkay=False):
     # make the common problems easier to debug
     h2o.verboseprint("checkScalarResult resultExec:", h2o.dump_json(resultExec))
 
@@ -58,7 +58,7 @@ def checkScalarResult(resultExec, resultKey, allowEmptyResult=False):
         scalar = resultExec['scalar']
         if scalar is None:
             raise Exception("both cols and scalar are null: %s %s" % (cols, scalar))
-        checkForBadFP(scalar, json=resultExec)
+        checkForBadFP(scalar, json=resultExec, nanOkay=nanOkay or stype=='Enum')
         return scalar
 
     metaDict = cols[0]
@@ -68,7 +68,7 @@ def checkScalarResult(resultExec, resultKey, allowEmptyResult=False):
     min_value = metaDict['min']
     stype = metaDict['type']
     # if it's an enum col, it's okay for min to be NaN ..
-    checkForBadFP(min_value, nanOkay=stype=='Enum', json=metaDict)
+    checkForBadFP(min_value, json=metaDict, nanOkay=nanOkay or stype=='Enum')
     return min_value
 
 def fill_in_expr_template(exprTemplate, colX=None, n=None, row=None, keyX=None, m=None):
@@ -145,7 +145,7 @@ def exec_expr_list_rand(lenNodes, exprList, keyX,
     minCol=1, maxCol=55, 
     minRow=1, maxRow=400000, 
     maxTrials=200, 
-    timeoutSecs=10, ignoreH2oError=False, allowEmptyResult=False):
+    timeoutSecs=10, ignoreH2oError=False, allowEmptyResult=False, nanOkay=False):
 
     trial = 0
     while trial < maxTrials: 
@@ -170,7 +170,7 @@ def exec_expr_list_rand(lenNodes, exprList, keyX,
         (resultExec, result) = exec_expr(h2o.nodes[execNode], execExpr, None, 
             timeoutSecs, ignoreH2oError)
 
-        checkScalarResult(resultExec, None, allowEmptyResult=allowEmptyResult)
+        checkScalarResult(resultExec, None, allowEmptyResult=allowEmptyResult, nanOkay=nanOkay)
 
         if keyX:
             inspect = h2o_cmd.runInspect(key=keyX)

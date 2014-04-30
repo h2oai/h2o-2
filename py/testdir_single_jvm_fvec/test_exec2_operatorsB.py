@@ -263,7 +263,7 @@ exprListFull = [
     "r.hex[,4] != 29 || r.hex[,2] < 305 && r.hex[,2] < 81",
     "quantile(r.hex[,4],c(0.001,.05,0.3,0.55,0.7,0.95,0.99))",
     "quantile(seq_len(10),seq_len(10)/10)",
-    "quantile(runif(seq_len(10000)),seq_len(10)/10)",
+    "quantile(runif(seq_len(10000), -1), seq_len(10)/10)",
     # "quantile(r.hex[,4],c(0.001,.05,0.3,0.55,0.7,0.95,0.99))",
     # problem with 0?
     "quantile(r.hex[,4],c(0,.05,0.3,0.55,0.7,0.95,0.99))",

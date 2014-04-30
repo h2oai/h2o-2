@@ -69,7 +69,7 @@ exprListFull = [
     "apply(r.1,2,function(x){total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt; ifelse(is.na(x),mean,x)})",
     "s.hex = r.1[!is.na(r.1[,13]),]",
     'r.1=apply(r.1,2,function(x){ifelse(is.na(x),0,x)})',
-    'cct.hex=runif(r.1);rTrain=r.1[cct.hex<=0.9,];rTest=r.1[cct.hex>0.9,]',
+    'cct.hex=runif(r.1, -1);rTrain=r.1[cct.hex<=0.9,];rTest=r.1[cct.hex>0.9,]',
     #******************************************************************************
 
     # says you can't use col 0
@@ -86,8 +86,8 @@ exprListFull = [
     # unimplemented
     # 'r.1[1,]=r.1[1,]==1.0',
 
-    'b.hex=runif(r3.hex[,1])',
-    'b.hex=runif(r3.hex[1,])',
+    'b.hex=runif(r3.hex[,1], -1)',
+    'b.hex=runif(r3.hex[1,], -1)',
 
     # 'r.1[,1]=r.1[,1] + 1.3',
     # 'r<n>.hex=min(r.1,1+2)',

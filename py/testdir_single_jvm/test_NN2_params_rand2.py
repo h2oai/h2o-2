@@ -13,7 +13,7 @@ def define_params():
                                             'Maxout', 'MaxoutWithDropout'],
         'input_dropout_ratio'          : [None, 0, 1],
         'hidden'                       : [None, 1, '200,200'],
-        'rate'                         : [None, 0, 0.005, 0.010],
+        'rate'                         : [None, 0.005, 0.010],
         'rate_annealing'               : [None, 0, 1e-6, 1e-4],
         'momentum_start'               : [None, 0, 0.1, 0.5, 0.9999],
         'momentum_ramp'                : [None, 1, 10000, 1000000],
