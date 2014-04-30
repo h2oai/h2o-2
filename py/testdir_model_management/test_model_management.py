@@ -274,8 +274,6 @@ class ApiTestCase(ModelManagementTestCase):
                 if -1 == idx:
                     d = d[path_elem]
                 else:
-                    print 'path_elem', path_elem
-                    print 'idx', idx
                     d = d[path_elem][idx]
         
         return d
@@ -434,7 +432,6 @@ class ApiTestCase(ModelManagementTestCase):
                 self.assertKeysDontExist(scoring_result, 'metrics[0]', ['cm', 'auc']) # TODO: HitRatio
 
 
-class SteamTestCase(ModelManagementTestCase):
     def test_steam(self):
         print "----------------------------------------------------------"
         print "                    Testing Steam...                      "
