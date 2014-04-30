@@ -171,7 +171,6 @@ exprListFull = [
     
         # doesn't work
         "mean=function(x){apply(x,1,sum)/nrow(x)};mean(r.hex)",
-
         ]
 
 
