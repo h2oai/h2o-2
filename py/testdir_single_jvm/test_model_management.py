@@ -441,6 +441,10 @@ class ApiTestCase(ModelManagementTestCase):
         # Don't know if there's a better way to do this. - Prithvi
         client_dir = os.path.join(os.path.split(os.path.split(os.path.dirname(os.path.realpath(__file__)))[0])[0], 'client')
 
+        node0 = h2o.nodes[0]
+        os.environ['STEAM_NODE_ADDR'] = node0.http_addr
+        os.environ['STEAM_NODE_PORT'] = str(node0.port)
+
         # Run `make test -C path_to_h2o/client`
         command_string = "make test -C " + client_dir
 
