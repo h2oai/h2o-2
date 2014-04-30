@@ -19,7 +19,7 @@ getting started from downloaded versions of  H\ :sub:`2`\ O, and using  H\
 .. toctree::
     :maxdepth: 1
     
-    resources/introduction
+   
     newuser/top
     Ruser/top
     Ruser/Rpackage
