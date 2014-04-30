@@ -54,7 +54,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   /*@API(help = "Data Key")*/ Key dataKey;
   @API(help = "Seed") protected long zeed;
   /* @API(help = "Final Confusion Matrix") */ CMTask.CMFinal confusion;
-  @API(help = "Conusion Matrix") long[][] cm;
+  @API(help = "Confusion Matrix") long[][] cm;
 
   public static final String JSON_CONFUSION_KEY   = "confusion_key";
 
@@ -381,7 +381,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
       DocGen.HTML.section(sb, "Confusion Matrix:");
       if (testKey != null)
-        sb.append("<div class=\"alert\">Reported on ").append(Inspect2.link(testKey.toString(), testKey));
+        sb.append("<div class=\"alert\">Reported on ").append(Inspect2.link(testKey.toString(), testKey)).append("</div>");
       else
         sb.append("<div class=\"alert\">Reported on ").append(cm.get(JSON_CM_TYPE).getAsString()).append(" data</div>");
 
