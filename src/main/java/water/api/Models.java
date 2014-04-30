@@ -188,7 +188,7 @@ public class Models extends Request2 {
     summary.state = ((Job)model.job()).getState();
     summary.model_category = model.getModelCategory();
     summary.creation_epoch_time_millis = model.getUniqueId().getCreationEpochTimeMillis();
-    summary.uuid = model.getUniqueId().getUuid();
+    summary.uuid = model.getUniqueId().getId();
 
     summary.response_column_name = names[names.length - 1];
 

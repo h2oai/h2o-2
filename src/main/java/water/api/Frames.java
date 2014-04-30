@@ -149,7 +149,7 @@ public class Frames extends Request2 {
    */
   private static void summarizeAndEnhanceFrame(FrameSummary summary, Frame frame, boolean find_compatible_models, Map<String, Model> all_models, Map<String, Set<String>> all_models_cols) {
     summary.creation_epoch_time_millis = frame.getUniqueId().getCreationEpochTimeMillis();
-    summary.uuid = frame.getUniqueId().getUuid();
+    summary.uuid = frame.getUniqueId().getId();
 
     summary.column_names = frame._names;
 

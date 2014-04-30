@@ -382,7 +382,7 @@ class ApiTestCase(ModelManagementTestCase):
 
                 self.assertKeysExist(scoring_result, '', ['metrics'])
                 self.assertKeysExist(scoring_result, 'metrics[0]', ['model', 'frame', 'duration_in_ms', 'error_measure'])
-                self.assertKeysExist(scoring_result, 'metrics[0]/model', ['key', 'model_category', 'uuid', 'creation_epoch_time_millis'])
+                self.assertKeysExist(scoring_result, 'metrics[0]/model', ['key', 'model_category', 'id', 'creation_epoch_time_millis'])
                 model_category = scoring_result['metrics'][0]['model']['model_category']
                 self.assertEqual(scoring_result['metrics'][0]['model']['key'], model_key, "Expected model key: " + model_key + " but got: " + scoring_result['metrics'][0]['model']['key'])
                 self.assertEqual(scoring_result['metrics'][0]['frame']['key'], frame_key, "Expected frame key: " + frame_key + " but got: " + scoring_result['metrics'][0]['frame']['key'])

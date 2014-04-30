@@ -58,15 +58,15 @@ public final class ModelMetrics extends Iced {
   }
 
   public static Key buildKey(Model model, Frame frame) {
-    return makeKey("modelmetrics_" + model.getUniqueId().getUuid() + "_on_" + frame.getUniqueId().getUuid());
+    return makeKey("modelmetrics_" + model.getUniqueId().getId() + "_on_" + frame.getUniqueId().getId());
   }
 
   public static Key buildKey(UniqueId model, UniqueId frame) {
-    return makeKey("modelmetrics_" + model.getUuid() + "_on_" + frame.getUuid());
+    return makeKey("modelmetrics_" + model.getId() + "_on_" + frame.getId());
   }
 
   public Key buildKey() {
-    return makeKey("modelmetrics_" + this.model.getUuid() + "_on_" + this.frame.getUuid());
+    return makeKey("modelmetrics_" + this.model.getId() + "_on_" + this.frame.getId());
   }
 
   public void putInDKV() {
@@ -102,11 +102,10 @@ public final class ModelMetrics extends Iced {
   public JsonObject toJSON() {
     final String json = new String(writeJSON(new AutoBuffer()).buf());
     if (json.length() == 0) return new JsonObject();
-    JsonObject jo = (JsonObject)new JsonParser().parse(json);
 
+    JsonObject jo = (JsonObject)new JsonParser().parse(json);
     if (jo.has("model"))
       jo.getAsJsonObject("model").addProperty("model_category", this.model_category.toString());
-
     return jo;
   }
 }

@@ -20,6 +20,8 @@ import java.util.IllegalFormatException;
  * references all the Vecs but this one.
  */
 public class Frame extends Lockable<Frame> {
+  static final int DEBUG_WEAVER=1;
+
   public String[] _names;
   Key[] _keys;          // Keys for the vectors
   private transient Vec[] _vecs;// The Vectors (transient to avoid network traffic)
@@ -31,7 +33,7 @@ public class Frame extends Lockable<Frame> {
   public Frame( String[] names, Vec[] vecs ) { this(null,names,vecs); }
   public Frame( Key key, String[] names, Vec[] vecs ) {
     super(key);
-    this.uniqueId = new UniqueId(_key);
+    this.uniqueId = new UniqueFrameId(_key, this);
     if( names==null ) {
       names = new String[vecs.length];
       for( int i=0; i<vecs.length; i++ ) names[i] = "C"+(i+1);
@@ -50,6 +52,22 @@ public class Frame extends Lockable<Frame> {
 
   public UniqueId getUniqueId() {
     return this.uniqueId;
+  }
+
+  /** 64-bit hash of the hashes of the vecs.  SHA-265 hashes of the chunks are XORed
+   * together.  Since parse always parses the same pieces of files into the same offsets
+   * in some chunk this hash will be consistent across reparses.
+   */
+  public byte[] hash() {
+    Vec [] vecs = vecs();
+    byte[] _hash = new byte[8];
+    for(int i = 0; i < _names.length; ++i) {
+      byte[] vec_hash = vecs[i].hash();
+      for (int j = 0; j < 8; j++) {
+        _hash[j] ^= vec_hash[j];
+      }
+    }
+    return _hash;
   }
 
   public Vec vec(String name){
