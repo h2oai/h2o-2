@@ -32,7 +32,7 @@ public class Inspector extends Request2 {
     REDIRECTS.put(Model.class,    sa("/2/%typename{}View", "_modelKey"));
   }
 
-  @API(help="H2O key to inspect.", filter=Default.class, json=true, required=true)
+  @API(help="H2O key to inspect.", filter=Default.class, json=true, required=true, gridable=false)
   Key src_key;
 
   @Override protected Response serve() {

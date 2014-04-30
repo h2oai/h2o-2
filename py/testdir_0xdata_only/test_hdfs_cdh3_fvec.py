@@ -20,7 +20,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_hdfs_fvec(self):
+    def test_hdfs_cdh3_fvec(self):
         h2o.beta_features = True
         print "\nLoad a list of files from HDFS, parse and do 1 RF tree"
         print "\nYou can try running as hduser/hduser if fail"

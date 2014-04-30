@@ -818,6 +818,13 @@ h2o.deeplearning <- function(x, y, data, classification = TRUE, validation,
   result$train_sqr_error = errs$train_mse
   result$valid_class_error = errs$valid_err
   result$valid_sqr_error = errs$valid_mse
+
+  if(!is.null(errs$validAUC)) {
+      tmp <- .h2o.__getPerfResults(errs$validAUC)
+      tmp$confusion <- NULL 
+      result <- c(result, tmp) 
+    }
+
   return(result)
 }
 
@@ -1033,7 +1040,7 @@ h2o.randomForest.FV <- function(x, y, data, classification=TRUE, ntree=50, depth
 
   # NB: externally, 1 based indexing; internally, 0 based
   cols <- paste(args$x_i - 1, collapse=',')
-  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRF, source=data@key, response=args$y, cols=cols, ntrees=ntree, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, seed=seed, importance=as.numeric(importance), classification=as.numeric(classification))
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRF, source=data@key, response=args$y, cols=cols, ntrees=ntree, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, seed=seed, importance=as.numeric(importance), classification=as.numeric(classification), validation=validation@key)
   params = list(x=args$x, y=args$y, ntree=ntree, depth=depth, sample.rate=sample.rate, nbins=nbins, importance=importance)
 
   if(length(ntree) == 1 && length(depth) == 1 && length(nodesize) == 1 && length(sample.rate) == 1 && length(nbins) == 1) {
@@ -1172,14 +1179,10 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, validation,
 
 .h2o.__getSpeeDRFResults <- function(res, params) {
   result = list()
-  params$ntree = res$total_trees
-  params$depth = res$depth
-  params$nbins = res$bin_limit
-  params$sample.rate = res$sample
+  params$ntree = res$N
+  params$depth = res$max_depth
+  params$nbins = res$nbins
   params$classification = TRUE
-  params$oobee = res$oobee
-  params$seed = res$zeed
-  params$stat.type = res$statType
 
   result$params = params
   #treeStats = unlist(res$treeStats)

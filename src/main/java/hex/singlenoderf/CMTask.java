@@ -1,6 +1,8 @@
 package hex.singlenoderf;
 
+import hex.ConfusionMatrix;
 import water.*;
+import water.api.AUC;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
@@ -34,6 +36,7 @@ public class CMTask extends MRTask2<CMTask> {
   public int[] _modelDataMap;
   public Frame _data;
   public int  _N;
+  public long _cms[][][];
 
   /** Data to replay the sampling algorithm */
   private int[]     _chunk_row_mapping;
@@ -47,6 +50,7 @@ public class CMTask extends MRTask2<CMTask> {
   private int       _cmin_model_mapping;
   /** Difference between data cmin and CM cmin */
   private int       _cmin_data_mapping;
+  private boolean _validation;
 
   /** Confusion matrix
    * @param model the ensemble used to classify
@@ -59,6 +63,7 @@ public class CMTask extends MRTask2<CMTask> {
     _treesUsed  = treesToUse;
     _computeOOB = computeOOB;
     _model = model;
+    _validation = model.test_frame == null;
     shared_init();
   }
 
@@ -128,6 +133,7 @@ public class CMTask extends MRTask2<CMTask> {
     final int rows = chks[0]._len;
     final int cmin       = (int) _data.vecs()[_classcol].min();
     short     numClasses = (short)_model.classes();
+    _cms = new long[ModelUtils.DEFAULT_THRESHOLDS.length][2][2];
 
     // Votes: we vote each tree on each row, holding on to the votes until the end
     int[][] votes = new int[rows][_N];
@@ -192,11 +198,12 @@ public class CMTask extends MRTask2<CMTask> {
         for (int v : votes[r])
           sum += (float)v;
 
-        float[] fs = new float[votes[r].length];
-        for (int i = 0; i < fs.length; ++i) {
-          fs[i] = sum == 0 ? 0 : (float)votes[r][i] / sum;
+        float[] fs = new float[_N];
+        for (int i = 0; i < _N; ++i) {
+
+          fs[i] = sum == 0 ? 1.f/_N : (float)votes[r][i] / sum;
         }
-        float err = 0.f;
+        float err;
         if(sum == 0) {
           err = 1.0f-1.0f/_N;
         } else {
@@ -206,6 +213,13 @@ public class CMTask extends MRTask2<CMTask> {
         actual[r] = alignedData;
         pred[r]   = alignedPrediction;
         if (isLocalTree) localVotes[r][alignedPrediction]++; // Vote
+        if(_N == 2) { // Binomial classification -> compute AUC, draw ROC
+          float snd = _validation ? fs[0] : 1.f;// for validation dataset sum is always 1
+          for(int i = 0; i < ModelUtils.DEFAULT_THRESHOLDS.length; i++) {
+            int p = snd >= ModelUtils.DEFAULT_THRESHOLDS[i] ? 1 : 0; // Compute prediction based on threshold
+            _cms[i][alignedData][p]++; // Increase matrix
+          }
+        }
       }
     }
     // Assemble the votes-per-class into predictions & score each row
@@ -241,6 +255,8 @@ public class CMTask extends MRTask2<CMTask> {
       if (ept1.length < ept2.length) ept1 = Arrays.copyOf(ept1, ept2.length);
       for (int i = 0; i < ept2.length; i++) ept1[i] += ept2[i];
     }
+    if (_cms!=null)
+      for (int i = 0; i < _cms.length; i++) Utils.add(_cms[i], drt._cms[i]);
   }
 
   /** Transforms 0-based class produced by model to CF zero-based */
@@ -402,6 +418,7 @@ public class CMTask extends MRTask2<CMTask> {
     final protected String[] _domain;
     final protected long  [] _errorsPerTree;
     final protected boolean  _computedOOB;
+    final protected long[][][] _cms;
     protected boolean        _valid;
     final protected float _sum;
 
@@ -413,8 +430,9 @@ public class CMTask extends MRTask2<CMTask> {
       _errorsPerTree = null;
       _computedOOB   = false;
       _sum = 0.f;
+      _cms = null;
     }
-    private CMFinal(CM cm, Key SpeeDRFModelKey, String[] domain, long[] errorsPerTree, boolean computedOOB, boolean valid, float sum) {
+    private CMFinal(CM cm, Key SpeeDRFModelKey, String[] domain, long[] errorsPerTree, boolean computedOOB, boolean valid, float sum, long[][][] cms) {
       _matrix = cm._matrix;
       _errors = cm._errors;
       _rows = cm._rows;
@@ -425,14 +443,15 @@ public class CMTask extends MRTask2<CMTask> {
       _computedOOB   = computedOOB;
       _valid         = valid;
       _sum = sum;
+      _cms = cms;
     }
     /** Make non-valid confusion matrix */
     public static CMFinal make() {
       return new CMFinal();
     }
     /** Create a new confusion matrix. */
-    public static CMFinal make(CM cm, SpeeDRFModel model, String[] domain, long[] errorsPerTree, boolean computedOOB, float sum) {
-      return new CMFinal(cm, model._key, domain, errorsPerTree, computedOOB, true, sum);
+    public static CMFinal make(CM cm, SpeeDRFModel model, String[] domain, long[] errorsPerTree, boolean computedOOB, float sum, long[][][] cms) {
+      return new CMFinal(cm, model._key, domain, errorsPerTree, computedOOB, true, sum, cms);
     }
     public String[] domain() { return _domain; }
     public int      dimension() { return _matrix.length; }

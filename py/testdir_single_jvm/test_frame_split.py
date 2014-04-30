@@ -34,6 +34,9 @@ class Basic(unittest.TestCase):
         origNumRows = inspect['numRows']
         origNumCols = inspect['numCols']
         for s in range(20):
+            inspect = h2o_cmd.runInspect(key=splitMe)
+            numRows = inspect['numRows']
+            numCols = inspect['numCols']
             fs = h2o.nodes[0].frame_split(source=splitMe, ratios=0.5)
             split0_key = fs['split_keys'][0]
             split1_key = fs['split_keys'][1]
@@ -43,8 +46,8 @@ class Basic(unittest.TestCase):
             split1_ratio = fs['split_ratios'][1]
             print "Iteration", s, "split0_rows:", split0_rows, "split1_rows:", split1_rows
             splitMe = split1_key
-            # split should be within 1 row accuracy
-            self.assertLess(abs(split1_rows - split0_rows), 2)
+            # split should be within 1 row accuracy. let's say within 20 for now
+            self.assertLess(abs(split1_rows - split0_rows), 20)
             self.assertEqual(numRows, (split1_rows + split0_rows))
             self.assertEqual(numCols, origNumCols)
 
