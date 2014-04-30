@@ -566,7 +566,7 @@ def createTestTrain(srcKey, trainDstKey, testDstKey, trainPercent,
     boundary = (trainPercent + 0.0)/100
 
     execExpr = ""
-    execExpr += "cct.hex=runif(%s);" % srcKey
+    execExpr += "cct.hex=runif(%s,-1);" % srcKey
     execExpr += "%s=%s[cct.hex<=%s,];" % (trainDstKey, srcKey, boundary)
     if changeToBinomial:
         execExpr += "%s[,%s]=%s[,%s]==%s;" % (trainDstKey, outputCol+1, trainDstKey, outputCol+1, outputClass)

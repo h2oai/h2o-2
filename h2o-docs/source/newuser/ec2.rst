@@ -9,7 +9,7 @@ an Amazon Machine Image to serve as an easy starting point.
 
 The README.txt file embedded below describes scripts that can be found
 in the EC2 directory of the downloadable zip file, or in the EC2
-directory of the github repository.
+directory of the Github repository.
 
 .. raw:: html
 

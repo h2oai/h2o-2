@@ -5,7 +5,7 @@ Data Science in H\ :sub:`2`\ O
 ================================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    glm
    kmeans

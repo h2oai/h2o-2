@@ -7,7 +7,7 @@ Welcome to H\ :sub:`2`\ O's Documentation
 H\ :sub:`2`\ O brings better algorithms to Big Data. This
 documentation is here to help guide and inform users. Users looking
 for documentation on a specific subject may find the Index by Topic
-useful. 
+useful. :ref:`Subject_Index`
 
 Getting Started with H\ :sub:`2`\ O
 ===================================
@@ -19,11 +19,9 @@ getting started from downloaded versions of  H\ :sub:`2`\ O, and using  H\
 .. toctree::
     :maxdepth: 1
     
-   
+    newuser/introduction
     newuser/top
     Ruser/top
-    Ruser/Rpackage
-    newuser/java_help
     userguide/top
 
 
@@ -60,6 +58,7 @@ in the public domain.
     resources/algoroadmap
     resources/publicdata
     resources/h2odatasheet
+    subjectindex
 
 
 

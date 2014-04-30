@@ -87,7 +87,6 @@ exprListFull = [
 
     'b.hex=runif(r3.hex[,1], -1)',
     'b.hex=runif(r3.hex[1,], -1)',
-
     # 'r.1[,1]=r.1[,1] + 1.3',
     # 'r<n>.hex=min(r.1,1+2)',
     # 'r<n>.hex=r2.hex + 1',
