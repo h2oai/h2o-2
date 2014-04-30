@@ -13,7 +13,7 @@ public class GapStatisticModel extends Model implements Job.Progress {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-  @API(help = "Number of clusters to build in each iteration.")
+//  @API(help = "Number of clusters to build in each iteration.")
   final int ks;
 
   @API(help = "The initial pooled within cluster sum of squares for each iteration.")
@@ -25,16 +25,16 @@ public class GapStatisticModel extends Model implements Job.Progress {
   @API(help = "The standard error from the Monte Carlo simulated data for each iteration.")
   final double[] sk;
 
-  @API(help = "k_max.")
+//  @API(help = "k_max.")
   final int k_max;
 
-  @API(help = "b_max.")
+//  @API(help = "b_max.")
   final int b_max;
 
-  @API(help = "The current value of k_max: (2 <= k <= k_max).")
+//  @API(help = "The current value of k_max: (2 <= k <= k_max).")
   int k;
 
-  @API(help = "The current value of B (1 <= b <= B.")
+//  @API(help = "The current value of B (1 <= b <= B.")
   int b;
 
   @API(help = "The gap statistics per value of k.")
@@ -197,6 +197,7 @@ public class GapStatisticModel extends Model implements Job.Progress {
         break;
       }
     }
+    if (k_best <= 0) k_best = (int)Double.NaN;
 
     if (log_wks[log_wks.length -1] != 0) {
       DocGen.HTML.section(sb, "Best k:");
