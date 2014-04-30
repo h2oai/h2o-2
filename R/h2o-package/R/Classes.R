@@ -878,8 +878,9 @@ as.data.frame.H2OParsedData <- function(x, ...) {
   # colClasses = sapply(res$levels, function(x) { ifelse(is.null(x), "numeric", "factor") })
 
   # Substitute NAs for blank cells rather than skipping
-  df = read.csv(textConnection(ttt), blank.lines.skip = FALSE, ...)
+  df = read.csv((tcon <- textConnection(ttt)), blank.lines.skip = FALSE, ...)
   # df = read.csv(textConnection(ttt), blank.lines.skip = FALSE, colClasses = colClasses, ...)
+  close(tcon)
   return(df)
 }
 

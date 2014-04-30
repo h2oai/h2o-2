@@ -248,26 +248,40 @@ h2o.clusterStatus <- function(client) {
   stop("Cannot find Java. Please install the latest JDK from http://www.oracle.com/technetwork/java/javase/downloads/index.html")
 }
 
-.h2o.downloadJar <- function(branch, version, overwrite = FALSE) {
+.h2o.downloadJar <- function(branch, version, forceDL = FALSE) {
+  if(missing(branch)) branch <- packageDescription("h2o")$Branch
+  if(missing(version)) version <- packageVersion("h2o")[1,4]
+  
   dest_folder <- paste(.h2o.pkg.path, "java", sep = .Platform$file.sep)
   if(!file.exists(dest_folder)) dir.create(dest_folder)
   dest_file <- paste(dest_folder, "h2o.jar", sep = .Platform$file.sep)
   
-  # Download if h2o.jar doesn't already exist or user specifies force overwrite
-  if(overwrite || !file.exists(dest_file)) {
-    if(missing(branch)) branch <- packageDescription("h2o")$Branch
-    if(missing(version)) version <- packageVersion("h2o")[1,4]
-    
-    # Production version must exist on local drive
-    if(version == '99999' && !file.exists(dest_file))
+  # Production version must exist on local drive
+  if(version == '99999') {
+    if(!file.exists(dest_file))
       stop("Cannot find ", dest_file, "\nPlease check that Makefile copied the jar correctly.")
+    return(dest_file)
+  }
+  
+  # Download if h2o.jar doesn't already exist or user specifies force overwrite
+  if(forceDL || !file.exists(dest_file)) {
+    base_url <- paste("https://s3.amazonaws.com/h2o-release/h2o", branch, version, sep = "/")
+    h2o_url <- paste(base_url, "h2o.jar", sep = "/")
+    temp_file <- paste(dest_file, "tmp", sep = ".")
     
-    h2o_url <- paste("http://s3.amazonaws.com/h2o-release/h2o", branch, version, "h2o.jar", sep = "/")
-    download.file(h2o_url, dest_file, mode = "wb")
-    
-    # TODO: Check file integrity to ensure download okay
+    # Save to temporary file first to protect against incomplete downloads
+    download.file(h2o_url, temp_file, mode = "wb", method = "curl")
+    file.rename(temp_file, dest_file)
     if(!file.exists(dest_file))
       stop("Error: Transfer failed. Please download ", h2o_url, " and place h2o.jar in ", dest_folder)
+    
+    # Check file integrity using MD5 checksum
+    md5_url <- paste(base_url, "h2o.jar.md5", sep = "/")
+    ttt <- getURLContent(md5_url)
+    md5_check <- readLines((tcon <- textConnection(ttt)))
+    close(tcon)
+    if(md5sum(dest_file) != md5_check)
+      stop("Error: MD5 checksum of ", dest_file, " does not match ", md5_check)
   }
   return(dest_file)
 }
