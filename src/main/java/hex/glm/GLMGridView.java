@@ -103,11 +103,17 @@ public class GLMGridView extends Request2 {
 
   @Override protected Response serve() {
     grid = DKV.get(grid_key).get();
-    Job j;
-    if(DKV.get(grid._jobKey) != null && (j = Job.findJob(grid._jobKey)) != null)
-      return Response.poll(this, (int) (100 * j.progress()), 100, "grid_key", grid_key.toString());
-    else
-      return Response.done(this);
+    Job j = null;
+    if((j = UKV.get(grid._jobKey)) != null){
+      switch(j.state){
+        case DONE:     return Response.done(this);
+        case CRASHED:  return Response.error(j.exception);
+        case CANCELLED:return Response.error("Job was cancelled by user!");
+        case RUNNING:  return Response.poll(this, (int) (100 * j.progress()), 100, "grid_key", grid_key.toString());
+        default: break;
+      }
+    }
+    return Response.poll(this, 0, 100, "grid_key", grid_key.toString());
   }
 }
 
