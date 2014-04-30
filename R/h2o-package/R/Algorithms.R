@@ -818,6 +818,13 @@ h2o.deeplearning <- function(x, y, data, classification = TRUE, validation,
   result$train_sqr_error = errs$train_mse
   result$valid_class_error = errs$valid_err
   result$valid_sqr_error = errs$valid_mse
+
+  if(!is.null(errs$validAUC)) {
+      tmp <- .h2o.__getPerfResults(errs$validAUC)
+      tmp$confusion <- NULL 
+      result <- c(result, tmp) 
+    }
+
   return(result)
 }
 

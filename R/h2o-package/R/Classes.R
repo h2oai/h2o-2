@@ -187,6 +187,27 @@ setMethod("show", "H2ODRFModel", function(object) {
   cat("\nMean-squared Error by tree:\n"); print(model$mse)
 })
 
+setMethod("show", "H2OSpeeDRFModel", function(object) {
+  print(object@data)
+  cat("SpeeDRF Model Key:", object@key)
+
+  model = object@model
+  cat("\n\nClassification:", model$params$classification)
+  cat("\nNumber of trees:", model$params$ntree)
+  cat("\nSampling Strategy:", model$params$sampling_strategy)
+  cat("\nTree statistics:", NA)
+  
+  if(model$params$oobee) {
+    cat("\nConfusion matrix:\n"); cat("Reported on oobee from", object@valid@key, "\n")
+  } else {
+    cat("\nConfusion matrix:\n"); cat("Reported on", object@valid@key,"\n")
+  }
+  print(model$confusion)
+  
+  cat("\nMean-squared Error by tree:\n"); print(model$mse)
+})
+  
+
 setMethod("show", "H2OPCAModel", function(object) {
   print(object@data)
   cat("PCA Model Key:", object@key)
