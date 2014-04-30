@@ -1711,6 +1711,32 @@ class H2O(object):
         verboseprint("\nframe_split result:", dump_json(a))
         return a
 
+    def gap_statistic(self, timeoutSecs=120, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
+        noise=None, benchmarkLogging=None, noPoll=False,
+        print_params=True, noPrint=False, **kwargs):
+
+        params_dict = {
+            'source': None,
+            'destination_key': None,
+            'k_max': None,
+            'b_max': None,
+            'bootstrap_fraction': None,
+            'seed': None,
+            'ignored_cols': None,
+        }
+        browseAlso = kwargs.pop('browseAlso', False)
+        check_params_update_kwargs(params_dict, kwargs, 'gap_statistic', print_params=True)
+        start = time.time()
+        a = self.__do_json_request('2/GapStatistic.json', timeout=timeoutSecs, params=params_dict)
+        if noPoll:
+            return a
+        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, benchmarkLogging=benchmarkLogging,
+                          initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
+        verboseprint("\ngap_statistic result:", dump_json(a))
+        a['python_elapsed'] = time.time() - start
+        a['python_%timeout'] = a['python_elapsed'] * 100 / timeoutSecs
+        return a
+
     def speedrf(self, data_key, trees, timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
                 noise=None, benchmarkLogging=None, noPoll=False,
                 print_params=True, noPrint=False, **kwargs):
