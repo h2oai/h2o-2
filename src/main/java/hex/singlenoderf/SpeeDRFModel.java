@@ -14,7 +14,6 @@ import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Counter;
-import water.util.ModelUtils;
 
 import java.util.Arrays;
 import java.util.Random;

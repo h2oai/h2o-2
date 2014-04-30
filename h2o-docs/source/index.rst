@@ -1,33 +1,48 @@
-.. H2O documentation master file, created by
-   sphinx-quickstart on Sun Nov  3 11:56:36 2013.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+
 
 =================================================
-Welcome to H\ :sub:`2`\ O's Documentation!
+Welcome to H\ :sub:`2`\ O's Documentation
 =================================================
 
-H\ :sub:`2`\ O brings better algorithms to big data. This documentation is here to help guide and inform users. For more information on what's next for H\ :sub:`2`\ O take a look at our introduction, where we present our roadmap and presentations featuring H\ :sub:`2`\ O's open source abilities. 
+H\ :sub:`2`\ O brings better algorithms to Big Data. This
+documentation is here to help guide and inform users. Users looking
+for documentation on a specific subject may find the Index by Topic
+useful. 
 
 Getting Started with H\ :sub:`2`\ O
 ===================================
 
-This section is for new users, and provides information about how to install and run H\ :sub:`2`\ O. New Users interested in development should also visit the getting started with development section.
+This section is for new users. Here you can find information on
+getting started from downloaded versions of  H\ :sub:`2`\ O, and using  H\
+:sub:`2`\ O with R. 
 
 .. toctree::
-    :maxdepth: 2
-
+    :maxdepth: 1
+    
+    resources/introduction
     newuser/top
     Ruser/top
+    Ruser/Rpackage
+    newuser/java_help
+    userguide/top
+
+
+Tutorials in H\ :sub:`2`\ O
+=============================
+
+
+.. toctree::
+    :maxdepth: 1
+
     tutorial/top
     tutorial/videos
-    newuser/java_help
+    
 
 Deployment and Big Data Management
 ==================================
 
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 1
 
     deployment/hadoop
     deployment/multinode
@@ -35,16 +50,17 @@ Deployment and Big Data Management
 Helpful Resources
 =================
 
-Various information related to the H\ :sub:`2`\ O project and data available in the public domain.
+Information related to the H\ :sub:`2`\ O project and data available
+in the public domain.
 
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 1
    
-    resources/introduction
-    resources/algoroadmap
     resources/glossary
+    resources/algoroadmap
     resources/publicdata
     resources/h2odatasheet
+
 
 
 H\ :sub:`2`\ O User Guide
@@ -53,7 +69,7 @@ H\ :sub:`2`\ O User Guide
 Details about starting H\ :sub:`2`\ O and the different menus and screens.
 
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 1
 
     Ruser/Rpackage
 
@@ -63,7 +79,7 @@ Data Science
 For information on the details of model specification, and an in-depth look at the math behind our algorithms and tools.
 
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 1
 
     datascience/top
     benchmarks/benchmarks
@@ -74,7 +90,7 @@ Developing in H\ :sub:`2`\ O
 H\ :sub:`2`\ O is open source, which means you have the opportunity to contribute! Look here to get started...
 
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 1
 
     developuser/top_developer
 
@@ -84,7 +100,7 @@ Miscellaneous
 A few more things that you might be interested in...
 
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 1
 
     resources/community
     misc/license

@@ -17,12 +17,12 @@ Quick Step-by-Step
 
   unzip h2o-1.7.0.520.zip
 
-4. At the prompt enter the following commands. Choose a unique name (use the -name option) for yourself if other people might be running H\ :sub:`2`\ O in your network.
+4. At the prompt enter the following commands. 
 
 ::
 
   cd h2o-1.7.0.520  #change working directory to the downloaded file
-  java -Xmx1g -jar h2o.jar 
+  java -Xmx1g -jar h2o.jar #run the basic java command to start h2o
 
 5. Wait a few moments and output similar to the following will appear in your terminal window:
 

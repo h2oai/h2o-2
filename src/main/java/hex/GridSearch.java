@@ -138,6 +138,8 @@ public class GridSearch extends Job {
               String s;
               if( value instanceof int[] )
                 s = Utils.sampleToString((int[]) value, 20);
+              else if( value instanceof double[] )
+                s = Utils.sampleToString((double[]) value, 20);
               else
                 s = "" + value;
               sb.append("<td>").append(s).append("</td>");

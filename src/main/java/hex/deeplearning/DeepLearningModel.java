@@ -814,7 +814,6 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
           // debugging check
           if (false) {
             bestModel = UKV.get(bestModelKey);
-
             final Frame fr = ftest != null ? ftest : ftrain;
             final Frame bestPredict = bestModel.score(fr, ftest != null ? adaptCM : false);
             final Frame hitRatio_bestPredict = new Frame(bestPredict);
@@ -827,18 +826,8 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
             }
             final double err3 = calcError(fr, fr.lastVec(), bestPredict, hitRatio_bestPredict, "cross-check",
                     printme, get_params().max_confusion_matrix_size, new water.api.ConfusionMatrix(), isClassifier() && nclasses() == 2 ? new AUC() : null, null);
-            if (isClassifier()) {
-              if (ftest != null ? Math.abs(err.valid_err - err3) > 1e-5 : Math.abs(err.train_err - err3) > 1e-5) {
-                Log.info("Should be " + (ftest != null ? err.valid_err : err.train_err) + " but is " + err3);
-              }
-              assert (ftest != null ? Math.abs(err.valid_err - err3) < 1e-5 : Math.abs(err.train_err - err3) < 1e-5);
-            }
-            else {
-              if (ftest != null ? Math.abs(err.valid_mse - err3) > 1e-5 : Math.abs(err.train_mse - err3) > 1e-5) {
-                Log.info("Should be " + (ftest != null ? err.valid_mse : err.train_mse) + " but is " + err3);
-              }
-              assert (ftest != null ? Math.abs(err.valid_mse - err3) < 1e-5 : Math.abs(err.train_mse - err3) < 1e-5);
-            }
+            if (isClassifier()) assert (ftest != null ? Math.abs(err.valid_err - err3) < 1e-5 : Math.abs(err.train_err - err3) < 1e-5);
+            else assert (ftest != null ? Math.abs(err.valid_mse - err3) < 1e-5 : Math.abs(err.train_mse - err3) < 1e-5);
             bestPredict.delete();
           }
         }
