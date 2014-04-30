@@ -1179,14 +1179,10 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, validation,
 
 .h2o.__getSpeeDRFResults <- function(res, params) {
   result = list()
-  params$ntree = res$total_trees
-  params$depth = res$depth
-  params$nbins = res$bin_limit
-  params$sample.rate = res$sample
+  params$ntree = res$N
+  params$depth = res$max_depth
+  params$nbins = res$nbins
   params$classification = TRUE
-  params$oobee = res$oobee
-  params$seed = res$zeed
-  params$stat.type = res$statType
 
   result$params = params
   #treeStats = unlist(res$treeStats)

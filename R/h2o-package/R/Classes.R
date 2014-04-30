@@ -194,10 +194,9 @@ setMethod("show", "H2OSpeeDRFModel", function(object) {
   model = object@model
   cat("\n\nClassification:", model$params$classification)
   cat("\nNumber of trees:", model$params$ntree)
-  cat("\nSampling Strategy:", model$params$sampling_strategy)
   cat("\nTree statistics:", NA)
   
-  if(model$params$oobee) {
+  if(FALSE){ #model$params$oobee) {
     cat("\nConfusion matrix:\n"); cat("Reported on oobee from", object@valid@key, "\n")
   } else {
     cat("\nConfusion matrix:\n"); cat("Reported on", object@valid@key,"\n")
