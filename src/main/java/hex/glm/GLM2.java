@@ -400,14 +400,14 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       double step = 0.5;
       for(int i = 0; i < glmt._objvals.length; ++i){
         if(!needLineSearch(glmt._betas[i],glmt._objvals[i],step)){
-          Log.info("GLM2 line search: found admissible step=" + step);
+          Log.info("GLM2 (iteration=" + _iter + ") line search: found admissible step=" + step);
           _lastResult = null; // set last result to null so that the Iteration will not attempt to verify whether or not it should do the line search.
           new GLMIterationTask(GLM2.this,_activeData,_glm,true,true,true,glmt._betas[i],_ymu,_reg,new Iteration()).asyncExec(_activeData._adaptedFrame);
           return;
         }
         step *= 0.5;
       } // no line step worked, forcibly converge
-      Log.info("GLM2 line search failed to find feasible step. Forcibly converged.");
+      Log.info("GLM2 (iteration=" + _iter + ") line search failed to find feasible step. Forcibly converged.");
       _activeCols = _lastResult._activeCols;
       nextLambda(_lastResult._glmt.clone(),_lastResult.beta(_activeCols,_dinfo.fullN()));
     }
@@ -484,7 +484,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
             for(int i = 0; i < fcnt; ++i)
               _activeCols[n+i] = failedCols[i];
             Arrays.sort(_activeCols);
-            _lastResult = null;
+//            _lastResult = null;
             _activeData = _dinfo.filterExpandedColumns(_activeCols);
             new GLMIterationTask(GLM2.this, _activeData,_glm,true,false,false,expandVec(glmt._beta,_activeCols,oldActiveCols),glmt._ymu,glmt._reg,new Iteration()).asyncExec(_activeData._adaptedFrame);
             return;
@@ -514,8 +514,10 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
             newBeta = fullBeta;
           if(Arrays.equals(oldCols,_activeCols)) // set of coefficients did not change
             glmt3 = glmt;
-          else
+          else {
+//            _lastResult = null;
             glmt3 = new GLMIterationTask(GLM2.this,_activeData,glmt._glm,true,false,false,newBeta,glmt._ymu,glmt._reg,new Iteration());
+          }
 
         } else glmt3 = glmt;
         if(n_folds > 1)
