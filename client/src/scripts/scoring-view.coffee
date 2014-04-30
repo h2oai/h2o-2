@@ -176,20 +176,23 @@ Steam.ScoringView = (_, _scoring) ->
     rates = map cms, computeTPRandFPR
     renderRocCurve rates
 
-  createInputParameter = (key, value, type) ->
-    key: key, value: value, type: type, isDifferent: no
+  createInputParameter = (key, value, isVisible) ->
+    key: key, value: value, isVisible: isVisible, isDifferent: no
 
   combineInputParameters = (model) ->
     critical = mapWithKey model.critical_parameters, (value, key) ->
-      createInputParameter key, value, 'critical'
+      createInputParameter key, value, yes
     secondary = mapWithKey model.secondary_parameters, (value, key) ->
-      createInputParameter key, value, 'secondary'
+      createInputParameter key, value, no
     concat critical, secondary
 
   # Side-effects!
   markAsDifferent = (parameterss, index) ->
     for parameters in parameterss
-      parameters[index].isDifferent = yes
+      parameter = parameters[index]
+      # mark this as different to enable special highlighting
+      parameter.isDifferent = yes
+      parameter.isVisible = yes
     return
 
   # Side-effects!
@@ -217,7 +220,7 @@ Steam.ScoringView = (_, _scoring) ->
     createParameterTable = ({ parameters }) ->
       kvtable [
         tbody map parameters, (parameter) ->
-          trow = if parameter.type is 'critical' then tr else trExpert
+          trow = if parameter.isVisible then tr else trExpert
           trow [
             th parameter.key
             td if parameter.isDifferent then diffSpan parameter.value else parameter.value
