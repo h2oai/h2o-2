@@ -106,8 +106,6 @@ class ModelManagementTestCase(unittest.TestCase):
         self.assertIsNotNone(airlines_test_hex)
 
         node = h2o.nodes[0]
-        timeoutSecs = 200
-        retryDelaySecs = 2
 
         print "##############################################################"
         print "Generating AirlinesTrain GLM2 binary classification model. . ."
@@ -122,7 +120,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'lambda': 1.0e-2, 
             'n_folds': 0
         }
-        glm_AirlinesTrain_1 = node.GLM(airlines_train_hex, timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, **glm_AirlinesTrain_1_params)
+        glm_AirlinesTrain_1 = node.GLM(airlines_train_hex, **glm_AirlinesTrain_1_params)
         h2o_glm.simpleCheckGLM(self, glm_AirlinesTrain_1, None, **glm_AirlinesTrain_1_params)
 
 
@@ -138,7 +136,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'classification': 1
             # TODO: what about minobsinnode and shrinkage?!
         }
-        gbm_AirlinesTrain_1 = node.gbm(airlines_train_hex, timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, **gbm_AirlinesTrain_1_params)
+        gbm_AirlinesTrain_1 = node.gbm(airlines_train_hex, **gbm_AirlinesTrain_1_params)
 
 
         print "#####################################################################"
@@ -153,7 +151,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'classification': 1
             # TODO: what about minobsinnode and shrinkage?!
         }
-        gbm_AirlinesTrain_2 = node.gbm(airlines_train_hex, timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, **gbm_AirlinesTrain_2_params)
+        gbm_AirlinesTrain_2 = node.gbm(airlines_train_hex, **gbm_AirlinesTrain_2_params)
 
 
         print "####################################################################"
@@ -167,7 +165,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'max_depth': 2,
             'classification': 1
         }
-        rf_AirlinesTrain_1 = node.random_forest(airlines_train_hex, timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, **rf_AirlinesTrain_1_params)
+        rf_AirlinesTrain_1 = node.random_forest(airlines_train_hex, **rf_AirlinesTrain_1_params)
 
 
         print "#####################################################################"
@@ -181,7 +179,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'max_depth': 10,
             'classification': 1
         }
-        rf_AirlinesTrain_2 = node.random_forest(airlines_train_hex, timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, **rf_AirlinesTrain_2_params)
+        rf_AirlinesTrain_2 = node.random_forest(airlines_train_hex, **rf_AirlinesTrain_2_params)
 
 
         print "######################################################################"
@@ -194,7 +192,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'hidden': [10, 10],
             'classification': 1
         }
-        dl_AirlinesTrain_1 = node.deep_learning(airlines_train_hex, timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, **dl_AirlinesTrain_1_params)
+        dl_AirlinesTrain_1 = node.deep_learning(airlines_train_hex, **dl_AirlinesTrain_1_params)
 
 
         print "##############################################################################################"
@@ -210,7 +208,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'lambda': 1.0e-2, 
             'n_folds': 0
         }
-        glm_AirlinesTrain_A = node.GLM(airlines_train_hex, timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, **glm_AirlinesTrain_A_params)
+        glm_AirlinesTrain_A = node.GLM(airlines_train_hex, **glm_AirlinesTrain_A_params)
         h2o_glm.simpleCheckGLM(self, glm_AirlinesTrain_A, None, **glm_AirlinesTrain_A_params)
 
 
@@ -225,7 +223,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'alpha': 0.5, 
             'n_folds': 0
         }
-        glm_Prostate_1 = node.GLM(prostate_hex, timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, **glm_Prostate_1_params)
+        glm_Prostate_1 = node.GLM(prostate_hex, **glm_Prostate_1_params)
         h2o_glm.simpleCheckGLM(self, glm_Prostate_1, None, **glm_Prostate_1_params)
 
 
@@ -240,7 +238,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'max_depth': 5,
             'classification': 1
         }
-        rf_Prostate_1 = node.random_forest(prostate_hex, timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, **rf_Prostate_1_params)
+        rf_Prostate_1 = node.random_forest(prostate_hex, **rf_Prostate_1_params)
 
 
         print "##############################################"
@@ -254,7 +252,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'alpha': 0.5, 
             'n_folds': 0
         }
-        glm_Prostate_regression_1 = node.GLM(prostate_hex, timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, **glm_Prostate_regression_1_params)
+        glm_Prostate_regression_1 = node.GLM(prostate_hex, **glm_Prostate_regression_1_params)
         h2o_glm.simpleCheckGLM(self, glm_Prostate_regression_1, None, **glm_Prostate_regression_1_params)
 
 
