@@ -1742,7 +1742,7 @@ class H2O(object):
         return rfView
 
     # note ntree in kwargs can overwrite trees! (trees is legacy param)
-    def random_forest(self, data_key, trees,
+    def random_forest(self, data_key, trees=None,
                       timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
                       noise=None, benchmarkLogging=None, noPoll=False, rfView=True,
                       print_params=True, noPrint=False, **kwargs):
