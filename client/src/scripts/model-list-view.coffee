@@ -83,8 +83,17 @@ Steam.ModelListView = (_) ->
             # data.frames[predicate.frameKey], data.models
             displayModels (head data.frames).compatible_models
     return
+  
+  deselectAllModels = ->
+    #TODO ugly
+    _isLive no
+    for item in _items()
+      item.isSelected no
+    _isLive yes
 
-  clearPredicate = -> _predicate type: 'all'
+  clearPredicate = ->
+    deselectAllModels()
+    _predicate type: 'all'
 
   link$ _.loadModels, (predicate) ->
     if predicate
@@ -92,12 +101,7 @@ Steam.ModelListView = (_) ->
     else
       displayActiveItem()
 
-  link$ _.deselectAllModels, ->
-    #TODO ugly
-    _isLive no
-    for item in _items()
-      item.isSelected no
-    _isLive yes
+  link$ _.deselectAllModels, deselectAllModels
 
   items: _items
   hasItems: _hasItems
