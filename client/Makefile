@@ -16,7 +16,7 @@ BUILD_DIRS=\
 
 SCRIPTS=\
 	$(BUILD)/scripts/prelude.global.js \
-	$(BUILD)/scripts/typecheck.global.js \
+	$(BUILD)/scripts/typedef.global.js \
 	$(BUILD)/scripts/hypergraph.global.js \
 	$(BUILD)/scripts/geyser.global.js \
 	$(BUILD)/scripts/main.js
@@ -86,7 +86,7 @@ STYLES=\
 
 TESTS=\
 	$(BUILD)/tests/prelude.tests.js \
-	$(BUILD)/tests/typecheck.tests.js \
+	$(BUILD)/tests/typedef.tests.js \
 	$(BUILD)/tests/hypergraph.tests.js \
 	$(BUILD)/tests/geyser.tests.js \
 	$(BUILD)/tests/base.tests.js
@@ -188,7 +188,7 @@ node: \
 	$(DIST)/steam.node.js
 
 watch:
-	$(BIN)/watchy --watch src -- make build test
+	$(BIN)/watchy --watch src -- make build unit test coverage
 
 preload:
 	Rscript src/util/h2o-R/preload.R
@@ -225,7 +225,7 @@ smoke: node
 
 test: node
 	$(BIN)/mocha \
-		--reporter min \
+		--reporter dot \
 		--check-leaks \
 		$(DIST)/steam.node.js
 
@@ -402,4 +402,4 @@ $(BUILD)/spec/index.html: node
 	@echo Spec generated at $(@D)
 	
 
-.PHONY: all build node unit smoke test debug report spec coverage doc clean setup reset watch help
+.PHONY: default really_build build node unit smoke test debug report spec coverage doc clean setup reset watch help preload pytest tags

@@ -231,6 +231,26 @@ public class Utils {
     }
   }
 
+  public static String sampleToString(double[] val, int max) {
+    if (val == null || val.length < max) return Arrays.toString(val);
+
+    StringBuilder b = new StringBuilder();
+    b.append('[');
+    max -= 10;
+    int valMax = val.length -1;
+    for (int i = 0; ; i++) {
+        b.append(val[i]);
+        if (i == max) {
+          b.append(", ...");
+          i = val.length - 10;
+        }
+        if ( i == valMax) {
+          return b.append(']').toString();
+        }
+        b.append(", ");
+    }
+  }
+
   /* Always returns a deterministic java.util.Random RNG.
    *
    * The determinism is important for re-playing sampling.
@@ -874,7 +894,10 @@ public class Utils {
 
   static public boolean isEmpty(int[] a) { return a==null || a.length == 0; }
   static public boolean contains(int[] a, int d) { for(int i=0; i<a.length; i++) if (a[i]==d) return true; return false; }
+  // warning: Non-Symmetric! Returns all elements in a that are not in b (but NOT the other way around)
   static public int[] difference(int a[], int b[]) {
+    if (a == null) return new int[]{};
+    if (b == null) return a.clone();
     int[] r = new int[a.length];
     int cnt = 0;
     for (int i=0; i<a.length; i++) {

@@ -2,7 +2,7 @@
 
 .. -*- mode: rst -*-
 
-.. _R_tutorial:
+
 
 R Tutorial
 -------------
@@ -256,9 +256,9 @@ Data Manipulation and Description
 
   Used to summarize information in data. Note that because H\ :sub:`2`\ O handles such large data sets, 
   it is possible for users to generate tables that are larger that R's
-  capacity. To minimize this risk and allow users to work uninterrruped,
+  capacity. To minimize this risk and allow users to work uninterrupted,
   h2o.table is called inside of a call for head() or tail(). Within
-  head() and tail() users can explicity specify the number of rows in
+  head() and tail() users can explicitly specify the number of rows in
   the table to return. 
 
 ::

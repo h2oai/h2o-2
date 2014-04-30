@@ -22,7 +22,7 @@ public class SpeeDRF extends Job.ValidatedJob {
   public int mtry = -1;
 
   @API(help = "Max Depth", filter = Default.class, json = true, lmin = 0, lmax = Integer.MAX_VALUE)
-  public int max_depth = 50;
+  public int max_depth = 20;
 
   @API(help = "Split Criterion Type", filter = Default.class, json=true)
   public Tree.StatType stat_type = Tree.StatType.ENTROPY;
@@ -49,7 +49,7 @@ public class SpeeDRF extends Job.ValidatedJob {
   public int bin_limit = 1024;
 
   @API(help = "seed", filter = Default.class, json = true)
-  public long seed = 784834182943470027L;
+  public long seed = -1;
 
   @API(help = "Build trees in parallel", filter = Default.class, json = true)
   public boolean  parallel  = true;
@@ -62,6 +62,8 @@ public class SpeeDRF extends Job.ValidatedJob {
 
   @API(help = "use non local data")
   public boolean _useNonLocalData = true;
+
+  private static final Random _seedGenerator = Utils.getDeterRNG(0xd280524ad7fe0602L);
 
   /** Return the query link to this page */
 //  public static String link(Key k, String content) {
@@ -117,7 +119,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       logStart();
       if (model == null) model = UKV.get(dest());
       model.write_lock(self());
-      drfParams = DRFParams.create(model.fr.find(model.response), model.total_trees, model.depth, (int)model.fr.numRows(), model.bin_limit,
+      drfParams = DRFParams.create(model.fr.find(model.response), model.N, model.max_depth, (int)model.fr.numRows(), model.nbins,
               model.statType, seed, parallel, model.weights, mtry, model.sampling_strategy, (float) sample, model.strata_samples, 1, _exclusiveSplitLimit, _useNonLocalData);
       DRFTask tsk = new DRFTask();
       tsk._job = Job.findJob(self());
@@ -183,13 +185,16 @@ public class SpeeDRF extends Job.ValidatedJob {
           class_weights = weights;
         }
       }
+      if (seed == -1) {
+        seed = _seedGenerator.nextLong();
+      }
       Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, false, false, false);
       Frame test = null;
       if (validation != null) {
         test = FrameTask.DataInfo.prepareFrame(validation, validation.vecs()[source.find(response)], ignored_cols, false, false, false);
       }
-      SpeeDRFModel model = new SpeeDRFModel(dest(), self(), source._key, train, response, new Key[0], seed);
-      model.bin_limit = bin_limit;
+      SpeeDRFModel model = new SpeeDRFModel(dest(), self(), source._key, train, response, new Key[0], seed, getCMDomain());
+      model.nbins = bin_limit;
       if (mtry == -1) {
         model.mtry = (int) Math.floor(Math.sqrt(source.numCols()));
       } else {
@@ -200,9 +205,9 @@ public class SpeeDRF extends Job.ValidatedJob {
       model.sample = (float) sample;
       model.weights = class_weights;
       model.time = 0;
-      model.total_trees = num_trees;
+      model.N = num_trees;
       model.strata_samples = samps;
-      model.depth = max_depth;
+      model.max_depth = max_depth;
       model.oobee = validation == null && oobee;
       model.statType = stat_type;
       model.test_frame = test;

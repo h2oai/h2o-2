@@ -1,4 +1,4 @@
-
+.. _SGDmath:
 
 SGD
 ----

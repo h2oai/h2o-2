@@ -187,6 +187,26 @@ setMethod("show", "H2ODRFModel", function(object) {
   cat("\nMean-squared Error by tree:\n"); print(model$mse)
 })
 
+setMethod("show", "H2OSpeeDRFModel", function(object) {
+  print(object@data)
+  cat("SpeeDRF Model Key:", object@key)
+
+  model = object@model
+  cat("\n\nClassification:", model$params$classification)
+  cat("\nNumber of trees:", model$params$ntree)
+  cat("\nTree statistics:", NA)
+  
+  if(FALSE){ #model$params$oobee) {
+    cat("\nConfusion matrix:\n"); cat("Reported on oobee from", object@valid@key, "\n")
+  } else {
+    cat("\nConfusion matrix:\n"); cat("Reported on", object@valid@key,"\n")
+  }
+  print(model$confusion)
+  
+  cat("\nMean-squared Error by tree:\n"); print(model$mse)
+})
+  
+
 setMethod("show", "H2OPCAModel", function(object) {
   print(object@data)
   cat("PCA Model Key:", object@key)
@@ -381,14 +401,16 @@ h2o.unique <- function(x, incomparables = FALSE, ...){
 }
 unique.H2OParsedData <- h2o.unique
 
-h2o.runif <- function(x, min = 0, max = 1) {
+h2o.runif <- function(x, min = 0, max = 1, seed = -1) {
   if(missing(x)) stop("Must specify data set")
   if(!inherits(x, "H2OParsedData")) stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
   if(!is.numeric(min)) stop("min must be a single number")
   if(!is.numeric(max)) stop("max must be a single number")
   if(length(min) > 1 || length(max) > 1) stop("Unimplemented")
   if(min > max) stop("min must be a number less than or equal to max")
-  expr = paste("runif(", x@key, ")*(", max - min, ")+", min, sep = "")
+  if(!is.numeric(seed)) stop("seed must be an integer >= 0")
+  
+  expr = paste("runif(", x@key, ",", seed, ")*(", max - min, ")+", min, sep = "")
   res = .h2o.__exec2(x@h2o, expr)
   if(res$num_rows == 0 && res$num_cols == 0)
     return(res$scalar)
@@ -876,8 +898,9 @@ as.data.frame.H2OParsedData <- function(x, ...) {
   # colClasses = sapply(res$levels, function(x) { ifelse(is.null(x), "numeric", "factor") })
 
   # Substitute NAs for blank cells rather than skipping
-  df = read.csv(textConnection(ttt), blank.lines.skip = FALSE, ...)
+  df = read.csv((tcon <- textConnection(ttt)), blank.lines.skip = FALSE, ...)
   # df = read.csv(textConnection(ttt), blank.lines.skip = FALSE, colClasses = colClasses, ...)
+  close(tcon)
   return(df)
 }
 

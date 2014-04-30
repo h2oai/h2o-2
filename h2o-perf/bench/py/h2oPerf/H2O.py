@@ -3,20 +3,17 @@
 import json
 import sys
 import os
-import shutil
-import signal
 import time
 import random
 import getpass
 import re
-import subprocess
 import atexit
 import paramiko
 import md5
 import errno
 import PerfUtils
-import stat
 import requests
+
 
 class H2OUseCloudNode:
     """  
@@ -32,19 +29,20 @@ class H2OUseCloudNode:
         self.use_port = use_port
 
     def start(self):
-        pass 
+        pass
 
     def stop(self):
-        pass 
+        pass
 
     def terminate(self):
-        pass 
+        pass
 
     def get_ip(self):
         return self.use_ip
 
     def get_port(self):
         return self.use_port
+
 
 class H2OUseCloud:
     """  
@@ -57,21 +55,21 @@ class H2OUseCloud:
         self.use_ip = use_ip
         self.use_port = use_port
 
-        self.nodes = [] 
+        self.nodes = []
         node = H2OUseCloudNode(self.use_ip, self.use_port)
         self.nodes.append(node)
 
     def start(self):
-        pass 
+        pass
 
     def wait_for_cloud_to_be_up(self):
-        pass 
+        pass
 
     def stop(self):
-        pass 
+        pass
 
     def terminate(self):
-        pass 
+        pass
 
     def get_ip(self):
         node = self.nodes[0]
@@ -91,7 +89,8 @@ class H2OUseCloud:
         res = []
         for node in self.nodes:
             res += [node.request_pid()]
-        return','.join(res)
+        return ','.join(res)
+
 
 class H2OCloudNode:
     """
@@ -107,7 +106,8 @@ class H2OCloudNode:
     terminated: Only from a signal.  Not normal shutdown.
     """
 
-    def __init__(self, cloud_num, nodes_per_cloud, node_num, cloud_name, h2o_jar, ip, base_port, xmx, output_dir, isEC2):
+    def __init__(self, cloud_num, nodes_per_cloud, node_num, cloud_name, h2o_jar, ip, base_port,
+                 xmx, output_dir, isEC2):
         """
         Create a node in a cloud.
 
@@ -144,7 +144,7 @@ class H2OCloudNode:
         policy = paramiko.AutoAddPolicy()
         self.ssh.set_missing_host_key_policy(policy)
         self.ssh.load_system_host_keys()
-  
+
         if self.password is None:
             self.ssh.connect(self.addr, username=self.username)
         else:
@@ -170,7 +170,7 @@ class H2OCloudNode:
 
     def open_channel(self):
         ch = self.ssh.get_transport().open_session()
-        ch.get_pty() # force the process to die without the connection
+        ch.get_pty()  # force the process to die without the connection
         return ch
 
     def get_ticks(self):
@@ -183,17 +183,18 @@ class H2OCloudNode:
         got_url_sys = False
         got_url_proc = False
         while m < max_retries:
-            url_sys  = "http://{}:{}/stat".format(self.ip, 8000)
+            print "Performing try : " + str(m) + " out of total tries = " + str(max_retries)
+            url_sys = "http://{}:{}/stat".format(self.ip, 8000)
             url_proc = "http://{}:{}/{}/stat".format(self.ip, 8000, self.pid)
-            r_sys    = requests.get(url_sys).text.split('\n')[0]
-            r_proc   = requests.get(url_proc).text.strip().split()
+            r_sys = requests.get(url_sys, timeout=120).text.split('\n')[0]
+            r_proc = requests.get(url_proc, timeout=120).text.strip().split()
             if not got_url_sys:
                 if not ("404" and "not" and "found") in r_sys:
                     got_url_sys = True
 
             if not got_url_proc:
                 if not ("404" and "not" and "found") in r_proc:
-                     got_url_proc = True
+                    got_url_proc = True
 
             if got_url_proc and got_url_sys:
                 break
@@ -203,11 +204,11 @@ class H2OCloudNode:
 
         if not (got_url_proc and got_url_sys):
             raise Exception("Max retries on /proc scrape exceeded! Did the JVM properly start?")
-    
-        url_sys  = "http://{}:{}/stat".format(self.ip, 8000)
+
+        url_sys = "http://{}:{}/stat".format(self.ip, 8000)
         url_proc = "http://{}:{}/{}/stat".format(self.ip, 8000, self.pid)
-        r_sys    = requests.get(url_sys).text.split('\n')[0]
-        r_proc   = requests.get(url_proc).text.strip().split()
+        r_sys = requests.get(url_sys, timeout=120).text.split('\n')[0]
+        r_proc = requests.get(url_proc, timeout=120).text.strip().split()
 
         sys_user = int(r_sys.split()[1])
         sys_nice = int(r_sys.split()[2])
@@ -219,23 +220,23 @@ class H2OCloudNode:
             print "DEBUGGING /proc scraped values served up: "
             print r_proc
             print " End of try 1."
-  
+
             proc_utime = int(r_proc[13])
             proc_stime = int(r_proc[14])
             process_total_ticks = proc_utime + proc_stime
-
         except:
             print "DEBUGGING /proc/<pid>/"
             print "This is try 2... Try 1 failed!"
             print "Did H2O shutdown first before this scrape occured?"
             print r_proc
             print "End of try 2...."
-            r_proc   = requests.get(url_proc).text.strip().split()
+            r_proc = requests.get(url_proc).text.strip().split()
             proc_utime = int(r_proc[13])
             proc_stime = int(r_proc[14])
             process_total_ticks = proc_utime + proc_stime
 
-        return {"process_total_ticks": process_total_ticks, "system_total_ticks": sys_total_ticks, "system_idle_ticks": sys_idle}
+        return {"process_total_ticks": process_total_ticks, "system_total_ticks": sys_total_ticks,
+                "system_idle_ticks": sys_idle}
 
     def is_contaminated(self):
         """
@@ -248,8 +249,8 @@ class H2OCloudNode:
         sys_delta = cur_ticks["system_total_ticks"] - first_ticks["system_total_ticks"]
         idle_delta = cur_ticks["system_idle_ticks"] - first_ticks["system_idle_ticks"]
 
-        sys_frac = 100*(1 - idle_delta * 1. / sys_delta)
-        proc_frac = 100*(proc_delta * 1. / sys_delta)
+        sys_frac = 100 * (1 - idle_delta * 1. / sys_delta)
+        proc_frac = 100 * (proc_delta * 1. / sys_delta)
 
         print "DEBUG: sys_frac, proc_frac"
         print sys_frac, proc_frac
@@ -282,20 +283,22 @@ class H2OCloudNode:
 
         # Add S3N credentials to cmd if they exist.
         ec2_hdfs_config_file_name = os.path.expanduser("/home/spencer/.ec2/core-site.xml")
-        if (os.path.exists(ec2_hdfs_config_file_name)):
+        if os.path.exists(ec2_hdfs_config_file_name):
             cmd.append("-hdfs_config")
             cmd.append(ec2_hdfs_config_file_name)
 
         self.output_file_name = "java_" + str(self.cloud_num) + "_" + str(self.node_num)
-    
+
         self.error_file_name = "java_" + str(self.cloud_num) + "_" + str(self.node_num)
 
         cmd = ' '.join(cmd)
         self.channel = self.open_channel()
-        self.stdouterr = "" #somehow cat outfile & errorfile?
+        self.stdouterr = ""  # somehow cat outfile & errorfile?
 
-        outfd, self.output_file_name = PerfUtils.tmp_file(prefix = "remoteH2O-" + self.output_file_name, suffix = ".out", directory = self.output_dir)
-        errfd, self.error_file_name = PerfUtils.tmp_file(prefix = "remoteH2O-" + self.error_file_name, suffix = ".err", directory = self.output_dir)
+        outfd, self.output_file_name = PerfUtils.tmp_file(prefix="remoteH2O-" + self.output_file_name, suffix=".out",
+                                                          directory=self.output_dir)
+        errfd, self.error_file_name = PerfUtils.tmp_file(prefix="remoteH2O-" + self.error_file_name, suffix=".err",
+                                                         directory=self.output_dir)
 
         PerfUtils.drain(self.channel.makefile(), outfd)
         PerfUtils.drain(self.channel.makefile_stderr(), errfd)
@@ -320,6 +323,7 @@ class H2OCloudNode:
                     pass
             except OSError:
                 pass
+
         print "+ CMD: " + cmd
 
     def request_pid(self):
@@ -328,7 +332,7 @@ class H2OCloudNode:
         """
         name = self.ip + ":" + self.port
         time.sleep(5)
-        r = requests.get("http://"+name+"/Cloud.json")
+        r = requests.get("http://" + name + "/Cloud.json")
         name = "/" + name
         j = json.loads(r.text)
         for node in j["nodes"]:
@@ -344,17 +348,17 @@ class H2OCloudNode:
 
         @return: none
         """
-        retries = 30 
-        while (retries > 0):
-            if (self.terminated):
+        retries = 30
+        while retries > 0:
+            if self.terminated:
                 return
-            f = open(self.output_file_name, "r") 
+            f = open(self.output_file_name, "r")
             s = f.readline()
-            while (len(s) > 0):
-                if (self.terminated):
+            while len(s) > 0:
+                if self.terminated:
                     return
                 match_groups = re.search(r"Listening for HTTP and REST traffic on  http://(\S+):(\d+)", s)
-                if (match_groups is not None):
+                if match_groups is not None:
                     port = match_groups.group(2)
                     if port is not None:
                         self.port = port
@@ -370,8 +374,8 @@ class H2OCloudNode:
                 s = f.readline()
 
             f.close()
-            retries -= 1 
-            if (self.terminated):
+            retries -= 1
+            if self.terminated:
                 return
             time.sleep(1)
 
@@ -390,7 +394,7 @@ class H2OCloudNode:
         try:
             requests.get("http://" + self.ip + ":" + self.port + "/Shutdown.html", timeout=5)
             try:
-                r2 = requests.get("http://" + self.ip + ":" + self.port + "/Cloud.html", timeout = 2)
+                r2 = requests.get("http://" + self.ip + ":" + self.port + "/Cloud.html", timeout=2)
             except Exception, e:
                 pass
         except Exception, e:
@@ -420,7 +424,7 @@ class H2OCloudNode:
         """
         self.terminated = True
         self.stop_remote()
-    
+
     def terminate_local(self):
         """ 
         Terminate a running node.  (Due to a signal.)
@@ -436,7 +440,7 @@ class H2OCloudNode:
 
     def get_output_file_name(self):
         """ Return the directory to the output file name. """
-        return self.output_file_name    
+        return self.output_file_name
 
     def get_error_file_name(self):
         """ Return the directory to the error file name. """
@@ -454,6 +458,7 @@ class H2OCloudNode:
         s += "        port:         {}\n".format(self.port)
         s += "        pid:          {}\n".format(self.pid)
         return s
+
 
 class H2OCloud:
     """  
@@ -502,18 +507,20 @@ class H2OCloud:
         @return: none.
         """
         f = self.h2o_jar
+
         def prog(sofar, total):
             # output is bad for jenkins.
             username = getpass.getuser()
-            if username!='jenkins':
+            if username != 'jenkins':
                 p = int(10.0 * sofar / total)
-                sys.stdout.write('\rUploading jar [%s%s] %02d%%' % ('#'*p, ' '*(10-p), 100*sofar/total))
+                sys.stdout.write('\rUploading jar [%s%s] %02d%%' % ('#' * p, ' ' * (10 - p), 100 * sofar / total))
                 sys.stdout.flush()
+
         for node in self.nodes:
             m = md5.new()
             m.update(open(f).read())
             m.update(getpass.getuser())
-            dest = '/tmp/' +m.hexdigest() +"-"+ os.path.basename(f)
+            dest = '/tmp/' + m.hexdigest() + "-" + os.path.basename(f)
             print "Uploading h2o jar to: " + dest + "on " + node.ip
             sftp = node.ssh.open_sftp()
             try:
@@ -525,7 +532,7 @@ class H2OCloud:
             finally:
                 sftp.close()
             node.uploaded[f] = dest
-           # sys.stdout.flush()
+            # sys.stdout.flush()
 
     def check_contaminated(self):
         """
@@ -553,7 +560,7 @@ class H2OCloud:
 
         @return: none
         """
-        if (self.nodes_per_cloud > 1):
+        if self.nodes_per_cloud > 1:
             print("")
             print("ERROR: Unimplemented: wait for cloud size > 1.")
             print("")
@@ -601,7 +608,7 @@ class H2OCloud:
         res = []
         for node in self.nodes:
             res += [node.request_pid()]
-        return','.join(res)
+        return ','.join(res)
 
     def terminate_remote(self):
         """  

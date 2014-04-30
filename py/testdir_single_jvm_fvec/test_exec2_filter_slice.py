@@ -4,8 +4,7 @@ import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec a
 
 exprList = [
     # "rTest=randomFilter(<keyX>,58101,12345)",
-    
-    "a=runif(c.hex[,1]); rTrain=<keyX>[a<0.8,]",
+    "a=runif(c.hex[,1], -1); rTrain=<keyX>[a<0.8,]",
     # doesn't work yet
     # "r2=c.hex[1:100,]",
     ]

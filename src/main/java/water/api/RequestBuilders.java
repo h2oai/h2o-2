@@ -1127,7 +1127,7 @@ public class RequestBuilders extends RequestQueries {
       try {
         String key = URLEncoder.encode(str,"UTF-8");
         String delete = "<a href='RemoveAck.html?"+KEY+"="+key+"'><button class='btn btn-danger btn-mini'>X</button></a>";
-        return delete + "&nbsp;&nbsp;" + Inspector.link(str, key);
+        return delete + "&nbsp;&nbsp;" + Inspector.link(str, str);
       } catch( UnsupportedEncodingException e ) {
         throw  Log.errRTExcept(e);
       }

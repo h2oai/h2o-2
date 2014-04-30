@@ -1222,7 +1222,18 @@ public class RequestArguments extends RequestStatics {
       try {
         return NumberSequence.parse(input, _multiplicative, _defaultStep);
       } catch( NumberFormatException e) {
-        throw new IllegalArgumentException("Value "+input+" is not a valid number sequence.");
+        // allow grid search number sequences to pass without an exception (if all numbers except for [(),] are valid)
+        if (input.contains("(") && input.contains(")")) {
+          try {
+            String[] s = input.replaceAll("[()]", "").split(","); //remove ( and ) and split on ,
+            for (String num : s) Double.parseDouble(num); //try to parse every number as Double
+            return NumberSequence.parse(s[0], _multiplicative, _defaultStep); //HACK: report back the first number (to satisfy the UI)
+          } catch (NumberFormatException e2) {
+            throw new IllegalArgumentException("Value " + input + " is not a valid number sequence.");
+          }
+        }
+        else
+        throw new IllegalArgumentException("Value " + input + " is not a valid number sequence.");
       }
     }
 

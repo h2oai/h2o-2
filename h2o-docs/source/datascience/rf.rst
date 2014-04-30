@@ -1,3 +1,4 @@
+.. _RFmath:
 
 Random Forest (RF)
 ------------------

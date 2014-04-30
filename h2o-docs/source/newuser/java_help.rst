@@ -1,7 +1,10 @@
+.. _Javahelp:
+
+
 H\ :sub:`2`\ O Command-line Options
 """"""""""""""""""""""""""""""""""""
-When an instance of H\ :sub:`2`\ O is started from the command line, users
-generally call a java command similar to "java -Xmx1g -jar
+When an instance of H\ :sub:`2`\ O is started from the command-line, users
+generally call a Java command similar to "java -Xmx1g -jar
 h2o.jar " Users can customize their running
 instance of H\ :sub:`2`\ O by changing options in this java command. Each of the
 options has a default. 
@@ -113,3 +116,10 @@ equal amounts of memory.
       $ java -Xmx2g -jar h2o.jar -name TomsCloud
       $ java -Xmx2g -jar h2o.jar -name TomsCloud
       $ java -Xmx2g -jar h2o.jar -name TomsCloud
+
+
+Supported Java
+""""""""""""""""
+Java 1.8 for developers is not supported at this time. Users running
+H\ :sub:`2`\ O, but not modifying and supplementing code, or
+recompiling the existing code can use Java 1.8

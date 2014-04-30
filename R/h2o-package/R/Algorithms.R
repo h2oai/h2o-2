@@ -818,6 +818,13 @@ h2o.deeplearning <- function(x, y, data, classification = TRUE, validation,
   result$train_sqr_error = errs$train_mse
   result$valid_class_error = errs$valid_err
   result$valid_sqr_error = errs$valid_mse
+
+  if(!is.null(errs$validAUC)) {
+      tmp <- .h2o.__getPerfResults(errs$validAUC)
+      tmp$confusion <- NULL 
+      result <- c(result, tmp) 
+    }
+
   return(result)
 }
 
@@ -1033,7 +1040,7 @@ h2o.randomForest.FV <- function(x, y, data, classification=TRUE, ntree=50, depth
 
   # NB: externally, 1 based indexing; internally, 0 based
   cols <- paste(args$x_i - 1, collapse=',')
-  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRF, source=data@key, response=args$y, cols=cols, ntrees=ntree, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, seed=seed, importance=as.numeric(importance), classification=as.numeric(classification))
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRF, source=data@key, response=args$y, cols=cols, ntrees=ntree, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, seed=seed, importance=as.numeric(importance), classification=as.numeric(classification), validation=validation@key)
   params = list(x=args$x, y=args$y, ntree=ntree, depth=depth, sample.rate=sample.rate, nbins=nbins, importance=importance)
 
   if(length(ntree) == 1 && length(depth) == 1 && length(nodesize) == 1 && length(sample.rate) == 1 && length(nbins) == 1) {
@@ -1100,7 +1107,18 @@ h2o.randomForest.FV <- function(x, y, data, classification=TRUE, ntree=50, depth
 }
 
 # -------------------------- SpeeDRF -------------------------- #
-h2o.SpeeDRF <- function(x, y, data, classification=TRUE, ntree=50, depth=50, sample.rate=2/3, nbins=1024, seed=78483418294, validation, stat.type="ENTROPY") {
+h2o.SpeeDRF <- function(x, y, data, classification=TRUE, validation,
+                        mtry=-1, 
+                        ntree=50, 
+                        depth=50, 
+                        sample.rate=2/3,
+                        oobee = TRUE,
+                        nbins=1024, 
+                        seed=-1,
+                        stat.type="ENTROPY",
+                        classwt=NULL,
+                        sampling_strategy = "RANDOM",
+                        strata_samples=NULL) {
   args <- .verify_dataxy(data, x, y)
   if(!is.numeric(ntree)) stop('ntree must be a number')
   if( any(ntree < 1) ) stop('ntree must be >= 1')
@@ -1110,15 +1128,30 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, ntree=50, depth=50, sam
   if( any(sample.rate < 0 || sample.rate > 1) ) stop('sample.rate must be between 0 and 1')
   if(!is.numeric(nbins)) stop('nbins must be a number')
   if( any(nbins < 1)) stop('nbins must be an integer >= 1')
-  if(!is.numeric(seed)) stop("seed must be an integer >= 0")
+  if(!is.numeric(seed)) stop("seed must be an integer")
+  if(!(stat.type %in% c("ENTROPY", "GINI"))) stop(paste("stat.type must be either GINI or ENTROPY. Input was: ", stat.type, sep = ""))
+  if(!(is.logical(oobee))) stop(paste("oobee must be logical (TRUE or FALSE). Input was: ", oobee, " and is of type ", mode(oobee), sep = ""))
+  if(!(sampling_strategy %in% c("RANDOM", "STRATIFIED"))) stop(paste("sampling_strategy must be either RANDOM or STRATIFIED. Input was: ", sampling_strategy, sep = ""))
+  
+  if(!missing(ntree) && length(ntree) > 1 || !missing(depth) && length(depth) > 1 || !missing(sample.rate) && length(sample.rate) > 1 || !missing(nbins) && length(nbins) > 1) 
+    stop("Random forest grid search not supported under SpeeDRF")
 
+  if(!is.numeric(classwt) && !is.null(classwt)) stop("classwt must be numeric")
+  if(!is.null(classwt)) {
+    if(any(classwt) < 0) stop("Class weights must all be positive")
+  }
+  if(!is.null(strata_samples)) {
+    if(any(strata_samples) < 0) stop("Strata samples must all be positive")
+  }
   if(missing(validation)) validation <- data 
   else if(!class(validation) %in% c("H2OParsedData")) stop("validation must be an H2O parsed dataset!")
 
   # NB: externally, 1 based indexing; internally, 0 based
   cols <- paste(args$x_i - 1, collapse=',')
-  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, response=args$y, cols=cols, num_trees=ntree, max_depth=depth, sample=sample.rate, bin_limit=nbins, seed=seed, stat_type = stat.type)
-  params = list(x=args$x, y=args$y, ntree=ntree, depth=depth, sample.rate=sample.rate, bin_limit=nbins, stat.type = stat.type)
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, response=args$y, cols=cols, num_trees=ntree, max_depth=depth, 
+                          sample=sample.rate, bin_limit=nbins, seed=seed, stat_type = stat.type, oobee=as.numeric(oobee), sampling_strategy=sampling_strategy, strata_samples=strata_samples, class_weights=classwt)
+
+  params = list(x=args$x, y=args$y, ntree=ntree, depth=depth, sample.rate=sample.rate, bin_limit=nbins, stat.type = stat.type, classwt=classwt, sampling_strategy=sampling_strategy, seed=seed, oobee = oobee)
 
   if(length(ntree) == 1 && length(depth) == 1 && length(sample.rate) == 1 && length(nbins) == 1) { 
     .h2o.__waitOnJob(data@h2o, res$job_key)
@@ -1146,14 +1179,10 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, ntree=50, depth=50, sam
 
 .h2o.__getSpeeDRFResults <- function(res, params) {
   result = list()
-  params$ntree = res$total_trees
-  params$depth = res$depth
-  params$nbins = res$bin_limit
-  params$sample.rate = res$sample
+  params$ntree = res$N
+  params$depth = res$max_depth
+  params$nbins = res$nbins
   params$classification = TRUE
-  params$oobee = res$oobee
-  params$seed = res$zeed
-  params$stat.type = res$statType
 
   result$params = params
   #treeStats = unlist(res$treeStats)
