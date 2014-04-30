@@ -33,9 +33,7 @@ Getting Started
 """""""""""""""
 This tutorial uses a publicly available data set that can be found at:
 
-`UCI Machine Learning 
-
-http://archive.ics.uci.edu/ml/machine-learning-databases/abalone/ 
+UCI Machine Learning Repository: http://archive.ics.uci.edu/ml/machine-learning-databases/abalone/ 
 
 The original data are the Abalone data, available from UCI
 Machine Learning Repository. They are composed of 4177 observations on
