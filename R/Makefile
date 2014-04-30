@@ -50,7 +50,7 @@ endif
 	mkdir -p h2o-package/inst/java
 ifeq ($(BUILD_NUMBER),99999)
 	# cp -f ../target/h2o.jar h2o-package/inst/java
-    mkdir -p h2o-package/inst/java/tmp
+	mkdir -p h2o-package/inst/java/tmp
 	cp -f ../target/h2o.jar h2o-package/inst/java/tmp/h2o_full.jar
 	(cd h2o-package/inst/java/tmp && jar xf h2o_full.jar)
 	(cd h2o-package/inst/java/tmp && rm -fr hadoop/0.* hadoop/1.* hadoop/cdh[35]* hadoop/cdh4_yarn)
