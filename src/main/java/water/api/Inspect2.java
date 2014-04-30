@@ -24,7 +24,7 @@ public class Inspect2 extends Request2 {
   static final String DOC_GET = "Inspect a fluid-vec frame";
   static final String NA = ""; // not available information
 
-  @API(help="An existing H2O Frame key.", required=true, filter=Default.class)
+  @API(help="An existing H2O Frame key.", required=true, filter=Default.class, gridable=false)
   Frame src_key;
 
   @API(help="Offset to begin viewing rows, or -1 to see a structural representation of the data", filter=Default.class, lmin=-1, lmax=Long.MAX_VALUE)

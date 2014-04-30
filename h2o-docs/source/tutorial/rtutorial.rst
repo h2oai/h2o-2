@@ -2,7 +2,7 @@
 
 .. -*- mode: rst -*-
 
-.. _R_tutorial:
+
 
 R Tutorial
 -------------

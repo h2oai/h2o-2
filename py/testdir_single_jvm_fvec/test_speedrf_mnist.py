@@ -95,8 +95,9 @@ class Basic(unittest.TestCase):
             print "RF completed in", elapsed, "seconds.", \
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             rfv["drf_model"] = rfv.pop("speedrf_model")
+            h2o_rf.simpleCheckRFView(None, rfv, **params)
             rf_model = rfv['drf_model']
-            used_trees = rf_model['total_trees']
+            used_trees = rf_model['N']
             data_key = rf_model['_dataKey']
             model_key = rf_model['_key']
 

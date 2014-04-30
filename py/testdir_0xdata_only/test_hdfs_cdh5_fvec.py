@@ -1,6 +1,6 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -20,7 +20,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_hdfs_fvec(self):
+    def test_hdfs_cdh5_fvec(self):
         h2o.beta_features = True
         print "\nLoad a list of files from HDFS, parse and do 1 RF tree"
         print "\nYou can try running as hduser/hduser if fail"
@@ -29,19 +29,19 @@ class Basic(unittest.TestCase):
         #    "allstate_claim_prediction_train_set.zip",
         csvFilenameAll = [
             # "3G_poker_shuffle"
-            "airlines_all.csv",
-            "and-testing.data",
-            "arcene2_train.both",
-            "arcene_train.both",
-            "bestbuy_test.csv",
-            "covtype.169x.data",
-            "covtype.data",
-            "covtype4x.shuffle.data",
+            ("and-testing.data", 60),
+            ### "arcene2_train.both",
+            ### "arcene_train.both",
+            ### "bestbuy_test.csv",
+            ("covtype.data", 60),
+            ("covtype4x.shuffle.data", 60),
             # "four_billion_rows.csv",
-            "hhp.unbalanced.012.data.gz",
-            "hhp.unbalanced.data.gz",
-            "leads.csv",
-            "prostate_long_1G.csv",
+            ("hhp.unbalanced.012.data.gz", 60),
+            ("hhp.unbalanced.data.gz", 60),
+            ("leads.csv", 60),
+            ("covtype.169x.data", 1200),
+            ("prostate_long_1G.csv", 200),
+            ("airlines_all.csv", 1200),
         ]
 
         # pick 8 randomly!
@@ -54,12 +54,43 @@ class Basic(unittest.TestCase):
         # pop open a browser on the cloud
         # h2b.browseTheCloud()
 
-        for csvFilename in csvFilenameList:
+        trial = 0
+        print "try importing /tmp2"
+        d = h2i.import_only(path="tmp2/*", schema='hdfs', timeoutSecs=1000)
+        for (csvFilename, timeoutSecs) in csvFilenameList:
             # creates csvFilename.hex from file in hdfs dir 
             print "Loading", csvFilename, 'from HDFS'
+            start = time.time()
+            hex_key = "a.hex"
             csvPathname = "datasets/" + csvFilename
-            parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', timeoutSecs=1000)
-            print "parse result:", parseResult['destination_key']
+            parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', hex_key=hex_key, timeoutSecs=1000)
+            print "hdfs parse of", csvPathname, "took", time.time() - start, 'secs'
+
+            start = time.time()
+            print "Saving", csvFilename, 'to HDFS'
+            print "Using /tmp2 to avoid the '.' prefixed files in /tmp2 (kills import)"
+            csvPathname = "tmp2/a%s.csv" % trial
+            path = "hdfs://"+ h2o.nodes[0].hdfs_name_node + "/" + csvPathname
+            h2o.nodes[0].export_files(src_key=hex_key, path=path, force=1, timeoutSecs=timeoutSecs)
+            print "export_files of", hex_key, "to", path, "took", time.time() - start, 'secs'
+            trial += 1
+
+            print "Re-Loading", csvFilename, 'from HDFS'
+            start = time.time()
+            hex_key = "a2.hex"
+            time.sleep(2)
+            d = h2i.import_only(path=csvPathname, schema='hdfs', timeoutSecs=1000)
+            print h2o.dump_json(d)
+            parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', hex_key=hex_key, timeoutSecs=1000)
+            print "hdfs re-parse of", csvPathname, "took", time.time() - start, 'secs'
+
+            # currently fails
+            # print "This comparison test only works because na's are treated as 0's. bug fix might change that na-> na"
+            # execExpr = "sum(%s!=%s)" % ("a.hex", "a2.hex")
+            # resultExec, result = h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+            # self.assertEqual(result, 0.0, msg="a.hex and a2.hex weren't the same (NA treated as 0) %s" % result)
+            
+
 
 if __name__ == '__main__':
     h2o.unit_main()

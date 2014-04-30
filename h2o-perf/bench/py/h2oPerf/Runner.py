@@ -71,7 +71,7 @@ class PerfRunner:
         parse_file = "parse.R"  # testDir + "_Parse.R"
         model_file = "model.R"  # testDir + "_Model.R"
         predict_file = None
-        if os.path.exists(os.path.join(self.test_root_dir, testDir, "predict.R")):
+        if os.path.exists(os.path.join(self.test_root_dir, prefix, testDir, "predict.R")):
             predict_file = "predict.R"
 
         test_dir = os.path.join(self.test_root_dir, prefix, testDir)
@@ -84,7 +84,7 @@ class PerfRunner:
         self.tests.append(test)
         self.q = "0xperf"
         self.tests_not_started.append(test)
-
+    
     def run_tests(self):
         """
         Run all tests.
@@ -93,6 +93,10 @@ class PerfRunner:
         """
         if self.terminated:
             return
+        print "DEBUG: TESTS TO BE RUN:"
+        names = [test.test_name for test in self.tests]
+        for n in names:
+            print n
 
         num_tests = len(self.tests)
         self.__log__("")
