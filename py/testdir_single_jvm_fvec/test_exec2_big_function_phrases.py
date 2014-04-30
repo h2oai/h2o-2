@@ -75,7 +75,7 @@ phrases = [
         "rhex[nrow(rhex)-1,ncol(rhex)-1]",
         "rhex-rhex",
 
-        "runif(rhex[,1])",
+        "runif(rhex[,1], -1)",
         "sum(1,2)",
         "sum(1,2,3)",
         "sum(1,rhex,3)",

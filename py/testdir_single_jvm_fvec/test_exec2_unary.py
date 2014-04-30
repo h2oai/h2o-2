@@ -22,7 +22,7 @@ if 1==0:
 else:
     exprListFull = [
         'r1.hex=apply(r.hex,2,function(x){ifelse(is.na(x),0,x)})',
-        'cct.hex=runif(r.hex);rTrain=r.hex[cct.hex<=0.9,];rTest=r.hex[cct.hex>0.9,]',
+        'cct.hex=runif(r.hex, -1);rTrain=r.hex[cct.hex<=0.9,];rTest=r.hex[cct.hex>0.9,]',
 
         # 'r<n>[,0] = r0[,0] * r<n-1>[,0]',
         # 'r<n>[0,] = r1[0,] + r<n-1>[0,]',
@@ -32,8 +32,8 @@ else:
         'r1.hex[,1]=r1.hex[,1]==1.0',
         # unsupported
         # 'r1.hex[1,]=r1.hex[1,]==1.0',
-        'b.hex=runif(r3.hex[,1])',
-        'b.hex=runif(r3.hex[1,])',
+        'b.hex=runif(r3.hex[,1], -1)',
+        'b.hex=runif(r3.hex[1,], -1)',
 
         # 'r1.hex[,1]=r1.hex[,1] + 1.3',
         # 'r<n>.hex=min(r1.hex,1+2)',
@@ -255,7 +255,7 @@ class Basic(unittest.TestCase):
             h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=10)
         start = time.time()
         # h2e.exec_expr_list_rand(len(h2o.nodes), exprList, 'r1.hex', maxTrials=200, timeoutSecs=10)
-        h2e.exec_expr_list_rand(len(h2o.nodes), exprList, None, maxTrials=200, timeoutSecs=30, allowEmptyResult=True)
+        h2e.exec_expr_list_rand(len(h2o.nodes), exprList, None, maxTrials=200, timeoutSecs=30, allowEmptyResult=True, nanOkay=True)
 
         h2o.check_sandbox_for_errors()
         print "exec end on ", "operators" , 'took', time.time() - start, 'seconds'

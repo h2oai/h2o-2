@@ -135,7 +135,7 @@ exprList = [
 
         "factor(r.hex[,5])",
         "r.hex[,1]==1.0",
-        "runif(r.hex[,1])",
+        "runif(r.hex[,1], -1)",
         "r.hex[,3]=4",
 
         ]
