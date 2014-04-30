@@ -31,6 +31,16 @@ class ModelManagementTestCase(unittest.TestCase):
             h2o.check_sandbox_for_errors(sandboxIgnoreErrors=False, python_test_name="test_model_management")
 
 
+    already_set_up = False
+
+    ''' Lazy setup of the common frames and models used by the test cases. '''
+    def setUp(self):
+        if ModelManagementTestCase.already_set_up:
+            return
+        self.create_models(self.import_frames())
+        ModelManagementTestCase.already_set_up = True
+
+
     def import_frame(self, target_key, bucket, csvFilename, csvPathname, expected_rows, expected_cols):
         path = csvPathname + '/' + csvFilename
         parseResult = h2i.import_parse(bucket=bucket, path=path, hex_key=target_key, schema='put') # upload the file
@@ -86,6 +96,7 @@ class ModelManagementTestCase(unittest.TestCase):
 
         return (prostate_hex, airlines_train_hex, airlines_test_hex)
         
+
     def create_models(self, frame_keys):
 
         prostate_hex, airlines_train_hex, airlines_test_hex = frame_keys
@@ -284,11 +295,7 @@ class ApiTestCase(ModelManagementTestCase):
             assert key not in d, "Unexpectedly found key: " + key + " in dict: " + repr(d)
 
 
-    # this is my test!
-    def test_binary_classifiers(self):
-
-        self.create_models(self.import_frames())
-
+    def test_endpoints(self):
         node = h2o.nodes[0]
 
         print "##############################################"
@@ -311,6 +318,8 @@ class ApiTestCase(ModelManagementTestCase):
         self.assertKeysExist(frames, 'frames', ['airlines_test.hex'])
         self.assertKeysDontExist(frames, 'frames', ['glm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_2', 'rf_AirlinesTrain_binary_1', 'rf_AirlinesTrain_binary_2', 'dl_AirlinesTrain_binary_1', 'glm_AirlinesTrain_binary_A', 'glm_Prostate_binary_1', 'rf_Prostate_binary_1', 'glm_Prostate_regression_1', 'airlines_train.hex', 'prostate.hex'])
         self.assertKeysDontExist(frames, '', ['models'])
+        self.assertKeysExist(frames, 'frames/airlines_test.hex', ['creation_epoch_time_millis', 'id', 'column_names', 'compatible_models'])
+        self.assertEqual(frames['frames']['airlines_test.hex']['id'], "88e9f821080b1221", msg="The airlines_test.hex frame hash should be deterministic.")
 
 
         print "##############################################"
@@ -356,6 +365,10 @@ class ApiTestCase(ModelManagementTestCase):
         self.assertKeysExist(models, 'frames', ['prostate.hex'])
         self.assertKeysDontExist(models, 'frames', ['airlines_train.hex', 'airlines_test.hex'])
 
+
+
+    def test_binary_classifiers(self):
+        node = h2o.nodes[0]
 
         print "##############################################"
         print "Testing /2/Models with scoring. . ."
@@ -420,9 +433,9 @@ class ApiTestCase(ModelManagementTestCase):
             if model_category is 'Regression':
                 self.assertKeysDontExist(scoring_result, 'metrics[0]', ['cm', 'auc']) # TODO: HitRatio
 
+
 class SteamTestCase(ModelManagementTestCase):
     def test_steam(self):
-        self.create_models(self.import_frames())
         print "----------------------------------------------------------"
         print "                    Testing Steam...                      "
         print "----------------------------------------------------------"

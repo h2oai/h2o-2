@@ -53,7 +53,7 @@ public class Frames extends Request2 {
 
   public static final class FrameSummary {
     public long creation_epoch_time_millis = -1L;
-    public String uuid = null;
+    public String id = null;
     public String[] column_names = { };
     public Set<String> compatible_models = new HashSet<String>();
   }
@@ -149,7 +149,7 @@ public class Frames extends Request2 {
    */
   private static void summarizeAndEnhanceFrame(FrameSummary summary, Frame frame, boolean find_compatible_models, Map<String, Model> all_models, Map<String, Set<String>> all_models_cols) {
     summary.creation_epoch_time_millis = frame.getUniqueId().getCreationEpochTimeMillis();
-    summary.uuid = frame.getUniqueId().getId();
+    summary.id = frame.getUniqueId().getId();
 
     summary.column_names = frame._names;
 

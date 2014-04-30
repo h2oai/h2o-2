@@ -60,7 +60,7 @@ public class Models extends Request2 {
     public Model.ModelCategory model_category = Model.ModelCategory.Unknown;
     public Job.JobState state = Job.JobState.CREATED;
     public long creation_epoch_time_millis = -1L;
-    public String uuid = null;
+    public String id = null;
     public List<String> input_column_names = new ArrayList<String>();
     public String response_column_name = "unknown";
     public Map critical_parameters = new HashMap<String, Object>();
@@ -188,7 +188,7 @@ public class Models extends Request2 {
     summary.state = ((Job)model.job()).getState();
     summary.model_category = model.getModelCategory();
     summary.creation_epoch_time_millis = model.getUniqueId().getCreationEpochTimeMillis();
-    summary.uuid = model.getUniqueId().getId();
+    summary.id = model.getUniqueId().getId();
 
     summary.response_column_name = names[names.length - 1];
 

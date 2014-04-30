@@ -8,7 +8,6 @@ import water.api.DocGen;
 import water.api.Request.API;
 import water.api.Request.Default;
 import water.fvec.Frame;
-import water.util.Log;
 
 /**
  * Frames are mutable, so we can't create a unique id at creation time to distinguish
@@ -32,7 +31,6 @@ public final class UniqueFrameId extends UniqueId {
 
   @Override
   public String getId() {
-    Log.info("calling UniqueFrameId.getId(), yay.");
     return Hex.encodeHexString(((Frame)DKV.get(frame).get()).hash());
   }
 

@@ -15,7 +15,6 @@ import java.util.UUID;
 
 public class UniqueId extends Iced {
   static final int API_WEAVER = 1;
-  static final int DEBUG_WEAVER = 1;
   static public DocGen.FieldDoc[] DOC_FIELDS;
 
   @API(help="The keycreation timestamp for the object (if it's not null).", required=false, filter=Default.class, json=true)
