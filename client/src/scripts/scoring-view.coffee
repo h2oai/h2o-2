@@ -177,6 +177,7 @@ Steam.ScoringView = (_, _scoring) ->
     renderRocCurve rates
 
   createInputParameter = (key, value, isVisible) ->
+    # DL, DRF have array-valued params, so handle that case properly
     formattedValue = if isArray value then value.join ', ' else value
 
     key: key
@@ -206,17 +207,9 @@ Steam.ScoringView = (_, _scoring) ->
     tailParameterss = tail parameterss
     for parameters, index in headParameters
       for tailParameters in tailParameterss
-        a = parameters.value
-        b = tailParameters[index].value
-        # DRF has array-valued params, so handle that case properly
-        if (isArray a) and (isArray b)
-          unless zipCompare a, b
-            markAsDifferent parameterss, index
-            break
-        else
-          if a isnt b
-            markAsDifferent parameterss, index
-            break
+        if parameters.value isnt tailParameters[index].value
+          markAsDifferent parameterss, index
+          break
     return
 
   renderComparisonTable = (scores) ->
