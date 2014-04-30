@@ -84,7 +84,7 @@ class PerfRunner:
         self.tests.append(test)
         self.q = "0xperf"
         self.tests_not_started.append(test)
-
+    
     def run_tests(self):
         """
         Run all tests.
@@ -93,6 +93,10 @@ class PerfRunner:
         """
         if self.terminated:
             return
+        print "DEBUG: TESTS TO BE RUN:"
+        names = [test.test_name for test in self.tests]
+        for n in names:
+            print n
 
         num_tests = len(self.tests)
         self.__log__("")
