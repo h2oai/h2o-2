@@ -116,3 +116,10 @@ equal amounts of memory.
       $ java -Xmx2g -jar h2o.jar -name TomsCloud
       $ java -Xmx2g -jar h2o.jar -name TomsCloud
       $ java -Xmx2g -jar h2o.jar -name TomsCloud
+
+
+Supported Java
+""""""""""""""""
+Java 1.8 for developers is not supported at this time. Users running
+H\ :sub:`2`\ O, but not modifying and supplementing code, or
+recompiling the existing code can use Java 1.8
