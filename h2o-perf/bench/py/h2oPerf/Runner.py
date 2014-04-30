@@ -71,7 +71,7 @@ class PerfRunner:
         parse_file = "parse.R"  # testDir + "_Parse.R"
         model_file = "model.R"  # testDir + "_Model.R"
         predict_file = None
-        if os.path.exists(os.path.join(self.test_root_dir, testDir, "predict.R")):
+        if os.path.exists(os.path.join(self.test_root_dir, prefix, testDir, "predict.R")):
             predict_file = "predict.R"
 
         test_dir = os.path.join(self.test_root_dir, prefix, testDir)
