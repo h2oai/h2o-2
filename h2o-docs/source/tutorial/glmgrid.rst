@@ -1,3 +1,5 @@
+.. _GLMgrid_tutorial:
+
 GLM Grid Tutorial
 -------------------
 
