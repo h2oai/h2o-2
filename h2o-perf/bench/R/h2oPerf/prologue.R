@@ -52,6 +52,7 @@ levels.json       <<- "None"
 minority_error    <<- "None"
 model             <<- "None"
 model.json        <<- "None"
+multinom_errors   <<- "None"
 null_dev          <<- "None"
 num_explan_cols   <<- -1
 num_train_rows    <<- -1   
@@ -177,6 +178,16 @@ function() {
 }
 
 #"Public" Methods
+
+#check that two vectors are approximately equal
+checkEquals<-
+function(v1, v2) {
+    DIFFERENCE <- 0.01
+    v <- abs(v1-v2)
+    if(sum(v > DIFFERENCE) > 0) {
+      correct_pass <<- 0
+    }
+}
 
 #Import/Parsing
 upload.VA<-
@@ -422,9 +433,15 @@ shuffle_training_data=FALSE) {
 
 #Scoring/Predicting
 runGBMScore<-
-function() {
+function(expected_results=NULL, type=NULL) {
   testData <<- new("H2OParsedData", h2o = h, key = "test.hex", logic = TRUE)
   .predict(model)
+  if (!is.null(expected_results)) {
+    if (type == "cm") {
+      rr <- confusion_matrix[,dim(confusion_matrix)[2]]
+      checkEquals(rr, expected_results)
+    }   
+  }
 }
 
 runGLMScore.VA<-
@@ -446,15 +463,27 @@ function() {
 }
 
 runRFScore.FV<-
-function() {
+function(expected_results=NULL, type=NULL) {
   testData <<- new("H2OParsedData", h2o = h, key = "test.hex", logic = TRUE)
   .predict(model)
+  if (!is.null(expected_results)) {
+    if (type == "cm") {
+      rr <- confusion_matrix[,dim(confusion_matrix)[2]]
+      checkEquals(rr, expected_results)
+    }
+  }
 }
 
 runDLScore<-
-function() {
+function(expected_results=NULL, type=NULL) {
   testData <<- new("H2OParsedData", h2o = h, key = "test.hex", logic = TRUE)
   .predict(model)
+  if (!is.null(expected_results)) {
+    if (type == "cm") {
+      rr <- confusion_matrix[,dim(confusion_matrix)[2]]
+      checkEquals(rr, expected_results)
+    }   
+  }
 }
 
 .retrieveModel<-
@@ -465,7 +494,6 @@ function(modelType, datatype = "VA") {
 
 .predict<-
 function(model) {
-  print("SPENCER!!!!")
   print(model)
   if( class(model)[1] == "H2OGLMModelVA") {
     res <- .h2o.__remoteSend(h, .h2o.__PAGE_PREDICT, model_key = model@key, data_key=testData@key, destination_key = "h2opreds.hex")
@@ -587,6 +615,7 @@ function(res) {
   confusion_matrix <<- cm
   cm.json <<- res$cm
   levels.json <<- res$response_domain
+  multinom_errors <<- diag(as.matrix(confusion_matrix)) / rowSums(confusion_matrix)
 }
 
 
