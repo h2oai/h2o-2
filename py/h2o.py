@@ -1145,6 +1145,19 @@ class H2O(object):
             params={"source": source},
         )
 
+    def export_files(self, print_params=True, timeoutSecs=60, **kwargs):
+        params_dict = {
+            'src_key': None,
+            'path': None,
+            'force': None,
+        }
+        check_params_update_kwargs(params_dict, kwargs, 'export_files', print_params)
+        return self.__do_json_request(
+            '2/ExportFiles.json',
+            timeout=timeoutSecs,
+            params=params_dict,
+        )
+
     def put_file(self, f, key=None, timeoutSecs=60):
         if key is None:
             key = os.path.basename(f)
