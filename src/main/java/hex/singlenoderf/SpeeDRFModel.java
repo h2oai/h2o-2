@@ -14,6 +14,8 @@ import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Counter;
 import hex.gbm.DTree.TreeModel.TreeStats;
+import water.util.ModelUtils;
+
 import java.util.Arrays;
 import java.util.Random;
 
@@ -57,7 +59,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   /* @API(help = "Confusion Matrix") */ long[][] cm;
   @API(help = "Tree Statistics") TreeStats treeStats;
   @API(help = "cmDomain") String[] cmDomain;
-  @API(help = "AUC") public final AUC validAUC;
+  @API(help = "AUC") public AUC validAUC;
   @API(help = "Variable Importance") public final VarImp varimp;
 
   //API output:
@@ -122,14 +124,14 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       cm_update = true;
       CMTask cmTask = new CMTask(m, m.size(), m.weights, m.oobee);
       cmTask.doAll(m.test_frame == null ? m.fr : m.test_frame, true);
-      m.confusion = CMTask.CMFinal.make(cmTask._matrix, m, cmTask.domain(), cmTask._errorsPerTree, m.oobee, cmTask._sum);
+      m.confusion = CMTask.CMFinal.make(cmTask._matrix, m, cmTask.domain(), cmTask._errorsPerTree, m.oobee, cmTask._sum, cmTask._cms);
       m.cm = cmTask._matrix._matrix;
     }
     if (f == 1.0) {
       cm_update = true;
       CMTask cmTask = new CMTask(m, m.size(), m.weights, m.oobee);
       cmTask.doAll(m.test_frame == null ? m.fr : m.test_frame, true);
-      m.confusion = CMTask.CMFinal.make(cmTask._matrix, m, cmTask.domain(), cmTask._errorsPerTree, m.oobee, cmTask._sum);
+      m.confusion = CMTask.CMFinal.make(cmTask._matrix, m, cmTask.domain(), cmTask._errorsPerTree, m.oobee, cmTask._sum, cmTask._cms);
       m.cm = cmTask._matrix._matrix;
     }
     if (!cm_update) {
@@ -143,6 +145,9 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       m.cms = Arrays.copyOf(old.cms, old.cms.length+1);
       ConfusionMatrix new_cm = new ConfusionMatrix(m.confusion._matrix);
       m.cms[m.cms.length-1] = new_cm;
+      if (m.classes() == 2) {
+        m.validAUC= makeAUC(toCMArray(m.confusion._cms), ModelUtils.DEFAULT_THRESHOLDS);
+      }
     }
     JsonObject trees = new JsonObject();
     trees.addProperty(Constants.TREE_COUNT,  m.size());
@@ -331,9 +336,9 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       DocGen.HTML.section(sb,"Mean Squared Error by Tree");
       DocGen.HTML.arrayHead(sb);
       sb.append("<tr style='min-width:60px'><th>Trees</th>");
-      int last = this.size() - 1;
+      int last = this.size(); // + 1;
       for( int i=last; i>=0; i-- )
-        sb.append("<td style='min-width:60px'>").append(i + 1).append("</td>");
+        sb.append("<td style='min-width:60px'>").append(i).append("</td>");
       sb.append("</tr>");
       sb.append("<tr><th class='warning'>MSE</th>");
       for( int i=last; i>=0; i-- )
@@ -349,6 +354,8 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       trees.add(Constants.TREE_LEAVES, this.leaves().toJson());
     }
     generateHTMLTreeStats(sb, trees);
+
+    if (validAUC != null) generateHTMLAUC(sb);
   }
 
   static final String NA = "---";
@@ -496,5 +503,20 @@ public class SpeeDRFModel extends Model implements Job.Progress {
         sb.append("</div>");
       }
     }
+  }
+
+  private static ConfusionMatrix[] toCMArray(long[][][] cms) {
+    int n = cms.length;
+    ConfusionMatrix[] res = new ConfusionMatrix[n];
+    for (int i = 0; i < n; i++) res[i] = new ConfusionMatrix(cms[i]);
+    return res;
+  }
+
+  protected static water.api.AUC makeAUC(ConfusionMatrix[] cms, float[] threshold) {
+    return cms != null ? new AUC(cms, threshold) : null;
+  }
+
+  protected void generateHTMLAUC(StringBuilder sb) {
+    validAUC.toHTML(sb);
   }
 }
