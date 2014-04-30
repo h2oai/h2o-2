@@ -230,7 +230,7 @@ test: node
 		$(DIST)/steam.node.js
 
 pytest: node
-	(cd ../py && python testdir_model_management/test_model_management.py -ccj localhost.json SteamTestCase)
+	(cd ../py && python testdir_single_jvm/test_model_management.py -ccj localhost.json ApiTestCase.test_steam)
 
 tags:
 	(cd src/scripts && ctags -R .)
