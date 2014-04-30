@@ -1,3 +1,6 @@
+.. _GBM_tutorial:
+
+
 GBM Grid Tutorial
 ------------------
 

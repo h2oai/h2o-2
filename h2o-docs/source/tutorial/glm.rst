@@ -1,4 +1,4 @@
-.._GLMtutorial:
+.. _GLM_tutorial:
 
 GLM Tutorial
 ==============
@@ -13,7 +13,7 @@ to run H\ :sub:`2`\ O.
 When to Use GLM
 """""""""""""""
 The variable of interest relates to predictions or
-inferences about a rate, an event, or a continuous
+inferences about a rate, an event, or a continuous 
 measurement. Questions are about how a set of environmental 
 conditions influence the dependent variable. 
 
@@ -32,6 +32,8 @@ Here are some examples:
 Getting Started
 """""""""""""""
 This tutorial uses a publicly available data set that can be found at:
+
+`UCI Machine Learning 
 
 http://archive.ics.uci.edu/ml/machine-learning-databases/abalone/ 
 

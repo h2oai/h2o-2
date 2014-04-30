@@ -19,11 +19,9 @@ getting started from downloaded versions of  H\ :sub:`2`\ O, and using  H\
 .. toctree::
     :maxdepth: 1
     
-   
+    newuser/introduction
     newuser/top
     Ruser/top
-    Ruser/Rpackage
-    newuser/java_help
     userguide/top
 
 

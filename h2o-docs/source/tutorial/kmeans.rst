@@ -1,3 +1,6 @@
+.. _KM_tutorial:
+
+
 K Means Tutorial
 ==================
 
@@ -59,7 +62,7 @@ Building a Model
 
 
 #. Note that data can be normalized, though it is not done for this
-   analysis. 
+   example. 
 
 #. Specify Initialization. Plus Plus initialization chooses one
    initial center and random, and weights the random selection of
@@ -71,9 +74,6 @@ Building a Model
 
 #. Specify Max Iter (short for maximum iterations), which allows the
    user to specify the maximum number of iterations the algorithm processes.
-
-#. Note that data can be normalized, though it is not done for this
-   analysis. 
 
 #. Cols is a list of the columns of attributes that should be used 
    in defining the clusters. Here we select all but column 7 (the 
