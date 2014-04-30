@@ -1032,6 +1032,15 @@ h2o.randomForest.FV <- function(x, y, data, classification=TRUE, ntree=50, depth
   if(!is.numeric(seed)) stop("seed must be an integer >= 0")
   if(!is.logical(importance)) stop("importance must be logical (TRUE or FALSE)')")
 
+    
+  print("DEBUG!!")
+  print("VALIDATION:")
+  print(validation)
+  print("IS IT MISSING?")
+  print(missing(validation))
+  print("VALIDATION KEY:")
+  print(validation@key)
+  
   if(missing(validation)) validation = data
   # else if(class(validation) != "H2OParsedData") stop("validation must be an H2O dataset")
   else if(!class(validation) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("validation must be an H2O parsed dataset")
@@ -1040,7 +1049,7 @@ h2o.randomForest.FV <- function(x, y, data, classification=TRUE, ntree=50, depth
 
   # NB: externally, 1 based indexing; internally, 0 based
   cols <- paste(args$x_i - 1, collapse=',')
-  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRF, source=data@key, response=args$y, cols=cols, ntrees=ntree, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, seed=seed, importance=as.numeric(importance), classification=as.numeric(classification, validation=validation@key))
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRF, source=data@key, response=args$y, cols=cols, ntrees=ntree, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, seed=seed, importance=as.numeric(importance), classification=as.numeric(classification), validation=validation@key)
   params = list(x=args$x, y=args$y, ntree=ntree, depth=depth, sample.rate=sample.rate, nbins=nbins, importance=importance)
 
   if(length(ntree) == 1 && length(depth) == 1 && length(nodesize) == 1 && length(sample.rate) == 1 && length(nbins) == 1) {
