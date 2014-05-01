@@ -3,8 +3,8 @@
 
 .. _R_user:
 
-For R Console and R Studio Users
-=================================
+Documentation For R Users (Console and Studio)
+===============================================
 
 .. toctree::
    :maxdepth: 1

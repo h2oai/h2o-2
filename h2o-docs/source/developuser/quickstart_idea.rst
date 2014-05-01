@@ -1,15 +1,9 @@
 For IDEA users (Github)
-----------------------------
+==========================
 
 1. Create a git clone of the H\ :sub:`2`\ O repository.
-
- ::
-  
-  git clone https://github.com/0xdata/h2o.git
-
-.. image:: idea/01FreshGitClone.png
-   :width: 90 %
-
+   :ref:`QuickstartGit`
+ 
 2. Open IDEA.
 3. Click Import Project.
 

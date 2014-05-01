@@ -1,3 +1,6 @@
+.. _Multinode:
+
+
 H\ :sub:`2`\ O on a Multi-Node Cluster
 =======================================
 
@@ -53,7 +56,7 @@ For best performance, we recommend you size your cluster to be about
 four times the size of your data (but to avoid swapping, Xmx must not
 be larger than physical memory on any given node).  Giving all nodes
 the same amount of memory is strongly recommended (H\ :sub:`2`\ O
-works best withsymmetric nodes).
+works best with symmetric nodes).
 
 Note the optional -ip (not shown in the example below) and -port
 options tell this H\ :sub:`2`\ O node what IP address and ports (port and port+1

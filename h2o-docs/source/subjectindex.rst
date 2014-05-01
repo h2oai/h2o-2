@@ -10,6 +10,12 @@ Index By Subject
 **Benchmarks**
 
 
+**Classification**
+
+
+   :ref:`RFmath`
+   :ref:`NBmath`
+
 
 **Data Science** 
 
@@ -17,8 +23,39 @@ Index By Subject
 
 **Data**
  
+  :ref:`SUMmath`
+
+**Deep Learning**
+
+  :ref:`DLmath`
+
+**Generalized Linear Modeling**
+
+  :ref:`GLMmath`
+
+**Gradient Boosted Models**
+
+  :ref:`GBMmath`
+
+**Hadoop**
+
+  :ref:`Hadoop`
+
 **Introduction to H2O**
 
+**Machine Learning**
+
+  :ref:`Machlearn`
+
+**Multinode**
+
+  :ref:`Multinode`
+
+**Naive Bayes**
+
+  :ref:`NBmath`
+
+**Principal Componenents Analysis**
 
 
 **R Console** 

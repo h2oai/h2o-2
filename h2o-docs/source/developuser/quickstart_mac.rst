@@ -1,16 +1,19 @@
-Setting up a H\ :sub:`2`\ O Hadoop cluster on a Mac
----------------------------------------------------
+.. _MacHomebrew:
+
+
+Setting up an H\ :sub:`2`\ O Hadoop cluster on a Mac
+=====================================================
 
 
 .. note::
 
-	The following instructions should work on a reasonably modern OS X (10.6 and up), but were only tested on OS X 10.9
+	The following instructions should work on any reasonably modern OS X (10.6 and up), but were only tested on OS X 10.9
 
 Installing H\ :sub:`2`\ O on a Mac
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+------------------------------------
 
 Prerequisites
-*************
+--------------
 
 1. Install Xcode from the `Apple store <https://itunes.apple.com/us/app/xcode/id497799835>`_
 
@@ -34,7 +37,7 @@ Prerequisites
 
 
 Optional Dependencies
-*********************
+----------------------
 
 5. Optional: Install sphinx (to build the documentation)
 
@@ -51,26 +54,16 @@ Optional Dependencies
 	
 		$ brew install poppler
 
-Downloading and Building H\ :sub:`2`\ O
-***************************************
+Building H\ :sub:`2`\ O From Github
+-------------------------------------------
 
-8. Get H\ :sub:`2`\ O from github 
+8. Get H\ :sub:`2`\ O from Github 
 
- ::
-
-  $ git clone https://github.com/0xdata/h2o.git
-
-9. Build H\ :sub:`2`\ O from source. After the build finishes, some JUnit tests will run automatically.  Note that if you normally compile a different way, e.g. with an IDE, you may not have built the Hadoop driver jars that you create when building with make:
-
- ::
-
-    $ cd h2o
-    $ make
 
 
 
 Installing Hadoop on a Mac
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+----------------------------
 
 10. Install Hadoop via Homebrew
 
@@ -170,7 +163,7 @@ or
 	$ hadoop dfsadmin -safemode leave
 
 Launching H\ :sub:`2`\ O on Hadoop
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+------------------------------------
 
 17. Launch a 5-node H\ :sub:`2`\ O Hadoop cluster (from the h2o directory), assuming you have enough free memory (>5GB)
 

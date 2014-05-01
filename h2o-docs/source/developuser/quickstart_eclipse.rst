@@ -1,14 +1,11 @@
+.. _Eclipse:
+
 H\ :sub:`2`\ O For Eclipse users (Github)
------------------------------------------
+============================================
 
 1. Create a git clone of the H\ :sub:`2`\ O repository.
+   :ref:`QuickstartGit`
 
- ::
-  
-  git clone https://github.com/0xdata/h2o.git
-
-.. image:: eclipse/01FreshGitClone.png
-   :width: 90 %
 
 2. Open Eclipse.
 

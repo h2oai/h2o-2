@@ -15,7 +15,7 @@ Defining a Naive Bayes Model
 """""""""""""""""""""""""""""
 **Source:**
 
-  The hex key associated with the data to be modeled. 
+  The .hex key associated with the data to be modeled. 
 
 **Response:**
 

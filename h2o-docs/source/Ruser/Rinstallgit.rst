@@ -2,7 +2,7 @@
 
 
 H\ :sub:`2`\ O + R For Developers Using Github
-------------------------------------------------------------------
+================================================
 
 
 These instructions assume you are using R  2.14.0 or later, and are a
@@ -82,7 +82,7 @@ following:
 
 **STEP 4:**
 
-Cut and paste the instructions into the R concole or R Studio as shown
+Cut and paste the instructions into the R console or R Studio as shown
 in the index page displayed when command in **STEP 3** is run. 
  
   
@@ -96,7 +96,7 @@ automatically for the user at localhost:54321, and the user will be
 notified.  
 
 Users who wish to specify a connection
-with a server (other than localhost at port 54321) must explicity
+with a server (other than localhost at port 54321) must explicitly
 state the IP address and port number in the h2o.init call. 
 An example is given below, but **do not cut and paste**; users should
 specify the IP and port number appropriate to their specific
