@@ -70,9 +70,12 @@ Index By Subject
 
 **Introduction to H2O**
 
+  * :ref:`Introduction`
+  
 **Java**
 
-  :ref:`Java`
+  * :ref:`Java`
+  * :ref:`Javahelp`
 
 **K-Means**
 
@@ -103,7 +106,6 @@ Index By Subject
   
   * :ref:`Rfromdownload`
   * :ref:`Rforgit`
-
 
 **R**
 
@@ -140,7 +142,7 @@ Index By Subject
 
 **Troubleshooting**
 
-  * :ref:`Troubleshoot`
+  * :ref:`Troubleshooting`
 
 **Tutorials**
 

@@ -1,3 +1,6 @@
+.. _Troubleshooting:
+
+
 Troubleshooting H\ :sub:`2`\ O
 =================================
 
