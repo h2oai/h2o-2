@@ -1,6 +1,9 @@
 Steam.Application = (_) ->
 
-  Steam.ErrorMonitor _
+  if window
+    Steam.ErrorMonitor _
+    #Steam.MouseMonitor _
+
   Steam.EventLog _
   Steam.Cache _
   Steam.LocalStorage _
