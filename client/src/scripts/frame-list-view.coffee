@@ -45,8 +45,9 @@ Steam.FrameListView = (_) ->
   displayFrames = (frames) ->
     _items items = map frames, createItem
     activateAndDisplayItem head items
+    _.framesLoaded()
 
-  apply$ _predicate, (predicate) ->
+  loadFrames = (predicate) ->
     console.assert isDefined predicate
     switch predicate.type
       when 'all'
@@ -62,13 +63,15 @@ Steam.FrameListView = (_) ->
             #TODO handle errors
           else
             displayFrames (head data.models).compatible_frames
+
+    _predicate predicate
     return
 
-  clearPredicate = -> _predicate type: 'all'
+  clearPredicate = -> loadFrames type: 'all'
 
   link$ _.loadFrames, (predicate) ->
     if predicate
-      _predicate predicate
+      loadFrames predicate
     else
       displayActiveItem()
 
