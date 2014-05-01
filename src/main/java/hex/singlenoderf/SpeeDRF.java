@@ -42,6 +42,9 @@ public class SpeeDRF extends Job.ValidatedJob {
   @API(help = "OOBEE", filter = Default.class, json = true)
   public boolean oobee = true;
 
+  @API(help = "Variable Importance") //, filter = Default.class, json = true)
+  public boolean importance = false;
+
   public Key _modelKey = dest();
 
   /* Advanced settings */
@@ -212,6 +215,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       model.statType = stat_type;
       model.test_frame = test;
       model.testKey = validation == null ? null : validation._key;
+      model.importance = importance;
 
       return model;
     }
@@ -419,8 +423,6 @@ public class SpeeDRF extends Job.ValidatedJob {
           return null;
       }
     }
-
-
 
   /** RF execution parameters. */
   public final static class DRFParams extends Iced {
