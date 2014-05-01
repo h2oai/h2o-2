@@ -1,4 +1,4 @@
-.. _MacHomebrew:
+.. _MacHadoop:
 
 
 Setting up an H\ :sub:`2`\ O Hadoop cluster on a Mac
@@ -17,7 +17,9 @@ Prerequisites
 
 1. Install Xcode from the `Apple store <https://itunes.apple.com/us/app/xcode/id497799835>`_
 
-2. Download and install Java 1.7 from `Oracle's website <http://www.oracle.com/technetwork/java/javase/downloads/index.html>`_
+2. Download and install Java 1.7 from `Oracle's website
+   <http://www.oracle.com/technetwork/java/javase/downloads/index.html>`_
+   **NOTE:** DO NOT USE JAVA 1.8. 
 
 3. Download and install R from `CRAN <http://cran.r-project.org/bin/macosx/>`_
 

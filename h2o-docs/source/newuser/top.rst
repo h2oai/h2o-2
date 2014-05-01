@@ -1,7 +1,7 @@
 
 .. -*- mode: rst -*-
 
-
+.. _Newuser:
 
 New Users
 =============
