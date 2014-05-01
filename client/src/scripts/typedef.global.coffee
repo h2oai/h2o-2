@@ -63,7 +63,6 @@ Steam.Typedef = do ->
           errors.push error
       else
         errors.push "Required attribute <#{attributeName}> not found."
-        errors.push 
     for check in type.checks
       if error = check value
         errors.push error
