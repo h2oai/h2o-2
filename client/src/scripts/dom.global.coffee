@@ -1,3 +1,27 @@
+if window
+  dumpTypecheckErrors = (arg) ->
+    tab = '  '
+    dump = (lines, offset, arg) ->
+      if isArray arg
+        indent = offset + tab
+        for item in arg
+          dump lines, indent, item
+      else if isString arg
+        lines.push offset + arg
+      return
+
+    dump lines=[], '', arg
+    lines
+
+  typecheck = (value, type) ->
+    if error = T.check value, type
+      lines = dumpTypecheckErrors error
+      message = "Typecheck failed for #{type.name}"
+      window.steam.context.fatal message, errors: lines
+      console.error message, lines
+      no
+    else
+      yes
 
 do ->
   setAttributes = (el, attributes) ->
