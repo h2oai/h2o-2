@@ -1271,13 +1271,14 @@ h2o.hitRatio <- function(prediction, reference, k = 10, seed = 0) {
   return(temp)
 }
 
-h2o.gapStatistic <- function(data, cols = "", B = 100, k = 10, seed = 0) {
+h2o.gapStatistic <- function(data, cols = "", K.max = 10, B = 100, boot_frac = 0.33, seed = 0) {
   args <- .verify_datacols(data, cols)
-  if(!is.numeric(B) || B < 1) stop("brep must be an integer greater than 0")
-  if(!is.numeric(k) || k < 2) stop("k must be an integer greater than 1")
+  if(!is.numeric(B) || B < 1) stop("B must be an integer greater than 0")
+  if(!is.numeric(K.max) || K.max < 2) stop("K.max must be an integer greater than 1")
+  if(!is.numeric(boot_frac) || boot_frac < 0 || boot_frac > 1) stop("boot_frac must be a number between 0 and 1")
   if(!is.numeric(seed)) stop("seed must be numeric")
   
-  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GAPSTAT, source = data@key, b_max = B, k_max = k, seed = seed)
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GAPSTAT, source = data@key, b_max = B, k_max = K.max, bootstrap_fraction = boot_frac, seed = seed)
   .h2o.__waitOnJob(data@h2o, res$job_key)
   res2 = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GAPSTATVIEW, '_modelKey' = res$destination_key)
   
@@ -1286,6 +1287,7 @@ h2o.gapStatistic <- function(data, cols = "", B = 100, k = 10, seed = 0) {
   result$boot_within_ss = res2$gap_model$wkbs
   result$se_boot_within_ss = res2$gap_model$sk
   result$gap_stats = res2$gap_model$gap_stats
+  result$k_opt = res2$gap_model$k_best
   return(result)
 }
 
