@@ -205,7 +205,6 @@ setMethod("show", "H2OSpeeDRFModel", function(object) {
   
   cat("\nMean-squared Error by tree:\n"); print(model$mse)
 })
-  
 
 setMethod("show", "H2OPCAModel", function(object) {
   print(object@data)

@@ -48,7 +48,7 @@ An \code{\linkS4class{H2OParsedData}} object containing the variables in the mod
   (Optional) An \code{\linkS4class{H2OParsedData}} object indicating the validation dataset used to construct confusion matrix. If left blank, this defaults to the training data.}
   }
 \value{
-An object of class \code{\linkS4class{H2OGBMModel}} with slots key, data, and model, where the last is a list of the following components:
+An object of class \code{\linkS4class{H2OGBMModel}} with slots key, data, valid (the validation dataset) and model, where the last is a list of the following components:
 \item{type }{The type of the tree.}
 \item{n.trees }{Number of trees grown.}
 \item{oob_err }{Out of bag error rate.}

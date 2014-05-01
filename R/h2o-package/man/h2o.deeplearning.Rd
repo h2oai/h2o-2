@@ -80,7 +80,7 @@ h2o.deeplearning(x, y, data, classification = TRUE, validation, activation,
   }
 
 \value{
-An object of class \code{\linkS4class{H2ODeepLearningModel}} with slots key, data, and model, where the last is a list of the following components:
+An object of class \code{\linkS4class{H2ODeepLearningModel}} with slots key, data, valid (the validation dataset) and model, where the last is a list of the following components:
   \item{confusion }{The confusion matrix of the response, with actual observations as rows and predicted values as columns.}
   \item{train_class_err }{Classification error on the training dataset.}
   \item{train_sqr_err }{Mean-squared error on the training dataset.}
