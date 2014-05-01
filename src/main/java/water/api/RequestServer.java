@@ -148,6 +148,7 @@ public class RequestServer extends NanoHTTPD {
       Request.addToNavbar(registerRequest(new Console()),        "Console",              "Beta");
       Request.addToNavbar(registerRequest(new GapStatistic()),   "Gap Statistic",        "Beta");
       Request.addToNavbar(registerRequest(new SpeeDRF()),        "SpeeDRF",              "Beta");
+      Request.addToNavbar(registerRequest(new UnlockKeys()),     "Unlock Keys",          "Beta");
 //      Request.addToNavbar(registerRequest(new ExportModel()),    "Export Model",         "Beta (FluidVecs!)");
 //      Request.addToNavbar(registerRequest(new ImportModel()),    "Import Model",         "Beta (FluidVecs!)");
     }
