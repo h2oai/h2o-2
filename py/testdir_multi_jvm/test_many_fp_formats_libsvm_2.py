@@ -175,7 +175,7 @@ class Basic(unittest.TestCase):
 
                     synMean = (v + 0.0)/rowCount
                     # enums don't have mean, but we're not enums
-                    mean = inspect['cols'][k]['mean']
+                    mean = float(inspect['cols'][k]['mean'])
                     # our fp formats in the syn generation sometimes only have two places?
                     self.assertAlmostEqual(mean, synMean, places=0,
                         msg='col %s mean %0.6f is not equal to generated mean %0.6f' % (k, mean, synMean))

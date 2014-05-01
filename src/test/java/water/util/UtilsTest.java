@@ -5,7 +5,8 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Random;
-
+import static water.TestUtil.ari;
+import static water.TestUtil.arf;
 public class UtilsTest {
 
   @Test public void testApproxMathImpl() {
@@ -90,7 +91,17 @@ public class UtilsTest {
   public void sumSquareTest() {
     float[] a = new float[993];
     for (int i=0;i<a.length;++i) a[i] = new Random(0xDECAF).nextFloat();
-    assert(Math.abs(sumSquares(a) - sumSquares(a, 0,443) - sumSquares(a, 443,983) - sumSquares(a, 983,993)) < 1e-5);
+    Assert.assertTrue(Math.abs(sumSquares(a) - sumSquares(a, 0,443) - sumSquares(a, 443,983) - sumSquares(a, 983,993)) < 1e-5);
   }
 
+  @Test
+  public void testPartitione() {
+    Assert.assertArrayEquals( ari(5,5),   Utils.partitione(10, arf(0.5f)) );
+    Assert.assertArrayEquals( ari(5,5,0), Utils.partitione(10, arf(0.5f, 0.5f)) );
+    Assert.assertArrayEquals( ari(6,7),   Utils.partitione(13, arf(0.5f)) );
+    Assert.assertArrayEquals( ari(6,7,0), Utils.partitione(13, arf(0.5f, 0.5f)) );
+    // more splits
+    Assert.assertArrayEquals( ari(3,3,7),   Utils.partitione(13, arf(0.25f, 0.25f)) );
+    Assert.assertArrayEquals( ari(3,3,7,0), Utils.partitione(13, arf(0.25f, 0.25f, 0.5f)) );
+  }
 }

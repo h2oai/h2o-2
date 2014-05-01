@@ -303,6 +303,9 @@ public class Inspect2 extends Request2 {
     return "<a href='/2/Inspect2.html?src_key=" + k.toString() + "&offset=-1'>info</a>";
   }
 
+  public static String link(Key k) {
+    return link(k.toString(), k.toString());
+  }
   public static String link(String txt,Key k) {
     return link(txt, k.toString());
   }
