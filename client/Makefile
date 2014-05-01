@@ -76,6 +76,7 @@ TEST_SCRIPTS=\
 	$(BUILD)/tests/frame-list-view.tests.js \
 	$(BUILD)/tests/frame-view.tests.js
 
+
 # Lib javascript files that go into the browser target.
 BROWSER_LIB_SCRIPTS=\
 	$(LIB)/stacktrace/stacktrace.js \
@@ -89,7 +90,7 @@ BROWSER_LIB_SCRIPTS=\
 	$(LIB)/d3/d3.js \
 	$(LIB)/knockout/knockout.js
 
-# Lib javascript files that go into the node target. 
+# Lib javascript files that go into the browser target. 
 TEST_LIB_SCRIPTS=\
 	$(LIB)/jquery/dist/jquery.js \
 	$(LIB)/lodash/dist/lodash.js \
@@ -228,23 +229,19 @@ help:
 	@echo "  make build      Build and deploy to ../lib/resources/steam/"
 	@echo "  make unit       Build browser test suite"
 	@echo "  make test       Run all tests"
-	@echo "  make            Run all tests"
-	@echo "  make smoke      Run tests, but bail on first failure"
-	@echo "  make report     Run all tests, verbose, with specs"
 	@echo "  make debug      Run tests in debug mode"
-	@echo "  make spec       Compile test specs"
 	@echo "  make coverage   Compile test coverage"
 	@echo "  make doc        Compile code documentation"
 	@echo "  make clean      Clean up build directories"
 	@echo "  make watch      Watch for changes and run `make build test`"
 
-smoke: node
-	@$(BIN)/mocha \
-		--reporter dot \
-		--bail \
-		--check-leaks \
-		${ARGS} \
-		$(DIST)/steam.node.js
+#smoke: node
+#	@$(BIN)/mocha \
+#		--reporter dot \
+#		--bail \
+#		--check-leaks \
+#		${ARGS} \
+#		$(DIST)/steam.node.js
 
 #
 # This runs all tests by default. 
@@ -252,45 +249,62 @@ smoke: node
 #   make ARGS="-g foobar" test
 # where foobar is a regexp
 #
+#test: node
+#	@$(BIN)/mocha \
+#		--reporter dot \
+#		--check-leaks \
+#		${ARGS} \
+#		$(DIST)/steam.node.js
+#
+
 test: node
-	@$(BIN)/mocha \
-		--reporter dot \
-		--check-leaks \
-		${ARGS} \
-		$(DIST)/steam.node.js
+	@node $(DIST)/steam.node.js
+
+debug: node
+	@node --debug-brk $(DIST)/steam.node.js
 
 pytest: node
 	(cd ../py && python testdir_single_jvm/test_model_management.py -ccj localhost.json ApiTestCase.test_steam)
-
-tags:
-	(cd src/scripts && ctags -R .)
-
-debug: node
-	@$(BIN)/mocha \
-		--reporter dot \
-		--check-leaks \
-		--debug-brk \
-		${ARGS} \
-		$(DIST)/steam.node.js
-
-report: node
-	@$(BIN)/mocha \
-		--reporter spec \
-		--check-leaks \
-		${ARGS} \
-		$(DIST)/steam.node.js
 
 coverage: node
 	@mkdir -p $(BUILD)/coverage
 	@$(BIN)/istanbul \
 		cover \
-		$(BIN)/_mocha \
 		--dir $(BUILD)/coverage \
 		-x "**/lib/**" \
 		$(DIST)/steam.node.js
 	@echo Coverage generated at $(BUILD)/coverage
 
-spec: $(BUILD)/spec/index.html
+
+tags:
+	(cd src/scripts && ctags -R .)
+
+#debug: node
+#	@$(BIN)/mocha \
+#		--reporter dot \
+#		--check-leaks \
+#		--debug-brk \
+#		${ARGS} \
+#		$(DIST)/steam.node.js
+#
+#report: node
+#	@$(BIN)/mocha \
+#		--reporter spec \
+#		--check-leaks \
+#		${ARGS} \
+#		$(DIST)/steam.node.js
+#
+#coverage: node
+#	@mkdir -p $(BUILD)/coverage
+#	@$(BIN)/istanbul \
+#		cover \
+#		$(BIN)/_mocha \
+#		--dir $(BUILD)/coverage \
+#		-x "**/lib/**" \
+#		$(DIST)/steam.node.js
+#	@echo Coverage generated at $(BUILD)/coverage
+
+# spec: $(BUILD)/spec/index.html
 
 doc: 
 	@mkdir -p $(BUILD)/doc
@@ -344,13 +358,15 @@ $(DEPLOY)/js/steam.js: $(COMMON_SCRIPTS) $(BROWSER_SCRIPTS)
 	@echo '(function(){' >> $@
 	@cat $^ >> $@
 	@echo '}).call(this);' >> $@
+	@echo Rebuilt browser script
 
-$(DIST)/steam.node.js: $(BUILD)/tests/node.global.js $(COMMON_SCRIPTS) $(TEST_SCRIPTS)
+$(DIST)/steam.node.js: $(BUILD)/tests/node.global.js $(COMMON_SCRIPTS) $(TEST_SCRIPTS) $(BUILD)/tests/reporter.global.js
 	@mkdir -p $(@D)
 	@echo '"use strict";' > $@
 	@echo '(function(){' >> $@
 	@cat $^ >> $@
 	@echo '}).call(this);' >> $@
+	@echo Rebuilt node test script
 
 $(DEPLOY)/steam.test.js: $(BUILD)/tests/browser.global.js $(COMMON_SCRIPTS) $(TEST_SCRIPTS)
 	@mkdir -p $(@D)
@@ -358,7 +374,7 @@ $(DEPLOY)/steam.test.js: $(BUILD)/tests/browser.global.js $(COMMON_SCRIPTS) $(TE
 	@echo '(function(){' >> $@
 	@cat $^ >> $@
 	@echo '}).call(this);' >> $@
-
+	@echo Rebuilt browser test script
 
 $(DEPLOY)/img/%.png: src/images/%.png
 	@mkdir -p $(@D)
@@ -411,28 +427,32 @@ $(DEPLOY)/css/%.map: $(LIB)/bootstrap/dist/css/%.map
 
 $(DEPLOY)/css/lib.css: $(LIB_STYLES)
 	@mkdir -p $(@D)
-	cat $^ > $@
+	@cat $^ > $@
+	@echo Rebuilt browser styles
 
 $(DEPLOY)/js/lib.js: $(BROWSER_LIB_SCRIPTS)
 	@mkdir -p $(@D)
-	cat $^ > $@
+	@cat $^ > $@
+	@echo Rebuilt browser lib
 
 $(DEPLOY)/lib.test.css: $(TEST_LIB_STYLES)
 	@mkdir -p $(@D)
-	cat $^ > $@
+	@cat $^ > $@
+	@echo Rebuilt test styles
 
 $(DEPLOY)/lib.test.js: $(TEST_LIB_SCRIPTS)
 	@mkdir -p $(@D)
-	cat $^ > $@
+	@cat $^ > $@
+	@echo Rebuilt test lib
 
-$(BUILD)/spec/index.html: node
-	@mkdir -p $(@D)
-	@$(BIN)/mocha \
-		--reporter doc \
-		$(DIST)/steam.node.js \
-		| cat src/util/mocha-doc/header.html - src/util/mocha-doc/footer.html \
-		> $@
-	@echo Spec generated at $(@D)
+#$(BUILD)/spec/index.html: node
+#	@mkdir -p $(@D)
+#	@$(BIN)/mocha \
+#		--reporter doc \
+#		$(DIST)/steam.node.js \
+#		| cat src/util/mocha-doc/header.html - src/util/mocha-doc/footer.html \
+#		> $@
+#	@echo Spec generated at $(@D)
 	
 
 .PHONY: default really_build build node unit smoke test debug report spec coverage doc clean setup reset watch help preload pytest tags
