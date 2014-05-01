@@ -1,6 +1,6 @@
 .. _GettingStartedFromaZipFile: 
 
-Getting Started from a Downloaded Zip File
+Getting Started From a Downloaded Zip File
 ===========================================
  
 

@@ -37,6 +37,10 @@ Index By Subject
 
   * :ref:`Developer`
 
+**Downloads**
+
+  * :ref:`GettingStartedFromaZipFile`
+
 **Eclipse**
 
   * :ref:`Eclipse`
@@ -133,6 +137,10 @@ Index By Subject
 **Summary (summary statistics on data)**
 
   * :ref:`SUMmath`
+
+**Troubleshooting**
+
+  * :ref:`Troubleshoot`
 
 **Tutorials**
 
