@@ -42,11 +42,14 @@ public class FrameSplitPage extends Func {
     super.init();
     /* Check input parameters */
     float sum = 0;
+    long nrows = source.numRows();
+    if (nrows <= ratios.length) throw new IllegalArgumentException("Dataset does not have enough row to be split!");
     for (int i=0; i<ratios.length; i++) {
       if (!(ratios[i] > 0 && ratios[i] < 1)) throw new IllegalArgumentException("Split ration has to be in (0,1) interval!");
+      if (ratios[i] * nrows <= 1) throw new IllegalArgumentException("Ratio " + ratios[i] + " produces empty frame since the source frame has only " + nrows + "!");
       sum += ratios[i];
     }
-    if (sum>1) throw new IllegalArgumentException("Sum of split ratios has to be less or equal to 1!");
+    if (!(sum<1f)) throw new IllegalArgumentException("Sum of split ratios has to be less than 1!");
   }
 
   // Run the function
@@ -56,7 +59,7 @@ public class FrameSplitPage extends Func {
 
     Frame[] splits = fs.getResult();
 
-    split_keys = new Key[splits.length];
+    split_keys = new Key [splits.length];
     split_rows = new long[splits.length];
     float rsum = Utils.sum(ratios);
     split_ratios = Arrays.copyOf(ratios, splits.length);
@@ -72,16 +75,18 @@ public class FrameSplitPage extends Func {
 
   @Override public boolean toHTML(StringBuilder sb) {
     int nsplits = split_keys.length;
-    String [] headers = new String[nsplits+1];
+    String [] headers = new String[nsplits+2];
     headers[0] = "";
     for(int i=0; i<nsplits; i++) headers[i+1] = "Split #"+i;
+    headers[nsplits+1] = "Total";
     DocGen.HTML.arrayHead(sb, headers);
     // Key table row
     sb.append("<tr><td>").append(DocGen.HTML.bold("Keys")).append("</td>");
     for (int i=0; i<nsplits; i++) {
       Key k = split_keys[i];
-      sb.append("<td>").append(Inspect2.link(k.toString(), k)).append("</td>");
+      sb.append("<td>").append(Inspect2.link(k)).append("</td>");
     }
+    sb.append("<td>").append(Inspect2.link(source._key)).append("</td>");
     sb.append("</tr>");
     // Number of rows row
     sb.append("<tr><td>").append(DocGen.HTML.bold("Rows")).append("</td>");
@@ -89,6 +94,7 @@ public class FrameSplitPage extends Func {
       long r = split_rows[i];
       sb.append("<td>").append(String.format("%,d", r)).append("</td>");
     }
+    sb.append("<td>").append(String.format("%,d", Utils.sum(split_rows))).append("</td>");
     sb.append("</tr>");
     // Split ratios
     sb.append("<tr><td>").append(DocGen.HTML.bold("Ratios")).append("</td>");
@@ -96,6 +102,7 @@ public class FrameSplitPage extends Func {
       float r = 100*split_ratios[i];
       sb.append("<td>").append(String.format("%.2f %%", r)).append("</td>");
     }
+    sb.append("<td>").append(String.format("%.2f %%", 100*Utils.sum(split_ratios))).append("</td>");
     sb.append("</tr>");
     DocGen.HTML.arrayTail(sb);
     return true;

@@ -107,7 +107,7 @@ public class FrameSplitter extends H2OCountedCompleter {
       int[] splits = Utils.partitione(nrows, ratios);
       assert splits.length == ratios.length+1 : "Unexpected number of splits";
       for (int j=0; j<splits.length; j++) {
-        assert splits[j] > 0 : "Ups, no rows for " + j + "-th segment!";
+        //assert splits[j] > 0 : "Ups, no rows for " + j + "-th segment!";
         r[j][i+1] = r[j][i] + splits[j]; // previous + current number of rows
       }
     }
@@ -116,12 +116,14 @@ public class FrameSplitter extends H2OCountedCompleter {
 
   private void onDone(boolean exceptional) {
     dataset.unlock(jobKey);
-    for (Frame s : splits) {
-      if (!exceptional) { // just unlock if everything was ok
-        s.update(jobKey);
-        s.unlock(jobKey);
-      } else { // else delete current half-done results
-        if (s!=null) s.delete(jobKey,0f);
+    if (splits!=null) { // if exception is hit before splits array is allocated
+      for (Frame s : splits) {
+        if (!exceptional) { // just unlock if everything was ok
+          s.update(jobKey);
+          s.unlock(jobKey);
+        } else { // else delete current half-done results
+          if (s!=null) s.delete(jobKey,0f);
+        }
       }
     }
   }
