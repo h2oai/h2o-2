@@ -3,36 +3,63 @@
 Index By Subject
 =================
 
-Algorithyms Roadmap: .. _Roadmap:
+**Algorithyms Roadmap**
 
-Benchmarks: .._Benchmarks:
+  :ref:`Roadmap`
 
-Data Science: :ref:`Data_Science`
+**Benchmarks**
 
-Data 
-Introduction to H2O .._IntrotoH2O
 
-R Package Document: .._Rpdf:
 
-R Console 
-  Install H2O in R: .. _Rfromdownload:
-  Installation for Git Users: .. _Rforgit
+**Data Science** 
 
-R Studio
-   Install H2O in R: .. _Rfromdownload:
-   Installation for Git Users: .. _Rforgit:
+   :ref:`Data_Science`
 
-Random Forest :ref:`RFmath`
+**Data**
+ 
+**Introduction to H2O**
 
-Stochastic Gradient Descent :ref:`SGDmath`
 
-Summary (summary statistics on data) :ref:`SUMmath`
 
-Tutorial: 
+**R Console** 
+  
+  :ref:`Rfromdownload`
+  :ref:`Rforgit`
 
-  Generalized Linear Modeling :ref:`GLM_tutorial`
-  Generalized Linear Modeling Grid :ref:`GLMgrid_tutorial`
-  Gradient Boosted Models 
-  K Means :ref:`KM_tutorial`
+
+**R**
+
+  :ref:`R_user`
+
+**R Package Document**
+
+  :ref:`R_pdf`
+
+**R Studio**
+   
+   :ref:`Rfromdownload`
+   :ref:`Rforgit`
+
+**Random Forest** 
+  
+  :ref:`RFmath`
+
+**References**
+
+  :ref:`References`
+
+**Stochastic Gradient Descent** 
+
+  :ref:`SGDmath`
+
+**Summary (summary statistics on data)**
+
+   :ref:`SUMmath`
+
+**Tutorial**
+
+   :ref:`GLM_tutorial`
+   :ref:`GLMgrid_tutorial`
+   :ref:`KM_tutorial`
  
  

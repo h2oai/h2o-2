@@ -1,7 +1,7 @@
 .. _Rforgit:
 
 
-H\ :sub:`2`\ O + R For Developers Using Git
+H\ :sub:`2`\ O + R For Developers Using Github
 ------------------------------------------------------------------
 
 
