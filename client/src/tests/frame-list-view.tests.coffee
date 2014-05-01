@@ -1,6 +1,4 @@
 describe 'FrameListView', ->
-  @timeout 10000
-
   it 'should display all frames when no predicate is applied', (go) ->
     _ = Steam.ApplicationContext()
     Steam.Xhr _
@@ -52,6 +50,21 @@ describe 'FrameListView', ->
           frameListView = Steam.FrameListView _
           link$ _.framesLoaded, ->
             testAsync go, ->
-              dumpAssertions frameListView, 'frameListView'
+              equal frameListView.items().length, 2, 'frameListView.items() array length mismatch'
+              equal frameListView.items()[0].title, 'airlines_test.hex', 'String frameListView.items()[0].title does not equal <airlines_test.hex>'
+              equal frameListView.items()[0].caption, '13 columns', 'String frameListView.items()[0].caption does not equal <13 columns>'
+              equal frameListView.items()[0].cutline, 'fYear, fMonth, fDayofMonth, fDayOfWeek, DepTime, ArrTime, UniqueCarrier, Origin, Dest, Distance, IsDepDelayed, IsDepDelayed_REC, IsDepDelayed_REC_recoded', 'String frameListView.items()[0].cutline does not equal <fYear, fMonth, fDayofMonth, fDayOfWeek, DepTime, ArrTime, UniqueCarrier, Origin, Dest, Distance, IsDepDelayed, IsDepDelayed_REC, IsDepDelayed_REC_recoded>'
+              ok (isFunction frameListView.items()[0].display), 'frameListView.items()[0].display is not a function'
+              equal frameListView.items()[0].isActive(), true, 'Boolean frameListView.items()[0].isActive() does not equal <true>'
+              equal frameListView.items()[1].title, 'airlines_train.hex', 'String frameListView.items()[1].title does not equal <airlines_train.hex>'
+              equal frameListView.items()[1].caption, '13 columns', 'String frameListView.items()[1].caption does not equal <13 columns>'
+              equal frameListView.items()[1].cutline, 'fYear, fMonth, fDayofMonth, fDayOfWeek, DepTime, ArrTime, UniqueCarrier, Origin, Dest, Distance, IsDepDelayed, IsDepDelayed_REC, IsDepDelayed_REC_recoded', 'String frameListView.items()[1].cutline does not equal <fYear, fMonth, fDayofMonth, fDayOfWeek, DepTime, ArrTime, UniqueCarrier, Origin, Dest, Distance, IsDepDelayed, IsDepDelayed_REC, IsDepDelayed_REC_recoded>'
+              ok (isFunction frameListView.items()[1].display), 'frameListView.items()[1].display is not a function'
+              equal frameListView.items()[1].isActive(), false, 'Boolean frameListView.items()[1].isActive() does not equal <false>'
+              equal frameListView.predicateCaption(), 'Showing datasets compatible with\ndl_AirlinesTrain_binary_1', 'String frameListView.predicateCaption() does not equal <Showing datasets compatible with\ndl_AirlinesTrain_binary_1>'
+              ok (isFunction frameListView.clearPredicate), 'frameListView.clearPredicate is not a function'
+              equal frameListView.canClearPredicate(), true, 'Boolean frameListView.canClearPredicate() does not equal <true>'
+              equal frameListView.hasItems(), true, 'Boolean frameListView.hasItems() does not equal <true>'
+              equal frameListView.template, 'frame-list-view', 'String frameListView.template does not equal <frame-list-view>'
           _.loadFrames type: 'compatibleWithModel', modelKey: model.key
 
