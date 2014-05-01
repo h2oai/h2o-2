@@ -1201,7 +1201,7 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, validation,
     #}
 
     class_names = tail(res$'_domains', 1)[[1]]
-    result$confusion = .build_cm(res$'cm', class_names)
+    result$confusion = .build_cm(tail(res$cms, 1)[[1]]$'_arr', class_names)
   }
 
   return(result)

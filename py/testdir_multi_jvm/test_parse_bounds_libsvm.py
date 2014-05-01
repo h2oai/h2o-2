@@ -149,10 +149,13 @@ class Basic(unittest.TestCase):
                     # definitely not enums
                     zeros = columns['zeros']
                     na = columns['na']
+                    print h2o.dump_json(columns)
+                    print columns['max'], columns['min'], columns['mean'], columns['sigma']
+                    # these numbers aren't quoted. array of 5 min, 5 max
                     smax = columns['max']
                     smin = columns['min']
-                    mean = columns['mean']
-                    sigma = columns['sigma']
+                    mean = float(columns['mean'])
+                    sigma = float(columns['sigma'])
 
                     # a single 1 in the last col
                     if name == "V" + str(colNumberMax): # h2o puts a "V" prefix

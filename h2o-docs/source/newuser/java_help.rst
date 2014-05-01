@@ -2,7 +2,8 @@
 
 
 H\ :sub:`2`\ O Command-line Options
-""""""""""""""""""""""""""""""""""""
+======================================
+
 When an instance of H\ :sub:`2`\ O is started from the command-line, users
 generally call a Java command similar to "java -Xmx1g -jar
 h2o.jar " Users can customize their running

@@ -37,6 +37,10 @@ Index By Subject
 
   * :ref:`Developer`
 
+**Downloads**
+
+  * :ref:`GettingStartedFromaZipFile`
+
 **Eclipse**
 
   * :ref:`Eclipse`
@@ -66,9 +70,12 @@ Index By Subject
 
 **Introduction to H2O**
 
+  * :ref:`Introduction`
+  
 **Java**
 
-  :ref:`Java`
+  * :ref:`Java`
+  * :ref:`Javahelp`
 
 **K-Means**
 
@@ -99,7 +106,6 @@ Index By Subject
   
   * :ref:`Rfromdownload`
   * :ref:`Rforgit`
-
 
 **R**
 
@@ -133,6 +139,10 @@ Index By Subject
 **Summary (summary statistics on data)**
 
   * :ref:`SUMmath`
+
+**Troubleshooting**
+
+  * :ref:`Troubleshooting`
 
 **Tutorials**
 

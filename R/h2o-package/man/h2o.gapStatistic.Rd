@@ -33,7 +33,7 @@ A list containing the following components:
 }
 
 \references{
-Tibshirani, R., Walther, G. and Hastie, T. (2001). Estimating the number of data clusters via the Gap statistic. \emph{Journal of the Royal Statistical Society B}, \strong{63}, 411–423.
+Tibshirani, R., Walther, G. and Hastie, T. (2001). Estimating the number of data clusters via the Gap statistic. \emph{Journal of the Royal Statistical Society B}, \strong{63}, 411-423.
 
 Tibshirani, R., Walther, G. and Hastie, T. (2000). Estimating the number of clusters in a dataset via the Gap statistic. Technical Report. Stanford.
 }
@@ -43,7 +43,7 @@ Tibshirani, R., Walther, G. and Hastie, T. (2000). Estimating the number of clus
 }
 \examples{
 library(h2o)
-localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
+localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, beta = TRUE)
 irisPath = system.file("extdata", "iris.csv", package = "h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath)
 h2o.gapStatistic(iris.hex, K.max = 10, B = 100)
