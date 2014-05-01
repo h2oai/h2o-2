@@ -65,11 +65,15 @@ Steam.ScoringView = (_, _scoring) ->
 
           if error
             _.error 'Scoring failed', { frameKey: frameKey, modelKey: modelKey }, error
+            item.status if error.response then error.response.status else 'error'
+            item.time if error.response then error.response.time else 0
+            item.result error
+          else
+            item.status if result.response then result.response.status else 'error'
+            #TODO what does it mean to have > 1 metrics
+            item.time if result.metrics and result.metrics.length > 0 then (head result.metrics).duration_in_ms else 0
+            item.result result
 
-          data = if error then error.data else result
-          item.status if data.response then data.response.status else 'error'
-          item.time if data.response then data.response.time else 0
-          item.result error or result
           do go
 
     runScoringJobs jobs, ->
