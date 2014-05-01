@@ -1,17 +1,16 @@
 Steam.H2OProxy = (_) ->
 
-  composeUri = (uri, opts) ->
+  composePath = (path, opts) ->
     if opts
       params = mapWithKey opts, (v, k) -> "#{k}=#{v}"
-      uri + '?' + join params, '&'
+      path + '?' + join params, '&'
     else
-      uri
+      path
 
-  request = (uri, opts, go) ->
-    _.requestJSON (composeUri uri, opts), (error, result) ->
+  request = (path, opts, go) ->
+    _.invokeH2O 'GET', (composePath path, opts), (error, result) ->
       if error
         #TODO error logging / retries, etc.
-        console.error error, result
         go error, result
       else
         go error, result.data

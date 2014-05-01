@@ -13,7 +13,7 @@ Steam.ApplicationContext = ->
     onRouteSucceeded: do edge$
     onRouteFailed: do edge$
 
-    requestJSON: do edge$
+    invokeH2O: do edge$
 
     requestFrames: do edge$
     requestFramesAndCompatibleModels: do edge$
@@ -46,6 +46,7 @@ Steam.ApplicationContext = ->
     displayEmpty: do edge$
 
     loadFrames: do edge$
+    framesLoaded: do edge$
     displayFrame: do edge$
 
     loadModels: do edge$
