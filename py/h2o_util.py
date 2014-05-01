@@ -5,6 +5,14 @@ import h2o
 import sys
 import math
 
+# Return file size.
+def get_file_size(f):
+    return os.path.getsize(f)
+
+# Splits file into chunks of given size and returns an iterator over chunks.
+def iter_chunked_file(file, chunk_size=2048):
+    return iter(lambda: file.read(chunk_size), '')
+
 # operations to get bit patterns for fp 
 # Python internally uses the native endianity and 64-bits for floats
 # Java floatToBits is the thing to convert fp to long bits

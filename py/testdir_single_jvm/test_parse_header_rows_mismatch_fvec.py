@@ -68,7 +68,6 @@ class Basic(unittest.TestCase):
             parseResult = h2i.import_parse(path=csvPathname, src_key=src_key, schema='put', hex_key=hex_key,
                 timeoutSecs=timeoutSecs, pollTimeoutSecs=30, header=1, separator=44)
             print "parseResult['destination_key']: " + parseResult['destination_key']
-            print 'parse time:', parseResult['response']['time']
 
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             h2o_cmd.infoFromInspect(inspect, csvPathname)
