@@ -26,21 +26,21 @@
       // /ko
 
   // ko if:hasExecuted
-
   h2.y-subtitle(data-bind='collapse:false') Scoring Comparison
-  // ko if:hasComparisonTable
-  .y-model-summary
-    .y-summary
-      // ko foreach:modelSummary
-      .y-summary-item
-        .y-summary-key(data-bind='text:key')
-        .y-summary-value(data-bind='text:value')
-      // /ko
-  div(data-bind='geyser:comparisonTable')
-  // /ko
+  div
+    // ko if:hasComparisonTable
+    .y-model-summary
+      .y-summary
+        // ko foreach:modelSummary
+        .y-summary-item
+          .y-summary-key(data-bind='text:key')
+          .y-summary-value(data-bind='text:value')
+        // /ko
+    div(data-bind='geyser:comparisonTable')
+    // /ko
 
-  // ko ifnot:hasComparisonTable
-  div Nothing to compare. Please select one or more models from the above table.
-  // /ko
+    // ko ifnot:hasComparisonTable
+    div Nothing to compare. Please select one or more models from the above table.
+    // /ko
 
   // /ko
