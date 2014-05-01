@@ -30,7 +30,8 @@ Steam.ModelView = (_, _model) ->
     createDefinitionList [
       [ 'Response Column', model.response_column_name ]
       [ 'Model Category', model.model_category ]
-      [ 'State', model.state ]
+      #TODO uncomment when this is functional
+      # [ 'State', model.state ]
     ]
 
   # Parameters section

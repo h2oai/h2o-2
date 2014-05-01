@@ -28,7 +28,8 @@ Steam.FrameView = (_, _frame) ->
         'Method'
         'Category'
         'Response Column'
-        'State'
+        #TODO uncomment when this is functional
+        # 'State'
       ]
 
       rows = map frame.compatible_models, (model) ->
@@ -36,7 +37,8 @@ Steam.FrameView = (_, _frame) ->
           model.model_algorithm
           model.model_category
           model.response_column_name
-          model.state
+          #TODO uncomment when this is functional
+          # model.state
         ]
 
       [ table, thead, tbody, tr, th, td ] = geyser.generate words 'table.table.table-condensed.table-hover thead tbody tr th td'
