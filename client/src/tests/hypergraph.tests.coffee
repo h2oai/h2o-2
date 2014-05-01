@@ -5,6 +5,7 @@ describe 'Hypergraph', ->
         edge$
         edges$
         node$
+        isNode$
         nodes$
         link$
         unlink$
