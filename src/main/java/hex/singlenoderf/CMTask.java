@@ -1,8 +1,7 @@
 package hex.singlenoderf;
 
-import hex.ConfusionMatrix;
+import hex.ShuffleTask;
 import water.*;
-import water.api.AUC;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
@@ -11,8 +10,10 @@ import water.util.Log.Tag.Sys;
 import water.util.ModelUtils;
 import water.util.Utils;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
+import hex.VarImp;
 
 /**
  * Confusion Matrix. Incrementally computes a Confusion Matrix for a forest
@@ -37,6 +38,8 @@ public class CMTask extends MRTask2<CMTask> {
   public Frame _data;
   public int  _N;
   public long _cms[][][];
+  public VarImp _varimp;
+  public int[] _oobs;
 
   /** Data to replay the sampling algorithm */
   private int[]     _chunk_row_mapping;
@@ -50,7 +53,9 @@ public class CMTask extends MRTask2<CMTask> {
   private int       _cmin_model_mapping;
   /** Difference between data cmin and CM cmin */
   private int       _cmin_data_mapping;
-  private boolean _validation;
+//  private boolean _validation;
+//  private long [/*ntrees*/] _votesSOOB;
+//  private long [/*ntrees*/] _votesOOB;
 
   /** Confusion matrix
    * @param model the ensemble used to classify
@@ -63,7 +68,8 @@ public class CMTask extends MRTask2<CMTask> {
     _treesUsed  = treesToUse;
     _computeOOB = computeOOB;
     _model = model;
-    _validation = model.test_frame == null;
+//    _validation = model.test_frame == null;
+    _varimp = null;
     shared_init();
   }
 
@@ -134,15 +140,22 @@ public class CMTask extends MRTask2<CMTask> {
     final int cmin       = (int) _data.vecs()[_classcol].min();
     short     numClasses = (short)_model.classes();
     _cms = new long[ModelUtils.DEFAULT_THRESHOLDS.length][2][2];
+//    _voteDiffs = new long[chks.length - 1][_model.treeCount()];
+//    int oobcnt = 0;
+//    varimp   = new float[chks.length - 1]; // output variable importance
+//    _varimpSD = new float[chks.length - 1]; // output standard dev per var
+//    ArrayList<Integer> oob = new ArrayList<Integer>();  // oob rows
+//    int[] soob = null; // shuffled oob rows
+//    double[] data =  new double[chks.length]; // a row of data
+//    boolean collectOOB = true;
 
     // Votes: we vote each tree on each row, holding on to the votes until the end
     int[][] votes = new int[rows][_N];
-    int[] actual = new int[rows];
-    int[] pred   = new int[rows];
     int[][] localVotes = _computeOOB ? new int[rows][_N] : null;
     // Errors per tree
     _errorsPerTree = new long[_model.treeCount()];
-    float sum = 0.f;
+//    _votesOOB = new long[_model.treeCount()];
+//    float sum = 0.f;
     // Replay the Data.java's "sample_fair" sampling algorithm to exclude data
     // we trained on during voting.
     for( int ntree = 0; ntree < _model.treeCount(); ntree++ ) {
@@ -186,6 +199,9 @@ public class CMTask extends MRTask2<CMTask> {
           }
         }
         // --- END OF CRUCIAL CODE ---
+//        if (collectOOB) {
+//          oob.add(row);
+//        }
 
         // Predict with this tree - produce 0-based class index
         int prediction = _model.classify0(ntree, _data, chks, row, _modelDataMap, numClasses );
@@ -193,20 +209,40 @@ public class CMTask extends MRTask2<CMTask> {
         // Check tree miss
         int alignedPrediction = alignModelIdx(prediction);
         int alignedData       = alignDataIdx((int) _data.vecs()[_classcol].at8(row) - cmin);
-        if (alignedPrediction != alignedData) _errorsPerTree[ntree]++;
+        if (alignedPrediction != alignedData) {
+//          if (_computeOOB) {
+//            _votesOOB[ntree]++;
+//          }
+          _errorsPerTree[ntree]++;
+        }
         votes[r][alignedPrediction]++; // Vote the row
-        actual[r] = alignedData;
-        pred[r]   = alignedPrediction;
         if (isLocalTree) localVotes[r][alignedPrediction]++; // Vote
       }
+//      collectOOB = false;
     }
+//    _oobs = new int[oob.size()];
+//    for (int i = 0; i < oob.size(); ++i) _oobs[i] = oob.get(i);
     // Assemble the votes-per-class into predictions & score each row
     _matrix = computeCM(votes, chks); // Make a confusion matrix for this chunk
-    _sum /= _model.treeCount();
     if (localVotes!=null) {
       _localMatrices = new CM[H2O.CLOUD.size()];
       _localMatrices[H2O.SELF.index()] = computeCM(localVotes, chks);
     }
+  }
+
+  public static float[] computeVarImpSD(long[][] vote_diffs) {
+    float[] res = new float[vote_diffs.length];
+    for (int var = 0; var < vote_diffs.length; ++var) {
+      float mean_diffs = 0.f;
+      float r = 0.f;
+      for (long d: vote_diffs[var]) mean_diffs += (float) d / (float) vote_diffs.length;
+      for (long d: vote_diffs[var]) {
+        r += (d - mean_diffs) * (d - mean_diffs);
+      }
+      r *= 1.f / (float)vote_diffs[var].length;
+      res[var] = (float) Math.sqrt(r);
+    }
+    return res;
   }
 
   /** Returns true if tree was produced by this node.
@@ -235,6 +271,16 @@ public class CMTask extends MRTask2<CMTask> {
     }
     if (_cms!=null)
       for (int i = 0; i < _cms.length; i++) Utils.add(_cms[i], drt._cms[i]);
+    if (_oobs != null)
+      for (int i = 0; i < _oobs.length; ++i) _oobs[i] += drt._oobs[i];
+//    if (drt.varimp != null) {
+//      for (int i = 0; i < drt.varimp.length; ++i) {
+//        varimp[i] += drt.varimp[i];
+//        for (int j = 0; j < _voteDiffs[i].length; ++j) {
+//          _voteDiffs[i][j] += drt._voteDiffs[i][j];
+//        }
+//      }
+//    }
   }
 
   /** Transforms 0-based class produced by model to CF zero-based */
@@ -390,6 +436,153 @@ public class CMTask extends MRTask2<CMTask> {
     /** Pad a string with spaces. */
     private String pad(String s, int l){ String p=""; for(int i=0; i<l-s.length();i++)p+=" "; return " "+p+s; }
   }
+
+
+//  public static class VarImpTask extends MRTask2<VarImpTask> {
+//    private SpeeDRFModel _model;
+//    private int[] _oob;
+//    public long[][] _voteDiffs;
+//    public float[] _varimp;
+//    public float[] _varimpSD;
+//    private int _var;
+//    private int _classcol;
+//
+//    public VarImpTask( SpeeDRFModel model, int[] oob, int variable) {
+//      _oob = oob;
+//      _model = model;
+//      _var = variable;
+//      _classcol = model.test_frame == null ?  (model.fr.numCols() - 1) : (model.test_frame.numCols() - 1);
+//    }
+//
+//    @Override public void map(Chunk[] chks) {
+//      final int rows = chks[0]._len;
+//      final int cmin       = (int) _model.fr.vecs()[_classcol].min();
+//      short     _N = (short)_model.classes();
+////    _voteDiffs = new long[chks.length - 1][_model.treeCount()];
+////    int oobcnt = 0;
+////    varimp   = new float[chks.length - 1]; // output variable importance
+////    _varimpSD = new float[chks.length - 1]; // output standard dev per var
+//      ArrayList<Integer> oob = new ArrayList<Integer>();  // oob rows
+//      int[] soob = null; // shuffled oob rows
+//      double[] data =  new double[chks.length]; // a row of data
+//      boolean collectOOB = true;
+//
+//      // Votes: we vote each tree on each row, holding on to the votes until the end
+//      int[][] votes = new int[rows][_N];
+//      int[][] localVotes = new int[rows][_N];
+//      // Errors per tree
+////      _errorsPerTree = new long[_model.treeCount()];
+////      _votesOOB = new long[_model.treeCount()];
+//      float sum = 0.f;
+//      // Replay the Data.java's "sample_fair" sampling algorithm to exclude data
+//      // we trained on during voting.
+//      for( int ntree = 0; ntree < _model.treeCount(); ntree++ ) {
+//        long    treeSeed    = _model.seed(ntree);
+//        byte    producerId  = _model.producerId(ntree);
+//        int     init_row    = (int)chks[0]._start;
+//        boolean isLocalTree = _computeOOB && isLocalTree(producerId); // tree is local
+//        boolean isRemote = true;
+//        for (int a_chunk_row_mapping : _chunk_row_mapping) {
+//          if (chks[0]._start == a_chunk_row_mapping) {
+//            isRemote = false;
+//            break;
+//          }
+//        }
+//        boolean isRemoteTreeChunk = _computeOOB && isRemote; // this is chunk which was used for construction the tree by another node
+//        if (isRemoteTreeChunk) init_row = _rowsPerNode[producerId] + (int)chks[0]._start;
+//      /* NOTE: Before changing used generator think about which kind of random generator you need:
+//       * if always deterministic or non-deterministic version - see hex.rf.Utils.get{Deter}RNG */
+//        // DEBUG: if( _computeOOB && (isLocalTree || isRemoteTreeChunk)) System.err.println(treeSeed + " : " + init_row + " (CM) " + isRemoteTreeChunk);
+//        long seed = Sampling.chunkSampleSeed(treeSeed, init_row);
+//        Random rand = Utils.getDeterRNG(seed);
+//        // Now for all rows, classify & vote!
+//        ROWS: for( int r = 0; r < rows; r++ ) {
+//          int row = r + (int)chks[0]._start;
+//          // ------ THIS CODE is crucial and serve to replay the same sequence
+//          // of random numbers as in the method Data.sampleFair()
+//          // Skip row used during training if OOB is computed
+//          float sampledItem = rand.nextFloat();
+//          // Bail out of broken rows with NA in class column.
+//          // Do not skip yet the rows with NAs in the rest of columns
+//          if( chks[_classcol].isNA(row)) continue;
+//
+//          if( _computeOOB && (isLocalTree || isRemoteTreeChunk)) { // if OOBEE is computed then we need to take into account utilized sampling strategy
+//            switch( _model.sampling_strategy ) {
+//              case RANDOM          : if (sampledItem < _model.sample ) continue ROWS; break;
+//              case STRATIFIED_LOCAL:
+//                int clazz = (int) chks[_classcol].at8(row) - cmin;
+//                if (sampledItem < _model.strata_samples[clazz] ) continue ROWS;
+//                break;
+//              default: assert false : "The selected sampling strategy does not support OOBEE replay!"; break;
+//            }
+//          }
+//          // --- END OF CRUCIAL CODE ---
+//          if (collectOOB) {
+//            oob.add(row);
+//          }
+//
+//          // Predict with this tree - produce 0-based class index
+//          int prediction = _model.classify0(ntree, _data, chks, row, _modelDataMap, numClasses );
+//          if( prediction >= numClasses ) continue; // Junk row cannot be predicted
+//          // Check tree miss
+//          int alignedPrediction = alignModelIdx(prediction);
+//          int alignedData       = alignDataIdx((int) _data.vecs()[_classcol].at8(row) - cmin);
+//          if (alignedPrediction != alignedData) {
+//            if (_computeOOB) {
+//              _votesOOB[ntree]++;
+//            }
+//            _errorsPerTree[ntree]++;
+//          }
+//          votes[r][alignedPrediction]++; // Vote the row
+//          if (isLocalTree) localVotes[r][alignedPrediction]++; // Vote
+//        }
+//        collectOOB = false;
+//      }
+//      _oobs = new int[oob.size()];
+//      for (int i = 0; i < oob.size(); ++i) _oobs[i] = oob.get(i);
+//      // Assemble the votes-per-class into predictions & score each row
+////    if (_computeOOB  && _model.importance) {
+////      _votesSOOB = new long[_model.treeCount()];
+////
+////      long seedForOob = ShuffleTask.seed(chks[0].cidx());
+////      for (int var = 0; var < chks.length - 1; ++var) {
+////        for(int ntree = 0; ntree < _model.treeCount(); ++ntree) {
+////          if (soob==null || soob.length < oobcnt) soob = new int[oobcnt];
+////          Utils.shuffleArray(oobs, oobcnt, soob, seedForOob, 0); // Shuffle array and copy results into <code>soob</code>
+////          for(int j = 1; j < oobcnt; j++) {
+////            int row = oobs[j];
+////            // Do scoring:
+////            // - prepare a row data
+////            for (int i=0;i<chks.length;i++) data[i] = chks[i].at0(row); // 1+i - one free is expected by prediction
+////            // - permute variable
+////            if (var>=0) data[var] = chks[var].at0(soob[j-1]);
+////            else assert soob==null;
+////            // - score data
+////            // - score only the tree
+////            int prediction = (int) Tree.classify(new AutoBuffer(_model.tree(ntree)), data, (double)_N); //.classify0(ntree, _data, chks, row, _modelDataMap, numClasses );
+////            int pred = alignModelIdx(prediction);
+////            int actu = alignDataIdx((int) _data.vecs()[_classcol].at8(row) - cmin);
+////            if (pred == actu) _votesSOOB[ntree]++;
+////          }
+////          final long vote_diff = _votesOOB[ntree] -  _votesSOOB[ntree];
+////          _voteDiffs[var][ntree] = vote_diff;
+////          varimp[var] += (float)vote_diff / (float) _model.treeCount();
+////        }
+////      }
+//////      _varimpSD = computeVarImptSD(_voteDiffs);
+//////      _varimp = new VarImp.VarImpMDA(varimp, varimpSD, _model.treeCount());
+////    }
+//      if (localVotes!=null) {
+//        _localMatrices = new CM[H2O.CLOUD.size()];
+//        _localMatrices[H2O.SELF.index()] = computeCM(localVotes, chks);
+//      }
+//    }
+//
+//
+//
+//
+//  }
+
 
   public static class CMFinal extends CM {
     final protected Key      _SpeeDRFModelKey;
