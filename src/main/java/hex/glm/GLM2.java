@@ -230,7 +230,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       _model.update(self());
     }
     _model.unlock(self());
-    if( _dinfo._nfolds == 0 && !_grid) remove(); // Remove/complete job only for top-level, not xval GLM2s
+    if( _dinfo._nfolds == 0 && !_grid)remove(); // Remove/complete job only for top-level, not xval GLM2s
+    state = JobState.DONE;
     if(_fjtask != null)_fjtask.tryComplete();
   }
 
@@ -273,8 +274,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     tweedie_link_power = 1 - tweedie_variance_power;// TODO
     _glm = new GLMParams(family, tweedie_variance_power, link, tweedie_link_power);
     if(alpha.length > 1) { // grid search
-      if(destination_key == null)destination_key = Key.make("GLMGridModel_"+Key.make());
-      if(job_key == null)job_key = Key.make("GLMGridJob_"+Key.make());
+      if(destination_key == null)destination_key = Key.make("GLMGridResults_"+Key.make());
+      if(job_key == null)job_key = Key.make((byte) 0, Key.JOB, H2O.SELF);;
       Job j = gridSearch(self(),destination_key, _dinfo, _glm, lambda, lambda_search, alpha, higher_accuracy, n_folds);
       return GLMGridView.redirect(this,j.dest());
     } else {
@@ -643,6 +644,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       _startTime = System.currentTimeMillis();
     }
   }
+
+
   public static class GLMGridSearch extends Job {
     public final int _maxParallelism;
     transient private AtomicInteger _idx;
@@ -674,6 +677,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       assert _maxParallelism >= 1;
       final H2OCountedCompleter fjt = new H2OCallback<ParallelGLMs>() {
         @Override public void callback(ParallelGLMs pgs){
+
           remove();
         }
       };
@@ -687,7 +691,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       return Response.redirect( this, n, "job_key", job_key, "destination_key", destination_key);
     }
   }
-  public boolean isDone(){return DKV.get(self()) == null;}
+
 
   // class to execute multiple GLM runs in parllell
   // (with  user-given limit on how many to run in in parallel)
