@@ -1,4 +1,6 @@
-For IDEA users (Github)
+.. _Idea:
+
+For IDEA Users (Github)
 ==========================
 
 1. Create a git clone of the H\ :sub:`2`\ O repository.

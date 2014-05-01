@@ -5,7 +5,7 @@ Index By Subject
 
 **Algorithyms Roadmap**
 
-  :ref:`Roadmap`
+  * :ref:`Roadmap`
 
 **Benchmarks**
 
@@ -13,90 +13,131 @@ Index By Subject
 **Classification**
 
 
-   :ref:`RFmath`
-   :ref:`NBmath`
+  * :ref:`RFmath`
+  * :ref:`NBmath`
+  * :ref:`KMmath`
 
+**Contact H2O**
+
+  * :ref:`ContactUs`
 
 **Data Science** 
 
-   :ref:`Data_Science`
+   * :ref:`Data_Science`
 
 **Data**
  
-  :ref:`SUMmath`
+  * :ref:`SUMmath`
 
 **Deep Learning**
 
-  :ref:`DLmath`
+  * :ref:`DLmath`
+
+**Development**
+
+  * :ref:`Developer`
+
+**Eclipse**
+
+  * :ref:`Eclipse`
 
 **Generalized Linear Modeling**
 
-  :ref:`GLMmath`
+  * :ref:`GLMmath`
+  * :ref:`GLM_tutorial`
 
 **Gradient Boosted Models**
 
-  :ref:`GBMmath`
+  * :ref:`GBMmath`
+  * :ref:`GLMgrid_tutorial`
 
 **Hadoop**
 
-  :ref:`Hadoop`
+  * :ref:`Hadoop`
+  * :ref:`MacHadoop`
+
+**High Avaialbility**
+
+  * :ref:`HA`
+
+**Idea**
+
+  * :ref:`Idea`
 
 **Introduction to H2O**
 
+**Java**
+
+  :ref:`Java`
+
+**K-Means**
+
+ * :ref:`KMmath`
+ * :ref:`KM_tutorial`
+
+**License**
+
+ * :ref:`License`
+
 **Machine Learning**
 
-  :ref:`Machlearn`
+  * :ref:`Machlearn`
 
 **Multinode**
 
-  :ref:`Multinode`
+  * :ref:`Multinode`
 
 **Naive Bayes**
 
-  :ref:`NBmath`
+  * :ref:`NBmath`
 
 **Principal Componenents Analysis**
-
+  
+  * :ref:`PCAmath`
 
 **R Console** 
   
-  :ref:`Rfromdownload`
-  :ref:`Rforgit`
+  * :ref:`Rfromdownload`
+  * :ref:`Rforgit`
 
 
 **R**
 
-  :ref:`R_user`
+  * :ref:`R_user`
 
 **R Package Document**
 
-  :ref:`R_pdf`
+  * :ref:`R_pdf`
 
 **R Studio**
    
-   :ref:`Rfromdownload`
-   :ref:`Rforgit`
+   * :ref:`Rfromdownload`
+   * :ref:`Rforgit`
 
 **Random Forest** 
   
-  :ref:`RFmath`
+  * :ref:`RFmath`
 
 **References**
 
-  :ref:`References`
+  * :ref:`References`
+
+**Scala**
+
+  * :ref:`Scala`
 
 **Stochastic Gradient Descent** 
 
-  :ref:`SGDmath`
+  * :ref:`SGDmath`
 
 **Summary (summary statistics on data)**
 
-   :ref:`SUMmath`
+  * :ref:`SUMmath`
 
-**Tutorial**
+**Tutorials**
 
-   :ref:`GLM_tutorial`
-   :ref:`GLMgrid_tutorial`
-   :ref:`KM_tutorial`
+  * :ref:`GLM_tutorial`
+  * :ref:`GLMgrid_tutorial`
+  * :ref:`KM_tutorial`
  
  
