@@ -15,6 +15,9 @@ Steam.H2OProxy = (_) ->
       else
         go error, result.data
 
+
+  filterOutUnhandledModels = (models) -> filter models, (model) -> model.state is 'DONE' and model.model_category is 'Binomial'
+
   requestFrames = (go, opts) ->
     request '/2/Frames.json', opts, (error, result) ->
       if error
@@ -28,7 +31,8 @@ Steam.H2OProxy = (_) ->
 
         for frameKey, frame of frames
           frame.key = frameKey
-          frame.compatible_models = map frame.compatible_models, (modelKey) ->
+          #TODO remove 'filterOutUnhandledModels' when issue with non-DONE models is resolved.
+          frame.compatible_models = filterOutUnhandledModels map frame.compatible_models, (modelKey) ->
             models[modelKey]
 
         go error,
@@ -52,7 +56,8 @@ Steam.H2OProxy = (_) ->
           model.compatible_frames = map model.compatible_frames, (frameKey) ->
             frames[frameKey]
 
-        go error, response: response, models: values models
+        #TODO remove 'filterOutUnhandledModels' when issue with non-DONE models is resolved.
+        go error, response: response, models: filterOutUnhandledModels values models
 
   link$ _.requestFrames, (go) -> requestFrames go
   link$ _.requestFramesAndCompatibleModels, (go) -> requestFrames go, find_compatible_models: yes
