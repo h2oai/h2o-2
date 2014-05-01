@@ -1,6 +1,6 @@
 import unittest, time, sys, time, itertools
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_util
 
 def file_to_put():
     # kbn fails 10/15/12
@@ -26,7 +26,7 @@ class Basic(unittest.TestCase):
     def test_A_putfile_to_all_nodes(self):
         csvfile  = file_to_put()
         print "csvfile:", csvfile
-        origSize = h2o.get_file_size(csvfile)
+        origSize = h2o_util.get_file_size(csvfile)
 
         # Putfile to each node and check the returned size
         for node in h2o.nodes:
@@ -57,7 +57,7 @@ class Basic(unittest.TestCase):
 
     def diff(self,r, f):
         h2o.verboseprint("checking r and f:", r, f)
-        for (r_chunk,f_chunk) in itertools.izip(r.iter_content(1024), h2o.iter_chunked_file(f, 1024)):
+        for (r_chunk,f_chunk) in itertools.izip(r.iter_content(1024), h2o_util.iter_chunked_file(f, 1024)):
             # print "\nr_chunk:", r_chunk, 
             # print "\nf_chunk:", f_chunk
             self.assertEqual(r_chunk,f_chunk)

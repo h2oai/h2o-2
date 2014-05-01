@@ -1,6 +1,6 @@
 .. _Eclipse:
 
-H\ :sub:`2`\ O For Eclipse users (Github)
+H\ :sub:`2`\ O For Eclipse Users (Github)
 ============================================
 
 1. Create a git clone of the H\ :sub:`2`\ O repository.

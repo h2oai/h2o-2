@@ -54,25 +54,13 @@ class Basic(unittest.TestCase):
     def test_PCA_many_cols(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
-        if localhost:
-            tryList = [
-                (10000, 10, 'cA', 300), 
-                (10000, 50, 'cB', 300), 
-                (10000, 100, 'cC', 300), 
-                # (10000, 500, 'cH', 300), 
-                # (10000, 1000, 'cI', 300), 
-                ]
-        else:
-            tryList = [
-                # (10000, 10, 'cB', 300), 
-                # (10000, 50, 'cC', 300), 
-                (10000, 100, 'cD', 300), 
-                (10000, 200, 'cE', 300), 
-                (10000, 300, 'cF', 300), 
-                (10000, 400, 'cG', 300), 
-                (10000, 500, 'cH', 300), 
-                (10000, 1000, 'cI', 300), 
-                ]
+        tryList = [
+            (10000, 10, 'cA', 300), 
+            (10000, 50, 'cB', 300), 
+            (10000, 100, 'cC', 300), 
+            # (10000, 500, 'cH', 300), 
+            # (10000, 1000, 'cI', 300), 
+            ]
 
         ### h2b.browseTheCloud()
         for (rowCount, colCount, hex_key, timeoutSecs) in tryList:

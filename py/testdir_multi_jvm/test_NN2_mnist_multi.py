@@ -74,9 +74,6 @@ class Basic(unittest.TestCase):
         nn = h2o_cmd.runDeepLearning(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
         print "neural net end on ", csvPathname_train, " and ", csvPathname_test, 'took', time.time() - start, 'seconds'
 
-        relTol = 0.10 ### 10% relative error is acceptable for Hogwild
-        h2o_nn.checkLastValidationError(self, nn['neuralnet_model'], inspect['numRows'], expectedErr, relTol, **kwargs)
-
         ### Now score using the model, and check the validation error
         kwargs = {
             'source' : validation_key,
@@ -89,9 +86,6 @@ class Basic(unittest.TestCase):
         }
         nnScoreResult = h2o_cmd.runDeepLearningScore(key=parseResult['destination_key'], timeoutSecs=timeoutSecs, **kwargs)
         h2o_nn.checkScoreResult(self, nnScoreResult, expectedErr, relTol, **kwargs)
-
-
-        h2o.beta_features = False
 
 if __name__ == '__main__':
     h2o.unit_main()

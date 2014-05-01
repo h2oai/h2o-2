@@ -1,4 +1,15 @@
 
+def kill_process_tree(pid, including_parent=True):
+    parent = psutil.Process(pid)
+    for child in parent.get_children(recursive=True):
+        child.kill()
+    if including_parent:
+        parent.kill()
+
+def kill_child_processes():
+    me = os.getpid()
+    kill_process_tree(me, including_parent=False)
+
 # since we hang if hosts has bad IP addresses, thought it'd be nice
 # to have simple obvious feedback to user if he's running with -v 
 # and machines are down or his hosts definition has bad IPs.
@@ -7,7 +18,6 @@ def ping_host_if_verbose(host):
     # if (h2o.verbose) 
     ping = subprocess.Popen( ["ping", "-c", "4", host])
     ping.communicate()
-
 
 def check_port_group(base_port):
     # disabled
