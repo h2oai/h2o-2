@@ -63,9 +63,9 @@ public class GapStatisticModel extends Model implements Job.Progress {
 
   @Override
   public float progress() {
-    float p1 = (float) ((double) (k - 1) / (double) k_max);
+//    float p1 = (float) ((double) (k - 1) / (double) k_max);
     float p2 = (float) (( (double) (k - 1) /  (double) k_max ) +  (double) b / (double) ( b_max * k_max ));
-    return  Math.min(p1, p2);
+    return  p2;
   }
 
   @Override protected float[] score0(double[] data, float[] preds) {
@@ -179,7 +179,7 @@ public class GapStatisticModel extends Model implements Job.Progress {
 
     //Compute optimal k: min k such that G_k >= G_(k+1) - s_(k+1)
     int kmin = -1;
-    for (int i = 0; i < gaps.length; ++i) {
+    for (int i = 0; i < gaps.length-1; ++i) {
       int cur_k = i + 1;
       if(gaps[cur_k] == 0) {
         kmin = 0;
@@ -197,23 +197,25 @@ public class GapStatisticModel extends Model implements Job.Progress {
         break;
       }
     }
-    if (k_best <= 0) k_best = (int)Double.NaN;
 
     if (log_wks[log_wks.length -1] != 0) {
       DocGen.HTML.section(sb, "Best k:");
       if (kmin <= 0) {
-        sb.append("k = " + "No k computed yet...");
+        sb.append("No optimal number of clusters found (best k = 1).");
       } else {
       sb.append("k = ").append(kmin);
       }
     } else {
       DocGen.HTML.section(sb, "Best k so far:");
       if (kmin <= 0) {
-        sb.append("k = " + "No k computed yet...");
+        sb.append("No k computed yet...");
       } else {
       sb.append("k = ").append(kmin);
       }
     }
+
+    if (k_best <= 0) k_best = (int)Double.NaN;
+    if (k_best == 0) k_best = 1;
 
     float[] K = new float[ks];
     float[] wks_y = new float[ks];
@@ -223,6 +225,7 @@ public class GapStatisticModel extends Model implements Job.Progress {
       wks_y[i] = (float)wks[i];
     }
 
+    DocGen.HTML.section(sb, "Elbow Plot");
     sb.append("<br />");
     D3Plot plt = new D3Plot(K, wks_y, "k (Number of clusters)", " log( W_k ) ", "Elbow Plot", true, false);
     plt.generate(sb);
@@ -234,9 +237,24 @@ public class GapStatisticModel extends Model implements Job.Progress {
       gs[i] = (float)gap_stats[i];
     }
     DocGen.HTML.section(sb, "Gap Statistics");
-    DocGen.HTML.graph(sb, "graphvarimp", "g_varimp",
+    sb.append("<br />");
+    DocGen.HTML.graph(sb, "gapstats", "g_varimp",
             DocGen.HTML.toJSArray(new StringBuilder(), names, null, gap_stats.length),
             DocGen.HTML.toJSArray(new StringBuilder(), gs , null, gap_stats.length)
+    );
+//    D3Plot plt2 = new D3Plot(K, gs, "k (Number of clusters)", " Gap Statistics ", "Gap Statistic Elbow Plot", true, false);
+//    plt2.generate(sb);
+
+    DocGen.HTML.section(sb, "Gap Statistics Less Standard Errors");
+    sb.append("<br />");
+    float[] new_gs = new float[gs.length];
+    for (int i = 0; i < gs.length; ++i) {
+      new_gs[i] = (float) (gs[i] - sks[i]);
+    }
+
+    DocGen.HTML.graph(sb, "g_minus_err", "g_varimp",
+            DocGen.HTML.toJSArray(new StringBuilder(), names, null, gap_stats.length),
+            DocGen.HTML.toJSArray(new StringBuilder(), new_gs , null, gap_stats.length)
     );
   }
 }
