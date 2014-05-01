@@ -17,7 +17,7 @@ Steam.H2OProxy = (_) ->
         go error, result.data
 
 
-  filterOutUnhandledModels = (models) -> filter models, (model) -> model.state is 'DONE' and model.model_category is 'Binomial'
+  filterOutUnhandledModels = (models) -> filter models, (model) -> model.model_category is 'Binomial'
 
   requestFrames = (go, opts) ->
     request '/2/Frames.json', opts, (error, result) ->
