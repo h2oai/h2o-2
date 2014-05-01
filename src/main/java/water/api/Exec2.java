@@ -30,8 +30,9 @@ public class Exec2 extends Request2 {
   @Override protected Response serve() {
     if( str == null ) return RequestServer._http404.serve();
     Throwable e;
+    Env env = null;
     try {
-      Env env = water.exec.Exec2.exec(str);
+      env = water.exec.Exec2.exec(str);
       StringBuilder sb = env._sb;
       if( sb.length()!=0 ) sb.append("\n");
       if( env == null ) throw new IllegalArgumentException("Null return from Exec2?");
@@ -59,12 +60,17 @@ public class Exec2 extends Request2 {
         scalar = env.popDbl();
         sb.append(Double.toString(scalar));
       }
-      env.remove_and_unlock();
       result=sb.toString();
       return Response.done(this);
     }
     catch( IllegalArgumentException pe ) { e=pe;} // No logging user typo's
     catch( Throwable e2 ) { Log.err(e=e2); }
+    finally {
+      if (env != null) {
+        try { env.remove_and_unlock(); }
+        catch (Exception xe) { Log.err("env.remove_and_unlock() failed", xe); }
+      }
+    }
     return Response.error(e);
   }
   @Override protected NanoHTTPD.Response serveGrid(NanoHTTPD server, Properties parms, RequestType type) {
