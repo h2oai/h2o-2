@@ -12,7 +12,7 @@ def define_params():
         'thresholds': [None, 0.1, 0.5, 0.7, 0.9],
         'x': [0,1,15,33,34],
         'family': ['gaussian'],
-        'n_folds': [2,3,4,9,15],
+        'n_folds': [2,3,4,9],
         'lambda': [1e-8, 1e-4],
         'alpha': [0,0.5,0.75],
         'beta_epsilon': [None, 0.0001],
@@ -52,7 +52,7 @@ class Basic(unittest.TestCase):
             kwargs = params.copy()
 
             start = time.time()
-            glm = h2o_cmd.runGLM(timeoutSecs=120, parseResult=parseResult, **kwargs)
+            glm = h2o_cmd.runGLM(timeoutSecs=300, parseResult=parseResult, **kwargs)
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'
 
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)

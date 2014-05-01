@@ -286,14 +286,6 @@ def find_file(base):
         raise Exception("unable to find file %s" % base)
     return f
 
-# Return file size.
-def get_file_size(f):
-    return os.path.getsize(f)
-
-# Splits file into chunks of given size and returns an iterator over chunks.
-def iter_chunked_file(file, chunk_size=2048):
-    return iter(lambda: file.read(chunk_size), '')
-
 # shutil.rmtree doesn't work on windows if the files are read only.
 # On unix the parent dir has to not be readonly too.
 # May still be issues with owner being different, like if 'system' is the guy running?
@@ -312,9 +304,7 @@ def handleRemoveError(func, path, exc):
     except OSError:
         pass
 
-
 LOG_DIR = get_sandbox_name()
-
 
 def clean_sandbox():
     if os.path.exists(LOG_DIR):
@@ -437,19 +427,6 @@ def spawn_cmd_and_wait(name, cmd, capture_output=True, timeout=None, **kwargs):
     (ps, stdout, stderr) = spawn_cmd(name, cmd, capture_output, **kwargs)
     spawn_wait(ps, stdout, stderr, capture_output, timeout)
 
-
-def kill_process_tree(pid, including_parent=True):
-    parent = psutil.Process(pid)
-    for child in parent.get_children(recursive=True):
-        child.kill()
-    if including_parent:
-        parent.kill()
-
-
-def kill_child_processes():
-    me = os.getpid()
-    kill_process_tree(me, including_parent=False)
-
 # used to get a browser pointing to the last RFview
 global json_url_history
 json_url_history = []
@@ -564,7 +541,7 @@ def build_cloud_with_json(h2o_nodes_json='h2o-nodes.json'):
                 raise Exception("Can't find %s in %s, wrong file or version change?" % (v, h2o_nodes_json))
             print "cloud_start['%s']: %s" % (v, cs[v])
 
-            # write out something that shows how the cloud could be rebuilt, since it's a decoupled cloud build.
+        ### # write out something that shows how the cloud could be rebuilt, since it's a decoupled cloud build.
         ###         build_cloud_rerun_sh = LOG_DIR + "/" + 'build_cloud_rerun.sh'
         ###         with open(build_cloud_rerun_sh, 'w') as f:
         ###             f.write("echo << ! > ./temp_for_build_cloud_rerun.sh\n")
@@ -750,8 +727,8 @@ def build_cloud(node_count=1, base_port=54321, hosts=None,
     ###     t = os.stat(test_rerun_sh)
     ###     os.chmod(test_rerun_sh, t.st_mode | stat.S_IEXEC)
 
-    # dump the h2o.nodes state to a json file # include enough extra info to have someone rebuild the cloud if a test fails
-    # that was using that cloud.
+    # dump the h2o.nodes state to a json file # include enough extra info to have someone 
+    # rebuild the cloud if a test fails that was using that cloud.
     if create_json:
         q = {
             'cloud_start':
@@ -1003,7 +980,8 @@ class H2O(object):
             # because there's no delay, and we don't want to delay all cloud teardowns by waiting.
             # (this is new/experimental)
             exc_info = sys.exc_info()
-            if not noExtraErrorCheck: # use this to ignore the initial connection errors during build cloud when h2o is coming up
+            # use this to ignore the initial connection errors during build cloud when h2o is coming up
+            if not noExtraErrorCheck: 
                 h2p.red_print(
                     "ERROR: got exception on %s to h2o. \nGoing to check sandbox, then rethrow.." % (url + paramsStr))
                 time.sleep(2)
@@ -1026,7 +1004,8 @@ class H2O(object):
                 else:
                     log_rest("r does not have attr text")
         except Exception, e:
-            # Paranoid exception catch.  Ignore logging exceptions in the case that the above error checking isn't sufficient.
+            # Paranoid exception catch.  
+            # Ignore logging exceptions in the case that the above error checking isn't sufficient.
             pass
 
         # fatal if no response
@@ -1908,7 +1887,6 @@ class H2O(object):
                            noPrint=False,
                            useRFScore=False, **kwargs):
 
-    # not supported yet
         if beta_features:
             print "random_forest_view not supported in H2O fvec yet. hacking done response"
             r = {'response': {'status': 'done'}, 'trees': {'number_built': 0}}
@@ -2024,8 +2002,7 @@ class H2O(object):
         return rfView
 
     def random_forest_score(self, data_key, model_key,
-                            timeoutSecs=60, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=180,
-                            **kwargs):
+            timeoutSecs=60, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=180, **kwargs):
         rfView = random_forest_view(useRFScore=True, *args, **kwargs)
         return rfView
 

@@ -1,7 +1,7 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_hosts
+import h2o, h2o_hosts, h2o_util
 import itertools
 
 def file_to_put():
@@ -31,13 +31,13 @@ class Basic(unittest.TestCase):
         node       = h2o.nodes[0]
         key        = node.put_file(cvsfile)
         resultSize = node.inspect(key)['byteSize']
-        origSize   = h2o.get_file_size(cvsfile)
+        origSize   = h2o_util.get_file_size(cvsfile)
         self.assertEqual(origSize,resultSize)
     
     def test_B_putfile_to_all_nodes(self):
 
         cvsfile  = file_to_put()
-        origSize = h2o.get_file_size(cvsfile)
+        origSize = h2o_util.get_file_size(cvsfile)
         for node in h2o.nodes:
             key        = node.put_file(cvsfile)
             resultSize = node.inspect(key)['byteSize']
@@ -65,7 +65,7 @@ class Basic(unittest.TestCase):
             f.close()
 
     def diff(self,r, f):
-        for (r_chunk,f_chunk) in itertools.izip(r.iter_content(1024), h2o.iter_chunked_file(f, 1024)):
+        for (r_chunk,f_chunk) in itertools.izip(r.iter_content(1024), h2o_util.iter_chunked_file(f, 1024)):
             self.assertEqual(r_chunk,f_chunk)
 
 if __name__ == '__main__':
