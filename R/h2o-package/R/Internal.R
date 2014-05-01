@@ -152,7 +152,7 @@ h2o.__changeLogPath <- function(path, type) {
 # page   -- URL to access within the H2O server.
 # parms  -- List of parameters to send to the server.
 .h2o.__remoteSendWithParms <- function(client, page, parms) {
-  cmd = "rv = .h2o.__remoteSend(client, page"
+  cmd = ".h2o.__remoteSend(client, page"
 
   for (i in 1:length(parms)) {
     thisparmname = names(parms)[i]
@@ -161,9 +161,8 @@ h2o.__changeLogPath <- function(path, type) {
 
   cmd = sprintf("%s)", cmd)
   #cat(sprintf("TOM: cmd is %s\n", cmd))
-
-  eval(parse(text=cmd))
-
+  
+  rv = eval(parse(text=cmd))
   return(rv)
 }
 

@@ -248,9 +248,10 @@ h2o.clusterStatus <- function(client) {
   stop("Cannot find Java. Please install the latest JDK from http://www.oracle.com/technetwork/java/javase/downloads/index.html")
 }
 
-.h2o.downloadJar <- function(branch, version, forceDL = FALSE) {
+.h2o.downloadJar <- function(branch, version, overwrite = FALSE) {
   if(missing(branch)) branch <- packageDescription("h2o")$Branch
   if(missing(version)) version <- packageVersion("h2o")[1,4]
+  if(!is.logical(overwrite)) stop("overwrite must be TRUE or FALSE")
   
   dest_folder <- paste(.h2o.pkg.path, "java", sep = .Platform$file.sep)
   if(!file.exists(dest_folder)) dir.create(dest_folder)
@@ -264,7 +265,7 @@ h2o.clusterStatus <- function(client) {
   }
   
   # Download if h2o.jar doesn't already exist or user specifies force overwrite
-  if(forceDL || !file.exists(dest_file)) {
+  if(overwrite || !file.exists(dest_file)) {
     base_url <- paste("https://s3.amazonaws.com/h2o-release/h2o", branch, version, sep = "/")
     h2o_url <- paste(base_url, "h2o.jar", sep = "/")
     

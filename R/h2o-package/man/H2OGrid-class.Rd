@@ -25,7 +25,7 @@ Object representing the models built by a H2O grid search algorithm on a FluidVe
 \seealso{
 %%  ~~objects to See Also as \code{\link{~~fun~~}}, ~~~
 %%  ~~or \code{\linkS4class{CLASSNAME}} for links to other classes ~~~
-\code{\linkS4class{H2OGLMGrid}, \linkS4class{H2OKMeansGrid}, \linkS4class{H2ODRFGrid}, \linkS4class{H2OGBMGrid}, \linkS4class{H2ONNGrid}}
+\code{\linkS4class{H2OGLMGrid}, \linkS4class{H2OKMeansGrid}, \linkS4class{H2ODRFGrid}, \linkS4class{H2OGBMGrid}, \linkS4class{H2ODeepLearningGrid}}
 }
 \examples{
 showClass("H2OGrid")

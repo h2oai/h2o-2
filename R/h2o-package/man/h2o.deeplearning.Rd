@@ -80,7 +80,7 @@ h2o.deeplearning(x, y, data, classification = TRUE, validation, activation,
   }
 
 \value{
-An object of class \code{\linkS4class{H2ONNModel}} with slots key, data, and model, where the last is a list of the following components:
+An object of class \code{\linkS4class{H2ODeepLearningModel}} with slots key, data, and model, where the last is a list of the following components:
   \item{confusion }{The confusion matrix of the response, with actual observations as rows and predicted values as columns.}
   \item{train_class_err }{Classification error on the training dataset.}
   \item{train_sqr_err }{Mean-squared error on the training dataset.}
@@ -93,6 +93,7 @@ library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 irisPath = system.file("extdata", "iris.csv", package = "h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath)
-h2o.deeplearning(x = 1:4, y = 5, data = iris.hex, activation = "Tanh", hidden = c(50, 50, 50), epochs = 500)
+h2o.deeplearning(x = 1:4, y = 5, data = iris.hex, activation = "Tanh", 
+hidden = c(50, 50, 50), epochs = 500)
 h2o.shutdown(localH2O)
 }

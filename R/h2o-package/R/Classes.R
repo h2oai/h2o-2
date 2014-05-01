@@ -273,6 +273,9 @@ month <- function(x) UseMethod('month', x)
 month.H2OParsedData <- h2o.month
 
 diff.H2OParsedData <- function(x, lag = 1, differences = 1, ...) {
+  if(!is.numeric(lag)) stop("lag must be numeric")
+  if(!is.numeric(differences)) stop("differences must be numeric")
+  
   expr = paste("diff(", paste(x@key, lag, differences, sep = ","), ")", sep = "")
   res = .h2o.__exec2(x@h2o, expr)
   new("H2OParsedData", h2o=x@h2o, key=res$dest_key, logic=FALSE)
@@ -624,7 +627,9 @@ setMethod("$<-", "H2OParsedData", function(x, name, value) {
 }
 
 # Note: right now, all things must be H2OParsedData
-cbind.H2OParsedData <- function(...) {
+cbind.H2OParsedData <- function(..., deparse.level = 1) {
+  if(deparse.level != 1) stop("Unimplemented")
+  
   l <- list(...)
   # l_dep <- sapply(substitute(placeholderFunction(...))[-1], deparse)
   if(length(l) == 0) stop('cbind requires an H2O parsed dataset')
@@ -647,7 +652,6 @@ cbind.H2OParsedData <- function(...) {
   res <- .h2o.__exec2(h2o, exec_cmd)
   new('H2OParsedData', h2o=h2o, key=res$dest_key)
 }
-cbind.H2OParsedDataVA <- cbind.H2OParsedData
 
 #--------------------------------- Arithmetic ----------------------------------#
 setMethod("+", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { .h2o.__binop2("+", e1, e2) })
@@ -1157,12 +1161,6 @@ setMethod("findInterval", "H2OParsedData", function(x, vec, rightmost.closed = F
   res = .h2o.__exec2(x@h2o, expr)
   new('H2OParsedData', h2o=x@h2o, key=res$dest_key)
 })
-
-merge.H2OParsedData <- function(x, y, by = intersect(names(x), names(y)), by.x = by, by.y = by, all = FALSE, all.x = all, all.y = all) {
-  if(!inherits(y, "H2OParsedData")) stop("y must be a H2O parsed data object")
-  if(!is.character(by)) stop("by must be of class character")
-  if(!is.logical(all)) stop("all must be of class logical")
-}
 
 # setGeneric("histograms", function(object) { standardGeneric("histograms") })
 # setMethod("histograms", "H2OParsedData", function(object) {

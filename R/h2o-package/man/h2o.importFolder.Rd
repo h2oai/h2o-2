@@ -11,7 +11,7 @@ Import Local Directory of Data Files
 \usage{
 ## Default method:
 h2o.importFolder(object, path, pattern = "", key = "", parse = TRUE, header, 
-  sep = "", col.names, version = 1)
+  sep = "", col.names, version = 2)
 
 ## Import to a ValueArray object:
 h2o.importFolder.VA(object, path, pattern = "", key = "", parse = TRUE, header, 

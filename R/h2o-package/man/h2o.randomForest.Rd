@@ -10,17 +10,18 @@ Performs random forest classification on a data set.
 }
 \usage{
 ## Default method:
-h2o.randomForest(x, y, data, ntree = 50, depth = 50, sample.rate = 2/3, classwt = NULL, 
-  nbins = 100, seed = -1, importance = FALSE, validation, nodesize = 1, 
-  use_non_local = TRUE, version = 1)
+h2o.randomForest(x, y, data, classification = TRUE, ntree = 50, depth = 20, 
+  sample.rate = 2/3, classwt = NULL, nbins = 100, seed = -1, importance = FALSE, 
+  validation, nodesize = 1, use_non_local = TRUE, version = 2)
 
 ## Import to a ValueArray object:
-h2o.randomForest.VA(x, y, data, ntree = 50, depth = 50, sample.rate = 2/3, 
+h2o.randomForest.VA(x, y, data, ntree = 50, depth = 20, sample.rate = 2/3, 
   classwt = NULL, nbins = 100, seed = -1, use_non_local = TRUE)
 
 ## Import to a FluidVecs object:
-h2o.randomForest.FV(x, y, data, ntree = 50, depth = 50, sample.rate = 2/3, nbins = 100, 
-  seed = -1, importance = FALSE, validation, nodesize = 1)
+h2o.randomForest.FV(x, y, data, classification = TRUE, ntree = 50, depth = 20, 
+  sample.rate = 2/3, nbins = 100, seed = -1, importance = FALSE, validation, 
+  nodesize = 1)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -33,6 +34,9 @@ The name or index of the response variable. If the data does not contain a heade
   \item{data}{
 An \code{\linkS4class{H2OParsedDataVA}} (\code{version = 1}) or \code{\linkS4class{H2OParsedData}} (\code{version = 2}) object containing the variables in the model.
 }
+  \item{classification}{
+(Optional) A logical value indicating whether a classification model should be built (as opposed to regression).
+  }
   \item{ntree}{
 (Optional) Number of trees to grow. (Must be a nonnegative integer).
 }

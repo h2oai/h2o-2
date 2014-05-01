@@ -10,7 +10,7 @@ Parses a raw data file, returning an object containing the identifying hex key.
 }
 \usage{
 ## Default method:
-h2o.parseRaw(data, key = "", header, sep = "", col.names, version = 1)
+h2o.parseRaw(data, key = "", header, sep = "", col.names, version = 2)
 
 ## Import to a ValueArray object:
 h2o.parseRaw.VA(data, key = "", header, sep = "", col.names)

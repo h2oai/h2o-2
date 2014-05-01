@@ -11,7 +11,7 @@ Imports a file from the local path and parses it, returning an object containing
 \usage{
 ## Default method:
 h2o.importFile(object, path, key = "", parse = TRUE, header, sep = "", col.names, 
-  version = 1)
+  version = 2)
 
 ## Import to a ValueArray object:
 h2o.importFile.VA(object, path, key = "", parse = TRUE, header, sep = "", col.names)
