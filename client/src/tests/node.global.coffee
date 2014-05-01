@@ -1,8 +1,11 @@
-require 'mocha'
-
+mocha = require 'mocha'
 _ = require 'lodash'
+chai = require 'chai'
+httpRequest = require 'request'
 
+#
 # Chai Assert API
+#
 # fail(actual, expected, message, operator)
 # ok(value, [message])
 # notOk(value, [message])
@@ -14,6 +17,6 @@ _ = require 'lodash'
 # notStrictEqual(actual, expected, [message])
 # throws(block, [error], [message])
 # doesNotThrow(block, [message])
-{ fail, ok, notOk, equal, notEqual, deepEqual, notDeepEqual, strictEqual, notStrictEqual, throws, doesNotThrow } = require('chai').assert
+{ fail, ok, notOk, equal, notEqual, deepEqual, notDeepEqual, strictEqual, notStrictEqual, throws, doesNotThrow } = chai.assert
 
 

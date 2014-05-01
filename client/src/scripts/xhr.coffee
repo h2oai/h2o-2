@@ -14,7 +14,6 @@ Steam.Xhr = (_) ->
 
     makeHttpRequest = (method, host, port, path, go) ->
       url = "http://#{host}:#{port}#{path}"
-      url = 'http://localhost:54321/2/Frames.json?key=airlines_train.hex&find_compatible_models=true'
       httpRequest url, (error, response, body) ->
         if error
           go error
