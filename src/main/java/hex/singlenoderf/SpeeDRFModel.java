@@ -414,7 +414,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       JsonObject cm       = new JsonObject();
       JsonArray  cmHeader = new JsonArray();
       JsonArray  matrix   = new JsonArray();
-      cm.addProperty(JSON_CM_TYPE, oobee ? "OOB error estimate" : "training");
+      cm.addProperty(JSON_CM_TYPE, oobee ? "OOB" : "training");
       cm.addProperty(JSON_CM_CLASS_ERR, confusion.classError());
       cm.addProperty(JSON_CM_ROWS_SKIPPED, confusion.skippedRows());
       cm.addProperty(JSON_CM_ROWS, confusion.rows());

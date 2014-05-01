@@ -195,31 +195,9 @@ public class CMTask extends MRTask2<CMTask> {
         int alignedData       = alignDataIdx((int) _data.vecs()[_classcol].at8(row) - cmin);
         if (alignedPrediction != alignedData) _errorsPerTree[ntree]++;
         votes[r][alignedPrediction]++; // Vote the row
-        for (int v : votes[r])
-          sum += (float)v;
-
-        float[] fs = new float[_N];
-        for (int i = 0; i < _N; ++i) {
-
-          fs[i] = sum == 0 ? 1.f/_N : (float)votes[r][i] / sum;
-        }
-        float err;
-        if(sum == 0) {
-          err = 1.0f-1.0f/_N;
-        } else {
-          err = fs[alignedData] == 0 ? 0.f : 1.0f-fs[alignedData]/sum;
-        }
-        _sum += (1-err)*(1-err);
         actual[r] = alignedData;
         pred[r]   = alignedPrediction;
         if (isLocalTree) localVotes[r][alignedPrediction]++; // Vote
-        if(_N == 2) { // Binomial classification -> compute AUC, draw ROC
-          float snd = _validation ? fs[0] : 1.f;// for validation dataset sum is always 1
-          for(int i = 0; i < ModelUtils.DEFAULT_THRESHOLDS.length; i++) {
-            int p = snd >= ModelUtils.DEFAULT_THRESHOLDS[i] ? 1 : 0; // Compute prediction based on threshold
-            _cms[i][alignedData][p]++; // Increase matrix
-          }
-        }
       }
     }
     // Assemble the votes-per-class into predictions & score each row
@@ -502,6 +480,7 @@ public class CMTask extends MRTask2<CMTask> {
     cm._matrix = new long[_N][_N];          // Make an empty confusion matrix for this chunk
     float preds[] = new float[_N+1];
     for( int r = 0; r < rows; r++ ) { // Iterate over rows
+      float sum = 0.f;
       int row = r + (int)chks[0]._start;
       int[] vi = votes[r];                // Votes for i-th row
       for( int v=0; v<_N; v++ ) preds[v+1] = vi[v];
@@ -515,8 +494,31 @@ public class CMTask extends MRTask2<CMTask> {
       cm._matrix[cclass][result]++;
       if( result != cclass ) cm._errors++;
       validation_rows++;
-    }
+      for (int v : vi)
+        sum += (float)v;
 
+      float[] fs = new float[_N];
+      for (int i = 0; i < _N; ++i) {
+        fs[i] = (float)votes[r][i];
+      }
+      float err;
+      if(sum == 0) {
+        err = 1.0f-1.0f/_N;
+      } else {
+        err = fs[cclass] == 0 ? 0.f : 1.0f-fs[cclass]/sum;
+      }
+//      if (err == 0) {
+//        err = 1 - 1.f / _N;
+//      }
+      _sum += err * err;
+      if(_N == 2) { // Binomial classification -> compute AUC, draw ROC
+        float snd = fs[1] / sum;// for validation dataset sum is always 1
+        for(int i = 0; i < ModelUtils.DEFAULT_THRESHOLDS.length; i++) {
+          int p = snd >= ModelUtils.DEFAULT_THRESHOLDS[i] ? 1 : 0; // Compute prediction based on threshold
+          _cms[i][cclass][p]++; // Increase matrix
+        }
+      }
+    }
     cm._rows=validation_rows;
     return cm;
   }

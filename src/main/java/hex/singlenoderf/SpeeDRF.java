@@ -40,7 +40,7 @@ public class SpeeDRF extends Job.ValidatedJob {
   public double sample = 0.67;
 
   @API(help = "OOBEE", filter = Default.class, json = true)
-  public boolean oobee = false;
+  public boolean oobee = true;
 
   public Key _modelKey = dest();
 
