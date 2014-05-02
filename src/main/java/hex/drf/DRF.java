@@ -9,23 +9,26 @@ import hex.VarImp;
 import hex.drf.TreeMeasuresCollector.TreeMeasures;
 import hex.drf.TreeMeasuresCollector.TreeSSE;
 import hex.drf.TreeMeasuresCollector.TreeVotes;
-import hex.gbm.*;
+import hex.gbm.DHistogram;
+import hex.gbm.DTree;
 import hex.gbm.DTree.DecidedNode;
 import hex.gbm.DTree.LeafNode;
 import hex.gbm.DTree.TreeModel.CompressedTree;
 import hex.gbm.DTree.TreeModel.TreeStats;
 import hex.gbm.DTree.UndecidedNode;
-
-import java.util.Arrays;
-import java.util.Random;
-
+import hex.gbm.SharedTreeModelBuilder;
 import water.*;
 import water.H2O.H2OCountedCompleter;
-import water.api.*;
+import water.api.DRFProgressPage;
+import water.api.DocGen;
+import water.api.ParamImportance;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.util.*;
 import water.util.Log.Tag.Sys;
+
+import java.util.Arrays;
+import java.util.Random;
 
 // Random Forest Trees
 public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
@@ -163,7 +166,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
    * variance. */
   @Override protected void execImpl() {
     logStart();
-    buildModel();
+    buildModel(seed);
   }
 
   @Override protected Response redirect() {
@@ -191,7 +194,9 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     // Initialize TreeVotes for classification, MSE arrays for regression
     if (importance) initTreeMeasurements();
   }
-  @Override protected void initWorkFrame(DRFModel initialModel, Frame fr) {  }
+  @Override protected void initWorkFrame(DRFModel initialModel, Frame fr) {
+    if (classification) initialModel.setModelClassDistribution(new MRUtils.ClassDist(response).doAll(response).rel_dist());
+  }
 
   @Override protected DRFModel buildModel( DRFModel model, final Frame fr, String names[], String domains[][], final Timer t_build ) {
     // Append number of trees participating in on-the-fly scoring
