@@ -543,7 +543,10 @@ setMethod("[<-", "H2OParsedData", function(x, i, j, ..., value) {
   }
 
   # rhs = ifelse(class(value) == "H2OParsedData", value@key, paste("c(", paste(value, collapse = ","), ")", sep=""))
-  rhs = ifelse(inherits(value, "H2OParsedData"), value@key, paste("c(", paste(value, collapse = ","), ")", sep=""))
+  if(inherits(value, "H2OParsedData"))
+    rhs = value@key
+  else
+    rhs = ifelse(length(value) == 1, value, paste("c(", paste(value, collapse = ","), ")", sep="")
   res = .h2o.__exec2(x@h2o, paste(lhs, "=", rhs))
   return(new("H2OParsedData", h2o=x@h2o, key=x@key))
 })
@@ -558,7 +561,10 @@ setMethod("$<-", "H2OParsedData", function(x, name, value) {
  
   lhs = paste(x@key, "[,", ifelse(is.na(idx), numCols+1, idx), "]", sep = "")
   # rhs = ifelse(class(value) == "H2OParsedData", value@key, paste("c(", paste(value, collapse = ","), ")", sep=""))
-  rhs = ifelse(inherits(value, "H2OParsedData"), value@key, paste("c(", paste(value, collapse = ","), ")", sep=""))
+  if(inherits(value, "H2OParsedData"))
+    rhs = value@key
+  else
+    rhs = ifelse(length(value) == 1, value, paste("c(", paste(value, collapse = ","), ")", sep="")
   res = .h2o.__exec2(x@h2o, paste(lhs, "=", rhs))
   
   if(is.na(idx))
