@@ -43,8 +43,9 @@ public class CXIChunk extends Chunk {
   @Override public final int nonzeros(int [] arr){
     int len = sparseLen();
     int off = OFF;
-    final int inc = _valsz + 2;
-    for(int i = 0; i < len; ++i, off += inc) arr[i] = UDP.get2(_mem, off)&0xFFFF;
+    final int inc = _valsz + _ridsz;
+    for(int i = 0; i < len; ++i, off += inc)
+      arr[i] = _ridsz == 2 ? UDP.get2(_mem, off)&0xFFFF : UDP.get4(_mem, off) ;
     return len;
   }
 
@@ -111,7 +112,7 @@ public class CXIChunk extends Chunk {
       case 4: return UDP.get4(_mem, off + _ridsz);
       case 8: return UDP.get8(_mem, off + _ridsz);
       default: throw H2O.unimpl();
-   } 
+   }
   }
 
   // find offset of the chunk-relative row id, or -1 if not stored (i.e. sparse zero)

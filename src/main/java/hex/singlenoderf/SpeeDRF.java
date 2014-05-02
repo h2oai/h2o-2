@@ -42,7 +42,7 @@ public class SpeeDRF extends Job.ValidatedJob {
   @API(help = "OOBEE", filter = Default.class, json = true)
   public boolean oobee = true;
 
-  @API(help = "Variable Importance") //, filter = Default.class, json = true)
+  @API(help = "Variable Importance", filter = Default.class, json = true)
   public boolean importance = false;
 
   public Key _modelKey = dest();
