@@ -2,11 +2,12 @@
 \alias{h2o.runif}
 \title{Produces a vector of specified length contain random uniform numbers}
 \description{Produces a vector of random uniform numbers.}
-\usage{h2o.runif(x, min, max)}
+\usage{h2o.runif(x, min = 0, max = 1, seed = -1)}
 \arguments{
   \item{x}{An \code{\linkS4class{H2OParsedData}} object with number of rows equal to the number of elements the vector of random numbers should have.}
   \item{min}{An integer specifying the lower bound of the distribution.}
-  \item{max}{An integer specifying the upper bound of the distribution.} 
+  \item{max}{An integer specifying the upper bound of the distribution.}
+  \item{seed}{(Optional) Random seed used to generate draws from the uniform distribution. The default of -1 results in a seed equal to the current system time in milliseconds.}
   }
 \details{
 \code{x} must be a \code{\linkS4class{H2OParsedData}} object so that H2O can generate random numbers aligned with the dataset for efficient large-scale sampling and filtering.

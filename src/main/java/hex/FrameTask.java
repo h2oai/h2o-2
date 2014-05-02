@@ -1,11 +1,8 @@
 package hex;
 
+import water.*;
 import water.H2O.H2OCountedCompleter;
-import water.Iced;
-import water.Job;
 import water.Job.JobCancelledException;
-import water.MRTask2;
-import water.MemoryManager;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.NewChunk;
@@ -73,19 +70,28 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
 
   public static class DataInfo extends Iced {
     public Frame _adaptedFrame;
-    public final int _responses; // number of responses
-    public final boolean _standardize;
-    public final boolean _standardize_response;
-    public final boolean _useAllFactorLevels;
-    public final int _nums;
-    public final int _cats;
-    public final int [] _catOffsets;
-    public final double [] _normMul;
-    public final double [] _normSub;
-    public final double [] _normRespMul;
-    public final double [] _normRespSub;
-    public final int _foldId;
-    public final int _nfolds;
+    public int _responses; // number of responses
+    public boolean _standardize;
+    public boolean _standardize_response;
+    public boolean _useAllFactorLevels;
+    public int _nums;
+    public int _cats;
+    public int [] _catOffsets;
+    public double [] _normMul;
+    public double [] _normSub;
+    public double [] _normRespMul;
+    public double [] _normRespSub;
+    public int _foldId;
+    public int _nfolds;
+
+    public DataInfo deep_clone() {
+      AutoBuffer ab = new AutoBuffer();
+      this.write(ab);
+      ab.flipForReading();
+      return new DataInfo().read(ab);
+    }
+
+    private DataInfo() {}
 
     private DataInfo(DataInfo dinfo, int foldId, int nfolds){
       assert dinfo._catLvls == null:"Should not be called with filtered levels (assuming the selected levels may change with fold id) ";

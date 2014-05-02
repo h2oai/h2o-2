@@ -9,7 +9,7 @@ H2O: K-Means Clustering
 \usage{
 ## Default method:
 h2o.kmeans(data, centers, cols = "", iter.max = 10, normalize = FALSE, 
-  init = "none", seed = 0, version = 1)
+  init = "none", seed = 0, dropNACols, version = 2)
 
 ## Import to a ValueArray object:
 h2o.kmeans.VA(data, centers, cols = "", iter.max = 10, normalize = FALSE, 
@@ -17,7 +17,7 @@ h2o.kmeans.VA(data, centers, cols = "", iter.max = 10, normalize = FALSE,
 
 ## Import to a FluidVecs object:
 h2o.kmeans.FV(data, centers, cols = "", iter.max = 10, normalize = FALSE, 
-  init = "none", seed = 0)
+  init = "none", seed = 0, dropNACols = FALSE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -41,6 +41,9 @@ The number of clusters k.
   }
   \item{seed}{
   (Optional) Random seed used to initialize the cluster centroids.
+  }
+  \item{dropNACols}{
+  (Optional) A logical value indicating whether to drop columns with more than 10\% entries that are NA.
   }
   \item{version}{
   (Optional) The version of k-means clustering to run. If \code{version = 1}, this will run the more stable ValueArray implementation, while \code{version = 2} selects the faster, but still beta stage FluidVecs implementation.

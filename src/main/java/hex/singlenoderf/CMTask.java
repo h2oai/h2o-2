@@ -1,5 +1,6 @@
 package hex.singlenoderf;
 
+import hex.ShuffleTask;
 import water.*;
 import water.fvec.Chunk;
 import water.fvec.Frame;
@@ -9,8 +10,10 @@ import water.util.Log.Tag.Sys;
 import water.util.ModelUtils;
 import water.util.Utils;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
+import hex.VarImp;
 
 /**
  * Confusion Matrix. Incrementally computes a Confusion Matrix for a forest
@@ -34,6 +37,9 @@ public class CMTask extends MRTask2<CMTask> {
   public int[] _modelDataMap;
   public Frame _data;
   public int  _N;
+  public long _cms[][][];
+  public VarImp _varimp;
+  public int[] _oobs;
 
   /** Data to replay the sampling algorithm */
   private int[]     _chunk_row_mapping;
@@ -59,6 +65,7 @@ public class CMTask extends MRTask2<CMTask> {
     _treesUsed  = treesToUse;
     _computeOOB = computeOOB;
     _model = model;
+    _varimp = null;
     shared_init();
   }
 
@@ -128,15 +135,13 @@ public class CMTask extends MRTask2<CMTask> {
     final int rows = chks[0]._len;
     final int cmin       = (int) _data.vecs()[_classcol].min();
     short     numClasses = (short)_model.classes();
+    _cms = new long[ModelUtils.DEFAULT_THRESHOLDS.length][2][2];
 
     // Votes: we vote each tree on each row, holding on to the votes until the end
     int[][] votes = new int[rows][_N];
-    int[] actual = new int[rows];
-    int[] pred   = new int[rows];
     int[][] localVotes = _computeOOB ? new int[rows][_N] : null;
     // Errors per tree
     _errorsPerTree = new long[_model.treeCount()];
-    float sum = 0.f;
     // Replay the Data.java's "sample_fair" sampling algorithm to exclude data
     // we trained on during voting.
     for( int ntree = 0; ntree < _model.treeCount(); ntree++ ) {
@@ -187,34 +192,34 @@ public class CMTask extends MRTask2<CMTask> {
         // Check tree miss
         int alignedPrediction = alignModelIdx(prediction);
         int alignedData       = alignDataIdx((int) _data.vecs()[_classcol].at8(row) - cmin);
-        if (alignedPrediction != alignedData) _errorsPerTree[ntree]++;
+        if (alignedPrediction != alignedData) {
+          _errorsPerTree[ntree]++;
+        }
         votes[r][alignedPrediction]++; // Vote the row
-        for (int v : votes[r])
-          sum += (float)v;
-
-        float[] fs = new float[votes[r].length];
-        for (int i = 0; i < fs.length; ++i) {
-          fs[i] = sum == 0 ? 0 : (float)votes[r][i] / sum;
-        }
-        float err = 0.f;
-        if(sum == 0) {
-          err = 1.0f-1.0f/_N;
-        } else {
-          err = fs[alignedData] == 0 ? 0.f : 1.0f-fs[alignedData]/sum;
-        }
-        _sum += (1-err)*(1-err);
-        actual[r] = alignedData;
-        pred[r]   = alignedPrediction;
         if (isLocalTree) localVotes[r][alignedPrediction]++; // Vote
       }
     }
     // Assemble the votes-per-class into predictions & score each row
     _matrix = computeCM(votes, chks); // Make a confusion matrix for this chunk
-    _sum /= _model.treeCount();
     if (localVotes!=null) {
       _localMatrices = new CM[H2O.CLOUD.size()];
       _localMatrices[H2O.SELF.index()] = computeCM(localVotes, chks);
     }
+  }
+
+  public static float[] computeVarImpSD(long[][] vote_diffs) {
+    float[] res = new float[vote_diffs.length];
+    for (int var = 0; var < vote_diffs.length; ++var) {
+      float mean_diffs = 0.f;
+      float r = 0.f;
+      for (long d: vote_diffs[var]) mean_diffs += (float) d / (float) vote_diffs.length;
+      for (long d: vote_diffs[var]) {
+        r += (d - mean_diffs) * (d - mean_diffs);
+      }
+      r *= 1.f / (float)vote_diffs[var].length;
+      res[var] = (float) Math.sqrt(r);
+    }
+    return res;
   }
 
   /** Returns true if tree was produced by this node.
@@ -241,6 +246,10 @@ public class CMTask extends MRTask2<CMTask> {
       if (ept1.length < ept2.length) ept1 = Arrays.copyOf(ept1, ept2.length);
       for (int i = 0; i < ept2.length; i++) ept1[i] += ept2[i];
     }
+    if (_cms!=null)
+      for (int i = 0; i < _cms.length; i++) Utils.add(_cms[i], drt._cms[i]);
+    if (_oobs != null)
+      for (int i = 0; i < _oobs.length; ++i) _oobs[i] += drt._oobs[i];
   }
 
   /** Transforms 0-based class produced by model to CF zero-based */
@@ -402,6 +411,7 @@ public class CMTask extends MRTask2<CMTask> {
     final protected String[] _domain;
     final protected long  [] _errorsPerTree;
     final protected boolean  _computedOOB;
+    final protected long[][][] _cms;
     protected boolean        _valid;
     final protected float _sum;
 
@@ -413,8 +423,9 @@ public class CMTask extends MRTask2<CMTask> {
       _errorsPerTree = null;
       _computedOOB   = false;
       _sum = 0.f;
+      _cms = null;
     }
-    private CMFinal(CM cm, Key SpeeDRFModelKey, String[] domain, long[] errorsPerTree, boolean computedOOB, boolean valid, float sum) {
+    private CMFinal(CM cm, Key SpeeDRFModelKey, String[] domain, long[] errorsPerTree, boolean computedOOB, boolean valid, float sum, long[][][] cms) {
       _matrix = cm._matrix;
       _errors = cm._errors;
       _rows = cm._rows;
@@ -425,14 +436,15 @@ public class CMTask extends MRTask2<CMTask> {
       _computedOOB   = computedOOB;
       _valid         = valid;
       _sum = sum;
+      _cms = cms;
     }
     /** Make non-valid confusion matrix */
     public static CMFinal make() {
       return new CMFinal();
     }
     /** Create a new confusion matrix. */
-    public static CMFinal make(CM cm, SpeeDRFModel model, String[] domain, long[] errorsPerTree, boolean computedOOB, float sum) {
-      return new CMFinal(cm, model._key, domain, errorsPerTree, computedOOB, true, sum);
+    public static CMFinal make(CM cm, SpeeDRFModel model, String[] domain, long[] errorsPerTree, boolean computedOOB, float sum, long[][][] cms) {
+      return new CMFinal(cm, model._key, domain, errorsPerTree, computedOOB, true, sum, cms);
     }
     public String[] domain() { return _domain; }
     public int      dimension() { return _matrix.length; }
@@ -483,6 +495,7 @@ public class CMTask extends MRTask2<CMTask> {
     cm._matrix = new long[_N][_N];          // Make an empty confusion matrix for this chunk
     float preds[] = new float[_N+1];
     for( int r = 0; r < rows; r++ ) { // Iterate over rows
+      float sum = 0.f;
       int row = r + (int)chks[0]._start;
       int[] vi = votes[r];                // Votes for i-th row
       for( int v=0; v<_N; v++ ) preds[v+1] = vi[v];
@@ -496,8 +509,31 @@ public class CMTask extends MRTask2<CMTask> {
       cm._matrix[cclass][result]++;
       if( result != cclass ) cm._errors++;
       validation_rows++;
-    }
+      for (int v : vi)
+        sum += (float)v;
 
+      float[] fs = new float[_N];
+      for (int i = 0; i < _N; ++i) {
+        fs[i] = (float)votes[r][i];
+      }
+      float err;
+      if(sum == 0) {
+        err = 1.0f-1.0f/_N;
+      } else {
+        err = fs[cclass] == 0 ? 0.f : 1.0f-fs[cclass]/sum;
+      }
+//      if (err == 0) {
+//        err = 1 - 1.f / _N;
+//      }
+      _sum += err * err;
+      if(_N == 2) { // Binomial classification -> compute AUC, draw ROC
+        float snd = fs[1] / sum;// for validation dataset sum is always 1
+        for(int i = 0; i < ModelUtils.DEFAULT_THRESHOLDS.length; i++) {
+          int p = snd >= ModelUtils.DEFAULT_THRESHOLDS[i] ? 1 : 0; // Compute prediction based on threshold
+          _cms[i][cclass][p]++; // Increase matrix
+        }
+      }
+    }
     cm._rows=validation_rows;
     return cm;
   }

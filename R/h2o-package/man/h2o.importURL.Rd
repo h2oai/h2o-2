@@ -11,7 +11,7 @@ Imports a file from the URL and parses it, returning an object containing the id
 \usage{
 ## Default method:
 h2o.importURL(object, path, key = "", parse = TRUE, header, 
-  sep = "", col.names, version = 1)
+  sep = "", col.names, version = 2)
 
 ## Import to a ValueArray object:
 h2o.importURL.VA(object, path, key = "", parse = TRUE, header, 

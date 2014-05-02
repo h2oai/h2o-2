@@ -66,7 +66,7 @@ class Basic(unittest.TestCase):
             'classification'               : 1,
             'destination_key'              : model_key,
             }
-        expectedErr = 0.45 ## expected validation error for the above model
+        expectedErr = 0.50 ## expected validation error for the above model
         relTol = 0.20 ## 20% rel. error tolerance due to Hogwild!
 
         timeoutSecs = 600

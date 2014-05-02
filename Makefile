@@ -110,7 +110,7 @@ build:
 	@echo
 	@echo "PHASE: Building R package..."
 	@echo
-	$(MAKE) -C R PROJECT_VERSION=$(PROJECT_VERSION) 1> target/logs/r_build.log
+	$(MAKE) -C R PROJECT_VERSION=$(PROJECT_VERSION) BUILD_NUMBER=$(BUILD_NUMBER) 1> target/logs/r_build.log
 
 	@echo
 	@echo "PHASE: Building zip package..."
@@ -124,6 +124,9 @@ BUILD_ON=$(shell date)
 BUILD_BY=$(shell whoami | sed 's/.*\\\\//')
 BUILD_VERSION_JAVA_FILE = src/main/java/water/BuildVersion.java
 GA_FILE=lib/resources/h2o/js/ga
+ifneq ($(OS),Windows_NT)
+OS := $(shell uname)
+endif
 
 build_version:
 	@rm -f ${BUILD_VERSION_JAVA_FILE}
@@ -142,6 +145,11 @@ build_version:
 build_h2o:
 	(export PROJECT_VERSION=$(PROJECT_VERSION); ./build.sh noclean doc)
 	git checkout -- ${GA_FILE}.js
+ifneq ($(shell uname),Windows_NT)
+	openssl md5 target/h2o.jar | sed 's/.*=//' >> target/h2o.jar.md5
+else
+	md5deep target/h2o.jar | cut -d'' -f1 >> target/h2o.jar.md5
+endif
 
 build_package:
 	echo $(PROJECT_VERSION) > target/project_version

@@ -1,8 +1,11 @@
+
+.. _Hadoop:
+
 H\ :sub:`2`\ O on Hadoop
 =========================
 
-Quick Start for Running H\ :sub:`2`\ O  on Hadoop
-""""""""""""""""""""""""""""""""""""""""""""""""""
+Running H\ :sub:`2`\ O  on Hadoop
+"""""""""""""""""""""""""""""""""""
 
 .. raw:: html
 

@@ -26,19 +26,19 @@ class Basic(unittest.TestCase):
         csvPathname = 'iris/' + csvFilename
 
         print "\nStarting", csvFilename
-        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put', hex_key=csvFilename + ".hex")
+        hex_key = csvFilename + ".hex"
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put', hex_key=hex_key)
 
-        for trial in range(10):
+        k = 3
+        ignored_cols = 'C5'
+        for trial in range(3):
             # reuse the same seed, to get deterministic results (otherwise sometimes fails
             kwargs = {
-                'ignored_cols': 'C5', # ignore the output
-                # 'normalize': 0,
-                'k': 3, 
+                'ignored_cols': ignored_cols, # ignore the output
+                'k': k, 
                 'max_iter': 25,
                 'initialization': 'Furthest',
                 'destination_key': 'iris.hex', 
-                # different answer with this seed
-                # 'seed': 265211114317615310,
                 'seed': 0,
                 }
 
@@ -64,6 +64,12 @@ class Basic(unittest.TestCase):
             # all are multipliers of expected tuple value
             allowedDelta = (0.01, 0.01, 0.01) 
             h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, trial=trial)
+
+            gs = h2o.nodes[0].gap_statistic(source=hex_key, ignored_cols=ignored_cols, k_max=k)
+            print "gap_statistic:", h2o.dump_json(gs)
+
+            k_best = gs['gap_model']['k_best']
+            self.assertTrue(k_best!=0, msg="k_best shouldn't be 0: %s" % k_best)
 
 if __name__ == '__main__':
     h2o.unit_main()

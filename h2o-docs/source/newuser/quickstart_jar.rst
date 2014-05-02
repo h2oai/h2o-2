@@ -1,7 +1,7 @@
 .. _GettingStartedFromaZipFile: 
 
-Getting Started from a Downloaded Zip File
--------------------------------------------
+Getting Started From a Downloaded Zip File
+===========================================
  
 
 Quick Step-by-Step
@@ -17,12 +17,12 @@ Quick Step-by-Step
 
   unzip h2o-1.7.0.520.zip
 
-4. At the prompt enter the following commands. Choose a unique name (use the -name option) for yourself if other people might be running H\ :sub:`2`\ O in your network.
+4. At the prompt enter the following commands. 
 
 ::
 
   cd h2o-1.7.0.520  #change working directory to the downloaded file
-  java -Xmx1g -jar h2o.jar 
+  java -Xmx1g -jar h2o.jar #run the basic java command to start h2o
 
 5. Wait a few moments and output similar to the following will appear in your terminal window:
 
@@ -84,3 +84,5 @@ give H\ :sub:`2`\ O more memory (for example, -Xmx4g gives H\
 :sub:`2`\ O four gigabytes of memory).  For best performance, Xmx
 should be 4x the size of your data, but never more than the total
 amount of memory on your computer.
+
+Java 1.8 for developers is not supported at this time. Users running H\ :sub:`2`\ O, but not modifying and supplementing code, or recompiling the existing code can use Java 1.8

@@ -1,12 +1,12 @@
 .. _GLMmath:
 
 
-Generalized Linear Model (GLM)
-==================================
+Generalized Linear Model
+==============================
 
-Generalized Linear Modeling (GLM) estimates regression models for
+Generalized Linear Models (GLM) estimates regression models for
 outcomes following exponential distributions in general. In addition
-to the Gaussian distribution, these include Poisson, binomial, gamma
+to the Gaussian (i.e. normal) distribution, these include Poisson, binomial, gamma
 and Tweedie distributions. Each serves a different purpose, and
 depending on distribution and link function choice, it can be used 
 either for prediction or classification.

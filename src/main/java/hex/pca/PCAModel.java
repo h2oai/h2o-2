@@ -5,6 +5,7 @@ import hex.gram.Gram.GramTask;
 import water.Key;
 import water.MemoryManager;
 import water.Model;
+import water.Request2;
 import water.api.DocGen;
 import water.api.Request.API;
 import water.api.RequestBuilders.ElementBuilder;
@@ -43,10 +44,10 @@ public class PCAModel extends Model {
   @API(help = "Number of principal components to display")
   int num_pc;
 
-  @API(help = "PCA parameters")
-  final PCAParams params;
+  @API(help = "Model parameters")
+  PCA params;
 
-  public PCAModel(Key selfKey, Key dataKey, DataInfo dinfo, GramTask gramt, double[] sdev, double[] propVar, double[] cumVar, double[][] eigVec, int rank, int num_pc, PCAParams params) {
+  public PCAModel(PCA params, Key selfKey, Key dataKey, DataInfo dinfo, GramTask gramt, double[] sdev, double[] propVar, double[] cumVar, double[][] eigVec, int rank, int num_pc) {
     super(selfKey, dataKey, dinfo._adaptedFrame);
     this.sdev = sdev;
     this.propVar = propVar;
@@ -62,6 +63,9 @@ public class PCAModel extends Model {
     this.normSub = gramt.normSub();
     this.normMul = gramt.normMul();
   }
+
+  @Override public final PCA get_params() { return params; }
+  @Override public final Request2 job() { return get_params(); }
 
   public double[] sdev() { return sdev; }
   public double[][] eigVec() { return eigVec; }
@@ -117,6 +121,7 @@ public class PCAModel extends Model {
     if(title != null && !title.isEmpty()) DocGen.HTML.title(sb, title);
     DocGen.HTML.paragraph(sb, "Model Key: " + _key);
 
+    job().toHTML(sb);
     sb.append("<script type=\"text/javascript\" src='/h2o/js/d3.v3.min.js'></script>");
     sb.append("<div class='alert'>Actions: " + PCAScore.link(_key, "Score on dataset") + (_dataKey != null ? (", " + PCA.link(_dataKey, "Compute new model")):"") + "</div>");
     screevarString(sb);

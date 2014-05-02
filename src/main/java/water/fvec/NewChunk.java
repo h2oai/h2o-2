@@ -73,8 +73,8 @@ public class NewChunk extends Chunk {
     final Value v = new Value(lId,gId);
     final Value next = new Value(lId,gId);
     return new Iterator<Value>(){
-      public final boolean hasNext(){return next._gId < to;}
-      public final Value next(){
+      @Override public final boolean hasNext(){return next._gId < to;}
+      @Override public final Value next(){
         if(!hasNext())throw new NoSuchElementException();
         v._gId = next._gId; v._lId = next._lId;
         next._lId++;

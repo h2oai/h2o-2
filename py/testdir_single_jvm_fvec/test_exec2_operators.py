@@ -69,8 +69,7 @@ exprListFull = [
     "apply(r.1,2,function(x){total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt; ifelse(is.na(x),mean,x)})",
     "s.hex = r.1[!is.na(r.1[,13]),]",
     'r.1=apply(r.1,2,function(x){ifelse(is.na(x),0,x)})',
-    'cct.hex=runif(r.1);rTrain=r.1[cct.hex<=0.9,];rTest=r.1[cct.hex>0.9,]',
-    #******************************************************************************
+    'cct.hex=runif(r.1, -1);rTrain=r.1[cct.hex<=0.9,];rTest=r.1[cct.hex>0.9,]',
 
     # says you can't use col 0
     # 'r.1[,0] = r.1[,0] * r2.hex[,1]',
@@ -83,12 +82,13 @@ exprListFull = [
     # 'r.1 = r.1 + r2.hex[1,]',
 
     'r.1[,1]=r.1[,1]==1.0',
+    'r.1[,1]=r.1$C1==1.0',
     # unimplemented
     # 'r.1[1,]=r.1[1,]==1.0',
 
-    'b.hex=runif(r3.hex[,1])',
-    'b.hex=runif(r3.hex[1,])',
-
+    'b.hex=runif(r3.hex[,1], -1)',
+    'b.hex=runif(r3.hex$C1, -1)',
+    'b.hex=runif(r3.hex[1,], -1)',
     # 'r.1[,1]=r.1[,1] + 1.3',
     # 'r<n>.hex=min(r.1,1+2)',
     # 'r<n>.hex=r2.hex + 1',
@@ -147,11 +147,19 @@ exprListFull = [
     "r.1+1",     #  Broadcast scalar over ary
     "r.1-r.1",
     "1.23+(r.1-r.1)",
+    "1.23+(r.1$C1-r.1$C2)",
     "(1.23+r.1)-r.1",
+    "(1.23+r.1$C1)-r.1$C2",
     "min(r.1,1+2)",
+    "min(r.1$C1,1+2)",
     "is.na(r.1)",
+    "is.na(r.1$C1)",
     "nrow(r.1)*3",
+    "nrow(r.1$C1)*3",
     "r.1[nrow(r.1)-1,ncol(r.1)-1]",
+
+    # this would result in 0 for the col
+    # "r.1[nrow(r.1)-1,ncol(r.1$C1)-1]",
     # doesn't work
     # "1=2",
     # doesn't work
@@ -169,6 +177,7 @@ exprListFull = [
     ## "(r.1+1)<-2",
     "r.1[nrow(r.1),]",
     "r.1[,ncol(r.1)]",
+    "r.1[,ncol(r.1$C1)]",
     # double semi doesn't work
     # "r.1[2,3]<-4;",
     "c(1,3,5)",
@@ -178,6 +187,7 @@ exprListFull = [
     "sum(c(1,3,5))",
     "sum(4,c(1,3,5),2,6)",
     "sum(1,r.1,3)",
+    "sum(1,r.1$C1,3)",
     # unimplemented?
     "r.1[,c(1)]",
     "r.1[c(1),]",
@@ -187,6 +197,7 @@ exprListFull = [
     #  Filter/selection
     "r.1[r.1[,1]>4,]",
     "apply(r.1,2,sum)",
+    "apply(r.1$C1,2,sum)",
     # doesn't work
     # "y=5;apply(r.1,1,function(x){x[]+y})",
     # doesn't work
@@ -205,16 +216,22 @@ exprListFull = [
     # doesn't work
     # "apply(r.1,2,function(x){total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt; ifelse(is.na(x),mean,x)})",
     "factor(r.1[,5])",
+    "factor(r.1$C1)",
 
     #  Slice assignment & map
     "r.1[,1]",
+    "r.1$C1",
     "r.1[1,]",
     "r.1[,1]+1",
+    "r.1$C1+1",
     "r.1[1,]+1",
     "r.1[,1]=3.3;r.1",  #  Replace a col with a constant
+    # doesn't work
+    # "r.1$C1=3.3;r.1$C1",  #  Replace a col with a constant
     # unimplemented
     # "r.1[1,]=3.3;r.1",
     "r.1[,1]=r.1[,1]+1",#  Replace a col
+    # "r.1$C1=r.1$C1+1",#  Replace a col
     # returns 'unimplemented"
     # "r.1[1,]=r.1[1,]+1",
     "r.1[,ncol(r.1)+1]=4",#  Extend a col

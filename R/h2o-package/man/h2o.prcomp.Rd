@@ -8,7 +8,7 @@ Principal Components Analysis
 Performs principal components analysis on the given data set.
 }
 \usage{
-h2o.prcomp(data, tol = 0, ignored_cols = "", standardize = TRUE, retx = FALSE)
+h2o.prcomp(data, tol = 0, cols = "", standardize = TRUE, retx = FALSE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -18,8 +18,8 @@ h2o.prcomp(data, tol = 0, ignored_cols = "", standardize = TRUE, retx = FALSE)
   \item{tol}{
   (Optional) A value indicating the magnitude below which components should be omitted. (Components are omitted if their standard deviations are less than or equal to tol times the standard deviation of the first component.) With the default setting \code{tol = 0}, no components are omitted.
   }
-  \item{ignored_cols}{
-  (Optional) A vector of column names or indices indicating the features to ignore when performing PCA. By default, all columns in the dataset are analyzed.
+  \item{cols}{
+  (Optional) A vector of column names or indices indicating the features to perform PCA on. By default, all columns in the dataset are analyzed.
   }
   \item{standardize}{
   (Optional) A logical value indicating whether the variables should be shifted to be zero centered and scaled to have unit variance before the analysis takes place.

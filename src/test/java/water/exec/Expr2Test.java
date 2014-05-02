@@ -190,7 +190,7 @@ public class Expr2Test extends TestUtil {
       checkStr("mean=function(x){apply(x,2,sum)/nrow(x)};mean(h.hex)");
       checkStr("sum(apply(h.hex[,c(4,5)],1,mean))",184.96); // Row-wise apply on mean
 
-      // Conditional selection; 
+      // Conditional selection;
       checkStr("ifelse(0,1,2)",2);
       checkStr("ifelse(0,h.hex+1,h.hex+2)");
       checkStr("ifelse(h.hex>3,99,h.hex)"); // Broadcast selection
@@ -240,7 +240,7 @@ public class Expr2Test extends TestUtil {
 
       // Quantile
       checkStr("quantile(seq_len(10),seq_len(10)/10)");
-      checkStr("quantile(runif(seq_len(10000)),seq_len(10)/10)");
+      checkStr("quantile(runif(seq_len(10000),-1),seq_len(10)/10)");
       checkStr("quantile(h.hex[,4],c(0,.05,0.3,0.55,0.7,0.95,0.99))");
 
       // ddply error checks
@@ -283,8 +283,8 @@ public class Expr2Test extends TestUtil {
 
   void checkStr( String s ) {
     Env env=null;
-    try { 
-      env = Exec2.exec(s); 
+    try {
+      env = Exec2.exec(s);
       if( env.isAry() ) {       // Print complete frames for inspection
         Frame res = env.popAry();
         String skey = env.key();
@@ -293,7 +293,7 @@ public class Expr2Test extends TestUtil {
       } else {
         System.out.println( env.resultString() );
       }
-    } 
+    }
     catch( IllegalArgumentException iae ) { System.out.println(iae.getMessage()); }
     if( env != null ) env.remove_and_unlock();
     debug_print(s);

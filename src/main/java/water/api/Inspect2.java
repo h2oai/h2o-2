@@ -1,18 +1,18 @@
 package water.api;
 
+import hex.ReBalance;
 import hex.deeplearning.DeepLearning;
 import hex.drf.DRF;
 import hex.gbm.GBM;
 import hex.glm.GLM2;
-import java.text.DecimalFormat;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
-
 import water.*;
 import water.api.Inspect2.ColSummary.ColType;
 import water.fvec.*;
 import water.util.UIUtils;
+
 import java.text.DecimalFormat;
 
 public class Inspect2 extends Request2 {
@@ -24,7 +24,7 @@ public class Inspect2 extends Request2 {
   static final String DOC_GET = "Inspect a fluid-vec frame";
   static final String NA = ""; // not available information
 
-  @API(help="An existing H2O Frame key.", required=true, filter=Default.class)
+  @API(help="An existing H2O Frame key.", required=true, filter=Default.class, gridable=false)
   Frame src_key;
 
   @API(help="Offset to begin viewing rows, or -1 to see a structural representation of the data", filter=Default.class, lmin=-1, lmax=Long.MAX_VALUE)
@@ -111,11 +111,12 @@ public class Inspect2 extends Request2 {
               GBM.link(skey, "Distributed GBM") +", "+
               GLM2.link(skey, "Generalized Linear Modeling (beta)") +", "+
               DeepLearning.link(skey, "Deep Learning") +", "+
-              hex.LR2.link(skey, "Linear Regression") + ",<br>"+
+              hex.LR2.link(skey, "Linear Regression") + "<br>"+
               SummaryPage2.link(skey,"Summary")+", "+
               DownloadDataset.link(skey, "Download as CSV")+", "+
               ExportFiles.link(skey, "Export to file")+", "+
-              UIUtils.qlink(FrameSplitPage.class, skey, "Split frame") +
+              UIUtils.qlink(FrameSplitPage.class, skey, "Split frame") + ", " +
+              UIUtils.qlink(ReBalance.class, skey, "ReBalance frame (load balancing)") +
               "</div>");
     String _scrollto = String.valueOf(offset - 1);
       sb.append(
@@ -303,6 +304,9 @@ public class Inspect2 extends Request2 {
     return "<a href='/2/Inspect2.html?src_key=" + k.toString() + "&offset=-1'>info</a>";
   }
 
+  public static String link(Key k) {
+    return link(k.toString(), k.toString());
+  }
   public static String link(String txt,Key k) {
     return link(txt, k.toString());
   }

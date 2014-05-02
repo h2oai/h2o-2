@@ -2,10 +2,11 @@
 # 1) If can't connect and user doesn't want to start H2O, stop immediately
 # 2) If user does want to start H2O and running locally, attempt to bring up H2O launcher
 # 3) If user does want to start H2O, but running non-locally, print an error
-h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, Xmx = "1g", beta = FALSE) {
+h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, forceDL = FALSE, Xmx = "1g", beta = FALSE) {
   if(!is.character(ip)) stop("ip must be of class character")
   if(!is.numeric(port)) stop("port must be of class numeric")
   if(!is.logical(startH2O)) stop("startH2O must be of class logical")
+  if(!is.logical(forceDL)) stop("forceDL must be of class logical")
   if(!is.character(Xmx)) stop("Xmx must be of class character")
   if(!regexpr("^[1-9][0-9]*[gGmM]$", Xmx)) stop("Xmx option must be like 1g or 1024m")
   if(!is.logical(beta)) stop("beta must be of class logical")
@@ -16,7 +17,7 @@ h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, Xmx = "1g"
       stop(paste("Cannot connect to H2O server. Please check that H2O is running at", myURL))
     else if(ip == "localhost" || ip == "127.0.0.1") {
       cat("\nH2O is not running yet, starting it now...\n")
-      .h2o.startJar(Xmx, beta)
+      .h2o.startJar(Xmx, beta, forceDL)
       count = 0; while(!url.exists(myURL) && count < 60) { Sys.sleep(1); count = count + 1 }
       if(!url.exists(myURL)) stop("H2O failed to start, stopping execution.")
     } else stop("Can only start H2O launcher if IP address is localhost.")
@@ -158,7 +159,7 @@ h2o.clusterStatus <- function(client) {
 #     h2o.shutdown(new("H2OClient", ip=ip, port=port), FALSE)
 # }
 
-.h2o.startJar <- function(memory = "1g", beta = FALSE) {
+.h2o.startJar <- function(memory = "1g", beta = FALSE, forceDL = FALSE) {
   command <- .h2o.checkJava()
   
   #
@@ -185,7 +186,8 @@ h2o.clusterStatus <- function(client) {
     stderr <- paste("/tmp/h2o", usr, "started_from_r.err", sep="_")
   }
   
-  jar_file <- paste(.h2o.pkg.path, "java", "h2o.jar", sep = .Platform$file.sep)
+  # jar_file <- paste(.h2o.pkg.path, "java", "h2o.jar", sep = .Platform$file.sep)
+  jar_file <- .h2o.downloadJar(overwrite = forceDL)
   jar_file <- paste('"', jar_file, '"', sep = "")
   args <- c(paste("-Xms", memory, sep=""),
             paste("-Xmx", memory, sep=""),
@@ -246,14 +248,42 @@ h2o.clusterStatus <- function(client) {
   stop("Cannot find Java. Please install the latest JDK from http://www.oracle.com/technetwork/java/javase/downloads/index.html")
 }
 
-.h2o.downloadJar <- function(branch = "rel-kahan", version) {
-  if(missing(version))
-    version <- packageVersion("h2o")[1,4]
-  dest_file <- paste(.h2o.pkg.path, "java", "h2o.jar", sep = .Platform$file.sep)
-  if(!file.exists(dest_file)) {
-    if(version == '99999') stop("Cannot find ", dest_file, "\nPlease check that Makefile copied the jar correctly.")
-    h2o_url <- paste("http://s3.amazonaws.com/h2o-release/h2o", branch, version, "h2o.jar", sep = "/")
-    download.file(h2o_url, dest_file, mode = "wb")
+.h2o.downloadJar <- function(branch, version, overwrite = FALSE) {
+  if(missing(branch)) branch <- packageDescription("h2o")$Branch
+  if(missing(version)) version <- packageVersion("h2o")[1,4]
+  if(!is.logical(overwrite)) stop("overwrite must be TRUE or FALSE")
+  
+  dest_folder <- paste(.h2o.pkg.path, "java", sep = .Platform$file.sep)
+  if(!file.exists(dest_folder)) dir.create(dest_folder)
+  dest_file <- paste(dest_folder, "h2o.jar", sep = .Platform$file.sep)
+  
+  # Production version must exist on local drive
+  if(version == '99999') {
+    if(!file.exists(dest_file))
+      stop("Cannot find ", dest_file, "\nPlease check that Makefile copied the jar correctly.")
+    return(dest_file)
+  }
+  
+  # Download if h2o.jar doesn't already exist or user specifies force overwrite
+  if(overwrite || !file.exists(dest_file)) {
+    base_url <- paste("https://s3.amazonaws.com/h2o-release/h2o", branch, version, sep = "/")
+    h2o_url <- paste(base_url, "h2o.jar", sep = "/")
+    
+    # Save to temporary file first to protect against incomplete downloads
+    temp_file <- paste(dest_file, "tmp", sep = ".")
+    download.file(h2o_url, temp_file, mode = "wb", method = "curl")
+    if(!file.exists(temp_file))
+      stop("Error: Transfer failed. Please download ", h2o_url, " and place h2o.jar in ", dest_folder)
+    
+    # Check file integrity using MD5 checksum
+    md5_url <- paste(base_url, "h2o.jar.md5", sep = "/")
+    ttt <- getURLContent(md5_url)
+    md5_check <- readLines((tcon <- textConnection(ttt)))
+    close(tcon)
+    
+    if(md5sum(temp_file) != md5_check)
+      stop("Error: MD5 checksum of ", temp_file, " does not match ", md5_check)
+    file.rename(temp_file, dest_file)
   }
   return(dest_file)
 }

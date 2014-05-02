@@ -146,10 +146,11 @@ function makeGraph(json, svg) {
                 dd.setAttribute("id", "a")
                 document.body.appendChild(dd);
                 div.transition().duration(200).style("opacity", .95);
-                div.html("build:" + d[0] + "<br /> time: " + parseFloat(d[1]).toFixed(1) + "(s)")
+                div.html("build:" + d[0] + "<br /> test_name: " + d[2] + "<br /> time: " + parseFloat(d[1]).toFixed(1) + "(s)")
                 .style("left", (d3.event.pageX) + "px")
                 .style("top", (d3.event.pageY - 28) + "px")
-                .style("width", (dd.clientWidth + 1) + "px");
+                .style("height",(dd.clientHeight + 30) + "px")
+                .style("width", (dd.clientWidth + 100) + "px");
              })
               .on("mouseout", function(d) {
                   div.transition().duration(400).style("opacity", 0)})
@@ -176,8 +177,8 @@ function makeGraph(json, svg) {
         .size([width*2, height/2])
         //.gravity(0.5)
         .linkDistance(10)
-        .theta(.9)
-        .charge(-100)
+        .theta(1)
+        .charge(-1200)
         .on("tick", tick);
 
     for(i = 0; i < force.nodes().length; i++) {
@@ -198,29 +199,35 @@ function makeGraph(json, svg) {
     var node = svg.selectAll(".node")
         .data(force.nodes())
       .enter().append("g")
-        .attr("class", "node")
-        .on("mouseover", mouseover)
-        .on("mouseout", mouseout);
+        .attr("class", "node");
+        //.on("mouseover", mouseover)
+        //.on("mouseout", mouseout);
         //.call(force.drag);
 
     node.append("circle")
-        .attr("r", 3);
+        .attr("r", function(d) { 
+            if (d.isTarget) {
+                return 20;
+            } else { return 0;}
+         });
 
     node.append("text")
-        .attr("x", 4)
-        .attr("dy", ".35em")
+        .attr("text-anchor", "right")
+        //.attr("x", 4)
+        //.attr("dy", ".35em")
         .text(function(d) { return d.name; });
 
     function tick() {
       link
           .attr("x1", function(d) { return d.source.x; })
-          .attr("y1", function(d) { return d.source.y; })
+          .attr("y1", function(d) { return d.source.y; }) 
           .attr("x2", function(d) { return d.target.x; })
           .attr("y2", function(d) { return d.target.y; });
-      node
-          .attr("transform", function(d) { 
-              return "translate(" + d.x + "," + d.y + ")"; 
-           });
+    
+      node.attr("x", function(d) { return d.x = Math.max(20, Math.min(width - 20, d.x)); })
+        .attr("y", function(d) { return d.y = Math.max(20, Math.min(height - 20, d.y)); })
+        .attr("transform", function(d) { 
+              return "translate(" + d.x + "," + d.y + ")";});
     }
 
     function mouseover() {

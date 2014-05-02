@@ -34,8 +34,16 @@ public class DeepLearning extends Job.ValidatedJob {
    * model. This option allows users to build a new model as a
    * continuation of a previously generated model (e.g., by a grid search).
    */
-  @API(help = "Model checkpoint to resume training with.", filter= Default.class, json = true, gridable = false)
+  @API(help = "Model checkpoint to resume training with", filter= Default.class, json = true, gridable = false)
   public Key checkpoint;
+
+  /**
+   * If given, store the best model so far under this key.
+   * Model performance is measured by MSE for regression and overall
+   * error rate for classification (at F1-optimal threshold for binary classification).
+   */
+  @API(help = "Key to store the always-best model under", filter= Default.class, json = true, gridable = false)
+  public Key best_model_key = null;
 
   /**
    * Unlock expert mode parameters than can affect model building speed,
@@ -57,7 +65,7 @@ public class DeepLearning extends Job.ValidatedJob {
    *      training row. This effectively trains exponentially many models at
    *      once, and can improve generalization.
    */
-  @API(help = "Activation function", filter = Default.class, json = true, importance = ParamImportance.SECONDARY)
+  @API(help = "Activation function", filter = Default.class, json = true, importance = ParamImportance.CRITICAL)
   public Activation activation = Activation.Tanh;
 
   /**
@@ -107,7 +115,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * results. Note that deterministic sampling and initialization might
    * still lead to some weak sense of determinism in the model.
    */
-  @API(help = "Seed for random numbers (affects sampling) - Note: only reproducible when running single threaded", filter = Default.class, json = true, importance = ParamImportance.SECONDARY)
+  @API(help = "Seed for random numbers (affects sampling) - Note: only reproducible when running single threaded", filter = Default.class, json = true)
   public long seed = new Random().nextLong();
 
   /*Adaptive Learning Rate*/
@@ -188,7 +196,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * and the learning rate for the weights connecting the second and third hidden layer will be 0.0025, etc.
    * This parameter is only active if adaptive learning rate is disabled.
    */
-  @API(help = "Learning rate decay factor between layers (N-th layer: rate*alpha^(N-1))", filter = Default.class, dmin = 0, json = true, importance = ParamImportance.SECONDARY)
+  @API(help = "Learning rate decay factor between layers (N-th layer: rate*alpha^(N-1))", filter = Default.class, dmin = 0, json = true, importance = ParamImportance.EXPERT)
   public double rate_decay = 1.0;
 
   /*Momentum*/
@@ -343,7 +351,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * data scoring dataset. When the error is at or below this threshold, training
    * stops.
    */
-  @API(help = "Stopping criterion for regression error (MSE) on training data (-1 to disable)", filter = Default.class, dmin=-1, json = true, gridable = false)
+  @API(help = "Stopping criterion for regression error (MSE) on training data (-1 to disable)", filter = Default.class, dmin=-1, json = true, gridable = false, importance = ParamImportance.EXPERT)
   public double regression_stop = 1e-6;
 
   /**
@@ -401,7 +409,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * input features to the first two hidden layers.
    */
   @API(help = "Compute variable importances for input features (Gedeon method) - can be slow for large networks", filter = Default.class, json = true)
-  public boolean variable_importances = true;
+  public boolean variable_importances = false;
 
   /**
    * Enable fast mode (minor approximation in back-propagation), should not affect results significantly.
@@ -425,7 +433,7 @@ public class DeepLearning extends Job.ValidatedJob {
   /**
    * Replicate the entire training dataset onto every node for faster training on small datasets.
    */
-  @API(help = "Replicate the entire training dataset onto every node for faster training on small datasets", filter = Default.class, json = true)
+  @API(help = "Replicate the entire training dataset onto every node for faster training on small datasets", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
   public boolean replicate_training_data = true;
 
   /**
@@ -446,10 +454,10 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Enable shuffling of training data (recommended if training data is replicated and train_samples_per_iteration is close to #nodes x #rows)", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
   public boolean shuffle_training_data = false;
 
-  @API(help = "Sparse data handling (Experimental).", filter = Default.class, json = true)
+  @API(help = "Sparse data handling (Experimental).", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
   public boolean sparse = false;
 
-  @API(help = "Use a column major weight matrix for input layer. Can speed up forward propagation, but might slow down backpropagation (Experimental).", filter = Default.class, json = true)
+  @API(help = "Use a column major weight matrix for input layer. Can speed up forward propagation, but might slow down backpropagation (Experimental).", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
   public boolean col_major = false;
 
   public enum ClassSamplingMethod {
@@ -479,7 +487,6 @@ public class DeepLearning extends Job.ValidatedJob {
   transient final String [] expert_options = new String[] {
           "loss",
           "max_w2",
-          "warmup_samples",
           "score_training_samples",
           "score_validation_samples",
           "initial_weight_distribution",
@@ -511,6 +518,7 @@ public class DeepLearning extends Job.ValidatedJob {
 
   // the following parameters can be modified when restarting from a checkpoint
   transient final String [] cp_modifiable = new String[] {
+          "best_model_key",
           "expert_mode",
           "seed",
           "epochs",
@@ -709,7 +717,8 @@ public class DeepLearning extends Job.ValidatedJob {
         Log.warn("Automatically re-using ignored_cols from the checkpointed model.");
       }
       if ((validation!=null) != (previous.model_info().get_params().validation != null)
-              || (validation != null && !Arrays.equals(validation._key._kb, previous.model_info().get_params().validation._key._kb))) {
+              || (validation != null && validation._key != null && previous.model_info().get_params().validation._key != null
+              && !Arrays.equals(validation._key._kb, previous.model_info().get_params().validation._key._kb))) {
         throw new IllegalArgumentException("validation must be the same as for the checkpointed model.");
       }
       if (classification != previous.model_info().get_params().classification) {
@@ -730,7 +739,8 @@ public class DeepLearning extends Job.ValidatedJob {
             for (Field fB : B.getClass().getDeclaredFields()) {
               if (fA.equals(fB)) {
                 try {
-                  if (!fA.get(A).toString().equals(fB.get(B).toString())) {
+                  if (fB.get(B) == null || fA.get(A) == null || !fA.get(A).toString().equals(fB.get(B).toString())) { // if either of the two parameters is null, skip the toString()
+                    if (fA.get(A) == null && fB.get(B) == null) continue; //if both parameters are null, we don't need to do anything
                     Log.info("Applying user-requested modification of '" + fA.getName() + "': " + fA.get(A) + " -> " + fB.get(B));
                     fA.set(A, fB.get(B));
                   }
@@ -863,16 +873,6 @@ public class DeepLearning extends Job.ValidatedJob {
     }
   }
 
-  /**
-   * Incrementally train an existing model
-   * @param model Initial model
-   * @param epochs How many epochs to train for
-   * @return Updated model
-   */
-  public final DeepLearningModel trainModel(DeepLearningModel model, double epochs) {
-    model.model_info().get_params().epochs += epochs;
-    return trainModel(model);
-  }
 
   /**
    * Helper to update a Frame and adding it to the local trash at the same time
@@ -954,12 +954,16 @@ public class DeepLearning extends Job.ValidatedJob {
               new DeepLearningTask(model.model_info(), rowUsageFraction).doAll(train).model_info()); //distributed data (always in multi-node mode)
       while (model.doScoring(train, trainScoreFrame, validScoreFrame, self(), getValidAdaptor()));
 
+      state = JobState.DONE; //for JSON REST response
+      model.get_params().state = state; //for parameter JSON on the HTML page
       Log.info("Finished training the Deep Learning model.");
       return model;
     }
     catch(JobCancelledException ex) {
-      Log.info("Deep Learning model building was cancelled.");
       model = UKV.get(dest());
+      state = JobState.CANCELLED; //for JSON REST response
+      model.get_params().state = state; //for parameter JSON on the HTML page
+      Log.info("Deep Learning model building was cancelled.");
       return model;
     }
     finally {

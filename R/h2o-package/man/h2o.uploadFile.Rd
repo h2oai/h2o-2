@@ -12,7 +12,7 @@ Uploads a file from the local drive and parses it, returning an object containin
 \usage{
 ## Default method:
 h2o.uploadFile(object, path, key = "", parse = TRUE, header, 
-  sep = "", col.names, silent = TRUE, version = 1)
+  sep = "", col.names, silent = TRUE, version = 2)
 
 ## Import to a ValueArray object:
 h2o.uploadFile.VA(object, path, key = "", parse = TRUE, header, 

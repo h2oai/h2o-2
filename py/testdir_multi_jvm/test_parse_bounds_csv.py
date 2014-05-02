@@ -113,10 +113,10 @@ class Basic(unittest.TestCase):
                     iColNameToOffset[iName] = iOffset
                     # just touching to make sure they are there
                     num_missing_values = iColDict['num_missing_values']
-                    iMin = iColDict['min']
-                    iMax = iColDict['max']
-                    iMean = iColDict['mean']
-                    iVariance = iColDict['variance']
+                    iMin = float(iColDict['min'])
+                    iMax = float(iColDict['max'])
+                    iMean = float(iColDict['mean'])
+                    iVariance = float(iColDict['variance'])
 
                 # SUMMARY********************************
                 summaryResult = h2o_cmd.runSummary(key=hex_key, max_column_display=colCount, timeoutSecs=timeoutSecs)

@@ -113,6 +113,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   private transient int [] _activeCols;
   private DataInfo _activeData;
   public GLMParams _glm;
+  private boolean _grid;
 
   private double ADMM_GRAD_EPS = 1e-4; // default addm gradietn eps
   private static final double MIN_ADMM_GRAD_EPS = 1e-5; // min admm gradient eps
@@ -249,11 +250,11 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     return rs.toString();
   }
 
-  public static Job gridSearch(Key jobKey, Key destinationKey, DataInfo dinfo, GLMParams glm, double [] lambda, double [] alpha, int nfolds){
-    return gridSearch(jobKey, destinationKey, dinfo, glm, lambda, alpha,nfolds,DEFAULT_BETA_EPS);
+  public static Job gridSearch(Key jobKey, Key destinationKey, DataInfo dinfo, GLMParams glm, double [] lambda, boolean lambda_search, double [] alpha, boolean higher_accuracy, int nfolds){
+    return gridSearch(jobKey, destinationKey, dinfo, glm, lambda,lambda_search, alpha,higher_accuracy, nfolds,DEFAULT_BETA_EPS);
   }
-  public static Job gridSearch(Key jobKey, Key destinationKey, DataInfo dinfo, GLMParams glm, double [] lambda, double [] alpha, int nfolds, double betaEpsilon){
-    return new GLMGridSearch(4, jobKey, destinationKey,dinfo,glm,lambda,alpha, nfolds,betaEpsilon).fork();
+  public static Job gridSearch(Key jobKey, Key destinationKey, DataInfo dinfo, GLMParams glm, double [] lambda, boolean lambda_search, double [] alpha, boolean high_accuracy, int nfolds, double betaEpsilon){
+    return new GLMGridSearch(4, jobKey, destinationKey,dinfo,glm,lambda, lambda_search, alpha, high_accuracy, nfolds,betaEpsilon).fork();
   }
 
   protected void complete(){
@@ -268,7 +269,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       _model.update(self());
     }
     _model.unlock(self());
-    if( _dinfo._nfolds == 0 ) remove(); // Remove/complete job only for top-level, not xval GLM2s
+    if( _dinfo._nfolds == 0 && !_grid)remove(); // Remove/complete job only for top-level, not xval GLM2s
+    state = JobState.DONE;
     if(_fjtask != null)_fjtask.tryComplete();
   }
 
@@ -311,9 +313,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     tweedie_link_power = 1 - tweedie_variance_power;// TODO
     _glm = new GLMParams(family, tweedie_variance_power, link, tweedie_link_power);
     if(alpha.length > 1) { // grid search
-      if(destination_key == null)destination_key = Key.make("GLMGridModel_"+Key.make());
-      if(job_key == null)job_key = Key.make("GLMGridJob_"+Key.make());
-      Job j = gridSearch(self(),destination_key, _dinfo, _glm, lambda, alpha,n_folds);
+      if(destination_key == null)destination_key = Key.make("GLMGridResults_"+Key.make());
+      if(job_key == null)job_key = Key.make((byte) 0, Key.JOB, H2O.SELF);;
+      Job j = gridSearch(self(),destination_key, _dinfo, _glm, lambda, lambda_search, alpha, higher_accuracy, n_folds);
       return GLMGridView.redirect(this,j.dest());
     } else {
       if(destination_key == null)destination_key = Key.make("GLMModel_"+Key.make());
@@ -826,20 +828,26 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       _startTime = System.currentTimeMillis();
     }
   }
+
+
   public static class GLMGridSearch extends Job {
     public final int _maxParallelism;
     transient private AtomicInteger _idx;
 
     public final GLM2 [] _jobs;
 
-    public GLMGridSearch(int maxP, Key jobKey, Key dstKey, DataInfo dinfo, GLMParams glm, double [] lambdas, double [] alphas, int nfolds, double betaEpsilon){
+    public GLMGridSearch(int maxP, Key jobKey, Key dstKey, DataInfo dinfo, GLMParams glm, double [] lambdas, boolean lambda_search, double [] alphas, boolean high_accuracy, int nfolds, double betaEpsilon){
       super(jobKey, dstKey);
       description = "GLM Grid with params " + glm.toString() + "on data " + dinfo.toString() ;
       _maxParallelism = maxP;
       _jobs = new GLM2[alphas.length];
       _idx = new AtomicInteger(_maxParallelism);
-      for(int i = 0; i < _jobs.length; ++i)
+      for(int i = 0; i < _jobs.length; ++i) {
         _jobs[i] = new GLM2("GLM grid(" + i + ")",self(),Key.make(dstKey.toString() + "_" + i),dinfo,glm,lambdas,alphas[i], nfolds, betaEpsilon,self());
+        _jobs[i]._grid = true;
+        _jobs[i].lambda_search = lambda_search;
+        _jobs[i].higher_accuracy = high_accuracy;
+      }
     }
 
     @Override public float progress(){
@@ -851,7 +859,12 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     public Job fork(){
       DKV.put(destination_key, new GLMGrid(self(),_jobs));
       assert _maxParallelism >= 1;
-      final H2OCountedCompleter fjt = new H2O.H2OEmptyCompleter();
+      final H2OCountedCompleter fjt = new H2OCallback<ParallelGLMs>() {
+        @Override public void callback(ParallelGLMs pgs){
+
+          remove();
+        }
+      };
       start(fjt);
       H2O.submitTask(new ParallelGLMs(this,_jobs,H2O.CLOUD.size(),fjt));
       return this;
@@ -862,7 +875,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       return Response.redirect( this, n, "job_key", job_key, "destination_key", destination_key);
     }
   }
-  public boolean isDone(){return DKV.get(self()) == null;}
+
 
   // class to execute multiple GLM runs in parllell
   // (with  user-given limit on how many to run in in parallel)
@@ -882,6 +895,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       new RPC(H2O.CLOUD._memary[nodeId],new DTask() {
         @Override
         public void compute2() {
+
           glm.run(this);
         }
       }).addCompleter(new Callback()).call();
@@ -894,7 +908,12 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           forkDTask(_glms.length - i);
         else if(_doneCnt.getAndDecrement() == 0) // am I the last guy to finish? if so complete parent.
           ParallelGLMs.this.tryComplete();
-        // else just done myself (no more work) but others stillin progress -> just return
+        // else just done myself (no more work) but others still in progress -> just return
+      }
+      @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
+        ex.printStackTrace();
+        _job.cancel(ex);
+        return true;
       }
     }
     @Override public void compute2(){

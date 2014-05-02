@@ -3,6 +3,7 @@ package water.api;
 import java.util.HashMap;
 import java.util.Map;
 
+import hex.glm.GLM2;
 import water.*;
 import water.fvec.Frame;
 import water.util.RString;
@@ -30,9 +31,10 @@ public class Inspector extends Request2 {
     REDIRECTS.put(Frame.class,    sa("/2/Inspect2",      "src_key"));
     // All attempts to view a model redirect to <model_name>View
     REDIRECTS.put(Model.class,    sa("/2/%typename{}View", "_modelKey"));
+    REDIRECTS.put(GLM2.GLMGrid.class, sa("/2/GLMGridView", "grid_key"));
   }
 
-  @API(help="H2O key to inspect.", filter=Default.class, json=true, required=true)
+  @API(help="H2O key to inspect.", filter=Default.class, json=true, required=true, gridable=false)
   Key src_key;
 
   @Override protected Response serve() {

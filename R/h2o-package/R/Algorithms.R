@@ -334,7 +334,7 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, response = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, beta_epsilon = epsilon, standardize = as.numeric(standardize), max_iter = iter.max, higher_accuracy = as.numeric(higher_accuracy), lambda_search = as.numeric(lambda_search), tweedie_variance_power = tweedie.p)
   else if(family == "binomial") {
     if(missing(prior)) prior = -1
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, response = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, beta_epsilon = epsilon, standardize = as.numeric(standardize), max_iter = iter.max, higher_accuracy = as.numeric(high_accuracy), lambda_search = as.numeric(lambda_search), prior = prior)
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, response = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, beta_epsilon = epsilon, standardize = as.numeric(standardize), max_iter = iter.max, higher_accuracy = as.numeric(higher_accuracy), lambda_search = as.numeric(lambda_search), prior = prior)
   }
   else
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, response = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, beta_epsilon = epsilon, standardize = as.numeric(standardize), max_iter = iter.max, higher_accuracy = as.numeric(higher_accuracy), lambda_search = as.numeric(lambda_search))
@@ -818,6 +818,13 @@ h2o.deeplearning <- function(x, y, data, classification = TRUE, validation,
   result$train_sqr_error = errs$train_mse
   result$valid_class_error = errs$valid_err
   result$valid_sqr_error = errs$valid_mse
+
+  if(!is.null(errs$validAUC)) {
+      tmp <- .h2o.__getPerfResults(errs$validAUC)
+      tmp$confusion <- NULL 
+      result <- c(result, tmp) 
+    }
+
   return(result)
 }
 
@@ -939,22 +946,25 @@ h2o.pcr <- function(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda 
 }
 
 # ----------------------------------- Random Forest --------------------------------- #
-h2o.randomForest <- function(x, y, data, classification = TRUE, ntree = 50, depth = 20, sample.rate = 2/3, classwt = NULL, nbins = 100, seed = -1, importance = FALSE, validation, nodesize = 1, use_non_local = TRUE, version = 2) {
+h2o.randomForest <- function(x, y, data, classification = TRUE, ntree = 50, depth = 20, sample.rate = 2/3,
+    classwt = NULL, nbins = 100, seed = -1, importance = FALSE, validation, nodesize = 1,
+    balance.classes = FALSE, max.after.balance.size = 5, use_non_local = TRUE, version = 2) {
   if(version == 1) {
     if(!missing(validation)) stop("validation not supported under ValueArray")
     if(nodesize != 1) stop("Random forest under ValueArray only runs on a single node")
     if(importance) stop("variable importance not supported under ValueArray")
     if(!classification) stop("regression not supported under ValueArray")
+    if(balance.classes) stop("balance.classes not supported under ValueArray")
     h2o.randomForest.VA(x, y, data, ntree, depth, sample.rate, classwt, nbins, seed, use_non_local)
   } else if(version == 2) {
-    if(!is.null(classwt)) stop("classwt not supported under FluidVecs")
-    h2o.randomForest.FV(x, y, data, classification, ntree, depth, sample.rate, nbins, seed, importance, validation, nodesize)
+    if(!is.null(classwt)) stop("classwt not supported under FluidVecs - use balance_classes=TRUE instead.")
+    h2o.randomForest.FV(x, y, data, classification, ntree, depth, sample.rate, nbins, seed, importance, validation, nodesize, balance.classes, max.after.balance.size)
   } else
     stop("version must be either 1 (ValueArray) or 2 (FluidVecs)")
 }
 
 # -------------------------- ValueArray -------------------------- #
-h2o.randomForest.VA <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3, classwt=NULL, nbins=100, seed=-1, use_non_local=TRUE) {
+h2o.randomForest.VA <- function(x, y, data, ntree=50, depth=20, sample.rate=2/3, classwt=NULL, nbins=100, seed=-1, use_non_local=TRUE) {
   if(class(data) != "H2OParsedDataVA")
     stop("data must be of class H2OParsedDataVA. Please import data via h2o.importFile.VA or h2o.importFolder.VA")
 
@@ -1011,7 +1021,7 @@ h2o.randomForest.VA <- function(x, y, data, ntree=50, depth=50, sample.rate=2/3,
 }
 
 # -------------------------- FluidVecs -------------------------- #
-h2o.randomForest.FV <- function(x, y, data, classification=TRUE, ntree=50, depth=20, sample.rate=2/3, nbins=100, seed=-1, importance=FALSE, validation, nodesize=1) {
+h2o.randomForest.FV <- function(x, y, data, classification=TRUE, ntree=50, depth=20, sample.rate=2/3, nbins=100, seed=-1, importance=FALSE, validation, nodesize=1, balance.classes=FALSE, max.after.balance.size=5) {
   args <- .verify_dataxy(data, x, y)
   if(!is.logical(classification)) stop("classification must be logical (TRUE or FALSE)")
   if(!is.numeric(ntree)) stop('ntree must be a number')
@@ -1031,12 +1041,17 @@ h2o.randomForest.FV <- function(x, y, data, classification=TRUE, ntree=50, depth
   if(!is.numeric(nodesize)) stop('nodesize must be a number')
   if( any(nodesize < 1) ) stop('nodesize must be >= 1')
 
+  if(!is.logical(balance.classes)) stop('balance.classes must be logical (TRUE or FALSE)')
+  if(!is.numeric(max.after.balance.size)) stop('max.after.balance.size must be a number')
+  if( any(max.after.balance.size <= 0) ) stop('max.after.balance.size must be >= 0')
+  if(balance.classes && !classification) stop('balance.classes can only be used for classification')
+
   # NB: externally, 1 based indexing; internally, 0 based
   cols <- paste(args$x_i - 1, collapse=',')
-  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRF, source=data@key, response=args$y, cols=cols, ntrees=ntree, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, seed=seed, importance=as.numeric(importance), classification=as.numeric(classification))
-  params = list(x=args$x, y=args$y, ntree=ntree, depth=depth, sample.rate=sample.rate, nbins=nbins, importance=importance)
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRF, source=data@key, response=args$y, cols=cols, ntrees=ntree, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, seed=seed, importance=as.numeric(importance), classification=as.numeric(classification), validation=validation@key, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size))
+  params = list(x=args$x, y=args$y, ntree=ntree, depth=depth, sample.rate=sample.rate, nbins=nbins, importance=importance, balance.classes=balance.classes, max.after.balance.size=max.after.balance.size)
 
-  if(length(ntree) == 1 && length(depth) == 1 && length(nodesize) == 1 && length(sample.rate) == 1 && length(nbins) == 1) {
+  if(length(ntree) == 1 && length(depth) == 1 && length(nodesize) == 1 && length(sample.rate) == 1 && length(nbins) == 1 && length(max.after.balance.size) == 1) {
     .h2o.__waitOnJob(data@h2o, res$job_key)
     # while(!.h2o.__isDone(data@h2o, "RF2", res)) { Sys.sleep(1) }
     res2 = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRFModelView, '_modelKey'=res$destination_key)
@@ -1056,6 +1071,8 @@ h2o.randomForest.FV <- function(x, y, data, classification=TRUE, ntree=50, depth
   mySum$max_depth = res$max_depth
   mySum$min_rows = res$min_rows
   mySum$nbins = res$nbins
+  mySum$balance_classes = res$balance_classes
+  mySum$max_after_balance_size = res$max_after_balance_size
 
   # temp = matrix(unlist(res$cm), nrow = length(res$cm))
   # mySum$prediction_error = 1-sum(diag(temp))/sum(temp)
@@ -1070,6 +1087,8 @@ h2o.randomForest.FV <- function(x, y, data, classification=TRUE, ntree=50, depth
   params$nbins = res$nbins
   params$sample.rate = res$sample_rate
   params$classification = ifelse(res$parameters$classification == "true", TRUE, FALSE)
+  params$balance.classes = res$balance_classes
+  params$max.after.balance.size = res$max_after_balance_size
 
   result$params = params
   treeStats = unlist(res$treeStats)
@@ -1100,7 +1119,18 @@ h2o.randomForest.FV <- function(x, y, data, classification=TRUE, ntree=50, depth
 }
 
 # -------------------------- SpeeDRF -------------------------- #
-h2o.SpeeDRF <- function(x, y, data, classification=TRUE, ntree=50, depth=50, sample.rate=2/3, nbins=1024, seed=78483418294, validation, stat.type="ENTROPY") {
+h2o.SpeeDRF <- function(x, y, data, classification=TRUE, validation,
+                        mtry=-1, 
+                        ntree=50, 
+                        depth=50, 
+                        sample.rate=2/3,
+                        oobee = TRUE,
+                        nbins=1024, 
+                        seed=-1,
+                        stat.type="ENTROPY",
+                        classwt=NULL,
+                        sampling_strategy = "RANDOM",
+                        strata_samples=NULL) {
   args <- .verify_dataxy(data, x, y)
   if(!is.numeric(ntree)) stop('ntree must be a number')
   if( any(ntree < 1) ) stop('ntree must be >= 1')
@@ -1110,15 +1140,30 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, ntree=50, depth=50, sam
   if( any(sample.rate < 0 || sample.rate > 1) ) stop('sample.rate must be between 0 and 1')
   if(!is.numeric(nbins)) stop('nbins must be a number')
   if( any(nbins < 1)) stop('nbins must be an integer >= 1')
-  if(!is.numeric(seed)) stop("seed must be an integer >= 0")
+  if(!is.numeric(seed)) stop("seed must be an integer")
+  if(!(stat.type %in% c("ENTROPY", "GINI"))) stop(paste("stat.type must be either GINI or ENTROPY. Input was: ", stat.type, sep = ""))
+  if(!(is.logical(oobee))) stop(paste("oobee must be logical (TRUE or FALSE). Input was: ", oobee, " and is of type ", mode(oobee), sep = ""))
+  if(!(sampling_strategy %in% c("RANDOM", "STRATIFIED"))) stop(paste("sampling_strategy must be either RANDOM or STRATIFIED. Input was: ", sampling_strategy, sep = ""))
+  
+  if(!missing(ntree) && length(ntree) > 1 || !missing(depth) && length(depth) > 1 || !missing(sample.rate) && length(sample.rate) > 1 || !missing(nbins) && length(nbins) > 1) 
+    stop("Random forest grid search not supported under SpeeDRF")
 
+  if(!is.numeric(classwt) && !is.null(classwt)) stop("classwt must be numeric")
+  if(!is.null(classwt)) {
+    if(any(classwt) < 0) stop("Class weights must all be positive")
+  }
+  if(!is.null(strata_samples)) {
+    if(any(strata_samples) < 0) stop("Strata samples must all be positive")
+  }
   if(missing(validation)) validation <- data 
   else if(!class(validation) %in% c("H2OParsedData")) stop("validation must be an H2O parsed dataset!")
 
   # NB: externally, 1 based indexing; internally, 0 based
   cols <- paste(args$x_i - 1, collapse=',')
-  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, response=args$y, cols=cols, num_trees=ntree, max_depth=depth, sample=sample.rate, bin_limit=nbins, seed=seed, stat_type = stat.type)
-  params = list(x=args$x, y=args$y, ntree=ntree, depth=depth, sample.rate=sample.rate, bin_limit=nbins, stat.type = stat.type)
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, response=args$y, cols=cols, num_trees=ntree, max_depth=depth, 
+                          sample=sample.rate, bin_limit=nbins, seed=seed, stat_type = stat.type, oobee=as.numeric(oobee), sampling_strategy=sampling_strategy, strata_samples=strata_samples, class_weights=classwt)
+
+  params = list(x=args$x, y=args$y, ntree=ntree, depth=depth, sample.rate=sample.rate, bin_limit=nbins, stat.type = stat.type, classwt=classwt, sampling_strategy=sampling_strategy, seed=seed, oobee = oobee)
 
   if(length(ntree) == 1 && length(depth) == 1 && length(sample.rate) == 1 && length(nbins) == 1) { 
     .h2o.__waitOnJob(data@h2o, res$job_key)
@@ -1146,14 +1191,10 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, ntree=50, depth=50, sam
 
 .h2o.__getSpeeDRFResults <- function(res, params) {
   result = list()
-  params$ntree = res$total_trees
-  params$depth = res$depth
-  params$nbins = res$bin_limit
-  params$sample.rate = res$sample
+  params$ntree = res$N
+  params$depth = res$max_depth
+  params$nbins = res$nbins
   params$classification = TRUE
-  params$oobee = res$oobee
-  params$seed = res$zeed
-  params$stat.type = res$statType
 
   result$params = params
   #treeStats = unlist(res$treeStats)
@@ -1172,7 +1213,7 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, ntree=50, depth=50, sam
     #}
 
     class_names = tail(res$'_domains', 1)[[1]]
-    result$confusion = .build_cm(res$'cm', class_names)
+    result$confusion = .build_cm(tail(res$cms, 1)[[1]]$'_arr', class_names)
   }
 
   return(result)
@@ -1242,13 +1283,14 @@ h2o.hitRatio <- function(prediction, reference, k = 10, seed = 0) {
   return(temp)
 }
 
-h2o.gapStatistic <- function(data, cols = "", B = 100, k = 10, seed = 0) {
+h2o.gapStatistic <- function(data, cols = "", K.max = 10, B = 100, boot_frac = 0.33, seed = 0) {
   args <- .verify_datacols(data, cols)
-  if(!is.numeric(B) || B < 1) stop("brep must be an integer greater than 0")
-  if(!is.numeric(k) || k < 2) stop("k must be an integer greater than 1")
+  if(!is.numeric(B) || B < 1) stop("B must be an integer greater than 0")
+  if(!is.numeric(K.max) || K.max < 2) stop("K.max must be an integer greater than 1")
+  if(!is.numeric(boot_frac) || boot_frac < 0 || boot_frac > 1) stop("boot_frac must be a number between 0 and 1")
   if(!is.numeric(seed)) stop("seed must be numeric")
   
-  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GAPSTAT, source = data@key, b_max = B, k_max = k, seed = seed)
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GAPSTAT, source = data@key, b_max = B, k_max = K.max, bootstrap_fraction = boot_frac, seed = seed)
   .h2o.__waitOnJob(data@h2o, res$job_key)
   res2 = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GAPSTATVIEW, '_modelKey' = res$destination_key)
   
@@ -1257,6 +1299,7 @@ h2o.gapStatistic <- function(data, cols = "", B = 100, k = 10, seed = 0) {
   result$boot_within_ss = res2$gap_model$wkbs
   result$se_boot_within_ss = res2$gap_model$sk
   result$gap_stats = res2$gap_model$gap_stats
+  result$k_opt = res2$gap_model$k_best
   return(result)
 }
 

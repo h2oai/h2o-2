@@ -107,8 +107,9 @@ usePackage("R.utils")
 usePackage("penalized")
 
 # these came from source('../findNSourceUtils.R')
-usePackage("glmnet")
+usePackage("expm")
 usePackage("Matrix")
+usePackage("glmnet")
 usePackage("survival")
 usePackage("gbm")
 # usePackage("splines")
@@ -137,4 +138,4 @@ else
 fi
 
 echo "If RCurl didn't install, you probably need libcurl-devel. ('sudo yum install libcurl-devel' on centos). libcurl not enough?"
-echo "you might want to check 'apt-get install libatlas-dev libblas-dev' for liblinear also"
+echo "you might want to check 'apt-get install libatlas-dev libblas-dev' for liblinear also, and lapack for Matrix"

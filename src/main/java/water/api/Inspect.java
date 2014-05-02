@@ -255,10 +255,14 @@ public class Inspect extends Request {
       json.addProperty(SIZE, Math.abs(c._size));
       json.addProperty(BASE, c._base);
       json.addProperty(SCALE, (int) c._scale);
-      json.addProperty(MIN,  c.isEnum() ? Double.NaN : c._min);
-      json.addProperty(MAX,  c.isEnum() ? Double.NaN : c._max);
-      json.addProperty(MEAN, c.isEnum() ? Double.NaN : c._mean);
-      json.addProperty(VARIANCE, c.isEnum() ? Double.NaN : c._sigma);
+      if(c.isEnum() || Double.isNaN(c._min)) json.addProperty(MIN, "\"NaN\"");
+      else json.addProperty(MIN, c._min);
+      if(c.isEnum() || Double.isNaN(c._max)) json.addProperty(MAX, "\"NaN\"");
+      else json.addProperty(MAX, c._max);
+      if(c.isEnum() || Double.isNaN(c._mean)) json.addProperty(MEAN, "\"NaN\"");
+      else json.addProperty(MEAN, c._mean);
+      if(c.isEnum() || Double.isNaN(c._sigma)) json.addProperty(VARIANCE, "\"NaN\"");
+      else json.addProperty(VARIANCE, c._sigma);
       json.addProperty(NUM_MISSING_VALUES, va._numrows - c._n);
       json.addProperty(TYPE, c.isEnum() ? "enum" : (c.isFloat() ? "float" : "int"));
       json.addProperty(ENUM_DOMAIN_SIZE, c.isEnum() ? c._domain.length : 0);

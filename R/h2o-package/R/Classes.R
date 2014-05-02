@@ -187,6 +187,25 @@ setMethod("show", "H2ODRFModel", function(object) {
   cat("\nMean-squared Error by tree:\n"); print(model$mse)
 })
 
+setMethod("show", "H2OSpeeDRFModel", function(object) {
+  print(object@data)
+  cat("SpeeDRF Model Key:", object@key)
+
+  model = object@model
+  cat("\n\nClassification:", model$params$classification)
+  cat("\nNumber of trees:", model$params$ntree)
+  cat("\nTree statistics:", NA)
+  
+  if(FALSE){ #model$params$oobee) {
+    cat("\nConfusion matrix:\n"); cat("Reported on oobee from", object@valid@key, "\n")
+  } else {
+    cat("\nConfusion matrix:\n"); cat("Reported on", object@valid@key,"\n")
+  }
+  print(model$confusion)
+  
+  cat("\nMean-squared Error by tree:\n"); print(model$mse)
+})
+
 setMethod("show", "H2OPCAModel", function(object) {
   print(object@data)
   cat("PCA Model Key:", object@key)
@@ -253,6 +272,9 @@ month <- function(x) UseMethod('month', x)
 month.H2OParsedData <- h2o.month
 
 diff.H2OParsedData <- function(x, lag = 1, differences = 1, ...) {
+  if(!is.numeric(lag)) stop("lag must be numeric")
+  if(!is.numeric(differences)) stop("differences must be numeric")
+  
   expr = paste("diff(", paste(x@key, lag, differences, sep = ","), ")", sep = "")
   res = .h2o.__exec2(x@h2o, expr)
   new("H2OParsedData", h2o=x@h2o, key=res$dest_key, logic=FALSE)
@@ -381,14 +403,16 @@ h2o.unique <- function(x, incomparables = FALSE, ...){
 }
 unique.H2OParsedData <- h2o.unique
 
-h2o.runif <- function(x, min = 0, max = 1) {
+h2o.runif <- function(x, min = 0, max = 1, seed = -1) {
   if(missing(x)) stop("Must specify data set")
   if(!inherits(x, "H2OParsedData")) stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
   if(!is.numeric(min)) stop("min must be a single number")
   if(!is.numeric(max)) stop("max must be a single number")
   if(length(min) > 1 || length(max) > 1) stop("Unimplemented")
   if(min > max) stop("min must be a number less than or equal to max")
-  expr = paste("runif(", x@key, ")*(", max - min, ")+", min, sep = "")
+  if(!is.numeric(seed)) stop("seed must be an integer >= 0")
+  
+  expr = paste("runif(", x@key, ",", seed, ")*(", max - min, ")+", min, sep = "")
   res = .h2o.__exec2(x@h2o, expr)
   if(res$num_rows == 0 && res$num_cols == 0)
     return(res$scalar)
@@ -543,7 +567,10 @@ setMethod("[<-", "H2OParsedData", function(x, i, j, ..., value) {
   }
 
   # rhs = ifelse(class(value) == "H2OParsedData", value@key, paste("c(", paste(value, collapse = ","), ")", sep=""))
-  rhs = ifelse(inherits(value, "H2OParsedData"), value@key, paste("c(", paste(value, collapse = ","), ")", sep=""))
+  if(inherits(value, "H2OParsedData"))
+    rhs = value@key
+  else
+    rhs = ifelse(length(value) == 1, value, paste("c(", paste(value, collapse = ","), ")", sep=""))
   res = .h2o.__exec2(x@h2o, paste(lhs, "=", rhs))
   return(new("H2OParsedData", h2o=x@h2o, key=x@key))
 })
@@ -558,7 +585,10 @@ setMethod("$<-", "H2OParsedData", function(x, name, value) {
  
   lhs = paste(x@key, "[,", ifelse(is.na(idx), numCols+1, idx), "]", sep = "")
   # rhs = ifelse(class(value) == "H2OParsedData", value@key, paste("c(", paste(value, collapse = ","), ")", sep=""))
-  rhs = ifelse(inherits(value, "H2OParsedData"), value@key, paste("c(", paste(value, collapse = ","), ")", sep=""))
+  if(inherits(value, "H2OParsedData"))
+    rhs = value@key
+  else
+    rhs = ifelse(length(value) == 1, value, paste("c(", paste(value, collapse = ","), ")", sep=""))
   res = .h2o.__exec2(x@h2o, paste(lhs, "=", rhs))
   
   if(is.na(idx))
@@ -566,26 +596,17 @@ setMethod("$<-", "H2OParsedData", function(x, name, value) {
   return(new("H2OParsedData", h2o=x@h2o, key=x@key))
 })
 
-`[[.H2OParsedData` <- function(x, ..., exact = TRUE) {
-  if( missing(x) ) stop('must specify x')
-  if( !class(x) == 'H2OParsedData') stop('x is the wrong class')
+setMethod("[[", "H2OParsedData", function(x, i, exact = TRUE) {
+  if(missing(i)) return(x)
+  if(length(i) > 1) stop("[[]] may only select one column")
+  if(!i %in% colnames(x) ) return(NULL)
+  x[, i]
+})
 
-  cols <- sapply(as.list(...), function(x) x)
-  if( length(cols) == 0 )
-    return(x)
-  if( length(cols) > 1 ) stop('[[]] may only select one column')
-  if( ! cols[1] %in% colnames(x) )
-    return(NULL)
-
-  x[, cols]
-}
-
-`[[<-.H2OParsedData` <- function(x, i, j, value) {
-  if( missing(x) ) stop('must specify x')
-  if( !inherits(x, 'H2OParsedData')) stop('x is the wrong class')
-  if( !inherits(value, 'H2OParsedData')) stop('can only append H2O data to H2O data')
-  if( ncol(value) > 1 ) stop('may only set a single column')
-  if( nrow(value) != nrow(x) ) stop(sprintf('replacement has %d row, data has %d', nrow(value), nrow(x)))
+setMethod("[[<-", "H2OParsedData", function(x, i, value) {
+  if( !inherits(value, 'H2OParsedData')) stop('Can only append H2O data to H2O data')
+  if( ncol(value) > 1 ) stop('May only set a single column')
+  if( nrow(value) != nrow(x) ) stop(sprintf('Replacement has %d row, data has %d', nrow(value), nrow(x)))
 
   mm <- match.call()
   col_name <- as.list(i)[[1]]
@@ -599,10 +620,12 @@ setMethod("$<-", "H2OParsedData", function(x, name, value) {
     colnames(x) <- cc
   }
   x
-}
+})
 
 # Note: right now, all things must be H2OParsedData
-cbind.H2OParsedData <- function(...) {
+cbind.H2OParsedData <- function(..., deparse.level = 1) {
+  if(deparse.level != 1) stop("Unimplemented")
+  
   l <- list(...)
   # l_dep <- sapply(substitute(placeholderFunction(...))[-1], deparse)
   if(length(l) == 0) stop('cbind requires an H2O parsed dataset')
@@ -625,9 +648,11 @@ cbind.H2OParsedData <- function(...) {
   res <- .h2o.__exec2(h2o, exec_cmd)
   new('H2OParsedData', h2o=h2o, key=res$dest_key)
 }
-cbind.H2OParsedDataVA <- cbind.H2OParsedData
 
 #--------------------------------- Arithmetic ----------------------------------#
+setMethod("+", c("H2OParsedData", "missing"), function(e1, e2) { .h2o.__binop2("+", 0, e1) })
+setMethod("-", c("H2OParsedData", "missing"), function(e1, e2) { .h2o.__binop2("-", 0, e1) })
+
 setMethod("+", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { .h2o.__binop2("+", e1, e2) })
 setMethod("-", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { .h2o.__binop2("-", e1, e2) })
 setMethod("*", c("H2OParsedData", "H2OParsedData"), function(e1, e2) { .h2o.__binop2("*", e1, e2) })
@@ -876,8 +901,9 @@ as.data.frame.H2OParsedData <- function(x, ...) {
   # colClasses = sapply(res$levels, function(x) { ifelse(is.null(x), "numeric", "factor") })
 
   # Substitute NAs for blank cells rather than skipping
-  df = read.csv(textConnection(ttt), blank.lines.skip = FALSE, ...)
+  df = read.csv((tcon <- textConnection(ttt)), blank.lines.skip = FALSE, ...)
   # df = read.csv(textConnection(ttt), blank.lines.skip = FALSE, colClasses = colClasses, ...)
+  close(tcon)
   return(df)
 }
 
@@ -1134,12 +1160,6 @@ setMethod("findInterval", "H2OParsedData", function(x, vec, rightmost.closed = F
   res = .h2o.__exec2(x@h2o, expr)
   new('H2OParsedData', h2o=x@h2o, key=res$dest_key)
 })
-
-merge.H2OParsedData <- function(x, y, by = intersect(names(x), names(y)), by.x = by, by.y = by, all = FALSE, all.x = all, all.y = all) {
-  if(!inherits(y, "H2OParsedData")) stop("y must be a H2O parsed data object")
-  if(!is.character(by)) stop("by must be of class character")
-  if(!is.logical(all)) stop("all must be of class logical")
-}
 
 # setGeneric("histograms", function(object) { standardGeneric("histograms") })
 # setMethod("histograms", "H2OParsedData", function(object) {

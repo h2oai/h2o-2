@@ -21,7 +21,7 @@ No methods defined with class "H2OModel" in the signature.
 \seealso{
 %%  ~~objects to See Also as \code{\link{~~fun~~}}, ~~~
 %%  ~~or \code{\linkS4class{CLASSNAME}} for links to other classes ~~~
-\code{\linkS4class{H2OGLMModel}, \linkS4class{H2OKMeansModel}, \linkS4class{H2ODRFModel}, \linkS4class{H2OGBMModel}, \linkS4class{H2OPCAModel}, \linkS4class{H2ONNModel}}
+\code{\linkS4class{H2OGLMModel}, \linkS4class{H2OKMeansModel}, \linkS4class{H2ODRFModel}, \linkS4class{H2OGBMModel}, \linkS4class{H2OPCAModel}, \linkS4class{H2ODeepLearningModel}}
 }
 \examples{
 showClass("H2OModel")

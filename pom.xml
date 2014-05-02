@@ -168,6 +168,12 @@
       <artifactId>joda-time</artifactId>
       <version>2.3</version>
     </dependency>
+    <!-- ==json.org== -->
+    <dependency>
+      <groupId>org.codeartisans</groupId>
+      <artifactId>org.json</artifactId>
+      <version>20131017</version>
+    </dependency>
   </dependencies>
   <!-- Configure build -->
   <build>

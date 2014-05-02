@@ -34,11 +34,11 @@ class Basic(unittest.TestCase):
         execExprList = [
             # hack to make them keys? (not really needed but interesting)
             'r0.hex = r.hex[,1]',
-            's0.hex = runif(r.hex[,1])',
-            's1.hex = runif(r.hex[,1])',
-            's2.hex = runif(r.hex[,1])',
+            's0.hex = runif(r.hex[,1],-1)',
+            's1.hex = runif(r.hex[,1],-1)',
+            's2.hex = runif(r.hex[,1],-1)',
             # error. this causes exception
-            # 's3.hex = runif(nrow(r.hex))',
+            # 's3.hex = runif(nrow(r.hex), -1)',
         ]
 
         results = []
