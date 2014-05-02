@@ -36,7 +36,7 @@ Steam.Typedef = do ->
     (value) ->
       for validValue in validValues
         return null if value is validValue
-      "Enum value <#{value}> does not match one of <#{validValues.join ', '}>"
+      "Enum value [#{value}] does not match one of [#{validValues.join ', '}]"
 
   t_checkBuiltin = (value, type) ->
     errors = []
@@ -62,7 +62,7 @@ Steam.Typedef = do ->
         if error = t_check attributeValue, attributeType
           errors.push error
       else
-        errors.push "Required attribute <#{attributeName}> not found."
+        errors.push "Required attribute [#{attributeName}] not found."
     for check in type.checks
       if error = check value
         errors.push error
@@ -76,13 +76,13 @@ Steam.Typedef = do ->
     else if type instanceof Struct
       t_checkStruct value, type
     else
-      throw new Error "Unknown type <#{type}>"
+      throw new Error "Unknown type [#{type}]"
 
   t_primitive = (name, args) ->
     primitiveCheck = builtinChecks[name]
 
     check = (value) ->
-      if primitiveCheck value then null else "<#{value}> is not a #{name}"
+      if primitiveCheck value then null else "[#{value}] is not a #{name}"
 
     checks = [ check ]
 
@@ -90,14 +90,14 @@ Steam.Typedef = do ->
       if isArray arg
         for value in arg
           unless primitiveCheck value
-            throw new Error "Enum value <#{value}> is not a #{name}"
+            throw new Error "Enum value [#{value}] is not a #{name}"
         checks.push t_checkEnum arg
 
       else if isFunction arg
         checks.push arg
 
       else
-        throw new Error "Invalid type arg <#{arg}>"
+        throw new Error "Invalid type arg [#{arg}]"
     
     new Builtin name, checks, -> name
 
@@ -128,7 +128,7 @@ Steam.Typedef = do ->
           checks.push arg
 
       else
-        throw new Error "Invalid arg <#{arg}>"
+        throw new Error "Invalid arg [#{arg}]"
 
     if types.length > 0
       type  = t_union.apply null, types
@@ -139,12 +139,12 @@ Steam.Typedef = do ->
             if error = t_check element, type
               errors.push "Array[#{index}]: #{error}"
         else
-          errors.push "<#{array}> is not an Array"
+          errors.push "[#{array}] is not an Array"
         if errors.length > 0 then errors else null
     else
       throw new Error "Array type not specified"
     
-    new Builtin 'Array', checks, -> "Array<#{type.inspect()}>"
+    new Builtin 'Array', checks, -> "Array[#{type.inspect()}]"
 
   t_union = (args...) ->
     if args.length is 0
@@ -156,7 +156,7 @@ Steam.Typedef = do ->
       else if arg instanceof Type
         return arg
       else
-        throw new Error "Invalid arg <#{arg}>"
+        throw new Error "Invalid arg [#{arg}]"
     else
       types = []
       checks = []
@@ -168,7 +168,7 @@ Steam.Typedef = do ->
         else if isFunction arg
           checks.push arg
         else
-          throw new Error "Invalid type arg <#{arg}>"
+          throw new Error "Invalid type arg [#{arg}]"
 
       checks.unshift (value) ->
         errors = []
@@ -182,7 +182,7 @@ Steam.Typedef = do ->
         if matched
           null
         else
-          map errors, (error) -> "Variant <#{value}>: #{error}"
+          map errors, (error) -> "Variant [#{value}]: #{error}"
 
       new Builtin 'Variant', checks, -> "#{types.map((type) -> type.inspect()).join('|')}"
 
@@ -197,7 +197,7 @@ Steam.Typedef = do ->
       else if isFunction arg
         checks.push arg
       else
-        throw new Error "Invalid arg <#{arg}>"
+        throw new Error "Invalid arg [#{arg}]"
 
     if types.length > 0
       checks.unshift (tuple) ->
@@ -215,8 +215,8 @@ Steam.Typedef = do ->
           if errors.length > 0 then errors else null
 
         else
-          "Value <#{tuple}> is not a Tuple"
-      new Builtin 'Tuple', checks, -> "Tuple<#{types.map((type) -> type.inspect()).join(', ')}>"
+          "Value [#{tuple}] is not a Tuple"
+      new Builtin 'Tuple', checks, -> "Tuple[#{types.map((type) -> type.inspect()).join(', ')}]"
     else
       throw new Error "Tuple types not specified"
 
@@ -239,10 +239,10 @@ Steam.Typedef = do ->
         else if attrType instanceof Type
           definition[attr] = attrType
         else
-          throw new Error "Unrecognized type <#{attr}> : <#{attrType}>"
+          throw new Error "Unrecognized type [#{attr}] : [#{attrType}]"
       new Struct name, definition, checks
     else
-      throw new Error "Invalid arg <#{arg}>"
+      throw new Error "Invalid arg [#{arg}]"
 
   typedef.any = t_any
   typedef.num = t_number
