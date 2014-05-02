@@ -3,36 +3,151 @@
 Index By Subject
 =================
 
-Algorithyms Roadmap: .. _Roadmap:
+**Algorithyms Roadmap**
 
-Benchmarks: .._Benchmarks:
+  * :ref:`Roadmap`
 
-Data Science: :ref:`Data_Science`
+**Benchmarks**
 
-Data 
-Introduction to H2O .._IntrotoH2O
 
-R Package Document: .._Rpdf:
+**Classification**
 
-R Console 
-  Install H2O in R: .. _Rfromdownload:
-  Installation for Git Users: .. _Rforgit
 
-R Studio
-   Install H2O in R: .. _Rfromdownload:
-   Installation for Git Users: .. _Rforgit:
+  * :ref:`RFmath`
+  * :ref:`NBmath`
+  * :ref:`KMmath`
 
-Random Forest :ref:`RFmath`
+**Contact H2O**
 
-Stochastic Gradient Descent :ref:`SGDmath`
+  * :ref:`ContactUs`
 
-Summary (summary statistics on data) :ref:`SUMmath`
+**Data Science** 
 
-Tutorial: 
+   * :ref:`Data_Science`
 
-  Generalized Linear Modeling :ref:`GLM_tutorial`
-  Generalized Linear Modeling Grid :ref:`GLMgrid_tutorial`
-  Gradient Boosted Models 
-  K Means :ref:`KM_tutorial`
+**Data**
+ 
+  * :ref:`SUMmath`
+
+**Deep Learning**
+
+  * :ref:`DLmath`
+
+**Development**
+
+  * :ref:`Developer`
+
+**Downloads**
+
+  * :ref:`GettingStartedFromaZipFile`
+
+**Eclipse**
+
+  * :ref:`Eclipse`
+
+**Generalized Linear Modeling**
+
+  * :ref:`GLMmath`
+  * :ref:`GLM_tutorial`
+
+**Gradient Boosted Models**
+
+  * :ref:`GBMmath`
+  * :ref:`GLMgrid_tutorial`
+
+**Hadoop**
+
+  * :ref:`Hadoop`
+  * :ref:`MacHadoop`
+
+**High Avaialbility**
+
+  * :ref:`HA`
+
+**Idea**
+
+  * :ref:`Idea`
+
+**Introduction to H2O**
+
+  * :ref:`Introduction`
+  
+**Java**
+
+  * :ref:`Java`
+  * :ref:`Javahelp`
+
+**K-Means**
+
+ * :ref:`KMmath`
+ * :ref:`KM_tutorial`
+
+**License**
+
+ * :ref:`License`
+
+**Machine Learning**
+
+  * :ref:`Machlearn`
+
+**Multinode**
+
+  * :ref:`Multinode`
+
+**Naive Bayes**
+
+  * :ref:`NBmath`
+
+**Principal Componenents Analysis**
+  
+  * :ref:`PCAmath`
+
+**R Console** 
+  
+  * :ref:`Rfromdownload`
+  * :ref:`Rforgit`
+
+**R**
+
+  * :ref:`R_user`
+
+**R Package Document**
+
+  * :ref:`R_pdf`
+
+**R Studio**
+   
+   * :ref:`Rfromdownload`
+   * :ref:`Rforgit`
+
+**Random Forest** 
+  
+  * :ref:`RFmath`
+
+**References**
+
+  * :ref:`References`
+
+**Scala**
+
+  * :ref:`Scala`
+
+**Stochastic Gradient Descent** 
+
+  * :ref:`SGDmath`
+
+**Summary (summary statistics on data)**
+
+  * :ref:`SUMmath`
+
+**Troubleshooting**
+
+  * :ref:`Troubleshooting`
+
+**Tutorials**
+
+  * :ref:`GLM_tutorial`
+  * :ref:`GLMgrid_tutorial`
+  * :ref:`KM_tutorial`
  
  

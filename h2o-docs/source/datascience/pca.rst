@@ -3,10 +3,16 @@
 Principal Components Analysis
 ===========================================
 
-The H\ :sub:`2`\ O PCA algorithm is still in development. If you have
-questions or comments please see our contact us document. 
-H\ :sub:`2`\ O is an open source tool and welcomes user  
-collaboration.
+Principal Components Analysis (PCA) is closely related to Principal
+Components Regression. The algorithm is carried out on a set of
+possibly collinear features, and performs a transformation
+to produce a new set of ucorrelated features. 
+
+PCA is commonly used when users wish to model without regularization,
+or perform dimensionality reduction. It can also be useful to carry
+out before classification analysis like K-means, as K-means relies on
+Euclidian distances, and PCA guarantees that all dimensions of a
+manifold are orthogonal.  
 
 
 Defining a PCA Model
@@ -134,7 +140,7 @@ generate a model, the dependent variable will occur on both sides of
 the predictive equation. 
 
 PCA Algorithm
----------------
+“””””””””””””””””
 
 Let :math:`X` be an :math:`M\times N` matrix where
  

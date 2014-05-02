@@ -227,11 +227,17 @@ class Basic(unittest.TestCase):
                         # we may not see the min/max range of values that was bounded by our gen, but 
                         # we can check that it's a subset of the allowed range
                         if synKey == 'min':
-                            self.assertTrue(syn[synKey] <= cols[synKey],
+                            # can have quoted numbers in json?
+                            self.assertTrue(syn[synKey] <= float(cols[synKey]),
                                 msg='col %s %s %s should be <= %s' % (k, synKey, cols[synKey], syn[synKey]))
                         elif synKey == 'max':
-                            self.assertTrue(syn[synKey] >= cols[synKey],
+                            # can have quoted numbers in json?
+                            self.assertTrue(syn[synKey] >= float(cols[synKey]),
                                 msg='col %s %s %s should be >= %s' % (k, synKey, cols[synKey], syn[synKey]))
+                        elif synKey == 'variance':
+                            # can have quoted numbers in json?
+                            self.assertTrue(syn[synKey] == float(cols[synKey]),
+                                msg='col %s %s %s should be == %s' % (k, synKey, cols[synKey], syn[synKey]))
                         elif synKey == 'size' or synKey == 'scale' or synKey == 'type':
                             if cols[synKey] not in syn[synKey]:
                                 # for debug of why it was a bad size
@@ -239,6 +245,7 @@ class Basic(unittest.TestCase):
                                 print "syn size/min/max:", syn['size'], syn['min'], syn['max']
                                 raise Exception('col %s %s %s should be in this allowed %s' % (k, synKey, cols[synKey], syn[synKey]))
                         else:
+                            # can have quoted numbers in json?
                             self.assertEqual(syn[synKey], cols[synKey],
                                 msg='col %s %s %s should be %s' % (k, synKey, cols[synKey], syn[synKey]))
                     

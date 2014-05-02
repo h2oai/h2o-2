@@ -58,7 +58,7 @@ def checkScalarResult(resultExec, resultKey, allowEmptyResult=False, nanOkay=Fal
         scalar = resultExec['scalar']
         if scalar is None:
             raise Exception("both cols and scalar are null: %s %s" % (cols, scalar))
-        checkForBadFP(scalar, json=resultExec, nanOkay=nanOkay or stype=='Enum')
+        checkForBadFP(scalar, json=resultExec, nanOkay=nanOkay)
         return scalar
 
     metaDict = cols[0]

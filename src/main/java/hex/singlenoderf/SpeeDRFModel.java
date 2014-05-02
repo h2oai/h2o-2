@@ -54,13 +54,14 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   /* @API(help = "Class column idx.") */ int classcol;
   /*@API(help = "Data Key")*/ Key dataKey;
   /* @API(help = "Seed")*/ protected long zeed;
+  boolean importance;
   /* @API(help = "Final Confusion Matrix") */ CMTask.CMFinal confusion;
   @API(help = "Confusion Matrices") ConfusionMatrix[] cms;
   /* @API(help = "Confusion Matrix") */ long[][] cm;
   @API(help = "Tree Statistics") TreeStats treeStats;
   @API(help = "cmDomain") String[] cmDomain;
   @API(help = "AUC") public AUC validAUC;
-  @API(help = "Variable Importance") public final VarImp varimp;
+  @API(help = "Variable Importance") public VarImp varimp;
 
   //API output:
 //  @API(help = "") int N = N;
@@ -133,6 +134,10 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       cmTask.doAll(m.test_frame == null ? m.fr : m.test_frame, true);
       m.confusion = CMTask.CMFinal.make(cmTask._matrix, m, cmTask.domain(), cmTask._errorsPerTree, m.oobee, cmTask._sum, cmTask._cms);
       m.cm = cmTask._matrix._matrix;
+//      if (m.oobee  && m.importance)
+//      m.varimp = new VarImp.VarImpMDA(cmTask.varimp, CMTask.computeVarImpSD(cmTask._voteDiffs), m.treeCount());
+      //      _varimpSD = computeVarImptSD(_voteDiffs);
+//      _varimp = new VarImp.VarImpMDA(varimp, varimpSD, _model.treeCount());
     }
     if (!cm_update) {
       m.errs = Arrays.copyOf(old.errs, old.errs.length+1);
@@ -356,6 +361,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     generateHTMLTreeStats(sb, trees);
 
     if (validAUC != null) generateHTMLAUC(sb);
+    if (varimp != null) generateHTMLVarImp(sb);
   }
 
   static final String NA = "---";
@@ -378,7 +384,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
             .append("<td>").append(leaf_stats != null ? leaf_stats[2]  : NA).append("</td></tr>");
     DocGen.HTML.arrayTail(sb);
 
-    if(depth_stats != null) {
+    if(depth_stats != null && leaf_stats != null) {
       treeStats.minDepth = (int)depth_stats[0];
       treeStats.meanDepth = (float)depth_stats[1];
       treeStats.maxDepth = (int)depth_stats[2];
@@ -518,5 +524,12 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
   protected void generateHTMLAUC(StringBuilder sb) {
     validAUC.toHTML(sb);
+  }
+  protected void generateHTMLVarImp(StringBuilder sb) {
+    if (varimp!=null) {
+      // Set up variable names for importance
+      varimp.setVariables(Arrays.copyOf(_names, _names.length-1));
+      varimp.toHTML(sb);
+    }
   }
 }

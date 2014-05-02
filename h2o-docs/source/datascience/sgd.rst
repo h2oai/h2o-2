@@ -1,10 +1,10 @@
 .. _SGDmath:
 
-SGD
-----
+Stochastic Gradient Descent
+=============================
 
-Models that optimize over a manifold obtain the gradient of
-complex functions using stochastic gradient descent (SGD). 
+Models that optimize over a manifold obtain the gradient 
+using stochastic gradient descent (SGD). 
 
 The SGD method implemented by  H\ :sub:`2`\ O is:
 

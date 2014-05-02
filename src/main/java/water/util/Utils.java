@@ -1458,11 +1458,14 @@ public class Utils {
     int[] r = new int[ratio.length+1];
     int sum = 0;
     int i = 0;
+    float sr = 0;
     for (i=0; i<ratio.length; i++) {
       r[i] = (int) (ratio[i]*len);
       sum += r[i];
+      sr  += ratio[i];
     }
-    r[i] = len - sum;
+    if (sr<1f) r[i] = len - sum;
+    else r[i-1] += (len-sum);
     return r;
   }
 

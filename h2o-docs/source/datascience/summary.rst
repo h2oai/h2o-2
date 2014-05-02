@@ -129,8 +129,7 @@ Output
    Gives a percentage of the number of observations that are equal to
    the corresponding value. 
 
-
-  *Users should note that the tables in summary can become
+  *Users should note that the tables in Summary can become
   quite large. When the width of the table exceeds the width of the
   display users can view more information by hovering over the table
   with their mouse and scrolling left and right.*

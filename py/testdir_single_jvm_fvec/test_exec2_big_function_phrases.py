@@ -122,8 +122,8 @@ class Basic(unittest.TestCase):
         execExpr = ""
         for j in range (25):
             # just keep making it bigger, with unique lh2
-            execExpr += ("a%s=" % j) + random.choice(phrases) +";\n"
-            execExprFull = ("func%s = function(x,y,z,rhex){ " % j) + execExpr + " }(0,0,0,rhex)"
+            execExpr += ("a%s=" % j) + random.choice(phrases) +"; "
+            execExprFull = ("func%s = function(x,y,z,rhex){ " % j) + execExpr + " }(1,1,1,rhex)"
             h2e.exec_expr(h2o.nodes[0], execExprFull, resultKey=None, timeoutSecs=30)
 
         

@@ -49,10 +49,11 @@ class Basic(unittest.TestCase):
                 "    numRows:", "{:,}".format(inspect['numRows']), \
                 "    numCols:", "{:,}".format(inspect['numCols'])
 
+            k = 2
             kwargs = {
                 'max_iter': 25,
                 'initialization': 'Furthest',
-                'k': 2, 
+                'k': k, 
                 # reuse the same seed, to get deterministic results (otherwise sometimes fails
                 'seed': 265211114317615310,
             }
@@ -65,6 +66,10 @@ class Basic(unittest.TestCase):
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
             h2o_kmeans.simpleCheckKMeans(self, kmeans, **kwargs)
             (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseResult, 'd', **kwargs)
+
+            gs = h2o.nodes[0].gap_statistic(source=hex_key, k_max=8)
+            print "gap_statistic:", h2o.dump_json(gs)
+
 
 if __name__ == '__main__':
     h2o.unit_main()

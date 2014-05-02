@@ -228,6 +228,21 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
     assert !is_locked(job_key);
   }
 
+  // Unlock from all lockers
+  public void unlock_all() {
+    if( _key != null )
+      for (Key k : _lockers) new UnlockSafe(k).invoke(_key);
+  }
+
+  private class UnlockSafe extends TAtomic<Lockable> {
+    final Key _job_key;         // potential job doing the unlocking
+    UnlockSafe( Key job_key ) { _job_key = job_key; }
+    @Override public Lockable atomic(Lockable old) {
+      if (old.is_locked(_job_key))
+        set_unlocked(old._lockers,_job_key);
+      return Lockable.this;
+    }
+  }
 
   // Remove any subparts before removing the whole thing
   protected abstract Futures delete_impl( Futures fs );

@@ -1,21 +1,28 @@
 package hex.gbm;
 
+import static water.util.MRUtils.sampleFrameStratified;
 import static water.util.ModelUtils.getPrediction;
 import hex.ConfusionMatrix;
 import hex.VarImp;
 import hex.rng.MersenneTwisterRNG;
-
-import java.util.Arrays;
-import java.util.Random;
-
 import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ValidatedJob;
-import water.api.*;
-import water.fvec.*;
-import water.util.*;
+import water.api.AUC;
+import water.api.DocGen;
+import water.api.ParamImportance;
+import water.fvec.Chunk;
+import water.fvec.Frame;
+import water.fvec.Vec;
+import water.util.Log;
 import water.util.Log.Tag.Sys;
+import water.util.MRUtils;
+import water.util.ModelUtils;
+import water.util.Utils;
+
+import java.util.Arrays;
+import java.util.Random;
 
 // Build (distributed) Trees.  Used for both Gradient Boosted Method and Random
 // Forest, and really could be used for any decision-tree builder.
@@ -49,6 +56,20 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
 
   @API(help = "Compute variable importance (true/false).", filter = Default.class )
   protected boolean importance = false; // compute variable importance
+
+  /**
+   * For imbalanced data, balance training data class counts via
+   * over/under-sampling. This can result in improved predictive accuracy.
+   */
+  @API(help = "Balance training data class counts via over/under-sampling (for imbalanced data)", filter = Default.class, json = true, gridable = false, importance = ParamImportance.EXPERT)
+  public boolean balance_classes = false;
+
+  /**
+   * When classes are balanced, limit the resulting dataset size to the
+   * specified multiple of the original dataset size.
+   */
+  @API(help = "Maximum relative size of the training data after balancing class counts (can be less than 1.0)", filter = Default.class, json = true, dmin=1e-3, gridable = true, importance = ParamImportance.EXPERT)
+  public float max_after_balance_size = Float.POSITIVE_INFINITY;
 
 //  @API(help = "Active feature columns")
   protected int _ncols;
@@ -119,7 +140,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
 
   // --------------------------------------------------------------------------
   // Driver for model-building.
-  public void buildModel( ) {
+  public void buildModel(long seed) {
     final Key outputKey = dest();
     String sd = input("source");
     final Key dataKey = (sd==null||sd.length()==0)?null:Key.make(sd);
@@ -147,6 +168,21 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
 
     // Find the class distribution
     _distribution = _nclass > 1 ? new MRUtils.ClassDist(_nclass).doAll(response).dist() : null;
+
+    // Handle imbalanced classes by stratified over/under-sampling
+    // initWorkFrame sets the modeled class distribution, and model.score() corrects the probabilities back using the distribution ratios
+    float[] trainSamplingFactors;
+    if (classification && balance_classes) {
+      int response_idx = fr.find(_responseName);
+      trainSamplingFactors = new float[domain.length]; //leave initialized to 0 -> will be filled up below
+      Frame stratified = sampleFrameStratified(
+              fr, fr.lastVec(), trainSamplingFactors, (long)(max_after_balance_size*fr.numRows()), seed, true, false);
+      if (stratified != fr) {
+        fr = stratified;
+        _nrows = fr.numRows();
+        response = fr.vecs()[response_idx];
+      }
+    }
 
     // Also add to the basic working Frame these sets:
     //   nclass Vecs of current forest results (sum across all trees)
@@ -773,12 +809,11 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   /**
    * Builds model
    * @param initialModel initial model created by {@link #makeModel(Key, Key, Key, String[], String[][], String[])} method.
-   * @param trainFr training dataset which can contain additional temporary vectors prepared by {@link #buildModel()} method.
+   * @param trainFr training dataset which can contain additional temporary vectors prepared by buildModel() method.
    * @param names names of columns in <code>trainFr</code> used for model training
    * @param domains domains of columns in <code>trainFr</code> used for model training
    * @param t_build timer to measure model building process
    * @return resulting model
-   * @see #buildModel()
    */
   protected abstract TM buildModel( TM initialModel, Frame trainFr, String names[], String domains[][], Timer t_build );
   /**
@@ -792,8 +827,6 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
    * Initialize working frame.
    * @param initialModel  initial model
    * @param fr working frame which contains train data and additional columns prepared by this builder.
-   *
-   * @see #buildModel()
    */
   protected abstract void initWorkFrame( TM initialModel, Frame fr);
 

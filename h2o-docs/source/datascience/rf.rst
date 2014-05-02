@@ -1,9 +1,9 @@
 .. _RFmath:
 
-Random Forest (RF)
-------------------
+Random Forest
+====================
 
-RF is a powerful classification tool. When given a set of data, RF
+Random Forest (RF) is a powerful classification tool. When given a set of data, RF
 generates a forest of classification trees, rather than a single
 classification tree. Each of these trees generates a classification
 for a given set of  attributes. The classification from each H\ :sub:`2`\ O tree
@@ -13,11 +13,8 @@ classification.
 
 When to use RF
 """"""""""""""
-  RF is a good choice when your objective is classification. 
-  For example:
 
-  "Given a large set of observations and attributes, the goal is to 
-  classify observations by spending habits."
+RF is a good choice when your objective is classification. 
 
 
 
