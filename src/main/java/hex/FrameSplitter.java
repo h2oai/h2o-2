@@ -1,6 +1,5 @@
 package hex;
 
-import static water.fvec.NewChunkHelper.extractChunkPart;
 import jsr166y.CountedCompleter;
 import water.H2O.H2OCountedCompleter;
 import water.*;
@@ -153,7 +152,7 @@ public class FrameSplitter extends H2OCountedCompleter {
         // Extract correct rows of _partIdx-th split from i-th input vector into the i-th chunk
         assert cs[i]._len == splits[_partIdx]; // Be sure that we correctly prepared vector template
         // NOTE: we preserve co-location of cs[i] chunks with _srcVecs[i] chunks so it is local load of chunk
-        extractChunkPart(_srcVecs[i].chunkForChunkIdx(cidx), cs[i], startRow, splits[_partIdx], _fs);
+        ChunkSplitter.extractChunkPart(_srcVecs[i].chunkForChunkIdx(cidx), cs[i], startRow, splits[_partIdx], _fs);
         //extractPartXXX(_srcVecs[i].chunkForChunkIdx(cidx), cs[i], startRow, splits[_partIdx]);
       }
     }

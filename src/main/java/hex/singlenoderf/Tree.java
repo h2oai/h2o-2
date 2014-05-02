@@ -418,7 +418,10 @@ public class Tree extends H2OCountedCompleter {
       assert b == '(' || b == 'S' || b == 'E';
       int col = ts.get2(); // Column number in model-space
       float fcmp = ts.get4f();  // Float to compare against
-      if( Double.isNaN(ds[col]) ) return badat;
+      if( Double.isNaN(ds[col]) )
+      {
+        return badat;
+      }
       float fdat = (float)ds[col];
       int skip = (ts.get1()&0xFF);
       if( skip == 0 ) skip = ts.get3();
@@ -430,7 +433,8 @@ public class Tree extends H2OCountedCompleter {
         if( fdat > fcmp ) ts.position(ts.position() + skip);
       }
     }
-    return ts.get1()&0xFF;      // Return the leaf's class
+    int vote = ts.get1()&0xFF;
+    return vote;      // Return the leaf's class
   }
 
   public static int dataId( byte[] bits) { return UDP.get4(bits, 0); }

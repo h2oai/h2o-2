@@ -660,7 +660,7 @@ public class NewChunk extends Chunk {
     int j = 0;
     for(int i = 0; i < _len2; ++i){
       double d = 0;
-      if(_id == null || _id[j] == i){
+      if(_id == null || (j < _id.length && _id[j] == i)) {
         d = _ds != null?_ds[j]:(isNA2(j)||isEnum(j))?Double.NaN:_ls[j]*DParseTask.pow10(_xs[j]);
         ++j;
       }

@@ -15,10 +15,12 @@ import water.fvec.Vec;
 import water.util.Counter;
 import hex.gbm.DTree.TreeModel.TreeStats;
 import water.util.ModelUtils;
+import hex.singlenoderf.VariableImportance;
 
 import java.util.Arrays;
 import java.util.Random;
 
+import static hex.singlenoderf.VariableImportance.asVotes;
 import static water.util.Utils.div;
 import static water.util.Utils.sum;
 
@@ -62,6 +64,10 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   @API(help = "cmDomain") String[] cmDomain;
   @API(help = "AUC") public AUC validAUC;
   @API(help = "Variable Importance") public VarImp varimp;
+
+  private transient VariableImportance.TreeMeasures[/*features*/] _treeMeasuresOnOOB;
+  // Tree votes/SSE per individual features on permutated OOB rows
+  private transient VariableImportance.TreeMeasures[/*features*/] _treeMeasuresOnSOOB;
 
   //API output:
 //  @API(help = "") int N = N;
@@ -134,10 +140,6 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       cmTask.doAll(m.test_frame == null ? m.fr : m.test_frame, true);
       m.confusion = CMTask.CMFinal.make(cmTask._matrix, m, cmTask.domain(), cmTask._errorsPerTree, m.oobee, cmTask._sum, cmTask._cms);
       m.cm = cmTask._matrix._matrix;
-//      if (m.oobee  && m.importance)
-//      m.varimp = new VarImp.VarImpMDA(cmTask.varimp, CMTask.computeVarImpSD(cmTask._voteDiffs), m.treeCount());
-      //      _varimpSD = computeVarImptSD(_voteDiffs);
-//      _varimp = new VarImp.VarImpMDA(varimp, varimpSD, _model.treeCount());
     }
     if (!cm_update) {
       m.errs = Arrays.copyOf(old.errs, old.errs.length+1);
@@ -153,6 +155,9 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       if (m.classes() == 2) {
         m.validAUC= makeAUC(toCMArray(m.confusion._cms), ModelUtils.DEFAULT_THRESHOLDS);
       }
+      //Launch a Variable Importance Task
+      if (m.importance)
+        m.varimp = m.doVarImpCalc(m);
     }
     JsonObject trees = new JsonObject();
     trees.addProperty(Constants.TREE_COUNT,  m.size());
@@ -284,10 +289,10 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     preds = new float[numClasses + 1];
     for( int i = 0; i < treeCount(); i++ )
       votes[(int) Tree.classify(new AutoBuffer(tree(i)), data, numClasses)]++;
-
-    float s = sum(votes);
-    for (int i = 0; i < votes.length; ++i) preds[i] = (float)votes[i];
-    if (s>0) div(preds, s); // unify over all classes
+    float s = 0.f;
+    for (int v : votes) s += (float)v;
+    for (int i = 0; i  < votes.length - 1; ++i)
+      preds[i+1] = (float)votes[i] / s;
     preds[0] = (float) (classify(votes, null, null) + get_response().min());
     return preds;
   }
@@ -345,7 +350,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       for( int i=last; i>=0; i-- )
         sb.append("<td style='min-width:60px'>").append(i).append("</td>");
       sb.append("</tr>");
-      sb.append("<tr><th class='warning'>MSE</th>");
+      sb.append("<tr style='min-width: 60px;'><th style='min-width: 60px;' class='warning'>MSE</th>");
       for( int i=last; i>=0; i-- )
         sb.append( (!(Double.isNaN(errs[i]) || errs[i] <= 0.f)) ? String.format("<td style='min-width:60px'>%5.5f</td>",errs[i]) : "<td style='min-width:60px'>---</td>");
       sb.append("</tr>");
@@ -462,11 +467,11 @@ public class SpeeDRFModel extends Model implements Job.Progress {
         sb.append("<dt>trees used</dt><dd>").append(cm.get(JSON_CM_TREES).getAsInt()).append("</dd>");
         sb.append("</dl>");
         sb.append("<table class='table table-striped table-bordered table-condensed'>");
-        sb.append("<tr><th>Actual \\ Predicted</th>");
+        sb.append("<tr style='min-width: 60px;'><th style='min-width: 60px;'>Actual \\ Predicted</th>");
         JsonArray header = (JsonArray) cm.get(JSON_CM_HEADER);
         for (JsonElement e: header)
-          sb.append("<th>").append(e.getAsString()).append("</th>");
-        sb.append("<th>Error</th></tr>");
+          sb.append("<th style='min-width: 60px;'>").append(e.getAsString()).append("</th>");
+        sb.append("<th style='min-width: 60px;'>Error</th></tr>");
         int classes = header.size();
         long[] totals = new long[classes];
         JsonArray matrix2 = (JsonArray) cm.get(JSON_CM_MATRIX);
@@ -476,7 +481,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
           JsonArray row = (JsonArray) matrix2.get(crow);
           long total = 0;
           long error = 0;
-          sb.append("<tr><th>").append(header.get(crow).getAsString()).append("</th>");
+          sb.append("<tr style='min-width: 60px;'><th style='min-width: 60px;'>").append(header.get(crow).getAsString()).append("</th>");
           for (int ccol = 0; ccol < classes; ++ccol) {
             long num = row.get(ccol).getAsLong();
             total += num;
@@ -490,16 +495,16 @@ public class SpeeDRFModel extends Model implements Job.Progress {
             sb.append(num);
             sb.append("</td>");
           }
-          sb.append("<td>");
-          sb.append(String.format("%5.5f = %d / %d", (double)error/total, error, total));
+          sb.append("<td style='min-width: 60px;'>");
+          sb.append(String.format("%.05f = %,d / %d", (double)error/total, error, total));
           sb.append("</td></tr>");
           sumTotal += total;
           sumError += error;
         }
-        sb.append("<tr><th>Totals</th>");
-        for (long total : totals) sb.append("<td>").append(total).append("</td>");
-        sb.append("<td><b>");
-        sb.append(String.format("%5.5f = %d / %d", (double)sumError/sumTotal, sumError, sumTotal));
+        sb.append("<tr style='min-width: 60px;'><th style='min-width: 60px;'>Totals</th>");
+        for (long total : totals) sb.append("<td style='min-width: 60px;'>").append(total).append("</td>");
+        sb.append("<td style='min-width: 60px;'><b>");
+        sb.append(String.format("%.05f = %,d / %d", (double)sumError/sumTotal, sumError, sumTotal));
         sb.append("</b></td></tr>");
         sb.append("</table>");
       } else {
@@ -531,5 +536,69 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       varimp.setVariables(Arrays.copyOf(_names, _names.length-1));
       varimp.toHTML(sb);
     }
+  }
+
+  protected VarImp doVarImpCalc(final SpeeDRFModel model) {
+    _treeMeasuresOnOOB  = new VariableImportance.TreeVotes[model.fr.numCols() - 1];
+    _treeMeasuresOnSOOB = new VariableImportance.TreeVotes[model.fr.numCols() - 1];
+    for (int i=0; i<model.fr.numCols() - 1; i++) _treeMeasuresOnOOB[i] = new VariableImportance.TreeVotes(model.treeCount());
+    for (int i=0; i<model.fr.numCols() - 1; i++) _treeMeasuresOnSOOB[i] = new VariableImportance.TreeVotes(model.treeCount());
+    final int ncols = model.fr.numCols();
+    final int trees = model.treeCount();
+    for (int i=0; i<ncols - 1; i++) _treeMeasuresOnSOOB[i] = new VariableImportance.TreeVotes(trees);
+    Futures fs = new Futures();
+    for (int var=0; var<ncols - 1; var++) {
+      final int variable = var;
+      H2O.H2OCountedCompleter task4var = new H2O.H2OCountedCompleter() {
+        @Override public void compute2() {
+          VariableImportance.TreeVotes[] cd = VariableImportance.collectVotes(trees, model.classes(), model.fr, ncols - 1, model.sample, variable, model);
+          asVotes(_treeMeasuresOnOOB[variable]).append(cd[0]);
+          asVotes(_treeMeasuresOnSOOB[variable]).append(cd[1]);
+          tryComplete();
+        }
+      };
+      H2O.submitTask(task4var);
+      fs.add(task4var);
+    }
+    fs.blockForPending();
+
+    // Compute varimp for individual features (_ncols)
+    final float[] varimp   = new float[ncols - 1]; // output variable importance
+    float[] varimpSD = new float[ncols - 1]; // output variable importance sd
+    final float[][] vote_diffs = new float[ncols - 1][trees];
+    for (int var=0; var<ncols - 1; var++) {
+      long[] votesOOB = asVotes(_treeMeasuresOnOOB[var]).votes();
+      long[] votesSOOB = asVotes(_treeMeasuresOnSOOB[var]).votes();
+      float imp = 0.f;
+      float v = 0.f;
+      long[] nrows = asVotes(_treeMeasuresOnOOB[var]).nrows();
+      for (int i = 0; i < votesOOB.length; ++i) {
+        double delta = ((float) (votesOOB[i] - votesSOOB[i])) / (float) nrows[i];
+        imp += delta;
+        v  += delta * delta;
+//        vote_diffs[var][i] = ((float) (votesOOB[i] - votesSOOB[i])) / (float) nrows[i];
+//        imp += ((float) (votesOOB[i] - votesSOOB[i])) / (float) nrows[i];
+      }
+      imp /= model.treeCount();
+      varimp[var] = imp;
+      varimpSD[var] = (float)Math.sqrt( (v/model.treeCount() - imp*imp) / model.treeCount() );
+    }
+//    varimpSD = computeVarImpSD(vote_diffs);
+    return new VarImp.VarImpMDA(varimp, varimpSD, model.treeCount());
+  }
+
+  public static float[] computeVarImpSD(float[][] vote_diffs) {
+    float[] res = new float[vote_diffs.length];
+    for (int var = 0; var < vote_diffs.length; ++var) {
+      float mean_diffs = 0.f;
+      float r = 0.f;
+      for (float d: vote_diffs[var]) mean_diffs += d / (float) vote_diffs.length;
+      for (float d: vote_diffs[var]) {
+        r += (d - mean_diffs) * (d - mean_diffs);
+      }
+      r *= 1.f / (float)vote_diffs[var].length;
+      res[var] = (float) Math.sqrt(r);
+    }
+    return res;
   }
 }
