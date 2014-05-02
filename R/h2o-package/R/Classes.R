@@ -564,7 +564,7 @@ setMethod("$<-", "H2OParsedData", function(x, name, value) {
   if(inherits(value, "H2OParsedData"))
     rhs = value@key
   else
-    rhs = ifelse(length(value) == 1, value, paste("c(", paste(value, collapse = ","), ")", sep="")
+    rhs = ifelse(length(value) == 1, value, paste("c(", paste(value, collapse = ","), ")", sep=""))
   res = .h2o.__exec2(x@h2o, paste(lhs, "=", rhs))
   
   if(is.na(idx))
