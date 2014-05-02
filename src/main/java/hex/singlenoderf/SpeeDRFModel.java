@@ -1,28 +1,24 @@
 package hex.singlenoderf;
 
+import static hex.singlenoderf.VariableImportance.asVotes;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import hex.ConfusionMatrix;
 import hex.VarImp;
+import hex.gbm.DTree.TreeModel.TreeStats;
 import water.*;
 import water.api.*;
-import hex.ConfusionMatrix;
 import water.api.Request.API;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Counter;
-import hex.gbm.DTree.TreeModel.TreeStats;
 import water.util.ModelUtils;
-import hex.singlenoderf.VariableImportance;
 
 import java.util.Arrays;
 import java.util.Random;
-
-import static hex.singlenoderf.VariableImportance.asVotes;
-import static water.util.Utils.div;
-import static water.util.Utils.sum;
 
 
 public class SpeeDRFModel extends Model implements Job.Progress {
@@ -524,7 +520,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   }
 
   protected static water.api.AUC makeAUC(ConfusionMatrix[] cms, float[] threshold) {
-    return cms != null ? new AUC(cms, threshold) : null;
+    return cms != null ? new AUC(cms, threshold,/*TODO: add CM domain*/null) : null;
   }
 
   protected void generateHTMLAUC(StringBuilder sb) {

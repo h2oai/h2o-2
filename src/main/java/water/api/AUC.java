@@ -157,8 +157,18 @@ public class AUC extends Func {
    * @param thresh Thresholds
    */
   public AUC(hex.ConfusionMatrix[] cms, float[] thresh) {
+    this(cms, thresh, null);
+  }
+  /**
+   * Constructor for algos that make their own CMs
+   * @param cms ConfusionMatrices
+   * @param thresh Thresholds
+   * @param domain Domain
+   */
+  public AUC(hex.ConfusionMatrix[] cms, float[] thresh, String[] domain) {
     _cms = cms;
     thresholds = thresh;
+    actual_domain = domain;
     assert(_cms.length == thresholds.length):("incompatible lengths of thresholds and confusion matrices: " + _cms.length + " != " + thresholds.length);
     // compute AUC and best thresholds
     computeAUC();

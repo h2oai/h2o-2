@@ -117,7 +117,7 @@ public class GLMModelView extends Request2 {
     sb.append("<tr><th>AIC</th><td>" + val.aic() + "</td></tr>");
     if(glm_model.glm.family == Family.binomial)sb.append("<tr><th>AUC</th><td>" + DFORMAT.format(val.auc()) + "</td></tr>");
     sb.append("</table>");
-    if(glm_model.glm.family == Family.binomial)new AUC(val._cms,val.thresholds).toHTML(sb);
+    if(glm_model.glm.family == Family.binomial)new AUC(val._cms,val.thresholds,glm_model._domains[glm_model._domains.length-1]).toHTML(sb);
     if(val instanceof GLMXValidation){
       GLMXValidation xval = (GLMXValidation)val;
       // add links to the xval models

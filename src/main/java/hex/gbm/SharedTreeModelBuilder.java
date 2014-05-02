@@ -836,7 +836,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
 
   protected water.api.AUC makeAUC(ConfusionMatrix[] cms, float[] threshold) {
     assert _nclass == 2;
-    return cms != null ? new AUC(cms, threshold) : null;
+    return cms != null ? new AUC(cms, threshold, _cmDomain) : null;
   }
 
   protected boolean inBagRow(Chunk[] chks, int row) { return false; }
