@@ -98,6 +98,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   @API(help = "lambda max", json=true, importance = ParamImportance.SECONDARY)
   double lambda_max = Double.NaN;
 
+  public static int MAX_PREDICTORS = 8000;
+
   // API output parameters END ------------------------------------------------------------
 
 
@@ -427,7 +429,21 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     currentLambdaIter = 0;
     boolean improved = _model.setAndTestValidation(_lambdaIdx,val);
     _model.clone().update(self());
-    if(_iter < max_iter && (improved || _runAllLambdas) && _lambdaIdx < (lambda.length-1) ){ // continue with next lambda value?
+    boolean done = false; // _iter < max_iter && (improved || _runAllLambdas) && _lambdaIdx < (lambda.length-1);
+    if(_iter == max_iter){
+      Log.info("GLM2 reached max #iterations.");
+      done = true;
+    } else if(!improved && !_runAllLambdas){
+      Log.info("GLM2 converged as solution stopped improving with decreasing lambda.");
+      done = true;
+    } else if(_lambdaIdx == lambda.length-1){
+      Log.info("GLM2 done with all given lambdas.");
+      done = true;
+    } else if(_activeCols.length + 1 >= MAX_PREDICTORS){
+      Log.info("GLM2 reached maximum allowed number of predictors at lambda = " + lambda[_lambdaIdx]);
+      done = true;
+    }
+    if(!done){ // continue with next lambda value?
       ++_lambdaIdx;
       glmt._val = null;
       if(glmt._gram == null){ // assume we had lambda search with strong rules
@@ -695,6 +711,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   private void run(final double ymu, final long nobs, LMAXTask lmaxt){
     String [] warns = null;
     if(lambda_search){
+      if(!strong_rules_enabled && _dinfo.fullN() > MAX_PREDICTORS)
+        throw new IllegalArgumentException("running GLM with too many predictors, can only handle 8000, got " + _dinfo.fullN() + ", try to run with strong_rules enabled.");
       max_iter = Math.max(300,max_iter);
       assert lmaxt != null:"running lambda search, but don't know what is the lambda max!";
       final double lmax = lmaxt.lmax();
@@ -706,6 +724,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         lambda[i] = lambda[i-1]*d;
       _runAllLambdas = false;
     } else if(alpha[0] > 0 && lmaxt != null) { // make sure we start with lambda max (and discard all lambda > lambda max)
+      if(_dinfo.fullN() > MAX_PREDICTORS)
+        throw new IllegalArgumentException("running GLM with too many predictors, can only handle 8000, got " + _dinfo.fullN() + ", try to filter out some columns OR run with lambda_search on and strong_rules enabled");
       final double lmax = lmaxt.lmax();
       int i = 0; while(i < lambda.length && lambda[i] > lmax)++i;
       if(i != 0) {
