@@ -251,7 +251,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   }
 
   public static Job gridSearch(Key jobKey, Key destinationKey, DataInfo dinfo, GLMParams glm, double [] lambda, boolean lambda_search, double [] alpha, boolean higher_accuracy, int nfolds){
-    return gridSearch(jobKey, destinationKey, dinfo, glm, lambda,lambda_search, alpha,higher_accuracy, nfolds,DEFAULT_BETA_EPS);
+    return gridSearch(jobKey, destinationKey, dinfo, glm, lambda, lambda_search, alpha, higher_accuracy, nfolds, DEFAULT_BETA_EPS);
   }
   public static Job gridSearch(Key jobKey, Key destinationKey, DataInfo dinfo, GLMParams glm, double [] lambda, boolean lambda_search, double [] alpha, boolean high_accuracy, int nfolds, double betaEpsilon){
     return new GLMGridSearch(4, jobKey, destinationKey,dinfo,glm,lambda, lambda_search, alpha, high_accuracy, nfolds,betaEpsilon).fork();
@@ -508,7 +508,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
             assert j == newBeta.length-1;
           } else
             newBeta = fullBeta;
-          if(Arrays.equals(oldCols,_activeCols)) // set of coefficients did not change
+          if(Arrays.equals(oldCols,_activeCols) && (glmt._gram.fullN() == _activeCols.length+1)) // set of coefficients did not change
             glmt3 = glmt;
           else
             glmt3 = new GLMIterationTask(GLM2.this,_activeData,glmt._glm,true,false,false,newBeta,glmt._ymu,glmt._reg,new Iteration());
@@ -556,7 +556,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   private class Iteration extends H2OCallback<GLMIterationTask> {
     public final long _iterationStartTime;
     public Iteration(){super(GLM2.this); _iterationStartTime = System.currentTimeMillis();}
-    @Override public void callback(final GLMIterationTask glmt) {
+    @Override public void callback(final GLMIterationTask glmt){
       Log.info("GLM2 iteration(" + _iter + ") done in " + (System.currentTimeMillis() - _iterationStartTime) + "ms");
       if( !isRunning(self()) )  throw new JobCancelledException();
       currentLambdaIter++;
@@ -612,7 +612,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         _lastResult = new IterationInfo(GLM2.this._iter-1, glmt,_activeCols);
 
       }
-      final double [] newBeta = glmt._beta != null?glmt._beta.clone():MemoryManager.malloc8d(glmt._xy.length);
+      final double [] newBeta = MemoryManager.malloc8d(glmt._xy.length);
       ADMMSolver slvr = new ADMMSolver(lambda[_lambdaIdx],alpha[0], ADMM_GRAD_EPS, _addedL2);
       slvr.solve(glmt._gram,glmt._xy,glmt._yy,newBeta);
       _addedL2 = slvr._addedL2;
@@ -689,7 +689,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       new LMAXTask(GLM2.this, _dinfo, _glm, ymu,nobs,alpha[0],new H2OCallback<LMAXTask>(GLM2.this){
         @Override public void callback(LMAXTask t){ run(ymu,nobs,t);}
       }).asyncExec(_dinfo._adaptedFrame);
-    } else run(ymu,nobs,null); // shortcut for quick & simple
+    } else run(ymu, nobs, null); // shortcut for quick & simple
   }
 
   private void run(final double ymu, final long nobs, LMAXTask lmaxt){

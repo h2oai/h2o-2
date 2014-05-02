@@ -91,7 +91,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       return new DataInfo().read(ab);
     }
 
-    private DataInfo() {}
+    private DataInfo() {_catLvls = null;}
 
     private DataInfo(DataInfo dinfo, int foldId, int nfolds){
       assert dinfo._catLvls == null:"Should not be called with filtered levels (assuming the selected levels may change with fold id) ";
