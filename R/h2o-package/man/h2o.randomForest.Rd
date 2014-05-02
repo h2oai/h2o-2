@@ -12,7 +12,8 @@ Performs random forest classification on a data set.
 ## Default method:
 h2o.randomForest(x, y, data, classification = TRUE, ntree = 50, depth = 20, 
   sample.rate = 2/3, classwt = NULL, nbins = 100, seed = -1, importance = FALSE, 
-  validation, nodesize = 1, use_non_local = TRUE, version = 2)
+  validation, nodesize = 1, balance.classes = FALSE, max.after.balance.size = 5,
+  use_non_local = TRUE, version = 2)
 
 ## Import to a ValueArray object:
 h2o.randomForest.VA(x, y, data, ntree = 50, depth = 20, sample.rate = 2/3, 
@@ -21,7 +22,7 @@ h2o.randomForest.VA(x, y, data, ntree = 50, depth = 20, sample.rate = 2/3,
 ## Import to a FluidVecs object:
 h2o.randomForest.FV(x, y, data, classification = TRUE, ntree = 50, depth = 20, 
   sample.rate = 2/3, nbins = 100, seed = -1, importance = FALSE, validation, 
-  nodesize = 1)
+  nodesize = 1, balance.classes = FALSE, max.after.balance.size = 5)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -63,6 +64,8 @@ An \code{\linkS4class{H2OParsedDataVA}} (\code{version = 1}) or \code{\linkS4cla
   \item{nodesize}{
   (Optional) Number of nodes to use for computation.
   }
+  \item{balance.classes}{(Optional) Balance training data class counts via over/under-sampling (for imbalanced data)}
+  \item{max.after.balance.size}{Maximum relative size of the training data after balancing class counts (can be less than 1.0)}
   \item{use_non_local}{
   (Optional) Logical value indicating whether to use non-local data in building random forest model.
   }
