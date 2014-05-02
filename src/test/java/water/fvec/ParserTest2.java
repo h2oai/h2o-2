@@ -590,6 +590,16 @@ public class ParserTest2 extends TestUtil {
       for( int i=0; i<100; i+=2 ) { exp[i+100][0]=-1001; exp[i+101][0]= 1001; }
       k = FVecTest.makeByteVec(Key.make().toString(),sb.toString());
       testParsed(k,exp);
+
+      // Build 100 zero's and 1 double.
+      exp = new double[101][1];
+      exp[50][0] = 1.23456789;
+      sb = new StringBuilder();
+      for( int i=0; i<50; i++ ) sb.append("0.0\n");
+      sb.append("1.23456789\n");
+      for( int i=0; i<50; i++ ) sb.append("0.0\n");
+      k = FVecTest.makeByteVec(Key.make().toString(),sb.toString());
+      testParsed(k,exp);
     }
   }
 
