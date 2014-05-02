@@ -1,14 +1,14 @@
-\name{h2o.__changeLogPath}
-\alias{h2o.__changeLogPath}
+\name{h2o.setLogPath}
+\alias{h2o.setLogPath}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-Change Path Where H2O R Logs are Saved
+Set Path Where H2O R Logs are Saved
 }
 \description{
-Change the file path where H2O R command and error response logs are currently being saved.
+Set the file path where H2O R command and error response logs are currently being saved.
 }
 \usage{
-h2o.__changeLogPath(path, type)
+h2o.setLogPath(path, type)
 }
 \arguments{
   \item{path}{A character string indicating the new file path where logs should be saved.}
@@ -16,13 +16,13 @@ h2o.__changeLogPath(path, type)
 }
 
 \seealso{
-\code{\link{h2o.__startLogging}, \link{h2o.__stopLogging}, \link{h2o.__clearLogs}, \link{h2o.__openLog}, \link{h2o.__getLogPath}}
+\code{\link{h2o.startLogging}, \link{h2o.stopLogging}, \link{h2o.clearLogs}, \link{h2o.openLog}, \link{h2o.getLogPath}}
 }
 \examples{
 library(h2o)
-h2o.__getLogPath("Command")
-h2o.__changeLogPath(getwd(), "Command")
-h2o.__getLogPath("Command")
+h2o.getLogPath("Command")
+h2o.setLogPath(getwd(), "Command")
+h2o.getLogPath("Command")
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

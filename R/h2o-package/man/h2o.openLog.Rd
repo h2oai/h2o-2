@@ -1,5 +1,5 @@
-\name{h2o.__openLog}
-\alias{h2o.__openLog}
+\name{h2o.openLog}
+\alias{h2o.openLog}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
 View H2O R Logs
@@ -8,14 +8,14 @@ View H2O R Logs
 Open existing logs of H2O R POST commands and error responses on local disk. Used primarily for debugging purposes.
 }
 \usage{
-h2o.__openLog(type)
+h2o.openLog(type)
 }
 \arguments{
   \item{type}{Which log file to open. Either \code{"Command"} for POST commands sent between R and H2O, or \code{"Error"} for errors returned by H2O in the HTTP response.}
 }
 
 \seealso{
-\code{\link{h2o.__startLogging}, \link{h2o.__stopLogging}, \link{h2o.__clearLogs}, \link{h2o.__getLogPath}, \link{h2o.__changeLogPath}}
+\code{\link{h2o.startLogging}, \link{h2o.stopLogging}, \link{h2o.clearLogs}, \link{h2o.getLogPath}, \link{h2o.setLogPath}}
 }
 \examples{
 \dontrun{
@@ -23,13 +23,13 @@ h2o.__openLog(type)
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 
-h2o.__startLogging()
+h2o.startLogging()
 ausPath = system.file("extdata", "australia.csv", package="h2o")
 australia.hex = h2o.importFile(localH2O, path = ausPath)
-h2o.__stopLogging()
+h2o.stopLogging()
 
-h2o.__openLog("Command")
-h2o.__openLog("Error")
+h2o.openLog("Command")
+h2o.openLog("Error")
 h2o.shutdown(localH2O)
 }
 }
