@@ -195,7 +195,7 @@ Steam.Hypergraph = do ->
     target = createNode undefined
     link source, throttle target, wait, options
     target
- 
+
   createEdge: createEdge
   createHyperedge: createHyperedge
   createNode: createNode
@@ -224,7 +224,7 @@ Steam.Hypergraph = do ->
 
 #
 # Common combinators easily expressed with zip$().
-# 
+#
 
 if$ = (condition, valueIfTrue, valueIfFalse) ->
   zip$ [condition, valueIfTrue, valueIfFalse], (c, t, f) -> if c then t else f

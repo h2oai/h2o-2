@@ -94,9 +94,7 @@ BROWSER_LIB_SCRIPTS=\
 TEST_LIB_SCRIPTS=\
 	$(LIB)/jquery/dist/jquery.js \
 	$(LIB)/lodash/dist/lodash.js \
-	$(LIB)/knockout/knockout.js \
-	$(LIB)/chai/chai.js \
-	$(MODULES)/mocha/mocha.js
+	$(LIB)/knockout/knockout.js
 
 TEMPLATES=\
 	src/templates/main-view.jade \
@@ -136,10 +134,6 @@ STYLES=\
 LIB_STYLES=\
 	$(LIB)/fontawesome/css/font-awesome.css \
 	$(LIB)/bootstrap/dist/css/bootstrap.css
-
-TEST_LIB_STYLES=\
-	$(MODULES)/mocha/mocha.css
-
 
 ifeq ($(shell which node),)
 default:
@@ -202,10 +196,10 @@ build: setup
 	$(MAKE) really_build
 
 unit: \
-	$(DEPLOY)/lib.test.css \
-	$(DEPLOY)/lib.test.js \
-	$(DEPLOY)/tests.html \
-	$(DEPLOY)/steam.test.js
+	$(DEPLOY)/tests/tape.js \
+	$(DEPLOY)/tests/lib.test.js \
+	$(DEPLOY)/tests/steam.test.js \
+	$(DEPLOY)/tests/index.html
 
 node: \
 	$(DIST)/steam.node.js
@@ -226,8 +220,8 @@ help:
 	@echo "  make preload    Preload a few frames and models into H2O (requires R)"
 	@echo ""
 	@echo "Development tasks:"
-	@echo "  make build      Build and deploy to ../lib/resources/steam/"
-	@echo "  make unit       Build browser test suite"
+	@echo "  make build      Build and deploy to ../lib/resources/steam/index.html"
+	@echo "  make unit       Build browser test suite and deploy to ../lib/resources/steam/tests/index.html"
 	@echo "  make test       Run all tests"
 	@echo "  make debug      Run tests in debug mode"
 	@echo "  make coverage   Compile test coverage"
@@ -235,30 +229,15 @@ help:
 	@echo "  make clean      Clean up build directories"
 	@echo "  make watch      Watch for changes and run `make build test`"
 
-#smoke: node
-#	@$(BIN)/mocha \
-#		--reporter dot \
-#		--bail \
-#		--check-leaks \
-#		${ARGS} \
-#		$(DIST)/steam.node.js
-
-#
 # This runs all tests by default. 
 # To run specific tests, run:
 #   make ARGS="-g foobar" test
 # where foobar is a regexp
-#
-#test: node
-#	@$(BIN)/mocha \
-#		--reporter dot \
-#		--check-leaks \
-#		${ARGS} \
-#		$(DIST)/steam.node.js
-#
-
 test: node
 	@node $(DIST)/steam.node.js
+
+faucet: node
+	@node $(DIST)/steam.node.js | $(BIN)/faucet
 
 debug: node
 	@node --debug-brk $(DIST)/steam.node.js
@@ -275,36 +254,8 @@ coverage: node
 		$(DIST)/steam.node.js
 	@echo Coverage generated at $(BUILD)/coverage
 
-
 tags:
 	(cd src/scripts && ctags -R .)
-
-#debug: node
-#	@$(BIN)/mocha \
-#		--reporter dot \
-#		--check-leaks \
-#		--debug-brk \
-#		${ARGS} \
-#		$(DIST)/steam.node.js
-#
-#report: node
-#	@$(BIN)/mocha \
-#		--reporter spec \
-#		--check-leaks \
-#		${ARGS} \
-#		$(DIST)/steam.node.js
-#
-#coverage: node
-#	@mkdir -p $(BUILD)/coverage
-#	@$(BIN)/istanbul \
-#		cover \
-#		$(BIN)/_mocha \
-#		--dir $(BUILD)/coverage \
-#		-x "**/lib/**" \
-#		$(DIST)/steam.node.js
-#	@echo Coverage generated at $(BUILD)/coverage
-
-# spec: $(BUILD)/spec/index.html
 
 doc: 
 	@mkdir -p $(BUILD)/doc
@@ -330,27 +281,33 @@ reset: clean
 
 $(BUILD)/scripts/%.global.js: src/scripts/%.global.coffee
 	@mkdir -p $(@D)
-	$(BIN)/coffee --bare --output $(@D) --compile $<
+	@$(BIN)/coffee --bare --output $(@D) --compile $<
+	@echo Built $@
 
 $(BUILD)/tests/%.global.js: src/tests/%.global.coffee
 	@mkdir -p $(@D)
-	$(BIN)/coffee --bare --output $(@D) --compile $<
+	@$(BIN)/coffee --bare --output $(@D) --compile $<
+	@echo Built $@
 
 $(BUILD)/scripts/%.js: src/scripts/%.coffee
 	@mkdir -p $(@D)
-	$(BIN)/coffee --output $(@D) --compile $<
+	@$(BIN)/coffee --output $(@D) --compile $<
+	@echo Built $@
 
 $(BUILD)/tests/%.js: src/tests/%.coffee
 	@mkdir -p $(@D)
-	$(BIN)/coffee --output $(@D) --compile $<
+	@$(BIN)/coffee --output $(@D) --compile $<
+	@echo Built $@
 
 $(DEPLOY)/index.html: src/templates/index.jade $(TEMPLATES)
 	@mkdir -p $(@D)
-	$(BIN)/jade --pretty --out $(@D) $<
+	@$(BIN)/jade --pretty --out $(@D) $<
+	@echo Built $@
 
 $(DEPLOY)/css/steam.css: src/styles/steam.styl $(STYLES)
 	@mkdir -p $(@D)
-	$(BIN)/stylus --use nib --out $(@D) $<
+	@$(BIN)/stylus --use nib --out $(@D) $<
+	@echo Built $@
 
 $(DEPLOY)/js/steam.js: $(COMMON_SCRIPTS) $(BROWSER_SCRIPTS)
 	@mkdir -p $(@D)
@@ -358,23 +315,23 @@ $(DEPLOY)/js/steam.js: $(COMMON_SCRIPTS) $(BROWSER_SCRIPTS)
 	@echo '(function(){' >> $@
 	@cat $^ >> $@
 	@echo '}).call(this);' >> $@
-	@echo Rebuilt browser script
+	@echo Built $@
 
-$(DIST)/steam.node.js: $(BUILD)/tests/node.global.js $(COMMON_SCRIPTS) $(TEST_SCRIPTS) $(BUILD)/tests/reporter.global.js
+$(DIST)/steam.node.js: $(BUILD)/tests/node.global.js $(COMMON_SCRIPTS) $(TEST_SCRIPTS)
 	@mkdir -p $(@D)
 	@echo '"use strict";' > $@
 	@echo '(function(){' >> $@
 	@cat $^ >> $@
 	@echo '}).call(this);' >> $@
-	@echo Rebuilt node test script
+	@echo Built $@
 
-$(DEPLOY)/steam.test.js: $(BUILD)/tests/browser.global.js $(COMMON_SCRIPTS) $(TEST_SCRIPTS)
+$(DEPLOY)/tests/steam.test.js: $(COMMON_SCRIPTS) $(TEST_SCRIPTS)
 	@mkdir -p $(@D)
 	@echo '"use strict";' > $@
 	@echo '(function(){' >> $@
 	@cat $^ >> $@
 	@echo '}).call(this);' >> $@
-	@echo Rebuilt browser test script
+	@echo Built $@
 
 $(DEPLOY)/img/%.png: src/images/%.png
 	@mkdir -p $(@D)
@@ -417,10 +374,6 @@ $(DEPLOY)/fonts/%.woff: $(LIB)/fontawesome/fonts/%.woff
 	@mkdir -p $(@D)
 	cp $< $@
 
-$(DEPLOY)/tests.html: src/util/mocha-html/tests.html
-	@mkdir -p $(@D)
-	cp $< $@
-
 $(DEPLOY)/css/%.map: $(LIB)/bootstrap/dist/css/%.map
 	@mkdir -p $(@D)
 	cp $< $@
@@ -428,31 +381,26 @@ $(DEPLOY)/css/%.map: $(LIB)/bootstrap/dist/css/%.map
 $(DEPLOY)/css/lib.css: $(LIB_STYLES)
 	@mkdir -p $(@D)
 	@cat $^ > $@
-	@echo Rebuilt browser styles
+	@echo Built $@
 
 $(DEPLOY)/js/lib.js: $(BROWSER_LIB_SCRIPTS)
 	@mkdir -p $(@D)
 	@cat $^ > $@
-	@echo Rebuilt browser lib
+	@echo Built $@
 
-$(DEPLOY)/lib.test.css: $(TEST_LIB_STYLES)
+$(DEPLOY)/tests/lib.test.js: $(TEST_LIB_SCRIPTS)
 	@mkdir -p $(@D)
 	@cat $^ > $@
-	@echo Rebuilt test styles
+	@echo Built $@
 
-$(DEPLOY)/lib.test.js: $(TEST_LIB_SCRIPTS)
+$(DEPLOY)/tests/tape.js: node_modules/tape/index.js
 	@mkdir -p $(@D)
-	@cat $^ > $@
-	@echo Rebuilt test lib
+	@$(BIN)/browserify $< -s test -o $@
+	@echo Built $@
 
-#$(BUILD)/spec/index.html: node
-#	@mkdir -p $(@D)
-#	@$(BIN)/mocha \
-#		--reporter doc \
-#		$(DIST)/steam.node.js \
-#		| cat src/util/mocha-doc/header.html - src/util/mocha-doc/footer.html \
-#		> $@
-#	@echo Spec generated at $(@D)
-	
+$(DEPLOY)/tests/index.html: src/tests/index.html
+	@mkdir -p $(@D)
+	cp $< $@
+	@echo Built $@
 
 .PHONY: default really_build build node unit smoke test debug report spec coverage doc clean setup reset watch help preload pytest tags
