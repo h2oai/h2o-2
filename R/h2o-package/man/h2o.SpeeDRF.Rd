@@ -85,12 +85,15 @@ An object of class \code{\linkS4class{H2OSpeeDRFModel}} with slots key, data, va
 }
 
 \examples{
+# Currently still in beta, so don't automatically run example
+\dontrun{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, beta = TRUE)
 irisPath = system.file("extdata", "iris.csv", package = "h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
 h2o.SpeeDRF(x = c(2,3,4), y = 5, data = iris.hex, ntree = 50, depth = 100)
 h2o.shutdown(localH2O)
+}
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
