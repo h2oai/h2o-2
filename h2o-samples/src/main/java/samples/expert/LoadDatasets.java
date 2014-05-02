@@ -1,7 +1,7 @@
 package samples.expert;
 
-import hex.FrameSplitter;
 import water.*;
+import water.api.FrameSplitPage;
 import water.fvec.Frame;
 import water.fvec.RebalanceDataSet;
 import water.util.Log;
@@ -334,7 +334,13 @@ public class LoadDatasets extends Job {
       if (!fr._key.toString().contains("_part")) {
         Log.info("Splitting frame under key '" + fr._key.toString() + "' into 75%/25% train/test splits.");
         try {
-          new FrameSplitter(fr, new float[]{0.75f, 0.25f}).invoke();
+          FrameSplitPage fsp = new FrameSplitPage();
+          fsp.source = fr;
+          fsp.ratios = new float[]{0.75f};
+          fsp.split_keys = null;
+          fsp.split_rows = null;
+          fsp.split_ratios = null;
+          fsp.invoke();
         } catch(Exception ex) {
           Log.err(ex.getMessage());
         }
