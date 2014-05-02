@@ -1,18 +1,18 @@
 package water.api;
 
+import hex.ReBalance;
 import hex.deeplearning.DeepLearning;
 import hex.drf.DRF;
 import hex.gbm.GBM;
 import hex.glm.GLM2;
-import java.text.DecimalFormat;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
-
 import water.*;
 import water.api.Inspect2.ColSummary.ColType;
 import water.fvec.*;
 import water.util.UIUtils;
+
 import java.text.DecimalFormat;
 
 public class Inspect2 extends Request2 {
@@ -111,11 +111,12 @@ public class Inspect2 extends Request2 {
               GBM.link(skey, "Distributed GBM") +", "+
               GLM2.link(skey, "Generalized Linear Modeling (beta)") +", "+
               DeepLearning.link(skey, "Deep Learning") +", "+
-              hex.LR2.link(skey, "Linear Regression") + ",<br>"+
+              hex.LR2.link(skey, "Linear Regression") + "<br>"+
               SummaryPage2.link(skey,"Summary")+", "+
               DownloadDataset.link(skey, "Download as CSV")+", "+
               ExportFiles.link(skey, "Export to file")+", "+
-              UIUtils.qlink(FrameSplitPage.class, skey, "Split frame") +
+              UIUtils.qlink(FrameSplitPage.class, skey, "Split frame") + ", " +
+              UIUtils.qlink(ReBalance.class, skey, "ReBalance frame (load balancing)") +
               "</div>");
     String _scrollto = String.valueOf(offset - 1);
       sb.append(

@@ -21,24 +21,24 @@ public class ReBalance extends Request2 {
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
   @Request.API(help = "Frame to rebalance", required = true, filter = Request.Default.class, json=true)
-  public Frame before;
+  public Frame source;
 
   @Request.API(help = "Random number seed", filter = Request.Default.class, json=true)
   public long seed = new Random().nextLong();
 
   @Request.API(help = "Key for rebalanced frame", filter = Request.Default.class, json=true)
-  public String after = before != null ? before._key.toString() + ".balanced" : null;
+  public String after = source != null ? source._key.toString() + ".balanced" : null;
 
   @Request.API(help = "Number of chunks", filter = Request.Default.class, json=true)
   public int chunks = H2O.CLOUD.size() * H2O.NUMCPUS * 4;
 
   @Override public RequestBuilders.Response serve() {
-    if( before==null ) throw new IllegalArgumentException("Missing frame to rebalance!");
+    if( source==null ) throw new IllegalArgumentException("Missing frame to rebalance!");
     try {
-      if (chunks > before.numRows()) throw new IllegalArgumentException("Cannot create more than " + before.numRows() + " chunks.");
-      if( after==null ) after = before._key.toString() + ".balanced";
+      if (chunks > source.numRows()) throw new IllegalArgumentException("Cannot create more than " + source.numRows() + " chunks.");
+      if( after==null ) after = source._key.toString() + ".balanced";
       final Key newKey = Key.make(after);
-      RebalanceDataSet rb = new RebalanceDataSet(before, newKey, chunks);
+      RebalanceDataSet rb = new RebalanceDataSet(source, newKey, chunks);
       H2O.submitTask(rb);
       rb.join();
       return RequestBuilders.Response.done(this);
@@ -55,7 +55,7 @@ public class ReBalance extends Request2 {
     aft.replace("key", after);
     DocGen.HTML.section(sb, "Rebalancing done. Frame '" + aft.toString()
             + "' now has " + ((Frame)UKV.get(Key.make(after))).anyVec().nChunks()
-            + " chunks (before: " + before.anyVec().nChunks() + ").");
+            + " chunks (source: " + source.anyVec().nChunks() + ").");
     return true;
   }
 
