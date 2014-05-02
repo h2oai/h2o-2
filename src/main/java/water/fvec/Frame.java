@@ -335,6 +335,15 @@ public class Frame extends Lockable<Frame> {
   public int  numCols() { return vecs().length; }
   public long numRows() { return anyVec()==null ? 0 : anyVec().length(); }
 
+  public boolean isRawData() {
+    // Right now there is only one Vec for raw data, but imagine a Parse after a JDBC import or such.
+    for (Vec v : vecs()) {
+      if (v.isByteVec())
+        return true;
+    }
+    return false;
+  }
+
   // Number of columns when categoricals expanded.
   // Note: One level is dropped in each categorical col.
   public int numExpCols() {

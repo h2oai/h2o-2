@@ -56,6 +56,7 @@ public class Frames extends Request2 {
     public String id = null;
     public String[] column_names = { };
     public Set<String> compatible_models = new HashSet<String>();
+    public boolean is_raw_frame = true; // guilty until proven innocent
   }
 
   // TODO: refactor, since this is duplicated
@@ -152,6 +153,7 @@ public class Frames extends Request2 {
     summary.id = frame.getUniqueId().getId();
 
     summary.column_names = frame._names;
+    summary.is_raw_frame = frame.isRawData();
 
     if (find_compatible_models) {
       Map<String, Model> compatible_models = findCompatibleModels(frame, all_models, all_models_cols);

@@ -379,6 +379,7 @@ public class Vec extends Iced {
   public final boolean isBad() { return naCnt() == length(); }
   /** Is the column contains float values. */
   public final boolean isFloat() { return !isEnum() && !isInt(); }
+  public final boolean isByteVec() { return (this instanceof ByteVec); }
 
   Vec setRollupStats( RollupStats rs ) {
     _min  = rs._min; _max = rs._max; _mean = rs._mean;
