@@ -314,9 +314,8 @@ public abstract class LSMSolver extends Iced{
           // did not converge, check if we can converge in reasonable time
           double diff = gradientErr - gerr;
           if(diff < 0 || (gerr/diff) > 1e3){ // we won't ever converge with this setup (maybe change rho and try again?)
-            if(_orlx < 1.8 && gerr > 5e-4){ //
+            if(_orlx < 1.8 && gerr > 5e-4) {
               _orlx = 1.8; // try if over-relaxation helps...
-              Log.info("trying over-relaxation of " + _orlx + " after " + i + " iteartions and gerr = " + gerr);
             } else {
               _converged = gerr < 1e-4;
               break;
@@ -414,7 +413,6 @@ public abstract class LSMSolver extends Iced{
         }
         converged = true;
       }
-      System.out.println("Proximal solver done" + " in " + iter + " iterations and " + (System.currentTimeMillis()-t1) + "ms" + ", objval reduced from " + objval + " to " + lsm_objectiveVal(xy,yy,beta,xb));
       return converged;
     }
     public String name(){return "ProximalGradientSolver";}

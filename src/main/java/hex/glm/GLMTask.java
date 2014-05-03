@@ -103,7 +103,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       final int numStart = _dinfo.numStart();
       for(int i = 0; i < nums.length; ++i)
         _z[i+numStart] += w*nums[i];
-      super.processRow(gid,nums,ncats,cats,responses);
+      super.processRow(gid, nums, ncats, cats, responses);
     }
     @Override public void reduce(GLMIterationTask git){
       Utils.add(_z, ((LMAXTask)git)._z);
@@ -254,12 +254,10 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       assert ((_glm.family != Family.binomial) || (0 <= y && y <= 1)) : "illegal response column, y must be <0,1>  for family=Binomial. got " + y;
       final double w, eta, mu, var, z;
       final int numStart = _dinfo.numStart();
-      double d = 0;
-      if( _glm.family == Family.gaussian) {
-        assert !_computeGradient;
+      double d = 1;
+      if( _glm.family == Family.gaussian){
         w = 1;
         z = y;
-        assert _beta == null || !_computeGram; // don't expect beta here, gaussian is non-iterative
         mu = _validate?computeEta(ncats,cats,nums,_beta):0;
       } else {
         if( _beta == null ) {

@@ -98,7 +98,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   @API(help = "lambda max", json=true, importance = ParamImportance.SECONDARY)
   double lambda_max = Double.NaN;
 
-  public static int MAX_PREDICTORS = 8000;
+  public static int MAX_PREDICTORS = 5000;
 
   // API output parameters END ------------------------------------------------------------
 
@@ -439,7 +439,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     } else if(_lambdaIdx == lambda.length-1){
       Log.info("GLM2 done with all given lambdas.");
       done = true;
-    } else if(_activeCols.length + 1 >= MAX_PREDICTORS){
+    } else if(_activeCols != null && _activeCols.length + 1 >= MAX_PREDICTORS){
       Log.info("GLM2 reached maximum allowed number of predictors at lambda = " + lambda[_lambdaIdx]);
       done = true;
     }
@@ -506,7 +506,6 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
             if(d > err) err = d;
             else if(d < -err) err = -d;
         }
-        Log.info("GLM converged with max |subgradient| = " + err);
         final GLMIterationTask glmt3;
         // now filter out the cols for the next lambda...
         if(lambda.length > 1 && _lambdaIdx < lambda.length-1 && _activeCols != null){
@@ -749,7 +748,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       GLM2.this.complete(); // signal we're done to anyone waiting for the job
     else {
       ++_iter;
-      if(lmaxt != null)
+      if(lmaxt != null && strong_rules_enabled)
         activeCols(lambda[_lambdaIdx],lmaxt.lmax(),lmaxt.gradient(l2pen()));
       Log.info("GLM2 staring GLM after " + (System.currentTimeMillis()-start) + "ms of preprocessing (mean/lmax/strong rules computation)");
       new GLMIterationTask(GLM2.this, _activeData,_glm,true,false,false,null,_ymu = ymu,_reg = 1.0/nobs, new Iteration()).asyncExec(_activeData._adaptedFrame);
