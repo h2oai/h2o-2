@@ -306,6 +306,10 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   }
 
   public void generateHTML(String title, StringBuilder sb) {
+    String style = "<style>\n"+
+                    "td, th { min-width:60px;}\n"+
+                    "</style>\n";
+    sb.append(style);
     DocGen.HTML.title(sb,title);
     sb.append("<div class=\"alert\">").append("Actions: ");
     sb.append(Inspect2.link("Inspect training data (" + _dataKey.toString() + ")", _dataKey)).append(", ");
@@ -318,7 +322,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     }
     sb.append("</div>");
     DocGen.HTML.paragraph(sb,"Model Key: "+_key);
-    DocGen.HTML.paragraph(sb,"Max max_depth: "+max_depth+", Nbins:"+nbins+", Trees: " + this.size());
+    DocGen.HTML.paragraph(sb,"Max max_depth: "+max_depth+", Nbins: "+nbins+", Trees: " + this.size());
     DocGen.HTML.paragraph(sb, "Sample Rate: "+sample + ", Seed: "+zeed+", mtry: "+mtry);
     sb.append("</pre>");
 
@@ -483,9 +487,9 @@ public class SpeeDRFModel extends Model implements Job.Progress {
             total += num;
             totals[ccol] += num;
             if (ccol == crow) {
-              sb.append("<td style='background-color:LightGreen'>");
+              sb.append("<td style='background-color:LightGreen; min-width: 60px;'>");
             } else {
-              sb.append("<td>");
+              sb.append("<td styile='min-width: 60px;'>");
               error += num;
             }
             sb.append(num);
@@ -561,7 +565,6 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     // Compute varimp for individual features (_ncols)
     final float[] varimp   = new float[ncols - 1]; // output variable importance
     float[] varimpSD = new float[ncols - 1]; // output variable importance sd
-    final float[][] vote_diffs = new float[ncols - 1][trees];
     for (int var=0; var<ncols - 1; var++) {
       long[] votesOOB = asVotes(_treeMeasuresOnOOB[var]).votes();
       long[] votesSOOB = asVotes(_treeMeasuresOnSOOB[var]).votes();
@@ -572,14 +575,11 @@ public class SpeeDRFModel extends Model implements Job.Progress {
         double delta = ((float) (votesOOB[i] - votesSOOB[i])) / (float) nrows[i];
         imp += delta;
         v  += delta * delta;
-//        vote_diffs[var][i] = ((float) (votesOOB[i] - votesSOOB[i])) / (float) nrows[i];
-//        imp += ((float) (votesOOB[i] - votesSOOB[i])) / (float) nrows[i];
       }
       imp /= model.treeCount();
       varimp[var] = imp;
       varimpSD[var] = (float)Math.sqrt( (v/model.treeCount() - imp*imp) / model.treeCount() );
     }
-//    varimpSD = computeVarImpSD(vote_diffs);
     return new VarImp.VarImpMDA(varimp, varimpSD, model.treeCount());
   }
 
