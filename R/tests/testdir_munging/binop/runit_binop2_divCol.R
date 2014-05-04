@@ -53,6 +53,17 @@ test.slice.div <- function(conn) {
   if (!(grepl("\\.", col))) {
     col <- gsub("\\.", " ", sample(colnames(df[!sapply(df, is.factor)]), 1)) 
   }
+    print(which(col == colnames(df)))
+
+  print(colnames(hex))
+  print(col)
+
+  print(col %in% colnames(hex))
+  print(col %in% colnames(df))
+
+  if (!(col %in% colnames(hex))) {
+    col <- which(col == colnames(df))
+  }
   Log.info(paste("Using column: ", col))
  
   sliced <- hex[,col]
