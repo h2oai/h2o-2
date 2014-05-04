@@ -105,7 +105,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       this.seed = prior.seed;
     }
 
-    @Override protected TreeModelType getTreeModelType() { return TreeModelType.GBM; }
+    @Override protected TreeModelType getTreeModelType() { return TreeModelType.DRF; }
 
     @Override protected float[] score0(double data[], float preds[]) {
       float[] p = super.score0(data, preds);
