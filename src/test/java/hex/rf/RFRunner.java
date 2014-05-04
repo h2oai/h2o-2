@@ -86,7 +86,7 @@ public class RFRunner {
     String rawKeys;
     String parsedKeys;
     String h2oArgs = "";                                      // args for the spawned h2o
-    String jvmArgs = " -Xmx6g";                               // args for the spawned jvm
+    String jvmArgs = " -Xmx2g";                               // args for the spawned jvm
     String resultDB = "/tmp/results.csv";                     // output file
   }
 
