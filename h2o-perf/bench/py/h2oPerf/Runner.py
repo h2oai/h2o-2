@@ -145,8 +145,10 @@ class PerfRunner:
                 print '-' * 60
                 traceback.print_exc(file=sys.stdout)
                 print '-' * 60
+                p.terminate()
                 PerfUtils.stop_cloud(self, test.remote_hosts)
                 self.cloud.pop(0)
+                self.perfdb.this_test_run_id += 1
 
     def begin_sys_profiling(self, test_name):
         this_path = os.path.dirname(os.path.realpath(__file__))
@@ -154,7 +156,7 @@ class PerfRunner:
         cmd = ["python", hounds_py, str(self.perfdb.this_test_run_id),
                self.cloud[0].all_pids(), self.cloud[0].all_ips(), test_name]
         print
-        print "Unleashing the hounds!"
+        print "Start scraping /proc for mem & cpu"
         print ' '.join(cmd)
         print
         out = os.path.join(this_path, "../results", str(self.perfdb.this_test_run_id))
