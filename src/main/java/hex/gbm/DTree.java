@@ -960,10 +960,10 @@ public class DTree extends Iced {
         }
         else {
           if (getTreeModelType() == TreeModelType.GBM) {
-            H2O.licenseManager.isFeatureAllowed(LicenseManager.FEATURE_GBM_SCORING);
+            featureAllowed = H2O.licenseManager.isFeatureAllowed(LicenseManager.FEATURE_GBM_SCORING);
           }
           else if (getTreeModelType() == TreeModelType.DRF) {
-            H2O.licenseManager.isFeatureAllowed(LicenseManager.FEATURE_RF_SCORING);
+            featureAllowed = H2O.licenseManager.isFeatureAllowed(LicenseManager.FEATURE_RF_SCORING);
           }
         }
       }
