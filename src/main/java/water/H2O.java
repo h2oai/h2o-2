@@ -1403,6 +1403,7 @@ public final class H2O {
       LicenseManager.Result r = licenseManager.readLicenseFile(OPT_ARGS.license);
       if (r == LicenseManager.Result.OK) {
         Log.info("Successfully read license file ("+ OPT_ARGS.license + ")");
+        licenseManager.logLicensedFeatures();
       }
       else {
         Log.err("readLicenseFile failed (" + r + ")");
