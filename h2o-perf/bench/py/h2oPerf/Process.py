@@ -157,6 +157,11 @@ class RProc(Process):
         """
         self.ip = ip
         self.port = port
+     
+        print 
+        print "DEBUG RPROCESS: "
+        print "TEST NAME: " + self.test_name
+        print
 
         cmd = ["R", "-f", self.rfile, "--args", self.ip + ":" + str(self.port)]
         short_dir = re.sub(r'[\\/]', "_", self.test_short_dir)
