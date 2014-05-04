@@ -186,8 +186,11 @@ class H2OCloudNode:
             print "Performing try : " + str(m) + " out of total tries = " + str(max_retries)
             url_sys = "http://{}:{}/stat".format(self.ip, 8000)
             url_proc = "http://{}:{}/{}/stat".format(self.ip, 8000, self.pid)
-            r_sys = requests.get(url_sys, timeout=120).text.split('\n')[0]
-            r_proc = requests.get(url_proc, timeout=120).text.strip().split()
+            try:
+              r_sys = requests.get(url_sys, timeout=120).text.split('\n')[0]
+              r_proc = requests.get(url_proc, timeout=120).text.strip().split()
+            except:
+              pass  # usually timeout, but just catch all and pass, error out downstream.
             if not got_url_sys:
                 if not ("404" and "not" and "found") in r_sys:
                     got_url_sys = True
