@@ -108,7 +108,6 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   private boolean highAccuracy(){return higher_accuracy;}
   private void setHighAccuracy(){
     higher_accuracy = true;
-    ADMM_GRAD_EPS = 1e-6;
   }
 
   private DataInfo _dinfo;
@@ -136,7 +135,6 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   }
   private static class IterationInfo {
     final int _iter;
-
     double [] _fullGrad;
 
     private final GLMIterationTask _glmt;
@@ -147,34 +145,6 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       _glmt = glmt.clone();
       _activeCols = activeCols;
       assert _glmt._beta != null && _glmt._val != null;
-    }
-
-
-
-    public final double [] beta(int [] activeCols, int fullN){
-      if(activeCols != null){
-        final double [] full = fullN(fullN);
-        final double [] res = MemoryManager.malloc8d(activeCols.length+1);
-        int i = 0;
-        for(int c:activeCols)
-          res[i++] = full[c];
-        assert i == res.length-1;
-        res[i] = full[full.length-1];
-        return res;
-      } else
-        return _glmt._beta.clone();
-    }
-    public final double [] fullN(int fullN){
-      double [] res = MemoryManager.malloc8d(fullN+1);
-      int i = 0;
-      for(int c:_activeCols){
-        assert c < res.length:"c = " + c + ", res.lenght = " + res.length + "fullN = " + fullN + ", _activeCols = " + Arrays.toString(_activeCols);
-        assert i < _glmt._beta.length:"i = " + i + ", _glmt._beta,length = " + _glmt._beta.length;
-        res[c] = _glmt._beta[i++];
-      }
-      assert i == _glmt._beta.length-1;
-      res[res.length-1] = _glmt._beta[i];
-      return res;
     }
   }
 
@@ -455,7 +425,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         assert _activeCols == null || (glmt._beta.length == _activeCols.length+1);
         assert !glmt.isDone();
         glmt.asyncExec(_activeData._adaptedFrame);
-      } else
+      } else // we have the right gram, just solve with with next lambda
         new Iteration().callback(glmt);
     } else    // nope, we're done
       GLM2.this.complete(); // signal we're done to anyone waiting for the job
@@ -496,7 +466,6 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
             for(int i = 0; i < fcnt; ++i)
               _activeCols[n+i] = failedCols[i];
             Arrays.sort(_activeCols);
-//            _lastResult = null;
             _activeData = _dinfo.filterExpandedColumns(_activeCols);
             new GLMIterationTask(GLM2.this, _activeData,_glm,true,false,false, resizeVec(newBeta,_activeCols,oldActiveCols),glmt._ymu,glmt._reg,new Iteration()).asyncExec(_activeData._adaptedFrame);
             return;
@@ -656,6 +625,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   }
 
   private int currentLambdaIter = 0;
+
   @Override
   public GLM2 fork(){
     start(new H2O.H2OEmptyCompleter());
@@ -709,9 +679,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 
   private void run(final double ymu, final long nobs, LMAXTask lmaxt){
     String [] warns = null;
+    if(!lambda_search || !strong_rules_enabled && _dinfo.fullN() > MAX_PREDICTORS)
+      throw new IllegalArgumentException("Too many predictors! GLM can only handle " + MAX_PREDICTORS + " predictors, got " + _dinfo.fullN() + ", try to run with strong_rules enabled.");
     if(lambda_search){
-      if(!strong_rules_enabled && _dinfo.fullN() > MAX_PREDICTORS)
-        throw new IllegalArgumentException("running GLM with too many predictors, can only handle 8000, got " + _dinfo.fullN() + ", try to run with strong_rules enabled.");
       max_iter = Math.max(300,max_iter);
       assert lmaxt != null:"running lambda search, but don't know what is the lambda max!";
       final double lmax = lmaxt.lmax();
@@ -723,8 +693,6 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         lambda[i] = lambda[i-1]*d;
       _runAllLambdas = false;
     } else if(alpha[0] > 0 && lmaxt != null) { // make sure we start with lambda max (and discard all lambda > lambda max)
-      if(_dinfo.fullN() > MAX_PREDICTORS)
-        throw new IllegalArgumentException("running GLM with too many predictors, can only handle 8000, got " + _dinfo.fullN() + ", try to filter out some columns OR run with lambda_search on and strong_rules enabled");
       final double lmax = lmaxt.lmax();
       int i = 0; while(i < lambda.length && lambda[i] > lmax)++i;
       if(i != 0) {
@@ -755,13 +723,12 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     }
   }
 
-
-
   private final double l2pen(){return l2pen(_lambdaIdx);}
   private final double l2pen(int lambdaIdx){return lambda[lambdaIdx]*(1-alpha[0]);}
   private final double l1pen(){return lambda[_lambdaIdx]*alpha[0];}
 
-
+  // filter the current active columns using the strong rules
+  // note: strong rules are update so tha they keep all previous coefficients in, to prevent issues with line-search
   private int [] activeCols(final double l1, final double l2, final double [] grad){
     final double rhs = alpha[0]*(2*l1-l2);
     int [] cols = MemoryManager.malloc4(_dinfo.fullN());
@@ -823,19 +790,12 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   public static class GLMGrid extends Iced {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
-
     final Key _jobKey;
-
     final long _startTime;
     @API(help="mean of response in the training dataset")
     final Key [] destination_keys;
     final double [] _alphas;
 
-//    final Comparator<GLMModel> _cmp;
-
-//    public GLMGrid (Key [] keys, double [] alphas){
-//      this(keys,alphas,null);
-//    }
     public GLMGrid (Key jobKey, GLM2 [] jobs){
       _jobKey = jobKey;
       _alphas = new double [jobs.length];
@@ -896,7 +856,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   }
 
 
-  // class to execute multiple GLM runs in parllell
+  // class to execute multiple GLM runs in parallel
   // (with  user-given limit on how many to run in in parallel)
   public static class ParallelGLMs extends DTask {
     transient final private GLM2 [] _glms;
@@ -912,9 +872,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       int nodeId = i%H2O.CLOUD.size();
       final GLM2 glm = _glms[i];
       new RPC(H2O.CLOUD._memary[nodeId],new DTask() {
-        @Override
-        public void compute2() {
-
+        @Override public void compute2() {
           glm.run(this);
         }
       }).addCompleter(new Callback()).call();
@@ -930,7 +888,6 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         // else just done myself (no more work) but others still in progress -> just return
       }
       @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
-        ex.printStackTrace();
         _job.cancel(ex);
         return true;
       }
