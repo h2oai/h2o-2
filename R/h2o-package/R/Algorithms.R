@@ -1136,6 +1136,7 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, validation,
                         depth=50, 
                         sample.rate=2/3,
                         oobee = TRUE,
+                        importance = FALSE,
                         nbins=1024, 
                         seed=-1,
                         stat.type="ENTROPY",
@@ -1171,10 +1172,10 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, validation,
 
   # NB: externally, 1 based indexing; internally, 0 based
   cols <- paste(args$x_i - 1, collapse=',')
-  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, response=args$y, ignored_cols=args$x_ignore, num_trees=ntree, max_depth=depth, validation=validation@key,
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, response=args$y, ignored_cols=args$x_ignore, num_trees=ntree, max_depth=depth, validation=validation@key, importance=as.numeric(importance),
                           sample=sample.rate, bin_limit=nbins, seed=seed, stat_type = stat.type, oobee=as.numeric(oobee), sampling_strategy=sampling_strategy, strata_samples=strata_samples, class_weights=classwt)
 
-  params = list(x=args$x, y=args$y, ntree=ntree, depth=depth, sample.rate=sample.rate, bin_limit=nbins, stat.type = stat.type, classwt=classwt, sampling_strategy=sampling_strategy, seed=seed, oobee = oobee)
+  params = list(x=args$x, y=args$y, ntree=ntree, depth=depth, sample.rate=sample.rate, bin_limit=nbins, stat.type = stat.type, classwt=classwt, sampling_strategy=sampling_strategy, seed=seed, oobee = oobee, importance = importance)
 
   if(length(ntree) == 1 && length(depth) == 1 && length(sample.rate) == 1 && length(nbins) == 1) { 
     .h2o.__waitOnJob(data@h2o, res$job_key)
@@ -1225,6 +1226,13 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, validation,
 
     class_names = tail(res$'_domains', 1)[[1]]
     result$confusion = .build_cm(tail(res$cms, 1)[[1]]$'_arr', class_names)
+  }
+
+  if(params$importance) {
+    result$varimp = data.frame(rbind(res$varimp$varimp, res$varimp$varimpSD))
+    result$varimp[3,] = sqrt(params$ntree)*result$varimp[1,]/result$varimp[2,]   # Compute z-scores
+    colnames(result$varimp) = res$'_names'[-length(res$'_names')]    #res$varimp$variables
+    rownames(result$varimp) = c(res$varimp$method, "Standard Deviation", "Z-Scores")
   }
 
   return(result)

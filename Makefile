@@ -110,6 +110,7 @@ build:
 	@echo
 	@echo "PHASE: Building R package..."
 	@echo
+	$(MAKE) build_rjar 1> target/logs/rjar_build.log
 	$(MAKE) -C R PROJECT_VERSION=$(PROJECT_VERSION) BUILD_NUMBER=$(BUILD_NUMBER) 1> target/logs/r_build.log
 
 	@echo
@@ -149,6 +150,24 @@ ifneq ($(shell uname),Windows_NT)
 	openssl md5 target/h2o.jar | sed 's/.*=[ ]*//' > target/h2o.jar.md5
 else
 	md5deep target/h2o.jar | cut -d'' -f1 > target/h2o.jar.md5
+endif
+
+build_rjar:
+	rm -fr target/Rjar
+	mkdir -p target/Rjar/tmp
+	cp target/h2o.jar target/Rjar/tmp/h2o_full.jar
+	(cd target/Rjar/tmp && jar xf h2o_full.jar)
+	(cd target/Rjar/tmp && rm -fr hadoop/0.* hadoop/1.* hadoop/cdh[35]* hadoop/cdh4_yarn)
+	(cd target/Rjar/tmp && rm -f h2o_full.jar)
+	(cd target/Rjar/tmp && cp META-INF/MANIFEST.MF ..)
+	(cd target/Rjar/tmp && rm -fr META-INF)
+	(cd target/Rjar/tmp && jar cfm ../h2o.jar ../MANIFEST.MF *)
+	rm -rf target/Rjar/tmp
+	rm target/Rjar/MANIFEST.MF
+ifneq ($(shell uname),Windows_NT)
+	openssl md5 target/Rjar/h2o.jar | sed 's/.*=[ ]*//' > target/Rjar/h2o.jar.md5
+else
+	md5deep target/Rjar/h2o.jar | cut -d'' -f1 > target/Rjar/h2o.jar.md5
 endif
 
 build_package:
