@@ -43,7 +43,7 @@ print(air.speedrf@model)
 
 # SpeeDRF
 air.speedrf.classwt = h2o.SpeeDRF(x = myX, y = myY, data = air.train, seed = 12, validation = air.valid, 
-                                  ntree = 10, depth = 20, classwt(2, 1))
+                                  ntree = 10, depth = 20, classwt=c(2, 1))
 print(air.speedrf@model)
 
 #uploading test file to h2o
