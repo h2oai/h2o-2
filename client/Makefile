@@ -19,7 +19,8 @@ COMMON_SCRIPTS=\
 	$(BUILD)/scripts/prelude.global.js \
 	$(BUILD)/scripts/typedef.global.js \
 	$(BUILD)/scripts/hypergraph.global.js \
-	$(BUILD)/scripts/geyser.global.js
+	$(BUILD)/scripts/geyser.global.js \
+	$(BUILD)/scripts/util.global.js
 
 # Javascript files that go into the browser target.
 BROWSER_SCRIPTS=\
@@ -72,6 +73,7 @@ TEST_SCRIPTS=\
 	$(BUILD)/tests/hypergraph.tests.js \
 	$(BUILD)/tests/geyser.tests.js \
 	$(BUILD)/tests/base.tests.js \
+	$(BUILD)/tests/h2o-proxy.tests.js \
 	$(BUILD)/tests/frame-list-view.tests.js \
 	$(BUILD)/tests/frame-view.tests.js
 

@@ -11,7 +11,7 @@ Steam.FrameListView = (_) ->
       when 'compatibleWithModel'
         "Showing datasets compatible with\n#{predicate.modelKey}"
       else
-        ''
+        throw new Error 'Invalid predicate type'
 
   displayItem = (item) ->
     if item
