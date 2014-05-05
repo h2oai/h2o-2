@@ -6,6 +6,7 @@ import hex.FrameTask;
 import jsr166y.ForkJoinTask;
 import water.*;
 import water.api.Constants;
+import water.api.DocGen;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Log;
@@ -16,6 +17,9 @@ import java.util.Random;
 
 
 public class SpeeDRF extends Job.ValidatedJob {
+  static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
+  public static DocGen.FieldDoc[] DOC_FIELDS;
+  public static final String DOC_GET = "SpeeDRF";
 
   @API(help = "Number of trees", filter = Default.class, json = true, lmin = 1, lmax = Integer.MAX_VALUE)
   public int num_trees   = 50;
@@ -125,10 +129,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       model.write_lock(self());
       drfParams = DRFParams.create(model.fr.find(model.response), model.N, model.max_depth, (int)model.fr.numRows(), model.nbins,
               model.statType, seed, parallel, model.weights, mtry, model.sampling_strategy, (float) sample, model.strata_samples, 1, _exclusiveSplitLimit, _useNonLocalData);
-//      Gson gson = new GsonBuilder().setPrettyPrinting().create();
-//      String json = gson.toJson(drfParams);
       logStart();
-//      Log.info(json);
       DRFTask tsk = new DRFTask();
       tsk._job = Job.findJob(self());
       tsk._params = drfParams;
