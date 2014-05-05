@@ -2,7 +2,6 @@ package hex;
 
 import static hex.NeuralNet.ExecutionMode.*;
 import hex.Layer.*;
-import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ValidatedJob;
@@ -193,23 +192,8 @@ public class NeuralNet extends ValidatedJob {
     description = DOC_GET;
   }
 
-  @Override public Job fork() {
-    init();
-    H2OCountedCompleter job = new H2OCountedCompleter() {
-      @Override public void compute2() {
-        startTrain();
-      }
-
-      @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
-        Job job = Job.findJob(job_key);
-        if( job != null )
-          job.cancel(Utils.getStackAsString(ex));
-        return super.onExceptionalCompletion(ex, caller);
-      }
-    };
-    start(job);
-    H2O.submitTask(job);
-    return this;
+  @Override public final void execImpl() {
+    startTrain();
   }
 
   void startTrain() {
