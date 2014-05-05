@@ -146,9 +146,9 @@ build_h2o:
 	(export PROJECT_VERSION=$(PROJECT_VERSION); ./build.sh noclean doc)
 	git checkout -- ${GA_FILE}.js
 ifneq ($(shell uname),Windows_NT)
-	openssl md5 target/h2o.jar | sed 's/.*=//' >> target/h2o.jar.md5
+	openssl md5 target/h2o.jar | sed 's/.*=[ ]*//' > target/h2o.jar.md5
 else
-	md5deep target/h2o.jar | cut -d'' -f1 >> target/h2o.jar.md5
+	md5deep target/h2o.jar | cut -d'' -f1 > target/h2o.jar.md5
 endif
 
 build_package:

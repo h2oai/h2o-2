@@ -275,20 +275,34 @@ h2o.clusterStatus <- function(client) {
     base_url <- paste("https://s3.amazonaws.com/h2o-release/h2o", branch, version, sep = "/")
     h2o_url <- paste(base_url, "h2o.jar", sep = "/")
     
+    # Get MD5 checksum
+    md5_url <- paste(base_url, "h2o.jar.md5", sep = "/")
+    ttt <- getURLContent(md5_url, binary = FALSE)
+    tcon <- textConnection(ttt)
+    md5_check <- readLines(tcon, n = 1)
+    close(tcon)
+    if (nchar(md5_check) != 32) stop("md5 malformed, must be 32 characters (see ", md5_url, ")")
+    
     # Save to temporary file first to protect against incomplete downloads
     temp_file <- paste(dest_file, "tmp", sep = ".")
-    download.file(h2o_url, temp_file, mode = "wb", method = "curl")
+    cat("Performing one-time download of h2o.jar from\n")
+    cat("    ", h2o_url, "\n")
+    cat("(This could take a few minutes, please be patient...)\n")
+    download.file(url = h2o_url, destfile = temp_file, mode = "wb", cacheOK = FALSE, method = "curl", quiet = TRUE)
+
+    # Apply sanity checks
     if(!file.exists(temp_file))
       stop("Error: Transfer failed. Please download ", h2o_url, " and place h2o.jar in ", dest_folder)
-    
-    # Check file integrity using MD5 checksum
-    md5_url <- paste(base_url, "h2o.jar.md5", sep = "/")
-    ttt <- getURLContent(md5_url)
-    md5_check <- readLines((tcon <- textConnection(ttt)))
-    close(tcon)
-    
-    if(md5sum(temp_file) != md5_check)
+
+    md5_temp_file = md5sum(temp_file)
+    md5_temp_file_as_char = as.character(md5_temp_file)
+    if(md5_temp_file_as_char != md5_check) {
+      cat("Error: Expected MD5: ", md5_check, "\n")
+      cat("Error: Actual MD5  : ", md5_temp_file_as_char, "\n")
       stop("Error: MD5 checksum of ", temp_file, " does not match ", md5_check)
+    }
+
+    # Move good file into final position
     file.rename(temp_file, dest_file)
   }
   return(dest_file)

@@ -77,15 +77,13 @@ public class NeuralNetMnist extends Job {
   }
 
   protected void startTraining(Layer[] ls) {
-    double epochs = 2.0;
-
     // Single-thread SGD
 //    System.out.println("Single-threaded\n");
 //    _trainer = new Trainer.Direct(ls, epochs, self());
 
     // Single-node parallel
     System.out.println("Multi-threaded\n");
-    _trainer = new Trainer.Threaded(ls, epochs, self(), -1);
+    _trainer = new Trainer.Threaded(ls, ls[0].params.epochs, self(), -1);
 
     // Distributed parallel
 //    System.out.println("MapReduce\n");

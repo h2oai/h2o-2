@@ -408,7 +408,8 @@ public final class Gram extends Iced {
         mrow[catIndexes[j]] += w;
     }
     // DIAG
-    if(hasDiag)_diag[catIndexes[0]] += w;
+    if(hasDiag && catN > 0)
+      _diag[catIndexes[0]] += w;
   }
   public void mul(double x){
     if(_diag != null)for(int i = 0; i < _diag.length; ++i)
