@@ -1,4 +1,4 @@
-test 'FrameListView should display all frames when no predicate is applied', (t) ->
+test 'FrameListView: should display all frames when no predicate is applied', (t) ->
   _ = Steam.ApplicationContext()
   Steam.Xhr _
   Steam.H2OProxy _
@@ -30,14 +30,12 @@ test 'FrameListView should display all frames when no predicate is applied', (t)
 
   _.loadFrames type: 'all'
 
-test 'FrameListView should display compatible frames when a model predicate is applied', (t) ->
+test 'FrameListView: should display compatible frames when a model predicate is applied', (t) ->
   _ = Steam.ApplicationContext()
   Steam.Xhr _
   Steam.H2OProxy _
   _.requestFrameAndCompatibleModels 'airlines_train.hex', (error, data) ->
     throw Error if error
-    frame = head data.frames
-    model = head frame.compatible_models
     frameListView = Steam.FrameListView _
     link$ _.framesLoaded, ->
       t.equal frameListView.items().length, 2, 'frameListView.items() array lengths match'
@@ -57,5 +55,41 @@ test 'FrameListView should display compatible frames when a model predicate is a
       t.equal frameListView.hasItems(), true, 'Boolean frameListView.hasItems() equals [true]'
       t.equal frameListView.template, 'frame-list-view', 'String frameListView.template equals [frame-list-view]'
       t.end()
+
+    frame = head data.frames
+    model = head frame.compatible_models
     _.loadFrames type: 'compatibleWithModel', modelKey: model.key
+
+test 'FrameListView: Clicking on a frame item marks it as active and launches the frame', (t) ->
+  _ = Steam.ApplicationContext()
+  Steam.Xhr _
+  Steam.H2OProxy _
+  frameListView = Steam.FrameListView _
+
+  t.plan 9
+
+  item0 = item1 = item2 = null
+  activeItemData = null
+
+  link$ _.displayFrame, (itemData) ->
+    t.ok itemData isnt null, 'launched a frame'
+    activeItemData = itemData
+
+  link$ _.framesLoaded, ->
+    item0 = frameListView.items()[0]
+    item1 = frameListView.items()[1]
+    item2 = frameListView.items()[2]
+
+    t.ok activeItemData is item0.data, 'launched frame0'
+    t.ok item0.isActive() is yes and item1.isActive() is no and item2.isActive() is no, 'item0 is active'
+    
+    item1.display() # click on item1
+    t.ok activeItemData is item1.data, 'launched frame1'
+    t.ok item0.isActive() is no and item1.isActive() is yes and item2.isActive() is no, 'item1 is active'
+
+    _.loadFrames null # switch to frame list from the top level menu while on frames view
+    t.ok activeItemData is item1.data, 'launched frame1 again'
+    t.ok item0.isActive() is no and item1.isActive() is yes and item2.isActive() is no, 'item1 is active'
+
+  _.loadFrames type: 'all'
 
