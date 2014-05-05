@@ -1,5 +1,7 @@
 package hex.singlenoderf;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import hex.FrameTask;
 import jsr166y.ForkJoinTask;
 import water.*;
@@ -28,13 +30,13 @@ public class SpeeDRF extends Job.ValidatedJob {
   public Tree.StatType stat_type = Tree.StatType.ENTROPY;
 
   @API(help = "Class Weights (0.0,0.2,0.4,0.6,0.8,1.0)", filter = Default.class, displayName = "class weights", json = true)
-  public double[] class_weights;
+  public double[] class_weights = null;
 
   @API(help = "Sampling Strategy", filter = Default.class, json = true)
   public Sampling.Strategy sampling_strategy = Sampling.Strategy.RANDOM;
 
   @API(help = "Strata Samples", filter = Default.class, json = true)
-  int[] strata_samples;
+  int[] strata_samples = null;
 
   @API(help = "Sampling Rate at each split.", filter = Default.class, json  = true, dmin = 0, dmax = 1)
   public double sample = 0.67;
@@ -119,18 +121,21 @@ public class SpeeDRF extends Job.ValidatedJob {
   public final void buildForest(SpeeDRFModel model) {
     try {
       source.read_lock(self());
-      logStart();
       if (model == null) model = UKV.get(dest());
       model.write_lock(self());
       drfParams = DRFParams.create(model.fr.find(model.response), model.N, model.max_depth, (int)model.fr.numRows(), model.nbins,
               model.statType, seed, parallel, model.weights, mtry, model.sampling_strategy, (float) sample, model.strata_samples, 1, _exclusiveSplitLimit, _useNonLocalData);
+      Gson gson = new GsonBuilder().setPrettyPrinting().create();
+      String json = gson.toJson(drfParams);
+      logStart();
+      Log.info(json);
       DRFTask tsk = new DRFTask();
       tsk._job = Job.findJob(self());
       tsk._params = drfParams;
       tsk._rfmodel = model;
       tsk._drf = this;
       tsk.validateInputData();
-
+      logStart();
       tsk.invokeOnAllNodes(); //this is bad when chunks aren't on each node!
     }
     catch(JobCancelledException ex) {
@@ -155,12 +160,10 @@ public class SpeeDRF extends Job.ValidatedJob {
       source.read_lock(self());
       float[] samps = new float[(int) (response.max() - response.min() + 1)];
       for (int i = 0; i < samps.length; ++i ) samps[i] = 67;
+      if (strata_samples == null) samps = null;
       if (strata_samples != null) {
         int[] _samples = new int[(int) (response.max() - response.min() + 1)];
         for (int i = 0; i < _samples.length; ++i ) _samples[i] = 67;
-        if (class_weights == null) {
-          strata_samples = _samples;
-        }
         if(strata_samples.length > _samples.length) {
           System.arraycopy(_samples, 0, strata_samples, 0, _samples.length);
           strata_samples = _samples;
@@ -196,7 +199,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       if (validation != null) {
         test = FrameTask.DataInfo.prepareFrame(validation, validation.vecs()[source.find(response)], ignored_cols, false, false, false);
       }
-      SpeeDRFModel model = new SpeeDRFModel(dest(), self(), source._key, train, response, new Key[0], seed, getCMDomain());
+      SpeeDRFModel model = new SpeeDRFModel(dest(), self(), source._key, train, response, new Key[0], seed, getCMDomain(), this);
       model.nbins = bin_limit;
       if (mtry == -1) {
         model.mtry = (int) Math.floor(Math.sqrt(source.numCols()));
@@ -216,7 +219,6 @@ public class SpeeDRF extends Job.ValidatedJob {
       model.test_frame = test;
       model.testKey = validation == null ? null : validation._key;
       model.importance = importance;
-
       return model;
     }
     finally {
@@ -280,7 +282,7 @@ public class SpeeDRF extends Job.ValidatedJob {
 
     /** Unless otherwise specified each split looks at sqrt(#features). */
     private int howManySplitFeatures() {
-      if (_params._numSplitFeatures!=-1) return _params._numSplitFeatures;
+      if (_params.num_split_features!=-1) return _params.num_split_features;
       return (int)Math.sqrt(_rfmodel.fr.numCols()-1/*we don't used the class column*/);
     }
 
@@ -304,8 +306,8 @@ public class SpeeDRF extends Job.ValidatedJob {
       Arrays.sort(array);
       // Give each H2ONode ntrees/#nodes worth of trees.  Round down for later nodes,
       // and round up for earlier nodes
-      int ntrees = _params._ntrees/nodes.size();
-      if( Arrays.binarySearch(array, H2O.SELF) < _params._ntrees - ntrees*nodes.size() )
+      int ntrees = _params.num_trees/nodes.size();
+      if( Arrays.binarySearch(array, H2O.SELF) < _params.num_trees - ntrees*nodes.size() )
         ++ntrees;
 
       return ntrees;
@@ -328,9 +330,9 @@ public class SpeeDRF extends Job.ValidatedJob {
       final int classes = (int)(c.max() - c.min())+1;
       if( !(2 <= classes && classes <= 254 ) )
         throw new IllegalArgumentException("Found " + classes+" classes: "+err);
-      if (0.0f > _params._sample || _params._sample > 1.0f)
-        throw new IllegalArgumentException("Sampling rate must be in [0,1] but found "+ _params._sample);
-      if (_params._numSplitFeatures!=-1 && (_params._numSplitFeatures< 1 || _params._numSplitFeatures>vecs.length-1))
+      if (0.0f > _params.sample || _params.sample > 1.0f)
+        throw new IllegalArgumentException("Sampling rate must be in [0,1] but found "+ _params.sample);
+      if (_params.num_split_features!=-1 && (_params.num_split_features< 1 || _params.num_split_features>vecs.length-1))
         throw new IllegalArgumentException("Number of split features exceeds available data. Should be in [1,"+(vecs.length-1)+"]");
       ChunkAllocInfo cai = new ChunkAllocInfo();
       if (_params._useNonLocalData && !canLoadAll( _rfmodel.fr, cai ))
@@ -402,21 +404,21 @@ public class SpeeDRF extends Job.ValidatedJob {
       byte producerId = (byte) H2O.SELF.index();
       for (int i = 0; i < ntrees; ++i) {
         long treeSeed = rnd.nextLong() + TREE_SEED_INIT; // make sure that enough bits is initialized
-        trees[i] = new Tree(job, localData, producerId, drfParams._depth, drfParams._stat, numSplitFeatures, treeSeed,
+        trees[i] = new Tree(job, localData, producerId, drfParams.max_depth, drfParams.stat_type, numSplitFeatures, treeSeed,
                 i, drfParams._exclusiveSplitLimit, sampler, drfParams._verbose);
-        if (!drfParams._parallel)   ForkJoinTask.invokeAll(new Tree[]{trees[i]});
+        if (!drfParams.parallel)   ForkJoinTask.invokeAll(new Tree[]{trees[i]});
       }
 
-      if(drfParams._parallel) DRemoteTask.invokeAll(trees);
+      if(drfParams.parallel) DRemoteTask.invokeAll(trees);
       Log.debug(Log.Tag.Sys.RANDF,"All trees ("+ntrees+") done in "+ t_alltrees);
     }
 
     static Sampling createSampler(final DRFParams params, int[] rowsPerChunks) {
-      switch(params._samplingStrategy) {
-        case RANDOM          : return new Sampling.Random(params._sample, rowsPerChunks);
+      switch(params.sampling_strategy) {
+        case RANDOM          : return new Sampling.Random(params.sample, rowsPerChunks);
         case STRATIFIED_LOCAL:
-          float[] ss = new float[params._strataSamples.length];
-          for (int i=0;i<ss.length;i++) ss[i] = params._strataSamples[i] / 100.f;
+          float[] ss = new float[params.strata_samples.length];
+          for (int i=0;i<ss.length;i++) ss[i] = params.strata_samples[i] / 100.f;
           return new Sampling.StratifiedLocal(ss, params._numrows);
         default:
           assert false : "Unsupported sampling strategy";
@@ -427,38 +429,38 @@ public class SpeeDRF extends Job.ValidatedJob {
   /** RF execution parameters. */
   public final static class DRFParams extends Iced {
     /** Total number of trees */
-    int _ntrees;
+    int num_trees;
     /** If true, build trees in parallel (default: true) */
-    boolean _parallel;
+    boolean parallel;
     /** Maximum depth for trees (default MaxInt) */
-    int _depth;
+    int max_depth;
     /** Split statistic */
-    Tree.StatType _stat;
+    Tree.StatType stat_type;
     /** Feature holding the classifier  (default: #features-1) */
-    int _classcol;
+    int classcol;
     /** Utilized sampling method */
-    Sampling.Strategy _samplingStrategy;
+    Sampling.Strategy sampling_strategy;
     /** Proportion of observations to use for building each individual tree (default: .67)*/
-    float _sample;
+    float sample;
     /** Limit of the cardinality of a feature before we bin. */
-    int _binLimit;
+    int bin_limit;
     /** Weights of the different features (default: 1/features) */
-    double[] _classWt;
+    double[] class_weights;
     /** Arity under which we may use exclusive splits */
     public int _exclusiveSplitLimit;
     /** Output warnings and info*/
     public int _verbose;
     /** Number of features which are tried at each split
      *  If it is equal to -1 then it is computed as sqrt(num of usable columns) */
-    int _numSplitFeatures;
+    int num_split_features;
     /** Defined stratas samples for each class */
-    float[] _strataSamples;
+    float[] strata_samples;
     /** Utilize not only local data but try to use data from other nodes. */
     boolean _useNonLocalData;
     /** Number of rows per chunk - used to replay sampling */
     int _numrows;
     /** Pseudo random seed initializing RF algorithm */
-    long _seed;
+    long seed;
 
     public static DRFParams create(int col, int ntrees, int depth, int numrows, int binLimit,
                                          Tree.StatType statType, long seed, boolean parallelTrees, double[] classWt,
@@ -467,22 +469,22 @@ public class SpeeDRF extends Job.ValidatedJob {
                                          boolean useNonLocalData) {
 
       DRFParams drfp = new DRFParams();
-      drfp._ntrees           = ntrees;
-      drfp._depth            = depth;
-      drfp._sample           = sample;
-      drfp._binLimit         = binLimit;
-      drfp._stat             = statType;
-      drfp._classcol         = col;
-      drfp._seed             = seed;
-      drfp._parallel         = parallelTrees;
-      drfp._classWt          = classWt;
-      drfp._numSplitFeatures = numSplitFeatures;
-      drfp._samplingStrategy = samplingStrategy;
-      drfp._verbose          = verbose;
+      drfp.num_trees           = ntrees;
+      drfp.max_depth            = depth;
+      drfp.sample           = sample;
+      drfp.bin_limit         = binLimit;
+      drfp.stat_type             = statType;
+      drfp.seed             = seed;
+      drfp.parallel         = parallelTrees;
+      drfp.class_weights          = classWt;
+      drfp.num_split_features = numSplitFeatures;
+      drfp.sampling_strategy = samplingStrategy;
+      drfp.strata_samples    = strataSamples;
+      drfp._numrows = numrows;
+      drfp._useNonLocalData = useNonLocalData;
       drfp._exclusiveSplitLimit = exclusiveSplitLimit;
-      drfp._strataSamples    = strataSamples;
-      drfp._numrows          = numrows;
-      drfp._useNonLocalData  = useNonLocalData;
+      drfp._verbose = verbose;
+      drfp.classcol = col;
       return drfp;
     }
   }
