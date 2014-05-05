@@ -130,7 +130,7 @@ Index By Subject
 
 **Scala**
 
-  * :ref:`Scala`
+
 
 **Stochastic Gradient Descent** 
 
