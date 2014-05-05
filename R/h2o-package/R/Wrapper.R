@@ -263,13 +263,6 @@ h2o.clusterStatus <- function(client) {
   if(!file.exists(dest_folder)) dir.create(dest_folder)
   dest_file <- paste(dest_folder, "h2o.jar", sep = .Platform$file.sep)
   
-  # Production version must exist on local drive
-  if(version == '99999') {
-    if(!file.exists(dest_file))
-      stop("Cannot find ", dest_file, "\nPlease check that Makefile copied the jar correctly.")
-    return(dest_file)
-  }
-  
   # Download if h2o.jar doesn't already exist or user specifies force overwrite
   if(overwrite || !file.exists(dest_file)) {
     base_url <- paste("https://s3.amazonaws.com/h2o-release/h2o", branch, version, sep = "/")
