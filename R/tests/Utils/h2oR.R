@@ -43,9 +43,9 @@ function() {
   write.table(SEED, paste(Rsandbox, "/seed", sep = ""), row.names = F, col.names = F)
   h2o.__LOG_COMMAND <- paste(Rsandbox, "/", sep = "") 
   h2o.__LOG_ERROR   <- paste(Rsandbox, "/", sep = "") 
-  h2o.__changeLogPath(normalizePath(h2o.__LOG_COMMAND), "Command")
-  h2o.__changeLogPath(normalizePath(h2o.__LOG_ERROR), "Error")
-  h2o.__startLogging()  
+  h2o.setLogPath(normalizePath(h2o.__LOG_COMMAND), "Command")
+  h2o.setLogPath(normalizePath(h2o.__LOG_ERROR), "Error")
+  h2o.startLogging()  
 }
 
 Log.info<-

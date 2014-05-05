@@ -1,15 +1,12 @@
 <p>
-Now that we have loaded the iris dataset into H2O, we can build a random forest
+Now that we have loaded the iris dataset into H2O, we can build a Random Forest
 model.  For this purpose, please use the menu option <span class='label
-mref'>Model &gt; Random Forest</span> or direct <a
-href="/RF.query?data_key=iris.hex&class=4&ntree=50&gini=1&class_weights=&stratify=0&model_key=model&oobee=0&features=&ignore=&sample=67&bin_limit=1024&depth=2147483647&seed=0&parallel=1"
+mref'>Model &gt; Distributed RF (Beta)</span> or direct <a
+href="/2/DRF.query?source=iris.hex&destination_key=model&response=4&ntrees=20&ignore=&nbins=50"
 target="_blank">link</a>.
 <p>
 </p>
-The random forest algorithm has multiple tuning parameters that can affect the
-model it will build.  For example, you can increase the number of trees, alter
-which column from the dataset the model is predicting, or change the split
-criterion for generating trees from
-<a href="http://en.wikipedia.org/wiki/Gini_coefficient">Gini</a> to
-<a href="http://en.wikipedia.org/wiki/Information_entropy">Entropy</a>.
+The Random Forest method has multiple tuning parameters that can affect the
+model it will build.  For example, you can increase the number of trees, the maximum tree
+depth or the number of bins.
 </p>

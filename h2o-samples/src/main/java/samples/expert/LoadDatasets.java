@@ -1,6 +1,7 @@
 package samples.expert;
 
 import water.*;
+import water.api.FrameSplitPage;
 import water.fvec.Frame;
 import water.fvec.RebalanceDataSet;
 import water.util.Log;
@@ -297,6 +298,7 @@ public class LoadDatasets extends Job {
     TestUtil.parseFromH2OFolder("smalldata/./zip_code/zip_code_database.csv.gz");
     TestUtil.parseFromH2OFolder("smalldata/./zipcodes");
     reBalanceFrames();
+    testTrainSplitFrames();
   }
 
   @Override protected void execImpl() {
@@ -316,6 +318,29 @@ public class LoadDatasets extends Job {
         try {
           final Key frHexBalanced = Key.make(name);
           new RebalanceDataSet(fr, frHexBalanced, splits).invoke();
+        } catch(Exception ex) {
+          Log.err(ex.getMessage());
+        }
+      }
+    }
+  }
+
+  public void testTrainSplitFrames () {
+    final Set<Key> keySet = H2O.globalKeySet(null);
+    for (Key key : keySet) {
+      final Value val = DKV.get(key);
+      if (val == null || !val.isFrame()) continue;
+      final Frame fr = val.get();
+      if (!fr._key.toString().contains("_part")) {
+        Log.info("Splitting frame under key '" + fr._key.toString() + "' into 75%/25% train/test splits.");
+        try {
+          FrameSplitPage fsp = new FrameSplitPage();
+          fsp.source = fr;
+          fsp.ratios = new float[]{0.75f};
+          fsp.split_keys = null;
+          fsp.split_rows = null;
+          fsp.split_ratios = null;
+          fsp.invoke();
         } catch(Exception ex) {
           Log.err(ex.getMessage());
         }

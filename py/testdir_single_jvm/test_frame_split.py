@@ -50,6 +50,8 @@ class Basic(unittest.TestCase):
             self.assertLess(abs(split1_rows - split0_rows), 20)
             self.assertEqual(numRows, (split1_rows + split0_rows))
             self.assertEqual(numCols, origNumCols)
+            if split0_rows <= 2:
+                break
 
 if __name__ == '__main__':
     h2o.unit_main()

@@ -8,27 +8,27 @@ source('../findNSourceUtils.R')
 
 test.rh2o_logging <- function(conn) {
   # Change log paths to R working directory
-  h2o.__changeLogPath(getwd(), "Command")
-  h2o.__changeLogPath(getwd(), "Error")
+  h2o.setLogPath(getwd(), "Command")
+  h2o.setLogPath(getwd(), "Error")
   
-  cmd_path <- h2o.__getLogPath("Command")
-  err_path <- h2o.__getLogPath("Error")
+  cmd_path <- h2o.getLogPath("Command")
+  err_path <- h2o.getLogPath("Error")
   
   Log.info(cat("Command logs saved to", cmd_path, "\n"))
   Log.info(cat("Error logs saved to", err_path, "\n"))
   
-  Log.info("Begin logging..."); h2o.__startLogging()
+  Log.info("Begin logging..."); h2o.startLogging()
   Log.info("Import iris dataset, then run summary and GBM")
   iris.hex <- h2o.uploadFile(conn, path = locate("smalldata/iris/iris_wheader.csv"), key = "iris.hex")
   print(summary(iris.hex))
   iris.gbm <- h2o.gbm(x = 1:4, y = 5, data = iris.hex)
   print(iris.gbm)
-  Log.info("Stop logging..."); h2o.__stopLogging()
+  Log.info("Stop logging..."); h2o.stopLogging()
   
   print(file.info(cmd_path))
   print(file.info(err_path))
   
-  Log.info("Deleting all logs..."); h2o.__clearLogs()
+  Log.info("Deleting all logs..."); h2o.clearLogs()
   expect_false(file.exists(cmd_path))
   expect_false(file.exists(err_path))
   

@@ -177,6 +177,7 @@ public class VariableImportance extends MRTask2<VariableImportance> {
         // - score data
         // - score only the tree
         int prediction = (int) Tree.classify(new AutoBuffer(_model.tree(ntree)), data, (double)_N); //.classify0(ntree, _data, chks, row, _modelDataMap, numClasses );
+        if( prediction >= _nclasses ) continue;
         int pred = alignModelIdx(prediction);
         int actu = alignDataIdx((int) chks[_classcol].at8(_oobs[j]) - cmin);
         if (pred == actu) _votesSOOB[ntree]++;

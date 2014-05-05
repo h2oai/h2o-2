@@ -13,10 +13,12 @@ public class TutorialDeepLearning extends TutorialWorkflow {
          /*               Title     Short Summary         File containing step description */
           new String[] { "Step 1", "Introduction"  ,     "/tutorials/deeplearning/step1.html" },
           new String[] { "Step 2", "Dataset inhale",     "/tutorials/deeplearning/step2.html" },
-          new String[] { "Step 3", "Parsing dataset",    "/tutorials/deeplearning/step3.html" },
-          new String[] { "Step 4", "Inspecting dataset", "/tutorials/deeplearning/step4.html" },
-          new String[] { "Step 5", "Building model",     "/tutorials/deeplearning/step5.html" },
-          new String[] { "Step 6", "Inspecting model",   "/tutorials/deeplearning/step6.html" },
+          new String[] { "Step 3", "Parsing the dataset",    "/tutorials/deeplearning/step3.html" },
+          new String[] { "Step 4", "Inspecting the dataset", "/tutorials/deeplearning/step4.html" },
+          new String[] { "Step 5", "Building the model",     "/tutorials/deeplearning/step5.html" },
+          new String[] { "Step 6", "Inspecting the model",   "/tutorials/deeplearning/step6.html" },
+          new String[] { "Step 7", "Predicting on a test set",   "/tutorials/deeplearning/step7.html" },
+          new String[] { "Step 8", "Score the prediction",   "/tutorials/deeplearning/step8.html" },
   };
 
   public TutorialDeepLearning() {

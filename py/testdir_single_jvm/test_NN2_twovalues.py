@@ -101,7 +101,7 @@ class test_NN_twovalues(unittest.TestCase):
             print "trial #", trial, "Deep Learning end on ", csvFilename, ' took', time.time() - start, 'seconds'
 
             #### Now score using the model, and check the validation error
-            expectedErr = 0.001
+            expectedErr = 0.00
             relTol = 0.01
             predict_key = 'Predict.hex'
 

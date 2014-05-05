@@ -5,7 +5,7 @@
 Connects to a running H2O instance and checks the local H2O R package is the correct version (i.e. that the version of the R package and the version of H2O are the same).}
 \usage{
 h2o.init(ip = "127.0.0.1", port = 54321, startH2O = TRUE, forceDL = FALSE, Xmx = "1g", 
-        beta = FALSE)}
+        beta = FALSE, license = NULL)}
 
 \arguments{
   \item{ip}{Object of class \code{"character"} representing the IP address of the server where H2O is running.}
@@ -14,9 +14,10 @@ h2o.init(ip = "127.0.0.1", port = 54321, startH2O = TRUE, forceDL = FALSE, Xmx =
   \item{forceDL}{(Optional) A logical value indicating whether to force download of the H2O executable. Defaults to FALSE, so the executable will only be downloaded if it does not already exist in the h2o R library resources directory \code{h2o/java/h2o.jar}.}
   \item{Xmx}{(Optional) A string specifying the maximum size, in bytes, of the memory allocation pool to H2O. This value must a multiple of 1024 greater than 2MB. Append the letter m or M to indicate megabytes, or g or G to indicate gigabytes.}
   \item{beta}{(Optional) A logical value indicating whether H2O should be launch in beta mode.}
+  \item{license}{(Optional) A string value specifying the full path of the license file.}
 }
 \details{
-This method first checks if H2O is connectable. If it cannot connect and \code{startH2O = TRUE} with IP of localhost, it will attempt to start an instance of H2O with IP = localhost, port = 54321. Otherwise, it stops immediately with an error.
+This method first checks if H2O is connectible. If it cannot connect and \code{startH2O = TRUE} with IP of localhost, it will attempt to start an instance of H2O with IP = localhost, port = 54321. Otherwise, it stops immediately with an error.
 
 When initializing H2O locally, this method searches for h2o.jar in the R library resources (\code{system.file("java", "h2o.jar", package = "h2o")}), and if the file does not exist, it will automatically attempt to download the correct version from Amazon S3. The user must have Internet access for this process to be successful.
 
@@ -28,7 +29,7 @@ Once the package is successfully installed, this method will load it and return 
 \note{ Users may wish to manually upgrade their package (rather than waiting 
 	until being prompted), which requires that they fully uninstall and reinstall 
 	the H2O package, and the H2O client package. You must unload packages running 
-	in the environment before upgrading. It's reccomended that users restart 
+	in the environment before upgrading. It's recommended that users restart
 	R or R studio after upgrading.
 }
 

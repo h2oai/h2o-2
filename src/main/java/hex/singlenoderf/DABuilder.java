@@ -17,7 +17,7 @@ public class DABuilder {
     protected final SpeeDRFModel _rfmodel;
 
     static DABuilder create(final SpeeDRF drf, final SpeeDRFModel rf_model) {
-      switch( drf.drfParams._samplingStrategy ) {
+      switch( drf.drfParams.sampling_strategy ) {
         case RANDOM                :
         case STRATIFIED_LOCAL      :
         default                    : return new DABuilder(drf, rf_model);
@@ -33,10 +33,10 @@ public class DABuilder {
     /** Check that we have proper number of valid columns vs. features selected, if not cap*/
     private void checkAndLimitFeatureUsedPerSplit() {
       int validCols = _drf.source.numCols()-1; // for classIdx column
-      if (validCols < _drf.drfParams._numSplitFeatures) {
-        Log.info(Log.Tag.Sys.RANDF, "Limiting features from " + _drf.drfParams._numSplitFeatures +
+      if (validCols < _drf.drfParams.num_split_features) {
+        Log.info(Log.Tag.Sys.RANDF, "Limiting features from " + _drf.drfParams.num_split_features +
                 " to " + validCols + " because there are no more valid columns in the dataset");
-        _drf.drfParams._numSplitFeatures= validCols;
+        _drf.drfParams.num_split_features= validCols;
       }
     }
 
@@ -94,9 +94,9 @@ public class DABuilder {
       final DataAdapter dapt = new DataAdapter(fr, rfmodel, modelDataMap,
               totalRows,
               getChunkId(fr),
-              _drf.drfParams._seed,
-              _drf.drfParams._binLimit,
-              _drf.drfParams._classWt);
+              _drf.drfParams.seed,
+              _drf.drfParams.bin_limit,
+              _drf.drfParams.class_weights);
       // Check that we have proper number of valid columns vs. features selected, if not cap.
       checkAndLimitFeatureUsedPerSplit();
 

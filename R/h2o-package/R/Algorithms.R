@@ -1,7 +1,8 @@
 # Model-building operations and algorithms
 # ----------------------- Generalized Boosting Machines (GBM) ----------------------- #
 # TODO: don't support missing x; default to everything?
-h2o.gbm <- function(x, y, distribution = 'multinomial', data, n.trees = 10, interaction.depth = 5, n.minobsinnode = 10, shrinkage = 0.1, n.bins = 100, importance = FALSE, validation) {
+h2o.gbm <- function(x, y, distribution = 'multinomial', data, n.trees = 10, interaction.depth = 5, n.minobsinnode = 10, shrinkage = 0.1,
+    n.bins = 100, importance = FALSE, validation, balance.classes=FALSE, max.after.balance.size=5) {
   args <- .verify_dataxy(data, x, y)
 
   if(!is.numeric(n.trees)) stop('n.trees must be numeric')
@@ -24,12 +25,18 @@ h2o.gbm <- function(x, y, distribution = 'multinomial', data, n.trees = 10, inte
     stop(paste(distribution, "is not a valid distribution; only [multinomial, gaussian] are supported"))
   classification <- ifelse(distribution == 'multinomial', 1, ifelse(distribution=='gaussian', 0, -1))
 
+  if(!is.logical(balance.classes)) stop('balance.classes must be logical (TRUE or FALSE)')
+  if(!is.numeric(max.after.balance.size)) stop('max.after.balance.size must be a number')
+  if( any(max.after.balance.size <= 0) ) stop('max.after.balance.size must be >= 0')
+  if(balance.classes && !classification) stop('balance.classes can only be used for classification')
+
   # NB: externally, 1 based indexing; internally, 0 based
   cols = paste(args$x_i - 1, collapse=",")
-  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GBM, source=data@key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, min_rows=n.minobsinnode, classification=classification, nbins=n.bins, importance=as.numeric(importance), validation=validation@key)
-  params = list(x=args$x, y=args$y, distribution=distribution, n.trees=n.trees, interaction.depth=interaction.depth, shrinkage=shrinkage, n.minobsinnode=n.minobsinnode, n.bins=n.bins, importance=importance)
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GBM, source=data@key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage,
+    min_rows=n.minobsinnode, classification=classification, nbins=n.bins, importance=as.numeric(importance), validation=validation@key, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size))
+  params = list(x=args$x, y=args$y, distribution=distribution, n.trees=n.trees, interaction.depth=interaction.depth, shrinkage=shrinkage, n.minobsinnode=n.minobsinnode, n.bins=n.bins, importance=importance, balance.classes=balance.classes, max.after.balance.size=max.after.balance.size)
 
-  if(length(n.trees) == 1 && length(interaction.depth) == 1 && length(n.minobsinnode) == 1 && length(shrinkage) == 1 && length(n.bins) == 1) {
+  if(length(n.trees) == 1 && length(interaction.depth) == 1 && length(n.minobsinnode) == 1 && length(shrinkage) == 1 && length(n.bins) == 1 && length(max.after.balance.size) == 1) {
     .h2o.__waitOnJob(data@h2o, res$job_key)
     # while(!.h2o.__isDone(data@h2o, "GBM", res)) { Sys.sleep(1) }
     res2 = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GBMModelView, '_modelKey'=res$destination_key)
@@ -49,6 +56,8 @@ h2o.gbm <- function(x, y, distribution = 'multinomial', data, n.trees = 10, inte
   mySum$min_rows = res$min_rows
   mySum$nbins = res$nbins
   mySum$learn_rate = res$learn_rate
+  mySum$balance_classes = res$balance_classes
+  mySum$max_after_balance_size = res$max_after_balance_size
 
   # if(params$distribution == "multinomial") {
     # temp = matrix(unlist(res$cm), nrow = length(res$cm))
@@ -66,6 +75,8 @@ h2o.gbm <- function(x, y, distribution = 'multinomial', data, n.trees = 10, inte
   params$shrinkage = res$learn_rate
   params$n.bins = res$nbins
   result$params = params
+  params$balance.classes = res$balance_classes
+  params$max.after.balance.size = res$max_after_balance_size
 
   if(result$params$distribution == "multinomial") {
     class_names = res$'cmDomain' # tail(res$'_domains', 1)[[1]]
@@ -1150,7 +1161,7 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, validation,
 
   if(!is.numeric(classwt) && !is.null(classwt)) stop("classwt must be numeric")
   if(!is.null(classwt)) {
-    if(any(classwt) < 0) stop("Class weights must all be positive")
+    if(any(classwt < 0)) stop("Class weights must all be positive")
   }
   if(!is.null(strata_samples)) {
     if(any(strata_samples) < 0) stop("Strata samples must all be positive")
@@ -1160,7 +1171,7 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, validation,
 
   # NB: externally, 1 based indexing; internally, 0 based
   cols <- paste(args$x_i - 1, collapse=',')
-  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, response=args$y, cols=cols, num_trees=ntree, max_depth=depth, 
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, response=args$y, ignored_cols=args$x_ignore, num_trees=ntree, max_depth=depth, validation=validation@key,
                           sample=sample.rate, bin_limit=nbins, seed=seed, stat_type = stat.type, oobee=as.numeric(oobee), sampling_strategy=sampling_strategy, strata_samples=strata_samples, class_weights=classwt)
 
   params = list(x=args$x, y=args$y, ntree=ntree, depth=depth, sample.rate=sample.rate, bin_limit=nbins, stat.type = stat.type, classwt=classwt, sampling_strategy=sampling_strategy, seed=seed, oobee = oobee)
@@ -1238,11 +1249,11 @@ h2o.predict <- function(object, newdata) {
     .h2o.__waitOnJob(object@data@h2o, res$response$redirect_request_args$job)
     res2 = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_INSPECT, key=res$response$redirect_request_args$destination_key)
     new("H2OParsedDataVA", h2o=object@data@h2o, key=res2$key)
-  } else if(class(object) %in% c("H2OGBMModel", "H2OKMeansModel", "H2ODRFModel", "H2OGLMModel", "H2ONBModel", "H2ODeepLearningModel")) {
+  } else if(class(object) %in% c("H2OGBMModel", "H2OKMeansModel", "H2ODRFModel", "H2OGLMModel", "H2ONBModel", "H2ODeepLearningModel", "H2OSpeeDRFModel")) {
     # Set randomized prediction key
     key_prefix = switch(class(object), "H2OGBMModel" = "GBMPredict", "H2OKMeansModel" = "KMeansPredict",
                                        "H2ODRFModel" = "DRFPredict", "H2OGLMModel" = "GLM2Predict", "H2ONBModel" = "NBPredict",
-                                       "H2ODeepLearningModel" = "DeepLearningPredict")
+                                       "H2ODeepLearningModel" = "DeepLearningPredict", "H2OSpeeDRFModel" = "SpeeDRFPredict")
     rand_pred_key = .h2o.__uniqID(key_prefix)
     res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_PREDICT2, model=object@key, data=newdata@key, prediction=rand_pred_key)
     res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_INSPECT2, src_key=rand_pred_key)
