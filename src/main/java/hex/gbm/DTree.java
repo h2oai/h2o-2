@@ -749,7 +749,10 @@ public class DTree extends Iced {
       if (treeStats != null) generateHTMLTreeStats(sb);
 
       // Show variable importance
-      if (varimp != null) generateHTMLVarImp(sb);
+      if (varimp != null) {
+        generateHTMLVarImp(sb);
+        sb.append("<button id=\"sortBars\" class=\"btn btn-primary\">Sort</button>\n");
+      }
     }
 
     static final String NA = "---";
