@@ -22,7 +22,7 @@ public abstract class Layer extends Iced {
   @ParamsSearch.Ignore
   public int units;
 
-  protected NeuralNet params;
+  public NeuralNet params;
 
   // Layer state: activity, error
   protected transient float[] _a, _e;
@@ -916,9 +916,9 @@ public abstract class Layer extends Iced {
 
   public static void shareWeights(Layer src, Layer dst) {
     dst._w = src._w;
-    dst._b = src._b;
+    if (dst._b == null || dst._b.length == src._b.length) dst._b = src._b;
     dst._wm = src._wm;
-    dst._bm = src._bm;
+    if (dst._bm == null || dst._bm.length == src._bm.length) dst._bm = src._bm;
   }
 
   public static void shareWeights(Layer[] src, Layer[] dst) {
