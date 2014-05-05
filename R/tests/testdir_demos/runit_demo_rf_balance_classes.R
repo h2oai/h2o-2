@@ -37,13 +37,13 @@ air.rf.balance = h2o.randomForest(x = myX, y = myY, data = air.train, seed = 12,
 print(air.rf.balance@model)
 
 # SpeeDRF
-air.speedrf =                     h2o.SpeeDRF(x = myX, y = myY, data = air.train, seed = 12, validation = air.valid, 
+air.speedrf         = h2o.SpeeDRF(x = myX, y = myY, data = air.train, seed = 12, validation = air.valid, 
                                   ntree = 10, depth = 20)
 print(air.speedrf@model)
 
 # SpeeDRF
 air.speedrf.classwt = h2o.SpeeDRF(x = myX, y = myY, data = air.train, seed = 12, validation = air.valid, 
-                                  ntree = 10, depth = 20, classwt=c(2, 1))
+                                  ntree = 10, depth = 20, classwt = c(1, 5))
 print(air.speedrf@model)
 
 #uploading test file to h2o
@@ -65,7 +65,7 @@ func = function(model_object) {
     perf@model$precision
     perf@model$accuracy
     perf@model$auc
-    plot(perf,type="roc")    
+    plot(perf,type="roc")
 }
 
 cat("\n\nWITHOUT CLASS BALANCING\n")
