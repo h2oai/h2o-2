@@ -679,7 +679,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 
   private void run(final double ymu, final long nobs, LMAXTask lmaxt){
     String [] warns = null;
-    if(!lambda_search || !strong_rules_enabled && _dinfo.fullN() > MAX_PREDICTORS)
+    if((!lambda_search || !strong_rules_enabled) && (_dinfo.fullN() > MAX_PREDICTORS))
       throw new IllegalArgumentException("Too many predictors! GLM can only handle " + MAX_PREDICTORS + " predictors, got " + _dinfo.fullN() + ", try to run with strong_rules enabled.");
     if(lambda_search){
       max_iter = Math.max(300,max_iter);
