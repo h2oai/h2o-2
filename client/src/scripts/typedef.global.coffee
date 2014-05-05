@@ -31,6 +31,7 @@ Steam.Typedef = do ->
     'Error': isError
     'Date': isDate
     'RegExp': isRegExp
+    'Object': isObject
 
   t_checkEnum = (validValues) ->
     (value) ->
@@ -109,9 +110,10 @@ Steam.Typedef = do ->
   t_error = (args...) -> t_primitive 'Error', args
   t_date = (args...) -> t_primitive 'Date', args
   t_regexp = (args...) -> t_primitive 'RegExp', args
+  t_object = (args...) -> t_primitive 'Object', args
 
   isBuiltin = (f) ->
-    f is t_any or f is t_number or f is t_string or f is t_boolean or f is t_function or f is t_error or f is t_date or f is t_regexp
+    f is t_any or f is t_number or f is t_string or f is t_boolean or f is t_function or f is t_error or f is t_date or f is t_regexp or f is t_object
 
   t_array = (args...) ->
     types = []
@@ -252,7 +254,8 @@ Steam.Typedef = do ->
   typedef.err = t_error
   typedef.date = t_date
   typedef.regexp = t_regexp
-  typedef.array = t_array
+  typedef.arr = t_array
+  typedef.obj = t_object
   typedef.union = t_union
   typedef.tuple = t_tuple
   typedef.check = t_check

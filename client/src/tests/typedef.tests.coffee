@@ -42,14 +42,14 @@ s_not_objs = [ s_undef, s_null, s_nan, s_0, s_num, s_empty, s_str, s_true, s_fal
 
 checkValid = (t, values, type) ->
   for value in values
-    t.ok (null is T.check value, type), "Failed positive #{JSON.stringify value} against type #{JSON.stringify type.inspect()}"
+    t.ok (null is T.check value, type), "#{JSON.stringify value} ~ #{JSON.stringify type.inspect()}"
   return
 
 checkInvalid = (t, values, type) ->
   for value in values
     errors = T.check value, type
     # console.log errors
-    t.ok (null isnt errors), "Failed negative #{JSON.stringify value} against type #{JSON.stringify type.inspect()}"
+    t.ok (null isnt errors), "#{JSON.stringify value} !~ #{JSON.stringify type.inspect()}"
   return
 
 check = (t, validValues, invalidValues, type) ->
@@ -144,7 +144,7 @@ test 'typedef Any is allowed on attribute definitions', (t) ->
   t.end()
 
 test 'typedef Array allows primitive string typed arrays', (t) ->
-  type = T foo: T.array T.str
+  type = T foo: T.arr T.str
   validValues = [
     []
     [ 'foo', 'bar' ]
@@ -154,7 +154,7 @@ test 'typedef Array allows primitive string typed arrays', (t) ->
   t.end()
 
 test 'typedef Array allows primitive number typed arrays', (t) ->
-  type = T foo: T.array T.num
+  type = T foo: T.arr T.num
   validValues = [
     []
     [ 1, 2, 3, 4, 5 ]
@@ -169,23 +169,23 @@ test 'typedef Array allows compound typed arrays', (t) ->
       foo: T.str
       bar: T.num
 
-  arrayType = T foos: T.array fooType
+  arrayType = T foos: T.arr fooType
 
   t.ok null is T.check [ { foo: 'foo', bar: 42 } ], arrayType
   t.end()
 
 test 'typedef Array does not allow untyped arrays', (t) ->
-  t.throws -> T foo: T.array()
-  t.throws -> T foo: T.array
-  t.throws -> T foo: T.array identity
+  t.throws -> T foo: T.arr()
+  t.throws -> T foo: T.arr
+  t.throws -> T foo: T.arr identity
   t.end()
 
 test 'typedef Array does not allow arbitrary arguments', (t) ->
-  t.throws -> T foo: T.array bar: 'baz'
+  t.throws -> T foo: T.arr bar: 'baz'
   t.end()
 
 test 'typedef Array allows validators', (t) ->
-  type = T foo: T.array T.num, (array) -> if array.length > 5 then 'Fail' else null
+  type = T foo: T.arr T.num, (array) -> if array.length > 5 then 'Fail' else null
   t.ok null is T.check [ 1, 2, 3, 4, 5 ], type
   t.ok null isnt T.check [ 1, 2, 3, 4, 5, 6 ], type
   t.end()
