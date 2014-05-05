@@ -79,7 +79,15 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   public static final String JSON_CM_ROWS_SKIPPED = "rows_skipped";
   public static final String JSON_CM_CLASSES_ERRORS = "classes_errors";
 
-  public SpeeDRFModel(Key selfKey, Key jobKey, Key dataKey, Frame fr, Vec response, Key[] t_keys, long zeed, String[] cmDomain) {
+  @API(help = "Model parameters", json = true)
+  private final SpeeDRF parameters;
+
+  @Override public final SpeeDRF get_params() { return parameters; }
+  @Override public final Request2 job() {
+    return get_params();
+  }
+
+  public SpeeDRFModel(Key selfKey, Key jobKey, Key dataKey, Frame fr, Vec response, Key[] t_keys, long zeed, String[] cmDomain, SpeeDRF params) {
     super(selfKey, dataKey, fr);
     this.dest_key = selfKey;
     int csize = H2O.CLOUD.size();
@@ -103,6 +111,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     this.validAUC = null;
     this.cms = new ConfusionMatrix[1];
     this.errs = new float[]{-1.f};
+    this.parameters = params;
   }
 
   public Vec get_response() {
