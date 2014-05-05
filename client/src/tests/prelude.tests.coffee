@@ -2,7 +2,7 @@
 truthy = [ [1, 2, 3], true, new Date(), { 'a' : 1 }, 42, /x/, 'a' ]
 falsy = [ '', 0, false, NaN, null, undefined, ]
 
-test 'prelude api should have functions available in application scope', (t) ->
+test 'prelude availability in application scope', (t) ->
   funcs = [
     compact
     difference
@@ -138,7 +138,7 @@ test 'prelude api should have functions available in application scope', (t) ->
     zipCompare
   ]
   for func in funcs
-    t.ok typeof func is 'function', 'Prelude function exists'
+    t.equal (typeof func), 'function'
   t.end()
 
 test 'isDefined', (t) ->
@@ -308,7 +308,7 @@ test 'remove', (t) ->
   t.equal array[1], o3
 
   o5 = remove array, o2
-  t.ok is undefined
+  t.equal o5, undefined
   t.equal array.length, 2
   t.end()
 
