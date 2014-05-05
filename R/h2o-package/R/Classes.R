@@ -206,9 +206,9 @@ setMethod("show", "H2OSpeeDRFModel", function(object) {
     cat("\nVariable importance:\n"); print(model$varimp)
   }
 
-  mse <-model$mse[length(model$mse)] # (model$mse[is.na(model$mse) | model$mse <= 0] <- "")
+  #mse <-model$mse[length(model$mse)] # (model$mse[is.na(model$mse) | model$mse <= 0] <- "")
 
-  cat("\nMean-squared Error from the",model$params$ntree, "trees: "); cat(mse, "\n")
+  cat("\nMean-squared Error from the",model$params$ntree, "trees: "); cat(model$mse, "\n")
 })
 
 setMethod("show", "H2OPCAModel", function(object) {

@@ -1215,7 +1215,8 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, validation,
   #rownames(rf_matrix) = c("Depth", "Leaves")
   #result$forest = rf_matrix
   result$mse = as.numeric(res$errs)
-  result$mse <- ifelse(result$mse == -1, NA, result$mse)
+  #result$mse <- ifelse(result$mse == -1, NA, result$mse)
+  result$mse <- result$mse[length(result$mse)]
 
   if(params$classification) {
     #if(!is.null(res$validAUC)) {
