@@ -29,8 +29,6 @@ public final class ModelMetrics extends Iced {
   @API(help="The unique ID (key / uuid / creation timestamp) for the frame used for this scoring run.", required=false, filter=Default.class, json=true)
   public UniqueId frame = null;
 
-  @API(help="The error measure for this scoring run.", required=false, filter=Default.class, json=true)
-  public double error_measure = Double.MAX_VALUE;
   @API(help="The duration in mS for this scoring run.", required=false, filter=Default.class, json=true)
   public long duration_in_ms =-1L;
   @API(help="The time in mS since the epoch for the start of this scoring run.", required=false, filter=Default.class, json=true)
@@ -41,11 +39,10 @@ public final class ModelMetrics extends Iced {
   @API(help="The ConfusionMatrix object for this scoring run.", required=false, filter=Default.class, json=true)
   public ConfusionMatrix cm = null;
 
-  public ModelMetrics(UniqueId model, ModelCategory model_category, UniqueId frame, double error_measure, long duration_in_ms, long scoring_time, AUC auc, ConfusionMatrix cm) {
+  public ModelMetrics(UniqueId model, ModelCategory model_category, UniqueId frame, long duration_in_ms, long scoring_time, AUC auc, ConfusionMatrix cm) {
     this.model = model;
     this.model_category = model_category;
     this.frame = frame;
-    this.error_measure = (float)error_measure;
     this.duration_in_ms = duration_in_ms;
     this.scoring_time = scoring_time;
 

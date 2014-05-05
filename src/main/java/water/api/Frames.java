@@ -252,15 +252,14 @@ public class Frames extends Request2 {
       ConfusionMatrix cm = new ConfusionMatrix(); // for regression this computes the MSE
       AUC auc = null;
       HitRatio hr = null;
-      double error = 0.0d;
 
       if (score_model.isClassifier()) {
         auc = new AUC();
 //      hr = new HitRatio();
-        error = score_model.calcError(frame, frame.vec(score_model.responseName()), predictions, predictions, "Prediction error:",
+        score_model.calcError(frame, frame.vec(score_model.responseName()), predictions, predictions, "Prediction error:",
                                       true, 20, cm, auc, hr);
       } else {
-        error = score_model.calcError(frame, frame.vec(score_model.responseName()), predictions, predictions, "Prediction error:",
+        score_model.calcError(frame, frame.vec(score_model.responseName()), predictions, predictions, "Prediction error:",
                                       true, 20, cm, null, null);
       }
 
@@ -268,7 +267,6 @@ public class Frames extends Request2 {
       metrics = new water.ModelMetrics(score_model.getUniqueId(),
                                        score_model.getModelCategory(),
                                        frame.getUniqueId(),
-                                       error,
                                        after - before,
                                        after,
                                        auc,

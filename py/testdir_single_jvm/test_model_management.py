@@ -393,7 +393,7 @@ class ApiTestCase(ModelManagementTestCase):
                 scoring_result = node.models(key=model_key, score_frame=frame_key)
 
                 self.assertKeysExist(scoring_result, '', ['metrics'])
-                self.assertKeysExist(scoring_result, 'metrics[0]', ['model', 'frame', 'duration_in_ms', 'error_measure'])
+                self.assertKeysExist(scoring_result, 'metrics[0]', ['model', 'frame', 'duration_in_ms'])
                 self.assertKeysExist(scoring_result, 'metrics[0]/model', ['key', 'model_category', 'id', 'creation_epoch_time_millis'])
                 model_category = scoring_result['metrics'][0]['model']['model_category']
                 self.assertEqual(scoring_result['metrics'][0]['model']['key'], model_key, "Expected model key: " + model_key + " but got: " + scoring_result['metrics'][0]['model']['key'])
@@ -423,7 +423,7 @@ class ApiTestCase(ModelManagementTestCase):
             self.assertKeysExist(scoring_result, '', ['metrics'])
             self.assertKeysExist(scoring_result, 'metrics[0]', ['model_category'])
             model_category = scoring_result['metrics'][0]['model_category']
-            self.assertKeysExist(scoring_result, 'metrics[0]', ['model', 'frame', 'duration_in_ms', 'error_measure'])
+            self.assertKeysExist(scoring_result, 'metrics[0]', ['model', 'frame', 'duration_in_ms'])
             self.assertEqual(scoring_result['metrics'][0]['model']['key'], model_key, "Expected model key: " + model_key + " but got: " + scoring_result['metrics'][0]['model']['key'])
             self.assertEqual(scoring_result['metrics'][0]['frame']['key'], 'prostate.hex', "Expected frame key: " + 'prostate.hex' + " but got: " + scoring_result['metrics'][0]['frame']['key'])
             if model_category is 'Binomial':
