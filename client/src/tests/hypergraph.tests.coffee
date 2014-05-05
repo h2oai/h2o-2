@@ -22,7 +22,7 @@ test 'hypergraph api should have functions available in application scope', (t) 
     throttle$
   ]
   for func in funcs
-    t.ok typeof func is 'function'
+    t.equal (typeof func), 'function'
   t.end()
 
 test 'hypergraph edge should not fail when unlinked', (t) ->
