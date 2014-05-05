@@ -37,7 +37,14 @@ air.rf.balance = h2o.randomForest(x = myX, y = myY, data = air.train, seed = 12,
 print(air.rf.balance@model)
 
 # SpeeDRF
-air.speedrf    = h2o.SpeeDRF(x = myX, y = myY, data = air.train, seed = 12, validation = air.valid, ntree = 10, depth = 20)
+air.speedrf =                     h2o.SpeeDRF(x = myX, y = myY, data = air.train, seed = 12, validation = air.valid, 
+                                  ntree = 10, depth = 20)
+print(air.speedrf@model)
+
+# SpeeDRF
+air.speedrf.classwt = h2o.SpeeDRF(x = myX, y = myY, data = air.train, seed = 12, validation = air.valid, 
+                                  ntree = 10, depth = 20, classwt(2, 1))
+print(air.speedrf@model)
 
 #uploading test file to h2o
 testFilePath <-"../../../smalldata/airlines/AirlinesTest.csv.zip"
@@ -66,5 +73,11 @@ func(air.rf)
 
 cat("\n\nWITH CLASS BALANCING\n")
 func(air.rf.balance)
+
+cat("\n\nSPEEDRF WITHOUT CLASS WT\n")
+func(air.speedrf)
+
+cat("\n\nSPEEDRF WITH CLASS WT\n")
+func(air.speedrf.classwt)
 
 PASS_BANNER()
