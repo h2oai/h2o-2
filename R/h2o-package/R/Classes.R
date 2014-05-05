@@ -194,7 +194,6 @@ setMethod("show", "H2OSpeeDRFModel", function(object) {
   model = object@model
   cat("\n\nClassification:", model$params$classification)
   cat("\nNumber of trees:", model$params$ntree)
-  cat("\nTree statistics:", NA)
   
   if(FALSE){ #model$params$oobee) {
     cat("\nConfusion matrix:\n"); cat("Reported on oobee from", object@valid@key, "\n")
@@ -202,8 +201,14 @@ setMethod("show", "H2OSpeeDRFModel", function(object) {
     cat("\nConfusion matrix:\n"); cat("Reported on", object@valid@key,"\n")
   }
   print(model$confusion)
-  
-  cat("\nMean-squared Error by tree:\n"); print(model$mse)
+ 
+  if(!is.null(model$varimp)) {
+    cat("\nVariable importance:\n"); print(model$varimp)
+  }
+
+  mse <-model$mse[length(model$mse)] # (model$mse[is.na(model$mse) | model$mse <= 0] <- "")
+
+  cat("\nMean-squared Error from the",model$params$ntree, "trees: "); cat(mse, "\n")
 })
 
 setMethod("show", "H2OPCAModel", function(object) {
