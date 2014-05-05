@@ -221,6 +221,20 @@ Steam.Typedef = do ->
       new Builtin 'Tuple', checks, -> "Tuple[#{types.map((type) -> type.inspect()).join(', ')}]"
     else
       throw new Error "Tuple types not specified"
+  
+  t_dump = (arg) ->
+    tab = '  '
+    dump = (lines, offset, arg) ->
+      if isArray arg
+        indent = offset + tab
+        for item in arg
+          dump lines, indent, item
+      else if isString arg
+        lines.push offset + arg
+      return
+
+    dump lines=[], '', arg
+    lines
 
   typedef = (specification, checks...) ->
     [ name, arg ] = head pairs specification
@@ -259,6 +273,7 @@ Steam.Typedef = do ->
   typedef.union = t_union
   typedef.tuple = t_tuple
   typedef.check = t_check
+  typedef.dump = t_dump
 
   typedef
 
