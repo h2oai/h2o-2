@@ -1161,7 +1161,7 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, validation,
 
   if(!is.numeric(classwt) && !is.null(classwt)) stop("classwt must be numeric")
   if(!is.null(classwt)) {
-    if(any(classwt) < 0) stop("Class weights must all be positive")
+    if(any(classwt < 0)) stop("Class weights must all be positive")
   }
   if(!is.null(strata_samples)) {
     if(any(strata_samples) < 0) stop("Strata samples must all be positive")
