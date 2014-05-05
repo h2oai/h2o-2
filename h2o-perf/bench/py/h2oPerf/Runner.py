@@ -138,6 +138,7 @@ class PerfRunner:
                 test.test_run.update(True)
                 p.terminate()
                 print "Successfully stopped profiler..."
+                PerfUtils.stop_cloud(self, test.remote_hosts)
                 self.cloud.pop(0)
                 self.perfdb.this_test_run_id += 1
             except:

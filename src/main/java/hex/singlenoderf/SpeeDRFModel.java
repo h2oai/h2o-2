@@ -365,8 +365,13 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     }
     generateHTMLTreeStats(sb, trees);
 
-    if (validAUC != null) generateHTMLAUC(sb);
-    if (varimp != null) generateHTMLVarImp(sb);
+    if (validAUC != null) {
+      generateHTMLAUC(sb);
+    }
+    if (varimp != null) {
+      generateHTMLVarImp(sb);
+      sb.append("<button id=\"sortBars\" class=\"btn btn-primary\">Sort</button>\n");
+    }
   }
 
   static final String NA = "---";

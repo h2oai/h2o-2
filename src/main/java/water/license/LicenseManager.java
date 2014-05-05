@@ -4,6 +4,7 @@ import water.util.Log;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -61,9 +62,31 @@ public class LicenseManager {
     return Result.OK;
   }
 
+  public void logLicensedFeatures() {
+    ArrayList<String> featureNameList = new ArrayList<String>();
+    featureNameList.add(FEATURE_DEEPLEARNING_SCORING);
+    featureNameList.add(FEATURE_GBM_SCORING);
+    featureNameList.add(FEATURE_GLM_SCORING);
+    featureNameList.add(FEATURE_RF_SCORING);
+
+    boolean silent = true;
+    for (String featureName : featureNameList) {
+      boolean b = isFeatureAllowed(featureName, silent);
+      Log.info("isFeatureAllowed(" + featureName + "): " + b);
+    }
+  }
+
   public boolean isFeatureAllowed(String featureName) {
+    boolean silent = false;
+    return isFeatureAllowed(featureName, silent);
+  }
+
+  public boolean isFeatureAllowed(String featureName, boolean silent) {
     if (_license == null) {
-      Log.info("isFeatureAllowed(" + featureName + ") is false (no valid license found)");
+      if (! silent) {
+        Log.info("isFeatureAllowed(" + featureName + ") is false (no valid license found)");
+      }
+
       return false;
     }
 
@@ -84,7 +107,10 @@ public class LicenseManager {
     }
     scanner.close();
 
-    Log.info("isFeatureAllowed(" + featureName + ") is false (feature not licensed)");
+    if (! silent) {
+      Log.info("isFeatureAllowed(" + featureName + ") is false (feature not licensed)");
+    }
+
     return false;
   }
 }

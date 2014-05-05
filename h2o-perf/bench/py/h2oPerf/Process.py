@@ -157,11 +157,22 @@ class RProc(Process):
         """
         self.ip = ip
         self.port = port
+     
+        print 
+        print "DEBUG RPROCESS: "
+        print "TEST NAME: " + self.test_name
+        print
+        print "RFILE : " + self.rfile
+        print
 
         cmd = ["R", "-f", self.rfile, "--args", self.ip + ":" + str(self.port)]
         short_dir = re.sub(r'[\\/]', "_", self.test_short_dir)
         self.output_file_name = os.path.join(self.output_dir,
                                              short_dir + "_" + self.test_name + ".out")
+
+        print "DEBUG PROCESS OUT FILE NAME: "
+        print "OUT FILE NAME: " + self.output_file_name
+
         f = open(self.output_file_name, "w")
         self.child = subprocess.Popen(args=cmd, 
                                       stdout = f,  

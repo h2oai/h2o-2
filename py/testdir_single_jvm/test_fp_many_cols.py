@@ -144,7 +144,7 @@ class Basic(unittest.TestCase):
 
             start = time.time()
             print csvFilename, "parse starting"
-            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=timeoutSecs, doSummary=True)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=timeoutSecs, doSummary=False)
             h2o.check_sandbox_for_errors()
             print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse and summary:", parseResult['destination_key'], "took", time.time() - start, "seconds"
