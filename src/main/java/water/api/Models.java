@@ -16,6 +16,7 @@ import water.api.Frames.FrameSummary;
 import water.fvec.Frame;
 
 import com.google.gson.*;
+import water.util.Log;
 
 public class Models extends Request2 {
 
@@ -59,8 +60,9 @@ public class Models extends Request2 {
     public String model_algorithm = "unknown";
     public Model.ModelCategory model_category = Model.ModelCategory.Unknown;
     public Job.JobState state = Job.JobState.CREATED;
-    public long creation_epoch_time_millis = -1L;
     public String id = null;
+    public String key = null;
+    public long creation_epoch_time_millis = -1;
     public List<String> input_column_names = new ArrayList<String>();
     public String response_column_name = "unknown";
     public Map critical_parameters = new HashMap<String, Object>();
@@ -186,9 +188,13 @@ public class Models extends Request2 {
     summary.model_algorithm = model.getClass().toString(); // fallback only
 
     summary.state = ((Job)model.job()).getState();
+    Log.info("For model: " + model._key + " job key is: " + model.job().toString());
     summary.model_category = model.getModelCategory();
-    summary.creation_epoch_time_millis = model.getUniqueId().getCreationEpochTimeMillis();
-    summary.id = model.getUniqueId().getId();
+
+    UniqueId unique_id = model.getUniqueId();
+    summary.id = unique_id.getId();
+    summary.key = unique_id.getKey();
+    summary.creation_epoch_time_millis = unique_id.getCreationEpochTimeMillis();
 
     summary.response_column_name = names[names.length - 1];
 

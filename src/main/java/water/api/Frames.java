@@ -52,8 +52,10 @@ public class Frames extends Request2 {
   public static final Gson gson = new GsonBuilder().serializeSpecialFloatingPointValues().setPrettyPrinting().create();
 
   public static final class FrameSummary {
-    public long creation_epoch_time_millis = -1L;
     public String id = null;
+    public String key = null;
+    public long creation_epoch_time_millis = -1;
+
     public String[] column_names = { };
     public Set<String> compatible_models = new HashSet<String>();
     public boolean is_raw_frame = true; // guilty until proven innocent
@@ -149,8 +151,10 @@ public class Frames extends Request2 {
    * Summarize fields in water.fvec.Frame.
    */
   private static void summarizeAndEnhanceFrame(FrameSummary summary, Frame frame, boolean find_compatible_models, Map<String, Model> all_models, Map<String, Set<String>> all_models_cols) {
-    summary.creation_epoch_time_millis = frame.getUniqueId().getCreationEpochTimeMillis();
-    summary.id = frame.getUniqueId().getId();
+    UniqueId unique_id = frame.getUniqueId();
+    summary.id = unique_id.getId();
+    summary.key = unique_id.getKey();
+    summary.creation_epoch_time_millis = unique_id.getCreationEpochTimeMillis();
 
     summary.column_names = frame._names;
     summary.is_raw_frame = frame.isRawData();
