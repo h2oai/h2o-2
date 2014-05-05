@@ -3,40 +3,9 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_import as h2i, h2o_jobs, h2o_gbm
 
 DO_SMALL = True
-# we can pass ntree thru kwargs if we don't use the "trees" parameter in runRF
-# only classes 1-7 in the 55th col
-# don't allow None on ntree..causes 50 tree default!
-print "Temporarily not using bin_limit=1 to 4"
-print "Use out_of_bag_error_estimate=0, to get full scoring, for when we change datasets"
-drf1ParamDict = {
-    'response_variable': [None,54],
-    'class_weights': [None,'1=2','2=2','3=2','4=2','5=2','6=2','7=2'], 'ntree': [5], 
-    # UPDATE: H2O...OOBE has to be 0 for scoring
-    'out_of_bag_error_estimate': [0],
-    'stat_type': [None, 'ENTROPY', 'GINI'],
-    'depth': [None, 1,10,20,100],
-    'bin_limit': [None,5,10,100,1000],
-    'ignore': [None,0,1,2,3,4,5,6,7,8,9],
-    'sample': [None,20,40,60,80,90],
-    'seed': [None,'0','1','11111','19823134','1231231'],
-    # stack trace if we use more features than legal. dropped or redundant cols reduce legal max also.
-    # only 51 non-constant cols in the 20k covtype?
-    'features': [None,1,3,5,7,9,11,13,17,19,23,37,51],
-    'exclusive_split_limit': [None,0,3,5],
-    'sampling_strategy': [None, 'RANDOM', 'STRATIFIED_LOCAL' ],
-    'strata_samples': [
-        None,
-        "2=10",
-        "1=5",
-        "2=3",
-        "1=1,2=1,3=1,4=1,5=1,6=1,7=1",
-        "1=99,2=99,3=99,4=99,5=99,6=99,7=99",
-        "1=0,2=0,3=0,4=0,5=0,6=0,7=0",
-        ]
-    }
 
 drf2ParamDict = {
-    'response': [None, 'C54'],
+    'response': [None, 'C55'],
     'max_depth': [None, 10,20,100],
     'nbins': [None,5,10,100,1000],
     'ignored_cols_by_name': [None,'C1','C2','C3','C4','C5','C6','C7','C8','C9'],
@@ -101,11 +70,7 @@ class Basic(unittest.TestCase):
 
         # make a 3rd key so the predict is uncached too!
         execExpr = dataKeyTest2 + "=" + dataKeyTest
-        if h2o.beta_features:
-            kwargs = {'str': execExpr, 'timeoutSecs': 15}
-        else:
-            kwargs = {'expression': execExpr, 'timeoutSecs': 15}
-
+        kwargs = {'str': execExpr, 'timeoutSecs': 15}
         resultExec = h2o_cmd.runExec(**kwargs)
 
         # train
@@ -114,27 +79,16 @@ class Basic(unittest.TestCase):
         # unless the no_confusion_matrix works
 
         # params is mutable. This is default.
-        if h2o.beta_features:
-            paramDict = drf2ParamDict
-            params = {
-                'ntrees': 20, 
-                'destination_key': 'RF_model'
-            }
-        else:
-            paramDict = drf1ParamDict
-            params = {
-                'ntree': 20, 
-                'out_of_bag_error_estimate': 1, 
-                'model_key': 'RF_model'
-            }
+        paramDict = drf2ParamDict
+        params = {
+            'ntrees': 20, 
+            'destination_key': 'RF_model'
+        }
 
         colX = h2o_rf.pickRandRfParams(paramDict, params)
 
         kwargs = params.copy()
-        if h2o.beta_features:
-            timeoutSecs = 30 + kwargs['ntrees'] * 60
-        else:
-            timeoutSecs = 30 + kwargs['ntree'] * 60 
+        timeoutSecs = 30 + kwargs['ntrees'] * 60
 
         start = time.time()
         rf = h2o_cmd.runRF(parseResult=parseResultTrain,
@@ -142,12 +96,8 @@ class Basic(unittest.TestCase):
         print "rf job end on ", dataKeyTrain, 'took', time.time() - start, 'seconds'
 
         print "\nRFView start after job completion"
-        if h2o.beta_features:
-            model_key = kwargs['destination_key']
-            ntree = kwargs['ntrees']
-        else:
-            model_key = kwargs['model_key']
-            ntree = kwargs['ntree']
+        model_key = kwargs['destination_key']
+        ntree = kwargs['ntrees']
 
         start = time.time()
         # this does the RFModel view for v2. but only model_key is used. Data doesn't matter? (nor ntree)
@@ -181,7 +131,7 @@ class Basic(unittest.TestCase):
 
             predictCMResult = h2o.nodes[0].predict_confusion_matrix(
                 actual=parseKey,
-                vactual='C54',
+                vactual='C55',
                 predict=predictKey,
                 vpredict='predict',
                 )

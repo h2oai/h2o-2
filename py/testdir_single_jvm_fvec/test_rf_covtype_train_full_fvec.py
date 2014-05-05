@@ -5,7 +5,7 @@ import h2o, h2o_cmd, h2o_rf as h2f, h2o_hosts, h2o_import as h2i, h2o_rf, h2o_jo
 # we can pass ntree thru kwargs if we don't use the "trees" parameter in runRF
 # only classes 1-7 in the 55th col
 paramDict = {
-    'response': 'C54',
+    'response': 'C55',
     'ntrees': 20,
     'destination_key': 'model_keyA',
     'max_depth': 20,
