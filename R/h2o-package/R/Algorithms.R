@@ -1171,7 +1171,7 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, validation,
 
   # NB: externally, 1 based indexing; internally, 0 based
   cols <- paste(args$x_i - 1, collapse=',')
-  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, response=args$y, cols=cols, num_trees=ntree, max_depth=depth, 
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, response=args$y, cols=cols, num_trees=ntree, max_depth=depth, validation=validation@key,
                           sample=sample.rate, bin_limit=nbins, seed=seed, stat_type = stat.type, oobee=as.numeric(oobee), sampling_strategy=sampling_strategy, strata_samples=strata_samples, class_weights=classwt)
 
   params = list(x=args$x, y=args$y, ntree=ntree, depth=depth, sample.rate=sample.rate, bin_limit=nbins, stat.type = stat.type, classwt=classwt, sampling_strategy=sampling_strategy, seed=seed, oobee = oobee)
