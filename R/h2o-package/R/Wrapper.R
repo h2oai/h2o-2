@@ -263,13 +263,6 @@ h2o.clusterStatus <- function(client) {
   if(!file.exists(dest_folder)) dir.create(dest_folder)
   dest_file <- paste(dest_folder, "h2o.jar", sep = .Platform$file.sep)
   
-  # Production version must exist on local drive
-  if(version == '99999') {
-    if(!file.exists(dest_file))
-      stop("Cannot find ", dest_file, "\nPlease check that Makefile copied the jar correctly.")
-    return(dest_file)
-  }
-  
   # Download if h2o.jar doesn't already exist or user specifies force overwrite
   if(overwrite || !file.exists(dest_file)) {
     base_url <- paste("https://s3.amazonaws.com/h2o-release/h2o", branch, version, sep = "/")
@@ -277,11 +270,15 @@ h2o.clusterStatus <- function(client) {
     
     # Get MD5 checksum
     md5_url <- paste(base_url, "h2o.jar.md5", sep = "/")
-    ttt <- getURLContent(md5_url, binary = FALSE)
-    tcon <- textConnection(ttt)
-    md5_check <- readLines(tcon, n = 1)
-    close(tcon)
+    # ttt <- getURLContent(md5_url, binary = FALSE)
+    # tcon <- textConnection(ttt)
+    # md5_check <- readLines(tcon, n = 1)
+    # close(tcon)
+    md5_file <- tempfile(fileext = ".md5")
+    download.file(md5_url, destfile = md5_file, mode = "w", cacheOK = FALSE, method = "curl", quiet = TRUE)
+    md5_check <- readLines(md5_file, n = 1)
     if (nchar(md5_check) != 32) stop("md5 malformed, must be 32 characters (see ", md5_url, ")")
+    unlink(md5_file)
     
     # Save to temporary file first to protect against incomplete downloads
     temp_file <- paste(dest_file, "tmp", sep = ".")

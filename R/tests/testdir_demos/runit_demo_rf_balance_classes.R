@@ -32,7 +32,7 @@ air.rf         = h2o.randomForest(x = myX, y = myY, data = air.train, seed = 12,
                                   ntree = 10, depth = 20, balance.classes=F)
 print(air.rf@model)
 
-air.rf.balance = h2o.randomForest(x = myX, y = myY, data = air.train, seed = 12, validation=air.valid, importance = T,
+air.rf.balance = h2o.randomForest(x = myX, y = myY, data = air.train, seed = 12, validation=air.valid,
                                   ntree = 10, depth = 20, balance.classes=T)
 print(air.rf.balance@model)
 
