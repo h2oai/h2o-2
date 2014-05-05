@@ -125,17 +125,16 @@ public class SpeeDRF extends Job.ValidatedJob {
       model.write_lock(self());
       drfParams = DRFParams.create(model.fr.find(model.response), model.N, model.max_depth, (int)model.fr.numRows(), model.nbins,
               model.statType, seed, parallel, model.weights, mtry, model.sampling_strategy, (float) sample, model.strata_samples, 1, _exclusiveSplitLimit, _useNonLocalData);
-      Gson gson = new GsonBuilder().setPrettyPrinting().create();
-      String json = gson.toJson(drfParams);
+//      Gson gson = new GsonBuilder().setPrettyPrinting().create();
+//      String json = gson.toJson(drfParams);
       logStart();
-      Log.info(json);
+//      Log.info(json);
       DRFTask tsk = new DRFTask();
       tsk._job = Job.findJob(self());
       tsk._params = drfParams;
       tsk._rfmodel = model;
       tsk._drf = this;
       tsk.validateInputData();
-      logStart();
       tsk.invokeOnAllNodes(); //this is bad when chunks aren't on each node!
     }
     catch(JobCancelledException ex) {
