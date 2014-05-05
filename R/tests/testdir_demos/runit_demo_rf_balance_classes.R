@@ -4,8 +4,8 @@
 #           Print Confusion matrix and performance measures for test set
 #----------------------------------------------------------------------
 
-# setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
-setwd("/Users/tomk/0xdata/ws/h2o/R/tests/testdir_demos")
+setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
+# setwd("/Users/tomk/0xdata/ws/h2o/R/tests/testdir_demos")
 
 source('../findNSourceUtils.R')
 options(echo=TRUE)
