@@ -1,10 +1,3 @@
-testAsync = (done, func) ->
-  try
-    func()
-    done()
-  catch error
-    done error
-
 dumpAssertion = (path, value) ->
   if isUndefined value
     console.log "t.ok (isUndefined #{path}), '#{path} is undefined'"

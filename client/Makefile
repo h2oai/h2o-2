@@ -23,7 +23,6 @@ COMMON_SCRIPTS=\
 
 # Javascript files that go into the browser target.
 BROWSER_SCRIPTS=\
-	$(BUILD)/scripts/dom.global.js \
 	$(BUILD)/scripts/knockout.js \
 	$(BUILD)/scripts/application.js \
 	$(BUILD)/scripts/application-context.js \
