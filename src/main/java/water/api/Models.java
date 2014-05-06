@@ -187,8 +187,10 @@ public class Models extends Request2 {
 
     summary.model_algorithm = model.getClass().toString(); // fallback only
 
-    summary.state = ((Job)model.job()).getState();
-    Log.info("For model: " + model._key + " job key is: " + model.job().toString());
+    // model.job() is a local copy; on multinode clusters we need to get from the DKV
+    Key job_key = ((Job)model.job()).self();
+    Job job = DKV.get(job_key).get();
+    summary.state = job.getState();
     summary.model_category = model.getModelCategory();
 
     UniqueId unique_id = model.getUniqueId();

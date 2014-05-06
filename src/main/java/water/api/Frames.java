@@ -244,7 +244,7 @@ public class Frames extends Request2 {
 
     if (null == metrics) {
       // have to compute
-      water.util.Log.info("Cache miss: computing ModelMetrics. . .");
+      water.util.Log.debug("Cache miss: computing ModelMetrics. . .");
       long before = System.currentTimeMillis();
       Frame predictions = score_model.score(frame, true); // TODO: for now we're always calling adapt inside score
       long after = System.currentTimeMillis();
@@ -276,7 +276,7 @@ public class Frames extends Request2 {
       metrics.putInDKV();
     } else {
       // it's already cached in the DKV
-      water.util.Log.info("using ModelMetrics from the cache. . .");
+      water.util.Log.debug("using ModelMetrics from the cache. . .");
     }
 
     JsonObject metricsJson = metrics.toJSON();

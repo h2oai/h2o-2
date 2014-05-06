@@ -87,8 +87,11 @@ public abstract class Model extends Lockable<Model> {
     _priorClassDist = priorClassDist;
   }
 
-  // currently only implemented by GLM2, DeepLearning, GBM and DRF:
+  // Currently only implemented by GLM2, DeepLearning, GBM and DRF:
   public Request2 get_params() { throw new UnsupportedOperationException("get_params() has not yet been implemented in class: " + this.getClass()); }
+
+  // NOTE: this is a local copy of the Job; to get the real state you need to get it from the DKV.
+  // Currently only implemented by GLM2, DeepLearning, GBM and DRF:
   public Request2 job() { throw new UnsupportedOperationException("job() has not yet been implemented in class: " + this.getClass()); }
 
   /** Simple shallow copy constructor to a new Key */

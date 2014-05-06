@@ -20,8 +20,6 @@ import java.util.IllegalFormatException;
  * references all the Vecs but this one.
  */
 public class Frame extends Lockable<Frame> {
-  static final int DEBUG_WEAVER=1;
-
   public String[] _names;
   Key[] _keys;          // Keys for the vectors
   private transient Vec[] _vecs;// The Vectors (transient to avoid network traffic)
