@@ -265,7 +265,7 @@ h2o.clusterStatus <- function(client) {
   
   # Download if h2o.jar doesn't already exist or user specifies force overwrite
   if(overwrite || !file.exists(dest_file)) {
-    base_url <- paste("https://s3.amazonaws.com/h2o-release/h2o", branch, version, sep = "/")
+    base_url <- paste("https://s3.amazonaws.com/h2o-release/h2o", branch, version, "Rjar", sep = "/")
     h2o_url <- paste(base_url, "h2o.jar", sep = "/")
     
     # Get MD5 checksum
