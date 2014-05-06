@@ -9,7 +9,7 @@ import h2o, h2o_cmd, h2o_rf as h2o_rf, h2o_hosts, h2o_import as h2i, h2o_exec, h
 ALLOWED_DELTA=40
 DO_MULTINOMIAL=False
 paramDict = {
-    'response': 'C54',
+    'response': 'C55',
     'ntrees': 30,
     'max_depth': 30,
     'nbins': 100,
