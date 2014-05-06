@@ -564,14 +564,14 @@ public class KMeans2 extends ColumnsJob {
       _rows = new long[_clusters.length];
       _gm = new double[_clusters[0].length];
 
-      int _ncats = _dinfo._cats;
+      int ncats = _dinfo._cats;
       String[][] domains = _dinfo._adaptedFrame.domains();
 
-      assert _ncats <= _clusters[0].length;
+      assert ncats <= _clusters[0].length;
       _cProto = new double[_clusters.length][_clusters[0].length];
-      _freqCnt = new int[_clusters.length][_ncats][/*Size of domain*/];
+      _freqCnt = new int[_clusters.length][ncats][/*Size of domain*/];
       for(int clu = 0; clu < _clusters.length; clu++) {
-        for(int col = 0; col < _ncats; col++)
+        for(int col = 0; col < ncats; col++)
           _freqCnt[clu][col] = new int[domains[col].length];
       }
 
@@ -582,7 +582,7 @@ public class KMeans2 extends ColumnsJob {
       for( int row = 0; row < cs[0]._len; row++ ) {
         data(values, cs, row, _means, _mults);
         // closest(_clusters, values, cd);
-        closest(_clusters, values, _ncats, cd, _gamma);
+        closest(_clusters, values, ncats, cd, _gamma);
         int clu = clusters[row] = cd._cluster;
         _sqr += cd._dist;
         if( clu == -1 )
@@ -594,27 +594,29 @@ public class KMeans2 extends ColumnsJob {
         _rows[clu]++;
 
         // Increment count of categorical levels for chosen cluster
-        for( int col = 0; col < _ncats; col++ )
+        for( int col = 0; col < ncats; col++ )
           _freqCnt[clu][col][(int)values[col]]++;
 
         // Add value of numeric cols for chosen cluster
-        for( int col = _ncats; col < values.length; col++ )
+        for( int col = ncats; col < values.length; col++ )
           _cProto[clu][col] += values[col];
       }
 
       // Update cluster centers using data from processed rows
       for( int clu = 0; clu < _cProto.length; clu++ ) {
         if(_rows[clu] != 0) {
-          for(int col = 0; col < _ncats; col++)
+          for(int col = 0; col < ncats; col++)
             _cProto[clu][col] = Utils.maxIndex(_freqCnt[clu][col]);
 
-          for( int col = _ncats; col < _cProto[clu].length; col++ ) {
+          for( int col = ncats; col < _cProto[clu].length; col++ ) {
             _cProto[clu][col] /= _rows[clu];
           }
         }
       }
 
-      // TODO: How do I handle grand mean and other error calculations with mixed numeric/categorical cols?
+      // TODO: Handle errors with mixed numeric/categorical cols
+      // Output overall mean for numeric cols, overall mode for categorical cols
+      // Compute BCSS outside of MRTask using output, then TS = WCSS + BCSS
       int[] validMeans = new int[_gm.length];
       for( int clu = 0; clu < _cMeans.length; clu++ ) {
         for( int col = 0; col < _cMeans[clu].length; col++ ) {
@@ -642,8 +644,12 @@ public class KMeans2 extends ColumnsJob {
         if( clu == -1 )
           continue;
         data(values, cs, row, _means, _mults);
-        for( int col = 0; col < values.length; col++ ) {
-          double delta = values[col] - _cMeans[clu][col];
+        for(int col = 0; col < ncats; col++) {
+          if(values[col] != _cProto[clu][col])
+            _cSqrs[clu][col] += _gamma;
+        }
+        for( int col = ncats; col < values.length; col++ ) {
+          double delta = values[col] - _cProto[clu][col];
           _cSqrs[clu][col] += delta * delta;
         }
       }
@@ -652,9 +658,6 @@ public class KMeans2 extends ColumnsJob {
     }
 
     @Override public void reduce(Lloyds mr) {
-      for( int clu = 0; clu < _cMeans.length; clu++ )
-        Layer.Stats.reduce(_cMeans[clu], _cSqrs[clu], _rows[clu], mr._cMeans[clu], mr._cSqrs[clu], mr._rows[clu]);
-
       // Sum frequency counts of categorical levels and update cluster centers with combined mean/mode
       for( int clu = 0; clu < _clusters.length; clu++ ) {
         Utils.add(_freqCnt[clu], mr._freqCnt[clu]);
@@ -667,6 +670,10 @@ public class KMeans2 extends ColumnsJob {
         for( int col = _dinfo._cats; col < _cProto.length; col++ )
           _cProto[clu][col] = (_cProto[clu][col]*_rows[clu] + mr._cProto[clu][col]*mr._rows[clu])/(_rows[clu] + mr._rows[clu]);
       }
+
+      // TODO: Combine _cSqrs taking into account re-computed cluster centers
+      for( int clu = 0; clu < _cMeans.length; clu++ )
+        Layer.Stats.reduce(_cMeans[clu], _cSqrs[clu], _rows[clu], mr._cMeans[clu], mr._cSqrs[clu], mr._rows[clu]);
       Utils.add(_rows, mr._rows);
       _sqr += mr._sqr;
     }
