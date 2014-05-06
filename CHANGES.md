@@ -1,3 +1,111 @@
+Release 2.4.1.7 (Kalman build 7)
+=================================
+
+* [Download this release](http://s3.amazonaws.com/h2o-release/h2o/rel-kalman/7/index.html)
+* [Query JIRAs for this release](https://0xdata.atlassian.net/issues/?jql=fixVersion%20%3D%20kalman%20and%20resolution%20is%20not%20empty)
+
+Bug
+---
+    * [PUB-27] - Failure Recovery when GLM2 fails on GBM
+    * [PUB-35] - gbm: prediction broken with superset factors
+    * [PUB-123] - DRF2: fails on dataset with constant columns
+    * [PUB-127] - Running GLM model on .hex data set and then .hex.autoframe in GLM2 appears to produce a model, but not display it 
+    * [PUB-138] - runit_demo_exec2.R is failing
+    * [PUB-141] - GBM: cannot generate 30k trees on cars 
+    * [PUB-159] - CLONE - GLM2: constant column causes an exception if GLM2 is executed from R
+    * [PUB-164] - CLONE - Exported GBM model prediction differs from in-h2o prediction
+    * [PUB-188] - After creating a model, when delete the dataset and then click on the built model link, get NPE
+    * [PUB-201] - h2o.ls gives incorrect results when drive h2o from two R terminals
+    * [PUB-218] - exec to turn col 379 into binomial on nflx manyfiles  causes stack trace
+    * [PUB-229] - comparing GLM1 vs GLM2 coefficients (binomial). slightly different
+    * [PUB-230] - I don't see 'progress' in the GLM2 polling response (other algos give 'progress' in their response)
+    * [PUB-231] - KMeans2: needs to handle cols with all NA better..causes NaNs apparently in cluster variances, centers, probably error
+    * [PUB-232] - GLM2: browser, not showing per-class error rate, also issues about what threshold is used
+    * [PUB-234] - GLM2 + Predict + ConfusionMatrix not compatible with use of case_mode/case_val params in GLM2
+    * [PUB-237] - exec2/summary2: should we declare standard dev = NaN  always wrong for numeric cols? (summary2). example I see
+    * [PUB-241] - Big exponents seem to make DRF2 fail (probably GBM too, since shared code here?)
+    * [PUB-245] - win8.1, jacobi install, h2o launched from R 3.0.2 for windows. can't read the h2o_vbox_started_from_r.err/r.out files due to permission problems (h2o stdout/err logs are fine though?). Can read them when I exit R.
+    * [PUB-248] - can't tell when I'm supposed to h2o.init() or not, after restarting R
+    * [PUB-249] - win8.1, used R h2o.init() to start h2o java process, killed R with Task Manager. child process (h2o) still running with no visual indication for user
+    * [PUB-250] - win 8.1, R 3.0.2, multiple h2o.init() doesn't complain. Unclear if I'm allowed to do that, (should give feedback to user, since h2o might not be the h2o you want)
+    * [PUB-252] - win8.1, r 3.0.2, if I start two R guis, and h2o.init(), nothing complains, yet there is only one java process
+    * [PUB-276] - glm2: 'cms'  json: '_predErr' is NaN and '_classErr' is wrong
+    * [PUB-277] - '_cms' is an array of cm in glm2 json result. for varying threshold. Have to have 'threshold' key in there, so can tell what is what
+    * [PUB-283] - Missing chunk 0 after exec expression; inspect shows NaN for min/max/mean for that col. h2o stdout has missing chunk message
+    * [PUB-285] - adding known working single execs, to a longer multi-expression str=.  NPE in Env.allAlive (Env. remove_and_unlock)
+    * [PUB-287] - exec AAIOBE at at water.exec.Env.push_slot(Env.java:98)
+    * [PUB-288] - Exec, assertion error at at water.exec.Env.poppush(Env.java:201)
+    * [PUB-290] - exec assertion error at at water.exec.Env.popDbl(Env.java:183)
+    * [PUB-310] - GLM2 exception
+    * [PUB-314] - GLM2: covtype class=4 binomial, inverted. Bad results? Maybe the auto-threshold detection is bad 
+    * [PUB-315] - Predict2: GLM2 model NA predictions
+    * [PUB-317] - GLM2 on Airlines data fails with NPE
+    * [PUB-320] - Predict on glm2 produces predictions in different formats for different data sets
+    * [PUB-321] -  KMeans2 AAIOBE (KMeans2Model.score0)
+    * [PUB-322] - GLM2: can't seem to get correct Predict output for a covtype binomial case
+    * [PUB-325] - Kmeans2: get error- Cannot ask for roll-up stats while the vector is being actively written, when running from inside R
+    * [PUB-326] - GLM2:java.lang.NegativeArraySizeException on Airlines data on two or more nodes
+    * [PUB-328] - Model specification needs to be reported on model results page GLM
+    * [PUB-333] - GLM2: Even if the model finishes successfully, the same key name gets assigned to the next GLM2 job
+    * [PUB-335] - GLM2 on 4-nodes on RC dataset throws NPE
+    * [PUB-339] - Exec2: scalar expressions don't seem to create keys so you can reference h2o scalar results in subsequent expressions
+    * [PUB-341] - Model specification needs to be reported on model results page  GBM
+    * [PUB-344] - Model specification needs to be reported on model results page PCA
+    * [PUB-347] - GLM2 exception.  java.lang.ArrayIndexOutOfBoundsException
+    * [PUB-349] - Confusing confusion matrix for mixed inputs
+    * [PUB-356] - GLM 2 with regularization inconsistent with R
+    * [PUB-360] - GLM2: JSON threshold not best
+    * [PUB-363] - GLM2 java.lang.ArrayIndexOutOfBoundsException: 733
+    * [PUB-365] - GLM2 not actually producing probabilities in binomial predict
+    * [PUB-378] - leaving lambda in default results in no model 
+    * [PUB-421] - [[ ]] not wired up in R
+    * [PUB-423] - cbind missing
+    * [PUB-446] - Errors in K means grid, results from models not updated to results page. Also: F1 missing 
+    * [PUB-470] - Rollup stats deadlock if dataset is used by an eq2 slice before doing an inspect
+    * [PUB-509] - R startup info is wrong for a just-started jvm
+    * [PUB-530] - Figure out DRF2 default settings
+    * [PUB-541] - GBM with VI on 3 nodes gives : java.lang.ArrayIndexOutOfBoundsException: -1
+    * [PUB-551] - hadoop distcp left logs in hdfs. h2o imports, and apparently doesn't like to RemoveKey them
+    * [PUB-557] - exec assertion error...maybe fair to say the expression is excessive, but I believe legal. it parsed in R..assertion error in H2O
+    * [PUB-561] - fvec import/parse of 50 manyfiles gz fails on 2 machines. works on one machine
+    * [PUB-563] - glm2 grid search from R throws Internal server error
+    * [PUB-566] - ddply with cbind  on more than 1 columns in R returns only 1 column in the output
+    * [PUB-580] - confusing case with import folder, gz files, 2 jvms, exec (iterate)
+    * [PUB-581] - R install fixes for 3.1
+    * [PUB-586] - When run RF with variable importance from R on a regression dataset  get :java.lang.AssertionError: Cannot get vector domain!
+    * [PUB-588] - I believe all exec functions have to be on their own exec str= currently (can't combine with any other expressions)
+    * [PUB-590] - Inspect2 not Redirecting to Model view page
+    * [PUB-592] - DeepLearning checkpoint restart of non-enum responses for classifiers fails on multiple nodes
+    * [PUB-597] - can't have type change after variable assigned inside a function (assign it as dbl, can't assign it as ary later in the function)
+    * [PUB-598] - I think this shows a problem with lhs assigns in the clauses of a ternary op
+    * [PUB-602] - Move all tutorials in the product to FVec (they are still on VA)
+    * [PUB-611] - benign on GLM2 - both AUC & xval results
+    * [PUB-612] - lambda search... not searching?
+    * [PUB-617] - Import URL fails to parse
+
+Improvement
+-----------
+    * [PUB-120] - Kmeans 1 output in gui
+    * [PUB-293] - maybe glm2 could more directly report the user error if I say ignored_cols has the output response
+    * [PUB-498] - Sparse data handling for DeepLearning
+    * [PUB-537] - Add DeepLearning options to R wrapper
+    * [PUB-574] - A bad h2o R package install into an alternate R library, might require walking the .libPaths() vector to make sure h2o package is removed. Maybe recommend h2o package not be installed as root.
+    * [PUB-577] - should mean() and sd() be fixed to work in ddply like min/max  and the other built-in column functions?
+
+New Feature
+-----------
+    * [PUB-512] - Add a tutorial for Deep Learning
+    * [PUB-523] - Naive Bayes java algorithm implementation
+    * [PUB-524] - R connector for Naive Bayes
+    * [PUB-593] - Implement Predict() for DeepLearning in R
+
+Task
+----
+    * [PUB-86] - Java POJO predict model testplan
+    * [PUB-91] - Menu cleanup
+
+
+
 Release 2.4.0.4 (Kahan build 4)
 ================================
 
