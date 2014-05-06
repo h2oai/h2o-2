@@ -112,6 +112,7 @@ build:
 	@echo
 	$(MAKE) build_rjar 1> target/logs/rjar_build.log
 	$(MAKE) -C R PROJECT_VERSION=$(PROJECT_VERSION) BUILD_NUMBER=$(BUILD_NUMBER) 1> target/logs/r_build.log
+	$(MAKE) build_rcran 1> target/logs/rcran_build.log
 
 	@echo
 	@echo "PHASE: Building zip package..."
@@ -152,6 +153,7 @@ else
 	md5deep target/h2o.jar | cut -d'' -f1 > target/h2o.jar.md5
 endif
 
+# Strip out stuff from h2o.jar that isn't needed for R.
 build_rjar:
 	rm -fr target/Rjar
 	mkdir -p target/Rjar/tmp
@@ -169,6 +171,18 @@ ifneq ($(shell uname),Windows_NT)
 else
 	md5deep target/Rjar/h2o.jar | cut -d'' -f1 > target/Rjar/h2o.jar.md5
 endif
+
+# Build the file for submission to CRAN by stripping out h2o.jar.
+H2O_R_SOURCE_FILE = h2o_$(PROJECT_VERSION).tar.gz
+build_rcran:
+	rm -fr target/Rcran
+	mkdir target/Rcran
+	cp target/R/src/contrib/$(H2O_R_SOURCE_FILE) target/Rcran/tmp.tar.gz
+	cd target/Rcran && tar zxvf tmp.tar.gz
+	rm -f target/Rcran/tmp.tar.gz
+	rm -f target/Rcran/h2o/inst/java/h2o.jar
+	cd target/Rcran && tar zcvf $(H2O_R_SOURCE_FILE) h2o
+	rm -fr target/Rcran/h2o
 
 build_package:
 	echo $(PROJECT_VERSION) > target/project_version
