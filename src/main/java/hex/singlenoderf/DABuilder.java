@@ -83,7 +83,7 @@ public class DABuilder {
       boolean[] _isByteCol = new boolean[fr.numCols()];
       long[] _naCnts = new long[fr.numCols()];
       for (int i = 0; i < _isByteCol.length; ++i) {
-        _isByteCol[i] = DataAdapter.isByteCol(fr.vecs()[i], (int)fr.numRows(), i == _isByteCol.length - 1);
+        _isByteCol[i] = DataAdapter.isByteCol(fr.vecs()[i], (int)fr.numRows(), i == _isByteCol.length - 1, rfmodel.regression);
         _naCnts[i] = fr.vecs()[i].naCnt();
       }
       // The model columns are dense packed - but there will be columns in the
@@ -103,7 +103,7 @@ public class DABuilder {
       // Collects jobs loading local chunks
       ArrayList<RecursiveAction> dataInhaleJobs = new ArrayList<RecursiveAction>();
       for(int i = 0; i < fr.anyVec().nChunks(); ++i) {
-        dataInhaleJobs.add(loadChunkAction(dapt, fr, i, _isByteCol, _naCnts));
+        dataInhaleJobs.add(loadChunkAction(dapt, fr, i, _isByteCol, _naCnts, rfmodel.regression));
       }
       _rfmodel.current_status = "Inhaling Data";
       _rfmodel.update(_rfmodel.jobKey);
@@ -115,7 +115,7 @@ public class DABuilder {
       return dapt;
     }
 
-    static RecursiveAction loadChunkAction(final DataAdapter dapt, final Frame fr, final int cidx, final boolean[] isByteCol, final long[] naCnts) {
+    static RecursiveAction loadChunkAction(final DataAdapter dapt, final Frame fr, final int cidx, final boolean[] isByteCol, final long[] naCnts, boolean regression) {
       return new RecursiveAction() {
         @Override protected void compute() {
           try {

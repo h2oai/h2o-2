@@ -1,6 +1,5 @@
 package hex.singlenoderf;
 
-import hex.ShuffleTask;
 import water.*;
 import water.fvec.Chunk;
 import water.fvec.Frame;
@@ -10,7 +9,6 @@ import water.util.Log.Tag.Sys;
 import water.util.ModelUtils;
 import water.util.Utils;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
 import hex.VarImp;
@@ -187,23 +185,27 @@ public class CMTask extends MRTask2<CMTask> {
         // --- END OF CRUCIAL CODE ---
 
         // Predict with this tree - produce 0-based class index
-        int prediction = _model.classify0(ntree, _data, chks, row, _modelDataMap, numClasses );
-        if( prediction >= numClasses ) continue; // Junk row cannot be predicted
-        // Check tree miss
-        int alignedPrediction = alignModelIdx(prediction);
-        int alignedData       = alignDataIdx((int) _data.vecs()[_classcol].at8(row) - cmin);
-        if (alignedPrediction != alignedData) {
-          _errorsPerTree[ntree]++;
+        if (!_model.regression) {
+          int prediction = (int)_model.classify0(ntree, _data, chks, row, _modelDataMap, numClasses, _model.regression);
+          if( prediction >= numClasses ) continue; // Junk row cannot be predicted
+          // Check tree miss
+          int alignedPrediction = alignModelIdx(prediction);
+          int alignedData       = alignDataIdx((int) _data.vecs()[_classcol].at8(row) - cmin);
+          if (alignedPrediction != alignedData) {
+            _errorsPerTree[ntree]++;
+          }
+          votes[r][alignedPrediction]++; // Vote the row
+          if (isLocalTree) localVotes[r][alignedPrediction]++; // Vote
         }
-        votes[r][alignedPrediction]++; // Vote the row
-        if (isLocalTree) localVotes[r][alignedPrediction]++; // Vote
       }
     }
-    // Assemble the votes-per-class into predictions & score each row
-    _matrix = computeCM(votes, chks); // Make a confusion matrix for this chunk
-    if (localVotes!=null) {
-      _localMatrices = new CM[H2O.CLOUD.size()];
-      _localMatrices[H2O.SELF.index()] = computeCM(localVotes, chks);
+    if(!_model.regression) {
+      // Assemble the votes-per-class into predictions & score each row
+      _matrix = computeCM(votes, chks); // Make a confusion matrix for this chunk
+      if (localVotes!=null) {
+        _localMatrices = new CM[H2O.CLOUD.size()];
+        _localMatrices[H2O.SELF.index()] = computeCM(localVotes, chks);
+      }
     }
   }
 
@@ -232,24 +234,26 @@ public class CMTask extends MRTask2<CMTask> {
 
   /** Reduction combines the confusion matrices. */
   @Override public void reduce(CMTask drt) {
-    if (_matrix == null) {
-      _matrix = drt._matrix;
-    } else {
-      _matrix = _matrix.add(drt._matrix);
+    if (!_model.regression) {
+      if (_matrix == null) {
+        _matrix = drt._matrix;
+      } else {
+        _matrix = _matrix.add(drt._matrix);
+      }
+      _sum += drt._sum;
+      // Reduce tree errors
+      long[] ept1 = _errorsPerTree;
+      long[] ept2 = drt._errorsPerTree;
+      if (ept1 == null) _errorsPerTree = ept2;
+      else if (ept2 != null) {
+        if (ept1.length < ept2.length) ept1 = Arrays.copyOf(ept1, ept2.length);
+        for (int i = 0; i < ept2.length; i++) ept1[i] += ept2[i];
+      }
+      if (_cms!=null)
+        for (int i = 0; i < _cms.length; i++) Utils.add(_cms[i], drt._cms[i]);
+      if (_oobs != null)
+        for (int i = 0; i < _oobs.length; ++i) _oobs[i] += drt._oobs[i];
     }
-    _sum += drt._sum;
-    // Reduce tree errors
-    long[] ept1 = _errorsPerTree;
-    long[] ept2 = drt._errorsPerTree;
-    if (ept1 == null) _errorsPerTree = ept2;
-    else if (ept2 != null) {
-      if (ept1.length < ept2.length) ept1 = Arrays.copyOf(ept1, ept2.length);
-      for (int i = 0; i < ept2.length; i++) ept1[i] += ept2[i];
-    }
-    if (_cms!=null)
-      for (int i = 0; i < _cms.length; i++) Utils.add(_cms[i], drt._cms[i]);
-    if (_oobs != null)
-      for (int i = 0; i < _oobs.length; ++i) _oobs[i] += drt._oobs[i];
   }
 
   /** Transforms 0-based class produced by model to CF zero-based */

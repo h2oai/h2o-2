@@ -13,7 +13,7 @@ def define_gbm_params():
         'ntrees': [1, 2, 4, 10],
         'max_depth': [None, 1, 2, 4, 8, 40], # 0 might cause problem
         'min_rows': [None, 1, 2, 100, 10000000],
-        'response': ['C54'],
+        'response': ['C55'],
         'ignored_cols_by_name': [None, 'C1,C2,C3,C4', 'C1'],
         # 'classification': [None, 1], # this is forced below
         # 'validation': [None]
@@ -46,7 +46,7 @@ class Basic(unittest.TestCase):
         modelKey = 'GBMModelKey'
         files = [
                 # ('standard', 'covtype.shuffled.90pct.data', 'covtype.train.hex', 1800, 54, 'covtype.shuffled.10pct.data', 'covtype.test.hex')
-                ('standard', 'covtype.shuffled.10pct.sorted.data', 'covtype.train.hex', 1800, 'C54', 'covtype.shuffled.10pct.data', 'covtype.test.hex')
+                ('standard', 'covtype.shuffled.10pct.sorted.data', 'covtype.train.hex', 1800, 'C55', 'covtype.shuffled.10pct.data', 'covtype.test.hex')
                 ]
 
         for (importFolderPath, trainFilename, trainKey, timeoutSecs, response, testFilename, testKey) in files:
@@ -77,7 +77,7 @@ class Basic(unittest.TestCase):
                 # use this to set any defaults you want if the pick doesn't set
                 print "Regression!"
                 params = {
-                    'response': 'C54', 
+                    'response': 'C55', 
                     # 'ignored_cols_by_name': 'C5,C6,C7,C8,C9', 
                     'ntrees': 2, 
                     'classification': 0,

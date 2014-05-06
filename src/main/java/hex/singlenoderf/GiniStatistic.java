@@ -23,7 +23,7 @@ import java.util.Random;
  */
 public class GiniStatistic extends Statistic {
 
-  public GiniStatistic(Data data, int features, long seed, int exclusiveSplitLimit) { super(data, features, seed, exclusiveSplitLimit); }
+  public GiniStatistic(Data data, int features, long seed, int exclusiveSplitLimit) { super(data, features, seed, exclusiveSplitLimit, false /*classification*/); }
 
   private double gini(int[] dd, int sum) {
     double result = 1.0;
@@ -100,5 +100,15 @@ public class GiniStatistic extends Statistic {
     return bestSplit == -1
             ? Split.impossible(Utils.maxIndex(dist, _random))
             : Split.exclusion(colIndex, bestSplit, bestFitness);
+  }
+
+  @Override
+  protected Split ltSplit(int colIndex, Data d, float[] dist, float distWeight, Random rand) {
+    return null;  //not called for classification
+  }
+
+  @Override
+  protected Split eqSplit(int colIndex, Data d, float[] dist, float distWeight, Random rand) {
+    return null;  //not called for classification
   }
 }

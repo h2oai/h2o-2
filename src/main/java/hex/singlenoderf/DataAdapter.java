@@ -31,6 +31,8 @@ final class DataAdapter  {
   public  final int      _numRows;
   /** Class weights */
   public  final double[] _classWt;
+  /** Use regression */
+  public final boolean _regression;
 
   DataAdapter(Frame fr, SpeeDRFModel model, int[] modelDataMap, int rows,
               long unique, long seed, int binLimit, double[] classWt) {
@@ -38,13 +40,14 @@ final class DataAdapter  {
     _seed       = seed+(unique<<16); // This is important to preserve sampling selection!!!
     /* Maximum arity for a column (not a hard limit) */
     _numRows    = rows;
-    _numClasses = model.classes();
+    _numClasses = model.regression ? 1 : model.classes();
+    _regression = model.regression;
 
     _c = new Col[model.fr.numCols()];
     for( int i = 0; i < _c.length; i++ ) {
       assert fr._names[modelDataMap[i]].equals(model.fr._names[i]);
       Vec v = fr.vecs()[i];
-      if( isByteCol(v,rows,i == _c.length-1) ) // we do not bin for small values
+      if( isByteCol(v,rows,i == _c.length-1, _regression) ) // we do not bin for small values
         _c[i] = new Col(fr._names[i], rows, i == _c.length-1);
       else
         _c[i] = new Col(fr._names[i], rows, i == _c.length-1, binLimit, !(v.isEnum() || v.isInt()));
@@ -54,7 +57,11 @@ final class DataAdapter  {
     _classWt = trivial ?  null : classWt;
   }
 
-  static boolean isByteCol( Vec C, int rows, boolean isClass ) {
+  static boolean isByteCol( Vec C, int rows, boolean isClass, boolean regression) {
+    if (regression) {
+      return (C.isInt() || C.isEnum()) && C.min() >= 0 && C.length()==rows &&
+              (C.max()<255 || C.max() <256 && C.length()==rows);
+    }
     return (C.isInt() || C.isEnum()) && !isClass && C.min() >= 0 && C.length()==rows &&
             (C.max()<255 || C.max() <256 && C.length()==rows);
   }
@@ -85,9 +92,15 @@ final class DataAdapter  {
 
   /** Returns the number of bins, i.e. the number of distinct values in the column.  */
   public int columnArity(int col) { return _c[col].arity(); }
+  public int columnArityOfClassCol() { return _c[_c.length - 1].arity(); }
 
   /** Return a short that represents the binned value of the original row,column value.  */
   public short getEncodedColumnValue(int row, int col) { return _c[col].get(row); }
+  public short getEncodedClassColumnValue(int row) { return _c[_c.length-1].get(row); }
+  public float getRawClassColumnValueFromBin(int row) {
+    short btor = _c[_c.length-1].get(row);
+    return _c[_c.length-1]._binned2raw[btor];
+  }
 
   public void shrink() {
     for ( Col c: _c) c.shrink();
