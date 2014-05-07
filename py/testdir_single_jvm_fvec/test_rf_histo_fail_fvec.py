@@ -6,7 +6,7 @@ import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_import as h2i
 paramDict = {
     'destination_key': 'model_keyA', 
     'ntrees': 13, 
-    'response': 'C54', 
+    'response': 'C55', 
     'mtries': 3, 
     'source': u'covtype.hex', 
     'seed': '1231231', 

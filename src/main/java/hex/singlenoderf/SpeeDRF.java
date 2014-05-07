@@ -6,6 +6,7 @@ import hex.FrameTask;
 import jsr166y.ForkJoinTask;
 import water.*;
 import water.api.Constants;
+import water.api.DocGen;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Log;
@@ -16,6 +17,9 @@ import java.util.Random;
 
 
 public class SpeeDRF extends Job.ValidatedJob {
+  static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
+  public static DocGen.FieldDoc[] DOC_FIELDS;
+  public static final String DOC_GET = "SpeeDRF";
 
   @API(help = "Number of trees", filter = Default.class, json = true, lmin = 1, lmax = Integer.MAX_VALUE)
   public int num_trees   = 50;
@@ -70,6 +74,8 @@ public class SpeeDRF extends Job.ValidatedJob {
 
   private static final Random _seedGenerator = Utils.getDeterRNG(0xd280524ad7fe0602L);
 
+  private boolean regression;
+
   /** Return the query link to this page */
 //  public static String link(Key k, String content) {
 //    RString rs = new RString("<a href='RF.query?%key_param=%$key'>%content</a>");
@@ -84,8 +90,11 @@ public class SpeeDRF extends Job.ValidatedJob {
   @Override protected void queryArgumentValueSet(Argument arg, java.util.Properties inputArgs) {
     super.queryArgumentValueSet(arg, inputArgs);
 
+//    if (arg._name.equals("classification")) {
+//      arg._hideInQuery = true;
+//    }
     if (arg._name.equals("classification")) {
-      arg._hideInQuery = true;
+      regression = !this.classification;
     }
     if (arg._name.equals("class_weights")) {
       if (source == null || response == null) {
@@ -94,15 +103,29 @@ public class SpeeDRF extends Job.ValidatedJob {
     }
     if (arg._name.equals("sampling_strategy")) {
       arg.setRefreshOnChange();
+      if (regression) {
+        arg.disable("Random Sampling for regression trees.");
+      }
+    }
+    if (arg._name.equals("stat_type")) {
+      if(regression) {
+        arg.disable("Minimize MSE for regression.");
+      }
     }
     if (arg._name.equals("strata_samples")) {
       if (sampling_strategy != Sampling.Strategy.STRATIFIED_LOCAL) {
         arg.disable("No Strata for Random sampling.");
       }
+      if (regression) {
+        arg.disable("No strata for regression.");
+      }
     }
     if (arg._name.equals("class_weights")) {
       if (source == null || response == null) {
         arg.disable("Requires a dataset and response.");
+      }
+      if (regression) {
+        arg.disable("No class weights for regression.");
       }
     }
   }
@@ -124,11 +147,8 @@ public class SpeeDRF extends Job.ValidatedJob {
       if (model == null) model = UKV.get(dest());
       model.write_lock(self());
       drfParams = DRFParams.create(model.fr.find(model.response), model.N, model.max_depth, (int)model.fr.numRows(), model.nbins,
-              model.statType, seed, parallel, model.weights, mtry, model.sampling_strategy, (float) sample, model.strata_samples, 1, _exclusiveSplitLimit, _useNonLocalData);
-//      Gson gson = new GsonBuilder().setPrettyPrinting().create();
-//      String json = gson.toJson(drfParams);
+              model.statType, seed, parallel, model.weights, mtry, model.sampling_strategy, (float) sample, model.strata_samples, 1, _exclusiveSplitLimit, _useNonLocalData, regression);
       logStart();
-//      Log.info(json);
       DRFTask tsk = new DRFTask();
       tsk._job = Job.findJob(self());
       tsk._params = drfParams;
@@ -157,39 +177,42 @@ public class SpeeDRF extends Job.ValidatedJob {
   public SpeeDRFModel initModel() {
     try {
       source.read_lock(self());
-      float[] samps = new float[(int) (response.max() - response.min() + 1)];
-      for (int i = 0; i < samps.length; ++i ) samps[i] = 67;
-      if (strata_samples == null) samps = null;
-      if (strata_samples != null) {
-        int[] _samples = new int[(int) (response.max() - response.min() + 1)];
-        for (int i = 0; i < _samples.length; ++i ) _samples[i] = 67;
-        if(strata_samples.length > _samples.length) {
-          System.arraycopy(_samples, 0, strata_samples, 0, _samples.length);
-          strata_samples = _samples;
+      float[] samps = null;
+      if(!regression) {
+        samps = new float[(int) (response.max() - response.min() + 1)];
+        for (int i = 0; i < samps.length; ++i ) samps[i] = 67;
+        if (strata_samples == null) samps = null;
+        if (strata_samples != null) {
+          int[] _samples = new int[(int) (response.max() - response.min() + 1)];
+          for (int i = 0; i < _samples.length; ++i ) _samples[i] = 67;
+          if(strata_samples.length > _samples.length) {
+            System.arraycopy(_samples, 0, strata_samples, 0, _samples.length);
+            strata_samples = _samples;
+          }
+          if(strata_samples.length < _samples.length) {
+            System.arraycopy(strata_samples, 0, _samples, 0, strata_samples.length);
+            strata_samples = _samples;
+          }
+          for (int i = 0; i < _samples.length; ++i) {
+            samps[i] = (float)strata_samples[i];
+          }
         }
-        if(strata_samples.length < _samples.length) {
-          System.arraycopy(strata_samples, 0, _samples, 0, strata_samples.length);
-          strata_samples = _samples;
+        if (class_weights != null) {
+          double[] weights = new double[(int) (response.max() - response.min() + 1)];
+          for (int i = 0; i < weights.length; ++i ) weights[i] = 1.0;
+          if (class_weights == null) {
+            class_weights = weights;
+          }
+          if(class_weights.length > weights.length) {
+            System.arraycopy(class_weights, 0, weights, 0, weights.length);
+            class_weights = weights;
+          }
+          if(class_weights.length < weights.length) {
+            System.arraycopy(class_weights, 0, weights, 0, class_weights.length);
+            class_weights = weights;
+          }
         }
-        for (int i = 0; i < _samples.length; ++i) {
-          samps[i] = (float)strata_samples[i];
-        }
-      }
-      if (class_weights != null) {
-        double[] weights = new double[(int) (response.max() - response.min() + 1)];
-        for (int i = 0; i < weights.length; ++i ) weights[i] = 1.0;
-        if (class_weights == null) {
-          class_weights = weights;
-        }
-        if(class_weights.length > weights.length) {
-          System.arraycopy(class_weights, 0, weights, 0, weights.length);
-          class_weights = weights;
-        }
-        if(class_weights.length < weights.length) {
-          System.arraycopy(class_weights, 0, weights, 0, class_weights.length);
-          class_weights = weights;
-        }
-      }
+      } else { class_weights = null; strata_samples = null; samps = null; }
       if (seed == -1) {
         seed = _seedGenerator.nextLong();
       }
@@ -201,20 +224,23 @@ public class SpeeDRF extends Job.ValidatedJob {
       SpeeDRFModel model = new SpeeDRFModel(dest(), self(), source._key, train, response, new Key[0], seed, getCMDomain(), this);
       model.nbins = bin_limit;
       if (mtry == -1) {
-        model.mtry = (int) Math.floor(Math.sqrt(source.numCols()));
+        if(!regression) {
+           model.mtry = (int) Math.floor(Math.sqrt(source.numCols()));
+        } else {model.mtry = (int) Math.floor((float) source.numCols() / 3.0f); }
       } else {
         model.mtry = mtry;
       }
+      model.regression = regression;
       model.features = source.numCols();
-      model.sampling_strategy = sampling_strategy;
+      model.sampling_strategy = regression ? Sampling.Strategy.RANDOM : sampling_strategy;
       model.sample = (float) sample;
-      model.weights = class_weights;
+      model.weights = regression ? null : class_weights;
       model.time = 0;
       model.N = num_trees;
       model.strata_samples = samps;
       model.max_depth = max_depth;
       model.oobee = validation == null && oobee;
-      model.statType = stat_type;
+      model.statType = regression ? Tree.StatType.MSE : stat_type;
       model.test_frame = test;
       model.testKey = validation == null ? null : validation._key;
       model.importance = importance;
@@ -324,13 +350,16 @@ public class SpeeDRF extends Job.ValidatedJob {
       Vec[] vecs = _rfmodel.fr.vecs();
       Vec c = _rfmodel.response;
       String err = "Response column must be an integer in the interval [2,254]";
-      if(!(c.isEnum() || c.isInt()))
-        throw new IllegalArgumentException("Regression is not supported: "+err);
-      final int classes = (int)(c.max() - c.min())+1;
-      if( !(2 <= classes && classes <= 254 ) )
-        throw new IllegalArgumentException("Found " + classes+" classes: "+err);
+      if( !_rfmodel.regression & (!(c.isEnum() || c.isInt())))
+        throw new IllegalArgumentException("Classification cannot be performed on a float column: "+err);
+
+      if(!_rfmodel.regression) {
+        final int classes = (int)(c.max() - c.min())+1;
+        if( !(2 <= classes && classes <= 254 ) )
+          throw new IllegalArgumentException("Found " + classes+" classes: "+err);
       if (0.0f > _params.sample || _params.sample > 1.0f)
         throw new IllegalArgumentException("Sampling rate must be in [0,1] but found "+ _params.sample);
+      }
       if (_params.num_split_features!=-1 && (_params.num_split_features< 1 || _params.num_split_features>vecs.length-1))
         throw new IllegalArgumentException("Number of split features exceeds available data. Should be in [1,"+(vecs.length-1)+"]");
       ChunkAllocInfo cai = new ChunkAllocInfo();
@@ -404,7 +433,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       for (int i = 0; i < ntrees; ++i) {
         long treeSeed = rnd.nextLong() + TREE_SEED_INIT; // make sure that enough bits is initialized
         trees[i] = new Tree(job, localData, producerId, drfParams.max_depth, drfParams.stat_type, numSplitFeatures, treeSeed,
-                i, drfParams._exclusiveSplitLimit, sampler, drfParams._verbose);
+                i, drfParams._exclusiveSplitLimit, sampler, drfParams._verbose, drfParams.regression);
         if (!drfParams.parallel)   ForkJoinTask.invokeAll(new Tree[]{trees[i]});
       }
 
@@ -460,12 +489,14 @@ public class SpeeDRF extends Job.ValidatedJob {
     int _numrows;
     /** Pseudo random seed initializing RF algorithm */
     long seed;
+    /** Build regression trees if true */
+    boolean regression;
 
     public static DRFParams create(int col, int ntrees, int depth, int numrows, int binLimit,
                                          Tree.StatType statType, long seed, boolean parallelTrees, double[] classWt,
                                          int numSplitFeatures, Sampling.Strategy samplingStrategy, float sample,
                                          float[] strataSamples, int verbose, int exclusiveSplitLimit,
-                                         boolean useNonLocalData) {
+                                         boolean useNonLocalData, boolean regression) {
 
       DRFParams drfp = new DRFParams();
       drfp.num_trees           = ntrees;
@@ -484,6 +515,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       drfp._exclusiveSplitLimit = exclusiveSplitLimit;
       drfp._verbose = verbose;
       drfp.classcol = col;
+      drfp.regression = regression;
       return drfp;
     }
   }

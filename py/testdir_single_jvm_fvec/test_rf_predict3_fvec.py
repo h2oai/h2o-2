@@ -66,7 +66,7 @@ class Basic(unittest.TestCase):
             
         elif 1==0:
             y = 54 # last col
-            response = 'C54'
+            response = 'C55'
             skipSrcOutputHeader = 1
             skipPredictHeader = 1
             trees = 6
@@ -78,7 +78,7 @@ class Basic(unittest.TestCase):
             expectedPctWrong = 0.7
         elif 1==0:
             y = 54 # last col
-            response = 'C54'
+            response = 'C55'
             skipSrcOutputHeader = 1
             skipPredictHeader = 1
             trees = 40
@@ -91,7 +91,7 @@ class Basic(unittest.TestCase):
             expectedPctWrong = 0.7
         elif 1==0:
             y = 54 # last col
-            response = 'C54'
+            response = 'C55'
             skipSrcOutputHeader = 1
             skipPredictHeader = 1
             trees = 6

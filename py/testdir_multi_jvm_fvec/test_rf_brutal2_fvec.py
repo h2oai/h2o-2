@@ -86,12 +86,12 @@ class Basic(unittest.TestCase):
                 'max_depth': 10,
                 'nbins': 50,
                 'timeoutSecs': 600,
-                'response': 'C54',
+                'response': 'C55',
                 'classification': 1,
             }
 
             paramsScoreRF = {
-                'vactual': 'C54',
+                'vactual': 'C55',
                 'timeoutSecs': 600,
             }
 

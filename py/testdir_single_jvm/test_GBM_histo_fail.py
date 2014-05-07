@@ -37,7 +37,7 @@ class Basic(unittest.TestCase):
             'max_depth': 7,
             # 'max_depth': 10,
             'ntrees': 2,
-            'response': 'C54'
+            'response': 'C55'
         }
 
         h2o_cmd.runGBM(parseResult=parseTrainResult, timeoutSecs=timeoutSecs, destination_key=modelKey, **kwargs)
