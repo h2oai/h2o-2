@@ -4,10 +4,13 @@ package samples;
 import hex.Layer;
 import hex.Layer.VecSoftmax;
 import hex.Layer.VecsInput;
+import hex.MnistCanvas;
 import hex.NeuralNet;
 import hex.Trainer;
 import samples.expert.NeuralNetMnist;
 import water.fvec.Vec;
+
+import javax.swing.*;
 
 public class NeuralNetMnistPretrain extends NeuralNetMnist {
   public static void main(String[] args) throws Exception {
@@ -46,8 +49,7 @@ public class NeuralNetMnistPretrain extends NeuralNetMnist {
   }
 
   @Override protected void startTraining(Layer[] ls) {
-    // pretrain for
-    int pretrain_epochs = 4;
+    int pretrain_epochs = 2;
     preTrain(ls, pretrain_epochs);
 
     // actual run
@@ -56,7 +58,16 @@ public class NeuralNetMnistPretrain extends NeuralNetMnist {
     if (epochs > 0) {
 //    _trainer = new Trainer.Direct(ls, epochs, self());
       _trainer = new Trainer.Threaded(ls, epochs, self(), -1);
-      //_trainer = new Trainer.MapReduce(ls, epochs, self());
+          // Basic visualization of images and weights
+
+      JFrame frame = new JFrame("H2O Training");
+      frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+      MnistCanvas canvas = new MnistCanvas(_trainer);
+      frame.setContentPane(canvas.init());
+      frame.pack();
+      frame.setLocationRelativeTo(null);
+      frame.setVisible(true);//_trainer = new Trainer.MapReduce(ls, epochs, self());
+
       _trainer.start();
       _trainer.join();
     }
@@ -101,14 +112,14 @@ public class NeuralNetMnistPretrain extends NeuralNetMnist {
 
     _trainer = new Trainer.Direct(pre, epochs, self());
 
-//    // Basic visualization of images and weights
-//    JFrame frame = new JFrame("H2O");
-//    frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-//    MnistCanvas canvas = new MnistCanvas(_trainer);
-//    frame.setContentPane(canvas.init());
-//    frame.pack();
-//    frame.setLocationRelativeTo(null);
-//    frame.setVisible(true);
+    // Basic visualization of images and weights
+    JFrame frame = new JFrame("H2O Pre-Training");
+    frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+    MnistCanvas canvas = new MnistCanvas(_trainer);
+    frame.setContentPane(canvas.init());
+    frame.pack();
+    frame.setLocationRelativeTo(null);
+    frame.setVisible(true);
 
     _trainer.start();
     _trainer.join();

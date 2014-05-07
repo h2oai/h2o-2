@@ -915,6 +915,9 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       return true;
     }
 
+    // optional JFrame creation for visualization of weights
+//    DeepLearningVisualization.visualize(this);
+
     final String mse_format = "%g";
 //    final String cross_entropy_format = "%2.6f";
 

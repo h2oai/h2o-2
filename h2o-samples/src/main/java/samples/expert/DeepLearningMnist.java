@@ -1,9 +1,12 @@
 package samples.expert;
 
+import static samples.expert.DeepLearningVisualization.visualize;
 import static water.util.MRUtils.sampleFrame;
 import hex.deeplearning.DeepLearning;
+import hex.deeplearning.DeepLearningModel;
 import water.Job;
 import water.TestUtil;
+import water.UKV;
 import water.fvec.Frame;
 import water.util.Log;
 
@@ -39,12 +42,12 @@ public class DeepLearningMnist extends Job {
     DeepLearning p = new DeepLearning();
     // Hinton parameters -> should lead to ~1 % test error after a few dozen million samples
     p.seed = seed;
-    p.hidden = new int[]{1024,1024,2048};
-//    p.hidden = new int[]{128,128,256};
+//    p.hidden = new int[]{1024,1024,2048};
+    p.hidden = new int[]{128,128,256};
     p.activation = DeepLearning.Activation.RectifierWithDropout;
     p.loss = DeepLearning.Loss.CrossEntropy;
     p.input_dropout_ratio = 0.2;
-    p.epochs = 10000;
+    p.epochs = 10;
     p.l1 = 1e-5;
     p.l2 = 0;
 
@@ -84,11 +87,15 @@ public class DeepLearningMnist extends Job {
     p.score_interval = 30;
     p.variable_importances = false;
     p.fast_mode = true; //to match old NeuralNet behavior
-    p.ignore_const_cols = true; //to match old NeuralNet behavior
+//    p.ignore_const_cols = true;
+    p.ignore_const_cols = false; //to match old NeuralNet behavior and to have images look straight
     p.shuffle_training_data = false;
     p.force_load_balance = true;
     p.replicate_training_data = true;
     p.quiet_mode = false;
     p.invoke();
+
+    visualize((DeepLearningModel) UKV.get(p.dest()));
   }
+
 }
