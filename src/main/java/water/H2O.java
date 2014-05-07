@@ -8,6 +8,7 @@ import java.util.*;
 
 import jsr166y.*;
 import water.Job.JobCancelledException;
+import water.fvec.Chunk;
 import water.nbhm.NonBlockingHashMap;
 import water.persist.*;
 import water.util.*;
