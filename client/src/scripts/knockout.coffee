@@ -59,6 +59,14 @@ ko.bindingHandlers.geyser =
       $(element).text 'Loading. Please wait..'
     return
 
+ko.bindingHandlers.icon =
+  update: (element, valueAccessor, allBindings, viewModel, bindingContext) ->
+    if icon = ko.unwrap valueAccessor()
+      element.className = "fa fa-#{icon.image}"
+      element.style.color = if icon.color then icon.color else null
+      element.title = if icon.caption then icon.caption else ''
+    return
+
 ko.bindingHandlers.collapse =
   init: (element, valueAccessor, allBindings, viewModel, bindingContext) ->
     angleDown = 'fa-angle-down'
@@ -69,6 +77,7 @@ ko.bindingHandlers.collapse =
     element.appendChild disclosureEl
     $el = $ element
     $nextEl = $el.next()
+    throw new Error 'No collapsible sibling found' unless $nextEl.length
     $disclosureEl = $ disclosureEl
     toggle = ->
       if isCollapsed
