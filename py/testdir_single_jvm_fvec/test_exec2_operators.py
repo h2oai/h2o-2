@@ -264,6 +264,23 @@ exprListFull = [
     # remove for now
     # "a=c(1,2,3); a[a[,1]>10,1]",
     # "z.hex=a=c(1,2,3); a[a[,1]>10,1];",
+    "cos(r.1)",
+    "sin(r.1)",
+    "tan(r.1)",
+    "acos(r.1)",
+    "asin(r.1)",
+    "atan(r.1)",
+    "cosh(r.1)",
+    "sinh(r.1)",
+    "tanh(r.1)",
+    "abs(r.1)",
+    "sgn(r.1)",
+    "sqrt(r.1)",
+    "ceil(r.1)",
+    "floor(r.1)",
+    "log(r.1)",
+    "exp(r.1)",
+    "is.na(r.1)",
     ]
 
     # leave ternary out
