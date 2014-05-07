@@ -24,6 +24,12 @@ public class Data implements Iterable<Data.Row> {
     public int classOf()    { return _dapt.classOf(_index); }
     public final short getEncodedColumnValue(int colIndex) {
       return _dapt.getEncodedColumnValue(_index, colIndex); }
+    public final short getEncodedClassColumnValue() {
+      return _dapt.getEncodedClassColumnValue(_index);
+    }
+    public final float getRawClassColumnValueFromBin() {
+      return _dapt.getRawClassColumnValueFromBin(_index);
+    }
     public final boolean hasValidValue(int colIndex) { return !_dapt.hasBadValue(_index, colIndex); }
     public final boolean isValid() { return !_dapt.isBadRow(_index); }
   }
@@ -50,11 +56,21 @@ public class Data implements Iterable<Data.Row> {
   public final String colName(int i)   { return _dapt.columnName(i); }
   public final float  unmap(int col, int split) { return _dapt.unmap(col, split); }
   public final int    columnArity(int colIndex) { return _dapt.columnArity(colIndex); }
+  public final int columnArityOfClassCol() { return _dapt.columnArityOfClassCol(); }
   /** Transforms given binned index (short) into 0..N-1 corresponding to predictor class */
   public final int      unmapClass(int clazz) {return _dapt.unmapClass(clazz); }
   public final boolean  isFloat(int col)      { return _dapt.isFloat(col);     }
   public final double[] classWt()             { return _dapt._classWt;         }
   public final boolean  isIgnored(int col)    { return _dapt.isIgnored(col);   }
+  public final float computeAverage() {
+    float av = 0.f;
+    int nobs = 0;
+    for (Row r: this) {
+      av += r.getRawClassColumnValueFromBin();
+      nobs++;
+    }
+    return av / (float)(nobs);
+  }
 
   public final Iterator<Row> iterator() { return new RowIter(start(), end()); }
   private class RowIter implements Iterator<Row> {
@@ -80,10 +96,10 @@ public class Data implements Iterable<Data.Row> {
       }
 
       if (putToLeft) {
-        ls.addQ(row);
+        ls.addQ(row, ls._regression);
         ++l;
       } else {
-        rs.addQ(row);
+        rs.addQ(row, rs._regression);
         permutation[l] = permutation[r];
         permutation[r--] = permIdx;
       }

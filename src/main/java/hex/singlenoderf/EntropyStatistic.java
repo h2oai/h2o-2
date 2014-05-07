@@ -26,7 +26,7 @@ import java.util.Random;
  */
 class EntropyStatistic extends Statistic {
 
-  public EntropyStatistic(Data data, int features, long seed, int exclusiveSplitLimit) { super(data, features, seed, exclusiveSplitLimit); }
+  public EntropyStatistic(Data data, int features, long seed, int exclusiveSplitLimit) { super(data, features, seed, exclusiveSplitLimit, false /*classification*/); }
   /** LessThenEqual splits s*/
   @Override protected Split ltSplit(int col, Data d, int[] dist, int distWeight, Random rand) {
     final int[] distL = new int[d.classes()], distR = dist.clone();
@@ -124,5 +124,16 @@ class EntropyStatistic extends Statistic {
             ? Split.impossible(Utils.maxIndex(dist,_random))
             : Split.exclusion(col,bestSplit,maxReduction);
   }
+
+  @Override
+  protected Split ltSplit(int colIndex, Data d, float[] dist, float distWeight, Random rand) {
+    return null;  //not called for classification
+  }
+
+  @Override
+  protected Split eqSplit(int colIndex, Data d, float[] dist, float distWeight, Random rand) {
+    return null;  //not called for classification
+  }
+
   static final double log2 = Math.log(2);
 }

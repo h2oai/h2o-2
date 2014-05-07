@@ -1,8 +1,10 @@
 package hex;
 
 import water.Iced;
+import water.Model;
 import water.api.DocGen;
 import water.api.Request.API;
+import water.util.UIUtils;
 import water.util.Utils;
 
 import java.util.Arrays;
@@ -44,13 +46,17 @@ public class VarImp extends Iced {
   public void setVariables(String[] variables) { this.variables = variables; }
 
   /** Generate variable importance HTML code. */
-  public final StringBuilder toHTML(StringBuilder sb) {
+  public final <T extends Model> StringBuilder toHTML(T model, StringBuilder sb) {
     DocGen.HTML.section(sb,"Variable importance of input variables: " + method);
+    sb.append("<div class=\"alert\">");
+    sb.append(UIUtils.builderModelLink(model.getClass(), model._dataKey, model.responseName(), "Build a new model using selected variables", "redirectWithCols(this,'vi_chkb')"));
+    sb.append("</div>");
+
     DocGen.HTML.arrayHead(sb);
     // Create a sort order
     Integer[] sortOrder = getSortOrder();
     // Generate variable labels and raw scores
-    if (variables != null) DocGen.HTML.tableLine(sb, "Variable", variables, sortOrder, Math.min(max_var, variables.length));
+    if (variables != null) DocGen.HTML.tableLine(sb, "Variable", variables, sortOrder, Math.min(max_var, variables.length), true, "vi_chkb");
     if (varimp    != null) DocGen.HTML.tableLine(sb, method.toString(), varimp, sortOrder, Math.min(max_var, variables.length));
     // Print a specific information
     toHTMLAppendMoreTableLines(sb, sortOrder);
@@ -76,6 +82,7 @@ public class VarImp extends Iced {
         DocGen.HTML.toJSArray(new StringBuilder(), names, so, Math.min(max, vals.length)),
         DocGen.HTML.toJSArray(new StringBuilder(), vals , so, Math.min(max, vals.length))
         );
+    sb.append("<button id=\"sortBars\" class=\"btn btn-primary\">Sort</button>\n");
     return sb;
   }
   /** By default provides a sort order according to raw scores stored in <code>varimp</code>. */
