@@ -5,37 +5,26 @@ import h2o, h2o_browse as h2b, h2o_exec as h2e, h2o_hosts, h2o_import as h2i, h2
 # new ...ability to reference cols
 # src[ src$age<17 && src$zip=95120 && ... , ]
 # can specify values for enums ..values are 0 thru n-1 for n enums
-print "FIX!: need to test the && and || reduction operators"
 initList = [
         ]
 
-DO_SUM = False
+exprList = [
+        'Last.value.0 = r1[,c(1)]',
+        'Last.value.1 = any.factor(Last.value.0)',
+        'Last.value.2 = Last.value.0 + 1',
+        'Last.value.3 = log(Last.value.2)',
 
-if DO_SUM:
-    exprList = [
-            'a=c(1); a = sum(r1[1,])',
-            'b=c(1); b = sum(r1[1,])',
-            'd=c(1); d = sum(r1[1,])',
-            'e=c(1); e = sum(r1[1,])',
-            'f=c(1); f = sum(r1[1,])',
-            'f=c(1); g = sum(r1[1,])',
-            'h=c(1); h = sum(r1[1,])',
-            ]
-else:
-    exprList = [
-            'a=c(1); a = log(r1[1,]+0)',
-            'b=c(1); b = log(r1[1,]+0)',
-            'c=c(1); c = log(r1[1,]+0)',
-            'd=c(1); d = log(r1[1,]+0)',
-            'e=c(1); e = log(r1[1,]+1)',
-            'f=c(1); f = log(r1[1,]+1)',
-            'g=c(1); g = log(r1[1,]+1)',
-            'h=c(1); h = log(r1[1,]+1)',
-            'i=c(1); i = log(r1[1,]+2)',
-            'j=c(1); j = log(r1[1,]+2)',
-            'k=c(1); k = log(r1[1,]+2)',
-            'l=c(1); l = log(r1[1,]+2)',
-            ]
+        'Last.value.4 = r1[,c(1)]' ,
+        'Last.value.5 = any.factor(Last.value.4)',
+        'Last.value.6 = Last.value.4 + 1',
+        'Last.value.7 = log(Last.value.6)',
+
+        'Last.value.8 = r1[,c(1)]' ,
+        'Last.value.9 = any.factor(Last.value.8)',
+        'Last.value.10 = Last.value.8 + 1',
+        'Last.value.11 = log(Last.value.10)',
+
+        ]
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -47,9 +36,9 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1, java_heap_GB=28)
+            h2o.build_cloud(1, java_heap_GB=14)
         else:
-            h2o_hosts.build_cloud_with_hosts(1)
+            h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=100)
 
     @classmethod
     def tearDownClass(cls):
@@ -59,11 +48,12 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         bucket = 'home-0xdiag-datasets'
         # csvPathname = 'airlines/year2013.csv'
-        if getpass.getuser()=='jenkins':
-            csvPathname = 'standard/billion_rows.csv.gz'
-        else:
-            csvPathname = '1B/reals_1000000x1000_15f.data'
+        if localhost:
+            # csvPathname = 'standard/billion_rows.csv.gz'
             csvPathname = '1B/reals_100000x1000_15f.data'
+        else:
+            # csvPathname = '1B/reals_1000000x1000_15f.data'
+            # csvPathname = '1B/reals_100000x1000_15f.data'
             csvPathname = '1B/reals_1B_15f.data'
 
         hex_key = 'r1'

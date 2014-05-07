@@ -695,7 +695,7 @@ public class DTree extends Iced {
         sb.append(Inspect2.link("Inspect training data ("+_dataKey.toString()+")", _dataKey)).append(", ");
       sb.append(Predict.link(_key,"Score on dataset")).append(", ");
       if (_dataKey != null)
-        sb.append(UIUtils.builderLink(this.getClass(), _dataKey, responseName(), "Compute new model")).append(", ");
+        sb.append(UIUtils.builderModelLink(this.getClass(), _dataKey, responseName(), "Compute new model")).append(", ");
       sb.append("<i class=\"icon-play\"></i>&nbsp;").append("Continue training this model");
       sb.append("</div>");
       DocGen.HTML.paragraph(sb,"Model Key: "+_key);
@@ -751,7 +751,6 @@ public class DTree extends Iced {
       // Show variable importance
       if (varimp != null) {
         generateHTMLVarImp(sb);
-        sb.append("<button id=\"sortBars\" class=\"btn btn-primary\">Sort</button>\n");
       }
     }
 
@@ -777,7 +776,7 @@ public class DTree extends Iced {
       if (varimp!=null) {
         // Set up variable names for importance
         varimp.setVariables(Arrays.copyOf(_names, _names.length-1));
-        varimp.toHTML(sb);
+        varimp.toHTML(this, sb);
       }
     }
 

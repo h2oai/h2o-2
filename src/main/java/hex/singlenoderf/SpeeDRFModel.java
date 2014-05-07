@@ -391,7 +391,6 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     }
     if (varimp != null) {
       generateHTMLVarImp(sb);
-      sb.append("<button id=\"sortBars\" class=\"btn btn-primary\">Sort</button>\n");
     }
   }
 
@@ -560,7 +559,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     if (varimp!=null) {
       // Set up variable names for importance
       varimp.setVariables(Arrays.copyOf(_names, _names.length-1));
-      varimp.toHTML(sb);
+      varimp.toHTML(this, sb);
     }
   }
 
