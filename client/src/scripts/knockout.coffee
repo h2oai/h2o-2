@@ -67,6 +67,19 @@ ko.bindingHandlers.icon =
       element.title = if icon.caption then icon.caption else ''
     return
 
+ko.bindingHandlers.tooltip =
+  update: (element, valueAccessor, allBindings, viewModel, bindingContext) ->
+    title = ko.unwrap valueAccessor()
+
+    #HACK simply setting a new title without calling 'destroy' does not update the tooltip.
+    $(element).tooltip 'destroy'
+    if title
+      $(element).tooltip title: title
+
+    #TODO can remove this callback if ko/jquery are disposing the tooltip's bindings properly.
+    ko.utils.domNodeDisposal.addDisposeCallback element, ->
+      $(element).tooltip 'destroy'
+
 ko.bindingHandlers.collapse =
   init: (element, valueAccessor, allBindings, viewModel, bindingContext) ->
     angleDown = 'fa-angle-down'
