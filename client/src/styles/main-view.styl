@@ -30,6 +30,7 @@
 
 .y-lane-header
   dock-top(y-desktop-header-height)
+  border-bottom 1px solid #ddd
 
 .y-lane-body
   dock(top:y-desktop-header-height)
@@ -37,24 +38,32 @@
 .y-topic-lane
   dock-left(y-topic-lane-width)
   border-right 1px solid #ddd
-  .y-lane-header
-    border-bottom 1px solid #ddd
 
 .y-workspace-lane
   dock(left:y-topic-lane-width, right:y-help-lane-width)
 
-.y-page-views
-.y-modal-views
+.y-page-views, .y-modal-views
   dock()
-  > div
-    dock()
-    overflow auto
+  padding 25px 30px
+  overflow auto
+
+.y-modal-views
+  background white
+
+.y-selection-views
+  margin 7px 25px
+  span
+    display inline-block
+    height 30px
+    line-height 30px
+    text-transform uppercase
+    font-size 11px
+  .btn
+    height 30px
 
 .y-help-lane
   dock-right(y-help-lane-width)
   border-left 1px solid #ddd
-  .y-lane-header
-    border-bottom 1px solid #ddd
   .y-lane-body
     overflow auto
 

@@ -43,15 +43,16 @@ Steam.ModelSelectionView = (_) ->
 
   scoreModels = ->
     frameKey = _frameKey()
-    scores = map _selections(), (selection) ->
+    scorings = map _selections(), (selection) ->
+      frameKey: frameKey
       model: selection.data
       status: null
       time: null
       result: null
-    scoring = frameKey: frameKey, scores: scores, timestamp: Date.now()
+      timestamp: Date.now()
 
     do cancel
-    _.switchToScoring type: 'scoring', scoring: scoring
+    _.switchToScoring type: 'scoring', scorings: scorings
 
   cancel = ->
     _selections.removeAll()

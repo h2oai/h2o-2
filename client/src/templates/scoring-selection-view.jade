@@ -1,0 +1,11 @@
+.y-scoring-selection-view
+  // ko if:hasSelection
+  span(data-bind='text:caption')
+  button.btn.btn-primary(data-bind='click:compareScorings, enable:canCompareScorings') Compare
+  button.btn(data-bind='click:clearSelections') Clear
+  button.btn.btn-warning(style='float:right' data-bind='click:deleteScorings') Delete Selected
+  // /ko
+  // ko ifnot:hasSelection
+  button.btn.btn-warning(style='float:right' data-bind='click:deleteActiveScoring') Delete
+  // /ko
+
