@@ -9,15 +9,33 @@ print "FIX!: need to test the && and || reduction operators"
 initList = [
         ]
 
-exprList = [
-        'a=c(1); a = sum(r1[1,])',
-        'b=c(1); b = sum(r1[1,])',
-        'd=c(1); d = sum(r1[1,])',
-        'e=c(1); e = sum(r1[1,])',
-        'f=c(1); f = sum(r1[1,])',
-        'f=c(1); g = sum(r1[1,])',
-        'h=c(1); h = sum(r1[1,])',
-        ]
+DO_SUM = False
+
+if DO_SUM:
+    exprList = [
+            'a=c(1); a = sum(r1[1,])',
+            'b=c(1); b = sum(r1[1,])',
+            'd=c(1); d = sum(r1[1,])',
+            'e=c(1); e = sum(r1[1,])',
+            'f=c(1); f = sum(r1[1,])',
+            'f=c(1); g = sum(r1[1,])',
+            'h=c(1); h = sum(r1[1,])',
+            ]
+else:
+    exprList = [
+            'a=c(1); a = log(r1[1,]+0)',
+            'b=c(1); b = log(r1[1,]+0)',
+            'c=c(1); c = log(r1[1,]+0)',
+            'd=c(1); d = log(r1[1,]+0)',
+            'e=c(1); e = log(r1[1,]+1)',
+            'f=c(1); f = log(r1[1,]+1)',
+            'g=c(1); g = log(r1[1,]+1)',
+            'h=c(1); h = log(r1[1,]+1)',
+            'i=c(1); i = log(r1[1,]+2)',
+            'j=c(1); j = log(r1[1,]+2)',
+            'k=c(1); k = log(r1[1,]+2)',
+            'l=c(1); l = log(r1[1,]+2)',
+            ]
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -44,6 +62,8 @@ class Basic(unittest.TestCase):
         if getpass.getuser()=='jenkins':
             csvPathname = 'standard/billion_rows.csv.gz'
         else:
+            csvPathname = '1B/reals_1000000x1000_15f.data'
+            csvPathname = '1B/reals_100000x1000_15f.data'
             csvPathname = '1B/reals_1B_15f.data'
 
         hex_key = 'r1'
