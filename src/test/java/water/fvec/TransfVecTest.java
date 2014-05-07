@@ -27,7 +27,7 @@ public class TransfVecTest extends TestUtil {
   }
 
   /** Verifies that {@link Model#getDomainMapping(String[], String[], boolean)} returns
-   * correct values. */
+   *  correct values. */
   @Test public void testModelMappingCall() {
     testModelMapping(ar("A", "B", "C"), ar("A", "B", "C"), ar( ari(0,1,2), ari(0,1,2) ));
     testModelMapping(ar("A", "B", "C"), ar(     "B", "C"), ar( ari(0,1),   ari(1,2)   ));
