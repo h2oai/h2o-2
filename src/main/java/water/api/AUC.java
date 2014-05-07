@@ -657,7 +657,7 @@ public class AUC extends Func {
                     "  }\n" +
                     "})\n" +
                     ".on(\"mouseover\", function(d,i){\n" +
-                    "   if(i <= " + _fprs.length + ") {" +
+                    "   if(i < " + _fprs.length + ") {" +
                     "     document.getElementById(\"select\").selectedIndex = i\n" +
                     "     show_cm(i)\n" +
                     "   }\n" +
