@@ -137,6 +137,7 @@ test 'prelude availability in application scope', (t) ->
     repeat
     mapWithKey
     zipCompare
+    valuesAreEqual
   ]
   for func in funcs
     t.equal (typeof func), 'function'
@@ -347,6 +348,17 @@ test 'zipCompare', (t) ->
   t.ok zipCompare [10, 20], [10, 20]
   t.ok not zipCompare { foo: 'bar' }, { foo: 'bar' }
   t.ok zipCompare [{ foo: 'bar' }], [{ foo: 'bar' }], (a, b) -> a.foo is b.foo
+  t.end()
+
+test 'valuesAreEqual', (t) ->
+  pluckFoo = (obj) -> obj.foo
+  compareBaz = (a, b) -> a.baz is b.baz
+  t.ok valuesAreEqual [], pluckFoo
+  t.ok valuesAreEqual [{ foo: 'bar' }], pluckFoo
+  t.ok valuesAreEqual [{ foo: 'bar' }, { foo: 'bar' }], pluckFoo
+  t.ok not valuesAreEqual [{ foo: 'bar' }, { foo: 'qux' }], pluckFoo
+  t.ok valuesAreEqual [{ foo: { baz: 'bar' } }, { foo: { baz: 'bar'} }], pluckFoo, compareBaz
+  t.ok not valuesAreEqual [{ foo: { baz: 'bar' } }, { foo: { baz: 'qux'} }], pluckFoo, compareBaz
   t.end()
 
 test 'mapWithKey', (t) ->

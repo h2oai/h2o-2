@@ -310,6 +310,21 @@ zipCompare = (array1, array2, areEqual) ->
       return no if a isnt b
   yes
 
+valuesAreEqual = (array, pluck, areEqual) ->
+  if array.length > 1
+    value = pluck head array
+    if isFunction areEqual
+      for i in [ 1 ... array.length ]
+        unless areEqual value, pluck array[i]
+          return no
+    else
+      for i in [ 1 ... array.length ]
+        if value isnt pluck array[i]
+          return no
+    yes
+  else
+    yes
+
 # Object ops
 
 mapWithKey = (obj, map) ->
