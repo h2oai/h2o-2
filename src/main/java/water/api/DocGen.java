@@ -362,10 +362,19 @@ public abstract class DocGen {
       return tableLine(sb, title, values, sortOrder, values.length);
     }
     public <T> StringBuilder tableLine(StringBuilder sb, String title, T[] values, Integer[] sortOrder, int maxValues) {
+      return tableLine(sb, title, values, sortOrder, maxValues, false, null);
+
+    }
+    public <T> StringBuilder tableLine(StringBuilder sb, String title, T[] values, Integer[] sortOrder, int maxValues, boolean checkBoxes, String idName) {
       assert sortOrder == null || values.length == sortOrder.length;
       sb.append("<tr><th>").append(title).append("</th>");
-      for( int i=0; i<maxValues; i++ )
-        sb.append("<td>").append(values[sortOrder!=null ? sortOrder[i] : i]).append("</td>");
+      for( int i=0; i<maxValues; i++ ) {
+        sb.append("<td>");
+        T val = values[sortOrder!=null ? sortOrder[i] : i];
+        if (checkBoxes) sb.append("<input type=\"checkbox\" name=\"").append(idName).append("\" value=\"").append(val).append("\" checked />&nbsp;");
+        sb.append(val);
+        sb.append("</td>");
+      }
       sb.append("</tr>");
       return sb;
     }

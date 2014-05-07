@@ -1,7 +1,7 @@
 package water.util;
 
-import hex.gbm.DTree.TreeModel;
 import water.Key;
+import water.Model;
 import water.api.RequestStatics.RequestType;
 
 public class UIUtils {
@@ -25,15 +25,19 @@ public class UIUtils {
     rs.replace("content", content);
     return rs.toString();
   }
-
-  public static <T extends TreeModel> String builderLink(Class<T> model, Key source, String response, String content) {
+  public static <T extends Model> String builderModelLink(Class<T> model, Key source, String response, String content) {
+    return builderModelLink(model, source, response, content, null);
+  }
+  public static <T extends Model> String builderModelLink(Class<T> model, Key source, String response, String content, String onClick) {
     String name = model.getSimpleName();
     name = name.substring(0, name.indexOf("Model"));
-    RString rs = new RString("<a href='/2/%page.query?source=%$source&response=%response'>%content</a>");
+    RString rs = new RString("<a href='/2/%page.query?source=%$source&response=%response' %onclick >%content</a>");
     rs.replace("page", name);
     rs.replace("source", source.toString());
     rs.replace("response", response);
     rs.replace("content", content);
+    rs.replace("onclick", onClick!=null ? "onclick=\""+onClick+"\"" : "");
     return rs.toString();
   }
+
 }
