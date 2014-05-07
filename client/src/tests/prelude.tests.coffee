@@ -126,9 +126,10 @@ test 'prelude availability in application scope', (t) ->
     copy
     concat
     unshift
+    unshiftAll
     shift
     push
-    shove
+    pushAll
     pop
     splice
     remove
@@ -245,6 +246,16 @@ test 'unshift', (t) ->
   t.equal actual, array
   t.end()
 
+test 'unshiftAll', (t) ->
+  o1 = {}
+  o2 = {}
+  o3 = {}
+  array = [ o1 ]
+  actual = unshiftAll array, [ o2, o3 ]
+  t.deepEqual actual, [ o2, o3, o1 ]
+  t.equal actual, array
+  t.end()
+
 test 'shift', (t) ->
   o1 = {}
   o2 = {}
@@ -265,12 +276,12 @@ test 'push', (t) ->
   t.equal actual, array
   t.end()
 
-test 'shove', (t) ->
+test 'pushAll', (t) ->
   o1 = {}
   o2 = {}
   o3 = {}
   array = [ o1 ]
-  actual = shove array, [ o2, o3 ]
+  actual = pushAll array, [ o2, o3 ]
   t.deepEqual actual, [ o1, o2, o3 ]
   t.equal actual, array
   t.end()

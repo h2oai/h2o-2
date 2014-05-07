@@ -261,13 +261,17 @@ unshift = (array, arg) ->
   array.unshift arg
   array
 
+unshiftAll = (array, elements) ->
+  array.splice.apply array, [0, 0].concat elements
+  array
+
 shift = (array) -> array.shift()
 
 push = (array, arg) ->
   array.push arg
   array
 
-shove = (array, elements) ->
+pushAll = (array, elements) ->
   for element in elements
     array.push element
   array
