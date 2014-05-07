@@ -187,6 +187,10 @@ really_build: \
 	$(DEPLOY)/fonts/fontawesome-webfont.ttf \
 	$(DEPLOY)/fonts/fontawesome-webfont.woff \
 	$(DEPLOY)/img/h2o.png \
+	$(DEPLOY)/img/h2o-spin-16.gif \
+	$(DEPLOY)/img/h2o-spin-32.gif \
+	$(DEPLOY)/img/h2o-spin-48.gif \
+	$(DEPLOY)/img/h2o-spin-64.gif \
 	$(DEPLOY)/css/bootstrap.css.map \
 	$(DEPLOY)/css/lib.css \
 	$(DEPLOY)/css/steam.css \
@@ -335,6 +339,10 @@ $(DEPLOY)/tests/steam.test.js: $(COMMON_SCRIPTS) $(TEST_SCRIPTS)
 	@echo Built $@
 
 $(DEPLOY)/img/%.png: src/images/%.png
+	@mkdir -p $(@D)
+	cp $< $@
+
+$(DEPLOY)/img/%.gif: src/images/%.gif
 	@mkdir -p $(@D)
 	cp $< $@
 
