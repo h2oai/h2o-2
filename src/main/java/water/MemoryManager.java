@@ -204,6 +204,8 @@ public abstract class MemoryManager {
         // Memory used after this FullGC
         Boot.TIME_AT_LAST_GC = System.currentTimeMillis();
         Boot.HEAP_USED_AT_LAST_GC = _allMemBean.getHeapMemoryUsage().getUsed();
+        if(Boot.HEAP_USED_AT_LAST_GC > (MEM_MAX - (MEM_MAX >> 1))) // emergency messure - really low on memory, stop allocations right now!
+          setMemLow();
         Boot.kick_store_cleaner();
       }
     }
