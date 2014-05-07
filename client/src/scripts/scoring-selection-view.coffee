@@ -3,17 +3,20 @@ Steam.ScoringSelectionView = (_) ->
   _hasSelection = lift$ _selections, (selections) -> selections.length > 0
   _caption = lift$ _selections, (selections) ->
     "#{describeCount selections.length, 'item'} selected"
-  _canCompareScorings = lift$ _selections, (selections) ->
-    console.log selections
 
-    if selections.length < 2
-      return no
+  defaultScoringComparisonMessage = 'Compare selected scorings'
+  _scoringComparisonMessage = lift$ _selections, (selections) ->
+    return 'Select two or more scorings to compare' if selections.length < 2
+    return 'Remove comparison tables from your selection' if some selections, (selection) -> selection.type is 'comparison'
+    return 'Ensure that all selected scorings refer to conforming datasets' unless valuesAreEqual selections, (selection) -> selection.data.input.frameKey
+    return 'Ensure that all selected scorings belong to the same model category' unless valuesAreEqual selections, (selection) -> selection.data.input.model.model_category
+    return 'Ensure that all selected scorings refer to the same response column' unless valuesAreEqual selections, (selection) -> selection.data.input.model.response_column_name
 
-    for selection in selections
-      if selection.type is 'comparison'
-        return no
+    # TODO is the following rule valid?
+    # return 'Ensure that all selected scorings refer to the same input columns' unless valuesAreEqual selections, (selection) -> selection.data.input.model.input_column_names.join '\0'
+    defaultScoringComparisonMessage
 
-    yes
+  _canCompareScorings = lift$ _scoringComparisonMessage, (message) -> message is defaultScoringComparisonMessage
 
   compareScorings = ->
     _.loadScorings
@@ -49,6 +52,7 @@ Steam.ScoringSelectionView = (_) ->
   selections: _selections
   hasSelection: _hasSelection
   clearSelections: clearSelections
+  scoringComparisonMessage: _scoringComparisonMessage
   canCompareScorings: _canCompareScorings
   compareScorings: compareScorings
   deleteScorings: deleteScorings
