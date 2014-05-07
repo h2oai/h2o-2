@@ -39,6 +39,8 @@ public class AUC extends Func {
 
   public enum ThresholdCriterion {
     maximum_F1,
+    maximum_F2,
+    maximum_F0point5,
     maximum_Accuracy,
     maximum_Precision,
     maximum_Recall,
@@ -272,6 +274,12 @@ public class AUC extends Func {
     if (criter == ThresholdCriterion.maximum_F1) {
       return (!Double.isNaN(a.F1()) &&
               (Double.isNaN(b.F1()) || a.F1() > b.F1()));
+    } if (criter == ThresholdCriterion.maximum_F2) {
+      return (!Double.isNaN(a.F2()) &&
+              (Double.isNaN(b.F2()) || a.F2() > b.F2()));
+    } if (criter == ThresholdCriterion.maximum_F0point5) {
+      return (!Double.isNaN(a.F0point5()) &&
+              (Double.isNaN(b.F0point5()) || a.F0point5() > b.F0point5()));
     } else if (criter == ThresholdCriterion.maximum_Recall) {
       return (!Double.isNaN(a.recall()) &&
               (Double.isNaN(b.recall()) || a.recall() > b.recall()));
@@ -341,20 +349,26 @@ public class AUC extends Func {
    */
   private void computeMetrics() {
     confusion_matrices = new long[_cms.length][][];
-    if (threshold_criterion == ThresholdCriterion.maximum_F1) F1 = new float[_cms.length];
-    if (threshold_criterion == ThresholdCriterion.maximum_Accuracy) accuracy = new float[_cms.length];
-    if (threshold_criterion == ThresholdCriterion.maximum_Precision) precision = new float[_cms.length];
-    if (threshold_criterion == ThresholdCriterion.maximum_Recall) recall = new float[_cms.length];
-    if (threshold_criterion == ThresholdCriterion.maximum_Specificity) specificity = new float[_cms.length];
-    if (threshold_criterion == ThresholdCriterion.minimizing_max_per_class_Error) max_per_class_error = new float[_cms.length];
+    F1 = new float[_cms.length];
+    F2 = new float[_cms.length];
+    F0point5 = new float[_cms.length];
+    accuracy = new float[_cms.length];
+    error = new float[_cms.length];
+    precision = new float[_cms.length];
+    recall = new float[_cms.length];
+    specificity = new float[_cms.length];
+    max_per_class_error = new float[_cms.length];
     for(int i=0;i<_cms.length;++i) {
       confusion_matrices[i] = _cms[i]._arr;
-      if (threshold_criterion == ThresholdCriterion.maximum_F1) F1[i] = (float)_cms[i].F1();
-      if (threshold_criterion == ThresholdCriterion.maximum_Accuracy) accuracy[i] = (float)_cms[i].accuracy();
-      if (threshold_criterion == ThresholdCriterion.maximum_Precision) precision[i] = (float)_cms[i].precision();
-      if (threshold_criterion == ThresholdCriterion.maximum_Recall) recall[i] = (float)_cms[i].recall();
-      if (threshold_criterion == ThresholdCriterion.maximum_Specificity) specificity[i] = (float)_cms[i].specificity();
-      if (threshold_criterion == ThresholdCriterion.minimizing_max_per_class_Error) max_per_class_error[i] = (float)_cms[i].max_per_class_error();
+      F1[i] = (float)_cms[i].F1();
+      F2[i] = (float)_cms[i].F2();
+      F0point5[i] = (float)_cms[i].F0point5();
+      accuracy[i] = (float)_cms[i].accuracy();
+      error[i] = (float)_cms[i].err();
+      precision[i] = (float)_cms[i].precision();
+      recall[i] = (float)_cms[i].recall();
+      specificity[i] = (float)_cms[i].specificity();
+      max_per_class_error[i] = (float)_cms[i].max_per_class_error();
     }
   }
 
