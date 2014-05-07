@@ -85,7 +85,7 @@ public class Jobs extends Request {
         try {
           key = URLEncoder.encode(str,"UTF-8");
         } catch( UnsupportedEncodingException e ) { key = str; }
-        return ("".equals(key) || DKV.get(Key.make(str)) == null) ? key : "<a href='/Inspect.html?"+KEY+"="+key+"'>"+str+"</a>";
+        return ("".equals(key) || DKV.get(Key.make(str)) == null) ? key : Inspector.link(str, str);
       }
     });
     r.setBuilder(JOBS + "." + START_TIME, new ArrayRowElementBuilder() {
