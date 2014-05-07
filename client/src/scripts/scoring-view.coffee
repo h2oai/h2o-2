@@ -35,8 +35,10 @@ Steam.ScoringView = (_, _scoring) ->
         _caption "Scoring on #{input.frameKey}"
         _timestamp new Date(input.timestamp).toString()
         _modelSummary createModelSummary input.model
-        if scoring.isReady() and not scoring.hasFailed()
-          displayComparisonTable [ scoring ]
+        apply$ scoring.isReady, scoring.hasFailed, (isReady, hasFailed) ->
+          if isReady and not hasFailed
+            #TODO untested
+            displayComparisonTable [ scoring ]
       when 'comparison'
         comparison = item
         _tag 'Comparison'

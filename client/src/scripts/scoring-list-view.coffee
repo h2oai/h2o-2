@@ -84,18 +84,20 @@ Steam.ScoringListView = (_) ->
       run: (go) ->
         item.state 'running'
         _.requestScoringOnFrame frameKey, modelKey, (error, result) ->
-          item.state if error then 'error' else 'success'
-          item.isReady yes
           if error
             _.error 'Scoring failed', { frameKey: frameKey, modelKey: modelKey }, error
             #item.time if error.response then error.response.time else 0
+            item.state 'error'
             item.hasFailed yes
             item.data.output = error
           else
             #TODO what does it mean to have > 1 metrics
             #TODO put this in the comparison table
             #item.time if result.metrics and result.metrics.length > 0 then (head result.metrics).duration_in_ms else 0
+            item.state 'success'
+            item.hasFailed no
             item.data.output = result
+          item.isReady yes
 
           do go
 
