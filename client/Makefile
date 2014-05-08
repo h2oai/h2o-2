@@ -212,6 +212,12 @@ node: \
 watch:
 	$(BIN)/watchy --watch src -- make build
 
+lint:
+	# Sort of pointless running this. 
+	# Pretty much all errors thrown point to coffeescript-generated code.
+	# TODO revisit better way to lint coffeescript.
+	(BIN)/jshint $(DEPLOY)/js/steam.js
+
 preload:
 	Rscript src/util/h2o-R/preload.R
 
