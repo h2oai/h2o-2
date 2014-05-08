@@ -1,8 +1,10 @@
 package hex;
 
+import java.util.Arrays;
+
 import jsr166y.CountedCompleter;
-import water.H2O.H2OCountedCompleter;
 import water.*;
+import water.H2O.H2OCountedCompleter;
 import water.fvec.*;
 import water.util.Utils;
 
@@ -38,6 +40,8 @@ public class FrameSplitter extends H2OCountedCompleter {
 
   /** Output frames for each output split part */
   private Frame[] splits;
+  /** Temporary variable holding exceptions of workers */
+  private Throwable[] workersExceptions;
 
   public FrameSplitter(Frame dataset, float[] ratios) { this(dataset, ratios, 43); }
   public FrameSplitter(Frame dataset, float[] ratios, long seed) {
@@ -55,6 +59,7 @@ public class FrameSplitter extends H2OCountedCompleter {
   }
 
   @Override public void compute2() {
+    // Lock all possible data
     dataset.read_lock(jobKey);
     // Create a template vector for each segment
     final Vec[][] templates = makeTemplates(dataset, ratios);
@@ -68,21 +73,53 @@ public class FrameSplitter extends H2OCountedCompleter {
       split.delete_and_lock(jobKey);
       splits[s] = split;
     }
-    setPendingCount(nsplits);
-    for (int s=0; s<nsplits; s++) {
-      new FrameSplitTask(this, datasetVecs, ratios, s).asyncExec(splits[s]);
-    }
-    tryComplete();
-  }
-  @Override public void onCompletion(CountedCompleter caller) {
-    onDone(false);
-  }
-  @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
-    onDone(true);
-    return true;
+    setPendingCount(1);
+    H2O.submitTask(new H2OCountedCompleter(FrameSplitter.this) {
+      @Override public void compute2() {
+        setPendingCount(nsplits);
+        for (int s=0; s<nsplits; s++) {
+          new FrameSplitTask(new H2OCountedCompleter(this) { // Completer for this task
+            @Override public void compute2() { }
+            @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
+              synchronized( FrameSplitter.this ) { // synchronized on this since can be accessed from different workers
+                workersExceptions = workersExceptions!=null ? Arrays.copyOf(workersExceptions, workersExceptions.length+1) : new Throwable[1];
+                workersExceptions[workersExceptions.length-1] = ex;
+              }
+              tryComplete(); // we handle the exception so wait perform normal completion
+              return false;
+            }
+          }, datasetVecs, ratios, s).asyncExec(splits[s]);
+        }
+        tryComplete(); // complete the computation of nsplits-tasks
+      }
+    });
+    tryComplete(); // complete the computation of thrown tasks
   }
 
-  public Frame[] getResult() { join(); return splits; }
+  /** Blocking call to obtain a result of computation. */
+  public Frame[] getResult() {
+    join();
+    if (workersExceptions!=null) throw new RuntimeException(workersExceptions[0]);
+    return splits;
+  }
+
+  @Override public void onCompletion(CountedCompleter caller) {
+    boolean exceptional = workersExceptions!=null;
+    dataset.unlock(jobKey);
+    if (splits!=null) {
+      for (Frame s : splits) {
+        if (s!=null) {
+          if (!exceptional) {
+            s.update(jobKey);
+            s.unlock(jobKey);
+          } else { // Have to unlock and delete here
+            s.unlock(jobKey);
+            s.delete(jobKey, 3.14f); // delete all splits
+          }
+        }
+      }
+    }
+  }
 
   // Make vector templates for all output frame vectors
   private Vec[][] makeTemplates(Frame dataset, float[] ratios) {
@@ -103,28 +140,13 @@ public class FrameSplitter extends H2OCountedCompleter {
     long[][] r = new long[ratios.length+1][espc.length];
     for (int i=0; i<espc.length-1; i++) {
       int nrows = (int) (espc[i+1]-espc[i]);
-      int[] splits = Utils.partitione(nrows, ratios);
+      int[] splits = Utils.partitione(nrows, ratios, (byte) (i%2));
       assert splits.length == ratios.length+1 : "Unexpected number of splits";
       for (int j=0; j<splits.length; j++) {
-        //assert splits[j] > 0 : "Ups, no rows for " + j + "-th segment!";
         r[j][i+1] = r[j][i] + splits[j]; // previous + current number of rows
       }
     }
     return r;
-  }
-
-  private void onDone(boolean exceptional) {
-    dataset.unlock(jobKey);
-    if (splits!=null) { // if exception is hit before splits array is allocated
-      for (Frame s : splits) {
-        if (!exceptional) { // just unlock if everything was ok
-          s.update(jobKey);
-          s.unlock(jobKey);
-        } else { // else delete current half-done results
-          if (s!=null) s.delete(jobKey,0f);
-        }
-      }
-    }
   }
 
   /** MR task extract specified part of <code>_srcVecs</code>
@@ -144,7 +166,7 @@ public class FrameSplitter extends H2OCountedCompleter {
       // NOTE: expecting the same distribution of input chunks as output chanks
       int cidx = cs[0].cidx();
       int len = _srcVecs[0].chunkLen(cidx); // get length of original chunk
-      int[] splits = Utils.partitione(len, _ratios); // compute partitions for different parts
+      int[] splits = Utils.partitione(len, _ratios, (byte)(cidx%2)); // compute partitions for different parts
       int startRow = 0;
       for (int i=0; i<_partIdx; i++) startRow += splits[i];
       // For each output chunk extract appropriate rows for partIdx-th part
@@ -153,14 +175,7 @@ public class FrameSplitter extends H2OCountedCompleter {
         assert cs[i]._len == splits[_partIdx]; // Be sure that we correctly prepared vector template
         // NOTE: we preserve co-location of cs[i] chunks with _srcVecs[i] chunks so it is local load of chunk
         ChunkSplitter.extractChunkPart(_srcVecs[i].chunkForChunkIdx(cidx), cs[i], startRow, splits[_partIdx], _fs);
-        //extractPartXXX(_srcVecs[i].chunkForChunkIdx(cidx), cs[i], startRow, splits[_partIdx]);
       }
-    }
-    // Now extract does not do any shuffling
-    private void extractPartXXX(Chunk ic, Chunk oc, int startRow, int nrows) {
-       // Dummy implementation
-       for (int r=0; r<nrows; r++)
-         oc.set0(r, ic.at0(startRow+r));
     }
   }
 }

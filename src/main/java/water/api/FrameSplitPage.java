@@ -55,7 +55,7 @@ public class FrameSplitPage extends Func {
   // Run the function
   @Override protected void execImpl() {
     FrameSplitter fs = new FrameSplitter(source, ratios);
-    H2O.submitTask(fs).join();
+    H2O.submitTask(fs);
 
     Frame[] splits = fs.getResult();
 
