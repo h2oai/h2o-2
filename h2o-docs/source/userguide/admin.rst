@@ -1,5 +1,5 @@
-Admin
-=====
+The Admin Menu
+================
 
 
 Jobs
@@ -15,11 +15,11 @@ well.
 
  **Key** 
 
-   Table field appears with a large red "X" button for those keys
-   that can be removed from current set of H\ :sub:`2`\ O objects. For instance,
-   if a user ran several different GLM models, but wishes to keep
-   only one of these, other models can be removed by clicking on the
-   red X button. 
+   Table field appears with an "X" button for those keys
+   that can be removed from current set of H\ :sub:`2`\ O objects. 
+   For instance, if a user ran several different GLM models, but
+   wishes to keep only one of these, other models can be removed by
+   clicking on the "X" button. 
 
  **Description** 
 
@@ -51,6 +51,16 @@ well.
 .. image:: AdminJobs.png
    :width: 100%
 
+
+**Cancelled** 
+
+  A column indiciating whether the job was cancelled. 
+
+**Result**
+
+  A column indicating the status of the job.
+
+
 Cluster Status
 --------------
 
@@ -59,7 +69,8 @@ Cluster Status from the Admin drop down menu.
 
 
  **Table Definitions:**
-   In the provided table each node in an H\ :sub:`2`\ O cloud has a row of information. 
+   In the provided table each node in an H\ :sub:`2`\ O cloud has a
+   row of information. 
 
 
  **Name** 
@@ -90,7 +101,8 @@ Cluster Status from the Admin drop down menu.
 
  **Max men bytes** 
 
-    The maximum amount of memory that the H\ :sub:`2`\ O node will attempt to use. 
+    The maximum amount of memory that the H\ :sub:`2`\ O node will
+    attempt to use. 
 
  **Free disk bytes** 
 
@@ -106,6 +118,21 @@ Cluster Status from the Admin drop down menu.
 
    The number of cores being used by the node
 
+
+ **System Load** 
+ 
+   The amount of computational work currently being carried out by the
+   cluster. 
+
+ **Node Healthy** 
+
+   Indiacates whether the node indicated by the row of the cluster
+   status table is healthy.
+
+ **PID**
+
+   Process ID number. 
+
  **Last contact** 
 
    The last time a specific node relayed communication about its
@@ -119,17 +146,15 @@ primarily designed for by H\ :sub:`2`\ O programmers, and are in development. It
 is likely that they will be removed in a future revision. 
 
 
-Log View
---------
+Inspect Log
+-------------
 
-Log view provides users with a full log of activities on all nodes. 
+Users can inspect a log of all  H\ :sub:`2`\ O activities. 
+Logs can be downloaded by clicking on the Download All Logs button in
+the upper left hand corner of the page. 
 
-Full logs from any H\ :sub:`2`\ O work session can be automatically downloaded
-by clicking the "Download all logs" button in the upper left hand corner. **When requesting help or reporting an error, please download logs, and contact us at support@0xdata.com with the logs attached.**
-
-.. image:: AdminLog.png
+.. image:: Logview.png
    :width: 100%
-
 
 
 

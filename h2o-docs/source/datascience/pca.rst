@@ -6,7 +6,7 @@ Principal Components Analysis
 Principal Components Analysis (PCA) is closely related to Principal
 Components Regression. The algorithm is carried out on a set of
 possibly collinear features, and performs a transformation
-to produce a new set of ucorrelated features. 
+to produce a new set of uncorrelated features. 
 
 PCA is commonly used when users wish to model without regularization,
 or perform dimensionality reduction. It can also be useful to carry
