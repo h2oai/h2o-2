@@ -7,6 +7,9 @@ Steam.ApplicationContext = ->
     fatal: do edge$
     notify: do edge$
 
+    schedule: do edge$
+    unschedule: do edge$
+
     route: do edge$
     setRoute: do edge$
     getRoute: do edge$

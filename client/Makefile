@@ -27,6 +27,7 @@ BROWSER_SCRIPTS=\
 	$(BUILD)/scripts/knockout.js \
 	$(BUILD)/scripts/application.js \
 	$(BUILD)/scripts/application-context.js \
+	$(BUILD)/scripts/timers.js \
 	$(BUILD)/scripts/router.js \
 	$(BUILD)/scripts/routes.js \
 	$(BUILD)/scripts/error-monitor.js \
