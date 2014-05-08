@@ -34,7 +34,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * model. This option allows users to build a new model as a
    * continuation of a previously generated model (e.g., by a grid search).
    */
-  @API(help = "Model checkpoint to resume training with", filter= Default.class, json = true, gridable = false)
+  @API(help = "Model checkpoint to resume training with", filter= Default.class, json = true)
   public Key checkpoint;
 
   /**
@@ -42,7 +42,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * Model performance is measured by MSE for regression and overall
    * error rate for classification (at F1-optimal threshold for binary classification).
    */
-  @API(help = "Key to store the always-best model under", filter= Default.class, json = true, gridable = false)
+  @API(help = "Key to store the always-best model under", filter= Default.class, json = true)
   public Key best_model_key = null;
 
   /**
@@ -51,7 +51,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * values is fine for many problems, but best results on complex datasets are often
    * only attainable via expert mode options.
    */
-  @API(help = "Enable expert mode (to access all options from GUI)", filter = Default.class, json = true, gridable = false)
+  @API(help = "Enable expert mode (to access all options from GUI)", filter = Default.class, json = true)
   public boolean expert_mode = false;
 
   /*Neural Net Topology*/
@@ -343,7 +343,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * training data scoring dataset. When the error is at or below this threshold,
    * training stops.
    */
-  @API(help = "Stopping criterion for classification error fraction on training data (-1 to disable)", filter = Default.class, dmin=-1, dmax=1, json = true, gridable = false, importance = ParamImportance.EXPERT)
+  @API(help = "Stopping criterion for classification error fraction on training data (-1 to disable)", filter = Default.class, dmin=-1, dmax=1, json = true, importance = ParamImportance.EXPERT)
   public double classification_stop = 0;
 
   /**
@@ -351,13 +351,13 @@ public class DeepLearning extends Job.ValidatedJob {
    * data scoring dataset. When the error is at or below this threshold, training
    * stops.
    */
-  @API(help = "Stopping criterion for regression error (MSE) on training data (-1 to disable)", filter = Default.class, dmin=-1, json = true, gridable = false, importance = ParamImportance.EXPERT)
+  @API(help = "Stopping criterion for regression error (MSE) on training data (-1 to disable)", filter = Default.class, dmin=-1, json = true, importance = ParamImportance.EXPERT)
   public double regression_stop = 1e-6;
 
   /**
    * Enable quiet mode for less output to standard output.
    */
-  @API(help = "Enable quiet mode for less output to standard output", filter = Default.class, json = true, gridable = false)
+  @API(help = "Enable quiet mode for less output to standard output", filter = Default.class, json = true)
   public boolean quiet_mode = false;
 
   /**
@@ -365,13 +365,13 @@ public class DeepLearning extends Job.ValidatedJob {
    * confusion matrix for it to be printed. This option is meant to avoid printing
    * extremely large confusion matrices.
    */
-  @API(help = "Max. size (number of classes) for confusion matrices to be shown", filter = Default.class, json = true, gridable = false)
+  @API(help = "Max. size (number of classes) for confusion matrices to be shown", filter = Default.class, json = true)
   public int max_confusion_matrix_size = 20;
 
   /**
    * The maximum number (top K) of predictions to use for hit ratio computation (for multi-class only, 0 to disable)
    */
-  @API(help = "Max. number (top K) of predictions to use for hit ratio computation (for multi-class only, 0 to disable)", filter = Default.class, lmin=0, json = true, gridable = false, importance = ParamImportance.EXPERT)
+  @API(help = "Max. number (top K) of predictions to use for hit ratio computation (for multi-class only, 0 to disable)", filter = Default.class, lmin=0, json = true, importance = ParamImportance.EXPERT)
   public int max_hit_ratio_k = 10;
 
   /*Imbalanced Classes*/
@@ -379,20 +379,20 @@ public class DeepLearning extends Job.ValidatedJob {
    * For imbalanced data, balance training data class counts via
    * over/under-sampling. This can result in improved predictive accuracy.
    */
-  @API(help = "Balance training data class counts via over/under-sampling (for imbalanced data)", filter = Default.class, json = true, gridable = false, importance = ParamImportance.EXPERT)
+  @API(help = "Balance training data class counts via over/under-sampling (for imbalanced data)", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
   public boolean balance_classes = false;
 
   /**
    * When classes are balanced, limit the resulting dataset size to the
    * specified multiple of the original dataset size.
    */
-  @API(help = "Maximum relative size of the training data after balancing class counts (can be less than 1.0)", filter = Default.class, json = true, dmin=1e-3, gridable = false, importance = ParamImportance.EXPERT)
+  @API(help = "Maximum relative size of the training data after balancing class counts (can be less than 1.0)", filter = Default.class, json = true, dmin=1e-3, importance = ParamImportance.EXPERT)
   public float max_after_balance_size = 5.0f;
 
   /**
    * Method used to sample the validation dataset for scoring, see Score Validation Samples above.
    */
-  @API(help = "Method used to sample validation dataset for scoring", filter = Default.class, json = true, gridable = false, importance = ParamImportance.EXPERT)
+  @API(help = "Method used to sample validation dataset for scoring", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
   public ClassSamplingMethod score_validation_sampling = ClassSamplingMethod.Uniform;
 
   /*Misc*/
@@ -400,7 +400,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * Gather diagnostics for hidden layers, such as mean and RMS values of learning
    * rate, momentum, weights and biases.
    */
-  @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = true, gridable = false)
+  @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = true)
   public boolean diagnostics = true;
 
   /**
