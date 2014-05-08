@@ -67,6 +67,19 @@ ko.bindingHandlers.icon =
       element.title = if icon.caption then icon.caption else ''
     return
 
+ko.bindingHandlers.hover =
+  init: (element, valueAccessor, allBindings, viewModel, bindingContext) ->
+    handler = ko.unwrap valueAccessor()
+    throw new Error 'Not a function' unless isFunction handler
+    $element = $ element
+    handlerIn = -> handler yes
+    handlerOut = -> handler no
+    $element.hover handlerIn, handlerOut
+
+    #TODO can remove this callback if ko/jquery are disposing the tooltip's bindings properly.
+    ko.utils.domNodeDisposal.addDisposeCallback element, ->
+      $element.off 'mouseenter mouseleave'
+
 ko.bindingHandlers.tooltip =
   update: (element, valueAccessor, allBindings, viewModel, bindingContext) ->
     title = ko.unwrap valueAccessor()
