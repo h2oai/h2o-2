@@ -24,7 +24,7 @@ of this documentation. Advanced users may find additional documentation on
 running in specialized environments helpful: :ref:`Developer`. 
 
 For multinode clusters utilizing several servers, it is strongly
-reccomended that all servers and nodes be symmetric and identically
+recommended that all servers and nodes be symmetric and identically
 configured. For example, allocating different amounts of memory to
 nodes in the same cluster can adversely impact performance.   
 

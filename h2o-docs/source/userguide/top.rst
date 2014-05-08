@@ -3,7 +3,7 @@ H\ :sub:`2`\ O User Guide
 ==========================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    general
    data
