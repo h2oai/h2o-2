@@ -27,6 +27,7 @@ BROWSER_SCRIPTS=\
 	$(BUILD)/scripts/knockout.js \
 	$(BUILD)/scripts/application.js \
 	$(BUILD)/scripts/application-context.js \
+	$(BUILD)/scripts/timers.js \
 	$(BUILD)/scripts/router.js \
 	$(BUILD)/scripts/routes.js \
 	$(BUILD)/scripts/error-monitor.js \
@@ -82,8 +83,8 @@ TEST_SCRIPTS=\
 BROWSER_LIB_SCRIPTS=\
 	$(LIB)/stacktrace/stacktrace.js \
 	$(LIB)/jquery/dist/jquery.js \
-	$(LIB)/jquery-timeago/jquery.timeago.js \
 	$(LIB)/lodash/dist/lodash.js \
+	$(LIB)/momentjs/min/moment.min.js \
 	$(LIB)/js-signals/dist/signals.js \
 	$(LIB)/crossroads/dist/crossroads.js \
 	$(LIB)/hasher/dist/js/hasher.js \
@@ -187,6 +188,10 @@ really_build: \
 	$(DEPLOY)/fonts/fontawesome-webfont.ttf \
 	$(DEPLOY)/fonts/fontawesome-webfont.woff \
 	$(DEPLOY)/img/h2o.png \
+	$(DEPLOY)/img/h2o-spin-16.gif \
+	$(DEPLOY)/img/h2o-spin-32.gif \
+	$(DEPLOY)/img/h2o-spin-48.gif \
+	$(DEPLOY)/img/h2o-spin-64.gif \
 	$(DEPLOY)/css/bootstrap.css.map \
 	$(DEPLOY)/css/lib.css \
 	$(DEPLOY)/css/steam.css \
@@ -207,6 +212,12 @@ node: \
 
 watch:
 	$(BIN)/watchy --watch src -- make build
+
+lint:
+	# Sort of pointless running this. 
+	# Pretty much all errors thrown point to coffeescript-generated code.
+	# TODO revisit better way to lint coffeescript.
+	(BIN)/jshint $(DEPLOY)/js/steam.js
 
 preload:
 	Rscript src/util/h2o-R/preload.R
@@ -335,6 +346,10 @@ $(DEPLOY)/tests/steam.test.js: $(COMMON_SCRIPTS) $(TEST_SCRIPTS)
 	@echo Built $@
 
 $(DEPLOY)/img/%.png: src/images/%.png
+	@mkdir -p $(@D)
+	cp $< $@
+
+$(DEPLOY)/img/%.gif: src/images/%.gif
 	@mkdir -p $(@D)
 	cp $< $@
 

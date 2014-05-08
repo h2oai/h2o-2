@@ -86,7 +86,7 @@ Steam.ModelView = (_, _model) ->
   
   data: _model
   key: _model.key
-  title: _model.model_algorithm
+  timestamp: _model.creation_epoch_time_millis
   summary: createSummarySection _model
   parameters: createParametersSection _model
   inputColumns: createInputColumnsSection _model

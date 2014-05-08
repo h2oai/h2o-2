@@ -126,9 +126,10 @@ test 'prelude availability in application scope', (t) ->
     copy
     concat
     unshift
+    unshiftAll
     shift
     push
-    shove
+    pushAll
     pop
     splice
     remove
@@ -136,6 +137,7 @@ test 'prelude availability in application scope', (t) ->
     repeat
     mapWithKey
     zipCompare
+    valuesAreEqual
   ]
   for func in funcs
     t.equal (typeof func), 'function'
@@ -245,6 +247,16 @@ test 'unshift', (t) ->
   t.equal actual, array
   t.end()
 
+test 'unshiftAll', (t) ->
+  o1 = {}
+  o2 = {}
+  o3 = {}
+  array = [ o1 ]
+  actual = unshiftAll array, [ o2, o3 ]
+  t.deepEqual actual, [ o2, o3, o1 ]
+  t.equal actual, array
+  t.end()
+
 test 'shift', (t) ->
   o1 = {}
   o2 = {}
@@ -265,12 +277,12 @@ test 'push', (t) ->
   t.equal actual, array
   t.end()
 
-test 'shove', (t) ->
+test 'pushAll', (t) ->
   o1 = {}
   o2 = {}
   o3 = {}
   array = [ o1 ]
-  actual = shove array, [ o2, o3 ]
+  actual = pushAll array, [ o2, o3 ]
   t.deepEqual actual, [ o1, o2, o3 ]
   t.equal actual, array
   t.end()
@@ -336,6 +348,17 @@ test 'zipCompare', (t) ->
   t.ok zipCompare [10, 20], [10, 20]
   t.ok not zipCompare { foo: 'bar' }, { foo: 'bar' }
   t.ok zipCompare [{ foo: 'bar' }], [{ foo: 'bar' }], (a, b) -> a.foo is b.foo
+  t.end()
+
+test 'valuesAreEqual', (t) ->
+  pluckFoo = (obj) -> obj.foo
+  compareBaz = (a, b) -> a.baz is b.baz
+  t.ok valuesAreEqual [], pluckFoo
+  t.ok valuesAreEqual [{ foo: 'bar' }], pluckFoo
+  t.ok valuesAreEqual [{ foo: 'bar' }, { foo: 'bar' }], pluckFoo
+  t.ok not valuesAreEqual [{ foo: 'bar' }, { foo: 'qux' }], pluckFoo
+  t.ok valuesAreEqual [{ foo: { baz: 'bar' } }, { foo: { baz: 'bar'} }], pluckFoo, compareBaz
+  t.ok not valuesAreEqual [{ foo: { baz: 'bar' } }, { foo: { baz: 'qux'} }], pluckFoo, compareBaz
   t.end()
 
 test 'mapWithKey', (t) ->

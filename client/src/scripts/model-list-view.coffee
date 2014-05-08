@@ -47,7 +47,7 @@ Steam.ModelListView = (_) ->
 
     self =
       data: model
-      title: model.model_algorithm
+      title: model.key
       caption: model.model_category
       cutline: 'Response Column: ' + model.response_column_name
       display: -> activateAndDisplayItem self

@@ -4,6 +4,7 @@ Steam.Application = (_) ->
     Steam.ErrorMonitor _
     #Steam.MouseMonitor _
 
+  Steam.Timers _
   Steam.EventLog _
   Steam.Cache _
   Steam.LocalStorage _

@@ -5,9 +5,14 @@
     .y-scoring(data-bind='css:{"y-active":isActive}')
       input(type='checkbox' data-bind='checked:isSelected')
       .y-scoring-details(data-bind='click:display')
-        .y-scoring-title(data-bind='text:title')
+        .y-scoring-title(data-bind='text:title, css:{"y-failed":hasFailed}')
         .y-scoring-caption(data-bind='text:caption')
-        .y-scoring-cutline(data-bind='text:cutline')
+        .y-scoring-cutline(data-bind='timeago:timestamp')
+      //ko ifnot:isReady
+      .y-scoring-status
+        .y-spinner-box
+          .y-spinner.y-spinner-16
+      // /ko
     // /ko
   // /ko
 

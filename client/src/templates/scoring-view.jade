@@ -1,46 +1,17 @@
 .y-scoring-view
   .clearfix
-    .y-tag Scoring
-    .y-tagline(data-bind='text:timestamp')
+    .y-tag(data-bind='text:tag')
+    .y-tagline(data-bind='timeago:timestamp')
   h1.y-title(data-bind="text:caption")
-  h2.y-subtitle(data-bind='collapse:false') Models
-  table.table.table-condensed.table-hover
-    thead
-      tr
-        th Method
-        th Category
-        th Response Column
-        th Status
-        th Time
-        th Compare
-    tbody
-      // ko foreach:items
-      tr
-        td(data-bind='text:algorithm')
-        td(data-bind='text:category')
-        td(data-bind='text:responseColumn')
-        td(data-bind='text:status')
-        td(data-bind='text:time')
-        td
-          input(type='checkbox' data-bind='checked:isSelected, enable:canSelect')
+
+  // TODO remove this 'if' condition when model summary is fixed
+  // ko if:modelSummary
+  .y-model-summary
+    .y-summary
+      // ko foreach:modelSummary
+      .y-summary-item
+        .y-summary-key(data-bind='text:key')
+        .y-summary-value(data-bind='text:value')
       // /ko
-
-  // ko if:hasExecuted
-  h2.y-subtitle(data-bind='collapse:false') Scoring Comparison
-  div
-    // ko if:hasComparisonTable
-    .y-model-summary
-      .y-summary
-        // ko foreach:modelSummary
-        .y-summary-item
-          .y-summary-key(data-bind='text:key')
-          .y-summary-value(data-bind='text:value')
-        // /ko
-    div(data-bind='geyser:comparisonTable')
-    // /ko
-
-    // ko ifnot:hasComparisonTable
-    div Nothing to compare. Please select one or more models from the above table.
-    // /ko
-
   // /ko
+  div(data-bind='geyser:comparisonTable')

@@ -7,6 +7,11 @@ Steam.ApplicationContext = ->
     fatal: do edge$
     notify: do edge$
 
+    schedule: do edge$
+    unschedule: do edge$
+
+    status: do edge$
+
     route: do edge$
     setRoute: do edge$
     getRoute: do edge$
@@ -62,10 +67,15 @@ Steam.ApplicationContext = ->
     displayNotification: do edge$
 
     loadScorings: do edge$
+    scoringsLoaded: do edge$
     displayScoring: do edge$
     scoringSelectionChanged: do edge$
+    scoringSelectionCleared: do edge$
     scoringsSelected: do edge$
     scoringsDeselected: do edge$
     deselectAllScorings: do edge$
     clearScoringSelection: do edge$
+    deleteScorings: do edge$
+    deleteActiveScoring: do edge$
+
 

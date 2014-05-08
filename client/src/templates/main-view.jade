@@ -27,7 +27,7 @@
 
     .y-workspace-lane
       .y-lane-header
-
+        .y-selection-views(data-bind="template:{name:template, foreach:selectionViews}")
       .y-lane-body
         .y-page-views(data-bind="template:{name:template, foreach:pageViews}")
         // ko if:isModal
@@ -94,5 +94,5 @@
               span  GBM Grid
 
 
-  .y-status-bar
+  .y-status-bar(data-bind='text:status')
 // /ko

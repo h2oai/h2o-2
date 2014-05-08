@@ -59,6 +59,65 @@ ko.bindingHandlers.geyser =
       $(element).text 'Loading. Please wait..'
     return
 
+ko.bindingHandlers.icon =
+  update: (element, valueAccessor, allBindings, viewModel, bindingContext) ->
+    if icon = ko.unwrap valueAccessor()
+      element.className = "fa fa-#{icon.image}"
+      element.style.color = if icon.color then icon.color else null
+      element.title = if icon.caption then icon.caption else ''
+    return
+
+ko.bindingHandlers.hover =
+  init: (element, valueAccessor, allBindings, viewModel, bindingContext) ->
+    handler = ko.unwrap valueAccessor()
+    throw new Error 'Not a function' unless isFunction handler
+    $element = $ element
+    handlerIn = -> handler yes
+    handlerOut = -> handler no
+    $element.hover handlerIn, handlerOut
+
+    #TODO can remove this callback if ko/jquery are disposing the tooltip's bindings properly.
+    ko.utils.domNodeDisposal.addDisposeCallback element, ->
+      $element.off 'mouseenter mouseleave'
+
+ko.bindingHandlers.tooltip =
+  update: (element, valueAccessor, allBindings, viewModel, bindingContext) ->
+    title = ko.unwrap valueAccessor()
+    $element = $ element
+
+    #HACK simply setting a new title without calling 'destroy' does not update the tooltip.
+    $element.tooltip 'destroy'
+    if title
+      $element.tooltip title: title
+
+    #TODO can remove this callback if ko/jquery are disposing the tooltip's bindings properly.
+    ko.utils.domNodeDisposal.addDisposeCallback element, ->
+      $element.tooltip 'destroy'
+
+timeagoUpdateInterval = 60000
+momentTimestampFormat = 'MMMM Do YYYY, h:mm:ss a'
+ko.bindingHandlers.timeago =
+  init: (element, valueAccessor, allBindings, viewModel, bindingContext) ->
+    timestamp = ko.unwrap valueAccessor()
+    timestamp = parseInt timestamp if isString timestamp
+    $element = $ element
+    date = moment new Date timestamp
+    $element.attr 'title', date.format momentTimestampFormat
+    tick = ->
+      label = date.fromNow()
+      if $element.text() isnt label
+        $element.text label
+      return
+
+    if window.steam
+      window.steam.context.schedule timeagoUpdateInterval, tick
+
+      ko.utils.domNodeDisposal.addDisposeCallback element, ->
+        window.steam.context.unschedule timeagoUpdateInterval, tick
+
+    tick()
+    return
+
 ko.bindingHandlers.collapse =
   init: (element, valueAccessor, allBindings, viewModel, bindingContext) ->
     angleDown = 'fa-angle-down'
@@ -69,6 +128,7 @@ ko.bindingHandlers.collapse =
     element.appendChild disclosureEl
     $el = $ element
     $nextEl = $el.next()
+    throw new Error 'No collapsible sibling found' unless $nextEl.length
     $disclosureEl = $ disclosureEl
     toggle = ->
       if isCollapsed

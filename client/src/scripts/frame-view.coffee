@@ -25,6 +25,7 @@ Steam.FrameView = (_, _frame) ->
 
   createCompatibleModelsSection = (frame) ->
       headers = [
+        'Key'
         'Method'
         'Category'
         'Response Column'
@@ -34,6 +35,7 @@ Steam.FrameView = (_, _frame) ->
 
       rows = map frame.compatible_models, (model) ->
         [
+          model.key
           model.model_algorithm
           model.model_category
           model.response_column_name
@@ -59,6 +61,7 @@ Steam.FrameView = (_, _frame) ->
 
   data: _frame
   key: _frame.key
+  timestamp: _frame.creation_epoch_time_millis
   title: _frame.key
   columns: createColumnsSection _frame.column_names
   columnCount: "(#{_frame.column_names.length})"

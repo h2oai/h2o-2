@@ -1,23 +1,21 @@
 Steam.ScoringView = (_, _scoring) ->
-  _items = nodes$ []
-  _hasExecuted = node$ no
+  _tag = node$ ''
+  _caption = node$ ''
+  _timestamp = node$ Date.now()
   _comparisonTable = node$ null
   _hasComparisonTable = lift$ _comparisonTable, (table) -> not isNull table
   _modelSummary = nodes$ []
 
-  createModelSummary = (scoring) ->
-    score = if scoring.scores.length > 0 then head scoring.scores else null
-    if score
-      [
-        key: 'Model Category'
-        value: score.model.model_category
-      ,
-        key: 'Response Column'
-        value: score.model.response_column_name
-      ]
-    else
-      []
+  createModelSummary = (model) ->
+    [
+      key: 'Model Category'
+      value: model.model_category
+    ,
+      key: 'Response Column'
+      value: model.response_column_name
+    ]
 
+  #TODO unused - remove
   createItem = (score) ->
     status = node$ if isNull score.status then '-' else score.status
     isSelected = lift$ status, (status) -> status is 'done'
@@ -27,67 +25,30 @@ Steam.ScoringView = (_, _scoring) ->
     category: score.model.model_category
     responseColumn: score.model.response_column_name
     status: status
-    time: node$ if isNull score.time then '-' else score.time
-    canSelect: lift$ status, (status) -> status is 'done'
-    isSelected: isSelected
-    result: node$ score.result
 
-  initialize = (scoring) ->
-    _modelSummary createModelSummary scoring
-    _items items = map scoring.scores, createItem
-    if (every scoring.scores, (score) -> score.status is null)
-      scoreModels scoring, items, ->
-        forEach items, (item) ->
-          apply$ item.isSelected, -> displayComparisonTable() if _hasExecuted()
-        _hasExecuted yes
-        displayComparisonTable()
-    else
-      _hasExecuted yes
-      displayComparisonTable()
+  initialize = (item) ->
+    switch item.type
+      when 'scoring'
+        scoring = item
+        input = scoring.data.input
+        _tag 'Scoring'
+        _caption "Scoring on #{input.frameKey}"
+        _modelSummary createModelSummary input.model
+        apply$ scoring.isReady, scoring.hasFailed, (isReady, hasFailed) ->
+          if isReady and not hasFailed
+            #TODO untested
+            _timestamp (head scoring.data.output.metrics).scoring_time
+            displayComparisonTable [ scoring ]
+      when 'comparison'
+        comparison = item
+        _tag 'Comparison'
+        _caption "Scoring Comparison"
+        _timestamp comparison.data.timestamp
+        _modelSummary null #TODO populate model summary
+        displayComparisonTable comparison.data.scorings
 
-  runScoringJobs = (jobs, go) ->
-    queue = copy jobs
-    runNext = ->
-      if job = shift queue
-        job.run -> defer runNext
-      else
-        go()
-    defer runNext
-
-  scoreModels = (scoring, items, go) ->
-    frameKey = scoring.frameKey
-    jobs = map items, (item) ->
-      modelKey = item.data.model.key
-      item.status 'waiting'
-      run: (go) ->
-        item.status 'running'
-        _.requestScoringOnFrame frameKey, modelKey, (error, result) ->
-
-          if error
-            _.error 'Scoring failed', { frameKey: frameKey, modelKey: modelKey }, error
-            item.status if error.response then error.response.status else 'error'
-            item.time if error.response then error.response.time else 0
-            item.result error
-          else
-            item.status if result.response then result.response.status else 'error'
-            #TODO what does it mean to have > 1 metrics
-            item.time if result.metrics and result.metrics.length > 0 then (head result.metrics).duration_in_ms else 0
-            item.result result
-
-          do go
-
-    runScoringJobs jobs, ->
-      forEach items, (item) ->
-        score = item.data
-        score.status = item.status()
-        score.time = item.time()
-        score.result = item.result()
-
-      go()
-
-  displayComparisonTable = () ->
-    selectedItems = filter _items(), (item) -> item.canSelect() and item.isSelected()
-    renderComparisonTable map selectedItems, (item) -> item.data
+  displayComparisonTable = (scorings) ->
+    renderComparisonTable scorings
 
   renderRocCurve = (data) ->
     margin = top: 20, right: 20, bottom: 20, left: 30
@@ -253,11 +214,12 @@ Steam.ScoringView = (_, _scoring) ->
       format4f = d3.format '.4f' # precision = 4
 
       #TODO what does it mean to have > 1 metrics
-      scoreWithLowestError = min scores, (score) -> (head score.result.metrics).error_measure
+      scoreWithLowestError = min scores, (score) -> (head score.data.output.metrics).error_measure
 
       inputParamsWithAlgorithm = map scores, (score) ->
-        algorithm: score.model.model_algorithm
-        parameters: combineInputParameters score.model
+        model = score.data.input.model
+        algorithm: model.model_algorithm
+        parameters: combineInputParameters model
 
       inputParamsByScoreIndex = map inputParamsWithAlgorithm, (a) -> a.parameters
 
@@ -267,9 +229,9 @@ Steam.ScoringView = (_, _scoring) ->
         compareInputParameters map groups, (group) -> group.parameters
 
       for score, scoreIndex in scores
-        model = score.model
+        model = score.data.input.model
         #TODO what does it mean to have > 1 metrics
-        metrics = head score.result.metrics
+        metrics = head score.data.output.metrics
         auc = metrics.auc
         cm = metrics.cm
         errorBadge = if scores.length > 1 and score is scoreWithLowestError then ' (Lowest)' else ''
@@ -293,7 +255,7 @@ Steam.ScoringView = (_, _scoring) ->
         forEach scores, (score, scoreIndex) ->
           defer ->
             #TODO what does it mean to have > 1 metrics
-            rocCurve = createRocCurve (head score.result.metrics).auc.confusion_matrices
+            rocCurve = createRocCurve (head score.data.output.metrics).auc.confusion_matrices
             $("#roc-#{scoreIndex}", $element).empty().append rocCurve
         return
 
@@ -336,11 +298,10 @@ Steam.ScoringView = (_, _scoring) ->
 
   initialize _scoring
 
-  items: _items
+  tag: _tag
+  caption: _caption
+  timestamp: _timestamp
   modelSummary: _modelSummary
-  hasExecuted: _hasExecuted
   comparisonTable: _comparisonTable
   hasComparisonTable: _hasComparisonTable
-  caption: "Scoring on #{_scoring.frameKey}"
-  timestamp: new Date(_scoring.timestamp).toString()
   template: 'scoring-view'

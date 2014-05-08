@@ -1,5 +1,8 @@
+defaultStatusMessage = 'Ready.'
 Steam.MainView = (_) ->
+  _status = node$ defaultStatusMessage
   _listViews = nodes$ []
+  _selectionViews = node$ []
   _pageViews = nodes$ []
   _modalViews = nodes$ []
   _isModal = lift$ _modalViews, (modalViews) -> modalViews.length > 0
@@ -29,19 +32,23 @@ Steam.MainView = (_) ->
       when _frameTopic
         unless _topic() is topic
           _topic topic
-          switchList _frameListView
+          switchListView _frameListView
+          switchSelectionView null
       when _modelTopic
         unless _topic() is topic
           _topic topic
-          switchList _modelListView
+          switchListView _modelListView
+          switchSelectionView null
       when _scoringTopic
         unless _topic() is topic
           _topic topic
-          switchList _scoringListView
+          switchListView _scoringListView
+          switchSelectionView _scoringSelectionView
       when _notificationTopic
         unless _topic() is topic
           _topic topic
-          switchList _notificationListView
+          switchListView _notificationListView
+          switchSelectionView null
     _isDisplayingTopics no
     return
   
@@ -72,12 +79,16 @@ Steam.MainView = (_) ->
     _administrationTopic = createTopic 'Administration', null
   ]
 
+  # List views
   _topicListView = Steam.TopicListView _, _topics
   _frameListView = Steam.FrameListView _
   _modelListView = Steam.ModelListView _
   _scoringListView = Steam.ScoringListView _
   _notificationListView = Steam.NotificationListView _
+
+  # Selection views
   _modelSelectionView = Steam.ModelSelectionView _
+  _scoringSelectionView = Steam.ScoringSelectionView _
 
   switchView = (views, view) ->
     for oldView in views()
@@ -85,28 +96,29 @@ Steam.MainView = (_) ->
     if view
       views [ view ]
     else
-      views.removeAll()
+      views []
 
-  switchList = (view) -> switchView _listViews, view
-  switchPage = (view) -> switchView _pageViews, view
-  switchModal = (view) -> switchView _modalViews, view
+  switchListView = (view) -> switchView _listViews, view
+  switchSelectionView = (view) -> switchView _selectionViews, view
+  switchPageView = (view) -> switchView _pageViews, view
+  switchModalView = (view) -> switchView _modalViews, view
  
   _template = (view) -> view.template
 
   link$ _.displayEmpty, ->
-    switchPage template: 'empty-view'
+    switchPageView template: 'empty-view'
 
   link$ _.displayFrame, (frame) ->
-    switchPage Steam.FrameView _, frame if _topic() is _frameTopic
+    switchPageView Steam.FrameView _, frame if _topic() is _frameTopic
 
   link$ _.displayModel, (model) ->
-    switchPage Steam.ModelView _, model if _topic() is _modelTopic
+    switchPageView Steam.ModelView _, model if _topic() is _modelTopic
 
   link$ _.displayScoring, (scoring) ->
-    switchPage Steam.ScoringView _, scoring if _topic() is _scoringTopic
+    switchPageView Steam.ScoringView _, scoring if _topic() is _scoringTopic
 
   link$ _.displayNotification, (notification) ->
-    switchPage Steam.NotificationView _, notification if _topic() is _notificationTopic
+    switchPageView Steam.NotificationView _, notification if _topic() is _notificationTopic
 
   link$ _.switchToFrames, switchToFrames
 
@@ -116,9 +128,11 @@ Steam.MainView = (_) ->
 
   link$ _.switchToNotifications, switchToNotifications
 
-  link$ _.modelsSelected, -> switchModal _modelSelectionView
+  link$ _.modelsSelected, -> switchModalView _modelSelectionView
 
   link$ _.modelsDeselected, -> _modalViews.remove _modelSelectionView
+
+  link$ _.status, (message) -> _status if message then message else defaultStatusMessage
 
   #TODO do this through hash uris
   switchToFrames type: 'all'
@@ -127,10 +141,13 @@ Steam.MainView = (_) ->
   toggleTopics: toggleTopics
   toggleHelp: toggleHelp
   listViews: _listViews
+  selectionViews: _selectionViews
   pageViews: _pageViews
   modalViews: _modalViews
   isListMasked: _isListMasked
   isPageMasked: _isPageMasked
   isModal: _isModal
   isHelpHidden: _isHelpHidden
+  status: _status
   template: _template
+
