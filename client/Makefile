@@ -82,8 +82,8 @@ TEST_SCRIPTS=\
 BROWSER_LIB_SCRIPTS=\
 	$(LIB)/stacktrace/stacktrace.js \
 	$(LIB)/jquery/dist/jquery.js \
-	$(LIB)/jquery-timeago/jquery.timeago.js \
 	$(LIB)/lodash/dist/lodash.js \
+	$(LIB)/momentjs/min/moment.min.js \
 	$(LIB)/js-signals/dist/signals.js \
 	$(LIB)/crossroads/dist/crossroads.js \
 	$(LIB)/hasher/dist/js/hasher.js \
