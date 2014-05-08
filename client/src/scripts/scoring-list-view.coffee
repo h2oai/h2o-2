@@ -37,7 +37,7 @@ Steam.ScoringListView = (_) ->
         output: null
       title: scoring.frameKey
       caption: "#{scoring.model.model_algorithm} (#{scoring.model.response_column_name})"
-      cutline: new Date(scoring.timestamp).toString()
+      timestamp: scoring.timestamp
       display: -> activateAndDisplayItem self
       isActive: node$ no
       isSelected: node$ no
@@ -56,7 +56,7 @@ Steam.ScoringListView = (_) ->
       data: comparison
       title: 'Comparison' #TODO needs a better caption
       caption: describeCount comparison.scorings.length, 'scoring'
-      cutline: new Date(comparison.timestamp).toString()
+      timestamp: node$ comparison.timestamp
       display: -> activateAndDisplayItem self
       isActive: node$ no
       isSelected: node$ no
@@ -111,6 +111,8 @@ Steam.ScoringListView = (_) ->
         _items.splice.apply _items, [0, 0].concat items
         jobs = createScoringJobs items
         runScoringJobs jobs, ->
+          for item in items
+            item.timestamp = (head item.data.output.metrics).scoring_time
         activateAndDisplayItem head items
         _.scoringsLoaded()
       when 'comparison'

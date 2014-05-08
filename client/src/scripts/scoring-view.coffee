@@ -1,7 +1,7 @@
 Steam.ScoringView = (_, _scoring) ->
   _tag = node$ ''
   _caption = node$ ''
-  _timestamp = node$ ''
+  _timestamp = node$ Date.now()
   _comparisonTable = node$ null
   _hasComparisonTable = lift$ _comparisonTable, (table) -> not isNull table
   _modelSummary = nodes$ []
@@ -33,17 +33,17 @@ Steam.ScoringView = (_, _scoring) ->
         input = scoring.data.input
         _tag 'Scoring'
         _caption "Scoring on #{input.frameKey}"
-        _timestamp new Date(input.timestamp).toString()
         _modelSummary createModelSummary input.model
         apply$ scoring.isReady, scoring.hasFailed, (isReady, hasFailed) ->
           if isReady and not hasFailed
             #TODO untested
+            _timestamp (head scoring.data.output.metrics).scoring_time
             displayComparisonTable [ scoring ]
       when 'comparison'
         comparison = item
         _tag 'Comparison'
         _caption "Scoring Comparison"
-        _timestamp new Date(comparison.data.timestamp).toString()
+        _timestamp comparison.data.timestamp
         _modelSummary null #TODO populate model summary
         displayComparisonTable comparison.data.scorings
 
