@@ -561,7 +561,7 @@ public class NewChunk extends Chunk {
     final int ridsz = _len2 >= 65535?4:2;
     final int elmsz = ridsz + valsz;
     int off = CXIChunk.OFF;
-    byte [] buf = MemoryManager.malloc1(off + _len*elmsz);
+    byte [] buf = MemoryManager.malloc1(off + _len*elmsz,true);
     for( int i=0; i<_len; i++, off += elmsz ) {
       if(ridsz == 2)
         UDP.set2(buf,off,(short)_id[i]);
@@ -604,7 +604,7 @@ public class NewChunk extends Chunk {
     final int ridsz = _len2 >= 65535?4:2;
     final int elmsz = ridsz + valsz;
     int off = CXDChunk.OFF;
-    byte [] buf = MemoryManager.malloc1(off + _len*elmsz);
+    byte [] buf = MemoryManager.malloc1(off + _len*elmsz,true);
     for( int i=0; i<_len; i++, off += elmsz ) {
       if(ridsz == 2)
         UDP.set2(buf,off,(short)_id[i]);
@@ -656,7 +656,7 @@ public class NewChunk extends Chunk {
 
   // Compute a compressed double buffer
   private Chunk chunkD() {
-    final byte [] bs = MemoryManager.malloc1(_len2*8);
+    final byte [] bs = MemoryManager.malloc1(_len2*8,true);
     int j = 0;
     for(int i = 0; i < _len2; ++i){
       double d = 0;
