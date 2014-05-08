@@ -70,15 +70,16 @@ ko.bindingHandlers.icon =
 ko.bindingHandlers.tooltip =
   update: (element, valueAccessor, allBindings, viewModel, bindingContext) ->
     title = ko.unwrap valueAccessor()
+    $element = $ element
 
     #HACK simply setting a new title without calling 'destroy' does not update the tooltip.
-    $(element).tooltip 'destroy'
+    $element.tooltip 'destroy'
     if title
-      $(element).tooltip title: title
+      $element.tooltip title: title
 
     #TODO can remove this callback if ko/jquery are disposing the tooltip's bindings properly.
     ko.utils.domNodeDisposal.addDisposeCallback element, ->
-      $(element).tooltip 'destroy'
+      $element.tooltip 'destroy'
 
 timeagoUpdateInterval = 60000
 momentTimestampFormat = 'MMMM Do YYYY, h:mm:ss a'
