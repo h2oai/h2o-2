@@ -1,4 +1,6 @@
+defaultStatusMessage = 'Ready.'
 Steam.MainView = (_) ->
+  _status = node$ defaultStatusMessage
   _listViews = nodes$ []
   _selectionViews = node$ []
   _pageViews = nodes$ []
@@ -130,6 +132,8 @@ Steam.MainView = (_) ->
 
   link$ _.modelsDeselected, -> _modalViews.remove _modelSelectionView
 
+  link$ _.status, (message) -> _status if message then message else defaultStatusMessage
+
   #TODO do this through hash uris
   switchToFrames type: 'all'
 
@@ -144,4 +148,6 @@ Steam.MainView = (_) ->
   isPageMasked: _isPageMasked
   isModal: _isModal
   isHelpHidden: _isHelpHidden
+  status: _status
   template: _template
+

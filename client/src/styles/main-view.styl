@@ -10,7 +10,7 @@
   background none
   border none
   padding 0
-  width: 32px
+  width 32px
   font-size 16px
   color y-color-grey-md
   &:hover
@@ -58,9 +58,9 @@
     line-height 30px
     text-transform uppercase
     font-size 11px
-  .y-tooltip
+  .y-hover-capture
     display inline-block
-    margin-left: 5px
+    margin-left 5px
   .btn
     height 30px
 
@@ -115,7 +115,10 @@
 
 .y-status-bar
   dock-bottom(y-status-bar-height)
+  line-height y-status-bar-height
   border-top 1px solid #ddd
+  padding 0px 10px
+  font-size 12px
 
 
 // Adding a .y-main-no-topic class on .y-main hides the help area

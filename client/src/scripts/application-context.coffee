@@ -10,6 +10,8 @@ Steam.ApplicationContext = ->
     schedule: do edge$
     unschedule: do edge$
 
+    status: do edge$
+
     route: do edge$
     setRoute: do edge$
     getRoute: do edge$
