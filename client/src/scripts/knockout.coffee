@@ -80,6 +80,30 @@ ko.bindingHandlers.tooltip =
     ko.utils.domNodeDisposal.addDisposeCallback element, ->
       $(element).tooltip 'destroy'
 
+timeagoUpdateInterval = 60000
+momentTimestampFormat = 'MMMM Do YYYY, h:mm:ss a'
+ko.bindingHandlers.timeago =
+  init: (element, valueAccessor, allBindings, viewModel, bindingContext) ->
+    timestamp = ko.unwrap valueAccessor()
+    timestamp = parseInt timestamp if isString timestamp
+    $element = $ element
+    date = moment new Date timestamp
+    $element.attr 'title', date.format momentTimestampFormat
+    tick = ->
+      label = date.fromNow()
+      if $element.text() isnt label
+        $element.text label
+      return
+
+    if window.steam
+      window.steam.context.schedule timeagoUpdateInterval, tick
+
+      ko.utils.domNodeDisposal.addDisposeCallback element, ->
+        window.steam.context.unschedule timeagoUpdateInterval, tick
+
+    tick()
+    return
+
 ko.bindingHandlers.collapse =
   init: (element, valueAccessor, allBindings, viewModel, bindingContext) ->
     angleDown = 'fa-angle-down'
