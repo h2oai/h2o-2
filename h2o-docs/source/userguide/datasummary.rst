@@ -4,8 +4,7 @@ Data: Summary (Request)
 ==========================
 
 Summary returns a column by column detailed summary of parsed
-data. For more information on the returned information see
-:ref:`Summary`
+data. For more information on the returned information see Summary. 
 
 **Source**
   
