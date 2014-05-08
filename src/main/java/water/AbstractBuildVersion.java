@@ -7,6 +7,17 @@ abstract public class AbstractBuildVersion {
     abstract public String projectVersion();
     abstract public String compiledOn();
     abstract public String compiledBy();
+
+    public String buildNumber() {
+      String buildNumber = "(unknown)";
+      try {
+        String projectVersion = projectVersion();
+        buildNumber = projectVersion.split("\\.")[3];
+      }
+      catch (Exception xe) {}
+      return buildNumber;
+    }
+
     @Override public String toString() {
     return "H2O v"+projectVersion()+ " ("+branchName()+" - "+lastCommitHash()+")";
     }

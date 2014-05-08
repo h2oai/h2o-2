@@ -27,7 +27,7 @@ public class Tutorials extends HTMLOnlyRequest {
 
     + "<div class='span2 col'>"
     + "  <h2>GBM</h2>"
-    +   "<p>GBM uses gradient boosted trees for regression and classification, and is one of the most powerful machine learning methods.</p>"
+    +   "<p>GBM uses gradient boosted trees for classification and regression, and is one of the most powerful machine learning methods in H<sub>2</sub>O.</p>"
     +   "<a href='/TutorialGBM.html' class='btn btn-primary'>Try it!</a>"
     + "</div>"
 
@@ -39,13 +39,13 @@ public class Tutorials extends HTMLOnlyRequest {
 
     + "<div class='span2 col'>"
     + "<h2>K-Means</h2>"
-    + "<p>Perform cluster analysis with H<sub>2</sub>O. It employs K-means, a highly scalable clustering algorithm for unsupervised learning on big data.</p>"
+    + "<p>Perform cluster analysis with H<sub>2</sub>O. K-means is a scalable clustering algorithm for unsupervised learning on big data.</p>"
     +   "<a href='/TutorialKMeans.html' class='btn btn-primary'>Try it!</a>"
     + "</div>"
 
     + "<div class='span2 col'>"
     + "<h2>Deep Learning</h2>"
-    + "<p>H<sub>2</sub>O's distributed Deep Learning gives you the power of deep neural networks for highest predictive accuracy in classification and regression.</p>"
+    + "<p>H<sub>2</sub>O's distributed Deep Learning gives you the power of deep neural networks for highest accuracy for classification and regression.</p>"
     +   "<a href='/TutorialDeepLearning.html' class='btn btn-primary'>Try it!</a>"
     + "</div>"
 

@@ -60,7 +60,7 @@ public class SpeeDRF extends Job.ValidatedJob {
   @API(help = "seed", filter = Default.class, json = true)
   public long seed = -1;
 
-  @API(help = "Build trees in parallel", filter = Default.class, json = true)
+  @API(help = "Build trees in parallel")
   public boolean  parallel  = true;
 
   @API(help = "split limit")

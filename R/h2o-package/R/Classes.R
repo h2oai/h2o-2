@@ -585,8 +585,10 @@ setMethod("$<-", "H2OParsedData", function(x, name, value) {
     stop("name must be a non-empty string")
   if(!inherits(value, "H2OParsedData") && !is.numeric(value))
     stop("value can only be numeric or a H2OParsedData object")
-  numCols = ncol(x); myNames = colnames(x)
-  idx = match(name, myNames)
+  numCols = ncol(x); numRows = nrow(x)
+  if(is.numeric(value) && length(value) != 1 && length(value) != numRows)
+    stop("value must be either a single number or a vector of length ", numRows)
+  myNames = colnames(x); idx = match(name, myNames)
  
   lhs = paste(x@key, "[,", ifelse(is.na(idx), numCols+1, idx), "]", sep = "")
   # rhs = ifelse(class(value) == "H2OParsedData", value@key, paste("c(", paste(value, collapse = ","), ")", sep=""))
