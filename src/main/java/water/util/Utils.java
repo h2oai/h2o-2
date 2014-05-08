@@ -1385,7 +1385,7 @@ public class Utils {
     // Header
     if (html) {
       sb.append("<tr class='warning' style='min-width:60px'>");
-      sb.append("<th>Actual / Predicted</th>");
+      sb.append("<th>&darr; Actual / Predicted &rarr;</th>");
       for( int p=0; p<pdomain.length; p++ )
         if( pdomain[p] != null )
           sb.append("<th style='min-width:60px'>").append(pdomain[p]).append("</th>");
