@@ -109,8 +109,8 @@ class Basic(unittest.TestCase):
                 h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=resultKey, timeoutSecs=60)
 
             for p in phrases:
-                # execExpr = "apply(r.hex, c(2), " + p + ")" 
-                execExpr = "apply(r.hex, 2, " + p + ")" 
+                # execExpr = "sapply(r.hex, " + p + ")" 
+                execExpr = "sapply(r.hex, " + p + ")" 
                 h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=60)
 
 if __name__ == '__main__':
