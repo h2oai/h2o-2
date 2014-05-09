@@ -6,27 +6,21 @@ import h2o_print
 DO_GLM = True
 LOG_MACHINE_STATS = False
 
+# fails during exec env push ..second import has to do a key delete (the first)
+DO_DOUBLE_IMPORT = False
+
 print "Assumes you ran ../build_for_clone.py in this directory"
 print "Using h2o-nodes.json. Also the sandbox dir"
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
-    def sub_c2_fvec_long(self):
+
+    def sub_c3_nongz_fvec_long(self, csvFilenameList):
+        h2o.beta_features = True
         # a kludge
         h2o.setup_benchmark_log()
 
-        avgMichalSize = 116561140 
         bucket = 'home-0xdiag-datasets'
-        ### importFolderPath = 'more1_1200_link'
-        importFolderPath = 'manyfiles-nflx-gz'
-        print "Using .gz'ed files in", importFolderPath
-        if len(h2o.nodes)==1:
-            csvFilenameList= [
-                ("*[1][0][0-9].dat.gz", "file_10_A.dat.gz", 10 * avgMichalSize, 600),
-            ]
-        else:
-            csvFilenameList= [
-                ("*[1][0-4][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 1800),
-                # ("*[1][0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 3600),
-            ]
+        importFolderPath = 'manyfiles-nflx'
+        print "Using nongz'ed files in", importFolderPath
 
         if LOG_MACHINE_STATS:
             benchmarkLogging = ['cpu', 'disk', 'network']
@@ -39,10 +33,11 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         for trial, (csvFilepattern, csvFilename, totalBytes, timeoutSecs) in enumerate(csvFilenameList):
                 csvPathname = importFolderPath + "/" + csvFilepattern
 
-                (importResult, importPattern) = h2i.import_only(bucket=bucket, path=csvPathname, schema='local')
-                importFullList = importResult['files']
-                importFailList = importResult['fails']
-                print "\n Problem if this is not empty: importFailList:", h2o.dump_json(importFailList)
+                if DO_DOUBLE_IMPORT:
+                    (importResult, importPattern) = h2i.import_only(bucket=bucket, path=csvPathname, schema='local')
+                    importFullList = importResult['files']
+                    importFailList = importResult['fails']
+                    print "\n Problem if this is not empty: importFailList:", h2o.dump_json(importFailList)
 
                 # this accumulates performance stats into a benchmark log over multiple runs 
                 # good for tracking whether we're getting slower or faster
@@ -78,14 +73,14 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                     for i in [3,4,5,6,7,8,9,10,11,14,16,17,18,19,20,424,425,426,540,541]:
                         x.remove(i)
                         ignore_x.append(i)
+                    x.remove(378)
 
-                    # plus 1 because we are no longer 0 offset
+                    # add one since we are no longer 0 based offset
                     x = ",".join(map(lambda x: "C" + str(x+1), x))
                     ignore_x = ",".join(map(lambda x: "C" + str(x+1), ignore_x))
 
                     GLMkwargs = {
                         'ignored_cols': ignore_x, 
-                        'family': 'binomial',
                         'response': 'C379', 
                         'max_iter': 4, 
                         'n_folds': 1, 
@@ -97,8 +92,10 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                     # convert to binomial
                     execExpr="A.hex=%s" % parseResult['destination_key']
                     h2e.exec_expr(execExpr=execExpr, timeoutSecs=60)
-                    execExpr="A.hex[,%s]=(A.hex[,%s]>%s)" % ('C379', 'C379', 15)
+
+                    execExpr = 'A.hex[,378+1]=(A.hex[,378+1]>15)'
                     h2e.exec_expr(execExpr=execExpr, timeoutSecs=60)
+
                     aHack = {'destination_key': "A.hex"}
 
                     start = time.time()
@@ -117,16 +114,37 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
     #***********************************************************************
     # these will be tracked individual by jenkins, which is nice
     #***********************************************************************
-
-    def test_A_c2_fvec_short(self):
+    def test_A_c3_nongz_fvec_one(self):
         h2o.beta_features = True
-        parseResult = h2i.import_parse(bucket='smalldata', path='iris/iris2.csv', schema='put')
-        h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=10)
+        avgMichalSize = 237270000
+        csvFilenameList= [
+            ("*[1][0][0].dat", "file_1_A.dat", 1 * avgMichalSize, 1800),
+        ]
+        self.sub_c3_nongz_fvec_long(csvFilenameList)
 
-    def test_B_c2_fvec_long(self):
+    def test_B_c3_nongz_fvec_two(self):
         h2o.beta_features = True
-        self.sub_c2_fvec_long()
+        avgMichalSize = 237270000
+        csvFilenameList= [
+            ("*[1][0][0-1].dat", "file_2_A.dat", 2 * avgMichalSize, 1800),
+        ]
+        self.sub_c3_nongz_fvec_long(csvFilenameList)
 
+    def test_C_c3_nongz_fvec_ten(self):
+        h2o.beta_features = True
+        avgMichalSize = 237270000
+        csvFilenameList= [
+            ("*[1][0][0-9].dat", "file_10_A.dat", 10 * avgMichalSize, 1800),
+        ]
+        self.sub_c3_nongz_fvec_long(csvFilenameList)
+
+    def test_D_c3_nongz_fvec_50(self):
+        h2o.beta_features = True
+        avgMichalSize = 237270000
+        csvFilenameList= [
+            ("*[1][0-4][0-9].dat", "file_50_A.dat", 50 * avgMichalSize, 1800),
+        ]
+        self.sub_c3_nongz_fvec_long(csvFilenameList)
 
 if __name__ == '__main__':
     h2o.unit_main()
