@@ -366,7 +366,17 @@ public class NewChunk extends Chunk {
   // Study this NewVector and determine an appropriate compression scheme.
   // Return the data so compressed.
   static final int MAX_FLOAT_MANTISSA = 0x7FFFFF;
+
   Chunk compress() {
+    Chunk res = compress2();
+    // force everything to null after compress to free up the memory
+    _id = null;
+    _xs = null;
+    _ds = null;
+    _ls = null;
+    return res;
+  }
+  private final Chunk compress2() {
     // Check for basic mode info: all missing or all strings or mixed stuff
     byte mode = type();
     if( mode==AppendableVec.NA ) // ALL NAs, nothing to do

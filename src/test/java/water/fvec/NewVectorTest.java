@@ -94,6 +94,7 @@ public class NewVectorTest extends TestUtil {
     nv._ls = new long[]{0,0,0,0}; // A 4-row chunk
     nv._xs = new int []{0,0,0,0};
     nv._len= nv._len2 = nv._ls.length;
+    long [] ls = nv._ls;
     nv.close(0,null);
     Vec vec = av.close(new Futures());
     assertEquals( nv._len2, vec.length() );
@@ -102,7 +103,7 @@ public class NewVectorTest extends TestUtil {
     assertTrue( "Found chunk class "+c0.getClass()+" but expected C0LChunk", c0 instanceof C0LChunk );
     assertEquals( false, c0.hasFloat() );
     // Also, we can decompress correctly
-    for( int i=0; i<nv._ls.length; i++ )
+    for( int i=0; i<ls.length; i++ )
       assertEquals(0, c0.at0(i), c0.at0(i)*EPSILON);
 
     // Now write a zero into slot 0
