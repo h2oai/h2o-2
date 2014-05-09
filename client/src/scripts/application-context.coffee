@@ -21,6 +21,11 @@ Steam.ApplicationContext = ->
     loadDialog: do edge$
     unloadDialog: do edge$
     positionDialog: do edge$
+
+    alert: do edge$
+    confirm: do edge$
+    fail: do edge$
+
     invokeH2O: do edge$
 
     requestFrames: do edge$
