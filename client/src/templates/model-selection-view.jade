@@ -1,21 +1,6 @@
 .y-model-selection-view
-  .clearfix
-    .y-tag Operations
-    .y-tagline(data-bind='text:frameKey')
-  h1.y-title(data-bind="text:caption")
-  table.table.table-condensed.table-hover
-    thead
-      tr
-        th Method
-        th Category
-        th Response Column
-    tbody
-      // ko foreach:selections
-      tr
-        td(data-bind='text:algorithm')
-        td(data-bind='text:category')
-        td(data-bind='text:responseColumn')
-      // /ko
-  div
-    button.btn.btn-primary(data-bind="click:scoreModels, enable:canScore") Score Models
-    button.btn(data-bind="click:cancel") Cancel
+  // ko if:hasSelection
+  .y-caption(data-bind='text:caption')
+  button.btn.btn-primary(title='Score selected models' data-bind='click:scoreSelections') Score&hellip;
+  button.btn(title='Clear selections' data-bind='click:clearSelections') Clear
+  // /ko

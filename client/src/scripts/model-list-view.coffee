@@ -55,7 +55,7 @@ Steam.ModelListView = (_) ->
       isSelected: node$ no
 
     apply$ _isLive, self.isSelected, (isLive, isSelected) ->
-      _.modelSelectionChanged isSelected, _predicate(), model if isLive
+      _.modelSelectionChanged isSelected, self if isLive
 
     self
 

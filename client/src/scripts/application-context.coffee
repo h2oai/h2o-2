@@ -62,13 +62,12 @@ Steam.ApplicationContext = ->
     loadFrames: do edge$
     framesLoaded: do edge$
     displayFrame: do edge$
+    promptForFrame: do edge$
 
     loadModels: do edge$
     displayModel: do edge$
     modelSelectionChanged: do edge$
     modelSelectionCleared: do edge$
-    modelsSelected: do edge$
-    modelsDeselected: do edge$
     deselectAllModels: do edge$
     clearModelSelection: do edge$
 
@@ -86,5 +85,6 @@ Steam.ApplicationContext = ->
     clearScoringSelection: do edge$
     deleteScorings: do edge$
     deleteActiveScoring: do edge$
+
 
 

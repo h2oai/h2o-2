@@ -1,69 +1,41 @@
 Steam.ModelSelectionView = (_) ->
   _selections = nodes$ []
+  _hasSelection = lift$ _selections, (selections) -> selections.length > 0
   _caption = lift$ _selections, (selections) ->
     "#{describeCount selections.length, 'model'} selected."
-  _hasSelection = lift$ _selections, (selections) ->
-    selections.length > 0
-  _predicate = node$ null
-  _frameKey = lift$ _predicate, (predicate) -> if predicate then predicate.frameKey else ''
-  _canScore = lift$ _predicate, _selections, (predicate, selections) ->
-    if predicate isnt null
-      if predicate.type is 'compatibleWithFrame'
-        if selections.length > 0
-          { category, responseColumn } = head selections
-          comparable = every selections, (selection) ->
-            selection.responseColumn is responseColumn and selection.category is category
-          return comparable
-    no
 
+  scoreSelections = ->
+    _.promptForFrame (action, frameKey) ->
+      switch action
+        when 'confirm'
+          scorings = map _selections(), (selection) ->
+            frameKey: frameKey
+            model: selection.data
+            status: null
+            time: null
+            result: null
+            timestamp: Date.now()
 
-  apply$ _hasSelection, (hasSelection) ->
-    if hasSelection
-      _.modelsSelected()
-    else
-      _.modelsDeselected()
+          _.switchToScoring type: 'scoring', scorings: scorings
+          _.deselectAllModels()
+        when 'error'
+          _.fail 'Error', 'An error occured while fetching the list of datasets.', error, noop
 
-  createSelection = (model) ->
-    data: model
-    algorithm: model.model_algorithm
-    category: model.model_category
-    responseColumn: model.response_column_name
+  clearSelections = ->
+    _.deselectAllModels()
 
-  link$ _.modelSelectionChanged, (isSelected, predicate, model) ->
+  link$ _.modelSelectionChanged, (isSelected, model) ->
     if isSelected
-      _selections.push createSelection model
+      _selections.push model
     else
-      _selections.remove (selection) -> selection.data is model
-
-    _predicate predicate unless _predicate() is predicate
+      _selections.remove model
 
   link$ _.modelSelectionCleared, ->
     _selections.removeAll()
-    _predicate null
 
-  scoreModels = ->
-    frameKey = _frameKey()
-    scorings = map _selections(), (selection) ->
-      frameKey: frameKey
-      model: selection.data
-      status: null
-      time: null
-      result: null
-      timestamp: Date.now()
-
-    do cancel
-    _.switchToScoring type: 'scoring', scorings: scorings
-
-  cancel = ->
-    _selections.removeAll()
-    _.deselectAllModels()
-
-
-  frameKey: _frameKey
   caption: _caption
   hasSelection: _hasSelection
-  selections: _selections
-  canScore: _canScore
-  scoreModels: scoreModels
-  cancel: cancel
+  clearSelections: clearSelections
+  scoreSelections: scoreSelections
   template: 'model-selection-view'
+  
