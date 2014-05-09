@@ -143,9 +143,9 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='',
                 foundBad = regex1.search(line) and not (
                     ('Prediction error' in line) or
                     (('Act/Prd' in line) and ('Error' in line)) or
+                    (('AUC' in line) and ('Gini' in line) and ('Precision' in line)) or
                     ('Error on training data' in line) or
                     ('Error on validation data' in line) or
-                    ('Act/Prd' in line) or
                     ('water.DException' in line) or
                     # the manyfiles data has eRRr in a warning about test/train data
                     ('WARN SCORM' in line) or
