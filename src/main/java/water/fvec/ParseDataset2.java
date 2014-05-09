@@ -535,20 +535,20 @@ public final class ParseDataset2 extends Job {
       }
     }
 
-    private Enum [] enums(){
-      if(!_enums.containsKey(_eKey)){
-        Enum [] enums = new Enum[_setup._ncols];
+    private static Enum [] enums(Key eKey, int ncols){
+      if(!_enums.containsKey(eKey)){
+        Enum [] enums = new Enum[ncols];
         for(int i = 0; i < enums.length; ++i)enums[i] = new Enum();
-        _enums.putIfAbsent(_eKey, enums);
+        _enums.putIfAbsent(eKey, enums);
       }
-      return _enums.get(_eKey);
+      return _enums.get(eKey);
     }
     // ------------------------------------------------------------------------
     // Zipped file; no parallel decompression; decompress into local chunks,
     // parse local chunks; distribute chunks later.
     private FVecDataOut streamParse( final InputStream is, final CustomParser.ParserSetup localSetup, int vecIdStart, int chunkStartIdx, ParseProgressMonitor pmon) throws IOException {
       // All output into a fresh pile of NewChunks, one per column
-      FVecDataOut dout = new FVecDataOut(_vg, chunkStartIdx, localSetup._ncols, vecIdStart, enums());
+      FVecDataOut dout = new FVecDataOut(_vg, chunkStartIdx, localSetup._ncols, vecIdStart, enums(_eKey,localSetup._ncols));
       CustomParser p = localSetup.parser();
       // assume 2x inflation rate
       if(localSetup._pType.parallelParseSupported)
@@ -562,12 +562,14 @@ public final class ParseDataset2 extends Job {
       return dout;
     }
 
-    private class DParse extends MRTask2<DParse> {
+    private static class DParse extends MRTask2<DParse> {
       final CustomParser.ParserSetup _setup;
       final int _vecIdStart;
       final int _startChunkIdx; // for multifile parse, offset of the first chunk in the final dataset
       final VectorGroup _vg;
       FVecDataOut _dout;
+      final Key _eKey;
+      final Key _progress;
       transient final MultiFileParseTask _outerMFPT;
 
       DParse(VectorGroup vg, CustomParser.ParserSetup setup, int vecIdstart, int startChunkIdx, MultiFileParseTask mfpt) {
@@ -576,9 +578,11 @@ public final class ParseDataset2 extends Job {
         _vecIdStart = vecIdstart;
         _startChunkIdx = startChunkIdx;
         _outerMFPT = mfpt;
+        _eKey = mfpt._eKey;
+        _progress = mfpt._progress;
       }
       @Override public void map( Chunk in ) {
-        Enum [] enums = enums();
+        Enum [] enums = enums(_eKey,_setup._ncols);
         // Break out the input & output vectors before the parse loop
         // The Parser
         FVecDataIn din = new FVecDataIn(in);
