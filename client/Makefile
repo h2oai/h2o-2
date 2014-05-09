@@ -36,6 +36,7 @@ BROWSER_SCRIPTS=\
 	$(BUILD)/scripts/localStorage.js \
 	$(BUILD)/scripts/xhr.js \
 	$(BUILD)/scripts/h2o-proxy.js \
+	$(BUILD)/scripts/dialog-manager.js \
 	$(BUILD)/scripts/topic-list-view.js \
 	$(BUILD)/scripts/frame-list-view.js \
 	$(BUILD)/scripts/model-list-view.js \

@@ -58,6 +58,52 @@ table.table-kv
     color red
     background transparent
 
+.y-dialog-container
+  block()
+  left:50%
+  top:50%
+
+.y-dialog
+  background white
+  box-shadow 7px 7px 30px 0px rgba(50, 50, 50, 0.66)
+  .y-dialog-title-bar
+    background y-color-yellow-dk
+    height 35px
+    line-height 35px
+    text-transform uppercase
+    font-size 11px
+  .y-dialog-title
+    display inline-block
+    height 35px
+    margin-left 20px
+  .y-dialog-exit
+    cursor pointer
+    display inline-block
+    color #777
+    background y-color-yellow-dk
+    width 32px
+    height 35px
+    float right
+    text-align center
+  .y-dialog-body
+    padding 15px 20px 5px 20px
+    font-size 13px
+  .y-dialog-actions
+    height 40px
+    line-height 40px
+    text-align right
+    border-top 1px solid #ddd
+    margin-top 20px
+  button
+    min-width 60px
+.y-dialog-failure
+  .y-dialog-title-bar
+    background y-color-red
+    color white
+  .y-dialog-exit
+    background y-color-red
+    color white
+
 .y-spinner-box
   block()
   left:50%

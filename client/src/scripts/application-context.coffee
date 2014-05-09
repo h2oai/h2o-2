@@ -18,6 +18,9 @@ Steam.ApplicationContext = ->
     onRouteSucceeded: do edge$
     onRouteFailed: do edge$
 
+    loadDialog: do edge$
+    unloadDialog: do edge$
+    positionDialog: do edge$
     invokeH2O: do edge$
 
     requestFrames: do edge$
