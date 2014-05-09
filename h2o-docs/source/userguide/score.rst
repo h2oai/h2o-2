@@ -1,15 +1,17 @@
+
 Score
-=====
+========
 
 .. toctree::
    :maxdepth: 1
 
-  scorepredict
-  scoreconfusionmatrix
-  scoreauc
-  scorehitratio
-  scorePCAscore
-  score
+   scoreMulitModel
+   scorePCAscore
+   scoreauc
+   scoreconfusionmatrix
+   scorehitratio
+   scorepredict
+   
  
 
 
