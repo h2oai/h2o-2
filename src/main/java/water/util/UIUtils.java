@@ -33,7 +33,7 @@ public class UIUtils {
     name = name.substring(0, name.indexOf("Model"));
     RString rs = new RString("<a href='/2/%page.query?source=%$source&response=%response' %onclick >%content</a>");
     rs.replace("page", name);
-    rs.replace("source", source.toString());
+    rs.replace("source", source!=null ? source.toString() : "");
     rs.replace("response", response);
     rs.replace("content", content);
     rs.replace("onclick", onClick!=null ? "onclick=\""+onClick+"\"" : "");
