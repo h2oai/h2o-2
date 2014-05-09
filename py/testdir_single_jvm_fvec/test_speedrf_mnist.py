@@ -32,7 +32,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_RF_mnist_speedrf(self):
+    def test_speedrf_mnist(self):
         h2o.beta_features = True
         importFolderPath = "mnist"
         csvFilelist = [
