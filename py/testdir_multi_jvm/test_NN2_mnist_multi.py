@@ -1,6 +1,6 @@
 import unittest, time, sys, random, string
 sys.path.extend(['.','..','py'])
-import h2o, h2o_nn, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_jobs, h2o_browse as h2b
+import h2o, h2o_nn, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_jobs, h2o_browse as h2b, h2o_gbm
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -29,7 +29,7 @@ class Basic(unittest.TestCase):
         csvPathname_test  = 'mnist/test.csv.gz'
         hex_key = 'mnist_train.hex'
         validation_key = 'mnist_test.hex'
-        timeoutSecs = 60
+        timeoutSecs = 90
         parseResult  = h2i.import_parse(bucket='smalldata', path=csvPathname_train, schema='put', hex_key=hex_key, timeoutSecs=timeoutSecs)
         parseResultV = h2i.import_parse(bucket='smalldata', path=csvPathname_test, schema='put', hex_key=validation_key, timeoutSecs=timeoutSecs)
         inspect = h2o_cmd.runInspect(None, hex_key)
@@ -74,18 +74,41 @@ class Basic(unittest.TestCase):
         nn = h2o_cmd.runDeepLearning(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
         print "neural net end on ", csvPathname_train, " and ", csvPathname_test, 'took', time.time() - start, 'seconds'
 
-        ### Now score using the model, and check the validation error
+        #### Now score using the model, and check the validation error
+        expectedErr = 0.04
+        relTol = 0.01
+        predict_key = 'Predict.hex'
+
         kwargs = {
-            'source' : validation_key,
-            'max_rows': 0,
-            'response': response,
-            'ignored_cols': None, # this is not consistent with ignored_cols_by_name
-            'classification': 1,
-            'destination_key': 'score_' + identifier + '.hex',
-            'model': model_key,
+            'data_key': validation_key,
+            'destination_key': predict_key,
+            'model_key': model_key
         }
-        nnScoreResult = h2o_cmd.runDeepLearningScore(key=parseResult['destination_key'], timeoutSecs=timeoutSecs, **kwargs)
-        h2o_nn.checkScoreResult(self, nnScoreResult, expectedErr, relTol, **kwargs)
+        predictResult = h2o_cmd.runPredict(timeoutSecs=timeoutSecs, **kwargs)
+        h2o_cmd.runInspect(key=predict_key, verbose=True)
+
+        kwargs = {
+        }
+
+        predictCMResult = h2o.nodes[0].predict_confusion_matrix(
+            actual=validation_key,
+            vactual=response,
+            predict=predict_key,
+            vpredict='predict',
+            timeoutSecs=timeoutSecs, **kwargs)
+
+        cm = predictCMResult['cm']
+
+        print h2o_gbm.pp_cm(cm)
+        actualErr = h2o_gbm.pp_cm_summary(cm)/100.
+
+        print "actual   classification error:" + format(actualErr)
+        print "expected classification error:" + format(expectedErr)
+        if actualErr != expectedErr and abs((expectedErr - actualErr)/expectedErr) > relTol:
+            raise Exception("Scored classification error of %s is not within %s %% relative error of %s" %
+                            (actualErr, float(relTol)*100, expectedErr))
+
+
 
 if __name__ == '__main__':
     h2o.unit_main()

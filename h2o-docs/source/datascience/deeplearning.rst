@@ -4,12 +4,12 @@
 Deep Learning
 ================
 
-H2O Deep Learning is based on a multi-layer feed-forward artificial neural
-network that is trained with stochastic gradient descent using
+H\ :sub:`2`\ O's Deep Learning is based on a multi-layer feed-forward
+artificial neural network that is trained with stochastic gradient descent using
 back-propagation. The network can contain a large number of hidden layers
 consisting of neurons with tanh, rectifier and maxout activation functions.
 Advanced features such as adaptive learning rate, rate annealing, momentum
-training, dropout, L1/L2 regularization, checkpointing and grid search enable
+training, dropout, L1 or L2 regularization, checkpointing and grid search enable
 high predictive accuracy. Each compute node trains a copy of the global model
 parameters on its local data with multi-threading (asynchronously), and
 contributes periodically to the global model via model averaging across the
@@ -19,14 +19,15 @@ network.
 Defining a Deep Learning Model
 """"""""""""""""""""""""""""""""
 
-H2O Deep Learning models have many input parameters, many of which are only accessible via
-the expert mode, and their default values should be fine for most use cases.
-Please read the following instructions before building extensive Deep Learning
-models. Many of the parameters allow specification of multiple values for grid
-search (e.g., comma-separated list "10,25,40" or from:to:step range "10:40:5").
-The application of grid search and successive continuation of winning models
-via checkpoint restart is highly recommended as model performance can vary
-greatly.
+ H\ :sub:`2`\ O Deep Learning models have many input parameters, many
+ of which are only accessible via the expert mode, and their default
+ values should be fine for most use cases. Please read the following
+ instructions before building extensive Deep Learning models. Many of
+ the parameters allow specification of multiple values for grid search
+ (e.g., comma-separated list "10,2,40" or from:to:step range
+ "10:40:5"). The application of grid search and successive
+ continuation of winning models via checkpoint restart is highly
+ recommended as model performance can vary greatly.
 
 **Destination Key**
 
@@ -48,7 +49,7 @@ greatly.
     that will be omitted from the model. Additionally - users can
     specify whether the model should omit constant columns by
     selecting expert settings and checking the tic box indicating
-    **Ignore const cols**.
+    **Ignore Const Cols**.
 
 **Classification** 
      
@@ -77,8 +78,8 @@ greatly.
 
     Unlock expert mode parameters than can affect model building speed,
     predictive accuracy and scoring. Leaving expert mode parameters at default
-    values is fine for many problems, but best results on complex datasets are often
-    only attainable via expert mode options.
+    values is fine for many problems, but best results on complex
+    datasets are often only attainable via expert mode options.
     
 **Activation**
 
@@ -118,7 +119,7 @@ greatly.
     with (online) stochastic gradient descent. This parameter controls the
     synchronization period between nodes in a distributed environment and the
     frequency at which scoring and model cancellation can happen. For example, if
-    it is set to 10,000 on H2O running on 4 nodes, then each node will
+    it is set to 10,000 on  H\ :sub:`2`\ O running on 4 nodes, then each node will
     process 2,500 rows per iteration, sampling randomly from their local data.
     Then, model averaging between the nodes takes place, and scoring can happen
     (dependent on scoring interval and duty factor). Special values are 0 for
@@ -139,10 +140,10 @@ greatly.
 
 **Adaptive Rate**
 
-    The implemented adaptive learning rate algorithm (ADADELTA) automatically
-    combines the benefits of learning rate annealing and momentum
-    training to avoid slow convergence. Specification of only two
-    parameters (rho and epsilon) simplifies hyper parameter search.
+    The implemented adaptive learning rate algorithm (ADADELTA) 
+    automatically combines the benefits of learning rate annealing and
+    momentum training to avoid slow convergence. Specification of only two
+    parameters (rho and epsilon) simplifies hyper-parameter search.
 
     In some cases, manually controlled (non-adaptive) learning rate and
     momentum specifications can lead to better results, but require the
@@ -160,14 +161,14 @@ greatly.
 
 **Rho**
 
-    The first of two hyper parameters for adaptive learning rate (ADADELTA).
+    The first of two hyper parameters for ADADELTA.
     It is similar to momentum and relates to the memory to prior weight updates.
     Typical values are between 0.9 and 0.999.
     This parameter is only active if adaptive learning rate is enabled.
 
 **Epsilon**
 
-    The second of two hyper parameters for adaptive learning rate (ADADELTA).
+    The second of two hyper parameters for ADADELTA.
     It is similar to learning rate annealing during initial training
     and momentum at later stages where it allows forward progress.
     Typical values are between 1e-10 and 1e-4.
@@ -198,30 +199,37 @@ greatly.
 
 **Rate Decay**
 
-    The learning rate decay parameter controls the change of learning rate across layers.
-    For example, assume the rate parameter is set to 0.01, and the rate_decay parameter is set to 0.5.
-    Then the learning rate for the weights connecting the input and first hidden layer will be 0.01,
-    the learning rate for the weights connecting the first and the second hidden layer will be 0.005,
-    and the learning rate for the weights connecting the second and third hidden layer will be 0.0025, etc.
-    This parameter is only active if adaptive learning rate is disabled.
+    The learning rate decay parameter controls the change of learning
+    rate across layers. For example, assume the rate parameter is set
+    to 0.01, and the rate decay parameter is set to 0.5. Then the
+    learning rate for the weights connecting the input and first
+    hidden layer will be 0.01, the learning rate for the weights
+    connecting the first and the second hidden layer will be 0.005,
+    and the learning rate for the weights connecting the second and
+    third hidden layer will be 0.0025, etc. This parameter is only
+    active if adaptive learning rate is disabled.
 
 **Momentum Start**
 
-    The momentum_start parameter controls the amount of momentum at the beginning of training.
-    This parameter is only active if adaptive learning rate is disabled.
+    The momentum_start parameter controls the amount of momentum at
+    the beginning of training. This parameter is only active if
+    adaptive learning rate is disabled.
 
 **Momentum Ramp**
 
-    The momentum_ramp parameter controls the amount of learning for which momentum increases
-    (assuming momentum_stable is larger than momentum_start). The ramp is measured in the number
-    of training samples.
-    This parameter is only active if adaptive learning rate is disabled.
+    The momentum_ramp parameter controls the amount of learning for
+    which momentum increases (assuming momentum_stable is larger than
+    momentum_start). The ramp is measured in the number of training
+    samples. This parameter is only active if adaptive learning rate
+    is disabled.
 
-*momentum stable**
+**Momentum Stable**
 
-    The momentum_stable parameter controls the final momentum value reached after momentum_ramp training samples.
-    The momentum used for training will remain the same for training beyond reaching that point.
-    This parameter is only active if adaptive learning rate is disabled.
+    The momentum_stable parameter controls the final momentum value
+    reached after momentum_ramp training samples. The momentum used
+    for training will remain the same for training beyond reaching
+    that point. This parameter is only active if adaptive learning
+    rate is disabled.
 
 **Nesterov Accelerated Gradient** 
 
@@ -271,8 +279,9 @@ greatly.
 **Initial Weight Scale**
 
     The scale of the distribution function for Uniform or Normal distributions.
-    For Uniform, the values are drawn uniformly from -initial_weight_scale...initial_weight_scale.
-    For Normal, the values are drawn from a Normal distribution with a standard deviation of initial_weight_scale.
+    For Uniform, the values are drawn uniformly from initial weight
+    scale. For Normal, the values are drawn from a Normal distribution
+    with the standard deviation of the initial weight scale.
 
 **Loss Function** 
 
@@ -325,7 +334,7 @@ greatly.
 
     Enable quiet mode for less output to standard output.
 
-**max confusion matrix** 
+**Max Confusion Matrix** 
 
     For classification models, the maximum size (in terms of classes) of the
     confusion matrix for it to be printed. This option is meant to avoid printing
@@ -333,7 +342,8 @@ greatly.
 
 **Max Hit Ratio K** 
 
-    The maximum number (top K) of predictions to use for hit ratio computation (for multi-class only, 0 to disable)
+    The maximum number (top K) of predictions to use for hit ratio
+    computation (for multi-class only, 0 to disable)
 
 **Balance Classes** 
 
@@ -362,7 +372,8 @@ greatly.
 
 **Fast Mode**
     
-    Enable fast mode (minor approximation in back-propagation), should not affect results significantly.
+    Enable fast mode (minor approximation in back-propagation), should
+    not affect results significantly.
 
 **Ignore Const Cols**
 
@@ -375,7 +386,8 @@ greatly.
 
 **Replicate Training Data**
 
-    Replicate the entire training dataset onto every node for faster training on small datasets.
+    Replicate the entire training dataset onto every node for faster
+    training on small datasets.
 
 **Single Node Mode**
 
@@ -386,12 +398,13 @@ greatly.
 **Shuffle Training Data** 
 
     Enable shuffling of training data (on each node). This option is
-    recommended if training data is replicated on N nodes, and the number of training samples per iteration
+    recommended if training data is replicated on N nodes, and the
+    number of training samples per iteration
     is close to N times the dataset size, where all nodes train will (almost) all
-    the data. It is automatically enabled if the number of training samples per iteration is set to -1 (or to N
-    times the dataset size or larger).
+    the data. It is automatically enabled if the number of training
+    samples per iteration is set to -1 (or to N times the dataset size or larger).
 
-Interpreting the Model
+Interpreting A Model
 """"""""""""""""""""""""
 
 The model view page displays information about the Deep Learning model being trained.
@@ -410,10 +423,11 @@ The model view page displays information about the Deep Learning model being tra
     weights dropped from training at that layer. Note that dropout is
     randomized for each training row.
 
-    *L1, L2* The L1 and L2 regularization penalty applied to the
+    *L1, L2* The L1 and L2 regularization penalty applied by 
     layer. 
 
-    *Rate, Weight and Bias* The per-layer learning rate, weight and bias statistics are displayed.
+    *Rate, Weight and Bias* The per-layer learning rate, weight and
+    bias statistics are displayed.
  
 **Scoring** 
 
@@ -430,11 +444,12 @@ The model view page displays information about the Deep Learning model being tra
 **Hit Ratio Table**
 
     A table displaying the percentage of instances where the actual
-    class label assigned to an observation is in the top K classes predicted by the
-    model. For instance, in a four class classifier on values A, B, C, D, a
-    particular observation is predicted to be class A with a probability of .6 of
-    being A, .2 probability of being B, a .1 probability of being C, and a .1
-    probability of being D. If the true class is B, the observation will be counted
+    class label assigned to an observation is in the top K classes
+    predicted by the model. For instance, in a four class classifier
+    on values A, B, C, D, a particular observation is predicted to be
+    class A with a probability of .6 of being A, .2 probability of
+    being B, a .1 probability of being C, and a .1 probability of
+    being D. If the true class is B, the observation will be counted
     in the hit rate for K=2, but not in the hit rate of K=1. 
 
 **Variable Importance** 
