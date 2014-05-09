@@ -103,7 +103,7 @@ class Basic(unittest.TestCase):
                 # (None, "function(x) { cbind( mean(x[,1]), mean(x[,%s]) ) }" % col),
                 (None, "func4=function(x) { mean( x[,%s]) }" % col), 
                 (None, "func5=function(x) { sd( x[,%s]) }" % col), 
-                # (None, "func6=function(x) { quantile(x[,%s] , c(0.9) ) }" % col),
+                (None, "func6=function(x) { quantile(x[,%s] , c(0.9) ) }" % col),
             ]
             for resultKey, execExpr in initList:
                 h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=resultKey, timeoutSecs=60)
