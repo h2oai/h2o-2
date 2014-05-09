@@ -54,6 +54,10 @@ parsed) are displayed across the top of the page.
   The number of missing values in a column of data. 
 
 
+.. image:: inspect.png
+   :width: 100%
+
+
 
 
 

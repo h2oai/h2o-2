@@ -417,6 +417,12 @@ class H2OCloudNode:
                 pass
         except OSError:
             pass
+        try:
+            requests.get("http://" + self.ip + ":" + self.port + "/Shutdown.html", timeout=5)
+        except Exception, e:
+            print "Got Exception trying to shutdown H2O:"
+            print e
+            pass
         print "Successfully shutdown h2o!"
         self.pid = -1
 

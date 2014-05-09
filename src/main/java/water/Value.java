@@ -350,7 +350,7 @@ public class
     _key = k;
     _pojo = pojo;
     _type = (short)pojo.frozenType();
-    _mem = pojo.write(new AutoBuffer()).buf();
+    _mem = (pojo instanceof Chunk)?((Chunk)pojo).getBytes():pojo.write(new AutoBuffer()).buf();
     _max = _mem.length;
     // For the ICE backend, assume new values are not-yet-written.
     // For HDFS & NFS backends, assume we from global data and preserve the
