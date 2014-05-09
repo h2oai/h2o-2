@@ -28,6 +28,9 @@
 .y-desktop
   dock(top:y-navigation-bar-height, bottom:y-status-bar-height)
 
+.y-workspace
+  dock(right:y-help-lane-width)
+
 .y-lane-header
   dock-top(y-desktop-header-height)
   border-bottom 1px solid #ddd
@@ -39,13 +42,18 @@
   dock-left(y-topic-lane-width)
   border-right 1px solid #ddd
 
-.y-workspace-lane
-  dock(left:y-topic-lane-width, right:y-help-lane-width)
+.y-view-lane
+  dock(left:y-topic-lane-width)
 
 .y-page-views, .y-modal-views
   dock()
   padding 25px 30px
   overflow auto
+
+
+.y-modal-dialogs-container
+.y-modal-dialogs
+  dock()
 
 .y-modal-views
   background white
@@ -65,6 +73,7 @@
     height 30px
 
 .y-help-lane
+  background white
   dock-right(y-help-lane-width)
   border-left 1px solid #ddd
   .y-lane-body
@@ -122,18 +131,18 @@
 
 
 // Adding a .y-main-no-topic class on .y-main hides the help area
-//    and docks .y-workspace-lane to the left
+//    and docks .y-view-lane to the left
 .y-main-no-topic
   .y-topic-lane
     display none
-  .y-workspace-lane
+  .y-view-lane
     left 0
 
 // Adding a .y-main-no-help class on .y-main hides the help area
-//    and docks .y-workspace-lane to the right
+//    and docks .y-view-lane to the right
 .y-main-no-help
   .y-help-lane
     display none
-  .y-workspace-lane
+  .y-workspace
     right 0
     

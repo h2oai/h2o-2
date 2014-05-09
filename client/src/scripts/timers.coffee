@@ -1,8 +1,17 @@
 Steam.Timers = (_) ->
   _timers = {}
+  _timeouts = {}
+
+  link$ _.timeout, (id, ms, func) ->
+    console.assert isFunction func
+    if timeout = _timeouts[id]
+      clearInterval timeout.id
+      timeout.id = setInterval func, ms
+    else
+      _timeouts[id] = id: setInterval func, ms
 
   link$ _.schedule, (ms, func) ->
-    throw new Error 'Not a function' unless isFunction func
+    console.assert isFunction func
     if timer = _timers[ms]
       push timer.functions, func
     else

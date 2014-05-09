@@ -48,7 +48,7 @@ Steam.ModelView = (_, _model) ->
     rows = map model.input_column_names, (columnName) -> [ columnName ]
 
     #TODO duplicates logic in FrameView. Refactor.
-    [ table, tbody, tr, td ] = geyser.generate words 'table.table.table-condensed.table-hover tbody tr td'
+    [ table, tbody, tr, td ] = geyser.generate words 'table.table.table-condensed tbody tr td'
     table [
       tbody map rows, (row) ->
         tr map row, td
@@ -68,7 +68,7 @@ Steam.ModelView = (_, _model) ->
       ]
 
     #TODO duplicates logic in FrameView. Refactor.
-    [ table, thead, tbody, tr, th, td ] = geyser.generate words 'table.table.table-condensed.table-hover thead tbody tr th td'
+    [ table, thead, tbody, tr, th, td ] = geyser.generate words 'table.table.table-condensed thead tbody tr th td'
 
     table [
       thead [

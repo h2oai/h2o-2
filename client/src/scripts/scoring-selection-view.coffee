@@ -1,12 +1,14 @@
+defaultScoringComparisonMessage = 'Compare selected scorings.'
 Steam.ScoringSelectionView = (_) ->
   _selections = do nodes$
   _hasSelection = lift$ _selections, (selections) -> selections.length > 0
   _caption = lift$ _selections, (selections) ->
     "#{describeCount selections.length, 'item'} selected"
 
-  defaultScoringComparisonMessage = 'Compare selected scorings.'
   _scoringComparisonMessage = lift$ _selections, (selections) ->
     return 'Select two or more scorings to compare.' if selections.length < 2
+    return 'Remove pending scorings from your selection.' if some selections, (selection) -> not selection.isReady()
+    return 'Remove failed scorings from your selection.' if some selections, (selection) -> selection.hasFailed()
     return 'Remove comparison tables from your selection.' if some selections, (selection) -> selection.type is 'comparison'
     return 'Ensure that all selected scorings refer to conforming datasets.' unless valuesAreEqual selections, (selection) -> selection.data.input.frameKey
     return 'Ensure that all selected scorings belong to the same model category.' unless valuesAreEqual selections, (selection) -> selection.data.input.model.model_category
@@ -39,7 +41,6 @@ Steam.ScoringSelectionView = (_) ->
     #TODO confirm dialog
     _.deleteScorings clone _selections()
 
-
   clearSelections = ->
     _.deselectAllScorings()
 
@@ -53,7 +54,6 @@ Steam.ScoringSelectionView = (_) ->
     _selections.removeAll()
 
   caption: _caption
-  selections: _selections
   hasSelection: _hasSelection
   clearSelections: clearSelections
   canCompareScorings: _canCompareScorings

@@ -7,37 +7,41 @@
       button.y-toggle-help-button(data-bind='click:toggleHelp' title='Toggle help pane')
         i.fa.fa-question-circle
   .y-desktop
-    .y-topic-lane
-      .y-lane-header
-        button.y-topic-button.btn.fa-btn(data-bind='click:toggleTopics')
-          i.fa.fa-bars
-        .y-topic-title(data-bind='text:topicTitle')
-        button.y-upload-button.btn.fa-btn
-          i.fa.fa-refresh
+    .y-workspace
+      .y-topic-lane
+        .y-lane-header
+          button.y-topic-button.btn.fa-btn(data-bind='click:toggleTopics')
+            i.fa.fa-bars
+          .y-topic-title(data-bind='text:topicTitle')
+          button.y-upload-button.btn.fa-btn
+            i.fa.fa-refresh
 
-      // ko if:isModal
-      .y-mask
-      // /ko
-
-      .y-lane-body(data-bind="template:{name:template, foreach:listViews}")
-
-      // ko if:isListMasked
-      .y-mask
-      // /ko
-
-    .y-workspace-lane
-      .y-lane-header
-        .y-selection-views(data-bind="template:{name:template, foreach:selectionViews}")
-      .y-lane-body
-        .y-page-views(data-bind="template:{name:template, foreach:pageViews}")
-        // ko if:isModal
-        .y-modal-views(data-bind="template:{name:template, foreach:modalViews}")
+        // ko if:isNavigatorMasked
+        .y-mask
         // /ko
 
-      // ko if:isPageMasked
-      .y-mask
-      // /ko
-        
+        .y-lane-body(data-bind="template:{name:template, foreach:listViews}")
+
+        // ko if:isListMasked
+        .y-mask
+        // /ko
+
+      .y-view-lane
+        .y-lane-header
+          .y-selection-views(data-bind="template:{name:template, foreach:selectionViews}")
+        .y-lane-body
+          .y-page-views(data-bind="template:{name:template, foreach:pageViews}")
+          // ko if:hasModalView
+          .y-modal-views(data-bind="template:{name:template, foreach:modalViews}")
+          // /ko
+
+        // ko if:isViewMasked
+        .y-mask
+        // /ko
+
+      .y-modal-dialogs-container(data-bind="visible:hasModalDialog")
+        .y-modal-dialogs(data-bind="template:{name:template, foreach:modalDialogs, afterAdd:fixDialogPlacement}")
+          
     .y-help-lane
       .y-lane-header
         button.y-help-home-button.btn.fa-btn

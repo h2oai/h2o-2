@@ -15,8 +15,8 @@ Steam.Application = (_) ->
   #_.route 'home'
   
   _view = Steam.MainView _
-
   Steam.Router _, Steam.Routes _
+  Steam.DialogManager _
 
   context: _
   view: _view

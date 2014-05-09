@@ -32,16 +32,16 @@
 
 ko.bindingHandlers.paragraph =
   update: (element, valueAccessor, allBindings, viewModel, bindingContext) ->
+    html = ''
     if data = ko.unwrap valueAccessor()
       if -1 isnt data.indexOf '\n'
-        ko.utils.setHtml element, "<span>#{data.replace /\n/g, '<br/>'}</span>"
+        html = "<span>#{data.replace /\n/g, '<br/>'}</span>"
       else
-        ko.utils.setTextContent element, data
-    else
-      ko.utils.setTextContent element, ''
+        html = data
+    ko.utils.setHtml element, html
 
 ko.bindingHandlers.json =
-  init: (element, valueAccessor, allBindings, viewModel, bindingContext) ->
+  update: (element, valueAccessor, allBindings, viewModel, bindingContext) ->
     data = ko.unwrap valueAccessor()
 
     $(element).text JSON.stringify data, null, 2
@@ -97,7 +97,7 @@ ko.bindingHandlers.tooltip =
 timeagoUpdateInterval = 60000
 momentTimestampFormat = 'MMMM Do YYYY, h:mm:ss a'
 ko.bindingHandlers.timeago =
-  init: (element, valueAccessor, allBindings, viewModel, bindingContext) ->
+  update: (element, valueAccessor, allBindings, viewModel, bindingContext) ->
     timestamp = ko.unwrap valueAccessor()
     timestamp = parseInt timestamp if isString timestamp
     $element = $ element

@@ -9,6 +9,7 @@ Steam.ApplicationContext = ->
 
     schedule: do edge$
     unschedule: do edge$
+    timeout: do edge$
 
     status: do edge$
 
@@ -17,6 +18,14 @@ Steam.ApplicationContext = ->
     getRoute: do edge$
     onRouteSucceeded: do edge$
     onRouteFailed: do edge$
+
+    loadDialog: do edge$
+    unloadDialog: do edge$
+    positionDialog: do edge$
+
+    alert: do edge$
+    confirm: do edge$
+    fail: do edge$
 
     invokeH2O: do edge$
 
@@ -53,13 +62,12 @@ Steam.ApplicationContext = ->
     loadFrames: do edge$
     framesLoaded: do edge$
     displayFrame: do edge$
+    promptForFrame: do edge$
 
     loadModels: do edge$
     displayModel: do edge$
     modelSelectionChanged: do edge$
     modelSelectionCleared: do edge$
-    modelsSelected: do edge$
-    modelsDeselected: do edge$
     deselectAllModels: do edge$
     clearModelSelection: do edge$
 
@@ -77,5 +85,6 @@ Steam.ApplicationContext = ->
     clearScoringSelection: do edge$
     deleteScorings: do edge$
     deleteActiveScoring: do edge$
+
 
 

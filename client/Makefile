@@ -36,6 +36,10 @@ BROWSER_SCRIPTS=\
 	$(BUILD)/scripts/localStorage.js \
 	$(BUILD)/scripts/xhr.js \
 	$(BUILD)/scripts/h2o-proxy.js \
+	$(BUILD)/scripts/dialog-manager.js \
+	$(BUILD)/scripts/alert-dialog.js \
+	$(BUILD)/scripts/error-dialog.js \
+	$(BUILD)/scripts/select-frame-dialog.js \
 	$(BUILD)/scripts/topic-list-view.js \
 	$(BUILD)/scripts/frame-list-view.js \
 	$(BUILD)/scripts/model-list-view.js \
@@ -56,6 +60,9 @@ TEST_SCRIPTS=\
 	$(BUILD)/scripts/application-context.js \
 	$(BUILD)/scripts/xhr.js \
 	$(BUILD)/scripts/h2o-proxy.js \
+	$(BUILD)/scripts/alert-dialog.js \
+	$(BUILD)/scripts/error-dialog.js \
+	$(BUILD)/scripts/select-frame-dialog.js \
 	$(BUILD)/scripts/topic-list-view.js \
 	$(BUILD)/scripts/frame-list-view.js \
 	$(BUILD)/scripts/model-list-view.js \
@@ -100,6 +107,9 @@ TEST_LIB_SCRIPTS=\
 
 TEMPLATES=\
 	src/templates/main-view.jade \
+	src/templates/alert-dialog.jade \
+	src/templates/error-dialog.jade \
+	src/templates/select-frame-dialog.jade \
 	src/templates/topic-list-view.jade \
 	src/templates/frame-list-view.jade \
 	src/templates/model-list-view.jade \
