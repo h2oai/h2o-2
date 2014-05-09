@@ -1,6 +1,5 @@
 package hex;
 
-import static water.fvec.NewChunkHelper.extractChunkPart;
 import jsr166y.CountedCompleter;
 import water.H2O.H2OCountedCompleter;
 import water.*;
@@ -107,7 +106,7 @@ public class FrameSplitter extends H2OCountedCompleter {
       int[] splits = Utils.partitione(nrows, ratios);
       assert splits.length == ratios.length+1 : "Unexpected number of splits";
       for (int j=0; j<splits.length; j++) {
-        assert splits[j] > 0 : "Ups, no rows for " + j + "-th segment!";
+        //assert splits[j] > 0 : "Ups, no rows for " + j + "-th segment!";
         r[j][i+1] = r[j][i] + splits[j]; // previous + current number of rows
       }
     }
@@ -116,12 +115,14 @@ public class FrameSplitter extends H2OCountedCompleter {
 
   private void onDone(boolean exceptional) {
     dataset.unlock(jobKey);
-    for (Frame s : splits) {
-      if (!exceptional) { // just unlock if everything was ok
-        s.update(jobKey);
-        s.unlock(jobKey);
-      } else { // else delete current half-done results
-        if (s!=null) s.delete(jobKey,0f);
+    if (splits!=null) { // if exception is hit before splits array is allocated
+      for (Frame s : splits) {
+        if (!exceptional) { // just unlock if everything was ok
+          s.update(jobKey);
+          s.unlock(jobKey);
+        } else { // else delete current half-done results
+          if (s!=null) s.delete(jobKey,0f);
+        }
       }
     }
   }
@@ -151,7 +152,7 @@ public class FrameSplitter extends H2OCountedCompleter {
         // Extract correct rows of _partIdx-th split from i-th input vector into the i-th chunk
         assert cs[i]._len == splits[_partIdx]; // Be sure that we correctly prepared vector template
         // NOTE: we preserve co-location of cs[i] chunks with _srcVecs[i] chunks so it is local load of chunk
-        extractChunkPart(_srcVecs[i].chunkForChunkIdx(cidx), cs[i], startRow, splits[_partIdx], _fs);
+        ChunkSplitter.extractChunkPart(_srcVecs[i].chunkForChunkIdx(cidx), cs[i], startRow, splits[_partIdx], _fs);
         //extractPartXXX(_srcVecs[i].chunkForChunkIdx(cidx), cs[i], startRow, splits[_partIdx]);
       }
     }

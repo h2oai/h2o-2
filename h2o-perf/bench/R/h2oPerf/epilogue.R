@@ -140,6 +140,7 @@ function() {
                      preccision = ifelse(precision[[1]] == "NaN", .NaN, precision[[1]]),
                      recall = ifelse(recall[[1]] == "NaN", .NaN, recall[[1]]),
                      error_rate = ifelse(error_rate[[1]] == "NaN", .NaN, error_rate[[1]]),
+                     errs = multinom_errs,
                      minority_error_rate = ifelse(minority_error_rate[[1]] == "NaN", .NaN, minority_error_rate[[1]])))
   .coda("BINOMIAL", r)
 }
@@ -166,7 +167,7 @@ function() {
 
 .emitMultinomResults<-
 function() {
-  r <- list(multinomial_result = .confusionMatrix())
+  r <- list(multinomial_result = .confusionMatrix(), errs = multinom_errs)
   .coda("MULTINOMIAL", r)
 }
 

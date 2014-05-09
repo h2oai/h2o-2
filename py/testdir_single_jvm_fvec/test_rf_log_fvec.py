@@ -8,7 +8,6 @@ print "We have to make the output integer though, still (no regression support?"
 # we can pass ntree thru kwargs if we don't use the "trees" parameter in runRF
 paramDict = {
     # FIX! if there's a header, can you specify column number or column header
-    # 'response': 'C54',
     'ntrees': 10,
     'destination_key': 'model_keyA',
     'max_depth': 20, 

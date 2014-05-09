@@ -1,4 +1,6 @@
 
+.. _Machlearn:
+
 Data Science and Machine Learning
 =================================
 .. raw:: html

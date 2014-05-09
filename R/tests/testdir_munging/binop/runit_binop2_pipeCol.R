@@ -44,7 +44,22 @@ test.binop2.pipe <- function(conn) {
   #col <- ifelse(is.na(suppressWarnings(as.numeric(col))), col, as.numeric(col))
   #col <- ifelse(is.na(suppressWarnings(as.numeric(col))), col, paste("C", col+1, sep = "", collapse = ""))
   df <- head(hex)
-  col <- gsub("\\.", " ", sample(colnames(df[!sapply(df, is.factor)]), 1))
+  col <- sample(colnames(df[!sapply(df, is.factor)]), 1)
+  if (!(grepl("\\.", col))) {
+    col <- gsub("\\.", " ", sample(colnames(df[!sapply(df, is.factor)]), 1)) 
+  }
+
+  print(which(col == colnames(df)))
+
+  print(colnames(hex))
+  print(col)
+
+  print(col %in% colnames(hex))
+  print(col %in% colnames(df))
+
+  if (!(col %in% colnames(hex))) {
+    col <- which(col == colnames(df))
+  }
 
   if(length(colnames(hex)) == 1) {
     Log.info(paste("Using column: ", colnames(hex)))

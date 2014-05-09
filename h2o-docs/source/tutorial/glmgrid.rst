@@ -1,3 +1,5 @@
+.. _GLMgrid_tutorial:
+
 GLM Grid Tutorial
 -------------------
 
@@ -7,7 +9,8 @@ specify, run, and interpret a GLM grid model using  H\ :sub:`2`\ O.
 Specification of GLM grid models are similar to GLM models, and all
 parameters and results have the same meaning. The primary difference
 between GLM and GLMgrid is that users can specify several different
-models, and generate the specified models simultaneously. 
+models, and generate the specified models simultaneously. For more
+information visit the GLM tutorial :ref:`GLM_tutorial`
 
 Those who have never used H\ :sub:`2`\ O before should see the quick
 start guide for additional instructions on how to run H\ :sub:`2`\ O.

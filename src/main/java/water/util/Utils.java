@@ -40,6 +40,21 @@ public class Utils {
     return result;
   }
 
+  public static int maxIndex(float[] from, Random rand) {
+    assert rand != null;
+    int result = 0;
+    int maxCount = 0; // count of maximal element for a 1 item reservoir sample
+    for( int i = 1; i < from.length; ++i ) {
+      if( from[i] > from[result] ) {
+        result = i;
+        maxCount = 1;
+      } else if( from[i] == from[result] ) {
+        if( rand.nextInt(++maxCount) == 0 ) result = i;
+      }
+    }
+    return result;
+  }
+
   public static int maxIndex(int[] from) {
     int result = 0;
     for (int i = 1; i<from.length; ++i)
@@ -212,6 +227,26 @@ public class Utils {
   }
 
   public static String sampleToString(int[] val, int max) {
+    if (val == null || val.length < max) return Arrays.toString(val);
+
+    StringBuilder b = new StringBuilder();
+    b.append('[');
+    max -= 10;
+    int valMax = val.length -1;
+    for (int i = 0; ; i++) {
+        b.append(val[i]);
+        if (i == max) {
+          b.append(", ...");
+          i = val.length - 10;
+        }
+        if ( i == valMax) {
+          return b.append(']').toString();
+        }
+        b.append(", ");
+    }
+  }
+
+  public static String sampleToString(double[] val, int max) {
     if (val == null || val.length < max) return Arrays.toString(val);
 
     StringBuilder b = new StringBuilder();
@@ -1350,7 +1385,7 @@ public class Utils {
     // Header
     if (html) {
       sb.append("<tr class='warning' style='min-width:60px'>");
-      sb.append("<th>Actual / Predicted</th>");
+      sb.append("<th>&darr; Actual / Predicted &rarr;</th>");
       for( int p=0; p<pdomain.length; p++ )
         if( pdomain[p] != null )
           sb.append("<th style='min-width:60px'>").append(pdomain[p]).append("</th>");
@@ -1438,11 +1473,14 @@ public class Utils {
     int[] r = new int[ratio.length+1];
     int sum = 0;
     int i = 0;
+    float sr = 0;
     for (i=0; i<ratio.length; i++) {
       r[i] = (int) (ratio[i]*len);
       sum += r[i];
+      sr  += ratio[i];
     }
-    r[i] = len - sum;
+    if (sr<1f) r[i] = len - sum;
+    else r[i-1] += (len-sum);
     return r;
   }
 

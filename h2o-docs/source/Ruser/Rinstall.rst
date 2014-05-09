@@ -1,7 +1,9 @@
 .. _Rfromdownload:
 
-H\ :sub:`2`\ O installation in R Console From Download Table
--------------------------------------------------------------
+H\ :sub:`2`\ O Installation in R From Download Table
+===============================================================
+
+
 These instructions assume you are using R  2.14.0 or later.  
 Regardless of whether installation is carried out in R Studio or R Console, the instructions are the same. 
 
@@ -64,7 +66,7 @@ arguments in the R call.
 
 
 Users who wish to specify a connection
-with a server (other than localhost at port 54321) must explicity
+with a server (other than localhost at port 54321) must explicitly
 state the IP address and port number in the h2o.init call. 
 An example is given below, but **do not cut and paste**; users should
 specify the IP and port number appropriate to their specific

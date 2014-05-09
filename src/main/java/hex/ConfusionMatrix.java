@@ -96,7 +96,12 @@ public class ConfusionMatrix extends Iced {
       _classErr[i] = classErr(i);
     _predErr = err();
   }
-
+  public final long classErrCount(int c) {
+    long s = 0;
+    for( long x : _arr[c] )
+      s += x;
+    return s - _arr[c][c];
+  }
   public final double classErr(int c) {
     long s = 0;
     for( long x : _arr[c] )
@@ -126,6 +131,13 @@ public class ConfusionMatrix extends Iced {
     for( int d = 0; d < _arr.length; ++d )
       err -= _arr[d][d];
     return (double) err / n;
+  }
+  public long errCount() {
+    long n = totalRows();
+    long err = n;
+    for( int d = 0; d < _arr.length; ++d )
+      err -= _arr[d][d];
+    return err;
   }
   /**
    * The percentage of predictions that are correct.

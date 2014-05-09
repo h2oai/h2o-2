@@ -3,7 +3,7 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_import as h2i, h2o_jobs
 
 paramDict = {
-    'response': [None,'C54'],
+    'response': [None,'C55'],
     'max_depth': [None, 1,10,20,100],
     'nbins': [None,5,10,100,1000],
     'ignored_cols_by_name': [None,'C1','C2','C3','C4','C5','C6','C7','C8','C9'],

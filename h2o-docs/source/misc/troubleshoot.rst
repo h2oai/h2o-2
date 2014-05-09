@@ -1,5 +1,8 @@
+.. _Troubleshooting:
+
+
 Troubleshooting H\ :sub:`2`\ O
---------------------------------
+=================================
 
 Download and Send Us Your Logs
 """""""""""""""""""""""""""""""
@@ -8,7 +11,7 @@ Download and Send Us Your Logs
 
   Through the drop down menu **Admin** go to **Log View**. 
 
-  On the log view page there is a **Download Logs button** in the
+  On the **Log View** page there is a **Download Logs** button in the
   upper left hand corner. Click on it to download your logs. 
 
 .. Image:: Logsdownload.png

@@ -179,8 +179,13 @@ public class Frame extends Lockable<Frame> {
 
  /** Appends a named column, keeping the last Vec as the response */
   public Frame add( String name, Vec vec ) {
-    assert _vecs.length == 0 || anyVec().group().equals(vec.group()) || Arrays.equals(anyVec()._espc,vec._espc) : "Vector groups differs - adding vec named '"+name+"' into the frame with names " + Arrays.toString(_names);
     if( find(name) != -1 ) throw new IllegalArgumentException("Duplicate name '"+name+"' in Frame");
+    if( _vecs.length != 0 ) {
+      if( !anyVec().group().equals(vec.group()) && !Arrays.equals(anyVec()._espc,vec._espc) )
+        throw new IllegalArgumentException("Vector groups differs - adding vec '"+name+"' into the frame " + Arrays.toString(_names));
+      if( numRows() != vec.length() )
+        throw new IllegalArgumentException("Vector lengths differ - adding vec '"+name+"' into the frame " + Arrays.toString(_names));
+    }
     final int len = _names != null ? _names.length : 0;
     _names = _names != null ? Arrays.copyOf(_names,len+1) : new String[len+1];
     _vecs  = _names != null ? Arrays.copyOf(_vecs ,len+1) : new Vec   [len+1];

@@ -30,7 +30,9 @@ class Basic(unittest.TestCase):
 
         print "Just split away and see if anything blows up"
         splitMe = hex_key
-        for s in range(20):
+
+        # don't split
+        for s in range(10):
             fs = h2o.nodes[0].frame_split(source=splitMe, ratios=0.5)
             split0_key = fs['split_keys'][0]
             split1_key = fs['split_keys'][1]
@@ -40,6 +42,8 @@ class Basic(unittest.TestCase):
             split1_ratio = fs['split_ratios'][1]
             print "Iteration", s, "split0_rows:", split0_rows, "split1_rows:", split1_rows
             splitMe = split0_key
+            if split0_rows<=2:
+                break
 
 
 if __name__ == '__main__':

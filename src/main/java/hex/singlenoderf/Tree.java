@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 
 public class Tree extends H2OCountedCompleter {
-  static public enum StatType { ENTROPY, GINI };
+  static public enum StatType { ENTROPY, GINI, MSE};
 
   /** Left and right seed initializer number for statistics */
   public static final long LTSS_INIT = 0xe779aef0a6fd0c16L;
@@ -43,11 +43,14 @@ public class Tree extends H2OCountedCompleter {
   int            _exclusiveSplitLimit;
   int            _verbose;
   final byte     _producerId;   // Id of node producing this tree
+  final boolean  _regression; // If true, will build regression tree.
 
   /**
    * Constructor used to define the specs when building the tree from the top.
    */
-  public Tree(final Job job, final Data data, byte producerId, int maxDepth, StatType stat, int numSplitFeatures, long seed, int treeId, int exclusiveSplitLimit, final hex.singlenoderf.Sampling sampler, int verbose) {
+  public Tree(final Job job, final Data data, byte producerId, int maxDepth, StatType stat,
+              int numSplitFeatures, long seed, int treeId, int exclusiveSplitLimit,
+              final hex.singlenoderf.Sampling sampler, int verbose, boolean regression) {
     _job              = job;
     _data             = data;
     _type             = stat;
@@ -59,6 +62,7 @@ public class Tree extends H2OCountedCompleter {
     _exclusiveSplitLimit = exclusiveSplitLimit;
     _verbose          = verbose;
     _producerId       = producerId;
+    _regression       = regression;
   }
 
   // Oops, uncaught exception
@@ -69,14 +73,25 @@ public class Tree extends H2OCountedCompleter {
 
   private hex.singlenoderf.Statistic getStatistic(int index, Data data, long seed, int exclusiveSplitLimit) {
     hex.singlenoderf.Statistic result = _stats[index].get();
+    if (_type == StatType.MSE) {
+      if(!_regression) {
+        throw H2O.unimpl();
+      }
+      if (result == null) {
+      result = new MSEStatistic(data, _numSplitFeatures, _seed, exclusiveSplitLimit);
+      _stats[index].set(result);
+      }
+      result.forgetFeatures();
+    } else {
     if( result==null ) {
       result  = _type == StatType.GINI ?
               new GiniStatistic(data,_numSplitFeatures, _seed, exclusiveSplitLimit) :
               new EntropyStatistic(data,_numSplitFeatures, _seed, exclusiveSplitLimit);
       _stats[index].set(result);
     }
+    }
     result.forgetFeatures();   // All new features
-    result.reset(data, seed);
+    result.reset(data, seed, _regression);
     return result;
   }
 
@@ -112,12 +127,16 @@ public class Tree extends H2OCountedCompleter {
       Data d = _sampler.sample(_data, _seed);
       hex.singlenoderf.Statistic left = getStatistic(0, d, _seed, _exclusiveSplitLimit);
       // calculate the split
-      for( Row r : d ) left.addQ(r);
-      left.applyClassWeights();   // Weight the distributions
+      for( Row r : d ) left.addQ(r, _regression);
+      if (!_regression)
+        left.applyClassWeights();   // Weight the distributions
       hex.singlenoderf.Statistic.Split spl = left.split(d, false);
-      _tree = spl.isLeafNode()
-              ? new LeafNode(_data.unmapClass(spl._split), d.rows())
-              : new FJBuild (spl, d, 0, _seed).compute();
+      if(spl.isLeafNode()) {
+        float av = d.computeAverage();
+        _tree = new LeafNode(-1, d.rows(), av);
+      } else {
+        _tree = new FJBuild (spl, d, 0, _seed).compute();
+      }
 
       if (_verbose > 1)  Log.info(Sys.RANDF,computeStatistics().toString());
       _stats = null; // GC
@@ -168,11 +187,23 @@ public class Tree extends H2OCountedCompleter {
       FJBuild fj0 = null, fj1 = null;
       hex.singlenoderf.Statistic.Split ls = left.split(res[0], _depth >= _maxDepth); // get the splits
       hex.singlenoderf.Statistic.Split rs = rite.split(res[1], _depth >= _maxDepth);
-      if (ls.isLeafNode() || ls.isImpossible())
-        nd._l = new LeafNode(_data.unmapClass(ls._split), res[0].rows()); // create leaf nodes if any
+      if (ls.isLeafNode() || ls.isImpossible()) {
+        if (_regression) {
+          float av = res[0].computeAverage();
+          nd._l = new LeafNode(-1, res[0].rows(), av);
+        } else {
+          nd._l = new LeafNode(_data.unmapClass(ls._split), res[0].rows(),-1); // create leaf nodes if any
+        }
+      }
       else  fj0 = new FJBuild(ls,res[0],_depth+1, _seed + LTS_INIT);
-      if (rs.isLeafNode() || rs.isImpossible())
-        nd._r = new LeafNode(_data.unmapClass(rs._split), res[1].rows());
+      if (rs.isLeafNode() || rs.isImpossible()) {
+        if (_regression) {
+          float av = res[1].computeAverage();
+          nd._r = new LeafNode(-1, res[0].rows(), av);
+        } else {
+        nd._r = new LeafNode(_data.unmapClass(rs._split), res[1].rows(),-1);
+        }
+      }
       else  fj1 = new  FJBuild(rs,res[1],_depth+1, _seed - RTS_INIT);
       // Recursively build the splits, in parallel
       if (_data.rows() > ROWS_FORK_TRESHOLD) {
@@ -195,7 +226,7 @@ public class Tree extends H2OCountedCompleter {
   }
 
   public static abstract class INode {
-    abstract int classify(Row r);
+    abstract float classify(Row r);
     abstract int depth();       // Depth of deepest leaf
     abstract int leaves();      // Number of leaves
     abstract void computeStats(ArrayList<SplitInfo>[] stats);
@@ -211,27 +242,36 @@ public class Tree extends H2OCountedCompleter {
 
   /** Leaf node that for any row returns its the data class it belongs to. */
   static class LeafNode extends INode {
+    final float _c;      // The continuous response
     final int _class;    // A category reported by the inner node
     final int _rows;     // A number of classified rows (only meaningful for training)
     /**
      * Construct a new leaf node.
      * @param c - a particular value of class predictor from interval [0,N-1]
+     *                OR possibly -1 for regression
+     * @param r - A continous response.
      * @param rows - numbers of rows with the predictor value
      */
-    LeafNode(int c, int rows) {
-      assert 0 <= c && c <= 254; // sanity check
+    LeafNode(int c, int rows, float r) {
+      assert -1 <= c && c <= 254; // sanity check
       _class = c;               // Class from 0 to _N-1
       _rows  = rows;
+      _c = r;
     }
+
     @Override public int depth()  { return 0; }
     @Override public int leaves() { return 1; }
     @Override public void computeStats(ArrayList<SplitInfo>[] stats) { /* do nothing for leaves */ }
-    @Override public int classify(Row r) { return _class; }
+    @Override public float classify(Row r) { if (_class == -1) { return _c; } else return (float)_class; }
     @Override public StringBuilder toString(StringBuilder sb, int n ) { return sb.append('[').append(_class).append(']').append('{').append(_rows).append('}'); }
     @Override public void print(TreePrinter p) throws IOException { p.printNode(this); }
     @Override void write( AutoBuffer bs ) {
       bs.put1('[');             // Leaf indicator
-      bs.put1(_class);
+      if (_class == -1) {
+        bs.put4f(_c);
+      } else {
+        bs.put1(_class);
+      }
     }
     @Override int size_impl( ) { return 2; } // 2 bytes in serialized form
   }
@@ -272,7 +312,7 @@ public class Tree extends H2OCountedCompleter {
       }
     }
 
-    @Override int classify(Row r) { return r.getEncodedColumnValue(_column) <= _split ? _l.classify(r) : _r.classify(r);  }
+    @Override float classify(Row r) { return r.getEncodedColumnValue(_column) <= _split ? _l.classify(r) : _r.classify(r);  }
     @Override public int depth() { return  _depth != 0 ? _depth : (_depth = Math.max(_l.depth(), _r.depth()) + 1); }
     @Override public int leaves() { return  _leaves != 0 ? _leaves : (_leaves=_l.leaves() + _r.leaves()); }
     @Override void computeStats(ArrayList<SplitInfo>[] stats) {
@@ -331,7 +371,7 @@ public class Tree extends H2OCountedCompleter {
 
     public ExclusionNode(int column, int val, String cname, float origSplit) { super(column,val,cname,origSplit);  }
 
-    @Override int classify(Row r) { return r.getEncodedColumnValue(_column) == _split ? _l.classify(r) : _r.classify(r); }
+    @Override float classify(Row r) { return r.getEncodedColumnValue(_column) == _split ? _l.classify(r) : _r.classify(r); }
     @Override public void print(TreePrinter p) throws IOException { p.printNode(this); }
     @Override public String toString() { return "E "+_column +"==" + _split + " ("+_l+","+_r+")"; }
     @Override public StringBuilder toString( StringBuilder sb, int n ) {
@@ -361,7 +401,7 @@ public class Tree extends H2OCountedCompleter {
     public boolean isIn(Row row) { return row.getEncodedColumnValue(_column) == _split; }
   }
 
-  public int classify(Row r) { return _tree.classify(r); }
+  public float classify(Row r) { return _tree.classify(r); }
   public String toString()   { return _tree.toString(); }
   public int leaves() { return _tree.leaves(); }
   public int depth() { return _tree.depth(); }
@@ -381,7 +421,7 @@ public class Tree extends H2OCountedCompleter {
   /** Classify this serialized tree - withOUT inflating it to a full tree.
    Use row 'row' in the dataset 'ary' (with pre-fetched bits 'databits')
    Returns classes from 0 to N-1*/
-  public static short classify( AutoBuffer ts, Frame fr, Chunk[] chks, int row, int modelDataMap[], short badData ) {
+  public static float classify( AutoBuffer ts, Frame fr, Chunk[] chks, int row, int modelDataMap[], short badData, boolean regression ) {
     ts.get4();    // Skip tree-id
     ts.get8();    // Skip seed
     ts.get1();    // Skip producer id
@@ -404,11 +444,14 @@ public class Tree extends H2OCountedCompleter {
         if( fdat > fcmp ) ts.position(ts.position() + skip);
       }
     }
-    return (short) ( ts.get1()&0xFF );      // Return the leaf's class
+    if (regression) {
+      return ts.get4f();
+    }
+    return (float)((short) ( ts.get1()&0xFF ));      // Return the leaf's class
   }
 
   // Classify on the compressed tree bytes, from the pre-packed double data
-  public static double classify( AutoBuffer ts, double[] ds, double badat ) {
+  public static double classify( AutoBuffer ts, double[] ds, double badat, boolean regression ) {
     ts.get4();    // Skip tree-id
     ts.get8();    // Skip seed
     ts.get1();    // Skip producer id
@@ -418,7 +461,10 @@ public class Tree extends H2OCountedCompleter {
       assert b == '(' || b == 'S' || b == 'E';
       int col = ts.get2(); // Column number in model-space
       float fcmp = ts.get4f();  // Float to compare against
-      if( Double.isNaN(ds[col]) ) return badat;
+      if( Double.isNaN(ds[col]) )
+      {
+        return badat;
+      }
       float fdat = (float)ds[col];
       int skip = (ts.get1()&0xFF);
       if( skip == 0 ) skip = ts.get3();
@@ -430,7 +476,9 @@ public class Tree extends H2OCountedCompleter {
         if( fdat > fcmp ) ts.position(ts.position() + skip);
       }
     }
-    return ts.get1()&0xFF;      // Return the leaf's class
+    if(regression) return ts.get4f();
+    int vote = ts.get1()&0xFF;
+    return vote;      // Return the leaf's class
   }
 
   public static int dataId( byte[] bits) { return UDP.get4(bits, 0); }

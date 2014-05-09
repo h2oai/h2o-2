@@ -88,7 +88,8 @@ class Basic(unittest.TestCase):
         write_syn_dataset(csvPathname, 1000000, SEED)
 
         print "\nStarting", csvFilename
-        parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=csvFilename + ".hex")
+        hex_key = csvFilename + ".hex"
+        parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key)
 
         for trial in range(10):
             # reuse the same seed, to get deterministic results (otherwise sometimes fails
@@ -117,6 +118,10 @@ class Basic(unittest.TestCase):
             # all are multipliers of expected tuple value
             allowedDelta = (0.01, 0.01, 0.01) 
             h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, trial=trial)
+
+            gs = h2o.nodes[0].gap_statistic(source=hex_key, k_max=5, timeoutSecs=300)
+            print "gap_statistic:", h2o.dump_json(gs)
+
 
 if __name__ == '__main__':
     h2o.unit_main()

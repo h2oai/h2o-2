@@ -71,7 +71,7 @@ class PerfRunner:
         parse_file = "parse.R"  # testDir + "_Parse.R"
         model_file = "model.R"  # testDir + "_Model.R"
         predict_file = None
-        if os.path.exists(os.path.join(self.test_root_dir, testDir, "predict.R")):
+        if os.path.exists(os.path.join(self.test_root_dir, prefix, testDir, "predict.R")):
             predict_file = "predict.R"
 
         test_dir = os.path.join(self.test_root_dir, prefix, testDir)
@@ -84,7 +84,7 @@ class PerfRunner:
         self.tests.append(test)
         self.q = "0xperf"
         self.tests_not_started.append(test)
-
+    
     def run_tests(self):
         """
         Run all tests.
@@ -93,6 +93,10 @@ class PerfRunner:
         """
         if self.terminated:
             return
+        print "DEBUG: TESTS TO BE RUN:"
+        names = [test.test_name for test in self.tests]
+        for n in names:
+            print n
 
         num_tests = len(self.tests)
         self.__log__("")
@@ -134,6 +138,7 @@ class PerfRunner:
                 test.test_run.update(True)
                 p.terminate()
                 print "Successfully stopped profiler..."
+                PerfUtils.stop_cloud(self, test.remote_hosts)
                 self.cloud.pop(0)
                 self.perfdb.this_test_run_id += 1
             except:
@@ -141,8 +146,10 @@ class PerfRunner:
                 print '-' * 60
                 traceback.print_exc(file=sys.stdout)
                 print '-' * 60
+                p.terminate()
                 PerfUtils.stop_cloud(self, test.remote_hosts)
                 self.cloud.pop(0)
+                self.perfdb.this_test_run_id += 1
 
     def begin_sys_profiling(self, test_name):
         this_path = os.path.dirname(os.path.realpath(__file__))
@@ -150,7 +157,7 @@ class PerfRunner:
         cmd = ["python", hounds_py, str(self.perfdb.this_test_run_id),
                self.cloud[0].all_pids(), self.cloud[0].all_ips(), test_name]
         print
-        print "Unleashing the hounds!"
+        print "Start scraping /proc for mem & cpu"
         print ' '.join(cmd)
         print
         out = os.path.join(this_path, "../results", str(self.perfdb.this_test_run_id))

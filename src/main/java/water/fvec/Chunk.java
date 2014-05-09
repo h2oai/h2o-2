@@ -168,7 +168,7 @@ public abstract class Chunk extends Iced implements Cloneable {
   public int sparseLen(){return _len;}
 
   /**
-   * Get chunk-relative indeces of values (nonzeros for sparse, all for dense) stored in this chunk.
+   * Get chunk-relative indexes of values (nonzeros for sparse, all for dense) stored in this chunk.
    * For desne chunks, this will contain indeces of all the rows in this chunk.
    *
    * @return array of chunk-relative indeces of values stored in this chunk.

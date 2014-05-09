@@ -69,7 +69,7 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
             if (param_ntrees is not None and used_trees != param_ntrees):
                 raise Exception("used_trees should == param_ntree. used_trees: %s"  % used_trees)
             if (used_trees+1)!=len(cms) or (used_trees+1)!=len(errs):
-                raise Exception("len(cms): %s and len(errs): %s should be one more than N %s trees" % (len(cms), len(errs), N))
+                raise Exception("len(cms): %s and len(errs): %s should be one more than N %s trees" % (len(cms), len(errs), used_trees))
 
     else:
         cm = rfv['confusion_matrix']

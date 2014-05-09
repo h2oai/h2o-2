@@ -16,7 +16,7 @@ h2o.exportFile(data, path, force = FALSE)
 }
 
 \arguments{
-  \item{object}{
+  \item{data}{
 An \code{\linkS4class{H2OParsedData}} or \code{\linkS4class{H2OParsedDataVA}} data frame.
 }
   \item{path}{

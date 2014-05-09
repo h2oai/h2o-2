@@ -1,5 +1,7 @@
-H\ :sub:`2`\ OLicense
-=====================
+.. _License:
 
-H2O is licensed with the `Apache 2.0 open source license <http://www.apache.org/licenses/LICENSE-2.0.html>`_.
+H\ :sub:`2`\ O License
+==========================
+
+H\ :sub:`2`\ O is licensed with the `Apache 2.0 open source license <http://www.apache.org/licenses/LICENSE-2.0.html>`_.
 

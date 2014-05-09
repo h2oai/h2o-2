@@ -1,16 +1,17 @@
 package water.api;
 
+import com.google.gson.JsonObject;
+import water.*;
+import water.parser.CsvParser;
+import water.parser.CustomParser;
+import water.parser.ParseDataset;
+import water.util.RString;
+
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Set;
 import java.util.regex.Pattern;
-import java.io.File;
-
-import water.*;
-import water.parser.*;
-import water.util.RString;
-
-import com.google.gson.JsonObject;
 
 public class Parse extends Request {
 
@@ -209,7 +210,7 @@ public class Parse extends Request {
     @Override protected String queryElement() {
       StringBuilder sb = new StringBuilder(super.queryElement() + "\n");
       try{
-        String [] colnames = _source.value()._setup._setup._columnNames;
+        String [] colnames = _source.value() != null ? _source.value()._setup._setup._columnNames : null;
         if(colnames != null){
           sb.append("<table class='table table-striped table-bordered'>").append("<tr><th>Header:</th>");
           for( String s : colnames ) sb.append("<th>").append(s).append("</th>");

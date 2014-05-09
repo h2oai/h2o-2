@@ -119,4 +119,4 @@ Data Manipulation
 
 Users who wish to manipulate their data after it has been parsed into
 H\ :sub:`2`\ O have a set of tools to do via  H\ :sub:`2`\ O + R. 
-To learn more about data manipulation refer to :ref:`R_tutorial`. 
+

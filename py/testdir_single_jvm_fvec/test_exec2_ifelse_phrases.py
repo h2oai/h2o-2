@@ -71,7 +71,7 @@ phrases = [
         "r.hex[nrow(r.hex),]",
         "r.hex[nrow(r.hex)-1,ncol(r.hex)-1]",
         "r.hex-r.hex",
-        "runif(r.hex[,1])",
+        "runif(r.hex[,1], -1)",
         "sum(1,2)",
         "sum(1,2,3)",
         "sum(1,r.hex,3)",

@@ -56,10 +56,10 @@ $('*').on('change', '#question', function() {
 
 function makeGraph(json, svg) {
     var margin = {top: 20, right: 80, bottom: 30, left: 50},
-        width = 1200 - margin.left - margin.right,
+        width = 2000 - margin.left - margin.right,
         height = 500 -margin.top -margin.bottom;
 
-    var x = d3.scale.linear().range([0, width - 200]);
+    var x = d3.scale.linear().range([0, width - 1000]);
     var y = d3.scale.linear().range([height, 0]);
     var color = d3.scale.category10();
 

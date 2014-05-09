@@ -69,28 +69,28 @@ class test_NN_twovalues(unittest.TestCase):
             print "\n" + csvPathname, \
                 "    numRows:", "{:,}".format(inspect['numRows']), \
                 "    numCols:", "{:,}".format(inspect['numCols'])
-            response = inspect['numCols'] - 1
+            response = inspect['numCols']
+            response = 'C' + str(response)
 
             kwargs = {
                 'ignored_cols'                 : None,
-                'response'                     : 'C' + str(response),
+                'response'                     : response,
                 'classification'               : 1,
                 'activation'                   : 'Tanh',
                 #'input_dropout_ratio'          : 0.2,
-                'hidden'                       : '500',
+                'hidden'                       : '113,71,54',
                 'rate'                         : 0.01,
                 'rate_annealing'               : 1e-6,
                 'momentum_start'               : 0,
                 'momentum_stable'              : 0,
                 'l1'                           : 0.0,
-                'l2'                           : 1e-4,
+                'l2'                           : 1e-6,
                 'seed'                         : 80023842348,
                 'loss'                         : 'CrossEntropy',
                 #'max_w2'                       : 15,
-                #'warmup_samples'               : 0,
                 'initial_weight_distribution'  : 'UniformAdaptive',
                 #'initial_weight_scale'         : 0.01,
-                'epochs'                       : 1.0,
+                'epochs'                       : 100,
                 'destination_key'              : model_key,
                 'validation'                   : hex_key,
             }
@@ -101,7 +101,7 @@ class test_NN_twovalues(unittest.TestCase):
             print "trial #", trial, "Deep Learning end on ", csvFilename, ' took', time.time() - start, 'seconds'
 
             #### Now score using the model, and check the validation error
-            expectedErr = 0.001
+            expectedErr = 0.00
             relTol = 0.01
             predict_key = 'Predict.hex'
 

@@ -73,8 +73,8 @@ public class NewChunk extends Chunk {
     final Value v = new Value(lId,gId);
     final Value next = new Value(lId,gId);
     return new Iterator<Value>(){
-      public final boolean hasNext(){return next._gId < to;}
-      public final Value next(){
+      @Override public final boolean hasNext(){return next._gId < to;}
+      @Override public final Value next(){
         if(!hasNext())throw new NoSuchElementException();
         v._gId = next._gId; v._lId = next._lId;
         next._lId++;
@@ -660,7 +660,7 @@ public class NewChunk extends Chunk {
     int j = 0;
     for(int i = 0; i < _len2; ++i){
       double d = 0;
-      if(_id == null || _id[j] == i){
+      if(_id == null || (j < _id.length && _id[j] == i)) {
         d = _ds != null?_ds[j]:(isNA2(j)||isEnum(j))?Double.NaN:_ls[j]*DParseTask.pow10(_xs[j]);
         ++j;
       }

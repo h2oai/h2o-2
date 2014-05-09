@@ -44,8 +44,8 @@ class Basic(unittest.TestCase):
         # make the timeout variable per dataset. it can be 10 secs for covtype 20x (col key creation)
         # so probably 10x that for covtype200
         csvFilenameList = [
-            ("mnist_train.svm", "cM", 30, 0, 9, False, False),
-            ("covtype.binary.svm", "cC", 30, 1, 2, True, True),
+            ("mnist_train.svm", "cM", 30, 0, 9.0, False, False),
+            ("covtype.binary.svm", "cC", 30, 1, 2.0, True, True),
             # multi-label target like 1,2,5 ..not sure what that means
             # ("tmc2007_train.svm",  "cJ", 30, 0, 21.0, False, False),
             # illegal non-ascending cols
@@ -54,13 +54,13 @@ class Basic(unittest.TestCase):
             # fails csvDownload
             ("duke.svm",           "cD", 30, -1.000000, 1.000000, False, False),
             ("colon-cancer.svm",   "cA", 30, -1.000000, 1.000000, False, False),
-            ("news20.svm",         "cH", 30, 1, 20, False, False), 
-            ("connect4.svm",       "cB", 30, -1, 1, False, False),
+            ("news20.svm",         "cH", 30, 1, 20.0, False, False), 
+            ("connect4.svm",       "cB", 30, -1, 1.0, False, False),
             # too many features? 150K inspect timeout?
             # ("E2006.train.svm",    "cE", 30, 1, -7.89957807346873 -0.519409526940154, False, False)
 
-            ("gisette_scale.svm",  "cF", 30, -1, 1, False, False),
-            ("mushrooms.svm",      "cG", 30, 1, 2, False, False),
+            ("gisette_scale.svm",  "cF", 30, -1, 1.0, False, False),
+            ("mushrooms.svm",      "cG", 30, 1, 2.0, False, False),
         ]
 
         ### csvFilenameList = random.sample(csvFilenameAll,1)
@@ -83,14 +83,15 @@ class Basic(unittest.TestCase):
             h2o_cmd.infoFromInspect(inspectFirst, csvFilename)
             # look at the min/max for the target col (0) and compare to expected for the dataset
             
-            imin = inspectFirst['cols'][0]['min']
-            imax = inspectFirst['cols'][0]['max']
+            imin = float(inspectFirst['cols'][0]['min'])
+            # print h2o.dump_json(inspectFirst['cols'][0])
+            imax = float(inspectFirst['cols'][0]['max'])
 
             if expectedCol0Min:
                 self.assertEqual(imin, expectedCol0Min,
                     msg='col %s min %s is not equal to expected min %s' % (0, imin, expectedCol0Min))
             if expectedCol0Max:
-                self.assertEqual(imax, expectedCol0Max,
+                h2o_util.assertApproxEqual(imax, expectedCol0Max, tol=0.00000001,
                     msg='col %s max %s is not equal to expected max %s' % (0, imax, expectedCol0Max))
 
             print "\nmin/max for col0:", imin, imax
@@ -164,8 +165,8 @@ class Basic(unittest.TestCase):
                     # make the check conditional based on the dataset
                     self.assertEqual(row_sizeA, row_sizeB,
                         "row_size mismatches after re-parse of downloadCsv result %d %d" % (row_sizeA, row_sizeB))
-                    self.assertEqual(value_size_bytesA, value_size_bytesB,
-                        "value_size_bytes mismatches after re-parse of downloadCsv result %d %d" % (value_size_bytesA, value_size_bytesB))
+                    h2o_util.assertApproxEqual(value_size_bytesA, value_size_bytesB, tol=0.00000001,
+                        msg="value_size_bytes mismatches after re-parse of downloadCsv result %d %d" % (value_size_bytesA, value_size_bytesB))
 
                 print "missingValuesListA:", missingValuesListA
                 print "missingValuesListB:", missingValuesListB

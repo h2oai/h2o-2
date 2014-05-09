@@ -9,7 +9,7 @@ print "Temporarily not using bin_limit=1 to 4"
 paramDict = {
     # 2 new
     'score_each_iteration': [None, None, None, 0, 1],
-    'response': [None,'C54'],
+    'response': [None, 'C55'],
     'validation': [None, 'covtype.data.hex'],
     'ntrees': [1,3,7,19],
     'importance': [None, 0, 1],

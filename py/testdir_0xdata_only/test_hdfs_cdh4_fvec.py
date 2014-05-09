@@ -20,7 +20,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_hdfs_fvec(self):
+    def test_hdfs_cdh5_fvec(self):
         h2o.beta_features = True
         print "\nLoad a list of files from HDFS, parse and do 1 RF tree"
         print "\nYou can try running as hduser/hduser if fail"
@@ -28,33 +28,20 @@ class Basic(unittest.TestCase):
         # fails because classes aren't integers
         #    "allstate_claim_prediction_train_set.zip",
         csvFilenameAll = [
-            "TEST-poker1000.csv",
-            "leads.csv",
-            "and-testing.data",
-            "arcene2_train.both",
-            "arcene_train.both",
-            # these can't RF ..output classes not integer?
-            # "bestbuy_test.csv",
-            # "bestbuy_train.csv",
-            "covtype.data",
-            "covtype.4x.shuffle.data",
-            "covtype4x.shuffle.data",
-            "covtype.13x.data",
-            "covtype.13x.shuffle.data",
-            # "covtype.169x.data",
-            # "prostate_2g.csv",
-            # "prostate_long.csv.gz",
-            "prostate_long_1G.csv",
-            "hhp.unbalanced.012.1x11.data.gz",
-            "hhp.unbalanced.012.data.gz",
-            "hhp.unbalanced.data.gz",
-            "hhp2.os.noisy.0_1.data",
-            "hhp2.os.noisy.9_4.data",
-            "hhp_9_14_12.data",
-            # "poker_c1s1_testing_refresh.csv",
-            # "3G_poker_shuffle",
-            # "billion_rows.csv.gz",
-            # "poker-hand.1244M.shuffled311M.full.txt",
+            # "3G_poker_shuffle"
+            ("and-testing.data", 60),
+            ### "arcene2_train.both",
+            ### "arcene_train.both",
+            ### "bestbuy_test.csv",
+            ("covtype.data", 60),
+            ("covtype4x.shuffle.data", 60),
+            # "four_billion_rows.csv",
+            ("hhp.unbalanced.012.data.gz", 60),
+            ("hhp.unbalanced.data.gz", 60),
+            ("leads.csv", 60),
+            ("covtype.169x.data", 600),
+            ("prostate_long_1G.csv", 600),
+            ("airlines_all.csv", 900),
         ]
 
         # pick 8 randomly!
@@ -67,12 +54,38 @@ class Basic(unittest.TestCase):
         # pop open a browser on the cloud
         # h2b.browseTheCloud()
 
-        for csvFilename in csvFilenameList:
+        trial = 0
+        print "try importing /tmp2"
+        d = h2i.import_only(path="tmp2/*", schema='hdfs', timeoutSecs=1000)
+        print h2o.dump_json(d)
+        d = h2i.import_only(path="datasets/*", schema='hdfs', timeoutSecs=1000)
+        print h2o.dump_json(d)
+        for (csvFilename, timeoutSecs) in csvFilenameList:
             # creates csvFilename.hex from file in hdfs dir 
             print "Loading", csvFilename, 'from HDFS'
+            start = time.time()
+            hex_key = "a.hex"
             csvPathname = "datasets/" + csvFilename
-            parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', timeoutSecs=1000)
-            print "parse result:", parseResult['destination_key']
+            parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', hex_key=hex_key, timeoutSecs=1000)
+            print "hdfs parse of", csvPathname, "took", time.time() - start, 'secs'
+
+            start = time.time()
+            print "Saving", csvFilename, 'to HDFS'
+            print "Using /tmp2 to avoid the '.' prefixed files in /tmp2 (kills import)"
+            csvPathname = "tmp2/a%s.csv" % trial
+            path = "hdfs://"+ h2o.nodes[0].hdfs_name_node + "/" + csvPathname
+            h2o.nodes[0].export_files(src_key=hex_key, path=path, force=1, timeoutSecs=timeoutSecs)
+            print "export_files of", hex_key, "to", path, "took", time.time() - start, 'secs'
+            trial += 1
+
+            print "Re-Loading", csvFilename, 'from HDFS'
+            start = time.time()
+            hex_key = "a2.hex"
+            time.sleep(2)
+            d = h2i.import_only(path=csvPathname, schema='hdfs', timeoutSecs=1000)
+            print h2o.dump_json(d)
+            parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', hex_key=hex_key, timeoutSecs=1000)
+            print "hdfs re-parse of", csvPathname, "took", time.time() - start, 'secs'
 
 if __name__ == '__main__':
     h2o.unit_main()

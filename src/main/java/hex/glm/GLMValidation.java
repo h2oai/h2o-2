@@ -2,15 +2,11 @@ package hex.glm;
 
 import hex.ConfusionMatrix;
 import hex.glm.GLMParams.Family;
-
-import java.text.DecimalFormat;
-import java.util.Arrays;
-
-import water.*;
+import water.Iced;
+import water.Key;
 import water.api.AUC;
 import water.api.DocGen;
 import water.api.Request.API;
-import water.api.RequestBuilders;
 import water.util.ModelUtils;
 
 /**
@@ -154,7 +150,7 @@ public class GLMValidation extends Iced {
     computeAIC();
     if(_glm.family == Family.binomial){
       for(ConfusionMatrix cm:_cms)cm.reComputeErrors();
-      AUC auc = new AUC(_cms,thresholds);
+      AUC auc = new AUC(_cms,thresholds,/*TODO: add CM domain*/null);
       this.auc = auc.AUC();
       best_threshold = auc.threshold();
     }

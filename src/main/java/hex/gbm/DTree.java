@@ -695,7 +695,7 @@ public class DTree extends Iced {
         sb.append(Inspect2.link("Inspect training data ("+_dataKey.toString()+")", _dataKey)).append(", ");
       sb.append(Predict.link(_key,"Score on dataset")).append(", ");
       if (_dataKey != null)
-        sb.append(UIUtils.builderLink(this.getClass(), _dataKey, responseName(), "Compute new model")).append(", ");
+        sb.append(UIUtils.builderModelLink(this.getClass(), _dataKey, responseName(), "Compute new model")).append(", ");
       sb.append("<i class=\"icon-play\"></i>&nbsp;").append("Continue training this model");
       sb.append("</div>");
       DocGen.HTML.paragraph(sb,"Model Key: "+_key);
@@ -749,7 +749,9 @@ public class DTree extends Iced {
       if (treeStats != null) generateHTMLTreeStats(sb);
 
       // Show variable importance
-      if (varimp != null) generateHTMLVarImp(sb);
+      if (varimp != null) {
+        generateHTMLVarImp(sb);
+      }
     }
 
     static final String NA = "---";
@@ -774,7 +776,7 @@ public class DTree extends Iced {
       if (varimp!=null) {
         // Set up variable names for importance
         varimp.setVariables(Arrays.copyOf(_names, _names.length-1));
-        varimp.toHTML(sb);
+        varimp.toHTML(this, sb);
       }
     }
 
@@ -960,10 +962,10 @@ public class DTree extends Iced {
         }
         else {
           if (getTreeModelType() == TreeModelType.GBM) {
-            H2O.licenseManager.isFeatureAllowed(LicenseManager.FEATURE_GBM_SCORING);
+            featureAllowed = H2O.licenseManager.isFeatureAllowed(LicenseManager.FEATURE_GBM_SCORING);
           }
           else if (getTreeModelType() == TreeModelType.DRF) {
-            H2O.licenseManager.isFeatureAllowed(LicenseManager.FEATURE_RF_SCORING);
+            featureAllowed = H2O.licenseManager.isFeatureAllowed(LicenseManager.FEATURE_RF_SCORING);
           }
         }
       }

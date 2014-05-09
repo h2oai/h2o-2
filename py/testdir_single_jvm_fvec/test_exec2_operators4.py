@@ -167,11 +167,10 @@ exprListFull = [
 
         "factor(r.hex[,5])",
         "r0.hex[,1]==1.0",
-        "runif(r4.hex[,1])",
+        "runif(r4.hex[,1], -1)",
     
         # doesn't work
         "mean=function(x){apply(x,1,sum)/nrow(x)};mean(r.hex)",
-
         ]
 
 

@@ -67,6 +67,12 @@ greatly.
     model. This option allows users to build a new model as a
     continuation of a previously generated model (e.g., by a grid search).
 
+**Best Model Key**
+
+    If given, store the best model so far under this key. Model performance is
+    measured by MSE for regression and overall error rate for classification 
+    (at F1-optimal threshold for binary classification).
+
 **Expert Mode** 
 
     Unlock expert mode parameters than can affect model building speed,

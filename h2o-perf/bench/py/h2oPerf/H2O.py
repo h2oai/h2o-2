@@ -183,11 +183,17 @@ class H2OCloudNode:
         got_url_sys = False
         got_url_proc = False
         while m < max_retries:
+            r_sys = ""
+            r_proc = ""
             print "Performing try : " + str(m) + " out of total tries = " + str(max_retries)
             url_sys = "http://{}:{}/stat".format(self.ip, 8000)
             url_proc = "http://{}:{}/{}/stat".format(self.ip, 8000, self.pid)
-            r_sys = requests.get(url_sys, timeout=120).text.split('\n')[0]
-            r_proc = requests.get(url_proc, timeout=120).text.strip().split()
+            try:
+              r_sys = requests.get(url_sys, timeout=120).text.split('\n')[0]
+              r_proc = requests.get(url_proc, timeout=120).text.strip().split()
+            except:
+              continue  # usually timeout, but just catch all and continue, error out downstream.
+            if r_sys == "" or r_proc == "": continue
             if not got_url_sys:
                 if not ("404" and "not" and "found") in r_sys:
                     got_url_sys = True
@@ -398,8 +404,20 @@ class H2OCloudNode:
             except Exception, e:
                 pass
         except Exception, e:
-            print "Successfully shutdown h2o!"
             pass
+        try:
+            try:
+                self.channel.exec_command('exit')
+                self.ssh.close()
+            except:
+                pass
+            try:
+                self.stop_local()
+            except:
+                pass
+        except OSError:
+            pass
+        print "Successfully shutdown h2o!"
         self.pid = -1
 
     def stop_local(self):

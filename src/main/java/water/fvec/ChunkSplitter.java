@@ -7,7 +7,7 @@ import water.Futures;
 /** Helper to provide access to package
  * hidden methods and attributes.
  */
-public class NewChunkHelper {
+public class ChunkSplitter {
   /** Reset len fields of given chunk */
   public static NewChunk resetLen(NewChunk nc) {
     nc._len = nc._len2 = 0;

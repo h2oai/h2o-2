@@ -44,7 +44,21 @@ test.binop2.ampersand <- function(conn) {
   #col <- ifelse(is.na(suppressWarnings(as.numeric(col))), col, as.numeric(col) + 1)
   #col <- ifelse(is.na(suppressWarnings(as.numeric(col))), col, paste("C", col, sep = "", collapse = ""))
   df <- head(hex)
-  col <- gsub("\\.", " ", sample(colnames(df[!sapply(df, is.factor)]), 1))
+  col <- sample(colnames(df[!sapply(df, is.factor)]), 1)
+  if (!(grepl("\\.", col))) {
+    col <- gsub("\\.", " ", sample(colnames(df[!sapply(df, is.factor)]), 1)) 
+  }
+    print(which(col == colnames(df)))
+
+  print(colnames(hex))
+  print(col)
+
+  print(col %in% colnames(hex))
+  print(col %in% colnames(df))
+
+  if (!(col %in% colnames(hex))) {
+    col <- which(col == colnames(df))
+  }
   Log.info(paste("Using column: ", col))
  
   sliced <- hex[,col] #expect this to be numeric!
