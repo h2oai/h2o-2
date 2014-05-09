@@ -142,8 +142,15 @@ Steam.MainView = (_) ->
   # Not in use. Leaving this here as an example of how a modal view can be displayed.
   # link$ _.modelsSelected, -> switchModalView _modelSelectionView
   # link$ _.modelsDeselected, -> _modalViews.remove _modelSelectionView
+  
+  link$ _.status, (message) ->
+    if message
+      _status message
+      # Reset status bar after 7000ms
+      _.timeout 'status', 7000, -> _.status null
+    else
+      _status defaultStatusMessage
 
-  link$ _.status, (message) -> _status if message then message else defaultStatusMessage
 
   #TODO do this through hash uris
   switchToFrames type: 'all'
