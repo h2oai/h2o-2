@@ -3,13 +3,14 @@
 Index By Subject
 =================
 
-**Algorithyms Roadmap**
+**Algorithms Roadmap**
 
   * :ref:`Roadmap`
 
 **Benchmarks**
 
-
+* :ref:`Benchmark`
+ 
 **Classification**
 
 
@@ -60,7 +61,7 @@ Index By Subject
   * :ref:`Hadoop`
   * :ref:`MacHadoop`
 
-**High Avaialbility**
+**High Availability**
 
   * :ref:`HA`
 
@@ -98,7 +99,7 @@ Index By Subject
 
   * :ref:`NBmath`
 
-**Principal Componenents Analysis**
+**Principal Components Analysis**
   
   * :ref:`PCAmath`
 

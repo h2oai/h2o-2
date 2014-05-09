@@ -24,19 +24,19 @@ class Basic(unittest.TestCase):
 
     def test_A_many_parse1(self):
         rows = self.genrows1()
-        set = 1
-        self.tryThemAll(set,rows)
+        tset = 1
+        self.tryThemAll(tset,rows)
 
     def test_B_many_parse2(self):
         rows = self.genrows2()
-        set = 2
-        self.tryThemAll(set,rows)
+        tset = 2
+        self.tryThemAll(tset,rows)
 
     # this one has problems with blank lines
     def test_C_many_parse3(self):
         rows = self.genrows3()
-        set = 3
-        self.tryThemAll(set,rows)
+        tset = 3
+        self.tryThemAll(tset,rows)
 
     def genrows1(self):
         # comment has to have # in first column? (no leading whitespace)
@@ -98,6 +98,29 @@ class Basic(unittest.TestCase):
         "Elodia|G.|Ali|1983-10-31",
         "Elodia|G.|Ali|1983-10-31",
         "Elodia|G.|Ali|1983-10-31"
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31"
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31"
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31"
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
         ]
         return rows
     
@@ -114,6 +137,29 @@ class Basic(unittest.TestCase):
         "",
         "Gwendolyn||Burton|1947-10-26",
         "",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
+        "Elodia|G.|Ali|1983-10-31",
         "Elodia|G.|Ali|1983-10-31",
         "Elodia|G.|Ali|1983-10-31",
         "Elodia|G.|Ali|1983-10-31",
