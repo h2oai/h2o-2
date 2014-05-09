@@ -78,8 +78,8 @@ class Basic(unittest.TestCase):
                 'response': 'C' + str(y), 
                 'max_iter': 10, 
                 'n_folds': 1, 
-                'alpha': 0.2, 
-                'lambda': 1e-5,
+                'alpha': 0.0, 
+                'lambda': 0.0,
             }
 
             start = time.time()

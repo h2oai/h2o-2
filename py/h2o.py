@@ -1735,7 +1735,6 @@ class H2O(object):
                        'mtry': -1.0,
                        'num_trees': 50.0,
                        'oobee': 0,
-                       'parallel': 1,
                        'sample': 0.67,
                        'sampling_strategy': 'RANDOM',
                        'seed': -1.0,

@@ -81,7 +81,8 @@ Output
    numbers, but for binomial data (for example), the minimum are
    listed as 0,1 and the maximum as 1,0. 
 
-**Percentiles** a table displayed only for *Numeric Data* 
+**Percentiles** 
+  a table displayed only for *Numeric Data* 
   A percentile of value X at P threshold is interpreted as 
   "X is greater than or equal to P percent of the values 
   in this column." For example, if 83 is given as the 
