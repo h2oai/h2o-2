@@ -3,12 +3,12 @@ setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 source('../../findNSourceUtils.R')
 
 # use this for interactive setup
-    library(h2o)
-    library(testthat)
-    h2o.setLogPath(getwd(), "Command")
-    h2o.setLogPath(getwd(), "Error")
-    h2o.startLogging()
-    conn = h2o.init()
+#    library(h2o)
+#    library(testthat)
+#    h2o.setLogPath(getwd(), "Command")
+#    h2o.setLogPath(getwd(), "Error")
+#    h2o.startLogging()
+#    conn = h2o.init()
 
 
 test.apply <- function(conn) {
