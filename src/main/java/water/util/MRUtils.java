@@ -48,6 +48,9 @@ public class MRUtils {
    * @return Shuffled frame
    */
   public static Frame shuffleFramePerChunk(Frame fr, final long seed) {
+    return shuffleFramePerChunk(null, fr, seed);
+  }
+  public static Frame shuffleFramePerChunk(Key outputFrameKey, Frame fr, final long seed) {
     Frame r = new MRTask2() {
       @Override
       public void map(Chunk[] cs, NewChunk[] ncs) {
@@ -60,7 +63,7 @@ public class MRUtils {
           }
         }
       }
-    }.doAll(fr.numCols(), fr).outputFrame(fr.names(), fr.domains());
+    }.doAll(fr.numCols(), fr).outputFrame(outputFrameKey, fr.names(), fr.domains());
     return r;
   }
 

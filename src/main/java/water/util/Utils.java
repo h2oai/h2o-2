@@ -1483,6 +1483,20 @@ public class Utils {
     else r[i-1] += (len-sum);
     return r;
   }
+  public static final long[] partitione(long len, float[] ratio) {
+    long[] r = new long[ratio.length+1];
+    long sum = 0;
+    int i = 0;
+    float sr = 0;
+    for (i=0; i<ratio.length; i++) {
+      r[i] = (int) (ratio[i]*len);
+      sum += r[i];
+      sr  += ratio[i];
+    }
+    if (sr<1f) r[i] = len - sum;
+    else r[i-1] += (len-sum);
+    return r;
+  }
 
   /** Generate given numbers of keys by suffixing key by given numbered suffix. */
   public static Key[] generateNumKeys(Key mk, int num) { return generateNumKeys(mk, num, "_part"); }
@@ -1496,6 +1510,15 @@ public class Utils {
     }
     for (int i=0; i<num; i++) ks[i] = Key.make(n+delim+i+suffix);
     return ks;
+  }
+  public static Key generateShuffledKey(Key mk) {
+    String n = mk!=null ? mk.toString() : "noname";
+    String suffix = "";
+    if (n.endsWith(".hex")) {
+      n = n.substring(0, n.length()-4); // be nice
+      suffix = ".hex";
+    }
+    return Key.make(n+"_shuffled"+suffix);
   }
 
 }
