@@ -35,7 +35,7 @@ Steam.ScoringListView = (_) ->
       data:
         input: scoring
         output: null
-      title: scoring.frameKey
+      title: "Scoring on #{scoring.frameKey}"
       caption: "#{scoring.model.model_algorithm} (#{scoring.model.response_column_name})"
       timestamp: scoring.timestamp
       display: -> activateAndDisplayItem self
@@ -89,7 +89,7 @@ Steam.ScoringListView = (_) ->
             #item.time if error.response then error.response.time else 0
             item.state 'error'
             item.hasFailed yes
-            item.data.output = error
+            item.data.output = result
           else
             #TODO what does it mean to have > 1 metrics
             #TODO put this in the comparison table
@@ -112,7 +112,8 @@ Steam.ScoringListView = (_) ->
         jobs = createScoringJobs items
         runScoringJobs jobs, ->
           for item in items
-            item.timestamp = (head item.data.output.metrics).scoring_time
+            unless item.hasFailed()
+              item.timestamp = (head item.data.output.metrics).scoring_time
         activateAndDisplayItem head items
         _.scoringsLoaded()
       when 'comparison'

@@ -13,7 +13,10 @@ Steam.H2OProxy = (_) ->
         #TODO error logging / retries, etc.
         go error, result
       else
-        go error, result.data
+        if result.data.response.status is 'error'
+          go result.data.error, result.data
+        else
+          go error, result.data
 
 
   filterOutUnhandledModels = (models) -> filter models, (model) -> model.state is 'DONE' and model.model_category is 'Binomial'

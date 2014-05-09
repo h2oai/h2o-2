@@ -14,4 +14,12 @@
         .y-summary-value(data-bind='text:value')
       // /ko
   // /ko
+
+  // ko ifnot:hasFailed
   div(data-bind='geyser:comparisonTable')
+  // /ko
+
+  // ko if:hasFailed
+  h2.y-subtitle Scoring Failure
+  pre(data-bind='json:failure')
+  // /ko
