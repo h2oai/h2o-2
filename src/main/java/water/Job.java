@@ -307,6 +307,10 @@ public abstract class Job extends Func {
     return redirect();
   }
 
+  public Response servePublic() {
+    return serve();
+  }
+
   protected Response redirect() {
     return Progress2.redirect(this, job_key, destination_key);
   }
