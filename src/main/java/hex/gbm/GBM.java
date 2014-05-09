@@ -126,7 +126,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   @Override protected GBMModel makeModel(GBMModel model, DTree[] ktrees, TreeStats tstats) {
     return new GBMModel(model, ktrees, tstats);
   }
-  public GBM() { description = "Distributed GBM"; }
+  public GBM() { description = "Distributed GBM"; importance = true; }
 
   /** Return the query link to this page */
   public static String link(Key k, String content) {
