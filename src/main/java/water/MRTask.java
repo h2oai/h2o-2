@@ -57,6 +57,7 @@ public abstract class MRTask<T extends MRTask> extends DRemoteTask<T> {
       if(!_runSingleThreaded && MemoryManager.tryReserveTaskMem(reqMem)){
         _reservedMem += reqMem;   // Remember the amount of reserved memory to free it later.
         _left.fork();             // Runs in another thread/FJ instance
+        _rite.compute2();         // Runs in THIS F/J thread
       } else {
         _left.setCompleter(new H2O.H2OCallback(null,this) {
           @Override
