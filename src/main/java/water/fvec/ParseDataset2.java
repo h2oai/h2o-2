@@ -575,6 +575,7 @@ public final class ParseDataset2 extends Job {
       transient final MultiFileParseTask _outerMFPT;
 
       DParse(VectorGroup vg, CustomParser.ParserSetup setup, int vecIdstart, int startChunkIdx, MultiFileParseTask mfpt) {
+        super(mfpt);
         _vg = vg;
         _setup = setup;
         _vecIdStart = vecIdstart;
