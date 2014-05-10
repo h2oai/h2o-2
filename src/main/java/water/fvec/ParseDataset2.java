@@ -429,6 +429,7 @@ public final class ParseDataset2 extends Job {
     MultiFileParseTask(VectorGroup vg,  CustomParser.ParserSetup setup, Key progress ) {
       _vg = vg; _setup = setup; _progress = progress;
       _vecIdStart = _vg.reserveKeys(setup._pType == ParserType.SVMLight?100000000:setup._ncols);
+      _runSingleThreaded = true;
     }
 
     @Override
@@ -478,8 +479,7 @@ public final class ParseDataset2 extends Job {
           if(localSetup._pType.parallelParseSupported){
             DParse dp = new DParse(_vg,localSetup, _vecIdStart, chunkStartIdx,this);
             addToPendingCount(1);
-            dp.setCompleter(this);
-            dp.asyncExec(new Frame(vec));
+            dp.exec(new Frame(vec));
             for(int i = 0; i < vec.nChunks(); ++i)
               _chunk2Enum[chunkStartIdx + i] = vec.chunkKey(i).home_node().index();
           }else {
