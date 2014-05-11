@@ -429,6 +429,7 @@ public final class ParseDataset2 extends Job {
     MultiFileParseTask(VectorGroup vg,  CustomParser.ParserSetup setup, Key progress ) {
       _vg = vg; _setup = setup; _progress = progress;
       _vecIdStart = _vg.reserveKeys(setup._pType == ParserType.SVMLight?100000000:setup._ncols);
+      _runSingleThreaded = true;
     }
 
     @Override
@@ -459,6 +460,7 @@ public final class ParseDataset2 extends Job {
         _parserr = "Conflicting file layouts, expecting: "+_setup+" but found "+localSetup;
         return;
       }
+
       // Allow dup headers, if they are equals-ignoring-case
       boolean has_hdr = _setup._header && localSetup._header;
       if( has_hdr ) {           // Both have headers?
@@ -477,8 +479,7 @@ public final class ParseDataset2 extends Job {
           if(localSetup._pType.parallelParseSupported){
             DParse dp = new DParse(_vg,localSetup, _vecIdStart, chunkStartIdx,this);
             addToPendingCount(1);
-            dp.setCompleter(this);
-            dp.asyncExec(new Frame(vec));
+            dp.exec(new Frame(vec));
             for(int i = 0; i < vec.nChunks(); ++i)
               _chunk2Enum[chunkStartIdx + i] = vec.chunkKey(i).home_node().index();
           }else {
@@ -513,7 +514,6 @@ public final class ParseDataset2 extends Job {
       } catch( IOException ioe ) {
         throw new RuntimeException(ioe);
       }
-
     }
 
     // Reduce: combine errors from across files.
@@ -562,17 +562,20 @@ public final class ParseDataset2 extends Job {
       return dout;
     }
 
+
     private static class DParse extends MRTask2<DParse> {
       final CustomParser.ParserSetup _setup;
       final int _vecIdStart;
       final int _startChunkIdx; // for multifile parse, offset of the first chunk in the final dataset
       final VectorGroup _vg;
+      private transient AppendableVec [] _appendables;
       FVecDataOut _dout;
       final Key _eKey;
       final Key _progress;
       transient final MultiFileParseTask _outerMFPT;
 
       DParse(VectorGroup vg, CustomParser.ParserSetup setup, int vecIdstart, int startChunkIdx, MultiFileParseTask mfpt) {
+        super(mfpt);
         _vg = vg;
         _setup = setup;
         _vecIdStart = vecIdstart;
@@ -580,6 +583,14 @@ public final class ParseDataset2 extends Job {
         _outerMFPT = mfpt;
         _eKey = mfpt._eKey;
         _progress = mfpt._progress;
+      }
+      @Override public void setupLocal(){
+        super.setupLocal();
+        if(_setup._pType == ParserType.CSV){
+          _appendables = new AppendableVec[_setup._ncols];
+          for(int i = 0; i < _setup._ncols; ++i)
+            _appendables[i] = new AppendableVec(_vg.vecKey(_vecIdStart + i));
+        }
       }
       @Override public void map( Chunk in ) {
         Enum [] enums = enums(_eKey,_setup._ncols);
@@ -591,7 +602,7 @@ public final class ParseDataset2 extends Job {
         switch(_setup._pType){
           case CSV:
             p = new CsvParser(_setup);
-            dout = new FVecDataOut(_vg,_startChunkIdx + in.cidx(),_setup._ncols,_vecIdStart,enums);
+            dout = new FVecDataOut(_vg,_startChunkIdx + in.cidx(),_setup._ncols,_vecIdStart,enums,_appendables);
             break;
           case SVMLight:
             p = new SVMLightParser(_setup);
@@ -611,6 +622,7 @@ public final class ParseDataset2 extends Job {
       @Override public void postGlobal() {
         super.postGlobal();
         _outerMFPT._dout = _dout;
+        _dout = null;
       }
     }
   }
@@ -639,8 +651,18 @@ public final class ParseDataset2 extends Job {
     static final private byte ECOL = 2;
     static final private byte TCOL = 3;
 
+    private static final AppendableVec[] newAppendables(int n, VectorGroup vg, int vecIdStart){
+      AppendableVec [] apps = new AppendableVec[n];
+      for(int i = 0; i < n; ++i)
+        apps[i] = new AppendableVec(vg.vecKey(vecIdStart + i));
+      return apps;
+    }
     public FVecDataOut(VectorGroup vg, int cidx, int ncols, int vecIdStart, Enum [] enums){
-      _vecs = new AppendableVec[ncols];
+      this(vg,cidx,ncols,vecIdStart,enums,newAppendables(ncols,vg,vecIdStart));
+    }
+
+    public FVecDataOut(VectorGroup vg, int cidx, int ncols, int vecIdStart, Enum [] enums, AppendableVec [] appendables){
+      _vecs = appendables;
       _nvs = new NewChunk[ncols];
       _enums = enums;
       _nCols = ncols;
@@ -649,19 +671,21 @@ public final class ParseDataset2 extends Job {
       _vecIdStart = vecIdStart;
       _ctypes = MemoryManager.malloc1(ncols);
       for(int i = 0; i < ncols; ++i)
-        _nvs[i] = (NewChunk)(_vecs[i] = new AppendableVec(vg.vecKey(vecIdStart + i))).chunkForChunkIdx(_cidx);
-
+        _nvs[i] = (NewChunk)_vecs[i].chunkForChunkIdx(_cidx);
     }
+
     public FVecDataOut reduce(StreamDataOut sdout){
       FVecDataOut dout = (FVecDataOut)sdout;
-      _nCols = Math.max(_nCols,dout._nCols);
-      if(dout._vecs.length > _vecs.length){
-        AppendableVec [] v = _vecs;
-        _vecs = dout._vecs;
-        dout._vecs = v;
+      if(_vecs != dout._vecs){
+        _nCols = Math.max(_nCols,dout._nCols);
+        if(dout._vecs.length > _vecs.length){
+          AppendableVec [] v = _vecs;
+          _vecs = dout._vecs;
+          dout._vecs = v;
+        }
+        for(int i = 0; i < dout._vecs.length; ++i)
+          _vecs[i].reduce(dout._vecs[i]);
       }
-      for(int i = 0; i < dout._vecs.length; ++i)
-        _vecs[i].reduce(dout._vecs[i]);
       return this;
     }
     @Override public FVecDataOut close(){
