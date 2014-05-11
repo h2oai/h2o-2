@@ -52,9 +52,9 @@ class Basic(unittest.TestCase):
             # csvPathname = 'standard/billion_rows.csv.gz'
             csvPathname = '1B/reals_100000x1000_15f.data'
         else:
-            # csvPathname = '1B/reals_1000000x1000_15f.data'
+            csvPathname = '1B/reals_1000000x1000_15f.data'
             # csvPathname = '1B/reals_100000x1000_15f.data'
-            csvPathname = '1B/reals_1B_15f.data'
+            # csvPathname = '1B/reals_1B_15f.data'
 
         hex_key = 'r1'
         parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local', 
@@ -65,11 +65,14 @@ class Basic(unittest.TestCase):
         inspect = h2o_cmd.runInspect(key=hex_key, offset=-1)
         print "inspect offset = -1:", h2o.dump_json(inspect)
 
-        for execExpr in exprList:
-            start = time.time()
-            execResult, result = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=300)
-            print 'exec took', time.time() - start, 'seconds'
-            print "result:", result
+        for trial in range(3):
+            for execExpr in exprList:
+                # put the trial number into the temp for uniqueness
+                execExpr = re.sub('Last.value', 'Last.value%s' % trial, execExpr)
+                start = time.time()
+                execResult, result = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=300)
+                print 'exec took', time.time() - start, 'seconds'
+                print "result:", result
 
         h2o.check_sandbox_for_errors()
 
