@@ -1,6 +1,9 @@
-import unittest, random, sys, time, getpass
+import unittest, random, sys, time, getpass, re
 sys.path.extend(['.','..','py'])
 import h2o, h2o_browse as h2b, h2o_exec as h2e, h2o_hosts, h2o_import as h2i, h2o_cmd
+import h2o_gbm
+
+DO_PLOT = getpass.getuser()=='kevin'
 
 # new ...ability to reference cols
 # src[ src$age<17 && src$zip=95120 && ... , ]
@@ -38,7 +41,7 @@ class Basic(unittest.TestCase):
         if (localhost):
             h2o.build_cloud(1, java_heap_GB=14)
         else:
-            h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=100)
+            h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=20)
 
     @classmethod
     def tearDownClass(cls):
@@ -58,23 +61,42 @@ class Basic(unittest.TestCase):
 
         hex_key = 'r1'
         parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local', 
-            hex_key=hex_key, timeoutSecs=3000, retryDelaySecs=2)
+            hex_key=hex_key, timeoutSecs=3000, retryDelaySecs=2, doSummary=False)
         inspect = h2o_cmd.runInspect(key=hex_key)
         print "numRows:", inspect['numRows']
         print "numCols:", inspect['numCols']
         inspect = h2o_cmd.runInspect(key=hex_key, offset=-1)
         print "inspect offset = -1:", h2o.dump_json(inspect)
 
-        for trial in range(3):
+        xList = []
+        eList = []
+        fList = []
+        for trial in range(300):
             for execExpr in exprList:
                 # put the trial number into the temp for uniqueness
                 execExpr = re.sub('Last.value', 'Last.value%s' % trial, execExpr)
                 start = time.time()
                 execResult, result = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=300)
-                print 'exec took', time.time() - start, 'seconds'
-                print "result:", result
+                execTime = time.time() - start
+                print 'exec took', execTime, 'seconds'
+                # print "result:", result
+                if 'r1' in execExpr:
+                    xList.append(trial)
+                    eList.append(execTime)
+                if 'log' in execExpr:
+                    fList.append(execTime)
 
         h2o.check_sandbox_for_errors()
+        # PLOTS. look for eplot.jpg and fplot.jpg in local dir?
+        if DO_PLOT:
+            xLabel = 'trial'
+            eLabel = 'time: Last.value<trial>.4 = r1[,c(1)]'
+            fLabel = 'time: Last.value<trial>.7 = log(Last.value<trial>.6)'
+            eListTitle = ""
+            fListTitle = ""
+            h2o_gbm.plotLists(xList, xLabel, eListTitle, eList, eLabel, fListTitle, fList, fLabel, server=True)
+
+
 
 
 if __name__ == '__main__':
