@@ -43,7 +43,7 @@ public class ProfileCollectorTask extends DRemoteTask<ProfileCollectorTask> {
           sb.append(ste.toString());
           sb.append("\n");
           j++;
-          if (j==3) break;
+          if (j==5) break;
         }
         String st = sb.toString();
         boolean found = false;
