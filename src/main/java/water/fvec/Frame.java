@@ -301,6 +301,11 @@ public class Frame extends Lockable<Frame> {
     return rv;
   }
 
+  public Vec factor(int col) {
+    Vec nv = vecs()[col].toEnum();
+    return replace(col, nv);
+  }
+
   public Frame extractFrame(int startIdx, int endIdx) {
     Frame f = subframe(startIdx, endIdx);
     remove(startIdx, endIdx);
