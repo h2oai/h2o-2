@@ -65,6 +65,7 @@ public class Data implements Iterable<Data.Row> {
   public final float computeAverage() {
     float av = 0.f;
     int nobs = 0;
+
     for (Row r: this) {
       av += r.getRawClassColumnValueFromBin();
       nobs++;
@@ -110,8 +111,8 @@ public class Data implements Iterable<Data.Row> {
   // Filter a column, with all valid data.  i.e., skip the invalid check
   private int filterVal(Tree.SplitNode node, int[] permutation, Statistic ls, Statistic rs) {
     final int l =filterVal1(node,permutation);
-    filterVal3(permutation,ls,start(),l);
-    filterVal3(permutation,rs,l,end());
+//    filterVal3(permutation,ls,start(),l);
+//    filterVal3(permutation,rs,l,end());
     return l;
   }
 

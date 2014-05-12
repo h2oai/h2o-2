@@ -273,7 +273,12 @@ public class Tree extends H2OCountedCompleter {
         bs.put1(_class);
       }
     }
-    @Override int size_impl( ) { return 2; } // 2 bytes in serialized form
+    @Override int size_impl( ) {
+      if (_class == -1) {
+        return 5; // 5 bytes in serialized form
+      }
+      return 2;  // 2 bytes in serialized form
+    }
   }
 
   /** Gini classifier node. */
@@ -491,18 +496,24 @@ public class Tree extends H2OCountedCompleter {
     protected TreeVisitor<T>  pre( int col, float fcmp, int off0, int offl, int offr ) throws T { return this; }
     protected TreeVisitor<T>  mid( int col, float fcmp ) throws T { return this; }
     protected TreeVisitor<T> post( int col, float fcmp ) throws T { return this; }
+    protected TreeVisitor<T> leafFloat(float _av) throws T { return this; }
     long  result( ) { return 0; }
     protected final AutoBuffer _ts;
-    public TreeVisitor( AutoBuffer tbits ) {
+    protected final boolean _regression;
+    public TreeVisitor( AutoBuffer tbits, boolean regression ) {
       _ts = tbits;
       _ts.get4(); // Skip tree ID
       _ts.get8(); // Skip seed
       _ts.get1(); // Skip producer id
+      _regression = regression;
     }
 
     public final TreeVisitor<T> visit() throws T {
       byte b = (byte) _ts.get1();
-      if( b == '[' ) return leaf(_ts.get1()&0xFF);
+      if( b == '[' ) {
+        if (_regression) { return leafFloat(_ts.get4f()); }
+        return leaf(_ts.get1()&0xFF);
+      }
       assert b == '(' || b == 'S' || b =='E' : b;
       int off0 = _ts.position()-1;    // Offset to start of *this* node
       int col = _ts.get2();     // Column number
@@ -516,9 +527,10 @@ public class Tree extends H2OCountedCompleter {
   }
 
   /** Return (depth<<32)|(leaves), in 1 pass. */
-  public static long depth_leaves( AutoBuffer tbits ) {
-    return new TreeVisitor<RuntimeException>(tbits) {
+  public static long depth_leaves( AutoBuffer tbits, boolean regression ) {
+    return new TreeVisitor<RuntimeException>(tbits, regression) {
       int _maxdepth, _depth, _leaves;
+      protected TreeVisitor leafFloat(float fv) {_leaves++; if (_depth > _maxdepth) _maxdepth = _depth; return this;}
       protected TreeVisitor leaf(int tclass ) { _leaves++; if( _depth > _maxdepth ) _maxdepth = _depth; return this; }
       protected TreeVisitor pre (int col, float fcmp, int off0, int offl, int offr ) { _depth++; return this; }
       protected TreeVisitor post(int col, float fcmp ) { _depth--; return this; }
