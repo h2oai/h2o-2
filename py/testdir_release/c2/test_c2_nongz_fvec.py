@@ -9,23 +9,23 @@ LOG_MACHINE_STATS = False
 print "Assumes you ran ../build_for_clone.py in this directory"
 print "Using h2o-nodes.json. Also the sandbox dir"
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
-    def sub_c2_fvec_long(self):
+    def sub_c2_nongz_fvec_long(self):
         # a kludge
         h2o.setup_benchmark_log()
 
-        avgMichalSize = 116561140 
+        avgMichalSize = 237270000
         bucket = 'home-0xdiag-datasets'
         ### importFolderPath = 'more1_1200_link'
-        importFolderPath = 'manyfiles-nflx-gz'
-        print "Using .gz'ed files in", importFolderPath
+        importFolderPath = 'manyfiles-nflx'
+        print "Using non-gz'ed files in", importFolderPath
         if len(h2o.nodes)==1:
             csvFilenameList= [
-                ("*[1][0][0-9].dat.gz", "file_10_A.dat.gz", 10 * avgMichalSize, 600),
+                ("*[1][0][0-9].dat", "file_10_A.dat", 10 * avgMichalSize, 600),
             ]
         else:
             csvFilenameList= [
-                ("*[1][0-4][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 1800),
-                # ("*[1][0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 3600),
+                ("*[1][0-4][0-9].dat", "file_50_A.dat", 50 * avgMichalSize, 1800),
+                # ("*[1][0-9][0-9].dat", "file_100_A.dat", 100 * avgMichalSize, 3600),
             ]
 
         if LOG_MACHINE_STATS:
@@ -118,14 +118,14 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
     # these will be tracked individual by jenkins, which is nice
     #***********************************************************************
 
-    def test_A_c2_fvec_short(self):
+    def test_A_c2_nongz_fvec_short(self):
         h2o.beta_features = True
         parseResult = h2i.import_parse(bucket='smalldata', path='iris/iris2.csv', schema='put')
         h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=10)
 
-    def test_B_c2_fvec_long(self):
+    def test_B_c2_nongz_fvec_long(self):
         h2o.beta_features = True
-        self.sub_c2_fvec_long()
+        self.sub_c2_nongz_fvec_long()
 
 
 if __name__ == '__main__':

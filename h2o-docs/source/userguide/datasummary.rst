@@ -1,7 +1,7 @@
 
 
-Data: Summary (Request)
-==========================
+Data: Summary (Request from Menu)
+===================================
 
 Summary returns a column by column detailed summary of parsed
 data. For more information on the returned information see Summary. 

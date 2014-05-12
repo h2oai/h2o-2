@@ -17,7 +17,7 @@ import java.util.Random;
 public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
   final protected DataInfo _dinfo;
   final Job _job;
-  double    _ymu = Double.NaN; // mean of the response
+//  double    _ymu = Double.NaN; // mean of the response
   // size of the expanded vector of parameters
 
   protected float _useFraction = 1.0f;
@@ -118,11 +118,11 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       this(fr,hasResponses,useAllFactorLvls,normSub != null && normMul != null, normRespSub != null && normRespMul != null);
       assert (normSub == null) == (normMul == null);
       assert (normRespSub == null) == (normRespMul == null);
-      if(normSub != null && normMul != null){
+      if(normSub != null) {
         System.arraycopy(normSub, 0, _normSub, 0, normSub.length);
         System.arraycopy(normMul, 0, _normMul, 0, normMul.length);
       }
-      if(normRespSub != null && normRespMul != null){
+      if(normRespSub != null) {
         System.arraycopy(normRespSub, 0, _normRespSub, 0, normRespSub.length);
         System.arraycopy(normRespMul, 0, _normRespMul, 0, normRespMul.length);
       }
@@ -196,7 +196,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       return fr;
     }
 
-    public static Frame prepareFrame(Frame source, int[] ignored_cols, boolean toEnum, boolean dropConstantCols, boolean dropNACols) {
+    public static Frame prepareFrame(Frame source, int[] ignored_cols, boolean dropConstantCols, boolean dropNACols) {
       Frame fr = new Frame(source._names.clone(), source.vecs().clone());
       if (ignored_cols != null) fr.remove(ignored_cols);
       final Vec[] vecs =  fr.vecs();
@@ -376,8 +376,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       if(ignoredCnt > 0){
         int [][] c = new int[_cats-ignoredCnt][];
         int y = 0;
-        for(int x = 0; x < catLvls.length; ++x)
-          if(catLvls[x] != null) c[y++] = catLvls[x];
+        for (int[] catLvl : catLvls) if (catLvl != null) c[y++] = catLvl;
         assert y == c.length;
         catLvls = c;
       }
@@ -415,8 +414,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         for(int j = _useAllFactorLevels?0:1; j < vecs[i]._domain.length; ++j)
           res[k++] = _adaptedFrame._names[i] + "." + vecs[i]._domain[j];
       final int nums = n-k;
-      for(int i = 0; i < nums; ++i)
-        res[k+i] = _adaptedFrame._names[_cats+i];
+      System.arraycopy(_adaptedFrame._names, _cats, res, k, nums);
       return res;
     }
   }

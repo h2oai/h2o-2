@@ -222,7 +222,20 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   }
 
   public final void asyncExec(Vec... vecs){asyncExec(0,new Frame(vecs),false);}
+  public final void exec(Vec... vecs){exec(0, new Frame(vecs), false);}
   public final void asyncExec(Frame fr){asyncExec(0,fr,false);}
+  public final void exec(Frame fr){exec(0, fr, false);}
+
+  public final void exec( int outputs, Frame fr, boolean run_local){
+    // Use first readable vector to gate home/not-home
+    fr.checkCompatible();       // Check for compatible vectors
+    if((_noutputs = outputs) > 0) _vid = fr.anyVec().group().reserveKeys(outputs);
+    _fr = fr;                   // Record vectors to work on
+    _nxx = (short)H2O.SELF.index(); _nhi = (short)H2O.CLOUD.size(); // Do Whole Cloud
+    _run_local = run_local;     // Run locally by copying data, or run globally?
+    setupLocal0();              // Local setup
+    compute2();
+  }
 
   /**
    * Fork the task in strictly non-blocking fashion.
