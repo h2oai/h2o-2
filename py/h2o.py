@@ -1718,7 +1718,7 @@ class H2O(object):
         a['python_%timeout'] = a['python_elapsed'] * 100 / timeoutSecs
         return a
 
-    def speedrf(self, data_key, trees, timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
+    def speedrf(self, data_key, ntrees=50, max_depth=10, timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
                 noise=None, benchmarkLogging=None, noPoll=False,
                 print_params=True, noPrint=False, **kwargs):
 
@@ -1731,9 +1731,9 @@ class H2O(object):
                        'validation': None,
                        'bin_limit': 1024.0,
                        'class_weights': None,
-                       'max_depth': trees,
+                       'max_depth': max_depth,
                        'mtry': -1.0,
-                       'num_trees': 50.0,
+                       'num_trees': ntrees,
                        'oobee': 0,
                        'sample': 0.67,
                        'sampling_strategy': 'RANDOM',

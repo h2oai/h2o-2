@@ -184,6 +184,20 @@ class ModelManagementTestCase(unittest.TestCase):
         rf_AirlinesTrain_2 = node.random_forest(airlines_train_hex, **rf_AirlinesTrain_2_params)
 
 
+        print "#####################################################################"
+        print "Generating AirlinesTrain complex SpeeDRF binary classification model. . ."
+        # what is the R binding?
+        speedrf_AirlinesTrain_1_params = {
+            'destination_key': 'speedrf_AirlinesTrain_binary_1',
+            'response': 'IsDepDelayed', 
+            'ignored_cols_by_name': 'IsDepDelayed_REC, IsDepDelayed_REC_recoded', 
+            'ntrees': 50,
+            'max_depth': 10,
+            'classification': 1
+        }
+        speedrf_AirlinesTrain_1 = node.speedrf(airlines_train_hex, **speedrf_AirlinesTrain_1_params)
+
+
         print "######################################################################"
         print "Generating AirlinesTrain DeepLearning binary classification model. . ."
         # h2o.deeplearning(y = "IsDepDelayed", x = c("Origin", "Dest", "fDayofMonth", "fYear", "UniqueCarrier", "fDayOfWeek", "fMonth", "DepTime", "ArrTime", "Distance"), data = airlines_train.hex, classification=TRUE, hidden=c(10, 10))
@@ -241,6 +255,19 @@ class ModelManagementTestCase(unittest.TestCase):
             'classification': 1
         }
         rf_Prostate_1 = node.random_forest(prostate_hex, **rf_Prostate_1_params)
+
+
+        print "#####################################################################"
+        print "Generating Prostate complex SpeeDRF binary classification model. . ."
+        speedrf_Prostate_1_params = {
+            'destination_key': 'speedrf_Prostate_binary_1',
+            'response': 'CAPSULE', 
+            'ignored_cols_by_name': None, 
+            'ntrees': 50,
+            'max_depth': 10,
+            'classification': 1
+        }
+        speedrf_Prostate_1 = node.speedrf(prostate_hex, **speedrf_Prostate_1_params)
 
 
         print "##############################################"

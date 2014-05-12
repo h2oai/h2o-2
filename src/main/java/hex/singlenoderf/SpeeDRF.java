@@ -7,6 +7,7 @@ import jsr166y.ForkJoinTask;
 import water.*;
 import water.api.Constants;
 import water.api.DocGen;
+import water.api.ParamImportance;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Log;
@@ -21,31 +22,31 @@ public class SpeeDRF extends Job.ValidatedJob {
   public static DocGen.FieldDoc[] DOC_FIELDS;
   public static final String DOC_GET = "SpeeDRF";
 
-  @API(help = "Number of trees", filter = Default.class, json = true, lmin = 1, lmax = Integer.MAX_VALUE)
+  @API(help = "Number of trees", filter = Default.class, json = true, lmin = 1, lmax = Integer.MAX_VALUE, importance = ParamImportance.CRITICAL)
   public int num_trees   = 50;
 
-  @API(help = "Number of features to randomly select at each split.", filter = Default.class, json = true, lmin = -1, lmax = Integer.MAX_VALUE)
+  @API(help = "Number of features to randomly select at each split.", filter = Default.class, json = true, lmin = -1, lmax = Integer.MAX_VALUE, importance = ParamImportance.SECONDARY)
   public int mtry = -1;
 
-  @API(help = "Max Depth", filter = Default.class, json = true, lmin = 0, lmax = Integer.MAX_VALUE)
+  @API(help = "Max Depth", filter = Default.class, json = true, lmin = 0, lmax = Integer.MAX_VALUE, importance = ParamImportance.CRITICAL)
   public int max_depth = 20;
 
-  @API(help = "Split Criterion Type", filter = Default.class, json=true)
+  @API(help = "Split Criterion Type", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
   public Tree.StatType stat_type = Tree.StatType.ENTROPY;
 
-  @API(help = "Class Weights (0.0,0.2,0.4,0.6,0.8,1.0)", filter = Default.class, displayName = "class weights", json = true)
+  @API(help = "Class Weights (0.0,0.2,0.4,0.6,0.8,1.0)", filter = Default.class, displayName = "class weights", json = true, importance = ParamImportance.SECONDARY)
   public double[] class_weights = null;
 
-  @API(help = "Sampling Strategy", filter = Default.class, json = true)
+  @API(help = "Sampling Strategy", filter = Default.class, json = true, importance = ParamImportance.SECONDARY)
   public Sampling.Strategy sampling_strategy = Sampling.Strategy.RANDOM;
 
-  @API(help = "Strata Samples", filter = Default.class, json = true)
+  @API(help = "Strata Samples", filter = Default.class, json = true, importance = ParamImportance.SECONDARY)
   int[] strata_samples = null;
 
-  @API(help = "Sampling Rate at each split.", filter = Default.class, json  = true, dmin = 0, dmax = 1)
+  @API(help = "Sampling Rate at each split.", filter = Default.class, json  = true, dmin = 0, dmax = 1, importance = ParamImportance.EXPERT)
   public double sample = 0.67;
 
-  @API(help = "OOBEE", filter = Default.class, json = true)
+  @API(help = "OOBEE", filter = Default.class, json = true, importance = ParamImportance.SECONDARY)
   public boolean oobee = true;
 
   @API(help = "Variable Importance", filter = Default.class, json = true)
@@ -54,22 +55,22 @@ public class SpeeDRF extends Job.ValidatedJob {
   public Key _modelKey = dest();
 
   /* Advanced settings */
-  @API(help = "bin limit", filter = Default.class, json = true, lmin = 0, lmax = 65534)
+  @API(help = "bin limit", filter = Default.class, json = true, lmin = 0, lmax = 65534, importance = ParamImportance.EXPERT)
   public int bin_limit = 1024;
 
-  @API(help = "seed", filter = Default.class, json = true)
+  @API(help = "seed", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
   public long seed = -1;
 
-  @API(help = "Build trees in parallel")
+  @API(help = "Build trees in parallel", importance = ParamImportance.SECONDARY)
   public boolean  parallel  = true;
 
-  @API(help = "split limit")
+  @API(help = "split limit", importance = ParamImportance.EXPERT)
   public int _exclusiveSplitLimit = 0;
 
 //  @API(help = "iterative cm")
 //  public  boolean  _iterativeCM = true;
 
-  @API(help = "use non local data")
+  @API(help = "use non local data", importance = ParamImportance.EXPERT)
   public boolean _useNonLocalData = true;
 
   private static final Random _seedGenerator = Utils.getDeterRNG(0xd280524ad7fe0602L);
