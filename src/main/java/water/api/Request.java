@@ -44,6 +44,9 @@ public abstract class Request extends RequestBuilders {
     boolean gridable() default true;
     Class<? extends Validator> validator() default NOPValidator.class;
     ParamImportance importance() default ParamImportance.UNIMPORTANT;
+    // NEW API
+    String[] dependsOn() default {};
+    String[] helpFiles() default {};
   }
 
   public interface Validator<V> extends Freezable {
