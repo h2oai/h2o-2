@@ -397,9 +397,9 @@ public class Frame extends Lockable<Frame> {
     // endlessly cache-missing the data around the cluster, pulling copies
     // local everywhere.
     if( v0.length() > 1e4 ) {
-      VectorGroup grp = v0.group();
+      Key gk = v0.groupKey();
       for( Vec vec : vecs() )
-        assert grp.equals(vec.group()) : "Vector " + vec + " has different vector group!";
+        assert gk.equals(vec.groupKey()) : "Vector " + vec + " has different vector group!";
     }
     return true;
   }
