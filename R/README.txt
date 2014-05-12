@@ -31,7 +31,7 @@ downloaded 35.0 Mb
 
 **STEP 3**
 
-Start an instance of H2O. If you have questions about how to do this see the notes provided at the bottom of the page for staring from a zip file. 
+Start an instance of H2O. If you have questions about how to do this see the notes provided at the bottom of the page for starting from a zip file.
 
 If users choose to not start an instance of H2O prior to attempting to connect to H2O through R, an instance will be started automatically for them at ip: localhost, port: 54321.
 
