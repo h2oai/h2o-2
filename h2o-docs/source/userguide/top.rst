@@ -10,6 +10,7 @@ H\ :sub:`2`\ O User Guide
    model
    score
    admin
+   help
 
   
 

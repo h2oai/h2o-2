@@ -29,7 +29,7 @@ Data: Quantiles (Request)
 **Multiple Pass**
   
   Only 3 possible entries: 
-  *0*: Calculate the best approximation of the requested quanitle in
+  *0*: Calculate the best approximation of the requested quantile in
   one pass. 
   *1*: Return the exact result (with a maximum iteration of 16 passes)
   *2*: Return both a single pass approximation and multi-pass exact

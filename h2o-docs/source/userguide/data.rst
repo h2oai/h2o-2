@@ -6,15 +6,16 @@ Data
 .. toctree::
    :maxdepth: 1
 
-   inspect
-   dataviewall
-   datasummary
+   
+   dataimportfiles
+   datauploadfiles
    dataparse
    datainspect
-   dataimportfiles
-   dataexportfiles
+   datasummary
    dataquantiles
-   datauploadfiles
+   dataviewall
+   dataexportfiles   
+   inspect
    quantiles
 
 

@@ -1,7 +1,7 @@
 
 
-Data: View All
-==================
+Data: View All (Request from Menu)
+=====================================
 
 Users can view all keys and associated data by selecting the **View
 All** option from the **Data** drop down menu. Keys are listed in the
