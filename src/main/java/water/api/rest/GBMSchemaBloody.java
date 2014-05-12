@@ -5,14 +5,14 @@ import water.Key;
 import water.api.rest.REST.ApiAdaptor;
 import water.api.rest.REST.ApiSupport;
 import water.api.rest.REST.RestCall;
+import water.api.rest.Version.Bloody;
 import water.api.rest.Version.V1;
 import water.fvec.Frame;
-import water.fvec.Vec;
 
 /** Actual schema for GBM REST API call
  *
  * NOTE: now extends Request2 since we have to have a nice way to test it. */
-public class GBMAPI extends ApiSupport implements RestCall<Version.V1> {
+public class GBMSchemaBloody extends ApiSupport implements RestCall<Version.Bloody> {
 
   @API(help="Source frame", helpFiles={"source.rst", "general.rst"}, filter=Default.class, required=true)
   public Frame source;
@@ -46,7 +46,7 @@ public class GBMAPI extends ApiSupport implements RestCall<Version.V1> {
     adaptor.fillApi(gbm, this);
     return r;
   }
-  @Override public V1 getVersion() {
-    return Version.v1;
+  @Override public Bloody getVersion() {
+    return Version.bloody;
   }
 }
