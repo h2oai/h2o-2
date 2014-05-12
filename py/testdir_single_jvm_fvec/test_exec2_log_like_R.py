@@ -4,30 +4,36 @@ import h2o, h2o_browse as h2b, h2o_exec as h2e, h2o_hosts, h2o_import as h2i, h2
 import h2o_gbm
 
 DO_PLOT = getpass.getuser()=='kevin'
+DO_ORIG = False
 
 # new ...ability to reference cols
 # src[ src$age<17 && src$zip=95120 && ... , ]
 # can specify values for enums ..values are 0 thru n-1 for n enums
 initList = [
+        'r2 = c(1); r2 = r1[,c(1)]',
         ]
+if DO_ORIG:
+    exprList = [
+            'Last.value.0 = r2',
+            'Last.value.1 = any.factor(Last.value.0)',
+            'Last.value.2 = Last.value.0 + 1',
+            'Last.value.3 = log(Last.value.2)',
 
-exprList = [
-        'Last.value.0 = r1[,c(1)]',
-        'Last.value.1 = any.factor(Last.value.0)',
-        'Last.value.2 = Last.value.0 + 1',
-        'Last.value.3 = log(Last.value.2)',
+            'Last.value.4 = r2',
+            'Last.value.5 = any.factor(Last.value.4)',
+            'Last.value.6 = Last.value.4 + 1',
+            'Last.value.7 = log(Last.value.6)',
 
-        'Last.value.4 = r1[,c(1)]' ,
-        'Last.value.5 = any.factor(Last.value.4)',
-        'Last.value.6 = Last.value.4 + 1',
-        'Last.value.7 = log(Last.value.6)',
+            'Last.value.8 = r2',
+            'Last.value.9 = any.factor(Last.value.8)',
+            'Last.value.10 = Last.value.8 + 1',
+            'Last.value.11 = log(Last.value.10)',
 
-        'Last.value.8 = r1[,c(1)]' ,
-        'Last.value.9 = any.factor(Last.value.8)',
-        'Last.value.10 = Last.value.8 + 1',
-        'Last.value.11 = log(Last.value.10)',
-
-        ]
+            ]
+else:
+    exprList = [
+            'Last.value.3 = r2+1',
+            ]
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -41,7 +47,8 @@ class Basic(unittest.TestCase):
         if (localhost):
             h2o.build_cloud(1, java_heap_GB=14)
         else:
-            h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=20)
+            h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=28, java_extra_args='-XX:+PrintGCDetails')
+
 
     @classmethod
     def tearDownClass(cls):
@@ -55,7 +62,8 @@ class Basic(unittest.TestCase):
             # csvPathname = 'standard/billion_rows.csv.gz'
             csvPathname = '1B/reals_100000x1000_15f.data'
         else:
-            csvPathname = '1B/reals_1000000x1000_15f.data'
+            # csvPathname = '1B/reals_1000000x1000_15f.data'
+            csvPathname = '1B/reals_1000000x1_15f.data'
             # csvPathname = '1B/reals_100000x1000_15f.data'
             # csvPathname = '1B/reals_1B_15f.data'
 
@@ -71,6 +79,8 @@ class Basic(unittest.TestCase):
         xList = []
         eList = []
         fList = []
+        for execExpr in initList:
+            execResult, result = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=300)
         for trial in range(300):
             for execExpr in exprList:
                 # put the trial number into the temp for uniqueness
@@ -79,6 +89,13 @@ class Basic(unittest.TestCase):
                 execResult, result = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=300)
                 execTime = time.time() - start
                 print 'exec took', execTime, 'seconds'
+                c = h2o.nodes[0].get_cloud()
+                c = c['nodes']
+
+                print "keys: %s %s" % (c[0]['num_keys'], c[1]['num_keys'])
+                print "value_size_bytes: %s %s" % (c[0]['value_size_bytes'], c[1]['value_size_bytes'])
+                # print (h2o.dump_json(c))
+
                 # print "result:", result
                 if 'r1' in execExpr:
                     xList.append(trial)
