@@ -135,7 +135,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     m.local_forests[nodeIdx][m.local_forests[nodeIdx].length-1] = tkey;
 
     double f = (double)m.t_keys.length / (double)m.N;
-    if (m.t_keys.length == 1 && !m.regression) {
+    if (m.t_keys.length == 1) {
       cm_update = true;
       CMTask cmTask = new CMTask(m, m.size(), m.weights, m.oobee);
       cmTask.doAll(m.test_frame == null ? m.fr : m.test_frame, true);
@@ -274,7 +274,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     _td = new Counter();
     _tl = new Counter();
     for( Key tkey : t_keys ) {
-      long dl = Tree.depth_leaves(new AutoBuffer(DKV.get(tkey).memOrLoad()), regression);
+      long dl = Tree.depth_leaves(new AutoBuffer(DKV.get(tkey).memOrLoad()));
       _td.add((int) (dl >> 32));
       _tl.add((int) dl);
     }
