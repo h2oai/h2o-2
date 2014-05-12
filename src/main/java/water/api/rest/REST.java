@@ -21,18 +21,26 @@ public class REST {
     public T getVersion();
   }
 
-  interface ApiAdaptor<I extends Iced, O extends RestCall<? super V>, V extends Version> {
-      public abstract I makeImpl(O api);
-      public abstract O makeApi(I impl);
+  /**
+   * @param <I> implementation type
+   * @param <A> api type
+   * @param <V> version type
+   */
+  interface ApiAdaptor<I extends Iced, A extends RestCall<? super V>, V extends Version> {
+      // Make implementation object based on given api object
+      public abstract I makeImpl(A api);
+      // Make API object based on implementation object
+      public abstract A makeApi(I impl);
       // Transfer inputs from API to implementation
-      public abstract I fillImpl(O api, I impl);
+      public abstract I fillImpl(A api, I impl);
       // Transfer outputs from implementation to API
-      public abstract O fillApi (I impl, O api);
+      public abstract A fillApi (I impl, A api);
+      // Get supported version
       public abstract V getVersion();
-      // Just creates implementation object
+      // Just creates empty implementation object
       public abstract I createImpl();
-      // Just creates api object
-      public abstract O createApi();
+      // Just creates empty API object
+      public abstract A createApi();
   }
 
   public static abstract class AbstractApiAdaptor<I extends Iced, O extends RestCall<? super V>, V extends Version> implements ApiAdaptor<I,O,V> {

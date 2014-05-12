@@ -38,9 +38,13 @@ public abstract class BloodyApiAdaptor<I extends Iced, A extends RestCall<Bloody
     for (Field field : fields) {
       API apiano = field.getAnnotation(API.class);
       if (apiano!=null) {
-        boolean inputAno = apiano.filter() != Filter.class || apiano.filters().length != 0;
-        if ((in && inputAno) || (!in && (!inputAno || apiano.json())))
-            fs.add(field);
+        boolean add = false;
+        switch( apiano.direction() ) {
+          case INOUT: add = true; break;
+          case IN:    add = in; break;
+          case OUT:   add = !in; break;
+        }
+        if (add) fs.add(field);
       }
     }
     return fs.toArray(new Field[fs.size()]);

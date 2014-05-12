@@ -13,19 +13,21 @@ import water.fvec.Frame;
  * NOTE: now extends Request2 since we have to have a nice way to test it. */
 public class GBMSchemaV1 extends ApiSupport implements RestCall<Version.V1> {
 
-  @API(help="Source frame", helpFiles={"source.rst", "general.rst"}, filter=Default.class, required=true)
+  @API( help="Source frame", helpFiles={"source.rst", "general.rst"},
+        direction=Direction.IN, required=true)
   public Frame source;
 
-  @API(help="Response", filter=Default.class, required=true, json = true, dependsOn="source")
+  @API( help="Response",
+        direction=Direction.IN, required=true, json = true, dependsOn="source")
   public String response;
 
-  @API(help="Selected columns", filter=Default.class)
+  @API(help="Selected columns", direction=Direction.IN)
   public int[] cols;
 
-  @API(help="Number of trees", filter=Default.class)
+  @API(help="Number of trees", direction=Direction.IN)
   int ntrees = 10;
 
-  @API(help = "Learning rate, from 0. to 1.0", filter=Default.class)
+  @API(help = "Learning rate, from 0. to 1.0", direction=Direction.IN)
   public double learn_rate = 0.1;
 
   // Output
