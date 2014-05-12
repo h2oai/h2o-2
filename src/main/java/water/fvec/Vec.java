@@ -564,7 +564,7 @@ public class Vec extends Iced {
   }
 
   /** Make a Vector-group key.  */
-  private Key groupKey(){
+  public Key groupKey(){
     byte [] bits = _key._kb.clone();
     bits[0] = Key.VGROUP;
     UDP.set4(bits, 2, -1);
