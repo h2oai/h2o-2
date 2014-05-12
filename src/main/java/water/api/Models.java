@@ -6,6 +6,8 @@ import hex.drf.DRF;
 import hex.gbm.GBM;
 import hex.glm.GLM2;
 import hex.glm.GLMModel;
+import hex.singlenoderf.SpeeDRF;
+import hex.singlenoderf.SpeeDRFModel;
 
 import java.util.*;
 
@@ -167,6 +169,8 @@ public class Models extends Request2 {
       summarizeDeepLearningModel(summary, (hex.deeplearning.DeepLearningModel) model);
     } else if (model instanceof hex.gbm.GBM.GBMModel) {
       summarizeGBMModel(summary, (hex.gbm.GBM.GBMModel) model);
+    } else if (model instanceof hex.singlenoderf.SpeeDRFModel) {
+      summarizeSpeeDRFModel(summary, (hex.singlenoderf.SpeeDRFModel) model);
     } else {
       // catch-all
       summarizeModelCommonFields(summary, model);
@@ -248,6 +252,28 @@ public class Models extends Request2 {
     summary.critical_parameters = whitelistJsonObject(all_params, DRF_critical_params);
     summary.secondary_parameters = whitelistJsonObject(all_params, DRF_secondary_params);
     summary.expert_parameters = whitelistJsonObject(all_params, DRF_expert_params);
+  }
+
+  /******
+   * SpeeDRF
+   ******/
+  private static final Set<String> SpeeDRF_critical_params = getCriticalParamNames(SpeeDRF.DOC_FIELDS);
+  private static final Set<String> SpeeDRF_secondary_params = getSecondaryParamNames(SpeeDRF.DOC_FIELDS);
+  private static final Set<String> SpeeDRF_expert_params = getExpertParamNames(SpeeDRF.DOC_FIELDS);
+
+  /**
+   * Summarize fields which are specific to hex.drf.DRF.SpeeDRFModel.
+   */
+  private static void summarizeSpeeDRFModel(ModelSummary summary, hex.singlenoderf.SpeeDRFModel model) {
+    // add generic fields such as column names
+    summarizeModelCommonFields(summary, model);
+
+    summary.model_algorithm = "SpeeDRF";
+
+    JsonObject all_params = (model.get_params()).toJSON();
+    summary.critical_parameters = whitelistJsonObject(all_params, SpeeDRF_critical_params);
+    summary.secondary_parameters = whitelistJsonObject(all_params, SpeeDRF_secondary_params);
+    summary.expert_parameters = whitelistJsonObject(all_params, SpeeDRF_expert_params);
   }
 
   /***************
