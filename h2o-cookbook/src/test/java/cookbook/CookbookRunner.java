@@ -91,9 +91,9 @@ public class CookbookRunner {
       tests.add(FrameCookbook.class);
       tests.add(VecChunkDemo.class);
       tests.add(KeyDemo.class);
-   //    tests.add(FillNAsWithMeanDemo01.class);
-   //    tests.add(FillNAsWithMeanDemo03.class);
-   //    tests.add(FillNAsWithMeanDemo02.class);
+      tests.add(FillNAsWithMeanDemo01.class);
+      tests.add(FillNAsWithMeanDemo02.class);
+      tests.add(FillNAsWithMeanDemo03.class);
       //
       // Run tests.
       //

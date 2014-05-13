@@ -26,7 +26,7 @@ public class FillNAsWithMeanDemo03 extends AbstractCookbook {
 		// String fileName = "/Users/nidhimehta/h2o/smalldata/iris/iris.csv";
 		 //String fileName = "/Users/nidhimehta/Desktop/data/covtype/covtrain_tit";
 		//String fileName = "/Users/nidhimehta/Desktop/iris_withNA.csv";
-		String fileName = "../cookbookData/iris_withNA.csv";
+		String fileName = "./cookbookData/iris_withNA.csv";
 		
 		File file = new File(fileName);
 		Key fkey = NFSFileVec.make(file);
