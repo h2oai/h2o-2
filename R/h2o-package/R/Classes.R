@@ -234,7 +234,7 @@ setMethod("show", "H2OGBMModel", function(object) {
   cat("GBM Model Key:", object@key, "\n")
 
   model = object@model
-  if(model$params$distribution == "multinomial") {
+  if(model$params$distribution %in% c("multinomial", "bernoulli")) {
     cat("\nConfusion matrix:\nReported on", object@valid@key, "\n");
     print(model$confusion)
     
