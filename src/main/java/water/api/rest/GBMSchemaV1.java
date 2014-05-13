@@ -7,28 +7,34 @@ import water.api.rest.REST.ApiSupport;
 import water.api.rest.REST.RestCall;
 import water.api.rest.Version.V1;
 import water.fvec.Frame;
+import water.fvec.Vec;
 
 /** Actual schema for GBM REST API call
  *
  * NOTE: now extends Request2 since we have to have a nice way to test it. */
+@REST(location="/metadata/models/algos/gbm/schema", href="/models/") // /metadata/models/algos
 public class GBMSchemaV1 extends ApiSupport implements RestCall<Version.V1> {
 
-  @API( help="Source frame", helpFiles={"source.rst", "general.rst"},
-        direction=Direction.IN, required=true)
-  public Frame source;
+  @API( help="Source frame", helpFiles={"source.rst", "general.rst"}, filter=Default.class, //<-- here i need to preserve still filter field since it enforce generation of right control element
+        direction=Direction.IN, required=true, type=Frame.class, href="/frames/$self")
+  public String source;
 
-  @API( help="Response",
-        direction=Direction.IN, required=true, json = true, dependsOn="source")
+  @API( help="Response", filter=Default.class,
+        direction=Direction.IN, required=true, json = true, dependsOn="source", type=Vec.class,
+        values="/frames/${source}/cols?names")
   public String response;
 
-  @API(help="Selected columns", direction=Direction.IN)
+  @API(help="Selected columns", filter=Default.class, direction=Direction.IN)
   public int[] cols;
 
-  @API(help="Number of trees", direction=Direction.IN)
+  @API(help="Number of trees", filter=Default.class, direction=Direction.IN)
   int ntrees = 10;
 
   @API(help = "Learning rate, from 0. to 1.0", direction=Direction.IN)
   public double learn_rate = 0.1;
+
+  @API(help = "Execute classification", valid="/frames/${/parameters/source}/cols/${/parameters/response}/type != 'Float' && ${/parameters/learn_rate} > 1000")
+  public boolean classification ;
 
   // Output
   @API(help = "Destination key")
