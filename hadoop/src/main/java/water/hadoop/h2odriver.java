@@ -51,6 +51,7 @@ public class h2odriver extends Configured implements Tool {
   static boolean enableExceptions = false;
   static boolean enableVerboseGC = false;
   static boolean enablePrintGCDetails = false;
+  static boolean enablePrintGCTimeStamps = false;
   static String licenseFileName = null;
 
   // State filled in as a result of handling options.
@@ -547,6 +548,14 @@ public class h2odriver extends Configured implements Tool {
       else if (s.equals("-XX:+PrintGCDetails")) {
         enablePrintGCDetails = true;
       }
+      else if (s.equals("-XX:+PrintGCTimeStamps")) {
+        enablePrintGCTimeStamps = true;
+      }
+      else if (s.equals("-gc")) {
+        enableVerboseGC = true;
+        enablePrintGCDetails = true;
+        enablePrintGCTimeStamps = true;
+      }
       else if (s.equals("-license")) {
         i++; if (i >= args.length) { usage(); }
         licenseFileName = args[i];
@@ -778,7 +787,8 @@ public class h2odriver extends Configured implements Tool {
               + mapperXmx + " -Xmx" + mapperXmx
               + (enableExceptions ? " -ea" : "")
               + (enableVerboseGC ? " -verbose:gc" : "")
-              + (enablePrintGCDetails ? " -XX:+PrintGCDetails" : "");
+              + (enablePrintGCDetails ? " -XX:+PrintGCDetails" : "")
+              + (enablePrintGCTimeStamps ? " -XX:+PrintGCTimeStamps" : "");
       conf.set("mapred.child.java.opts", mapChildJavaOpts);
       conf.set("mapred.map.child.java.opts", mapChildJavaOpts);       // MapR 2.x requires this.
 
