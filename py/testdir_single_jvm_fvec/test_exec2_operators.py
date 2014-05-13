@@ -59,6 +59,10 @@ exprListFull = [
     "log(r1$C1)",
     "exp(r1$C1)",
     "is.na(r1$C1)",
+    # exec doesn't handle the range?
+    
+    # "n=2; fff = r1$C1; bbb=seq_len(length(fff)-n); aaa=fff[c( rep_len(0, n), bbb),]", # shift in 0
+
 
 
     "length(r1[,1])",
@@ -89,6 +93,7 @@ exprListFull = [
     "unique(r1$C1)",
     "factor(r1$C1)",
     "nrow(r1)",
+    "sd(r1$C1)",
     "ncol(r1)",
     "length(r1$C1)",
     "is.factor(r1$C1)",
