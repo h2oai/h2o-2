@@ -99,11 +99,12 @@ h2o.gbm <- function(x, y, distribution = 'multinomial', data, n.trees = 10, inte
     result$classification <- F
   
   if(params$importance) {
-    result$varimp = data.frame(t(res$varimp$varimp))
-    result$varimp[2,] = result$varimp[1,]/max(result$varimp[1,])
-    result$varimp[3,] = 100*result$varimp[1,]/sum(result$varimp[1,])
-    colnames(result$varimp) = res$'_names'[-length(res$'_names')]
-    rownames(result$varimp) = c(res$varimp$method, "Scaled Values", "Percent Influence")
+    result$varimp = data.frame(res$varimp$varimp)
+    result$varimp[,2] = result$varimp[,1]/max(result$varimp[,1])
+    result$varimp[,3] = 100*result$varimp[,1]/sum(result$varimp[,1])
+    rownames(result$varimp) = res$'_names'[-length(res$'_names')]
+    colnames(result$varimp) = c(res$varimp$method, "Scaled.Values", "Percent.Influence")
+    result$varimp = result$varimp[order(result$varimp[,1], decreasing = TRUE),]
   }
 
   result$err = as.numeric(res$errs)
