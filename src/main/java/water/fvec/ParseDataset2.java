@@ -479,6 +479,7 @@ public final class ParseDataset2 extends Job {
           if(localSetup._pType.parallelParseSupported){
             DParse dp = new DParse(_vg,localSetup, _vecIdStart, chunkStartIdx,this);
             addToPendingCount(1);
+            dp._removeKey = vec._key;
             dp.exec(new Frame(vec));
             for(int i = 0; i < vec.nChunks(); ++i)
               _chunk2Enum[chunkStartIdx + i] = vec.chunkKey(i).home_node().index();
@@ -572,7 +573,9 @@ public final class ParseDataset2 extends Job {
       FVecDataOut _dout;
       final Key _eKey;
       final Key _progress;
+      Key _removeKey;
       transient final MultiFileParseTask _outerMFPT;
+
 
       DParse(VectorGroup vg, CustomParser.ParserSetup setup, int vecIdstart, int startChunkIdx, MultiFileParseTask mfpt) {
         super(mfpt);
@@ -623,6 +626,7 @@ public final class ParseDataset2 extends Job {
         super.postGlobal();
         _outerMFPT._dout = _dout;
         _dout = null;
+        if(_removeKey != null) UKV.remove(_removeKey);
       }
     }
   }
