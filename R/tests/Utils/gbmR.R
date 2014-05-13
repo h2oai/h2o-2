@@ -15,13 +15,13 @@ checkGBMModel <- function(myGBM.h2o, myGBM.r, h2oTest, RTest) {
   #expect_true(sd(errDiff) < 0.1)
  
   # Compare GBM models on out-of-sample data
-  Log.info("Uploading ecology testing data...\n")
+  Log.info("Uploading GBM testing data...")
   ecologyTest.hex <- h2oTest
   ecologyTest.data <- RTest
   actual <- ecologyTest.data[,1]
   Log.info("Performing the predictions on h2o GBM model: ")
 
-  #TODO: Building CM in R instead of in H2O
+  # TODO: Building CM in R instead of in H2O
   h2ogbm.predict <- h2o.predict(myGBM.h2o, ecologyTest.hex)
   h2o.preds <- head(h2ogbm.predict,nrow(h2ogbm.predict))[,1]
   h2oCM <- table(actual,h2o.preds)

@@ -21,9 +21,9 @@ h2o.gbm <- function(x, y, distribution = 'multinomial', data, n.trees = 10, inte
   # else if(class(validation) != "H2OParsedData") stop("validation must be an H2O dataset")
   else if(!class(validation) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("validation must be an H2O parsed dataset")
 
-  if(!(distribution %in% c('multinomial', 'gaussian')))
-    stop(paste(distribution, "is not a valid distribution; only [multinomial, gaussian] are supported"))
-  classification <- ifelse(distribution == 'multinomial', 1, ifelse(distribution=='gaussian', 0, -1))
+  if(!(distribution %in% c('multinomial', 'gaussian', 'bernoulli')))
+    stop(paste(distribution, "is not a valid distribution; only [multinomial, gaussian, bernoulli] are supported"))
+  classification <- ifelse(distribution %in% c('multinomial', 'bernoulli'), 1, ifelse(distribution=='gaussian', 0, -1))
 
   if(!is.logical(balance.classes)) stop('balance.classes must be logical (TRUE or FALSE)')
   if(!is.numeric(max.after.balance.size)) stop('max.after.balance.size must be a number')
@@ -32,8 +32,12 @@ h2o.gbm <- function(x, y, distribution = 'multinomial', data, n.trees = 10, inte
 
   # NB: externally, 1 based indexing; internally, 0 based
   cols = paste(args$x_i - 1, collapse=",")
-  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GBM, source=data@key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage,
-    min_rows=n.minobsinnode, classification=classification, nbins=n.bins, importance=as.numeric(importance), validation=validation@key, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size))
+  if(distribution == "bernoulli")
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GBM, source=data@key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, family = "bernoulli",
+      min_rows=n.minobsinnode, classification=classification, nbins=n.bins, importance=as.numeric(importance), validation=validation@key, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size))
+  else
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GBM, source=data@key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage,
+      min_rows=n.minobsinnode, classification=classification, nbins=n.bins, importance=as.numeric(importance), validation=validation@key, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size))
   params = list(x=args$x, y=args$y, distribution=distribution, n.trees=n.trees, interaction.depth=interaction.depth, shrinkage=shrinkage, n.minobsinnode=n.minobsinnode, n.bins=n.bins, importance=importance, balance.classes=balance.classes, max.after.balance.size=max.after.balance.size)
 
   if(length(n.trees) == 1 && length(interaction.depth) == 1 && length(n.minobsinnode) == 1 && length(shrinkage) == 1 && length(n.bins) == 1 && length(max.after.balance.size) == 1) {
@@ -68,6 +72,9 @@ h2o.gbm <- function(x, y, distribution = 'multinomial', data, n.trees = 10, inte
 }
 
 .h2o.__getGBMResults <- function(res, params) {
+  if(res$parameters$state == "CRASHED")
+    stop(res$parameters$exception)
+  
   result = list()
   params$n.trees = res$N
   params$interaction.depth = res$max_depth
@@ -78,7 +85,7 @@ h2o.gbm <- function(x, y, distribution = 'multinomial', data, n.trees = 10, inte
   params$balance.classes = res$balance_classes
   params$max.after.balance.size = res$max_after_balance_size
 
-  if(result$params$distribution == "multinomial") {
+  if(result$params$distribution %in% c("multinomial", "bernoulli")) {
     class_names = res$'cmDomain' # tail(res$'_domains', 1)[[1]]
     result$confusion = .build_cm(tail(res$'cms', 1)[[1]]$'_arr', class_names)  # res$'_domains'[[length(res$'_domains')]])
     result$classification <- T
@@ -92,11 +99,12 @@ h2o.gbm <- function(x, y, distribution = 'multinomial', data, n.trees = 10, inte
     result$classification <- F
   
   if(params$importance) {
-    result$varimp = data.frame(t(res$varimp$varimp))
-    result$varimp[2,] = result$varimp[1,]/max(result$varimp[1,])
-    result$varimp[3,] = 100*result$varimp[1,]/sum(result$varimp[1,])
-    colnames(result$varimp) = res$'_names'[-length(res$'_names')]
-    rownames(result$varimp) = c(res$varimp$method, "Scaled Values", "Percent Influence")
+    result$varimp = data.frame(res$varimp$varimp)
+    result$varimp[,2] = result$varimp[,1]/max(result$varimp[,1])
+    result$varimp[,3] = 100*result$varimp[,1]/sum(result$varimp[,1])
+    rownames(result$varimp) = res$'_names'[-length(res$'_names')]
+    colnames(result$varimp) = c(res$varimp$method, "Scaled.Values", "Percent.Influence")
+    result$varimp = result$varimp[order(result$varimp[,1], decreasing = TRUE),]
   }
 
   result$err = as.numeric(res$errs)

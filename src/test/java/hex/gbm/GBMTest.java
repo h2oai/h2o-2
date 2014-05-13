@@ -2,16 +2,17 @@ package hex.gbm;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import hex.gbm.GBM.Family;
 import hex.gbm.GBM.GBMModel;
+
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
 import water.*;
 import water.api.ConfusionMatrix;
 import water.api.GBMModelView;
-import water.fvec.Frame;
-import water.fvec.NFSFileVec;
-import water.fvec.ParseDataset2;
+import water.fvec.*;
 
 import java.io.File;
 
@@ -73,14 +74,37 @@ public class GBMTest extends TestUtil {
     //         });
   }
 
+  @Test public void testBasicGBMFamily() {
+    // Classification with Bernoulli family
+    basicGBM("./smalldata/logreg/prostate.csv","prostate.hex",
+        new PrepData() {
+          int prep(Frame fr) {
+            assertEquals(380,fr.numRows());
+            // Remove patient ID vector
+            UKV.remove(fr.remove("ID")._key);
+            // Change CAPSULE and RACE to categoricals
+            fr.factor(fr.find("CAPSULE"));
+            fr.factor(fr.find("RACE"));
+            // Prostate: predict on CAPSULE
+            return fr.find("CAPSULE");
+          }
+        }, Family.bernoulli);
+  }
+
   // covtype ignorable columns
-  static final int IGNS[] = new int[] { 6, 7, 10,11 };
+  static final int IGNS[] = new int[] { 6, 7, 10, 11 };
 
   // ==========================================================================
   public GBMModel basicGBM(String fname, String hexname, PrepData prep) {
-    return basicGBM(fname, hexname, prep, false);
+    return basicGBM(fname, hexname, prep, false, Family.AUTO);
   }
   public GBMModel basicGBM(String fname, String hexname, PrepData prep, boolean validation) {
+    return basicGBM(fname, hexname, prep, validation, Family.AUTO);
+  }
+  public GBMModel basicGBM(String fname, String hexname, PrepData prep, Family family) {
+    return basicGBM(fname, hexname, prep, false, Family.AUTO);
+  }
+  public GBMModel basicGBM(String fname, String hexname, PrepData prep, boolean validation, Family family) {
     File file = TestUtil.find_test_file(fname);
     if( file == null ) return null;  // Silently abort test if the file is missing
     Key fkey = NFSFileVec.make(file);
@@ -94,6 +118,8 @@ public class GBMTest extends TestUtil {
       int idx = prep.prep(fr);
       if( idx < 0 ) { gbm.classification = false; idx = ~idx; }
       gbm.response = fr.vecs()[idx];
+      gbm.family = family;
+      assert gbm.family != Family.bernoulli || gbm.classification;
       gbm.ntrees = 4;
       gbm.max_depth = 4;
       gbm.min_rows = 1;
