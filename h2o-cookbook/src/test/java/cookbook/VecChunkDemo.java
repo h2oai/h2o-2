@@ -21,7 +21,7 @@ public class VecChunkDemo {
 	@Test
     public void frame_001() {
 		
-		String fileName = "/Users/nidhimehta/Desktop/iris.csv";
+		String fileName = "../smalldata/iris/iris.csv";
 		
 		File file = new File(fileName);
 		Key fkey = NFSFileVec.make(file);
