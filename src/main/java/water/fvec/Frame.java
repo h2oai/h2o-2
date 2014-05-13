@@ -1,5 +1,6 @@
 package water.fvec;
 
+import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.exec.Flow;
@@ -718,9 +719,12 @@ public class Frame extends Lockable<Frame> {
 
     // Do Da Slice
     // orows is either a long[] or a Vec
-    if (orows == null)
-      return new DeepSlice((long[])orows,c2,vecs()).doAll(c2.length,this).outputFrame(names(c2),domains(c2));
-    else if (orows instanceof long[]) {
+    if (orows == null){
+      Vec [] vs = new Vec[c2.length];
+      for(int i = 0; i < vs.length; ++i)
+        vs[i] = vecs()[c2[i]];
+      return new Frame(new DeepCopyTask(vs).doAll(vs)._res);
+    } else if (orows instanceof long[]) {
       final long CHK_ROWS=1000000;
       long[] rows = (long[])orows;
       if( rows.length==0 || rows[0] < 0 )
@@ -797,6 +801,34 @@ public class Frame extends Lockable<Frame> {
         }
       }
     }
+  }
+
+  public static class DeepCopyTask extends MRTask2<DeepCopyTask>{
+    final Vec [] _vs;
+    final Key [] _newVecKeys;
+    Vec [] _res;
+    public DeepCopyTask(Vec ... vs){
+      _vs = vs;
+      _newVecKeys = _vs[0].group().addVecs(vs.length);
+    }
+    @Override public void map(Chunk [] chks){
+      for(int i = 0; i < chks.length; ++i){
+        Chunk nc = chks[i].clone();
+        if(nc._mem == chks[i]._mem) // make sure it's deep clone
+          nc._mem = chks[i]._mem.clone();
+        DKV.put(new Vec(_newVecKeys[i], new long[0]).chunkKey(chks[i].cidx()),nc,_fs);
+      }
+    }
+    @Override public final void postGlobal() {
+      Futures fs = new Futures();
+      _res = new Vec[_vs.length];
+      for(int i = 0; i < _vs.length; ++i) {
+        _res[i] = new Vec(_newVecKeys[i],_vs[i]._espc.clone(),_vs[i]._domain == null?null:_vs[i]._domain.clone());
+        DKV.put(_newVecKeys[i], _res[i],fs);
+      }
+      fs.blockForPending();
+    }
+    @Override public void reduce(DeepCopyTask dct){/* no need to do anything here... */}
   }
 
   // Bulk (expensive) copy from 2nd cols into 1st cols.
