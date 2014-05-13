@@ -384,7 +384,7 @@ class ASTId extends AST {
 class ASTAssign extends AST {
   final AST _lhs;
   final AST _eval;
-  ASTAssign( AST lhs, AST eval ) { super(lhs._t); _lhs=lhs; _eval=eval; }
+  ASTAssign( AST lhs, AST eval ) { super(eval._t); _lhs=lhs; _eval=eval; }
   // Parse a valid LHS= or return null
   static ASTAssign parse(Exec2 E, AST ast, boolean EOS) {
     int x = E._x;
@@ -466,8 +466,8 @@ class ASTAssign extends AST {
     Frame ary = env.frId(id._depth,id._num);
     // Pull the RHS off the stack; do not lower the refcnt
     Frame ary_rhs=null;  double d=Double.NaN;
-    if( env.isDbl() ) d = env.popDbl();
-    else        ary_rhs = env.popXAry(); // Pop without deleting
+    if( env.isDbl() ) d = env._d[env._sp-1];
+    else        ary_rhs = env.peekAry(); // Pop without deleting
 
     // Typed as a double ==> the row & col selectors are simple constants
     if( slice._t == Type.DBL ) { // Typed as a double?
@@ -530,7 +530,7 @@ class ASTAssign extends AST {
     int narg = 0;
     if( rows!= null ) narg++;
     if( cols!= null ) narg++;
-    env.poppush(narg,ary,null);
+    env.pop(narg);
   }
   @Override String argName() { return _lhs instanceof ASTId ? ((ASTId)_lhs)._id : null; }
   @Override public String toString() { return "="; }
