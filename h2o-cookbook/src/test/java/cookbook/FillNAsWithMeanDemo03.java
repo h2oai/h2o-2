@@ -59,8 +59,10 @@ public class FillNAsWithMeanDemo03 extends AbstractCookbook {
 		Log.info(" new output frame        : " + outputFrame);
 		//logThisH2OInstanceWebBrowserAddress();
         //sleepForever();
-		
-	}
+
+        Frame.delete(okey);
+        outputFrame.delete();
+    }
 	public static class FillNasWithMean extends MRTask2<FillNasWithMean> {
 		final double[] _meanX;
 
