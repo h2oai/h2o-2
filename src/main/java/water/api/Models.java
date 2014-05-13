@@ -1,13 +1,14 @@
 package water.api;
 
 import static water.util.ParamUtils.*;
+
+import hex.VarImp;
 import hex.deeplearning.DeepLearning;
 import hex.drf.DRF;
 import hex.gbm.GBM;
 import hex.glm.GLM2;
 import hex.glm.GLMModel;
 import hex.singlenoderf.SpeeDRF;
-import hex.singlenoderf.SpeeDRFModel;
 
 import java.util.*;
 
@@ -70,6 +71,7 @@ public class Models extends Request2 {
     public Map critical_parameters = new HashMap<String, Object>();
     public Map secondary_parameters = new HashMap<String, Object>();
     public Map expert_parameters = new HashMap<String, Object>();
+    public Map variable_importances = null;
     public Set<String> compatible_frames = new HashSet<String>();
   }
 
@@ -206,6 +208,17 @@ public class Models extends Request2 {
 
     for (int i = 0; i < names.length - 1; i++)
       summary.input_column_names.add(names[i]);
+
+    // Ugh.
+    VarImp vi = model.varimp();
+    if (null != vi) {
+      summary.variable_importances = new LinkedHashMap();
+      summary.variable_importances.put("varimp", vi.varimp);
+      summary.variable_importances.put("variables", vi.getVariables());
+      summary.variable_importances.put("method", vi.method);
+      summary.variable_importances.put("max_var", vi.max_var);
+      summary.variable_importances.put("scaled", vi.scaled());
+    }
   }
 
 
