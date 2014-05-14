@@ -1,18 +1,14 @@
 package water.api.rest;
 
-import hex.gbm.GBM;
 import water.Key;
-import water.api.rest.REST.ApiAdaptor;
 import water.api.rest.REST.ApiSupport;
-import water.api.rest.REST.RestCall;
 import water.api.rest.Version.Bloody;
-import water.api.rest.Version.V1;
 import water.fvec.Frame;
 
 /** Actual schema for GBM REST API call
  *
  * NOTE: now extends Request2 since we have to have a nice way to test it. */
-public class GBMSchemaBloody extends ApiSupport implements RestCall<Version.Bloody> {
+public class GBMSchemaBloody extends ApiSupport<GBMSchemaBloody, Version.Bloody> {
 
   @API(help="Source frame", helpFiles={"source.rst", "general.rst"}, filter=Default.class, required=true)
   public Frame source;
@@ -35,17 +31,6 @@ public class GBMSchemaBloody extends ApiSupport implements RestCall<Version.Bloo
   @API(help = "Job key")
   public Key job_key;
 
-  // This is a part of HACK to be connect a new API to current RequestServer
-  @Override protected Response serve() {
-    // Get adaptor
-    ApiAdaptor adaptor = REST.API_MAPPING.get(this.getClass());
-    // Create implementation
-    GBM gbm = (GBM) adaptor.makeImpl(this);
-    Response r = gbm.servePublic();
-    // Fill API
-    adaptor.fillApi(gbm, this);
-    return r;
-  }
   @Override public Bloody getVersion() {
     return Version.bloody;
   }
