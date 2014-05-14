@@ -724,12 +724,12 @@ public class Frame extends Lockable<Frame> {
     // Do Da Slice
     // orows is either a long[] or a Vec
     if (orows == null)
-      return new DeepSlice((long[])orows,c2,vecs()).doAll(c2.length,this).outputFrame(names(c2),domains(c2));
+      return copyRollups(new DeepSlice((long[])orows,c2,vecs()).doAll(c2.length,this).outputFrame(names(c2),domains(c2)),true);
     else if (orows instanceof long[]) {
       final long CHK_ROWS=1000000;
       long[] rows = (long[])orows;
       if( rows.length==0 || rows[0] < 0 )
-        return new DeepSlice(rows,c2,vecs()).doAll(c2.length, this).outputFrame(names(c2), domains(c2));
+        return copyRollups(new DeepSlice(rows,c2,vecs()).doAll(c2.length, this).outputFrame(names(c2), domains(c2)),rows.length==0);
       // Vec'ize the index array
       Futures fs = new Futures();
       AppendableVec av = new AppendableVec("rownames");
@@ -886,6 +886,19 @@ public class Frame extends Lockable<Frame> {
             nchks[j].addNum(chks[j].at0(i));
       }
     }
+  }
+
+  private Frame copyRollups( Frame fr, boolean isACopy ) {
+    if( !isACopy ) return fr; // Not a clean copy, do not copy rollups (will do rollups "the hard way" on first ask)
+    Vec vecs0[] = vecs();
+    Vec vecs1[] = fr.vecs();
+    for( int i=0; i<fr._names.length; i++ ) {
+      assert vecs1[i]._naCnt== -1; // not computed yet, right after slice
+      Vec v0 = vecs0[find(fr._names[i])];
+      Vec v1 = vecs1[i];
+      v1.setRollupStats(v0);
+    }
+    return fr;
   }
 
   // ------------------------------------------------------------------------------
