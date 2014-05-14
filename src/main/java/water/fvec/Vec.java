@@ -111,7 +111,7 @@ public class Vec extends Iced {
                   DKV.put(k,new C0LChunk(l,(int)(nrow-row)),_fs);
                 row = nrow;
               }
-              tryComplete();;
+              tryComplete();
             }
           }.fork();
         }
@@ -384,6 +384,13 @@ public class Vec extends Iced {
     _naCnt= rs._naCnt;          // Volatile write last to announce all stats ready
     return this;
   }
+  Vec setRollupStats( Vec v ) {
+    _min  = v._min;   _max   = v._max;
+    _mean = v._mean;  _sigma = v._sigma;
+    _size = v._size;  _isInt = v._isInt;
+    _naCnt= v._naCnt;  // Volatile write last to announce all stats ready
+    return this;
+  }
 
   /** Compute the roll-up stats as-needed, and copy into the Vec object */
   public Vec rollupStats() { return rollupStats(null); }
@@ -393,16 +400,11 @@ public class Vec extends Iced {
     Vec vthis = DKV.get(_key).get();
     if( vthis._naCnt==-2 )
       throw new IllegalArgumentException("Cannot ask for roll-up stats while the vector is being actively written.");
-    if( vthis._naCnt>= 0 ) {    // KV store has a better answer
-      if( vthis == this ) return this;
-      _min  = vthis._min;   _max   = vthis._max;
-      _mean = vthis._mean;  _sigma = vthis._sigma;
-      _size = vthis._size;  _isInt = vthis._isInt;
-      _naCnt= vthis._naCnt;  // Volatile write last to announce all stats ready
-    } else {                 // KV store reports we need to recompute
-      RollupStats rs = new RollupStats().dfork(this);
-      if(fs != null) fs.add(rs); else setRollupStats(rs.getResult());
-    }
+    if( vthis._naCnt>= 0 )      // KV store has a better answer
+      return vthis == this ? this : setRollupStats(vthis);
+                                // KV store reports we need to recompute
+    RollupStats rs = new RollupStats().dfork(this);
+    if(fs != null) fs.add(rs); else setRollupStats(rs.getResult());
     return this;
   }
 
