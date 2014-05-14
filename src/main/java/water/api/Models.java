@@ -66,6 +66,7 @@ public class Models extends Request2 {
     public String id = null;
     public String key = null;
     public long creation_epoch_time_millis = -1;
+    public long training_duration_in_ms = -1;
     public List<String> input_column_names = new ArrayList<String>();
     public String response_column_name = "unknown";
     public Map critical_parameters = new HashMap<String, Object>();
@@ -203,6 +204,7 @@ public class Models extends Request2 {
     summary.id = unique_id.getId();
     summary.key = unique_id.getKey();
     summary.creation_epoch_time_millis = unique_id.getCreationEpochTimeMillis();
+    summary.training_duration_in_ms = model.training_duration_in_ms;
 
     summary.response_column_name = names[names.length - 1];
 

@@ -133,7 +133,11 @@ public class SpeeDRF extends Job.ValidatedJob {
 
   @Override protected void execImpl() {
     SpeeDRFModel rf_model = initModel();
+    rf_model.start_training(null);
     buildForest(rf_model);
+    // buildForest() caused a different SpeeDRFModel instance to get put into the DKV.  We
+    // need to update that one, not rf_model
+    DRFTask.updateRFModelStopTraining(rf_model._key);
     cleanup();
     remove();
   }
@@ -302,6 +306,16 @@ public class SpeeDRF extends Job.ValidatedJob {
           SpeeDRFModel newModel = (SpeeDRFModel)old.clone();
           newModel.current_status = status;
           return newModel;
+        }
+      }.invoke(modelKey);
+    }
+
+    static void updateRFModelStopTraining(Key modelKey) {
+      new TAtomic<SpeeDRFModel>() {
+        @Override public SpeeDRFModel atomic(SpeeDRFModel m) {
+          if(m == null) return null;
+          m.stop_training();
+          return m;
         }
       }.invoke(modelKey);
     }

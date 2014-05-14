@@ -700,8 +700,10 @@ public class DeepLearning extends Job.ValidatedJob {
   @Override
   public final void execImpl() {
     DeepLearningModel cp = null;
-    if (checkpoint == null) cp = initModel();
-    else {
+    if (checkpoint == null) {
+      cp = initModel();
+      cp.start_training(null);
+    } else {
       final DeepLearningModel previous = UKV.get(checkpoint);
       if (previous == null) throw new IllegalArgumentException("Checkpoint not found.");
       Log.info("Resuming from checkpoint.");
@@ -724,6 +726,7 @@ public class DeepLearning extends Job.ValidatedJob {
       if (classification != previous.model_info().get_params().classification) {
         Log.warn("Automatically switching to " + ((classification=!classification) ? "classification" : "regression") + " (same as the checkpointed model).");
       }
+      cp.start_training(previous);
       epochs += previous.epoch_counter; //add new epochs to existing model
       Log.info("Adding " + String.format("%.3f", previous.epoch_counter) + " epochs from the checkpointed model.");
       try {
@@ -757,6 +760,7 @@ public class DeepLearning extends Job.ValidatedJob {
       }
     }
     trainModel(cp);
+    cp.stop_training();
     delete();
   }
 

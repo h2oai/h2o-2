@@ -206,6 +206,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     Timer bm_timer =  new Timer();
     // Create an initial model
     TM model = makeModel(outputKey, dataKey, testKey, names, domains, getCMDomain());
+    long before = System.currentTimeMillis();
     // Save the model ! (delete_and_lock has side-effect of saving model into DKV)
     model.delete_and_lock(self());
     // Prepare and cache adapted validation dataset if it is necessary
@@ -222,6 +223,10 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     } finally {
       model.unlock(self());  // Update and unlock model
       cleanUp(fr,bm_timer);  // Shared cleanup
+      Log.info("after buildModel: " + model);
+      // we get back a different model
+      model.start_training(before);
+      model.stop_training();
     }
   }
 
