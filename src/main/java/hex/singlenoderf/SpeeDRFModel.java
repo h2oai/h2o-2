@@ -135,7 +135,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     m.local_forests[nodeIdx][m.local_forests[nodeIdx].length-1] = tkey;
 
     double f = (double)m.t_keys.length / (double)m.N;
-    if (m.t_keys.length == 1) {
+    if (m.t_keys.length == 1 && !m.regression) {
       cm_update = true;
       CMTask cmTask = new CMTask(m, m.size(), m.weights, m.oobee);
       cmTask.doAll(m.test_frame == null ? m.fr : m.test_frame, true);
@@ -164,7 +164,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
         m.validAUC= makeAUC(toCMArray(m.confusion._cms), ModelUtils.DEFAULT_THRESHOLDS);
       }
       //Launch a Variable Importance Task
-      if (m.importance)
+      if (m.importance && !m.regression)
         m.varimp = m.doVarImpCalc(m);
     }
     JsonObject trees = new JsonObject();
@@ -274,7 +274,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     _td = new Counter();
     _tl = new Counter();
     for( Key tkey : t_keys ) {
-      long dl = Tree.depth_leaves(new AutoBuffer(DKV.get(tkey).memOrLoad()));
+      long dl = Tree.depth_leaves(new AutoBuffer(DKV.get(tkey).memOrLoad()), regression);
       _td.add((int) (dl >> 32));
       _tl.add((int) dl);
     }
@@ -298,7 +298,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       for (int i = 0; i < treeCount(); ++i) {
         p += Tree.classify(new AutoBuffer(tree(i)), data, numClasses, true);
       }
-      return new float[]{p};
+      return new float[]{p / (float)(1. * treeCount())};
     } else {
       int votes[] = new int[numClasses + 1/* +1 to catch broken rows */];
       preds = new float[numClasses + 1];
