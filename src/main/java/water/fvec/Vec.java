@@ -126,6 +126,29 @@ public class Vec extends Iced {
     }.invokeOnAllNodes();
     return vs;
   }
+
+  /**
+   * Create an array of Vecs from scratch
+   * @param rows Length of each vec
+   * @param cols Number of vecs
+   * @param val Constant value (long)
+   * @param domain Factor levels (for factor columns)
+   * @return Array of Vecs
+   */
+  static public Vec [] makeNewCons(final long rows, final int cols, final long val, final String [][] domain){
+    int chunks = Math.min((int)rows, 4*H2O.NUMCPUS*H2O.CLOUD.size());
+    long[] espc = new long[chunks];
+    for (int i = 0; i<chunks; ++i) {
+      espc[i] = i * rows / chunks;
+    }
+    for (long i = chunks * (rows/chunks); i<rows; ++i) {
+      espc[chunks-1]++;
+    }
+    Vec v = new Vec(Vec.newKey(), espc);
+    Vec[] vecs = v.makeCons(cols, val, domain);
+    return vecs;
+  }
+
    /** Make a new vector with the same size and data layout as the old one, and
    *  initialized to zero. */
   public Vec makeZero()                { return makeCon(0); }
