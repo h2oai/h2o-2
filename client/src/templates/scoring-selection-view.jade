@@ -1,7 +1,7 @@
 .y-scoring-selection-view
   // ko if:hasSelection
   .y-caption(data-bind='text:caption')
-  //- This div exists because bootstrap's tooltip plugin does not function on disabled elements
+  //- This div exists because mouse events are not triggered on disabled elements
   .y-hover-capture(data-bind='hover:tryCompareScorings')
     button.btn.btn-primary(title='Compare selected scorings' data-bind='click:compareScorings, enable:canCompareScorings') Compare
   button.btn(title='Clear selections' data-bind='click:clearSelections') Clear

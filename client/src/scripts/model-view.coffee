@@ -3,15 +3,8 @@ Steam.ModelView = (_, _model) ->
   _compatibleFramesCount = node$ ''
 
   initialize = (model) ->
-    _.requestModelAndCompatibleFrames model.key, (error, data) ->
-      if error
-        #TODO handle errors
-      else
-        #TODO typecheck
-        unless isEmpty data.models
-          aModel = head data.models
-          _compatibleFrames createCompatibleFramesSection aModel.compatible_frames
-          _compatibleFramesCount "(#{aModel.compatible_frames.length})"
+    _compatibleFrames createCompatibleFramesSection model.compatible_frames
+    _compatibleFramesCount "(#{model.compatible_frames.length})"
 
   stringify = (value) ->
     if isArray value
