@@ -1,6 +1,8 @@
 package water.api.rest.schemas;
 
 import water.Key;
+import water.api.Direction;
+import water.api.DocGen;
 import water.api.anno.RESTCall;
 import water.api.rest.*;
 import water.api.rest.Version.V1;
@@ -13,6 +15,9 @@ import water.api.rest.Version.V1;
  * NOTE: now extends Request2 since we have to have a nice way to test it. */
 @RESTCall(location="/metadata/models/algos/gbm/schema", path="/models/", method="PUT") // /metadata/models/algos
 public class GBMSchemaV1 extends ApiSupport<GBMSchemaV1, Version.V1> {
+
+  static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
+  static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
   @API( help      = "Source frame", // <-- Short help
         helpFiles = {"source.rst", "general.rst"}, // <-- Help files used for documentation generation

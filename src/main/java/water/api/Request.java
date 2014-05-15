@@ -74,10 +74,6 @@ public abstract class Request extends RequestBuilders {
     // =========
   }
 
-  public enum Direction {
-    IN, OUT, INOUT;
-  }
-
   public interface Validator<V> extends Freezable {
     void validateRaw(String value) throws IllegalArgumentException;
     void validateValue(V value) throws IllegalArgumentException;

@@ -4,8 +4,8 @@ import java.lang.reflect.Field;
 import java.util.Map;
 
 import water.Iced;
+import water.api.Direction;
 import water.api.Request.API;
-import water.api.Request.Direction;
 import water.api.rest.REST.RestCall;
 import water.api.rest.REST.TransfSig;
 import water.api.rest.REST.ValueTransf;
