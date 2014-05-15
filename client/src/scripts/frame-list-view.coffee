@@ -58,11 +58,17 @@ Steam.FrameListView = (_) ->
             displayFrames data.frames
 
       when 'compatibleWithModel'
+        #FIXME Need an api call to get "frames and compatible models for all frames compatible with a model"
         _.requestModelAndCompatibleFrames predicate.modelKey, (error, data) ->
           if error
             #TODO handle errors
           else
-            displayFrames (head data.models).compatible_frames
+            compatibleFramesByKey = indexBy (head data.models).compatible_frames, (frame) -> frame.key
+            _.requestFramesAndCompatibleModels (error, data) ->
+              if error
+                #TODO handle errors
+              else
+                displayFrames filter data.frames, (frame) -> if compatibleFramesByKey[frame.key] then yes else no
 
     _predicate predicate
     return
