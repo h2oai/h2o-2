@@ -29,8 +29,6 @@ public final class ModelMetrics extends Iced {
   @API(help="The unique ID (key / uuid / creation timestamp) for the frame used for this scoring run.", required=false, filter=Default.class, json=true)
   public UniqueId frame = null;
 
-  @API(help="The error measure for this scoring run.", required=false, filter=Default.class, json=true)
-  public double error_measure = Double.MAX_VALUE;
   @API(help="The duration in mS for this scoring run.", required=false, filter=Default.class, json=true)
   public long duration_in_ms =-1L;
   @API(help="The time in mS since the epoch for the start of this scoring run.", required=false, filter=Default.class, json=true)
@@ -41,11 +39,10 @@ public final class ModelMetrics extends Iced {
   @API(help="The ConfusionMatrix object for this scoring run.", required=false, filter=Default.class, json=true)
   public ConfusionMatrix cm = null;
 
-  public ModelMetrics(UniqueId model, ModelCategory model_category, UniqueId frame, double error_measure, long duration_in_ms, long scoring_time, AUC auc, ConfusionMatrix cm) {
+  public ModelMetrics(UniqueId model, ModelCategory model_category, UniqueId frame, long duration_in_ms, long scoring_time, AUC auc, ConfusionMatrix cm) {
     this.model = model;
     this.model_category = model_category;
     this.frame = frame;
-    this.error_measure = (float)error_measure;
     this.duration_in_ms = duration_in_ms;
     this.scoring_time = scoring_time;
 
@@ -58,15 +55,15 @@ public final class ModelMetrics extends Iced {
   }
 
   public static Key buildKey(Model model, Frame frame) {
-    return makeKey("modelmetrics_" + model.getUniqueId().getUuid() + "_on_" + frame.getUniqueId().getUuid());
+    return makeKey("modelmetrics_" + model.getUniqueId().getId() + "_on_" + frame.getUniqueId().getId());
   }
 
   public static Key buildKey(UniqueId model, UniqueId frame) {
-    return makeKey("modelmetrics_" + model.getUuid() + "_on_" + frame.getUuid());
+    return makeKey("modelmetrics_" + model.getId() + "_on_" + frame.getId());
   }
 
   public Key buildKey() {
-    return makeKey("modelmetrics_" + this.model.getUuid() + "_on_" + this.frame.getUuid());
+    return makeKey("modelmetrics_" + this.model.getId() + "_on_" + this.frame.getId());
   }
 
   public void putInDKV() {
@@ -102,11 +99,10 @@ public final class ModelMetrics extends Iced {
   public JsonObject toJSON() {
     final String json = new String(writeJSON(new AutoBuffer()).buf());
     if (json.length() == 0) return new JsonObject();
-    JsonObject jo = (JsonObject)new JsonParser().parse(json);
 
+    JsonObject jo = (JsonObject)new JsonParser().parse(json);
     if (jo.has("model"))
       jo.getAsJsonObject("model").addProperty("model_category", this.model_category.toString());
-
     return jo;
   }
 }

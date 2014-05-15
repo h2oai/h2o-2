@@ -25,16 +25,15 @@
   ],
   "dependencies": {
     "jquery": "~2.1.0",
-    "jquery-timeago": "~1.4.0",
     "d3": "~3.4.4",
     "bootstrap": "~3.1.1",
     "knockout": "komputing/knockout",
     "lodash": "~2.4.1",
     "chai": "~1.9.1",
-    "tv4": "~1.0.15",
     "hasher": "~1.2.0",
     "crossroads": "~0.12.0",
     "fontawesome": "~4.0.3",
-    "stacktrace": "~0.6.0"
+    "stacktrace": "~0.6.0",
+    "momentjs": "~2.6.0"
   }
 }

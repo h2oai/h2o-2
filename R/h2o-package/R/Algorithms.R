@@ -2,7 +2,7 @@
 # ----------------------- Generalized Boosting Machines (GBM) ----------------------- #
 # TODO: don't support missing x; default to everything?
 h2o.gbm <- function(x, y, distribution = 'multinomial', data, n.trees = 10, interaction.depth = 5, n.minobsinnode = 10, shrinkage = 0.1,
-    n.bins = 100, importance = FALSE, validation, balance.classes=FALSE, max.after.balance.size=5) {
+    n.bins = 100, importance = FALSE, validation, balance.classes = FALSE, max.after.balance.size = 5) {
   args <- .verify_dataxy(data, x, y)
 
   if(!is.numeric(n.trees)) stop('n.trees must be numeric')

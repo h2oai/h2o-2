@@ -11,7 +11,7 @@ Steam.FrameListView = (_) ->
       when 'compatibleWithModel'
         "Showing datasets compatible with\n#{predicate.modelKey}"
       else
-        ''
+        throw new Error 'Invalid predicate type'
 
   displayItem = (item) ->
     if item
@@ -45,12 +45,13 @@ Steam.FrameListView = (_) ->
   displayFrames = (frames) ->
     _items items = map frames, createItem
     activateAndDisplayItem head items
+    _.framesLoaded()
 
-  apply$ _predicate, (predicate) ->
+  loadFrames = (predicate) ->
     console.assert isDefined predicate
     switch predicate.type
       when 'all'
-        _.requestFrames (error, data) ->
+        _.requestFramesAndCompatibleModels (error, data) ->
           if error
             #TODO handle errors
           else
@@ -62,13 +63,15 @@ Steam.FrameListView = (_) ->
             #TODO handle errors
           else
             displayFrames (head data.models).compatible_frames
+
+    _predicate predicate
     return
 
-  clearPredicate = -> _predicate type: 'all'
+  clearPredicate = -> loadFrames type: 'all'
 
   link$ _.loadFrames, (predicate) ->
     if predicate
-      _predicate predicate
+      loadFrames predicate
     else
       displayActiveItem()
 

@@ -539,8 +539,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   }
   private class Iteration extends H2OCallback<GLMIterationTask> {
     public final long _iterationStartTime;
-    public Iteration(){super(GLM2.this); _iterationStartTime = System.currentTimeMillis();}
+    public Iteration(){super(GLM2.this); _iterationStartTime = System.currentTimeMillis(); _model.start_training(null);}
     @Override public void callback(final GLMIterationTask glmt){
+      _model.stop_training();
       Log.info("GLM2 iteration(" + _iter + ") done in " + (System.currentTimeMillis() - _iterationStartTime) + "ms");
       if( !isRunning(self()) )  throw new JobCancelledException();
       currentLambdaIter++;

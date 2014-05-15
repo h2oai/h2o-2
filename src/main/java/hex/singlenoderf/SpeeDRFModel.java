@@ -161,7 +161,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       ConfusionMatrix new_cm = new ConfusionMatrix(m.confusion._matrix);
       m.cms[m.cms.length-1] = new_cm;
       if (m.classes() == 2) {
-        m.validAUC= makeAUC(toCMArray(m.confusion._cms), ModelUtils.DEFAULT_THRESHOLDS);
+        m.validAUC= makeAUC(toCMArray(m.confusion._cms), ModelUtils.DEFAULT_THRESHOLDS, m.cmDomain);
       }
       //Launch a Variable Importance Task
       if (m.importance && !m.regression)
@@ -548,8 +548,8 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     return res;
   }
 
-  protected static water.api.AUC makeAUC(ConfusionMatrix[] cms, float[] threshold) {
-    return cms != null ? new AUC(cms, threshold,/*TODO: add CM domain*/null) : null;
+  protected static water.api.AUC makeAUC(ConfusionMatrix[] cms, float[] threshold, String[] cmDomain) {
+    return cms != null ? new AUC(cms, threshold, cmDomain) : null;
   }
 
   protected void generateHTMLAUC(StringBuilder sb) {

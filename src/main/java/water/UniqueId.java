@@ -1,5 +1,6 @@
 package water;
 
+import com.google.gson.JsonObject;
 import water.api.DocGen;
 import water.api.Request.API;
 import water.api.Request.Default;
@@ -12,34 +13,34 @@ import java.util.UUID;
  * same key over time.
  */
 
-public final class UniqueId extends Iced {
+public class UniqueId extends Iced {
   static final int API_WEAVER = 1;
   static public DocGen.FieldDoc[] DOC_FIELDS;
 
-  @API(help="The keycreation timestamp for the model (if it's not null).", required=false, filter=Default.class, json=true)
+  @API(help="The keycreation timestamp for the object (if it's not null).", required=false, filter=Default.class, json=true)
   private String key = null;
 
-  @API(help="The creation timestamp for the model.", required=false, filter=Default.class, json=true)
+  @API(help="The creation timestamp for the object.", required=false, filter=Default.class, json=true)
   private long creation_epoch_time_millis = -1L;
 
-  @API(help="The uuid for the model.", required=false, filter=Default.class, json=true)
-  private String uuid = null;
+  @API(help="The id for the object.", required=false, filter=Default.class, json=true)
+  private String id = null;
 
 
   public UniqueId(Key key) {
     if (null != key)
       this.key = key.toString();
     this.creation_epoch_time_millis = System.currentTimeMillis();
-    this.uuid = UUID.randomUUID().toString();
+    this.id = UUID.randomUUID().toString();
   }
 
   /**
    * ONLY to be used to deserializing persisted instances.
    */
-  public UniqueId(String key, long creation_epoch_time_millis, String uuid) {
+  public UniqueId(String key, long creation_epoch_time_millis, String id) {
     this.key = key;
     this.creation_epoch_time_millis = creation_epoch_time_millis;
-    this.uuid = uuid;
+    this.id = id;
   }
 
   public String getKey() {
@@ -50,8 +51,16 @@ public final class UniqueId extends Iced {
     return this.creation_epoch_time_millis;
   }
 
-  public String getUuid() {
-    return this.uuid;
+  public String getId() {
+    return this.id;
+  }
+
+  public JsonObject toJSON() {
+    JsonObject result = new JsonObject();
+    result.addProperty("key", this.getKey());
+    result.addProperty("creation_epoch_time_millis", this.getCreationEpochTimeMillis());
+    result.addProperty("id", this.getId());
+    return result;
   }
 
   public boolean equals(Object o) {
@@ -60,15 +69,16 @@ public final class UniqueId extends Iced {
 
     UniqueId other = (UniqueId)o;
 
+    // NOTE: we must call this.getId() because subclasses can define the id in a way that's dynamic.
     return
       (this.creation_epoch_time_millis == other.creation_epoch_time_millis) &&
-      (this.uuid != null) &&
-      (this.uuid.equals(other.uuid));
+      (this.getId() != null) &&
+      (this.getId().equals(other.getId()));
   }
 
   public int hashCode() {
     return 17 +
       37 * Long.valueOf(this.creation_epoch_time_millis).hashCode() +
-      37 * this.uuid.hashCode();
+      37 * this.getId().hashCode();
   }
 }

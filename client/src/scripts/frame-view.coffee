@@ -3,21 +3,13 @@ Steam.FrameView = (_, _frame) ->
   _compatibleModelsCount = node$ ''
 
   initialize = (frame) ->
-    _.requestFrameAndCompatibleModels frame.key, (error, data) ->
-      if error
-        #TODO handle errors
-      else
-        #TODO typecheck
-        unless isEmpty data.frames
-          aFrame = head data.frames
-          _compatibleModels createCompatibleModelsSection aFrame
-          _compatibleModelsCount "(#{aFrame.compatible_models.length})"
-        return
+    _compatibleModels createCompatibleModelsSection frame
+    _compatibleModelsCount "(#{frame.compatible_models.length})"
 
   # Columns section
   createColumnsSection = (columnNames) ->
     rows = map columnNames, (columnName) -> [ columnName ]
-    [ table, tbody, tr, td ] = geyser.generate words 'table.table.table-condensed.table-hover tbody tr td'
+    [ table, tbody, tr, td ] = geyser.generate words 'table.table.table-condensed tbody tr td'
     table [
       tbody map rows, (row) ->
         tr map row, td
@@ -25,21 +17,25 @@ Steam.FrameView = (_, _frame) ->
 
   createCompatibleModelsSection = (frame) ->
       headers = [
+        'Key'
         'Method'
         'Category'
         'Response Column'
-        'State'
+        #TODO uncomment when this is functional
+        # 'State'
       ]
 
       rows = map frame.compatible_models, (model) ->
         [
+          model.key
           model.model_algorithm
           model.model_category
           model.response_column_name
-          model.state
+          #TODO uncomment when this is functional
+          # model.state
         ]
 
-      [ table, thead, tbody, tr, th, td ] = geyser.generate words 'table.table.table-condensed.table-hover thead tbody tr th td'
+      [ table, thead, tbody, tr, th, td ] = geyser.generate words 'table.table.table-condensed thead tbody tr th td'
 
       table [
         thead [
@@ -57,6 +53,7 @@ Steam.FrameView = (_, _frame) ->
 
   data: _frame
   key: _frame.key
+  timestamp: _frame.creation_epoch_time_millis
   title: _frame.key
   columns: createColumnsSection _frame.column_names
   columnCount: "(#{_frame.column_names.length})"

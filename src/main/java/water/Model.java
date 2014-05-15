@@ -56,6 +56,13 @@ public abstract class Model extends Lockable<Model> {
 
   private final UniqueId uniqueId;
 
+  /** The start time in mS since the epoch for model training. */
+  public long training_start_time = 0L;
+
+  /** The duration in mS for model training. */
+  public long training_duration_in_ms = 0L;
+
+
   /** Full constructor from frame: Strips out the Vecs to just the names needed
    *  to match columns later for future datasets.  */
   public Model( Key selfKey, Key dataKey, Frame fr, float[] priorClassDist ) {
@@ -87,8 +94,11 @@ public abstract class Model extends Lockable<Model> {
     _priorClassDist = priorClassDist;
   }
 
-  // currently only implemented by GLM2, DeepLearning, GBM and DRF:
+  // Currently only implemented by GLM2, DeepLearning, GBM and DRF:
   public Request2 get_params() { throw new UnsupportedOperationException("get_params() has not yet been implemented in class: " + this.getClass()); }
+
+  // NOTE: this is a local copy of the Job; to get the real state you need to get it from the DKV.
+  // Currently only implemented by GLM2, DeepLearning, GBM and DRF:
   public Request2 job() { throw new UnsupportedOperationException("job() has not yet been implemented in class: " + this.getClass()); }
 
   /** Simple shallow copy constructor to a new Key */
@@ -115,6 +125,18 @@ public abstract class Model extends Lockable<Model> {
 
   public UniqueId getUniqueId() {
     return this.uniqueId;
+  }
+
+  public void start_training(long training_start_time) {
+    this.training_start_time = training_start_time;
+  }
+  public void start_training(Model previous) {
+    training_start_time = System.currentTimeMillis();
+    if (null != previous)
+      training_duration_in_ms += previous.training_duration_in_ms;
+  }
+  public void stop_training() {
+    training_duration_in_ms += (System.currentTimeMillis() - training_start_time);
   }
 
   public String responseName() { return   _names[  _names.length-1]; }

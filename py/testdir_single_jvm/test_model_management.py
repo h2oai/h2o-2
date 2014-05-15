@@ -16,9 +16,11 @@ class ModelManagementTestCase(unittest.TestCase):
 
         localhost = h2o.decide_if_localhost()
         if (localhost):
+            print "Calling h2o.build_cloud(1). . ."
             h2o.build_cloud(1)
         else:
             h2o_hosts.build_cloud_with_hosts(1)
+            print "Calling h2o_hosts.build_cloud_with_hosts(1). . ."
         
         # USE FVec!
         h2o.beta_features = True
@@ -29,6 +31,16 @@ class ModelManagementTestCase(unittest.TestCase):
             h2o.tear_down_cloud()
         else:
             h2o.check_sandbox_for_errors(sandboxIgnoreErrors=False, python_test_name="test_model_management")
+
+
+    already_set_up = False
+
+    ''' Lazy setup of the common frames and models used by the test cases. '''
+    def setUp(self):
+        if ModelManagementTestCase.already_set_up:
+            return
+        self.create_models(self.import_frames())
+        ModelManagementTestCase.already_set_up = True
 
 
     def import_frame(self, target_key, bucket, csvFilename, csvPathname, expected_rows, expected_cols):
@@ -86,6 +98,7 @@ class ModelManagementTestCase(unittest.TestCase):
 
         return (prostate_hex, airlines_train_hex, airlines_test_hex)
         
+
     def create_models(self, frame_keys):
 
         prostate_hex, airlines_train_hex, airlines_test_hex = frame_keys
@@ -95,8 +108,6 @@ class ModelManagementTestCase(unittest.TestCase):
         self.assertIsNotNone(airlines_test_hex)
 
         node = h2o.nodes[0]
-        timeoutSecs = 200
-        retryDelaySecs = 2
 
         print "##############################################################"
         print "Generating AirlinesTrain GLM2 binary classification model. . ."
@@ -111,7 +122,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'lambda': 1.0e-2, 
             'n_folds': 0
         }
-        glm_AirlinesTrain_1 = node.GLM(airlines_train_hex, timeoutSecs, retryDelaySecs, **glm_AirlinesTrain_1_params)
+        glm_AirlinesTrain_1 = node.GLM(airlines_train_hex, **glm_AirlinesTrain_1_params)
         h2o_glm.simpleCheckGLM(self, glm_AirlinesTrain_1, None, **glm_AirlinesTrain_1_params)
 
 
@@ -127,7 +138,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'classification': 1
             # TODO: what about minobsinnode and shrinkage?!
         }
-        gbm_AirlinesTrain_1 = node.gbm(airlines_train_hex, timeoutSecs, retryDelaySecs, **gbm_AirlinesTrain_1_params)
+        gbm_AirlinesTrain_1 = node.gbm(airlines_train_hex, **gbm_AirlinesTrain_1_params)
 
 
         print "#####################################################################"
@@ -142,7 +153,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'classification': 1
             # TODO: what about minobsinnode and shrinkage?!
         }
-        gbm_AirlinesTrain_2 = node.gbm(airlines_train_hex, timeoutSecs, retryDelaySecs, **gbm_AirlinesTrain_2_params)
+        gbm_AirlinesTrain_2 = node.gbm(airlines_train_hex, **gbm_AirlinesTrain_2_params)
 
 
         print "####################################################################"
@@ -156,7 +167,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'max_depth': 2,
             'classification': 1
         }
-        rf_AirlinesTrain_1 = node.random_forest(airlines_train_hex, timeoutSecs, retryDelaySecs, **rf_AirlinesTrain_1_params)
+        rf_AirlinesTrain_1 = node.random_forest(airlines_train_hex, **rf_AirlinesTrain_1_params)
 
 
         print "#####################################################################"
@@ -170,7 +181,21 @@ class ModelManagementTestCase(unittest.TestCase):
             'max_depth': 10,
             'classification': 1
         }
-        rf_AirlinesTrain_2 = node.random_forest(airlines_train_hex, timeoutSecs, retryDelaySecs, **rf_AirlinesTrain_2_params)
+        rf_AirlinesTrain_2 = node.random_forest(airlines_train_hex, **rf_AirlinesTrain_2_params)
+
+
+        print "#####################################################################"
+        print "Generating AirlinesTrain complex SpeeDRF binary classification model. . ."
+        # what is the R binding?
+        speedrf_AirlinesTrain_1_params = {
+            'destination_key': 'speedrf_AirlinesTrain_binary_1',
+            'response': 'IsDepDelayed', 
+            'ignored_cols_by_name': 'IsDepDelayed_REC, IsDepDelayed_REC_recoded', 
+            'ntrees': 50,
+            'max_depth': 10,
+            'classification': 1
+        }
+        speedrf_AirlinesTrain_1 = node.speedrf(airlines_train_hex, **speedrf_AirlinesTrain_1_params)
 
 
         print "######################################################################"
@@ -183,7 +208,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'hidden': [10, 10],
             'classification': 1
         }
-        dl_AirlinesTrain_1 = node.deep_learning(airlines_train_hex, timeoutSecs, retryDelaySecs, **dl_AirlinesTrain_1_params)
+        dl_AirlinesTrain_1 = node.deep_learning(airlines_train_hex, **dl_AirlinesTrain_1_params)
 
 
         print "##############################################################################################"
@@ -199,7 +224,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'lambda': 1.0e-2, 
             'n_folds': 0
         }
-        glm_AirlinesTrain_A = node.GLM(airlines_train_hex, timeoutSecs, retryDelaySecs, **glm_AirlinesTrain_A_params)
+        glm_AirlinesTrain_A = node.GLM(airlines_train_hex, **glm_AirlinesTrain_A_params)
         h2o_glm.simpleCheckGLM(self, glm_AirlinesTrain_A, None, **glm_AirlinesTrain_A_params)
 
 
@@ -214,7 +239,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'alpha': 0.5, 
             'n_folds': 0
         }
-        glm_Prostate_1 = node.GLM(prostate_hex, timeoutSecs, retryDelaySecs, **glm_Prostate_1_params)
+        glm_Prostate_1 = node.GLM(prostate_hex, **glm_Prostate_1_params)
         h2o_glm.simpleCheckGLM(self, glm_Prostate_1, None, **glm_Prostate_1_params)
 
 
@@ -229,7 +254,20 @@ class ModelManagementTestCase(unittest.TestCase):
             'max_depth': 5,
             'classification': 1
         }
-        rf_Prostate_1 = node.random_forest(prostate_hex, timeoutSecs, retryDelaySecs, **rf_Prostate_1_params)
+        rf_Prostate_1 = node.random_forest(prostate_hex, **rf_Prostate_1_params)
+
+
+        print "#####################################################################"
+        print "Generating Prostate complex SpeeDRF binary classification model. . ."
+        speedrf_Prostate_1_params = {
+            'destination_key': 'speedrf_Prostate_binary_1',
+            'response': 'CAPSULE', 
+            'ignored_cols_by_name': None, 
+            'ntrees': 50,
+            'max_depth': 10,
+            'classification': 1
+        }
+        speedrf_Prostate_1 = node.speedrf(prostate_hex, **speedrf_Prostate_1_params)
 
 
         print "##############################################"
@@ -243,7 +281,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'alpha': 0.5, 
             'n_folds': 0
         }
-        glm_Prostate_regression_1 = node.GLM(prostate_hex, timeoutSecs, retryDelaySecs, **glm_Prostate_regression_1_params)
+        glm_Prostate_regression_1 = node.GLM(prostate_hex, **glm_Prostate_regression_1_params)
         h2o_glm.simpleCheckGLM(self, glm_Prostate_regression_1, None, **glm_Prostate_regression_1_params)
 
 
@@ -263,8 +301,6 @@ class ApiTestCase(ModelManagementTestCase):
                 if -1 == idx:
                     d = d[path_elem]
                 else:
-                    print 'path_elem', path_elem
-                    print 'idx', idx
                     d = d[path_elem][idx]
         
         return d
@@ -284,11 +320,7 @@ class ApiTestCase(ModelManagementTestCase):
             assert key not in d, "Unexpectedly found key: " + key + " in dict: " + repr(d)
 
 
-    # this is my test!
-    def test_binary_classifiers(self):
-
-        self.create_models(self.import_frames())
-
+    def test_endpoints(self):
         node = h2o.nodes[0]
 
         print "##############################################"
@@ -311,6 +343,9 @@ class ApiTestCase(ModelManagementTestCase):
         self.assertKeysExist(frames, 'frames', ['airlines_test.hex'])
         self.assertKeysDontExist(frames, 'frames', ['glm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_2', 'rf_AirlinesTrain_binary_1', 'rf_AirlinesTrain_binary_2', 'dl_AirlinesTrain_binary_1', 'glm_AirlinesTrain_binary_A', 'glm_Prostate_binary_1', 'rf_Prostate_binary_1', 'glm_Prostate_regression_1', 'airlines_train.hex', 'prostate.hex'])
         self.assertKeysDontExist(frames, '', ['models'])
+        self.assertKeysExist(frames, 'frames/airlines_test.hex', ['creation_epoch_time_millis', 'id', 'key', 'column_names', 'compatible_models'])
+        self.assertEqual(frames['frames']['airlines_test.hex']['id'], "88e9f821080b1221", msg="The airlines_test.hex frame hash should be deterministic.")
+        self.assertEqual(frames['frames']['airlines_test.hex']['key'], "airlines_test.hex", msg="The airlines_test.hex key should be airlines_test.hex.")
 
 
         print "##############################################"
@@ -334,6 +369,8 @@ class ApiTestCase(ModelManagementTestCase):
         print "Testing /2/Models list. . ."
         models = node.models()
         self.assertKeysExist(models, 'models', ['glm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_2', 'rf_AirlinesTrain_binary_1', 'rf_AirlinesTrain_binary_2', 'dl_AirlinesTrain_binary_1', 'glm_AirlinesTrain_binary_A', 'glm_Prostate_binary_1', 'rf_Prostate_binary_1', 'glm_Prostate_regression_1'])
+        self.assertKeysExist(models, 'models/glm_AirlinesTrain_binary_1', ['id', 'key', 'creation_epoch_time_millis', 'model_category', 'state', 'input_column_names', 'response_column_name', 'critical_parameters', 'secondary_parameters', 'expert_parameters', 'compatible_frames'])
+        self.assertEqual(models['models']['glm_AirlinesTrain_binary_1']['key'], 'glm_AirlinesTrain_binary_1', "key should equal our key: " + "glm_AirlinesTrain_binary_1")
         self.assertKeysDontExist(models, 'models', ['airlines_train.hex', 'airlines_test.hex', 'prostate.hex'])
         self.assertKeysDontExist(models, '', ['frames'])
 
@@ -357,6 +394,10 @@ class ApiTestCase(ModelManagementTestCase):
         self.assertKeysDontExist(models, 'frames', ['airlines_train.hex', 'airlines_test.hex'])
 
 
+
+    def test_binary_classifiers(self):
+        node = h2o.nodes[0]
+
         print "##############################################"
         print "Testing /2/Models with scoring. . ."
         print "##############################################"
@@ -375,14 +416,15 @@ class ApiTestCase(ModelManagementTestCase):
             # find all compatible frames
             models = node.models(key=model_key, find_compatible_frames=1)
             compatible_frames = models['models'][model_key]['compatible_frames']
+            self.assertNotEqual(models['models'][model_key]['training_duration_in_ms'], 0, "Expected non-zero training time for model: " + model_key)
 
             for frame_key in compatible_frames:
                 print "Scoring: /2/Models?key=" + model_key + "&score_frame=" + frame_key
                 scoring_result = node.models(key=model_key, score_frame=frame_key)
 
                 self.assertKeysExist(scoring_result, '', ['metrics'])
-                self.assertKeysExist(scoring_result, 'metrics[0]', ['model', 'frame', 'duration_in_ms', 'error_measure'])
-                self.assertKeysExist(scoring_result, 'metrics[0]/model', ['key', 'model_category', 'uuid', 'creation_epoch_time_millis'])
+                self.assertKeysExist(scoring_result, 'metrics[0]', ['model', 'frame', 'duration_in_ms'])
+                self.assertKeysExist(scoring_result, 'metrics[0]/model', ['key', 'model_category', 'id', 'creation_epoch_time_millis'])
                 model_category = scoring_result['metrics'][0]['model']['model_category']
                 self.assertEqual(scoring_result['metrics'][0]['model']['key'], model_key, "Expected model key: " + model_key + " but got: " + scoring_result['metrics'][0]['model']['key'])
                 self.assertEqual(scoring_result['metrics'][0]['frame']['key'], frame_key, "Expected frame key: " + frame_key + " but got: " + scoring_result['metrics'][0]['frame']['key'])
@@ -411,7 +453,7 @@ class ApiTestCase(ModelManagementTestCase):
             self.assertKeysExist(scoring_result, '', ['metrics'])
             self.assertKeysExist(scoring_result, 'metrics[0]', ['model_category'])
             model_category = scoring_result['metrics'][0]['model_category']
-            self.assertKeysExist(scoring_result, 'metrics[0]', ['model', 'frame', 'duration_in_ms', 'error_measure'])
+            self.assertKeysExist(scoring_result, 'metrics[0]', ['model', 'frame', 'duration_in_ms'])
             self.assertEqual(scoring_result['metrics'][0]['model']['key'], model_key, "Expected model key: " + model_key + " but got: " + scoring_result['metrics'][0]['model']['key'])
             self.assertEqual(scoring_result['metrics'][0]['frame']['key'], 'prostate.hex', "Expected frame key: " + 'prostate.hex' + " but got: " + scoring_result['metrics'][0]['frame']['key'])
             if model_category is 'Binomial':
@@ -420,9 +462,8 @@ class ApiTestCase(ModelManagementTestCase):
             if model_category is 'Regression':
                 self.assertKeysDontExist(scoring_result, 'metrics[0]', ['cm', 'auc']) # TODO: HitRatio
 
-class SteamTestCase(ModelManagementTestCase):
+
     def test_steam(self):
-        self.create_models(self.import_frames())
         print "----------------------------------------------------------"
         print "                    Testing Steam...                      "
         print "----------------------------------------------------------"
@@ -430,6 +471,10 @@ class SteamTestCase(ModelManagementTestCase):
         # Go up two dirs and add '/client'.
         # Don't know if there's a better way to do this. - Prithvi
         client_dir = os.path.join(os.path.split(os.path.split(os.path.dirname(os.path.realpath(__file__)))[0])[0], 'client')
+
+        node0 = h2o.nodes[0]
+        os.environ['STEAM_NODE_ADDR'] = node0.http_addr
+        os.environ['STEAM_NODE_PORT'] = str(node0.port)
 
         # Run `make test -C path_to_h2o/client`
         command_string = "make test -C " + client_dir
