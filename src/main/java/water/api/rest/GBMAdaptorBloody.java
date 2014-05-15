@@ -1,5 +1,6 @@
 package water.api.rest;
 
+import water.api.rest.schemas.GBMSchemaBloody;
 import hex.gbm.GBM;
 
 public class GBMAdaptorBloody extends BloodyApiAdaptor<GBM, GBMSchemaBloody> {

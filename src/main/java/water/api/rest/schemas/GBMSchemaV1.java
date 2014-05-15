@@ -1,8 +1,8 @@
-package water.api.rest;
+package water.api.rest.schemas;
 
 import water.Key;
 import water.api.anno.RESTCall;
-import water.api.rest.REST.ApiSupport;
+import water.api.rest.*;
 import water.api.rest.Version.V1;
 
 /** Actual schema for GBM REST API call.
@@ -14,15 +14,19 @@ import water.api.rest.Version.V1;
 @RESTCall(location="/metadata/models/algos/gbm/schema", path="/models/", method="PUT") // /metadata/models/algos
 public class GBMSchemaV1 extends ApiSupport<GBMSchemaV1, Version.V1> {
 
-  @API( help="Source frame", helpFiles={"source.rst", "general.rst"},
-        filter=Default.class, //<-- here i need to preserve still filter field since it enforce generation of right control element
-        direction=Direction.IN, required=true, path="/frames/$self")
+  @API( help      = "Source frame", // <-- Short help
+        helpFiles = {"source.rst", "general.rst"}, // <-- Help files used for documentation generation
+        filter    = Default.class, //<-- here i need to preserve still filter field since it enforce generation of right control element
+        direction = Direction.IN,
+        required  = true,
+        path      = "/frames/$self" //<-- where to fetch this resource
+        )
   public String source;
 
   @API( help="Response",
         filter=Default.class,
         direction=Direction.INOUT, required=true, dependsOn="source",
-        values="/frames/${source}/cols?names") // <-- We need to express what are available values
+        values="/frames/${source}/cols") // <-- We need to express available values
   public String response;
 
   @API(help="Selected columns", filter=Default.class, direction=Direction.IN)
@@ -35,14 +39,16 @@ public class GBMSchemaV1 extends ApiSupport<GBMSchemaV1, Version.V1> {
   public double learn_rate = 0.1;
 
   @API(help = "Execute classification",
+       visible="",
+       enabled="",
        valid="/frames/${/parameters/source}/cols/${/parameters/response}/type != 'Float' && ${/parameters/learn_rate} > 1000")
   // @Tom proposal: valid="(getFrame(source).getCol(response).getType() != 'Float') && (getParameter(learn_rate) > 1000)")
   public boolean classification ;
 
   // Output
-  @API(help = "Destination key")
+  @API(help = "Destination key of produced model.")
   public Key destination_key;
-  @API(help = "Job key")
+  @API(help = "Job key of model producer.")
   public Key job_key;
 
   @Override public V1 getVersion() {

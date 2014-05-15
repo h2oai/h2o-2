@@ -56,6 +56,10 @@ public abstract class Request extends RequestBuilders {
      * It should express a predicate, e.g.:
      * <code>"/frames/${/parameters/source}/cols/${/parameters/response}/type != 'Float' && ${/parameters/learn_rate} > 1000</code> */
     String valid() default "";
+    /** Is the field is enabled. */
+    String enabled() default "";
+    /** Is the field visibled. */
+    String visible() default "";
     /** Predefined values for the field - can be a list of values, or query to
      * obtain values.
      *
@@ -66,6 +70,7 @@ public abstract class Request extends RequestBuilders {
      * Type of parameter
      */
     Class type() default Void.class;
+
     // =========
   }
 

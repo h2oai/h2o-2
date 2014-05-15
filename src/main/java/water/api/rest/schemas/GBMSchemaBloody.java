@@ -1,7 +1,7 @@
-package water.api.rest;
+package water.api.rest.schemas;
 
 import water.Key;
-import water.api.rest.REST.ApiSupport;
+import water.api.rest.*;
 import water.api.rest.Version.Bloody;
 import water.fvec.Frame;
 
