@@ -1,8 +1,11 @@
-Steam.SelectFrameDialog = (_, _go) ->
-  _isBusy = node$ yes
+Steam.SelectFrameDialog = (_, _frames, _go) ->
   _items = do nodes$
   _selectedItem = node$ null
   _hasSelection = lift$ _selectedItem, isTruthy
+
+  initialize = (frames) ->
+    _items items = map frames, createItem
+    selectItem head items
 
   selectItem = (target) ->
     for item in _items()
@@ -18,21 +21,13 @@ Steam.SelectFrameDialog = (_, _go) ->
       select: -> selectItem self
       isActive: node$ no
 
-  _.requestFrames (error, data) ->
-    if error
-      _go 'error', error
-    else
-      if data.frames.length > 0
-        _items items = map data.frames, createItem
-        selectItem head items
-      _isBusy no
-
   confirm = -> _go 'confirm', _selectedItem().data.key
   cancel = -> _go 'cancel'
+
+  initialize _frames
   
   items: _items
   hasSelection: _hasSelection
-  isBusy: _isBusy
   confirm: confirm
   cancel: cancel
   template: 'select-frame-dialog'
