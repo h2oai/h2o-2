@@ -52,16 +52,16 @@ f.all.data.H[,11]<- as.factor(f.all.data.H[,11])
 ###Fit GBM models in R: 
 
 
-fit.gbm1 <- gbm(y ~ x1 + x2 + x3 + x4 + x5, data=f.all.data2, dist="multinomial", n.tree = 1, shrinkage = .7, verbose=T)
+fit.gbm1 <- gbm(y ~ x1 + x2 + x3, data=f.all.data2, dist="multinomial", n.tree = 1, shrinkage = .7, verbose=T)
 
-fit.gbm2 <- gbm(y ~ x1 + x2 + x3 + x4 + x5, data=all.data2, dist="bernoulli", n.tree = 1, shrinkage = .7, verbose=T)
+fit.gbm2 <- gbm(y ~ x1 + x2 + x3, data=all.data2, dist="bernoulli", n.tree = 1, shrinkage = .7, verbose=T)
 
 
 ###Fit GBM models in H2O+R
 
-h2o.fit1<- h2o.gbm(x=c("x1", "x2"), y="y", distribution="multinomial", n.trees=1, shrinkage=.7, interaction.depth = 1, data=f.all.data.H)
+h2o.fit1<- h2o.gbm(x=c("x1", "x2", "x3"), y="y", distribution="multinomial", n.trees=1, shrinkage=.7, interaction.depth = 1, data=f.all.data.H)
 
-h2o.fit2<- h2o.gbm(x=c("x1", "x2"), y="y", distribution="bernoulli", n.trees=1, shrinkage=.7, interaction.depth = 1, data=f.all.data.H)
+h2o.fit2<- h2o.gbm(x=c("x1", "x2", "x3"), y="y", distribution="bernoulli", n.trees=1, shrinkage=.7, interaction.depth = 1, data=f.all.data.H)
 
 ######### Get predictions: ###################
 
