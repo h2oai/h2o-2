@@ -1,6 +1,10 @@
 Steam.Application = (_) ->
 
-  Steam.ErrorMonitor _
+  if window
+    Steam.ErrorMonitor _
+    #Steam.MouseMonitor _
+
+  Steam.Timers _
   Steam.EventLog _
   Steam.Cache _
   Steam.LocalStorage _
@@ -11,8 +15,8 @@ Steam.Application = (_) ->
   #_.route 'home'
   
   _view = Steam.MainView _
-
   Steam.Router _, Steam.Routes _
+  Steam.DialogManager _
 
   context: _
   view: _view

@@ -5,6 +5,8 @@ import water.*;
 import water.nbhm.NonBlockingHashMapLong;
 import water.util.Utils;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.UUID;
 
@@ -71,6 +73,8 @@ public class Vec extends Iced {
    *  modified!), or -1 if rollups have not been computed since the last
    *  modification.   */
   volatile long _naCnt=-1;
+
+  private byte[] _hash = null; // XOR of chunk-level SHA-256 hashes of the Vec contents.
 
   /** Maximal size of enum domain */
   public static final int MAX_ENUM_SIZE = 10000;
@@ -380,6 +384,8 @@ public class Vec extends Iced {
   public boolean isInt(){return rollupStats()._isInt; }
   /** Size of compressed vector data. */
   public long byteSize(){return rollupStats()._size; }
+  /** XOR of chunk-level SHA-256 hashes of the Vec contents. */
+  public byte[] hash() { return rollupStats()._hash; }
   /** Is the column a factor/categorical/enum?  Note: all "isEnum()" columns
    *  are are also "isInt()" but not vice-versa. */
   public final boolean isEnum(){return _domain != null;}
@@ -392,6 +398,7 @@ public class Vec extends Iced {
   public final boolean isBad() { return naCnt() == length(); }
   /** Is the column contains float values. */
   public final boolean isFloat() { return !isEnum() && !isInt(); }
+  public final boolean isByteVec() { return (this instanceof ByteVec); }
 
   Vec setRollupStats( RollupStats rs ) {
     _min  = rs._min; _max = rs._max; _mean = rs._mean;
@@ -401,6 +408,7 @@ public class Vec extends Iced {
     if( rs._rows == 0 )         // All rows missing?  Then no rollups
       _min = _max = _mean = _sigma = Double.NaN;
     _naCnt= rs._naCnt;          // Volatile write last to announce all stats ready
+    _hash = rs._hash;
     return this;
   }
   Vec setRollupStats( Vec v ) {
@@ -432,6 +440,7 @@ public class Vec extends Iced {
     double _min=Double.MAX_VALUE, _max=-Double.MAX_VALUE, _mean, _sigma;
     long _rows, _naCnt, _size;
     boolean _isInt=true;
+    byte[] _hash = null;
 
     @Override public void postGlobal(){
       final RollupStats rs = this;
@@ -445,9 +454,16 @@ public class Vec extends Iced {
     }
 
     @Override public void map( Chunk c ) {
+      MessageDigest md = null;
+      try { md = MessageDigest.getInstance("SHA-256"); } catch (NoSuchAlgorithmException e) {}
       _size = c.byteSize();
       for( int i=0; i<c._len; i++ ) {
         double d = c.at0(i);
+        long v = Double.doubleToRawLongBits(d);
+        for (int j = 0; j < 8; j++) {
+          md.update((byte)((v >> ((7 - i) * 8)) & 0xff));
+        }
+
         if( Double.isNaN(d) ) _naCnt++;
         else {
           if( d < _min ) _min = d;
@@ -464,6 +480,7 @@ public class Vec extends Iced {
           _sigma += (d - _mean) * (d - _mean);
         }
       }
+      _hash = md.digest();
     }
     @Override public void reduce( RollupStats rs ) {
       _min = Math.min(_min,rs._min);
@@ -478,6 +495,9 @@ public class Vec extends Iced {
       _rows += rs._rows;
       _size += rs._size;
       _isInt &= rs._isInt;
+
+      for (int i = 0; i < 8; i++)
+        _hash[i] ^= rs._hash[i];
     }
     // Just toooo common to report always.  Drowning in multi-megabyte log file writes.
     @Override public boolean logVerbose() { return false; }

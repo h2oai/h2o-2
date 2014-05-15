@@ -39,7 +39,7 @@ public class Jobs extends Request {
       Job job = jobs[i];
 
       boolean cancelled;
-      if (cancelled = (job.state==JobState.CANCELLED || job.state==JobState.CRASHED)) {
+      if (cancelled = (job.state==JobState.CANCELLED || job.state==JobState.FAILED)) {
         if(job.exception != null){
           jobResult.addProperty("exception", "1");
           jobResult.addProperty("val", jobs[i].exception);
