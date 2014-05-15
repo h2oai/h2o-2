@@ -5,9 +5,11 @@
   .y-hover-capture(data-bind='hover:tryCompareScorings')
     button.btn.btn-primary(title='Compare selected scorings' data-bind='click:compareScorings, enable:canCompareScorings') Compare
   button.btn(title='Clear selections' data-bind='click:clearSelections') Clear
-  button.btn.btn-warning(style='float:right' data-bind='click:deleteScorings') Delete Selected
+  button.btn.btn-warning(title='Permanently delete selected scorings' style='float:right' data-bind='click:deleteScorings') Delete Selected
   // /ko
   // ko ifnot:hasSelection
-  button.btn.btn-warning(style='float:right' data-bind='click:deleteActiveScoring') Delete
+  // ko if:canDeleteScoring
+  button.btn.btn-warning(title='Permanently delete this scoring' style='float:right' data-bind='click:deleteActiveScoring') Delete
+  // /ko
   // /ko
 

@@ -12,8 +12,10 @@ Steam.ScoringListView = (_) ->
   displayItem = (item) ->
     if item
       _.displayScoring item
+      _.scoringAvailable yes
     else
       _.displayEmpty()
+      _.scoringAvailable no
 
   findActiveItem = ->
     find _items(), (item) -> item.isActive()
@@ -142,13 +144,13 @@ Steam.ScoringListView = (_) ->
 
   deleteActiveScoring = () ->
     _items.remove findActiveItem()
-    _.displayEmpty()
+    displayItem null
 
   deleteScorings = (scorings) ->
     deselectAllScorings()
     _items.removeAll scorings 
     unless findActiveItem()
-      _.displayEmpty() 
+      displayItem null
 
   link$ _.deselectAllScorings, deselectAllScorings
   link$ _.deleteScorings, deleteScorings
