@@ -22,7 +22,7 @@ public class CreateFrame extends Request2 {
   public String key;
 
   @API(help = "Number of rows", required = true, filter = Default.class, json=true)
-  public long rows = 1000;
+  public long rows = 10000;
 
   @API(help = "Number of columns", required = true, filter = Default.class, json=true)
   public int cols = 10;
@@ -46,7 +46,7 @@ public class CreateFrame extends Request2 {
   public double integer_fraction = 0.2;
 
   @API(help = "Range for integer variables (-range ... range)", filter = Default.class, json=true)
-  public int integer_range = 100;
+  public long integer_range = Long.MAX_VALUE;
 
   @API(help = "Fraction of missing values", filter = Default.class, json=true)
   public double missing_fraction = 0.01;

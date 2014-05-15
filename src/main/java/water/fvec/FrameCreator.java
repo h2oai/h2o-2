@@ -5,11 +5,11 @@ import jsr166y.CountedCompleter;
 import water.H2O;
 import water.Key;
 import water.MRTask2;
-import water.util.Log;
 import water.util.Utils;
 
 import java.util.Arrays;
 import java.util.Random;
+import java.util.UUID;
 
 /**
  * Helper to make up a Frame from scratch, with random content
@@ -45,7 +45,7 @@ public class FrameCreator extends H2O.H2OCountedCompleter {
       for (int c : _cat_cols) {
         _domain[c] = new String[_createFrame.factors];
         for (int i = 0; i < _createFrame.factors; ++i) {
-          _domain[c][i] = "C" + (c+1) + ".L" + (i+1);
+          _domain[c][i] = UUID.randomUUID().toString().subSequence(0,5).toString();
         }
       }
     }
@@ -59,13 +59,7 @@ public class FrameCreator extends H2O.H2OCountedCompleter {
   private Frame _out;
   final private Key _job;
 
-  public Frame getResult(){
-    join();
-    return _out;
-  }
-
-  @Override
-  public void compute2() {
+  @Override public void compute2() {
     Vec[] vecs = Vec.makeNewCons(_createFrame.rows, _createFrame.cols, _createFrame.value, _domain);
     _out = new Frame(Key.make(_createFrame.key), null, vecs);
     assert _out.numRows() == _createFrame.rows;
@@ -84,11 +78,6 @@ public class FrameCreator extends H2O.H2OCountedCompleter {
     _out.unlock(_job);
   }
 
-  @Override
-  public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
-    return super.onExceptionalCompletion(ex, caller);
-  }
-
   private static class FrameRandomizer extends MRTask2<FrameRandomizer> {
     final private CreateFrame _createFrame;
     final private int[] _cat_cols;
@@ -102,25 +91,31 @@ public class FrameCreator extends H2O.H2OCountedCompleter {
       _real_cols = real_cols;
     }
 
+    //row+col-dependent RNG for reproducibility with different number of VMs, chunks, etc.
+    void setSeed(Random rng, int col, long row) {
+      rng.setSeed(_createFrame.seed + _createFrame.cols * row + col);
+      rng.setSeed(rng.nextLong());
+    }
+
     @Override
     public void map (Chunk[]cs){
       if (!_createFrame.randomize) return;
       final Random rng = new Random();
       for (int c : _cat_cols) {
         for (int r = 0; r < cs[c]._len; r++) {
-          rng.setSeed(cs[c]._start + 1234 * c - 1723 * (cs[c]._start + r)); //row+col-dependent RNG for reproducibility
+          setSeed(rng, c, cs[c]._start + r);
           cs[c].set0(r, (int)(rng.nextDouble() * _createFrame.factors));
         }
       }
       for (int c : _int_cols) {
         for (int r = 0; r < cs[c]._len; r++) {
-          rng.setSeed(cs[c]._start + 1234 * c - 1723 * (cs[c]._start + r)); //row+col-dependent RNG for reproducibility
-          cs[c].set0(r, (int) ((_createFrame.integer_range + 1) * (1 - 2 * rng.nextDouble())));
+          setSeed(rng, c, cs[c]._start + r);
+          cs[c].set0(r, (long) ((_createFrame.integer_range+1) * (1 - 2 * rng.nextDouble())));
         }
       }
       for (int c : _real_cols) {
         for (int r = 0; r < cs[c]._len; r++) {
-          rng.setSeed(cs[c]._start + 1234 * c - 1723 * (cs[c]._start + r)); //row+col-dependent RNG for reproducibility
+          setSeed(rng, c, cs[c]._start + r);
           cs[c].set0(r, rng.nextDouble());
         }
       }
@@ -130,8 +125,8 @@ public class FrameCreator extends H2O.H2OCountedCompleter {
 
 
   private static class MissingInserter extends MRTask2<MissingInserter> {
-    long _seed;
-    double _frac;
+    final long _seed;
+    final double _frac;
 
     public MissingInserter(H2O.H2OCountedCompleter cmp, long seed, double frac){
       super(cmp);
@@ -145,7 +140,7 @@ public class FrameCreator extends H2O.H2OCountedCompleter {
       final Random rng = new Random();
       for (int c = 0; c < cs.length; c++) {
         for (int r = 0; r < cs[c]._len; r++) {
-          rng.setSeed(cs[c]._start + 1234 * c - 1723 * (cs[c]._start + r)); //row+col-dependent RNG for reproducibility
+          rng.setSeed(_seed + 1234 * c ^ 1723 * (cs[c]._start + r)); //row+col-dependent RNG for reproducibility
           if (rng.nextDouble() < _frac) cs[c].setNA0(r);
         }
       }
