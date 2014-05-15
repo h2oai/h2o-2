@@ -1172,6 +1172,7 @@ class H2O(object):
                  noise=None, benchmarkLogging=None, noPoll=False, reuseFirstPollUrl=False, noPrint=False):
         ### print "poll_url: pollTimeoutSecs", pollTimeoutSecs
         verboseprint('poll_url input: response:', dump_json(response))
+        print "at top of poll_url, timeoutSec: ", timeoutSecs
 
         # for the rev 2 stuff..the job_key, destination_key and redirect_url are just in the response
         # look for 'response'..if not there, assume the rev 2
@@ -1253,6 +1254,7 @@ class H2O(object):
         # note this doesn't affect polling with Inspect? (since it doesn't redirect ?
         while status == 'poll' or doFirstPoll or (beta_features and status == 'redirect' and 'Inspect' not in url):
             count += 1
+            print "right before check, timeoutSec: ", timeoutSecs
             if ((time.time() - start) > timeoutSecs):
                 # show what we're polling with
                 emsg = "Exceeded timeoutSecs: %d secs while polling." % timeoutSecs + \
@@ -1716,7 +1718,7 @@ class H2O(object):
         a['python_%timeout'] = a['python_elapsed'] * 100 / timeoutSecs
         return a
 
-    def speedrf(self, data_key, trees, timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
+    def speedrf(self, data_key, ntrees=50, max_depth=10, timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
                 noise=None, benchmarkLogging=None, noPoll=False,
                 print_params=True, noPrint=False, **kwargs):
 
@@ -1729,9 +1731,9 @@ class H2O(object):
                        'validation': None,
                        'bin_limit': 1024.0,
                        'class_weights': None,
-                       'max_depth': trees,
+                       'max_depth': max_depth,
                        'mtry': -1.0,
-                       'num_trees': 50.0,
+                       'num_trees': ntrees,
                        'oobee': 0,
                        'sample': 0.67,
                        'sampling_strategy': 'RANDOM',
@@ -1759,11 +1761,12 @@ class H2O(object):
         return rfView
 
     # note ntree in kwargs can overwrite trees! (trees is legacy param)
-    def random_forest(self, data_key, trees,
+    def random_forest(self, data_key, trees=None,
                       timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
                       noise=None, benchmarkLogging=None, noPoll=False, rfView=True,
                       print_params=True, noPrint=False, **kwargs):
 
+        print "at top of random_forest, timeoutSec: ", timeoutSecs
         algo = '2/DRF' if beta_features else 'RF'
         algoView = '2/DRFView' if beta_features else 'RFView'
 
@@ -1843,6 +1846,7 @@ class H2O(object):
             # if we want to do noPoll, we have to name the model, so we know what to ask for when we do the completion view
             # HACK: wait more for first poll?
             time.sleep(5)
+            print "right ebfore call to poll_url, timeoutSec: ", timeoutSecs
             rfView = self.poll_url(rf, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                                    initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
                                    noise=noise, benchmarkLogging=benchmarkLogging, noPrint=noPrint)
