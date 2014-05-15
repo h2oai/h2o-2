@@ -48,8 +48,8 @@ Steam.ModelListView = (_) ->
     self =
       data: model
       title: model.key
-      caption: model.model_category
-      cutline: 'Response Column: ' + model.response_column_name
+      caption: "#{model.response_column_name} (#{model.model_category})"
+      timestamp: model.creation_epoch_time_millis
       display: -> activateAndDisplayItem self
       isActive: node$ no
       isSelected: node$ no
