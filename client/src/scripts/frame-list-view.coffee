@@ -51,7 +51,7 @@ Steam.FrameListView = (_) ->
     console.assert isDefined predicate
     switch predicate.type
       when 'all'
-        _.requestFrames (error, data) ->
+        _.requestFramesAndCompatibleModels (error, data) ->
           if error
             #TODO handle errors
           else

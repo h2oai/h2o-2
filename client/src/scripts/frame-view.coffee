@@ -3,16 +3,8 @@ Steam.FrameView = (_, _frame) ->
   _compatibleModelsCount = node$ ''
 
   initialize = (frame) ->
-    _.requestFrameAndCompatibleModels frame.key, (error, data) ->
-      if error
-        #TODO handle errors
-      else
-        #TODO typecheck
-        unless isEmpty data.frames
-          aFrame = head data.frames
-          _compatibleModels createCompatibleModelsSection aFrame
-          _compatibleModelsCount "(#{aFrame.compatible_models.length})"
-        return
+    _compatibleModels createCompatibleModelsSection frame
+    _compatibleModelsCount "(#{frame.compatible_models.length})"
 
   # Columns section
   createColumnsSection = (columnNames) ->
