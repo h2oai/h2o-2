@@ -2,6 +2,7 @@ package water.api;
 
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
+import hex.CreateFrame;
 import hex.GridSearch.GridSearchProgress;
 import hex.KMeans2;
 import hex.KMeans2.KMeans2ModelView;
@@ -149,6 +150,7 @@ public class RequestServer extends NanoHTTPD {
       Request.addToNavbar(registerRequest(new FrameSplitPage()), "Split frame",          "Beta");
       Request.addToNavbar(registerRequest(new Console()),        "Console",              "Beta");
       Request.addToNavbar(registerRequest(new GapStatistic()),   "Gap Statistic",        "Beta");
+      Request.addToNavbar(registerRequest(new CreateFrame()),    "Create Frame",         "Beta");
 //      Request.addToNavbar(registerRequest(new ExportModel()),    "Export Model",         "Beta (FluidVecs!)");
 //      Request.addToNavbar(registerRequest(new ImportModel()),    "Import Model",         "Beta (FluidVecs!)");
     }

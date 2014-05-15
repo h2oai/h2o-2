@@ -137,13 +137,9 @@ public class Vec extends Iced {
    */
   static public Vec [] makeNewCons(final long rows, final int cols, final long val, final String [][] domain){
     int chunks = Math.min((int)rows, 4*H2O.NUMCPUS*H2O.CLOUD.size());
-    long[] espc = new long[chunks];
-    for (int i = 0; i<chunks; ++i) {
+    long[] espc = new long[chunks+1];
+    for (int i = 0; i<=chunks; ++i)
       espc[i] = i * rows / chunks;
-    }
-    for (long i = chunks * (rows/chunks); i<rows; ++i) {
-      espc[chunks-1]++;
-    }
     Vec v = new Vec(Vec.newKey(), espc);
     Vec[] vecs = v.makeCons(cols, val, domain);
     return vecs;
