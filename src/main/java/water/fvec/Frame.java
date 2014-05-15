@@ -31,7 +31,7 @@ public class Frame extends Lockable<Frame> {
   public Frame( String[] names, Vec[] vecs ) { this(null,names,vecs); }
   public Frame( Key key, String[] names, Vec[] vecs ) {
     super(key);
-    this.uniqueId = new UniqueId(_key);
+    this.uniqueId = new UniqueFrameId(_key, this);
     if( names==null ) {
       names = new String[vecs.length];
       for( int i=0; i<vecs.length; i++ ) names[i] = "C"+(i+1);
@@ -50,6 +50,22 @@ public class Frame extends Lockable<Frame> {
 
   public UniqueId getUniqueId() {
     return this.uniqueId;
+  }
+
+  /** 64-bit hash of the hashes of the vecs.  SHA-265 hashes of the chunks are XORed
+   * together.  Since parse always parses the same pieces of files into the same offsets
+   * in some chunk this hash will be consistent across reparses.
+   */
+  public byte[] hash() {
+    Vec [] vecs = vecs();
+    byte[] _hash = new byte[8];
+    for(int i = 0; i < _names.length; ++i) {
+      byte[] vec_hash = vecs[i].hash();
+      for (int j = 0; j < 8; j++) {
+        _hash[j] ^= vec_hash[j];
+      }
+    }
+    return _hash;
   }
 
   public Vec vec(String name){
@@ -326,6 +342,15 @@ public class Frame extends Lockable<Frame> {
   public final String[] names() { return _names; }
   public int  numCols() { return vecs().length; }
   public long numRows() { return anyVec()==null ? 0 : anyVec().length(); }
+
+  public boolean isRawData() {
+    // Right now there is only one Vec for raw data, but imagine a Parse after a JDBC import or such.
+    for (Vec v : vecs()) {
+      if (v.isByteVec())
+        return true;
+    }
+    return false;
+  }
 
   // Number of columns when categoricals expanded.
   // Note: One level is dropped in each categorical col.

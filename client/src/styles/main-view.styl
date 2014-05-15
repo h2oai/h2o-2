@@ -10,7 +10,7 @@
   background none
   border none
   padding 0
-  width: 32px
+  width 32px
   font-size 16px
   color y-color-grey-md
   &:hover
@@ -28,8 +28,12 @@
 .y-desktop
   dock(top:y-navigation-bar-height, bottom:y-status-bar-height)
 
+.y-workspace
+  dock(right:y-help-lane-width)
+
 .y-lane-header
   dock-top(y-desktop-header-height)
+  border-bottom 1px solid #ddd
 
 .y-lane-body
   dock(top:y-desktop-header-height)
@@ -37,24 +41,41 @@
 .y-topic-lane
   dock-left(y-topic-lane-width)
   border-right 1px solid #ddd
-  .y-lane-header
-    border-bottom 1px solid #ddd
 
-.y-workspace-lane
-  dock(left:y-topic-lane-width, right:y-help-lane-width)
+.y-view-lane
+  dock(left:y-topic-lane-width)
 
-.y-page-views
-.y-modal-views
+.y-page-views, .y-modal-views
   dock()
-  > div
-    dock()
-    overflow auto
+  padding 25px 30px
+  overflow auto
+
+
+.y-modal-dialogs-container
+.y-modal-dialogs
+  dock()
+
+.y-modal-views
+  background white
+
+.y-selection-views
+  margin 7px 25px
+  .y-caption
+    display inline-block
+    height 30px
+    line-height 30px
+    text-transform uppercase
+    font-size 11px
+  .y-hover-capture
+    display inline-block
+    margin-left 5px
+  .btn
+    height 30px
 
 .y-help-lane
+  background white
   dock-right(y-help-lane-width)
   border-left 1px solid #ddd
-  .y-lane-header
-    border-bottom 1px solid #ddd
   .y-lane-body
     overflow auto
 
@@ -103,22 +124,25 @@
 
 .y-status-bar
   dock-bottom(y-status-bar-height)
+  line-height y-status-bar-height
   border-top 1px solid #ddd
+  padding 0px 10px
+  font-size 12px
 
 
 // Adding a .y-main-no-topic class on .y-main hides the help area
-//    and docks .y-workspace-lane to the left
+//    and docks .y-view-lane to the left
 .y-main-no-topic
   .y-topic-lane
     display none
-  .y-workspace-lane
+  .y-view-lane
     left 0
 
 // Adding a .y-main-no-help class on .y-main hides the help area
-//    and docks .y-workspace-lane to the right
+//    and docks .y-view-lane to the right
 .y-main-no-help
   .y-help-lane
     display none
-  .y-workspace-lane
+  .y-workspace
     right 0
     

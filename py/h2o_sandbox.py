@@ -141,9 +141,11 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='',
                 # don't detect these class loader info messags as errors
                 #[Loaded java.lang.Error from /usr/lib/jvm/java-7-oracle/jre/lib/rt.jar]
                 foundBad = regex1.search(line) and not (
+                    ('Prediction error' in line) or
+                    (('Act/Prd' in line) and ('Error' in line)) or
+                    (('AUC' in line) and ('Gini' in line) and ('Precision' in line)) or
                     ('Error on training data' in line) or
                     ('Error on validation data' in line) or
-                    ('Act/Prd' in line) or
                     ('water.DException' in line) or
                     # the manyfiles data has eRRr in a warning about test/train data
                     ('WARN SCORM' in line) or
@@ -157,12 +159,15 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='',
                     ('Mean Squared Error' in line) or
                     ('Error' in line and 'Actual' in line) or
                     # fvec
-                    ('prediction error' in line) or ('errors on' in line) or
+                    ('prediction error' in line) or 
+                    ('errors on' in line) or
                     # R
                     ('class.error' in line) or
                     # original RF
-                    ('error rate' in line) or ('[Loaded ' in line) or
-                    ('[WARN]' in line) or ('CalcSquareErrorsTasks' in line))
+                    ('error rate' in line) or 
+                    ('[Loaded ' in line) or
+                    ('[WARN]' in line) or 
+                    ('CalcSquareErrorsTasks' in line))
 
             if (printing==0 and foundBad):
                 printing = 1

@@ -48,6 +48,7 @@ Steam.Hypergraph = do ->
   if ko?
     createObservable = ko.observable
     createObservableArray = ko.observableArray
+    isObservable = ko.isObservable
   else
     createObservable = (initialValue) ->
       arrows = []
@@ -78,9 +79,13 @@ Steam.Hypergraph = do ->
           dispose: -> remove arrows, arrow
         arrow
 
+      self.__observable__ = yes
+
       self
 
     createObservableArray = createObservable
+
+    isObservable = (obj) -> if obj.__observable__ then yes else no
 
   createNode = (value, equalityComparer) ->
     if arguments.length is 0
@@ -89,6 +94,8 @@ Steam.Hypergraph = do ->
       observable = createObservable value
       observable.equalityComparer = equalityComparer if isFunction equalityComparer
       observable
+
+  isNode = isObservable
 
   createPolynode = (array) -> createObservableArray array or []
 
@@ -188,10 +195,11 @@ Steam.Hypergraph = do ->
     target = createNode undefined
     link source, throttle target, wait, options
     target
- 
+
   createEdge: createEdge
   createHyperedge: createHyperedge
   createNode: createNode
+  isNode: isNode
   createPolynode: createPolynode
   createContext: createContext
   link: link
@@ -211,12 +219,12 @@ Steam.Hypergraph = do ->
 # Destructure into application scope with shorter names.
 #
 
-{ createEdge: edge$, createHyperedge: edges$, createNode: node$, createPolynode: nodes$, createContext: context$, link: link$, unlink: unlink$, callOnChange: call$, applyOnChange: apply$, joinNodes: join$, zipNodes: zip$, liftNodes: lift$, filterNode: filter$, switchNodes: switch$, debounceNode: debounce$, throttleNode: throttle$ } = Steam.Hypergraph
+{ createEdge: edge$, createHyperedge: edges$, createNode: node$, isNode: isNode$, createPolynode: nodes$, createContext: context$, link: link$, unlink: unlink$, callOnChange: call$, applyOnChange: apply$, joinNodes: join$, zipNodes: zip$, liftNodes: lift$, filterNode: filter$, switchNodes: switch$, debounceNode: debounce$, throttleNode: throttle$ } = Steam.Hypergraph
 
 
 #
 # Common combinators easily expressed with zip$().
-# 
+#
 
 if$ = (condition, valueIfTrue, valueIfFalse) ->
   zip$ [condition, valueIfTrue, valueIfFalse], (c, t, f) -> if c then t else f

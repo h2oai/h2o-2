@@ -1,13 +1,23 @@
+defaultStatusMessage = 'Ready.'
 Steam.MainView = (_) ->
-  _listViews = nodes$ []
-  _pageViews = nodes$ []
-  _modalViews = nodes$ []
-  _isModal = lift$ _modalViews, (modalViews) -> modalViews.length > 0
+  _status = node$ defaultStatusMessage
+  _listViews = do nodes$
+  _selectionViews = do nodes$
+  _pageViews = do nodes$
+  _modalViews = do nodes$
+  _modalDialogs = do nodes$
   _isHelpHidden = node$ no
   _topic = node$ null
+
   _isDisplayingTopics = node$ no
-  _isListMasked = node$ no
-  _isPageMasked = lift$ _isDisplayingTopics, identity
+  _hasModalView = lift$ _modalViews, (modalViews) -> modalViews.length > 0
+  _hasModalDialog = lift$ _modalDialogs, (modalDialogs) -> modalDialogs.length > 0
+  _isNavigatorMasked = lift$ _hasModalDialog, _hasModalView, (hasModalDialog, hasModalView) ->
+    hasModalDialog or hasModalView
+  _isListMasked = lift$ _hasModalDialog, identity
+  _isViewMasked = lift$ _hasModalDialog, _isDisplayingTopics, (hasModalDialog, isDisplayingTopics) ->
+    hasModalDialog or isDisplayingTopics
+
   _topicTitle = lift$ _topic, _isDisplayingTopics, (topic, isDisplayingTopics) ->
     if isDisplayingTopics then 'Menu' else if topic then topic.title else ''
   toggleTopics = -> _isDisplayingTopics not _isDisplayingTopics()
@@ -29,19 +39,23 @@ Steam.MainView = (_) ->
       when _frameTopic
         unless _topic() is topic
           _topic topic
-          switchList _frameListView
+          switchListView _frameListView
+          switchSelectionView null
       when _modelTopic
         unless _topic() is topic
           _topic topic
-          switchList _modelListView
+          switchListView _modelListView
+          switchSelectionView _modelSelectionView
       when _scoringTopic
         unless _topic() is topic
           _topic topic
-          switchList _scoringListView
+          switchListView _scoringListView
+          switchSelectionView _scoringSelectionView
       when _notificationTopic
         unless _topic() is topic
           _topic topic
-          switchList _notificationListView
+          switchListView _notificationListView
+          switchSelectionView null
     _isDisplayingTopics no
     return
   
@@ -72,12 +86,16 @@ Steam.MainView = (_) ->
     _administrationTopic = createTopic 'Administration', null
   ]
 
+  # List views
   _topicListView = Steam.TopicListView _, _topics
   _frameListView = Steam.FrameListView _
   _modelListView = Steam.ModelListView _
   _scoringListView = Steam.ScoringListView _
   _notificationListView = Steam.NotificationListView _
+
+  # Selection views
   _modelSelectionView = Steam.ModelSelectionView _
+  _scoringSelectionView = Steam.ScoringSelectionView _
 
   switchView = (views, view) ->
     for oldView in views()
@@ -85,40 +103,54 @@ Steam.MainView = (_) ->
     if view
       views [ view ]
     else
-      views.removeAll()
+      views []
 
-  switchList = (view) -> switchView _listViews, view
-  switchPage = (view) -> switchView _pageViews, view
-  switchModal = (view) -> switchView _modalViews, view
+  switchListView = (view) -> switchView _listViews, view
+  switchSelectionView = (view) -> switchView _selectionViews, view
+  switchPageView = (view) -> switchView _pageViews, view
+  switchModalView = (view) -> switchView _modalViews, view
+  fixDialogPlacement = (element) -> _.positionDialog element
  
-  _template = (view) -> view.template
+  template = (view) -> view.template
+
+  link$ _.loadDialog, (dialog) ->
+    _modalDialogs.push dialog
+
+  link$ _.unloadDialog, (dialog) ->
+    _modalDialogs.remove dialog
 
   link$ _.displayEmpty, ->
-    switchPage template: 'empty-view'
+    switchPageView template: 'empty-view'
 
   link$ _.displayFrame, (frame) ->
-    switchPage Steam.FrameView _, frame if _topic() is _frameTopic
+    switchPageView Steam.FrameView _, frame if _topic() is _frameTopic
 
   link$ _.displayModel, (model) ->
-    switchPage Steam.ModelView _, model if _topic() is _modelTopic
+    switchPageView Steam.ModelView _, model if _topic() is _modelTopic
 
   link$ _.displayScoring, (scoring) ->
-    switchPage Steam.ScoringView _, scoring if _topic() is _scoringTopic
+    switchPageView Steam.ScoringView _, scoring if _topic() is _scoringTopic
 
   link$ _.displayNotification, (notification) ->
-    switchPage Steam.NotificationView _, notification if _topic() is _notificationTopic
+    switchPageView Steam.NotificationView _, notification if _topic() is _notificationTopic
 
   link$ _.switchToFrames, switchToFrames
-
   link$ _.switchToModels, switchToModels
-
   link$ _.switchToScoring, switchToScoring
-
   link$ _.switchToNotifications, switchToNotifications
 
-  link$ _.modelsSelected, -> switchModal _modelSelectionView
+  # Not in use. Leaving this here as an example of how a modal view can be displayed.
+  # link$ _.modelsSelected, -> switchModalView _modelSelectionView
+  # link$ _.modelsDeselected, -> _modalViews.remove _modelSelectionView
+  
+  link$ _.status, (message) ->
+    if message
+      _status message
+      # Reset status bar after 7000ms
+      _.timeout 'status', 7000, -> _.status null
+    else
+      _status defaultStatusMessage
 
-  link$ _.modelsDeselected, -> _modalViews.remove _modelSelectionView
 
   #TODO do this through hash uris
   switchToFrames type: 'all'
@@ -127,10 +159,17 @@ Steam.MainView = (_) ->
   toggleTopics: toggleTopics
   toggleHelp: toggleHelp
   listViews: _listViews
+  selectionViews: _selectionViews
   pageViews: _pageViews
   modalViews: _modalViews
+  modalDialogs: _modalDialogs
+  hasModalView: _hasModalView
+  hasModalDialog: _hasModalDialog
+  isNavigatorMasked: _isNavigatorMasked
   isListMasked: _isListMasked
-  isPageMasked: _isPageMasked
-  isModal: _isModal
+  isViewMasked: _isViewMasked
   isHelpHidden: _isHelpHidden
-  template: _template
+  status: _status
+  fixDialogPlacement: fixDialogPlacement
+  template: template
+

@@ -91,6 +91,9 @@ usePackage <- function(p) {
 }
 
 # what packages did the h2o_master_test need?
+usePackage("R.utils")
+usePackage("R.oo")
+usePackage("R.methodsS3")
 usePackage("RCurl")
 usePackage("rjson")
 usePackage("statmod")
@@ -103,7 +106,6 @@ usePackage("caTools")
 usePackage("gplots")
 usePackage("ROCR")
 usePackage("digest")
-usePackage("R.utils")
 usePackage("penalized")
 
 # these came from source('../findNSourceUtils.R')

@@ -107,7 +107,7 @@ public class GLMGridView extends Request2 {
     if((j = UKV.get(grid._jobKey)) != null){
       switch(j.state){
         case DONE:     return Response.done(this);
-        case CRASHED:  return Response.error(j.exception);
+        case FAILED:  return Response.error(j.exception);
         case CANCELLED:return Response.error("Job was cancelled by user!");
         case RUNNING:  return Response.poll(this, (int) (100 * j.progress()), 100, "grid_key", grid_key.toString());
         default: break;

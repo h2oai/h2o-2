@@ -1,8 +1,8 @@
 .y-model-view
   .clearfix
     .y-tag Model
-    .y-tagline(data-bind='text:key')
-  h1.y-title(data-bind='text:title')
+    .y-tagline(data-bind='timeago:timestamp')
+  h1.y-title(data-bind='text:key')
   .y-section(data-bind='geyser:summary')
   h2.y-subtitle(data-bind='collapse:false') Parameters
   .y-parameters(data-bind='geyser:parameters')
