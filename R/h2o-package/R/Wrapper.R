@@ -255,7 +255,9 @@ h2o.clusterStatus <- function(client) {
 }
 
 .h2o.downloadJar <- function(branch, version, overwrite = FALSE) {
-  if(missing(branch)) branch <- packageDescription("h2o")$Branch
+  # if(missing(branch)) branch <- packageDescription("h2o")$Branch
+  if(missing(branch))
+    branch <- readLines(paste(.h2o.pkg.path, "branch.txt", sep = .Platform$file.sep))
   if(missing(version)) version <- packageVersion("h2o")[1,4]
   if(!is.logical(overwrite)) stop("overwrite must be TRUE or FALSE")
   

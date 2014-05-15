@@ -39,6 +39,7 @@ PDFLATEX=$(shell which pdflatex)
 build_rh2o:
 	sed -e 's/SUBST_PROJECT_VERSION/$(PROJECT_VERSION)/' -e 's/SUBST_PROJECT_BRANCH/$(BUILD_BRANCH)/' h2o-DESCRIPTION.template > h2o-package/DESCRIPTION
 	sed -e 's/SUBST_PROJECT_VERSION/$(PROJECT_VERSION)/' -e 's/SUBST_PROJECT_BRANCH/$(BUILD_BRANCH)/' h2o-package.template > h2o-package/man/h2o-package.Rd
+	echo '$(BUILD_BRANCH)' > h2o-package/inst/branch.txt
 ifeq ($(PDFLATEX),)
 	@echo pdflatex not found, skipping pdf generation...
 else
@@ -112,6 +113,7 @@ clean:
 	rm -f h2o-package/DESCRIPTION
 	rm -f h2o_package.pdf
 	rm -f h2o-package/man/h2o-package.Rd
+	rm -f h2o-package/inst/branch.txt
 	rm -fr h2o-package/inst/java
 	rm -f h2o_*.tar.gz
 	rm -f h2o_*.tgz
