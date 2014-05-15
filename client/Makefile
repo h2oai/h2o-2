@@ -39,6 +39,7 @@ BROWSER_SCRIPTS=\
 	$(BUILD)/scripts/dialog-manager.js \
 	$(BUILD)/scripts/alert-dialog.js \
 	$(BUILD)/scripts/error-dialog.js \
+	$(BUILD)/scripts/confirm-dialog.js \
 	$(BUILD)/scripts/select-frame-dialog.js \
 	$(BUILD)/scripts/topic-list-view.js \
 	$(BUILD)/scripts/frame-list-view.js \
@@ -62,6 +63,7 @@ TEST_SCRIPTS=\
 	$(BUILD)/scripts/h2o-proxy.js \
 	$(BUILD)/scripts/alert-dialog.js \
 	$(BUILD)/scripts/error-dialog.js \
+	$(BUILD)/scripts/confirm-dialog.js \
 	$(BUILD)/scripts/select-frame-dialog.js \
 	$(BUILD)/scripts/topic-list-view.js \
 	$(BUILD)/scripts/frame-list-view.js \
@@ -109,6 +111,7 @@ TEMPLATES=\
 	src/templates/main-view.jade \
 	src/templates/alert-dialog.jade \
 	src/templates/error-dialog.jade \
+	src/templates/confirm-dialog.jade \
 	src/templates/select-frame-dialog.jade \
 	src/templates/topic-list-view.jade \
 	src/templates/frame-list-view.jade \

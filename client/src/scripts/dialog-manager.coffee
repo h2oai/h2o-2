@@ -3,6 +3,7 @@ Steam.DialogManager = (_) ->
   initialize = ->
     linkDialog _.alert, Steam.AlertDialog
     linkDialog _.fail, Steam.ErrorDialog
+    linkDialog _.confirm, Steam.ConfirmDialog
     linkDialog _.promptForFrame, Steam.SelectFrameDialog
 
     # --- Add additional dialogs here ---
