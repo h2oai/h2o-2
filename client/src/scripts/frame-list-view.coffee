@@ -37,8 +37,8 @@ Steam.FrameListView = (_) ->
     self =
       data: frame
       title: frame.key
-      caption: describeCount frame.column_names.length, 'column'
-      cutline: join frame.column_names, ', '
+      caption: (describeCount frame.column_names.length, 'column') + ': ' + join (head frame.column_names, 5), ', '
+      timestamp: frame.creation_epoch_time_millis
       display: -> activateAndDisplayItem self
       isActive: node$ no
   
