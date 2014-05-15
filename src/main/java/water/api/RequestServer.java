@@ -144,6 +144,7 @@ public class RequestServer extends NanoHTTPD {
       registerRequest(new ReBalance());
       registerRequest(new FrameSplitPage());
       registerRequest(new GapStatistic());
+      registerRequest(new CreateFrame());
     } else {
       Request.addToNavbar(registerRequest(new hex.LR2()),        "Linear Regression2",   "Beta");
       Request.addToNavbar(registerRequest(new ReBalance()),      "ReBalance",            "Beta");

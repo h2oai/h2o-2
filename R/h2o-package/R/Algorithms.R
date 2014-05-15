@@ -1522,3 +1522,20 @@ plot.H2OPerfModel <- function(x, type = "cutoffs", ...) {
 .toupperFirst <- function(str) {
   paste(toupper(substring(str, 1, 1)), substring(str, 2), sep = "")
 }
+
+h2o.createFrame <- function(object, key, rows, cols, seed, randomize, value, categorical_fraction, factors, integer_fraction, integer_range, missing_fraction) {
+  if(!is.numeric(rows)) stop("rows must be a numeric value")
+  if(!is.numeric(cols)) stop("rows must be a numeric value")
+  if(!is.numeric(seed)) stop("rows must be a numeric value")
+  if(!is.logical(randomize)) stop("randomize must be a boolean value")
+  if(!is.numeric(value)) stop("value must be a numeric value")
+  if(!is.numeric(categorical_fraction)) stop("categorical_fraction must be a numeric value")
+  if(!is.numeric(factors)) stop("factors must be a numeric value")
+  if(!is.numeric(integer_fraction)) stop("integer_fraction must be a numeric value")
+  if(!is.numeric(integer_range)) stop("integer_range must be a numeric value")
+  if(!is.numeric(missing_fraction)) stop("missing_fraction must be a numeric value")
+
+  res = .h2o.__remoteSend(object, .h2o.__PAGE_CreateFrame, key = key, rows = rows, cols = cols, seed = seed, randomize = as.numeric(randomize), value = value,
+    categorical_fraction = categorical_fraction, factors = factors, integer_fraction = integer_fraction, integer_range = integer_range, missing_fraction = missing_fraction)
+  new("H2OParsedData", h2o=object, key=key)
+}
