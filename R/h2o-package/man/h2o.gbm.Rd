@@ -11,7 +11,8 @@ H2O: Gradient Boosted Machines
 }
 \usage{
 h2o.gbm(x, y, distribution = "multinomial", data, n.trees = 10, interaction.depth = 5, 
-  n.minobsinnode = 10, shrinkage = 0.1, n.bins = 100, importance = FALSE, validation, balance.classes = FALSE, max.after.balance.size = 5)
+  n.minobsinnode = 10, shrinkage = 0.1, n.bins = 100, importance = FALSE, validation, 
+  balance.classes = FALSE, max.after.balance.size = 5)
 }
 \arguments{
   \item{x}{
