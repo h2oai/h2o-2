@@ -23,6 +23,30 @@ class Basic(unittest.TestCase):
     def test_exec2_cbind_fail1(self):
 
         for i in range(5):
+            # execExpr = "a=c(0,0,0); b=c(0,0,0)"
+            execExpr = "a=c(0,0,0)"
+            h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+            execExpr = "b = a"
+            h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+            execExpr = "h <- cbind(a, b)"
+            h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+
+        h2o.check_sandbox_for_errors()
+
+    def test_exec2_cbind_fail2(self):
+
+        for i in range(5):
+            execExpr = "a=c(0,0,0); b=c(0,0,0)"
+            h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+            execExpr = "h <- cbind(a, b)"
+            h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+
+        h2o.check_sandbox_for_errors()
+
+
+    def test_exec2_cbind_fail3(self):
+
+        for i in range(5):
             execExpr = "h <- cbind(c(0,0,0), c(1,1,1))"
             h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
             # have to make sure they're created as keys for reuse between execs
@@ -43,7 +67,7 @@ class Basic(unittest.TestCase):
 
         h2o.check_sandbox_for_errors()
 
-    def test_exec2_cbind_fail2(self):
+    def test_exec2_cbind_fail4(self):
 
         for i in range(5):
             execExpr = "b=c(0,0,0,0,0,0,0,0,0,0,0,0)"
