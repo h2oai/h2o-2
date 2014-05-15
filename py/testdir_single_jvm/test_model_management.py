@@ -416,6 +416,7 @@ class ApiTestCase(ModelManagementTestCase):
             # find all compatible frames
             models = node.models(key=model_key, find_compatible_frames=1)
             compatible_frames = models['models'][model_key]['compatible_frames']
+            self.assertNotEqual(models['models'][model_key]['training_duration_in_ms'], 0, "Expected non-zero training time for model: " + model_key)
 
             for frame_key in compatible_frames:
                 print "Scoring: /2/Models?key=" + model_key + "&score_frame=" + frame_key
