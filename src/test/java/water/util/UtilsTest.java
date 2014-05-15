@@ -85,6 +85,11 @@ public class UtilsTest {
         Assert.assertTrue("rel. error for approxLog(double): " + err, Math.abs(err) < 1e-3);
       }
     }
+
+    int[] idx = Utils.seq(0, 13 + new Random().nextInt(10000));
+    int[] shuffled_idx = new int[idx.length];
+    Utils.shuffleArray(idx, idx.length, shuffled_idx, new Random().nextLong(), 0);
+    Utils.shuffleArray(idx, idx.length-13, shuffled_idx, new Random().nextLong(), 13);
   }
 
   @Test
