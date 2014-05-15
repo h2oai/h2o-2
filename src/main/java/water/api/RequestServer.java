@@ -32,6 +32,8 @@ import water.Boot;
 import water.H2O;
 import water.NanoHTTPD;
 import water.api.Upload.PostFile;
+import water.api.rest.schemas.GBMSchemaBloody;
+import water.api.rest.schemas.GBMSchemaV1;
 import water.deploy.LaunchJar;
 import water.util.Log;
 import water.util.Log.Tag.Sys;
@@ -75,6 +77,9 @@ public class RequestServer extends NanoHTTPD {
 
 
 //    Request.addToNavbar(registerRequest(new Inspect4UX()),  "NEW Inspect",                "Data"); //disable for now
+    // REST API helper
+    Request.addToNavbar(registerRequest(new GBMSchemaV1()),    "GBM API call", "REST");
+    Request.addToNavbar(registerRequest(new GBMSchemaBloody()), "GBM Bloody", "REST");
 
     // Data
     Request.addToNavbar(registerRequest(new ImportFiles2()),  "Import Files",           "Data");

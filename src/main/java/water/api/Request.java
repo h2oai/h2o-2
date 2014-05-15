@@ -44,6 +44,34 @@ public abstract class Request extends RequestBuilders {
     boolean gridable() default true;
     Class<? extends Validator> validator() default NOPValidator.class;
     ParamImportance importance() default ParamImportance.UNIMPORTANT;
+
+    // ============
+    // NEW API
+    String[] dependsOn() default {}; // Should be field automatically depending on values, valid fields
+    String[] helpFiles() default {};
+    Direction direction() default Direction.OUT;
+    /** REST path to reference of this field */
+    String path() default "";
+    /** Validation String for annotated field - make sense only for input annotation!
+     * It should express a predicate, e.g.:
+     * <code>"/frames/${/parameters/source}/cols/${/parameters/response}/type != 'Float' && ${/parameters/learn_rate} > 1000</code> */
+    String valid() default "";
+    /** Is the field is enabled. */
+    String enabled() default "";
+    /** Is the field visibled. */
+    String visible() default "";
+    /** Predefined values for the field - can be a list of values, or query to
+     * obtain values.
+     *
+     * <code>/frames/${source}/cols?names</code>, <code>1,2,10,15</code>
+     */
+    String values() default "";
+    /**
+     * Type of parameter
+     */
+    Class type() default Void.class;
+
+    // =========
   }
 
   public interface Validator<V> extends Freezable {
