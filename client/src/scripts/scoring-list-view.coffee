@@ -38,7 +38,7 @@ Steam.ScoringListView = (_) ->
         input: scoring
         output: null
       title: "Scoring on #{scoring.frameKey}"
-      caption: "#{scoring.model.model_algorithm} (#{scoring.model.response_column_name})"
+      caption: "#{scoring.model.key} (#{scoring.model.response_column_name})"
       timestamp: scoring.timestamp
       display: -> activateAndDisplayItem self
       isActive: node$ no
