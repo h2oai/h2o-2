@@ -378,9 +378,10 @@ public class Utils {
     result[0] = a[startIndex];
     for (int i = 1; i < n; i++) {
       int j = random.nextInt(i+1);
-      if (j!=i) result[i] = a[startIndex+j];
+      if (j!=i) result[i] = result[j];
       result[j] = a[startIndex+i];
     }
+    for (int val : a) assert(Utils.contains(result, val));
     return result;
   }
 
