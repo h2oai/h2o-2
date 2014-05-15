@@ -1,10 +1,18 @@
 
+library(h2o)
+
+# debug files 
+h2o.setLogPath(getwd(), "Command")
+h2o.setLogPath(getwd(), "Error")
+h2o.startLogging()
+
+# in case connecting to existing cloud
 ls
 rm(list=ls())
-library(h2o)
+
 local.h2o=h2o.init(Xmx="14g")
 filePath <- "/home/0xdiag/datasets/standard/covtype.class4.10000.data"
-cov=h2o.uploadFile.FV(local.h2o,filePath,key="cov")
+cov=h2o.uploadFile(local.h2o,filePath,key="cov")
 
 #spliting data into train/validation set
 s = h2o.runif(cov)    # Useful when number of rows too large for R to handle
@@ -20,7 +28,7 @@ seed = 1234567890
 depth = 20
 ntree = 50
 print("using balance.clsses=T in RF")
-cov.rf=h2o.randomForest.FV(x=myX,y=myY,data=cov.train,ntree=ntree, depth=depth,seed=seed,importance=T,validation=cov.valid, balance.classes=T)
+cov.rf=h2o.randomForest(x=myX,y=myY,data=cov.train,ntree=ntree, depth=depth,seed=seed,importance=T,validation=cov.valid, balance.classes=T)
 
 print(cov.rf)
 print(cov.rf@model)
@@ -57,13 +65,13 @@ head(pred[,3])      #
 print("If you have a number as a class label then call it as head(pred$'0') head(pred$'1')")
 
 
-perf = h2o.performance(pred[,3], cov.test$V55, measure = "F1")
+perf = h2o.performance(pred[,3], cov.test$C55, measure = "F1")
 print(" here the threshold used to calculate the performance measures is decided by maximizing F1 for the test set ")
 perf@model$auc
 perf@model$best_cutoff
 perf@model$confusion
 
-perf = h2o.performance(pred[,3], cov.test$V55, thresholds=cov.rf@model$best_cutoff )
+perf = h2o.performance(pred[,3], cov.test$C55, thresholds=cov.rf@model$best_cutoff )
 print("here the threshold we use tis that wihich maximizes F1 for validaion set")
 print(perf)
 cov.rf@model$best_cutoff
@@ -82,5 +90,5 @@ pred$Predicted_on_modelsBestCutoff = as.factor(pred$Predicted_on_modelsBestCutof
 
 print("This gives a weird formatted output because of inconsistency in the labels")
 print("Matching the prior CM from h2o.performance() means we got the threshold right?")
-CM=h2o.confusionMatrix(pred$Predicted_on_modelsBestCutoff,cov.test$V55)
+CM=h2o.confusionMatrix(pred$Predicted_on_modelsBestCutoff,cov.test$C55)
 print(CM)
