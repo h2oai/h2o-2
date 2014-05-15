@@ -32,14 +32,24 @@ Steam.ScoringSelectionView = (_) ->
     _.status if hover then _scoringComparisonMessage() else null
 
   deleteActiveScoring = ->
-    #TODO confirm dialog
-    _.deleteActiveScoring()
+    confirmDialogOpts =
+      title: 'Delete Scoring?'
+      confirmCaption: 'Delete'
+      cancelCaption: 'Keep'
+    _.confirm 'This scoring will be permanently deleted. Are you sure?', confirmDialogOpts, (response) ->
+      if response is 'confirm'
+        _.deleteActiveScoring()
 
   deleteScorings = ->
     # Send a clone of selections because the selections gets cleared
     #  when deleted from the selection list.
-    #TODO confirm dialog
-    _.deleteScorings clone _selections()
+    confirmDialogOpts =
+      title: 'Delete Scorings?'
+      confirmCaption: 'Delete'
+      cancelCaption: 'Keep'
+    _.confirm 'These scorings will be permanently deleted. Are you sure?', confirmDialogOpts, (response) ->
+      if response is 'confirm'
+        _.deleteScorings clone _selections()
 
   clearSelections = ->
     _.deselectAllScorings()
