@@ -16,7 +16,7 @@ wssR<-sort.int(fitR$withinss)
 wssH2O<- sort.int(fitH2O@model$withinss)
 
 
-Log.info(paste("H2O WithinSS  : ", wssH2O, "\t\t", "R WithinSS : ", wssR))
+Log.info(print("H2O WithinSS  : ", wssH2O, "\t\t", "R WithinSS : ", wssR))
 
 Log.info("Compare Within SS between R and H2O")
 expect_equal(wssR, wssH2O, tolerance = 0.10)
