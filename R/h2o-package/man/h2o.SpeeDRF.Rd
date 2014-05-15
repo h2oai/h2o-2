@@ -8,8 +8,8 @@ Performs single-node random forest classification on a data set.
 }
 \usage{
 h2o.SpeeDRF(x, y, data, classification = TRUE, validation, mtry = -1, ntree = 50, 
-  depth = 50, sample.rate = 2/3, oobee = TRUE, nbins = 1024, seed = -1, 
-  stat.type = "ENTROPY", classwt = NULL, sampling_strategy = "RANDOM", 
+  depth = 50, sample.rate = 2/3, oobee = TRUE, importance = FALSE, nbins = 1024, 
+  seed = -1, stat.type = "ENTROPY", classwt = NULL, sampling_strategy = "RANDOM", 
   strata_samples = NULL)
 }
 %- maybe also 'usage' for other objects documented here.
@@ -42,6 +42,9 @@ An \code{\linkS4class{H2OParsedData}} object containing the variables in the mod
   }
   \item{oobee}{
   (Optional) A logical value indicating whether to calculate the out of bag error estimate.
+  }
+  \item{importance}{
+  (Optional) A logical value indicating whether to compute variable importance measures. (If set to \code{TRUE}, the algorithm will take longer to finish.)
   }
   \item{nbins}{
   (Optional) Build a histogram of this many bins, then split at best point.
