@@ -99,6 +99,7 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTFactor());
     putPrefix(new ASTIsFactor());
     putPrefix(new ASTAnyFactor());   // For Runit testing
+    putPrefix(new ASTCanBeCoercedToLogical());
     putPrefix(new ASTAnyNA());
     putPrefix(new ASTIsTRUE());
     putPrefix(new ASTMTrans());
@@ -403,6 +404,29 @@ class ASTAnyFactor extends ASTUniPrefixOp {
     Vec[] v = fr.vecs();
     for(int i = 0; i < v.length; i++) {
       if(v[i].isEnum()) { d = 1; break; }
+    }
+    env.subRef(fr,skey);
+    env.poppush(d);
+  }
+}
+
+class ASTCanBeCoercedToLogical extends ASTUniPrefixOp {
+  ASTCanBeCoercedToLogical() { super(VARS1,new Type[]{Type.DBL,Type.ARY}); }
+  @Override String opStr() { return "canBeCoercedToLogical"; }
+  @Override ASTOp make() {return this;}
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    if(!env.isAry()) { env.poppush(0); return; }
+    Frame fr = env.popAry();
+    String skey = env.key();
+    double d = 0;
+    Vec[] v = fr.vecs();
+    for (Vec aV : v) {
+      if (aV.isInt()) {
+        if (aV.min() == 0 && aV.max() == 1) {
+          d = 1;
+          break;
+        }
+      }
     }
     env.subRef(fr,skey);
     env.poppush(d);
