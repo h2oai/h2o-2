@@ -311,7 +311,7 @@ h2o.cut <- function(x, breaks) {
   if(missing(x)) stop("Must specify data set")
   if(!inherits(x, "H2OParsedData")) stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
   if(missing(breaks) || !is.numeric(breaks)) stop("breaks must be a numeric vector")
-  
+
   nums = ifelse(length(breaks) == 1, breaks, paste("c(", paste(breaks, collapse=","), ")", sep=""))
   expr = paste("cut(", x@key, ",", nums, ")", sep="")
   res = .h2o.__exec2(x@h2o, expr)
@@ -1061,11 +1061,18 @@ screeplot.H2OPCAModel <- function(x, npcs = min(10, length(x@model$sdev)), type 
     stop("type must be either 'barplot' or 'lines'")
 }
 
+.canBeCoercedToLogical<-
+function(vec) {
+  if (!(inherits(vec, "H2OParsedData"))) stop("Object must be a H2OParsedData object. Input was: ", vec)
+  # expects fr to be a vec.
+  as.logical(.h2o.__unop2("canBeCoercedToLogical", vec))
+}
+
 setMethod("ifelse", "H2OParsedData", function(test, yes, no) {
   # if(!(is.numeric(yes) || class(yes) == "H2OParsedData") || !(is.numeric(no) || class(no) == "H2OParsedData"))
   if(!(is.numeric(yes) || inherits(yes, "H2OParsedData")) || !(is.numeric(no) || inherits(no, "H2OParsedData")))
     stop("Unimplemented")
-  if(!test@logic) stop(test@key, " is not a H2O logical data type")
+  if(!test@logic && !.canBeCoercedToLogical(test)) stop(test@key, " is not a H2O logical data type")
   # yes = ifelse(class(yes) == "H2OParsedData", yes@key, yes)
   # no = ifelse(class(no) == "H2OParsedData", no@key, no)
   yes = ifelse(inherits(yes, "H2OParsedData"), yes@key, yes)
