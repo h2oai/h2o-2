@@ -1,7 +1,7 @@
 import unittest, random, sys, time, re
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_glm, h2o_import as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
     # FIX! all this fanciness shouldn't be needed. GLM shouldn't be able to learn
@@ -9,33 +9,20 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
 
     # getting correlated results?
     r1 = random.Random(SEED)
-    # keep a single thread from the original SEED, for repeatability.
-    SEED2 = r1.randint(0, sys.maxint)
-    r2 = random.Random(SEED2)
-    SEED3 = r1.randint(0, sys.maxint)
-    r3 = random.Random(SEED3)
+    ### r1.jumpahead(922377089)   
+
+    r2 = random.Random(SEED)
+    ### r2.jumpahead(488915466)
     dsf = open(csvPathname, "w+")
 
     for i in range(rowCount):
         rowData = []
         rowTotal = 0
-        # do jumpahead per row, so the combination of rows plus col dice rolls
-        # doesn't allow prediction of the RNG so well? (an issue with 500 col datasets)
-        ### r1.jumpahead(922377089)   
-        ### r2.jumpahead(488915466)
-        ### r3.jumpahead(743976213)
-
-        # use r3 to randomly inject 5% noise. noise is complement
         for j in range(colCount):
             ri1 = r1.randint(0,1)
-            ri3 = r3.randint(0,1)
-            rs = (ri1 + ri3) % 2
-            rowData.append(rs)
+            rowData.append(ri1)
 
-        # use r3 to randomly inject 5% noise. noise is complement
-        ri2 = r2.randint(0,1)
-        ri3 = r3.randint(0,1)
-        result = (ri2 + ri3) % 2
+        result = r2.randint(0,1)
         rowData.append(str(result))
         ### print colCount, rowTotal, result
         rowDataCsv = ",".join(map(str,rowData))
@@ -62,21 +49,21 @@ class Basic(unittest.TestCase):
         ### time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_GLM_convergence_1_noise(self):
+    def test_GLM2_convergence_1(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (10000, 50,  'cD', 300),
-            (10000, 100, 'cE', 300),
-            (10000, 200, 'cF', 300),
-            (10000, 300, 'cG', 300),
-            (10000, 400, 'cH', 300),
-            (10000, 500, 'cI', 300),
+            (100, 50,  'cD', 300),
+            (100, 100, 'cE', 300),
+            (100, 200, 'cF', 300),
+            (100, 300, 'cG', 300),
+            (100, 400, 'cH', 300),
+            (100, 500, 'cI', 300),
         ]
 
         ### h2b.browseTheCloud()
         lenNodes = len(h2o.nodes)
 
-        USEKNOWNFAILURE = False
         for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
             SEEDPERFILE = random.randint(0, sys.maxint)
             csvFilename = 'syn_%s_%sx%s.csv' % (SEEDPERFILE,rowCount,colCount)
@@ -84,34 +71,24 @@ class Basic(unittest.TestCase):
             print "\nCreating random", csvPathname
             write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
 
-            if USEKNOWNFAILURE:
-                csvFilename = 'failtoconverge_100x50.csv'
-                csvPathname = 'logreg/' + csvFilename
-
             parseResult = h2i.import_parse(path=csvPathname, hex_key=hex_key, timeoutSecs=10, schema='put')
-            print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvFilename
 
             y = colCount
             kwargs = {
-                    'max_iter': 40, 
-                    'lambda': 1e-4,
-                    'alpha': 0.5,
-                    'link': 'familyDefault',
-                    'n_folds': 2,
+                    'max_iter': 10, 
+                    'lambda': 1e-8,
+                    'alpha': 0,
+                    'n_folds': 0,
                     'beta_epsilon': 1e-4,
-                    'thresholds': '0.5',
                     }
 
-            if USEKNOWNFAILURE:
-                kwargs['y'] = 50
-            else:
-                kwargs['y'] = y
-
+            kwargs['response'] = y
             emsg = None
-            for i in range(1):
+            # FIX! how much should we loop here. 
+            for i in range(3):
                 start = time.time()
                 glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
                 print 'glm #', i, 'end on', csvPathname, 'took', time.time() - start, 'seconds'
@@ -124,10 +101,7 @@ class Basic(unittest.TestCase):
                     print "\n", "\ncoefficients in col order:"
                     # since we're loading the x50 file all the time..the real colCount 
                     # should be 50 (0 to 49)
-                    if USEKNOWNFAILURE:
-                        showCols = 50
-                    else:
-                        showCols = colCount
+                    showCols = colCount
                     for c in range(showCols):
                         print "%s:\t%.6e" % (c, coefficients[c])
                     print "intercept:\t %.6e" % intercept

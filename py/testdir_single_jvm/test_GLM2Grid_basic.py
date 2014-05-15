@@ -19,7 +19,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLMGrid_basic_benign(self):
+    def test_GLM2Grid_basic_benign(self):
+        h2o.beta_features = True
         csvFilename = "benign.csv"
         print "\nStarting", csvFilename 
         csvPathname = 'logreg/' + csvFilename
@@ -28,27 +29,19 @@ class Basic(unittest.TestCase):
         # cols 0-13. 3 is output
         # no member id in this one
         y = "3"
-        x = range(14)
-        # 0 and 1 are id-like values
-        x.remove(0)
-        x.remove(1)
-
-        x.remove(3) # 3 is output
-        x = ','.join(map(str, x))
-
-        # just run the test with all x, not the intermediate results
-        print "\nx:", x
         print "y:", y
         
         kwargs = {
-            'x': x, 'y':  y, 'n_folds': 0, 
+            'ignored_cols': '0,1', 
+            'response':  y, 
+            'n_folds': 0, 
             'lambda': '1e-8:1e-2:100', 
             'alpha': '0,0.5,1',
-            'thresholds': '0:1:0.01'
             }
         # fails with n_folds
         print "Not doing n_folds with benign. Fails with 'unable to solve?'"
-        gg = h2o_cmd.runGLMGrid(parseResult=parseResult, timeoutSecs=120, **kwargs)
+        # the gridded params make it grid..just call GLM2
+        gg = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=120, **kwargs)
         # check the first in the models list. It should be the best
         colNames = [ 'STR','OBS','AGMT','FNDX','HIGD','DEG','CHK',
                      'AGP1','AGMN','NLV','LIV','WT','AGLP','MST' ]
@@ -63,13 +56,9 @@ class Basic(unittest.TestCase):
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=csvFilename + ".hex", schema='put')
 
         y = "1"
-        x = range(9)
-        x.remove(0) # 0. member ID. not used.
-        x.remove(1) # 1 is output
-        x = ','.join(map(str, x))
+        # 0. member ID. not used.
+        # 1 is output
 
-        # just run the test with all x, not the intermediate results
-        print "\nx:", x
         print "y:", y
 
         # FIX! thresholds is used in GLMGrid. threshold is used in GLM
@@ -77,14 +66,15 @@ class Basic(unittest.TestCase):
         # colon separated is min/max/step
         # FIX! have to update other GLMGrid tests
         kwargs = {
-            'x': x, 'y':  y, 'n_folds': 2, 
-            'beta_eps': 1e-4,
+            'ignored_cols': 0, 
+            'response':  y, 
+            'n_folds': 2, 
             'lambda': '1e-8:1e3:100', 
             'alpha': '0,0.5,1',
-            'thresholds': '0:1:0.01'
             }
 
-        gg = h2o_cmd.runGLMGrid(parseResult=parseResult, timeoutSecs=120, **kwargs)
+        # the gridded params make it grid..just call GLM2
+        gg = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=120, **kwargs)
         colNames = ['D','CAPSULE','AGE','RACE','DPROS','DCAPS','PSA','VOL','GLEASON']
         # h2o_glm.simpleCheckGLMGrid(self, gg, colNames[xList[0]], **kwargs)
         h2o_glm.simpleCheckGLMGrid(self, gg, None, **kwargs)
