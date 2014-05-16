@@ -29,7 +29,6 @@ irisPath = system.file("extdata", "iris.csv", package="h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
 nrow(iris.hex)
 ncol(iris.hex)
-h2o.shutdown(localH2O)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

@@ -85,7 +85,6 @@ class(iris.fv)
 iris_folder.hex = h2o.importHDFS(localH2O, path = paste("hdfs://192.168.1.161", 
   "datasets/runit/iris_test_train", sep = "/"))
 summary(iris_folder.hex)
-h2o.shutdown(localH2O)
 }
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

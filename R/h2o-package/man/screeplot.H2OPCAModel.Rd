@@ -23,5 +23,4 @@ ausPath = system.file("extdata", "australia.csv", package = "h2o")
 australia.hex = h2o.importFile(localH2O, path = ausPath)
 australia.pca = h2o.prcomp(data = australia.hex, standardize = TRUE)
 screeplot(australia.pca)
-h2o.shutdown(localH2O)
 }

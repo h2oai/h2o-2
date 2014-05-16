@@ -20,5 +20,4 @@ prostate.hex = h2o.importFile(localH2O, path = prosPath)
 prostate.data.frame <- as.data.frame(prostate.hex)
 summary(prostate.data.frame)
 head(prostate.data.frame)
-h2o.shutdown(localH2O)
 }

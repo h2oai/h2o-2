@@ -49,7 +49,6 @@ localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, beta = TRUE
 irisPath = system.file("extdata", "iris.csv", package = "h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath)
 h2o.gapStatistic(iris.hex, K.max = 10, B = 100)
-h2o.shutdown(localH2O)
 }
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

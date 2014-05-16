@@ -29,7 +29,6 @@ prostate.hex = h2o.importFile(localH2O, path = prosPath)
 prostate.gbm = h2o.gbm(x = 3:9, y = 2, data = prostate.hex)
 prostate.pred = h2o.predict(prostate.gbm)
 h2o.confusionMatrix(prostate.pred[,1], prostate.hex[,2])
-h2o.shutdown(localH2O)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
