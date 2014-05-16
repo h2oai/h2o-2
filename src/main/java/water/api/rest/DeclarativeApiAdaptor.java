@@ -20,8 +20,16 @@ public abstract class DeclarativeApiAdaptor<I extends Iced, A extends ApiSchema<
     return Collections.unmodifiableMap(r);
   }
 
-  abstract protected Map<String,String> getAPI2Impl();
-  abstract protected Map<String,String> getImpl2API();
+  public final String[][] pairs = map();
+  final Map<String, String> api2impl = toMap(pairs);
+  final Map<String, String> impl2api = toRMap(pairs);
+
+  protected Map<String, String> getAPI2Impl() {
+    return api2impl;
+  }
+  protected Map<String, String> getImpl2API() {
+    return impl2api;
+  }
 
   @Override final public A fillApi(I impl, A api) {
     RestUtils.fillAPIFields(impl, api, REST.VAL_TRANSF);

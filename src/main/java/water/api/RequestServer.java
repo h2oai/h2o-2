@@ -75,6 +75,9 @@ public class RequestServer extends NanoHTTPD {
   static final Request _http404;
   static final Request _http500;
 
+  public static final Response response404(NanoHTTPD server, Properties parms) { return _http404.serve(server, parms, Request.RequestType.www); }
+  public static final Response response500(NanoHTTPD server, Properties parms) { return _http500.serve(server, parms, Request.RequestType.www); }
+
   // initialization ------------------------------------------------------------
   static {
     boolean USE_NEW_TAB = true;
@@ -88,9 +91,9 @@ public class RequestServer extends NanoHTTPD {
     // Request.addToNavbar(registerRequest(new GBMSchemaV1()),    "GBM API call", "REST");
     // Request.addToNavbar(registerRequest(new GBMSchemaBloody()), "GBM Bloody", "REST");
     // FIXME: version in the route should be taken from handler!
-    registerRoute("/f00/3/GBM/(.*)", ModelHandlerV3.class);
-    registerRoute("/f00/bloody/GBM/(.*)", ModelHandlerBloody.class);
-    registerRoute("/f00/1/cloud_status", CloudStatusHandlerV1.class);
+    registerRoute("/3/models/(.*)", ModelHandlerV3.class);
+    registerRoute("/bloody/models/(.*)", ModelHandlerBloody.class);
+    registerRoute("/1/cloud_status", CloudStatusHandlerV1.class);
 
     // Data
     Request.addToNavbar(registerRequest(new ImportFiles2()),  "Import Files",           "Data");

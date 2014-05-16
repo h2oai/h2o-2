@@ -6,9 +6,8 @@ import water.Key;
 import water.api.rest.REST.Versioned;
 import water.api.rest.Version;
 
-abstract public class ModelHandler<V extends Version> extends AbstractHandler<V> {
+abstract public class ModelHandler<V extends Version> extends DKVHandler<V> {
     public ModelHandler(String path) {
         super(path);
     }
-
 }

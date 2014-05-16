@@ -81,4 +81,5 @@ public class NodeStatusSchemaV1 extends Iced implements Versioned<Version.V1> {
 
   @Override
   public Version.V1 getVersion() { return Version.v1; }
+
 }
