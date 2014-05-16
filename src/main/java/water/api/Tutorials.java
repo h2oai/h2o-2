@@ -39,7 +39,7 @@ public class Tutorials extends HTMLOnlyRequest {
 
     + "<div class='span2 col'>"
     + "<h2>K-Means</h2>"
-    + "<p>Perform cluster analysis with H<sub>2</sub>O. K-means is a scalable clustering algorithm for unsupervised learning on big data.</p>"
+    + "<p>Perform clustering analysis with H<sub>2</sub>O. K-means is a highly scalable clustering algorithm for unsupervised learning on big data.</p>"
     +   "<a href='/TutorialKMeans.html' class='btn btn-primary'>Try it!</a>"
     + "</div>"
 

@@ -36,6 +36,9 @@ public class CreateFrame extends Request2 {
   @API(help = "Constant value (for randomize=false)", filter = Default.class, json=true)
   public long value = 0;
 
+  @API(help = "Range for real variables (-range ... range)", filter = Default.class, json=true)
+  public long real_range = 100;
+
   @API(help = "Fraction of categorical columns (for randomize=true)", filter = Default.class, json=true)
   public double categorical_fraction = 0.2;
 
@@ -46,7 +49,7 @@ public class CreateFrame extends Request2 {
   public double integer_fraction = 0.2;
 
   @API(help = "Range for integer variables (-range ... range)", filter = Default.class, json=true)
-  public long integer_range = Long.MAX_VALUE;
+  public long integer_range = 100;
 
   @API(help = "Fraction of missing values", filter = Default.class, json=true)
   public double missing_fraction = 0.01;

@@ -63,8 +63,8 @@ class Basic(unittest.TestCase):
 
         h2o.tear_down_cloud()
     
-    def test_rf_float_bigexp(self):
-        h2o.beta_features = False
+    def test_rf_float_bigexp_fvec(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilename = "syn_prostate.csv"
         csvPathname = SYNDATASETS_DIR + '/' + csvFilename
@@ -83,15 +83,14 @@ class Basic(unittest.TestCase):
 
             # make sure all key names are unique, when we re-put and re-parse (h2o caching issues)
             hex_key = csvFilename + "_" + str(trial) + ".hex"
-            # On EC2 once we get to 30 trials or so, do we see polling hang? GC or spill of heap or ??
             ntree = 2
             kwargs = {
-                'ntree': ntree,
-                'features': None,
-                'depth': 20,
-                'sample': 67,
-                'model_key': None,
-                'bin_limit': 1024,
+                'ntrees': ntree,
+                'mtries': None,
+                'max_depth': 20,
+                'sample_rate': 0.67,
+                'destination_key': None,
+                'nbins': 1024,
                 'seed': 784834182943470027,
             }
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, doSummary=True)
@@ -110,13 +109,6 @@ class Basic(unittest.TestCase):
                     colType = c['type']
                     self.assertEqual(colType, 'float', msg="col %d should be type Real: %s" % (i, colType))
         
-            # header = rfView['confusion_matrix']['header']
-            # self.assertEqual(header, "", 
-            #    msg="%s cols in cm, means rf must have ignored some cols. I created data with %s cols" % (len(header), num_cols-1))
-
-
-            ### h2o_cmd.runInspect(key=hex_key)
-            ### h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
             h2o.check_sandbox_for_errors()
 
 
