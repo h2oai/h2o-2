@@ -1776,20 +1776,22 @@ class H2O(object):
                 'source': data_key,
                 # 'model': None,
                 'response': None,
+                'balance_classes': 1, 
+                'classification': 1,
                 'cols': None,
                 'ignored_cols_by_name': None,
-                'classification': 1,
-                'validation': None,
                 'importance': 1, # enable variable importance by default
-                'ntrees': trees,
+                'max_after_balance_size': 7,
                 'max_depth': None,
                 'min_rows': None, # how many rows in leaves for stopping condition
-                'nbins': None,
                 'mtries': None,
+                'nbins': None,
+                'ntrees': trees,
                 'sample_rate': None,
-                'seed': None,
-                'build_tree_per_node': None,
                 'score_each_iteration': None,
+                'seed': None,
+                'validation': None,
+
             }
             if 'model_key' in kwargs:
                 kwargs['destination_key'] = kwargs['model_key'] # hmm..should we switch test to new param?
