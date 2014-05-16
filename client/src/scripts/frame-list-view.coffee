@@ -68,7 +68,10 @@ Steam.FrameListView = (_) ->
               if error
                 #TODO handle errors
               else
-                displayFrames filter data.frames, (frame) -> if compatibleFramesByKey[frame.key] then yes else no
+                compatibleFrames = filter data.frames, (frame) -> if compatibleFramesByKey[frame.key] then yes else no
+                # PP-74 hide raw frames from list
+                nonRawFrames = filter compatibleFrames, (frame) -> not frame.is_raw_frame
+                displayFrames nonRawFrames
 
     _predicate predicate
     return

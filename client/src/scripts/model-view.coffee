@@ -3,7 +3,9 @@ Steam.ModelView = (_, _model) ->
   _compatibleFramesCount = node$ ''
 
   initialize = (model) ->
-    _compatibleFrames createCompatibleFramesSection model.compatible_frames
+    # PP-74 hide raw frames from list
+    nonRawFrames = filter model.compatible_frames, (frame) -> not frame.is_raw_frame
+    _compatibleFrames createCompatibleFramesSection nonRawFrames
     _compatibleFramesCount "(#{model.compatible_frames.length})"
 
   stringify = (value) ->
