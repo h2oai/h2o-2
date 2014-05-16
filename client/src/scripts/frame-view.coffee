@@ -20,6 +20,8 @@ Steam.FrameView = (_, _frame) ->
   compatibleModelsCount: _frame.compatible_models.length
   hasCompatibleModels: _frame.compatible_models.length > 0
   loadCompatibleModels: loadCompatibleModels
+  isRawFrame: _frame.is_raw_frame
+  parseUrl: "/2/Parse2.query?source_key=#{encodeURIComponent _frame.key}"
   dispose: ->
   template: 'frame-view'
 
