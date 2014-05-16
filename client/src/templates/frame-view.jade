@@ -5,13 +5,38 @@
   h1.y-title(data-bind='text:title')
   h2.y-subtitle(data-bind='collapse:false') Columns 
     span(data-bind='text:columnCount')
-  .y-columns(data-bind='geyser:columns')
+  .y-columns
+    table.table.table-condensed
+      tbody
+        // ko foreach:columns
+        tr
+          td(data-bind='text:name')
+        // /ko
+
+  // ko if:hasCompatibleModels
   h2.y-subtitle(data-bind='collapse:false') Compatible Models 
     span(data-bind='text:compatibleModelsCount')
   div
-    .y-models(data-bind='geyser:compatibleModels')
+    .y-models
+      table.table.table-condensed
+        thead
+          tr
+            th Key
+            th Method
+            th Category
+            th Response Column
+        tbody
+          // ko foreach:compatibleModels
+          tr
+            td(data-bind='text:key')
+            td(data-bind='text:algorithm')
+            td(data-bind='text:category')
+            td(data-bind='text:responseColumnName')
+          // /ko
+
     .y-controls
       button.btn(data-bind='click:loadCompatibleModels') View These Models&hellip;
+  // /ko
   h2.y-subtitle(data-bind='collapse:true') JSON
   pre(data-bind='json:data')
 
