@@ -167,6 +167,7 @@ public class GLMModelView extends Request2 {
       vals.append("<td>" + sm.beta[i] + "</td>");
       if(first){
         equation.append(DFORMAT.format(sm.beta[i]));
+        first = false;
       } else {
         equation.append(sm.beta[i] > 0?" + ":" - ");
         equation.append(DFORMAT.format(Math.abs(sm.beta[i])));
