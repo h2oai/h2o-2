@@ -32,6 +32,11 @@ import water.Boot;
 import water.H2O;
 import water.NanoHTTPD;
 import water.api.Upload.PostFile;
+import water.api.rest.GBMAdaptorBloody;
+import water.api.rest.GBMAdaptorV1;
+import water.api.rest.handlers.AbstractHandler;
+import water.api.rest.handlers.ModelHandlerBloody;
+import water.api.rest.handlers.ModelHandlerV3;
 import water.api.rest.schemas.GBMSchemaBloody;
 import water.api.rest.schemas.GBMSchemaV1;
 import water.deploy.LaunchJar;
@@ -44,10 +49,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.ServerSocket;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 /** This is a simple web server. */
 public class RequestServer extends NanoHTTPD {
@@ -64,6 +71,7 @@ public class RequestServer extends NanoHTTPD {
   // cache of all loaded resources
   private static final ConcurrentHashMap<String,byte[]> _cache = new ConcurrentHashMap();
   protected static final HashMap<String,Request> _requests = new HashMap();
+  protected static final HashMap<Pattern, AbstractHandler> _routes = new HashMap();
 
   static final Request _http404;
   static final Request _http500;
@@ -78,8 +86,10 @@ public class RequestServer extends NanoHTTPD {
 
 //    Request.addToNavbar(registerRequest(new Inspect4UX()),  "NEW Inspect",                "Data"); //disable for now
     // REST API helper
-    Request.addToNavbar(registerRequest(new GBMSchemaV1()),    "GBM API call", "REST");
-    Request.addToNavbar(registerRequest(new GBMSchemaBloody()), "GBM Bloody", "REST");
+    // Request.addToNavbar(registerRequest(new GBMSchemaV1()),    "GBM API call", "REST");
+    // Request.addToNavbar(registerRequest(new GBMSchemaBloody()), "GBM Bloody", "REST");
+    registerRoute("/f00/3/GBM/(.*)", ModelHandlerV3.class);
+    registerRoute("/f00/bloody/GBM/(.*)", ModelHandlerBloody.class);
 
     // Data
     Request.addToNavbar(registerRequest(new ImportFiles2()),  "Import Files",           "Data");
@@ -304,6 +314,40 @@ public class RequestServer extends NanoHTTPD {
     }
   }
 
+  public static void registerRoute(String path, Class cls) {
+    try {
+      Pattern p = Pattern.compile(path);
+      AbstractHandler handler = (AbstractHandler)cls.getConstructor(String.class).newInstance(path);
+      _routes.put(p, handler);
+    }
+    catch (PatternSyntaxException e) {
+      Log.warn("Caught exception trying to parse path: " + path + "\n" + e);
+    }
+    catch (Exception e) {
+        Log.warn("Caught exception trying to get the constructor for class: " + cls.toString() + "\n" + e);
+    }
+  }
+
+  public static void unregisterRoute(String path) {
+    try {
+      Pattern p = Pattern.compile(path);
+      _routes.remove(p);
+    }
+    catch (PatternSyntaxException e) {
+      Log.warn("Caught exception trying to parse path: " + path);
+    }
+  }
+
+  public static AbstractHandler getRoute(String path) {
+    for (Map.Entry<Pattern, AbstractHandler> entry : _routes.entrySet()) {
+      Matcher m = entry.getKey().matcher(path);
+      if (m.matches()) {
+        return entry.getValue();
+      }
+    }
+    return null;
+  }
+
   // Keep spinning until we get to launch the NanoHTTPD
   public static void start() {
     new Thread( new Runnable() {
@@ -384,23 +428,41 @@ public class RequestServer extends NanoHTTPD {
     String requestName = type.requestName(uri);
 
     maybeLogRequest(uri, method, parms);
-    try {
-      // determine if we have known resource
-      Request request = _requests.get(requestName);
-      // if the request is not know, treat as resource request, or 404 if not
-      // found
-      if (request == null)
-        return getResource(uri);
-      // Some requests create an instance per call
-      request = request.create(parms);
-      // call the request
-      return request.serve(this,parms,type);
-    } catch( Exception e ) {
-      if(!(e instanceof ExpectedExceptionForDebug))
-        e.printStackTrace();
-      // make sure that no Exception is ever thrown out from the request
-      parms.setProperty(Request.ERROR,e.getClass().getSimpleName()+": "+e.getMessage());
-      return _http500.serve(this,parms,type);
+
+    // Are we a new-style request?
+    AbstractHandler handler = getRoute(uri);
+    if (null != handler) {
+      if ("get".equalsIgnoreCase(method)) {
+        return handler.get(this, uri, header, parms);
+      } else if ("post".equalsIgnoreCase(method)) {
+        return handler.post(this, uri, header, parms);
+      } else if ("put".equalsIgnoreCase(method)) {
+        return handler.put(this, uri, header, parms);
+      } else if ("delete".equalsIgnoreCase(method)) {
+        return handler.delete(this, uri, header, parms);
+      } else {
+        Log.warn("Unknown http method, request ignored: " + method);
+        return _http500.serve(this, parms, type);
+      }
+    } else {
+      try {
+        // determine if we have known resource
+        Request request = _requests.get(requestName);
+        // if the request is not know, treat as resource request, or 404 if not
+        // found
+        if (request == null)
+          return getResource(uri);
+        // Some requests create an instance per call
+        request = request.create(parms);
+        // call the request
+        return request.serve(this,parms,type);
+      } catch( Exception e ) {
+        if(!(e instanceof ExpectedExceptionForDebug))
+          e.printStackTrace();
+        // make sure that no Exception is ever thrown out from the request
+        parms.setProperty(Request.ERROR,e.getClass().getSimpleName()+": "+e.getMessage());
+        return _http500.serve(this,parms,type);
+      }
     }
   }
 

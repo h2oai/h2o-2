@@ -7,8 +7,9 @@ import java.util.List;
 import water.Iced;
 import water.api.Request.*;
 import water.api.rest.REST.AbstractApiAdaptor;
-import water.api.rest.REST.RestCall;
+import water.api.rest.REST.Versioned;
 import water.api.rest.Version.Bloody;
+import water.api.rest.schemas.ApiSchema;
 
 /**
  *
@@ -16,7 +17,7 @@ import water.api.rest.Version.Bloody;
  * @param <I> implementation type
  * @param <A> api type
  */
-public abstract class BloodyApiAdaptor<I extends Iced, A extends RestCall<Bloody>> extends AbstractApiAdaptor<I, A, Version.Bloody> {
+abstract class BloodyApiAdaptor<I extends Iced, A extends ApiSchema<Bloody>> extends AbstractApiAdaptor<I, A, Version.Bloody> {
   @Override public A fillApi(I impl, A api) {
     Field[] fields = listAPIFields(api, false);
     for (Field f : fields) {

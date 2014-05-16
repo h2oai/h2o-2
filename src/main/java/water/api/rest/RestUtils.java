@@ -6,9 +6,9 @@ import java.util.Map;
 import water.Iced;
 import water.api.Direction;
 import water.api.Request.API;
-import water.api.rest.REST.RestCall;
 import water.api.rest.REST.TransfSig;
 import water.api.rest.REST.ValueTransf;
+import water.api.rest.schemas.ApiSchema;
 
 public class RestUtils {
   static final Class [] p(Class a, Class b) { return new Class[] { a, b}; }
@@ -16,10 +16,10 @@ public class RestUtils {
   static final String[][] map(String[] ...s)  { return s; }
   public static TransfSig tsig(Class a, Class b) { return new TransfSig(a, b); }
 
-  public static <A extends RestCall, I extends Iced> boolean fillAPIField(I source, String ffrom, A target, String fto, Map<TransfSig, ValueTransf> valueTransformers) {
+  public static <A extends ApiSchema, I extends Iced> boolean fillAPIField(I source, String ffrom, A target, String fto, Map<TransfSig, ValueTransf> valueTransformers) {
     return fillField(source, ffrom, target, fto, valueTransformers, false);
   }
-  public static <A extends RestCall, I extends Iced> boolean fillImplField(A source, String ffrom, I target, String fto, Map<TransfSig, ValueTransf> valueTransformers) {
+  public static <A extends ApiSchema, I extends Iced> boolean fillImplField(A source, String ffrom, I target, String fto, Map<TransfSig, ValueTransf> valueTransformers) {
     return fillField(source, ffrom, target, fto, valueTransformers, true);
   }
   public static boolean fillField(Object source, String ffrom, Object target, String fto, Map<TransfSig, ValueTransf> valueTransformers, boolean direction /* true: source == API, false: target == API */) {

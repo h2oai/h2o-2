@@ -4,20 +4,23 @@ import java.util.HashMap;
 import java.util.Map;
 
 import water.*;
+import water.api.rest.handlers.ModelHandlerV3;
+import water.api.rest.schemas.ApiSchema;
+import water.fvec.Frame;
 import water.api.rest.schemas.GBMSchemaBloody;
 import water.api.rest.schemas.GBMSchemaV1;
-import water.fvec.Frame;
 import water.fvec.Vec;
+import water.util.Log;
 
 public class REST {
 
-  public static Map<Class, ApiAdaptor> API_MAPPING = new HashMap<Class, ApiAdaptor>();
+  private static Map<Class, ApiAdaptor> API_MAPPING = new HashMap<Class, ApiAdaptor>();
+  private static Map<Class, ApiAdaptor> REVERSE_API_MAPPING = new HashMap<Class, ApiAdaptor>();
   public static Map<TransfSig, ValueTransf> VAL_TRANSF = new HashMap<TransfSig, ValueTransf>();
   static {
-    // Just temporary implementation of mapping between Schema and Adaptor
     // Later we will auto-generate this by reflection or Weaver
-    API_MAPPING.put(GBMSchemaV1.class, new GBMAdaptorV1());
-    API_MAPPING.put(GBMSchemaBloody.class, new GBMAdaptorBloody());
+    registerAdaptor(new GBMAdaptorV1());
+    registerAdaptor(new GBMAdaptorBloody());
 
     VAL_TRANSF.put(String2Frame.transf(), new String2Frame());
     VAL_TRANSF.put(Frame2String.transf(), new Frame2String());
@@ -27,8 +30,32 @@ public class REST {
     VAL_TRANSF.put(Key2String.transf(), new Key2String());
   }
 
+  static public ApiAdaptor registerAdaptor(ApiAdaptor adaptor) {
+    Class apiClass = adaptor.getApiClass();
+    Class implClass = adaptor.getImplClass();
+    ApiAdaptor old = API_MAPPING.get(apiClass);
+
+    API_MAPPING.put(apiClass, adaptor);
+    REVERSE_API_MAPPING.put(implClass, adaptor);
+    return old;
+  }
+
+  static public ApiAdaptor unregisterAdaptor(Class schema) {
+    ApiAdaptor old = API_MAPPING.get(schema);
+    API_MAPPING.remove(schema);
+    return old;
+  }
+
+  static public ApiAdaptor getAdaptorFromSchema(Class schema) {
+    return API_MAPPING.get(schema);
+  }
+
+  static public ApiAdaptor getAdaptorFromImpl(Class impl) {
+    return REVERSE_API_MAPPING.get(impl);
+  }
+
   /** Abstract representation of a REST API call */
-  interface RestCall<T extends Version> {
+  public interface Versioned<T extends Version> {
     public T getVersion();
   }
 
@@ -37,30 +64,56 @@ public class REST {
    * @param <A> api type
    * @param <V> version type
    */
-  interface ApiAdaptor<I extends Iced, A extends RestCall<? super V>, V extends Version> {
-      // Make implementation object based on given api object
-      public abstract I makeImpl(A api);
-      // Make API object based on implementation object
-      public abstract A makeApi(I impl);
-      // Transfer inputs from API to implementation
-      public abstract I fillImpl(A api, I impl);
-      // Transfer outputs from implementation to API
-      public abstract A fillApi (I impl, A api);
-      // Get supported version
-      public abstract V getVersion();
-      // Just creates empty implementation object
-      public abstract I createImpl();
-      // Just creates empty API object
-      public abstract A createApi();
+  public interface ApiAdaptor<I extends Iced, A extends ApiSchema<? super V>, V extends Version> {
+    // Make implementation object based on given api object
+    public I createAndAdaptToImpl(A api);
+    // Make API object based on implementation object
+    public A createAndAdaptToApi(I impl);
+    // Transfer inputs from API to implementation
+    public I fillImpl(A api, I impl);
+    // Transfer outputs from implementation to API
+    public A fillApi (I impl, A api);
+    // Get supported version
+    public V getVersion();
+    // Just creates empty implementation object
+    public I createImpl();
+    // Just creates empty API object
+    public A createApi();
+    // Get the class for the implementation object
+    public Class<I> getImplClass();
+    // Get the class for the api object
+    public Class<A> getApiClass();
   }
 
-  public static abstract class AbstractApiAdaptor<I extends Iced, O extends RestCall<? super V>, V extends Version> implements ApiAdaptor<I,O,V> {
-    @Override public I makeImpl(O api) {
+  public static abstract class AbstractApiAdaptor<I extends Iced, A extends ApiSchema<? super V>, V extends Version> implements ApiAdaptor<I,A,V> {
+    @Override public A createApi() {
+      A api = null;
+      try {
+        api = getApiClass().newInstance();
+      }
+      catch (Exception e) {
+        Log.warn("Caught exception trying to create a: " + getApiClass().toString());
+      }
+      return api;
+    }
+
+    @Override public I createImpl() {
+      I impl = null;
+      try {
+        impl = getImplClass().newInstance();
+      }
+      catch (Exception e) {
+        Log.warn("Caught exception trying to create a: " + getImplClass().toString());
+      }
+      return impl;
+    }
+
+    @Override public I createAndAdaptToImpl(A api) {
       I impl = createImpl();
       return fillImpl(api, impl);
     }
-    @Override public O makeApi(I impl) {
-      O api = createApi();
+    @Override public A createAndAdaptToApi(I impl) {
+      A api = createApi();
       return fillApi(impl, api);
     }
   }

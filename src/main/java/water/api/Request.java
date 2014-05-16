@@ -210,7 +210,7 @@ public abstract class Request extends RequestBuilders {
     return server.new Response(NanoHTTPD.HTTP_OK, NanoHTTPD.MIME_JSON, response.toString());
   }
 
-  protected NanoHTTPD.Response wrap(NanoHTTPD server, String value, RequestType type) {
+  public NanoHTTPD.Response wrap(NanoHTTPD server, String value, RequestType type) {
     if( type == RequestType.xml )
       return server.new Response(NanoHTTPD.HTTP_OK, NanoHTTPD.MIME_XML, value);
     if( type == RequestType.json )

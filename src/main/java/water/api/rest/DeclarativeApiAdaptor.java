@@ -4,10 +4,10 @@ import java.util.*;
 
 import water.Iced;
 import water.api.rest.REST.AbstractApiAdaptor;
-import water.api.rest.REST.RestCall;
+import water.api.rest.schemas.ApiSchema;
 import water.util.Log;
 
-public abstract class DeclarativeApiAdaptor<I extends Iced, O extends RestCall<? super V>, V extends Version> extends AbstractApiAdaptor<I, O, V> {
+public abstract class DeclarativeApiAdaptor<I extends Iced, O extends ApiSchema<? super V>, V extends Version> extends AbstractApiAdaptor<I, O, V> {
   static final String[] p(String a, String b) { return RestUtils.p(a, b); }
   static final String[][] map(String[] ...s)  { return RestUtils.map(s); }
   static final Map<String,String> toMap(String[][] pairs) {
