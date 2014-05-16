@@ -7,7 +7,7 @@ import water.api.rest.REST.AbstractApiAdaptor;
 import water.api.rest.schemas.ApiSchema;
 import water.util.Log;
 
-public abstract class DeclarativeApiAdaptor<I extends Iced, O extends ApiSchema<? super V>, V extends Version> extends AbstractApiAdaptor<I, O, V> {
+public abstract class DeclarativeApiAdaptor<I extends Iced, A extends ApiSchema<? super V>, V extends Version> extends AbstractApiAdaptor<I, A, V> {
   static final String[] p(String a, String b) { return RestUtils.p(a, b); }
   static final String[][] map(String[] ...s)  { return RestUtils.map(s); }
   static final Map<String,String> toMap(String[][] pairs) {
@@ -24,14 +24,16 @@ public abstract class DeclarativeApiAdaptor<I extends Iced, O extends ApiSchema<
   abstract protected Map<String,String> getAPI2Impl();
   abstract protected Map<String,String> getImpl2API();
 
-  @Override final public O fillApi(I impl, O api) {
+  @Override final public A fillApi(I impl, A api) {
+    RestUtils.fillAPIFields(impl, api, REST.VAL_TRANSF);
     for (Map.Entry<String, String> e : getImpl2API().entrySet()) {
       boolean res = RestUtils.fillAPIField(impl, e.getValue(), api, e.getKey(), REST.VAL_TRANSF);
       if (!res) Log.warn("The field was not filled: " + e.getValue()+" --> " + e.getKey());
     }
     return fillA(impl, api);
   }
-  @Override final public I fillImpl(O api, I impl) {
+  @Override final public I fillImpl(A api, I impl) {
+    RestUtils.fillImplFields(api, impl, REST.VAL_TRANSF);
     for (Map.Entry<String, String> e : getAPI2Impl().entrySet()) {
       boolean res = RestUtils.fillImplField(api, e.getValue(), impl, e.getKey(), REST.VAL_TRANSF);
       if (!res) Log.warn("The field was not filled: " + e.getValue()+" --> " + e.getKey());
@@ -39,6 +41,6 @@ public abstract class DeclarativeApiAdaptor<I extends Iced, O extends ApiSchema<
     return fillI(api,impl);
   }
 
-  protected O fillA(I impl, O api) { return api;  }
-  protected I fillI(O api, I impl) { return impl; }
+  protected A fillA(I impl, A api) { return api;  }
+  protected I fillI(A api, I impl) { return impl; }
 }

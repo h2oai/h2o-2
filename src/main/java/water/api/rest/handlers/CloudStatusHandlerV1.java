@@ -12,9 +12,9 @@ public class CloudStatusHandlerV1 extends AbstractHandler<Version.V1> {
     return Version.v1;
   }
 
-  public water.Iced findObject(String path) {
+  @Override public water.Iced findObject(String path) {
     CloudStatus cs = new CloudStatus();
-    cs.name = "TEST";
+    cs.cloud_name = "TEST";
     return cs;
   };
 
