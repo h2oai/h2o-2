@@ -205,6 +205,7 @@ Steam.ScoringView = (_, _scoring) ->
         ]
       ]
       errorRow = [ th 'Error' ]
+      durationRow = [ th 'Time' ]
       aucRow = [ th 'AUC' ]
       thresholdCriterionRow = [ th 'Threshold Criterion' ]
       thresholdRow = [ thIndent 'Threshold' ]
@@ -245,6 +246,7 @@ Steam.ScoringView = (_, _scoring) ->
         rocCurveRow.push td 'Loading...', "roc-#{scoreIndex}"
         inputParametersRow.push td createParameterTable parameters: inputParamsByScoreIndex[scoreIndex]
         errorRow.push td (format4f metrics.error_measure) + errorBadge #TODO change to bootstrap badge
+        durationRow.push td "#{metrics.duration_in_ms} ms"
         aucRow.push td format4f auc.AUC
         thresholdCriterionRow.push td head auc.threshold_criteria
         thresholdRow.push td head auc.threshold_for_criteria
@@ -285,6 +287,7 @@ Steam.ScoringView = (_, _scoring) ->
         tr rocCurveRow
         tr inputParametersRow
         tr errorRow
+        tr durationRow
         tr aucRow
         tr thresholdCriterionRow
         tr thresholdRow
