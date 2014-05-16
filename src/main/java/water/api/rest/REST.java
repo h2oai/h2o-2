@@ -21,6 +21,7 @@ public class REST {
     // Later we will auto-generate this by reflection or Weaver
     registerAdaptor(new GBMAdaptorV1());
     registerAdaptor(new GBMAdaptorBloody());
+    registerAdaptor(new CloudStatusAdaptorV1());
 
     VAL_TRANSF.put(String2Frame.transf(), new String2Frame());
     VAL_TRANSF.put(Frame2String.transf(), new Frame2String());

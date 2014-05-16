@@ -1,11 +1,15 @@
 package water.api.rest.schemas;
 
+import water.Iced;
+import water.api.DocGen;
 import water.api.Request.API;
-import water.api.rest.REST;
 import water.api.rest.REST.Versioned;
 import water.api.rest.Version;
 
-public class NodeStatusSchemaV1 implements Versioned<Version.V1> {
+public class NodeStatusSchemaV1 extends Iced implements Versioned<Version.V1> {
+  static final int API_WEAVER = 1;
+  static public DocGen.FieldDoc[] DOC_FIELDS;
+
   @API(help="name")
   public String name;
 
@@ -75,5 +79,6 @@ public class NodeStatusSchemaV1 implements Versioned<Version.V1> {
   @API(help="fj_queue_hi")
   int [] fj_queue_hi;
 
+  @Override
   public Version.V1 getVersion() { return Version.v1; }
 }

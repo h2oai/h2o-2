@@ -1,12 +1,13 @@
 package water.api.rest.schemas;
 
+import water.api.DocGen;
 import water.api.Request.API;
-import water.api.rest.REST;
-import water.api.rest.REST.Versioned;
 import water.api.rest.Version;
-import water.api.rest.schemas.ApiSchema;
 
 public class CloudStatusSchemaV1 extends ApiSchema<Version.V1> {
+  static final int API_WEAVER = 1;
+  static public DocGen.FieldDoc[] DOC_FIELDS;
+
   @API(help="version")
   public String version;
 
@@ -34,6 +35,7 @@ public class CloudStatusSchemaV1 extends ApiSchema<Version.V1> {
   @API(help="nodes")
   public NodeStatusSchemaV1[] nodes;
 
+  @Override
   public Version.V1 getVersion() { return Version.v1; }
 
 }

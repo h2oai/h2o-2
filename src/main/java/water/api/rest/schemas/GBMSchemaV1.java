@@ -17,8 +17,8 @@ import water.api.rest.Version.V1;
 @RESTCall(location="/metadata/models/algos/gbm/schema", path="/models/", method="PUT") // /metadata/models/algos
 public class GBMSchemaV1 extends ApiSchema<Version.V1> implements REST.Versioned<V1> {
 
-  static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
-  static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+  static final int API_WEAVER = 1;
+  static public DocGen.FieldDoc[] DOC_FIELDS;
 
   @Request.API( help      = "Source frame", // <-- Short help
         helpFiles = {"source.rst", "general.rst"}, // <-- Help files used for documentation generation

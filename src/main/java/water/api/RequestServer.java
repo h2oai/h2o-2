@@ -2,6 +2,7 @@ package water.api;
 
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
+
 import hex.CreateFrame;
 import hex.GridSearch.GridSearchProgress;
 import hex.KMeans2;
@@ -34,9 +35,7 @@ import water.NanoHTTPD;
 import water.api.Upload.PostFile;
 import water.api.rest.GBMAdaptorBloody;
 import water.api.rest.GBMAdaptorV1;
-import water.api.rest.handlers.AbstractHandler;
-import water.api.rest.handlers.ModelHandlerBloody;
-import water.api.rest.handlers.ModelHandlerV3;
+import water.api.rest.handlers.*;
 import water.api.rest.schemas.GBMSchemaBloody;
 import water.api.rest.schemas.GBMSchemaV1;
 import water.deploy.LaunchJar;
@@ -88,8 +87,10 @@ public class RequestServer extends NanoHTTPD {
     // REST API helper
     // Request.addToNavbar(registerRequest(new GBMSchemaV1()),    "GBM API call", "REST");
     // Request.addToNavbar(registerRequest(new GBMSchemaBloody()), "GBM Bloody", "REST");
+    // FIXME: version in the route should be taken from handler!
     registerRoute("/f00/3/GBM/(.*)", ModelHandlerV3.class);
     registerRoute("/f00/bloody/GBM/(.*)", ModelHandlerBloody.class);
+    registerRoute("/f00/1/cloud_status", CloudStatusHandlerV1.class);
 
     // Data
     Request.addToNavbar(registerRequest(new ImportFiles2()),  "Import Files",           "Data");
