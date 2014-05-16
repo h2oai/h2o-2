@@ -726,13 +726,13 @@ public class DeepLearning extends Job.ValidatedJob {
       if (classification != previous.model_info().get_params().classification) {
         Log.warn("Automatically switching to " + ((classification=!classification) ? "classification" : "regression") + " (same as the checkpointed model).");
       }
-      cp.start_training(previous);
       epochs += previous.epoch_counter; //add new epochs to existing model
       Log.info("Adding " + String.format("%.3f", previous.epoch_counter) + " epochs from the checkpointed model.");
       try {
         final DataInfo dataInfo = prepareDataInfo();
         cp = new DeepLearningModel(previous, destination_key, job_key, dataInfo);
         cp.write_lock(self());
+        cp.start_training(previous);
         assert(state==JobState.RUNNING);
         final DeepLearning mp = cp.model_info().get_params();
         Object A = mp, B = this;
