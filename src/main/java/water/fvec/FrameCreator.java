@@ -116,7 +116,7 @@ public class FrameCreator extends H2O.H2OCountedCompleter {
       for (int c : _real_cols) {
         for (int r = 0; r < cs[c]._len; r++) {
           setSeed(rng, c, cs[c]._start + r);
-          cs[c].set0(r, rng.nextDouble());
+          cs[c].set0(r, Double.MAX_VALUE * (1 - 2 * rng.nextDouble()));
         }
       }
     }
