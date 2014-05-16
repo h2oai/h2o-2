@@ -16,7 +16,11 @@ public class Weaver {
   private final CtClass[] _serBases;
   private final CtClass _fielddoc;
   private final CtClass _arg;
+  // Versioning
   private final CtClass _apiSchema;
+  private final CtClass _apiAdaptor;
+  private final CtClass _apiHandler;
+  // ---
   public static Class _typeMap;
   public static volatile String[] _packages = new String[] { "water", "hex", "org.junit", "com.oxdata", "ai.h2o" };
 
@@ -28,6 +32,9 @@ public class Weaver {
       _enum = _pool.get("java.lang.Enum"); // Needs serialization
       _freezable = _pool.get("water.Freezable"); // Needs serialization
       _apiSchema = _pool.get("water.api.rest.schemas.ApiSchema");
+      _apiAdaptor = _pool.get("water.api.rest.ApiAdaptor");
+      _apiHandler = _pool.get("water.api.rest.handlers.AbstractHandler");
+      //_versioned = _pool.get("water.api.rest.REST$Versioned");
       _serBases = new CtClass[] { _iced, _dtask, _enum, _freezable };
       for( CtClass c : _serBases ) c.freeze();
       _fielddoc = _pool.get("water.api.DocGen$FieldDoc");// Is auto-documentation result
@@ -157,10 +164,11 @@ public class Weaver {
   }
 
   CtClass addVersioningMethods( CtClass cc) throws CannotCompileException, NotFoundException, BadBytecode {
-    if (cc.subclassOf(_apiSchema)) {
+    if (cc.subclassOf(_apiSchema) ||
+        cc.subtypeOf(_apiAdaptor) ||
+        cc.subclassOf(_apiHandler)) {
       ensureVersion(cc);
     }
-    cc.freeze();
     return cc;
   }
 
@@ -221,7 +229,8 @@ public class Weaver {
       if (ta!=null && !hasExisting("getVersion", "()"+ta.getType().encode(), ccms) ) {
         String typeName = ta.toString();
         String valueName = getValueFromType(typeName);
-        cc.addMethod(CtNewMethod.make("public "+typeName+" getVersion() {" +
+        //cc.addMethod(CtNewMethod.make("public "+typeName+" getVersion() {" +
+        cc.addMethod(CtNewMethod.make("public water.api.rest.Version getVersion() {" +
             "  return "+valueName+";" +
             "}",cc));
       }

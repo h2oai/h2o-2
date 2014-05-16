@@ -106,4 +106,8 @@ public class RestUtils {
       if (ffrom!=null) fillField(source, ffrom, target, fto, valueTransformers, true);
     }
   }
+
+  public static RuntimeException barf(Object o) {
+    return new RuntimeException(o.getClass().toString()+" should be automatically overridden in the subclass by the auto-serialization code");
+  }
 }

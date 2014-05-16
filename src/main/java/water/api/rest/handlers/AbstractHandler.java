@@ -1,11 +1,10 @@
 package water.api.rest.handlers;
 
-import water.*;
-import water.api.rest.*;
-import water.api.rest.REST.Versioned;
-import water.api.rest.schemas.ApiSchema;
-
 import java.util.Properties;
+
+import water.NanoHTTPD;
+import water.api.rest.REST.Versioned;
+import water.api.rest.*;
 
 public abstract class AbstractHandler<V extends Version> implements Versioned<V> {
 
@@ -31,5 +30,9 @@ public abstract class AbstractHandler<V extends Version> implements Versioned<V>
 
   public NanoHTTPD.Response delete(NanoHTTPD server, String path, Properties header, Properties parms) {
     throw new UnsupportedOperationException("Don't know how to DELETE at path: " + path);
+  }
+
+  @Override public V getVersion() {
+    throw RestUtils.barf(this);
   }
 }

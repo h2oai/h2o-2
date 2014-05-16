@@ -35,4 +35,8 @@ public abstract class AbstractApiAdaptor<I extends Iced, A extends ApiSchema<? s
     A api = createApi();
     return fillApi(impl, api);
   }
+
+  @Override public V getVersion() {
+    throw RestUtils.barf(this);
+  }
 }
