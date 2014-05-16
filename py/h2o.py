@@ -1254,7 +1254,6 @@ class H2O(object):
         # note this doesn't affect polling with Inspect? (since it doesn't redirect ?
         while status == 'poll' or doFirstPoll or (beta_features and status == 'redirect' and 'Inspect' not in url):
             count += 1
-            print "right before check, timeoutSec: ", timeoutSecs
             if ((time.time() - start) > timeoutSecs):
                 # show what we're polling with
                 emsg = "Exceeded timeoutSecs: %d secs while polling." % timeoutSecs + \
