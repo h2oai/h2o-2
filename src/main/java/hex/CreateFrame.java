@@ -36,6 +36,9 @@ public class CreateFrame extends Request2 {
   @API(help = "Constant value (for randomize=false)", filter = Default.class, json=true)
   public long value = 0;
 
+  @API(help = "Range for real variables (-range ... range)", filter = Default.class, json=true)
+  public long real_range = 1;
+
   @API(help = "Fraction of categorical columns (for randomize=true)", filter = Default.class, json=true)
   public double categorical_fraction = 0.2;
 
