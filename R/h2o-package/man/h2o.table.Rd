@@ -29,7 +29,6 @@ head(h2o.table(prostate.hex[,3]))
 
 # Two-way table of ages (rows) and race (cols) of all patients
 head(h2o.table(prostate.hex[,c(3,4)]))
-h2o.shutdown(localH2O)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

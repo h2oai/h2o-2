@@ -58,5 +58,4 @@ prostate.gbm = h2o.gbm(y = 2, x = 3:9, data = prostate.hex)
 prostate.pred = h2o.predict(prostate.gbm)
 head(prostate.pred)
 h2o.performance(prostate.pred[,3], prostate.hex$CAPSULE, measure = "precision")
-h2o.shutdown(localH2O)
 }

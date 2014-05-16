@@ -95,5 +95,4 @@ irisPath = system.file("extdata", "iris.csv", package = "h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath)
 h2o.deeplearning(x = 1:4, y = 5, data = iris.hex, activation = "Tanh", 
 hidden = c(50, 50, 50), epochs = 500)
-h2o.shutdown(localH2O)
 }

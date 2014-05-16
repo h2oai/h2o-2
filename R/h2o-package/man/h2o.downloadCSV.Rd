@@ -31,7 +31,6 @@ myFile = paste(getwd(), "my_iris_file.csv", sep = .Platform$file.sep)
 h2o.downloadCSV(iris.hex, myFile)
 file.info(myFile)
 file.remove(myFile)
-h2o.shutdown(localH2O)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
