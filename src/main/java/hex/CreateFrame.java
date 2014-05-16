@@ -54,13 +54,16 @@ public class CreateFrame extends Request2 {
   @API(help = "Fraction of missing values", filter = Default.class, json=true)
   public double missing_fraction = 0.01;
 
+  @API(help = "Number of factor levels of the first column (1=real, 2=binomial, N=multinomial)", filter = Default.class, json=true)
+  public int response_factors = 2;
+
   @Override public Response serve() {
     try {
       if (integer_fraction + categorical_fraction > 1)
         throw new InvalidArgumentException("Integer and categorical fractions must add up to <= 1.");
 
-      if (cols == 0 || rows == 0)
-        throw new InvalidArgumentException("Must have non-zero number of rows and columns.");
+      if (cols <= 0 || rows <= 0)
+        throw new InvalidArgumentException("Must have number of rows > 0 and columns > 1.");
 
       if (!randomize) {
         if (integer_fraction != 0 || categorical_fraction != 0)

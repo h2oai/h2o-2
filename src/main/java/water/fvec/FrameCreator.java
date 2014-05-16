@@ -23,13 +23,13 @@ public class FrameCreator extends H2O.H2OCountedCompleter {
     _job=job;
     _createFrame = createFrame;
 
-    int[] idx = Utils.seq(0, _createFrame.cols);
+    int[] idx = Utils.seq(1, _createFrame.cols);
     int[] shuffled_idx = new int[idx.length];
     Utils.shuffleArray(idx, idx.length, shuffled_idx, _createFrame.seed, 0);
 
-    int catcols = (int)(_createFrame.categorical_fraction * _createFrame.cols);
-    int intcols = (int)(_createFrame.integer_fraction * _createFrame.cols);
-    int realcols = _createFrame.cols - catcols - intcols;
+    int catcols = (int)(_createFrame.categorical_fraction * (_createFrame.cols-1));
+    int intcols = (int)(_createFrame.integer_fraction * (_createFrame.cols-1));
+    int realcols = (_createFrame.cols-1) - catcols - intcols;
 
     assert(catcols >= 0);
     assert(intcols >= 0);
@@ -42,6 +42,13 @@ public class FrameCreator extends H2O.H2OCountedCompleter {
     // create domains for categorical variables
     if (_createFrame.randomize) {
       _domain = new String[_createFrame.cols][];
+      _domain[0] = _createFrame.response_factors == 1 ? null : new String[_createFrame.response_factors];
+      if (_domain[0] != null) {
+        for (int i=0; i <_domain[0].length; ++i) {
+          _domain[0][i] = "resp." + i;
+        }
+      }
+
       for (int c : _cat_cols) {
         _domain[c] = new String[_createFrame.factors];
         for (int i = 0; i < _createFrame.factors; ++i) {
@@ -101,6 +108,16 @@ public class FrameCreator extends H2O.H2OCountedCompleter {
     public void map (Chunk[]cs){
       if (!_createFrame.randomize) return;
       final Random rng = new Random();
+
+      // response
+      for (int r = 0; r < cs[0]._len; r++) {
+        setSeed(rng, 0, cs[0]._start + r);
+        if (_createFrame.response_factors >1)
+          cs[0].set0(r, (int)(rng.nextDouble() * _createFrame.response_factors)); //classification
+        else
+          cs[0].set0(r, _createFrame.real_range * (1 - 2 * rng.nextDouble())); //regression
+      }
+
       for (int c : _cat_cols) {
         for (int r = 0; r < cs[c]._len; r++) {
           setSeed(rng, c, cs[c]._start + r);
