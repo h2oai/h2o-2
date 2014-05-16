@@ -53,8 +53,10 @@ h2o.shutdown <- function(client, prompt = TRUE) {
       stop(paste("Unable to shutdown H2O. Server returned the following error:\n", res$error))
   }
   
-  if((client@ip == "localhost" || client@ip == "127.0.0.1") && exists(".startedH2O") && .startedH2O) 
-    .startedH2O <<- FALSE
+  if((client@ip == "localhost" || client@ip == "127.0.0.1") && .h2o.startedH2O()) {
+    pid_file <- .h2o.getTmpFile("pid")
+    if(file.exists(pid_file)) file.remove(pid_file)
+  }
 }
 
 # ----------------------- Diagnostics ----------------------- #
@@ -133,14 +135,16 @@ h2o.clusterStatus <- function(client) {
   packageStartupMessage(msg)
   
   # Shut down local H2O when user exits from R
-  .startedH2O <<- FALSE
+  pid_file <- .h2o.getTmpFile("pid")
+  if(file.exists(pid_file)) file.remove(pid_file)
+  
   reg.finalizer(.h2o.jar.env, function(e) {
     ip = "127.0.0.1"; port = 54321
     myURL = paste("http://", ip, ":", port, sep = "")
             
     # require(RCurl); require(rjson)
-    if(exists(".startedH2O") && .startedH2O && url.exists(myURL))
-      h2o.shutdown(new("H2OClient", ip=ip, port=port), FALSE)
+    if(.h2o.startedH2O() && url.exists(myURL))
+      h2o.shutdown(new("H2OClient", ip=ip, port=port), prompt = FALSE)
   }, onexit = TRUE)
 }
 
@@ -156,7 +160,7 @@ h2o.clusterStatus <- function(client) {
 #   myURL = paste("http://", ip, ":", port, sep = "")
 #   
 #   require(RCurl); require(rjson)
-#   if(exists(".startedH2O") && .startedH2O && url.exists(myURL))
+#   if(.h2o.startedH2O() && url.exists(myURL))
 #     h2o.shutdown(new("H2OClient", ip=ip, port=port), FALSE)
 # }
 
@@ -170,25 +174,9 @@ h2o.clusterStatus <- function(client) {
   }
 
   # Note: Logging to stdout and stderr in Windows only works for R version 3.0.2 or later!
-  if(.Platform$OS.type == "windows") {
-    default_path <- paste("C:", "TMP", sep = .Platform$file.sep)
-    if(file.exists(default_path))
-      tmp_path <- default_path
-    else if(file.exists(paste("C:", "TEMP", sep = .Platform$file.sep)))
-      tmp_path <- paste("C:", "TEMP", sep = .Platform$file.sep)
-    else if(file.exists(Sys.getenv("APPDATA")))
-      tmp_path <- Sys.getenv("APPDATA")
-    else
-      stop("Error: Cannot log Java output. Please create the directory ", default_path, ", ensure it is writable, and re-initialize H2O")
-    
-    usr <- gsub("[^A-Za-z0-9]", "_", Sys.getenv("USERNAME"))
-    stdout <- paste(tmp_path, paste("h2o", usr, "started_from_r.out", sep="_"), sep = .Platform$file.sep)
-    stderr <- paste(tmp_path, paste("h2o", usr, "started_from_r.err", sep="_"), sep = .Platform$file.sep)
-  } else {
-    usr <- gsub("[^A-Za-z0-9]", "_", Sys.getenv("USER"))
-    stdout <- paste("/tmp/h2o", usr, "started_from_r.out", sep="_")
-    stderr <- paste("/tmp/h2o", usr, "started_from_r.err", sep="_")
-  }
+  stdout <- .h2o.getTmpFile("stdout")
+  stderr <- .h2o.getTmpFile("stderr")
+  write(Sys.getpid(), .h2o.getTmpFile("pid"), append = FALSE)   # Write PID to file to track if R started H2O
   
   # jar_file <- paste(.h2o.pkg.path, "java", "h2o.jar", sep = .Platform$file.sep)
   jar_file <- .h2o.downloadJar(overwrite = forceDL)
@@ -218,7 +206,42 @@ h2o.clusterStatus <- function(client) {
   if (rc != 0) {
     stop(sprintf("Failed to exec %s with return code=%s", jar_file, as.character(rc)))
   }
-  .startedH2O <<- TRUE
+}
+
+.h2o.getTmpFile <- function(type) {
+  if(missing(type) || !type %in% c("stdout", "stderr", "pid"))
+    stop("type must be one of 'stdout', 'stderr', or 'pid'")
+  
+  if(.Platform$OS.type == "windows") {
+    default_path <- paste("C:", "TMP", sep = .Platform$file.sep)
+    if(file.exists(default_path))
+      tmp_path <- default_path
+    else if(file.exists(paste("C:", "TEMP", sep = .Platform$file.sep)))
+      tmp_path <- paste("C:", "TEMP", sep = .Platform$file.sep)
+    else if(file.exists(Sys.getenv("APPDATA")))
+      tmp_path <- Sys.getenv("APPDATA")
+    else
+      stop("Error: Cannot log Java output. Please create the directory ", default_path, ", ensure it is writable, and re-initialize H2O")
+    usr <- gsub("[^A-Za-z0-9]", "_", Sys.getenv("USERNAME"))
+  } else {
+    tmp_path <- paste(.Platform$file.sep, "tmp", sep = "")
+    usr <- gsub("[^A-Za-z0-9]", "_", Sys.getenv("USER"))
+  }
+  
+  if(type == "stdout")
+    paste(tmp_path, paste("h2o", usr, "started_from_r.out", sep="_"), sep = .Platform$file.sep)
+  else if(type == "stderr")
+    paste(tmp_path, paste("h2o", usr, "started_from_r.err", sep="_"), sep = .Platform$file.sep)
+  else
+    paste(tmp_path, paste("h2o", usr, "started_from_r.pid", sep="_"), sep = .Platform$file.sep)
+}
+
+.h2o.startedH2O <- function() {
+  pid_file <- .h2o.getTmpFile("pid")
+  if(file.exists(pid_file)) {
+    pid_saved <- as.numeric(readLines(pid_file))
+    return(pid_saved == Sys.getpid())
+  } else return(FALSE)
 }
 
 # This function returns the path to the Java executable if it exists
