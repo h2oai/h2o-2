@@ -68,7 +68,11 @@ public class FrameCreator extends H2O.H2OCountedCompleter {
 
   @Override public void compute2() {
     Vec[] vecs = Vec.makeNewCons(_createFrame.rows, _createFrame.cols, _createFrame.value, _domain);
-    _out = new Frame(Key.make(_createFrame.key), null, vecs);
+    String[] names = new String[vecs.length];
+    names[0] = "response";
+    for( int i=1; i<vecs.length; i++ ) names[i] = "C"+i;
+
+    _out = new Frame(Key.make(_createFrame.key), names, vecs);
     assert _out.numRows() == _createFrame.rows;
     assert _out.numCols() == _createFrame.cols;
     _out.delete_and_lock(_job);
