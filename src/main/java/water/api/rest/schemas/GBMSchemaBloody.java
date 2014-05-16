@@ -31,8 +31,4 @@ public class GBMSchemaBloody extends ApiSchema<Bloody> {
   public Key destination_key;
   @Request.API(help = "Job key")
   public Key job_key;
-
-  @Override public Bloody getVersion() {
-    return Version.bloody;
-  }
 }

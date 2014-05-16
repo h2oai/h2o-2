@@ -3,6 +3,9 @@ package water;
 import java.util.*;
 
 import javassist.*;
+import javassist.bytecode.*;
+import javassist.bytecode.SignatureAttribute.ClassSignature;
+import javassist.bytecode.SignatureAttribute.TypeArgument;
 import water.api.Request.API;
 import water.util.Log;
 import water.util.Log.Tag.Sys;
@@ -13,6 +16,7 @@ public class Weaver {
   private final CtClass[] _serBases;
   private final CtClass _fielddoc;
   private final CtClass _arg;
+  private final CtClass _apiSchema;
   public static Class _typeMap;
   public static volatile String[] _packages = new String[] { "water", "hex", "org.junit", "com.oxdata", "ai.h2o" };
 
@@ -23,6 +27,7 @@ public class Weaver {
       _dtask= _pool.get("water.DTask");// Needs serialization and remote execution
       _enum = _pool.get("java.lang.Enum"); // Needs serialization
       _freezable = _pool.get("water.Freezable"); // Needs serialization
+      _apiSchema = _pool.get("water.api.rest.schemas.ApiSchema");
       _serBases = new CtClass[] { _iced, _dtask, _enum, _freezable };
       for( CtClass c : _serBases ) c.freeze();
       _fielddoc = _pool.get("water.api.DocGen$FieldDoc");// Is auto-documentation result
@@ -90,6 +95,8 @@ public class Weaver {
       return null;              // Not found?  Use the normal loader then
     } catch( CannotCompileException e ) { // Expected to compile
       throw new RuntimeException(e);
+    } catch (BadBytecode e) {
+      throw new RuntimeException(e);
     } finally {
       // Do not forget to configure classloader back to original value
       Thread.currentThread().setContextClassLoader(ccl);
@@ -105,7 +112,7 @@ public class Weaver {
     return false;
   }
 
-  private synchronized CtClass javassistLoadClass( CtClass cc ) throws NotFoundException, CannotCompileException {
+  private synchronized CtClass javassistLoadClass( CtClass cc ) throws NotFoundException, CannotCompileException, BadBytecode {
     if( cc.isFrozen() ) return cc;
     // serialize parent
     javassistLoadClass(cc.getSuperclass());
@@ -117,7 +124,9 @@ public class Weaver {
       if( base.subclassOf(_enum) && base != cc )
         javassistLoadClass(base);
     }
-    return addSerializationMethods(cc);
+    CtClass ccr = addVersioningMethods(addSerializationMethods(cc));
+    ccr.freeze();
+    return ccr;
   }
 
   // Returns true if this method pre-exists *in the local class*.
@@ -143,6 +152,13 @@ public class Weaver {
       ensureNullaryCtor(cc);
       ensureNewInstance(cc);
       ensureType(cc);
+    }
+    return cc;
+  }
+
+  CtClass addVersioningMethods( CtClass cc) throws CannotCompileException, NotFoundException, BadBytecode {
+    if (cc.subclassOf(_apiSchema)) {
+      ensureVersion(cc);
     }
     cc.freeze();
     return cc;
@@ -193,6 +209,34 @@ public class Weaver {
                                     "  return _frozen$type == 0 ? (_frozen$type=water.TypeMap.onIce(\""+cc.getName()+"\")) : _frozen$type;" +
                                     "}",cc));
     }
+  }
+
+  private void ensureVersion(CtClass cc) throws NotFoundException, CannotCompileException, BadBytecode {
+    CtMethod ccms[] = cc.getDeclaredMethods();
+    if (!javassist.Modifier.isAbstract(cc.getModifiers())) {
+      String gsig = cc.getGenericSignature();
+      ClassSignature csig = SignatureAttribute.toClassSignature(gsig);
+      // Warning: this is not doing proper parent (superclass/interfaces) traversal
+      TypeArgument ta = getTypeArg(csig.getSuperClass().getTypeArguments(), "Lwater/api/rest/Version");
+      if (ta!=null && !hasExisting("getVersion", "()"+ta.getType().encode(), ccms) ) {
+        String typeName = ta.toString();
+        String valueName = getValueFromType(typeName);
+        cc.addMethod(CtNewMethod.make("public "+typeName+" getVersion() {" +
+            "  return "+valueName+";" +
+            "}",cc));
+      }
+    }
+  }
+  private String getValueFromType(String typeName) {
+    int idx = typeName.indexOf('$');
+    String t = typeName.substring(0, idx);
+    String v = typeName.substring(idx+1).toLowerCase();
+    return t+"."+v;
+  }
+  private TypeArgument getTypeArg(TypeArgument[] args, String prefix) {
+    for (TypeArgument ta : args)
+      if (ta.getType().encode().startsWith(prefix)) return ta;
+    return null;
   }
 
 

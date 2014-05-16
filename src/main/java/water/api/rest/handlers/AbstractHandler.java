@@ -1,10 +1,8 @@
 package water.api.rest.handlers;
 
 import water.*;
-import water.api.rest.REST;
-import water.api.rest.REST.ApiAdaptor;
+import water.api.rest.*;
 import water.api.rest.REST.Versioned;
-import water.api.rest.Version;
 import water.api.rest.schemas.ApiSchema;
 
 import java.util.Properties;

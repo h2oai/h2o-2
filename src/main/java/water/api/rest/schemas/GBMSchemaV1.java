@@ -1,12 +1,9 @@
 package water.api.rest.schemas;
 
 import water.Key;
-import water.api.Direction;
-import water.api.DocGen;
-import water.api.Request;
+import water.api.*;
 import water.api.anno.RESTCall;
-import water.api.rest.*;
-import water.api.rest.Version.V1;
+import water.api.rest.Version;
 
 /** Actual schema for GBM REST API call.
  *
@@ -15,7 +12,7 @@ import water.api.rest.Version.V1;
  *
  * NOTE: now extends Request2 since we have to have a nice way to test it. */
 @RESTCall(location="/metadata/models/algos/gbm/schema", path="/models/", method="PUT") // /metadata/models/algos
-public class GBMSchemaV1 extends ApiSchema<Version.V1> implements REST.Versioned<V1> {
+public class GBMSchemaV1 extends ApiSchema<Version.V1> {
 
   static final int API_WEAVER = 1;
   static public DocGen.FieldDoc[] DOC_FIELDS;
@@ -57,7 +54,4 @@ public class GBMSchemaV1 extends ApiSchema<Version.V1> implements REST.Versioned
   @Request.API(help = "Job key of model producer.")
   public Key job_key;
 
-  @Override public V1 getVersion() {
-    return Version.v1;
-  }
 }

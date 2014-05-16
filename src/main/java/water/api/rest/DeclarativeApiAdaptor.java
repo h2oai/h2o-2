@@ -3,7 +3,6 @@ package water.api.rest;
 import java.util.*;
 
 import water.Iced;
-import water.api.rest.REST.AbstractApiAdaptor;
 import water.api.rest.schemas.ApiSchema;
 import water.util.Log;
 

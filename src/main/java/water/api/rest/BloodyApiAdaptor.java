@@ -1,7 +1,6 @@
 package water.api.rest;
 
 import water.Iced;
-import water.api.rest.REST.AbstractApiAdaptor;
 import water.api.rest.Version.Bloody;
 import water.api.rest.schemas.ApiSchema;
 

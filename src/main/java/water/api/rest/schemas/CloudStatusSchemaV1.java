@@ -34,8 +34,4 @@ public class CloudStatusSchemaV1 extends ApiSchema<Version.V1> {
 
   @API(help="nodes")
   public NodeStatusSchemaV1[] nodes;
-
-  @Override
-  public Version.V1 getVersion() { return Version.v1; }
-
 }
