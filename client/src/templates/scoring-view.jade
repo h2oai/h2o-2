@@ -16,7 +16,28 @@
   // /ko
 
   // ko ifnot:hasFailed
+
+  // ko if:isScoringView
   div(data-bind='geyser:comparisonTable')
+  // /ko
+
+  // ko if:isComparisonView
+
+  .y-tabs
+    a.y-tab(data-bind='click:switchToTabularView, css:{active:isTabularComparisonView}') Tabular View
+    a.y-tab(data-bind='click:switchToAdvancedView, css:{active:isAdvancedComparisonView}') Advanced View
+
+  // ko if:isTabularComparisonView
+  div(data-bind='geyser:comparisonTable')
+  // /ko
+  // ko ifnot:isTabularComparisonView
+  h2.y-subtitle(data-bind='collapse:false') ROC Comparison
+  div(data-bind='geyser:multiRocPlot')
+  h2.y-subtitle(data-bind='collapse:false') Output Comparison
+  div(data-bind='geyser:stripPlot')
+  // /ko
+  // /ko
+
   // /ko
 
   // ko if:hasFailed
