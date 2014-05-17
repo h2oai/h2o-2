@@ -192,8 +192,11 @@ class H2OCloudNode:
               r_sys = requests.get(url_sys, timeout=120).text.split('\n')[0]
               r_proc = requests.get(url_proc, timeout=120).text.strip().split()
             except:
+              m += 1
               continue  # usually timeout, but just catch all and continue, error out downstream.
-            if r_sys == "" or r_proc == "": continue
+            if r_sys == "" or r_proc == "":
+                m += 1
+                continue
             if not got_url_sys:
                 if not ("404" and "not" and "found") in r_sys:
                     got_url_sys = True
