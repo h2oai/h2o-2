@@ -352,6 +352,9 @@ Steam.ScoringView = (_, _scoring) ->
 
 
   renderMultiRocPlot = (scorings) ->
+
+    [ div ] = geyser.generate [ 'div' ]
+
     margin = top: 20, right: 20, bottom: 20, left: 30
     width = 300
     height = 300
@@ -431,8 +434,8 @@ Steam.ScoringView = (_, _scoring) ->
       .attr 'class', 'line'
       .attr 'd', (d) -> line d.rates
       .style 'stroke', (d) -> color d.id
-      .on 'mouseover', (d) -> console.log 'mouseover', d
-      .on 'mouseout', (d) -> console.log 'mouseout', d
+      #.on 'mouseover', (d) -> _.inspect div d.caption
+      #.on 'mouseout', (d) -> console.log 'mouseout', d
 
     forEach scorings, (scoring) ->
       stroke = color scoring.id

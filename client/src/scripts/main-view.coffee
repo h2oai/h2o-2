@@ -1,12 +1,17 @@
 defaultStatusMessage = 'Ready.'
 Steam.MainView = (_) ->
+  _inspection = node$ null #TODO default to home
+  _inspectionHistory = []
+  _inspectionHistoryIndex = -1
+  _canNavigateBack = node$ no
+  _canNavigateForward = node$ no
   _status = node$ defaultStatusMessage
   _listViews = do nodes$
   _selectionViews = do nodes$
   _pageViews = do nodes$
   _modalViews = do nodes$
   _modalDialogs = do nodes$
-  _isHelpHidden = node$ no
+  _isInspectorHidden = node$ no
   _topic = node$ null
 
   _isDisplayingTopics = node$ no
@@ -21,7 +26,7 @@ Steam.MainView = (_) ->
   _topicTitle = lift$ _topic, _isDisplayingTopics, (topic, isDisplayingTopics) ->
     if isDisplayingTopics then 'Menu' else if topic then topic.title else ''
   toggleTopics = -> _isDisplayingTopics not _isDisplayingTopics()
-  toggleHelp = -> _isHelpHidden not _isHelpHidden()
+  toggleInspector = -> _isInspectorHidden not _isInspectorHidden()
   apply$ _isDisplayingTopics, (isDisplayingTopics) ->
     if isDisplayingTopics
       _listViews.push _topicListView
@@ -151,13 +156,46 @@ Steam.MainView = (_) ->
     else
       _status defaultStatusMessage
 
+  navigateHome = -> _.help()
+
+  inspect = ->
+    _inspection _inspectionHistory[_inspectionHistoryIndex]
+    _canNavigateBack _inspectionHistoryIndex > 0
+    _canNavigateForward _inspectionHistoryIndex < _inspectionHistory.length - 1
+
+  navigateBack = ->
+    if _inspectionHistoryIndex > 0
+      _inspectionHistoryIndex--
+      inspect()
+
+  navigateForward = ->
+    if _inspectionHistoryIndex < _inspectionHistory.length - 1
+      _inspectionHistoryIndex++
+      inspect()
+
+  navigate = (content) ->
+    unless _inspectionHistory[_inspectionHistoryIndex] is content
+      if _inspectionHistoryIndex < _inspectionHistory.length - 1
+        # Chop off tail
+        _inspectionHistory.length = _inspectionHistoryIndex + 1 
+        _inspectionHistoryIndex = _inspectionHistory.length - 1
+      if _inspectionHistory.length > 50
+        # Chop off head
+        _inspectionHistory.splice 0, _inspectionHistory.length - 50
+        _inspectionHistoryIndex = _inspectionHistory.length - 1
+      _inspectionHistory.push content
+      navigateForward()
+
+  link$ _.inspect, navigate
+
+  navigateHome()
 
   #TODO do this through hash uris
   switchToFrames type: 'all'
 
   topicTitle: _topicTitle
   toggleTopics: toggleTopics
-  toggleHelp: toggleHelp
+  toggleInspector: toggleInspector
   listViews: _listViews
   selectionViews: _selectionViews
   pageViews: _pageViews
@@ -168,7 +206,13 @@ Steam.MainView = (_) ->
   isNavigatorMasked: _isNavigatorMasked
   isListMasked: _isListMasked
   isViewMasked: _isViewMasked
-  isHelpHidden: _isHelpHidden
+  isInspectorHidden: _isInspectorHidden
+  inspection: _inspection
+  navigateHome: navigateHome
+  canNavigateBack: _canNavigateBack
+  navigateBack: navigateBack
+  canNavigateForward: _canNavigateForward
+  navigateForward: navigateForward
   status: _status
   fixDialogPlacement: fixDialogPlacement
   template: template

@@ -5,7 +5,7 @@
   dock-top(y-navigation-bar-height)
   background-color y-color-yellow
 
-.y-toggle-help-button
+.y-toggle-inspector-button
   float right
   background none
   border none
@@ -29,7 +29,7 @@
   dock(top:y-navigation-bar-height, bottom:y-status-bar-height)
 
 .y-workspace
-  dock(right:y-help-lane-width)
+  dock(right:y-inspector-lane-width)
 
 .y-lane-header
   dock-top(y-desktop-header-height)
@@ -72,9 +72,9 @@
   .btn
     height 30px
 
-.y-help-lane
+.y-inspector-lane
   background white
-  dock-right(y-help-lane-width)
+  dock-right(y-inspector-lane-width)
   border-left 1px solid #ddd
   .y-lane-body
     overflow auto
@@ -92,22 +92,22 @@
   dock-right(48px, 6px, 6px, 6px)
 
 
-.y-help-home-button
+.y-inspector-home-button
   dock-left(48px, 6px, 6px, 6px)
 
-.y-help-title
+.y-inspector-title
   text-block(y-desktop-header-height, 4 * 6px +  2 * 48px, 6px + 48px + 6px)
   font-size 18px
   font-weight 300
   text-align center
 
-.y-help-back-button
+.y-inspector-back-button
   dock-right(48px, 6px, 2 * 6px + 48px, 6px)
 
-.y-help-forward-button
+.y-inspector-forward-button
   dock-right(48px, 6px, 6px, 6px)
 
-.y-help
+.y-inspector
   padding 10px
   font-size 90%
   h1
@@ -130,7 +130,7 @@
   font-size 12px
 
 
-// Adding a .y-main-no-topic class on .y-main hides the help area
+// Adding a .y-main-no-topic class on .y-main hides the inspector area
 //    and docks .y-view-lane to the left
 .y-main-no-topic
   .y-topic-lane
@@ -138,10 +138,10 @@
   .y-view-lane
     left 0
 
-// Adding a .y-main-no-help class on .y-main hides the help area
+// Adding a .y-main-no-inspector class on .y-main hides the inspector area
 //    and docks .y-view-lane to the right
-.y-main-no-help
-  .y-help-lane
+.y-main-no-inspector
+  .y-inspector-lane
     display none
   .y-workspace
     right 0
