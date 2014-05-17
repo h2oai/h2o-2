@@ -24,7 +24,7 @@ public class CreateFrame extends Request2 {
   @API(help = "Number of rows", required = true, filter = Default.class, json=true)
   public long rows = 10000;
 
-  @API(help = "Number of columns", required = true, filter = Default.class, json=true)
+  @API(help = "Number of data columns (in addition to the first response column)", required = true, filter = Default.class, json=true)
   public int cols = 10;
 
   @API(help = "Random number seed", filter = Default.class, json=true)
@@ -77,7 +77,7 @@ public class CreateFrame extends Request2 {
       H2O.submitTask(fct);
       fct.join();
 
-      Log.info("Created frame '" + key.toString() + "'.");
+      Log.info("Created frame '" + key + "'.");
       return Response.done(this);
     } catch( Throwable t ) {
       return Response.error(t);
@@ -91,9 +91,10 @@ public class CreateFrame extends Request2 {
     }
     RString aft = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
     aft.replace("key", key);
-    DocGen.HTML.section(sb, "Frame creation done. Frame '" + aft.toString()
-            + "' now has " + fr.numRows() + " rows and " + fr.numCols() + " columns (" + fr.anyVec().nChunks()
-            + " chunks).");
+    DocGen.HTML.section(sb, "Frame creation done.<br/>Frame '" + aft.toString()
+            + "' now has " + fr.numRows() + " rows and " + (fr.numCols()-1)
+            + " data columns, as well as a " + (response_factors == 1 ? "real-valued" : (response_factors == 2 ? "binomial" : "multi-nomial"))
+            + " response variable as the first column.<br/>Number of chunks: " + fr.anyVec().nChunks() + ".");
     return true;
   }
 

@@ -14,7 +14,7 @@ h2o.createFrame(object, key, rows, cols, seed, randomize, value, categorical_fra
 \arguments{
   \item{key}{Name (Key) of frame to be created}
   \item{rows}{Number of rows}
-  \item{cols}{Number of columns}
+  \item{cols}{Number of data columns (in addition to the first response column)}
   \item{seed}{Random number seed}
   \item{randomize}{Whether frame should be randomized}
   \item{value}{Constant value (for randomize=false)}

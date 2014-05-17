@@ -23,13 +23,13 @@ public class FrameCreator extends H2O.H2OCountedCompleter {
     _job=job;
     _createFrame = createFrame;
 
-    int[] idx = Utils.seq(1, _createFrame.cols);
+    int[] idx = Utils.seq(1, _createFrame.cols+1);
     int[] shuffled_idx = new int[idx.length];
     Utils.shuffleArray(idx, idx.length, shuffled_idx, _createFrame.seed, 0);
 
-    int catcols = (int)(_createFrame.categorical_fraction * (_createFrame.cols-1));
-    int intcols = (int)(_createFrame.integer_fraction * (_createFrame.cols-1));
-    int realcols = (_createFrame.cols-1) - catcols - intcols;
+    int catcols = (int)(_createFrame.categorical_fraction * _createFrame.cols);
+    int intcols = (int)(_createFrame.integer_fraction * _createFrame.cols);
+    int realcols = _createFrame.cols - catcols - intcols;
 
     assert(catcols >= 0);
     assert(intcols >= 0);
@@ -41,7 +41,7 @@ public class FrameCreator extends H2O.H2OCountedCompleter {
 
     // create domains for categorical variables
     if (_createFrame.randomize) {
-      _domain = new String[_createFrame.cols][];
+      _domain = new String[_createFrame.cols+1][];
       _domain[0] = _createFrame.response_factors == 1 ? null : new String[_createFrame.response_factors];
       if (_domain[0] != null) {
         for (int i=0; i <_domain[0].length; ++i) {
@@ -67,14 +67,14 @@ public class FrameCreator extends H2O.H2OCountedCompleter {
   final private Key _job;
 
   @Override public void compute2() {
-    Vec[] vecs = Vec.makeNewCons(_createFrame.rows, _createFrame.cols, _createFrame.value, _domain);
+    Vec[] vecs = Vec.makeNewCons(_createFrame.rows, _createFrame.cols+1, _createFrame.value, _domain);
     String[] names = new String[vecs.length];
     names[0] = "response";
     for( int i=1; i<vecs.length; i++ ) names[i] = "C"+i;
 
     _out = new Frame(Key.make(_createFrame.key), names, vecs);
     assert _out.numRows() == _createFrame.rows;
-    assert _out.numCols() == _createFrame.cols;
+    assert _out.numCols() == _createFrame.cols+1;
     _out.delete_and_lock(_job);
 
     // fill with random values
