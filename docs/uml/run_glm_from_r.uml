@@ -36,7 +36,7 @@ h2o_jobmanager   -> h2o_jobmanager : New job_id created
 h2o_glm_job      <- h2o_jobmanager : Return job_id
 h2o_glm_endpoint <- h2o_glm_job : Return job_id
 h2o_webserver    <- h2o_glm_endpoint : Prepare JSON response\nwith job_id
-RCurl <- h2o_webserver : JSON response\nHTTP+TCP/IP
+RCurl            <- h2o_webserver : JSON response\nHTTP+TCP/IP
 R_h2o_glm        <- RCurl : Return job_id
 
 
