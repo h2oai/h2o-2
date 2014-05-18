@@ -76,6 +76,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   @API(help="number of lambdas to be used in a search",filter=Default.class)
   int nlambdas = 100;
 
+  @API(help="min lambda used in lambda search, specified as a ratio of lambda_max",filter=Default.class)
+  double lambda_min_ratio = 0.0001;
+
   @API(help="prior probability for y==1. To be used only for logistic regression iff the data has been sampled and the mean of response does not reflect reality.",filter=Default.class)
   double prior = -1; // -1 is magic value for default value which is mean(y) computed on the current dataset
   private transient double _iceptAdjust; // adjustment due to the prior
@@ -676,7 +679,6 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       max_iter = Math.max(300,max_iter);
       assert lmaxt != null:"running lambda search, but don't know what is the lambda max!";
       final double lmax = lmaxt.lmax();
-      final double lambda_min_ratio = _dinfo._adaptedFrame.numRows() > _dinfo.fullN()?0.0001:0.01;
       final double d = Math.pow(lambda_min_ratio,1.0/nlambdas);
       lambda = new double [nlambdas];
       lambda[0] = lmax;
