@@ -98,7 +98,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   long start_time;
 
   // fully expanded beta used for scoring
-  double [] beta;
+  double [] global_beta;
 
   static class Submodel extends Iced {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -165,6 +165,8 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @API(help = "lambda sequence")
   final double [] lambdas;
 
+  final boolean useAllFactorLevels;
+
   public GLMModel(GLM2 job, Key selfKey, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double lambda_max, double [] lambda, double ymu, double prior) {
     super(selfKey,null,dinfo._adaptedFrame);
     parameters = job;
@@ -185,6 +187,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     run_time = 0;
     start_time = System.currentTimeMillis();
     coefficients_names = coefNames();
+    useAllFactorLevels = dinfo._useAllFactorLevels;
   }
   public void setLambdaSubmodel(int lambdaIdx, double [] beta, double [] norm_beta, int iteration, boolean sparseCoef){
     run_time = (System.currentTimeMillis()-start_time);
@@ -210,7 +213,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
       res = submodels[i].iteration;
     return res;
   }
-  public double [] beta(){return beta;}
+  public double [] beta(){return global_beta;}
   public double [] norm_beta(int lambdaIdx){
     if(submodels[lambdaIdx].norm_beta == null)
       return beta(); // not normalized
@@ -224,8 +227,13 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @Override protected float[] score0(double[] data, float[] preds) {
     double eta = 0.0;
     final double [] b = beta();
-    for(int i = 0; i < data_info._catOffsets.length-1; ++i) if(data[i] != 0)
-      eta += b[data_info._catOffsets[i] + (int)(data[i]-1)];
+    if(!useAllFactorLevels){ // skip level 0 of all factors
+      for(int i = 0; i < data_info._catOffsets.length-1; ++i) if(data[i] != 0)
+        eta += b[data_info._catOffsets[i] + (int)(data[i]-1)];
+    } else { // do not skip any levels!
+      for(int i = 0; i < data_info._catOffsets.length-1; ++i)
+        eta += b[data_info._catOffsets[i] + (int)data[i]];
+    }
     final int noff = data_info.numStart() - data_info._cats;
     for(int i = data_info._cats; i < data.length; ++i)
       eta += b[noff+i]*data[i];
@@ -350,11 +358,11 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
 
   public boolean setAndTestValidation(int lambdaIdx,GLMValidation val ){
     submodels[lambdaIdx].validation = val;
-    if(lambdaIdx == 0 || rank(lambdaIdx) == 1){
+    if(best_lambda_idx == lambdaIdx || lambdaIdx == 0 || rank(lambdaIdx) == 1){
       setLambdaIdx(lambdaIdx);
       return true;
     }
-    double diff = (submodels[lambdaIdx-1].validation.residual_deviance - val.residual_deviance)/val.null_deviance;
+    double diff = (submodels[best_lambda_idx].validation.residual_deviance - val.residual_deviance)/val.null_deviance;
     if(diff >= 0.01) setLambdaIdx(lambdaIdx);
     return  true;
   }
@@ -362,11 +370,11 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   public void setLambdaIdx(int l){
     best_lambda_idx = l;
     threshold = submodels[l].validation.best_threshold;
-    if(beta == null) beta = MemoryManager.malloc8d(this.coefficients_names.length);
-    else Arrays.fill(beta,0);
+    if(global_beta == null) global_beta = MemoryManager.malloc8d(this.coefficients_names.length);
+    else Arrays.fill(global_beta,0);
     int j = 0;
     for(int i:submodels[l].idxs)
-      beta[i] = submodels[l].beta[j++];
+      global_beta[i] = submodels[l].beta[j++];
   }
 
   /**
