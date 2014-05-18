@@ -224,7 +224,7 @@ class H2OCloudNode:
 
         if not (got_url_proc and got_url_sys):
             print "Max retries on /proc scrape exceeded! Did the JVM properly start?"
-            return
+            return -1
             #raise Exception("Max retries on /proc scrape exceeded! Did the JVM properly start?")
 
         url_sys = "http://{}:{}/stat".format(self.ip, 8000)
@@ -267,22 +267,24 @@ class H2OCloudNode:
         """
         cur_ticks = self.get_ticks()
         first_ticks = self.first_ticks
-        proc_delta = cur_ticks["process_total_ticks"] - first_ticks["process_total_ticks"]
-        sys_delta = cur_ticks["system_total_ticks"] - first_ticks["system_total_ticks"]
-        idle_delta = cur_ticks["system_idle_ticks"] - first_ticks["system_idle_ticks"]
+        if cur_ticks != -1 and first_ticks != -1:
+            proc_delta = cur_ticks["process_total_ticks"] - first_ticks["process_total_ticks"]
+            sys_delta = cur_ticks["system_total_ticks"] - first_ticks["system_total_ticks"]
+            idle_delta = cur_ticks["system_idle_ticks"] - first_ticks["system_idle_ticks"]
 
-        sys_frac = 100 * (1 - idle_delta * 1. / sys_delta)
-        proc_frac = 100 * (proc_delta * 1. / sys_delta)
+          sys_frac = 100 * (1 - idle_delta * 1. / sys_delta)
+          proc_frac = 100 * (proc_delta * 1. / sys_delta)
 
-        print "DEBUG: sys_frac, proc_frac"
-        print sys_frac, proc_frac
-        print ""
-        print ""
+          print "DEBUG: sys_frac, proc_frac"
+          print sys_frac, proc_frac
+          print ""
+          print ""
 
-        #20% diff
-        if proc_frac + 5 <= sys_frac:
-            self.is_contaminated = True
-            return 1
+          #20% diff
+          if proc_frac + 5 <= sys_frac:
+              self.is_contaminated = True
+              return 1
+          return 0
         return 0
 
     def start_remote(self):
