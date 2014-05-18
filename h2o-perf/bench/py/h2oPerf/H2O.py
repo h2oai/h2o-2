@@ -183,6 +183,14 @@ class H2OCloudNode:
         got_url_sys = False
         got_url_proc = False
         while m < max_retries:
+            if m != 0:
+                cmd_serve = "ps -efww | grep 0xdiag*proc | awk '{print %2}' | xargs kill"
+                tryKill = self.open_channel()
+                tryKill.exec_command(cmd_serve)
+                
+                cmd_serve = ["python", "/home/0xdiag/serve_proc.py"]
+                self.channelServe = self.open_channel()
+                self.channelServe.exec_command(' '.join(cmd_serve))
             r_sys = ""
             r_proc = ""
             print "Performing try : " + str(m) + " out of total tries = " + str(max_retries)
