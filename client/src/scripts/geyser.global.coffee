@@ -64,7 +64,7 @@ geyser = do ->
     else if isArray arg
       join (map arg, render), ''
     else
-      arg
+      if arg then arg else ''
 
   generate: generate
   render: render

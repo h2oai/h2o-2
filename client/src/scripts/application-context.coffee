@@ -11,7 +11,9 @@ Steam.ApplicationContext = ->
     unschedule: do edge$
     timeout: do edge$
 
+    inspect: do edge$
     status: do edge$
+    help: do edge$
 
     route: do edge$
     setRoute: do edge$

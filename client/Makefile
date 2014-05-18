@@ -36,6 +36,7 @@ BROWSER_SCRIPTS=\
 	$(BUILD)/scripts/localStorage.js \
 	$(BUILD)/scripts/xhr.js \
 	$(BUILD)/scripts/h2o-proxy.js \
+	$(BUILD)/scripts/help-server.js \
 	$(BUILD)/scripts/dialog-manager.js \
 	$(BUILD)/scripts/alert-dialog.js \
 	$(BUILD)/scripts/error-dialog.js \
@@ -61,6 +62,7 @@ TEST_SCRIPTS=\
 	$(BUILD)/scripts/application-context.js \
 	$(BUILD)/scripts/xhr.js \
 	$(BUILD)/scripts/h2o-proxy.js \
+	$(BUILD)/scripts/help-server.js \
 	$(BUILD)/scripts/alert-dialog.js \
 	$(BUILD)/scripts/error-dialog.js \
 	$(BUILD)/scripts/confirm-dialog.js \
