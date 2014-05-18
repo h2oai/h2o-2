@@ -272,19 +272,19 @@ class H2OCloudNode:
             sys_delta = cur_ticks["system_total_ticks"] - first_ticks["system_total_ticks"]
             idle_delta = cur_ticks["system_idle_ticks"] - first_ticks["system_idle_ticks"]
 
-          sys_frac = 100 * (1 - idle_delta * 1. / sys_delta)
-          proc_frac = 100 * (proc_delta * 1. / sys_delta)
+            sys_frac = 100 * (1 - idle_delta * 1. / sys_delta)
+            proc_frac = 100 * (proc_delta * 1. / sys_delta)
 
-          print "DEBUG: sys_frac, proc_frac"
-          print sys_frac, proc_frac
-          print ""
-          print ""
+            print "DEBUG: sys_frac, proc_frac"
+            print sys_frac, proc_frac
+            print ""
+            print ""
 
-          #20% diff
-          if proc_frac + 5 <= sys_frac:
-              self.is_contaminated = True
-              return 1
-          return 0
+            #20% diff
+            if proc_frac + 5 <= sys_frac:
+                self.is_contaminated = True
+                return 1
+            return 0
         return 0
 
     def start_remote(self):
