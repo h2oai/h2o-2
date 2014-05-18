@@ -343,15 +343,10 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     res[res.length-1] = beta[beta.length-1];
     return res;
   }
-
   private final double [] resizeVec(double[] beta, final int[] activeCols, final int[] oldActiveCols){
-    if(activeCols == null || Arrays.equals(activeCols,oldActiveCols))return beta;
-    double [] full = MemoryManager.malloc8d(_dinfo.fullN()+1);
-    int i = 0;
-    for(int c:oldActiveCols)
-      full[c] = beta[i++];
-    assert i == beta.length-1;
-    full[full.length-1] = beta[i];
+    if(Arrays.equals(activeCols,oldActiveCols))return beta;
+    double [] full = expandVec(beta,oldActiveCols);
+    if(activeCols == null)return full;
     return contractVec(full,activeCols);
   }
   protected boolean needLineSearch(final double [] beta,double objval, double step){
