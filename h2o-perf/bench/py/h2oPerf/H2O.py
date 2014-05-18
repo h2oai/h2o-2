@@ -178,7 +178,7 @@ class H2OCloudNode:
         Get process_total_ticks, system_total_ticks, sys_idle_ticks.
         """
         #poll on url until get a valid http response
-        max_retries = 30
+        max_retries = 5
         m = 0
         got_url_sys = False
         got_url_proc = False
@@ -223,7 +223,9 @@ class H2OCloudNode:
             time.sleep(1)
 
         if not (got_url_proc and got_url_sys):
-            raise Exception("Max retries on /proc scrape exceeded! Did the JVM properly start?")
+            print "Max retries on /proc scrape exceeded! Did the JVM properly start?"
+            return
+            #raise Exception("Max retries on /proc scrape exceeded! Did the JVM properly start?")
 
         url_sys = "http://{}:{}/stat".format(self.ip, 8000)
         url_proc = "http://{}:{}/{}/stat".format(self.ip, 8000, self.pid)
