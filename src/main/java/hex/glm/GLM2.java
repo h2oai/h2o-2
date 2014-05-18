@@ -70,6 +70,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   @API(help="use strong rules to filter out inactive columns",filter=Default.class)
   boolean strong_rules_enabled = true;
 
+  // intentionally not declared as API now
+  int sparseCoefThreshold = 1000; // if more than this number of predictors, result vector of coefficients will be stored sparse
+
   @API(help="prior probability for y==1. To be used only for logistic regression iff the data has been sampled and the mean of response does not reflect reality.",filter=Default.class)
   double prior = -1; // -1 is magic value for default value which is mean(y) computed on the current dataset
   private transient double _iceptAdjust; // adjustment due to the prior
@@ -533,7 +536,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       newBetaDeNorm[newBetaDeNorm.length-1] -= norm;
     } else
       newBetaDeNorm = null;
-    _model.setLambdaSubmodel(_lambdaIdx, newBetaDeNorm == null ? fullBeta : newBetaDeNorm, newBetaDeNorm == null ? null : fullBeta, (_iter + 1));
+    _model.setLambdaSubmodel(_lambdaIdx, newBetaDeNorm == null ? fullBeta : newBetaDeNorm, newBetaDeNorm == null ? null : fullBeta, (_iter + 1),_dinfo.fullN() >= sparseCoefThreshold);
     _model.clone().update(self());
     return fullBeta;
   }
@@ -708,7 +711,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     if(lambda[0] == lambda_max && alpha[0] > 0){ // fill-in trivial solution for lambda max
       _beta = MemoryManager.malloc8d(_dinfo.fullN()+1);
       _beta[_beta.length-1] = _glm.link(ymu) + _iceptAdjust;
-      _model.setLambdaSubmodel(0,_beta,_beta,0);
+      _model.setLambdaSubmodel(0,_beta,_beta,0,_dinfo.fullN() >= sparseCoefThreshold);
       if(lmaxt != null)
         _model.setAndTestValidation(0,lmaxt._val);
       _lambdaIdx = 1;
@@ -757,7 +760,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     final Key [] keys = new Key[n_folds];
     GLM2 [] glms = new GLM2[n_folds];
     for(int i = 0; i < n_folds; ++i)
-      glms[i] = new GLM2(this.description + "xval " + i, self(), keys[i] = Key.make(destination_key + "_" + _lambdaIdx + "_xval" + i), _dinfo.getFold(i, n_folds),_glm,new double[]{lambda[_lambdaIdx]},model.alpha,0, model.beta_eps,self(),model.norm_beta(lambdaIxd),higher_accuracy,prior,0);
+      glms[i] = new GLM2(this.description + "xval " + i, self(), keys[i] = Key.make(destination_key + "_" + _lambdaIdx + "_xval" + i), _dinfo.getFold(i, n_folds),_glm,new double[]{lambda[_lambdaIdx]},model.alpha,0, model.beta_eps,self(),model.norm_beta(_lambdaIdx),higher_accuracy,prior,0);
     H2O.submitTask(new ParallelGLMs(GLM2.this,glms,H2O.CLOUD.size(),new H2OCallback(GLM2.this) {
       @Override public void callback(H2OCountedCompleter t) {
         GLMModel [] models = new GLMModel[keys.length];
