@@ -17,7 +17,7 @@ Steam.FrameView = (_, _frame) ->
   columns: map _frame.column_names, createColumnItem
   columnCount: "(#{_frame.column_names.length})"
   compatibleModels: map _frame.compatible_models, createCompatibleModelItem
-  compatibleModelsCount: _frame.compatible_models.length
+  compatibleModelsCount: "(#{_frame.compatible_models.length})"
   hasCompatibleModels: _frame.compatible_models.length > 0
   loadCompatibleModels: loadCompatibleModels
   isRawFrame: _frame.is_raw_frame
