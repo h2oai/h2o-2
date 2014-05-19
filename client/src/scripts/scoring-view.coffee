@@ -1,4 +1,41 @@
 #TODO check for memory leaks
+Steam.RocMarkInspection = (_, metrics, mark) ->
+  [ div, h1, table, tbody, tr, th, td ] = geyser.generate words 'div h1 table tbody tr th td'
+
+  formatConfusionMatrix = (cm) -> 'TODO'
+
+  collectProperties = (auc, index) ->
+    [
+      [ 'CM', formatConfusionMatrix auc.confusion_matrices[index] ]
+      [ 'FPR', mark.fpr ]
+      [ 'TPR', mark.tpr ]
+      [ 'F0.5', auc.F0point5[index] ]
+      [ 'F1', auc.F1[index] ]
+      [ 'F2', auc.F2[index] ]
+      [ 'Accuracy', auc.accuracy[index] ]
+      [ 'Error', auc.error[index] ]
+      [ 'MPCE', auc.max_per_class_error[index] ]
+      [ 'Precision', auc.precision[index] ]
+      [ 'Recall', auc.recall[index] ]
+      [ 'Specificity', auc.specificity[index] ]
+      [ 'Threshold', auc.thresholds[index] ]
+    ]
+
+  tabulateProperties = (auc, index) -> 
+    properties = collectProperties auc, index
+    
+    table tbody map properties, (property) ->
+      [ term, value ] = property
+      tr [
+        th term
+        td value
+      ]
+
+  div [
+    h1 metrics.caption
+    tabulateProperties metrics.metrics.auc, mark.index
+  ]
+
 Steam.ScoringView = (_, _scoring) ->
   _tag = node$ ''
   _caption = node$ ''
@@ -63,7 +100,6 @@ Steam.ScoringView = (_, _scoring) ->
         _modelSummary null #TODO populate model summary
         scorings = comparison.data.scorings
         apply$ _isTabularComparisonView, (isTabularComparisonView) ->
-          console.log _isAdvancedComparisonView()
           if isTabularComparisonView
             if scorings.length > 0
               _comparisonTable createComparisonTable scorings
@@ -161,9 +197,11 @@ Steam.ScoringView = (_, _scoring) ->
 
     el
 
-  computeTPRandFPR = (cm) ->
+  computeTPRandFPR = (cm, index) ->
     [[tn, fp], [fn, tp]] = cm
 
+    cm: cm
+    index: index
     tpr: tp / (tp + fn)
     fpr: fp / (fp + tn)
 
@@ -209,7 +247,7 @@ Steam.ScoringView = (_, _scoring) ->
 
   renderStripPlot = (scorings) ->
     palette = if scorings.length > 10 then d3.scale.category20 else d3.scale.category10
-    color = palette().domain map scorings, (scoring) -> scoring.id
+    color = palette().domain map scorings, (scoring) -> scoring.metrics.id
     categories = keys (head scorings).outputs
 
     margin = top: 20, right: 20, bottom: 20, left: 140
@@ -252,12 +290,12 @@ Steam.ScoringView = (_, _scoring) ->
       .enter()
       .append 'path'
       .attr 'd', path
-      .attr 'id', (d) -> "path-#{d.id}"
+      .attr 'id', (d) -> "path-#{d.metrics.id}"
 
     forEach scorings, (scoring) ->
-      stroke = color scoring.id
+      stroke = color scoring.metrics.id
       svg.append 'g'
-        .attr 'id', "strips-#{scoring.id}"
+        .attr 'id', "strips-#{scoring.metrics.id}"
         .selectAll '.strip'
         .data categories
         .enter()
@@ -268,10 +306,11 @@ Steam.ScoringView = (_, _scoring) ->
         .attr 'x2', (d) -> x[d] scoring.outputs[d]
         .attr 'y2', (d) -> 5 + y d
         .attr 'stroke', stroke
-        .on 'mouseover', (d) -> svg.select("#path-#{scoring.id}").style 'stroke', '#ddd'
-        .on 'mouseout', (d) -> svg.select("#path-#{scoring.id}").style 'stroke', 'none'
+        .on 'mouseover', (d) -> svg.select("#path-#{scoring.metrics.id}").style 'stroke', '#ddd'
+        .on 'mouseout', (d) -> svg.select("#path-#{scoring.metrics.id}").style 'stroke', 'none'
+        .on 'click', (d) -> console.log d
         .append 'title'
-        .text (d) -> "#{scoring.caption}\n#{d} = #{scoring.outputs[d]}"
+        .text (d) -> "#{scoring.metrics.caption}\n#{d} = #{scoring.outputs[d]}"
 
     g = svg.selectAll '.category'
       .data categories
@@ -282,6 +321,7 @@ Steam.ScoringView = (_, _scoring) ->
     g.append 'text'
       .attr 'dy', 5
       .text String
+      .on 'click', (d) -> console.log d
 
     g.append 'line'
       .attr 'class', 'guide'
@@ -369,7 +409,7 @@ Steam.ScoringView = (_, _scoring) ->
 
     # Go for higher contrast when comparing fewer scorings.
     palette = if scorings.length > 10 then d3.scale.category20 else d3.scale.category10
-    color = palette().domain map scorings, (scoring) -> scoring.id
+    color = palette().domain map scorings, (scoring) -> scoring.metrics.id
 
     axisX = d3.svg.axis()
       .scale x
@@ -430,15 +470,15 @@ Steam.ScoringView = (_, _scoring) ->
       .attr 'class', 'y-curve'
 
     curve.append 'path'
-      .attr 'id', (d) -> "curve#{d.id}"
+      .attr 'id', (d) -> "curve#{d.metrics.id}"
       .attr 'class', 'line'
       .attr 'd', (d) -> line d.rates
-      .style 'stroke', (d) -> color d.id
+      .style 'stroke', (d) -> color d.metrics.id
       #.on 'mouseover', (d) -> _.inspect div d.caption
       #.on 'mouseout', (d) -> console.log 'mouseout', d
 
     forEach scorings, (scoring) ->
-      stroke = color scoring.id
+      stroke = color scoring.metrics.id
       svg.append 'g'
         .selectAll '.dot'
         .data scoring.rates
@@ -448,12 +488,15 @@ Steam.ScoringView = (_, _scoring) ->
         .attr 'r', 5
         .attr 'cx', (d) -> x d.fpr
         .attr 'cy', (d) -> y d.tpr
+        .on 'click', (d) ->
+          console.log d
+          console.log scoring
+          _.inspect Steam.RocMarkInspection _, scoring.metrics, d
+
         .on 'mouseover', (d) ->
           d3.select(@).style 'stroke', stroke
-          #TODO send signal
         .on 'mouseout', (d) ->
           d3.select(@).style 'stroke', 'none'
-          #TODO send signal
     el
 
   createMetricsArray = (scores) ->
@@ -478,8 +521,7 @@ Steam.ScoringView = (_, _scoring) ->
     [ div ] = geyser.generate [ 'div' ]
     render = ($element) ->
       ratesArray = map metricsArray, (metrics) -> 
-        id: metrics.id
-        caption: metrics.caption
+        metrics: metrics
         rates: map metrics.metrics.auc.confusion_matrices, computeTPRandFPR
 
       multiRocPlot = renderMultiRocPlot ratesArray
@@ -492,8 +534,7 @@ Steam.ScoringView = (_, _scoring) ->
     [ div ] = geyser.generate [ 'div' ]
     render = ($element) ->
       outputsArray = map metricsArray, (metrics) ->
-        id: metrics.id
-        caption: metrics.caption
+        metrics: metrics
         outputs: reshapeAucForParallelCoords metrics.metrics.auc
 
       stripPlot = renderStripPlot outputsArray

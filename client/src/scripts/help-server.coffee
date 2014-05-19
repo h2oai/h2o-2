@@ -27,11 +27,11 @@ Steam.HelpServer = (_) ->
       ]
     ]
 
-  link$ _.help, (id) ->
+  link$ _.loadHelp, (id) ->
     if id
-      _.inspect()
+      _.displayHelp()
     else
-      _.inspect _helpContents
+      _.displayHelp _helpContents
 
   initialize()
 

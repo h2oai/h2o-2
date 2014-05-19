@@ -1,16 +1,18 @@
 defaultStatusMessage = 'Ready.'
 Steam.MainView = (_) ->
-  _inspection = node$ null #TODO default to home
-  _inspectionHistory = []
-  _inspectionHistoryIndex = -1
-  _canNavigateBack = node$ no
-  _canNavigateForward = node$ no
+  _help = node$ null
+  _helpHistory = []
+  _helpHistoryIndex = -1
+  _canNavigateHelpBack = node$ no
+  _canNavigateHelpForward = node$ no
   _status = node$ defaultStatusMessage
+  _inspection = node$ null
   _listViews = do nodes$
   _selectionViews = do nodes$
   _pageViews = do nodes$
   _modalViews = do nodes$
   _modalDialogs = do nodes$
+  _inspectorViews = do nodes$
   _isInspectorHidden = node$ no
   _topic = node$ null
 
@@ -32,6 +34,13 @@ Steam.MainView = (_) ->
       _listViews.push _topicListView
     else
       _listViews.remove _topicListView
+
+  initialize = ->
+    # TODO uncomment when help panel is in.
+    # navigateHelpHome()
+
+    #TODO do this through hash uris
+    switchToFrames type: 'all'
 
   createTopic = (title, handle) ->
     self =
@@ -115,8 +124,68 @@ Steam.MainView = (_) ->
   switchPageView = (view) -> switchView _pageViews, view
   switchModalView = (view) -> switchView _modalViews, view
   fixDialogPlacement = (element) -> _.positionDialog element
+
+  #
+  # Status bar
+  #
+
+  displayStatus = (message) ->
+    if message
+      _status message
+      # Reset status bar after 7000ms
+      _.timeout 'status', 7000, -> _.status null
+    else
+      _status defaultStatusMessage
+
+  #
+  # Inspection
+  #
+  inspect = (content) ->
+    if content
+      _inspection content
+    # TODO else clear inspector / display generic info about inspector
+    return
+  
+
+  #
+  # Help
+  #
+
+  navigateHelpHome = -> _.loadHelp()
+
+  navigateHelp = ->
+    _help _helpHistory[_helpHistoryIndex]
+    _canNavigateHelpBack _helpHistoryIndex > 0
+    _canNavigateHelpForward _helpHistoryIndex < _helpHistory.length - 1
+
+  navigateHelpBack = ->
+    if _helpHistoryIndex > 0
+      _inspectionHistoryIndex--
+      navigateHelp()
+
+  navigateHelpForward = ->
+    if _helpHistoryIndex < _helpHistory.length - 1
+      _helpHistoryIndex++
+      navigateHelp()
+
+  displayHelp = (content) ->
+    unless _helpHistory[_helpHistoryIndex] is content
+      if _helpHistoryIndex < _helpHistory.length - 1
+        # Chop off tail
+        _helpHistory.length = _helpHistoryIndex + 1 
+        _helpHistoryIndex = _helpHistory.length - 1
+      if _helpHistory.length > 50
+        # Chop off head
+        _helpHistory.splice 0, _helpHistory.length - 50
+        _helpHistoryIndex = _helpHistory.length - 1
+      _helpHistory.push content
+      navigateHelpForward()
  
   template = (view) -> view.template
+
+  #
+  # Links
+  #
 
   link$ _.loadDialog, (dialog) ->
     _modalDialogs.push dialog
@@ -143,55 +212,17 @@ Steam.MainView = (_) ->
   link$ _.switchToModels, switchToModels
   link$ _.switchToScoring, switchToScoring
   link$ _.switchToNotifications, switchToNotifications
+  link$ _.inspect, inspect
 
   # Not in use. Leaving this here as an example of how a modal view can be displayed.
   # link$ _.modelsSelected, -> switchModalView _modelSelectionView
   # link$ _.modelsDeselected, -> _modalViews.remove _modelSelectionView
-  
-  link$ _.status, (message) ->
-    if message
-      _status message
-      # Reset status bar after 7000ms
-      _.timeout 'status', 7000, -> _.status null
-    else
-      _status defaultStatusMessage
 
-  navigateHome = -> _.help()
+  link$ _.status, displayStatus
+  link$ _.displayHelp, displayHelp
 
-  inspect = ->
-    _inspection _inspectionHistory[_inspectionHistoryIndex]
-    _canNavigateBack _inspectionHistoryIndex > 0
-    _canNavigateForward _inspectionHistoryIndex < _inspectionHistory.length - 1
 
-  navigateBack = ->
-    if _inspectionHistoryIndex > 0
-      _inspectionHistoryIndex--
-      inspect()
-
-  navigateForward = ->
-    if _inspectionHistoryIndex < _inspectionHistory.length - 1
-      _inspectionHistoryIndex++
-      inspect()
-
-  navigate = (content) ->
-    unless _inspectionHistory[_inspectionHistoryIndex] is content
-      if _inspectionHistoryIndex < _inspectionHistory.length - 1
-        # Chop off tail
-        _inspectionHistory.length = _inspectionHistoryIndex + 1 
-        _inspectionHistoryIndex = _inspectionHistory.length - 1
-      if _inspectionHistory.length > 50
-        # Chop off head
-        _inspectionHistory.splice 0, _inspectionHistory.length - 50
-        _inspectionHistoryIndex = _inspectionHistory.length - 1
-      _inspectionHistory.push content
-      navigateForward()
-
-  link$ _.inspect, navigate
-
-  navigateHome()
-
-  #TODO do this through hash uris
-  switchToFrames type: 'all'
+  do initialize
 
   topicTitle: _topicTitle
   toggleTopics: toggleTopics
@@ -208,11 +239,12 @@ Steam.MainView = (_) ->
   isViewMasked: _isViewMasked
   isInspectorHidden: _isInspectorHidden
   inspection: _inspection
-  navigateHome: navigateHome
-  canNavigateBack: _canNavigateBack
-  navigateBack: navigateBack
-  canNavigateForward: _canNavigateForward
-  navigateForward: navigateForward
+  help: _help
+  navigateHelpHome: navigateHelpHome
+  canNavigateHelpBack: _canNavigateHelpBack
+  navigateHelpBack: navigateHelpBack
+  canNavigateHelpForward: _canNavigateHelpForward
+  navigateHelpForward: navigateHelpForward
   status: _status
   fixDialogPlacement: fixDialogPlacement
   template: template

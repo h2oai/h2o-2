@@ -44,13 +44,18 @@
           
     .y-inspector-lane
       .y-lane-header
-        button.y-inspector-home-button.btn.fa-btn(data-bind='click:navigateHome')
-          i.fa.fa-home
+        //-TODO tie these to help nav
+        //-
+          button.y-inspector-home-button.btn.fa-btn(data-bind='click:navigateHelpHome')
+            i.fa.fa-home
         .y-inspector-title Inspector
-        button.y-inspector-back-button.btn.fa-btn(data-bind='click:navigateBack, enable:canNavigateBack')
-          i.fa.fa-arrow-left
-        button.y-inspector-forward-button.btn.fa-btn(data-bind='click:navigateForward, enable:canNavigateForward')
-          i.fa.fa-arrow-right
+        //-TODO tie these to help nav
+        //-
+        //-
+          button.y-inspector-back-button.btn.fa-btn(data-bind='click:navigateHelpBack, enable:canNavigateHelpBack')
+            i.fa.fa-arrow-left
+          button.y-inspector-forward-button.btn.fa-btn(data-bind='click:navigateHelpForward, enable:canNavigateHelpForward')
+            i.fa.fa-arrow-right
 
       .y-lane-body
         .y-inspector(data-bind="geyser:inspection")
