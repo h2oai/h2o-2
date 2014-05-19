@@ -29,7 +29,7 @@ public class StoreView extends Request {
     int len = 0;
     int off = 0;
     String filter = _filter.value();
-    // Gather some keys that pass all filters
+    // Gather some user-keys that pass all filters.
     // - Sort all the keys for pretty display and reliable ordering
     Set<Key> keySet = new TreeSet(H2O.globalKeySet(null));
     int kcnt = keySet.size();
@@ -39,8 +39,6 @@ public class StoreView extends Request {
       if( filter != null && // Have a filter?
           key.toString().indexOf(filter) == -1 )
         continue; // Ignore this filtered-out key
-      if( !key.user_allowed() ) // Also filter out for user-keys
-        continue;
       if( H2O.get(key) == null ) continue; // Ignore misses
       if( off >= offset) { // Skip first _offset keys
         if (len<view) {
