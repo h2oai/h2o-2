@@ -11,7 +11,8 @@ H2O: Gradient Boosted Machines
 }
 \usage{
 h2o.gbm(x, y, distribution = "multinomial", data, n.trees = 10, interaction.depth = 5, 
-  n.minobsinnode = 10, shrinkage = 0.1, n.bins = 100, importance = FALSE, validation, balance.classes = FALSE, max.after.balance.size = 5)
+  n.minobsinnode = 10, shrinkage = 0.1, n.bins = 100, importance = FALSE, validation, 
+  balance.classes = FALSE, max.after.balance.size = 5)
 }
 \arguments{
   \item{x}{
@@ -91,5 +92,4 @@ h2o.gbm(y = dependent, x = independent, data = australia.hex, n.trees = 10, inte
 # Run multinomial classification GBM on australia data 
 h2o.gbm(y = dependent, x = independent, data = australia.hex, n.trees = 15, interaction.depth = 5, 
   n.minobsinnode = 2, shrinkage = 0.01, distribution= "multinomial")
-h2o.shutdown(localH2O)
 }

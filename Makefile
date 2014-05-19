@@ -110,7 +110,9 @@ build:
 	@echo
 	@echo "PHASE: Building R package..."
 	@echo
+	$(MAKE) build_rjar 1> target/logs/rjar_build.log
 	$(MAKE) -C R PROJECT_VERSION=$(PROJECT_VERSION) BUILD_NUMBER=$(BUILD_NUMBER) 1> target/logs/r_build.log
+	$(MAKE) build_rcran 1> target/logs/rcran_build.log
 
 	@echo
 	@echo "PHASE: Building zip package..."
@@ -146,10 +148,41 @@ build_h2o:
 	(export PROJECT_VERSION=$(PROJECT_VERSION); ./build.sh noclean doc)
 	git checkout -- ${GA_FILE}.js
 ifneq ($(shell uname),Windows_NT)
-	openssl md5 target/h2o.jar | sed 's/.*=//' >> target/h2o.jar.md5
+	openssl md5 target/h2o.jar | sed 's/.*=[ ]*//' > target/h2o.jar.md5
 else
-	md5deep target/h2o.jar | cut -d'' -f1 >> target/h2o.jar.md5
+	md5deep target/h2o.jar | cut -d'' -f1 > target/h2o.jar.md5
 endif
+
+# Strip out stuff from h2o.jar that isn't needed for R.
+build_rjar:
+	rm -fr target/Rjar
+	mkdir -p target/Rjar/tmp
+	cp target/h2o.jar target/Rjar/tmp/h2o_full.jar
+	(cd target/Rjar/tmp && jar xf h2o_full.jar)
+	(cd target/Rjar/tmp && rm -fr hadoop/0.* hadoop/1.* hadoop/cdh[35]* hadoop/cdh4_yarn)
+	(cd target/Rjar/tmp && rm -f h2o_full.jar)
+	(cd target/Rjar/tmp && cp META-INF/MANIFEST.MF ..)
+	(cd target/Rjar/tmp && rm -fr META-INF)
+	(cd target/Rjar/tmp && jar cfm ../h2o.jar ../MANIFEST.MF *)
+	rm -rf target/Rjar/tmp
+	rm target/Rjar/MANIFEST.MF
+ifneq ($(shell uname),Windows_NT)
+	openssl md5 target/Rjar/h2o.jar | sed 's/.*=[ ]*//' > target/Rjar/h2o.jar.md5
+else
+	md5deep target/Rjar/h2o.jar | cut -d'' -f1 > target/Rjar/h2o.jar.md5
+endif
+
+# Build the file for submission to CRAN by stripping out h2o.jar.
+H2O_R_SOURCE_FILE = h2o_$(PROJECT_VERSION).tar.gz
+build_rcran:
+	rm -fr target/Rcran
+	mkdir target/Rcran
+	cp target/R/src/contrib/$(H2O_R_SOURCE_FILE) target/Rcran/tmp.tar.gz
+	cd target/Rcran && tar zxvf tmp.tar.gz
+	rm -f target/Rcran/tmp.tar.gz
+	rm -f target/Rcran/h2o/inst/java/h2o.jar
+	cd target/Rcran && tar zcvf $(H2O_R_SOURCE_FILE) h2o
+	rm -fr target/Rcran/h2o
 
 build_package:
 	echo $(PROJECT_VERSION) > target/project_version

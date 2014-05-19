@@ -194,7 +194,6 @@ setMethod("show", "H2OSpeeDRFModel", function(object) {
   model = object@model
   cat("\n\nClassification:", model$params$classification)
   cat("\nNumber of trees:", model$params$ntree)
-  cat("\nTree statistics:", NA)
   
   if(FALSE){ #model$params$oobee) {
     cat("\nConfusion matrix:\n"); cat("Reported on oobee from", object@valid@key, "\n")
@@ -202,8 +201,14 @@ setMethod("show", "H2OSpeeDRFModel", function(object) {
     cat("\nConfusion matrix:\n"); cat("Reported on", object@valid@key,"\n")
   }
   print(model$confusion)
-  
-  cat("\nMean-squared Error by tree:\n"); print(model$mse)
+ 
+  if(!is.null(model$varimp)) {
+    cat("\nVariable importance:\n"); print(model$varimp)
+  }
+
+  #mse <-model$mse[length(model$mse)] # (model$mse[is.na(model$mse) | model$mse <= 0] <- "")
+
+  cat("\nMean-squared Error from the",model$params$ntree, "trees: "); cat(model$mse, "\n")
 })
 
 setMethod("show", "H2OPCAModel", function(object) {
@@ -229,7 +234,7 @@ setMethod("show", "H2OGBMModel", function(object) {
   cat("GBM Model Key:", object@key, "\n")
 
   model = object@model
-  if(model$params$distribution == "multinomial") {
+  if(model$params$distribution %in% c("multinomial", "bernoulli")) {
     cat("\nConfusion matrix:\nReported on", object@valid@key, "\n");
     print(model$confusion)
     
@@ -306,7 +311,7 @@ h2o.cut <- function(x, breaks) {
   if(missing(x)) stop("Must specify data set")
   if(!inherits(x, "H2OParsedData")) stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
   if(missing(breaks) || !is.numeric(breaks)) stop("breaks must be a numeric vector")
-  
+
   nums = ifelse(length(breaks) == 1, breaks, paste("c(", paste(breaks, collapse=","), ")", sep=""))
   expr = paste("cut(", x@key, ",", nums, ")", sep="")
   res = .h2o.__exec2(x@h2o, expr)
@@ -580,8 +585,10 @@ setMethod("$<-", "H2OParsedData", function(x, name, value) {
     stop("name must be a non-empty string")
   if(!inherits(value, "H2OParsedData") && !is.numeric(value))
     stop("value can only be numeric or a H2OParsedData object")
-  numCols = ncol(x); myNames = colnames(x)
-  idx = match(name, myNames)
+  numCols = ncol(x); numRows = nrow(x)
+  if(is.numeric(value) && length(value) != 1 && length(value) != numRows)
+    stop("value must be either a single number or a vector of length ", numRows)
+  myNames = colnames(x); idx = match(name, myNames)
  
   lhs = paste(x@key, "[,", ifelse(is.na(idx), numCols+1, idx), "]", sep = "")
   # rhs = ifelse(class(value) == "H2OParsedData", value@key, paste("c(", paste(value, collapse = ","), ")", sep=""))
@@ -1054,11 +1061,18 @@ screeplot.H2OPCAModel <- function(x, npcs = min(10, length(x@model$sdev)), type 
     stop("type must be either 'barplot' or 'lines'")
 }
 
+.canBeCoercedToLogical<-
+function(vec) {
+  if (!(inherits(vec, "H2OParsedData"))) stop("Object must be a H2OParsedData object. Input was: ", vec)
+  # expects fr to be a vec.
+  as.logical(.h2o.__unop2("canBeCoercedToLogical", vec))
+}
+
 setMethod("ifelse", "H2OParsedData", function(test, yes, no) {
   # if(!(is.numeric(yes) || class(yes) == "H2OParsedData") || !(is.numeric(no) || class(no) == "H2OParsedData"))
   if(!(is.numeric(yes) || inherits(yes, "H2OParsedData")) || !(is.numeric(no) || inherits(no, "H2OParsedData")))
     stop("Unimplemented")
-  if(!test@logic) stop(test@key, " is not a H2O logical data type")
+  if(!test@logic && !.canBeCoercedToLogical(test)) stop(test@key, " is not a H2O logical data type")
   # yes = ifelse(class(yes) == "H2OParsedData", yes@key, yes)
   # no = ifelse(class(no) == "H2OParsedData", no@key, no)
   yes = ifelse(inherits(yes, "H2OParsedData"), yes@key, yes)

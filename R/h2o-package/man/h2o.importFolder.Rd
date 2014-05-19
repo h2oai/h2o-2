@@ -76,7 +76,6 @@ class(prostate_all.hex)
 summary(prostate_all.hex)
 prostate_all.fv = h2o.importFolder(localH2O, path = myPath, version = 2)
 class(prostate_all.fv)
-h2o.shutdown(localH2O)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

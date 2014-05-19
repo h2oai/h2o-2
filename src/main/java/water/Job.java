@@ -53,7 +53,7 @@ public abstract class Job extends Func {
     CREATED,   // Job was created
     RUNNING,   // Job is running
     CANCELLED, // Job was cancelled by user
-    CRASHED,   // Job crashed, error message/exception is available
+    FAILED,   // Job crashed, error message/exception is available
     DONE       // Job was successfully finished
   }
 
@@ -163,13 +163,13 @@ public abstract class Job extends Func {
     PrintWriter pw = new PrintWriter(sw);
     ex.printStackTrace(pw);
     String stackTrace = sw.toString();
-    cancel("Got exception '" + ex.getClass() + "', with msg '" + ex.getMessage() + "'\n" + stackTrace, JobState.CRASHED);
+    cancel("Got exception '" + ex.getClass() + "', with msg '" + ex.getMessage() + "'\n" + stackTrace, JobState.FAILED);
   }
   /** Signal exceptional cancellation of this job.
    * @param msg cancellation message explaining reason for cancelation
    */
   public void cancel(final String msg) {
-    JobState js = msg == null ? JobState.CANCELLED : JobState.CRASHED;
+    JobState js = msg == null ? JobState.CANCELLED : JobState.FAILED;
     cancel(msg, js);
   }
   private void cancel(final String msg, JobState resultingState ) {
@@ -194,10 +194,10 @@ public abstract class Job extends Func {
   }
 
   /** Returns true if the job was cancelled by the user or crashed.
-   * @return true if the job is in state {@link JobState#CANCELLED} or {@link JobState#CRASHED}
+   * @return true if the job is in state {@link JobState#CANCELLED} or {@link JobState#FAILED}
    */
   public boolean isCancelledOrCrashed() {
-    return state == JobState.CANCELLED || state == JobState.CRASHED;
+    return state == JobState.CANCELLED || state == JobState.FAILED;
   }
 
   /** Returns true if the job was cancelled by the user.
@@ -208,7 +208,7 @@ public abstract class Job extends Func {
   /** Returns true if the job was terminated by unexpected exception.
    * @return true, if the job was terminated by unexpected exception.
    */
-  public boolean isCrashed() { return state == JobState.CRASHED; }
+  public boolean isCrashed() { return state == JobState.FAILED; }
 
   /** Returns true if this job is correctly finished.
    * @return returns true if the job finished and it was not cancelled or crashed by an exception.

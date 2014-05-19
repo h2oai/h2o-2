@@ -29,7 +29,6 @@ summary(iris.hex)
 sepal_len.cut = h2o.cut(iris.hex$sepal_len, c(4.2, 4.8, 5.8, 6, 8))
 head(sepal_len.cut)
 summary(sepal_len.cut)
-h2o.shutdown(localH2O)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

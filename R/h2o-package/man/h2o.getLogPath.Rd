@@ -19,8 +19,8 @@ h2o.getLogPath(type)
 }
 \examples{
 library(h2o)
-h2o.setLogPath("Command")
-h2o.setLogPath("Error")
+h2o.getLogPath("Command")
+h2o.getLogPath("Error")
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

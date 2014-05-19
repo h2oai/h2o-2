@@ -148,7 +148,7 @@ public class VariableImportance extends MRTask2<VariableImportance> {
         }
 
         // Predict with this tree - produce 0-based class index
-        int prediction = _model.classify0(ntree, _data, chks, row, _modelDataMap, (short)_N );
+        int prediction = (int)_model.classify0(ntree, _data, chks, row, _modelDataMap, (short)_N, false);
         if( prediction >= _nclasses ) continue; // Junk row cannot be predicted
         // Check tree miss
         int alignedPrediction = alignModelIdx(prediction);
@@ -176,7 +176,7 @@ public class VariableImportance extends MRTask2<VariableImportance> {
         else assert soob==null;
         // - score data
         // - score only the tree
-        int prediction = (int) Tree.classify(new AutoBuffer(_model.tree(ntree)), data, (double)_N); //.classify0(ntree, _data, chks, row, _modelDataMap, numClasses );
+        int prediction = (int) Tree.classify(new AutoBuffer(_model.tree(ntree)), data, (double)_N, false); //.classify0(ntree, _data, chks, row, _modelDataMap, numClasses );
         if( prediction >= _nclasses ) continue;
         int pred = alignModelIdx(prediction);
         int actu = alignDataIdx((int) chks[_classcol].at8(_oobs[j]) - cmin);

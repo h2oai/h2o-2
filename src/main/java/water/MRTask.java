@@ -1,6 +1,7 @@
 package water;
 
 import jsr166y.CountedCompleter;
+import water.fvec.ParseDataset2;
 
 /** Map/Reduce style distributed computation. */
 public abstract class MRTask<T extends MRTask> extends DRemoteTask<T> {
@@ -32,6 +33,7 @@ public abstract class MRTask<T extends MRTask> extends DRemoteTask<T> {
    * record the results in the <em>this</em> MRTask. */
   abstract public void map( Key key );
 
+  protected boolean _runSingleThreaded = false;
   transient long _reservedMem;
   /** Do all the keys in the list associated with this Node.  Roll up the
    * results into <em>this</em> MRTask. */
@@ -53,13 +55,20 @@ public abstract class MRTask<T extends MRTask> extends DRemoteTask<T> {
       // operation, the min memory is proportional to the depth of the right
       // subtree.
       long reqMem = (log2(_hi - mid)+3)*memOverheadPerChunk();
-      if(MemoryManager.tryReserveTaskMem(reqMem)){
+
+      if(!_runSingleThreaded && MemoryManager.tryReserveTaskMem(reqMem)){
         _reservedMem += reqMem;   // Remember the amount of reserved memory to free it later.
         _left.fork();             // Runs in another thread/FJ instance
+        _rite.compute2();         // Runs in THIS F/J thread
       } else {
-        _left.compute2();
+        _left.setCompleter(new H2O.H2OCallback(null,this) {
+          @Override
+          public void callback(H2O.H2OCountedCompleter caller) {
+            _rite.fork();
+          }        // Runs in THIS F/J thread}
+        });
+        _left.fork();
       }
-      _rite.compute2();         // Runs in THIS F/J thread
     } else {
       if( _hi > _lo ) {         // Single key?
         try {

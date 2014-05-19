@@ -20,6 +20,7 @@
     <orderEntry type="library" name="poi" level="project" />
     <orderEntry type="library" name="s3" level="project" />
     <orderEntry type="library" name="lib" level="project" />
+    <orderEntry type="library" name="joda-time-2.3" level="project" />
   </component>
 </module>
 

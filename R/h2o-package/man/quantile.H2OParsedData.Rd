@@ -29,5 +29,4 @@ prostate.hex = h2o.importFile(localH2O, path = prosPath)
 quantile(prostate.hex[,3])
 for(i in 1:ncol(prostate.hex))
   quantile(prostate.hex[,i])
-h2o.shutdown(localH2O)
 }

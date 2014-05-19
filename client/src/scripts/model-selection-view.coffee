@@ -1,68 +1,61 @@
+defaultScoringSelectionMessage = 'Score selected models.'
 Steam.ModelSelectionView = (_) ->
   _selections = nodes$ []
+  _hasSelection = lift$ _selections, (selections) -> selections.length > 0
   _caption = lift$ _selections, (selections) ->
     "#{describeCount selections.length, 'model'} selected."
-  _hasSelection = lift$ _selections, (selections) ->
-    selections.length > 0
-  _predicate = node$ null
-  _frameKey = lift$ _predicate, (predicate) -> if predicate then predicate.frameKey else ''
-  _canScore = lift$ _predicate, _selections, (predicate, selections) ->
-    if predicate isnt null
-      if predicate.type is 'compatibleWithFrame'
-        if selections.length > 0
-          { category, responseColumn } = head selections
-          comparable = every selections, (selection) ->
-            selection.responseColumn is responseColumn and selection.category is category
-          return comparable
-    no
 
+  _compatibleFrames = lift$ _selections, (selections) ->
+    framesPerModel = map selections, (selection) -> selection.data.compatible_frames
+    framesByKey = indexBy (flatten framesPerModel), (frame) -> frame.key
+    commonFrameKeys = sortBy intersection.apply null, map framesPerModel, (frames) -> map frames, (frame) -> frame.key
+    map commonFrameKeys, (key) -> framesByKey[key]
 
-  apply$ _hasSelection, (hasSelection) ->
-    if hasSelection
-      _.modelsSelected()
+  _canScoreSelections = lift$ _compatibleFrames, (frames) -> frames.length > 0
+
+  _modelSelectionMessage = lift$ _compatibleFrames, (frames) ->
+    if frames.length
+      defaultScoringSelectionMessage
     else
-      _.modelsDeselected()
+      'No compatible datasets found.'
 
-  createSelection = (model) ->
-    data: model
-    algorithm: model.model_algorithm
-    category: model.model_category
-    responseColumn: model.response_column_name
+  scoreSelections = ->
+    _.promptForFrame _compatibleFrames(), (action, frameKey) ->
+      switch action
+        when 'confirm'
+          scorings = map _selections(), (selection) ->
+            frameKey: frameKey
+            model: selection.data
+            status: null
+            time: null
+            result: null
+            timestamp: Date.now()
 
-  link$ _.modelSelectionChanged, (isSelected, predicate, model) ->
+          _.switchToScoring type: 'scoring', scorings: scorings
+          _.deselectAllModels()
+        when 'error'
+          _.fail 'Error', 'An error occured while fetching the list of datasets.', error, noop
+
+  tryScoreSelections = (hover) ->
+    _.status if hover then _modelSelectionMessage() else null
+
+  clearSelections = ->
+    _.deselectAllModels()
+
+  link$ _.modelSelectionChanged, (isSelected, model) ->
     if isSelected
-      _selections.push createSelection model
+      _selections.push model
     else
-      _selections.remove (selection) -> selection.data is model
-
-    _predicate predicate unless _predicate() is predicate
+      _selections.remove model
 
   link$ _.modelSelectionCleared, ->
     _selections.removeAll()
-    _predicate null
 
-  scoreModels = ->
-    frameKey = _frameKey()
-    scores = map _selections(), (selection) ->
-      model: selection.data
-      status: null
-      time: null
-      result: null
-    scoring = frameKey: frameKey, scores: scores, timestamp: Date.now()
-
-    do cancel
-    _.switchToScoring type: 'scoring', scoring: scoring
-
-  cancel = ->
-    _selections.removeAll()
-    _.deselectAllModels()
-
-
-  frameKey: _frameKey
   caption: _caption
   hasSelection: _hasSelection
-  selections: _selections
-  canScore: _canScore
-  scoreModels: scoreModels
-  cancel: cancel
+  clearSelections: clearSelections
+  canScoreSelections: _canScoreSelections
+  tryScoreSelections: tryScoreSelections
+  scoreSelections: scoreSelections
   template: 'model-selection-view'
+  

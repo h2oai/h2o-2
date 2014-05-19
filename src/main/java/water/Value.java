@@ -102,6 +102,7 @@ public class
   // Will (re)build the POJO from the _mem array.
   // Never returns NULL.
   public <T extends Iced> T get() {
+    touch();
     Iced pojo = (Iced)_pojo;    // Read once!
     if( pojo != null ) return (T)pojo;
     pojo = TypeMap.newInstance(_type);
@@ -109,21 +110,19 @@ public class
     pojo.init(_key);
     return (T)(_pojo = pojo);
   }
-  public <T> T get(Class<T> fc) {
+  public <T extends Freezable> T get(Class<T> fc) {
+    T pojo = getFreezable();
+    assert fc.isAssignableFrom(pojo.getClass());
+    return pojo;
+  }
+  public <T extends Freezable> T getFreezable() {
+    touch();
     Freezable pojo = _pojo;     // Read once!
     if( pojo != null ) return (T)pojo;
     pojo = TypeMap.newFreezable(_type);
     pojo.read(new AutoBuffer(memOrLoad()));
-    assert fc.isAssignableFrom(pojo.getClass());
-    return (T)(_pojo = pojo);
-  }
-  public Freezable getFreezable() {
-    Freezable pojo = _pojo;     // Read once!
-    if( pojo != null ) return pojo;
-    pojo = TypeMap.newFreezable(_type);
-    pojo.read(new AutoBuffer(memOrLoad()));
     if( pojo instanceof Iced ) ((Iced)pojo).init(_key);
-    return (_pojo = pojo);
+    return (T)(_pojo = pojo);
   }
 
   // ---
@@ -351,7 +350,7 @@ public class
     _key = k;
     _pojo = pojo;
     _type = (short)pojo.frozenType();
-    _mem = pojo.write(new AutoBuffer()).buf();
+    _mem = (pojo instanceof Chunk)?((Chunk)pojo).getBytes():pojo.write(new AutoBuffer()).buf();
     _max = _mem.length;
     // For the ICE backend, assume new values are not-yet-written.
     // For HDFS & NFS backends, assume we from global data and preserve the
@@ -381,7 +380,6 @@ public class
   // and the normal serializer then might ship over a null instead of the
   // intended byte[].  Also, the value is NOT on the deserialize'd machines disk
   public AutoBuffer write(AutoBuffer bb) {
-    touch();
     byte p = _persist;
     if( onICE() ) p &= ~ON_dsk; // Not on the remote disk
     return bb.put1(p).put2(_type).putA1(memOrLoad());

@@ -121,16 +121,21 @@ public class DatasetCompare extends MRTask<DatasetCompare>{
     String root = (args.length > 0)?args[0]:"smalldata";
     System.out.println("ROOT = " + root);
     System.out.println("Running...");
-    new NewVectorTest().testCompression();
-    Map<String,Double> diffs = new TreeMap<String, Double>();
-    Map<String,Exception> exs = new TreeMap<String, Exception>();
-    do_file(TestUtil.find_test_file(root),diffs,exs);
-    System.out.println("DONE!!!");
+//    new NewVectorTest().testCompression();
+////    Map<String,Double> diffs = new TreeMap<String, Double>();
+////    Map<String,Exception> exs = new TreeMap<String, Exception>();
+////    do_file(TestUtil.find_test_file(root),diffs,exs);
+////    System.out.println("DONE!!!");
     File f = new File("/Users/tomasnykodym/mydata/c12/anon_file_bigger.csv");
     assert f.exists():"did not find file " + f.getPath();
     Key frRaw = NFSFileVec.make(f);
     Key frHex = Key.make("anon_file_bigger.hex");
     ParseDataset2.parse(frHex, new Key[]{frRaw});
+    File f2 = new File("/Users/tomasnykodym/h2o/smalldata/airlines/allyears2k_headers.csv");
+    assert f2.exists():"did not find file " + f.getPath();
+    Key frRaw2 = NFSFileVec.make(f2);
+    Key frHex2 = Key.make("allyears2k_headers.hex");
+    ParseDataset2.parse(frHex2, new Key[]{frRaw2});
     System.out.println("DONE");
 //    for(Map.Entry<String, Exception> e:exs.entrySet()){
 //      System.err.println("Exception occured while processing " + e.getKey());

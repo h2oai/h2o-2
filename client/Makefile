@@ -14,27 +14,32 @@ BUILD_DIRS=\
 	$(DIST) \
 	$(DEPLOY)
 
-SCRIPTS=\
+# Common javascript files that go into both the browser and node targets.
+COMMON_SCRIPTS=\
 	$(BUILD)/scripts/prelude.global.js \
 	$(BUILD)/scripts/typedef.global.js \
 	$(BUILD)/scripts/hypergraph.global.js \
 	$(BUILD)/scripts/geyser.global.js \
-	$(BUILD)/scripts/main.js
+	$(BUILD)/scripts/util.global.js
 
+# Javascript files that go into the browser target.
 BROWSER_SCRIPTS=\
-	$(BUILD)/scripts/dom.global.js \
-	$(BUILD)/scripts/geyser.global.js \
 	$(BUILD)/scripts/knockout.js \
 	$(BUILD)/scripts/application.js \
 	$(BUILD)/scripts/application-context.js \
+	$(BUILD)/scripts/timers.js \
 	$(BUILD)/scripts/router.js \
 	$(BUILD)/scripts/routes.js \
 	$(BUILD)/scripts/error-monitor.js \
 	$(BUILD)/scripts/event-log.js \
 	$(BUILD)/scripts/cache.js \
 	$(BUILD)/scripts/localStorage.js \
-	$(BUILD)/scripts/h2o-proxy.js \
 	$(BUILD)/scripts/xhr.js \
+	$(BUILD)/scripts/h2o-proxy.js \
+	$(BUILD)/scripts/dialog-manager.js \
+	$(BUILD)/scripts/alert-dialog.js \
+	$(BUILD)/scripts/error-dialog.js \
+	$(BUILD)/scripts/select-frame-dialog.js \
 	$(BUILD)/scripts/topic-list-view.js \
 	$(BUILD)/scripts/frame-list-view.js \
 	$(BUILD)/scripts/model-list-view.js \
@@ -49,8 +54,62 @@ BROWSER_SCRIPTS=\
 	$(BUILD)/scripts/main-view.js \
 	$(BUILD)/scripts/steam.js
 
+# Javascript files that go into the node target.
+# All test scripts go at the bottom of this list.
+TEST_SCRIPTS=\
+	$(BUILD)/scripts/application-context.js \
+	$(BUILD)/scripts/xhr.js \
+	$(BUILD)/scripts/h2o-proxy.js \
+	$(BUILD)/scripts/alert-dialog.js \
+	$(BUILD)/scripts/error-dialog.js \
+	$(BUILD)/scripts/select-frame-dialog.js \
+	$(BUILD)/scripts/topic-list-view.js \
+	$(BUILD)/scripts/frame-list-view.js \
+	$(BUILD)/scripts/model-list-view.js \
+	$(BUILD)/scripts/scoring-list-view.js \
+	$(BUILD)/scripts/notification-list-view.js \
+	$(BUILD)/scripts/frame-view.js \
+	$(BUILD)/scripts/model-view.js \
+	$(BUILD)/scripts/model-selection-view.js \
+	$(BUILD)/scripts/scoring-view.js \
+	$(BUILD)/scripts/notification-view.js \
+	$(BUILD)/scripts/scoring-selection-view.js \
+	$(BUILD)/scripts/main-view.js \
+	$(BUILD)/tests/test.global.js \
+	$(BUILD)/tests/prelude.tests.js \
+	$(BUILD)/tests/typedef.tests.js \
+	$(BUILD)/tests/hypergraph.tests.js \
+	$(BUILD)/tests/geyser.tests.js \
+	$(BUILD)/tests/base.tests.js \
+	$(BUILD)/tests/h2o-proxy.tests.js \
+	$(BUILD)/tests/frame-list-view.tests.js \
+	$(BUILD)/tests/frame-view.tests.js
+
+
+# Lib javascript files that go into the browser target.
+BROWSER_LIB_SCRIPTS=\
+	$(LIB)/stacktrace/stacktrace.js \
+	$(LIB)/jquery/dist/jquery.js \
+	$(LIB)/lodash/dist/lodash.js \
+	$(LIB)/momentjs/min/moment.min.js \
+	$(LIB)/js-signals/dist/signals.js \
+	$(LIB)/crossroads/dist/crossroads.js \
+	$(LIB)/hasher/dist/js/hasher.js \
+	$(LIB)/bootstrap/dist/js/bootstrap.js \
+	$(LIB)/d3/d3.js \
+	$(LIB)/knockout/knockout.js
+
+# Lib javascript files that go into the browser target. 
+TEST_LIB_SCRIPTS=\
+	$(LIB)/jquery/dist/jquery.js \
+	$(LIB)/lodash/dist/lodash.js \
+	$(LIB)/knockout/knockout.js
+
 TEMPLATES=\
 	src/templates/main-view.jade \
+	src/templates/alert-dialog.jade \
+	src/templates/error-dialog.jade \
+	src/templates/select-frame-dialog.jade \
 	src/templates/topic-list-view.jade \
 	src/templates/frame-list-view.jade \
 	src/templates/model-list-view.jade \
@@ -84,39 +143,9 @@ STYLES=\
 	src/styles/notification-view.styl \
 	src/styles/scoring-selection-view.styl
 
-TESTS=\
-	$(BUILD)/tests/prelude.tests.js \
-	$(BUILD)/tests/typedef.tests.js \
-	$(BUILD)/tests/hypergraph.tests.js \
-	$(BUILD)/tests/geyser.tests.js \
-	$(BUILD)/tests/base.tests.js
-
-LIB_JS=\
-	$(LIB)/stacktrace/stacktrace.js \
-	$(LIB)/jquery/dist/jquery.js \
-	$(LIB)/jquery-timeago/jquery.timeago.js \
-	$(LIB)/lodash/dist/lodash.js \
-	$(LIB)/js-signals/dist/signals.js \
-	$(LIB)/crossroads/dist/crossroads.js \
-	$(LIB)/hasher/dist/js/hasher.js \
-	$(LIB)/bootstrap/dist/js/bootstrap.js \
-	$(LIB)/d3/d3.js \
-	$(LIB)/knockout/knockout.js
-
-LIB_CSS=\
+LIB_STYLES=\
 	$(LIB)/fontawesome/css/font-awesome.css \
 	$(LIB)/bootstrap/dist/css/bootstrap.css
-
-LIB_TEST_JS=\
-	$(LIB)/jquery/dist/jquery.js \
-	$(LIB)/lodash/dist/lodash.js \
-	$(LIB)/knockout/knockout.js \
-	$(LIB)/chai/chai.js \
-	$(MODULES)/mocha/mocha.js
-
-LIB_TEST_CSS=\
-	$(MODULES)/mocha/mocha.css
-
 
 ifeq ($(shell which node),)
 default:
@@ -169,6 +198,10 @@ really_build: \
 	$(DEPLOY)/fonts/fontawesome-webfont.ttf \
 	$(DEPLOY)/fonts/fontawesome-webfont.woff \
 	$(DEPLOY)/img/h2o.png \
+	$(DEPLOY)/img/h2o-spin-16.gif \
+	$(DEPLOY)/img/h2o-spin-32.gif \
+	$(DEPLOY)/img/h2o-spin-48.gif \
+	$(DEPLOY)/img/h2o-spin-64.gif \
 	$(DEPLOY)/css/bootstrap.css.map \
 	$(DEPLOY)/css/lib.css \
 	$(DEPLOY)/css/steam.css \
@@ -179,16 +212,22 @@ build: setup
 	$(MAKE) really_build
 
 unit: \
-	$(DEPLOY)/lib.test.css \
-	$(DEPLOY)/lib.test.js \
-	$(DEPLOY)/tests.html \
-	$(DEPLOY)/steam.test.js
+	$(DEPLOY)/tests/tape.js \
+	$(DEPLOY)/tests/lib.test.js \
+	$(DEPLOY)/tests/steam.test.js \
+	$(DEPLOY)/tests/index.html
 
 node: \
 	$(DIST)/steam.node.js
 
 watch:
-	$(BIN)/watchy --watch src -- make build unit test coverage
+	$(BIN)/watchy --watch src -- make build
+
+lint:
+	# Sort of pointless running this. 
+	# Pretty much all errors thrown point to coffeescript-generated code.
+	# TODO revisit better way to lint coffeescript.
+	(BIN)/jshint $(DEPLOY)/js/steam.js
 
 preload:
 	Rscript src/util/h2o-R/preload.R
@@ -203,62 +242,42 @@ help:
 	@echo "  make preload    Preload a few frames and models into H2O (requires R)"
 	@echo ""
 	@echo "Development tasks:"
-	@echo "  make build      Build and deploy to ../lib/resources/steam/"
-	@echo "  make unit       Build browser test suite"
+	@echo "  make build      Build and deploy to ../lib/resources/steam/index.html"
+	@echo "  make unit       Build browser test suite and deploy to ../lib/resources/steam/tests/index.html"
 	@echo "  make test       Run all tests"
-	@echo "  make            Run all tests"
-	@echo "  make smoke      Run tests, but bail on first failure"
-	@echo "  make report     Run all tests, verbose, with specs"
 	@echo "  make debug      Run tests in debug mode"
-	@echo "  make spec       Compile test specs"
 	@echo "  make coverage   Compile test coverage"
 	@echo "  make doc        Compile code documentation"
 	@echo "  make clean      Clean up build directories"
 	@echo "  make watch      Watch for changes and run `make build test`"
 
-smoke: node
-	$(BIN)/mocha \
-		--reporter dot \
-		--bail \
-		--check-leaks \
-		$(DIST)/steam.node.js
-
+# This runs all tests by default. 
+# To run specific tests, run:
+#   make ARGS="-g foobar" test
+# where foobar is a regexp
 test: node
-	$(BIN)/mocha \
-		--reporter dot \
-		--check-leaks \
-		$(DIST)/steam.node.js
+	@node $(DIST)/steam.node.js
 
-pytest: node
-	(cd ../py && python testdir_model_management/test_model_management.py -ccj localhost.json SteamTestCase)
-
-tags:
-	(cd src/scripts && ctags -R .)
+faucet: node
+	@node $(DIST)/steam.node.js | $(BIN)/faucet
 
 debug: node
-	$(BIN)/mocha \
-		--reporter dot \
-		--check-leaks \
-		--debug-brk \
-		$(DIST)/steam.node.js
+	@node --debug-brk $(DIST)/steam.node.js
 
-report: node
-	$(BIN)/mocha \
-		--reporter spec \
-		--check-leaks \
-		$(DIST)/steam.node.js
+pytest: node
+	(cd ../py && python testdir_single_jvm/test_model_management.py -ccj localhost.json ApiTestCase.test_steam)
 
 coverage: node
 	@mkdir -p $(BUILD)/coverage
-	$(BIN)/istanbul \
+	@$(BIN)/istanbul \
 		cover \
-		$(BIN)/_mocha \
 		--dir $(BUILD)/coverage \
 		-x "**/lib/**" \
 		$(DIST)/steam.node.js
 	@echo Coverage generated at $(BUILD)/coverage
 
-spec: $(BUILD)/spec/index.html
+tags:
+	(cd src/scripts && ctags -R .)
 
 doc: 
 	@mkdir -p $(BUILD)/doc
@@ -284,36 +303,63 @@ reset: clean
 
 $(BUILD)/scripts/%.global.js: src/scripts/%.global.coffee
 	@mkdir -p $(@D)
-	$(BIN)/coffee --bare --output $(@D) --compile $<
+	@$(BIN)/coffee --bare --output $(@D) --compile $<
+	@echo Built $@
 
 $(BUILD)/tests/%.global.js: src/tests/%.global.coffee
 	@mkdir -p $(@D)
-	$(BIN)/coffee --bare --output $(@D) --compile $<
+	@$(BIN)/coffee --bare --output $(@D) --compile $<
+	@echo Built $@
 
 $(BUILD)/scripts/%.js: src/scripts/%.coffee
 	@mkdir -p $(@D)
-	$(BIN)/coffee --output $(@D) --compile $<
+	@$(BIN)/coffee --output $(@D) --compile $<
+	@echo Built $@
 
 $(BUILD)/tests/%.js: src/tests/%.coffee
 	@mkdir -p $(@D)
-	$(BIN)/coffee --output $(@D) --compile $<
+	@$(BIN)/coffee --output $(@D) --compile $<
+	@echo Built $@
 
 $(DEPLOY)/index.html: src/templates/index.jade $(TEMPLATES)
 	@mkdir -p $(@D)
-	$(BIN)/jade --pretty --out $(@D) $<
+	@$(BIN)/jade --pretty --out $(@D) $<
+	@echo Built $@
 
 $(DEPLOY)/css/steam.css: src/styles/steam.styl $(STYLES)
 	@mkdir -p $(@D)
-	$(BIN)/stylus --use nib --out $(@D) $<
+	@$(BIN)/stylus --use nib --out $(@D) $<
+	@echo Built $@
 
-$(DEPLOY)/js/steam.js: $(SCRIPTS) $(BROWSER_SCRIPTS)
+$(DEPLOY)/js/steam.js: $(COMMON_SCRIPTS) $(BROWSER_SCRIPTS)
 	@mkdir -p $(@D)
 	@echo '"use strict";' > $@
 	@echo '(function(){' >> $@
-	cat $^ >> $@
+	@cat $^ >> $@
 	@echo '}).call(this);' >> $@
+	@echo Built $@
+
+$(DIST)/steam.node.js: $(BUILD)/tests/node.global.js $(COMMON_SCRIPTS) $(TEST_SCRIPTS)
+	@mkdir -p $(@D)
+	@echo '"use strict";' > $@
+	@echo '(function(){' >> $@
+	@cat $^ >> $@
+	@echo '}).call(this);' >> $@
+	@echo Built $@
+
+$(DEPLOY)/tests/steam.test.js: $(COMMON_SCRIPTS) $(TEST_SCRIPTS)
+	@mkdir -p $(@D)
+	@echo '"use strict";' > $@
+	@echo '(function(){' >> $@
+	@cat $^ >> $@
+	@echo '}).call(this);' >> $@
+	@echo Built $@
 
 $(DEPLOY)/img/%.png: src/images/%.png
+	@mkdir -p $(@D)
+	cp $< $@
+
+$(DEPLOY)/img/%.gif: src/images/%.gif
 	@mkdir -p $(@D)
 	cp $< $@
 
@@ -354,52 +400,33 @@ $(DEPLOY)/fonts/%.woff: $(LIB)/fontawesome/fonts/%.woff
 	@mkdir -p $(@D)
 	cp $< $@
 
-$(DIST)/steam.node.js: $(BUILD)/tests/node.global.js $(SCRIPTS) $(TESTS)
-	@mkdir -p $(@D)
-	@echo '"use strict";' > $@
-	@echo '(function(){' >> $@
-	cat $^ >> $@
-	@echo '}).call(this);' >> $@
-
-$(DEPLOY)/steam.test.js: $(BUILD)/tests/browser.global.js $(SCRIPTS) $(TESTS)
-	@mkdir -p $(@D)
-	@echo '"use strict";' > $@
-	@echo '(function(){' >> $@
-	cat $^ >> $@
-	@echo '}).call(this);' >> $@
-
-$(DEPLOY)/tests.html: src/util/mocha-html/tests.html
-	@mkdir -p $(@D)
-	cp $< $@
-
 $(DEPLOY)/css/%.map: $(LIB)/bootstrap/dist/css/%.map
 	@mkdir -p $(@D)
 	cp $< $@
 
-$(DEPLOY)/css/lib.css: $(LIB_CSS)
+$(DEPLOY)/css/lib.css: $(LIB_STYLES)
 	@mkdir -p $(@D)
-	cat $^ > $@
+	@cat $^ > $@
+	@echo Built $@
 
-$(DEPLOY)/js/lib.js: $(LIB_JS)
+$(DEPLOY)/js/lib.js: $(BROWSER_LIB_SCRIPTS)
 	@mkdir -p $(@D)
-	cat $^ > $@
+	@cat $^ > $@
+	@echo Built $@
 
-$(DEPLOY)/lib.test.css: $(LIB_TEST_CSS)
+$(DEPLOY)/tests/lib.test.js: $(TEST_LIB_SCRIPTS)
 	@mkdir -p $(@D)
-	cat $^ > $@
+	@cat $^ > $@
+	@echo Built $@
 
-$(DEPLOY)/lib.test.js: $(LIB_TEST_JS)
+$(DEPLOY)/tests/tape.js: node_modules/tape/index.js
 	@mkdir -p $(@D)
-	cat $^ > $@
+	@$(BIN)/browserify $< -s test -o $@
+	@echo Built $@
 
-$(BUILD)/spec/index.html: node
+$(DEPLOY)/tests/index.html: src/tests/index.html
 	@mkdir -p $(@D)
-	@$(BIN)/mocha \
-		--reporter doc \
-		$(DIST)/steam.node.js \
-		| cat src/util/mocha-doc/header.html - src/util/mocha-doc/footer.html \
-		> $@
-	@echo Spec generated at $(@D)
-	
+	cp $< $@
+	@echo Built $@
 
 .PHONY: default really_build build node unit smoke test debug report spec coverage doc clean setup reset watch help preload pytest tags

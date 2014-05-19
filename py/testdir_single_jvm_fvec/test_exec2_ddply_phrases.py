@@ -88,22 +88,24 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         bucket = 'home-0xdiag-datasets'
         # csvPathname = 'standard/covtype.data'
-        csvPathname = "standard/covtype.shuffled.10pct.data"
+        # csvPathname = "standard/covtype.shuffled.10pct.data"
+        csvPathname = "standard/covtype.data"
 
         hexKey = 'i.hex'
         parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local', hex_key=hexKey)
 
 
-        for col in range(1,10):
+        for col in range(1,3):
             initList = [
                 ('r.hex', 'r.hex=i.hex'),
                 (None, "func1=function(x){max(x[,%s])}" % col),
                 (None, "func2=function(x){a=3;nrow(x[,%s])*a}" % col),
                 (None, "func3=function(x){apply(x[,%s],2,sum)/nrow(x[,%s])}" % (col, col) ),
-                # (None, "function(x) { cbind( mean(x[,1]), mean(x[,%s]) ) }" % col),
                 (None, "func4=function(x) { mean( x[,%s]) }" % col), 
                 (None, "func5=function(x) { sd( x[,%s]) }" % col), 
-                # (None, "func6=function(x) { quantile(x[,%s] , c(0.9) ) }" % col),
+                (None, "func6=function(x) { quantile(x[,%s] , c(0.9) ) }" % col),
+                (None, "func7=function(x) { cbind( mean(x[,%s]), mean(x[,%s+1]) ) }" % (col, col)),
+                (None, "func8=function(x) { cbind( mean(x[,1]), mean(x[,%s]) ) }" % col),
             ]
             for resultKey, execExpr in initList:
                 h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=resultKey, timeoutSecs=60)

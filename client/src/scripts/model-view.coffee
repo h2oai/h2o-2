@@ -3,15 +3,8 @@ Steam.ModelView = (_, _model) ->
   _compatibleFramesCount = node$ ''
 
   initialize = (model) ->
-    _.requestModelAndCompatibleFrames model.key, (error, data) ->
-      if error
-        #TODO handle errors
-      else
-        #TODO typecheck
-        unless isEmpty data.models
-          aModel = head data.models
-          _compatibleFrames createCompatibleFramesSection aModel.compatible_frames
-          _compatibleFramesCount "(#{aModel.compatible_frames.length})"
+    _compatibleFrames createCompatibleFramesSection model.compatible_frames
+    _compatibleFramesCount "(#{model.compatible_frames.length})"
 
   stringify = (value) ->
     if isArray value
@@ -30,7 +23,8 @@ Steam.ModelView = (_, _model) ->
     createDefinitionList [
       [ 'Response Column', model.response_column_name ]
       [ 'Model Category', model.model_category ]
-      [ 'State', model.state ]
+      #TODO uncomment when this is functional
+      # [ 'State', model.state ]
     ]
 
   # Parameters section
@@ -47,7 +41,7 @@ Steam.ModelView = (_, _model) ->
     rows = map model.input_column_names, (columnName) -> [ columnName ]
 
     #TODO duplicates logic in FrameView. Refactor.
-    [ table, tbody, tr, td ] = geyser.generate words 'table.table.table-condensed.table-hover tbody tr td'
+    [ table, tbody, tr, td ] = geyser.generate words 'table.table.table-condensed tbody tr td'
     table [
       tbody map rows, (row) ->
         tr map row, td
@@ -67,7 +61,7 @@ Steam.ModelView = (_, _model) ->
       ]
 
     #TODO duplicates logic in FrameView. Refactor.
-    [ table, thead, tbody, tr, th, td ] = geyser.generate words 'table.table.table-condensed.table-hover thead tbody tr th td'
+    [ table, thead, tbody, tr, th, td ] = geyser.generate words 'table.table.table-condensed thead tbody tr th td'
 
     table [
       thead [
@@ -85,7 +79,7 @@ Steam.ModelView = (_, _model) ->
   
   data: _model
   key: _model.key
-  title: _model.model_algorithm
+  timestamp: _model.creation_epoch_time_millis
   summary: createSummarySection _model
   parameters: createParametersSection _model
   inputColumns: createInputColumnsSection _model

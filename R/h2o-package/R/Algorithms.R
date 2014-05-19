@@ -2,7 +2,7 @@
 # ----------------------- Generalized Boosting Machines (GBM) ----------------------- #
 # TODO: don't support missing x; default to everything?
 h2o.gbm <- function(x, y, distribution = 'multinomial', data, n.trees = 10, interaction.depth = 5, n.minobsinnode = 10, shrinkage = 0.1,
-    n.bins = 100, importance = FALSE, validation, balance.classes=FALSE, max.after.balance.size=5) {
+    n.bins = 100, importance = FALSE, validation, balance.classes = FALSE, max.after.balance.size = 5) {
   args <- .verify_dataxy(data, x, y)
 
   if(!is.numeric(n.trees)) stop('n.trees must be numeric')
@@ -21,9 +21,9 @@ h2o.gbm <- function(x, y, distribution = 'multinomial', data, n.trees = 10, inte
   # else if(class(validation) != "H2OParsedData") stop("validation must be an H2O dataset")
   else if(!class(validation) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("validation must be an H2O parsed dataset")
 
-  if(!(distribution %in% c('multinomial', 'gaussian')))
-    stop(paste(distribution, "is not a valid distribution; only [multinomial, gaussian] are supported"))
-  classification <- ifelse(distribution == 'multinomial', 1, ifelse(distribution=='gaussian', 0, -1))
+  if(!(distribution %in% c('multinomial', 'gaussian', 'bernoulli')))
+    stop(paste(distribution, "is not a valid distribution; only [multinomial, gaussian, bernoulli] are supported"))
+  classification <- ifelse(distribution %in% c('multinomial', 'bernoulli'), 1, ifelse(distribution=='gaussian', 0, -1))
 
   if(!is.logical(balance.classes)) stop('balance.classes must be logical (TRUE or FALSE)')
   if(!is.numeric(max.after.balance.size)) stop('max.after.balance.size must be a number')
@@ -32,8 +32,12 @@ h2o.gbm <- function(x, y, distribution = 'multinomial', data, n.trees = 10, inte
 
   # NB: externally, 1 based indexing; internally, 0 based
   cols = paste(args$x_i - 1, collapse=",")
-  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GBM, source=data@key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage,
-    min_rows=n.minobsinnode, classification=classification, nbins=n.bins, importance=as.numeric(importance), validation=validation@key, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size))
+  if(distribution == "bernoulli")
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GBM, source=data@key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, family = "bernoulli",
+      min_rows=n.minobsinnode, classification=classification, nbins=n.bins, importance=as.numeric(importance), validation=validation@key, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size))
+  else
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GBM, source=data@key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage,
+      min_rows=n.minobsinnode, classification=classification, nbins=n.bins, importance=as.numeric(importance), validation=validation@key, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size))
   params = list(x=args$x, y=args$y, distribution=distribution, n.trees=n.trees, interaction.depth=interaction.depth, shrinkage=shrinkage, n.minobsinnode=n.minobsinnode, n.bins=n.bins, importance=importance, balance.classes=balance.classes, max.after.balance.size=max.after.balance.size)
 
   if(length(n.trees) == 1 && length(interaction.depth) == 1 && length(n.minobsinnode) == 1 && length(shrinkage) == 1 && length(n.bins) == 1 && length(max.after.balance.size) == 1) {
@@ -68,6 +72,9 @@ h2o.gbm <- function(x, y, distribution = 'multinomial', data, n.trees = 10, inte
 }
 
 .h2o.__getGBMResults <- function(res, params) {
+  if(res$parameters$state == "CRASHED")
+    stop(res$parameters$exception)
+  
   result = list()
   params$n.trees = res$N
   params$interaction.depth = res$max_depth
@@ -78,7 +85,7 @@ h2o.gbm <- function(x, y, distribution = 'multinomial', data, n.trees = 10, inte
   params$balance.classes = res$balance_classes
   params$max.after.balance.size = res$max_after_balance_size
 
-  if(result$params$distribution == "multinomial") {
+  if(result$params$distribution %in% c("multinomial", "bernoulli")) {
     class_names = res$'cmDomain' # tail(res$'_domains', 1)[[1]]
     result$confusion = .build_cm(tail(res$'cms', 1)[[1]]$'_arr', class_names)  # res$'_domains'[[length(res$'_domains')]])
     result$classification <- T
@@ -92,11 +99,12 @@ h2o.gbm <- function(x, y, distribution = 'multinomial', data, n.trees = 10, inte
     result$classification <- F
   
   if(params$importance) {
-    result$varimp = data.frame(t(res$varimp$varimp))
-    result$varimp[2,] = result$varimp[1,]/max(result$varimp[1,])
-    result$varimp[3,] = 100*result$varimp[1,]/sum(result$varimp[1,])
-    colnames(result$varimp) = res$'_names'[-length(res$'_names')]
-    rownames(result$varimp) = c(res$varimp$method, "Scaled Values", "Percent Influence")
+    result$varimp = data.frame(res$varimp$varimp)
+    result$varimp[,2] = result$varimp[,1]/max(result$varimp[,1])
+    result$varimp[,3] = 100*result$varimp[,1]/sum(result$varimp[,1])
+    rownames(result$varimp) = res$'_names'[-length(res$'_names')]
+    colnames(result$varimp) = c(res$varimp$method, "Scaled.Values", "Percent.Influence")
+    result$varimp = result$varimp[order(result$varimp[,1], decreasing = TRUE),]
   }
 
   result$err = as.numeric(res$errs)
@@ -1136,6 +1144,7 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, validation,
                         depth=50, 
                         sample.rate=2/3,
                         oobee = TRUE,
+                        importance = FALSE,
                         nbins=1024, 
                         seed=-1,
                         stat.type="ENTROPY",
@@ -1171,10 +1180,10 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, validation,
 
   # NB: externally, 1 based indexing; internally, 0 based
   cols <- paste(args$x_i - 1, collapse=',')
-  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, response=args$y, ignored_cols=args$x_ignore, num_trees=ntree, max_depth=depth, validation=validation@key,
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, response=args$y, ignored_cols=args$x_ignore, num_trees=ntree, max_depth=depth, validation=validation@key, importance=as.numeric(importance),
                           sample=sample.rate, bin_limit=nbins, seed=seed, stat_type = stat.type, oobee=as.numeric(oobee), sampling_strategy=sampling_strategy, strata_samples=strata_samples, class_weights=classwt)
 
-  params = list(x=args$x, y=args$y, ntree=ntree, depth=depth, sample.rate=sample.rate, bin_limit=nbins, stat.type = stat.type, classwt=classwt, sampling_strategy=sampling_strategy, seed=seed, oobee = oobee)
+  params = list(x=args$x, y=args$y, ntree=ntree, depth=depth, sample.rate=sample.rate, bin_limit=nbins, stat.type = stat.type, classwt=classwt, sampling_strategy=sampling_strategy, seed=seed, oobee = oobee, importance = importance)
 
   if(length(ntree) == 1 && length(depth) == 1 && length(sample.rate) == 1 && length(nbins) == 1) { 
     .h2o.__waitOnJob(data@h2o, res$job_key)
@@ -1214,7 +1223,8 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, validation,
   #rownames(rf_matrix) = c("Depth", "Leaves")
   #result$forest = rf_matrix
   result$mse = as.numeric(res$errs)
-  result$mse <- ifelse(result$mse == -1, NA, result$mse)
+  #result$mse <- ifelse(result$mse == -1, NA, result$mse)
+  result$mse <- result$mse[length(result$mse)]
 
   if(params$classification) {
     #if(!is.null(res$validAUC)) {
@@ -1225,6 +1235,13 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, validation,
 
     class_names = tail(res$'_domains', 1)[[1]]
     result$confusion = .build_cm(tail(res$cms, 1)[[1]]$'_arr', class_names)
+  }
+
+  if(params$importance) {
+    result$varimp = data.frame(rbind(res$varimp$varimp, res$varimp$varimpSD))
+    result$varimp[3,] = sqrt(params$ntree)*result$varimp[1,]/result$varimp[2,]   # Compute z-scores
+    colnames(result$varimp) = res$'_names'[-length(res$'_names')]    #res$varimp$variables
+    rownames(result$varimp) = c(res$varimp$method, "Standard Deviation", "Z-Scores")
   }
 
   return(result)
@@ -1504,4 +1521,23 @@ plot.H2OPerfModel <- function(x, type = "cutoffs", ...) {
 
 .toupperFirst <- function(str) {
   paste(toupper(substring(str, 1, 1)), substring(str, 2), sep = "")
+}
+
+h2o.createFrame <- function(object, key, rows, cols, seed, randomize, value, real_range, categorical_fraction, factors, integer_fraction, integer_range, missing_fraction, response_factors) {
+  if(!is.numeric(rows)) stop("rows must be a numeric value")
+  if(!is.numeric(cols)) stop("rows must be a numeric value")
+  if(!is.numeric(seed)) stop("rows must be a numeric value")
+  if(!is.logical(randomize)) stop("randomize must be a boolean value")
+  if(!is.numeric(value)) stop("value must be a numeric value")
+  if(!is.numeric(real_range)) stop("real_range must be a numeric value")
+  if(!is.numeric(categorical_fraction)) stop("categorical_fraction must be a numeric value")
+  if(!is.numeric(factors)) stop("factors must be a numeric value")
+  if(!is.numeric(integer_fraction)) stop("integer_fraction must be a numeric value")
+  if(!is.numeric(integer_range)) stop("integer_range must be a numeric value")
+  if(!is.numeric(missing_fraction)) stop("missing_fraction must be a numeric value")
+  if(!is.numeric(response_factors)) stop("response_factors must be a numeric value")
+
+  res = .h2o.__remoteSend(object, .h2o.__PAGE_CreateFrame, key = key, rows = rows, cols = cols, seed = seed, randomize = as.numeric(randomize), value = value, real_range = real_range,
+    categorical_fraction = categorical_fraction, factors = factors, integer_fraction = integer_fraction, integer_range = integer_range, missing_fraction = missing_fraction, response_factors = response_factors)
+  new("H2OParsedData", h2o=object, key=key)
 }

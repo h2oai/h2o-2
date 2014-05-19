@@ -1,5 +1,32 @@
+
 Score
-=====
+========
+
+.. toctree::
+   :maxdepth: 1
+
+   scoreMulitModel
+   scorePCAscore
+   scoreauc
+   scoreconfusionmatrix
+   scorehitratio
+   scorepredict
+   
+ 
+
+
+**Predict**
+   
+   *model* the key associated with the model to be used in prediction
+ 
+   *data* the data on which to predict
+
+   *prediction* an optional user specified name for the returned
+   prediction results
+
+
+
+
 
 
 Scoring Models

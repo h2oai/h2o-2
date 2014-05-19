@@ -59,7 +59,7 @@ public class KMeans2 extends ColumnsJob {
       sourceKey = Key.make(sourceArg);
 
     // Drop ignored cols and, if user asks for it, cols with too many NAs
-    Frame fr = DataInfo.prepareFrame(source, ignored_cols, false, false, drop_na_cols);
+    Frame fr = DataInfo.prepareFrame(source, ignored_cols, false, drop_na_cols);
     String[] names = fr.names();
     Vec[] vecs = fr.vecs();
     if(vecs == null || vecs.length == 0)

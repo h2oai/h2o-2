@@ -40,7 +40,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GBM_params_rand2(self):
-        h2o.beta_features = False
+        h2o.beta_features = True
         bucket = 'home-0xdiag-datasets'
         modelKey = 'GBMModelKey'
         files = [

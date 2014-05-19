@@ -17,7 +17,7 @@ public class DABuilder {
     protected final SpeeDRFModel _rfmodel;
 
     static DABuilder create(final SpeeDRF drf, final SpeeDRFModel rf_model) {
-      switch( drf.drfParams._samplingStrategy ) {
+      switch( drf.drfParams.sampling_strategy ) {
         case RANDOM                :
         case STRATIFIED_LOCAL      :
         default                    : return new DABuilder(drf, rf_model);
@@ -33,10 +33,10 @@ public class DABuilder {
     /** Check that we have proper number of valid columns vs. features selected, if not cap*/
     private void checkAndLimitFeatureUsedPerSplit() {
       int validCols = _drf.source.numCols()-1; // for classIdx column
-      if (validCols < _drf.drfParams._numSplitFeatures) {
-        Log.info(Log.Tag.Sys.RANDF, "Limiting features from " + _drf.drfParams._numSplitFeatures +
+      if (validCols < _drf.drfParams.num_split_features) {
+        Log.info(Log.Tag.Sys.RANDF, "Limiting features from " + _drf.drfParams.num_split_features +
                 " to " + validCols + " because there are no more valid columns in the dataset");
-        _drf.drfParams._numSplitFeatures= validCols;
+        _drf.drfParams.num_split_features= validCols;
       }
     }
 
@@ -83,7 +83,7 @@ public class DABuilder {
       boolean[] _isByteCol = new boolean[fr.numCols()];
       long[] _naCnts = new long[fr.numCols()];
       for (int i = 0; i < _isByteCol.length; ++i) {
-        _isByteCol[i] = DataAdapter.isByteCol(fr.vecs()[i], (int)fr.numRows(), i == _isByteCol.length - 1);
+        _isByteCol[i] = DataAdapter.isByteCol(fr.vecs()[i], (int)fr.numRows(), i == _isByteCol.length - 1, rfmodel.regression);
         _naCnts[i] = fr.vecs()[i].naCnt();
       }
       // The model columns are dense packed - but there will be columns in the
@@ -94,16 +94,16 @@ public class DABuilder {
       final DataAdapter dapt = new DataAdapter(fr, rfmodel, modelDataMap,
               totalRows,
               getChunkId(fr),
-              _drf.drfParams._seed,
-              _drf.drfParams._binLimit,
-              _drf.drfParams._classWt);
+              _drf.drfParams.seed,
+              _drf.drfParams.bin_limit,
+              _drf.drfParams.class_weights);
       // Check that we have proper number of valid columns vs. features selected, if not cap.
       checkAndLimitFeatureUsedPerSplit();
 
       // Collects jobs loading local chunks
       ArrayList<RecursiveAction> dataInhaleJobs = new ArrayList<RecursiveAction>();
       for(int i = 0; i < fr.anyVec().nChunks(); ++i) {
-        dataInhaleJobs.add(loadChunkAction(dapt, fr, i, _isByteCol, _naCnts));
+        dataInhaleJobs.add(loadChunkAction(dapt, fr, i, _isByteCol, _naCnts, rfmodel.regression));
       }
       _rfmodel.current_status = "Inhaling Data";
       _rfmodel.update(_rfmodel.jobKey);
@@ -115,7 +115,7 @@ public class DABuilder {
       return dapt;
     }
 
-    static RecursiveAction loadChunkAction(final DataAdapter dapt, final Frame fr, final int cidx, final boolean[] isByteCol, final long[] naCnts) {
+    static RecursiveAction loadChunkAction(final DataAdapter dapt, final Frame fr, final int cidx, final boolean[] isByteCol, final long[] naCnts, boolean regression) {
       return new RecursiveAction() {
         @Override protected void compute() {
           try {

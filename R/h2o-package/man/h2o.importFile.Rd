@@ -66,5 +66,4 @@ class(iris.hex)
 summary(iris.hex)
 iris.fv = h2o.importFile(localH2O, path = irisPath, key = "iris.fv", version = 2)
 class(iris.fv)
-h2o.shutdown(localH2O)
 }

@@ -491,37 +491,38 @@ def compareToFirstGlm(self, key, glm, firstglm):
 
 
 def simpleCheckGLMGrid(self, glmGridResult, colX=None, allowFailWarning=False, **kwargs):
-    destination_key = glmGridResult['destination_key']
-    inspectGG = h2o_cmd.runInspect(None, destination_key)
-    h2o.verboseprint("Inspect of destination_key", destination_key,":\n", h2o.dump_json(inspectGG))
+# "grid": {
+#    "destination_keys": [
+#        "GLMGridResults__8222a49156af52532a34fb3ce4304308_0", 
+#        "GLMGridResults__8222a49156af52532a34fb3ce4304308_1", 
+#        "GLMGridResults__8222a49156af52532a34fb3ce4304308_2"
+#   ]
+# }, 
+    if h2o.beta_features:
+        destination_key = glmGridResult['grid']['destination_keys'][0]
+        inspectGG = h2o.nodes[0].glm_view(destination_key)
+        models = inspectGG['glm_model']['submodels']
+        h2o.verboseprint("GLMGrid inspect GLMGrid model 0(best):", h2o.dump_json(models[0]))
+        g = simpleCheckGLM(self, inspectGG, colX, allowFailWarning=allowFailWarning, **kwargs)
+    else:
+        destination_key = glmGridResult['destination_key']
+        inspectGG = h2o_cmd.runInspect(None, destination_key)
+        h2o.verboseprint("Inspect of destination_key", destination_key,":\n", h2o.dump_json(inspectGG))
+        models = glmGridResult['models']
+        for m, model in enumerate(models):
+            alpha = model['alpha']
+            area_under_curve = model['area_under_curve']
+            # FIX! should check max error?
+            error_0 = model['error_0']
+            error_1 = model['error_1']
+            model_key = model['key']
+            print "#%s GLM model key: %s" % (m, model_key)
+            glm_lambda = model['lambda']
 
-    # FIX! currently this is all unparsed!
-    #type = inspectGG['type']
-    #if 'unparsed' in type:
-    #    print "Warning: GLM Grid result destination_key is unparsed, can't interpret. Ignoring for now"
-    #    print "Run with -b arg to look at the browser output, for minimal checking of result"
-
-    ### cols = inspectGG['cols']
-    response = inspectGG['response'] # dict
-    ### rows = inspectGG['rows']
-    #value_size_bytes = inspectGG['value_size_bytes']
-
-    # FIX! does error_0/1 only exist for binomial?
-    for m, model in enumerate(glmGridResult['models']):
-        alpha = model['alpha']
-        area_under_curve = model['area_under_curve']
-        # FIX! should check max error?
-        error_0 = model['error_0']
-        error_1 = model['error_1']
-        model_key = model['key']
-        print "#%s GLM model key: %s" % (m, model_key)
-        glm_lambda = model['lambda']
-
-    # now indirect to the GLM result/model that's first in the list (best)
-    inspectGLM = h2o_cmd.runInspect(None, glmGridResult['models'][0]['key'])
-    h2o.verboseprint("GLMGrid inspect GLMGrid model 0(best):", h2o.dump_json(inspectGLM))
-    g = simpleCheckGLM(self, inspectGLM, colX, allowFailWarning=allowFailWarning, **kwargs)
-
+        # now indirect to the GLM result/model that's first in the list (best)
+        inspectGLM = h2o_cmd.runInspect(None, glmGridResult['models'][0]['key'])
+        h2o.verboseprint("GLMGrid inspect GLMGrid model 0(best):", h2o.dump_json(inspectGLM))
+        g = simpleCheckGLM(self, inspectGLM, colX, allowFailWarning=allowFailWarning, **kwargs)
     return g
 
 

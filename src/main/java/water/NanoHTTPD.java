@@ -1,12 +1,16 @@
 package water;
+import water.fvec.UploadFileVec;
+import water.util.Log;
+import water.util.Log.Tag.Sys;
+import water.util.Utils;
+
 import java.io.*;
-import java.net.*;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.SocketException;
+import java.net.URLEncoder;
 import java.util.*;
 import java.util.regex.Pattern;
-
-import water.fvec.UploadFileVec;
-import water.util.*;
-import water.util.Log.Tag.Sys;
 
 /**
  * A simple, tiny, nicely embeddable HTTP 1.0 (partially 1.1) server in Java
@@ -697,7 +701,11 @@ public class NanoHTTPD
           {
             int read = data.read( buff, 0, ( (pending>theBufferSize) ?  theBufferSize : pending ));
             if (read <= 0)	break;
-            out.write( buff, 0, read );
+            try {
+              out.write(buff, 0, read);
+            } catch (SocketException ex) {
+              // don't print exceptions from NanoHTTPD
+            }
             //pending -= read;
             pending = data.available();
           }

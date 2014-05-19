@@ -21,31 +21,31 @@ public class Tutorials extends HTMLOnlyRequest {
 
     + "<div class='span2 col'>"
     + "  <h2>Random Forest</h2>"
-    +   "<p>Random Forest is a classical machine learning method for classification and regression. Learn how to use it with H<sub>2</sub>O.</it></p>"
+    +   "<p>Random Forest is a classical machine learning method for classification and regression. Learn how to use it with H<sub>2</sub>O for better predictions.</it></p>"
     +   "<a href='/TutorialRFIris.html' class='btn btn-primary'>Try it!</a>"
     + "</div>"
 
     + "<div class='span2 col'>"
     + "  <h2>GBM</h2>"
-    +   "<p>GBM uses gradient boosted regression trees for highly predictive regression and classification.</p>"
+    +   "<p>GBM uses gradient boosted trees for classification and regression, and is one of the most powerful machine learning methods in H<sub>2</sub>O.</p>"
     +   "<a href='/TutorialGBM.html' class='btn btn-primary'>Try it!</a>"
     + "</div>"
 
     + "<div class='span2 col'>"
     +   "<h2>GLM</h2>"
-    +   "<p>Generalized linear model is a generalization of linear regression. Experience its unique power on top of H<sub>2</sub>O.</p>"
+    +   "<p>Generalized linear model is a generalization of linear regression. Experience its unique power and blazing speed on top of H<sub>2</sub>O.</p>"
     +   "<a href='/TutorialGLMProstate.html' class='btn btn-primary'>Try it!</a>"
     + "</div>"
 
     + "<div class='span2 col'>"
     + "<h2>K-Means</h2>"
-    + "<p>Perform cluster analysis with H<sub>2</sub>O. It employs K-means, a highly scalable clustering algorithm.</p>"
+    + "<p>Perform clustering analysis with H<sub>2</sub>O. K-means is a highly scalable clustering algorithm for unsupervised learning on big data.</p>"
     +   "<a href='/TutorialKMeans.html' class='btn btn-primary'>Try it!</a>"
     + "</div>"
 
     + "<div class='span2 col'>"
     + "<h2>Deep Learning</h2>"
-    + "<p>H<sub>2</sub>O's distributed Deep Learning models high-level abstractions in data with deep artificial neural networks.</p>"
+    + "<p>H<sub>2</sub>O's distributed Deep Learning gives you the power of deep neural networks for highest accuracy for classification and regression.</p>"
     +   "<a href='/TutorialDeepLearning.html' class='btn btn-primary'>Try it!</a>"
     + "</div>"
 

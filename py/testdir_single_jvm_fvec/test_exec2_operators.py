@@ -8,30 +8,25 @@ import h2o, h2o_browse as h2b, h2o_exec as h2e, h2o_hosts, h2o_import as h2i
 print "FIX!: need to test the && and || reduction operators"
 DO_FUNCTION = False
 initList = [
-        # ('r.1', 'r.1=c(1.3,0,1,2,3,4,5)'),
-        # ('r2.hex', 'r2.hex=c(2.3,0,1,2,3,4,5)'),
-        # ('r3.hex', 'r3.hex=c(4.3,0,1,2,3,4,5)'),
-        ('r.1', 'r.1=i.hex'),
-        ('r.1', 'r.1=i.hex'),
-        ('r2.hex', 'r2.hex=i.hex'),
-        ('r3.hex', 'r3.hex=i.hex'),
+        # ('r1', 'r1=c(1.3,0,1,2,3,4,5)'),
+        # ('r2.hex', 'r2.hex=c(2.3,0,1,2,3,4,5)'), # ('r1', 'r1=c(4.3,0,1,2,3,4,5)'), ('r1', 'r1=i.hex'), ('r1', 'r1=i.hex'), ('r2.hex', 'r2.hex=i.hex'), ('r1', 'r1=i.hex'),
         # not supported. should? also row vector assign?
-        # ('r.1',  'r.1[1,]=3.3'),
+        # ('r1',  'r1[1,]=3.3'),
 
-        # ('x', 'x=r.1[,1]; rcnt=nrow(x)-sum(is.na(x))'),
-        # ('x', 'x=r.1[,1]; total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x))'),
-        # ('x', 'x=r.1[,1]; total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt'),
-        # ('x', 'x=r.1[,1]; total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt; x=ifelse(is.na(x),mean,x)'),
+        # ('x', 'x=r1[,1]; rcnt=nrow(x)-sum(is.na(x))'),
+        # ('x', 'x=r1[,1]; total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x))'),
+        # ('x', 'x=r1[,1]; total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt'),
+        # ('x', 'x=r1[,1]; total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt; x=ifelse(is.na(x),mean,x)'),
         ]
 
 # apply: return vector or array or list of values..applying function to margins of array or matrix
 # margins: either rows(1), columns(2) or both(1:2)
-# "apply(r.1,2,function(x){total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=0.0; ifelse(is.na(x),mean,x)})",
+# "apply(r1,2,function(x){total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=0.0; ifelse(is.na(x),mean,x)})",
 # doesn't work. Should work according to earl
-# 'r.1[is.na(r.1)]<-0',
+# 'r1[is.na(r1)]<-0',
 # works
-# 'r.1=apply(r.1,2,function(x){ifelse(is.na(x),0,x)})',
-# "mean=function(x){apply(x,2,sum)/nrow(x)};mean(r.1)",
+# 'r1=apply(r1,2,function(x){ifelse(is.na(x),0,x)})',
+# "mean=function(x){apply(x,2,sum)/nrow(x)};mean(r1)",
 
 deepIfElse = ""
 closeParen = 0
@@ -47,52 +42,123 @@ for i in range(closeParen):
 
 exprListFull = [
     deepIfElse,
+    "cos(r1$C1)",
+    "sin(r1$C1)",
+    "tan(r1$C1)",
+    "acos(r1$C1)",
+    "asin(r1$C1)",
+    "atan(r1$C1)",
+    "cosh(r1$C1)",
+    "sinh(r1$C1)",
+    "tanh(r1$C1)",
+    "abs(r1$C1)",
+    "sgn(r1$C1)",
+    "sqrt(r1$C1)",
+    "ceil(r1$C1)",
+    "floor(r1$C1)",
+    "log(r1$C1)",
+    "exp(r1$C1)",
+    "is.na(r1$C1)",
+    # exec doesn't handle the range?
+    
+    # "n=2; fff = r1$C1; bbb=seq_len(length(fff)-n); aaa=fff[c( rep_len(0, n), bbb),]", # shift in 0
+
+
+
+    "length(r1[,1])",
+    "length(r1[1,])",
+    "r1[r1$C1==1234567,]", # empty ?
+    "length(r1[r1$C1==1234567,])", # length of empty is?
+    "r1$C1&&r1$C2",
+    "r1$C1||r1$C2",
+    # fails saying the matrices don't match
+    # "r1$C1%*%r1$C2",
+    "ifelse(1, r1, r1)",
+    "cbind(r1$C1, r1$C2)",
+    "print(r1[1,])",
+    # "apply",
+    # "sapply",
+    # "ddply",
+    "cut(r1$C1,2)",
+    "findInterval(r1$C1,1,1)",
+    "runif(r1$C1,-1)",
+    "scale(r1$C1)",
+    # too slow
+    # "t(r1$C1)", # transpose
+    "seq_len(5)",
+    "seq(0.1,10.1,2.3)",
+    "rep_len(0.1,10)",
+    "c(0,0,0)",
+    "table(r1$C1)",
+    "unique(r1$C1)",
+    "factor(r1$C1)",
+    "nrow(r1)",
+    "sd(r1$C1)",
+    "ncol(r1)",
+    "length(r1$C1)",
+    "is.factor(r1$C1)",
+    "any.factor(r1)",
+    "any.na(r1)",
+    "isTRUE(r1)",
+    "min.na.rm(r1)",
+    "max.na.rm(r1)",
+    "min(r1)",
+    "max(r1)",
+    "xorsum(r1)",
+    "r1[,c(-1,-5, -40)]", # exclude cols
+    "r1[,-c(1,5, 40)]", # exclude cols
+    # doesn't work
+    # "r1[,c(5:40)]", # select cols
+    # "r1[,c(1,5:40)]", # select cols
+    # doesn't work
+    # "r1[c(-1,-5, -40),]", # exclude rows
+
     # this is supposed to work on vendavo branch?
-    # "apply(r.1, 1, function(x) { x+1 })",
+    # "apply(r1, 1, function(x) { x+1 })",
     # fails if row based ..okay if col base
-    # "apply(r.1, 1, function(x) { mean(x) })",
-    # "apply(r.1, 1, function(x) { sd(x) })",
-    # "apply(r.1, 1, function(x) { sd(x)/mean(x) })",
+    # "apply(r1, 1, function(x) { mean(x) })",
+    # "apply(r1, 1, function(x) { sd(x) })",
+    # "apply(r1, 1, function(x) { sd(x)/mean(x) })",
 
-    "apply(r.1, 2, function(x) { mean(x) })",
-    "apply(r.1, 2, function(x) { sd(x) })",
-    "apply(r.1, 2, function(x) { sd(x)/mean(x) })",
+    "apply(r1, 2, function(x) { mean(x) })",
+    "apply(r1, 2, function(x) { sd(x) })",
+    "apply(r1, 2, function(x) { sd(x)/mean(x) })",
 
-    "ddply(r.1,c(3),nrow)",
+    "ddply(r1,c(3),nrow)",
     # More complex multi-return
     # ddply can only return one thing
-    # "ddply(r.1,c(3),function(x) {c(mean(x[,2]),mean(x[,3]))})",
-    "ddply(r.1,c(7),nrow)",
+    # "ddply(r1,c(3),function(x) {c(mean(x[,2]),mean(x[,3]))})",
+    "ddply(r1,c(7),nrow)",
 
     "s1=c(1); s2=c(2); s3=c(3); s4=c(4); s5=s1+s2+s3+s4;"
-    "s.hex = r.1[!is.na(r.1[,13]),]",
-    "apply(r.1,2,function(x){total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt; ifelse(is.na(x),mean,x)})",
-    "s.hex = r.1[!is.na(r.1[,13]),]",
-    'r.1=apply(r.1,2,function(x){ifelse(is.na(x),0,x)})',
-    'cct.hex=runif(r.1, -1);rTrain=r.1[cct.hex<=0.9,];rTest=r.1[cct.hex>0.9,]',
+    "s.hex = r1[!is.na(r1[,13]),]",
+    "apply(r1,2,function(x){total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt; ifelse(is.na(x),mean,x)})",
+    "s.hex = r1[!is.na(r1[,13]),]",
+    'r1=apply(r1,2,function(x){ifelse(is.na(x),0,x)})',
+    'cct.hex=runif(r1, -1);rTrain=r1[cct.hex<=0.9,];rTest=r1[cct.hex>0.9,]',
 
     # says you can't use col 0
-    # 'r.1[,0] = r.1[,0] * r2.hex[,1]',
-    # 'r.1[,0] = r.1[,0] + r2.hex[,1]',
+    # 'r1[,0] = r1[,0] * r2.hex[,1]',
+    # 'r1[,0] = r1[,0] + r2.hex[,1]',
 
     # says arrays must be same size
-    # 'r.1 = r.1 + r2.hex[,1]',
+    # 'r1 = r1 + r2.hex[,1]',
 
     # bad exception due to different sizes
-    # 'r.1 = r.1 + r2.hex[1,]',
+    # 'r1 = r1 + r2.hex[1,]',
 
-    'r.1[,1]=r.1[,1]==1.0',
-    'r.1[,1]=r.1$C1==1.0',
+    'r1[,1]=r1[,1]==1.0',
+    'r1[,1]=r1$C1==1.0',
     # unimplemented
-    # 'r.1[1,]=r.1[1,]==1.0',
+    # 'r1[1,]=r1[1,]==1.0',
 
-    'b.hex=runif(r3.hex[,1], -1)',
-    'b.hex=runif(r3.hex$C1, -1)',
-    'b.hex=runif(r3.hex[1,], -1)',
-    # 'r.1[,1]=r.1[,1] + 1.3',
-    # 'r<n>.hex=min(r.1,1+2)',
+    'b.hex=runif(r1[,1], -1)',
+    'b.hex=runif(r1$C1, -1)',
+    'b.hex=runif(r1[1,], -1)',
+    # 'r1[,1]=r1[,1] + 1.3',
+    # 'r<n>.hex=min(r1,1+2)',
     # 'r<n>.hex=r2.hex + 1',
-    # 'r<n>.hex=r3.hex + 1',
+    # 'r<n>.hex=r1 + 1',
     # 'r<n>[,0] = r2[,0] / r<n-1>[,0]',
     # 'r<n>[,0] = r3[,0] - r<n-1>[,0]',
 
@@ -127,39 +193,39 @@ exprListFull = [
     "1.23>= 2.34", #  0
     "1.23== 2.34", #  0
     "1.23!= 2.34", #  1
-    "r.1",       #  Simple ref
+    "r1",       #  Simple ref
     # syntax error "missing ')'"
     # This doesn't work anymore?
     # "+(1.23,2.34)",#  prefix 3.57
     ## "+(1.23)",     #  Syntax error, not enuf args
     ## "+(1.23,2,3)", #  Syntax error, too many args
-    "r.1[2,3]",  #  Scalar selection
-    ## "r.1[2,+]",  #  Function not allowed
-    "r.1[2+4,-4]", #  Select row 6, all-cols but 4
-    # "r.1[1,-1]; r.1[2,-2]; r.1[3,-3]", #  Partial results are freed
-    "r.1[1,-1]; r.1[1,-1]; r.1[1,-1]", #  Partial results are freed
-    ## "r.1[2+3,r.1]",#  Error: col selector has too many columns
-    # "r.1[2,]",   #  Row 2 all cols
-    "r.1[1,]",   #  Row 2 all cols
-    # "r.1[,3]",   #  Col 3 all rows
-    "r.1[,1]",   #  Col 3 all rows
+    "r1[2,3]",  #  Scalar selection
+    ## "r1[2,+]",  #  Function not allowed
+    "r1[2+4,-4]", #  Select row 6, all-cols but 4
+    # "r1[1,-1]; r1[2,-2]; r1[3,-3]", #  Partial results are freed
+    "r1[1,-1]; r1[1,-1]; r1[1,-1]", #  Partial results are freed
+    ## "r1[2+3,r1]",#  Error: col selector has too many columns
+    # "r1[2,]",   #  Row 2 all cols
+    "r1[1,]",   #  Row 2 all cols
+    # "r1[,3]",   #  Col 3 all rows
+    "r1[,1]",   #  Col 3 all rows
 
-    "r.1+1",     #  Broadcast scalar over ary
-    "r.1-r.1",
-    "1.23+(r.1-r.1)",
-    "1.23+(r.1$C1-r.1$C2)",
-    "(1.23+r.1)-r.1",
-    "(1.23+r.1$C1)-r.1$C2",
-    "min(r.1,1+2)",
-    "min(r.1$C1,1+2)",
-    "is.na(r.1)",
-    "is.na(r.1$C1)",
-    "nrow(r.1)*3",
-    "nrow(r.1$C1)*3",
-    "r.1[nrow(r.1)-1,ncol(r.1)-1]",
+    "r1+1",     #  Broadcast scalar over ary
+    "r1-r1",
+    "1.23+(r1-r1)",
+    "1.23+(r1$C1-r1$C2)",
+    "(1.23+r1)-r1",
+    "(1.23+r1$C1)-r1$C2",
+    "min(r1,1+2)",
+    "min(r1$C1,1+2)",
+    "is.na(r1)",
+    "is.na(r1$C1)",
+    "nrow(r1)*3",
+    "nrow(r1$C1)*3",
+    "r1[nrow(r1)-1,ncol(r1)-1]",
 
     # this would result in 0 for the col
-    # "r.1[nrow(r.1)-1,ncol(r.1$C1)-1]",
+    # "r1[nrow(r1)-1,ncol(r1$C1)-1]",
     # doesn't work
     # "1=2",
     # doesn't work
@@ -170,91 +236,91 @@ exprListFull = [
     "x=1",
     "x<-1",        #  Alternative R assignment syntax
     # doesn't work
-    ## "x=1;x=r.1", #  Allowed to change types via shadowing at REPL level
-    "a=r.1",     #  Top-level assignment back to H2O.STORE
+    ## "x=1;x=r1", #  Allowed to change types via shadowing at REPL level
+    "a=r1",     #  Top-level assignment back to H2O.STORE
     ## "x<-+",
     # ?
-    ## "(r.1+1)<-2",
-    "r.1[nrow(r.1),]",
-    "r.1[,ncol(r.1)]",
-    "r.1[,ncol(r.1$C1)]",
+    ## "(r1+1)<-2",
+    "r1[nrow(r1),]",
+    "r1[,ncol(r1)]",
+    "r1[,ncol(r1$C1)]",
     # double semi doesn't work
-    # "r.1[2,3]<-4;",
+    # "r1[2,3]<-4;",
     "c(1,3,5)",
     # doesn't work
     # "function(x){y=1+2;y=c(1,2)}",#  Not allowed to change types in inner scopes
     "sum(1,2,3)",
     "sum(c(1,3,5))",
     "sum(4,c(1,3,5),2,6)",
-    "sum(1,r.1,3)",
-    "sum(1,r.1$C1,3)",
+    "sum(1,r1,3)",
+    "sum(1,r1$C1,3)",
     # unimplemented?
-    "r.1[,c(1)]",
-    "r.1[c(1),]",
-    "r.1[c(1,3,5),]",
-    "r.1[,c(1,3,5)]",
+    "r1[,c(1)]",
+    "r1[c(1),]",
+    "r1[c(1,3,5),]",
+    "r1[,c(1,3,5)]",
     "a=c(11,22,33,44,55,66); a[c(2,6,1),]",
     #  Filter/selection
-    "r.1[r.1[,1]>4,]",
-    "apply(r.1,2,sum)",
-    "apply(r.1$C1,2,sum)",
+    "r1[r1[,1]>4,]",
+    "apply(r1,2,sum)",
+    "apply(r1$C1,2,sum)",
     # doesn't work
-    # "y=5;apply(r.1,1,function(x){x[]+y})",
+    # "y=5;apply(r1,1,function(x){x[]+y})",
     # doesn't work
-    # "apply(r.1,1,function(x){x=1;r.1})",
+    # "apply(r1,1,function(x){x=1;r1})",
     # doesn't work
-    # "apply(r.1,1,function(x){r.1})",
-    "mean=function(x){apply(x,2,sum)/nrow(x)};mean(r.1)",
-    # "mean=function(x){apply(x,1,sum)/nrow(x)};mean(r.1)",
+    # "apply(r1,1,function(x){r1})",
+    "mean=function(x){apply(x,2,sum)/nrow(x)};mean(r1)",
+    # "mean=function(x){apply(x,1,sum)/nrow(x)};mean(r1)",
 
     #  Conditional selection; 
     "ifelse(0,1,2)",
-    "ifelse(0,r.1+1,r.1+2)",
-    "ifelse(r.1>3,99,r.1)",#  Broadcast selection
+    "ifelse(0,r1+1,r1+2)",
+    "ifelse(r1>3,99,r1)",#  Broadcast selection
     "ifelse(0,+,*)(1,2)",      #  Select functions
     #  Impute the mean
     # doesn't work
-    # "apply(r.1,2,function(x){total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt; ifelse(is.na(x),mean,x)})",
-    "factor(r.1[,5])",
-    "factor(r.1$C1)",
+    # "apply(r1,2,function(x){total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt; ifelse(is.na(x),mean,x)})",
+    "factor(r1[,5])",
+    "factor(r1$C1)",
 
     #  Slice assignment & map
-    "r.1[,1]",
-    "r.1$C1",
-    "r.1[1,]",
-    "r.1[,1]+1",
-    "r.1$C1+1",
-    "r.1[1,]+1",
-    "r.1[,1]=3.3;r.1",  #  Replace a col with a constant
+    "r1[,1]",
+    "r1$C1",
+    "r1[1,]",
+    "r1[,1]+1",
+    "r1$C1+1",
+    "r1[1,]+1",
+    "r1[,1]=3.3;r1",  #  Replace a col with a constant
     # doesn't work
-    # "r.1$C1=3.3;r.1$C1",  #  Replace a col with a constant
+    # "r1$C1=3.3;r1$C1",  #  Replace a col with a constant
     # unimplemented
-    # "r.1[1,]=3.3;r.1",
-    "r.1[,1]=r.1[,1]+1",#  Replace a col
-    # "r.1$C1=r.1$C1+1",#  Replace a col
+    # "r1[1,]=3.3;r1",
+    "r1[,1]=r1[,1]+1",#  Replace a col
+    # "r1$C1=r1$C1+1",#  Replace a col
     # returns 'unimplemented"
-    # "r.1[1,]=r.1[1,]+1",
-    "r.1[,ncol(r.1)+1]=4",#  Extend a col
+    # "r1[1,]=r1[1,]+1",
+    "r1[,ncol(r1)+1]=4",#  Extend a col
     # unimplemented
-    # "r.1[nrow(r.1)+1,]=4",
-    "a=ncol(r.1); r.1[,c(a+1,a+2)]=5",#  Extend two cols
+    # "r1[nrow(r1)+1,]=4",
+    "a=ncol(r1); r1[,c(a+1,a+2)]=5",#  Extend two cols
     # doesn't work
-    # "table(r.1)",
+    # "table(r1)",
     # doesn't work. wants integer
-    # "table(r.1[,1])",
+    # "table(r1[,1])",
 
 
-    # "r.1[r.1[,2]>4,]=-99",
-    # "r.1[2,]=r.1[7,]",
-    # "r.1[c(1,3,5),1] = r.1[c(2,4,6),2]",
-    # "r.1[c(1,3,5),1] = r.1[c(2,4),2]",
+    # "r1[r1[,2]>4,]=-99",
+    # "r1[2,]=r1[7,]",
+    # "r1[c(1,3,5),1] = r1[c(2,4,6),2]",
+    # "r1[c(1,3,5),1] = r1[c(2,4),2]",
     # "map()",
     # "map(1)",
-    # "map(+,r.1,1)",
+    # "map(+,r1,1)",
     # "map(+,1,2)",
-    # "map(function(x){x[];1},r.1)",
-    # "map(function(a,b,d){a+b+d},r.1,r.1,1)",
-    # "map(function(a,b){a+ncol(b)},r.1,r.1)",
+    # "map(function(x){x[];1},r1)",
+    # "map(function(a,b,d){a+b+d},r1,r1,1)",
+    # "map(function(a,b){a+ncol(b)},r1,r1)",
 
     "a=0;x=0",     #  Delete keys from global scope
     "a=c(1,2,3); a[a[,1]>1,1]",
@@ -268,7 +334,7 @@ exprListFull = [
 
     # leave ternary out
     # "(0 ? + : *)(1,2)",        #  Trinary select
-    # "(1? r.1 : (r.1+1))[1,2]",#  True (vs false) test
+    # "(1? r1 : (r1+1))[1,2]",#  True (vs false) test
 
 if DO_FUNCTION:
     exprListFull += [
@@ -280,7 +346,7 @@ if DO_FUNCTION:
         # "function(x,<-){x+1}(2)",
         # doesn't work
         # "function(x,x){x+1}(2)",
-        "function(x,y,z){x[]}(r.1,1,2)",
+        "function(x,y,z){x[]}(r1,1,2)",
         # doesn't work?
         # "function(x){x[]}(2)",
         "function(x){x+1}(2)",
@@ -295,7 +361,7 @@ if DO_FUNCTION:
         # doesn't work
         # "function(a){a[];a=1}",
         "a=1;a=2;function(x){x=a;a=3}",
-        "a=r.1;function(x){x=a;a=3;nrow(x)*a}(a)",
+        "a=r1;function(x){x=a;a=3;nrow(x)*a}(a)",
         #  Higher-order function typing: fun is typed in the body of function(x)
         "function(funy){function(x){funy(x)*funy(x)}}(sgn)(-2)",
     ]
@@ -335,13 +401,13 @@ class Basic(unittest.TestCase):
         bucket = 'home-0xdiag-datasets'
         # csvPathname = 'airlines/year2013.csv'
         csvPathname = 'standard/covtype.data'
-        hexKey = 'i.hex'
+        hexKey = 'r1'
         parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='put', hex_key=hexKey)
 
         for resultKey, execExpr in initList:
             h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=10)
         start = time.time()
-        # h2e.exec_expr_list_rand(len(h2o.nodes), exprList, 'r.1', maxTrials=200, timeoutSecs=10)
+        # h2e.exec_expr_list_rand(len(h2o.nodes), exprList, 'r1', maxTrials=200, timeoutSecs=10)
         # h2e.exec_expr_list_rand(len(h2o.nodes), exprList, None, maxTrials=200, timeoutSecs=30)
         for execExpr in exprList:
             h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=30)

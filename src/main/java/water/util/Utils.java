@@ -40,6 +40,21 @@ public class Utils {
     return result;
   }
 
+  public static int maxIndex(float[] from, Random rand) {
+    assert rand != null;
+    int result = 0;
+    int maxCount = 0; // count of maximal element for a 1 item reservoir sample
+    for( int i = 1; i < from.length; ++i ) {
+      if( from[i] > from[result] ) {
+        result = i;
+        maxCount = 1;
+      } else if( from[i] == from[result] ) {
+        if( rand.nextInt(++maxCount) == 0 ) result = i;
+      }
+    }
+    return result;
+  }
+
   public static int maxIndex(int[] from) {
     int result = 0;
     for (int i = 1; i<from.length; ++i)
@@ -357,15 +372,28 @@ public class Utils {
     }
   }
 
+  /**
+   * Extract a shuffled array of integers
+   * @param a input array
+   * @param n number of elements to extract
+   * @param result array to store the results into (will be of size n)
+   * @param seed random number seed
+   * @param startIndex offset into a
+   * @return result
+   */
   public static int[] shuffleArray(int[] a, int n, int result[], long seed, int startIndex) {
     if (n<=0) return result;
     Random random = getDeterRNG(seed);
+    if (result == null || result.length != n)
+      result = new int[n];
     result[0] = a[startIndex];
     for (int i = 1; i < n; i++) {
       int j = random.nextInt(i+1);
-      if (j!=i) result[i] = a[startIndex+j];
+      if (j!=i) result[i] = result[j];
       result[j] = a[startIndex+i];
     }
+    for (int i = 0; i < n; ++i)
+      assert(Utils.contains(result, a[startIndex+i]));
     return result;
   }
 
@@ -1370,7 +1398,7 @@ public class Utils {
     // Header
     if (html) {
       sb.append("<tr class='warning' style='min-width:60px'>");
-      sb.append("<th>Actual / Predicted</th>");
+      sb.append("<th>&darr; Actual / Predicted &rarr;</th>");
       for( int p=0; p<pdomain.length; p++ )
         if( pdomain[p] != null )
           sb.append("<th style='min-width:60px'>").append(pdomain[p]).append("</th>");
@@ -1468,6 +1496,20 @@ public class Utils {
     else r[i-1] += (len-sum);
     return r;
   }
+  public static final long[] partitione(long len, float[] ratio) {
+    long[] r = new long[ratio.length+1];
+    long sum = 0;
+    int i = 0;
+    float sr = 0;
+    for (i=0; i<ratio.length; i++) {
+      r[i] = (int) (ratio[i]*len);
+      sum += r[i];
+      sr  += ratio[i];
+    }
+    if (sr<1f) r[i] = len - sum;
+    else r[i-1] += (len-sum);
+    return r;
+  }
 
   /** Generate given numbers of keys by suffixing key by given numbered suffix. */
   public static Key[] generateNumKeys(Key mk, int num) { return generateNumKeys(mk, num, "_part"); }
@@ -1481,6 +1523,15 @@ public class Utils {
     }
     for (int i=0; i<num; i++) ks[i] = Key.make(n+delim+i+suffix);
     return ks;
+  }
+  public static Key generateShuffledKey(Key mk) {
+    String n = mk!=null ? mk.toString() : "noname";
+    String suffix = "";
+    if (n.endsWith(".hex")) {
+      n = n.substring(0, n.length()-4); // be nice
+      suffix = ".hex";
+    }
+    return Key.make(n+"_shuffled"+suffix);
   }
 
 }

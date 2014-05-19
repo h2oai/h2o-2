@@ -42,5 +42,4 @@ Once the package is successfully installed, this method will load it and return 
 localH2O = h2o.init()
 localH2O = h2o.init(ip = "localhost", port = 54321)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = FALSE)
-h2o.shutdown(localH2O)
 }

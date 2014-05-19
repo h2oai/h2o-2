@@ -14,9 +14,9 @@ class PerfDB:
     def __init__(self):
         db_host = '192.168.1.171'
         self.host = db_host
-#        self.host = "localhost"
+        #self.host = "localhost"
         #if( socket.gethostbyname_ex(socket.gethostname())[2][0] == db_host):
-        #    self.host = "localhost"
+        #self.host = "localhost"
         self.db = MySQLdb.connect(host = self.host,
                                  user = "spencer",
                                  passwd = "spencer",
@@ -65,6 +65,11 @@ class PerfDB:
         """
         Takes a TableRow object and writes to the db.
         """
+        next_test_run_id = self.get_table_pk("test_run") + 1
+        if table_row.row["test_run_id"] != next_test_run_id:
+            print "DEBUG: Updating test_run_id, got old ID value."
+            table_row.row["test_run_id"] = next_test_run_id
+
         print "INSERTING INTO TABLE: " + table_row.table_name
         #print "CURRENT TABLE ROW'S ROW:"
         #print table_row.row

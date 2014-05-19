@@ -28,7 +28,8 @@ print("Generating AirlinesTrain DeepLearning model. . .")
 print("SKIPPED BECAUSE IT IS CRASHING")
 
 print("Generating AirlinesTrain GLM2 model with different response column. . .")
-h2o.glm.FV(y = "IsDepDelayed_REC", x = c("Origin", "Dest", "fDayofMonth", "fYear", "UniqueCarrier", "fDayOfWeek", "fMonth", "DepTime", "ArrTime", "Distance"), data = airlines_train.hex, family = "binomial", alpha=0.05, lambda=1.0e-2, standardize=FALSE, nfolds=0)
+#h2o.glm.FV(y = "IsDepDelayed_REC", x = c("Origin", "Dest", "fDayofMonth", "fYear", "UniqueCarrier", "fDayOfWeek", "fMonth", "DepTime", "ArrTime", "Distance"), data = airlines_train.hex, family = "binomial", alpha=0.05, lambda=1.0e-2, standardize=FALSE, nfolds=0)
+print("SKIPPED BECAUSE IT IS CRASHING")
 
 
 #################

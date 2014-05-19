@@ -49,6 +49,9 @@ public class h2odriver extends Configured implements Tool {
   static int basePort = -1;
   static boolean beta = false;
   static boolean enableExceptions = false;
+  static boolean enableVerboseGC = false;
+  static boolean enablePrintGCDetails = false;
+  static boolean enablePrintGCTimeStamps = false;
   static String licenseFileName = null;
 
   // State filled in as a result of handling options.
@@ -374,6 +377,8 @@ public class h2odriver extends Configured implements Tool {
                     "          [-nthreads <maximum typical worker threads, i.e. cpus to use>]\n" +
                     "          [-baseport <starting HTTP port for H2O nodes; default is 54321>]\n" +
                     "          [-ea]\n" +
+                    "          [-verbose:gc]\n" +
+                    "          [-XX:+PrintGCDetails]\n" +
                     "          [-license <license file name (local filesystem, not hdfs)>]\n" +
                     "          -o | -output <hdfs output dir>\n" +
                     "\n" +
@@ -536,6 +541,20 @@ public class h2odriver extends Configured implements Tool {
       }
       else if (s.equals("-ea")) {
         enableExceptions = true;
+      }
+      else if (s.equals("-verbose:gc")) {
+        enableVerboseGC = true;
+      }
+      else if (s.equals("-XX:+PrintGCDetails")) {
+        enablePrintGCDetails = true;
+      }
+      else if (s.equals("-XX:+PrintGCTimeStamps")) {
+        enablePrintGCTimeStamps = true;
+      }
+      else if (s.equals("-gc")) {
+        enableVerboseGC = true;
+        enablePrintGCDetails = true;
+        enablePrintGCTimeStamps = true;
       }
       else if (s.equals("-license")) {
         i++; if (i >= args.length) { usage(); }
@@ -763,7 +782,13 @@ public class h2odriver extends Configured implements Tool {
       conf.set("mapreduce.map.memory.mb", mapreduceMapMemoryMb);
 
       // MRv1 standard options, but also required for YARN.
-      String mapChildJavaOpts = "-Xms" + mapperXmx + " -Xmx" + mapperXmx + (enableExceptions ? " -ea" : "");
+      String mapChildJavaOpts =
+              "-Xms"
+              + mapperXmx + " -Xmx" + mapperXmx
+              + (enableExceptions ? " -ea" : "")
+              + (enableVerboseGC ? " -verbose:gc" : "")
+              + (enablePrintGCDetails ? " -XX:+PrintGCDetails" : "")
+              + (enablePrintGCTimeStamps ? " -XX:+PrintGCTimeStamps" : "");
       conf.set("mapred.child.java.opts", mapChildJavaOpts);
       conf.set("mapred.map.child.java.opts", mapChildJavaOpts);       // MapR 2.x requires this.
 

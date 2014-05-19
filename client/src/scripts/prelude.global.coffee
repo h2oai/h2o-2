@@ -261,13 +261,17 @@ unshift = (array, arg) ->
   array.unshift arg
   array
 
+unshiftAll = (array, elements) ->
+  array.splice.apply array, [0, 0].concat elements
+  array
+
 shift = (array) -> array.shift()
 
 push = (array, arg) ->
   array.push arg
   array
 
-shove = (array, elements) ->
+pushAll = (array, elements) ->
   for element in elements
     array.push element
   array
@@ -305,6 +309,21 @@ zipCompare = (array1, array2, areEqual) ->
       b = array2[i]
       return no if a isnt b
   yes
+
+valuesAreEqual = (array, pluck, areEqual) ->
+  if array.length > 1
+    value = pluck head array
+    if isFunction areEqual
+      for i in [ 1 ... array.length ]
+        unless areEqual value, pluck array[i]
+          return no
+    else
+      for i in [ 1 ... array.length ]
+        if value isnt pluck array[i]
+          return no
+    yes
+  else
+    yes
 
 # Object ops
 

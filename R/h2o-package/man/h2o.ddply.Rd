@@ -62,7 +62,6 @@ h2o.addFunction(localH2O, fun)
 # Apply function to groups by class of flower
 res = h2o.ddply(iris.hex, "class", fun)
 head(res)
-h2o.shutdown(localH2O)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

@@ -61,14 +61,14 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
    * For imbalanced data, balance training data class counts via
    * over/under-sampling. This can result in improved predictive accuracy.
    */
-  @API(help = "Balance training data class counts via over/under-sampling (for imbalanced data)", filter = Default.class, json = true, gridable = false, importance = ParamImportance.EXPERT)
+  @API(help = "Balance training data class counts via over/under-sampling (for imbalanced data)", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
   public boolean balance_classes = false;
 
   /**
    * When classes are balanced, limit the resulting dataset size to the
    * specified multiple of the original dataset size.
    */
-  @API(help = "Maximum relative size of the training data after balancing class counts (can be less than 1.0)", filter = Default.class, json = true, dmin=1e-3, gridable = true, importance = ParamImportance.EXPERT)
+  @API(help = "Maximum relative size of the training data after balancing class counts (can be less than 1.0)", filter = Default.class, json = true, dmin=1e-3, importance = ParamImportance.EXPERT)
   public float max_after_balance_size = Float.POSITIVE_INFINITY;
 
 //  @API(help = "Active feature columns")
@@ -206,6 +206,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     Timer bm_timer =  new Timer();
     // Create an initial model
     TM model = makeModel(outputKey, dataKey, testKey, names, domains, getCMDomain());
+    long before = System.currentTimeMillis();
     // Save the model ! (delete_and_lock has side-effect of saving model into DKV)
     model.delete_and_lock(self());
     // Prepare and cache adapted validation dataset if it is necessary
@@ -222,6 +223,10 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     } finally {
       model.unlock(self());  // Update and unlock model
       cleanUp(fr,bm_timer);  // Shared cleanup
+      Log.info("after buildModel: " + model);
+      // we get back a different model
+      model.start_training(before);
+      model.stop_training();
     }
   }
 

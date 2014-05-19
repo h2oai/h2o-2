@@ -10,6 +10,7 @@
     overflow auto
 
   .y-scoring
+    position relative
     padding 10px
     border-left 3px solid transparent
     border-bottom 1px solid #ddd
@@ -29,6 +30,8 @@
   .y-scoring-title
     font-size 18px
     font-weight 300
+    &.y-failed
+      color: red
   .y-scoring-caption
     font-size 11px
     text-transform uppercase
@@ -38,4 +41,7 @@
     font-size 12px
     color #888
     overflow ellipsis
-
+  .y-scoring-status
+    dock()
+    background rgba(255,255,255,0.75)
+    text-align: center

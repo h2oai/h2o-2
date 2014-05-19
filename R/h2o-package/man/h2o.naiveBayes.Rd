@@ -59,5 +59,4 @@ h2o.naiveBayes(y = 1, x = 2:17, data = votes.hex, laplace = 3)
 irisPath = system.file("extdata", "iris.csv", package="h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath)
 h2o.naiveBayes(y = 5, x = 1:4, data = iris.hex)
-h2o.shutdown(localH2O)
 }

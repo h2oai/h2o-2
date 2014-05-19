@@ -1101,8 +1101,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
     // Variable importance
     if (error.variable_importances != null) {
-      error.variable_importances.toHTML(sb);
-        sb.append("<button id=\"sortBars\" class=\"btn btn-primary\">Sort</button>\n");
+      error.variable_importances.toHTML(this, sb);
     }
 
     DocGen.HTML.title(sb, "Scoring history");

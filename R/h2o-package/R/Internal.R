@@ -164,6 +164,7 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__PAGE_BAYES = "2/NaiveBayes.json"
 .h2o.__PAGE_NBProgress = "2/NBProgressPage.json"
 .h2o.__PAGE_NBModelView = "2/NBModelView.json"
+.h2o.__PAGE_CreateFrame = "2/CreateFrame.json"
 
 # client -- Connection object returned from h2o.init().
 # page   -- URL to access within the H2O server.
@@ -459,7 +460,7 @@ h2o.setLogPath <- function(path, type) {
 
 .h2o.__formatError <- function(error,prefix="  ") {
   result = ""
-  items = strsplit(error,"\n")[[1]];
+  items = strsplit(as.character(error),"\n")[[1]];
   for (i in 1:length(items))
     result = paste(result,prefix,items[i],"\n",sep="")
   result

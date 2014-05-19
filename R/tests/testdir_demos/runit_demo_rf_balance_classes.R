@@ -32,7 +32,7 @@ air.rf         = h2o.randomForest(x = myX, y = myY, data = air.train, seed = 12,
                                   ntree = 10, depth = 20, balance.classes=F)
 print(air.rf@model)
 
-air.rf.balance = h2o.randomForest(x = myX, y = myY, data = air.train, seed = 12, validation=air.valid, importance = T,
+air.rf.balance = h2o.randomForest(x = myX, y = myY, data = air.train, seed = 12, validation=air.valid,
                                   ntree = 10, depth = 20, balance.classes=T)
 print(air.rf.balance@model)
 
@@ -44,7 +44,7 @@ print(air.speedrf@model)
 # SpeeDRF
 air.speedrf.classwt = h2o.SpeeDRF(x = myX, y = myY, data = air.train, seed = 12, validation = air.valid, 
                                   ntree = 10, depth = 20, classwt = c(1, 5))
-print(air.speedrf@model)
+print(air.speedrf.classwt@model)
 
 #uploading test file to h2o
 testFilePath <-"../../../smalldata/airlines/AirlinesTest.csv.zip"

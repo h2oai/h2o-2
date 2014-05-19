@@ -96,7 +96,12 @@ public class ConfusionMatrix extends Iced {
       _classErr[i] = classErr(i);
     _predErr = err();
   }
-
+  public final long classErrCount(int c) {
+    long s = 0;
+    for( long x : _arr[c] )
+      s += x;
+    return s - _arr[c][c];
+  }
   public final double classErr(int c) {
     long s = 0;
     for( long x : _arr[c] )
@@ -126,6 +131,13 @@ public class ConfusionMatrix extends Iced {
     for( int d = 0; d < _arr.length; ++d )
       err -= _arr[d][d];
     return (double) err / n;
+  }
+  public long errCount() {
+    long n = totalRows();
+    long err = n;
+    for( int d = 0; d < _arr.length; ++d )
+      err -= _arr[d][d];
+    return err;
   }
   /**
    * The percentage of predictions that are correct.
@@ -178,13 +190,33 @@ public class ConfusionMatrix extends Iced {
   public final boolean isBinary(){return nclasses() == 2;}
 
   /**
-   * Returns the F-measure which combines precision and recall. <br>
-   * C.f. end of http://en.wikipedia.org/wiki/Precision_and_recall.
+   * Returns the F-measure which combines precision and recall in a balanced way. <br>
+   * See <a href="http://en.wikipedia.org/wiki/Precision_and_recall.">Precision_and_recall</a>
    */
   public double F1() {
     final double precision = precision();
     final double recall = recall();
     return 2. * (precision * recall) / (precision + recall);
+  }
+
+  /**
+   * Returns the F-measure which combines precision and recall and weights recall higher than precision. <br>
+   * See <a href="http://en.wikipedia.org/wiki/F1_score.">F1_score</a>
+   */
+  public double F2() {
+    final double precision = precision();
+    final double recall = recall();
+    return 5. * (precision * recall) / (4. * precision + recall);
+  }
+
+  /**
+   * Returns the F-measure which combines precision and recall and weights precision higher than recall. <br>
+   * See <a href="http://en.wikipedia.org/wiki/F1_score.">F1_score</a>
+   */
+  public double F0point5() {
+    final double precision = precision();
+    final double recall = recall();
+    return 1.25 * (precision * recall) / (.25 * precision + recall);
   }
 
   @Override public String toString() {

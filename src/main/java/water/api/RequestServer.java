@@ -2,6 +2,7 @@ package water.api;
 
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
+import hex.CreateFrame;
 import hex.GridSearch.GridSearchProgress;
 import hex.KMeans2;
 import hex.KMeans2.KMeans2ModelView;
@@ -101,8 +102,9 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new PCA()),         "PCA",                      "Model");
     Request.addToNavbar(registerRequest(new GBM()),         "GBM",                      "Model");
     Request.addToNavbar(registerRequest(new DeepLearning()),"Deep Learning",            "Model");
-    Request.addToNavbar(registerRequest(new DRF()),         "Distributed RF (Beta)",    "Model");
-    Request.addToNavbar(registerRequest(new GLM2()),        "GLM (Beta)",               "Model");
+    Request.addToNavbar(registerRequest(new DRF()),         "Distributed RF",           "Model");
+    Request.addToNavbar(registerRequest(new GLM2()),        "GLM",                      "Model");
+    Request.addToNavbar(registerRequest(new SpeeDRF()),     "SpeeDRF (Beta)",           "Model");
     Request.addToNavbar(registerRequest(new KMeans2()),     "KMeans (Beta)",            "Model");
     Request.addToNavbar(registerRequest(new NaiveBayes()),  "Naive Bayes (Beta)",       "Model");
 
@@ -119,10 +121,11 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new Cloud()),       "Cluster Status",           "Admin");
     Request.addToNavbar(registerRequest(new IOStatus()),    "Cluster I/O",              "Admin");
     Request.addToNavbar(registerRequest(new Timeline()),    "Timeline",                 "Admin");
+    Request.addToNavbar(registerRequest(new JProfile()),    "Profiler",                 "Admin");
     Request.addToNavbar(registerRequest(new JStack()),      "Stack Dump",               "Admin");
-    Request.addToNavbar(registerRequest(new JProfile()),    "Profile Dump",             "Admin");
     Request.addToNavbar(registerRequest(new Debug()),       "Debug Dump",               "Admin");
     Request.addToNavbar(registerRequest(new LogView()),     "Inspect Log",              "Admin");
+    Request.addToNavbar(registerRequest(new UnlockKeys()),  "Unlock Keys",              "Admin");
     Request.addToNavbar(registerRequest(new Shutdown()),    "Shutdown",                 "Admin");
 
     // Help and Tutorials
@@ -141,21 +144,20 @@ public class RequestServer extends NanoHTTPD {
       registerRequest(new ReBalance());
       registerRequest(new FrameSplitPage());
       registerRequest(new GapStatistic());
-      registerRequest(new SpeeDRF());
+      registerRequest(new CreateFrame());
     } else {
       Request.addToNavbar(registerRequest(new hex.LR2()),        "Linear Regression2",   "Beta");
       Request.addToNavbar(registerRequest(new ReBalance()),      "ReBalance",            "Beta");
       Request.addToNavbar(registerRequest(new FrameSplitPage()), "Split frame",          "Beta");
       Request.addToNavbar(registerRequest(new Console()),        "Console",              "Beta");
       Request.addToNavbar(registerRequest(new GapStatistic()),   "Gap Statistic",        "Beta");
-      Request.addToNavbar(registerRequest(new SpeeDRF()),        "SpeeDRF",              "Beta");
-      Request.addToNavbar(registerRequest(new UnlockKeys()),     "Unlock Keys",          "Beta");
+      Request.addToNavbar(registerRequest(new CreateFrame()),    "Create Frame",         "Beta");
 //      Request.addToNavbar(registerRequest(new ExportModel()),    "Export Model",         "Beta (FluidVecs!)");
 //      Request.addToNavbar(registerRequest(new ImportModel()),    "Import Model",         "Beta (FluidVecs!)");
     }
 
-    // VA stuff
-    if (false) {
+    // VA stuff is only shown with -beta
+    if(H2O.OPT_ARGS.beta == null) {
       registerRequest(new Inspect());
       registerRequest(new SummaryPage());
       registerRequest(new Parse());

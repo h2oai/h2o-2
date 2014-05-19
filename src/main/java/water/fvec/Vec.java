@@ -5,6 +5,8 @@ import water.*;
 import water.nbhm.NonBlockingHashMapLong;
 import water.util.Utils;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.UUID;
 
@@ -72,6 +74,8 @@ public class Vec extends Iced {
    *  modification.   */
   volatile long _naCnt=-1;
 
+  private byte[] _hash = null; // XOR of chunk-level SHA-256 hashes of the Vec contents.
+
   /** Maximal size of enum domain */
   public static final int MAX_ENUM_SIZE = 10000;
 
@@ -111,7 +115,7 @@ public class Vec extends Iced {
                   DKV.put(k,new C0LChunk(l,(int)(nrow-row)),_fs);
                 row = nrow;
               }
-              tryComplete();;
+              tryComplete();
             }
           }.fork();
         }
@@ -126,6 +130,25 @@ public class Vec extends Iced {
     }.invokeOnAllNodes();
     return vs;
   }
+
+  /**
+   * Create an array of Vecs from scratch
+   * @param rows Length of each vec
+   * @param cols Number of vecs
+   * @param val Constant value (long)
+   * @param domain Factor levels (for factor columns)
+   * @return Array of Vecs
+   */
+  static public Vec [] makeNewCons(final long rows, final int cols, final long val, final String [][] domain){
+    int chunks = Math.min((int)rows, 4*H2O.NUMCPUS*H2O.CLOUD.size());
+    long[] espc = new long[chunks+1];
+    for (int i = 0; i<=chunks; ++i)
+      espc[i] = i * rows / chunks;
+    Vec v = new Vec(Vec.newKey(), espc);
+    Vec[] vecs = v.makeCons(cols, val, domain);
+    return vecs;
+  }
+
    /** Make a new vector with the same size and data layout as the old one, and
    *  initialized to zero. */
   public Vec makeZero()                { return makeCon(0); }
@@ -361,6 +384,8 @@ public class Vec extends Iced {
   public boolean isInt(){return rollupStats()._isInt; }
   /** Size of compressed vector data. */
   public long byteSize(){return rollupStats()._size; }
+  /** XOR of chunk-level SHA-256 hashes of the Vec contents. */
+  public byte[] hash() { return rollupStats()._hash; }
   /** Is the column a factor/categorical/enum?  Note: all "isEnum()" columns
    *  are are also "isInt()" but not vice-versa. */
   public final boolean isEnum(){return _domain != null;}
@@ -373,6 +398,7 @@ public class Vec extends Iced {
   public final boolean isBad() { return naCnt() == length(); }
   /** Is the column contains float values. */
   public final boolean isFloat() { return !isEnum() && !isInt(); }
+  public final boolean isByteVec() { return (this instanceof ByteVec); }
 
   Vec setRollupStats( RollupStats rs ) {
     _min  = rs._min; _max = rs._max; _mean = rs._mean;
@@ -382,6 +408,14 @@ public class Vec extends Iced {
     if( rs._rows == 0 )         // All rows missing?  Then no rollups
       _min = _max = _mean = _sigma = Double.NaN;
     _naCnt= rs._naCnt;          // Volatile write last to announce all stats ready
+    _hash = rs._hash;
+    return this;
+  }
+  Vec setRollupStats( Vec v ) {
+    _min  = v._min;   _max   = v._max;
+    _mean = v._mean;  _sigma = v._sigma;
+    _size = v._size;  _isInt = v._isInt;
+    _naCnt= v._naCnt;  // Volatile write last to announce all stats ready
     return this;
   }
 
@@ -393,16 +427,11 @@ public class Vec extends Iced {
     Vec vthis = DKV.get(_key).get();
     if( vthis._naCnt==-2 )
       throw new IllegalArgumentException("Cannot ask for roll-up stats while the vector is being actively written.");
-    if( vthis._naCnt>= 0 ) {    // KV store has a better answer
-      if( vthis == this ) return this;
-      _min  = vthis._min;   _max   = vthis._max;
-      _mean = vthis._mean;  _sigma = vthis._sigma;
-      _size = vthis._size;  _isInt = vthis._isInt;
-      _naCnt= vthis._naCnt;  // Volatile write last to announce all stats ready
-    } else {                 // KV store reports we need to recompute
-      RollupStats rs = new RollupStats().dfork(this);
-      if(fs != null) fs.add(rs); else setRollupStats(rs.getResult());
-    }
+    if( vthis._naCnt>= 0 )      // KV store has a better answer
+      return vthis == this ? this : setRollupStats(vthis);
+                                // KV store reports we need to recompute
+    RollupStats rs = new RollupStats().dfork(this);
+    if(fs != null) fs.add(rs); else setRollupStats(rs.getResult());
     return this;
   }
 
@@ -411,6 +440,7 @@ public class Vec extends Iced {
     double _min=Double.MAX_VALUE, _max=-Double.MAX_VALUE, _mean, _sigma;
     long _rows, _naCnt, _size;
     boolean _isInt=true;
+    byte[] _hash = null;
 
     @Override public void postGlobal(){
       final RollupStats rs = this;
@@ -424,9 +454,16 @@ public class Vec extends Iced {
     }
 
     @Override public void map( Chunk c ) {
+      MessageDigest md = null;
+      try { md = MessageDigest.getInstance("SHA-256"); } catch (NoSuchAlgorithmException e) {}
       _size = c.byteSize();
       for( int i=0; i<c._len; i++ ) {
         double d = c.at0(i);
+        long v = Double.doubleToRawLongBits(d);
+        for (int j = 0; j < 8; j++) {
+          md.update((byte)((v >> ((7 - i) * 8)) & 0xff));
+        }
+
         if( Double.isNaN(d) ) _naCnt++;
         else {
           if( d < _min ) _min = d;
@@ -443,6 +480,7 @@ public class Vec extends Iced {
           _sigma += (d - _mean) * (d - _mean);
         }
       }
+      _hash = md.digest();
     }
     @Override public void reduce( RollupStats rs ) {
       _min = Math.min(_min,rs._min);
@@ -457,6 +495,9 @@ public class Vec extends Iced {
       _rows += rs._rows;
       _size += rs._size;
       _isInt &= rs._isInt;
+
+      for (int i = 0; i < 8; i++)
+        _hash[i] ^= rs._hash[i];
     }
     // Just toooo common to report always.  Drowning in multi-megabyte log file writes.
     @Override public boolean logVerbose() { return false; }
@@ -564,7 +605,7 @@ public class Vec extends Iced {
   }
 
   /** Make a Vector-group key.  */
-  private Key groupKey(){
+  public Key groupKey(){
     byte [] bits = _key._kb.clone();
     bits[0] = Key.VGROUP;
     UDP.set4(bits, 2, -1);

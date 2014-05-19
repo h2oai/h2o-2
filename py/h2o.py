@@ -292,6 +292,7 @@ def find_file(base):
 # Apparently this escape function on errors is the way shutil.rmtree can
 # handle the permission issue. (do chmod here)
 # But we shouldn't have read-only files. So don't try to handle that case.
+
 def handleRemoveError(func, path, exc):
     # If there was an error, it could be due to windows holding onto files.
     # Wait a bit before retrying. Ignore errors on the retry. Just leave files.
@@ -308,6 +309,13 @@ LOG_DIR = get_sandbox_name()
 
 def clean_sandbox():
     if os.path.exists(LOG_DIR):
+
+        # shutil.rmtree hangs if symlinks in the dir? (in syn_datasets for multifile parse)
+        # use os.remove() first
+        for f in glob.glob(LOG_DIR + '/syn_datasets/*'):
+            verboseprint("cleaning", f)
+            os.remove(f)
+
         # shutil.rmtree fails to delete very long filenames on Windoze
         #shutil.rmtree(LOG_DIR)
         # was this on 3/5/13. This seems reliable on windows+cygwin
@@ -1172,6 +1180,7 @@ class H2O(object):
                  noise=None, benchmarkLogging=None, noPoll=False, reuseFirstPollUrl=False, noPrint=False):
         ### print "poll_url: pollTimeoutSecs", pollTimeoutSecs
         verboseprint('poll_url input: response:', dump_json(response))
+        print "at top of poll_url, timeoutSec: ", timeoutSecs
 
         # for the rev 2 stuff..the job_key, destination_key and redirect_url are just in the response
         # look for 'response'..if not there, assume the rev 2
@@ -1716,7 +1725,7 @@ class H2O(object):
         a['python_%timeout'] = a['python_elapsed'] * 100 / timeoutSecs
         return a
 
-    def speedrf(self, data_key, trees, timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
+    def speedrf(self, data_key, ntrees=50, max_depth=10, timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
                 noise=None, benchmarkLogging=None, noPoll=False,
                 print_params=True, noPrint=False, **kwargs):
 
@@ -1729,11 +1738,10 @@ class H2O(object):
                        'validation': None,
                        'bin_limit': 1024.0,
                        'class_weights': None,
-                       'max_depth': trees,
+                       'max_depth': max_depth,
                        'mtry': -1.0,
-                       'num_trees': 50.0,
+                       'num_trees': ntrees,
                        'oobee': 0,
-                       'parallel': 1,
                        'sample': 0.67,
                        'sampling_strategy': 'RANDOM',
                        'seed': -1.0,
@@ -1760,11 +1768,12 @@ class H2O(object):
         return rfView
 
     # note ntree in kwargs can overwrite trees! (trees is legacy param)
-    def random_forest(self, data_key, trees,
+    def random_forest(self, data_key, trees=None,
                       timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
                       noise=None, benchmarkLogging=None, noPoll=False, rfView=True,
                       print_params=True, noPrint=False, **kwargs):
 
+        print "at top of random_forest, timeoutSec: ", timeoutSecs
         algo = '2/DRF' if beta_features else 'RF'
         algoView = '2/DRFView' if beta_features else 'RFView'
 
@@ -1774,20 +1783,22 @@ class H2O(object):
                 'source': data_key,
                 # 'model': None,
                 'response': None,
+                'balance_classes': 1, 
+                'classification': 1,
                 'cols': None,
                 'ignored_cols_by_name': None,
-                'classification': 1,
-                'validation': None,
                 'importance': 1, # enable variable importance by default
-                'ntrees': trees,
+                'max_after_balance_size': 7,
                 'max_depth': None,
                 'min_rows': None, # how many rows in leaves for stopping condition
-                'nbins': None,
                 'mtries': None,
+                'nbins': None,
+                'ntrees': trees,
                 'sample_rate': None,
-                'seed': None,
-                'build_tree_per_node': None,
                 'score_each_iteration': None,
+                'seed': None,
+                'validation': None,
+
             }
             if 'model_key' in kwargs:
                 kwargs['destination_key'] = kwargs['model_key'] # hmm..should we switch test to new param?
@@ -1844,6 +1855,7 @@ class H2O(object):
             # if we want to do noPoll, we have to name the model, so we know what to ask for when we do the completion view
             # HACK: wait more for first poll?
             time.sleep(5)
+            print "right ebfore call to poll_url, timeoutSec: ", timeoutSecs
             rfView = self.poll_url(rf, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                                    initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
                                    noise=noise, benchmarkLogging=benchmarkLogging, noPrint=noPrint)
