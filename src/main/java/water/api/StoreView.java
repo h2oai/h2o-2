@@ -22,7 +22,6 @@ public class StoreView extends Request {
     String filter = _filter.value();
     // Gather some keys that pass all filters
     ArrayList<Key> akeys = new ArrayList<Key>();
-    int allkeys = 0; // compute all viewable keys
     for( Key key : H2O.globalKeySet(null) )
       if( key.user_allowed() && // Filter out for user-keys
           (filter == null || // Have a filter?
@@ -60,7 +59,7 @@ public class StoreView extends Request {
         " <button type='submit' class='btn btn-primary'>Filter keys!</button>" +
         "</form>");
 
-    r.setBuilder(KEYS, new PaginatedTable(argumentsToJson(),offset,view,allkeys,false));
+    r.setBuilder(KEYS, new PaginatedTable(argumentsToJson(),offset,view,keys.length,false));
     r.setBuilder(KEYS+"."+KEY, new KeyCellBuilder());
     r.setBuilder(KEYS+".col_0", new KeyMinAvgMaxBuilder());
     r.setBuilder(KEYS+".col_1", new KeyMinAvgMaxBuilder());
