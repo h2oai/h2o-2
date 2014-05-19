@@ -460,7 +460,7 @@ h2o.setLogPath <- function(path, type) {
 
 .h2o.__formatError <- function(error,prefix="  ") {
   result = ""
-  items = strsplit(error,"\n")[[1]];
+  items = strsplit(as.character(error),"\n")[[1]];
   for (i in 1:length(items))
     result = paste(result,prefix,items[i],"\n",sep="")
   result

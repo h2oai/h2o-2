@@ -26,7 +26,6 @@ localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 h2o.downloadAllLogs(localH2O, dirname = getwd(), filename = "h2o_logs.log")
 file.info(paste(getwd(), "h2o_logs.log", sep = .Platform$file.sep))
 file.remove(paste(getwd(), "h2o_logs.log", sep = .Platform$file.sep))
-h2o.shutdown(localH2O)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

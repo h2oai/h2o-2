@@ -28,7 +28,6 @@ irisPath = system.file("extdata", "iris_wheader.csv", package="h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath)
 iris.gbm = h2o.gbm(x = 1:4, y = 5, data = iris.hex)
 h2o.exportHDFS(iris.gbm, path = "hdfs://192.168.1.161/datasets/models")
-h2o.shutdown(localH2O)
 }
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

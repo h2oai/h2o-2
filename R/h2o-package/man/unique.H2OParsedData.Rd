@@ -33,5 +33,4 @@ nrow(prostate.hex$AGE)
 prosAge.uniq = unique(prostate.hex$AGE)
 nrow(prosAge.uniq)
 head(prosAge.uniq)
-h2o.shutdown(localH2O)
 }

@@ -3,6 +3,7 @@
 \docType{class}
 \alias{H2OParsedData-class}
 \alias{-,H2OParsedData,H2OParsedData-method}
+\alias{-,H2OParsedData,missing-method}
 \alias{-,H2OParsedData,numeric-method}
 \alias{-,numeric,H2OParsedData-method}
 \alias{!,H2OParsedData-method}
@@ -29,6 +30,7 @@
 \alias{\%\%,numeric,H2OParsedData-method}
 \alias{\%*\%,H2OParsedData,H2OParsedData-method}
 \alias{+,H2OParsedData,H2OParsedData-method}
+\alias{+,H2OParsedData,missing-method}
 \alias{+,H2OParsedData,numeric-method}
 \alias{+,numeric,H2OParsedData-method}
 \alias{<,H2OParsedData,H2OParsedData-method}

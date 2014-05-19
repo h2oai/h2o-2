@@ -24,5 +24,4 @@ prostate.hex = h2o.importFile(localH2O, path = prosPath)
 summary(prostate.hex)
 summary(prostate.hex$GLEASON)
 summary(prostate.hex[,4:6])
-h2o.shutdown(localH2O)
 }

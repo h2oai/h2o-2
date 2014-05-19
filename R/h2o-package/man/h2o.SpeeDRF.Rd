@@ -8,8 +8,8 @@ Performs single-node random forest classification on a data set.
 }
 \usage{
 h2o.SpeeDRF(x, y, data, classification = TRUE, validation, mtry = -1, ntree = 50, 
-  depth = 50, sample.rate = 2/3, oobee = TRUE, nbins = 1024, seed = -1, 
-  stat.type = "ENTROPY", classwt = NULL, sampling_strategy = "RANDOM", 
+  depth = 50, sample.rate = 2/3, oobee = TRUE, importance = FALSE, nbins = 1024, 
+  seed = -1, stat.type = "ENTROPY", classwt = NULL, sampling_strategy = "RANDOM", 
   strata_samples = NULL)
 }
 %- maybe also 'usage' for other objects documented here.
@@ -42,6 +42,9 @@ An \code{\linkS4class{H2OParsedData}} object containing the variables in the mod
   }
   \item{oobee}{
   (Optional) A logical value indicating whether to calculate the out of bag error estimate.
+  }
+  \item{importance}{
+  (Optional) A logical value indicating whether to compute variable importance measures. (If set to \code{TRUE}, the algorithm will take longer to finish.)
   }
   \item{nbins}{
   (Optional) Build a histogram of this many bins, then split at best point.
@@ -92,7 +95,6 @@ localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, beta = TRUE
 irisPath = system.file("extdata", "iris.csv", package = "h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
 h2o.SpeeDRF(x = c(2,3,4), y = 5, data = iris.hex, ntree = 50, depth = 100)
-h2o.shutdown(localH2O)
 }
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

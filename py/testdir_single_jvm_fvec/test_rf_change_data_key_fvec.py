@@ -61,7 +61,7 @@ class Basic(unittest.TestCase):
 
         # params is mutable. This is default.
         params = {
-            'ntrees': 6, 
+            'ntrees': 3, 
             'destination_key': 'RF_model'
         }
 
@@ -69,8 +69,8 @@ class Basic(unittest.TestCase):
         kwargs = params.copy()
         # adjust timeoutSecs with the number of trees
         # seems ec2 can be really slow
-        timeoutSecs = 30 + kwargs['ntrees'] * 60 
 
+        timeoutSecs = 100
         start = time.time()
         rfv = h2o_cmd.runRF(parseResult=parseResultTrain,
             timeoutSecs=timeoutSecs, retryDelaySecs=1, noPoll=True, **kwargs)
@@ -79,7 +79,7 @@ class Basic(unittest.TestCase):
 
 
         start = time.time()
-        h2o_jobs.pollWaitJobs(pattern='RF_model', timeoutSecs=180, pollTimeoutSecs=120, retryDelaySecs=5)
+        h2o_jobs.pollWaitJobs(pattern='RF_model', timeoutSecs=300, pollTimeoutSecs=120, retryDelaySecs=5)
         print "rf job end on ", dataKeyTrain, 'took', time.time() - start, 'seconds'
 
         print "\nRFView start after job completion"

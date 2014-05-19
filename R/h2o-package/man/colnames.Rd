@@ -20,6 +20,5 @@ irisPath = system.file("extdata", "iris.csv", package="h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
 summary(iris.hex)
 colnames(iris.hex)
-h2o.shutdown(localH2O)
 }
 
