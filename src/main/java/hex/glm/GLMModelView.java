@@ -61,12 +61,18 @@ public class GLMModelView extends Request2 {
       sb.append("</ul>");
     }
     sb.append("</div>");
+    if(!Double.isNaN(lambda) && lambda != glm_model.lambdas[glm_model.best_lambda_idx]){ // show button to permanently set lambda to this value
+      sb.append("<div class='alert alert-warning'>\n");
+      sb.append(GLMModelUpdate.link("Set lambda to current value!",_modelKey,lambda) + "\n");
+      sb.append("</div>");
+    }
     sb.append("<h4>Parameters</h4>");
     parm(sb,"family",glm_model.glm.family);
     parm(sb,"link",glm_model.glm.link);
     parm(sb,"&epsilon;<sub>&beta;</sub>",glm_model.beta_eps);
     parm(sb,"&alpha;",glm_model.alpha);
-    parm(sb,"&lambda;<sub>max</sub>",DFORMAT2.format(glm_model.lambda_max));
+    if(!Double.isNaN(glm_model.lambda_max))
+      parm(sb,"&lambda;<sub>max</sub>",DFORMAT2.format(glm_model.lambda_max));
     parm(sb,"&lambda;",DFORMAT2.format(lambda));
 
     if(glm_model.submodels.length > 1){
