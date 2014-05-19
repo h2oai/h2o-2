@@ -107,7 +107,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   @API(help = "lambda max", json=true, importance = ParamImportance.SECONDARY)
   double lambda_max = Double.NaN;
 
-  public static int MAX_PREDICTORS = 5000;
+  public static int MAX_PREDICTORS = 10000;
 
   // API output parameters END ------------------------------------------------------------
 
