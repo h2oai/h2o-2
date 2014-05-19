@@ -11,7 +11,8 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
         rowData = []
         # just reuse the same col data, since we're just parsing
         # don't want to compress?
-        r = random.random()
+        # r = random.random()
+        r = random.randint(1,1500)
         for j in range(colCount):
             rowData.append(r)
 
@@ -31,10 +32,10 @@ class Basic(unittest.TestCase):
         localhost = h2o.decide_if_localhost()
         java_extra_args='-XX:+PrintGCDetails'
         if (localhost):
-            h2o.build_cloud(1, java_heap_GB=2, java_extra_args=java_extra_args)
+            h2o.build_cloud(2, java_heap_GB=6, java_extra_args=java_extra_args)
 
         else:
-            h2o_hosts.build_cloud_with_hosts(java_extra_args=java_extra_args)
+            h2o_hosts.build_cloud_with_hosts(2, java_heap_GB=6, java_extra_args=java_extra_args)
 
     @classmethod
     def tearDownClass(cls):
@@ -46,7 +47,7 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (100000, 500, 'cA', 1800, 1800),
+            (1000, 500, 'cA', 1800, 1800),
             ]
 
         h2b.browseTheCloud()
@@ -57,9 +58,11 @@ class Basic(unittest.TestCase):
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
             # create sym links
-            # for p in range(3):
-            #    csvPathnameLink = csvPathname + "_" + str(p)
-            #    os.symlink(csvFilename, csvPathnameLink)
+            multifile = 1000
+            # there is already one file. assume it's the "0" case
+            for p in range(1, multifile):
+                csvPathnameLink = csvPathname + "_" + str(p)
+                os.symlink(csvFilename, csvPathnameLink)
 
             print "\nCreating random", csvPathname
             write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
@@ -82,9 +85,9 @@ class Basic(unittest.TestCase):
                 # should match # of cols in header or ??
                 self.assertEqual(inspect['numCols'], colCount,
                     "parse created result with the wrong number of cols %s %s" % (inspect['numCols'], colCount))
-                self.assertEqual(inspect['numRows'], rowCount,
+                self.assertEqual(inspect['numRows'], rowCount * multifile,
                     "parse created result with the wrong number of rows (header shouldn't count) %s %s" % \
-                    (inspect['numRows'], rowCount))
+                    (inspect['numRows'], rowCount * multifile))
 
                 # h2i.delete_keys_at_all_nodes()
 
