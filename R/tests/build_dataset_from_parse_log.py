@@ -10,7 +10,7 @@ from random import uniform
 
 class RealColumn:
     """
-    One real number column in a dataset.
+    One real number column in a dataset.  May or may not be integer.
     """
 
     def __init__(self, col_num, col_name, min_val, max_val, na_fraction, is_integer):
@@ -153,7 +153,7 @@ class Dataset:
                         print("ERROR: is_constant mismatch on file {} line {}".format(self.parse_log_path, line_num))
                         sys.exit(1)
 
-                na_fraction = na_count / self.num_rows
+                na_fraction = float(na_count) / float(self.num_rows)
 
                 is_min_integer = float(int(min_val)) == float(min_val)
                 is_max_integer = float(int(min_val)) == float(min_val)
@@ -196,7 +196,7 @@ class Dataset:
                     if (num_levels != 1):
                         print("ERROR: num_levels mismatch on file {} line {}".format(self.parse_log_path, line_num))
                         sys.exit(1)
-                na_fraction = na_count / self.num_rows
+                na_fraction = float(na_count) / float(self.num_rows)
 
                 c = CategoricalColumn(col_num, "C" + str(col_num), num_levels, na_fraction)
                 self.add_col(c)
@@ -244,6 +244,9 @@ g_num_rows = 1
 
 
 def usage():
+    print("")
+    print("This program takes the log output from H2O's parse and generates")
+    print("a random dataset with similar characteristics.")
     print("")
     print("Usage:  " + g_script_name +
           " [--rows num_rows_to_generate]" +
