@@ -27,7 +27,7 @@ public class TypeaheadKeysRequest extends TypeaheadRequest {
     Key[] keys = new Key[limit];
     int len = 0;
     // Gather some keys that pass all filters
-    for( Key key : H2O.globalKeySet(null) ) {
+    for( Key key : H2O.globalKeySet(_cname) ) {
       if( filter != null &&     // Have a filter?
           key.toString().indexOf(filter) == -1 )
         continue;               // Ignore this filtered-out key
