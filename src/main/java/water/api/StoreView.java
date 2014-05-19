@@ -1,14 +1,10 @@
-
 package water.api;
 
+import com.google.gson.*;
 import java.util.*;
-
 import water.*;
 import water.fvec.Frame;
 import water.fvec.Vec;
-
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 
 public class StoreView extends Request {
 
@@ -23,50 +19,36 @@ public class StoreView extends Request {
     // get the offset index
     final int offset = _offset.value();
     final int view = _view.value();
-    // write the response
-    final H2O cloud = H2O.CLOUD; // Current eldest Cloud
-    Key[] keys = new Key[view]; // Limit size of what we'll display on this page
-    int len = 0;
-    int off = 0;
     String filter = _filter.value();
-    // Gather some user-keys that pass all filters.
-    // - Sort all the keys for pretty display and reliable ordering
-    Set<Key> keySet = new TreeSet(H2O.globalKeySet(null));
-    int kcnt = keySet.size();
-    int allkeys = 0; // compute all viewable keys
-    for( Key key : keySet ) {
-      kcnt--;
-      if( filter != null && // Have a filter?
-          key.toString().indexOf(filter) == -1 )
-        continue; // Ignore this filtered-out key
-      if( H2O.get(key) == null ) continue; // Ignore misses
-      if( off >= offset) { // Skip first _offset keys
-        if (len<view) {
-          keys[len++] = key; // Capture the key
-          if( len == view && kcnt > 0) { // Last key for the view
-            // List is full; stop
-            result.addProperty(Constants.MORE,true);
-          }
-        }
-      } else off++;
-      allkeys++;
-    }
-    if (off<offset)
-      return Response.error("Not enough keys - request offset is " + off + " but K/V contains "+len+" keys.");
+    // Gather some keys that pass all filters
+    ArrayList<Key> akeys = new ArrayList<Key>();
+    for( Key key : H2O.globalKeySet(null) )
+      if( key.user_allowed() && // Filter out for user-keys
+          (filter == null || // Have a filter?
+           key.toString().contains(filter)) && // Pass filter
+          H2O.get(key) != null ) // Ignore misses
+        akeys.add(key);
+
+    // Sort all the keys for pretty display and reliable ordering
+    Key[] keys = akeys.toArray(new Key[akeys.size()]);
+    Arrays.sort(keys);
+    if( keys.length<offset )
+      return Response.error("Not enough keys - request offset is " + offset + " but K/V contains "+keys.length+" keys.");
+    if( keys.length > offset+view )
+      result.addProperty(Constants.MORE,true);
 
     // Now build the result JSON with all available keys
+    final H2O cloud = H2O.CLOUD; // Current eldest Cloud
     JsonArray ary = new JsonArray();
-    for( int i=0; i<len; i++ ) {
-      if( i >= len ) break;
+    int len = Math.min(keys.length,offset+view);
+    for( int i=offset; i<len; i++ ) {
       Value val = DKV.get(keys[i]);
-      if( val != null ) {
-        JsonObject jo = formatKeyRow(cloud,keys[i],val);
-        ary.add(jo);
-      }
+      if( val != null )
+        ary.add(formatKeyRow(cloud,keys[i],val));
     }
 
     result.add(KEYS,ary);
-    result.addProperty(NUM_KEYS, len);
+    result.addProperty(NUM_KEYS, len-offset);
     result.addProperty(CLOUD_NAME, H2O.NAME);
     result.addProperty(NODE_NAME, H2O.SELF.toString());
     Response r = Response.done(result);
@@ -77,7 +59,7 @@ public class StoreView extends Request {
         " <button type='submit' class='btn btn-primary'>Filter keys!</button>" +
         "</form>");
 
-    r.setBuilder(KEYS, new PaginatedTable(argumentsToJson(),offset,view,allkeys,false));
+    r.setBuilder(KEYS, new PaginatedTable(argumentsToJson(),offset,view,keys.length,false));
     r.setBuilder(KEYS+"."+KEY, new KeyCellBuilder());
     r.setBuilder(KEYS+".col_0", new KeyMinAvgMaxBuilder());
     r.setBuilder(KEYS+".col_1", new KeyMinAvgMaxBuilder());
@@ -91,6 +73,15 @@ public class StoreView extends Request {
   static private String noNaN( double d ) {
     return (Double.isNaN(d) || Double.isInfinite(d)) ? "" : Double.toString(d);
   }
+
+  // Used by tests
+  public String setAndServe(String offset) { 
+    _offset.reset();  _offset.check(null,offset);
+    _view  .reset();  _view  .check(null,"20");
+    _filter.reset();
+    return new Gson().toJson(serve()._response);
+  }
+  
 
   private JsonObject formatKeyRow(H2O cloud, Key key, Value val) {
     JsonObject result = new JsonObject();
