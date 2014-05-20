@@ -347,6 +347,9 @@ public final class AutoBuffer {
   // (still sending ack ack back).
   public void drainClose() {
     try {
+      try {
+        Log.info("drain-closing channel to " + ((SocketChannel) _chan).socket().getInetAddress());
+      }catch(Throwable t){Log.info("drain-closing channel to unknown node");}
       _chan.close();
       restorePriority();        // And if we raised priority, lower it back
       bbFree();
