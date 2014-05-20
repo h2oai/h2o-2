@@ -296,13 +296,13 @@ h2o.clusterStatus <- function(client) {
     h2o_url <- paste("http:/", base_url, "h2o.jar", sep = "/")
     
     # Get MD5 checksum
-    md5_url <- paste("https:/", base_url, "h2o.jar.md5", sep = "/")
+    md5_url <- paste("http:/", base_url, "h2o.jar.md5", sep = "/")
     # ttt <- getURLContent(md5_url, binary = FALSE)
     # tcon <- textConnection(ttt)
     # md5_check <- readLines(tcon, n = 1)
     # close(tcon)
     md5_file <- tempfile(fileext = ".md5")
-    download.file(md5_url, destfile = md5_file, mode = "w", cacheOK = FALSE, method = "curl", quiet = TRUE)
+    download.file(md5_url, destfile = md5_file, mode = "w", cacheOK = FALSE, quiet = TRUE)
     md5_check <- readLines(md5_file, n = 1)
     if (nchar(md5_check) != 32) stop("md5 malformed, must be 32 characters (see ", md5_url, ")")
     unlink(md5_file)
