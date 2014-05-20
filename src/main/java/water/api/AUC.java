@@ -66,7 +66,7 @@ public class AUC extends Func {
   @API(help = "Accuracy for all thresholds")
   public float[] accuracy;
   @API(help = "Error for all thresholds")
-  public float[] error;
+  public float[] errorr;
   @API(help = "Precision for all thresholds")
   public float[] precision;
   @API(help = "Recall for all thresholds")
@@ -113,7 +113,7 @@ public class AUC extends Func {
     F2 = null;
     F0point5 = null;
     accuracy = null;
-    error = null;
+    errorr = null;
     precision = null;
     recall = null;
     specificity = null;
@@ -363,7 +363,7 @@ public class AUC extends Func {
     F2 = new float[_cms.length];
     F0point5 = new float[_cms.length];
     accuracy = new float[_cms.length];
-    error = new float[_cms.length];
+    errorr = new float[_cms.length];
     precision = new float[_cms.length];
     recall = new float[_cms.length];
     specificity = new float[_cms.length];
@@ -374,7 +374,7 @@ public class AUC extends Func {
       F2[i] = (float)_cms[i].F2();
       F0point5[i] = (float)_cms[i].F0point5();
       accuracy[i] = (float)_cms[i].accuracy();
-      error[i] = (float)_cms[i].err();
+      errorr[i] = (float)_cms[i].err();
       precision[i] = (float)_cms[i].precision();
       recall[i] = (float)_cms[i].recall();
       specificity[i] = (float)_cms[i].specificity();
