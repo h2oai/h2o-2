@@ -292,11 +292,11 @@ h2o.clusterStatus <- function(client) {
   
   # Download if h2o.jar doesn't already exist or user specifies force overwrite
   if(overwrite || !file.exists(dest_file)) {
-    base_url <- paste("https://s3.amazonaws.com/h2o-release/h2o", branch, version, "Rjar", sep = "/")
-    h2o_url <- paste(base_url, "h2o.jar", sep = "/")
+    base_url <- paste("s3.amazonaws.com/h2o-release/h2o", branch, version, "Rjar", sep = "/")
+    h2o_url <- paste("http:/", base_url, "h2o.jar", sep = "/")
     
     # Get MD5 checksum
-    md5_url <- paste(base_url, "h2o.jar.md5", sep = "/")
+    md5_url <- paste("https:/", base_url, "h2o.jar.md5", sep = "/")
     # ttt <- getURLContent(md5_url, binary = FALSE)
     # tcon <- textConnection(ttt)
     # md5_check <- readLines(tcon, n = 1)
@@ -312,7 +312,7 @@ h2o.clusterStatus <- function(client) {
     cat("Performing one-time download of h2o.jar from\n")
     cat("    ", h2o_url, "\n")
     cat("(This could take a few minutes, please be patient...)\n")
-    download.file(url = h2o_url, destfile = temp_file, mode = "wb", cacheOK = FALSE, method = "curl", quiet = TRUE)
+    download.file(url = h2o_url, destfile = temp_file, mode = "wb", cacheOK = FALSE, quiet = TRUE)
 
     # Apply sanity checks
     if(!file.exists(temp_file))
