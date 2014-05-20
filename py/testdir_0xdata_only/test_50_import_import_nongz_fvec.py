@@ -13,9 +13,9 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(2, java_heap_GB=40)
+            h2o.build_cloud(2, java_heap_GB=6)
         else:
-            h2o_hosts.build_cloud_with_hosts(2, java_heap_GB=40)
+            h2o_hosts.build_cloud_with_hosts(2, java_heap_GB=6)
 
     @classmethod
     def tearDownClass(cls):
@@ -26,12 +26,13 @@ class Basic(unittest.TestCase):
         avgMichalSize = 237270000
         bucket = 'home-0xdiag-datasets'
         importFolderPath = 'manyfiles-nflx'
+        importFolderPath = 'airlines'
         print "Using non-gz'ed files in", importFolderPath
         csvFilenameList= [
-            ("*[1][0-4][0-9].dat", "file_50_A.dat", 50 * avgMichalSize, 1800),
-            ("*[1][0-4][0-9].dat", "file_50_A.dat", 50 * avgMichalSize, 1800),
-            ("*[1][0-4][0-9].dat", "file_50_A.dat", 50 * avgMichalSize, 1800),
-            ("*[1][0-4][0-9].dat", "file_50_A.dat", 50 * avgMichalSize, 1800),
+            ("*[1][0][0].dat", "file_1_A.dat", 1 * avgMichalSize, 1800),
+            # ("*[1][0-4][0-9].dat", "file_50_A.dat", 50 * avgMichalSize, 1800),
+            # ("*[1][0-4][0-9].dat", "file_50_A.dat", 50 * avgMichalSize, 1800),
+            # ("*[1][0-4][0-9].dat", "file_50_A.dat", 50 * avgMichalSize, 1800),
         ]
 
         pollTimeoutSecs = 120
