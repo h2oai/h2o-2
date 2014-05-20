@@ -62,11 +62,13 @@ aucOutputs = [
 
 aucCategories = do ->
   categories = [
+    index: 0
     key: 'AUC'
     caption: 'AUC'
     domain: [0, 1]
     isGrouped: no
   ,
+    index: 0
     key: 'Gini'
     caption: 'Gini'
     domain: [0, 1]
@@ -75,7 +77,8 @@ aucCategories = do ->
   for criterion, criterionIndex in aucCriteria
     for output in aucOutputs
       categories.push
-        key: "#{criterion.caption}.#{output.caption}"
+        index: 0
+        key: "#{criterion.caption}\0#{output.caption}"
         caption: "#{criterion.caption} - #{output.caption}"
         domain: [0, 1]
         isGrouped: yes
@@ -83,7 +86,9 @@ aucCategories = do ->
         output: output
         criterionIndex: criterionIndex
 
-  categories
+  map categories, (category, index) ->
+    category.index = index
+    category
 
 aucVariables = [
   'Threshold'
@@ -204,28 +209,40 @@ createRocMarkInspection = (metrics, mark) ->
     formatConfusionMatrix auc.actual_domain, auc.confusion_matrices[mark.index]
   ]
 
-createStripPlotLabelInspection = (scorings, category) ->
+createStripPlotInspection = (series, category) ->
   [ div, h1, table, tbody, tr, th, td ] = geyser.generate words 'div h1 table.table.table-condensed tbody tr th td'
 
   div [
     h1 category.caption
-    table tbody map scorings, (scoring) ->
-      value = scoring.metrics.metrics.auc[category.output.key][category.criterionIndex]
+    table tbody map series, (series) ->
+      value = series.scoringMark[category.key]
       tr [
-        th scoring.metrics.caption
-        td if isNull value then '-' else format4f value
+        th series.caption
+        td if isNaN value then 'NaN' else format4f value
       ]
   ]
 
-createStripPlotMarkInspection = (scoring) ->
-  [ div, h1, table, tbody, tr, th, td ] = geyser.generate words 'div h1 table.table.table-condensed tbody tr th td'
+
+createScoringInspection = (series) ->
+  [ div, h1, h2, table, tbody, tr, th, td ] = geyser.generate words 'div h1 h2 table.table.table-condensed tbody tr th td'
+  createStripPlotMarkInspectionTable = (series, categories) ->
+    table tbody map categories, (category) ->
+      value = series.scoringMark[category.key]
+      tr [
+        th if category.isGrouped then category.criterion.caption else category.caption
+        td if isNaN value then 'NaN' else format4f value
+      ]
+  ungroupedCategories = filter aucCategories, (category) -> not category.isGrouped
+  groupedCategories = filter aucCategories, (category) -> category.isGrouped
+  groupedCategoriesByOutput = groupBy groupedCategories, (category) -> category.output.caption
 
   div [
-    h1 scoring.metrics.caption
-    table tbody map scoring.outputs, (output) ->
-      tr [
-        th output.category.caption
-        td if isNull output.value then '-' else format4f output.value
+    h2 'Outputs'
+    createStripPlotMarkInspectionTable series, ungroupedCategories
+    div mapWithKey groupedCategoriesByOutput, (categories, caption) ->
+      div [
+        h2 caption
+        createStripPlotMarkInspectionTable series, categories
       ]
   ]
 
@@ -305,12 +322,12 @@ Steam.ScoringView = (_, _scoring) ->
           else
             if scorings.length > 0
               series = createSeriesFromMetrics scorings
-              console.log series
+              _scoringList createScoringList series
               metricsArray = createMetricsArray scorings
-              _scoringList createScoringList metricsArray
               _multiRocPlot createMultiRocPlot metricsArray
               _customPlot createThresholdPlot series, 'F0.5', 'MPCE'
-              _stripPlot createStripPlot metricsArray
+              #_stripPlot createStripPlot metricsArray
+              _stripPlot createStripPlot series, aucCategories
             else
               _scoringList null
               _multiRocPlot null
@@ -453,21 +470,21 @@ Steam.ScoringView = (_, _scoring) ->
           break
     return
 
-  renderStripPlot = (categories, scorings) ->
+  renderStripPlot = (series, categories) ->
     margin = top: 20, right: 70, bottom: 20, left: 140
     width = 140
     rowHeight = 18
     height = categories.length * rowHeight
 
-    x = zipObject map categories, (category) ->
+    scaleX = zipObject map categories, (category) ->
       scaleX = d3.scale.linear()
         #.domain d3.extent scorings, (d) -> +d.outputs[category.id].value
-        .domain [0, 1]
+        .domain category.domain
         .range [ 0, width ]
-      [ category.id, scaleX ]
+      [ category.key, scaleX ]
 
-    y = d3.scale.ordinal()
-      .domain map categories, (category) -> category.id
+    scaleY = d3.scale.ordinal()
+      .domain map categories, (category) -> category.key
       .rangePoints [ 0, height ], 1
 
     line = d3.svg.line()
@@ -475,10 +492,12 @@ Steam.ScoringView = (_, _scoring) ->
     axis = d3.svg.axis()
       .orient 'left'
 
+    x = (value) -> if isNaN value then 0 else value
+
     path = (d) ->
       line map categories, (category) ->
-        id = category.id
-        [ (x[id] d.outputs[id].value), (y id) ]
+        key = category.key
+        [ (scaleX[key] x d.scoringMark[key]), (scaleY key) ]
 
     el = document.createElementNS 'http://www.w3.org/2000/svg', 'svg'
     svg = (d3.select el)
@@ -491,59 +510,59 @@ Steam.ScoringView = (_, _scoring) ->
     line = svg.append 'g'
       .attr 'class', 'line'
       .selectAll 'path'
-      .data scorings
+      .data series
       .enter()
       .append 'path'
       .attr 'd', path
-      .attr 'id', (d) -> "strip-plot-#{d.metrics.id}-path"
+      .attr 'id', (d) -> "strip-plot-#{d.id}-path"
 
-    forEach scorings, (scoring) ->
+    forEach series, (series) ->
       svg.append 'g'
-        .attr 'id', "strips-#{scoring.metrics.id}"
+        .attr 'id', "strips-#{series.id}"
         .selectAll '.strip'
         .data categories
         .enter()
         .append 'line'
         .attr 'class', 'strip'
-        .attr 'x1', (d) -> x[d.id] scoring.outputs[d.id].value
-        .attr 'y1', (d) -> -5 + y d.id
-        .attr 'x2', (d) -> x[d.id] scoring.outputs[d.id].value
-        .attr 'y2', (d) -> 5 + y d.id
-        .attr 'stroke', scoring.metrics.color
+        .attr 'x1', (d) -> scaleX[d.key] x series.scoringMark[d.key]
+        .attr 'y1', (d) -> -5 + scaleY d.key
+        .attr 'x2', (d) -> scaleX[d.key] x series.scoringMark[d.key]
+        .attr 'y2', (d) -> 5 + scaleY d.key
+        .attr 'stroke', series.color
         .on 'mouseover', (d) ->
-          svg.select("#strip-plot-#{scoring.metrics.id}-path").style 'stroke', '#ddd'
-          svg.select("#strip-plot-#{scoring.metrics.id}-labels").style 'display', 'block'
+          svg.select("#strip-plot-#{series.id}-path").style 'stroke', '#ddd'
+          svg.select("#strip-plot-#{series.id}-labels").style 'display', 'block'
         .on 'mouseout', (d) ->
-          svg.select("#strip-plot-#{scoring.metrics.id}-path").style 'stroke', 'none'
-          svg.select("#strip-plot-#{scoring.metrics.id}-labels").style 'display', 'none'
-        .on 'click', (d) -> _.inspect createStripPlotMarkInspection scoring
+          svg.select("#strip-plot-#{series.id}-path").style 'stroke', 'none'
+          svg.select("#strip-plot-#{series.id}-labels").style 'display', 'none'
 
     g = svg.selectAll '.category'
       .data categories
       .enter()
       .append 'g'
-      .attr 'transform', (d) -> "translate(#{-margin.left}, #{y d.id})"
+      .attr 'transform', (d) -> "translate(#{-margin.left}, #{scaleY d.key})"
 
     g.append 'text'
       .attr 'class', 'labels'
       .attr 'dy', 5
       .text (d) -> d.caption
-      .on 'click', (d) -> _.inspect createStripPlotLabelInspection scorings, d
+      .on 'click', (d) ->
+        _.inspect createStripPlotInspection series, d
 
-    forEach scorings, (scoring) ->
+    forEach series, (series) ->
       svg.append 'g'
-        .attr 'id', "strip-plot-#{scoring.metrics.id}-labels"
+        .attr 'id', "strip-plot-#{series.id}-labels"
         .attr 'transform', (d) -> "translate(#{width + 10})"
         .style 'display', 'none'
         .selectAll '.label'
         .data categories
         .enter()
         .append 'text'
-        .attr 'transform', (d) -> "translate(0, #{y d.id})"
+        .attr 'transform', (d) -> "translate(0, #{scaleY d.key})"
         .attr 'dy', 5
         .text (d) ->
-          value = scoring.outputs[d.id].value
-          if isNull value then '-' else format4f value
+          value = series.scoringMark[d.key]
+          if isNaN value then 'NaN' else format4f value
 
     g.append 'line'
       .attr 'class', 'guide'
@@ -554,14 +573,13 @@ Steam.ScoringView = (_, _scoring) ->
 
 #    g.append 'g'
 #      .attr 'class', 'axis'
-#      .each (d) -> d3.select(@).call axis.scale x[d]
+#      .each (d) -> d3.select(@).call axis.scale scaleX[d]
 #      .append 'text'
 #      .attr 'text-anchor', 'middle'
 #      .attr 'y', -9
 #      .text String
 
     el
-
 
   buildAucCategories = ->
     categories = []
@@ -684,21 +702,17 @@ Steam.ScoringView = (_, _scoring) ->
         .attr 'cy', (d) -> y d.tpr
         .on 'click', (d) ->
           _.inspect createRocMarkInspection scoring.metrics, d
-
         .on 'mouseover', (d) ->
           d3.select(@).style 'stroke', scoring.metrics.color
         .on 'mouseout', (d) ->
           d3.select(@).style 'stroke', 'none'
     el
 
-  createScoringList = (metricsArray) ->
-    [ table, tbody, tr, th, td, swatch ] = geyser.generate 'table.table.table-condensed', 'tbody', 'tr', 'th', 'td', ".y-legend-swatch style='background:$color'"
-
-    table tbody map metricsArray, (metrics) ->
-      tr [
-        td swatch '', $color:metrics.color
-        td metrics.caption
-      ]
+  createScoringList = (series) ->
+    map series, (series) ->
+      caption: series.caption
+      color: series.color
+      inspect: -> _.inspect createScoringInspection series
 
   createSeriesFromMetrics = (scores) ->
     uniqueScoringNames = {}
@@ -730,9 +744,9 @@ Steam.ScoringView = (_, _scoring) ->
     mark = {}
     for category in aucCategories
       if category.isGrouped
-        mark[category.caption] = +auc[category.output.key][category.criterionIndex]
+        mark[category.key] = +auc[category.output.key][category.criterionIndex]
       else
-        mark[category.caption] = +auc[category.key]
+        mark[category.key] = +auc[category.key]
     mark
 
   createMarksForThresholdMetrics = (metrics) ->
@@ -897,17 +911,10 @@ Steam.ScoringView = (_, _scoring) ->
     markup: div()
     behavior: render
 
-  createStripPlot = (metricsArray) ->
+  createStripPlot = (series, categories) ->
     [ div ] = geyser.generate [ 'div' ]
     render = ($element) ->
-      #TODO build up once and reuse
-      categories = buildAucCategories()
-      outputsArray = map metricsArray, (metrics) ->
-        metrics: metrics
-        outputs: reshapeAucForParallelCoords categories, metrics.metrics.auc
-
-      #TODO filtering of categories
-      stripPlot = renderStripPlot categories.categories, outputsArray
+      stripPlot = renderStripPlot series, categories
       $element.empty().append stripPlot
 
     markup: div()

@@ -59,7 +59,7 @@ ko.bindingHandlers.geyser =
       else
         $element.html geyser.render data
     else
-      $(element).text 'Loading. Please wait..'
+      $(element).text '-'
     return
 
 ko.bindingHandlers.icon =

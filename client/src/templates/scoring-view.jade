@@ -32,7 +32,15 @@
   // /ko
   // ko ifnot:isTabularComparisonView
   h2.y-subtitle(data-bind='collapse:false') Scorings
-  div(data-bind='geyser:scoringList')
+  div
+    table.table.table-condensed.table-hover
+      tbody
+        // ko foreach:scoringList
+        tr
+          td
+            .y-legend-swatch(data-bind='style:{backgroundColor:color}')
+          td(data-bind='text:caption, click:inspect')
+        // /ko
   h2.y-subtitle(data-bind='collapse:false') ROC Comparison
   div(data-bind='geyser:multiRocPlot')
   h2.y-subtitle(data-bind='collapse:false') Plots
