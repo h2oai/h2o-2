@@ -122,6 +122,7 @@ public class AUC extends Func {
     precision = null;
     recall = null;
     specificity = null;
+    mcc = null;
     max_per_class_error = null;
     threshold_for_criteria = null;
     F1_for_criteria = null;
@@ -523,6 +524,7 @@ public class AUC extends Func {
       sb.append("\t" + "document.getElementById('precision').innerHTML = precision[i];\n");
       sb.append("\t" + "document.getElementById('recall').innerHTML = recall[i];\n");
       sb.append("\t" + "document.getElementById('specificity').innerHTML = specificity[i];\n");
+      sb.append("\t" + "document.getElementById('mcc').innerHTML = mcc[i];\n");
       sb.append("\t" + "document.getElementById('max_per_class_error').innerHTML = max_per_class_error[i];\n");
       sb.append("\t" + "update(dataset);\n");
       sb.append("}\n");
