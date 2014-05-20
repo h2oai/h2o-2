@@ -13,6 +13,7 @@ paramDict = {
     'validation': [None, 'covtype.data.hex'],
     'ntrees': [1,3,7,19],
     'importance': [None, 0, 1],
+    'balance_classes': [0],
     'destination_key': ['model_keyA', '012345', '__hello'],
     'max_depth': [None, 1,10,20,100],
     'nbins': [None,5,10,100,1000],
@@ -51,7 +52,7 @@ class Basic(unittest.TestCase):
         hex_key = 'covtype.data.hex'
         for trial in range(10):
             # params is mutable. This is default.
-            params = {'ntrees': 13, 'mtries': 7}
+            params = {'ntrees': 13, 'mtries': 7, 'balance_classes': 0, 'importance': 0}
             colX = h2o_rf.pickRandRfParams(paramDict, params)
             if 'cols' in params and params['cols']:
                 pass

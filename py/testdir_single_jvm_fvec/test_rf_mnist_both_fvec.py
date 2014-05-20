@@ -90,6 +90,8 @@ class Basic(unittest.TestCase):
                 'sample_rate': 0.67,
                 'destination_key': 'RF_model',
                 'nbins': 100,
+                'importance': 0,
+                'balance_classes': 0,
                 }
 
             if rfSeed is None:
