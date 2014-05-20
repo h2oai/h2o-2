@@ -39,12 +39,24 @@
         tr
           td
             .y-legend-swatch(data-bind='style:{backgroundColor:color}')
-          td(data-bind='text:caption, click:inspect')
+          td.y-legend-label(data-bind='text:caption, click:inspect')
         // /ko
   h2.y-subtitle(data-bind='collapse:false') ROC Comparison
   div(data-bind='geyser:multiRocPlot')
   h2.y-subtitle(data-bind='collapse:false') Plots
-  div(data-bind='geyser:customPlot')
+  div
+    div(data-bind='geyser:thresholdPlot')
+    h3 Customize this plot
+    table.table.table-condensed
+      tbody
+        tr
+          th X-Axis
+          td
+            select(data-bind="options:thresholdPlotVariables, optionsText:'caption', value:thresholdPlotX")
+        tr
+          th Y-Axis
+          td
+            select(data-bind="options:thresholdPlotVariables, optionsText:'caption', value:thresholdPlotY")
   h2.y-subtitle(data-bind='collapse:false') Output Comparison
   div(data-bind='geyser:stripPlot')
   // /ko

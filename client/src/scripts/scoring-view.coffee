@@ -255,7 +255,10 @@ Steam.ScoringView = (_, _scoring) ->
   _comparisonTable = node$ null
   _scoringList = node$ null
   _multiRocPlot = node$ null
-  _customPlot = node$ null
+  _thresholdPlotVariables = nodes$ sortBy aucVariables, (variable) -> variable.caption
+  _thresholdPlotX = node$ aucVariableMap.FPR
+  _thresholdPlotY = node$ aucVariableMap.TPR
+  _thresholdPlot = node$ null
   _stripPlot = node$ null
   _modelSummary = nodes$ []
   _hasFailed = node$ no
@@ -323,15 +326,15 @@ Steam.ScoringView = (_, _scoring) ->
             if scorings.length > 0
               series = createSeriesFromMetrics scorings
               _scoringList createScoringList series
-              metricsArray = createMetricsArray scorings
-              _multiRocPlot createMultiRocPlot metricsArray
-              _customPlot createThresholdPlot series, 'F0.5', 'MPCE'
+              _multiRocPlot createThresholdPlot series, 'FPR', 'TPR', yes
+              apply$ _thresholdPlotX, _thresholdPlotY, (x, y) ->
+                _thresholdPlot createThresholdPlot series, x.key, y.key, no
               #_stripPlot createStripPlot metricsArray
               _stripPlot createStripPlot series, aucCategories
             else
               _scoringList null
               _multiRocPlot null
-              _customPlot null
+              _thresholdPlot null
               _stripPlot null
 
     _scoringType item.type
@@ -599,115 +602,6 @@ Steam.ScoringView = (_, _scoring) ->
     outputs: aucOutputs
     categories: categories
 
-  reshapeAucForParallelCoords = (data, auc) ->
-    # Validate, just to be doubly sure.
-    criteria = data.criteria
-    for criterion, index in auc.threshold_criteria
-      if criterion isnt criteria[index].key
-        throw new Error 'Mismatch in AUC criteria'
-
-    map data.categories, (category) ->
-      value = auc[category.output.key][category.criterionIndex]
-      category: category
-      value: if value is 'NaN' then null else value
-
-  renderMultiRocPlot = (scorings) ->
-    margin = top: 20, right: 20, bottom: 20, left: 30
-    width = 300
-    height = 300
-
-    x = d3.scale.linear()
-      .domain [ 0, 1 ]
-      .range [ 0, width ]
-
-    y = d3.scale.linear()
-      .domain [ 0, 1 ]
-      .range [ height, 0 ]
-
-    axisX = d3.svg.axis()
-      .scale x
-      .orient 'bottom'
-      .ticks 5
-
-    axisY = d3.svg.axis()
-      .scale y
-      .orient 'left'
-      .ticks 5
-
-    line = d3.svg.line()
-      .x (d) -> x d.fpr
-      .y (d) -> y d.tpr
-
-    el = document.createElementNS 'http://www.w3.org/2000/svg', 'svg'
-
-    svg = (d3.select el)
-      .attr 'class', 'y-multi-roc-curve'
-      .attr 'width', width + margin.left + margin.right
-      .attr 'height', height + margin.top + margin.bottom
-      .append 'g'
-      .attr 'transform', "translate(#{margin.left},#{margin.top})"
-
-    svg.append 'g'
-      .attr 'class', 'x axis'
-      .attr 'transform', "translate(0, #{height})"
-      .call axisX
-      .append 'text'
-      .attr 'x', width
-      .attr 'y', -6
-      .style 'text-anchor', 'end'
-      .text 'FPR'
-
-    svg.append 'g'
-      .attr 'class', 'y axis'
-      .call axisY
-      .append 'text'
-      .attr 'transform', 'rotate(-90)'
-      .attr 'y', 6
-      .attr 'dy', '.71em'
-      .style 'text-anchor', 'end'
-      .text 'TPR'
-
-    svg.append 'line'
-      .attr 'class', 'guide'
-      .attr 'stroke-dasharray', '3,3'
-      .attr
-        x1: x 0
-        y1: y 0
-        x2: x 1
-        y2: y 1
-
-    curve = svg.selectAll '.y-curve'
-      .data scorings
-      .enter()
-      .append 'g'
-      .attr 'class', 'y-curve'
-
-    curve.append 'path'
-      .attr 'id', (d) -> "curve#{d.metrics.id}"
-      .attr 'class', 'line'
-      .attr 'd', (d) -> line d.rates
-      .style 'stroke', (d) -> d.metrics.color
-      #.on 'mouseover', (d) -> _.inspect div d.caption
-      #.on 'mouseout', (d) -> console.log 'mouseout', d
-
-    forEach scorings, (scoring) ->
-      svg.append 'g'
-        .selectAll '.dot'
-        .data scoring.rates
-        .enter()
-        .append 'circle'
-        .attr 'class', 'dot'
-        .attr 'r', 5
-        .attr 'cx', (d) -> x d.fpr
-        .attr 'cy', (d) -> y d.tpr
-        .on 'click', (d) ->
-          _.inspect createRocMarkInspection scoring.metrics, d
-        .on 'mouseover', (d) ->
-          d3.select(@).style 'stroke', scoring.metrics.color
-        .on 'mouseout', (d) ->
-          d3.select(@).style 'stroke', 'none'
-    el
-
   createScoringList = (series) ->
     map series, (series) ->
       caption: series.caption
@@ -769,30 +663,7 @@ Steam.ScoringView = (_, _scoring) ->
       'TPR': tpr
       'FPR': fpr
 
-  createMetricsArray = (scores) ->
-    uniqueScoringNames = {}
-    createUniqueScoringName = (frameKey, modelKey) ->
-      name = "#{modelKey} on #{frameKey}"
-      if index = uniqueScoringNames[name]
-        uniqueScoringNames[name] = index++
-        name += ' #' + index
-      else
-        uniqueScoringNames[name] = 1
-      name
-
-    # Go for higher contrast when comparing fewer scorings.
-    palette = if scores.length > 10 then d3.scale.category20 else d3.scale.category10
-    colorScale = palette().domain d3.range scores.length
-
-    map scores, (score, index) ->
-      metrics = head score.data.output.metrics
-
-      id: index
-      caption: createUniqueScoringName metrics.frame.key, metrics.model.key
-      metrics: metrics
-      color: colorScale index
-
-  renderThresholdPlot = (series, attrX, attrY) ->
+  renderThresholdPlot = (series, attrX, attrY, showReferenceLine) ->
     variableX = aucVariableMap[attrX]
     variableY = aucVariableMap[attrY]
 
@@ -856,6 +727,16 @@ Steam.ScoringView = (_, _scoring) ->
       .style 'text-anchor', 'end'
       .text variableY.caption
 
+    if showReferenceLine
+      svg.append 'line'
+        .attr 'class', 'guide'
+        .attr 'stroke-dasharray', '3,3'
+        .attr
+          x1: scaleX 0
+          y1: scaleY 0
+          x2: scaleX 1
+          y2: scaleY 1
+
     curve = svg.selectAll '.y-curve'
       .data series
       .enter()
@@ -889,27 +770,14 @@ Steam.ScoringView = (_, _scoring) ->
     el
 
 
-  createThresholdPlot = (series, attrX, attrY) ->
+  createThresholdPlot = (series, attrX, attrY, showReferenceLine) ->
     [ div ] = geyser.generate [ 'div' ]
     render = ($element) ->
-      plot = renderThresholdPlot series, attrX, attrY
+      plot = renderThresholdPlot series, attrX, attrY, showReferenceLine
       $element.empty().append plot
     markup: div()
     behavior: render
 
-
-  createMultiRocPlot = (metricsArray) ->
-    [ div ] = geyser.generate [ 'div' ]
-    render = ($element) ->
-      ratesArray = map metricsArray, (metrics) ->
-        metrics: metrics
-        rates: map metrics.metrics.auc.confusion_matrices, computeTPRandFPR
-
-      multiRocPlot = renderMultiRocPlot ratesArray
-      $element.empty().append multiRocPlot
-
-    markup: div()
-    behavior: render
 
   createStripPlot = (series, categories) ->
     [ div ] = geyser.generate [ 'div' ]
@@ -1059,7 +927,10 @@ Steam.ScoringView = (_, _scoring) ->
   comparisonTable: _comparisonTable
   scoringList: _scoringList
   multiRocPlot: _multiRocPlot
-  customPlot: _customPlot
+  thresholdPlot: _thresholdPlot
+  thresholdPlotX: _thresholdPlotX
+  thresholdPlotY: _thresholdPlotY
+  thresholdPlotVariables: _thresholdPlotVariables
   stripPlot: _stripPlot
   hasFailed: _hasFailed
   failure: _failure
