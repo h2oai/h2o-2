@@ -5,7 +5,7 @@ geyser = do ->
     constructor: (@name, @classes, @attrs) ->
 
   class GeyserNode
-    constructor: (@id, @tag, @content) ->
+    constructor: (@tag, @params, @content) ->
 
   createTag = (tagSpec, attrSpec) ->
     switch tagSpec.indexOf '.'
@@ -34,13 +34,12 @@ geyser = do ->
     else
       _tagCache[spec] = parseTagSpec spec
 
-  generate = (specs) ->
-    console.assert isArray specs
-
+  generate = (specs...) ->
+    specs = head specs if specs.length is 1 and isArray head specs
     map specs, (spec) ->
       tag = getOrCreateTag spec
-      (arg, id) ->
-        new GeyserNode id, tag,
+      (arg, params) ->
+        new GeyserNode tag, params,
           if isArray arg
             arg
           else if arg instanceof GeyserNode
@@ -59,8 +58,12 @@ geyser = do ->
       name = tag.name
       classes = if tag.classes then " class='#{tag.classes}'" else ''
       attrs = if tag.attrs then " #{tag.attrs}" else ''
+      if attrs and arg.params
+        for k, v of arg.params
+          # find-and-replace first occurence - intentionally simple - don't want full-fledged templating features here
+          attrs = attrs.replace "#{k}", v
       content = render arg.content
-      "<#{name}#{id}#{classes}#{attrs}>#{content}</#{name}>"
+      "<#{name}#{classes}#{attrs}>#{content}</#{name}>"
     else if isArray arg
       join (map arg, render), ''
     else

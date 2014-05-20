@@ -52,11 +52,10 @@ ko.bindingHandlers.geyser =
       $element = $ element
       if data.markup
         $element.html geyser.render data.markup
-        if data.behaviors
-          for behavior in data.behaviors
-            behavior $element
-          if data.dispose
-            ko.utils.domNodeDisposal.addDisposeCallback element, -> data.dispose()
+        if data.behavior
+          data.behavior $element
+        if data.dispose
+          ko.utils.domNodeDisposal.addDisposeCallback element, -> data.dispose()
       else
         $element.html geyser.render data
     else
