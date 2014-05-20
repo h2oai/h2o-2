@@ -5,7 +5,7 @@
 Connects to a running H2O instance and checks the local H2O R package is the correct version (i.e. that the version of the R package and the version of H2O are the same).}
 \usage{
 h2o.init(ip = "127.0.0.1", port = 54321, startH2O = TRUE, forceDL = FALSE, Xmx = "1g", 
-        beta = FALSE, license = NULL)}
+        beta = FALSE, assertion = FALSE, license = NULL)}
 
 \arguments{
   \item{ip}{Object of class \code{"character"} representing the IP address of the server where H2O is running.}
@@ -14,6 +14,7 @@ h2o.init(ip = "127.0.0.1", port = 54321, startH2O = TRUE, forceDL = FALSE, Xmx =
   \item{forceDL}{(Optional) A logical value indicating whether to force download of the H2O executable. Defaults to FALSE, so the executable will only be downloaded if it does not already exist in the h2o R library resources directory \code{h2o/java/h2o.jar}.}
   \item{Xmx}{(Optional) A string specifying the maximum size, in bytes, of the memory allocation pool to H2O. This value must a multiple of 1024 greater than 2MB. Append the letter m or M to indicate megabytes, or g or G to indicate gigabytes.}
   \item{beta}{(Optional) A logical value indicating whether H2O should be launch in beta mode.}
+  \item{assertion}{(Optional) A logical value indicating whether H2O should be launched with assertions enabled. Used mainly for error checking and debugging purposes.}
   \item{license}{(Optional) A string value specifying the full path of the license file.}
 }
 \details{
