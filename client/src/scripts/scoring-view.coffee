@@ -1,24 +1,44 @@
-#TODO check for memory leaks
-Steam.RocMarkInspection = (_, metrics, mark) ->
-  [ div, h1, table, tbody, tr, th, td ] = geyser.generate words 'div h1 table tbody tr th td'
+unless exports?
+  format4f = d3.format '.4f' # precision = 4
 
-  formatConfusionMatrix = (cm) -> 'TODO'
+createRocMarkInspection = (metrics, mark) ->
+  [ div, h1, h2, table, grid, tbody, tr, th, td ] = geyser.generate words 'div h1 h2 table.table.table-condensed table.table.table-bordered tbody tr th td'
+
+  formatConfusionMatrix = (domain, cm) ->
+    [ d1, d2 ] = domain
+    [[tn, fp], [fn, tp]] = cm
+    grid [
+      tr [
+        th ''
+        th d1
+        th d2
+      ]
+      tr [
+        th d1
+        td tn
+        td fp
+      ]
+      tr [
+        th d2
+        td fn
+        td tp
+      ]
+    ]
 
   collectProperties = (auc, index) ->
     [
-      [ 'CM', formatConfusionMatrix auc.confusion_matrices[index] ]
-      [ 'FPR', mark.fpr ]
-      [ 'TPR', mark.tpr ]
-      [ 'F0.5', auc.F0point5[index] ]
-      [ 'F1', auc.F1[index] ]
-      [ 'F2', auc.F2[index] ]
-      [ 'Accuracy', auc.accuracy[index] ]
-      [ 'Error', auc.error[index] ]
-      [ 'MPCE', auc.max_per_class_error[index] ]
-      [ 'Precision', auc.precision[index] ]
-      [ 'Recall', auc.recall[index] ]
-      [ 'Specificity', auc.specificity[index] ]
-      [ 'Threshold', auc.thresholds[index] ]
+      [ 'Threshold', format4f auc.thresholds[index] ]
+      [ 'Error', format4f auc.error[index] ]
+      [ 'F0.5', format4f auc.F0point5[index] ]
+      [ 'F1', format4f auc.F1[index] ]
+      [ 'F2', format4f auc.F2[index] ]
+      [ 'Accuracy', format4f auc.accuracy[index] ]
+      [ 'Precision', format4f auc.precision[index] ]
+      [ 'Recall', format4f auc.recall[index] ]
+      [ 'Specificity', format4f auc.specificity[index] ]
+      [ 'MPCE', format4f auc.max_per_class_error[index] ]
+      [ 'False Positive Rate', format4f mark.fpr ]
+      [ 'True Positive Rate', format4f mark.tpr ]
     ]
 
   tabulateProperties = (auc, index) -> 
@@ -31,17 +51,50 @@ Steam.RocMarkInspection = (_, metrics, mark) ->
         td value
       ]
 
+  auc = metrics.metrics.auc
   div [
     h1 metrics.caption
-    tabulateProperties metrics.metrics.auc, mark.index
+    h2 'Outputs'
+    tabulateProperties auc, mark.index
+    h2 'Confusion Matrix'
+    formatConfusionMatrix auc.actual_domain, auc.confusion_matrices[mark.index]
   ]
 
+createStripPlotLabelInspection = (scorings, category) ->
+  [ div, h1, table, tbody, tr, th, td ] = geyser.generate words 'div h1 table.table.table-condensed tbody tr th td'
+
+  div [
+    h1 category.caption
+    table tbody map scorings, (scoring) ->
+      value = scoring.metrics.metrics.auc[category.output.key][category.criterionIndex]
+      tr [
+        th scoring.metrics.caption
+        td if isNull value then '-' else format4f value
+      ]
+  ]
+
+createStripPlotMarkInspection = (scoring) ->
+  [ div, h1, table, tbody, tr, th, td ] = geyser.generate words 'div h1 table.table.table-condensed tbody tr th td'
+
+  div [
+    h1 scoring.metrics.caption
+    table tbody map scoring.outputs, (output) ->
+      tr [
+        th output.category.caption
+        td if isNull output.value then '-' else format4f output.value
+      ]
+  ]
+
+
+#TODO check for memory leaks
 Steam.ScoringView = (_, _scoring) ->
   _tag = node$ ''
   _caption = node$ ''
   _timestamp = node$ Date.now()
   _comparisonTable = node$ null
+  _scoringList = node$ null
   _multiRocPlot = node$ null
+  _customPlot = node$ null
   _stripPlot = node$ null
   _modelSummary = nodes$ []
   _hasFailed = node$ no
@@ -108,10 +161,14 @@ Steam.ScoringView = (_, _scoring) ->
           else
             if scorings.length > 0
               metricsArray = createMetricsArray scorings
+              _scoringList createScoringList metricsArray
               _multiRocPlot createMultiRocPlot metricsArray
+              _customPlot createCustomPlot metricsArray
               _stripPlot createStripPlot metricsArray
             else
+              _scoringList null
               _multiRocPlot null
+              _customPlot null
               _stripPlot null
 
     _scoringType item.type
@@ -244,26 +301,22 @@ Steam.ScoringView = (_, _scoring) ->
           markAsDifferent parametersArray, index
           break
     return
-
-  renderStripPlot = (scorings) ->
-    palette = if scorings.length > 10 then d3.scale.category20 else d3.scale.category10
-    color = palette().domain map scorings, (scoring) -> scoring.metrics.id
-    categories = keys (head scorings).outputs
-
-    margin = top: 20, right: 20, bottom: 20, left: 140
-    width = 190
+  
+  renderStripPlot = (categories, scorings) ->
+    margin = top: 20, right: 70, bottom: 20, left: 140
+    width = 140
     rowHeight = 18
     height = categories.length * rowHeight
 
     x = zipObject map categories, (category) ->
       scaleX = d3.scale.linear()
-        #.domain d3.extent scorings, (d) -> +d.outputs[category]
+        #.domain d3.extent scorings, (d) -> +d.outputs[category.id].value
         .domain [0, 1]
         .range [ 0, width ]
-      [ category, scaleX ]
+      [ category.id, scaleX ]
 
     y = d3.scale.ordinal()
-      .domain categories
+      .domain map categories, (category) -> category.id
       .rangePoints [ 0, height ], 1
 
     line = d3.svg.line()
@@ -273,7 +326,8 @@ Steam.ScoringView = (_, _scoring) ->
 
     path = (d) ->
       line map categories, (category) ->
-        [ (x[category] d.outputs[category]), (y category) ]
+        id = category.id
+        [ (x[id] d.outputs[id].value), (y id) ]
 
     el = document.createElementNS 'http://www.w3.org/2000/svg', 'svg'
     svg = (d3.select el)
@@ -290,10 +344,9 @@ Steam.ScoringView = (_, _scoring) ->
       .enter()
       .append 'path'
       .attr 'd', path
-      .attr 'id', (d) -> "path-#{d.metrics.id}"
+      .attr 'id', (d) -> "strip-plot-#{d.metrics.id}-path"
 
     forEach scorings, (scoring) ->
-      stroke = color scoring.metrics.id
       svg.append 'g'
         .attr 'id', "strips-#{scoring.metrics.id}"
         .selectAll '.strip'
@@ -301,33 +354,51 @@ Steam.ScoringView = (_, _scoring) ->
         .enter()
         .append 'line'
         .attr 'class', 'strip'
-        .attr 'x1', (d) -> x[d] scoring.outputs[d]
-        .attr 'y1', (d) -> -5 + y d
-        .attr 'x2', (d) -> x[d] scoring.outputs[d]
-        .attr 'y2', (d) -> 5 + y d
-        .attr 'stroke', stroke
-        .on 'mouseover', (d) -> svg.select("#path-#{scoring.metrics.id}").style 'stroke', '#ddd'
-        .on 'mouseout', (d) -> svg.select("#path-#{scoring.metrics.id}").style 'stroke', 'none'
-        .on 'click', (d) -> console.log d
-        .append 'title'
-        .text (d) -> "#{scoring.metrics.caption}\n#{d} = #{scoring.outputs[d]}"
+        .attr 'x1', (d) -> x[d.id] scoring.outputs[d.id].value
+        .attr 'y1', (d) -> -5 + y d.id
+        .attr 'x2', (d) -> x[d.id] scoring.outputs[d.id].value
+        .attr 'y2', (d) -> 5 + y d.id
+        .attr 'stroke', scoring.metrics.color
+        .on 'mouseover', (d) ->
+          svg.select("#strip-plot-#{scoring.metrics.id}-path").style 'stroke', '#ddd'
+          svg.select("#strip-plot-#{scoring.metrics.id}-labels").style 'display', 'block'
+        .on 'mouseout', (d) ->
+          svg.select("#strip-plot-#{scoring.metrics.id}-path").style 'stroke', 'none'
+          svg.select("#strip-plot-#{scoring.metrics.id}-labels").style 'display', 'none'
+        .on 'click', (d) -> _.inspect createStripPlotMarkInspection scoring
 
     g = svg.selectAll '.category'
       .data categories
       .enter()
       .append 'g'
-      .attr 'transform', (d) -> "translate(#{-margin.left}, #{y d})"
+      .attr 'transform', (d) -> "translate(#{-margin.left}, #{y d.id})"
 
     g.append 'text'
+      .attr 'class', 'labels'
       .attr 'dy', 5
-      .text String
-      .on 'click', (d) -> console.log d
+      .text (d) -> d.caption
+      .on 'click', (d) -> _.inspect createStripPlotLabelInspection scorings, d
+
+    forEach scorings, (scoring) ->
+      svg.append 'g'
+        .attr 'id', "strip-plot-#{scoring.metrics.id}-labels"
+        .attr 'transform', (d) -> "translate(#{width + 10})"
+        .style 'display', 'none'
+        .selectAll '.label'
+        .data categories
+        .enter()
+        .append 'text'
+        .attr 'transform', (d) -> "translate(0, #{y d.id})"
+        .attr 'dy', 5
+        .text (d) ->
+          value = scoring.outputs[d.id].value
+          if isNull value then '-' else format4f value
 
     g.append 'line'
       .attr 'class', 'guide'
       .attr 'x1', 0
       .attr 'y1', rowHeight / 2
-      .attr 'x2', margin.left + width + margin.right
+      .attr 'x2', margin.left + width
       .attr 'y2', rowHeight / 2
 
 #    g.append 'g'
@@ -340,18 +411,32 @@ Steam.ScoringView = (_, _scoring) ->
 
     el
 
-  reshapeAucForParallelCoords = (auc) ->
-    data = {}
-
-    criteria =
-      'maximum F1': 'Max F1'
-      'maximum F2': 'Max F2'
-      'maximum F0point5': 'Max F0.5'
-      'maximum Accuracy': 'Max Accuracy'
-      'maximum Precision': 'Max Precision'
-      'maximum Recall': 'Max Recall'
-      'maximum Specificity': 'Max Specificity'
-      'minimizing max per class Error': 'Min MPCE'
+  buildAucCategories = ->
+    criteria = [
+      key: 'maximum F1'
+      caption: 'Max F1'
+    ,
+      key: 'maximum F2'
+      caption: 'Max F2'
+    ,
+      key: 'maximum F0point5'
+      caption: 'Max F0.5'
+    ,
+      key: 'maximum Accuracy'
+      caption: 'Max Accuracy'
+    ,
+      key: 'maximum Precision'
+      caption: 'Max Precision'
+    ,
+      key: 'maximum Recall'
+      caption: 'Max Recall'
+    ,
+      key: 'maximum Specificity'
+      caption: 'Max Specificity'
+    ,
+      key: 'minimizing max per class Error'
+      caption: 'Min MPCE'
+    ]
 
     outputs = [
       key: 'threshold_for_criteria'
@@ -382,19 +467,35 @@ Steam.ScoringView = (_, _scoring) ->
       caption: 'MPCE'
     ]
 
-    for criterion, index in auc.threshold_criteria
+    categories = []
+    id = 0
+    for criterion, criterionIndex in criteria
       for output in outputs
-        criterionCaption = criteria[criterion] or criterion
-        value = auc[output.key][index]
-        data["#{criterionCaption} - #{output.caption}"] = if value is 'NaN' then null else value
+        categories.push
+          id: id
+          caption: "#{criterion.caption} - #{output.caption}"
+          criterion: criterion
+          output: output
+          criterionIndex: criterionIndex
+        id++
 
-    data
+    criteria: criteria
+    outputs: outputs
+    categories: categories
 
+  reshapeAucForParallelCoords = (data, auc) ->
+    # Validate, just to be doubly sure. 
+    criteria = data.criteria
+    for criterion, index in auc.threshold_criteria
+      if criterion isnt criteria[index].key
+        throw new Error 'Mismatch in AUC criteria'
+
+    map data.categories, (category) ->
+      value = auc[category.output.key][category.criterionIndex]
+      category: category
+      value: if value is 'NaN' then null else value
 
   renderMultiRocPlot = (scorings) ->
-
-    [ div ] = geyser.generate [ 'div' ]
-
     margin = top: 20, right: 20, bottom: 20, left: 30
     width = 300
     height = 300
@@ -406,10 +507,6 @@ Steam.ScoringView = (_, _scoring) ->
     y = d3.scale.linear()
       .domain [ 0, 1 ]
       .range [ height, 0 ]
-
-    # Go for higher contrast when comparing fewer scorings.
-    palette = if scorings.length > 10 then d3.scale.category20 else d3.scale.category10
-    color = palette().domain map scorings, (scoring) -> scoring.metrics.id
 
     axisX = d3.svg.axis()
       .scale x
@@ -473,12 +570,11 @@ Steam.ScoringView = (_, _scoring) ->
       .attr 'id', (d) -> "curve#{d.metrics.id}"
       .attr 'class', 'line'
       .attr 'd', (d) -> line d.rates
-      .style 'stroke', (d) -> color d.metrics.id
+      .style 'stroke', (d) -> d.metrics.color
       #.on 'mouseover', (d) -> _.inspect div d.caption
       #.on 'mouseout', (d) -> console.log 'mouseout', d
 
     forEach scorings, (scoring) ->
-      stroke = color scoring.metrics.id
       svg.append 'g'
         .selectAll '.dot'
         .data scoring.rates
@@ -489,15 +585,22 @@ Steam.ScoringView = (_, _scoring) ->
         .attr 'cx', (d) -> x d.fpr
         .attr 'cy', (d) -> y d.tpr
         .on 'click', (d) ->
-          console.log d
-          console.log scoring
-          _.inspect Steam.RocMarkInspection _, scoring.metrics, d
+          _.inspect createRocMarkInspection scoring.metrics, d
 
         .on 'mouseover', (d) ->
-          d3.select(@).style 'stroke', stroke
+          d3.select(@).style 'stroke', scoring.metrics.color
         .on 'mouseout', (d) ->
           d3.select(@).style 'stroke', 'none'
     el
+
+  createScoringList = (metricsArray) ->
+    [ table, tbody, tr, th, td, swatch ] = geyser.generate 'table.table.table-condensed', 'tbody', 'tr', 'th', 'td', ".y-legend-swatch style='background:$color'"
+
+    table tbody map metricsArray, (metrics) ->
+      tr [
+        td swatch '', $color:metrics.color
+        td metrics.caption
+      ]
 
   createMetricsArray = (scores) ->
     uniqueScoringNames = {}
@@ -510,12 +613,141 @@ Steam.ScoringView = (_, _scoring) ->
         uniqueScoringNames[name] = 1
       name
 
+    # Go for higher contrast when comparing fewer scorings.
+    palette = if scores.length > 10 then d3.scale.category20 else d3.scale.category10
+    colorScale = palette().domain d3.range scores.length
+
     map scores, (score, index) ->
       metrics = head score.data.output.metrics
 
       id: index
       caption: createUniqueScoringName metrics.frame.key, metrics.model.key
       metrics: metrics
+      color: colorScale index
+
+  renderCustomPlot = (metricsArray) ->
+    console.log metricsArray
+    xAttr = 'F0point5'
+    yAttr = 'max_per_class_error'
+    domainX = [0, 1]
+    domainY = [0, 1]
+    series = map metricsArray, (metrics) ->
+      auc = metrics.metrics.auc
+
+      xs = auc[xAttr]
+      ys = auc[yAttr]
+      
+      marks = []
+      for x, i in xs
+        x = +x
+        y = +ys[i]
+        unless isNaN x
+          unless isNaN y
+            marks.push [ x, y ] 
+
+      id: metrics.id
+      color: metrics.color 
+      marks: marks
+
+    console.log series
+
+
+    margin = top: 20, right: 20, bottom: 20, left: 30
+    width = 300
+    height = 300
+
+    scaleX = d3.scale.linear()
+      .domain domainX
+      .range [ 0, width ]
+
+    scaleY = d3.scale.linear()
+      .domain domainY
+      .range [ height, 0 ]
+
+    axisX = d3.svg.axis()
+      .scale scaleX
+      .orient 'bottom'
+      .ticks 5
+
+    axisY = d3.svg.axis()
+      .scale scaleY
+      .orient 'left'
+      .ticks 5
+
+    line = d3.svg.line()
+      .x (d) -> scaleX d[0]
+      .y (d) -> scaleY d[1]
+
+    el = document.createElementNS 'http://www.w3.org/2000/svg', 'svg'
+
+    svg = (d3.select el)
+      .attr 'class', 'y-custom-plot'
+      .attr 'width', width + margin.left + margin.right
+      .attr 'height', height + margin.top + margin.bottom
+      .append 'g'
+      .attr 'transform', "translate(#{margin.left},#{margin.top})"
+    
+    svg.append 'g'
+      .attr 'class', 'x axis'
+      .attr 'transform', "translate(0, #{height})"
+      .call axisX
+      .append 'text'
+      .attr 'x', width
+      .attr 'y', -6
+      .style 'text-anchor', 'end'
+      .text xAttr
+
+    svg.append 'g'
+      .attr 'class', 'y axis'
+      .call axisY
+      .append 'text'
+      .attr 'transform', 'rotate(-90)'
+      .attr 'y', 6
+      .attr 'dy', '.71em'
+      .style 'text-anchor', 'end'
+      .text yAttr
+
+    curve = svg.selectAll '.y-curve'
+      .data series
+      .enter()
+      .append 'g'
+      .attr 'class', 'y-curve'
+
+    curve.append 'path'
+      .attr 'id', (d) -> "curve#{d.id}"
+      .attr 'class', 'line'
+      .attr 'd', (d) -> line d.marks
+      .style 'stroke', (d) -> d.color
+      #.on 'mouseover', (d) -> _.inspect div d.caption
+      #.on 'mouseout', (d) -> console.log 'mouseout', d
+
+    forEach series, (series) ->
+      svg.append 'g'
+        .selectAll '.dot'
+        .data series.marks
+        .enter()
+        .append 'circle'
+        .attr 'class', 'dot'
+        .attr 'r', 5
+        .attr 'cx', (d) -> scaleX d[0]
+        .attr 'cy', (d) -> scaleY d[1]
+        .on 'click', (d) ->
+          console.log d, series
+        .on 'mouseover', (d) ->
+          d3.select(@).style 'stroke', series.color
+        .on 'mouseout', (d) ->
+          d3.select(@).style 'stroke', 'none'
+    el
+
+
+  createCustomPlot = (metricsArray) ->
+    [ div ] = geyser.generate [ 'div' ]
+    render = ($element) ->
+      plot = renderCustomPlot metricsArray
+      $element.empty().append plot
+    markup: div()
+    behavior: render
+
 
   createMultiRocPlot = (metricsArray) ->
     [ div ] = geyser.generate [ 'div' ]
@@ -528,23 +760,27 @@ Steam.ScoringView = (_, _scoring) ->
       $element.empty().append multiRocPlot
 
     markup: div()
-    behaviors: [ render ]
+    behavior: render
 
   createStripPlot = (metricsArray) ->
     [ div ] = geyser.generate [ 'div' ]
     render = ($element) ->
+      #TODO build up once and reuse
+      categories = buildAucCategories()
       outputsArray = map metricsArray, (metrics) ->
         metrics: metrics
-        outputs: reshapeAucForParallelCoords metrics.metrics.auc
+        outputs: reshapeAucForParallelCoords categories, metrics.metrics.auc
 
-      stripPlot = renderStripPlot outputsArray
+      #TODO filtering of categories
+      stripPlot = renderStripPlot categories.categories, outputsArray
       $element.empty().append stripPlot
 
     markup: div()
-    behaviors: [ render ]
+    behavior: render
 
   createComparisonTable = (scores) ->
     [ div, table, kvtable, thead, tbody, tr, trExpert, diffSpan, th, thIndent, td, hyperlink] = geyser.generate words 'div table.table.table-condensed table.table-kv thead tbody tr tr.y-expert span.y-diff th th.y-indent td div.y-link'
+    [ tdId ] = geyser.generate "td id='$id'"
 
     createParameterTable = ({ parameters }) ->
       kvtable [
@@ -578,7 +814,6 @@ Steam.ScoringView = (_, _scoring) ->
       specificityRow = [ thIndent 'Specificity' ]
       maxPerClassErrorRow = [ thIndent 'Max Per Class Error' ]
 
-      format4f = d3.format '.4f' # precision = 4
 
       #TODO what does it mean to have > 1 metrics
       scoreWithLowestError = min scores, (score) -> (head score.data.output.metrics).error_measure
@@ -605,7 +840,7 @@ Steam.ScoringView = (_, _scoring) ->
 
         algorithmRow.push td model.model_algorithm
         nameRow.push td model.key
-        rocCurveRow.push td 'Loading...', "roc-#{scoreIndex}"
+        rocCurveRow.push tdId 'Loading...', $id:"roc-#{scoreIndex}"
         inputParametersRow.push td createParameterTable parameters: inputParamsByScoreIndex[scoreIndex]
         errorRow.push td (format4f metrics.error_measure) + errorBadge #TODO change to bootstrap badge
         durationRow.push td "#{metrics.duration_in_ms} ms"
@@ -660,7 +895,9 @@ Steam.ScoringView = (_, _scoring) ->
         tr specificityRow
         tr maxPerClassErrorRow
       ]
-      behaviors: [ renderRocCurves, toggleAdvancedParameters ]
+      behavior: ($element) ->
+        renderRocCurves $element
+        toggleAdvancedParameters $element
 
     createComparisonGrid scores
 
@@ -678,7 +915,9 @@ Steam.ScoringView = (_, _scoring) ->
   switchToAdvancedView: switchToAdvancedView
   modelSummary: _modelSummary
   comparisonTable: _comparisonTable
+  scoringList: _scoringList
   multiRocPlot: _multiRocPlot
+  customPlot: _customPlot
   stripPlot: _stripPlot
   hasFailed: _hasFailed
   failure: _failure

@@ -31,8 +31,12 @@
   div(data-bind='geyser:comparisonTable')
   // /ko
   // ko ifnot:isTabularComparisonView
+  h2.y-subtitle(data-bind='collapse:false') Scorings
+  div(data-bind='geyser:scoringList')
   h2.y-subtitle(data-bind='collapse:false') ROC Comparison
   div(data-bind='geyser:multiRocPlot')
+  h2.y-subtitle(data-bind='collapse:false') Plots
+  div(data-bind='geyser:customPlot')
   h2.y-subtitle(data-bind='collapse:false') Output Comparison
   div(data-bind='geyser:stripPlot')
   // /ko
