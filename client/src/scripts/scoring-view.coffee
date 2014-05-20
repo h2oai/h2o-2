@@ -1,6 +1,150 @@
 unless exports?
   format4f = d3.format '.4f' # precision = 4
 
+aucCriteria = [
+  key: 'maximum F1'
+  caption: 'Max F1'
+,
+  key: 'maximum F2'
+  caption: 'Max F2'
+,
+  key: 'maximum F0point5'
+  caption: 'Max F0.5'
+,
+  key: 'maximum Accuracy'
+  caption: 'Max Accuracy'
+,
+  key: 'maximum Precision'
+  caption: 'Max Precision'
+,
+  key: 'maximum Recall'
+  caption: 'Max Recall'
+,
+  key: 'maximum Specificity'
+  caption: 'Max Specificity'
+,
+  key: 'minimizing max per class Error'
+  caption: 'Min MPCE'
+]
+
+
+aucOutputs = [
+  key: 'threshold_for_criteria'
+  caption: 'Threshold'
+,
+  key: 'error_for_criteria'
+  caption: 'Error'
+,
+  key: 'F0point5_for_criteria'
+  caption: 'F0.5'
+,
+  key: 'F1_for_criteria'
+  caption: 'F1'
+,
+  key: 'F2_for_criteria'
+  caption: 'F2'
+,
+  key: 'accuracy_for_criteria'
+  caption: 'Accuracy'
+,
+  key: 'precision_for_criteria'
+  caption: 'Precision'
+,
+  key: 'recall_for_criteria'
+  caption: 'Recall'
+,
+  key: 'specificity_for_criteria'
+  caption: 'Specificity'
+,
+  key: 'max_per_class_error_for_criteria'
+  caption: 'MPCE'
+]
+
+aucCategories = do ->
+  categories = [
+    key: 'AUC'
+    caption: 'AUC'
+    domain: [0, 1]
+    isGrouped: no
+  ,
+    key: 'Gini'
+    caption: 'Gini'
+    domain: [0, 1]
+    isGrouped: no
+  ]
+  for criterion, criterionIndex in aucCriteria
+    for output in aucOutputs
+      categories.push
+        key: "#{criterion.caption}.#{output.caption}"
+        caption: "#{criterion.caption} - #{output.caption}"
+        domain: [0, 1]
+        isGrouped: yes
+        criterion: criterion
+        output: output
+        criterionIndex: criterionIndex
+
+  categories
+
+aucVariables = [
+  'Threshold'
+  'Error'
+  'F0.5'
+  'F1'
+  'F2'
+  'Accuracy'
+  'Precision'
+  'Recall'
+  'Specificity'
+  'MPCE'
+  'TPR'
+  'FPR'
+].map (attr) -> key: attr, caption: attr, domain: [0,1]
+
+aucCriteriaMap = indexBy aucCriteria, (criterion) -> criterion.key
+aucOutputMap = indexBy aucOutputs, (output) -> output.key
+aucCategoryMap = indexBy aucCategories, (cateogory) -> cateogory.key
+aucVariableMap = indexBy aucVariables, (variable) -> variable.key
+
+createThresholdPlotInspection = (series, mark) ->
+  [ div, h1, h2, table, grid, tbody, tr, th, td ] = geyser.generate words 'div h1 h2 table.table.table-condensed table.table.table-bordered tbody tr th td'
+
+  formatConfusionMatrix = (domain, cm) ->
+    [ d1, d2 ] = domain
+    [[tn, fp], [fn, tp]] = cm
+    grid [
+      tr [
+        th ''
+        th d1
+        th d2
+      ]
+      tr [
+        th d1
+        td tn
+        td fp
+      ]
+      tr [
+        th d2
+        td fn
+        td tp
+      ]
+    ]
+
+  tabulateProperties = (mark) ->
+    table tbody map aucVariables, (variable) ->
+      [ term, value ] = property
+      tr [
+        th variable.caption
+        td format4f mark[variable.key]
+      ]
+
+  div [
+    h1 series.caption
+    h2 'Outputs'
+    tabulateProperties mark
+    h2 'Confusion Matrix'
+    formatConfusionMatrix series.metrics.auc.actual_domain, mark['Confusion Matrix']
+  ]
+
 createRocMarkInspection = (metrics, mark) ->
   [ div, h1, h2, table, grid, tbody, tr, th, td ] = geyser.generate words 'div h1 h2 table.table.table-condensed table.table.table-bordered tbody tr th td'
 
@@ -41,9 +185,9 @@ createRocMarkInspection = (metrics, mark) ->
       [ 'True Positive Rate', format4f mark.tpr ]
     ]
 
-  tabulateProperties = (auc, index) -> 
+  tabulateProperties = (auc, index) ->
     properties = collectProperties auc, index
-    
+
     table tbody map properties, (property) ->
       [ term, value ] = property
       tr [
@@ -160,10 +304,12 @@ Steam.ScoringView = (_, _scoring) ->
               _comparisonTable null
           else
             if scorings.length > 0
+              series = createSeriesFromMetrics scorings
+              console.log series
               metricsArray = createMetricsArray scorings
               _scoringList createScoringList metricsArray
               _multiRocPlot createMultiRocPlot metricsArray
-              _customPlot createCustomPlot metricsArray
+              _customPlot createThresholdPlot series, 'F0.5', 'MPCE'
               _stripPlot createStripPlot metricsArray
             else
               _scoringList null
@@ -208,7 +354,7 @@ Steam.ScoringView = (_, _scoring) ->
       .attr 'height', height + margin.top + margin.bottom
       .append 'g'
       .attr 'transform', "translate(#{margin.left},#{margin.top})"
-    
+
     svg.append 'g'
       .attr 'class', 'x axis'
       .attr 'transform', "translate(0, #{height})"
@@ -253,6 +399,11 @@ Steam.ScoringView = (_, _scoring) ->
       .attr 'd', line
 
     el
+
+
+  computeTPRandFPR2 = (cm, index) ->
+    [[tn, fp], [fn, tp]] = cm
+    [ tp / (tp + fn), fp / (fp + tn) ]
 
   computeTPRandFPR = (cm, index) ->
     [[tn, fp], [fn, tp]] = cm
@@ -301,7 +452,7 @@ Steam.ScoringView = (_, _scoring) ->
           markAsDifferent parametersArray, index
           break
     return
-  
+
   renderStripPlot = (categories, scorings) ->
     margin = top: 20, right: 70, bottom: 20, left: 140
     width = 140
@@ -411,80 +562,27 @@ Steam.ScoringView = (_, _scoring) ->
 
     el
 
+
   buildAucCategories = ->
-    criteria = [
-      key: 'maximum F1'
-      caption: 'Max F1'
-    ,
-      key: 'maximum F2'
-      caption: 'Max F2'
-    ,
-      key: 'maximum F0point5'
-      caption: 'Max F0.5'
-    ,
-      key: 'maximum Accuracy'
-      caption: 'Max Accuracy'
-    ,
-      key: 'maximum Precision'
-      caption: 'Max Precision'
-    ,
-      key: 'maximum Recall'
-      caption: 'Max Recall'
-    ,
-      key: 'maximum Specificity'
-      caption: 'Max Specificity'
-    ,
-      key: 'minimizing max per class Error'
-      caption: 'Min MPCE'
-    ]
-
-    outputs = [
-      key: 'threshold_for_criteria'
-      caption: 'Threshold'
-    ,
-      key: 'F0point5_for_criteria'
-      caption: 'F0.5'
-    ,
-      key: 'F1_for_criteria'
-      caption: 'F1'
-    ,
-      key: 'F2_for_criteria'
-      caption: 'F2'
-    ,
-      key: 'accuracy_for_criteria'
-      caption: 'Accuracy'
-    ,
-      key: 'precision_for_criteria'
-      caption: 'Precision'
-    ,
-      key: 'recall_for_criteria'
-      caption: 'Recall'
-    ,
-      key: 'specificity_for_criteria'
-      caption: 'Specificity'
-    ,
-      key: 'max_per_class_error_for_criteria'
-      caption: 'MPCE'
-    ]
-
     categories = []
     id = 0
-    for criterion, criterionIndex in criteria
-      for output in outputs
+    for criterion, criterionIndex in aucCriteria
+      for output in aucOutputs
         categories.push
           id: id
           caption: "#{criterion.caption} - #{output.caption}"
           criterion: criterion
           output: output
           criterionIndex: criterionIndex
+          domain: [0, 1]
         id++
 
-    criteria: criteria
-    outputs: outputs
+    criteria: aucCriteria
+    outputs: aucOutputs
     categories: categories
 
   reshapeAucForParallelCoords = (data, auc) ->
-    # Validate, just to be doubly sure. 
+    # Validate, just to be doubly sure.
     criteria = data.criteria
     for criterion, index in auc.threshold_criteria
       if criterion isnt criteria[index].key
@@ -530,7 +628,7 @@ Steam.ScoringView = (_, _scoring) ->
       .attr 'height', height + margin.top + margin.bottom
       .append 'g'
       .attr 'transform', "translate(#{margin.left},#{margin.top})"
-    
+
     svg.append 'g'
       .attr 'class', 'x axis'
       .attr 'transform', "translate(0, #{height})"
@@ -602,6 +700,61 @@ Steam.ScoringView = (_, _scoring) ->
         td metrics.caption
       ]
 
+  createSeriesFromMetrics = (scores) ->
+    uniqueScoringNames = {}
+    createUniqueScoringName = (frameKey, modelKey) ->
+      name = "#{modelKey} on #{frameKey}"
+      if index = uniqueScoringNames[name]
+        uniqueScoringNames[name] = index++
+        name += ' #' + index
+      else
+        uniqueScoringNames[name] = 1
+      name
+
+    # Go for higher contrast when comparing fewer scorings.
+    palette = if scores.length > 10 then d3.scale.category20 else d3.scale.category10
+    colorScale = palette().domain d3.range scores.length
+
+    map scores, (score, index) ->
+      metrics = head score.data.output.metrics
+
+      id: index
+      caption: createUniqueScoringName metrics.frame.key, metrics.model.key
+      metrics: metrics
+      scoringMark: createMarkForScoringMetrics metrics
+      thresholdMarks: createMarksForThresholdMetrics metrics
+      color: colorScale index
+
+  createMarkForScoringMetrics = (metrics) ->
+    auc = metrics.auc
+    mark = {}
+    for category in aucCategories
+      if category.isGrouped
+        mark[category.caption] = +auc[category.output.key][category.criterionIndex]
+      else
+        mark[category.caption] = +auc[category.key]
+    mark
+
+  createMarksForThresholdMetrics = (metrics) ->
+    auc = metrics.auc
+    map auc.thresholds, (threshold, index) ->
+      cm = auc.confusion_matrices[index]
+      [ tpr, fpr ] = computeTPRandFPR2 cm
+
+      'Threshold': +threshold
+      'Error': +auc.error[index]
+      'F0.5': +auc.F0point5[index]
+      'F1': +auc.F1[index]
+      'F2': +auc.F2[index]
+      'Accuracy': +auc.accuracy[index]
+      'Precision': +auc.precision[index]
+      'Recall': +auc.recall[index]
+      'Specificity': +auc.specificity[index]
+      'MPCE': +auc.max_per_class_error[index]
+      'Confusion Matrix': cm
+      'TPR': tpr
+      'FPR': fpr
+
   createMetricsArray = (scores) ->
     uniqueScoringNames = {}
     createUniqueScoringName = (frameKey, modelKey) ->
@@ -625,43 +778,25 @@ Steam.ScoringView = (_, _scoring) ->
       metrics: metrics
       color: colorScale index
 
-  renderCustomPlot = (metricsArray) ->
-    console.log metricsArray
-    xAttr = 'F0point5'
-    yAttr = 'max_per_class_error'
-    domainX = [0, 1]
-    domainY = [0, 1]
-    series = map metricsArray, (metrics) ->
-      auc = metrics.metrics.auc
-
-      xs = auc[xAttr]
-      ys = auc[yAttr]
-      
-      marks = []
-      for x, i in xs
-        x = +x
-        y = +ys[i]
-        unless isNaN x
-          unless isNaN y
-            marks.push [ x, y ] 
-
-      id: metrics.id
-      color: metrics.color 
-      marks: marks
-
-    console.log series
-
+  renderThresholdPlot = (series, attrX, attrY) ->
+    variableX = aucVariableMap[attrX]
+    variableY = aucVariableMap[attrY]
 
     margin = top: 20, right: 20, bottom: 20, left: 30
     width = 300
     height = 300
 
+    validMarks = zipObject map series, (series) ->
+      marks = filter series.thresholdMarks, (mark) ->
+        (not isNaN mark[attrX]) and (not isNaN mark[attrY])
+      [ series.id, marks ]
+
     scaleX = d3.scale.linear()
-      .domain domainX
+      .domain variableX.domain
       .range [ 0, width ]
 
     scaleY = d3.scale.linear()
-      .domain domainY
+      .domain variableY.domain
       .range [ height, 0 ]
 
     axisX = d3.svg.axis()
@@ -675,8 +810,8 @@ Steam.ScoringView = (_, _scoring) ->
       .ticks 5
 
     line = d3.svg.line()
-      .x (d) -> scaleX d[0]
-      .y (d) -> scaleY d[1]
+      .x (d) -> scaleX d[attrX]
+      .y (d) -> scaleY d[attrY]
 
     el = document.createElementNS 'http://www.w3.org/2000/svg', 'svg'
 
@@ -686,7 +821,7 @@ Steam.ScoringView = (_, _scoring) ->
       .attr 'height', height + margin.top + margin.bottom
       .append 'g'
       .attr 'transform', "translate(#{margin.left},#{margin.top})"
-    
+
     svg.append 'g'
       .attr 'class', 'x axis'
       .attr 'transform', "translate(0, #{height})"
@@ -695,7 +830,7 @@ Steam.ScoringView = (_, _scoring) ->
       .attr 'x', width
       .attr 'y', -6
       .style 'text-anchor', 'end'
-      .text xAttr
+      .text variableX.caption
 
     svg.append 'g'
       .attr 'class', 'y axis'
@@ -705,7 +840,7 @@ Steam.ScoringView = (_, _scoring) ->
       .attr 'y', 6
       .attr 'dy', '.71em'
       .style 'text-anchor', 'end'
-      .text yAttr
+      .text variableY.caption
 
     curve = svg.selectAll '.y-curve'
       .data series
@@ -716,7 +851,7 @@ Steam.ScoringView = (_, _scoring) ->
     curve.append 'path'
       .attr 'id', (d) -> "curve#{d.id}"
       .attr 'class', 'line'
-      .attr 'd', (d) -> line d.marks
+      .attr 'd', (d) -> line validMarks[d.id]
       .style 'stroke', (d) -> d.color
       #.on 'mouseover', (d) -> _.inspect div d.caption
       #.on 'mouseout', (d) -> console.log 'mouseout', d
@@ -724,15 +859,15 @@ Steam.ScoringView = (_, _scoring) ->
     forEach series, (series) ->
       svg.append 'g'
         .selectAll '.dot'
-        .data series.marks
+        .data validMarks[series.id]
         .enter()
         .append 'circle'
         .attr 'class', 'dot'
         .attr 'r', 5
-        .attr 'cx', (d) -> scaleX d[0]
-        .attr 'cy', (d) -> scaleY d[1]
+        .attr 'cx', (d) -> scaleX d[attrX]
+        .attr 'cy', (d) -> scaleY d[attrY]
         .on 'click', (d) ->
-          console.log d, series
+          _.inspect createThresholdPlotInspection series, d
         .on 'mouseover', (d) ->
           d3.select(@).style 'stroke', series.color
         .on 'mouseout', (d) ->
@@ -740,10 +875,10 @@ Steam.ScoringView = (_, _scoring) ->
     el
 
 
-  createCustomPlot = (metricsArray) ->
+  createThresholdPlot = (series, attrX, attrY) ->
     [ div ] = geyser.generate [ 'div' ]
     render = ($element) ->
-      plot = renderCustomPlot metricsArray
+      plot = renderThresholdPlot series, attrX, attrY
       $element.empty().append plot
     markup: div()
     behavior: render
@@ -752,7 +887,7 @@ Steam.ScoringView = (_, _scoring) ->
   createMultiRocPlot = (metricsArray) ->
     [ div ] = geyser.generate [ 'div' ]
     render = ($element) ->
-      ratesArray = map metricsArray, (metrics) -> 
+      ratesArray = map metricsArray, (metrics) ->
         metrics: metrics
         rates: map metrics.metrics.auc.confusion_matrices, computeTPRandFPR
 
@@ -876,7 +1011,7 @@ Steam.ScoringView = (_, _scoring) ->
           isHidden = not isHidden
           return
         return
-      
+
 
       markup: table tbody [
         tr algorithmRow
