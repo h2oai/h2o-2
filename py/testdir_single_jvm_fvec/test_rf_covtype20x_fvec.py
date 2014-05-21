@@ -12,8 +12,8 @@ drf2ParamDict = {
     'sample_rate': [None,0.20,0.40,0.60,0.80,0.90],
     'seed': [None,'0','1','11111','19823134','1231231'],
     'mtries': [None,1,3,5,7,9,11,13,17,19,23,37,51],
-    'balance_classes': 0,
-    'importance': 0,
+    'balance_classes': [0],
+    'importance': [0],
     }
 
 print "Will RF train on one dataset, test on another (multiple params)"
