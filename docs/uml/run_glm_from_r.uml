@@ -30,7 +30,7 @@ R_script         -> R_h2o_glm : R script calls h2o.glm\n(input params)
 R_h2o_glm        -> RCurl : POST\n/2/GLM.json\n(input params)
 RCurl            -> h2o_webserver : HTTP query\nTCP/IP
 h2o_webserver    -> h2o_glm_endpoint : Dispatch request
-h2o_glm_endpoint -> h2o_glm_job : Start GLM job\n(input params)
+h2o_glm_endpoint -> h2o_glm_job : Create GLM job\n(input params)
 h2o_glm_job      -> h2o_jobmanager : Start job
 h2o_jobmanager   -> h2o_jobmanager : New job_id created
 h2o_glm_job      <- h2o_jobmanager : Return job_id
@@ -48,6 +48,7 @@ h2o_forkjoin     -> h2o_forkjoin : Execute task
 h2o_glm_task     <- h2o_forkjoin : Task complete
 h2o_glm_job      <- h2o_glm_task : Task complete
 h2o_glm_job      -> h2o_dkv      : Write model to K/V store (under model_id)
+h2o_glm_job      -> h2o_jobmanager : Job complete
 
 
 == R polls for GLM Job completion ==
