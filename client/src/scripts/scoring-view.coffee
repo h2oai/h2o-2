@@ -23,6 +23,9 @@ aucCriteria = [
   key: 'maximum Specificity'
   caption: 'Max Specificity'
 ,
+  key: 'maximum absolute MCC'
+  caption: 'Max Absolute MCC'
+,
   key: 'minimizing max per class Error'
   caption: 'Min MPCE'
 ]
@@ -55,6 +58,9 @@ aucOutputs = [
 ,
   key: 'specificity_for_criteria'
   caption: 'Specificity'
+,
+  key: 'mcc_for_criteria'
+  caption: 'MCC'
 ,
   key: 'max_per_class_error_for_criteria'
   caption: 'MPCE'
@@ -100,6 +106,7 @@ aucVariables = [
   'Precision'
   'Recall'
   'Specificity'
+  'MCC'
   'MPCE'
   'TPR'
   'FPR'
@@ -177,7 +184,7 @@ createRocMarkInspection = (metrics, mark) ->
   collectProperties = (auc, index) ->
     [
       [ 'Threshold', format4f auc.thresholds[index] ]
-      [ 'Error', format4f auc.error[index] ]
+      [ 'Error', format4f auc.errorr[index] ]
       [ 'F0.5', format4f auc.F0point5[index] ]
       [ 'F1', format4f auc.F1[index] ]
       [ 'F2', format4f auc.F2[index] ]
@@ -185,6 +192,7 @@ createRocMarkInspection = (metrics, mark) ->
       [ 'Precision', format4f auc.precision[index] ]
       [ 'Recall', format4f auc.recall[index] ]
       [ 'Specificity', format4f auc.specificity[index] ]
+      [ 'MCC', format4f auc.mcc[index] ]
       [ 'MPCE', format4f auc.max_per_class_error[index] ]
       [ 'False Positive Rate', format4f mark.fpr ]
       [ 'True Positive Rate', format4f mark.tpr ]
@@ -707,7 +715,7 @@ Steam.ScoringView = (_, _scoring) ->
       [ tpr, fpr ] = computeTPRandFPR2 cm
 
       'Threshold': +threshold
-      'Error': +auc.error[index]
+      'Error': +auc.errorr[index]
       'F0.5': +auc.F0point5[index]
       'F1': +auc.F1[index]
       'F2': +auc.F2[index]
@@ -715,6 +723,7 @@ Steam.ScoringView = (_, _scoring) ->
       'Precision': +auc.precision[index]
       'Recall': +auc.recall[index]
       'Specificity': +auc.specificity[index]
+      'MCC': +auc.mcc[index]
       'MPCE': +auc.max_per_class_error[index]
       'Confusion Matrix': cm
       'TPR': tpr
@@ -879,6 +888,7 @@ Steam.ScoringView = (_, _scoring) ->
       precisionRow = [ thIndent 'Precision' ]
       recallRow = [ thIndent 'Recall' ]
       specificityRow = [ thIndent 'Specificity' ]
+      mccRow = [ thIndent 'MCC' ]
       maxPerClassErrorRow = [ thIndent 'Max Per Class Error' ]
 
 
@@ -921,6 +931,7 @@ Steam.ScoringView = (_, _scoring) ->
         precisionRow.push td format4f head auc.precision_for_criteria
         recallRow.push td format4f head auc.recall_for_criteria
         specificityRow.push td format4f head auc.specificity_for_criteria
+        mccRow.push td format4f head auc.mcc_for_criteria
         maxPerClassErrorRow.push td format4f head auc.max_per_class_error_for_criteria
 
       renderRocCurves = ($element) ->
@@ -962,6 +973,7 @@ Steam.ScoringView = (_, _scoring) ->
         tr precisionRow
         tr recallRow
         tr specificityRow
+        tr mccRow
         tr maxPerClassErrorRow
       ]
       behavior: ($element) ->
