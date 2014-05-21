@@ -844,11 +844,11 @@ Steam.ScoringView = (_, _scoring) ->
           (hyperlink 'Show more', 'toggle-advanced-parameters')
         ]
       ]
-      errorRow = [ th 'Error' ]
       durationRow = [ th 'Time' ]
       aucRow = [ th 'AUC' ]
       thresholdCriterionRow = [ th 'Threshold Criterion' ]
       thresholdRow = [ thIndent 'Threshold' ]
+      errorRow = [ thIndent 'Error' ]
       f1Row = [ thIndent 'F1' ]
       accuracyRow = [ thIndent 'Accuracy' ]
       precisionRow = [ thIndent 'Precision' ]
@@ -884,11 +884,13 @@ Steam.ScoringView = (_, _scoring) ->
         nameRow.push td model.key
         rocCurveRow.push tdId 'Loading...', $id:"roc-#{scoreIndex}"
         inputParametersRow.push td createParameterTable parameters: inputParamsByScoreIndex[scoreIndex]
-        errorRow.push td (format4f metrics.error_measure) + errorBadge #TODO change to bootstrap badge
         durationRow.push td "#{metrics.duration_in_ms} ms"
         aucRow.push td format4f auc.AUC
+        #TODO fix error badge
+        #errorRow.push td (format4f metrics.error_measure) + errorBadge #TODO change to bootstrap badge
         thresholdCriterionRow.push td head auc.threshold_criteria
-        thresholdRow.push td head auc.threshold_for_criteria
+        thresholdRow.push td format4f head auc.threshold_for_criteria
+        errorRow.push td format4f head auc.error_for_criteria
         f1Row.push td format4f head auc.F1_for_criteria
         accuracyRow.push td format4f head auc.accuracy_for_criteria
         precisionRow.push td format4f head auc.precision_for_criteria
@@ -925,11 +927,11 @@ Steam.ScoringView = (_, _scoring) ->
         tr nameRow
         tr rocCurveRow
         tr inputParametersRow
-        tr errorRow
         tr durationRow
         tr aucRow
         tr thresholdCriterionRow
         tr thresholdRow
+        tr errorRow
         tr f1Row
         tr accuracyRow
         tr precisionRow
