@@ -12,15 +12,15 @@ public class FileIntegrityChecker extends DRemoteTask<FileIntegrityChecker> {
   final String[] _files;        // File names found locally
   final long  [] _sizes;        // File sizes found locally
   final boolean  _newApi;       // Produce NFSFileVec instead of ValueArray
-  int[] _ok;                    // OUTPUT: files which are globally compatible
+  int[][] _ok;                    // OUTPUT: files which are globally compatible
 
 
   @Override public void lcompute() {
-    _ok = new int[_files.length];
+    _ok = new int[_files.length][H2O.CLOUD.size()];
     for (int i = 0; i < _files.length; ++i) {
       File f = new File(_files[i]);
       if (f.exists() && (f.length()==_sizes[i]))
-        _ok[i] = 1;
+        _ok[i][H2O.SELF.index()] = 1;
     }
     tryComplete();
   }
@@ -83,9 +83,14 @@ public class FileIntegrityChecker extends DRemoteTask<FileIntegrityChecker> {
     Key k = null;
     // Find all Keys which match ...
     for( int i = 0; i < _files.length; ++i ) {
-      if( _ok[i] < H2O.CLOUD.size() ) {
-        if( fails != null ) fails.add(_files[i]);
-      } else {
+      boolean failed = false;
+      for (int j = 0; j < H2O.CLOUD.size(); ++j) {
+        if (_ok[i][j] == 0) {
+          failed = true;
+          fails.add("missing file " + _files[i] + " at node " + H2O.CLOUD._memary[j]);
+        }
+      }
+      if(!failed){
         File f = new File(_files[i]);
         k = PersistNFS.decodeFile(f);
         if( files != null ) files.add(_files[i]);
