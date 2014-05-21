@@ -347,7 +347,6 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     // exception occured when processing this task locally, set exception and send it back to the caller
     @Override public boolean onExceptionalCompletion( Throwable ex, CountedCompleter caller ) {
       if(!_firstException.getAndSet(true)){
-        ex.printStackTrace();
         _dt.setException(ex);
         onCompletion(caller);
       }
