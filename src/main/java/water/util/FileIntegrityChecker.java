@@ -79,13 +79,6 @@ public class FileIntegrityChecker extends DRemoteTask<FileIntegrityChecker> {
                            ArrayList<String> fails,
                            ArrayList<String> dels) {
 
-    // Remove & report all Keys that match the root prefix
-    for( Key k : H2O.localKeySet() )
-      if( k.toString().startsWith(_root) ) {
-        dels.add(k.toString());
-        Lockable.delete(k);
-      }
-
     Futures fs = new Futures();
     Key k = null;
     // Find all Keys which match ...
@@ -98,6 +91,7 @@ public class FileIntegrityChecker extends DRemoteTask<FileIntegrityChecker> {
         if( files != null ) files.add(_files[i]);
         if( keys  != null ) keys .add(k.toString());
         if(_newApi) {
+          if(DKV.get(k) != null)dels.add(k.toString());
           new Frame(k).delete_and_lock(null);
           NFSFileVec nfs = DKV.get(NFSFileVec.make(f, fs)).get();
           Frame fr = new Frame(k,new String[] { "0" }, new Vec[] { nfs });
