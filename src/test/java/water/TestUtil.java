@@ -83,6 +83,7 @@ public class TestUtil {
     if( leaked_keys > 0 ) {
       for( Key k : H2O.localKeySet() ) {
         Value value = DKV.get(k);
+        if( value==null ) { leaked_keys--; continue; }
         Object o = value.type() != TypeMap.PRIM_B ? value.get() : "byte[]";
         // Ok to leak VectorGroups
         if( o instanceof Vec.VectorGroup )

@@ -66,14 +66,8 @@ h2o.fit2<- h2o.gbm(x=c("x1", "x2", "x3"), y="y", distribution="bernoulli", n.tre
 ######### Get predictions: ###################
 
 pred.gbm1<-as.data.frame(predict.gbm(fit.gbm1, newdata=f.all.data2, n.trees=1, type="response"))
-pred.gbm1<- pred.gbm1[,2]
-pred.gbm2<-predict.gbm(fit.gbm2, newdata=f.all.data2, n.trees=1, type="response")
-pred.h2o.fit1<- h2o.predict(h2o.fit1, f.all.data.H)
-pred.h2o.fit1<- as.data.frame(pred.h2o.fit1)
-pred.h2o.fit1<- pred.h2o.fit1[,3]
-pred.h2o.fit2<- h2o.predict(h2o.fit2, f.all.data.H)
-pred.h2o.fit2<- as.data.frame(pred.h2o.fit2)
-pred.h2o.fit2<- pred.h2o.fit2[,3]
+pred.gbm2<- as.data.frame(predict.gbm(fit.gbm2, newdata=all.data2, n.trees=1, type="response"))
+pred.h2o.fit1<- as.data.frame(h2o.predict)
 
 
 #We expect that the two families within the same tool produce different predictions because they are optimizing a different loss function. This is true for the models produced in R. We also expect that the models built between the two tools agree to some extent, and thus significant positive correlation between the two vectors of predictors. 

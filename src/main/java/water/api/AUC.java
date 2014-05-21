@@ -45,6 +45,7 @@ public class AUC extends Func {
     maximum_Precision,
     maximum_Recall,
     maximum_Specificity,
+    maximum_absolute_MCC,
     minimizing_max_per_class_Error
   }
 
@@ -66,13 +67,15 @@ public class AUC extends Func {
   @API(help = "Accuracy for all thresholds")
   public float[] accuracy;
   @API(help = "Error for all thresholds")
-  public float[] error;
+  public float[] errorr;
   @API(help = "Precision for all thresholds")
   public float[] precision;
   @API(help = "Recall for all thresholds")
   public float[] recall;
   @API(help = "Specificity for all thresholds")
   public float[] specificity;
+  @API(help = "MCC for all thresholds")
+  public float[] mcc;
   @API(help = "Max per class error for all thresholds")
   public float[] max_per_class_error;
 
@@ -96,6 +99,8 @@ public class AUC extends Func {
   private float[] recall_for_criteria;
   @API(help="Specificity for threshold criteria")
   private float[] specificity_for_criteria;
+  @API(help="MCC for threshold criteria")
+  private float[] mcc_for_criteria;
   @API(help="Maximum per class Error for threshold criteria")
   private float[] max_per_class_error_for_criteria;
   @API(help="Confusion Matrices for threshold criteria")
@@ -113,10 +118,11 @@ public class AUC extends Func {
     F2 = null;
     F0point5 = null;
     accuracy = null;
-    error = null;
+    errorr = null;
     precision = null;
     recall = null;
     specificity = null;
+    mcc = null;
     max_per_class_error = null;
     threshold_for_criteria = null;
     F1_for_criteria = null;
@@ -142,6 +148,7 @@ public class AUC extends Func {
   public double precision(ThresholdCriterion criter) { return _cms[idxCriter[criter.ordinal()]].precision(); }
   public double recall(ThresholdCriterion criter) { return _cms[idxCriter[criter.ordinal()]].recall(); }
   public double specificity(ThresholdCriterion criter) { return _cms[idxCriter[criter.ordinal()]].specificity(); }
+  public double mcc(ThresholdCriterion criter) { return _cms[idxCriter[criter.ordinal()]].mcc(); }
   public double accuracy(ThresholdCriterion criter) { return _cms[idxCriter[criter.ordinal()]].accuracy(); }
   public double err(ThresholdCriterion criter) { return _cms[idxCriter[criter.ordinal()]].err(); }
   public double max_per_class_error(ThresholdCriterion criter) { return _cms[idxCriter[criter.ordinal()]].max_per_class_error(); }
@@ -157,6 +164,7 @@ public class AUC extends Func {
   public double precision() { return precision(threshold_criterion); }
   public double recall() { return recall(threshold_criterion); }
   public double specificity() { return specificity(threshold_criterion); }
+  public double mcc() { return mcc(threshold_criterion); }
   public double accuracy() { return accuracy(threshold_criterion); }
   public double max_per_class_error() { return max_per_class_error(threshold_criterion); }
   public float threshold() { return threshold(threshold_criterion); }
@@ -303,6 +311,9 @@ public class AUC extends Func {
     } else if (criter == ThresholdCriterion.maximum_Specificity) {
       return (!Double.isNaN(a.specificity()) &&
               (Double.isNaN(b.specificity()) || a.specificity() > b.specificity()));
+    } else if (criter == ThresholdCriterion.maximum_absolute_MCC) {
+      return (!Double.isNaN(a.mcc()) &&
+              (Double.isNaN(b.mcc()) || Math.abs(a.mcc()) > Math.abs(b.mcc())));
     }
     else {
       throw new IllegalArgumentException("Unknown threshold criterion.");
@@ -328,6 +339,7 @@ public class AUC extends Func {
     precision_for_criteria = new float[hs.size()];
     recall_for_criteria = new float[hs.size()];
     specificity_for_criteria = new float[hs.size()];
+    mcc_for_criteria = new float[hs.size()];
     max_per_class_error_for_criteria = new float[hs.size()];
 
     for (ThresholdCriterion criter : hs) {
@@ -350,6 +362,7 @@ public class AUC extends Func {
       precision_for_criteria[id] = (float)_cms[idxCriter[id]].precision();
       recall_for_criteria[id] = (float)_cms[idxCriter[id]].recall();
       specificity_for_criteria[id] = (float)_cms[idxCriter[id]].specificity();
+      mcc_for_criteria[id] = (float)_cms[idxCriter[id]].mcc();
       max_per_class_error_for_criteria[id] = (float)_cms[idxCriter[id]].max_per_class_error();
     }
   }
@@ -363,10 +376,11 @@ public class AUC extends Func {
     F2 = new float[_cms.length];
     F0point5 = new float[_cms.length];
     accuracy = new float[_cms.length];
-    error = new float[_cms.length];
+    errorr = new float[_cms.length];
     precision = new float[_cms.length];
     recall = new float[_cms.length];
     specificity = new float[_cms.length];
+    mcc = new float[_cms.length];
     max_per_class_error = new float[_cms.length];
     for(int i=0;i<_cms.length;++i) {
       confusion_matrices[i] = _cms[i]._arr;
@@ -374,10 +388,11 @@ public class AUC extends Func {
       F2[i] = (float)_cms[i].F2();
       F0point5[i] = (float)_cms[i].F0point5();
       accuracy[i] = (float)_cms[i].accuracy();
-      error[i] = (float)_cms[i].err();
+      errorr[i] = (float)_cms[i].err();
       precision[i] = (float)_cms[i].precision();
       recall[i] = (float)_cms[i].recall();
       specificity[i] = (float)_cms[i].specificity();
+      mcc[i] = (float)_cms[i].mcc();
       max_per_class_error[i] = (float)_cms[i].max_per_class_error();
     }
   }
@@ -440,6 +455,9 @@ public class AUC extends Func {
       sb.append("var specificity = [");
       for (int i = 0; i < my_cms.length; ++i) sb.append((float) my_cms[i].specificity() + ",");
       sb.append(" ];\n");
+      sb.append("var mcc = [");
+      for (int i = 0; i < my_cms.length; ++i) sb.append((float) my_cms[i].mcc() + ",");
+      sb.append(" ];\n");
       sb.append("var max_per_class_error = [");
       for (int i = 0; i < my_cms.length; ++i) sb.append((float) my_cms[i].max_per_class_error() + ",");
       sb.append(" ];\n");
@@ -465,6 +483,7 @@ public class AUC extends Func {
       sb.append("<th>Precision  </th>");
       sb.append("<th>Recall     </th>");
       sb.append("<th>Specificity</th>");
+      sb.append("<th>MCC</th>");
       sb.append("<th>Max per class Error</th>");
       sb.append("<tr class='warning'>");
       sb.append("<td>" + String.format("%.5f", AUC()) + "</td>"
@@ -476,6 +495,7 @@ public class AUC extends Func {
                       + "<td id='precision'>" + String.format("%.7f", precision()) + "</td>"
                       + "<td id='recall'>" + String.format("%.7f", recall()) + "</td>"
                       + "<td id='specificity'>" + String.format("%.7f", specificity()) + "</td>"
+                      + "<td id='mcc'>" + String.format("%.7f", mcc()) + "</td>"
                       + "<td id='max_per_class_error'>" + String.format("%.7f", max_per_class_error()) + "</td>"
       );
       DocGen.HTML.arrayTail(sb);
@@ -504,6 +524,7 @@ public class AUC extends Func {
       sb.append("\t" + "document.getElementById('precision').innerHTML = precision[i];\n");
       sb.append("\t" + "document.getElementById('recall').innerHTML = recall[i];\n");
       sb.append("\t" + "document.getElementById('specificity').innerHTML = specificity[i];\n");
+      sb.append("\t" + "document.getElementById('mcc').innerHTML = mcc[i];\n");
       sb.append("\t" + "document.getElementById('max_per_class_error').innerHTML = max_per_class_error[i];\n");
       sb.append("\t" + "update(dataset);\n");
       sb.append("}\n");
@@ -535,6 +556,7 @@ public class AUC extends Func {
     sb.append(", Precision: " + String.format("%.5f", precision()));
     sb.append(", Recall: " + String.format("%.5f", recall()));
     sb.append(", Specificity: " + String.format("%.5f", specificity()));
+    sb.append(", MCC: " + String.format("%.5f", mcc()));
     sb.append(", Threshold for " + threshold_criterion.toString().replace("_", " ") + ": " + String.format("%g", threshold()));
     sb.append("\n");
   }

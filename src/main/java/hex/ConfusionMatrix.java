@@ -174,6 +174,21 @@ public class ConfusionMatrix extends Iced {
     return tp / (tp + fp);
   }
   /**
+   * The Matthews Correlation Coefficient, takes true negatives into account in contrast to F-Score
+   * See <a href="http://en.wikipedia.org/wiki/Matthews_correlation_coefficient">MCC</a>
+   * MCC = Correlation between observed and predicted binary classification
+   * @return mcc ranges from -1 (total disagreement) ... 0 (no better than random) ... 1 (perfect)
+   */
+  public double mcc() {
+    if(!isBinary())throw new UnsupportedOperationException("precision is only implemented for 2 class problems.");
+    double tn = _arr[0][0];
+    double fp = _arr[0][1];
+    double tp = _arr[1][1];
+    double fn = _arr[1][0];
+    double mcc = (tp*tn - fp*fn)/Math.sqrt((tp+fp)*(tp+fn)*(tn+fp)*(tn+fn));
+    return mcc;
+  }
+  /**
    * The maximum per-class error
    * @return max(classErr(i))
    */

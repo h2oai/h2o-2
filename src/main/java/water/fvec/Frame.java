@@ -26,9 +26,14 @@ public class Frame extends Lockable<Frame> {
   private transient Vec _col0;  // First readable vec; fast access to the VectorGroup's Chunk layout
   private final UniqueId uniqueId;
 
+  public Frame(Key k){
+    super(k);
+    uniqueId = new UniqueFrameId(k, this);
+  }
   public Frame( Frame fr ) { this(fr._key,fr._names.clone(), fr.vecs().clone()); _col0 = null; }
   public Frame( Vec... vecs ){ this(null,vecs);}
   public Frame( String[] names, Vec[] vecs ) { this(null,names,vecs); }
+
   public Frame( Key key, String[] names, Vec[] vecs ) {
     super(key);
     this.uniqueId = new UniqueFrameId(_key, this);

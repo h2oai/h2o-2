@@ -118,11 +118,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
     # these will be tracked individual by jenkins, which is nice
     #***********************************************************************
 
-    def test_A_c2_nongz_fvec_short(self):
-        h2o.beta_features = True
-        parseResult = h2i.import_parse(bucket='smalldata', path='iris/iris2.csv', schema='put')
-        h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=10)
-
     def test_B_c2_nongz_fvec_long(self):
         h2o.beta_features = True
         self.sub_c2_nongz_fvec_long()

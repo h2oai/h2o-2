@@ -93,7 +93,7 @@ public class GridSearch extends Job {
             info._error = info._model.mse();
           }
         }
-        if( info._cm != null )
+        if( info._cm != null && (info._model == null || info._model.isClassifier()))
           info._error = info._cm.err();
         if (infos != null) infos.add(info);
         prediction_errors[i] = info._error;

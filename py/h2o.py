@@ -292,6 +292,7 @@ def find_file(base):
 # Apparently this escape function on errors is the way shutil.rmtree can
 # handle the permission issue. (do chmod here)
 # But we shouldn't have read-only files. So don't try to handle that case.
+
 def handleRemoveError(func, path, exc):
     # If there was an error, it could be due to windows holding onto files.
     # Wait a bit before retrying. Ignore errors on the retry. Just leave files.
@@ -308,6 +309,13 @@ LOG_DIR = get_sandbox_name()
 
 def clean_sandbox():
     if os.path.exists(LOG_DIR):
+
+        # shutil.rmtree hangs if symlinks in the dir? (in syn_datasets for multifile parse)
+        # use os.remove() first
+        for f in glob.glob(LOG_DIR + '/syn_datasets/*'):
+            verboseprint("cleaning", f)
+            os.remove(f)
+
         # shutil.rmtree fails to delete very long filenames on Windoze
         #shutil.rmtree(LOG_DIR)
         # was this on 3/5/13. This seems reliable on windows+cygwin
