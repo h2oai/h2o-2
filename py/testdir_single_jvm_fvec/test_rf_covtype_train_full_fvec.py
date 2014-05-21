@@ -13,6 +13,8 @@ paramDict = {
     # 'ignored_cols_by_name': "A1,A2,A6,A7,A8",
     'sample_rate': 0.80,
     'validation': 'covtype.data.hex'
+    'balance_classes': 0,
+    'importance': 0,
     }
 
 class Basic(unittest.TestCase):

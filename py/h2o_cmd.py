@@ -425,7 +425,8 @@ def infoFromSummary(summaryResult, noPrint=False, numCols=None, numRows=None):
                 else:
                     if not mins:
                         print h2o.dump_json(column)
-                        raise Exception ("Why is min[] empty for a %s col (%s) ? %s %s %s" % (mins, stattype, colname, nacnt, numRows))
+                        # raise Exception ("Why is min[] empty for a %s col (%s) ? %s %s %s" % (mins, stattype, colname, nacnt, numRows))
+                        print "Why is min[] empty for a %s col (%s) ? %s %s %s" % (mins, stattype, colname, nacnt, numRows)
                     if not maxs:
                         # this is failing on maprfs best buy...why? (va only?)
                         print h2o.dump_json(column)

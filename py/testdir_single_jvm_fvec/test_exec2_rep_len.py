@@ -24,7 +24,7 @@ class Basic(unittest.TestCase):
 
         for i in range(5):
             # have to make sure they're created as keys for reuse between execs
-            execExpr = "a=rep_len(0,1000000000); b = runif(a,-1)"
+            execExpr = "a=rep_len(0,1000000); b = runif(a,-1)"
             h2e.exec_expr(execExpr=execExpr, timeoutSecs=180)
             execExpr = "b=a; d=a; f=a; g=a;"
             h2e.exec_expr(execExpr=execExpr, timeoutSecs=180)

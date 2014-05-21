@@ -10,6 +10,8 @@ paramDict = {
     'sample_rate': [None,0.20,0.40,0.60,0.80,0.90],
     'seed': [None,'0','1','11111','19823134','1231231'],
     'mtries': [None,1,3,5,7,9,11,13,17,19,23,37,51],
+    'balance_classes': 0,
+    'importance': 0,
     }
 
 print "Will RF train on one dataset, test on another (multiple params)"
@@ -61,7 +63,7 @@ class Basic(unittest.TestCase):
 
         # params is mutable. This is default.
         params = {
-            'ntrees': 6, 
+            'ntrees': 3, 
             'destination_key': 'RF_model'
         }
 
@@ -69,17 +71,17 @@ class Basic(unittest.TestCase):
         kwargs = params.copy()
         # adjust timeoutSecs with the number of trees
         # seems ec2 can be really slow
-        timeoutSecs = 30 + kwargs['ntrees'] * 60 
 
+        timeoutSecs = 100
         start = time.time()
-        rfv = h2o_cmd.runRF(parseResult=parseResultTrain,
+        rfv = h2o_cmd.runRF(parseResult=parseResultTrain, 
             timeoutSecs=timeoutSecs, retryDelaySecs=1, noPoll=True, **kwargs)
         print "rf job dispatch end on ", dataKeyTrain, 'took', time.time() - start, 'seconds'
         ### print "rf response:", h2o.dump_json(rfv)
 
 
         start = time.time()
-        h2o_jobs.pollWaitJobs(pattern='RF_model', timeoutSecs=180, pollTimeoutSecs=120, retryDelaySecs=5)
+        h2o_jobs.pollWaitJobs(pattern='RF_model', timeoutSecs=300, pollTimeoutSecs=120, retryDelaySecs=5)
         print "rf job end on ", dataKeyTrain, 'took', time.time() - start, 'seconds'
 
         print "\nRFView start after job completion"

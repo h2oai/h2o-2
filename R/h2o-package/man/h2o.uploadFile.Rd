@@ -75,7 +75,6 @@ class(prostate.hex)
 summary(prostate.hex)
 prostate.fv = h2o.uploadFile(localH2O, path = prosPath, key = "prostate.fv", version = 2)
 class(prostate.fv)
-h2o.shutdown(localH2O)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

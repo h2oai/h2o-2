@@ -98,8 +98,11 @@ public class FileIntegrityChecker extends DRemoteTask<FileIntegrityChecker> {
         if( files != null ) files.add(_files[i]);
         if( keys  != null ) keys .add(k.toString());
         if(_newApi) {
+          new Frame(k).delete_and_lock(null);
           NFSFileVec nfs = DKV.get(NFSFileVec.make(f, fs)).get();
-          new Frame(k,new String[] { "0" }, new Vec[] { nfs }).delete_and_lock(null).unlock(null);
+          Frame fr = new Frame(k,new String[] { "0" }, new Vec[] { nfs });
+          fr.update(null);
+          fr.unlock(null);
         } else {
           long size = f.length();
           Value val;

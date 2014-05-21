@@ -40,7 +40,6 @@ prostate.glm = h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = 
 # Get fitted values of prostate dataset
 prostate.fit = h2o.predict(object = prostate.glm, newdata = prostate.hex)
 summary(prostate.fit)
-h2o.shutdown(localH2O)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

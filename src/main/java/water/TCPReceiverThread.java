@@ -91,6 +91,8 @@ public class TCPReceiverThread extends Thread {
           break;                // Socket closed for shutdown
         } catch( Exception e ) {
           // On any error from anybody, close everything
+          System.err.println("IO error");
+          e.printStackTrace();
           Log.err("IO error on TCP port "+H2O.UDP_PORT+": ",e);
           break;
         }

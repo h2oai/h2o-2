@@ -117,12 +117,12 @@ class Basic(unittest.TestCase):
                 timeoutSecs=timeoutSecs, retryDelaySecs=1)
 
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfv, ntree=used_trees)
-            self.assertAlmostEqual(classification_error, 5.0, delta=2.0, msg="Classification error %s differs too much" % classification_error)
+            self.assertTrue(classification_error<=5.0, msg="Classification error %s too big" % classification_error)
             predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
 
             fullScorePctRight = 100.0 - classification_error
             expectScorePctRight = 94
-            self.assertAlmostEqual(fullScorePctRight,expectScorePctRight,
+            self.assertTrue(fullScorePctRight >= expectScorePctRight,
                 msg="Full: pct. right for scoring not close enough %6.2f %6.2f"% (fullScorePctRight, expectScorePctRight), delta=5)
 
 

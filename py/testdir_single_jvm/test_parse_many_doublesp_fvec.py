@@ -215,7 +215,13 @@ class Basic(unittest.TestCase):
                         str(sepCase) + \
                         '.data'
                     self.writeRows(csvPathname,newRows2,eol)
-                    parseResult = h2i.import_parse(path=csvPathname, schema='put', noPrint=not h2o.verbose)
+                    if "'" in self.tokenChangeDict[tokenCase]:
+                        single_quotes = 1
+                    else:
+                        single_quotes = 0
+                    parseResult = h2i.import_parse(path=csvPathname, schema='put', single_quotes=single_quotes,
+                        noPrint=not h2o.verbose)
+
                     if DO_RF:
                         h2o_cmd.runRF(parseResult=parseResult, trees=1, timeoutSecs=30, retryDelaySecs=0.1)
                     h2o.verboseprint("Set", set)

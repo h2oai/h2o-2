@@ -70,13 +70,13 @@ public final class H2O {
   public static final int NUMCPUS = Runtime.getRuntime().availableProcessors();
 
   // Convenience error
-  public static final RuntimeException unimpl() { return new RuntimeException("unimplemented"); }
-  public static final RuntimeException fail() { return new RuntimeException("do not call"); }
+  public static RuntimeException unimpl() { return new RuntimeException("unimplemented"); }
+  public static RuntimeException fail() { return new RuntimeException("do not call"); }
 
   // Central /dev/null for ignored exceptions
-  public static final void ignore(Throwable e)             { ignore(e,"[h2o] Problem ignored: "); }
-  public static final void ignore(Throwable e, String msg) { ignore(e, msg, true); }
-  public static final void ignore(Throwable e, String msg, boolean printException) { Log.debug(Sys.WATER, msg + (printException? e.toString() : "")); }
+  public static void ignore(Throwable e)             { ignore(e,"[h2o] Problem ignored: "); }
+  public static void ignore(Throwable e, String msg) { ignore(e, msg, true); }
+  public static void ignore(Throwable e, String msg, boolean printException) { Log.debug(Sys.WATER, msg + (printException? e.toString() : "")); }
 
   // --------------------------------------------------------------------------
   // Embedded configuration for a full H2O node to be implanted in another

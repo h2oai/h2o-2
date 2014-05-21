@@ -146,7 +146,6 @@ class PerfRunner:
                 print '-' * 60
                 traceback.print_exc(file=sys.stdout)
                 print '-' * 60
-                p.terminate()
                 PerfUtils.stop_cloud(self, test.remote_hosts)
                 self.cloud.pop(0)
                 self.perfdb.this_test_run_id += 1

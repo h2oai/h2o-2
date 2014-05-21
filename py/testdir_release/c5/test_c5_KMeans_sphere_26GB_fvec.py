@@ -6,6 +6,7 @@ import socket
 print "Assumes you ran ../build_for_clone.py in this directory"
 print "Using h2o-nodes.json. Also the sandbox dir"
 
+DELETE_KEYS_EACH_ITER = True
 DO_KMEANS = True
 # assumes the cloud was built with CDH3? maybe doesn't matter as long as the file is there
 FROM_HDFS = 'CDH3'
@@ -76,6 +77,13 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             print "\n"+l
             h2o.cloudPerfH2O.message(l)
 
+            inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
+            numRows = inspect['numRows']
+            numCols = inspect['numCols']
+            summary = h2o_cmd.runSummary(key=parseResult['destination_key'], numRows=numRows, numCols=numCols)
+            h2o_cmd.infoFromSummary(summary)
+
+
             # KMeans ****************************************
             if not DO_KMEANS:
                 continue
@@ -120,7 +128,9 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             # all are multipliers of expected tuple value
             allowedDelta = (0.01, 0.01, 0.01) 
             h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, allowError=True, trial=trial)
-            h2i.delete_keys_at_all_nodes()
+
+            if DELETE_KEYS_EACH_ITER:
+                h2i.delete_keys_at_all_nodes()
 
 
 if __name__ == '__main__':

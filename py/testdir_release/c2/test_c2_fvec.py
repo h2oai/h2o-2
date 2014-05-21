@@ -3,7 +3,7 @@ sys.path.extend(['.','..','../..','py'])
 import h2o, h2o_cmd, h2o_import as h2i, h2o_glm, h2o_common, h2o_exec as h2e
 import h2o_print
 
-DO_GLM = True
+DO_GLM = False
 LOG_MACHINE_STATS = False
 
 print "Assumes you ran ../build_for_clone.py in this directory"
@@ -117,11 +117,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
     #***********************************************************************
     # these will be tracked individual by jenkins, which is nice
     #***********************************************************************
-
-    def test_A_c2_fvec_short(self):
-        h2o.beta_features = True
-        parseResult = h2i.import_parse(bucket='smalldata', path='iris/iris2.csv', schema='put')
-        h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=10)
 
     def test_B_c2_fvec_long(self):
         h2o.beta_features = True
