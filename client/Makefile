@@ -42,6 +42,7 @@ BROWSER_SCRIPTS=\
 	$(BUILD)/scripts/error-dialog.js \
 	$(BUILD)/scripts/confirm-dialog.js \
 	$(BUILD)/scripts/select-frame-dialog.js \
+	$(BUILD)/scripts/configure-strip-plot-dialog.js \
 	$(BUILD)/scripts/topic-list-view.js \
 	$(BUILD)/scripts/frame-list-view.js \
 	$(BUILD)/scripts/model-list-view.js \
@@ -67,6 +68,7 @@ TEST_SCRIPTS=\
 	$(BUILD)/scripts/error-dialog.js \
 	$(BUILD)/scripts/confirm-dialog.js \
 	$(BUILD)/scripts/select-frame-dialog.js \
+	$(BUILD)/scripts/configure-strip-plot-dialog.js \
 	$(BUILD)/scripts/topic-list-view.js \
 	$(BUILD)/scripts/frame-list-view.js \
 	$(BUILD)/scripts/model-list-view.js \
@@ -115,6 +117,7 @@ TEMPLATES=\
 	src/templates/error-dialog.jade \
 	src/templates/confirm-dialog.jade \
 	src/templates/select-frame-dialog.jade \
+	src/templates/configure-strip-plot-dialog.jade \
 	src/templates/topic-list-view.jade \
 	src/templates/frame-list-view.jade \
 	src/templates/model-list-view.jade \

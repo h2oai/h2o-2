@@ -24,8 +24,8 @@
   // ko if:isComparisonView
 
   .y-tabs
-    a.y-tab(data-bind='click:switchToTabularView, css:{active:isTabularComparisonView}') Tabular View
-    a.y-tab(data-bind='click:switchToAdvancedView, css:{active:isAdvancedComparisonView}') Advanced View
+    a.y-tab(data-bind='click:switchToTabularView, css:{active:isTabularComparisonView}') Tabular
+    a.y-tab(data-bind='click:switchToAdvancedView, css:{active:isAdvancedComparisonView}') Advanced
 
   // ko if:isTabularComparisonView
   div(data-bind='geyser:comparisonTable')
@@ -45,20 +45,26 @@
   div(data-bind='geyser:multiRocPlot')
   h2.y-subtitle(data-bind='collapse:false') Plots
   div
+    h3(data-bind='collapse:true') Modify this plot
+    .y-shade
+      table.table.table-condensed
+        tbody
+          tr
+            th X-Axis
+            td
+              select(data-bind="options:thresholdPlotVariables, optionsText:'caption', value:thresholdPlotX")
+          tr
+            th Y-Axis
+            td
+              select(data-bind="options:thresholdPlotVariables, optionsText:'caption', value:thresholdPlotY")
     div(data-bind='geyser:thresholdPlot')
-    h3 Customize this plot
-    table.table.table-condensed
-      tbody
-        tr
-          th X-Axis
-          td
-            select(data-bind="options:thresholdPlotVariables, optionsText:'caption', value:thresholdPlotX")
-        tr
-          th Y-Axis
-          td
-            select(data-bind="options:thresholdPlotVariables, optionsText:'caption', value:thresholdPlotY")
   h2.y-subtitle(data-bind='collapse:false') Output Comparison
-  div(data-bind='geyser:stripPlot')
+  div
+    div(data-bind='geyser:stripPlot')
+    //-
+      div
+        button.btn.btn-primary(data-bind='click:configureStripPlot') Configure...
+
   // /ko
   // /ko
 

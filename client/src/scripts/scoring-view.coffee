@@ -209,19 +209,36 @@ createRocMarkInspection = (metrics, mark) ->
     formatConfusionMatrix auc.actual_domain, auc.confusion_matrices[mark.index]
   ]
 
-createStripPlotInspection = (series, category) ->
+createStripPlotRowInspection = (series, category) ->
   [ div, h1, table, tbody, tr, th, td ] = geyser.generate words 'div h1 table.table.table-condensed tbody tr th td'
+
+  rows = map series, (series) ->
+    caption: series.caption
+    value: series.scoringMark[category.key]
+
+  sortedRows = sortBy rows, (row) -> -row.value
 
   div [
     h1 category.caption
-    table tbody map series, (series) ->
-      value = series.scoringMark[category.key]
+    table tbody map sortedRows, (row) ->
       tr [
-        th series.caption
-        td if isNaN value then 'NaN' else format4f value
+        th row.caption
+        td if isNaN row.value then 'NaN' else format4f row.value
       ]
   ]
 
+createStripPlotValueInspection = (series) ->
+  [ div, h1, h2, table, tbody, tr, th, td ] = geyser.generate words 'div h1 h2 table.table.table-condensed tbody tr th td'
+
+  div [
+    h1 series.caption
+    table tbody map aucCategories, (category) ->
+      value = series.scoringMark[category.key]
+      tr [
+        th category.caption
+        td if isNaN value then 'NaN' else format4f value
+      ]
+  ]
 
 createScoringInspection = (series) ->
   [ div, h1, h2, table, tbody, tr, th, td ] = geyser.generate words 'div h1 h2 table.table.table-condensed tbody tr th td'
@@ -237,6 +254,7 @@ createScoringInspection = (series) ->
   groupedCategoriesByOutput = groupBy groupedCategories, (category) -> category.output.caption
 
   div [
+    h1 series.caption
     h2 'Outputs'
     createStripPlotMarkInspectionTable series, ungroupedCategories
     div mapWithKey groupedCategoriesByOutput, (categories, caption) ->
@@ -255,11 +273,15 @@ Steam.ScoringView = (_, _scoring) ->
   _comparisonTable = node$ null
   _scoringList = node$ null
   _multiRocPlot = node$ null
-  _thresholdPlotVariables = nodes$ sortBy aucVariables, (variable) -> variable.caption
-  _thresholdPlotX = node$ aucVariableMap.FPR
-  _thresholdPlotY = node$ aucVariableMap.TPR
+  _thresholdPlotVariables = sortBy aucVariables, (variable) -> variable.caption
+  _thresholdPlotX = node$ aucVariableMap.Threshold
+  _thresholdPlotY = node$ aucVariableMap.Error
   _thresholdPlot = node$ null
   _stripPlot = node$ null
+  _stripPlotParameters =
+    group1: node$ null
+    group2: node$ null
+    group3: node$ null
   _modelSummary = nodes$ []
   _hasFailed = node$ no
   _failure = node$ null
@@ -330,6 +352,9 @@ Steam.ScoringView = (_, _scoring) ->
               apply$ _thresholdPlotX, _thresholdPlotY, (x, y) ->
                 _thresholdPlot createThresholdPlot series, x.key, y.key, no
               #_stripPlot createStripPlot metricsArray
+              _stripPlotParameters.group1 []
+              _stripPlotParameters.group2 map aucCriteria, createStripPlotParameters2
+              _stripPlotParameters.group3 map aucOutputs, createStripPlotParameters3
               _stripPlot createStripPlot series, aucCategories
             else
               _scoringList null
@@ -338,6 +363,19 @@ Steam.ScoringView = (_, _scoring) ->
               _stripPlot null
 
     _scoringType item.type
+
+  createStripPlotParameters2 = (criterion) ->
+    id: "y-#{uniqueId()}"
+    caption: criterion.caption
+    criterion: criterion
+    isSelected: node$ no
+
+  createStripPlotParameters3 = (output) ->
+    isSelected = node$ no
+    id: "y-#{uniqueId()}"
+    caption: output.caption
+    output: output
+    isSelected: node$ no
 
   renderRocCurve = (data) ->
     margin = top: 20, right: 20, bottom: 20, left: 30
@@ -538,6 +576,8 @@ Steam.ScoringView = (_, _scoring) ->
         .on 'mouseout', (d) ->
           svg.select("#strip-plot-#{series.id}-path").style 'stroke', 'none'
           svg.select("#strip-plot-#{series.id}-labels").style 'display', 'none'
+        .on 'click', (d) ->
+          _.inspect createStripPlotValueInspection series
 
     g = svg.selectAll '.category'
       .data categories
@@ -550,7 +590,7 @@ Steam.ScoringView = (_, _scoring) ->
       .attr 'dy', 5
       .text (d) -> d.caption
       .on 'click', (d) ->
-        _.inspect createStripPlotInspection series, d
+        _.inspect createStripPlotRowInspection series, d
 
     forEach series, (series) ->
       svg.append 'g'
@@ -573,14 +613,6 @@ Steam.ScoringView = (_, _scoring) ->
       .attr 'y1', rowHeight / 2
       .attr 'x2', margin.left + width
       .attr 'y2', rowHeight / 2
-
-#    g.append 'g'
-#      .attr 'class', 'axis'
-#      .each (d) -> d3.select(@).call axis.scale scaleX[d]
-#      .append 'text'
-#      .attr 'text-anchor', 'middle'
-#      .attr 'y', -9
-#      .text String
 
     el
 
@@ -911,6 +943,20 @@ Steam.ScoringView = (_, _scoring) ->
 
     createComparisonGrid scores
 
+  configureStripPlot = ->
+    _.configureStripPlot _stripPlotParameters, (parameters) ->
+      if parameters
+        for parameter in parameters.group1
+          parameter.source.isSelected parameter.isSelected()
+        for parameter in parameters.group2
+          parameter.source.isSelected parameter.isSelected()
+        for parameter in parameters.group3
+          parameter.source.isSelected parameter.isSelected()
+        console.log map _stripPlotParameters.group2(), (parameter) -> [ parameter.caption, parameter.isSelected()]
+        console.log map _stripPlotParameters.group3(), (parameter) -> [ parameter.caption, parameter.isSelected()]
+      return
+
+
 
   initialize _scoring
 
@@ -932,6 +978,7 @@ Steam.ScoringView = (_, _scoring) ->
   thresholdPlotY: _thresholdPlotY
   thresholdPlotVariables: _thresholdPlotVariables
   stripPlot: _stripPlot
+  configureStripPlot: configureStripPlot
   hasFailed: _hasFailed
   failure: _failure
   template: 'scoring-view'

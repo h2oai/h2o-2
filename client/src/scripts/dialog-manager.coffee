@@ -5,6 +5,7 @@ Steam.DialogManager = (_) ->
     linkDialog _.fail, Steam.ErrorDialog
     linkDialog _.confirm, Steam.ConfirmDialog
     linkDialog _.promptForFrame, Steam.SelectFrameDialog
+    linkDialog _.configureStripPlot, Steam.ConfigureStripPlotDialog
 
     # --- Add additional dialogs here ---
 
