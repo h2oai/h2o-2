@@ -53,17 +53,34 @@ DEFAULT_EC2_INSTANCE_CONFIGS = {
 
 ''' Memory mappings for instance kinds '''
 MEMORY_MAPPING = {
-    'm1.large'   : { 'xmx' : 5  },  # $0.24/hr
-    'm1.xlarge'  : { 'xmx' : 11 },  # $0.48/hr
-    'm2.xlarge'  : { 'xmx' : 13 },  # $0.41/hr
-    'm2.2xlarge' : { 'xmx' : 30 },  # $0.82/hr
-    'm2.4xlarge' : { 'xmx' : 60 },  # $1.64/hr
-    'm3.xlarge'  : { 'xmx' : 11 },  # $0.50/hr
-    'm3.2xlarge' : { 'xmx' : 24 },  # $1.00/hr
-    'c1.xlarge'  : { 'xmx' : 6  },  # $0.58/hr
-    'c3.xlarge'  : { 'xmx' : 5  },  # $0.30/hr
-    'hi1.4xlarge'  : { 'xmx' : 56},  # $3.10/hr 60.5GB dram. 8 cores/8 threads. 2TB SSD. 10GE
+    'm1.small'     : { 'xmx' : 1  },
+    'm1.medium'    : { 'xmx' : 3  },
+    'm1.large'     : { 'xmx' : 5  },  # $0.24/hr
+    'm1.xlarge'    : { 'xmx' : 12 },  # $0.48/hr
+    'm2.xlarge'    : { 'xmx' : 13 },  # $0.41/hr
+    'm2.2xlarge'   : { 'xmx' : 30 },  # $0.82/hr
+    'm2.4xlarge'   : { 'xmx' : 64 },  # $1.64/hr
+    'm3.medium'    : { 'xmx' : 3  },
+    'm3.large'     : { 'xmx' : 5  },
+    'm3.xlarge'    : { 'xmx' : 12 },  # $0.50/hr
+    'm3.2xlarge'   : { 'xmx' : 26 },  # $1.00/hr
+    'c1.medium'    : { 'xmx' : 1  },
+    'c1.xlarge'    : { 'xmx' : 6  },  # $0.58/hr
+    'c3.large'     : { 'xmx' : 3  },
+    'c3.xlarge'    : { 'xmx' : 5  },  # $0.30/hr
+    'c3.2xlarge'   : { 'xmx' : 12 },
+    'c3.4xlarge'   : { 'xmx' : 27 },
+    'c3.8xlarge'   : { 'xmx' : 56 },
+    'cc2.8xlarge'  : { 'xmx' : 56 },
+    'hi1.4xlarge'  : { 'xmx' : 56 },  # $3.10/hr 60.5GB dram. 8 cores/8 threads. 2TB SSD. 10GE
     'cr1.8xlarge'  : { 'xmx' : 230},  # $4.60/hr 244GB dram. 2 E5-2670. 240GB SSD. 10GE
+    'g2.2xlarge'   : { 'xmx' : 12 },
+    'i2.xlarge'    : { 'xmx' : 27 },
+    'i2.2xlarge'   : { 'xmx' : 57 },
+    'cg1.4xlarge'  : { 'xmx' : 19 },
+    'i2.4xlarge'   : { 'xmx' : 116},
+    'hs1.8xlarge'  : { 'xmx' : 112},
+    'i2.8xlarge'   : { 'xmx' : 236},
 }
 
 ''' EC2 API default configuration. The corresponding values are replaces by EC2 user config. '''
