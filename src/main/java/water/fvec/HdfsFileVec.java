@@ -20,10 +20,13 @@ public class HdfsFileVec extends FileVec {
     String fname = f.getPath().toString();
     Key k = Key.make(fname);
     Key k2 = Vec.newKey(k);
+    new Frame(k2).delete_and_lock(null);
     // Insert the top-level FileVec key into the store
     Vec v = new HdfsFileVec(k2,size);
     DKV.put(k2, v, fs);
-    new Frame(k,new String[]{fname},new Vec[]{v}).delete_and_lock(null).unlock(null);
+    Frame fr = new Frame(k,new String[]{fname},new Vec[]{v});
+    fr.update(null);
+    fr.unlock(null);
     return k;
   }
   private HdfsFileVec(Key key, long len) {super(key,len,Value.HDFS);}
