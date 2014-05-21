@@ -43,6 +43,11 @@
         // /ko
   h2.y-subtitle(data-bind='collapse:false') ROC Comparison
   div(data-bind='geyser:multiRocPlot')
+  h2.y-subtitle(data-bind='collapse:false') Compare Scorings
+  div
+    span Compare scorings by:
+    select(data-bind="options:categories, optionsText:'caption', value:selectedCategory")
+    div(data-bind='geyser:comparisonPlot')
   h2.y-subtitle(data-bind='collapse:false') Plots
   div
     h3(data-bind='collapse:true') Modify this plot

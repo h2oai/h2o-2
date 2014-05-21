@@ -272,6 +272,9 @@ Steam.ScoringView = (_, _scoring) ->
   _timestamp = node$ Date.now()
   _comparisonTable = node$ null
   _scoringList = node$ null
+  _categories = node$ null
+  _selectedCategory = node$ aucCategoryMap.AUC
+  _comparisonPlot = node$ null
   _multiRocPlot = node$ null
   _thresholdPlotVariables = sortBy aucVariables, (variable) -> variable.caption
   _thresholdPlotX = node$ aucVariableMap.Threshold
@@ -347,7 +350,11 @@ Steam.ScoringView = (_, _scoring) ->
           else
             if scorings.length > 0
               series = createSeriesFromMetrics scorings
+              #TODO sort by AUC
               _scoringList createScoringList series
+              _categories aucCategories
+              apply$ _selectedCategory, (category) ->
+                _comparisonPlot generateComparison category, series
               _multiRocPlot createThresholdPlot series, 'FPR', 'TPR', yes
               apply$ _thresholdPlotX, _thresholdPlotY, (x, y) ->
                 _thresholdPlot createThresholdPlot series, x.key, y.key, no
@@ -633,6 +640,24 @@ Steam.ScoringView = (_, _scoring) ->
     criteria: aucCriteria
     outputs: aucOutputs
     categories: categories
+
+  generateComparison = (category, series) ->
+    [ div, chart, table, tbody, tr, trWide, td, bar ] = geyser.generate 'div', '.y-criteria-comparison', 'table', 'tbody', 'tr', "tr colspan='2'", 'td', ".y-bar style='background:$color;width:$width'"
+
+    filteredSeries = filter series, (series) -> not isNaN series.scoringMark[category.key]
+    sortedSeries = sortBy filteredSeries, (series) -> -series.scoringMark[category.key]
+
+    rows = []
+    for series in sortedSeries
+      value = series.scoringMark[category.key] 
+      rows.push trWide [ td series.caption ]
+      rows.push tr [
+        td bar '', $color:series.color, $width: if value is 0 then '1px' else "#{Math.round value * 100}%"
+        td format4f value
+      ]
+
+
+    chart table tbody rows
 
   createScoringList = (series) ->
     map series, (series) ->
@@ -975,6 +1000,9 @@ Steam.ScoringView = (_, _scoring) ->
   comparisonTable: _comparisonTable
   scoringList: _scoringList
   multiRocPlot: _multiRocPlot
+  categories: _categories
+  selectedCategory: _selectedCategory
+  comparisonPlot: _comparisonPlot
   thresholdPlot: _thresholdPlot
   thresholdPlotX: _thresholdPlotX
   thresholdPlotY: _thresholdPlotY
