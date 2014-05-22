@@ -108,27 +108,29 @@ aucCategories = do ->
     category
 
 aucVariables = [
-  'Threshold'
-  'Error'
-  'F0.5'
-  'F1'
-  'F2'
-  'Accuracy'
-  'Precision'
-  'Recall'
-  'Specificity'
-  'MCC'
-  'MPCE'
-  'TPR'
-  'FPR'
-].map (attr) -> key: attr, caption: attr, domain: [0,1]
+  [ 'Threshold', [0, 1] ]
+  [ 'Error', [0, 1] ]
+  [ 'F0.5', [0, 1] ]
+  [ 'F1', [0, 1] ]
+  [ 'F2', [0, 1] ]
+  [ 'Accuracy', [0, 1] ]
+  [ 'Precision', [0, 1] ]
+  [ 'Recall', [0, 1] ]
+  [ 'Specificity', [0, 1] ]
+  [ 'MCC', [-1, 1] ]
+  [ 'MPCE', [0, 1] ]
+  [ 'TPR', [0, 1] ]
+  [ 'FPR', [0, 1] ]
+].map (attr) ->
+  [ key, domain ] = attr
+  key: key, caption: key, domain: domain
 
 aucCriteriaMap = indexBy aucCriteria, (criterion) -> criterion.key
 aucOutputMap = indexBy aucOutputs, (output) -> output.key
 aucCategoryMap = indexBy aucCategories, (cateogory) -> cateogory.key
 aucVariableMap = indexBy aucVariables, (variable) -> variable.key
 
-createThresholdPlotInspection = (series, mark) ->
+createThresholdPlotInspection = (series) ->
   [ div, h1, h2, table, grid, tbody, tr, th, td ] = geyser.generate words 'div h1 h2 table.table.table-condensed table.table.table-bordered tbody tr th td'
 
   formatConfusionMatrix = (domain, cm) ->
@@ -233,7 +235,7 @@ createStripPlotRowInspection = (series, category) ->
 
   rows = map series, (series) ->
     caption: series.caption
-    value: series.scoringMark[category.key]
+    value: series.outputs[category.key]
 
   sortedRows = sortBy rows, (row) -> -row.value
 
@@ -252,7 +254,7 @@ createStripPlotValueInspection = (series) ->
   div [
     h1 series.caption
     table tbody map aucCategories, (category) ->
-      value = series.scoringMark[category.key]
+      value = series.outputs[category.key]
       tr [
         th category.caption
         td if isNaN value then 'NaN' else format4f value
@@ -263,7 +265,7 @@ createScoringInspection = (series) ->
   [ div, h1, h2, table, tbody, tr, th, td ] = geyser.generate words 'div h1 h2 table.table.table-condensed tbody tr th td'
   createStripPlotMarkInspectionTable = (series, categories) ->
     table tbody map categories, (category) ->
-      value = series.scoringMark[category.key]
+      value = series.outputs[category.key]
       tr [
         th if category.isGrouped then category.criterion.caption else category.caption
         td if isNaN value then 'NaN' else format4f value
@@ -294,6 +296,10 @@ Steam.ScoringView = (_, _scoring) ->
   _categories = node$ null
   _selectedCategory = node$ aucCategoryMap.AUC
   _comparisonPlot = node$ null
+  _inputOutputCategories = node$ null
+  _inputOutputPlotX = node$ null
+  _inputOutputPlotY = node$ null
+  _inputOutputPlot = node$ null
   _multiRocPlot = node$ null
   _thresholdPlotVariables = sortBy aucVariables, (variable) -> variable.caption
   _thresholdPlotX = node$ aucVariableMap.Threshold
@@ -369,6 +375,16 @@ Steam.ScoringView = (_, _scoring) ->
           else
             if scorings.length > 0
               series = createSeriesFromMetrics scorings
+              areModelsComparable = same series, (a, b) -> a.model.model_category is b.model.model_category and a.model.model_algorithm is b.model.model_algorithm
+              if areModelsComparable
+                [inputParameterKeys, inputParameters] = collateInputParameters series
+                [ inputAndOutputVariables, defaultInputVariable, defaultOutputVariable ] = createInputAndOutputVariables inputParameterKeys, inputParameters, aucCategories
+                _inputOutputPlotX defaultInputVariable
+                _inputOutputPlotY defaultOutputVariable
+                _inputOutputCategories inputAndOutputVariables
+                apply$ _inputOutputPlotX, _inputOutputPlotY, (x, y) ->
+                  _inputOutputPlot createMetricsPlot series, x, y
+
               #TODO sort by AUC
               _scoringList createScoringList series
               _categories aucCategories
@@ -384,6 +400,7 @@ Steam.ScoringView = (_, _scoring) ->
               _stripPlot createStripPlot series, aucCategories
             else
               _scoringList null
+              _comparisonPlot null
               _multiRocPlot null
               _thresholdPlot null
               _stripPlot null
@@ -501,20 +518,80 @@ Steam.ScoringView = (_, _scoring) ->
     rates = map cms, computeTPRandFPR
     renderRocCurve rates
 
-  createInputParameter = (key, value, isVisible) ->
+  createInputParameterForDisplay = (key, value, isVisible) ->
     # DL, DRF have array-valued params, so handle that case properly
-    formattedValue = if isArray value then value.join ', ' else value
-
+    scalarValue = if isArray value then value.join ', ' else value
     key: key
-    value: formattedValue
+    value: scalarValue
     isVisible: isVisible
     isDifferent: no
 
+  createInputParameterAndValue = (value, key) ->
+    # DL, DRF have array-valued params, so handle that case properly
+    scalarValue = if isArray value then value.join ', ' else value
+    key: key
+    value: scalarValue
+    isNumber: isNumber value
+
+  createInputAndOutputVariables = (inputKeys, inputParameters, aucVariables) ->
+    inputVariables = map inputKeys, (inputKey) ->
+      values = map inputParameters, (parameter) -> parameter[inputKey]
+
+      # Compute domain
+      type: 'input'
+      key: inputKey
+      caption: "Input: #{inputKey}"
+      domain: d3.extent values
+
+    outputVariables = map aucVariables, (variable) ->
+      type: 'output'
+      key: variable.key
+      caption: "Output: #{variable.caption}"
+      variable: variable
+
+    allVariables = sortBy (flatten [ inputVariables, outputVariables ]), (variable) -> variable.caption
+    defaultInputVariable = if inputVariables.length > 0 then head inputVariables else outputVariables[1]
+    defaultOutputVariable = head outputVariables
+
+    [ allVariables, defaultInputVariable, defaultOutputVariable ]
+
+  collateInputParameters = (series) ->
+    models = map series, (series) -> series.model
+
+    # Collate critcal, secondary, expert parameters for all models
+    parametersByModel = map models, (model) ->
+      flatten [
+        mapWithKey model.critical_parameters, createInputParameterAndValue
+        mapWithKey model.secondary_parameters, createInputParameterAndValue
+        mapWithKey model.expert_parameters, createInputParameterAndValue
+      ]
+
+    # Filter only numeric parameters
+    numericParametersByModel = map parametersByModel, (parameters) -> filter parameters, (parameter) -> parameter.isNumber
+
+    # Find parameters that have numeric values defined for all models.
+    # This is to reject any parameters that have numeric values for some models and non-numeric ones for the others (in which case the number of parameter values will not match the number of models).
+    parametersByKey = groupBy (flatten numericParametersByModel), (parameter) -> parameter.key
+    plottableParameterKeys = []
+    for key, parameters of parametersByKey
+      if parameters.length is models.length
+        plottableParameterKeys.push key
+
+    # Create a dictionary of input parameters per series
+    inputParameters = times models.length, -> {}
+    for key in plottableParameterKeys
+      for parameter, i in parametersByKey[key]
+        inputParameters[i][key] = parameter.value
+
+    forEach series, (series, i) -> series.inputs = inputParameters[i]
+
+    [plottableParameterKeys, inputParameters]
+
   combineInputParameters = (model) ->
     critical = mapWithKey model.critical_parameters, (value, key) ->
-      createInputParameter key, value, yes
+      createInputParameterForDisplay key, value, yes
     secondary = mapWithKey model.secondary_parameters, (value, key) ->
-      createInputParameter key, value, no
+      createInputParameterForDisplay key, value, no
     concat critical, secondary
 
   # Side-effects!
@@ -564,7 +641,7 @@ Steam.ScoringView = (_, _scoring) ->
     path = (d) ->
       line map categories, (category) ->
         key = category.key
-        [ (scaleX[key] x d.scoringMark[key]), (scaleY key) ]
+        [ (scaleX[key] x d.outputs[key]), (scaleY key) ]
 
     el = document.createElementNS 'http://www.w3.org/2000/svg', 'svg'
     svg = (d3.select el)
@@ -591,9 +668,9 @@ Steam.ScoringView = (_, _scoring) ->
         .enter()
         .append 'line'
         .attr 'class', 'strip'
-        .attr 'x1', (d) -> scaleX[d.key] x series.scoringMark[d.key]
+        .attr 'x1', (d) -> scaleX[d.key] x series.outputs[d.key]
         .attr 'y1', (d) -> -5 + scaleY d.key
-        .attr 'x2', (d) -> scaleX[d.key] x series.scoringMark[d.key]
+        .attr 'x2', (d) -> scaleX[d.key] x series.outputs[d.key]
         .attr 'y2', (d) -> 5 + scaleY d.key
         .attr 'stroke', series.color
         .on 'mouseover', (d) ->
@@ -630,7 +707,7 @@ Steam.ScoringView = (_, _scoring) ->
         .attr 'transform', (d) -> "translate(0, #{scaleY d.key})"
         .attr 'dy', 5
         .text (d) ->
-          value = series.scoringMark[d.key]
+          value = series.outputs[d.key]
           if isNaN value then 'NaN' else format4f value
 
     g.append 'line'
@@ -663,12 +740,12 @@ Steam.ScoringView = (_, _scoring) ->
   generateComparison = (category, series) ->
     [ div, chart, table, tbody, tr, trWide, td, bar ] = geyser.generate 'div', '.y-criteria-comparison', 'table', 'tbody', 'tr', "tr colspan='2'", 'td', ".y-bar style='background:$color;width:$width'"
 
-    filteredSeries = filter series, (series) -> not isNaN series.scoringMark[category.key]
-    sortedSeries = sortBy filteredSeries, (series) -> -series.scoringMark[category.key]
+    filteredSeries = filter series, (series) -> not isNaN series.outputs[category.key]
+    sortedSeries = sortBy filteredSeries, (series) -> -series.outputs[category.key]
 
     rows = []
     for series in sortedSeries
-      value = series.scoringMark[category.key] 
+      value = series.outputs[category.key] 
       rows.push trWide [ td series.caption ]
       rows.push tr [
         td bar '', $color:series.color, $width: if value is 0 then '1px' else "#{Math.round value * 100}%"
@@ -701,11 +778,14 @@ Steam.ScoringView = (_, _scoring) ->
 
     map scores, (score, index) ->
       metrics = head score.data.output.metrics
+      model = score.data.input.model
 
       id: index
       caption: createUniqueScoringName metrics.frame.key, metrics.model.key
+      model: model
+      inputs: null
       metrics: metrics
-      scoringMark: createMarkForScoringMetrics metrics
+      outputs: createMarkForScoringMetrics metrics
       thresholdMarks: createMarksForThresholdMetrics metrics
       color: colorScale index
 
@@ -740,7 +820,94 @@ Steam.ScoringView = (_, _scoring) ->
       'TPR': tpr
       'FPR': fpr
 
+  renderMetricsPlot = (series, variableX, variableY) ->
+    margin = top: 20, right: 20, bottom: 20, left: 30
+    width = 300
+    height = 300
+
+    isInputX = variableX.type is 'input'
+    isInputY = variableY.type is 'input'
+
+    readX = (series) ->
+      if isInputX
+        series.inputs[variableX.key]
+      else
+        series.outputs[variableX.key]
+
+    readY = (series) ->
+      if isInputY
+        series.inputs[variableY.key]
+      else
+        series.outputs[variableY.key]
+
+    scaleX = d3.scale.linear()
+      .domain if isInputX then variableX.domain else variableX.variable.domain
+      .range [ 0, width ]
+      .nice()
+
+    scaleY = d3.scale.linear()
+      .domain if isInputY then variableY.domain else variableY.variable.domain
+      .range [ height, 0 ]
+      .nice()
+
+    axisX = d3.svg.axis()
+      .scale scaleX
+      .orient 'bottom'
+      .ticks 5
+
+    axisY = d3.svg.axis()
+      .scale scaleY
+      .orient 'left'
+      .ticks 5
+
+    line = d3.svg.line()
+      .x (d) -> scaleX readX d
+      .y (d) -> scaleY readY d
+
+    el = document.createElementNS 'http://www.w3.org/2000/svg', 'svg'
+
+    svg = (d3.select el)
+      .attr 'class', 'y-metrics-plot'
+      .attr 'width', width + margin.left + margin.right
+      .attr 'height', height + margin.top + margin.bottom
+      .append 'g'
+      .attr 'transform', "translate(#{margin.left},#{margin.top})"
+
+    svg.append 'g'
+      .attr 'class', 'x axis'
+      .attr 'transform', "translate(0, #{height})"
+      .call axisX
+      .append 'text'
+      .attr 'x', width
+      .attr 'y', -6
+      .style 'text-anchor', 'end'
+      .text variableX.caption
+
+    svg.append 'g'
+      .attr 'class', 'y axis'
+      .call axisY
+      .append 'text'
+      .attr 'transform', 'rotate(-90)'
+      .attr 'y', 6
+      .attr 'dy', '.71em'
+      .style 'text-anchor', 'end'
+      .text variableY.caption
+
+    svg.selectAll '.dot'
+      .data series
+      .enter()
+      .append 'circle'
+      .attr 'class', 'dot'
+      .attr 'r', 5
+      .attr 'cx', (d) -> scaleX readX d
+      .attr 'cy', (d) -> scaleY readY d
+      .attr 'stroke', (d) -> d.color
+      .on 'click', (d) ->
+        _.inspect createStripPlotValueInspection d
+    el
+
   renderThresholdPlot = (series, attrX, attrY, showReferenceLine) ->
+    #TODO make this function accept variables instead of attrs
     variableX = aucVariableMap[attrX]
     variableY = aucVariableMap[attrY]
 
@@ -839,13 +1006,21 @@ Steam.ScoringView = (_, _scoring) ->
         .attr 'cx', (d) -> scaleX d[attrX]
         .attr 'cy', (d) -> scaleY d[attrY]
         .on 'click', (d) ->
-          _.inspect createThresholdPlotInspection series, d
+          _.inspect createThresholdPlotInspection series
         .on 'mouseover', (d) ->
           d3.select(@).style 'stroke', series.color
         .on 'mouseout', (d) ->
           d3.select(@).style 'stroke', 'none'
     el
 
+
+  createMetricsPlot = (series, variableX, variableY) ->
+    [ div ] = geyser.generate [ 'div' ]
+    render = ($element) ->
+      plot = renderMetricsPlot series, variableX, variableY
+      $element.empty().append plot
+    markup: div()
+    behavior: render
 
   createThresholdPlot = (series, attrX, attrY, showReferenceLine) ->
     [ div ] = geyser.generate [ 'div' ]
@@ -1005,6 +1180,10 @@ Steam.ScoringView = (_, _scoring) ->
   categories: _categories
   selectedCategory: _selectedCategory
   comparisonPlot: _comparisonPlot
+  inputOutputCategories: _inputOutputCategories
+  inputOutputPlotX: _inputOutputPlotX
+  inputOutputPlotY: _inputOutputPlotY
+  inputOutputPlot: _inputOutputPlot
   thresholdPlot: _thresholdPlot
   thresholdPlotX: _thresholdPlotX
   thresholdPlotY: _thresholdPlotY

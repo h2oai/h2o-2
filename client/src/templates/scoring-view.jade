@@ -43,6 +43,21 @@
         // /ko
   h2.y-subtitle(data-bind='collapse:false') ROC Comparison
   div(data-bind='geyser:multiRocPlot')
+  h2.y-subtitle(data-bind='collapse:false') Compare Inputs and Outputs
+  div
+    h3(data-bind='collapse:true') Modify this plot
+    .y-shade
+      table.table.table-condensed
+        tbody
+          tr
+            th X-Axis
+            td
+              select(data-bind="options:inputOutputCategories, optionsText:'caption', value:inputOutputPlotX")
+          tr
+            th Y-Axis
+            td
+              select(data-bind="options:inputOutputCategories, optionsText:'caption', value:inputOutputPlotY")
+    div(data-bind='geyser:inputOutputPlot')
   h2.y-subtitle(data-bind='collapse:false') Compare Scorings
   div
     span Compare scorings by:
