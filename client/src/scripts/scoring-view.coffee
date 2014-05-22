@@ -936,7 +936,8 @@ Steam.ScoringView = (_, _scoring) ->
             #TODO what does it mean to have > 1 metrics
             metrics = head score.data.output.metrics
             auc = metrics.auc
-            outputRow.push td auc[aucOutput.key][criterionIndex]
+            value = auc[aucOutput.key][criterionIndex]
+            outputRow.push td if value is 'NaN' then value else format4f value
 
           comparisonRows.push outputRow
 
