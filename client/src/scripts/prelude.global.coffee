@@ -310,6 +310,21 @@ zipCompare = (array1, array2, areEqual) ->
       return no if a isnt b
   yes
 
+same = (array, areEqual) ->
+  if array.length > 1
+    value = head array
+    if isFunction areEqual
+      for i in [ 1 ... array.length ]
+        unless areEqual value, array[i]
+          return no
+    else
+      for i in [ 1 ... array.length ]
+        if value isnt array[i]
+          return no
+    yes
+  else
+    yes
+
 valuesAreEqual = (array, pluck, areEqual) ->
   if array.length > 1
     value = pluck head array

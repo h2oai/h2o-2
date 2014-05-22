@@ -137,6 +137,7 @@ test 'prelude availability in application scope', (t) ->
     repeat
     mapWithKey
     zipCompare
+    same
     valuesAreEqual
   ]
   for func in funcs
@@ -348,6 +349,16 @@ test 'zipCompare', (t) ->
   t.ok zipCompare [10, 20], [10, 20]
   t.ok not zipCompare { foo: 'bar' }, { foo: 'bar' }
   t.ok zipCompare [{ foo: 'bar' }], [{ foo: 'bar' }], (a, b) -> a.foo is b.foo
+  t.end()
+
+test 'same', (t) ->
+  compareBaz = (a, b) -> a.baz is b.baz
+  t.ok same []
+  t.ok same [ 'bar' ]
+  t.ok same [ 'bar', 'bar' ]
+  t.ok not same [ 'bar', 'qux' ]
+  t.ok same [ { baz: 'bar' }, { baz: 'bar'} ], compareBaz
+  t.ok not same [ { baz: 'bar' }, { baz: 'qux' } ], compareBaz
   t.end()
 
 test 'valuesAreEqual', (t) ->
