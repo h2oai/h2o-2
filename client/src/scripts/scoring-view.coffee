@@ -130,7 +130,7 @@ aucOutputMap = indexBy aucOutputs, (output) -> output.key
 aucCategoryMap = indexBy aucCategories, (cateogory) -> cateogory.key
 aucVariableMap = indexBy aucVariables, (variable) -> variable.key
 
-createThresholdPlotInspection = (series) ->
+createThresholdPlotInspection = (series, mark) ->
   [ div, h1, h2, table, grid, tbody, tr, th, td ] = geyser.generate words 'div h1 h2 table.table.table-condensed table.table.table-bordered tbody tr th td'
 
   formatConfusionMatrix = (domain, cm) ->
@@ -1006,7 +1006,7 @@ Steam.ScoringView = (_, _scoring) ->
         .attr 'cx', (d) -> scaleX d[attrX]
         .attr 'cy', (d) -> scaleY d[attrY]
         .on 'click', (d) ->
-          _.inspect createThresholdPlotInspection series
+          _.inspect createThresholdPlotInspection series, d
         .on 'mouseover', (d) ->
           d3.select(@).style 'stroke', series.color
         .on 'mouseout', (d) ->
