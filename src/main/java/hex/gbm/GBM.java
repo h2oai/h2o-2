@@ -63,6 +63,9 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     @API(help = "Distribution for computing loss function. AUTO selects gaussian for continuous and multinomial for categorical response")
     final Family family;
 
+    @API(help = "Initially predicted value (for zero trees)")
+    double initialPrediction;
+
     public GBMModel(GBM job, Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, double learn_rate, Family family) {
       super(key,dataKey,testKey,names,domains,cmDomain,ntrees,max_depth,min_rows,nbins);
       this.parameters = job;
@@ -74,18 +77,21 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       this.parameters = prior.parameters;
       this.learn_rate = prior.learn_rate;
       this.family = prior.family;
+      this.initialPrediction = prior.initialPrediction;
     }
     public GBMModel(GBMModel prior, DTree[] trees, TreeStats tstats) {
       super(prior, trees, tstats);
       this.parameters = prior.parameters;
       this.learn_rate = prior.learn_rate;
       this.family = prior.family;
+      this.initialPrediction = prior.initialPrediction;
     }
     public GBMModel(GBMModel prior, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
       super(prior, err, cm, varimp, validAUC);
       this.parameters = prior.parameters;
       this.learn_rate = prior.learn_rate;
       this.family = prior.family;
+      this.initialPrediction = prior.initialPrediction;
     }
 
     @Override protected TreeModelType getTreeModelType() { return TreeModelType.GBM; }
@@ -93,7 +99,8 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     @Override protected float[] score0(double[] data, float[] preds) {
       float[] p = super.score0(data, preds);    // These are f_k(x) in Algorithm 10.4
       if(family == Family.bernoulli) {
-        p[2] = 1.0f/(float)(1f+Math.exp(-p[1]));
+        double fx = p[1] + initialPrediction;
+        p[2] = 1.0f/(float)(1f+Math.exp(-fx));
         p[1] = 1f-p[2];
         p[0] = getPrediction(p, data);
         return p;
@@ -114,7 +121,8 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
         div(p,dsum);
         p[0] = getPrediction(p, data);
       } else { // regression
-        // do nothing for regression
+        // Prediction starts from the mean response, and adds predicted residuals
+        preds[0] += initialPrediction;
       }
       return p;
     }
@@ -126,7 +134,8 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     @Override protected void toJavaUnifyPreds(SB bodyCtxSB) {
       if(family == Family.bernoulli) {
         bodyCtxSB.i().p("// Compute Probabilities for Bernoulli 0-1 classifier").nl();
-        bodyCtxSB.i().p("preds[2] = 1.0f/(float)(1f+Math.exp(-preds[1]))").nl();
+        bodyCtxSB.i().p("double fx = preds[1] + "+initialPrediction+";").nl();
+        bodyCtxSB.i().p("preds[2] = 1.0f/(float)(1f+Math.exp(-fx))").nl();
         bodyCtxSB.i().p("preds[1] = 1f-preds[2]").nl();
       }
       else if (isClassifier()) {
@@ -138,6 +147,10 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
         bodyCtxSB.i().p("for(int i=1; i<preds.length; i++) maxval = Math.max(maxval, preds[i]);").nl();
         bodyCtxSB.i().p("for(int i=1; i<preds.length; i++) dsum += (preds[i]=(float) Math.exp(preds[i] - maxval));").nl();
         bodyCtxSB.i().p("for(int i=1; i<preds.length; i++) preds[i] = preds[i] / dsum;").nl();
+      }
+      else {
+        bodyCtxSB.i().p("// Compute Regression").nl();
+        bodyCtxSB.i().p("preds[0] += "+initialPrediction+";").nl();
       }
     }
   }
@@ -187,10 +200,11 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     if (classification) initialModel.setModelClassDistribution(new MRUtils.ClassDist(response).doAll(response).rel_dist());
     // Tag out rows missing the response column
     new ExcludeNAResponse().doAll(fr);
+    // Initial value is mean(y)
+    final double mean = (float) fr.vec(initialModel.responseName()).mean();
     // Initialize working response based on given loss function
     if (_nclass == 1) { /* regression */
-      // Initial value is mean(y)
-      final float mean = (float) fr.vec(initialModel.responseName()).mean();
+      initialModel.initialPrediction = mean; // Regression initially predicts the response mean
       new MRTask2() {
         @Override public void map(Chunk[] chks) {
           Chunk tr = chk_tree(chks, 0); // there is only one tree for regression
@@ -199,8 +213,8 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       }.doAll(fr);
     } else if(family == Family.bernoulli) {
       // Initial value is log( mean(y)/(1-mean(y)) )
-      final float mean = (float) fr.vec(initialModel.responseName()).mean();
       final float init = (float) Math.log(mean/(1.0f-mean));
+      initialModel.initialPrediction = init;
       new MRTask2() {
         @Override public void map(Chunk[] chks) {
           Chunk tr = chk_tree(chks, 0); // only the tree for y = 0 is used
@@ -313,7 +327,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       return fs[1]+fs[2];
     }
     if( _nclass == 1 )          // Classification?
-      return (float)chk_tree(chks,0).at0(row); // Regression.
+      return fs[0]=(float)chk_tree(chks,0).at0(row); // Regression.
     if( _nclass == 2 ) {        // The Boolean Optimization
       // This optimization assumes the 2nd tree of a 2-class system is the
       // inverse of the first.  Fill in the missing tree
