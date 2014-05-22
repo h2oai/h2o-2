@@ -34,36 +34,47 @@ aucCriteria = [
 aucOutputs = [
   key: 'threshold_for_criteria'
   caption: 'Threshold'
+  domain: [0, 1]
 ,
   key: 'error_for_criteria'
   caption: 'Error'
+  domain: [0, 1]
 ,
   key: 'F0point5_for_criteria'
   caption: 'F0.5'
+  domain: [0, 1]
 ,
   key: 'F1_for_criteria'
   caption: 'F1'
+  domain: [0, 1]
 ,
   key: 'F2_for_criteria'
   caption: 'F2'
+  domain: [0, 1]
 ,
   key: 'accuracy_for_criteria'
   caption: 'Accuracy'
+  domain: [0, 1]
 ,
   key: 'precision_for_criteria'
   caption: 'Precision'
+  domain: [0, 1]
 ,
   key: 'recall_for_criteria'
   caption: 'Recall'
+  domain: [0, 1]
 ,
   key: 'specificity_for_criteria'
   caption: 'Specificity'
+  domain: [0, 1]
 ,
   key: 'mcc_for_criteria'
   caption: 'MCC'
+  domain: [-1, 1]
 ,
   key: 'max_per_class_error_for_criteria'
   caption: 'MPCE'
+  domain: [0, 1]
 ]
 
 aucCategories = do ->
@@ -86,7 +97,7 @@ aucCategories = do ->
         index: 0
         key: "#{criterion.caption}\0#{output.caption}"
         caption: "#{criterion.caption} - #{output.caption}"
-        domain: [0, 1]
+        domain: criterion.domain
         isGrouped: yes
         criterion: criterion
         output: output
@@ -856,7 +867,7 @@ Steam.ScoringView = (_, _scoring) ->
 
   createComparisonTable = (scores) ->
     [ div, table, kvtable, thead, tbody, tr, trExpert, diffSpan, th, thIndent, td, hyperlink] = geyser.generate words 'div table.table.table-condensed table.table-kv thead tbody tr tr.y-expert span.y-diff th th.y-indent td div.y-link'
-    [ tdId ] = geyser.generate "td id='$id'"
+    [ tdId, thWide ] = geyser.generate "td id='$id'", "th colspan='#{scores.length + 1}' style='background:#f5f5f5'"
 
     createParameterTable = ({ parameters }) ->
       kvtable [
@@ -869,27 +880,19 @@ Steam.ScoringView = (_, _scoring) ->
       ]
 
     createComparisonGrid = (scores) ->
-      algorithmRow = [ th 'Method' ]
-      nameRow = [ th 'Name' ]
-      rocCurveRow = [ th 'ROC Curve' ]
-      inputParametersRow = [
+      comparisonRows = []
+
+      comparisonRows.push algorithmRow = [ th 'Method' ]
+      comparisonRows.push nameRow = [ th 'Name' ]
+      comparisonRows.push rocCurveRow = [ th 'ROC Curve' ]
+      comparisonRows.push inputParametersRow = [
         th [
           (div 'Input Parameters')
           (hyperlink 'Show more', 'toggle-advanced-parameters')
         ]
       ]
-      durationRow = [ th 'Time' ]
-      aucRow = [ th 'AUC' ]
-      thresholdCriterionRow = [ th 'Threshold Criterion' ]
-      thresholdRow = [ thIndent 'Threshold' ]
-      errorRow = [ thIndent 'Error' ]
-      f1Row = [ thIndent 'F1' ]
-      accuracyRow = [ thIndent 'Accuracy' ]
-      precisionRow = [ thIndent 'Precision' ]
-      recallRow = [ thIndent 'Recall' ]
-      specificityRow = [ thIndent 'Specificity' ]
-      mccRow = [ thIndent 'MCC' ]
-      maxPerClassErrorRow = [ thIndent 'Max Per Class Error' ]
+      comparisonRows.push durationRow = [ th 'Time' ]
+      comparisonRows.push aucRow = [ th 'AUC' ]
 
 
       #TODO what does it mean to have > 1 metrics
@@ -923,16 +926,19 @@ Steam.ScoringView = (_, _scoring) ->
         aucRow.push td format4f auc.AUC
         #TODO fix error badge
         #errorRow.push td (format4f metrics.error_measure) + errorBadge #TODO change to bootstrap badge
-        thresholdCriterionRow.push td head auc.threshold_criteria
-        thresholdRow.push td format4f head auc.threshold_for_criteria
-        errorRow.push td format4f head auc.error_for_criteria
-        f1Row.push td format4f head auc.F1_for_criteria
-        accuracyRow.push td format4f head auc.accuracy_for_criteria
-        precisionRow.push td format4f head auc.precision_for_criteria
-        recallRow.push td format4f head auc.recall_for_criteria
-        specificityRow.push td format4f head auc.specificity_for_criteria
-        mccRow.push td format4f head auc.mcc_for_criteria
-        maxPerClassErrorRow.push td format4f head auc.max_per_class_error_for_criteria
+
+      for criterion, criterionIndex in aucCriteria
+        comparisonRows.push [ thWide "Outputs by #{criterion.caption}" ]
+        for aucOutput in aucOutputs
+          outputRow = [[ th aucOutput.caption ]]
+          for score, scoreIndex in scores
+            model = score.data.input.model
+            #TODO what does it mean to have > 1 metrics
+            metrics = head score.data.output.metrics
+            auc = metrics.auc
+            outputRow.push td auc[aucOutput.key][criterionIndex]
+
+          comparisonRows.push outputRow
 
       renderRocCurves = ($element) ->
         forEach scores, (score, scoreIndex) ->
@@ -958,24 +964,7 @@ Steam.ScoringView = (_, _scoring) ->
         return
 
 
-      markup: table tbody [
-        tr algorithmRow
-        tr nameRow
-        tr rocCurveRow
-        tr inputParametersRow
-        tr durationRow
-        tr aucRow
-        tr thresholdCriterionRow
-        tr thresholdRow
-        tr errorRow
-        tr f1Row
-        tr accuracyRow
-        tr precisionRow
-        tr recallRow
-        tr specificityRow
-        tr mccRow
-        tr maxPerClassErrorRow
-      ]
+      markup: table tbody map comparisonRows, (row) -> tr row 
       behavior: ($element) ->
         renderRocCurves $element
         toggleAdvancedParameters $element
