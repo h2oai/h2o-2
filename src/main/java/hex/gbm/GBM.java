@@ -135,8 +135,8 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       if(family == Family.bernoulli) {
         bodyCtxSB.i().p("// Compute Probabilities for Bernoulli 0-1 classifier").nl();
         bodyCtxSB.i().p("double fx = preds[1] + "+initialPrediction+";").nl();
-        bodyCtxSB.i().p("preds[2] = 1.0f/(float)(1f+Math.exp(-fx))").nl();
-        bodyCtxSB.i().p("preds[1] = 1f-preds[2]").nl();
+        bodyCtxSB.i().p("preds[2] = 1.0f/(float)(1.0f+Math.exp(-fx))").nl();
+        bodyCtxSB.i().p("preds[1] = 1.0f-preds[2]").nl();
       }
       else if (isClassifier()) {
         bodyCtxSB.i().p("// Compute Probabilities for classifier (scale via http://www.hongliangjie.com/2011/01/07/logsum/)").nl();
@@ -150,7 +150,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       }
       else {
         bodyCtxSB.i().p("// Compute Regression").nl();
-        bodyCtxSB.i().p("preds[0] += "+initialPrediction+";").nl();
+        bodyCtxSB.i().p("preds[1] += "+initialPrediction+";").nl();
       }
     }
   }
