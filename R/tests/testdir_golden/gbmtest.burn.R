@@ -67,15 +67,15 @@ h2o.fit2<- h2o.gbm(x=c("x1", "x2", "x3"), y="y", distribution="bernoulli", n.tre
 
 pred.gbm1<-as.data.frame(predict.gbm(fit.gbm1, newdata=f.all.data2, n.trees=1, type="response"))
 pred.gbm2<- as.data.frame(predict.gbm(fit.gbm2, newdata=all.data2, n.trees=1, type="response"))
-pred.h2o.fit1<- as.data.frame(h2o.predict)
-
+pred.h2o.fit1<- as.data.frame(h2o.predict(h2o.fit1, f.all.data.H))
+pred.h2o.fit2<- as.data.frame(h2o.predict(h2o.fit2, f.all.data.H))
 
 #We expect that the two families within the same tool produce different predictions because they are optimizing a different loss function. This is true for the models produced in R. We also expect that the models built between the two tools agree to some extent, and thus significant positive correlation between the two vectors of predictors. 
 
-Is.R.Different<- cor.test(pred.gbm1, pred.gbm2, method="spearman")
-Is.H2O.Different<- cor.test(pred.h2o.fit1, pred.h2o.fit2, method="spearman")
-Does.Family.Mult.Agree<- cor.test(pred.h2o.fit1, pred.gbm1, method="spearman")
-Does.Family.Bern.Agree<- cor.test(pred.h2o.fit2, pred.gbm2, method="spearman")
+Is.R.Different<- cor.test(pred.gbm1[,2], pred.gbm2[,1], method="spearman")
+Is.H2O.Different<- cor.test(pred.h2o.fit1$X1, pred.h2o.fit2$X1, method="spearman")
+Does.Family.Mult.Agree<- cor.test(pred.h2o.fit1$X1, pred.gbm1[,2], method="spearman")
+Does.Family.Bern.Agree<- cor.test(pred.h2o.fit2$X1, pred.gbm2[,1], method="spearman")
 
 
 ##############Print out and Compare P-values for Spearman statistics for each of the comparrisons###############
