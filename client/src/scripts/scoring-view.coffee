@@ -97,7 +97,7 @@ aucCategories = do ->
         index: 0
         key: "#{criterion.caption}\0#{output.caption}"
         caption: "#{criterion.caption} - #{output.caption}"
-        domain: criterion.domain
+        domain: output.domain
         isGrouped: yes
         criterion: criterion
         output: output
