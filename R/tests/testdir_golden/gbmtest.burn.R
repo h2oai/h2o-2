@@ -6,7 +6,7 @@ test.gbmMultiVBern.golden <- function(H2Oserver) {
 #Import data: 
 Log.info("Making data...") 
 set.seed(3719)
-n <- 2000
+n <- 1000
 X <- matrix(rnorm(10*n), n, 10)
 y <- rep(-1, n)
 y[apply(X*X, 1, sum) > qchisq(.5, 10)] <- 1
@@ -52,16 +52,16 @@ f.all.data.H[,11]<- as.factor(f.all.data.H[,11])
 ###Fit GBM models in R: 
 
 
-fit.gbm1 <- gbm(y ~ x1 + x2 + x3, data=f.all.data2, dist="multinomial", n.tree = 1, shrinkage = .7, verbose=T)
+fit.gbm1 <- gbm(y ~ x1 + x2 + x3, dist="multinomial", data=f.all.data2, n.trees = 1, interaction.depth = 1, shrinkage = .7, bag.fraction = 1, verbose=T)
 
-fit.gbm2 <- gbm(y ~ x1 + x2 + x3, data=all.data2, dist="bernoulli", n.tree = 1, shrinkage = .7, verbose=T)
+fit.gbm2 <- gbm(y ~ x1 + x2 + x3, dist="bernoulli", data=all.data2, n.trees = 1, interaction.depth = 1, shrinkage = .7, bag.fraction = 1, verbose=T)
 
 
 ###Fit GBM models in H2O+R
 
-h2o.fit1<- h2o.gbm(x=c("x1", "x2", "x3"), y="y", distribution="multinomial", n.trees=1, shrinkage=.7, interaction.depth = 1, data=f.all.data.H)
+h2o.fit1<- h2o.gbm(x=c("x1", "x2", "x3"), y="y", distribution="multinomial", data=f.all.data.H, n.trees=1, interaction.depth = 1, shrinkage = .7, n.bins = 1000)
 
-h2o.fit2<- h2o.gbm(x=c("x1", "x2", "x3"), y="y", distribution="bernoulli", n.trees=1, shrinkage=.7, interaction.depth = 1, data=f.all.data.H)
+h2o.fit2<- h2o.gbm(x=c("x1", "x2", "x3"), y="y", distribution="bernoulli", data=f.all.data.H, n.trees=1, interaction.depth = 1, shrinkage = .7, n.bins = 1000)
 
 ######### Get predictions: ###################
 
@@ -77,7 +77,6 @@ Is.H2O.Different<- cor.test(pred.h2o.fit1$X1, pred.h2o.fit2$X1, method="spearman
 Does.Family.Mult.Agree<- cor.test(pred.h2o.fit1$X1, pred.gbm1[,2], method="spearman")
 Does.Family.Bern.Agree<- cor.test(pred.h2o.fit2$X1, pred.gbm2[,1], method="spearman")
 
-
 ##############Print out and Compare P-values for Spearman statistics for each of the comparrisons###############
 Log.info("Print model statistics for R and H2O... \n")
 Log.info(paste("Is R Different  : ", Is.R.Different$p.value))
@@ -86,8 +85,8 @@ Log.info(paste("Multinomial Agreement  : ", Does.Family.Mult.Agree$p.value))
 Log.info(paste("Bernoulli Agreement  : ", Does.Family.Bern.Agree$p.value))
 
 Log.info("Compare Spearman test statistics in R to model statistics in H2O")
-#expect_less_than(Does.Family.Bern.Agree$p.value, .05)
-#expect_less_than(Does.Family.Mult.Agree$p.value, .05)
+expect_less_than(Does.Family.Bern.Agree$p.value, .05)
+expect_less_than(Does.Family.Mult.Agree$p.value, .05)
 #expect_less_than(Is.R.Different$p.value, .05)
 #expect_less_than(Is.H2O.Different$p.value, .05)
 
