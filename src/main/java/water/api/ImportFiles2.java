@@ -3,6 +3,7 @@ package water.api;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+
 import org.apache.hadoop.fs.Path;
 
 import tachyon.client.TachyonFS;
@@ -17,6 +18,7 @@ import water.util.*;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -172,6 +174,8 @@ public class ImportFiles2 extends Request2 {
     try {
       String[] pathComponents = PersistTachyon.decode(path);
       String serverUri = pathComponents[0];
+      // Be explicit, it would be possible to use default client URI, but better is throw an error
+      if (serverUri==null || serverUri.isEmpty()) throw new IllegalArgumentException("The " + path + " is not legall URI - it is missing tachyon server URI." );
       client = (TachyonFS) Persist.I[Value.TACHYON].createClient();
       String rootFolder = pathComponents[1];
       List<ClientFileInfo> files= client.listStatus(rootFolder); // do a recursive descend

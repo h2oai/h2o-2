@@ -10,6 +10,7 @@ import tachyon.client.ReadType;
 import tachyon.client.TachyonFS;
 import water.*;
 import water.Job.ProgressMonitor;
+import water.fvec.FileVec;
 import water.fvec.Vec;
 import water.util.*;
 
@@ -28,9 +29,11 @@ public class PersistTachyon extends Persist<TachyonFS> {
   }
 
   @Override public byte[] load(Value v) {
+    Key k = v._key; // key for value
+    if (k._kb[0] != Key.DVEC) throw H2O.unimpl(); // Load only from values stored in vector
+    long skip = FileVec.chunkOffset(k); // Compute skip for this value
     long start_io_ms = System.currentTimeMillis();
-    byte[] b = MemoryManager.malloc1(v._max);
-    Key k = v._key;
+    final byte[] b = MemoryManager.malloc1(v._max);
     String[] keyComp = decodeKey(k);
     String clientUri = keyComp[0];
     String fpath = keyComp[1];
@@ -40,6 +43,7 @@ public class PersistTachyon extends Persist<TachyonFS> {
       tfs = (TachyonFS) (Persist.I[Value.TACHYON].createClient(clientUri));
       long start_ns = System.nanoTime(); // Blocking i/o call timing - without counting repeats
       is = tfs.getFile(fpath).getInStream(ReadType.NO_CACHE);
+      ByteStreams.skipFully(is, skip);
       ByteStreams.readFully(is, b);
       TimeLine.record_IOclose(start_ns, start_io_ms, 1/* read */, v._max, Value.TACHYON);
       return b;
@@ -116,7 +120,7 @@ public class PersistTachyon extends Persist<TachyonFS> {
   }
 
   @Override public void store(Value v) {
-    throw new RuntimeException("TODO Auto-generated method stub");
+    throw new UnsupportedOperationException();
   }
 
   @Override public void delete(Value v) {

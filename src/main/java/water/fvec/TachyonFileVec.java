@@ -16,7 +16,7 @@ public class TachyonFileVec extends FileVec {
     long size = tf.getLength();
     Key k = Key.make(PersistTachyon.PREFIX + serverUri + fname);
     Key k2 = Vec.newKey(k);
-    new Frame(k2).delete_and_lock(null);
+    new Frame(k).delete_and_lock(null);
     // Insert the top-level FileVec key into the store
     Vec v = new TachyonFileVec(k2,size);
     DKV.put(k2, v, fs);
