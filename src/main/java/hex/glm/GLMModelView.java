@@ -84,11 +84,18 @@ public class GLMModelView extends Request2 {
       for(int i = 0; i < glm_model.submodels.length; ++i){
         final Submodel sm = glm_model.submodels[i];
         if(sm.validation == null)break;
-        if(glm_model.lambdas[i] == lambda)firstRow.append("\t\t<td><b>" + DFORMAT2.format(glm_model.lambdas[i]) + "</b></td>\n");
-        else firstRow.append("\t\t<td>" + link(DFORMAT2.format(glm_model.lambdas[i]),glm_model._key,glm_model.lambdas[i]) + "</td>\n");
-        secondRow.append("\t\t<td>" + (sm.rank-1) + "</td>\n");
-        thirdRow.append("\t\t<td>" + DFORMAT.format(1-sm.validation.residual_deviance/sm.validation.null_deviance) + "</td>\n");
-        fourthRow.append("\t\t<td>" + DFORMAT.format(glm_model.glm.family==Family.binomial?sm.validation.auc:sm.validation.aic) + "</td>\n");
+        if (glm_model.lambdas[i] == lambda)
+          firstRow.append("\t\t<td><b>" + DFORMAT2.format(glm_model.lambdas[i]) + "</b></td>\n");
+        else
+          firstRow.append("\t\t<td>" + link(DFORMAT2.format(glm_model.lambdas[i]), glm_model._key, glm_model.lambdas[i]) + "</td>\n");
+        secondRow.append("\t\t<td>" + (sm.rank - 1) + "</td>\n");
+        if(sm.xvalidation != null){
+          thirdRow.append("\t\t<td>"  + DFORMAT.format(1 - sm.xvalidation.residual_deviance / sm.validation.null_deviance) + "<sub>x</sub>(" + DFORMAT.format(1 - sm.validation.residual_deviance / sm.validation.null_deviance) + ")" + "</td>\n");
+          fourthRow.append("\t\t<td>" + DFORMAT.format(glm_model.glm.family == Family.binomial ? sm.xvalidation.auc : sm.xvalidation.aic) + "<sub>x</sub>("+ DFORMAT.format(glm_model.glm.family == Family.binomial ? sm.validation.auc : sm.validation.aic) + ")</td>\n");
+        } else {
+          thirdRow.append("\t\t<td>" + DFORMAT.format(1 - sm.validation.residual_deviance / sm.validation.null_deviance) + "</td>\n");
+          fourthRow.append("\t\t<td>" + DFORMAT.format(glm_model.glm.family == Family.binomial ? sm.validation.auc : sm.validation.aic) + "</td>\n");
+        }
       }
       sb.append(firstRow.append("\t</tr>\n"));
       sb.append(secondRow.append("\t</tr>\n"));
@@ -106,8 +113,10 @@ public class GLMModelView extends Request2 {
     }
     if(glm_model.beta() != null)
       coefs2html(sm,sb);
-    GLMValidation val = sm.validation;
-    if(val != null)val2HTML(sm,val, sb);
+    if(sm.xvalidation != null)
+      val2HTML(sm,sm.xvalidation,sb);
+    else if(sm.validation != null)
+      val2HTML(sm,sm.validation, sb);
     return true;
   }
 

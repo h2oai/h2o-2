@@ -109,6 +109,8 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     final long       run_time;
     @API(help="Validation")
     GLMValidation validation;
+    @API(help="X-Validation")
+    GLMXValidation xvalidation;
     @API(help="Beta vector containing model coefficients.") double []  beta;
     @API(help="Beta vector containing normalized coefficients (coefficients obtained on normalized data).") double []  norm_beta;
 
@@ -365,6 +367,10 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     double diff = (submodels[best_lambda_idx].validation.residual_deviance - val.residual_deviance)/val.null_deviance;
     if(diff >= 0.01) setLambdaIdx(lambdaIdx);
     return  true;
+  }
+
+  public void setXValidation(int lambdaIdx, GLMXValidation val ){
+    submodels[lambdaIdx].xvalidation = val;
   }
 
   public void setLambdaIdx(int l){
