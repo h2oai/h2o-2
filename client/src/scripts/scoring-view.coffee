@@ -332,17 +332,6 @@ Steam.ScoringView = (_, _scoring) ->
       value: model.response_column_name
     ]
 
-  #TODO unused - remove
-  createItem = (score) ->
-    status = node$ if isNull score.status then '-' else score.status
-    isSelected = lift$ status, (status) -> status is 'done'
-
-    data: score
-    algorithm: score.model.model_algorithm
-    category: score.model.model_category
-    responseColumn: score.model.response_column_name
-    status: status
-
   initialize = (item) ->
     switch item.type
       when 'scoring'
@@ -741,22 +730,35 @@ Steam.ScoringView = (_, _scoring) ->
     categories: categories
 
   generateComparison = (category, series) ->
-    [ div, chart, table, tbody, tr, trWide, td, bar ] = geyser.generate 'div', '.y-criteria-comparison', 'table', 'tbody', 'tr', "tr colspan='2'", 'td', ".y-bar style='background:$color;width:$width'"
-
     filteredSeries = filter series, (series) -> not isNaN series.outputs[category.key]
     sortedSeries = sortBy filteredSeries, (series) -> -series.outputs[category.key]
 
-    rows = []
-    for series in sortedSeries
+    span = 300
+
+    scale = d3.scale.linear()
+      .domain category.domain
+      .range [0, span]
+
+    map sortedSeries, (series) ->
       value = series.outputs[category.key] 
-      rows.push trWide [ td series.caption ]
-      rows.push tr [
-        td bar '', $color:series.color, $width: if value is 0 then '1px' else "#{Math.round value * 100}%"
-        td format4f value
-      ]
+      origin = scale 0
+      x = scale value
+      if x > origin
+        left = origin
+        width = x - origin
+      else if x < origin
+        left = x
+        width = origin - x
+      else
+        left = 0
+        width = 1
 
-
-    chart table tbody rows
+      caption: series.caption
+      value: format4f value
+      span: "#{span}px"
+      width: "#{width}px"
+      left: "#{left}px"
+      color: series.color
 
   createScoringList = (series) ->
     map series, (series) ->

@@ -48,7 +48,18 @@
   div
     span Compare scorings by:
     select(data-bind="options:categories, optionsText:'caption', value:selectedCategory")
-    div(data-bind='geyser:comparisonPlot')
+    .y-criteria-comparision
+      table(width='400')
+        tbody
+          // ko foreach:comparisonPlot
+          tr
+            td(colspan='2' data-bind='text:caption')
+          tr
+            td(data-bind='style:{width:span}' style='position:relative')
+              div(style='position:absolute;height:10px' data-bind='style:{left:left, width:width, backgroundColor:color}')
+            td(width='100' data-bind='text:value')
+          // /ko
+
   h2.y-subtitle(data-bind='collapse:false') Plot Model Inputs and Scoring Outputs
   div
     h3(data-bind='collapse:true') Modify this plot
