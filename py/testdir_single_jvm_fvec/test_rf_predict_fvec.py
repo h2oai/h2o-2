@@ -17,7 +17,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        h2o.sleep(3600)
+        # h2o.sleep(3600)
         h2o.tear_down_cloud()
 
     def test_rf_predict_fvec(self):
