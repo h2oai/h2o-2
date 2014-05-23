@@ -186,8 +186,8 @@ class Basic(unittest.TestCase):
             print 'PARSE_PATTERN_INCLUDES_HEADER', PARSE_PATTERN_INCLUDES_HEADER
             print 'DATA_FIRST_IS_COMMENT:', DATA_FIRST_IS_COMMENT
             print 'HEADER_FIRST_IS_COMMENT:', HEADER_FIRST_IS_COMMENT
-            print 'SEP_CHAR_GEN:', SEP_CHAR_GEN
-            print 'HEADER_SEP_CHAR_GEN:', HEADER_SEP_CHAR_GEN
+            print 'SEP_CHAR_GEN:', "->" + SEP_CHAR_GEN + "<-"
+            print 'HEADER_SEP_CHAR_GEN:', "->" + HEADER_SEP_CHAR_GEN + "<-"
             print 'GZIP_DATA:', GZIP_DATA
             print 'GZIP_HEADER:', GZIP_HEADER 
 
@@ -198,6 +198,9 @@ class Basic(unittest.TestCase):
             # separator the data uses?
 
             headerForHeader = HEADER_SEP_CHAR_GEN.join(hfhList)
+            print "headerForHeader:", headerForHeader
+
+            
             # make these different
             # hfdList = [random.choice(headerChoices) for h in range(colCount)] + ["output"]
             # FIX! keep them the same for now to avoid some odd cases on what header gets used to RF
