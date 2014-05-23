@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_browse as h2b
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -17,9 +17,11 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        h2o.sleep(3600)
         h2o.tear_down_cloud()
 
     def test_rf_predict_fvec(self):
+        h2b.browseTheCloud()
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         h2o.beta_features = True
@@ -63,7 +65,7 @@ class Basic(unittest.TestCase):
         expected = {
           "numRows": 150, 
           "numCols": 4, 
-          "byteSize": 2843, 
+          # "byteSize": 2843, 
         }
 
         diffKeys = [k for k in expected if inspect[k] != expected[k]]
