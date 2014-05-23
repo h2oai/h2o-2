@@ -1,0 +1,38 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'eu.appsatori:gradle-fatjar-plugin:0.2'
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'fatjar'
+apply plugin: 'idea'
+apply plugin: 'eclipse'
+
+version = ''
+sourceCompatibility = 1.7
+targetCompatibility = 1.7
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile("org.apache.zookeeper:zookeeper:3.4.3")
+    compile("com.google.code.gson:gson:2.2.4")
+    compile("org.apache.curator:curator-x-discovery:2.4.2")
+
+    compile files('../target/h2o.jar')
+}
+
+fatJar {
+   manifest {
+      attributes 'Main-Class': 'water.zookeeper.h2odriver'
+   }
+}
+
+build.dependsOn fatJar
