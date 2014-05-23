@@ -379,11 +379,14 @@ Steam.ScoringView = (_, _scoring) ->
               if areModelsComparable
                 [inputParameterKeys, inputParameters] = collateInputParameters series
                 [ inputAndOutputVariables, defaultInputVariable, defaultOutputVariable ] = createInputAndOutputVariables inputParameterKeys, inputParameters, aucCategories
-                _inputOutputPlotX defaultInputVariable
-                _inputOutputPlotY defaultOutputVariable
-                _inputOutputCategories inputAndOutputVariables
-                apply$ _inputOutputPlotX, _inputOutputPlotY, (x, y) ->
-                  _inputOutputPlot createMetricsPlot series, x, y
+              else
+                [ inputAndOutputVariables, defaultInputVariable, defaultOutputVariable ] = createInputAndOutputVariables [], [], aucCategories
+
+              _inputOutputPlotX defaultInputVariable
+              _inputOutputPlotY defaultOutputVariable
+              _inputOutputCategories inputAndOutputVariables
+              apply$ _inputOutputPlotX, _inputOutputPlotY, (x, y) ->
+                _inputOutputPlot createMetricsPlot series, x, y
 
               #TODO sort by AUC
               _scoringList createScoringList series
