@@ -31,8 +31,9 @@
   div(data-bind='geyser:comparisonTable')
   // /ko
   // ko ifnot:isTabularComparisonView
-  h2.y-subtitle(data-bind='collapse:false') Scorings
+  h2.y-subtitle(data-bind='collapse:false') Scorings in this comparison
   div
+    div Click on a scoring to inspect it.
     table.table.table-condensed.table-hover
       tbody
         // ko foreach:scoringList
@@ -41,9 +42,14 @@
             .y-legend-swatch(data-bind='style:{backgroundColor:color}')
           td.y-legend-label(data-bind='text:caption, click:inspect')
         // /ko
-  h2.y-subtitle(data-bind='collapse:false') ROC Comparison
+  h2.y-subtitle(data-bind='collapse:false') ROC Plot
   div(data-bind='geyser:multiRocPlot')
-  h2.y-subtitle(data-bind='collapse:false') Compare Inputs and Outputs
+  h2.y-subtitle(data-bind='collapse:false') Compare Scoring Outputs
+  div
+    span Compare scorings by:
+    select(data-bind="options:categories, optionsText:'caption', value:selectedCategory")
+    div(data-bind='geyser:comparisonPlot')
+  h2.y-subtitle(data-bind='collapse:false') Plot Model Inputs and Scoring Outputs
   div
     h3(data-bind='collapse:true') Modify this plot
     .y-shade
@@ -58,12 +64,7 @@
             td
               select(data-bind="options:inputOutputCategories, optionsText:'caption', value:inputOutputPlotY")
     div(data-bind='geyser:inputOutputPlot')
-  h2.y-subtitle(data-bind='collapse:false') Compare Scorings
-  div
-    span Compare scorings by:
-    select(data-bind="options:categories, optionsText:'caption', value:selectedCategory")
-    div(data-bind='geyser:comparisonPlot')
-  h2.y-subtitle(data-bind='collapse:false') Plots
+  h2.y-subtitle(data-bind='collapse:false') Plot Scoring Outputs by Threshold
   div
     h3(data-bind='collapse:true') Modify this plot
     .y-shade
@@ -78,7 +79,7 @@
             td
               select(data-bind="options:thresholdPlotVariables, optionsText:'caption', value:thresholdPlotY")
     div(data-bind='geyser:thresholdPlot')
-  h2.y-subtitle(data-bind='collapse:false') Output Comparison
+  h2.y-subtitle(data-bind='collapse:false') Compare All Scoring Outputs
   div
     div(data-bind='geyser:stripPlot')
     //-
