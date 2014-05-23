@@ -128,7 +128,7 @@ h2o.importFolder.VA <- function(object, path, pattern = "", key = "", parse = TR
     for(i in 1:length(res$fails)) 
       cat(res$fails[[i]], "failed to import")
   }
-  
+  if(length(res$fails) > 0){warning(res$fails);}  
   # Return only the files that successfully imported
   if(length(res$files) > 0) {
     if(parse) {

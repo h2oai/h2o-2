@@ -10,6 +10,8 @@ paramDict = {
     'mtries': 3, 
     'source': u'covtype.hex', 
     'seed': '1231231', 
+    'importance': 0,
+    'balance_classes': 0,
 }
 
 
@@ -31,7 +33,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_rf_params_rand2_fvec(self):
+    def test_rf_histo_fail_fvec(self):
         h2o.beta_features = True
         csvPathname = 'standard/covtype.data'
         for trial in range(3):

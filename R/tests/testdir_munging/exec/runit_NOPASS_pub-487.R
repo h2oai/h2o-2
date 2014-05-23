@@ -9,7 +9,7 @@ source('../../findNSourceUtils.R')
       h2o.setLogPath(getwd(), "Command")
       h2o.setLogPath(getwd(), "Error")
       h2o.startLogging()
-      conn = h2o.init()
+#      conn = h2o.init()
 
 
 test.frame_add_equal <- function(conn) {

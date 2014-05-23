@@ -163,10 +163,6 @@ class Basic(unittest.TestCase):
         "Elodia|G.|Ali|1983-10-31",
         "Elodia|G.|Ali|1983-10-31",
         "Elodia|G.|Ali|1983-10-31",
-        "Elodia|G.|Ali|1983-10-31",
-        "Elodia|G.|Ali|1983-10-31",
-        "Elodia|G.|Ali|1983-10-31",
-        "Elodia|G.|Ali|1983-10-31",
         ]
         return rows
 
@@ -267,7 +263,14 @@ class Basic(unittest.TestCase):
                         str(sepCase) + \
                         '.data'
                     self.writeRows(csvPathname,newRows2,eol)
-                    parseResult = h2i.import_parse(path=csvPathname, schema='local', noPrint=not h2o.verbose)
+
+                    # use the single_quotes param if single quote in the tokenCase (creates token wrapper)
+                    if "'" in self.tokenChangeDict[tokenCase]:
+                        single_quotes = 1
+                    else:
+                        single_quotes = 0
+                    parseResult = h2i.import_parse(path=csvPathname, schema='local', single_quotes=single_quotes,
+                        noPrint=not h2o.verbose)
                     inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
                     print "\n" + csvPathname, \
                         "    num_rows:", "{:,}".format(inspect['num_rows']), \
