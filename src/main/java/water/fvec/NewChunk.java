@@ -316,6 +316,37 @@ public class NewChunk extends Chunk {
   }
   protected void set_sparse(int nzeros){
     if(_len == nzeros)return;
+    if(_id != null){ // we have sparse represenation but some 0s in it!
+      int [] id = MemoryManager.malloc4(nzeros);
+      int j = 0;
+      if(_ds != null){
+        double [] ds = MemoryManager.malloc8d(nzeros);
+        for(int i = 0; i < _len; ++i){
+          if(_ds[i] != 0){
+            ds[j] = _ds[i];
+            id[j] = _id[i];
+            ++j;
+          }
+        }
+        _ds = ds;
+      } else {
+        long [] ls = MemoryManager.malloc8(nzeros);
+        int [] xs = MemoryManager.malloc4(nzeros);
+        for(int i = 0; i < _len; ++i){
+          if(_ls[i] != 0){
+            ls[j] = _ls[i];
+            xs[j] = _xs[j];
+            id[j] = _id[i];
+            ++j;
+          }
+        }
+        _ls = ls;
+        _xs = xs;
+      }
+      _id = id;
+      assert j == nzeros;
+      return;
+    }
     assert _len == _len2:"_len = " + _len + ", _len2 = " + _len2 + ", nzeros = " + nzeros;
     int zs = 0;
     if(_ds == null){
