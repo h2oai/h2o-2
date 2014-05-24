@@ -728,6 +728,7 @@ public class NewChunk extends Chunk {
       else cancel_sparse(); // for now don't bother setting the sparse value
     }
     _ls[i]=l; _xs[i]=0;
+    _naCnt = -1;
     return true;
   }
 
@@ -743,6 +744,7 @@ public class NewChunk extends Chunk {
     }
     while(i >= _len2) append2slowd();
     _ds[i] = d;
+    _naCnt = -1;
     return true;
   }
   @Override boolean set_impl(int i, float f) {  return set_impl(i,(double)f); }
@@ -751,6 +753,7 @@ public class NewChunk extends Chunk {
     if( isNA2(i) ) return true;
     if( _ls != null ) { _ls[i] = Long.MAX_VALUE; _xs[i] = Integer.MIN_VALUE; }
     if( _ds != null ) { _ds[i] = Double.NaN; }
+    _naCnt = -1;
     return true;
   }
   @Override boolean setNA_impl(int i) {
