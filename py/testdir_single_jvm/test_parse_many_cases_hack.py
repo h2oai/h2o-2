@@ -264,8 +264,9 @@ class Basic(unittest.TestCase):
                         '.data'
                     self.writeRows(csvPathname,newRows2,eol)
 
-                    # use the single_quotes param if single quote in the tokenCase (creates token wrapper)
-                    if "'" in self.tokenChangeDict[tokenCase]:
+                    # use the single_quotes param if single quote in the 
+                    # tokenCase (creates token wrapper)
+                    if "'" in self.tokenChangeDict[tokenCase][0]:
                         single_quotes = 1
                     else:
                         single_quotes = 0
