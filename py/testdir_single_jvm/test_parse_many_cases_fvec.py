@@ -243,7 +243,7 @@ class Basic(unittest.TestCase):
                         str(sepCase) + \
                         '.data'
                     self.writeRows(csvPathname,newRows2,eol)
-                    if "'" in self.tokenChangeDict[tokenCase]:
+                    if "'" in tcd[tokenCase][0]:
                         single_quotes = 1
                     else:
                         single_quotes = 0
