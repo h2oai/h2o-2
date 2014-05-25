@@ -1,11 +1,10 @@
 #'
-#' An assortment of methods, some H2O specifc and some that overlap with R.
+#' An assortment of methods.
 #'
 #' Methods are grouped according to the data type upon which they operate. ValueArray methods
 #' are grouped into a section and FluidVec methods are grouped into their own section. Furthermore,
 #' within each section, there is a grouping of H2O specifc methods and methods that are overridden from
 #' the R language (e.g. summary, head, tail, dim, nrow).
-#'
 
 #--------------------------------- Unique H2O Methods ----------------------------------#
 # TODO: s4 year, month impls as well?
