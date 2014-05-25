@@ -706,7 +706,10 @@ public class Vec extends Iced {
     public final double set( long i, double d) { return _vec.chunkForRow(i).set(i,d); }
     public final float  set( long i, float  f) { return _vec.chunkForRow(i).set(i,f); }
     public final boolean setNA( long i ) { return _vec.chunkForRow(i).setNA(i); }
-    public void close() { _vec.close(); }
+    public void close() {
+      _vec.close();
+      _vec.postWrite();
+    }
   }
 
   public final Writer open() {
