@@ -372,6 +372,11 @@ setClass("H2ODeepLearningGrid", contains="H2OGrid")
 #' The H2ORawData is a representation of the imported, not yet parsed, data.
 setClass("H2ORawDataVA", representation(h2o="H2OClient",  key="character"))
 
+setMethod("show", "H2ORawDataVA", function(object) {
+  print(object@h2o)
+  cat("Raw Data Key:", object@key, "\n")
+})
+
 #'
 #' The H2OParsedDataVA class.
 #'
@@ -397,11 +402,55 @@ setClass("H2OModelVA", representation(key="character", data="H2OParsedDataVA", m
 #' A grid search is an automated procedure for varying the parameters of a model and discovering the best tunings.
 setClass("H2OGridVA", representation(key="character", data="H2OParsedDataVA", model="list", sumtable="list", "VIRTUAL"))
 
+setMethod("show", "H2OGridVA", function(object) {
+  print(object@data)
+  cat("Grid Search Model Key:", object@key, "\n")
+
+  temp = data.frame(t(sapply(object@sumtable, c)))
+  cat("\nSummary\n"); print(temp)
+})
+
 #'
 #' The H2OGLMModelVA class.
 #'
 #' The legacy ValueArray backed generalized linear model.
 setClass("H2OGLMModelVA", representation(xval="list"), contains="H2OModelVA")
+
+setMethod("show", "H2OGLMModelVA", function(object) {
+  print(object@data)
+  cat("GLM Model Key:", object@key, "\n\n")
+
+  model = object@model
+  cat("Coefficients:\n"); print(round(model$coefficients,5))
+  if(!is.null(model$normalized_coefficients)) {
+    cat("\nNormalized Coefficients:\n"); print(round(model$normalized_coefficients,5))
+  }
+  cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual")
+  cat("\nNull Deviance:    ", round(model$null.deviance,1))
+  cat("\nResidual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1))
+  cat("\nDeviance Explained:", round(1-model$deviance/model$null.deviance,5))
+  cat("\nAvg Training Error Rate:", round(model$train.err,5), "\n")
+
+  family = model$params$family$family
+  if(family == "binomial") {
+    cat("AUC:", round(model$auc,5), " Best Threshold:", round(model$threshold,5))
+    cat("\n\nConfusion Matrix:\n"); print(model$confusion)
+  }
+
+  if(length(object@xval) > 0) {
+    cat("\nCross-Validation Models:\n")
+    if(family == "binomial") {
+      modelXval = t(sapply(object@xval, function(x) { c(x@model$threshold, x@model$auc, x@model$class.err) }))
+      colnames(modelXval) = c("Best Threshold", "AUC", "Err(0)", "Err(1)")
+    } else {
+      modelXval = sapply(object@xval, function(x) { x@model$train.err })
+      modelXval = data.frame(modelXval)
+      colnames(modelXval) = c("Error")
+    }
+    rownames(modelXval) = paste("Model", 0:(nrow(modelXval)-1))
+    print(modelXval)
+  }
+})
 
 #'
 #' The H2OGLMGridVA class.
@@ -415,11 +464,34 @@ setClass("H2OGLMGridVA", contains="H2OGridVA")
 #' The legacy ValueArray backed KMeans model.
 setClass("H2OKMeansModelVA", contains="H2OModelVA")
 
+setMethod("show", "H2OKMeansModelVA", function(object) {
+  print(object@data)
+  cat("K-Means Model Key:", object@key)
+
+  model = object@model
+  cat("\n\nK-means clustering with", length(model$size), "clusters of sizes "); cat(model$size, sep=", ")
+  cat("\n\nCluster means:\n"); print(model$centers)
+  cat("\nClustering vector:\n"); print(summary(model$cluster))
+  cat("\nWithin cluster sum of squares by cluster:\n"); print(model$withinss)
+  cat("(between_SS / total_SS = ", round(100*sum(model$betweenss)/model$totss, 1), "%)\n")
+  cat("\nAvailable components:\n"); print(names(model))
+})
+
 #'
 #' The H2ORFModelVA class.
 #'
 #' The legacy ValueArray backed Random Forest model. It's directly analagous to the FluidVec backed SpeeDRF rather than DRF.
 setClass("H2ORFModelVA", contains="H2OModelVA")
+
+setMethod("show", "H2ORFModelVA", function(object) {
+  print(object@data)
+  cat("Random Forest Model Key:", object@key)
+
+  model = object@model
+  cat("\n\nClassification Error:", model$classification_error)
+  cat("\nConfusion Matrix:\n"); print(model$confusion)
+  cat("\nTree Stats:\n"); print(model$tree_sum)
+})
 
 
 ########################################################################################################################
