@@ -24,6 +24,8 @@ public class LinuxProcFileReader {
   private long _systemTotalTicks = -1;
   private long _processTotalTicks = -1;
 
+  private long _processRss = -1;
+
   private int _processNumOpenFds = -1;
 
   /**
@@ -46,6 +48,11 @@ public class LinuxProcFileReader {
    * @return ticks this process was running.
    */
   public long getProcessTotalTicks() { assert _processTotalTicks > 0;  return _processTotalTicks; }
+
+  /**
+   * @return resident set size (RSS) of this process.
+   */
+  public long getProcessRss()        { assert _processRss > 0;         return _processRss; }
 
   /**
    * @return number of currently open fds of this process.
@@ -181,7 +188,12 @@ public class LinuxProcFileReader {
       BufferedReader reader = new BufferedReader(new StringReader(s));
       String line = reader.readLine();
 
-      Pattern p = Pattern.compile("(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+).*");
+      Pattern p = Pattern.compile(
+              "(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)" + "\\s+" +
+              "(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)" + "\\s+" +
+              "(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)" + "\\s+" +
+              "(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)" + "\\s+" +
+              "(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)" + ".*");
       Matcher m = p.matcher(line);
       boolean b = m.matches();
       if (! b) {
@@ -191,6 +203,7 @@ public class LinuxProcFileReader {
       long processUserTicks   = Long.parseLong(m.group(14));
       long processSystemTicks   = Long.parseLong(m.group(15));
       _processTotalTicks = processUserTicks + processSystemTicks;
+      _processRss = Long.parseLong(m.group(24));
     }
     catch (Exception xe) {}
   }
@@ -261,5 +274,6 @@ public class LinuxProcFileReader {
     System.out.println("System idle ticks: " + lpfr.getSystemIdleTicks());
     System.out.println("System total ticks: " + lpfr.getSystemTotalTicks());
     System.out.println("Process total ticks: " + lpfr.getProcessTotalTicks());
+    System.out.println("Process RSS: " + lpfr.getProcessRss());
   }
 }

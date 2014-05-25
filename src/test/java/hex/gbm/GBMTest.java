@@ -18,7 +18,7 @@ import java.io.File;
 
 public class GBMTest extends TestUtil {
 
-  private final void testHTML(GBMModel m) {
+  private void testHTML(GBMModel m) {
     StringBuilder sb = new StringBuilder();
     GBMModelView gbmv = new GBMModelView();
     gbmv.gbm_model = m;
@@ -31,6 +31,57 @@ public class GBMTest extends TestUtil {
   private abstract class PrepData { abstract int prep(Frame fr); }
 
   static final String ignored_aircols[] = new String[] { "DepTime", "ArrTime", "AirTime", "ArrDelay", "DepDelay", "TaxiIn", "TaxiOut", "Cancelled", "CancellationCode", "Diverted", "CarrierDelay", "WeatherDelay", "NASDelay", "SecurityDelay", "LateAircraftDelay", "IsDepDelayed"};
+
+  @Test public void testGBMRegression() {
+    File file = TestUtil.find_test_file("./smalldata/gbm_test/Mfgdata_gaussian_GBM_testing.csv");
+    Key fkey = NFSFileVec.make(file);
+    Key dest = Key.make("mfg.hex");
+    GBM gbm = new GBM();          // The Builder
+    GBM.GBMModel gbmmodel = null; // The Model
+    try {
+      Frame fr = gbm.source = ParseDataset2.parse(dest,new Key[]{fkey});
+      UKV.remove(fkey);
+      gbm.classification = false;  // Regression
+      gbm.family = GBM.Family.AUTO;
+      gbm.response = fr.vecs()[1]; // Row in col 0, dependent in col 1, predictor in col 2
+      gbm.ntrees = 1;
+      gbm.max_depth = 1;
+      gbm.min_rows = 1;
+      gbm.nbins = 20;
+      gbm.cols = new int[]{2};  // Just column 2
+      gbm.validation = null;
+      gbm.learn_rate = 1.0f;
+      gbm.score_each_iteration=true;
+      gbm.invoke();
+      gbmmodel = UKV.get(gbm.dest());
+
+      Frame preds = gbm.score(gbm.source);
+      double sq_err = new CompErr().doAll(gbm.response,preds.vecs()[0])._sum;
+      double mse = sq_err/preds.numRows();
+      assertEquals(79152.1233,mse,0.1);
+
+      preds.delete();
+
+    } finally {
+      gbm.source.delete();              // Remove original hex frame key
+      if (gbm.validation != null) gbm.validation.delete(); // Remove validation dataset if specified
+      if( gbmmodel != null ) gbmmodel.delete(); // Remove the model
+      gbm.remove();             // Remove GBM Job
+    }
+  }
+
+  private static class CompErr extends MRTask2<CompErr> {
+    double _sum;
+    @Override public void map( Chunk resp, Chunk pred ) {
+      double sum = 0;
+      for( int i=0; i<resp._len; i++ ) {
+        double err = resp.at(i)-pred.at(i);
+        sum += err*err;
+      }
+      _sum = sum;
+    }
+    @Override public void reduce( CompErr ce ) { _sum += ce._sum; }
+  }
 
   @Test public void testBasicGBM() {
     // Regression tests
@@ -75,6 +126,7 @@ public class GBMTest extends TestUtil {
   }
 
   @Test public void testBasicGBMFamily() {
+    Scope.enter();
     // Classification with Bernoulli family
     basicGBM("./smalldata/logreg/prostate.csv","prostate.hex",
         new PrepData() {
@@ -83,16 +135,14 @@ public class GBMTest extends TestUtil {
             // Remove patient ID vector
             UKV.remove(fr.remove("ID")._key);
             // Change CAPSULE and RACE to categoricals
-            fr.factor(fr.find("CAPSULE"));
-            fr.factor(fr.find("RACE"));
+            Scope.track(fr.factor(fr.find("CAPSULE"))._key);
+            Scope.track(fr.factor(fr.find("RACE"   ))._key);
             // Prostate: predict on CAPSULE
             return fr.find("CAPSULE");
           }
         }, Family.bernoulli);
+    Scope.exit();
   }
-
-  // covtype ignorable columns
-  static final int IGNS[] = new int[] { 6, 7, 10, 11 };
 
   // ==========================================================================
   public GBMModel basicGBM(String fname, String hexname, PrepData prep) {
@@ -102,17 +152,16 @@ public class GBMTest extends TestUtil {
     return basicGBM(fname, hexname, prep, validation, Family.AUTO);
   }
   public GBMModel basicGBM(String fname, String hexname, PrepData prep, Family family) {
-    return basicGBM(fname, hexname, prep, false, Family.AUTO);
+    return basicGBM(fname, hexname, prep, false, family);
   }
   public GBMModel basicGBM(String fname, String hexname, PrepData prep, boolean validation, Family family) {
     File file = TestUtil.find_test_file(fname);
     if( file == null ) return null;  // Silently abort test if the file is missing
     Key fkey = NFSFileVec.make(file);
     Key dest = Key.make(hexname);
-    GBM gbm = null;               // The Builder
+    GBM gbm = new GBM();          // The Builder
     GBM.GBMModel gbmmodel = null; // The Model
     try {
-      gbm = new GBM();
       Frame fr = gbm.source = ParseDataset2.parse(dest,new Key[]{fkey});
       UKV.remove(fkey);
       int idx = prep.prep(fr);
@@ -155,11 +204,10 @@ public class GBMTest extends TestUtil {
     File file2 = TestUtil.find_test_file("smalldata/gbm_test/ecology_eval.csv");
     Key fkey2 = NFSFileVec.make(file2);
     Key dest2 = Key.make("test.hex");
-    GBM gbm = null;               // The Builder
+    GBM gbm = new GBM();          // The Builder
     GBM.GBMModel gbmmodel = null; // The Model
     Frame ftest = null, fpreds = null;
     try {
-      gbm = new GBM();
       Frame fr = ParseDataset2.parse(dest1,new Key[]{fkey1});
       UKV.remove(fr.remove("Site")._key); // Remove unique ID; too predictive
       gbm.response = fr.vecs()[fr.find("Angaus")];   // Train on the outcome
@@ -207,10 +255,9 @@ public class GBMTest extends TestUtil {
     File file2 = TestUtil.find_test_file("./smalldata/kaggle/KDDTest.arff.gz");
     Key fkey2 = NFSFileVec.make(file2);
     Key dest2 = Key.make("KDDTest.hex");
-    GBM gbm = null;
+    GBM gbm = new GBM();
     GBM.GBMModel gbmmodel = null; // The Model
     try {
-      gbm = new GBM();
       gbm.source = ParseDataset2.parse(dest1,new Key[]{fkey1});
       gbm.response = gbm.source.vecs()[41]; // Response is col 41
       gbm.ntrees = 2;
@@ -252,14 +299,14 @@ public class GBMTest extends TestUtil {
       for( int i=0; i<gbm.cols.length; i++ ) gbm.cols[i]=i;
       gbm.learn_rate = .2f;
       gbm.fork();
-      try { Thread.sleep(100); } catch( Exception xe ) { }
+      try { Thread.sleep(100); } catch( Exception ignore ) { }
 
       try {
         fr.delete();            // Attempted delete while model-build is active
-        H2O.fail();             // Should toss IAE instead of reaching here
-      } catch( IllegalArgumentException xe ) {
+        throw H2O.fail();       // Should toss IAE instead of reaching here
+      } catch( IllegalArgumentException ignore ) {
       } catch( DException.DistributedException de ) {
-        assertTrue( de.getMessage().indexOf("java.lang.IllegalArgumentException") != -1 );
+        assertTrue( de.getMessage().contains("java.lang.IllegalArgumentException") );
       }
 
       GBM.GBMModel model = gbm.get();

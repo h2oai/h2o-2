@@ -48,7 +48,7 @@ public class TreeMeasuresCollector extends MRTask2<TreeMeasuresCollector> {
     float [] preds = new float[_nclasses+1];
     Chunk cresp = chk_resp(chks);
     int   nrows = cresp._len;
-    int   [] oob = new int[1+(int)((1f-_rate)*nrows*1.2f)];
+    int   [] oob = new int[2+Math.round((1f-_rate)*nrows*1.2f+0.5f)]; // preallocate
     int   [] soob = null;
 
     // Prepare output data
@@ -61,7 +61,7 @@ public class TreeMeasuresCollector extends MRTask2<TreeMeasuresCollector> {
       // OOB RNG for this tree
       Random rng = rngForTree(_trees[tidx], cresp.cidx());
       // Collect oob rows and permutate them
-      oob = ModelUtils.sampleOOBRows(nrows, _rate, rng);
+      oob = ModelUtils.sampleOOBRows(nrows, _rate, rng, oob); // reuse use the same array for sampling
       int oobcnt = oob[0]; // Get number of sample rows
       if (_var>=0) {
         if (soob==null || soob.length < oobcnt) soob = new int[oobcnt];

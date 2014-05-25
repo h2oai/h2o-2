@@ -357,7 +357,7 @@ public class Inspect extends Request {
           + DRF.link(key, "Distributed Random Forest") + ", "
           + GBM.link(key, "GBM") + ", "
           + GLM.link(key, "GLM") + ", " + GLMGrid.link(key, "GLM Grid Search") + ", "
-          + GLM2.link(key, "Generalized Linear Modeling (beta)") +", "
+          + GLM2.link(key, "Generalized Linear Modeling") +", "
           + KMeans.link(key, "KMeans") + ", "
 //          + NeuralNet.link(key, NeuralNet.DOC_GET) + ", or "
           + DeepLearning.link(key, DeepLearning.DOC_GET) + "<br />"

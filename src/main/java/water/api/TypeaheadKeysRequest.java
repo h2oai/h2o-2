@@ -28,11 +28,11 @@ public class TypeaheadKeysRequest extends TypeaheadRequest {
     int len = 0;
     // Gather some keys that pass all filters
     for( Key key : H2O.globalKeySet(_cname) ) {
+      if( !key.user_allowed() ) // Also filter out for user-keys
+        continue;
       if( filter != null &&     // Have a filter?
           key.toString().indexOf(filter) == -1 )
         continue;               // Ignore this filtered-out key
-      if( !key.user_allowed() ) // Also filter out for user-keys
-        continue;
       Value val = DKV.get(key);
       if( val == null ) continue; // Deleted key?
       if( !matchesType(val) ) continue; // Wrong type?

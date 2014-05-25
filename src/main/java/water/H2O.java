@@ -803,6 +803,7 @@ public final class H2O {
     public String help = null;
     public String version = null;
     public String beta = null;
+    public String mem_watchdog = null; // For developer debugging
   }
 
   public static void printHelp() {
@@ -995,7 +996,10 @@ public final class H2O {
     Log.POST(350,"");
     startApiIpPortWatchdog(); // Check if the API port becomes unreachable
     Log.POST(360,"");
-
+    if (OPT_ARGS.mem_watchdog != null) {
+      startMemoryWatchdog();
+      Log.POST(370, "");
+    }
     startupFinalize(); // finalizes the startup & tests (if any)
     Log.POST(380,"");
   }
@@ -1092,6 +1096,10 @@ public final class H2O {
   private static void startApiIpPortWatchdog() {
     apiIpPortWatchdog = new ApiIpPortWatchdogThread();
     apiIpPortWatchdog.start();
+  }
+
+  private static void startMemoryWatchdog() {
+    new MemoryWatchdogThread().start();
   }
 
   // Used to update the Throwable detailMessage field.
@@ -1824,6 +1832,69 @@ public final class H2O {
     public void run() {
       Log.debug (threadName + ": Thread run() started");
       reset();
+
+      while (true) {
+        mySleep (sleepMillis);
+        if (gracefulShutdownInitiated) { break; }
+        check();
+        if (gracefulShutdownInitiated) { break; }
+      }
+    }
+  }
+
+  /**
+   * Log physical (RSS) memory usage periodically.
+   * Used by developers to look for memory leaks.
+   * Currently this only works for Linux.
+   */
+  private static class MemoryWatchdogThread extends Thread {
+    final private String threadName = "MemoryWatchdog";
+
+    private volatile boolean gracefulShutdownInitiated;         // Thread-safe.
+
+    // Timing things that can be tuned if needed.
+    final private int checkIntervalSeconds = 5;
+    final private int millisPerSecond = 1000;
+    final private int sleepMillis = checkIntervalSeconds * millisPerSecond;
+
+    // Constructor.
+    public MemoryWatchdogThread() {
+      super("MemWatch");        // Only 9 characters get printed in the log.
+      setDaemon(true);
+      setPriority(MAX_PRIORITY - 2);
+      gracefulShutdownInitiated = false;
+    }
+
+    // Exit this watchdog thread.
+    public void shutdown() {
+      gracefulShutdownInitiated = true;
+    }
+
+    // Sleep method.
+    private void mySleep(int millis) {
+      try {
+        Thread.sleep (sleepMillis);
+      }
+      catch (Exception xe)
+      {}
+    }
+
+    // Do the watchdog check.
+    private void check() {
+      water.util.LinuxProcFileReader r = new LinuxProcFileReader();
+      r.read();
+      long rss = -1;
+      try {
+        rss = r.getProcessRss();
+      }
+      catch (AssertionError xe) {}
+      Log.info("RSS: " + rss);
+    }
+
+    // Class main thread.
+    @Override
+    public void run() {
+      Log.debug(threadName + ": Thread run() started");
 
       while (true) {
         mySleep (sleepMillis);

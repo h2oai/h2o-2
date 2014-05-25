@@ -326,7 +326,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
         AutoBuffer ab = null;
         try {
           ab = new AutoBuffer(_client).putTask(UDP.udp.ack,_tsknum).put1(SERVER_UDP_SEND);
-          dt.write(ab);      // Write the DTask - could be very large write
+          dt.write(ab);       // Write the DTask - could be very large write
           _computed = true;   // After the TCP reply flag set, set computed bit
           boolean t = ab.hasTCP(); // Resends do not need to repeat TCP result
           dt._repliedTcp = t;
@@ -336,6 +336,9 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
           Log.info("Task cancelled or network congestion: TCPACK "+e._ioe.getMessage()+", t#"+_tsknum+" AB="+ab+", waiting and retrying...");
           if( ab != null ) ab.close(true,true);
           try { Thread.sleep(500); } catch (InterruptedException ie) {}
+        } catch( Exception e ) { // Custom serializer just barfed?
+          Log.err(e);            // Log custom serializer exception
+          if( ab != null ) ab.close(true,true);
         }
       } while((dt = _dt) != null); // end of while(true)
       if( dt == null )

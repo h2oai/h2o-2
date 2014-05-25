@@ -2,7 +2,7 @@ import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
 
-H2O_SUPPORTS_OVER_50K_COLS = False
+H2O_SUPPORTS_OVER_500K_COLS = False
 
 print "Stress the # of cols with fp reals here." 
 print "Can pick fp format but will start with just the first (e0)"
@@ -107,10 +107,10 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_fp_many_cols(self):
+    def test_fp_many_cols_fvec(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
-        if H2O_SUPPORTS_OVER_50K_COLS:
+        if H2O_SUPPORTS_OVER_500K_COLS:
             tryList = [
                 (100, 200000, 'cG', 120, 120),
                 (100, 300000, 'cH', 120, 120),
@@ -123,7 +123,7 @@ class Basic(unittest.TestCase):
                 (100, 1200000, 'cK', 120, 120),
             ]
         else:
-            print "Restricting number of columns tested to 50,000"
+            print "Restricting number of columns tested to <=500,000"
             tryList = [
                 (100, 200000, 'cG', 400, 400),
                 (100, 300000, 'cH', 400, 400),
@@ -146,7 +146,6 @@ class Basic(unittest.TestCase):
             print csvFilename, "parse starting"
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=timeoutSecs, doSummary=False)
             h2o.check_sandbox_for_errors()
-            print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse and summary:", parseResult['destination_key'], "took", time.time() - start, "seconds"
 
             # We should be able to see the parse result?
@@ -155,19 +154,15 @@ class Basic(unittest.TestCase):
             print "Inspect:", parseResult['destination_key'], "took", time.time() - start, "seconds"
             h2o_cmd.infoFromInspect(inspect, csvPathname)
             print "\n" + csvPathname, \
-                "    num_rows:", "{:,}".format(inspect['num_rows']), \
-                "    num_cols:", "{:,}".format(inspect['num_cols'])
+                "    numRows:", "{:,}".format(inspect['numRows']), \
+                "    numCols:", "{:,}".format(inspect['numCols'])
 
             # should match # of cols in header or ??
-            self.assertEqual(inspect['num_cols'], colCount,
-                "parse created result with the wrong number of cols %s %s" % (inspect['num_cols'], colCount))
-            self.assertEqual(inspect['num_rows'], rowCount,
+            self.assertEqual(inspect['numCols'], colCount,
+                "parse created result with the wrong number of cols %s %s" % (inspect['numCols'], colCount))
+            self.assertEqual(inspect['numRows'], rowCount,
                 "parse created result with the wrong number of rows (header shouldn't count) %s %s" % \
-                (inspect['num_rows'], rowCount))
-
-            # if not h2o.browse_disable:
-            #     h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
-            #     time.sleep(3)
+                (inspect['numRows'], rowCount))
 
 if __name__ == '__main__':
     h2o.unit_main()
