@@ -4,7 +4,7 @@ import h2o, h2o_cmd, h2o_import as h2i, h2o_glm, h2o_common, h2o_exec as h2e
 import h2o_print
 
 DO_GLM = True
-LOG_MACHINE_STATS = False
+LOG_MACHINE_STATS = True
 
 print "Assumes you ran ../build_for_clone.py in this directory"
 print "Using h2o-nodes.json. Also the sandbox dir"
@@ -91,9 +91,9 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
                     # convert to binomial
                     execExpr="A.hex=%s" % parseResult['destination_key']
-                    h2e.exec_expr(execExpr=execExpr, timeoutSecs=60)
+                    h2e.exec_expr(execExpr=execExpr, timeoutSecs=180)
                     execExpr="A.hex[,%s]=(A.hex[,%s]>%s)" % ('379', '379', 15)
-                    h2e.exec_expr(execExpr=execExpr, timeoutSecs=60)
+                    h2e.exec_expr(execExpr=execExpr, timeoutSecs=180)
                     aHack = {'destination_key': "A.hex"}
 
                     start = time.time()
