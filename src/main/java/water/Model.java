@@ -312,8 +312,9 @@ public abstract class Model extends Lockable<Model> {
 
   /**
    * Type of missing columns during adaptation between train/test datasets
-   * Overload this methdo for models that have sparse data handling and use 0 instead of NaN
-   * @return
+   * Overload this method for models that have sparse data handling.
+   * Otherwise, NaN is used.
+   * @return real-valued number (can be NaN)
    */
   protected double missingColumnsType() { return Double.NaN; }
 
