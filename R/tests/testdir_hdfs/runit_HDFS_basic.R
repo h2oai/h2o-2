@@ -83,7 +83,7 @@ head(iris.VA.dir.hex)
 tail(iris.VA.dir.hex)
 n <- nrow(iris.VA.dir.hex)
 print(n)
-if (n != 300) {
+if (n != 150) {
     stop("VA nrows is wrong")
 }
 if (class(iris.VA.dir.hex) != "H2OParsedDataVA") {
@@ -99,7 +99,7 @@ head(iris.FV.dir.hex)
 tail(iris.FV.dir.hex)
 n <- nrow(iris.FV.dir.hex)
 print(n)
-if (n != 300) {
+if (n != 150) {
     stop("FV nrows is wrong")
 }
 if (class(iris.FV.dir.hex) != "H2OParsedData") {

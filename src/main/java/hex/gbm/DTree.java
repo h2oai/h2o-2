@@ -192,6 +192,7 @@ public class DTree extends Iced {
       for( int j=0; j<hs.length; j++ ) { // For every column in the new split
         DHistogram h = hs[j];            // old histogram of column
         if( h == null ) continue;        // Column was not being tracked?
+        int adj_nbins  = Math.max(h.nbins()>>1,nbins);
         // min & max come from the original column data, since splitting on an
         // unrelated column will not change the j'th columns min/max.
         // Tighten min/max based on actual observed data for tracked columns
@@ -223,7 +224,7 @@ public class DTree extends Iced {
         if( h._isInt > 0 && !(min+1 < maxEx ) ) continue; // This column will not split again
         if( min >  maxEx ) continue; // Happens for all-NA subsplits
         assert min < maxEx && n > 1 : ""+min+"<"+maxEx+" n="+n;
-        nhists[j] = DHistogram.make(h._name,nbins,h._isInt,min,maxEx,n,h.isBinom());
+        nhists[j] = DHistogram.make(h._name,adj_nbins,h._isInt,min,maxEx,n,h.isBinom());
         cnt++;                    // At least some chance of splitting
       }
       return cnt == 0 ? null : nhists;

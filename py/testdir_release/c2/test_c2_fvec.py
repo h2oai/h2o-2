@@ -18,15 +18,10 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         ### importFolderPath = 'more1_1200_link'
         importFolderPath = 'manyfiles-nflx-gz'
         print "Using .gz'ed files in", importFolderPath
-        if len(h2o.nodes)==1:
-            csvFilenameList= [
-                ("*[1][0][0-9].dat.gz", "file_10_A.dat.gz", 10 * avgMichalSize, 600),
-            ]
-        else:
-            csvFilenameList= [
-                ("*[1][0-4][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 1800),
-                # ("*[1][0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 3600),
-            ]
+        csvFilenameList= [
+            ("*[1][0-4][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 1800),
+            # ("*[1][0-9][0-9].dat.gz", "file_100_A.dat.gz", 100 * avgMichalSize, 3600),
+        ]
 
         if LOG_MACHINE_STATS:
             benchmarkLogging = ['cpu', 'disk', 'network']
@@ -96,9 +91,9 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
                     # convert to binomial
                     execExpr="A.hex=%s" % parseResult['destination_key']
-                    h2e.exec_expr(execExpr=execExpr, timeoutSecs=60)
-                    execExpr="A.hex[,%s]=(A.hex[,%s]>%s)" % ('C379', 'C379', 15)
-                    h2e.exec_expr(execExpr=execExpr, timeoutSecs=60)
+                    h2e.exec_expr(execExpr=execExpr, timeoutSecs=180)
+                    execExpr="A.hex[,%s]=(A.hex[,%s]>%s)" % ('379', '379', 15)
+                    h2e.exec_expr(execExpr=execExpr, timeoutSecs=180)
                     aHack = {'destination_key': "A.hex"}
 
                     start = time.time()
