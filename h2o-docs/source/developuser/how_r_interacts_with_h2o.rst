@@ -36,7 +36,7 @@ polling the /Jobs.json URL for the GLM model to complete.)
 
 An end-to-end sequence diagram of the same transaction is below (click
 on the diagram to zoom).  This gives a different perspective of the R
-and H2O interactions for the same GLM request and result model.
+and H2O interactions for the same GLM request and the resulting model.
 
 .. image:: PngGen/uml/run_glm_from_r.png
    :width: 90 %
