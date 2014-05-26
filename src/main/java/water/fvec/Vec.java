@@ -701,7 +701,10 @@ public class Vec extends Iced {
    */
   public final static class Writer {
     Vec _vec;
-    private Writer(Vec v){_vec=v;}
+    private Writer(Vec v){
+      _vec=v;
+      _vec.preWriting();
+    }
     public final long   set( long i, long   l) { return _vec.chunkForRow(i).set(i,l); }
     public final double set( long i, double d) { return _vec.chunkForRow(i).set(i,d); }
     public final float  set( long i, float  f) { return _vec.chunkForRow(i).set(i,f); }
