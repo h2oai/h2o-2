@@ -535,3 +535,35 @@ h2o.downloadAllLogs <- function(client, dirname = ".", filename = NULL) {
 #     system(paste("bash ", tempPath))
 #   }
 # }
+
+
+# ------------------- Show H2O recommended columns to ignore ----------------------------------------------------
+h2o.ignoreColumns <- function(object, ...) {
+  digits = 12L
+  if(ncol(object) > .MAX_INSPECT_COL_VIEW)
+    warning(object@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
+  
+  naThreshold = nrow(object) * .2
+  cardinalityThreshold = nrow(object)
+  
+  res = .h2o.__remoteSend(object@h2o, .h2o.__PAGE_SUMMARY2, source=object@key, max_ncols=.Machine$integer.max)
+  columns = res$summaries
+  ignore = sapply(columns, function(col) {
+    if(col$stats$type != 'Enum'){# Numeric Column
+      if(col$stats$min==col$stats$max || col$nacnt >= naThreshold){
+        # If min=max then only one value in entire column
+        # If naCnt is higher than 20% of all entries
+        col$colname
+      }
+    }
+    else { # Categorical Column
+      if(col$stats$cardinality==cardinalityThreshold || col$nacnt >= naThreshold ){
+        # If only entry is a unique entry
+        # If naCnt is higher than 20% of all entries
+        col$colname
+      }
+    }
+  }
+  )
+  unlist(ignore)
+}

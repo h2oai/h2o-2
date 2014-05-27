@@ -25,8 +25,10 @@ ridgeGLMNet <- function (X,y,L){
 #H2O RIDGE
 ridgeH2O <- function (X,y,L){
         fitH2O=h2o.glm.FV(X, y, data=handmadeH2O, nfolds=0, alpha=0, lambda=L, family="gaussian", standardize=T)        
-    
-	betah <- fitH2O@model$normalized_coefficients
+    betah <- fitH2O@model$normalized_coefficients[hx]
+    betah <- vector(mode = "numeric", length = length(hx+1))
+    names(betah) <- c(hX,"Intercept")    
+    betah[names(fitH2O@model$normalized_coefficients)] <- fitH2O@model$normalized_coefficients
 	betah;
 }
 
