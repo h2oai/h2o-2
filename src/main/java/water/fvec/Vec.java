@@ -710,7 +710,9 @@ public class Vec extends Iced {
     public final float  set( long i, float  f) { return _vec.chunkForRow(i).set(i,f); }
     public final boolean setNA( long i ) { return _vec.chunkForRow(i).setNA(i); }
     public void close() {
-      _vec.close();
+      Futures fs = new Futures();
+      _vec.close(fs);
+      fs.blockForPending();
       _vec.postWrite();
     }
   }
@@ -722,11 +724,11 @@ public class Vec extends Iced {
   /** Close all chunks that are local (not just the ones that are homed)
    * This should only be called from a Writer object
    * */
-  private final void close() {
+  private final void close(Futures fs) {
     int nc = nChunks();
     for( int i=0; i<nc; i++ ) {
       if (H2O.get(chunkKey(i)) != null) {
-        chunkForChunkIdx(i).close(i, null);
+        chunkForChunkIdx(i).close(i, fs);
       }
     }
   }
