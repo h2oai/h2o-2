@@ -9,6 +9,7 @@
 .pkg.env$result_count <- 0
 .pkg.env$temp_count   <- 0
 .pkg.env$IS_LOGGING   <- FALSE
+.pkg.env$call_list    <- NULL
 
 #"<-" <- function(l, r) {
 #    lhs <- substitute(l)
@@ -23,6 +24,7 @@
 .MAX_INSPECT_ROW_VIEW <- 10000
 .MAX_INSPECT_COL_VIEW <- 10000
 .LOGICAL_OPERATORS <- c("==", ">", "<", "!=", ">=", "<=", "&", "|", "&&", "||", "!", "is.na")
+.INFIX_OPERATORS   <- c("+", "-", "*", "/", "^", "%%", "%/%", "&", "|", "!", "==", "!=", "<", "<=", ">=", ">")
 
 .h2o.__PAGE_CANCEL                <- "Cancel.json"
 .h2o.__PAGE_CLOUD                 <- "Cloud.json"

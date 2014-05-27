@@ -22,14 +22,18 @@ function(op, x) {
   if(missing(x)) stop("Must specify data set")
   if(!inherits(x, "H2OFrame")) stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
 
-  expr = paste(op, "(", x@key, ")", sep = "")
-  res = .h2o.__exec2(x@h2o, expr)
-  if(res$num_rows == 0 && res$num_cols == 0)
-    return(ifelse(op %in% .LOGICAL_OPERATORS, as.logical(res$scalar), res$scalar))
-  if(op %in% .LOGICAL_OPERATORS)
-    new("H2OParsedData", h2o=x@h2o, key=res$dest_key, logic=TRUE)
-  else
-    new("H2OParsedData", h2o=x@h2o, key=res$dest_key, logic=FALSE)
+  op <- new("ASTOp", type="UnaryOperator", operator=op, infix=FALSE)
+  if (inherits(x, "ASTNode")) {
+    return(new("ASTNode", root=op, children=list(arg=x)))
+  } else if (inherits(x, "H2OParsedData")) {
+   type_list <- list("Frame")
+   type_defs <- list(x@key)
+   names(type_list) <- names(type_defs) <- deparse(substitute(x))
+   arg <- new("ASTFrame", s_table=list(types = type_list, defs = type_defs), type="Frame", value=x@key)
+   return(new("ASTNode", root=op, children=list(arg=arg)))
+  } else {
+    stop("Data must be an H2O data set!")
+  }
 }
 
 .h2o.binop<-
@@ -42,7 +46,7 @@ function(op, e1, e2) {
     names(type_list) <- names(type_defs) <- c(deparse(substitute(e1)), deparse(substitute(e2)))
     lhs <- e1
     rhs <-  new("ASTNumeric", s_table=list(types = type_list, defs = type_defs), type="numeric", value=e2)
-    op <- new("ASTOp", type="BinaryOperator", operator=op)
+    op <- new("ASTOp", type="BinaryOperator", operator=op, infix=TRUE)
     return(new("ASTNode", root=op, children=list(left = lhs, right = rhs)))
 
   #Case 2: l: ASTOp & r: ASTOp
@@ -52,7 +56,7 @@ function(op, e1, e2) {
     names(type_list) <- names(type_defs) <- c(deparse(substitute(e1)), deparse(substitute(e2)))
     lhs <- e1
     rhs <- e2
-    op <- new("ASTOp", type="BinaryOperator", operator=op)
+    op <- new("ASTOp", type="BinaryOperator", operator=op, infix=TRUE)
     return(new("ASTNode", root=op, children=list(left = lhs, right = rhs)))
 
   #Case 3: l: ASTOp & r: H2OParsedData
@@ -62,7 +66,7 @@ function(op, e1, e2) {
     names(type_list) <- names(type_defs) <- c(deparse(substitute(e1)), deparse(substitute(e2)))
     lhs <- e1
     rhs <- new("ASTFrame", s_table=list(types = type_list, defs = type_defs), type="Frame", value=e2@key)
-    op  <- new("ASTOp", type="BinaryOperator", operator=op)
+    op <- new("ASTOp", type="BinaryOperator", operator=op, infix=TRUE)
     return(new("ASTNode", root=op, children=list(left = lhs, right = rhs)))
 
   #Case 4: l: H2OParsedData & r: Numeric
@@ -72,7 +76,7 @@ function(op, e1, e2) {
     names(type_list) <- names(type_defs) <- c(deparse(substitute(e1)), deparse(substitute(e2)))
     lhs <- new("ASTFrame", s_table=list(types = type_list, defs = type_defs), type="Frame", value=e1@key)
     rhs <- new("ASTNumeric", s_table=list(types = type_list, defs = type_defs), type="Numeric", value=e2)
-    op  <- new("ASTOp", type="BinaryOperator", operator=op)
+    op <- new("ASTOp", type="BinaryOperator", operator=op, infix=TRUE)
     return(new("ASTNode", root=op, children=list(left = lhs, right = rhs)))
 
   #Case 5: l: H2OParsedData & r: ASTOp
@@ -82,7 +86,7 @@ function(op, e1, e2) {
     names(type_list) <- names(type_defs) <- c(deparse(substitute(e1)), deparse(substitute(e2)))
     lhs <- new("ASTFrame", s_table=list(types = type_list, defs = type_defs), type="Frame", value=e1@key)
     rhs <- e2
-    op  <- new("ASTOp", type="BinaryOperator", operator=op)
+    op <- new("ASTOp", type="BinaryOperator", operator=op, infix=TRUE)
     return(new("ASTNode", root=op, children=list(left = lhs, right = rhs)))
 
   #Case 6: l: H2OParsedData & r: H2OParsedData
@@ -92,7 +96,7 @@ function(op, e1, e2) {
     names(type_list) <- names(type_defs) <- c(deparse(substitute(e1)), deparse(substitute(e2)))
     lhs <- new("ASTFrame", s_table=list(types = type_list, defs = type_defs), type="Frame", value=e1@key)
     rhs <- new("ASTFrame", s_table=list(types = type_list, defs = type_defs), type="Frame", value=e2@key)
-    op  <- new("ASTOp", type="BinaryOperator", operator=op)
+    op  <- new("ASTOp", type="BinaryOperator", operator=op, infix=TRUE)
     return(new("ASTNode", root=op, children=list(left = lhs, right = rhs)))
 
   #Case 7: l: Numeric & r: ASTOp
@@ -102,7 +106,7 @@ function(op, e1, e2) {
     names(type_list) <- names(type_defs) <- c(deparse(substitute(e1)), deparse(substitute(e2)))
     lhs <- new("ASTNumeric", s_table=list(types = type_list, defs = type_defs), type="numeric", value=e1)
     rhs <- e2
-    op  <- new("ASTOp", type="BinaryOperator", operator=op)
+    op <- new("ASTOp", type="BinaryOperator", operator=op, infix=TRUE)
     return(new("ASTNode", root=op, children=list(left = lhs, right = rhs)))
 
   #Case 8: l: Numeric & r: H2OParsedData
@@ -112,7 +116,7 @@ function(op, e1, e2) {
     names(type_list) <- names(type_defs) <- c(deparse(substitute(e1)), deparse(substitute(e2)))
     lhs <- new("ASTNumeric", s_table=list(types = type_list, defs = type_defs), type="numeric", value=e1)
     rhs <- new("ASTFrame", s_table=list(types = type_list, defs = type_defs), type="Frame", value=e2@key)
-    op  <- new("ASTOp", type="BinaryOperator", operator=op)
+    op <- new("ASTOp", type="BinaryOperator", operator=op, infix=TRUE)
     return(new("ASTNode", root=op, children=list(left = lhs, right = rhs)))
   }
 }

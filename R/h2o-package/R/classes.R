@@ -522,7 +522,7 @@ setClass("ASTNode", representation(root="Node", children="list"), contains="Node
 #'
 #' This class represents an operator between one or more H2O objects. ASTOp nodes are always root nodes in a tree and
 #' are never leaf nodes. Operators are discussed more in depth in ops.R.
-setClass("ASTOp", representation(type="character", operator="character"), contains="Node")
+setClass("ASTOp", representation(type="character", operator="character", infix="logical"), contains="Node")
 
 #'
 #' The ASTNumeric class.
@@ -536,3 +536,21 @@ setClass("ASTNumeric", representation(type="character", value="numeric"), contai
 #'
 #' This class represents a leaf containing an H2OFrame object.
 setClass("ASTFrame", representation(type="character", value="character"), contains="Node")
+
+#'
+#' The ASTUnk class.
+#'
+#' This class represents a leaf that will be assigned to and has unkown type before evaluation.
+setClass("ASTUnk", representation(key="character"), contains="Node")
+
+#'
+#' The ASTString class.
+#'
+#' This class represents a leaf holding a string expression to be passed into some function.
+setClass("ASTString", representation(type="character", value="character"), contains="Node")
+
+#'
+#' The ASTFun class.
+#'
+#' This class represents a UDF.
+setClass("ASTFun", representation(type="character", name="character", statements="list"), contains="Node")

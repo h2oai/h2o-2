@@ -1,9 +1,9 @@
 #'
 #' An assortment of methods.
 #'
-#' Methods are grouped according to the data type upon which they operate. ValueArray methods
+#' Methods are grouped according to the data types upon which they operate. ValueArray methods
 #' are grouped into a section and FluidVec methods are grouped into their own section. Furthermore,
-#' within each section, there is a grouping of H2O specifc methods and methods that are overridden from
+#' within each section, there is a grouping of H2O specifc methods and methods that are overloaded from
 #' the R language (e.g. summary, head, tail, dim, nrow).
 
 #-----------------------------------------------------------------------------------------------------------------------
@@ -18,14 +18,14 @@
 h2o.year <- function(x){
   if( missing(x) ) stop('must specify x')
   if( !class(x) == 'H2OParsedData' ) stop('x must be an h2o data object')
-  res1 <- .h2o.__unop2('year', x)
-  .h2o.__binop2("-", res1, 1900)
+  res1 <- .h2o.unop('year', x)
+  .h2o.binop("-", res1, 1900)
 }
 
 h2o.month <- function(x){
   if( missing(x) ) stop('must specify x')
   if( !class(x) == 'H2OParsedData' ) stop('x must be an h2o data object')
-  .h2o.__unop2('month', x)
+  .h2o.unop('month', x)
 }
 
 year <- function(x) UseMethod('year', x)
@@ -36,6 +36,11 @@ month.H2OParsedData <- h2o.month
 diff.H2OParsedData <- function(x, lag = 1, differences = 1, ...) {
   if(!is.numeric(lag)) stop("lag must be numeric")
   if(!is.numeric(differences)) stop("differences must be numeric")
+
+  print("DEBUG")
+  print(sys.call())
+  print(match.call())
+  print(as.list(match.call()))
 
   expr = paste("diff(", paste(x@key, lag, differences, sep = ","), ")", sep = "")
   res = .h2o.__exec2(x@h2o, expr)
@@ -131,8 +136,10 @@ ddply <- h2o.ddply
 
 `.` <- `h2o..`
 
-h2o.addFunction <- function(object, fun, name){
-  if( missing(object) || class(object) != 'H2OClient' ) stop('must specify h2o connection in object')
+h2o.addFunction <- function(fun, name){
+  print(match.call())
+  print(as.list(match.call()))
+#  if( missing(object) || class(object) != 'H2OClient' ) stop('must specify h2o connection in object')
   if( missing(fun) ) stop('must specify fun')
   if( !missing(name) ){
     if( class(name) != 'character' ) stop('name must be a name')
@@ -142,7 +149,8 @@ h2o.addFunction <- function(object, fun, name){
   }
   src <- paste(deparse(fun), collapse='\n')
   exec_cmd <- sprintf('%s <- %s', as.character(fun_name), src)
-  res <- .h2o.__exec2(object, exec_cmd)
+  exec_cmd
+#  res <- .h2o.__exec2(object, exec_cmd)
 }
 
 h2o.unique <- function(x, incomparables = FALSE, ...){
