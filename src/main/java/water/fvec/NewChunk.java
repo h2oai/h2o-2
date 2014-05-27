@@ -335,7 +335,7 @@ public class NewChunk extends Chunk {
         for(int i = 0; i < _len; ++i){
           if(_ls[i] != 0){
             ls[j] = _ls[i];
-            xs[j] = _xs[j];
+            xs[j] = _xs[i];
             id[j] = _id[i];
             ++j;
           }
