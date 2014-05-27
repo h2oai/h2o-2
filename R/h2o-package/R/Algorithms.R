@@ -410,24 +410,25 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e
 
 # Pretty formatting of H2O GLM2 results
 .h2o.__getGLM2Results <- function(model, params) {
-  submod = model$submodels[[model$best_lambda_idx+1]]
-  valid = submod$validation
+  submod <- model$submodels[[model$best_lambda_idx+1]]
+  valid  <- submod$validation
 
-  result = list()
-  params$alpha = model$alpha
-  params$lambda = model$lambdas
-  params$best_lambda = model$lambdas[[model$best_lambda_idx+1]]
-  result$params = params
+  result <- list()
+  params$alpha  <- model$alpha
+  params$lambda <- model$lambdas
+  params$best_lambda <- model$lambdas[[model$best_lambda_idx+1]]
+  result$params <- params
   if(model$glm$family == "tweedie")
-    result$params$family = .h2o.__getFamily(model$glm$family, model$glm$link, model$glm$tweedie_variance_power, model$glm$tweedie_link_power)
+    result$params$family <- .h2o.__getFamily(model$glm$family, model$glm$link, model$glm$tweedie_variance_power, model$glm$tweedie_link_power)
   else
-    result$params$family = .h2o.__getFamily(model$glm$family, model$glm$link)
-  
-  result$coefficients = as.numeric(unlist(submod$beta))
-  names(result$coefficients) = model$coefficients_names
+    result$params$family <- .h2o.__getFamily(model$glm$family, model$glm$link)
+
+  result$coefficients <- as.numeric(unlist(submod$beta))
+  idxes <- submod$idxs + 1
+  names(result$coefficients) <- model$coefficients_names[idxes] 
   if(params$standardize) {
     result$normalized_coefficients = as.numeric(unlist(submod$norm_beta))
-    names(result$normalized_coefficients) = model$coefficients_names
+    names(result$normalized_coefficients) = model$coefficients_names[submod$idxs + 1]
   }
   result$rank = valid$'_rank'
   result$iter = submod$iteration
@@ -1523,7 +1524,7 @@ plot.H2OPerfModel <- function(x, type = "cutoffs", ...) {
   paste(toupper(substring(str, 1, 1)), substring(str, 2), sep = "")
 }
 
-h2o.createFrame <- function(object, key, rows, cols, seed, randomize, value, real_range, categorical_fraction, factors, integer_fraction, integer_range, missing_fraction, response_factors) {
+h2o.createFrame <- function(object, key, rows, cols, seed, randomize, value, real_range, categorical_fraction, factors, integer_fraction, integer_range, missing_fraction) {
   if(!is.numeric(rows)) stop("rows must be a numeric value")
   if(!is.numeric(cols)) stop("rows must be a numeric value")
   if(!is.numeric(seed)) stop("rows must be a numeric value")
@@ -1535,9 +1536,8 @@ h2o.createFrame <- function(object, key, rows, cols, seed, randomize, value, rea
   if(!is.numeric(integer_fraction)) stop("integer_fraction must be a numeric value")
   if(!is.numeric(integer_range)) stop("integer_range must be a numeric value")
   if(!is.numeric(missing_fraction)) stop("missing_fraction must be a numeric value")
-  if(!is.numeric(response_factors)) stop("response_factors must be a numeric value")
 
   res = .h2o.__remoteSend(object, .h2o.__PAGE_CreateFrame, key = key, rows = rows, cols = cols, seed = seed, randomize = as.numeric(randomize), value = value, real_range = real_range,
-    categorical_fraction = categorical_fraction, factors = factors, integer_fraction = integer_fraction, integer_range = integer_range, missing_fraction = missing_fraction, response_factors = response_factors)
+    categorical_fraction = categorical_fraction, factors = factors, integer_fraction = integer_fraction, integer_range = integer_range, missing_fraction = missing_fraction)
   new("H2OParsedData", h2o=object, key=key)
 }

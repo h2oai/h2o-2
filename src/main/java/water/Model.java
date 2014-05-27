@@ -310,6 +310,14 @@ public abstract class Model extends Lockable<Model> {
     return map;
   }
 
+  /**
+   * Type of missing columns during adaptation between train/test datasets
+   * Overload this method for models that have sparse data handling.
+   * Otherwise, NaN is used.
+   * @return real-valued number (can be NaN)
+   */
+  protected double missingColumnsType() { return Double.NaN; }
+
   /** Build an adapted Frame from the given Frame. Useful for efficient bulk
    *  scoring of a new dataset to an existing model.  Same adaption as above,
    *  but expressed as a Frame instead of as an int[][]. The returned Frame
@@ -329,7 +337,7 @@ public abstract class Model extends Lockable<Model> {
     String [] names = Arrays.copyOf(_names, n);
     Frame  [] subVfr;
     // replace missing columns with NaNs (or 0s for DeepLearning with sparse data)
-    subVfr = vfr.subframe(names, (this instanceof DeepLearningModel && ((DeepLearningModel)this).get_params().sparse) ? 0 : Double.NaN);
+    subVfr = vfr.subframe(names, missingColumnsType());
     vfr = subVfr[0]; // extract only subframe but keep the rest for delete later
     Vec[] frvecs = vfr.vecs();
     boolean[] toEnum = new boolean[frvecs.length];

@@ -12,15 +12,15 @@ public class FileIntegrityChecker extends DRemoteTask<FileIntegrityChecker> {
   final String[] _files;        // File names found locally
   final long  [] _sizes;        // File sizes found locally
   final boolean  _newApi;       // Produce NFSFileVec instead of ValueArray
-  int[] _ok;                    // OUTPUT: files which are globally compatible
+  int[][] _ok;                    // OUTPUT: files which are globally compatible
 
 
   @Override public void lcompute() {
-    _ok = new int[_files.length];
+    _ok = new int[_files.length][H2O.CLOUD.size()];
     for (int i = 0; i < _files.length; ++i) {
       File f = new File(_files[i]);
       if (f.exists() && (f.length()==_sizes[i]))
-        _ok[i] = 1;
+        _ok[i][H2O.SELF.index()] = 1;
     }
     tryComplete();
   }
@@ -79,25 +79,24 @@ public class FileIntegrityChecker extends DRemoteTask<FileIntegrityChecker> {
                            ArrayList<String> fails,
                            ArrayList<String> dels) {
 
-    // Remove & report all Keys that match the root prefix
-    for( Key k : H2O.localKeySet() )
-      if( k.toString().startsWith(_root) ) {
-        dels.add(k.toString());
-        Lockable.delete(k);
-      }
-
     Futures fs = new Futures();
     Key k = null;
     // Find all Keys which match ...
     for( int i = 0; i < _files.length; ++i ) {
-      if( _ok[i] < H2O.CLOUD.size() ) {
-        if( fails != null ) fails.add(_files[i]);
-      } else {
+      boolean failed = false;
+      for (int j = 0; j < H2O.CLOUD.size(); ++j) {
+        if (_ok[i][j] == 0) {
+          failed = true;
+          fails.add("missing file " + _files[i] + " at node " + H2O.CLOUD._memary[j]);
+        }
+      }
+      if(!failed){
         File f = new File(_files[i]);
         k = PersistNFS.decodeFile(f);
         if( files != null ) files.add(_files[i]);
         if( keys  != null ) keys .add(k.toString());
         if(_newApi) {
+          if(DKV.get(k) != null)dels.add(k.toString());
           new Frame(k).delete_and_lock(null);
           NFSFileVec nfs = DKV.get(NFSFileVec.make(f, fs)).get();
           Frame fr = new Frame(k,new String[] { "0" }, new Vec[] { nfs });

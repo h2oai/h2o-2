@@ -5,6 +5,7 @@ import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 import jsr166y.*;
 import water.Job.JobCancelledException;
@@ -494,6 +495,8 @@ public final class H2O {
     }
   }
 
+
+
   // --------------------------------------------------------------------------
   // The (local) set of Key/Value mappings.
   static final NonBlockingHashMap<Key,Value> STORE = new NonBlockingHashMap<Key, Value>();
@@ -803,6 +806,7 @@ public final class H2O {
     public String help = null;
     public String version = null;
     public String beta = null;
+    public String mem_watchdog = null; // For developer debugging
   }
 
   public static void printHelp() {
@@ -995,7 +999,10 @@ public final class H2O {
     Log.POST(350,"");
     startApiIpPortWatchdog(); // Check if the API port becomes unreachable
     Log.POST(360,"");
-
+    if (OPT_ARGS.mem_watchdog != null) {
+      startMemoryWatchdog();
+      Log.POST(370, "");
+    }
     startupFinalize(); // finalizes the startup & tests (if any)
     Log.POST(380,"");
   }
@@ -1092,6 +1099,10 @@ public final class H2O {
   private static void startApiIpPortWatchdog() {
     apiIpPortWatchdog = new ApiIpPortWatchdogThread();
     apiIpPortWatchdog.start();
+  }
+
+  private static void startMemoryWatchdog() {
+    new MemoryWatchdogThread().start();
   }
 
   // Used to update the Throwable detailMessage field.
@@ -1422,6 +1433,109 @@ public final class H2O {
   static void dirty_store( long x ) {
     // Keep earliest dirty time seen
     if( x < _dirty ) _dirty = x;
+  }
+
+  public abstract static class KVFilter extends Iced {
+    public abstract boolean filter(KeyInfo k);
+  }
+
+  public static final class KeyInfo extends Iced implements Comparable<KeyInfo>{
+    public final Key _key;
+    public final int _type;
+    public final boolean _rawData;
+    public final int _sz;
+    public final byte _backEnd;
+
+    public KeyInfo(Key k, Value v){
+      _key = k;
+      _type = v.type();
+      _rawData = v.isRawData();
+      _sz = v._max;
+      _backEnd = v.backend();
+    }
+    @Override public int compareTo(KeyInfo ki){ return _key.compareTo(ki._key);}
+  }
+  public static KeyInfo [] localEntrySet(KVFilter f,boolean homeOnly, boolean userOnly){
+    Object [] kvs = STORE.raw_array();
+    ArrayList<KeyInfo> res = new ArrayList<KeyInfo>();
+    for(int i = 2; i < kvs.length; i+= 2){
+      Object ok = kvs[i], ov = kvs[i+1];
+      if( !(ok instanceof Key  ) ) continue; // Ignore tombstones and Primes and null's
+      Key key = (Key )ok;
+      if(homeOnly && !key.home())continue;
+      if(userOnly && !key.user_allowed())continue;
+      if( !(ov instanceof Value) ) continue; // Ignore tombstones and Primes and null's
+      Value value = (Value)ov;
+      KeyInfo ki = new KeyInfo(key,value);
+      if(f == null || f.filter(ki))
+        res.add(new KeyInfo(key,value));
+    }
+    return res.toArray(new KeyInfo[res.size()]);
+  }
+
+  private static class GlobalUKeySetTask extends DRemoteTask<GlobalUKeySetTask> {
+    KeyInfo [] _res;
+    private static AtomicReference<GlobalUKeySetTask> _gbt = new AtomicReference<GlobalUKeySetTask>();
+    private static volatile long _lastUpdate;
+    private static volatile KeyInfo [] _cache;
+
+    @Override public byte priority(){return H2O.GET_KEY_PRIORITY;}
+    @Override public void lcompute(){
+      KeyInfo [] res = H2O.localEntrySet(null, true, true);
+      Arrays.sort(res);
+      _res = res;
+      tryComplete();
+    }
+    @Override public void reduce(GlobalUKeySetTask gbt){
+      if(_res == null)_res = gbt._res;
+      else if(gbt._res != null){ // merge sort keys together
+        KeyInfo [] res = new KeyInfo[_res.length + gbt._res.length];
+        int j = 0, k = 0;
+        for(int i = 0; i < res.length; ++i)
+          res[i] = j < gbt._res.length && (k == _res.length || gbt._res[j].compareTo(_res[k]) < 0)?gbt._res[j++]:_res[k++];
+        _res = res;
+      }
+    }
+    @Override public void postGlobal(){
+      _cache = _res;
+      _lastUpdate = System.currentTimeMillis();
+      _gbt.compareAndSet(this,null);
+    }
+  }
+
+  public static KeyInfo [] globalKeySet(final KVFilter f, long timeTolerance){
+    long t = System.currentTimeMillis();
+    KeyInfo [] res = null;
+    // first check if we nedd to update cache (cache is unfiltered and contains info about all user keys!)
+    if(((res = GlobalUKeySetTask._cache) == null) || t - GlobalUKeySetTask._lastUpdate > timeTolerance){
+      final GlobalUKeySetTask tsk = new GlobalUKeySetTask();
+      if(GlobalUKeySetTask._gbt.compareAndSet(null,tsk) || timeTolerance == -1){
+        res = tsk.invokeOnAllNodes()._res;
+      } else {
+        GlobalUKeySetTask t2 = GlobalUKeySetTask._gbt.get();
+        if(t2 != null) t2.join();
+        res = GlobalUKeySetTask._cache;
+      }
+    } else if(t - GlobalUKeySetTask._lastUpdate > 1000){ // fork cache update
+      final GlobalUKeySetTask tsk = new GlobalUKeySetTask();
+      if(GlobalUKeySetTask._gbt.compareAndSet(null,tsk))
+        H2O.submitTask(new H2OCountedCompleter() {
+        @Override
+        public void compute2() {
+          tsk.invokeOnAllNodes();
+          tryComplete();
+        }
+      });
+    }
+    // now apply the filter
+    if(f != null){
+      ArrayList<KeyInfo> filteredRes = new ArrayList<KeyInfo>();
+      for(KeyInfo ki:res)
+        if(f.filter(ki)) filteredRes.add(ki);
+      if(filteredRes.size() != res.length)
+        res = filteredRes.toArray(new KeyInfo[filteredRes.size()]);
+    }
+    return res;
   }
 
   // Periodically write user keys to disk
@@ -1824,6 +1938,69 @@ public final class H2O {
     public void run() {
       Log.debug (threadName + ": Thread run() started");
       reset();
+
+      while (true) {
+        mySleep (sleepMillis);
+        if (gracefulShutdownInitiated) { break; }
+        check();
+        if (gracefulShutdownInitiated) { break; }
+      }
+    }
+  }
+
+  /**
+   * Log physical (RSS) memory usage periodically.
+   * Used by developers to look for memory leaks.
+   * Currently this only works for Linux.
+   */
+  private static class MemoryWatchdogThread extends Thread {
+    final private String threadName = "MemoryWatchdog";
+
+    private volatile boolean gracefulShutdownInitiated;         // Thread-safe.
+
+    // Timing things that can be tuned if needed.
+    final private int checkIntervalSeconds = 5;
+    final private int millisPerSecond = 1000;
+    final private int sleepMillis = checkIntervalSeconds * millisPerSecond;
+
+    // Constructor.
+    public MemoryWatchdogThread() {
+      super("MemWatch");        // Only 9 characters get printed in the log.
+      setDaemon(true);
+      setPriority(MAX_PRIORITY - 2);
+      gracefulShutdownInitiated = false;
+    }
+
+    // Exit this watchdog thread.
+    public void shutdown() {
+      gracefulShutdownInitiated = true;
+    }
+
+    // Sleep method.
+    private void mySleep(int millis) {
+      try {
+        Thread.sleep (sleepMillis);
+      }
+      catch (Exception xe)
+      {}
+    }
+
+    // Do the watchdog check.
+    private void check() {
+      water.util.LinuxProcFileReader r = new LinuxProcFileReader();
+      r.read();
+      long rss = -1;
+      try {
+        rss = r.getProcessRss();
+      }
+      catch (AssertionError xe) {}
+      Log.info("RSS: " + rss);
+    }
+
+    // Class main thread.
+    @Override
+    public void run() {
+      Log.debug(threadName + ": Thread run() started");
 
       while (true) {
         mySleep (sleepMillis);

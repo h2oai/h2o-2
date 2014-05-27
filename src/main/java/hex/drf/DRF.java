@@ -336,6 +336,9 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     // leaf); all columns
     DHistogram hcs[][][] = new DHistogram[_nclass][1/*just root leaf*/][_ncols];
 
+    // Adjust nbins for the top-levels
+    int adj_nbins = Math.max((1<<(10-0)),nbins);
+
     // Use for all k-trees the same seed. NOTE: this is only to make a fair
     // view for all k-trees
     long rseed = rand.nextLong();
@@ -350,7 +353,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
         //if( k==1 && _nclass==2 ) continue;
         ktrees[k] = new DRFTree(fr,_ncols,(char)nbins,(char)_nclass,min_rows,mtrys,rseed);
         boolean isBinom = classification;
-        new DRFUndecidedNode(ktrees[k],-1, DHistogram.initialHist(fr,_ncols,nbins,hcs[k][0],isBinom) ); // The "root" node
+        new DRFUndecidedNode(ktrees[k],-1, DHistogram.initialHist(fr,_ncols,adj_nbins,hcs[k][0],isBinom) ); // The "root" node
       }
     }
 

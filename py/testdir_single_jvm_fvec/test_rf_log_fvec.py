@@ -108,8 +108,8 @@ class Basic(unittest.TestCase):
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfv, ntree=used_trees)
             oobeTrainPctRight = 100.0 - classification_error
             expectTrainPctRight = 94
-            self.assertAlmostEqual(oobeTrainPctRight, expectTrainPctRight,\
-                msg="OOBE: pct. right for training not close enough %6.2f %6.2f"% (oobeTrainPctRight, expectTrainPctRight), delta=5)
+            self.assertTrue(oobeTrainPctRight >= expectTrainPctRight,\
+                msg="OOBE: pct. right for training not close enough %6.2f %6.2f"% (oobeTrainPctRight, expectTrainPctRight))
 
             # RF score******************************************************
             print "Now score with the 2nd random dataset"
@@ -123,7 +123,7 @@ class Basic(unittest.TestCase):
             fullScorePctRight = 100.0 - classification_error
             expectScorePctRight = 94
             self.assertTrue(fullScorePctRight >= expectScorePctRight,
-                msg="Full: pct. right for scoring not close enough %6.2f %6.2f"% (fullScorePctRight, expectScorePctRight), delta=5)
+                msg="Full: pct. right for scoring not close enough %6.2f %6.2f"% (fullScorePctRight, expectScorePctRight))
 
 
 if __name__ == '__main__':
