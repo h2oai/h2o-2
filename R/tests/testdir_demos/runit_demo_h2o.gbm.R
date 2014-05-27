@@ -8,7 +8,7 @@ setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 source('../findNSourceUtils.R')
 
 test.h2o.gbm <- function(conn) {
-  prosPath = system.file("extdata", "prostate.csv", package="h2oRClient")
+  prosPath = system.file("extdata", "prostate.csv", package="h2o")
   Log.info(paste("Uploading", prosPath))
   prostate.hex = h2o.uploadFile(conn, path = prosPath, key = "prostate.hex")
   
@@ -24,7 +24,7 @@ test.h2o.gbm <- function(conn) {
   prostate.gbm2 = h2o.gbm(x = c("AGE", "RACE", "PSA", "VOL", "GLEASON"), y = "CAPSULE", data = prostate.hex, n.trees = 10, interaction.depth = 8, n.minobsinnode = 10, shrinkage = 0.2)
   print(prostate.gbm2)
   
-  irisPath = system.file("extdata", "iris.csv", package="h2oRClient")
+  irisPath = system.file("extdata", "iris.csv", package="h2o")
   Log.info(paste("Uploading", irisPath))
   iris.hex = h2o.uploadFile.FV(conn, path = irisPath, key = "iris.hex")
   

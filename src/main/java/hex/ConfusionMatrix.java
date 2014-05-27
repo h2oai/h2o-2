@@ -1,21 +1,26 @@
 package hex;
 
-import java.util.Arrays;
-
-import water.Iced;
-import water.api.DocGen;
-import water.api.Request.API;
-
 import com.google.gson.JsonArray;
 import com.google.gson.JsonPrimitive;
+import water.Iced;
+import water.api.Request.API;
 
-public final class ConfusionMatrix extends Iced {
+import java.util.Arrays;
+
+import static water.api.DocGen.FieldDoc;
+import static water.util.Utils.printConfusionMatrix;
+
+public class ConfusionMatrix extends Iced {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
-  static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
-  @API(help="")
+  static public FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+  @API(help="Confusion matrix (Actual/Predicted)")
   public long[][] _arr; // [actual][predicted]
+  @API(help = "Prediction error by class")
+  public final double[] _classErr;
+  @API(help = "Prediction error")
+  public final double _predErr;
 
-  public ConfusionMatrix clone() {
+  @Override public ConfusionMatrix clone() {
     ConfusionMatrix res = new ConfusionMatrix(0);
     res._arr = _arr.clone();
     for( int i = 0; i < _arr.length; ++i )
@@ -53,17 +58,21 @@ public final class ConfusionMatrix extends Iced {
 
   public ConfusionMatrix(int n) {
     _arr = new long[n][n];
+    _classErr = classErr();
+    _predErr = err();
   }
 
   public ConfusionMatrix(long[][] value) {
     _arr = value;
+    _classErr = classErr();
+    _predErr = err();
   }
 
   public void add(int i, int j) {
     _arr[i][j]++;
   }
 
-  public final double[] classErr() {
+  public double[] classErr() {
     double[] res = new double[_arr.length];
     for( int i = 0; i < res.length; ++i )
       res[i] = classErr(i);
@@ -82,39 +91,78 @@ public final class ConfusionMatrix extends Iced {
       return 0.0;    // Either 0 or NaN, but 0 is nicer
     return (double) (s - _arr[c][c]) / s;
   }
-
-  public double err() {
+  public long totalRows() {
     long n = 0;
     for( int a = 0; a < _arr.length; ++a )
       for( int p = 0; p < _arr[a].length; ++p )
         n += _arr[a][p];
-    long err = n;
-    for( int d = 0; d < _arr.length; ++d )
-      err -= _arr[d][d];
-    return (double) err / n;
+    return n;
   }
 
   public void add(ConfusionMatrix other) {
     water.util.Utils.add(_arr, other._arr);
   }
 
-  public double precisionAndRecall() {
-    return precisionAndRecall(_arr);
+  /**
+   * @return overall classification error
+   */
+  public double err() {
+    long n = totalRows();
+    long err = n;
+    for( int d = 0; d < _arr.length; ++d )
+      err -= _arr[d][d];
+    return (double) err / n;
   }
-
+  /**
+   * The percentage of predictions that are correct.
+   */
+  public double accuracy() { return 1-err(); }
+  /**
+   * The percentage of negative labeled instances that were predicted as negative.
+   * @return TNR / Specificity
+   */
+  public double specificity() {
+    assert _arr.length == 2 && _arr[0].length == 2 && _arr[1].length == 2;
+    double tn = _arr[0][0];
+    double fp = _arr[0][1];
+    return tn / (tn + fp);
+  }
+  /**
+   * The percentage of positive labeled instances that were predicted as positive.
+   * @return Recall / TPR / Sensitivity
+   */
+  public double recall() {
+    assert _arr.length == 2 && _arr[0].length == 2 && _arr[1].length == 2;
+    double tp = _arr[1][1];
+    double fn = _arr[1][0];
+    return tp / (tp + fn);
+  }
+  /**
+   * The percentage of positive predictions that are correct.
+   * @return Precision
+   */
+  public double precision() {
+    assert _arr.length == 2 && _arr[0].length == 2 && _arr[1].length == 2;
+    double tp = _arr[1][1];
+    double fp = _arr[0][1];
+    return tp / (tp + fp);
+  }
+  /**
+   * The maximum per-class error
+   * @return max(classErr(0), classErr(1))
+   */
+  public double max_per_class_error() {
+    assert _arr.length == 2 && _arr[0].length == 2 && _arr[1].length == 2;
+    return Math.max(classErr(0), classErr(1));
+  }
   /**
    * Returns the F-measure which combines precision and recall. <br>
    * C.f. end of http://en.wikipedia.org/wiki/Precision_and_recall.
    */
-  public static double precisionAndRecall(long[][] cm) {
-    assert cm.length == 2 && cm[0].length == 2 && cm[1].length == 2;
-    double tp = cm[0][0];
-    double fp = cm[1][0];
-    double fn = cm[0][1];
-    double precision = tp / (tp + fp);
-    double recall = tp / (tp + fn);
-    double f = 2 * (precision * recall) / (precision + recall);
-    return f;
+  public double F1() {
+    final double precision = precision();
+    final double recall = recall();
+    return 2. * (precision * recall) / (precision + recall);
   }
 
   @Override public String toString() {
@@ -162,4 +210,10 @@ public final class ConfusionMatrix extends Iced {
     res.add(totals);
     return res;
   }
+
+  public void toHTML(StringBuilder sb, String[] domain) {
+    long[][] cm = _arr;
+    printConfusionMatrix(sb, cm, domain, true);
+  }
+
 }

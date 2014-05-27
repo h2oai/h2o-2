@@ -7,9 +7,12 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.*;
+import org.junit.rules.TestRule;
+import org.junit.runner.Description;
+import org.junit.runners.model.Statement;
 
+import water.Job.JobState;
 import water.deploy.*;
 import water.fvec.*;
 import water.parser.ParseDataset;
@@ -35,10 +38,24 @@ public class TestUtil {
     assert Job.all().length == 0;      // No outstanding jobs
   }
 
+  /** Execute this rule before each test to print test name and test class */
+  @Rule public TestRule logRule = new TestRule() {
+
+    @Override public Statement apply(Statement base, Description description) {
+      Log.info("###########################################################");
+      Log.info("  * Test class name:  " + description.getClassName());
+      Log.info("  * Test method name: " + description.getMethodName());
+      Log.info("###########################################################");
+      return base;
+    }
+  };
+
   @AfterClass public static void checkLeakedKeys() {
     Job[] jobs = Job.all();
-    for( Job job : jobs )
-      assert job.end_time != 0 : ("UNFINSIHED JOB: " + job.job_key + " " + job.description + ", end_time = " + job.end_time);  // No pending job
+    for( Job job : jobs ) {
+      assert job.state != JobState.RUNNING : ("UNFINSIHED JOB: " + job.job_key + " " + job.description + ", end_time = " + job.end_time + ", state=" + job.state );  // No pending job
+      DKV.remove(job.job_key);
+    }
     DKV.remove(Job.LIST);         // Remove all keys
     DKV.remove(Log.LOG_KEY);
     DKV.write_barrier();
@@ -347,18 +364,37 @@ public class TestUtil {
   }
 
   public static Frame parseFrame(Key okey, String path) {
-    return parseFrame(okey, new File(path));
+    return parseFrame(okey, find_test_file(path));
   }
 
   public static Frame parseFrame(Key okey, File file) {
     if( !file.exists() )
       throw new RuntimeException("File not found " + file);
     if(okey == null)
-        okey = Key.make(file.getName());
+      okey = Key.make(file.getName());
     Key fkey = NFSFileVec.make(file);
     return ParseDataset2.parse(okey, new Key[] { fkey });
   }
 
+  public static Vec vec(int...rows) { return vec(null, null, rows); }
+  public static Vec vec(String[] domain, int ...rows) { return vec(null, domain, rows); }
+
+  public static Vec vec(Key k, String[] domain, int ...rows) {
+    k = (k==null) ? new Vec.VectorGroup().addVec() : k;
+    Futures fs = new Futures();
+    AppendableVec avec = new AppendableVec(k);
+    NewChunk chunk = new NewChunk(avec, 0);
+    for( int r = 0; r < rows.length; r++ )
+      chunk.addNum(rows[r]);
+    chunk.close(0, fs);
+    Vec vec = avec.close(fs);
+    fs.blockForPending();
+    vec._domain = domain;
+    return vec;
+  }
+
+  public static Frame frame(String name, Vec vec) { return new Frame().add(name, vec); }
+  public static Frame frame(String[] names, Vec[] vecs) { return new Frame(names, vecs); }
   public static Frame frame(String[] names, double[]... rows) {
     assert names == null || names.length == rows[0].length;
     Futures fs = new Futures();
@@ -384,8 +420,9 @@ public class TestUtil {
     System.err.println("----------------------");
   }
 
-  public static String[] ar(String ...a) { return a; }
-  public static int   [] ar(int    ...a) { return a; }
-  public static long  [] ar(long   ...a) { return a; }
-  public static long[][] ar(long[] ...a) { return a; }
+  public static String[] ar (String ...a) { return a; }
+  public static long  [] ar (long   ...a) { return a; }
+  public static long[][] ar (long[] ...a) { return a; }
+  public static int   [] ari(int    ...a) { return a; }
+  public static int [][] ar (int[]  ...a) { return a; }
 }

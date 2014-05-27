@@ -4,11 +4,14 @@ import hex.ConfusionMatrix;
 import hex.glm.GLMParams.Family;
 
 import java.text.DecimalFormat;
+import java.util.Arrays;
 
 import water.*;
+import water.api.AUC;
 import water.api.DocGen;
 import water.api.Request.API;
 import water.api.RequestBuilders;
+import water.util.ModelUtils;
 
 /**
  * Class for GLMValidation.
@@ -43,6 +46,8 @@ public class GLMValidation extends Iced {
   private double _aic2;// internal aic used only for poisson family!
   @API(help="")
   final Key dataKey;
+  @API(help="Decision thresholds used to generare confuion matrices, AUC and to find the best thresholds based on user criteria")
+  public final float [] thresholds;
   @API(help="")
   ConfusionMatrix [] _cms;
   @API(help="")
@@ -68,25 +73,27 @@ public class GLMValidation extends Iced {
     }
   }
   public GLMValidation(Key dataKey, double ymu, GLMParams glm, int rank){
+    this(dataKey, ymu, glm, rank,glm.family == Family.binomial?ModelUtils.DEFAULT_THRESHOLDS:null);
+  }
+  public GLMValidation(Key dataKey, double ymu, GLMParams glm, int rank, float [] thresholds){
     _rank = rank;
     _ymu = ymu;
     _glm = glm;
     if(_glm.family == Family.binomial){
-      _cms = new ConfusionMatrix[DEFAULT_THRESHOLDS.length];
+      _cms = new ConfusionMatrix[thresholds.length];
       for(int i = 0; i < _cms.length; ++i)
         _cms[i] = new ConfusionMatrix(2);
     }
     this.dataKey = dataKey;
+    this.thresholds = thresholds;
   }
   protected void regularize(double reg){avg_err = avg_err*reg;}
   public static Key makeKey(){return Key.make("__GLMValidation_" + Key.make());}
   public void add(double yreal, double ymodel){
     null_deviance += _glm.deviance(yreal, _ymu);
-    if(_glm.family == Family.binomial) // clasification -> update confusion matrix too
-      for(int i = 0; i < DEFAULT_THRESHOLDS.length; ++i)
-        _cms[i].add((int)yreal, (ymodel >= DEFAULT_THRESHOLDS[i])?1:0);
-    if(Double.isNaN(_glm.deviance(yreal, ymodel)))
-      System.out.println("NaN from yreal=" + yreal + ", ymodel=" + ymodel);
+    if(_glm.family == Family.binomial) // classification -> update confusion matrix too
+      for(int i = 0; i < thresholds.length; ++i)
+        _cms[i].add((int)yreal, (ymodel >= thresholds[i])?1:0);
     residual_deviance  += _glm.deviance(yreal, ymodel);
     ++nobs;
     avg_err += (ymodel - yreal) * (ymodel - yreal);
@@ -141,7 +148,11 @@ public class GLMValidation extends Iced {
 
   protected void finalize_AIC_AUC(){
     computeAIC();
-    if(_glm.family == Family.binomial)computeAUC();
+    if(_glm.family == Family.binomial){
+      AUC auc = new AUC(_cms,thresholds);
+      this.auc = auc.AUC();
+      best_threshold = auc.threshold();
+    }
   }
   /**
    * Computes area under the ROC curve. The ROC curve is computed from the confusion matrices
@@ -152,51 +163,11 @@ public class GLMValidation extends Iced {
    */
   double[] tprs;
   double[] fprs;
-  protected void computeAUC() {
-    if( _cms == null ) return;
-    tprs = new double[_cms.length];
-    fprs = new double[_cms.length];
-    double auc = 0;           // Area-under-ROC
-    double TPR_pre = 1;
-    double FPR_pre = 1;
-    for( int t = 0; t < _cms.length; ++t ) {
-      double TPR = 1 - _cms[t].classErr(1); // =TP/(TP+FN) = true -positive-rate
-      double FPR = _cms[t].classErr(0); // =FP/(FP+TN) = false-positive-rate
-      auc += trapeziod_area(FPR_pre, FPR, TPR_pre, TPR);
-      TPR_pre = TPR;
-      FPR_pre = FPR;
-      tprs[t] = TPR;
-      fprs[t] = FPR;
-    }
-    auc += trapeziod_area(FPR_pre, 0, TPR_pre, 0);
-    this.auc = Math.round(1000*auc)*0.001;
-    if(_glm.family == Family.binomial){
-      int best = 0;
-      for(int i = 1; i < _cms.length; ++i){
-        if(Math.max(_cms[i].classErr(0),_cms[i].classErr(1)) < Math.max(_cms[best].classErr(0),_cms[best].classErr(1)))
-          best = i;
-      }
-      best_threshold = best*0.01f;
-    }
-  }
 
   private double trapeziod_area(double x1, double x2, double y1, double y2) {
     double base = Math.abs(x1 - x2);
     double havg = 0.5 * (y1 + y2);
     return base * havg;
   }
-
-
-
-
-
-
-  public static double[] DEFAULT_THRESHOLDS = new double[] { 0.00, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.10,
-    0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19, 0.20, 0.21, 0.22, 0.23, 0.24, 0.25, 0.26, 0.27, 0.28, 0.29,
-    0.30, 0.31, 0.32, 0.33, 0.34, 0.35, 0.36, 0.37, 0.38, 0.39, 0.40, 0.41, 0.42, 0.43, 0.44, 0.45, 0.46, 0.47, 0.48,
-    0.49, 0.50, 0.51, 0.52, 0.53, 0.54, 0.55, 0.56, 0.57, 0.58, 0.59, 0.60, 0.61, 0.62, 0.63, 0.64, 0.65, 0.66, 0.67,
-    0.68, 0.69, 0.70, 0.71, 0.72, 0.73, 0.74, 0.75, 0.76, 0.77, 0.78, 0.79, 0.80, 0.81, 0.82, 0.83, 0.84, 0.85, 0.86,
-    0.87, 0.88, 0.89, 0.90, 0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98, 0.99, 1.00 };
-
 
 }

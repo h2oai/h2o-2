@@ -4,10 +4,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import water.*;
 import water.fvec.Frame;
-import water.fvec.NFSFileVec;
 import water.fvec.Vec;
-
-import java.io.File;
 
 import static org.junit.Assert.assertEquals;
 
@@ -26,9 +23,9 @@ public class Summary2Test extends TestUtil {
     Vec vec = fr.vecs()[0];
     Summary2.BasicStat basicStat = new Summary2.PrePass().doAll(fr).finishUp()._basicStats[0];
     Summary2 s = new Summary2(vec, "",basicStat);
-    s.add(vec.chunk(0));
+    s.add(vec.chunkForRow(0));
     for (int i = 1; i < vec.nChunks(); i++) {
-      Summary2 s1 = new Summary2(vec, "", basicStat); s1.add(vec.chunk(i)); s.add(s1);
+      Summary2 s1 = new Summary2(vec, "", basicStat); s1.add(vec.chunkForRow(i)); s.add(s1);
     }
     s.finishUp(vec);
     assertEquals(1, s.hcnt.length);
@@ -48,9 +45,9 @@ public class Summary2Test extends TestUtil {
     Vec vec = fr.vecs()[fr.find("name")];
     Summary2.BasicStat basicStat = new Summary2.PrePass().doAll(fr).finishUp()._basicStats[fr.find("name")];
     Summary2 s = new Summary2(vec, "", basicStat);
-    s.add(vec.chunk(0));
+    s.add(vec.chunkForRow(0));
     for( int i = 1; i < vec.nChunks(); i++ )
-      { Summary2 s1 = new Summary2(vec, "", basicStat); s1.add(vec.chunk(i)); s.add(s1); }
+      { Summary2 s1 = new Summary2(vec, "", basicStat); s1.add(vec.chunkForRow(i)); s.add(s1); }
     s.finishUp(vec);
 
     assertEquals(306, s.hcnt.length);
@@ -66,13 +63,15 @@ public class Summary2Test extends TestUtil {
     Vec vec = fr.vecs()[fr.find("cylinders")];
     Summary2.BasicStat basicStat = new Summary2.PrePass().doAll(fr).finishUp()._basicStats[fr.find("cylinders")];
     Summary2 s = new Summary2(vec, "", basicStat);
-    s.add(vec.chunk(0));
+    s.add(vec.chunkForRow(0));
     for( int i = 1; i < vec.nChunks(); i++ )
-      { Summary2 s1 = new Summary2(vec, "", basicStat); s1.add(vec.chunk(i)); s.add(s1); }
+      { Summary2 s1 = new Summary2(vec, "", basicStat); s1.add(vec.chunkForRow(i)); s.add(s1); }
     s.finishUp(vec);
 
     assertEquals(0, s.hcnt[4]); // no 7 cylinder cars
-    assertEquals(4, (int)s._pctile[0]);
+    // kbn 2/28. 1% quantile for 0 should expect 4
+    // I changed Summary2 to be .1%, 1% ...99%, 99.9% quantiles. So answer is 3 for [0]
+    assertEquals(3, (int)s._pctile[0]);
     assertEquals(8, (int)s._pctile[s._pctile.length - 1]);
     fr.delete();
   }

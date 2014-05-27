@@ -27,16 +27,10 @@ Log.info(paste("H2O Reported MSE  : ", REPMSE, "\t\t", "R Expected MSE   : ", EX
 
 Log.info("Compare model statistics in R to model statistics in H2O")
 expect_equal(length(fith2o@model$err), 4) # 3 errs per for each subforest + one error for empty forest.
-expect_equal(REPMSE, EXPMSE)
+expect_equal(REPMSE, EXPMSE, tolerance=1e-4)
+expect_equal(REPMSE>0, TRUE);
 
 testEnd()
 }
 
 doTest("GBM Test: Golden GBM - MSE for GBM Regression", test.gbmMSEgauss.golden)
-
-
-
-
-
-
-

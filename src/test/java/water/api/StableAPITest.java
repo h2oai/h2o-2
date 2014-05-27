@@ -202,7 +202,6 @@ public class StableAPITest {
     regPy(RFScore.class);
     regPy(RFTreeView.class, "data_key", "model_key", "tree_number");
     regPy(RFView.class, "class_weights", "clear_confusion_matrix", "data_key", "iterative_cm", "model_key", "ntree", "out_of_bag_error_estimate", "response_variable");
-    regPy(RPackage.class);
     regPy(RReader.class);
     regPy(RReaderProgress.class);
     regPy(Remove.class, "key");

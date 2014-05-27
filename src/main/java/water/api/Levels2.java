@@ -20,7 +20,7 @@ public class Levels2 extends Request2 {
   @API(help = "Select columns", filter=colsFilter1.class)
   int[] cols;
 
-  @API(help = "Maximum columns to show summaries of", filter = Default.class, lmin = 1,  lmax = 1000)
+  @API(help = "Maximum columns to show summaries of", filter = Default.class, lmin = 1)
   int max_ncols = 1000;
 
   @API(help = "Factor levels of each column")

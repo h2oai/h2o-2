@@ -89,20 +89,20 @@ public class RequestBuilders extends RequestQueries {
   }
 
   private static final String _responseHeader =
-            "<table class='table table-bordered'><tr><td><table style='font-size:12px;margin:0px;' class='table-borderless'>"
+            "<table class='table table-bordered'><tr><td min-width: 60px><table style='font-size:12px;margin:0px;' class='table-borderless'>"
           + "  <tr>"
-          + "    <td style='border:0px' rowspan='2' style='vertical-align:top;'>%BUTTON&nbsp;&nbsp;</td>"
-          + "    <td style='border:0px' colspan='6'>"
+          + "    <td style='border:0px; min-width: 60px;' rowspan='2' style='vertical-align:top;'>%BUTTON&nbsp;&nbsp;</td>"
+          + "    <td style='border:0px; min-width: 60px' colspan='6'>"
           + "      %TEXT"
           + "    </td>"
           + "  </tr>"
           + "  <tr>"
-          + "    <td style='border:0px'><b>Cloud:</b></td>"
-          + "    <td style='padding-right:70px;border:0px'>%CLOUD_NAME</td>"
-          + "    <td style='border:0px'><b>Node:</b></td>"
-          + "    <td style='padding-right:70px;border:0px'>%NODE_NAME</td>"
-          + "    <td style='border:0px'><b>Time:</b></td>"
-          + "    <td style='padding-right:70px;border:0px'>%TIME</td>"
+          + "    <td style='border:0px; min-width: 60px'><b>Cloud:</b></td>"
+          + "    <td style='padding-right:70px;border:0px; min-width: 60px'>%CLOUD_NAME</td>"
+          + "    <td style='border:0px; min-width: 60px'><b>Node:</b></td>"
+          + "    <td style='padding-right:70px;border:0px; min-width: 60px'>%NODE_NAME</td>"
+          + "    <td style='border:0px; min-width: 60px'><b>Time:</b></td>"
+          + "    <td style='padding-right:70px;border:0px; min-width: 60px'>%TIME</td>"
           + "  </tr>"
           + "</table></td></tr></table>"
           + "<script type='text/javascript'>"
@@ -160,7 +160,7 @@ public class RequestBuilders extends RequestQueries {
     switch (response._status) {
       case error:
         result.replace("BUTTON","<button class='btn btn-danger disabled'>"+response._status.toString()+"</button>");
-        result.replace("TEXT","An error has occured during the creation of the response. Details follow:");
+        result.replace("TEXT","An error has occurred during the creation of the response. Details follow:");
         break;
       case done:
         //result.replace("BUTTON","<button class='btn btn-success disabled'>"+response._status.toString()+"</button>");
@@ -182,13 +182,13 @@ public class RequestBuilders extends RequestQueries {
           result.replace("JSSTUFF", poll.toString());
         } else {
           RString poll = new RString(_pollJs);
-          poll.replace("TIMEOUT", response._pollProgress==0 ? 1500 : 2000);
+          poll.replace("TIMEOUT", response._pollProgress==0 ? 4500 : 5000);
           result.replace("JSSTUFF", poll.toString());
         }
         int pct = (int) ((double)response._pollProgress / response._pollProgressElements * 100);
         result.replace("BUTTON","<button class='btn btn-primary' onclick='redirect()'>"+response._status.toString()+"</button>");
         result.replace("TEXT","<div style='margin-bottom:0px;padding-bottom:0xp;height:5px;' class='progress progress-stripped'><div class='bar' style='width:"+pct+"%;'></div></div>"
-                + "Request was successful, but the process has not yet finished.  The page will refresh every 2 seconds, or you can click the button"
+                + "Request was successful, but the process has not yet finished.  The page will refresh every 5 seconds, or you can click the button"
                 + " on the left.  If you want you can <a href='#' onclick='countdown_stop()'>disable the automatic refresh</a>.");
         break;
       default:
@@ -270,7 +270,8 @@ public class RequestBuilders extends RequestQueries {
       done, ///< Indicates that the request has completed and no further action from the user is required
       poll, ///< Indicates that the same request should be repeated to see some progress
       redirect, ///< Indicates that the request was successful, but new request must be filled to obtain results
-      error ///< The request was an error.
+      error, ///< The request was an error.
+      custom
     }
 
     /** Time it took the request to finish. In ms.
@@ -323,6 +324,18 @@ public class RequestBuilders extends RequestQueries {
      */
     private Response(Status status, JsonObject response) {
       _status = status;
+      _response = response;
+      _redirectName = null;
+      _redirectArgs = null;
+      _redirArgs = null;
+      _pollProgress = -1;
+      _pollProgressElements = -1;
+      _req = null;
+    }
+
+
+    private Response(JsonObject response) {
+      _status = Status.custom;
       _response = response;
       _redirectName = null;
       _redirectArgs = null;
@@ -404,6 +417,13 @@ public class RequestBuilders extends RequestQueries {
     public static Response done(JsonObject response) {
       assert response != null : "Called Response.done with null JSON response - perhaps you should call Response.doneEmpty";
       return new Response(Status.done, response);
+    }
+
+    /** Returns new done response with given JSON response object.
+     */
+    public static Response custom(JsonObject response) {
+      assert response != null : "Called Response.custom with null JSON response";
+      return new Response(response);
     }
 
     /** Response done v2. */
@@ -507,22 +527,37 @@ public class RequestBuilders extends RequestQueries {
      */
     protected JsonObject responseToJson() {
       JsonObject resp = new JsonObject();
-      resp.addProperty(STATUS,_status.toString());
-      resp.addProperty(JSON_H2O, H2O.NAME);
-      resp.addProperty(NODE, H2O.SELF.toString());
-      resp.addProperty(REQUEST_TIME, _time);
       switch (_status) {
         case done:
+          resp.addProperty(STATUS,_status.toString());
+          resp.addProperty(JSON_H2O, H2O.NAME);
+          resp.addProperty(NODE, H2O.SELF.toString());
+          resp.addProperty(REQUEST_TIME, _time);
+          break;
         case error:
+          resp.addProperty(STATUS,_status.toString());
+          resp.addProperty(JSON_H2O, H2O.NAME);
+          resp.addProperty(NODE, H2O.SELF.toString());
+          resp.addProperty(REQUEST_TIME, _time);
           break;
         case redirect:
+          resp.addProperty(STATUS,_status.toString());
+          resp.addProperty(JSON_H2O, H2O.NAME);
+          resp.addProperty(NODE, H2O.SELF.toString());
+          resp.addProperty(REQUEST_TIME, _time);
           resp.addProperty(REDIRECT,_redirectName);
           if (_redirectArgs != null)
             resp.add(REDIRECT_ARGS,_redirectArgs);
           break;
         case poll:
+          resp.addProperty(STATUS,_status.toString());
+          resp.addProperty(JSON_H2O, H2O.NAME);
+          resp.addProperty(NODE, H2O.SELF.toString());
+          resp.addProperty(REQUEST_TIME, _time);
           resp.addProperty(PROGRESS, _pollProgress);
           resp.addProperty(PROGRESS_TOTAL, _pollProgressElements);
+          break;
+        case custom:
           break;
         default:
           assert(false): "Unknown response type "+_status.toString();
@@ -548,7 +583,7 @@ public class RequestBuilders extends RequestQueries {
       return res;
     }
 
-    public void toJava(StringBuilder sb) { 
+    public void toJava(StringBuilder sb) {
       if( _req != null ) _req.toJava(sb);
     }
 
@@ -753,7 +788,7 @@ public class RequestBuilders extends RequestQueries {
       if (array.get(0) instanceof JsonObject) {
         sb.append("<tr>");
         for (Map.Entry<String,JsonElement> entry : ((JsonObject)array.get(0)).entrySet())
-          sb.append("<th>").append(header(entry.getKey())).append("</th>");
+          sb.append("<th style='min-width: 60px;'>").append(header(entry.getKey())).append("</th>");
         sb.append("</tr>");
       }
       return sb.toString();
@@ -986,7 +1021,7 @@ public class RequestBuilders extends RequestQueries {
    */
   public static class ArrayRowElementBuilder extends ElementBuilder {
     public String build(String elementContents, String elementName) {
-      return "<td>"+elementContents+"</td>";
+      return "<td style='min-width: 60px;'>"+elementContents+"</td>";
     }
   }
 
@@ -1000,7 +1035,7 @@ public class RequestBuilders extends RequestQueries {
    */
   public static class ArrayRowSingleColBuilder extends ElementBuilder {
     public String build(String elementContents, String elementName) {
-      return "<tr><td>"+elementContents+"</td></tr>";
+      return "<tr style='min-width: 60px;'><td style='min-width: 60px;'>"+elementContents+"</td></tr>";
     }
   }
 

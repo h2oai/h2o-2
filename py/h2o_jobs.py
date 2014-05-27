@@ -18,7 +18,7 @@ def pollStatsWhileBusy(timeoutSecs=300, pollTimeoutSecs=15, retryDelaySecs=5):
         a = h2o.nodes[0].jobs_admin(timeoutSecs=10)
         busy = False
         for j in a['jobs']:
-            if j['end_time'] == '':
+            if j['end_time']=='' and not (j['cancelled'] or (j['result'].get('val', None)=='CANCELLED')):
                 busy = True
                 h2o.verboseprint("Still busy")
                 break
@@ -74,7 +74,7 @@ def pollStatsWhileBusy(timeoutSecs=300, pollTimeoutSecs=15, retryDelaySecs=5):
 
         time.sleep(retryDelaySecs)
         if ((time.time() - start) > timeoutSecs):
-            raise Exception("Timeout while polling in pollAnyBusy: %s seconds" % timeoutSecs)
+            raise Exception("Timeout while polling in pollStatsWhileBusy: %s seconds" % timeoutSecs)
     
 
     # now print man 
@@ -111,32 +111,56 @@ def pollWaitJobs(pattern=None, errorIfCancelled=False, timeoutSecs=30, pollTimeo
         jobs = a['jobs']
         busy = 0
         for j in jobs:
-            if errorIfCancelled and j['cancelled']:
+            cancelled = j['cancelled'] or (j['result'].get('val', None)=='CANCELLED')
+            description = j['description']
+            destination_key = j['destination_key']
+            end_time = j['end_time']
+            key = j['key']
+            progress = j['progress']
+            # has exception and val?
+            result = j['result']
+            start_time = j['start_time']
+
+            # for now, don't ignore any exceptions
+            if 'exception' in result and result['exception']:
+                h2o.check_sandbox_for_errors()
+                msg = "ERROR: pollWaitJobs found a job with a exception result when it shouldn't have:\n %s" % h2o.dump_json(j)
+                raise Exception(msg)
+
+            if result:
+                # ignore if 'val' is 'OK'
+                if 'val' in result and result['val'] == 'OK':
+                    pass
+                else:
+                    print "non-empty result: %s for %s" % (result, key)
+
+            if errorIfCancelled and cancelled:
                 h2o.check_sandbox_for_errors()
                 print ("ERROR: not stopping, but: pollWaitJobs found a cancelled job when it shouldn't have:\n %s" % h2o.dump_json(j))
                 print ("Continuing so maybe a json response will give more info")
                 
             ### h2o.verboseprint(j)
-            if j['end_time'] == '':
+            # don't include cancelled jobs here
+            elif end_time=='' and not cancelled:
                 if not pattern: 
                     # always print progress if busy job (no pattern used
-                    print "time:", time.strftime("%I:%M:%S"), "progress:",  j['progress'], j['destination_key']
-                    h2o.verboseprint("description:", j['description'], "end_time:", j['end_time'])
+                    print "time:", time.strftime("%I:%M:%S"), "progress:",  progress, destination_key
+                    h2o.verboseprint("description:", description, "end_time:", end_time)
                     busy +=1
                     h2o.verboseprint("pollWaitJobs: found a busy job, now: %s" % busy)
                 else:
-                    if (pattern in j['key']) or (pattern in j['destination_key']) or (pattern in j['description']):
-                        ## print "description:", j['description'], "end_time:", j['end_time']
+                    if (pattern in key) or (pattern in destination_key) or (pattern in description):
+                        ## print "description:", description, "end_time:", end_time
                         busy += 1
                         h2o.verboseprint("pollWaitJobs: found a pattern-matched busy job, now %s" % busy)
                         # always print progress if pattern is used and matches
-                        print "time:", time.strftime("%I:%M:%S"), "progress:",  j['progress'], j['destination_key'], 
+                        print "time:", time.strftime("%I:%M:%S"), "progress:",  progress, destination_key
                     # we only want to print the warning message once
-                    elif j['key'] not in ignoredJobs:
-                        jobMsg = "%s %s %s" % (j['key'], j['description'], j['destination_key'])
+                    elif key not in ignoredJobs:
+                        jobMsg = "%s %s %s" % (key, description, destination_key)
                         h2o.verboseprint(" %s job in progress but we're ignoring it. Doesn't match pattern." % jobMsg)
                         # I guess "key" is supposed to be unique over all time for a job id?
-                        ignoredJobs.add(j['key'])
+                        ignoredJobs.add(key)
 
         if stallForNJobs:
             waitFor = stallForNJobs
@@ -174,6 +198,10 @@ def pollWaitJobs(pattern=None, errorIfCancelled=False, timeoutSecs=30, pollTimeo
 
     return patternKeys
 
+def showAllJobs():
+    print "Showing all jobs"
+    a = h2o.nodes[0].jobs_admin(timeoutSecs=10)
+    print h2o.dump_json(a)
 
 #*******************************************************************************************
 def cancelAllJobs(timeoutSecs=10, **kwargs): # I guess you could pass pattern

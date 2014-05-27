@@ -1,4 +1,4 @@
-import h2o_cmd, h2o, h2o_util
+import h2o_cmd, h2o, h2o_util, h2o_gbm
 import re, random, math
 
 def pickRandGlmParams(paramDict, params):
@@ -118,6 +118,10 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
     else:
         GLMModel = glm['GLMModel']
 
+    if not GLMModel:
+        raise Exception("GLMModel didn't exist in the glm response? %s" % h2o.dump_json(glm))
+    
+
     warnings = None
     if 'warnings' in GLMModel and GLMModel['warnings']:
         warnings = GLMModel['warnings']
@@ -147,8 +151,29 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
     family = GLMParams["family"]
 
     if h2o.beta_features:
-        submodels0 = GLMModel['submodels'][0]
-        iterations = submodels0['iteration']
+        # number of submodels = number of lambda
+        # min of 2. lambdaMax is first
+        submodels = GLMModel['submodels']
+        lambdas = GLMModel['lambdas']
+        # since all our tests?? only use one lambda, the best_lamda_idx should = 1
+        best_lambda_idx = GLMModel['best_lambda_idx']
+        lambdaMax = lambdas[0]
+        print "lambdaMax:", lambdaMax
+
+        if 1==0:
+            if len(submodels) < 2:
+                raise Exception("Always should have a minimum of 2 submodels in GLM2 response", len(submodels))
+            if len(lambdas) < 2:
+                raise Exception("Always should have a minimum of 2 lambdas in GLM2 response", len(submodels))
+            if best_lambda_idx != 1:
+                raise Exception("best_lamda_idx %s should point to the one lamda we specified? %s" % (best_lamda_idx, lamdas[1]))
+            if lambdaMax <= lambdas[-1]:
+                raise Exception("lambdaMax %s should always be < the lambda result %s we're checking" % (lambdaMax, lambdas[1]))
+
+        submodels0 = submodels[0]
+        submodels1 = submodels[-1] # hackery to make it work when there's just one
+        iterations = submodels1['iteration']
+
     else:
         iterations = GLMModel['iterations']
 
@@ -159,9 +184,9 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
             raise Exception("Convergence issue? GLM did iterations: %d which is greater than expected: %d" % (iterations, maxExpectedIterations) )
 
     if h2o.beta_features:
-        if 'validation' not in submodels0:
-            raise Exception("Should be a 'validation' key in submodels0: %s" % h2o.dump_json(submodels0))
-        validationsList = submodels0['validation']
+        if 'validation' not in submodels1:
+            raise Exception("Should be a 'validation' key in submodels1: %s" % h2o.dump_json(submodels1))
+        validationsList = submodels1['validation']
         validations = validationsList
         
     else:
@@ -214,8 +239,30 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
         print "%15s %s" % ("auc:\t", validations['auc'])
         if h2o.beta_features:
             print "%15s %s" % ("best_threshold:\t", validations['best_threshold'])
+            # show the middle one? 
+            print "We're just going to print the middle '_cms' ..that must be threshold 0.5?. this isn't above best_threshold"
+            # cm = glm['glm_model']['submodels'][0]['validation']['_cms'][-1]
+            cms = glm['glm_model']['submodels'][0]['validation']['_cms']
+            # rounds to int
+            mid = len(cms)/2
+            cm = cms[mid]
+
+            print "cm:", h2o.dump_json(cm['_arr'])
+            predErr = cm['_predErr']
+            classErr = cm['_classErr']
+            # compare to predErr
+            pctWrong = h2o_gbm.pp_cm_summary(cm['_arr']);
+            print "predErr:", predErr
+            print "calculated pctWrong from cm:", pctWrong
+            print "classErr:", classErr
+
+            # self.assertLess(pctWrong, 9,"Should see less than 9% error (class = 4)")
+
+            print "\nTrain\n==========\n"
+            print h2o_gbm.pp_cm(cm['_arr'])
         else:
             print "%15s %s" % ("threshold:\t", validations['threshold'])
+
 
     if family=="poisson" or family=="gaussian":
         print "%15s %s" % ("aic:\t", validations['aic'])
@@ -236,16 +283,16 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
     # get a copy, so we don't destroy the original when we pop the intercept
     if h2o.beta_features:
         coefficients_names = GLMModel['coefficients_names']
-        idxs = submodels0['idxs']
+        idxs = submodels1['idxs']
         column_names = coefficients_names
 
         # always check both normalized and normal coefficients
-        norm_beta = submodels0['norm_beta']
-        if len(column_names)!=len(norm_beta):
+        norm_beta = submodels1['norm_beta']
+        if norm_beta and len(column_names)!=len(norm_beta):
             print len(column_names), len(norm_beta)
             raise Exception("column_names and normalized_norm_beta from h2o json not same length. column_names: %s normalized_norm_beta: %s" % (column_names, norm_beta))
 
-        beta = submodels0['beta']
+        beta = submodels1['beta']
         if len(column_names)!=len(beta):
             print len(column_names), len(beta)
             raise Exception("column_names and beta from h2o json not same length. column_names: %s beta: %s" % (column_names, beta))
@@ -389,7 +436,7 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
             ))
 
     if h2o.beta_features:
-        print "submodels0, run_time (milliseconds):", submodels0['run_time']
+        print "submodels1, run_time (milliseconds):", submodels1['run_time']
     else:
 
         print "GLMModel model time (milliseconds):", GLMModel['model_time']
@@ -552,8 +599,8 @@ def goodXFromColumnInfo(y,
     if returnStringX:
         x = ",".join(map(str, x))
 
-    if h2o.beta_features: # add the 'C" prefix because of ignored_cols_by_name
-        ignore_x = ",".join(map(lambda x: "C" + str(x), ignore_x))
+    if h2o.beta_features: # add the 'C" prefix because of ignored_cols_by_name (and the start-with-1 offset)
+        ignore_x = ",".join(map(lambda x: "C" + str(x+1), ignore_x))
     else:
         ignore_x = ",".join(map(lambda x: str(x), ignore_x))
 

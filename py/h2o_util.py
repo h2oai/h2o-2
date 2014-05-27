@@ -1,7 +1,101 @@
 import subprocess
 import gzip, shutil, random, time, re
-import os, zipfile, simplejson as json
+import os, zipfile, simplejson as json, csv
 import h2o
+import sys
+
+
+
+# takes fp or list of fp and returns same with just two digits of precision
+# using print rounding
+def twoDecimals(l):
+    if isinstance(l, list):
+        return ["%.2f" % v for v in l]
+    else:
+        return "%.2f" % l
+
+# a short quick version for relative comparion. But it's probably better to use approx_equal below
+# the subsequent ones might be prefered, especially assertAlmostEqual(
+# http://en.wikipedia.org/wiki/Relative_difference
+# http://stackoverflow.com/questions/4028889/floating-point-equality-in-python
+def fp_approx_equal(a, b, rel):
+    c = abs(a-b) / max(abs(a), abs(b))
+    print "actual relative diff: %s allowed relative diff: %s" % (c, rel)
+    return c < rel
+
+# Generic "approximately equal" function for any object type, with customisable error tolerance.
+# When called with float arguments, approx_equal(x, y[, tol[, rel]) compares x and y numerically, 
+# and returns True if y is within either absolute error tol or relative error rel of x, 
+# otherwise return False. 
+
+# The function defaults to sensible default values for tol and rel.
+# or any other pair of objects, approx_equal() looks for a method __approx_equal__ and, if found, 
+# calls it with arbitrary optional arguments. 
+# This allows types to define their own concept of "close enough".
+def _float_approx_equal(x, y, tol=1e-18, rel=1e-7, **kwargs):
+    if tol is rel is None:
+        raise TypeError('cannot specify both absolute and relative errors are None')
+    tests = []
+    if tol is not None: tests.append(tol)
+    if rel is not None: tests.append(rel*abs(x))
+    assert tests
+    return abs(x - y) <= max(tests)
+
+# from http://code.activestate.com/recipes/577124-approximately-equal/
+def approx_equal(x, y, *args, **kwargs):
+    """approx_equal(float1, float2[, tol=1e-18, rel=1e-7]) -> True|False
+    approx_equal(obj1, obj2[, *args, **kwargs]) -> True|False
+
+    Return True if x and y are approximately equal, otherwise False.
+
+    If x and y are floats, return True if y is within either absolute error
+    tol or relative error rel of x. You can disable either the absolute or
+    relative check by passing None as tol or rel (but not both).
+
+    For any other objects, x and y are checked in that order for a method
+    __approx_equal__, and the result of that is returned as a bool. Any
+    optional arguments are passed to the __approx_equal__ method.
+
+    __approx_equal__ can return NotImplemented to signal that it doesn't know
+    how to perform that specific comparison, in which case the other object is
+    checked instead. If neither object have the method, or both defer by
+    returning NotImplemented, approx_equal falls back on the same numeric
+    comparison used for floats.
+
+    >>> almost_equal(1.2345678, 1.2345677)
+    True
+    >>> almost_equal(1.234, 1.235)
+    False
+
+    """
+    if not (type(x) is type(y) is float):
+        # Skip checking for __approx_equal__ in the common case of two floats.
+        methodname = '__approx_equal__'
+        # Allow the objects to specify what they consider "approximately equal",
+        # giving precedence to x. If either object has the appropriate method, we
+        # pass on any optional arguments untouched.
+        for a,b in ((x, y), (y, x)):
+            try:
+                method = getattr(a, methodname)
+            except AttributeError:
+                continue
+            else:
+                result = method(b, *args, **kwargs)
+                if result is NotImplemented:
+                    continue
+                return bool(result)
+
+    # If we get here without returning, then neither x nor y knows how to do an
+    # approximate equal comparison (or are both floats). Fall back to a numeric
+    # comparison.
+    return _float_approx_equal(x, y, *args, **kwargs)
+
+# note this can take 'tol' and 'rel' parms for the float case
+# just wraps approx_equal in an assert with a good print message
+def assertApproxEqual(x, y, msg='', **kwargs):
+    if not approx_equal(x, y, msg=msg, **kwargs):
+        m = msg + '. h2o_util.assertApproxEqual failed comparing %s and %s. %s.' % (x, y, kwargs)
+        raise Exception(m)
 
 def cleanseInfNan(value):
     # change the strings returned in h2o json to the IEEE number values
@@ -14,6 +108,23 @@ def cleanseInfNan(value):
         value = translate[str(value)]
     return value
 
+# http://eli.thegreenplace.net/2010/01/22/weighted-random-generation-in-python/
+# given [2, 3, 5] it returns 0 (the index of the first element) with probability 0.2, 
+# 1 with probability 0.3 and 2 with probability 0.5. 
+# The weights need not sum up to anything in particular, and can actually be 
+# arbitrary Python floating point numbers.
+
+# The weights need to cover the whole list? otherwise you don't get the rest of the choises
+#     random_data = [6,7,8]
+#     weights = [2,3,5]
+#     d = random_data[h2o_util.weighted_choice(weights)]
+def weighted_choice(weights):
+    rnd = random.random() * sum(weights)
+    for i, w in enumerate(weights):
+        rnd -= w
+        if rnd < 0:
+            return i
+
 # x = choice_with_probability( [('one',0.25), ('two',0.25), ('three',0.5)] )
 # need to sum to 1 or less. check error case if you go negative
 def choice_with_probability(tupleList):
@@ -24,6 +135,55 @@ def choice_with_probability(tupleList):
         if n < 0: 
             raise Exception("h2o_util.choice_with_probability() error, prob's sum > 1")
     return item
+
+# this reads a single col out a csv file into a list, without using numpy
+# so we can port some jenkins tests without needing numpy
+def file_read_csv_col(csvPathname, col=0, skipHeader=True, datatype='float', preview=5):
+    # only can skip one header line. numpy provides a number N. could update to that.
+    with open(csvPathname, 'rb') as f:
+        reader = csv.reader(f, quoting=csv.QUOTE_NONE) # no extra handling for quotes
+        print "csv read of", csvPathname, "column", col
+        # print "Preview of 1st %s lines:" % preview
+        rowNum = 0
+        dataList = []
+        lastRowLength = None
+        try:
+            for row in reader:
+                if skipHeader and rowNum==0:
+                    print "Skipping header in this csv"
+                else:
+                    NA = False
+                    if col > len(row)-1:
+                        print "col (zero indexed): %s points past the # entries in this row %s" % (col, row)
+                    if lastRowLength and len(row)!=lastRowLength:
+                        print "Current row length: %s is different than last row length: %s" % (row, lastRowLength)
+
+                    if col > len(row)-1:
+                        colData = None
+                    else:
+                        colData = row[col]
+                    # only print first 5 for seeing
+                    # don't print big col cases
+                    if rowNum < preview and len(row) <= 10: 
+                        print colData
+                    dataList.append(colData)
+                rowNum += 1
+                if rowNum%10==0:
+                    # print rowNum
+                    pass
+                lastRowLength = len(row)
+        except csv.Error, e:
+            sys.exit('file %s, line %d: %s' % (csvPathname, reader.line_num, e))
+
+        # now we have a list of strings
+        # change them to float if asked for, or int
+        # elimate empty strings
+        if datatype=='float':
+            D1 = [float(i) for i in dataList if i]
+        if datatype=='int':
+            D1 = [int(i) for i in dataList if i]
+        print "D1 done"
+    return D1
 
 def file_line_count(fname):
     return sum(1 for line in open(fname))

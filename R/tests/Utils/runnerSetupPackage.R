@@ -19,18 +19,11 @@ removePackage <- function(package) {
 }
 
 removePackage('h2o')
-removePackage('h2oRClient')
 
 failed <<- F
 tryCatch(library(h2o), error = function(e) {failed <<- T})
 if (! failed) {
     stop("Failed to remove h2o library")
-}
-
-failed <<- F
-tryCatch(library(h2oRClient), error = function(e) {failed <<- T})
-if (! failed) {
-    stop("Failed to remove h2oRClient library")
 }
 
 h2o_r_package_file <- NULL
@@ -59,8 +52,7 @@ install.packages("h2o", repos = c(H2O = paste("file://", dir_to_search, sep=""),
 library(h2o)
 h2o.init(ip            = ipPort[[1]], 
          port          = ipPort[[2]], 
-         startH2O      = FALSE, 
-         silentUpgrade = TRUE)
+         startH2O      = FALSE)
 
 ##generate master_seed
 

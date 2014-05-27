@@ -1,11 +1,9 @@
 # Initialize H2O and check/install correct version of H2O R package
 library(h2o)
 localH2O = h2o.init(ip = "127.0.0.1", port = 54321)
-# localH2O = new("H2OClient", ip = "127.0.0.1", port = 54321)
 
 # For hands-on audience participation
 # H2O Import, Summary, GLM and K-Means on prostate cancer data set
-library(h2oRClient)
 # prostate.hex = h2o.importFile(localH2O, path = "../../smalldata/logreg/prostate.hex", key = "prostate.hex")
 prostate.hex = h2o.importURL(localH2O, path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", key = "prostate.hex")
 summary(prostate.hex)

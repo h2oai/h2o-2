@@ -30,7 +30,7 @@ JAR_ROOT=lib
 
 # additional dependencies, relative to this file, but all dependencies should be
 # inside the JAR_ROOT tree so that they are packed to the jar file properly
-DEPENDENCIES="${JAR_ROOT}/jama/*${SEP}${JAR_ROOT}/apache/*${SEP}${JAR_ROOT}/junit/*${SEP}${JAR_ROOT}/gson/*${SEP}${JAR_ROOT}/javassist.jar${SEP}${JAR_ROOT}/poi/*${SEP}${JAR_ROOT}/s3/*${SEP}${JAR_ROOT}/jets3t/*${SEP}${JAR_ROOT}/log4j/*${SEP}${JAR_ROOT}/mockito/*${SEP}${JAR_ROOT}/jogamp/*"
+DEPENDENCIES="${JAR_ROOT}/jama/*${SEP}${JAR_ROOT}/apache/*${SEP}${JAR_ROOT}/junit/*${SEP}${JAR_ROOT}/gson/*${SEP}${JAR_ROOT}/javassist.jar${SEP}${JAR_ROOT}/poi/*${SEP}${JAR_ROOT}/s3/*${SEP}${JAR_ROOT}/jets3t/*${SEP}${JAR_ROOT}/log4j/*${SEP}${JAR_ROOT}/joda/*${SEP}${JAR_ROOT}/mockito/*${SEP}${JAR_ROOT}/jogamp/*"
 
 DEFAULT_HADOOP_VERSION="cdh3"
 OUTDIR="target"
@@ -169,7 +169,7 @@ function build_src_jar() {
 
 function build_imodel_jar() {
     echo "creating imodel jar file... ${IMODEL_JAR_FILE}"
-    "$JAR" cf ${IMODEL_JAR_FILE} -C "${CLASSES}" "water/genmodel"
+    "$JAR" cf ${IMODEL_JAR_FILE} -C "${CLASSES}" "water/genmodel" -C "${CLASSES}" "water/util/ModelUtils.class"
     [ -d "$CLASSES/resources/" ] || mkdir -p "$CLASSES/resources/"
     cp "${IMODEL_JAR_FILE}" "$CLASSES/resources/"
 }
@@ -193,7 +193,7 @@ function build_javadoc() {
 
 function junit() {
     echo "running JUnit tests..."
-    "$JAVA" -ea -cp ${JAR_FILE} water.Boot -mainClass water.JUnitRunner
+    "$JAVA" -Xmx1g -ea -cp ${JAR_FILE} water.Boot -mainClass water.JUnitRunner
 }
 
 if [ "$1" = "onlydoc" ]; then
@@ -211,9 +211,10 @@ if [ "$1" = "compile" ]; then exit 0; fi
 build_initializer
 build_imodel_jar
 build_jar
-build_src_jar
-build_samples
-if [ "$1" = "build" ]; then exit 0; fi
-build_javadoc
-if [ "$1" = "doc" ]; then exit 0; fi
-junit
+cp "target/h2o.jar" "h2o-perf/perf-target/"
+#build_src_jar
+#build_samples
+#if [ "$1" = "build" ]; then exit 0; fi
+#build_javadoc
+#if [ "$1" = "doc" ]; then exit 0; fi
+#junit

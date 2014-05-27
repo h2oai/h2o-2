@@ -7,7 +7,8 @@ import water.*;
 import water.Job.JobCancelledException;
 import water.ValueArray.Column;
 import water.parser.ParseDataset.FileInfo;
-import water.util.Utils;
+import water.util.Log;
+import water.fvec.ParseTime;
 
 /** Class responsible for actual parsing of the datasets.
  *
@@ -445,6 +446,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
     assert (_phase == Pass.TWO);
     Column[] cols = new Column[_ncolumns];
     int off = 0;
+    Log.info("Parse result for " + _job.dest() + " (" + Long.toString(_numRows) + " rows):");
     for( int i = 0; i < cols.length; ++i) {
       cols[i] = new Column();
       cols[i]._n = _numRows - _invalidValues[i];
@@ -459,6 +461,22 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
       cols[i]._mean = _mean[i];
       cols[i]._sigma = _sigma[i];
       cols[i]._name = _colNames != null?_colNames[i]:("C"+(Integer.toString(i+1)));
+
+      try {
+        boolean isCategorical = _colDomains[i] != null;
+        boolean isConstant = _min[i] == _max[i];
+        String CStr = String.format("C%d:", i+1);
+        String typeStr = String.format("%s", (isCategorical ? "categorical" : "numeric"));
+        String minStr = String.format("min(%f)", _min[i]);
+        String maxStr = String.format("max(%f)", _max[i]);
+        long numNAs = _invalidValues[i];
+        String naStr = (numNAs > 0) ? String.format("na(%d)", numNAs) : "";
+        String isConstantStr = isConstant ? "constant" : "";
+        String numLevelsStr = isCategorical ? String.format("numLevels(%d)", _colDomains[i].length) : "";
+        Log.info(String.format("    %-8s %15s %20s %20s %15s %11s %16s", CStr, typeStr, minStr, maxStr, naStr, isConstantStr, numLevelsStr));
+      }
+      catch (Exception _) {}
+
       off += Math.abs(cols[i]._size);
     }
     // let any pending progress reports finish
@@ -672,6 +690,7 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
     1000000000000000l,
     10000000000000000l,
     100000000000000000l,
+    1000000000000000000l,
   };
 
   public static double pow10(int exp){
@@ -876,11 +895,12 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
         ++_colIdx;
         // If this is a yet unspecified but non-numeric column, attempt a time-parse
         if( _colTypes[colIdx] == UCOL &&
-            Utils.attemptTimeParse(str) != Long.MIN_VALUE )
+            ParseTime.attemptTimeParse(str) != Long.MIN_VALUE )
           _colTypes[colIdx] = TCOL; // Passed a time-parse, so assume a time-column
         if( _colTypes[colIdx] == TCOL ) {
-          long time = Utils.attemptTimeParse(str);
+          long time = ParseTime.attemptTimeParse(str);
           if( time != Long.MIN_VALUE ) {
+            time = ParseTime.decodeTime(time); // Get time
             if(time < _min[colIdx])_min[colIdx] = time;
             if(time > _max[colIdx])_max[colIdx] = time;
             _mean[colIdx] += time;
@@ -912,7 +932,8 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
         } else if( _colTypes[colIdx] == LONG ) {
           ++_colIdx;
           // Times are strings with a numeric column type of LONG
-          long time = Utils.attemptTimeParse(str);
+          long time = ParseTime.attemptTimeParse(str);
+          time = ParseTime.decodeTime(time); // Get time
           _ab.put8(time);
           // Update sigma
           if( !Double.isNaN(_mean[colIdx])) {

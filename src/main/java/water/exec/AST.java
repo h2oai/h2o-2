@@ -15,28 +15,30 @@ import water.fvec.Vec;
 
 // --------------------------------------------------------------------------
 abstract public class AST extends Iced {
-  final transient Type _t;
+  final Type _t;
   AST( Type t ) { assert t != null; _t = t; }
-  static AST parseCXExpr(Exec2 E ) {
-    int x = E._x;
-    AST ast2, ast = ASTApply.parseInfix(E,null,0);
-    if( ast == null ) return ASTAssign.parseNew(E);
+  static AST parseCXExpr(Exec2 E, boolean EOS ) {
+    if( EOS && E.peekEOS() ) { E._x--; return new ASTNop(); }
+    AST ast2, ast = ASTApply.parseInfix(E,0,EOS);
+    if( ast == null ) return ASTAssign.parseNew(E,EOS);
     // In case of a slice or id, try match an assignment
     if( ast instanceof ASTSlice || ast instanceof ASTId)
-      if( (ast2 = ASTAssign.parse(E,ast)) != null ) return ast2;
+      if( (ast2 = ASTAssign.parse(E,ast,EOS)) != null ) return ast2;
     // Next try match an IFELSE statement
-    if( (ast2 = ASTIfElse.parse(E,ast)) != null ) return ast2;
+    if( (ast2 = ASTIfElse.parse(E,ast,EOS)) != null ) return ast2;
     // Return the infix: op1* expr {op2 op1* expr}*
     return ast;
   }
 
-  static AST parseVal(Exec2 E ) {
+  static AST parseVal(Exec2 E, boolean EOS ) {
+    E.skipWS(EOS);
     AST ast;
     // Simple paren expression
-    if( E.peek('(') )  return E.xpeek(')',E._x,parseCXExpr(E));
+    if( E.peek('(',EOS) )  return E.xpeek(')',E._x,parseCXExpr(E,false));
     if( (ast = ASTId   .parse(E)) != null ) return ast;
     if( (ast = ASTNum  .parse(E)) != null ) return ast;
     if( (ast = ASTOp   .parse(E)) != null ) return ast;
+    if( E.peek('"',EOS) ) E.throwErr("The current Exec does not handle strings",E._x);
     return null;
   }
   abstract void exec(Env env);
@@ -49,6 +51,12 @@ abstract public class AST extends Iced {
 }
 
 // --------------------------------------------------------------------------
+class ASTNop extends AST {
+  ASTNop() { super(Type.DBL); }
+  @Override void exec(Env env) { env.push(0.0); }
+}
+
+// --------------------------------------------------------------------------
 class ASTStatement extends AST {
   final AST[] _asts;
   ASTStatement( AST[] asts ) { super(asts[asts.length-1]._t); _asts = asts; }
@@ -56,15 +64,15 @@ class ASTStatement extends AST {
   static ASTStatement parse( Exec2 E ) {
     ArrayList<AST> asts = new ArrayList<AST>();
     while( true ) {
-      AST ast = parseCXExpr(E);
+      AST ast = parseCXExpr(E,true);
       if( ast == null ) break;
       asts.add(ast);
-      if( !E.peek(';') ) break;
+      if( !E.peekEOS() ) break; // if not finding statement separator, break
     }
     if( asts.size()==0 ) return null;
     return new ASTStatement(asts.toArray(new AST[asts.size()]));
   }
-  void exec(Env env) {
+  @Override void exec(Env env) {
     for( int i=0; i<_asts.length-1; i++ ) {
       _asts[i].exec(env);       // Exec all statements
       env.pop();                // Pop all intermediate results
@@ -72,7 +80,7 @@ class ASTStatement extends AST {
     _asts[_asts.length-1].exec(env); // Return final statement as result
   }
   @Override public String toString() { return ";;;"; }
-  public StringBuilder toString( StringBuilder sb, int d ) {
+  @Override public StringBuilder toString( StringBuilder sb, int d ) {
     for( int i=0; i<_asts.length-1; i++ )
       _asts[i].toString(sb,d+1).append(";\n");
     return _asts[_asts.length-1].toString(sb,d+1);
@@ -109,14 +117,13 @@ class ASTApply extends AST {
   }
 
   // Parse a prefix operator
-  static AST parsePrefix(Exec2 E) {
+  static AST parsePrefix(Exec2 E, boolean EOS) {
     int x0 = E._x;
-    AST pre = parseVal(E);
+    AST pre = parseVal(E,EOS);
     if( pre == null ) return null;
     while( true ) {
-      //if( pre._t.isNotFun() ) return pre; // Bail now if clearly not a function
       int x = E._x;
-      if( !E.peek('(') ) return pre; // Plain op, no prefix application
+      if( !E.peek('(', true) ) return pre; // Plain op, no prefix application
       if (pre._t.isNotFun()) {
         E._x = x0; if ((pre = ASTOp.parse(E)) == null) E.throwErr("No potential function was found.", x0);
         if( !E.peek('(') ) return pre;
@@ -125,7 +132,8 @@ class ASTApply extends AST {
       int i=1;
       if( !E.peek(')') ) {
         while( true ) {
-          args[i++] = parseCXExpr(E);
+          if( (args[i++] = parseCXExpr(E,false)) == null )
+            E.throwErr("Missing argument",E._x);
           if( E.peek(')') ) break;
           E.xpeek(',',E._x,null);
           if( i==args.length ) args = Arrays.copyOf(args,args.length<<1);
@@ -137,41 +145,41 @@ class ASTApply extends AST {
   }
 
   // Parse an infix boolean operator
-  static AST parseInfix(Exec2 E, AST ast, int curr_prec) {
+  static AST parseInfix(Exec2 E, int curr_prec, boolean EOS) {
     int x = E._x;
-    AST inf = null;
-    if (ast == null) {
-      ASTOp op1 = ASTOp.parseUniInfixOp(E);
-      if (op1 != null) {
-        // CASE 1 ~ INFIX1 := [] OP INFIX
-        if ((ast = parseInfix(E,null,op1._precedence)) != null)
-          ast = make(new AST[]{op1,ast},E,x);
-        else {
-          // CASE 2 ~ INFIX1 := [] OP
-          E._x = x;
-          ast = ASTSlice.parse(E);
-        }
-      } else {
-        // CASE 3 ~ INFIX1 := [] SLICE
-        ast = ASTSlice.parse(E);
+    AST ast;
+    E.skipWS(EOS);
+    ASTOp op1 = ASTOp.parseUniInfixOp(E);
+    if (op1 != null) {
+      // CASE 1 ~ INFIX1 := [] OP INFIX
+      if ((ast = parseInfix(E,op1._precedence,EOS)) != null)
+        ast = make(new AST[]{op1,ast},E,x);
+      else {
+        // CASE 2 ~ INFIX1 := [] OP
+        E._x = x;
+        ast = ASTSlice.parse(E, EOS);
       }
-      // CASE 0 ~ []
-      if (ast == null) return null;
-      inf = ast;
+    } else {
+      // CASE 3 ~ INFIX1 := [] SLICE
+      ast = ASTSlice.parse(E, EOS);
     }
+    // CASE 0 ~ []
+    if (ast == null) return null;
+
     // INFIX := INFIX1 OP INFIX
     while( true ) {
       int op_x = E._x;
+      E.skipWS(EOS);
       ASTOp op = ASTOp.parseBinInfixOp(E);
       if( op == null
        || op._precedence < curr_prec
        || (op.leftAssociate() && op._precedence == curr_prec) )
-      { E._x = op_x; return inf; }
+      { E._x = op_x; return ast; }
       op_x = E._x;
-      AST rite = parseInfix(E,null,op._precedence);
+      AST rite = parseInfix(E,op._precedence, false);
       if (rite == null)
         E.throwErr("Missing expr or unknown ID", op_x);
-      ast = inf = make(new AST[]{op,ast,rite},E,x);
+      ast = make(new AST[]{op,ast,rite},E,x);
     }
   }
 
@@ -200,16 +208,17 @@ class ASTSlice extends AST {
   ASTSlice( Type t, AST ast, AST cols, AST rows ) {
     super(t); _ast = ast; _cols = cols; _rows = rows;
   }
-  static AST parse(Exec2 E ) {
+  static AST parse(Exec2 E, boolean EOS ) {
     int x = E._x;
-    AST ast = ASTApply.parsePrefix(E);
+    AST ast = ASTApply.parsePrefix(E, EOS);
     if( ast == null ) return null;
-    if( !E.peek('[') ) return ast; // No slice
+    if( !E.peek('[',EOS) )      // Not start of slice?
+      return ASTNamedCol.parse(E,ast,EOS); // Also try named col slice
     if( !Type.ARY.union(ast._t) ) E.throwErr("Not an ary",x);
-    if(  E.peek(']') ) return ast; // [] ===> same as no slice
-    AST rows=E.xpeek(',',(x=E._x),parseCXExpr(E));
+    if(  E.peek(']',false) ) return ast; // [] ===> same as no slice
+    AST rows=E.xpeek(',',(x=E._x),parseCXExpr(E, false));
     if( rows != null && !rows._t.union(Type.dblary()) ) E.throwErr("Must be scalar or array",x);
-    AST cols=E.xpeek(']',(x=E._x),parseCXExpr(E));
+    AST cols=E.xpeek(']',(x=E._x),parseCXExpr(E, false));
     if( cols != null && !cols._t.union(Type.dblary()) ) E.throwErr("Must be scalar or array",x);
     Type t =                    // Provable scalars will type as a scalar
       rows != null && rows.isPosConstant() &&
@@ -265,7 +274,7 @@ class ASTSlice extends AST {
     // Got a frame/list of results.
     // Decide if we're a toss-out or toss-in list
     Frame ary = env._ary[env._sp-1];  // Peek-frame
-    if( ary.numCols() != 1 ) throw new IllegalArgumentException("Selector must be a single column: "+ary);
+    if( ary.numCols() != 1 ) throw new IllegalArgumentException("Selector must be a single column: "+ary.toStringNames());
     Vec vec = ary.anyVec();
     // Check for a matching column of bools.
     if( ary.numRows() == len && vec.min()>=0 && vec.max()<=1 && vec.isInt() )
@@ -281,7 +290,7 @@ class ASTSlice extends AST {
   }
 
   @Override public String toString() { return "[,]"; }
-  public StringBuilder toString( StringBuilder sb, int d ) {
+  @Override public StringBuilder toString( StringBuilder sb, int d ) {
     indent(sb,d).append(this).append('\n');
     _ast.toString(sb,d+1).append("\n");
     if( _cols==null ) indent(sb,d+1).append("all\n");
@@ -290,6 +299,32 @@ class ASTSlice extends AST {
     else      _rows.toString(sb,d+1);
     return sb;
   }
+}
+
+// --------------------------------------------------------------------------
+class ASTNamedCol extends AST {
+  final AST _ast;               // named slice of an expression
+  final String _colname;        // 
+  ASTNamedCol( Type t, AST ast, String colname ) {
+    super(t); _ast = ast; _colname=colname;
+  }
+  static AST parse(Exec2 E, AST ast, boolean EOS ) {
+    if( !E.peek('$',true) ) return ast;
+    int x = E._x;
+    E.skipWS(EOS);
+    String colname = E.isID();
+    if( colname == null ) E.throwErr("Missing column name after $",x);
+    return new ASTNamedCol(Type.ARY,ast,colname);
+  }
+  @Override void exec(Env env) {
+    int sp = env._sp;  _ast.exec(env);  assert sp+1==env._sp;
+    Frame ary=env.peekAry();
+    int cidx = ary.find(_colname);
+    if( cidx== -1 ) throw new IllegalArgumentException("Missing column "+_colname+" in frame "+ary.toStringNames());
+    Frame fr2 = new Frame(new String[]{ary._names[cidx]}, new Vec[]{ary.vecs()[cidx]});
+    env.poppush(1,fr2,null);
+  }
+  @Override public String toString() { return "$"+_colname; }
 }
 
 // --------------------------------------------------------------------------
@@ -347,11 +382,11 @@ class ASTAssign extends AST {
   final AST _eval;
   ASTAssign( AST lhs, AST eval ) { super(lhs._t); _lhs=lhs; _eval=eval; }
   // Parse a valid LHS= or return null
-  static ASTAssign parse(Exec2 E, AST ast) {
+  static ASTAssign parse(Exec2 E, AST ast, boolean EOS) {
     int x = E._x;
     // Allow '=' and '<-' assignment
-    if( !E.peek('=') ) {
-      if( !(E.peek('<') && E.peek('-')) ) { E._x=x; return null; }
+    if( !E.peek('=',EOS) ) {
+      if( !(E.peek('<',EOS) && E.peek('-',EOS)) ) { E._x=x; return null; }
     }
     AST ast2=ast;
     ASTSlice slice= null;
@@ -360,7 +395,7 @@ class ASTAssign extends AST {
     // Must be a simple in-scope ID
     if( !(ast2 instanceof ASTId) ) E.throwErr("Can only assign to ID (or slice)",x);
     ASTId id = (ASTId)ast2;
-    final AST eval = parseCXExpr(E);
+    final AST eval = parseCXExpr(E, false);
     if( eval == null ) E.throwErr("Missing RHS",x);
     boolean partial = slice != null && (slice._cols != null || slice._rows != null);
     if( partial ) {             // Partial slice assignment?
@@ -388,18 +423,18 @@ class ASTAssign extends AST {
     return new ASTAssign(ast,eval);
   }
   // Parse a valid LHS= or return null - for a new variable
-  static ASTAssign parseNew(Exec2 E) {
+  static ASTAssign parseNew(Exec2 E, boolean EOS) {
     int x = E._x;
     String var = ASTId.parseNew(E);
     if( var == null ) return null;
-    if( !E.peek('=') ) {        // Not an assignment
-      if( !(E.peek('<') && E.peek('-')) ) { // The other assignment operator
+    if( !E.peek('=',EOS) ) {        // Not an assignment
+      if( !(E.peek('<',EOS) && E.peek('-',EOS)) ) { // The other assignment operator
         if( Exec2.isLetter(var.charAt(0) ) ) E.throwErr("Unknown var "+var,x);
         E._x=x; return null;      // Let higher parse levels sort it out
       }
     }
     x = E._x;
-    AST eval = parseCXExpr(E);
+    AST eval = parseCXExpr(E, EOS);
     if( eval == null ) E.throwErr("Missing RHS",x);
     // Extend the local environment by the new name
     return new ASTAssign(extend_local(E,eval._t,var),eval);
@@ -466,7 +501,7 @@ class ASTAssign extends AST {
 
     // Partial row assignment?
     if( rows != null ) {
-        throw H2O.unimpl();
+      throw H2O.unimpl();
     }
     assert cols != null; // all/all assignment uses simple-assignment
 
@@ -484,7 +519,7 @@ class ASTAssign extends AST {
     for( long i : cs ) {
       int cidx = (int)i-1;      // Convert 1-based to 0-based
       Vec rv = env.addRef(rvecs[rvecs.length==1?0:cidx]);
-      if( cidx == ary.numCols() ) ary.add("C"+cidx,rv);
+      if( cidx == ary.numCols() ) ary.add("C"+(int)i,rv);     // New column name created with 1-based index
       else fs = env.subRef(ary.replace(cidx,rv),fs);
     }
     if( fs != null )  fs.blockForPending();
@@ -574,7 +609,7 @@ class ASTNum extends AST {
     // The lookahead character is 'e'.  Find the remaining trailing numbers
     // and attach them to this token.
     // Start with sb as stuff from NF.parse plus the 'e'.
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append(s.substring(startPosition, Math.min(s.length(),pp.getIndex() + 2)));
     for( int i = pp.getIndex() + 2; i < s.length(); i++ ) {
       char c = s.charAt(i);

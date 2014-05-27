@@ -29,7 +29,6 @@ public class TaskPutKey extends DTask<TaskPutKey> {
     assert _key.home() || _val==null; // Only PUT to home for keys, or remote invalidation from home
     Paxos.lockCloud();
     // Initialize Value for having a single known replica (the sender)
-    //if( _val != null && !_dontCache ) _val.initReplicaHome(sender,_key);
     if( _val != null ) _val.initReplicaHome(sender,_key);
     // Spin, until we update something.
     Value old = H2O.raw_get(_key); // Raw-get: do not lazy-manifest if overwriting

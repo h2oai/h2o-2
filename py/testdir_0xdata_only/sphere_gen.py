@@ -8,9 +8,9 @@ sys.path.extend(['.','..','py'])
 # http://stackoverflow.com/questions/2106503/pseudorandom-number-generator-exponential-distribution/2106568#2106568
 
 CLUSTERS = 15
-GB_SPHERE_PTS = 4000000 # 1GB
-SPHERE_PTS = 10 * GB_SPHERE_PTS
-RANDOMIZE_SPHERE_PTS = True
+# GB_SPHERE_PTS = 1000000 # 1GB
+SPHERE_PTS = 100000
+RANDOMIZE_SPHERE_PTS = False
 JUMP_RANDOM_ALL_DIRS = True
 SHUFFLE_SPHERES = False
 RADIUS_NOISE = True
@@ -19,6 +19,10 @@ MAX_DIGITS_IN_DIMENSIONS = [2,1,3,4,8,5]
 MAXINTS = [(pow(10,d) - 1) for d in MAX_DIGITS_IN_DIMENSIONS]
 print "MAXINTS per col:", MAXINTS
 DIMENSIONS = len(MAX_DIGITS_IN_DIMENSIONS)
+
+# don't include the unnecessary columns
+JUST_SPHERES = True
+DO_REALS = True
 
 def getInterestingEnum():
     # powerhouse data
@@ -95,7 +99,10 @@ def write_spheres_dataset(csvPathname, CLUSTERS, n):
         # some random place in the allowed space. Let's just assume we don't get 
         # sphere overlap that kills us. With enough dimensions, that might be true?
         # looks like we compare the sum of the centers above (in -1 to 1 space)
-        initial = [int((0.5 * random.randint(0,MAXINTS[i]))) for i in range(DIMENSIONS)]
+	if DO_REALS:
+            initial = [(0.5 * random.random() * MAXINTS[i]) for i in range(DIMENSIONS)]
+	else:
+            initial = [int((0.5 * random.randint(0,MAXINTS[i]))) for i in range(DIMENSIONS)]
 
         # zero out the ones we'll mess with just to be safe/clear
         # this will be the initial center? make it within the range of half
@@ -110,7 +117,10 @@ def write_spheres_dataset(csvPathname, CLUSTERS, n):
     
             # randomly sized "ball"  to scale our "sphere"
             # use only 1/2 the allowed range, letting the center skew by one half also
-            scale.append(0.5 * random.randint(0,MAX))
+	    if DO_REALS:
+            	scale.append(0.5 * random.randint(0,MAX))
+	    else:
+            	scale.append(0.5 * random.random() * MAX);
 
         # figure out the next center
         if currentCenter is None:
@@ -131,12 +141,20 @@ def write_spheres_dataset(csvPathname, CLUSTERS, n):
         print "currentCenter:", currentCenter, "R:", R, "numPts", numPts
 
         for n in range(numPts):
-            interestingEnum = getInterestingEnum()
             thisPt = currentCenter[:]
             xyz = get_xyz_sphere(R) 
             for i in range(3):
-                thisPt[xyzShift+i] += int(xyz[i])
-            dsf.write(",".join(map(str,[interestingEnum] + thisPt))+"\n")
+		if DO_REALS:
+                   thisPt[xyzShift+i] += xyz[i]
+		else:
+                   thisPt[xyzShift+i] += int(xyz[i])
+
+	    if JUST_SPHERES:
+                row = ",".join(map(str,thisPt)) + "\n"
+	    else:
+                interestingEnum = getInterestingEnum()
+                row = ",".join(map(str,[interestingEnum] + thisPt)) + "\n"
+            dsf.write(row)
             totalRows += 1
 
 	sphereCnt += 1 # end of while loop

@@ -47,7 +47,7 @@ public class KMeansApply extends Request {
       Job job = KMeansModel.KMeansApply.run(dest, model, data);
       JsonObject response = new JsonObject();
       response.addProperty(RequestStatics.DEST_KEY, _dest.value().toString());
-      return Progress.redirect(response, job.job_key, _dest.value());
+      return Progress.redirect(response, job.self(), _dest.value());
     } catch( Throwable e ) {
       return Response.error(e);
     }

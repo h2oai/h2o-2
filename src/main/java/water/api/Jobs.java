@@ -1,15 +1,17 @@
 package water.api;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
-import java.util.Date;
-import java.text.ParseException;
-
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import water.DKV;
 import water.Job;
+import water.Job.JobState;
 import water.Key;
 
-import com.google.gson.*;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.text.ParseException;
+import java.util.Date;
 
 public class Jobs extends Request {
   Jobs() {
@@ -34,18 +36,20 @@ public class Jobs extends Request {
       json.addProperty(START_TIME, RequestBuilders.ISO8601.get().format(new Date(jobs[i].start_time)));
       long end = jobs[i].end_time;
       JsonObject jobResult = new JsonObject();
+      Job job = jobs[i];
 
       boolean cancelled;
-      if(cancelled = (end == Job.CANCELLED_END_TIME)){
-        if(jobs[i].exception != null){
+      if (cancelled = (job.state==JobState.CANCELLED || job.state==JobState.CRASHED)) {
+        if(job.exception != null){
           jobResult.addProperty("exception", "1");
           jobResult.addProperty("val", jobs[i].exception);
         } else {
           jobResult.addProperty("val", "CANCELLED");
         }
-      } else if(end > 0)
+      } else if (job.state==JobState.DONE)
         jobResult.addProperty("val", "OK");
       json.addProperty(END_TIME, end == 0 ? "" : RequestBuilders.ISO8601.get().format(new Date(end)));
+      json.addProperty(PROGRESS, job.state==JobState.RUNNING || job.state==JobState.DONE ? jobs[i].progress() : -1);
       json.addProperty(PROGRESS, end == 0 ? (cancelled ? -2 : jobs[i].progress()) : (cancelled ? -2 : -1));
       json.addProperty(CANCELLED, cancelled);
       json.add("result",jobResult);
@@ -68,7 +72,7 @@ public class Jobs extends Request {
           html = "<button disabled class='btn btn-mini'>X</button>";
         else {
           String keyParam = KEY + "=" + elm.getAsString();
-          html = "<a href='Cancel.html?" + keyParam + "'><button class='btn btn-danger btn-mini'>X</button></a>";
+          html = "<a href='/Cancel.html?" + keyParam + "'><button class='btn btn-danger btn-mini'>X</button></a>";
         }
         return html;
       }
@@ -81,7 +85,7 @@ public class Jobs extends Request {
         try {
           key = URLEncoder.encode(str,"UTF-8");
         } catch( UnsupportedEncodingException e ) { key = str; }
-        return ("".equals(key) || DKV.get(Key.make(str)) == null) ? key : "<a href='Inspect.html?"+KEY+"="+key+"'>"+str+"</a>";
+        return ("".equals(key) || DKV.get(Key.make(str)) == null) ? key : "<a href='/Inspect.html?"+KEY+"="+key+"'>"+str+"</a>";
       }
     });
     r.setBuilder(JOBS + "." + START_TIME, new ArrayRowElementBuilder() {
@@ -168,5 +172,10 @@ public class Jobs extends Request {
           + "</div>" //
         + "</div>";
     // @formatter:on
+  }
+
+  @Override
+  public RequestServer.API_VERSION[] supportedVersions() {
+    return SUPPORTS_V1_V2;
   }
 }

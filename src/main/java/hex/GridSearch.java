@@ -5,6 +5,7 @@ import hex.KMeans2.KMeans2ModelView;
 import hex.NeuralNet.NeuralNetModel;
 import hex.drf.DRF.DRFModel;
 import hex.gbm.GBM.GBMModel;
+import hex.deeplearning.DeepLearningModel;
 import water.*;
 import water.api.*;
 import water.util.Utils;
@@ -19,7 +20,7 @@ public class GridSearch extends Job {
   public GridSearch(){
 
   }
-  @Override protected Status exec() {
+  @Override protected JobState execImpl() {
     UKV.put(destination_key, this);
     int max = jobs[0].gridParallelism();
     int head = 0, tail = 0;
@@ -34,7 +35,7 @@ public class GridSearch extends Job {
         }
       }
     }
-    return Status.Done;
+    return JobState.DONE;
   }
 
   @Override protected void onCancelled() {
@@ -61,6 +62,10 @@ public class GridSearch extends Job {
 
     @API(help = "Jobs")
     public Job[] jobs;
+    @API(help = "Prediction Errors")
+    public double[] prediction_errors;
+    @API(help = "State")
+    public String[] job_state;
 
     @Override protected Response serve() {
       Response response = super.serve();
@@ -68,9 +73,36 @@ public class GridSearch extends Job {
         GridSearch grid = UKV.get(destination_key);
         if( grid != null )
           jobs = grid.jobs;
+        updateErrors(null);
       }
       return response;
     }
+
+    void updateErrors(ArrayList<JobInfo> infos) {
+      if (jobs == null) return;
+      prediction_errors = new double[jobs.length];
+      job_state = new String[jobs.length];
+      int i = 0;
+      for( Job job : jobs ) {
+        JobInfo info = new JobInfo();
+        info._job = job;
+        if(job.dest() != null){
+          Object value = UKV.get(job.dest());
+          info._model = value instanceof Model ? (Model) value : null;
+          if( info._model != null ) {
+            info._cm = info._model.cm();
+            info._error = info._model.mse();
+          }
+        }
+        if( info._cm != null)
+          info._error = info._cm.err();
+        if (infos != null) infos.add(info);
+        prediction_errors[i] = info._error;
+        job_state[i] = info._job.state.toString();
+        i++;
+      }
+    }
+
 
     @Override public boolean toHTML(StringBuilder sb) {
       if( jobs != null ) {
@@ -81,8 +113,7 @@ public class GridSearch extends Job {
         args = (ArrayList<Argument>) args.clone();
         filter(args, "destination_key", "source", "cols", "ignored_cols", "ignored_cols_by_name", //
             "response", "classification", "validation");
-        for( int i = 0; i < args.size(); i++ )
-          sb.append("<td><b>").append(args.get(i)._name).append("</b></td>");
+        for (Argument arg : args) sb.append("<td><b>").append(arg._name).append("</b></td>");
         sb.append("<td><b>").append("run time").append("</b></td>");
         String perf = jobs[0].speedDescription();
         if( perf != null )
@@ -93,21 +124,7 @@ public class GridSearch extends Job {
         sb.append("</tr>");
 
         ArrayList<JobInfo> infos = new ArrayList<JobInfo>();
-        for( Job job : jobs ) {
-          JobInfo info = new JobInfo();
-          info._job = job;
-          if(job.destination_key != null){
-            Object value = UKV.get(job.destination_key);
-            info._model = value instanceof Model ? (Model) value : null;
-            if( info._model != null ) {
-              info._cm = info._model.cm();
-              info._error = info._model.mse();
-            }
-          }
-          if( info._cm != null)
-            info._error = info._cm.err();
-          infos.add(info);
-        }
+        updateErrors(infos);
         Collections.sort(infos, new Comparator<JobInfo>() {
           @Override public int compare(JobInfo a, JobInfo b) {
             return Double.compare(a._error, b._error);
@@ -138,26 +155,27 @@ public class GridSearch extends Job {
           if( perf != null )
             sb.append("<td>").append(speed).append("</td>");
           String link = "";
-          if( info._job.start_time != 0 && DKV.get(info._job.destination_key) != null ) {
-            link = info._job.destination_key.toString();
+          if( info._job.start_time != 0 && DKV.get(info._job.dest()) != null ) {
+            link = info._job.dest().toString();
             if( info._model instanceof GBMModel )
-              link = GBMModelView.link(link, info._job.destination_key);
+              link = GBMModelView.link(link, info._job.dest());
             else if( info._model instanceof DRFModel )
-              link = DRFModelView.link(link, info._job.destination_key);
+              link = DRFModelView.link(link, info._job.dest());
             else if( info._model instanceof NeuralNetModel )
-              link = NeuralNetModelView.link(link, info._job.destination_key);
+              link = NeuralNetModelView.link(link, info._job.dest());
+            else if( info._model instanceof DeepLearningModel)
+              link = DeepLearningModelView.link(link, info._job.dest());
             if( info._model instanceof KMeans2Model )
-              link = KMeans2ModelView.link(link, info._job.destination_key);
+              link = KMeans2ModelView.link(link, info._job.dest());
             else
-              link = Inspect.link(link, info._job.destination_key);
+              link = Inspect.link(link, info._job.dest());
           }
           sb.append("<td>").append(link).append("</td>");
 
-          String pct = "", f1 = "";
+          String pct, f1 = "";
           if( info._cm != null ) {
             pct = String.format("%.2f", 100 * info._error) + "%";
-            if( info._cm._arr.length == 2 )
-              f1 = String.format("%.2f", info._cm.precisionAndRecall());
+            if (info._cm.F1() != Double.NaN) f1 = String.format("%.4f", info._cm.F1());
           } else pct = String.format("%.2f", info._error) ;
           sb.append("<td><b>").append(pct).append("</b></td>");
           sb.append("<td><b>").append(f1).append("</b></td>");
@@ -182,7 +200,7 @@ public class GridSearch extends Job {
             args.remove(i);
     }
 
-    @Override protected Response jobDone(final Job job, final Key dst) {
+    @Override protected Response jobDone(final Key dst) {
       return Response.done(this);
     }
   }

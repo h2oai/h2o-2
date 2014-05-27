@@ -78,9 +78,7 @@ class Basic(unittest.TestCase):
             modelKey = 'GLM_model'
             params = {
                 'ignored_cols': ignoreX, 
-                'response': 'C' + str(y),
-                # 'case_mode': '=',
-                # 'case_val': 0,
+                'response': 'C' + str(y+1),
                 'family': 'binomial',
                 'lambda': 0.5,
                 'alpha': 1e-4,
@@ -128,7 +126,12 @@ class Basic(unittest.TestCase):
                 aHack = {'destination_key': 'A.hex'}
                 glmFirstResult = h2o_cmd.runGLM(parseResult=aHack, timeoutSecs=timeoutSecs, pollTimeoutSecs=60, 
                     noPoll=True, **kwargs)
+                print "\nglmFirstResult:", h2o.dump_json(glmFirstResult)
+                job_key = glmFirstResult['job_key']
                 h2o_jobs.pollStatsWhileBusy(timeoutSecs=timeoutSecs, pollTimeoutSecs=60, retryDelaySecs=5)
+
+                # double check...how come the model is bogus?
+                h2o_jobs.pollWaitJobs()
                 glm = h2o.nodes[0].glm_view(_modelKey=modelKey)
 
                 elapsed = time.time() - start
@@ -139,14 +142,13 @@ class Basic(unittest.TestCase):
                 modelKey = glm['glm_model']['_key']
 
                 # This seems wrong..what's the format of the cm?
-                if 1==0:
-                    cm = glm['glm_model']['submodels'][0]['validation']['_cms'][0]['_arr']
-                    print "cm:", cm
-                    pctWrong = h2o_gbm.pp_cm_summary(cm);
-                    # self.assertLess(pctWrong, 9,"Should see less than 9% error (class = 4)")
+                cm = glm['glm_model']['submodels'][0]['validation']['_cms'][-1]['_arr']
+                print "cm:", cm
+                pctWrong = h2o_gbm.pp_cm_summary(cm);
+                # self.assertLess(pctWrong, 9,"Should see less than 9% error (class = 4)")
 
-                    print "\nTrain\n==========\n"
-                    print h2o_gbm.pp_cm(cm)
+                print "\nTrain\n==========\n"
+                print h2o_gbm.pp_cm(cm)
 
 
                 # Score *******************************
@@ -162,7 +164,7 @@ class Basic(unittest.TestCase):
 
                 predictCMResult = h2o.nodes[0].predict_confusion_matrix(
                     actual='B.hex',
-                    vactual='C' + str(y),
+                    vactual='C' + str(y+1),
                     predict=predictKey,
                     vpredict='predict',
                     )

@@ -34,7 +34,7 @@ then
     echo "Permission rights extend to the top level now, so only 0xcustomer can automount them"
     echo "okay to ls the top level here...no secret info..do all the machines we might be using"
 
-    for mr in 161 164
+    for mr in 161 164 180
     do
         ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.$mr  \
             'echo rm -f -r /home/0xcustomer/ice*; cd /mnt/0xcustomer-datasets'
@@ -43,9 +43,9 @@ then
     # HACK this is really 161 plus 164. this allows us to talk to localhost:54377 accidently (R)
     # python ../four_hour_cloud.py -cj pytest_config-jenkins-161.json &
     # CLOUD_IP=192.168.1.161
-    python ../four_hour_cloud.py -cj pytest_config-jenkins.json &
+    python ../four_hour_cloud.py -cj pytest_config-jenkins-180.json &
     # make sure this matches what's in the json!
-    CLOUD_IP=192.168.1.164
+    CLOUD_IP=192.168.1.180
     CLOUD_PORT=54355
 else
     if [[ $USER == "kevin" ]]
@@ -94,42 +94,19 @@ echo "Used to run as 0xcust.., with multi-node targets (possibly)"
 mySetup() {
     # we setup .Renviron and delete the old local library if it exists
     # then make the R_LIB_USERS dir
-    which R
-    R --version
-    # don't always remove..other users may have stuff he doesn't want to re-install
-    if [[ $USER == "jenkins" ]]
-    then 
-        echo "Rebuilding ~/.Renviron and ~/.Rprofile for $USER"
-        # Set CRAN mirror to a default location
-        rm -f ~/.Renviron
-        rm -f ~/.Rprofile
-        echo "options(repos = \"http://cran.stat.ucla.edu\")" > ~/.Rprofile
-        echo "R_LIBS_USER=\"~/.Rlibrary\"" > ~/.Renviron
-        rm -f -r ~/.Rlibrary
-        mkdir -p ~/.Rlibrary
-    fi
-
-    # removing .Rlibrary should have removed h2oWrapper
-    # but maybe it was installed in another library (site library)
-    # make sure it's removed, so the install installs the new (latest) one
-    cat <<!  > /tmp/libPaths.cmd
-    .libPaths()
-    myPackages = rownames(installed.packages())
-    if("h2o" %in% myPackages) {
-      remove.packages("h2o")
-    }
-!
-
+    # creates /tmp/libPaths.cmd
+    rm -f /tmp/libPaths.cmd
+    ./Rsetup.sh
     cmd="R -f /tmp/libPaths.cmd --args $CLOUD_IP:$CLOUD_PORT"
     echo "Running this cmd:"
     echo $cmd
-    # everything after -- is positional. grabbed by argparse.REMAINDER
-    basen=`basename "$1"`
-    echo "basen: $basen"
-    ./sh2junit.py -name $basen -timeout 30 -- $cmd
+    # it's gotten long now because of all the installs
+    ./sh2junit.py -name 'libPaths' -timeout 300 -- $cmd
 }
 
 myR() {
+    # we change dir, but return it to what it was, on the return
+    pushd .
     # these are hardwired in the config json used above for the cloud
     # CLOUD_IP=
     # CLOUD_PORT=
@@ -151,31 +128,31 @@ myR() {
     # this is where we downloaded to. 
     # notice no version number
     # ../../h2o-1.6.0.1/R/h2oWrapper_1.0.tar.gz
-    export H2OWrapperDir="$PWD/../../h2o-downloaded/R"
-    echo "H2OWrapperDir should be $H2OWrapperDir"
-    ls $H2OWrapperDir/h2o*.tar.gz
+
+    echo "FIX!  we don't need H2OWrapperDir stuff any more???"
+    # export H2OWrapperDir="$PWD/../../h2o-downloaded/R"
+    # echo "H2OWrapperDir should be $H2OWrapperDir"
+    # ls $H2OWrapperDir/h2o*.tar.gz
 
     # we want $1 used for -name below, to not have .R suffix
-    rScript=$H2O_R_HOME/tests/$1.R
+    # test paths are always relative to tests
+    testDir=$(dirname $1)
+    shdir=$H2O_R_HOME/tests/$testDir
+    testName=$(basename $1)
+    rScript=$testName.R
     echo $rScript
-    echo "Running this cmd:"
+    echo "Will run this cmd in $shdir"
     cmd="R -f $rScript --args $CLOUD_IP:$CLOUD_PORT"
     echo $cmd
 
     # don't fail on errors, since we want to check the logs in case that has more info!
     set +e
-    # everything after -- is positional. grabbed by argparse.REMAINDER
-    basen=`basename "$1"`
-    echo "basen: $basen"
-    ./sh2junit.py -name $basen -timeout $timeout -- $cmd || true
+    # executes the $cmd in the target dir, but the logs stay in sandbox here
+    # -dir is optional
+    ./sh2junit.py -shdir $shdir -name $testName -timeout $timeout -- $cmd || true
 
-    # try moving all the logs created by this test in sandbox to a subdir to isolate test failures
-    # think of h2o.check_sandbox_for_errors()
-    rm -f -r sandbox/$1
-    mkdir -p sandbox/$1
-    cp -f sandbox/*log sandbox/$1
-    # rm -f sandbox/*log
     set -e
+    popd
 }
 
 H2O_R_HOME=../../R
@@ -184,42 +161,31 @@ echo "Okay to run h2oWrapper.R every time for now"
 #***********************************************************************
 # This is the list of tests
 #***********************************************************************
-mySetup libPaths
+mySetup 
 
 # can be slow if it had to reinstall all packages?
-export H2OWrapperDir="$PWD/../../h2o-downloaded/R"
-echo "Showing the H2OWrapperDir env. variable. Is it .../../h2o-downloaded/R?"
-printenv | grep H2OWrapperDir
+# export H2OWrapperDir="$PWD/../../h2o-downloaded/R"
+
+# FIX! if we assume we're always running with a local build, we shouldn't load from here
+# echo "Showing the H2OWrapperDir env. variable. Is it .../../h2o-downloaded/R?"
+# printenv | grep H2OWrapperDir
 
 #autoGen RUnits
-#!/bin/bash
-
 myR ../../R/tests/Utils/runnerSetupPackage 300
-
 # myR ../../R/tests/testdir_munging/histograms/runit_histograms 1200
 
-
-# sleep 3600
-
-# have to ignore the Rsandbox dirs that got created in the tests directory
-for test in $(find ../../R/tests/ | egrep -v 'Utils|Rsandbox' | grep runit | awk '{gsub("\\.[rR]","",$0); print $0}');
-do
-    if [ -d $test ];
-    then
-        continue
-    fi  
-    testName=$(basename $test)
-    testDir=$(dirname $test)
-    testDirParent=$(dirname $testDir)
-    if [ $(basename $testDirParent) != "tests" ];
-    then
-        testDirName=$(basename $testDirParent)/$(basename $testDir)
-    else
-        testDirName=$(basename $testDir)
-    fi  
-    myR $testDirName/$testName 300
-    sleep 180
-done
+# these are used to run a single test (from the command line -d -t)
+if [[ $TEST == "" ]] || [[ $TESTDIR == "" ]]
+then
+    # have to ignore the Rsandbox dirs that got created in the tests directory
+    for test in $(find ../../R/tests/ | egrep -v 'Utils|Rsandbox|/results/' | grep 'runit.*\.[rR]' | sed -e 's!\.[rR]$!!');
+    do
+        myR $test 300
+        sleep 180
+    done
+else
+    myR $TESTDIR/$TEST 300
+fi
 
 # airlines is failing summary. put it last
 #myR $single/runit_libR_airlines 120

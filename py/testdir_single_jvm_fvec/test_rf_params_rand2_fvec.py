@@ -7,8 +7,13 @@ import h2o, h2o_cmd, h2o_rf, h2o_hosts, h2o_import as h2i
 # don't allow None on ntree..causes 50 tree default!
 print "Temporarily not using bin_limit=1 to 4"
 paramDict = {
+    # 2 new
+    'build_tree_per_node': [None, None, 0, 1],
+    'score_each_iteration': [None, None, None, 0, 1],
     'response': [None,'C54'],
+    'validation': [None, 'covtype.data.hex'],
     'ntrees': [1,3,7,19],
+    'importance': [None, 0, 1],
     'destination_key': ['model_keyA', '012345', '__hello'],
     'max_depth': [None, 1,10,20,100],
     'nbins': [None,5,10,100,1000],
@@ -44,6 +49,7 @@ class Basic(unittest.TestCase):
     def test_rf_params_rand2_fvec(self):
         h2o.beta_features = True
         csvPathname = 'standard/covtype.data'
+        hex_key = 'covtype.data.hex'
         for trial in range(10):
             # params is mutable. This is default.
             params = {'ntrees': 13, 'mtries': 7}
@@ -60,7 +66,7 @@ class Basic(unittest.TestCase):
             # adjust timeoutSecs with the number of trees
             timeoutSecs = 30 + ((kwargs['ntrees']*80) * max(1,kwargs['mtries']/60) )
             start = time.time()
-            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put')
+            parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put', hex_key=hex_key)
             h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, retryDelaySecs=1, **kwargs)
             elapsed = time.time()-start
             print "Trial #", trial, "completed in", elapsed, "seconds.", "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)

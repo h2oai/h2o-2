@@ -169,16 +169,20 @@ def compareToFirstKMeans(self, clusters, firstclusters):
         kList  = clusters
         firstkList = firstclusters
     elif type(clusters) is dict:
-        raise Exception("compareToFirstGLm: Not expecting dict for " + key)
+        raise Exception("compareToFirstKMeans: Not expecting dict for " + key)
     else:
         kList  = [clusters]
         firstkList = [firstclusters]
 
+    print "kbn:", kList, firstkList
     for k, firstk in zip(kList, firstkList):
         # delta must be a positive number?
-        delta = .1 * abs(float(firstk))
-        msg = "Too large a delta (>" + str(delta) + ") comparing current and first clusters: " + \
-            str(float(k)) + ", " + str(float(firstk))
-        self.assertAlmostEqual(float(k), float(firstk), delta=delta, msg=msg)
-        self.assertGreaterEqual(abs(float(k)), 0.0, str(k) + " abs not >= 0.0 in current")
+        # too bad we can't do an assertAlmostEqual on the list directly..have to break them out
+        for k1, firstk1 in zip(k, firstk):
+            delta = .1 * abs(float(firstk1))
+            print "k1:", k1, "firstk1:", firstk1
+            msg = "Too large a delta (>" + str(delta) + ") comparing current and first clusters: " + \
+                str(float(k1)) + ", " + str(float(firstk1))
+            self.assertAlmostEqual(float(k1), float(firstk1), delta=delta, msg=msg)
+            self.assertGreaterEqual(abs(float(k1)), 0.0, str(k1) + " abs not >= 0.0 in current")
 

@@ -1,7 +1,11 @@
 package hex;
 
+import water.Model;
+
 import java.text.DecimalFormat;
 import java.util.Random;
+
+import static water.util.ModelUtils.getPrediction;
 
 /**
  * James McCaffrey's MLP on Iris.
@@ -519,9 +523,9 @@ public class NeuralNetMLPReference {
 
       for( int i = 0; i < numHidden; ++i )
         // apply activation
-        if (activation == NeuralNet.Activation.Tanh) {
+        if (activation == NeuralNet.Activation.Tanh || activation == NeuralNet.Activation.TanhWithDropout) {
           hOutputs[i] = HyperTanFunction(hSums[i]);
-        } else if (activation == NeuralNet.Activation.Rectifier) {
+        } else if (activation == NeuralNet.Activation.Rectifier || activation == NeuralNet.Activation.RectifierWithDropout) {
           hOutputs[i] = Rectifier(hSums[i]);
         } else throw new RuntimeException("invalid activation.");
 
@@ -598,9 +602,9 @@ public class NeuralNetMLPReference {
       // 2. compute hidden gradients
       for( int i = 0; i < hGrads.length; ++i ) {
         double derivative = 1;
-        if (activation == NeuralNet.Activation.Tanh) {
+        if (activation == NeuralNet.Activation.Tanh || activation == NeuralNet.Activation.TanhWithDropout) {
           derivative = (1 - hOutputs[i]) * (1 + hOutputs[i]); // derivative of tanh (y) = (1 - y) * (1 + y)
-        } else if (activation == NeuralNet.Activation.Rectifier) {
+        } else if (activation == NeuralNet.Activation.Rectifier || activation == NeuralNet.Activation.RectifierWithDropout) {
           derivative = hOutputs[i] <= 0 ? 0 : 1;
         } else throw new RuntimeException("invalid activation.");
 
@@ -642,7 +646,7 @@ public class NeuralNetMLPReference {
       // 4. update hidden-output weights
       for( int i = 0; i < hoWeights.length; ++i ) {
         for( int j = 0; j < hoWeights[0].length; ++j ) {
-          // see above: hOutputs are inputs to the nn outputs
+          // see above: hOutputs are inputs to the deeplearning outputs
           double delta = learnRate * oGrads[j] * hOutputs[i];
           hoWeights[i][j] += delta;
           hoWeights[i][j] += momentum * hoPrevWeightsDelta[i][j]; // momentum
@@ -711,28 +715,19 @@ public class NeuralNetMLPReference {
 // t-values
         System.arraycopy(testData[i], numInput, tValues, 0, numOutput);
         yValues = this.ComputeOutputs(xValues);
-        int maxIndex = MaxIndex(yValues); // which cell in yValues has largest value?
+//        int maxIndex = MaxIndex(yValues); // which cell in yValues has largest value?
 
-        if( tValues[maxIndex] == 1.0 ) // ugly. consider AreEqual(double x, double y)
+        // convert to float and do the same tie-breaking as H2O
+        float[] preds = new float[yValues.length+1];
+        for (int j=0; j<yValues.length; ++j) preds[j+1] = (float)yValues[j];
+        preds[0] = getPrediction(preds, xValues);
+
+        if( tValues[(int)preds[0]] == 1.0 ) // ugly. consider AreEqual(double x, double y)
           ++numCorrect;
         else
           ++numWrong;
       }
       return (double)numWrong / (numCorrect + numWrong); // ugly 2 - check for divide by zero
-    }
-
-    private static int MaxIndex(double[] vector) // helper for Accuracy()
-    {
-      // index of largest value
-      int bigIndex = 0;
-      double biggestVal = vector[0];
-      for( int i = 0; i < vector.length; ++i ) {
-        if( vector[i] > biggestVal ) {
-          biggestVal = vector[i];
-          bigIndex = i;
-        }
-      }
-      return bigIndex;
     }
   }
 }

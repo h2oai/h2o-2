@@ -53,21 +53,25 @@ Cliff Click
 Tom Kraljevic
 Earl Hathaway
 Tomas Nykodym
-Cyprien Noel
+Michal Malohlava
 Kevin Normoyle
 Irene Lang
 Spencer Aiello
 Anqi Fu
-Azra Tucic
+Nidhi Mehta
+Arno Candel
+Nikole Sanchez
+Josephine Wang
+Amy Wang
+Max Schloemer
+Ray Peck
+Anand Avati
 
 Opensource:
 Jan Vitek
-Michal Malohlava
 Mr.Jenkins
-
 Petr Maj
 Matt Fowles
-Lauren Brems
 ```
 
 Advisors
@@ -85,7 +89,6 @@ Doug Lea
 Chris Pouliot
 Dhruba Borthakur
 Charles Zedlewski
-Niall Dalton
 ```
 
 Investors

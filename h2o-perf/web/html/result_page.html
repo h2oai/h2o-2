@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>RESULTS</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="http://code.jquery.com/jquery.js"></script>
+        <link href="../vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
+        <link href="../vendor/bootstrap/css/bootstrap-responsive.min.css" rel="stylesheet">
+        <script src="../vendor/bootstrap/js/bootstrap.min.js"></script>
+        <script src="../vendor/bootstrap/js/bootstrap-typeahead.js"></script>
+        <script type="text/javascript" src="../prototype/js/customQuery.js"></script>
+        <script type="text/javascript" src="../prototype/js/perf.js"></script>
+        <script type="text/javascript" src="../prototype/js/handleTypeahead.js"></script>
+        <script type="text/javascript" src="http://d3js.org/d3.v3.min.js"></script>
+    </head>
+    <body>
+        <script>
+            $(document).ready(function() {
+              var params = GetUrlValue();
+            });
+        </script>
+        <div class="container-fluid">
+            <div class="row-fluid">
+                <div class="span6 offset3">
+                    <div class="page-header">
+                        <h1>Performance Query Results</h1>
+                    </div>
+                </div>
+            </div>
+            <div id="results_table">
+              <script>
+                $(document).ready(function() {
+                  doQuery('../prototype/php/getJSON.php');
+                  //doQuery('../prototype/php/last_n_builds.php');
+                });
+              </script>
+              </div>
+              <br />
+              <button class="btn btn-primary" onclick="new_query()">Make Another Query</button>
+            </div>
+        </div>
+    </body>
+</html>
+

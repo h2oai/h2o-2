@@ -58,8 +58,8 @@ public class GLMModelView extends Request2 {
     sb.append("<div class='alert " + succ + "'>");
     pprintTime(sb.append(glm_model.iteration() + " iterations computed in "),glm_model.run_time);
     if(glm_model.warnings != null && glm_model.warnings.length > 0){
-      sb.append("<b>Warnings:</b><ul>");
-      for(String w:glm_model.warnings)sb.append("<li>" + w + "</li>");
+      sb.append("<ul>");
+      for(String w:glm_model.warnings)sb.append("<li><b>Warning:</b>" + w + "</li>");
       sb.append("</ul>");
     }
     sb.append("</div>");
@@ -68,6 +68,7 @@ public class GLMModelView extends Request2 {
     parm(sb,"link",glm_model.glm.link);
     parm(sb,"&epsilon;<sub>&beta;</sub>",glm_model.beta_eps);
     parm(sb,"&alpha;",glm_model.alpha);
+    parm(sb,"&lambda;<sub>max</sub>",DFORMAT2.format(glm_model.lambda_max));
     parm(sb,"&lambda;",DFORMAT2.format(lambda));
 
     if(glm_model.submodels.length > 1){
@@ -119,37 +120,7 @@ public class GLMModelView extends Request2 {
     sb.append("<tr><th>Training Error Rate Avg</th><td>" + val.avg_err + "</td></tr>");
     if(glm_model.glm.family == Family.binomial)sb.append("<tr><th>AUC</th><td>" + DFORMAT.format(val.auc()) + "</td></tr>");
     sb.append("</table>");
-
-    if(glm_model.glm.family == Family.binomial){
-      sb.append("<span><b>ROC curve</b></span>");
-      ROCc(sb,val);
-      int best = (int)(100*glm_model.threshold);
-      confusionHTML(val._cms[best], sb);
-      sb.append("\n<script type=\"text/javascript\">");//</script>");
-      sb.append("var cms = [\n");
-      for(ConfusionMatrix cm:val._cms){
-        sb.append("\t[\n");
-        for(long [] line:cm._arr) {
-          sb.append("\t\t[");
-          for(long l:line) sb.append(l + ",");
-          sb.append("],\n");
-        }
-        sb.append("\t],\n");
-      }
-      sb.append("];\n");
-      sb.append("function show_cm(i){\n");
-      //sb.append("\t" + "console.log(i);\n");
-      sb.append("\t" + "document.getElementById('TN').innerHTML = cms[i][0][0];\n");
-      sb.append("\t" + "document.getElementById('TP').innerHTML = cms[i][1][1];\n");
-      sb.append("\t" + "document.getElementById('FN').innerHTML = cms[i][0][1];\n");
-      sb.append("\t" + "document.getElementById('FP').innerHTML = cms[i][1][0];\n");
-      sb.append("}\n");
-      sb.append("</script>\n");
-      sb.append("\n<div><b>Confusion Matrix at decision threshold:</b></div><select id=\"select\" onchange='show_cm(this.value)'>\n");
-      for(int i = 0; i < GLMValidation.DEFAULT_THRESHOLDS.length; ++i)
-        sb.append("\t<option value='" + i + "'" + (GLMValidation.DEFAULT_THRESHOLDS[i] == glm_model.threshold?"selected='selected'":"") +">" + GLMValidation.DEFAULT_THRESHOLDS[i] + "</option>\n");
-      sb.append("</select>\n");
-    }
+    if(glm_model.glm.family == Family.binomial)new AUC(val._cms,val.thresholds).toHTML(sb);
     if(val instanceof GLMXValidation){
       GLMXValidation xval = (GLMXValidation)val;
       // add links to the xval models

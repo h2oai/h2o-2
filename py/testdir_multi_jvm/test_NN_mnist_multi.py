@@ -76,7 +76,7 @@ class Basic(unittest.TestCase):
                 'validation'                   : validation_key,
             }
             ###expectedErr = 0.0362 ## from single-threaded mode
-            expectedErr = 0.0331 ## observed actual value with Hogwild
+            expectedErr = 0.03 ## observed actual value with Hogwild
 
             timeoutSecs = 600
             start = time.time()

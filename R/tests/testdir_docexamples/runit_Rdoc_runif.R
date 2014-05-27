@@ -4,7 +4,7 @@ source('../findNSourceUtils.R')
 
 test.rdocrunif.golden <- function(H2Oserver) {
 
-prosPath = system.file("extdata", "prostate.csv", package="h2oRClient")
+prosPath = system.file("extdata", "prostate.csv", package="h2o")
 prostate.hex = h2o.importFile(H2Oserver, path = prosPath, key = "prostate.hex")
 s = runif(nrow(prostate.hex))
 summary(s)

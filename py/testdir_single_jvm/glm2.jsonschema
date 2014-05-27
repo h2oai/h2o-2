@@ -1,3 +1,24 @@
+
+# the first GLM2 response is different than the last response. (the model view response)
+# the first response looks like this. Note "job_key" is not buried inside 'glm_model' here
+{
+  "Request2": 0, 
+  "description": "GLM2", 
+  "destination_key": "GLM_model", 
+  "end_time": 0, 
+  "exception": null, 
+  "job_key": "GLM2Job__a841582a0a0d6bc8e8a40257140c4058", 
+  "response_info": {
+    "h2o": "pytest-kevin-5900", 
+    "node": "/192.168.1.40:54321", 
+    "redirect_url": "/2/GLMProgress.json?job_key=GLM2Job__a841582a0a0d6bc8e8a40257140c4058&destination_key=GLM_model", 
+    "status": "redirect", 
+    "time": 19
+  }, 
+  "start_time": 1392406845450
+}
+
+# here is the final (and polling?) responses
 {
     "type": "object", "properties":{
         "Request2": {
@@ -11,10 +32,11 @@
                 "_domains": { "type": "array", "items": 
                     { "type": "string" }
                 },
+                "_key": { "type": "string", },
+                "_modelClassDist": { "type": "string", },
+                "_priorClassDist": { "type": "string", },
                 "_names": { "type": "array", "items": 
                     { "type": "string" }
-                },
-                "_key": { "type": "string",
                 },
                 "alpha": { "type": "number" },
                 "best_lambda_idx": { "type": "number" }
@@ -37,6 +59,7 @@
                 },
                 "run_time": { "type": "number" },
                 "start_time": { "type": "number" },
+                # number of submodels = # of lambdas
                 "submodels": { "type": "array", "items": {
                     "type": "object", "properties": {
                         "beta": { "type": "array", "items": 
@@ -49,10 +72,10 @@
                             { "type": "number" }
                         },
                         "iteration": { "type": "number" },
-                        "lambda": { "type": "number" },
                         "run_time": { "type": "number", },
                         "validation": { "type": "object", "properties": {
                             "_aic2": { "type": "number" },
+                            # number of cms = # of thresholds
                             "_cms": { "type": "array", "items": { 
                                 "type": "object", "properties": {
                                     "_arr": { "type": "array", "items": 

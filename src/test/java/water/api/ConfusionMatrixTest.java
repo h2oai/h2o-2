@@ -1,14 +1,15 @@
 package water.api;
 
-import java.util.Arrays;
-
-import org.junit.*;
-
+import org.junit.Assert;
+import org.junit.Test;
 import water.Key;
 import water.TestUtil;
 import water.fvec.Frame;
 
+import java.util.Arrays;
+
 public class ConfusionMatrixTest extends TestUtil {
+  final boolean debug = false;
 
   @Test
   public void testIdenticalVectors() {
@@ -24,7 +25,7 @@ public class ConfusionMatrixTest extends TestUtil {
             ar(0L, 0L, 1L, 0L),
             ar(0L, 0L, 0L, 0L)
             ),
-        false);
+        debug);
 
   }
 
@@ -43,7 +44,7 @@ public class ConfusionMatrixTest extends TestUtil {
             ar(0L, 0L, 1L, 0L),
             ar(0L, 0L, 0L, 0L)
             ),
-        false);
+        debug);
   }
 
   /** Negative test testing expected exception if two vectors
@@ -63,7 +64,7 @@ public class ConfusionMatrixTest extends TestUtil {
             ar(0L, 0L, 1L, 0L),
             ar(0L, 0L, 0L, 0L)
             ),
-        false);
+        debug);
   }
 
   @Test
@@ -80,7 +81,7 @@ public class ConfusionMatrixTest extends TestUtil {
             ar(0L, 0L, 1L, 0L),
             ar(0L, 0L, 0L, 0L)
             ),
-         false);
+         debug);
 
     simpleCMTest(
         "smalldata/test/cm/v4.csv",
@@ -93,7 +94,7 @@ public class ConfusionMatrixTest extends TestUtil {
             ar(0L, 2L, 1L, 0L),
             ar(0L, 0L, 0L, 0L)
             ),
-         false);
+         debug);
 
     simpleCMTest(
         "smalldata/test/cm/v2.csv",
@@ -106,7 +107,7 @@ public class ConfusionMatrixTest extends TestUtil {
             ar(0L, 0L, 2L, 0L),
             ar(0L, 0L, 0L, 0L)
             ),
-         false);
+         debug);
   }
 
   @Test
@@ -122,7 +123,7 @@ public class ConfusionMatrixTest extends TestUtil {
             ar(0L, 0L, 1L, 0L),
             ar(0L, 0L, 0L, 0L)
             ),
-        false);
+        debug);
 
     simpleCMTest(
         "smalldata/test/cm/v1n.csv",
@@ -135,7 +136,7 @@ public class ConfusionMatrixTest extends TestUtil {
             ar(0L, 0L, 1L, 0L),
             ar(0L, 0L, 0L, 0L)
             ),
-        false);
+        debug);
   }
 
   @Test
@@ -152,7 +153,7 @@ public class ConfusionMatrixTest extends TestUtil {
             ar(0L, 0L, 1L, 0L),
             ar(0L, 0L, 0L, 0L)
             ),
-         false);
+         debug);
 
     simpleCMTest(
         "smalldata/test/cm/v4n.csv",
@@ -165,7 +166,7 @@ public class ConfusionMatrixTest extends TestUtil {
             ar(0L, 2L, 1L, 0L),
             ar(0L, 0L, 0L, 0L)
             ),
-         false);
+         debug);
 
     simpleCMTest(
         "smalldata/test/cm/v2n.csv",
@@ -178,15 +179,97 @@ public class ConfusionMatrixTest extends TestUtil {
             ar(0L, 0L, 2L, 0L),
             ar(0L, 0L, 0L, 0L)
             ),
-         false);
+         debug);
+  }
+
+  /** Test for PUB-216:
+   * The case when vector domain is set to a value (0~A, 1~B, 2~C), but actual values stored in
+   * vector references only a subset of domain (1~B, 2~C). The TransfVec was using minimum from
+   * vector (i.e., value 1) to compute transformation but minimum was wrong since it should be 0. */
+  @Test public void testBadModelPrect() {
+
+      simpleCMTest(
+          frame("v1", vec(ar("A","B","C"), ari(0,0,1,1,2) )),
+          frame("v2", vec(ar("A","B","C"), ari(1,1,2,2,2) )),
+          ar("A","B","C"),
+          ar("A","B","C"),
+          ar("A","B","C"),
+          ar( ar(0L, 2L, 0L, 0L),
+              ar(0L, 0L, 2L, 0L),
+              ar(0L, 0L, 1L, 0L),
+              ar(0L, 0L, 0L, 0L)
+              ),
+          debug);
+
+      simpleCMTest(
+          frame("v1", vec(ar("B","C"), ari(0,0,1,1) )),
+          frame("v2", vec(ar("A","B"), ari(1,1,0,0) )),
+          ar("B","C"),
+          ar("A","B"),
+          ar("A","B","C"),
+          ar( ar(0L, 0L, 0L, 0L),
+              ar(0L, 2L, 0L, 0L),
+              ar(2L, 0L, 0L, 0L),
+              ar(0L, 0L, 0L, 0L)
+              ),
+          debug);
+  }
+
+  @Test public void testBadModelPrect2() {
+      simpleCMTest(
+          frame("v1", vec(ari(-1,-1,0,0,1) )),
+          frame("v2", vec(ari( 0, 0,1,1,1) )),
+          ar("-1","0","1"),
+          ar("0","1"),
+          ar("-1","0","1"),
+          ar( ar(0L, 2L, 0L, 0L),
+              ar(0L, 0L, 2L, 0L),
+              ar(0L, 0L, 1L, 0L),
+              ar(0L, 0L, 0L, 0L)
+              ),
+          debug);
+
+      simpleCMTest(
+          frame("v1", vec(ari(-1,-1,0,0) )),
+          frame("v2", vec(ari( 1, 1,0,0) )),
+          ar("-1","0"),
+          ar("0","1"),
+          ar("-1","0","1"),
+          ar( ar(0L, 0L, 2L, 0L),
+              ar(0L, 2L, 0L, 0L),
+              ar(0L, 0L, 0L, 0L),
+              ar(0L, 0L, 0L, 0L)
+              ),
+          debug);
+
+      // The case found by Nidhi on modified covtype dataset
+      simpleCMTest(
+          frame("v1", vec(ari( 1, 2, 3, 4, 5, 6,  7) )),
+          frame("v2", vec(ari( 1, 2, 3, 4, 5, 6, -1) )),
+          ar(      "1","2","3","4","5","6","7"),
+          ar("-1", "1","2","3","4","5","6"),
+          ar("-1", "1","2","3","4","5","6","7"),
+          ar( ar( 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L), // "-1"
+              ar( 0L, 1L, 0L, 0L, 0L, 0L, 0L, 0L, 0L), // "1"
+              ar( 0L, 0L, 1L, 0L, 0L, 0L, 0L, 0L, 0L), // "2"
+              ar( 0L, 0L, 0L, 1L, 0L, 0L, 0L, 0L, 0L), // "3"
+              ar( 0L, 0L, 0L, 0L, 1L, 0L, 0L, 0L, 0L), // "4"
+              ar( 0L, 0L, 0L, 0L, 0L, 1L, 0L, 0L, 0L), // "5"
+              ar( 0L, 0L, 0L, 0L, 0L, 0L, 1L, 0L, 0L), // "6"
+              ar( 1L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L), // "7"
+              ar( 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L)  // "NAs"
+              ),
+          debug);
   }
 
 
   private void simpleCMTest(String f1, String f2, String[] expectedActualDomain, String[] expectedPredictDomain, String[] expectedDomain, long[][] expectedCM, boolean debug) {
-    Frame v1 = null, v2 = null;
+    simpleCMTest(parseFrame(Key.make("v1.hex"), find_test_file(f1)), parseFrame(Key.make("v2.hex"), find_test_file(f2)), expectedActualDomain, expectedPredictDomain, expectedDomain, expectedCM, debug);
+  }
+
+  /** Delete v1, v2 after processing. */
+  private void simpleCMTest(Frame v1, Frame v2, String[] expectedActualDomain, String[] expectedPredictDomain, String[] expectedDomain, long[][] expectedCM, boolean debug) {
     try {
-      v1 = parseFrame(Key.make("v1.hex"), find_test_file(f1));
-      v2 = parseFrame(Key.make("v2.hex"), find_test_file(f2));
       ConfusionMatrix cm = computeCM(v1, v2);
       // -- DEBUG --
       if (debug) {
@@ -194,6 +277,9 @@ public class ConfusionMatrixTest extends TestUtil {
         System.err.println(Arrays.toString(cm.predicted_domain));
         for (int i=0; i<cm.cm.length; i++)
           System.err.println(Arrays.toString(cm.cm[i]));
+        StringBuilder sb = new StringBuilder();
+        cm.toASCII(sb);
+        System.err.println(sb.toString());
       }
       // -- -- --
       assertCMEqual(expectedActualDomain,

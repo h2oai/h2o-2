@@ -112,10 +112,15 @@ class Basic(unittest.TestCase):
                 # summary respects column limits
                 col_limit = int(floor( 0.3 * colNumberMax ))
 
-                summaryResult = h2o_cmd.runSummary(key=hex_key, max_column_display=col_limit, timeoutSecs=timeoutSecs)
+                # trigger an fvec conversion
+                h2o.beta_features = True
+                print "Do a summary2, which triggers a VA to fvec"
+                summaryResult = h2o_cmd.runSummary(key=hex_key, max_ncols=col_limit, timeoutSecs=timeoutSecs)
                 h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
-                self.assertEqual(col_limit, len( summaryResult[ 'summary'][ 'columns' ] ), 
-                    "summary doesn't respect column limit of %d on %d cols" % (col_limit, colNumberMax+1))
+                h2o.beta_features = False
+                print "Go back to VA"
+                # self.assertEqual(col_limit, len( summaryResult[ 'summary'][ 'columns' ] ), 
+                #    "summary doesn't respect column limit of %d on %d cols" % (col_limit, colNumberMax+1))
 
                 summaryResult = h2o_cmd.runSummary(key=hex_key, max_column_display=10*num_cols, timeoutSecs=timeoutSecs)
                 h2o_cmd.infoFromSummary(summaryResult, noPrint=True)

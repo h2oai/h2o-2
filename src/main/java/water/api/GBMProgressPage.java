@@ -1,16 +1,14 @@
 package water.api;
 
 import hex.gbm.GBM.GBMModel;
-import water.*;
-
-import com.google.gson.JsonObject;
+import water.Job;
+import water.Key;
+import water.UKV;
 
 public class GBMProgressPage extends Progress2 {
   /** Return {@link Response} for finished job. */
-  @Override protected Response jobDone(final Job job, final Key dst) {
-    JsonObject args = new JsonObject();
-    args.addProperty(MODEL_KEY, job.dest().toString());
-    return GBMModelView.redirect(this, job.dest());
+  @Override protected Response jobDone(final Key dst) {
+    return GBMModelView.redirect(this, dst);
   }
 
   public static Response redirect(Request req, Key jobkey, Key dest) {
@@ -18,8 +16,7 @@ public class GBMProgressPage extends Progress2 {
   }
 
   @Override public boolean toHTML( StringBuilder sb ) {
-    Job jjob = Job.findJob(job_key);
-    GBMModel m = UKV.get(jjob.dest());
+    GBMModel m = UKV.get(destination_key);
     if (m!=null) m.generateHTML("GBM Model", sb);
     else DocGen.HTML.paragraph(sb, "Pending...");
     return true;

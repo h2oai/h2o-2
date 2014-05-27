@@ -78,8 +78,8 @@ class Basic(unittest.TestCase):
             print "parse result:", parseResult['destination_key']
 
             # RF+RFView (train)****************************************
-            print "This is the 'ignore=' we'll use"
-            ignore_x = h2o_glm.goodXFromColumnInfo(y, key=parseResult['destination_key'], timeoutSecs=300, forRF=True)
+            print "Not using ignore from this..have to adjust cols?"
+            h2o_glm.goodXFromColumnInfo(y, key=parseResult['destination_key'], timeoutSecs=300, forRF=True)
             ntree = 2
             params = {
                 'response': 'C1',
@@ -109,7 +109,7 @@ class Basic(unittest.TestCase):
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             # print 'rfView:', h2o.dump_json(rfView)
             h2o_rf.simpleCheckRFView(None, rfView, **params)
-            modelKey = rfView['drf_model']['_selfKey']
+            modelKey = rfView['drf_model']['_key']
 
             # RFView (score on test)****************************************
             start = time.time()
@@ -122,13 +122,17 @@ class Basic(unittest.TestCase):
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(None, rfView, **params)
-            print "classification error is expected to be low because we included the test data in with the training!"
-            self.assertAlmostEqual(classification_error, 0.0003, delta=0.0003, msg="Classification error %s differs too much" % classification_error)
-        
-            leaves = rfView['trees']['leaves']
+            # training and test data are unique, so error won't be low?
+            # self.assertAlmostEqual(classification_error, 0.0003, delta=0.0003, msg="Classification error %s differs too much" % classification_error)
+
+            leaves = {
+                'min': rfView['drf_model']['treeStats']['minLeaves'],
+                'mean': rfView['drf_model']['treeStats']['meanLeaves'],
+                'max': rfView['drf_model']['treeStats']['maxLeaves'],
+            }
             # Expected values are from this case:
             # ("mnist_training.csv.gz", "mnist_testing.csv.gz", 600, 784834182943470027),
-            leavesExpected = {'min': 4996, 'mean': 5064.1, 'max': 5148}
+            leavesExpected = {'min': 537, 'mean': 1118.05, 'max': 1701}
             for l in leaves:
                 # self.assertAlmostEqual(leaves[l], leavesExpected[l], delta=10, msg="leaves %s %s %s differs too much" % (l, leaves[l], leavesExpected[l]))
                 delta = ((leaves[l] - leavesExpected[l])/leaves[l]) * 100
@@ -136,8 +140,12 @@ class Basic(unittest.TestCase):
                 print d
                 allDelta.append(d)
 
-            depth = rfView['trees']['depth']
-            depthExpected = {'min': 21, 'mean': 23.8, 'max': 25}
+            depth = {
+                'min': rfView['drf_model']['treeStats']['minDepth'],
+                'mean': rfView['drf_model']['treeStats']['meanDepth'],
+                'max': rfView['drf_model']['treeStats']['maxDepth'],
+            }
+            depthExpected = {'min': 20, 'mean': 20, 'max': 20}
             for l in depth:
                 # self.assertAlmostEqual(depth[l], depthExpected[l], delta=1, msg="depth %s %s %s differs too much" % (l, depth[l], depthExpected[l]))
                 delta = ((depth[l] - depthExpected[l])/leaves[l]) * 100

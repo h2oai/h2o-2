@@ -28,6 +28,7 @@ public class NewChunk extends Chunk {
   int _naCnt=-1;                // Count of NA's   appended
   int _strCnt;                  // Count of Enum's appended
   int _nzCnt;                   // Count of non-zero's appended
+  final int _timCnt[] = new int[ParseTime.TIME_PARSE.length]; // Count of successful time parses
 
   public NewChunk( Vec vec, int cidx ) { _vec = vec; _cidx = cidx; }
 
@@ -35,6 +36,14 @@ public class NewChunk extends Chunk {
   public NewChunk( Chunk C ) {
     this(C._vec,C._vec.elem2ChunkIdx(C._start));
     _len = _len2 = C._len;
+  }
+
+  // Pre-sized newchunks.
+  public NewChunk( Vec vec, int cidx, int len ) {
+    this(vec,cidx);
+    _ds = new double[len];
+    Arrays.fill(_ds,Double.NaN);
+    _len = _len2 = len;
   }
 
   // Heuristic to decide the basic type of a column
@@ -57,11 +66,14 @@ public class NewChunk extends Chunk {
       _nzCnt=nzs;  _strCnt=ss;  _naCnt=nas;
     }
     // Now run heuristic for type
-    if(_naCnt == _len2)
+    if(_naCnt == _len2)          // All NAs ==> NA Chunk
       return AppendableVec.NA;
     if(_strCnt > 0 && _strCnt + _naCnt == _len2)
-      return AppendableVec.ENUM;
-    return AppendableVec.NUMBER;
+      return AppendableVec.ENUM; // All are Strings+NAs ==> Enum Chunk
+    // Larger of time & numbers
+    int timCnt=0; for( int t : _timCnt ) timCnt+=t;
+    int nums = _len2-_naCnt-timCnt;
+    return timCnt >= nums ? AppendableVec.TIME : AppendableVec.NUMBER;
   }
   protected final boolean isNA(int idx) {
     return (_ds == null) ? (_ls[idx] == 0 && _xs[idx] == Integer.MIN_VALUE) : Double.isNaN(_ds[idx]);
@@ -83,6 +95,28 @@ public class NewChunk extends Chunk {
     if( _ds==null||_len >= _ds.length ) append2slowd();
     _ds[_len++] = d;  _len2++;
   }
+  // Append all of 'nc' onto the current NewChunk.  Kill nc.
+  public void add( NewChunk nc ) {
+    if( nc._len == 0 ) return;
+    if( _ds != null ) throw H2O.unimpl();
+    while( _len+nc._len >= _xs.length )
+      _xs = MemoryManager.arrayCopyOf(_xs,_xs.length<<1);
+    _ls = MemoryManager.arrayCopyOf(_ls,_xs.length);
+    System.arraycopy(nc._ls,0,_ls,_len,nc._len);
+    System.arraycopy(nc._xs,0,_xs,_len,nc._len);
+    _len2= (_len += nc._len);
+    nc._ls = null;  nc._xs = null;  nc._len = nc._len2 = 0;
+  }
+  // PREpend all of 'nc' onto the current NewChunk.  Kill nc.
+  public void addr( NewChunk nc ) {
+    long  [] tmpl = _ls; _ls = nc._ls; nc._ls = tmpl;
+    int   [] tmpi = _xs; _xs = nc._xs; nc._xs = tmpi;
+    double[] tmpd = _ds; _ds = nc._ds; nc._ds = tmpd;
+    int      tmp  = _len; _len=nc._len; nc._len=tmp;
+    _len2=_len;
+    add(nc);
+  }
+
   // Fast-path append long data
   void append2( long l, int x ) {
     if( _ls==null||_len >= _ls.length ) append2slow();
@@ -139,12 +173,13 @@ public class NewChunk extends Chunk {
   // Do any final actions on a completed NewVector.  Mostly: compress it, and
   // do a DKV put on an appropriate Key.  The original NewVector goes dead
   // (does not live on inside the K/V store).
-  public Chunk new_close(Futures fs) {
+  public Chunk new_close() {
     Chunk chk = compress();
     if(_vec instanceof AppendableVec)
       ((AppendableVec)_vec).closeChunk(this);
     return chk;
   }
+  public void close(Futures fs) { close(_cidx,fs); }
 
   // Study this NewVector and determine an appropriate compression scheme.
   // Return the data so compressed.
@@ -154,11 +189,12 @@ public class NewChunk extends Chunk {
     byte mode = type();
     if( mode==AppendableVec.NA ) // ALL NAs, nothing to do
       return new C0DChunk(Double.NaN,_len);
+    boolean rerun=false;
     for( int i=0; i<_len; i++ )
       if( mode==AppendableVec.ENUM   && !isEnum(i) ||
           mode==AppendableVec.NUMBER &&  isEnum(i) )
-        setNA_impl(i);
-    _naCnt = -1;  type();    // Re-run rollups after dropping all numbers/enums
+        { setNA_impl(i); rerun = true; }  // Smack any mismatched string/numbers
+    if( rerun ) { _naCnt = -1;  type(); } // Re-run rollups after dropping all numbers/enums
 
     // If the data was set8 as doubles, we do a quick check to see if it's
     // plain longs.  If not, we give up and use doubles.
@@ -193,6 +229,7 @@ public class NewChunk extends Chunk {
     boolean first = true;
     double min = _len2==_len ?  Double.MAX_VALUE : 0;
     double max = _len2==_len ? -Double.MAX_VALUE : 0;
+    int p10iLength = DParseTask.powers10i.length;
 
     for( int i=0; i<_len; i++ ) {
       if( isNA(i) ) continue;
@@ -213,19 +250,20 @@ public class NewChunk extends Chunk {
         lemin = lemax = l;
         continue;
       }
-      // Remove any trailing zeros / powers-of-10
-      if(overflow || (overflow = (Math.abs(xmin-x)) >=10))continue;
       // Track largest/smallest values at xmin scale.  Note overflow.
       if( x < xmin ) {
+        if( overflow || (overflow = ((xmin-x) >=p10iLength)) ) continue;
         lemin *= DParseTask.pow10i(xmin-x);
         lemax *= DParseTask.pow10i(xmin-x);
         xmin = x;               // Smaller xmin
       }
       // *this* value, as a long scaled at the smallest scale
+      if( overflow || (overflow = ((x-xmin) >=p10iLength)) ) continue;
       long le = l*DParseTask.pow10i(x-xmin);
       if( le < lemin ) lemin=le;
       if( le > lemax ) lemax=le;
     }
+
     if(_len2 != _len){ // sparse? compare xmin/lemin/lemax with 0
       lemin = Math.min(0, lemin);
       lemax = Math.max(0, lemax);
@@ -268,17 +306,19 @@ public class NewChunk extends Chunk {
     // uniform, so we scale up the largest lmax by the largest scale we need
     // and if that fits in a byte/short - then it's worth compressing.  Other
     // wise we just flip to a float or double representation.
-    if(overflow || fpoint && floatOverflow || -35 > xmin || xmin > 35)
+    if( overflow || (fpoint && floatOverflow) || -35 > xmin || xmin > 35 )
       return chunkD();
     if( fpoint ) {
-      if(lemax-lemin < 255 ) // Fits in scaled biased byte?
-        return new C1SChunk( bufX(lemin,xmin,C1SChunk.OFF,0),(int)lemin,DParseTask.pow10(xmin));
-      if(lemax-lemin < 65535 ) { // we use signed 2B short, add -32k to the bias!
-        long bias = 32767 + lemin;
-        return new C2SChunk( bufX(bias,xmin,C2SChunk.OFF,1),(int)bias,DParseTask.pow10(xmin));
+      if((int)lemin == lemin && (int)lemax == lemax){
+        if(lemax-lemin < 255 && (int)lemin == lemin ) // Fits in scaled biased byte?
+          return new C1SChunk( bufX(lemin,xmin,C1SChunk.OFF,0),(int)lemin,DParseTask.pow10(xmin));
+        if(lemax-lemin < 65535 ) { // we use signed 2B short, add -32k to the bias!
+          long bias = 32767 + lemin;
+          return new C2SChunk( bufX(bias,xmin,C2SChunk.OFF,1),(int)bias,DParseTask.pow10(xmin));
+        }
+        if(lemax - lemin < Integer.MAX_VALUE)
+          return new C4SChunk(bufX(lemin, xmin,C4SChunk.OFF,2),(int)lemin,DParseTask.pow10(xmin));
       }
-      if(lemax - lemin < Integer.MAX_VALUE)
-        return new C4SChunk(bufX(lemin, xmin,C4SChunk.OFF,2),(int)lemin,DParseTask.pow10(xmin));
       return chunkD();
     } // else an integer column
     // Compress column into a byte
@@ -394,7 +434,7 @@ public class NewChunk extends Chunk {
     _ls[i]=l; _xs[i]=0;
     return true;
   }
-  @Override boolean set_impl(int i, double d) {
+  @Override public boolean set_impl(int i, double d) {
     if( _ls != null ) {         // Flip to using doubles
       if( _len2 != _len ) throw H2O.unimpl();
       double ds[] = MemoryManager.malloc8d(_len);
@@ -431,4 +471,5 @@ public class NewChunk extends Chunk {
   @Override public NewChunk read(AutoBuffer bb) { throw H2O.fail(); }
   @Override NewChunk inflate_impl(NewChunk nc) { throw H2O.fail(); }
   @Override boolean hasFloat() { throw H2O.fail(); }
+  @Override public String toString() { return "NewChunk._len="+_len; }
 }

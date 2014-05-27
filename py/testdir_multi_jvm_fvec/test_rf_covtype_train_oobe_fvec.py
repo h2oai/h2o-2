@@ -111,7 +111,7 @@ class Basic(unittest.TestCase):
             model_key = rf_model['_key']
 
             rfvScoring = h2o_cmd.runRFView(None, dataKeyTest, model_key, used_trees,
-                timeoutSecs, retryDelaySecs=1, print_params=True, **kwargs)
+                timeoutSecs, retryDelaySecs=1, **kwargs)
             (error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfvScoring)
             fullScorePctRight = 100 - error
 

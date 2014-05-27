@@ -36,12 +36,6 @@ REMOTE_USER=0xcustomer@$REMOTE_IP
 REMOTE_SCP="scp -i $HOME/.0xcustomer/0xcustomer_id_rsa"
 REMOTE_SSH_USER="ssh -i $HOME/.0xcustomer/0xcustomer_id_rsa $REMOTE_USER"
 
-# have to copy the downloaded h2o stuff over to 176 to execute with the ssh
-# it needs the right hadoop client setup. This is easier than installing hadoop client stuff here.
-echo "scp some jars"
-$REMOTE_SCP $H2O_HADOOP/$HDP_JAR  $REMOTE_USER:$REMOTE_HOME
-$REMOTE_SCP $H2O_DOWNLOADED/$H2O_JAR $REMOTE_USER:$REMOTE_HOME
-
 source ./kill_hadoop_jobs.sh
 
 #*****HERE' WHERE WE START H2O ON HADOOP*******************************************
@@ -53,6 +47,17 @@ set +e
 echo "hadoop dfs -rmr /user/0xcustomer/$HDFS_OUTPUT" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 set -e
 echo "hadoop jar $HDP_JAR water.hadoop.h2odriver -jt $HDP_JOBTRACKER -libjars $H2O_JAR -mapperXmx $HDP_HEAP -nodes $HDP_NODES -output $HDFS_OUTPUT -notify h2o_one_node " >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
+
+# copy the script, just so we have it there too
+$REMOTE_SCP /tmp/h2o_on_hadoop_$REMOTE_IP.sh $REMOTE_USER:$REMOTE_HOME
+
+# have to copy the downloaded h2o stuff over to xxx to execute with the ssh
+# it needs the right hadoop client setup. This is easier than installing hadoop client stuff here.
+# do the jars last, so we can see the script without waiting for the copy
+echo "scp some jars"
+$REMOTE_SCP $H2O_HADOOP/$HDP_JAR  $REMOTE_USER:$REMOTE_HOME
+$REMOTE_SCP $H2O_DOWNLOADED/$H2O_JAR $REMOTE_USER:$REMOTE_HOME
+
 # exchange keys so jenkins can do this?
 # background!
 cat /tmp/h2o_on_hadoop_$REMOTE_IP.sh

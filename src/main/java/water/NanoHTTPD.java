@@ -4,6 +4,9 @@ import java.net.*;
 import java.util.*;
 import java.util.regex.Pattern;
 
+import com.google.gson.*;
+import com.google.gson.internal.StringMap;
+
 import water.fvec.UploadFileVec;
 import water.util.*;
 import water.util.Log.Tag.Sys;
@@ -313,6 +316,7 @@ public class NanoHTTPD
 
         long size = 0x7FFFFFFFFFFFFFFFl;
         String contentLength = header.getProperty("content-length");
+        //System.out.println("contentLength: "+contentLength);
         if (contentLength != null) {
           try { size = Integer.parseInt(contentLength); }
           catch (NumberFormatException ex) {}
@@ -372,6 +376,7 @@ public class NanoHTTPD
             boolean useValueArray = !Pattern.matches("/[0-9]+/.*", uri);  // For /2 and beyond, use fluid vector.
             fileUpload(boundary,is,parms, useValueArray);
           } else {
+            System.out.println("Handle application/x-www-form-urlencoded size: "+size);
             // Handle application/x-www-form-urlencoded
 
             String postLine = "";
@@ -398,6 +403,7 @@ public class NanoHTTPD
                 sb.append(pbuf, 0, n);
               }
               postLine = sb.toString();
+              System.out.println("postLine: "+postLine);
             }
             else {
               //
@@ -486,6 +492,7 @@ public class NanoHTTPD
         }
 
         pre.put("uri", uri);
+        //System.out.println("in: "+in.toString()+" "+pre.entrySet().toString()+" parms "+parms.entrySet().toString()+" header: "+header.entrySet().toString());
       } catch ( IOException ioe ) {
         sendError( HTTP_INTERNALERROR, "SERVER INTERNAL ERROR: IOException: " + ioe.getMessage());
       }
@@ -570,7 +577,15 @@ public class NanoHTTPD
           if (contentDisposition == null) {
             sendError( HTTP_BADREQUEST, "BAD REQUEST: Content type is multipart/form-data but no content-disposition info found. Usage: GET /example/file.html" );
           }
-          String key = parms.getProperty("key");
+          String key = null;
+
+          if (parms.getProperty("filename")!=null)
+            key = parms.getProperty("filename");
+          else
+            key = parms.getProperty("key");
+
+          System.out.println("key="+key);
+
           if (useValueArray) {
             ValueArray.readPut(key, new InputStreamWrapper(in, boundary.getBytes()));
           }
@@ -641,6 +656,40 @@ public class NanoHTTPD
           String value = decodePercent( e.substring( sep+1 ) );
           String old = p.getProperty(key, null);
           p.put(key, old == null ? value : (old+","+value));
+        }
+        try {
+          new JsonParser().parse(parms); //check json
+
+          Gson gson=new Gson();
+          Map<String,Object> map=new HashMap<String,Object>();
+          map=(Map<String,Object>) gson.fromJson(parms, map.getClass());
+
+          Iterator iterator = map.keySet().iterator();
+
+          while (iterator.hasNext()) {
+             String key = iterator.next().toString();
+             String value = "";
+             if (map.get(key) instanceof StringMap ){
+               Iterator iter = ((StringMap)map.get(key)).keySet().iterator();
+               while (iter.hasNext()) {
+                 String key1 = iter.next().toString();
+                 String value1 = ((StringMap)map.get(key)).get(key1).toString();
+                 if (value1 != null && value1.startsWith("[") && value1.endsWith("]"))
+                   value1 = value1.substring(1, value1.length()-1);
+                 String old = p.getProperty(key1, null);
+                 p.put(key1, old == null ? value1 : (old+","+value1));
+                 value = null;
+               }
+             }else{
+               value = map.get(key).toString();
+             }
+             String old = p.getProperty(key, null);
+             if (value != null)
+               p.put(key, old == null ? value : (old+","+value));
+          }
+
+        } catch (JsonParseException jpe) {
+
         }
       }
     }

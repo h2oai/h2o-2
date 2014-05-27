@@ -41,10 +41,17 @@ test.binop2.pipe <- function(conn) {
 
   Log.info("Selecting a column")
   col <- sample(colnames[colTypes != "enum"], 1)
-  col <- ifelse(is.na(suppressWarnings(as.numeric(col))), col, as.numeric(col) + 1)
-  col <- ifelse(is.na(suppressWarnings(as.numeric(col))), col, paste("C", col, sep = "", collapse = ""))
-  Log.info(paste("Using column: ", col))
+  col <- ifelse(is.na(suppressWarnings(as.numeric(col))), col, as.numeric(col))
+  col <- ifelse(is.na(suppressWarnings(as.numeric(col))), col, paste("C", col+1, sep = "", collapse = ""))
+
+  if(length(colnames(hex)) == 1) {
+    Log.info(paste("Using column: ", colnames(hex)))
+    col <- colnames(hex)
+  } else {
+    Log.info(paste("Using column: ", col))
+  }
  
+
   sliced <- hex[,col]
   Log.info("Placing key \"sliced.hex\" into User Store")
   sliced <- h2o.assign(sliced, "sliced.hex")

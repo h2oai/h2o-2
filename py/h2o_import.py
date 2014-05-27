@@ -336,7 +336,16 @@ def import_parse(node=None, schema='local', bucket=None, path=None,
     if doSummary and not noPoll:
         # if parse blows up, we want error isolation ..i.e. find stack traces here, rather than the next guy blowing up
         h2o.check_sandbox_for_errors()
-        node.summary_page(parseResult['destination_key'], timeoutSecs=timeoutSecs, noPrint=noPrint)
+        inspect = node.inspect(parseResult['destination_key'], timeoutSecs=timeoutSecs)
+        if h2o.beta_features:
+            numRows = inspect['numRows']
+            numCols = inspect['numCols']
+        else:
+            numRows = inspect['num_rows']
+            numCols = inspect['num_cols']
+                
+        # we pass numCols, for detecting whether the na cnt means a col is all NAs, (for ignoring min/max/mean/sigma)
+        node.summary_page(parseResult['destination_key'], timeoutSecs=timeoutSecs, noPrint=noPrint, numRows=numRows, numCols=numCols)
         # for now, don't worry about error isolating summary 
     else:
         # isolate a parse from the next thing

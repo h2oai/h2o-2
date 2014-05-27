@@ -34,7 +34,8 @@ class Basic(unittest.TestCase):
         # suffix = ""
         suffix = ".hex"
         for i in range(54):
-            execExpr = "Result" + str(i) + suffix + " = c.hex[," + str(i+1) + "]"
+            # try the funky c(6) thing like  R, instead of just 6
+            execExpr = "Result" + str(i) + suffix + " = c.hex[,c(" + str(i+1) + ")]"
             print "execExpr:", execExpr
             h2e.exec_expr(h2o.nodes[0], execExpr, resultKey="Result" + str(i) + suffix, 
                 timeoutSecs=4)

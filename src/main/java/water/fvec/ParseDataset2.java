@@ -32,7 +32,7 @@ public final class ParseDataset2 extends Job {
   public static Frame parse(Key okey, Key [] keys, CustomParser.ParserSetup globalSetup, boolean delete_on_done) {
     Key k = keys[0];
     ByteVec v = (ByteVec)getVec(k);
-    byte [] bits = v.elem2BV(0).getBytes();
+    byte [] bits = v.chunkForChunkIdx(0).getBytes();
     Compression cpr = Utils.guessCompressionMethod(bits);
     globalSetup = ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), globalSetup,true)._setup;
     if( globalSetup._ncols == 0 ) throw new java.lang.IllegalArgumentException(globalSetup.toString());
@@ -270,7 +270,7 @@ public final class ParseDataset2 extends Job {
   }
   private static String [] genericColumnNames(int ncols){
     String [] res = new String[ncols];
-    for(int i = 0; i < res.length; ++i)res[i] = "C" + i;
+    for(int i = 0; i < res.length; ++i) res[i] = "C" + String.valueOf(i+1);
     return res;
   }
 
@@ -320,7 +320,7 @@ public final class ParseDataset2 extends Job {
 
   public static ParserSetup guessSetup(Key key, ParserSetup setup, boolean checkHeader){
     ByteVec vec = (ByteVec) getVec(key);
-    byte [] bits = vec.elem2BV(0)._mem;
+    byte [] bits = vec.chunkForChunkIdx(0)._mem;
     Compression cpr = Utils.guessCompressionMethod(bits);
     return ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), setup,checkHeader)._setup;
   }
@@ -380,7 +380,7 @@ public final class ParseDataset2 extends Job {
     @Override public void map( Key key ) {
       // Get parser setup info for this chunk
       ByteVec vec = (ByteVec) getVec(key);
-      byte [] bits = vec.elem2BV(0)._mem;
+      byte [] bits = vec.chunkForChunkIdx(0)._mem;
       final int chunkStartIdx = _fileChunkOffsets.get(key)._val;
       Compression cpr = Utils.guessCompressionMethod(bits);
       CustomParser.ParserSetup localSetup = ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), _setup,false)._setup;
@@ -576,11 +576,12 @@ public final class ParseDataset2 extends Job {
       _vecIdStart = vecIdStart;
       _ctypes = MemoryManager.malloc1(ncols);
       for(int i = 0; i < ncols; ++i)
-        _nvs[i] = (NewChunk)(_vecs[i] = new AppendableVec(vg.vecKey(vecIdStart + i))).elem2BV(_cidx);
+        _nvs[i] = (NewChunk)(_vecs[i] = new AppendableVec(vg.vecKey(vecIdStart + i))).chunkForChunkIdx(_cidx);
 
     }
     public FVecDataOut reduce(StreamDataOut sdout){
       FVecDataOut dout = (FVecDataOut)sdout;
+      _nCols = Math.max(_nCols,dout._nCols);
       if(dout._vecs.length > _vecs.length){
         AppendableVec [] v = _vecs;
         _vecs = dout._vecs;
@@ -596,6 +597,10 @@ public final class ParseDataset2 extends Job {
       fs.blockForPending();
       return this;
     }
+     public void check(){
+       if(_nvs != null) for(NewChunk nv:_nvs)
+        assert (nv._len2 == _nLines):"unexpected number of lines in NewChunk, got " + nv._len2 + ", but expected " + _nLines;
+    }
     @Override public FVecDataOut close(Futures fs){
       if( _nvs == null ) return this; // Might call close twice
       for(NewChunk nv:_nvs)nv.close(_cidx, fs);
@@ -610,6 +615,16 @@ public final class ParseDataset2 extends Job {
       Futures fs = new Futures();
       _closedVecs = true;
       Vec [] res = new Vec[_vecs.length];
+      for(int i = 0; i < _vecs[0]._espc.length; ++i){
+        int j = 0;
+        while(j < _vecs.length && _vecs[j]._espc[i] == 0)++j;
+        if(j == _vecs.length)break;
+        final long clines = _vecs[j]._espc[i];
+        for(AppendableVec v:_vecs) {
+          if(v._espc[i] == 0)v._espc[i] = clines;
+          else assert v._espc[i] == clines:"incompatible number of lines: " +  v._espc[i] +  " != " + clines;
+        }
+      }
       for(int i = 0; i < _vecs.length; ++i)
         res[i] = _vecs[i].close(fs);
       _vecs = null;  // Free for GC
@@ -627,7 +642,7 @@ public final class ParseDataset2 extends Job {
     }
     protected long linenum(){return _nLines;}
     @Override public void addNumCol(int colIdx, long number, int exp) {
-      if(colIdx < _nCols)_nvs[_col = colIdx].addNum(number,exp);
+      if( colIdx < _nCols ) _nvs[_col = colIdx].addNum(number,exp);
       // else System.err.println("Additional column ("+ _nvs.length + " < " + colIdx + ":" + number + "," + exp + ") on line " + linenum());
     }
 
@@ -643,12 +658,17 @@ public final class ParseDataset2 extends Job {
           addInvalidCol(colIdx);
           return;
         }
-        if(_ctypes[colIdx] == UCOL && Utils.attemptTimeParse(str) > 0)
+        if(_ctypes[colIdx] == UCOL && ParseTime.attemptTimeParse(str) > 0)
           _ctypes[colIdx] = TCOL;
         if(_ctypes[colIdx] == TCOL){
-          long l = Utils.attemptTimeParse(str);
-          if(l > 0)addNumCol(colIdx, l, 0);
-          else addInvalidCol(colIdx);
+          long l = ParseTime.attemptTimeParse(str);
+          if( l == Long.MIN_VALUE ) addInvalidCol(colIdx);
+          else {
+            int time_pat = ParseTime.decodePat(l); // Get time pattern
+            l = ParseTime.decodeTime(l);           // Get time
+            addNumCol(colIdx, l, 0);               // Record time in msec
+            _nvs[_col]._timCnt[time_pat]++; // Count histo of time parse patterns
+          }
         } else if(!_enums[_col = colIdx].isKilled()) {
           // store enum id into exponent, so that it will be interpreted as NA if compressing as numcol.
           int id = _enums[colIdx].addKey(str);
@@ -706,7 +726,7 @@ public final class ParseDataset2 extends Job {
     }
     @Override public byte[] getChunkData(int cidx) {
       if(cidx != _idx)
-        _chk = cidx < _vec.nChunks()?_vec.elem2BV(_idx=cidx):null;
+        _chk = cidx < _vec.nChunks()?_vec.chunkForChunkIdx(_idx = cidx):null;
       return (_chk == null)?null:_chk._mem;
     }
     @Override public int  getChunkDataStart(int cidx) { return -1; }

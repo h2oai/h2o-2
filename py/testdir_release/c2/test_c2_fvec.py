@@ -87,8 +87,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                         'ignored_cols': ignore_x, 
                         'family': 'binomial',
                         'response': 'C379', 
-                        'case_val': 15, 
-                        'case_mode': '>',
                         'max_iter': 4, 
                         'n_folds': 1, 
                         'family': 'binomial',
@@ -96,8 +94,15 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                         'lambda': 1e-5
                     }
 
+                    # convert to binomial
+                    execExpr="A.hex=%s" % parseResult['destination_key']
+                    h2e.exec_expr(execExpr=execExpr, timeoutSecs=60)
+                    execExpr="A.hex[,%s]=(A.hex[,%s]>%s)" % ('C379', 'C379', 15)
+                    h2e.exec_expr(execExpr=execExpr, timeoutSecs=60)
+                    aHack = {'destination_key': "A.hex"}
+
                     start = time.time()
-                    glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **GLMkwargs)
+                    glm = h2o_cmd.runGLM(parseResult=aHack, timeoutSecs=timeoutSecs, **GLMkwargs)
                     elapsed = time.time() - start
                     h2o.check_sandbox_for_errors()
 

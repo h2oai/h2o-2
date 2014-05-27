@@ -1,15 +1,19 @@
 package hex.gbm;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import hex.gbm.GBM.GBMModel;
-
-import java.io.File;
-import java.util.Arrays;
-import org.junit.*;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
 import water.*;
 import water.api.ConfusionMatrix;
-import water.fvec.*;
+import water.fvec.Frame;
+import water.fvec.NFSFileVec;
+import water.fvec.ParseDataset2;
+
+import java.io.File;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class GBMTest extends TestUtil {
 
@@ -90,6 +94,7 @@ public class GBMTest extends TestUtil {
       for( int i=0; i<gbm.cols.length; i++ ) gbm.cols[i]=i;
       gbm.validation = validation ? new Frame(gbm.source) : null;
       gbm.learn_rate = .2f;
+      gbm.score_each_iteration=true;
       gbm.invoke();
       gbmmodel = UKV.get(gbm.dest());
       //System.out.println(gbmmodel.toJava());
@@ -144,46 +149,8 @@ public class GBMTest extends TestUtil {
       CM.vpredict = fpreds.vecs()[fpreds.find("predict")];
       CM.serve();               // Start it, do it
 
-      // Really crappy cut-n-paste of what should be in the ConfusionMatrix class itself
-      long cm[][] = CM.cm;
-      long acts [] = new long[cm   .length];
-      long preds[] = new long[cm[0].length];
-      for( int a=0; a<cm.length; a++ ) {
-        long sum=0;
-        for( int p=0; p<cm[a].length; p++ ) { sum += cm[a][p]; preds[p] += cm[a][p]; }
-        acts[a] = sum;
-      }
-      String[] tfs = new String[]{"False","True","NA"};
-      String adomain[] = ConfusionMatrix.show(acts ,tfs);
-      String pdomain[] = ConfusionMatrix.show(preds,tfs);
-
       StringBuilder sb = new StringBuilder();
-      sb.append("Act/Prd\t");
-      for( String s : pdomain )
-        if( s != null )
-          sb.append(s).append('\t');
-      sb.append("Error\n");
-
-      long terr=0;
-      for( int a=0; a<cm.length; a++ ) {
-        if( adomain[a] == null ) continue;
-        sb.append(adomain[a]).append('\t');
-        long correct=0;
-        for( int p=0; p<pdomain.length; p++ ) {
-          if( pdomain[p] == null ) continue;
-          if( adomain[a].equals(pdomain[p]) ) correct = cm[a][p];
-          sb.append(cm[a][p]).append('\t');
-        }
-        long err = acts[a]-correct;
-        terr += err;            // Bump totals
-        sb.append(String.format("%5.3f = %d / %d\n", (double)err/acts[a], err, acts[a]));
-      }
-      sb.append("Totals\t");
-      for( int p=0; p<pdomain.length; p++ )
-        if( pdomain[p] != null )
-          sb.append(preds[p]).append("\t");
-      sb.append(String.format("%5.3f = %d / %d\n", (double)terr/CM.vactual.length(), terr, CM.vactual.length()));
-
+      CM.toASCII(sb);
       System.out.println(sb);
 
     } finally {

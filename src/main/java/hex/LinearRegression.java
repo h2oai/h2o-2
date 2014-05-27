@@ -5,6 +5,9 @@ import water.*;
 public abstract class LinearRegression {
 
   static public JsonObject run( ValueArray ary, int colA, int colB ) {
+      return exec(ary,colA,colB).toJson();
+  }
+  static public LRResult exec( ValueArray ary, int colA, int colB ) {
     // Pass 1: compute sums & sums-of-squares
     long start = System.currentTimeMillis();
     CalcSumsTask lr1 = new CalcSumsTask();
@@ -42,23 +45,22 @@ public abstract class LinearRegression {
     double svar1 = svar / lr2._XXbar;
     double svar0 = svar/n + lr2._Xbar*lr2._Xbar*svar1;
 
-    JsonObject res = new JsonObject();
-    res.addProperty("Key", ary._key.toString());
-    res.addProperty("ColA", ary._cols[colA]._name);
-    res.addProperty("ColB", ary._cols[colB]._name);
-    res.addProperty("Pass1Msecs", pass1 - start);
-    res.addProperty("Pass2Msecs", pass2-pass1);
-    res.addProperty("Pass3Msecs", pass3-pass2);
-    res.addProperty("Rows", n);
-    res.addProperty("Beta0", lr3._beta0);
-    res.addProperty("Beta1", lr3._beta1);
-    res.addProperty("RSquared", R2);
-    res.addProperty("Beta0StdErr", Math.sqrt(svar0));
-    res.addProperty("Beta1StdErr", Math.sqrt(svar1));
-    res.addProperty("SSTO", lr2._YYbar);
-    res.addProperty("SSE", lr3._rss);
-    res.addProperty("SSR", lr3._ssr);
-    return res;
+    LRResult result = new LRResult(ary._key.toString(),
+                                   ary._cols[colA]._name,
+                                   ary._cols[colB]._name,
+                                   pass1-start,
+                                   pass2-pass1,
+                                   pass3-pass2,
+                                   n,
+                                   lr3._beta0,
+                                   lr3._beta1,
+                                   R2,
+                                   Math.sqrt(svar0),
+                                   Math.sqrt(svar1),
+                                   lr2._YYbar,
+                                   lr3._rss,
+                                   lr3._ssr );
+      return result;
   }
 
   public static class CalcSumsTask extends MRTask {
@@ -67,6 +69,7 @@ public abstract class LinearRegression {
     long _rows; // Rows used
     double _sumX,_sumY,_sumX2; // Sum of X's, Y's, X^2's
 
+    @Override
     public void map( Key key ) {
       assert key.home();
       // Get the root ValueArray for the metadata
@@ -104,6 +107,7 @@ public abstract class LinearRegression {
       }
     }
 
+    @Override
     public void reduce( DRemoteTask rt ) {
       CalcSumsTask lr1 = (CalcSumsTask)rt;
       _sumX += lr1._sumX ;
@@ -119,6 +123,7 @@ public abstract class LinearRegression {
     int _colA, _colB; // Which columns to work on
     double _Xbar, _Ybar, _XXbar, _YYbar, _XYbar;
 
+    @Override
     public void map( Key key ) {
       assert key.home();
       // Get the root ValueArray for the metadata
@@ -158,6 +163,7 @@ public abstract class LinearRegression {
       }
     }
 
+    @Override
     public void reduce( DRemoteTask rt ) {
       CalcSquareErrorsTasks lr2 = (CalcSquareErrorsTasks)rt;
       _XXbar += lr2._XXbar;
@@ -174,6 +180,7 @@ public abstract class LinearRegression {
     double _beta0, _beta1;
     double _rss, _ssr;
 
+    @Override
     public void map( Key key ) {
       assert key.home();
       // Get the root ValueArray for the metadata
@@ -214,10 +221,101 @@ public abstract class LinearRegression {
       }
     }
 
+    @Override
     public void reduce( DRemoteTask rt ) {
       CalcRegressionTask lr3 = (CalcRegressionTask)rt;
       _rss += lr3._rss;
       _ssr += lr3._ssr;
     }
+  }
+  public static class LRResult extends Iced {
+      public final String key;
+      public final String colA;
+      public final String colB;
+      public final long   pass1Msecs;
+      public final long   pass2Msecs;
+      public final long   pass3Msecs;
+      public final long   rows;
+      public final double beta0;
+      public final double beta1;
+      public final double rSquared;
+      public final double beta0StdErr;
+      public final double beta1StdErr;
+      public final double ssto;
+      public final double sse;
+      public final double ssr;
+
+      public LRResult (String key,
+                       String colA,
+                       String colB,
+                       long pass1Msecs,
+                       long pass2Msecs,
+                       long pass3Msecs,
+                       long rows,
+                       double beta0,
+                       double beta1,
+                       double rSquared,
+                       double beta0StdErr,
+                       double beta1StdErr,
+                       double ssto,
+                       double sse,
+                       double ssr) {
+          this.key = key;
+          this.colA = colA;
+          this.colB = colB;
+          this.pass1Msecs = pass1Msecs;
+          this.pass2Msecs = pass2Msecs;
+          this.pass3Msecs = pass3Msecs;
+          this.rows = rows;
+          this.beta0 = beta0;
+          this.beta1 = beta1;
+          this.rSquared = rSquared;
+          this.beta0StdErr = beta0StdErr;
+          this.beta1StdErr = beta1StdErr;
+          this.ssto = ssto;
+          this.sse = sse;
+          this.ssr = ssr;
+      }
+
+      @Override
+      public String toString () {
+          return "LRResult{" +
+                 "key='" + key + '\'' +
+                 ", colA='" + colA + '\'' +
+                 ", colB='" + colB + '\'' +
+                 ", pass1Msecs=" + pass1Msecs +
+                 ", pass2Msecs=" + pass2Msecs +
+                 ", pass3Msecs=" + pass3Msecs +
+                 ", rows=" + rows +
+                 ", beta0=" + beta0 +
+                 ", beta1=" + beta1 +
+                 ", rSquared=" + rSquared +
+                 ", beta0StdErr=" + beta0StdErr +
+                 ", beta1StdErr=" + beta1StdErr +
+                 ", ssto=" + ssto +
+                 ", sse=" + sse +
+                 ", ssr=" + ssr +
+                 '}';
+      }
+
+      public JsonObject toJson() {
+          JsonObject res = new JsonObject();
+          res.addProperty("Key", key);
+          res.addProperty("ColA", colA);
+          res.addProperty("ColB", colB);
+          res.addProperty("Pass1Msecs", pass1Msecs);
+          res.addProperty("Pass2Msecs", pass2Msecs);
+          res.addProperty("Pass3Msecs", pass3Msecs);
+          res.addProperty("Rows", rows);
+          res.addProperty("Beta0", beta0);
+          res.addProperty("Beta1", beta1);
+          res.addProperty("RSquared", rSquared);
+          res.addProperty("Beta0StdErr", beta0StdErr);
+          res.addProperty("Beta1StdErr", beta1StdErr);
+          res.addProperty("SSTO", ssto);
+          res.addProperty("SSE", sse);
+          res.addProperty("SSR", ssr);
+          return res ;
+      }
   }
 }

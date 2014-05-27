@@ -9,7 +9,6 @@ import hex.Trainer;
 import hex.rng.MersenneTwisterRNG;
 import water.Job;
 import water.TestUtil;
-import water.api.FrameSplit;
 import water.fvec.AppendableVec;
 import water.fvec.Frame;
 import water.fvec.NewChunk;
@@ -34,6 +33,7 @@ public class NeuralNetMnist extends Job {
     samples.launchers.CloudLocal.launch(job, 1);
 //    samples.launchers.CloudProcess.launch(job, 4);
     //samples.launchers.CloudConnect.launch(job, "localhost:54321");
+//    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.163");
 //    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162", "192.168.1.163", "192.168.1.164");
 //    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.163", "192.168.1.164");
     //samples.launchers.CloudRemote.launchEC2(job, 4);
@@ -42,49 +42,33 @@ public class NeuralNetMnist extends Job {
   private Vec[] train, test;
   protected transient volatile Trainer _trainer;
 
-  void load(double fraction, long seed) {
-    assert(fraction > 0 && fraction <= 1);
-    Frame trainf = TestUtil.parseFromH2OFolder("smalldata/mnist/train.csv.gz");
-    Frame testf = TestUtil.parseFromH2OFolder("smalldata/mnist/test.csv.gz");
-    if (fraction < 1) {
-      System.out.println("Sampling " + fraction*100 + "% of data with random seed: " + seed + ".");
-      FrameSplit split = new FrameSplit();
-      final double[] ratios = {fraction, 1-fraction};
-      trainf = split.splitFrame(trainf, ratios, seed)[0];
-      testf = split.splitFrame(testf, ratios, seed)[0];
-
-      // for debugging only
-//      UKV.put(water.Key.make("train"+fraction), trainf);
-//      UKV.put(water.Key.make("test"+fraction), testf);
-    }
-    train = trainf.vecs();
-    test = testf.vecs();
-    //NeuralNet.reChunk(train);
-  }
-
   protected Layer[] build(Vec[] data, Vec labels, VecsInput inputStats, VecSoftmax outputStats) {
+    //same parameters as in test_NN_mnist.py
     Layer[] ls = new Layer[5];
-    //ls[0] = new VecsInput(data, inputStats, 0.2);
     ls[0] = new VecsInput(data, inputStats);
-//    ls[1] = new Layer.Tanh(50);
-//    ls[2] = new Layer.Tanh(50);
-    ls[1] = new Layer.RectifierDropout(128);
-    ls[2] = new Layer.RectifierDropout(128);
-    ls[3] = new Layer.RectifierDropout(256);
-    ls[4] = new VecSoftmax(labels, outputStats, NeuralNet.Loss.CrossEntropy);
+    ls[1] = new Layer.RectifierDropout(117);
+    ls[2] = new Layer.RectifierDropout(131);
+    ls[3] = new Layer.RectifierDropout(129);
+    ls[ls.length-1] = new VecSoftmax(labels, outputStats);
 
     NeuralNet p = new NeuralNet();
-    p.rate = 0.003f;
-    p.rate_annealing = 1e-6f;
-    p.epochs = 1000;
+    p.seed = 98037452452l;
+    p.rate = 0.005;
+    p.rate_annealing = 1e-6;
     p.activation = NeuralNet.Activation.RectifierWithDropout;
+    p.loss = NeuralNet.Loss.CrossEntropy;
+    p.input_dropout_ratio = 0.2;
     p.max_w2 = 15;
-    p.momentum_start = 0.5f;
-    p.momentum_ramp = 1800000;
-    p.momentum_stable = 0.99f;
-    p.l1 = .00001f;
-    p.l2 = .00f;
+    p.epochs = 2;
+    p.l1 = 1e-5;
+    p.l2 = 0.0000001;
+    p.momentum_start = 0.5;
+    p.momentum_ramp = 100000;
+    p.momentum_stable = 0.99;
     p.initial_weight_distribution = NeuralNet.InitialWeightDistribution.UniformAdaptive;
+    p.classification = true;
+    p.diagnostics = true;
+    p.expert_mode = true;
 
     for( int i = 0; i < ls.length; i++ ) {
       ls[i].init(ls, i, p);
@@ -93,9 +77,9 @@ public class NeuralNetMnist extends Job {
   }
 
   protected void startTraining(Layer[] ls) {
-    double epochs = 1000.0;
+    double epochs = 2.0;
 
-//    // Single-thread SGD
+    // Single-thread SGD
 //    System.out.println("Single-threaded\n");
 //    _trainer = new Trainer.Direct(ls, epochs, self());
 
@@ -110,10 +94,11 @@ public class NeuralNetMnist extends Job {
     _trainer.start();
   }
 
-  @Override protected Status exec() {
-    final double fraction = 1.0;
-    final long seed = 0xC0FFEE;
-    load(fraction, seed);
+  @Override protected JobState execImpl() {
+    Frame trainf = TestUtil.parseFromH2OFolder("smalldata/mnist/train.csv.gz");
+    Frame testf = TestUtil.parseFromH2OFolder("smalldata/mnist/test.csv.gz");
+    train = trainf.vecs();
+    test = testf.vecs();
 
     // Labels are on last column for this dataset
     final Vec trainLabels = train[train.length - 1];
@@ -160,7 +145,7 @@ public class NeuralNetMnist extends Job {
       }
     }, 0, 10);
     startTraining(ls);
-    return Status.Running;
+    return JobState.RUNNING;
   }
 
   // Remaining code was used to shuffle & convert to CSV

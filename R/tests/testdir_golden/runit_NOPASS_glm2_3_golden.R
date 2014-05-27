@@ -5,10 +5,11 @@ test.glm2collinearfeatures.golden <- function(H2Oserver) {
 	
 #Import data: 
 Log.info("Importing CUSE data...") 
-cuseH2O<- h2o.uploadFile(H2Oserver, locate("../../smalldata/cuseexpanded.csv"), key="cuseH2O")
+cuseH2O<- h2o.uploadFile.FV(H2Oserver, locate("../../smalldata/cuseexpanded.csv"), key="cuseH2O")
 cuseR<- read.csv(locate("smalldata/cuseexpanded.csv"), header=T)
 
 #Build matching models in R and H2O - All levels of factors included
+#Including all factor levels means that the model will be specified on a non-spd matrix. We should return an error, or drop a column, but BECAUSE REGULARIZATION IS SET TO 0 we should produce the model as it is specified. R drops a collinear column. Alpha and Lambda regularization are not produed as part of the R output for the FV model, so there's no way for the user to know if regularization was applied. 
 Log.info("Test H2O treatment of collinear columns - expect to drop col when regularization is 0")
 Log.info("Run matching models in R and H2O")
 fitH2O<- h2o.glm.FV(x=c("AgeA", "AgeB", "AgeC", "AgeD", "LowEd", "HighEd", "MoreYes", "MoreNo"), y="UsingBinom", lambda=0, alpha=0, nfolds=0, data=cuseH2O, family="binomial")

@@ -1,10 +1,9 @@
 import os, json, unittest, time, shutil, sys, socket
 import h2o
-import h2o_browse as h2b, h2o_rf as h2f, h2o_exec
+import h2o_browse as h2b, h2o_rf as h2f, h2o_exec, h2o_gbm
 
 def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None, 
-    timeoutSecs=20, retryDelaySecs=2, pollTimeoutSecs=30, 
-    noise=None, noPoll=None, **kwargs):
+    timeoutSecs=20, retryDelaySecs=2, pollTimeoutSecs=30, **kwargs):
     ''' Parse a file stored in S3 bucket'''                                                                                                                                                                       
     if not bucket  : raise Exception('No S3 bucket')
     if not filename: raise Exception('No filename in bucket')
@@ -19,7 +18,7 @@ def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None,
         myKeyForParseResult = keyForParseResult
     p = node.parse(s3_key, myKeyForParseResult, 
         timeoutSecs, retryDelaySecs, 
-        pollTimeoutSecs=pollTimeoutSecs, noise=noise, noPoll=noPoll, **kwargs)
+        pollTimeoutSecs=pollTimeoutSecs, **kwargs)
 
     # do SummaryPage here too, just to get some coverage
     node.summary_page(myKeyForParseResult)
@@ -58,50 +57,54 @@ def runExec(node=None, timeoutSecs=20, **kwargs):
         h2o.check_sandbox_for_errors()
     return a
 
-def runKMeans(node=None, parseResult=None, timeoutSecs=20, retryDelaySecs=2, noPoll=False, **kwargs):
+def runKMeans(node=None, parseResult=None, timeoutSecs=20, retryDelaySecs=2, **kwargs):
     if not parseResult: raise Exception('No parseResult for KMeans')
     if not node: node = h2o.nodes[0]
-    return node.kmeans(parseResult['destination_key'], None, timeoutSecs, retryDelaySecs, noPoll=noPoll, **kwargs)
+    return node.kmeans(parseResult['destination_key'], None, timeoutSecs, retryDelaySecs, **kwargs)
 
-def runGLM(node=None, parseResult=None, 
-        timeoutSecs=20, retryDelaySecs=2, noise=None, noPoll=False, **kwargs):
+def runGLM(node=None, parseResult=None, timeoutSecs=20, retryDelaySecs=2, **kwargs):
     if not parseResult: raise Exception('No parseResult for GLM')
     if not node: node = h2o.nodes[0]
     return node.GLM(parseResult['destination_key'], 
-        timeoutSecs, retryDelaySecs, noise=noise, noPoll=noPoll,**kwargs)
+        timeoutSecs, retryDelaySecs, **kwargs)
 
 def runGLMScore(node=None, key=None, model_key=None, timeoutSecs=20, **kwargs):
     if not node: node = h2o.nodes[0]
     return node.GLMScore(key, model_key, timeoutSecs, **kwargs)
 
-def runGLMGrid(node=None, parseResult=None,
-        timeoutSecs=60, retryDelaySecs=2, noise=None, **kwargs):
+def runGLMGrid(node=None, parseResult=None, timeoutSecs=60, retryDelaySecs=2, **kwargs):
     if not parseResult: raise Exception('No parseResult for GLMGrid')
     if not node: node = h2o.nodes[0]
     # no such thing as GLMGridView..don't use retryDelaySecs
     return node.GLMGrid(parseResult['destination_key'], timeoutSecs, **kwargs)
 
-def runPCA(node=None, parseResult=None, timeoutSecs=600, noPoll=False, returnFast=False, **kwargs):
+def runPCA(node=None, parseResult=None, timeoutSecs=600, **kwargs):
     if not parseResult: raise Exception('No parseResult for PCA')
     if not node: node = h2o.nodes[0]
     data_key = parseResult['destination_key']
-    return node.pca(data_key=data_key, timeoutSecs=timeoutSecs, noPoll=noPoll, returnFast=returnFast, **kwargs)
+    return node.pca(data_key=data_key, timeoutSecs=timeoutSecs, **kwargs)
 
-def runNNetScore(node=None, key=None, model=None, timeoutSecs=600, noPoll=False, **kwargs):
+def runNNetScore(node=None, key=None, model=None, timeoutSecs=600, **kwargs):
     if not node: node = h2o.nodes[0]
-    return node.neural_net_score(key, model, timeoutSecs=timeoutSecs, noPoll=noPoll, **kwargs)
+    return node.neural_net_score(key, model, timeoutSecs=timeoutSecs, **kwargs)
 
-def runNNet(node=None, parseResult=None, timeoutSecs=600, noPoll=False, **kwargs):
-    if not parseResult: raise Exception('No parseResult for NN')
+def runNNet(node=None, parseResult=None, timeoutSecs=600, **kwargs):
+    if not parseResult: raise Exception('No parseResult for Neural Net')
     if not node: node = h2o.nodes[0]
     data_key = parseResult['destination_key']
-    return node.neural_net(data_key=data_key, timeoutSecs=timeoutSecs, noPoll=noPoll, **kwargs)
+    return node.neural_net(data_key=data_key, timeoutSecs=timeoutSecs, **kwargs)
 
-def runGBM(node=None, parseResult=None, timeoutSecs=500, noPoll=False, **kwargs):
+def runDeepLearning(node=None, parseResult=None, timeoutSecs=600, **kwargs):
+    if not parseResult: raise Exception('No parseResult for Deep Learning')
+    if not node: node = h2o.nodes[0]
+    data_key = parseResult['destination_key']
+    return node.deep_learning(data_key=data_key, timeoutSecs=timeoutSecs, **kwargs)
+
+def runGBM(node=None, parseResult=None, timeoutSecs=500, **kwargs):
     if not parseResult: raise Exception('No parseResult for GBM')
     if not node: node = h2o.nodes[0]
     data_key = parseResult['destination_key']
-    return node.gbm(data_key=data_key, timeoutSecs=timeoutSecs, noPoll=noPoll, **kwargs) 
+    return node.gbm(data_key=data_key, timeoutSecs=timeoutSecs, **kwargs) 
 
 def runPredict(node=None, data_key=None, model_key=None, timeoutSecs=500, **kwargs):
     if not data_key: raise Exception('No data_key for run Predict')
@@ -110,8 +113,7 @@ def runPredict(node=None, data_key=None, model_key=None, timeoutSecs=500, **kwar
 
 # rfView can be used to skip the rf completion view
 # for creating multiple rf jobs
-def runRF(node=None, parseResult=None, trees=5, 
-        timeoutSecs=20, retryDelaySecs=2, rfView=True, noise=None, noPrint=False, **kwargs):
+def runRF(node=None, parseResult=None, trees=5, timeoutSecs=20, **kwargs):
     if not parseResult: raise Exception('No parseResult for RF')
     if not node: node = h2o.nodes[0]
     Key = parseResult['destination_key']
@@ -121,52 +123,51 @@ def runRFTreeView(node=None, n=None, data_key=None, model_key=None, timeoutSecs=
     if not node: node = h2o.nodes[0]
     return node.random_forest_treeview(n, data_key, model_key, timeoutSecs, **kwargs)
 
-def runGBMView(node=None, model_key=None, timeoutSecs=300, retryDelaySecs=2, noPoll=False, **kwargs):
+def runGBMView(node=None, model_key=None, timeoutSecs=300, retryDelaySecs=2, **kwargs):
     if not node: node = h2o.nodes[0]
     if not model_key: 
         raise Exception("\nNo model_key was supplied to the gbm view!")
-    gbmView = node.gbm_view(model_key,timeoutSecs=timeoutSecs)
+    gbmView = node.gbm_view(model_key, timeoutSecs=timeoutSecs)
     return gbmView
 
-def runNeuralView(node=None, model_key=None, timeoutSecs=300, retryDelaySecs=2, noPoll=False, **kwargs):
+def runNeuralView(node=None, model_key=None, timeoutSecs=300, retryDelaySecs=2, **kwargs):
     if not node: node = h2o.nodes[0]
     if not model_key: 
         raise Exception("\nNo model_key was supplied to the neural view!")
-    neuralView = node.neural_view(model_key,timeoutSecs=timeoutSecs)
+    neuralView = node.neural_view(model_key, timeoutSecs=timeoutSecs, retryDelaysSecs=retryDelaysecs)
     return neuralView
 
-def runPCAView(node=None, modelKey=None, timeoutSecs=300, retryDelaySecs=2, noPoll=False, **kwargs):
+def runPCAView(node=None, modelKey=None, timeoutSecs=300, retryDelaySecs=2, **kwargs):
     if not node: node = h2o.nodes[0]
     if not modelKey:
         raise Exception("\nNo modelKey was supplied to the pca view!")
     pcaView = node.pca_view(modelKey, timeoutSecs=timeoutSecs)
     return pcaView
 
-def runGLMView(node=None, modelKey=None, timeoutSecs=300, retryDelaySecs=2, noPoll=False, **kwargs):
+def runGLMView(node=None, modelKey=None, timeoutSecs=300, retryDelaySecs=2, **kwargs):
     if not node: node = h2o.nodes[0]
     if not modelKey:
         raise Exception("\nNo modelKey was supplied to the glm view!")
-    glmView = node.glm_view(modelKey,timeoutSecs=timeoutSecs)
+    glmView = node.glm_view(modelKey,timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs)
     return glmView
 
 def runRFView(node=None, data_key=None, model_key=None, ntree=None, 
     timeoutSecs=15, retryDelaySecs=2, doSimpleCheck=True,
-    noise=None, noPoll=False, noPrint=False, **kwargs):
+    noPrint=False, **kwargs):
     if not node: node = h2o.nodes[0]
 
     # kind of wasteful re-read, but maybe good for testing
-    rfView = node.random_forest_view(data_key, model_key, ntree=ntree, timeoutSecs=timeoutSecs, noise=noise, **kwargs)
+    rfView = node.random_forest_view(data_key, model_key, ntree=ntree, timeoutSecs=timeoutSecs, **kwargs)
     if doSimpleCheck:
         h2f.simpleCheckRFView(node, rfView, noPrint=noPrint)
     return rfView
 
 def runRFScore(node=None, data_key=None, model_key=None, ntree=None, 
-    timeoutSecs=15, retryDelaySecs=2, doSimpleCheck=True,
-    noise=None, noPoll=False, noPrint=False, **kwargs):
+    timeoutSecs=15, retryDelaySecs=2, doSimpleCheck=True, **kwargs):
     if not node: node = h2o.nodes[0]
 
     # kind of wasteful re-read, but maybe good for testing
-    rfView = node.random_forest_score(data_key, model_key, timeoutSecs, noise=noise, **kwargs)
+    rfView = node.random_forest_score(data_key, model_key, timeoutSecs, **kwargs)
     if doSimpleCheck:
         h2f.simpleCheckRFView(node, rfView, noPrint=noPrint)
     return rfView
@@ -291,8 +292,14 @@ def columnInfoFromInspect(key, exceptionOnMissingValues=True, **kwargs):
             missingValuesDict[k] = c[keyNA]
             printMsg = True
 
-        if c['min'] == c['max']:
-            msg += (" constant value: %s" % c['min'])
+        if c['min']==c['max'] and (c['type']!='Enum' and c['type']!='enum'):
+            msg += (" constant value (min=max): %s" % c['min'])
+            constantValuesDict[k] = c['min']
+            printMsg = True
+
+        # if the naCnt = num_rows, that means it's likely forced NAs..so detect that
+        if c[keyNA]==num_rows:
+            msg += (" constant value (na count = num rows): %s" % c['min'])
             constantValuesDict[k] = c['min']
             printMsg = True
 
@@ -322,6 +329,9 @@ def columnInfoFromInspect(key, exceptionOnMissingValues=True, **kwargs):
     return (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) 
 
 def infoFromInspect(inspect, csvPathname):
+    if not inspect:
+        raise Exception("inspect is empty for infoFromInspect")
+
     # need more info about this dataset for debug
     cols = inspect['cols']
     # look for nonzero num_missing_values count in each col
@@ -359,22 +369,34 @@ def infoFromInspect(inspect, csvPathname):
 
     return missingValuesList
 
-def infoFromSummary(summaryResult, noPrint=False):
+# summary doesn't have the # of rows
+# we need it to see if na count = number of rows. min/max/mean/sigma/zeros then are ignored (undefined?)
+# while we're at it, let's cross check numCols
+# if we don't pass these extra params, just ignore
+def infoFromSummary(summaryResult, noPrint=False, numCols=None, numRows=None):
+    if not summaryResult:
+        raise Exception("summaryResult is empty for infoFromSummary")
     if h2o.beta_features:
         # names = summaryResult['names']
         # means = summaryResult['means']
         summaries = summaryResult['summaries']
 
+        # what if we didn't get the full # of cols in this summary view? 
+        # I guess the test should deal with that
+        if 1==0 and numCols and (len(summaries)!=numCols):
+            raise Exception("Expected numCols: %s cols in summary. Got %s" % (numCols, len(summaries)))
+
         for column in summaries:
             colname = column['colname']
             coltype = column['type']
             nacnt = column['nacnt']
-
             stats = column['stats']
             stattype = stats['type']
+            h2o_exec.checkForBadFP(nacnt, 'nacnt for colname: %s stattype: %s' % (colname, stattype))
 
             if stattype == 'Enum':
                 cardinality = stats['cardinality']
+                h2o_exec.checkForBadFP(cardinality, 'cardinality for colname: %s stattype: %s' % (colname, stattype))
                 
             else:
                 mean = stats['mean']
@@ -384,6 +406,22 @@ def infoFromSummary(summaryResult, noPrint=False):
                 maxs = stats['maxs']
                 pct = stats['pct']
                 pctile = stats['pctile']
+
+                # check for NaN/Infinity in some of these
+                # apparently we can get NaN in the mean for a numerica col with all NA?
+                h2o_exec.checkForBadFP(mean, 'mean for colname: %s stattype: %s' % (colname, stattype), nanOkay=True, infOkay=True)
+                h2o_exec.checkForBadFP(sd, 'sd for colname: %s stattype %s' % (colname, stattype), nanOkay=True, infOkay=True)
+                h2o_exec.checkForBadFP(zeros, 'zeros for colname: %s stattype %s' % (colname, stattype))
+
+                if numRows and (nacnt==numRows):
+                    print "%s is all NAs with type: %s. no checking for min/max/mean/sigma" % (colname, stattype)
+                else:
+                    if not mins:
+                        print h2o.dump_json(column)
+                        raise Exception ("Why is min[] empty for a %s col (%s) ? %s %s %s" % (mins, stattype, colname, nacnt, numRows))
+                    if not maxs:
+                        print h2o.dump_json(column)
+                        raise Exception ("Why is max[] empty for a %s col? (%s) ? %s %s %s" % (maxs, stattype, colname, nacnt, numRows))
 
             hstart = column['hstart']
             hstep = column['hstep']
@@ -416,13 +454,16 @@ def infoFromSummary(summaryResult, noPrint=False):
 
     else:
         summary = summaryResult['summary']
-        columnsList = summary['columns']
-        for columns in columnsList:
-            N = columns['N']
+        columnList = summary['columns']
+        # can't get the right number of columns in summary? have to ask for more cols (does va support >  1000)
+        if 1==0 and numCols and (len(columnList)!=numCols):
+            raise Exception("Expected numCols: %s cols in summary. Got %s" % (numCols, len(columnList)))
+        for column in columnList:
+            N = column['N']
             # self.assertEqual(N, rowCount)
-            name = columns['name']
-            stype = columns['type']
-            histogram = columns['histogram']
+            name = column['name']
+            stype = column['type']
+            histogram = column['histogram']
             bin_size = histogram['bin_size']
             bin_names = histogram['bin_names']
             # if not noPrint:
@@ -443,47 +484,51 @@ def infoFromSummary(summaryResult, noPrint=False):
 
             # not done if enum
             if stype != "enum":
-                zeros = columns['zeros']
-                na = columns['na']
-                smax = columns['max']
-                smin = columns['min']
-                mean = columns['mean']
-                sigma = columns['sigma']
+                zeros = column['zeros']
+                na = column['na']
+                maxs = column['max']
+                mins = column['min']
+                mean = column['mean']
+                sigma = column['sigma']
                 if not noPrint:
                     print "zeros:", zeros
                     print "na:", na
-                    print "smax:", smax
-                    print "smin:", smin
+                    print "maxs:", maxs
+                    print "mins:", mins
                     print "mean:", mean
                     print "sigma:", sigma
 
-                if not smin:
-                    print h2o.dump_json(columns)
-                    raise Exception ("Why is min[] empty for a %s col (%s) ? %s" % (smin, stype, N))
-                if not smax:
-                    print h2o.dump_json(columns)
-                    raise Exception ("Why is max[] empty for a %s col? (%s) ? %s" % (smin, stype, N))
+                if numRows and (na==numRows):
+                    print "%s is all NAs with type: %s. no checking for min/max/mean/sigma" % (name, stype)
+                else:
+                    if not mins:
+                        print h2o.dump_json(column)
+                        raise Exception ("Why is min[] empty for a %s col (%s) ? %s %s %s" % (mins, stype, N, na, numRows))
+                    if not maxs:
+                        print h2o.dump_json(column)
+                        raise Exception ("Why is max[] empty for a %s col? (%s) ? %s %s %s" % (maxs, stype, N, na, numRows))
+
 
                 # sometimes we don't get percentiles? (if 0 or 1 bins?)
                 if len(bins) >= 2:
-                    percentiles = columns['percentiles']
+                    percentiles = column['percentiles']
                     thresholds = percentiles['thresholds']
                     values = percentiles['values']
 
                     if not noPrint:
                         # h2o shows 5 of them, ordered
-                        print "len(max):", len(smax), smax
-                        print "len(min):", len(smin), smin
+                        print "len(max):", len(maxs), maxs
+                        print "len(min):", len(mins), mins
                         print "len(thresholds):", len(thresholds), thresholds
                         print "len(values):", len(values), values
 
                     for v in values:
                         # 0 is the most max or most min
-                       if not v >= smin[0]:
-                            m = "Percentile value %s should all be >= the min dataset value %s" % (v, smin[0])
+                       if not v >= mins[0]:
+                            m = "Percentile value %s should all be >= the min dataset value %s" % (v, mins[0])
                             raise Exception(m)
-                       if not v <= smax[0]:
-                            m = "Percentile value %s should all be <= the max dataset value %s" % (v, smax[0])
+                       if not v <= maxs[0]:
+                            m = "Percentile value %s should all be <= the max dataset value %s" % (v, maxs[0])
                             raise Exception(m)
 
 def dot():

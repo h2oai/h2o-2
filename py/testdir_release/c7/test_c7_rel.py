@@ -31,17 +31,20 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         # looks like it takes the hex string (two chars)
         start = time.time()
         # hardwire TAB as a separator, as opposed to white space (9)
-        parseResult = h2i.import_parse(path=csvPathname, schema='local', timeoutSecs=500, separator=9, doSummary=True)
+        parseResult = h2i.import_parse(path=csvPathname, schema='local', timeoutSecs=500, separator=9, doSummary=False)
         print "Parse of", parseResult['destination_key'], "took", time.time() - start, "seconds"
-
-        print "Parse result['destination_key']:", parseResult['destination_key']
 
         start = time.time()
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=500)
         print "Inspect:", parseResult['destination_key'], "took", time.time() - start, "seconds"
         h2o_cmd.infoFromInspect(inspect, csvPathname)
-        # num_rows = inspect['num_rows']
-        # num_cols = inspect['num_cols']
+        num_rows = inspect['num_rows']
+        num_cols = inspect['num_cols']
+        print "\n" + csvFilename, "    num_rows:", "{:,}".format(num_rows), "    num_cols:", "{:,}".format(num_cols)
+
+        summaryResult = h2o_cmd.runSummary(key=parseResult['destination_key'], numCols=num_cols, numRows=num_rows, max_column_display=2500)
+        # it's in runSummary!
+        # h2o_cmd.infoFromSummary(summaryResult, noPrint=False, numCols=num_cols, numRows=num_rows)
 
         keepPattern = "oly_|mt_|b_"
         y = "is_purchase"
@@ -73,9 +76,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
-        # do summary of the parsed dataset last, since we know it fails on this dataset
-        summaryResult = h2o_cmd.runSummary(key=parseResult['destination_key'])
-        h2o_cmd.infoFromSummary(summaryResult, noPrint=False)
 
 if __name__ == '__main__':
     h2o.unit_main()

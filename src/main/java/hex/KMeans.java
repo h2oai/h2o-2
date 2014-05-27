@@ -223,7 +223,7 @@ public class KMeans extends Job {
     boolean _normalize;   // IN:  Normalize
 
     double[][] _sums;     // OUT: Sum of (normalized) features in each cluster
-    int[] _counts;        // OUT: Count of rows in cluster
+    long[] _counts;       // OUT: Count of rows in cluster
     double _error;        // OUT: Total sqr distance
 
     @Override public void map(Key key) {
@@ -235,7 +235,7 @@ public class KMeans extends Job {
 
       // Create result arrays
       _sums = new double[_clusters.length][_cols.length - 1];
-      _counts = new int[_clusters.length];
+      _counts = new long[_clusters.length];
       ClusterDist cd = new ClusterDist();
 
       // Find closest cluster for each row

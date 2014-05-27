@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Typeahead Ajax</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="http://code.jquery.com/jquery.js"></script>
+        <link href="../vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
+        <link href="../vendor/bootstrap/css/bootstrap-responsive.min.css" rel="stylesheet">
+        <script src="../vendor/bootstrap/js/bootstrap.min.js"></script>
+        <script src="../vendor/bootstrap/js/bootstrap-typeahead.js"></script>
+        <script type="text/javascript" src="../prototype/js/customQuery.js"></script>
+        <script type="text/javascript" src="../prototype/js/perf.js"></script>
+        <script type="text/javascript" src="../prototype/js/handleTypeahead.js"></script>
+        <link href="/prototype/css/tabs-left.css" rel="stylesheet">
+    </head>
+    <body>
+        <div class="container-fluid">
+            <div class="row-fluid">
+                <div class="span6 offset3">
+                    <div class="page-header">
+                        <h1>H2O Performance Dashboard</h1>
+                    </div>
+                </div>
+            </div>
+      <div class="tabbable tabs-left">
+        <ul class="nav nav-tabs">
+          <li><a href="#a" data-toggle="tab">Parse</a></li>
+          <li><a href="#b" data-toggle="tab">Summary</a></li>
+          <li><a href="#i" data-toggle="tab">PCA</a></li>
+          <li><a href="#c" data-toggle="tab">GLM</a></li>
+          <li><a href="#d" data-toggle="tab">KMeans</a></li>
+          <li><a href="#e" data-toggle="tab">DRF</a></li>
+          <li><a href="#f" data-toggle="tab">GBM</a></li>
+          <li><a href="#g" data-toggle="tab">Neural Net</a></li>
+          <li><a href="#h" data-toggle="tab">Custom Query</a></li>
+        </ul>
+        <div class="tab-content">
+         <div class="tab-pane" id="a">
+            <div class="page-header">
+              <h1>Parse Performance</h1>
+            </div>
+         Lorem ipsum dolor sit amet, charetra varius quam sit amet vulputate. 
+         Quisque mauris augue, molestie tincidunt condimentum vitae, gravida a libero.</div>
+         <div class="tab-pane" id="b">
+            <div class="page-header">
+              <h1>Summary Performance</h1>
+            </div>
+         Secondo sed ac orci quis tortor imperdiet venenatis. Duis elementum auctor accumsan. 
+         Aliquam in felis sit amet augue.</div>
+         <div class="tab-pane" id="c">Thirdamuno, ipsum dolor sit amet, consectetur adipiscing elit. Duis pharetra varius quam sit amet vulputate. 
+         Quisque mauris augue, molestie tincidunt condimentum vitae. </div>
+
+         <div class="tab-pane active" id="h">
+            <div class="page-header">
+              <h1>Custom Query</h1>
+            </div>
+            <dl class="dl-horizontal">
+                <dt style="padding-top:3px">
+                <span rel="tooltip" title data-placement="left">Test Name: </span>
+                <dd>
+                  <div class="container" style="float:left;">  <!--"control-group inline" style="display: inline-block" -->
+                      <input id = 'test' class="typeahead" type="text" data-provide="typeahead" autocomplete="off" placeholder="e.g. gbm_test">
+                  </div>
+                </dd>
+            </dl>
+<!--
+            <dl class="dl-horizontal">
+                <dt style="padding-top:3px">
+                <span rel="tooltip" title data-placement="left">Machines: </span>
+                <dd>
+                  <div class="container" style="float:left;">
+                      <input id = 'machine' class="typeahead" type="text" data-provide="typeahead" autocomplete="off" placeholder="e.g. 2">
+                  </div>
+                </dd>
+            </dl>
+-->
+            <dl class="dl-horizontal">
+                <dt style="padding-top:3px">
+                <span rel="tooltip" title data-placement="left">Question: </span>
+                <dd>
+                  <div class="control-group inline" style="display: inline" >
+                      <input id = 'question' class="typeahead" type="text" data-provide="typeahead" autocomplete="off" placeholder="e.g. All Results">
+                  </div>
+                  <span id = "num_builds_text" rel="tooltip" titl style="font-weight: bold; display: none; padding-left:50px;">Number of Builds: </span>
+                  <div id = "num_builds_div" class="control-group inline" style="padding-left: 27px; display: none">
+                      <input id = "num_builds" class="typeahead" type="text" data-provide="typeahead" autocomplete="off" placeholder="e.g. 25">
+                  </div>
+                </dd>
+            </dl>
+            <dl class="dl-horizontal">
+                <dt style="padding-top:3px">
+                <span rel="tooltip" title data-placement="left">Phase: </span>
+                <dd>
+                  <select id="phase_select">
+                    <option value="Import/Parse">Import/Parse</option>
+                    <option value="Modeling">Modeling</option>
+                    <option value="Score/Prediction">Score/Prediction</option>
+                  </select>
+                </dd>
+            </dl>
+            <button class="btn btn-primary" onclick="query_submit($('#test').val(), 
+                                                                  $('#question').val(), 
+                                                                  $('#num_builds').val(), 
+                                                                  $('#phase_select').val()
+            )">Submit</button>
+         </div> 
+        </div>
+      </div>
+      <!-- /tabs -->
+        </div>
+        <form name="query" method="POST" action="../prototype/php/results_page.php">
+            <input type="hidden" name="query">
+        </form>
+    </body>
+</html>
+

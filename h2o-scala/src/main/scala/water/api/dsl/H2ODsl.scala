@@ -33,14 +33,15 @@ object H2ODsl extends H2ODslImplicitConv with T_R_Env[DFrame] with T_H2O_Env[Hex
   def load(k:HexKey) = new DFrame(get(k))
   def save(k:HexKey, d:DFrame) = put(k,d)
   
-  def example():DFrame = example(System.getProperty("user.dir"))
+  def example():DFrame = example(System.getProperty("user.dir") + "/../../")
   
   def example(topdir:String):DFrame = {
-    val tdir = if (topdir==null) "" else if (!topdir.endsWith("/")) topdir+"/"
+    println("topdir is: " + topdir)
+    val tdir = if (topdir==null) "" else if (!topdir.endsWith("/")) topdir+"/" else topdir
     println("Looking for smalldata directory in " + tdir)
     println("""
 == Parsing smalldata/cars.csv""")
-    val f = parse(topdir+"smalldata/cars.csv", "cars.hex")
+    val f = parse(tdir+"smalldata/cars.csv", "cars.hex")
     val g = load("cars.hex")
     val g1 = g ++ (g("year") > 80)
     save("cars.hex", g1)

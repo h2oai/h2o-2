@@ -232,7 +232,7 @@ class Basic(unittest.TestCase):
                     self.assertEqual(num_rows, 29, "Parsed wrong number of rows: %s" % num_rows)
 
                     h2o_cmd.runRF(parseResult=parseResult, trees=1, 
-                        timeoutSecs=10, retryDelaySecs=1.0, noPrint=True, print_params=False)
+                        timeoutSecs=10, retryDelaySecs=1.0, noPrint=True)
                     h2o.verboseprint("Set", set)
                     h2o.check_sandbox_for_errors()
                     sys.stdout.write('.')

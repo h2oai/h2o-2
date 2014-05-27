@@ -1,16 +1,19 @@
 package water;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-
 import jsr166y.CountedCompleter;
 import jsr166y.ForkJoinPool;
 import water.H2O.FJWThr;
 import water.H2O.H2OCountedCompleter;
 import water.util.Log;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.concurrent.Delayed;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
  * A remotely executed FutureTask.  Flow is:
@@ -117,6 +120,12 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
   // Make an initial RPC, or re-send a packet.  Always called on 1st send; also
   // called on a timeout.
   public synchronized RPC<V> call() {
+    // If running on self, just submit to queues & do locally
+    if( _target==H2O.SELF ) {
+      H2O.submitTask(_dt);
+      return this;
+    }
+
     // Keep a global record, for awhile
     _target.taskPut(_tasknum,this);
     try {
@@ -186,7 +195,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
   public V get() {
     // check priorities - FJ task can only block on a task with higher priority!
     Thread cThr = Thread.currentThread();
-    int priority = (cThr instanceof FJWThr) ? ((FJWThr)cThr)._priority : 0;
+    int priority = (cThr instanceof FJWThr) ? ((FJWThr)cThr)._priority : -1;
     assert _dt.priority() > priority || (_dt.priority() == priority && (_dt instanceof DRemoteTask || _dt instanceof MRTask2))
       : "*** Attempting to block on task (" + _dt.getClass() + ") with equal or lower priority. Can lead to deadlock! " + _dt.priority() + " <=  " + priority;
     if( _done ) return result(); // Fast-path shortcut
@@ -203,7 +212,19 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
   // return true.  Used by the FJ Pool management to spawn threads to prevent
   // deadlock is otherwise all threads would block on waits.
   public synchronized boolean block() {
-    while( !isDone() ) { try { wait(); } catch( InterruptedException e ) { } }
+    while( !isDone() ) { 
+      try {
+        // Wait for local to complete
+        if( _target==H2O.SELF ) { _dt.get(); _done=true; }
+        else wait();            // Wait for remote to complete
+      } 
+      catch( InterruptedException e ) { }
+      catch(   ExecutionException e ) { // Only fails for local get()
+        _dt.setException(e.getCause());
+        _done = true;
+        break;
+      }
+    }
     return true;
   }
 
@@ -299,7 +320,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       if( dt == null )
         Log.info("Cancelled remote task#"+_tsknum+" "+origDt.getClass()+" to "+_client + " has been cancelled by remote");
       else if( (dt instanceof DRemoteTask || dt instanceof MRTask2) && dt.logVerbose() )
-        Log.info("Done  remote task#"+_tsknum+" "+dt.getClass()+" to "+_client);
+        Log.debug("Done  remote task#"+_tsknum+" "+dt.getClass()+" to "+_client);
       _client.record_task_answer(this); // Setup for retrying Ack & AckAck
     }
     // exception occured when processing this task locally, set exception and send it back to the caller
@@ -387,7 +408,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       RPCCall rpc2 = ab._h2o.record_task(rpc);
       if( rpc2==null ) {        // Atomically insert (to avoid double-work)
         if( (rpc._dt instanceof DRemoteTask || rpc._dt instanceof MRTask2) && rpc._dt.logVerbose() )
-          Log.info("Start remote task#"+task+" "+rpc._dt.getClass()+" from "+ab._h2o);
+          Log.debug("Start remote task#"+task+" "+rpc._dt.getClass()+" from "+ab._h2o);
         H2O.submitTask(rpc);    // And execute!
       } else {                  // Else lost the task-insertion race
         if(ab.hasTCP())TimeLine.printMyTimeLine();

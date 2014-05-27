@@ -63,24 +63,18 @@ class Basic(unittest.TestCase):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         translateList = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u']
 
-        if getpass.getuser() == 'kevin': # longer run
-            tryList = [
-                (10000,  100, 'cA', 300),
-                (10000,  300, 'cB', 500),
-                # (10000,  500, 'cC', 700),
-                # (10000,  700, 'cD', 3600),
-                # (10000,  900, 'cE', 3600),
-                # (10000,  1000, 'cF', 3600),
-                # (10000,  1300, 'cG', 3600),
-                # (10000,  1700, 'cH', 3600),
-                # (10000,  2000, 'cI', 3600),
-                # (10000,  2500, 'cJ', 3600),
-                # (10000,  3000, 'cK', 3600),
-                ]
-        else:
-            tryList = [
-                (10000,  100, 'cA', 100),
-                (10000,  300, 'cC', 300),
+        tryList = [
+            (10000,  100, 'cA', 300),
+            (10000,  300, 'cB', 500),
+            # (10000,  500, 'cC', 700),
+            # (10000,  700, 'cD', 3600),
+            # (10000,  900, 'cE', 3600),
+            # (10000,  1000, 'cF', 3600),
+            # (10000,  1300, 'cG', 3600),
+            # (10000,  1700, 'cH', 3600),
+            # (10000,  2000, 'cI', 3600),
+            # (10000,  2500, 'cJ', 3600),
+            # (10000,  3000, 'cK', 3600),
             ]
 
         ### h2b.browseTheCloud()
@@ -175,7 +169,7 @@ class Basic(unittest.TestCase):
                 errsLast = gbmTrainView['gbm_model']['errs'][-1]
                 print "GBM 'errsLast'", errsLast
 
-                cm = gbmTrainView['gbm_model']['cms'][-1] # use the last one
+                cm = gbmTrainView['gbm_model']['cms'][-1]['_arr'] # use the last one
                 pctWrongTrain = h2o_gbm.pp_cm_summary(cm);
                 print "\nTrain\n==========\n"
                 print h2o_gbm.pp_cm(cm)

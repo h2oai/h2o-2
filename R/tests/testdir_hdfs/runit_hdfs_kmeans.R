@@ -15,27 +15,22 @@ source(sprintf("%s/%s", TEST_ROOT_DIR, "findNSourceUtils.R"))
 #----------------------------------------------------------------------
 # Parameters for the test.
 #----------------------------------------------------------------------
+# Check if we are running inside the 0xdata network by seeing if we can touch
+# the cdh3 namenode. Update if using other clusters.
+# Note this should fail on home networks, since 176 is not likely to exist
+# also should fail in ec2.
+running_inside_hexdata = url.exists("http://192.168.1.176:80", timeout=1)
 
-# Check if we are running inside the 0xdata network.
-# This is checking for 192.168.1.* network, which is popular.  So this
-# isn't the ideal check, but it's something.
-
-rv = system("ifconfig | grep '192\\.168\\.1\\..*'")
-# Grep returns 0 if there is a match.
-
-running_inside_hexdata = (rv == 0)
 if (running_inside_hexdata) {
-    hdfs_name_node = "192.168.1.161"    
+    # cdh3 cluster
+    hdfs_name_node = "192.168.1.176"
     hdfs_iris_file = "/datasets/runit/iris_wheader.csv"
-    hdfs_covtype_file = "/datasets/covtype.data"
-    # Huge covtype for kmeans scaling test.
-    # hdfs_covtype_file = "/datasets/covtype.169x.data"
+    hdfs_covtype_file = "/datasets/runit/covtype.data"
 } else {
     stop("Not running on 0xdata internal network.  No access to HDFS.")
 }
 
 #----------------------------------------------------------------------
-
 
 heading("BEGIN TEST")
 conn <- new("H2OClient", ip=myIP, port=myPort)

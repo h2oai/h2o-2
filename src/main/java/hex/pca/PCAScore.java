@@ -2,13 +2,13 @@ package hex.pca;
 
 import hex.FrameTask;
 import hex.FrameTask.DataInfo;
-
-import java.util.Arrays;
-
-import water.Job.*;
-import water.*;
+import water.Job;
+import water.Job.FrameJob;
+import water.Key;
 import water.api.DocGen;
-import water.fvec.*;
+import water.fvec.Frame;
+import water.fvec.NewChunk;
+import water.fvec.Vec;
 import water.util.RString;
 
 /**
@@ -31,7 +31,7 @@ public class PCAScore extends FrameJob {
   @API(help = "Number of principal components to return", filter = Default.class, lmin = 1, lmax = 10000)
   int num_pc = 1;
 
-  @Override protected Status exec() {
+  @Override protected JobState execImpl() {
     // Note: Source data MUST contain all features (matched by name) used to build PCA model!
     // If additional columns exist in source, they are automatically ignored in scoring
     new Frame(destination_key, new String[0], new Vec[0]).delete_and_lock(self());
@@ -47,7 +47,7 @@ public class PCAScore extends FrameJob {
       domains[i] = null;
     }
     tsk.outputFrame(destination_key, names, domains).unlock(self());
-    return Status.Done;
+    return JobState.DONE;
   }
 
   @Override protected void init() {
@@ -89,7 +89,7 @@ public class PCAScore extends FrameJob {
     }
 
     // Note: Rows with NAs (missing values) are automatically skipped!
-    @Override protected void processRow(double[] nums, int ncats, int[] cats, double [] response, NewChunk[] outputs) {
+    @Override protected void processRow(long gid, double[] nums, int ncats, int[] cats, double [] response, NewChunk[] outputs) {
       for(int c = 0; c < _ncomp; c++) {
         double x = 0;
         for(int d = 0; d < ncats; d++)

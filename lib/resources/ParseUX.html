@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+
+<html ng-app="h2o.parse">
+
+    <head>
+        <meta charset="UTF-8">
+
+        <title>Parse data - H2O</title>
+
+        <script src="js/vendor/vendor-all.js"></script>
+
+        <script type="text/javascript" src="js/config.js"></script>
+
+        <script src="js/app-all.js"></script>
+
+        <link rel="stylesheet" href="css/parse-all.css" media="screen"/>
+    </head>
+
+    <body>
+
+        <!-- App Header -->
+        <header>
+
+            <!-- App Navigation -->
+            <nav>
+
+                <!-- App Logo -->
+                <h1>
+                    <a href="#" title="H2O">
+                        <i class="icon-logo"></i>
+                        H<sub>2</sub>O
+                        <i class="icon-angle_down"></i>
+                    </a>
+                </h1><!-- /end App Logo -->
+
+                <div class="wrap" adjust-height>
+                    <ul class="accordion">
+                        <li class="accordion-pane">
+                            <a href="#" title="Data">Data<i class="icon-angle_down"></i></a>
+                            <ul class="accordion-pane-content">
+                                <li>
+                                    <a href="#" title="Inspect">Inspect</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="View All">View All</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="Parse">Parse</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="Import Files">Import Files</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="Import URL">Import URL</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="Import S3">Import S3</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="Export S3">Export S3</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="Import HDFS">Import HDFS</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="Export HDFS">Export HDFS</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="Upload">Upload</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="Download">Download</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="Summary">Summary</a>
+                                </li>
+                            </ul>
+                        </li>
+                        <li class="accordion-pane">
+                            <a href="#" title="Model">Model<i class="icon-angle_down"></i></a>
+                            <ul class="accordion-pane-content">
+                                <li>
+                                    <a href="#" title="Random Forest">Random Forest</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="GLM">GLM</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="GLM Grid">GLM Grid</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="KMeans">KMeans</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="KMeans2">KMeans2</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="PCA (Beta)">PCA (Beta)</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="GBM (Beta)">GBM (Beta)</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="GLM2 (Beta)">GLM2 (Beta)</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="Neural Network (Beta)">Neural Network (Beta)</a>
+                                </li>
+                            </ul>
+                        </li>
+                        <li class="accordion-pane">
+                            <a href="#" title="Score">Score<i class="icon-angle_down"></i></a>
+                            <ul class="accordion-pane-content">
+                                <li>
+                                    <a href="#" title="Random Forest">Random Forest</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="GLM">GLM</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="KMeans">KMeans</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="KMeans Apply">KMeans Apply</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="PCA (Beta)">PCA (Beta)</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="Neural Network (Beta)">Neural Network (Beta)</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="Predict">Predict</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="Predict2">Predict2</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="Apply Model">Apply Model</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="Confusion Matrix">Confusion Matrix</a>
+                                </li>
+                            </ul>
+                        </li>
+                        <li class="accordion-pane">
+                            <a href="#" title="Admin">Admin<i class="icon-angle_down"></i></a>
+                            <ul class="accordion-pane-content">
+                                <li>
+                                    <a href="#" title="Jobs">Jobs</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="Cluster Status">Cluster Status</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="Cluster I/O">Cluster I/O</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="Timeline">Timeline</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="Stack Dump">Stack Dump</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="Debug Dump">Debug Dump</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="Inspect Log">Inspect Log</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="Get Script">Get Script</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="Shutdown">Shutdown</a>
+                                </li>
+                            </ul>
+                        </li>
+                        <li class="accordion-pane">
+                            <a href="#" title="Help">Help<i class="icon-angle_down"></i></a>
+                            <ul class="accordion-pane-content">
+                                <li>
+                                    <a href="#" title="H2O Documentation">H2O Documentation</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="Tutorials Home">Tutorials Home</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="Random Forest Tutorial">Random Forest Tutorial</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="GLM Tutorial">GLM Tutorial</a>
+                                </li>
+                                <li>
+                                    <a href="#" title="KMeans Tutorial">KMeans Tutorial</a>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+
+            </nav><!-- App Navigation -->
+
+            <aside>
+
+                <!-- 'Contact' Button -->
+                <a href="#" title="Contact"><i class="icon-mail"></i></a><!-- /end 'Contact' Button -->
+
+            </aside>
+
+        </header><!-- /end App Header -->
+
+        <div ng-controller="ParseAppController">
+            <listerrors jquery-note-errors="{layout:'topRight', type:'error', timeout: 2000}"
+                        filter="{sender:['ParseFileUploaderService','ParseGetHeaderService','ParsePreviewService','ParseService','ParseJobCancelService', 'chooseDataSourceForm']}"
+                        show="{max:10}"
+                    >
+            </listerrors>
+
+            <div ui-view></div>
+        </div>
+
+        <script type="text/javascript">
+            $(document).ready(function() {
+
+                // Accordion
+                $('.accordion').each(function() {
+                    $('> * > a', $(this)).on('click', function(e) {
+                        e.preventDefault();
+
+                        if($(this).parent().hasClass('open')) {
+                            $(this).parent().removeClass('open');
+                        } else {
+                            $('.open', $(this).parents('.accordion')).removeClass('open');
+                            $(this).parent().addClass('open');
+                        }
+                    });
+                });
+
+                // App Navigation activation
+                $('body > header > nav > h1 > a').on('click', function(e) { e.preventDefault(); });
+                $('body > header > nav').hover(
+                    function() {
+                        $(this).addClass('open');
+                        $('body > header > nav > .wrap').css({
+                            'visibility' : 'visible',
+                            'left' : '0px'
+                        });
+                    },
+                    function() {
+                        $(this).removeClass('open');
+                        $('body > header > nav > .wrap').css({
+                            'left' : '-385px'
+                        });
+                    }
+                );
+
+            });
+        </script>
+
+    </body>
+
+</html>

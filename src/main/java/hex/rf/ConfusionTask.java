@@ -103,10 +103,10 @@ public class ConfusionTask extends MRTask {
   /**Apply a model to a dataset to produce a Confusion Matrix.  To support
      incremental & repeated model application, hash the model & data and look
      for that Key to already exist, returning a prior CM if one is available.*/
-  static public CMJob make(RFModel model, Key datakey, int classcol, double[] classWt, boolean computeOOB) {
+  static public Job make(RFModel model, Key datakey, int classcol, double[] classWt, boolean computeOOB) {
     return make(model, model.size(), datakey, classcol, classWt, computeOOB);
   }
-  static public CMJob make(final RFModel model, final int modelSize, final Key datakey, final int classcol, final double[] classWt, final boolean computeOOB) {
+  static public Job make(final RFModel model, final int modelSize, final Key datakey, final int classcol, final double[] classWt, final boolean computeOOB) {
     // Create a unique key for CM regarding given RFModel, validation data and parameters
     final Key cmKey = keyForCM(model._key, modelSize, datakey, classcol, computeOOB);
     // Start a new job if CM is not yet computed
@@ -145,7 +145,7 @@ public class ConfusionTask extends MRTask {
       return cmJob;
     } else {
       // We should return Job which is/was computing the CM with given cmKey
-      return (CMJob) Job.findJobByDest(cmKey);
+      return Job.findJobByDest(cmKey);
     }
   }
 
@@ -308,7 +308,7 @@ public class ConfusionTask extends MRTask {
   }
 
   /** Reduction combines the confusion matrices. */
-  public void reduce(DRemoteTask drt) {
+  @Override public void reduce(DRemoteTask drt) {
     ConfusionTask C = (ConfusionTask) drt;
     if (_matrix == null) {
       _matrix = C._matrix;
@@ -562,26 +562,18 @@ public class ConfusionTask extends MRTask {
     int rows = votes.length;
     int validation_rows = 0;
     int cmin = (int) _data._cols[_classcol]._min;
-
     // Assemble the votes-per-class into predictions & score each row
-    cm._matrix = new long[_N][_N]; // Make an empty confusion matrix for this chunk
-    for( int i = 0; i < rows; i++ ) {
-      int[] vi = votes[i];
-      if(_classWt != null )
-        for( int v = 0; v<_N; v++) vi[v] = (int)(vi[v]*_classWt[v]);
-      int result = 0, tied = 1;
-      for( int l = 1; l<_N; l++)
-        if( vi[l] > vi[result] ) { result=l; tied=1; }
-        else if( vi[l] == vi[result] ) { tied++; }
+    cm._matrix = new long[_N][_N];          // Make an empty confusion matrix for this chunk
+    float preds[] = new float[_N+1];
+    for( int row = 0; row < rows; row++ ) { // Iterate over rows
+      int[] vi = votes[row];                // Votes for i-th row
+      for( int v=0; v<_N; v++ ) preds[v+1] = vi[v];
+      if(_classWt != null )                 // Apply class weights
+        for( int v = 0; v<_N; v++) preds[v+1] *= _classWt[v];
+      int result = ModelUtils.getPrediction(preds, row); // Share logic to get a prediction for classifiers (solve ties)
       if( vi[result]==0 ) { cm._skippedRows++; continue; }// Ignore rows with zero votes
-      if( tied>1 ) {                // Tie-breaker logic
-        int j = _rand.nextInt(tied);
-        int k = 0;
-        for( int l=0; l<_N; l++ )
-          if( vi[l]==vi[result] && (k++ >= j) )  // From zero to number of tied classes-1
-            { result = l; break; }
-      }
-      int cclass = alignDataIdx((int) _data.data(bits, i, _classcol) - cmin);
+
+      int cclass = alignDataIdx((int) _data.data(bits, row, _classcol) - cmin);
       assert 0 <= cclass && cclass < _N : ("cclass " + cclass + " < " + _N);
       cm._matrix[cclass][result]++;
       if( result != cclass ) cm._errors++;

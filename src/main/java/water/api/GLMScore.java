@@ -48,11 +48,11 @@ public class GLMScore extends Request {
     }
   };
 
-  public static String link(Key modelKey, double threshold, String content) {
+  public static String link(Key modelKey, String threshold, String content) {
     return link(MODEL_KEY, modelKey, threshold, content);
   }
 
-  public static String link(String key_param, Key k, double threshold, String content) {
+  public static String link(String key_param, Key k, String threshold, String content) {
     RString rs = new RString("<a href='GLMScore.query?%key_param=%$key&thresholds=%threshold'>%content</a>");
     rs.replace("key_param", key_param);
     rs.replace("key", k.toString());

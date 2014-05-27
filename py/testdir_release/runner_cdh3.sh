@@ -56,6 +56,17 @@ set +e
 echo "hadoop dfs -rmr /user/0xcustomer/$HDFS_OUTPUT" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 set -e
 echo "hadoop jar $CDH3_JAR water.hadoop.h2odriver -jt $CDH3_JOBTRACKER -libjars $H2O_JAR -mapperXmx $CDH3_HEAP -nodes $CDH3_NODES -output $HDFS_OUTPUT -notify h2o_one_node " >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
+
+# copy the script, just so we have it there too
+$REMOTE_SCP /tmp/h2o_on_hadoop_$REMOTE_IP.sh $REMOTE_USER:$REMOTE_HOME
+
+# have to copy the downloaded h2o stuff over to xxx to execute with the ssh
+# it needs the right hadoop client setup. This is easier than installing hadoop client stuff here.
+# do the jars last, so we can see the script without waiting for the copy
+echo "scp some jars"
+$REMOTE_SCP $H2O_HADOOP/$CDH3_JAR  $REMOTE_USER:$REMOTE_HOME
+$REMOTE_SCP $H2O_DOWNLOADED/$H2O_JAR $REMOTE_USER:$REMOTE_HOME
+
 # exchange keys so jenkins can do this?
 # background!
 cat /tmp/h2o_on_hadoop_$REMOTE_IP.sh
@@ -127,6 +138,9 @@ myPy c2 test_c2_rel.py
 # myPy c3 test_c3_rel.py
 # myPy c4 test_c4_four_billion_rows.py
 myPy c6 test_c6_hdfs.py
+myPy c6 test_c6_hdfs_fvec.py
+# myPy c6 test_c6_maprfs_fvec.py
+myPy c8 test_c8_rf_airlines_hdfs_fvec.py
 
 # If this one fails, fail this script so the bash dies 
 # We don't want to hang waiting for the cloud to terminate.

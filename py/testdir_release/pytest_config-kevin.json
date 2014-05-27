@@ -7,8 +7,8 @@
     "use_home_for_ice": true,
 
     "key_filename": "~/.0xcustomer/0xcustomer_id_rsa",
-    "h2o_per_host": 3, 
-    "java_heap_GB": 4, 
+    "h2o_per_host": 1, 
+    "java_heap_GB": 12, 
 
     "hdfs_name_node": "192.168.1.176",
     "hdfs_version": "cdh3",
@@ -16,10 +16,10 @@
 
     "use_flatfile": true,
     "base_port": 54355,
-    "cloud_name": "jenkins-164",
+    "cloud_name": "kevin-172",
 
     "ip": [
-        "127.0.0.1"
+        "192.168.0.37"
     ]
 }
 

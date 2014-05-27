@@ -1,16 +1,15 @@
 package hex.gbm;
 
 import static hex.gbm.SharedTreeModelBuilder.createRNG;
-import static water.util.Utils.append;
+import hex.*;
 import hex.ConfusionMatrix;
-import hex.VariableImportance;
 import hex.gbm.DTree.TreeModel.CompressedTree;
 import hex.gbm.DTree.TreeModel.TreeVisitor;
 
 import java.util.*;
 
 import water.*;
-import water.api.DocGen;
+import water.api.*;
 import water.api.Request.API;
 import water.fvec.Chunk;
 import water.util.*;
@@ -125,6 +124,16 @@ public class DTree extends Iced {
     public final int   bin() { return _bin; }
     public final long  rowsLeft () { return _n0; }
     public final long  rowsRight() { return _n1; }
+    /** Returns empirical improvement in mean-squared error.
+     *
+     *  Formula for node splittin space into two subregions R1,R2 with predictions y1, y2:
+     *    i2(R1,R2) ~ w1*w2 / (w1+w2) * (y1 - y2)^2
+     *
+     * @see (35), (45) in J. Friedman - Greedy Function Approximation: A Gradient boosting machine */
+    public final float improvement() {
+      double d = (_p0-_p1);
+      return (float) ( d*d*_n0*_n1 / (_n0+_n1) );
+    }
 
     // Split-at dividing point.  Don't use the step*bin+bmin, due to roundoff
     // error we can have that point be slightly higher or lower than the bin
@@ -519,72 +528,86 @@ public class DTree extends Iced {
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
     @API(help="Expected max trees")                public final int N;
     @API(help="MSE rate as trees are added")       public final double [] errs;
-    @API(help="Actual trees built (probably < N)") public final CompressedTree [/*N*/][/*nclass*/] treeBits;
+    @API(help="Keys of actual trees built")        public final Key [/*N*/][/*nclass*/] treeKeys; // Always filled, but 2-binary classifiers can contain null for 2nd class
     @API(help="Maximum tree depth")                public final int max_depth;
-    @API(help = "Fewest allowed observations in a leaf") public final int min_rows;
-    @API(help = "Bins in the histograms")          public final int nbins;
+    @API(help="Fewest allowed observations in a leaf") public final int min_rows;
+    @API(help="Bins in the histograms")            public final int nbins;
 
     // For classification models, we'll do a Confusion Matrix right in the
-    // model (for now - really should be seperate).
-    @API(help="Testing key for cm and errs") public final Key testKey;
-    @API(help="Confusion Matrix computed on training dataset, cm[actual][predicted]") public final long cms[/*CM-per-tree*/][][];
-    @API(help="Unscaled variable importance for individual input variables.") public float[] varimp;
-    @API(help="Tree statistics") public final TreeStats treeStats;
+    // model (for now - really should be separate).
+    @API(help="Testing key for cm and errs")                                          public final Key testKey;
+    // Confusion matrix per each generated tree or null
+    @API(help="Confusion Matrix computed on training dataset, cm[actual][predicted]") public final ConfusionMatrix cms[/*CM-per-tree*/];
+    @API(help="Confusion matrix domain.")                                             public final String[]        cmDomain;
+    @API(help="Variable importance for individual input variables.")                  public final VarImp          varimp;
+    @API(help="Tree statistics")                                                      public final TreeStats       treeStats;
+    @API(help="AUC for validation dataset")                                           public final AUC             validAUC;
 
-    public TreeModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], int ntrees, int max_depth, int min_rows, int nbins) {
+    private transient CompressedTree[/*N*/][/*nclasses OR 1 for regression*/] _treeBitsCache;
+
+    public TreeModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins) {
       super(key,dataKey,names,domains);
       this.N = ntrees; this.errs = new double[0];
-      this.testKey = testKey; this.cms = new long[0][][];
+      this.testKey = testKey; this.cms = new ConfusionMatrix[0];
       this.max_depth = max_depth; this.min_rows = min_rows; this.nbins = nbins;
-      treeBits = new CompressedTree[0][];
+      treeKeys = new Key[0][];
       treeStats = null;
+      this.cmDomain = cmDomain!=null ? cmDomain : new String[0];;
+      this.varimp = null;
+      this.validAUC = null;
     }
     // Simple copy ctor, null value of parameter means copy from prior-model
-    private TreeModel(TreeModel prior, CompressedTree[][] treeBits, double[] errs, long[][][] cms, TreeStats tstats) {
+    private TreeModel(TreeModel prior, Key[][] treeKeys, double[] errs, ConfusionMatrix[] cms, TreeStats tstats, VarImp varimp, AUC validAUC) {
       super(prior._key,prior._dataKey,prior._names,prior._domains);
       this.N = prior.N; this.testKey = prior.testKey;
       this.max_depth = prior.max_depth;
-      this.min_rows = prior.min_rows;
-      this.nbins = prior.nbins;
+      this.min_rows  = prior.min_rows;
+      this.nbins     = prior.nbins;
+      this.cmDomain  = prior.cmDomain;
 
-      if (treeBits != null) this.treeBits  = treeBits; else this.treeBits  = prior.treeBits;
+      if (treeKeys != null) this.treeKeys  = treeKeys; else this.treeKeys  = prior.treeKeys;
       if (errs     != null) this.errs      = errs;     else this.errs      = prior.errs;
       if (cms      != null) this.cms       = cms;      else this.cms       = prior.cms;
       if (tstats   != null) this.treeStats = tstats;   else this.treeStats = prior.treeStats;
+      if (varimp   != null) this.varimp    = varimp;   else this.varimp    = prior.varimp;
+      if (validAUC != null) this.validAUC  = validAUC; else this.validAUC  = prior.validAUC;
     }
 
-    public TreeModel(TreeModel prior, DTree[] trees, double err, long [][] cm, TreeStats tstats) {
-      this(prior, append(prior.treeBits, trees), Utils.append(prior.errs, err), Utils.append(prior.cms, cm), tstats);
+    public TreeModel(TreeModel prior, DTree[] tree, double err, ConfusionMatrix cm, TreeStats tstats) {
+      this(prior, append(prior.treeKeys, tree), Utils.append(prior.errs, err), Utils.append(prior.cms, cm), tstats, null, null);
     }
-    public TreeModel(TreeModel prior, DTree[] trees, TreeStats tstats) {
-      this(prior, append(prior.treeBits, trees), null, null, tstats);
-    }
-    public TreeModel(TreeModel prior, double err, long [][] cm) {
-      this(prior, null, Utils.append(prior.errs, err), Utils.append(prior.cms, cm), null);
+    public TreeModel(TreeModel prior, DTree[] tree, TreeStats tstats) {
+      this(prior, append(prior.treeKeys, tree), null, null, tstats, null, null);
     }
 
-    private static final CompressedTree[][] append(CompressedTree[][] prior, DTree[] tree ) {
+    public TreeModel(TreeModel prior, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
+      this(prior, null, Utils.append(prior.errs, err), Utils.append(prior.cms, cm), null, varimp, validAUC);
+    }
+
+    private static final Key[][] append(Key[][] prior, DTree[] tree ) {
       if (tree==null) return prior;
       prior = Arrays.copyOf(prior, prior.length+1);
-      CompressedTree ts[] = prior[prior.length-1] = new CompressedTree[tree.length];
+      Key ts[] = prior[prior.length-1] = new Key[tree.length];
       for( int c=0; c<tree.length; c++ )
-        if( tree[c] != null )
-            ts[c] = tree[c].compress();
+        if( tree[c] != null ) {
+            ts[c] = tree[c].save();
+        }
       return prior;
     }
 
-    // Number of trees actually in the model (instead of expected/planned)
-    public int numTrees() { return treeBits.length; }
+    /** Number of trees in current model. */
+    public int ntrees() { return treeKeys.length; }
     // Most recent ConfusionMatrix
     @Override public ConfusionMatrix cm() {
-      long cms[][][] = this.cms; // Avoid racey update; read it once
+      ConfusionMatrix[] cms = this.cms; // Avoid racey update; read it once
       if(cms != null && cms.length > 0){
         int n = cms.length-1;
         while(n > 0 && cms[n] == null)--n;
-        return cms[n] == null?null:new ConfusionMatrix(cms[n]);
+        return cms[n] == null?null:cms[n];
       } else return null;
     }
-    @Override public VariableImportance varimp() { return varimp == null ? null : new VariableImportance(varimp, _names); }
+
+    @Override public VarImp varimp() { return varimp; }
     @Override public double mse() {
       if(errs != null && errs.length > 0){
         int n = errs.length-1;
@@ -594,16 +617,49 @@ public class DTree extends Iced {
     }
     @Override protected float[] score0(double data[], float preds[]) {
       Arrays.fill(preds,0);
-      for( int tidx=0; tidx<treeBits.length; tidx++ )
+      for( int tidx=0; tidx<treeKeys.length; tidx++ )
         score0(data, preds, tidx);
       return preds;
     }
+
+    /** Returns i-th tree represented by an array of k-trees. */
+    public final synchronized CompressedTree[] ctree(int tidx) {
+      if (_treeBitsCache!=null && _treeBitsCache[tidx]!=null) return _treeBitsCache[tidx];
+      if (_treeBitsCache==null) _treeBitsCache = new CompressedTree[ntrees()][];
+      Key[] k = treeKeys[tidx];
+      CompressedTree[] ctree = new CompressedTree[nclasses()];
+      for (int i = 0; i < nclasses(); i++) // binary classifiers can contains null for second tree
+        if (k[i]!=null) ctree[i] = UKV.get(k[i]);
+      _treeBitsCache[tidx] = ctree;
+      return ctree;
+    }
     // Score per line per tree
     public void score0(double data[], float preds[], int treeIdx) {
-      CompressedTree ts[] = treeBits[treeIdx];
+      CompressedTree ts[] = ctree(treeIdx);
       for( int c=0; c<ts.length; c++ )
         if( ts[c] != null )
-          preds[c] += ts[c].score(data);
+          preds[ts.length==1?0:c+1] += ts[c].score(data);
+    }
+
+    /** Delete model trees */
+    public void delete_trees() {
+      Futures fs = new Futures();
+      delete_trees(fs);
+      fs.blockForPending();
+    }
+    public Futures delete_trees(Futures fs) {
+      for (int tid = 0; tid < treeKeys.length; tid++) /* over all trees */
+          for (int cid = 0; cid < treeKeys[tid].length; cid++) /* over all classes */
+            // 2-binary classifiers can contain null for the second
+            if (treeKeys[tid][cid]!=null) DKV.remove(treeKeys[tid][cid], fs);
+      return fs;
+    }
+
+    // If model is deleted then all trees has to be delete as well
+    @Override public Futures delete_impl(Futures fs) {
+      delete_trees(fs);
+      super.delete_impl(fs);
+      return fs;
     }
 
     public void generateHTML(String title, StringBuilder sb) {
@@ -612,11 +668,11 @@ public class DTree extends Iced {
       DocGen.HTML.paragraph(sb,"Max depth: "+max_depth+", Min rows: "+min_rows+", Nbins:"+nbins);
       generateModelDescription(sb);
       DocGen.HTML.paragraph(sb,water.api.Predict.link(_key,"Predict!"));
-      String[] domain = _domains[_domains.length-1]; // Domain of response col
+      String[] domain = cmDomain; // Domain of response col
 
       // Generate a display using the last scored Model.  Not all models are
       // scored immediately (since scoring can be a big part of model building).
-      long cm[][] = null;
+      ConfusionMatrix cm = null;
       int last = cms.length-1;
       while( last > 0 && cms[last]==null ) last--;
       cm = 0 <= last && last < cms.length ? cms[last] : null;
@@ -624,7 +680,7 @@ public class DTree extends Iced {
       // Display the CM
       if( cm != null && domain != null ) {
         // Top row of CM
-        assert cm.length==domain.length;
+        assert cm._arr.length==domain.length;
         DocGen.HTML.section(sb,"Confusion Matrix");
         if( testKey == null ) {
           sb.append("<div class=\"alert\">Reported on ").append(title.contains("DRF") ? "out-of-bag" : "training").append(" data</div>");
@@ -635,39 +691,39 @@ public class DTree extends Iced {
         }
 
         DocGen.HTML.arrayHead(sb);
-        sb.append("<tr class='warning'>");
-        sb.append("<th>Actual / Predicted</th>"); // Row header
-        for( int i=0; i<cm.length; i++ )
-          sb.append("<th>").append(domain[i]).append("</th>");
-        sb.append("<th>Error</th>");
+        sb.append("<tr class='warning' style='min-width:60px'>");
+        sb.append("<th style='min-width:60px'>Actual / Predicted</th>"); // Row header
+        for( int i=0; i<cm._arr.length; i++ )
+          sb.append("<th style='min-width:60px'>").append(domain[i]).append("</th>");
+        sb.append("<th style='min-width:60px'>Error</th>");
         sb.append("</tr>");
 
         // Main CM Body
         long tsum=0, terr=0;               // Total observations & errors
-        for( int i=0; i<cm.length; i++ ) { // Actual loop
-          sb.append("<tr>");
-          sb.append("<th>").append(domain[i]).append("</th>");// Row header
+        for( int i=0; i<cm._arr.length; i++ ) { // Actual loop
+          sb.append("<tr style='min-width:60px'>");
+          sb.append("<th style='min-width:60px'>").append(domain[i]).append("</th>");// Row header
           long sum=0, err=0;                     // Per-class observations & errors
-          for( int j=0; j<cm[i].length; j++ ) { // Predicted loop
-            sb.append(i==j ? "<td style='background-color:LightGreen'>":"<td>");
-            sb.append(cm[i][j]).append("</td>");
-            sum += cm[i][j];              // Per-class observations
-            if( i != j ) err += cm[i][j]; // and errors
+          for( int j=0; j<cm._arr[i].length; j++ ) { // Predicted loop
+            sb.append(i==j ? "<td style='background-color:LightGreen; min-width:60px;'>":"<td style='min-width:60px'>");
+            sb.append(cm._arr[i][j]).append("</td>");
+            sum += cm._arr[i][j];              // Per-class observations
+            if( i != j ) err += cm._arr[i][j]; // and errors
           }
-          sb.append(String.format("<th>%5.3f = %d / %d</th>", (double)err/sum, err, sum));
+          sb.append(String.format("<th style='min-width:60px'>%5.3f = %d / %d</th>", (double)err/sum, err, sum));
           tsum += sum;  terr += err; // Bump totals
         }
         sb.append("</tr>");
 
         // Last row of CM
-        sb.append("<tr>");
-        sb.append("<th>Totals</th>");// Row header
-        for( int j=0; j<cm.length; j++ ) { // Predicted loop
+        sb.append("<tr style='min-width:60px'>");
+        sb.append("<th style='min-width:60px'>Totals</th>");// Row header
+        for( int j=0; j<cm._arr.length; j++ ) { // Predicted loop
           long sum=0;
-          for( int i=0; i<cm.length; i++ ) sum += cm[i][j];
-          sb.append("<td>").append(sum).append("</td>");
+          for( int i=0; i<cm._arr.length; i++ ) sum += cm._arr[i][j];
+          sb.append("<td style='min-width:60px'>").append(sum).append("</td>");
         }
-        sb.append(String.format("<th>%5.3f = %d / %d</th>", (double)terr/tsum, terr, tsum));
+        sb.append(String.format("<th style='min-width:60px'>%5.3f = %d / %d</th>", (double)terr/tsum, terr, tsum));
         sb.append("</tr>");
         DocGen.HTML.arrayTail(sb);
       }
@@ -675,58 +731,55 @@ public class DTree extends Iced {
       if( errs != null ) {
         DocGen.HTML.section(sb,"Mean Squared Error by Tree");
         DocGen.HTML.arrayHead(sb);
-        sb.append("<tr><th>Trees</th>");
+        sb.append("<tr style='min-width:60px'><th>Trees</th>");
         last = isClassifier() ? last : errs.length-1; // for regressor reports all errors
         for( int i=last; i>=0; i-- )
-          sb.append("<td>").append(i).append("</td>");
+          sb.append("<td style='min-width:60px'>").append(i).append("</td>");
         sb.append("</tr>");
         sb.append("<tr><th class='warning'>MSE</th>");
         for( int i=last; i>=0; i-- )
-          sb.append(!Double.isNaN(errs[i]) ? String.format("<td>%5.3f</td>",errs[i]) : "<td>---</td>");
+          sb.append(!Double.isNaN(errs[i]) ? String.format("<td style='min-width:60px'>%5.3f</td>",errs[i]) : "<td style='min-width:60px'>---</td>");
         sb.append("</tr>");
         DocGen.HTML.arrayTail(sb);
       }
+      // Show AUC for binary classifiers
+      if (validAUC != null) generateHTMLAUC(sb);
 
       // Show tree stats
       if (treeStats != null) generateHTMLTreeStats(sb);
 
       // Show variable importance
       if (varimp != null) generateHTMLVarImp(sb);
-
     }
 
+    static final String NA = "---";
     protected void generateHTMLTreeStats(StringBuilder sb) {
       DocGen.HTML.section(sb,"Tree stats");
       DocGen.HTML.arrayHead(sb);
       sb.append("<tr><th>&nbsp;</th>").append("<th>Min</th><th>Mean</th><th>Max</th></tr>");
+
+      boolean valid = treeStats.isValid();
       sb.append("<tr><th>Depth</th>")
-            .append("<td>").append(treeStats.minDepth).append("</td>")
-            .append("<td>").append(treeStats.meanDepth).append("</td>")
-            .append("<td>").append(treeStats.maxDepth).append("</td></tr>");
+            .append("<td>").append(valid ? treeStats.minDepth  : NA).append("</td>")
+            .append("<td>").append(valid ? treeStats.meanDepth : NA).append("</td>")
+            .append("<td>").append(valid ? treeStats.maxDepth  : NA).append("</td></tr>");
       sb.append("<th>Leaves</th>")
-            .append("<td>").append(treeStats.minLeaves).append("</td>")
-            .append("<td>").append(treeStats.meanLeaves).append("</td>")
-            .append("<td>").append(treeStats.maxLeaves).append("</td></tr>");
+            .append("<td>").append(valid ? treeStats.minLeaves  : NA).append("</td>")
+            .append("<td>").append(valid ? treeStats.meanLeaves : NA).append("</td>")
+            .append("<td>").append(valid ? treeStats.maxLeaves  : NA).append("</td></tr>");
       DocGen.HTML.arrayTail(sb);
     }
 
     protected void generateHTMLVarImp(StringBuilder sb) {
-      DocGen.HTML.section(sb,"Unscaled Variable Importance");
-      DocGen.HTML.arrayHead(sb);
-      sb.append("<tr><th>Variable</th>");
-      for( int i=0; i<varimp.length; i++ )
-        sb.append("<td>").append(_names[i]).append("</td>");
-      sb.append("</tr>");
-      sb.append("<tr><th class='warning'>Mean Decrease Accuracy</th>");
-      for( int i=0; i<varimp.length; i++ )
-        sb.append(String.format("<td>%5.3f</td>",varimp[i]));
-      sb.append("</tr>");
-      DocGen.HTML.arrayTail(sb);
-      // Generate a graph - horrible code
-      DocGen.HTML.graph(sb, "graphvarimp", "g_varimp",
-          DocGen.HTML.toJSArray(new StringBuilder(), Arrays.copyOf(_names, _names.length-1)),
-          DocGen.HTML.toJSArray(new StringBuilder(), varimp)
-          );
+      if (varimp!=null) {
+        // Set up variable names for importance
+        varimp.setVariables(Arrays.copyOf(_names, _names.length-1));
+        varimp.toHTML(sb);
+      }
+    }
+
+    protected void generateHTMLAUC(StringBuilder sb) {
+      validAUC.toHTML(sb);
     }
 
     public static class TreeStats extends Iced {
@@ -742,6 +795,7 @@ public class DTree extends Iced {
       transient long sumDepth  = 0;
       transient long sumLeaves = 0;
       transient int  numTrees = 0;
+      public boolean isValid() { return minDepth <= maxDepth; }
       public void updateBy(DTree[] ktrees) {
         if (ktrees==null) return;
         for (int i=0; i<ktrees.length; i++) {
@@ -777,7 +831,7 @@ public class DTree extends Iced {
       final int _nclass;
       final long _seed;
       public CompressedTree( byte [] bits, int nclass, long seed ) { _bits = bits; _nclass = nclass; _seed = seed; }
-      float score( final double row[] ) {
+      public float score( final double row[] ) {
         AutoBuffer ab = new AutoBuffer(_bits);
         while(true) {
           int nodeType = ab.get1();
@@ -815,6 +869,7 @@ public class DTree extends Iced {
       }
 
       private float scoreLeaf( AutoBuffer ab ) { return ab.get4f(); }
+
       public Random rngForChunk( int cidx ) {
         Random rand = createRNG(_seed);
         // Argh - needs polishment
@@ -902,7 +957,7 @@ public class DTree extends Iced {
                 "class=\'btn btn-inverse btn-mini\'>Java Model</a></div><br /><div class=\"hide\" id=\"javaModel\">"       +
                 "<pre style=\"overflow-y:scroll;\"><code class=\"language-java\">");
 
-      if( numTrees() * treeStats.meanLeaves > 5000 ) {
+      if( ntrees() * treeStats.meanLeaves > 5000 ) {
         String modelName = JCodeGen.toJavaId(_key.toString());
         sb.append("/* Java code is too large to display, download it directly.\n");
         sb.append("   To obtain the code please invoke in your terminal:\n");
@@ -934,8 +989,8 @@ public class DTree extends Iced {
       sb.di(1);
       sb.p(TO_JAVA_BENCH_FUNC);
 
-      JCodeGen.toStaticVar(sb, "NTREES", numTrees(), "Number of trees in this model.");
-      JCodeGen.toStaticVar(sb, "NTREES_INTERNAL", numTrees()*nclasses(), "Number of internal trees in this model (= NTREES*NCLASSES).");
+      JCodeGen.toStaticVar(sb, "NTREES", ntrees(), "Number of trees in this model.");
+      JCodeGen.toStaticVar(sb, "NTREES_INTERNAL", ntrees()*nclasses(), "Number of internal trees in this model (= NTREES*NCLASSES).");
       JCodeGen.toStaticVar(sb, "DEFAULT_ITERATIONS", 10000, "Default number of iterations.");
       // Generate a data in separated class since we do not want to influence size of constant pool of model class
       if( _dataKey != null ) {
@@ -959,8 +1014,8 @@ public class DTree extends Iced {
       bodySb.i().p("java.util.Arrays.fill(preds,0f);").nl();
       for( int c=0; c<nclasses(); c++ ) {
         toJavaForestBegin(bodySb, forest, c, fidx++, maxfsize);
-        for( int i=0; i < treeBits.length; i++ ) {
-          CompressedTree cts[] = treeBits[i];
+        for( int i=0; i < treeKeys.length; i++ ) {
+          CompressedTree cts[] = ctree(i);
           if( cts[c] == null ) continue;
           forest.i().p("if (iters-- > 0) pred").p(" +=").p(" Tree_").p(i).p("_class_").p(c).p(".predict(data);").nl();
           // append representation of tree predictor
@@ -986,7 +1041,7 @@ public class DTree extends Iced {
     /** Fill preds[0] based on already filled and unified preds[1,..NCLASSES]. */
     protected void toJavaFillPreds0(SB bodySb) {
       // Pick max index as a prediction
-      if (isClassifier()) bodySb.i().p("preds[0] = maxIndex(preds,1)-1;").nl();
+      if (isClassifier()) bodySb.i().p("preds[0] = water.util.ModelUtils.getPrediction(preds,data);").nl();
       else bodySb.i().p("preds[0] = preds[1];").nl();
     }
 
@@ -1032,27 +1087,18 @@ public class DTree extends Iced {
     assert ab.position() == sz;
     return new TreeModel.CompressedTree(ab.buf(),_nclass,_seed);
   }
+  /** Save this tree into DKV store under default random Key. */
+  public Key save() { return save(defaultTreeKey()); }
+  /** Save this tree into DKV store under the given Key. */
+  public Key save(Key k) {
+    CompressedTree ts = compress();
+    UKV.put(k, ts);
+    return k;
+  }
 
-  // Static Java code which is generated :-(
-  private static final SB TO_JAVA_MAX_INDEX_FUNC = new SB().
-      nl().
-      p("  /**").nl().
-      p("   * Find the index of the largest value in an array.").nl().
-      p("   *").nl().
-      p("   * @param from array of predictions per output class").nl().
-      p("   * @param start starting index to test from").nl().
-      p("   * @returns The index of the largest value").nl().
-      p("   */").nl().
-      p("  public static int maxIndex(float[] from, int start) {").nl().
-      p("    int result = start;").nl().
-      p("    for (int i = start; i < from.length; ++i) {").nl().
-      p("      if (from[i] > from[result]) {").nl().
-      p("        result = i;").nl().
-      p("      }").nl().
-      p("    }").nl().
-      p("    return result;").nl().
-      p("  }").nl().
-      nl();
+  private Key defaultTreeKey() {
+    return Key.make("__Tree_"+Key.rand());
+  }
 
   private static final SB TO_JAVA_BENCH_FUNC = new SB().
       nl().

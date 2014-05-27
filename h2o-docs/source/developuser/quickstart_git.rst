@@ -1,3 +1,5 @@
+.. _QuickstartGit:
+
 From Source Code (Github)
 ----------------------------
 

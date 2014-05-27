@@ -17,6 +17,7 @@ NO_DOWNLOAD=0
 USE_EXISTING=0
 BRANCH=master
 TESTDIR=
+TEST=
 while getopts hunb:d:t: flag
 do
     case $flag in
@@ -42,9 +43,9 @@ do
             echo "test is $TEST"
             ;;
         h)
-            echo "-u will use existing"
-            echo "-n will reuse existing download of h2o stuff from s3"
-            echo "-b <BRANCH> will use that branch for download"
+            echo "-u Use existing target/h2o.jar, target/R/*  and existing downloaded hadoop drivers"
+            echo "-n Init target/* from existing download of h2o stuff from s3 (h2o-downloaded)."
+            echo "-b <BRANCH> Use this branch for any s3 download"
             echo "-d <dir> -t <python test> will run a single test"
             exit
             ;;
@@ -82,7 +83,8 @@ echo "Setting PATH and showing java/python versions"
 date
 export PATH="/usr/local/bin:/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/sbin"
 echo "Checking python/java links and revs first"
-echo "JAVA_HOME: $JAVA_HOME"
+# JAVA_HOME might not exist. no need to check?
+# echo "JAVA_HOME: $JAVA_HOME"
 which java
 java -version
 which javac

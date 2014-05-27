@@ -26,10 +26,9 @@ public abstract class DRF {
       Sampling.Strategy samplingStrategy, float sample, float[] strataSamples, int verbose, int exclusiveSplitLimit, boolean useNonLocalData) {
 
     // Create DRF remote task
-    DRFJob  drfJob  = new DRFJob(ntrees);
+    DRFJob  drfJob  = new DRFJob(ntrees, modelKey);
     DRFTask drfTask = create(drfJob,modelKey, cols, ary, ntrees, depth, binLimit, stat, seed, parallelTrees, classWt, numSplitFeatures, samplingStrategy, sample, strataSamples, verbose, exclusiveSplitLimit, useNonLocalData);
     // Create DRF user job & start it
-    drfJob.destination_key = modelKey;
     drfJob.start(drfTask);
     drfTask._job = drfJob;
     // Execute the DRF task
@@ -329,8 +328,9 @@ public abstract class DRF {
   /** DRF job showing progress with reflect to a number of generated trees. */
   public static class DRFJob extends Job {
 
-    public DRFJob(int ntrees) {
+    public DRFJob(int ntrees, Key destKey) {
       description = "RandomForest_" + ntrees + "trees";
+      destination_key = destKey;
     }
 
     @Override public Job start(H2OCountedCompleter fjtask) {

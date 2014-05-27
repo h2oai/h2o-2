@@ -1,18 +1,21 @@
 package hex;
 
 import hex.KMeans.Initialization;
-
-import java.util.*;
-
 import water.*;
 import water.Job.ColumnsJob;
-import water.api.*;
+import water.api.DocGen;
+import water.api.Progress2;
+import water.api.Request;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.NewChunk;
 import water.fvec.Vec;
 import water.util.RString;
 import water.util.Utils;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Random;
 
 /**
  * Scalable K-Means++ (KMeans||)<br>
@@ -24,26 +27,27 @@ public class KMeans2 extends ColumnsJob {
   static public DocGen.FieldDoc[] DOC_FIELDS;
   static final String DOC_GET = "k-means";
 
-  @API(help = "Cluster initialization: None - chooses initial centers at random; Plus Plus - choose first center at random, subsequent centers chosen from probability distribution weighted so that points further from first center are more likey to be selected; Furthest - chooses intial point at random, subsequent point taken as the point furthest from prior point.", filter = Default.class)
+  @API(help = "Cluster initialization: None - chooses initial centers at random; Plus Plus - choose first center at random, subsequent centers chosen from probability distribution weighted so that points further from first center are more likey to be selected; Furthest - chooses initial point at random, subsequent point taken as the point furthest from prior point.", filter = Default.class, json=true)
   public Initialization initialization = Initialization.None;
 
-  @API(help = "Number of clusters", required = true, json = true, filter = Default.class, lmin = 1, lmax = 100000)
+  @API(help = "Number of clusters", required = true, filter = Default.class, lmin = 1, lmax = 100000, json=true)
   public int k = 2;
 
-  @API(help = "Maximum number of iterations before stopping", required = true, filter = Default.class, lmin = 1, lmax = 100000)
+  @API(help = "Maximum number of iterations before stopping", required = true, filter = Default.class, lmin = 1, lmax = 100000, json=true)
   public int max_iter = 100;
 
-  @API(help = "Whether data should be normalized", filter = Default.class)
+  @API(help = "Whether data should be normalized", filter = Default.class, json=true)
   public boolean normalize;
 
-  @API(help = "Seed for the random number generator", filter = Default.class)
+  @API(help = "Seed for the random number generator", filter = Default.class, json=true)
   public long seed = new Random().nextLong();
 
   public KMeans2() {
     description = "K-means";
   }
 
-  @Override protected Status exec() {
+  @Override protected JobState execImpl() {
+    logStart();
     source.read_lock(self());
     String sourceArg = input("source");
     Key sourceKey = null;
@@ -59,7 +63,7 @@ public class KMeans2 extends ColumnsJob {
       domain[i] = "Cluster " + i;
     String[] namesResp = Utils.append(names, "response");
     String[][] domaiResp = (String[][]) Utils.append((new Frame(names, vecs)).domains(), (Object) domain);
-    KMeans2Model model = new KMeans2Model(destination_key, sourceKey, namesResp, domaiResp);
+    KMeans2Model model = new KMeans2Model(this, destination_key, sourceKey, namesResp, domaiResp);
     model.delete_and_lock(self());
     model.k = k; model.normalized = normalize; model.max_iter = max_iter;
 
@@ -107,7 +111,7 @@ public class KMeans2 extends ColumnsJob {
         clusters = Utils.append(clusters, sampler._sampled);
 
         if( !isRunning(self()) )
-          return Status.Done;
+          return JobState.DONE;
         model.centers = normalize ? denormalize(clusters, vecs) : clusters;
         model.total_within_SS = sqr._sqr;
         model.iterations++;
@@ -145,7 +149,7 @@ public class KMeans2 extends ColumnsJob {
         cc._means = means;
         cc._mults = mults;
         cc.doAll(1, vecs);
-        Frame fr2 = cc.outputFrame(model._clustersKey,new String[]{"Cluster ID"}, new String[1][]);
+        Frame fr2 = cc.outputFrame(model._clustersKey,new String[]{"Cluster ID"}, new String[][] { Utils.toStringMap(0,cc._clusters.length-1) } );
         fr2.delete_and_lock(self()).unlock(self());
         break;
       }
@@ -154,7 +158,7 @@ public class KMeans2 extends ColumnsJob {
     }
     model.unlock(self());
     source.unlock(self());
-    return Status.Done;
+    return JobState.DONE;
   }
 
   @Override protected Response redirect() {
@@ -165,7 +169,7 @@ public class KMeans2 extends ColumnsJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
-    @Override protected Response jobDone(Job job, Key dst) {
+    @Override protected Response jobDone(Key dst) {
       return KMeans2ModelView.redirect(this, destination_key);
     }
 
@@ -195,6 +199,7 @@ public class KMeans2 extends ColumnsJob {
 
     @Override public boolean toHTML(StringBuilder sb) {
       if( model != null ) {
+        model.parameters.makeJsonBox(sb);
         DocGen.HTML.section(sb, "Cluster Centers: "); //"Total Within Cluster Sum of Squares: " + model.total_within_SS);
         table(sb, "Clusters", model._names, model.centers);
         double[][] rows = new double[model.within_cluster_variances.length][1];
@@ -286,6 +291,9 @@ public class KMeans2 extends ColumnsJob {
     static final int API_WEAVER = 1;
     static public DocGen.FieldDoc[] DOC_FIELDS;
 
+    @API(help = "Model parameters")
+    private final KMeans2 parameters;    // This is used purely for printing values out.
+
     @API(help = "Cluster centers, always denormalized")
     public double[][] centers;
 
@@ -326,8 +334,9 @@ public class KMeans2 extends ColumnsJob {
     private transient double[][] _normClust;
     private transient double[] _means, _mults;
 
-    public KMeans2Model(Key selfKey, Key dataKey, String names[], String domains[][]) {
+    public KMeans2Model(KMeans2 params, Key selfKey, Key dataKey, String names[], String domains[][]) {
       super(selfKey, dataKey, names, domains);
+      parameters = params;
       _clustersKey = Key.make(selfKey.toString() + "_clusters");
     }
 
@@ -354,7 +363,9 @@ public class KMeans2 extends ColumnsJob {
       }
       data(tmp, chunks, rowInChunk, _means, _mults);
       Arrays.fill(preds, 0);
-      preds[closest(cs, tmp, new ClusterDist())._cluster] = 1;
+      int cluster = closest(cs, tmp, new ClusterDist())._cluster;
+      preds[0] = cluster;       // prediction in preds[0]
+      preds[1+cluster] = 1;     // class distribution
       return preds;
     }
 
@@ -374,14 +385,15 @@ public class KMeans2 extends ColumnsJob {
       double[][] _clusters;         // Cluster centers
       double[] _means, _mults;      // Normalization
 
-      @Override public void map(Chunk[] cs, NewChunk[] ncs) {
+      @Override public void map(Chunk[] cs, NewChunk ncs) {
           double[] values = new double[_clusters[0].length];
           ClusterDist cd = new ClusterDist();
           for (int row = 0; row < cs[0]._len; row++) {
               data(values, cs, row, _means, _mults);
               closest(_clusters, values, cd);
               int clu = cd._cluster;
-              ncs[0].addNum(clu);
+              // ncs[0].addNum(clu);
+              ncs.addEnum(clu);
           }
       }
   }

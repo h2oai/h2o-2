@@ -15,7 +15,7 @@ public class GLMGridProgress extends Progress2 {
 
   /** Return {@link Response} for finished job. */
   @Override
-  protected Response jobDone(final Job job, final Key dst) {
+  protected Response jobDone(final Key dst) {
     return GLMGridView.redirect(this, dst);
   }
 

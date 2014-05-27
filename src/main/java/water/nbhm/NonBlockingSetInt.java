@@ -128,6 +128,8 @@ public class NonBlockingSetInt extends AbstractSet<Integer> implements Serializa
    * @return count of elements.
    */
   public int     size    (             ) { return _nbsi.size( );                   }
+  /** Approx largest element in set; at least as big (but max might be smaller).  */
+  public int length() { return _nbsi._bits.length<<6; }
   /** Empty the bitvector. */
   public void    clear   (             ) { 
     NBSI cleared = new NBSI(63, new ConcurrentAutoTable(), this); // An empty initial NBSI

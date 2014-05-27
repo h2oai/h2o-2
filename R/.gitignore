@@ -1,8 +1,5 @@
 *.pdf
-h2oRClient-package/DESCRIPTION
-h2oRClient-package/h2oRClient_package.pdf
-h2oRClient-package/man/h2oRClient-package.Rd
 h2o-package/DESCRIPTION
-h2o-package/h2o_package.pdf
 h2o-package/man/h2o-package.Rd
+h2o-package/h2o_package.pdf
 h2o-package/inst/java

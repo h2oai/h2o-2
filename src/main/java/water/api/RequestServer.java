@@ -15,6 +15,7 @@ import hex.glm.GLM2;
 import hex.glm.GLMGridView;
 import hex.glm.GLMModelView;
 import hex.glm.GLMProgress;
+import hex.deeplearning.DeepLearning;
 import hex.pca.PCA;
 import hex.pca.PCAModelView;
 import hex.pca.PCAProgressPage;
@@ -24,6 +25,7 @@ import water.H2O;
 import water.NanoHTTPD;
 import water.api.Script.RunScript;
 import water.api.Upload.PostFile;
+import water.api.v2.*;
 import water.deploy.LaunchJar;
 import water.util.Log;
 import water.util.Log.Tag.Sys;
@@ -43,7 +45,8 @@ import java.util.regex.Pattern;
 public class RequestServer extends NanoHTTPD {
   public enum API_VERSION {
     V_1(1, "/"),
-    V_2(2, "/2/"); // FIXME: better should be /v2/
+    V_2(2, "/2/"), // FIXME: better should be /v2/
+    V_v2(3, "/v2/");
     final private int _version;
     final private String _prefix;
     public final String prefix() { return _prefix; }
@@ -54,15 +57,14 @@ public class RequestServer extends NanoHTTPD {
   // cache of all loaded resources
   private static final ConcurrentHashMap<String,byte[]> _cache = new ConcurrentHashMap();
   protected static final HashMap<String,Request> _requests = new HashMap();
-  public static HashMap<String,Request> requests() {
-    return _requests;
-  }
 
   static final Request _http404;
   static final Request _http500;
 
   // initialization ------------------------------------------------------------
   static {
+    boolean USE_NEW_TAB = true;
+
     _http404 = registerRequest(new HTTP404());
     _http500 = registerRequest(new HTTP500());
 
@@ -87,18 +89,20 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new DRF()),         "Distributed RF (Beta)",      "Model");
     Request.addToNavbar(registerRequest(new GLM2()),        "GLM2 (Beta)",                "Model");
     Request.addToNavbar(registerRequest(new KMeans2()),     "KMeans2 (Beta)",             "Model");
-    Request.addToNavbar(registerRequest(new NeuralNet()),   "Neural Network (Beta)",      "Model");
+    Request.addToNavbar(registerRequest(new NeuralNet()),   "Neural Network (deprecated)","Model");
+    Request.addToNavbar(registerRequest(new DeepLearning()),          "Deep Learning (Beta)",       "Model");
 
     Request.addToNavbar(registerRequest(new RFScore()),     "Random Forest",              "Score");
     Request.addToNavbar(registerRequest(new GLMScore()),    "GLM",                        "Score");
     Request.addToNavbar(registerRequest(new KMeansScore()), "KMeans",                     "Score");
     Request.addToNavbar(registerRequest(new KMeansApply()), "KMeans Apply",               "Score");
     Request.addToNavbar(registerRequest(new PCAScore()),    "PCA (Beta)",                 "Score");
-    Request.addToNavbar(registerRequest(new NeuralNetScore()), "Neural Network (Beta)",   "Score");
+    Request.addToNavbar(registerRequest(new NeuralNetScore()), "Neural Network (deprecated)","Score");
     Request.addToNavbar(registerRequest(new GeneratePredictionsPage()),  "Predict",       "Score");
-    Request.addToNavbar(registerRequest(new Predict()),     "Predict2",      "Score");
+    Request.addToNavbar(registerRequest(new Predict()),     "Predict2",                   "Score");
     Request.addToNavbar(registerRequest(new Score()),       "Apply Model",                "Score");
     Request.addToNavbar(registerRequest(new ConfusionMatrix()), "Confusion Matrix",       "Score");
+    Request.addToNavbar(registerRequest(new AUC()),         "AUC",                        "Score");
 
     Request.addToNavbar(registerRequest(new Jobs()),        "Jobs",            "Admin");
     Request.addToNavbar(registerRequest(new Cloud()),       "Cluster Status",  "Admin");
@@ -110,11 +114,12 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new Script()),      "Get Script",      "Admin");
     Request.addToNavbar(registerRequest(new Shutdown()),    "Shutdown",        "Admin");
 
-    Request.addToNavbar(registerRequest(new Documentation()),       "H2O Documentation",      "Help");
-    Request.addToNavbar(registerRequest(new Tutorials()),           "Tutorials Home",         "Help");
-    Request.addToNavbar(registerRequest(new TutorialRFIris()),      "Random Forest Tutorial", "Help");
-    Request.addToNavbar(registerRequest(new TutorialGLMProstate()), "GLM Tutorial",           "Help");
-    Request.addToNavbar(registerRequest(new TutorialKMeans()),      "KMeans Tutorial",        "Help");
+    Request.addToNavbar(registerRequest(new Documentation()),       "H2O Documentation",      "Help", USE_NEW_TAB);
+    Request.addToNavbar(registerRequest(new Tutorials()),           "Tutorials Home",         "Help", USE_NEW_TAB);
+    Request.addToNavbar(registerRequest(new TutorialRFIris()),      "Random Forest Tutorial", "Help", USE_NEW_TAB);
+    Request.addToNavbar(registerRequest(new TutorialGLMProstate()), "GLM Tutorial",           "Help", USE_NEW_TAB);
+    Request.addToNavbar(registerRequest(new TutorialKMeans()),      "KMeans Tutorial",        "Help", USE_NEW_TAB);
+    Request.addToNavbar(registerRequest(new AboutH2O()),            "About H2O",              "Help");
 
     // Beta things should be reachable by the API and web redirects, but not put in the menu.
     if(H2O.OPT_ARGS.beta == null) {
@@ -122,6 +127,7 @@ public class RequestServer extends NanoHTTPD {
       registerRequest(new Parse2());
       registerRequest(new Inspect2());
       registerRequest(new SummaryPage2());
+      registerRequest(new QuantilesPage());
       registerRequest(new hex.LR2());
     } else {
       Request.addToNavbar(registerRequest(new ImportFiles2()),   "Import Files2",        "Beta (FluidVecs!)");
@@ -130,6 +136,7 @@ public class RequestServer extends NanoHTTPD {
       Request.addToNavbar(registerRequest(new Inspect2()),       "Inspect2",             "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new hex.LR2()),        "Linear Regression2",   "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new SummaryPage2()),   "Summary2",             "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new QuantilesPage()),  "Quantiles",            "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new Console()),        "Console",              "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new ExportModel()),    "Export Model",         "Beta (FluidVecs!)");
       Request.addToNavbar(registerRequest(new ImportModel()),    "Import Model",         "Beta (FluidVecs!)");
@@ -151,9 +158,10 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new GLMProgressPage());
     registerRequest(new GridSearchProgress());
     registerRequest(new LogView.LogDownload());
-    registerRequest(new RPackage.RDownload());
     registerRequest(new NeuralNetModelView());
     registerRequest(new NeuralNetProgressPage());
+    registerRequest(new DeepLearningModelView());
+    registerRequest(new DeepLearningProgressPage());
     registerRequest(new KMeans2Progress());
     registerRequest(new KMeans2ModelView());
     registerRequest(new PCAProgressPage());
@@ -165,7 +173,6 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new PutValue());
     registerRequest(new RFTreeView());
     registerRequest(new RFView());
-    registerRequest(new RPackage());
     registerRequest(new RReaderProgress());
     registerRequest(new Remove());
     registerRequest(new RemoveAll());
@@ -174,6 +181,9 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new SetColumnNames());
     registerRequest(new water.api.SetColumnNames2());     // Set colnames for FluidVec objects
     registerRequest(new LogAndEcho());
+    registerRequest(new ToEnum());
+    registerRequest(new ToEnum2());
+    registerRequest(new ToInt2());
     registerRequest(new GLMProgress());
     registerRequest(new hex.glm.GLMGridProgress());
     registerRequest(new water.api.Levels2());    // Temporary hack to get factor levels efficiently
@@ -196,9 +206,17 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new GLMModelView());
     registerRequest(new GLMGridView());
 //    registerRequest(new GLMValidationView());
-    registerRequest(new FrameSplit());
     registerRequest(new LaunchJar());
     Request.initializeNavBar();
+
+    //v2 API
+    registerRequest(new Parser());
+    registerRequest(new UploadFile());
+    registerRequest(new ListUri());
+    registerRequest(new PreviewData());
+    registerRequest(new water.api.v2.Progress());
+    registerRequest(new CancelJob());
+    registerRequest(new GetHeader());
   }
 
   /**
@@ -252,7 +270,7 @@ public class RequestServer extends NanoHTTPD {
       // On Jenkins, this command sticks his own R version's number
       // into the package that gets built.
       //
-      //     R CMD INSTALL -l $(TMP_BUILD_DIR) --build h2oRClient-package
+      //     R CMD INSTALL -l $(TMP_BUILD_DIR) --build h2o-package
       //
       String versionOfRThatJenkinsUsed = "3.0";
 
@@ -276,6 +294,7 @@ public class RequestServer extends NanoHTTPD {
       if (uri.endsWith(".png")) return;
       if (uri.endsWith(".ico")) return;
       if (uri.startsWith("/Typeahead")) return;
+      if (uri.startsWith("/2/Typeahead")) return;
       if (uri.startsWith("/Cloud.json")) return;
       if (uri.endsWith("LogAndEcho.json")) return;
       if (uri.contains("Progress")) return;

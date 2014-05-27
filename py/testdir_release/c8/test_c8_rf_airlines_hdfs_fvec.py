@@ -36,7 +36,7 @@ PARSE_TIMEOUT=14800
 
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
-    def parseFile(self, importFolderPath='datasets', csvFilename='airlines_all.csv', 
+    def parseFile(self, importFolderPath='datasets/airlines', csvFilename='airlines_all.csv', 
         timeoutSecs=500, **kwargs):
         csvPathname = importFolderPath + "/" + csvFilename
 
@@ -76,6 +76,9 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         scoreParseResult = self.loadScoreData()
         kwargs   = paramsScoreRF.copy()
         scoreResult = h2o_rf.scoreRF(scoreParseResult, trainResult, **kwargs)
+        
+        h2i.delete_keys_at_all_nodes(timeoutSecs=600)
+
 
 if __name__ == '__main__':
     h2o.unit_main()

@@ -21,9 +21,11 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(3, create_json=True, java_heap_GB=4)
+            # h2o.nodes[0].delete_keys_at_teardown should cause the testdir_release
+            # tests to delete keys after each test completion (not cloud teardown)
+            h2o.build_cloud(3, create_json=True, java_heap_GB=4, delete_keys_at_teardown=True)
         else:
-            h2o_hosts.build_cloud_with_hosts(create_json=True)
+            h2o_hosts.build_cloud_with_hosts(create_json=True, delete_keys_at_teardown=True)
 
     @classmethod
     def tearDownClass(cls):

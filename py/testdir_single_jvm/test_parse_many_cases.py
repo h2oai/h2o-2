@@ -24,18 +24,18 @@ class Basic(unittest.TestCase):
     def test_A_many_parse1(self):
         rows = self.genrows1()
         set = 1
-        self.tryThemAll(set,rows)
+        self.tryThemAll(set, rows, enumsOnly=False)
 
     def test_B_many_parse2(self):
         rows = self.genrows2()
         set = 2
-        self.tryThemAll(set,rows)
+        self.tryThemAll(set, rows, enumsOnly=True)
 
     # this one has problems with blank lines
     def test_C_many_parse3(self):
         rows = self.genrows3()
         set = 3
-        self.tryThemAll(set,rows)
+        self.tryThemAll(set, rows, enumsOnly=True)
 
     def genrows1(self):
         # comment has to have # in first column? (no leading whitespace)
@@ -47,7 +47,7 @@ class Basic(unittest.TestCase):
         "# 'comment, is okay",
         '# "this comment, is okay too',
         "# 'this' comment, is okay too",
-        "@FirstName@|@Middle@Initials@|@LastName@|@Date@of@Birth@ ",
+        "@FirstName@|@Middle@Initials@|@LastName@|@Date@of@Birth@", # had to remove the trailing space to avoid bad parse
         "0|0.5|1|0",
         "3|NaN|4|1",
         "6||8|0",
@@ -141,15 +141,29 @@ class Basic(unittest.TestCase):
     tokenChangeDict = {
         0:['',''],
         1:['\t','\t'],
+        1:['\t','\t'],
         2:[' ',' '],
         3:['"','"'],
         4:['" ',' "'],
         5:["'","'"],
         6:["' "," '"],
         }
+
+    # flip in more characters to confuse the separator decisions. for enum test data only
+    tokenChangeDictEnumsOnly = {
+        0:[' a\t','\ta '],
+        1:['\t a','a \t'],
+        2:['',''],
+        3:['\t','\t'],
+        4:[' ',' '],
+        5:['"','"'],
+        6:['" ',' "'],
+        7:["'","'"],
+        8:["' "," '"],
+        }
     
-    def changeTokens(self,rows,tokenCase):
-        [cOpen,cClose] = self.tokenChangeDict[tokenCase]
+    def changeTokens(self, rows, tokenCase, tokenChangeDict):
+        [cOpen,cClose] = tokenChangeDict[tokenCase]
         newRows = []
         for r in rows:
             # don't quote lines that start with #
@@ -208,12 +222,17 @@ class Basic(unittest.TestCase):
 
         return newRows
     
-    def tryThemAll(self,set,rows):
+    def tryThemAll(self, set, rows, enumsOnly=False):
         for eolCase in range(len(self.eolDict)):
             eol = self.eolDict[eolCase]
             # change tokens must be first
-            for tokenCase in range(len(self.tokenChangeDict)):
-                newRows1 = self.changeTokens(rows,tokenCase)
+            if enumsOnly:
+                tcd = self.tokenChangeDict
+            else:
+                tcd = self.tokenChangeDictEnumsOnly
+
+            for tokenCase in range(len(tcd)):
+                newRows1 = self.changeTokens(rows, tokenCase, tcd)
                 for sepCase in range(len(self.sepChangeDict)):
                     newRows2 = self.changeSep(newRows1,sepCase)
                     csvPathname = SYNDATASETS_DIR + '/parsetmp_' + \

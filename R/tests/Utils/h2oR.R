@@ -30,6 +30,9 @@ function(exdir) {
 sandbox<-
 function() {
   test_name <- R.utils::commandArgs(asValues=TRUE)$"f"
+  if (is.null(test_name)) {
+      test_name <- paste(getwd(), "r_command_line", sep="/")
+  }
   # test_name can be a path..just what the basename
   Rsandbox <- paste("./Rsandbox_", basename(test_name), sep = "")
   dir.create(Rsandbox, showWarnings = FALSE)
@@ -40,11 +43,9 @@ function() {
   write.table(SEED, paste(Rsandbox, "/seed", sep = ""), row.names = F, col.names = F)
   h2o.__LOG_COMMAND <- paste(Rsandbox, "/", sep = "") 
   h2o.__LOG_ERROR   <- paste(Rsandbox, "/", sep = "") 
-  h2o.__changeLog(normalizePath(h2o.__LOG_COMMAND), "Command")
-  h2o.__changeLog(normalizePath(h2o.__LOG_ERROR), "Error")
-  h2o.__startLogging()
-  
-  
+  h2o.__changeLogPath(normalizePath(h2o.__LOG_COMMAND), "Command")
+  h2o.__changeLogPath(normalizePath(h2o.__LOG_ERROR), "Error")
+  h2o.__startLogging()  
 }
 
 Log.info<-
@@ -58,7 +59,7 @@ function(m) {
   logging(paste("[WARN] : ",m,sep=""))
   #temp <- strsplit(as.character(Sys.time()), " ")[[1]]
   #m <- paste('[',temp[1], ' ',temp[2],']', '\t', m)
-  h2o.__logIt("[WARN] :", m, "Error")
+  .h2o.__logIt("[WARN] :", m, "Error")
   traceback()
 }
 
@@ -70,7 +71,7 @@ function(m) {
   logging("[ERROR] : TEST FAILED")
   #temp <- strsplit(as.character(Sys.time()), " ")[[1]]
   #m <- paste('[',temp[1], ' ',temp[2],']', '\t', m)
-  h2o.__logIt("[ERROR] :", m, "Error")
+  .h2o.__logIt("[ERROR] :", m, "Error")
   traceback()
   q("no",1,FALSE) #exit with nonzero exit code
 }
@@ -82,14 +83,15 @@ function(m) {
 
 PASS_BANNER<-
 function() {
-  cat("")
-  cat("######     #     #####   #####  \n")
-  cat("#     #   # #   #     # #     # \n")
-  cat("#     #  #   #  #       #       \n")
-  cat("######  #     #  #####   #####  \n")
-  cat("#       #######       #       # \n")
-  cat("#       #     # #     # #     # \n")
-  cat("#       #     #  #####   #####  \n")  
+  cat("\n")
+  cat("########     ###     ######   ###### \n")
+  cat("##     ##   ## ##   ##    ## ##    ##\n")
+  cat("##     ##  ##   ##  ##       ##      \n")
+  cat("########  ##     ##  ######   ###### \n")
+  cat("##        #########       ##       ##\n")
+  cat("##        ##     ## ##    ## ##    ##\n")
+  cat("##        ##     ##  ######   ###### \n")
+  cat("\n")
 }
 
 PASS<- 
@@ -101,7 +103,7 @@ function() {
 
 FAIL<-
 function(e) {
-  cat("")
+  cat("\n")
   cat("########    ###    #### ##       \n")
   cat("##         ## ##    ##  ##       \n")
   cat("##        ##   ##   ##  ##       \n")
@@ -109,6 +111,8 @@ function(e) {
   cat("##       #########  ##  ##       \n")
   cat("##       ##     ##  ##  ##       \n")
   cat("##       ##     ## #### ######## \n")
+  cat("\n")
+
   Log.err(e)
 }
 
@@ -236,12 +240,11 @@ function(ipPort) {
   library(h2o)
   h2o.init(ip            = ipPort[[1]], 
            port          = ipPort[[2]], 
-           startH2O      = FALSE, 
-           silentUpgrade = TRUE)
-  #source("../../h2oRClient-package/R/Algorithms.R")
-  #source("../../h2oRClient-package/R/Classes.R")
-  #source("../../h2oRClient-package/R/ParseImport.R")
-  #source("../../h2oRClient-package/R/Internal.R")
+           startH2O      = FALSE)
+  #source("../../h2o-package/R/Algorithms.R")
+  #source("../../h2o-package/R/Classes.R")
+  #source("../../h2o-package/R/ParseImport.R")
+  #source("../../h2o-package/R/Internal.R")
   #sandbox()
 }
 
@@ -276,7 +279,7 @@ function() {
 h2o.removeAll <-
 function(object) {
   Log.info("Throwing away any keys on the H2O cluster")
-  h2o.__remoteSend(object, h2o.__PAGE_REMOVEALL)
+  .h2o.__remoteSend(object, .h2o.__PAGE_REMOVEALL)
 }
 
 #Log.info("Loading other required test packages")

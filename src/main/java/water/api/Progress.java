@@ -22,10 +22,10 @@ public class Progress extends Request {
     JsonObject jsonResponse = defaultJsonResponse();
 
     if( job != null && job.isCancelled() ) {
-      String msg = job.exception == null?"Job was cancelled by user!":job.exception;
+      String msg = job.isCrashed() ? job.exception : "Job was cancelled by user!";
       return Response.error(msg);
     }
-    if( job == null || job.end_time != 0 )
+    if( job == null || job.isDone())
       return jobDone(job, jsonResponse);
 
     return jobInProgress(job, jsonResponse);

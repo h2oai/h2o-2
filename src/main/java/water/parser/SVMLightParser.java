@@ -57,7 +57,11 @@ public class SVMLightParser extends CustomParser{
    * @return SVMLightPArser instance or null
    */
   public static PSetupGuess guessSetup(byte [] bits){
-    InputStream is = new ByteArrayInputStream(bits);
+    // find the last eof
+    int i = bits.length-1;
+    while(bits[i] != '\n' && i >= 0)--i;
+    assert i > 0;
+    InputStream is = new ByteArrayInputStream(Arrays.copyOf(bits,i));
     SVMLightParser p = new SVMLightParser(new ParserSetup(ParserType.SVMLight, CsvParser.AUTO_SEP, false));
     InspectDataOut dout = new InspectDataOut();
     try{p.streamParse(is, dout);}catch(Exception e){throw new RuntimeException(e);}

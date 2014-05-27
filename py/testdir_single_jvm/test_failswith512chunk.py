@@ -24,7 +24,7 @@ class Basic(unittest.TestCase):
 
     def test_fail1_100x1100(self):
         parseResult = h2i.import_parse(bucket='smalldata', path='fail1_100x11000.csv.gz', schema='put',
-            timeoutSecs=10, retryDelaySecs=0.15)
+            timeoutSecs=60, retryDelaySecs=0.15)
 
 if __name__ == '__main__':
     h2o.unit_main()

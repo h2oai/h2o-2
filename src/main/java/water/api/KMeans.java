@@ -93,7 +93,7 @@ public class KMeans extends Request {
       _m = m;
     }
 
-    public String build(Response response, JsonObject json, String contextName) {
+    @Override public String build(Response response, JsonObject json, String contextName) {
       StringBuilder sb = new StringBuilder();
       modelHTML(_m, json, sb);
       return sb.toString();

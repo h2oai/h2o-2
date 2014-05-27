@@ -1,0 +1,5 @@
+latest <- read.csv("latest", header = F)
+addr <- paste("http://h2o-release.s3.amazonaws.com/h2o/master/", latest, "/R", sep = "")
+remove.packages("h2o") 
+install.packages("h2o", repos=(c(addr, getOption("repos")))) 
+library(h2o)

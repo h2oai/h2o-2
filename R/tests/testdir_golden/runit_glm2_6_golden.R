@@ -18,7 +18,7 @@ drugsH2O[,6]<- drugsH2O[,4]-drugsH2O[,5]
 
 
 Log.info("Run matching models in R and H2O")
-fitH2O<- h2o.glm.FV(x=c("V1", "V2", "V3"), y="C5", data=drugsH2O, family="gaussian", alpha=0, lambda=0, nfolds=0)
+fitH2O<- h2o.glm.FV(x=c("V1", "V2", "V3"), y="C6", data=drugsH2O, family="gaussian", alpha=0, lambda=0, nfolds=0)
 fitR<- glm(V6 ~ V1 + V2 + V3, family=gaussian, data=drugsR)
 
 

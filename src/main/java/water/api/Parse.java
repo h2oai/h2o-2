@@ -182,10 +182,17 @@ public class Parse extends Request {
       PSetup setup = _source.value();
       if( setup == null ) return null;
       String n = setup._keys.get(0).toString();
+      // blahblahblah/myName.ext ==> myName
       int sep = n.lastIndexOf(File.separatorChar);
       if( sep > 0 ) n = n.substring(sep+1);
       int dot = n.lastIndexOf('.');
       if( dot > 0 ) n = n.substring(0, dot);
+      if( !Character.isJavaIdentifierStart(n.charAt(0)) ) n = "X"+n;
+      char[] cs = n.toCharArray();
+      for( int i=1; i<cs.length; i++ )
+        if( !Character.isJavaIdentifierPart(cs[i]) )
+          cs[i] = '_';
+      n = new String(cs);
       int i = 0;
       String res = n + Extensions.HEX;
       Key k = Key.make(res);

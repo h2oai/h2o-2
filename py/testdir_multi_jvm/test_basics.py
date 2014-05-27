@@ -6,8 +6,8 @@ import h2o_browse as h2b
 import h2o_common
 
 class Basic(h2o_common.SetupUnitTest, unittest.TestCase):
-    nodes = 3
-    java_xmx = 1
+    nodes = 2
+    java_xmx = 7
 
     def test_A_Basic(self):
         ### h2o.verify_cloud_size()
@@ -26,12 +26,13 @@ class Basic(h2o_common.SetupUnitTest, unittest.TestCase):
         h2o_cmd.runRF(parseResult=parseResult, trees=50, timeoutSecs=15)
 
     def test_E_ParseManyCols(self):
-        parseResult = h2i.import_parse(bucket='smalldata', path='fail1_100x11000.csv.gz', schema='put', timeoutSecs=10)
+        parseResult = h2i.import_parse(bucket='smalldata', path='fail1_100x11000.csv.gz', schema='put', timeoutSecs=100)
         inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
 
+    # default now wants all data at each node? too slow?
     def test_F_RF_covtype(self):
-        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path='standard/covtype.data', schema='put', timeoutSecs=30)
-        h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=35, retryDelaySecs=0.5)
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path='standard/covtype.data', schema='put', timeoutSecs=100)
+        h2o_cmd.runRF(parseResult=parseResult, trees=1, timeoutSecs=300, retryDelaySecs=0.5, iterative_cm=0)
 
     def test_G_StoreView(self):
         h2i.delete_keys_at_all_nodes(timeoutSecs=30)

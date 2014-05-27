@@ -1,9 +1,7 @@
 package hex.gbm;
 
-import java.util.Arrays;
 import water.MemoryManager;
 import water.util.Utils;
-import hex.drf.DRF;
 
 /**
    A Histogram, computed in parallel over a Vec.

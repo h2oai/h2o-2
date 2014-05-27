@@ -1,6 +1,11 @@
 package water.exec;
 
+import hex.la.Matrix;
+
 import java.util.*;
+
+import org.joda.time.DateTime;
+import org.joda.time.MutableDateTime;
 
 import water.*;
 import water.fvec.*;
@@ -73,6 +78,7 @@ public abstract class ASTOp extends AST {
     putBinInfix(new ASTNE());
     putBinInfix(new ASTLA());
     putBinInfix(new ASTLO());
+    putBinInfix(new ASTMMult());
 
     // Unary prefix ops
     putPrefix(new ASTIsNA());
@@ -91,6 +97,7 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTAnyFactor());   // For Runit testing
     putPrefix(new ASTAnyNA());
     putPrefix(new ASTIsTRUE());
+    putPrefix(new ASTMTrans());
 
     putPrefix(new ASTCos());  // Trigonometric functions
     putPrefix(new ASTSin());
@@ -101,6 +108,15 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTCosh());
     putPrefix(new ASTSinh());
     putPrefix(new ASTTanh());
+
+    // Time extractions, to and from msec since the Unix Epoch
+    putPrefix(new ASTYear  ());
+    putPrefix(new ASTMonth ());
+    putPrefix(new ASTDay   ());
+    putPrefix(new ASTHour  ());
+    putPrefix(new ASTMinute());
+    putPrefix(new ASTSecond());
+    putPrefix(new ASTMillis());
 
     // More generic reducers
     putPrefix(new ASTMin ());
@@ -122,6 +138,7 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTRApply());
     putPrefix(new ASTSApply());
     putPrefix(new ASTddply ());
+    putPrefix(new ASTUnique());
     putPrefix(new ASTRunif ());
     putPrefix(new ASTCut   ());
     putPrefix(new ASTPrint ());
@@ -214,20 +231,6 @@ public abstract class ASTOp extends AST {
     return ASTFunc.parseFcn(E);
   }
 
-  //// Parse a prefix OP or return null.
-  //static ASTOp parsePrefixOp(Exec2 E) {
-  //  int x = E._x;
-  //  String id = E.isID();
-  //  if( id == null ) return null;
-  //  ASTOp op = PREFIX_OPS.get(id);
-  //  if( op != null ) return op.make();
-  //  E._x = x;                 // Roll back, no parse happened
-  //  // Attempt a user-mode function parse
-  //  return ASTFunc.parseFcn(E);
-  //}
-
-  // Parse
-
   // Parse a unary infix OP or return null.
   static ASTOp parseUniInfixOp(Exec2 E) {
     int x = E._x;
@@ -250,10 +253,11 @@ public abstract class ASTOp extends AST {
     return null;
   }
 
-  double[] map(Env env, double[] in, double[] out) { H2O.unimpl(); return null; }
-
   @Override void exec(Env env) { env.push(this); }
+  // Standard column-wise function application
   abstract void apply(Env env, int argcnt);
+  // Special row-wise 'apply'
+  double[] map(Env env, double[] in, double[] out) { throw H2O.unimpl(); }
 }
 
 abstract class ASTUniOp extends ASTOp {
@@ -296,24 +300,24 @@ abstract class ASTUniPrefixOp extends ASTUniOp {
   ASTUniPrefixOp( String[] vars, Type[] types ) { super(vars,types,OPF_PREFIX,OPP_PREFIX,OPA_RIGHT); }
 }
 
-class ASTCos  extends ASTUniPrefixOp { String opStr(){ return "cos";   } ASTOp make() {return new ASTCos ();} double op(double d) { return Math.cos(d);}}
-class ASTSin  extends ASTUniPrefixOp { String opStr(){ return "sin";   } ASTOp make() {return new ASTSin ();} double op(double d) { return Math.sin(d);}}
-class ASTTan  extends ASTUniPrefixOp { String opStr(){ return "tan";   } ASTOp make() {return new ASTTan ();} double op(double d) { return Math.tan(d);}}
-class ASTACos extends ASTUniPrefixOp { String opStr(){ return "acos";  } ASTOp make() {return new ASTACos();} double op(double d) { return Math.acos(d);}}
-class ASTASin extends ASTUniPrefixOp { String opStr(){ return "asin";  } ASTOp make() {return new ASTASin();} double op(double d) { return Math.asin(d);}}
-class ASTATan extends ASTUniPrefixOp { String opStr(){ return "atan";  } ASTOp make() {return new ASTATan();} double op(double d) { return Math.atan(d);}}
-class ASTCosh extends ASTUniPrefixOp { String opStr(){ return "cosh";  } ASTOp make() {return new ASTCosh ();} double op(double d) { return Math.cosh(d);}}
-class ASTSinh extends ASTUniPrefixOp { String opStr(){ return "sinh";  } ASTOp make() {return new ASTSinh ();} double op(double d) { return Math.sinh(d);}}
-class ASTTanh extends ASTUniPrefixOp { String opStr(){ return "tanh";  } ASTOp make() {return new ASTTanh ();} double op(double d) { return Math.tanh(d);}}
+class ASTCos  extends ASTUniPrefixOp { @Override String opStr(){ return "cos";   } @Override ASTOp make() {return new ASTCos ();} @Override double op(double d) { return Math.cos(d);}}
+class ASTSin  extends ASTUniPrefixOp { @Override String opStr(){ return "sin";   } @Override ASTOp make() {return new ASTSin ();} @Override double op(double d) { return Math.sin(d);}}
+class ASTTan  extends ASTUniPrefixOp { @Override String opStr(){ return "tan";   } @Override ASTOp make() {return new ASTTan ();} @Override double op(double d) { return Math.tan(d);}}
+class ASTACos extends ASTUniPrefixOp { @Override String opStr(){ return "acos";  } @Override ASTOp make() {return new ASTACos();} @Override double op(double d) { return Math.acos(d);}}
+class ASTASin extends ASTUniPrefixOp { @Override String opStr(){ return "asin";  } @Override ASTOp make() {return new ASTASin();} @Override double op(double d) { return Math.asin(d);}}
+class ASTATan extends ASTUniPrefixOp { @Override String opStr(){ return "atan";  } @Override ASTOp make() {return new ASTATan();} @Override double op(double d) { return Math.atan(d);}}
+class ASTCosh extends ASTUniPrefixOp { @Override String opStr(){ return "cosh";  } @Override ASTOp make() {return new ASTCosh ();} @Override double op(double d) { return Math.cosh(d);}}
+class ASTSinh extends ASTUniPrefixOp { @Override String opStr(){ return "sinh";  } @Override ASTOp make() {return new ASTSinh ();} @Override double op(double d) { return Math.sinh(d);}}
+class ASTTanh extends ASTUniPrefixOp { @Override String opStr(){ return "tanh";  } @Override ASTOp make() {return new ASTTanh ();} @Override double op(double d) { return Math.tanh(d);}}
 
-class ASTAbs  extends ASTUniPrefixOp { String opStr(){ return "abs";   } ASTOp make() {return new ASTAbs ();} double op(double d) { return Math.abs(d);}}
-class ASTSgn  extends ASTUniPrefixOp { String opStr(){ return "sgn" ;  } ASTOp make() {return new ASTSgn ();} double op(double d) { return Math.signum(d);}}
-class ASTSqrt extends ASTUniPrefixOp { String opStr(){ return "sqrt";  } ASTOp make() {return new ASTSqrt();} double op(double d) { return Math.sqrt(d);}}
-class ASTCeil extends ASTUniPrefixOp { String opStr(){ return "ceil";  } ASTOp make() {return new ASTCeil();} double op(double d) { return Math.ceil(d);}}
-class ASTFlr  extends ASTUniPrefixOp { String opStr(){ return "floor"; } ASTOp make() {return new ASTFlr ();} double op(double d) { return Math.floor(d);}}
-class ASTLog  extends ASTUniPrefixOp { String opStr(){ return "log";   } ASTOp make() {return new ASTLog ();} double op(double d) { return Math.log(d);}}
-class ASTExp  extends ASTUniPrefixOp { String opStr(){ return "exp";   } ASTOp make() {return new ASTExp ();} double op(double d) { return Math.exp(d);}}
-class ASTIsNA extends ASTUniPrefixOp { String opStr(){ return "is.na"; } ASTOp make() {return new ASTIsNA();} double op(double d) { return Double.isNaN(d)?1:0;}}
+class ASTAbs  extends ASTUniPrefixOp { @Override String opStr(){ return "abs";   } @Override ASTOp make() {return new ASTAbs ();} @Override double op(double d) { return Math.abs(d);}}
+class ASTSgn  extends ASTUniPrefixOp { @Override String opStr(){ return "sgn" ;  } @Override ASTOp make() {return new ASTSgn ();} @Override double op(double d) { return Math.signum(d);}}
+class ASTSqrt extends ASTUniPrefixOp { @Override String opStr(){ return "sqrt";  } @Override ASTOp make() {return new ASTSqrt();} @Override double op(double d) { return Math.sqrt(d);}}
+class ASTCeil extends ASTUniPrefixOp { @Override String opStr(){ return "ceil";  } @Override ASTOp make() {return new ASTCeil();} @Override double op(double d) { return Math.ceil(d);}}
+class ASTFlr  extends ASTUniPrefixOp { @Override String opStr(){ return "floor"; } @Override ASTOp make() {return new ASTFlr ();} @Override double op(double d) { return Math.floor(d);}}
+class ASTLog  extends ASTUniPrefixOp { @Override String opStr(){ return "log";   } @Override ASTOp make() {return new ASTLog ();} @Override double op(double d) { return Math.log(d);}}
+class ASTExp  extends ASTUniPrefixOp { @Override String opStr(){ return "exp";   } @Override ASTOp make() {return new ASTExp ();} @Override double op(double d) { return Math.exp(d);}}
+class ASTIsNA extends ASTUniPrefixOp { @Override String opStr(){ return "is.na"; } @Override ASTOp make() {return new ASTIsNA();} @Override double op(double d) { return Double.isNaN(d)?1:0;}}
 
 class ASTNrow extends ASTUniPrefixOp {
   ASTNrow() { super(VARS1,new Type[]{Type.DBL,Type.ARY}); }
@@ -473,6 +477,59 @@ class ASTScale extends ASTUniPrefixOp {
   }
 }
 
+// ----
+abstract class ASTTimeOp extends ASTOp {
+  static Type[] newsig() {
+    Type t1 = Type.dblary();
+    return new Type[]{t1,t1};
+  }
+  ASTTimeOp() { super(VARS1,newsig(),OPF_PREFIX,OPP_PREFIX,OPA_RIGHT); }
+  abstract long op( MutableDateTime dt );
+  @Override void apply(Env env, int argcnt) {
+    // Single instance of MDT for the single call
+    if( !env.isAry() ) {        // Single point
+      double d = env.popDbl();
+      if( !Double.isNaN(d) ) d = op(new MutableDateTime((long)d));
+      env.poppush(d);
+      return;
+    }
+    // Whole column call
+    Frame fr = env.popAry();
+    String skey = env.key();
+    final ASTTimeOp uni = this;  // Final 'this' so can use in closure
+    Frame fr2 = new MRTask2() {
+        @Override public void map( Chunk chks[], NewChunk nchks[] ) {
+          MutableDateTime dt = new MutableDateTime(0);
+          for( int i=0; i<nchks.length; i++ ) {
+            NewChunk n =nchks[i];
+            Chunk c = chks[i];
+            int rlen = c._len;
+            for( int r=0; r<rlen; r++ ) {
+              double d = c.at0(r);
+              if( !Double.isNaN(d) ) {
+                dt.setMillis((long)d);
+                d = uni.op(dt);
+              }
+              n.addNum(d);
+            }
+          }
+        }
+      }.doAll(fr.numCols(),fr).outputFrame(fr._names, null);
+    env.subRef(fr,skey);
+    env.pop();                  // Pop self
+    env.push(fr2);
+  }
+}
+
+class ASTYear  extends ASTTimeOp { @Override String opStr(){ return "year" ; } @Override ASTOp make() {return new ASTYear  ();} @Override long op(MutableDateTime dt) { return dt.getYear();}}
+class ASTMonth extends ASTTimeOp { @Override String opStr(){ return "month"; } @Override ASTOp make() {return new ASTMonth ();} @Override long op(MutableDateTime dt) { return dt.getMonthOfYear()-1;}}
+class ASTDay   extends ASTTimeOp { @Override String opStr(){ return "day"  ; } @Override ASTOp make() {return new ASTDay   ();} @Override long op(MutableDateTime dt) { return dt.getDayOfMonth();}}
+class ASTHour  extends ASTTimeOp { @Override String opStr(){ return "hour" ; } @Override ASTOp make() {return new ASTHour  ();} @Override long op(MutableDateTime dt) { return dt.getHourOfDay();}}
+class ASTMinute extends ASTTimeOp { @Override String opStr(){return "minute";} @Override ASTOp make() {return new ASTMinute();} @Override long op(MutableDateTime dt) { return dt.getMinuteOfHour();}}
+class ASTSecond extends ASTTimeOp { @Override String opStr(){return "second";} @Override ASTOp make() {return new ASTSecond();} @Override long op(MutableDateTime dt) { return dt.getSecondOfMinute();}}
+class ASTMillis extends ASTTimeOp { @Override String opStr(){return "millis";} @Override ASTOp make() {return new ASTMillis();} @Override long op(MutableDateTime dt) { return dt.getMillisOfSecond();}}
+
+// ----
 // Class of things that will auto-expand across arrays in a 2-to-1 way:
 // applying 2 things (from an array or scalar to array or scalar) producing an
 // array or scalar result.
@@ -497,8 +554,7 @@ abstract class ASTBinOp extends ASTOp {
     }
     final boolean lf = fr0 != null;
     final boolean rf = fr1 != null;
-    final double fd0 = d0;
-    final double fd1 = d1;
+    final double df0 = d0, df1 = d1;
     Frame fr  = null;           // Do-All frame
     int ncols = 0;              // Result column count
     if( fr0 !=null ) {          // Left?
@@ -522,18 +578,21 @@ abstract class ASTBinOp extends ASTOp {
         @Override public void map( Chunk chks[], NewChunk nchks[] ) {
           for( int i=0; i<nchks.length; i++ ) {
             NewChunk n =nchks[i];
-            Chunk c0= !lf ? null : chks[i];
-            Chunk c1= !rf ? null : chks[i+(lf?nchks.length:0)];
-            int rlen = (lf ? c0 : c1)._len;
-            for( int r=0; r<rlen; r++ ) {
-              if(chks[i]._vec.isEnum())
-                n.addNA(); //slam in NA if op on enum; same as R
-              else
-                n.addNum(bin.op(lf ? c0.at0(r) : fd0, rf ? c1.at0(r) : fd1));
+            int rlen = chks[0]._len;
+            Chunk c0 = chks[i];
+            if( (!c0._vec.isEnum() &&
+                 !(lf && rf && chks[i+nchks.length]._vec.isEnum())) ||
+                bin instanceof ASTEQ ||
+                bin instanceof ASTNE ) {
+              for( int r=0; r<rlen; r++ )
+                n.addNum(bin.op(lf ? chks[i                      ].at0(r) : df0,
+                                rf ? chks[i+(lf ? nchks.length:0)].at0(r) : df1));
+            } else {
+              for( int r=0; r<rlen; r++ )  n.addNA();
             }
           }
         }
-      }.doAll(ncols,fr).outputFrame((lf ? fr0 : fr1)._names,(lf ? fr0 : fr1).domains());
+      }.doAll(ncols,fr).outputFrame((lf ? fr0 : fr1)._names,null);
     if( fr0 != null ) env.subRef(fr0,k0);
     if( fr1 != null ) env.subRef(fr1,k1);
     env.pop();
@@ -541,24 +600,24 @@ abstract class ASTBinOp extends ASTOp {
   }
 }
 
-class ASTUniPlus  extends ASTUniOp { ASTUniPlus()  { super(OPF_INFIX, OPP_UPLUS,  OPA_RIGHT); } String opStr(){ return "+"  ;} ASTOp make() {return new ASTUniPlus(); } double op(double d) { return d;}}
-class ASTUniMinus extends ASTUniOp { ASTUniMinus() { super(OPF_INFIX, OPP_UMINUS, OPA_RIGHT); } String opStr(){ return "-"  ;} ASTOp make() {return new ASTUniMinus();} double op(double d) { return -d;}}
-class ASTNot      extends ASTUniOp { ASTNot()      { super(OPF_INFIX, OPP_NOT,    OPA_RIGHT); } String opStr(){ return "!"  ;} ASTOp make() {return new ASTNot();     } double op(double d) { return d==0?1:0; }}
-class ASTPlus     extends ASTBinOp { ASTPlus()     { super(OPF_INFIX, OPP_PLUS,   OPA_LEFT ); } String opStr(){ return "+"  ;} ASTOp make() {return new ASTPlus();} double op(double d0, double d1) { return d0+d1;}}
-class ASTSub      extends ASTBinOp { ASTSub()      { super(OPF_INFIX, OPP_MINUS,  OPA_LEFT); }  String opStr(){ return "-"  ;} ASTOp make() {return new ASTSub ();} double op(double d0, double d1) { return d0-d1;}}
-class ASTMul      extends ASTBinOp { ASTMul()      { super(OPF_INFIX, OPP_MUL,    OPA_LEFT); }  String opStr(){ return "*"  ;} ASTOp make() {return new ASTMul ();} double op(double d0, double d1) { return d0*d1;}}
-class ASTDiv      extends ASTBinOp { ASTDiv()      { super(OPF_INFIX, OPP_DIV,    OPA_LEFT); }  String opStr(){ return "/"  ;} ASTOp make() {return new ASTDiv ();} double op(double d0, double d1) { return d0/d1;}}
-class ASTPow      extends ASTBinOp { ASTPow()      { super(OPF_INFIX, OPP_POWER,  OPA_RIGHT);}  String opStr(){ return "^"  ;} ASTOp make() {return new ASTPow ();} double op(double d0, double d1) { return Math.pow(d0,d1);}}
-class ASTPow2     extends ASTBinOp { ASTPow2()     { super(OPF_INFIX, OPP_POWER,  OPA_RIGHT);}  String opStr(){ return "**" ;} ASTOp make() {return new ASTPow2();} double op(double d0, double d1) { return Math.pow(d0,d1);}}
-class ASTMod      extends ASTBinOp { ASTMod()      { super(OPF_INFIX, OPP_MOD,    OPA_LEFT); }  String opStr(){ return "%"  ;} ASTOp make() {return new ASTMod ();} double op(double d0, double d1) { return d0%d1;}}
-class ASTLT       extends ASTBinOp { ASTLT()       { super(OPF_INFIX, OPP_LT,     OPA_LEFT); }  String opStr(){ return "<"  ;} ASTOp make() {return new ASTLT  ();} double op(double d0, double d1) { return d0<d1 && !Utils.equalsWithinOneSmallUlp(d0,d1)?1:0;}}
-class ASTLE       extends ASTBinOp { ASTLE()       { super(OPF_INFIX, OPP_LE,     OPA_LEFT); }  String opStr(){ return "<=" ;} ASTOp make() {return new ASTLE  ();} double op(double d0, double d1) { return d0<d1 ||  Utils.equalsWithinOneSmallUlp(d0,d1)?1:0;}}
-class ASTGT       extends ASTBinOp { ASTGT()       { super(OPF_INFIX, OPP_GT,     OPA_LEFT); }  String opStr(){ return ">"  ;} ASTOp make() {return new ASTGT  ();} double op(double d0, double d1) { return d0>d1 && !Utils.equalsWithinOneSmallUlp(d0,d1)?1:0;}}
-class ASTGE       extends ASTBinOp { ASTGE()       { super(OPF_INFIX, OPP_GE,     OPA_LEFT); }  String opStr(){ return ">=" ;} ASTOp make() {return new ASTGE  ();} double op(double d0, double d1) { return d0>d1 ||  Utils.equalsWithinOneSmallUlp(d0,d1)?1:0;}}
-class ASTEQ       extends ASTBinOp { ASTEQ()       { super(OPF_INFIX, OPP_EQ,     OPA_LEFT); }  String opStr(){ return "==" ;} ASTOp make() {return new ASTEQ  ();} double op(double d0, double d1) { return Utils.equalsWithinOneSmallUlp(d0,d1)?1:0;}}
-class ASTNE       extends ASTBinOp { ASTNE()       { super(OPF_INFIX, OPP_NE,     OPA_LEFT); }  String opStr(){ return "!=" ;} ASTOp make() {return new ASTNE  ();} double op(double d0, double d1) { return Utils.equalsWithinOneSmallUlp(d0,d1)?0:1;}}
-class ASTLA       extends ASTBinOp { ASTLA()       { super(OPF_INFIX, OPP_AND,    OPA_LEFT); }  String opStr(){ return "&"  ;} ASTOp make() {return new ASTLA  ();} double op(double d0, double d1) { return (d0!=0 && d1!=0) ? (Double.isNaN(d0) || Double.isNaN(d1)?Double.NaN:1) :0;}}
-class ASTLO       extends ASTBinOp { ASTLO()       { super(OPF_INFIX, OPP_OR,     OPA_LEFT); }  String opStr(){ return "|"  ;} ASTOp make() {return new ASTLO  ();} double op(double d0, double d1) { return (d0==0 && d1==0) ? (Double.isNaN(d0) || Double.isNaN(d1)?Double.NaN:0) :1;}}
+class ASTUniPlus  extends ASTUniOp { ASTUniPlus()  { super(OPF_INFIX, OPP_UPLUS,  OPA_RIGHT); } @Override String opStr(){ return "+"  ;} @Override ASTOp make() {return new ASTUniPlus(); } @Override double op(double d) { return d;}}
+class ASTUniMinus extends ASTUniOp { ASTUniMinus() { super(OPF_INFIX, OPP_UMINUS, OPA_RIGHT); } @Override String opStr(){ return "-"  ;} @Override ASTOp make() {return new ASTUniMinus();} @Override double op(double d) { return -d;}}
+class ASTNot      extends ASTUniOp { ASTNot()      { super(OPF_INFIX, OPP_NOT,    OPA_RIGHT); } @Override String opStr(){ return "!"  ;} @Override ASTOp make() {return new ASTNot();     } @Override double op(double d) { return d==0?1:0; }}
+class ASTPlus     extends ASTBinOp { ASTPlus()     { super(OPF_INFIX, OPP_PLUS,   OPA_LEFT ); } @Override String opStr(){ return "+"  ;} @Override ASTOp make() {return new ASTPlus();} @Override double op(double d0, double d1) { return d0+d1;}}
+class ASTSub      extends ASTBinOp { ASTSub()      { super(OPF_INFIX, OPP_MINUS,  OPA_LEFT); }  @Override String opStr(){ return "-"  ;} @Override ASTOp make() {return new ASTSub ();} @Override double op(double d0, double d1) { return d0-d1;}}
+class ASTMul      extends ASTBinOp { ASTMul()      { super(OPF_INFIX, OPP_MUL,    OPA_LEFT); }  @Override String opStr(){ return "*"  ;} @Override ASTOp make() {return new ASTMul ();} @Override double op(double d0, double d1) { return d0*d1;}}
+class ASTDiv      extends ASTBinOp { ASTDiv()      { super(OPF_INFIX, OPP_DIV,    OPA_LEFT); }  @Override String opStr(){ return "/"  ;} @Override ASTOp make() {return new ASTDiv ();} @Override double op(double d0, double d1) { return d0/d1;}}
+class ASTPow      extends ASTBinOp { ASTPow()      { super(OPF_INFIX, OPP_POWER,  OPA_RIGHT);}  @Override String opStr(){ return "^"  ;} @Override ASTOp make() {return new ASTPow ();} @Override double op(double d0, double d1) { return Math.pow(d0,d1);}}
+class ASTPow2     extends ASTBinOp { ASTPow2()     { super(OPF_INFIX, OPP_POWER,  OPA_RIGHT);}  @Override String opStr(){ return "**" ;} @Override ASTOp make() {return new ASTPow2();} @Override double op(double d0, double d1) { return Math.pow(d0,d1);}}
+class ASTMod      extends ASTBinOp { ASTMod()      { super(OPF_INFIX, OPP_MOD,    OPA_LEFT); }  @Override String opStr(){ return "%"  ;} @Override ASTOp make() {return new ASTMod ();} @Override double op(double d0, double d1) { return d0%d1;}}
+class ASTLT       extends ASTBinOp { ASTLT()       { super(OPF_INFIX, OPP_LT,     OPA_LEFT); }  @Override String opStr(){ return "<"  ;} @Override ASTOp make() {return new ASTLT  ();} @Override double op(double d0, double d1) { return d0<d1 && !Utils.equalsWithinOneSmallUlp(d0,d1)?1:0;}}
+class ASTLE       extends ASTBinOp { ASTLE()       { super(OPF_INFIX, OPP_LE,     OPA_LEFT); }  @Override String opStr(){ return "<=" ;} @Override ASTOp make() {return new ASTLE  ();} @Override double op(double d0, double d1) { return d0<d1 ||  Utils.equalsWithinOneSmallUlp(d0,d1)?1:0;}}
+class ASTGT       extends ASTBinOp { ASTGT()       { super(OPF_INFIX, OPP_GT,     OPA_LEFT); }  @Override String opStr(){ return ">"  ;} @Override ASTOp make() {return new ASTGT  ();} @Override double op(double d0, double d1) { return d0>d1 && !Utils.equalsWithinOneSmallUlp(d0,d1)?1:0;}}
+class ASTGE       extends ASTBinOp { ASTGE()       { super(OPF_INFIX, OPP_GE,     OPA_LEFT); }  @Override String opStr(){ return ">=" ;} @Override ASTOp make() {return new ASTGE  ();} @Override double op(double d0, double d1) { return d0>d1 ||  Utils.equalsWithinOneSmallUlp(d0,d1)?1:0;}}
+class ASTEQ       extends ASTBinOp { ASTEQ()       { super(OPF_INFIX, OPP_EQ,     OPA_LEFT); }  @Override String opStr(){ return "==" ;} @Override ASTOp make() {return new ASTEQ  ();} @Override double op(double d0, double d1) { return Utils.equalsWithinOneSmallUlp(d0,d1)?1:0;}}
+class ASTNE       extends ASTBinOp { ASTNE()       { super(OPF_INFIX, OPP_NE,     OPA_LEFT); }  @Override String opStr(){ return "!=" ;} @Override ASTOp make() {return new ASTNE  ();} @Override double op(double d0, double d1) { return Utils.equalsWithinOneSmallUlp(d0,d1)?0:1;}}
+class ASTLA       extends ASTBinOp { ASTLA()       { super(OPF_INFIX, OPP_AND,    OPA_LEFT); }  @Override String opStr(){ return "&"  ;} @Override ASTOp make() {return new ASTLA  ();} @Override double op(double d0, double d1) { return (d0!=0 && d1!=0) ? (Double.isNaN(d0) || Double.isNaN(d1)?Double.NaN:1) :0;}}
+class ASTLO       extends ASTBinOp { ASTLO()       { super(OPF_INFIX, OPP_OR,     OPA_LEFT); }  @Override String opStr(){ return "|"  ;} @Override ASTOp make() {return new ASTLO  ();} @Override double op(double d0, double d1) { return (d0==0 && d1==0) ? (Double.isNaN(d0) || Double.isNaN(d1)?Double.NaN:0) :1;}}
 
 // Variable length; instances will be created of required length
 abstract class ASTReducerOp extends ASTOp {
@@ -626,8 +685,8 @@ abstract class ASTReducerOp extends ASTOp {
   }
 }
 
-class ASTSum     extends ASTReducerOp { ASTSum( )     {super(0,false);} String opStr(){ return "sum"      ;} ASTOp make() {return new ASTSum();    } double op(double d0, double d1) { return d0+d1;}}
-class ASTSumNaRm extends ASTReducerOp { ASTSumNaRm( ) {super(0,true) ;} String opStr(){ return "sum.na.rm";} ASTOp make() {return new ASTSumNaRm();} double op(double d0, double d1) { return d0+d1;}}
+class ASTSum     extends ASTReducerOp { ASTSum( )     {super(0,false);} @Override String opStr(){ return "sum"      ;} @Override ASTOp make() {return new ASTSum();    } @Override double op(double d0, double d1) { return d0+d1;}}
+class ASTSumNaRm extends ASTReducerOp { ASTSumNaRm( ) {super(0,true) ;} @Override String opStr(){ return "sum.na.rm";} @Override ASTOp make() {return new ASTSumNaRm();} @Override double op(double d0, double d1) { return d0+d1;}}
 
 class ASTReduce extends ASTOp {
   static final String VARS[] = new String[]{ "", "op2", "ary"};
@@ -680,15 +739,18 @@ class ASTCbind extends ASTOp {
         env.addRef(v);
       }
     }
-    env._ary[env._sp-argcnt] = fr;
+    env._ary[env._sp-argcnt] = fr;  env._fcn[env._sp-argcnt] = null;
     env._sp -= argcnt-1;
+    Arrays.fill(env._ary,env._sp,env._sp+(argcnt-1),null);
     assert env.check_refcnt(fr.anyVec());
   }
 }
 
 class ASTMinNaRm extends ASTReducerOp {
   ASTMinNaRm( ) { super( Double.POSITIVE_INFINITY, true ); }
+  @Override
   String opStr(){ return "min.na.rm";}
+  @Override
   ASTOp make() {return new ASTMinNaRm();}
   @Override double op(double d0, double d1) { return Math.min(d0, d1); }
   @Override void apply(Env env, int argcnt) {
@@ -714,7 +776,9 @@ class ASTMinNaRm extends ASTReducerOp {
 
 class ASTMaxNaRm extends ASTReducerOp {
   ASTMaxNaRm( ) { super( Double.NEGATIVE_INFINITY, true ); }
+  @Override
   String opStr(){ return "max.na.rm";}
+  @Override
   ASTOp make() {return new ASTMaxNaRm();}
   @Override double op(double d0, double d1) { return Math.max(d0,d1); }
   @Override void apply(Env env, int argcnt) {
@@ -740,7 +804,9 @@ class ASTMaxNaRm extends ASTReducerOp {
 
 class ASTMin extends ASTReducerOp {
   ASTMin( ) { super( Double.POSITIVE_INFINITY, false); }
+  @Override
   String opStr(){ return "min";}
+  @Override
   ASTOp make() {return new ASTMin();}
   @Override double op(double d0, double d1) { return Math.min(d0, d1); }
   @Override void apply(Env env, int argcnt) {
@@ -760,7 +826,9 @@ class ASTMin extends ASTReducerOp {
 
 class ASTMax extends ASTReducerOp {
   ASTMax( ) { super( Double.NEGATIVE_INFINITY, false ); }
+  @Override
   String opStr(){ return "max";}
+  @Override
   ASTOp make() {return new ASTMax();}
   @Override double op(double d0, double d1) { return Math.max(d0,d1); }
   @Override void apply(Env env, int argcnt) {
@@ -823,6 +891,51 @@ class ASTOR extends ASTOp {
   }
 }
 
+// Brute force implementation of matrix multiply
+class ASTMMult extends ASTOp {
+  @Override String opStr() { return "%*%"; }
+  ASTMMult( ) {
+    super(new String[]{"", "x", "y"},
+          new Type[]{Type.ARY,Type.ARY,Type.ARY},
+          OPF_PREFIX,
+          OPP_MUL,
+          OPA_RIGHT);
+  }
+  @Override ASTOp make() { return new ASTMMult(); }
+  @Override void apply(Env env, int argcnt) {
+    env.poppush(3,new Matrix(env.ary(-2)).mult(env.ary(-1)),null);
+  }
+}
+
+// Brute force implementation of matrix transpose
+class ASTMTrans extends ASTOp {
+  @Override String opStr() { return "t"; }
+  ASTMTrans( ) {
+   super(new String[]{"", "x"},
+         new Type[]{Type.ARY,Type.dblary()},
+         OPF_PREFIX,
+         OPP_PREFIX,
+         OPA_RIGHT);
+  }
+  @Override ASTOp make() { return new ASTMTrans(); }
+  @Override void apply(Env env, int argcnt) {
+    if(!env.isAry(-1)) {
+      Key k = new Vec.VectorGroup().addVec();
+      Futures fs = new Futures();
+      AppendableVec avec = new AppendableVec(k);
+      NewChunk chunk = new NewChunk(avec, 0);
+      chunk.addNum(env.dbl(-1));
+      chunk.close(0, fs);
+      Vec vec = avec.close(fs);
+      fs.blockForPending();
+      vec._domain = null;
+      Frame fr = new Frame(new String[] {"C1"}, new Vec[] {vec});
+      env.poppush(2,new Matrix(fr).trans(),null);
+    } else
+      env.poppush(2,new Matrix(env.ary(-1)).trans(),null);
+  }
+}
+
 // Similar to R's seq_len
 class ASTSeq extends ASTOp {
   @Override String opStr() { return "seq_len"; }
@@ -838,14 +951,7 @@ class ASTSeq extends ASTOp {
     int len = (int)env.popDbl();
     if (len <= 0)
       throw new IllegalArgumentException("Error in seq_len(" +len+"): argument must be coercible to positive integer");
-    Key key = Vec.VectorGroup.VG_LEN1.addVecs(1)[0];
-    AppendableVec av = new AppendableVec(key);
-    NewChunk nc = new NewChunk(av,0);
-    for (int r = 0; r < len; r++) nc.addNum(r+1);
-    nc.close(0,null);
-    Vec v = av.close(null);
-    env.pop();
-    env.push(new Frame(new String[]{"c"}, new Vec[]{v}));
+    env.poppush(1,new Frame(new String[]{"c"}, new Vec[]{Vec.makeSeq(len)}),null);
   }
 }
 
@@ -1024,6 +1130,13 @@ class ASTMean extends ASTOp {
     env.pop();
     env.poppush(ave);
   }
+  @Override double[] map(Env env, double[] in, double[] out) {
+    if (out == null || out.length < 1) out = new double[1];
+    double s = 0;  int cnt=0;
+    for (double v : in) if( !Double.isNaN(v) ) { s+=v; cnt++; }
+    out[0] = s/cnt;
+    return out;
+  }
 }
 
 class ASTTable extends ASTOp {
@@ -1041,8 +1154,8 @@ class ASTTable extends ASTOp {
     for (int i = 0; i < ncol; i++) if (!fr.vecs()[i].isInt())
       throw new IllegalArgumentException("table only applies to integer vectors.");
     String[][] domains = new String[ncol][];  // the domain names to display as row and col names
-                                              // if vec does not have original domain, use levels returned by CoolectDomain
-    int[][] levels = new int[ncol][];
+                                              // if vec does not have original domain, use levels returned by CollectDomain
+    long[][] levels = new long[ncol][];
     for (int i = 0; i < ncol; i++) {
       Vec v = fr.vecs()[i];
       levels[i] = new Vec.CollectDomain(v).doAll(new Frame(v)).domain();
@@ -1070,25 +1183,27 @@ class ASTTable extends ASTOp {
       c.close(0, null);
       vecs[level1+1] = v.close(null);
       if (ncol>1) {
-        colnames[level1+1] = domains[1]==null? Integer.toString(levels[1][level1]) : domains[1][levels[1][level1]];
+        colnames[level1+1] = domains[1]==null? Long.toString(levels[1][level1]) : domains[1][(int)(levels[1][level1])];
       }
     }
     env.pop(2);
     env.push(new Frame(colnames, vecs));
   }
   private static class Tabularize extends MRTask2<Tabularize> {
-    public final int[][]  _domains;
+    public final long[][]  _domains;
     public long[][] _counts;
 
-    public Tabularize(int[][] dom) { super(); _domains=dom; }
+    public Tabularize(long[][] dom) { super(); _domains=dom; }
     @Override public void map(Chunk[] cs) {
       assert cs.length == _domains.length;
       _counts = _domains.length==1? new long[1][] : new long[_domains[1].length][];
       for (int i=0; i < _counts.length; i++) _counts[i] = new long[_domains[0].length];
       for (int i=0; i < cs[0]._len; i++) {
-        int level0, level1;
-        if (cs[0].isNA0(i)) continue; else level0 = Arrays.binarySearch(_domains[0],(int)cs[0].at80(i));
-        assert 0 <= level0 && level0 < _domains[0].length;
+        if (cs[0].isNA0(i)) continue;
+        long ds[] = _domains[0];
+        int level0 = Arrays.binarySearch(ds,cs[0].at80(i));
+        assert 0 <= level0 && level0 < ds.length : "l0="+level0+", len0="+ds.length+", min="+ds[0]+", max="+ds[ds.length-1];
+        int level1;
         if (cs.length>1) {
           if (cs[1].isNA0(i)) continue; else level1 = Arrays.binarySearch(_domains[1],(int)cs[1].at80(i));
           assert 0 <= level1 && level1 < _domains[1].length;
@@ -1116,13 +1231,13 @@ class ASTIfElse extends ASTOp {
   @Override ASTOp make() {return new ASTIfElse();}
   @Override String opStr() { return "ifelse"; }
   // Parse an infix trinary ?: operator
-  static AST parse(Exec2 E, AST tst) {
-    if( !E.peek('?') ) return null;
+  static AST parse(Exec2 E, AST tst, boolean EOS) {
+    if( !E.peek('?',true) ) return null;
     int x=E._x;
-    AST tru=E.xpeek(':',E._x,parseCXExpr(E));
+    AST tru=E.xpeek(':',E._x,parseCXExpr(E,false));
     if( tru == null ) E.throwErr("Missing expression in trinary",x);
     x = E._x;
-    AST fal=parseCXExpr(E);
+    AST fal=parseCXExpr(E,EOS);
     if( fal == null ) E.throwErr("Missing expression in trinary",x);
     return ASTApply.make(new AST[]{new ASTIfElse(),tst,tru,fal},E,x);
   }

@@ -351,6 +351,23 @@ public abstract class DocGen {
       return sb;
     }
 
+    public <T> StringBuilder tableLine(StringBuilder sb, String title, T[] values, Integer[] sortOrder) {
+      assert sortOrder == null || values.length == sortOrder.length;
+      sb.append("<tr><th>").append(title).append("</th>");
+      for( int i=0; i<values.length; i++ )
+        sb.append("<td>").append(values[sortOrder!=null ? sortOrder[i] : i]).append("</td>");
+      sb.append("</tr>");
+      return sb;
+    }
+    public StringBuilder tableLine(StringBuilder sb, String title, float[] values, Integer[] sortOrder) {
+      assert sortOrder == null || values.length == sortOrder.length;
+      sb.append("<tr><th>").append(title).append("</th>");
+      for( int i=0; i<values.length; i++ )
+        sb.append(String.format("<td>%5.4f</td>",values[sortOrder!=null ? sortOrder[i] : i]));
+      sb.append("</tr>");
+      return sb;
+    }
+
     public StringBuilder graph(StringBuilder sb, String gid, String gname, StringBuilder ...gparams) {
       sb.append("<style scoped>@import url('/h2o/css/graphs.css')</style>");
       sb.append("<script type=\"text/javascript\" src='/h2o/js/d3.v3.min.js'></script>");

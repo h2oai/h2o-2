@@ -148,7 +148,7 @@ public class RFView extends /* Progress */ Request {
       modelSize     = modelSize == 0 || finished==tasks ? finished : modelSize * (finished/modelSize);
 
       // Get the computing the matrix - if no job is computing, then start a new job
-      CMJob cmJob       = ConfusionTask.make(model, modelSize, _dataKey.value()._key, classCol, weights, _oobee.value());
+      Job cmJob       = ConfusionTask.make(model, modelSize, _dataKey.value()._key, classCol, weights, _oobee.value());
       // Here the the job is running - it saved a CM which can be already finished or in invalid state.
       CMFinal confusion = UKV.get(cmJob.dest());
       // if the matrix is valid, report it in the JSON

@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<?php session_start(); ?>
+<html>
+<head>
+    <title>H2O Performance Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="http://code.jquery.com/jquery.js"></script>
+    <link href="../vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
+    <link href="../vendor/bootstrap/css/bootstrap-responsive.min.css" rel="stylesheet">
+    <script src="../vendor/bootstrap/js/bootstrap.min.js"></script>
+    <script src="../vendor/bootstrap/js/bootstrap-typeahead.js"></script>
+    <script type="text/javascript" src="../prototype/js/customQuery.js"></script>
+    <script type="text/javascript" src="../prototype/js/perf.js"></script>
+    <script type="text/javascript" src="../prototype/js/handleTypeahead.js"></script>
+    <link href="/prototype/css/tabs-left.css" rel="stylesheet">
+</head>
+<body>
+
+<div class="container-fluid">
+    <div class="row-fluid">
+        <div class="span6 offset3">
+            <div class="page-header">
+                <h1>H2O Performance Dashboard</h1>
+            </div>
+        </div>
+    </div>
+    <div class="tabbable tabs-left">
+        <ul class="nav nav-tabs">
+            <li><a href="#a" data-toggle="tab">Parse</a></li>
+            <li><a href="#b" data-toggle="tab">Summary</a></li>
+            <li><a href="#c" data-toggle="tab">PCA</a></li>
+            <li><a href="#d" data-toggle="tab">GLM</a></li>
+            <li><a href="#e" data-toggle="tab">KMeans</a></li>
+            <li><a href="#f" data-toggle="tab">DRF</a></li>
+            <li><a href="#g" data-toggle="tab">GBM</a></li>
+            <li><a href="#h" data-toggle="tab">Neural Net</a></li>
+            <li><a href="#i" data-toggle="tab">Custom Query</a></li>
+        </ul>
+        <div class="tab-content">
+            <div class="tab-pane active" id="a">
+                <div class="page-header">
+                    <h1>Parse Performance</h1>
+                </div>
+                <div class="panel-group" id="accordiona">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h4 class="panel-title">
+                                <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#panel1">Show all results for Parse on all tests.</a>
+                            </h4>
+                        </div>
+                        <div id="panel1" class="panel-collapse collapse">
+                            <div class="panel-body">
+
+                                <form action="../prototype/php/post.php" method="post">
+                                    <div>
+                                            <textarea name="parse_1" style="width: 700px; height: 700px;">
+SELECT
+FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_name,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 parse_time_s,
+    tr.train_dataset_name,
+    tr.num_train_rows,
+    tr.num_explan_cols,
+    tr.build_version,
+    tr.build_branch,
+    tr.cpus_per_host,
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+FROM test_run tr
+INNER JOIN test_run_phase_result tp
+ON tr.test_run_id = tp.test_run_id
+WHERE tp.phase_name = 'parse'
+ORDER BY tr.start_epoch_ms;
+                                            </textarea>
+                                        <button class="btn btn-primary">Submit</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h4 class="panel-title">
+                                <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#panel2">Show results for 1B row Parse.</a>
+                            </h4>
+                        </div>
+                        <div id="panel2" class="panel-collapse collapse">
+                            <div class="panel-body">
+                                <form action="../prototype/php/post.php" method="post">
+                                    <div>
+                                            <textarea name="parse_1" style="width: 700px; height: 700px;">
+SELECT
+FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_name,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 parse_time_s,
+    tr.train_dataset_name,
+    tr.num_train_rows,
+    tr.num_explan_cols,
+    tr.build_version,
+    tr.build_branch,
+    tr.cpus_per_host,
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+FROM test_run tr
+INNER JOIN test_run_phase_result tp
+ON tr.test_run_id = tp.test_run_id
+WHERE tp.phase_name = 'parse'
+AND tr.test_name LIKE '%billion%'
+ORDER BY tr.start_epoch_ms;</textarea>
+                                        <button class="btn btn-primary">Submit</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane" id="b">
+                <div class="page-header">
+                    <h1>Summary Performance</h1>
+                </div>
+                <div class="panel-group" id="accordionb">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h4 class="panel-title">
+                                <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#panel3">Show all results for Summary on all tests.</a>
+                            </h4>
+                        </div>
+                        <div id="panel3" class="panel-collapse collapse">
+                            <div class="panel-body">
+
+                                <form action="../prototype/php/post.php" method="post">
+                                    <div>
+                                            <textarea name="parse_1" style="width: 700px; height: 700px;">
+SELECT
+FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_name,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 summary_time_s,
+    tr.train_dataset_name,
+    tr.num_train_rows,
+    tr.num_explan_cols,
+    tr.build_version,
+    tr.build_branch,
+    tr.cpus_per_host,
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+FROM test_run tr
+INNER JOIN test_run_phase_result tp
+ON tr.test_run_id = tp.test_run_id
+WHERE tp.phase_name = 'model'
+AND tr.test_name LIKE '%summary%'
+ORDER BY tr.start_epoch_ms;</textarea>
+                                        <button class="btn btn-primary">Submit</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h4 class="panel-title">
+                                <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#panel4">Show results for 1B row Summary.</a>
+                            </h4>
+                        </div>
+                        <div id="panel4" class="panel-collapse collapse">
+                            <div class="panel-body">
+                                <form action="../prototype/php/post.php" method="post">
+                                    <div>
+                                            <textarea name="parse_1" style="width: 700px; height: 650px;">
+SELECT
+FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_name,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 summary_time_s,
+    tr.train_dataset_name,
+    tr.num_train_rows,
+    tr.num_explan_cols,
+    tr.build_version,
+    tr.build_branch,
+    tr.cpus_per_host,
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+FROM test_run tr
+INNER JOIN test_run_phase_result tp
+ON tr.test_run_id = tp.test_run_id
+WHERE tp.phase_name = 'model'
+AND tr.test_name LIKE '%summary%'
+AND tr.test_name LIKE '%billion%'
+ORDER BY tr.start_epoch_ms;</textarea>
+                                        <button class="btn btn-primary">Submit</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane" id="c">
+                <div class="page-header">
+                    <h1>PCA Performance</h1>
+                </div>
+                <div class="panel-group" id="accordionc">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h4 class="panel-title">
+                                <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#panelc1">Show all results for PCA on all tests.</a>
+                            </h4>
+                        </div>
+                        <div id="panelc1" class="panel-collapse collapse">
+                            <div class="panel-body">
+
+                                <form action="../prototype/php/post.php" method="post">
+                                    <div>
+                                            <textarea name="parse_1" style="width: 700px; height: 700px;">
+SELECT
+FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_name,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 pca_time_s,
+    tr.train_dataset_name,
+    tr.num_train_rows,
+    tr.num_explan_cols,
+    tr.build_version,
+    tr.build_branch,
+    tr.cpus_per_host,
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+FROM test_run tr
+INNER JOIN test_run_phase_result tp
+ON tr.test_run_id = tp.test_run_id
+WHERE tp.phase_name = 'model'
+AND tr.test_name LIKE '%pca%'
+ORDER BY tr.start_epoch_ms;</textarea>
+                                        <button class="btn btn-primary">Submit</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h4 class="panel-title">
+                                <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#panelc2">Show results for 1B row PCA.</a>
+                            </h4>
+                        </div>
+                        <div id="panelc2" class="panel-collapse collapse">
+                            <div class="panel-body">
+                                <form action="../prototype/php/post.php" method="post">
+                                    <div>
+                                        <textarea name="parse_1" style="width: 700px; height: 600px;">
+SELECT
+FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_name,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 pca_time_s,
+    tr.train_dataset_name,
+    tr.num_train_rows,
+    tr.num_explan_cols,
+    tr.build_version,
+    tr.build_branch,
+    tr.cpus_per_host,
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+FROM test_run tr
+INNER JOIN test_run_phase_result tp
+ON tr.test_run_id = tp.test_run_id
+WHERE tp.phase_name = 'model'
+AND tr.test_name LIKE '%pca%'
+AND tr.test_name LIKE '%billion%'
+ORDER BY tr.start_epoch_ms;</textarea>
+                                        <button class="btn btn-primary">Submit</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="tab-pane" id="d">
+                <div class="page-header">
+                    <h1>GLM Performance</h1>
+                </div>
+                <div class="panel-group" id="accordiond">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h4 class="panel-title">
+                                <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#paneld1">Show all results for GLM on all tests.</a>
+                            </h4>
+                        </div>
+                        <div id="paneld1" class="panel-collapse collapse">
+                            <div class="panel-body">
+
+                                <form action="../prototype/php/post.php" method="post">
+                                    <div>
+                                        <textarea name="parse_1" style="width: 700px; height: 650px;">
+SELECT
+FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_name,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 glm_time_s,
+    tr.train_dataset_name,
+    tr.num_train_rows,
+    tr.num_explan_cols,
+    tr.build_version,
+    tr.build_branch,
+    tr.cpus_per_host,
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+FROM test_run tr
+INNER JOIN test_run_phase_result tp
+ON tr.test_run_id = tp.test_run_id
+WHERE tp.phase_name = 'model'
+AND tr.test_name LIKE '%glm%'
+ORDER BY tr.start_epoch_ms;</textarea>
+                                        <button class="btn btn-primary">Submit</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h4 class="panel-title">
+                                <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#paneld2">Show results for 1B row GLM (logistic regression).</a>
+                            </h4>
+                        </div>
+                        <div id="paneld2" class="panel-collapse collapse">
+                            <div class="panel-body">
+                                <form action="../prototype/php/post.php" method="post">
+                                    <div>
+                                            <textarea name="parse_1" style="width: 700px; height: 600px;">
+SELECT
+FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_name,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 glm_time_s,
+    tr.train_dataset_name,
+    tr.num_train_rows,
+    tr.num_explan_cols,
+    tr.build_version,
+    tr.build_branch,
+    tr.cpus_per_host,
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+FROM test_run tr
+INNER JOIN test_run_phase_result tp
+ON tr.test_run_id = tp.test_run_id
+WHERE tp.phase_name = 'model'
+AND tr.test_name LIKE '%glm%'
+AND tr.test_name LIKE '%billion%'
+ORDER BY tr.start_epoch_ms;</textarea>
+                                        <button class="btn btn-primary">Submit</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="tab-pane" id="e">
+                <div class="page-header">
+                    <h1>KMeans Performance</h1>
+                </div>
+                <div class="panel-group" id="accordione">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h4 class="panel-title">
+                                <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#panele1">Show all results for KMeans on all tests.</a>
+                            </h4>
+                        </div>
+                        <div id="panele1" class="panel-collapse collapse">
+                            <div class="panel-body">
+
+                                <form action="../prototype/php/post.php" method="post">
+                                    <div>
+                                        <textarea name="parse_1" style="width: 700px; height: 700px;">
+SELECT
+FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_name,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 kmeans_time_s,
+    tr.train_dataset_name,
+    tr.num_train_rows,
+    tr.num_explan_cols,
+    tr.build_version,
+    tr.build_branch,
+    tr.cpus_per_host,
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+FROM test_run tr
+INNER JOIN test_run_phase_result tp
+ON tr.test_run_id = tp.test_run_id
+WHERE tp.phase_name = 'model'
+AND tr.test_name LIKE '%kmeans%'
+ORDER BY tr.start_epoch_ms;</textarea>
+                                        <button class="btn btn-primary">Submit</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h4 class="panel-title">
+                                <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#panele2">Show results for 1B row KMeans.</a>
+                            </h4>
+                        </div>
+                        <div id="panele2" class="panel-collapse collapse">
+                            <div class="panel-body">
+                                <form action="../prototype/php/post.php" method="post">
+                                    <div>
+                                        <textarea name="parse_1" style="width: 700px; height: 600px;">
+SELECT
+FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_name,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 kmeans_time_s,
+    tr.train_dataset_name,
+    tr.num_train_rows,
+    tr.num_explan_cols,
+    tr.build_version,
+    tr.build_branch,
+    tr.cpus_per_host,
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+FROM test_run tr
+INNER JOIN test_run_phase_result tp
+ON tr.test_run_id = tp.test_run_id
+WHERE tp.phase_name = 'model'
+AND tr.test_name LIKE '%kmeans%'
+AND tr.test_name LIKE '%billion%'
+ORDER BY tr.start_epoch_ms;</textarea>
+                                        <button class="btn btn-primary">Submit</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="tab-pane" id="f">
+                <div class="page-header">
+                    <h1>DRF Performance</h1>
+                </div>
+                <div class="panel-group" id="accordionf">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h4 class="panel-title">
+                                <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#panelf1">Show all results for DRF on all tests.</a>
+                            </h4>
+                        </div>
+                        <div id="panelf1" class="panel-collapse collapse">
+                            <div class="panel-body">
+
+                                <form action="../prototype/php/post.php" method="post">
+                                    <div>
+                                        <textarea name="parse_1" style="width: 700px; height: 700px;">
+SELECT
+FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_name,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 drf_time_s,
+    tr.train_dataset_name,
+    tr.num_train_rows,
+    tr.num_explan_cols,
+    tr.build_version,
+    tr.build_branch,
+    tr.cpus_per_host,
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+FROM test_run tr
+INNER JOIN test_run_phase_result tp
+ON tr.test_run_id = tp.test_run_id
+WHERE tp.phase_name = 'model'
+AND tr.test_name LIKE '%rf%'
+ORDER BY tr.start_epoch_ms;</textarea>
+                                        <button class="btn btn-primary">Submit</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h4 class="panel-title">
+                                <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#panelf2">Compare MNIST8M results on RF.VA and RF.FV.</a>
+                            </h4>
+                        </div>
+                        <div id="panelf2" class="panel-collapse collapse">
+                            <div class="panel-body">
+                                <form action="../prototype/php/post.php" method="post">
+                                    <div>
+                                        <textarea name="parse_1" style="width: 700px; height: 700px;">
+SELECT
+    FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_name,
+    (p.end_epoch_ms - p.start_epoch_ms) / 1000 drf_time_s,
+    tr.train_dataset_name,
+    tr.test_run_id,
+    tr.num_train_rows,
+    tr.num_explan_cols,
+    tr.build_branch,
+    tr.build_version,
+    tr.cpus_per_host,
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+FROM test_run tr
+INNER JOIN test_run_phase_result p
+ON tr.test_run_id = p.test_run_id
+WHERE tr.test_name LIKE '%rf%'
+AND p.phase_name = 'model'
+ORDER BY tr.test_name, tr.test_run_id; 
+                                        </textarea>
+                                        <button class="btn btn-primary">Submit</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="tab-pane" id="g">
+                <div class="page-header">
+                    <h1>GBM Performance</h1>
+                </div>
+                <div class="panel-group" id="accordiong">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h4 class="panel-title">
+                                <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#panelg1">Show all results for GBM on all tests.</a>
+                            </h4>
+                        </div>
+                        <div id="panelg1" class="panel-collapse collapse">
+                            <div class="panel-body">
+
+                                <form action="../prototype/php/post.php" method="post">
+                                    <div>
+                                        <textarea name="parse_1" style="width: 700px; height: 700px;">
+SELECT
+FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+    tr.test_name,
+    (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 gbm_time_s,
+    tr.train_dataset_name,
+    tr.num_train_rows,
+    tr.num_explan_cols,
+    tr.build_version,
+    tr.build_branch,
+    tr.cpus_per_host,
+    tr.heap_bytes_per_node / (1024 * 1024) heap_gb
+FROM test_run tr
+INNER JOIN test_run_phase_result tp
+ON tr.test_run_id = tp.test_run_id
+WHERE tp.phase_name = 'model'
+AND tr.test_name LIKE '%gbm%'
+ORDER BY tr.start_epoch_ms;</textarea>
+                                        <button class="btn btn-primary">Submit</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+<!--
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h4 class="panel-title">
+                                <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#panelg2">Show results for 1B row GBM.</a>
+                            </h4>
+                        </div>
+                        <div id="panelg2" class="panel-collapse collapse">
+                            <div class="panel-body">
+                                <form action="../prototype/php/post.php" method="post">
+                                    <div>
+                                        <textarea name="parse_1" style="width: 700px; height: 700px;">SELECT
+                                            FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+                                            tr.test_name,
+                                            (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 parse_time_s,
+                                            tr.train_dataset_name,
+                                            tr.num_train_rows,
+                                            tr.num_explan_cols,
+                                            tr.build_version,
+                                            tr.build_branch,
+                                            tr.cpus_per_host,
+                                            tr.heap_bytes_per_node
+                                            FROM test_run tr
+                                            INNER JOIN test_run_phase_result tp
+                                            ON tr.test_run_id = tp.test_run_id
+                                            WHERE tp.phase_name = 'parse'
+                                            ORDER BY tr.start_epoch_ms;</textarea>
+                                        <button class="btn btn-primary">Submit</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+-->
+                </div>
+
+            </div>
+
+            <div class="tab-pane" id = "h">
+                <div class="page-header">
+                    <h1>Neural Net Performance</h1>
+                </div>
+<!--
+                <div class="panel-group" id="accordionh">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h4 class="panel-title">
+                                <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#panelh1">Show all results for Neural Net on all tests.</a>
+                            </h4>
+                        </div>
+                        <div id="panelh1" class="panel-collapse collapse">
+                            <div class="panel-body">
+
+                                <form action="../prototype/php/post.php" method="post">
+                                    <div>
+                                        <textarea name="parse_1" style="width: 700px; height: 700px;">SELECT
+                                            FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+                                            tr.test_name,
+                                            (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 parse_time_s,
+                                            tr.train_dataset_name,
+                                            tr.num_train_rows,
+                                            tr.num_explan_cols,
+                                            tr.build_version,
+                                            tr.build_branch,
+                                            tr.cpus_per_host,
+                                            tr.heap_bytes_per_node
+                                            FROM test_run tr
+                                            INNER JOIN test_run_phase_result tp
+                                            ON tr.test_run_id = tp.test_run_id
+                                            WHERE tp.phase_name = 'parse'
+                                            ORDER BY tr.start_epoch_ms;</textarea>
+                                        <button class="btn btn-primary">Submit</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h4 class="panel-title">
+                                <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#panelh2">Show results for 1B row Neural Net.</a>
+                            </h4>
+                        </div>
+                        <div id="panelh2" class="panel-collapse collapse">
+                            <div class="panel-body">
+                                <form action="../prototype/php/post.php" method="post">
+                                    <div>
+                                        <textarea name="parse_1" style="width: 700px; height: 700px;">SELECT
+                                            FROM_UNIXTIME(tr.start_epoch_ms / 1000, '%Y-%m-%d') as run_date,
+                                            tr.test_name,
+                                            (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 parse_time_s,
+                                            tr.train_dataset_name,
+                                            tr.num_train_rows,
+                                            tr.num_explan_cols,
+                                            tr.build_version,
+                                            tr.build_branch,
+                                            tr.cpus_per_host,
+                                            tr.heap_bytes_per_node
+                                            FROM test_run tr
+                                            INNER JOIN test_run_phase_result tp
+                                            ON tr.test_run_id = tp.test_run_id
+                                            WHERE tp.phase_name = 'parse'
+                                            ORDER BY tr.start_epoch_ms;</textarea>
+                                        <button class="btn btn-primary">Submit</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+-->
+            <p> <h4><b>No Neural Net Tests Exist Yet</b> </h4></p>
+            </div>
+
+            <div class="tab-pane" id="i">
+                <div class="page-header">
+                    <h1>Custom Query</h1>
+                </div>
+
+                <form action="../prototype/php/post.php" method="post">
+                    <div>
+                        <label>
+                            <textarea name="query"></textarea>
+                        </label>
+                        <button class="btn btn-primary">Submit</button>
+                    </div>
+                </form>
+            </div>
+
+        </div>
+    </div>
+    <!-- /tabs -->
+</div>
+<!--
+        <form name="query" method="POST" action="../prototype/php/results_page.php">
+            <input type="hidden" name="query">
+        </form>
+-->
+</body>
+</html>
+
+

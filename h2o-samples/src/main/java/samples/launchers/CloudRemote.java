@@ -1,10 +1,12 @@
 package samples.launchers;
 
-import java.util.Arrays;
-
 import water.Job;
-import water.deploy.*;
+import water.deploy.Cloud;
+import water.deploy.EC2;
+import water.deploy.VM;
 import water.util.Log;
+
+import java.util.Arrays;
 
 /**
  * Builds a remote cluster. H2O jar, or classes from current workspace, are deployed through rsync.
@@ -61,7 +63,7 @@ public class CloudRemote {
     cloud.clientRSyncExcludes.add("lib/javassist");
     cloud.clientRSyncExcludes.add("**/*-sources.jar");
 
-    String java = "-ea -Xmx60G -Dh2o.debug";
+    String java = "-ea -Xmx20G -Dh2o.debug";
     String node = "-mainClass " + UserCode.class.getName() + " " + (job != null ? job.getName() : null) + " -beta";
     cloud.start(java.split(" "), node.split(" "));
   }

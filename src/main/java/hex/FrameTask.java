@@ -1,19 +1,30 @@
 package hex;
 
-import hex.glm.GLMParams.CaseMode;
-
-import java.util.Arrays;
-
-import water.*;
 import water.H2O.H2OCountedCompleter;
+import water.Iced;
+import water.Job;
 import water.Job.JobCancelledException;
-import water.fvec.*;
+import water.MRTask2;
+import water.MemoryManager;
+import water.fvec.Chunk;
+import water.fvec.Frame;
+import water.fvec.NewChunk;
+import water.fvec.Vec;
+import water.util.Log;
+import water.util.Utils;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Random;
 
 public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
   final protected DataInfo _dinfo;
   final Job _job;
   double    _ymu = Double.NaN; // mean of the response
   // size of the expanded vector of parameters
+
+  protected float _useFraction = 1.0f;
+  protected boolean _shuffle = false;
 
   public FrameTask(Job job, DataInfo dinfo) {
     this(job,dinfo,null);
@@ -26,9 +37,13 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
   protected FrameTask(FrameTask ft){
     _dinfo = ft._dinfo;
     _job = ft._job;
+    _useFraction = ft._useFraction;
+    _shuffle = ft._shuffle;
   }
-  public double [] normMul(){return _dinfo._normMul;}
-  public double [] normSub(){return _dinfo._normSub;}
+  public final double [] normMul(){return _dinfo._normMul;}
+  public final double [] normSub(){return _dinfo._normSub;}
+  public final double [] normRespMul(){return _dinfo._normMul;}
+  public final double [] normRespSub(){return _dinfo._normSub;}
 
   /**
    * Method to process one row of the data for GLM functions.
@@ -46,29 +61,34 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
    *      B,B - ncats = 2, indexes = [0,2]
    *      and so on
    *
+   * @param gid      - global id of this row, in [0,_adaptedFrame.numRows())
    * @param nums     - numeric values of this row
    * @param ncats    - number of passed (non-zero) categoricals
    * @param cats     - indexes of categoricals into the expanded beta-vector.
    * @param response - numeric value for the response
    */
-  protected void processRow(double [] nums, int ncats, int [] cats, double [] response){throw new RuntimeException("should've been overriden!");}
-  protected void processRow(double [] nums, int ncats, int [] cats, double [] response, NewChunk [] outputs){throw new RuntimeException("should've been overriden!");}
+  protected void processRow(long gid, double [] nums, int ncats, int [] cats, double [] response){throw new RuntimeException("should've been overriden!");}
+  protected void processRow(long gid, double [] nums, int ncats, int [] cats, double [] response, NewChunk [] outputs){throw new RuntimeException("should've been overriden!");}
 
 
   public static class DataInfo extends Iced {
-    public final Frame _adaptedFrame;
+    public Frame _adaptedFrame;
     public final int _responses; // number of responses
     public final boolean _standardize;
+    public final boolean _standardize_response;
     public final int _nums;
     public final int _cats;
     public final int [] _catOffsets;
     public final double [] _normMul;
     public final double [] _normSub;
+    public final double [] _normRespMul;
+    public final double [] _normRespSub;
     public final int _foldId;
     public final int _nfolds;
 
-    private DataInfo(DataInfo dinfo,int foldId, int nfolds){
+    private DataInfo(DataInfo dinfo, int foldId, int nfolds){
       _standardize = dinfo._standardize;
+      _standardize_response = dinfo._standardize_response;
       _responses = dinfo._responses;
       _nums = dinfo._nums;
       _cats = dinfo._cats;
@@ -76,23 +96,103 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       _catOffsets = dinfo._catOffsets;
       _normMul = dinfo._normMul;
       _normSub = dinfo._normSub;
+      _normRespMul = dinfo._normRespMul;
+      _normRespSub = dinfo._normRespSub;
       _foldId = foldId;
       _nfolds = nfolds;
     }
-    public DataInfo(Frame fr, int hasResponses, double [] normSub, double [] normMul){
-      this(fr,hasResponses,normSub != null && normMul != null);
+    public DataInfo(Frame fr, int hasResponses, double [] normSub, double [] normMul) {
+      this(fr,hasResponses,normSub,normMul,null,null);
+    }
+    public DataInfo(Frame fr, int hasResponses, double [] normSub, double [] normMul, double [] normRespSub, double [] normRespMul){
+      this(fr,hasResponses,normSub != null && normMul != null, normRespSub != null && normRespMul != null);
       assert (normSub == null) == (normMul == null);
+      assert (normRespSub == null) == (normRespMul == null);
       if(normSub != null && normMul != null){
         System.arraycopy(normSub, 0, _normSub, 0, normSub.length);
         System.arraycopy(normMul, 0, _normMul, 0, normMul.length);
       }
+      if(normRespSub != null && normRespMul != null){
+        System.arraycopy(normRespSub, 0, _normRespSub, 0, normRespSub.length);
+        System.arraycopy(normRespMul, 0, _normRespMul, 0, normRespMul.length);
+      }
     }
-    public DataInfo(Frame fr, int nResponses, boolean standardize){
+
+    /**
+     * Prepare a Frame (with a single response) to be processed by the FrameTask
+     * 1) Place response at the end
+     * 2) (Optionally) Remove columns with constant values or with >20% NaNs
+     * 3) Possibly turn integer categoricals into enums
+     *
+     * @param source A frame to be expanded and sanity checked
+     * @param response (should be part of source)
+     * @param toEnum Whether or not to turn categoricals into enums
+     * @param dropConstantCols Whether or not to drop constant columns
+     * @return Frame to be used by FrameTask
+     */
+    public static Frame prepareFrame(Frame source, Vec response, int[] ignored_cols, boolean toEnum, boolean dropConstantCols) {
+      Frame fr = new Frame(source._names.clone(), source.vecs().clone());
+      if (ignored_cols != null) fr.remove(ignored_cols);
+      final Vec[] vecs =  fr.vecs();
+      // put response to the end (if not already)
+      for(int i = 0; i < vecs.length-1; ++i) {
+        if(vecs[i] == response){
+          final String n = fr._names[i];
+          if (toEnum && !vecs[i].isEnum()) fr.add(n, fr.remove(i).toEnum()); //convert int classes to enums
+          else fr.add(n, fr.remove(i));
+          break;
+        }
+      }
+      // special case for when response was at the end already
+      if (toEnum && !response.isEnum() && vecs[vecs.length-1] == response) {
+        final String n = fr._names[vecs.length-1];
+        fr.add(n, fr.remove(vecs.length-1).toEnum());
+      }
+
+      ArrayList<Integer> constantOrNAs = new ArrayList<Integer>();
+      {
+        ArrayList<Integer> constantCols = new ArrayList<Integer>();
+        ArrayList<Integer> NACols = new ArrayList<Integer>();
+        for(int i = 0; i < vecs.length-1; ++i) {
+          // remove constant cols and cols with too many NAs
+          final boolean dropconstant = dropConstantCols && vecs[i].min() == vecs[i].max();
+          final boolean droptoomanyNAs = vecs[i].naCnt() > vecs[i].length()*0.2;
+          if(dropconstant) {
+            constantCols.add(i);
+          } else if (droptoomanyNAs) {
+            NACols.add(i);
+          }
+        }
+        constantOrNAs.addAll(constantCols);
+        constantOrNAs.addAll(NACols);
+
+        // Report what is dropped
+        String msg = "";
+        if (constantCols.size() > 0) msg += "Dropping constant column(s): ";
+        for (int i : constantCols) msg += source._names[i] + " ";
+        if (NACols.size() > 0) msg += "Dropping column(s) with too many missing values: ";
+        for (int i : NACols) msg += source._names[i] + " (" + String.format("%.2f", vecs[i].naCnt() * 100. / vecs[i].length()) + "%) ";
+        for (String s : msg.split("\n")) Log.info(s);
+      }
+      if(!constantOrNAs.isEmpty()){
+        int [] cols = new int[constantOrNAs.size()];
+        for(int i = 0; i < cols.length; ++i)
+          cols[i] = constantOrNAs.get(i);
+        fr.remove(cols);
+      }
+      return fr;
+    }
+    public DataInfo(Frame fr, int nResponses, boolean standardize) {
+      this(fr, nResponses, standardize, false);
+    }
+    public DataInfo(Frame fr, int nResponses, boolean standardize, boolean standardize_response){
       _nfolds = _foldId = 0;
       _standardize = standardize;
+      _standardize_response = standardize_response;
       _responses = nResponses;
       final Vec [] vecs = fr.vecs();
       final int n = vecs.length-_responses;
+      if (n < 1) throw new IllegalArgumentException("Training data must have at least one column.");
       int [] nums = MemoryManager.malloc4(n);
       int [] cats = MemoryManager.malloc4(n);
       int nnums = 0, ncats = 0;
@@ -125,17 +225,30 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       if(standardize){
         _normSub = MemoryManager.malloc8d(nnums);
         _normMul = MemoryManager.malloc8d(nnums); Arrays.fill(_normMul, 1);
-      } else
-        _normSub = _normMul = null;
+      } else _normSub = _normMul = null;
       for(int i = 0; i < nnums; ++i){
-        Vec v = (vecs2[i+ncats]  = vecs [nums[i]]);
+        Vec v = (vecs2[i+ncats] = vecs[nums[i]]);
         names[i+ncats] = fr._names[nums[i]];
         if(standardize){
           _normSub[i] = v.mean();
-          _normMul[i] = 1.0/v.sigma();
+          _normMul[i] = v.sigma() != 0 ? 1.0/v.sigma() : 1.0;
+        }
+      }
+
+      if(standardize_response){
+        _normRespSub = MemoryManager.malloc8d(_responses);
+        _normRespMul = MemoryManager.malloc8d(_responses); Arrays.fill(_normRespMul, 1);
+      } else _normRespSub = _normRespMul = null;
+      for(int i = 0; i < _responses; ++i){
+        Vec v = (vecs2[nnums+ncats+i] = vecs[nnums+ncats+i]);
+        if(standardize_response){
+          _normRespSub[i] = v.mean();
+          _normRespMul[i] = v.sigma() != 0 ? 1.0/v.sigma() : 1.0;
+//          Log.info("normalization for response[" + i + ": mul " + _normRespMul[i] + ", sub " + _normRespSub[i]);
         }
       }
       _adaptedFrame = new Frame(names,vecs2);
+      _adaptedFrame.reloadVecs();
     }
     public String toString(){
       return "";
@@ -182,16 +295,44 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
    * and adapts response according to the CaseMode/CaseValue if set.
    */
   @Override public final void map(Chunk [] chunks, NewChunk [] outputs){
-    if(_job != null && !Job.isRunning(_job.self()))throw new JobCancelledException();
-    chunkInit();
+    if(_job != null && _job.self() != null && !Job.isRunning(_job.self()))throw new JobCancelledException();
     final int nrows = chunks[0]._len;
+    final long offset = chunks[0]._start;
+    chunkInit();
     double [] nums = MemoryManager.malloc8d(_dinfo._nums);
     int    [] cats = MemoryManager.malloc4(_dinfo._cats);
     double [] response = MemoryManager.malloc8d(_dinfo._responses);
+    int start = 0;
+    int end = nrows;
+
+    boolean contiguous = false;
+    Random skip_rng = null; //random generator for skipping rows
+    if (_useFraction < 1.0) {
+      skip_rng = water.util.Utils.getDeterRNG(new Random().nextLong());
+      if (contiguous) {
+        final int howmany = (int)Math.ceil(_useFraction*nrows);
+        if (howmany > 0) {
+          start = skip_rng.nextInt(nrows - howmany);
+          end = start + howmany;
+        }
+        assert(start < nrows);
+        assert(end <= nrows);
+      }
+    }
+
+    long[] shuf_map = null;
+    if (_shuffle) {
+      shuf_map = new long[end-start];
+      for (int i=0;i<shuf_map.length;++i)
+        shuf_map[i] = start + i;
+      Utils.shuffleArray(shuf_map, new Random().nextLong());
+    }
 
     OUTER:
-    for(int r = 0; r < nrows; ++r){
-      if(_dinfo._nfolds > 0 && (r % _dinfo._nfolds) == _dinfo._foldId)continue;
+    for(int rr = start; rr < end; ++rr){
+      final int r = shuf_map != null ? (int)shuf_map[rr-start] : rr;
+      if ((_dinfo._nfolds > 0 && (r % _dinfo._nfolds) == _dinfo._foldId)
+              || (skip_rng != null && skip_rng.nextFloat() > _useFraction))continue;
       for(Chunk c:chunks)if(c.isNA0(r))continue OUTER; // skip rows with NAs!
       int i = 0, ncats = 0;
       for(; i < _dinfo._cats; ++i){
@@ -204,12 +345,14 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         if(_dinfo._normMul != null) d = (d - _dinfo._normSub[i-_dinfo._cats])*_dinfo._normMul[i-_dinfo._cats];
         nums[i-_dinfo._cats] = d;
       }
-      for(i = 0; i < _dinfo._responses; ++i)
+      for(i = 0; i < _dinfo._responses; ++i) {
         response[i] = chunks[chunks.length-_dinfo._responses + i].at0(r);
+        if (_dinfo._normRespMul != null) response[i] = (response[i] - _dinfo._normRespSub[i])*_dinfo._normRespMul[i];
+      }
       if(outputs != null && outputs.length > 0)
-        processRow(nums, ncats, cats,response,outputs);
+        processRow(offset+r, nums, ncats, cats, response, outputs);
       else
-        processRow(nums, ncats, cats,response);
+        processRow(offset+r, nums, ncats, cats, response);
     }
     chunkDone();
   }

@@ -15,6 +15,8 @@ import hex.drf.DRF;
 import hex.drf.DRF.DRFModel;
 import hex.gbm.GBM.GBMModel;
 import hex.glm.GLMModelView;
+import hex.deeplearning.DeepLearning;
+import hex.deeplearning.DeepLearningModel;
 import hex.pca.PCA;
 import hex.pca.PCAModelView;
 import hex.rf.RFModel;
@@ -71,7 +73,7 @@ public class Inspect extends Request {
 
   public static Response redirect(JsonObject resp, Job keyProducer, Key dest) {
     JsonObject redir = new JsonObject();
-    if (keyProducer!=null) redir.addProperty(JOB, keyProducer.job_key.toString());
+    if (keyProducer!=null) redir.addProperty(JOB, keyProducer.self().toString());
     redir.addProperty(KEY, dest.toString());
     return Response.redirect(resp, Inspect.class, redir);
   }
@@ -175,6 +177,8 @@ public class Inspect extends Request {
 //      return GLMValidationView.redirect(this, key);
     if(f instanceof NeuralNetModel)
       return NeuralNetModelView.redirect(this, key);
+    if(f instanceof DeepLearningModel)
+      return DeepLearningModelView.redirect(this, key);
     if(f instanceof KMeans2Model)
       return KMeans2ModelView.redirect(this, key);
     if(f instanceof GridSearch)
@@ -347,11 +351,12 @@ public class Inspect extends Request {
           + RF.link(key, "Single Node Random Forest") + ", "
           + DRF.link(key, "Distributed Random Forest") + ", "
           + GLM.link(key, "GLM") + ", " + GLMGrid.link(key, "GLM Grid Search") + ", "
-          + KMeans.link(key, "KMeans") + ", or "
-          + NeuralNet.link(key, NeuralNet.DOC_GET) + "<br />"
+          + KMeans.link(key, "KMeans") + ", "
+          + NeuralNet.link(key, NeuralNet.DOC_GET) + ", or "
+          + DeepLearning.link(key, DeepLearning.DOC_GET) + "<br />"
           + "Score data using "
           + RFScore.link(key, "Random Forest") + ", "
-          + GLMScore.link(KEY, key, 0.0, "GLM") + "</br><b>Download as</b> " + DownloadDataset.link(key, "CSV")
+          + GLMScore.link(KEY, key, "0.0", "GLM") + "</br><b>Download as</b> " + DownloadDataset.link(key, "CSV")
         + "</div>"
         + "<p><b><font size=+1>"
           + cols + " columns"
@@ -477,6 +482,34 @@ public class Inspect extends Request {
 
       JsonObject row = new JsonObject();
 
+      row.addProperty(ROW, "Change Type");
+      String k = _va._key.toString();
+      for( int i = 0; i < _max_columns; i++ ) {
+        if(_va._cols[i].isFloat()) {
+          row.addProperty(_va._cols[i]._name, "");
+          continue;
+        }
+        if(_va._cols[i].isEnum()) {
+          // check if previously an int column
+          // technically I should check if the whole domain is ints, I just check mu and sigma instead.
+          // enums have mu = sigma = NaN, unless they are just transformed int column.
+          if(!Double.isNaN(_va._cols[i]._mean) && !Double.isNaN(_va._cols[i]._sigma)){
+            String btn = "<span class='btn_custom'>\n";
+            btn += "<a href='ToEnum.html?key=" + k + "&col_index=" + (i)  + "&to_enum=false" + "'>\n"
+              + "<button type='submit' class='btn btn-custom'>As Integer</button>\n";
+            btn += "</span>\n";
+            row.addProperty(_va._cols[i]._name, btn);
+          } else row.addProperty(_va._cols[i]._name, "");
+          continue;
+        }
+        String btn = "<span class='btn_custom'>\n";
+        btn += "<a href='ToEnum.html?key=" + k + "&col_index=" + (i)  + "&to_enum=true" + "'>"
+                + "<button type='submit' class='btn btn-custom'>As Factor</button>";
+        btn += "</span>\n";
+        row.addProperty(_va._cols[i]._name, btn);
+      }
+      sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
+
       row.addProperty(ROW, TYPE);
       for( int i = 0; i < _max_columns; i++ )
         row.addProperty(_va._cols[i]._name, _va._cols[i].isEnum() ? ColType.Enum.toString() : _va._cols[i].isFloat() ? ColType.Real.toString() : ColType.Int.toString());
@@ -598,21 +631,21 @@ public class Inspect extends Request {
 
       row.addProperty(ROW, FIRST_CHUNK);
       for( int i = 0; i < _f.numCols(); i++ )
-        row.addProperty(_f._names[i], _f.vecs()[i].elem2BV(0).getClass().getSimpleName());
+        row.addProperty(_f._names[i], _f.vecs()[i].chunkForChunkIdx(0).getClass().getSimpleName());
       sb.append(ARRAY_HEADER_ROW_BUILDER.build(response, row, contextName));
 
       if( _offset == INFO_PAGE ) {
 
         for( int ci = 0; ci < _f.vecs()[0].nChunks(); ci++ ) {
-//          Chunk chunk = _f.vecs()[ci].elem2BV(ci);
+//          Chunk chunk = _f.vecs()[ci].chunkForChunkIdx(ci);
           String prefix = CHUNK + " " + ci + " ";
           row.addProperty(ROW, prefix + TYPE);
           for( int i = 0; i < _f.numCols(); i++ )
-            row.addProperty(_f._names[i], _f.vecs()[i].elem2BV(ci).getClass().getSimpleName());
+            row.addProperty(_f._names[i], _f.vecs()[i].chunkForChunkIdx(ci).getClass().getSimpleName());
           sb.append(defaultBuilder(row).build(response, row, contextName));
           row.addProperty(ROW, prefix + SIZE);
           for( int i = 0; i < _f.numCols(); i++ )
-            row.addProperty(_f._names[i], _f.vecs()[i].elem2BV(ci).byteSize());
+            row.addProperty(_f._names[i], _f.vecs()[i].chunkForChunkIdx(ci).byteSize());
           sb.append(defaultBuilder(row).build(response, row, contextName));
         }
       } else {
@@ -627,5 +660,10 @@ public class Inspect extends Request {
       sb.append(footer(array));
       return sb.toString();
     }
+  }
+
+  @Override
+  public RequestServer.API_VERSION[] supportedVersions() {
+    return SUPPORTS_ONLY_V1;
   }
 }

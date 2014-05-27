@@ -1,0 +1,32 @@
+{
+    "type": "object" , "properties": {
+    "jobs": { "type": "array" , "items":
+        { "type": "object" , "properties": {
+            "cancelled": { "type": "boolean" },
+            "description": { "type": "string" },
+            "destination_key": { "type": "string" },
+            "end_time": { "type": "string" },
+            "key": { "type": "string" },
+            "progress": { "type": "number" },
+            "result": { "type": "object" , "properties": {
+                "exception": { "type": "string" },
+                "val": { "type": "string" }
+            } 
+            },
+            "start_time": { "type": "string" }
+        } 
+        }
+    }
+    },
+#    "response": { "type": "object" , "properties": {
+#        "h2o": { "type": "string" },
+#        "node": { "type": "string" },
+#        "status": { "type": "string" },
+#        "time": { "type": "number" }
+#        } 
+#        }
+#    }
+#    } 
+
+}
+

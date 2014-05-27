@@ -31,33 +31,45 @@ For IDEA users (Github)
 .. image:: idea/05ConfigureImport.png
    :width: 90 %
 
-7. H\ :sub:`2`\ O should be selected by default.  Keep it selected and click Next.
+7. H\ :sub:`2`\ O should be selected by default.  Keep it selected.  If the "experiments" module is selected uncheck it.  Click Next.
 
 .. image:: idea/06H2OSelected.png
    :width: 90 %
 
-8. Keep the 1.6 selected by default and click Finish.  SDK 1.7 is also fine if that is the default on your system.
+8. SDK 1.6 or 1.7 should selected by default.  If so click Finish.  If you don't have an SDK on your system you will need to install one first.
 
 .. image:: idea/07SelectJavaSK.png
    :width: 90 %
 
-9. (Import from Eclipse) If prompted for Python configuration stuff, just click Cancel.
+9. (Import from Eclipse) If prompted for Python configuration stuff just click Cancel.
 
 .. image:: idea/08CancelPython.png
    :width: 90 %
 
-10. If prompted to Add Files to Git, just click Cancel.
+10. If prompted to Add Files to Git just click Cancel.
 
 .. image:: idea/09CancelAddProjectFilesToGit.png
    :width: 90 %
 
-11. Select a sample Java Application and right click on it.  Choose Run.
+11. In IntelliJ IDEA / Preferences (CMD-,) set the project bytecode version to 1.6:
 
-.. image:: idea/10SelectJavaApplicationToRun.png
+.. image:: idea/11SetProjectBytecodeVersion.png
    :width: 90 %
 
-12. See the output of a successful run.
+12. Select a sample Java Application and right click on it.  Choose Run.
 
-.. image:: idea/11SuccessfulRunOutput.png
+.. image:: idea/12SelectJavaApplicationToRun.png
    :width: 90 %
+
+13. In certain versions of IntelliJ you may need to set the Java heap size and re-run:
+
+.. image:: idea/13SetJavaHeapSize.png
+   :width: 90 %
+
+14. See the output of a successful run.
+
+.. image:: idea/14SuccessfulRunOutput.png
+   :width: 90 %
+
+15. You may connect to http://127.0.0.1:54321/ to use H\ :sub:`2`\ O interactively.
 

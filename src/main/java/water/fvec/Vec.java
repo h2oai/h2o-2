@@ -1,9 +1,12 @@
 package water.fvec;
 
+import water.*;
+import water.nbhm.NonBlockingHashMapLong;
+import water.util.Utils;
+
+import java.util.Arrays;
 import java.util.UUID;
 
-import water.*;
-import water.util.Utils;
 import static water.util.Utils.seq;
 
 /**
@@ -56,8 +59,10 @@ public class Vec extends Iced {
 
   /** Enum/factor/categorical names. */
   public String [] _domain;
+  /** Time parse, index into Utils.TIME_PARSE, or -1 for not-a-time */
+  public byte _time;
   /** RollupStats: min/max/mean of this Vec lazily computed.  */
-  double _min, _max, _mean, _sigma;
+  private double _min, _max, _mean, _sigma;
   long _size;
   boolean _isInt;
   /** The count of missing elements.... or -2 if we have active writers and no
@@ -75,9 +80,10 @@ public class Vec extends Iced {
     assert key._kb[0]==Key.VEC;
     _key = key;
     _espc = espc;
+    _time = -1;                 // not-a-time
   }
 
-  protected Vec( Key key, Vec v ) { _key = key; _espc = v._espc; assert group()==v.group(); }
+  protected Vec( Key key, Vec v ) { _key = key; _espc = v._espc; _time = -1; assert group()==v.group(); }
 
   // A 1-element Vec
   public Vec( Key key, double d ) {
@@ -125,36 +131,100 @@ public class Vec extends Iced {
     fs.blockForPending();
     return v0;
   }
-
-  // Create a vector transforming values according given domain map
-  public Vec makeTransf(final int[] domMap) { return makeTransf(domMap, null); }
-  public Vec makeTransf(final int[] domMap, final String[] domain) {
+  public static Vec makeSeq( int len ) {
     Futures fs = new Futures();
-    if( _espc == null ) throw H2O.unimpl();
-    Vec v0 = new TransfVec(this._key, domMap, (int) min(), domain, group().addVecs(1)[0],_espc);
-    DKV.put(v0._key,v0,fs);
+    AppendableVec av = new AppendableVec(VectorGroup.VG_LEN1.addVec());
+    NewChunk nc = new NewChunk(av,0);
+    for (int r = 0; r < len; r++) nc.addNum(r+1);
+    nc.close(0,fs);
+    Vec v = av.close(fs);
     fs.blockForPending();
+    return v;
+  }
+
+  /** Create a vector transforming values according given domain map.
+   * @see Vec#makeTransf(int[], int[], String[])
+   */
+  public Vec makeTransf(final int[][] map, String[] domain) { return makeTransf(map[0], map[1], domain); }
+  public Vec makeTransf(final int[][] map) { return makeTransf(map[0], map[1], null); }
+  Vec makeTransf(final int[] values, final int[] indexes) { return makeTransf(values, indexes, null); }
+  /**
+   * TODO
+   * @param values
+   * @param indexes
+   * @param domain
+   * @return
+   */
+  Vec makeTransf(final int[] values, final int[] indexes, final String[] domain) {
+    if( _espc == null ) throw H2O.unimpl();
+    Vec v0 = new TransfVec(values, indexes, domain, this._key, group().addVecs(1)[0],_espc);
+    UKV.put(v0._key,v0);
     return v0;
   }
-  // This Vec does not have dependent hidden Vec it uses
+  /**
+   * TODO
+   * @return
+   * @see Vec#makeTransf(int[], int[], String[])
+   */
+  Vec makeIdentityTransf() {
+    assert _domain != null : "Cannot make an identity transformation of non-enum vector!";
+    return makeTransf(seq(0, _domain.length), null, _domain);
+  }
+  /**
+   * TODO
+   * @param values
+   * @param domain
+   * @return
+   * @see Vec#makeTransf(int[], int[], String[])
+   */
+  Vec makeSimpleTransf(long[] values, String[] domain) {
+    int is[] = new int[values.length];
+    for( int i=0; i<values.length; i++ ) is[i] = (int)values[i];
+    return makeTransf(is, null, domain);
+  }
+  /** This Vec does not have dependent hidden Vec it uses.
+   *
+   * @return dependent hidden vector or <code>null</code>
+   */
   public Vec masterVec() { return null; }
 
   /**
    * Adapt given vector <code>v</code> to this vector.
-   * I.e., unify domains and call makeTransf().
+   * I.e., unify domains, compute transformation, and call makeTransf().
+   *
+   * This vector is a leader - it determines a domain (i.e., {@link #domain()}) and mapping between values stored in vector
+   * and domain values.
+   * The vector <code>v</code> can contain different domain (subset, superset), hence the values stored in the vector
+   * has to be transformed to the values determined by this vector. The resulting vector domain is the
+   * same as this vector domain.
+   *
+   * Always returns a new vector and user's responsibility is delete the vector.
+   *
+   * @param v vector which should be adapter in according this vector.
+   * @param exact should vector match exactly (recommended value is true).
+   * @return a new vector which implements transformation of original values.
    */
+  /*// Not used any more in code ??
   public Vec adaptTo(Vec v, boolean exact) {
+    assert isInt() : "This vector has to be int/enum vector!";
     int[] domain = null;
-    String[] sdomain = _domain == null
+    // Compute domain of this vector
+    // - if vector is enum, use domain directly
+    // - if vector is int, then vector numeric domain is collected and transformed to string domain
+    // and then adapted
+    String[] sdomain =
+        (_domain == null)
         ? Utils.toStringMap(domain = new CollectDomain(this).doAll(this).domain()) // it is number-column
         : domain(); // it is enum
-    int[] domMap = Model.getDomainMapping(null, v._domain, sdomain, exact);
+    // Compute transformation - domain map - each value in an array is one value from vector domain, its index
+    // represents an index into string domain representation.
+    int[] domMap = Model.getDomainMapping(v._domain, sdomain, exact);
     if (domain!=null) {
       // do a mapping from INT -> ENUM -> this vector ENUM
       domMap = Utils.compose(Utils.mapping(domain), domMap);
     }
     return this.makeTransf(domMap, sdomain);
-  }
+  }*/
 
   /** Number of elements in the vector.  Overridden by subclasses that compute
    *  length in an alternative way, such as file-backed Vecs. */
@@ -168,6 +238,11 @@ public class Vec extends Iced {
    *  are are also "isInt()" but not vice-versa. */
   public final boolean isEnum(){return _domain != null;}
 
+  /** Whether or not this column parsed as a time, and if so what pattern was used. */
+  public final boolean isTime(){ return _time>=0; }
+  public final int timeMode(){ return _time; }
+  public final String timeParse(){ return ParseTime.TIME_PARSE[_time]; }
+
   /** Map the integer value for a enum/factor/categorical to it's String.
    *  Error if it is not an ENUM.  */
   public String domain(long i) { return _domain[(int)i]; }
@@ -180,18 +255,20 @@ public class Vec extends Iced {
   public int cardinality() { return isEnum() ? _domain.length : -1; }
 
   /** Transform this vector to enum.
+   *  If the vector is integer vector then its domain is collected and transformed to
+   *  corresponding strings.
+   *  If the vector is enum an identity transformation vector is returned.
    *  Transformation is done by a {@link TransfVec} which provides a mapping between values.
    *
-   *  The caller is responsible for vector deletion!
+   *  @return always returns a new vector and the caller is responsible for vector deletion!
    */
   public Vec toEnum() {
-    if( isEnum() ) return this.makeTransf(seq(0,_domain.length), _domain);
+    if( isEnum() ) return this.makeIdentityTransf(); // Make an identity transformation of this vector
     if( !isInt() ) throw new IllegalArgumentException("Enum conversion only works on integer columns");
-    int[] domain;
+    long[] domain;
     String[] sdomain = Utils.toStringMap(domain = new CollectDomain(this).doAll(this).domain());
-    int[] domMap = Utils.mapping(domain);
-    if( domain.length > MAX_ENUM_SIZE ) throw new IllegalArgumentException("Column is to big to represent an enum: " + domain.length + " > " + MAX_ENUM_SIZE);
-    return this.makeTransf(domMap, sdomain);
+    if( domain.length > MAX_ENUM_SIZE ) throw new IllegalArgumentException("Column domain is too large to be represented as an enum: " + domain.length + " > " + MAX_ENUM_SIZE);
+    return this.makeSimpleTransf(domain, sdomain);
   }
 
   /** Default read/write behavior for Vecs.  File-backed Vecs are read-only. */
@@ -380,7 +457,7 @@ public class Vec extends Iced {
 
   protected boolean checkMissing(int cidx, Value val) {
     if( val != null ) return true;
-    System.out.println("Missing chunk "+cidx+" for "+_key);
+    System.out.println("Error: Missing chunk "+cidx+" for "+_key);
     return false;
   }
 
@@ -425,7 +502,7 @@ public class Vec extends Iced {
   }
 
   /** The Chunk for a chunk#.  Warning: this loads the data locally!  */
-  public Chunk elem2BV( int cidx ) {
+  public Chunk chunkForChunkIdx(int cidx) {
     long start = chunk2StartElem(cidx); // Chunk# to chunk starting element#
     Value dvec = chunkIdx(cidx);        // Chunk# to chunk data
     Chunk c = dvec.get();               // Chunk data to compression wrapper
@@ -437,33 +514,33 @@ public class Vec extends Iced {
     return c;
   }
   /** The Chunk for a row#.  Warning: this loads the data locally!  */
-  public final Chunk chunk( long i ) {
-    return elem2BV(elem2ChunkIdx(i));
+  public final Chunk chunkForRow(long i) {
+    return chunkForChunkIdx(elem2ChunkIdx(i));
   }
 
   /** Fetch element the slow way, as a long.  Floating point values are
    *  silently rounded to an integer.  Throws if the value is missing. */
-  public final long  at8( long i ) { return chunk(i).at8(i); }
+  public final long  at8( long i ) { return chunkForRow(i).at8(i); }
   /** Fetch element the slow way, as a double.  Missing values are
    *  returned as Double.NaN instead of throwing. */
-  public final double at( long i ) { return chunk(i).at (i); }
+  public final double at( long i ) { return chunkForRow(i).at(i); }
   /** Fetch the missing-status the slow way. */
-  public final boolean isNA(long row){ return chunk(row).isNA(row); }
+  public final boolean isNA(long row){ return chunkForRow(row).isNA(row); }
 
   /** Write element the slow way, as a long.  There is no way to write a
    *  missing value with this call.  Under rare circumstances this can throw:
    *  if the long does not fit in a double (value is larger magnitude than
    *  2^52), AND float values are stored in Vector.  In this case, there is no
    *  common compatible data representation. */
-  public final long   set( long i, long   l) { return chunk(i).set(i,l); }
+  public final long   set( long i, long   l) { return chunkForRow(i).set(i, l); }
   /** Write element the slow way, as a double.  Double.NaN will be treated as
    *  a set of a missing element. */
-  public final double set( long i, double d) { return chunk(i).set(i,d); }
+  public final double set( long i, double d) { return chunkForRow(i).set(i, d); }
   /** Write element the slow way, as a float.  Float.NaN will be treated as
    *  a set of a missing element. */
-  public final float  set( long i, float  f) { return chunk(i).set(i,f); }
+  public final float  set( long i, float  f) { return chunkForRow(i).set(i, f); }
   /** Set the element as missing the slow way.  */
-  public final boolean setNA( long i ) { return chunk(i).setNA(i); }
+  public final boolean setNA( long i ) { return chunkForRow(i).setNA(i); }
 
   /** Pretty print the Vec: [#elems, min/mean/max]{chunks,...} */
   @Override public String toString() {
@@ -472,8 +549,8 @@ public class Vec extends Iced {
     for( int i=0; i<nc; i++ ) {
       s += chunkKey(i).home_node()+":"+chunk2StartElem(i)+":";
       // CNC: Bad plan to load remote data during a toString... messes up debug printing
-      // Stupidly elem2BV loads all data locally
-      // s += elem2BV(i).getClass().getSimpleName().replaceAll("Chunk","")+", ";
+      // Stupidly chunkForChunkIdx loads all data locally
+      // s += chunkForChunkIdx(i).getClass().getSimpleName().replaceAll("Chunk","")+", ";
     }
     return s+"}]";
   }
@@ -604,6 +681,13 @@ public class Vec extends Iced {
         res[i] = vecKey(i + tsk._n);
       return res;
     }
+    /**
+     * Shortcut for addVecs(1).
+     * @see #addVecs(int)
+     */
+    public Key addVec() {
+      return addVecs(1)[0];
+    }
 
     @Override public String toString() {
       return "VecGrp "+_key.toString()+", next free="+_len;
@@ -619,34 +703,46 @@ public class Vec extends Iced {
 
   /** Collect numeric domain of given vector */
   public static class CollectDomain extends MRTask2<CollectDomain> {
-    final int _nclass;
-    final int _ymin;
-    byte _dom[]; // Shared between all instances of this tasks since each instance is doing a simple write.
-
-    @Override protected void setupLocal() { _dom = new byte[_nclass]; }
-
-    public CollectDomain(Vec v) { _ymin = (int) v.min(); _nclass = (int)(v.max()-_ymin+1); }
+    transient NonBlockingHashMapLong<Object> _uniques;
+    @Override protected void setupLocal() { _uniques = new NonBlockingHashMapLong(); }
+    public CollectDomain(Vec v) { }
     @Override public void map(Chunk ys) {
-      for( int row=0; row<ys._len; row++ ) {
-        if (ys.isNA0(row)) continue;
-        int ycls = (int)ys.at80(row)-_ymin;
-        if( _dom[ycls] == 0 ) _dom[ycls] = 1; // Only write to shared array
-      }
+      for( int row=0; row<ys._len; row++ )
+        if( !ys.isNA0(row) )
+          _uniques.put(ys.at80(row),"");
     }
 
-    @Override public void reduce(CollectDomain mrt) { Utils.or(this._dom, mrt._dom); }
+    @Override public void reduce(CollectDomain mrt) {
+      if( _uniques == mrt._uniques ) return;
+      _uniques.putAll(mrt._uniques);
+    }
+
+    @Override public AutoBuffer write( AutoBuffer ab ) {
+      super.write(ab);
+      return ab.putA8(_uniques==null ? null : _uniques.keySetLong());
+    }
+
+    @Override public CollectDomain read( AutoBuffer ab ) {
+      super.read(ab);
+      assert _uniques == null || _uniques.size()==0;
+      long ls[] = ab.getA8();
+      _uniques = new NonBlockingHashMapLong();
+      if( ls != null ) for( long l : ls ) _uniques.put(l,"");
+      return this;
+    }
+    @Override public void copyOver(DTask that) {
+      super.copyOver(that);
+      _uniques = ((CollectDomain)that)._uniques;
+    }
 
     /** Returns exact numeric domain of given vector computed by this task.
      * The domain is always sorted. Hence:
      *    domain()[0] - minimal domain value
      *    domain()[domain().length-1] - maximal domain value
      */
-    public int[] domain() {
-      int cnt = 0;
-      for (int i=0; i<_dom.length; i++) if (_dom[i]>0) cnt++;
-      int[] dom = new int[cnt];
-      cnt=0;
-      for (int i=0; i<_dom.length; i++) if (_dom[i]>0) dom[cnt++] = i+_ymin;
+    public long[] domain() {
+      long[] dom = _uniques.keySetLong();
+      Arrays.sort(dom);
       return dom;
     }
   }

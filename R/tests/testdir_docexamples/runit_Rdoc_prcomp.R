@@ -5,7 +5,7 @@ test.principalcomp.golden <- function(H2Oserver) {
 	
 #Example from prcomp R doc
 
-ausPath = system.file("extdata", "australia.csv", package="h2oRClient")
+ausPath = system.file("extdata", "australia.csv", package="h2o")
 australia.hex = h2o.importFile(H2Oserver, path = ausPath)
 australia.pca = h2o.prcomp(data = australia.hex, standardize = TRUE)
 model<- print(australia.pca)

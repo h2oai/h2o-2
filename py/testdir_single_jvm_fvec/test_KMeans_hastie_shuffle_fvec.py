@@ -50,10 +50,17 @@ def kmeans_doit(self, csvFilename, bucket, csvPathname, num_rows, timeoutSecs=30
 
     # compare this kmeans to the first one. since the files are replications, the results
     # should be similar?
-    inspect = h2o_cmd.runInspect(None, key=kmeans['model']['_key'])
-    KMeansModel = inspect['KMeansModel']
-    clusters = KMeansModel['centers'][0]
-    print "clusters:", h2o.dump_json(clusters)
+    # inspect doesn't work
+    # inspect = h2o_cmd.runInspect(None, key=kmeans['model']['_key'])
+    # KMeansModel = inspect['KMeansModel']
+    modelView = h2o.nodes[0].kmeans_model_view(model='KMeansModel.hex')
+    h2o.verboseprint("KMeans2ModelView:", h2o.dump_json(modelView))
+    model = modelView['model']
+    clusters = model['centers']
+    within_cluster_variances = model['within_cluster_variances']
+    total_within_SS = model['total_within_SS']
+    print "within_cluster_variances:", within_cluster_variances
+    print "total_within_SS:", total_within_SS
     
     if self.clusters1:
         h2o_kmeans.compareToFirstKMeans(self, clusters, self.clusters1)
@@ -79,7 +86,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    clusters1 = {}
+    clusters1 = []
     def test_KMeans_hastie_shuffle_fvec(self):
         h2o.beta_features = True
         # gunzip it and cat it to create 2x and 4x replications in SYNDATASETS_DIR

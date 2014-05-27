@@ -3,36 +3,48 @@ import h2o, h2o_cmd, sys
 import time, random, re
 import h2o_browse as h2b
 
-def checkForBadFP(min_value):
-    if 'Infinity' in str(min_value):
-        raise Exception("Infinity in inspected min_value (proxy for scalar result) can't be good: %s" % str(min))
-    if 'NaN' in str(min):
-        raise Exception("NaN in inspected min_value (proxy for scalar result)  can't be good: %s" % str(min))
+def checkForBadFP(value, name='min_value', nanOkay=False, infOkay=False, json=None):
+    # if we passed the json, dump it for debug
+    if 'Infinity' in str(value) and not infOkay:
+        if json:
+            print h2o.dump_json(json)
+        raise Exception("Infinity in inspected %s can't be good for: %s" % (str(value), name))
+    if 'NaN' in str(value) and not nanOkay:
+        if json:
+            print h2o.dump_json(json)
+        raise Exception("NaN in inspected %s can't be good for: %s" % (str(value), name))
 
-def checkScalarResult(resultInspect, resultKey):
+def checkScalarResult(resultExec, resultKey, allowEmptyResult=False):
     # make the common problems easier to debug
-    h2o.verboseprint("checkScalarResult resultInspect:", h2o.dump_json(resultInspect))
-    # FIX! HACK!..seems like there is inconsistency
-    # if 'type' is one level down, throw away the first level
-    # weird..it's a tuple, not a list? when the extra level of hier is there
-    # this works:
-    resultInspect0 = resultInspect[0]
+    h2o.verboseprint("checkScalarResult resultExec:", h2o.dump_json(resultExec))
 
-    if 'num_rows' not in resultInspect0:
-        emsg = "Inspect response: 'num_rows' missing. Look at the json just printed"
-    elif 'cols' not in resultInspect0:
-        emsg = "Inspect response: 'cols' missing. Look at the json just printed"
+    if 'funstr' not in resultExec:
+        emsg = "checkScalarResult: 'funstr' missing"
+    if 'result' not in resultExec:
+        emsg = "checkScalarResult: 'result' missing"
+    if 'scalar' not in resultExec:
+        emsg = "checkScalarResult: 'scalar' missing"
+    if 'num_cols' not in resultExec:
+        emsg = "checkScalarResult: 'num_cols' missing"
+    if 'num_rows' not in resultExec:
+        emsg = "checkScalarResult: 'num_rows' missing"
+    elif 'cols' not in resultExec:
+        emsg = "checkScalarResult: 'cols' missing"
     else:
         emsg = None
-        num_cols = resultInspect0["num_cols"]
-        num_rows = resultInspect0["num_rows"]
-        cols = resultInspect0["cols"]
+        num_cols = resultExec["num_cols"]
+        num_rows = resultExec["num_rows"]
+        cols = resultExec["cols"]
         # print "cols:", h2o.dump_json(cols)
 
     if emsg:
-        print "\nKey: '" + str(resultKey) + "' inspect result:\n", h2o.dump_json(resultInspect)
+        print "\nKey: '" + str(resultKey) + "' resultExec:\n", h2o.dump_json(resultExec)
         sys.stdout.flush()
-        raise Exception("Inspect problem:" + emsg)
+        raise Exception("exec result (resultExec) missing what we expected. Look at json above. " + emsg)
+
+    if (cols and (not num_rows or num_rows==0) ) and not allowEmptyResult:
+        print "resultExec[0]:", h2o.dump_json(resultExec)
+        raise Exception ("checkScalarResult says cols, but num_rows is 0 or None %s" % num_rows)
 
     # Cycle thru rows and extract all the meta-data into a dict?   
     # assume "0" and "row" keys exist for each list entry in rows
@@ -40,12 +52,11 @@ def checkScalarResult(resultInspect, resultKey):
 
     # cols may not exist..if the result was just scalar?
     if not cols:
-        # raise Exception("cols is null: %s" % cols)
         # just return the scalar result then
-        scalar = resultInspect0['scalar']
+        scalar = resultExec['scalar']
         if scalar is None:
             raise Exception("both cols and scalar are null: %s %s" % (cols, scalar))
-        checkForBadFP(scalar)
+        checkForBadFP(scalar, json=resultExec)
         return scalar
 
     metaDict = cols[0]
@@ -53,10 +64,9 @@ def checkScalarResult(resultInspect, resultKey):
         print "Inspect metaDict:", key, value
             
     min_value = metaDict['min']
-    checkForBadFP(min_value)
-
-
-    # do a VA inspect to see if the fvec to va converter works
+    stype = metaDict['type']
+    # if it's an enum col, it's okay for min to be NaN ..
+    checkForBadFP(min_value, nanOkay=stype=='Enum', json=metaDict)
     return min_value
 
 def fill_in_expr_template(exprTemplate, colX=None, n=None, row=None, keyX=None, m=None):
@@ -121,13 +131,11 @@ def exec_expr(node=None, execExpr=None, resultKey=None, timeoutSecs=10, ignoreH2
     return resultExec, result
 
 
-
 def exec_zero_list(zeroList):
     # zero the list of Results using node[0]
     for exprTemplate in zeroList:
         execExpr = fill_in_expr_template(exprTemplate,0, 0, 0, None)
-        execResult = exec_expr(h2o.nodes[0], execExpr, None)
-        ### print "\nexecResult:", execResult
+        (resultExec, result) = exec_expr(h2o.nodes[0], execExpr, None)
 
 
 def exec_expr_list_rand(lenNodes, exprList, keyX, 
@@ -135,7 +143,7 @@ def exec_expr_list_rand(lenNodes, exprList, keyX,
     minCol=1, maxCol=55, 
     minRow=1, maxRow=400000, 
     maxTrials=200, 
-    timeoutSecs=10, ignoreH2oError=False):
+    timeoutSecs=10, ignoreH2oError=False, allowEmptyResult=False):
 
     trial = 0
     while trial < maxTrials: 
@@ -157,20 +165,16 @@ def exec_expr_list_rand(lenNodes, exprList, keyX,
         row = str(random.randint(minRow,maxRow))
 
         execExpr = fill_in_expr_template(exprTemplate, colX, ((trial+1)%4)+1, row, keyX)
-        execResultInspect = exec_expr(h2o.nodes[execNode], execExpr, None, 
+        (resultExec, result) = exec_expr(h2o.nodes[execNode], execExpr, None, 
             timeoutSecs, ignoreH2oError)
-        ### print "\nexecResult:", execResultInspect
 
-        checkScalarResult(execResultInspect, None)
+        checkScalarResult(resultExec, None, allowEmptyResult=allowEmptyResult)
 
         if keyX:
             inspect = h2o_cmd.runInspect(key=keyX)
-            print "\ns.hex" \
+            print keyX, \
                 "    numRows:", "{:,}".format(inspect['numRows']), \
                 "    numCols:", "{:,}".format(inspect['numCols'])
-
-        # print "va Inspect:", h2o.dump_json(vaInspect)
-        # checkScalarResult(vaInspect, keyX)
 
         sys.stdout.write('.')
         sys.stdout.flush()
@@ -206,32 +210,9 @@ def exec_expr_list_across_cols(lenNodes, exprList, keyX,
             else: # assume it's a re-assign to self
                 resultKey = keyX
 
-            # kbn
-
-            # v1
-            # execResultInspect = exec_expr(h2o.nodes[execNode], execExpr, resultKey, timeoutSecs)
             # v2
-            execResultInspect = exec_expr(h2o.nodes[execNode], execExpr, None, timeoutSecs)
-            print "\nexecResult:", h2o.dump_json(execResultInspect)
-            execResultKey = execResultInspect[0]['key']
-
-            # v2: Exec2 'apply' can have no key field? (null) maybe just use keyX then
-            if execResultKey:
-                resultInspect = h2o_cmd.runInspect(None, execResultKey)
-            else:
-                resultInspect = h2o_cmd.runInspect(None, keyX)
-            ### h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
-
-            # min is keyword. shouldn't use.
-            if incrementingResult: # a col will have a single min
-                min_value = checkScalarResult(execResultInspect, resultKey)
-                h2o.verboseprint("min_value: ", min_value, "col:", colX)
-                print "min_value: ", min_value, "col:", colX
-            else:
-                min_value = None
-
-            sys.stdout.write('.')
-            sys.stdout.flush()
+            (resultExec, result) = exec_expr(h2o.nodes[execNode], execExpr, None, timeoutSecs)
+            print "\nexecResult:", h2o.dump_json(resultExec)
 
             ### h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
             # slows things down to check every iteration, but good for isolation
@@ -240,7 +221,7 @@ def exec_expr_list_across_cols(lenNodes, exprList, keyX,
                     "Found errors in sandbox stdout or stderr, on trial #%s." % trial)
 
         print "Column #", colX, "completed\n"
-        colResultList.append(min_value)
+        colResultList.append(result)
 
     return colResultList
 

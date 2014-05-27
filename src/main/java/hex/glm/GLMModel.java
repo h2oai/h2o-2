@@ -1,7 +1,6 @@
 package hex.glm;
 
 import hex.FrameTask.DataInfo;
-import hex.glm.GLMParams.CaseMode;
 import hex.glm.GLMParams.Family;
 import hex.glm.GLMValidation.GLMXValidation;
 
@@ -12,29 +11,26 @@ import water.H2O.H2OCountedCompleter;
 import water.api.DocGen;
 import water.api.Request.API;
 import water.fvec.Chunk;
+import water.util.Log;
 import water.util.Utils;
 
 public class GLMModel extends Model implements Comparable<GLMModel> {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
+  @API(help="lambda max, smallest lambda which drives all coefficients to zero")
+  final double  lambda_max;
   @API(help="mean of response in the training dataset")
   final double     ymu;
 
   @API(help="job key assigned to the job building this model")
   final Key job_key;
 
-  @API(help="predicate applied to the response column to turn it into 0/1")
-  final CaseMode  _caseMode;
-
-  @API(help="value used to co compare agains using case-predicate to turn the response into 0/1")
-  final double _caseVal;
-
   @API(help="Input data info")
   DataInfo data_info;
 
   @API(help="warnings")
-  final String []  warnings;
+  String []  warnings;
   @API(help="Decision threshold.")
   final double     threshold;
   @API(help="glm params")
@@ -70,6 +66,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @Override public GLMModel clone(){
     GLMModel res = (GLMModel)super.clone();
     res.submodels = submodels.clone();
+    if(warnings != null)res.warnings = warnings.clone();
     return res;
   }
 
@@ -145,7 +142,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @API(help = "lambda sequence")
   final double [] lambdas;
 
-  public GLMModel(Key jobKey, Key selfKey, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double [] lambda, double ymu,  CaseMode caseMode, double caseVal ) {
+  public GLMModel(Key jobKey, Key selfKey, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double lambda_max, double [] lambda, double ymu) {
     super(selfKey,null,dinfo._adaptedFrame);
     job_key = jobKey;
     this.ymu = ymu;
@@ -154,10 +151,9 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     this.data_info = dinfo;
     this.warnings = null;
     this.alpha = alpha;
+    this.lambda_max = lambda_max;
     this.lambdas = lambda;
     this.beta_eps = beta_eps;
-    _caseVal = caseVal;
-    _caseMode = caseMode;
     submodels = new Submodel[lambda.length];
     for(int i = 0; i < submodels.length; ++i)
       submodels[i] = new Submodel(null, null, 0, 0);
@@ -184,8 +180,8 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     return submodels[best_lambda_idx].validation;
   }
   public int iteration(){
-    int res = 0;
-    for(int i = 0; i < submodels.length && submodels[i] != null && submodels[i].iteration != 0; ++i)
+    int res = submodels[0].iteration;
+    for(int i = 1; i < submodels.length && submodels[i] != null && submodels[i].iteration != 0; ++i)
       res = submodels[i].iteration;
     return res;
   }
@@ -207,9 +203,10 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     eta += b[b.length-1]; // add intercept
     double mu = glm.linkInv(eta);
     preds[0] = (float)mu;
-    if(glm.family == Family.binomial){ // threshold
-      if(preds.length > 1)preds[1] = preds[0];
-      preds[0] = preds[0] >= threshold?1:0;
+    if( glm.family == Family.binomial ) { // threshold for prediction
+      preds[0] = (mu >= threshold ? 1 : 0);
+      preds[1] = 1.0f - (float)mu; // class 0
+      preds[2] =        (float)mu; // class 1
     }
     return preds;
   }
@@ -227,7 +224,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
       _res = new GLMValidation(null,_model.ymu,_model.glm,_model.rank(_lambdaIdx));
       final int nrows = chunks[0]._len;
       double [] row   = MemoryManager.malloc8d(_model._names.length);
-      float  [] preds = MemoryManager.malloc4f(_model.glm.family == Family.binomial?2:1);
+      float  [] preds = MemoryManager.malloc4f(_model.glm.family == Family.binomial?3:1);
       OUTER:
       for(int i = 0; i < nrows; ++i){
         if(chunks[chunks.length-1].isNA0(i))continue;
@@ -237,9 +234,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
         }
         _model.score0(row, preds,_lambdaIdx);
         double response = chunks[chunks.length-1].at0(i);
-        if(_model._caseMode != CaseMode.none)
-          response = _model._caseMode.isCase(response, _model._caseVal)?1:0;
-        _res.add(response, _model.glm.family == Family.binomial?preds[1]:preds[0]);
+        _res.add(response, _model.glm.family == Family.binomial?preds[2]:preds[0]);
       }
       _res.avg_err /= _res.nobs;
     }
@@ -262,7 +257,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
         _xvals[i] = new GLMValidation(null,_xmodels[i].ymu,_xmodels[i].glm,_xmodels[i].rank());
       final int nrows = chunks[0]._len;
       double [] row   = MemoryManager.malloc8d(_model._names.length);
-      float  [] preds = MemoryManager.malloc4f(_model.glm.family == Family.binomial?2:1);
+      float  [] preds = MemoryManager.malloc4f(_model.glm.family == Family.binomial?3:1);
       OUTER:
       for(int i = 0; i < nrows; ++i){
         if(chunks[chunks.length-1].isNA0(i))continue;
@@ -276,8 +271,6 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
         final GLMValidation val = _xvals[mid];
         model.score0(row, preds);
         double response = chunks[chunks.length-1].at80(i);
-        if(model._caseMode != CaseMode.none)
-          response = model._caseMode.isCase(response, model._caseVal)?1:0;
         val.add(response, model.glm.family == Family.binomial?preds[1]:preds[0]);
       }
       for(GLMValidation val:_xvals)
@@ -324,7 +317,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     if(lambdaIdx == 0 || rank(lambdaIdx) == 1)return true;
     double diff = (submodels[lambdaIdx-1].validation.residual_deviance - val.residual_deviance)/val.null_deviance;
     if(diff >= 0.01)best_lambda_idx = lambdaIdx;
-    return  (diff > 0.001);
+    return  true;
   }
 
   /**

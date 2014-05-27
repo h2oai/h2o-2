@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="JAVA_MODULE" version="4">
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/java" isTestSource="false" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="mapr3.0.1" level="project" />
+    <orderEntry type="library" name="0.23.4" level="project" />
+    <orderEntry type="library" name="cdh3" level="project" />
+    <orderEntry type="library" name="target1" level="project" />
+    <orderEntry type="library" name="hadoop-core-1.2.0.1.3.2.0-111" level="project" />
+    <orderEntry type="library" name="0.20.2mapr" level="project" />
+    <orderEntry type="library" name="hdp2.0.6" level="project" />
+    <orderEntry type="library" name="hadoop-mapreduce-client-core-2.0.0-cdh4.3.0" level="project" />
+    <orderEntry type="library" name="hadoop-core-1.0.0" level="project" />
+    <orderEntry type="library" name="hadoop-0.20.2-core" level="project" />
+    <orderEntry type="library" name="cdh4" level="project" />
+    <orderEntry type="library" name="mapr2.1.3" level="project" />
+    <orderEntry type="library" name="h2o" level="project" />
+    <orderEntry type="library" name="hadoop-common-2.0.0-cdh4.3.0" level="project" />
+    <orderEntry type="module" module-name="test1" />
+    <orderEntry type="module" module-name="main2" />
+  </component>
+</module>
+

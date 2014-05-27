@@ -1,27 +1,29 @@
 package water.util;
 
-import hex.rng.*;
+import hex.rng.H2ORandomRNG;
 import hex.rng.H2ORandomRNG.RNGKind;
 import hex.rng.H2ORandomRNG.RNGType;
+import hex.rng.MersenneTwisterRNG;
+import hex.rng.XorShiftRNG;
+import sun.misc.Unsafe;
+import water.*;
+import water.api.DocGen;
+import water.api.DocGen.FieldDoc;
+import water.nbhm.UtilUnsafe;
+import water.parser.ParseDataset;
+import water.parser.ParseDataset.Compression;
 
 import java.io.*;
 import java.net.Socket;
-import java.net.URL;
 import java.security.SecureRandom;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.zip.*;
-
-
-import sun.misc.Unsafe;
-import water.*;
-import water.api.DocGen.FieldDoc;
-import water.nbhm.UtilUnsafe;
-import water.parser.ParseDataset.Compression;
-import water.parser.ParseDataset;
-import water.parser.ValueString;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+import java.util.zip.ZipInputStream;
 
 public class Utils {
   /** Returns the index of the largest value in the array.
@@ -52,6 +54,42 @@ public class Utils {
     int result = 0;
     for (int i = 1; i<from.length; ++i)
       if (from[i]>from[result]) result = i;
+    return result;
+  }
+  public static int minIndex(int[] from) {
+    int result = 0;
+    for (int i = 1; i<from.length; ++i)
+      if (from[i]<from[result]) result = i;
+    return result;
+  }
+  public static int minIndex(float[] from) {
+    int result = 0;
+    for (int i = 1; i<from.length; ++i)
+      if (from[i]<from[result]) result = i;
+    return result;
+  }
+  public static float maxValue(float[] from) {
+    float result = from[0];
+    for (int i = 1; i<from.length; ++i)
+      if (from[i]>result) result = from[i];
+    return result;
+  }
+  public static float minValue(float[] from) {
+    float result = from[0];
+    for (int i = 1; i<from.length; ++i)
+      if (from[i]<result) result = from[i];
+    return result;
+  }
+  public static long maxValue(long[] from) {
+    long result = from[0];
+    for (int i = 1; i<from.length; ++i)
+      if (from[i]>result) result = from[i];
+    return result;
+  }
+  public static long minValue(long[] from) {
+    long result = from[0];
+    for (int i = 1; i<from.length; ++i)
+      if (from[i]<result) result = from[i];
     return result;
   }
 
@@ -107,14 +145,24 @@ public class Utils {
     return Double.longBitsToDouble(sum);
   }
 
-  public static int sum(int[] from) {
+  public static long sum(final long[] from) {
+    long result = 0;
+    for (long d: from) result += d;
+    return result;
+  }
+  public static int sum(final int[] from) {
     int result = 0;
     for (int d: from) result += d;
     return result;
   }
-  public static float sum(float[] from) {
+  public static float sum(final float[] from) {
     float result = 0;
     for (float d: from) result += d;
+    return result;
+  }
+  public static double sum(final double[] from) {
+    double result = 0;
+    for (double d: from) result += d;
     return result;
   }
 
@@ -234,9 +282,9 @@ public class Utils {
     return result;
   }
 
-  public static void shuffleArray(long[] a) {
+  public static void shuffleArray(long[] a, long seed) {
     int n = a.length;
-    Random random = new Random();
+    Random random = getDeterRNG(seed);
     random.nextInt();
     for (int i = 0; i < n; i++) {
       int change = i + random.nextInt(n - i);
@@ -244,8 +292,25 @@ public class Utils {
     }
   }
 
+  public static int[] shuffleArray(int[] a, int n, int result[], long seed, int startIndex) {
+    Random random = getDeterRNG(seed);
+    result[0] = a[startIndex];
+    for (int i = 1; i < n; i++) {
+      int j = random.nextInt(i+1);
+      if (j!=i) result[i] = a[startIndex+j];
+      result[j] = a[startIndex+i];
+    }
+    return result;
+  }
+
   private static void swap(long[] a, int i, int change) {
     long helper = a[i];
+    a[i] = a[change];
+    a[change] = helper;
+  }
+
+  private static void swap(int[] a, int i, int change) {
+    int helper = a[i];
     a[i] = a[change];
     a[change] = helper;
   }
@@ -611,15 +676,24 @@ public class Utils {
     }
     @Override public int hashCode() { return (int)_val; }
   }
+  public static class IcedDouble extends Iced {
+    public final double _val;
+    public IcedDouble(double v){_val = v;}
+    @Override public boolean equals( Object o ) {
+      if( !(o instanceof IcedDouble) ) return false;
+      return ((IcedDouble)o)._val == _val;
+    }
+    @Override public int hashCode() { return (int)Double.doubleToLongBits(_val); }
+  }
   /**
    * Simple wrapper around HashMap with support for H2O serialization
    * @author tomasnykodym
-   * @param <T>
    */
   public static class IcedHashMap<K extends Iced, V extends Iced> extends HashMap<K,V> implements Freezable {
     @Override public AutoBuffer write(AutoBuffer bb) {
       bb.put4(size());
-      for(Map.Entry<K, V> e:entrySet())bb.put(e.getKey()).put(e.getValue());
+      for( Map.Entry<K, V> e : entrySet() )
+        bb.put(e.getKey()).put(e.getValue());
       return bb;
     }
     @Override public IcedHashMap<K,V> read(AutoBuffer bb) {
@@ -629,19 +703,13 @@ public class Utils {
       return this;
     }
 
-    @Override public <T2 extends Freezable> T2 newInstance() {
-      return (T2)new IcedHashMap<K,V>();
-    }
+    @Override public IcedHashMap<K,V> newInstance() { return new IcedHashMap<K,V>(); }
     private static int _frozen$type;
     @Override public int frozenType() {
       return _frozen$type == 0 ? (_frozen$type=water.TypeMap.onIce(IcedHashMap.class.getName())) : _frozen$type;
     }
-    @Override public AutoBuffer writeJSONFields(AutoBuffer bb) {
-      return bb;
-    }
-    @Override public FieldDoc[] toDocField() {
-      return null;
-    }
+    @Override public AutoBuffer writeJSONFields(AutoBuffer bb) { return bb; }
+    @Override public FieldDoc[] toDocField() { return null; }
   }
   public static final boolean hasNaNsOrInfs(double [] arr){
     for(double d:arr) if(Double.isNaN(d) || Double.isInfinite(d))return true;
@@ -658,124 +726,6 @@ public class Utils {
     return result.toString();
   }
 
-  // Deduce if we are looking at a Date/Time value, or not.
-  // If so, return time as msec since Jan 1, 1970 or Long.MIN_VALUE.
-
-  // I tried java.util.SimpleDateFormat, but it just throws too many
-  // exceptions, including ParseException, NumberFormatException, and
-  // ArrayIndexOutOfBoundsException... and the Piece de resistance: a
-  // ClassCastException deep in the SimpleDateFormat code:
-  // "sun.util.calendar.Gregorian$Date cannot be cast to sun.util.calendar.JulianCalendar$Date"
-  public static int digit( int x, int c ) {
-    if( x < 0 || c < '0' || c > '9' ) return -1;
-    return x*10+(c-'0');
-  }
-
-  // So I just brutally parse "dd-MMM-yy".
-  public static final byte MMS[][][] = new byte[][][] {
-    {"jan".getBytes(),null},
-    {"feb".getBytes(),null},
-    {"mar".getBytes(),null},
-    {"apr".getBytes(),null},
-    {"may".getBytes(),null},
-    {"jun".getBytes(),"june".getBytes()},
-    {"jul".getBytes(),"july".getBytes()},
-    {"aug".getBytes(),null},
-    {"sep".getBytes(),"sept".getBytes()},
-    {"oct".getBytes(),null},
-    {"nov".getBytes(),null},
-    {"dec".getBytes(),null}
-  };
-
-  public static long attemptTimeParse( ValueString str ) {
-    long t0 = attemptTimeParse_0(str); // "yyyy-MM-dd HH:mm:ss.SSS"
-    if( t0 != Long.MIN_VALUE ) return t0;
-    long t1 = attemptTimeParse_1(str); // "dd-MMM-yy"
-    if( t1 != Long.MIN_VALUE ) return t1;
-    return Long.MIN_VALUE;
-  }
-  // So I just brutally parse "yyyy-MM-dd HH:mm:ss.SSS"
-  private static long attemptTimeParse_0( ValueString str ) {
-    final byte[] buf = str.get_buf();
-    int i=str.get_off();
-    final int end = i+str.get_length();
-    while( i < end && buf[i] == ' ' ) i++;
-    if   ( i < end && buf[i] == '"' ) i++;
-    if( (end-i) < 19 ) return Long.MIN_VALUE;
-    int yy=0, MM=0, dd=0, HH=0, mm=0, ss=0, SS=0;
-    yy = digit(yy,buf[i++]);
-    yy = digit(yy,buf[i++]);
-    yy = digit(yy,buf[i++]);
-    yy = digit(yy,buf[i++]);
-    if( yy < 1970 ) return Long.MIN_VALUE;
-    if( buf[i++] != '-' ) return Long.MIN_VALUE;
-    MM = digit(MM,buf[i++]);
-    MM = digit(MM,buf[i++]);
-    if( MM < 1 || MM > 12 ) return Long.MIN_VALUE;
-    if( buf[i++] != '-' ) return Long.MIN_VALUE;
-    dd = digit(dd,buf[i++]);
-    dd = digit(dd,buf[i++]);
-    if( dd < 1 || dd > 31 ) return Long.MIN_VALUE;
-    if( buf[i++] != ' ' ) return Long.MIN_VALUE;
-    HH = digit(HH,buf[i++]);
-    HH = digit(HH,buf[i++]);
-    if( HH < 0 || HH > 23 ) return Long.MIN_VALUE;
-    if( buf[i++] != ':' ) return Long.MIN_VALUE;
-    mm = digit(mm,buf[i++]);
-    mm = digit(mm,buf[i++]);
-    if( mm < 0 || mm > 59 ) return Long.MIN_VALUE;
-    if( buf[i++] != ':' ) return Long.MIN_VALUE;
-    ss = digit(ss,buf[i++]);
-    ss = digit(ss,buf[i++]);
-    if( ss < 0 || ss > 59 ) return Long.MIN_VALUE;
-    if( i<end && buf[i] == '.' ) {
-      i++;
-      if( i<end ) SS = digit(SS,buf[i++]);
-      if( i<end ) SS = digit(SS,buf[i++]);
-      if( i<end ) SS = digit(SS,buf[i++]);
-      if( SS < 0 || SS > 999 ) return Long.MIN_VALUE;
-    }
-    if( i<end && buf[i] == '"' ) i++;
-    if( i<end ) return Long.MIN_VALUE;
-    return new GregorianCalendar(yy,MM,dd,HH,mm,ss).getTimeInMillis()+SS;
-  }
-
-  private static long attemptTimeParse_1( ValueString str ) {
-    final byte[] buf = str.get_buf();
-    int i=str.get_off();
-    final int end = i+str.get_length();
-    while( i < end && buf[i] == ' ' ) i++;
-    if   ( i < end && buf[i] == '"' ) i++;
-    if( (end-i) < 8 ) return Long.MIN_VALUE;
-    int yy=0, MM=0, dd=0;
-    dd = digit(dd,buf[i++]);
-    if( buf[i] != '-' ) dd = digit(dd,buf[i++]);
-    if( dd < 1 || dd > 31 ) return Long.MIN_VALUE;
-    if( buf[i++] != '-' ) return Long.MIN_VALUE;
-    byte[]mm=null;
-    OUTER: for( ; MM<MMS.length; MM++ ) {
-      byte[][] mms = MMS[MM];
-      INNER: for( int k=0; k<mms.length; k++ ) {
-        mm = mms[k];
-        if( mm == null ) continue;
-        for( int j=0; j<mm.length; j++ )
-          if( mm[j] != Character.toLowerCase(buf[i+j]) )
-            continue INNER;
-        break OUTER;
-      }
-    }
-    if( MM == MMS.length ) return Long.MIN_VALUE; // No matching month
-    i += mm.length;             // Skip month bytes
-    MM++;                       // 1-based month
-    if( buf[i++] != '-' ) return Long.MIN_VALUE;
-    yy = digit(yy,buf[i++]);
-    yy = digit(yy,buf[i++]);
-    yy += 2000;                 // Y2K bug
-    if( i<end && buf[i] == '"' ) i++;
-    if( i<end ) return Long.MIN_VALUE;
-    return new GregorianCalendar(yy,MM,dd).getTimeInMillis();
-  }
-
   /** Returns a mapping of given domain to values (0, ... max(dom)).
    * Unused domain items has mapping to -1.
    * @precondition - dom is sorted dom[0] contains minimal value, dom[dom.length-1] represents max. value. */
@@ -789,9 +739,15 @@ public class Utils {
     for (int i=0; i<dom.length; i++) result[dom[i]-min] = i;
     return result;
   }
-  public static String[] toStringMap(int[] dom) {
+  public static String[] toStringMap(long[] dom) {
     String[] result = new String[dom.length];
     for (int i=0; i<dom.length; i++) result[i] = String.valueOf(dom[i]);
+    return result;
+  }
+  public static String[] toStringMap(int first, int last) {
+    if(first > last) throw new IllegalArgumentException("first must be an integer less than or equal to last");
+    String[] result = new String[last-first+1];
+    for(int i = first; i <= last; i++) result[i-first] = String.valueOf(i);
     return result;
   }
   public static int[] compose(int[] first, int[] transf) {
@@ -799,6 +755,27 @@ public class Utils {
       if (first[i]!=-1) first[i] = transf[first[i]];
     }
     return first;
+  }
+  public static int[][] compose(int[][] first, int[][] second) {
+    int[] firstDom = first[0];
+    int[] firstRan = first[1];  // flat transformation
+    int[] secondDom = second[0];
+    int[] secondRan = second[1];
+
+    boolean[] filter = new boolean[firstDom.length]; int fcnt = 0;
+    int[] resDom = firstDom.clone();
+    int[] resRan = firstRan!=null ? firstRan.clone() : new int[firstDom.length];
+    for (int i=0; i<resDom.length; i++) {
+      int v = firstRan!=null ? firstRan[i] : i; // resulting value
+      int vi = Arrays.binarySearch(secondDom, v);
+      // Do not be too strict in composition assert vi >=0 : "Trying to compose two incompatible transformation: first=" + Arrays.deepToString(first) + ", second=" + Arrays.deepToString(second);
+      if (vi<0) {
+        filter[i] = true;
+        fcnt++;
+      } else
+        resRan[i] = secondRan!=null ? secondRan[vi] : vi;
+    }
+    return new int[][] { filter(resDom,filter,fcnt), filter(resRan,filter,fcnt) };
   }
 
   private static final DecimalFormat default_dformat = new DecimalFormat("0.#####");
@@ -875,12 +852,27 @@ public class Utils {
     return sum/nums.length;
   }
   public static float[] div(float[] nums, int n) {
-    for (int i=0; i<nums.length; i++) nums[i] = nums[i] / n;
+    for (int i=0; i<nums.length; i++) nums[i] /= n;
     return nums;
   }
   public static float[] div(float[] nums, float n) {
     assert !Float.isInfinite(n) : "Trying to divide " + Arrays.toString(nums) + " by  " + n; // Almost surely not what you want
-    for (int i=0; i<nums.length; i++) nums[i] = nums[i] / n;
+    for (int i=0; i<nums.length; i++) nums[i] /= n;
+    return nums;
+  }
+  public static double[] div(double[] nums, double n) {
+    assert !Double.isInfinite(n) : "Trying to divide " + Arrays.toString(nums) + " by  " + n; // Almost surely not what you want
+    for (int i=0; i<nums.length; i++) nums[i] /= n;
+    return nums;
+  }
+  public static float[] mult(float[] nums, float n) {
+    assert !Float.isInfinite(n) : "Trying to multiply " + Arrays.toString(nums) + " by  " + n; // Almost surely not what you want
+    for (int i=0; i<nums.length; i++) nums[i] *= n;
+    return nums;
+  }
+  public static double[] mult(double[] nums, double n) {
+    assert !Double.isInfinite(n) : "Trying to multiply " + Arrays.toString(nums) + " by  " + n; // Almost surely not what you want
+    for (int i=0; i<nums.length; i++) nums[i] *= n;
     return nums;
   }
   /**
@@ -1018,7 +1010,17 @@ public class Utils {
     return s;
   }
 
+  /** Union of given arrays.
+   *
+   * @param a first array
+   * @param b second array
+   * @return union of values in given arrays.
+   *
+   * @precondition a!=null && b!=null
+   * @precondition a && b are sorted
+   */
   public static String[] union(String[] a, String[] b) {
+    assert a!=null && b!=null : "Union expect non-null input!";
     String[] r = new String[a.length+b.length];
     int ia = 0, ib = 0, i = 0;
     while (ia < a.length && ib < b.length) {
@@ -1030,5 +1032,178 @@ public class Utils {
     if (ia < a.length) while (ia<a.length) r[i++] = a[ia++];
     if (ib < b.length) while (ib<b.length) r[i++] = b[ib++];
     return Arrays.copyOf(r, i);
+  }
+
+  public static int[] filter(int[] values, boolean[] filter, int fcnt) {
+    assert filter.length == values.length : "Values should have same length as filter!";
+    assert filter.length - fcnt >= 0 : "Cannot filter more values then legth of filter vector!";
+    if (fcnt==0) return values;
+    int[] result = new int[filter.length - fcnt];
+    int c = 0;
+    for (int i=0; i<values.length; i++) {
+      if (!filter[i]) result[c++] = values[i];
+    }
+    return result;
+  }
+
+  public static int[][] pack(int[] values, boolean[] usemap) {
+    assert values.length == usemap.length : "Cannot pack the map according given use map!";
+    int cnt = 0;
+    for (int i=0; i<usemap.length; i++) cnt += usemap[i] ? 1 : 0;
+    int[] pvals = new int[cnt]; // only used values
+    int[] pindx = new int[cnt]; // indexes of used values
+    int index = 0;
+    for (int i=0; i<usemap.length; i++) {
+      if (usemap[i]) {
+        pvals[index] = values[i];
+        pindx[index] = i;
+        index++;
+      }
+    }
+    return new int[][] { pvals, pindx };
+  }
+
+  /**
+   * Poisson-distributed RNG
+   * @param lambda Lambda parameter
+   * @return Poisson-distributed random number in [0,inf)
+   */
+  public static int getPoisson(double lambda, Random rng) {
+    double L = Math.exp(-lambda);
+    double p = 1.0;
+    int k = 0;
+    if (rng == null) rng = new Random();
+    do {
+      k++;
+      p *= rng.nextDouble();
+    } while (p > L);
+    return k - 1;
+  }
+
+  /** Create a new sorted array according to given sort order */
+  public static float[] sortAccording(float[] ary, Integer[] sortOrder) {
+    float[] res = new float[ary.length];
+    for(int i=0; i<ary.length; i++) res[i] = ary[sortOrder[i]];
+    return res;
+  }
+  public static String[] sortAccording(String[] ary, Integer[] sortOrder) {
+    String[] res = new String[ary.length];
+    for(int i=0; i<ary.length; i++) res[i] = ary[sortOrder[i]];
+    return res;
+  }
+
+  public static String[] createConfusionMatrixHeader( long xs[], String ds[] ) {
+    String ss[] = new String[xs.length]; // the same length
+    for( int i=0; i<ds.length; i++ )
+      if( xs[i] >= 0 || (ds[i] != null && ds[i].length() > 0) && !Integer.toString(i).equals(ds[i]) )
+        ss[i] = ds[i];
+    if( ds.length == xs.length-1 && xs[xs.length-1] > 0 )
+      ss[xs.length-1] = "NA";
+    return ss;
+  }
+
+  public static void printConfusionMatrix(StringBuilder sb, long[][] cm, String[] domain, boolean html) {
+    assert(cm != null);
+    assert(domain != null);
+    for (int i=0; i<cm.length; ++i) assert(cm.length == cm[i].length);
+    if (html) DocGen.HTML.arrayHead(sb);
+    // Sum up predicted & actuals
+    long acts [] = new long[cm   .length];
+    long preds[] = new long[cm[0].length];
+    for( int a=0; a<cm.length; a++ ) {
+      long sum=0;
+      for( int p=0; p<cm[a].length; p++ ) {
+        sum += cm[a][p];
+        preds[p] += cm[a][p];
+      }
+      acts[a] = sum;
+    }
+    String adomain[] = createConfusionMatrixHeader(acts , domain);
+    String pdomain[] = createConfusionMatrixHeader(preds, domain);
+    assert adomain.length == pdomain.length : "The confusion matrix should have the same length for both directions.";
+
+    String fmt = "";
+    String fmtS = "";
+
+    // Header
+    if (html) {
+      sb.append("<tr class='warning' style='min-width:60px'>");
+      sb.append("<th>Actual / Predicted</th>");
+      for( int p=0; p<pdomain.length; p++ )
+        if( pdomain[p] != null )
+          sb.append("<th style='min-width:60px'>").append(pdomain[p]).append("</th>");
+      sb.append("<th>Error</th>");
+      sb.append("</tr>");
+    } else {
+      // determine max length of each space-padded field
+      int maxlen = 0;
+      for( String s : pdomain ) if( s != null ) maxlen = Math.max(maxlen, s.length());
+      long lsum = 0;
+      for( int a=0; a<cm.length; a++ ) {
+        if( adomain[a] == null ) continue;
+        for( int p=0; p<pdomain.length; p++ ) { if( pdomain[p] == null ) continue; lsum += cm[a][p]; }
+      }
+      maxlen = Math.max(8, Math.max(maxlen, String.valueOf(lsum).length()) + 2);
+      fmt  = "%" + maxlen + "d";
+      fmtS = "%" + maxlen + "s";
+      sb.append(String.format(fmtS, "Act/Prd"));
+      for( String s : pdomain ) if( s != null ) sb.append(String.format(fmtS, s));
+      sb.append("   " + String.format(fmtS, "Error\n"));
+    }
+
+    // Main CM Body
+    long terr=0;
+    for( int a=0; a<cm.length; a++ ) {
+      if( adomain[a] == null ) continue;
+      if (html) {
+        sb.append("<tr style='min-width:60px'>");
+        sb.append("<th style='min-width:60px'>").append(adomain[a]).append("</th>");
+      } else {
+        sb.append(String.format(fmtS,adomain[a]));
+      }
+      long correct=0;
+      for( int p=0; p<pdomain.length; p++ ) {
+        if( pdomain[p] == null ) continue;
+        boolean onDiag = adomain[a].equals(pdomain[p]);
+        if( onDiag ) correct = cm[a][p];
+        String id = "";
+        if (html) {
+          sb.append(onDiag ? "<td style='min-width: 60px; background-color:LightGreen' "+id+">":"<td style='min-width: 60px;'"+id+">").append(String.format("%,d", cm[a][p])).append("</td>");
+        } else {
+          sb.append(String.format(fmt,cm[a][p]));
+        }
+      }
+      long err = acts[a]-correct;
+      terr += err;
+      if (html) {
+        sb.append(String.format("<th  style='min-width: 60px;'>%5.3f = %,d / %,d</th></tr>", (double)err/acts[a], err, acts[a]));
+      } else {
+        sb.append("   " + String.format("%5.3f = %,d / %d\n", (double)err/acts[a], err, acts[a]));
+      }
+    }
+
+    // Last row of CM
+    if (html) {
+      sb.append("<tr style='min-width:60px'><th>Totals</th>");
+    } else {
+      sb.append(String.format(fmtS, "Totals"));
+    }
+    for( int p=0; p<pdomain.length; p++ ) {
+      if( pdomain[p] == null ) continue;
+      if (html) {
+        sb.append("<td style='min-width:60px'>").append(String.format("%,d", preds[p])).append("</td>");
+      } else {
+        sb.append(String.format(fmt, preds[p]));
+      }
+    }
+    long nrows = 0;
+    for (long n : acts) nrows += n;
+
+    if (html) {
+      sb.append(String.format("<th style='min-width:60px'>%5.3f = %,d / %,d</th></tr>", (float)terr/nrows, terr, nrows));
+      DocGen.HTML.arrayTail(sb);
+    } else {
+      sb.append("   " + String.format("%5.3f = %,d / %,d\n", (float)terr/nrows, terr, nrows));
+    }
   }
 }

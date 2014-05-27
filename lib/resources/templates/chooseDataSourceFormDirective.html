@@ -32,14 +32,14 @@
         <!-- Data source : HDFS -->
         <fieldset class="tab" id="tab-Data_source-HDFS">
 
-            <input class="input" type="text" name="data_source_uri" placeholder="URI goes here (e.g. http://)" ng-model="uris['hdfs']" ng-trim="false" ui-keypress="{13:'saveProceedMethodIn()'}">
+            <input class="input" type="text" name="data_source_uri" placeholder="URI goes here (e.g. hdfs://)" ng-model="uris['hdfs']" ng-trim="false" ui-keypress="{13:'saveProceedMethodIn()'}">
 
         </fieldset><!-- /end Data source : HDFS -->
 
         <!-- Data source : S3 -->
         <fieldset class="tab" id="tab-Data_source-S3">
 
-            <input class="input typeahead-input" type="text" name="data_source_uri" placeholder="URI goes here (e.g. http://)" ng-model="uris['s3']" sf-typeahead datasets="TypeaheadService.s3Dataset" ng-trim="false" ui-keypress="{13:'saveProceedMethodIn()'}">
+            <input class="input typeahead-input" type="text" name="data_source_uri" placeholder="Path to your file goes here (e.g. your-bucket/folder/)" ng-model="uris['s3']" sf-typeahead datasets="TypeaheadService.s3Dataset" ng-trim="false" ui-keypress="{13:'saveProceedMethodIn()'}">
 
         </fieldset><!-- /end Data source : S3 -->
 

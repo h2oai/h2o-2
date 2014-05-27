@@ -1,6 +1,5 @@
 package hex.gbm;
 
-import java.util.Arrays;
 import water.MemoryManager;
 import water.util.Utils;
 
@@ -48,7 +47,7 @@ public class DRealHistogram extends DHistogram<DRealHistogram> {
     Utils.AtomicDoubleArray.add(_ssqs,b,yy);
   }
 
-  // Merge two equal histograms together.  
+  // Merge two equal histograms together.
   // Done in a F/J reduce, so no synchronization needed.
   @Override void add0( DRealHistogram dsh ) {
     Utils.add(_sums,dsh._sums);
@@ -81,7 +80,7 @@ public class DRealHistogram extends DHistogram<DRealHistogram> {
     // column.  Normally this situation is cut out before we even try to split, but we might
     // have NA's in THIS column...
     if( ssqs0[nbins]*tot - sums0[nbins]*sums0[nbins] == 0 ) {
-      assert isConstantResponse(); return null; 
+      assert isConstantResponse(); return null;
     }
 
     // Compute mean/var for cumulative bins from nbins to 0 inclusive.

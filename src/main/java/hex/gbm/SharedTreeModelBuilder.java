@@ -1,5 +1,8 @@
 package hex.gbm;
 
+import static water.util.ModelUtils.getPrediction;
+import hex.ConfusionMatrix;
+import hex.VarImp;
 import hex.rng.MersenneTwisterRNG;
 
 import java.util.Arrays;
@@ -9,12 +12,13 @@ import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ValidatedJob;
+import water.api.AUC;
 import water.api.DocGen;
 import water.fvec.*;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
-// Build (distributed) Trees.  Used for both Gradiant Boosted Method and Random
+// Build (distributed) Trees.  Used for both Gradient Boosted Method and Random
 // Forest, and really could be used for any decision-tree builder.
 //
 // While this is a wholly H2O-design, we found these papers afterwards that
@@ -29,31 +33,34 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-  @API(help = "Number of trees", filter = Default.class, lmin=1, lmax=1000000)
+  @API(help = "Number of trees", filter = Default.class, lmin=1, lmax=1000000, json=true)
   public int ntrees = 50;
 
-  @API(help = "Maximum tree depth", filter = Default.class, lmin=1, lmax=10000)
+  @API(help = "Maximum tree depth", filter = Default.class, lmin=1, lmax=10000, json=true)
   public int max_depth = 5;
 
-  @API(help = "Fewest allowed observations in a leaf (in R called 'nodesize')", filter = Default.class, lmin=1)
+  @API(help = "Fewest allowed observations in a leaf (in R called 'nodesize')", filter = Default.class, lmin=1, json=true)
   public int min_rows = 10;
 
-  @API(help = "Build a histogram of this many bins, then split at the best point", filter = Default.class, lmin=2, lmax=10000)
+  @API(help = "Build a histogram of this many bins, then split at the best point", filter = Default.class, lmin=2, lmax=10000, json=true)
   public int nbins = 20;
 
-  @API(help = "Perform scoring after each iteration (can be slow)", filter = Default.class)
+  @API(help = "Perform scoring after each iteration (can be slow)", filter = Default.class, json=true)
   public boolean score_each_iteration = false;
 
-  // Overall prediction Mean Squared Error as I add trees
-  transient protected double _errs[];
+  @API(help = "Compute variable importance (true/false).", filter = Default.class )
+  protected boolean importance = false; // compute variable importance
 
-  @API(help = "Active feature columns")
+  @API(help = "Scale variable importance measures.", filter = Default.class )
+  protected boolean scale_importance = false;
+
+//  @API(help = "Active feature columns")
   protected int _ncols;
 
-  @API(help = "Rows in training dataset")
+//  @API(help = "Rows in training dataset")
   protected long _nrows;
 
-  @API(help = "Number of classes")
+//  @API(help = "Number of classes")
   protected int _nclass;
 
   @API(help = "Class distribution")
@@ -72,15 +79,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   @Override public float progress(){
     Value value = DKV.get(dest());
     DTree.TreeModel m = value != null ? (DTree.TreeModel) value.get() : null;
-    return m == null ? 0 : (float)m.treeBits.length/(float)m.N;
-  }
-
-  @Override protected void logStart() {
-    super.logStart();
-    Log.info("    ntrees: " + ntrees);
-    Log.info("    max_depth: " + max_depth);
-    Log.info("    min_rows: " + min_rows);
-    Log.info("    nbins: " + nbins);
+    return m == null ? 0 : m.ntrees() / (float) m.N;
   }
 
   // Verify input parameters
@@ -93,8 +92,6 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     assert (classification && (response.isInt() || response.isEnum())) ||   // Classify Int or Enums
            (!classification && !response.isEnum()) : "Classification="+classification + " and response="+response.isInt();  // Regress  Int or Float
 
-    if (source.numRows()==0)
-      throw new IllegalArgumentException("Cannot build a model on empty dataset!");
     if (source.numRows() - response.naCnt() <=0)
       throw new IllegalArgumentException("Dataset contains too many NAs!");
 
@@ -103,12 +100,12 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
 
     assert (_nrows>0) : "Dataset contains no rows - validation of input parameters is probably broken!";
     // Transform response to enum
+    // TODO: moved to shared model job
     if( !response.isEnum() && classification ) {
       response = response.toEnum();
       _gen_enum = true;
     }
     _nclass = response.isEnum() ? (char)(response.domain().length) : 1;
-    _errs = new double[0];                // No trees yet
     if (classification && _nclass <= 1)
       throw new IllegalArgumentException("Constant response column!");
     if (_nclass > MAX_SUPPORTED_LEVELS)
@@ -129,6 +126,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     if( validation != null && !source._key.equals(validation._key) )
       validation.read_lock(self());
 
+    // Prepare a frame for this tree algorithm run
     Frame fr = new Frame(_names, _train);
     fr.add(_responseName,response);
     final Frame frm = new Frame(fr); // Model-Frame; no extra columns
@@ -138,12 +136,12 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     // For doing classification on Integer (not Enum) columns, we want some
     // handy names in the Model.  This really should be in the Model code.
     String[] domain = response.domain();
-    if( domain == null && _nclass > 1 ) // No names?  Something is wrong since we converted response to enum
+    if( domain == null && _nclass > 1 ) // No names?  Something is wrong since we converted response to enum already !
       assert false : "Response domain' names should be always presented in case of classification";
     if( domain == null ) domain = new String[] {"r"}; // For regression, give a name to class 0
 
     // Find the class distribution
-    _distribution = _nclass > 1 ? new ClassDist(_nclass).doAll(response)._ys : null;
+    _distribution = _nclass > 1 ? new MRUtils.ClassDist(_nclass).doAll(response).dist() : null;
 
     // Also add to the basic working Frame these sets:
     //   nclass Vecs of current forest results (sum across all trees)
@@ -163,13 +161,30 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     for( int i=0; i<_nclass; i++ )
       fr.add("NIDs_"+domain[i], response.makeCon(_distribution==null ? 0 : (_distribution[i]==0?-1:0)));
 
-    // Tail-call position: this forks off in the background, and this call
-    // returns immediately.  The actual model build is merely kicked off.
-    buildModel(fr,names,domains,outputKey, dataKey, testKey, new Timer());
+    // Timer  for model building
+    Timer bm_timer =  new Timer();
+    // Create an initial model
+    TM model = makeModel(outputKey, dataKey, testKey, names, domains, getCMDomain());
+    // Save the model ! (delete_and_lock has side-effect of saving model into DKV)
+    model.delete_and_lock(self());
+    // Prepare and cache adapted validation dataset if it is necessary
+    prepareValidationWithModel(model);
+
+    try {
+      // Initialized algorithm
+      initAlgo(model);
+      // Compute the model
+      model = buildModel(model, fr, names, domains, bm_timer);
+    //} catch (Throwable t) { t.printStackTrace();
+    } finally {
+      model.unlock(self());  // Update and unlock model
+      cleanUp(fr,bm_timer);  // Shared cleanup
+    }
   }
 
-  // Shared cleanup
+  // Tree model cleanup
   protected void cleanUp(Frame fr, Timer t_build) {
+    //super.cleanUp(fr, t_build);
     Log.info(logTag(),"Modeling done in "+t_build);
 
     // Remove temp vectors; cleanup the Frame
@@ -187,7 +202,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   }
 
   transient long _timeLastScoreStart, _timeLastScoreEnd, _firstScore;
-  protected TM doScoring(TM model, Key outputKey, Frame fr, DTree[] ktrees, int tid, DTree.TreeModel.TreeStats tstats, boolean finalScoring, boolean oob, boolean build_tree_per_node ) {
+  protected TM doScoring(TM model, Frame fTrain, DTree[] ktrees, int tid, DTree.TreeModel.TreeStats tstats, boolean finalScoring, boolean oob, boolean build_tree_per_node ) {
     long now = System.currentTimeMillis();
     if( _firstScore == 0 ) _firstScore=now;
     long sinceLastScore = now-_timeLastScoreStart;
@@ -197,6 +212,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     // Double update - before scoring
     model = makeModel(model, ktrees, tstats);
     model.update(self());
+    // Now model already contains tid-trees in serialized form
     if( score_each_iteration ||
         finalScoring ||
         (now-_firstScore < 4000) || // Score every time for 4 secs
@@ -205,15 +221,36 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
          (double)(_timeLastScoreEnd-_timeLastScoreStart)/sinceLastScore < 0.1) ) { // 10% duty cycle
       _timeLastScoreStart = now;
       // Perform scoring
-      sc = new Score().doIt(model, fr, validation, oob, build_tree_per_node).report(logTag(),tid,ktrees);
+      Response2CMAdaptor vadaptor = getValidAdaptor();
+      sc = new Score().doIt(model, fTrain, vadaptor, oob, build_tree_per_node).report(logTag(),tid,ktrees);
       _timeLastScoreEnd = System.currentTimeMillis();
+    }
+
+    // Compute variable importance for this tree if necessary
+    VarImp varimp = null;
+    if (importance && ktrees!=null) { // compute this tree votes but skip the first scoring call which is done over empty forest
+      Timer vi_timer = new Timer();
+      varimp  = doVarImpCalc(model, ktrees, tid-1, fTrain, scale_importance);
+      Log.info(Sys.DRF__, "Computation of variable importance with "+tid+"th-tree took: " + vi_timer.toString());
     }
     // Double update - after scoring
     model = makeModel(model,
                       sc==null ? Double.NaN : sc.mse(),
-                      sc==null ? null : (_nclass>1?sc._cm:null));
+                      sc==null ? null : (_nclass>1? new ConfusionMatrix(sc._cm):null),
+                      varimp,
+                      sc==null ? null : (_nclass==2 ? makeAUC(toCMArray(sc._cms), ModelUtils.DEFAULT_THRESHOLDS) : null)
+                      );
     model.update(self());
     return model;
+  }
+
+  protected abstract VarImp doVarImpCalc(TM model, DTree[] ktrees, int tid, Frame validationFrame, boolean scale);
+
+  private ConfusionMatrix[] toCMArray(long[][][] cms) {
+    int n = cms.length;
+    ConfusionMatrix[] res = new ConfusionMatrix[n];
+    for (int i = 0; i < n; i++) res[i] = new ConfusionMatrix(cms[i]);
+    return res;
   }
 
   // --------------------------------------------------------------------------
@@ -226,6 +263,12 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
 
   protected final Vec vec_nids( Frame fr, int t) { return fr.vecs()[_ncols+1+_nclass+_nclass+t]; }
   protected final Vec vec_resp( Frame fr, int t) { return fr.vecs()[_ncols]; }
+
+  protected double[] data_row( Chunk chks[], int row, double[] data) {
+    assert data.length == _ncols;
+    for(int f=0; f<_ncols; f++) data[f] = chks[f].at0(row);
+    return data;
+  }
 
   // --------------------------------------------------------------------------
   // Fuse 2 conceptual passes into one:
@@ -546,115 +589,150 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   protected abstract DTree.DecidedNode makeDecided( DTree.UndecidedNode udn, DHistogram hs[] );
 
   // --------------------------------------------------------------------------
-  private static class ClassDist extends MRTask2<ClassDist> {
-    ClassDist(int nclass) { _nclass = nclass; }
-    final int _nclass;
-    long _ys[];
-    @Override public void map(Chunk ys) {
-      _ys = new long[_nclass];
-      for( int i=0; i<ys._len; i++ )
-        if( !ys.isNA0(i) )
-          _ys[(int)ys.at80(i)]++;
-    }
-    @Override public void reduce( ClassDist that ) { Utils.add(_ys,that._ys); }
-  }
-
-  // --------------------------------------------------------------------------
   // Read the 'tree' columns, do model-specific math and put the results in the
-  // ds[] array, and return the sum.  Dividing any ds[] element by the sum
+  // fs[] array, and return the sum.  Dividing any fs[] element by the sum
   // turns the results into a probability distribution.
-  protected abstract double score0( Chunk chks[], double ds[/*nclass*/], int row );
+  protected abstract float score1( Chunk chks[], float fs[/*nclass*/], int row );
 
   // Score the *tree* columns, and produce a confusion matrix
   public class Score extends MRTask2<Score> {
-    long _cm[/*actual*/][/*predicted*/]; // Confusion matrix
-    double _sum;                // Sum-squared-error
-    long _snrows;               // Count of voted-on rows
-    /* @IN */ boolean _oob;
-    /* @IN */ boolean _validation;
+    /* @OUT */ long    _cm[/*actual*/][/*predicted*/]; // Confusion matrix
+    /* @OUT */ double  _sum;                           // Sum-squared-error
+    /* @OUT */ long    _snrows;                        // Count of voted-on rows
+    /* @OUT */ long    _cms[/*threshold*/][/*actual*/][/*predicted*/]; // Compute CM per threshold for binary classifiers
+    /* @IN */  boolean _oob;
+    /* @IN */  boolean _validation;
+    /* @IN */  int     _cmlen;
+    /* @IN */  boolean _cavr; // true if validation response needs to be adapted to CM domain
+    //double _auc;               //Area under the ROC curve for _nclass == 2
 
     public double   sum()   { return _sum; }
     public long[][] cm ()   { return _cm;  }
     public long     nrows() { return _snrows; }
     public double   mse()   { return sum() / nrows(); }
+   // public double   auc()   { return _auc; }
 
-    // Compute CM & MSE on either the training or testing dataset
-    public Score doIt(Model model, Frame fr, Frame validation, boolean oob, boolean build_tree_per_node) {
-      assert !oob || validation==null ; // oob => validation==null
+    /**
+     * Compute CM & MSE on either the training or testing dataset.
+     *
+     * It expect already adapted validation dataset which is adapted to a model
+     * and contains a response which is adapted to confusion matrix domain. Uff :)
+     *
+     * @param model a model which is used to perform computation
+     * @param fr    a model training frame
+     * @param vadaptor an adaptor which helps to adapt model/validation response to confusion matrix domain.
+     * @param oob   perform out-of-bag validation on training frame
+     * @param build_tree_per_node
+     * @return this score object
+     */
+    public Score doIt(Model model, Frame fr, Response2CMAdaptor vadaptor, boolean oob, boolean build_tree_per_node) {
+      assert !oob || vadaptor.getValidation()==null : "Validation frame cannot be specified if oob validation is demanded!"; // oob => validation==null
+      assert _nclass == 1 || vadaptor.getCMDomain() != null : "CM domain has to be configured from classification!";
+
+      _cmlen = _nclass > 1 ? vadaptor.getCMDomain().length : 1;
       _oob = oob;
-      // No validation, so do on training data
-      //System.err.println(fr.toStringAll());
-      if( validation == null ) return doAll(fr, build_tree_per_node);
+      // Validation frame adapted to a model
+      Frame adaptedValidation = vadaptor.getValidation();
+      // No validation frame is specified, so perform computation on training data
+      if( adaptedValidation == null ) return doAll(fr, build_tree_per_node);
       _validation = true;
+      _cavr       = false;
       // Validation: need to score the set, getting a probability distribution for each class
-      // Frame has nclass vectors (nclass, or 1 for regression)
-      Frame res = model.score(validation);
-      // Adapt the validation set to the model
-      Frame frs[] = model.adapt(validation,false);
-      Frame adapValidation = frs[0]; // adapted validation dataset
+      // Frame has nclass vectors (nclass, or 1 for regression), for classification it
+      Frame res = model.score(adaptedValidation, false); // For classification: predicted values (~ values in res[0]) are in interval 0..domain().length-1, for regression just single column.
+      Frame adapValidation = new Frame(adaptedValidation); // adapted validation dataset
       // All columns including response of validation frame are already adapted to model
-      if (_nclass>1) { // Classification
+      if (_nclass>1) { // Only for Classification
         for( int i=0; i<_nclass; i++ ) // Distribution of response classes
           adapValidation.add("ClassDist"+i,res.vecs()[i+1]);
-        adapValidation.add("Prediction",res.vecs()[0]); // Predicted values
+        if (vadaptor.needsAdaptation2CM()) {
+          Vec ar = vadaptor.adaptModelResponse2CM(res.vecs()[0]); // perform transformation of model results to be consistent with expected confusion matrix domain
+          adapValidation.add("Prediction", ar); // add as a prediction
+          adapValidation.add("ActualValidationResponse", vadaptor.getAdaptedValidationResponse2CM());
+          _cavr = true; // signal that we have two predictions vectors in the frame.
+          res.add("__dummyx__", ar); // add the vector to clean up list
+        } else
+          adapValidation.add("Prediction",res.vecs()[0]); // Predicted values
       } else { // Regression
         adapValidation.add("Prediction",res.vecs()[0]);
       }
       // Compute a CM & MSE
-      doAll(adapValidation, build_tree_per_node);
-      // Remove the extra adapted Vecs
-      frs[1].delete();
-      // Remove temporary result
-      res.delete();
+      try {
+        doAll(adapValidation, build_tree_per_node);
+      } finally {
+        // Perform clean-up: remove temporary result
+        res.delete();
+      }
       return this;
     }
 
     @Override public void map( Chunk chks[] ) {
       Chunk ys = chk_resp(chks); // Response
-      _cm = new long[_nclass][_nclass];
-      double ds[] = new double[_nclass];
-      int ties[] = new int[_nclass];
+      Chunk ays = _cavr ? chks[_ncols+1+_nclass+1] : ys; // Remember adapted response
+      _cm = new long[_cmlen][_cmlen];
+      float fs[] = new float[_nclass+1]; // Array to hold prediction and distribution given by the model.
+      // For binary classifier allocate cms for individual thresholds
+      _cms = new long[ModelUtils.DEFAULT_THRESHOLDS.length][2][2];
       // Score all Rows
       for( int row=0; row<ys._len; row++ ) {
-        if( ys.isNA0(row) ) continue; // Ignore missing response vars
-        double sum;
+        if( ays.isNA0(row) ) continue; // Ignore missing response vars only if it was actual NA
+        float sum;
         if( _validation ) {     // Passed in a class distribution from scoring
           for( int i=0; i<_nclass; i++ )
-            ds[i] = chks[i+_ncols+1].at0(row); // Get the class distros
-          if (_nclass > 1 ) sum = 1.0;           // Sum of a distribution is 1.0 for classification
-          else sum = ds[0];                      // Sum is the same as prediction for regression.
-        } else {                // Passed in the model-specific columns
-          sum = score0(chks,ds,row);
+            fs[i+1] = (float)chk_tree(chks,i).at0(row); // Get the class distros
+          if (_nclass > 1 ) sum = 1.0f;  // Sum of a distribution is 1.0 for classification
+          else              sum = fs[1]; // Sum is the same as prediction for regression.
+        } else {               // Passed in the model-specific columns
+          sum = score1(chks,fs,row);
         }
-        double err;  int ycls=0;
+        float err;  int yact=0; // actual response from dataset
+        int yact_orig = 0; // actual response from dataset before potential scaling
         if (_oob && inBagRow(chks, row)) continue; // score only on out-of-bag rows
         if( _nclass > 1 ) {    // Classification
           if( sum == 0 ) {       // This tree does not predict this row *at all*?
             err = 1.0f-1.0f/_nclass; // Then take ycls=0, uniform predictive power
           } else {
-            ycls = (int)ys.at80(row); // Response class from 0 to nclass-1
-            if (ycls >= _nclass) continue;
-            assert 0 <= ycls && ycls < _nclass : "weird ycls="+ycls+", y="+ys.at0(row);
-            err = Double.isInfinite(sum)
-              ? (Double.isInfinite(ds[ycls]) ? 0 : 1)
-              : 1.0-ds[ycls]/sum; // Error: distance from predicting ycls as 1.0
+            if (_cavr && ys.isNA0(row)) { // Handle adapted validation response - actual response was adapted but does not contain NA - it is implicit misprediction,
+              err = 1f;
+            } else { // No adaptation of validation response
+              yact = yact_orig = (int) ys.at80(row); // Pick an actual prediction adapted to model values <0, nclass-1)
+              assert 0 <= yact && yact < _nclass : "weird ycls="+yact+", y="+ys.at0(row);
+              err = Float.isInfinite(sum)
+                ? (Float.isInfinite(fs[yact+1]) ? 0f : 1f)
+                : 1.0f-fs[yact+1]/sum; // Error: distance from predicting ycls as 1.0
+            }
           }
-          assert !Double.isNaN(err) : "ds[cls]="+ds[ycls] + ", sum=" + sum;
+          assert !Double.isNaN(err) : "fs[cls]="+fs[yact+1] + ", sum=" + sum;
+          // Overwrite response by adapted value to provide correct CM
+          if (_cavr) yact = (int) ays.at80(row);
         } else {                // Regression
-          err = ys.at0(row) - sum;
+          err = (float)ys.at0(row) - sum;
         }
         _sum += err*err;               // Squared error
         assert !Double.isNaN(_sum);
-        // Pick highest prob for our prediction.  Count all ties for best.
+        // Pick highest prob for our prediction.
         if (_nclass > 1) { // fill CM only for classification
-          int best = _validation ? (int) chks[_ncols+1+_nclass].at80(row) : Model.getPrediction(ds, ties, row);
-          _cm[ycls][best]++;      // Bump Confusion Matrix also
+          if(_nclass == 2) { // Binomial classification -> compute AUC, draw ROC
+            float snd = (!Float.isInfinite(sum) ? fs[2] / sum : Float.isInfinite(fs[2]) ? 1 : 0);
+            for(int i = 0; i < ModelUtils.DEFAULT_THRESHOLDS.length; i++) {
+              int p = snd >= ModelUtils.DEFAULT_THRESHOLDS[i] ? 1 : 0; // Compute prediction based on threshold
+              _cms[i][yact_orig][p]++; // Increase matrix
+            }
+          }
+          int ypred = _validation ? (int) chks[_ncols+1+_nclass].at80(row) : getPrediction(fs, row);
+          _cm[yact][ypred]++;      // actual v. predicted
         }
         _snrows++;
       }
     }
 
-    @Override public void reduce( Score t ) { _sum += t._sum; Utils.add(_cm,t._cm); _snrows += t._snrows; }
+    @Override public void reduce( Score t ) {
+      _sum += t._sum;
+      Utils.add(_cm,t._cm);
+      _snrows += t._snrows;
+      if (_cms!=null)
+        for (int i = 0; i < _cms.length; i++) Utils.add(_cms[i], t._cms[i]);
+    }
 
     public Score report( Sys tag, int ntree, DTree[] trees ) {
       assert !Double.isNaN(_sum);
@@ -676,18 +754,42 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   @Override public long speedValue() {
     Value value = DKV.get(dest());
     DTree.TreeModel m = value != null ? (DTree.TreeModel) value.get() : null;
-    long numTreesBuiltSoFar = m == null ? 0 : m.treeBits.length;
+    long numTreesBuiltSoFar = m == null ? 0 : m.ntrees();
     long sv = (numTreesBuiltSoFar <= 0) ? 0 : (runTimeMs() / numTreesBuiltSoFar);
     return sv;
   }
 
+  /** Returns a log tag for a particular model builder (e.g., DRF, GBM) */
   protected abstract water.util.Log.Tag.Sys logTag();
-  protected abstract void buildModel( Frame fr, String names[], String domains[][], Key outputKey, Key dataKey, Key testKey, Timer t_build );
+  /**
+   * Builds model
+   * @param initialModel initial model created by {@link #makeModel(Key, Key, Key, String[], String[][], String[])} method.
+   * @param trainFr training dataset which can contain additional temporary vectors prepared by {@link #buildModel()} method.
+   * @param names names of columns in <code>trainFr</code> used for model training
+   * @param domains domains of columns in <code>trainFr</code> used for model training
+   * @param t_build timer to measure model building process
+   * @return resulting model
+   * @see #buildModel()
+   */
+  protected abstract TM buildModel( TM initialModel, Frame trainFr, String names[], String domains[][], Timer t_build );
+  /**
+   * Initialize algorithm - e.g., allocate algorithm specific datastructure.
+   *
+   * @param initialModel
+   */
+  protected abstract void initAlgo( TM initialModel);
 
-  protected abstract TM makeModel( TM model, double err, long cm[][]);
+  protected abstract TM makeModel( Key outputKey, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain);
+  protected abstract TM makeModel( TM model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC);
   protected abstract TM makeModel( TM model, DTree ktrees[], DTree.TreeModel.TreeStats tstats);
 
+  protected water.api.AUC makeAUC(ConfusionMatrix[] cms, float[] threshold) {
+    assert _nclass == 2;
+    return cms != null ? new AUC(cms, threshold) : null;
+  }
+
   protected boolean inBagRow(Chunk[] chks, int row) { return false; }
+  protected final boolean isClassification() { return _nclass > 1; }
 
   static public final boolean isOOBRow(int nid)     { return nid <= OUT_OF_BAG; }
   static public final boolean isDecidedRow(int nid) { return nid == DECIDED_ROW; }

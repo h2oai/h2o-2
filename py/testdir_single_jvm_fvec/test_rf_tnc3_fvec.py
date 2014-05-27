@@ -37,7 +37,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_tnc3_fvec(self):
+    def test_rf_tnc3_fvec(self):
         h2o.beta_features = True
         csvPathname = 'tnc3.csv'
         print "\n" + csvPathname

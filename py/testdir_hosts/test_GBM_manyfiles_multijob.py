@@ -110,9 +110,10 @@ class Basic(unittest.TestCase):
             # randomly ignore a bunch of cols, just to make it go faster
             x = range(numCols)
             del x[response]
-            ignored_cols_by_name = ",".join(map(lambda x: "C" + str(x), random.sample(x, 300)))
+            # add 1 for start-with-1
+            ignored_cols_by_name = ",".join(map(lambda x: "C" + str(x+1), random.sample(x, 300)))
 
-            print "Using the same response %s for train and test (which should have a output value too)" % response
+            print "Using the same response %s for train and test (which should have a output value too)" % 'C' + str(response+1)
 
             ntrees = 10
             trial = 0
@@ -128,7 +129,7 @@ class Basic(unittest.TestCase):
                 trial += 1
 
                 params = {
-                    'response': "C" + str(response),
+                    'response': "C" + str(response+1),
                     'learn_rate': .2,
                     'nbins': 1024,
                     'ntrees': ntrees,

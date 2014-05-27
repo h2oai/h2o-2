@@ -79,7 +79,7 @@ class Basic(unittest.TestCase):
                 
                 # jea = "-XX:+UseParNewGC -XX:+UseConcMarkSweepGC"
                 # jea = "-Dh2o.find-ByteBuffer-leaks=true"
-                h2o_hosts.build_cloud_with_hosts(h2oPerNode, java_heap_GB=tryHeap,
+                h2o_hosts.build_cloud_with_hosts(h2oPerNode, java_heap_GB=tryHeap, base_port=54326,
                     # java_extra_args=jea,
                     enable_benchmark_log=True, timeoutSecs=120, retryDelaySecs=10)
                 # don't raise exception if we find something bad in h2o stdout/stderr?
@@ -119,7 +119,7 @@ class Basic(unittest.TestCase):
                     hex_key = csvFilename + "_" + str(trial) + ".hex"
                     print "Loading", protocol, "key:", src_key, "to", hex_key
                     start = time.time()
-                    parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvFolder + "/*",
+                    parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvFolder + "/" + csvFilepattern,
                         timeoutSecs=timeoutSecs, 
                         retryDelaySecs=retryDelaySecs,
                         pollTimeoutSecs=pollTimeoutSecs,
@@ -134,7 +134,7 @@ class Basic(unittest.TestCase):
                             src_key = csvFilepattern
                             hex_key = csvFilename + "_" + str(trial) + ".hex"
                             print "Loading", protocol, "key:", src_key, "to", hex_key
-                            parse2Result = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvFolder + "/*",
+                            parse2Result = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvFolder + "/" + csvFilepattern,
                                 timeoutSecs=timeoutSecs,
                                 retryDelaySecs=retryDelaySecs,
                                 pollTimeoutSecs=pollTimeoutSecs,
@@ -148,7 +148,7 @@ class Basic(unittest.TestCase):
                             src_key = URI + csvFilepattern
                             hex_key = csvFilename + "_" + str(trial) + ".hex"
                             print "Loading", protocol, "key:", src_key, "to", hex_key
-                            parse3Result = h2i.import_parse(bucket='home-0xdiag-datasets', path=importFolderPath+"/*",
+                            parse3Result = h2i.import_parse(bucket='home-0xdiag-datasets', path=importFolderPath + "/" + csvFilepattern,
                                 timeoutSecs=timeoutSecs, 
                                 retryDelaySecs=retryDelaySecs,
                                 pollTimeoutSecs=pollTimeoutSecs,

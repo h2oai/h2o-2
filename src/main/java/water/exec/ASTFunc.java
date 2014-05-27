@@ -33,7 +33,7 @@ public class ASTFunc extends ASTOp {
     if( !"function".equals(var) ) { E._x = x; return null; }
     E.xpeek('(',E._x,null);
     ArrayList<ASTId> vars = new ArrayList<ASTId>();
-    if( !E.peek(')') ) {
+    if( !E.peek(')',false) ) {
       while( true ) {
         x = E._x;
         var = E.isID();
@@ -41,14 +41,14 @@ public class ASTFunc extends ASTOp {
         for( ASTId id : vars ) if( var.equals(id._id) ) E.throwErr("Repeated argument",x);
         // Add unknown-type variable to new vars list
         vars.add(new ASTId(Type.unbound(),var,0,vars.size()));
-        if( E.peek(')') ) break;
+        if( E.peek(')',false) ) break;
         E.xpeek(',',E._x,null);
       }
     }
     int argcnt = vars.size();   // Record current size, as body may extend
     // Parse the body
     E._env.push(vars);
-    AST body = E.peek('{') ? E.xpeek('}',E._x,ASTStatement.parse(E)) : parseCXExpr(E);
+    AST body = E.peek('{',false) ? E.xpeek('}',E._x,ASTStatement.parse(E)) : parseCXExpr(E,true);
     if( body == null ) E.throwErr("Missing function body",x);
     E._env.pop();
 
@@ -70,7 +70,7 @@ public class ASTFunc extends ASTOp {
     // Make a shallow copy (the body remains shared across all ASTFuncs).
     // Then fill in the current environment.
     ASTFunc fun = (ASTFunc)clone();
-    fun._env = env.capture();
+    fun._env = env.capture(false);
     env.push(fun);
   }
   @Override void apply(Env env, int argcnt) { 

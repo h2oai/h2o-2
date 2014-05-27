@@ -73,7 +73,8 @@ class Basic(unittest.TestCase):
             GLMModel = glm['GLMModel']
             modelKey = GLMModel['model_key']
             print "Doing predict with same dataset, and the GLM model"
-            h2o.nodes[0].generate_predictions(model_key=modelKey, data_key=parseResult['destination_key'])
+            h2o.nodes[0].generate_predictions(model_key=modelKey, 
+                data_key=parseResult['destination_key'], destination_key='Predict.hex')
 
         h2o.nodes[0].log_view()
         namelist = h2o.nodes[0].log_download()

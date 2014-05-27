@@ -1,6 +1,6 @@
 import unittest, time, sys, random, string
 sys.path.extend(['.','..','py'])
-import h2o, h2o_nn, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_jobs, h2o_browse as h2b
+import h2o, h2o_nn, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_browse as h2b
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -27,7 +27,7 @@ class Basic(unittest.TestCase):
         hex_key = 'covtype.hex'
         validation_key = hex_key
         timeoutSecs = 30
-        parseResult  = h2i.import_parse(bucket='smalldata', path=csvPathname_train, schema='local', hex_key=hex_key, timeoutSecs=timeoutSecs)
+        parseResult  = h2i.import_parse(bucket='smalldata', path=csvPathname_train, schema='put', hex_key=hex_key, timeoutSecs=timeoutSecs)
         ###No need - use training as validation
         ###parseResultV = h2i.import_parse(bucket='smalldata', path=csvPathname_test, schema='local', hex_key=validation_key, timeoutSecs=timeoutSecs)
         inspect = h2o_cmd.runInspect(None, hex_key)
@@ -72,14 +72,14 @@ class Basic(unittest.TestCase):
                 'destination_key'              : model_key,
                 'validation'                   : validation_key,
             }
-            expectedErr = 0.3413 if mode == 'SingleThread' else 0.3 ## expected validation error for the above model
+            expectedErr = 0.35195 if mode == 'SingleThread' else 0.3 ## expected validation error for the above model
 
             timeoutSecs = 600
             start = time.time()
             nn = h2o_cmd.runNNet(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             print "neural net end on ", csvPathname_train, " and ", csvPathname_test, 'took', time.time() - start, 'seconds'
 
-            relTol = 0.03 if mode == 'SingleThread' else 0.15 ### 15% relative error is acceptable for Hogwild
+            relTol = 0.03 if mode == 'SingleThread' else 0.20 ### 20% relative error is acceptable for Hogwild
             h2o_nn.checkLastValidationError(self, nn['neuralnet_model'], inspect['numRows'], expectedErr, relTol, **kwargs)
 
             ### Now score using the model, and check the validation error

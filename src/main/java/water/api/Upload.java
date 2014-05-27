@@ -1,9 +1,17 @@
 
 package water.api;
 
+import water.api.RequestServer.API_VERSION;
+
 import com.google.gson.JsonObject;
 
 public class Upload extends HTMLOnlyRequest {
+
+  @Override public String href() { return href(supportedVersions()[0]); }
+  @Override protected String href(API_VERSION v) {
+    return v.prefix() + "upload_file";
+  }
+
   @Override
   protected String build(Response response) {
     return ""

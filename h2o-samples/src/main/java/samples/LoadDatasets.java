@@ -18,8 +18,12 @@ public class LoadDatasets extends Job {
   }
 
   void load() {
+    TestUtil.parseFromH2OFolder("smalldata/./logreg/prostate.csv");
     TestUtil.parseFromH2OFolder("smalldata/./mnist/test.csv.gz");
     TestUtil.parseFromH2OFolder("smalldata/./mnist/train.csv.gz");
+    TestUtil.parseFromH2OFolder("smalldata/./cars.csv");
+    TestUtil.parseFromH2OFolder("smalldata/./iris/iris.csv");
+    TestUtil.parseFromH2OFolder("smalldata/./covtype/covtype.20k.data");
     TestUtil.parseFromH2OFolder("smalldata/./1_100kx7_logreg.data.gz");
     TestUtil.parseFromH2OFolder("smalldata/./2_100kx7_logreg.data.gz");
     TestUtil.parseFromH2OFolder("smalldata/./AID362red_test.csv.gz");
@@ -39,7 +43,6 @@ public class LoadDatasets extends Job {
     TestUtil.parseFromH2OFolder("smalldata/./auto.csv");
     TestUtil.parseFromH2OFolder("smalldata/./badchars.csv");
     TestUtil.parseFromH2OFolder("smalldata/./baddata.data");
-    TestUtil.parseFromH2OFolder("smalldata/./cars.csv");
     TestUtil.parseFromH2OFolder("smalldata/./categoricals/30k_categoricals.csv.gz");
     TestUtil.parseFromH2OFolder("smalldata/./categoricals/40k_categoricals.csv.gz");
     TestUtil.parseFromH2OFolder("smalldata/./categoricals/AllBedrooms_Rent_Neighborhoods.csv.gz");
@@ -88,7 +91,6 @@ public class LoadDatasets extends Job {
     TestUtil.parseFromH2OFolder("smalldata/./chess/chess_2x2x500/weka/test.csv.arff");
     TestUtil.parseFromH2OFolder("smalldata/./chess/chess_2x2x500/weka/train.csv.arff");
     TestUtil.parseFromH2OFolder("smalldata/./constantColumn.csv");
-    TestUtil.parseFromH2OFolder("smalldata/./covtype/covtype.20k.data");
     TestUtil.parseFromH2OFolder("smalldata/./cuse.data.csv");
     TestUtil.parseFromH2OFolder("smalldata/./cusedataREADME.rtf");
     TestUtil.parseFromH2OFolder("smalldata/./cuseexpanded.csv");
@@ -110,7 +112,6 @@ public class LoadDatasets extends Job {
     TestUtil.parseFromH2OFolder("smalldata/./hhp.cut3.214.data.gz");
     TestUtil.parseFromH2OFolder("smalldata/./hhp_107_01.data.gz");
     TestUtil.parseFromH2OFolder("smalldata/./hhp_9_17_12.predict.data.gz");
-    TestUtil.parseFromH2OFolder("smalldata/./iris/iris.csv");
     TestUtil.parseFromH2OFolder("smalldata/./iris/iris.csv.gz");
     TestUtil.parseFromH2OFolder("smalldata/./iris/iris.csv.zip");
     TestUtil.parseFromH2OFolder("smalldata/./iris/iris.xls");
@@ -141,7 +142,6 @@ public class LoadDatasets extends Job {
     TestUtil.parseFromH2OFolder("smalldata/./logreg/princeton/cuse.dat");
     TestUtil.parseFromH2OFolder("smalldata/./logreg/princeton/housing.raw");
     TestUtil.parseFromH2OFolder("smalldata/./logreg/pros.xls");
-    TestUtil.parseFromH2OFolder("smalldata/./logreg/prostate.csv");
     TestUtil.parseFromH2OFolder("smalldata/./logreg/prostate_long.csv.gz");
     TestUtil.parseFromH2OFolder("smalldata/./logreg/prostate_test.csv");
     TestUtil.parseFromH2OFolder("smalldata/./logreg/prostate_train.csv");
@@ -293,8 +293,8 @@ public class LoadDatasets extends Job {
     TestUtil.parseFromH2OFolder("smalldata/./zipcodes");
   }
 
-  @Override protected Status exec() {
+  @Override protected JobState execImpl() {
     load();
-    return Status.Running;
+    return JobState.RUNNING;
   }
 }

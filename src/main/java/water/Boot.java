@@ -275,6 +275,7 @@ public class Boot extends ClassLoader {
       addInternalJars("s3");
       addInternalJars("jets3t");
       addInternalJars("log4j");
+      addInternalJars("joda");
     }
 
     run(args);

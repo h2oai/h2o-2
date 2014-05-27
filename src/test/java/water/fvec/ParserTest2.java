@@ -9,8 +9,6 @@ import org.junit.Test;
 import water.*;
 import water.deploy.Node;
 import water.deploy.NodeVM;
-import water.parser.CustomParser;
-import water.parser.CustomParser.ParserType;
 
 public class ParserTest2 extends TestUtil {
   private double[] d(double... ds) { return ds; }
@@ -25,20 +23,24 @@ public class ParserTest2 extends TestUtil {
     if( Double.isInfinite(a) || Double.isInfinite(b) ) return false;
     return Math.abs(a-b)/Math.max(Math.abs(a),Math.abs(b)) < threshold;
   }
-  public static void testParsed(Key k, double[][] expected, Key inputkey) {
-    testParsed(k,expected,inputkey,expected.length);
+  public static void testParsed(Key inputKey, double[][] expected) {
+    testParsed(ParseDataset2.parse(Key.make("parsed"), new Key[]{inputKey}),expected, expected.length);
   }
-  public static void testParsed(Key k, double[][] expected, Key inputkey, int len) {
-    Frame fr = DKV.get(k).get();
-    Assert.assertEquals(len,fr.numRows());
-    Assert.assertEquals(expected[0].length,fr.numCols());
-    for (int i = 0; i < expected.length; ++i)
-      for (int j = 0; j < fr.numCols(); ++j) {
-        double parsedVal = fr.vecs()[j].at(i);
-        Assert.assertTrue((Double.isNaN(parsedVal) == Double.isNaN(expected[i][j])));
-        Assert.assertTrue(Double.isNaN(expected[i][j]) || compareDoubles(expected[i][j],parsedVal,1e-5));
-      }
-    fr.delete();
+
+  public static void testParsed(Frame fr, double[][] expected, int len) {
+    try {
+      Assert.assertEquals(len,fr.numRows());
+      Assert.assertEquals(expected[0].length,fr.numCols());
+      for (int i = 0; i < expected.length; ++i)
+        for (int j = 0; j < fr.numCols(); ++j) {
+          double parsedVal = fr.vecs()[j].at(i);
+          Assert.assertTrue((Double.isNaN(parsedVal) == Double.isNaN(expected[i][j])));
+          Assert.assertTrue("Frame "+fr._key+", row="+i+", col="+j+", expect="+expected[i][j]+", found="+parsedVal,
+                            Double.isNaN(expected[i][j]) || compareDoubles(expected[i][j],parsedVal,1e-5));
+        }
+    } finally {
+      fr.delete();
+    }
   }
 
   @Test public void testBasic() {
@@ -66,15 +68,11 @@ public class ParserTest2 extends TestUtil {
       StringBuilder sb = new StringBuilder();
       for( int i = 0; i < dataset.length; ++i ) sb.append(dataset[i]).append("\n");
       Key k = FVecTest.makeByteVec(Key.make().toString(),sb.toString());
-      Key r1 = Key.make("r1");
-      ParseDataset2.parse(r1, new Key[]{k});
-      testParsed(r1,exp,k);
+      testParsed(k,exp);
       sb = new StringBuilder();
       for( int i = 0; i < dataset.length; ++i ) sb.append(dataset[i]).append("\r\n");
       k = FVecTest.makeByteVec(k.toString(),sb.toString());
-      Key r2 = Key.make("r2");
-      ParseDataset2.parse(r2, new Key[]{k});
-      testParsed(r2,exp,k);
+      testParsed(k,exp);
     }
   }
 
@@ -155,9 +153,7 @@ public class ParserTest2 extends TestUtil {
         d(0,0,0,0,0,0),
     };
     Key k = FVecTest.makeByteVec(Key.make().toString(),data);
-    Key r1 = Key.make("r1");
-    ParseDataset2.parse(r1, new Key[]{k});
-    testParsed(r1,exp,k);
+    testParsed(k,exp);
 
   }
 
@@ -190,9 +186,7 @@ public class ParserTest2 extends TestUtil {
     for (char separator : SEPARATORS) {
       String[] dataset = getDataForSeparator(separator, data);
       Key k = FVecTest.makeByteVec("ChunkBoundaries",dataset);
-      Key r3 = Key.make();
-      ParseDataset2.parse(r3,new Key[]{k});
-      testParsed(r3,exp,k);
+      testParsed(k,exp);
     }
   }
 
@@ -221,9 +215,7 @@ public class ParserTest2 extends TestUtil {
     for (char separator : SEPARATORS) {
       String[] dataset = getDataForSeparator(separator, data);
       Key k = FVecTest.makeByteVec("ChunkBoundariesMixedLineEndings",dataset);
-      Key r4 = Key.make();
-      ParseDataset2.parse(r4,new Key[]{k});
-      testParsed(r4,exp,k);
+      testParsed(k,exp);
       checkLeakedKeys();
     }
   }
@@ -271,15 +263,13 @@ public class ParserTest2 extends TestUtil {
     for (char separator : SEPARATORS) {
       String[] dataset = getDataForSeparator(separator, data);
       Key key = FVecTest.makeByteVec("NondecimalColumns",dataset);
-      Key r = Key.make();
-      ParseDataset2.parse(r,new Key[]{key});
-      Frame fr = DKV.get(r).get();
+      Frame fr = ParseDataset2.parse(Key.make(),new Key[]{key});
       String[] cd = fr.vecs()[2]._domain;
       Assert.assertEquals(" four",cd[0]);
       Assert.assertEquals("one",cd[1]);
       Assert.assertEquals("three",cd[2]);
       Assert.assertEquals("two",cd[3]);
-      testParsed(r, expDouble,key);
+      testParsed(fr, expDouble,expDouble.length);
     }
     checkLeakedKeys();
   }
@@ -293,9 +283,7 @@ public class ParserTest2 extends TestUtil {
     for (char separator : SEPARATORS) {
       String[] dataset = getDataForSeparator(separator, data);
       Key key = FVecTest.makeByteVec("NumberFormats",dataset);
-      Key r = Key.make();
-      ParseDataset2.parse(r,new Key[]{key});
-      testParsed(r, expDouble,key);
+      testParsed(key,expDouble);
     }
   }
  @Test public void testMultipleNondecimalColumns() {
@@ -323,8 +311,7 @@ public class ParserTest2 extends TestUtil {
       String[] dataset = getDataForSeparator(separator, data);
       Key key = FVecTest.makeByteVec("MultipleNondecimalColumns",dataset);
       Key r = Key.make();
-      ParseDataset2.parse(r,new Key[]{key});
-      Frame fr = DKV.get(r).get();
+      Frame fr = ParseDataset2.parse(r,new Key[]{key});
       String[] cd = fr.vecs()[2]._domain;
       Assert.assertEquals("one",cd[0]);
       Assert.assertEquals("three",cd[1]);
@@ -333,7 +320,7 @@ public class ParserTest2 extends TestUtil {
       Assert.assertEquals("bar",cd[0]);
       Assert.assertEquals("foo",cd[1]);
       Assert.assertEquals("foobar",cd[2]);
-      testParsed(r, expDouble,key);
+      testParsed(fr, expDouble,expDouble.length);
     }
   }
 
@@ -371,12 +358,11 @@ public class ParserTest2 extends TestUtil {
     String[] dataset = getDataForSeparator(separator, data);
     Key key = FVecTest.makeByteVec("EmptyColumnValues",dataset);
     Key r = Key.make();
-    ParseDataset2.parse(r,new Key[]{key});
-    Frame fr = DKV.get(r).get();
+    Frame fr = ParseDataset2.parse(r,new Key[]{key});
     String[] cd = fr.vecs()[3]._domain;
     Assert.assertEquals("bar",cd[0]);
     Assert.assertEquals("foo",cd[1]);
-    testParsed(r, expDouble,key);
+    testParsed(fr, expDouble, expDouble.length);
   }
 
 
@@ -403,9 +389,7 @@ public class ParserTest2 extends TestUtil {
       StringBuilder sb = new StringBuilder();
       for( i = 0; i < dataset.length; ++i ) sb.append(dataset[i]).append("\n");
       Key k = FVecTest.makeByteVec("test_"+separator,sb.toString());
-      Key r5 = Key.make();
-      ParseDataset2.parse(r5, new Key[]{k});
-      testParsed(r5, exp,k);
+      testParsed(k,exp);
     }
   }
 
@@ -419,13 +403,6 @@ public class ParserTest2 extends TestUtil {
     return result;
   }
 
-  @Test public void testTimeParse() {
-    Key fkey = NFSFileVec.make(find_test_file("smalldata/kaggle/bestbuy_train_10k.csv.gz"));
-    Key okey = Key.make("bestbuy.hex");
-    Frame fr = ParseDataset2.parse(okey,new Key[]{fkey});
-    fr.delete();
-  }
-
   @Test public void testMixedSeps() {
     double[][] exp = new double[][] {
       d(NaN,   1,   1),
@@ -437,9 +414,7 @@ public class ParserTest2 extends TestUtil {
       d(NaN, NaN,   6),
     };
     Key fkey = NFSFileVec.make(find_test_file("smalldata/test/is_NA.csv"));
-    Key okey = Key.make("NA.fvec");
-    ParseDataset2.parse(okey,new Key[]{fkey});
-    testParsed(okey,exp,fkey,25);
+    testParsed(ParseDataset2.parse(Key.make(),new Key[]{fkey}),exp,25);
   }
 
   @Test public void testNAs() {
@@ -467,11 +442,11 @@ public class ParserTest2 extends TestUtil {
     Class [] expectedTypes = new Class[]{C1Chunk.class,C1SChunk.class,C2Chunk.class,C2SChunk.class,C4Chunk.class,C4FChunk.class,C8Chunk.class,C8DChunk.class, C1Chunk.class};
     assertTrue(fr.numCols() == expectedTypes.length);
 //    for(int i = 0; i < expectedTypes.length; ++i)
-//      assertTrue("unpextected vector type, got: " + fr.vecs()[i].elem2BV(0).getClass().getSimpleName() + ", expected: " + expectedTypes[i].getSimpleName(),expectedTypes[i].isInstance(fr.vecs()[i].elem2BV(0)));
+//      assertTrue("unpextected vector type, got: " + fr.vecs()[i].chunkForChunkIdx(0).getClass().getSimpleName() + ", expected: " + expectedTypes[i].getSimpleName(),expectedTypes[i].isInstance(fr.vecs()[i].chunkForChunkIdx(0)));
     assertEquals(9,nlines);
     for(int i = 0; i < nlines-2; ++i)
       for( Vec v : fr.vecs() )
-        assertTrue("error at line "+i+", vec " + v.elem2BV(0).getClass().getSimpleName(),
+        assertTrue("error at line "+i+", vec " + v.chunkForChunkIdx(0).getClass().getSimpleName(),
                    !Double.isNaN(v.at(i)) && !v.isNA(i) );
     int j = 0;
     for( Vec v:fr.vecs() ) {
@@ -511,23 +486,49 @@ public class ParserTest2 extends TestUtil {
 
   @Test public void testSVMLight() {
     String[] data = new String[] {
-        "1 2:.2 5:.5 9:.9\n",
-        "-1 7:.7 8:.8 9:.9\n",
-        "+1 1:.1 5:.5 6:.6\n"
+        "1 2:.2 5:.5 9:.9\n-1 1:.1 4:.4 8:.8\n",
+        "1 2:.2 5:.5 9:.9\n1 3:.3 6:.6\n",
+        "-1 7:.7 8:.8 9:.9\n1 20:2.\n",
+        "+1 1:.1 5:.5 6:.6 10:1\n1 19:1.9\n",
+      "1 2:.2 5:.5 9:.9\n-1 1:.1 4:.4 8:.8\n",
+      "1 2:.2 5:.5 9:.9\n1 3:.3 6:.6\n",
+      "-1 7:.7 8:.8 9:.9\n1 20:2.\n",
+      "+1 1:.1 5:.5 6:.6 10:1\n1 19:1.9\n",
+      "1 2:.2 5:.5 9:.9\n-1 1:.1 4:.4 8:.8\n",
+      "1 2:.2 5:.5 9:.9\n1 3:.3 6:.6\n",
+      "-1 7:.7 8:.8 9:.9\n1 20:2.\n",
+      "+1 1:.1 5:.5 6:.6 10:1\n1 19:1.9\n"
     };
 
     double[][] exp = new double[][] {
-        d( 1., .0, .2, .0, .0, .5, .0, .0, .0, .9),
-        d(-1., .0, .0, .0, .0, .0, .0, .7, .8, .9),
-        d( 1., .1, .0, .0, .0, .5, .6, .0, .0, .0),
+        d(  1., .0, .2, .0, .0, .5, .0, .0, .0, .9, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
+        d( -1., .1, .0, .0, .4, .0, .0, .0, .8, .0, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
+        d(  1., .0, .2, .0, .0, .5, .0, .0, .0, .9, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
+        d(  1., .0, .0, .3, .0, .0, .6, .0, .0, .0, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
+        d( -1., .0, .0, .0, .0, .0, .0, .7, .8, .9, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
+        d(  1., .0, .0, .0, .0, .0, .0, .0, .0, .0, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0,2.0),
+        d(  1., .1, .0, .0, .0, .5, .6, .0, .0, .0, 1, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
+        d(  1., .0, .0, .0, .0, .0, .0, .0, .0, .0, 0, 0, 0, 0, 0, 0, 0, 0, 0,1.9, .0),
+      d(  1., .0, .2, .0, .0, .5, .0, .0, .0, .9, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
+      d( -1., .1, .0, .0, .4, .0, .0, .0, .8, .0, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
+      d(  1., .0, .2, .0, .0, .5, .0, .0, .0, .9, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
+      d(  1., .0, .0, .3, .0, .0, .6, .0, .0, .0, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
+      d( -1., .0, .0, .0, .0, .0, .0, .7, .8, .9, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
+      d(  1., .0, .0, .0, .0, .0, .0, .0, .0, .0, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0,2.0),
+      d(  1., .1, .0, .0, .0, .5, .6, .0, .0, .0, 1, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
+      d(  1., .0, .0, .0, .0, .0, .0, .0, .0, .0, 0, 0, 0, 0, 0, 0, 0, 0, 0,1.9, .0),
+      d(  1., .0, .2, .0, .0, .5, .0, .0, .0, .9, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
+      d( -1., .1, .0, .0, .4, .0, .0, .0, .8, .0, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
+      d(  1., .0, .2, .0, .0, .5, .0, .0, .0, .9, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
+      d(  1., .0, .0, .3, .0, .0, .6, .0, .0, .0, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
+      d( -1., .0, .0, .0, .0, .0, .0, .7, .8, .9, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
+      d(  1., .0, .0, .0, .0, .0, .0, .0, .0, .0, 0, 0, 0, 0, 0, 0, 0, 0, 0, .0,2.0),
+      d(  1., .1, .0, .0, .0, .5, .6, .0, .0, .0, 1, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
+      d(  1., .0, .0, .0, .0, .0, .0, .0, .0, .0, 0, 0, 0, 0, 0, 0, 0, 0, 0,1.9, .0),
     };
     String[] dataset = data;
-    StringBuilder sb = new StringBuilder();
-    for( int i = 0; i < dataset.length; ++i ) sb.append(dataset[i]).append("\n");
-    Key k = FVecTest.makeByteVec(Key.make().toString(),sb.toString());
-    Key r1 = Key.make("r1");
-    ParseDataset2.parse(r1, new Key[]{k});
-    testParsed(r1,exp,k);
+    Key k = FVecTest.makeByteVec(Key.make("svmtest_bits").toString(),dataset);
+    testParsed(k,exp);
   }
 
   // Test very sparse data
@@ -535,44 +536,38 @@ public class ParserTest2 extends TestUtil {
     for (char separator : SEPARATORS) {
 
       // Build 100 zero's and 1 one.
+      double[][] exp = new double[101][1];
+      exp[50][0] = 1;
       StringBuilder sb = new StringBuilder();
       for( int i=0; i<50; i++ ) sb.append("0.0\n");
       sb.append("1.0\n");
       for( int i=0; i<50; i++ ) sb.append("0.0\n");
       Key k = FVecTest.makeByteVec(Key.make().toString(),sb.toString());
-      Key r1 = Key.make("r1");
-      ParseDataset2.parse(r1, new Key[]{k});
-      double[][] exp = new double[101][1];
-      exp[50][0] = 1;
-      testParsed(r1,exp,k);
+      testParsed(k,exp);
 
       // Build 100 zero's and 1 non-zero.
+      exp = new double[101][1];
+      exp[50][0] = 2;
       sb = new StringBuilder();
       for( int i=0; i<50; i++ ) sb.append("0\n");
       sb.append("2\n");
       for( int i=0; i<50; i++ ) sb.append("0\n");
       k = FVecTest.makeByteVec(Key.make().toString(),sb.toString());
-      r1 = Key.make("r1");
-      ParseDataset2.parse(r1, new Key[]{k});
-      exp = new double[101][1];
-      exp[50][0] = 2;
-      testParsed(r1,exp,k);
+      testParsed(k,exp);
 
       // Build 100 zero's and some non-zeros.  Last line is truncated.
+      exp = new double[101][2];
+      exp[ 50][0] = 2;
+      exp[ 50][1] = 3;
+      exp[100][0] = 0;          // Truncated final line
+      exp[100][1] = Double.NaN;
       sb = new StringBuilder();
       for( int i=0; i<50; i++ ) sb.append("0,0\n");
       sb.append("2,3\n");
       for( int i=0; i<49; i++ ) sb.append("0,0\n");
       sb.append("0");           // Truncated final line
       k = FVecTest.makeByteVec(Key.make().toString(),sb.toString());
-      r1 = Key.make("r1");
-      ParseDataset2.parse(r1, new Key[]{k});
-      exp = new double[101][2];
-      exp[ 50][0] = 2;
-      exp[ 50][1] = 3;
-      exp[100][0] = 0;          // Truncated final line
-      exp[100][1] = Double.NaN;
-      testParsed(r1,exp,k);
+      testParsed(k,exp);
 
       // Build 100000 zero's and some one's
       sb = new StringBuilder();
@@ -584,9 +579,7 @@ public class ParserTest2 extends TestUtil {
         exp[i*1001+1000][0]=1;
       }
       k = FVecTest.makeByteVec(Key.make().toString(),sb.toString());
-      r1 = Key.make("r1");
-      ParseDataset2.parse(r1, new Key[]{k});
-      testParsed(r1,exp,k);
+      testParsed(k,exp);
 
       // Build 100 zero's, then 100 mix of -1001 & 1001's (to force a
       // sparse-short, that finally inflates to a full dense-short).
@@ -596,9 +589,7 @@ public class ParserTest2 extends TestUtil {
       exp = new double[200][1];
       for( int i=0; i<100; i+=2 ) { exp[i+100][0]=-1001; exp[i+101][0]= 1001; }
       k = FVecTest.makeByteVec(Key.make().toString(),sb.toString());
-      r1 = Key.make("r1");
-      ParseDataset2.parse(r1, new Key[]{k});
-      testParsed(r1,exp,k);
+      testParsed(k,exp);
     }
   }
 
@@ -640,13 +631,7 @@ public class ParserTest2 extends TestUtil {
       d( +.6e102,  +.7e102,  +.8e102, 0),
       d( -.6e102,  -.7e102,  -.8e102, 1)
     };
-    Key k = Key.make("q.hex");
-    try {
-      TestUtil.parseFrame(k,"smalldata/test/test_parse_mix.csv");
-      testParsed(k, exp, null);
-    } finally { 
-      Lockable.delete(k); 
-    }
+    testParsed(TestUtil.parseFrame(null,"smalldata/test/test_parse_mix.csv"),exp,exp.length);
   }
 
   void runTests(){
@@ -668,8 +653,6 @@ public class ParserTest2 extends TestUtil {
     testNondecimalColumns();
     System.out.println("testNumberFormats");
     testNumberFormats();
-    System.out.println("testTimeParse");
-    testTimeParse();
     System.out.println("testNAs");
     testNAs();
     checkLeakedKeys();
@@ -685,57 +668,8 @@ public class ParserTest2 extends TestUtil {
       n.start();
     }
     H2O.waitForCloudSize(nnodes);
-    new ParserTest2().runTests();
-//    new ParserTest2().testSingleQuotes();
-//    File f = new File("/Users/tomasnykodym/Downloads/140k_train_anonymised.zip");
-//    Key fkey = NFSFileVec.make(f);
-//    ByteVec v = DKV.get(fkey).get();
-//    InputStream is = v.openStream(null);
-//    InputStream is2 = new FileInputStream(f);
-//    byte [] buff1 = new byte[256];
-//    byte [] buff2 = new byte[256];
-//    while(is.available() > 0 || is2.available() > 0){
-//      assert is.read() == is2.read();
-//      int off = (int)(buff1.length*Math.random());
-//      int maxN = buff1.length-off;
-//      int len = (int)(maxN*Math.random());
-//      int l1 = is.read(buff1, off, len);
-//      int l2 = is2.read(buff2, off, len);
-//      while(l1 < l2 && is.available() > 0)
-//        l1 += is.read(buff1, off+l1, l2-l1);
-//      while(l2 < l1 && is2.available() > 0)
-//        l2 += is2.read(buff2, off+l2, l1-l2);
-//      if(l1 != l2 || !Arrays.equals(buff1, buff2)){
-//        System.out.println(Arrays.toString(buff1));
-//        System.out.println(Arrays.toString(buff2));
-//        assert l1 == l2;
-//        assert Arrays.equals(buff1, buff2);
-//      }
-//    }
-//    is2.close();
-////    is = v.openStream(null);
-////    ZipInputStream zis = new ZipInputStream(is);
-////    ZipEntry ze = zis.getNextEntry(); // Get the *FIRST* entry
-////    // There is at least one entry in zip file and it is not a directory.
-////    assert( ze != null && !ze.isDirectory() );
-////    int i = 0;
-////    while(zis.read() != -1)++i;
-////    System.out.println("read " + i + " bytes");
-////    zis.close();
-/////    System.out.println("DONE!");
-//    System.out.println("==========================================================================");
-//    ParseDataset2.forkParseDataset(Key.make("haha"), new Key[]{fkey}, ParseDataset2.guessSetup(fkey, new ParserSetup(), true)).get();
-//    Frame f1 = DKV.get(Key.make("haha")).get();
-//    Vec v = DKV.get(fkey).get();
-//    System.out.println("parsed nchunks = " + f1.anyVec().nChunks() + ", raw nchunks = " + v.nChunks());
-//    assert f1.anyVec().nChunks() == v.nChunks();
-
-////    new ParserTest2().testTimeParse();
-//
-//
-//////    new ParserTest2().testSVMLight();
-////    new ParserTest().testSVMLight();
+    new ParserTest2  ().runTests();
+    new ParseTimeTest().runTests();
     System.out.println("DONE!");
-
   }
 }

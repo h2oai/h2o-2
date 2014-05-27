@@ -132,10 +132,10 @@ if (distance < 0) {
     source(paste(path, "tests/Utils/glmR.R", sep = ""))
     source(paste(path, "tests/Utils/gbmR.R", sep = ""))
     source(paste(path, "tests/Utils/utilsR.R", sep = ""))
-    source(paste(path, "h2oRClient-package/R/Algorithms.R", sep = ""))
-    source(paste(path, "h2oRClient-package/R/Classes.R", sep = ""))
-    source(paste(path, "h2oRClient-package/R/ParseImport.R", sep = ""))
-    source(paste(path, "h2oRClient-package/R/Internal.R", sep = ""))
+    source(paste(path, "h2o-package/R/Algorithms.R", sep = ""))
+    source(paste(path, "h2o-package/R/Classes.R", sep = ""))
+    source(paste(path, "h2o-package/R/ParseImport.R", sep = ""))
+    source(paste(path, "h2o-package/R/Internal.R", sep = ""))
 } else {
     dots     <- genDots(distance)
     source(paste(dots, "Utils/h2oR.R", sep = ""))
@@ -148,10 +148,10 @@ if (distance < 0) {
     #rdots is the calculated path to the R source files...
     rdots <- ifelse(dots == "./", "../", paste("../", dots, sep = ""))
 
-    source(paste(rdots, "h2oRClient-package/R/Algorithms.R", sep = ""))
-    source(paste(rdots, "h2oRClient-package/R/Classes.R", sep = ""))
-    source(paste(rdots, "h2oRClient-package/R/ParseImport.R", sep = ""))
-    source(paste(rdots, "h2oRClient-package/R/Internal.R", sep = ""))
+    source(paste(rdots, "h2o-package/R/Algorithms.R", sep = ""))
+    source(paste(rdots, "h2o-package/R/Classes.R", sep = ""))
+    source(paste(rdots, "h2o-package/R/ParseImport.R", sep = ""))
+    source(paste(rdots, "h2o-package/R/Internal.R", sep = ""))
 }
 
 #The master seed is set by the runnerSetup.R script.
@@ -165,7 +165,7 @@ if (file.exists(ms))  {
 }
 setupRandomSeed(seed, suppress = FALSE)
 sandbox()
-h2o.__logIt("[SEED] :", SEED, "Command")
+.h2o.__logIt("[SEED] :", SEED, "Command")
 
 
 h2o.logAndEcho(new("H2OClient", ip=myIP, port=myPort), "------------------------------------------------------------")

@@ -68,7 +68,7 @@ class Basic(unittest.TestCase):
 
         for i in range(20):
             # every other one
-            single_quotes = i % 2
+            single_quotes = 1
 
             parseResult = h2i.import_parse(path=csvPathname, schema='put', single_quotes=single_quotes,
                 hex_key="trial" + str(i) + ".hex")

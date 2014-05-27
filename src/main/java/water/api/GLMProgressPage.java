@@ -67,7 +67,7 @@ public class GLMProgressPage extends Request {
     }
     Response r = null;
     // Display HTML setup
-    if(_job.value()== null || DKV.get(_job.value()) == null)
+    if(_job.value()== null || !Job.isRunning(_job.value()))
       r =  Response.done(response);
     else if(p != null)
       r = Response.poll(response,p.progress());
@@ -92,7 +92,7 @@ public class GLMProgressPage extends Request {
     private void modelHTML( GLMModel m, JsonObject json, StringBuilder sb ) {
       switch(m.status()){
       case Done:
-        sb.append("<div class='alert'>Actions: " + (m.isSolved() ? (GLMScore.link(m._key,m._vals[0].bestThreshold(), "Validate on another dataset") + ", "):"") + GLM.link(m._dataKey,m, "Compute new model") + "</div>");
+        sb.append("<div class='alert'>Actions: " + (m.isSolved() ? (GLMScore.link(m._key,"0:1:0.01"/*m._vals[0].bestThreshold()*/, "Validate on another dataset") + ", "):"") + GLM.link(m._dataKey,m, "Compute new model") + "</div>");
         break;
       case ComputingModel:
       case ComputingValidation:
@@ -294,7 +294,8 @@ public class GLMProgressPage extends Request {
         R.replace("CM",R2);
       }
       sb.append(R);
-      ROCplot(val, sb);
+      if (val._cm != null && val._fprs != null && val._tprs != null)
+        ROCplot(val, sb);
       confusionHTML(val.bestCM(),sb);
       if(val.fold() > 1){
         int nclasses = 2;
@@ -401,13 +402,13 @@ public class GLMProgressPage extends Request {
           sb.append("var dataset = [");
 
           for(int c = 0; c < xval._cm.length; c++) {
-              if (c == 0) {
-                  sb.append("["+String.valueOf(xval._fprs[c])+",").append(String.valueOf(xval._tprs[c])).append("]");
-              }
-              sb.append(", ["+String.valueOf(xval._fprs[c])+",").append(String.valueOf(xval._tprs[c])).append("]");
+            if (c == 0) {
+              sb.append("["+String.valueOf(xval._fprs[c])+",").append(String.valueOf(xval._tprs[c])).append("]");
+            }
+            sb.append(", ["+String.valueOf(xval._fprs[c])+",").append(String.valueOf(xval._tprs[c])).append("]");
           }
           for(int c = 0; c < 2*xval._cm.length; c++) {
-              sb.append(", ["+String.valueOf(c/(2.0*xval._cm.length))+",").append(String.valueOf(c/(2.0*xval._cm.length))).append("]");
+            sb.append(", ["+String.valueOf(c/(2.0*xval._cm.length))+",").append(String.valueOf(c/(2.0*xval._cm.length))).append("]");
           }
           sb.append("];\n");
 

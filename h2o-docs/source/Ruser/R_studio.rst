@@ -1,97 +1,111 @@
 
 
-H\ :sub:`2`\ O in R Studio
----------------------------
+H\ :sub:`2`\ O installation in R Studio
+------------------------------------------
 
 
-These instructions assume you are using R Studio 2.14.0 or later.  
+These instructions assume you are using R  2.14.0 or later.  
 
 **STEP 1**
 
-To use H2O in R, users need a copy of H2O. 
-The download package can be obtained by clicking on the button Download H\ :sub:`2`\ O at `http://0xdata.com/downloadtable <http://0xdata.com/downloadtable/>`_.
+The download package containing the  H\ :sub:`2`\ O jar file can be
+obtained by visiting H\ :sub:`2`\ O available downloads at 
+`http://0xdata.com/downloadtable <http://0xdata.com/downloadtable/>`_.
 
-Unzip the downloaded H\ :sub:`2`\ O zip file.
+Choose the version of  H\ :sub:`2`\ O best for you, and unzip the
+downloaded H\ :sub:`2`\ O zip file. The most recent promoted build is
+reccomended. 
 
 **STEP 2**
 
-Start an instance of H\ :sub:`2`\ O. For help with this see :ref:`GettingStartedFromaZipFile`
+Start an instance of H\ :sub:`2`\ O. For help with this see 
+:ref:`GettingStartedFromaZipFile`
 
+If users do not start an instance of H\ :sub:`2`\ O, one will be
+started automatically for them at localhost: 54321 (see **STEP 4** for
+more detail). 
 
-Users should be aware that in order for H\ :sub:`2`\ O to successfully run through R, an instance of H\ :sub:`2`\ O must also simultaneously be running. If the instance of H\ :sub:`2`\ O is stopped, the R program will no longer run, and work done will be lost. 
+If the instance of H\ :sub:`2`\ O is stopped, the R
+program will no longer run, and work done will be lost. 
 
+**STEP 3:**
 
-**STEP 3** 
-
-For users who may have already installed a prior version of the H2O
-package. New users may skip this step. 
-
-For packages to be successfully removed and updated in R studio - they
-must first be detatched from the R environment and then uninstalled. 
-Simply enter the following: 
+New users may skip this step, while users who have previously
+installed the  H\ :sub:`2`\ O R packages should uninstall them by entering the
+following commands to the R console:  
 
 ::
 
    detach("package:h2o", unload=TRUE) 
-   detach("package:h2oRClient", unload=TRUE) 
    remove.packages("h2o") 
-   remove.packages("h2oRClient") 
 
 
 Note: users may get warnings of the type "Error in
 detatch("package:h2o", unload = TRUE): invalid 'name' argument. 
-This tells users that there is no h2o package to uninstall. These
+This tells users that there is no  H\ :sub:`2`\ O package to uninstall. These
 warnings can safely be ignored. 
 
-.. image:: Rstudioinstall1.jpg
-   :width: 90%
+**STEP 4:**
 
+Install the H\ :sub:`2`\ O package via the H\ :sub:`2`\ O
+repository. This repository functions exactly like the R repository,
+but is maintained by  H\ :sub:`2`\ O. 
 
-**STEP 4**
+**DO NOT CUT AND PASTE THIS CALL INTO R**
+The call shown below is specifically for the jacobi/2 build, which may
+be older than the build you would like to use. Your call should look
+similar to this, and you can find an exact command to copy and paste
+by going to H\ :sub:`2`\ O available downloads at 
+`http://0xdata.com/downloadtable
+<http://0xdata.com/downloadtable/>`_ and selecting the correct version
+there. 
 
-Install the H\ :sub:`2`\ O package from the H2ORepo, the H2O cran that
-functions exactly like the usual R cran, but is managed and maintained
-by H2O. 
-Simply enter the call: 
+  `install.packages("h2o", repos=(c("http://h2o-release.s3.amazonaws.com/h2o/rel-jacobi/2/R", getOption("repos"))))` 
+  
+
+**STEP 4:**
+
+Once the  H\ :sub:`2`\ O R package has been installed, call the
+package, and establish a connection to a running instance of  H\
+:sub:`2`\ O. 
+
+If there is no running instance of  H\ :sub:`2`\ O prior to using
+the command "h2o.init()",  H\ :sub:`2`\ O in R will start an instance
+automatically for the user at localhost:54321, and the user will be
+notified. If you would like to connect to an instance at an IP and
+port other than localhost:54321, these details must be specified as
+arguments in the R call. 
+
 
 ::
 
-  install.packages("h2o", repos=(c("http://h2o-release.s3.amazonaws.com/h2o/rel-jacobi/2/R", getOption("repos"))))
- 
-as shown here:
-
-.. image:: Rstudioinstall2.jpg
-   :width: 90%
- 
+  library(h2o)
+  localH2O <- h2o.init()
 
 
-
-**STEP 4**
-
-If you have not started an instance of H2O from your command line
-terminal, R will start an instance for you automatically. If you have
-already started an instance, H2O R will connect to this instance, and
-no other instance will be started. 
-
-Get R Studio talking to your instance of H\ :sub:`2`\ O by typing in the call: 
+Users who wish to specify a connection
+with a server (other than localhost at port 54321) must explicity
+state the IP address and port number in the h2o.init call. 
+An example is given below, but **do not cut and paste**; users should
+specify the IP and port number appropriate to their specific
+environment. 
 
 ::
 
-  >localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, silentUpgrade = FALSE, promptUpgrade = TRUE)
-
-Your IP and port may be different, depending on whether you are running H\ :sub:`2`\ O from your computer or a server. If you are running on a server, where it says IP enter the IP address of the server, and the appropriate port number. In the picture below the IP number is everything before the colon, and the port number is the 5 digit string after the colon.
-
+  library(h2o)
+  localH2O = h2o.init(ip = "192.555.1.123", port = 12345, startH2O = FALSE) 
 
 
-Upgrading the H\ :sub:`2`\ O R Packages
-"""""""""""""""""""""""""""""""""""""""
+**STEP 5: Upgrading Packages**
 
+Users may wish to manually upgrade their R packages. For instance, if
+you are running the bleeding edge developer build, it’s possible that
+the code has changed, but that the revision number has not, in which
+case manually upgrading ensures the most current version of not only
+the H\ :sub:`2`\ O code, but the corresponding R code as well.
 
-Users may wish to manually upgrade their R packages. They can do this
-by returning to STEP 3, and following the instructions through
-STEP 4. 
-
-
+This can be done by returning to STEP 3, and following the commands
+through STEP 4.
 
 
  

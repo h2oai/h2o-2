@@ -97,6 +97,7 @@ then
     myPy c10  test_c10_rel_gbm.py
     # put known failure last
     myPy c7 test_c7_rel.py
+
 else
     myPy $TESTDIR $TEST
 fi

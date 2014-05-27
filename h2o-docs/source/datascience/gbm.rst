@@ -229,6 +229,11 @@ Elements of Statistical Learning.
 Vol.1. N.p., page 339: Springer New York, 2001. 
 http://www.stanford.edu/~hastie/local.ftp/Springer/OLD//ESLII_print4.pdf
 
+Niu, Feng, et al. "Hogwild!: A lock-free approach to parallelizing
+stochastic gradient descent." Advances in Neural Information
+Processing Systems 24 (2011): 693-701. (algorithm implemented is on p.5)
+https://papers.nips.cc/paper/4390-hogwild-a-lock-free-approach-to-parallelizing-stochastic-gradient-descent.pdf
+
 
 
 

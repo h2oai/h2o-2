@@ -1,13 +1,14 @@
 package water.exec;
 
 import java.util.Arrays;
+import water.Iced;
 
 /** Typing system for a generic R-like parser.
  *  Supports Hindley-Milner style type inference.
  *  @author cliffc@0xdata.com
  */
 // --------------------------------------------------------------------------
-public class Type {
+public class Type extends Iced {
   final static private int UNBOUND= 0;
   final static private int BOUND  = 1; // to _ts[0]
   final static private int DBL0   = 2;

@@ -126,7 +126,7 @@ class Basic(unittest.TestCase):
 
             SEPARATOR = ord(',')
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=10, 
-                header=1, separator=SEPARATOR)
+                header=0, separator=SEPARATOR) # don't force header..we have NAs in the rows, and NAs mess up headers
             print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
 

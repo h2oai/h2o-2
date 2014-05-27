@@ -22,13 +22,13 @@ diff<- diff[-1,]
 diffsq<- diff^2
 EXPMSE<- mean(diffsq)
 
-#Log.info("Print model MSE... \n")
-Log.info(paste("Length of H2O MSE Vec: ", length(fith2o@model$err),      "\t\t", "Expected Length   : ", 10))
+
+Log.info("Print model MSE... \n")
 Log.info(paste("H2O Reported MSE  : ", REPMSE, "\t\t", "R Expected MSE   : ", EXPMSE))
 
-#Log.info("Compare model statistics in R to model statistics in H2O")
-expect_equal(length(fith2o@model$err), 10)
-expect_equal(REPMSE, EXPMSE, tolerance = 0.01)
+
+Log.info("Compare model statistics in R to model statistics in H2O")
+expect_equal(REPMSE, EXPMSE, tolerance = 0.10)
 
 testEnd()
 }

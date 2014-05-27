@@ -471,6 +471,11 @@ Nelder, John A, and Robert WM Wedderburn. "Generalized Linear Models."
 Journal of the Royal Statistical Society. Series A (General) (1972): 370-384.
 http://biecek.pl/MIMUW/uploads/Nelder_GLM.pdf
 
+Niu, Feng, et al. "Hogwild!: A lock-free approach to parallelizing
+stochastic gradient descent." Advances in Neural Information
+Processing Systems 24 (2011): 693-701.*implemented algorithm on p.5
+http://www.eecs.berkeley.edu/~brecht/papers/hogwildTR.pdf
+
 Pearce, Jennie, and Simon Ferrier. "Evaluating the Predictive
 Performance of Habitat Models Developed Using Logistic Regression."
 Ecological modeling 133.3 (2000): 225-245.
@@ -483,6 +488,10 @@ http://www.statpt.com/logistic/press_1978.pdf
 
 Snee, Ronald D. "Validation of Regression Models: Methods and
 Examples." Technometrics 19.4 (1977): 415-428.
+
+
+
+
 
 
  

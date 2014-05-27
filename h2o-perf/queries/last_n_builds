@@ -1,0 +1,44 @@
+DELIMITER $$
+CREATE DEFINER=`spencer`@`localhost` PROCEDURE `LastN`(IN testName longtext, IN numBuilds bigint(20), IN phasse longtext)
+BEGIN
+  SELECT
+      -- Select from test_run --
+      test_run.test_name AS "test name",
+    FROM_UNIXTIME(test_run.start_epoch_ms/1000, "%Y-%m-%d") as run_date,
+    test_run.build_version as version,
+    test_run.build_branch as branch,
+    test_run.build_date as build_date,
+      test_run.build_sha as "build sha", 
+    test_run.cpus_per_host as "CPUs/Host",
+    test_run.total_hosts as "Number of hosts",
+    test_run.start_epoch_ms as "test_start_time(ms from epoch)",
+      test_run.end_epoch_ms as "test_end_time(ms from epoch)",
+      (test_run.end_epoch_ms - test_run.start_epoch_ms)/1000 AS "test_run_elapsed(s)",
+      test_run.heap_bytes_per_node as "Heap Bytes Per Node",
+      test_run.dataset_name AS "Dataset",
+      test_run.passed AS "overall test passed",
+      test_run.correctness_passed AS "overall correctness passed",
+    test_run.contaminated AS "Test contaminated",
+    
+    -- Select from test phase result --
+      test_run_phase_result.phase_name AS "phase",
+    test_run_phase_result.start_epoch_ms AS "phase_start_time(ms from epoch)",
+    test_run_phase_result.end_epoch_ms AS "phase_end_time(ms from epoch)",
+    (test_run_phase_result.end_epoch_ms - test_run_phase_result.start_epoch_ms)/1000 AS "phase_elapsed_time(s)",
+    test_run_phase_result.passed AS "phase test passed",
+      test_run_phase_result.correctness_passed AS "phase correctness passed"
+  FROM
+    test_run
+  INNER JOIN
+    test_run_phase_result
+  ON
+    test_run.test_run_id = test_run_phase_result.test_run_id
+  WHERE
+    test_run_phase_result.phase_name = phasse #Default is model building phase
+  AND test_run.test_name = testName  
+  ORDER BY
+    branch, build_date, run_date
+  LIMIT numBuilds;
+END$$
+DELIMITER ;
+

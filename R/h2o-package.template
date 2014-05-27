@@ -3,10 +3,10 @@
 \alias{h2o}
 \docType{package}
 \title{
-Installer for H2O R Package
+H2O R Interface
 }
 \description{
-This wrapper connects to an H2O instance and installs the corresponding R package "h2o", that allows users to run H2O via its REST API from within R. To communicate, the version of the R package must match the version of H2O, so when connecting to a new H2O cluster, it is necessary to re-run the initializer.
+This is a package for running H2O via its REST API from within R. To communicate with a H2O instance, the version of the R package must match the version of H2O. When connecting to a new H2O cluster, it is necessary to re-run the initializer.
 }
 \details{
 \tabular{ll}{
@@ -14,16 +14,18 @@ Package: \tab h2o\cr
 Type: \tab Package\cr
 Version: \tab SUBST_PROJECT_VERSION\cr
 Date: \tab 2013-12-12\cr
-License: \tab Apache-2\cr
-Depends: \tab R (>= 2.13.0), RCurl, rjson\cr
+License: \tab Apache License (== 2.0)\cr
+Depends: \tab R (>= 2.13.0), RCurl, rjson, statmod, tools, methods, utils\cr
 }
 
-You can install the package h2o by going here: http://0xdata.com/h2O/. Click the "Download H2O" button. Once the H2O file has downloaded call install.packages("~/h2o_SUBST_PROJECT_VERSION.tar.gz", repos= NULL, type = "source"). Note that you will need to provide a path to the .tar.gz file within the quotation marks in order for R to correctly find the package. Alternatively users can also change their working directory to the same file where the downloaded .tar.gz file is found, and specify just the file name.
+This package allows the user to run basic H2O commands using R commands. In order to use it, you must first have H2O running (See \href{http://docs.0xdata.com/newuser/quickstart_jar.html}{How to Start H2O}). To run H2O on your local machine, call \code{h2o.init} without any arguments, and H2O will be automatically launched on \url{http://127.0.0.1:54321}, where the IP is "127.0.0.1" and the port is 54321. If H2O is running on a cluster, you must provide the IP and port of the remote machine as arguments to the h2o.init() call. 
 
-First, you must have H2O installed and running on a computer/cluster. See the references for more details. If H2O is running on your local machine, call \code{h2o.init} with the IP and port that H2O is communicating on. By default, this is \url{http://localhost:54321}, where the IP is "localhost" and the port is "54321". If H2O is running on a cluster, you must provide the IP and port of the remote machine.
+H2O supports a number of standard statistical models, such as GLM, K-means, and Random Forest classification. For example, to run GLM, call \code{\link{h2o.glm}} with the H2O parsed data and parameters (response variable, error distribution, etc...) as arguments. (The operation will be done on the server associated with the data object where H2O is running, not within the R environment). 
+
+Note that no actual data is stored in the R workspace; and no actual work is carried out by R. R only saves the named objects, which uniquely identify the data set, model, etc on the server. When the user makes a request, R queries the server via the REST API, which returns a JSON file with the relevant information that R then displays in the console.
 }
 \author{
-Anqi Fu
+Anqi Fu, Tom Kraljevic and Petr Maj, with contributions from the 0xdata team
 
 Maintainer: Anqi Fu <anqi@0xdata.com>
 }
@@ -37,24 +39,20 @@ Maintainer: Anqi Fu <anqi@0xdata.com>
 \keyword{ package }
 \examples{
 # Check connection with H2O and ensure local H2O R package matches server version.
-# Optionally ask for startH2O to start H2O if it's not already running.
-# Note that for startH2O to work, the IP must be localhost and you must
-# have installed with the Windows or Mac installer package so H2O is in 
-# a known place.  startH2O requires the port to be 54321.
-myIP = "localhost"
-myPort = 54321
-localH2O = h2o.init(ip = myIP, port = myPort, startH2O = TRUE, silentUpgrade = TRUE, promptUpgrade = TRUE)
+# Optionally, ask for startH2O to start H2O if it's not already running.
+# Note that for startH2O to work, the IP must be 127.0.0.1 or localhost with port 54321.
+library(h2o)
+localH2O = h2o.init(ip = "127.0.0.1", port = 54321, startH2O = TRUE)
 
 # Import iris dataset into H2O and print summary
-irisPath = system.file("extdata", "iris.csv", package="h2oRClient")
+irisPath = system.file("extdata", "iris.csv", package = "h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
 summary(iris.hex)
 
 # Attach H2O R package and run GLM demo
-library(h2oRClient)
 ??h2o
-demo(package = "h2oRClient")
-demo(h2o.glm)
+demo(package = "h2o")
+demo(h2o.prcomp)
 
 # Shutdown local H2O instance when finished
 h2o.shutdown(localH2O)

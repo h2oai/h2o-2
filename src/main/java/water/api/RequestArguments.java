@@ -114,24 +114,24 @@ public class RequestArguments extends RequestStatics {
 
   /** Compute union of categories in model column and data column.
    * The result is ordered and the values are unique. */
-  protected static String[] vaCategoryNames(ValueArray.Column modelCol, ValueArray.Column dataCol, int maxClasses) throws IllegalArgumentException {
+  protected static String[] vaCategoryNames(Argument caller, ValueArray.Column modelCol, ValueArray.Column dataCol, int maxClasses) throws IllegalArgumentException {
     String[] result = ConfusionTask.domain(modelCol, dataCol);
     if (result.length > maxClasses)
-      throw new IllegalArgumentException("The column has more than "+maxClasses+" values. Are you sure you have that many classes?");
+      throw new H2OIllegalArgumentException(caller, "The column has more than "+maxClasses+" values. Are you sure you have that many classes?");
     return result;
   }
 
-  protected static String[] vaCategoryNames(ValueArray.Column col, int maxClasses) throws IllegalArgumentException {
+  protected static String[] vaCategoryNames(Argument caller, ValueArray.Column col, int maxClasses) throws IllegalArgumentException {
     String[] domain = col._domain;
     if ((domain == null) || (domain.length == 0)) {
       int min = (int) col._min;
       if (col._min!= min)
-        throw new IllegalArgumentException("Only integer or enum columns can be classes!");
+        throw new H2OIllegalArgumentException(caller, "Only integer or enum columns can be classes!");
       int max = (int) col._max;
       if (col._max != max)
-        throw new IllegalArgumentException("Only integer or enum columns can be classes!");
+        throw new H2OIllegalArgumentException(caller, "Only integer or enum columns can be classes!");
       if (max - min > maxClasses) // arbitrary number
-        throw new IllegalArgumentException("The column has more than "+maxClasses+" values. Are you sure you have that many classes?");
+        throw new H2OIllegalArgumentException(caller, "The column has more than "+maxClasses+" values. Are you sure you have that many classes?");
       String[] result = new String[max-min+1];
       for (int i = 0; i <= max - min; ++i)
         result[i] = String.valueOf(min+i);
@@ -319,6 +319,9 @@ public class RequestArguments extends RequestStatics {
       return "";
     }
 
+    public String getName() { return _name; }
+    public String getDisplayName() { return _displayName; }
+
     /** Returns the html query for the given argument, including the full
      * formatting. That means not only the queryElement, but also the argument
      * name in front of it, etc.
@@ -335,7 +338,8 @@ public class RequestArguments extends RequestStatics {
       else
         result.replace("ELEMENT",queryElement());
       result.replace("TOOLTIP_DESCRIPTION", queryDescription());
-      result.replace("COMMENT",queryComment());
+      if (!disabled())
+        result.replace("COMMENT",queryComment());
       if (_required)
         result.replace("ASTERISK","<span style='color:#ff0000'>* </span>");
       return result.toString();
@@ -589,7 +593,13 @@ public class RequestArguments extends RequestStatics {
         T v = defaultValue();
         value = (v == null) ? "" : v.toString();
       }
+      if (_name == "path" || _name == "key" || _name == "source" || _name == "data_key" || _name == "source_key" || _name == "model_key" || _name == "thresholds" || _name == "model") {
       return "<input autocomplete=\"off\"" + (_readOnly ? " disabled" : "")+ " class='span5' type='text' name='"+_name+"' id='"+_name+"' placeholder='"+queryDescription()+"' "+ (!value.isEmpty() ? (" value='"+value+"' />") : "/>");
+      } else {
+        return "<input " + (_readOnly ? " disabled" : "")+ " class='span5' type='text' name='"+_name+"' id='"+_name+"' placeholder='"+queryDescription()+"' "+ (!value.isEmpty() ? (" value='"+value+"' />") : "/>");
+      }
+
+
     }
 
     /** JS refresh is a default jQuery hook to the change() method.
@@ -708,7 +718,7 @@ public class RequestArguments extends RequestStatics {
         return true;
       if (input.equals("false"))
         return false;
-      throw new IllegalArgumentException(input+" is not valid boolean value. Only 1 and 0 are allowed.");
+      throw new H2OIllegalArgumentException(this, input+" is not valid boolean value. Only 1 and 0 are allowed.");
     }
 
     /** Displays the query element. This is just the checkbox followed by the
@@ -1104,6 +1114,80 @@ public class RequestArguments extends RequestStatics {
     }
   }
 
+  public static class NumberSequenceFloat {
+    public final float [] _arr;
+    final String _str;
+    final boolean _ints;
+
+    public NumberSequenceFloat(float [] val, String str, boolean ints) {
+      _arr = val;
+      _str = str;
+      _ints = ints;
+    }
+
+    public NumberSequenceFloat(String str, boolean mul, float defaultStep) {
+      this(parseArray(str,mul,defaultStep),str, false);
+    }
+
+    static float [] parseArray(String input, boolean mul, float defaultStep) {
+      String str = input.trim().toLowerCase();
+      if(str.startsWith("c(") && str.endsWith(")"))
+        str = str.substring(2,str.length()-1);
+      if( str.startsWith("seq") ) {
+        throw new RuntimeException("unimplemented");
+      } if( str.contains(":") )
+        return parseGenerator(input, mul, defaultStep);
+      else if( str.contains(",") ) {
+        String [] parts = str.split(",");
+        float [] res = new float[parts.length];
+        for(int i = 0; i < parts.length; ++i)
+          res[i] = Float.parseFloat(parts[i]);
+        return res;
+      } else {
+        return new float [] {Float.parseFloat(str)};
+      }
+    }
+    public static float[] parseGenerator(String input, boolean mul, float defaultStep) {
+      String str = input.trim().toLowerCase();
+      String [] parts = str.split(":");
+      if(parts.length != 2 &&  parts.length != 3 )throw new IllegalArgumentException("Value "+input+" is not a valid number sequence.");
+      float step = defaultStep;
+
+      if( parts.length == 3 ){
+        step = Float.parseFloat(parts[2]);
+      }
+      float from = Float.parseFloat(parts[0]);
+      float to = Float.parseFloat(parts[1]);
+      if(to == from) return new float[]{from};
+      if(to < from)throw new IllegalArgumentException("Value "+input+" is not a valid number sequence.");
+      if(mul?(step <= 1):(step<=0))throw new IllegalArgumentException("Value "+input+" is not a valid number sequence.");
+      // make sure we have format from < to
+
+      float [] res = new float[1024];
+      int i = 0;
+      while(from <= to){
+        res[i++] = from;
+        if(i == res.length)res = Arrays.copyOf(res, res.length + Math.max(1, res.length >> 1));
+        if( mul) from *= step; else from += step;
+      }
+      return Arrays.copyOf(res,i);
+    }
+    static NumberSequenceFloat parse(String input, boolean mul, float defaultStep) {
+      return new NumberSequenceFloat(parseArray(input, mul, defaultStep),null, false);
+    }
+    @Override public String toString() {
+      if(_str != null)return _str;
+      if(_arr == null || _arr.length == 0)return"";
+
+      StringBuilder res = new StringBuilder();
+      for(int i = 0; i < _arr.length; ++i) {
+        if(i > 0) res.append(",");
+        res.append(_ints ? "" + (int) _arr[i] : _arr[i]);
+      }
+      return res.toString();
+    }
+  }
+
   public class RSeq extends InputText<NumberSequence> {
     boolean _multiplicative;
     transient NumberSequence _dVal;
@@ -1153,6 +1237,55 @@ public class RequestArguments extends RequestStatics {
     }
   }
 
+  public class RSeqFloat extends InputText<NumberSequenceFloat> {
+    boolean _multiplicative;
+    transient NumberSequenceFloat _fVal;
+    float _defaultStep;
+    String _comment;
+
+    @Override
+    public String queryComment() {
+      if( disabled() ) return "";
+      if( _comment != null ) return _comment;
+      return "Comma separated list of values. Or range specified as from:to:step" + (_multiplicative?"(*).":"(+).");
+    }
+
+    public RSeqFloat(String name, boolean req, boolean mul){
+      this(name,req,null,mul);
+    }
+    public RSeqFloat(String seq, boolean mul){
+      this("", false, new NumberSequenceFloat(seq, mul, 0), mul);
+    }
+    public RSeqFloat(String name, boolean req, NumberSequenceFloat fVal, boolean mul){
+      this(name, req, fVal, mul, null);
+    }
+    public RSeqFloat(String name, boolean req, NumberSequenceFloat fVal, boolean mul, String comment){
+      super(name,req);
+      _fVal = fVal;
+      _multiplicative = mul;
+      _defaultStep = mul?10:1;
+      _comment = comment;
+    }
+
+    @Override protected NumberSequenceFloat parse(String input) throws IllegalArgumentException {
+      try {
+        return NumberSequenceFloat.parse(input, _multiplicative, _defaultStep);
+      } catch( NumberFormatException e) {
+        throw new IllegalArgumentException("Value "+input+" is not a valid number sequence.");
+      }
+    }
+
+    @Override
+    protected NumberSequenceFloat defaultValue() {
+      return _fVal;
+    }
+
+    @Override
+    protected String queryDescription() {
+      return "Number sequence. Comma separated list of values. Or range specified as from:to:step.";
+    }
+  }
+
 
 
   // ---------------------------------------------------------------------------
@@ -1192,10 +1325,10 @@ public class RequestArguments extends RequestStatics {
       try {
         int i = Integer.parseInt(input);
         if ((i< _min) || (i > _max))
-          throw new IllegalArgumentException("Value "+i+" is not between "+_min+" and "+_max+" (inclusive)");
+          throw new H2OIllegalArgumentException(this, "Value "+i+" is not between "+_min+" and "+_max+" (inclusive)");
         return i;
       } catch( NumberFormatException e ) {
-        throw new IllegalArgumentException("Value "+input+" is not a valid integer.");
+        throw new H2OIllegalArgumentException(this, "Value "+input+" is not a valid integer.");
       }
     }
 
@@ -1233,16 +1366,19 @@ public class RequestArguments extends RequestStatics {
     }
 
     @Override protected Long parse(String input) throws IllegalArgumentException {
-      long i;
+      long i = 0;
       try {
         i = Long.parseLong(input);
       } catch( NumberFormatException e ) {
-        double d = Double.parseDouble(input);
-        i = (long)d;
-        if( i!=d ) throw new IllegalArgumentException(_name+"Value "+input+" is not a valid long integer.");
+        double d = Double.NaN;
+        try {
+          d = Double.parseDouble(input);
+          i = (long)d;
+        } catch ( NumberFormatException _) { d = i - 1; } // make d different from i
+        if( i!=d ) throw new H2OIllegalArgumentException(this, "Value '"+input+"' is not a valid long integer.");
       }
       if ((i< _min) || (i > _max))
-        throw new IllegalArgumentException(_name+"Value "+i+" is not between "+_min+" and "+_max+" (inclusive)");
+        throw new H2OIllegalArgumentException(this, "Value "+i+" is not between "+_min+" and "+_max+" (inclusive)");
       return i;
     }
 
@@ -1300,10 +1436,10 @@ public class RequestArguments extends RequestStatics {
       try {
         double i = Double.parseDouble(input);
         if ((i< _min) || (i > _max))
-         throw new IllegalArgumentException("Value "+i+" is not between "+_min+" and "+_max+" (inclusive)");
+         throw new H2OIllegalArgumentException(this, "Value "+i+" is not between "+_min+" and "+_max+" (inclusive)");
         return i;
       } catch( NumberFormatException e ) {
-        throw new IllegalArgumentException("Value "+input+" is not a valid real number.");
+        throw new H2OIllegalArgumentException(this, "Value "+input+" is not a valid real number.");
       }
     }
 
@@ -1402,7 +1538,7 @@ public class RequestArguments extends RequestStatics {
       _max = C._max;
       double x = super.parse(input); // Then the normal parsing step
       if( Double.isNaN(x) && (C._scale!=1 || _min != 0 || _max != 1) )
-        throw new IllegalArgumentException("Class column is not boolean, 'case' needs to specify what value to treat as TRUE; valid values range from "+_min+" to "+_max);
+        throw new H2OIllegalArgumentException(this, "Class column is not boolean, 'case' needs to specify what value to treat as TRUE; valid values range from "+_min+" to "+_max);
       return x;
     }
 
@@ -1430,6 +1566,12 @@ public class RequestArguments extends RequestStatics {
     @Override protected String queryDescription() {
       return _description;
     }
+
+    public Bool invertValue(){
+      if (record() != null && record()._value != null)
+        record()._value = !record()._value;
+      return this;
+    }
   }
 
   public class ClassifyBool extends Bool {
@@ -1446,10 +1588,10 @@ public class RequestArguments extends RequestStatics {
       else if (input.equals("0"))     b= false;
       else if (input.equals("true"))  b= true;
       else if (input.equals("false")) b= false;
-      else throw new IllegalArgumentException(input+" is not valid boolean value. Only 1 and 0 are allowed.");
+      else throw new H2OIllegalArgumentException(this, input+" is not valid boolean value. Only 1 and 0 are allowed.");
       Vec vec = _fcv.value();
-      if( !vec.isInt() &&  b ) throw new IllegalArgumentException("Float response allows only regression!");
-      if( vec.isEnum() && !b ) throw new IllegalArgumentException("Categorical response allows only classification!");
+      if( !vec.isInt() &&  b ) throw new H2OIllegalArgumentException(this, "Float response allows only regression!");
+      if( vec.isEnum() && !b ) throw new H2OIllegalArgumentException(this, "Categorical response allows only classification!");
       return b;
     }
     @Override protected Boolean defaultValue() {
@@ -1477,7 +1619,7 @@ public class RequestArguments extends RequestStatics {
       else if (input.equals("0"))     b= false;
       else if (input.equals("true"))  b= true;
       else if (input.equals("false")) b= false;
-      else throw new IllegalArgumentException(input+" is not valid boolean value. Only 1 and 0 are allowed.");
+      else throw new H2OIllegalArgumentException(this, input+" is not valid boolean value. Only 1 and 0 are allowed.");
       return b;
     }
     @Override protected Boolean defaultValue() {
@@ -1536,7 +1678,7 @@ public class RequestArguments extends RequestStatics {
       for (T v : _enumClass.getEnumConstants())
         if (v.toString().equals(input))
           return v;
-      throw new IllegalArgumentException("Only "+Arrays.toString(selectValues())+" accepted for argument "+_name);
+      throw new H2OIllegalArgumentException(this, "Only "+Arrays.toString(selectValues())+" accepted for argument "+_name);
     }
 
     @Override protected T defaultValue() {
@@ -1560,7 +1702,7 @@ public class RequestArguments extends RequestStatics {
     @Override protected File parse(String input) throws IllegalArgumentException {
       File f = new File(input);
       if( !f.exists() )
-        throw new IllegalArgumentException("File "+input+" not found");
+        throw new H2OIllegalArgumentException(this, "File "+input+" not found");
       return f;
     }
     @Override protected String queryDescription() { return "Existing file or directory"; }
@@ -1632,7 +1774,7 @@ public class RequestArguments extends RequestStatics {
       Key k = Key.make(input);
       Value v = DKV.get(k);
       if (v == null)
-        throw new IllegalArgumentException("Key "+input+" not found!");
+        throw new H2OIllegalArgumentException(this, "Key "+input+" not found!");
       return v;
     }
 
@@ -1665,9 +1807,9 @@ public class RequestArguments extends RequestStatics {
     @Override protected ValueArray parse(String input) throws IllegalArgumentException {
       Key k = Key.make(input);
       Value v = DKV.get(k);
-      if (v == null)    throw new IllegalArgumentException("Key "+input+" not found!");
+      if (v == null)    throw new H2OIllegalArgumentException(this, "Key "+input+" not found!");
       if( v.isFrame() ) return ValueArray.frameAsVA(k);
-      if (!v.isArray()) throw new IllegalArgumentException("Key "+input+" is not a valid HEX key");
+      if (!v.isArray()) throw new H2OIllegalArgumentException(this, "Key "+input+" is not a valid HEX key");
       return v.get();
     }
 
@@ -1688,7 +1830,7 @@ public class RequestArguments extends RequestStatics {
         if (v != null)
           return v.get();
       }
-      throw new IllegalArgumentException("Key "+input+" not found!");
+      throw new H2OIllegalArgumentException(this, "Key "+input+" not found!");
     }
     @Override protected String queryDescription() { return "An existing H2O Model key"; }
     @Override protected TM defaultValue() { return null; }
@@ -1755,7 +1897,7 @@ public class RequestArguments extends RequestStatics {
       for (String s : _values)
         if (s.equals(input))
           return input;
-      throw new IllegalArgumentException("Invalid value "+input+", only "+Arrays.toString(_values)+" allowed");
+      throw new H2OIllegalArgumentException(this, "Invalid value "+input+", only "+Arrays.toString(_values)+" allowed");
     }
 
     @Override
@@ -1810,7 +1952,7 @@ public class RequestArguments extends RequestStatics {
       ValueArray va = _key.value();
       int colIdx = vaColumnNameToIndex(va, input);
       if (colIdx == -1)
-        throw new IllegalArgumentException(input+" not a name of column, or a column index");
+        throw new H2OIllegalArgumentException(this, input+" not a name of column, or a column index");
       return colIdx;
     }
 
@@ -1834,7 +1976,7 @@ public class RequestArguments extends RequestStatics {
     @Override protected Integer parse(String input) throws IllegalArgumentException {
       Integer i = super.parse(input);
       // called for error checking
-      vaCategoryNames(_key.value()._cols[i], Integer.MAX_VALUE);
+      vaCategoryNames(this, _key.value()._cols[i], Integer.MAX_VALUE);
       return i;
     }
   }
@@ -1911,9 +2053,9 @@ public class RequestArguments extends RequestStatics {
         col = col.trim();
         int idx = vaColumnNameToIndex(va, col);
         if (idx == -1)
-          throw new IllegalArgumentException("Column "+col+" not part of key "+va._key);
+          throw new H2OIllegalArgumentException(this, "Column "+col+" not part of key "+va._key);
         if (al.contains(idx))
-          throw new IllegalArgumentException("Column "+col+" is already ignored.");
+          throw new H2OIllegalArgumentException(this, "Column "+col+" is already ignored.");
         checkLegality(idx, va._cols[idx]);
         al.add(idx);
       }
@@ -1945,7 +2087,7 @@ public class RequestArguments extends RequestStatics {
     @Override
     public void checkLegality(int i, Column c) throws IllegalArgumentException {
       if( i == _classCol.value() )
-        throw new IllegalArgumentException("Class column "+i+" cannot be ignored");
+        throw new H2OIllegalArgumentException(this, "Class column "+i+" cannot be ignored");
     }
   }
 
@@ -2175,9 +2317,9 @@ public class RequestArguments extends RequestStatics {
       ValueArray.Column dataCol = va._cols[_classCol.value()];
       if (_modelKey!=null) {
         ValueArray.Column modelCol = _modelKey.value().response();
-        return vaCategoryNames(modelCol, dataCol, maxClasses);
+        return vaCategoryNames(this, modelCol, dataCol, maxClasses);
       } else {
-        return vaCategoryNames(dataCol, maxClasses);
+        return vaCategoryNames(this, dataCol, maxClasses);
       }
     }
 
@@ -2227,7 +2369,7 @@ public class RequestArguments extends RequestStatics {
         start = end;
         while (start < bsource.length && bsource[start]==' ') ++start; // whitespace;
         if (bsource[start]!=JS_SEP)
-          throw new IllegalArgumentException("Expected = after the class name.");
+          throw new H2OIllegalArgumentException(this, "Expected = after the class name.");
         ++start;
         end = input.indexOf(',',start);
         try {
@@ -2239,11 +2381,11 @@ public class RequestArguments extends RequestStatics {
             start = end + 1;
           }
         } catch( NumberFormatException e ) {
-          throw new IllegalArgumentException("Invalid double format for weight value");
+          throw new H2OIllegalArgumentException(this, "Invalid double format for weight value");
         }
 
         if (!classNames.containsKey(className))
-          throw new IllegalArgumentException("Category "+className+" not found!");
+          throw new H2OIllegalArgumentException(this, "Category "+className+" not found!");
         result[classNames.get(className)] = classWeight;
       }
       return result;
@@ -2288,7 +2430,7 @@ public class RequestArguments extends RequestStatics {
     protected String[] determineColumnClassNames(int maxClasses) throws IllegalArgumentException {
       ValueArray va = _key.value();
       ValueArray.Column classCol = va._cols[_classCol.value()];
-      return vaCategoryNames(classCol, maxClasses);
+      return vaCategoryNames(this, classCol, maxClasses);
     }
 
     @Override protected String[] textValues() {
@@ -2335,7 +2477,7 @@ public class RequestArguments extends RequestStatics {
         start = end;
         while (start < bsource.length && bsource[start]==' ') ++start; // whitespace;
         if (bsource[start]!=JS_SEP)
-          throw new IllegalArgumentException("Expected = after the class name.");
+          throw new H2OIllegalArgumentException(this, "Expected = after the class name.");
         ++start;
         end = input.indexOf(',',start);
         try {
@@ -2347,10 +2489,10 @@ public class RequestArguments extends RequestStatics {
             start = end + 1;
           }
         } catch( NumberFormatException e ) {
-          throw new IllegalArgumentException("Invalid integer format for strata value");
+          throw new H2OIllegalArgumentException(this, "Invalid integer format for strata value");
         }
         if (!classNames.containsKey(className))
-          throw new IllegalArgumentException("Category "+className+" not found!");
+          throw new H2OIllegalArgumentException(this, "Category "+className+" not found!");
         result[classNames.get(className)] = classWeight;
       }
       return result;
@@ -2448,7 +2590,7 @@ public class RequestArguments extends RequestStatics {
           cidx = Integer.parseInt(input);
         } catch( NumberFormatException e ) { cidx = -1; }
         if (cidx < 0 || cidx >= fr().numCols() )
-          throw new IllegalArgumentException(input+" not a name of column, or a column index");
+          throw new H2OIllegalArgumentException(this, input+" not a name of column, or a column index");
       }
       _colIdx.set(cidx);
       return fr().vecs()[cidx];
@@ -2475,7 +2617,7 @@ public class RequestArguments extends RequestStatics {
     protected transient ThreadLocal<Integer> _colIdx= new ThreadLocal();
     protected Frame fr() {
       Value v = DKV.get(_key.value());
-      if(v == null) throw new IllegalArgumentException("Frame not found");
+      if(v == null) throw new H2OIllegalArgumentException(this, "Frame not found");
       return ValueArray.asFrame(v);
     }
     public FrameKeyMultiVec(String name, TypeaheadKey key, FrameClassVec response, String description, boolean namesOnly) {
@@ -2536,9 +2678,9 @@ public class RequestArguments extends RequestStatics {
         col = col.trim();
         int idx = frameColumnNameToIndex(fr(), col, _namesOnly);
         if (0 > idx || idx > fr.numCols())
-          throw new IllegalArgumentException("Column "+col+" not part of key "+_key.value());
+          throw new H2OIllegalArgumentException(this, "Column "+col+" not part of key "+_key.value());
         if (al.contains(idx))
-          throw new IllegalArgumentException("Column "+col+" is specified twice.");
+          throw new H2OIllegalArgumentException(this, "Column "+col+" is specified twice.");
         checkLegality(fr.vecs()[idx]);
         al.add(idx);
       }
@@ -2551,6 +2693,12 @@ public class RequestArguments extends RequestStatics {
 
     @Override protected String queryDescription() {
       return _description;
+    }
+  }
+
+  public static class H2OIllegalArgumentException extends IllegalArgumentException {
+    public H2OIllegalArgumentException(Argument a, String msg) {
+      super("Field '" + (a!=null ? a.getName() : "<unknown>") + "' : " + msg);
     }
   }
 }

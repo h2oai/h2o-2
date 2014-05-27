@@ -4,6 +4,8 @@ import java.util.*;
 
 import water.*;
 import water.fvec.*;
+import water.util.Utils.IcedHashMap;
+import water.util.Utils.IcedInt;
 
 /** Execute a R-like AST, in the context of an H2O Cloud
  *  @author cliffc@0xdata.com
@@ -25,7 +27,7 @@ public class Env extends Iced {
   int _tod;
 
   // Ref Counts for each vector
-  transient final HashMap<Vec,Integer> _refcnt;
+  final IcedHashMap<Vec,IcedInt> _refcnt;
 
   transient final public StringBuilder _sb; // Holder for print results
 
@@ -40,7 +42,7 @@ public class Env extends Iced {
     _d   = new double[4]; // Double (only if frame & func are null)
     _fcn = new ASTOp [4]; // Functions (or null if not a function)
     _display= new int[4];
-    _refcnt = new HashMap<Vec,Integer>();
+    _refcnt = new IcedHashMap<Vec,IcedInt>();
     _sb = new StringBuilder();
     _locked = locked;
   }
@@ -204,17 +206,20 @@ public class Env extends Iced {
   public void poppush(double d) { pop(); push(d); }
 
   // Capture the current environment & return it (for some closure's future execution).
-  Env capture( ) { return new Env(this); }
-  private Env( Env e ) {
+  Env capture( boolean cntrefs ) { return new Env(this,cntrefs); }
+  private Env( Env e, boolean cntrefs ) {
     _sp = e._sp;
     _key= Arrays.copyOf(e._key,_sp);
     _ary= Arrays.copyOf(e._ary,_sp);
     _d  = Arrays.copyOf(e._d  ,_sp);
     _fcn= Arrays.copyOf(e._fcn,_sp);
     _tod= e._tod;
-    _display = Arrays.copyOf(e._display,_tod+1);
+    _display = e._display.clone();
+    if( cntrefs ) {             // If counting refs
+      _refcnt = new IcedHashMap<Vec,IcedInt>();
+      _refcnt.putAll(e._refcnt); // Deep copy the existing refs
+    } else _refcnt = null;
     // All other fields are ignored/zero
-    _refcnt = null;
     _sb = null;
     _locked = null;
   }
@@ -223,16 +228,16 @@ public class Env extends Iced {
   // Nice assert
   boolean allAlive(Frame fr) {
     for( Vec vec : fr.vecs() )
-      assert _refcnt.get(vec) > 0;
+      assert _refcnt.get(vec)._val > 0;
     return true;
   }
 
   public Futures subRef( Vec vec, Futures fs ) {
 
     if ( vec.masterVec() != null ) subRef(vec.masterVec(), fs);
-    int cnt = _refcnt.get(vec)-1;
+    int cnt = _refcnt.get(vec)._val-1;
     //Log.info(" --- " + vec._key.toString()+ " RC=" + cnt);
-    if( cnt > 0 ) _refcnt.put(vec,cnt);
+    if( cnt > 0 ) _refcnt.put(vec,new IcedInt(cnt));
     else {
       if( fs == null ) fs = new Futures();
       UKV.remove(vec._key,fs);
@@ -262,15 +267,10 @@ public class Env extends Iced {
   }
 
   Vec addRef( Vec vec ) {
-    Integer I = _refcnt.get(vec);
-    assert I==null || I>0;
+    IcedInt I = _refcnt.get(vec);
+    assert I==null || I._val>0;
     assert vec.length() == 0 || (vec.at(0) > 0 || vec.at(0) <= 0 || Double.isNaN(vec.at(0)));
-    _refcnt.put(vec,I==null?1:I+1);
-    //Log.info(" +++ " + vec._key.toString() + " RC=" + (I==null?1:I+1));
-    //if (I!=null&&I==1)
-    //  for (StackTraceElement ste : Thread.currentThread().getStackTrace()) {
-    //    System.out.println(ste);
-    //  }
+    _refcnt.put(vec,new IcedInt(I==null?1:I._val+1));
     if (vec.masterVec()!=null) addRef(vec.masterVec());
     return vec;
   }
@@ -314,7 +314,7 @@ public class Env extends Iced {
         Frame fr2=new Frame(Key.make(skey),fr._names.clone(),fr.vecs().clone());
         for( int i=0; i<fr.numCols(); i++ ) {
           Vec v = fr.vecs()[i];
-          int refcnt = _refcnt.get(v);
+          int refcnt = _refcnt.get(v)._val;
           assert refcnt > 0;
           if( refcnt > 1 ) {    // Need a deep-copy now
             Vec v2 = new Frame(v).deepSlice(null,null).vecs()[0];
@@ -360,8 +360,8 @@ public class Env extends Iced {
     return cnt + refs.size();
   }
   boolean check_refcnt( Vec vec ) {
-    Integer I = _refcnt.get(vec);
-    int cnt0 = I==null ? 0 : I;
+    IcedInt I = _refcnt.get(vec);
+    int cnt0 = I==null ? 0 : I._val;
     int cnt1 = compute_refcnt(vec);
     if( cnt0==cnt1 ) return true;
     System.out.println("Refcnt is "+cnt0+" but computed as "+cnt1);

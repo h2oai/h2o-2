@@ -1,15 +1,21 @@
 package water;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import hex.GridSearch;
-
-import java.lang.annotation.Annotation;
-import java.lang.reflect.*;
-import java.util.*;
-
-import water.api.*;
+import water.api.DocGen;
+import water.api.Request;
+import water.api.RequestArguments;
 import water.api.RequestServer.API_VERSION;
 import water.fvec.Frame;
+import water.util.Log;
 import water.util.Utils;
+
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.util.*;
 
 public abstract class Request2 extends Request {
   static final int API_WEAVER = 1;
@@ -48,12 +54,12 @@ public abstract class Request2 extends Request {
       Key k = Key.make(input);
       Value v = DKV.get(k);
       if( v == null && _mustExist )
-        throw new IllegalArgumentException("Key '" + input + "' does not exist!");
+        throw new H2OIllegalArgumentException(this, "Key '" + input + "' does not exist!");
       if( _type != null ) {
         if( v != null && !compatible(_type, v.get()) )
-          throw new IllegalArgumentException(input + ":" + errors()[0]);
+          throw new H2OIllegalArgumentException(this, input + ":" + errors()[0]);
         if( v == null && _required )
-          throw new IllegalArgumentException("Key '" + input + "' does not exist!");
+          throw new H2OIllegalArgumentException(this, "Key '" + input + "' does not exist!");
       }
       return k;
     }
@@ -261,6 +267,12 @@ public abstract class Request2 extends Request {
           else if( f.getType() == double[].class ) {
             double[] val = (double[]) defaultValue;
             arg = new RSeq(f.getName(), api.required(), new NumberSequence(val, null, false), false, api.help());
+          }
+
+          // RSeq float
+          else if( f.getType() == float[].class ) {
+            float[] val = (float[]) defaultValue;
+            arg = new RSeqFloat(f.getName(), api.required(), new NumberSequenceFloat(val, null, false), false, api.help());
           }
 
           // Bool
@@ -514,6 +526,16 @@ public abstract class Request2 extends Request {
         } else
           value = ds;
       }
+      else if( value instanceof NumberSequenceFloat ) {
+        float[] fs = ((NumberSequenceFloat) value)._arr;
+        if( arg._field.getType() == int[].class ) {
+          int[] is = new int[fs.length];
+          for( int i = 0; i < is.length; i++ )
+            is[i] = (int) fs[i];
+          value = is;
+        } else
+          value = fs;
+      }
       arg._field.set(this, value);
     } catch( Exception e ) {
       throw new RuntimeException(e);
@@ -526,5 +548,33 @@ public abstract class Request2 extends Request {
 
   public void fillResponseInfo(Response response) {
     this.response_info = response.extractInfo();
+  }
+
+  protected JsonObject toJSON() {
+    final String json = new String(writeJSON(new AutoBuffer()).buf());
+    if (json.length() == 0) return new JsonObject();
+    JsonObject jo = (JsonObject)new JsonParser().parse(json);
+    jo.remove("Request2");
+    jo.remove("response_info");
+    return jo;
+  }
+
+  @Override
+  public String toString() {
+    return GSON_BUILDER.toJson(toJSON());
+  }
+
+  protected void logStart() {
+    Log.info("Building H2O " + this.getClass().getSimpleName() + " model with these parameters:");
+    for (String s : toString().split("\n")) Log.info(s);
+  }
+
+  public boolean makeJsonBox(StringBuilder sb) {
+    sb.append("<div class='pull-right'><a href='#' onclick='$(\"#params\").toggleClass(\"hide\");'"
+            + " class='btn btn-inverse btn-mini'>Model Parameters</a></div><div class='hide' id='params'>"
+            + "<pre><code class=\"language-json\">");
+    sb.append(toString());
+    sb.append("</code></pre></div>");
+    return true;
   }
 }

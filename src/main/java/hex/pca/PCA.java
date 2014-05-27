@@ -1,18 +1,17 @@
 package hex.pca;
 
+import Jama.Matrix;
+import Jama.SingularValueDecomposition;
 import hex.FrameTask.DataInfo;
 import hex.gram.Gram.GramTask;
-
-import java.util.ArrayList;
-
 import water.Job.ColumnsJob;
-import water.*;
+import water.Key;
 import water.api.DocGen;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.RString;
-import Jama.Matrix;
-import Jama.SingularValueDecomposition;
+
+import java.util.ArrayList;
 
 
 /**
@@ -32,13 +31,13 @@ public class PCA extends ColumnsJob {
   @API(help = "The PCA Model")
   public PCAModel pca_model;
 
-  @API(help = "Maximum number of principal components to return.", filter = Default.class, lmin = 1, lmax = 10000)
+  @API(help = "Maximum number of principal components to return.", filter = Default.class, lmin = 1, lmax = 10000, json=true)
   int max_pc = 10000;
 
-  @API(help = "Omit components with std dev <= tol times std dev of first component.", filter = Default.class, lmin = 0, lmax = 1)
+  @API(help = "Omit components with std dev <= tol times std dev of first component.", filter = Default.class, lmin = 0, lmax = 1, json=true)
   double tolerance = 0;
 
-  @API(help = "If true, data will be standardized on the fly when computing the model.", filter = Default.class)
+  @API(help = "If true, data will be standardized on the fly when computing the model.", filter = Default.class, json=true)
   boolean standardize = true;
 
   public PCA() {tolerance = 0; standardize = true;}
@@ -56,7 +55,7 @@ public class PCA extends ColumnsJob {
     this.standardize = standardize;
   }
 
-  @Override protected Status exec() {
+  @Override protected JobState execImpl() {
     Frame fr = selectFrame(source);
     Vec[] vecs = fr.vecs();
 
@@ -81,7 +80,7 @@ public class PCA extends ColumnsJob {
     PCAModel myModel = buildModel(dinfo, tsk);
     myModel.delete_and_lock(self());
     myModel.unlock(self());
-    return Status.Done;
+    return JobState.DONE;
   }
 
   @Override protected void init() {
@@ -95,6 +94,7 @@ public class PCA extends ColumnsJob {
   }
 
   public PCAModel buildModel(DataInfo dinfo, GramTask tsk) {
+    logStart();
     Matrix myGram = new Matrix(tsk._gram.getXX());   // X'X/n where n = num rows
     SingularValueDecomposition mySVD = myGram.svd();
 

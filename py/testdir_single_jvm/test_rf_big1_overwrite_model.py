@@ -27,7 +27,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_rf_big1_nopoll(self):
+    def test_rf_big1_overwrite_model(self):
         csvFilename = 'hhp_107_01.data.gz'
         hex_key = csvFilename + ".hex"
         print "\n" + csvFilename
@@ -38,7 +38,7 @@ class Basic(unittest.TestCase):
             start = time.time()
             kwargs = {}
             if OVERWRITE_RF_MODEL:
-                print "Since we're overwriting here, we have to wait for each to complete nopoll=False"
+                print "Since we're overwriting here, we have to wait for each to complete noPoll=False"
                 model_key = 'RF_model'
             else:
                 model_key = 'RF_model' + str(jobDispatch)

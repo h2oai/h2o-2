@@ -62,7 +62,7 @@ class Basic(unittest.TestCase):
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         tryList = [
-            (10000, 10, 'cA', 300),
+            (10000, 100, 'cA', 300),
             ]
 
         for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
@@ -94,7 +94,7 @@ class Basic(unittest.TestCase):
             timeoutSecs = 30 + kwargs['ntrees'] * 20
             start = time.time()
             # do oobe
-            kwargs['response'] = "C" + str(colCount)
+            kwargs['response'] = "C" + str(colCount+1)
             
             rfv = h2o_cmd.runRF(parseResult=trainParseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
@@ -108,23 +108,23 @@ class Basic(unittest.TestCase):
 
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfv, ntree=used_trees)
             oobeTrainPctRight = 100.0 - classification_error
-            expectTrainPctRight = 99
+            expectTrainPctRight = 94
             self.assertAlmostEqual(oobeTrainPctRight, expectTrainPctRight,\
-                msg="OOBE: pct. right for training not close enough %6.2f %6.2f"% (oobeTrainPctRight, expectTrainPctRight), delta=1)
+                msg="OOBE: pct. right for training not close enough %6.2f %6.2f"% (oobeTrainPctRight, expectTrainPctRight), delta=5)
 
             # RF score******************************************************
             print "Now score with the 2nd random dataset"
             rfv = h2o_cmd.runRFView(data_key=dataKeyTest, model_key=model_key, 
-                timeoutSecs=timeoutSecs, retryDelaySecs=1, print_params=True)
+                timeoutSecs=timeoutSecs, retryDelaySecs=1)
 
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfv, ntree=used_trees)
-            self.assertAlmostEqual(classification_error, 0.03, delta=0.5, msg="Classification error %s differs too much" % classification_error)
+            self.assertAlmostEqual(classification_error, 5.0, delta=2.0, msg="Classification error %s differs too much" % classification_error)
             predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
 
             fullScorePctRight = 100.0 - classification_error
-            expectScorePctRight = 99
+            expectScorePctRight = 94
             self.assertAlmostEqual(fullScorePctRight,expectScorePctRight,
-                msg="Full: pct. right for scoring not close enough %6.2f %6.2f"% (fullScorePctRight, expectScorePctRight), delta=1)
+                msg="Full: pct. right for scoring not close enough %6.2f %6.2f"% (fullScorePctRight, expectScorePctRight), delta=5)
 
 
 if __name__ == '__main__':

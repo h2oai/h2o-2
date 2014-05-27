@@ -74,51 +74,43 @@ default: nightly_build_stuff
 
 nightly_build_stuff:
 	@echo PROJECT_VERSION is $(PROJECT_VERSION)
-	$(MAKE) clean PROJECT_VERSION=$(PROJECT_VERSION)
+	$(MAKE) clean PROJECT_VERSION=$(PROJECT_VERSION) 1> /dev/null
+	@mkdir -p target/logs
 	$(MAKE) build PROJECT_VERSION=$(PROJECT_VERSION)
 	$(MAKE) docs-website PROJECT_VERSION=$(PROJECT_VERSION)
 	@echo
 	@echo Build completed successfully.
 
-MILLIS_SINCE_EPOCH = $(shell date '+%s')
-
 build:
-	@echo
-	@echo "PHASE: Building R inner package..."
-	@echo
-ifeq ($(BUILD_NUMBER),99999)
-	$(MAKE) -C R build_inner PROJECT_VERSION=$(PROJECT_VERSION).$(MILLIS_SINCE_EPOCH)
-else
-	$(MAKE) -C R build_inner PROJECT_VERSION=$(PROJECT_VERSION)
-endif
 	@echo
 	@echo "PHASE: Creating ${BUILD_VERSION_JAVA_FILE}..."
 	@echo
-	$(MAKE) build_version PROJECT_VERSION=$(PROJECT_VERSION)
+	$(MAKE) build_version PROJECT_VERSION=$(PROJECT_VERSION) 1> target/logs/version_build.log
+
 	@echo
 	@echo "PHASE: Building H2O..."
 	@echo
 	$(MAKE) build_h2o PROJECT_VERSION=$(PROJECT_VERSION)
+
+	@echo
+	@echo "PHASE: Building hadoop driver..."
+	@echo
+	$(MAKE) -C hadoop build PROJECT_VERSION=$(PROJECT_VERSION) 1> target/logs/hadoop_build.log
+
 	@echo
 	@echo "PHASE: Building Shalala..."
 	@echo
 	$(MAKE) -C h2o-scala PROJECT_VERSION=$(PROJECT_VERSION)
+
 	@echo
-	@echo "PHASE: Building R outer package..."
+	@echo "PHASE: Building R package..."
 	@echo
-	$(MAKE) -C R build_outer PROJECT_VERSION=$(PROJECT_VERSION)
-	@echo
-	@echo "PHASE: Building hadoop driver..."
-	@echo
-	$(MAKE) -C hadoop build PROJECT_VERSION=$(PROJECT_VERSION)
-	@echo
-	@echo "PHASE: Building launcher..."
-	@echo
-	$(MAKE) -C launcher build PROJECT_VERSION=$(PROJECT_VERSION)
+	$(MAKE) -C R PROJECT_VERSION=$(PROJECT_VERSION) 1> target/logs/r_build.log
+
 	@echo
 	@echo "PHASE: Building zip package..."
 	@echo
-	$(MAKE) build_package PROJECT_VERSION=$(PROJECT_VERSION)
+	$(MAKE) build_package PROJECT_VERSION=$(PROJECT_VERSION) 1> target/logs/package_build.log
 
 BUILD_BRANCH=$(shell git branch | grep '*' | sed 's/* //')
 BUILD_HASH=$(shell git log -1 --format="%H")
@@ -162,7 +154,7 @@ build_package:
 	cp -p LICENSE.txt target/h2o-$(PROJECT_VERSION)
 	mkdir target/h2o-$(PROJECT_VERSION)/ec2
 	cp -p ec2/*.py ec2/*.sh ec2/README.txt target/h2o-$(PROJECT_VERSION)/ec2
-	(cd target; zip -r h2o-$(PROJECT_VERSION).zip h2o-$(PROJECT_VERSION))
+	(cd target; zip -q -r h2o-$(PROJECT_VERSION).zip h2o-$(PROJECT_VERSION))
 	rm -fr target/h2o-$(PROJECT_VERSION)
 	rm -fr target/ci
 	cp -rp ci target
@@ -185,10 +177,11 @@ docs-website: dw_announce
 
 docs-website-clean:
 else
-docs-website: dw_announce dw_1 dw_2 dw_3 dw_4
+docs-website: dw_announce dw_1 dw_2 dw_3
 
 docs-website-clean:
 	rm -rf h2o-docs/source/developuser/DocGen
+	rm -rf h2o-docs/source/developuser/ScalaGen
 	$(MAKE) -C h2o-docs clean
 endif
 
@@ -206,6 +199,8 @@ dw_1:
 	mkdir -p h2o-docs/source/developuser/DocGen
 	cd h2o-docs/source/developuser/DocGen && java -Xmx1g -jar "$(TOPDIR)/target/h2o.jar" -runClass water.api.DocGen -port $(PORT) -name $(TMPDIR) -ice_root $(TMPDIR) 1> /dev/null
 	rm -rf $(TMPDIR)
+	mkdir -p h2o-docs/source/developuser/ScalaGen
+	cp -p h2o-scala/README.rst h2o-docs/source/developuser/ScalaGen/README.rst
 
 # If this fails, you might need to do the following:
 #     $ (possibly sudo) easy_install pip
@@ -225,24 +220,9 @@ dw_3:
 	cp -p docs/H2O_on_Hadoop_0xdata.pdf $(BUILD_WEBSITE_DIR)/bits/hadoop
 	mkdir -p $(BUILD_WEBSITE_DIR)/bits/ec2
 	cp -p ec2/README.txt $(BUILD_WEBSITE_DIR)/bits/ec2
-	mkdir -p $(BUILD_WEBSITE_DIR)/bits/h2o-scala
-	cp -p h2o-scala/README.md $(BUILD_WEBSITE_DIR)/bits/h2o-scala/README.txt
-
-# Note:  to get pdfunite on a mac, try:
-#     $ brew install poppler
-#
-PDFLATEX=$(shell which pdflatex)
-PDFUNITE=$(shell which pdfunite)
-dw_4:
-ifeq ($(PDFLATEX),)
-	@echo pdflatex not found, skipping...
-else
-ifeq ($(PDFUNITE),)
-	@echo pdfunite not found, skipping...
-else
-	pdfunite R/h2o-package/h2o_package.pdf R/h2oRClient-package/h2oRClient_package.pdf $(BUILD_WEBSITE_DIR)/bits/h2oRjoin.pdf
-endif
-endif
+	@if [ -f R/h2o-package/h2o_package.pdf ]; then \
+	    cp -p R/h2o-package/h2o_package.pdf $(BUILD_WEBSITE_DIR)/bits/h2o_package.pdf || exit 1; \
+	fi
 
 #
 # Set appropriately for your data size to quickly try out H2O.

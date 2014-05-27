@@ -5,7 +5,6 @@ import water.*;
 public abstract class FileVec extends ByteVec {
   long _len;                    // File length
   final byte _be;
-  public static final int LOG_CHK = 22; // Chunks are 1<<22, or 4Meg
   public static final int CHUNK_SZ = 1 << LOG_CHK;
   
 

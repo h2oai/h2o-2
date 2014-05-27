@@ -122,7 +122,9 @@ public abstract class Request extends RequestBuilders {
   }
 
   protected NanoHTTPD.Response serveGrid(NanoHTTPD server, Properties parms, RequestType type) {
+    //System.out.println("request: params: "+parms.entrySet().toString()+" type: "+type);
     String query = checkArguments(parms, type);
+    System.out.println("query: "+query);
     if( query != null )
       return wrap(server, query, type);
     long time = System.currentTimeMillis();
@@ -146,7 +148,11 @@ public abstract class Request extends RequestBuilders {
   }
 
   protected NanoHTTPD.Response wrap(NanoHTTPD server, JsonObject response) {
-    return server.new Response(NanoHTTPD.HTTP_OK, NanoHTTPD.MIME_JSON, response.toString());
+    String statusCode = NanoHTTPD.HTTP_OK;
+    if (response.has("error")) {
+      statusCode = NanoHTTPD.HTTP_BADREQUEST;
+    }
+    return server.new Response(statusCode, NanoHTTPD.MIME_JSON, response.toString());
   }
 
   protected NanoHTTPD.Response wrap(NanoHTTPD server, String value, RequestType type) {
@@ -198,16 +204,24 @@ public abstract class Request extends RequestBuilders {
   private static class MenuItem {
     public final Request _request;
     public final String _name;
+    public final boolean _useNewTab;
 
-    public MenuItem(Request request, String name) {
+    public MenuItem(Request request, String name, boolean useNewTab) {
       _request = request;
       _name = name;
+      _useNewTab = useNewTab;
     }
 
     public void toHTML(StringBuilder sb) {
       sb.append("<li><a href='");
       sb.append(_request.href() + _request.hrefType()._suffix);
-      sb.append("'>");
+      sb.append("'");
+
+      if (_useNewTab) {
+        sb.append(" target='_blank'");
+      }
+
+      sb.append(">");
       sb.append(_name);
       sb.append("</a></li>");
     }
@@ -250,20 +264,26 @@ public abstract class Request extends RequestBuilders {
   public static Request addToNavbar(Request r, String name) {
     assert (!_navbar.containsKey(name));
     ArrayList<MenuItem> arl = new ArrayList();
-    arl.add(new MenuItem(r, name));
+    boolean useNewTab = false;
+    arl.add(new MenuItem(r, name, useNewTab));
     _navbar.put(name, arl);
     _navbarOrdering.add(name);
     return r;
   }
 
   public static Request addToNavbar(Request r, String name, String category) {
+    boolean useNewTab = false;
+    return addToNavbar(r, name, category, useNewTab);
+  }
+
+  public static Request addToNavbar(Request r, String name, String category, boolean useNewTab) {
     ArrayList<MenuItem> arl = _navbar.get(category);
     if( arl == null ) {
       arl = new ArrayList();
       _navbar.put(category, arl);
       _navbarOrdering.add(category);
     }
-    arl.add(new MenuItem(r, name));
+    arl.add(new MenuItem(r, name, useNewTab));
     return r;
   }
 
@@ -332,5 +352,6 @@ public abstract class Request extends RequestBuilders {
   protected static final API_VERSION[] SUPPORTS_ONLY_V1 = new API_VERSION[] { API_VERSION.V_1 };
   protected static final API_VERSION[] SUPPORTS_ONLY_V2 = new API_VERSION[] { API_VERSION.V_2 };
   protected static final API_VERSION[] SUPPORTS_V1_V2   = new API_VERSION[] { API_VERSION.V_1, API_VERSION.V_2 };
-  public API_VERSION[] supportedVersions() { return SUPPORTS_ONLY_V1; }
+  protected static final API_VERSION[] SUPPORTS_ALL   = new API_VERSION[] { API_VERSION.V_1, API_VERSION.V_2, API_VERSION.V_v2 };
+  public API_VERSION[] supportedVersions() { return SUPPORTS_ALL; }
 }

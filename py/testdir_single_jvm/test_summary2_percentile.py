@@ -1,6 +1,8 @@
 import unittest, time, sys, random
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_summ
+
+DO_MEDIAN = True
 
 def randint_triangular(low, high, mode): # inclusive bounds
     t = random.triangular(low, high, mode)
@@ -54,7 +56,7 @@ class Basic(unittest.TestCase):
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
             print "Creating random", csvPathname
-            legalValues = {0, 1} # set. http://docs.python.org/2/library/stdtypes.html#set
+            legalValues = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10} # set. http://docs.python.org/2/library/stdtypes.html#set
             expectedMin = min(legalValues)
             expectedMax = max(legalValues)
             expectedUnique = (expectedMax - expectedMin) + 1
@@ -65,6 +67,7 @@ class Basic(unittest.TestCase):
                 low=expectedMin, high=expectedMax, mode=mode,
                 SEED=SEEDPERFILE)
 
+            csvPathnameFull = h2i.find_folder_and_filename('.', csvPathname, returnFullPath=True)
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, 
                 timeoutSecs=10, doSummary=False)
             print "Parse result['destination_key']:", parseResult['destination_key']
@@ -78,6 +81,7 @@ class Basic(unittest.TestCase):
                 print "summaryResult:", h2o.dump_json(summaryResult)
 
             summaries = summaryResult['summaries']
+            scipyCol = 0
             for column in summaries:
                 colname = column['colname']
                 coltype = column['type']
@@ -102,8 +106,8 @@ class Basic(unittest.TestCase):
                     self.assertIn(int(b), legalValues)
                 self.assertEqual(len(hbrk), len(legalValues))
 
-                self.assertAlmostEqual(hcnt[0], 0.5 * rowCount, delta=.01*rowCount)
-                self.assertAlmostEqual(hcnt[1], 0.5 * rowCount, delta=.01*rowCount)
+                # self.assertAlmostEqual(hcnt[0], 0.5 * rowCount, delta=.01*rowCount)
+                # self.assertAlmostEqual(hcnt[1], 0.5 * rowCount, delta=.01*rowCount)
 
                 print "pctile:", pctile
                 print "maxs:", maxs
@@ -127,6 +131,22 @@ class Basic(unittest.TestCase):
                     eV = [e+1 for e in eV1]
                 else:
                     raise Exception("Test doesn't have the expected percentileValues for expectedMin: %s" % expectedMin)
+
+                if colname!='':
+                    # don't do for enums
+                    # also get the median with a sort (h2o_summ.percentileOnSortedlist()
+                    h2o_summ.quantile_comparisons(
+                        csvPathnameFull,
+                        skipHeader=True,
+                        col=scipyCol,
+                        datatype='float',
+                        quantile=0.5 if DO_MEDIAN else 0.999,
+                        h2oSummary2=pctile[5 if DO_MEDIAN else 10],
+                        # h2oQuantilesApprox=qresult_single,
+                        # h2oQuantilesExact=qresult,
+                        )
+
+                scipyCol += 1
 
 
 if __name__ == '__main__':

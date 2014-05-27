@@ -68,7 +68,10 @@ class Basic(unittest.TestCase):
 
         print "GBM 'errsLast'", errsLast
         if DO_CLASSIFICATION:
-            cm = gbmTrainView['gbm_model']['cms'][-1] # use the last one
+            cms = gbmTrainView['gbm_model']['cms']
+            cm = cms[-1]['_arr'] # use the last one
+            print "GBM cms[-1]['_predErr']:", cms[-1]['_predErr']
+            print "GBM cms[-1]['_classErr']:", cms[-1]['_classErr']
             pctWrongTrain = h2o_gbm.pp_cm_summary(cm);
             print "\nTrain\n==========\n"
             print h2o_gbm.pp_cm(cm)

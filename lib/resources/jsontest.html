@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+    <head>
+        <title>TODO supply a title</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="jquery-1.11.0.min.js"></script>
+    </head>
+    <body>
+        <script>
+            $(document).ready(function() {
+                //var data = {"uris" : [ "countrylist.csv" ]}
+                var data = new Object();
+               	data.uris = 'countrylist.csv'; 
+                $.ajax({
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {parser_config:data},
+                    //data: {uris:"countrylist.csv"},
+                    url: 'http://localhost:54321/v2/parse_preview.json',
+                    success: function(json) {
+                        var output = "";
+                        output = JSON.stringify(json);
+                        $('#content').html('<p>LS: '+output+'</p>');
+                    }
+                })
+            })
+        </script>
+        <div id="content">TODO write content</div>
+    </body>
+</html>

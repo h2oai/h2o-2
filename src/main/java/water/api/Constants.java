@@ -47,9 +47,12 @@ public class Constants extends Iced {
   public static final String CLOUD_HEALTH          = "cloud_healthy";
   public static final String CLOUD_NAME            = "cloud_name";
   public static final String CLOUD_SIZE            = "cloud_size";
+  public static final String CLOUD_UPTIME_MILLIS   = "cloud_uptime_millis";
   public static final String CLUSTERS              = "clusters";
   public static final String COEFFICIENTS          = "coefficients";
+  public static final String COL_INDEX             = "col_index";
   public static final String COLS                  = "cols";
+  public static final String COLUMN_NAME           = "col_name";
   public static final String COLUMNS_DISPLAY       = "max_column_display";
   public static final String CONSENSUS             = "consensus";
   public static final String CONTENTS              = "contents";
@@ -70,6 +73,7 @@ public class Constants extends Iced {
   public static final String FAMILY                = "family";
   public static final String FEATURES              = "features";
   public static final String FILE                  = "file";
+  public static final String FILENAME              = "filename";
   public static final String FILES                 = "files";
   public static final String FILTER                = "filter";
   public static final String FIRST_CHUNK           = "first_chunk";
@@ -153,6 +157,7 @@ public class Constants extends Iced {
   public static final String SENT_ROWS             = "sent_rows";
   public static final String SIZE                  = "size";
   public static final String SOURCE_KEY            = "source_key";
+  public static final String URIS                  = "uris";
   public static final String STACK_TRACES          = "stack_traces";
   public static final String START_TIME            = "start_time";
   public static final String STATUS                = "status";
@@ -166,6 +171,7 @@ public class Constants extends Iced {
   public static final String TCPS_DUTY             = "tcp_duty_cycle";
   public static final String TIME                  = "time";
   public static final String TOT_MEM               = "tot_mem" + Suffixes.BYTES;
+  public static final String TO_ENUM               = "to_enum";
   public static final String TREE_COUNT            = "number_built";
   public static final String TREE_DEPTH            = "depth";
   public static final String TREE_LEAVES           = "leaves";

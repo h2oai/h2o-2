@@ -4,7 +4,8 @@ Model
 
 
 For detailed information on the specifications of each model, please
-see Data Science. Tutorials for each algorithm are available in Tutorial
+see :ref:`GLMmath`. Tutorials for each algorithm, and model
+specificaiton through R, are available in Tutorial
 Documentation. 
 
 In general, a model of the user's choosing can be specified either by

@@ -3,6 +3,7 @@ package water.parser;
 import java.util.*;
 
 import water.*;
+import water.fvec.ParseTime;
 
 public class CsvParser extends CustomParser {
 
@@ -578,11 +579,14 @@ NEXT_CHAR:
   }
 
   private static boolean allStrings(String [] line){
-    for( String s : line )
+    ValueString str = new ValueString();
+    for( String s : line ) {
       try {
         Double.parseDouble(s);
         return false;       // Number in 1st row guesses: No Column Header
       } catch (NumberFormatException e) { /*Pass - determining if number is possible*/ }
+      if( ParseTime.attemptTimeParse(str.setTo(s)) != Long.MIN_VALUE ) return false;
+    }
     return true;
   }
   // simple heuristic to determine if we have headers:
@@ -594,20 +598,34 @@ NEXT_CHAR:
   private static byte guessSeparator(String l1, String l2, int single_quote){
     int[] s1 = determineSeparatorCounts(l1, single_quote);
     int[] s2 = determineSeparatorCounts(l2, single_quote);
-    // now we have the counts - if both lines have the same number of separators
-    // the we assume it is the separator. Separators are ordered by their
-    // likelyhoods. If no separators have same counts, space will be used as the
-    // default one
-    for (int i = 0; i < s1.length; ++i)
-      if (((s1[i] == s2[i]) && (s1[i] != 0)) || (i == separators.length-1)) {
+    // Now we have the counts - if both lines have the same number of separators
+    // the we assume it is the separator.  Separators are ordered by their
+    // likelyhoods.  
+    int max = 0;
+    for( int i = 0; i < s1.length; ++i ) {
+      if( s1[i] == 0 ) continue;   // Separator does not appear; ignore it
+      if( s1[max] < s1[i] ) max=i; // Largest count sep on 1st line
+      if( s1[i] == s2[i] ) {       // Sep counts are equal?
         try {
           String[] t1 = determineTokens(l1, separators[i], single_quote);
           String[] t2 = determineTokens(l2, separators[i], single_quote);
-          if (t1.length == 0 || t1.length != t2.length)
-            continue;
+          if( t1.length != s1[i]+1 || t2.length != s2[i]+1 )
+            continue;           // Token parsing fails
           return separators[i];
         } catch (Exception e) { /*pass; try another parse attempt*/ }
       }
+    }
+    // No sep's appeared, or no sep's had equal counts on lines 1 & 2.  If no
+    // separators have same counts, the largest one will be used as the default
+    // one.  If there's no largest one, space will be used.
+    if( s1[max]==0 ) max=separators.length-1; // Try last separator (space)
+    if( s1[max]!=0 ) {
+      String[] t1 = determineTokens(l1, separators[max], single_quote);
+      String[] t2 = determineTokens(l2, separators[max], single_quote);
+      if( t1.length == s1[max]+1 && t2.length == s2[max]+1 )
+        return separators[max];
+    }
+
     return AUTO_SEP;
   }
 
@@ -615,9 +633,15 @@ NEXT_CHAR:
   private static int guessNcols(ParserSetup setup,String [][] data){
     int res = data[0].length;
     if(setup._header)return res;
-    boolean samelen = true;
-    for(String [] s:data) samelen &= (s.length == res);
-    if(samelen)return res;
+    boolean samelen = true;     // True if all are same length
+    boolean longest0 = true;    // True if no line is longer than 1st line
+    for(String [] s:data) {
+      samelen  &= (s.length == res);
+      if( s.length > res ) longest0=false;
+    }
+    if(samelen)return res;      // All same length, take it
+    if( longest0 ) return res;  // 1st line is longer than all the rest; take it
+
     // we don't have lines of same length, pick the most common length
     HashMap<Integer, Integer> lengths = new HashMap<Integer, Integer>();
     for(String [] s:data){

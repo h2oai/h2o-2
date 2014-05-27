@@ -26,7 +26,10 @@
 	<header>
 
 		<hgroup>
-			<h2>{{ ParseSettingsService.dst }}<small>Destination key</small></h2>
+			<h2>
+				<span>{{ ParseSettingsService.dst }}</span>
+				<small>Destination key</small>
+			</h2>
 			<h1>Preview</h1>
 		</hgroup>
 
@@ -55,9 +58,12 @@
 					<li>
 						<select name="file_with_header"
 								chosen
+								allow-single-deselect="true"
+								no-results-text="'Use the button on the right to add files'"
 								data-placeholder="Select file with header"
 								ng-model="ParseSettingsService.headerFile"
-								ng-options="f.key as (f.lastPathComponent() | pathEllipsis:35) for f in ParseSettingsService.files | filter:{excluded:false}">
+								ng-options="f.key as (f.lastPathComponent() | pathEllipsis:35) for f in ParseSettingsService.additionalHeaderFiles"
+								ng-change="didChangeHeaderFile()">
 						</select>
 
 						<a  class="button overlay-File_upload_open"
@@ -97,35 +103,39 @@
 												<!-- 'Header options' - skip header -->
 												<label id="chk-Skip_header">
 													<input type="checkbox" name="skip_header"
-													       ng-model="ParseSettingsService.skipHeader"> Skip header
+													       ng-model="ParseSettingsService.skipHeader"
+													       ng-change="didChangeSkipHeader()"> Skip header
 												</label><!-- /end 'Header options' - skip header -->
 											</td>
-											<td>Header separator</td>
-											<td>
+											<td ng-show="ParseSettingsService.headerFile">Header separator</td>
+											<td ng-show="ParseSettingsService.headerFile">
 												<label>
 													<autoradio model="ParseSettingsService.headerSeparator"
 															   checked-if-value="','"
-															   on-selection-set-value="','" />
+															   on-selection-set-value="','"
+															   ng-change="markColumnsToBeOverwritten()"/>
 													Comma
 												</label>
 											</td>
-											<td>
+											<td ng-show="ParseSettingsService.headerFile">
 												<label>
 													<autoradio model="ParseSettingsService.headerSeparator"
 															   checked-if-value="';'"
-															   on-selection-set-value="';'" />
+															   on-selection-set-value="';'"
+															   ng-change="markColumnsToBeOverwritten()"/>
 													Semicolon
 												</label>
 											</td>
-											<td>
+											<td ng-show="ParseSettingsService.headerFile">
 												<label>
 													<autoradio model="ParseSettingsService.headerSeparator"
 															   checked-if-value="'\t'"
-															   on-selection-set-value="'\t'" />
+															   on-selection-set-value="'\t'"
+															   ng-change="markColumnsToBeOverwritten()"/>
 													Tab
 												</label>
 											</td>
-											<td>
+											<td ng-show="ParseSettingsService.headerFile">
 													<autoradio model="ParseSettingsService.headerSeparator"
 															   checked-if-value-not-in="[',',';','\t']" />
 													<select data-placeholder="other"
@@ -133,11 +143,13 @@
 															disable-search="true"
 															width="'140px'"
 															ng-model="ParseSettingsService.headerSeparator"
-															ng-options="s.separator as s.displayName for s in ParseSettingsService.SEPARATORS">
+															ng-options="s.separator as s.displayName for s in ParseSettingsService.SEPARATORS"
+															ng-change="markColumnsToBeOverwritten()">
 												<span ng-hide="ParseSettingsService.headerSeparator == 'RESET'">
 													or
 													<input type="text" placeholder="Type other separator here"
-													       ng-model="ParseSettingsService.headerSeparator">
+													       ng-model="ParseSettingsService.headerSeparator"
+													       ng-on-blur-if-dirty="markColumnsToBeOverwritten()">
 												</span>
 											</td>
 										</tbody>

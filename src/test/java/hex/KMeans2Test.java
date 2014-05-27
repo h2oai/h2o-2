@@ -36,7 +36,7 @@ public class KMeans2Test extends TestUtil {
       algo.max_iter = 100;
       algo.seed = SEED;
       algo.invoke();
-      KMeans2Model res = UKV.get(algo.destination_key);
+      KMeans2Model res = UKV.get(algo.dest());
       double[][] clusters = res.centers;
       Assert.assertEquals(1.125, clusters[0][0], 0.000001);
       Assert.assertEquals(4.65, clusters[1][0], 0.000001);
@@ -69,7 +69,7 @@ public class KMeans2Test extends TestUtil {
       algo.seed = SEED;
       Timer t = new Timer();
       algo.invoke();
-      KMeans2Model res = UKV.get(algo.destination_key);
+      KMeans2Model res = UKV.get(algo.dest());
       Log.debug(Sys.KMEAN, " testGaussian rows:" + rows + ", ms:" + t);
       double[][] clusters = res.centers;
 
@@ -137,7 +137,7 @@ public class KMeans2Test extends TestUtil {
     Timer t = new Timer();
     algo.invoke();
     Log.debug(Sys.KMEAN, "ms= " + t);
-    KMeans2Model res = UKV.get(algo.destination_key);
+    KMeans2Model res = UKV.get(algo.dest());
     Assert.assertEquals(algo.k, res.centers.length);
     frame.delete();
     res.delete();
@@ -155,7 +155,7 @@ public class KMeans2Test extends TestUtil {
     Timer t = new Timer();
     algo.invoke();
     Log.debug(Sys.KMEAN, "ms= " + t);
-    KMeans2Model res = UKV.get(algo.destination_key);
+    KMeans2Model res = UKV.get(algo.dest());
     Assert.assertEquals(algo.k, res.centers.length);
     frame.delete();
     res.delete();

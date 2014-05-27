@@ -21,6 +21,8 @@ function() {
     doSelect()
 }
 
+toDouble <- function(r) ifelse(is.integer(r), as.numeric(r), r)
+
 test.slice.star <- function(conn) {
   dataSet <- doSelect()
   dataName <- names(dataSet)
@@ -51,11 +53,18 @@ test.slice.star <- function(conn) {
   slicedStarFive <- h2o.assign(slicedStarFive, "slicedStarFive.hex")
 
   Log.info("Orignal sliced: ")
-  print(head(as.data.frame(sliced)))
+  df_head <- as.data.frame(sliced)
+  df_head <- data.frame(apply(df_head, 1:2, toDouble))
+  print(head(df_head))
 
   Log.info("Sliced * 5: ")
-  print(head(as.data.frame(slicedStarFive)))
-  expect_that(as.data.frame(slicedStarFive), equals(5 *  as.data.frame(sliced)))
+  df_slicedStarFive <- as.data.frame(slicedStarFive)
+  df_slicedStarFive <- data.frame(apply(df_slicedStarFive, 1:2, toDouble))
+  df_sliced <- as.data.frame(sliced)
+  df_sliced <- data.frame(apply(df_sliced, 1:2, toDouble))
+  print(head(df_slicedStarFive))
+
+  expect_that(df_slicedStarFive, equals(5 * df_sliced  ))
 
   Log.info("Checking left and right: ")
   slicedStarFive <- sliced * 5
@@ -66,7 +75,13 @@ test.slice.star <- function(conn) {
 
   Log.info("5 * sliced: ")
   print(head(fiveStarSliced))
-  expect_that(as.data.frame(slicedStarFive), equals(as.data.frame(fiveStarSliced)))
+
+  df_slicedStarFive <- as.data.frame(slicedStarFive)
+  df_slicedStarFive <- data.frame(apply(df_slicedStarFive, 1:2, toDouble))
+  df_sliced <- as.data.frame(fiveStarSliced)
+  df_fiveStarSliced <- data.frame(apply(df_sliced, 1:2, toDouble))
+
+  expect_that(df_slicedStarFive, equals(df_fiveStarSliced))
 
 
   Log.info("Checking the variation of H2OParsedData * H2OParsedData")
@@ -77,8 +92,10 @@ test.slice.star <- function(conn) {
   print(head(hexStarHex))
  
   Log.info("as.data.frame(fiveStarSliced) * as.data.frame(fiveStarSliced)")
-  print(head(as.data.frame(fiveStarSliced)*as.data.frame(fiveStarSliced)))
-  expect_that(as.data.frame(hexStarHex), equals(as.data.frame(fiveStarSliced)*as.data.frame(fiveStarSliced)))
+  
+
+  print(head(df_fiveStarSliced*df_fiveStarSliced))
+  expect_that(as.data.frame(hexStarHex), equals(df_fiveStarSliced*df_fiveStarSliced))
 
   testEnd()
 }

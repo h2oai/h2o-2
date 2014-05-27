@@ -8,7 +8,6 @@ import org.junit.Test;
 import water.JUnitRunnerDebug;
 import water.Key;
 import water.TestUtil;
-import water.UKV;
 import water.fvec.Frame;
 import water.fvec.NFSFileVec;
 import water.fvec.ParseDataset2;
@@ -29,44 +28,45 @@ public class NeuralNetSpiralsTest extends TestUtil {
     Vec labels = frame.vecs()[frame.vecs().length - 1];
 
     NeuralNet p = new NeuralNet();
-    p.warmup_samples = 1000;
+    p.warmup_samples = 0;
     p.seed = 7401699394609084302l;
     p.rate = 0.007;
     p.rate_annealing = 0;
-    p.epochs = 20000;
+    p.epochs = 11000;
     p.activation = NeuralNet.Activation.Tanh;
     p.max_w2 = Double.MAX_VALUE;
     p.l1 = 0;
     p.l2 = 0;
+    p.hidden = new int[]{100};
     p.momentum_start = 0;
     p.momentum_ramp = 0;
     p.momentum_stable = 0;
+    p.classification = true;
+    p.diagnostics = true;
+    p.activation = NeuralNet.Activation.Tanh;
     p.initial_weight_distribution = NeuralNet.InitialWeightDistribution.Normal;
     p.initial_weight_scale = 2.5;
+    p.loss = NeuralNet.Loss.CrossEntropy;
 
     Layer[] ls = new Layer[3];
     VecsInput input = new VecsInput(data, null);
-    VecSoftmax output = new VecSoftmax(labels, null, NeuralNet.Loss.CrossEntropy);
+    VecSoftmax output = new VecSoftmax(labels, null);
     ls[0] = input;
-    ls[1] = new Layer.Tanh(100);
+    ls[1] = new Layer.Tanh(p.hidden[0]);
     ls[2] = output;
     for( int i = 0; i < ls.length; i++ )
       ls[i].init(ls, i, p);
 
-//    Trainer.Direct trainer = new Trainer.Direct(ls, p.epochs, null);
-//    trainer.run();
-    Trainer.Threaded trainer = new Trainer.Threaded(ls, p.epochs, null, -1);
-    trainer.start();
-    trainer.join();
+    Trainer.Direct trainer = new Trainer.Direct(ls, p.epochs, null);
+    trainer.run();
 
-    // Check that classification error is 0
+    // Check that training classification error is 0
     NeuralNet.Errors train = NeuralNet.eval(ls, 0, null);
     if (train.classification != 0) {
       Assert.fail("Classification error is not 0, but " + train.classification);
     }
 
     frame.delete();
-    for( int i = 0; i < ls.length; i++ )
-      ls[i].close();
+    for (Layer l : ls) l.close();
   }
 }

@@ -12,7 +12,7 @@
 
 			<!-- Hex file name -->
 			<h2>
-				{{ ParseSettingsService.dst }}
+				<span>{{ ParseSettingsService.dst }}</span>
 				<small>Destination key</small>
 			</h2>
 			<!-- /end Hex file name -->
@@ -169,7 +169,10 @@
                                     ng-show="ErrorAndStatusService.isLoading('ParseService')">
                     </spinneroverlay>
 					<!-- [Notice] "Next" button -->
-					<!--<a class="button action next" href="#" title="Next">Next <i class="icon-arrow"></i></a>-->
+					<a class="button action next" 
+						ng-if="ParseJobStatusDataService.isComplete() && !ParseJobStatusDataService.hasErrors()" 
+						ng-click="goToInspect()"
+						title="Next">Next <i class="icon-arrow"></i></a>
 
 					<!-- [Notice] "Parse" button -->
 					<!--<a class="button action parse" href="#" title="Parse">Parse <i class="icon-parse"></i></a>-->

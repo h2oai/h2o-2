@@ -173,7 +173,7 @@ public class DRFTest extends TestUtil {
       // Get the model
       model = UKV.get(drf.dest());
       // And compare CMs
-      assertCM(expCM, model.cms[model.cms.length-1]);
+      assertCM(expCM, model.cms[model.cms.length-1]._arr);
       Assert.assertEquals("Number of trees differs!", ntree, model.errs.length-1);
       String[] cmDom = model._domains[model._domains.length-1];
       Assert.assertArrayEquals("CM domain differs!", expRespDom, cmDom);

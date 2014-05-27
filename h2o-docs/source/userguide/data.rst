@@ -1,3 +1,5 @@
+.. _Data:
+
 Data
 =====
 
@@ -34,24 +36,24 @@ menu **Data**, and select the appropriate option. Options and their uses are des
 
  **Import S3:** 
 
-   In the field marked Bucket give the path to an existing AWS bucket where data 
-   are stored. 
+   In the field marked Bucket give the path to an existing AWS bucket
+   where data are stored. 
 
  **Upload:**
 
     Click on the **Select File** button. A menu of files on the 
     computer or working directory will appear. Select the appropriate
-    file, and click on **Choose.** When returned to the H\ :sub:`2`\ O screen press
-    **Upload.**
+    file, and click on **Choose.** When returned to the H\ :sub:`2`\ O
+    screen press **Upload.**
 
  
 
 Parsing Data
 ------------
 
-Once data are ingested, they are available to H\ :sub:`2`\ O, but are not yet in
-a format that H\ :sub:`2`\ O can process. Converting the data to an H\ :sub:`2`\ O usable
-format is called parsing. 
+Once data are ingested, they are available to H\ :sub:`2`\ O, but are
+not yet in a format that H\ :sub:`2`\ O can process. Converting the data to 
+an H\ :sub:`2`\ O usable format is called parsing. 
 
 After ingestion users are directed to a **Request Parse** screen. To
 parse data users can leave most options in default. For example, H\ :sub:`2`\ O
@@ -98,17 +100,23 @@ menu.
  **View All:** 
 
    Used to view all data sets that have been inhaled or
-   parsed into H\ :sub:`2`\ O. To remove a dataset from H\ :sub:`2`\ O click on the red X next
-   to the data set key.  
+   parsed into H\ :sub:`2`\ O. To remove a dataset from H\ :sub:`2`\ O
+   click on the red X next to the data set key.  
  
  **Summary:** 
 
    Used to display descriptive statistics and histograms of
    any columns within a specific data set. Specify data by the
    associated .hex key in the Key field, and select variables of
-   interest from the resulting list of variables. 
+   interest from the resulting list of variables. Summary can be found
+   under the **Model** drop down menu.
 
- **Console:** 
 
-   Data can be transformed and managed through the H\ :sub:`2`\ O console. The
-   console can be found under the **Model** drop down menu. 
+
+
+Data Manipulation
+------------------
+
+Users who wish to manipulate their data after it has been parsed into
+H\ :sub:`2`\ O have a set of tools to do via  H\ :sub:`2`\ O + R. 
+To learn more about data manipulation refer to :ref:`R_tutorial`. 

@@ -2,16 +2,15 @@ References
 ==========
 
 Prior publications and useful reading relevant to analysis in general
-and for each algorithm can be found at the references listed below. 
+and for each algorithm can be found in the references listed below. 
 
-Understanding the algorithms of H2O is an integral part of using the
+Understanding the algorithms of  H\ :sub:`2`\ O is an integral part of using the
 platform correctly, and getting the most of analysis. 
 
 Below are the citations of seminal articles, and articles
-demonstrating rigorous application of the algorithms of H2O. Included
-are references for algos currently in the works. This list is not meant
-to be exhaustive, but rather to provide an abbreviated syllabus to help
-develop a strong understanding. 
+demonstrating rigorous application of the algorithms of H\ :sub:`2`\ O
+This list is not meant to be exhaustive, but rather to provide an
+abbreviated syllabus to help develop a strong understanding. 
 
 Recommended Reading
 -------------------
@@ -21,8 +20,8 @@ Elements of Statistical Learning.
 Vol.1. N.p.: Springer New York, 2001. 
 http://www.stanford.edu/~hastie/local.ftp/Springer/OLD//ESLII_print4.pdf
 
-Glm
----
+GLM
+------
 
 Breslow, N E. "Generalized Linear Models: Checking Assumptions and
 Strengthening Conclusions." Statistica Applicata 8 (1996): 23-41.
@@ -47,7 +46,7 @@ Examples." Technometrics 19.4 (1977): 415-428.
 
 
 Poisson
-------- 
+---------- 
 
 Frome, E L. "The Analysis of Rates Using Poisson Regression Models." 
 Biometrics (1983): 665-674.

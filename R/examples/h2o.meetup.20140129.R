@@ -7,7 +7,7 @@ print(sprintf('h2o version: %s\n', packageVersion('h2o')))
 #Connecting to h2o
 myIP = '127.0.0.1'
 myPort = 54321
-loc <- h2o.init(ip=myIP, port=myPort, startH2O=T, silentUpgrade=F, promptUpgrade=T, Xmx='4g')
+loc <- h2o.init(ip=myIP, port=myPort, startH2O=T, Xmx='4g')
 
 #Parsing in the data file
 #air <- h2o.importFile(loc, 'hdfs://192.168.1.161/datasets/airlines_all.csv')

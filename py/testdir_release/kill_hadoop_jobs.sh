@@ -14,7 +14,7 @@ do
     # ignore these kind of lines
     # 0 jobs currently running
     # JobId   State   StartTime   UserName    Priority    SchedulingInfo
-    if [[ ("$jobid" != "JobId") && ("$state" != "jobs") ]]
+    if [[ ("$jobid" != "JobId") && ("$state" != "jobs") && ("$jobid" != "Total") ]]
     then
         echo "hadoop job -kill $jobid"
         $REMOTE_SSH_USER "hadoop job -kill $jobid"

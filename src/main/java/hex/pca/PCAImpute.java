@@ -21,10 +21,10 @@ public class PCAImpute extends FrameJob {
   @API(help = "Scale columns by their standard deviations", filter = Default.class)
   boolean scale = true;
 
-  @Override protected Status exec() {
+  @Override protected JobState execImpl() {
     Frame fr = source;
     new Frame(destination_key,fr._names.clone(),fr.vecs().clone()).delete_and_lock(null).unlock(null);
-    return Status.Done;
+    return JobState.DONE;
   }
 
   @Override protected void init() {

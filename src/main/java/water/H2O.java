@@ -29,6 +29,7 @@ public final class H2O {
   public static volatile ApiIpPortWatchdogThread apiIpPortWatchdog;
 
   public static String VERSION = "(unknown)";
+  public static long START_TIME_MILLIS = -1;
 
   // User name for this Cloud (either the username or the argument for the option -name)
   public static String NAME;
@@ -737,22 +738,11 @@ public final class H2O {
       try {
         callback((T)caller);
       } catch(Throwable ex){
+        ex.printStackTrace();
         completeExceptionally(ex);
       }
     }
     public abstract void callback(T t);
-  }
-
-  public static class JobCompleter extends H2OCountedCompleter{
-    final Job _job;
-    public JobCompleter(Job j){this(j,null);}
-    public JobCompleter(Job j,H2OCountedCompleter cmp){super(cmp); _job = j;}
-    @Override public void compute2(){throw new UnsupportedOperationException();}
-    @Override public void onCompletion(CountedCompleter caller){_job.remove();}
-    @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter c){
-      if(!(ex instanceof JobCancelledException))_job.cancel(ex);
-      return true;
-    }
   }
 
   public static class H2OEmptyCompleter extends H2OCountedCompleter{
@@ -926,6 +916,7 @@ public final class H2O {
     IS_SYSTEM_RUNNING = true;
 
     VERSION = getVersion();   // Pick this up from build-specific info.
+    START_TIME_MILLIS = System.currentTimeMillis();
 
     // Parse args
     Arguments arguments = new Arguments(args);
@@ -985,9 +976,6 @@ public final class H2O {
   /** Starts the local k-v store.
 * Initializes the local k-v store, local node and the local cloud with itself
 * as the only member.
-*
-* @param args Command line arguments
-* @return Unprocessed command line arguments for further processing.
 */
   private static void startLocalNode() {
     // Figure self out; this is surprisingly hard
@@ -1121,7 +1109,17 @@ public final class H2O {
         // Enabling SO_REUSEADDR prior to binding the socket using bind(SocketAddress)
         // allows the socket to be bound even though a previous connection is in a timeout state.
         // cnc: this is busted on windows.  Back to the old code.
-        _apiSocket = new ServerSocket(API_PORT);
+
+        // If the user specified the -ip flag, honor it for the Web UI interface bind.
+        // Otherwise bind to all interfaces.
+        if (OPT_ARGS.ip != null) {
+          int defaultBacklog = -1;
+          _apiSocket = new ServerSocket(API_PORT, defaultBacklog, SELF_ADDRESS);
+        }
+        else {
+          _apiSocket = new ServerSocket(API_PORT);
+        }
+
         _udpSocket = DatagramChannel.open();
         _udpSocket.socket().setReuseAddress(true);
         _udpSocket.socket().bind(new InetSocketAddress(SELF_ADDRESS, UDP_PORT));
@@ -1140,7 +1138,7 @@ public final class H2O {
       API_PORT += 2;
     }
     SELF = H2ONode.self(SELF_ADDRESS);
-    Log.info("Internal communication uses port: ",UDP_PORT,"\nListening for HTTP and REST traffic on  http:/",SELF_ADDRESS,":"+_apiSocket.getLocalPort()+"/");
+    Log.info("Internal communication uses port: ",UDP_PORT,"\nListening for HTTP and REST traffic on  http://",SELF_ADDRESS.getHostAddress(),":"+_apiSocket.getLocalPort()+"/");
 
     String embeddedConfigFlatfile = null;
     AbstractEmbeddedH2OConfig ec = getEmbeddedH2OConfig();
@@ -1666,7 +1664,7 @@ public final class H2O {
 
     // Timing things that can be tuned if needed.
     final private int maxFailureSeconds = 180;
-    final private int maxConsecutiveFailures = 6;
+    final private int maxConsecutiveFailures = 9999999;
     final private int checkIntervalSeconds = 10;
     final private int timeoutSeconds = 30;
     final private int millisPerSecond = 1000;
@@ -1744,33 +1742,22 @@ public final class H2O {
     private void check() {
       final Socket s = new Socket();
       final InetSocketAddress apiIpPort = new InetSocketAddress(H2O.SELF_ADDRESS, H2O.API_PORT);
-
+      Exception e=null;
+      String msg=null;
       try {
         s.connect (apiIpPort, timeoutMillis);
         reset();
       }
-      catch (SocketTimeoutException e) {
-        if (gracefulShutdownInitiated) { return; }
-        Log.err(threadName + ": Timed out trying to connect to REST API IP and Port (" +
-                H2O.SELF_ADDRESS + ":" + H2O.API_PORT + ", " + timeoutMillis + " ms)");
-        failed();
-      }
-      catch (IOException e) {
-        if (gracefulShutdownInitiated) { return; }
-        Log.err(threadName + ": Failed to connect to REST API IP and Port (" +
-                H2O.SELF_ADDRESS + ":" + H2O.API_PORT + ")");
-        Log.err(threadName + ": " + e.getMessage());
-        failed();
-      }
-      catch (Exception e) {
-        if (gracefulShutdownInitiated) { return; }
-        Log.err(threadName + ": Failed unexpectedly trying to connect to REST API IP and Port (" +
-                H2O.SELF_ADDRESS + ":" + H2O.API_PORT + ")",
-                e);
-        failed();
-      }
+      catch (SocketTimeoutException se) { e= se; msg=": Timed out"; }
+      catch (IOException           ioe) { e=ioe; msg=": Failed"; }
+      catch (Exception              ee) { e= ee; msg=": Failed unexpectedly"; }
       finally {
         if (gracefulShutdownInitiated) { return; }
+        if( e != null ) {
+          Log.err(threadName+msg+" trying to connect to REST API IP and Port (" +
+                  H2O.SELF_ADDRESS + ":" + H2O.API_PORT + ", " + timeoutMillis + " ms)");
+          fail();
+        }
         testForFailureShutdown();
         try { s.close(); } catch (Exception _) {}
       }

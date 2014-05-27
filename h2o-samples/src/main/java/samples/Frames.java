@@ -20,7 +20,7 @@ public class Frames extends Job {
   }
 
   @Override
-  protected Status exec() {
+  protected JobState execImpl() {
     // From file
     parse(new File(VM.h2oFolder(), "smalldata/iris/iris.csv"));
 
@@ -35,7 +35,7 @@ public class Frames extends Job {
     Key key = Key.make("MyFrame");
     UKV.put(key, frame);
 
-    return Status.Done;
+    return JobState.DONE;
   }
 
   /**

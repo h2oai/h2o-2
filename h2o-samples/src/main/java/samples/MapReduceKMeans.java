@@ -16,7 +16,7 @@ public class MapReduceKMeans extends Job {
     samples.launchers.CloudProcess.launch(MapReduceKMeans.class, 2);
   }
 
-  @Override protected Status exec() {
+  @Override protected JobState execImpl() {
     // Load and parse a file. Data is distributed to other nodes in a round-robin way
     Key file = NFSFileVec.make(new File("../lib/resources/datasets/gaussian.csv"));
     Frame frame = ParseDataset2.parse(Key.make("test"), new Key[] { file });
@@ -62,7 +62,7 @@ public class MapReduceKMeans extends Job {
         System.out.print(df.format(clusters[c][v]) + ", ");
       System.out.println("");
     }
-    return Status.Done;
+    return JobState.DONE;
   }
 
   /**

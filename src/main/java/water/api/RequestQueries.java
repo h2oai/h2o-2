@@ -33,6 +33,7 @@ public class RequestQueries extends RequestArguments {
    * @return
    */
   protected final String checkArguments(Properties args, RequestType type) {
+    System.out.println("args: "+args.entrySet().toString());
     // Why the following lines duplicate lines from Request#92 - handling query?
     // reset all arguments
     for (Argument arg: _arguments)

@@ -47,8 +47,14 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
         else:
             cms = rfv['drf_model']['cms']
             print "number of cms:", len(cms)
-            print "cms[0]:", cms[-1]
-            cm = cms[-1] # take the last one
+            print "FIX! need to add reporting of h2o's _perr per class error"
+            # FIX! what if regression. is rf only classification?
+            print "cms[-1]['_arr']:", cms[-1]['_arr']
+            print "cms[-1]['_predErr']:", cms[-1]['_predErr']
+            print "cms[-1]['_classErr']:", cms[-1]['_classErr']
+            cm = cms[-1]['_arr'] # take the last one
+            # print "cms[-1]:", cms[-1]
+            # cm = cms[-1] # take the last one
         scoresList = cm
 
         if not checkScoringOnly:

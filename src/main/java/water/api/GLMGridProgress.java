@@ -75,7 +75,7 @@ public class GLMGridProgress extends Request {
 
     Response r;
     Key job = _job.value();
-    if( job != null && DKV.get(job) != null )
+    if( job != null && Job.isRunning(job) )
       r = Response.poll(response, models.progress());
     else
       r = Response.done(response);

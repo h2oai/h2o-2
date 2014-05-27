@@ -1,17 +1,22 @@
 package water;
 
-import static water.util.Utils.contains;
-import hex.ConfusionMatrix;
-import hex.VariableImportance;
-
-import java.util.*;
-
+import hex.*;
 import javassist.*;
 import water.api.DocGen;
 import water.api.Request.API;
-import water.fvec.*;
+import water.fvec.Chunk;
+import water.fvec.Frame;
+import water.fvec.TransfVec;
+import water.fvec.Vec;
 import water.util.*;
 import water.util.Log.Tag.Sys;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashMap;
+
+import static water.util.Utils.contains;
 
 /**
  * A Model models reality (hopefully).
@@ -41,14 +46,34 @@ public abstract class Model extends Lockable<Model> {
   @API(help="Column names used to build the model")
   public final String _domains[][];
 
+  @API(help = "Relative class distribution factors in original data")
+  final protected float[] _priorClassDist;
+  @API(help = "Relative class distribution factors used for model building")
+  protected float[] _modelClassDist;
+  public void setModelClassDistribution(float[] classdist) {
+    _modelClassDist = classdist.clone();
+  }
+
+
   /** Full constructor from frame: Strips out the Vecs to just the names needed
    *  to match columns later for future datasets.  */
+  public Model( Key selfKey, Key dataKey, Frame fr, float[] priorClassDist ) {
+    this(selfKey,dataKey,fr.names(),fr.domains(),priorClassDist);
+  }
+
+  /** Constructor from frame (without prior class dist): Strips out the Vecs to just the names needed
+   *  to match columns later for future datasets.  */
   public Model( Key selfKey, Key dataKey, Frame fr ) {
-    this(selfKey,dataKey,fr.names(),fr.domains());
+    this(selfKey,dataKey,fr.names(),fr.domains(),null);
+  }
+
+  /** Constructor without prior class distribution */
+  public Model( Key selfKey, Key dataKey, String names[], String domains[][]) {
+    this(selfKey,dataKey,names,domains,null);
   }
 
   /** Full constructor */
-  public Model( Key selfKey, Key dataKey, String names[], String domains[][] ) {
+  public Model( Key selfKey, Key dataKey, String names[], String domains[][], float[] priorClassDist ) {
     super(selfKey);
     if( domains == null ) domains=new String[names.length+1][];
     assert domains.length==names.length;
@@ -57,6 +82,7 @@ public abstract class Model extends Lockable<Model> {
     _dataKey = dataKey;
     _names   = names;
     _domains = domains;
+    _priorClassDist = priorClassDist;
   }
 
   /** Simple shallow copy constructor to a new Key */
@@ -73,33 +99,70 @@ public abstract class Model extends Lockable<Model> {
     String cns[] = classNames();
     return cns==null ? 1 : cns.length;
   }
+  /** Returns number of input features */
+  public int nfeatures() { return _names.length - 1; }
 
   /** For classifiers, confusion matrix on validation set. */
   public ConfusionMatrix cm() { return null; }
   /** Returns mse for validation set. */
   public double mse() { return Double.NaN; }
-  /** Variable importance of individual variables measured by this model. */
-  public VariableImportance varimp() { return null; }
+  /** Variable importance of individual input features measured by this model. */
+  public VarImp varimp() { return null; }
 
-  /** Bulk score the frame 'fr', producing a Frame result; the 1st Vec is the
+  /** Bulk score for given <code>fr<code> frame.
+   * The frame is always adapted to this model.
+   *
+   * @param fr frame to be scored
+   * @return frame holding predicted values
+   *
+   * @see #score(Frame, boolean)
+   */
+  public final Frame score(Frame fr) {
+    return score(fr, true);
+  }
+  /** Bulk score the frame <code>fr</code>, producing a Frame result; the 1st Vec is the
    *  predicted class, the remaining Vecs are the probability distributions.
    *  For Regression (single-class) models, the 1st and only Vec is the
-   *  prediction value.  Also passed in a flag describing how hard we try to
-   *  adapt the frame.  */
-  public Frame score( Frame fr) {
+   *  prediction value.
+   *
+   *  The flat <code>adapt</code>
+   * @param fr frame which should be scored
+   * @param adapt a flag enforcing an adaptation of <code>fr</code> to this model. If flag
+   *        is <code>false</code> scoring code expect that <code>fr</code> is already adapted.
+   * @return a new frame containing a predicted values. For classification it contains a column with
+   *         prediction and distribution for all response classes. For regression it contains only
+   *         one column with predicted values.
+   */
+  public final Frame score(Frame fr, boolean adapt) {
     int ridx = fr.find(_names[_names.length-1]);
-    if(ridx != -1){ // drop the response for scoring!
+    if (ridx != -1) { // drop the response for scoring!
       fr = new Frame(fr);
       fr.remove(ridx);
     }
     // Adapt the Frame layout - returns adapted frame and frame containing only
     // newly created vectors
-    Frame[] adaptFrms = adapt(fr,false);
+    Frame[] adaptFrms = adapt ? adapt(fr,false) : null;
     // Adapted frame containing all columns - mix of original vectors from fr
     // and newly created vectors serving as adaptors
-    Frame adaptFrm = adaptFrms[0];
+    Frame adaptFrm = adapt ? adaptFrms[0] : fr;
     // Contains only newly created vectors. The frame eases deletion of these vectors.
-    Frame onlyAdaptFrm = adaptFrms[1];
+    Frame onlyAdaptFrm = adapt ? adaptFrms[1] : null;
+    // Invoke scoring
+    Frame output = scoreImpl(adaptFrm);
+    // Be nice to DKV and delete vectors which i created :-)
+    if (adapt) onlyAdaptFrm.delete();
+    return output;
+  }
+
+  /** Score already adapted frame.
+   *
+   * @param adaptFrm
+   * @return
+   */
+  private Frame scoreImpl(Frame adaptFrm) {
+    int ridx = adaptFrm.find(_names[_names.length-1]);
+    assert ridx == -1 : "Adapted frame should not contain response in scoring method!";
+    // Create a new vector for response
     Vec v = adaptFrm.anyVec().makeZero();
     // If the model produces a classification/enum, copy the domain into the
     // result vector.
@@ -114,29 +177,19 @@ public abstract class Model extends Lockable<Model> {
     }
     new MRTask2() {
       @Override public void map( Chunk chks[] ) {
-        double tmp [] = new double[_names.length];
-        float preds[] = new float [nclasses()];
-        int   ties [] = new int   [nclasses()];
-        Chunk p = chks[_names.length-1];
-        for( int row=0; row<p._len; row++ ) {
-          float[] out = score0(chks,row,tmp,preds);
-          if( nclasses() > 1 ) {
-            if( Float.isNaN(out[0]) ) p.setNA0(row);
-            else p.set0(row, Model.getPrediction(out, ties, row));
-            for( int c=0; c<nclasses(); c++ )
-              chks[_names.length+c].set0(row,out[c]);
-          } else {
-            p.set0(row,out[0]);
-          }
+        double tmp [] = new double[_names.length-1]; // We do not need the last field representing response
+        float preds[] = new float [nclasses()==1?1:nclasses()+1];
+        int len = chks[0]._len;
+        for( int row=0; row<len; row++ ) {
+          float p[] = score0(chks,row,tmp,preds);
+          for( int c=0; c<preds.length; c++ )
+            chks[_names.length-1+c].set0(row,p[c]);
         }
       }
     }.doAll(adaptFrm);
     // Return just the output columns
     int x=_names.length-1, y=adaptFrm.numCols();
-    Frame output = adaptFrm.extractFrame(x, y);
-    // Delete manually only vectors which i created :-/
-    onlyAdaptFrm.delete();
-    return output;
+    return adaptFrm.extractFrame(x, y);
   }
 
   /** Single row scoring, on a compatible Frame.  */
@@ -153,8 +206,8 @@ public abstract class Model extends Lockable<Model> {
   }
 
   /** Single row scoring, on a compatible set of data, given an adaption vector */
-  public final float[] score( int map[][], double row[], float[] preds ) {
-    int[] colMap = map[map.length-1]; // Column mapping is the final array
+  public final float[] score( int map[][][], double row[], float[] preds ) {
+    /*FIXME final int[][] colMap = map[map.length-1]; // Response column mapping is the last array
     assert colMap.length == _names.length-1 : " "+Arrays.toString(colMap)+" "+Arrays.toString(_names);
     double tmp[] = new double[colMap.length]; // The adapted data
     for( int i=0; i<colMap.length; i++ ) {
@@ -170,12 +223,13 @@ public abstract class Model extends Lockable<Model> {
       }
       tmp[i] = d;
     }
-    return score0(tmp,preds);   // The results.
+    return score0(tmp,preds);   // The results. */
+    return null;
   }
 
-  /** Build an adaption array.  The length is equal to the Model's vector
-   *  length minus the response plus a column mapping.  Each inner array is a
-   *  domain map from data domains to model domains - or null for non-enum
+  /** Build an adaption array.  The length is equal to the Model's vector length.
+   *  Each inner 2D-array is a
+   *  compressed domain map from data domains to model domains - or null for non-enum
    *  columns, or null for identity mappings.  The extra final int[] is the
    *  column mapping itself, mapping from model columns to data columns. or -1
    *  if missing.
@@ -185,18 +239,18 @@ public abstract class Model extends Lockable<Model> {
    *    any enums returned by the model that the data does not have a mapping for.
    *  If 'exact' is false, these situations will use or return NA's instead.
    */
-  private int[][] adapt( String names[], String domains[][], boolean exact) {
+  private int[][][] adapt( String names[], String domains[][], boolean exact) {
     int maplen = names.length;
-    int map[][] = new int[maplen][];
+    int map[][][] = new int[maplen][][];
     // Make sure all are compatible
     for( int c=0; c<names.length;++c) {
             // Now do domain mapping
       String ms[] = _domains[c];  // Model enum
       String ds[] =  domains[c];  // Data  enum
       if( ms == ds ) { // Domains trivially equal?
-      } else if( ms == null && ds != null ) {
+      } else if( ms == null ) {
         throw new IllegalArgumentException("Incompatible column: '" + _names[c] + "', expected (trained on) numeric, was passed a categorical");
-      } else if( ms != null && ds == null ) {
+      } else if( ds == null ) {
         if( exact )
           throw new IllegalArgumentException("Incompatible column: '" + _names[c] + "', expected (trained on) categorical, was passed a numeric");
         throw H2O.unimpl();     // Attempt an asEnum?
@@ -232,16 +286,16 @@ public abstract class Model extends Lockable<Model> {
         frvecs[i] = frvecs[i].toEnum();
         toEnum[i] = true;
       }
-    int map[][] = adapt(names,vfr.domains(),exact);
+    int[][][] map = adapt(names,vfr.domains(),exact);
     assert map.length == names.length; // Be sure that adapt call above do not skip any column
     ArrayList<Vec> avecs = new ArrayList<Vec>(); // adapted vectors
     ArrayList<String> anames = new ArrayList<String>(); // names for adapted vector
 
     for( int c=0; c<map.length; c++ ) // Iterate over columns
       if(map[c] != null) { // Column needs adaptation
-        Vec adaptedVec = null;
+        Vec adaptedVec;
         if (toEnum[c]) { // Vector was flipped to column already, compose transformation
-          adaptedVec = TransfVec.compose( (TransfVec) frvecs[c], map[c], false );
+          adaptedVec = TransfVec.compose( (TransfVec) frvecs[c], map[c], vfr.domains()[c], false);
         } else adaptedVec = frvecs[c].makeTransf(map[c]);
         avecs.add(frvecs[c] = adaptedVec);
         anames.add(names[c]); // Collect right names
@@ -252,20 +306,46 @@ public abstract class Model extends Lockable<Model> {
     return new Frame[] { new Frame(names,frvecs), new Frame(anames.toArray(new String[anames.size()]), avecs.toArray(new Vec[avecs.size()])) };
   }
 
-  /** Returns a mapping between values domains for a given column.  */
-  public static int[] getDomainMapping(String colName, String[] modelDom, String[] dom, boolean exact) {
-    int emap[] = new int[dom.length];
+  /** Returns a mapping between values of model domains (<code>modelDom</code>) and given column domain.
+   * @see #getDomainMapping(String, String[], String[], boolean) */
+  public static int[][] getDomainMapping(String[] modelDom, String[] colDom, boolean exact) {
+    return getDomainMapping(null, modelDom, colDom, exact);
+  }
+  /**
+   * Returns a mapping for given column according to given <code>modelDom</code>.
+   * In this case, <code>modelDom</code> is
+   *
+   * @param colName name of column which is mapped, can be null.
+   * @param modelDom
+   * @param logNonExactMapping
+   * @return
+   */
+  public static int[][] getDomainMapping(String colName, String[] modelDom, String[] colDom, boolean logNonExactMapping) {
+    int emap[] = new int[modelDom.length];
+    boolean bmap[] = new boolean[modelDom.length];
     HashMap<String,Integer> md = new HashMap<String, Integer>();
-    for( int i = 0; i < modelDom.length; i++) md.put(modelDom[i], i);
-    for( int i = 0; i < dom.length; i++) {
-      Integer I = md.get(dom[i]);
-      if( I==null && exact )
-        Log.warn(Sys.SCORM, "Column "+colName+" was not trained with factor '"+dom[i]+"' which appears in the data");
-      emap[i] = I==null ? -1 : I;
+    for( int i = 0; i < colDom.length; i++) md.put(colDom[i], i);
+    for( int i = 0; i < modelDom.length; i++) {
+      Integer I = md.get(modelDom[i]);
+      if (I == null && logNonExactMapping)
+        Log.warn(Sys.SCORM, "Column "+colName+" was trained with factor '"+modelDom[i]+"' which DOES NOT appear in column data");
+      if (I!=null) {
+        emap[i] = I;
+        bmap[i] = true;
+      }
     }
-    for( int i = 0; i < dom.length; i++)
-      assert emap[i]==-1 || modelDom[emap[i]].equals(dom[i]);
-    return emap;
+    if (logNonExactMapping) { // Inform about additional values in column domain which do not appear in model domain
+      for (int i=0; i<colDom.length; i++) {
+        boolean found = false;
+        for (int j=0; j<emap.length; j++)
+          if (emap[j]==i) { found=true; break; }
+        if (!found)
+          Log.warn(Sys.SCORM, "Column "+colName+" WAS NOT trained with factor '"+colDom[i]+"' which appears in column data");
+      }
+    }
+
+    // produce packed values
+    return Utils.pack(emap, bmap);
   }
 
   /** Bulk scoring API for one row.  Chunks are all compatible with the model,
@@ -274,57 +354,37 @@ public abstract class Model extends Lockable<Model> {
    *  subclass scoring logic. */
   protected float[] score0( Chunk chks[], int row_in_chunk, double[] tmp, float[] preds ) {
     assert chks.length>=_names.length; // Last chunk is for the response
-    for( int i=0; i<_names.length; i++ )
+    for( int i=0; i<_names.length-1; i++ ) // Do not include last value since it can contains a response
       tmp[i] = chks[i].at0(row_in_chunk);
-    return score0(tmp,preds);
+    float[] scored = score0(tmp,preds);
+    // Correct probabilities obtained from training on oversampled data back to original distribution
+    // C.f. http://gking.harvard.edu/files/0s.pdf Eq.(27)
+    if (isClassifier() && _priorClassDist != null && _modelClassDist != null) {
+      assert(scored.length == nclasses()+1); //1 label + nclasses probs
+      double probsum=0;
+      for( int c=1; c<scored.length; c++ ) {
+        final double original_fraction = _priorClassDist[c-1];
+        assert(original_fraction > 0);
+        final double oversampled_fraction = _modelClassDist[c-1];
+        assert(oversampled_fraction > 0);
+        assert(!Double.isNaN(scored[c]));
+        scored[c] *= original_fraction / oversampled_fraction;
+        probsum += scored[c];
+      }
+      for (int i=1;i<scored.length;++i) scored[i] /= probsum;
+      //set label based on corrected probabilities (max value wins, with deterministic tie-breaking)
+      scored[0] = ModelUtils.getPrediction(scored, tmp);
+    }
+    return scored;
   }
 
   /** Subclasses implement the scoring logic.  The data is pre-loaded into a
    *  re-used temp array, in the order the model expects.  The predictions are
    *  loaded into the re-used temp array, which is also returned.  */
-  protected abstract float[] score0(double data[/*ncols*/], float preds[/*nclasses*/]);
+  protected abstract float[] score0(double data[/*ncols*/], float preds[/*nclasses+1*/]);
   // Version where the user has just ponied-up an array of data to be scored.
   // Data must be in proper order.  Handy for JUnit tests.
   public double score(double [] data){ return Utils.maxIndex(score0(data,new float[nclasses()]));  }
-
-  /**
-   * Utility function to get a best prediction from an array of class prediction distribution if you know the row number.
-   * It returns index of max value if predicted values are unique.
-   * In the case of tie, the implementation solve it in sudo-random way based on number of row in chunk.
-   *
-   * @param preds an array of prediction distribution. Length of arrays is equal to a number of classes.
-   * @param ties a pre-allocated array to hold class numbers participating in tie
-   * @return the best prediction (index of class)
-   */
-  public static final int getPrediction(float[] preds, int[] ties, int rowInChunk) {
-    assert preds.length == ties.length;
-    int best=0; int tieCnt = 0; ties[tieCnt] = 0;
-    for (int c=1; c<preds.length; c++) {
-      if (preds[best] < preds[c]) {
-        best = c; // take the max index
-        ties[tieCnt=0] = c;
-      } else if (preds[best] == preds[c]) {
-        ties[++tieCnt] = c;
-      }
-    }
-    if (tieCnt >= 1) best = ties[rowInChunk % (tieCnt+1)]; // override max decision
-    return best;
-  }
-  // Argh Java needs templates for primitive types
-  public static final int getPrediction(double[] preds, int[] ties, int rowInChunk) {
-    assert preds.length == ties.length;
-    int best=0; int tieCnt = 0; ties[tieCnt] = 0;
-    for (int c=1; c<preds.length; c++) {
-      if (preds[best] < preds[c]) {
-        best = c; // take the max index
-        ties[tieCnt=0] = c;
-      } else if (preds[best] == preds[c]) {
-        ties[++tieCnt] = c;
-      }
-    }
-    if (tieCnt >= 1) best = ties[rowInChunk % (tieCnt+1)]; // override max decision
-    return best;
-  }
 
 
   /** Return a String which is a valid Java program representing a class that
@@ -438,8 +498,8 @@ public abstract class Model extends Lockable<Model> {
     return sb.i(1).p("};").nl();
   }
   // Override in subclasses to provide some top-level model-specific goodness
-  protected SB toJavaInit(SB sb, SB fileContextSB) { return sb; };
-  protected void toJavaInit(CtClass ct) { };
+  protected SB toJavaInit(SB sb, SB fileContextSB) { return sb; }
+  protected void toJavaInit(CtClass ct) { }
   // Override in subclasses to provide some inside 'predict' call goodness
   // Method returns code which should be appended into generated top level class after
   // predit method.
@@ -463,7 +523,7 @@ public abstract class Model extends Lockable<Model> {
     return ccsb;
   }
 
-  protected String toJavaDefaultMaxIters() { return "-1"; };
+  protected String toJavaDefaultMaxIters() { return "-1"; }
 
   private static final String TOJAVA_MAP =
     "\n"+

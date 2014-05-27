@@ -91,12 +91,17 @@ class GLM_twovalues(unittest.TestCase):
             hex_key = csvFilename + "_" + str(trial)
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key)
 
+            # maybe go back to simpler exec here. this was from when Exec failed unless this was used
+            execExpr="A.hex=%s" % hex_key
+            h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+            execExpr="A.hex[,%s]=(A.hex[,%s]==%s)" % (12, 12, case)
+            h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+            aHack = {'destination_key': 'A.hex'}
+
             start = time.time()
             kwargs = {
                 'n_folds': 0,
-                'case_mode': '=',
-                'case_val': case, 
-                'response': 'C12', 
+                'response': 'C13', 
                 'family': 'binomial', 
                 'alpha': 0.5, 
                 'lambda': 1e-4, 
@@ -105,7 +110,7 @@ class GLM_twovalues(unittest.TestCase):
 
             # default takes 39 iterations? play with alpha/beta
             print "using outputTrue: %s outputFalse: %s" % (outputTrue, outputFalse)
-            glm = h2o_cmd.runGLM(parseResult=parseResult, **kwargs)
+            glm = h2o_cmd.runGLM(parseResult=aHack, **kwargs)
             (warnings, coefficients, intercept) = h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
             # check that the number of entries in coefficients is right (12 with intercept)
