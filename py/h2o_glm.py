@@ -339,7 +339,7 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
         # idxs has the order for non-zero coefficients, it's shorter than beta_used and column_names
         for i in idxs:
             if beta_used[i]==0.0:
-                raise Exception("idxs shouldn't point to any 0 coefficients i: %s beta_used[i]:" (i, beta_used[i]))
+                raise Exception("idxs shouldn't point to any 0 coefficients i: %d beta_used[i]: %f" % (i, beta_used[i]))
 
         intercept = coefficients.pop('Intercept', None)
 
