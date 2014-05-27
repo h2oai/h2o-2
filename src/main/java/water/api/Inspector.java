@@ -61,7 +61,7 @@ public class Inspector extends Request2 {
       // This is critical error since it should not happen
       return Response.error(e);
     }
-    throw new IllegalArgumentException("Uknown key type! Key = " + src_key + " and type = " + typename);
+    throw new IllegalArgumentException("Unknown key type! Key = " + src_key + " and type = " + typename);
   }
 
   public static String link(String txt, String key) {
