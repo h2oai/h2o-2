@@ -116,8 +116,10 @@ Steam.ScoringListView = (_) ->
           for item in items
             unless item.hasFailed()
               item.timestamp = (head item.data.output.metrics).scoring_time
-        activateAndDisplayItem head items
-        _.scoringsLoaded()
+          _.loadScorings 
+            type: 'comparison'
+            scorings: items
+            timestamp: Date.now()
       when 'comparison'
         item = createComparisonItem
           scorings: predicate.scorings

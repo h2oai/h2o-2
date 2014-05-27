@@ -79,7 +79,6 @@ Steam.ApplicationContext = ->
     displayNotification: do edge$
 
     loadScorings: do edge$
-    scoringsLoaded: do edge$
     displayScoring: do edge$
     scoringSelectionChanged: do edge$
     scoringSelectionCleared: do edge$
