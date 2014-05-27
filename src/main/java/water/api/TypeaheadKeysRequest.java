@@ -7,6 +7,8 @@ import hex.*;
 import hex.rf.RFModel;
 
 import java.util.Arrays;
+import java.util.Comparator;
+import java.util.concurrent.atomic.AtomicReference;
 
 import water.*;
 
@@ -23,38 +25,33 @@ public class TypeaheadKeysRequest extends TypeaheadRequest {
 
   @Override
   protected JsonArray serve(String filter, int limit) {
+    return serve(filter, limit, 2000);
+  }
+  protected JsonArray serve(String filter, int limit, long timetolerance) {
     JsonArray array = new JsonArray();
-    Key[] keys = new Key[limit];
     int len = 0;
     // Gather some keys that pass all filters
-    for( Key key : H2O.globalKeySet(_cname) ) {
-      if( !key.user_allowed() ) // Also filter out for user-keys
-        continue;
+    for( H2O.KeyInfo kinfo : H2O.globalKeySet(null,timetolerance)) {
       if( filter != null &&     // Have a filter?
-          key.toString().indexOf(filter) == -1 )
+          kinfo._key.toString().indexOf(filter) == -1 )
         continue;               // Ignore this filtered-out key
-      Value val = DKV.get(key);
-      if( val == null ) continue; // Deleted key?
-      if( !matchesType(val) ) continue; // Wrong type?
-      if( !shouldIncludeKey(key) ) continue; // Generic override
-      keys[len++] = key;        // Capture the key
-      if( len == keys.length ) break;
+      if( !matchesType(kinfo) ) continue; // Wrong type?
+      if( !shouldIncludeKey(kinfo) ) continue; // Generic override
+      array.add(new JsonPrimitive(kinfo._key.toString()));
+      if(array.size() == limit)break;
     }
-    // sort the keys, for pretty display & reliable ordering
-    Arrays.sort(keys,0,len);
-    for( int i = 0; i < len; ++i) array.add(new JsonPrimitive(keys[i].toString()));
     return array;
   }
 
-  protected boolean matchesType(Value val) {
+  protected boolean matchesType(H2O.KeyInfo ki) {
     // One-shot monotonic racey update from 0 to the known fixed typeid.
     // Since all writers write the same typeid, there is no race.
     if( _typeid == 0 && _cname != null ) _typeid = TypeMap.onIce(_cname);
-    return _typeid == 0 || val.type() == _typeid;
+    return _typeid == 0 || ki._type == _typeid;
   }
 
   // By default, all keys passing filters
-  protected boolean shouldIncludeKey(Key k) { return true; }
+  protected boolean shouldIncludeKey(H2O.KeyInfo k) { return true; }
 }
 
 
@@ -113,9 +110,7 @@ class TypeaheadHexKeyRequest extends TypeaheadKeysRequest {
           null,ValueArray.class);
   }
 
-  @Override protected boolean matchesType(Value val) {
-    if( val.type() == TypeMap.VALUE_ARRAY )
-      return val.isHex();
-    return val.type() == TypeMap.FRAME;
+  @Override protected boolean matchesType(H2O.KeyInfo kinfo) {
+    return !kinfo._rawData && (kinfo._type == TypeMap.FRAME || kinfo._type == TypeMap.VALUE_ARRAY);
   }
 }
