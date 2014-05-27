@@ -1035,7 +1035,6 @@ Steam.ScoringView = (_, _scoring) ->
     markup: div()
     behavior: render
 
-
   createStripPlot = (series, categories) ->
     [ div ] = geyser.generate [ 'div' ]
     render = ($element) ->
@@ -1161,11 +1160,7 @@ Steam.ScoringView = (_, _scoring) ->
           parameter.source.isSelected parameter.isSelected()
         for parameter in parameters.group3
           parameter.source.isSelected parameter.isSelected()
-        console.log map _stripPlotParameters.group2(), (parameter) -> [ parameter.caption, parameter.isSelected()]
-        console.log map _stripPlotParameters.group3(), (parameter) -> [ parameter.caption, parameter.isSelected()]
       return
-
-
 
   initialize _scoring
 

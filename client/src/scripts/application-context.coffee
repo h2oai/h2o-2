@@ -89,6 +89,7 @@ Steam.ApplicationContext = ->
     deleteScorings: do edge$
     deleteActiveScoring: do edge$
     scoringAvailable: do edge$
+    rescore: do edge$
     configureStripPlot: do edge$
 
 

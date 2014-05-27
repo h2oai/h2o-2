@@ -116,10 +116,14 @@ Steam.ScoringListView = (_) ->
           for item in items
             unless item.hasFailed()
               item.timestamp = (head item.data.output.metrics).scoring_time
-          _.loadScorings 
-            type: 'comparison'
-            scorings: items
-            timestamp: Date.now()
+          # Automatically create a comparison if the selection has > 1 items
+          if items.length > 1
+            _.loadScorings 
+              type: 'comparison'
+              scorings: items
+              timestamp: Date.now()
+          else
+            activateAndDisplayItem head items
       when 'comparison'
         item = createComparisonItem
           scorings: predicate.scorings
@@ -144,7 +148,40 @@ Steam.ScoringListView = (_) ->
     _isLive yes
     _.scoringSelectionCleared()
 
-  deleteActiveScoring = () ->
+  link$ _.rescore, ->
+    scoring = findActiveItem()
+    # Collect all frames from all models
+    models = []
+    allFrames = []
+    switch scoring.type
+      when 'scoring'
+        model = scoring.data.input.model
+        push models, model
+        pushAll allFrames, model.compatible_frames
+      when 'comparison'
+        for item in scoring.data.scorings
+          model = item.data.input.model
+          push models, model
+          pushAll allFrames, model.compatible_frames
+
+    # Build a unique list of frames
+    compatibleFrames = unique allFrames, (frame) -> frame.id
+
+    #TODO remove current frame
+
+    _.promptForFrame compatibleFrames, (action, frameKey) ->
+      switch action
+        when 'confirm'
+          _.switchToScoring type: 'scoring', scorings: map models, (model) ->
+            frameKey: frameKey
+            model: model
+            status: null
+            time: null
+            result: null
+            timestamp: Date.now()
+
+
+  deleteActiveScoring = ->
     _items.remove findActiveItem()
     displayItem null
 

@@ -55,6 +55,8 @@ Steam.ScoringSelectionView = (_) ->
   clearSelections = ->
     _.deselectAllScorings()
 
+  rescore = -> _.rescore()
+
   link$ _.scoringSelectionChanged, (isSelected, scoring) ->
     if isSelected
       _selections.push scoring
@@ -71,6 +73,7 @@ Steam.ScoringSelectionView = (_) ->
   clearSelections: clearSelections
   canCompareScorings: _canCompareScorings
   tryCompareScorings: tryCompareScorings
+  rescore: rescore
   compareScorings: compareScorings
   canDeleteScoring: _canDeleteScoring
   deleteScorings: deleteScorings

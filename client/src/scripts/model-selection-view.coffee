@@ -33,8 +33,6 @@ Steam.ModelSelectionView = (_) ->
 
           _.switchToScoring type: 'scoring', scorings: scorings
           _.deselectAllModels()
-        when 'error'
-          _.fail 'Error', 'An error occured while fetching the list of datasets.', error, noop
 
   tryScoreSelections = (hover) ->
     _.status if hover then _modelSelectionMessage() else null
