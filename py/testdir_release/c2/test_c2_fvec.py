@@ -34,10 +34,12 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         for trial, (csvFilepattern, csvFilename, totalBytes, timeoutSecs) in enumerate(csvFilenameList):
                 csvPathname = importFolderPath + "/" + csvFilepattern
 
-                (importResult, importPattern) = h2i.import_only(bucket=bucket, path=csvPathname, schema='local')
-                importFullList = importResult['files']
-                importFailList = importResult['fails']
-                print "\n Problem if this is not empty: importFailList:", h2o.dump_json(importFailList)
+
+                # double import still causing problems?
+                # (importResult, importPattern) = h2i.import_only(bucket=bucket, path=csvPathname, schema='local')
+                # importFullList = importResult['files']
+                # importFailList = importResult['fails']
+                # print "\n Problem if this is not empty: importFailList:", h2o.dump_json(importFailList)
 
                 # this accumulates performance stats into a benchmark log over multiple runs 
                 # good for tracking whether we're getting slower or faster

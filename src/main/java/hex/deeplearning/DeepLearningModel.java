@@ -54,6 +54,8 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   @Override public final DeepLearning get_params() { return model_info.get_params(); }
   @Override public final Request2 job() { return get_params(); }
 
+  @Override protected double missingColumnsType() { return get_params().sparse ? 0 : Double.NaN; }
+
   public float error() { return (float) (isClassifier() ? cm().err() : mse()); }
 
   @Override
