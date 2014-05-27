@@ -1,6 +1,6 @@
 
-H2O Software Stack
-==========================
+H\ :sub:`2`\ O Software Stack
+=============================
 
 The diagram below shows most of the different components that work
 together to form the H2O software stack.  The diagram is split into a

@@ -1,6 +1,6 @@
 
-How R Scripts Call H2O GLM
-==========================
+How R Scripts Call H\ :sub:`2`\ O GLM
+=====================================
 
 The following diagram shows the different software layers involved
 when a user runs an R program that starts a GLM on H2O.
@@ -44,8 +44,8 @@ and H2O interactions for the same GLM request and the resulting model.
 |
 |
 
-How R Expressions are Sent to H2O for Evaluation
-================================================
+How R Expressions are Sent to H\ :sub:`2`\ O for Evaluation
+===========================================================
 
 An H2O data frame is represented in R by an S4 object of class
 H2OParsedData.  The S4 object has a @key slot which is a reference to
