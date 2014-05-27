@@ -61,14 +61,13 @@ public class Frame extends Lockable<Frame> {
    * together.  Since parse always parses the same pieces of files into the same offsets
    * in some chunk this hash will be consistent across reparses.
    */
-  public byte[] hash() {
+  public long hash() {
     Vec [] vecs = vecs();
-    byte[] _hash = new byte[8];
+    long _hash = 0;
     for(int i = 0; i < _names.length; ++i) {
-      byte[] vec_hash = vecs[i].hash();
-      for (int j = 0; j < 8; j++) {
-        _hash[j] ^= vec_hash[j];
-      }
+      long vec_hash = vecs[i].hash();
+      _hash ^= vec_hash;
+      _hash ^= (2147483647 * i);
     }
     return _hash;
   }

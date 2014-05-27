@@ -72,6 +72,9 @@ public class Vec extends Iced {
    *  modification.   */
   volatile long _naCnt=-1;
 
+  private long _timestamp = -1;
+  private long _hash_timestamp = -1;
+  private long _hash = -1;
 
   /** Maximal size of enum domain */
   public static final int MAX_ENUM_SIZE = 10000;
@@ -382,11 +385,15 @@ public class Vec extends Iced {
   /** Size of compressed vector data. */
   public long byteSize(){return rollupStats()._size; }
 
-  public byte[] hash() {
-    final Vec rst = rollupStats();
-    final int hi = new Double(rst._mean).hashCode();
-    final int lo = new Double(rst._sigma).hashCode();
-    return new byte[]{(byte)(hi >> 3), (byte)(hi >> 2), (byte)(hi >> 1), (byte)(hi >> 0), (byte)(lo >> 3),(byte)(lo >> 2),(byte)(lo >> 1), (byte)(lo >> 0)};
+  public long hash() {
+    final long now = _timestamp;  // TODO: someone can be writing while we're hashing. . .
+    if (now == _hash_timestamp)
+      return _hash;
+    final long hash = new HasherTask().doAll(this).getHash();
+    new TAtomic<Vec>() {
+      @Override public Vec atomic(Vec v) { if (v != null) v._hash = hash; v._hash_timestamp = now; return v; }
+    }.invoke(_key);
+    return _hash;
   }
   /** Is the column a factor/categorical/enum?  Note: all "isEnum()" columns
    *  are are also "isInt()" but not vice-versa. */
@@ -492,7 +499,29 @@ public class Vec extends Iced {
     }
     // Just toooo common to report always.  Drowning in multi-megabyte log file writes.
     @Override public boolean logVerbose() { return false; }
-  }
+  } // class RollupStats
+
+  /** A private class to compute the rollup stats */
+  private static class HasherTask extends MRTask2<HasherTask> {
+    public long hash = 0;
+    public long getHash() { return hash; }
+
+    @Override public void map( Chunk c ) {
+      long _start = c._start;
+
+      for( int i=0; i<c._len; i++ ) {
+        long l = c.at80(i);
+        long global_row = _start + i;
+
+        hash ^= (17 * global_row);
+        hash ^= (23 * l);
+      }
+    } // map()
+
+    @Override public void reduce( HasherTask that ) {
+      this.hash ^= that.hash;
+    }
+  } // class HasherTask
 
   /** Writing into this Vector from *some* chunk.  Immediately clear all caches
    *  (_min, _max, _mean, etc).  Can be called repeatedly from one or all
@@ -516,7 +545,7 @@ public class Vec extends Iced {
     if( vthis._naCnt==-2 ) {
       _naCnt = vthis._naCnt=-1;
       new TAtomic<Vec>() {
-        @Override public Vec atomic(Vec v) { if( v!=null && v._naCnt==-2 ) v._naCnt=-1; return v; }
+        @Override public Vec atomic(Vec v) { if( v!=null && v._naCnt==-2 ) v._naCnt=-1; v._timestamp = System.currentTimeMillis(); return v; }
       }.invoke(_key);
     }
   }
