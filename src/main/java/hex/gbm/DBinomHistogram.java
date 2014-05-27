@@ -1,5 +1,7 @@
 package hex.gbm;
 
+import java.util.*;
+
 import water.MemoryManager;
 import water.util.Utils;
 
@@ -54,12 +56,26 @@ public class DBinomHistogram extends DHistogram<DBinomHistogram> {
     final int nbins = nbins();
     assert nbins > 1;
 
+    // Store indices from sort to determine group split later
+    Integer idx[] = new Integer[nbins];
+    for(int i = 0; i < nbins; i++) idx[i] = i;
+
+    // Sort predictor levels in ascending order of mean response within each bin
+    if(_isInt == 2 && _step == 1.0f && nbins >= 4) {
+      final Double[] means = new Double[nbins];
+      for(int i = 0; i < nbins; i++)
+        means[i] = (double)_sums[i]/_bins[i];
+      Arrays.sort(idx, new Comparator<Integer>() {
+        @Override public int compare(Integer o1, Integer o2) { return means[o1].compareTo(means[o2]); }
+      });
+    }
+
     // Compute mean/var for cumulative bins from 0 to nbins inclusive.
     long sums0[] = MemoryManager.malloc8(nbins+1);
     long   ns0[] = MemoryManager.malloc8(nbins+1);
     for( int b=1; b<=nbins; b++ ) {
-      long m0 = sums0[b-1],  m1 = _sums[b-1];
-      long k0 = ns0  [b-1],  k1 = _bins[b-1];
+      long m0 = sums0[b-1],  m1 = _sums[idx[b-1]];
+      long k0 = ns0  [b-1],  k1 = _bins[idx[b-1]];
       if( k0==0 && k1==0 ) continue;
       sums0[b] = m0+m1;
       ns0  [b] = k0+k1;
@@ -74,8 +90,8 @@ public class DBinomHistogram extends DHistogram<DBinomHistogram> {
     long sums1[] = MemoryManager.malloc8(nbins+1);
     long   ns1[] = MemoryManager.malloc8(nbins+1);
     for( int b=nbins-1; b>=0; b-- ) {
-      long m0 = sums1[b+1],  m1 = _sums[b];
-      long k0 = ns1  [b+1],  k1 = _bins[b];
+      long m0 = sums1[b+1],  m1 = _sums[idx[b]];
+      long k0 = ns1  [b+1],  k1 = _bins[idx[b]];
       if( k0==0 && k1==0 ) continue;
       sums1[b] = m0+m1;
       ns1  [b] = k0+k1;
@@ -84,15 +100,15 @@ public class DBinomHistogram extends DHistogram<DBinomHistogram> {
 
     // Now roll the split-point across the bins.  There are 2 ways to do this:
     // split left/right based on being less than some value, or being equal/
-    // not-equal to some value.  Equal/not-equal makes sense for catagoricals
+    // not-equal to some value.  Equal/not-equal makes sense for categoricals
     // but both splits could work for any integral datatype.  Do the less-than
     // splits first.
     int best=0;                         // The no-split
     double best_se0=Double.MAX_VALUE;   // Best squared error
     double best_se1=Double.MAX_VALUE;   // Best squared error
-    boolean equal=false;                // Ranged check
+    byte equal=0;                // Ranged check
     for( int b=1; b<=nbins-1; b++ ) {
-      if( _bins[b] == 0 ) continue; // Ignore empty splits
+      if( _bins[idx[b]] == 0 ) continue; // Ignore empty splits
       // We're making an unbiased estimator, so that MSE==Var.
       // Then Squared Error = MSE*N = Var*N
       //                    = (ssqs/N - mean^2)*N
@@ -116,26 +132,36 @@ public class DBinomHistogram extends DHistogram<DBinomHistogram> {
     if( _isInt > 0 && _step == 1.0f &&    // For any integral (not float) column
         _maxEx-_min > 2 ) { // Also need more than 2 (boolean) choices to actually try a new split pattern
       for( int b=1; b<=nbins-1; b++ ) {
-        if( _bins[b] == 0 ) continue; // Ignore empty splits
+        if( _bins[idx[b]] == 0 ) continue; // Ignore empty splits
         long N =        ns0[b+0] + ns1[b+1];
         if( N == 0 ) continue;
         double sums = sums0[b+0]+sums1[b+1];
-        double sumb = _sums[b+0];
-        double si = sums - sums*sums/   N    ; // Left+right, excluding 'b'
-        double sx = sumb - sumb*sumb/_bins[b]; // Just 'b'
+        double sumb = _sums[idx[b+0]];
+        double si = sums - sums*sums/   N    ;      // Left+right, excluding 'b'
+        double sx = sumb - sumb*sumb/_bins[idx[b]]; // Just 'b'
         if( si+sx < best_se0+best_se1 ) { // Strictly less error?
           best_se0 = si;   best_se1 = sx;
-          best = b;        equal = true; // Equality check
+          best = b;        equal = 1; // Equality check
         }
       }
     }
 
     if( best==0 ) return null;  // No place to split
     assert best > 0 : "Must actually pick a split "+best;
-    long   n0 = !equal ?   ns0[best] :   ns0[best]+  ns1[best+1];
-    long   n1 = !equal ?   ns1[best] : _bins[best]              ;
-    double p0 = !equal ? sums0[best] : sums0[best]+sums1[best+1];
-    double p1 = !equal ? sums1[best] : _sums[best]              ;
+    long   n0 = equal == 0 ?   ns0[best] :   ns0[best]+  ns1[best+1];
+    long   n1 = equal == 0 ?   ns1[best] : _bins[idx[best]]         ;
+    double p0 = equal == 0 ? sums0[best] : sums0[best]+sums1[best+1];
+    double p1 = equal == 0 ? sums1[best] : _sums[idx[best]]         ;
+
+    // For categorical predictors, set bits for levels grouped to right of split
+    // TODO: Is bit = 1 for left or right of the split?
+    BitSet bs = new BitSet(nbins);
+    if(_isInt == 2 && _step == 1.0f && nbins >= 4) {
+      equal = 2;
+      // for(int i = 0; i < best; i++) bs.set(idx[i]);
+      for(int i = best; i < nbins; i++) bs.set(idx[i]);
+      return new DTree.Split(col,bs,equal,best_se0,best_se1,n0,n1,p0/n0,p1/n1);
+    }
     return new DTree.Split(col,best,equal,best_se0,best_se1,n0,n1,p0/n0,p1/n1);
   }
 

@@ -15,8 +15,7 @@ import water.fvec.Chunk;
 import water.license.LicenseManager;
 import water.util.*;
 
-import java.util.Arrays;
-import java.util.Random;
+import java.util.*;
 
 /**
    A Decision Tree, laid over a Frame of Vecs, and built distributed.
@@ -113,13 +112,21 @@ public class DTree extends Iced {
   // Records a column, a bin to split at within the column, and the MSE.
   public static class Split extends Iced {
     final int _col, _bin;       // Column to split, bin where being split
-    final boolean _equal;       // Split is < or == ?
+    final BitSet _bs;           // For binary y and categorical x (with >= 4 levels), split into 2 non-contiguous groups
+    final byte _equal;          // Split is 0: <, 1: == with single split point, 2: == with bitset split
     final double _se0, _se1;    // Squared error of each subsplit
     final long    _n0,  _n1;    // Rows in each final split
     final double  _p0,  _p1;    // Predicted value for each split
 
-    public Split( int col, int bin, boolean equal, double se0, double se1, long n0, long n1, double p0, double p1 ) {
-      _col = col;  _bin = bin;  _equal = equal;
+    public Split( int col, int bin, byte equal, double se0, double se1, long n0, long n1, double p0, double p1 ) {
+      assert equal == 0 || equal == 1;
+      _col = col;  _bin = bin;  _bs = null;  _equal = equal;
+      _n0 = n0;  _n1 = n1;  _se0 = se0;  _se1 = se1;
+      _p0 = p0;  _p1 = p1;
+    }
+    public Split( int col, BitSet bsplit, byte equal, double se0, double se1, long n0, long n1, double p0, double p1 ) {
+      assert equal == 2;
+      _col = col;  _bin = -1;  _bs = bsplit;  _equal = equal;
       _n0 = n0;  _n1 = n1;  _se0 = se0;  _se1 = se1;
       _p0 = p0;  _p1 = p1;
     }
@@ -149,7 +156,7 @@ public class DTree extends Iced {
     float splat(DHistogram hs[]) {
       DHistogram h = hs[_col];
       assert _bin > 0 && _bin < h.nbins();
-      if( _equal ) { assert h.bins(_bin)!=0; return h.binAt(_bin); }
+      if( _equal != 0 ) { assert h.bins(_bin)!=0; return h.binAt(_bin); }
       // Find highest non-empty bin below the split
       int x=_bin-1;
       while( x >= 0 && h.bins(x)==0 ) x--;
@@ -209,7 +216,7 @@ public class DTree extends Iced {
         // Tighter bounds on the column getting split: exactly each new
         // DHistogram's bound are the bins' min & max.
         if( _col==j ) {
-          if( _equal ) {        // Equality split; no change on unequals-side
+          if( _equal != 0 ) {        // Equality split; no change on unequals-side
             if( way == 1 ) continue; // but know exact bounds on equals-side - and this col will not split again
           } else {              // Less-than split
             if( h._bins[_bin]==0 )
@@ -413,13 +420,21 @@ public class DTree extends Iced {
         return 0;                        // NAs always to bin 0
       // Note that during *scoring* (as opposed to training), we can be exposed
       // to data which is outside the bin limits.
-      return _split._equal ? (d != _splat ? 0 : 1) : (d < _splat ? 0 : 1);
+      if(_split._equal == 0)
+        return d < _splat ? 0 : 1;
+      else if(_split._equal == 1)
+        return d != _splat ? 0 : 1;
+      else
+        return _split._bs.get((int)d) ? 1 : 0;
+        // return _split._bs.get((int)d) ? 0 : 1;
+      // return _split._equal ? (d != _splat ? 0 : 1) : (d < _splat ? 0 : 1);
     }
 
     public int ns( Chunk chks[], int row ) { return _nids[bin(chks,row)]; }
 
     public double pred( int nid ) { return nid==0 ? _split._p0 : _split._p1; }
 
+    // TODO: Update to print bitset split
     @Override public String toString() {
       if( _split._col == -1 ) return "Decided has col = -1";
       int col = _split._col;
@@ -443,6 +458,7 @@ public class DTree extends Iced {
       return sb;
     }
 
+    // TODO: Update to include bitset split
     @Override public StringBuilder toString2(StringBuilder sb, int depth) {
       for( int i=0; i<_nids.length; i++ ) {
         for( int d=0; d<depth; d++ ) sb.append("  ");
@@ -461,6 +477,7 @@ public class DTree extends Iced {
       return sb;
     }
 
+    // TODO: Also must modify size for bitset splits
     // Size of this subtree; sets _nodeType also
     @Override public final int size(){
       if( _size != 0 ) return _size; // Cached size

@@ -557,7 +557,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
 
     // Find the column with the best split (lowest score).
     @Override public DTree.Split bestCol( UndecidedNode u, DHistogram hs[] ) {
-      DTree.Split best = new DTree.Split(-1,-1,false,Double.MAX_VALUE,Double.MAX_VALUE,0L,0L,0,0);
+      DTree.Split best = new DTree.Split(-1,-1,(byte)0,Double.MAX_VALUE,Double.MAX_VALUE,0L,0L,0,0);
       if( hs == null ) return best;
       for( int i=0; i<u._scoreCols.length; i++ ) {
         int col = u._scoreCols[i];
