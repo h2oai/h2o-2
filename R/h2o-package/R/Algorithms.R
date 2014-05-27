@@ -410,24 +410,25 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e
 
 # Pretty formatting of H2O GLM2 results
 .h2o.__getGLM2Results <- function(model, params) {
-  submod = model$submodels[[model$best_lambda_idx+1]]
-  valid = submod$validation
+  submod <- model$submodels[[model$best_lambda_idx+1]]
+  valid  <- submod$validation
 
-  result = list()
-  params$alpha = model$alpha
-  params$lambda = model$lambdas
-  params$best_lambda = model$lambdas[[model$best_lambda_idx+1]]
-  result$params = params
+  result <- list()
+  params$alpha  <- model$alpha
+  params$lambda <- model$lambdas
+  params$best_lambda <- model$lambdas[[model$best_lambda_idx+1]]
+  result$params <- params
   if(model$glm$family == "tweedie")
-    result$params$family = .h2o.__getFamily(model$glm$family, model$glm$link, model$glm$tweedie_variance_power, model$glm$tweedie_link_power)
+    result$params$family <- .h2o.__getFamily(model$glm$family, model$glm$link, model$glm$tweedie_variance_power, model$glm$tweedie_link_power)
   else
-    result$params$family = .h2o.__getFamily(model$glm$family, model$glm$link)
-  
-  result$coefficients = as.numeric(unlist(submod$beta))
-  names(result$coefficients) = model$coefficients_names[submod$idxs]
+    result$params$family <- .h2o.__getFamily(model$glm$family, model$glm$link)
+
+  result$coefficients <- as.numeric(unlist(submod$beta))
+  idxes <- submod$idxs + 1
+  names(result$coefficients) <- model$coefficients_names[idxes] 
   if(params$standardize) {
     result$normalized_coefficients = as.numeric(unlist(submod$norm_beta))
-    names(result$normalized_coefficients) = model$coefficients_names[submod$idxs]
+    names(result$normalized_coefficients) = model$coefficients_names[submod$idxs + 1]
   }
   result$rank = valid$'_rank'
   result$iter = submod$iteration
