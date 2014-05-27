@@ -660,7 +660,10 @@ public class Vec extends Iced {
   public final long   set( long i, long   l) {
     Chunk ck = chunkForRow(i);
     long ret = ck.set(i,l);
-    ck.close(ck.cidx(), null); //slow to do this for every set -> use Writer if writing many values
+    Futures fs = new Futures();
+    ck.close(ck.cidx(), fs); //slow to do this for every set -> use Writer if writing many values
+    fs.blockForPending();
+    _cache = null;
     return ret;
   }
   /** Write element the VERY slow way, as a double.  Double.NaN will be treated as
@@ -669,7 +672,10 @@ public class Vec extends Iced {
   public final double set( long i, double d) {
     Chunk ck = chunkForRow(i);
     double ret = ck.set(i,d);
-    ck.close(ck.cidx(), null); //slow to do this for every set -> use Writer if writing many values
+    Futures fs = new Futures();
+    ck.close(ck.cidx(), fs); //slow to do this for every set -> use Writer if writing many values
+    fs.blockForPending();
+    _cache = null;
     return ret;
   }
   /** Write element the VERY slow way, as a float.  Float.NaN will be treated as
@@ -678,14 +684,20 @@ public class Vec extends Iced {
   public final float  set( long i, float  f) {
     Chunk ck = chunkForRow(i);
     float ret = ck.set(i, f);
-    ck.close(ck.cidx(), null); //slow to do this for every set -> use Writer if writing many values
+    Futures fs = new Futures();
+    ck.close(ck.cidx(), fs); //slow to do this for every set -> use Writer if writing many values
+    fs.blockForPending();
+    _cache = null;
     return ret;
   }
   /** Set the element as missing the VERY slow way.  */
   public final boolean setNA( long i ) {
     Chunk ck = chunkForRow(i);
     boolean ret = ck.setNA(i);
-    ck.close(ck.cidx(), null); //slow to do this for every set -> use Writer if writing many values
+    Futures fs = new Futures();
+    ck.close(ck.cidx(), fs); //slow to do this for every set -> use Writer if writing many values
+    fs.blockForPending();
+    _cache = null;
     return ret;
   }
 
