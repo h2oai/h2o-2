@@ -29,11 +29,11 @@ h2o.month <- function(x){
 }
 
 year <- function(x) UseMethod('year', x)
-year.H2OParsedData <- h2o.year
+year.H2OFrame <- h2o.year
 month <- function(x) UseMethod('month', x)
-month.H2OParsedData <- h2o.month
+month.H2OFrame <- h2o.month
 
-diff.H2OParsedData <- function(x, lag = 1, differences = 1, ...) {
+diff.H2OFrame <- function(x, lag = 1, differences = 1, ...) {
   if(!is.numeric(lag)) stop("lag must be numeric")
   if(!is.numeric(differences)) stop("differences must be numeric")
 
@@ -107,13 +107,11 @@ h2o.ddply <- function (.data, .variables, .fun = NULL, ..., .progress = 'none'){
     idx <- as.integer(.variables)
   }
 
-  bad <- is.na(idx) | idx < 1 | idx > ncol(.data)
-  if( any(bad) ) stop( sprintf('can\'t recognize .variables %s', paste(vars[bad], sep=',')) )
+  #TODO: Put these on the back end
+  #  bad <- is.na(idx) | idx < 1 | idx > ncol(.data)
+  #  if( any(bad) ) stop( sprintf('can\'t recognize .variables %s', paste(vars[bad], sep=',')) )
 
-  fun_name <- mm[[ '.fun' ]]
-  exec_cmd <- sprintf('ddply(%s,c(%s),%s)', .data@key, paste(idx, collapse=','), as.character(fun_name))
-  res <- .h2o.__exec2(.data@h2o, exec_cmd)
-  new('H2OParsedData', h2o=.data@h2o, key=res$dest_key)
+  .h2o.varop("ddply", .data, vars, .fun, fun_args=list(...), .progress)
 }
 ddply <- h2o.ddply
 
@@ -147,7 +145,7 @@ h2o.unique <- function(x, incomparables = FALSE, ...) {
   # NB: we do nothing with incomparables right now
   # NB: we only support MARGIN = 2 (which is the default)
 
-  if(!class(x) %in% c('H2OParsedData', 'H2OParsedDataVA')) stop('h2o.unique: x is of the wrong type. Got: ', class(x))
+  if(!class(x) %in% c('H2OFrame', 'H2OParsedData', 'H2OParsedDataVA')) stop('h2o.unique: x is of the wrong type. Got: ', class(x))
 #  if( nrow(x) == 0 | ncol(x) == 0) return(NULL) #TODO: Do this on the back end.
 #  if( nrow(x) == 1) return(x)  #TODO: Do this on the back end.
 
@@ -155,29 +153,23 @@ h2o.unique <- function(x, incomparables = FALSE, ...) {
   if( 'MARGIN' %in% names(args) && args[['MARGIN']] != 2 ) stop('h2o unique: only MARGIN 2 supported')
   .h2o.unop("unique", x)
 }
-unique.H2OParsedData <- h2o.unique
+unique.H2OFrame <- h2o.unique
 
 h2o.runif <- function(x, min = 0, max = 1, seed = -1) {
   if(missing(x)) stop("Must specify data set")
-  if(!inherits(x, "H2OParsedData")) stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
+  if(!inherits(x, "H2OFrame")) stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
   if(!is.numeric(min)) stop("min must be a single number")
   if(!is.numeric(max)) stop("max must be a single number")
   if(length(min) > 1 || length(max) > 1) stop("Unimplemented")
   if(min > max) stop("min must be a number less than or equal to max")
   if(!is.numeric(seed)) stop("seed must be an integer >= 0")
 
-  expr = paste("runif(", x@key, ",", seed, ")*(", max - min, ")+", min, sep = "")
-  res = .h2o.__exec2(x@h2o, expr)
-  if(res$num_rows == 0 && res$num_cols == 0)
-    return(res$scalar)
-  else
-    return(new("H2OParsedData", h2o=x@h2o, key=res$dest_key, logic=FALSE))
+  .h2o.varop("runif", x, min, max, seed)
 }
 
 h2o.anyFactor <- function(x) {
-  # if(class(x) != "H2OParsedData") stop("x must be an H2OParsedData object")
   if(!inherits(x, "H2OParsedData")) stop("x must be an H2O parsed data object")
-  as.logical(.h2o.__unop2("any.factor", x))
+  as.logical(.h2o.unop("any.factor", x))
 }
 
 #-----------------------------------------------------------------------------------------------------------------------
@@ -314,7 +306,7 @@ setMethod("dim", "H2OParsedData", function(x) {
 
 setMethod("dim<-", "H2OParsedData", function(x, value) { stop("Unimplemented") })
 
-head.H2OParsedData <- function(x, n = 6L, ...) {
+head.H2OFrame <- function(x, n = 6L, ...) {
   numRows = nrow(x)
   stopifnot(length(n) == 1L)
   n <- ifelse(n < 0L, max(numRows + n, 0L), min(n, numRows))
@@ -331,7 +323,7 @@ head.H2OParsedData <- function(x, n = 6L, ...) {
   return(x.slice)
 }
 
-tail.H2OParsedData <- function(x, n = 6L, ...) {
+tail.H2OFrame <- function(x, n = 6L, ...) {
   stopifnot(length(n) == 1L)
   nrx <- nrow(x)
   n <- ifelse(n < 0L, max(nrx + n, 0L), min(n, nrx))
@@ -353,7 +345,7 @@ tail.H2OParsedData <- function(x, n = 6L, ...) {
 
 setMethod("is.factor", "H2OFrame", function(x) { as.logical(.h2o.unop("is.factor", x)) })
 
-quantile.H2OParsedData <- function(x, probs = seq(0, 1, 0.25), na.rm = FALSE, names = TRUE, type = 7, ...) {
+quantile.H2OFrame <- function(x, probs = seq(0, 1, 0.25), na.rm = FALSE, names = TRUE, type = 7, ...) {
   if((numCols = ncol(x)) != 1) stop("quantile only operates on a single column")
   if(is.factor(x)) stop("factors are not allowed")
   if(!na.rm && .h2o.__unop2("any.na", x)) stop("missing values and NaN's not allowed if 'na.rm' is FALSE")
@@ -377,7 +369,7 @@ quantile.H2OParsedData <- function(x, probs = seq(0, 1, 0.25), na.rm = FALSE, na
 }
 
 # setMethod("summary", "H2OParsedData", function(object) {
-summary.H2OParsedData <- function(object, ...) {
+summary.H2OFrame <- function(object, ...) {
   digits = 12L
   if(ncol(object) > .MAX_INSPECT_COL_VIEW)
     warning(object@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
@@ -500,7 +492,7 @@ setMethod("range", "H2OParsedData", function(x) {
   # Math Operations
   #---------------------------------------------------------------------------------------------------------------------
 
-mean.H2OParsedData <- function(x, trim = 0, na.rm = FALSE, ...) {
+mean.H2OFrame <- function(x, trim = 0, na.rm = FALSE, ...) {
   if(ncol(x) != 1 || trim != 0) stop("Unimplemented")
   if(h2o.anyFactor(x) || dim(x)[2] != 1) {
     warning("argument is not numeric or logical: returning NA")
@@ -652,7 +644,7 @@ setMethod("colnames<-", signature(x="H2OParsedData", value="character"),
 
 setMethod("names<-", "H2OParsedData", function(x, value) { colnames(x) <- value; return(x) })
 
-as.data.frame.H2OParsedData <- function(x, ...) {
+as.data.frame.H2OFrame <- function(x, ...) {
   # Versions of R prior to 3.1 should not use hex string.
   # Versions of R including 3.1 and later should use hex string.
   use_hex_string = FALSE
@@ -711,7 +703,7 @@ as.data.frame.H2OParsedData <- function(x, ...) {
   return(df)
 }
 
-as.matrix.H2OParsedData <- function(x, ...) { as.matrix(as.data.frame(x, ...)) }
+as.matrix.H2OFrame <- function(x, ...) { as.matrix(as.data.frame(x, ...)) }
 
 setMethod("as.factor", "H2OParsedData", function(x) { .h2o.__unop2("factor", x) })
 
@@ -769,7 +761,7 @@ setMethod("ifelse", "H2OParsedData", function(test, yes, no) {
 })
 
 # Note: right now, all things must be H2OParsedData
-cbind.H2OParsedData <- function(..., deparse.level = 1) {
+cbind.H2OFrame <- function(..., deparse.level = 1) {
   if(deparse.level != 1) stop("Unimplemented")
 
   l <- list(...)
@@ -837,7 +829,7 @@ setMethod("apply", "H2OParsedData", function(X, MARGIN, FUN, ...) {
   new("H2OParsedData", h2o=X@h2o, key=res$dest_key)
 })
 
-str.H2OParsedData <- function(object, ...) {
+str.H2OFrame <- function(object, ...) {
   if (length(l <- list(...)) && any("give.length" == names(l)))
     invisible(NextMethod("str", ...))
   else invisible(NextMethod("str", give.length = FALSE, ...))

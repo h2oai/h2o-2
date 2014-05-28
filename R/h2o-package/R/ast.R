@@ -47,11 +47,17 @@ function(node) {
     list(astop = root_values)
   } else if (.hasSlot(node, "statements")) {
     f_name <- node@name
+    arguments <- node@arguments
     children <- lapply(node@statements, visitor)
-    l <- list(children)
-    names(l) <- f_name
+
+    l <- list(arguments, children)
+    names(l) <- c("args", f_name)
     l
   } else if (.hasSlot(node, "arg_value") && .hasSlot(node@arg_value, "root")) {
+    l <- .ASTToList(node)
+    l$arg_value <- visitor(node@arg_value)
+    l
+  } else if (.hasSlot(node, "arg_value") && .hasSlot(node@arg_value, "statements")) {
     l <- .ASTToList(node)
     l$arg_value <- visitor(node@arg_value)
     l
@@ -87,6 +93,17 @@ function(o) {
 function(i) { class(eval(i)) }
 
 #'
+#' Check if the expr is in the formals of _any_ method in the call list.
+#'
+#' It doesn't matter if multiple closures have the same argument names since at execution time
+#' the closure will use whatever symbol table it is closest to.
+.isFormal<-
+function(expr) {
+  formals_vec <- function(fun) { names(formals(fun)) }
+  expr %in% unlist(lapply(.pkg.env$call_list, formals_vec))
+}
+
+#'
 #' Walk the R AST directly.
 #'
 #' This walks the AST for some arbitrary R expression and produces an "S4"-ified AST.
@@ -100,9 +117,13 @@ function(i) { class(eval(i)) }
 .exprToAST<-
 function(expr) {
 
-  # Assigning to the symbol
+  # Assigning to the symbol or this is a symbol appearing in the formals of a UDF. If the latter, tag it.
   if (is.symbol(expr)) {
-    return( new("ASTUnk", key=as.character(expr)))
+    sym <- as.character(expr)
+    if (.isFormal(sym)) {
+      return(new("ASTUnk", key=sym, isFormal=TRUE))
+    }
+    return(new("ASTUnk", key=as.character(expr), isFormal=FALSE))
   }
 
   # Got an atomic numeric. Plain old numeric value. #TODO: What happens to logicals?
@@ -115,7 +136,7 @@ function(expr) {
 
   # Got a left arrow assignment statement
   } else if (identical(expr[[1]], quote(`<-`))) {
-    lhs <- new("ASTUnk", key=as.character(expr[[2]]))
+    lhs <- new("ASTUnk", key=as.character(expr[[2]]), isFormal=FALSE)
     rhs <- .exprToAST(expr[[3]])
     op <- new("ASTOp", type="LAAssignOperator", operator="<-", infix=TRUE)
     new("ASTNode", root=op, children=list(left = lhs, right = rhs))
@@ -208,9 +229,12 @@ function(piece) {
 .funToAST<-
 function(fun) {
   if (.isUDF(fun)) {
+    .pkg.env$call_list <- c(.pkg.env$call_list, fun)
     l <- as.list(body(fun))
     statements <- lapply(l[-1], .funToASTHelper)
     .pkg.env$call_list <- NULL
-    new("ASTFun", type="UDF", name=deparse(substitute(fun)), statements=statements)
+    new("ASTFun", type="UDF", name=deparse(substitute(fun)), statements=statements, arguments=names(formals(fun)))
+  } else {
+    substitute(fun)
   }
 }
