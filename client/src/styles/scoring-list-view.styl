@@ -6,7 +6,7 @@
     dock()
 
   .y-scorings
-    dock()
+    dock(top:y-desktop-header-height)
     overflow auto
 
   .y-scoring
@@ -20,13 +20,13 @@
       background #eee
       border-left-color y-color-yellow-dk
       border-left-color y-color-grey-md
+    input[type='checkbox']
+      position relative
+      float left
+      top 18px
   .y-scoring-details
     cursor pointer
     margin-left 25px 
-  input[type='checkbox']
-    position relative
-    float left
-    top 18px
   .y-scoring-title
     font-size 18px
     font-weight 300

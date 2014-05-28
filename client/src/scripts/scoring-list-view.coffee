@@ -5,9 +5,20 @@ Steam.ScoringListView = (_) ->
   _predicate = node$ type: 'all'
   _items = do nodes$
   _hasItems = lift$ _items, (items) -> items.length > 0
+  _isSelectAll = node$ no
 
   #TODO ugly
   _isLive = node$ yes
+
+  apply$ _isSelectAll, (isSelected) ->
+    _isLive no
+    for item in _items()
+      item.isSelected isSelected
+    _isLive yes
+    return
+
+  _canClearPredicate = no
+  _predicateCaption = 'Showing\nall scorings'
 
   displayItem = (item) ->
     if item
@@ -191,11 +202,17 @@ Steam.ScoringListView = (_) ->
     unless findActiveItem()
       displayItem null
 
+  clearPredicate = ->
+
   link$ _.deselectAllScorings, deselectAllScorings
   link$ _.deleteScorings, deleteScorings
   link$ _.deleteActiveScoring, deleteActiveScoring
 
   items: _items
   hasItems: _hasItems
+  predicateCaption: _predicateCaption
+  clearPredicate: clearPredicate
+  canClearPredicate: _canClearPredicate
+  isSelectAll: _isSelectAll
   template: 'scoring-list-view'
 
