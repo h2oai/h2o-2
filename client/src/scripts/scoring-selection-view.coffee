@@ -19,7 +19,7 @@ Steam.ScoringSelectionView = (_) ->
     defaultScoringComparisonMessage
 
   _canCompareScorings = lift$ _scoringComparisonMessage, (message) -> message is defaultScoringComparisonMessage
-  _canDeleteScoring = node$ no
+  _hasScorings = node$ no
 
   compareScorings = ->
     _.loadScorings
@@ -66,7 +66,7 @@ Steam.ScoringSelectionView = (_) ->
   link$ _.scoringSelectionCleared, ->
     _selections.removeAll()
 
-  link$ _.scoringAvailable, _canDeleteScoring
+  link$ _.scoringAvailable, _hasScorings
 
   caption: _caption
   hasSelection: _hasSelection
@@ -75,7 +75,7 @@ Steam.ScoringSelectionView = (_) ->
   tryCompareScorings: tryCompareScorings
   rescore: rescore
   compareScorings: compareScorings
-  canDeleteScoring: _canDeleteScoring
+  hasScorings: _hasScorings
   deleteScorings: deleteScorings
   deleteActiveScoring: deleteActiveScoring
   template: 'scoring-selection-view'
