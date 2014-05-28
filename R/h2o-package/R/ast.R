@@ -1,14 +1,7 @@
 #'
-#' The AST visitor method.
+#' A collection of methods to parse expressions and produce ASTs.
 #'
-#' This method represents a map between an AST S4 object and a regular R list,
-#' which is suitable for the rjson::toJSON method.
-#'
-#' Given a node, the `visitor` function recursively "list"-ifies the node's S4 slots and then returns the list.
-#'
-#' A node that has a "root" slot is an object of type ASTOp. An ASTOp will always have a "children" slot representing
-#' its operands. A root node is the most general type of input, while an object of type ASTFrame or ASTNumeric is the
-#' most general. This method relies on the private helper function .ASTToList(...) to map the AST S4 object to a list.
+#' R expressions convolved with H2O objects evaluate lazily.
 
 
 #'
@@ -39,6 +32,12 @@ function(object) {
 #'
 #' This method represents a map between an AST S4 object and a regular R list,
 #' which is suitable for the rjson::toJSON method.
+#'
+#' Given a node, the `visitor` function recursively "list"-ifies the node's S4 slots and then returns the list.
+#'
+#' A node that has a "root" slot is an object of type ASTOp. An ASTOp will always have a "children" slot representing
+#' its operands. A root node is the most general type of input, while an object of type ASTFrame or ASTNumeric is the
+#' most general. This method relies on the private helper function .ASTToList(...) to map the AST S4 object to a list.
 visitor<-
 function(node) {
   if (.hasSlot(node, "root")) {
@@ -51,6 +50,10 @@ function(node) {
     children <- lapply(node@statements, visitor)
     l <- list(children)
     names(l) <- f_name
+    l
+  } else if (.hasSlot(node, "arg_value") && .hasSlot(node@arg_value, "root")) {
+    l <- .ASTToList(node)
+    l$arg_value <- visitor(node@arg_value)
     l
   } else {
     .ASTToList(node)
@@ -106,7 +109,7 @@ function(expr) {
   if (is.atomic(expr) && class(expr) == "numeric") {
     new("ASTNumeric", type="numeric", value=expr)
 
-  # Got an atomic string. #TODO: What to do with print/cat statements in h2o? Ignore them in UDFS?
+  # Got an atomic string. #TODO: What to do with print/cat statements in h2o? Ignore them in UDFs?
   } else if (is.atomic(expr) && class(expr) == "character") {
     new("ASTString", type="character", value=expr)
 
@@ -131,8 +134,10 @@ function(expr) {
     # Is the function generic? (see getGenerics() in R)
     if (isGeneric(o)) {
 
-      # Prove that we have h2o infix:
+      # Operator is infix?
       if (.isInfix(o)) {
+
+        # Prove that we have _h2o_ infix:
         if (length( intersect(c("H2OParsedData", "H2OFrame", "ASTNode"), unlist(lapply(expr, .evalClass)))) > 0) {
 
           # Calls .h2o.binop
@@ -147,7 +152,7 @@ function(expr) {
       # Function is not infix, but some prefix method. #TODO: Must ensure a _single_ argument here: No .h2o.varop yet!
       } else {
 
-        # Prove that we have h2o prefix:
+        # Prove that we have _h2o_ prefix:
         if (length( intersect(c("H2OParsedData", "H2OFrame", "ASTNode"), unlist(lapply(expr, .evalClass)))) > 0) {
 
           # Calls .h2o.unop
@@ -167,7 +172,7 @@ function(expr) {
     } else if (inherits(expr, "H2OFrame")) {
       new("ASTFrame", type="Frame", value=expr@key)
     } else {
-      stop("Unfamiliar object. Got: ", class(expr), " Unimplemented.")
+      stop("Unfamiliar object. Got: ", class(expr), ". This is unimplemented.")
     }
   }
 }
@@ -175,8 +180,8 @@ function(expr) {
 #'
 #' Helper function for .funToAST
 #'
-#' Recursively discover other user defined functions and hand them to .funToAST.
-#' Hand *real* R expressions over to .exprToAST.
+#' Recursively discover other user defined functions and hand them to .funToAST and
+#' hand the *real* R expressions over to .exprToAST.
 .funToASTHelper<-
 function(piece) {
   f_call <- piece[[1]]
@@ -198,9 +203,11 @@ function(piece) {
 #' Translate a function's body to an AST.
 #'
 #' Recursively build an AST from a UDF.
+#'
+#' This method is the entry point for producing an AST from a closure.
 .funToAST<-
 function(fun) {
-  if (!.isUDF(fun)) {
+  if (.isUDF(fun)) {
     l <- as.list(body(fun))
     statements <- lapply(l[-1], .funToASTHelper)
     .pkg.env$call_list <- NULL

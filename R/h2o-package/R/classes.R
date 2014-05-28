@@ -554,3 +554,9 @@ setClass("ASTString", representation(type="character", value="character"), conta
 #'
 #' This class represents a UDF.
 setClass("ASTFun", representation(type="character", name="character", statements="list"), contains="Node")
+
+#'
+#' The ASTArg class.
+#'
+#' This class represents an argument to a function.
+setClass("ASTArg", representation(arg_name="character", arg_number="numeric", arg_value="ANY", arg_type="ANY"), contains="Node")

@@ -37,11 +37,6 @@ diff.H2OParsedData <- function(x, lag = 1, differences = 1, ...) {
   if(!is.numeric(lag)) stop("lag must be numeric")
   if(!is.numeric(differences)) stop("differences must be numeric")
 
-  print("DEBUG")
-  print(sys.call())
-  print(match.call())
-  print(as.list(match.call()))
-
   expr = paste("diff(", paste(x@key, lag, differences, sep = ","), ")", sep = "")
   res = .h2o.__exec2(x@h2o, expr)
   new("H2OParsedData", h2o=x@h2o, key=res$dest_key, logic=FALSE)
@@ -71,15 +66,10 @@ as.h2o <- function(client, object, key = "", header, sep = "") {
 
 h2o.cut <- function(x, breaks) {
   if(missing(x)) stop("Must specify data set")
-  if(!inherits(x, "H2OParsedData")) stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
+  if(!inherits(x, "H2OFrame")) stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
   if(missing(breaks) || !is.numeric(breaks)) stop("breaks must be a numeric vector")
 
-  nums = ifelse(length(breaks) == 1, breaks, paste("c(", paste(breaks, collapse=","), ")", sep=""))
-  expr = paste("cut(", x@key, ",", nums, ")", sep="")
-  res = .h2o.__exec2(x@h2o, expr)
-  if(res$num_rows == 0 && res$num_cols == 0)   # TODO: If logical operator, need to indicate
-    return(res$scalar)
-  new("H2OParsedData", h2o=x@h2o, key=res$dest_key)
+  .h2o.varop("cut", x, breaks)
 }
 
 # TODO: H2O doesn't support any arguments beyond the single H2OParsedData object (with <= 2 cols)
@@ -87,7 +77,7 @@ h2o.table <- function(x) {
   if(missing(x)) stop("Must specify data set")
   if(!inherits(x, "H2OParsedData")) stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
   if(ncol(x) > 2) stop("Unimplemented")
-  .h2o.__unop2("table", x)
+  .h2o.unop("table", x)
 }
 
 h2o.ddply <- function (.data, .variables, .fun = NULL, ..., .progress = 'none'){
@@ -139,7 +129,7 @@ ddply <- h2o.ddply
 h2o.addFunction <- function(fun, name){
   print(match.call())
   print(as.list(match.call()))
-#  if( missing(object) || class(object) != 'H2OClient' ) stop('must specify h2o connection in object')
+
   if( missing(fun) ) stop('must specify fun')
   if( !missing(name) ){
     if( class(name) != 'character' ) stop('name must be a name')
@@ -153,23 +143,17 @@ h2o.addFunction <- function(fun, name){
 #  res <- .h2o.__exec2(object, exec_cmd)
 }
 
-h2o.unique <- function(x, incomparables = FALSE, ...){
+h2o.unique <- function(x, incomparables = FALSE, ...) {
   # NB: we do nothing with incomparables right now
   # NB: we only support MARGIN = 2 (which is the default)
 
-  if(!class(x) %in% c('H2OParsedData', 'H2OParsedDataVA')) stop('h2o.unique: x is of the wrong type')
-  if( nrow(x) == 0 | ncol(x) == 0) return(NULL)
-  if( nrow(x) == 1) return(x)
+  if(!class(x) %in% c('H2OParsedData', 'H2OParsedDataVA')) stop('h2o.unique: x is of the wrong type. Got: ', class(x))
+#  if( nrow(x) == 0 | ncol(x) == 0) return(NULL) #TODO: Do this on the back end.
+#  if( nrow(x) == 1) return(x)  #TODO: Do this on the back end.
 
   args <- list(...)
   if( 'MARGIN' %in% names(args) && args[['MARGIN']] != 2 ) stop('h2o unique: only MARGIN 2 supported')
-  .h2o.__unop2("unique", x)
-
-#   uniq <- function(df){1}
-#   h2o.addFunction(l, uniq)
-#   res <- h2o.ddply(x, 1:ncol(x), uniq)
-#
-#   res[,1:(ncol(res)-1)]
+  .h2o.unop("unique", x)
 }
 unique.H2OParsedData <- h2o.unique
 
@@ -367,7 +351,7 @@ tail.H2OParsedData <- function(x, n = 6L, ...) {
   return(x.slice)
 }
 
-setMethod("is.factor", "H2OParsedData", function(x) { as.logical(.h2o.__unop2("is.factor", x)) })
+setMethod("is.factor", "H2OFrame", function(x) { as.logical(.h2o.unop("is.factor", x)) })
 
 quantile.H2OParsedData <- function(x, probs = seq(0, 1, 0.25), na.rm = FALSE, names = TRUE, type = 7, ...) {
   if((numCols = ncol(x)) != 1) stop("quantile only operates on a single column")
@@ -522,22 +506,22 @@ mean.H2OParsedData <- function(x, trim = 0, na.rm = FALSE, ...) {
     warning("argument is not numeric or logical: returning NA")
     return(NA_real_)
   }
-  if(!na.rm && .h2o.__unop2("any.na", x)) return(NA)
-  .h2o.__unop2("mean", x)
+  if(!na.rm && .h2o.unop("any.na", x)) return(NA)
+  .h2o.unop("mean", x)
 }
 
 setMethod("sd", "H2OParsedData", function(x, na.rm = FALSE) {
   if(ncol(x) != 1) stop("Unimplemented")
   if(dim(x)[2] != 1 || h2o.anyFactor(x)) stop("Could not coerce argument to double. H2O sd requires a single numeric column.")
-  if(!na.rm && .h2o.__unop2("any.na", x)) return(NA)
-  .h2o.__unop2("sd", x)
+  if(!na.rm && .h2o.unop("any.na", x)) return(NA)
+  .h2o.unop2("sd", x)
 })
 
 setMethod("var", "H2OParsedData", function(x, y = NULL, na.rm = FALSE, use) {
   if(!is.null(y) || !missing(use)) stop("Unimplemented")
   if(h2o.anyFactor(x)) stop("x cannot contain any categorical columns")
-  if(!na.rm && .h2o.__unop2("any.na", x)) return(NA)
-  .h2o.__unop2("var", x)
+  if(!na.rm && .h2o.unop("any.na", x)) return(NA)
+  .h2o.unop("var", x)
 })
 
 

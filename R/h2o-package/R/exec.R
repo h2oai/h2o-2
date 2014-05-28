@@ -120,3 +120,39 @@ function(op, e1, e2) {
     return(new("ASTNode", root=op, children=list(left = lhs, right = rhs)))
   }
 }
+
+
+.getValueFromArg<-
+function(a) {
+  if (inherits(a, "H2OParsedData")) {
+    a@key
+  } else if (inherits(a, "ASTNode")) {
+    a
+  } else {
+    deparse(eval(a))
+  }
+}
+
+.toASTArg<-
+function(col) {
+  new("ASTArg", arg_name=col$arg_names, arg_number=col$arg_numbers, arg_value=col$arg_values, arg_type=col$arg_types)
+}
+
+.h2o.varop<-
+function(op, ...) {
+  arg_names  <- unlist(lapply(as.list(substitute(list(...)))[-1], as.character))
+  arg_types  <- lapply(list(...), .evalClass)
+  arg_values <- lapply(list(...), .getValueFromArg)
+
+  args <- as.data.frame(rbind(arg_names, arg_types, arg_values, arg_numbers = 1:length(arg_names)))
+  names(args) <- paste("Arg", 1:length(arg_names), sep ="")
+
+  ASTargs <- unlist(apply(args, 2, .toASTArg))
+
+  op <- new("ASTOp", type="PrefixOperator", operator=op, infix=FALSE)
+  new("ASTNode", root=op, children=ASTargs)
+}
+
+
+
+cat(toJSON(visitor(h2o.cut(hex[,1], seq(0,1,0.01)))), "\n")
