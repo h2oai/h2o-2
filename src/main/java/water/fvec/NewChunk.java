@@ -448,9 +448,13 @@ public class NewChunk extends Chunk {
       _xs = new int [_ds.length];
       double [] ds = _ds;
       _ds = null;
+      final int naCnt = _naCnt;
       for( i=0; i<_len; i++ )   // Inject all doubles into longs
         if( Double.isNaN(ds[i]) )setNA_impl2(i);
         else                     _ls[i] = (long)ds[i];
+      // setNA_impl2 will set _naCnt to -1!
+      // we already know what the naCnt is (it did not change!) so set it back to correct value
+      _naCnt = naCnt;
     }
 
     // IF (_len2 > _len) THEN Sparse
