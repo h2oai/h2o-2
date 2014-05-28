@@ -782,6 +782,40 @@ public class Utils {
     @Override public int hashCode() { return (int)Double.doubleToLongBits(_val); }
     @Override public String toString() { return Double.toString(_val); }
   }
+  public static class IcedBitSet extends Iced {
+    public final byte[] _val;
+    public IcedBitSet(int nbits) {
+      if(nbits < 0) throw new NegativeArraySizeException("nbits < 0: " + nbits);
+      _val = new byte[((nbits-1) >> 3) + 1];
+    }
+    public boolean get(int idx) {
+      if(idx < 0) throw new IndexOutOfBoundsException("idx < 0: " + idx);
+      return (_val[idx >> 3] & ((byte)1 << idx)) != 0;
+    }
+    public void set(int idx) {
+      if(idx < 0) throw new IndexOutOfBoundsException("idx < 0: " + idx);
+      _val[idx >> 3] |= ((byte)1 << idx);
+    }
+    public int size() { return _val.length << 3; };
+    @Override public String toString() {
+      StringBuilder sb = new StringBuilder();
+      sb.append("{");
+
+      boolean first = true;
+      for(int i = 0; i < _val.length; i++) {
+        if(_val[i] == 0) continue;
+        for(int j = 0; j < 8; j++) {
+          if((_val[i] & ((byte)1 << j)) == 1) {
+            if(!first) sb.append(", ");
+            sb.append(8*i + j);
+            first = false;
+          }
+        }
+      }
+      sb.append("}");
+      return sb.toString();
+    }
+  }
   /**
    * Simple wrapper around HashMap with support for H2O serialization
    * @author tomasnykodym

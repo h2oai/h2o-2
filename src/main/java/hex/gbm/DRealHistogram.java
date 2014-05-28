@@ -150,7 +150,7 @@ public class DRealHistogram extends DHistogram<DRealHistogram> {
     long   n1 = equal == 0 ?   ns1[best] : _bins[best]              ;
     double p0 = equal == 0 ? sums0[best] : sums0[best]+sums1[best+1];
     double p1 = equal == 0 ? sums1[best] : _sums[best]              ;
-    return new DTree.Split(col,best,equal,best_se0,best_se1,n0,n1,p0/n0,p1/n1);
+    return new DTree.Split(col,best,null,equal,best_se0,best_se1,n0,n1,p0/n0,p1/n1);
   }
 
   @Override public long byteSize0() {

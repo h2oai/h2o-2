@@ -14,6 +14,7 @@ import water.api.Request.API;
 import water.fvec.Chunk;
 import water.license.LicenseManager;
 import water.util.*;
+import water.util.Utils.IcedBitSet;
 
 import java.util.*;
 
@@ -112,21 +113,14 @@ public class DTree extends Iced {
   // Records a column, a bin to split at within the column, and the MSE.
   public static class Split extends Iced {
     final int _col, _bin;       // Column to split, bin where being split
-    final BitSet _bs;           // For binary y and categorical x (with >= 4 levels), split into 2 non-contiguous groups
+    final IcedBitSet _bs;       // For binary y and categorical x (with >= 4 levels), split into 2 non-contiguous groups
     final byte _equal;          // Split is 0: <, 1: == with single split point, 2: == with bitset split
     final double _se0, _se1;    // Squared error of each subsplit
     final long    _n0,  _n1;    // Rows in each final split
     final double  _p0,  _p1;    // Predicted value for each split
 
-    public Split( int col, int bin, byte equal, double se0, double se1, long n0, long n1, double p0, double p1 ) {
-      assert equal == 0 || equal == 1;
-      _col = col;  _bin = bin;  _bs = null;  _equal = equal;
-      _n0 = n0;  _n1 = n1;  _se0 = se0;  _se1 = se1;
-      _p0 = p0;  _p1 = p1;
-    }
-    public Split( int col, BitSet bsplit, byte equal, double se0, double se1, long n0, long n1, double p0, double p1 ) {
-      assert equal == 2;
-      _col = col;  _bin = -1;  _bs = bsplit;  _equal = equal;
+    public Split( int col, int bin, IcedBitSet bs, byte equal, double se0, double se1, long n0, long n1, double p0, double p1 ) {
+      _col = col;  _bin = bin;  _bs = bs;  _equal = equal;
       _n0 = n0;  _n1 = n1;  _se0 = se0;  _se1 = se1;
       _p0 = p0;  _p1 = p1;
     }
@@ -426,7 +420,6 @@ public class DTree extends Iced {
         return d != _splat ? 0 : 1;
       else
         return _split._bs.get((int)d) ? 1 : 0;
-        // return _split._bs.get((int)d) ? 0 : 1;
       // return _split._equal ? (d != _splat ? 0 : 1) : (d < _splat ? 0 : 1);
     }
 
@@ -434,14 +427,17 @@ public class DTree extends Iced {
 
     public double pred( int nid ) { return nid==0 ? _split._p0 : _split._p1; }
 
-    // TODO: Update to print bitset split
     @Override public String toString() {
       if( _split._col == -1 ) return "Decided has col = -1";
       int col = _split._col;
-      if( _split._equal )
+      if( _split._equal == 1 )
         return
           _tree._names[col]+" != "+_splat+"\n"+
           _tree._names[col]+" == "+_splat+"\n";
+      else if( _split._equal == 2 )
+        return
+          _tree._names[col]+" != "+_split._bs.toString()+"\n"+
+          _tree._names[col]+" == "+_split._bs.toString()+"\n";
       return
         _tree._names[col]+" < "+_splat+"\n"+
         _splat+" <="+_tree._names[col]+"\n";
@@ -451,14 +447,13 @@ public class DTree extends Iced {
       int i = _nids[0]==nid ? 0 : 1;
       assert _nids[i]==nid : "No child nid "+nid+"? " +Arrays.toString(_nids);
       sb.append("[").append(_tree._names[_split._col]);
-      sb.append(_split._equal
+      sb.append(_split._equal != 0
                 ? (i==0 ? " != " : " == ")
                 : (i==0 ? " <  " : " >= "));
-      sb.append(_splat).append("]");
+      sb.append(_split._equal == 2 ? _split._bs.toString() : _splat).append("]");
       return sb;
     }
 
-    // TODO: Update to include bitset split
     @Override public StringBuilder toString2(StringBuilder sb, int depth) {
       for( int i=0; i<_nids.length; i++ ) {
         for( int d=0; d<depth; d++ ) sb.append("  ");
@@ -466,10 +461,10 @@ public class DTree extends Iced {
         if( _split._col < 0 ) sb.append("init");
         else {
           sb.append(_tree._names[_split._col]);
-          sb.append(_split._equal
+          sb.append(_split._equal != 0
                     ? (i==0 ? " != " : " == ")
                     : (i==0 ? " <  " : " >= "));
-          sb.append(_splat).append("\n");
+          sb.append(_split._equal == 2 ? _split._bs.toString() : _splat).append("\n");
         }
         if( _nids[i] >= 0 && _nids[i] < _tree._len )
           _tree.node(_nids[i]).toString2(sb,depth+1);
@@ -477,15 +472,16 @@ public class DTree extends Iced {
       return sb;
     }
 
-    // TODO: Also must modify size for bitset splits
+    // TODO: Update size of subtree to include IcedBitSet
     // Size of this subtree; sets _nodeType also
     @Override public final int size(){
       if( _size != 0 ) return _size; // Cached size
 
       assert _nodeType == 0:"unexpected node type: " + _nodeType;
-      if( _split._equal ) _nodeType |= (byte)4;
+      if( _split._equal != 0 ) _nodeType |= (byte)4;
 
-      int res = 7; // 1B node type + flags, 2B colId, 4B float split val
+      int res = 7;  // 1B node type + flags, 2B colId, 4B float split val
+      // int res = _split._equal == 2 ? 3 + (_split._bs.size() >> 3) : 7;
 
       Node left = _tree.node(_nids[0]);
       int lsz = left.size();
@@ -505,6 +501,7 @@ public class DTree extends Iced {
       return (_size = res);
     }
 
+    // TODO: Compress and save BitSet _bs rather than _splat for group splitting
     // Compress this tree into the AutoBuffer
     @Override public AutoBuffer compress(AutoBuffer ab) {
       int pos = ab.position();
@@ -834,6 +831,8 @@ public class DTree extends Iced {
       }
     }
 
+    // TODO: How many bytes of BitSet are there? (Look up number of levels in col with colID)
+    //       Need 1 more bit to encode == for group splitting
     // --------------------------------------------------------------------------
     // Highly compressed tree encoding:
     //    tree: 1B nodeType, 2B colId, 4B splitVal, left-tree-size, left, right

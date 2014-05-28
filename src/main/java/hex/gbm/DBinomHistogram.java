@@ -4,6 +4,7 @@ import java.util.*;
 
 import water.MemoryManager;
 import water.util.Utils;
+import water.util.Utils.IcedBitSet;
 
 /**
    A Histogram, computed in parallel over a Vec.
@@ -155,14 +156,13 @@ public class DBinomHistogram extends DHistogram<DBinomHistogram> {
 
     // For categorical predictors, set bits for levels grouped to right of split
     // TODO: Is bit = 1 for left or right of the split?
-    BitSet bs = new BitSet(nbins);
+    IcedBitSet bs = new IcedBitSet(nbins);
     if(_isInt == 2 && _step == 1.0f && nbins >= 4) {
       equal = 2;
       // for(int i = 0; i < best; i++) bs.set(idx[i]);
       for(int i = best; i < nbins; i++) bs.set(idx[i]);
-      return new DTree.Split(col,bs,equal,best_se0,best_se1,n0,n1,p0/n0,p1/n1);
     }
-    return new DTree.Split(col,best,equal,best_se0,best_se1,n0,n1,p0/n0,p1/n1);
+    return new DTree.Split(col,best,bs,equal,best_se0,best_se1,n0,n1,p0/n0,p1/n1);
   }
 
   @Override public long byteSize0() {
