@@ -13,10 +13,7 @@ import hex.drf.DRF;
 import hex.gapstat.GapStatistic;
 import hex.gapstat.GapStatisticModelView;
 import hex.gbm.GBM;
-import hex.glm.GLM2;
-import hex.glm.GLMGridView;
-import hex.glm.GLMModelView;
-import hex.glm.GLMProgress;
+import hex.glm.*;
 import hex.nb.NBModelView;
 import hex.nb.NBProgressPage;
 import hex.gapstat.GapStatisticProgressPage;
@@ -145,6 +142,7 @@ public class RequestServer extends NanoHTTPD {
       registerRequest(new FrameSplitPage());
       registerRequest(new GapStatistic());
       registerRequest(new CreateFrame());
+      registerRequest(new KillMinus3());
     } else {
       Request.addToNavbar(registerRequest(new hex.LR2()),        "Linear Regression2",   "Beta");
       Request.addToNavbar(registerRequest(new ReBalance()),      "ReBalance",            "Beta");
@@ -152,6 +150,7 @@ public class RequestServer extends NanoHTTPD {
       Request.addToNavbar(registerRequest(new Console()),        "Console",              "Beta");
       Request.addToNavbar(registerRequest(new GapStatistic()),   "Gap Statistic",        "Beta");
       Request.addToNavbar(registerRequest(new CreateFrame()),    "Create Frame",         "Beta");
+      Request.addToNavbar(registerRequest(new KillMinus3()),     "Kill Minus 3",         "Beta");
 //      Request.addToNavbar(registerRequest(new ExportModel()),    "Export Model",         "Beta (FluidVecs!)");
 //      Request.addToNavbar(registerRequest(new ImportModel()),    "Import Model",         "Beta (FluidVecs!)");
     }
@@ -267,6 +266,7 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new TestRedirect());
 //    registerRequest(new GLMProgressPage2());
     registerRequest(new GLMModelView());
+    registerRequest(new GLMModelUpdate());
     registerRequest(new GLMGridView());
 //    registerRequest(new GLMValidationView());
     registerRequest(new LaunchJar());

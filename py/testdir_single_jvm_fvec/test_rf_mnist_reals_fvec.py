@@ -73,6 +73,8 @@ class Basic(unittest.TestCase):
                 'destination_key': 'RF_model',
                 'nbins': 1024,
                 'seed': 784834182943470027,
+                'importance': 0,
+                'balance_classes': 0,
                 }
 
             kwargs = params.copy()

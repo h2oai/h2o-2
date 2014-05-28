@@ -4,7 +4,7 @@ import h2o, h2o_cmd, h2o_import as h2i, h2o_glm, h2o_common, h2o_exec as h2e
 import h2o_print
 
 DO_GLM = True
-LOG_MACHINE_STATS = False
+LOG_MACHINE_STATS = True
 
 print "Assumes you ran ../build_for_clone.py in this directory"
 print "Using h2o-nodes.json. Also the sandbox dir"
@@ -18,15 +18,10 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         ### importFolderPath = 'more1_1200_link'
         importFolderPath = 'manyfiles-nflx'
         print "Using non-gz'ed files in", importFolderPath
-        if len(h2o.nodes)==1:
-            csvFilenameList= [
-                ("*[1][0][0-9].dat", "file_10_A.dat", 10 * avgMichalSize, 600),
-            ]
-        else:
-            csvFilenameList= [
-                ("*[1][0-4][0-9].dat", "file_50_A.dat", 50 * avgMichalSize, 1800),
-                # ("*[1][0-9][0-9].dat", "file_100_A.dat", 100 * avgMichalSize, 3600),
-            ]
+        csvFilenameList= [
+            ("*[1][0-4][0-9].dat", "file_50_A.dat", 50 * avgMichalSize, 1800),
+            # ("*[1][0-9][0-9].dat", "file_100_A.dat", 100 * avgMichalSize, 3600),
+        ]
 
         if LOG_MACHINE_STATS:
             benchmarkLogging = ['cpu', 'disk', 'network']
@@ -96,9 +91,9 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
                     # convert to binomial
                     execExpr="A.hex=%s" % parseResult['destination_key']
-                    h2e.exec_expr(execExpr=execExpr, timeoutSecs=60)
-                    execExpr="A.hex[,%s]=(A.hex[,%s]>%s)" % ('C379', 'C379', 15)
-                    h2e.exec_expr(execExpr=execExpr, timeoutSecs=60)
+                    h2e.exec_expr(execExpr=execExpr, timeoutSecs=180)
+                    execExpr="A.hex[,%s]=(A.hex[,%s]>%s)" % ('379', '379', 15)
+                    h2e.exec_expr(execExpr=execExpr, timeoutSecs=180)
                     aHack = {'destination_key': "A.hex"}
 
                     start = time.time()
@@ -117,11 +112,6 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
     #***********************************************************************
     # these will be tracked individual by jenkins, which is nice
     #***********************************************************************
-
-    def test_A_c2_nongz_fvec_short(self):
-        h2o.beta_features = True
-        parseResult = h2i.import_parse(bucket='smalldata', path='iris/iris2.csv', schema='put')
-        h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=10)
 
     def test_B_c2_nongz_fvec_long(self):
         h2o.beta_features = True

@@ -80,17 +80,17 @@ public class Parse extends Request {
         exclude = makePattern(_excludeExpression.value());
       ArrayList<Key> keys = new ArrayList();
       // boolean badkeys = false;
-      for( Key key : H2O.globalKeySet(null) ) { // For all keys
-        if( !key.user_allowed() ) continue;
-        String ks = key.toString();
+      for( H2O.KeyInfo kinfo : H2O.globalKeySet(null,100) ) { // For all keys
+        if(!kinfo._rawData)continue;
+        String ks = kinfo._key.toString();
         if( !p.matcher(ks).matches() ) // Ignore non-matching keys
           continue;
         if(exclude != null && exclude.matcher(ks).matches())
           continue;
-        Value v2 = DKV.get(key);  // Look at it
+        Value v2 = DKV.get(kinfo._key);  // Look at it
         if( !v2.isRawData() ) // filter common mistake such as *filename* with filename.hex already present
           continue;
-        keys.add(key);        // Add to list
+        keys.add(kinfo._key);        // Add to list
       }
       if(keys.size() == 0 )
         throw new IllegalArgumentException("I did not find any keys matching this pattern!");
