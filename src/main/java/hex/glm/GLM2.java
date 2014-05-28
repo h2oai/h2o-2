@@ -605,7 +605,6 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           int nzs = 0;
           for(int i = 0; i < newBeta.length; ++i)
             if(newBeta[i] != 0) ++nzs;
-          if(newBeta.length < 20)System.out.println("beta = " + Arrays.toString(newBeta));
           Log.info("GLM2 (lambda_" + _lambdaIdx + "=" + lambda[_lambdaIdx] + ") converged (reached a fixed point with ~ 1e" + diff + " precision) after " + _iter + "iterations, got " + nzs + " nzs");
           nextLambda(glmt,newBeta);
         } else { // not done yet, launch next iteration
