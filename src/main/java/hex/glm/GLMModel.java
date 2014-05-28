@@ -98,7 +98,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   long start_time;
 
   // fully expanded beta used for scoring
-  double [] global_beta;
+  private double [] global_beta;
 
   static class Submodel extends Iced {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -215,9 +215,10 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   }
   public double [] beta(){return global_beta;}
   public double [] norm_beta(int lambdaIdx){
-    if(submodels[lambdaIdx].norm_beta == null)
+    if(submodels[lambdaIdx].norm_beta == null) {
       return beta(); // not normalized
-    double [] res = beta().clone();
+    }
+    double [] res = MemoryManager.malloc8d(data_info.fullN()+1);
     int j = 0;
     for(int i:submodels[lambdaIdx].idxs)
       res[i] = submodels[lambdaIdx].norm_beta[j++];
