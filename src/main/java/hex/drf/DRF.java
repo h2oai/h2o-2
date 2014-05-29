@@ -131,6 +131,9 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
         bodySb.i().p("if (sum>0) for(int i=1; i<preds.length; i++) preds[i] /= sum;").nl();
       } else bodySb.i().p("preds[1] = preds[1]/NTREES;").nl();
     }
+    @Override protected void setCrossValidationError(double cv_error, water.api.ConfusionMatrix cm, water.api.AUC auc, water.api.HitRatio hr) {
+      Log.info(" CV-error: " + cv_error);
+    }
   }
   public Frame score( Frame fr ) { return ((DRFModel)UKV.get(dest())).score(fr);  }
 
@@ -167,6 +170,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   @Override protected void execImpl() {
     logStart();
     buildModel(seed);
+    if (num_folds > 0) ModelUtils.crossValidate(this);
   }
 
   @Override protected Response redirect() {
@@ -624,5 +628,20 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
           nids.set0(row, OUT_OF_BAG);     // Flag row as being ignored by sampling
         }
     }
+  }
+
+  /**
+   * Cross-Validate a DRF model by building new models on N train/test holdout splits
+   * @param basename Basename for naming the cross-validated models
+   * @param splits Frames containing train/test splits
+   * @param cv_preds Array of Frames to store the predictions for each cross-validation run
+   * @param offsets Array to store the offsets of starting row indices for each cross-validation run
+   * @param i Which fold of cross-validation to perform
+   */
+  @Override public void crossValidate(String basename, Frame[] splits, Frame[] cv_preds, long[] offsets, int i) {
+    // Train a clone with slightly modified parameters (to account for cross-validation)
+    DRF cv = (DRF) this.clone();
+    cv.genericCrossValidation(basename, splits, offsets, i);
+    cv_preds[i] = ((DRFModel) UKV.get(cv.dest())).score(cv.validation);
   }
 }
