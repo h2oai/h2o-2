@@ -16,6 +16,7 @@ import water.license.LicenseManager;
 import water.util.*;
 import water.util.Utils.IcedBitSet;
 
+import java.nio.ByteBuffer;
 import java.util.*;
 
 /**
@@ -832,17 +833,16 @@ public class DTree extends Iced {
     }
 
     // TODO: How many bytes of BitSet are there? (Look up number of levels in col with colID)
-    //       Need 1 more bit to encode == for group splitting
     // --------------------------------------------------------------------------
     // Highly compressed tree encoding:
     //    tree: 1B nodeType, 2B colId, 4B splitVal, left-tree-size, left, right
     //    nodeType: (from lsb):
-    //        2 bits ( 1,2) skip-tree-size-size,
-    //        1 bit  ( 4) operator flag (0 --> <, 1 --> == ),
-    //        1 bit  ( 8) left leaf flag,
-    //        1 bit  (16) left leaf type flag, (unused)
-    //        1 bit  (32) right leaf flag,
-    //        1 bit  (64) right leaf type flag (unused)
+    //        2 bits (1,2) skip-tree-size-size,
+    //        2 bits (4,8) operator flag (0 --> <, 1 --> ==, 2 --> small (4B) group, 3 --> big (var size) group),
+    //        1 bit  ( 16) left leaf flag,
+    //        1 bit  ( 32) left leaf type flag (0: subtree, 1: small cat, 2: big cat, 3: float)
+    //        1 bit  ( 64) right leaf flag,
+    //        1 bit  (128) right leaf type flag (0: subtree, 1: small cat, 2: big cat, 3: float)
     //    left, right: tree | prediction
     //    prediction: 4 bytes of float
     public static class CompressedTree extends Iced {
@@ -856,20 +856,25 @@ public class DTree extends Iced {
           int nodeType = ab.get1();
           int colId = ab.get2();
           if( colId == 65535 ) return scoreLeaf(ab);
+
+          // boolean equal = ((nodeType&4)==4);
+          int equal = (nodeType & 12) >> 2;
+          assert (equal >= 0 && equal <= 3): "illegal equal value " + equal+" at "+ab.position()+" in bitpile "+Arrays.toString(_bits);
+
+          // TODO: Get BitSet group. For large group, extract 2B size val first, then read BitSet array from AutoBuffer.
           float splitVal = ab.get4f();
 
-          boolean equal = ((nodeType&4)==4);
           // Compute the amount to skip.
-          int lmask =  nodeType & 0x1B;
-          int rmask = (nodeType & 0x60) >> 2;
+          int lmask =  nodeType & 0x33;
+          int rmask = (nodeType & 0xC0) >> 2;
           int skip = 0;
           switch(lmask) {
           case 0:  skip = ab.get1();  break;
           case 1:  skip = ab.get2();  break;
           case 2:  skip = ab.get3();  break;
           case 3:  skip = ab.get4();  break;
-          case 8:  skip = _nclass < 256?1:2;  break; // Small leaf
-          case 24: skip = 4;          break; // skip the prediction
+          case 16: skip = _nclass < 256?1:2;  break; // Small leaf
+          case 48: skip = 4;          break; // skip the prediction
           default: assert false:"illegal lmask value " + lmask+" at "+ab.position()+" in bitpile "+Arrays.toString(_bits);
           }
 
@@ -877,13 +882,13 @@ public class DTree extends Iced {
           //   - Double.NaN <  3.7f => return false => BUT left branch has to be selected (i.e., ab.position())
           //   - Double.NaN != 3.7f => return true  => left branch has to be select selected (i.e., ab.position())
           if( !Double.isNaN(row[colId]) ) { // NaNs always go to bin 0
-            if( ( equal && ((float)row[colId]) == splitVal) ||
-                (!equal && ((float)row[colId]) >= splitVal) ) {
+            if( ( equal==1 && ((float)row[colId]) == splitVal) ||     // TODO: Deal with equal = 2 and 3 cases
+                ( equal==0 && ((float)row[colId]) >= splitVal) ) {
               ab.position(ab.position()+skip); // Skip to the right subtree
               lmask = rmask;                   // And set the leaf bits into common place
             }
           } /* else Double.isNaN() is true => use left branch */
-          if( (lmask&8)==8 ) return scoreLeaf(ab);
+          if( (lmask&16)==16 ) return scoreLeaf(ab);
         }
       }
 

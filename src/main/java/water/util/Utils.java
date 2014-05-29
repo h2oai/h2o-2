@@ -784,6 +784,7 @@ public class Utils {
   }
   public static class IcedBitSet extends Iced {
     public final byte[] _val;
+    public IcedBitSet(byte[] v) { _val = v; }
     public IcedBitSet(int nbits) {
       if(nbits < 0) throw new NegativeArraySizeException("nbits < 0: " + nbits);
       _val = new byte[((nbits-1) >> 3) + 1];
