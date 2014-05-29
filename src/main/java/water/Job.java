@@ -776,7 +776,7 @@ public abstract class Job extends Func {
      * @param i Which fold of cross-validation to perform
      */
     final protected void genericCrossValidation(String basename, Frame[] splits, long[] offsets, int i) {
-      int respidx = source.find(response);
+      int respidx = source.find(_responseName);
       assert(respidx != -1) : "response is not found in source!";
       job_key = Key.make(); //make a new Job for CV
       destination_key = Key.make(basename + ".cv" + i);
@@ -784,10 +784,10 @@ public abstract class Job extends Func {
       source = splits[(i + 1) % 2]; //TODO: replace with holdout extractor code
       response = source.vecs()[respidx];
       num_folds = 0;
-      state = Job.JobState.RUNNING; //Hack to allow this job to run
+      state = Job.JobState.CREATED; //Hack to allow this job to run
       DKV.put(self(), this); //Needed to pass the Job.isRunning(cvdl.self()) check in FrameTask
       offsets[i + 1] = offsets[i] + validation.numRows();
-      execImpl();
+      invoke();
     }
 
     /**

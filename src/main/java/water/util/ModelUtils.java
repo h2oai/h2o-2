@@ -204,8 +204,12 @@ public class ModelUtils {
     long[] offsets = new long[job.num_folds+1];
     Frame[] cv_preds = new Frame[job.num_folds];
     for (int i = 0; i < job.num_folds; ++i)
-      job.crossValidate(basename, splits, cv_preds, offsets, i);
-    ((Model)DKV.get(job.destination_key).get()).scoreCrossValidation(job.source, job.response, cv_preds, offsets);
+      job.crossValidate(basename, splits, cv_preds, offsets, i); //this removes the enum-ified response!
+
+    boolean put_back = UKV.get(job.response._key) == null;
+    if (put_back) DKV.put(job.response._key, job.response); //put enum-ified response back to K-V store
+    ((Model)UKV.get(job.destination_key)).scoreCrossValidation(job.source, job.response, cv_preds, offsets);
+    if (put_back) UKV.remove(job.response._key);
   }
 
 }
