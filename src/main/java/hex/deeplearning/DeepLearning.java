@@ -1,21 +1,15 @@
 package hex.deeplearning;
 
+import hex.*;
+import water.*;
+import water.util.*;
 import static water.util.MRUtils.sampleFrame;
 import static water.util.MRUtils.sampleFrameStratified;
-import hex.FrameTask;
 import hex.FrameTask.DataInfo;
-import water.H2O;
-import water.Job;
-import water.Key;
-import water.UKV;
 import water.api.*;
 import water.fvec.Frame;
 import water.fvec.RebalanceDataSet;
 import water.fvec.Vec;
-import water.util.Log;
-import water.util.MRUtils;
-import water.util.RString;
-import water.util.Utils;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
@@ -694,11 +688,18 @@ public class DeepLearning extends Job.ValidatedJob {
     return 0;
   }
 
-  /**
-   * Train a Deep Learning model, assumes that all members are populated
-   */
   @Override
   public final void execImpl() {
+    buildModel();
+    if (num_folds > 0) ModelUtils.crossValidate(this);
+    delete();
+  }
+
+  /**
+   * Train a Deep Learning model, assumes that all members are populated
+   * If checkpoint == null, then start training a new model, otherwise continue from a checkpoint
+   */
+  private final void buildModel() {
     DeepLearningModel cp = null;
     if (checkpoint == null) {
       cp = initModel();
@@ -761,7 +762,6 @@ public class DeepLearning extends Job.ValidatedJob {
     }
     trainModel(cp);
     cp.stop_training();
-    delete();
   }
 
   /**
@@ -868,7 +868,7 @@ public class DeepLearning extends Job.ValidatedJob {
       final DataInfo dinfo = prepareDataInfo();
       final Vec resp = dinfo._adaptedFrame.lastVec(); //convention from DataInfo: response is the last Vec
       float[] priorDist = classification ? new MRUtils.ClassDist(resp).doAll(resp).rel_dist() : null;
-      final DeepLearningModel model = new DeepLearningModel(dest(), self(), source._key, dinfo, this, priorDist);
+      final DeepLearningModel model = new DeepLearningModel(dest(), self(), source._key, dinfo, (DeepLearning)this.clone(), priorDist);
       model.model_info().initializeMembers();
       return model;
     }
@@ -1063,4 +1063,19 @@ public class DeepLearning extends Job.ValidatedJob {
     return rowUsageFraction;
   }
 
+  /**
+   * Cross-Validate a DeepLearning model by building new models on N train/test holdout splits
+   * @param basename
+   * @param splits
+   * @param cv_preds
+   * @param offsets
+   * @param i
+   */
+  @Override public void crossValidate(String basename, Frame[] splits, Frame[] cv_preds, long[] offsets, int i) {
+    // Train a clone with slightly modified parameters (to account for cross-validation)
+    DeepLearning cvdl = (DeepLearning) this.clone();
+    cvdl.best_model_key = null; // model-specific stuff
+    cvdl.genericCrossValidation(basename, splits, offsets, i);
+    cv_preds[i] = ((DeepLearningModel) UKV.get(cvdl.dest())).score(cvdl.validation);
+  }
 }
