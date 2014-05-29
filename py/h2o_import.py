@@ -370,7 +370,7 @@ def import_parse(node=None, schema='local', bucket=None, path=None,
             numCols = inspect['num_cols']
                 
         # we pass numCols, for detecting whether the na cnt means a col is all NAs, (for ignoring min/max/mean/sigma)
-        node.summary_page(parseResult['destination_key'], timeoutSecs=timeoutSecs, noPrint=noPrint, numRows=numRows, numCols=numCols, max_ncols=numCols)
+        node.summary_page(parseResult['destination_key'], timeoutSecs=timeoutSecs, noPrint=noPrint, numRows=numRows, numCols=numCols)
         # for now, don't worry about error isolating summary 
     else:
         # isolate a parse from the next thing
