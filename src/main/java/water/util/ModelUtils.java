@@ -2,7 +2,9 @@ package water.util;
 
 import java.util.*;
 
-import water.H2O;
+import hex.FrameSplitter;
+import water.*;
+import water.fvec.Frame;
 
 /**
  * Shared static code to support modeling, prediction, and scoring.
@@ -180,4 +182,30 @@ public class ModelUtils {
     oob[0] = oobcnt;
     return oob;
   }
+
+  /**
+   * Cross-Validate a ValidatedJob
+   * @param job (must contain valid entries for num_folds, validation, destination_key, source, response)
+   */
+  public static void crossValidate(Job.ValidatedJob job) {
+    if (job.validation != null)
+      throw new IllegalArgumentException("Cannot provide validation dataset and num_folds > 0 at the same time.");
+    if (job.num_folds <= 1)
+      throw new IllegalArgumentException("num_folds must be >= 2 for cross-validation.");
+    //FIXME: Hardcoded to N=2
+    if (job.num_folds != 2) throw new UnsupportedOperationException("num_folds != 2 is not yet implemented.");
+    float[] ratios = TestUtil.arf(0.5f);
+    String basename = job.destination_key.toString();
+    basename = basename.substring(0, Math.max(Math.min(40, basename.length() - 5), 0));
+    Key[] destkeys = new Key[]{Key.make(basename + ".cv" + ".first"), Key.make(basename + ".cv" + ".second")};
+    FrameSplitter fs = new FrameSplitter(job.source, ratios, destkeys, null);
+    H2O.submitTask(fs).join();
+    Frame[] splits = fs.getResult();
+    long[] offsets = new long[job.num_folds+1];
+    Frame[] cv_preds = new Frame[job.num_folds];
+    for (int i = 0; i < job.num_folds; ++i)
+      job.crossValidate(basename, splits, cv_preds, offsets, i);
+    ((Model)DKV.get(job.destination_key).get()).scoreCrossValidation(job.source, job.response, cv_preds, offsets);
+  }
+
 }
