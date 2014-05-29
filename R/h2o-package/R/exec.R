@@ -1,3 +1,11 @@
+#'
+#' This is the front-end of the execution interface between R and H2O.
+#'
+#' The workhorses of this front end are .h2o.unop, .h2o.binop, and .h2o.varop.
+#'
+#' Together, these three methods handle all of the available operations that can
+#' be done with H2OFrame objects (this includes H2OParsedData objects and ASTNode objects).
+
 
 .h2o.__exec2 <- function(client, expr) {
   destKey = paste(.TEMP_KEY, ".", .pkg.env$temp_count, sep="")
@@ -39,21 +47,48 @@ function(op, x) {
 .h2o.binop<-
 function(op, e1, e2) {
 
+  #Preprocessing step
+  if (inherits(e1, "ASTNumeric")) {
+    e1 <- e1@value
+  } else if (inherits(e1, "ASTFrame")) {
+    e1 <- new("H2OParsedData", key=e1@value)
+  } else if (inherits(e2, "ASTNumeric")) {
+    e2 <- e2@value
+  } else if (inherits(e2, "ASTFrame")) {
+    e2 <- new("H2OParsedData", key=e2@value)
+  }
+
+  if (inherits(e1, "ASTUnk") || inherits(e2, "ASTUnk")) {
+    if (!inherits(e1, "ASTUnk")) {
+      tmp <- e1
+      e1 <- e2
+      e2 <- tmp
+    }
+  }
+
+  if (inherits(e1, "ASTFun") || inherits(e2, "ASTFun")) {
+    if (!inherits(e1, "ASTFun")) {
+      tmp <- e1
+      e1 <- e2
+      e2 <- tmp
+    }
+  }
+
   #Case 1: l: ASTOp & r: Numeric
   if (inherits(e1, "ASTNode") && inherits(e2, "numeric")) {
-    type_list <- list("ASTOp", "Numeric")  # An ASTNode is a root node. Root nodes are always ASTOps.
-    type_defs <- list("", e2)
-    names(type_list) <- names(type_defs) <- c(deparse(substitute(e1)), deparse(substitute(e2)))
+#    type_list <- list("ASTOp", "Numeric")  # An ASTNode is a root node. Root nodes are always ASTOps.
+#    type_defs <- list("", e2)
+#    names(type_list) <- names(type_defs) <- c(deparse(substitute(e1)), deparse(substitute(e2)))
     lhs <- e1
-    rhs <-  new("ASTNumeric", s_table=list(types = type_list, defs = type_defs), type="numeric", value=e2)
+    rhs <-  new("ASTNumeric", type="numeric", value=e2)  #s_table=list(types = type_list, defs = type_defs)
     op <- new("ASTOp", type="BinaryOperator", operator=op, infix=TRUE)
     return(new("ASTNode", root=op, children=list(left = lhs, right = rhs)))
 
   #Case 2: l: ASTOp & r: ASTOp
   } else if (inherits(e1, "ASTNode") && inherits(e2, "ASTNode")) {
-    type_list <- list("ASTOp", "ASTOp")  # An ASTNode is a root node. Root nodes are always ASTOps.
-    type_defs <- list("", "")
-    names(type_list) <- names(type_defs) <- c(deparse(substitute(e1)), deparse(substitute(e2)))
+#    type_list <- list("ASTOp", "ASTOp")  # An ASTNode is a root node. Root nodes are always ASTOps.
+#    type_defs <- list("", "")
+#    names(type_list) <- names(type_defs) <- c(deparse(substitute(e1)), deparse(substitute(e2)))
     lhs <- e1
     rhs <- e2
     op <- new("ASTOp", type="BinaryOperator", operator=op, infix=TRUE)
@@ -61,79 +96,178 @@ function(op, e1, e2) {
 
   #Case 3: l: ASTOp & r: H2OParsedData
   } else if (inherits(e1, "ASTNode") && inherits(e2, "H2OParsedData")) {
-    type_list <- list("ASTOp", "Frame")  # An ASTNode is a root node. Root nodes are always ASTOps.
-    type_defs <- list("", e2@key)
-    names(type_list) <- names(type_defs) <- c(deparse(substitute(e1)), deparse(substitute(e2)))
+#    type_list <- list("ASTOp", "Frame")  # An ASTNode is a root node. Root nodes are always ASTOps.
+#    type_defs <- list("", e2@key)
+#    names(type_list) <- names(type_defs) <- c(deparse(substitute(e1)), deparse(substitute(e2)))
     lhs <- e1
-    rhs <- new("ASTFrame", s_table=list(types = type_list, defs = type_defs), type="Frame", value=e2@key)
+    rhs <- new("ASTFrame", type="Frame", value=e2@key)  #  s_table=list(types = type_list, defs = type_defs)
     op <- new("ASTOp", type="BinaryOperator", operator=op, infix=TRUE)
     return(new("ASTNode", root=op, children=list(left = lhs, right = rhs)))
 
   #Case 4: l: H2OParsedData & r: Numeric
   } else if (inherits(e1, "H2OParsedData") && inherits(e2, "numeric")) {
-    type_list <- list("Frame", "Numeric")
-    type_defs <- list(e1@key, e2)
-    names(type_list) <- names(type_defs) <- c(deparse(substitute(e1)), deparse(substitute(e2)))
-    lhs <- new("ASTFrame", s_table=list(types = type_list, defs = type_defs), type="Frame", value=e1@key)
-    rhs <- new("ASTNumeric", s_table=list(types = type_list, defs = type_defs), type="Numeric", value=e2)
+#    type_list <- list("Frame", "Numeric")
+#    type_defs <- list(e1@key, e2)
+#    names(type_list) <- names(type_defs) <- c(deparse(substitute(e1)), deparse(substitute(e2)))
+
+    lhs <- new("ASTFrame", type="Frame", value=e1@key) # s_table=list(types = type_list, defs = type_defs)
+    rhs <- new("ASTNumeric", type="Numeric", value=e2) # s_table=list(types = type_list, defs = type_defs)
     op <- new("ASTOp", type="BinaryOperator", operator=op, infix=TRUE)
     return(new("ASTNode", root=op, children=list(left = lhs, right = rhs)))
 
   #Case 5: l: H2OParsedData & r: ASTOp
   } else if (inherits(e1, "H2OParsedData") && inherits(e2, "ASTNode")) {
-    type_list <- list("Frame", "ASTOp")
-    type_defs <- list(e1@key, "")
-    names(type_list) <- names(type_defs) <- c(deparse(substitute(e1)), deparse(substitute(e2)))
-    lhs <- new("ASTFrame", s_table=list(types = type_list, defs = type_defs), type="Frame", value=e1@key)
+#    type_list <- list("Frame", "ASTOp")
+#    type_defs <- list(e1@key, "")
+#    names(type_list) <- names(type_defs) <- c(deparse(substitute(e1)), deparse(substitute(e2)))
+    lhs <- new("ASTFrame", type="Frame", value=e1@key) # s_table=list(types = type_list, defs = type_defs)
     rhs <- e2
     op <- new("ASTOp", type="BinaryOperator", operator=op, infix=TRUE)
     return(new("ASTNode", root=op, children=list(left = lhs, right = rhs)))
 
   #Case 6: l: H2OParsedData & r: H2OParsedData
   } else if (inherits(e1, "H2OParsedData") && inherits(e2, "H2OParsedData")) {
-    type_list <- list("Frame", "Frame")
-    type_defs <- list(e1@key, e2@key)
-    names(type_list) <- names(type_defs) <- c(deparse(substitute(e1)), deparse(substitute(e2)))
-    lhs <- new("ASTFrame", s_table=list(types = type_list, defs = type_defs), type="Frame", value=e1@key)
-    rhs <- new("ASTFrame", s_table=list(types = type_list, defs = type_defs), type="Frame", value=e2@key)
+#    type_list <- list("Frame", "Frame")
+#    type_defs <- list(e1@key, e2@key)
+#    names(type_list) <- names(type_defs) <- c(deparse(substitute(e1)), deparse(substitute(e2)))
+    lhs <- new("ASTFrame", type="Frame", value=e1@key) #s_table=list(types = type_list, defs = type_defs),
+    rhs <- new("ASTFrame", type="Frame", value=e2@key) #s_table=list(types = type_list, defs = type_defs),
     op  <- new("ASTOp", type="BinaryOperator", operator=op, infix=TRUE)
     return(new("ASTNode", root=op, children=list(left = lhs, right = rhs)))
 
   #Case 7: l: Numeric & r: ASTOp
   } else if (inherits(e1, "numeric") && inherits(e2, "ASTNode")) {
-    type_list <- list("Numeric", "ASTOp")
-    type_defs <- list(e1, "")
-    names(type_list) <- names(type_defs) <- c(deparse(substitute(e1)), deparse(substitute(e2)))
-    lhs <- new("ASTNumeric", s_table=list(types = type_list, defs = type_defs), type="numeric", value=e1)
+#    type_list <- list("Numeric", "ASTOp")
+#    type_defs <- list(e1, "")
+#    names(type_list) <- names(type_defs) <- c(deparse(substitute(e1)), deparse(substitute(e2)))
+    lhs <- new("ASTNumeric", type="numeric", value=e1) #s_table=list(types = type_list, defs = type_defs),
     rhs <- e2
     op <- new("ASTOp", type="BinaryOperator", operator=op, infix=TRUE)
     return(new("ASTNode", root=op, children=list(left = lhs, right = rhs)))
 
   #Case 8: l: Numeric & r: H2OParsedData
   } else if (inherits(e1, "numeric") && inherits(e2, "H2OParsedData")) {
-    type_list <- list("Numeric", "Frame")
-    type_defs <- list(e1, e2@key)
-    names(type_list) <- names(type_defs) <- c(deparse(substitute(e1)), deparse(substitute(e2)))
-    lhs <- new("ASTNumeric", s_table=list(types = type_list, defs = type_defs), type="numeric", value=e1)
-    rhs <- new("ASTFrame", s_table=list(types = type_list, defs = type_defs), type="Frame", value=e2@key)
+#    type_list <- list("Numeric", "Frame")
+#    type_defs <- list(e1, e2@key)
+#    names(type_list) <- names(type_defs) <- c(deparse(substitute(e1)), deparse(substitute(e2)))
+    lhs <- new("ASTNumeric", type="numeric", value=e1) #s_table=list(types = type_list, defs = type_defs)
+    rhs <- new("ASTFrame", type="Frame", value=e2@key) #s_table=list(types = type_list, defs = type_defs)
+    op <- new("ASTOp", type="BinaryOperator", operator=op, infix=TRUE)
+    return(new("ASTNode", root=op, children=list(left = lhs, right = rhs)))
+
+
+  #Case 9: l: ASTUnk & r: ASTOp
+  } else if (inherits(e1, "ASTUnk") && inherits(e2, "ASTNode")) {
+#    type_list <- list("ASTUnk", "ASTOp")
+#    type_defs <- list("", "")
+#    names(type_list) <- names(type_defs) <- c(deparse(substitute(e1)), deparse(substitute(e2)))
+    lhs <- e1 #new("ASTNumeric", s_table=list(types = type_list, defs = type_defs), type="numeric", value=e1)
+    rhs <- e2 #new("ASTFrame", s_table=list(types = type_list, defs = type_defs), type="Frame", value=e2@key)
+    op <- new("ASTOp", type="BinaryOperator", operator=op, infix=TRUE)
+    return(new("ASTNode", root=op, children=list(left = lhs, right = rhs)))
+
+
+  #Case 10: l: ASTUnk & r: H2OParsedData
+  } else if (inherits(e1, "ASTUnk") && inherits(e2, "H2OParsedData")) {
+#    type_list <- list("ASTUnk", "Frame")
+#    type_defs <- list("", e2@key)
+#    names(type_list) <- names(type_defs) <- c(deparse(substitute(e1)), deparse(substitute(e2)))
+    lhs <- e1 #new("ASTNumeric", s_table=list(types = type_list, defs = type_defs), type="numeric", value=e1)
+    rhs <- new("ASTFrame", type="Frame", value=e2@key) #s_table=list(types = type_list, defs = type_defs),
+    op <- new("ASTOp", type="BinaryOperator", operator=op, infix=TRUE)
+    return(new("ASTNode", root=op, children=list(left = lhs, right = rhs)))
+
+
+  #Case 11: l: ASTUnk & r: numeric
+  } else if (inherits(e1, "ASTUnk") && inherits(e2, "numeric")) {
+#    type_list <- list("ASTUnk", "Numeric")
+#    type_defs <- list("", e2)
+#    names(type_list) <- names(type_defs) <- c(deparse(substitute(e1)), deparse(substitute(e2)))
+    lhs <- e1 #new("ASTNumeric", s_table=list(types = type_list, defs = type_defs), type="numeric", value=e1)
+    rhs <- new("ASTNumeric", type="numeric", value=e2) #s_table=list(types = type_list, defs = type_defs),
+    op <- new("ASTOp", type="BinaryOperator", operator=op, infix=TRUE)
+    return(new("ASTNode", root=op, children=list(left = lhs, right = rhs)))
+
+
+  #Case 12: l: ASTUnk & r: ASTUnk
+  } else if (inherits(e1, "ASTUnk") && inherits(e2, "ASTUnk")) {
+#    type_list <- list("ASTUnk", "ASTUnk")
+#    type_defs <- list("", "")
+#    names(type_list) <- names(type_defs) <- c(deparse(substitute(e1)), deparse(substitute(e2)))
+    lhs <- e1 #new("ASTNumeric", s_table=list(types = type_list, defs = type_defs), type="numeric", value=e1)
+    rhs <- e2 #new("ASTNumeric", s_table=list(types = type_list, defs = type_defs), type="numeric", value=e1)
+    op <- new("ASTOp", type="BinaryOperator", operator=op, infix=TRUE)
+    return(new("ASTNode", root=op, children=list(left = lhs, right = rhs)))
+
+  #Case 13: l: ASTFun & r: ASTOp
+  } else if (inherits(e1, "ASTFun") && inherits(e2, "ASTNode")) {
+    lhs <- e1 #new("ASTNumeric", s_table=list(types = type_list, defs = type_defs), type="numeric", value=e1)
+    rhs <- e2 #new("ASTNumeric", s_table=list(types = type_list, defs = type_defs), type="numeric", value=e1)
+    op <- new("ASTOp", type="BinaryOperator", operator=op, infix=TRUE)
+    return(new("ASTNode", root=op, children=list(left = lhs, right = rhs)))
+
+  #Case 14: l: ASTFun & r: H2OParsedData
+  } else if (inherits(e1, "ASTFun") && inherits(e2, "H2OParsedData")) {
+    lhs <- e1 #new("ASTNumeric", s_table=list(types = type_list, defs = type_defs), type="numeric", value=e1)
+    rhs <- new("ASTFrame", type="Frame", value=e2@key)
+    op <- new("ASTOp", type="BinaryOperator", operator=op, infix=TRUE)
+    return(new("ASTNode", root=op, children=list(left = lhs, right = rhs)))
+
+  #Case 15: l: ASTFun & r: numeric
+  } else if (inherits(e1, "ASTFun") && inherits(e2, "numeric")) {
+    lhs <- e1
+    rhs <- new("ASTNumeric", type="numeric", value=e2)
+    op <- new("ASTOp", type="BinaryOperator", operator=op, infix=TRUE)
+    return(new("ASTNode", root=op, children=list(left = lhs, right = rhs)))
+
+  #Case 16: l: ASTFun & r: ASTUnk
+  } else if (inherits(e1, "ASTFun") && inherits(e2, "ASTUnk")) {
+    lhs <- e1
+    rhs <- e2
+    op <- new("ASTOp", type="BinaryOperator", operator=op, infix=TRUE)
+    return(new("ASTNode", root=op, children=list(left = lhs, right = rhs)))
+
+  #Case 17: l: ASTFun & r: ASTFun
+  } else if (inherits(e1, "ASTFun") && inherits(e2, "numeric")) {
+    lhs <- e1
+    rhs <- e2
     op <- new("ASTOp", type="BinaryOperator", operator=op, infix=TRUE)
     return(new("ASTNode", root=op, children=list(left = lhs, right = rhs)))
   }
 }
 
+#'
+#' Retrieve values from arguments supplied in a function call.
+#'
+#' Developer Note: If a method takes a function as an argument and
+#'                 you wish to pass arguments to that function by the way of `...`
+#'                 then you before passing flowing control to .h2o.varop, you MUST
+#'                 label the `...` and list it.
+#'
+#'                   e.g.: Inside of ddply, we have the following "fun_args" pattern:
+#'                      .h2o.varop("ddply", .data, vars, .fun, fun_args=list(...), .progress)
 .getValueFromArg<-
-function(a) {
+function(a, name=NULL) {
   if (inherits(a, "H2OParsedData")) {
     a@key
   } else if (inherits(a, "ASTNode")) {
     a
   } else if (class(a) == "function") {
-    .funToAST(a)
-  } else if (!is.null(names(a)) && (names(a) == "fun_args")) {
-    .toASTArg(unlist(a))
+    ret <- .funToAST(a)
+    .pkg.env$formals <- names(formals(a))
+    ret
+  } else if (!is.null(name) && (name == "fun_args")) {
+    .toSymbolTable(a, .pkg.env$formals)
   } else {
     deparse(eval(a))
   }
+}
+
+.toSymbolTable<-
+function(arguments, free_vars) {
+  if (length(free_vars) != length(arguments)) stop("Number of free variables does not match number of arguments.")
+  names(arguments) <- free_vars
+  new("ASTSymbolTable", symbols=arguments)
 }
 
 .toASTArg<-
@@ -143,11 +277,33 @@ function(col) {
 
 .argsToAST<-
 function(...) {
-  print(as.list(substitute(list(...))))
-  arg_names  <- unlist(lapply(as.list(substitute(list(...)))[-1], as.character))
-  arg_types  <- lapply(list(...), .evalClass)
-  arg_values <- lapply(list(...), .getValueFromArg)
+  arg.names <- names(as.list(substitute(list(...)))[-1])
+  if ("fun_args" %in% arg.names) {
+    arg_names  <- unlist(lapply(as.list(substitute(list(...)))[-1], as.character))
+    to_keep <- which(names(arg_names) == "")
+    idx_to_change <- which(arg.names != "")
+    lapply(seq_along(arg.names),
+      function(i) {
+        if (arg.names[i] == "") {
+          print(to_keep)
+          arg.names[i] <<- arg_names[to_keep[1]]
+          to_keep <<- to_keep[-1]
+        }
+      }
+    )
+    to_keep   <- NULL
+    arg_names <- arg.names
+    arg_ts <- lapply(list(...), .evalClass)
+    arg_ts$fun_args <- "ASTSymbolTable"
+    names(arg_ts) <- NULL
+    arg_types <- arg_ts
+  } else {
+    arg_names  <- unlist(lapply(as.list(substitute(list(...)))[-1], as.character))
+    arg_types  <- lapply(list(...), .evalClass)
+  }
+  arg_values <- lapply(seq_along(list(...)), function(i) { .getValueFromArg(list(...)[[i]], names(list(...))[i]) })
   args <- as.data.frame(rbind(arg_names, arg_types, arg_values, arg_numbers = 1:length(arg_names)))
+  .pkg.env$formals <- NULL
   names(args) <- paste("Arg", 1:length(arg_names), sep ="")
   unlist(apply(args, 2, .toASTArg))
 }
@@ -161,3 +317,11 @@ function(op, ...) {
 }
 
 #cat(toJSON(visitor(h2o.cut(hex[,1], seq(0,1,0.01)))), "\n")
+
+
+#cat(toJSON(visitor( h2o.ddply(hex, .("Sepal.Length", "Sepal.Width", "Petal.Length"), f, "hello", "from", "ddply") )), "\n")
+
+
+
+
+

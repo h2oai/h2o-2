@@ -37,7 +37,7 @@ function(object) {
 #'
 #' A node that has a "root" slot is an object of type ASTOp. An ASTOp will always have a "children" slot representing
 #' its operands. A root node is the most general type of input, while an object of type ASTFrame or ASTNumeric is the
-#' most general. This method relies on the private helper function .ASTToList(...) to map the AST S4 object to a list.
+#' most specific. This method relies on the private helper function .ASTToList(...) to map the AST S4 object to a list.
 visitor<-
 function(node) {
   if (.hasSlot(node, "root")) {
@@ -50,8 +50,12 @@ function(node) {
     arguments <- node@arguments
     children <- lapply(node@statements, visitor)
 
-    l <- list(arguments, children)
-    names(l) <- c("args", f_name)
+    l <- list(f_name, arguments, children)
+    names(l) <- c("alias", "free_variables", "body")
+    l
+  } else if (.hasSlot(node, "symbols")) {
+    l <- .ASTToList(node)
+    l$symbols <- node@symbols
     l
   } else if (.hasSlot(node, "arg_value") && .hasSlot(node@arg_value, "root")) {
     l <- .ASTToList(node)
@@ -60,6 +64,10 @@ function(node) {
   } else if (.hasSlot(node, "arg_value") && .hasSlot(node@arg_value, "statements")) {
     l <- .ASTToList(node)
     l$arg_value <- visitor(node@arg_value)
+    l
+  } else if (.hasSlot(node, "arg_value") && .hasSlot(node@arg_value, "symbols")) {
+    l <- .ASTToList(node)
+    l$arg_value <- node@arg_value@symbols #visitor(node@arg_value)
     l
   } else {
     .ASTToList(node)
@@ -90,7 +98,9 @@ function(o) {
 #'
 #' A convenience method for lapply. Used by .exprToAST
 .evalClass<-
-function(i) { class(eval(i)) }
+function(i) {
+  val <- tryCatch(class(eval(i)), error = function(e) {return(NA)})
+}
 
 #'
 #' Check if the expr is in the formals of _any_ method in the call list.
@@ -158,13 +168,27 @@ function(expr) {
       # Operator is infix?
       if (.isInfix(o)) {
 
-        # Prove that we have _h2o_ infix:
-        if (length( intersect(c("H2OParsedData", "H2OFrame", "ASTNode"), unlist(lapply(expr, .evalClass)))) > 0) {
+        lhs <- .exprToAST(expr[[2]])
+        rhs <- .exprToAST(expr[[3]])
 
+        print(expr)
+        expr[[2]] <- lhs
+        expr[[3]] <- rhs
+        print(expr)
+        print("HELLO WORLD")
+
+#        return(eval(expr))
+
+        print(unlist(lapply(expr, .evalClass)))
+        print(expr)
+        # Prove that we have _h2o_ infix:
+        if (length( intersect(c("H2OParsedData", "H2OFrame", "ASTNode", "ASTUnk", "ASTFrame", "ASTFrame"), unlist(lapply(expr, .evalClass)))) > 0) {
+          print(expr)
           # Calls .h2o.binop
           return(eval(expr))
         } else {
 
+          print("DEBUGUGUGUGU")
           # Regular R infix... recurse down the left and right arguments
           op <- new("ASTOp", type="InfixOperator", operator=as.character(expr[[1]]), infix=TRUE)
           args <- lapply(expr[-1], .exprToAST)
@@ -180,6 +204,16 @@ function(expr) {
           return(eval(expr))
        }
       }
+    }
+    if (.isUDF(expr[[1]])) {
+        print("IS THIS A UDF... YES")
+        print(expr[[1]])
+        print(formals(expr[[1]]))
+        print(eval(expr[[1]]))
+        print(formals(eval(expr[[1]])))
+        print(class(g))
+        print(typeof(g))
+        return(.funToAST(expr[[1]]))
     }
     # Not an R generic, operator is some other R method. Recurse down the arguments.
     op <- new("ASTOp", type="PrefixOperator", operator=as.character(expr[[1]]), infix=FALSE)
@@ -207,11 +241,16 @@ function(expr) {
 function(piece) {
   f_call <- piece[[1]]
 
+  print(f_call)
+  print("DDDDDDDDDDD")
+
   # Check if user defined function
   if (.isUDF(f_call)) {
+    stop("HIIIHIIIII")
 
     # Keep a global eye on functions we have definitions for to prevent infinite recursion
-    if (! (any(f_call == .pkg.env$call_list))) {
+    if (! (any(f_call == .pkg.env$call_list)) || is.null(.pkg.env$call_list)) {
+      print("MEMEMEMMEEMMEMEME")
       .pkg.env$call_list <- c(.pkg.env$call_list, f_call)
       .funToAST(eval(f_call))
     }
@@ -228,11 +267,18 @@ function(piece) {
 #' This method is the entry point for producing an AST from a closure.
 .funToAST<-
 function(fun) {
+  if(is.null(body(fun))) fun <- eval(fun)
   if (.isUDF(fun)) {
     .pkg.env$call_list <- c(.pkg.env$call_list, fun)
     l <- as.list(body(fun))
     statements <- lapply(l[-1], .funToASTHelper)
     .pkg.env$call_list <- NULL
+    print("ARGSSSSS")
+    print(fun)
+    print(eval(fun))
+    print(body(fun))
+    print(formals(fun))
+    print("SHOULD NOT BE NULL....")
     new("ASTFun", type="UDF", name=deparse(substitute(fun)), statements=statements, arguments=names(formals(fun)))
   } else {
     substitute(fun)

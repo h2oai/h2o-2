@@ -508,7 +508,7 @@ setMethod("show", "H2ORFModelVA", function(object) {
 #' Every node in the abstract syntax tree will have a symbol table, which is a dictionary of types and names for
 #' all the relevant variables and functions defined in the current scope. A missing symbol is therefore discovered
 #' by looking up the tree to the nearest symbol table defining that symbol.
-setClass("Node", representation(s_table="list"), contains="H2OFrame")
+setClass("Node", contains="H2OFrame")
 
 #'
 #' The ASTNode class.
@@ -543,6 +543,8 @@ setClass("ASTFrame", representation(type="character", value="character"), contai
 #' This class represents a leaf that will be assigned to and has unkown type before evaluation -OR-
 #' it represents an operation on a function's argument if the symbol appears in the functions formals.
 #' The distinction between these two cases is denoted by isFormal (TRUE -> Function arg, FALSE -> assignment)
+#'
+#' Note: Formal args are free variables.
 setClass("ASTUnk", representation(key="character", isFormal="logical"), contains="Node")
 
 #'
@@ -562,3 +564,9 @@ setClass("ASTFun", representation(type="character", name="character", statements
 #'
 #' This class represents an argument to a function.
 setClass("ASTArg", representation(arg_name="character", arg_number="numeric", arg_value="ANY", arg_type="ANY"), contains="Node")
+
+#'
+#' The ASTSymbolTable Class.
+#'
+#' This class represents a symbol table. It is a table of free variables.
+setClass("ASTSymbolTable", representation(symbols="list"), contains="Node")
