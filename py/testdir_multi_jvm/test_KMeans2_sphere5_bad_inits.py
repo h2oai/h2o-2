@@ -106,12 +106,13 @@ class Basic(unittest.TestCase):
             print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.',\
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
 
-            kmeansResult = h2o_cmd.runInspect(key='syn_spheres100.hex')
+            # inspect of model doesn't work
+            # kmeansResult = h2o_cmd.runInspect(key='syn_spheres100.hex')
             ### print h2o.dump_json(kmeans)
             ### print h2o.dump_json(kmeansResult)
             h2o_kmeans.simpleCheckKMeans(self, kmeans, **kwargs)
 
-            model = kmeansResult['model']
+            model = kmeans['model']
             clusters = model["centers"]
             cluster_variances = model["within_cluster_variances"]
             error = model["total_within_SS"]
