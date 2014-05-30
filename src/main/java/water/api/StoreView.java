@@ -19,32 +19,27 @@ public class StoreView extends Request {
     // get the offset index
     final int offset = _offset.value();
     final int view = _view.value();
-    String filter = _filter.value();
+    final String filter = _filter.value();
     // Gather some keys that pass all filters
-    ArrayList<Key> akeys = new ArrayList<Key>();
-    for( Key key : H2O.globalKeySet(null) )
-      if( key.user_allowed() && // Filter out for user-keys
-          (filter == null || // Have a filter?
-           key.toString().contains(filter)) && // Pass filter
-          H2O.get(key) != null ) // Ignore misses
-        akeys.add(key);
-
-    // Sort all the keys for pretty display and reliable ordering
-    Key[] keys = akeys.toArray(new Key[akeys.size()]);
-    Arrays.sort(keys);
-    if( keys.length<offset )
-      return Response.error("Not enough keys - request offset is " + offset + " but K/V contains "+keys.length+" keys.");
-    if( keys.length > offset+view )
+    H2O.KeySnapshot ks = H2O.KeySnapshot.globalSnapshot();
+    if(filter != null)
+      ks = ks.filter(new H2O.KVFilter() {
+        @Override
+        public boolean filter(H2O.KeyInfo k) {
+          return k._key.toString().indexOf(filter) != -1;
+        }
+      });
+    final H2O.KeyInfo []  kinfos = ks._keyInfos;
+    if( ks._keyInfos.length > offset+view )
       result.addProperty(Constants.MORE,true);
-
     // Now build the result JSON with all available keys
     final H2O cloud = H2O.CLOUD; // Current eldest Cloud
     JsonArray ary = new JsonArray();
-    int len = Math.min(keys.length,offset+view);
+    int len = Math.min(kinfos.length,offset+view);
     for( int i=offset; i<len; i++ ) {
-      Value val = DKV.get(keys[i]);
+      Value val = DKV.get(kinfos[i]._key);
       if( val != null )
-        ary.add(formatKeyRow(cloud,keys[i],val));
+        ary.add(formatKeyRow(cloud,kinfos[i]._key,val));
     }
 
     result.add(KEYS,ary);
@@ -59,7 +54,7 @@ public class StoreView extends Request {
         " <button type='submit' class='btn btn-primary'>Filter keys!</button>" +
         "</form>");
 
-    r.setBuilder(KEYS, new PaginatedTable(argumentsToJson(),offset,view,keys.length,false));
+    r.setBuilder(KEYS, new PaginatedTable(argumentsToJson(),offset,view,kinfos.length,false));
     r.setBuilder(KEYS+"."+KEY, new KeyCellBuilder());
     r.setBuilder(KEYS+".col_0", new KeyMinAvgMaxBuilder());
     r.setBuilder(KEYS+".col_1", new KeyMinAvgMaxBuilder());
