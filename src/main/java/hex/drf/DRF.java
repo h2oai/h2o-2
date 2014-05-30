@@ -133,6 +133,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     }
     @Override protected void setCrossValidationError(ValidatedJob job, double cv_error, water.api.ConfusionMatrix cm, water.api.AUC auc, water.api.HitRatio hr) {
       DRFModel drfm = ((DRF)job).makeModel(this, cv_error, new ConfusionMatrix(cm.cm, cms[0].nclasses()), this.varimp, auc);
+      drfm._have_cv_results = true;
       DKV.put(this._key, drfm); //overwrite this model
     }
   }

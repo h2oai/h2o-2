@@ -631,6 +631,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   }
 
   @Override protected void setCrossValidationError(Job.ValidatedJob job, double cv_error, water.api.ConfusionMatrix cm, water.api.AUC auc, water.api.HitRatio hr) {
+    _have_cv_results = true;
     // TODO: Update the model
   }
 }

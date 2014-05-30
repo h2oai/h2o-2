@@ -722,10 +722,13 @@ public class DTree extends Iced {
         assert cm._arr.length==domain.length;
         DocGen.HTML.section(sb,"Confusion Matrix");
         if( testKey == null ) {
-          if (num_folds > 0)
+          if (_have_cv_results)
             sb.append("<div class=\"alert\">Reported on ").append(num_folds).append("-fold cross-validated training data</div>");
-          else
-            sb.append("<div class=\"alert\">Reported on ").append(title.contains("DRF") ? "out-of-bag" : "training").append(" data</div>");
+          else {
+            sb.append("<div class=\"alert\">Reported on ").append(title.contains("DRF") ? "out-of-bag" : "training").append(" data");
+            if (num_folds > 0) sb.append(" (cross-validation results are being computed - please reload this page later).");
+            sb.append("</div>");
+          }
         } else {
           RString rs = new RString("<div class=\"alert\">Reported on <a href='Inspect2.html?src_key=%$key'>%key</a></div>");
           rs.replace("key", testKey);

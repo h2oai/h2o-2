@@ -876,6 +876,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   }
 
   @Override protected void setCrossValidationError(Job.ValidatedJob job, double cv_error, ConfusionMatrix cm, AUC auc, HitRatio hr) {
+    _have_cv_results = true;
     if (!get_params().classification)
       last_scored().valid_mse = cv_error;
     else
@@ -1049,15 +1050,17 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
     if (isClassifier()) {
       DocGen.HTML.section(sb, "Classification error on training data: " + formatPct(error.train_err));
-//      DocGen.HTML.section(sb, "Training cross entropy: " + String.format(cross_entropy_format, error.train_mce));
-      if(error.validation || (error.num_folds > 0 && get_params().state == Job.JobState.DONE)) {
-        DocGen.HTML.section(sb, "Classification error on " + (error.num_folds>0 ? error.num_folds + "-fold cross-" : "") + "validation data: " + formatPct(error.valid_err));
-//        DocGen.HTML.section(sb, "Validation mean cross entropy: " + String.format(cross_entropy_format, error.valid_mce));
+      if(error.validation) {
+        DocGen.HTML.section(sb, "Classification error on validation data: " + formatPct(error.valid_err));
+      } else if(error.num_folds > 0) {
+        DocGen.HTML.section(sb, "Classification error on " + error.num_folds + "-fold cross-validated training data: " + (_have_cv_results ? formatPct(error.valid_err) : "not yet available"));
       }
     } else {
       DocGen.HTML.section(sb, "MSE on training data: " + String.format(mse_format, error.train_mse));
-      if(error.validation || (error.num_folds > 0 && get_params().state == Job.JobState.DONE)) {
-        DocGen.HTML.section(sb, "MSE on " + (error.num_folds>0 ? error.num_folds + "-fold cross-" : "") + "validation data: " + String.format(mse_format, error.valid_mse));
+      if(error.validation) {
+        DocGen.HTML.section(sb, "MSE on validation data: " + formatPct(error.valid_err));
+      } else if(error.num_folds > 0) {
+        DocGen.HTML.section(sb, "MSE on " + error.num_folds + "-fold cross-validated training data: " + (_have_cv_results ? String.format(mse_format, error.valid_mse) : "not yet available"));
       }
     }
     DocGen.HTML.paragraph(sb, "Training samples: " + String.format("%,d", model_info().get_processed_total()));
@@ -1103,10 +1106,10 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
           } else if (smallenough) sb.append(" Confusion matrix not yet computed.</h5>");
           else sb.append(toolarge + "</h5>");
         }
-        else if (error.num_folds > 0) {
+        else if (error.num_folds > 0 && _have_cv_results) {
           RString v_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
           v_rs.replace("key", get_params().source._key);
-          String cmTitle = "<div class=\"alert\">Scoring results reported for " + error.num_folds + "-fold cross-validation on training data " + v_rs.toString() + ":</div>";
+          String cmTitle = "<div class=\"alert\">Scoring results reported for " + error.num_folds + "-fold cross-validated training data " + v_rs.toString() + ":</div>";
           sb.append("<h5>" + cmTitle);
           if (error.valid_confusion_matrix != null && smallenough) {
             sb.append("</h5>");
@@ -1264,7 +1267,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
         }
       }
       else if(e.num_folds > 0) {
-        if (i == errors.length - 1) {
+        if (i == errors.length - 1 && _have_cv_results) {
           if (isClassifier()) {
             sb.append("<td>" + formatPct(e.valid_err) + "</td>");
             if (nclasses() == 2) {
