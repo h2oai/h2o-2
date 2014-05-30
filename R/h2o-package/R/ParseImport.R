@@ -135,6 +135,8 @@ h2o.importFolder.VA <- function(object, path, pattern = "", key = "", parse = TR
       if(substr(path, nchar(path), nchar(path)) == .Platform$file.sep)
         path <- substr(path, 1, nchar(path)-1)
       regPath = paste(path, pattern, sep=.Platform$file.sep)
+      if(.Platform$OS.type == "windows")
+        regPath = gsub("/", "\\\\", regPath)
       srcKey = ifelse(length(res$keys) == 1, res$keys[1], paste("*", regPath, "*", sep=""))
       rawData = new("H2ORawDataVA", h2o=object, key=srcKey)
       h2o.parseRaw.VA(data=rawData, key=key, header=header, sep=sep, col.names=col.names)
@@ -169,6 +171,8 @@ h2o.importFolder.FV <- function(object, path, pattern = "", key = "", parse = TR
       if(substr(path, nchar(path), nchar(path)) == .Platform$file.sep)
         path <- substr(path, 1, nchar(path)-1)
       regPath = paste(path, pattern, sep=.Platform$file.sep)
+      if(.Platform$OS.type == "windows")
+        regPath = gsub("/", "\\\\", regPath)
       srcKey = ifelse(length(res$keys) == 1, res$keys[[1]], paste("*", regPath, "*", sep=""))
       rawData = new("H2ORawData", h2o=object, key=srcKey)
       h2o.parseRaw.FV(data=rawData, key=key, header=header, sep=sep, col.names=col.names) 
@@ -413,29 +417,16 @@ h2o.exportHDFS <- function(object, path) {
   res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_EXPORTHDFS, source_key = object@key, path = path)
 }
 
-h2o.downloadCSV <- function(data, filename) {
+h2o.downloadCSV <- function(data, filename, quiet = FALSE) {
   if( missing(data)) stop('Must specify data')
-  if(! class(data) %in% c('H2OParsedDataVA', 'H2OParsedData'))
+  if(!class(data) %in% c('H2OParsedDataVA', 'H2OParsedData'))
     stop('data is not an H2O data object')
   if( missing(filename) ) stop('Must specify filename')
+  if(!is.character(filename)) stop("filename must be a character string")
+  if(!is.logical(quiet)) stop("quiet must be a logical value")
   
-  str <- paste('http://', data@h2o@ip, ':', data@h2o@port, '/2/DownloadDataset?src_key=', data@key, sep='')
-  has_wget <- '' != Sys.which('wget')
-  has_curl <- '' != Sys.which('curl')
-  if( !(has_wget || has_curl)) stop("I can't find wget or curl on your system")
-  if( has_wget ){
-    cmd <- 'wget'
-    args <- paste('-O', filename, str)
-  } else {
-    cmd <- 'curl'
-    args <- paste('-o', filename, str)
-  }
-  
-  print(paste('cmd:', cmd))
-  print(paste('args:', args))
-  val <- system2(cmd, args, wait=T)
-  if( val != 0 )
-    print(paste('Bad return val', val))
+  csv_url <- paste('http://', data@h2o@ip, ':', data@h2o@port, '/2/DownloadDataset?src_key=', data@key, sep='')
+  download.file(csv_url, destfile = filename, mode = "w", cacheOK = FALSE, quiet = quiet)
 }
 
 # ----------------------------------- Work in Progress --------------------------------- #
