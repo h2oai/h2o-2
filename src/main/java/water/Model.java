@@ -61,6 +61,8 @@ public abstract class Model extends Lockable<Model> {
   /** The duration in mS for model training. */
   public long training_duration_in_ms = 0L;
 
+  /** Whether or not this model has cross-validated results stored. */
+  protected boolean _have_cv_results;
 
   /** Full constructor from frame: Strips out the Vecs to just the names needed
    *  to match columns later for future datasets.  */
