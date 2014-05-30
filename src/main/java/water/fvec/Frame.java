@@ -57,19 +57,19 @@ public class Frame extends Lockable<Frame> {
     return this.uniqueId;
   }
 
-  /** 64-bit hash of the hashes of the vecs.  SHA-265 hashes of the chunks are XORed
+  /** 64-bit checksum of the checksums of the vecs.  SHA-265 checksums of the chunks are XORed
    * together.  Since parse always parses the same pieces of files into the same offsets
-   * in some chunk this hash will be consistent across reparses.
+   * in some chunk this checksum will be consistent across reparses.
    */
-  public long hash() {
+  public long checksum() {
     Vec [] vecs = vecs();
-    long _hash = 0;
+    long _checksum = 0;
     for(int i = 0; i < _names.length; ++i) {
-      long vec_hash = vecs[i].hash();
-      _hash ^= vec_hash;
-      _hash ^= (2147483647 * i);
+      long vec_checksum = vecs[i].checksum();
+      _checksum ^= vec_checksum;
+      _checksum ^= (2147483647 * i);
     }
-    return _hash;
+    return _checksum;
   }
 
   public Vec vec(String name){

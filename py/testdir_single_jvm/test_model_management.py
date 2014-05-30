@@ -11,13 +11,15 @@ class ModelManagementTestCase(unittest.TestCase):
     def setUpClass(cls):
         global localhost
 
+        cloud_size = 3
+
         if h2o.clone_cloud_json is not None:
             print "NOTE: Connecting to existing cloud, and leaving the cloud running afterwards: " + os.path.abspath(h2o.clone_cloud_json)
 
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            print "Calling h2o.build_cloud(1). . ."
-            h2o.build_cloud(1)
+            print "Calling h2o.build_cloud(cloud_size). . ."
+            h2o.build_cloud(cloud_size)
         else:
             h2o_hosts.build_cloud_with_hosts(1)
             print "Calling h2o_hosts.build_cloud_with_hosts(1). . ."
@@ -102,6 +104,11 @@ class ModelManagementTestCase(unittest.TestCase):
         self.assertKeysExist(frames, 'frames/airlines_test.hex', ['id'])
         test_hash_before = frames['frames']['airlines_test.hex']['id']
         train_hash_before = frames['frames']['airlines_train.hex']['id']
+
+        self.assertNotEqual("ffffffffffffffff", test_hash_before);
+        self.assertNotEqual("ffffffffffffffff", train_hash_before);
+        self.assertNotEqual("0", test_hash_before);
+        self.assertNotEqual("0", train_hash_before);
 
         # Add new proper boolean response columns
         self.create_new_boolean('airlines_train.hex', 'IsDepDelayed_REC', 'IsDepDelayed_REC_recoded')
@@ -374,7 +381,7 @@ class ApiTestCase(ModelManagementTestCase):
         self.assertKeysDontExist(frames, 'frames', ['glm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_2', 'rf_AirlinesTrain_binary_1', 'rf_AirlinesTrain_binary_2', 'dl_AirlinesTrain_binary_1', 'glm_AirlinesTrain_binary_A', 'glm_Prostate_binary_1', 'rf_Prostate_binary_1', 'glm_Prostate_regression_1', 'airlines_train.hex', 'prostate.hex'])
         self.assertKeysDontExist(frames, '', ['models'])
         self.assertKeysExist(frames, 'frames/airlines_test.hex', ['creation_epoch_time_millis', 'id', 'key', 'column_names', 'compatible_models'])
-        self.assertEqual(frames['frames']['airlines_test.hex']['id'], "d5ab56adc992254a", msg="The airlines_test.hex frame hash should be deterministic.  Expected d5ab56adc992254a, got: " + frames['frames']['airlines_test.hex']['id'])
+        self.assertEqual(frames['frames']['airlines_test.hex']['id'], "fffffffffffff38d", msg="The airlines_test.hex frame hash should be deterministic.  Expected fffffffffffff38d, got: " + frames['frames']['airlines_test.hex']['id'])
         self.assertEqual(frames['frames']['airlines_test.hex']['key'], "airlines_test.hex", msg="The airlines_test.hex key should be airlines_test.hex.")
 
 
