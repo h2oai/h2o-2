@@ -285,7 +285,6 @@ function(...) {
     lapply(seq_along(arg.names),
       function(i) {
         if (arg.names[i] == "") {
-          print(to_keep)
           arg.names[i] <<- arg_names[to_keep[1]]
           to_keep <<- to_keep[-1]
         }

@@ -160,6 +160,11 @@ function(expr) {
 
   # Got a named function
   } else if (is.name(expr[[1]])) {
+
+    # The named function is user defined
+    if (.isUDF(expr[[1]])) {
+      return(.funToAST(expr))
+    }
     o <- deparse(expr[[1]])
 
     # Is the function generic? (see getGenerics() in R)
@@ -171,24 +176,15 @@ function(expr) {
         lhs <- .exprToAST(expr[[2]])
         rhs <- .exprToAST(expr[[3]])
 
-        print(expr)
         expr[[2]] <- lhs
         expr[[3]] <- rhs
-        print(expr)
-        print("HELLO WORLD")
 
-#        return(eval(expr))
-
-        print(unlist(lapply(expr, .evalClass)))
-        print(expr)
         # Prove that we have _h2o_ infix:
-        if (length( intersect(c("H2OParsedData", "H2OFrame", "ASTNode", "ASTUnk", "ASTFrame", "ASTFrame"), unlist(lapply(expr, .evalClass)))) > 0) {
-          print(expr)
+        if (length( intersect(c("H2OParsedData", "H2OFrame", "ASTNode", "ASTUnk", "ASTFrame", "ASTFrame", "ASTNumeric"), unlist(lapply(expr, .evalClass)))) > 0) {
+
           # Calls .h2o.binop
           return(eval(expr))
         } else {
-
-          print("DEBUGUGUGUGU")
           # Regular R infix... recurse down the left and right arguments
           op <- new("ASTOp", type="InfixOperator", operator=as.character(expr[[1]]), infix=TRUE)
           args <- lapply(expr[-1], .exprToAST)
@@ -205,16 +201,7 @@ function(expr) {
        }
       }
     }
-    if (.isUDF(expr[[1]])) {
-        print("IS THIS A UDF... YES")
-        print(expr[[1]])
-        print(formals(expr[[1]]))
-        print(eval(expr[[1]]))
-        print(formals(eval(expr[[1]])))
-        print(class(g))
-        print(typeof(g))
-        return(.funToAST(expr[[1]]))
-    }
+
     # Not an R generic, operator is some other R method. Recurse down the arguments.
     op <- new("ASTOp", type="PrefixOperator", operator=as.character(expr[[1]]), infix=FALSE)
     args <- lapply(expr[-1], .exprToAST)
@@ -241,16 +228,20 @@ function(expr) {
 function(piece) {
   f_call <- piece[[1]]
 
+  print("Debugging now....")
   print(f_call)
-  print("DDDDDDDDDDD")
+  print(piece)
+  print("OK carry on...")
 
   # Check if user defined function
   if (.isUDF(f_call)) {
-    stop("HIIIHIIIII")
+
+    if (is.call(piece)) {
+      return(.funToAST(piece))
+    }
 
     # Keep a global eye on functions we have definitions for to prevent infinite recursion
     if (! (any(f_call == .pkg.env$call_list)) || is.null(.pkg.env$call_list)) {
-      print("MEMEMEMMEEMMEMEME")
       .pkg.env$call_list <- c(.pkg.env$call_list, f_call)
       .funToAST(eval(f_call))
     }
@@ -267,19 +258,39 @@ function(piece) {
 #' This method is the entry point for producing an AST from a closure.
 .funToAST<-
 function(fun) {
-  if(is.null(body(fun))) fun <- eval(fun)
+  if (is.call(fun)) {
+
+    res <- tryCatch(eval(fun), error = function(e) {
+      FALSE
+      }
+    )
+    # This is a fairly slimey conditional.
+#    if (is.object(res)) { return(res) }
+    if ( (!is.object(res) && res == FALSE) || (is.object(res)) ) {
+      return(.exprToAST(fun[[2]]))
+    } else {
+      return(.exprToAST(eval(fun)))
+    }
+  }
+  if(is.null(body(fun)) && !(is.call(fun))) fun <- eval(fun)
   if (.isUDF(fun)) {
     .pkg.env$call_list <- c(.pkg.env$call_list, fun)
     l <- as.list(body(fun))
+    print("THE LIST OF STATEMENTS")
+    print(l)
+    print(l[-1])
     statements <- lapply(l[-1], .funToASTHelper)
+    if (length(l[-1]) == 1) {
+      print("statements is only length 1!")
+      print(l)
+      statements <- .funToASTHelper(eval(parse(text=deparse(eval(l[-1])))))
+    }
+    if (length(statements) == 1 && is.null(statements[[1]])) { return(NULL) }
     .pkg.env$call_list <- NULL
-    print("ARGSSSSS")
     print(fun)
-    print(eval(fun))
-    print(body(fun))
-    print(formals(fun))
-    print("SHOULD NOT BE NULL....")
-    new("ASTFun", type="UDF", name=deparse(substitute(fun)), statements=statements, arguments=names(formals(fun)))
+    arguments <- names(formals(fun))
+    if (is.null(formals(fun))) arguments <- "none"
+    new("ASTFun", type="UDF", name=deparse(substitute(fun)), statements=statements, arguments=arguments)
   } else {
     substitute(fun)
   }
