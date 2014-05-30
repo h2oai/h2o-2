@@ -49,7 +49,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_many_cols_real(self):
+    def test_GLM2_many_cols_real(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             (100, 1000, 'cA', 100),
@@ -66,9 +67,8 @@ class Basic(unittest.TestCase):
             write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
 
             start = time.time()
-            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=10)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=60)
             elapsed = time.time() - start
-            print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
 
             algo = "Parse"
@@ -84,14 +84,11 @@ class Basic(unittest.TestCase):
             y = colCount
             # just limit to 2 iterations..assume it scales with more iterations
             kwargs = {
-                'y': y,
+                'response': y,
                 'max_iter': 2, 
-                'case': 1,
-                'case_mode': '=',
                 'family': 'binomial',
                 'lambda': 1.e-4,
                 'alpha': 0.6,
-                'thresholds': 0.5,
                 'n_folds': 1,
                 'beta_epsilon': 1.e-4,
             }
