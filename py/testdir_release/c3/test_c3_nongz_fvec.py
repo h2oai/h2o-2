@@ -47,7 +47,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
                 start = time.time()
                 parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local',
-                    hex_key=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
+                    hex_key="A.hex", timeoutSecs=timeoutSecs, 
                     retryDelaySecs=retryDelaySecs,
                     pollTimeoutSecs=pollTimeoutSecs,
                     benchmarkLogging=benchmarkLogging)
@@ -90,8 +90,8 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                     }
 
                     # convert to binomial
-                    execExpr="A.hex=%s" % parseResult['destination_key']
-                    h2e.exec_expr(execExpr=execExpr, timeoutSecs=180)
+                    # execExpr="A.hex=%s" % parseResult['destination_key']
+                    # h2e.exec_expr(execExpr=execExpr, timeoutSecs=180)
 
                     execExpr = 'A.hex[,378+1]=(A.hex[,378+1]>15)'
                     h2e.exec_expr(execExpr=execExpr, timeoutSecs=180)

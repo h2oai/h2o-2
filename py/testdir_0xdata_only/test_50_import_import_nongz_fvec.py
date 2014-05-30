@@ -29,8 +29,8 @@ class Basic(unittest.TestCase):
         importFolderPath = 'airlines'
         print "Using non-gz'ed files in", importFolderPath
         csvFilenameList= [
-            ("*[1][0][0].dat", "file_1_A.dat", 1 * avgMichalSize, 1800),
-            # ("*[1][0-4][0-9].dat", "file_50_A.dat", 50 * avgMichalSize, 1800),
+            # ("*[1][0][0].dat", "file_1_A.dat", 1 * avgMichalSize, 1800),
+            ("*[1][0-4][0-9].dat", "file_50_A.dat", 50 * avgMichalSize, 1800),
             # ("*[1][0-4][0-9].dat", "file_50_A.dat", 50 * avgMichalSize, 1800),
             # ("*[1][0-4][0-9].dat", "file_50_A.dat", 50 * avgMichalSize, 1800),
         ]
@@ -41,6 +41,10 @@ class Basic(unittest.TestCase):
         for trial, (csvFilepattern, csvFilename, totalBytes, timeoutSecs) in enumerate(csvFilenameList):
             csvPathname = importFolderPath + "/" + csvFilepattern
 
+            (importResult, importPattern) = h2i.import_only(bucket=bucket, path=csvPathname, schema='local')
+            (importResult, importPattern) = h2i.import_only(bucket=bucket, path=csvPathname, schema='local')
+            (importResult, importPattern) = h2i.import_only(bucket=bucket, path=csvPathname, schema='local')
+            (importResult, importPattern) = h2i.import_only(bucket=bucket, path=csvPathname, schema='local')
             (importResult, importPattern) = h2i.import_only(bucket=bucket, path=csvPathname, schema='local')
             importFullList = importResult['files']
             importFailList = importResult['fails']
