@@ -502,7 +502,7 @@ public abstract class Model extends Lockable<Model> {
         } else {
           error = new hex.ConfusionMatrix(cm.cm).err(); //only set error if AUC didn't already set the error
         }
-        if (cm.cm.length <= max_conf_mat_size) cm.toASCII(sb);
+        if (cm.cm.length <= max_conf_mat_size+1) cm.toASCII(sb);
       } else {
         assert(auc == null);
         error = cm.mse;
