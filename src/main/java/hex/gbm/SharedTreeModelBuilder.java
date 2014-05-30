@@ -223,8 +223,6 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     } finally {
       model.unlock(self());  // Update and unlock model
       cleanUp(fr,bm_timer);  // Shared cleanup
-      Log.info("after buildModel: " + model);
-      // we get back a different model
       model.start_training(before);
       model.stop_training();
     }
