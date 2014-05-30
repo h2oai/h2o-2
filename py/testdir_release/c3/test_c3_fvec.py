@@ -115,7 +115,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
     #***********************************************************************
     # these will be tracked individual by jenkins, which is nice
     #***********************************************************************
-    def test_A_c3_fvec_one(self):
+    def notest_A_c3_fvec_one(self):
         h2o.beta_features = True
         avgMichalSize = 116561140 
         csvFilenameList= [
@@ -123,7 +123,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         ]
         self.sub_c3_fvec_long(csvFilenameList)
 
-    def test_B_c3_fvec_two(self):
+    def notest_B_c3_fvec_two(self):
         h2o.beta_features = True
         avgMichalSize = 116561140 
         csvFilenameList= [
@@ -143,7 +143,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         h2o.beta_features = True
         avgMichalSize = 116561140 
         csvFilenameList= [
-            ("*[1][0-4][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 1800),
+            ("*[1][0-4][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 2400),
         ]
         self.sub_c3_fvec_long(csvFilenameList)
 

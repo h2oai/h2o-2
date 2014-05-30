@@ -15,16 +15,17 @@ glm2Benign <- function(conn) {
   Log.info("Check that the columns used in the model are the ones we passed in.")
   
   Log.info("===================Columns passed in: ================")
-  Log.info(paste("index ", X ," ", colnames(bhexFV)[X], "\n", sep=""))
+  Log.info(paste("index ", X ," ", names(bhexFV)[X], "\n", sep=""))
   Log.info("======================================================")
+  preds <- names(mFV@model$coefficients)
+  preds <- preds[1:length(preds)-1]
   Log.info("===================Columns Used in Model: =========================")
-  Log.info(paste(mFV@model$x, "\n", sep=""))
+  Log.info(paste(preds, "\n", sep=""))
   Log.info("================================================================")
   
   #Check coeffs here
   #tryCatch(expect_that(mFV@model$x, equals(colnames(bhexFV)[X])), error = function(e) Log.warn("Not getting colnames back, just indices"))
-   expect_that(mFV@model$x, equals(colnames(bhexFV)[X]))
-
+   expect_that(preds, equals(colnames(bhexFV)[X]))
   testEnd()
 }
 
