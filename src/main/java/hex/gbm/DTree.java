@@ -739,10 +739,16 @@ public class DTree extends Iced {
       }
 
       if( errs != null ) {
+        if (!isClassifier() && num_folds > 0) {
+          if (_have_cv_results)
+            DocGen.HTML.section(sb, num_folds + "-fold cross-validated Mean Squared Error: " + String.format("%5.3f", errs[errs.length-1]));
+          else
+            DocGen.HTML.section(sb, num_folds + "-fold cross-validated Mean Squared Error is being computed - please reload this page later.");
+        }
         DocGen.HTML.section(sb,"Mean Squared Error by Tree");
         DocGen.HTML.arrayHead(sb);
         sb.append("<tr style='min-width:60px'><th>Trees</th>");
-        last = isClassifier() ? last : errs.length-1; // for regressor reports all errors
+        last = isClassifier() ? last : errs.length-1-(_have_cv_results?1:0); // for regressor reports all errors (except for cross-validated result)
         for( int i=last; i>=0; i-- )
           sb.append("<td style='min-width:60px'>").append(i).append("</td>");
         sb.append("</tr>");
