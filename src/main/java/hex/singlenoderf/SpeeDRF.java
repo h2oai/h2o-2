@@ -11,6 +11,7 @@ import water.api.ParamImportance;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Log;
+import water.util.ModelUtils;
 import water.util.Utils;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -138,6 +139,7 @@ public class SpeeDRF extends Job.ValidatedJob {
     // buildForest() caused a different SpeeDRFModel instance to get put into the DKV.  We
     // need to update that one, not rf_model
     DRFTask.updateRFModelStopTraining(rf_model._key);
+    if (num_folds > 0) ModelUtils.crossValidate(this);
     cleanup();
     remove();
   }
@@ -533,5 +535,20 @@ public class SpeeDRF extends Job.ValidatedJob {
       drfp.regression = regression;
       return drfp;
     }
+  }
+
+  /**
+   * Cross-Validate a SpeeDRF model by building new models on N train/test holdout splits
+   * @param basename Basename for naming the cross-validated models
+   * @param splits Frames containing train/test splits
+   * @param cv_preds Array of Frames to store the predictions for each cross-validation run
+   * @param offsets Array to store the offsets of starting row indices for each cross-validation run
+   * @param i Which fold of cross-validation to perform
+   */
+  @Override public void crossValidate(String basename, Frame[] splits, Frame[] cv_preds, long[] offsets, int i) {
+    // Train a clone with slightly modified parameters (to account for cross-validation)
+    SpeeDRF cv = (SpeeDRF) this.clone();
+    cv.genericCrossValidation(basename, splits, offsets, i);
+    cv_preds[i] = ((SpeeDRFModel) UKV.get(cv.dest())).score(cv.validation);
   }
 }

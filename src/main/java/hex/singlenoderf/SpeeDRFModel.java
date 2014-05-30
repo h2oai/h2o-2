@@ -15,6 +15,7 @@ import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Counter;
+import water.util.Log;
 import water.util.ModelUtils;
 
 import java.util.Arrays;
@@ -125,6 +126,11 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     return regression ? 1 : (int)(response.max() - response.min() + 1);
   }
 
+  //FIXME: Model._domain should be used for nclasses() and classNames()
+  static String[] _domain = null;
+  @Override public int nclasses() { return classes(); }
+  @Override public String[] classNames() { return _domain; }
+
   public static SpeeDRFModel make(SpeeDRFModel old, Key tkey, int nodeIdx) {
     boolean cm_update = false;
     SpeeDRFModel m = (SpeeDRFModel)old.clone();
@@ -147,6 +153,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       CMTask cmTask = new CMTask(m, m.size(), m.weights, m.oobee);
       cmTask.doAll(m.test_frame == null ? m.fr : m.test_frame, true);
       m.confusion = CMTask.CMFinal.make(cmTask._matrix, m, cmTask.domain(), cmTask._errorsPerTree, m.oobee, cmTask._sum, cmTask._cms);
+      _domain = cmTask.domain(); //FIXME: Model._domain should be used
       m.cm = cmTask._matrix._matrix;
     }
     if (!cm_update || m.regression) {
@@ -621,5 +628,9 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       res[var] = (float) Math.sqrt(r);
     }
     return res;
+  }
+
+  @Override protected void setCrossValidationError(Job.ValidatedJob job, double cv_error, water.api.ConfusionMatrix cm, water.api.AUC auc, water.api.HitRatio hr) {
+    // TODO: Update the model
   }
 }
