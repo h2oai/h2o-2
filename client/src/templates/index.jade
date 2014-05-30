@@ -27,6 +27,10 @@ html(lang='en')
     //- Recursively include other .jade files
     include main-view
 
+    script(type="text/html" id="help")
+      include help
+    script(type="text/html" id="geyser")
+      include geyser
     script(type="text/html" id="alert-dialog")
       include alert-dialog
     script(type="text/html" id="error-dialog")

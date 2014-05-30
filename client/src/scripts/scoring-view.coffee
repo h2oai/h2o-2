@@ -672,7 +672,9 @@ Steam.ScoringView = (_, _scoring) ->
           svg.select("#strip-plot-#{series.id}-path").style 'stroke', 'none'
           svg.select("#strip-plot-#{series.id}-labels").style 'display', 'none'
         .on 'click', (d) ->
-          _.inspect createStripPlotValueInspection series
+          _.inspect
+            content: createStripPlotValueInspection series
+            template: 'geyser'
 
     g = svg.selectAll '.category'
       .data categories
@@ -685,7 +687,9 @@ Steam.ScoringView = (_, _scoring) ->
       .attr 'dy', 5
       .text (d) -> d.caption
       .on 'click', (d) ->
-        _.inspect createStripPlotRowInspection series, d
+        _.inspect
+          content: createStripPlotRowInspection series, d
+          template: 'geyser'
 
     forEach series, (series) ->
       svg.append 'g'
@@ -759,12 +763,17 @@ Steam.ScoringView = (_, _scoring) ->
       width: "#{width}px"
       left: "#{left}px"
       color: series.color
+      inspect: -> _.inspect
+        content: createScoringInspection series
+        template: 'geyser'
 
   createScoringList = (series) ->
     map series, (series) ->
       caption: series.caption
       color: series.color
-      inspect: -> _.inspect createScoringInspection series
+      inspect: -> _.inspect
+        content: createScoringInspection series
+        template: 'geyser'
 
   createSeriesFromMetrics = (scores) ->
     uniqueScoringNames = {}
@@ -908,7 +917,9 @@ Steam.ScoringView = (_, _scoring) ->
       .attr 'cy', (d) -> scaleY readY d
       .attr 'stroke', (d) -> d.color
       .on 'click', (d) ->
-        _.inspect createStripPlotValueInspection d
+        _.inspect
+          content: createStripPlotValueInspection d
+          template: 'geyser'
     el
 
   renderThresholdPlot = (series, attrX, attrY, showReferenceLine) ->
@@ -1011,7 +1022,9 @@ Steam.ScoringView = (_, _scoring) ->
         .attr 'cx', (d) -> scaleX d[attrX]
         .attr 'cy', (d) -> scaleY d[attrY]
         .on 'click', (d) ->
-          _.inspect createThresholdPlotInspection series, d
+          _.inspect
+            content: createThresholdPlotInspection series, d
+            template: 'geyser'
         .on 'mouseover', (d) ->
           d3.select(@).style 'stroke', series.color
         .on 'mouseout', (d) ->

@@ -6,13 +6,12 @@ Steam.MainView = (_) ->
   _canNavigateHelpBack = node$ no
   _canNavigateHelpForward = node$ no
   _status = node$ defaultStatusMessage
-  _inspection = node$ null
   _listViews = do nodes$
   _selectionViews = do nodes$
   _pageViews = do nodes$
   _modalViews = do nodes$
   _modalDialogs = do nodes$
-  _inspectorViews = do nodes$
+  _inspectorViews = nodes$ null
   _isInspectorHidden = node$ no
   _topic = node$ null
 
@@ -140,12 +139,14 @@ Steam.MainView = (_) ->
   #
   # Inspection
   #
-  inspect = (content) ->
-    if content
-      _inspection content
-    # TODO else clear inspector / display generic info about inspector
+  inspect = (view) ->
+    if view
+      switchView _inspectorViews, view
+    else
+      # Clear the inspector
+      # TODO put some default content here.
+      switchView _inspectorViews, null
     return
-  
 
   #
   # Help
@@ -238,7 +239,7 @@ Steam.MainView = (_) ->
   isListMasked: _isListMasked
   isViewMasked: _isViewMasked
   isInspectorHidden: _isInspectorHidden
-  inspection: _inspection
+  inspectorViews: _inspectorViews
   help: _help
   navigateHelpHome: navigateHelpHome
   canNavigateHelpBack: _canNavigateHelpBack

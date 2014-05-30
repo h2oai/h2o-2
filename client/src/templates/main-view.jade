@@ -58,7 +58,7 @@
             i.fa.fa-arrow-right
 
       .y-lane-body
-        .y-inspector(data-bind="geyser:inspection")
+        .y-inspector(data-bind="template:{name:template, foreach:inspectorViews}")
 
 
   .y-status-bar(data-bind='text:status')

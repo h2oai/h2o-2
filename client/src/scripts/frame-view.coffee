@@ -1,9 +1,23 @@
+
+helpIndex =
+  modelCategories:
+    Binomial: 'model.category.binomial'
+  modelMethods:
+    DeepLearning: 'model.method.deep_learning'
+    GBM: 'model.method.gbm'
+    GLM: 'model.method.glm'
+    DRF: 'model.method.drf'
+    SpeeDRF: 'model.method.speed_drf'
+  
 Steam.FrameView = (_, _frame) ->
   createCompatibleModelItem = (model) ->
     key: model.key
     algorithm: model.model_algorithm
     category: model.model_category
     responseColumnName: model.response_column_name
+    inspect: -> console.log model.key
+    inspectAlgorithm: -> _.help helpIndex.modelMethods[model.model_algorithm]
+    inspectCategory: -> _.help helpIndex.modelCategories[model.model_category]
 
   createColumnItem = (name) -> name: name
 

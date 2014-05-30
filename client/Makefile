@@ -37,6 +37,7 @@ BROWSER_SCRIPTS=\
 	$(BUILD)/scripts/xhr.js \
 	$(BUILD)/scripts/h2o-proxy.js \
 	$(BUILD)/scripts/help-server.js \
+	$(BUILD)/scripts/help.js \
 	$(BUILD)/scripts/dialog-manager.js \
 	$(BUILD)/scripts/alert-dialog.js \
 	$(BUILD)/scripts/error-dialog.js \
@@ -64,6 +65,7 @@ TEST_SCRIPTS=\
 	$(BUILD)/scripts/xhr.js \
 	$(BUILD)/scripts/h2o-proxy.js \
 	$(BUILD)/scripts/help-server.js \
+	$(BUILD)/scripts/help.js \
 	$(BUILD)/scripts/alert-dialog.js \
 	$(BUILD)/scripts/error-dialog.js \
 	$(BUILD)/scripts/confirm-dialog.js \
@@ -113,6 +115,8 @@ TEST_LIB_SCRIPTS=\
 
 TEMPLATES=\
 	src/templates/main-view.jade \
+	src/templates/help.jade \
+	src/templates/geyser.jade \
 	src/templates/alert-dialog.jade \
 	src/templates/error-dialog.jade \
 	src/templates/confirm-dialog.jade \

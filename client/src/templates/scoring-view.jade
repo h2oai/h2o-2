@@ -34,13 +34,14 @@
   h2.y-subtitle(data-bind='collapse:false') Scorings in this comparison
   div
     div Click on a scoring to inspect it.
-    table.table.table-condensed.table-hover
+    table.table.table-condensed
       tbody
         // ko foreach:scoringList
         tr
           td
             .y-legend-swatch(data-bind='style:{backgroundColor:color}')
-          td.y-legend-label(data-bind='text:caption, click:inspect')
+          td.y-legend-label
+             a.help(data-bind='text:caption, click:inspect')
         // /ko
   h2.y-subtitle(data-bind='collapse:false') ROC Plot
   div(data-bind='geyser:multiRocPlot')
@@ -53,7 +54,8 @@
         tbody
           // ko foreach:comparisonPlot
           tr
-            td(colspan='2' data-bind='text:caption')
+            td(colspan='2')
+              a.help(data-bind='text:caption, click:inspect')
           tr
             td(data-bind='style:{width:span}' style='position:relative')
               div(style='position:absolute;height:10px' data-bind='style:{left:left, width:width, backgroundColor:color}')

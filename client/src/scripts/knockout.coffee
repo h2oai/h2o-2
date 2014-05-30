@@ -149,9 +149,33 @@ ko.bindingHandlers.collapse =
     $el.css 'cursor', 'pointer'
     $el.attr 'title', 'Click to expand/collapse'
     $disclosureEl.css 'margin-left', '10px'
-    $el.click toggle
+    $el.on 'click', toggle
     toggle()
     ko.utils.domNodeDisposal.addDisposeCallback element, ->
       $el.off 'click'
+    return
+
+ko.bindingHandlers.raw =
+  init: (element, valueAccessor, allBindings, viewModel, bindingContext) ->
+    arg = ko.unwrap valueAccessor()
+    if arg
+      $element = $ element
+      $element.empty()
+      $element.append arg
+    return
+
+
+ko.bindingHandlers.help =
+  init: (element, valueAccessor, allBindings, viewModel, bindingContext) ->
+    if steam = window.steam
+      $element = $ element
+      arg = ko.unwrap valueAccessor()
+      if isFunction arg
+        $element.on 'click', -> do arg
+      else if isString arg
+        $element.on 'click', -> steam.context.help arg
+      else
+        throw new Error 'Invalid argument'
+      ko.utils.domNodeDisposal.addDisposeCallback element, -> $element.off 'click'
     return
 
