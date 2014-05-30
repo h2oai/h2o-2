@@ -726,7 +726,7 @@ public abstract class Model extends Lockable<Model> {
    * @param cv_preds N Frames containing predictions made by N-fold CV runs on disjoint contiguous holdout pieces of the training data
    * @param offsets Starting row numbers for the N CV pieces (length = N+1, first element: 0, last element: #rows)
    */
-  public final void scoreCrossValidation(Frame source, Vec response, Frame[] cv_preds, long[] offsets) {
+  public final void scoreCrossValidation(Job.ValidatedJob job, Frame source, Vec response, Frame[] cv_preds, long[] offsets) {
     assert(offsets[0] == 0);
     assert(offsets[offsets.length-1] == source.numRows());
 
@@ -770,9 +770,9 @@ public abstract class Model extends Lockable<Model> {
     water.api.ConfusionMatrix cm = new water.api.ConfusionMatrix();
     HitRatio hr = isClassifier() ? new HitRatio() : null;
     double cv_error = calcError(source, response, cv_pred, cv_pred, "cross-validated", true, 10, cm, auc, hr);
-    setCrossValidationError(cv_error, cm, auc, hr);
+    setCrossValidationError(job, cv_error, cm, auc, hr);
   }
 
-  protected void setCrossValidationError(double cv_error, water.api.ConfusionMatrix cm, AUC auc, HitRatio hr) { throw H2O.unimpl(); }
+  protected void setCrossValidationError(Job.ValidatedJob job, double cv_error, water.api.ConfusionMatrix cm, AUC auc, HitRatio hr) { throw H2O.unimpl(); }
 
 }

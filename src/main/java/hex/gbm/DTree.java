@@ -551,9 +551,10 @@ public class DTree extends Iced {
     @API(help="Tree statistics")                                                      public final TreeStats       treeStats;
     @API(help="AUC for validation dataset")                                           public final AUC             validAUC;
 
+    private final int num_folds;
     private transient volatile CompressedTree[/*N*/][/*nclasses OR 1 for regression*/] _treeBitsCache;
 
-    public TreeModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins) {
+    public TreeModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, int num_folds) {
       super(key,dataKey,names,domains);
       this.N = ntrees; this.errs = new double[0];
       this.testKey = testKey; this.cms = new ConfusionMatrix[0];
@@ -563,6 +564,7 @@ public class DTree extends Iced {
       this.cmDomain = cmDomain!=null ? cmDomain : new String[0];;
       this.varimp = null;
       this.validAUC = null;
+      this.num_folds = num_folds;
     }
     // Simple copy ctor, null value of parameter means copy from prior-model
     private TreeModel(TreeModel prior, Key[][] treeKeys, double[] errs, ConfusionMatrix[] cms, TreeStats tstats, VarImp varimp, AUC validAUC) {
@@ -572,6 +574,7 @@ public class DTree extends Iced {
       this.min_rows  = prior.min_rows;
       this.nbins     = prior.nbins;
       this.cmDomain  = prior.cmDomain;
+      this.num_folds = prior.num_folds;
 
       if (treeKeys != null) this.treeKeys  = treeKeys; else this.treeKeys  = prior.treeKeys;
       if (errs     != null) this.errs      = errs;     else this.errs      = prior.errs;
@@ -719,7 +722,10 @@ public class DTree extends Iced {
         assert cm._arr.length==domain.length;
         DocGen.HTML.section(sb,"Confusion Matrix");
         if( testKey == null ) {
-          sb.append("<div class=\"alert\">Reported on ").append(title.contains("DRF") ? "out-of-bag" : "training").append(" data</div>");
+          if (num_folds > 0)
+            sb.append("<div class=\"alert\">Reported on ").append(num_folds).append("-fold cross-validated training data</div>");
+          else
+            sb.append("<div class=\"alert\">Reported on ").append(title.contains("DRF") ? "out-of-bag" : "training").append(" data</div>");
         } else {
           RString rs = new RString("<div class=\"alert\">Reported on <a href='Inspect2.html?src_key=%$key'>%key</a></div>");
           rs.replace("key", testKey);

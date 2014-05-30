@@ -875,7 +875,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     }
   }
 
-  @Override protected void setCrossValidationError(double cv_error, ConfusionMatrix cm, AUC auc, HitRatio hr) {
+  @Override protected void setCrossValidationError(Job.ValidatedJob job, double cv_error, ConfusionMatrix cm, AUC auc, HitRatio hr) {
     if (!get_params().classification)
       last_scored().valid_mse = cv_error;
     else

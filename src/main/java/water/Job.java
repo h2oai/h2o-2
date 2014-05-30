@@ -47,6 +47,7 @@ public abstract class Job extends Func {
   @API(help = "Job state")       public JobState state;
 
   transient public H2OCountedCompleter _fjtask; // Top-level task you can block on
+  transient protected boolean _cv;
 
   /** Possible job states. */
   public static enum JobState {
@@ -577,6 +578,7 @@ public abstract class Job extends Func {
 
     @Override protected void init() {
       super.init();
+      if (_cv) return;
 
       // At most one of the following may be specified.
       int specified = 0;
@@ -787,6 +789,7 @@ public abstract class Job extends Func {
       state = Job.JobState.CREATED; //Hack to allow this job to run
       DKV.put(self(), this); //Needed to pass the Job.isRunning(cvdl.self()) check in FrameTask
       offsets[i + 1] = offsets[i] + validation.numRows();
+      _cv = true; //Hack to allow init() to pass for ColumnsJob (allow cols/ignored_cols to co-exist)
       invoke();
     }
 
