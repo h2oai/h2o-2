@@ -1086,6 +1086,30 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
             + ") is greater than the specified limit of " + get_params().max_confusion_matrix_size + ".";
     boolean smallenough = model_info.units[model_info.units.length-1] <= get_params().max_confusion_matrix_size;
 
+    if (!error.validation) {
+      if (_have_cv_results) {
+        RString v_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
+        v_rs.replace("key", get_params().source._key);
+        String cmTitle = "<div class=\"alert\">Scoring results reported for " + error.num_folds + "-fold cross-validated training data " + v_rs.toString() + ":</div>";
+        sb.append("<h5>" + cmTitle);
+        sb.append("</h5>");
+      }
+      else {
+        RString t_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
+        t_rs.replace("key", get_params().source._key);
+        String cmTitle = "<div class=\"alert\">Scoring results reported on training data " + t_rs.toString() + (fulltrain ? "" : " (" + score_train + " samples)") + ":</div>";
+        sb.append("<h5>" + cmTitle);
+        sb.append("</h5>");
+      }
+    }
+    else {
+      RString v_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
+      v_rs.replace("key", get_params().validation._key != null ? get_params().validation._key : "");
+      String cmTitle = "<div class=\"alert\">Scoring results reported on validation data " + v_rs.toString() + (fullvalid ? "" : " (" + score_valid + " samples)") + ":</div>";
+      sb.append("<h5>" + cmTitle);
+      sb.append("</h5>");
+    }
+
     if (isClassifier()) {
       // print AUC
       if (error.validAUC != null) {
@@ -1096,37 +1120,19 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       }
       else {
         if (error.validation) {
-          RString v_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
-          v_rs.replace("key", get_params().validation._key != null ? get_params().validation._key : "");
-          String cmTitle = "<div class=\"alert\">Scoring results reported on validation data " + v_rs.toString() + (fullvalid ? "" : " (" + score_valid + " samples)") + ":</div>";
-          sb.append("<h5>" + cmTitle);
           if (error.valid_confusion_matrix != null && smallenough) {
-            sb.append("</h5>");
             error.valid_confusion_matrix.toHTML(sb);
-          } else if (smallenough) sb.append(" Confusion matrix not yet computed.</h5>");
-          else sb.append(toolarge + "</h5>");
+          } else if (smallenough) sb.append("<h5>Confusion matrix on validation data is not yet computed.</h5>");
         }
-        else if (error.num_folds > 0 && _have_cv_results) {
-          RString v_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
-          v_rs.replace("key", get_params().source._key);
-          String cmTitle = "<div class=\"alert\">Scoring results reported for " + error.num_folds + "-fold cross-validated training data " + v_rs.toString() + ":</div>";
-          sb.append("<h5>" + cmTitle);
+        else if (_have_cv_results) {
           if (error.valid_confusion_matrix != null && smallenough) {
-            sb.append("</h5>");
             error.valid_confusion_matrix.toHTML(sb);
-          } else if (smallenough) sb.append(" Confusion matrix not yet computed.</h5>");
-          else sb.append(toolarge + "</h5>");
+          } else if (smallenough) sb.append("<h5>Confusion matrix on " + error.num_folds + "-fold cross-validated training data is not yet computed.</h5>");
         }
         else {
-          RString t_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
-          t_rs.replace("key", get_params().source._key);
-          String cmTitle = "<div class=\"alert\">Scoring results reported on training data " + t_rs.toString() + (fulltrain ? "" : " (" + score_train + " samples)") + ":</div>";
-          sb.append("<h5>" + cmTitle);
           if (error.train_confusion_matrix != null && smallenough) {
-            sb.append("</h5>");
             error.train_confusion_matrix.toHTML(sb);
-          } else if (smallenough) sb.append(" Confusion matrix not yet computed.</h5>");
-          else sb.append(toolarge + "</h5>");
+          } else if (smallenough) sb.append("<h5>Confusion matrix on training data is not yet computed.</h5>");
         }
       }
     }
