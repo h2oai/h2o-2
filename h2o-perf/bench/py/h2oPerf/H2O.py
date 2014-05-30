@@ -355,7 +355,7 @@ class H2OCloudNode:
         Use a request for /Cloud.json and look for pid.
         """
         name = self.ip + ":" + self.port
-        time.sleep(5)
+        time.sleep(3)
         r = requests.get("http://" + name + "/Cloud.json")
         name = "/" + name
         j = json.loads(r.text)
@@ -416,7 +416,7 @@ class H2OCloudNode:
         @return: none
         """
         try:
-            requests.get("http://" + self.ip + ":" + self.port + "/Shutdown.html", timeout=5)
+            requests.get("http://" + self.ip + ":" + self.port + "/Shutdown.html", timeout=1)
             try:
                 r2 = requests.get("http://" + self.ip + ":" + self.port + "/Cloud.html", timeout=2)
             except Exception, e:
@@ -436,7 +436,7 @@ class H2OCloudNode:
         except OSError:
             pass
         try:
-            requests.get("http://" + self.ip + ":" + self.port + "/Shutdown.html", timeout=5)
+            requests.get("http://" + self.ip + ":" + self.port + "/Shutdown.html", timeout=1)
         except Exception, e:
             print "Got Exception trying to shutdown H2O:"
             print e
