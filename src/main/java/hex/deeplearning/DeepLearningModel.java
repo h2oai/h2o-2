@@ -240,8 +240,9 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     public final Neurons.DenseVector get_biases_ada_dx_g(int i) { return biases_ada_dx_g[i]; }
 
     @API(help = "Model parameters", json = true)
-    private DeepLearning parameters;
-    public final DeepLearning get_params() { return parameters; }
+    private Job job;
+    public final DeepLearning get_params() { return (DeepLearning)job; }
+    public final Job get_job() { return job; }
 
     @API(help = "Mean rate", json = true)
     private float[] mean_rate;
@@ -284,13 +285,13 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
     public DeepLearningModelInfo() {}
 
-    public DeepLearningModelInfo(final DeepLearning params, final DataInfo dinfo) {
+    public DeepLearningModelInfo(final Job.ValidatedJob job, final DataInfo dinfo) {
+      this.job = job;
       data_info = dinfo;
       final int num_input = dinfo.fullN();
-      final int num_output = params.classification ? dinfo._adaptedFrame.domains()[dinfo._adaptedFrame.domains().length-1].length : 1;
+      final int num_output = get_params().classification ? dinfo._adaptedFrame.domains()[dinfo._adaptedFrame.domains().length-1].length : 1;
       assert(num_input > 0);
       assert(num_output > 0);
-      parameters = params;
       if (has_momenta() && adaDelta()) throw new IllegalArgumentException("Cannot have non-zero momentum and adaptive rate at the same time.");
       final int layers=get_params().hidden.length;
       // units (# neurons for each layer)
@@ -303,7 +304,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       dense_col_weights = new Neurons.DenseColMatrix[layers+1];
 
       // decide format of weight matrices row-major or col-major
-      if (params.col_major) dense_col_weights[0] = new Neurons.DenseColMatrix(units[1], units[0]);
+      if (get_params().col_major) dense_col_weights[0] = new Neurons.DenseColMatrix(units[1], units[0]);
       else dense_row_weights[0] = new Neurons.DenseRowMatrix(units[1], units[0]);
       for (int i=1; i<=layers; ++i)
         dense_row_weights[i] = new Neurons.DenseRowMatrix(units[i+1] /*rows*/, units[i] /*cols*/);
@@ -490,7 +491,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
                 get_weights(w).set(i,j, (float)uniformDist(rng, -range, range));
             }
             else if (get_params().initial_weight_distribution == DeepLearning.InitialWeightDistribution.Uniform) {
-              get_weights(w).set(i,j, (float)uniformDist(rng, -get_params().initial_weight_scale, parameters.initial_weight_scale));
+              get_weights(w).set(i,j, (float)uniformDist(rng, -get_params().initial_weight_scale, get_params().initial_weight_scale));
             }
             else if (get_params().initial_weight_distribution == DeepLearning.InitialWeightDistribution.Normal) {
               get_weights(w).set(i,j, (float)(rng.nextGaussian() * get_params().initial_weight_scale));
@@ -1053,14 +1054,16 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       if(error.validation) {
         DocGen.HTML.section(sb, "Classification error on validation data: " + formatPct(error.valid_err));
       } else if(error.num_folds > 0) {
-        DocGen.HTML.section(sb, "Classification error on " + error.num_folds + "-fold cross-validated training data: " + (_have_cv_results ? formatPct(error.valid_err) : "not yet available"));
+        DocGen.HTML.section(sb, "Classification error on " + error.num_folds + "-fold cross-validated training data"
+                + (_have_cv_results ? ": " + formatPct(error.valid_err) : " is being computed - please reload this page later."));
       }
     } else {
       DocGen.HTML.section(sb, "MSE on training data: " + String.format(mse_format, error.train_mse));
       if(error.validation) {
         DocGen.HTML.section(sb, "MSE on validation data: " + formatPct(error.valid_err));
       } else if(error.num_folds > 0) {
-        DocGen.HTML.section(sb, "MSE on " + error.num_folds + "-fold cross-validated training data: " + (_have_cv_results ? String.format(mse_format, error.valid_mse) : "not yet available"));
+        DocGen.HTML.section(sb, "MSE on " + error.num_folds + "-fold cross-validated training data"
+                + (_have_cv_results ? ": " + String.format(mse_format, error.valid_mse) : " is being computed - please reload this page later."));
       }
     }
     DocGen.HTML.paragraph(sb, "Training samples: " + String.format("%,d", model_info().get_processed_total()));
@@ -1123,16 +1126,19 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
           if (error.valid_confusion_matrix != null && smallenough) {
             error.valid_confusion_matrix.toHTML(sb);
           } else if (smallenough) sb.append("<h5>Confusion matrix on validation data is not yet computed.</h5>");
+          else sb.append(toolarge);
         }
         else if (_have_cv_results) {
           if (error.valid_confusion_matrix != null && smallenough) {
             error.valid_confusion_matrix.toHTML(sb);
           } else if (smallenough) sb.append("<h5>Confusion matrix on " + error.num_folds + "-fold cross-validated training data is not yet computed.</h5>");
+          else sb.append(toolarge);
         }
         else {
           if (error.train_confusion_matrix != null && smallenough) {
             error.train_confusion_matrix.toHTML(sb);
           } else if (smallenough) sb.append("<h5>Confusion matrix on training data is not yet computed.</h5>");
+          else sb.append(toolarge);
         }
       }
     }
