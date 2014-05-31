@@ -839,7 +839,7 @@ public abstract class Job extends Func {
     @Override protected void init() {
       if ( validation != null && num_folds != 0 ) throw new UnsupportedOperationException("Cannot specify a validation dataset and non-zero number of cross-validation folds.");
       if ( num_folds < 0 ) throw new UnsupportedOperationException("The number of cross-validation folds must be >= 0.");
-      if ( num_folds != 2 || num_folds != 0 ) throw new UnsupportedOperationException("The number of cross-validation folds must be either 0 or 2.");
+      if ( num_folds != 2 && num_folds != 0 ) throw new UnsupportedOperationException("The number of cross-validation folds must be either 0 or 2.");
       super.init();
 
       int rIndex = 0;
