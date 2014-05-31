@@ -205,7 +205,7 @@ public class ModelUtils {
     Frame[] cv_preds = new Frame[job.num_folds];
     for (int i = 0; i < job.num_folds; ++i)
       job.crossValidate(basename, splits, cv_preds, offsets, i); //this removes the enum-ified response!
-
+    if (!job.keep_cross_validation_splits) for(Frame f : splits) f.delete(); //FIXME: delete each split as soon as possible (once we have N>2)
     boolean put_back = UKV.get(job.response._key) == null;
     if (put_back) DKV.put(job.response._key, job.response); //put enum-ified response back to K-V store
     ((Model)UKV.get(job.destination_key)).scoreCrossValidation(job, job.source, job.response, cv_preds, offsets);

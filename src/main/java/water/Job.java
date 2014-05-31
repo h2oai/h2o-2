@@ -756,8 +756,38 @@ public abstract class Job extends Func {
     @API(help = "Validation frame", filter = Default.class, mustExist = true, json = true)
     public Frame validation;
 
-    @API(help = "Number of folds for cross-validation (only if no validation data is given)", filter = Default.class, json = true)
+    @API(help = "Number of folds for cross-validation (if no validation data is specified)", filter = Default.class, json = true)
     public int num_folds = 0;
+
+    @API(help = "Keep cross-validation dataset splits", filter = Default.class, json = true)
+    public boolean keep_cross_validation_splits = false;
+
+    /**
+     * Helper to specify which arguments trigger a refresh on change
+     * @param ver
+     */
+    @Override
+    protected void registered(RequestServer.API_VERSION ver) {
+      super.registered(ver);
+      for (Argument arg : _arguments) {
+        if ( arg._name.equals("validation")) {
+          arg.setRefreshOnChange();
+        }
+      }
+    }
+
+    /**
+     * Helper to handle arguments based on existing input values
+     * @param arg
+     * @param inputArgs
+     */
+    @Override protected void queryArgumentValueSet(Argument arg, java.util.Properties inputArgs) {
+      super.queryArgumentValueSet(arg, inputArgs);
+      if (arg._name.equals("num_folds") && validation != null) {
+        arg.disable("Only if no validation dataset is provided.");
+        num_folds = 0;
+      }
+    }
 
     /**
      * Cross-Validate this Job (to be overridden for each instance, which also calls genericCrossValidation)
