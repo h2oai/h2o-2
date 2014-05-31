@@ -16,7 +16,6 @@ import water.license.LicenseManager;
 import water.util.*;
 import water.util.Utils.IcedBitSet;
 
-import java.nio.ByteBuffer;
 import java.util.*;
 
 /**
@@ -151,7 +150,7 @@ public class DTree extends Iced {
     float splat(DHistogram hs[]) {
       DHistogram h = hs[_col];
       assert _bin > 0 && _bin < h.nbins();
-      if( _equal != 0 ) { assert h.bins(_bin)!=0; return h.binAt(_bin); }
+      if( _equal == 1 ) { assert h.bins(_bin)!=0; return h.binAt(_bin); }
       // Find highest non-empty bin below the split
       int x=_bin-1;
       while( x >= 0 && h.bins(x)==0 ) x--;
@@ -396,7 +395,7 @@ public class DTree extends Iced {
         Arrays.fill(_nids,-1);
         return;
       }
-      _splat = _split.splat(hs); // Split-at value
+      _splat = (_split._equal == 0 || _split._equal == 1) ? _split.splat(hs) : -1; // Split-at value (-1 for group-wise splits)
       final char nbins   = _tree._nbins;
       final int min_rows = _tree._min_rows;
 
@@ -420,7 +419,7 @@ public class DTree extends Iced {
       else if(_split._equal == 1)
         return d != _splat ? 0 : 1;
       else
-        return _split._bs.get((int)d) ? 1 : 0;
+        return _split._bs.contains((int)d) ? 1 : 0;
       // return _split._equal ? (d != _splat ? 0 : 1) : (d < _splat ? 0 : 1);
     }
 
@@ -473,21 +472,22 @@ public class DTree extends Iced {
       return sb;
     }
 
-    // TODO: Update size of subtree to include IcedBitSet
     // Size of this subtree; sets _nodeType also
     @Override public final int size(){
       if( _size != 0 ) return _size; // Cached size
 
       assert _nodeType == 0:"unexpected node type: " + _nodeType;
-      if( _split._equal != 0 ) _nodeType |= (byte)4;
+      if(_split._equal != 0)
+        _nodeType |= (byte)((_split._equal == 1) ? 4 : (_split._bs.size() <= 32) ? 8 : 12);
 
-      int res = 7;  // 1B node type + flags, 2B colId, 4B float split val
-      // int res = _split._equal == 2 ? 3 + (_split._bs.size() >> 3) : 7;
+      // int res = 7;  // 1B node type + flags, 2B colId, 4B float split val
+      // 1B node type + flags, 2B colId, 4B split val/small group or 2B size + large group
+      int res = (_split._equal == 2 && (_split._bs.size() > 32)) ? 5 + (_split._bs.size() >> 3) : 7;
 
       Node left = _tree.node(_nids[0]);
       int lsz = left.size();
       res += lsz;
-      if( left instanceof LeafNode ) _nodeType |= (byte)(24 << 0*2);
+      if( left instanceof LeafNode ) _nodeType |= (byte)(48 << 0*2);
       else {
         int slen = lsz < 256 ? 0 : (lsz < 65535 ? 1 : (lsz<(1<<24) ? 2 : 3));
         _nodeType |= slen; // Set the size-skip bits
@@ -495,14 +495,13 @@ public class DTree extends Iced {
       }
 
       Node rite = _tree.node(_nids[1]);
-      if( rite instanceof LeafNode ) _nodeType |= (byte)(24 << 1*2);
+      if( rite instanceof LeafNode ) _nodeType |= (byte)(48 << 1*2);
       res += rite.size();
-      assert (_nodeType&0x1B) != 27;
+      assert (_nodeType&0x33) != 51;
       assert res != 0;
       return (_size = res);
     }
 
-    // TODO: Compress and save BitSet _bs rather than _splat for group splitting
     // Compress this tree into the AutoBuffer
     @Override public AutoBuffer compress(AutoBuffer ab) {
       int pos = ab.position();
@@ -510,9 +509,25 @@ public class DTree extends Iced {
       ab.put1(_nodeType);          // Includes left-child skip-size bits
       assert _split._col != -1;    // Not a broken root non-decision?
       ab.put2((short)_split._col);
-      ab.put4f(_splat);
+
+      // Save split-at-value or group
+      if(_split._equal == 0 || _split._equal == 1)
+        ab.put4f(_splat);
+      else if(_split._equal == 2) {
+        if(_split._bs.size() <= 32) {
+          // Make sure group split is 4B, else pad with zeros
+          byte[] ary = MemoryManager.malloc1(4);
+          for(int i = 0; i < _split._bs._val.length; i++)
+            ary[i] = _split._bs._val[i];
+          ab.putA1(ary, 4);
+        } else {
+          ab.put2((char)(_split._bs.size() >> 3));
+          ab.putA1(_split._bs._val, _split._bs._val.length);
+        }
+      }
+
       Node left = _tree.node(_nids[0]);
-      if( (_nodeType&24) == 0 ) { // Size bits are optional for left leaves !
+      if( (_nodeType&48) == 0 ) { // Size bits are optional for left leaves !
         int sz = left.size();
         if(sz < 256)            ab.put1(       sz);
         else if (sz < 65535)    ab.put2((short)sz);
@@ -858,11 +873,20 @@ public class DTree extends Iced {
           if( colId == 65535 ) return scoreLeaf(ab);
 
           // boolean equal = ((nodeType&4)==4);
-          int equal = (nodeType & 12) >> 2;
+          int equal = (nodeType&12) >> 2;
           assert (equal >= 0 && equal <= 3): "illegal equal value " + equal+" at "+ab.position()+" in bitpile "+Arrays.toString(_bits);
 
-          // TODO: Get BitSet group. For large group, extract 2B size val first, then read BitSet array from AutoBuffer.
-          float splitVal = ab.get4f();
+          // Extract value or group to split on
+          float splitVal = -1;
+          IcedBitSet splitGrp = null;
+          if(equal == 0 || equal == 1)
+            splitVal = ab.get4f();
+          else {
+            int sz = (equal == 3) ? ab.get2() : 4;
+            byte[] buf = MemoryManager.malloc1(sz);
+            ab.read(buf, 0, sz);
+            splitGrp = new IcedBitSet(buf);
+          }
 
           // Compute the amount to skip.
           int lmask =  nodeType & 0x33;
@@ -882,8 +906,9 @@ public class DTree extends Iced {
           //   - Double.NaN <  3.7f => return false => BUT left branch has to be selected (i.e., ab.position())
           //   - Double.NaN != 3.7f => return true  => left branch has to be select selected (i.e., ab.position())
           if( !Double.isNaN(row[colId]) ) { // NaNs always go to bin 0
-            if( ( equal==1 && ((float)row[colId]) == splitVal) ||     // TODO: Deal with equal = 2 and 3 cases
-                ( equal==0 && ((float)row[colId]) >= splitVal) ) {
+            if( ( equal==0 && ((float)row[colId]) >= splitVal) ||
+                ( equal==1 && ((float)row[colId]) == splitVal) ||
+                ( splitGrp!=null && splitGrp.contains((int)row[colId]) )) {
               ab.position(ab.position()+skip); // Skip to the right subtree
               lmask = rmask;                   // And set the leaf bits into common place
             }

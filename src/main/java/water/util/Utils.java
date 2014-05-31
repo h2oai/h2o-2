@@ -790,11 +790,18 @@ public class Utils {
       _val = new byte[((nbits-1) >> 3) + 1];
     }
     public boolean get(int idx) {
-      if(idx < 0) throw new IndexOutOfBoundsException("idx < 0: " + idx);
+      int sz = size();
+      if(idx < 0 || idx >= sz) throw new IndexOutOfBoundsException("Must have 0 <= idx < " + sz + ": " + idx);
       return (_val[idx >> 3] & ((byte)1 << idx)) != 0;
     }
-    public void set(int idx) {
+    public boolean contains(int idx) {
       if(idx < 0) throw new IndexOutOfBoundsException("idx < 0: " + idx);
+      if(Double.isNaN(idx) || idx >= size()) return false;
+      return get(idx);
+    }
+    public void set(int idx) {
+      int sz = size();
+      if(idx < 0 || idx >= sz) throw new IndexOutOfBoundsException("Must have 0 <= idx < " + sz + ": " + idx);
       _val[idx >> 3] |= ((byte)1 << idx);
     }
     public int size() { return _val.length << 3; };
