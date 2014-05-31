@@ -192,6 +192,7 @@ def probe_node(line, h2oNodes):
             'delete_keys_at_teardown': 'true', # yes we want each test to clean up after itself
             'use_hdfs': use_hdfs,
             'use_maprfs': use_maprfs,
+            'h2o_remote_buckets_root': 'false',
             'hdfs_version': args.hdfs_version, # something is checking for this. I guess we could set this in tests as a hack
             'hdfs_name_node': args.hdfs_name_node, # hmm. do we have to set this to do hdfs url generation correctly?
         }
