@@ -708,6 +708,9 @@ public class DeepLearning extends Job.ValidatedJob {
       final DeepLearningModel previous = UKV.get(checkpoint);
       if (previous == null) throw new IllegalArgumentException("Checkpoint not found.");
       Log.info("Resuming from checkpoint.");
+      if (num_folds != 0) {
+        throw new UnsupportedOperationException("num_folds must be 0: Cross-validation is not supproted during checkpoint restarts.");
+      }
       if (source == null || !Arrays.equals(source._key._kb, previous.model_info().get_params().source._key._kb)) {
         throw new IllegalArgumentException("source must be the same as for the checkpointed model.");
       }
@@ -754,6 +757,10 @@ public class DeepLearning extends Job.ValidatedJob {
               }
             }
           }
+        }
+        if (mp.num_folds != 0) {
+          Log.warn("Disabling cross-validation: Not supported when resuming training from a checkpoint.");
+          mp.num_folds = 0;
         }
         cp.update(self());
       } finally {
