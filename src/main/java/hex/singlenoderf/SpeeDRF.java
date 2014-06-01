@@ -259,6 +259,9 @@ public class SpeeDRF extends Job.ValidatedJob {
 
           // If stratified local, turn of out of bag sampling
           oobee = false;
+        } else {
+          strata_samples = new int[response.toEnum().cardinality()];
+          for (int i = 0; i < strata_samples.length; i++) strata_samples[i] = 67;
         }
 
         // Handle bad user input for class weights
@@ -286,7 +289,6 @@ public class SpeeDRF extends Job.ValidatedJob {
       if (seed == -1) {
         seed = _seedGenerator.nextLong();
       }
-
 
       // Prepare the train/test data sets based on the user input for the model.
       Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, false, false, false);
