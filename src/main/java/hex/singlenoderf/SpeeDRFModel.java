@@ -15,7 +15,6 @@ import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Counter;
-import water.util.Log;
 import water.util.ModelUtils;
 
 import java.util.Arrays;
@@ -26,51 +25,53 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-  /* @API(help = "Number of features these trees are built for.") */ int features;
-  /* @API(help = "Sampling strategy used for model") */ Sampling.Strategy sampling_strategy;
-  @API(help = " Sampling rate used when building trees.") float sample;
-  @API(help = "Strata sampling rate used for local-node strata-sampling") float[] strata_samples;
-  @API(help = "Number of split features defined by user.") int mtry;
-  /* @API(help = " Number of computed split features per node.") */ int[] node_split_features;
-  @API(help = "Number of keys the model expects to be built for it.") int N;
-  @API(help = "Max depth to grow trees to") int max_depth;
-  @API(help = "All the trees in the model.") Key[] t_keys;
-  /* @API(help = "Local forests produced by nodes.") */ Key[][] local_forests;
-  /* @API(help = "Total time in seconds to produce the model.")*/ long time;
-  /*@API(help = "Frame being operated on.")*/ Frame fr;
-  /*@API(help = "Response Vector.")*/ Vec response;
-  /*@API(help = "Class weights.")*/ double[] weights;
-  @API(help = "bin limit") int nbins;
- /*  @API(help = "Raw tree data. for faster classification passes.") */ transient byte[][] trees;
-  @API(help = "Job key") Key jobKey;
-  Key dest_key;
-  /* @API(help = "Current model status") */ String current_status;
-  @API(help = "MSE by tree") float[] errs;
-  /*@API(help = "Statistic Type")*/ Tree.StatType statType;
-  /* @API(help = "Adapted Validation Frame")*/ Frame test_frame;
-  @API(help = "Test Key") Key testKey;
-  /* @API(help = "Out of bag error estimate.") */ boolean oobee;
-  /* @API(help = "Class column idx.") */ int classcol;
-  /*@API(help = "Data Key")*/ Key dataKey;
-  /* @API(help = "Seed")*/ protected long zeed;
-  boolean importance;
-  /* @API(help = "Final Confusion Matrix") */ CMTask.CMFinal confusion;
-  @API(help = "Confusion Matrices") ConfusionMatrix[] cms;
-  /* @API(help = "Confusion Matrix") */ long[][] cm;
-  @API(help = "Tree Statistics") TreeStats treeStats;
-  @API(help = "cmDomain") String[] cmDomain;
-  @API(help = "AUC") public AUC validAUC;
-  @API(help = "Variable Importance") public VarImp varimp;
-  boolean regression;
 
+  /**
+   * Model Parameters
+   */
+  /* Number of features these trees are built for */                      int features;
+  /* Sampling strategy used for model */                                  Sampling.Strategy sampling_strategy;
+  @API(help = " Sampling rate used when building trees.")                 float sample;
+  @API(help = "Strata sampling rate used for local-node strata-sampling") float[] strata_samples;
+  @API(help = "Number of split features defined by user.")                int mtry;
+  /* Number of computed split features per node */                        int[] node_split_features;
+  @API(help = "Number of keys the model expects to be built for it.")     int N;
+  @API(help = "Max depth to grow trees to")                               int max_depth;
+  @API(help = "All the trees in the model.")                              Key[] t_keys;
+  /* Local forests produced by nodes */                                   Key[][] local_forests;
+  /* Total time in seconds to produce the model */                        long time;
+  /* Frame being operated on */                                           Frame fr;
+  /* Response Vector */                                                   Vec response;
+  /* Class weights */                                                     double[] weights;
+  @API(help = "bin limit")                                                int nbins;
+  /* Raw tree data. for faster classification passes */                   transient byte[][] trees;
+  @API(help = "Job key")                                                  Key jobKey;
+  /* Destination Key */                                                   Key dest_key;
+  /* Current model status */                                              String current_status;
+  @API(help = "MSE by tree")                                              float[] errs;
+  /* Statistic Type */                                                    Tree.StatType statType;
+  /* Adapted Validation Frame */                                          Frame test_frame;
+  @API(help = "Test Key")                                                 Key testKey;
+  /* Out of bag error estimate */                                         boolean oobee;
+  /* Seed */                                                              protected long zeed;
+  /* Variable Importance */                                               boolean importance;
+  /* Final Confusion Matrix */                                            CMTask.CMFinal confusion;
+  @API(help = "Confusion Matrices")                                       ConfusionMatrix[] cms;
+  /* Confusion Matrix */                                                  long[][] cm;
+  @API(help = "Tree Statistics")                                          TreeStats treeStats;
+  @API(help = "cmDomain")                                                 String[] cmDomain;
+  @API(help = "AUC")                                                      public AUC validAUC;
+  @API(help = "Variable Importance")                                      public VarImp varimp;
+  /* Regression or Classification */                                      boolean regression;
+
+
+  /**
+   * Extra helper variables.
+   */
   private transient VariableImportance.TreeMeasures[/*features*/] _treeMeasuresOnOOB;
   // Tree votes/SSE per individual features on permutated OOB rows
   private transient VariableImportance.TreeMeasures[/*features*/] _treeMeasuresOnSOOB;
 
-  //API output:
-//  @API(help = "") int N = N;
-//  @API(help = "") int max_depth = depth;
-//  @API(help = "")
   public static final String JSON_CONFUSION_KEY   = "confusion_key";
   public static final String JSON_CM_TYPE         = "type";
   public static final String JSON_CM_HEADER       = "header";
@@ -89,30 +90,9 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     return get_params();
   }
 
-  public SpeeDRFModel(Key selfKey, Key jobKey, Key dataKey, Frame fr, Vec response, Key[] t_keys, long zeed, String[] cmDomain, SpeeDRF params) {
+  public SpeeDRFModel(Key selfKey, Key dataKey, Frame fr, SpeeDRF params) {
     super(selfKey, dataKey, fr);
     this.dest_key = selfKey;
-    int csize = H2O.CLOUD.size();
-    this.fr = fr;
-    this.response = response;
-    this.time = 0;
-    this.local_forests = new Key[csize][];
-    for(int i=0;i<csize;i++) this.local_forests[i] = new Key[0];
-    this.t_keys = t_keys;
-    this.node_split_features = new int[csize];
-    for( Key tkey : t_keys ) assert DKV.get(tkey)!=null;
-    this.jobKey = jobKey;
-    this.classcol = fr.find(response);
-    this.dataKey = dataKey;
-    this.current_status = "Initializing Model";
-    this.confusion = null;
-    this.zeed = zeed;
-//    this.errs = new float[t_keys.length];
-    this.cmDomain = cmDomain;
-    this.varimp = null;
-    this.validAUC = null;
-    this.cms = new ConfusionMatrix[1];
-    this.errs = new float[]{-1.f};
     this.parameters = params;
   }
 
@@ -130,6 +110,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   static String[] _domain = null;
   @Override public int nclasses() { return classes(); }
   @Override public String[] classNames() { return _domain; }
+
 
   public static SpeeDRFModel make(SpeeDRFModel old, Key tkey, int nodeIdx) {
     boolean cm_update = false;
