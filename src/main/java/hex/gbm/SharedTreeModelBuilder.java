@@ -277,7 +277,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     if (importance && ktrees!=null) { // compute this tree votes but skip the first scoring call which is done over empty forest
       Timer vi_timer = new Timer();
       varimp  = doVarImpCalc(model, ktrees, tid-1, fTrain, false);
-      Log.info(Sys.DRF__, "Computation of variable importance with "+tid+"th-tree took: " + vi_timer.toString());
+      Log.info(logTag(), "Computation of variable importance with "+tid+"th-tree took: " + vi_timer.toString());
     }
     // Double update - after scoring
     model = makeModel(model,
