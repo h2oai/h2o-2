@@ -21,7 +21,7 @@ public class SpeeDRFTest extends TestUtil {
   @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
   // Test kaggle/creditsample-test data
-  @org.junit.Test public static void kaggle_credit() {
+  @org.junit.Test public void kaggle_credit() {
 
 
     Key destTrain = Key.make("credit");
@@ -62,7 +62,7 @@ public class SpeeDRFTest extends TestUtil {
     fr.delete();
   }
 
-  @org.junit.Test public static void covtype() {
+  @org.junit.Test public void covtype() {
     Frame fr = parseFrame(Key.make("covtype.hex"), "smalldata/covtype/covtype.20k.data");
     //Key okey = loadAndParseFile("covtype.hex", "../datasets/UCI/UCI-large/covtype/covtype.data");
     //Key okey = loadAndParseFile("covtype.hex", "/home/0xdiag/datasets/standard/covtype.data");
