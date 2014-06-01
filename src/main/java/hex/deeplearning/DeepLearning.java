@@ -699,7 +699,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * Train a Deep Learning model, assumes that all members are populated
    * If checkpoint == null, then start training a new model, otherwise continue from a checkpoint
    */
-  private final void buildModel() {
+  private void buildModel() {
     DeepLearningModel cp = null;
     if (checkpoint == null) {
       cp = initModel();
@@ -722,7 +722,7 @@ public class DeepLearning extends Job.ValidatedJob {
         ignored_cols = previous.model_info().get_params().ignored_cols;
         Log.warn("Automatically re-using ignored_cols from the checkpointed model.");
       }
-      if ((validation!=null) != (previous.model_info().get_params().validation != null)
+      if ((validation == null) == (previous.model_info().get_params().validation != null)
               || (validation != null && validation._key != null && previous.model_info().get_params().validation._key != null
               && !Arrays.equals(validation._key._kb, previous.model_info().get_params().validation._key._kb))) {
         throw new IllegalArgumentException("validation must be the same as for the checkpointed model.");
@@ -738,8 +738,8 @@ public class DeepLearning extends Job.ValidatedJob {
         cp.write_lock(self());
         cp.start_training(previous);
         assert(state==JobState.RUNNING);
-        final DeepLearning mp = cp.model_info().get_params();
-        Object A = mp, B = this;
+        final DeepLearning A = cp.model_info().get_params();
+        Object B = this;
         for (Field fA : A.getClass().getDeclaredFields()) {
           if (Utils.contains(cp_modifiable, fA.getName())) {
             if (!expert_mode && Utils.contains(expert_options, fA.getName())) continue;
@@ -758,9 +758,9 @@ public class DeepLearning extends Job.ValidatedJob {
             }
           }
         }
-        if (mp.num_folds != 0) {
+        if (A.num_folds != 0) {
           Log.warn("Disabling cross-validation: Not supported when resuming training from a checkpoint.");
-          mp.num_folds = 0;
+          A.num_folds = 0;
         }
         cp.update(self());
       } finally {
@@ -854,7 +854,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * Helper to create a DataInfo object from the source and response
    * @return DataInfo object
    */
-  private final DataInfo prepareDataInfo() {
+  private DataInfo prepareDataInfo() {
     final boolean del_enum_resp = (classification && !response.isEnum());
     final Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, classification, ignore_const_cols, true /*drop >20% NA cols*/);
     final DataInfo dinfo = new FrameTask.DataInfo(train, 1, false, true, !classification);
@@ -947,7 +947,7 @@ public class DeepLearning extends Job.ValidatedJob {
       }
 
       // Set train_samples_per_iteration size (cannot be done earlier since this depends on whether stratified sampling is done)
-      mp.actual_train_samples_per_iteration = computeTrainSamplesPerIteration(mp.train_samples_per_iteration, train.numRows(), mp.replicate_training_data, mp.single_node_mode, mp.quiet_mode);
+      mp.actual_train_samples_per_iteration = computeTrainSamplesPerIteration(mp.train_samples_per_iteration, train.numRows(), mp.replicate_training_data, mp.quiet_mode);
       // Determine whether shuffling is enforced
       if(mp.replicate_training_data && (mp.actual_train_samples_per_iteration == train.numRows()*H2O.CLOUD.size()) && !mp.shuffle_training_data && H2O.CLOUD.size() > 1) {
         Log.warn("Enabling training data shuffling, because all nodes train on the full dataset (replicated training data).");
@@ -1029,8 +1029,7 @@ public class DeepLearning extends Job.ValidatedJob {
     RebalanceDataSet rb = new RebalanceDataSet(fr, newKey, chunks);
     H2O.submitTask(rb);
     rb.join();
-    Frame rebalanced = UKV.get(newKey);
-    return rebalanced;
+    return UKV.get(newKey);
   }
 
   /**
@@ -1038,10 +1037,9 @@ public class DeepLearning extends Job.ValidatedJob {
    * @param train_samples_per_iteration user-given train_samples_per_iteration size
    * @param numRows number of training rows
    * @param replicate_training_data whether or not the training data is replicated on each node
-   * @param single_node_mode whether or not the single node mode is enabled
    * @return The total number of training rows to be processed per iteration (summed over on all nodes)
    */
-  private static long computeTrainSamplesPerIteration(final long train_samples_per_iteration, final long numRows, final boolean replicate_training_data, final boolean single_node_mode, final boolean quiet_mode) {
+  private static long computeTrainSamplesPerIteration(final long train_samples_per_iteration, final long numRows, final boolean replicate_training_data, final boolean quiet_mode) {
     long tspi = train_samples_per_iteration;
     assert(tspi == 0 || tspi == -1 || tspi >= 1);
     if (tspi == 0 || (!replicate_training_data && tspi == -1) ) {

@@ -72,9 +72,10 @@ public class DeepLearningProstateTest extends TestUtil {
                             0,
                     }) {
                       for (int vf : new int[]{
-                              0,  //no validation
-                              1,  //same as source
-                              -1, //different validation frame
+//                              0,  //no validation
+//                              1,  //same as source
+//                              -1, //different validation frame
+                              -2, //2-fold CV
                       }) {
                         for (int train_samples_per_iteration : new int[] {
                                 -1, //N epochs per iteration
@@ -107,7 +108,10 @@ public class DeepLearningProstateTest extends TestUtil {
                               p.source = frame;
                               p.response = frame.vecs()[resp];
                               p.validation = valid;
-
+                              if (vf == -2) {
+                                assert(p.validation == null);
+                                p.n_folds = 2;
+                              }
                               p.hidden = hidden;
                               if (i == 0 && resp == 2) p.classification = false;
                               p.best_model_key = best_model_key;
@@ -120,15 +124,16 @@ public class DeepLearningProstateTest extends TestUtil {
                               p.score_training_samples = scoretraining;
                               p.score_validation_samples = scorevalidation;
                               p.balance_classes = balance_classes;
-                              p.quiet_mode = true;
-//                              p.quiet_mode = false;
+//                              p.quiet_mode = true;
+                              p.quiet_mode = false;
                               p.score_validation_sampling = csm;
                               p.invoke();
+                              if (p.best_model_key != null) assert(UKV.get(p.best_model_key)!=null);
                             }
 
                             // Do some more training via checkpoint restart
                             Key dest = Key.make();
-                            {
+                            if (vf != -2) {
                               DeepLearning p = new DeepLearning();
                               final DeepLearningModel tmp_model = UKV.get(dest_tmp); //this actually *requires* frame to also still be in UKV (because of DataInfo...)
                               assert(tmp_model != null);
@@ -146,6 +151,8 @@ public class DeepLearningProstateTest extends TestUtil {
                               p.seed = seed;
                               p.train_samples_per_iteration = train_samples_per_iteration;
                               p.invoke();
+                            } else  {
+                              dest = dest_tmp;
                             }
 
                             // score and check result (on full data)
@@ -155,7 +162,7 @@ public class DeepLearningProstateTest extends TestUtil {
                               StringBuilder sb = new StringBuilder();
                               mymodel.generateHTML("test", sb);
                             }
-                            if (valid == null ) valid = frame;
+                            if (valid == null) valid = frame;
                             double threshold = 0;
                             if (mymodel.isClassifier()) {
                               Frame pred = mymodel.score(valid);
@@ -251,7 +258,7 @@ public class DeepLearningProstateTest extends TestUtil {
                               pred.delete();
                             } //classifier
 
-                            final boolean validation = (vf != 0); //p.validation != null -> DL scores based on validation data set (which can be the same as training data set)
+                            final boolean validation = (vf == 1 || vf == -1); //p.validation != null -> DL scores based on validation data set (which can be the same as training data set)
 
                             if (mymodel.get_params().best_model_key != null) {
                               // get the actual best error on (potentially sampled) training data
