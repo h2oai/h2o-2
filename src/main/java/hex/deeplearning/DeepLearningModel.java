@@ -1155,6 +1155,8 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       error.variable_importances.toHTML(this, sb);
     }
 
+    printCrossValidationModelsHTML(sb);
+
     DocGen.HTML.title(sb, "Scoring history");
     if (errors.length > 1) {
       DocGen.HTML.paragraph(sb, "Time taken for last scoring and diagnostics: " + PrettyPrint.msecs(errors[errors.length-1].scoring_time, true));

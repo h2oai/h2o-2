@@ -662,16 +662,15 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
 
   /**
    * Cross-Validate a GBM model by building new models on N train/test holdout splits
-   * @param basename Basename for naming the cross-validated models
    * @param splits Frames containing train/test splits
    * @param cv_preds Array of Frames to store the predictions for each cross-validation run
    * @param offsets Array to store the offsets of starting row indices for each cross-validation run
    * @param i Which fold of cross-validation to perform
    */
-  @Override public void crossValidate(String basename, Frame[] splits, Frame[] cv_preds, long[] offsets, int i) {
+  @Override public void crossValidate(Frame[] splits, Frame[] cv_preds, long[] offsets, int i) {
     // Train a clone with slightly modified parameters (to account for cross-validation)
     GBM cv = (GBM) this.clone();
-    cv.genericCrossValidation(basename, splits, offsets, i);
+    cv.genericCrossValidation(splits, offsets, i);
     cv_preds[i] = ((GBMModel) UKV.get(cv.dest())).score(cv.validation);
   }
 

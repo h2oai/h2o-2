@@ -768,6 +768,7 @@ public class DTree extends Iced {
       if (varimp != null) {
         generateHTMLVarImp(sb);
       }
+      printCrossValidationModelsHTML(sb);
     }
 
     static final String NA = "---";

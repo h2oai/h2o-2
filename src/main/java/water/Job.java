@@ -760,7 +760,10 @@ public abstract class Job extends Func {
     public int n_folds = 0;
 
     @API(help = "Keep cross-validation dataset splits", filter = Default.class, json = true)
-    public boolean keep_cross_validation_splits = false;
+    public boolean keep_cross_validation_splits = true;
+
+    @API(help = "Cross-validation models", json = true)
+    public Key[] xval_models;
 
     /**
      * Helper to specify which arguments trigger a refresh on change
@@ -791,27 +794,26 @@ public abstract class Job extends Func {
 
     /**
      * Cross-Validate this Job (to be overridden for each instance, which also calls genericCrossValidation)
-     * @param basename Basename for naming the cross-validated models
      * @param splits Frames containing train/test splits
      * @param cv_preds Store the predictions for each cross-validation run
      * @param offsets Array to store the offsets of starting row indices for each cross-validation run
      * @param i Which fold of cross-validation to perform
      */
-    public void crossValidate(String basename, Frame[] splits, Frame[] cv_preds, long[] offsets, int i) { throw H2O.unimpl(); }
+    public void crossValidate(Frame[] splits, Frame[] cv_preds, long[] offsets, int i) { throw H2O.unimpl(); }
 
     /**
      * Helper to perform the generic part of cross validation
      * Expected to be called from each specific instance's crossValidate method
-     * @param basename Basename for naming the cross-validated models
      * @param splits Frames containing train/test splits
      * @param offsets Array to store the offsets of starting row indices for each cross-validation run
      * @param i Which fold of cross-validation to perform
      */
-    final protected void genericCrossValidation(String basename, Frame[] splits, long[] offsets, int i) {
+    final protected void genericCrossValidation(Frame[] splits, long[] offsets, int i) {
       int respidx = source.find(_responseName);
       assert(respidx != -1) : "response is not found in source!";
       job_key = Key.make(); //make a new Job for CV
-      destination_key = Key.make(basename + ".cv" + i);
+      assert(xval_models != null);
+      destination_key = xval_models[i];
       validation = splits[i]; //TODO: replace with holdout extractor code
       source = splits[(i + 1) % 2]; //TODO: replace with holdout extractor code
       response = source.vecs()[respidx];
@@ -841,6 +843,9 @@ public abstract class Job extends Func {
       if ( n_folds < 0 ) throw new UnsupportedOperationException("The number of cross-validation folds must be >= 0.");
       if ( n_folds != 2 && n_folds != 0 ) throw new UnsupportedOperationException("The number of cross-validation folds must be either 0 or 2.");
       super.init();
+      xval_models = new Key[n_folds];
+      for (int i=0; i<xval_models.length; ++i)
+        xval_models[i] = Key.make(dest().toString() + "_xval" + i);
 
       int rIndex = 0;
       for( int i = 0; i < source.vecs().length; i++ )

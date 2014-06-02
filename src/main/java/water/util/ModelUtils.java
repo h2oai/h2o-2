@@ -195,8 +195,7 @@ public class ModelUtils {
     //FIXME: Hardcoded to N=2
     if (job.n_folds != 2) throw new UnsupportedOperationException("n_folds != 2 is not yet implemented.");
     float[] ratios = TestUtil.arf(0.5f);
-    String basename = job.destination_key.toString();
-    basename = basename.substring(0, Math.max(Math.min(40, basename.length() - 5), 0));
+    final String basename = job.destination_key.toString();
     Key[] destkeys = new Key[]{Key.make(basename + ".cv" + ".first"), Key.make(basename + ".cv" + ".second")};
     FrameSplitter fs = new FrameSplitter(job.source, ratios, destkeys, null);
     H2O.submitTask(fs).join();
@@ -204,7 +203,7 @@ public class ModelUtils {
     long[] offsets = new long[job.n_folds +1];
     Frame[] cv_preds = new Frame[job.n_folds];
     for (int i = 0; i < job.n_folds; ++i)
-      job.crossValidate(basename, splits, cv_preds, offsets, i); //this removes the enum-ified response!
+      job.crossValidate(splits, cv_preds, offsets, i); //this removes the enum-ified response!
     if (!job.keep_cross_validation_splits) for(Frame f : splits) f.delete(); //FIXME: delete each split as soon as possible (once we have N>2)
     boolean put_back = UKV.get(job.response._key) == null;
     if (put_back) DKV.put(job.response._key, job.response); //put enum-ified response back to K-V store
