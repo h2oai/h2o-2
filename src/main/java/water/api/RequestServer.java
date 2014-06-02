@@ -140,19 +140,21 @@ public class RequestServer extends NanoHTTPD {
       registerRequest(new hex.LR2());
       registerRequest(new ReBalance());
       registerRequest(new FrameSplitPage());
+      registerRequest(new FrameExtractPage());
       registerRequest(new GapStatistic());
       registerRequest(new CreateFrame());
       registerRequest(new KillMinus3());
     } else {
-      Request.addToNavbar(registerRequest(new hex.LR2()),        "Linear Regression2",   "Beta");
-      Request.addToNavbar(registerRequest(new ReBalance()),      "ReBalance",            "Beta");
-      Request.addToNavbar(registerRequest(new FrameSplitPage()), "Split frame",          "Beta");
-      Request.addToNavbar(registerRequest(new Console()),        "Console",              "Beta");
-      Request.addToNavbar(registerRequest(new GapStatistic()),   "Gap Statistic",        "Beta");
-      Request.addToNavbar(registerRequest(new CreateFrame()),    "Create Frame",         "Beta");
-      Request.addToNavbar(registerRequest(new KillMinus3()),     "Kill Minus 3",         "Beta");
-//      Request.addToNavbar(registerRequest(new ExportModel()),    "Export Model",         "Beta (FluidVecs!)");
-//      Request.addToNavbar(registerRequest(new ImportModel()),    "Import Model",         "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new hex.LR2()),         "Linear Regression2",   "Beta");
+      Request.addToNavbar(registerRequest(new ReBalance()),       "ReBalance",            "Beta");
+      Request.addToNavbar(registerRequest(new FrameSplitPage()),  "Split frame",          "Beta");
+      Request.addToNavbar(registerRequest(new FrameExtractPage()),"N-Fold frame extract", "Beta");
+      Request.addToNavbar(registerRequest(new Console()),         "Console",              "Beta");
+      Request.addToNavbar(registerRequest(new GapStatistic()),    "Gap Statistic",        "Beta");
+      Request.addToNavbar(registerRequest(new CreateFrame()),     "Create Frame",         "Beta");
+      Request.addToNavbar(registerRequest(new KillMinus3()),      "Kill Minus 3",         "Beta");
+//      Request.addToNavbar(registerRequest(new ExportModel()),     "Export Model",         "Beta (FluidVecs!)");
+//      Request.addToNavbar(registerRequest(new ImportModel()),     "Import Model",         "Beta (FluidVecs!)");
     }
 
     // VA stuff is only shown with -beta
