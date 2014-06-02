@@ -757,7 +757,7 @@ public abstract class Job extends Func {
     public Frame validation;
 
     @API(help = "Number of folds for cross-validation (if no validation data is specified)", filter = Default.class, json = true)
-    public int num_folds = 0;
+    public int n_folds = 0;
 
     @API(help = "Keep cross-validation dataset splits", filter = Default.class, json = true)
     public boolean keep_cross_validation_splits = false;
@@ -783,9 +783,9 @@ public abstract class Job extends Func {
      */
     @Override protected void queryArgumentValueSet(Argument arg, java.util.Properties inputArgs) {
       super.queryArgumentValueSet(arg, inputArgs);
-      if (arg._name.equals("num_folds") && validation != null) {
+      if (arg._name.equals("n_folds") && validation != null) {
         arg.disable("Only if no validation dataset is provided.");
-        num_folds = 0;
+        n_folds = 0;
       }
     }
 
@@ -815,7 +815,7 @@ public abstract class Job extends Func {
       validation = splits[i]; //TODO: replace with holdout extractor code
       source = splits[(i + 1) % 2]; //TODO: replace with holdout extractor code
       response = source.vecs()[respidx];
-      num_folds = 0;
+      n_folds = 0;
       state = Job.JobState.CREATED; //Hack to allow this job to run
       DKV.put(self(), this); //Needed to pass the Job.isRunning(cvdl.self()) check in FrameTask
       offsets[i + 1] = offsets[i] + validation.numRows();
@@ -837,9 +837,9 @@ public abstract class Job extends Func {
     }
 
     @Override protected void init() {
-      if ( validation != null && num_folds != 0 ) throw new UnsupportedOperationException("Cannot specify a validation dataset and non-zero number of cross-validation folds.");
-      if ( num_folds < 0 ) throw new UnsupportedOperationException("The number of cross-validation folds must be >= 0.");
-      if ( num_folds != 2 && num_folds != 0 ) throw new UnsupportedOperationException("The number of cross-validation folds must be either 0 or 2.");
+      if ( validation != null && n_folds != 0 ) throw new UnsupportedOperationException("Cannot specify a validation dataset and non-zero number of cross-validation folds.");
+      if ( n_folds < 0 ) throw new UnsupportedOperationException("The number of cross-validation folds must be >= 0.");
+      if ( n_folds != 2 && n_folds != 0 ) throw new UnsupportedOperationException("The number of cross-validation folds must be either 0 or 2.");
       super.init();
 
       int rIndex = 0;

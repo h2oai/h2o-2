@@ -134,7 +134,7 @@ public class SpeeDRF extends Job.ValidatedJob {
     // buildForest() caused a different SpeeDRFModel instance to get put into the DKV.  We
     // need to update that one, not rf_model
     DRFTask.updateRFModelStopTraining(rf_model._key);
-    if (num_folds > 0) ModelUtils.crossValidate(this);
+    if (n_folds > 0) ModelUtils.crossValidate(this);
     cleanup();
     remove();
   }

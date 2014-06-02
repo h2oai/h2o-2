@@ -681,7 +681,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     errors = new Errors[1];
     errors[0] = new Errors();
     errors[0].validation = (params.validation != null);
-    errors[0].num_folds = params.num_folds;
+    errors[0].num_folds = params.n_folds;
     assert(Arrays.equals(_key._kb, destKey._kb));
   }
 
@@ -727,7 +727,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
         err.training_time_ms = run_time;
         err.epoch_counter = epoch_counter;
         err.validation = ftest != null;
-        err.num_folds = get_params().num_folds;
+        err.num_folds = get_params().n_folds;
         err.training_samples = model_info().get_processed_total();
         err.score_training_samples = ftrain.numRows();
         err.train_confusion_matrix = new ConfusionMatrix();
@@ -882,8 +882,8 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       last_scored().valid_mse = cv_error;
     else
       last_scored().valid_err = cv_error;
-    last_scored().score_validation_samples = last_scored().score_training_samples / get_params().num_folds;
-    last_scored().num_folds = get_params().num_folds;
+    last_scored().score_validation_samples = last_scored().score_training_samples / get_params().n_folds;
+    last_scored().num_folds = get_params().n_folds;
     last_scored().valid_confusion_matrix = cm;
     last_scored().validAUC = auc;
     last_scored().valid_hitratio = hr;
@@ -1083,7 +1083,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     long score_train = error.score_training_samples;
     long score_valid = error.score_validation_samples;
     final boolean fulltrain = score_train==0 || score_train == training_rows;
-    final boolean fullvalid = get_params().num_folds == 0 && (score_valid==0 || score_valid == get_params().validation.numRows());
+    final boolean fullvalid = get_params().n_folds == 0 && (score_valid==0 || score_valid == get_params().validation.numRows());
 
     final String toolarge = " Confusion matrix not shown here - too large: number of classes (" + model_info.units[model_info.units.length-1]
             + ") is greater than the specified limit of " + get_params().max_confusion_matrix_size + ".";

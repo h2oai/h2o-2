@@ -1,6 +1,5 @@
 package hex.gbm;
 
-import water.api.HitRatio;
 import static water.util.ModelUtils.getPrediction;
 import static water.util.Utils.div;
 import hex.ConfusionMatrix;
@@ -164,7 +163,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
 
   @Override protected Log.Tag.Sys logTag() { return Sys.GBM__; }
   @Override protected GBMModel makeModel(Key outputKey, Key dataKey, Key testKey, String[] names, String[][] domains, String[] cmDomain) {
-    return new GBMModel(this, outputKey, dataKey, validation==null?null:testKey, names, domains, cmDomain, ntrees, max_depth, min_rows, nbins, learn_rate, family, num_folds);
+    return new GBMModel(this, outputKey, dataKey, validation==null?null:testKey, names, domains, cmDomain, ntrees, max_depth, min_rows, nbins, learn_rate, family, n_folds);
   }
   @Override protected GBMModel makeModel( GBMModel model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
     return new GBMModel(model, err, cm, varimp, validAUC);
@@ -185,7 +184,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   @Override protected void execImpl() {
     logStart();
     buildModel(seed);
-    if (num_folds > 0) ModelUtils.crossValidate(this);
+    if (n_folds > 0) ModelUtils.crossValidate(this);
   }
 
   @Override public int gridParallelism() {

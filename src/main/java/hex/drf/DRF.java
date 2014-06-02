@@ -141,7 +141,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
 
   @Override protected Log.Tag.Sys logTag() { return Sys.DRF__; }
   @Override protected DRFModel makeModel(Key outputKey, Key dataKey, Key testKey, String[] names, String[][] domains, String[] cmDomain) {
-    return new DRFModel(this, outputKey,dataKey,validation==null?null:testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, mtries, sample_rate, _seed, num_folds);
+    return new DRFModel(this, outputKey,dataKey,validation==null?null:testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, mtries, sample_rate, _seed, n_folds);
   }
 
   @Override protected DRFModel makeModel( DRFModel model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
@@ -172,7 +172,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   @Override protected void execImpl() {
     logStart();
     buildModel(seed);
-    if (num_folds > 0) ModelUtils.crossValidate(this);
+    if (n_folds > 0) ModelUtils.crossValidate(this);
   }
 
   @Override protected Response redirect() {

@@ -185,15 +185,15 @@ public class ModelUtils {
 
   /**
    * Cross-Validate a ValidatedJob
-   * @param job (must contain valid entries for num_folds, validation, destination_key, source, response)
+   * @param job (must contain valid entries for n_folds, validation, destination_key, source, response)
    */
   public static void crossValidate(Job.ValidatedJob job) {
     if (job.validation != null)
-      throw new IllegalArgumentException("Cannot provide validation dataset and num_folds > 0 at the same time.");
-    if (job.num_folds <= 1)
-      throw new IllegalArgumentException("num_folds must be >= 2 for cross-validation.");
+      throw new IllegalArgumentException("Cannot provide validation dataset and n_folds > 0 at the same time.");
+    if (job.n_folds <= 1)
+      throw new IllegalArgumentException("n_folds must be >= 2 for cross-validation.");
     //FIXME: Hardcoded to N=2
-    if (job.num_folds != 2) throw new UnsupportedOperationException("num_folds != 2 is not yet implemented.");
+    if (job.n_folds != 2) throw new UnsupportedOperationException("n_folds != 2 is not yet implemented.");
     float[] ratios = TestUtil.arf(0.5f);
     String basename = job.destination_key.toString();
     basename = basename.substring(0, Math.max(Math.min(40, basename.length() - 5), 0));
@@ -201,9 +201,9 @@ public class ModelUtils {
     FrameSplitter fs = new FrameSplitter(job.source, ratios, destkeys, null);
     H2O.submitTask(fs).join();
     Frame[] splits = fs.getResult();
-    long[] offsets = new long[job.num_folds+1];
-    Frame[] cv_preds = new Frame[job.num_folds];
-    for (int i = 0; i < job.num_folds; ++i)
+    long[] offsets = new long[job.n_folds +1];
+    Frame[] cv_preds = new Frame[job.n_folds];
+    for (int i = 0; i < job.n_folds; ++i)
       job.crossValidate(basename, splits, cv_preds, offsets, i); //this removes the enum-ified response!
     if (!job.keep_cross_validation_splits) for(Frame f : splits) f.delete(); //FIXME: delete each split as soon as possible (once we have N>2)
     boolean put_back = UKV.get(job.response._key) == null;
