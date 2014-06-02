@@ -172,7 +172,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   @Override protected void execImpl() {
     logStart();
     buildModel(seed);
-    if (n_folds > 0) ModelUtils.crossValidate(this);
+    if (n_folds > 0) CrossValUtils.crossValidate(this);
   }
 
   @Override protected Response redirect() {
