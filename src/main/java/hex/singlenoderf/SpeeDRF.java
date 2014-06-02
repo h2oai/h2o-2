@@ -10,9 +10,8 @@ import water.api.DocGen;
 import water.api.ParamImportance;
 import water.fvec.Frame;
 import water.fvec.Vec;
-import water.util.Log;
-import water.util.ModelUtils;
-import water.util.Utils;
+import water.util.*;
+
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Random;
@@ -134,7 +133,7 @@ public class SpeeDRF extends Job.ValidatedJob {
     // buildForest() caused a different SpeeDRFModel instance to get put into the DKV.  We
     // need to update that one, not rf_model
     DRFTask.updateRFModelStopTraining(rf_model._key);
-    if (n_folds > 0) ModelUtils.crossValidate(this);
+    if (n_folds > 0) CrossValUtils.crossValidate(this);
     cleanup();
     remove();
   }
