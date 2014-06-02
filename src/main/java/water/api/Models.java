@@ -335,38 +335,11 @@ public class Models extends Request2 {
     summary.expert_parameters = whitelistJsonObject(all_params, GBM_expert_params);
   }
 
-
   /**
    * Fetch all Models from the KV store.
    */
-  protected Map<String, Model>fetchAll() {
-    // Get all the water.model keys.
-    //
-    // NOTE: globalKeySet filters by class when it pulls stuff from other nodes,
-    // but still returns local keys of all types so we need to filter below.
-    Set<Key> keySet = H2O.globalKeySet("water.Model"); // filter by class, how cool is that?
-
-    Map<String, Model> modelsMap = new TreeMap(); // Sort for pretty display and reliable ordering.
-
-    for (Key key : keySet) {
-      if( !key.user_allowed() ) // Also filter out for user-keys
-        continue;
-      if( H2O.get(key) == null )
-        continue;
-
-      String keyString = key.toString();
-
-      Value value = DKV.get(key);
-      Iced pojo = value.get();
-
-      if (! (pojo instanceof Model))
-        continue;
-      Model model = (Model)pojo;
-
-      modelsMap.put(keyString, model);
-    }
-
-    return modelsMap;
+  protected Map<String, Model> fetchAll() {
+    return H2O.KeySnapshot.globalSnapshot().fetchAll(water.Model.class);
   }
 
 

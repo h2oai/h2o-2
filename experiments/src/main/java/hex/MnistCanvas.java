@@ -1,16 +1,14 @@
 package hex;
 
 import hex.Layer.VecsInput;
+import water.fvec.Vec;
 
+import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.image.BufferedImage;
 import java.awt.image.WritableRaster;
 import java.util.Random;
-
-import javax.swing.*;
-
-import water.fvec.Vec;
 
 public class MnistCanvas extends Canvas {
   static final int PIXELS = 784, EDGE = 28;
@@ -139,9 +137,9 @@ public class MnistCanvas extends Canvas {
         double w = layer._w[o * layer._previous._a.length + i];
         w = ((w - mean) / sigma) * 200;
         if( w >= 0 )
-          start[i] = ((int) Math.min(+w, 255)) << 8;
+          start[i] = ((int) Math.min(+w, 255)) << 8; //GREEN
         else
-          start[i] = ((int) Math.min(-w, 255)) << 16;
+          start[i] = ((int) Math.min(-w, 255)) << 16; //RED
       }
 
       BufferedImage out = new BufferedImage(EDGE, EDGE, BufferedImage.TYPE_INT_RGB);

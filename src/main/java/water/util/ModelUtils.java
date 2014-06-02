@@ -2,7 +2,9 @@ package water.util;
 
 import java.util.*;
 
-import water.H2O;
+import hex.FrameSplitter;
+import water.*;
+import water.fvec.Frame;
 
 /**
  * Shared static code to support modeling, prediction, and scoring.
@@ -180,4 +182,34 @@ public class ModelUtils {
     oob[0] = oobcnt;
     return oob;
   }
+
+  /**
+   * Cross-Validate a ValidatedJob
+   * @param job (must contain valid entries for n_folds, validation, destination_key, source, response)
+   */
+  public static void crossValidate(Job.ValidatedJob job) {
+    if (job.validation != null)
+      throw new IllegalArgumentException("Cannot provide validation dataset and n_folds > 0 at the same time.");
+    if (job.n_folds <= 1)
+      throw new IllegalArgumentException("n_folds must be >= 2 for cross-validation.");
+    //FIXME: Hardcoded to N=2
+    if (job.n_folds != 2) throw new UnsupportedOperationException("n_folds != 2 is not yet implemented.");
+    float[] ratios = TestUtil.arf(0.5f);
+    String basename = job.destination_key.toString();
+    basename = basename.substring(0, Math.max(Math.min(40, basename.length() - 5), 0));
+    Key[] destkeys = new Key[]{Key.make(basename + ".cv" + ".first"), Key.make(basename + ".cv" + ".second")};
+    FrameSplitter fs = new FrameSplitter(job.source, ratios, destkeys, null);
+    H2O.submitTask(fs).join();
+    Frame[] splits = fs.getResult();
+    long[] offsets = new long[job.n_folds +1];
+    Frame[] cv_preds = new Frame[job.n_folds];
+    for (int i = 0; i < job.n_folds; ++i)
+      job.crossValidate(basename, splits, cv_preds, offsets, i); //this removes the enum-ified response!
+    if (!job.keep_cross_validation_splits) for(Frame f : splits) f.delete(); //FIXME: delete each split as soon as possible (once we have N>2)
+    boolean put_back = UKV.get(job.response._key) == null;
+    if (put_back) DKV.put(job.response._key, job.response); //put enum-ified response back to K-V store
+    ((Model)UKV.get(job.destination_key)).scoreCrossValidation(job, job.source, job.response, cv_preds, offsets);
+    if (put_back) UKV.remove(job.response._key);
+  }
+
 }
