@@ -2,7 +2,7 @@ package water.util;
 
 import java.util.*;
 
-import hex.FrameSplitter;
+import hex.NFoldFrameExtractor;
 import water.*;
 import water.fvec.Frame;
 
@@ -192,19 +192,17 @@ public class ModelUtils {
       throw new IllegalArgumentException("Cannot provide validation dataset and n_folds > 0 at the same time.");
     if (job.n_folds <= 1)
       throw new IllegalArgumentException("n_folds must be >= 2 for cross-validation.");
-    //FIXME: Hardcoded to N=2
-    if (job.n_folds != 2) throw new UnsupportedOperationException("n_folds != 2 is not yet implemented.");
-    float[] ratios = TestUtil.arf(0.5f);
     final String basename = job.destination_key.toString();
-    Key[] destkeys = new Key[]{Key.make(basename + ".cv" + ".first"), Key.make(basename + ".cv" + ".second")};
-    FrameSplitter fs = new FrameSplitter(job.source, ratios, destkeys, null);
-    H2O.submitTask(fs).join();
-    Frame[] splits = fs.getResult();
     long[] offsets = new long[job.n_folds +1];
     Frame[] cv_preds = new Frame[job.n_folds];
-    for (int i = 0; i < job.n_folds; ++i)
+    for (int i = 0; i < job.n_folds; ++i) {
+      Key[] destkeys = new Key[]{Key.make(basename + "_xval" + i + "_train"), Key.make(basename + "_xval" + i + "_holdout")};
+      NFoldFrameExtractor nffe = new NFoldFrameExtractor(job.source, job.n_folds, i, destkeys, null);
+      H2O.submitTask(nffe);
+      Frame[] splits = nffe.getResult();
       job.crossValidate(splits, cv_preds, offsets, i); //this removes the enum-ified response!
-    if (!job.keep_cross_validation_splits) for(Frame f : splits) f.delete(); //FIXME: delete each split as soon as possible (once we have N>2)
+      if (!job.keep_cross_validation_splits) for(Frame f : splits) f.delete();
+    }
     boolean put_back = UKV.get(job.response._key) == null;
     if (put_back) DKV.put(job.response._key, job.response); //put enum-ified response back to K-V store
     ((Model)UKV.get(job.destination_key)).scoreCrossValidation(job, job.source, job.response, cv_preds, offsets);
