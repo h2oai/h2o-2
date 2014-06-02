@@ -3,9 +3,15 @@ package hex;
 import static org.junit.Assert.assertArrayEquals;
 import static water.util.Utils.nfold;
 
+import java.util.Arrays;
+
+import junit.framework.Assert;
+
 import org.junit.Test;
 
-import water.TestUtil;
+import water.*;
+import water.fvec.Frame;
+import water.util.Utils;
 
 public class NFoldFrameExtractorTest extends TestUtil {
 
@@ -66,6 +72,34 @@ public class NFoldFrameExtractorTest extends TestUtil {
     espc = fe.computeEspcPerSplit(ar(0,6), 6L);
     assertArrayEquals(ar(0L, 4L), espc[0]);
     assertArrayEquals(ar(0L, 2L), espc[1]);
+  }
 
+  @Test
+  public void testIris() {
+    Key key = Key.make("iris.hex");
+    Frame fr = parseFrame(key, "./smalldata/iris/iris.csv");
+    int[] nfolds = new int[] {2,3,10,11};
+    long nrows = fr.numRows();
+    try {
+      for (int i=0; i<nfolds.length; i++) {
+        int n = nfolds[i];
+        for (int f=0; f<n; f++) {
+          Frame[] splits = null;
+          try {
+            NFoldFrameExtractor nffe = new NFoldFrameExtractor(fr, n, f, null, null);
+            H2O.submitTask(nffe);
+            splits = nffe.getResult();
+            Arrays.deepToString(splits);
+            Assert.assertEquals("N-Fold extract should always produce 2 frames!", 2, splits.length);
+            Assert.assertEquals("N-Fold extract should not modify input frame!", nrows, fr.numRows());
+            Assert.assertEquals(nrows, splits[0].numRows()+splits[1].numRows());
+          } finally {
+            if (splits!=null) for (Frame fs: splits) fs.delete();
+          }
+        }
+      }
+    } finally {
+      if (fr!=null) fr.delete();
+    }
   }
 }
