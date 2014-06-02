@@ -245,8 +245,10 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
 
             # have to look up the index for the cm, from the thresholds list
             best_index = None
+
+            # FIX! best_threshold isn't necessarily in the list. jump out if >=
             for i,t in enumerate(thresholds):
-                if t == best_threshold:
+                if t >= best_threshold: # ends up using next one if not present
                     best_index = i
                     break
                 
