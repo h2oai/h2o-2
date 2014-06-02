@@ -298,7 +298,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       }
 
       // Set the model parameters
-      SpeeDRFModel model = new SpeeDRFModel(dest(), self(), train, this);
+      SpeeDRFModel model = new SpeeDRFModel(dest(), source._key, train, this);
       int csize = H2O.CLOUD.size();
       model.fr = train;
       model.response = response;
