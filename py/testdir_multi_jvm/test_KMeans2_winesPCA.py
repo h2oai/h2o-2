@@ -23,7 +23,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_KMeans_winesPCA(self):
+    def test_KMeans2_winesPCA(self):
+        h2o.beta_features = True
         csvPathname = 'winesPCA.csv'
         start = time.time()
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put', timeoutSecs=10)
@@ -31,13 +32,12 @@ class Basic(unittest.TestCase):
         h2o.check_sandbox_for_errors()
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         print "\n" + csvPathname, \
-            "    num_rows:", "{:,}".format(inspect['num_rows']), \
-            "    num_cols:", "{:,}".format(inspect['num_cols'])
+            "    numRows:", "{:,}".format(inspect['numRows']), \
+            "    numCols:", "{:,}".format(inspect['numCols'])
 
         kwargs = {
-            #appears not to take 'cols'?
-            'cols': None,
             'initialization': 'Furthest',
+            'max_iter': 15,
             'k': 3,
             # reuse the same seed, to get deterministic results (otherwise sometimes fails
             'seed': 265211114317615310,

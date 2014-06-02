@@ -91,6 +91,7 @@ then
     myPy c1 test_c1_fvec.py
     myPy c2 test_c2_nongz_fvec.py
     # myPy c3 test_c3_rel.py
+    myPy c3 test_c3_exec_copy.py
     myPy c3 test_c3_nongz_fvec.py
     # myPy c4 test_c4_four_billion_rows.py
     # known failure last

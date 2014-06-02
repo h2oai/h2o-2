@@ -1797,7 +1797,7 @@ class ASTLs extends ASTOp {
   @Override String opStr() { return "ls"; }
   @Override ASTOp make() {return new ASTLs();}
   @Override void apply(Env env, int argcnt, ASTApply apply) {
-    for( Key key : H2O.globalKeySet(null) )
+    for( Key key : H2O.KeySnapshot.globalSnapshot().keys())
       if( key.user_allowed() && H2O.get(key) != null )
         env._sb.append(key.toString());
     // Pop the self-function and push a zero.

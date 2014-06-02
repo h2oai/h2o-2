@@ -77,7 +77,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_kmeans_sphere5(self):
+    def test_KMeans2_sphere5_bad_inits(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         CLUSTERS = 5
         SPHERE_PTS = 10000
@@ -95,7 +96,6 @@ class Basic(unittest.TestCase):
                 'k': CLUSTERS, 
                 'max_iter': 10,
                 'initialization': 'Furthest', 
-                'cols': None, 
                 'destination_key': 'syn_spheres100.hex', 
                 'seed': SEED
             }
@@ -106,14 +106,20 @@ class Basic(unittest.TestCase):
             print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.',\
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
 
-            kmeansResult = h2o_cmd.runInspect(key='syn_spheres100.hex')
-
+            # inspect of model doesn't work
+            # kmeansResult = h2o_cmd.runInspect(key='syn_spheres100.hex')
             ### print h2o.dump_json(kmeans)
             ### print h2o.dump_json(kmeansResult)
             h2o_kmeans.simpleCheckKMeans(self, kmeans, **kwargs)
 
-            # cluster centers can return in any order
-            clusters = kmeansResult['KMeansModel']['clusters']
+            model = kmeans['model']
+            clusters = model["centers"]
+            cluster_variances = model["within_cluster_variances"]
+            error = model["total_within_SS"]
+            iterations = model["iterations"]
+            normalized = model["normalized"]
+            max_iter = model["max_iter"]
+
             clustersSorted = sorted(clusters, key=itemgetter(0))
             ### print clustersSorted
 
