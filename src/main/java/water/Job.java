@@ -814,8 +814,8 @@ public abstract class Job extends Func {
       job_key = Key.make(); //make a new Job for CV
       assert(xval_models != null);
       destination_key = xval_models[i];
-      validation = splits[i]; //TODO: replace with holdout extractor code
-      source = splits[(i + 1) % 2]; //TODO: replace with holdout extractor code
+      source = splits[0];
+      validation = splits[1];
       response = source.vecs()[respidx];
       n_folds = 0;
       state = Job.JobState.CREATED; //Hack to allow this job to run
@@ -841,7 +841,6 @@ public abstract class Job extends Func {
     @Override protected void init() {
       if ( validation != null && n_folds != 0 ) throw new UnsupportedOperationException("Cannot specify a validation dataset and non-zero number of cross-validation folds.");
       if ( n_folds < 0 ) throw new UnsupportedOperationException("The number of cross-validation folds must be >= 0.");
-      if ( n_folds != 2 && n_folds != 0 ) throw new UnsupportedOperationException("The number of cross-validation folds must be either 0 or 2.");
       super.init();
       xval_models = new Key[n_folds];
       for (int i=0; i<xval_models.length; ++i)
