@@ -1083,7 +1083,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     long score_train = error.score_training_samples;
     long score_valid = error.score_validation_samples;
     final boolean fulltrain = score_train==0 || score_train == training_rows;
-    final boolean fullvalid = get_params().n_folds == 0 && (score_valid==0 || score_valid == get_params().validation.numRows());
+    final boolean fullvalid = error.validation && get_params().n_folds == 0 && (score_valid==0 || score_valid == get_params().validation.numRows());
 
     final String toolarge = " Confusion matrix not shown here - too large: number of classes (" + model_info.units[model_info.units.length-1]
             + ") is greater than the specified limit of " + get_params().max_confusion_matrix_size + ".";
