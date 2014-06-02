@@ -34,13 +34,14 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud(h2o.nodes)
     
-    def test_parse_fs_schmoo(self):
+    def test_parse_fs_schmoo_fvec(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilename = "syn_prostate.csv"
         csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
         headerData = "ID,CAPSULE,AGE,RACE,DPROS,DCAPS,PSA,VOL,GLEASON"
-        rowData = "1,0,65,1,2,1,1.4,0,6"
+        # rowData = "1,0,65,1,2,1,1.4,0,6"
         rowData = "1,0,65,1,2,1,1,0,6"
 
         totalRows = 99860
