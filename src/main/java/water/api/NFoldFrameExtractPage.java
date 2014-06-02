@@ -4,7 +4,7 @@ import hex.NFoldFrameExtractor;
 import water.*;
 import water.fvec.Frame;
 
-public class FrameExtractPage extends Func {
+public class NFoldFrameExtractPage extends Func {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
