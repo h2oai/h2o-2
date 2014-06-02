@@ -116,6 +116,7 @@ public class Inspect2 extends Request2 {
               DownloadDataset.link(skey, "Download as CSV")+", "+
               ExportFiles.link(skey, "Export to file")+", "+
               UIUtils.qlink(FrameSplitPage.class, skey, "Split frame") + ", " +
+              UIUtils.qlink(FrameExtractPage.class, skey, "N-fold extract") + ", " +
               UIUtils.qlink(ReBalance.class, skey, "ReBalance frame (load balancing)") +
               "</div>");
     String _scrollto = String.valueOf(offset - 1);
