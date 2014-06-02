@@ -751,7 +751,7 @@ public class DTree extends Iced {
         DocGen.HTML.section(sb,"Mean Squared Error by Tree");
         DocGen.HTML.arrayHead(sb);
         sb.append("<tr style='min-width:60px'><th>Trees</th>");
-        last = isClassifier() ? last : errs.length-1-(_have_cv_results?1:0); // for regressor reports all errors (except for cross-validated result)
+        last = errs.length-1-(_have_cv_results?1:0); // for regressor reports all errors (except for cross-validated result)
         for( int i=last; i>=0; i-- )
           sb.append("<td style='min-width:60px'>").append(i).append("</td>");
         sb.append("</tr>");
