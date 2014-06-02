@@ -1060,7 +1060,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     } else {
       DocGen.HTML.section(sb, "MSE on training data: " + String.format(mse_format, error.train_mse));
       if(error.validation) {
-        DocGen.HTML.section(sb, "MSE on validation data: " + formatPct(error.valid_err));
+        DocGen.HTML.section(sb, "MSE on validation data: " + String.format(mse_format, error.valid_mse));
       } else if(error.num_folds > 0) {
         DocGen.HTML.section(sb, "MSE on " + error.num_folds + "-fold cross-validated training data"
                 + (_have_cv_results ? ": " + String.format(mse_format, error.valid_mse) : " is being computed - please reload this page later."));
