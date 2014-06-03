@@ -11,6 +11,7 @@ public class CrossValUtils {
    * @param job (must contain valid entries for n_folds, validation, destination_key, source, response)
    */
   public static void crossValidate(Job.ValidatedJob job) {
+    if (job.state != Job.JobState.DONE) return; //don't do cross-validation if the full model builder failed
     if (job.validation != null)
       throw new IllegalArgumentException("Cannot provide validation dataset and n_folds > 0 at the same time.");
     if (job.n_folds <= 1)
