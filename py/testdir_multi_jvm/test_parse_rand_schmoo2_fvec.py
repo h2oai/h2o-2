@@ -24,7 +24,7 @@ def rand_rowData():
         rowData = rowData + "," + str(random.uniform(-1e59,1e59))
     return rowData
 
-class test_parse_rand_schmoo2(unittest.TestCase):
+class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
 
@@ -43,7 +43,8 @@ class test_parse_rand_schmoo2(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud(h2o.nodes)
     
-    def test_sort_of_prostate_with_row_schmoo(self):
+    def test_parse_rand_schmoo2_fvec(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilename = "syn_prostate.csv"
         csvPathname = SYNDATASETS_DIR + '/' + csvFilename

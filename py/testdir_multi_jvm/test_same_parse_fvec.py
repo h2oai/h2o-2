@@ -18,7 +18,8 @@ class glm_same_parse(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud(h2o.nodes)
     
-    def test_prostate_then_prostate_long_parse(self):
+    def test_same_parse_fvec(self):
+        h2o.beta_features = True
         print "\nput and parse of same file, but both src_key and hex_key are the h2o defaults..always different"
         for trial in range (10):
             start = time.time()

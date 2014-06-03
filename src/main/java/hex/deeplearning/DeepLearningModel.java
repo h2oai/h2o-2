@@ -1060,7 +1060,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     } else {
       DocGen.HTML.section(sb, "MSE on training data: " + String.format(mse_format, error.train_mse));
       if(error.validation) {
-        DocGen.HTML.section(sb, "MSE on validation data: " + formatPct(error.valid_err));
+        DocGen.HTML.section(sb, "MSE on validation data: " + String.format(mse_format, error.valid_mse));
       } else if(error.num_folds > 0) {
         DocGen.HTML.section(sb, "MSE on " + error.num_folds + "-fold cross-validated training data"
                 + (_have_cv_results ? ": " + String.format(mse_format, error.valid_mse) : " is being computed - please reload this page later."));
@@ -1083,7 +1083,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     long score_train = error.score_training_samples;
     long score_valid = error.score_validation_samples;
     final boolean fulltrain = score_train==0 || score_train == training_rows;
-    final boolean fullvalid = get_params().n_folds == 0 && (score_valid==0 || score_valid == get_params().validation.numRows());
+    final boolean fullvalid = error.validation && get_params().n_folds == 0 && (score_valid==0 || score_valid == get_params().validation.numRows());
 
     final String toolarge = " Confusion matrix not shown here - too large: number of classes (" + model_info.units[model_info.units.length-1]
             + ") is greater than the specified limit of " + get_params().max_confusion_matrix_size + ".";
@@ -1154,6 +1154,8 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     if (error.variable_importances != null) {
       error.variable_importances.toHTML(this, sb);
     }
+
+    printCrossValidationModelsHTML(sb);
 
     DocGen.HTML.title(sb, "Scoring history");
     if (errors.length > 1) {

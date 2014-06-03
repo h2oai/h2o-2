@@ -10,9 +10,8 @@ import water.api.DocGen;
 import water.api.ParamImportance;
 import water.fvec.Frame;
 import water.fvec.Vec;
-import water.util.Log;
-import water.util.ModelUtils;
-import water.util.Utils;
+import water.util.*;
+
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Random;
@@ -134,7 +133,7 @@ public class SpeeDRF extends Job.ValidatedJob {
     // buildForest() caused a different SpeeDRFModel instance to get put into the DKV.  We
     // need to update that one, not rf_model
     DRFTask.updateRFModelStopTraining(rf_model._key);
-    if (n_folds > 0) ModelUtils.crossValidate(this);
+    if (n_folds > 0) CrossValUtils.crossValidate(this);
     cleanup();
     remove();
   }
@@ -298,7 +297,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       }
 
       // Set the model parameters
-      SpeeDRFModel model = new SpeeDRFModel(dest(), self(), train, this);
+      SpeeDRFModel model = new SpeeDRFModel(dest(), source._key, train, this);
       int csize = H2O.CLOUD.size();
       model.fr = train;
       model.response = response;
@@ -638,16 +637,15 @@ public class SpeeDRF extends Job.ValidatedJob {
 
   /**
    * Cross-Validate a SpeeDRF model by building new models on N train/test holdout splits
-   * @param basename Basename for naming the cross-validated models
    * @param splits Frames containing train/test splits
    * @param cv_preds Array of Frames to store the predictions for each cross-validation run
    * @param offsets Array to store the offsets of starting row indices for each cross-validation run
    * @param i Which fold of cross-validation to perform
    */
-  @Override public void crossValidate(String basename, Frame[] splits, Frame[] cv_preds, long[] offsets, int i) {
+  @Override public void crossValidate(Frame[] splits, Frame[] cv_preds, long[] offsets, int i) {
     // Train a clone with slightly modified parameters (to account for cross-validation)
     SpeeDRF cv = (SpeeDRF) this.clone();
-    cv.genericCrossValidation(basename, splits, offsets, i);
+    cv.genericCrossValidation(splits, offsets, i);
     cv_preds[i] = ((SpeeDRFModel) UKV.get(cv.dest())).score(cv.validation);
   }
 }

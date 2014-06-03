@@ -90,6 +90,9 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                         'lambda': 1e-5
                     }
 
+                    # are the unparsed keys slowing down exec?
+                    h2i.delete_keys_at_all_nodes(pattern="manyfile")
+
                     # convert to binomial
                     execExpr="A.hex=%s" % parseResult['destination_key']
                     h2e.exec_expr(execExpr=execExpr, timeoutSecs=180)

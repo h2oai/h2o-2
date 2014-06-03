@@ -380,6 +380,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     if (varimp != null) {
       generateHTMLVarImp(sb);
     }
+    printCrossValidationModelsHTML(sb);
   }
 
   static final String NA = "---";

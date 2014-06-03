@@ -1,12 +1,10 @@
 package water;
 
+import water.api.*;
 import static water.util.Utils.contains;
 import hex.ConfusionMatrix;
 import hex.VarImp;
 import javassist.*;
-import water.api.AUC;
-import water.api.DocGen;
-import water.api.HitRatio;
 import water.api.Request.API;
 import water.fvec.Chunk;
 import water.fvec.Frame;
@@ -776,5 +774,21 @@ public abstract class Model extends Lockable<Model> {
   }
 
   protected void setCrossValidationError(Job.ValidatedJob job, double cv_error, water.api.ConfusionMatrix cm, AUC auc, HitRatio hr) { throw H2O.unimpl(); }
+
+  protected void printCrossValidationModelsHTML(StringBuilder sb) {
+    if (job() == null) return;
+    Job.ValidatedJob job = (Job.ValidatedJob)job();
+    if (job.xval_models != null && job.xval_models.length > 0) {
+      sb.append("<h4>Cross Validation Models</h4>");
+      sb.append("<table class='table table-bordered table-condensed'>");
+      sb.append("<tr><th>Model</th></tr>");
+      for (Key k : job.xval_models) {
+        sb.append("<tr>");
+        sb.append("<td>" + (UKV.get(k) != null ? Inspector.link(k.toString(), k.toString()) : "In progress") + "</td>");
+        sb.append("</tr>");
+      }
+      sb.append("</table>");
+    }
+  }
 
 }

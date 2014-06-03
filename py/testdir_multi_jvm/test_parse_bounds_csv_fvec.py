@@ -56,14 +56,16 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_parse_bounds_csv (self):
+    def test_parse_bounds_csv_fvec(self):
+        h2o.beta_features = True
         print "Random 0/1 for col1. Last has max col = 1, All have zeros for class."
-        h2b.browseTheCloud()
+        # h2b.browseTheCloud()
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (1000, 100000, 'cB', 300),
-            (1000, 1000, 'cA', 300),
+            (1000, 50, 'cC', 300),
             (1000, 999, 'cC', 300),
+            (1000, 1000, 'cA', 300),
+            (1000, 100000, 'cB', 300),
             ]
 
         # h2b.browseTheCloud()
@@ -82,127 +84,106 @@ class Basic(unittest.TestCase):
                 print "Parse result['destination_key']:", parseResult['destination_key']
 
                 # INSPECT*******************
-                inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], 
-                    max_column_display=colCount, timeoutSecs=timeoutSecs)
-                num_cols = inspect['num_cols']
-                num_rows = inspect['num_rows']
-                row_size = inspect['row_size']
-                value_size_bytes = inspect['value_size_bytes']
+                inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=timeoutSecs)
+                numCols = inspect['numCols']
+                numRows = inspect['numRows']
                 print "\n" + csvPathname, \
-                    "    num_rows:", "{:,}".format(num_rows), \
-                    "    num_cols:", "{:,}".format(num_cols), \
-                    "    value_size_bytes:", "{:,}".format(value_size_bytes), \
-                    "    row_size:", "{:,}".format(row_size)
-
-                expectedRowSize = num_cols * 1 # plus output
-                expectedValueSize = expectedRowSize * num_rows
-                self.assertEqual(row_size, expectedRowSize,
-                    msg='row_size %s is not expected num_cols * 1 byte: %s' % \
-                    (row_size, expectedRowSize))
-                self.assertEqual(value_size_bytes, expectedValueSize,
-                    msg='value_size_bytes %s is not expected row_size * rows: %s' % \
-                    (value_size_bytes, expectedValueSize))
+                    "    numRows:", "{:,}".format(numRows), \
+                    "    numCols:", "{:,}".format(numCols)
 
                 iCols = inspect['cols']
-                iColNameToOffset = {}
-                for iColDict in iCols:
-                    # even though 'offset' exists, we'll use 'name' as the common key
-                    # to compare inspect and summary results
-                    iName = iColDict['name']
-                    iOffset = iColDict['offset']
-                    iColNameToOffset[iName] = iOffset
+                iStats = []
+                for stats in iCols:
+                    iName = stats['name']
                     # just touching to make sure they are there
-                    num_missing_values = iColDict['num_missing_values']
-                    iMin = float(iColDict['min'])
-                    iMax = float(iColDict['max'])
-                    iMean = float(iColDict['mean'])
-                    iVariance = float(iColDict['variance'])
+                    iNaCnt = stats['naCnt']
+                    iMin = float(stats['min'])
+                    iMax = float(stats['max'])
+                    iMean = float(stats['mean'])
+                    iStats.append( 
+                        {
+                            'name': iName,
+                            'naCnt': iNaCnt, 
+                            'min': iMin, 
+                            'max': iMax, 
+                            'mean': iMean, 
+                        })
 
                 # SUMMARY********************************
-                summaryResult = h2o_cmd.runSummary(key=hex_key, max_column_display=colCount, timeoutSecs=timeoutSecs)
+                summaryResult = h2o_cmd.runSummary(key=hex_key, max_ncols=colCount, timeoutSecs=timeoutSecs)
                 h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
 
-                self.assertEqual(rowCount, num_rows, 
-                    msg="generated %s rows, parsed to %s rows" % (rowCount, num_rows))
+                self.assertEqual(rowCount, numRows, 
+                    msg="generated %s rows, parsed to %s rows" % (rowCount, numRows))
 
-                summary = summaryResult['summary']
-                columnsList = summary['columns']
+                columnsList = summaryResult['summaries']
                 self.assertEqual(colCount, len(columnsList), 
                     msg="generated %s cols (including output).  summary has %s columns" % (colCount, len(columnsList)))
 
-                for columns in columnsList:
-                    name = columns['name']
-                    iOffset = iColNameToOffset[name]
-                    iColDict = iCols[iOffset]
+                c = 0
+                for column in columnsList:
+                    # get info from the inspect col for comparison
+                    iMin = iStats[c]['min']
+                    iMax = iStats[c]['max']
+                    iMean = iStats[c]['mean']
+                    iNaCnt = iStats[c]['naCnt']
+                    c += 1
 
-                    iMin = iColDict['min']
-                    iMax = iColDict['max']
-                    iMean = iColDict['mean']
-                    iVariance = iColDict['variance']
-                    iNumMissingValues = iColDict['num_missing_values']
+                    colname = column['colname']
+                    stats = column['stats']
+                    stype = column['type']
+                    hstep = column['hstep']
+                    hbrk = column['hstep']
+                    hstart = column['hstart']
 
-                    
-                    # from the summary
-                    N = columns['N']
-                    stype = columns['type']
-
-                    histogram = columns['histogram']
-                    bin_size = histogram['bin_size']
-                    bin_names = histogram['bin_names']
-                    bins = histogram['bins']
-                    nbins = histogram['nbins']
-
-                    smax = columns['max']
-                    smin = columns['min']
-                    smean = columns['mean']
-                    sigma = columns['sigma']
-                    na = columns['na']
+                    smax = stats['maxs']
+                    smin = stats['mins']
+                    sd = stats['sd']
+                    smean = stats['mean']
                     # no zeroes if enum, but we're not enum here
-                    zeros = columns['zeros']
+                    zeros = stats['zeros']
 
                     self.assertEqual(iMin, smin[0], "inspect min %s != summary min %s" % (iMin, smin))
                     self.assertEqual(iMax, smax[0], "inspect max %s != summary max %s" % (iMax, smax))
                     self.assertEqual(iMean, smean, "inspect mean %s != summary mean %s" % (iMean, smean))
-                    self.assertEqual(iVariance, sigma, "inspect variance %s != summary sigma %s" % (iVariance, sigma))
-                    self.assertEqual(iNumMissingValues, na, "inspect num_missing_values %s != summary na %s" % (iNumMissingValues, na))
                     # no comparison for 'zeros'
 
                     # now, also compare expected values
-                    if name == "V1":
+                    if colname == "V1":
                         synNa = 0
                         # can reverse-engineer the # of zeroes, since data is always 1
                         synSum = synSumList[1] # could get the same sum for all ccols
-                        synZeros = num_rows - synSum
+                        synZeros = numRows - synSum
                         synSigma = 0.50
-                        synMean = (synSum + 0.0)/num_rows
+                        synMean = (synSum + 0.0)/numRows
                         synMin = [0.0, 1.0]
                         synMax = [1.0, 0.0]
 
-                    elif name == "V2":
+                    elif colname == "V2":
                         synSum = 0
                         synSigma = 0
                         synMean = 0
                         if DO_NAN:
                             synZeros = 0
-                            synNa = num_rows
+                            synNa = numRows
                             synMin = []
                             synMax = []
                         else:
-                            synZeros = num_rows
+                            synZeros = numRows
                             synNa = 0
                             synMin = [0.0]
                             synMax = [0.0]
 
                     # a single 1 in the last col
-                    elif name == "V" + str(colCount-1): # h2o puts a "V" prefix
+                    elif colname == "V" + str(colCount-1): # h2o puts a "V" prefix
                         synNa = 0
                         synSum = synSumList[colCount-1] 
-                        synZeros = num_rows - 1
+                        synZeros = numRows - 1
                         # stddev.p 
                         # http://office.microsoft.com/en-us/excel-help/stdev-p-function-HP010335772.aspx
 
-                        synMean = 1.0/num_rows # why does this need to be a 1 entry list
-                        synSigma = math.sqrt(pow((synMean - 1),2)/num_rows)
+                        synMean = 1.0/numRows # why does this need to be a 1 entry list
+                        synSigma = math.sqrt(pow((synMean - 1),2)/numRows)
                         print "last col with single 1. synSigma:", synSigma
                         synMin = [0.0, 1.0]
                         synMax = [1.0, 0.0]
@@ -210,7 +191,7 @@ class Basic(unittest.TestCase):
                     else:
                         synNa = 0
                         synSum = 0
-                        synZeros = num_rows
+                        synZeros = numRows
                         synSigma = 0.0
                         synMean = 0.0
                         synMin = [0.0]
@@ -218,32 +199,21 @@ class Basic(unittest.TestCase):
 
                     if DO_MEAN:
                         self.assertAlmostEqual(float(smean), synMean, places=6,
-                            msg='col %s mean %s is not equal to generated mean %s' % (name, smean, synMean))
+                            msg='col %s mean %s is not equal to generated mean %s' % (colname, smean, synMean))
 
                     # why are min/max one-entry lists in summary result. Oh..it puts N min, N max
                     self.assertTrue(smin >= synMin,
-                        msg='col %s min %s is not >= generated min %s' % (name, smin, synMin))
+                        msg='col %s min %s is not >= generated min %s' % (colname, smin, synMin))
 
                     self.assertTrue(smax <= synMax,
-                        msg='col %s max %s is not <= generated max %s' % (name, smax, synMax))
+                        msg='col %s max %s is not <= generated max %s' % (colname, smax, synMax))
 
                     # reverse engineered the number of zeroes, knowing data was always 1 if present?
-                    if name == "V65536" or name == "V65537":
+                    if colname == "V65536" or colname == "V65537":
                         print "columns around possible zeros mismatch:", h2o.dump_json(columns)
 
-                    self.assertEqual(na, synNa,
-                        msg='col %s na %s is not equal to generated na %s' % (name, na, synNa))
-
                     self.assertEqual(zeros, synZeros,
-                        msg='col %s zeros %s is not equal to generated zeros %s' % (name, zeros, synZeros))
-
-                    self.assertEqual(stype, 'number',
-                        msg='col %s type %s is not equal to %s' % (name, stype, 'number'))
-
-                    # our random generation will have some variance for col 1. so just check to 2 places
-                    if synSigma:
-                        self.assertAlmostEqual(float(sigma), synSigma, delta=0.03,
-                            msg='col %s sigma %s is not equal to generated sigma %s' % (name, sigma, synSigma))
+                        msg='col %s zeros %s is not equal to generated zeros %s' % (colname, zeros, synZeros))
 
 if __name__ == '__main__':
     h2o.unit_main()
