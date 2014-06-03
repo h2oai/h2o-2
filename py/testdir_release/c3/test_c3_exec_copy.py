@@ -65,6 +65,9 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 h2o.cloudPerfH2O.message(msg)
                 h2o_cmd.checkKeyDistribution()
 
+                # are the unparsed keys slowing down exec?
+                h2i.delete_keys_at_all_nodes(pattern="manyfile")
+
                 execExpr = 'B.hex=A.hex'
                 h2e.exec_expr(execExpr=execExpr, timeoutSecs=180)
                 h2o_cmd.checkKeyDistribution()
