@@ -1297,21 +1297,25 @@ public class DTree extends Iced {
 
     // generate code for checking group split
     protected void groupSplit(int col, IcedBitSet gcmp) throws RuntimeException {
-      _sb.p(" (Double.isNaN(data[").p(col).p("]) ||");
+      StringBuilder group = new StringBuilder();
       boolean first = true;
+
+      // TODO: Make more efficient by checking cardinality and using (||, ==) or (&&, !=) depending on number of set bits
       for(int i = 0; i < gcmp._val.length; i++) {
         if(gcmp._val[i] == 0) continue;
         for(int j = 0; j < 8; j++) {
           // split to left, so want data[col] to NOT be set in BitSet
-          if((gcmp._val[i] & (1 << j)) == 1) {
+          if((gcmp._val[i] & (1 << j)) != 0) {
             if(first)
-              _sb.p(" (int) data[").p(col).p(" /* ").p(_tm._names[col]).p(" */").p("] !=").p((i << 3) + j);
+              group.append("(int) data[").append(col).append(" /* ").append(_tm._names[col]).append(" */").append("] != ").append((i << 3) + j);
             else
-              _sb.p(" && (int) data[").p(col).p("] !=").p((i << 3) + j);
+              group.append(" && (int) data[").append(col).append("] != ").append((i << 3) + j);
             first = false;
           }
         }
       }
+      _sb.p(" (Double.isNaN(data[").p(col).p("])");
+      if(group.length() > 0) _sb.p(" || (").p(group.toString()).p(")");
     }
 
     @Override protected void pre( int col, float fcmp, IcedBitSet gcmp, int equal ) {

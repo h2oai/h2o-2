@@ -804,6 +804,12 @@ public class Utils {
       if(idx < 0 || idx >= sz) throw new IndexOutOfBoundsException("Must have 0 <= idx < " + sz + ": " + idx);
       _val[idx >> 3] |= ((byte)1 << idx);
     }
+    public int cardinality() {
+      int sum = 0;
+      for(int i = 0; i < _val.length; i++)
+        sum += Integer.bitCount(_val[i]);
+      return sum;
+    }
     public int size() { return _val.length << 3; };
     @Override public String toString() {
       StringBuilder sb = new StringBuilder();
