@@ -8,18 +8,16 @@ helpIndex =
     GLM: 'model.method.glm'
     DRF: 'model.method.drf'
     SpeeDRF: 'model.method.speed_drf'
-  
+
 Steam.FrameView = (_, _frame) ->
   createCompatibleModelItem = (model) ->
     key: model.key
     algorithm: model.model_algorithm
     category: model.model_category
     responseColumnName: model.response_column_name
-    inspect: -> console.log model.key
+    inspect: -> _.inspect Steam.ModelInspectionView _, model
     inspectAlgorithm: -> _.help helpIndex.modelMethods[model.model_algorithm]
     inspectCategory: -> _.help helpIndex.modelCategories[model.model_category]
-
-  createColumnItem = (name) -> name: name
 
   loadCompatibleModels = ->
     _.switchToModels type: 'compatibleWithFrame', frameKey: _frame.key
@@ -28,7 +26,7 @@ Steam.FrameView = (_, _frame) ->
   key: _frame.key
   timestamp: _frame.creation_epoch_time_millis
   title: _frame.key
-  columns: map _frame.column_names, createColumnItem
+  columns: _frame.column_names
   columnCount: "(#{_frame.column_names.length})"
   compatibleModels: map _frame.compatible_models, createCompatibleModelItem
   compatibleModelsCount: "(#{_frame.compatible_models.length})"

@@ -156,7 +156,7 @@ ko.bindingHandlers.collapse =
     return
 
 ko.bindingHandlers.raw =
-  init: (element, valueAccessor, allBindings, viewModel, bindingContext) ->
+  update: (element, valueAccessor, allBindings, viewModel, bindingContext) ->
     arg = ko.unwrap valueAccessor()
     if arg
       $element = $ element
@@ -178,4 +178,70 @@ ko.bindingHandlers.help =
         throw new Error 'Invalid argument'
       ko.utils.domNodeDisposal.addDisposeCallback element, -> $element.off 'click'
     return
+
+captureClickAndDrag = ($el, onClick, onDrag, onRelease) ->
+  $document = $ document
+
+  $el.on 'mousedown', (e) ->
+    return if e.which isnt 1 # Left clicks only
+    zIndex = $el.css 'z-index'
+    $el.css 'z-index', 1000
+
+    onMouseMove = (e) ->
+      onDrag e.pageX, e.pageY
+
+    onMouseUp = (e) ->
+      # restore z-index
+      $el.css 'z-index', zIndex
+      $document.off 'mousemove', onMouseMove
+      $document.off 'mouseup', onMouseUp
+      onRelease e.pageX, e.pageY
+
+    $document.on 'mousemove', onMouseMove
+    $document.on 'mouseup', onMouseUp
+
+    # disable selection
+    e.preventDefault()
+    onClick e.pageX, e.pageY
+    return
+
+makeGrabBar = ($el, _opts, go) ->
+  _offset = null
+  _left = _top = _width = _height = _x = _y = 0
+
+  readElementSize = ->
+    _width = $el.outerWidth()
+    _height = $el.outerHeight()
+    _offset = $el.offset()
+
+  onClick = (x, y) ->
+    readElementSize()
+    _x = _offset.left + _width - x
+    _y = _offset.top + _height - y
+
+  onDrag = (x, y) ->
+    left = if _opts.allowHorizontalMovement then x + _x - _width else _offset.left 
+    top = if _opts.allowVerticalMovement then y + _y - _height else _offset.top
+    if left isnt _left or top isnt _top
+      _left = left
+      _top = top
+      $el.offset left: left, top: top
+
+  onRelease = (x, y) ->
+    readElementSize()
+    go
+      left: _offset.left
+      top: _offset.top
+      width: _width
+      height: _height
+
+  captureClickAndDrag $el, onClick, onDrag, onRelease
+
+ko.bindingHandlers.draggable =
+  init: (element, valueAccessor, allBindings, viewModel, bindingContext) ->
+    $el = $ element
+    grabBarOpts =  allowVerticalMovement: yes, allowHorizontalMovement: no 
+    makeGrabBar $el, grabBarOpts, (rect) ->
+      #TODO - resize linked elements
+      console.log rect
 

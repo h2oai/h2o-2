@@ -35,8 +35,7 @@ Steam.MainView = (_) ->
       _listViews.remove _topicListView
 
   initialize = ->
-    # TODO uncomment when help panel is in.
-    # navigateHelpHome()
+    navigateHelpHome()
 
     #TODO do this through hash uris
     switchToFrames type: 'all'
@@ -152,16 +151,16 @@ Steam.MainView = (_) ->
   # Help
   #
 
-  navigateHelpHome = -> _.loadHelp()
+  navigateHelpHome = -> help 'home'
 
   navigateHelp = ->
-    _help _helpHistory[_helpHistoryIndex]
+    _help _.man _helpHistory[_helpHistoryIndex]
     _canNavigateHelpBack _helpHistoryIndex > 0
     _canNavigateHelpForward _helpHistoryIndex < _helpHistory.length - 1
 
   navigateHelpBack = ->
     if _helpHistoryIndex > 0
-      _inspectionHistoryIndex--
+      _helpHistoryIndex--
       navigateHelp()
 
   navigateHelpForward = ->
@@ -169,8 +168,8 @@ Steam.MainView = (_) ->
       _helpHistoryIndex++
       navigateHelp()
 
-  displayHelp = (content) ->
-    unless _helpHistory[_helpHistoryIndex] is content
+  help = (id) ->
+    unless _helpHistory[_helpHistoryIndex] is id
       if _helpHistoryIndex < _helpHistory.length - 1
         # Chop off tail
         _helpHistory.length = _helpHistoryIndex + 1 
@@ -179,7 +178,7 @@ Steam.MainView = (_) ->
         # Chop off head
         _helpHistory.splice 0, _helpHistory.length - 50
         _helpHistoryIndex = _helpHistory.length - 1
-      _helpHistory.push content
+      _helpHistory.push id
       navigateHelpForward()
  
   template = (view) -> view.template
@@ -220,7 +219,7 @@ Steam.MainView = (_) ->
   # link$ _.modelsDeselected, -> _modalViews.remove _modelSelectionView
 
   link$ _.status, displayStatus
-  link$ _.displayHelp, displayHelp
+  link$ _.help, help
 
 
   do initialize

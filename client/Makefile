@@ -51,6 +51,8 @@ BROWSER_SCRIPTS=\
 	$(BUILD)/scripts/notification-list-view.js \
 	$(BUILD)/scripts/frame-view.js \
 	$(BUILD)/scripts/model-view.js \
+	$(BUILD)/scripts/frame-inspection-view.js \
+	$(BUILD)/scripts/model-inspection-view.js \
 	$(BUILD)/scripts/model-selection-view.js \
 	$(BUILD)/scripts/scoring-view.js \
 	$(BUILD)/scripts/notification-view.js \
@@ -78,6 +80,8 @@ TEST_SCRIPTS=\
 	$(BUILD)/scripts/notification-list-view.js \
 	$(BUILD)/scripts/frame-view.js \
 	$(BUILD)/scripts/model-view.js \
+	$(BUILD)/scripts/frame-inspection-view.js \
+	$(BUILD)/scripts/model-inspection-view.js \
 	$(BUILD)/scripts/model-selection-view.js \
 	$(BUILD)/scripts/scoring-view.js \
 	$(BUILD)/scripts/notification-view.js \
@@ -131,6 +135,8 @@ TEMPLATES=\
 	src/templates/frame-view.jade \
 	src/templates/model-view.jade \
 	src/templates/model-selection-view.jade \
+	src/templates/frame-inspection-view.jade \
+	src/templates/model-inspection-view.jade \
 	src/templates/scoring-view.jade \
 	src/templates/notification-view.jade \
 	src/templates/scoring-selection-view.jade

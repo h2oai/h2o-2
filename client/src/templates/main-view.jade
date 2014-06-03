@@ -44,21 +44,24 @@
           
     .y-inspector-lane
       .y-lane-header
-        //-TODO tie these to help nav
-        //-
-          button.y-inspector-home-button.btn.fa-btn(data-bind='click:navigateHelpHome')
-            i.fa.fa-home
         .y-inspector-title Inspector
-        //-TODO tie these to help nav
-        //-
-        //-
-          button.y-inspector-back-button.btn.fa-btn(data-bind='click:navigateHelpBack, enable:canNavigateHelpBack')
-            i.fa.fa-arrow-left
-          button.y-inspector-forward-button.btn.fa-btn(data-bind='click:navigateHelpForward, enable:canNavigateHelpForward')
-            i.fa.fa-arrow-right
 
       .y-lane-body
         .y-inspector(data-bind="template:{name:template, foreach:inspectorViews}")
+
+        .y-help-pane
+          .y-help-pane-header
+            button.y-help-home-button.btn.fa-btn(data-bind='click:navigateHelpHome')
+              i.fa.fa-home
+            .y-help-title Help
+            button.y-help-back-button.btn.fa-btn(data-bind='click:navigateHelpBack, enable:canNavigateHelpBack')
+              i.fa.fa-arrow-left
+            button.y-help-forward-button.btn.fa-btn(data-bind='click:navigateHelpForward, enable:canNavigateHelpForward')
+              i.fa.fa-arrow-right
+          .y-help(data-bind="raw:help")
+      //-
+        .y-grab-bar
+          .y-grab-bar-border
 
 
   .y-status-bar(data-bind='text:status')

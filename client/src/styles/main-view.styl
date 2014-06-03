@@ -80,8 +80,18 @@
   background white
   dock-right(y-inspector-lane-width)
   border-left 1px solid #ddd
-  .y-lane-body
+  .y-inspector
+    dock-top(50%)
     overflow auto
+  .y-grab-bar
+    cursor ns-resize
+    dock-top(10px, 50%)
+  .y-grab-bar-border
+    dock-top(0, 50%)
+    border-top 1px solid #ddd
+  .y-help-pane
+    border-top 1px solid #ddd
+    dock-bottom(50%)
 
 .y-topic-button
   dock-left(48px, 6px, 6px, 6px)
@@ -95,25 +105,46 @@
 .y-upload-button
   dock-right(48px, 6px, 6px, 6px)
 
-
-.y-inspector-home-button
-  dock-left(48px, 6px, 6px, 6px)
-
 .y-inspector-title
-  // TODO uncomment this if home/back/fwd buttons need to be displayed
-  // text-block(y-desktop-header-height, 4 * 6px +  2 * 48px, 6px + 48px + 6px)
   line-height y-desktop-header-height
   font-size 18px
   font-weight 300
   text-align center
 
-.y-inspector-back-button
-  dock-right(48px, 6px, 2 * 6px + 48px, 6px)
+.y-help-pane-header
+  border-bottom 1px solid #eee
 
-.y-inspector-forward-button
-  dock-right(48px, 6px, 6px, 6px)
+  text-block(y-desktop-header-height, 0, 0)
+  line-height y-desktop-header-height
+  font-weight 300
+  text-align center
+  button
+    background none
+    color y-color-grey-md
+    &:focus
+      outline 0 !important
+    &:hover
+      background none
+      color #000
+    &:disabled
+      color #ccc
+  .btn
+    padding 0
 
-.y-inspector
+.y-help-home-button
+  dock-left(32px, 6px, 6px, 6px)
+
+.y-help-back-button
+  dock-right(32px, 6px, 2 * 6px + 32px, 6px)
+
+.y-help-forward-button
+  dock-right(32px, 6px, 6px, 6px)
+
+.y-help
+  dock(y-desktop-header-height)
+  overflow auto
+
+.y-inspector, .y-help
   padding 10px
   font-size 90%
   h1
@@ -132,6 +163,10 @@
     list-style-type none
     color y-color-hyperlink
     cursor pointer
+
+.y-help
+  h2
+    text-align left
 
 .y-status-bar
   dock-bottom(y-status-bar-height)
