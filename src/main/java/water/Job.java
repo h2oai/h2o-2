@@ -760,7 +760,7 @@ public abstract class Job extends Func {
     public int n_folds = 0;
 
     @API(help = "Keep cross-validation dataset splits", filter = Default.class, json = true)
-    public boolean keep_cross_validation_splits = true;
+    public boolean keep_cross_validation_splits = false;
 
     @API(help = "Cross-validation models", json = true)
     public Key[] xval_models;
