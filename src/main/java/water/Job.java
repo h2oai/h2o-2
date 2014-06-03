@@ -811,7 +811,7 @@ public abstract class Job extends Func {
     final protected void genericCrossValidation(Frame[] splits, long[] offsets, int i) {
       int respidx = source.find(_responseName);
       assert(respidx != -1) : "response is not found in source!";
-      job_key = Key.make(); //make a new Job for CV
+      job_key = Key.make(job_key.toString() + "_xval" + i); //make a new Job for CV
       assert(xval_models != null);
       destination_key = xval_models[i];
       source = splits[0];
