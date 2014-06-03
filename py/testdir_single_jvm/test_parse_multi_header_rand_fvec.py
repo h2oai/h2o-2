@@ -165,6 +165,10 @@ class Basic(unittest.TestCase):
             if HEADER_SEP_CHAR_GEN != SEP_CHAR_GEN:
                 HEADER_SEP_CHAR_GEN = ','
 
+
+            # screw it. make them always match
+            HEADER_SEP_CHAR_GEN = SEP_CHAR_GEN
+
             if HEADER_SEP_CHAR_GEN in (',', ' '):
                 pass
                 # extra spaces? Don't add any
