@@ -139,17 +139,20 @@ public class FrameSplitter extends H2OCountedCompleter {
   // The task computes ESPC per split
   static long[/*nsplits*/][/*nchunks*/] computeEspcPerSplit(long[] espc, long len, float[] ratios) {
     assert espc.length>0 && espc[0] == 0;
+    assert espc[espc.length-1] == len;
     long[] partSizes = Utils.partitione(len, ratios); // Split of whole vector
     int nparts = ratios.length+1;
     long[][] r = new long[nparts][espc.length]; // espc for each partition
     long nrows = 0;
+    long start = 0;
     for (int p=0,c=0; p<nparts; p++) {
       int nc = 0; // number of chunks for this partition
-      while(c<espc.length-1 && (nrows+=espc[c+1]-espc[c]) < partSizes[p]) { r[p][++nc] = nrows; c++; }
-      r[p][++nc] = partSizes[p]; // last item in espc contains number of rows
+      for(;c<espc.length-1 && (espc[c+1]-start) <= partSizes[p];c++) r[p][++nc] = espc[c+1]-start;
+      if (r[p][nc] < partSizes[p]) r[p][++nc] = partSizes[p]; // last item in espc contains number of rows
       r[p] = Arrays.copyOf(r[p], nc+1);
       // Transfer rest of lines to the next part
       nrows = nrows-partSizes[p];
+      start += partSizes[p];
     }
     return r;
   }
