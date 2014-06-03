@@ -129,23 +129,13 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
         // grab the indeces of non-zero coefficients
         for(double d:beta)if(d != 0)++r;
         idxs = MemoryManager.malloc4(sparseCoef?r:beta.length);
-        int ii = 0;
-        for(int i = 0; i < b.length; ++i)if(b[i] != 0)idxs[ii++] = i;
-        if(!sparseCoef) // add zeros to the end
-          for(int i = 0; i < b.length; ++i)if(b[i] == 0)idxs[ii++] = i;
-        // now sort the nonzeros according to their abs value from biggest to smallest (but keep intercept last)
-        for(int i = 1; i < r; ++i){
-          for(int j = 1; j < r-i;++j){
-            if(Math.abs(b[idxs[j-1]]) < Math.abs(b[idxs[j]])){
-              int jj = idxs[j];
-              idxs[j] = idxs[j-1];
-              idxs[j-1] = jj;
-            }
-          }
-        }
-        this.beta = MemoryManager.malloc8d(idxs.length);
         int j = 0;
-        for(int i:idxs) this.beta[j++] = beta[i];
+        for(int i = 0; i < beta.length; ++i)
+          if(!sparseCoef || beta[i] != 0)idxs[j++] = i;
+        j = 0;
+        this.beta = MemoryManager.malloc8d(idxs.length);
+        for(int i:idxs)
+          this.beta[j++] = beta[i];
         if(norm_beta != null){
           j = 0;
           this.norm_beta = MemoryManager.malloc8d(idxs.length);

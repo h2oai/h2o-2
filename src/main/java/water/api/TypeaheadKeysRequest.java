@@ -6,10 +6,6 @@ import hex.pca.PCAModel;
 import hex.*;
 import hex.rf.RFModel;
 
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.concurrent.atomic.AtomicReference;
-
 import water.*;
 
 import com.google.gson.JsonArray;
@@ -31,7 +27,7 @@ public class TypeaheadKeysRequest extends TypeaheadRequest {
     JsonArray array = new JsonArray();
     int len = 0;
     // Gather some keys that pass all filters
-    for( H2O.KeyInfo kinfo : H2O.globalKeySet(null,timetolerance)) {
+    for( H2O.KeyInfo kinfo : H2O.KeySnapshot.globalSnapshot(2000)._keyInfos) {
       if( filter != null &&     // Have a filter?
           kinfo._key.toString().indexOf(filter) == -1 )
         continue;               // Ignore this filtered-out key

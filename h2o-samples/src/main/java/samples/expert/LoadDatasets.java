@@ -306,7 +306,7 @@ public class LoadDatasets extends Job {
   }
 
   public void reBalanceFrames () {
-    final Set<Key> keySet = H2O.globalKeySet(null);
+    final Key [] keySet = H2O.KeySnapshot.globalSnapshot().keys();
     for (Key key : keySet) {
       final Value val = DKV.get(key);
       if (val == null || !val.isFrame()) continue;
@@ -326,7 +326,7 @@ public class LoadDatasets extends Job {
   }
 
   public void testTrainSplitFrames () {
-    final Set<Key> keySet = H2O.globalKeySet(null);
+    final Key []  keySet = H2O.KeySnapshot.globalSnapshot().keys();
     for (Key key : keySet) {
       final Value val = DKV.get(key);
       if (val == null || !val.isFrame()) continue;

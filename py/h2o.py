@@ -1589,7 +1589,7 @@ class H2O(object):
     def rebalance(self, timeoutSecs=180, **kwargs):
         params_dict = {
             # now we should default to a big number, so we see everything
-            'before': None,
+            'source': None,
             'after': None,
             'chunks': None,
             'seed': None,
@@ -2481,7 +2481,7 @@ class H2O(object):
             params_dict = {
                 'source': key,
                 'cols': None,
-                'max_ncols': 1000,
+                'max_ncols': 1000 if not numCols else numCols,
                 'max_qbins': None,
             }
         else:

@@ -712,7 +712,7 @@ public class Vec extends Iced {
     Futures fs = new Futures();
     ck.close(ck.cidx(), fs); //slow to do this for every set -> use Writer if writing many values
     fs.blockForPending();
-    _cache = null;
+    postWrite();
     return ret;
   }
   /** Write element the VERY slow way, as a double.  Double.NaN will be treated as
@@ -724,7 +724,7 @@ public class Vec extends Iced {
     Futures fs = new Futures();
     ck.close(ck.cidx(), fs); //slow to do this for every set -> use Writer if writing many values
     fs.blockForPending();
-    _cache = null;
+    postWrite();
     return ret;
   }
   /** Write element the VERY slow way, as a float.  Float.NaN will be treated as
@@ -736,7 +736,7 @@ public class Vec extends Iced {
     Futures fs = new Futures();
     ck.close(ck.cidx(), fs); //slow to do this for every set -> use Writer if writing many values
     fs.blockForPending();
-    _cache = null;
+    postWrite();
     return ret;
   }
   /** Set the element as missing the VERY slow way.  */
@@ -746,7 +746,7 @@ public class Vec extends Iced {
     Futures fs = new Futures();
     ck.close(ck.cidx(), fs); //slow to do this for every set -> use Writer if writing many values
     fs.blockForPending();
-    _cache = null;
+    postWrite();
     return ret;
   }
 

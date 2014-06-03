@@ -70,31 +70,26 @@ public class Parse extends Request {
 //      addPrerequisite(_separator);
     }
 
-
     @Override protected PSetup parse(String input) throws IllegalArgumentException {
-      Pattern p = makePattern(input);
-      Pattern exclude = null;
+      final Pattern p = makePattern(input);
+      final Pattern exclude;
       if(_hdrFrom.specified())
         _header.setValue(true);
-      if(_excludeExpression.specified())
-        exclude = makePattern(_excludeExpression.value());
-      ArrayList<Key> keys = new ArrayList();
+      exclude = _excludeExpression.specified()?makePattern(_excludeExpression.value()):null;
+
       // boolean badkeys = false;
-      for( H2O.KeyInfo kinfo : H2O.globalKeySet(null,100) ) { // For all keys
-        if(!kinfo._rawData)continue;
-        String ks = kinfo._key.toString();
-        if( !p.matcher(ks).matches() ) // Ignore non-matching keys
-          continue;
-        if(exclude != null && exclude.matcher(ks).matches())
-          continue;
-        Value v2 = DKV.get(kinfo._key);  // Look at it
-        if( !v2.isRawData() ) // filter common mistake such as *filename* with filename.hex already present
-          continue;
-        keys.add(kinfo._key);        // Add to list
-      }
-      if(keys.size() == 0 )
-        throw new IllegalArgumentException("I did not find any keys matching this pattern!");
-      Collections.sort(keys);   // Sort all the keys, except the 1 header guy
+      final Key [] keyAry = H2O.KeySnapshot.globalSnapshot().filter(new H2O.KVFilter() {
+        @Override
+        public boolean filter(H2O.KeyInfo k) {
+          if(k._rawData) {
+            String ks = k._key.toString();
+            return (p.matcher(ks).matches() && (exclude == null || !exclude.matcher(ks).matches()));
+          }
+          return false;
+        }
+      }).keys();
+      ArrayList<Key> keys = new ArrayList<Key>(keyAry.length);
+      for(Key k:keyAry)keys.add(k);
       // now we assume the first key has the header
       Key hKey = null;
       if(_hdrFrom.specified()){

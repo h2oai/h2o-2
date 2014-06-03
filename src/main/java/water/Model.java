@@ -1,13 +1,10 @@
 package water;
 
+import water.api.*;
 import static water.util.Utils.contains;
 import hex.ConfusionMatrix;
 import hex.VarImp;
-import hex.deeplearning.DeepLearningModel;
 import javassist.*;
-import water.api.AUC;
-import water.api.DocGen;
-import water.api.HitRatio;
 import water.api.Request.API;
 import water.fvec.Chunk;
 import water.fvec.Frame;
@@ -62,6 +59,8 @@ public abstract class Model extends Lockable<Model> {
   /** The duration in mS for model training. */
   public long training_duration_in_ms = 0L;
 
+  /** Whether or not this model has cross-validated results stored. */
+  protected boolean _have_cv_results;
 
   /** Full constructor from frame: Strips out the Vecs to just the names needed
    *  to match columns later for future datasets.  */
@@ -535,7 +534,7 @@ public abstract class Model extends Lockable<Model> {
         } else {
           error = new hex.ConfusionMatrix(cm.cm).err(); //only set error if AUC didn't already set the error
         }
-        if (cm.cm.length <= max_conf_mat_size) cm.toASCII(sb);
+        if (cm.cm.length <= max_conf_mat_size+1) cm.toASCII(sb);
       } else {
         assert(auc == null);
         error = cm.mse;
@@ -749,6 +748,79 @@ public abstract class Model extends Lockable<Model> {
     catch( CannotCompileException cce ) { throw new Error(cce); }
     catch( InstantiationException cce ) { throw new Error(cce); }
     catch( IllegalAccessException cce ) { throw new Error(cce); }
+  }
+
+  /**
+   * Compute the cross validation error from an array of predictions for N folds.
+   * Also stores the results in the model for display/query.
+   * @param source Full training data
+   * @param response Full response
+   * @param cv_preds N Frames containing predictions made by N-fold CV runs on disjoint contiguous holdout pieces of the training data
+   * @param offsets Starting row numbers for the N CV pieces (length = N+1, first element: 0, last element: #rows)
+   */
+  public final void scoreCrossValidation(Job.ValidatedJob job, Frame source, Vec response, Frame[] cv_preds, long[] offsets) {
+    assert(offsets[0] == 0);
+    assert(offsets[offsets.length-1] == source.numRows());
+
+    //Hack to make a frame with the correct dimensions and vector group
+    Frame cv_pred = score(source);
+
+    // Stitch together the content of cv_pred from cv_preds
+    for (int i=0; i<cv_preds.length; ++i) {
+      // stitch probabilities (or regression values)
+      for (int c=(isClassifier() ? 1 : 0); c<cv_preds[i].numCols(); ++c) {
+        Vec.Writer vw = cv_pred.vec(c).open();
+        try {
+          for (int r=0; r < cv_preds[i].numRows(); ++r) {
+            vw.set(offsets[i] + r, cv_preds[i].vec(c).at(r));
+          }
+        } finally {
+          vw.close();
+        }
+      }
+      if (isClassifier()) {
+        // make labels
+        float[] probs = new float[cv_preds[i].numCols()];
+        Vec.Writer vw = cv_pred.vec(0).open();
+        try {
+          for (int r = 0; r < cv_preds[i].numRows(); ++r) {
+            //probs[0] stays 0, is not used in getPrediction
+            for (int c = 1; c < cv_preds[i].numCols(); ++c) {
+              probs[c] = (float) cv_preds[i].vec(c).at(r);
+            }
+            final int label = ModelUtils.getPrediction(probs, r);
+            vw.set(offsets[i] + r, label);
+          }
+        } finally {
+          vw.close();
+        }
+      }
+    }
+
+    // Now score the model on the
+    AUC auc = nclasses() == 2 ? new AUC() : null;
+    water.api.ConfusionMatrix cm = new water.api.ConfusionMatrix();
+    HitRatio hr = isClassifier() ? new HitRatio() : null;
+    double cv_error = calcError(source, response, cv_pred, cv_pred, "cross-validated", true, 10, cm, auc, hr);
+    setCrossValidationError(job, cv_error, cm, auc, hr);
+  }
+
+  protected void setCrossValidationError(Job.ValidatedJob job, double cv_error, water.api.ConfusionMatrix cm, AUC auc, HitRatio hr) { throw H2O.unimpl(); }
+
+  protected void printCrossValidationModelsHTML(StringBuilder sb) {
+    if (job() == null) return;
+    Job.ValidatedJob job = (Job.ValidatedJob)job();
+    if (job.xval_models != null && job.xval_models.length > 0) {
+      sb.append("<h4>Cross Validation Models</h4>");
+      sb.append("<table class='table table-bordered table-condensed'>");
+      sb.append("<tr><th>Model</th></tr>");
+      for (Key k : job.xval_models) {
+        sb.append("<tr>");
+        sb.append("<td>" + (UKV.get(k) != null ? Inspector.link(k.toString(), k.toString()) : "In progress") + "</td>");
+        sb.append("</tr>");
+      }
+      sb.append("</table>");
+    }
   }
 
 }

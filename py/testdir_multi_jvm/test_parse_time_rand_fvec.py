@@ -79,7 +79,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud(h2o.nodes)
     
-    def test_parse_time(self):
+    def test_parse_time_rand_fvec(self):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilename = "syn_time.csv"

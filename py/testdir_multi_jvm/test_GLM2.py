@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_print as h2p, h2o_glm
 
 # Test of glm comparing result against R-implementation
 # Tested on prostate.csv short (< 1M) and long (multiple chunks)
@@ -26,35 +26,31 @@ class GLMTest(unittest.TestCase):
         # no regularization
         kwargs['alpha'] = 0
         kwargs['lambda'] = 0
-        glm = h2o_cmd.runGLM(parseResult=parseResult, y = 'CAPSULE', timeoutSecs=10, **kwargs)
+        kwargs['response'] = 'CAPSULE'
+        glmResult = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=10, **kwargs)
 
-        GLMModel = glm['GLMModel']
-        GLMParams = GLMModel["GLMParams"]
-        family = GLMParams["family"]
-        coefs = GLMModel['coefficients']        
+        (warnings, clist, intercept) = h2o_glm.simpleCheckGLM(self, glmResult, None, **kwargs)
+        cstring = "".join([("%.5e  " % c) for c in clist])
+        h2p.green_print("h2o coefficient list:", cstring)
+        h2p.green_print("h2o intercept", "%.5e  " %  intercept)
 
-        # pop the first validation from the list
-        validationsList = GLMModel['validations']
-        validations = validationsList.pop()
+        # other stuff in the json response
 
-        err = validations['err']
-        nullDev = validations['nullDev']
-        resDev = validations['resDev']
+        # the first submodel is the right one, if onely one lambda is provided as a parameter above
+        glm_model = glmResult['glm_model']
+        submodels = glm_model['submodels'][0]
+        validation = submodels['validation']
+        null_deviance = validation['null_deviance']
+        residual_deviance = validation['residual_deviance']
 
-        # change to .1% of R for allowed error, not .01 absolute error
         errors = []
-        for x in coefs: 
-            h2o.verboseprint("Comparing:", coefs[x], e_coefs[x])
-            if abs(float(coefs[x]) - e_coefs[x]) > (0.001 * abs(e_coefs[x])):
-                errors.append('%s: %f != %f' % (x,e_coefs[x],coefs[x]))
-
         # FIX! our null deviance doesn't seem to match
-        h2o.verboseprint("Comparing:", nullDev, e_ndev)
+        h2o.verboseprint("Comparing:", null_deviance, e_ndev)
         # if abs(float(nullDev) - e_ndev) > (0.001 * e_ndev): 
         #    errors.append('NullDeviance: %f != %s' % (e_ndev,nullDev))
 
         # FIX! our res deviance doesn't seem to match
-        h2o.verboseprint("Comparing:", resDev, e_rdev)
+        h2o.verboseprint("Comparing:", residual_deviance, e_rdev)
         # if abs(float(resDev) - e_rdev) > (0.001 * e_rdev): 
         #    errors.append('ResDeviance: %f != %s' % (e_rdev,resDev))
 
@@ -62,6 +58,7 @@ class GLMTest(unittest.TestCase):
         return errors
     
     def test_prostate_gaussian(self):
+        h2o.beta_features = True
         errors = []
         # First try on small data (1 chunk)
         parseResult = h2i.import_parse(bucket='smalldata', path='logreg/prostate.csv', schema='put', hex_key='prostate_g')
@@ -81,6 +78,7 @@ class GLMTest(unittest.TestCase):
             self.fail(str(errors))
 
     def test_prostate_binomial(self):
+        h2o.beta_features = True
         errors = []
         # First try on small data (1 chunk)
         parseResult = h2i.import_parse(bucket='smalldata', path='logreg/prostate.csv', schema='put', hex_key='prostate_b')
@@ -99,6 +97,7 @@ class GLMTest(unittest.TestCase):
             self.fail(str(errors))
 
     def test_prostate_poisson(self):
+        h2o.beta_features = True
         errors = []
         # First try on small data (1 chunk)
         parseResult = h2i.import_parse(bucket='smalldata', path='logreg/prostate.csv', schema='put', hex_key='poisson_p')

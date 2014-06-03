@@ -1,21 +1,15 @@
 package hex.deeplearning;
 
+import hex.*;
+import water.*;
+import water.util.*;
 import static water.util.MRUtils.sampleFrame;
 import static water.util.MRUtils.sampleFrameStratified;
-import hex.FrameTask;
 import hex.FrameTask.DataInfo;
-import water.H2O;
-import water.Job;
-import water.Key;
-import water.UKV;
 import water.api.*;
 import water.fvec.Frame;
 import water.fvec.RebalanceDataSet;
 import water.fvec.Vec;
-import water.util.Log;
-import water.util.MRUtils;
-import water.util.RString;
-import water.util.Utils;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
@@ -694,11 +688,18 @@ public class DeepLearning extends Job.ValidatedJob {
     return 0;
   }
 
-  /**
-   * Train a Deep Learning model, assumes that all members are populated
-   */
   @Override
   public final void execImpl() {
+    buildModel();
+    if (n_folds > 0) CrossValUtils.crossValidate(this);
+    delete();
+  }
+
+  /**
+   * Train a Deep Learning model, assumes that all members are populated
+   * If checkpoint == null, then start training a new model, otherwise continue from a checkpoint
+   */
+  private final void buildModel() {
     DeepLearningModel cp = null;
     if (checkpoint == null) {
       cp = initModel();
@@ -707,6 +708,12 @@ public class DeepLearning extends Job.ValidatedJob {
       final DeepLearningModel previous = UKV.get(checkpoint);
       if (previous == null) throw new IllegalArgumentException("Checkpoint not found.");
       Log.info("Resuming from checkpoint.");
+      if (n_folds != 0) {
+        throw new UnsupportedOperationException("n_folds must be 0: Cross-validation is not supproted during checkpoint restarts.");
+      }
+      else {
+        ((ValidatedJob)previous.job()).xval_models = null; //remove existing cross-validation keys after checkpoint restart
+      }
       if (source == null || !Arrays.equals(source._key._kb, previous.model_info().get_params().source._key._kb)) {
         throw new IllegalArgumentException("source must be the same as for the checkpointed model.");
       }
@@ -754,6 +761,10 @@ public class DeepLearning extends Job.ValidatedJob {
             }
           }
         }
+        if (mp.n_folds != 0) {
+          Log.warn("Disabling cross-validation: Not supported when resuming training from a checkpoint.");
+          mp.n_folds = 0;
+        }
         cp.update(self());
       } finally {
         if (cp != null) cp.unlock(self());
@@ -761,7 +772,6 @@ public class DeepLearning extends Job.ValidatedJob {
     }
     trainModel(cp);
     cp.stop_training();
-    delete();
   }
 
   /**
@@ -868,7 +878,7 @@ public class DeepLearning extends Job.ValidatedJob {
       final DataInfo dinfo = prepareDataInfo();
       final Vec resp = dinfo._adaptedFrame.lastVec(); //convention from DataInfo: response is the last Vec
       float[] priorDist = classification ? new MRUtils.ClassDist(resp).doAll(resp).rel_dist() : null;
-      final DeepLearningModel model = new DeepLearningModel(dest(), self(), source._key, dinfo, this, priorDist);
+      final DeepLearningModel model = new DeepLearningModel(dest(), self(), source._key, dinfo, (DeepLearning)this.clone(), priorDist);
       model.model_info().initializeMembers();
       return model;
     }
@@ -1063,4 +1073,18 @@ public class DeepLearning extends Job.ValidatedJob {
     return rowUsageFraction;
   }
 
+  /**
+   * Cross-Validate a DeepLearning model by building new models on N train/test holdout splits
+   * @param splits Frames containing train/test splits
+   * @param cv_preds Array of Frames to store the predictions for each cross-validation run
+   * @param offsets Array to store the offsets of starting row indices for each cross-validation run
+   * @param i Which fold of cross-validation to perform
+   */
+  @Override public void crossValidate(Frame[] splits, Frame[] cv_preds, long[] offsets, int i) {
+    // Train a clone with slightly modified parameters (to account for cross-validation)
+    DeepLearning cv = (DeepLearning) this.clone();
+    cv.best_model_key = null; // model-specific stuff
+    cv.genericCrossValidation(splits, offsets, i);
+    cv_preds[i] = ((DeepLearningModel) UKV.get(cv.dest())).score(cv.validation);
+  }
 }

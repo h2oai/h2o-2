@@ -142,10 +142,12 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   // Driver for model-building.
   public void buildModel(long seed) {
     final Key outputKey = dest();
-    String sd = input("source");
-    final Key dataKey = (sd==null||sd.length()==0)?null:Key.make(sd);
-    String sv = input("validation");
-    final Key testKey = (sv==null||sv.length()==0)?dataKey:Key.make(sv);
+//    String sd = input("source");
+//    final Key dataKey = (sd==null||sd.length()==0)?null:Key.make(sd);
+//    String sv = input("validation");
+//    final Key testKey = (sv==null||sv.length()==0)?dataKey:Key.make(sv);
+    final Key dataKey = source != null ? source._key : null;
+    final Key testKey = validation != null ? validation._key : dataKey;
 
     // Lock the input datasets against deletes
     source.read_lock(self());
@@ -223,8 +225,6 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     } finally {
       model.unlock(self());  // Update and unlock model
       cleanUp(fr,bm_timer);  // Shared cleanup
-      Log.info("after buildModel: " + model);
-      // we get back a different model
       model.start_training(before);
       model.stop_training();
     }
@@ -279,7 +279,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     if (importance && ktrees!=null) { // compute this tree votes but skip the first scoring call which is done over empty forest
       Timer vi_timer = new Timer();
       varimp  = doVarImpCalc(model, ktrees, tid-1, fTrain, false);
-      Log.info(Sys.DRF__, "Computation of variable importance with "+tid+"th-tree took: " + vi_timer.toString());
+      Log.info(logTag(), "Computation of variable importance with "+tid+"th-tree took: " + vi_timer.toString());
     }
     // Double update - after scoring
     model = makeModel(model,
