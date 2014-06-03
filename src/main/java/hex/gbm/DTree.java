@@ -862,7 +862,6 @@ public class DTree extends Iced {
       }
     }
 
-    // TODO: How many bytes of BitSet are there? (Look up number of levels in col with colID)
     // --------------------------------------------------------------------------
     // Highly compressed tree encoding:
     //    tree: 1B nodeType, 2B colId, 4B splitVal, left-tree-size, left, right
@@ -908,14 +907,14 @@ public class DTree extends Iced {
           int rmask = (nodeType & 0xC0) >> 2;
           int skip = 0;
           switch(lmask) {
-          case 0:  skip = ab.get1();  break;
-          case 1:  skip = ab.get2();  break;
-          case 2:  skip = ab.get3();  break;
-          case 3:  skip = ab.get4();  break;
-          case 16: skip = _nclass < 256?1:2;  break; // Small leaf
-          case 48: skip = 4;          break; // skip the prediction
-          default: assert false:"illegal lmask value " + lmask+" at "+ab.position()+" in bitpile "+Arrays.toString(_bits);
-          }
+            case 0:  skip = ab.get1();  break;
+            case 1:  skip = ab.get2();  break;
+            case 2:  skip = ab.get3();  break;
+            case 3:  skip = ab.get4();  break;
+            case 16: skip = _nclass < 256?1:2;  break; // Small leaf
+            case 48: skip = 4;          break; // skip the prediction
+            default: assert false:"illegal lmask value " + lmask+" at "+ab.position()+" in bitpile "+Arrays.toString(_bits);
+           }
 
           // WARNING: Generated code has to be consistent with this code:
           //   - Double.NaN <  3.7f => return false => BUT left branch has to be selected (i.e., ab.position())
@@ -946,9 +945,9 @@ public class DTree extends Iced {
     /** Abstract visitor class for serialized trees.*/
     public static abstract class TreeVisitor<T extends Exception> {
       // Override these methods to get walker behavior.
-      protected void pre ( int col, float fcmp, boolean equal ) throws T { }
-      protected void mid ( int col, float fcmp, boolean equal ) throws T { }
-      protected void post( int col, float fcmp, boolean equal ) throws T { }
+      protected void pre ( int col, float fcmp, IcedBitSet gcmp, int equal ) throws T { }
+      protected void mid ( int col, float fcmp, IcedBitSet gcmp, int equal ) throws T { }
+      protected void post( int col, float fcmp, IcedBitSet gcmp, int equal ) throws T { }
       protected void leaf( float pred )                         throws T { }
       long  result( ) { return 0; } // Override to return simple results
 
@@ -964,7 +963,7 @@ public class DTree extends Iced {
 
       // Call either the single-class leaf or the full-prediction leaf
       private final void leaf2( int mask ) throws T {
-        assert (mask==0 || ( (mask&8)== 8 && (mask&16)==16) ) : "Unknown mask: " + mask;   // Is a leaf or a special leaf on the top of tree
+        assert (mask==0 || ( (mask&16)==16 && (mask&32)==32) ) : "Unknown mask: " + mask;   // Is a leaf or a special leaf on the top of tree
         leaf(_ts.get4f());
       }
 
@@ -972,37 +971,54 @@ public class DTree extends Iced {
         int nodeType = _ts.get1();
         int col = _ts.get2();
         if( col==65535 ) { leaf2(nodeType); return; }
-        float fcmp = _ts.get4f();
-        boolean equal = ((nodeType&4)==4);
+        // float fcmp = _ts.get4f();
+        // boolean equal = ((nodeType&4)==4);
+        int equal = (nodeType&12) >> 2;
+
+        // Extract value or group to split on
+        float fcmp = -1;
+        IcedBitSet gcmp = null;
+        if(equal == 0 || equal == 1)
+          fcmp = _ts.get4f();
+        else {
+          int sz = (equal == 3) ? _ts.get2() : 4;
+          byte[] buf = MemoryManager.malloc1(sz);
+          _ts.read(buf, 0, sz);
+          gcmp = new IcedBitSet(buf);
+        }
+
         // Compute the amount to skip.
-        int lmask =  nodeType & 0x1B;
-        int rmask = (nodeType & 0x60) >> 2;
+        int lmask =  nodeType & 0x33;
+        int rmask = (nodeType & 0xC0) >> 2;
         int skip = 0;
         switch(lmask) {
-        case 0:  skip = _ts.get1();  break;
-        case 1:  skip = _ts.get2();  break;
-        case 2:  skip = _ts.get3();  break;
-        case 3:  skip = _ts.get4();  break;
-        case 8:  skip = _ct._nclass < 256?1:2;  break; // Small leaf
-        case 24: skip = _ct._nclass*4;  break; // skip the p-distribution
-        default: assert false:"illegal lmask value " + lmask;
+          case 0:  skip = _ts.get1();  break;
+          case 1:  skip = _ts.get2();  break;
+          case 2:  skip = _ts.get3();  break;
+          case 3:  skip = _ts.get4();  break;
+          case 16: skip = _ct._nclass < 256?1:2;  break; // Small leaf
+          case 48: skip = _ct._nclass*4;  break; // skip the p-distribution
+          default: assert false:"illegal lmask value " + lmask;
         }
-        pre (col,fcmp,equal);   // Pre-walk
+        pre(col,fcmp,gcmp,equal);   // Pre-walk
         _depth++;
-        if( (lmask & 0x8)==8 ) leaf2(lmask);  else  visit();
-        mid (col,fcmp,equal);   // Mid-walk
-        if( (rmask & 0x8)==8 ) leaf2(rmask);  else  visit();
+        if( (lmask & 0x10)==16 ) leaf2(lmask);  else  visit();
+        mid(col,fcmp,gcmp,equal);   // Mid-walk
+        if( (rmask & 0x10)==16 ) leaf2(rmask);  else  visit();
         _depth--;
-        post(col,fcmp,equal);
+        post(col,fcmp,gcmp,equal);
         _nodes++;
       }
     }
 
     StringBuilder toString(final String res, CompressedTree ct, final StringBuilder sb ) {
       new TreeVisitor<RuntimeException>(this,ct) {
-        @Override protected void pre( int col, float fcmp, boolean equal ) {
+        @Override protected void pre( int col, float fcmp, IcedBitSet gcmp, int equal ) {
           for( int i=0; i<_depth; i++ ) sb.append("  ");
-          sb.append(_names[col]).append(equal?"==":"< ").append(fcmp).append('\n');
+          if(equal == 2)
+            sb.append(_names[col]).append("==").append(gcmp.toString()).append('\n');
+          else
+            sb.append(_names[col]).append(equal==1?"==":"< ").append(fcmp).append('\n');
         }
         @Override protected void leaf( float pred ) {
           for( int i=0; i<_depth; i++ ) sb.append("  ");
@@ -1157,7 +1173,7 @@ public class DTree extends Iced {
 
     // Produce prediction code for one tree
     protected void toJavaTreePredictFct(final SB sb, final CompressedTree cts, int treeIdx, int classIdx) {
-      // generate top-leve class definition
+      // generate top-level class definition
       sb.nl();
       sb.i().p("// Tree predictor for ").p(treeIdx).p("-tree and ").p(classIdx).p("-class").nl();
       sb.i().p("class Tree_").p(treeIdx).p("_class_").p(classIdx).p(" {").nl().ii(1);
@@ -1261,7 +1277,7 @@ public class DTree extends Iced {
       _csb = new SB();
     }
 
-    // code preambule
+    // code preamble
     protected void preamble(SB sb, int subtree) throws RuntimeException {
       String subt = subtree>0?String.valueOf(subtree):"";
       sb.i().p("static final ").p(TreeModel.PRED_TYPE).p(" predict").p(subt).p("(double[] data) {").nl().ii(1); // predict method for one tree
@@ -1275,7 +1291,26 @@ public class DTree extends Iced {
       sb.i().p("}").nl().di(1);
     }
 
-    @Override protected void pre( int col, float fcmp, boolean equal ) {
+    // generate code for checking group split
+    protected void groupSplit(int col, IcedBitSet gcmp) throws RuntimeException {
+      _sb.p(" (Double.isNaN(data[").p(col).p("]) ||");
+      boolean first = true;
+      for(int i = 0; i < gcmp._val.length; i++) {
+        if(gcmp._val[i] == 0) continue;
+        for(int j = 0; j < 8; j++) {
+          // split to left, so want data[col] to NOT be set in BitSet
+          if((gcmp._val[i] & (1 << j)) == 1) {
+            if(first)
+              _sb.p(" (int) data[").p(col).p(" /* ").p(_tm._names[col]).p(" */").p("] !=").p((i << 3) + j);
+            else
+              _sb.p(" && (int) data[").p(col).p("] !=").p((i << 3) + j);
+            first = false;
+          }
+        }
+      }
+    }
+
+    @Override protected void pre( int col, float fcmp, IcedBitSet gcmp, int equal ) {
       if( _depth > 0 ) {
         int b = _bits[_depth-1];
         assert b > 0 : Arrays.toString(_bits)+"\n"+_sb.toString();
@@ -1294,7 +1329,10 @@ public class DTree extends Iced {
         _subtrees++;
       }
       // All NAs are going always to the left
-      _sb.p(" (Double.isNaN(data[").p(col).p("]) || (float) data[").p(col).p(" /* ").p(_tm._names[col]).p(" */").p("] ").p(equal?"!= ":"< ").pj(fcmp); // then left and then right (left is !=)
+      if(equal == 0 || equal == 1)
+        _sb.p(" (Double.isNaN(data[").p(col).p("]) || (float) data[").p(col).p(" /* ").p(_tm._names[col]).p(" */").p("] ").p(equal==1?"!= ":"< ").pj(fcmp); // then left and then right (left is !=)
+      else
+        groupSplit(col, gcmp);
       assert _bits[_depth]==0;
       _bits[_depth]=1;
     }
@@ -1302,7 +1340,7 @@ public class DTree extends Iced {
       assert _depth==0 || _bits[_depth-1] > 0 : Arrays.toString(_bits); // it can be degenerated tree
       if( _depth==0) { // it is de-generated tree
         _sb.pj(pred);
-      } else if( _bits[_depth-1] == 1 ) { // No prior leaf; just memoize this leaf
+      } else if( _bits[_depth-1] == 1 ) { // No prior leaf; just memorize this leaf
         _bits[_depth-1]=2; _fs[_depth-1]=pred;
       } else {          // Else==2 (prior leaf) or 3 (prior tree)
         if( _bits[_depth-1] == 2 ) _sb.p(" ? ").pj(_fs[_depth-1]).p(" ");
@@ -1310,7 +1348,7 @@ public class DTree extends Iced {
         _sb.p(": ").pj(pred);
       }
     }
-    @Override protected void post( int col, float fcmp, boolean equal ) {
+    @Override protected void post( int col, float fcmp, IcedBitSet gcmp, int equal ) {
       _sb.p(')');
       _bits[_depth]=0;
       if (_sbs[_depth]!=null) {
