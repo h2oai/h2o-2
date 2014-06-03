@@ -115,8 +115,8 @@ class Basic(unittest.TestCase):
 
         tryList = [
             (3, 5, 9, 'cA', 60, 0),
-            (3, 5, 25, 'cA', 60, 0),
-            (10, 100, 500, 'cA', 60, 0),
+            # (3, 5, 25, 'cA', 60, 0),
+            # (10, 100, 500, 'cA', 60, 0),
             ]
 
         for trial in range(20):
@@ -158,6 +158,7 @@ class Basic(unittest.TestCase):
             if HEADER_SEP_CHAR_GEN in (',', ' '):
                 if random.randint(0,1):
                     HEADER_SEP_CHAR_GEN = " " + HEADER_SEP_CHAR_GEN
+                # extra spaces? 
                 if random.randint(0,1):
                     HEADER_SEP_CHAR_GEN = HEADER_SEP_CHAR_GEN + " "
 
