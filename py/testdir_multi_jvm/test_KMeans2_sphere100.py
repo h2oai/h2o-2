@@ -131,7 +131,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_kmeans_sphere100(self):
+    def test_kmeans2_sphere100(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilename = 'syn_spheres100.csv'
         csvPathname = SYNDATASETS_DIR + '/' + csvFilename
@@ -159,25 +160,33 @@ class Basic(unittest.TestCase):
             kwargs = {
                 'k': CLUSTERS, 
                 'initialization': 'Furthest', 
-                'cols': cols,
-                'destination_key': 'syn_spheres100.hex'
+                'destination_key': 'syn_spheres100.hex',
+                'max_iter': 15,
             }
             timeoutSecs = 100
             start = time.time()
-            kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+            kmeansResult = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.',\
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
 
-            kmeansResult = h2o_cmd.runInspect(key='syn_spheres100.hex')
+            # can't inspect a kmeans2 model
+            # kmeansResult = h2o_cmd.runInspect(key='syn_spheres100.hex')
             # print h2o.dump_json(kmeansResult)
 
             ### print h2o.dump_json(kmeans)
             ### print h2o.dump_json(kmeansResult)
-            h2o_kmeans.simpleCheckKMeans(self, kmeans, **kwargs)
+            h2o_kmeans.simpleCheckKMeans(self, kmeansResult, **kwargs)
 
             # cluster centers can return in any order
-            clusters = kmeansResult['KMeansModel']['clusters']
+            model = kmeansResult['model']
+            clusters = model["centers"]
+            cluster_variances = model["within_cluster_variances"]
+            error = model["total_within_SS"]
+            iterations = model["iterations"]
+            normalized = model["normalized"]
+            max_iter = model["max_iter"]
+
 
             # the way we create the centers above, if we sort on the sum of xyz
             # we should get the order the same as when they were created.

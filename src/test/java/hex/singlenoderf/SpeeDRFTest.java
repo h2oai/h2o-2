@@ -87,4 +87,9 @@ public class SpeeDRFTest extends TestUtil {
     m.delete();
     fr.delete();
   }
+
+//  public static void main(String[] Args) {
+//    kaggle_credit();
+//    covtype();
+//  }
 }

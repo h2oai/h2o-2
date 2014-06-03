@@ -50,31 +50,7 @@ public class ModelMetrics extends Request2 {
    * Fetch all ModelMetrics from the KV store.
    */
   protected static List<water.ModelMetrics>fetchAll() {
-    // Get all the water.ModelMetrics keys.
-    //
-    // NOTE: globalKeySet filters by class when it pulls stuff from other nodes,
-    // but still returns local keys of all types so we need to filter below.
-    Set<Key> keySet = H2O.globalKeySet("water.ModelMetrics"); // filter by class, how cool is that?
-
-    List<water.ModelMetrics> list = new ArrayList();
-
-    for (Key key : keySet) {
-      if( H2O.get(key) == null )
-        continue;
-
-      String keyString = key.toString();
-
-      Value value = DKV.get(key);
-      Iced pojo = value.get();
-
-      if (! (pojo instanceof water.ModelMetrics))
-        continue;
-
-      water.ModelMetrics modelMetrics = (water.ModelMetrics)pojo;
-      list.add(modelMetrics);
-    }
-
-    return list;
+    return new ArrayList<water.ModelMetrics>(H2O.KeySnapshot.globalSnapshot().fetchAll(water.ModelMetrics.class).values());
   }
 
 

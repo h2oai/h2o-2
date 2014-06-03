@@ -1,8 +1,8 @@
 name := "h2o-scala"
 
-version := "2.5"
+version := "2.5-SNAPSHOT"
 
-organization := "0xdata.com"
+organization := "ai.h2o"
 
 scalaVersion := "2.10.3"
 
@@ -61,6 +61,8 @@ fullRunTask(runExamples, Runtime, "water.api.dsl.examples.Examples")
 
 fork in runExamples := true
 
+credentials += Credentials(Path.userHome / ".ivy2" / ".credentials")
+
 /** Publish to sonatype */
 publishTo := {
   val nexus = "https://oss.sonatype.org/"
@@ -91,3 +93,4 @@ pomExtra := (
     <url>https://github.com/0xdata/h2o</url>
   </scm>
 )
+

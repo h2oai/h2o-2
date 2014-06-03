@@ -47,7 +47,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
                 start = time.time()
                 parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local',
-                    hex_key=csvFilename + ".hex", timeoutSecs=timeoutSecs, 
+                    hex_key="A.hex", timeoutSecs=timeoutSecs, 
                     retryDelaySecs=retryDelaySecs,
                     pollTimeoutSecs=pollTimeoutSecs,
                     benchmarkLogging=benchmarkLogging)
@@ -90,8 +90,8 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                     }
 
                     # convert to binomial
-                    execExpr="A.hex=%s" % parseResult['destination_key']
-                    h2e.exec_expr(execExpr=execExpr, timeoutSecs=180)
+                    # execExpr="A.hex=%s" % parseResult['destination_key']
+                    # h2e.exec_expr(execExpr=execExpr, timeoutSecs=180)
 
                     execExpr = 'A.hex[,378+1]=(A.hex[,378+1]>15)'
                     h2e.exec_expr(execExpr=execExpr, timeoutSecs=180)
@@ -114,7 +114,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
     #***********************************************************************
     # these will be tracked individual by jenkins, which is nice
     #***********************************************************************
-    def test_A_c3_nongz_fvec_one(self):
+    def notest_A_c3_nongz_fvec_one(self):
         h2o.beta_features = True
         avgMichalSize = 237270000
         csvFilenameList= [
@@ -122,7 +122,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         ]
         self.sub_c3_nongz_fvec_long(csvFilenameList)
 
-    def test_B_c3_nongz_fvec_two(self):
+    def notest_B_c3_nongz_fvec_two(self):
         h2o.beta_features = True
         avgMichalSize = 237270000
         csvFilenameList= [

@@ -4,10 +4,15 @@ import java.util.*;
 
 import water.H2O;
 
+
 /**
  * Shared static code to support modeling, prediction, and scoring.
  *
- *  Used by interpreted models as well as by generated model code.
+ * <p>Used by interpreted models as well as by generated model code.</p>
+ *
+ * <p><strong>WARNING:</strong> The class should have no other H2O dependencies
+ * since it is provided for generated code as h2o-model.jar which contains
+ * only a few files.</p>
  *
  */
 public class ModelUtils {

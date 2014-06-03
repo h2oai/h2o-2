@@ -1,9 +1,9 @@
 package water.api;
 
+import hex.FrameSplitter;
+
 import java.util.Arrays;
 
-import hex.FrameSplitter;
-import hex.ShuffleTask;
 import water.*;
 import water.fvec.Frame;
 import water.util.MRUtils;
