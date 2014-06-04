@@ -68,10 +68,11 @@ public class NFoldFrameExtractor extends FrameExtractor {
     private final int _afold;
     private final boolean _inFold;
 
-    transient int _startChkIdx;
-    transient int _endChkIdx;
-    transient int _startRow; // fold start row inside the chunk _startChkIdx
-    transient int _endRow;  // fold end row inside the chunk _endChkIdx
+    transient int _precedingChks;   // number of preceding chunks
+    transient int _startFoldChkIdx; // idx of 1st chunk for the fold
+    transient int _startRestChkIdx; // idx of 1st of remaining part
+    transient int _startFoldRow;  // fold start row inside the chunk _startFoldChkIdx
+    transient int _startRestRow;  // index of the 1st row inside chunk _startRestChkIdx begining remaining part of data
 
     @Override protected void setupLocal() {
       Vec anyInVec = _vecs[0];
@@ -81,11 +82,12 @@ public class NFoldFrameExtractor extends FrameExtractor {
       long espc[] = anyInVec._espc;
       int c = 0;
       for (; c<espc.length-1 && espc[c+1] <= startRow; c++) ;
-      _startChkIdx = c;
-      _startRow = (int) (startRow-espc[c]);
+      _startFoldChkIdx = c;
+      _startFoldRow = (int) (startRow-espc[c]);
+      _precedingChks = _startFoldRow > 0 ? c+1 : c;
       for (; c<espc.length-1 && espc[c+1] <= endRow; c++) ;
-      _endChkIdx = c;
-      _endRow = (int) (endRow-espc[c]);
+      _startRestChkIdx = c;
+      _startRestRow = (int) (endRow-espc[c]);
     }
     public FoldExtractTask(H2OCountedCompleter completer, Vec[] srcVecs, int nfold, int afold, boolean inFold) {
       super(completer);
@@ -105,19 +107,19 @@ public class NFoldFrameExtractor extends FrameExtractor {
     }
     private int getInChunkIdx(int coutidx) {
       if (_inFold)
-        return _startChkIdx==_endChkIdx ? _startChkIdx : coutidx + _startChkIdx;
+        return _startFoldChkIdx==_startRestChkIdx ? _startFoldChkIdx : coutidx + _startFoldChkIdx;
       else { // out fold part
-        if (coutidx <= _startChkIdx)
+        if (coutidx < _precedingChks)
           return coutidx;
         else
-          return (_endChkIdx-_startChkIdx-1) + coutidx;
+          return _startRestChkIdx + (coutidx-_precedingChks);
       }
     }
     private int getStartRow(int coutidx) {
       if (_inFold)
-        return coutidx == 0 ? _startRow : 0;
+        return coutidx == 0 ? _startFoldRow : 0;
       else { //out fold part
-        return coutidx == _startChkIdx+1 ? _endRow : 0;
+        return coutidx == _precedingChks ? _startRestRow : 0;
       }
     }
   }

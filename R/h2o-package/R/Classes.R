@@ -9,16 +9,17 @@ setClass("H2OModel", representation(key="character", data="H2OParsedData", model
 # setClass("H2OModel", representation(key="character", data="H2OParsedData", model="list", env="environment", "VIRTUAL"))
 setClass("H2OGrid", representation(key="character", data="H2OParsedData", model="list", sumtable="list", "VIRTUAL"))
 setClass("H2OPerfModel", representation(cutoffs="numeric", measure="numeric", perf="character", model="list", roc="data.frame"))
+setClassUnion("H2OParsedDataOrNULL", c("H2OParsedData", "NULL"))
 
 setClass("H2OGLMModel", contains="H2OModel", representation(xval="list"))
 # setClass("H2OGLMGrid", contains="H2OGrid")
 setClass("H2OKMeansModel", contains="H2OModel")
 setClass("H2ODeepLearningModel", contains="H2OModel", representation(valid="H2OParsedData"))
-setClass("H2ODRFModel", contains="H2OModel", representation(valid="H2OParsedData"))
+setClass("H2ODRFModel", contains="H2OModel", representation(valid="H2OParsedDataOrNULL", xval="list"))
 setClass("H2ONBModel", contains="H2OModel")
 setClass("H2OPCAModel", contains="H2OModel")
-setClass("H2OGBMModel", contains="H2OModel", representation(valid="H2OParsedData"))
-setClass("H2OSpeeDRFModel", contains="H2OModel", representation(valid="H2OParsedData"))
+setClass("H2OGBMModel", contains="H2OModel", representation(valid="H2OParsedDataOrNULL", xval="list"))
+setClass("H2OSpeeDRFModel", contains="H2OModel", representation(valid="H2OParsedData", xval="list"))
 
 setClass("H2OGLMGrid", contains="H2OGrid")
 setClass("H2OGBMGrid", contains="H2OGrid")
@@ -176,8 +177,10 @@ setMethod("show", "H2ODRFModel", function(object) {
   cat("\nTree statistics:\n"); print(model$forest)
   
   if(model$params$classification) {
-    cat("\nConfusion matrix:\n"); cat("Reported on", object@valid@key, "\n")
-    print(model$confusion)
+    if(!is.null(object@valid)) {
+      cat("\nConfusion matrix:\n"); cat("Reported on", object@valid@key, "\n")
+      print(model$confusion)
+    }
     if(!is.null(model$auc) && !is.null(model$gini))
       cat("\nAUC:", model$auc, "\nGini:", model$gini, "\n")
   }
@@ -185,6 +188,10 @@ setMethod("show", "H2ODRFModel", function(object) {
     cat("\nVariable importance:\n"); print(model$varimp)
   }
   cat("\nMean-squared Error by tree:\n"); print(model$mse)
+  if(length(object@xval) > 0) {
+    cat("\nCross-Validation Models:\n")
+    print(sapply(object@xval, function(x) x@key))
+  }
 })
 
 setMethod("show", "H2OSpeeDRFModel", function(object) {
@@ -195,12 +202,14 @@ setMethod("show", "H2OSpeeDRFModel", function(object) {
   cat("\n\nClassification:", model$params$classification)
   cat("\nNumber of trees:", model$params$ntree)
   
-  if(FALSE){ #model$params$oobee) {
-    cat("\nConfusion matrix:\n"); cat("Reported on oobee from", object@valid@key, "\n")
-  } else {
-    cat("\nConfusion matrix:\n"); cat("Reported on", object@valid@key,"\n")
+  if(!is.null(object@valid)) {
+    if(FALSE){ #model$params$oobee) {
+      cat("\nConfusion matrix:\n"); cat("Reported on oobee from", object@valid@key, "\n")
+    } else {
+      cat("\nConfusion matrix:\n"); cat("Reported on", object@valid@key,"\n")
+    }
+    print(model$confusion)
   }
-  print(model$confusion)
  
   if(!is.null(model$varimp)) {
     cat("\nVariable importance:\n"); print(model$varimp)
@@ -209,6 +218,10 @@ setMethod("show", "H2OSpeeDRFModel", function(object) {
   #mse <-model$mse[length(model$mse)] # (model$mse[is.na(model$mse) | model$mse <= 0] <- "")
 
   cat("\nMean-squared Error from the",model$params$ntree, "trees: "); cat(model$mse, "\n")
+  if(length(object@xval) > 0) {
+    cat("\nCross-Validation Models:\n")
+    print(sapply(object@xval, function(x) x@key))
+  }
 })
 
 setMethod("show", "H2OPCAModel", function(object) {
@@ -235,8 +248,10 @@ setMethod("show", "H2OGBMModel", function(object) {
 
   model = object@model
   if(model$params$distribution %in% c("multinomial", "bernoulli")) {
-    cat("\nConfusion matrix:\nReported on", object@valid@key, "\n");
-    print(model$confusion)
+    if(!is.null(object@valid)) {
+      cat("\nConfusion matrix:\nReported on", object@valid@key, "\n");
+      print(model$confusion)
+    }
     
     if(!is.null(model$auc) && !is.null(model$gini))
       cat("\nAUC:", model$auc, "\nGini:", model$gini, "\n")
@@ -246,6 +261,10 @@ setMethod("show", "H2OGBMModel", function(object) {
     cat("\nVariable importance:\n"); print(model$varimp)
   }
   cat("\nMean-squared Error by tree:\n"); print(model$err)
+  if(length(object@xval) > 0) {
+    cat("\nCross-Validation Models:\n")
+    print(sapply(object@xval, function(x) x@key))
+  }
 })
 
 setMethod("show", "H2OPerfModel", function(object) {
