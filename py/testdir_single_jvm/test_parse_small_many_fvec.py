@@ -26,7 +26,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls): 
         h2o.tear_down_cloud()
 
-    def test_parse_small_many(self):
+    def test_parse_small_many_fvec(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         # can try the other two possibilities also
         eol = "\n"

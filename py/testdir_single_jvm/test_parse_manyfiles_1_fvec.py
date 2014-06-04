@@ -21,7 +21,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_parse_summary_manyfiles_1(self):
+    def test_parse_summary_manyfiles_1_fvec(self):
+        h2o.beta_features = True
         # these will be used as directory imports/parse
         csvDirlist = [
             ("manyfiles-nflx-gz",   600),
@@ -50,10 +51,10 @@ class Basic(unittest.TestCase):
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=360)
             print "Inspect:", parseResult['destination_key'], "took", time.time() - start, "seconds"
             h2o_cmd.infoFromInspect(inspect, csvPathname)
-            num_rows = inspect['num_rows']
-            num_cols = inspect['num_cols']
-            self.assertEqual(num_cols, 542)
-            self.assertEqual(num_rows, 100000)
+            numRows = inspect['numRows']
+            numCols = inspect['numCols']
+            self.assertEqual(numCols, 542)
+            self.assertEqual(numRows, 100000)
 
             # gives us some reporting on missing values, constant values, to see if we have x specified well
             # figures out everything from parseResult['destination_key']
@@ -64,7 +65,7 @@ class Basic(unittest.TestCase):
             # SUMMARY****************************************
             # pass numRows, so we know when na cnt means row is all na's
             summaryResult = h2o_cmd.runSummary(key=hex_key, timeoutSecs=360, 
-                numCols=num_cols, numRows=num_rows)
+                numCols=numCols, numRows=numRows)
 
             # STOREVIEW***************************************
             print "\nTrying StoreView after the parse"
