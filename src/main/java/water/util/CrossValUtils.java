@@ -11,7 +11,7 @@ public class CrossValUtils {
    * @param job (must contain valid entries for n_folds, validation, destination_key, source, response)
    */
   public static void crossValidate(Job.ValidatedJob job) {
-    if (job.state != Job.JobState.DONE) return; //don't do cross-validation if the full model builder failed
+    if (job.state != Job.JobState.RUNNING) return; //don't do cross-validation if the full model builder failed
     if (job.validation != null)
       throw new IllegalArgumentException("Cannot provide validation dataset and n_folds > 0 at the same time.");
     if (job.n_folds <= 1)
@@ -20,6 +20,7 @@ public class CrossValUtils {
     long[] offsets = new long[job.n_folds +1];
     Frame[] cv_preds = new Frame[job.n_folds];
     for (int i = 0; i < job.n_folds; ++i) {
+      if (job.state != Job.JobState.RUNNING) break;
       Key[] destkeys = new Key[]{Key.make(basename + "_xval" + i + "_train"), Key.make(basename + "_xval" + i + "_holdout")};
       NFoldFrameExtractor nffe = new NFoldFrameExtractor(job.source, job.n_folds, i, destkeys, null);
       H2O.submitTask(nffe);

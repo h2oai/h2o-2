@@ -185,6 +185,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     logStart();
     buildModel(seed);
     if (n_folds > 0) CrossValUtils.crossValidate(this);
+    remove();                   // Remove Job
   }
 
   @Override public int gridParallelism() {
