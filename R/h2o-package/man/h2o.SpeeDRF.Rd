@@ -7,10 +7,10 @@ H2O: Single-Node Random Forest
 Performs single-node random forest classification on a data set.
 }
 \usage{
-h2o.SpeeDRF(x, y, data, classification = TRUE, validation, mtry = -1, ntree = 50, 
-  depth = 50, sample.rate = 2/3, oobee = TRUE, importance = FALSE, nbins = 1024, 
-  seed = -1, stat.type = "ENTROPY", classwt = NULL, sampling_strategy = "RANDOM", 
-  strata_samples = NULL)
+h2o.SpeeDRF(x, y, data, classification = TRUE, nfolds = 0, validation, mtry = -1, 
+  ntree = 50, depth = 50, sample.rate = 2/3, oobee = TRUE, importance = FALSE, 
+  nbins = 1024, seed = -1, stat.type = "ENTROPY", classwt = NULL, 
+  sampling_strategy = "RANDOM", strata_samples = NULL)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -26,8 +26,11 @@ An \code{\linkS4class{H2OParsedData}} object containing the variables in the mod
   \item{classification}{
 (Optional) A logical value indicating whether a classification model should be built (as opposed to regression).
   }
+    \item{nfolds}{
+  (Optional) Number of folds for cross-validation. If \code{nfolds >= 2}, then \code{validation} must remain empty.
+}
   \item{validation}{
-  (Optional) An \code{\linkS4class{H2OParsedData}} object indicating the validation dataset used to construct confusion matrix. If left blank, this defaults to the training data.}
+  (Optional) An \code{\linkS4class{H2OParsedData}} object indicating the validation dataset used to construct confusion matrix. If left blank, this defaults to the training data when \code{nfolds = 0}.}
   \item{mtry}{
   (Optional) Number of features to randomly select at each split in the tree. If set to the default of -1, this will be set to \code{sqrt(ncol(data))}, rounded down to the nearest integer.
   }

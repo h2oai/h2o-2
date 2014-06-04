@@ -1193,7 +1193,7 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, nfolds=0, validation,
   }
   if(!is.numeric(nfolds)) stop("nfolds must be numeric")
   if(nfolds == 1) stop("nfolds cannot be 1")
-  if(!missing(validation) && class(validation) == "H2OParsedData")
+  if(!missing(validation) && !class(validation) %in% c("H2OParsedData", "H2OParsedDataVA"))
     stop("validation must be an H2O parsed dataset")
   
   if(missing(validation) && nfolds == 0) {
