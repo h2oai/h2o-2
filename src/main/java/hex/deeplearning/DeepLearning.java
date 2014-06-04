@@ -967,9 +967,6 @@ public class DeepLearning extends Job.ValidatedJob {
               new DeepLearningTask2(train, model.model_info(), rowUsageFraction).invokeOnAllNodes().model_info() ) : //replicated data + multi-node mode
               new DeepLearningTask(model.model_info(), rowUsageFraction).doAll(train).model_info()); //distributed data (always in multi-node mode)
       while (model.doScoring(train, trainScoreFrame, validScoreFrame, self(), getValidAdaptor()));
-
-      state = JobState.DONE; //for JSON REST response
-      model.get_params().state = state; //for parameter JSON on the HTML page
       Log.info("Finished training the Deep Learning model.");
       return model;
     }
@@ -1011,6 +1008,15 @@ public class DeepLearning extends Job.ValidatedJob {
     cleanup();
     if (_fakejob) UKV.remove(job_key);
     remove();
+
+    // HACK: update the state of the model's Job/parameter object
+    // (since we cloned the Job/parameters several times and we're not sharing a reference)
+    DeepLearningModel m = DKV.get(dest()).get();
+    if (m != null) {
+      m.get_params().state = state;
+      DKV.put(dest(), m);
+    }
+
   }
 
   /**
