@@ -18,7 +18,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_parse_file_loop(self):
+    def test_parse_file_loop_fvec(self):
+        h2o.beta_features = True
         lenNodes = len(h2o.nodes)
         # h2b.browseTheCloud()
 

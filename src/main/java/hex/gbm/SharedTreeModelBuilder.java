@@ -142,10 +142,12 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   // Driver for model-building.
   public void buildModel(long seed) {
     final Key outputKey = dest();
-    String sd = input("source");
-    final Key dataKey = (sd==null||sd.length()==0)?null:Key.make(sd);
-    String sv = input("validation");
-    final Key testKey = (sv==null||sv.length()==0)?dataKey:Key.make(sv);
+//    String sd = input("source");
+//    final Key dataKey = (sd==null||sd.length()==0)?null:Key.make(sd);
+//    String sv = input("validation");
+//    final Key testKey = (sv==null||sv.length()==0)?dataKey:Key.make(sv);
+    final Key dataKey = source != null ? source._key : null;
+    final Key testKey = validation != null ? validation._key : dataKey;
 
     // Lock the input datasets against deletes
     source.read_lock(self());
@@ -243,8 +245,6 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     source.unlock(self());
     if( validation != null && !source._key.equals(validation._key) )
       validation.unlock(self());
-
-    remove();                   // Remove Job
   }
 
   transient long _timeLastScoreStart, _timeLastScoreEnd, _firstScore;

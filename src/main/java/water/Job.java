@@ -757,10 +757,13 @@ public abstract class Job extends Func {
     public Frame validation;
 
     @API(help = "Number of folds for cross-validation (if no validation data is specified)", filter = Default.class, json = true)
-    public int num_folds = 0;
+    public int n_folds = 0;
 
     @API(help = "Keep cross-validation dataset splits", filter = Default.class, json = true)
     public boolean keep_cross_validation_splits = false;
+
+    @API(help = "Cross-validation models", json = true)
+    public Key[] xval_models;
 
     /**
      * Helper to specify which arguments trigger a refresh on change
@@ -783,39 +786,38 @@ public abstract class Job extends Func {
      */
     @Override protected void queryArgumentValueSet(Argument arg, java.util.Properties inputArgs) {
       super.queryArgumentValueSet(arg, inputArgs);
-      if (arg._name.equals("num_folds") && validation != null) {
+      if (arg._name.equals("n_folds") && validation != null) {
         arg.disable("Only if no validation dataset is provided.");
-        num_folds = 0;
+        n_folds = 0;
       }
     }
 
     /**
      * Cross-Validate this Job (to be overridden for each instance, which also calls genericCrossValidation)
-     * @param basename Basename for naming the cross-validated models
      * @param splits Frames containing train/test splits
      * @param cv_preds Store the predictions for each cross-validation run
      * @param offsets Array to store the offsets of starting row indices for each cross-validation run
      * @param i Which fold of cross-validation to perform
      */
-    public void crossValidate(String basename, Frame[] splits, Frame[] cv_preds, long[] offsets, int i) { throw H2O.unimpl(); }
+    public void crossValidate(Frame[] splits, Frame[] cv_preds, long[] offsets, int i) { throw H2O.unimpl(); }
 
     /**
      * Helper to perform the generic part of cross validation
      * Expected to be called from each specific instance's crossValidate method
-     * @param basename Basename for naming the cross-validated models
      * @param splits Frames containing train/test splits
      * @param offsets Array to store the offsets of starting row indices for each cross-validation run
      * @param i Which fold of cross-validation to perform
      */
-    final protected void genericCrossValidation(String basename, Frame[] splits, long[] offsets, int i) {
+    final protected void genericCrossValidation(Frame[] splits, long[] offsets, int i) {
       int respidx = source.find(_responseName);
       assert(respidx != -1) : "response is not found in source!";
-      job_key = Key.make(); //make a new Job for CV
-      destination_key = Key.make(basename + ".cv" + i);
-      validation = splits[i]; //TODO: replace with holdout extractor code
-      source = splits[(i + 1) % 2]; //TODO: replace with holdout extractor code
+      job_key = Key.make(job_key.toString() + "_xval" + i); //make a new Job for CV
+      assert(xval_models != null);
+      destination_key = xval_models[i];
+      source = splits[0];
+      validation = splits[1];
       response = source.vecs()[respidx];
-      num_folds = 0;
+      n_folds = 0;
       state = Job.JobState.CREATED; //Hack to allow this job to run
       DKV.put(self(), this); //Needed to pass the Job.isRunning(cvdl.self()) check in FrameTask
       offsets[i + 1] = offsets[i] + validation.numRows();
@@ -837,10 +839,12 @@ public abstract class Job extends Func {
     }
 
     @Override protected void init() {
-      if ( validation != null && num_folds != 0 ) throw new UnsupportedOperationException("Cannot specify a validation dataset and non-zero number of cross-validation folds.");
-      if ( num_folds < 0 ) throw new UnsupportedOperationException("The number of cross-validation folds must be >= 0.");
-      if ( num_folds != 2 && num_folds != 0 ) throw new UnsupportedOperationException("The number of cross-validation folds must be either 0 or 2.");
+      if ( validation != null && n_folds != 0 ) throw new UnsupportedOperationException("Cannot specify a validation dataset and non-zero number of cross-validation folds.");
+      if ( n_folds < 0 ) throw new UnsupportedOperationException("The number of cross-validation folds must be >= 0.");
       super.init();
+      xval_models = new Key[n_folds];
+      for (int i=0; i<xval_models.length; ++i)
+        xval_models[i] = Key.make(dest().toString() + "_xval" + i);
 
       int rIndex = 0;
       for( int i = 0; i < source.vecs().length; i++ )

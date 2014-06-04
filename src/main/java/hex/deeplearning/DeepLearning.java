@@ -689,9 +689,9 @@ public class DeepLearning extends Job.ValidatedJob {
   }
 
   @Override
-  public final void execImpl() {
+  protected final void execImpl() {
     buildModel();
-    if (num_folds > 0) ModelUtils.crossValidate(this);
+    if (n_folds > 0) CrossValUtils.crossValidate(this);
     delete();
   }
 
@@ -708,8 +708,11 @@ public class DeepLearning extends Job.ValidatedJob {
       final DeepLearningModel previous = UKV.get(checkpoint);
       if (previous == null) throw new IllegalArgumentException("Checkpoint not found.");
       Log.info("Resuming from checkpoint.");
-      if (num_folds != 0) {
-        throw new UnsupportedOperationException("num_folds must be 0: Cross-validation is not supproted during checkpoint restarts.");
+      if (n_folds != 0) {
+        throw new UnsupportedOperationException("n_folds must be 0: Cross-validation is not supproted during checkpoint restarts.");
+      }
+      else {
+        ((ValidatedJob)previous.job()).xval_models = null; //remove existing cross-validation keys after checkpoint restart
       }
       if (source == null || !Arrays.equals(source._key._kb, previous.model_info().get_params().source._key._kb)) {
         throw new IllegalArgumentException("source must be the same as for the checkpointed model.");
@@ -758,9 +761,9 @@ public class DeepLearning extends Job.ValidatedJob {
             }
           }
         }
-        if (A.num_folds != 0) {
+        if (A.n_folds != 0) {
           Log.warn("Disabling cross-validation: Not supported when resuming training from a checkpoint.");
-          A.num_folds = 0;
+          A.n_folds = 0;
         }
         cp.update(self());
       } finally {
@@ -964,9 +967,6 @@ public class DeepLearning extends Job.ValidatedJob {
               new DeepLearningTask2(train, model.model_info(), rowUsageFraction).invokeOnAllNodes().model_info() ) : //replicated data + multi-node mode
               new DeepLearningTask(model.model_info(), rowUsageFraction).doAll(train).model_info()); //distributed data (always in multi-node mode)
       while (model.doScoring(train, trainScoreFrame, validScoreFrame, self(), getValidAdaptor()));
-
-      state = JobState.DONE; //for JSON REST response
-      model.get_params().state = state; //for parameter JSON on the HTML page
       Log.info("Finished training the Deep Learning model.");
       return model;
     }
@@ -1008,6 +1008,16 @@ public class DeepLearning extends Job.ValidatedJob {
     cleanup();
     if (_fakejob) UKV.remove(job_key);
     remove();
+
+    // HACK: update the state of the model's Job/parameter object
+    // (since we cloned the Job/parameters several times and we're not sharing a reference)
+    Value v = DKV.get(dest());
+    if (v != null) {
+      DeepLearningModel m = v.get();
+      m.get_params().state = state;
+      DKV.put(dest(), m);
+    }
+
   }
 
   /**
@@ -1070,17 +1080,16 @@ public class DeepLearning extends Job.ValidatedJob {
 
   /**
    * Cross-Validate a DeepLearning model by building new models on N train/test holdout splits
-   * @param basename Basename for naming the cross-validated models
    * @param splits Frames containing train/test splits
    * @param cv_preds Array of Frames to store the predictions for each cross-validation run
    * @param offsets Array to store the offsets of starting row indices for each cross-validation run
    * @param i Which fold of cross-validation to perform
    */
-  @Override public void crossValidate(String basename, Frame[] splits, Frame[] cv_preds, long[] offsets, int i) {
+  @Override public void crossValidate(Frame[] splits, Frame[] cv_preds, long[] offsets, int i) {
     // Train a clone with slightly modified parameters (to account for cross-validation)
     DeepLearning cv = (DeepLearning) this.clone();
     cv.best_model_key = null; // model-specific stuff
-    cv.genericCrossValidation(basename, splits, offsets, i);
+    cv.genericCrossValidation(splits, offsets, i);
     cv_preds[i] = ((DeepLearningModel) UKV.get(cv.dest())).score(cv.validation);
   }
 }

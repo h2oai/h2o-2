@@ -1,6 +1,5 @@
 package hex.gbm;
 
-import water.api.HitRatio;
 import static water.util.ModelUtils.getPrediction;
 import static water.util.Utils.div;
 import hex.ConfusionMatrix;
@@ -164,7 +163,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
 
   @Override protected Log.Tag.Sys logTag() { return Sys.GBM__; }
   @Override protected GBMModel makeModel(Key outputKey, Key dataKey, Key testKey, String[] names, String[][] domains, String[] cmDomain) {
-    return new GBMModel(this, outputKey, dataKey, validation==null?null:testKey, names, domains, cmDomain, ntrees, max_depth, min_rows, nbins, learn_rate, family, num_folds);
+    return new GBMModel(this, outputKey, dataKey, validation==null?null:testKey, names, domains, cmDomain, ntrees, max_depth, min_rows, nbins, learn_rate, family, n_folds);
   }
   @Override protected GBMModel makeModel( GBMModel model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
     return new GBMModel(model, err, cm, varimp, validAUC);
@@ -185,7 +184,8 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   @Override protected void execImpl() {
     logStart();
     buildModel(seed);
-    if (num_folds > 0) ModelUtils.crossValidate(this);
+    if (n_folds > 0) CrossValUtils.crossValidate(this);
+    remove();                   // Remove Job
   }
 
   @Override public int gridParallelism() {
@@ -663,16 +663,15 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
 
   /**
    * Cross-Validate a GBM model by building new models on N train/test holdout splits
-   * @param basename Basename for naming the cross-validated models
    * @param splits Frames containing train/test splits
    * @param cv_preds Array of Frames to store the predictions for each cross-validation run
    * @param offsets Array to store the offsets of starting row indices for each cross-validation run
    * @param i Which fold of cross-validation to perform
    */
-  @Override public void crossValidate(String basename, Frame[] splits, Frame[] cv_preds, long[] offsets, int i) {
+  @Override public void crossValidate(Frame[] splits, Frame[] cv_preds, long[] offsets, int i) {
     // Train a clone with slightly modified parameters (to account for cross-validation)
     GBM cv = (GBM) this.clone();
-    cv.genericCrossValidation(basename, splits, offsets, i);
+    cv.genericCrossValidation(splits, offsets, i);
     cv_preds[i] = ((GBMModel) UKV.get(cv.dest())).score(cv.validation);
   }
 

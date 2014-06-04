@@ -720,7 +720,7 @@ public class DTree extends Iced {
       if( cm != null && domain != null ) {
         // Top row of CM
         assert cm._arr.length==domain.length;
-        DocGen.HTML.section(sb,"Confusion Matrix");
+        DocGen.HTML.title(sb,"Scoring");
         if( testKey == null ) {
           if (_have_cv_results)
             sb.append("<div class=\"alert\">Reported on ").append(num_folds).append("-fold cross-validated training data</div>");
@@ -734,8 +734,11 @@ public class DTree extends Iced {
           rs.replace("key", testKey);
           DocGen.HTML.paragraph(sb,rs.toString());
         }
-        // generate HTML for CM
-        cm.toHTML(sb, domain);
+        if (validAUC == null) { //AUC shows the CM already
+          // generate HTML for CM
+          DocGen.HTML.section(sb, "Confusion Matrix");
+          cm.toHTML(sb, domain);
+        }
       }
 
       if( errs != null ) {
@@ -748,7 +751,7 @@ public class DTree extends Iced {
         DocGen.HTML.section(sb,"Mean Squared Error by Tree");
         DocGen.HTML.arrayHead(sb);
         sb.append("<tr style='min-width:60px'><th>Trees</th>");
-        last = isClassifier() ? last : errs.length-1-(_have_cv_results?1:0); // for regressor reports all errors (except for cross-validated result)
+        last = errs.length-1-(_have_cv_results?1:0); // for regressor reports all errors (except for cross-validated result)
         for( int i=last; i>=0; i-- )
           sb.append("<td style='min-width:60px'>").append(i).append("</td>");
         sb.append("</tr>");
@@ -768,6 +771,7 @@ public class DTree extends Iced {
       if (varimp != null) {
         generateHTMLVarImp(sb);
       }
+      printCrossValidationModelsHTML(sb);
     }
 
     static final String NA = "---";

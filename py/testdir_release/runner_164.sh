@@ -100,7 +100,7 @@ then
     # fails with summary. currently disable summary
     # doesn't work. key gets locked. forget about it
     # myPy c7 test_c7_rel.py
-    myPy c8 test_c8_rf_airlines_hdfs.py
+    # myPy c8 test_c8_rf_airlines_hdfs.py
     myPy c8 test_c8_rf_airlines_hdfs_fvec.py
     myPy c9 test_c9_GLM_rc_fvec.py
     myPy c9 test_c9_GLM_airlines_fvec.py

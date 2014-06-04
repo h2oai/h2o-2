@@ -861,6 +861,8 @@ public class h2odriver extends Configured implements Tool {
     job.submit();
     System.out.println("Job name '" + jobtrackerName + "' submitted");
     System.out.println("JobTracker job ID is '" + job.getJobID() + "'");
+    String applicationID = job.getJobID().toString().replace("job_", "application_");
+    System.out.println("For YARN users, logs command is 'yarn logs -applicationId " + applicationID + "'");
 
     // Register ctrl-c handler to try to clean up job when possible.
     ctrlc = new CtrlCHandler();
