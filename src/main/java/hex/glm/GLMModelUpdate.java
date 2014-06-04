@@ -1,15 +1,8 @@
 package hex.glm;
 
-import hex.glm.GLMModel.Submodel;
-import hex.glm.GLMParams.Family;
-import hex.glm.GLMValidation.GLMXValidation;
 import water.*;
-import water.api.AUC;
 import water.api.DocGen;
 import water.api.Request;
-import water.util.RString;
-
-import java.text.DecimalFormat;
 
 public class GLMModelUpdate extends Request2 {
 
@@ -51,10 +44,9 @@ public class GLMModelUpdate extends Request2 {
       glm_model = v.get();
       glm_model.write_lock(null);
       int id = 0;
-      for(int i = 0; i < glm_model.lambdas.length; ++i)
-        if(lambda == glm_model.lambdas[i]){
-          id = i;
-          threshold = glm_model.submodels[i].validation.best_threshold;
+      for(; id < glm_model.submodels.length; ++id)
+        if(glm_model.submodels[id].lambda == lambda){
+          threshold = glm_model.submodels[id].validation.best_threshold;
           break;
         }
       glm_model.best_lambda_idx = id;

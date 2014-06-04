@@ -55,8 +55,8 @@ public class GLMValidation extends Iced {
 
     @API(help="n-fold models built for cross-validation")
     Key [] xval_models;
-    public GLMXValidation(GLMModel mainModel, GLMModel [] xvalModels, int lambdaIdx, long nobs) {
-      super(mainModel._dataKey, mainModel.ymu, mainModel.glm, mainModel.rank(lambdaIdx));
+    public GLMXValidation(GLMModel mainModel, GLMModel [] xvalModels, double lambda, long nobs) {
+      super(mainModel._dataKey, mainModel.ymu, mainModel.glm, mainModel.rank(lambda));
       xval_models = new Key[xvalModels.length];
       double t = 0;
       auc = 0;
