@@ -17,9 +17,9 @@ public class Weaver {
   private final CtClass _fielddoc;
   private final CtClass _arg;
   // Versioning
-  private final CtClass _apiSchema;
-  private final CtClass _apiAdaptor;
-  private final CtClass _apiHandler;
+//  private final CtClass _apiSchema;
+//  private final CtClass _apiAdaptor;
+//  private final CtClass _apiHandler;
   // ---
   public static Class _typeMap;
   public static volatile String[] _packages = new String[] { "water", "hex", "org.junit", "com.oxdata", "ai.h2o" };
@@ -31,9 +31,9 @@ public class Weaver {
       _dtask= _pool.get("water.DTask");// Needs serialization and remote execution
       _enum = _pool.get("java.lang.Enum"); // Needs serialization
       _freezable = _pool.get("water.Freezable"); // Needs serialization
-      _apiSchema = _pool.get("water.api.rest.schemas.ApiSchema");
-      _apiAdaptor = _pool.get("water.api.rest.ApiAdaptor");
-      _apiHandler = _pool.get("water.api.rest.handlers.AbstractHandler");
+//      _apiSchema = _pool.get("water.api.rest.schemas.ApiSchema");
+//      _apiAdaptor = _pool.get("water.api.rest.ApiAdaptor");
+//      _apiHandler = _pool.get("water.api.rest.handlers.AbstractHandler");
       //_versioned = _pool.get("water.api.rest.REST$Versioned");
       _serBases = new CtClass[] { _iced, _dtask, _enum, _freezable };
       for( CtClass c : _serBases ) c.freeze();
@@ -131,7 +131,7 @@ public class Weaver {
       if( base.subclassOf(_enum) && base != cc )
         javassistLoadClass(base);
     }
-    CtClass ccr = addVersioningMethods(addSerializationMethods(cc));
+    CtClass ccr = addSerializationMethods(cc);
     ccr.freeze();
     return ccr;
   }
@@ -163,14 +163,6 @@ public class Weaver {
     return cc;
   }
 
-  CtClass addVersioningMethods( CtClass cc) throws CannotCompileException, NotFoundException, BadBytecode {
-    if (cc.subclassOf(_apiSchema) ||
-        cc.subtypeOf(_apiAdaptor) ||
-        cc.subclassOf(_apiHandler)) {
-      ensureVersion(cc);
-    }
-    return cc;
-  }
 
   // Expose the raw enum array that all Enums have, so we can directly convert
   // ordinal values to enum instances.
@@ -279,7 +271,7 @@ public class Weaver {
               ".put1(',');\n",
               ";\n  return ab;\n}",
               new FieldFilter() {
-    	        @Override boolean filter(CtField ctf) throws NotFoundException {
+                @Override boolean filter(CtField ctf) throws NotFoundException {
                   API api = null;
                   try {
                     api = (API) ctf.getAnnotation(API.class);

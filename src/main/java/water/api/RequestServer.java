@@ -26,25 +26,28 @@ import hex.pca.PCAScore;
 import hex.singlenoderf.SpeeDRF;
 import hex.singlenoderf.SpeeDRFModelView;
 import hex.singlenoderf.SpeeDRFProgressPage;
+import water.AutoBuffer;
 import water.Boot;
 import water.H2O;
 import water.NanoHTTPD;
 import water.api.Upload.PostFile;
-import water.api.rest.GBMAdaptorBloody;
-import water.api.rest.GBMAdaptorV1;
-import water.api.rest.handlers.*;
-import water.api.rest.schemas.GBMSchemaBloody;
-import water.api.rest.schemas.GBMSchemaV1;
+import water.api.handlers.ModelBuildersMetadataHandlerV1;
 import water.deploy.LaunchJar;
+import water.schemas.HTTP404V1;
+import water.schemas.HTTP500V1;
+import water.schemas.Schema;
 import water.util.Log;
 import water.util.Log.Tag.Sys;
+import water.util.RString;
 import water.util.Utils.ExpectedExceptionForDebug;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Method;
 import java.net.ServerSocket;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
@@ -54,6 +57,8 @@ import java.util.regex.PatternSyntaxException;
 
 /** This is a simple web server. */
 public class RequestServer extends NanoHTTPD {
+  private static final int LATEST_VERSION = 2;
+
   public enum API_VERSION {
     V_1(1, "/"),
     V_2(2, "/2/"); // FIXME: better should be /v2/
@@ -67,7 +72,10 @@ public class RequestServer extends NanoHTTPD {
   // cache of all loaded resources
   private static final ConcurrentHashMap<String,byte[]> _cache = new ConcurrentHashMap();
   protected static final HashMap<String,Request> _requests = new HashMap();
-  protected static final HashMap<Pattern, AbstractHandler> _routes = new HashMap();
+
+  // An array of regexs-over-URLs and handling Methods.
+  // The list is searched in-order, first match gets dispatched.
+  protected static final LinkedHashMap<String,Method> _handlers = new LinkedHashMap<String,Method>();
 
   static final Request _http404;
   static final Request _http500;
@@ -87,10 +95,8 @@ public class RequestServer extends NanoHTTPD {
     // REST API helper
     // Request.addToNavbar(registerRequest(new GBMSchemaV1()),    "GBM API call", "REST");
     // Request.addToNavbar(registerRequest(new GBMSchemaBloody()), "GBM Bloody", "REST");
-    // FIXME: version in the route should be taken from handler!
-    registerRoute("/3/models/(.*)", ModelHandlerV3.class);
-    registerRoute("/bloody/models/(.*)", ModelHandlerBloody.class);
-    registerRoute("/1/cloud_status", CloudStatusHandlerV1.class);
+    registerGET("/1/metadata/modelbuilders/.*", ModelBuildersMetadataHandlerV1.class, "show");
+    registerGET("/1/metadata/modelbuilders", ModelBuildersMetadataHandlerV1.class, "list");
 
     // Data
     Request.addToNavbar(registerRequest(new ImportFiles2()),  "Import Files",           "Data");
@@ -320,39 +326,70 @@ public class RequestServer extends NanoHTTPD {
     }
   }
 
-  public static void registerRoute(String path, Class cls) {
+  /** Registers the request with the request server.  */
+  public static String registerGET   (String url, Class hclass, String hmeth) { return register("GET"   ,url,hclass,hmeth); }
+  public static String registerPUT   (String url, Class hclass, String hmeth) { return register("PUT"   ,url,hclass,hmeth); }
+  public static String registerDELETE(String url, Class hclass, String hmeth) { return register("DELETE",url,hclass,hmeth); }
+  public static String registerPOST  (String url, Class hclass, String hmeth) { return register("POST"  ,url,hclass,hmeth); }
+  private static String register(String method, String url, Class hclass, String hmeth) {
     try {
-      Pattern p = Pattern.compile(path);
-      AbstractHandler handler = (AbstractHandler)cls.getConstructor(String.class).newInstance(path);
-      _routes.put(p, handler);
-    }
-    catch (PatternSyntaxException e) {
-      Log.warn("Caught exception trying to parse path: " + path + "\n" + e);
-    }
-    catch (Exception e) {
-        Log.warn("Caught exception trying to get the constructor for class: " + cls.toString() + "\n" + e);
+      assert lookup(method,url)==null; // Not shadowed
+      Method meth = hclass.getDeclaredMethod(hmeth);
+      _handlers.put(method+url,meth);
+      return url;
+    } catch( NoSuchMethodException nsme ) {
+      throw new Error("NoSuchMethodException: "+hclass.getName()+"."+hmeth);
     }
   }
 
-  public static void unregisterRoute(String path) {
-    try {
-      Pattern p = Pattern.compile(path);
-      _routes.remove(p);
-    }
-    catch (PatternSyntaxException e) {
-      Log.warn("Caught exception trying to parse path: " + path);
-    }
-  }
-
-  public static AbstractHandler getRoute(String path) {
-    for (Map.Entry<Pattern, AbstractHandler> entry : _routes.entrySet()) {
-      Matcher m = entry.getKey().matcher(path);
-      if (m.matches()) {
-        return entry.getValue();
-      }
-    }
+  // Lookup the method/url in the register list, and return a matching Method
+  private static Method lookup( String method, String url ) {
+    String s = method+url;
+    for( String x : _handlers.keySet() )
+      if( x.equals(s) )         // TODO: regex
+        return _handlers.get(x);
     return null;
   }
+
+  // Handling ------------------------------------------------------------------
+  private Schema handle( Request.RequestType type, Method meth, int version, Properties parms ) throws Exception {
+    Schema S;
+    switch( type ) {
+    // case html: // These request-types only dictate the response-type;
+    case java: // the normal action is always done.
+    case json:
+    case xml: {
+      Class x = meth.getDeclaringClass();
+      Class<Handler> clz = (Class<Handler>)x;
+      Handler h = clz.newInstance();
+      return h.handle(version,meth,parms); // Can throw any Exception the handler throws
+    }
+    case query:
+    case help:
+    default:
+      throw H2O.unimpl();
+    }
+  }
+
+  private Response wrap( String http_code, Schema S, RequestStatics.RequestType type ) {
+    // Convert Schema to desired output flavor
+    switch( type ) {
+    case json:   return new Response(http_code, MIME_JSON, new String(S.writeJSON(new AutoBuffer()).buf()));
+/*
+    case xml:  //return new Response(http_code, MIME_XML , new String(S.writeXML (new AutoBuffer()).buf()));
+    case java:
+      throw H2O.unimpl();
+    case html: {
+      RString html = new RString(_htmlTemplate);
+      html.replace("CONTENTS", S.writeHTML(new water.util.DocGen.HTML()).toString());
+      return new Response(http_code, MIME_HTML, html.toString());
+    }
+*/
+    default:
+      throw H2O.fail();
+    }
+  }
+
 
   // Keep spinning until we get to launch the NanoHTTPD
   public static void start() {
@@ -424,6 +461,43 @@ public class RequestServer extends NanoHTTPD {
     Log.info(Sys.HTTPD, log);
   }
 
+  ///////// Stuff for URL parsing brought over from H2O2:
+  /** Returns the name of the request, that is the request url without the
+   *  request suffix.  E.g. converts "/GBM.html/crunk" into "/GBM/crunk" */
+  String requestName(String url) {
+    String s = "."+toString();
+    int i = url.indexOf(s);
+    if( i== -1 ) return url;    // No, or default, type
+    return url.substring(0,i)+url.substring(i+s.length());
+  }
+
+  // Parse version number.  Java has no ref types, bleah, so return the version
+  // number and the "parse pointer" by shift-by-16 compaction.
+  // /1/xxx     --> version 1
+  // /2/xxx     --> version 2
+  // /v1/xxx    --> version 1
+  // /v2/xxx    --> version 2
+  // /latest/xxx--> LATEST_VERSION
+  // /xxx       --> LATEST_VERSION
+  private int parseVersion( String uri ) {
+    if( uri.length() <= 1 || uri.charAt(0) != '/' ) // If not a leading slash, then I am confused
+      return (0<<16)|LATEST_VERSION;
+    if( uri.startsWith("/latest") )
+      return (("/latest".length())<<16)|LATEST_VERSION;
+    int idx=1;                  // Skip the leading slash
+    int version=0;
+    char c = uri.charAt(idx);   // Allow both /### and /v###
+    if( c=='v' ) c = uri.charAt(++idx);
+    while( idx < uri.length() && '0' <= c && c <= '9' ) {
+      version = version*10+(c-'0');
+      c = uri.charAt(++idx);
+    }
+    if( idx > 10 || version > LATEST_VERSION || version < 1 || uri.charAt(idx) != '/' )
+      return (0<<16)|LATEST_VERSION; // Failed number parse or baloney version
+    // Happy happy version
+    return (idx<<16)|version;
+  }
+
   @Override public NanoHTTPD.Response serve( String uri, String method, Properties header, Properties parms ) {
     // Jack priority for user-visible requests
     Thread.currentThread().setPriority(Thread.MAX_PRIORITY-1);
@@ -435,40 +509,45 @@ public class RequestServer extends NanoHTTPD {
 
     maybeLogRequest(uri, method, parms);
 
-    // Are we a new-style request?
-    AbstractHandler handler = getRoute(uri);
-    if (null != handler) {
-      if ("get".equalsIgnoreCase(method)) {
-        return handler.get(this, uri, header, parms);
-      } else if ("post".equalsIgnoreCase(method)) {
-        return handler.post(this, uri, header, parms);
-      } else if ("put".equalsIgnoreCase(method)) {
-        return handler.put(this, uri, header, parms);
-      } else if ("delete".equalsIgnoreCase(method)) {
-        return handler.delete(this, uri, header, parms);
-      } else {
-        Log.warn("Unknown http method, request ignored: " + method);
-        return _http500.serve(this, parms, type);
+    // determine version
+    int version = parseVersion(uri);
+    int idx = version>>16;
+    version &= 0xFFFF;
+    String uripath = uri.substring(idx);
+
+    String path = requestName(uripath); // Strip suffix type from middle of URI
+    Method meth = null;
+    try {
+      // Find handler for url
+      meth = lookup(method,path);
+      if (meth != null) {
+        return wrap(HTTP_OK,handle(type,meth,version,parms),type);
       }
-    } else {
-      try {
-        // determine if we have known resource
-        Request request = _requests.get(requestName);
-        // if the request is not know, treat as resource request, or 404 if not
-        // found
-        if (request == null)
-          return getResource(uri);
-        // Some requests create an instance per call
-        request = request.create(parms);
-        // call the request
-        return request.serve(this,parms,type);
-      } catch( Exception e ) {
-        if(!(e instanceof ExpectedExceptionForDebug))
-          e.printStackTrace();
-        // make sure that no Exception is ever thrown out from the request
-        parms.setProperty(Request.ERROR,e.getClass().getSimpleName()+": "+e.getMessage());
-        return _http500.serve(this,parms,type);
-      }
+    } catch( IllegalArgumentException e ) {
+      return wrap(HTTP_BADREQUEST,new HTTP404V1(e.getMessage(),uri),type);
+    } catch( Exception e ) {
+      // make sure that no Exception is ever thrown out from the request
+      return wrap(e.getMessage()!="unimplemented"? HTTP_INTERNALERROR : HTTP_NOTIMPLEMENTED, new HTTP500V1(e),type);
+    }
+
+    // Wasn't a new type of handler:
+    try {
+      // determine if we have known resource
+      Request request = _requests.get(requestName);
+      // if the request is not know, treat as resource request, or 404 if not
+      // found
+      if (request == null)
+        return getResource(uri);
+      // Some requests create an instance per call
+      request = request.create(parms);
+      // call the request
+      return request.serve(this,parms,type);
+    } catch( Exception e ) {
+      if(!(e instanceof ExpectedExceptionForDebug))
+        e.printStackTrace();
+      // make sure that no Exception is ever thrown out from the request
+      parms.setProperty(Request.ERROR,e.getClass().getSimpleName()+": "+e.getMessage());
+      return _http500.serve(this,parms,type);
     }
   }
 

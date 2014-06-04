@@ -73,6 +73,7 @@ public final class H2O {
   // Convenience error
   public static RuntimeException unimpl() { return new RuntimeException("unimplemented"); }
   public static RuntimeException fail() { return new RuntimeException("do not call"); }
+  public static RuntimeException fail(String msg) { return new RuntimeException(msg); }
 
   // Central /dev/null for ignored exceptions
   public static void ignore(Throwable e)             { ignore(e,"[h2o] Problem ignored: "); }
@@ -1674,7 +1675,7 @@ public final class H2O {
           if( touched > clean_to_age ) { // Too recently touched?
             // But can toss out a byte-array if already deserialized & on disk
             // (no need for both forms).  Note no savings for Chunks, for which m==p._mem
-            if( val.isPersisted() && m != null && p != null && !isChunk ) { 
+            if( val.isPersisted() && m != null && p != null && !isChunk ) {
               val.freeMem();      // Toss serialized form, since can rebuild from POJO
               freed += val._max;
             }

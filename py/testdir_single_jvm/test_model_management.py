@@ -11,7 +11,7 @@ class ModelManagementTestCase(unittest.TestCase):
     def setUpClass(cls):
         global localhost
 
-        cloud_size = 3
+        cloud_size = 5
 
         if h2o.clone_cloud_json is not None:
             print "NOTE: Connecting to existing cloud, and leaving the cloud running afterwards: " + os.path.abspath(h2o.clone_cloud_json)
@@ -30,7 +30,8 @@ class ModelManagementTestCase(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         if h2o.clone_cloud_json is None:
-            h2o.tear_down_cloud()
+            # h2o.tear_down_cloud()
+            None
         else:
             h2o.check_sandbox_for_errors(sandboxIgnoreErrors=False, python_test_name="test_model_management")
 
@@ -142,6 +143,8 @@ class ModelManagementTestCase(unittest.TestCase):
 
         node = h2o.nodes[0]
 
+        num_models = 0
+
         print "##############################################################"
         print "Generating AirlinesTrain GLM2 binary classification model. . ."
         # h2o.glm.FV(y = "IsDepDelayed", x = c("Origin", "Dest", "fDayofMonth", "fYear", "UniqueCarrier", "fDayOfWeek", "fMonth", "DepTime", "ArrTime", "Distance"), data = airlines_train.hex, family = "binomial", alpha=0.05, lambda=1.0e-2, standardize=FALSE, nfolds=0)
@@ -156,6 +159,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'n_folds': 0
         }
         glm_AirlinesTrain_1 = node.GLM(airlines_train_hex, **glm_AirlinesTrain_1_params)
+        num_models = num_models + 1
         # TODO: PUT BACK!
         # h2o_glm.simpleCheckGLM(self, glm_AirlinesTrain_1, None, **glm_AirlinesTrain_1_params)
 
@@ -173,6 +177,7 @@ class ModelManagementTestCase(unittest.TestCase):
             # TODO: what about minobsinnode and shrinkage?!
         }
         gbm_AirlinesTrain_1 = node.gbm(airlines_train_hex, **gbm_AirlinesTrain_1_params)
+        num_models = num_models + 1
 
 
         print "#####################################################################"
@@ -188,6 +193,7 @@ class ModelManagementTestCase(unittest.TestCase):
             # TODO: what about minobsinnode and shrinkage?!
         }
         gbm_AirlinesTrain_2 = node.gbm(airlines_train_hex, **gbm_AirlinesTrain_2_params)
+        num_models = num_models + 1
 
 
         print "####################################################################"
@@ -202,6 +208,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'classification': 1
         }
         rf_AirlinesTrain_1 = node.random_forest(airlines_train_hex, **rf_AirlinesTrain_1_params)
+        num_models = num_models + 1
 
 
         print "#####################################################################"
@@ -216,6 +223,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'classification': 1
         }
         rf_AirlinesTrain_2 = node.random_forest(airlines_train_hex, **rf_AirlinesTrain_2_params)
+        num_models = num_models + 1
 
 
         print "#####################################################################"
@@ -231,6 +239,7 @@ class ModelManagementTestCase(unittest.TestCase):
         }
 # TODO: put back; fails to complete in multinode
 #        speedrf_AirlinesTrain_1 = node.speedrf(airlines_train_hex, **speedrf_AirlinesTrain_1_params)
+#        num_models = num_models + 1
 
 
         print "######################################################################"
@@ -244,6 +253,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'classification': 1
         }
         dl_AirlinesTrain_1 = node.deep_learning(airlines_train_hex, **dl_AirlinesTrain_1_params)
+        num_models = num_models + 1
 
 
         print "##############################################################################################"
@@ -260,6 +270,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'n_folds': 0
         }
         glm_AirlinesTrain_A = node.GLM(airlines_train_hex, **glm_AirlinesTrain_A_params)
+        num_models = num_models + 1
         # TODO: PUT BACK!
         # h2o_glm.simpleCheckGLM(self, glm_AirlinesTrain_A, None, **glm_AirlinesTrain_A_params)
 
@@ -276,6 +287,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'n_folds': 0
         }
         glm_Prostate_1 = node.GLM(prostate_hex, **glm_Prostate_1_params)
+        num_models = num_models + 1
         # TODO: PUT BACK!
         # h2o_glm.simpleCheckGLM(self, glm_Prostate_1, None, **glm_Prostate_1_params)
 
@@ -292,6 +304,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'classification': 1
         }
         rf_Prostate_1 = node.random_forest(prostate_hex, **rf_Prostate_1_params)
+        num_models = num_models + 1
 
 
         print "#####################################################################"
@@ -306,6 +319,7 @@ class ModelManagementTestCase(unittest.TestCase):
         }
 # TODO: put back; fails to complete in multinode
 #        speedrf_Prostate_1 = node.speedrf(prostate_hex, **speedrf_Prostate_1_params)
+#        num_models = num_models + 1
 
 
         print "##############################################"
@@ -320,10 +334,29 @@ class ModelManagementTestCase(unittest.TestCase):
             'n_folds': 0
         }
         glm_Prostate_regression_1 = node.GLM(prostate_hex, **glm_Prostate_regression_1_params)
+        num_models = num_models + 1
         # TODO: PUT BACK!
         # h2o_glm.simpleCheckGLM(self, glm_Prostate_regression_1, None, **glm_Prostate_regression_1_params)
 
+        # We were getting different results for each node.  Bad, bad bad. . .
+        print "Checking " + str(len(h2o.nodes)) + " nodes: "
+        for a_node in h2o.nodes:
+            print "  " + a_node.http_addr + ":" + str(a_node.port)
 
+        found_problem = False
+        for a_node in h2o.nodes:
+            models = a_node.models()
+            got = len(models['models'])
+            print "For node: " + a_node.http_addr + ":" + str(a_node.port) + " checking that we got ",str(num_models), " models. . ."
+            if num_models != got:
+                print "p00p, not enough. . ."
+                found_problem = True
+                print "Got these models: " + repr(models['models'].keys())
+                print "Expected " + str(num_models) + ", got: " + str(got)
+
+            for key, value in models['models'].iteritems():
+                self.assertEquals(value['state'], 'DONE', "Expected state to be DONE for model: " + key)
+        self.assertNotEqual(found_problem, True, "Missing models on at least one node.")
 
 
 class ApiTestCase(ModelManagementTestCase):
