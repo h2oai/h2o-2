@@ -166,11 +166,11 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   public hex.ConfusionMatrix cm() {
     final Errors lasterror = last_scored();
     if (errors == null) return null;
-    water.api.ConfusionMatrix cm = lasterror.validation ?
+    water.api.ConfusionMatrix cm = lasterror.validation || lasterror.num_folds > 0 ?
             lasterror.valid_confusion_matrix :
             lasterror.train_confusion_matrix;
     if (cm == null || cm.cm == null) {
-      if (lasterror.validation) {
+      if (lasterror.validation || lasterror.num_folds > 0) {
         return new ConfMat(lasterror.valid_err, lasterror.validAUC != null ? lasterror.validAUC.F1() : 0);
       } else {
         return new ConfMat(lasterror.train_err, lasterror.trainAUC != null ? lasterror.trainAUC.F1() : 0);
@@ -183,7 +183,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   @Override
   public double mse() {
     if (errors == null) return super.mse();
-    return last_scored().validation ? last_scored().valid_mse : last_scored().train_mse;
+    return last_scored().validation || last_scored().num_folds > 0 ? last_scored().valid_mse : last_scored().train_mse;
   }
 
   @Override

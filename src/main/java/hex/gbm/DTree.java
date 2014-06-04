@@ -1045,9 +1045,11 @@ public class DTree extends Iced {
       // Generate a data in separated class since we do not want to influence size of constant pool of model class
       if( _dataKey != null ) {
         Value dataval = DKV.get(_dataKey);
-        water.fvec.Frame frdata = ValueArray.asFrame(dataval);
-        water.fvec.Frame frsub = frdata.subframe(_names);
-        JCodeGen.toClass(fileContextSB, "// Sample of data used by benchmark\nclass DataSample", "DATA", frsub, 10, "Sample test data.");
+        if (dataval != null) {
+          water.fvec.Frame frdata = ValueArray.asFrame(dataval);
+          water.fvec.Frame frsub = frdata.subframe(_names);
+          JCodeGen.toClass(fileContextSB, "// Sample of data used by benchmark\nclass DataSample", "DATA", frsub, 10, "Sample test data.");
+        }
       }
       return sb;
     }
