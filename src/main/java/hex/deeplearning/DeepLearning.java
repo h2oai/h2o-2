@@ -689,7 +689,7 @@ public class DeepLearning extends Job.ValidatedJob {
   }
 
   @Override
-  public final void execImpl() {
+  protected final void execImpl() {
     buildModel();
     if (n_folds > 0) CrossValUtils.crossValidate(this);
     delete();
