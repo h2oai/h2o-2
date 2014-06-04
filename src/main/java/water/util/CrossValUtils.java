@@ -28,6 +28,7 @@ public class CrossValUtils {
       job.crossValidate(splits, cv_preds, offsets, i); //this removes the enum-ified response!
       if (!job.keep_cross_validation_splits) for(Frame f : splits) f.delete();
     }
+    if (job.state != Job.JobState.RUNNING) return;
     boolean put_back = UKV.get(job.response._key) == null;
     if (put_back) DKV.put(job.response._key, job.response); //put enum-ified response back to K-V store
     ((Model)UKV.get(job.destination_key)).scoreCrossValidation(job, job.source, job.response, cv_preds, offsets);
