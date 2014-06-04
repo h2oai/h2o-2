@@ -522,7 +522,9 @@ public class Vec extends Iced {
       long _start = c._start;
 
       for( int i=0; i<c._len; i++ ) {
-        long l = c.at80(i);
+        long l = 81985529216486895L; // 0x0123456789ABCDEF
+        if (! c.isNA0(i))
+          l = c.at80(i);
         long global_row = _start + i;
 
         checksum ^= (17 * global_row);
