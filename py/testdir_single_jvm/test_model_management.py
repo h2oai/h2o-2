@@ -4,6 +4,8 @@ import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_exec
 import h2o_glm, h2o_gbm, h2o_rf # TODO: DeepLearning
 
 class ModelManagementTestCase(unittest.TestCase):
+    tear_down_cloud = True
+
     def tearDown(self):
         h2o.check_sandbox_for_errors()
 
@@ -30,8 +32,10 @@ class ModelManagementTestCase(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         if h2o.clone_cloud_json is None:
-            # h2o.tear_down_cloud()
-            None
+            if ModelManagementTestCase.tear_down_cloud:
+                h2o.tear_down_cloud()
+            else:
+                None
         else:
             h2o.check_sandbox_for_errors(sandboxIgnoreErrors=False, python_test_name="test_model_management")
 
@@ -99,17 +103,34 @@ class ModelManagementTestCase(unittest.TestCase):
         airlines_test_hex = self.import_frame('airlines_test.hex', 'smalldata', 'AirlinesTest.csv.zip', 'airlines', 2691, 12)
 
         # get the hashes
-        frames = node.frames()
-        self.assertKeysExist(frames, 'frames', ['airlines_train.hex'])
-        self.assertKeysExist(frames, 'frames', ['airlines_test.hex'])
-        self.assertKeysExist(frames, 'frames/airlines_test.hex', ['id'])
-        test_hash_before = frames['frames']['airlines_test.hex']['id']
-        train_hash_before = frames['frames']['airlines_train.hex']['id']
+        print "Checking " + str(len(h2o.nodes)) + " nodes for frames: "
+        for a_node in h2o.nodes:
+            print "  " + a_node.http_addr + ":" + str(a_node.port)
 
-        self.assertNotEqual("ffffffffffffffff", test_hash_before);
-        self.assertNotEqual("ffffffffffffffff", train_hash_before);
-        self.assertNotEqual("0", test_hash_before);
-        self.assertNotEqual("0", train_hash_before);
+        test_hash_before = -1
+        train_hash_before = -1
+        for a_node in h2o.nodes:
+            frames = a_node.frames()
+            self.assertKeysExist(frames, 'frames', ['airlines_train.hex'])
+            self.assertKeysExist(frames, 'frames', ['airlines_test.hex'])
+            self.assertKeysExist(frames, 'frames/airlines_test.hex', ['id'])
+
+            # Make sure we have the same checksums everywhere:
+            tmp = frames['frames']['airlines_test.hex']['id']
+            if test_hash_before != -1:
+                self.assertEquals(tmp, test_hash_before, "Same hash on every node for airlines_test.hex")
+            test_hash_before = tmp
+
+            # Make sure we have the same checksums everywhere:
+            tmp = frames['frames']['airlines_train.hex']['id']
+            if train_hash_before != -1:
+                self.assertEquals(tmp, train_hash_before, "Same hash on every node for airlines_train.hex")
+            train_hash_before = tmp
+
+            self.assertNotEqual("ffffffffffffffff", test_hash_before);
+            self.assertNotEqual("ffffffffffffffff", train_hash_before);
+            self.assertNotEqual("0", test_hash_before);
+            self.assertNotEqual("0", train_hash_before);
 
         # Add new proper boolean response columns
         self.create_new_boolean('airlines_train.hex', 'IsDepDelayed_REC', 'IsDepDelayed_REC_recoded')
@@ -134,7 +155,6 @@ class ModelManagementTestCase(unittest.TestCase):
         
 
     def create_models(self, frame_keys):
-
         prostate_hex, airlines_train_hex, airlines_test_hex = frame_keys
 
         self.assertIsNotNone(prostate_hex)
@@ -339,7 +359,7 @@ class ModelManagementTestCase(unittest.TestCase):
         # h2o_glm.simpleCheckGLM(self, glm_Prostate_regression_1, None, **glm_Prostate_regression_1_params)
 
         # We were getting different results for each node.  Bad, bad bad. . .
-        print "Checking " + str(len(h2o.nodes)) + " nodes: "
+        print "Checking " + str(len(h2o.nodes)) + " nodes for models: "
         for a_node in h2o.nodes:
             print "  " + a_node.http_addr + ":" + str(a_node.port)
 
