@@ -701,9 +701,7 @@ public class DTree extends Iced {
     // Score per line per tree
     public void score0(double data[], float preds[], int treeIdx) {
       CompressedTree ts[] = ctree(treeIdx);
-      for( int c=0; c<ts.length; c++ )
-        if( ts[c] != null )
-          preds[ts.length==1?0:c+1] += ts[c].score(data);
+      DTreeUtils.scoreTree(data, preds, ts);
     }
 
     /** Delete model trees */

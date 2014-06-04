@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.Random;
 
 import hex.gbm.DTree.TreeModel.CompressedTree;
+import hex.gbm.DTreeUtils;
 import water.*;
 import water.fvec.Chunk;
 
@@ -13,7 +14,7 @@ import water.fvec.Chunk;
  * <p>It prepares voter per tree and also marks
  * rows which were consider out-of-bag.</p>
  */
-class OOBScorer extends MRTask2<OOBScorer> {
+/* package */ class OOBScorer extends MRTask2<OOBScorer> {
   /* @IN */ final private int _ncols;
   /* @IN */ private final int _nclass;
   /* @IN */ private final float _rate;
@@ -80,8 +81,6 @@ class OOBScorer extends MRTask2<OOBScorer> {
   private Chunk chk_resp( Chunk chks[] ) { return chks[_ncols]; }
 
   private void score0(double data[], float preds[], CompressedTree[] ts) {
-    for( int c=0; c<ts.length; c++ )
-      if( ts[c] != null )
-        preds[ts.length==1?0:c+1] += ts[c].score(data);
+    DTreeUtils.scoreTree(data, preds, ts);
   }
 }
