@@ -25,11 +25,11 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         avgMichalSize = 237270000
         bucket = 'home-0xdiag-datasets'
-        importFolderPath = 'manyfiles-nflx'
+        importFolderPath = 'manyfiles-nflx-gz'
         print "Using non-gz'ed files in", importFolderPath
         csvFilenameList= [
             # ("*[1][0][0].dat", "file_1_A.dat", 1 * avgMichalSize, 1800),
-            ("*[1][0-4][0-9].dat", "file_50_A.dat", 50 * avgMichalSize, 1800),
+            ("*[1][0-4][0-9].dat.gz", "file_50_A.dat", 50 * avgMichalSize, 1800),
             # ("*[1][0-4][0-9].dat", "file_50_A.dat", 50 * avgMichalSize, 1800),
             # ("*[1][0-4][0-9].dat", "file_50_A.dat", 50 * avgMichalSize, 1800),
         ]
@@ -50,10 +50,9 @@ class Basic(unittest.TestCase):
             print "\n Problem if this is not empty: importFailList:", h2o.dump_json(importFailList)
 
 
-            (importResult, importPattern) = h2i.import_only(bucket=bucket, path=csvPathname, schema='local')
-            importFullList = importResult['files']
-            importFailList = importResult['fails']
-            print "\n Problem if this is not empty: importFailList:", h2o.dump_json(importFailList)
+            parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local')
+            execExpr="A.hex=%s" % parseResult['destination_key']
+            h2e.exec_expr(execExpr=execExpr, timeoutSecs=180)
 
             h2o_cmd.runStoreView(timeoutSecs=60)
 
