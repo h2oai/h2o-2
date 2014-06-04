@@ -101,9 +101,7 @@ class Basic(unittest.TestCase):
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
-            iterations = glm['GLMModel']['iterations']
-
-            algo = "GLM " + str(iterations) + " iterations"
+            algo = "GLM "
             l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs'.format(
                 len(h2o.nodes), tryHeap, algo, csvFilename, elapsed)
             print l
