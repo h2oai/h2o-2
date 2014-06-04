@@ -1011,8 +1011,9 @@ public class DeepLearning extends Job.ValidatedJob {
 
     // HACK: update the state of the model's Job/parameter object
     // (since we cloned the Job/parameters several times and we're not sharing a reference)
-    DeepLearningModel m = DKV.get(dest()).get();
-    if (m != null) {
+    Value v = DKV.get(dest());
+    if (v != null) {
+      DeepLearningModel m = v.get();
       m.get_params().state = state;
       DKV.put(dest(), m);
     }
