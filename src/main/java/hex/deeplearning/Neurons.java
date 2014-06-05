@@ -148,14 +148,14 @@ public abstract class Neurons {
     if (!(this instanceof Input)) {
       _previous = neurons[index-1]; //incoming neurons
       _minfo = minfo;
-      _w = minfo.get_weights(index-1); //incoming weights
+      _w = minfo.get_weights(index-1-(params.autoencoder && index == neurons.length-1 ? 1 : 0)); //incoming weights
       _b = minfo.get_biases(index-1); //bias for this layer (starting at hidden layer)
       if (minfo.has_momenta()) {
-        _wm = minfo.get_weights_momenta(index-1); //incoming weights
+        _wm = minfo.get_weights_momenta(index-1-(params.autoencoder && index == neurons.length-1 ? 1 : 0)); //incoming weights
         _bm = minfo.get_biases_momenta(index-1); //bias for this layer (starting at hidden layer)
       }
       if (minfo.adaDelta()) {
-        _ada_dx_g = minfo.get_ada_dx_g(index-1);
+        _ada_dx_g = minfo.get_ada_dx_g(index-1-(params.autoencoder && index == neurons.length-1 ? 1 : 0));
         _bias_ada_dx_g = minfo.get_biases_ada_dx_g(index - 1);
       }
       _shortcut = (params.fast_mode || (
@@ -704,6 +704,39 @@ public abstract class Neurons {
       else {
         super.fprop(seed, false);
         Utils.mult(_a.raw(), (float)params.hidden_dropout_ratios[_index]);
+      }
+    }
+  }
+
+
+  /**
+   * TanhPrime neurons - for auto-encoder
+   */
+  public static class TanhPrime extends Neurons {
+    public TanhPrime(int units) { super(units); }
+    @Override protected void fprop(long seed, boolean training) {
+      gemv((DenseVector)_a, _w, _previous._a, _b, _dropout != null ? _dropout.bits() : null);
+      final int rows = _a.size();
+      for( int row = 0; row < rows; row++ ) {
+        _a.set(row, 1f - 2f / (1f + (float)Math.exp(2*_a.get(row)))); //evals faster than tanh(x), but is slightly less numerically stable - OK
+      }
+    }
+    // Computing partial derivative g = dE/dnet = dE/dy * dy/dnet, where dE/dy is the backpropagated error
+    // dy/dnet = (1 - a^2) for y(net) = tanh(net)
+    protected void bprop() {
+      long processed = _minfo.get_processed_total();
+      float m = momentum(processed);
+      float r = rate(processed) * (1 - m);
+      for( int o = 0; o < _a.size(); o++ ) {
+        assert _previous._previous.units == units;
+        float e = _previous._previous._a.get(o) - _a.get(o);
+        float g = e;
+        for( int i = 0; i < _previous._a.size(); i++ ) {
+          if( _previous._e != null )
+            _previous._e.add(i, g * _w.get(i,o));
+          _w.add(i, o, (float) (r * (g * _previous._a.get(i) - _w.get(i,o) * params.l2 - Math.signum(_w.get(i,o)) * params.l1)));
+        }
+        _b.add(o, r * g);
       }
     }
   }

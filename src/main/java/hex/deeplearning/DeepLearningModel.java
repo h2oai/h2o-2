@@ -232,11 +232,12 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     // accessors to (shared) weights and biases - those will be updated racily (c.f. Hogwild!)
     boolean has_momenta() { return get_params().momentum_start != 0 || get_params().momentum_stable != 0; }
     boolean adaDelta() { return get_params().adaptive_rate; }
-    public final Neurons.Matrix get_weights(int i) { return dense_row_weights[i] == null ? dense_col_weights[i] : dense_row_weights[i]; }
+    public int index_helper(int i) { return get_params().autoencoder && i == get_params().hidden.length+1 ? i-1 : i; }
+    public final Neurons.Matrix get_weights(int i) { i = index_helper(i); return dense_row_weights[i] == null ? dense_col_weights[i] : dense_row_weights[i]; }
     public final Neurons.DenseVector get_biases(int i) { return biases[i]; }
-    public final Neurons.Matrix get_weights_momenta(int i) { return dense_row_weights_momenta[i] == null ? dense_col_weights_momenta[i] : dense_row_weights_momenta[i]; }
+    public final Neurons.Matrix get_weights_momenta(int i) { i = index_helper(i); return dense_row_weights_momenta[i] == null ? dense_col_weights_momenta[i] : dense_row_weights_momenta[i]; }
     public final Neurons.DenseVector get_biases_momenta(int i) { return biases_momenta[i]; }
-    public final Neurons.Matrix get_ada_dx_g(int i) { return dense_row_ada_dx_g[i] == null ? dense_col_ada_dx_g[i] : dense_row_ada_dx_g[i]; }
+    public final Neurons.Matrix get_ada_dx_g(int i) { i = index_helper(i); return dense_row_ada_dx_g[i] == null ? dense_col_ada_dx_g[i] : dense_row_ada_dx_g[i]; }
     public final Neurons.DenseVector get_biases_ada_dx_g(int i) { return biases_ada_dx_g[i]; }
 
     @API(help = "Model parameters", json = true)
@@ -289,7 +290,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       this.job = job;
       data_info = dinfo;
       final int num_input = dinfo.fullN();
-      final int num_output = get_params().classification ? dinfo._adaptedFrame.domains()[dinfo._adaptedFrame.domains().length-1].length : 1;
+      final int num_output = get_params().autoencoder ? num_input : get_params().classification ? dinfo._adaptedFrame.domains()[dinfo._adaptedFrame.domains().length-1].length : 1;
       assert(num_input > 0);
       assert(num_output > 0);
       if (has_momenta() && adaDelta()) throw new IllegalArgumentException("Cannot have non-zero momentum and adaptive rate at the same time.");
@@ -299,15 +300,22 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       units[0] = num_input;
       System.arraycopy(get_params().hidden, 0, units, 1, layers);
       units[layers+1] = num_output;
+      final boolean ae = get_params().autoencoder;
       // weights (to connect layers)
-      dense_row_weights = new Neurons.DenseRowMatrix[layers+1];
-      dense_col_weights = new Neurons.DenseColMatrix[layers+1];
+      dense_row_weights = new Neurons.DenseRowMatrix[ae ? 1 : layers+1];
+      dense_col_weights = new Neurons.DenseColMatrix[ae ? 1 : layers+1];
 
       // decide format of weight matrices row-major or col-major
-      if (get_params().col_major) dense_col_weights[0] = new Neurons.DenseColMatrix(units[1], units[0]);
+      if (get_params().col_major) {
+        if (ae) throw H2O.unimpl();
+        dense_col_weights[0] = new Neurons.DenseColMatrix(units[1], units[0]);
+      }
       else dense_row_weights[0] = new Neurons.DenseRowMatrix(units[1], units[0]);
-      for (int i=1; i<=layers; ++i)
-        dense_row_weights[i] = new Neurons.DenseRowMatrix(units[i+1] /*rows*/, units[i] /*cols*/);
+      // auto-encoder: the two matrices are tranposed version of each other (only need one)
+      if (!ae) {
+        for (int i = 1; i <= layers; ++i)
+          dense_row_weights[i] = new Neurons.DenseRowMatrix(units[i + 1] /*rows*/, units[i] /*cols*/);
+      }
 
       // biases (only for hidden layers and output layer)
       biases = new Neurons.DenseVector[layers+1];
@@ -377,7 +385,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
             continue;
           }
           else if (i < neurons.length-1) {
-            sb.append("  " + Utils.formatPct(neurons[i].params.hidden_dropout_ratios[i-1]) + " ");
+            sb.append("  " + Utils.formatPct(neurons[i].params.hidden_dropout_ratios[i - 1]) + " ");
           } else {
             sb.append("          ");
           }
@@ -713,137 +721,147 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
                 + ". Processed " + String.format("%,d", samples) + " samples" + " (" + String.format("%.3f", epoch_counter) + " epochs)."
                 + " Speed: " + String.format("%.3f", 1000.*samples/run_time) + " samples/sec.");
       }
+
       // this is potentially slow - only do every so often
       if( !keep_running ||
               (sinceLastScore > get_params().score_interval*1000 //don't score too often
                       &&(double)(_timeLastScoreEnd-_timeLastScoreStart)/sinceLastScore < get_params().score_duty_cycle) ) { //duty cycle
         final boolean printme = !get_params().quiet_mode;
-        if (printme) Log.info("Scoring the model.");
         _timeLastScoreStart = now;
-        // compute errors
-        Errors err = new Errors();
-        err.classification = isClassifier();
-        assert(err.classification == get_params().classification);
-        err.training_time_ms = run_time;
-        err.epoch_counter = epoch_counter;
-        err.validation = ftest != null;
-        err.num_folds = get_params().n_folds;
-        err.training_samples = model_info().get_processed_total();
-        err.score_training_samples = ftrain.numRows();
-        err.train_confusion_matrix = new ConfusionMatrix();
-        final int hit_k = Math.min(nclasses(), get_params().max_hit_ratio_k);
-        if (err.classification && nclasses()==2) err.trainAUC = new AUC();
-        if (err.classification && nclasses() > 2 && hit_k > 0) {
-          err.train_hitratio = new HitRatio();
-          err.train_hitratio.set_max_k(hit_k);
-        }
         if (get_params().diagnostics) model_info().computeStats();
-        final String m = model_info().toString();
-        if (m.length() > 0) Log.info(m);
-        final Frame trainPredict = score(ftrain, false);
-        final double trainErr = calcError(ftrain, ftrain.lastVec(), trainPredict, trainPredict, "training",
-                printme, get_params().max_confusion_matrix_size, err.train_confusion_matrix, err.trainAUC, err.train_hitratio);
-        if (isClassifier()) err.train_err = trainErr;
-        else err.train_mse = trainErr;
-
-        trainPredict.delete();
-
-        final boolean adaptCM = (isClassifier() && vadaptor.needsAdaptation2CM());
-        if (err.validation) {
-          assert ftest != null;
-          err.score_validation_samples = ftest.numRows();
-          err.valid_confusion_matrix = new ConfusionMatrix();
-          if (err.classification && nclasses()==2) err.validAUC = new AUC();
+        if (get_params().autoencoder) {
+          if (printme) Log.info("Scoring the auto-encoder.");
+          final Frame reconstructed = score(ftrain);
+          Log.info(reconstructed.toStringAll());
+        }
+        else {
+          if (printme) Log.info("Scoring the model.");
+          // compute errors
+          Errors err = new Errors();
+          err.classification = isClassifier();
+          assert (err.classification == get_params().classification);
+          err.training_time_ms = run_time;
+          err.epoch_counter = epoch_counter;
+          err.validation = ftest != null;
+          err.num_folds = get_params().n_folds;
+          err.training_samples = model_info().get_processed_total();
+          err.score_training_samples = ftrain.numRows();
+          err.train_confusion_matrix = new ConfusionMatrix();
+          final int hit_k = Math.min(nclasses(), get_params().max_hit_ratio_k);
+          if (err.classification && nclasses() == 2) err.trainAUC = new AUC();
           if (err.classification && nclasses() > 2 && hit_k > 0) {
-            err.valid_hitratio = new HitRatio();
-            err.valid_hitratio.set_max_k(hit_k);
+            err.train_hitratio = new HitRatio();
+            err.train_hitratio.set_max_k(hit_k);
           }
-          final String adaptRespName = vadaptor.adaptedValidationResponse(responseName());
-          Vec adaptCMresp = null;
-          if (adaptCM) {
-            Vec[] v = ftest.vecs();
-            assert(ftest.find(adaptRespName) == v.length-1); //make sure to have (adapted) response in the test set
-            adaptCMresp = ftest.remove(v.length-1); //model would remove any extra columns anyway (need to keep it here for later)
-          }
+          final String m = model_info().toString();
+          if (m.length() > 0) Log.info(m);
+          final Frame trainPredict = score(ftrain, false);
+          final double trainErr = calcError(ftrain, ftrain.lastVec(), trainPredict, trainPredict, "training",
+                  printme, get_params().max_confusion_matrix_size, err.train_confusion_matrix, err.trainAUC, err.train_hitratio);
+          if (isClassifier()) err.train_err = trainErr;
+          else err.train_mse = trainErr;
 
-          final Frame validPredict = score(ftest, adaptCM);
-          final Frame hitratio_validPredict = new Frame(validPredict);
-          // Adapt output response domain, in case validation domain is different from training domain
-          // Note: doesn't change predictions, just the *possible* label domain
-          if (adaptCM) {
-            assert(adaptCMresp != null);
-            assert(ftest.find(adaptRespName) == -1);
-            ftest.add(adaptRespName, adaptCMresp);
-            final Vec CMadapted = vadaptor.adaptModelResponse2CM(validPredict.vecs()[0]);
-            validPredict.replace(0, CMadapted); //replace label
-            validPredict.add("to_be_deleted", CMadapted); //keep the Vec around to be deleted later (no leak)
-          }
-          final double validErr = calcError(ftest, ftest.lastVec(), validPredict, hitratio_validPredict, "validation",
-                  printme, get_params().max_confusion_matrix_size, err.valid_confusion_matrix, err.validAUC, err.valid_hitratio);
-          if (isClassifier()) err.valid_err = validErr;
-          else err.valid_mse = validErr;
-          validPredict.delete();
-        }
+          trainPredict.delete();
 
-        if (get_params().variable_importances) {
-          if (!get_params().quiet_mode) Log.info("Computing variable importances.");
-          final float [] vi = model_info().computeVariableImportances();
-          err.variable_importances = new VarImp(vi, Arrays.copyOfRange(model_info().data_info().coefNames(), 0, vi.length));
-        }
+          final boolean adaptCM = (isClassifier() && vadaptor.needsAdaptation2CM());
+          if (err.validation) {
+            assert ftest != null;
+            err.score_validation_samples = ftest.numRows();
+            err.valid_confusion_matrix = new ConfusionMatrix();
+            if (err.classification && nclasses() == 2) err.validAUC = new AUC();
+            if (err.classification && nclasses() > 2 && hit_k > 0) {
+              err.valid_hitratio = new HitRatio();
+              err.valid_hitratio.set_max_k(hit_k);
+            }
+            final String adaptRespName = vadaptor.adaptedValidationResponse(responseName());
+            Vec adaptCMresp = null;
+            if (adaptCM) {
+              Vec[] v = ftest.vecs();
+              assert (ftest.find(adaptRespName) == v.length - 1); //make sure to have (adapted) response in the test set
+              adaptCMresp = ftest.remove(v.length - 1); //model would remove any extra columns anyway (need to keep it here for later)
+            }
 
-        // only keep confusion matrices for the last step if there are fewer than specified number of output classes
-        if (err.train_confusion_matrix.cm != null
-                && err.train_confusion_matrix.cm.length-1 >= get_params().max_confusion_matrix_size) {
-          err.train_confusion_matrix = null;
-          err.valid_confusion_matrix = null;
-        }
-
-        _timeLastScoreEnd = System.currentTimeMillis();
-        err.scoring_time = System.currentTimeMillis() - now;
-        // enlarge the error array by one, push latest score back
-        if (errors == null) {
-          errors = new Errors[]{err};
-        } else {
-          Errors[] err2 = new Errors[errors.length+1];
-          System.arraycopy(errors, 0, err2, 0, errors.length);
-          err2[err2.length-1] = err;
-          errors = err2;
-        }
-        // always keep a copy of the best model so far (based on the following criterion)
-        if (error() < _bestError && get_params().best_model_key != null) {
-          _actual_best_model_key = get_params().best_model_key;
-          final Key bestModelKey = _actual_best_model_key;
-          if (!get_params().quiet_mode) Log.info("Error reduced from " + _bestError + " to " + error() + ". Storing best model so far under key " + bestModelKey.toString() + ".");
-          _bestError = error();
-          final Key job = null;
-          final DeepLearningModel cp = this;
-          DeepLearningModel bestModel = new DeepLearningModel(cp, bestModelKey, job, model_info().data_info());
-          bestModel.delete_and_lock(job);
-          bestModel.unlock(job);
-          assert(UKV.get(bestModelKey) != null);
-          assert(bestModel.compareTo(this) <= 0);
-          assert(((DeepLearningModel)UKV.get(bestModelKey)).error() == _bestError);
-
-          // debugging check
-          if (false) {
-            bestModel = UKV.get(bestModelKey);
-            final Frame fr = ftest != null ? ftest : ftrain;
-            final Frame bestPredict = bestModel.score(fr, ftest != null ? adaptCM : false);
-            final Frame hitRatio_bestPredict = new Frame(bestPredict);
+            final Frame validPredict = score(ftest, adaptCM);
+            final Frame hitratio_validPredict = new Frame(validPredict);
             // Adapt output response domain, in case validation domain is different from training domain
             // Note: doesn't change predictions, just the *possible* label domain
             if (adaptCM) {
-              final Vec CMadapted = vadaptor.adaptModelResponse2CM(bestPredict.vecs()[0]);
-              bestPredict.replace(0, CMadapted); //replace label
-              bestPredict.add("to_be_deleted", CMadapted); //keep the Vec around to be deleted later (no leak)
+              assert (adaptCMresp != null);
+              assert (ftest.find(adaptRespName) == -1);
+              ftest.add(adaptRespName, adaptCMresp);
+              final Vec CMadapted = vadaptor.adaptModelResponse2CM(validPredict.vecs()[0]);
+              validPredict.replace(0, CMadapted); //replace label
+              validPredict.add("to_be_deleted", CMadapted); //keep the Vec around to be deleted later (no leak)
             }
-            final double err3 = calcError(fr, fr.lastVec(), bestPredict, hitRatio_bestPredict, "cross-check",
-                    printme, get_params().max_confusion_matrix_size, new water.api.ConfusionMatrix(), isClassifier() && nclasses() == 2 ? new AUC() : null, null);
-            if (isClassifier()) assert (ftest != null ? Math.abs(err.valid_err - err3) < 1e-5 : Math.abs(err.train_err - err3) < 1e-5);
-            else assert (ftest != null ? Math.abs(err.valid_mse - err3) < 1e-5 : Math.abs(err.train_mse - err3) < 1e-5);
-            bestPredict.delete();
+            final double validErr = calcError(ftest, ftest.lastVec(), validPredict, hitratio_validPredict, "validation",
+                    printme, get_params().max_confusion_matrix_size, err.valid_confusion_matrix, err.validAUC, err.valid_hitratio);
+            if (isClassifier()) err.valid_err = validErr;
+            else err.valid_mse = validErr;
+            validPredict.delete();
           }
-        }
+
+          if (get_params().variable_importances) {
+            if (!get_params().quiet_mode) Log.info("Computing variable importances.");
+            final float[] vi = model_info().computeVariableImportances();
+            err.variable_importances = new VarImp(vi, Arrays.copyOfRange(model_info().data_info().coefNames(), 0, vi.length));
+          }
+
+          // only keep confusion matrices for the last step if there are fewer than specified number of output classes
+          if (err.train_confusion_matrix.cm != null
+                  && err.train_confusion_matrix.cm.length - 1 >= get_params().max_confusion_matrix_size) {
+            err.train_confusion_matrix = null;
+            err.valid_confusion_matrix = null;
+          }
+
+          _timeLastScoreEnd = System.currentTimeMillis();
+          err.scoring_time = System.currentTimeMillis() - now;
+          // enlarge the error array by one, push latest score back
+          if (errors == null) {
+            errors = new Errors[]{err};
+          } else {
+            Errors[] err2 = new Errors[errors.length + 1];
+            System.arraycopy(errors, 0, err2, 0, errors.length);
+            err2[err2.length - 1] = err;
+            errors = err2;
+          }
+          // always keep a copy of the best model so far (based on the following criterion)
+          if (error() < _bestError && get_params().best_model_key != null) {
+            _actual_best_model_key = get_params().best_model_key;
+            final Key bestModelKey = _actual_best_model_key;
+            if (!get_params().quiet_mode)
+              Log.info("Error reduced from " + _bestError + " to " + error() + ". Storing best model so far under key " + bestModelKey.toString() + ".");
+            _bestError = error();
+            final Key job = null;
+            final DeepLearningModel cp = this;
+            DeepLearningModel bestModel = new DeepLearningModel(cp, bestModelKey, job, model_info().data_info());
+            bestModel.delete_and_lock(job);
+            bestModel.unlock(job);
+            assert (UKV.get(bestModelKey) != null);
+            assert (bestModel.compareTo(this) <= 0);
+            assert (((DeepLearningModel) UKV.get(bestModelKey)).error() == _bestError);
+
+            // debugging check
+            if (false) {
+              bestModel = UKV.get(bestModelKey);
+              final Frame fr = ftest != null ? ftest : ftrain;
+              final Frame bestPredict = bestModel.score(fr, ftest != null ? adaptCM : false);
+              final Frame hitRatio_bestPredict = new Frame(bestPredict);
+              // Adapt output response domain, in case validation domain is different from training domain
+              // Note: doesn't change predictions, just the *possible* label domain
+              if (adaptCM) {
+                final Vec CMadapted = vadaptor.adaptModelResponse2CM(bestPredict.vecs()[0]);
+                bestPredict.replace(0, CMadapted); //replace label
+                bestPredict.add("to_be_deleted", CMadapted); //keep the Vec around to be deleted later (no leak)
+              }
+              final double err3 = calcError(fr, fr.lastVec(), bestPredict, hitRatio_bestPredict, "cross-check",
+                      printme, get_params().max_confusion_matrix_size, new water.api.ConfusionMatrix(), isClassifier() && nclasses() == 2 ? new AUC() : null, null);
+              if (isClassifier())
+                assert (ftest != null ? Math.abs(err.valid_err - err3) < 1e-5 : Math.abs(err.train_err - err3) < 1e-5);
+              else
+                assert (ftest != null ? Math.abs(err.valid_mse - err3) < 1e-5 : Math.abs(err.train_mse - err3) < 1e-5);
+              bestPredict.delete();
+            }
+          }
 //        else {
 //          // keep output JSON small
 //          if (errors.length > 1) {
@@ -853,9 +871,10 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 //          }
 //        }
 
-        // print the freshly scored model to ASCII
-        for (String s : toString().split("\n")) Log.info(s);
-        if (printme) Log.info("Time taken for scoring and diagnostics: " + PrettyPrint.msecs(err.scoring_time, true));
+          // print the freshly scored model to ASCII
+          for (String s : toString().split("\n")) Log.info(s);
+          if (printme) Log.info("Time taken for scoring and diagnostics: " + PrettyPrint.msecs(err.scoring_time, true));
+        }
       }
       if (model_info().unstable()) {
         Log.err("Canceling job since the model is unstable (exponential growth observed).");
@@ -917,20 +936,27 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     ((Neurons.Input)neurons[0]).setInput(-1, data);
     DeepLearningTask.step(-1, neurons, model_info, false, null);
     float[] out = neurons[neurons.length - 1]._a.raw();
-    if (isClassifier()) {
-      assert(preds.length == out.length+1);
-      for (int i=0; i<preds.length-1; ++i) {
-        preds[i+1] = out[i];
-        if (Float.isNaN(preds[i+1])) throw new RuntimeException("Predicted class probability NaN!");
+    if (get_params().autoencoder) {
+      assert(preds.length == out.length);
+      for (int i = 0; i < out.length; ++i) {
+        preds[i] = out[i];
       }
-      preds[0] = ModelUtils.getPrediction(preds, data);
     } else {
-      assert(preds.length == 1 && out.length == 1);
-      if (model_info().data_info()._normRespMul != null)
-        preds[0] = (float)(out[0] / model_info().data_info()._normRespMul[0] + model_info().data_info()._normRespSub[0]);
-      else
-        preds[0] = out[0];
-      if (Float.isNaN(preds[0])) throw new RuntimeException("Predicted regression target NaN!");
+      if (isClassifier()) {
+        assert (preds.length == out.length + 1);
+        for (int i = 0; i < preds.length - 1; ++i) {
+          preds[i + 1] = out[i];
+          if (Float.isNaN(preds[i + 1])) throw new RuntimeException("Predicted class probability NaN!");
+        }
+        preds[0] = ModelUtils.getPrediction(preds, data);
+      } else {
+        assert (preds.length == 1 && out.length == 1);
+        if (model_info().data_info()._normRespMul != null)
+          preds[0] = (float) (out[0] / model_info().data_info()._normRespMul[0] + model_info().data_info()._normRespSub[0]);
+        else
+          preds[0] = out[0];
+        if (Float.isNaN(preds[0])) throw new RuntimeException("Predicted regression target NaN!");
+      }
     }
     return preds;
   }

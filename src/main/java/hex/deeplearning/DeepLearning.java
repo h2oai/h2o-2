@@ -23,6 +23,9 @@ public class DeepLearning extends Job.ValidatedJob {
   public static DocGen.FieldDoc[] DOC_FIELDS;
   public static final String DOC_GET = "Deep Learning";
 
+  @API(help = "Auto-Encoder", filter= Default.class, json = true)
+  public boolean autoencoder = false;
+
   /**
    * A model key associated with a previously trained Deep Learning
    * model. This option allows users to build a new model as a
@@ -466,7 +469,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * Activation functions
    */
   public enum Activation {
-    Tanh, TanhWithDropout, Rectifier, RectifierWithDropout, Maxout, MaxoutWithDropout
+    Tanh, TanhWithDropout, Rectifier, RectifierWithDropout, Maxout, MaxoutWithDropout, TanhPrime
   }
 
   /**
@@ -967,6 +970,7 @@ public class DeepLearning extends Job.ValidatedJob {
               new DeepLearningTask2(train, model.model_info(), rowUsageFraction).invokeOnAllNodes().model_info() ) : //replicated data + multi-node mode
               new DeepLearningTask(model.model_info(), rowUsageFraction).doAll(train).model_info()); //distributed data (always in multi-node mode)
       while (model.doScoring(train, trainScoreFrame, validScoreFrame, self(), getValidAdaptor()));
+      Log.info(model);
       Log.info("Finished training the Deep Learning model.");
       return model;
     }
