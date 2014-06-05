@@ -785,7 +785,7 @@ h2o.deeplearning <- function(x, y, data, classification = TRUE, nfolds = 0, vali
   res = .h2o.__remoteSendWithParms(data@h2o, .h2o.__PAGE_DeepLearning, parms)
 
   noGrid = T
-  if (noGrid)
+  if(noGrid)
     .h2o.singlerun.internal("DeepLearning", data, res, nfolds, validation, parms)
   else {
     # .h2o.gridsearch.internal("DeepLearning", data, res, validation, params)
@@ -834,6 +834,7 @@ h2o.deeplearning <- function(x, y, data, classification = TRUE, nfolds = 0, vali
   result$params = unlist(model_params, recursive = FALSE)
   result$params = lapply(result$params, function(x) { if(is.character(x)) { switch(x, true = TRUE, false = FALSE, "Inf" = Inf, "-Inf" = -Inf, x) }
                                                       else return(x) })
+  result$params$nfolds = params$n_folds
   errs = tail(res$errors, 1)[[1]]
   confusion = errs$valid_confusion_matrix
 
