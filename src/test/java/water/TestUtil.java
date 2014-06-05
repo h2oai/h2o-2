@@ -358,6 +358,10 @@ public class TestUtil {
     return FrameUtils.parseFrame(null, file);
   }
 
+  public static Frame parseFrame(String path) {
+    return FrameUtils.parseFrame(null, find_test_file(path));
+  }
+
   public static Frame parseFrame(File file) {
     return FrameUtils.parseFrame(null, file);
   }

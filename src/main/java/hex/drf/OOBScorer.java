@@ -4,43 +4,24 @@ import java.util.Arrays;
 import java.util.Random;
 
 import hex.gbm.DTree.TreeModel.CompressedTree;
-import hex.gbm.DTreeUtils;
+import hex.gbm.*;
 import water.*;
 import water.fvec.Chunk;
 
 /**
- * Computing oob scores over all trees and rows.
+ * Computing oob scores over all trees and rows
+ * and reconstructing <code>ntree_id, oobt</code> fields in given frame.
  *
  * <p>It prepares voter per tree and also marks
  * rows which were consider out-of-bag.</p>
  */
-/* package */ class OOBScorer extends MRTask2<OOBScorer> {
-  /* @IN */ final private int _ncols;
-  /* @IN */ private final int _nclass;
-  /* @IN */ private final float _rate;
-  /* @IN */ private final Key[][] _treeKeys;
+/* package */ class OOBScorer extends DTreeScorer<OOBScorer> {
 
-  private transient CompressedTree[][] _trees;
+  /* @IN */ final protected float _rate;
 
   public OOBScorer(int ncols, int nclass, float rate, Key[][] treeKeys) {
-    _ncols = ncols;
-    _nclass = nclass;
+    super(ncols,nclass,treeKeys);
     _rate = rate;
-    _treeKeys = treeKeys;
-  }
-
-  @Override protected void setupLocal() {
-    int ntrees = _treeKeys.length;
-    _trees = new CompressedTree[ntrees][];
-    for (int t=0; t<ntrees; t++) {
-      Key[] treek = _treeKeys[t];
-      _trees[t] = new CompressedTree[treek.length];
-      // FIXME remove get by introducing fetch class for all trees
-      for (int i=0; i<treek.length; i++) {
-        if (treek[i]!=null)
-          _trees[t][i] = DKV.get(treek[i]).get();
-      }
-    }
   }
 
   @Override public void map(Chunk[] chks) {
@@ -60,6 +41,7 @@ import water.fvec.Chunk;
           for (int i=0;i<_ncols;i++) data[i] = chks[i].at0(row);
           Arrays.fill(preds, 0);
           score0(data, preds, _trees[tidx]);
+          if (_nclass==1) preds[1]=preds[0]; // Only for regression, keep consistency
           // Write tree predictions
           for (int c=0;c<_nclass;c++) { // over all class
             if (preds[1+c] != 0) {
@@ -74,13 +56,5 @@ import water.fvec.Chunk;
 
   private Random rngForTree(CompressedTree[] ts, int cidx) {
     return ts[0].rngForChunk(cidx); // k-class set of trees shares the same random number
-  }
-
-  private Chunk chk_oobt(Chunk chks[]) { return chks[_ncols+1+_nclass+_nclass+_nclass]; }
-  private Chunk chk_tree(Chunk chks[], int c) { return chks[_ncols+1+c]; }
-  private Chunk chk_resp( Chunk chks[] ) { return chks[_ncols]; }
-
-  private void score0(double data[], float preds[], CompressedTree[] ts) {
-    DTreeUtils.scoreTree(data, preds, ts);
   }
 }

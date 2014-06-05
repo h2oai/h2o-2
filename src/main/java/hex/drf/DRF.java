@@ -224,7 +224,6 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       // Compute oob votes for each output level
       new OOBScorer(_ncols, _nclass, sample_rate, initialModel.treeKeys).doAll(fr);
       Log.info(logTag(), "Reconstructing oob stats from checkpointed model took " + t);
-      debugPrintTreeColumns(fr);
     }
   }
 
@@ -235,7 +234,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     int tid;
     DTree[] ktrees = null;
     // Prepare tree statistics
-    TreeStats tstats = new TreeStats();
+    TreeStats tstats = model.treeStats!=null ? model.treeStats : new TreeStats();
     // Build trees until we hit the limit
     for( tid=0; tid<ntrees; tid++) { // Building tid-tree
       if (tid!=0 || checkpoint==null) { // do not make initial scoring if model already exist
@@ -257,7 +256,6 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     model = doScoring(model, fr, ktrees, tid, tstats, true, !hasValidation(), build_tree_one_node);
     // Make sure that we did not miss any votes
     assert !importance || _treeMeasuresOnOOB.npredictors() == _treeMeasuresOnSOOB[0/*variable*/].npredictors() : "Missing some tree votes in variable importance voting?!";
-    debugPrintTreeColumns(fr);
 
     return model;
   }
@@ -665,23 +663,5 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     DRF cv = (DRF) this.clone();
     cv.genericCrossValidation(splits, offsets, i);
     cv_preds[i] = ((DRFModel) UKV.get(cv.dest())).score(cv.validation);
-  }
-
-  protected void debugPrintTreeColumns(Frame fr) {
-    new MRTask2() {
-      @Override public void map(Chunk[] cs) {
-        for (int r=0; r<cs[0]._len; r++) {
-          System.err.print("Row "+ r +": ");
-          for (int i=0; i<_nclass; i++) {
-            Chunk c = chk_tree(cs, i);
-            System.err.print(c.at80(r));
-            System.err.print(',');
-          }
-          Chunk c = chk_oobt(cs);
-          System.err.print(c.at80(r)>0 ? ":OUT" : ":IN");
-          System.err.println();
-        }
-      }
-    }.doAll(fr);
   }
 }

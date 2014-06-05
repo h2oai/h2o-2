@@ -79,10 +79,10 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   public float max_after_balance_size = Float.POSITIVE_INFINITY;
 
   @API(help = "Model checkpoint to start building a new model from", filter = Default.class, json = true, required = false)
-  protected Key checkpoint;
+  public Key checkpoint;
 
   @API(help = "Overwrite checkpoint", filter = Default.class, json = true, required = false)
-  protected boolean overwrite_checkpoint = true;
+  public boolean overwrite_checkpoint = true;
 
 //  @API(help = "Active feature columns")
   protected int _ncols;
@@ -239,15 +239,11 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       } finally { checkpointModel.unlock(self()); }
     }
 
-    //XXX: for GBM we need to rebuild structure in memory - for validation==null || validation !=null
-
     // Save the model ! (delete_and_lock has side-effect of saving model into DKV)
     if (checkpoint!=null && overwrite_checkpoint)
       model.write_lock(self()); // do not delete previous model since it would trigger delete of stored trees which we need
     else
       model.delete_and_lock(self()); // we can safely delete any previous model since this one should be the first one
-    //
-    System.err.println("===: LOCKERS right after locking: " + Arrays.toString(model._lockers));
     // Prepare and cache adapted validation dataset if it is necessary
     prepareValidationWithModel(model);
 
@@ -346,6 +342,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
 
   protected final Vec vec_nids( Frame fr, int t) { return fr.vecs()[_ncols+1+_nclass+_nclass+t]; }
   protected final Vec vec_resp( Frame fr, int t) { return fr.vecs()[_ncols]; }
+  protected final Vec vec_tree( Frame fr, int c ) { return fr.vecs()[_ncols+1+c]; }
 
   protected double[] data_row( Chunk chks[], int row, double[] data) {
     assert data.length == _ncols;
@@ -898,5 +895,23 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     for( int k=0; k<trees.length; k++ )
       if( trees[k] != null )
         System.out.println(trees[k].root().toString2(new StringBuilder(),0));
+  }
+
+  protected final void debugPrintTreeColumns(Frame fr) {
+    new MRTask2() {
+      @Override public void map(Chunk[] cs) {
+        for (int r=0; r<cs[0]._len; r++) {
+          System.err.print("Row "+ r +": ");
+          for (int i=0; i<_nclass; i++) {
+            Chunk c = chk_tree(cs, i);
+            System.err.print(c.at0(r));
+            System.err.print(',');
+          }
+          //Chunk c = chk_oobt(cs);
+          //System.err.print(c.at80(r)>0 ? ":OUT" : ":IN");
+          System.err.println();
+        }
+      }
+    }.doAll(fr);
   }
 }
