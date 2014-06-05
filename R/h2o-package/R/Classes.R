@@ -161,7 +161,7 @@ setMethod("show", "H2ODeepLearningModel", function(object) {
   cat("\nTraining mean square error:", model$train_sqr_error)
   cat("\n\nValidation classification error:", model$valid_class_error)
   cat("\nValidation square error:", model$valid_sqr_error)
-  if(!is.null(object@valid@key) && !is.null(model$confusion)) {
+  if(!is.na(object@valid@key) && !is.null(model$confusion)) {
     cat("\n\nConfusion matrix:\n"); cat("Reported on", object@valid@key, "\n"); print(model$confusion)
   }
 })
@@ -176,7 +176,7 @@ setMethod("show", "H2ODRFModel", function(object) {
   cat("\nTree statistics:\n"); print(model$forest)
   
   if(model$params$classification) {
-    if(!is.null(object@valid@key)) {
+    if(!is.na(object@valid@key)) {
       cat("\nConfusion matrix:\n"); cat("Reported on", object@valid@key, "\n")
       print(model$confusion)
     }
@@ -201,7 +201,7 @@ setMethod("show", "H2OSpeeDRFModel", function(object) {
   cat("\n\nClassification:", model$params$classification)
   cat("\nNumber of trees:", model$params$ntree)
   
-  if(!is.null(object@valid@key)) {
+  if(!is.na(object@valid@key)) {
     if(FALSE){ #model$params$oobee) {
       cat("\nConfusion matrix:\n"); cat("Reported on oobee from", object@valid@key, "\n")
     } else {
@@ -247,7 +247,7 @@ setMethod("show", "H2OGBMModel", function(object) {
 
   model = object@model
   if(model$params$distribution %in% c("multinomial", "bernoulli")) {
-    if(!is.null(object@valid@key)) {
+    if(!is.na(object@valid@key)) {
       cat("\nConfusion matrix:\nReported on", object@valid@key, "\n");
       print(model$confusion)
     }

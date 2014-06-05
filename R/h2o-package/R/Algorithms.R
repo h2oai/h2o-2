@@ -1387,7 +1387,7 @@ h2o.performance <- function(data, reference, measure = "accuracy", thresholds) {
   result$recall = res$recall_for_criteria[[idx]]
   result$specificity = res$specificity_for_criteria[[idx]]
   result$max_per_class_err = res$max_per_class_error_for_criteria[[idx]]
-  result = lapply(result, function(x) { if(x == "NaN") x = NaN; return(x) })   # HACK: NaN's are returned as strings, not numeric values
+  result = lapply(result, function(x) { if(x == "NaN") x = NaN; return(x) })   # HACK: NaNs are returned as strings, not numeric values
 
   # Note: Currently, Java assumes actual_domain = predicted_domain, but this may not always be true. Need to fix.
   result$confusion = .build_cm(res$confusion_matrix_for_criteria[[idx]], res$actual_domain)
@@ -1492,9 +1492,9 @@ plot.H2OPerfModel <- function(x, type = "cutoffs", ...) {
   for(i in 1:nfolds) {
     resX = .h2o.__remoteSend(data@h2o, model_view, '_modelKey'=xvalKey[i])
     modelXval = results_fun(resX[[3]], params)
-    res_xval[[i]] = new(model_obj, key=xvalKey[i], data=data, model=modelXval, valid=new("H2OParsedData", key=NULL), xval=list())
+    res_xval[[i]] = new(model_obj, key=xvalKey[i], data=data, model=modelXval, valid=new("H2OParsedData", key=as.character(NA)), xval=list())
   }
-  new(model_obj, key=dest_key, data=data, model=modelOrig, valid=new("H2OParsedData", key=NULL), xval=res_xval)
+  new(model_obj, key=dest_key, data=data, model=modelOrig, valid=new("H2OParsedData", key=as.character(NA)), xval=res_xval)
 }
 
 # .h2o.gridsearch.internal <- function(algo, data, job_key, dest_key, validation = NULL, forGBMIsClassificationAndYesTheBloodyModelShouldReportIt=T) {
