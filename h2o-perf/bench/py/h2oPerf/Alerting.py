@@ -1,7 +1,9 @@
 import abc
 import MySQLdb
 import requests
+import os
 from datetime import datetime, timedelta
+from LMSAdaptiveFilter import LMSAdaptiveFilter
 
 
 # Global queries used throughout
@@ -46,13 +48,53 @@ GROUP BY tr.test_run_id
 HAVING cnt > 1;
 """
 
+CORRECT = \
+    """
+SELECT correctness_passed
+FROM test_run
+WHERE test_name = '{}'
+ORDER BY build_version DESC;
+"""
+
+TIMING = \
+    """
+SELECT (tp.end_epoch_ms - tp.start_epoch_ms) / 1000 elapsed
+FROM test_run tr
+INNER JOIN test_run_phase_result tp
+USING (test_run_id)
+WHERE tr.timing_passed = 1
+AND tr.test_name = '{}'
+ORDER BY tr.start_epoch_ms DESC
+LIMIT {};
+"""
+
 # A dictionary of the queries appearing above
 QUERIES = {
     "test_names": TEST_NAMES_QUERY,
     "test_build_num": MOST_RECENTLY_RUN_TEST_NAME,
     "contaminated": CONTAMINATED,
     "multiple_ids": MULTIPLE_IDS,
+    "correct": CORRECT,
+    "timing": TIMING,
 }
+
+CORRECT_ALERT_HEADER = \
+    """
+Correctness Alerts
+------------------
+"""
+
+TIMING_ALERT_HEADER = \
+    """
+Timing Alerts
+-------------
+"""
+
+INFRASTRUCTURE_ALERT_HEADER = \
+    """
+Infrastructure Alerts
+---------------------
+"""
 
 
 class Alert:
@@ -138,7 +180,7 @@ class Alert:
         """
         if self.is_recent(test_name):
             return self._check_contaminated(test_name)
-        return "NA"
+        return False
 
     def has_multiple_ids(self, test_name):
         """
@@ -147,7 +189,7 @@ class Alert:
         """
         if self.is_recent(test_name):
             return self._multiple_ids_helper(test_name)
-        return "NA"
+        return False
 
     def add_to_alert_list(self, test_name, message):
         self.alert_list[test_name] = message
@@ -194,25 +236,83 @@ class Alert:
 class CorrectAlert(Alert):
     """
     This class is responsible for sending out alerts when a test fails its correctness criteria.
+
+    The correctness of each test is stored in the `test_run` table under the column `correctness_passed`, which
+    is a boolean:
+        0: Incorrect
+        1: Correct
     """
 
     def __init__(self, order):
         super(CorrectAlert, self).__init__(order)
 
     def should_alert(self, test_name):
-        pass
+        if not self.was_contaminated(test_name) \
+                and not self.has_multiple_ids(test_name) \
+                and self.is_recent(test_name):
+            return self._is_correct(test_name)
+        return False
+
+    def _is_correct(self, test_name):
+        query = QUERIES["correct"].format(test_name.strip('"'))
+        self.cursor.execute(query)
+        res = self.cursor.fetchone()
+        return res[0] == 0  # 1: Correct, 0: Incorrect
 
 
 class SpeedAlert(Alert):
     """
     This class is responsible for sending out alerts when a test fails its timing criteria.
+
+    Unlike correctness alerts based on how long the test took to run are based on an outlier detector. Here we use the
+    LMS adaptive filter ( *which additionally implements the exclusion of outliers**) to detect test run times that are
+    out of the ordinary.
+
+    This is where the `order`, or in time-series parlance `lag` (or `lag order`) comes in to play. This is just the
+    number of previous data points we want to include in our evaluation of the new data point. If the incoming point is
+    "OK" then nothing happens and it does not update the `timing_passed` field in the `test_run` table. If it is
+    determined to be an outlier, the `timing_passed` field switches from 1 -> 0. All points with a `timing_passed` value
+    of 0 are excluded from future computations (as we do not wish to contaminate the running statistics by including
+    spurious results).
     """
 
     def __init__(self, order):
         super(SpeedAlert, self).__init__(order)
 
     def should_alert(self, test_name):
-        pass
+        if not self.was_contaminated(test_name) \
+                and not self.has_multiple_ids(test_name) \
+                and self.is_recent(test_name):
+            return self._is_ontime(test_name)
+        return False
+
+    def _is_ontime(self, test_name):
+        """
+        The input stream is an incoming stream of elapsed times from the last `order` runs of the given test_name.
+        The input stream is initially sorted by most recent to furthest back in time. Therefore, exclude the first
+        entry, and perform the LMS on the next `order - 1` data points.
+        """
+        input_stream = self._get_input_stream(test_name)
+        if input_stream == "NA": return False  # This condition should never happen
+        if len(input_stream) == 1: return True  # Only have a single data point, nothing to compute.
+
+        query_point = input_stream[0]
+        data_points = input_stream[1:]
+        fil = LMSAdaptiveFilter(len(data_points))
+        for t in data_points:
+            fil.X.add(t)
+        return fil.is_signal_outlier(query_point)
+
+    def _get_input_stream(self, test_name):
+        query = QUERIES["timing"].format(test_name.strip('"'), self.order)
+        self.cursor.execute(query)
+        res = self.cursor.fetchall()
+        if len(res) == 0:
+            return "NA"
+        if len(res) == 1:
+            return [int(res[0])]
+        if len(res) > 1:
+            return [int(res[i][0]) for i in range(len(res))]
 
 
 class InfrastructureAlert(Alert):
@@ -224,7 +324,7 @@ class InfrastructureAlert(Alert):
         super(InfrastructureAlert, self).__init__(order)
 
     def should_alert(self, test_name):
-        pass
+        return not self.is_recent(test_name)
 
 
 class Alerter:
@@ -234,6 +334,7 @@ class Alerter:
     This class manages the various types of alerts that may occur. In addition, this class handles the actual
     alerting by email.
     """
+
     def __init__(self, order):
         self.correct_alert = CorrectAlert(order)
         self.speed_alert = SpeedAlert(order)
@@ -270,15 +371,53 @@ class Alerter:
                           'multinode_kmeans_one-billion-rows'
                           'multinode_glm_one-billion-rows']
 
-        self.test_names = self.correct_alert.test_names  # correct_alert chosen WLOG
-
-    def gather_alerts(self):
-        pass
+        self.test_names = self.correct_alert.test_names  # `correct_alert` chosen WLOG
 
     def alert(self):
-        self.gather_alerts()
-        self._alert(self)
+        self._gather_alerts()
+        self._do_alert()
 
-    def _alert(self):
-        pass
+    def _gather_alerts(self):
+        for name in self.test_names:
+            if self.correct_alert.should_alert(name):
+                self.correct_alert.add_to_alert_list(name, "Failed correctness.")
 
+            if self.speed_alert.should_alert(name):
+                self.speed_alert.add_to_alert_list(name, "Failed timinng.")
+
+            if self.infrastructure_alert.should_alert(name):
+                self.infrastructure_alert.add_to_alert_list(name, "Test failed to run.")
+
+        for name in self.test_list:
+            if name not in self.test_names:
+                if name not in self.infrastructure_alert.alert_list:
+                    self.infrastructure_alert.add_to_alert_list(name, "Test failed to run.")
+
+    def _do_alert(self):
+        this_path = os.path.dirname(os.path.realpath(__file__))
+        res_path = os.path.join(this_path, '..', "results", "Alerts.txt")
+        with open(res_path, 'w') as f:
+
+        # Check & Report Correctness Alerts
+            if len(self.correct_alert.alert_list) > 0:
+                f.write(CORRECT_ALERT_HEADER)
+                f.write('\n')
+                for key in self.correct_alert.alert_list:
+                    f.write("Test " + key + " failed:  " + self.correct_alert.alert_list[key])
+                    f.write('\n')
+
+        # Check & Report Timing Alerts
+            if len(self.speed_alert.alert_list) > 0:
+                f.write(TIMING_ALERT_HEADER)
+                f.write('\n')
+            for key in self.speed_alert.alert_list:
+                    f.write("Test " + key + " failed:  " + self.speed_alert.alert_list[key])
+                    f.write('\n')
+
+        # Check & Report Infrastructure Alerts
+            if len(self.infrastructure_alert.alert_list) > 0:
+                f.write(INFRASTRUCTURE_ALERT_HEADER)
+                f.write('\n')
+            for key in self.infrastructure_alert.alert_list:
+                    f.write("Test " + key + " failed:  " + self.infrastructure_alert.alert_list[key])
+                    f.write('\n')

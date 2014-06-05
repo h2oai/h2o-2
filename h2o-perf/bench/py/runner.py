@@ -65,9 +65,9 @@ def main(argv):
 
     # Run tests
     perf_runner.run_tests()
-    
+
     # Alerts
-    #( Alerter(order=10) ).alert() #  Parens around Alerter to make explicit that alert() is non-static
+    ( Alerter(order=10) ).alert() #  Parens around Alerter to make explicit that alert() is non-static
 
 if __name__ == "__main__":
     main(sys.argv)
