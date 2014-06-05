@@ -34,59 +34,66 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        ## print "sleeping 3600"
-        ## time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_parse_200k_cols(self):
+    def test_parse_65k_cols_01_fvec(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            # (10, 100000, 'cA', 200, 200),
-            (10, 200000, 'cB', 200, 200),
-            # (10, 300000, 'cB', 200, 200),
-            # we timeout/fail on 500k? stop at 200k
-            # (10, 500000, 'cC', 200, 200),
-            # (10, 1000000, 'cD', 200, 360),
-            # (10, 1100000, 'cE', 60, 100),
-            # (10, 1200000, 'cF', 60, 120),
+            (10, 63000, 'cH', 100),
+            (10, 65000, 'cH', 100),
             ]
 
-        ### h2b.browseTheCloud()
-        for (rowCount, colCount, hex_key, timeoutSecs, timeoutSecs2) in tryList:
+        # h2b.browseTheCloud()
+        for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
             SEEDPERFILE = random.randint(0, sys.maxint)
 
             csvFilename = 'syn_' + str(SEEDPERFILE) + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
-            print "\nCreating random", csvPathname
+            print "Creating random", csvPathname
             write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
 
             start = time.time()
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, 
                 timeoutSecs=timeoutSecs, doSummary=False)
-            print csvFilename, 'parse time:', parseResult['response']['time']
-            print "Parse:", parseResult['destination_key'], "took", time.time() - start, "seconds"
+            print "Parse", parseResult['destination_key'], "took", time.time() - start, "seconds"
+            print "Summary should work with 65k"
+            start = time.time()
+            h2o_cmd.runSummary(key=parseResult['destination_key'], timeoutSecs=300)
+            print "Summary", parseResult['destination_key'], "took", time.time() - start, "seconds"
 
             # We should be able to see the parse result?
             start = time.time()
-            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=timeoutSecs2)
+            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=timeoutSecs)
             print "Inspect:", parseResult['destination_key'], "took", time.time() - start, "seconds"
             h2o_cmd.infoFromInspect(inspect, csvPathname)
             print "\n" + csvPathname, \
-                "    num_rows:", "{:,}".format(inspect['num_rows']), \
-                "    num_cols:", "{:,}".format(inspect['num_cols'])
+                "    numRows:", "{:,}".format(inspect['numRows']), \
+                "    numCols:", "{:,}".format(inspect['numCols'])
 
             # should match # of cols in header or ??
-            self.assertEqual(inspect['num_cols'], colCount,
-                "parse created result with the wrong number of cols %s %s" % (inspect['num_cols'], colCount))
-            self.assertEqual(inspect['num_rows'], rowCount,
+            self.assertEqual(inspect['numCols'], colCount,
+                "parse created result with the wrong number of cols %s %s" % (inspect['numCols'], colCount))
+            self.assertEqual(inspect['numRows'], rowCount,
                 "parse created result with the wrong number of rows (header shouldn't count) %s %s" % \
-                (inspect['num_rows'], rowCount))
+                (inspect['numRows'], rowCount))
 
-            # if not h2o.browse_disable:
-            #    h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
-            #    time.sleep(5)
-            h2i.delete_keys_at_all_nodes()
+            
+
+            # we should obey max_column_display
+            # column_limits = [25, 25000]
+            # for column_limit in column_limits:
+            #     inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], max_column_display=column_limit, timeoutSecs=timeoutSecs)
+            #     self.assertEqual(len( inspect['cols'] ) , column_limit, "inspect doesn't obey max_column_display = %s" % column_limit)
+            #     for r in range(0, len( inspect[ 'rows' ] )):
+            #         # NB: +1 below because each row includes a row header row: #{row}
+            #         self.assertEqual(len( inspect['rows'][r] ) , column_limit + 1, "inspect data rows doesn't obey max_column_display = " + str(column_limit))
+
+
+             # if not h2o.browse_disable:
+             #    h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
+             #    time.sleep(5)
 
 if __name__ == '__main__':
     h2o.unit_main()

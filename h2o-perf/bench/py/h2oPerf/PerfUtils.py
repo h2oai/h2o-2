@@ -4,14 +4,17 @@ import shutil
 import threading
 import stat
 import tempfile
+from math import sqrt
 
 sig = False
 dash_line = "\n-------------------------------------------------------------------------------------\n"
+
 
 def use(x):
     """ Hack to remove compiler warning. """
     if False:
         print(x)
+
 
 def signal_handler(signum, stackframe):
     global sig
@@ -26,6 +29,7 @@ def signal_handler(signum, stackframe):
     print dash_line
     sys.exit(1)
 
+
 def wipe_output_dir(dir_to_wipe):
     print("")
     print("Wiping output directory...")
@@ -38,6 +42,7 @@ def wipe_output_dir(dir_to_wipe):
         print("       (errno {0}): {1}".format(e.errno, e.strerror))
         print("")
         sys.exit(1)
+
 
 def start_cloud(object, use_remote):
     """ 
@@ -67,15 +72,17 @@ def start_cloud(object, use_remote):
     object.cloud[0].wait_for_cloud_to_be_up()
     object.jvm_output_file = object.cloud[0].nodes[0].get_output_file_name()
 
+
 def run_contaminated(object):
     """
     Check if the run was contaminated.
     """
-    
+
     if object.terminated:
         return
-    
+
     return object.cloud[0].check_contaminated()
+
 
 def stop_cloud(object, use_remote):
     """
@@ -84,11 +91,11 @@ def stop_cloud(object, use_remote):
     if object.terminated:
         return
 
-#    if object.use_cloud:
-#        print("")
-#        print("All tests completed...")
-#        print("")
-#        return
+    # if object.use_cloud:
+    #        print("")
+    #        print("All tests completed...")
+    #        print("")
+    #        return
 
     print("")
     print("All tests completed; tearing down clouds...")
@@ -97,6 +104,7 @@ def stop_cloud(object, use_remote):
         object.cloud[0].stop_remote()
     else:
         object.cloud[0].stop_local()
+
 
 def __scrape_h2o_sys_info__(object):
     """
@@ -109,26 +117,27 @@ def __scrape_h2o_sys_info__(object):
     test_run_dict['component_name'] = "None"
     with open(object.jvm_output_file, "r") as f:
         for line in f:
-          line = line.replace('\n', '')
-          if "Built by" in line:
-              test_run_dict['user_name'] = line.split(': ')[-1]
-          if "Build git branch" in line:
-              test_run_dict['build_branch'] = line.split(': ')[-1]
-          if "Build git hash" in line:
-              test_run_dict['build_sha'] = line.split(': ')[-1]
-          if "Build project version" in line:
-              test_run_dict['build_version'] = line.split(': ')[-1]
-          if "Built on" in line:
-              test_run_dict['build_date'] = line.split(': ')[-1]
-          if "Java availableProcessors" in line:
-              test_run_dict['cpus_per_host'] = line.split(': ')[-1]
-          if "Java heap maxMemory" in line:
-              test_run_dict['heap_bytes_per_node'] = str(float(line.split(': ')[-1].split(' ')[0]) * 1024 * 1024)
-          if "error" in line.lower():
-              test_run_dict['error_message'] = line
-          else:
-              test_run_dict['error_message'] = "No error"
+            line = line.replace('\n', '')
+            if "Built by" in line:
+                test_run_dict['user_name'] = line.split(': ')[-1]
+            if "Build git branch" in line:
+                test_run_dict['build_branch'] = line.split(': ')[-1]
+            if "Build git hash" in line:
+                test_run_dict['build_sha'] = line.split(': ')[-1]
+            if "Build project version" in line:
+                test_run_dict['build_version'] = line.split(': ')[-1]
+            if "Built on" in line:
+                test_run_dict['build_date'] = line.split(': ')[-1]
+            if "Java availableProcessors" in line:
+                test_run_dict['cpus_per_host'] = line.split(': ')[-1]
+            if "Java heap maxMemory" in line:
+                test_run_dict['heap_bytes_per_node'] = str(float(line.split(': ')[-1].split(' ')[0]) * 1024 * 1024)
+            if "error" in line.lower():
+                test_run_dict['error_message'] = line
+            else:
+                test_run_dict['error_message'] = "No error"
     return test_run_dict
+
 
 def report_summary(object):
     """
@@ -168,6 +177,7 @@ def report_summary(object):
         object.__log__("Time/completed test:  N/A")
     object.__log__("")
 
+
 def __drain__(src, dst):
     for l in src:
         if type(dst) == type(0):
@@ -179,14 +189,15 @@ def __drain__(src, dst):
     if type(dst) == type(0):
         os.close(dst)
 
+
 def drain(src, dst):
-    t = threading.Thread(target=__drain__, args=(src,dst))
+    t = threading.Thread(target=__drain__, args=(src, dst))
     t.daemon = True
     t.start()
 
 
-def tmp_file(prefix = '', suffix = '', directory = ''):
-    fd, path = tempfile.mkstemp(prefix = prefix, suffix = suffix, dir = directory)
+def tmp_file(prefix='', suffix='', directory=''):
+    fd, path = tempfile.mkstemp(prefix=prefix, suffix=suffix, dir=directory)
     permissions = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
     os.chmod(path, permissions)
     return (fd, path)

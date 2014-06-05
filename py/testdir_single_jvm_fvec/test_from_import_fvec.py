@@ -25,7 +25,7 @@ class Basic(unittest.TestCase):
 
         csvFilenameAll = [
             ("covtype.data", 500),
-            ("covtype20x.data", 1000),
+            # ("covtype20x.data", 1000),
             ]
 
         for (csvFilename, timeoutSecs) in csvFilenameAll:

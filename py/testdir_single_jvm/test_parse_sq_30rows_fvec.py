@@ -58,9 +58,9 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_parse_bad_30rows(self):
+    def test_parse_bad_30rows_fvec(self):
         # h2b.browseTheCloud()
-        h2o.beta_features = False
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvPathname = SYNDATASETS_DIR + '/bad.data'
         dsf = open(csvPathname, "w+")
@@ -75,14 +75,14 @@ class Basic(unittest.TestCase):
                 hex_key="trial" + str(i) + ".hex")
             inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
             print "\n" + csvPathname, \
-                "    num_rows:", "{:,}".format(inspect['num_rows']), \
-                "    num_cols:", "{:,}".format(inspect['num_cols'])
-            num_rows = inspect['num_rows']
-            num_cols = inspect['num_cols']
-            self.assertEqual(num_cols, 4, "Parsed wrong number of cols: %s" % num_cols)
-            self.assertNotEqual(num_rows, 30, "Parsed wrong number of rows. Should be 29.\
-                 Didn't deduce header?: %s" % num_rows)
-            self.assertEqual(num_rows, 29, "Parsed wrong number of rows: %s" % num_rows)
+                "    numRows:", "{:,}".format(inspect['numRows']), \
+                "    numCols:", "{:,}".format(inspect['numCols'])
+            numRows = inspect['numRows']
+            numCols = inspect['numCols']
+            self.assertEqual(numCols, 4, "Parsed wrong number of cols: %s" % numCols)
+            self.assertNotEqual(numRows, 30, "Parsed wrong number of rows. Should be 29.\
+                 Didn't deduce header?: %s" % numRows)
+            self.assertEqual(numRows, 29, "Parsed wrong number of rows: %s" % numRows)
 
 
 if __name__ == '__main__':

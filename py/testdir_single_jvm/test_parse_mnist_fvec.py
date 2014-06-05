@@ -16,6 +16,7 @@ class Basic(unittest.TestCase):
             h2o.build_cloud(1, java_heap_GB=14)
         else:
             h2o_hosts.build_cloud_with_hosts()
+        h2o.beta_features = True
 
     @classmethod
     def tearDownClass(cls):

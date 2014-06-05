@@ -245,8 +245,6 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     source.unlock(self());
     if( validation != null && !source._key.equals(validation._key) )
       validation.unlock(self());
-
-    remove();                   // Remove Job
   }
 
   transient long _timeLastScoreStart, _timeLastScoreEnd, _firstScore;

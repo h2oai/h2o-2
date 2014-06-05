@@ -54,7 +54,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_cols_enum_multi_import(self):
+    def test_parse_multi_exclude_fvec(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         translateList = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u']
         tryList = [
@@ -98,15 +99,15 @@ class Basic(unittest.TestCase):
 
 
             # FIX! h2o strips one of the headers, but treats all the other files with headers as data
-            num_rows = inspect['num_rows']
-            num_cols = inspect['num_cols']
+            numRows = inspect['numRows']
+            numCols = inspect['numCols']
             print "\n" + parseResult['destination_key'] + ":", \
-                "    num_rows:", "{:,}".format(num_rows), \
-                "    num_cols:", "{:,}".format(num_cols)
+                "    numRows:", "{:,}".format(numRows), \
+                "    numCols:", "{:,}".format(numCols)
 
             # all should have rowCount rows (due to the excludePattern
-            self.assertEqual(num_rows, rowCount*FILENUM, msg=("got num_rows: %s. Should be rowCount: %s * FILENUM: %s" % \
-                (num_rows, rowCount, FILENUM)))
+            self.assertEqual(numRows, rowCount*FILENUM, msg=("got numRows: %s. Should be rowCount: %s * FILENUM: %s" % \
+                (numRows, rowCount, FILENUM)))
 
 if __name__ == '__main__':
     h2o.unit_main()

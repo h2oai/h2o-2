@@ -68,9 +68,9 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_parse_bad_30rows(self):
+    def test_parse_single_quote_strip_fvec(self):
         # h2b.browseTheCloud()
-        h2o.beta_features = False
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvPathname = SYNDATASETS_DIR + '/bad.data'
         dsf = open(csvPathname, "w+")
@@ -82,41 +82,15 @@ class Basic(unittest.TestCase):
                 hex_key="trial" + str(i) + ".hex")
             inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
             print "\n" + csvPathname, \
-                "    num_rows:", "{:,}".format(inspect['num_rows']), \
-                "    num_cols:", "{:,}".format(inspect['num_cols'])
-            num_rows = inspect['num_rows']
-            num_cols = inspect['num_cols']
+                "    numRows:", "{:,}".format(inspect['numRows']), \
+                "    numCols:", "{:,}".format(inspect['numCols'])
+            numRows = inspect['numRows']
+            numCols = inspect['numCols']
 
-            # remove the "row" value. The rest is col names
-            row0 = inspect['rows'][0]
-            self.assertEqual(row0['row'], 0, "'row' is supposed to say row 0")
-            del row0['row']
-
-            row1 = inspect['rows'][1]
-            self.assertEqual(row1['row'], 1, "'row' is supposed to say row 0")
-            del row1['row']
-
-            print "row0", row0
-
-            # row0 and row1 should have the same col names
-            for name in row0:
-                value = row0[name]
-                print value
-                if "\u0027" in value or "'" in value:
-                    raise Exception('Row 0. not stripped single quote or "\u0027" in the parsed row value %s' % value)
-
-                value = row1[name]
-                if "\u0027" in value or "'" in value:
-                    raise Exception('Row 1. not stripped single quote or "\u0027" in the parsed row value %s' % value)
-
-                # this is what we don't want
-                if 'C1' in name or 'C2' in name or 'C3' in name or 'C4' in name:
-                    raise Exception("Row 0. %s is the name of a col, means header wasn't deduced" % name)
-
-            self.assertEqual(num_cols, 4, "Parsed wrong number of cols: %s" % num_cols)
-            self.assertNotEqual(num_rows, 30, "Parsed wrong number of rows. Should be 29.\
-                 Didn't deduce header?: %s" % num_rows)
-            self.assertEqual(num_rows, 29, "Parsed wrong number of rows: %s" % num_rows)
+            self.assertEqual(numCols, 4, "Parsed wrong number of cols: %s" % numCols)
+            self.assertNotEqual(numRows, 30, "Parsed wrong number of rows. Should be 29.\
+                 Didn't deduce header?: %s" % numRows)
+            self.assertEqual(numRows, 29, "Parsed wrong number of rows: %s" % numRows)
 
 
 if __name__ == '__main__':
