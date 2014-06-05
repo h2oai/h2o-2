@@ -79,6 +79,8 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     //training/validation sets
     @API(help = "Whether a validation set was provided")
     boolean validation;
+    @API(help = "Number of folds for cross-validation (for validation=false)")
+    int num_folds;
     @API(help = "Number of training set samples for scoring")
     public long score_training_samples;
     @API(help = "Number of validation set samples for scoring")
@@ -132,13 +134,15 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
                 + String.format("%.2f", 100*train_err) + "%");
 
         if (trainAUC != null) sb.append(", AUC on training data: " + String.format("%.4f", 100*trainAUC.AUC) + "%");
-        if (validation) sb.append("\nError on validation data (misclassification)"
+        if (validation || num_folds>0)
+          sb.append("\nError on " + (num_folds>0 ? num_folds + "-fold cross-":"")+ "validation data (misclassification)"
                 + (validAUC != null ? " [using threshold for " + validAUC.threshold_criterion.toString().replace("_"," ") +"]: ": ": ")
                 + String.format("%.2f", (100*valid_err)) + "%");
         if (validAUC != null) sb.append(", AUC on validation data: " + String.format("%.4f", 100*validAUC.AUC) + "%");
       } else if (!Double.isInfinite(train_mse)) {
         sb.append("Error on training data (MSE): " + train_mse);
-        if (validation) sb.append("\nError on validation data (MSE): " + valid_mse);
+        if (validation || num_folds>0)
+          sb.append("\nError on "+ (num_folds>0 ? num_folds + "-fold cross-":"")+ "validation data (MSE): " + valid_mse);
       }
       return sb.toString();
     }
@@ -162,11 +166,11 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   public hex.ConfusionMatrix cm() {
     final Errors lasterror = last_scored();
     if (errors == null) return null;
-    water.api.ConfusionMatrix cm = lasterror.validation ?
+    water.api.ConfusionMatrix cm = lasterror.validation || lasterror.num_folds > 0 ?
             lasterror.valid_confusion_matrix :
             lasterror.train_confusion_matrix;
     if (cm == null || cm.cm == null) {
-      if (lasterror.validation) {
+      if (lasterror.validation || lasterror.num_folds > 0) {
         return new ConfMat(lasterror.valid_err, lasterror.validAUC != null ? lasterror.validAUC.F1() : 0);
       } else {
         return new ConfMat(lasterror.train_err, lasterror.trainAUC != null ? lasterror.trainAUC.F1() : 0);
@@ -179,7 +183,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   @Override
   public double mse() {
     if (errors == null) return super.mse();
-    return last_scored().validation ? last_scored().valid_mse : last_scored().train_mse;
+    return last_scored().validation || last_scored().num_folds > 0 ? last_scored().valid_mse : last_scored().train_mse;
   }
 
   @Override
@@ -236,8 +240,9 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     public final Neurons.DenseVector get_biases_ada_dx_g(int i) { return biases_ada_dx_g[i]; }
 
     @API(help = "Model parameters", json = true)
-    private DeepLearning parameters;
-    public final DeepLearning get_params() { return parameters; }
+    private Job job;
+    public final DeepLearning get_params() { return (DeepLearning)job; }
+    public final Job get_job() { return job; }
 
     @API(help = "Mean rate", json = true)
     private float[] mean_rate;
@@ -280,13 +285,13 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
     public DeepLearningModelInfo() {}
 
-    public DeepLearningModelInfo(final DeepLearning params, final DataInfo dinfo) {
+    public DeepLearningModelInfo(final Job.ValidatedJob job, final DataInfo dinfo) {
+      this.job = job;
       data_info = dinfo;
       final int num_input = dinfo.fullN();
-      final int num_output = params.classification ? dinfo._adaptedFrame.domains()[dinfo._adaptedFrame.domains().length-1].length : 1;
+      final int num_output = get_params().classification ? dinfo._adaptedFrame.domains()[dinfo._adaptedFrame.domains().length-1].length : 1;
       assert(num_input > 0);
       assert(num_output > 0);
-      parameters = params;
       if (has_momenta() && adaDelta()) throw new IllegalArgumentException("Cannot have non-zero momentum and adaptive rate at the same time.");
       final int layers=get_params().hidden.length;
       // units (# neurons for each layer)
@@ -299,7 +304,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       dense_col_weights = new Neurons.DenseColMatrix[layers+1];
 
       // decide format of weight matrices row-major or col-major
-      if (params.col_major) dense_col_weights[0] = new Neurons.DenseColMatrix(units[1], units[0]);
+      if (get_params().col_major) dense_col_weights[0] = new Neurons.DenseColMatrix(units[1], units[0]);
       else dense_row_weights[0] = new Neurons.DenseRowMatrix(units[1], units[0]);
       for (int i=1; i<=layers; ++i)
         dense_row_weights[i] = new Neurons.DenseRowMatrix(units[i+1] /*rows*/, units[i] /*cols*/);
@@ -486,7 +491,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
                 get_weights(w).set(i,j, (float)uniformDist(rng, -range, range));
             }
             else if (get_params().initial_weight_distribution == DeepLearning.InitialWeightDistribution.Uniform) {
-              get_weights(w).set(i,j, (float)uniformDist(rng, -get_params().initial_weight_scale, parameters.initial_weight_scale));
+              get_weights(w).set(i,j, (float)uniformDist(rng, -get_params().initial_weight_scale, get_params().initial_weight_scale));
             }
             else if (get_params().initial_weight_distribution == DeepLearning.InitialWeightDistribution.Normal) {
               get_weights(w).set(i,j, (float)(rng.nextGaussian() * get_params().initial_weight_scale));
@@ -668,10 +673,15 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     start_time = System.currentTimeMillis();
     _timeLastScoreEnter = start_time;
     model_info = new DeepLearningModelInfo(params, dinfo);
-    get_params().state = ((DeepLearning)UKV.get(jobKey)).state; //make the job state consistent
+    Object job = UKV.get(jobKey);
+    if (job instanceof DeepLearning)
+      get_params().state = ((DeepLearning)UKV.get(jobKey)).state; //make the job state consistent
+    else
+      get_params().state = ((Job.JobHandle)UKV.get(jobKey)).state; //make the job state consistent
     errors = new Errors[1];
     errors[0] = new Errors();
     errors[0].validation = (params.validation != null);
+    errors[0].num_folds = params.n_folds;
     assert(Arrays.equals(_key._kb, destKey._kb));
   }
 
@@ -717,6 +727,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
         err.training_time_ms = run_time;
         err.epoch_counter = epoch_counter;
         err.validation = ftest != null;
+        err.num_folds = get_params().n_folds;
         err.training_samples = model_info().get_processed_total();
         err.score_training_samples = ftrain.numRows();
         err.train_confusion_matrix = new ConfusionMatrix();
@@ -865,6 +876,19 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     }
   }
 
+  @Override protected void setCrossValidationError(Job.ValidatedJob job, double cv_error, ConfusionMatrix cm, AUC auc, HitRatio hr) {
+    _have_cv_results = true;
+    if (!get_params().classification)
+      last_scored().valid_mse = cv_error;
+    else
+      last_scored().valid_err = cv_error;
+    last_scored().score_validation_samples = last_scored().score_training_samples / get_params().n_folds;
+    last_scored().num_folds = get_params().n_folds;
+    last_scored().valid_confusion_matrix = cm;
+    last_scored().validAUC = auc;
+    last_scored().valid_hitratio = hr;
+  }
+
   @Override public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append(model_info.toString());
@@ -916,6 +940,9 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       DocGen.HTML.title(sb, "No model yet");
       return true;
     }
+
+    // optional JFrame creation for visualization of weights
+//    DeepLearningVisualization.visualize(this);
 
     final String mse_format = "%g";
 //    final String cross_entropy_format = "%2.6f";
@@ -1024,15 +1051,19 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
     if (isClassifier()) {
       DocGen.HTML.section(sb, "Classification error on training data: " + formatPct(error.train_err));
-//      DocGen.HTML.section(sb, "Training cross entropy: " + String.format(cross_entropy_format, error.train_mce));
       if(error.validation) {
         DocGen.HTML.section(sb, "Classification error on validation data: " + formatPct(error.valid_err));
-//        DocGen.HTML.section(sb, "Validation mean cross entropy: " + String.format(cross_entropy_format, error.valid_mce));
+      } else if(error.num_folds > 0) {
+        DocGen.HTML.section(sb, "Classification error on " + error.num_folds + "-fold cross-validated training data"
+                + (_have_cv_results ? ": " + formatPct(error.valid_err) : " is being computed - please reload this page later."));
       }
     } else {
       DocGen.HTML.section(sb, "MSE on training data: " + String.format(mse_format, error.train_mse));
       if(error.validation) {
         DocGen.HTML.section(sb, "MSE on validation data: " + String.format(mse_format, error.valid_mse));
+      } else if(error.num_folds > 0) {
+        DocGen.HTML.section(sb, "MSE on " + error.num_folds + "-fold cross-validated training data"
+                + (_have_cv_results ? ": " + String.format(mse_format, error.valid_mse) : " is being computed - please reload this page later."));
       }
     }
     DocGen.HTML.paragraph(sb, "Training samples: " + String.format("%,d", model_info().get_processed_total()));
@@ -1052,11 +1083,35 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     long score_train = error.score_training_samples;
     long score_valid = error.score_validation_samples;
     final boolean fulltrain = score_train==0 || score_train == training_rows;
-    final boolean fullvalid = score_valid==0 || score_valid == get_params().validation.numRows();
+    final boolean fullvalid = error.validation && get_params().n_folds == 0 && (score_valid==0 || score_valid == get_params().validation.numRows());
 
     final String toolarge = " Confusion matrix not shown here - too large: number of classes (" + model_info.units[model_info.units.length-1]
             + ") is greater than the specified limit of " + get_params().max_confusion_matrix_size + ".";
     boolean smallenough = model_info.units[model_info.units.length-1] <= get_params().max_confusion_matrix_size;
+
+    if (!error.validation) {
+      if (_have_cv_results) {
+        RString v_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
+        v_rs.replace("key", get_params().source._key);
+        String cmTitle = "<div class=\"alert\">Scoring results reported for " + error.num_folds + "-fold cross-validated training data " + v_rs.toString() + ":</div>";
+        sb.append("<h5>" + cmTitle);
+        sb.append("</h5>");
+      }
+      else {
+        RString t_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
+        t_rs.replace("key", get_params().source._key);
+        String cmTitle = "<div class=\"alert\">Scoring results reported on training data " + t_rs.toString() + (fulltrain ? "" : " (" + score_train + " samples)") + ":</div>";
+        sb.append("<h5>" + cmTitle);
+        sb.append("</h5>");
+      }
+    }
+    else {
+      RString v_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
+      v_rs.replace("key", get_params().validation._key != null ? get_params().validation._key : "");
+      String cmTitle = "<div class=\"alert\">Scoring results reported on validation data " + v_rs.toString() + (fullvalid ? "" : " (" + score_valid + " samples)") + ":</div>";
+      sb.append("<h5>" + cmTitle);
+      sb.append("</h5>");
+    }
 
     if (isClassifier()) {
       // print AUC
@@ -1068,25 +1123,22 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       }
       else {
         if (error.validation) {
-          RString v_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
-          v_rs.replace("key", get_params().validation._key != null ? get_params().validation._key : "");
-          String cmTitle = "<div class=\"alert\">Scoring results reported on validation data " + v_rs.toString() + (fullvalid ? "" : " (" + score_valid + " samples)") + ":</div>";
-          sb.append("<h5>" + cmTitle);
           if (error.valid_confusion_matrix != null && smallenough) {
-            sb.append("</h5>");
             error.valid_confusion_matrix.toHTML(sb);
-          } else if (smallenough) sb.append(" Confusion matrix not yet computed.</h5>");
-          else sb.append(toolarge + "</h5>");
-        } else {
-          RString t_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
-          t_rs.replace("key", get_params().source._key);
-          String cmTitle = "<div class=\"alert\">Scoring results reported on training data " + t_rs.toString() + (fulltrain ? "" : " (" + score_train + " samples)") + ":</div>";
-          sb.append("<h5>" + cmTitle);
+          } else if (smallenough) sb.append("<h5>Confusion matrix on validation data is not yet computed.</h5>");
+          else sb.append(toolarge);
+        }
+        else if (_have_cv_results) {
+          if (error.valid_confusion_matrix != null && smallenough) {
+            error.valid_confusion_matrix.toHTML(sb);
+          } else if (smallenough) sb.append("<h5>Confusion matrix on " + error.num_folds + "-fold cross-validated training data is not yet computed.</h5>");
+          else sb.append(toolarge);
+        }
+        else {
           if (error.train_confusion_matrix != null && smallenough) {
-            sb.append("</h5>");
             error.train_confusion_matrix.toHTML(sb);
-          } else if (smallenough) sb.append(" Confusion matrix not yet computed.</h5>");
-          else sb.append(toolarge + "</h5>");
+          } else if (smallenough) sb.append("<h5>Confusion matrix on training data is not yet computed.</h5>");
+          else sb.append(toolarge);
         }
       }
     }
@@ -1102,6 +1154,8 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     if (error.variable_importances != null) {
       error.variable_importances.toHTML(this, sb);
     }
+
+    printCrossValidationModelsHTML(sb);
 
     DocGen.HTML.title(sb, "Scoring history");
     if (errors.length > 1) {
@@ -1191,6 +1245,14 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
         sb.append("<th>Validation MSE</th>");
       }
     }
+    else if (error.num_folds > 0) {
+      if (isClassifier()) {
+        sb.append("<th>Cross-Validation Error</th>");
+        if (nclasses()==2) sb.append("<th>Cross-Validation AUC</th>");
+      } else {
+        sb.append("<th>Cross-Validation MSE</th>");
+      }
+    }
     sb.append("</tr>");
     for( int i = errors.length - 1; i >= 0; i-- ) {
       final Errors e = errors[i];
@@ -1199,7 +1261,6 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       sb.append("<td>" + String.format("%g", e.epoch_counter) + "</td>");
       sb.append("<td>" + String.format("%,d", e.training_samples) + "</td>");
       if (isClassifier()) {
-//        sb.append("<td>" + String.format(cross_entropy_format, e.train_mce) + "</td>");
         sb.append("<td>" + formatPct(e.train_err) + "</td>");
         if (nclasses()==2) {
           if (e.trainAUC != null) sb.append("<td>" + formatPct(e.trainAUC.AUC()) + "</td>");
@@ -1210,7 +1271,6 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       }
       if(e.validation) {
         if (isClassifier()) {
-//          sb.append("<td>" + String.format(cross_entropy_format, e.valid_mce) + "</td>");
           sb.append("<td>" + formatPct(e.valid_err) + "</td>");
           if (nclasses()==2) {
             if (e.validAUC != null) sb.append("<td>" + formatPct(e.validAUC.AUC()) + "</td>");
@@ -1218,6 +1278,23 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
           }
         } else {
           sb.append("<td>" + String.format(mse_format, e.valid_mse) + "</td>");
+        }
+      }
+      else if(e.num_folds > 0) {
+        if (i == errors.length - 1 && _have_cv_results) {
+          if (isClassifier()) {
+            sb.append("<td>" + formatPct(e.valid_err) + "</td>");
+            if (nclasses() == 2) {
+              if (e.validAUC != null) sb.append("<td>" + formatPct(e.validAUC.AUC()) + "</td>");
+              else sb.append("<td>" + "N/A" + "</td>");
+            }
+          } else {
+            sb.append("<td>" + String.format(mse_format, e.valid_mse) + "</td>");
+          }
+        }
+        else {
+          sb.append("<td>N/A</td>");
+          if (nclasses() == 2) sb.append("<td>N/A</td>");
         }
       }
       sb.append("</tr>");

@@ -903,6 +903,20 @@ public final class H2O {
     Log.info ("Machine physical memory: " + (totalMemory==-1 ? "NA" : String.format("%.2f gb", totalMemory / ONE_GB)));
   }
 
+  /**
+   * We had a report from a user that H2O didn't start properly on MacOS X in a
+   * case where the user was part of the root group.  So warn about it.
+   */
+  public static void printWarningIfRootOnMac() {
+    String os_name = System.getProperty("os.name");
+    if (os_name.equals("Mac OS X")) {
+      String user_name = System.getProperty("user.name");
+      if (user_name.equals("root")) {
+        Log.warn("Running as root on MacOS; check if java binary is unintentionally setuid");
+      }
+    }
+  }
+
   public static String getVersion() {
     String build_project_version = "(unknown)";
     try {
@@ -934,6 +948,7 @@ public final class H2O {
     ARGS = arguments.toStringArray();
 
     printAndLogVersion();
+    printWarningIfRootOnMac();
 
     if (OPT_ARGS.baseport != 0) {
       DEFAULT_PORT = OPT_ARGS.baseport;

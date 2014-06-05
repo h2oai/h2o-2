@@ -26,7 +26,6 @@ class Basic(unittest.TestCase):
         avgMichalSize = 237270000
         bucket = 'home-0xdiag-datasets'
         importFolderPath = 'manyfiles-nflx'
-        importFolderPath = 'airlines'
         print "Using non-gz'ed files in", importFolderPath
         csvFilenameList= [
             # ("*[1][0][0].dat", "file_1_A.dat", 1 * avgMichalSize, 1800),

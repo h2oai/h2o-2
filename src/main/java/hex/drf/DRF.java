@@ -82,8 +82,8 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
 
     // Params that do not affect model quality:
     //
-    public DRFModel(DRF params, Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, int mtries, float sample_rate, long seed) {
-      super(key,dataKey,testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins);
+    public DRFModel(DRF params, Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, int mtries, float sample_rate, long seed, int num_folds) {
+      super(key,dataKey,testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, num_folds);
       this.parameters = params;
       this.mtries = mtries;
       this.sample_rate = sample_rate;
@@ -131,12 +131,17 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
         bodySb.i().p("if (sum>0) for(int i=1; i<preds.length; i++) preds[i] /= sum;").nl();
       } else bodySb.i().p("preds[1] = preds[1]/NTREES;").nl();
     }
+    @Override protected void setCrossValidationError(ValidatedJob job, double cv_error, water.api.ConfusionMatrix cm, water.api.AUC auc, water.api.HitRatio hr) {
+      DRFModel drfm = ((DRF)job).makeModel(this, cv_error, cm.cm == null ? null : new ConfusionMatrix(cm.cm, cms[0].nclasses()), this.varimp, auc);
+      drfm._have_cv_results = true;
+      DKV.put(this._key, drfm); //overwrite this model
+    }
   }
   public Frame score( Frame fr ) { return ((DRFModel)UKV.get(dest())).score(fr);  }
 
   @Override protected Log.Tag.Sys logTag() { return Sys.DRF__; }
   @Override protected DRFModel makeModel(Key outputKey, Key dataKey, Key testKey, String[] names, String[][] domains, String[] cmDomain) {
-    return new DRFModel(this, outputKey,dataKey,validation==null?null:testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, mtries, sample_rate, _seed);
+    return new DRFModel(this, outputKey,dataKey,validation==null?null:testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, mtries, sample_rate, _seed, n_folds);
   }
 
   @Override protected DRFModel makeModel( DRFModel model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
@@ -167,6 +172,8 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   @Override protected void execImpl() {
     logStart();
     buildModel(seed);
+    if (n_folds > 0) CrossValUtils.crossValidate(this);
+    remove();                   // Remove Job
   }
 
   @Override protected Response redirect() {
@@ -624,5 +631,19 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
           nids.set0(row, OUT_OF_BAG);     // Flag row as being ignored by sampling
         }
     }
+  }
+
+  /**
+   * Cross-Validate a DRF model by building new models on N train/test holdout splits
+   * @param splits Frames containing train/test splits
+   * @param cv_preds Array of Frames to store the predictions for each cross-validation run
+   * @param offsets Array to store the offsets of starting row indices for each cross-validation run
+   * @param i Which fold of cross-validation to perform
+   */
+  @Override public void crossValidate(Frame[] splits, Frame[] cv_preds, long[] offsets, int i) {
+    // Train a clone with slightly modified parameters (to account for cross-validation)
+    DRF cv = (DRF) this.clone();
+    cv.genericCrossValidation(splits, offsets, i);
+    cv_preds[i] = ((DRFModel) UKV.get(cv.dest())).score(cv.validation);
   }
 }

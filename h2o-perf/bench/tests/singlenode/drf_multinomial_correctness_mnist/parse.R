@@ -5,7 +5,7 @@ data_source <<- "home-0xdiag-datasets"
 trainData   <<-  "../../../../../smalldata/mnist/train.csv.gz"
 num_train_rows <<- 60000
 num_explan_cols <<- 784
-response <<- "C785"
+response <<- "C1"
 import.FV("parsed.hex", trainData)
 
 testData    <<-  "../../../../../smalldata/mnist/test.csv.gz"

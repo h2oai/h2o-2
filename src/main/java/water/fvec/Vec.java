@@ -663,7 +663,6 @@ public class Vec extends Iced {
     Futures fs = new Futures();
     ck.close(ck.cidx(), fs); //slow to do this for every set -> use Writer if writing many values
     fs.blockForPending();
-    _cache = null;
     postWrite();
     return ret;
   }
@@ -676,7 +675,6 @@ public class Vec extends Iced {
     Futures fs = new Futures();
     ck.close(ck.cidx(), fs); //slow to do this for every set -> use Writer if writing many values
     fs.blockForPending();
-    _cache = null;
     postWrite();
     return ret;
   }
@@ -689,7 +687,6 @@ public class Vec extends Iced {
     Futures fs = new Futures();
     ck.close(ck.cidx(), fs); //slow to do this for every set -> use Writer if writing many values
     fs.blockForPending();
-    _cache = null;
     postWrite();
     return ret;
   }
@@ -700,7 +697,6 @@ public class Vec extends Iced {
     Futures fs = new Futures();
     ck.close(ck.cidx(), fs); //slow to do this for every set -> use Writer if writing many values
     fs.blockForPending();
-    _cache = null;
     postWrite();
     return ret;
   }

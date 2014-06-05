@@ -93,6 +93,9 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                     # execExpr="A.hex=%s" % parseResult['destination_key']
                     # h2e.exec_expr(execExpr=execExpr, timeoutSecs=180)
 
+                    # are the unparsed keys slowing down exec?
+                    h2i.delete_keys_at_all_nodes(pattern="manyfile")
+
                     execExpr = 'A.hex[,378+1]=(A.hex[,378+1]>15)'
                     h2e.exec_expr(execExpr=execExpr, timeoutSecs=180)
 

@@ -112,7 +112,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_many_fp_formats_libsvm (self):
+    def test_many_fp_formats_libsvm_fvec(self):
+        h2o.beta_features = True
         # h2b.browseTheCloud()
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [

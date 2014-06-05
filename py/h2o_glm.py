@@ -245,8 +245,10 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
 
             # have to look up the index for the cm, from the thresholds list
             best_index = None
+
+            # FIX! best_threshold isn't necessarily in the list. jump out if >=
             for i,t in enumerate(thresholds):
-                if t == best_threshold:
+                if t >= best_threshold: # ends up using next one if not present
                     best_index = i
                     break
                 
@@ -298,7 +300,9 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
     # get a copy, so we don't destroy the original when we pop the intercept
     if h2o.beta_features:
         coefficients_names = GLMModel['coefficients_names']
+        # print "coefficients_names:", coefficients_names
         idxs = submodels1['idxs']
+        print "idxs:", idxs
         column_names = coefficients_names
 
         # always check both normalized and normal coefficients
@@ -308,6 +312,7 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
         #    raise Exception("column_names and normalized_norm_beta from h2o json not same length. column_names: %s normalized_norm_beta: %s" % (column_names, norm_beta))
 #
         beta = submodels1['beta']
+        # print "beta:", beta
         # if len(column_names)!=len(beta):
         #    print len(column_names), len(beta)
         #    raise Exception("column_names and beta from h2o json not same length. column_names: %s beta: %s" % (column_names, beta))
@@ -322,26 +327,28 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
         coefficients = {}
         # create a dictionary with name, beta (including intercept) just like v1
 
-        # hack if column_names doesn't have "Intercept"
-        if 'Intercept' not in column_names:
-            raise Exception("'Intercept' not in column_names")
-        else:
-            coefficients['Intercept'] = 0 # temp hack if lists are not sized correctly
-        
+        for i,b in zip(idxs, beta_used[:-1]):
+            name = coefficients_names[i]
+            coefficients[name] = b
 
-        for n,b in zip(column_names, beta_used):
-            coefficients[n] = b
-
+        print "len(idxs)", len(idxs), "len(beta_used)", len(beta_used)
         print  "coefficients:", coefficients
         print  "beta:", beta
         print  "norm_beta:", norm_beta
 
+        coefficients['Intercept'] = beta_used[-1]
         print "intercept demapping info:", \
             "column_names[-i]:", column_names[-1], \
             "idxs[-1]:", idxs[-1], \
-            "coefficients_names[[idxs[-1]]:", coefficients_names[idxs[-1]], \
+            "coefficients_names[idxs[-1]]:", coefficients_names[idxs[-1]], \
             "beta_used[-1]:", beta_used[-1], \
             "coefficients['Intercept']", coefficients['Intercept']
+
+        # last one is intercept
+        interceptName = coefficients_names[idxs[-1]]
+        if interceptName != "Intercept" or abs(beta_used[-1])<1e-26:
+            raise Exception("'Intercept' should be last in coefficient_names and beta %s %s %s" %\
+                (idxs[-1], beta_used[-1], "-"+interceptName+"-"))
 
         # idxs has the order for non-zero coefficients, it's shorter than beta_used and column_names
         # new 5/28/14. glm can point to zero coefficients

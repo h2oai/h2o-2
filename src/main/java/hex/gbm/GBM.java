@@ -66,8 +66,8 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     @API(help = "Initially predicted value (for zero trees)")
     double initialPrediction;
 
-    public GBMModel(GBM job, Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, double learn_rate, Family family) {
-      super(key,dataKey,testKey,names,domains,cmDomain,ntrees,max_depth,min_rows,nbins);
+    public GBMModel(GBM job, Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, double learn_rate, Family family, int num_folds) {
+      super(key,dataKey,testKey,names,domains,cmDomain,ntrees,max_depth,min_rows,nbins,num_folds);
       this.parameters = job;
       this.learn_rate = learn_rate;
       this.family = family;
@@ -153,12 +153,17 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
         bodyCtxSB.i().p("preds[1] += "+initialPrediction+";").nl();
       }
     }
+    @Override protected void setCrossValidationError(ValidatedJob job, double cv_error, water.api.ConfusionMatrix cm, water.api.AUC auc, water.api.HitRatio hr) {
+      GBMModel gbmm = ((GBM)job).makeModel(this, cv_error, cm.cm == null ? null : new ConfusionMatrix(cm.cm, cms[0].nclasses()), this.varimp, auc);
+      gbmm._have_cv_results = true;
+      DKV.put(this._key, gbmm); //overwrite this model
+    }
   }
   public Frame score( Frame fr ) { return ((GBMModel)UKV.get(dest())).score(fr);  }
 
   @Override protected Log.Tag.Sys logTag() { return Sys.GBM__; }
   @Override protected GBMModel makeModel(Key outputKey, Key dataKey, Key testKey, String[] names, String[][] domains, String[] cmDomain) {
-    return new GBMModel(this, outputKey, dataKey, testKey, names, domains, cmDomain, ntrees, max_depth, min_rows, nbins, learn_rate, family);
+    return new GBMModel(this, outputKey, dataKey, validation==null?null:testKey, names, domains, cmDomain, ntrees, max_depth, min_rows, nbins, learn_rate, family, n_folds);
   }
   @Override protected GBMModel makeModel( GBMModel model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
     return new GBMModel(model, err, cm, varimp, validAUC);
@@ -179,6 +184,8 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   @Override protected void execImpl() {
     logStart();
     buildModel(seed);
+    if (n_folds > 0) CrossValUtils.crossValidate(this);
+    remove();                   // Remove Job
   }
 
   @Override public int gridParallelism() {
@@ -653,4 +660,19 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
 
     return new VarImpRI(varimp);
   }
+
+  /**
+   * Cross-Validate a GBM model by building new models on N train/test holdout splits
+   * @param splits Frames containing train/test splits
+   * @param cv_preds Array of Frames to store the predictions for each cross-validation run
+   * @param offsets Array to store the offsets of starting row indices for each cross-validation run
+   * @param i Which fold of cross-validation to perform
+   */
+  @Override public void crossValidate(Frame[] splits, Frame[] cv_preds, long[] offsets, int i) {
+    // Train a clone with slightly modified parameters (to account for cross-validation)
+    GBM cv = (GBM) this.clone();
+    cv.genericCrossValidation(splits, offsets, i);
+    cv_preds[i] = ((GBMModel) UKV.get(cv.dest())).score(cv.validation);
+  }
+
 }
