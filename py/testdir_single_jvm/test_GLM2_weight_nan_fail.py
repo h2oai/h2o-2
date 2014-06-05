@@ -20,20 +20,19 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_weight_nan_fail(self):
+    def test_GLM2_weight_nan_fail(self):
+        h2o.beta_features = True
         csvPathname = 'covtype/covtype.20k.data'
         hex_key = 'covtype.20k.hex'
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=hex_key, schema='put')
         kwargs = {
-            'case': 2, 
             'destination_key': 'GLM_model_python_0_default_0', 
             'family': 'tweedie', 
-            'tweedie_power': 1.9999999, 
+            'tweedie_variance_power': 1.9999999, 
             'max_iter': 10, 
             'alpha': 0, 
-            'y': 54, 
-            'case_mode': '<', 
-            'lambda': 0
+            'lambda': 0,
+            'response': 54, 
         }
 
         for trial in range(3):

@@ -21,9 +21,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_umass(self):
-        # filename, Y, timeoutSecs
-        # fix. the ones with comments may want to be a gaussian?
+    def test_GLM2_umass(self):
+        h2o.beta_features = True
         csvFilenameList = [
             ('cgd.dat', 'gaussian', 12, 5, None),
             ('chdage.dat', 'binomial', 2, 5, None),
@@ -47,7 +46,7 @@ class Basic(unittest.TestCase):
         for i in range(3):
             for (csvFilename, family, y, timeoutSecs, x) in csvFilenameList:
                 csvPathname = "logreg/umass_statdata/" + csvFilename
-                kwargs = {'n_folds': 2, 'y': y, 'family': family, 'alpha': 1, 'lambda': 1e-4, 'link': 'familyDefault'}
+                kwargs = {'n_folds': 2, 'response': y, 'family': family, 'alpha': 1, 'lambda': 1e-4}
                 if x is not None:
                     kwargs['x'] = x
 

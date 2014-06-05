@@ -590,4 +590,13 @@ def createTestTrain(srcKey, trainDstKey, testDstKey, trainPercent,
     inspect = runInspect(key=testDstKey)
     infoFromInspect(inspect, "%s after mungeDataset on %s" % (testDstKey, srcKey) )
 
+# figure out what cols to ignore (opposite of cols+response)
+def createIgnoredCols(key, cols, response):
+    inspect = runInspect(key=key)
+    numCols = inspect['numCols']
+    ignore = filter(lambda x:(x not in cols and x!=response), range(numCols))
+
+    ignored_cols = ','.join(map(str,ignore))
+    return ignored_cols
+
 

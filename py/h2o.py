@@ -2695,6 +2695,7 @@ class H2O(object):
     # key=cuse.hex&
     # thresholds=0%3A1%3A0.01
     def GLMScore(self, key, model_key, timeoutSecs=100, **kwargs):
+        # this isn't in fvec?
         browseAlso = kwargs.pop('browseAlso', False)
         # i guess key and model_key could be in kwargs, but
         # maybe separate is more consistent with the core key behavior

@@ -21,15 +21,15 @@ class Basic(unittest.TestCase):
         # time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_GLM_gamma_fail1(self):
+    def test_GLM2_gamma_fail1(self):
+        h2o.beta_features = True
         csvPathname = 'standard/covtype.data'
         parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put')
         for trial in range(5):
             kwargs = {
                 'standardize': 1, 
                 'family': 'gamma', 
-                'link': 'familyDefault', 
-                'y': 54, 
+                'response': 54, 
                 'lambda': 0.0001,
                 'alpha': 0.5, 
                 'max_iter': 25, 
