@@ -1,6 +1,6 @@
 import unittest, random, sys, time, re, math
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_browse as h2b
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_browse as h2b, h2o_gbm
 
 # use randChars for the random chars to use
 def random_enum(randChars, maxEnumSize):
@@ -72,7 +72,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_ints_unbalanced(self):
+    def test_GLM2_ints_unbalanced(self):
+        h2o.beta_features = True
         ### h2b.browseTheCloud()
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
@@ -117,7 +118,6 @@ class Basic(unittest.TestCase):
 
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, 
                 timeoutSecs=30, separator=colSepInt)
-            print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
 
             print "\n" + csvFilename
@@ -125,16 +125,15 @@ class Basic(unittest.TestCase):
                 h2o_cmd.columnInfoFromInspect(parseResult['destination_key'], exceptionOnMissingValues=True)
 
             y = colCount
+            modelKey = 'xyz'
             kwargs = {
-                'y': y, 
+                'destination_key': modelKey,
+                'response': y, 
                 'max_iter': 200, 
                 'family': 'binomial',
                 'n_folds': 10, 
                 'alpha': 0, 
                 'lambda': 0, 
-                'thresholds': 0.5,
-                # 'case_mode': '=', 
-                # 'case': 0,
                 }
 
             start = time.time()
@@ -156,57 +155,31 @@ class Basic(unittest.TestCase):
                 glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
                 print "glm end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'
 
-                GLMModel = glm['GLMModel']
-                # submodels0 = GLMModel['submodels'][0]
-                iterations = GLMModel['iterations']
-                modelKey = GLMModel['model_key']
-
                 h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
-                # if iterations > 20:
-                #    raise Exception("Why take so many iterations:  %s in this glm training?" % iterations)
 
-
-
-                parseResult = h2i.import_parse(path=csvScorePathname, schema='put', hex_key="score_" + hex_key, 
+                parseResult = h2i.import_parse(path=csvScorePathname, schema='put', hex_key="B.hex",
                     timeoutSecs=30, separator=colSepInt)
 
-                start = time.time()
-                # score with same dataset (will change to recreated dataset with one less enum
-                glmScore = h2o_cmd.runGLMScore(key=parseResult['destination_key'],
-                    model_key=modelKey, thresholds="0.5", timeoutSecs=timeoutSecs)
-                print "glm end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'
-                ### print h2o.dump_json(glmScore)
-                classErr = glmScore['validation']['classErr']
-                auc = glmScore['validation']['auc']
-                err = glmScore['validation']['err']
-                nullDev = glmScore['validation']['nullDev']
-                resDev = glmScore['validation']['resDev']
-                h2o_glm.simpleCheckGLMScore(self, glmScore, **kwargs)
+                predictKey = 'Predict.hex'
+                predictResult = h2o_cmd.runPredict(
+                    data_key="B.hex",
+                    model_key=modelKey,
+                    destination_key=predictKey,
+                    timeoutSecs=timeoutSecs)
+
+                predictCMResult = h2o.nodes[0].predict_confusion_matrix(
+                    actual="B.hex",
+                    vactual='C' + str(y+1),
+                    predict=predictKey,
+                    vpredict='predict',
+                    )
+
+                cm = predictCMResult['cm']
+                pctWrong = h2o_gbm.pp_cm_summary(cm);
+                print "\nTest\n==========\n"
+                print h2o_gbm.pp_cm(cm)
 
 
-                print "classErr:", classErr
-                print "err:", err
-                print "auc:", auc
-                print "resDev:", resDev
-                print "nullDev:", nullDev
-                if math.isnan(resDev):
-                    emsg = "Why is this resDev = 'nan'?? %6s %s" % ("resDev:\t", validation['resDev'])
-                    raise Exception(emsg)
-
-                # what is reasonable?
-                # self.assertAlmostEqual(err, 0.3, delta=0.15, msg="actual err: %s not close enough to 0.3" % err)
-                # self.assertAlmostEqual(auc, 0.5, delta=0.15, msg="actual auc: %s not close enough to 0.5" % auc)
-
-                if math.isnan(err):
-                    emsg = "Why is this err = 'nan'?? %6s %s" % ("err:\t", err)
-                    raise Exception(emsg)
-
-                if math.isnan(resDev):
-                    emsg = "Why is this resDev = 'nan'?? %6s %s" % ("resDev:\t", resDev)
-                    raise Exception(emsg)
-
-                if math.isnan(nullDev):
-                    emsg = "Why is this nullDev = 'nan'?? %6s %s" % ("nullDev:\t", nullDev)
 
 if __name__ == '__main__':
     h2o.unit_main()

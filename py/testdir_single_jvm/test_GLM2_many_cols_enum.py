@@ -26,7 +26,8 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED, translateList):
 
         rowAvg = (rowTotal + 0.0)/colCount
         ### print rowAvg
-        if rowAvg > 2.25:
+        # if rowAvg > 2.25:
+        if rowAvg > 2.3:
             result = 1
         else:
             result = 0
@@ -58,7 +59,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_many_cols_enum(self):
+    def test_GLM2_many_cols_enum(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         translateList = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u']
 
@@ -96,7 +98,6 @@ class Basic(unittest.TestCase):
             parseResult = h2i.import_parse(path=csvPathname, hex_key=hex_key, schema='put', timeoutSecs=30)
             elapsed = time.time() - start
 
-            print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
 
             algo = "Parse"
@@ -111,17 +112,18 @@ class Basic(unittest.TestCase):
 
             y = colCount
             # just limit to 2 iterations..assume it scales with more iterations
+            # java.lang.IllegalArgumentException: Too many predictors! 
+            # GLM can only handle 5000 predictors, got 5100, try to run with strong_rules enabled.
+
             kwargs = {
-                'y': y, 
+                'response': y, 
                 'max_iter': 2, 
-                'case': 1,
-                'case_mode': '=',
                 'family': 'binomial',
                 'lambda': 1e-4,
                 'alpha': 0.6,
-                'thresholds': 0.5,
                 'n_folds': 1,
                 'beta_epsilon': 1e-4,
+                'strong_rules_enabled': 1,
             }
 
             start = time.time()
@@ -133,9 +135,7 @@ class Basic(unittest.TestCase):
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
-            iterations = glm['GLMModel']['iterations']
-
-            algo = "GLM " + str(iterations) + " iterations"
+            algo = "GLM " 
             l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs'.format(
                 len(h2o.nodes), h2o.nodes[0].java_heap_GB, algo, csvFilename, elapsed)
             print l
