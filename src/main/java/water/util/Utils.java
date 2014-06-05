@@ -804,11 +804,42 @@ public class Utils {
       if(idx < 0 || idx >= sz) throw new IndexOutOfBoundsException("Must have 0 <= idx < " + sz + ": " + idx);
       _val[idx >> 3] |= ((byte)1 << idx);
     }
+    public void clear(int idx) {
+      int sz = size();
+      if(idx < 0 || idx >= sz) throw new IndexOutOfBoundsException("Must have 0 <= idx < " + sz + ": " + idx);
+      _val[idx >> 3] &= ~((byte)1 << idx);
+    }
     public int cardinality() {
-      int sum = 0;
+      int nbits = 0;
       for(int i = 0; i < _val.length; i++)
-        sum += Integer.bitCount(_val[i]);
-      return sum;
+        nbits += Integer.bitCount(_val[i]);
+      return nbits;
+    }
+    public int firstSetBit() { return get(0) ? 0 : nextSetBit(0); }
+    public int firstClearBit() { return !get(0) ? 0 : nextClearBit(0); }
+    public int nextSetBit(int idx) {
+      int sz = size();
+      if(idx < 0 || idx >= sz) throw new IndexOutOfBoundsException("Must have 0 <= idx < " + sz + ": " + idx);
+
+      int idx_next = idx >> 3;
+      byte bt_next = (byte)(_val[idx_next] & ((byte)0xFF << idx));
+      while(bt_next == 0) {
+        if(++idx_next >= _val.length) return -1;
+        bt_next = _val[idx_next];
+      }
+      return (idx_next << 3) + Integer.numberOfLeadingZeros(bt_next);
+    }
+    public int nextClearBit(int idx) {
+      int sz = size();
+      if(idx < 0 || idx >= sz) throw new IndexOutOfBoundsException("Must have 0 <= idx < " + sz + ": " + idx);
+
+      int idx_next = idx >> 3;
+      byte bt_next = (byte)(~_val[idx_next] & ((byte)0xFF << idx));
+      while(bt_next == 0) {
+        if(++idx_next >= _val.length) return -1;
+        bt_next = (byte)(~_val[idx_next]);
+      }
+      return (idx_next << 3) + Integer.numberOfLeadingZeros(bt_next);
     }
     public int size() { return _val.length << 3; };
     @Override public String toString() {

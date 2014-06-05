@@ -1297,25 +1297,20 @@ public class DTree extends Iced {
 
     // generate code for checking group split
     protected void groupSplit(int col, IcedBitSet gcmp) throws RuntimeException {
-      StringBuilder group = new StringBuilder();
-      boolean first = true;
+      StringBuilder grp = new StringBuilder();
+      boolean cntSet = gcmp.cardinality() >= gcmp.size()/2;    // if more than half of bits set, iterate over clear bits
 
-      // TODO: Make more efficient by checking cardinality and using (||, ==) or (&&, !=) depending on number of set bits
-      for(int i = 0; i < gcmp._val.length; i++) {
-        if(gcmp._val[i] == 0) continue;
-        for(int j = 0; j < 8; j++) {
-          // split to left, so want data[col] to NOT be set in BitSet
-          if((gcmp._val[i] & (1 << j)) != 0) {
-            if(first)
-              group.append("(int) data[").append(col).append(" /* ").append(_tm._names[col]).append(" */").append("] != ").append((i << 3) + j);
-            else
-              group.append(" && (int) data[").append(col).append("] != ").append((i << 3) + j);
-            first = false;
-          }
-        }
+      // TODO: Iterate over contiguous ranges rather than individual bits
+      // Use (||, == clear bit) or (&&, != set bit) depending on number of set bits
+      int idx = cntSet ? gcmp.firstSetBit() : gcmp.firstClearBit();
+      if(idx != -1) {
+        // split to left, so want data[col] to NOT be set in BitSet
+        grp.append("(int) data[").append(col).append(" /* ").append(_tm._names[col]).append(" */").append("] == ").append(idx);
+        while((idx = cntSet ? gcmp.nextSetBit(idx) : gcmp.nextClearBit(idx)) != -1)
+          grp.append(" || (int) data[").append(col).append("] == ").append(idx);
       }
       _sb.p(" (Double.isNaN(data[").p(col).p("])");
-      if(group.length() > 0) _sb.p(" || (").p(group.toString()).p(")");
+      if(grp.length() > 0) _sb.p(" || ").p(cntSet ? "!(" : "(").p(grp.toString()).p(")");
     }
 
     @Override protected void pre( int col, float fcmp, IcedBitSet gcmp, int equal ) {
