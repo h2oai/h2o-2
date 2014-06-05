@@ -33,6 +33,7 @@ import water.H2O;
 import water.NanoHTTPD;
 import water.api.Upload.PostFile;
 import water.deploy.LaunchJar;
+import water.exec3.ASTParser;
 import water.util.Log;
 import water.util.Log.Tag.Sys;
 import water.util.Utils.ExpectedExceptionForDebug;
@@ -200,6 +201,9 @@ public class RequestServer extends NanoHTTPD {
       Request.addToNavbar(registerRequest(new GeneratePredictionsPage()), "GeneratePredictionsPage", "VA (deprecated)");
       Request.addToNavbar(registerRequest(new Score()), "Score", "VA (deprecated)");
     }
+
+
+    registerRequest(new ASTParser());
 
     registerRequest(new Get()); // Download
     //Column Expand

@@ -64,6 +64,16 @@ public abstract class ASTOp extends AST {
     putUniInfix(new ASTUniMinus());
     putUniInfix(new ASTNot());
     // Binary infix ops
+
+
+    class ASTLArrow extends ASTBinOp {
+
+      ASTLArrow()   { super(OPF_INFIX, OPP_LARROW, OPA_RIGHT); }
+      @Override String opStr(){ return "<-" ;}
+      @Override ASTOp make() {return new ASTLArrow();}
+      @Override double op(double d0, double d1) { d0 = d1; return d0;}}
+
+    putBinInfix(new ASTLArrow());
     putBinInfix(new ASTPlus());
     putBinInfix(new ASTSub());
     putBinInfix(new ASTMul());

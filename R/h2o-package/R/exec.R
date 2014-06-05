@@ -315,6 +315,16 @@ function(op, ...) {
   new("ASTNode", root=op, children=ASTargs)
 }
 
+.force.eval<-
+function(client, object) {
+  expr <- as.character(toJSON(visitor(object)))
+  res <- .h2o.__remoteSend(client, .h2o.__PAGE_EXEC3, ast=expr)
+  if(!is.null(res$response$status) && res$response$status == "error") stop("H2O returned an error!")
+  res$dest_key = destKey
+  return(res)
+}
+
+
 #cat(toJSON(visitor(h2o.cut(hex[,1], seq(0,1,0.01)))), "\n")
 
 

@@ -26,6 +26,7 @@
 .LOGICAL_OPERATORS <- c("==", ">", "<", "!=", ">=", "<=", "&", "|", "&&", "||", "!", "is.na")
 .INFIX_OPERATORS   <- c("+", "-", "*", "/", "^", "%%", "%/%", "&", "|", "!", "==", "!=", "<", "<=", ">=", ">")
 
+.h2o.__PAGE_EXEC3                 <- "2/ASTParser.json"
 .h2o.__PAGE_CANCEL                <- "Cancel.json"
 .h2o.__PAGE_CLOUD                 <- "Cloud.json"
 .h2o.__PAGE_GET                   <- "GetVector.json"

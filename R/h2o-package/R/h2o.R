@@ -260,44 +260,10 @@ h2o.rm <- function(object, keys) {
     .h2o.__remoteSend(object, .h2o.__PAGE_REMOVE, key=keys[[i]])
 }
 
-# ----------------------- Log helper ----------------------- #
-h2o.logAndEcho <- function(conn, message) {
-  if(class(conn) != "H2OClient") stop("conn must be an H2OClient")
-  if(!is.character(message)) stop("message must be a character string")
-
-  res = .h2o.__remoteSend(conn, .h2o.__PAGE_LOG_AND_ECHO, message=message)
-  echo_message = res$message
-  return(echo_message)
-}
-
-h2o.downloadAllLogs <- function(client, dirname = ".", filename = NULL) {
-  if(class(client) != "H2OClient") stop("client must be of class H2OClient")
-  if(!is.character(dirname)) stop("dirname must be of class character")
-  if(!is.null(filename)) {
-    if(!is.character(filename)) stop("filename must be of class character")
-    else if(nchar(filename) == 0) stop("filename must be a non-empty string")
-  }
-
-  url = paste("http://", client@ip, ":", client@port, "/", .h2o.__DOWNLOAD_LOGS, sep="")
-  if(!file.exists(dirname)) dir.create(dirname)
-
-  cat("Downloading H2O logs from server...\n")
-  h = basicHeaderGatherer()
-  tempfile = getBinaryURL(url, headerfunction = h$update, verbose = TRUE)
-
-  # Get filename from HTTP header of response
-  if(is.null(filename)) {
-    # temp = strsplit(as.character(Sys.time()), " ")[[1]]
-    # myDate = gsub("-", "", temp[1]); myTime = gsub(":", "", temp[2])
-    # file_name = paste("h2ologs_", myDate, "_", myTime, ".zip", sep="")
-    atch = h$value()[["Content-Disposition"]]
-    ind = regexpr("filename=", atch)[[1]]
-    if(ind == -1) stop("Header corrupted: Expected attachment filename in Content-Disposition")
-    filename = substr(atch, ind+nchar("filename="), nchar(atch))
-  }
-  myPath = paste(normalizePath(dirname), filename, sep = .Platform$file.sep)
-
-  cat("Writing H2O logs to", myPath, "\n")
-  # download.file(url, destfile = myPath)
-  writeBin(tempfile, myPath)
+.h2o.__formatError <- function(error,prefix="  ") {
+  result = ""
+  items = strsplit(as.character(error),"\n")[[1]];
+  for (i in 1:length(items))
+    result = paste(result,prefix,items[i],"\n",sep="")
+  result
 }
