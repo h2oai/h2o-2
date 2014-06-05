@@ -3,7 +3,7 @@ source("../../../R/h2oPerf/prologue.R")
 data_source <<- "home-0xdiag-datasets"
 
 trainData    <<- "/home/0xdiag/datasets/mnist/mnist_training.csv.gz"
-response <<- "C785"
+response <<- "C1"
 
 num_train_rows  <<- 49749
 num_explan_cols <<- 784
