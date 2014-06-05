@@ -273,4 +273,12 @@ class Alerter:
         self.test_names = self.correct_alert.test_names  # correct_alert chosen WLOG
 
     def gather_alerts(self):
+        pass
+
+    def alert(self):
+        self.gather_alerts()
+        self._alert(self)
+
+    def _alert(self):
+        pass
 
