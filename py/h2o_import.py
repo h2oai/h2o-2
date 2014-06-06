@@ -443,6 +443,7 @@ def delete_keys(node=None, pattern=None, timeoutSecs=120):
 
 # if pattern is used, don't use the heavy h2o method
 def delete_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=120):
+    time.sleep(5)
     # TEMP: change this to remove_all_keys which ignores locking and removes keys?
     # getting problems when tests fail in multi-test-on-one-h2o-cluster runner*sh tests
     if not node: node = h2o.nodes[0]

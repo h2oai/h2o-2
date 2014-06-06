@@ -368,7 +368,7 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
             coefficients = GLMModel['normalized_coefficients'].copy()
         else:
             coefficients = GLMModel['coefficients'].copy()
-        coefficients_names = GLMModel['coefficients_names']
+        coefficients_names = GLMModel['column_names']
         # get the intercept out of there into it's own dictionary
         intercept = coefficients.pop('Intercept', None)
         print "First intercept:", intercept
