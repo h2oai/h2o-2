@@ -47,11 +47,17 @@ class Basic(unittest.TestCase):
             for (csvFilename, family, y, timeoutSecs, x) in csvFilenameList:
                 csvPathname = "logreg/umass_statdata/" + csvFilename
                 kwargs = {'n_folds': 2, 'response': y, 'family': family, 'alpha': 1, 'lambda': 1e-4}
+
+
+                parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put', 
+                    timeoutSecs=timeoutSecs)
                 if x is not None:
-                    kwargs['x'] = x
+                    ignored_cols = h2o_cmd.createIgnoredCols(key=parseResult['destination_key'], 
+                        cols=x, response=y)
+                    kwargs['ignored_cols'] = ignored_cols
+
 
                 start = time.time()
-                parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put', timeoutSecs=timeoutSecs)
                 glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
                 h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
                 print "glm end (w/check) on ", csvPathname, 'took', time.time() - start, 'seconds'
