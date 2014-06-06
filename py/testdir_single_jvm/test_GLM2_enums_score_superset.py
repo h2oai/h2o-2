@@ -1,7 +1,7 @@
 import unittest, random, sys, time, re, math
 sys.path.extend(['.','..','py'])
 
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_gbm
 
 # use randChars for the random chars to use
 def random_enum(randChars, maxEnumSize):
@@ -53,7 +53,8 @@ class Basic(unittest.TestCase):
         ### time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_GLM_enums_score_superset(self):
+    def test_GLM2_enums_score_superset(self):
+        h2o.beta_features = True
         print "FIX!: this should cause an error. We should detect that it's not causing an error/warning?"
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
@@ -101,7 +102,6 @@ class Basic(unittest.TestCase):
 
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key,
                 timeoutSecs=30, separator=colSepInt)
-            print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
 
             print "\n" + csvFilename
@@ -109,49 +109,63 @@ class Basic(unittest.TestCase):
                 h2o_cmd.columnInfoFromInspect(parseResult['destination_key'], exceptionOnMissingValues=True)
 
             y = colCount
-            kwargs = {'y': y, 'max_iter': 1, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5, 'family': 'binomial',
-                'case_mode': '=', 'case': 0}
+            modelKey = 'enums'
+            kwargs = {
+                'destination_key': modelKey,
+                'response': y, 
+                'max_iter': 1, 
+                'n_folds': 1, 
+                'alpha': 0.2, 
+                'lambda': 1e-5, 
+                'family': 'binomial'
+            }
+
             start = time.time()
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
             print "glm end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
-            GLMModel = glm['GLMModel']
-            modelKey = GLMModel['model_key']
-
-            parseResult = h2i.import_parse(path=csvScorePathname, schema='put', hex_key="score_" + hex_key, 
+            scoreDataKey = "score_" + hex_key
+            parseResult = h2i.import_parse(path=csvScorePathname, schema='put', hex_key=scoreDataKey, 
                 timeoutSecs=30, separator=colSepInt)
 
+            # Score *******************************
+            # this messes up if you use case_mode/case_vale above
+            predictKey = 'Predict.hex'
             start = time.time()
-            # score with same dataset (will change to recreated dataset with one less enum
-            glmScore = h2o_cmd.runGLMScore(key=parseResult['destination_key'],
-                model_key=modelKey, thresholds="0.5", timeoutSecs=timeoutSecs)
-            print "glmScore end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'
-            ### print h2o.dump_json(glmScore)
-            classErr = glmScore['validation']['classErr']
-            auc = glmScore['validation']['auc']
-            err = glmScore['validation']['err']
-            resDev = glmScore['validation']['resDev']
-            nullDev = glmScore['validation']['nullDev']
-            print "classErr:", classErr
-            print "err:", err
-            print "auc:", auc
-            print "resDev:", resDev
-            print "nullDev:", nullDev
-            # what is reasonable?
-            # self.assertAlmostEqual(err, 0.3, delta=0.15, msg="actual err: %s not close enough to 0.3" % err)
-            self.assertAlmostEqual(auc, 0.5, delta=0.15, msg="actual auc: %s not close enough to 0.5" % auc)
 
-            if math.isnan(err):
-                emsg = "Why is this err = 'nan'?? %6s %s" % ("err:\t", err)
-                raise Exception(emsg)
+            predictResult = h2o_cmd.runPredict(
+                data_key=scoreDataKey,
+                model_key=modelKey,
+                destination_key=predictKey,
+                timeoutSecs=timeoutSecs)
 
-            if math.isnan(resDev):
-                emsg = "Why is this resDev = 'nan'?? %6s %s" % ("resDev:\t", resDev)
-                raise Exception(emsg)
+           # just get a predict and AUC on the same data. has to be binomial result
+            resultAUC = h2o.nodes[0].generate_auc(
+                thresholds=None, 
+                actual=scoreDataKey,
+                predict='Predict.hex',
+                vactual=y, 
+                vpredict=1)
+            auc = resultAUC['AUC']
+            self.assertAlmostEqual(auc, 0.5, delta=0.15, 
+                msg="actual auc: %s not close enough to 0.5" % auc)
 
-            if math.isnan(nullDev):
-                emsg = "Why is this nullDev = 'nan'?? %6s %s" % ("nullDev:\t", nullDev)
+            predictCMResult = h2o.nodes[0].predict_confusion_matrix(
+                actual=scoreDataKey,
+                predict=predictKey,
+                vactual='C' + str(y+1),
+                vpredict='predict',
+                )
+
+            cm = predictCMResult['cm']
+
+            # These will move into the h2o_gbm.py
+            pctWrong = h2o_gbm.pp_cm_summary(cm);
+
+            print "\nTest\n==========\n"
+            print h2o_gbm.pp_cm(cm)
+
 
 
 if __name__ == '__main__':
