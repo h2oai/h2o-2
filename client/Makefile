@@ -55,6 +55,7 @@ BROWSER_SCRIPTS=\
 	$(BUILD)/scripts/model-inspection-view.js \
 	$(BUILD)/scripts/model-selection-view.js \
 	$(BUILD)/scripts/scoring-view.js \
+	$(BUILD)/scripts/scoring-sheet-view.js \
 	$(BUILD)/scripts/notification-view.js \
 	$(BUILD)/scripts/scoring-selection-view.js \
 	$(BUILD)/scripts/main-view.js \
@@ -84,6 +85,7 @@ TEST_SCRIPTS=\
 	$(BUILD)/scripts/model-inspection-view.js \
 	$(BUILD)/scripts/model-selection-view.js \
 	$(BUILD)/scripts/scoring-view.js \
+	$(BUILD)/scripts/scoring-sheet-view.js \
 	$(BUILD)/scripts/notification-view.js \
 	$(BUILD)/scripts/scoring-selection-view.js \
 	$(BUILD)/scripts/main-view.js \

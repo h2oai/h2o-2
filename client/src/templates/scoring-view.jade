@@ -22,15 +22,15 @@
   // /ko
 
   // ko if:isComparisonView
-
   .y-tabs
     a.y-tab(data-bind='click:switchToTabularView, css:{active:isTabularComparisonView}') Tabular
     a.y-tab(data-bind='click:switchToAdvancedView, css:{active:isAdvancedComparisonView}') Advanced
+    a.y-tab(data-bind='click:switchToSheetView, css:{active:isSheetView}') Sheet
 
   // ko if:isTabularComparisonView
   div(data-bind='geyser:comparisonTable')
   // /ko
-  // ko ifnot:isTabularComparisonView
+  // ko if:isAdvancedComparisonView
   h2.y-subtitle(data-bind='collapse:false') Scorings in this comparison
   div
     div Click on a scoring to inspect it.
@@ -100,9 +100,20 @@
         button.btn.btn-primary(data-bind='click:configureStripPlot') Configure...
 
   // /ko
+  //- if:isAdvancedComparisonView
+
+  // ko if:isSheetView
+  // ko with:sheetView
+  div(data-bind="geyser:metricTable")
   // /ko
+  // /ko
+  //- if:isSheetView
 
   // /ko
+  //- if:isComparisonView
+
+  // /ko
+  //- ifnot:hasFailed
 
   // ko if:hasFailed
   h2.y-subtitle Scoring Failure

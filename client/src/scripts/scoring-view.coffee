@@ -318,10 +318,14 @@ Steam.ScoringView = (_, _scoring) ->
   _isComparisonView = lift$ _scoringType, (type) -> type is 'comparison'
 
   #TODO make this a property of the comparison object
-  _isTabularComparisonView = node$ yes
-  _isAdvancedComparisonView = lift$ _isTabularComparisonView, negate
-  switchToTabularView = -> _isTabularComparisonView yes
-  switchToAdvancedView = -> _isTabularComparisonView no
+  _comparisonMode = node$ 'tabular'
+  _isTabularComparisonView = lift$ _comparisonMode, (mode) -> mode is 'tabular'
+  _isAdvancedComparisonView = lift$ _comparisonMode, (mode) -> mode is 'advanced'
+  _isSheetView = lift$ _comparisonMode, (mode) -> mode is 'sheet'
+  switchToTabularView = -> _comparisonMode 'tabular'
+  switchToAdvancedView = -> _comparisonMode 'advanced'
+  switchToSheetView = -> _comparisonMode 'sheet'
+  _sheetView = node$ null
 
   createModelSummary = (model) ->
     [
@@ -355,47 +359,50 @@ Steam.ScoringView = (_, _scoring) ->
         _timestamp comparison.data.timestamp
         _modelSummary null #TODO populate model summary
         scorings = comparison.data.scorings
-        apply$ _isTabularComparisonView, (isTabularComparisonView) ->
-          if isTabularComparisonView
-            if scorings.length > 0
-              _comparisonTable createComparisonTable scorings
-            else
-              _comparisonTable null
-          else
-            if scorings.length > 0
-              series = createSeriesFromMetrics scorings
-              areModelsComparable = same series, (a, b) -> a.model.model_category is b.model.model_category and a.model.model_algorithm is b.model.model_algorithm
-              if areModelsComparable
-                [inputParameterKeys, inputParameters] = collateInputParameters series
-                [ inputAndOutputVariables, defaultInputVariable, defaultOutputVariable ] = createInputAndOutputVariables inputParameterKeys, inputParameters, aucCategories
+        apply$ _comparisonMode, (mode) ->
+          switch mode
+            when 'tabular'
+              if scorings.length > 0
+                _comparisonTable createComparisonTable scorings
               else
-                [ inputAndOutputVariables, defaultInputVariable, defaultOutputVariable ] = createInputAndOutputVariables [], [], aucCategories
+                _comparisonTable null
+            when 'advanced'
+              if scorings.length > 0
+                series = createSeriesFromMetrics scorings
+                areModelsComparable = same series, (a, b) -> a.model.model_category is b.model.model_category and a.model.model_algorithm is b.model.model_algorithm
+                if areModelsComparable
+                  [inputParameterKeys, inputParameters] = collateInputParameters series
+                  [ inputAndOutputVariables, defaultInputVariable, defaultOutputVariable ] = createInputAndOutputVariables inputParameterKeys, inputParameters, aucCategories
+                else
+                  [ inputAndOutputVariables, defaultInputVariable, defaultOutputVariable ] = createInputAndOutputVariables [], [], aucCategories
 
-              _inputOutputPlotX defaultInputVariable
-              _inputOutputPlotY defaultOutputVariable
-              _inputOutputCategories inputAndOutputVariables
-              apply$ _inputOutputPlotX, _inputOutputPlotY, (x, y) ->
-                _inputOutputPlot createMetricsPlot series, x, y
+                _inputOutputPlotX defaultInputVariable
+                _inputOutputPlotY defaultOutputVariable
+                _inputOutputCategories inputAndOutputVariables
+                apply$ _inputOutputPlotX, _inputOutputPlotY, (x, y) ->
+                  _inputOutputPlot createMetricsPlot series, x, y
 
-              #TODO sort by AUC
-              _scoringList createScoringList series
-              _categories aucCategories
-              apply$ _selectedCategory, (category) ->
-                _comparisonPlot generateComparison category, series
-              _multiRocPlot createThresholdPlot series, 'FPR', 'TPR', yes
-              apply$ _thresholdPlotX, _thresholdPlotY, (x, y) ->
-                _thresholdPlot createThresholdPlot series, x.key, y.key, no
-              #_stripPlot createStripPlot metricsArray
-              _stripPlotParameters.group1 []
-              _stripPlotParameters.group2 map aucCriteria, createStripPlotParameters2
-              _stripPlotParameters.group3 map aucOutputs, createStripPlotParameters3
-              _stripPlot createStripPlot series, aucCategories
-            else
-              _scoringList null
-              _comparisonPlot null
-              _multiRocPlot null
-              _thresholdPlot null
-              _stripPlot null
+                #TODO sort by AUC
+                _scoringList createScoringList series
+                _categories aucCategories
+                apply$ _selectedCategory, (category) ->
+                  _comparisonPlot generateComparison category, series
+                _multiRocPlot createThresholdPlot series, 'FPR', 'TPR', yes
+                apply$ _thresholdPlotX, _thresholdPlotY, (x, y) ->
+                  _thresholdPlot createThresholdPlot series, x.key, y.key, no
+                #_stripPlot createStripPlot metricsArray
+                _stripPlotParameters.group1 []
+                _stripPlotParameters.group2 map aucCriteria, createStripPlotParameters2
+                _stripPlotParameters.group3 map aucOutputs, createStripPlotParameters3
+                _stripPlot createStripPlot series, aucCategories
+              else
+                _scoringList null
+                _comparisonPlot null
+                _multiRocPlot null
+                _thresholdPlot null
+                _stripPlot null
+            when 'sheet'
+              _sheetView Steam.ScoringSheetView _, scorings
 
     _scoringType item.type
 
@@ -492,7 +499,6 @@ Steam.ScoringView = (_, _scoring) ->
       .attr 'd', line
 
     el
-
 
   computeTPRandFPR2 = (cm, index) ->
     [[tn, fp], [fn, tp]] = cm
@@ -1184,8 +1190,10 @@ Steam.ScoringView = (_, _scoring) ->
   isComparisonView: _isComparisonView
   isTabularComparisonView: _isTabularComparisonView
   isAdvancedComparisonView: _isAdvancedComparisonView
+  isSheetView: _isSheetView
   switchToTabularView: switchToTabularView
   switchToAdvancedView: switchToAdvancedView
+  switchToSheetView: switchToSheetView
   modelSummary: _modelSummary
   comparisonTable: _comparisonTable
   scoringList: _scoringList
@@ -1203,6 +1211,7 @@ Steam.ScoringView = (_, _scoring) ->
   thresholdPlotVariables: _thresholdPlotVariables
   stripPlot: _stripPlot
   configureStripPlot: configureStripPlot
+  sheetView: _sheetView
   hasFailed: _hasFailed
   failure: _failure
   template: 'scoring-view'

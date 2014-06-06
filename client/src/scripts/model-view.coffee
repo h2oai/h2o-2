@@ -35,7 +35,7 @@ Steam.ModelView = (_, _model) ->
   compatibleFramesCount = "(#{nonRawFrames.length})"
 
   loadCompatibleFrames = ->
-    _.switchToFrames type: 'compatibleWithModel', modelKey: model.key
+    _.switchToFrames type: 'compatibleWithModel', modelKey: _model.key
   
   data: _model
   key: _model.key
