@@ -827,7 +827,7 @@ public class Utils {
         if(++idx_next >= _val.length) return -1;
         bt_next = _val[idx_next];
       }
-      return (idx_next << 3) + Integer.numberOfLeadingZeros(bt_next);
+      return (idx_next << 3) + Integer.numberOfTrailingZeros(bt_next);
     }
     public int nextClearBit(int idx) {
       int sz = size();
@@ -839,7 +839,7 @@ public class Utils {
         if(++idx_next >= _val.length) return -1;
         bt_next = (byte)(~_val[idx_next]);
       }
-      return (idx_next << 3) + Integer.numberOfLeadingZeros(bt_next);
+      return (idx_next << 3) + Integer.numberOfTrailingZeros(bt_next);
     }
     public int size() { return _val.length << 3; };
     @Override public String toString() {
