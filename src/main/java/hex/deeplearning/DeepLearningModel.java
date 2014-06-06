@@ -3,9 +3,11 @@ package hex.deeplearning;
 import static java.lang.Double.isNaN;
 import hex.FrameTask.DataInfo;
 import hex.VarImp;
+import org.apache.commons.lang.ArrayUtils;
 import water.*;
 import water.api.*;
 import water.api.Request.API;
+import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.*;
@@ -731,7 +733,8 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
         if (get_params().diagnostics) model_info().computeStats();
         if (get_params().autoencoder) {
           if (printme) Log.info("Scoring the auto-encoder.");
-          final Frame reconstructed = score(ftrain);
+          Log.info(get_params().source.toStringAll());
+          final Frame reconstructed = score(ftrain, false);
           Log.info(reconstructed.toStringAll());
           reconstructed.delete();
         }
@@ -923,6 +926,42 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     return sb.toString();
   }
 
+  @Override
+  protected Frame scoreImpl(Frame adaptFrm) {
+    if (!get_params().autoencoder) return super.scoreImpl(adaptFrm);
+    else {
+      final int len = _names.length-1;
+      String prefix = "reconstr_";
+      for( int c=0; c<len; c++ )
+        adaptFrm.add(prefix+adaptFrm.names()[c],adaptFrm.anyVec().makeZero());
+      new MRTask2() {
+        @Override public void map( Chunk chks[] ) {
+          double tmp [] = new double[len];
+          float preds[] = new float [len];
+          for( int row=0; row<chks[0]._len; row++ ) {
+            float p[] = score0(chks,row,tmp,preds);
+            for( int c=0; c<preds.length; c++ )
+              chks[len+c].set0(row,p[c]);
+          }
+        }
+      }.doAll(adaptFrm);
+
+      // Return just the output columns
+      int x=_names.length-1, y=adaptFrm.numCols();
+      return adaptFrm.extractFrame(x, y);
+    }
+  }
+
+  @Override
+  protected float[] score0(Chunk[] chks, int row_in_chunk, double[] tmp, float[] preds) {
+    if (!get_params().autoencoder) return super.score0(chks, row_in_chunk, tmp, preds);
+    else {
+      for( int i=0; i<_names.length-1; i++ )
+        tmp[i] = chks[i].at0(row_in_chunk);
+      return score0(tmp,preds);
+    }
+  }
+
   /**
    * Predict from raw double values representing
    * @param data raw array containing categorical values (horizontalized to 1,0,0,1,0,0 etc.) and numerical values (0.35,1.24,5.3234,etc), both can contain NaNs
@@ -940,7 +979,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     if (get_params().autoencoder) {
       assert(preds.length == out.length);
       for (int i = 0; i < out.length; ++i) {
-        preds[i] = out[i];
+        preds[i] = (float) (out[i] / model_info().data_info()._normMul[i] + model_info().data_info()._normSub[i]);
       }
     } else {
       if (isClassifier()) {

@@ -33,10 +33,10 @@ public class DeepLearningAutoEncoderTest extends TestUtil {
 
     // regular parameters
     p.seed = seed;
-    p.hidden = new int[]{100};
+    p.hidden = new int[]{1000};
     p.adaptive_rate = true;
     p.activation = DeepLearning.Activation.Tanh;
-    p.epochs = 10;
+    p.epochs = 1000;
     p.force_load_balance = false; //keep just 1 chunk for reproducibility
     p.invoke();
 

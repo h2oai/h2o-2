@@ -156,6 +156,7 @@ public class DeepLearningTask extends FrameTask<DeepLearningTask> {
         neurons[i].fprop(seed, training);
       }
       if (minfo.get_params().autoencoder) {
+        neurons[neurons.length - 1].fprop(seed, training);
         if (training) {
           for (int i = 1; i < neurons.length - 1; i++)
           neurons[neurons.length - 1].bprop();

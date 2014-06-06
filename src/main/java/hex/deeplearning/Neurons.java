@@ -727,16 +727,17 @@ public abstract class Neurons {
       long processed = _minfo.get_processed_total();
       float m = momentum(processed);
       float r = rate(processed) * (1 - m);
-      for( int o = 0; o < _a.size(); o++ ) {
+      for( int row = 0; row < _a.size(); row++ ) {
         assert _previous._previous.units == units;
-        float e = _previous._previous._a.get(o) - _a.get(o);
-        float g = e;
-        for( int i = 0; i < _previous._a.size(); i++ ) {
+        float e = _previous._previous._a.get(row) - _a.get(row);
+        float g = e * (1 - _a.get(row) * _a.get(row)); //Tanh
+        for( int col = 0; col < _previous._a.size(); col++ ) {
+          // transposed matrix access
           if( _previous._e != null )
-            _previous._e.add(i, g * _w.get(i,o));
-          _w.add(i, o, (float) (r * (g * _previous._a.get(i) - _w.get(i,o) * params.l2 - Math.signum(_w.get(i,o)) * params.l1)));
+            _previous._e.add(col, g * _w.get(col,row));
+          _w.add(col, row, (float) (r * (g * _previous._a.get(col) - _w.get(col,row) * params.l2 - Math.signum(_w.get(col,row)) * params.l1)));
         }
-        _b.add(o, r * g);
+        _b.add(row, r * g);
       }
     }
   }
