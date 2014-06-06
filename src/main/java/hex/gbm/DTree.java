@@ -1297,18 +1297,23 @@ public class DTree extends Iced {
 
     // generate code for checking group split
     protected void groupSplit(int col, IcedBitSet gcmp) throws RuntimeException {
-      boolean cntSet = gcmp.cardinality() >= gcmp.size()/2;    // if more than half of bits set, iterate over clear bits
+      // boolean cntSet = gcmp.cardinality() >= gcmp.size()/2;    // if more than half of bits set, iterate over clear bits
+      boolean cntSet = true;
       _sb.p(" (Double.isNaN(data[").p(col).p("])");
 
       // TODO: Iterate over contiguous ranges rather than individual bits
       // Use (||, == clear bit) or (&&, != set bit) depending on number of set bits in group
-      int idx = cntSet ? gcmp.firstSetBit() : gcmp.firstClearBit();
+      int idx = cntSet ? gcmp.nextSetBit(0) : gcmp.nextClearBit(0);
       if(idx != -1) {
         _sb.p(" || ").p(cntSet ? "!(" : "(");
         // split to left, so want data[col] to NOT be set in BitSet
         _sb.p("(int) data[").p(col).p(" /* ").p(_tm._names[col]).p(" */").p("] == ").p(idx);
-        while((idx = cntSet ? gcmp.nextSetBit(idx) : gcmp.nextClearBit(idx)) != -1)
+        // while((idx = cntSet ? gcmp.nextSetBit(idx+1) : gcmp.nextClearBit(idx+1)) != -1)
+        while(idx+1 <= gcmp.size()-1) {
+          idx = cntSet ? gcmp.nextSetBit(idx+1) : gcmp.nextClearBit(idx+1);
+          if(idx == -1) break;
           _sb.p(" || (int) data[").p(col).p("] == ").p(idx);
+        }
         _sb.p(")");
       }
     }

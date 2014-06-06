@@ -784,14 +784,22 @@ public class Utils {
   }
   public static class IcedBitSet extends Iced {
     public final byte[] _val;
-    public IcedBitSet(byte[] v) { _val = v; }
+    public final int _nbits;
+
+    public IcedBitSet(byte[] v) { _val = v; _nbits = v.length << 3; }
+    public IcedBitSet(byte[] v, int nbits) {
+      assert nbits << 3 <= v.length;
+      _val = v; _nbits = nbits;
+    }
     public IcedBitSet(int nbits) {
       if(nbits < 0) throw new NegativeArraySizeException("nbits < 0: " + nbits);
+      _nbits = nbits;
       _val = new byte[((nbits-1) >> 3) + 1];
     }
+
     public boolean get(int idx) {
-      int sz = size();
-      if(idx < 0 || idx >= sz) throw new IndexOutOfBoundsException("Must have 0 <= idx < " + sz + ": " + idx);
+      if(idx < 0 || idx > _nbits-1)
+        throw new IndexOutOfBoundsException("Must have 0 <= idx <= " + Integer.toString(_nbits-1) + ": " + idx);
       return (_val[idx >> 3] & ((byte)1 << idx)) != 0;
     }
     public boolean contains(int idx) {
@@ -800,13 +808,13 @@ public class Utils {
       return get(idx);
     }
     public void set(int idx) {
-      int sz = size();
-      if(idx < 0 || idx >= sz) throw new IndexOutOfBoundsException("Must have 0 <= idx < " + sz + ": " + idx);
+      if(idx < 0 || idx > _nbits-1)
+        throw new IndexOutOfBoundsException("Must have 0 <= idx <= " + Integer.toString(_nbits-1) + ": " + idx);
       _val[idx >> 3] |= ((byte)1 << idx);
     }
     public void clear(int idx) {
-      int sz = size();
-      if(idx < 0 || idx >= sz) throw new IndexOutOfBoundsException("Must have 0 <= idx < " + sz + ": " + idx);
+      if(idx < 0 || idx > _nbits-1)
+        throw new IndexOutOfBoundsException("Must have 0 <= idx <= " + Integer.toString(_nbits-1) + ": " + idx);
       _val[idx >> 3] &= ~((byte)1 << idx);
     }
     public int cardinality() {
@@ -815,33 +823,34 @@ public class Utils {
         nbits += Integer.bitCount(_val[i]);
       return nbits;
     }
-    public int firstSetBit() { return get(0) ? 0 : nextSetBit(0); }
-    public int firstClearBit() { return !get(0) ? 0 : nextClearBit(0); }
-    public int nextSetBit(int idx) {
-      int sz = size();
-      if(idx < 0 || idx >= sz) throw new IndexOutOfBoundsException("Must have 0 <= idx < " + sz + ": " + idx);
 
+    public int nextSetBit(int idx) {
+      if(idx < 0 || idx > _nbits-1)
+        throw new IndexOutOfBoundsException("Must have 0 <= idx <= " + Integer.toString(_nbits-1) + ": " + idx);
       int idx_next = idx >> 3;
-      byte bt_next = (byte)(_val[idx_next] & ((byte)0xFF << idx));
+      byte bt_next = (byte)(_val[idx_next] & ((byte)0xff << idx));
+
       while(bt_next == 0) {
         if(++idx_next >= _val.length) return -1;
         bt_next = _val[idx_next];
       }
       return (idx_next << 3) + Integer.numberOfTrailingZeros(bt_next);
     }
-    public int nextClearBit(int idx) {
-      int sz = size();
-      if(idx < 0 || idx >= sz) throw new IndexOutOfBoundsException("Must have 0 <= idx < " + sz + ": " + idx);
 
+    // TODO: Need to stop at nbits % 8 from last byte
+    public int nextClearBit(int idx) {
+      if(idx < 0 || idx > _nbits-1)
+        throw new IndexOutOfBoundsException("Must have 0 <= idx <= " + Integer.toString(_nbits-1) + ": " + idx);
       int idx_next = idx >> 3;
-      byte bt_next = (byte)(~_val[idx_next] & ((byte)0xFF << idx));
+      byte bt_next = (byte)(~_val[idx_next] & ((byte)0xff << idx));
+
       while(bt_next == 0) {
         if(++idx_next >= _val.length) return -1;
         bt_next = (byte)(~_val[idx_next]);
       }
       return (idx_next << 3) + Integer.numberOfTrailingZeros(bt_next);
     }
-    public int size() { return _val.length << 3; };
+    public int size() { return _nbits; };
     @Override public String toString() {
       StringBuilder sb = new StringBuilder();
       sb.append("{");
