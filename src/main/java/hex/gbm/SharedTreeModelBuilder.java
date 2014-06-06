@@ -96,6 +96,9 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   @API(help = "Class distribution")
   protected long _distribution[];
 
+  // Number of trees inherited from checkpoint
+  protected int _ntreesFromCheckpoint;
+
   private transient boolean _gen_enum; // True if we need to cleanup an enum response column at the end
 
   /** Maximal number of supported levels in response. */
@@ -225,17 +228,19 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     // Timer  for model building
     Timer bm_timer =  new Timer();
     long before = System.currentTimeMillis();
+    // Fetch checkpoint
+    assert checkpoint==null || (!(overwrite_checkpoint && checkpoint!=null) || outputKey==checkpoint): "If checkpoint is to be overwritten then outputkey has to equal to checkpoint key";
+    TM checkpointModel = checkpoint!=null ? (TM) UKV.get(checkpoint) : null;
     // Create an initial model based on given parameters
-    TM model = makeModel(outputKey, dataKey, testKey, names, domains, getCMDomain());
-    // Building from existing model
-    if (checkpoint!=null) {
-      assert !(overwrite_checkpoint && checkpoint!=null) || outputKey==checkpoint: "If checkpoint is to be overwritten then outputkey has to equal to checkpoint key";
-      TM checkpointModel = UKV.get(checkpoint);
+    TM model = makeModel(outputKey, dataKey, testKey, checkpointModel!=null?ntrees+checkpointModel.ntrees():ntrees,names, domains, getCMDomain());
+    // Update the model by a checkpoint
+    if (checkpointModel!=null) {
       checkpointModel.read_lock(self()); // lock it for read to avoid any other job to start working on it
       try {
         // Create a new initial model based on given checkpoint
         // TODO: check compatibility of parameters !
         model = updateModel(model, checkpointModel, overwrite_checkpoint);
+        _ntreesFromCheckpoint = checkpointModel.ntrees();
       } finally { checkpointModel.unlock(self()); }
     }
 
@@ -867,7 +872,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
    */
   protected abstract void initWorkFrame( TM initialModel, Frame fr);
 
-  protected abstract TM makeModel( Key outputKey, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain);
+  protected abstract TM makeModel( Key outputKey, Key dataKey, Key testKey, int ntrees, String names[], String domains[][], String[] cmDomain);
   protected abstract TM makeModel( TM model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC);
   protected abstract TM makeModel( TM model, DTree ktrees[], DTree.TreeModel.TreeStats tstats);
   protected abstract TM updateModel( TM model, TM checkpoint, boolean overwriteCheckpoint);

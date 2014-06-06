@@ -167,7 +167,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   public Frame score( Frame fr ) { return ((GBMModel)UKV.get(dest())).score(fr);  }
 
   @Override protected Log.Tag.Sys logTag() { return Sys.GBM__; }
-  @Override protected GBMModel makeModel(Key outputKey, Key dataKey, Key testKey, String[] names, String[][] domains, String[] cmDomain) {
+  @Override protected GBMModel makeModel(Key outputKey, Key dataKey, Key testKey, int ntrees, String[] names, String[][] domains, String[] cmDomain) {
     return new GBMModel(this, outputKey, dataKey, validation==null?null:testKey, names, domains, cmDomain, ntrees, max_depth, min_rows, nbins, learn_rate, family, n_folds);
   }
   @Override protected GBMModel makeModel( GBMModel model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
@@ -178,12 +178,12 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   }
   public GBM() { description = "Distributed GBM"; importance = true; }
 
-  @Override protected GBMModel updateModel(GBMModel model, GBMModel checkpoint, boolean overwriteCheckpoint) {
+  @Override protected GBMModel updateModel(GBMModel additionModel, GBMModel checkpoint, boolean overwriteCheckpoint) {
     // Do not forget to clone trees in case that we are not going to overwrite checkpoint
     Key[][] treeKeys = null;
-    if (!overwriteCheckpoint) throw H2O.unimpl("Cloning of model trees is not implemented yet!");
+    if (!overwriteCheckpoint) throw H2O.unimpl("Cloning of tree models is not implemented yet!");
     else treeKeys = checkpoint.treeKeys;
-    return new GBMModel(model, treeKeys, checkpoint.errs, checkpoint.cms, checkpoint.treeStats, checkpoint.varimp, checkpoint.validAUC);
+    return new GBMModel(additionModel, treeKeys, checkpoint.errs, checkpoint.cms, checkpoint.treeStats, checkpoint.varimp, checkpoint.validAUC);
   }
 
   /** Return the query link to this page */
@@ -241,8 +241,14 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
           for (int i=0; i<tr._len; i++) tr.set0(i, init);
         }
       }.doAll(fr);
-    } else { /* multinomial */ // TODO: we should use bernoulli distribution
+    } else { /* multinomial */
       /* Preserve 0s in working columns */
+    }
+    // Update tree fields based on checkpoint
+    if (checkpoint!=null) {
+      Timer t = new Timer();
+      new ResidualsCollector(_ncols, _nclass, initialModel.treeKeys).doAll(fr);
+      Log.info(logTag(), "Reconstructing oob stats from checkpointed model took " + t);
     }
   }
   // ==========================================================================
@@ -257,12 +263,14 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     // Build trees until we hit the limit
     int tid;
     DTree[] ktrees = null;              // Trees
-    TreeStats tstats = new TreeStats(); // Tree stats
+    TreeStats tstats = model.treeStats!=null ? model.treeStats : new TreeStats();
     for( tid=0; tid<ntrees; tid++) {
       // During first iteration model contains 0 trees, then 0-trees, then 1-tree,...
       // BUT if validation is not specified model does not participate in voting
       // but on-the-fly computed data are used
-      model = doScoring(model, fr, ktrees, tid, tstats, false, false, false);
+      if (tid!=0 || checkpoint==null) { // do not make initial scoring if model already exist
+        model = doScoring(model, fr, ktrees, tid, tstats, false, false, false);
+      }
       // ESL2, page 387
       // Step 2a: Compute prediction (prob distribution) from prior tree results:
       //   Work <== f(Tree)
@@ -503,7 +511,9 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
           for( int row=0; row<nids._len; row++ ) {
             int nid = (int)nids.at80(row);
             if( nid < 0 ) continue;
-            ct.set0(row, (float)(ct.at0(row) + ((LeafNode)tree.node(nid))._pred));
+            // Prediction stored in Leaf is cut to float to be deterministic in reconstructing
+            // <tree_klazz> fields from tree prediction
+            ct.set0(row, (float)(ct.at0(row) + (float) ((LeafNode)tree.node(nid))._pred));
             nids.set0(row,0);
           }
         }
@@ -644,7 +654,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
    *  See (45), (35) formulas in Friedman: Greedy Function Approximation: A Gradient boosting machine.
    *  Algo used here can be used for computation individual importance of features per output class. */
   @Override protected VarImp doVarImpCalc(GBMModel model, DTree[] ktrees, int tid, Frame validationFrame, boolean scale) {
-    assert model.ntrees()-1 == tid : "varimp computation expect model with already serialized trees: tid="+tid;
+    assert model.ntrees()-1-_ntreesFromCheckpoint == tid : "varimp computation expect model with already serialized trees: tid="+tid;
     // Iterates over k-tree
     for (DTree t : ktrees) { // Iterate over trees
       if (t!=null) {
