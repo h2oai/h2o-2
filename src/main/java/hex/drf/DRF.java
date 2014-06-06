@@ -230,6 +230,9 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   @Override protected DRFModel buildModel( DRFModel model, final Frame fr, String names[], String domains[][], final Timer t_build ) {
     // The RNG used to pick split columns
     Random rand = createRNG(_seed);
+    // To be deterministic get random numbers for previous trees and
+    // put random generator to the same state
+    for (int i=0; i<_ntreesFromCheckpoint; i++) rand.nextLong();
 
     int tid;
     DTree[] ktrees = null;

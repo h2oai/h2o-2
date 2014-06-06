@@ -1,6 +1,5 @@
 package hex.gbm;
 
-import hex.gbm.DTree.TreeModel;
 import hex.gbm.GBM.GBMModel;
 import static org.junit.Assert.*;
 

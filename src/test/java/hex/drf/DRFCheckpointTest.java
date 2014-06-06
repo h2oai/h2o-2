@@ -1,10 +1,8 @@
 package hex.drf;
 
 import hex.drf.DRF.DRFModel;
-import hex.gbm.GBM;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.*;
 
 import water.*;
 import water.fvec.Frame;
@@ -17,7 +15,8 @@ public class DRFCheckpointTest extends TestUtil {
    *
    * <p>This test verify multinominal model.</p>
    */
-  @Test public void testCheckpointReconstruction4Multinomial() {
+  @Test
+  public void testCheckpointReconstruction4Multinomial() {
     testCheckPointReconstruction("smalldata/iris/iris.csv", 4, true, 5, 3);
   }
 
@@ -26,7 +25,8 @@ public class DRFCheckpointTest extends TestUtil {
    *
    * <p>This test verify binominal model.</p>
    */
-  @Test public void testCheckpointReconstruction4Binomial() {
+  @Test
+  public void testCheckpointReconstruction4Binomial() {
     testCheckPointReconstruction("smalldata/logreg/prostate.csv", 1, true, 5, 3);
   }
 
@@ -36,7 +36,8 @@ public class DRFCheckpointTest extends TestUtil {
    *
    * <p>This test verify regression model.</p>
    */
-  @Test public void testCheckpointReconstruction4Regression() {
+  @Test
+  public void testCheckpointReconstruction4Regression() {
     testCheckPointReconstruction("smalldata/logreg/prostate.csv", 8, false, 5, 3);
   }
 
@@ -68,6 +69,7 @@ public class DRFCheckpointTest extends TestUtil {
       drfFromCheckpoint.seed = 42;
       drfFromCheckpoint.invoke();
       modelFromCheckpoint = UKV.get(drf.dest());
+      //System.err.println(Arrays.toString(modelFromCheckpoint.errs));
 
       Assert.assertArrayEquals("Tree data produced by drf run and reconstructed from a model do not match!",
                               drf.treesCols, drfFromCheckpoint.treesCols);
@@ -81,6 +83,7 @@ public class DRFCheckpointTest extends TestUtil {
       drfFinal.seed = 42;
       drfFinal.invoke();
       modelFinal = UKV.get(drfFinal.dest());
+      //System.err.println(Arrays.toString(modelFinal.errs));
       // Compare resulting model with the model produced from checkpoint
       assertTreeModelEquals(modelFinal, modelFromCheckpoint);
 
@@ -88,6 +91,7 @@ public class DRFCheckpointTest extends TestUtil {
       if (f!=null) f.delete();
       if (model!=null) model.delete();
       if (modelFromCheckpoint!=null) modelFromCheckpoint.delete();
+      if (modelFinal!=null) modelFinal.delete();
     }
   }
 

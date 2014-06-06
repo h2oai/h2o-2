@@ -248,7 +248,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     if (checkpoint!=null) {
       Timer t = new Timer();
       new ResidualsCollector(_ncols, _nclass, initialModel.treeKeys).doAll(fr);
-      Log.info(logTag(), "Reconstructing oob stats from checkpointed model took " + t);
+      Log.info(logTag(), "Reconstructing tree residuals stats from checkpointed model took " + t);
     }
   }
   // ==========================================================================
