@@ -232,7 +232,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     // accessors to (shared) weights and biases - those will be updated racily (c.f. Hogwild!)
     boolean has_momenta() { return get_params().momentum_start != 0 || get_params().momentum_stable != 0; }
     boolean adaDelta() { return get_params().adaptive_rate; }
-    public int index_helper(int i) { return get_params().autoencoder && i == get_params().hidden.length+1 ? i-1 : i; }
+    public int index_helper(int i) { return get_params().autoencoder && i == get_params().hidden.length ? i-1 : i; }
     public final Neurons.Matrix get_weights(int i) { i = index_helper(i); return dense_row_weights[i] == null ? dense_col_weights[i] : dense_row_weights[i]; }
     public final Neurons.DenseVector get_biases(int i) { return biases[i]; }
     public final Neurons.Matrix get_weights_momenta(int i) { i = index_helper(i); return dense_row_weights_momenta[i] == null ? dense_col_weights_momenta[i] : dense_row_weights_momenta[i]; }
