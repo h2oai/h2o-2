@@ -733,6 +733,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
           if (printme) Log.info("Scoring the auto-encoder.");
           final Frame reconstructed = score(ftrain);
           Log.info(reconstructed.toStringAll());
+          reconstructed.delete();
         }
         else {
           if (printme) Log.info("Scoring the model.");
