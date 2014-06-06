@@ -837,16 +837,21 @@ public class Utils {
       return (idx_next << 3) + Integer.numberOfTrailingZeros(bt_next);
     }
 
-    // TODO: Need to stop at nbits % 8 from last byte
     public int nextClearBit(int idx) {
       if(idx < 0 || idx > _nbits-1)
         throw new IndexOutOfBoundsException("Must have 0 <= idx <= " + Integer.toString(_nbits-1) + ": " + idx);
       int idx_next = idx >> 3;
       byte bt_next = (byte)(~_val[idx_next] & ((byte)0xff << idx));
 
+      // Mask out leftmost bits not in use
+      if(idx_next == _val.length-1 && _nbits % 8 > 0)
+        bt_next &= ~((byte)0xff << (_nbits % 8));
+
       while(bt_next == 0) {
         if(++idx_next >= _val.length) return -1;
         bt_next = (byte)(~_val[idx_next]);
+        if(idx_next == _val.length-1 && _nbits % 8 > 0)
+          bt_next &= ~((byte)0xff << (_nbits % 8));
       }
       return (idx_next << 3) + Integer.numberOfTrailingZeros(bt_next);
     }

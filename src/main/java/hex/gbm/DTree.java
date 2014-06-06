@@ -986,7 +986,7 @@ public class DTree extends Iced {
           int sz = (equal == 3) ? _ts.get2() : 4;
           byte[] buf = MemoryManager.malloc1(sz);
           _ts.read(buf, 0, sz);
-          gcmp = new IcedBitSet(buf);
+          gcmp = new IcedBitSet(buf);   // TODO: Need to tell it how many bins/bits actually used
         }
 
         // Compute the amount to skip.
