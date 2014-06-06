@@ -114,7 +114,7 @@ public class DTree extends Iced {
   public static class Split extends Iced {
     final int _col, _bin;       // Column to split, bin where being split
     final IcedBitSet _bs;       // For binary y and categorical x (with >= 4 levels), split into 2 non-contiguous groups
-    final byte _equal;          // Split is 0: <, 1: == with single split point, 2: == with bitset split
+    final byte _equal;          // Split is 0: <, 1: == with single split point, 2: == with group split (<= 32 levels), 3: == with group split (> 32 levels)
     final double _se0, _se1;    // Squared error of each subsplit
     final long    _n0,  _n1;    // Rows in each final split
     final double  _p0,  _p1;    // Predicted value for each split
@@ -434,7 +434,7 @@ public class DTree extends Iced {
         return
           _tree._names[col]+" != "+_splat+"\n"+
           _tree._names[col]+" == "+_splat+"\n";
-      else if( _split._equal == 2 )
+      else if( _split._equal == 2 || _split._equal == 3 )
         return
           _tree._names[col]+" != "+_split._bs.toString()+"\n"+
           _tree._names[col]+" == "+_split._bs.toString()+"\n";
@@ -450,7 +450,7 @@ public class DTree extends Iced {
       sb.append(_split._equal != 0
                 ? (i==0 ? " != " : " == ")
                 : (i==0 ? " <  " : " >= "));
-      sb.append(_split._equal == 2 ? _split._bs.toString() : _splat).append("]");
+      sb.append((_split._equal == 2 || _split._equal == 3) ? _split._bs.toString() : _splat).append("]");
       return sb;
     }
 
@@ -464,7 +464,7 @@ public class DTree extends Iced {
           sb.append(_split._equal != 0
                     ? (i==0 ? " != " : " == ")
                     : (i==0 ? " <  " : " >= "));
-          sb.append(_split._equal == 2 ? _split._bs.toString() : _splat).append("\n");
+          sb.append((_split._equal == 2 || _split._equal == 3) ? _split._bs.toString() : _splat).append("\n");
         }
         if( _nids[i] >= 0 && _nids[i] < _tree._len )
           _tree.node(_nids[i]).toString2(sb,depth+1);
@@ -478,11 +478,11 @@ public class DTree extends Iced {
 
       assert _nodeType == 0:"unexpected node type: " + _nodeType;
       if(_split._equal != 0)
-        _nodeType |= (byte)((_split._equal == 1) ? 4 : (_split._bs.size() <= 32) ? 8 : 12);
+        _nodeType |= _split._equal == 1 ? 4 : (_split._equal == 2 ? 8 : 12);
 
       // int res = 7;  // 1B node type + flags, 2B colId, 4B float split val
       // 1B node type + flags, 2B colId, 4B split val/small group or 2B size + large group
-      int res = (_split._equal == 2 && (_split._bs.size() > 32)) ? 5 + (_split._bs.size() >> 3) : 7;
+      int res = _split._equal == 3 ? 5 + (_split._bs.size() >> 3) : 7;
 
       Node left = _tree.node(_nids[0]);
       int lsz = left.size();
@@ -514,16 +514,14 @@ public class DTree extends Iced {
       if(_split._equal == 0 || _split._equal == 1)
         ab.put4f(_splat);
       else if(_split._equal == 2) {
-        if(_split._bs.size() <= 32) {
-          // Make sure group split is 4B, else pad with zeros
-          byte[] ary = MemoryManager.malloc1(4);
-          for(int i = 0; i < _split._bs._val.length; i++)
-            ary[i] = _split._bs._val[i];
-          ab.putA1(ary, 4);
-        } else {
-          ab.put2((char)(_split._bs.size() >> 3));
-          ab.putA1(_split._bs._val, _split._bs._val.length);
-        }
+        // Make sure group split is 4B, else pad with zeros
+        byte[] ary = MemoryManager.malloc1(4);
+        for(int i = 0; i < _split._bs._val.length; i++)
+          ary[i] = _split._bs._val[i];
+        ab.putA1(ary, 4);
+      } else {
+        ab.put2((char)(_split._bs.size() >> 3));
+        ab.putA1(_split._bs._val, _split._bs._val.length);
       }
 
       Node left = _tree.node(_nids[0]);
@@ -1019,7 +1017,7 @@ public class DTree extends Iced {
       new TreeVisitor<RuntimeException>(this,ct) {
         @Override protected void pre( int col, float fcmp, IcedBitSet gcmp, int equal ) {
           for( int i=0; i<_depth; i++ ) sb.append("  ");
-          if(equal == 2)
+          if(equal == 2 || equal == 3)
             sb.append(_names[col]).append("==").append(gcmp.toString()).append('\n');
           else
             sb.append(_names[col]).append(equal==1?"==":"< ").append(fcmp).append('\n');
@@ -1303,7 +1301,7 @@ public class DTree extends Iced {
       boolean cntSet = gcmp.cardinality() >= gcmp.size()/2;    // if more than half of bits set, iterate over clear bits
 
       // TODO: Iterate over contiguous ranges rather than individual bits
-      // Use (||, == clear bit) or (&&, != set bit) depending on number of set bits
+      // Use (||, == clear bit) or (&&, != set bit) depending on number of set bits in group
       int idx = cntSet ? gcmp.firstSetBit() : gcmp.firstClearBit();
       if(idx != -1) {
         // split to left, so want data[col] to NOT be set in BitSet

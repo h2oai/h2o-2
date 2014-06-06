@@ -158,7 +158,7 @@ public class DBinomHistogram extends DHistogram<DBinomHistogram> {
     // TODO: Is bit = 1 for left or right of the split? Should be right (see Javapredict pre code in DTree.java)
     IcedBitSet bs = new IcedBitSet(nbins);
     if(_isInt == 2 && _step == 1.0f && nbins >= 4) {
-      equal = 2;
+      equal = (byte)(bs.size() <= 32 ? 2 : 3);
       // for(int i = 0; i < best; i++) bs.set(idx[i]);
       for(int i = best; i < nbins; i++) bs.set(idx[i]);
     }
