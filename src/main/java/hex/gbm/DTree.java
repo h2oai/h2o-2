@@ -572,7 +572,8 @@ public class DTree extends Iced {
     // Simple copy ctor, null value of parameter means copy from prior-model
     protected TreeModel(TreeModel prior, Key[][] treeKeys, double[] errs, ConfusionMatrix[] cms, TreeStats tstats, VarImp varimp, AUC validAUC) {
       super(prior._key,prior._dataKey,prior._names,prior._domains);
-      this.N = prior.N; this.testKey = prior.testKey;
+      this.N = prior.N;
+      this.testKey   = prior.testKey;
       this.max_depth = prior.max_depth;
       this.min_rows  = prior.min_rows;
       this.nbins     = prior.nbins;
@@ -585,10 +586,6 @@ public class DTree extends Iced {
       if (tstats   != null) this.treeStats = tstats;   else this.treeStats = prior.treeStats;
       if (varimp   != null) this.varimp    = varimp;   else this.varimp    = prior.varimp;
       if (validAUC != null) this.validAUC  = validAUC; else this.validAUC  = prior.validAUC;
-      System.err.println("this.ntrees = "  + this.treeKeys.length);
-      System.err.println("prior.ntrees = " + prior.treeKeys.length);
-      System.err.println("this.cms = " +  this.cms.length);
-      System.err.println("prior.cms = " + prior.cms.length);
     }
 
     public TreeModel(TreeModel prior, DTree[] tree, double err, ConfusionMatrix cm, TreeStats tstats) {

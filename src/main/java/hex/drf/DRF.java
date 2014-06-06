@@ -143,7 +143,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   public Frame score( Frame fr ) { return ((DRFModel)UKV.get(dest())).score(fr);  }
 
   @Override protected Log.Tag.Sys logTag() { return Sys.DRF__; }
-  @Override protected DRFModel makeModel(Key outputKey, Key dataKey, Key testKey, String[] names, String[][] domains, String[] cmDomain) {
+  @Override protected DRFModel makeModel(Key outputKey, Key dataKey, Key testKey, int ntrees, String[] names, String[][] domains, String[] cmDomain) {
     return new DRFModel(this,outputKey,dataKey,validation==null?null:testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, mtries, sample_rate, _seed, n_folds);
   }
 
@@ -290,7 +290,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   @Override
   protected VarImp doVarImpCalc(final DRFModel model, DTree[] ktrees, final int tid, final Frame fTrain, boolean scale) {
     // Check if we have already serialized 'ktrees'-trees in the model
-    assert model.ntrees()-1 == tid : "Cannot compute DRF varimp since 'ktrees' are not serialized in the model! tid="+tid;
+    assert model.ntrees()-1-_ntreesFromCheckpoint == tid : "Cannot compute DRF varimp since 'ktrees' are not serialized in the model! tid="+tid;
     assert _treeMeasuresOnOOB.npredictors()-1 == tid : "Tree votes over OOB rows for this tree (var ktrees) were not found!";
     // Compute tree votes over shuffled data
     final CompressedTree[/*nclass*/] theTree = model.ctree(tid); // get the last tree FIXME we should pass only keys
