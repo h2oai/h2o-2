@@ -1,14 +1,14 @@
 package hex.drf;
 
-import java.util.Arrays;
-
 import hex.drf.DRF.DRFModel;
+import hex.gbm.GBM;
 
 import org.junit.Assert;
 import org.junit.Test;
 
 import water.*;
-import water.fvec.*;
+import water.fvec.Frame;
+import water.fvec.Vec;
 
 public class DRFCheckpointTest extends TestUtil {
 
@@ -18,7 +18,7 @@ public class DRFCheckpointTest extends TestUtil {
    * <p>This test verify multinominal model.</p>
    */
   @Test public void testCheckpointReconstruction4Multinomial() {
-    testCheckPointReconstruction("smalldata/iris/iris.csv", 4, true, 5);
+    testCheckPointReconstruction("smalldata/iris/iris.csv", 4, true, 5, 3);
   }
 
   /** Test if reconstructed initial frame match the last iteration
@@ -27,7 +27,7 @@ public class DRFCheckpointTest extends TestUtil {
    * <p>This test verify binominal model.</p>
    */
   @Test public void testCheckpointReconstruction4Binomial() {
-    testCheckPointReconstruction("smalldata/logreg/prostate.csv", 1, true, 5);
+    testCheckPointReconstruction("smalldata/logreg/prostate.csv", 1, true, 5, 3);
   }
 
 
@@ -37,13 +37,14 @@ public class DRFCheckpointTest extends TestUtil {
    * <p>This test verify regression model.</p>
    */
   @Test public void testCheckpointReconstruction4Regression() {
-    testCheckPointReconstruction("smalldata/logreg/prostate.csv", 8, false, 5);
+    testCheckPointReconstruction("smalldata/logreg/prostate.csv", 8, false, 5, 3);
   }
 
-  private void testCheckPointReconstruction(String dataset, int response, boolean classification, int ntreesInPriorModel) {
+  private void testCheckPointReconstruction(String dataset, int response, boolean classification, int ntreesInPriorModel, int ntreesInANewModel) {
     Frame f = parseFrame(dataset);
     DRFModel model = null;
     DRFModel modelFromCheckpoint = null;
+    DRFModel modelFinal = null;
     try {
       Vec respVec = f.vec(response);
       // Build a model
@@ -53,6 +54,7 @@ public class DRFCheckpointTest extends TestUtil {
       drf.classification = classification;
       drf.ntrees = ntreesInPriorModel;
       drf.collectPoint = WhereToCollect.AFTER_BUILD;
+      drf.seed = 42;
       drf.invoke();
       model = UKV.get(drf.dest());
 
@@ -60,17 +62,27 @@ public class DRFCheckpointTest extends TestUtil {
       drfFromCheckpoint.source = f;
       drfFromCheckpoint.response = respVec;
       drfFromCheckpoint.classification = classification;
-      drfFromCheckpoint.ntrees = 1;
+      drfFromCheckpoint.ntrees = ntreesInANewModel;
       drfFromCheckpoint.collectPoint = WhereToCollect.AFTER_RECONSTRUCTION;
       drfFromCheckpoint.checkpoint = drf.dest();
+      drfFromCheckpoint.seed = 42;
       drfFromCheckpoint.invoke();
       modelFromCheckpoint = UKV.get(drf.dest());
 
-      System.err.println(Arrays.deepToString(drf.treesCols));
-      System.err.println(Arrays.deepToString(drfFromCheckpoint.treesCols));
-
       Assert.assertArrayEquals("Tree data produced by drf run and reconstructed from a model do not match!",
                               drf.treesCols, drfFromCheckpoint.treesCols);
+
+      DRF drfFinal = new DRF();
+      drfFinal.source = f;
+      drfFinal.response = respVec;
+      drfFinal.classification = classification;
+      drfFinal.ntrees = ntreesInANewModel + ntreesInPriorModel;
+      drfFinal.score_each_iteration = true;
+      drfFinal.seed = 42;
+      drfFinal.invoke();
+      modelFinal = UKV.get(drfFinal.dest());
+      // Compare resulting model with the model produced from checkpoint
+      assertTreeModelEquals(modelFinal, modelFromCheckpoint);
 
     } finally {
       if (f!=null) f.delete();
@@ -79,7 +91,7 @@ public class DRFCheckpointTest extends TestUtil {
     }
   }
 
-  private enum WhereToCollect { AFTER_BUILD, AFTER_RECONSTRUCTION }
+  private enum WhereToCollect { NONE, AFTER_BUILD, AFTER_RECONSTRUCTION }
   // Helper class with a hook to collect tree cols
   static class DRFWithHooks extends DRF {
     WhereToCollect collectPoint;

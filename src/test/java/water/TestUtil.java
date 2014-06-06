@@ -1,7 +1,8 @@
 package water;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
+import hex.ConfusionMatrix;
+import hex.gbm.DTree.TreeModel;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -416,5 +417,25 @@ public class TestUtil {
     double[][] r = new double[a.length][1];
     for (int i=0; i<a.length;i++) r[i][0] = a[i];
     return r;
+  }
+
+  public static void assertCMEquals(String msg, ConfusionMatrix a, ConfusionMatrix b) {
+    Assert.assertEquals(msg + " - Confusion matrix should be of the same size", a._arr.length, b._arr.length);
+    for (int i=0; i< a._arr.length; i++) {
+      Assert.assertArrayEquals(msg, a._arr[i], b._arr[i]);
+    }
+  }
+
+  public static void assertTreeModelEquals(TreeModel a, TreeModel b) {
+    assertEquals("Number of demanded trees should be same!", a.N, b.N);
+    assertEquals("Number of produced trees should be same!", a.ntrees(), b.ntrees());
+    assertArrayEquals("All error fields should be same (requiring models build without skipping scoring)!", a.errs, b.errs, 0.00000001);
+    assertEquals("Models shoudl be of the same type!", a.isClassifier(), b.isClassifier());
+    if (a.isClassifier()) {
+      assertEquals("The models should contain the same number of CMs", a.cms.length, b.cms.length);
+      for (int i=0; i<a.cms.length; i++) {
+        assertCMEquals(i+"-th CM should be same (requiring models build without skipping scoring)!", a.cms[i], b.cms[i]);
+      }
+    }
   }
 }
