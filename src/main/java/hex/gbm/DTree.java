@@ -894,14 +894,19 @@ public class DTree extends Iced {
 
           // Extract value or group to split on
           float splitVal = -1;
-          IcedBitSet splitGrp = null;
+          boolean grpContains = false;
           if(equal == 0 || equal == 1)
             splitVal = ab.get4f();
           else {
             int sz = (equal == 3) ? ab.get2() : 4;
-            byte[] buf = MemoryManager.malloc1(sz);
-            ab.read(buf, 0, sz);
-            splitGrp = new IcedBitSet(buf);
+            int idx = (int)row[colId];
+            if(Double.isNaN(idx))
+              ab.skip(sz);
+            else {
+              ab.skip(idx >> 3);
+              grpContains = (ab.get1() & ((byte)1 << idx)) != 0;
+              ab.skip(sz-(idx >> 3)-1);
+            }
           }
 
           // Compute the amount to skip.
@@ -924,7 +929,7 @@ public class DTree extends Iced {
           if( !Double.isNaN(row[colId]) ) { // NaNs always go to bin 0
             if( ( equal==0 && ((float)row[colId]) >= splitVal) ||
                 ( equal==1 && ((float)row[colId]) == splitVal) ||
-                ( splitGrp!=null && splitGrp.contains((int)row[colId]) )) {
+                ( (equal==2 || equal==3) && grpContains )) {
               ab.position(ab.position()+skip); // Skip to the right subtree
               lmask = rmask;                   // And set the leaf bits into common place
             }
@@ -948,8 +953,8 @@ public class DTree extends Iced {
     public static abstract class TreeVisitor<T extends Exception> {
       // Override these methods to get walker behavior.
       protected void pre ( int col, float fcmp, IcedBitSet gcmp, int equal ) throws T { }
-      protected void mid ( int col, float fcmp, IcedBitSet gcmp, int equal ) throws T { }
-      protected void post( int col, float fcmp, IcedBitSet gcmp, int equal ) throws T { }
+      protected void mid ( int col, float fcmp, int equal ) throws T { }
+      protected void post( int col, float fcmp, int equal ) throws T { }
       protected void leaf( float pred )                         throws T { }
       long  result( ) { return 0; } // Override to return simple results
 
@@ -1005,10 +1010,10 @@ public class DTree extends Iced {
         pre(col,fcmp,gcmp,equal);   // Pre-walk
         _depth++;
         if( (lmask & 0x10)==16 ) leaf2(lmask);  else  visit();
-        mid(col,fcmp,gcmp,equal);   // Mid-walk
+        mid(col,fcmp,equal);   // Mid-walk
         if( (rmask & 0x10)==16 ) leaf2(rmask);  else  visit();
         _depth--;
-        post(col,fcmp,gcmp,equal);
+        post(col,fcmp,equal);
         _nodes++;
       }
     }
@@ -1272,13 +1277,16 @@ public class DTree extends Iced {
     final int   _nodesCnt[] = new int  [100];
     SB _sb;
     SB _csb;
+    SB _grpsplit;
 
     int _subtrees = 0;
+    int _grpcnt = 0;
 
     public TreeJCodeGen(TreeModel tm, CompressedTree ct, SB sb) {
       super(tm, ct);
       _sb = sb;
       _csb = new SB();
+      _grpsplit = new SB();
     }
 
     // code preamble
@@ -1292,33 +1300,14 @@ public class DTree extends Iced {
     protected void closure(SB sb) throws RuntimeException {
       sb.p(";").nl();
       sb.i(1).p("return pred;").nl().di(1);
-      sb.i().p("}").nl().di(1);
-    }
-
-    // generate code for checking group split
-    protected void groupSplit(int col, IcedBitSet gcmp) throws RuntimeException {
-      // boolean cntSet = gcmp.cardinality() >= gcmp.size()/2;    // if more than half of bits set, iterate over clear bits
-      boolean cntSet = true;
-      _sb.p(" (Double.isNaN(data[").p(col).p("])");
-
-      // TODO: Iterate over contiguous ranges rather than individual bits
-      // Use (||, == clear bit) or (&&, != set bit) depending on number of set bits in group
-      int idx = cntSet ? gcmp.nextSetBit(0) : gcmp.nextClearBit(0);
-      if(idx != -1) {
-        _sb.p(" || ").p(cntSet ? "!(" : "(");
-        // split to left, so want data[col] to NOT be set in BitSet
-        _sb.p("(int) data[").p(col).p(" /* ").p(_tm._names[col]).p(" */").p("] == ").p(idx);
-        // while((idx = cntSet ? gcmp.nextSetBit(idx+1) : gcmp.nextClearBit(idx+1)) != -1)
-        while(idx+1 <= gcmp.size()-1) {
-          idx = cntSet ? gcmp.nextSetBit(idx+1) : gcmp.nextClearBit(idx+1);
-          if(idx == -1) break;
-          _sb.p(" || (int) data[").p(col).p("] == ").p(idx);
-        }
-        _sb.p(")");
-      }
+      sb.i().p("}").nl();
+      sb.p(_grpsplit).di(1);
     }
 
     @Override protected void pre( int col, float fcmp, IcedBitSet gcmp, int equal ) {
+      if(equal == 2 || equal == 3 && gcmp != null)
+        _grpsplit.i(1).p("public static final byte[] GRPSPLIT").p(_grpcnt).p(" = new byte[] ").p(gcmp.toStrArray()).p(";").nl();
+
       if( _depth > 0 ) {
         int b = _bits[_depth-1];
         assert b > 0 : Arrays.toString(_bits)+"\n"+_sb.toString();
@@ -1337,10 +1326,13 @@ public class DTree extends Iced {
         _subtrees++;
       }
       // All NAs are going always to the left
+      _sb.p(" (Double.isNaN(data[").p(col).p("]) || ");
       if(equal == 0 || equal == 1)
-        _sb.p(" (Double.isNaN(data[").p(col).p("]) || (float) data[").p(col).p(" /* ").p(_tm._names[col]).p(" */").p("] ").p(equal==1?"!= ":"< ").pj(fcmp); // then left and then right (left is !=)
-      else
-        groupSplit(col, gcmp);
+        _sb.p("(float) data[").p(col).p(" /* ").p(_tm._names[col]).p(" */").p("] ").p(equal==1?"!= ":"< ").pj(fcmp); // then left and then right (left is !=)
+      else {
+        _sb.p("!grpContains(GRPSPLIT").p(_grpcnt).p(", (int) data[").p(col).p(" /* ").p(_tm._names[col]).p(" */").p("])");
+        _grpcnt++;
+      }
       assert _bits[_depth]==0;
       _bits[_depth]=1;
     }
@@ -1356,7 +1348,7 @@ public class DTree extends Iced {
         _sb.p(": ").pj(pred);
       }
     }
-    @Override protected void post( int col, float fcmp, IcedBitSet gcmp, int equal ) {
+    @Override protected void post( int col, float fcmp, int equal ) {
       _sb.p(')');
       _bits[_depth]=0;
       if (_sbs[_depth]!=null) {
@@ -1368,7 +1360,7 @@ public class DTree extends Iced {
       }
     }
     public void generate() {
-      preamble(_sb, _subtrees++);
+      preamble(_sb, _subtrees++);   // TODO: Need to pass along group split BitSet
       visit();
       closure(_sb);
       _sb.p(_csb);

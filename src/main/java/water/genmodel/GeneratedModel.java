@@ -10,6 +10,13 @@ public abstract class GeneratedModel implements IGeneratedModel {
   @Override public int      getNumResponseClasses() { return getNumClasses(getResponseIdx()); }
   @Override public boolean  isClassifier() { return getNumResponseClasses()!=-1; }
 
+  public boolean grpContains(byte[] gcmp, int idx) {
+    int max_idx = (gcmp.length << 3) - 1;
+    if(idx < 0 || idx > max_idx)
+      throw new IndexOutOfBoundsException("Must have 0 <= idx <= " + max_idx + ": " + idx);
+    return (gcmp[idx >> 3] & ((byte)1 << idx)) != 0;
+  }
+
   @Override public int getColIdx(String name) {
     String[] names = getNames();
     for (int i=0; i<names.length; i++) if (names[i].equals(name)) return i;

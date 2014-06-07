@@ -856,6 +856,7 @@ public class Utils {
       return (idx_next << 3) + Integer.numberOfTrailingZeros(bt_next);
     }
     public int size() { return _nbits; };
+
     @Override public String toString() {
       StringBuilder sb = new StringBuilder();
       sb.append("{");
@@ -870,6 +871,19 @@ public class Utils {
             first = false;
           }
         }
+      }
+      sb.append("}");
+      return sb.toString();
+    }
+    public String toStrArray() {
+      StringBuilder sb = new StringBuilder();
+      sb.append("{");
+
+      boolean first = true;
+      for(int i = 0; i < _val.length; i++) {
+        if(!first) sb.append(", ");
+        sb.append(_val[i]);
+        first = false;
       }
       sb.append("}");
       return sb.toString();
