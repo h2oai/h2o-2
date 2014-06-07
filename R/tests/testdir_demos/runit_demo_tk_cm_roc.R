@@ -16,7 +16,7 @@ source('../findNSourceUtils.R')
 options(echo=TRUE)
 
 heading("BEGIN TEST")
-conn <- new("H2OClient", ip=myIP, port=myPort)
+conn <- h2o.init(ip=myIP, port=myPort, startH2O=FALSE)
 
 #uploading data file to h2o
 filePath <- "https://raw.github.com/0xdata/h2o/master/smalldata/airlines/AirlinesTrain.csv.zip"
