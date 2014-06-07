@@ -72,7 +72,7 @@ public abstract class Neurons {
   /**
    * References for ADADELTA
    */
-  private Matrix _ada_dx_g;
+  Matrix _ada_dx_g;
   DenseVector _bias_ada_dx_g;
 
   /**
@@ -526,8 +526,8 @@ public abstract class Neurons {
    * @param rate learning rate
    * @param momentum momentum factor (needed only if ADADELTA isn't used)
    */
-  private void update_bias(final DenseVector _b, final DenseVector _bm, final int row,
-                         final float partial_grad, final float avg_grad2, float rate, final float momentum) {
+  void update_bias(final DenseVector _b, final DenseVector _bm, final int row,
+                   final float partial_grad, final float avg_grad2, float rate, final float momentum) {
     final boolean have_momenta = _minfo.has_momenta();
     final boolean have_ada = _minfo.adaDelta();
 
@@ -725,19 +725,71 @@ public abstract class Neurons {
     // dy/dnet = (1 - a^2) for y(net) = tanh(net)
     protected void bprop() {
       long processed = _minfo.get_processed_total();
-      float m = momentum(processed);
-      float r = rate(processed) * (1 - m);
+      float momentum = momentum(processed);
+      float rate = rate(processed) * (1 - momentum);
+      /*
       for( int row = 0; row < _a.size(); row++ ) {
         assert _previous._previous.units == units;
         float e = _previous._previous._a.get(row) - _a.get(row);
-        float g = e * (1 - _a.get(row) * _a.get(row)); //Tanh
+        float g = e;
         for( int col = 0; col < _previous._a.size(); col++ ) {
           // transposed matrix access
           if( _previous._e != null )
             _previous._e.add(col, g * _w.get(col,row));
           _w.add(col, row, (float) (r * (g * _previous._a.get(col) - _w.get(col,row) * params.l2 - Math.signum(_w.get(col,row)) * params.l1)));
         }
-        _b.add(row, r * g);
+        //_b.add(row, r * g);
+        _b.set(row, 0);
+      }
+      */
+
+      final float rho = (float) params.rho;
+      final float eps = (float) params.epsilon;
+      final float l1 = (float) params.l1;
+      final float l2 = (float) params.l2;
+      final boolean have_momenta = _minfo.has_momenta();
+      final boolean have_ada = _minfo.adaDelta();
+      final boolean nesterov = params.nesterov_accelerated_gradient;
+      final boolean update_prev = _previous._e != null;
+      for( int row = 0; row < _a.size(); row++ ) {
+        float avg_grad2 = 0;
+        final float partial_grad = _previous._previous._a.get(row) - _a.get(row);
+        for( int col = 0; col < _previous._a.size(); col++ ) {
+          final float weight = _w.get(col, row); //transposed
+          if (update_prev)
+            _previous._e.add(col, partial_grad * weight); // propagate the error dE/dnet to the previous layer, via connecting weights
+          //this is the actual gradient dE/dw
+          final float grad = partial_grad * _previous._a.get(col) - Math.signum(weight) * l1 - weight * l2;
+          if (have_ada) {
+            assert (!have_momenta);
+            avg_grad2 += grad*grad;
+            // either indexing order should work
+            float brate = computeAdaDeltaRateForWeight(grad, row*_previous._a.size()+col, (DenseRowMatrix)_ada_dx_g, rho, eps);
+//            float brate = computeAdaDeltaRateForWeight(grad, col*_a.size()+row, (DenseRowMatrix)_ada_dx_g, rho, eps);
+            _w.add(col, row, brate * grad);
+          } else {
+            if (!nesterov) {
+              final float delta = rate * grad;
+              _w.add(col, row, delta);
+              if (have_momenta) {
+                _w.add(col, row, momentum * _wm.get(row, col));
+                _wm.set(col, row, delta);
+              }
+            } else {
+              float tmp = grad;
+              if (have_momenta) {
+                float val = _wm.get(col, row);
+                val *= momentum;
+                val += tmp;
+                tmp = val;
+                _wm.set(col, row, val);
+              }
+              _w.add(col, row, rate * tmp);
+            }
+          }
+        }
+        if (have_ada) avg_grad2 /= _previous._a.size();
+        update_bias(_b, _bm, row, partial_grad, avg_grad2, rate, momentum);
       }
     }
   }
