@@ -10,7 +10,6 @@ import water.UKV;
 import water.fvec.Frame;
 import water.fvec.NFSFileVec;
 import water.fvec.ParseDataset2;
-import water.util.Log;
 
 public class DeepLearningAutoEncoderTest extends TestUtil {
   static final String PATH = "smalldata/iris/iris.csv";
@@ -31,7 +30,6 @@ public class DeepLearningAutoEncoderTest extends TestUtil {
     p.autoencoder = true;
     p.response = frame.lastVec();
 
-    // regular parameters
     p.seed = seed;
     p.hidden = new int[]{4};
     p.adaptive_rate = true;
