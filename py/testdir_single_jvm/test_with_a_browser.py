@@ -14,6 +14,7 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         if (localhost):
             h2o.build_cloud(1, use_hdfs=True, 
+            # hdfs_config='/home/kevin/.ec2/core-site.xml',
             hdfs_name_node='192.168.1.176', hdfs_version='cdh3',
             java_heap_GB=20, base_port=54321,
             java_extra_args='-XX:+PrintGCDetails')
