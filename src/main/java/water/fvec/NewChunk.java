@@ -20,7 +20,7 @@ public class NewChunk extends Chunk {
   // zeros, and _len is count of non-zeros.
   transient long   _ls[];       // Mantissa
   transient int    _xs[];       // Exponent, or if _ls==0, NA or Enum or Rows
-  transient int    _id[];       // Indeces (row numbers) of stored values, used for sparse
+  transient int    _id[];       // Indices (row numbers) of stored values, used for sparse
   transient double _ds[];       // Doubles, for inflating via doubles
   int _len2;                    // Actual rows, if the data is sparse
   int _naCnt=-1;                // Count of NA's   appended

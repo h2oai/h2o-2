@@ -141,4 +141,48 @@ public abstract class ParseTime {
     if( i<end ) return Long.MIN_VALUE;
     return encodeTimePat(new DateTime(yy,MM,dd,0,0,0).getMillis(),2);
   }
+
+  // --------------------------------
+  // Parse canonical UUID form: XXXX-XX-XX-XX-XXXXXX
+  public static long attemptUUIDParse( ValueString str ) {
+    final byte[] buf = str.get_buf();
+    int i=str.get_off();
+    long lo=0;
+    lo = get2(lo,buf,(i+=2)-2);
+    lo = get2(lo,buf,(i+=2)-2);
+    lo = get2(lo,buf,(i+=2)-2);
+    lo = get2(lo,buf,(i+=2)-2);
+    if( buf[i++]!='-' ) return Long.MIN_VALUE;
+    lo = get2(lo,buf,i+2);
+    lo = get2(lo,buf,i+2);
+    if( buf[i++]!='-' ) return Long.MIN_VALUE;
+    lo = get2(lo,buf,i+2);
+    lo = get2(lo,buf,i+2);
+    if( buf[i++]!='-' ) return Long.MIN_VALUE;
+    long hi=0;
+    hi = get2(hi,buf,(i+=2)-2);
+    hi = get2(hi,buf,(i+=2)-2);
+    if( buf[i++]!='-' ) return Long.MIN_VALUE;
+    hi = get2(hi,buf,(i+=2)-2);
+    hi = get2(hi,buf,(i+=2)-2);
+    hi = get2(hi,buf,(i+=2)-2);
+    hi = get2(hi,buf,(i+=2)-2);
+    hi = get2(hi,buf,(i+=2)-2);
+    hi = get2(hi,buf,(i+=2)-2);
+    return 0;
+  }
+
+  private static long get2( long x, byte[] buf, int i ) {
+    if( x == Long.MIN_VALUE ) return x;
+    x = hdigit(x,buf[i++]);
+    x = hdigit(x,buf[i++]);
+  }
+
+  private static long hdigit( long x, byte b ) {
+    if( false ) ;
+    else if( b >= '0' && b <= '9' ) return (x<<4)+b-'0';
+    else if( b >= 'A' && b <= 'F' ) return (x<<4)+b-'A'+10;
+    else if( b >= 'a' && b <= 'f' ) return (x<<4)+b-'a'+10;
+    else return Long.MIN_VALUE;
+  }
 }

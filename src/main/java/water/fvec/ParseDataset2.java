@@ -650,10 +650,11 @@ public final class ParseDataset2 extends Job {
     boolean _closedVecs = false;
     private final VectorGroup _vg;
 
-    static final private byte UCOL = 0;
-    static final private byte NCOL = 1;
-    static final private byte ECOL = 2;
-    static final private byte TCOL = 3;
+    static final private byte UCOL = 0; // unknown col type
+    static final private byte NCOL = 1; // numeric col type
+    static final private byte ECOL = 2; // enum    col type
+    static final private byte TCOL = 3; // time    col typ
+    static final private byte ICOL = 4; // UUID    col typ
 
     private static final AppendableVec[] newAppendables(int n, VectorGroup vg, int vecIdStart){
       AppendableVec [] apps = new AppendableVec[n];
