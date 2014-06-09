@@ -1031,18 +1031,21 @@ public class DTree extends Iced {
     public void toJavaHtml( StringBuilder sb ) {
       if( treeStats == null ) return; // No trees yet
       sb.append("<br /><br /><div class=\"pull-right\"><a href=\"#\" onclick=\'$(\"#javaModel\").toggleClass(\"hide\");\'" +
-                "class=\'btn btn-inverse btn-mini\'>Java Model</a></div><br /><div class=\"hide\" id=\"javaModel\">"       +
-                "<pre style=\"overflow-y:scroll;\"><code class=\"language-java\">");
+                "class=\'btn btn-inverse btn-mini\'>Java Model</a></div><br /><div class=\"hide\" id=\"javaModel\">");
 
       boolean featureAllowed = isFeatureAllowed();
       if (! featureAllowed) {
-        sb.append("You have requested a premium feature (> 10 trees) and your H2O software is unlicensed.\n");
-        sb.append("\n");
-        sb.append("Please email support@0xdata.com to request a trial license.\n");
-        sb.append("Then restart H2O with the -license option.\n");
+        sb.append("<br/><div id=\'javaModelWarningBlock\' class=\"alert\">You have requested a premium feature (> 10 trees) and your H<sub>2</sub>O software is unlicensed.<br/><br/>");
+        sb.append("Please enter your email address to temporarily enable downloading Java models:<br/>");
+        sb.append("<form class=\'form-inline\'><input id=\"emailForJavaModel\" class=\"span5\" type=\"text\" placeholder=\"Email\"/> ");
+        sb.append("<a href=\"#\" onclick=\'displayJavaModel();\' class=\'btn\'>Accept</a></form></div>");
+        sb.append("<div id=\"javaModelSource\" class=\"hide\"><pre style=\"overflow-y:scroll;\"><code class=\"language-java\">");
+        DocGen.HTML.escape(sb, toJava());
+        sb.append("</code></pre></div>");
       }
       else if( ntrees() * treeStats.meanLeaves > 5000 ) {
         String modelName = JCodeGen.toJavaId(_key.toString());
+        sb.append("<pre style=\"overflow-y:scroll;\"><code class=\"language-java\">");
         sb.append("/* Java code is too large to display, download it directly.\n");
         sb.append("   To obtain the code please invoke in your terminal:\n");
         sb.append("     curl http:/").append(H2O.SELF.toString()).append("/h2o-model.jar > h2o-model.jar\n");
@@ -1050,9 +1053,13 @@ public class DTree extends Iced {
         sb.append("     javac -cp h2o-model.jar -J-Xmx2g -J-XX:MaxPermSize=128m ").append(modelName).append(".java\n");
         sb.append("     java -cp h2o-model.jar:. -Xmx2g -XX:MaxPermSize=256m -XX:ReservedCodeCacheSize=256m ").append(modelName).append('\n');
         sb.append("*/");
-      } else
-        DocGen.HTML.escape(sb,toJava());
-      sb.append("</code></pre></div>");
+        sb.append("</code></pre>");
+      } else {
+        sb.append("<pre style=\"overflow-y:scroll;\"><code class=\"language-java\">");
+        DocGen.HTML.escape(sb, toJava());
+        sb.append("</code></pre>");
+      }
+      sb.append("</div>");
     }
 
     @Override protected SB toJavaInit(SB sb, SB fileContextSB) {
