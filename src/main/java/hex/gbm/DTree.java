@@ -1035,10 +1035,10 @@ public class DTree extends Iced {
 
       boolean featureAllowed = isFeatureAllowed();
       if (! featureAllowed) {
-        sb.append("<br /><div class=\"alert\">You have requested a premium feature (> 10 trees) and your H2O software is unlicensed.<br/><br/>");
-        sb.append("Please email support@0xdata.com to request a trial license.<br/>");
-        sb.append("Then restart H2O with the -license option.</br></br>");
-        sb.append("<a href=\"#\" onclick=\'$(\"#javaModelSource\").toggleClass(\"hide\");ga(\"send\",\"event\",\"view-java-model\",\"[user-info]\")\' class=\'btn btn-primary btn-mini\'>Display Java model anyway</a></div>");
+        sb.append("<br/><div id=\'javaModelWarningBlock\' class=\"alert\">You have requested a premium feature (> 10 trees) and your H<sub>2</sub>O software is unlicensed.<br/><br/>");
+        sb.append("Please enter your email address to temporarily enable downloading Java models:<br/>");
+        sb.append("<form class=\'form-inline\'><input id=\"emailForJavaModel\" class=\"span5\" type=\"text\" placeholder=\"Email\"/> ");
+        sb.append("<a href=\"#\" onclick=\'displayJavaModel();\' class=\'btn\'>Accept</a></form></div>");
         sb.append("<div id=\"javaModelSource\" class=\"hide\"><pre style=\"overflow-y:scroll;\"><code class=\"language-java\">");
         DocGen.HTML.escape(sb, toJava());
         sb.append("</code></pre></div>");
