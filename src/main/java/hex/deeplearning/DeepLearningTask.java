@@ -131,7 +131,8 @@ public class DeepLearningTask extends FrameTask<DeepLearningTask> {
     // output
     if(params.autoencoder) {
       assert(params.activation == DeepLearning.Activation.Tanh);
-      neurons[neurons.length - 1] = new Neurons.TanhPrime(minfo.units[0]);
+      //neurons[neurons.length - 1] = new Neurons.TanhPrime(minfo.units[0]);
+      neurons[neurons.length - 1] = new Neurons.Tanh(minfo.units[0]);
     } else {
       if (params.classification)
         neurons[neurons.length - 1] = new Neurons.Softmax(minfo.units[minfo.units.length - 1]);
