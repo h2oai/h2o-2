@@ -128,10 +128,12 @@ public class FrameSplitter extends H2OCountedCompleter {
     final int num = dataset.numCols(); // number of columns in input frame
     final int nsplits = espcPerSplit.length; // number of splits
     final String[][] domains = dataset.domains(); // domains
+    final boolean[] uuids = dataset.uuids();
+    final byte   [] times = dataset.times();
     Vec[][] t = new Vec[nsplits][/*num*/]; // resulting vectors for all
     for (int i=0; i<nsplits; i++) {
       // vectors for j-th split
-      t[i] = new Vec(Vec.newKey(),espcPerSplit[i/*-th split*/]).makeZeros(num, domains);
+      t[i] = new Vec(Vec.newKey(),espcPerSplit[i/*-th split*/]).makeZeros(num, domains, uuids, times);
     }
     return t;
   }
@@ -191,7 +193,7 @@ public class FrameSplitter extends H2OCountedCompleter {
       int nrows = cs[0]._len;
       // For each output chunk extract appropriate rows for partIdx-th part
       for (int i=0; i<cs.length; i++) {
-        // WARNING: this implementation does not preserver co-location of chunks so we are forcing here network transfer!
+        // WARNING: this implementation does not preserve co-location of chunks so we are forcing here network transfer!
         ChunkSplitter.extractChunkPart(_srcVecs[i].chunkForChunkIdx(cinidx), cs[i], startRow, nrows, _fs);
       }
     }
