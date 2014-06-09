@@ -915,14 +915,11 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
           str.setOff(old);
         }
         if( _colTypes[colIdx] == ICOL ) { // UUID column?  Only allow UUID parses
-          //int old = str.get_off();
           long lo = ParseTime.attemptUUIDParse0(str);
           long hi = ParseTime.attemptUUIDParse1(str);
           if( str.get_off() == -1 )  ++_invalidValues[colIdx];
           // No min/max/mean rollups on UUID
-          //str.setOff(old);
-          throw H2O.unimpl();   // UUID parse
-          // return;
+          return;
         }
 
         // Now attempt to make this an Enum col
