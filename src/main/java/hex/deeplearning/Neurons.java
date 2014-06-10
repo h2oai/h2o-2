@@ -148,14 +148,17 @@ public abstract class Neurons {
     if (!(this instanceof Input)) {
       _previous = neurons[index-1]; //incoming neurons
       _minfo = minfo;
-      _w = minfo.get_weights(index-1-(params.autoencoder && index == neurons.length-1 ? 1 : 0)); //incoming weights
+//      _w = minfo.get_weights(index-1-(params.autoencoder && index == neurons.length-1 ? 1 : 0)); //incoming weights
+      _w = minfo.get_weights(index-1); //incoming weights
       _b = minfo.get_biases(index-1); //bias for this layer (starting at hidden layer)
       if (minfo.has_momenta()) {
-        _wm = minfo.get_weights_momenta(index-1-(params.autoencoder && index == neurons.length-1 ? 1 : 0)); //incoming weights
+//        _wm = minfo.get_weights_momenta(index-1-(params.autoencoder && index == neurons.length-1 ? 1 : 0)); //incoming weights
+        _wm = minfo.get_weights_momenta(index-1); //incoming weights
         _bm = minfo.get_biases_momenta(index-1); //bias for this layer (starting at hidden layer)
       }
       if (minfo.adaDelta()) {
-        _ada_dx_g = minfo.get_ada_dx_g(index-1-(params.autoencoder && index == neurons.length-1 ? 1 : 0));
+//        _ada_dx_g = minfo.get_ada_dx_g(index-1-(params.autoencoder && index == neurons.length-1 ? 1 : 0));
+        _ada_dx_g = minfo.get_ada_dx_g(index-1);
         _bias_ada_dx_g = minfo.get_biases_ada_dx_g(index - 1);
       }
       _shortcut = (params.fast_mode || (
