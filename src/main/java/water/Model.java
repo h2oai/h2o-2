@@ -10,6 +10,7 @@ import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.TransfVec;
 import water.fvec.Vec;
+import water.serial.AutoBufferSerializer;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
@@ -791,4 +792,11 @@ public abstract class Model extends Lockable<Model> {
     }
   }
 
+  /** Helper type for serialization */
+  protected static class ModelAutobufferSerializer extends AutoBufferSerializer<Model> { }
+
+  /** Returns a model serializer into AutoBuffer. */
+  public AutoBufferSerializer<Model> getModelSerializer() {
+    return new ModelAutobufferSerializer();
+  }
 }

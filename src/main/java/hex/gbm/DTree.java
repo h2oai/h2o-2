@@ -722,6 +722,34 @@ public class DTree extends Iced {
       return fs;
     }
 
+    @Override public ModelAutobufferSerializer getModelSerializer() {
+      // Return a serializer which knows how to serialize keys
+      return new ModelAutobufferSerializer() {
+        @Override protected AutoBuffer postSave(Model m, AutoBuffer ab) {
+          int ntrees = treeKeys.length;
+          ab.put4(ntrees);
+          for (int i=0; i<ntrees; i++) {
+            CompressedTree[] ts = ctree(i);
+            ab.putA(ts);
+          }
+          return ab;
+        }
+        @Override protected AutoBuffer postLoad(Model m, AutoBuffer ab) {
+          int ntrees = ab.get4();
+          Futures fs = new Futures();
+          for (int i=0; i<ntrees; i++) {
+            CompressedTree[] ts = ab.getA(CompressedTree.class);
+            for (int j=0; j<ts.length; j++) {
+              Key k = ((TreeModel) m).treeKeys[i][j];
+              UKV.put(k, ts[j], fs);
+            }
+          }
+          fs.blockForPending();
+          return ab;
+        }
+      };
+    }
+
     public void generateHTML(String title, StringBuilder sb) {
       DocGen.HTML.title(sb,title);
       sb.append("<div class=\"alert\">").append("Actions: ");
@@ -730,6 +758,7 @@ public class DTree extends Iced {
       sb.append(Predict.link(_key,"Score on dataset")).append(", ");
       if (_dataKey != null)
         sb.append(UIUtils.builderModelLink(this.getClass(), _dataKey, responseName(), "Compute new model")).append(", ");
+      sb.append(UIUtils.qlink(SaveModel.class, "model", _key, "Save model")).append(", ");
       if (isProduced()) { // looks at locker field and check W-locker guy
         sb.append("<i class=\"icon-stop\"></i>&nbsp;").append(Cancel.link(getProducer(), "Stop training this model"));
       } else {
