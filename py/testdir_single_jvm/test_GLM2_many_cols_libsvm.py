@@ -41,7 +41,8 @@ class Basic(unittest.TestCase):
         ### time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_GLM_many_cols_libsvm(self):
+    def test_GLM2_many_cols_libsvm(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         tryList = [
@@ -62,8 +63,7 @@ class Basic(unittest.TestCase):
             print "Creating random libsvm:", csvPathname
             write_syn_libsvm_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
 
-            parseResult = h2i.import_parse(path=csvPathname, hex_key=hex_key, schema='put', timeoutSecs=10)
-            print csvFilename, 'parse time:', parseResult['response']['time']
+            parseResult = h2i.import_parse(path=csvPathname, hex_key=hex_key, schema='put', timeoutSecs=timeoutSecs)
             print "Parse result['destination_key']:", parseResult['destination_key']
 
             # We should be able to see the parse result?
@@ -71,11 +71,7 @@ class Basic(unittest.TestCase):
             print "\n" + csvFilename
 
             y = colCount
-            # normally we dno't create x and rely on the default
-            # create the big concat'ed x like the browser, to see what happens
-            # x = ','.join(map(str, range(colCount)))
-            # no need to specify x, since all except output. easier on stdout with many cols
-            kwargs = {'y': y, 'max_iter': 2, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
+            kwargs = {'response': y, 'max_iter': 2, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
 
             start = time.time()
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)

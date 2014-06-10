@@ -21,19 +21,18 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_umass(self):
-        # filename, Y, timeoutSecs
-        # fix. the ones with comments may want to be a gaussian?
+    def test_GLM2_umass(self):
+        h2o.beta_features = True
         csvFilenameList = [
             ('cgd.dat', 'gaussian', 12, 5, None),
             ('chdage.dat', 'binomial', 2, 5, None),
     
             # leave out ID and birth weight
-            ('clslowbwt.dat', 'binomial', 7, 10, '1,2,3,4,5'),
+            ('clslowbwt.dat', 'binomial', 7, 10, [1,2,3,4,5]),
             ('icu.dat', 'binomial', 1, 10, None),
             # need to exclude col 0 (ID) and col 10 (bwt)
             # but -x doesn't work..so do 2:9...range doesn't work? FIX!
-            ('lowbwt.dat', 'binomial', 1, 10, '2,3,4,5,6,7,8,9'),
+            ('lowbwt.dat', 'binomial', 1, 10, [2,3,4,5,6,7,8,9]),
             ('lowbwtm11.dat', 'binomial', 1, 10, None),
             ('meexp.dat', 'gaussian', 3, 10, None),
             ('nhanes3.dat', 'binomial', 15, 10, None),
@@ -47,12 +46,18 @@ class Basic(unittest.TestCase):
         for i in range(3):
             for (csvFilename, family, y, timeoutSecs, x) in csvFilenameList:
                 csvPathname = "logreg/umass_statdata/" + csvFilename
-                kwargs = {'n_folds': 2, 'y': y, 'family': family, 'alpha': 1, 'lambda': 1e-4, 'link': 'familyDefault'}
+                kwargs = {'n_folds': 2, 'response': y, 'family': family, 'alpha': 1, 'lambda': 1e-4}
+
+
+                parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put', 
+                    timeoutSecs=timeoutSecs)
                 if x is not None:
-                    kwargs['x'] = x
+                    ignored_cols = h2o_cmd.createIgnoredCols(key=parseResult['destination_key'], 
+                        cols=x, response=y)
+                    kwargs['ignored_cols'] = ignored_cols
+
 
                 start = time.time()
-                parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put', timeoutSecs=timeoutSecs)
                 glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
                 h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
                 print "glm end (w/check) on ", csvPathname, 'took', time.time() - start, 'seconds'

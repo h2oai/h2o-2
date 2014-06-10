@@ -21,7 +21,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_princeton(self):
+    def test_GLM2_princeton(self):
+        h2o.beta_features = True
         # filename, y, timeoutSecs
         # these are all counts? using gaussian?
         csvFilenameList = [
@@ -40,7 +41,7 @@ class Basic(unittest.TestCase):
 
             parseResult = h2i.import_parse(path=csvPathname2, schema='put', timeoutSecs=timeoutSecs)
             start = time.time()
-            kwargs = {'n_folds': 0, 'family': family, 'link': 'familyDefault', 'y': y}
+            kwargs = {'n_folds': 0, 'family': family, 'response': y}
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
             print "glm end (w/check) on ", csvPathname2, 'took', time.time() - start, 'seconds'

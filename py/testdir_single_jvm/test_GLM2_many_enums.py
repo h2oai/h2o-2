@@ -84,41 +84,19 @@ class Basic(unittest.TestCase):
         ### time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_GLM_many_enums(self):
+    def test_GLM2_many_enums(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
-        if not localhost:
-            n = 200
-            tryList = [
-                (n, 1, 'cD', 300), 
-                (n, 2, 'cE', 300), 
-                (n, 3, 'cF', 300), 
-                (n, 4, 'cG', 300), 
-                (n, 5, 'cH', 300), 
-                (n, 6, 'cI', 300), 
-                ]
-        else:
-            n = 150
-            tryList = [
-                (n, 1, 'cD', 300), 
-                (n, 2, 'cE', 300), 
-                (n, 3, 'cF', 300), 
-                (n, 4, 'cG', 300), 
-                (n, 5, 'cH', 300), 
-                (n, 6, 'cI', 300), 
-                (n, 7, 'cJ', 300), 
-                (n, 9, 'cK', 300), 
-                (n, 10, 'cLA', 300), 
-                (n, 11, 'cDA', 300), 
-                (n, 12, 'cEA', 300), 
-                (n, 13, 'cFA', 300), 
-                (n, 14, 'cGA', 300), 
-                (n, 15, 'cHA', 300), 
-                (n, 16, 'cIA', 300), 
-                (n, 17, 'cJA', 300), 
-                (n, 19, 'cKA', 300), 
-                (n, 20, 'cLA', 300), 
-                ]
+        n = 200
+        tryList = [
+            (n, 1, 'cD', 300), 
+            (n, 2, 'cE', 300), 
+            (n, 3, 'cF', 300), 
+            (n, 4, 'cG', 300), 
+            (n, 5, 'cH', 300), 
+            (n, 6, 'cI', 300), 
+            ]
 
         ### h2b.browseTheCloud()
         for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
@@ -160,7 +138,6 @@ class Basic(unittest.TestCase):
             # looks like it takes the hex string (two chars)
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, 
                 timeoutSecs=30, separator=colSepInt)
-            print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
 
             # We should be able to see the parse result?
@@ -170,8 +147,7 @@ class Basic(unittest.TestCase):
                 h2o_cmd.columnInfoFromInspect(parseResult['destination_key'], exceptionOnMissingValues=True)
 
             y = colCount
-            kwargs = {'y': y, 'max_iter': 1, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5, 
-                'case_mode': '=', 'case': 0}
+            kwargs = {'response': y, 'max_iter': 1, 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
             start = time.time()
             ### glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'

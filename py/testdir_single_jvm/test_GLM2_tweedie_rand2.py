@@ -7,23 +7,12 @@ DO_WEIGHT_FAIL = False
 def define_params(): 
     paramDict = {
         'standardize': [None, 0,1],
-        'lsm_solver': [None, 'AUTO','ADMM','GenGradient'],
         'beta_epsilon': [None, 0.0001],
-        'expert_settings': [None, 0, 1],
         'family': ['tweedie'],
-        'thresholds': [None, 0.1, 0.5, 0.7, 0.9],
-        'x': [0,1,15,33],
+        'ignored_cols': [0,1,15,33],
         'lambda': [0, 1e-8, 1e-4],
         'alpha': [0,0.2,0.8],
-        'tweedie_power': [1.00001, 1.9999999],
-        # can't use < or <= case_mode if 1!
-        # same with > or > if 7
-        # maybe don't use 7 because of low frequency in dataset (think xval sampling)
-        'case': [1,2,3,4,5,6],
-        'case_mode': ['>','<','=','<=','>='],
-        # FIX! inverse and log were causing problems..add back in?
-        # 'link': [None, 'familyDefault', 'logit','identity', 'log', 'inverse'],
-        'link': [None, 'logit'],
+        'tweedie_variance_power': [1.00001, 1.9999999],
         'max_iter': [None, 10],
         'n_folds': [None, 0, 1, 2],
         'standardize': [None, 0, 1],
@@ -48,7 +37,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_tweedie_rand2(self):
+    def test_GLM2_tweedie_rand2(self):
+        h2o.beta_features = True
         if 1==1:
             csvPathname = 'standard/covtype.data'
             hex_key = 'covtype.hex'
@@ -64,9 +54,7 @@ class Basic(unittest.TestCase):
         for trial in range(10):
             # params is mutable. This is default.
             params = {
-                'y': 54, 
-                'case': 4, 
-                'case_mode': '=', 
+                'response': 54, 
                 'lambda': 0, 
                 'alpha': 0, 
                 'n_folds': 1, 

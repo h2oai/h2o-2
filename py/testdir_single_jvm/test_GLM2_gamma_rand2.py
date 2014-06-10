@@ -5,19 +5,12 @@ import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_import as h2i
 def define_params():
     paramDict = {
         'standardize': [None, 0,1],
-        'lsm_solver': [None, 'AUTO','ADMM','GenGradient'],
         'beta_epsilon': [None, 0.0001],
-        'expert_settings': [None, 0, 1],
-
-        'thresholds': [None, 0.1, 0.5, 0.7, 0.9],
-        'x': [0,1,15,33,34],
+        'ignored_cols': [0,1,15,33,34],
         'family': ['gamma'],
         'n_folds': [2,3,4],
         'lambda': [1e-8, 1e-4],
         'alpha': [0,0.5,0.75],
-        'case': [1,2,3,4,5,6,7],
-        # inverse and log causing problems
-        # 'link': [None, 'logit','identity', 'log', 'inverse'],
         'max_iter': [24],
         }
     return paramDict
@@ -41,13 +34,14 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_gamma_rand2(self):
+    def test_GLM2_gamma_rand2(self):
+        h2o.beta_features = True
         csvPathname = 'standard/covtype.data'
         parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put')
         paramDict = define_params()
         for trial in range(10):
             # params is mutable. This is default.
-            params = {'y': 54, 'n_folds': 3, 'family': "gamma", 'alpha': 0.5, 'lambda': 1e-4, 'max_iter': 24}
+            params = {'response': 54, 'n_folds': 3, 'family': "gamma", 'alpha': 0.5, 'lambda': 1e-4, 'max_iter': 24}
             colX = h2o_glm.pickRandGlmParams(paramDict, params)
             kwargs = params.copy()
 
