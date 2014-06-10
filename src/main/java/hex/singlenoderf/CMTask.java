@@ -39,6 +39,8 @@ public class CMTask extends MRTask2<CMTask> {
   public VarImp _varimp;
   public int[] _oobs;
   public Key[][] _remoteChunksKeys;
+  public float _ss; // Sum of squares
+  public int _rowcnt; // Rows used in scoring for regression
 
   /** Data to replay the sampling algorithm */
   private int[]     _chunk_row_mapping;
@@ -67,6 +69,7 @@ public class CMTask extends MRTask2<CMTask> {
     _computeOOB = computeOOB;
     _model = model;
     _varimp = null;
+    _ss = 0.f;
     shared_init();
   }
 
@@ -207,7 +210,7 @@ public class CMTask extends MRTask2<CMTask> {
 
         // Predict with this tree - produce 0-based class index
         if (!_model.regression) {
-          int prediction = (int)_model.classify0(ntree, _data, chks, row, _modelDataMap, numClasses, _model.regression);
+          int prediction = (int)_model.classify0(ntree, _data, chks, row, _modelDataMap, numClasses, false /*Not regression*/);
           if( prediction >= numClasses ) continue; // Junk row cannot be predicted
           // Check tree miss
           int alignedPrediction = alignModelIdx(prediction);
@@ -217,6 +220,12 @@ public class CMTask extends MRTask2<CMTask> {
           }
           votes[r][alignedPrediction]++; // Vote the row
           if (isLocalTree) localVotes[r][alignedPrediction]++; // Vote
+        } else {
+          float pred = _model.classify0(ntree, _data, chks, row, _modelDataMap, numClasses, true /*regression*/);
+          float actual = _data.vecs()[_classcol].at8(row);
+          float delta = actual - pred;
+          _ss += delta * delta;
+          _rowcnt++;
         }
       }
     }
@@ -274,6 +283,9 @@ public class CMTask extends MRTask2<CMTask> {
         for (int i = 0; i < _cms.length; i++) Utils.add(_cms[i], drt._cms[i]);
       if (_oobs != null)
         for (int i = 0; i < _oobs.length; ++i) _oobs[i] += drt._oobs[i];
+    } else {
+      _ss += drt._ss;
+      _rowcnt += drt._rowcnt;
     }
   }
 
