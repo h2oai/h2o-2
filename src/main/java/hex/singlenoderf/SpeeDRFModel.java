@@ -65,6 +65,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   /* Regression or Classification */                                      boolean regression;
 
 
+
   /**
    * Extra helper variables.
    */
@@ -94,6 +95,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     super(selfKey, dataKey, fr);
     this.dest_key = selfKey;
     this.parameters = params;
+    _domain = regression ? null : fr.lastVec().toEnum().domain();
   }
 
   public Vec get_response() {
@@ -270,10 +272,19 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   public Counter leaves() { find_leaves_depth(); return _tl; }
   public Counter depth()  { find_leaves_depth(); return _td; }
 
+
+  private static int find(String n, String[] names) {
+    if( n == null ) return -1;
+    for( int j = 0; j<names.length; j++ )
+      if( n.equals(names[j]) )
+        return j;
+    return -1;
+  }
+
   public int[] colMap(String[] names) {
-    int res[] = new int[names.length];
+    int res[] = new int[fr._names.length]; //new int[names.length];
     for(int i = 0; i < res.length; i++) {
-      res[i] = fr.find(names[i]);
+      res[i] = find(fr.names()[i], names);
     }
     return res;
   }

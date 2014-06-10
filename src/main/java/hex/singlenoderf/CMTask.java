@@ -38,6 +38,7 @@ public class CMTask extends MRTask2<CMTask> {
   public long _cms[][][];
   public VarImp _varimp;
   public int[] _oobs;
+  public Key[][] _remoteChunksKeys;
 
   /** Data to replay the sampling algorithm */
   private int[]     _chunk_row_mapping;
@@ -51,6 +52,8 @@ public class CMTask extends MRTask2<CMTask> {
   private int       _cmin_model_mapping;
   /** Difference between data cmin and CM cmin */
   private int       _cmin_data_mapping;
+
+  transient private Random _rand;
 
   /** Confusion matrix
    * @param model the ensemble used to classify
@@ -71,7 +74,7 @@ public class CMTask extends MRTask2<CMTask> {
   private void shared_init() {
     /* For reproducibility we can control the randomness in the computation of the
    confusion matrix. The default seed when deserializing is 42. */
-//    Random _rand = Utils.getRNG(0x92b5023f2cd40b7cL);
+    Random _rand = Utils.getRNG(0x92b5023f2cd40b7cL);
     _data = _model.test_frame == null ? _model.fr : _model.test_frame;
 
     _modelDataMap = _model.colMap(_model._names);
@@ -104,22 +107,21 @@ public class CMTask extends MRTask2<CMTask> {
 
   public void init() {
     // Make a mapping from chunk# to row# just for chunks on this node
-    int total_home = 0;
-    for (int i = 0; i < _data.anyVec().nChunks(); ++i) {
-      if (_data.anyVec().chunkKey(i).home()) {
-        total_home++;
-      }
-    }
-    _chunk_row_mapping = new int[total_home];
-
-    int off=0;
-    int cidx=0;
-    for (int i = 0; i < _data.anyVec().nChunks(); ++i) {
-      if (_data.anyVec().chunkKey(i).home()) {
-        _chunk_row_mapping[cidx++] = off;
-        off += _data.anyVec().chunkLen(i);
-      }
-    }
+//    int total_home = 0;
+//    for (int i = 0; i < _data.anyVec().nChunks(); ++i) {
+//      if (_data.anyVec().chunkKey(i).home()) {
+//        total_home++;
+//      }
+//    }
+//    _chunk_row_mapping = new int[_data.anyVec().nChunks()];
+//
+//    int off=0;
+//    for (int i = 0; i < _data.anyVec().nChunks(); ++i) {
+//      if (_data.anyVec().chunkKey(i).home()) {
+//        _chunk_row_mapping[i] = off;
+//        off += _data.anyVec().chunkLen(i);
+//      }
+//    }
     // Initialize number of rows per node
     _rowsPerNode = new int[H2O.CLOUD.size()];
     long chunksCount = _data.anyVec().nChunks();
@@ -127,6 +129,31 @@ public class CMTask extends MRTask2<CMTask> {
       Key cKey = _data.anyVec().chunkKey(ci);
       _rowsPerNode[cKey.home_node().index()] += _data.anyVec().chunkLen(ci);
     }
+
+    _remoteChunksKeys = new Key[H2O.CLOUD.size()][];
+    int[] _remoteChunksCounter = new int[H2O.CLOUD.size()];
+
+    for (int i = 0; i < _data.anyVec().nChunks(); ++i) {
+      _remoteChunksCounter[_data.anyVec().chunkKey(i).home(H2O.CLOUD)]++;
+    }
+
+    for (int i = 0; i < H2O.CLOUD.size(); ++i) _remoteChunksKeys[i] = new Key[_remoteChunksCounter[i]];
+
+    int[] cnter = new int[H2O.CLOUD.size()];
+    for (int i = 0; i < _data.anyVec().nChunks(); ++i) {
+      int node_idx = _data.anyVec().chunkKey(i).home(H2O.CLOUD);
+      _remoteChunksKeys[node_idx][cnter[node_idx]++] = _data.anyVec().chunkKey(i);
+    }
+  }
+
+  private int producerRemoteRows(byte treeProducerID, Key chunkKey) {
+    Key[] remoteCKeys = _remoteChunksKeys[treeProducerID];
+    int off = 0;
+    for (int i=0; i<remoteCKeys.length; i++) {
+      if (chunkKey.equals(remoteCKeys[i])) return off;
+      off += _data.anyVec().chunkLen(i);
+    }
+    return off;
   }
 
   @Override public void map(Chunk[] chks) {
@@ -145,17 +172,11 @@ public class CMTask extends MRTask2<CMTask> {
     for( int ntree = 0; ntree < _model.treeCount(); ntree++ ) {
       long    treeSeed    = _model.seed(ntree);
       byte    producerId  = _model.producerId(ntree);
-      int     init_row    = (int)chks[0]._start;
+      int     init_row    =   (int)chks[0]._start; //_chunk_row_mapping[chks[0].cidx()]; //
       boolean isLocalTree = _computeOOB && isLocalTree(producerId); // tree is local
-      boolean isRemote = true;
-      for (int a_chunk_row_mapping : _chunk_row_mapping) {
-        if (chks[0]._start == a_chunk_row_mapping) {
-          isRemote = false;
-          break;
-        }
-      }
-      boolean isRemoteTreeChunk = _computeOOB && isRemote; // this is chunk which was used for construction the tree by another node
-      if (isRemoteTreeChunk) init_row = _rowsPerNode[producerId] + (int)chks[0]._start;
+//      boolean isRemote = false; // Left around for legacy reasons... data is never remote, but trees might be.
+      boolean isRemoteTreeChunk = false; //_computeOOB && isRemote; // this is chunk which was used for construction the tree by another node
+//      if (isRemoteTreeChunk) init_row = _rowsPerNode[producerId] + producerRemoteRows(producerId, chks[0]._vec.chunkKey(chks[0].cidx())); //(int)chks[0]._start;
       /* NOTE: Before changing used generator think about which kind of random generator you need:
        * if always deterministic or non-deterministic version - see hex.rf.Utils.get{Deter}RNG */
       // DEBUG: if( _computeOOB && (isLocalTree || isRemoteTreeChunk)) System.err.println(treeSeed + " : " + init_row + " (CM) " + isRemoteTreeChunk);
@@ -172,7 +193,7 @@ public class CMTask extends MRTask2<CMTask> {
         // Do not skip yet the rows with NAs in the rest of columns
         if( chks[_classcol].isNA(row)) continue;
 
-        if( _computeOOB && (isLocalTree || isRemoteTreeChunk)) { // if OOBEE is computed then we need to take into account utilized sampling strategy
+        if( _computeOOB /*&& (isLocalTree || isRemoteTreeChunk) */) { // if OOBEE is computed then we need to take into account utilized sampling strategy
           switch( _model.sampling_strategy ) {
             case RANDOM          : if (sampledItem < _model.sample ) continue ROWS; break;
             case STRATIFIED_LOCAL:

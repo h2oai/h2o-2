@@ -267,7 +267,7 @@ public class SpeeDRF extends Job.ValidatedJob {
         class_weights = checkClassWeights(class_weights);
 
         // If MSE is chosen for regression, then throw unimpl
-        if (stat_type == Tree.StatType.MSE) throw H2O.unimpl();
+        if (stat_type == Tree.StatType.MSE) throw new IllegalArgumentException("Got a bad statistic type. Must use MSE for regression only.");
 
 
       // Initialize regression specific model parameters
@@ -278,10 +278,12 @@ public class SpeeDRF extends Job.ValidatedJob {
         strata_samples = null;
 
         // The only acceptable stat type is MSE
-        if (stat_type != Tree.StatType.MSE) throw H2O.unimpl();
+        if (stat_type != Tree.StatType.MSE) {
+          stat_type = Tree.StatType.MSE;
+        }
 
         //TODO: Variable importance in regression not currently supported
-        if (importance) throw H2O.unimpl();
+        if (importance) throw new IllegalArgumentException("Variable Importance for SpeeDRF regression not currently supported.");
       }
 
       // Generate a new seed by default.
@@ -290,7 +292,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       }
 
       // Prepare the train/test data sets based on the user input for the model.
-      Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, false, false, false);
+      Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, !regression /*toEnum is TRUE if regression is FALSE*/, false, false);
       Frame test = null;
       if (validation != null) {
         test = FrameTask.DataInfo.prepareFrame(validation, validation.vecs()[source.find(response)], ignored_cols, false, false, false);
@@ -300,7 +302,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       SpeeDRFModel model = new SpeeDRFModel(dest(), source._key, train, this);
       int csize = H2O.CLOUD.size();
       model.fr = train;
-      model.response = response;
+      model.response = regression ? train.lastVec() : train.lastVec().toEnum();
       model.t_keys = new Key[0];
       model.time = 0;
       model.local_forests = new Key[csize][];
@@ -330,8 +332,11 @@ public class SpeeDRF extends Job.ValidatedJob {
       model.weights = regression ? null : class_weights;
       model.time = 0;
       model.N = num_trees;
-      model.strata_samples = new float[strata_samples.length];
-      for (int i = 0; i < strata_samples.length; i++) model.strata_samples[i] = (float) strata_samples[i];
+      model.strata_samples = regression ? null : new float[strata_samples.length];
+
+      if (!regression) {
+        for (int i = 0; i < strata_samples.length; i++) model.strata_samples[i] = (float) strata_samples[i];
+      }
 
       if (mtry == -1) {
         if(!regression) {

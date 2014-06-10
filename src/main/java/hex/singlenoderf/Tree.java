@@ -132,8 +132,12 @@ public class Tree extends H2OCountedCompleter {
         left.applyClassWeights();   // Weight the distributions
       hex.singlenoderf.Statistic.Split spl = left.split(d, false);
       if(spl.isLeafNode()) {
-        float av = d.computeAverage();
-        _tree = new LeafNode(-1, d.rows(), av);
+        if(_regression) {
+          float av = d.computeAverage();
+          _tree = new LeafNode(-1, d.rows(), av);
+        } else {
+          _tree =  new LeafNode(_data.unmapClass(spl._split), d.rows(),-1);
+        }
       } else {
         _tree = new FJBuild (spl, d, 0, _seed).compute();
       }
