@@ -800,7 +800,7 @@ public class Utils {
     public boolean get(int idx) {
       if(idx < 0 || idx > _nbits-1)
         throw new IndexOutOfBoundsException("Must have 0 <= idx <= " + Integer.toString(_nbits-1) + ": " + idx);
-      return (_val[idx >> 3] & ((byte)1 << idx)) != 0;
+      return (_val[idx >> 3] & ((byte)1 << (idx % 8))) != 0;
     }
     public boolean contains(int idx) {
       if(idx < 0) throw new IndexOutOfBoundsException("idx < 0: " + idx);
@@ -810,12 +810,12 @@ public class Utils {
     public void set(int idx) {
       if(idx < 0 || idx > _nbits-1)
         throw new IndexOutOfBoundsException("Must have 0 <= idx <= " + Integer.toString(_nbits-1) + ": " + idx);
-      _val[idx >> 3] |= ((byte)1 << idx);
+      _val[idx >> 3] |= ((byte)1 << (idx % 8));
     }
     public void clear(int idx) {
       if(idx < 0 || idx > _nbits-1)
         throw new IndexOutOfBoundsException("Must have 0 <= idx <= " + Integer.toString(_nbits-1) + ": " + idx);
-      _val[idx >> 3] &= ~((byte)1 << idx);
+      _val[idx >> 3] &= ~((byte)1 << (idx % 8));
     }
     public int cardinality() {
       int nbits = 0;

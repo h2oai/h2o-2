@@ -904,7 +904,7 @@ public class DTree extends Iced {
               ab.skip(sz);
             else {
               ab.skip(idx >> 3);
-              grpContains = (ab.get1() & ((byte)1 << idx)) != 0;
+              grpContains = (ab.get1() & ((byte)1 << (idx % 8))) != 0;
               ab.skip(sz-(idx >> 3)-1);
             }
           }
@@ -1330,7 +1330,7 @@ public class DTree extends Iced {
       if(equal == 0 || equal == 1)
         _sb.p("(float) data[").p(col).p(" /* ").p(_tm._names[col]).p(" */").p("] ").p(equal==1?"!= ":"< ").pj(fcmp); // then left and then right (left is !=)
       else {
-        _sb.p("!grpContains(GRPSPLIT").p(_grpcnt).p(", (int) data[").p(col).p(" /* ").p(_tm._names[col]).p(" */").p("])");
+        _sb.p("!water.genmodel.GeneratedModel.grpContains(GRPSPLIT").p(_grpcnt).p(", (int) data[").p(col).p(" /* ").p(_tm._names[col]).p(" */").p("])");
         _grpcnt++;
       }
       assert _bits[_depth]==0;
