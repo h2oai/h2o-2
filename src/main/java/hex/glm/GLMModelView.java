@@ -175,22 +175,38 @@ public class GLMModelView extends Request2 {
     StringBuilder equation = new StringBuilder();
     StringBuilder vals = new StringBuilder();
     StringBuilder normVals = sm.norm_beta == null?null:new StringBuilder();
+    int [] sortedIds = new int[sm.beta.length];
+    for(int i = 0; i < sortedIds.length; ++i)
+      sortedIds[i] = i;
+    final double [] b = sm.norm_beta == null?sm.beta:sm.norm_beta;
+    // now sort the indeces according to their abs value from biggest to smallest (but keep intercept last)
+    int r = sortedIds.length-1;
+    for(int i = 1; i < r; ++i){
+      for(int j = 1; j < r-i;++j){
+        if(Math.abs(b[sortedIds[j-1]]) < Math.abs(b[sortedIds[j]])){
+          int jj = sortedIds[j];
+          sortedIds[j] = sortedIds[j-1];
+          sortedIds[j-1] = jj;
+        }
+      }
+    }
+
     String [] cNames = glm_model.coefficients_names;
     boolean first = true;
     int j = 0;
-    for(int i:sm.idxs){
+    for(int i:sortedIds){
       names.append("<th>" + cNames[i] + "</th>");
-      vals.append("<td>" + sm.beta[j] + "</td>");
+      vals.append("<td>" + sm.beta[i] + "</td>");
       if(first){
-        equation.append(DFORMAT.format(sm.beta[j]));
+        equation.append(DFORMAT.format(sm.beta[i]));
         first = false;
       } else {
-        equation.append(sm.beta[j] > 0?" + ":" - ");
-        equation.append(DFORMAT.format(Math.abs(sm.beta[j])));
+        equation.append(sm.beta[i] > 0?" + ":" - ");
+        equation.append(DFORMAT.format(Math.abs(sm.beta[i])));
       }
       if(i < (cNames.length-1))
          equation.append("*x[" + cNames[i] + "]");
-      if(sm.norm_beta != null) normVals.append("<td>" + sm.norm_beta[j] + "</td>");
+      if(sm.norm_beta != null) normVals.append("<td>" + sm.norm_beta[i] + "</td>");
       ++j;
     }
     sb.append("<h4>Equation</h4>");

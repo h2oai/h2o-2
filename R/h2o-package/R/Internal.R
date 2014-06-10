@@ -22,8 +22,14 @@ if(.Platform$OS.type == "windows")
 h2o.startLogging     <- function() {
   cmdDir <- normalizePath(dirname(.pkg.env$h2o.__LOG_COMMAND))
   errDir <- normalizePath(dirname(.pkg.env$h2o.__LOG_ERROR))
-  if(!file.exists(cmdDir)) stop(cmdDir, " directory does not exist. Please create it or change logging path with h2o.setLogPath")
-  if(!file.exists(errDir)) stop(errDir, " directory does not exist. Please create it or change logging path with h2o.setLogPath")
+  if(!file.exists(cmdDir)) {
+    warning(cmdDir, " directory does not exist. Creating it now...")
+    dir.create(cmdDir, recursive = TRUE)
+  }
+  if(!file.exists(errDir)) {
+    warning(errDir, " directory does not exist. Creating it now...")
+    dir.create(errDir, recursive = TRUE)
+  }
   
   cat("Appending to log file", .pkg.env$h2o.__LOG_COMMAND, "\n")
   cat("Appending to log file", .pkg.env$h2o.__LOG_ERROR, "\n")
@@ -402,13 +408,15 @@ h2o.setLogPath <- function(path, type) {
 }
 
 .h2o.__binop2 <- function(op, x, y) {
+  if(class(x) != "H2OParsedData" && length(x) != 1) stop("Unimplemented: x must be a scalar value")
+  if(class(y) != "H2OParsedData" && length(y) != 1) stop("Unimplemented: y must be a scalar value")
   # if(!((ncol(x) == 1 || class(x) == "numeric") && (ncol(y) == 1 || class(y) == "numeric")))
   #  stop("Can only operate on single column vectors")
   # LHS = ifelse(class(x) == "H2OParsedData", x@key, x)
   LHS = ifelse(inherits(x, "H2OParsedData"), x@key, x)
   
-  # if((class(x) == "H2OParsedData" || class(y) == "H2OParsedData") & !( op %in% c('==', '!='))) {
-  if((inherits(x, "H2OParsedData") || inherits(y, "H2OParsedData")) & !( op %in% c('==', '!='))) {
+  # if((class(x) == "H2OParsedData" || class(y) == "H2OParsedData") && !( op %in% c('==', '!='))) {
+  if((inherits(x, "H2OParsedData") || inherits(y, "H2OParsedData")) && !( op %in% c('==', '!='))) {
     anyFactorsX <- .h2o.__checkForFactors(x)
     anyFactorsY <- .h2o.__checkForFactors(y)
     anyFactors <- any(c(anyFactorsX, anyFactorsY))

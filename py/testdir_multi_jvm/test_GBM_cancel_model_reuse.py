@@ -26,9 +26,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GBM_cancel_model_reuse(self):
-        print "do import/parse with VA"
-        h2o.beta_features = False
-
+        h2o.beta_features = True
         importFolderPath = 'standard'
         timeoutSecs = 500
         csvFilenameAll = [
@@ -47,10 +45,9 @@ class Basic(unittest.TestCase):
         for (importFolderPath, csvFilename, response) in csvFilenameList:
             # creates csvFilename.hex from file in importFolder dir 
             csvPathname = importFolderPath + "/" + csvFilename 
-            
-            ### h2o.beta_features = False
             print "FIX! is this guy getting cancelled because he's reusing a key name? but it should be okay?"
-            (importResult, importPattern) = h2i.import_only(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', timeoutSecs=50)
+            (importResult, importPattern) = h2i.import_only(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', 
+                timeoutSecs=50)
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', hex_key='c.hex', 
                 timeoutSecs=500, noPoll=False, doSummary=False) # can't do summary until parse result is correct json
 
@@ -60,13 +57,7 @@ class Basic(unittest.TestCase):
             ## time.sleep(2)
             # no pattern waits for all
             ## h2o_jobs.pollWaitJobs(pattern=None, timeoutSecs=300, pollTimeoutSecs=10, retryDelaySecs=5)
-
-            # hack it because no response from Parse2
-            if h2o.beta_features:
-                parseResult = {'destination_key': 'c.hex'}
-
-            print "\nparseResult", h2o.dump_json(parseResult)
-
+            # print "\nparseResult", h2o.dump_json(parseResult)
             print "Parse result['destination_key']:", parseResult['destination_key']
             ## What's wrong here? too big?
             ### inspect = h2o_cmd.runInspect(key=parseResult['destination_key'], timeoutSecs=30, verbose=True)
@@ -74,7 +65,8 @@ class Basic(unittest.TestCase):
             h2o.check_sandbox_for_errors()
 
             # have to avoid this on nflx data. colswap with exec
-            # Exception: rjson error in gbm: Argument 'response' error: Only integer or enum/factor columns can be classified
+            # Exception: rjson error in gbm: Argument 'response' error: 
+            # Only integer or enum/factor columns can be classified
 
             if DO_CLASSIFICATION:
                 # need to flip the right col! (R wise)
@@ -83,7 +75,6 @@ class Basic(unittest.TestCase):
                 resultExec = h2o_cmd.runExec(**kwargs)
 
             # lets look at the response column now
-            h2o.beta_features = True
             s = h2o_cmd.runSummary(key="c.hex", cols=response, max_ncols=1)
             # x = range(542)
             # remove the output too! (378)
@@ -122,6 +113,8 @@ class Basic(unittest.TestCase):
                 #     h2o.nodes[0].jobs_cancel(key=j)
 
                 h2o_jobs.cancelAllJobs()
+                # PUB-361. going to wait after cancel before reusing keys
+                time.sleep(3)
                 # am I getting a subsequent parse job cancelled?
                 h2o_jobs.showAllJobs()
 

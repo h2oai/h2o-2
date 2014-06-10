@@ -1511,6 +1511,21 @@ public class Utils {
     return r;
   }
 
+  /** Compute start row and length of <code>i</code>-th fold from <code>nfolds</code>.
+   *
+   * @param nrows  number of rows
+   * @param nfolds  number of folds
+   * @param i fold which is intended to be computed
+   * @return return start row and number of rows for <code>i</code>-th fold.
+   */
+  public static final long[] nfold(long nrows, int nfolds, int i) {
+    assert i>=0 && i<nfolds;
+    long foldSize = nrows / nfolds;
+    long start = i * foldSize;
+    long size  = i!=nfolds-1 ? foldSize : foldSize + (nrows % nfolds);
+    return new long[] {start,size};
+  }
+
   /** Generate given numbers of keys by suffixing key by given numbered suffix. */
   public static Key[] generateNumKeys(Key mk, int num) { return generateNumKeys(mk, num, "_part"); }
   public static Key[] generateNumKeys(Key mk, int num, String delim) {

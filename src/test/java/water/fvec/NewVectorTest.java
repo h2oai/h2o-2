@@ -10,7 +10,7 @@ import water.parser.DParseTask;
 
 public class NewVectorTest extends TestUtil {
   static final double EPSILON = 1e-6;
-  @BeforeClass public static void stall() { stall_till_cloudsize(1); }
+  @BeforeClass public static void stall() { stall_till_cloudsize(3); }
 
   private void testImpl( long[] ls, int[] xs, Class C, boolean hasFloat ) {
     int [] id = new int[xs.length];
@@ -96,7 +96,9 @@ public class NewVectorTest extends TestUtil {
     nv._len= nv._len2 = nv._ls.length;
     long [] ls = nv._ls;
     nv.close(0,null);
-    Vec vec = av.close(new Futures());
+    Futures fs = new Futures();
+    Vec vec = av.close(fs);
+    fs.blockForPending();
     assertEquals( nv._len2, vec.length() );
     // Compression returns the expected constant-compression-type:
     Chunk c0 = vec.chunkForChunkIdx(0);
@@ -113,24 +115,31 @@ public class NewVectorTest extends TestUtil {
     assertTrue( "Found chunk class "+c1.getClass()+" but expected C0LChunk", c1 instanceof C0LChunk );
 
     // Now write a one into slot 1; chunk should inflate into boolean vector.
-    c1.set(1,1);
+    vec.set(1,1);
     assertEquals(1,vec.at8(1)); // Immediate visibility in current thread
-    c1.close(0,null);           // Done writing into chunk
     Chunk c2 = vec.chunkForChunkIdx(0);  // Look again at the installed chunk
     assertTrue( "Found chunk class "+c2.getClass()+" but expected CBSChunk", c2 instanceof CBSChunk );
 
     // Now write a two into slot 2; chunk should inflate into byte vector
-    c2.set(2,2);
+    vec.set(2,2);
     assertEquals(2,vec.at8(2)); // Immediate visibility in current thread
-    c2.close(0,null);           // Done writing into chunk
     Chunk c3 = vec.chunkForChunkIdx(0);  // Look again at the installed chunk
     assertTrue( "Found chunk class "+c3.getClass()+" but expected C1NChunk", c3 instanceof C1NChunk );
 
-    c3.set(3,3);
+    vec.set(3,3);
     assertEquals(3,vec.at8(3)); // Immediate visibility in current thread
-    c3.close(0,null);           // Done writing into chunk
     Chunk c4 = vec.chunkForChunkIdx(0);  // Look again at the installed chunk
     assertTrue( "Found chunk class "+c4.getClass()+" but expected C1NChunk", c4 instanceof C1NChunk );
+
+    // Now doing the same for multiple writes, close() only at the end for better speed
+    Vec.Writer vw = vec.open();
+    vw.set(1,4);
+    vw.set(2,5);
+    vw.set(3,6);
+    vw.close(); //update chunks in DKV
+    assertEquals(4,vec.at8(1));
+    assertEquals(5,vec.at8(2));
+    assertEquals(6,vec.at8(3));
 
     UKV.remove(av._key);
   }

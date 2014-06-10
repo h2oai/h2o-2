@@ -200,8 +200,8 @@ class H2OCloudNode:
             url_sys = "http://{}:{}/stat".format(self.ip, 8000)
             url_proc = "http://{}:{}/{}/stat".format(self.ip, 8000, self.pid)
             try:
-              r_sys = requests.get(url_sys, timeout=120).text.split('\n')[0]
-              r_proc = requests.get(url_proc, timeout=120).text.strip().split()
+              r_sys = requests.get(url_sys, timeout=10).text.split('\n')[0]
+              r_proc = requests.get(url_proc, timeout=10).text.strip().split()
             except:
               m += 1
               continue  # usually timeout, but just catch all and continue, error out downstream.
@@ -355,7 +355,7 @@ class H2OCloudNode:
         Use a request for /Cloud.json and look for pid.
         """
         name = self.ip + ":" + self.port
-        time.sleep(5)
+        time.sleep(3)
         r = requests.get("http://" + name + "/Cloud.json")
         name = "/" + name
         j = json.loads(r.text)
@@ -416,7 +416,7 @@ class H2OCloudNode:
         @return: none
         """
         try:
-            requests.get("http://" + self.ip + ":" + self.port + "/Shutdown.html", timeout=5)
+            requests.get("http://" + self.ip + ":" + self.port + "/Shutdown.html", timeout=1)
             try:
                 r2 = requests.get("http://" + self.ip + ":" + self.port + "/Cloud.html", timeout=2)
             except Exception, e:
@@ -436,7 +436,7 @@ class H2OCloudNode:
         except OSError:
             pass
         try:
-            requests.get("http://" + self.ip + ":" + self.port + "/Shutdown.html", timeout=5)
+            requests.get("http://" + self.ip + ":" + self.port + "/Shutdown.html", timeout=1)
         except Exception, e:
             print "Got Exception trying to shutdown H2O:"
             print e
