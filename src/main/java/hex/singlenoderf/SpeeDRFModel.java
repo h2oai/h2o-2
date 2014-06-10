@@ -95,6 +95,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     super(selfKey, dataKey, fr);
     this.dest_key = selfKey;
     this.parameters = params;
+    regression = !(params.classification);
     _domain = regression ? null : fr.lastVec().toEnum().domain();
   }
 
