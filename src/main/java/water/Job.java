@@ -745,7 +745,7 @@ public abstract class Job extends Func {
     /** Names of columns */
     protected transient String[] _names;
     /** Name of validation response. Should be same as source response. */
-    protected transient String _responseName;
+    public transient String _responseName;
 
     /** Adapted validation frame to a computed model. */
     private transient Frame _adaptedValidation;

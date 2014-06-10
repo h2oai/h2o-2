@@ -1750,7 +1750,7 @@ class H2O(object):
                        'sample': 0.67,
                        'sampling_strategy': 'RANDOM',
                        'seed': -1.0,
-                       'stat_type': 'ENTROPY',
+                       'select_stat_type': 'ENTROPY',
                        'strata_samples': None,
         }
         check_params_update_kwargs(params_dict, kwargs, 'random_forest', print_params)

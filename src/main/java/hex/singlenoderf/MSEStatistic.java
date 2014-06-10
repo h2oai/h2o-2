@@ -25,10 +25,6 @@ public class MSEStatistic extends Statistic {
 
   @Override
   protected Split ltSplit(int colIndex, Data d, float[] dist, float distWeight, Random rand) {
-//    float Y_R = distWeight;
-//    float Y_L = 0.f;
-//    int nobs_R = d.rows();
-//    int nobs_L = 0;
     float bestSoFar = 0.f;
     int bestSplit = -1;
 
@@ -83,11 +79,11 @@ public class MSEStatistic extends Statistic {
 
 
 
-  @Override protected Split ltSplit(int col, Data d, int[] dist, int distWeight, Random _) {
+  @Override protected Split ltSplit(int col, Data d, int[] dist, int distWeight, Random r) {
     return null; //not called for regression
   }
 
-  @Override protected Split eqSplit(int colIndex, Data d, int[] dist, int distWeight, Random _) {
+  @Override protected Split eqSplit(int colIndex, Data d, int[] dist, int distWeight, Random r) {
     return null; //not called for regression
   }
 }
