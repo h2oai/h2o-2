@@ -479,7 +479,7 @@ public class DTree extends Iced {
 
       // int res = 7;  // 1B node type + flags, 2B colId, 4B float split val
       // 1B node type + flags, 2B colId, 4B split val/small group or 2B size + large group
-      int res = _split._equal == 3 ? 5 + (_split._bs.size() >> 3) : 7;
+      int res = _split._equal == 3 ? 5 + _split._bs.size() : 7;
 
       Node left = _tree.node(_nids[0]);
       int lsz = left.size();
@@ -517,7 +517,7 @@ public class DTree extends Iced {
           ary[i] = _split._bs._val[i];
         ab.putA1(ary, 4);
       } else {
-        ab.put2((char)(_split._bs.size() >> 3));
+        ab.put2((char)_split._bs.size());
         ab.putA1(_split._bs._val, _split._bs._val.length);
       }
 
@@ -1025,7 +1025,7 @@ public class DTree extends Iced {
           int sz = (equal == 3) ? _ts.get2() : 4;
           byte[] buf = MemoryManager.malloc1(sz);
           _ts.read(buf, 0, sz);
-          gcmp = new IcedBitSet(buf);   // TODO: Need to tell it how many bins/bits actually used
+          gcmp = new IcedBitSet(buf);
         }
 
         // Compute the amount to skip.

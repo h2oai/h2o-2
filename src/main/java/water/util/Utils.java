@@ -855,7 +855,7 @@ public class Utils {
       }
       return (idx_next << 3) + Integer.numberOfTrailingZeros(bt_next);
     }
-    public int size() { return _nbits; };
+    public int size() { return _val.length; };
 
     @Override public String toString() {
       StringBuilder sb = new StringBuilder();
