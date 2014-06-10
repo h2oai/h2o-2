@@ -231,10 +231,10 @@ public class CMTask extends MRTask2<CMTask> {
     }
     if(!_model.regression) {
       // Assemble the votes-per-class into predictions & score each row
-      _matrix = computeCM(votes, chks); // Make a confusion matrix for this chunk
+      _matrix = computeCM(votes, chks, false /*Do the _cms once*/); // Make a confusion matrix for this chunk
       if (localVotes!=null) {
         _localMatrices = new CM[H2O.CLOUD.size()];
-        _localMatrices[H2O.SELF.index()] = computeCM(localVotes, chks);
+        _localMatrices[H2O.SELF.index()] = computeCM(localVotes, chks, true /*Don't the _cms again!*/);
       }
     }
   }
@@ -279,8 +279,10 @@ public class CMTask extends MRTask2<CMTask> {
         if (ept1.length < ept2.length) ept1 = Arrays.copyOf(ept1, ept2.length);
         for (int i = 0; i < ept2.length; i++) ept1[i] += ept2[i];
       }
+      
       if (_cms!=null)
         for (int i = 0; i < _cms.length; i++) Utils.add(_cms[i], drt._cms[i]);
+
       if (_oobs != null)
         for (int i = 0; i < _oobs.length; ++i) _oobs[i] += drt._oobs[i];
     } else {
@@ -523,7 +525,7 @@ public class CMTask extends MRTask2<CMTask> {
   }
 
   /** Produce confusion matrix from given votes. */
-  final CM computeCM(int[][] votes, Chunk[] chks) {
+  final CM computeCM(int[][] votes, Chunk[] chks, boolean local) {
     CM cm = new CM();
     int rows = votes.length;
     int validation_rows = 0;
@@ -539,7 +541,7 @@ public class CMTask extends MRTask2<CMTask> {
       if(_classWt != null )                 // Apply class weights
         for( int v = 0; v<_N; v++) preds[v+1] *= _classWt[v];
       int result = ModelUtils.getPrediction(preds, row); // Share logic to get a prediction for classifiers (solve ties)
-      if( vi[result]==0 ) { cm._skippedRows++; continue; }// Ignore rows with zero votes
+      if( vi[result]==0 ) { cm._skippedRows++; continue; } // Ignore rows with zero votes
 
       int cclass = alignDataIdx((int) chks[_classcol].at8(row) - cmin);
       assert 0 <= cclass && cclass < _N : ("cclass " + cclass + " < " + _N);
@@ -563,7 +565,7 @@ public class CMTask extends MRTask2<CMTask> {
 //        err = 1 - 1.f / _N;
 //      }
       _sum += err * err;
-      if(_N == 2) { // Binomial classification -> compute AUC, draw ROC
+      if(_N == 2 && !local) { // Binomial classification -> compute AUC, draw ROC
         float snd = fs[1] / sum;// for validation dataset sum is always 1
         for(int i = 0; i < ModelUtils.DEFAULT_THRESHOLDS.length; i++) {
           int p = snd >= ModelUtils.DEFAULT_THRESHOLDS[i] ? 1 : 0; // Compute prediction based on threshold

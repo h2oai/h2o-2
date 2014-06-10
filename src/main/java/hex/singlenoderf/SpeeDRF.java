@@ -341,17 +341,17 @@ public class SpeeDRF extends Job.ValidatedJob {
       if (mtry == -1) {
         if(!regression) {
 
-          //Classification uses the square root of the number of features by default
+          // Classification uses the square root of the number of features by default
           model.mtry = (int) Math.floor(Math.sqrt(source.numCols()));
         } else {
 
-          //Regression uses about a third of the features by default
+          // Regression uses about a third of the features by default
           model.mtry = (int) Math.floor((float) source.numCols() / 3.0f);
         }
 
       } else {
 
-        //The user specified mtry
+        // The user specified mtry
         model.mtry = mtry;
       }
 
