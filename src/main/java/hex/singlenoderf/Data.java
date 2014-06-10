@@ -199,7 +199,7 @@ public class Data implements Iterable<Data.Row> {
             int val = bins[permIdx];
             if (val == DataAdapter.BAD) continue; // ignore bad rows
             float resp = response[permIdx];    // Class-for-row
-            int response_bin = cols[_dapt.classColIdx()]._binned == null ? permIdx : cols[_dapt.classColIdx()]._binned[permIdx];
+            int response_bin = cols[_dapt.classColIdx()]._binned == null ? (cols[_dapt.classColIdx()]._rawB[permIdx] & 0xFF) : cols[_dapt.classColIdx()]._binned[permIdx];
             if (resp == DataAdapter.BAD) continue; // ignore rows with NA in response column
             cdsf[val][response_bin] = resp;             // Bump histogram
           }
@@ -209,7 +209,7 @@ public class Data implements Iterable<Data.Row> {
             int permIdx = permutation[i];
             int val = (0xFF & raw[permIdx]);
             float resp = response[permIdx];
-            int response_bin = cols[_dapt.classColIdx()]._binned == null ? permIdx : cols[_dapt.classColIdx()]._binned[permIdx];
+            int response_bin = cols[_dapt.classColIdx()]._binned == null ? (cols[_dapt.classColIdx()]._rawB[permIdx] & 0xFF) : cols[_dapt.classColIdx()]._binned[permIdx];
             cdsf[val][response_bin] = resp;
           }
         }

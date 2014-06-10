@@ -22,13 +22,14 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_B_importFolder_files(self):
+    def test_billion_rows_fvec(self):
+        h2o.beta_features = True
         # just do the import folder once
         timeoutSecs = 1500
 
         csvFilenameAll = [
             # quick test first
-            "covtype.data", 
+            # "covtype.data", 
             # then the real thing
             "billion_rows.csv.gz",
             ]
@@ -44,7 +45,6 @@ class Basic(unittest.TestCase):
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path='standard/' + csvFilename,
                 timeoutSecs=timeoutSecs, pollTimeoutSecs=60)
             elapsed = time.time() - start
-            print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
             print csvFilename, "completed in", elapsed, "seconds.", "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
@@ -52,7 +52,7 @@ class Basic(unittest.TestCase):
             inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
 
             print "\n" + csvFilename
-            kwargs = {'x': 0, 'y': 1, 'n_folds': 0, 'case_mode': '=', 'case': 1}
+            kwargs = {'response': 1, 'n_folds': 0}
             # one coefficient is checked a little more
             colX = 'C1'
 

@@ -9,26 +9,23 @@ import hex.VarImp;
 import hex.drf.TreeMeasuresCollector.TreeMeasures;
 import hex.drf.TreeMeasuresCollector.TreeSSE;
 import hex.drf.TreeMeasuresCollector.TreeVotes;
-import hex.gbm.DHistogram;
-import hex.gbm.DTree;
+import hex.gbm.*;
 import hex.gbm.DTree.DecidedNode;
 import hex.gbm.DTree.LeafNode;
 import hex.gbm.DTree.TreeModel.CompressedTree;
 import hex.gbm.DTree.TreeModel.TreeStats;
 import hex.gbm.DTree.UndecidedNode;
-import hex.gbm.SharedTreeModelBuilder;
+
+import java.util.Arrays;
+import java.util.Random;
+
 import water.*;
 import water.H2O.H2OCountedCompleter;
-import water.api.DRFProgressPage;
-import water.api.DocGen;
-import water.api.ParamImportance;
+import water.api.*;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.util.*;
 import water.util.Log.Tag.Sys;
-
-import java.util.Arrays;
-import java.util.Random;
 
 // Random Forest Trees
 public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
@@ -96,9 +93,15 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       this.sample_rate = prior.sample_rate;
       this.seed = prior.seed;
     }
-
     private DRFModel(DRFModel prior, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
       super(prior, err, cm, varimp, validAUC);
+      this.parameters = prior.parameters;
+      this.mtries = prior.mtries;
+      this.sample_rate = prior.sample_rate;
+      this.seed = prior.seed;
+    }
+    private DRFModel(DRFModel prior, Key[][] treeKeys, double[] errs, ConfusionMatrix[] cms, TreeStats tstats, VarImp varimp, AUC validAUC) {
+      super(prior, treeKeys, errs, cms, tstats, varimp, validAUC);
       this.parameters = prior.parameters;
       this.mtries = prior.mtries;
       this.sample_rate = prior.sample_rate;
@@ -140,8 +143,8 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   public Frame score( Frame fr ) { return ((DRFModel)UKV.get(dest())).score(fr);  }
 
   @Override protected Log.Tag.Sys logTag() { return Sys.DRF__; }
-  @Override protected DRFModel makeModel(Key outputKey, Key dataKey, Key testKey, String[] names, String[][] domains, String[] cmDomain) {
-    return new DRFModel(this, outputKey,dataKey,validation==null?null:testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, mtries, sample_rate, _seed, n_folds);
+  @Override protected DRFModel makeModel(Key outputKey, Key dataKey, Key testKey, int ntrees, String[] names, String[][] domains, String[] cmDomain) {
+    return new DRFModel(this,outputKey,dataKey,validation==null?null:testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, mtries, sample_rate, _seed, n_folds);
   }
 
   @Override protected DRFModel makeModel( DRFModel model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
@@ -149,6 +152,13 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   }
   @Override protected DRFModel makeModel( DRFModel model, DTree ktrees[], TreeStats tstats) {
     return new DRFModel(model, ktrees, tstats);
+  }
+  @Override protected DRFModel updateModel(DRFModel model, DRFModel checkpoint, boolean overwriteCheckpoint) {
+    // Do not forget to clone trees in case that we are not going to overwrite checkpoint
+    Key[][] treeKeys = null;
+    if (!overwriteCheckpoint) throw H2O.unimpl("Cloning of model trees is not implemented yet!");
+    else treeKeys = checkpoint.treeKeys;
+    return new DRFModel(model, treeKeys, checkpoint.errs, checkpoint.cms, checkpoint.treeStats, checkpoint.varimp, checkpoint.validAUC);
   }
   public DRF() { description = "Distributed RF"; ntrees = 50; max_depth = 20; min_rows = 1; }
 
@@ -203,32 +213,43 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   }
   @Override protected void initWorkFrame(DRFModel initialModel, Frame fr) {
     if (classification) initialModel.setModelClassDistribution(new MRUtils.ClassDist(response).doAll(response).rel_dist());
+    // Append number of trees participating in on-the-fly scoring
+    fr.add("OUT_BAG_TREES", response.makeZero());
+    // Prepare working columns
+    new SetWrkTask().doAll(fr);
+    // If there was a check point recompute tree_<_> and oob columns based on predictions from previous trees
+    // but only if OOB validation is requested.
+    if (validation==null && checkpoint!=null) {
+      Timer t = new Timer();
+      // Compute oob votes for each output level
+      new OOBScorer(_ncols, _nclass, sample_rate, initialModel.treeKeys).doAll(fr);
+      Log.info(logTag(), "Reconstructing oob stats from checkpointed model took " + t);
+    }
   }
 
   @Override protected DRFModel buildModel( DRFModel model, final Frame fr, String names[], String domains[][], final Timer t_build ) {
-    // Append number of trees participating in on-the-fly scoring
-    fr.add("OUT_BAG_TREES", response.makeZero());
-
     // The RNG used to pick split columns
     Random rand = createRNG(_seed);
-
-    // Prepare working columns
-    new SetWrkTask().doAll(fr);
+    // To be deterministic get random numbers for previous trees and
+    // put random generator to the same state
+    for (int i=0; i<_ntreesFromCheckpoint; i++) rand.nextLong();
 
     int tid;
     DTree[] ktrees = null;
     // Prepare tree statistics
-    TreeStats tstats = new TreeStats();
+    TreeStats tstats = model.treeStats!=null ? model.treeStats : new TreeStats();
     // Build trees until we hit the limit
     for( tid=0; tid<ntrees; tid++) { // Building tid-tree
-      model = doScoring(model, fr, ktrees, tid, tstats, tid==0, !hasValidation(), build_tree_one_node);
+      if (tid!=0 || checkpoint==null) { // do not make initial scoring if model already exist
+        model = doScoring(model, fr, ktrees, tid, tstats, tid==0, !hasValidation(), build_tree_one_node);
+      }
       // At each iteration build K trees (K = nclass = response column domain size)
 
       // TODO: parallelize more? build more than k trees at each time, we need to care about temporary data
       // Idea: launch more DRF at once.
       Timer kb_timer = new Timer();
       ktrees = buildNextKTrees(fr,_mtry,sample_rate,rand,tid);
-      Log.info(Sys.DRF__, (tid+1) + ". tree was built " + kb_timer.toString());
+      Log.info(logTag(), (tid+1) + ". tree was built " + kb_timer.toString());
       if( !Job.isRunning(self()) ) break; // If canceled during building, do not bulkscore
 
       // Check latest predictions
@@ -272,7 +293,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   @Override
   protected VarImp doVarImpCalc(final DRFModel model, DTree[] ktrees, final int tid, final Frame fTrain, boolean scale) {
     // Check if we have already serialized 'ktrees'-trees in the model
-    assert model.ntrees()-1 == tid : "Cannot compute DRF varimp since 'ktrees' are not serialized in the model! tid="+tid;
+    assert model.ntrees()-1-_ntreesFromCheckpoint == tid : "Cannot compute DRF varimp since 'ktrees' are not serialized in the model! tid="+tid;
     assert _treeMeasuresOnOOB.npredictors()-1 == tid : "Tree votes over OOB rows for this tree (var ktrees) were not found!";
     // Compute tree votes over shuffled data
     final CompressedTree[/*nclass*/] theTree = model.ctree(tid); // get the last tree FIXME we should pass only keys
@@ -333,7 +354,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   }
 
   // --------------------------------------------------------------------------
-  // Build the next random k-trees represeint tid-th tree
+  // Build the next random k-trees representing tid-th tree
   private DTree[] buildNextKTrees(Frame fr, int mtrys, float sample_rate, Random rand, int tid) {
     // We're going to build K (nclass) trees - each focused on correcting
     // errors for a single class.
@@ -353,7 +374,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     for( int k=0; k<_nclass; k++ ) {
       assert (_distribution!=null && classification) || (_distribution==null && !classification);
       if( _distribution == null || _distribution[k] != 0 ) { // Ignore missing classes
-        // The Boolean Optimization
+        // The Boolean Optimization cannot be applied here for RF !
         // This optimization assumes the 2nd tree of a 2-class system is the
         // inverse of the first.  This is false for DRF (and true for GBM) -
         // DRF picks a random different set of columns for the 2nd tree.
