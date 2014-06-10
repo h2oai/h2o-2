@@ -22,8 +22,8 @@ class Basic(unittest.TestCase):
         #    "covtype.13x.shuffle.data",
         #    "3G_poker_shuffle"
         csvFilenameList = [
-            "billion_rows.csv.gz",
-            # "covtype20x.data", 
+            # "billion_rows.csv.gz",
+            "covtype20x.data", 
             ]
 
         importFolderPath = "standard"

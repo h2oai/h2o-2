@@ -1,6 +1,7 @@
 package hex.drf;
 
 import hex.ShuffleTask;
+import hex.gbm.DTreeUtils;
 import hex.gbm.DTree.TreeModel.CompressedTree;
 
 import java.util.Arrays;
@@ -48,7 +49,7 @@ public class TreeMeasuresCollector extends MRTask2<TreeMeasuresCollector> {
     float [] preds = new float[_nclasses+1];
     Chunk cresp = chk_resp(chks);
     int   nrows = cresp._len;
-    int   [] oob = new int[1+(int)((1f-_rate)*nrows*1.2f)];
+    int   [] oob = new int[2+Math.round((1f-_rate)*nrows*1.2f+0.5f)]; // preallocate
     int   [] soob = null;
 
     // Prepare output data
@@ -61,7 +62,7 @@ public class TreeMeasuresCollector extends MRTask2<TreeMeasuresCollector> {
       // OOB RNG for this tree
       Random rng = rngForTree(_trees[tidx], cresp.cidx());
       // Collect oob rows and permutate them
-      oob = ModelUtils.sampleOOBRows(nrows, _rate, rng);
+      oob = ModelUtils.sampleOOBRows(nrows, _rate, rng, oob); // reuse use the same array for sampling
       int oobcnt = oob[0]; // Get number of sample rows
       if (_var>=0) {
         if (soob==null || soob.length < oobcnt) soob = new int[oobcnt];
@@ -106,9 +107,7 @@ public class TreeMeasuresCollector extends MRTask2<TreeMeasuresCollector> {
   public TreeSSE   resultSSE  () { return new TreeSSE  (_sse,   _nrows, _ntrees); }
   /* This is a copy of score0 method from DTree:615 */
   private void score0(double data[], float preds[], CompressedTree[] ts) {
-    for( int c=0; c<ts.length; c++ )
-      if( ts[c] != null )
-        preds[ts.length==1?0:c+1] += ts[c].score(data);
+    DTreeUtils.scoreTree(data, preds, ts);
   }
 
   private Chunk chk_resp( Chunk chks[] ) { return chks[_ncols]; }

@@ -31,10 +31,10 @@ class Basic(unittest.TestCase):
         timeoutSecs = 500
         csvFilenameAll = [
             # have to use col name for response?
-            ("manyfiles-nflx-gz", "file_1.dat.gz", 378),
-            ("manyfiles-nflx-gz", "file_1.dat.gz", 378),
+            # ("manyfiles-nflx-gz", "file_1.dat.gz", 378),
+            # ("manyfiles-nflx-gz", "file_1.dat.gz", 378),
             # ("manyfiles-nflx-gz", "file_[1-9].dat.gz", 378),
-            # ("standard", "covtype.data", 54),
+            ("standard", "covtype.data", 54),
             # ("standard", "covtype20x.data", 54),
             ]
         # csvFilenameList = random.sample(csvFilenameAll,1)

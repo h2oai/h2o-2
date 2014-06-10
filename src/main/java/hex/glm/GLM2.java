@@ -70,6 +70,15 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   @API(help="use strong rules to filter out inactive columns",filter=Default.class)
   boolean strong_rules_enabled = true;
 
+  // intentionally not declared as API now
+  int sparseCoefThreshold = 1000; // if more than this number of predictors, result vector of coefficients will be stored sparse
+
+  @API(help="number of lambdas to be used in a search",filter=Default.class)
+  int nlambdas = 100;
+
+  @API(help="min lambda used in lambda search, specified as a ratio of lambda_max",filter=Default.class)
+  double lambda_min_ratio = 0.0001;
+
   @API(help="prior probability for y==1. To be used only for logistic regression iff the data has been sampled and the mean of response does not reflect reality.",filter=Default.class)
   double prior = -1; // -1 is magic value for default value which is mean(y) computed on the current dataset
   private transient double _iceptAdjust; // adjustment due to the prior
@@ -329,6 +338,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   }
 
   private final double [] contractVec(double [] beta, final int [] activeCols){
+    if(activeCols == null)return beta.clone();
     double [] res = MemoryManager.malloc8d(activeCols.length+1);
     int i = 0;
     for(int c:activeCols)
@@ -336,15 +346,10 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     res[res.length-1] = beta[beta.length-1];
     return res;
   }
-
   private final double [] resizeVec(double[] beta, final int[] activeCols, final int[] oldActiveCols){
-    if(activeCols == null || Arrays.equals(activeCols,oldActiveCols))return beta;
-    double [] full = MemoryManager.malloc8d(_dinfo.fullN()+1);
-    int i = 0;
-    for(int c:oldActiveCols)
-      full[c] = beta[i++];
-    assert i == beta.length-1;
-    full[full.length-1] = beta[i];
+    if(Arrays.equals(activeCols,oldActiveCols))return beta;
+    double [] full = expandVec(beta,oldActiveCols);
+    if(activeCols == null)return full;
     return contractVec(full,activeCols);
   }
   protected boolean needLineSearch(final double [] beta,double objval, double step){
@@ -432,8 +437,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   }
 
   private void nextLambda(final GLMIterationTask glmt, final double [] newBeta){
-    setNewBeta(newBeta);
-    final double [] fullBeta = _activeCols != null?expandVec(newBeta,_activeCols):newBeta;
+    final double [] fullBeta = setNewBeta(newBeta);
     // now we need full gradient (on all columns) using this beta
     new GLMIterationTask(GLM2.this,_dinfo,_glm,false,true,true,fullBeta,_ymu,_reg,new H2OCallback<GLMIterationTask>(GLM2.this){
       @Override public void callback(final GLMIterationTask glmt2){
@@ -507,18 +511,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   }
 
   private double [] setNewBeta(final double [] newBeta){
-    final double [] fullBeta;
-    if(_activeCols != null){
-      fullBeta = MemoryManager.malloc8d(_dinfo.fullN()+1);
-      int j = 0;
-      for(int i:_activeCols)
-        fullBeta[i] = newBeta[j++];
-      assert j == newBeta.length-1;
-      fullBeta[fullBeta.length-1] = newBeta[j];
-    } else {
-      assert newBeta.length == _dinfo.fullN()+1;
-      fullBeta = newBeta;
-    }
+    final double [] fullBeta = (_activeCols == null)?newBeta:expandVec(newBeta,_activeCols);
     final double [] newBetaDeNorm;
     if(_dinfo._standardize) {
       newBetaDeNorm = fullBeta.clone();
@@ -533,14 +526,15 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       newBetaDeNorm[newBetaDeNorm.length-1] -= norm;
     } else
       newBetaDeNorm = null;
-    _model.setLambdaSubmodel(_lambdaIdx, newBetaDeNorm == null ? fullBeta : newBetaDeNorm, newBetaDeNorm == null ? null : fullBeta, (_iter + 1));
+    _model.setLambdaSubmodel(_lambdaIdx, newBetaDeNorm == null ? fullBeta : newBetaDeNorm, newBetaDeNorm == null ? null : fullBeta, (_iter + 1),_dinfo.fullN() >= sparseCoefThreshold);
     _model.clone().update(self());
     return fullBeta;
   }
   private class Iteration extends H2OCallback<GLMIterationTask> {
     public final long _iterationStartTime;
-    public Iteration(){super(GLM2.this); _iterationStartTime = System.currentTimeMillis();}
+    public Iteration(){super(GLM2.this); _iterationStartTime = System.currentTimeMillis(); _model.start_training(null);}
     @Override public void callback(final GLMIterationTask glmt){
+      _model.stop_training();
       Log.info("GLM2 iteration(" + _iter + ") done in " + (System.currentTimeMillis() - _iterationStartTime) + "ms");
       if( !isRunning(self()) )  throw new JobCancelledException();
       currentLambdaIter++;
@@ -611,7 +605,6 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           int nzs = 0;
           for(int i = 0; i < newBeta.length; ++i)
             if(newBeta[i] != 0) ++nzs;
-          if(newBeta.length < 20)System.out.println("beta = " + Arrays.toString(newBeta));
           Log.info("GLM2 (lambda_" + _lambdaIdx + "=" + lambda[_lambdaIdx] + ") converged (reached a fixed point with ~ 1e" + diff + " precision) after " + _iter + "iterations, got " + nzs + " nzs");
           nextLambda(glmt,newBeta);
         } else { // not done yet, launch next iteration
@@ -685,9 +678,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       max_iter = Math.max(300,max_iter);
       assert lmaxt != null:"running lambda search, but don't know what is the lambda max!";
       final double lmax = lmaxt.lmax();
-      final double lambda_min_ratio = _dinfo._adaptedFrame.numRows() > _dinfo.fullN()?0.0001:0.01;
-      final double d = Math.pow(lambda_min_ratio,0.01);
-      lambda = new double [100];
+      final double d = Math.pow(lambda_min_ratio,1.0/nlambdas);
+      lambda = new double [nlambdas];
       lambda[0] = lmax;
       for(int i = 1; i < lambda.length; ++i)
         lambda[i] = lambda[i-1]*d;
@@ -707,7 +699,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     if(lambda[0] == lambda_max && alpha[0] > 0){ // fill-in trivial solution for lambda max
       _beta = MemoryManager.malloc8d(_dinfo.fullN()+1);
       _beta[_beta.length-1] = _glm.link(ymu) + _iceptAdjust;
-      _model.setLambdaSubmodel(0,_beta,_beta,0);
+      _model.setLambdaSubmodel(0,_beta,_beta,0,_dinfo.fullN() >= sparseCoefThreshold);
       if(lmaxt != null)
         _model.setAndTestValidation(0,lmaxt._val);
       _lambdaIdx = 1;
@@ -756,7 +748,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     final Key [] keys = new Key[n_folds];
     GLM2 [] glms = new GLM2[n_folds];
     for(int i = 0; i < n_folds; ++i)
-      glms[i] = new GLM2(this.description + "xval " + i, self(), keys[i] = Key.make(destination_key + "_" + _lambdaIdx + "_xval" + i), _dinfo.getFold(i, n_folds),_glm,new double[]{lambda[_lambdaIdx]},model.alpha,0, model.beta_eps,self(),model.norm_beta(lambdaIxd),higher_accuracy,prior,0);
+      glms[i] = new GLM2(this.description + "xval " + i, self(), keys[i] = Key.make(destination_key + "_" + _lambdaIdx + "_xval" + i), _dinfo.getFold(i, n_folds),_glm,new double[]{lambda[_lambdaIdx]},model.alpha,0, model.beta_eps,self(),model.norm_beta(_lambdaIdx),higher_accuracy,prior,0);
     H2O.submitTask(new ParallelGLMs(GLM2.this,glms,H2O.CLOUD.size(),new H2OCallback(GLM2.this) {
       @Override public void callback(H2OCountedCompleter t) {
         GLMModel [] models = new GLMModel[keys.length];

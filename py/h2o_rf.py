@@ -151,6 +151,7 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
     if h2o.beta_features:
         varimp = rf_model['varimp']
         treeStats = rf_model['treeStats']
+        # print "json:", h2o.dump_json(rfv)
         data_key = rf_model['_dataKey']
         model_key = rf_model['_key']
         classification_error = pctWrong

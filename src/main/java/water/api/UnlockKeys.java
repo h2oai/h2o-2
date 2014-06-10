@@ -11,8 +11,7 @@ public class UnlockKeys extends Request2 {
   @Override protected Response serve() {
     try {
       Log.info("Unlocking all locked keys on the cluster.");
-      UnlockTask cleanup = new UnlockTask();
-      cleanup.invokeOnAllNodes();
+      new UnlockTask().invokeOnAllNodes();
     } catch( Throwable e ) {
       return Response.error(e);
     }
@@ -24,21 +23,13 @@ public class UnlockKeys extends Request2 {
     @Override public byte priority() { return H2O.GUI_PRIORITY; }
 
     @Override public void lcompute() {
-      // Optional: cancel all jobs
-//      for (Job job : Job.all()) {
-//        job.cancel();
-//        Job.waitUntilJobEnded(job.self());
-//      }
-
-      final Set<Key> keySet = H2O.globalKeySet(null);
-      for( Key key : keySet ) {
-        if (!key.home()) continue; // only unlock local keys
-        final Value val = DKV.get(key);
+      final H2O.KeyInfo[] kinfo = H2O.KeySnapshot.localSnapshot(true)._keyInfos;
+      for(H2O.KeyInfo k:kinfo) {
+        if(!k.isLockable()) continue;
+        final Value val = DKV.get(k._key);
         if( val == null ) continue;
-        if (val.rawPOJO() == null) continue; //need to have a POJO to be locked
-        if( !val.isLockable() ) continue;
         final Object obj = val.rawPOJO();
-        assert(obj instanceof Lockable<?>);
+        if( obj == null ) continue; //need to have a POJO to be locked
         final Lockable<?> lockable = (Lockable<?>)(obj);
         final Key[] lockers = ((Lockable) obj)._lockers;
         if (lockers != null) {
@@ -51,7 +42,7 @@ public class UnlockKeys extends Request2 {
             }
           }
           lockable.unlock_all();
-          Log.info("Unlocked key '" + key + "' from " + lockers.length + " lockers.");
+          Log.info("Unlocked key '" + k._key + "' from " + lockers.length + " lockers.");
         }
       }
       Log.info("All keys are now unlocked.");

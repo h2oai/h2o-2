@@ -316,6 +316,37 @@ public class NewChunk extends Chunk {
   }
   protected void set_sparse(int nzeros){
     if(_len == nzeros)return;
+    if(_id != null){ // we have sparse represenation but some 0s in it!
+      int [] id = MemoryManager.malloc4(nzeros);
+      int j = 0;
+      if(_ds != null){
+        double [] ds = MemoryManager.malloc8d(nzeros);
+        for(int i = 0; i < _len; ++i){
+          if(_ds[i] != 0){
+            ds[j] = _ds[i];
+            id[j] = _id[i];
+            ++j;
+          }
+        }
+        _ds = ds;
+      } else {
+        long [] ls = MemoryManager.malloc8(nzeros);
+        int [] xs = MemoryManager.malloc4(nzeros);
+        for(int i = 0; i < _len; ++i){
+          if(_ls[i] != 0){
+            ls[j] = _ls[i];
+            xs[j] = _xs[i];
+            id[j] = _id[i];
+            ++j;
+          }
+        }
+        _ls = ls;
+        _xs = xs;
+      }
+      _id = id;
+      assert j == nzeros;
+      return;
+    }
     assert _len == _len2:"_len = " + _len + ", _len2 = " + _len2 + ", nzeros = " + nzeros;
     int zs = 0;
     if(_ds == null){
@@ -417,9 +448,13 @@ public class NewChunk extends Chunk {
       _xs = new int [_ds.length];
       double [] ds = _ds;
       _ds = null;
+      final int naCnt = _naCnt;
       for( i=0; i<_len; i++ )   // Inject all doubles into longs
         if( Double.isNaN(ds[i]) )setNA_impl2(i);
         else                     _ls[i] = (long)ds[i];
+      // setNA_impl2 will set _naCnt to -1!
+      // we already know what the naCnt is (it did not change!) so set it back to correct value
+      _naCnt = naCnt;
     }
 
     // IF (_len2 > _len) THEN Sparse
@@ -728,6 +763,7 @@ public class NewChunk extends Chunk {
       else cancel_sparse(); // for now don't bother setting the sparse value
     }
     _ls[i]=l; _xs[i]=0;
+    _naCnt = -1;
     return true;
   }
 
@@ -743,6 +779,7 @@ public class NewChunk extends Chunk {
     }
     while(i >= _len2) append2slowd();
     _ds[i] = d;
+    _naCnt = -1;
     return true;
   }
   @Override boolean set_impl(int i, float f) {  return set_impl(i,(double)f); }
@@ -751,6 +788,7 @@ public class NewChunk extends Chunk {
     if( isNA2(i) ) return true;
     if( _ls != null ) { _ls[i] = Long.MAX_VALUE; _xs[i] = Integer.MIN_VALUE; }
     if( _ds != null ) { _ds[i] = Double.NaN; }
+    _naCnt = -1;
     return true;
   }
   @Override boolean setNA_impl(int i) {

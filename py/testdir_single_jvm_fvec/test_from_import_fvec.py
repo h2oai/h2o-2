@@ -25,7 +25,7 @@ class Basic(unittest.TestCase):
 
         csvFilenameAll = [
             ("covtype.data", 500),
-            ("covtype20x.data", 1000),
+            # ("covtype20x.data", 1000),
             ]
 
         for (csvFilename, timeoutSecs) in csvFilenameAll:
@@ -43,7 +43,7 @@ class Basic(unittest.TestCase):
 
             trees = 2
             start = time.time()
-            rfView = h2o_cmd.runRF(trees=trees, max_depth=20, parseResult=parseResult, timeoutSecs=timeoutSecs)
+            rfView = h2o_cmd.runRF(trees=trees, max_depth=20, balance_classes=0, importance=1, parseResult=parseResult, timeoutSecs=timeoutSecs)
             elapsed = time.time() - start
 
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView, ntree=trees)

@@ -52,10 +52,13 @@ public class Frames extends Request2 {
   public static final Gson gson = new GsonBuilder().serializeSpecialFloatingPointValues().setPrettyPrinting().create();
 
   public static final class FrameSummary {
-    public long creation_epoch_time_millis = -1L;
-    public String uuid = null;
+    public String id = null;
+    public String key = null;
+    public long creation_epoch_time_millis = -1;
+
     public String[] column_names = { };
     public Set<String> compatible_models = new HashSet<String>();
+    public boolean is_raw_frame = true; // guilty until proven innocent
   }
 
   // TODO: refactor, since this is duplicated
@@ -148,10 +151,13 @@ public class Frames extends Request2 {
    * Summarize fields in water.fvec.Frame.
    */
   private static void summarizeAndEnhanceFrame(FrameSummary summary, Frame frame, boolean find_compatible_models, Map<String, Model> all_models, Map<String, Set<String>> all_models_cols) {
-    summary.creation_epoch_time_millis = frame.getUniqueId().getCreationEpochTimeMillis();
-    summary.uuid = frame.getUniqueId().getUuid();
+    UniqueId unique_id = frame.getUniqueId();
+    summary.id = unique_id.getId();
+    summary.key = unique_id.getKey();
+    summary.creation_epoch_time_millis = unique_id.getCreationEpochTimeMillis();
 
     summary.column_names = frame._names;
+    summary.is_raw_frame = frame.isRawData();
 
     if (find_compatible_models) {
       Map<String, Model> compatible_models = findCompatibleModels(frame, all_models, all_models_cols);
@@ -165,34 +171,8 @@ public class Frames extends Request2 {
    */
   protected static Map<String, Frame>fetchAll() {
     // Get all the fvec frame keys.
-    //
-    // NOTE: globalKeySet filters by class when it pulls stuff from other nodes,
-    // but still returns local keys of all types so we need to filter below.
-    Set<Key> keySet = H2O.globalKeySet("water.fvec.Frame"); // filter by class, how cool is that?
-
-    Map<String, Frame> framesMap = new TreeMap(); // Sort for pretty display and reliable ordering.
-
-    for (Key key : keySet) {
-      if( !key.user_allowed() ) // Also filter out for user-keys
-        continue;
-      if( H2O.get(key) == null )
-        continue;
-
-      String keyString = key.toString();
-
-      Value value = DKV.get(key);
-      Iced pojo = value.get();
-
-      if (! (pojo instanceof Frame))
-        continue;
-      Frame frame = (Frame)pojo;
-
-      framesMap.put(keyString, frame);
-    }
-
-    return framesMap;
+    return H2O.KeySnapshot.globalSnapshot().fetchAll(Frame.class); // Sort for pretty display and reliable ordering.
   }
-
 
   /**
    * For one or more Frame from the KV store, sumamrize and enhance them and Response containing a map of them.
@@ -238,7 +218,7 @@ public class Frames extends Request2 {
 
     if (null == metrics) {
       // have to compute
-      water.util.Log.info("Cache miss: computing ModelMetrics. . .");
+      water.util.Log.debug("Cache miss: computing ModelMetrics. . .");
       long before = System.currentTimeMillis();
       Frame predictions = score_model.score(frame, true); // TODO: for now we're always calling adapt inside score
       long after = System.currentTimeMillis();
@@ -246,15 +226,14 @@ public class Frames extends Request2 {
       ConfusionMatrix cm = new ConfusionMatrix(); // for regression this computes the MSE
       AUC auc = null;
       HitRatio hr = null;
-      double error = 0.0d;
 
       if (score_model.isClassifier()) {
         auc = new AUC();
 //      hr = new HitRatio();
-        error = score_model.calcError(frame, frame.vec(score_model.responseName()), predictions, predictions, "Prediction error:",
+        score_model.calcError(frame, frame.vec(score_model.responseName()), predictions, predictions, "Prediction error:",
                                       true, 20, cm, auc, hr);
       } else {
-        error = score_model.calcError(frame, frame.vec(score_model.responseName()), predictions, predictions, "Prediction error:",
+        score_model.calcError(frame, frame.vec(score_model.responseName()), predictions, predictions, "Prediction error:",
                                       true, 20, cm, null, null);
       }
 
@@ -262,7 +241,6 @@ public class Frames extends Request2 {
       metrics = new water.ModelMetrics(score_model.getUniqueId(),
                                        score_model.getModelCategory(),
                                        frame.getUniqueId(),
-                                       error,
                                        after - before,
                                        after,
                                        auc,
@@ -272,7 +250,7 @@ public class Frames extends Request2 {
       metrics.putInDKV();
     } else {
       // it's already cached in the DKV
-      water.util.Log.info("using ModelMetrics from the cache. . .");
+      water.util.Log.debug("using ModelMetrics from the cache. . .");
     }
 
     JsonObject metricsJson = metrics.toJSON();

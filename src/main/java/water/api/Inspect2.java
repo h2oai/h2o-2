@@ -109,13 +109,14 @@ public class Inspect2 extends Request2 {
               "<br/>Build models using " +
               DRF.link(skey, "Distributed Random Forest") +", "+
               GBM.link(skey, "Distributed GBM") +", "+
-              GLM2.link(skey, "Generalized Linear Modeling (beta)") +", "+
+              GLM2.link(skey, "Generalized Linear Modeling") +", "+
               DeepLearning.link(skey, "Deep Learning") +", "+
               hex.LR2.link(skey, "Linear Regression") + "<br>"+
               SummaryPage2.link(skey,"Summary")+", "+
               DownloadDataset.link(skey, "Download as CSV")+", "+
               ExportFiles.link(skey, "Export to file")+", "+
               UIUtils.qlink(FrameSplitPage.class, skey, "Split frame") + ", " +
+              UIUtils.qlink(NFoldFrameExtractPage.class, skey, "N-fold extract") + ", " +
               UIUtils.qlink(ReBalance.class, skey, "ReBalance frame (load balancing)") +
               "</div>");
     String _scrollto = String.valueOf(offset - 1);

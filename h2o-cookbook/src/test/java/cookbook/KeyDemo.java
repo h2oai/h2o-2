@@ -24,7 +24,7 @@ public class KeyDemo {
 		//Log.info(H2O.STORE.toString());	
 		
 		//String fileName = "/Users/nidhimehta/Desktop/data/covtype/covtrain_tit";
-		String fileName = "/Users/nidhimehta/h2o/smalldata/iris/iris.csv";
+		String fileName = "../smalldata/iris/iris.csv";
 
 	   
 		File file = new File(fileName);

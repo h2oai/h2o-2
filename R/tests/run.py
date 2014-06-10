@@ -1008,7 +1008,8 @@ class RUnitRunner:
             s = "PASS      %d %4ds %-60s" % (port, duration, test.get_test_name())
             self._log(s)
         else:
-            s = "     FAIL %d %4ds %-60s %s  %s" % (port, duration, test.get_test_name(), test.get_output_dir_file_name(), test.get_seed_used())
+            s = "     FAIL %d %4ds %-60s %s  %s" % \
+                (port, duration, test.get_test_name(), test.get_output_dir_file_name(), test.get_seed_used())
             self._log(s)
             f = self._get_failed_filehandle_for_appending()
             f.write(test.get_test_dir_file_name() + "\n")
@@ -1380,7 +1381,8 @@ def main(argv):
 
     g_runner = RUnitRunner(test_root_dir,
                            g_use_cloud, g_use_ip, g_use_port,
-                           g_num_clouds, nodes_per_cloud, h2o_jar, g_base_port, g_jvm_xmx, g_output_dir, g_failed_output_dir)
+                           g_num_clouds, nodes_per_cloud, h2o_jar, g_base_port, g_jvm_xmx,
+                           g_output_dir, g_failed_output_dir)
 
     # Build test list.
     if (g_test_to_run is not None):

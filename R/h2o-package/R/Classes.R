@@ -13,12 +13,12 @@ setClass("H2OPerfModel", representation(cutoffs="numeric", measure="numeric", pe
 setClass("H2OGLMModel", contains="H2OModel", representation(xval="list"))
 # setClass("H2OGLMGrid", contains="H2OGrid")
 setClass("H2OKMeansModel", contains="H2OModel")
-setClass("H2ODeepLearningModel", contains="H2OModel", representation(valid="H2OParsedData"))
-setClass("H2ODRFModel", contains="H2OModel", representation(valid="H2OParsedData"))
+setClass("H2ODeepLearningModel", contains="H2OModel", representation(valid="H2OParsedData", xval="list"))
+setClass("H2ODRFModel", contains="H2OModel", representation(valid="H2OParsedData", xval="list"))
 setClass("H2ONBModel", contains="H2OModel")
 setClass("H2OPCAModel", contains="H2OModel")
-setClass("H2OGBMModel", contains="H2OModel", representation(valid="H2OParsedData"))
-setClass("H2OSpeeDRFModel", contains="H2OModel", representation(valid="H2OParsedData"))
+setClass("H2OGBMModel", contains="H2OModel", representation(valid="H2OParsedData", xval="list"))
+setClass("H2OSpeeDRFModel", contains="H2OModel", representation(valid="H2OParsedData", xval="list"))
 
 setClass("H2OGLMGrid", contains="H2OGrid")
 setClass("H2OGBMGrid", contains="H2OGrid")
@@ -162,7 +162,12 @@ setMethod("show", "H2ODeepLearningModel", function(object) {
   cat("\n\nValidation classification error:", model$valid_class_error)
   cat("\nValidation square error:", model$valid_sqr_error)
   if(!is.null(model$confusion)) {
-    cat("\n\nConfusion matrix:\n"); cat("Reported on", object@valid@key, "\n"); print(model$confusion)
+    cat("\n\nConfusion matrix:\n")
+    if(is.na(object@valid@key))
+      cat("Reported on", paste(model$params$nfolds, "-fold cross-validated data", sep = ""), "\n")
+    else
+      cat("Reported on", object@valid@key, "\n")
+    print(model$confusion)
   }
 })
 
@@ -176,8 +181,13 @@ setMethod("show", "H2ODRFModel", function(object) {
   cat("\nTree statistics:\n"); print(model$forest)
   
   if(model$params$classification) {
-    cat("\nConfusion matrix:\n"); cat("Reported on", object@valid@key, "\n")
+    cat("\nConfusion matrix:\n")
+    if(is.na(object@valid@key))
+      cat("Reported on", paste(object@model$params$nfolds, "-fold cross-validated data", sep = ""), "\n")
+    else
+      cat("Reported on", object@valid@key, "\n")
     print(model$confusion)
+    
     if(!is.null(model$auc) && !is.null(model$gini))
       cat("\nAUC:", model$auc, "\nGini:", model$gini, "\n")
   }
@@ -185,6 +195,10 @@ setMethod("show", "H2ODRFModel", function(object) {
     cat("\nVariable importance:\n"); print(model$varimp)
   }
   cat("\nMean-squared Error by tree:\n"); print(model$mse)
+  if(length(object@xval) > 0) {
+    cat("\nCross-Validation Models:\n")
+    print(sapply(object@xval, function(x) x@key))
+  }
 })
 
 setMethod("show", "H2OSpeeDRFModel", function(object) {
@@ -197,8 +211,16 @@ setMethod("show", "H2OSpeeDRFModel", function(object) {
   
   if(FALSE){ #model$params$oobee) {
     cat("\nConfusion matrix:\n"); cat("Reported on oobee from", object@valid@key, "\n")
+    if(is.na(object@valid@key))
+      cat("Reported on oobee from", paste(object@model$params$nfolds, "-fold cross-validated data", sep = ""), "\n")
+    else
+      cat("Reported on oobee from", object@valid@key, "\n")
   } else {
-    cat("\nConfusion matrix:\n"); cat("Reported on", object@valid@key,"\n")
+    cat("\nConfusion matrix:\n");
+    if(is.na(object@valid@key))
+      cat("Reported on", paste(object@model$params$nfolds, "-fold cross-validated data", sep = ""), "\n")
+    else
+      cat("Reported on", object@valid@key, "\n")
   }
   print(model$confusion)
  
@@ -209,6 +231,10 @@ setMethod("show", "H2OSpeeDRFModel", function(object) {
   #mse <-model$mse[length(model$mse)] # (model$mse[is.na(model$mse) | model$mse <= 0] <- "")
 
   cat("\nMean-squared Error from the",model$params$ntree, "trees: "); cat(model$mse, "\n")
+  if(length(object@xval) > 0) {
+    cat("\nCross-Validation Models:\n")
+    print(sapply(object@xval, function(x) x@key))
+  }
 })
 
 setMethod("show", "H2OPCAModel", function(object) {
@@ -235,7 +261,11 @@ setMethod("show", "H2OGBMModel", function(object) {
 
   model = object@model
   if(model$params$distribution %in% c("multinomial", "bernoulli")) {
-    cat("\nConfusion matrix:\nReported on", object@valid@key, "\n");
+    cat("\nConfusion matrix:\n")
+    if(is.na(object@valid@key))
+      cat("Reported on", paste(object@model$params$nfolds, "-fold cross-validated data", sep = ""), "\n")
+    else
+      cat("Reported on", object@valid@key, "\n")
     print(model$confusion)
     
     if(!is.null(model$auc) && !is.null(model$gini))
@@ -246,6 +276,10 @@ setMethod("show", "H2OGBMModel", function(object) {
     cat("\nVariable importance:\n"); print(model$varimp)
   }
   cat("\nMean-squared Error by tree:\n"); print(model$err)
+  if(length(object@xval) > 0) {
+    cat("\nCross-Validation Models:\n")
+    print(sapply(object@xval, function(x) x@key))
+  }
 })
 
 setMethod("show", "H2OPerfModel", function(object) {
@@ -311,7 +345,7 @@ h2o.cut <- function(x, breaks) {
   if(missing(x)) stop("Must specify data set")
   if(!inherits(x, "H2OParsedData")) stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
   if(missing(breaks) || !is.numeric(breaks)) stop("breaks must be a numeric vector")
-  
+
   nums = ifelse(length(breaks) == 1, breaks, paste("c(", paste(breaks, collapse=","), ")", sep=""))
   expr = paste("cut(", x@key, ",", nums, ")", sep="")
   res = .h2o.__exec2(x@h2o, expr)
@@ -1061,11 +1095,18 @@ screeplot.H2OPCAModel <- function(x, npcs = min(10, length(x@model$sdev)), type 
     stop("type must be either 'barplot' or 'lines'")
 }
 
+.canBeCoercedToLogical<-
+function(vec) {
+  if (!(inherits(vec, "H2OParsedData"))) stop("Object must be a H2OParsedData object. Input was: ", vec)
+  # expects fr to be a vec.
+  as.logical(.h2o.__unop2("canBeCoercedToLogical", vec))
+}
+
 setMethod("ifelse", "H2OParsedData", function(test, yes, no) {
   # if(!(is.numeric(yes) || class(yes) == "H2OParsedData") || !(is.numeric(no) || class(no) == "H2OParsedData"))
   if(!(is.numeric(yes) || inherits(yes, "H2OParsedData")) || !(is.numeric(no) || inherits(no, "H2OParsedData")))
     stop("Unimplemented")
-  if(!test@logic) stop(test@key, " is not a H2O logical data type")
+  if(!test@logic && !.canBeCoercedToLogical(test)) stop(test@key, " is not a H2O logical data type")
   # yes = ifelse(class(yes) == "H2OParsedData", yes@key, yes)
   # no = ifelse(class(no) == "H2OParsedData", no@key, no)
   yes = ifelse(inherits(yes, "H2OParsedData"), yes@key, yes)

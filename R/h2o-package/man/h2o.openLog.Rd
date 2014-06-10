@@ -30,7 +30,6 @@ h2o.stopLogging()
 
 h2o.openLog("Command")
 h2o.openLog("Error")
-h2o.shutdown(localH2O)
 }
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

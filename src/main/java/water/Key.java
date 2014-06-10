@@ -319,14 +319,15 @@ public final class Key extends Iced implements Comparable {
     }
   }
 
-  public int hashCode() { return _hash; }
-  public boolean equals( Object o ) {
+  @Override public int hashCode() { return _hash; }
+  @Override public boolean equals( Object o ) {
+    if( o == null || ((Key)(o))._kb == null || _kb == null) return false;
     if( this == o ) return true;
     Key k = (Key)o;
     return Arrays.equals(k._kb,_kb);
   }
 
-  public int compareTo(Object o) {
+  @Override public int compareTo(Object o) {
     assert (o instanceof Key);
     return this.toString().compareTo(o.toString());
   }

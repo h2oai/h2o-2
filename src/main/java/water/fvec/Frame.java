@@ -26,12 +26,17 @@ public class Frame extends Lockable<Frame> {
   private transient Vec _col0;  // First readable vec; fast access to the VectorGroup's Chunk layout
   private final UniqueId uniqueId;
 
+  public Frame(Key k){
+    super(k);
+    uniqueId = new UniqueFrameId(k, this);
+  }
   public Frame( Frame fr ) { this(fr._key,fr._names.clone(), fr.vecs().clone()); _col0 = null; }
   public Frame( Vec... vecs ){ this(null,vecs);}
   public Frame( String[] names, Vec[] vecs ) { this(null,names,vecs); }
+
   public Frame( Key key, String[] names, Vec[] vecs ) {
     super(key);
-    this.uniqueId = new UniqueId(_key);
+    this.uniqueId = new UniqueFrameId(_key, this);
     if( names==null ) {
       names = new String[vecs.length];
       for( int i=0; i<vecs.length; i++ ) names[i] = "C"+(i+1);
@@ -50,6 +55,22 @@ public class Frame extends Lockable<Frame> {
 
   public UniqueId getUniqueId() {
     return this.uniqueId;
+  }
+
+  /** 64-bit hash of the hashes of the vecs.  SHA-265 hashes of the chunks are XORed
+   * together.  Since parse always parses the same pieces of files into the same offsets
+   * in some chunk this hash will be consistent across reparses.
+   */
+  public byte[] hash() {
+    Vec [] vecs = vecs();
+    byte[] _hash = new byte[8];
+    for(int i = 0; i < _names.length; ++i) {
+      byte[] vec_hash = vecs[i].hash();
+      for (int j = 0; j < 8; j++) {
+        _hash[j] ^= vec_hash[j];
+      }
+    }
+    return _hash;
   }
 
   public Vec vec(String name){
@@ -161,6 +182,24 @@ public class Frame extends Lockable<Frame> {
     return -1;
   }
 
+
+  /**
+   * Analogy of R's cbind.
+   * Makes a copy of the given frame compatible with this frame's vector group and adds it to this frame.
+   *
+   * Note: unlike in R, "this" frame gets updated IN-PLACE!
+   *
+   * @param f
+   * @return Frame with added vec
+   */
+  public Frame addCopy( Frame f) {
+    if(numRows() == 0)return add(f,f.names());
+    Key k = Key.make();
+    H2O.submitTask(new RebalanceDataSet(this, f, k)).join();
+    Frame f2 = DKV.get(k).get();
+    DKV.remove(k);
+    return add(f2, true);
+  }
  /** Appends a named column, keeping the last Vec as the response */
   public Frame add( String name, Vec vec ) {
     if( find(name) != -1 ) throw new IllegalArgumentException("Duplicate name '"+name+"' in Frame");
@@ -326,6 +365,15 @@ public class Frame extends Lockable<Frame> {
   public final String[] names() { return _names; }
   public int  numCols() { return vecs().length; }
   public long numRows() { return anyVec()==null ? 0 : anyVec().length(); }
+
+  public boolean isRawData() {
+    // Right now there is only one Vec for raw data, but imagine a Parse after a JDBC import or such.
+    for (Vec v : vecs()) {
+      if (v.isByteVec())
+        return true;
+    }
+    return false;
+  }
 
   // Number of columns when categoricals expanded.
   // Note: One level is dropped in each categorical col.
@@ -724,12 +772,12 @@ public class Frame extends Lockable<Frame> {
     // Do Da Slice
     // orows is either a long[] or a Vec
     if (orows == null)
-      return new DeepSlice((long[])orows,c2,vecs()).doAll(c2.length,this).outputFrame(names(c2),domains(c2));
+      return copyRollups(new DeepSlice((long[])orows,c2,vecs()).doAll(c2.length,this).outputFrame(names(c2),domains(c2)),true);
     else if (orows instanceof long[]) {
       final long CHK_ROWS=1000000;
       long[] rows = (long[])orows;
       if( rows.length==0 || rows[0] < 0 )
-        return new DeepSlice(rows,c2,vecs()).doAll(c2.length, this).outputFrame(names(c2), domains(c2));
+        return copyRollups(new DeepSlice(rows,c2,vecs()).doAll(c2.length, this).outputFrame(names(c2), domains(c2)),rows.length==0);
       // Vec'ize the index array
       Futures fs = new Futures();
       AppendableVec av = new AppendableVec("rownames");
@@ -886,6 +934,19 @@ public class Frame extends Lockable<Frame> {
             nchks[j].addNum(chks[j].at0(i));
       }
     }
+  }
+
+  private Frame copyRollups( Frame fr, boolean isACopy ) {
+    if( !isACopy ) return fr; // Not a clean copy, do not copy rollups (will do rollups "the hard way" on first ask)
+    Vec vecs0[] = vecs();
+    Vec vecs1[] = fr.vecs();
+    for( int i=0; i<fr._names.length; i++ ) {
+      assert vecs1[i]._naCnt== -1; // not computed yet, right after slice
+      Vec v0 = vecs0[find(fr._names[i])];
+      Vec v1 = vecs1[i];
+      v1.setRollupStats(v0);
+    }
+    return fr;
   }
 
   // ------------------------------------------------------------------------------

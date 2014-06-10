@@ -30,6 +30,5 @@ h2o.ls(localH2O)
 h2o.rm(object = localH2O, keys = "prostate.hex")
 remove(prostate.hex)
 h2o.ls(localH2O)
-h2o.shutdown(localH2O)
 }
 

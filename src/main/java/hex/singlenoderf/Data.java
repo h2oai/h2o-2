@@ -69,7 +69,7 @@ public class Data implements Iterable<Data.Row> {
       av += r.getRawClassColumnValueFromBin();
       nobs++;
     }
-    return av / (float)(nobs);
+    return nobs == 0 ? 0.f : av / (float)(nobs);
   }
 
   public final Iterator<Row> iterator() { return new RowIter(start(), end()); }
@@ -140,35 +140,78 @@ public class Data implements Iterable<Data.Row> {
 
   // Update the histogram
   private void filterVal3(int[] permutation, Statistic s, final int lo, final int hi) {
-    DataAdapter.Col cs[] = _dapt._c;
-    short classs[]= cs[_dapt.classColIdx()]._binned;
-    int cds[][][] = s._columnDists;
-    int fs[] = s._features;
+    if (!s._regression) {
+      DataAdapter.Col cs[] = _dapt._c;
+      short classs[]= cs[_dapt.classColIdx()]._binned;
+      int cds[][][] = s._columnDists;
+      int fs[] = s._features;
 
-    // Run this loop by-feature instead of by-row - so that the updates in the
-    // inner loops do not need to start from loading the feature array.
-    for (int f : fs) {
-      if (f == -1) break;       // Short features.
-      int cdsf[][] = cds[f];    // Histogram per-column (by value & class)
-      short[] bins = cs[f]._binned; // null if byte col, otherwise bin#
+      // Run this loop by-feature instead of by-row - so that the updates in the
+      // inner loops do not need to start from loading the feature array.
+      for (int f : fs) {
+        if (f == -1) break;       // Short features.
+        int cdsf[][] = cds[f];    // Histogram per-column (by value & class)
+        short[] bins = cs[f]._binned; // null if byte col, otherwise bin#
 
-      if (bins != null) {              // binned?
-        for (int i = lo; i < hi; i++) {    // Binned-loop
-          int permIdx = permutation[i]; // Get the row
-          int val = bins[permIdx];      // Bin-for-row
-          if (val == DataAdapter.BAD) continue; // ignore bad rows
-          int cls = classs[permIdx];    // Class-for-row
-          if (cls == DataAdapter.BAD) continue; // ignore rows with NA in response column
-          cdsf[val][cls]++;             // Bump histogram
+        if (bins != null) {              // binned?
+          for (int i = lo; i < hi; i++) {    // Binned-loop
+            int permIdx = permutation[i]; // Get the row
+            int val = bins[permIdx];      // Bin-for-row
+            if (val == DataAdapter.BAD) continue; // ignore bad rows
+            int cls = classs[permIdx];    // Class-for-row
+            if (cls == DataAdapter.BAD) continue; // ignore rows with NA in response column
+            cdsf[val][cls]++;             // Bump histogram
+          }
+
+        } else {                          // not binned?
+          byte[] raw = cs[f]._rawB;       // Raw unbinned byte array
+          for (int i = lo; i < hi; i++) {    // not-binned loop
+            int permIdx = permutation[i]; // Get the row
+            int val = (0xFF & raw[permIdx]);// raw byte value, has no bad rows
+            int cls = classs[permIdx];    // Class-for-row
+            cdsf[val][cls]++;             // Bump histogram
+          }
         }
+      }
+    } else {
+      DataAdapter.Col cols[] = _dapt._c;
+      float[] response;
+      if (cols[_dapt.classColIdx()]._binned == null) {
+        response = new float[cols[_dapt.classColIdx()]._rawB.length];
+        for (int b = 0; b < response.length; ++b)
+          response[b] = (float)(0xFF & cols[_dapt.classColIdx()]._rawB[b]);
+      } else {
+        response = new float[cols[_dapt.classColIdx()]._binned.length];
+        for (int f = 0; f < response.length; ++f)
+          response[f] = cols[_dapt.classColIdx()]._binned2raw[cols[_dapt.classColIdx()]._binned[f]];
+      }
+      float cds[][][] = s._columnDistsRegression;
+      int fs[] = s._features;
 
-      } else {                          // not binned?
-        byte[] raw = cs[f]._rawB;       // Raw unbinned byte array
-        for (int i = lo; i < hi; i++) {    // not-binned loop
-          int permIdx = permutation[i]; // Get the row
-          int val = (0xFF & raw[permIdx]);// raw byte value, has no bad rows
-          int cls = classs[permIdx];    // Class-for-row
-          cdsf[val][cls]++;             // Bump histogram
+      for (int f: fs) {
+        if (f == -1) break;
+        float cdsf[][] = cds[f];
+        short[] bins = cols[f]._binned;
+
+        if (bins != null) {
+          for (int i = lo; i < hi; i++) {
+            int permIdx = permutation[i];
+            int val = bins[permIdx];
+            if (val == DataAdapter.BAD) continue; // ignore bad rows
+            float resp = response[permIdx];    // Class-for-row
+            int response_bin = cols[_dapt.classColIdx()]._binned == null ? (cols[_dapt.classColIdx()]._rawB[permIdx] & 0xFF) : cols[_dapt.classColIdx()]._binned[permIdx];
+            if (resp == DataAdapter.BAD) continue; // ignore rows with NA in response column
+            cdsf[val][response_bin] = resp;             // Bump histogram
+          }
+        } else {
+          byte[] raw = cols[f]._rawB;
+          for (int i = lo; i < hi; i++) {
+            int permIdx = permutation[i];
+            int val = (0xFF & raw[permIdx]);
+            float resp = response[permIdx];
+            int response_bin = cols[_dapt.classColIdx()]._binned == null ? (cols[_dapt.classColIdx()]._rawB[permIdx] & 0xFF) : cols[_dapt.classColIdx()]._binned[permIdx];
+            cdsf[val][response_bin] = resp;
+          }
         }
       }
     }

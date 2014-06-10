@@ -4,10 +4,15 @@ import java.util.*;
 
 import water.H2O;
 
+
 /**
  * Shared static code to support modeling, prediction, and scoring.
  *
- *  Used by interpreted models as well as by generated model code.
+ * <p>Used by interpreted models as well as by generated model code.</p>
+ *
+ * <p><strong>WARNING:</strong> The class should have no other H2O dependencies
+ * since it is provided for generated code as h2o-model.jar which contains
+ * only a few files.</p>
  *
  */
 public class ModelUtils {
@@ -79,7 +84,7 @@ public class ModelUtils {
     for (int i = 1; i < preds.length; ++i) {
       final Float prob = preds[i];
       final int label = i-1;
-      assert(prob >= 0 && prob <= 1);
+      assert(prob >= 0 && prob <= 1) : "prob is not inside [0,1]: " + prob;
       if (prob_idx.containsKey(prob)) {
         prob_idx.get(prob).add(label); //add all ties
       } else {
@@ -158,12 +163,12 @@ public class ModelUtils {
    * can be greater than number of sampled rows.
    */
   public static int[] sampleOOBRows(int nrows, float rate, Random sampler) {
-    return sampleOOBRows(nrows, rate, sampler, new int[1+(int)((1f-rate)*nrows*1.2f)]);
+    return sampleOOBRows(nrows, rate, sampler, new int[2+Math.round((1f-rate)*nrows*1.2f+0.5f)]);
   }
   /**
    * In-situ version of {@link #sampleOOBRows(int, float, Random)}.
    *
-   * @param oob an initial array to hold sampled rows. Can be internally realocted.
+   * @param oob an initial array to hold sampled rows. Can be internally reallocated.
    * @return an array containing sampled rows.
    *
    * @see #sampleOOBRows(int, float, Random)
@@ -174,7 +179,7 @@ public class ModelUtils {
     for(int row = 0; row < nrows; row++) {
       if (sampler.nextFloat() >= rate) { // it is out-of-bag row
         oob[1+oobcnt++] = row;
-        if (1+oobcnt>=oob.length) oob = Arrays.copyOf(oob, (int)(1.2f*oob.length)+1);
+        if (1+oobcnt>=oob.length) oob = Arrays.copyOf(oob, Math.round(1.2f*nrows+0.5f)+2);
       }
     }
     oob[0] = oobcnt;

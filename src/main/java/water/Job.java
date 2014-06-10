@@ -47,13 +47,14 @@ public abstract class Job extends Func {
   @API(help = "Job state")       public JobState state;
 
   transient public H2OCountedCompleter _fjtask; // Top-level task you can block on
+  transient protected boolean _cv;
 
   /** Possible job states. */
   public static enum JobState {
     CREATED,   // Job was created
     RUNNING,   // Job is running
     CANCELLED, // Job was cancelled by user
-    CRASHED,   // Job crashed, error message/exception is available
+    FAILED,   // Job crashed, error message/exception is available
     DONE       // Job was successfully finished
   }
 
@@ -163,13 +164,13 @@ public abstract class Job extends Func {
     PrintWriter pw = new PrintWriter(sw);
     ex.printStackTrace(pw);
     String stackTrace = sw.toString();
-    cancel("Got exception '" + ex.getClass() + "', with msg '" + ex.getMessage() + "'\n" + stackTrace, JobState.CRASHED);
+    cancel("Got exception '" + ex.getClass() + "', with msg '" + ex.getMessage() + "'\n" + stackTrace, JobState.FAILED);
   }
   /** Signal exceptional cancellation of this job.
    * @param msg cancellation message explaining reason for cancelation
    */
   public void cancel(final String msg) {
-    JobState js = msg == null ? JobState.CANCELLED : JobState.CRASHED;
+    JobState js = msg == null ? JobState.CANCELLED : JobState.FAILED;
     cancel(msg, js);
   }
   private void cancel(final String msg, JobState resultingState ) {
@@ -194,10 +195,10 @@ public abstract class Job extends Func {
   }
 
   /** Returns true if the job was cancelled by the user or crashed.
-   * @return true if the job is in state {@link JobState#CANCELLED} or {@link JobState#CRASHED}
+   * @return true if the job is in state {@link JobState#CANCELLED} or {@link JobState#FAILED}
    */
   public boolean isCancelledOrCrashed() {
-    return state == JobState.CANCELLED || state == JobState.CRASHED;
+    return state == JobState.CANCELLED || state == JobState.FAILED;
   }
 
   /** Returns true if the job was cancelled by the user.
@@ -208,7 +209,7 @@ public abstract class Job extends Func {
   /** Returns true if the job was terminated by unexpected exception.
    * @return true, if the job was terminated by unexpected exception.
    */
-  public boolean isCrashed() { return state == JobState.CRASHED; }
+  public boolean isCrashed() { return state == JobState.FAILED; }
 
   /** Returns true if this job is correctly finished.
    * @return returns true if the job finished and it was not cancelled or crashed by an exception.
@@ -577,6 +578,7 @@ public abstract class Job extends Func {
 
     @Override protected void init() {
       super.init();
+      if (_cv) return;
 
       // At most one of the following may be specified.
       int specified = 0;
@@ -754,6 +756,75 @@ public abstract class Job extends Func {
     @API(help = "Validation frame", filter = Default.class, mustExist = true, json = true)
     public Frame validation;
 
+    @API(help = "Number of folds for cross-validation (if no validation data is specified)", filter = Default.class, json = true)
+    public int n_folds = 0;
+
+    @API(help = "Keep cross-validation dataset splits", filter = Default.class, json = true)
+    public boolean keep_cross_validation_splits = false;
+
+    @API(help = "Cross-validation models", json = true)
+    public Key[] xval_models;
+
+    /**
+     * Helper to specify which arguments trigger a refresh on change
+     * @param ver
+     */
+    @Override
+    protected void registered(RequestServer.API_VERSION ver) {
+      super.registered(ver);
+      for (Argument arg : _arguments) {
+        if ( arg._name.equals("validation")) {
+          arg.setRefreshOnChange();
+        }
+      }
+    }
+
+    /**
+     * Helper to handle arguments based on existing input values
+     * @param arg
+     * @param inputArgs
+     */
+    @Override protected void queryArgumentValueSet(Argument arg, java.util.Properties inputArgs) {
+      super.queryArgumentValueSet(arg, inputArgs);
+      if (arg._name.equals("n_folds") && validation != null) {
+        arg.disable("Only if no validation dataset is provided.");
+        n_folds = 0;
+      }
+    }
+
+    /**
+     * Cross-Validate this Job (to be overridden for each instance, which also calls genericCrossValidation)
+     * @param splits Frames containing train/test splits
+     * @param cv_preds Store the predictions for each cross-validation run
+     * @param offsets Array to store the offsets of starting row indices for each cross-validation run
+     * @param i Which fold of cross-validation to perform
+     */
+    public void crossValidate(Frame[] splits, Frame[] cv_preds, long[] offsets, int i) { throw H2O.unimpl(); }
+
+    /**
+     * Helper to perform the generic part of cross validation
+     * Expected to be called from each specific instance's crossValidate method
+     * @param splits Frames containing train/test splits
+     * @param offsets Array to store the offsets of starting row indices for each cross-validation run
+     * @param i Which fold of cross-validation to perform
+     */
+    final protected void genericCrossValidation(Frame[] splits, long[] offsets, int i) {
+      int respidx = source.find(_responseName);
+      assert(respidx != -1) : "response is not found in source!";
+      job_key = Key.make(job_key.toString() + "_xval" + i); //make a new Job for CV
+      assert(xval_models != null);
+      destination_key = xval_models[i];
+      source = splits[0];
+      validation = splits[1];
+      response = source.vecs()[respidx];
+      n_folds = 0;
+      state = Job.JobState.CREATED; //Hack to allow this job to run
+      DKV.put(self(), this); //Needed to pass the Job.isRunning(cvdl.self()) check in FrameTask
+      offsets[i + 1] = offsets[i] + validation.numRows();
+      _cv = true; //Hack to allow init() to pass for ColumnsJob (allow cols/ignored_cols to co-exist)
+      invoke();
+    }
+
     /**
      * Annotate the number of columns and rows of the validation data set in the job parameter JSON
      * @return JsonObject annotated with num_cols and num_rows of the validation data set
@@ -768,7 +839,12 @@ public abstract class Job extends Func {
     }
 
     @Override protected void init() {
+      if ( validation != null && n_folds != 0 ) throw new UnsupportedOperationException("Cannot specify a validation dataset and non-zero number of cross-validation folds.");
+      if ( n_folds < 0 ) throw new UnsupportedOperationException("The number of cross-validation folds must be >= 0.");
       super.init();
+      xval_models = new Key[n_folds];
+      for (int i=0; i<xval_models.length; ++i)
+        xval_models[i] = Key.make(dest().toString() + "_xval" + i);
 
       int rIndex = 0;
       for( int i = 0; i < source.vecs().length; i++ )
@@ -905,7 +981,7 @@ public abstract class Job extends Func {
   /** Almost lightweight job handle containing the same content
    * as pure Job class.
    */
-  private static class JobHandle extends Job {
+  public static class JobHandle extends Job {
     public JobHandle(final Job job) { super(job); }
   }
   public static class JobCancelledException extends RuntimeException {

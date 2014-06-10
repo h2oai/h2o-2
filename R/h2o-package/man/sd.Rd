@@ -26,6 +26,5 @@ localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 irisPath = system.file("extdata", "iris.csv", package="h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
 sd(iris.hex[,4])
-h2o.shutdown(localH2O)
 }
 

@@ -3,7 +3,7 @@ sys.path.extend(['.','..','../..','py'])
 import h2o, h2o_cmd, h2o_import as h2i, h2o_glm, h2o_common, h2o_exec as h2e
 import h2o_print
 
-DO_GLM = True
+DO_GLM = False
 LOG_MACHINE_STATS = False
 
 # fails during exec env push ..second import has to do a key delete (the first)
@@ -92,10 +92,10 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
                     # convert to binomial
                     execExpr="A.hex=%s" % parseResult['destination_key']
-                    h2e.exec_expr(execExpr=execExpr, timeoutSecs=60)
+                    h2e.exec_expr(execExpr=execExpr, timeoutSecs=180)
 
                     execExpr = 'A.hex[,378+1]=(A.hex[,378+1]>15)'
-                    h2e.exec_expr(execExpr=execExpr, timeoutSecs=60)
+                    h2e.exec_expr(execExpr=execExpr, timeoutSecs=180)
 
                     aHack = {'destination_key': "A.hex"}
 
@@ -115,7 +115,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
     #***********************************************************************
     # these will be tracked individual by jenkins, which is nice
     #***********************************************************************
-    def test_A_c3_fvec_one(self):
+    def notest_A_c3_fvec_one(self):
         h2o.beta_features = True
         avgMichalSize = 116561140 
         csvFilenameList= [
@@ -123,7 +123,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         ]
         self.sub_c3_fvec_long(csvFilenameList)
 
-    def test_B_c3_fvec_two(self):
+    def notest_B_c3_fvec_two(self):
         h2o.beta_features = True
         avgMichalSize = 116561140 
         csvFilenameList= [
@@ -143,7 +143,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         h2o.beta_features = True
         avgMichalSize = 116561140 
         csvFilenameList= [
-            ("*[1][0-4][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 1800),
+            ("*[1][0-4][0-9].dat.gz", "file_50_A.dat.gz", 50 * avgMichalSize, 2400),
         ]
         self.sub_c3_fvec_long(csvFilenameList)
 

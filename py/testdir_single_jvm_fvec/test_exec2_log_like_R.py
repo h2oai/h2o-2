@@ -31,26 +31,26 @@ initList = [
 if DO_ORIG:
     # update to write back to the original dataset at the same time as the last temp
     exprList = [
-            'Last.value.0 = r2',
-            'Last.value.1 = any.factor(Last.value.0)',
-            'Last.value.2 = Last.value.0 + 1',
-            'r1[,1] = Last.value.3 = log(Last.value.2)',
+        'Last.value.0 = r1[,c(1)]',
+        'Last.value.1 = any.factor(Last.value.0)',
+        'Last.value.2 = Last.value.0 + 1',
+        'r1[,1] = Last.value.3 = log(Last.value.2)',
 
-            'Last.value.4 = r2',
-            'Last.value.5 = any.factor(Last.value.4)',
-            'Last.value.6 = Last.value.4 + 1',
-            'r1[,1] = Last.value.7 = log(Last.value.6)',
+        'Last.value.4 = r2',
+        'Last.value.5 = any.factor(Last.value.4)',
+        'Last.value.6 = Last.value.4 + 1',
+        'r1[,1] = Last.value.7 = log(Last.value.6)',
 
-            'Last.value.8 = r2',
-            'Last.value.9 = any.factor(Last.value.8)',
-            'Last.value.10 = Last.value.8 + 1',
-            'r1[,1] = Last.value.11 = log(Last.value.10)',
+        'Last.value.8 = r2',
+        'Last.value.9 = any.factor(Last.value.8)',
+        'Last.value.10 = Last.value.8 + 1',
+        'r1[,1] = Last.value.11 = log(Last.value.10)',
 
-            ]
+        ]
 else:
     exprList = [
-            'Last.value.3 = r2+1',
-            ]
+        'Last.value.3 = r2+1',
+        ]
 
 class Basic(unittest.TestCase):
     def tearDown(self):

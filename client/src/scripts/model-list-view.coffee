@@ -47,7 +47,7 @@ Steam.ModelListView = (_) ->
 
     self =
       data: model
-      title: model.model_algorithm
+      title: model.key
       caption: model.model_category
       cutline: 'Response Column: ' + model.response_column_name
       display: -> activateAndDisplayItem self
@@ -55,7 +55,7 @@ Steam.ModelListView = (_) ->
       isSelected: node$ no
 
     apply$ _isLive, self.isSelected, (isLive, isSelected) ->
-      _.modelSelectionChanged isSelected, _predicate(), model if isLive
+      _.modelSelectionChanged isSelected, self if isLive
 
     self
 
@@ -69,22 +69,36 @@ Steam.ModelListView = (_) ->
 
     switch predicate.type
       when 'all'
-        _.requestModels (error, data) ->
+        _.requestModelsAndCompatibleFrames (error, data) ->
           if error
             #TODO handle errors
           else
             displayModels data.models
 
       when 'compatibleWithFrame'
+        #FIXME Need an api call to get "models and compatible frames for all models compatible with a frame"
         _.requestFrameAndCompatibleModels predicate.frameKey, (error, data) ->
           if error
             #TODO handle errors
           else
-            # data.frames[predicate.frameKey], data.models
-            displayModels (head data.frames).compatible_models
+            compatibleModelsByKey = indexBy (head data.frames).compatible_models, (model) -> model.key
+            _.requestModelsAndCompatibleFrames (error, data) ->
+              if error
+                #TODO handle errors
+              else
+                displayModels filter data.models, (model) -> if compatibleModelsByKey[model.key] then yes else no
     return
+  
+  deselectAllModels = ->
+    #TODO ugly
+    _isLive no
+    for item in _items()
+      item.isSelected no
+    _isLive yes
 
-  clearPredicate = -> _predicate type: 'all'
+  clearPredicate = ->
+    deselectAllModels()
+    _predicate type: 'all'
 
   link$ _.loadModels, (predicate) ->
     if predicate
@@ -92,12 +106,7 @@ Steam.ModelListView = (_) ->
     else
       displayActiveItem()
 
-  link$ _.deselectAllModels, ->
-    #TODO ugly
-    _isLive no
-    for item in _items()
-      item.isSelected no
-    _isLive yes
+  link$ _.deselectAllModels, deselectAllModels
 
   items: _items
   hasItems: _hasItems

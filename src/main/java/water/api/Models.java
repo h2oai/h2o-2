@@ -1,11 +1,14 @@
 package water.api;
 
 import static water.util.ParamUtils.*;
+
+import hex.VarImp;
 import hex.deeplearning.DeepLearning;
 import hex.drf.DRF;
 import hex.gbm.GBM;
 import hex.glm.GLM2;
 import hex.glm.GLMModel;
+import hex.singlenoderf.SpeeDRF;
 
 import java.util.*;
 
@@ -16,6 +19,7 @@ import water.api.Frames.FrameSummary;
 import water.fvec.Frame;
 
 import com.google.gson.*;
+import water.util.Log;
 
 public class Models extends Request2 {
 
@@ -59,13 +63,16 @@ public class Models extends Request2 {
     public String model_algorithm = "unknown";
     public Model.ModelCategory model_category = Model.ModelCategory.Unknown;
     public Job.JobState state = Job.JobState.CREATED;
-    public long creation_epoch_time_millis = -1L;
-    public String uuid = null;
+    public String id = null;
+    public String key = null;
+    public long creation_epoch_time_millis = -1;
+    public long training_duration_in_ms = -1;
     public List<String> input_column_names = new ArrayList<String>();
     public String response_column_name = "unknown";
     public Map critical_parameters = new HashMap<String, Object>();
     public Map secondary_parameters = new HashMap<String, Object>();
     public Map expert_parameters = new HashMap<String, Object>();
+    public Map variable_importances = null;
     public Set<String> compatible_frames = new HashSet<String>();
   }
 
@@ -165,6 +172,8 @@ public class Models extends Request2 {
       summarizeDeepLearningModel(summary, (hex.deeplearning.DeepLearningModel) model);
     } else if (model instanceof hex.gbm.GBM.GBMModel) {
       summarizeGBMModel(summary, (hex.gbm.GBM.GBMModel) model);
+    } else if (model instanceof hex.singlenoderf.SpeeDRFModel) {
+      summarizeSpeeDRFModel(summary, (hex.singlenoderf.SpeeDRFModel) model);
     } else {
       // catch-all
       summarizeModelCommonFields(summary, model);
@@ -185,15 +194,33 @@ public class Models extends Request2 {
 
     summary.model_algorithm = model.getClass().toString(); // fallback only
 
-    summary.state = ((Job)model.job()).getState();
+    // model.job() is a local copy; on multinode clusters we need to get from the DKV
+    Key job_key = ((Job)model.job()).self();
+    Job job = DKV.get(job_key).get();
+    summary.state = job.getState();
     summary.model_category = model.getModelCategory();
-    summary.creation_epoch_time_millis = model.getUniqueId().getCreationEpochTimeMillis();
-    summary.uuid = model.getUniqueId().getUuid();
+
+    UniqueId unique_id = model.getUniqueId();
+    summary.id = unique_id.getId();
+    summary.key = unique_id.getKey();
+    summary.creation_epoch_time_millis = unique_id.getCreationEpochTimeMillis();
+    summary.training_duration_in_ms = model.training_duration_in_ms;
 
     summary.response_column_name = names[names.length - 1];
 
     for (int i = 0; i < names.length - 1; i++)
       summary.input_column_names.add(names[i]);
+
+    // Ugh.
+    VarImp vi = model.varimp();
+    if (null != vi) {
+      summary.variable_importances = new LinkedHashMap();
+      summary.variable_importances.put("varimp", vi.varimp);
+      summary.variable_importances.put("variables", vi.getVariables());
+      summary.variable_importances.put("method", vi.method);
+      summary.variable_importances.put("max_var", vi.max_var);
+      summary.variable_importances.put("scaled", vi.scaled());
+    }
   }
 
 
@@ -242,6 +269,28 @@ public class Models extends Request2 {
     summary.expert_parameters = whitelistJsonObject(all_params, DRF_expert_params);
   }
 
+  /******
+   * SpeeDRF
+   ******/
+  private static final Set<String> SpeeDRF_critical_params = getCriticalParamNames(SpeeDRF.DOC_FIELDS);
+  private static final Set<String> SpeeDRF_secondary_params = getSecondaryParamNames(SpeeDRF.DOC_FIELDS);
+  private static final Set<String> SpeeDRF_expert_params = getExpertParamNames(SpeeDRF.DOC_FIELDS);
+
+  /**
+   * Summarize fields which are specific to hex.drf.DRF.SpeeDRFModel.
+   */
+  private static void summarizeSpeeDRFModel(ModelSummary summary, hex.singlenoderf.SpeeDRFModel model) {
+    // add generic fields such as column names
+    summarizeModelCommonFields(summary, model);
+
+    summary.model_algorithm = "SpeeDRF";
+
+    JsonObject all_params = (model.get_params()).toJSON();
+    summary.critical_parameters = whitelistJsonObject(all_params, SpeeDRF_critical_params);
+    summary.secondary_parameters = whitelistJsonObject(all_params, SpeeDRF_secondary_params);
+    summary.expert_parameters = whitelistJsonObject(all_params, SpeeDRF_expert_params);
+  }
+
   /***************
    * DeepLearning
    ***************/
@@ -286,38 +335,11 @@ public class Models extends Request2 {
     summary.expert_parameters = whitelistJsonObject(all_params, GBM_expert_params);
   }
 
-
   /**
    * Fetch all Models from the KV store.
    */
-  protected Map<String, Model>fetchAll() {
-    // Get all the water.model keys.
-    //
-    // NOTE: globalKeySet filters by class when it pulls stuff from other nodes,
-    // but still returns local keys of all types so we need to filter below.
-    Set<Key> keySet = H2O.globalKeySet("water.Model"); // filter by class, how cool is that?
-
-    Map<String, Model> modelsMap = new TreeMap(); // Sort for pretty display and reliable ordering.
-
-    for (Key key : keySet) {
-      if( !key.user_allowed() ) // Also filter out for user-keys
-        continue;
-      if( H2O.get(key) == null )
-        continue;
-
-      String keyString = key.toString();
-
-      Value value = DKV.get(key);
-      Iced pojo = value.get();
-
-      if (! (pojo instanceof Model))
-        continue;
-      Model model = (Model)pojo;
-
-      modelsMap.put(keyString, model);
-    }
-
-    return modelsMap;
+  protected Map<String, Model> fetchAll() {
+    return H2O.KeySnapshot.globalSnapshot().fetchAll(water.Model.class);
   }
 
 

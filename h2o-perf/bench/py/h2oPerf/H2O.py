@@ -178,22 +178,36 @@ class H2OCloudNode:
         Get process_total_ticks, system_total_ticks, sys_idle_ticks.
         """
         #poll on url until get a valid http response
-        max_retries = 30
+        max_retries = 5
         m = 0
         got_url_sys = False
         got_url_proc = False
         while m < max_retries:
+            if m != 0:
+                print "DEBUG: Restarting serve_proc!"
+                print "Stopping service"
+                cmd_serve = "ps -efww | grep 0xdiag | awk '{print %2}' | xargs kill"
+                tryKill = self.open_channel()
+                tryKill.exec_command(cmd_serve)
+                
+                print "Starting service"
+                cmd_serve = ["python", "/home/0xdiag/serve_proc.py"]
+                self.channelServe = self.open_channel()
+                self.channelServe.exec_command(' '.join(cmd_serve))
             r_sys = ""
             r_proc = ""
             print "Performing try : " + str(m) + " out of total tries = " + str(max_retries)
             url_sys = "http://{}:{}/stat".format(self.ip, 8000)
             url_proc = "http://{}:{}/{}/stat".format(self.ip, 8000, self.pid)
             try:
-              r_sys = requests.get(url_sys, timeout=120).text.split('\n')[0]
-              r_proc = requests.get(url_proc, timeout=120).text.strip().split()
+              r_sys = requests.get(url_sys, timeout=10).text.split('\n')[0]
+              r_proc = requests.get(url_proc, timeout=10).text.strip().split()
             except:
+              m += 1
               continue  # usually timeout, but just catch all and continue, error out downstream.
-            if r_sys == "" or r_proc == "": continue
+            if r_sys == "" or r_proc == "":
+                m += 1
+                continue
             if not got_url_sys:
                 if not ("404" and "not" and "found") in r_sys:
                     got_url_sys = True
@@ -209,7 +223,9 @@ class H2OCloudNode:
             time.sleep(1)
 
         if not (got_url_proc and got_url_sys):
-            raise Exception("Max retries on /proc scrape exceeded! Did the JVM properly start?")
+            print "Max retries on /proc scrape exceeded! Did the JVM properly start?"
+            return -1
+            #raise Exception("Max retries on /proc scrape exceeded! Did the JVM properly start?")
 
         url_sys = "http://{}:{}/stat".format(self.ip, 8000)
         url_proc = "http://{}:{}/{}/stat".format(self.ip, 8000, self.pid)
@@ -251,22 +267,24 @@ class H2OCloudNode:
         """
         cur_ticks = self.get_ticks()
         first_ticks = self.first_ticks
-        proc_delta = cur_ticks["process_total_ticks"] - first_ticks["process_total_ticks"]
-        sys_delta = cur_ticks["system_total_ticks"] - first_ticks["system_total_ticks"]
-        idle_delta = cur_ticks["system_idle_ticks"] - first_ticks["system_idle_ticks"]
+        if cur_ticks != -1 and first_ticks != -1:
+            proc_delta = cur_ticks["process_total_ticks"] - first_ticks["process_total_ticks"]
+            sys_delta = cur_ticks["system_total_ticks"] - first_ticks["system_total_ticks"]
+            idle_delta = cur_ticks["system_idle_ticks"] - first_ticks["system_idle_ticks"]
 
-        sys_frac = 100 * (1 - idle_delta * 1. / sys_delta)
-        proc_frac = 100 * (proc_delta * 1. / sys_delta)
+            sys_frac = 100 * (1 - idle_delta * 1. / sys_delta)
+            proc_frac = 100 * (proc_delta * 1. / sys_delta)
 
-        print "DEBUG: sys_frac, proc_frac"
-        print sys_frac, proc_frac
-        print ""
-        print ""
+            print "DEBUG: sys_frac, proc_frac"
+            print sys_frac, proc_frac
+            print ""
+            print ""
 
-        #20% diff
-        if proc_frac + 5 <= sys_frac:
-            self.is_contaminated = True
-            return 1
+            #20% diff
+            if proc_frac + 5 <= sys_frac:
+                self.is_contaminated = True
+                return 1
+            return 0
         return 0
 
     def start_remote(self):
@@ -337,7 +355,7 @@ class H2OCloudNode:
         Use a request for /Cloud.json and look for pid.
         """
         name = self.ip + ":" + self.port
-        time.sleep(5)
+        time.sleep(3)
         r = requests.get("http://" + name + "/Cloud.json")
         name = "/" + name
         j = json.loads(r.text)
@@ -398,7 +416,7 @@ class H2OCloudNode:
         @return: none
         """
         try:
-            requests.get("http://" + self.ip + ":" + self.port + "/Shutdown.html", timeout=5)
+            requests.get("http://" + self.ip + ":" + self.port + "/Shutdown.html", timeout=1)
             try:
                 r2 = requests.get("http://" + self.ip + ":" + self.port + "/Cloud.html", timeout=2)
             except Exception, e:
@@ -418,7 +436,7 @@ class H2OCloudNode:
         except OSError:
             pass
         try:
-            requests.get("http://" + self.ip + ":" + self.port + "/Shutdown.html", timeout=5)
+            requests.get("http://" + self.ip + ":" + self.port + "/Shutdown.html", timeout=1)
         except Exception, e:
             print "Got Exception trying to shutdown H2O:"
             print e

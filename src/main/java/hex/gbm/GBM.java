@@ -2,24 +2,23 @@ package hex.gbm;
 
 import static water.util.ModelUtils.getPrediction;
 import static water.util.Utils.div;
-import hex.ConfusionMatrix;
-import hex.VarImp;
+import hex.*;
 import hex.VarImp.VarImpRI;
+import hex.ConfusionMatrix;
 import hex.gbm.DTree.DecidedNode;
 import hex.gbm.DTree.LeafNode;
 import hex.gbm.DTree.Split;
 import hex.gbm.DTree.TreeModel.TreeStats;
 import hex.gbm.DTree.UndecidedNode;
+
+import java.util.Arrays;
+
 import water.*;
-import water.api.DocGen;
-import water.api.GBMProgressPage;
-import water.api.ParamImportance;
+import water.api.*;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.util.*;
 import water.util.Log.Tag.Sys;
-
-import java.util.Arrays;
 
 // Gradient Boosted Trees
 //
@@ -63,26 +62,38 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     @API(help = "Distribution for computing loss function. AUTO selects gaussian for continuous and multinomial for categorical response")
     final Family family;
 
-    public GBMModel(GBM job, Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, double learn_rate, Family family) {
-      super(key,dataKey,testKey,names,domains,cmDomain,ntrees,max_depth,min_rows,nbins);
+    @API(help = "Initially predicted value (for zero trees)")
+    double initialPrediction;
+
+    public GBMModel(GBM job, Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, double learn_rate, Family family, int num_folds) {
+      super(key,dataKey,testKey,names,domains,cmDomain,ntrees,max_depth,min_rows,nbins,num_folds);
       this.parameters = job;
       this.learn_rate = learn_rate;
       this.family = family;
     }
-    public GBMModel(GBMModel prior, DTree[] trees, double err, ConfusionMatrix cm, TreeStats tstats) {
+    private GBMModel(GBMModel prior, DTree[] trees, double err, ConfusionMatrix cm, TreeStats tstats) {
       super(prior, trees, err, cm, tstats);
       this.parameters = prior.parameters;
       this.learn_rate = prior.learn_rate;
       this.family = prior.family;
+      this.initialPrediction = prior.initialPrediction;
     }
-    public GBMModel(GBMModel prior, DTree[] trees, TreeStats tstats) {
+    private GBMModel(GBMModel prior, DTree[] trees, TreeStats tstats) {
       super(prior, trees, tstats);
       this.parameters = prior.parameters;
       this.learn_rate = prior.learn_rate;
       this.family = prior.family;
+      this.initialPrediction = prior.initialPrediction;
     }
-    public GBMModel(GBMModel prior, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
+    private GBMModel(GBMModel prior, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
       super(prior, err, cm, varimp, validAUC);
+      this.parameters = prior.parameters;
+      this.learn_rate = prior.learn_rate;
+      this.family = prior.family;
+      this.initialPrediction = prior.initialPrediction;
+    }
+    private GBMModel(GBMModel prior, Key[][] treeKeys, double[] errs, ConfusionMatrix[] cms, TreeStats tstats, VarImp varimp, AUC validAUC) {
+      super(prior, treeKeys, errs, cms, tstats, varimp, validAUC);
       this.parameters = prior.parameters;
       this.learn_rate = prior.learn_rate;
       this.family = prior.family;
@@ -93,7 +104,8 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     @Override protected float[] score0(double[] data, float[] preds) {
       float[] p = super.score0(data, preds);    // These are f_k(x) in Algorithm 10.4
       if(family == Family.bernoulli) {
-        p[2] = 1.0f/(float)(1f+Math.exp(-p[1]));
+        double fx = p[1] + initialPrediction;
+        p[2] = 1.0f/(float)(1f+Math.exp(-fx));
         p[1] = 1f-p[2];
         p[0] = getPrediction(p, data);
         return p;
@@ -114,7 +126,8 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
         div(p,dsum);
         p[0] = getPrediction(p, data);
       } else { // regression
-        // do nothing for regression
+        // Prediction starts from the mean response, and adds predicted residuals
+        preds[0] += initialPrediction;
       }
       return p;
     }
@@ -126,8 +139,9 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     @Override protected void toJavaUnifyPreds(SB bodyCtxSB) {
       if(family == Family.bernoulli) {
         bodyCtxSB.i().p("// Compute Probabilities for Bernoulli 0-1 classifier").nl();
-        bodyCtxSB.i().p("preds[2] = 1.0f/(float)(1f+Math.exp(-preds[1]))").nl();
-        bodyCtxSB.i().p("preds[1] = 1f-preds[2]").nl();
+        bodyCtxSB.i().p("double fx = preds[1] + "+initialPrediction+";").nl();
+        bodyCtxSB.i().p("preds[2] = 1.0f/(float)(1.0f+Math.exp(-fx))").nl();
+        bodyCtxSB.i().p("preds[1] = 1.0f-preds[2]").nl();
       }
       else if (isClassifier()) {
         bodyCtxSB.i().p("// Compute Probabilities for classifier (scale via http://www.hongliangjie.com/2011/01/07/logsum/)").nl();
@@ -139,13 +153,22 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
         bodyCtxSB.i().p("for(int i=1; i<preds.length; i++) dsum += (preds[i]=(float) Math.exp(preds[i] - maxval));").nl();
         bodyCtxSB.i().p("for(int i=1; i<preds.length; i++) preds[i] = preds[i] / dsum;").nl();
       }
+      else {
+        bodyCtxSB.i().p("// Compute Regression").nl();
+        bodyCtxSB.i().p("preds[1] += "+initialPrediction+";").nl();
+      }
+    }
+    @Override protected void setCrossValidationError(ValidatedJob job, double cv_error, water.api.ConfusionMatrix cm, water.api.AUC auc, water.api.HitRatio hr) {
+      GBMModel gbmm = ((GBM)job).makeModel(this, cv_error, cm.cm == null ? null : new ConfusionMatrix(cm.cm, cms[0].nclasses()), this.varimp, auc);
+      gbmm._have_cv_results = true;
+      DKV.put(this._key, gbmm); //overwrite this model
     }
   }
   public Frame score( Frame fr ) { return ((GBMModel)UKV.get(dest())).score(fr);  }
 
   @Override protected Log.Tag.Sys logTag() { return Sys.GBM__; }
-  @Override protected GBMModel makeModel(Key outputKey, Key dataKey, Key testKey, String[] names, String[][] domains, String[] cmDomain) {
-    return new GBMModel(this, outputKey, dataKey, testKey, names, domains, cmDomain, ntrees, max_depth, min_rows, nbins, learn_rate, family);
+  @Override protected GBMModel makeModel(Key outputKey, Key dataKey, Key testKey, int ntrees, String[] names, String[][] domains, String[] cmDomain) {
+    return new GBMModel(this, outputKey, dataKey, validation==null?null:testKey, names, domains, cmDomain, ntrees, max_depth, min_rows, nbins, learn_rate, family, n_folds);
   }
   @Override protected GBMModel makeModel( GBMModel model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
     return new GBMModel(model, err, cm, varimp, validAUC);
@@ -154,6 +177,14 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     return new GBMModel(model, ktrees, tstats);
   }
   public GBM() { description = "Distributed GBM"; importance = true; }
+
+  @Override protected GBMModel updateModel(GBMModel additionModel, GBMModel checkpoint, boolean overwriteCheckpoint) {
+    // Do not forget to clone trees in case that we are not going to overwrite checkpoint
+    Key[][] treeKeys = null;
+    if (!overwriteCheckpoint) throw H2O.unimpl("Cloning of tree models is not implemented yet!");
+    else treeKeys = checkpoint.treeKeys;
+    return new GBMModel(additionModel, treeKeys, checkpoint.errs, checkpoint.cms, checkpoint.treeStats, checkpoint.varimp, checkpoint.validAUC);
+  }
 
   /** Return the query link to this page */
   public static String link(Key k, String content) {
@@ -166,6 +197,8 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   @Override protected void execImpl() {
     logStart();
     buildModel(seed);
+    if (n_folds > 0) CrossValUtils.crossValidate(this);
+    remove();                   // Remove Job
   }
 
   @Override public int gridParallelism() {
@@ -187,10 +220,11 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     if (classification) initialModel.setModelClassDistribution(new MRUtils.ClassDist(response).doAll(response).rel_dist());
     // Tag out rows missing the response column
     new ExcludeNAResponse().doAll(fr);
+    // Initial value is mean(y)
+    final double mean = (float) fr.vec(initialModel.responseName()).mean();
     // Initialize working response based on given loss function
     if (_nclass == 1) { /* regression */
-      // Initial value is mean(y)
-      final float mean = (float) fr.vec(initialModel.responseName()).mean();
+      initialModel.initialPrediction = mean; // Regression initially predicts the response mean
       new MRTask2() {
         @Override public void map(Chunk[] chks) {
           Chunk tr = chk_tree(chks, 0); // there is only one tree for regression
@@ -199,16 +233,22 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       }.doAll(fr);
     } else if(family == Family.bernoulli) {
       // Initial value is log( mean(y)/(1-mean(y)) )
-      final float mean = (float) fr.vec(initialModel.responseName()).mean();
       final float init = (float) Math.log(mean/(1.0f-mean));
+      initialModel.initialPrediction = init;
       new MRTask2() {
         @Override public void map(Chunk[] chks) {
           Chunk tr = chk_tree(chks, 0); // only the tree for y = 0 is used
           for (int i=0; i<tr._len; i++) tr.set0(i, init);
         }
       }.doAll(fr);
-    } else { /* multinomial */ // TODO: we should use bernoulli distribution
+    } else { /* multinomial */
       /* Preserve 0s in working columns */
+    }
+    // Update tree fields based on checkpoint
+    if (checkpoint!=null) {
+      Timer t = new Timer();
+      new ResidualsCollector(_ncols, _nclass, initialModel.treeKeys).doAll(fr);
+      Log.info(logTag(), "Reconstructing tree residuals stats from checkpointed model took " + t);
     }
   }
   // ==========================================================================
@@ -223,12 +263,14 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     // Build trees until we hit the limit
     int tid;
     DTree[] ktrees = null;              // Trees
-    TreeStats tstats = new TreeStats(); // Tree stats
+    TreeStats tstats = model.treeStats!=null ? model.treeStats : new TreeStats();
     for( tid=0; tid<ntrees; tid++) {
       // During first iteration model contains 0 trees, then 0-trees, then 1-tree,...
       // BUT if validation is not specified model does not participate in voting
       // but on-the-fly computed data are used
-      model = doScoring(model, fr, ktrees, tid, tstats, false, false, false);
+      if (tid!=0 || checkpoint==null) { // do not make initial scoring if model already exist
+        model = doScoring(model, fr, ktrees, tid, tstats, false, false, false);
+      }
       // ESL2, page 387
       // Step 2a: Compute prediction (prob distribution) from prior tree results:
       //   Work <== f(Tree)
@@ -313,7 +355,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       return fs[1]+fs[2];
     }
     if( _nclass == 1 )          // Classification?
-      return (float)chk_tree(chks,0).at0(row); // Regression.
+      return fs[0]=(float)chk_tree(chks,0).at0(row); // Regression.
     if( _nclass == 2 ) {        // The Boolean Optimization
       // This optimization assumes the 2nd tree of a 2-class system is the
       // inverse of the first.  Fill in the missing tree
@@ -375,6 +417,9 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     // leaf); all columns
     DHistogram hcs[][][] = new DHistogram[_nclass][1/*just root leaf*/][_ncols];
 
+    // Adjust nbins for the top-levels
+    int adj_nbins = Math.max((1<<(10-0)),nbins);
+
     for( int k=0; k<_nclass; k++ ) {
       // Initially setup as-if an empty-split had just happened
       if( _distribution == null || _distribution[k] != 0 ) {
@@ -384,7 +429,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
         // DRF picks a random different set of columns for the 2nd tree.
         if( k==1 && _nclass==2 ) continue;
         ktrees[k] = new DTree(fr._names,_ncols,(char)nbins,(char)_nclass,min_rows);
-        new GBMUndecidedNode(ktrees[k],-1,DHistogram.initialHist(fr,_ncols,nbins,hcs[k][0],false) ); // The "root" node
+        new GBMUndecidedNode(ktrees[k],-1,DHistogram.initialHist(fr,_ncols,adj_nbins,hcs[k][0],false) ); // The "root" node
       }
     }
     int[] leafs = new int[_nclass]; // Define a "working set" of leaf splits, from here to tree._len
@@ -466,7 +511,9 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
           for( int row=0; row<nids._len; row++ ) {
             int nid = (int)nids.at80(row);
             if( nid < 0 ) continue;
-            ct.set0(row, (float)(ct.at0(row) + ((LeafNode)tree.node(nid))._pred));
+            // Prediction stored in Leaf is cut to float to be deterministic in reconstructing
+            // <tree_klazz> fields from tree prediction
+            ct.set0(row, (float)(ct.at0(row) + (float) ((LeafNode)tree.node(nid))._pred));
             nids.set0(row,0);
           }
         }
@@ -607,7 +654,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
    *  See (45), (35) formulas in Friedman: Greedy Function Approximation: A Gradient boosting machine.
    *  Algo used here can be used for computation individual importance of features per output class. */
   @Override protected VarImp doVarImpCalc(GBMModel model, DTree[] ktrees, int tid, Frame validationFrame, boolean scale) {
-    assert model.ntrees()-1 == tid : "varimp computation expect model with already serialized trees: tid="+tid;
+    assert model.ntrees()-1-_ntreesFromCheckpoint == tid : "varimp computation expect model with already serialized trees: tid="+tid;
     // Iterates over k-tree
     for (DTree t : ktrees) { // Iterate over trees
       if (t!=null) {
@@ -636,4 +683,19 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
 
     return new VarImpRI(varimp);
   }
+
+  /**
+   * Cross-Validate a GBM model by building new models on N train/test holdout splits
+   * @param splits Frames containing train/test splits
+   * @param cv_preds Array of Frames to store the predictions for each cross-validation run
+   * @param offsets Array to store the offsets of starting row indices for each cross-validation run
+   * @param i Which fold of cross-validation to perform
+   */
+  @Override public void crossValidate(Frame[] splits, Frame[] cv_preds, long[] offsets, int i) {
+    // Train a clone with slightly modified parameters (to account for cross-validation)
+    GBM cv = (GBM) this.clone();
+    cv.genericCrossValidation(splits, offsets, i);
+    cv_preds[i] = ((GBMModel) UKV.get(cv.dest())).score(cv.validation);
+  }
+
 }

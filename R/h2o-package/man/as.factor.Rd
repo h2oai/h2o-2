@@ -19,5 +19,4 @@ prosPath = system.file("extdata", "prostate.csv", package="h2o")
 prostate.hex = h2o.importFile(localH2O, path = prosPath)
 prostate.hex[,4] = as.factor(prostate.hex[,4])
 summary(prostate.hex)
-h2o.shutdown(localH2O)
 }

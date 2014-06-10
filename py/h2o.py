@@ -292,6 +292,7 @@ def find_file(base):
 # Apparently this escape function on errors is the way shutil.rmtree can
 # handle the permission issue. (do chmod here)
 # But we shouldn't have read-only files. So don't try to handle that case.
+
 def handleRemoveError(func, path, exc):
     # If there was an error, it could be due to windows holding onto files.
     # Wait a bit before retrying. Ignore errors on the retry. Just leave files.
@@ -308,6 +309,13 @@ LOG_DIR = get_sandbox_name()
 
 def clean_sandbox():
     if os.path.exists(LOG_DIR):
+
+        # shutil.rmtree hangs if symlinks in the dir? (in syn_datasets for multifile parse)
+        # use os.remove() first
+        for f in glob.glob(LOG_DIR + '/syn_datasets/*'):
+            verboseprint("cleaning", f)
+            os.remove(f)
+
         # shutil.rmtree fails to delete very long filenames on Windoze
         #shutil.rmtree(LOG_DIR)
         # was this on 3/5/13. This seems reliable on windows+cygwin
@@ -1172,6 +1180,7 @@ class H2O(object):
                  noise=None, benchmarkLogging=None, noPoll=False, reuseFirstPollUrl=False, noPrint=False):
         ### print "poll_url: pollTimeoutSecs", pollTimeoutSecs
         verboseprint('poll_url input: response:', dump_json(response))
+        print "at top of poll_url, timeoutSec: ", timeoutSecs
 
         # for the rev 2 stuff..the job_key, destination_key and redirect_url are just in the response
         # look for 'response'..if not there, assume the rev 2
@@ -1404,7 +1413,9 @@ class H2O(object):
                 'source': key,
                 'destination_key': key2,
                 'seed': None,
+                'cols': None,
                 'ignored_cols': None,
+                'ignored_cols_by_name': None,
                 'max_iter': None,
                 'normalize': None,
             }
@@ -1580,7 +1591,7 @@ class H2O(object):
     def rebalance(self, timeoutSecs=180, **kwargs):
         params_dict = {
             # now we should default to a big number, so we see everything
-            'before': None,
+            'source': None,
             'after': None,
             'chunks': None,
             'seed': None,
@@ -1701,7 +1712,9 @@ class H2O(object):
             'b_max': None,
             'bootstrap_fraction': None,
             'seed': None,
+            'cols': None,
             'ignored_cols': None,
+            'ignored_cols_by_name': None,
         }
         browseAlso = kwargs.pop('browseAlso', False)
         check_params_update_kwargs(params_dict, kwargs, 'gap_statistic', print_params=True)
@@ -1716,7 +1729,7 @@ class H2O(object):
         a['python_%timeout'] = a['python_elapsed'] * 100 / timeoutSecs
         return a
 
-    def speedrf(self, data_key, trees, timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
+    def speedrf(self, data_key, ntrees=50, max_depth=10, timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
                 noise=None, benchmarkLogging=None, noPoll=False,
                 print_params=True, noPrint=False, **kwargs):
 
@@ -1724,19 +1737,20 @@ class H2O(object):
                        'source': data_key,
                        'response': None,
                        'cols': None,
+                       'ignored_cols': None,
                        'ignored_cols_by_name': None,
                        'classification': 1,
                        'validation': None,
                        'bin_limit': 1024.0,
                        'class_weights': None,
-                       'max_depth': trees,
+                       'max_depth': max_depth,
                        'mtry': -1.0,
-                       'num_trees': 50.0,
+                       'num_trees': ntrees,
                        'oobee': 0,
                        'sample': 0.67,
                        'sampling_strategy': 'RANDOM',
                        'seed': -1.0,
-                       'stat_type': 'ENTROPY',
+                       'select_stat_type': 'ENTROPY',
                        'strata_samples': None,
         }
         check_params_update_kwargs(params_dict, kwargs, 'random_forest', print_params)
@@ -1759,11 +1773,12 @@ class H2O(object):
         return rfView
 
     # note ntree in kwargs can overwrite trees! (trees is legacy param)
-    def random_forest(self, data_key, trees,
+    def random_forest(self, data_key, trees=None,
                       timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
                       noise=None, benchmarkLogging=None, noPoll=False, rfView=True,
                       print_params=True, noPrint=False, **kwargs):
 
+        print "at top of random_forest, timeoutSec: ", timeoutSecs
         algo = '2/DRF' if beta_features else 'RF'
         algoView = '2/DRFView' if beta_features else 'RFView'
 
@@ -1773,20 +1788,23 @@ class H2O(object):
                 'source': data_key,
                 # 'model': None,
                 'response': None,
-                'cols': None,
-                'ignored_cols_by_name': None,
+                'balance_classes': 1, 
                 'classification': 1,
-                'validation': None,
+                'cols': None,
+                'ignored_cols': None,
+                'ignored_cols_by_name': None,
                 'importance': 1, # enable variable importance by default
-                'ntrees': trees,
+                'max_after_balance_size': 7,
                 'max_depth': None,
                 'min_rows': None, # how many rows in leaves for stopping condition
-                'nbins': None,
                 'mtries': None,
+                'nbins': None,
+                'ntrees': trees,
                 'sample_rate': None,
-                'seed': None,
-                'build_tree_per_node': None,
                 'score_each_iteration': None,
+                'seed': None,
+                'validation': None,
+
             }
             if 'model_key' in kwargs:
                 kwargs['destination_key'] = kwargs['model_key'] # hmm..should we switch test to new param?
@@ -1843,6 +1861,7 @@ class H2O(object):
             # if we want to do noPoll, we have to name the model, so we know what to ask for when we do the completion view
             # HACK: wait more for first poll?
             time.sleep(5)
+            print "right ebfore call to poll_url, timeoutSec: ", timeoutSecs
             rfView = self.poll_url(rf, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                                    initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
                                    noise=noise, benchmarkLogging=benchmarkLogging, noPrint=noPrint)
@@ -2046,7 +2065,9 @@ class H2O(object):
             'destination_key': None,
             'source_key': None,
             'response': None,
+            'cols': None,
             'ignored_cols': None,
+            'ignored_cols_by_name': None,
             'classification': None,
             'laplace': None,
         }
@@ -2218,8 +2239,9 @@ class H2O(object):
             'ntrees': None,
             'max_depth': None,
             'min_rows': None,
-            'ignored_cols_by_name': None, # either this or cols..not both
             'cols': None,
+            'ignored_cols': None,
+            'ignored_cols_by_name': None, # either this or cols..not both
             'nbins': None,
             'classification': None,
             'score_each_iteration': None,
@@ -2251,7 +2273,9 @@ class H2O(object):
         params_dict = {
             'destination_key': None,
             'source': data_key,
+            'cols': None,
             'ignored_cols': None,
+            'ignored_col_names': None,
             'tolerance': None,
             'max_pc': None,
             'standardize': None,
@@ -2307,7 +2331,9 @@ class H2O(object):
             'source': key,
             'destination_key': None,
             'model': model,
+            'cols': None,
             'ignored_cols': None,
+            'ignored_col_name': None,
             'classification': None,
             'response': None,
             'max_rows': 0,
@@ -2336,7 +2362,9 @@ class H2O(object):
         params_dict = {
             'destination_key': None,
             'source': data_key,
+            'cols': None,
             'ignored_cols': None,
+            'ignored_cols_by_name': None,
             'validation': None,
             'classification': None,
             'response': None,
@@ -2384,7 +2412,9 @@ class H2O(object):
         params_dict = {
             'destination_key': None,
             'source': data_key,
+            'cols': None,
             'ignored_cols': None,
+            'ignored_cols_by_name': None,
             'validation': None,
             'classification': None,
             'response': None,
@@ -2468,7 +2498,7 @@ class H2O(object):
             params_dict = {
                 'source': key,
                 'cols': None,
-                'max_ncols': 1000,
+                'max_ncols': 1000 if not numCols else numCols,
                 'max_qbins': None,
             }
         else:
@@ -2550,29 +2580,32 @@ class H2O(object):
         browseAlso = kwargs.pop('browseAlso', False)
         if beta_features:
             params_dict = {
+                'strong_rules_enabled': None,
+                'lambda_search': None,
+                'nlambdas': None,
+                'lambda_min_ratio': None,
+                'prior': None,
+
                 'source': key,
                 'destination_key': None,
                 'response': None,
-                # what about cols? doesn't exist?
-                # what about ignored_cols_by_name
+                'cols': None,
                 'ignored_cols': None,
+                'ignored_cols_by_name': None,
                 'max_iter': None,
                 'standardize': None,
                 'family': None,
-                # 'link': None, # apparently we don't get this for GLM2
                 'alpha': None,
                 'lambda': None,
                 'beta_epsilon': None, # GLMGrid doesn't use this name
                 'tweedie_variance_power': None,
                 'n_folds': None,
-                # 'weight': None,
-                # 'thresholds': None,
+
                 # only GLMGrid has this..we should complain about it on GLM?
                 'parallelism': None,
                 'beta_eps': None,
                 'higher_accuracy': None,
                 'use_all_factor_levels': None,
-                'lambda_search': None,
             }
         else:
             params_dict = {
@@ -2682,6 +2715,7 @@ class H2O(object):
     # key=cuse.hex&
     # thresholds=0%3A1%3A0.01
     def GLMScore(self, key, model_key, timeoutSecs=100, **kwargs):
+        # this isn't in fvec?
         browseAlso = kwargs.pop('browseAlso', False)
         # i guess key and model_key could be in kwargs, but
         # maybe separate is more consistent with the core key behavior
@@ -2815,6 +2849,12 @@ class H2O(object):
         else:
             args += ["-jar", self.get_h2o_jar()]
 
+        if 1==1:
+            if self.hdfs_config:
+                args += [
+                    '-hdfs_config=' + self.hdfs_config
+                ]
+
         if beta_features:
             args += ["-beta"]
 
@@ -2875,10 +2915,11 @@ class H2O(object):
         ]
 
         # ignore the other -hdfs args if the config is used?
-        if self.hdfs_config:
-            args += [
-                '-hdfs_config ' + self.hdfs_config
-            ]
+        if 1==0:
+            if self.hdfs_config:
+                args += [
+                    '-hdfs_config=' + self.hdfs_config
+                ]
 
         if self.use_hdfs:
             args += [

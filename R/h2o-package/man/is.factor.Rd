@@ -26,7 +26,6 @@ prostate.hex = h2o.importFile(localH2O, path = prosPath)
 prostate.hex[,4]=as.factor(prostate.hex[,4])
 is.factor(prostate.hex[,4])
 is.factor(prostate.hex[,3])
-h2o.shutdown(localH2O)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

@@ -79,6 +79,5 @@ prostate.hex = h2o.importURL(localH2O, path = paste("https://raw.github.com",
   "0xdata/h2o/master/smalldata/logreg/prostate.csv", sep = "/"), key = "prostate.hex")
 h2o.pcr(x = c("AGE","RACE","PSA","DCAPS"), y = "CAPSULE", data = prostate.hex, family = "binomial", 
   nfolds = 10, alpha = 0.5, ncomp = 3)
-h2o.shutdown(localH2O)
 }
 

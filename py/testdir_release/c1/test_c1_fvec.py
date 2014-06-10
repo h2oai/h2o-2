@@ -17,8 +17,8 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
     def test_A_c1_fvec(self):
         h2o.beta_features = True
-        parseResult = h2i.import_parse(bucket='smalldata', path='iris/iris2.csv', schema='put')
-        h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=10)
+        parseResult = h2i.import_parse(bucket='smalldata', path='iris/iris2.csv', schema='put', timeoutSecs=60)
+        h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=60)
 
     def test_B_c1_fvec(self):
         h2o.beta_features = True
@@ -26,8 +26,8 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         print "Want to be able to run python as jenkins"
         print "I guess for big 0xcust files, we don't need schema='put'"
         print "For files that we want to put (for testing put), we can get non-private files"
-        parseResult = h2i.import_parse(bucket='0xcustomer-datasets', path='c1/iris2.csv', schema='local')
-        h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=10)
+        parseResult = h2i.import_parse(bucket='0xcustomer-datasets', path='c1/iris2.csv', schema='local', timeoutSecs=60)
+        h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=60)
 
 if __name__ == '__main__':
     h2o.unit_main()

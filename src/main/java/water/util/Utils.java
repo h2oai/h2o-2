@@ -372,15 +372,28 @@ public class Utils {
     }
   }
 
+  /**
+   * Extract a shuffled array of integers
+   * @param a input array
+   * @param n number of elements to extract
+   * @param result array to store the results into (will be of size n)
+   * @param seed random number seed
+   * @param startIndex offset into a
+   * @return result
+   */
   public static int[] shuffleArray(int[] a, int n, int result[], long seed, int startIndex) {
     if (n<=0) return result;
     Random random = getDeterRNG(seed);
+    if (result == null || result.length != n)
+      result = new int[n];
     result[0] = a[startIndex];
     for (int i = 1; i < n; i++) {
       int j = random.nextInt(i+1);
-      if (j!=i) result[i] = a[startIndex+j];
+      if (j!=i) result[i] = result[j];
       result[j] = a[startIndex+i];
     }
+    for (int i = 0; i < n; ++i)
+      assert(Utils.contains(result, a[startIndex+i]));
     return result;
   }
 
@@ -1496,6 +1509,21 @@ public class Utils {
     if (sr<1f) r[i] = len - sum;
     else r[i-1] += (len-sum);
     return r;
+  }
+
+  /** Compute start row and length of <code>i</code>-th fold from <code>nfolds</code>.
+   *
+   * @param nrows  number of rows
+   * @param nfolds  number of folds
+   * @param i fold which is intended to be computed
+   * @return return start row and number of rows for <code>i</code>-th fold.
+   */
+  public static final long[] nfold(long nrows, int nfolds, int i) {
+    assert i>=0 && i<nfolds;
+    long foldSize = nrows / nfolds;
+    long start = i * foldSize;
+    long size  = i!=nfolds-1 ? foldSize : foldSize + (nrows % nfolds);
+    return new long[] {start,size};
   }
 
   /** Generate given numbers of keys by suffixing key by given numbered suffix. */

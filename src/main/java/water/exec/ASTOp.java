@@ -99,6 +99,7 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTFactor());
     putPrefix(new ASTIsFactor());
     putPrefix(new ASTAnyFactor());   // For Runit testing
+    putPrefix(new ASTCanBeCoercedToLogical());
     putPrefix(new ASTAnyNA());
     putPrefix(new ASTIsTRUE());
     putPrefix(new ASTMTrans());
@@ -403,6 +404,29 @@ class ASTAnyFactor extends ASTUniPrefixOp {
     Vec[] v = fr.vecs();
     for(int i = 0; i < v.length; i++) {
       if(v[i].isEnum()) { d = 1; break; }
+    }
+    env.subRef(fr,skey);
+    env.poppush(d);
+  }
+}
+
+class ASTCanBeCoercedToLogical extends ASTUniPrefixOp {
+  ASTCanBeCoercedToLogical() { super(VARS1,new Type[]{Type.DBL,Type.ARY}); }
+  @Override String opStr() { return "canBeCoercedToLogical"; }
+  @Override ASTOp make() {return this;}
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    if(!env.isAry()) { env.poppush(0); return; }
+    Frame fr = env.popAry();
+    String skey = env.key();
+    double d = 0;
+    Vec[] v = fr.vecs();
+    for (Vec aV : v) {
+      if (aV.isInt()) {
+        if (aV.min() == 0 && aV.max() == 1) {
+          d = 1;
+          break;
+        }
+      }
     }
     env.subRef(fr,skey);
     env.poppush(d);
@@ -792,14 +816,18 @@ class ASTCbind extends ASTOp {
     }
 
     Frame fr = new Frame(new String[0],new Vec[0]);
+    int oldVecs = Integer.MAX_VALUE;
     for(int i = 0; i < argcnt-1; i++) {
       if( env.isAry(-argcnt+1+i) ) {
         String name = null;
         Frame fr2 = env.ary(-argcnt+1+i);
-        if( fr2.numCols()==1 && apply != null && (name = apply._args[i+1].argName()) != null )
-          fr.add(name,fr2.anyVec());
-        else
-          fr.add(fr2,true);
+        if(fr.numRows() == 0)
+          oldVecs = fr2.numCols();
+        fr.addCopy(fr2);
+//        if( fr2.numCols()==1 && apply != null && (name = apply._args[i+1].argName()) != null )
+//          fr.add(name,fr2.anyVec());
+//        else
+//          fr.add(fr2,true);
       } else {
         double d = env.dbl(-argcnt+1+i);
         // Vec v = fr.vecs()[0].makeCon(d);
@@ -808,6 +836,8 @@ class ASTCbind extends ASTOp {
         env.addRef(v);
       }
     }
+    for(int i = oldVecs; i < fr.vecs().length; ++i)
+      env.addRef(fr.vec(i));
     env._ary[env._sp-argcnt] = fr;  env._fcn[env._sp-argcnt] = null;
     env._sp -= argcnt-1;
     Arrays.fill(env._ary,env._sp,env._sp+(argcnt-1),null);
@@ -1773,7 +1803,7 @@ class ASTLs extends ASTOp {
   @Override String opStr() { return "ls"; }
   @Override ASTOp make() {return new ASTLs();}
   @Override void apply(Env env, int argcnt, ASTApply apply) {
-    for( Key key : H2O.globalKeySet(null) )
+    for( Key key : H2O.KeySnapshot.globalSnapshot().keys())
       if( key.user_allowed() && H2O.get(key) != null )
         env._sb.append(key.toString());
     // Pop the self-function and push a zero.

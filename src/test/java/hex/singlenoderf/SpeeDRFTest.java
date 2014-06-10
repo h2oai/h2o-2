@@ -45,10 +45,8 @@ public class SpeeDRFTest extends TestUtil {
     spdrf.ignored_cols = ignored_cols;
     spdrf.num_trees = 3;
     spdrf.max_depth = 30;
-    spdrf.stat_type = StatType.GINI;
+    spdrf.select_stat_type = Tree.SelectStatType.GINI;
     spdrf.seed = 42;
-
-
 
     Log.info("Invoking the SpeeDRF task.");
 
@@ -75,7 +73,7 @@ public class SpeeDRFTest extends TestUtil {
     spdrf.response = response;
     spdrf.num_trees = 8;
     spdrf.max_depth = 999;
-    spdrf.stat_type = StatType.ENTROPY;
+    spdrf.select_stat_type = Tree.SelectStatType.ENTROPY;
     spdrf.seed = 42;
 
     spdrf.invoke();
@@ -87,4 +85,9 @@ public class SpeeDRFTest extends TestUtil {
     m.delete();
     fr.delete();
   }
+
+//  public static void main(String[] Args) {
+//    kaggle_credit();
+//    covtype();
+//  }
 }

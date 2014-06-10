@@ -24,9 +24,17 @@ ridgeGLMNet <- function (X,y,L){
 
 #H2O RIDGE
 ridgeH2O <- function (X,y,L){
-        fitH2O=h2o.glm.FV(X, y, data=handmadeH2O, nfolds=0, alpha=0, lambda=L, family="gaussian", standardize=T)        
-    
-	betah <- fitH2O@model$normalized_coefficients
+  fitH2O=h2o.glm.FV(X, y, data=handmadeH2O, nfolds=0, alpha=0, lambda=L, family="gaussian", standardize=T)        
+  betah <- fitH2O@model$normalized_coefficients[hX]
+  
+  betah <- c(betah, fitH2O@model$normalized_coefficients[length(fitH2O@model$normalized_coefficients)])
+  names(betah) <- c(hX,"Intercept")    
+ 
+
+  print("DEBUG CHECKKING")
+  print(fitH2O@model$normalized_coefficients)
+  print(betah)
+ 
 	betah;
 }
 
@@ -51,7 +59,7 @@ coef
 ridgeAnalytical  <- function(X,y,L){
 	nobs <- dim(X)[1];
 	ncols <- dim(X)[2];
-	intercept <- c(1:nobs)/c(1:nobs) # ugly way to create vector of ones, don't know how to # do properly in R
+	intercept <- rep(1, nobs)
 	lMatrx <- diag(ncols+1);
 	lMatrx[ncols+1,ncols+1] <- 0; # do not penalize intercept
 	x <- cbind(as.matrix(X),intercept);
