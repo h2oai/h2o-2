@@ -6,17 +6,29 @@
 #           Print Confusion matrix and performance measures for test set
 #----------------------------------------------------------------------
 
-setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
+# Source setup code to define myIP and myPort and helper functions.
+# If you are having trouble running this, just set the condition to FALSE
+# and hardcode myIP and myPort.
+if (TRUE) {
+  # Set working directory so that the source() below works.
+  setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 
-if (FALSE) {
-    setwd("/Users/tomk/0xdata/ws/h2o/R/tests/testdir_demos")
+  if (FALSE) {
+      setwd("/Users/tomk/0xdata/ws/h2o/R/tests/testdir_demos")
+  }
+
+  source('../findNSourceUtils.R')
+  options(echo=TRUE)
+} else {
+  stop("need to hardcode ip and port")
+  # myIP = "127.0.0.1"
+  # myPort = 54321
+
+  library(h2o)
+  PASS_BANNER <- function() { cat("\nPASS\n\n") }
 }
 
-source('../findNSourceUtils.R')
-options(echo=TRUE)
-
-heading("BEGIN TEST")
-conn <- new("H2OClient", ip=myIP, port=myPort)
+conn <- h2o.init(ip=myIP, port=myPort, startH2O=FALSE)
 
 #uploading data file to h2o
 filePath <- "https://raw.github.com/0xdata/h2o/master/smalldata/airlines/AirlinesTrain.csv.zip"
@@ -39,8 +51,8 @@ print(air.gbm@model)
 air.gbm@model$auc
 
 #RF
-air.rf=h2o.randomForest.FV(x=myX,y=myY,data=air.train,ntree=10,
-                           depth=20,seed=12,importance=T,validation=air.valid)
+air.rf=h2o.randomForest(x=myX,y=myY,data=air.train,ntree=10,
+                        depth=20,seed=12,importance=T,validation=air.valid)
 print(air.rf@model)
 
 #uploading test file to h2o

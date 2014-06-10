@@ -822,6 +822,9 @@ public class Vec extends Iced {
    *
    */
   public static class VectorGroup extends Iced {
+    public static VectorGroup newVectorGroup(){
+      return new Vec(Vec.newKey(),(long[])null).group();
+    }
     // The common shared vector group for length==1 vectors
     public static VectorGroup VG_LEN1 = new VectorGroup();
     final int _len;
@@ -902,6 +905,30 @@ public class Vec extends Iced {
     @Override public int hashCode() {
       return _key.hashCode();
     }
+  }
+
+  /**
+   * Method to change the domain of the Vec.
+   *
+   * Can only be applied to factors (Vec with non-null domain) and
+   * domain can only be set to domain of the same or greater length.
+   *
+   * Updating the domain requires updating the Vec header in the K/V and since chunks cache Vec header references,
+   * need to execute distributed task to flush (null) those references).
+   *
+   * @param newDomain
+   */
+  public void changeDomain(String [] newDomain){
+    if(_domain == null)throw new RuntimeException("Setting a domain to a non-factor Vector, call as.Factor() instead.");
+    if(newDomain == null)throw new RuntimeException("Can not set domain to null. You have to convert the vec to numbers explicitly");
+    if(newDomain.length < _domain.length) throw new RuntimeException("Setting domain to incompatible size. New domain must be at least the same length!");
+    _domain = newDomain;
+    // update the vec header in the K/V
+    DKV.put(_key,this);
+    // now flush the cached vec header references (still pointing to the old guy)
+    new MRTask2(){
+      @Override public void map(Chunk c){c._vec = null;}
+    }.doAll(this);
   }
 
   /** Collect numeric domain of given vector */

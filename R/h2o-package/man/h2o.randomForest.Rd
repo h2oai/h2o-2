@@ -11,9 +11,9 @@ Performs random forest classification on a data set.
 \usage{
 ## Default method:
 h2o.randomForest(x, y, data, classification = TRUE, ntree = 50, depth = 20, 
-  sample.rate = 2/3, classwt = NULL, nbins = 100, seed = -1, importance = FALSE, 
-  validation, nodesize = 1, balance.classes = FALSE, max.after.balance.size = 5,
-  use_non_local = TRUE, version = 2)
+  sample.rate = 2/3, classwt = NULL, nbins = 100, seed = -1, nfolds = 0, 
+  importance = FALSE, validation, nodesize = 1, balance.classes = FALSE, 
+  max.after.balance.size = 5, use_non_local = TRUE, version = 2)
 
 ## Import to a ValueArray object:
 h2o.randomForest.VA(x, y, data, ntree = 50, depth = 20, sample.rate = 2/3, 
@@ -21,8 +21,8 @@ h2o.randomForest.VA(x, y, data, ntree = 50, depth = 20, sample.rate = 2/3,
 
 ## Import to a FluidVecs object:
 h2o.randomForest.FV(x, y, data, classification = TRUE, ntree = 50, depth = 20, 
-  sample.rate = 2/3, nbins = 100, seed = -1, importance = FALSE, validation, 
-  nodesize = 1, balance.classes = FALSE, max.after.balance.size = 5)
+  sample.rate = 2/3, nbins = 100, seed = -1, importance = FALSE, nfolds = 0,
+  validation, nodesize = 1, balance.classes = FALSE, max.after.balance.size = 5)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -59,8 +59,11 @@ An \code{\linkS4class{H2OParsedDataVA}} (\code{version = 1}) or \code{\linkS4cla
   \item{importance}{
   (Optional) A logical value indicating whether to calculate variable importance. Set to \code{FALSE} to speed up computations.
   }
+  \item{nfolds}{
+  (Optional) Number of folds for cross-validation. If \code{nfolds >= 2}, then \code{validation} must remain empty.
+}
   \item{validation}{
-  (Optional) An \code{\linkS4class{H2OParsedDataVA}} (\code{version = 1}) or \code{\linkS4class{H2OParsedData}} (\code{version = 2}) object indicating the validation dataset used to construct confusion matrix. If left blank, this defaults to the training data.}
+  (Optional) An \code{\linkS4class{H2OParsedDataVA}} (\code{version = 1}) or \code{\linkS4class{H2OParsedData}} (\code{version = 2}) object indicating the validation dataset used to construct confusion matrix. If left blank, this defaults to the training data when \code{nfolds = 0}.}
   \item{nodesize}{
   (Optional) Number of nodes to use for computation.
   }
