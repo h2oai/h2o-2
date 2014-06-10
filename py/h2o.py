@@ -1413,7 +1413,9 @@ class H2O(object):
                 'source': key,
                 'destination_key': key2,
                 'seed': None,
+                'cols': None,
                 'ignored_cols': None,
+                'ignored_cols_by_name': None,
                 'max_iter': None,
                 'normalize': None,
             }
@@ -1710,7 +1712,9 @@ class H2O(object):
             'b_max': None,
             'bootstrap_fraction': None,
             'seed': None,
+            'cols': None,
             'ignored_cols': None,
+            'ignored_cols_by_name': None,
         }
         browseAlso = kwargs.pop('browseAlso', False)
         check_params_update_kwargs(params_dict, kwargs, 'gap_statistic', print_params=True)
@@ -1733,6 +1737,7 @@ class H2O(object):
                        'source': data_key,
                        'response': None,
                        'cols': None,
+                       'ignored_cols': None,
                        'ignored_cols_by_name': None,
                        'classification': 1,
                        'validation': None,
@@ -1786,6 +1791,7 @@ class H2O(object):
                 'balance_classes': 1, 
                 'classification': 1,
                 'cols': None,
+                'ignored_cols': None,
                 'ignored_cols_by_name': None,
                 'importance': 1, # enable variable importance by default
                 'max_after_balance_size': 7,
@@ -2059,7 +2065,9 @@ class H2O(object):
             'destination_key': None,
             'source_key': None,
             'response': None,
+            'cols': None,
             'ignored_cols': None,
+            'ignored_cols_by_name': None,
             'classification': None,
             'laplace': None,
         }
@@ -2231,8 +2239,9 @@ class H2O(object):
             'ntrees': None,
             'max_depth': None,
             'min_rows': None,
-            'ignored_cols_by_name': None, # either this or cols..not both
             'cols': None,
+            'ignored_cols': None,
+            'ignored_cols_by_name': None, # either this or cols..not both
             'nbins': None,
             'classification': None,
             'score_each_iteration': None,
@@ -2264,7 +2273,9 @@ class H2O(object):
         params_dict = {
             'destination_key': None,
             'source': data_key,
+            'cols': None,
             'ignored_cols': None,
+            'ignored_col_names': None,
             'tolerance': None,
             'max_pc': None,
             'standardize': None,
@@ -2320,7 +2331,9 @@ class H2O(object):
             'source': key,
             'destination_key': None,
             'model': model,
+            'cols': None,
             'ignored_cols': None,
+            'ignored_col_name': None,
             'classification': None,
             'response': None,
             'max_rows': 0,
@@ -2349,7 +2362,9 @@ class H2O(object):
         params_dict = {
             'destination_key': None,
             'source': data_key,
+            'cols': None,
             'ignored_cols': None,
+            'ignored_cols_by_name': None,
             'validation': None,
             'classification': None,
             'response': None,
@@ -2397,7 +2412,9 @@ class H2O(object):
         params_dict = {
             'destination_key': None,
             'source': data_key,
+            'cols': None,
             'ignored_cols': None,
+            'ignored_cols_by_name': None,
             'validation': None,
             'classification': None,
             'response': None,
@@ -2572,7 +2589,9 @@ class H2O(object):
                 'source': key,
                 'destination_key': None,
                 'response': None,
+                'cols': None,
                 'ignored_cols': None,
+                'ignored_cols_by_name': None,
                 'max_iter': None,
                 'standardize': None,
                 'family': None,
@@ -2830,6 +2849,12 @@ class H2O(object):
         else:
             args += ["-jar", self.get_h2o_jar()]
 
+        if 1==1:
+            if self.hdfs_config:
+                args += [
+                    '-hdfs_config=' + self.hdfs_config
+                ]
+
         if beta_features:
             args += ["-beta"]
 
@@ -2890,10 +2915,11 @@ class H2O(object):
         ]
 
         # ignore the other -hdfs args if the config is used?
-        if self.hdfs_config:
-            args += [
-                '-hdfs_config ' + self.hdfs_config
-            ]
+        if 1==0:
+            if self.hdfs_config:
+                args += [
+                    '-hdfs_config=' + self.hdfs_config
+                ]
 
         if self.use_hdfs:
             args += [

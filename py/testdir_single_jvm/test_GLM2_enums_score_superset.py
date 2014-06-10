@@ -29,8 +29,6 @@ def write_syn_dataset(csvPathname, enumList, rowCount, colCount=1, SEED='1234567
         ri = round(r1.triangular(0,1,0.3), 0)
         rowData.append(ri)
         rowDataCsv = colSepChar.join(map(str,rowData)) + rowSepChar
-
-        rowDataCsv = colSepChar.join(map(str,rowData)) + rowSepChar
         dsf.write(rowDataCsv)
     dsf.close()
 
@@ -55,7 +53,6 @@ class Basic(unittest.TestCase):
 
     def test_GLM2_enums_score_superset(self):
         h2o.beta_features = True
-        print "FIX!: this should cause an error. We should detect that it's not causing an error/warning?"
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         n = 200
@@ -100,6 +97,10 @@ class Basic(unittest.TestCase):
             write_syn_dataset(csvScorePathname, enumListForScore, rowCount, colCount, SEEDPERFILE, 
                 colSepChar=colSepChar, rowSepChar=rowSepChar)
 
+            scoreDataKey = "score_" + hex_key
+            parseResult = h2i.import_parse(path=csvScorePathname, schema='put', hex_key=scoreDataKey, 
+                timeoutSecs=30, separator=colSepInt)
+
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key,
                 timeoutSecs=30, separator=colSepInt)
             print "Parse result['destination_key']:", parseResult['destination_key']
@@ -125,47 +126,10 @@ class Basic(unittest.TestCase):
             print "glm end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
-            scoreDataKey = "score_" + hex_key
-            parseResult = h2i.import_parse(path=csvScorePathname, schema='put', hex_key=scoreDataKey, 
-                timeoutSecs=30, separator=colSepInt)
-
             # Score *******************************
             # this messes up if you use case_mode/case_vale above
             predictKey = 'Predict.hex'
-            start = time.time()
-
-            predictResult = h2o_cmd.runPredict(
-                data_key=scoreDataKey,
-                model_key=modelKey,
-                destination_key=predictKey,
-                timeoutSecs=timeoutSecs)
-
-           # just get a predict and AUC on the same data. has to be binomial result
-            resultAUC = h2o.nodes[0].generate_auc(
-                thresholds=None, 
-                actual=scoreDataKey,
-                predict='Predict.hex',
-                vactual=y, 
-                vpredict=1)
-            auc = resultAUC['AUC']
-            self.assertAlmostEqual(auc, 0.5, delta=0.15, 
-                msg="actual auc: %s not close enough to 0.5" % auc)
-
-            predictCMResult = h2o.nodes[0].predict_confusion_matrix(
-                actual=scoreDataKey,
-                predict=predictKey,
-                vactual='C' + str(y+1),
-                vpredict='predict',
-                )
-
-            cm = predictCMResult['cm']
-
-            # These will move into the h2o_gbm.py
-            pctWrong = h2o_gbm.pp_cm_summary(cm);
-
-            print "\nTest\n==========\n"
-            print h2o_gbm.pp_cm(cm)
-
+            h2o_cmd.runGLM2Score(dataKey=scoreDataKey, modelKey=modelKey, vactual=y, vpredict=1, expectedAuc=0.5)
 
 
 if __name__ == '__main__':
