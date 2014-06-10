@@ -1861,7 +1861,6 @@ class H2O(object):
             # if we want to do noPoll, we have to name the model, so we know what to ask for when we do the completion view
             # HACK: wait more for first poll?
             time.sleep(5)
-            print "right ebfore call to poll_url, timeoutSec: ", timeoutSecs
             rfView = self.poll_url(rf, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                                    initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
                                    noise=noise, benchmarkLogging=benchmarkLogging, noPrint=noPrint)

@@ -24,11 +24,10 @@ def glm_doit(self, csvFilename, bucket, csvPathname, timeoutSecs=30):
     print "\nStarting GLM of", csvFilename
     parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, hex_key=csvFilename + ".hex", schema='put', timeoutSecs=10)
     y = "10"
-    x = ""
     # Took n_folds out, because GLM doesn't include n_folds time and it's slow
     # wanted to compare GLM time to my measured time
     # hastie has two values, 1 and -1. need to use case for one of them
-    kwargs = {'x': x, 'y':  y, 'case': -1}
+    kwargs = {'response':  y, 'family': 'binomial'}
 
     start = time.time()
     glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
@@ -37,15 +36,13 @@ def glm_doit(self, csvFilename, bucket, csvPathname, timeoutSecs=30):
 
     # compare this glm to the first one. since the files are replications, the results
     # should be similar?
-    GLMModel = glm['GLMModel']
-    validationsList = glm['GLMModel']['validations']
-    validations = validationsList[0]
-    # validations['err']
+    glm_model = glm['glm_model']
+    validation = glm_model['submodels'][0]['validation']
 
-    if self.validations1:
-        h2o_glm.compareToFirstGlm(self, 'err', validations, self.validations1)
+    if self.validation1:
+        h2o_glm.compareToFirstGlm(self, 'err', validation, self.validation1)
     else:
-        self.validations1 = copy.deepcopy(validations)
+        self.validation1 = copy.deepcopy(validation)
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -66,8 +63,9 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    validations1 = {}
-    def test_1mx10_hastie_10_2_cat_and_shuffle(self):
+    validation1 = {}
+    def test_GLM2_hastie_shuffle(self):
+        h2o.beta_features = True
         # gunzip it and cat it to create 2x and 4x replications in SYNDATASETS_DIR
         # FIX! eventually we'll compare the 1x, 2x and 4x results like we do
         # in other tests. (catdata?)

@@ -29,21 +29,18 @@
                 "_caseMode": { "type": "string" },
                 "_caseVal": { "type": "number" },
                 "_dataKey": { "type": "string" },
-                "_domains": { "type": "array", "items": 
-                    { "type": "string" }
+                "_domains": { "type": "array", "items": { "type": "string" }
                 },
                 "_key": { "type": "string", },
                 "_modelClassDist": { "type": "string", },
                 "_priorClassDist": { "type": "string", },
-                "_names": { "type": "array", "items": 
-                    { "type": "string" }
+                "_names": { "type": "array", "items": { "type": "string" }
                 },
                 "alpha": { "type": "number" },
                 "best_lambda_idx": { "type": "number" }
                 "beta_eps": { "type": "number" },
                 "lambda_max": { "type": "number" },
-                "coefficient_names": { "type": "array", "items": 
-                    { "type": "string" }
+                "coefficient_names": { "type": "array", "items": { "type": "string" }
                 },
                 "data_info": { "type": "null" },
                 "glm": {
@@ -63,15 +60,9 @@
                 # number of submodels = # of lambdas
                 "submodels": { "type": "array", "items": {
                     "type": "object", "properties": {
-                        "beta": { "type": "array", "items": 
-                            { "type": "number" }
-                        },
-                        "norm_beta": { "type": "array", "items": 
-                            { "type": "number" }
-                        },
-                        "idxs": { "type": "array", "items": 
-                            { "type": "number" }
-                        },
+                        "beta": { "type": "array", "items": { "type": "number" } },
+                        "norm_beta": { "type": "array", "items": { "type": "number" } },
+                        "idxs": { "type": "array", "items": { "type": "number" } },
                         "iteration": { "type": "number" },
                         "run_time": { "type": "number", },
                         "validation": { "type": "object", "properties": {
@@ -79,19 +70,15 @@
                             # number of cms = # of thresholds
                             "_cms": { "type": "array", "items": { 
                                 "type": "object", "properties": {
-                                    "_arr": { "type": "array", "items": 
-                                        { "type": "array" }
-                                    }
-                                }
-                                }
+                                    "_arr": { "type": "array", "items": { "type": "array" } }
+                                } }
                             },
                             "_glm": { "type": "object", "properties": {
                                 "family": { "type": "string" },
                                 "link": { "type": "string" },
                                 "tweedie_link_power": { "type": "number" },
                                 "tweedie_variance_power": { "type": "number" }
-                            }
-                            },
+                            } },
                             "_rank": { "type": "number" },
                             "_ymu": { "type": "number" },
                             "aic": { "type": "number" },
@@ -102,8 +89,7 @@
                             "nobs": { "type": "number" },
                             "null_deviance": { "type": "number" },
                             "residual_deviance": { "type": "number" }
-                        }
-                        }
+                        } }
                     }
                 }
                 },
