@@ -16,29 +16,29 @@ import h2o, h2o_cmd, h2o_glm, h2o_util, h2o_hosts, h2o_import as h2i
 def glm_doit(self, csvFilename, bucket, csvPathname, timeoutSecs=30):
     print "\nStarting GLM of", csvFilename
     parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, hex_key=csvFilename + ".hex", schema='put', timeoutSecs=30)
-    y = "10"
-    x = ""
+    y = 10
     # Took n_folds out, because GLM doesn't include n_folds time and it's slow
     # wanted to compare GLM time to my measured time
     # hastie has two values 1,-1. need to specify case
-    kwargs = {'x': x, 'y':  y, 'case': -1, 'thresholds': 0.5}
+    kwargs = {'response':  y, 'alpha': 0, 'family': 'binomial'}
+# ToInt2.html?src_key=Twitter2DB.hex&column_index=2
+# ToEnum2.html?src_key=Twitter2DB.hex&column_index=2
 
     start = time.time()
+    # change the 1/-1 to enums
+    h2o.nodes[0].to_enum(src_key=parseResult['destination_key'], column_index=y+1)
     glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
     print "GLM in",  (time.time() - start), "secs (python)"
     h2o_glm.simpleCheckGLM(self, glm, "C8", **kwargs)
 
     # compare this glm to the first one. since the files are replications, the results
     # should be similar?
-    GLMModel = glm['GLMModel']
-    validationsList = glm['GLMModel']['validations']
-    validations = validationsList[0]
-    # validations['err']
+    validation = glm['glm_model']['submodels'][0]['validation']
 
-    if self.validations1:
-        h2o_glm.compareToFirstGlm(self, 'err', validations, self.validations1)
+    if self.validation1:
+        h2o_glm.compareToFirstGlm(self, 'auc', validation, self.validation1)
     else:
-        self.validations1 = copy.deepcopy(validations)
+        self.validation1 = copy.deepcopy(validation)
 
 
 class Basic(unittest.TestCase):
@@ -60,9 +60,10 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    validations1 = {}
+    validation1 = {}
 
-    def test_GLM_hastie(self):
+    def test_GLM2_hastie(self):
+        h2o.beta_features = True
         # gunzip it and cat it to create 2x and 4x replications in SYNDATASETS_DIR
         # FIX! eventually we'll compare the 1x, 2x and 4x results like we do
         # in other tests. (catdata?)

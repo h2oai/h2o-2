@@ -1604,6 +1604,26 @@ class H2O(object):
         verboseprint("\n rebalance result:", dump_json(a))
         return a
 
+    def to_int(self, timeoutSecs=60, **kwargs):
+        params_dict = {
+            'src_key': None,
+            'column_index': None, # ugh. takes 1 based indexing
+        }
+        params_dict.update(kwargs)
+        a = self.__do_json_request('2/ToInt2.json', params=params_dict, timeout=timeoutSecs)
+        verboseprint("\n to_int result:", dump_json(a))
+        return a
+
+    def to_enum(self, timeoutSecs=60, **kwargs):
+        params_dict = {
+            'src_key': None,
+            'column_index': None, # ugh. takes 1 based indexing
+        }
+        params_dict.update(kwargs)
+        a = self.__do_json_request('2/ToEnum2.json', params=params_dict, timeout=timeoutSecs)
+        verboseprint("\n to_int result:", dump_json(a))
+        return a
+
     # There is also a RemoveAck in the browser, that asks for confirmation from
     # the user. This is after that confirmation.
     # UPDATE: ignore errors on remove..key might already be gone due to h2o removing it now
