@@ -682,7 +682,7 @@ public abstract class Neurons {
         for (int row = 0; row < rows; row++) {
           float g = _e.get(row) * (1f - _a.get(row) * _a.get(row));
           //last layer of auto-encoder: gradient is given by MSE
-          if (_index == _minfo.get_params().hidden.length+1) {
+          if (_minfo.get_params().autoencoder && _index == _minfo.get_params().hidden.length) {
             g = _previous._previous._a.get(row) - _a.get(row);
           }
           bprop(row, g, r, m);
