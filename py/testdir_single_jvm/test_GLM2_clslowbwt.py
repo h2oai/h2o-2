@@ -20,7 +20,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_clslowbwt(self):
+    def test_GLM2_clslowbwt(self):
+        h2o.beta_features = True
         # filename, y, timeoutSecs
         # this hangs during parse for some reason
         csvFilenameList = [
@@ -30,7 +31,7 @@ class Basic(unittest.TestCase):
         trial = 0
         for (csvFilename, y, timeoutSecs) in csvFilenameList:
             print "\n" + csvFilename
-            kwargs = {'n_folds': 0, 'family': 'binomial', 'link': 'familyDefault', 'y': y}
+            kwargs = {'n_folds': 0, 'family': 'binomial', 'response': y}
             start = time.time()
             parseResult = h2i.import_parse(bucket='smalldata', path='logreg/umass_statdata/' + csvFilename, schema='put')
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)

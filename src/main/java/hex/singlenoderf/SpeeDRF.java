@@ -32,7 +32,7 @@ public class SpeeDRF extends Job.ValidatedJob {
   public int max_depth = 20;
 
   @API(help = "Split Criterion Type", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
-  public Tree.StatType stat_type = Tree.StatType.ENTROPY;
+  public Tree.SelectStatType select_stat_type = Tree.SelectStatType.ENTROPY;
 
   @API(help = "Class Weights (0.0,0.2,0.4,0.6,0.8,1.0)", filter = Default.class, displayName = "class weights", json = true, importance = ParamImportance.SECONDARY)
   public double[] class_weights = null;
@@ -71,6 +71,8 @@ public class SpeeDRF extends Job.ValidatedJob {
 
   private boolean regression;
 
+  private Tree.StatType stat_type;
+
   /** Return the query link to this page */
 //  public static String link(Key k, String content) {
 //    RString rs = new RString("<a href='RF.query?%key_param=%$key'>%content</a>");
@@ -85,13 +87,17 @@ public class SpeeDRF extends Job.ValidatedJob {
   @Override protected void queryArgumentValueSet(Argument arg, java.util.Properties inputArgs) {
     super.queryArgumentValueSet(arg, inputArgs);
 
+    if (arg._name.equals("classification")) {
+      arg.setRefreshOnChange();
+    }
+
     // Regression is selected if classification is false and vice-versa.
     if (arg._name.equals("classification")) {
       regression = !this.classification;
     }
 
     // Regression only accepts the MSE stat type.
-    if (arg._name.equals("stat_type")) {
+    if (arg._name.equals("select_stat_type")) {
       if(regression) {
         arg.disable("Minimize MSE for regression.");
       }
@@ -124,6 +130,14 @@ public class SpeeDRF extends Job.ValidatedJob {
         arg.disable("No strata for regression.");
       }
     }
+
+    // Variable Importance disabled in SpeeDRF regression currently
+    if (arg._name.equals("importance")) {
+      if (regression) {
+        arg.disable("Variable Importance not supported in SpeeDRF regression.");
+      }
+    }
+
   }
 
   @Override protected void execImpl() {
@@ -156,7 +170,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       tsk._rfmodel = model;
       tsk._drf = this;
       tsk.validateInputData();
-      tsk.invokeOnAllNodes(); //this is bad when chunks aren't on each node!
+      tsk.invokeOnAllNodes();
     }
     catch(JobCancelledException ex) {
       Log.info("Random Forest building was cancelled.");
@@ -249,6 +263,17 @@ public class SpeeDRF extends Job.ValidatedJob {
     try {
       source.read_lock(self());
 
+      //Map the SelectStatType to the actual StatType
+      if (regression) {
+        stat_type = Tree.StatType.MSE;
+      } else {
+        if (select_stat_type == Tree.SelectStatType.ENTROPY) {
+          stat_type = Tree.StatType.ENTROPY;
+        } else {
+          stat_type = Tree.StatType.GINI;
+        }
+      }
+
       // Initialize classification specific model parameters
       if(!regression) {
 
@@ -267,7 +292,7 @@ public class SpeeDRF extends Job.ValidatedJob {
         class_weights = checkClassWeights(class_weights);
 
         // If MSE is chosen for regression, then throw unimpl
-        if (stat_type == Tree.StatType.MSE) throw H2O.unimpl();
+        if (stat_type == Tree.StatType.MSE) throw new IllegalArgumentException("Got a bad statistic type. Must use MSE for regression only.");
 
 
       // Initialize regression specific model parameters
@@ -278,10 +303,12 @@ public class SpeeDRF extends Job.ValidatedJob {
         strata_samples = null;
 
         // The only acceptable stat type is MSE
-        if (stat_type != Tree.StatType.MSE) throw H2O.unimpl();
+        if (stat_type != Tree.StatType.MSE) {
+          stat_type = Tree.StatType.MSE;
+        }
 
         //TODO: Variable importance in regression not currently supported
-        if (importance) throw H2O.unimpl();
+        if (importance) throw new IllegalArgumentException("Variable Importance for SpeeDRF regression not currently supported.");
       }
 
       // Generate a new seed by default.
@@ -290,17 +317,17 @@ public class SpeeDRF extends Job.ValidatedJob {
       }
 
       // Prepare the train/test data sets based on the user input for the model.
-      Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, false, false, false);
+      Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, !regression /*toEnum is TRUE if regression is FALSE*/, false, false);
       Frame test = null;
       if (validation != null) {
-        test = FrameTask.DataInfo.prepareFrame(validation, validation.vecs()[source.find(response)], ignored_cols, false, false, false);
+        test = FrameTask.DataInfo.prepareFrame(validation, validation.vecs()[source.find(response)], ignored_cols, !regression, false, false);
       }
 
       // Set the model parameters
       SpeeDRFModel model = new SpeeDRFModel(dest(), source._key, train, this);
       int csize = H2O.CLOUD.size();
       model.fr = train;
-      model.response = response;
+      model.response = regression ? train.lastVec() : train.lastVec().toEnum();
       model.t_keys = new Key[0];
       model.time = 0;
       model.local_forests = new Key[csize][];
@@ -330,23 +357,26 @@ public class SpeeDRF extends Job.ValidatedJob {
       model.weights = regression ? null : class_weights;
       model.time = 0;
       model.N = num_trees;
-      model.strata_samples = new float[strata_samples.length];
-      for (int i = 0; i < strata_samples.length; i++) model.strata_samples[i] = (float) strata_samples[i];
+      model.strata_samples = regression ? null : new float[strata_samples.length];
+
+      if (!regression) {
+        for (int i = 0; i < strata_samples.length; i++) model.strata_samples[i] = (float) strata_samples[i];
+      }
 
       if (mtry == -1) {
         if(!regression) {
 
-          //Classification uses the square root of the number of features by default
+          // Classification uses the square root of the number of features by default
           model.mtry = (int) Math.floor(Math.sqrt(source.numCols()));
         } else {
 
-          //Regression uses about a third of the features by default
+          // Regression uses about a third of the features by default
           model.mtry = (int) Math.floor((float) source.numCols() / 3.0f);
         }
 
       } else {
 
-        //The user specified mtry
+        // The user specified mtry
         model.mtry = mtry;
       }
 

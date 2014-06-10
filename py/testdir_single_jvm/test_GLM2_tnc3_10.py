@@ -37,7 +37,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_tnc3_10(self):
+    def test_GLM2_tnc3_10(self):
+        h2o.beta_features = True
         csvFilename = 'tnc3_10.csv'
         print "\n" + csvFilename
         hex_key = "tnc3.hex"
@@ -57,7 +58,7 @@ class Basic(unittest.TestCase):
 
         if (1==1):
             start = time.time()
-            kwargs = {'y': 13, 'n_folds': 6}
+            kwargs = {'response': 13, 'n_folds': 6}
             # hmm. maybe we should update to use key as input
             # in case exec is used to change the parseResult
             # in any case, the destination_key in parseResult was what was updated
@@ -80,7 +81,7 @@ class Basic(unittest.TestCase):
 
         if (1==1):
             start = time.time()
-            kwargs = {'y': 13, 'n_folds': 6}
+            kwargs = {'response': 13, 'n_folds': 6}
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=300, **kwargs)
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
             print "glm end on ", csvFilename, 'took', time.time() - start, 'seconds'

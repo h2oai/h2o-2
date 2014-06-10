@@ -105,10 +105,7 @@ class Basic(unittest.TestCase):
                     h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
                 else:
                     execExpr="A.hex=%s" % (trainKey)
-                    h2e.exec_expr(execExp=execExpxpr="A.hex=%s;A.hex[,%s]=(A.hex[,%s]==%s)" % (trainKey, y+1, y+1, c)
                     h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
- timeoutSecs=30)
-
                     execExpr="A.hex[,%s]=(A.hex[,%s]==%s)" % (y+1, y+1, c)
                     h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
 
