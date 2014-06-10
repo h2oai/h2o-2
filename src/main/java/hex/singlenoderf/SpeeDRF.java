@@ -32,7 +32,7 @@ public class SpeeDRF extends Job.ValidatedJob {
   public int max_depth = 20;
 
   @API(help = "Split Criterion Type", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
-  public Tree.StatType stat_type = Tree.StatType.ENTROPY;
+  public Tree.SelectStatType select_stat_type = Tree.SelectStatType.ENTROPY;
 
   @API(help = "Class Weights (0.0,0.2,0.4,0.6,0.8,1.0)", filter = Default.class, displayName = "class weights", json = true, importance = ParamImportance.SECONDARY)
   public double[] class_weights = null;
@@ -71,6 +71,8 @@ public class SpeeDRF extends Job.ValidatedJob {
 
   private boolean regression;
 
+  private Tree.StatType stat_type;
+
   /** Return the query link to this page */
 //  public static String link(Key k, String content) {
 //    RString rs = new RString("<a href='RF.query?%key_param=%$key'>%content</a>");
@@ -85,13 +87,17 @@ public class SpeeDRF extends Job.ValidatedJob {
   @Override protected void queryArgumentValueSet(Argument arg, java.util.Properties inputArgs) {
     super.queryArgumentValueSet(arg, inputArgs);
 
+    if (arg._name.equals("classification")) {
+      arg.setRefreshOnChange();
+    }
+
     // Regression is selected if classification is false and vice-versa.
     if (arg._name.equals("classification")) {
       regression = !this.classification;
     }
 
     // Regression only accepts the MSE stat type.
-    if (arg._name.equals("stat_type")) {
+    if (arg._name.equals("select_stat_type")) {
       if(regression) {
         arg.disable("Minimize MSE for regression.");
       }
@@ -124,6 +130,14 @@ public class SpeeDRF extends Job.ValidatedJob {
         arg.disable("No strata for regression.");
       }
     }
+
+    // Variable Importance disabled in SpeeDRF regression currently
+    if (arg._name.equals("importance")) {
+      if (regression) {
+        arg.disable("Variable Importance not supported in SpeeDRF regression.");
+      }
+    }
+
   }
 
   @Override protected void execImpl() {
@@ -156,7 +170,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       tsk._rfmodel = model;
       tsk._drf = this;
       tsk.validateInputData();
-      tsk.invokeOnAllNodes(); //this is bad when chunks aren't on each node!
+      tsk.invokeOnAllNodes();
     }
     catch(JobCancelledException ex) {
       Log.info("Random Forest building was cancelled.");
@@ -248,6 +262,17 @@ public class SpeeDRF extends Job.ValidatedJob {
   public SpeeDRFModel initModel() {
     try {
       source.read_lock(self());
+
+      //Map the SelectStatType to the actual StatType
+      if (regression) {
+        stat_type = Tree.StatType.MSE;
+      } else {
+        if (select_stat_type == Tree.SelectStatType.ENTROPY) {
+          stat_type = Tree.StatType.ENTROPY;
+        } else {
+          stat_type = Tree.StatType.GINI;
+        }
+      }
 
       // Initialize classification specific model parameters
       if(!regression) {

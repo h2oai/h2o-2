@@ -64,8 +64,6 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   @API(help = "Variable Importance")                                      public VarImp varimp;
   /* Regression or Classification */                                      boolean regression;
 
-
-
   /**
    * Extra helper variables.
    */
@@ -121,7 +119,6 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   }
 
   public static SpeeDRFModel make(SpeeDRFModel old, Key tkey, int nodeIdx) {
-    boolean cm_update = false;
 
     // Create a new model for atomic update
     SpeeDRFModel m = (SpeeDRFModel)old.clone();

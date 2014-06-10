@@ -234,7 +234,7 @@ public class CMTask extends MRTask2<CMTask> {
       _matrix = computeCM(votes, chks, false /*Do the _cms once*/); // Make a confusion matrix for this chunk
       if (localVotes!=null) {
         _localMatrices = new CM[H2O.CLOUD.size()];
-        _localMatrices[H2O.SELF.index()] = computeCM(localVotes, chks, true /*Don't the _cms again!*/);
+        _localMatrices[H2O.SELF.index()] = computeCM(localVotes, chks, true /*Don't compute the _cms again!*/);
       }
     }
   }
@@ -279,7 +279,7 @@ public class CMTask extends MRTask2<CMTask> {
         if (ept1.length < ept2.length) ept1 = Arrays.copyOf(ept1, ept2.length);
         for (int i = 0; i < ept2.length; i++) ept1[i] += ept2[i];
       }
-      
+
       if (_cms!=null)
         for (int i = 0; i < _cms.length; i++) Utils.add(_cms[i], drt._cms[i]);
 
@@ -564,7 +564,7 @@ public class CMTask extends MRTask2<CMTask> {
 //      if (err == 0) {
 //        err = 1 - 1.f / _N;
 //      }
-      _sum += err * err;
+      if (!local) _sum += err * err;
       if(_N == 2 && !local) { // Binomial classification -> compute AUC, draw ROC
         float snd = fs[1] / sum;// for validation dataset sum is always 1
         for(int i = 0; i < ModelUtils.DEFAULT_THRESHOLDS.length; i++) {

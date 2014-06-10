@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 
 public class Tree extends H2OCountedCompleter {
+  static public enum SelectStatType {ENTROPY, GINI};
   static public enum StatType { ENTROPY, GINI, MSE};
 
   /** Left and right seed initializer number for statistics */
