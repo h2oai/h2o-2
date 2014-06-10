@@ -295,7 +295,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, !regression /*toEnum is TRUE if regression is FALSE*/, false, false);
       Frame test = null;
       if (validation != null) {
-        test = FrameTask.DataInfo.prepareFrame(validation, validation.vecs()[source.find(response)], ignored_cols, false, false, false);
+        test = FrameTask.DataInfo.prepareFrame(validation, validation.vecs()[source.find(response)], ignored_cols, !regression, false, false);
       }
 
       // Set the model parameters
