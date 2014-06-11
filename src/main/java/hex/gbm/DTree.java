@@ -1035,7 +1035,7 @@ public class DTree extends Iced {
 
       boolean featureAllowed = isFeatureAllowed();
       if (! featureAllowed) {
-        sb.append("<br/><div id=\'javaModelWarningBlock\' class=\"alert\" style=\"background:#eedd20;color:#636363;text-shadow:none;\">);";
+        sb.append("<br/><div id=\'javaModelWarningBlock\' class=\"alert\" style=\"background:#eedd20;color:#636363;text-shadow:none;\">);"
         sb.append("<b>You have requested a premium feature (> 10 trees) and your H<sub>2</sub>O software is unlicensed.</b><br/><br/>");
         sb.append("Please enter your email address below, and we will send you a trial license shortly.<br/>");
         sb.append("This will also temporarily enable downloading Java models.<br/>");
