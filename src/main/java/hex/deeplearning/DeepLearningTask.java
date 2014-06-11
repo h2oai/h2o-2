@@ -141,8 +141,10 @@ public class DeepLearningTask extends FrameTask<DeepLearningTask> {
     }
 
     //copy parameters from NN, and set previous/input layer links
-    for( int i = 0; i < neurons.length; i++ )
+    for( int i = 0; i < neurons.length; i++ ) {
       neurons[i].init(neurons, i, params, minfo, training);
+      neurons[i]._input = neurons[0];
+    }
 
 //    // debugging
 //    for (Neurons n : neurons) Log.info(n.toString());
@@ -159,8 +161,9 @@ public class DeepLearningTask extends FrameTask<DeepLearningTask> {
       if (minfo.get_params().autoencoder) {
         neurons[neurons.length - 1].fprop(seed, training);
         if (training) {
-          for (int i = 1; i < neurons.length - 1; i++)
-          neurons[neurons.length - 1].bprop();
+          for (int i=neurons.length-1; i>0; --i) {
+            neurons[i].bprop();
+          }
         }
       } else {
         if (minfo.get_params().classification) {

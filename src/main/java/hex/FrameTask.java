@@ -72,6 +72,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     public Frame _adaptedFrame;
     public int _responses; // number of responses
     public boolean _standardize;
+    public boolean _normalize;
     public boolean _standardize_response;
     public boolean _useAllFactorLevels;
     public int _nums;
@@ -96,6 +97,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     private DataInfo(DataInfo dinfo, int foldId, int nfolds){
       assert dinfo._catLvls == null:"Should not be called with filtered levels (assuming the selected levels may change with fold id) ";
       _standardize = dinfo._standardize;
+      _normalize = dinfo._normalize;
       _standardize_response = dinfo._standardize_response;
       _responses = dinfo._responses;
       _nums = dinfo._nums;
@@ -112,10 +114,16 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       _catLvls = null;
     }
     public DataInfo(Frame fr, int hasResponses, boolean useAllFactorLvls, double [] normSub, double [] normMul) {
-      this(fr,hasResponses,useAllFactorLvls, normSub,normMul,null,null);
+      this(fr,hasResponses,useAllFactorLvls, normSub,normMul,true /*standardize, don't normalize*/, null,null);
+    }
+    public DataInfo(Frame fr, int hasResponses, boolean useAllFactorLvls, double [] normSub, double [] normMul, boolean standardize) {
+      this(fr,hasResponses,useAllFactorLvls, normSub,normMul,standardize, null,null);
     }
     public DataInfo(Frame fr, int hasResponses, boolean useAllFactorLvls, double [] normSub, double [] normMul, double [] normRespSub, double [] normRespMul){
-      this(fr,hasResponses,useAllFactorLvls,normSub != null && normMul != null, normRespSub != null && normRespMul != null);
+      this(fr, hasResponses, useAllFactorLvls, normSub, normMul, true /*standardize, don't normalize*/, normRespSub, normRespMul);
+    }
+    public DataInfo(Frame fr, int hasResponses, boolean useAllFactorLvls, double [] normSub, double [] normMul, boolean standardize, double [] normRespSub, double [] normRespMul){
+      this(fr,hasResponses,useAllFactorLvls,standardize && normSub != null && normMul != null, !standardize && normSub != null && normMul != null, normRespSub != null && normRespMul != null);
       assert (normSub == null) == (normMul == null);
       assert (normRespSub == null) == (normRespMul == null);
       if(normSub != null) {
@@ -240,12 +248,15 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     }
 
     public DataInfo(Frame fr, int nResponses, boolean useAllFactors, boolean standardize) {
-      this(fr, nResponses, useAllFactors, standardize, false);
+      this(fr, nResponses, useAllFactors, standardize, !standardize, false);
     }
 
+    public DataInfo(Frame fr, int nResponses, boolean useAllFactors, boolean standardize, boolean standardizeResponse) {
+      this(fr, nResponses, useAllFactors, standardize, !standardize, standardizeResponse);
+    }
 
     //new DataInfo(f,catLvls, _responses, _standardize, _standardize_response);
-    private DataInfo(Frame fr, int [][] catLevels, int responses, boolean standardize, boolean standardizeResponse, int nfolds, int foldId){
+    private DataInfo(Frame fr, int[][] catLevels, int responses, boolean standardize, boolean normalize, boolean standardizeResponse, int foldId, int nfolds){
       _adaptedFrame = fr;
       _catOffsets = MemoryManager.malloc4(catLevels.length+1);
       int s = 0;
@@ -265,6 +276,14 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         for(int i = 0; i < _nums; ++i){
           Vec v = fr.vec(catLevels.length+i);
           _normMul[i] = (v.sigma() != 0)?1.0/v.sigma():1.0;
+          _normSub[i] = v.mean();
+        }
+      } else if((_normalize = normalize) && _nums > 0){
+        _normMul = MemoryManager.malloc8d(_nums);
+        _normSub = MemoryManager.malloc8d(_nums);
+        for(int i = 0; i < _nums; ++i){
+          Vec v = fr.vec(catLevels.length+i);
+          _normMul[i] = (v.max() - v.min() > 0)?1.0/(v.max() - v.min()):1.0;
           _normSub[i] = v.mean();
         }
       } else {
@@ -288,9 +307,11 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       _nfolds = nfolds;
       _foldId = foldId;
     }
-    public DataInfo(Frame fr, int nResponses, boolean useAllFactorLevels, boolean standardize, boolean standardize_response){
+    public DataInfo(Frame fr, int nResponses, boolean useAllFactorLevels, boolean standardize, boolean normalize, boolean standardize_response){
+      assert !(standardize && normalize) : "Can only either standardize or normalize, not both.";
       _nfolds = _foldId = 0;
       _standardize = standardize;
+      _normalize = normalize;
       _standardize_response = standardize_response;
       _responses = nResponses;
       _useAllFactorLevels = useAllFactorLevels;
@@ -327,7 +348,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         names[i] = fr._names[cats[i]];
         _catOffsets[i+1] = (len += v.domain().length - (useAllFactorLevels?0:1));
       }
-      if(standardize){
+      if(standardize || normalize){
         _normSub = MemoryManager.malloc8d(nnums);
         _normMul = MemoryManager.malloc8d(nnums); Arrays.fill(_normMul, 1);
       } else _normSub = _normMul = null;
@@ -337,6 +358,9 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         if(standardize){
           _normSub[i] = v.mean();
           _normMul[i] = v.sigma() != 0 ? 1.0/v.sigma() : 1.0;
+        } else if (normalize) {
+          _normSub[i] = v.mean();
+          _normMul[i] = (v.max() - v.min() > 0)?1.0/(v.max() - v.min()):1.0;
         }
       }
 
@@ -394,7 +418,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       Frame f = new Frame(_adaptedFrame.names().clone(),_adaptedFrame.vecs().clone());
       if(ignoredCnt > 0) f.remove(Arrays.copyOf(ignoredCols,ignoredCnt));
       assert catLvls.length < f.numCols():"cats = " + catLvls.length + " numcols = " + f.numCols();
-      return new DataInfo(f,catLvls, _responses, _standardize, _standardize_response, _nfolds, _foldId);
+      return new DataInfo(f,catLvls, _responses, _standardize, _normalize, _standardize_response, _foldId, _nfolds);
     }
     public String toString(){
       return "";

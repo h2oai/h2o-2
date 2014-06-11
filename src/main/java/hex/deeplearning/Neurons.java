@@ -59,6 +59,7 @@ public abstract class Neurons {
    * References for feed-forward connectivity
    */
   public Neurons _previous;
+  public Neurons _input;
   DeepLearningModel.DeepLearningModelInfo _minfo; //reference to shared model info
   public Matrix _w;
   public DenseVector _b;
@@ -686,7 +687,8 @@ public abstract class Neurons {
           float g = _e.get(row) * (1f - _a.get(row) * _a.get(row));
           //last layer of auto-encoder: gradient is given by MSE
           if (_minfo.get_params().autoencoder && _index == _minfo.get_params().hidden.length) {
-            g = _previous._previous._a.get(row) - _a.get(row);
+            if (params.loss != Loss.MeanSquare) throw new UnsupportedOperationException("Auto-Encoder is only implemented for MeanSquare error.");
+            g = (_input._a.get(row) - _a.get(row)); //target - activation
           }
           bprop(row, g, r, m);
         }

@@ -35,10 +35,11 @@ public class DeepLearningAutoEncoderTest extends TestUtil {
     p.adaptive_rate = true;
 //    p.rate = 1e-4;
     p.activation = DeepLearning.Activation.Tanh;
+    p.loss = DeepLearning.Loss.MeanSquare;
 //    p.initial_weight_distribution = DeepLearning.InitialWeightDistribution.Normal;
 //    p.initial_weight_scale = 1e-3;
-    p.epochs = 10000;
-    p.force_load_balance = false; //keep just 1 chunk for reproducibility
+    p.epochs = 1000;
+    p.force_load_balance = true; //keep just 1 chunk for reproducibility
     p.invoke();
 
     DeepLearningModel mymodel = UKV.get(p.dest());
