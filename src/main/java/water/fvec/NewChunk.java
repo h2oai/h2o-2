@@ -98,7 +98,6 @@ public class NewChunk extends Chunk {
         assert _ls==null && _xs==null;
         for( int i = 0; i < _len; ++i) if( Double.isNaN(_ds[i]) ) nas++; else if( _ds[i]!=0 ) nzs++;
       } else {
-        assert _ds==null;
         if( _ls != null )
           for( int i=0; i<_len; i++ )
             if( isNA2(i) ) nas++;
@@ -129,8 +128,7 @@ public class NewChunk extends Chunk {
   protected final boolean isEnum(int idx) {
     if(_id == null)return isEnum2(idx);
     int j = Arrays.binarySearch(_id,0,_len,idx);
-    if(j < 0)return false;
-    return isEnum2(j);
+    return j>=0 && isEnum2(j);
   }
 
   public void addEnum(int e) {append2(e,Integer.MIN_VALUE+1);}
@@ -296,14 +294,6 @@ public class NewChunk extends Chunk {
   }
   public void close(Futures fs) { close(_cidx,fs); }
 
-  protected void set_enum(){
-    for(int i = 0; i < _xs.length; ++i){
-      if(_xs[i] == (Integer.MIN_VALUE+1))
-        _xs[i] = 0;
-      else
-        setNA_impl2(i);
-    }
-  }
   protected void switch_to_doubles(){
     assert _ds == null;
     double [] ds = MemoryManager.malloc8d(_len);
@@ -407,7 +397,7 @@ public class NewChunk extends Chunk {
     _ls = null;
     return res;
   }
-  private final Chunk compress2() {
+  private Chunk compress2() {
     // Check for basic mode info: all missing or all strings or mixed stuff
     byte mode = type();
     if( mode==AppendableVec.NA ) // ALL NAs, nothing to do
@@ -469,13 +459,12 @@ public class NewChunk extends Chunk {
     // Data in some fixed-point format, not doubles
     // See if we can sanely normalize all the data to the same fixed-point.
     int  xmin = Integer.MAX_VALUE;   // min exponent found
-    long lemin= 0, lemax=lemin; // min/max at xmin fixed-point
-    boolean overflow=false;
     boolean floatOverflow = false;
-    boolean first = true;
     double min = Double.POSITIVE_INFINITY;
     double max = Double.NEGATIVE_INFINITY;
     int p10iLength = DParseTask.powers10i.length;
+    long llo=Long   .MAX_VALUE, lhi=Long   .MIN_VALUE;
+    int  xlo=Integer.MAX_VALUE, xhi=Integer.MIN_VALUE;
 
     for( int i=0; i<_len; i++ ) {
       if( isNA2(i) ) continue;
@@ -484,38 +473,20 @@ public class NewChunk extends Chunk {
       assert x != Integer.MIN_VALUE:"l = " + l + ", x = " + x;
       if( x==Integer.MIN_VALUE+1) x=0; // Replace enum flag with no scaling
       assert l!=0 || x==0:"l == 0 while x = " + x + " ls = " + Arrays.toString(_ls);      // Exponent of zero is always zero
-      // Compute per-chunk min/max
-      double d = l*DParseTask.pow10(x);
-      if( d < min ) min = d;
-      if( d > max ) max = d;
       long t;                   // Remove extra scaling
       while( l!=0 && (t=l/10)*10==l ) { l=t; x++; }
+      // Compute per-chunk min/max
+      double d = l*DParseTask.pow10(x);
+      if( d < min ) { min = d; llo=l; xlo=x; }
+      if( d > max ) { max = d; lhi=l; xhi=x; }
       floatOverflow = Math.abs(l) > MAX_FLOAT_MANTISSA;
-      if( first ) {
-        first = false;
-        xmin = x;
-        lemin = lemax = l;
-        continue;
-      }
-      // Track largest/smallest values at xmin scale.  Note overflow.
-      if( x < xmin ) {
-        if( overflow || (overflow = ((xmin-x) >=p10iLength)) ) continue;
-        lemin *= DParseTask.pow10i(xmin-x);
-        lemax *= DParseTask.pow10i(xmin-x);
-        xmin = x;               // Smaller xmin
-      }
-      // *this* value, as a long scaled at the smallest scale
-      if( overflow || (overflow = ((x-xmin) >=p10iLength)) ) continue;
-      long le = l*DParseTask.pow10i(x-xmin);
-      if( le < lemin ) lemin=le;
-      if( le > lemax ) lemax=le;
+      xmin = Math.min(xmin,x);
     }
 
-    if(_len2 != _len){ // sparse? compare xmin/lemin/lemax with 0
-      lemin = Math.min(0, lemin);
-      lemax = Math.max(0, lemax);
-      min = Math.min(min,0);
-      max = Math.max(max,0);
+    if(_len2 != _len){ // sparse?  then compare vs implied 0s
+      if( min > 0 ) { min = 0; llo=0; xlo=0; }
+      if( max < 0 ) { max = 0; lhi=0; xhi=0; }
+      xmin = Math.min(xmin,0);
     }
 
     // Constant column?
@@ -525,12 +496,28 @@ public class NewChunk extends Chunk {
           : new C0DChunk(      min,_len2);
     }
 
+    // Compute min & max, as scaled integers in the xmin scale.
+    // Check for overflow along the way
+    boolean overflow = (xhi-xmin) >= p10iLength;
+    long lemax=0, lemin=0;
+    if( !overflow ) {           // Can at least get the power-of-10 without overflow
+      long pow10 = DParseTask.pow10i(xhi-xmin);
+      lemax = lhi*pow10;
+      // Hacker's Delight, Section 2-13, checking overflow.
+      // Note that the power-10 is always positive, so the test devolves this:
+      if( (lemax/pow10) != lhi ) overflow = true;
+      // Note that xlo might be > xmin; e.g. { 101e-49 , 1e-48}.
+      long pow10lo = DParseTask.pow10i(xlo-xmin);
+      lemin = llo*pow10lo;
+      assert overflow || (lemin/pow10lo)==llo;
+    }
+
     // Boolean column?
     if (max == 1 && min == 0 && xmin == 0 && !overflow) {
       if(sparse) { // Very sparse?
         return  _naCnt==0
-          ?new CX0Chunk(_len2,_len,bufS(0))// No NAs, can store as sparse bitvector
-          :new CXIChunk(_len2,_len,1,bufS(1)); // have NAs, store as sparse 1byte values
+          ? new CX0Chunk(_len2,_len,bufS(0))// No NAs, can store as sparse bitvector
+          : new CXIChunk(_len2,_len,1,bufS(1)); // have NAs, store as sparse 1byte values
       }
 
       int bpv = _strCnt+_naCnt > 0 ? 2 : 1;   // Bit-vector
@@ -540,11 +527,11 @@ public class NewChunk extends Chunk {
 
     final boolean fpoint = xmin < 0 || min < Long.MIN_VALUE || max > Long.MAX_VALUE;
 
-    if(sparse){
+    if( sparse ) {
       if(fpoint) return new CXDChunk(_len2,_len,8,bufD(8));
       int sz = 8;
-      if(Short.MIN_VALUE <= min && max <= Short.MAX_VALUE)sz = 2;
-      else if(Integer.MIN_VALUE <= min && max <= Integer.MAX_VALUE)sz = 4;
+      if( Short.MIN_VALUE <= min && max <= Short.MAX_VALUE ) sz = 2;
+      else if( Integer.MIN_VALUE <= min && max <= Integer.MAX_VALUE ) sz = 4;
       return new CXIChunk(_len2,_len,sz,bufS(sz));
     }
     // Exponent scaling: replacing numbers like 1.3 with 13e-1.  '13' fits in a
@@ -561,7 +548,7 @@ public class NewChunk extends Chunk {
     if( overflow || (fpoint && floatOverflow) || -35 > xmin || xmin > 35 )
       return chunkD();
     if( fpoint ) {
-      if((int)lemin == lemin && (int)lemax == lemax){
+      if( (int)lemin == lemin && (int)lemax == lemax ) {
         if(lemax-lemin < 255 && (int)lemin == lemin ) // Fits in scaled biased byte?
           return new C1SChunk( bufX(lemin,xmin,C1SChunk.OFF,0),(int)lemin,DParseTask.pow10(xmin));
         if(lemax-lemin < 65535 ) { // we use signed 2B short, add -32k to the bias!
@@ -573,12 +560,13 @@ public class NewChunk extends Chunk {
       }
       return chunkD();
     } // else an integer column
+
     // Compress column into a byte
     if(xmin == 0 &&  0<=lemin && lemax <= 255 && ((_naCnt + _strCnt)==0) )
       return new C1NChunk( bufX(0,0,C1NChunk.OFF,0));
-    if(lemin < Integer.MIN_VALUE)return new C8Chunk( bufX(0,0,0,3));
-    if( lemax-lemin < 255 ) {         // Span fits in a byte?
-      if(0 <= min && max < 255 )      // Span fits in an unbiased byte?
+    if( lemin < Integer.MIN_VALUE ) return new C8Chunk( bufX(0,0,0,3));
+    if( lemax-lemin < 255 ) {    // Span fits in a byte?
+      if(0 <= min && max < 255 ) // Span fits in an unbiased byte?
         return new C1Chunk( bufX(0,0,C1Chunk.OFF,0));
       return new C1SChunk( bufX(lemin,xmin,C1SChunk.OFF,0),(int)lemin,DParseTask.pow10i(xmin));
     }
@@ -692,7 +680,7 @@ public class NewChunk extends Chunk {
         case 1: UDP.set2(bs,(i<<1)+off,  (short)le); break;
         case 2: UDP.set4(bs,(i<<2)+off,    (int)le); break;
         case 3: UDP.set8(bs,(i<<3)+off,         le); break;
-        default: H2O.fail();
+        default: throw H2O.fail();
       }
     }
     assert j == _len:"j = " + j + ", len = " + _len + ", len2 = " + _len2 + ", id[j] = " + _id[j];
@@ -747,7 +735,7 @@ public class NewChunk extends Chunk {
     assert j == _len;
     assert bs[0] == (byte) (boff == 0 ? 0 : 8-boff):"b[0] = " + bs[0] + ", boff = " + boff + ", bpv = " + bpv;
     // Flush last byte
-    if (boff>0) bs[idx++] = b;
+    if (boff>0) bs[idx] = b;
     return bs;
   }
 
