@@ -806,22 +806,22 @@ public class Utils {
     }
 
     public boolean get(int idx) {
-      if(idx < 0 || idx > _nbits-1)
+      if(idx < 0 || idx >= _nbits)
         throw new IndexOutOfBoundsException("Must have 0 <= idx <= " + Integer.toString(_nbits-1) + ": " + idx);
       return (_val[idx >> 3] & ((byte)1 << (idx % 8))) != 0;
     }
     public boolean contains(int idx) {
       if(idx < 0) throw new IndexOutOfBoundsException("idx < 0: " + idx);
-      if(Double.isNaN(idx) || idx >= size()) return false;
+      if(Double.isNaN(idx) || idx >= _nbits) return false;
       return get(idx);
     }
     public void set(int idx) {
-      if(idx < 0 || idx > _nbits-1)
+      if(idx < 0 || idx >= _nbits)
         throw new IndexOutOfBoundsException("Must have 0 <= idx <= " + Integer.toString(_nbits-1) + ": " + idx);
       _val[idx >> 3] |= ((byte)1 << (idx % 8));
     }
     public void clear(int idx) {
-      if(idx < 0 || idx > _nbits-1)
+      if(idx < 0 || idx >= _nbits)
         throw new IndexOutOfBoundsException("Must have 0 <= idx <= " + Integer.toString(_nbits-1) + ": " + idx);
       _val[idx >> 3] &= ~((byte)1 << (idx % 8));
     }
@@ -833,7 +833,7 @@ public class Utils {
     }
 
     public int nextSetBit(int idx) {
-      if(idx < 0 || idx > _nbits-1)
+      if(idx < 0 || idx >= _nbits)
         throw new IndexOutOfBoundsException("Must have 0 <= idx <= " + Integer.toString(_nbits-1) + ": " + idx);
       int idx_next = idx >> 3;
       byte bt_next = (byte)(_val[idx_next] & ((byte)0xff << idx));
@@ -846,7 +846,7 @@ public class Utils {
     }
 
     public int nextClearBit(int idx) {
-      if(idx < 0 || idx > _nbits-1)
+      if(idx < 0 || idx >= _nbits)
         throw new IndexOutOfBoundsException("Must have 0 <= idx <= " + Integer.toString(_nbits-1) + ": " + idx);
       int idx_next = idx >> 3;
       byte bt_next = (byte)(~_val[idx_next] & ((byte)0xff << idx));
@@ -863,7 +863,9 @@ public class Utils {
       }
       return (idx_next << 3) + Integer.numberOfTrailingZeros(bt_next);
     }
-    public int size() { return _val.length; };
+
+    public int size() { return _val.length << 3; }
+    public int numBytes() { return _val.length; };
 
     @Override public String toString() {
       StringBuilder sb = new StringBuilder();
@@ -885,14 +887,9 @@ public class Utils {
     }
     public String toStrArray() {
       StringBuilder sb = new StringBuilder();
-      sb.append("{");
-
-      boolean first = true;
-      for(int i = 0; i < _val.length; i++) {
-        if(!first) sb.append(", ");
-        sb.append(_val[i]);
-        first = false;
-      }
+      sb.append("{").append(_val[0]);
+      for(int i = 1; i < _val.length; i++)
+        sb.append(", ").append(_val[i]);
       sb.append("}");
       return sb.toString();
     }
