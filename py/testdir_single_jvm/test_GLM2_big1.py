@@ -20,22 +20,21 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_C_hhp_107_01(self):
+    def test_GLM2_big1(self):
+        h2o.beta_features = True
         csvPathname = 'hhp_107_01.data.gz'
         print "\n" + csvPathname
 
         y = "106"
-        x = ""
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, timeoutSecs=15, schema='put')
 
         for trial in xrange(3):
             sys.stdout.write('.')
             sys.stdout.flush() 
-            print "\nx:", x
-            print "y:", y
+            print "response:", y
 
             start = time.time()
-            kwargs = {'x': x, 'y': y, 'n_folds': 6}
+            kwargs = {'response': y, 'n_folds': 6, 'alpha': 0.0}
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=300, **kwargs)
 
             # pass the kwargs with all the params, so we know what we asked for!

@@ -603,9 +603,9 @@ def createIgnoredCols(key, cols, response):
 
 
 # example:
-# h2o_cmd.runGLM2Score(dataKey=scoreDataKey, modelKey=modelKey, vactual=y, vpredict=1, expectedAuc=0.5)
-def runGLM2Score(node=None, dataKey=None, modelKey=None, predictKey='Predict.hex', 
-    vactual='C1', vpredict=1, expectedAuc=0.5, timeoutSecs=200):
+# h2o_cmd.runScore(dataKey=scoreDataKey, modelKey=modelKey, vactual=y, vpredict=1, expectedAuc=0.5)
+def runScore(node=None, dataKey=None, modelKey=None, predictKey='Predict.hex', 
+    vactual='C1', vpredict=1, expectedAuc=0.5, doAUC=True, timeoutSecs=200):
     # Score *******************************
     # this messes up if you use case_mode/case_vale above
     predictKey = 'Predict.hex'
@@ -617,18 +617,23 @@ def runGLM2Score(node=None, dataKey=None, modelKey=None, predictKey='Predict.hex
         destination_key=predictKey,
         timeoutSecs=timeoutSecs)
 
+
     # just get a predict and AUC on the same data. has to be binomial result
-    resultAUC = h2o.nodes[0].generate_auc(
-        thresholds=None,
-        actual=dataKey,
-        predict='Predict.hex',
-        vactual=vactual,
-        vpredict=vpredict)
+    if doAUC:
+        resultAUC = h2o.nodes[0].generate_auc(
+            thresholds=None,
+            actual=dataKey,
+            predict='Predict.hex',
+            vactual=vactual,
+            vpredict=vpredict)
 
-    auc = resultAUC['AUC']
-    h2o_util.assertApproxEqual(auc, expectedAuc, tol=0.15,
-        msg="actual auc: %s not close enough to %s" % (auc, expectedAuc))
+        auc = resultAUC['AUC']
+        raise Exception()
 
+        h2o_util.assertApproxEqual(auc, expectedAuc, tol=0.15,
+            msg="actual auc: %s not close enough to %s" % (auc, expectedAuc))
+
+    # don't do this unless binomial
     predictCMResult = h2o.nodes[0].predict_confusion_matrix(
         actual=dataKey,
         predict=predictKey,
@@ -636,13 +641,17 @@ def runGLM2Score(node=None, dataKey=None, modelKey=None, predictKey='Predict.hex
         vpredict='predict',
         )
 
-    cm = predictCMResult['cm']
+    # print "cm", h2o.dump_json(predictCMResult)
 
     # These will move into the h2o_gbm.py
-    pctWrong = h2o_gbm.pp_cm_summary(cm);
+    # if doAUC=False, means we're not binomial, and the cm is not what we expect
+    if doAUC:
+        cm = predictCMResult['cm']
+        pctWrong = h2o_gbm.pp_cm_summary(cm);
+        print h2o_gbm.pp_cm(cm)
 
-    print "\nTest\n==========\n"
-    print h2o_gbm.pp_cm(cm)
+    return predictCMResult
+        
 
 
 
