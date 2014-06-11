@@ -478,8 +478,8 @@ public class DTree extends Iced {
         _nodeType |= _split._equal == 1 ? 4 : (_split._equal == 2 ? 8 : 12);
 
       // int res = 7;  // 1B node type + flags, 2B colId, 4B float split val
-      // 1B node type + flags, 2B colId, 4B split val/small group or 2B size + large group
-      int res = _split._equal == 3 ? 5 + _split._bs.numBytes() : 7;
+      // 1B node type + flags, 2B colId, 4B split val/small group or (2B offset + 2B size) + large group
+      int res = _split._equal == 3 ? 7 + _split._bs.numBytes() : 7;
 
       Node left = _tree.node(_nids[0]);
       int lsz = left.size();
@@ -511,11 +511,13 @@ public class DTree extends Iced {
       if(_split._equal == 0 || _split._equal == 1)
         ab.put4f(_splat);
       else if(_split._equal == 2) {
-        byte[] ary = MemoryManager.malloc1(4);
-        for(int i = 0; i < _split._bs.numBytes(); i++)
+        /* byte[] ary = MemoryManager.malloc1(4);
+        for(int i = 0; i < 4; i++)
           ary[i] = _split._bs._val[i];
-        ab.putA1(ary, 4);
+        ab.putA1(ary, 4); */
+        ab.putA1(_split._bs._val, 4);
       } else {
+        ab.put2((char)_split._bs._offset);
         ab.put2((char)_split._bs.numBytes());
         ab.putA1(_split._bs._val, _split._bs.numBytes());
       }
@@ -931,11 +933,15 @@ public class DTree extends Iced {
           if(equal == 0 || equal == 1)
             splitVal = ab.get4f();
           else {
+            int off = (equal == 3) ? ab.get2() : 0;
             int sz = (equal == 3) ? ab.get2() : 4;
             int idx = (int)row[colId];
-            if(Double.isNaN(idx))
+
+            if(Double.isNaN(idx) || idx < off) {
+              grpContains = false;
               ab.skip(sz);
-            else {
+            } else {
+              idx = idx - off;
               ab.skip(idx >> 3);
               grpContains = (ab.get1() & ((byte)1 << (idx % 8))) != 0;
               ab.skip(sz-(idx >> 3)-1);
@@ -1021,10 +1027,11 @@ public class DTree extends Iced {
         if(equal == 0 || equal == 1)
           fcmp = _ts.get4f();
         else {
+          int off = (equal == 3) ? _ts.get2() : 0;
           int sz = (equal == 3) ? _ts.get2() : 4;
           byte[] buf = MemoryManager.malloc1(sz);
           _ts.read(buf, 0, sz);
-          gcmp = new IcedBitSet(buf);
+          gcmp = new IcedBitSet(buf, sz << 3, off);
         }
 
         // Compute the amount to skip.
@@ -1370,7 +1377,7 @@ public class DTree extends Iced {
       if(equal == 0 || equal == 1)
         _sb.p("(float) data[").p(col).p(" /* ").p(_tm._names[col]).p(" */").p("] ").p(equal==1?"!= ":"< ").pj(fcmp); // then left and then right (left is !=)
       else {
-        _sb.p("!water.genmodel.GeneratedModel.grpContains(GRPSPLIT").p(_grpcnt).p(", (int) data[").p(col).p(" /* ").p(_tm._names[col]).p(" */").p("])");
+        _sb.p("!water.genmodel.GeneratedModel.grpContains(GRPSPLIT").p(_grpcnt).p(", ").p(gcmp._offset).p(", (int) data[").p(col).p(" /* ").p(_tm._names[col]).p(" */").p("])");
         _grpcnt++;
       }
       assert _bits[_depth]==0;

@@ -155,13 +155,27 @@ public class DBinomHistogram extends DHistogram<DBinomHistogram> {
     double p1 = equal == 0 ? sums1[best] : _sums[idx[best]]         ;
 
     // For categorical predictors, set bits for levels grouped to right of split
-    // TODO: Is bit = 1 for left or right of the split? Should be right (see Javapredict pre code in DTree.java)
     IcedBitSet bs = null;
     if(_isInt == 2 && _step == 1.0f && nbins >= 4) {
-      bs = new IcedBitSet(nbins);
+      /* bs = new IcedBitSet(nbins, (int)_min);
       equal = (byte)(bs.numBytes() <= 4 ? 2 : 3);
       // for(int i = 0; i < best; i++) bs.set(idx[i]);
-      for(int i = best; i < nbins; i++) bs.set(idx[i]);
+      for(int i = best; i < nbins; i++) bs.set(idx[i]);*/
+
+      // Small cats: always use 4B to store and prepend offset # of zeros at front
+      // Big cats: save offset and store only nbins # of bits that are left after trimming
+      int offset = (int)_min;
+      if(_maxEx <= 32) {
+        equal = 2;
+        bs = new IcedBitSet(32);
+        for(int i = best; i < nbins; i++)
+          bs.set(idx[i] + offset);
+      } else {
+        equal = 3;
+        bs = new IcedBitSet(nbins, offset);
+        for(int i = best; i < nbins; i++)
+          bs.set(idx[i]);
+      }
     }
     return new DTree.Split(col,best,bs,equal,best_se0,best_se1,n0,n1,p0/n0,p1/n1);
   }

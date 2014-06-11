@@ -10,7 +10,11 @@ public abstract class GeneratedModel implements IGeneratedModel {
   @Override public int      getNumResponseClasses() { return getNumClasses(getResponseIdx()); }
   @Override public boolean  isClassifier() { return getNumResponseClasses()!=-1; }
 
-  public static boolean grpContains(byte[] gcmp, int idx) {
+  public static boolean grpContains(byte[] gcmp, int offset, int idx) {
+    if(offset < 0) throw new IndexOutOfBoundsException("offset < 0: " + offset);
+    if(idx < offset) return false;
+    idx = idx - offset;
+
     int max_idx = (gcmp.length << 3) - 1;
     if(idx < 0 || idx > max_idx)
       throw new IndexOutOfBoundsException("Must have 0 <= idx <= " + max_idx + ": " + idx);

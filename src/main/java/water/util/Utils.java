@@ -793,15 +793,22 @@ public class Utils {
   public static class IcedBitSet extends Iced {
     public final byte[] _val;
     public final int _nbits;
+    public final int _offset;   // Number of bits discarded from beginning (inclusive min)
 
-    public IcedBitSet(byte[] v) { _val = v; _nbits = v.length << 3; }
-    public IcedBitSet(byte[] v, int nbits) {
-      assert nbits << 3 <= v.length;
-      _val = v; _nbits = nbits;
-    }
-    public IcedBitSet(int nbits) {
+    public IcedBitSet(byte[] v) { this(v, v.length << 3, 0); }
+    public IcedBitSet(byte[] v, int nbits) { this(v, nbits, 0); }
+    public IcedBitSet(byte[] v, int nbits, int offset) {
       if(nbits < 0) throw new NegativeArraySizeException("nbits < 0: " + nbits);
+      if(offset < 0) throw new IndexOutOfBoundsException("offset < 0: " + offset);
+      assert (nbits >> 3) <= v.length;
+      _val = v; _nbits = nbits; _offset = offset;
+    }
+    public IcedBitSet(int nbits) { this(nbits, 0); }
+    public IcedBitSet(int nbits, int offset) {
+      if(nbits < 0) throw new NegativeArraySizeException("nbits < 0: " + nbits);
+      if(offset < 0) throw new IndexOutOfBoundsException("offset < 0: " + offset);
       _nbits = nbits;
+      _offset = offset;
       _val = new byte[((nbits-1) >> 3) + 1];
     }
 
