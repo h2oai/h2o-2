@@ -89,25 +89,23 @@ class Basic(unittest.TestCase):
             write_syn_dataset(csvPathname, enumList, rowCount, colCount, SEEDPERFILE, 
                 colSepChar=colSepChar, rowSepChar=rowSepChar)
 
-            parseResult = h2i.import_parse(path=csvScorePathname, schema='put', hex_key="score_" + hex_key, 
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, 
                 timeoutSecs=30, separator=colSepInt)
 
             print "Creating random", csvScorePathname, "for glm scoring with prior model (using enum subset)"
             write_syn_dataset(csvScorePathname, enumListForScore, rowCount, colCount, SEEDPERFILE, 
                 colSepChar=colSepChar, rowSepChar=rowSepChar)
 
-            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, 
+            parseResult = h2i.import_parse(path=csvScorePathname, schema='put', hex_key="score_" + hex_key, 
                 timeoutSecs=30, separator=colSepInt)
-            print csvFilename, 'parse time:', parseResult['response']['time']
-            print "Parse result['destination_key']:", parseResult['destination_key']
+
 
             print "\n" + csvFilename
             (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
                 h2o_cmd.columnInfoFromInspect(parseResult['destination_key'], exceptionOnMissingValues=True)
 
             y = colCount
-            kwargs = {'y': y, 'max_iter': 1, 'family': 'binomial',
-                'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5, 'case_mode': '=', 'case': 0}
+            kwargs = {'response': y, 'max_iter': 1, 'family': 'binomial', 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
             start = time.time()
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
             print "glm end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'
@@ -117,7 +115,8 @@ class Basic(unittest.TestCase):
             # Score *******************************
             # this messes up if you use case_mode/case_vale above
             predictKey = 'Predict.hex'
-            h2o_cmd.runGLM2Score(dataKey=scoreDataKey, modelKey=modelKey, vactual=y, vpredict=1, expectedAuc=0.5)
+            modelKey = glm['glm_model']['_key']
+            h2o_cmd.runScore(dataKey="score_" + hex_key, modelKey=modelKey, vactual=y, vpredict=1, expectedAuc=0.5)
 
 
 if __name__ == '__main__':

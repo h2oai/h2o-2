@@ -47,7 +47,7 @@ final class DataAdapter  {
     for( int i = 0; i < _c.length; i++ ) {
       assert fr._names[modelDataMap[i]].equals(model.fr._names[i]);
       Vec v = fr.vecs()[i];
-      if( isByteCol(v,rows,i == _c.length-1, _regression) ) // we do not bin for small values
+      if( isByteCol(v,rows, i == _c.length-1, _regression) ) // we do not bin for small values
         _c[i] = new Col(fr._names[i], rows, i == _c.length-1);
       else
         _c[i] = new Col(fr._names[i], rows, i == _c.length-1, binLimit, !(v.isEnum() || v.isInt()));
@@ -59,8 +59,7 @@ final class DataAdapter  {
 
   static boolean isByteCol( Vec C, int rows, boolean isClass, boolean regression) {
     if (regression) {
-      return (C.isInt() || C.isEnum()) && C.min() >= 0 && C.length()==rows &&
-              (C.max()<255 || C.max() <256 && C.length()==rows);
+      return !isClass && (C.isInt() || C.isEnum()) && C.min() >= 0 && C.length() == rows && (C.max() < 255 || C.max() < 256 && C.length() == rows);
     }
     return (C.isInt() || C.isEnum()) && !isClass && C.min() >= 0 && C.length()==rows &&
             (C.max()<255 || C.max() <256 && C.length()==rows);

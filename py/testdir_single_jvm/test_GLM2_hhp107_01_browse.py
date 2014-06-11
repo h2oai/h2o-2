@@ -5,13 +5,10 @@ import h2o_browse as h2b
 
 argcaseList = [
     {   
-        'x': '0,1,2,3,4,5,6,7,8,10,11',
-        'y': 106,
+        'response': 106,
         'family': 'gaussian',
         'lambda': 1.0E-5,
         'max_iter': 50,
-        'thresholds': 0.5,
-        'link': 'familyDefault',
         'n_folds': 0,
         'alpha': 1,
         'beta_epsilon': 1.0E-4 
@@ -34,7 +31,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_hhp_107_01_browse(self):
+    def test_GLM2_hhp_107_01_browse(self):
+        h2o.beta_features = True
         csvPathname = 'hhp_107_01.data.gz'
         print "\n" + csvPathname
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put',
@@ -46,7 +44,7 @@ class Basic(unittest.TestCase):
         for argcase in argcaseList:
             print "\nTrial #", trial, "start"
             kwargs = argcase
-            print 'y:', kwargs['y']
+            print 'response:', kwargs['response']
             start = time.time()
             glm = h2o_cmd.runGLM(parseResult=parseResult, browseAlso=True, timeoutSecs=200, **kwargs)
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
