@@ -580,8 +580,8 @@ public class DeepLearning extends Job.ValidatedJob {
             ) {
       arg.disable("Using sqrt(6 / (# units + # units of previous layer)) for Uniform distribution.", inputArgs);
     }
-    if(arg._name.equals("loss") && !classification) {
-      arg.disable("Using MeanSquare loss for regression.", inputArgs);
+    if(arg._name.equals("loss") && (!classification || autoencoder)) {
+      arg.disable("Using MeanSquare loss.", inputArgs);
       loss = Loss.MeanSquare;
     }
     if (classification) {

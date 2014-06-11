@@ -3,7 +3,6 @@ package hex.deeplearning;
 import static java.lang.Double.isNaN;
 import hex.FrameTask.DataInfo;
 import hex.VarImp;
-import org.apache.commons.lang.ArrayUtils;
 import water.*;
 import water.api.*;
 import water.api.Request.API;
