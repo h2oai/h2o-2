@@ -52,7 +52,8 @@ class Basic(unittest.TestCase):
         ### time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_GLM_convergence_1(self):
+    def test_GLM2grid_convergence_1(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             (100, 50,  'cD', 300),
@@ -74,7 +75,6 @@ class Basic(unittest.TestCase):
             write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
 
             parseResult = h2i.import_parse(path=csvPathname, hex_key=hex_key, timeoutSecs=10, schema='put')
-            print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvFilename
@@ -82,29 +82,23 @@ class Basic(unittest.TestCase):
             y = colCount
             kwargs = {
                     'max_iter': 10, 
-                    'link': 'familyDefault',
                     'n_folds': 2,
-                    'beta_eps': 1e-4,
+                    'beta_epsilon': 1e-4,
                     'lambda': '1e-8:1e-3:1e2',
                     'alpha': '0,0.5,.75',
-                    'thresholds': '0,1,0.2'
                     }
 
-            kwargs['y'] = y
+            kwargs['response'] = y
 
-            emsg = None
             for i in range(2):
                 start = time.time()
                 # get rid of the Jstack polling
-                glm = h2o_cmd.runGLMGrid(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+                glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+                print "glm grid result", h2o.dump_json(glm)
                 print 'glm #', i, 'end on', csvPathname, 'took', time.time() - start, 'seconds'
                 # we can pass the warning, without stopping in the test, so we can 
                 # redo it in the browser for comparison
                 h2o_glm.simpleCheckGLMGrid(self, glm, None, allowFailWarning=True, **kwargs)
-
-            # gets the failed to converge, here, after we see it in the browser too
-            if emsg is not None:
-                raise Exception(emsg)
 
 if __name__ == '__main__':
     h2o.unit_main()
