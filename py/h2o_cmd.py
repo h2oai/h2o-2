@@ -628,7 +628,6 @@ def runScore(node=None, dataKey=None, modelKey=None, predictKey='Predict.hex',
             vpredict=vpredict)
 
         auc = resultAUC['AUC']
-        raise Exception()
 
         h2o_util.assertApproxEqual(auc, expectedAuc, tol=0.15,
             msg="actual auc: %s not close enough to %s" % (auc, expectedAuc))
