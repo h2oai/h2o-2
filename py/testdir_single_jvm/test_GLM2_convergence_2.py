@@ -49,7 +49,8 @@ class Basic(unittest.TestCase):
         ### time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_GLM_convergence_2(self):
+    def test_GLM2_convergence_2(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             (100, 1,  'cD', 300),
@@ -76,7 +77,6 @@ class Basic(unittest.TestCase):
                 csvPathname = 'logreg/' + csvFilename
 
             parseResult = h2i.import_parse(path=csvPathname, hex_key=hex_key, timeoutSecs=10, schema='put')
-            print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvFilename
@@ -86,16 +86,14 @@ class Basic(unittest.TestCase):
                     'max_iter': 40, 
                     'lambda': 1e0,
                     'alpha': 0.5,
-                    'link': 'familyDefault',
                     'n_folds': 0,
                     'beta_epsilon': 1e-4,
-                    'thresholds': '0:1:0.01',
                     }
 
             if USEKNOWNFAILURE:
-                kwargs['y'] = 50
+                kwargs['response'] = 50
             else:
-                kwargs['y'] = y
+                kwargs['response'] = y
 
             emsg = None
             for i in range(3):

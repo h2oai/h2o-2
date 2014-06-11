@@ -1,6 +1,6 @@
 
-H2O Software Architecture
-=========================
+H\ :sub:`2`\ O Software Architecture
+====================================
 
 .. toctree::
    :maxdepth: 1

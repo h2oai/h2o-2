@@ -18,30 +18,23 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_poisson_1(self):
+    def test_GLM2_poisson_1(self):
+        h2o.beta_features = True
         csvFilename = 'covtype.data'
         csvPathname = 'standard/' + csvFilename
         parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put', timeoutSecs=10)
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         print "\n" + csvPathname, \
-            "    num_rows:", "{:,}".format(inspect['num_rows']), \
-            "    num_cols:", "{:,}".format(inspect['num_cols'])
-
-        if (1==0):
-            print "WARNING: just doing the first 33 features, for comparison to ??? numbers"
-            x = ",".join(map(str,range(33)))
-        else:
-            x = ""
+            "    numRows:", "{:,}".format(inspect['numRows']), \
+            "    numCols:", "{:,}".format(inspect['numCols'])
 
         print "WARNING: max_iter set to 8 for benchmark comparisons"
         max_iter = 8
 
         y = "54"
         kwargs = {
-            'x': x,
-            'y': y,
+            'response': y,
             'family': 'poisson',
-            'link': 'log',
             'n_folds': 0,
             'max_iter': max_iter,
             'beta_epsilon': 1e-3}
@@ -62,7 +55,7 @@ class Basic(unittest.TestCase):
         h2o_glm.simpleCheckGLM(self, glm, "C14", **kwargs)
 
         # L1
-        kwargs.update({'alpha': 1, 'lambda': 1e-4})
+        kwargs.update({'alpha': 0.75, 'lambda': 1e-4})
         start = time.time()
         glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
         print "glm (L1) end on ", csvPathname, 'took', time.time() - start, 'seconds'

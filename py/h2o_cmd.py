@@ -1,6 +1,6 @@
 import os, json, unittest, time, shutil, sys, socket
 import h2o
-import h2o_browse as h2b, h2o_rf as h2f, h2o_exec, h2o_gbm
+import h2o_browse as h2b, h2o_rf as h2f, h2o_exec, h2o_gbm, h2o_util
 
 def parseS3File(node=None, bucket=None, filename=None, keyForParseResult=None, 
     timeoutSecs=20, retryDelaySecs=2, pollTimeoutSecs=30, **kwargs):
@@ -590,6 +590,8 @@ def createTestTrain(srcKey, trainDstKey, testDstKey, trainPercent,
     inspect = runInspect(key=testDstKey)
     infoFromInspect(inspect, "%s after mungeDataset on %s" % (testDstKey, srcKey) )
 
+
+
 # figure out what cols to ignore (opposite of cols+response)
 def createIgnoredCols(key, cols, response):
     inspect = runInspect(key=key)
@@ -598,5 +600,57 @@ def createIgnoredCols(key, cols, response):
 
     ignored_cols = ','.join(map(str,ignore))
     return ignored_cols
+
+
+# example:
+# h2o_cmd.runScore(dataKey=scoreDataKey, modelKey=modelKey, vactual=y, vpredict=1, expectedAuc=0.5)
+def runScore(node=None, dataKey=None, modelKey=None, predictKey='Predict.hex', 
+    vactual='C1', vpredict=1, expectedAuc=0.5, doAUC=True, timeoutSecs=200):
+    # Score *******************************
+    # this messes up if you use case_mode/case_vale above
+    predictKey = 'Predict.hex'
+    start = time.time()
+
+    predictResult = runPredict(
+        data_key=dataKey,
+        model_key=modelKey,
+        destination_key=predictKey,
+        timeoutSecs=timeoutSecs)
+
+
+    # just get a predict and AUC on the same data. has to be binomial result
+    if doAUC:
+        resultAUC = h2o.nodes[0].generate_auc(
+            thresholds=None,
+            actual=dataKey,
+            predict='Predict.hex',
+            vactual=vactual,
+            vpredict=vpredict)
+
+        auc = resultAUC['AUC']
+
+        h2o_util.assertApproxEqual(auc, expectedAuc, tol=0.15,
+            msg="actual auc: %s not close enough to %s" % (auc, expectedAuc))
+
+    # don't do this unless binomial
+    predictCMResult = h2o.nodes[0].predict_confusion_matrix(
+        actual=dataKey,
+        predict=predictKey,
+        vactual=vactual,
+        vpredict='predict',
+        )
+
+    # print "cm", h2o.dump_json(predictCMResult)
+
+    # These will move into the h2o_gbm.py
+    # if doAUC=False, means we're not binomial, and the cm is not what we expect
+    if doAUC:
+        cm = predictCMResult['cm']
+        pctWrong = h2o_gbm.pp_cm_summary(cm);
+        print h2o_gbm.pp_cm(cm)
+
+    return predictCMResult
+        
+
 
 

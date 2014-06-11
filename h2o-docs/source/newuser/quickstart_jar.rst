@@ -66,7 +66,12 @@ Quick Step-by-Step
 
   http://localhost:54321/ 
 
-The user interface will appear in your browser, and now H\ :sub:`2`\ O is ready to go. 
+The user interface will appear in your browser, and now H\ :sub:`2`\ O is ready to go.
+
+.. WARNING::
+  On Windows systems, Internet Explorer is frequently blocked due to
+  security settings.  If you cannot reach http://localhost:54321 try a
+  different web browser such as Firefox or Chrome.
 
 Useful Notes
 """"""""""""   

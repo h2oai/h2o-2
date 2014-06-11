@@ -816,14 +816,18 @@ class ASTCbind extends ASTOp {
     }
 
     Frame fr = new Frame(new String[0],new Vec[0]);
+    int oldVecs = Integer.MAX_VALUE;
     for(int i = 0; i < argcnt-1; i++) {
       if( env.isAry(-argcnt+1+i) ) {
         String name = null;
         Frame fr2 = env.ary(-argcnt+1+i);
-        if( fr2.numCols()==1 && apply != null && (name = apply._args[i+1].argName()) != null )
-          fr.add(name,fr2.anyVec());
-        else
-          fr.add(fr2,true);
+        if(fr.numRows() == 0)
+          oldVecs = fr2.numCols();
+        fr.addCopy(fr2);
+//        if( fr2.numCols()==1 && apply != null && (name = apply._args[i+1].argName()) != null )
+//          fr.add(name,fr2.anyVec());
+//        else
+//          fr.add(fr2,true);
       } else {
         double d = env.dbl(-argcnt+1+i);
         // Vec v = fr.vecs()[0].makeCon(d);
@@ -832,6 +836,8 @@ class ASTCbind extends ASTOp {
         env.addRef(v);
       }
     }
+    for(int i = oldVecs; i < fr.vecs().length; ++i)
+      env.addRef(fr.vec(i));
     env._ary[env._sp-argcnt] = fr;  env._fcn[env._sp-argcnt] = null;
     env._sp -= argcnt-1;
     Arrays.fill(env._ary,env._sp,env._sp+(argcnt-1),null);

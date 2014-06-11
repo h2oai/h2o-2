@@ -1,8 +1,6 @@
 package water.parser;
 
 import java.util.*;
-
-import water.*;
 import water.fvec.ParseTime;
 
 public class CsvParser extends CustomParser {
@@ -36,7 +34,7 @@ public class CsvParser extends CustomParser {
   private static final byte POSSIBLE_EMPTY_LINE = 19;
   private static final byte POSSIBLE_CURRENCY = 20;
 
-  private static final long LARGEST_DIGIT_NUMBER = 1000000000000000000L;
+  private static final long LARGEST_DIGIT_NUMBER = Long.MAX_VALUE/10;
 
   public CsvParser(ParserSetup setup) {
     super(setup);
@@ -70,7 +68,6 @@ public class CsvParser extends CustomParser {
     int sgn_exp = 1;
     boolean decimal = false;
     int fractionDigits = 0;
-    int numStart = 0;
     int tokenStart = 0; // used for numeric token to backtrace if not successful
     int colIdx = 0;
     byte c = bits[offset];
@@ -216,15 +213,12 @@ NEXT_CHAR:
             number = 0;
             fractionDigits = 0;
             decimal = false;
-            numStart = offset;
             tokenStart = offset;
             if (c == '-') {
               exp = -1;
-              ++numStart;
               break NEXT_CHAR;
             } else if(c == '+'){
               exp = 1;
-              ++numStart;
               break NEXT_CHAR;
             } else {
               exp = 1;
@@ -242,18 +236,15 @@ NEXT_CHAR:
         // ---------------------------------------------------------------------
         case NUMBER:
           if ((c >= '0') && (c <= '9')) {
-            number = (number*10)+(c-'0');
-            if (number >= LARGEST_DIGIT_NUMBER)
-              state = NUMBER_SKIP;
+            if (number >= LARGEST_DIGIT_NUMBER)  state = NUMBER_SKIP;
+            else  number = (number*10)+(c-'0');
             break NEXT_CHAR;
           } else if (c == CHAR_DECIMAL_SEPARATOR) {
-            ++numStart;
             state = NUMBER_FRACTION;
             fractionDigits = offset;
             decimal = true;
             break NEXT_CHAR;
           } else if ((c == 'e') || (c == 'E')) {
-            ++numStart;
             state = NUMBER_EXP_START;
             sgn_exp = 1;
             break NEXT_CHAR;
@@ -304,8 +295,8 @@ NEXT_CHAR:
           }
         // ---------------------------------------------------------------------
         case NUMBER_SKIP:
-          ++numStart;
           if ((c >= '0') && (c <= '9')) {
+            exp++;
             break NEXT_CHAR;
           } else if (c == CHAR_DECIMAL_SEPARATOR) {
             state = NUMBER_SKIP_NO_DOT;
@@ -319,7 +310,6 @@ NEXT_CHAR:
           continue MAIN_LOOP;
         // ---------------------------------------------------------------------
         case NUMBER_SKIP_NO_DOT:
-          ++numStart;
           if ((c >= '0') && (c <= '9')) {
             break NEXT_CHAR;
           } else if ((c == 'e') || (c == 'E')) {
@@ -341,7 +331,6 @@ NEXT_CHAR:
             }
             break NEXT_CHAR;
           } else if ((c == 'e') || (c == 'E')) {
-            ++numStart;
             if (decimal)
               fractionDigits = offset - 1 - fractionDigits;
             state = NUMBER_EXP_START;
@@ -363,11 +352,9 @@ NEXT_CHAR:
           }
           exp = 0;
           if (c == '-') {
-            ++numStart;
             sgn_exp *= -1;
             break NEXT_CHAR;
           } else if (c == '+'){
-            ++numStart;
             break NEXT_CHAR;
           }
           if ((c < '0') || (c > '9')){
@@ -380,7 +367,6 @@ NEXT_CHAR:
         // ---------------------------------------------------------------------
         case NUMBER_EXP:
           if ((c >= '0') && (c <= '9')) {
-            ++numStart;
             exp = (exp*10)+(c-'0');
             break NEXT_CHAR;
           }
@@ -428,7 +414,6 @@ NEXT_CHAR:
 
         // Now parsing in the 2nd chunk.  All offsets relative to the 2nd chunk start.
         firstChunk = false;
-        numStart -= bits.length;
         if (state == NUMBER_FRACTION)
           fractionDigits -= bits.length;
         offset -= bits.length;

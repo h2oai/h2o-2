@@ -50,7 +50,8 @@ class Basic(unittest.TestCase):
         ### time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_GLM_enums_score_subset(self):
+    def test_GLM2_enums_score_subset(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         n = 200
@@ -88,68 +89,35 @@ class Basic(unittest.TestCase):
             write_syn_dataset(csvPathname, enumList, rowCount, colCount, SEEDPERFILE, 
                 colSepChar=colSepChar, rowSepChar=rowSepChar)
 
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, 
+                timeoutSecs=30, separator=colSepInt)
+
             print "Creating random", csvScorePathname, "for glm scoring with prior model (using enum subset)"
             write_syn_dataset(csvScorePathname, enumListForScore, rowCount, colCount, SEEDPERFILE, 
                 colSepChar=colSepChar, rowSepChar=rowSepChar)
 
-            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, 
+            parseResult = h2i.import_parse(path=csvScorePathname, schema='put', hex_key="score_" + hex_key, 
                 timeoutSecs=30, separator=colSepInt)
-            print csvFilename, 'parse time:', parseResult['response']['time']
-            print "Parse result['destination_key']:", parseResult['destination_key']
+
 
             print "\n" + csvFilename
             (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
                 h2o_cmd.columnInfoFromInspect(parseResult['destination_key'], exceptionOnMissingValues=True)
 
             y = colCount
-            kwargs = {'y': y, 'max_iter': 1, 'family': 'binomial',
-                'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5, 'case_mode': '=', 'case': 0}
+            kwargs = {'response': y, 'max_iter': 1, 'family': 'binomial', 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
             start = time.time()
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
             print "glm end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'
 
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
-            GLMModel = glm['GLMModel']
-            modelKey = GLMModel['model_key']
+            # Score *******************************
+            # this messes up if you use case_mode/case_vale above
+            predictKey = 'Predict.hex'
+            modelKey = glm['glm_model']['_key']
+            h2o_cmd.runScore(dataKey="score_" + hex_key, modelKey=modelKey, vactual=y, vpredict=1, expectedAuc=0.5)
 
-            parseResult = h2i.import_parse(path=csvScorePathname, schema='put', hex_key="score_" + hex_key, 
-                timeoutSecs=30, separator=colSepInt)
-
-            start = time.time()
-            # score with same dataset (will change to recreated dataset with one less enum
-            glmScore = h2o_cmd.runGLMScore(key=parseResult['destination_key'],
-                model_key=modelKey, thresholds="0.5", timeoutSecs=timeoutSecs)
-            print "glm end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'
-            ### print h2o.dump_json(glmScore)
-            classErr = glmScore['validation']['classErr']
-            auc = glmScore['validation']['auc']
-            err = glmScore['validation']['err']
-            nullDev = glmScore['validation']['nullDev']
-            resDev = glmScore['validation']['resDev']
-            print "classErr:", classErr
-            print "err:", err
-            print "auc:", auc
-            print "resDev:", resDev
-            print "nullDev:", nullDev
-            if math.isnan(resDev):
-                emsg = "Why is this resDev = 'nan'?? %6s %s" % ("resDev:\t", validation['resDev'])
-                raise Exception(emsg)
-
-            # what is reasonable?
-            # self.assertAlmostEqual(err, 0.3, delta=0.15, msg="actual err: %s not close enough to 0.3" % err)
-            self.assertAlmostEqual(auc, 0.5, delta=0.15, msg="actual auc: %s not close enough to 0.5" % auc)
-
-            if math.isnan(err):
-                emsg = "Why is this err = 'nan'?? %6s %s" % ("err:\t", err)
-                raise Exception(emsg)
-
-            if math.isnan(resDev):
-                emsg = "Why is this resDev = 'nan'?? %6s %s" % ("resDev:\t", resDev)
-                raise Exception(emsg)
-
-            if math.isnan(nullDev):
-                emsg = "Why is this nullDev = 'nan'?? %6s %s" % ("nullDev:\t", nullDev)
 
 if __name__ == '__main__':
     h2o.unit_main()

@@ -3,9 +3,8 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_import as h2i
 
 params = {
-    'y': 1049, 
+    'response': 1049, 
     'family': 'binomial', 
-    'link': 'familyDefault', 
     'beta_epsilon': 0.0001, 
     'thresholds': 0.5, 
     'alpha': 1.0, 
@@ -20,6 +19,7 @@ class Basic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         global localhost
+        h2o.beta_features = True
         localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(1)
@@ -30,7 +30,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_syn_2659x1049(self):
+    def test_GLM2_syn_2659x1049(self):
         csvFilename = "syn_2659x1049.csv"
         csvPathname = 'logreg' + '/' + csvFilename
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=csvFilename + ".hex", schema='put')
@@ -38,7 +38,7 @@ class Basic(unittest.TestCase):
         glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=120, **kwargs)
         h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
 
-    def test_GLM_syn_2659x1049x2enum(self):
+    def test_GLM2_syn_2659x1049x2enum(self):
         csvFilename = "syn_2659x1049x2enum.csv"
         csvPathname = 'logreg' + '/' + csvFilename
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=csvFilename + ".hex", schema='put')

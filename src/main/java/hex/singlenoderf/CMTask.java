@@ -38,6 +38,9 @@ public class CMTask extends MRTask2<CMTask> {
   public long _cms[][][];
   public VarImp _varimp;
   public int[] _oobs;
+  public Key[][] _remoteChunksKeys;
+  public float _ss; // Sum of squares
+  public int _rowcnt; // Rows used in scoring for regression
 
   /** Data to replay the sampling algorithm */
   private int[]     _chunk_row_mapping;
@@ -52,6 +55,8 @@ public class CMTask extends MRTask2<CMTask> {
   /** Difference between data cmin and CM cmin */
   private int       _cmin_data_mapping;
 
+  transient private Random _rand;
+
   /** Confusion matrix
    * @param model the ensemble used to classify
    */
@@ -64,6 +69,7 @@ public class CMTask extends MRTask2<CMTask> {
     _computeOOB = computeOOB;
     _model = model;
     _varimp = null;
+    _ss = 0.f;
     shared_init();
   }
 
@@ -71,7 +77,7 @@ public class CMTask extends MRTask2<CMTask> {
   private void shared_init() {
     /* For reproducibility we can control the randomness in the computation of the
    confusion matrix. The default seed when deserializing is 42. */
-//    Random _rand = Utils.getRNG(0x92b5023f2cd40b7cL);
+    Random _rand = Utils.getRNG(0x92b5023f2cd40b7cL);
     _data = _model.test_frame == null ? _model.fr : _model.test_frame;
 
     _modelDataMap = _model.colMap(_model._names);
@@ -104,22 +110,21 @@ public class CMTask extends MRTask2<CMTask> {
 
   public void init() {
     // Make a mapping from chunk# to row# just for chunks on this node
-    int total_home = 0;
-    for (int i = 0; i < _data.anyVec().nChunks(); ++i) {
-      if (_data.anyVec().chunkKey(i).home()) {
-        total_home++;
-      }
-    }
-    _chunk_row_mapping = new int[total_home];
-
-    int off=0;
-    int cidx=0;
-    for (int i = 0; i < _data.anyVec().nChunks(); ++i) {
-      if (_data.anyVec().chunkKey(i).home()) {
-        _chunk_row_mapping[cidx++] = off;
-        off += _data.anyVec().chunkLen(i);
-      }
-    }
+//    int total_home = 0;
+//    for (int i = 0; i < _data.anyVec().nChunks(); ++i) {
+//      if (_data.anyVec().chunkKey(i).home()) {
+//        total_home++;
+//      }
+//    }
+//    _chunk_row_mapping = new int[_data.anyVec().nChunks()];
+//
+//    int off=0;
+//    for (int i = 0; i < _data.anyVec().nChunks(); ++i) {
+//      if (_data.anyVec().chunkKey(i).home()) {
+//        _chunk_row_mapping[i] = off;
+//        off += _data.anyVec().chunkLen(i);
+//      }
+//    }
     // Initialize number of rows per node
     _rowsPerNode = new int[H2O.CLOUD.size()];
     long chunksCount = _data.anyVec().nChunks();
@@ -127,6 +132,31 @@ public class CMTask extends MRTask2<CMTask> {
       Key cKey = _data.anyVec().chunkKey(ci);
       _rowsPerNode[cKey.home_node().index()] += _data.anyVec().chunkLen(ci);
     }
+
+    _remoteChunksKeys = new Key[H2O.CLOUD.size()][];
+    int[] _remoteChunksCounter = new int[H2O.CLOUD.size()];
+
+    for (int i = 0; i < _data.anyVec().nChunks(); ++i) {
+      _remoteChunksCounter[_data.anyVec().chunkKey(i).home(H2O.CLOUD)]++;
+    }
+
+    for (int i = 0; i < H2O.CLOUD.size(); ++i) _remoteChunksKeys[i] = new Key[_remoteChunksCounter[i]];
+
+    int[] cnter = new int[H2O.CLOUD.size()];
+    for (int i = 0; i < _data.anyVec().nChunks(); ++i) {
+      int node_idx = _data.anyVec().chunkKey(i).home(H2O.CLOUD);
+      _remoteChunksKeys[node_idx][cnter[node_idx]++] = _data.anyVec().chunkKey(i);
+    }
+  }
+
+  private int producerRemoteRows(byte treeProducerID, Key chunkKey) {
+    Key[] remoteCKeys = _remoteChunksKeys[treeProducerID];
+    int off = 0;
+    for (int i=0; i<remoteCKeys.length; i++) {
+      if (chunkKey.equals(remoteCKeys[i])) return off;
+      off += _data.anyVec().chunkLen(i);
+    }
+    return off;
   }
 
   @Override public void map(Chunk[] chks) {
@@ -145,17 +175,11 @@ public class CMTask extends MRTask2<CMTask> {
     for( int ntree = 0; ntree < _model.treeCount(); ntree++ ) {
       long    treeSeed    = _model.seed(ntree);
       byte    producerId  = _model.producerId(ntree);
-      int     init_row    = (int)chks[0]._start;
+      int     init_row    =   (int)chks[0]._start; //_chunk_row_mapping[chks[0].cidx()]; //
       boolean isLocalTree = _computeOOB && isLocalTree(producerId); // tree is local
-      boolean isRemote = true;
-      for (int a_chunk_row_mapping : _chunk_row_mapping) {
-        if (chks[0]._start == a_chunk_row_mapping) {
-          isRemote = false;
-          break;
-        }
-      }
-      boolean isRemoteTreeChunk = _computeOOB && isRemote; // this is chunk which was used for construction the tree by another node
-      if (isRemoteTreeChunk) init_row = _rowsPerNode[producerId] + (int)chks[0]._start;
+//      boolean isRemote = false; // Left around for legacy reasons... data is never remote, but trees might be.
+      boolean isRemoteTreeChunk = false; //_computeOOB && isRemote; // this is chunk which was used for construction the tree by another node
+//      if (isRemoteTreeChunk) init_row = _rowsPerNode[producerId] + producerRemoteRows(producerId, chks[0]._vec.chunkKey(chks[0].cidx())); //(int)chks[0]._start;
       /* NOTE: Before changing used generator think about which kind of random generator you need:
        * if always deterministic or non-deterministic version - see hex.rf.Utils.get{Deter}RNG */
       // DEBUG: if( _computeOOB && (isLocalTree || isRemoteTreeChunk)) System.err.println(treeSeed + " : " + init_row + " (CM) " + isRemoteTreeChunk);
@@ -172,7 +196,7 @@ public class CMTask extends MRTask2<CMTask> {
         // Do not skip yet the rows with NAs in the rest of columns
         if( chks[_classcol].isNA(row)) continue;
 
-        if( _computeOOB && (isLocalTree || isRemoteTreeChunk)) { // if OOBEE is computed then we need to take into account utilized sampling strategy
+        if( _computeOOB /*&& (isLocalTree || isRemoteTreeChunk) */) { // if OOBEE is computed then we need to take into account utilized sampling strategy
           switch( _model.sampling_strategy ) {
             case RANDOM          : if (sampledItem < _model.sample ) continue ROWS; break;
             case STRATIFIED_LOCAL:
@@ -186,7 +210,7 @@ public class CMTask extends MRTask2<CMTask> {
 
         // Predict with this tree - produce 0-based class index
         if (!_model.regression) {
-          int prediction = (int)_model.classify0(ntree, _data, chks, row, _modelDataMap, numClasses, _model.regression);
+          int prediction = (int)_model.classify0(ntree, _data, chks, row, _modelDataMap, numClasses, false /*Not regression*/);
           if( prediction >= numClasses ) continue; // Junk row cannot be predicted
           // Check tree miss
           int alignedPrediction = alignModelIdx(prediction);
@@ -196,15 +220,21 @@ public class CMTask extends MRTask2<CMTask> {
           }
           votes[r][alignedPrediction]++; // Vote the row
           if (isLocalTree) localVotes[r][alignedPrediction]++; // Vote
+        } else {
+          float pred = _model.classify0(ntree, _data, chks, row, _modelDataMap, numClasses, true /*regression*/);
+          float actual = _data.vecs()[_classcol].at8(row);
+          float delta = actual - pred;
+          _ss += delta * delta;
+          _rowcnt++;
         }
       }
     }
     if(!_model.regression) {
       // Assemble the votes-per-class into predictions & score each row
-      _matrix = computeCM(votes, chks); // Make a confusion matrix for this chunk
+      _matrix = computeCM(votes, chks, false /*Do the _cms once*/); // Make a confusion matrix for this chunk
       if (localVotes!=null) {
         _localMatrices = new CM[H2O.CLOUD.size()];
-        _localMatrices[H2O.SELF.index()] = computeCM(localVotes, chks);
+        _localMatrices[H2O.SELF.index()] = computeCM(localVotes, chks, true /*Don't compute the _cms again!*/);
       }
     }
   }
@@ -249,10 +279,15 @@ public class CMTask extends MRTask2<CMTask> {
         if (ept1.length < ept2.length) ept1 = Arrays.copyOf(ept1, ept2.length);
         for (int i = 0; i < ept2.length; i++) ept1[i] += ept2[i];
       }
+
       if (_cms!=null)
         for (int i = 0; i < _cms.length; i++) Utils.add(_cms[i], drt._cms[i]);
+
       if (_oobs != null)
         for (int i = 0; i < _oobs.length; ++i) _oobs[i] += drt._oobs[i];
+    } else {
+      _ss += drt._ss;
+      _rowcnt += drt._rowcnt;
     }
   }
 
@@ -419,7 +454,6 @@ public class CMTask extends MRTask2<CMTask> {
     protected boolean        _valid;
     final protected float _sum;
 
-
     private CMFinal() {
       _valid         = false;
       _SpeeDRFModelKey = null;
@@ -429,6 +463,7 @@ public class CMTask extends MRTask2<CMTask> {
       _sum = 0.f;
       _cms = null;
     }
+
     private CMFinal(CM cm, Key SpeeDRFModelKey, String[] domain, long[] errorsPerTree, boolean computedOOB, boolean valid, float sum, long[][][] cms) {
       _matrix = cm._matrix;
       _errors = cm._errors;
@@ -442,14 +477,17 @@ public class CMTask extends MRTask2<CMTask> {
       _sum = sum;
       _cms = cms;
     }
+
     /** Make non-valid confusion matrix */
     public static CMFinal make() {
       return new CMFinal();
     }
+
     /** Create a new confusion matrix. */
     public static CMFinal make(CM cm, SpeeDRFModel model, String[] domain, long[] errorsPerTree, boolean computedOOB, float sum, long[][][] cms) {
       return new CMFinal(cm, model._key, domain, errorsPerTree, computedOOB, true, sum, cms);
     }
+
     public String[] domain() { return _domain; }
     public int      dimension() { return _matrix.length; }
     public long     matrix(int i, int j) { return _matrix[i][j]; }
@@ -489,55 +527,94 @@ public class CMTask extends MRTask2<CMTask> {
     }
   }
 
+  /** Compute the sum of squared errors */
+  private float doSSECalc(int[] votes, float[] preds, int cclass) {
+    float err;
+
+    // Get the total number of votes for the row
+    float sum = doSum(votes);
+
+    // No votes for the row
+    if (sum == 0) {
+      err = 1f - (1f / (votes.length - 1f));
+      return err * err;
+    }
+
+    err = Float.isInfinite(sum)
+            ? (Float.isInfinite(preds[cclass + 1]) ? 0f : 1f)
+            : 1f - preds[cclass + 1] / sum;
+
+    return err * err;
+  }
+
+  private float doSum(int[] votes) {
+    float sum = 0f;
+    for (int v : votes)
+      sum += v;
+    return sum;
+  }
+
   /** Produce confusion matrix from given votes. */
-  final CM computeCM(int[][] votes, Chunk[] chks) {
+  final CM computeCM(int[/**/][/**/] votes, Chunk[] chks, boolean local) {
     CM cm = new CM();
     int rows = votes.length;
     int validation_rows = 0;
     int cmin = (int) _data.vecs()[_classcol].min();
-    // Assemble the votes-per-class into predictions & score each row
-    cm._matrix = new long[_N][_N];          // Make an empty confusion matrix for this chunk
-    float preds[] = new float[_N+1];
-    for( int r = 0; r < rows; r++ ) { // Iterate over rows
-      float sum = 0.f;
-      int row = r + (int)chks[0]._start;
-      int[] vi = votes[r];                // Votes for i-th row
-      for( int v=0; v<_N; v++ ) preds[v+1] = vi[v];
-      if(_classWt != null )                 // Apply class weights
-        for( int v = 0; v<_N; v++) preds[v+1] *= _classWt[v];
-      int result = ModelUtils.getPrediction(preds, row); // Share logic to get a prediction for classifiers (solve ties)
-      if( vi[result]==0 ) { cm._skippedRows++; continue; }// Ignore rows with zero votes
 
+    // Assemble the votes-per-class into predictions & score each row
+
+    // Make an empty confusion matrix for this chunk
+    cm._matrix = new long[_N][_N];
+    float preds[] = new float[_N+1];
+
+    // Loop over the rows
+    for( int r = 0; r < rows; r++ ) {
+      int row = r + (int)chks[0]._start;
+
+      // The class votes for the i-th row
+      int[] vi = votes[r];
+
+      // Fill the predictions with the vote counts, keeping the 0th index unchanged
+      for( int v=0; v<_N; v++ ) preds[v+1] = vi[v];
+
+      // Apply class weights
+      if(_classWt != null )
+        for( int v = 0; v<_N; v++) preds[v+1] *= _classWt[v];
+
+      // `result` is the class with the most votes, accounting for ties in the shared logic in ModelUtils
+      int result = ModelUtils.getPrediction(preds, row);
+
+      // Get the class value from the response column for the current row
       int cclass = alignDataIdx((int) chks[_classcol].at8(row) - cmin);
       assert 0 <= cclass && cclass < _N : ("cclass " + cclass + " < " + _N);
+
+      // Ignore rows with zero votes, but still update the sum of squared errors
+      if( vi[result]==0 ) {
+        cm._skippedRows++;
+        if (!local) _sum += doSSECalc(vi, preds, cclass);
+        continue;
+      }
+
+      // Update the confusion matrix
       cm._matrix[cclass][result]++;
       if( result != cclass ) cm._errors++;
       validation_rows++;
-      for (int v : vi)
-        sum += (float)v;
 
-      float[] fs = new float[_N];
-      for (int i = 0; i < _N; ++i) {
-        fs[i] = (float)votes[r][i];
-      }
-      float err;
-      if(sum == 0) {
-        err = 1.0f-1.0f/_N;
-      } else {
-        err = fs[cclass] == 0 ? 0.f : 1.0f-fs[cclass]/sum;
-      }
-//      if (err == 0) {
-//        err = 1 - 1.f / _N;
-//      }
-      _sum += err * err;
-      if(_N == 2) { // Binomial classification -> compute AUC, draw ROC
-        float snd = fs[1] / sum;// for validation dataset sum is always 1
+      // Update the sum of squared errors
+      if (!local) _sum += doSSECalc(vi, preds, cclass);
+      float sum = doSum(vi);
+
+      // Binomial classification -> compute AUC, draw ROC
+      if(_N == 2 && !local) {
+        float snd = preds[2] / sum;
         for(int i = 0; i < ModelUtils.DEFAULT_THRESHOLDS.length; i++) {
-          int p = snd >= ModelUtils.DEFAULT_THRESHOLDS[i] ? 1 : 0; // Compute prediction based on threshold
+          int p = snd >= ModelUtils.DEFAULT_THRESHOLDS[i] ? 1 : 0;
           _cms[i][cclass][p]++; // Increase matrix
         }
       }
     }
+
+    // End of loop over rows, return confusion matrix
     cm._rows=validation_rows;
     return cm;
   }

@@ -18,55 +18,75 @@ import java.util.Iterator;
  */
 public class RebalanceDataSet extends H2O.H2OCountedCompleter {
   final Frame _in;
-  final int _nchunks;
+
   Key _okey;
   Frame _out;
   final Key _jobKey;
+  final transient Vec.VectorGroup _vg;
+  final transient long [] _espc;
 
-  public RebalanceDataSet(Frame srcFrame, Key dstKey, int nchunks) { this(srcFrame, dstKey,nchunks,null,null);}
-  public RebalanceDataSet(Frame srcFrame, Key dstKey, int nchunks, H2O.H2OCountedCompleter cmp, Key jobKey){
+  /**
+   * Constructor for make-compatible task.
+   *
+   * To be used to make frame compatible with other frame (i.e. make all vecs compatible with other vector group and rows-per-chunk).
+   */
+  public RebalanceDataSet(Frame modelFrame, Frame srcFrame, Key dstKey) {this(modelFrame,srcFrame,dstKey,null,null);}
+  public RebalanceDataSet(Frame modelFrame, Frame srcFrame, Key dstKey, H2O.H2OCountedCompleter cmp, Key jobKey) {
     super(cmp);
     _in = srcFrame;
-    _nchunks = nchunks;
     _jobKey = jobKey;
     _okey = dstKey;
+    _espc = modelFrame.anyVec()._espc;
+    _vg = modelFrame.anyVec().group();
+  }
+
+  /**
+   * Constructor for re-balancing the dataset (e.g. for performance reasons).
+   * Resulting dataset will have requested number of chunks and rows will be unfirmly distributed with the
+   * same rows-per chunk count in all chunk (+/- 1).
+   */
+  public RebalanceDataSet(Frame srcFrame, Key dstKey, int nchunks) { this(srcFrame,dstKey,nchunks,null,null);}
+  public RebalanceDataSet(Frame srcFrame, Key dstKey, int nchunks, H2O.H2OCountedCompleter cmp, Key jobKey) {
+    super(cmp);
+    // simply create a bogus new vector (don't even put it into KV) with appropriate number of lines per chunk and then use it as a source to do multiple makeZero calls
+    // to create empty vecs and than call RebalanceTask on each one of them.
+    // RebalanceTask will fetch the appropriate src chunks and fetch the data from them.
+    int rpc = (int)(srcFrame.numRows() / nchunks);
+    int rem = (int)(srcFrame.numRows() % nchunks);
+    final long [] espc;
+    _espc = new long[nchunks + 1];
+    Arrays.fill(_espc, rpc);
+    for (int i = 0; i < rem; ++i) ++_espc[i];
+    long sum = 0;
+    for (int i = 0; i < _espc.length; ++i) {
+      long s = _espc[i];
+      _espc[i] = sum;
+      sum += s;
+    }
+    assert _espc[_espc.length - 1] == srcFrame.numRows() : "unexpected number of rows, expected " + srcFrame.numRows() + ", got " + _espc[_espc.length - 1];
+    _in = srcFrame;
+    _jobKey = jobKey;
+    _okey = dstKey;
+    _vg = Vec.VectorGroup.newVectorGroup();
   }
 
   public Frame getResult(){join(); return _out;}
 
+  boolean unlock;
   @Override
   public void compute2() {
-    _in.read_lock(_jobKey);
-    // simply create a bogus new vector (don't even put it into KV) with appropriate number of lines per chunk and then use it as a source to do multiple makeZero calls
-    // to create empty vecs and than call RebalanceTask on each one of them.
-    // RebalanceTask will fetch the appropriate src chunks and fetch the data from them.
-    int rpc = (int)(_in.numRows() / _nchunks);
-    int rem = (int)(_in.numRows() % _nchunks);
-    long [] espc = new long[_nchunks+1];
-    Arrays.fill(espc,rpc);
-    for(int i = 0; i < rem; ++i)++espc[i];
-    long sum = 0;
-    for(int i = 0; i < espc.length; ++i) {
-      long  s = espc[i];
-      espc[i] = sum;
-      sum += s;
-    }
-    assert espc[espc.length-1] == _in.numRows():"unexpected number of rows, expected " + _in.numRows() + ", got " + espc[espc.length-1];
     final Vec [] srcVecs = _in.vecs();
-    _out = new Frame(_okey,_in.names(), new Vec(Vec.newKey(),espc).makeZeros(srcVecs.length,_in.domains(),_in.uuids(),_in.times()));
+    _out = new Frame(_okey,_in.names(), new Vec(_vg.addVec(),_espc).makeZeros(srcVecs.length,_in.domains(),_in.uuids(),_in.times()));
     _out.delete_and_lock(_jobKey);
     new RebalanceTask(this,srcVecs).asyncExec(_out);
   }
 
   @Override public void onCompletion(CountedCompleter caller){
     assert _out.numRows() == _in.numRows();
-    assert _out.anyVec()._espc.length == (_nchunks+1);
-    _in.unlock(_jobKey);
     _out.update(_jobKey);
     _out.unlock(_jobKey);
   }
   @Override public boolean onExceptionalCompletion(Throwable t, CountedCompleter caller){
-    _in.unlock(_jobKey);
     if(_out != null)_out.delete(_jobKey,0.0f);
     return true;
   }

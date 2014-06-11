@@ -1413,7 +1413,9 @@ class H2O(object):
                 'source': key,
                 'destination_key': key2,
                 'seed': None,
+                'cols': None,
                 'ignored_cols': None,
+                'ignored_cols_by_name': None,
                 'max_iter': None,
                 'normalize': None,
             }
@@ -1602,6 +1604,26 @@ class H2O(object):
         verboseprint("\n rebalance result:", dump_json(a))
         return a
 
+    def to_int(self, timeoutSecs=60, **kwargs):
+        params_dict = {
+            'src_key': None,
+            'column_index': None, # ugh. takes 1 based indexing
+        }
+        params_dict.update(kwargs)
+        a = self.__do_json_request('2/ToInt2.json', params=params_dict, timeout=timeoutSecs)
+        verboseprint("\n to_int result:", dump_json(a))
+        return a
+
+    def to_enum(self, timeoutSecs=60, **kwargs):
+        params_dict = {
+            'src_key': None,
+            'column_index': None, # ugh. takes 1 based indexing
+        }
+        params_dict.update(kwargs)
+        a = self.__do_json_request('2/ToEnum2.json', params=params_dict, timeout=timeoutSecs)
+        verboseprint("\n to_int result:", dump_json(a))
+        return a
+
     # There is also a RemoveAck in the browser, that asks for confirmation from
     # the user. This is after that confirmation.
     # UPDATE: ignore errors on remove..key might already be gone due to h2o removing it now
@@ -1710,7 +1732,9 @@ class H2O(object):
             'b_max': None,
             'bootstrap_fraction': None,
             'seed': None,
+            'cols': None,
             'ignored_cols': None,
+            'ignored_cols_by_name': None,
         }
         browseAlso = kwargs.pop('browseAlso', False)
         check_params_update_kwargs(params_dict, kwargs, 'gap_statistic', print_params=True)
@@ -1733,6 +1757,7 @@ class H2O(object):
                        'source': data_key,
                        'response': None,
                        'cols': None,
+                       'ignored_cols': None,
                        'ignored_cols_by_name': None,
                        'classification': 1,
                        'validation': None,
@@ -1745,7 +1770,7 @@ class H2O(object):
                        'sample': 0.67,
                        'sampling_strategy': 'RANDOM',
                        'seed': -1.0,
-                       'stat_type': 'ENTROPY',
+                       'select_stat_type': 'ENTROPY',
                        'strata_samples': None,
         }
         check_params_update_kwargs(params_dict, kwargs, 'random_forest', print_params)
@@ -1786,6 +1811,7 @@ class H2O(object):
                 'balance_classes': 1, 
                 'classification': 1,
                 'cols': None,
+                'ignored_cols': None,
                 'ignored_cols_by_name': None,
                 'importance': 1, # enable variable importance by default
                 'max_after_balance_size': 7,
@@ -1855,7 +1881,6 @@ class H2O(object):
             # if we want to do noPoll, we have to name the model, so we know what to ask for when we do the completion view
             # HACK: wait more for first poll?
             time.sleep(5)
-            print "right ebfore call to poll_url, timeoutSec: ", timeoutSecs
             rfView = self.poll_url(rf, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                                    initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
                                    noise=noise, benchmarkLogging=benchmarkLogging, noPrint=noPrint)
@@ -2059,7 +2084,9 @@ class H2O(object):
             'destination_key': None,
             'source_key': None,
             'response': None,
+            'cols': None,
             'ignored_cols': None,
+            'ignored_cols_by_name': None,
             'classification': None,
             'laplace': None,
         }
@@ -2231,8 +2258,9 @@ class H2O(object):
             'ntrees': None,
             'max_depth': None,
             'min_rows': None,
-            'ignored_cols_by_name': None, # either this or cols..not both
             'cols': None,
+            'ignored_cols': None,
+            'ignored_cols_by_name': None, # either this or cols..not both
             'nbins': None,
             'classification': None,
             'score_each_iteration': None,
@@ -2264,7 +2292,9 @@ class H2O(object):
         params_dict = {
             'destination_key': None,
             'source': data_key,
+            'cols': None,
             'ignored_cols': None,
+            'ignored_col_names': None,
             'tolerance': None,
             'max_pc': None,
             'standardize': None,
@@ -2320,7 +2350,9 @@ class H2O(object):
             'source': key,
             'destination_key': None,
             'model': model,
+            'cols': None,
             'ignored_cols': None,
+            'ignored_col_name': None,
             'classification': None,
             'response': None,
             'max_rows': 0,
@@ -2349,7 +2381,9 @@ class H2O(object):
         params_dict = {
             'destination_key': None,
             'source': data_key,
+            'cols': None,
             'ignored_cols': None,
+            'ignored_cols_by_name': None,
             'validation': None,
             'classification': None,
             'response': None,
@@ -2397,7 +2431,9 @@ class H2O(object):
         params_dict = {
             'destination_key': None,
             'source': data_key,
+            'cols': None,
             'ignored_cols': None,
+            'ignored_cols_by_name': None,
             'validation': None,
             'classification': None,
             'response': None,
@@ -2572,7 +2608,9 @@ class H2O(object):
                 'source': key,
                 'destination_key': None,
                 'response': None,
+                'cols': None,
                 'ignored_cols': None,
+                'ignored_cols_by_name': None,
                 'max_iter': None,
                 'standardize': None,
                 'family': None,
@@ -2830,6 +2868,12 @@ class H2O(object):
         else:
             args += ["-jar", self.get_h2o_jar()]
 
+        if 1==1:
+            if self.hdfs_config:
+                args += [
+                    '-hdfs_config=' + self.hdfs_config
+                ]
+
         if beta_features:
             args += ["-beta"]
 
@@ -2890,10 +2934,11 @@ class H2O(object):
         ]
 
         # ignore the other -hdfs args if the config is used?
-        if self.hdfs_config:
-            args += [
-                '-hdfs_config ' + self.hdfs_config
-            ]
+        if 1==0:
+            if self.hdfs_config:
+                args += [
+                    '-hdfs_config=' + self.hdfs_config
+                ]
 
         if self.use_hdfs:
             args += [
