@@ -454,7 +454,6 @@ public class CMTask extends MRTask2<CMTask> {
     protected boolean        _valid;
     final protected float _sum;
 
-
     private CMFinal() {
       _valid         = false;
       _SpeeDRFModelKey = null;
@@ -464,6 +463,7 @@ public class CMTask extends MRTask2<CMTask> {
       _sum = 0.f;
       _cms = null;
     }
+
     private CMFinal(CM cm, Key SpeeDRFModelKey, String[] domain, long[] errorsPerTree, boolean computedOOB, boolean valid, float sum, long[][][] cms) {
       _matrix = cm._matrix;
       _errors = cm._errors;
@@ -477,14 +477,17 @@ public class CMTask extends MRTask2<CMTask> {
       _sum = sum;
       _cms = cms;
     }
+
     /** Make non-valid confusion matrix */
     public static CMFinal make() {
       return new CMFinal();
     }
+
     /** Create a new confusion matrix. */
     public static CMFinal make(CM cm, SpeeDRFModel model, String[] domain, long[] errorsPerTree, boolean computedOOB, float sum, long[][][] cms) {
       return new CMFinal(cm, model._key, domain, errorsPerTree, computedOOB, true, sum, cms);
     }
+
     public String[] domain() { return _domain; }
     public int      dimension() { return _matrix.length; }
     public long     matrix(int i, int j) { return _matrix[i][j]; }
@@ -561,9 +564,9 @@ public class CMTask extends MRTask2<CMTask> {
       } else {
         err = fs[cclass] == 0 ? 0.f : 1.0f-fs[cclass]/sum;
       }
-//      if (err == 0) {
-//        err = 1 - 1.f / _N;
-//      }
+      if (err == 0) {
+        err = 1 - 1.f / _N;
+      }
       if (!local) _sum += err * err;
       if(_N == 2 && !local) { // Binomial classification -> compute AUC, draw ROC
         float snd = fs[1] / sum;// for validation dataset sum is always 1
