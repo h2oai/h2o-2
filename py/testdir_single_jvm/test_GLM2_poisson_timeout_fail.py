@@ -6,12 +6,10 @@ print "Repeated test of case that timeouts in EC2"
 
 def define_params():
     paramDict = {
-        'y': 54,
+        'response': 54,
         'family': 'poisson', 
         'beta_epsilon': 0.001, 
-        'thresholds': 0.1, 
         'max_iter': 15, 
-        'link': 'familyDefault', 
         'alpha': 0.5, 
         'n_folds': 9, 
         'lambda': 1e-4
@@ -35,7 +33,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_poisson_timeout_fail(self):
+    def test_GLM2_poisson_timeout_fail(self):
+        h2o.beta_features = True
         start = time.time()
         csvPathname = 'standard/covtype.data'
         parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put')
