@@ -532,9 +532,7 @@ public class CMTask extends MRTask2<CMTask> {
     float err;
 
     // Get the total number of votes for the row
-    float sum = 0.f;
-    for (int v : votes)
-      sum += v;
+    float sum = doSum(votes);
 
     // No votes for the row
     if (sum == 0) {
@@ -547,6 +545,13 @@ public class CMTask extends MRTask2<CMTask> {
             : 1f - preds[cclass + 1] / sum;
 
     return err * err;
+  }
+
+  private float doSum(int[] votes) {
+    float sum = 0f;
+    for (int v : votes)
+      sum += v;
+    return sum;
   }
 
   /** Produce confusion matrix from given votes. */
@@ -564,7 +569,6 @@ public class CMTask extends MRTask2<CMTask> {
 
     // Loop over the rows
     for( int r = 0; r < rows; r++ ) {
-      float sum = 0.f;
       int row = r + (int)chks[0]._start;
 
       // The class votes for the i-th row
@@ -598,6 +602,7 @@ public class CMTask extends MRTask2<CMTask> {
 
       // Update the sum of squared errors
       if (!local) _sum += doSSECalc(vi, preds, cclass);
+      float sum = doSum(vi);
 
       // Binomial classification -> compute AUC, draw ROC
       if(_N == 2 && !local) {

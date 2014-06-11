@@ -115,10 +115,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   @Override public String[] classNames() { return regression ? null : _domain; }
 
   private static boolean doScore(SpeeDRFModel m) {
-    if (m.score_each) return true;
-    if (m.t_keys.length == 1) return true;
-    if (m.t_keys.length == m.N) return true;
-    return false;
+    return m.score_each || m.t_keys.length == 1 || m.t_keys.length == m.N;
   }
 
   public static SpeeDRFModel make(SpeeDRFModel old, Key tkey, int nodeIdx) {
