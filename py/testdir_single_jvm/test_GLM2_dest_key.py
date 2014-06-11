@@ -20,33 +20,25 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
 
-    def test_C_prostate(self):
+    def test_GLM2_dest_key(self):
+        h2o.beta_features = True
         print "\nStarting prostate.csv"
         # columns start at 0
         y = "1"
-        x = ""
         csvFilename = "prostate.csv"
         csvPathname = 'logreg' + '/' + csvFilename
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=csvFilename + ".hex", schema='put')
 
         for maxx in [6]:
-            x = range(maxx)
-            x.remove(0) # 0 is member ID. not used
-            x.remove(1) # 1 is output
-            x = ",".join(map(str,x))
-            print "\nx:", x
-            print "y:", y
-
             destination_key='GLM_model_python_0_default_0'
-
             kwargs = {
-                'x': x, 
-                'y':  y, 
+                'ignored_cols': '0,1',
+                'response':  y, 
                 'n_folds': 5, 
                 'destination_key': destination_key,
             }
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=15, **kwargs)
-            h2o_destination_key = glm['destination_key']
+            h2o_destination_key = glm['glm_model']['_key']
             print 'h2o_destination_key:', h2o_destination_key
 
             self.assertEqual(h2o_destination_key, destination_key, msg='I said to name the key %s, h2o used %s' % 

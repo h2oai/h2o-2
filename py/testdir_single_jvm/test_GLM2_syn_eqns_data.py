@@ -122,6 +122,7 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        h2o.beta_features = True
         global SEED, localhost
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
@@ -193,7 +194,6 @@ class Basic(unittest.TestCase):
                 DATA_VALUE_MIN, DATA_VALUE_MAX, DATA_DISTS, ALGO, SEED)
 
             parseResult = h2i.import_parse(path=csvPathname, hex_key=hex_key, schema='put', timeoutSecs=60)
-            print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
 
             # We should be able to see the parse result?
@@ -204,7 +204,7 @@ class Basic(unittest.TestCase):
             print "GLM is ignoring the thresholds I give it? deciding what's best?"
             kwargs = {
                     'family': ALGO,
-                    'y': y, 
+                    'response': y, 
                     'max_iter': 10, 
                     'lambda': 0,
                     'alpha': 0,
@@ -238,7 +238,7 @@ class Basic(unittest.TestCase):
 
     #************************************************************************************
             
-    def test_GLM_syn_eqns_data_A(self):
+    def test_GLM2_syn_eqns_data_A(self):
         self.GLM_syn_eqns_data(
             ALGO='binomial', 
             DATA_VALUE_MIN=-1, DATA_VALUE_MAX=1,
@@ -246,7 +246,7 @@ class Basic(unittest.TestCase):
             INTCPT_VALUE_MIN=-1, INTCPT_VALUE_MAX=1,
             DATA_DISTS='unique_pos_neg')
 
-    def test_GLM_syn_eqns_data_B(self):
+    def test_GLM2_syn_eqns_data_B(self):
         self.GLM_syn_eqns_data(
             ALGO='binomial', 
             DATA_VALUE_MIN=-1, DATA_VALUE_MAX=1,
@@ -254,7 +254,7 @@ class Basic(unittest.TestCase):
             INTCPT_VALUE_MIN=-1, INTCPT_VALUE_MAX=1,
             DATA_DISTS='mean')
 
-    def test_GLM_syn_eqns_data_C(self):
+    def test_GLM2_syn_eqns_data_C(self):
         self.GLM_syn_eqns_data(
             ALGO='poisson', 
             DATA_VALUE_MIN=0, DATA_VALUE_MAX=1,
@@ -262,7 +262,7 @@ class Basic(unittest.TestCase):
             INTCPT_VALUE_MIN=0, INTCPT_VALUE_MAX=1,
             DATA_DISTS='mean')
 
-    def test_GLM_syn_eqns_data_D(self):
+    def test_GLM2_syn_eqns_data_D(self):
         # data and y have to be 0 to N for poisson
         self.GLM_syn_eqns_data(
             ALGO='poisson', 
@@ -271,7 +271,7 @@ class Basic(unittest.TestCase):
             INTCPT_VALUE_MIN=0, INTCPT_VALUE_MAX=1,
             DATA_DISTS='unique_pos_neg')
 
-    def test_GLM_syn_eqns_data_E(self):
+    def test_GLM2_syn_eqns_data_E(self):
         # data and y have to be 0 to N for poisson
         # y seems to be tightly clamped between 0 and 1 if you have coefficient range from -1 to 0
         self.GLM_syn_eqns_data(
@@ -281,7 +281,7 @@ class Basic(unittest.TestCase):
             INTCPT_VALUE_MIN=-.2, INTCPT_VALUE_MAX=2,
             DATA_DISTS='random')
 
-    def test_GLM_syn_eqns_data_F(self):
+    def test_GLM2_syn_eqns_data_F(self):
         # data and y have to be 0 to N for poisson
         # y seems to be tightly clamped between 0 and 1 if you have coefficient range from -1 to 0
         self.GLM_syn_eqns_data(
