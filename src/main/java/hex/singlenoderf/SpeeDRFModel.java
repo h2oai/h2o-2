@@ -458,8 +458,8 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       JsonObject obj = json.getAsJsonObject();
       return new double[]{
               obj.get(Constants.MIN).getAsDouble(),
-              obj.get(Constants.MAX).getAsDouble(),
-              obj.get(Constants.MEAN).getAsDouble()};
+              obj.get(Constants.MEAN).getAsDouble(),
+              obj.get(Constants.MAX).getAsDouble()};
     }
   }
 
