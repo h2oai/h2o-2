@@ -1204,10 +1204,10 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, nfolds=0, validation,
       sample=sample.rate, bin_limit=nbins, seed=seed, select_stat_type = stat.type, oobee=as.numeric(oobee), sampling_strategy=sampling_strategy, strata_samples=strata_samples, class_weights=classwt)
   } else if(missing(validation) && nfolds >= 2) {
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, response=args$y, ignored_cols=args$x_ignore, num_trees=ntree, max_depth=depth, n_folds=nfolds, importance=as.numeric(importance),
-      sample=sample.rate, bin_limit=nbins, seed=seed, stat_type=stat.type, oobee=as.numeric(oobee), sampling_strategy=sampling_strategy, strata_samples=strata_samples, class_weights=classwt)
+      sample=sample.rate, bin_limit=nbins, seed=seed, select_stat_type=stat.type, oobee=as.numeric(oobee), sampling_strategy=sampling_strategy, strata_samples=strata_samples, class_weights=classwt)
   } else if(!missing(validation) && nfolds == 0) {
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, response=args$y, ignored_cols=args$x_ignore, num_trees=ntree, max_depth=depth, validation=validation@key, importance=as.numeric(importance),
-      sample=sample.rate, bin_limit=nbins, seed=seed, stat_type = stat.type, oobee=as.numeric(oobee), sampling_strategy=sampling_strategy, strata_samples=strata_samples, class_weights=classwt)
+      sample=sample.rate, bin_limit=nbins, seed=seed, select_stat_type = stat.type, oobee=as.numeric(oobee), sampling_strategy=sampling_strategy, strata_samples=strata_samples, class_weights=classwt)
   } else stop("Cannot set both validation and nfolds at the same time")
   params = list(x=args$x, y=args$y, ntree=ntree, depth=depth, sample.rate=sample.rate, bin_limit=nbins, stat.type = stat.type, classwt=classwt, sampling_strategy=sampling_strategy, seed=seed, oobee=oobee, nfolds=nfolds, importance=importance)
 

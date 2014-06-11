@@ -138,7 +138,6 @@ public class SpeeDRF extends Job.ValidatedJob {
         arg.disable("Variable Importance not supported in SpeeDRF regression.");
       }
     }
-
   }
 
   @Override protected void execImpl() {
