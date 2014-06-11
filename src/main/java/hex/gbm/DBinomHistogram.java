@@ -156,9 +156,10 @@ public class DBinomHistogram extends DHistogram<DBinomHistogram> {
 
     // For categorical predictors, set bits for levels grouped to right of split
     // TODO: Is bit = 1 for left or right of the split? Should be right (see Javapredict pre code in DTree.java)
-    IcedBitSet bs = new IcedBitSet(nbins);
+    IcedBitSet bs = null;
     if(_isInt == 2 && _step == 1.0f && nbins >= 4) {
-      equal = (byte)(bs.size() <= 4 ? 2 : 3);
+      bs = new IcedBitSet(nbins);
+      equal = (byte)(bs.numBytes() <= 4 ? 2 : 3);
       // for(int i = 0; i < best; i++) bs.set(idx[i]);
       for(int i = best; i < nbins; i++) bs.set(idx[i]);
     }

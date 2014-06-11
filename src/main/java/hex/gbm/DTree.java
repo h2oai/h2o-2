@@ -479,7 +479,7 @@ public class DTree extends Iced {
 
       // int res = 7;  // 1B node type + flags, 2B colId, 4B float split val
       // 1B node type + flags, 2B colId, 4B split val/small group or 2B size + large group
-      int res = _split._equal == 3 ? 5 + _split._bs.size() : 7;
+      int res = _split._equal == 3 ? 5 + _split._bs.numBytes() : 7;
 
       Node left = _tree.node(_nids[0]);
       int lsz = left.size();
@@ -511,14 +511,13 @@ public class DTree extends Iced {
       if(_split._equal == 0 || _split._equal == 1)
         ab.put4f(_splat);
       else if(_split._equal == 2) {
-        // Make sure group split is 4B, else pad with zeros
         byte[] ary = MemoryManager.malloc1(4);
-        for(int i = 0; i < _split._bs._val.length; i++)
+        for(int i = 0; i < _split._bs.numBytes(); i++)
           ary[i] = _split._bs._val[i];
         ab.putA1(ary, 4);
       } else {
-        ab.put2((char)_split._bs.size());
-        ab.putA1(_split._bs._val, _split._bs._val.length);
+        ab.put2((char)_split._bs.numBytes());
+        ab.putA1(_split._bs._val, _split._bs.numBytes());
       }
 
       Node left = _tree.node(_nids[0]);

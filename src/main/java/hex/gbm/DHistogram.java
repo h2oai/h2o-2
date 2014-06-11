@@ -85,6 +85,7 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
     // Common for e.g. boolean columns, or near leaves.
     int xbins = nbins;
     float step;
+    // TODO: Fix shrinkage of bins when doing non-contiguous group splits
     if( isInt>0 && maxEx-min <= nbins ) {
       assert ((long)min)==min;                // No overflow
       xbins = (char)((long)maxEx-(long)min);  // Shrink bins
