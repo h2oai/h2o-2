@@ -863,8 +863,8 @@ public class Frame extends Lockable<Frame> {
               last_cs[c] = vecs[c].chunkForChunkIdx(last_ci);
           }
           for (int c = 0; c < vecs.length; c++)
-            if( vecs[c].isUUID() ) ncs[c].addUUID(last_cs[c].at16l(r),last_cs[c].at16h(r));
-            else ncs[c].addNum(last_cs[c].at(r));
+            if( vecs[c].isUUID() ) ncs[c].addUUID(last_cs[c],r);
+            else                   ncs[c].addNum (last_cs[c].at(r));
         }
       }
     }
@@ -930,8 +930,9 @@ public class Frame extends Lockable<Frame> {
           NewChunk nc = nchks[      i ];
           if( _isInt[i] == 1 ) { // Slice on integer columns
             for( int j=rlo; j<rhi; j++ )
-              if( oc.isNA0(j) ) nc.addNA();
-              else              nc.addNum(oc.at80(j),0);
+              if( oc._vec.isUUID() ) nc.addUUID(oc,j);
+              else if( oc.isNA0(j) ) nc.addNA();
+              else                   nc.addNum(oc.at80(j),0);
           } else {                // Slice on double columns
             for( int j=rlo; j<rhi; j++ )
               nc.addNum(oc.at0(j));
