@@ -201,11 +201,6 @@ public abstract class Job extends Func {
     return state == JobState.CANCELLED || state == JobState.FAILED;
   }
 
-  /** Returns true if the job was cancelled by the user.
-   * @return true if the job is in state {@link JobState#CANCELLED}.
-   */
-  public boolean isCancelledXX() { return state == JobState.CANCELLED; }
-
   /** Returns true if the job was terminated by unexpected exception.
    * @return true, if the job was terminated by unexpected exception.
    */
@@ -273,13 +268,10 @@ public abstract class Job extends Func {
    * @param jobkey job key
    * @return returns a job with given job key or null if a job is not found.
    */
-  public static final Job findJob(final Key jobkey) {
-    Job job = UKV.get(jobkey);
-    return job;
-  }
+  public static Job findJob(final Key jobkey) { return UKV.get(jobkey); }
 
   /** Finds a job with given dest key or returns null */
-  public static final Job findJobByDest(final Key destKey) {
+  public static Job findJobByDest(final Key destKey) {
     Job job = null;
     for( Job current : Job.all() ) {
       if( current.dest().equals(destKey) ) {
@@ -372,7 +364,7 @@ public abstract class Job extends Func {
         return;
       }
 
-      try { Thread.sleep (pollingIntervalMillis); } catch (Exception xe) {}
+      try { Thread.sleep (pollingIntervalMillis); } catch (Exception ignore) {}
     }
   }
 
@@ -390,8 +382,7 @@ public abstract class Job extends Func {
     final long _count;
     private final Status _status;
     final String _error;
-    protected DException _ex;
-    public enum Status { Computing, Done, Cancelled, Error };
+    public enum Status { Computing, Done, Cancelled, Error }
 
     public Status status() { return _status; }
 
@@ -586,6 +577,14 @@ public abstract class Job extends Func {
       if (!isEmpty(ignored_cols)) { specified++; }
       if (!isEmpty(ignored_cols_by_name)) { specified++; }
       if (specified > 1) throw new IllegalArgumentException("Arguments 'cols', 'ignored_cols_by_name', and 'ignored_cols' are exclusive");
+
+      Vec[] vecs = source.vecs();
+      for( int i = 0; i < vecs.length; i++ )
+        if( vecs[i].isUUID() ) {
+          if( ignored_cols==null ) ignored_cols = new int[0];
+          ignored_cols = Arrays.copyOf(ignored_cols,ignored_cols.length+1);
+          ignored_cols[ignored_cols.length-1] = i;
+       }
 
       // If the column are not specified, then select everything.
       if (isEmpty(cols)) {
@@ -884,7 +883,7 @@ public abstract class Job extends Func {
     protected String[] getVectorDomain(final Vec v) {
       assert v==null || v.isInt() || v.isEnum() : "Cannot get vector domain!";
       if (v==null) return null;
-      String[] r = null;
+      String[] r;
       if (v.isEnum()) {
         r = v.domain();
       } else {

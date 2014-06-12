@@ -3,7 +3,6 @@ package water.fvec;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.exec.Flow;
-import water.fvec.Vec.VectorGroup;
 import water.util.Log;
 
 import java.io.IOException;
@@ -392,6 +391,22 @@ public class Frame extends Lockable<Frame> {
     return ds;
   }
 
+  /** true/false every Vec is a UUID */
+  public boolean[] uuids() {
+    boolean bs[] = new boolean[vecs().length];
+    for( int i=0; i<vecs().length; i++ )
+      bs[i] = vecs()[i].isUUID();
+    return bs;
+  }
+
+  /** Time status for every Vec */
+  public byte[] times() {
+    byte bs[] = new byte[vecs().length];
+    for( int i=0; i<vecs().length; i++ )
+      bs[i] = vecs()[i]._time;
+    return bs;
+  }
+
   private String[][] domains(int [] cols){
     Vec [] vecs = vecs();
     String [][] res = new String[cols.length][];
@@ -656,8 +671,9 @@ public class Frame extends Lockable<Frame> {
         for( int i = 0; i < vs.length; i++ ) {
           if(i > 0) sb.append(',');
           if(!vs[i].isNA(_row)) {
-            if(vs[i].isEnum()) sb.append('"' + vs[i]._domain[(int) vs[i].at8(_row)] + '"');
-            else if(vs[i].isInt()) sb.append(vs[i].at8(_row));
+            if( vs[i].isEnum() ) sb.append('"' + vs[i]._domain[(int) vs[i].at8(_row)] + '"');
+            else if( vs[i].isUUID() ) sb.append(PrettyPrint.UUID(vs[i].at16l(_row),vs[i].at16h(_row)));
+            else if( vs[i].isInt() ) sb.append(vs[i].at8(_row));
             else {
               // R 3.1 unfortunately changed the behavior of read.csv().
               // (Really type.convert()).
