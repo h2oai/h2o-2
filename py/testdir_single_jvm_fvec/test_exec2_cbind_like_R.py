@@ -86,16 +86,6 @@ class Basic(unittest.TestCase):
                 execResult, result = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=300)
                 execTime = time.time() - start
                 print 'exec took', execTime, 'seconds'
-                c = h2o.nodes[0].get_cloud()
-                c = c['nodes']
-
-                # print (h2o.dump_json(c))
-                k = [i['num_keys'] for i in c]
-                v = [i['value_size_bytes'] for i in c]
-
-                
-                print "keys: %s" % " ".join(map(str,k))
-                print "value_size_bytes: %s" % " ".join(map(str,v))
 
         h2o.check_sandbox_for_errors()
 
