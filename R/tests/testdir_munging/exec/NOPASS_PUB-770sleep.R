@@ -4,18 +4,17 @@ setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 source('../../findNSourceUtils.R')
 
 # use this for interactive setup
-#     library(h2o)
-#     library(testthat)
-#     h2o.setLogPath(getwd(), "Command")
-#     h2o.setLogPath(getwd(), "Error")
-#     h2o.startLogging()
-#     conn = h2o.init()
+#      library(h2o)
+#      library(testthat)
+#      h2o.setLogPath(getwd(), "Command")
+#      h2o.setLogPath(getwd(), "Error")
+#      h2o.startLogging()
+#      conn = h2o.init()
 
 test.cbind <- function(conn) {
 
-    # orig
-    # df = data.frame(matrix(1:300000, nrow=300000, ncol=150))
-    df = data.frame(matrix(1:30000, nrow=30000, ncol=150))
+    # seemed to get different errors (cbind) if I pasted the stuff below in "paragraphs" into R
+    df = data.frame(matrix(1:300000, nrow=300000, ncol=150))
     sample.IDs <- 1:60000
     index <- data.frame(ifelse(df[,1] %in% sample.IDs,1,0))
     colnames(index) <- c("index")
