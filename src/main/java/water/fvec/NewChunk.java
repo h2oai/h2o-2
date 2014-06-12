@@ -548,7 +548,7 @@ public class NewChunk extends Chunk {
 
     // Compute min & max, as scaled integers in the xmin scale.
     // Check for overflow along the way
-    boolean overflow = (xhi-xmin) >= p10iLength;
+    boolean overflow = ((xhi-xmin) >= p10iLength) || ((xlo-xmin) >= p10iLength);
     long lemax=0, lemin=0;
     if( !overflow ) {           // Can at least get the power-of-10 without overflow
       long pow10 = DParseTask.pow10i(xhi-xmin);
