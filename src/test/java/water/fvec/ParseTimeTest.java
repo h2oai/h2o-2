@@ -3,6 +3,7 @@ package water.fvec;
 import static org.junit.Assert.*;
 import org.junit.Test;
 import water.TestUtil;
+import water.Key;
 
 public class ParseTimeTest extends TestUtil {
   private double[] d(double... ds) { return ds; }
@@ -69,7 +70,7 @@ public class ParseTimeTest extends TestUtil {
       l(         8,0x8000000000000000L,0x0000000000000000L,0),
       l(         9,0xFFFFFFFFFFFFFFFFL,0xFFFFFFFFFFFFFFFFL,1),
     };
-    Frame fr = TestUtil.parseFrame(null,"smalldata/test/test_uuid.csv");
+    Frame fr = parseFrame(Key.make("uuid.hex"),"smalldata/test/test_uuid.csv");
     Vec vecs[] = fr.vecs();
     try {
       assertEquals(exp.length,fr.numRows());
@@ -96,6 +97,20 @@ public class ParseTimeTest extends TestUtil {
         }
         assertEquals(exp[row].length,col2);
       }
+
+      // Slice with UUIDs
+      water.exec.Env env=null;
+      try {
+        env = water.exec.Exec2.exec("uuid.hex[seq(1,10,1),]");
+        Frame res = env.popAry();
+        System.out.println(res.toStringAll());
+        String skey = env.key();
+        env.subRef(res,skey);   // But then end lifetime
+      } catch( IllegalArgumentException iae ) { 
+        if( env != null ) env.remove_and_unlock();
+        throw iae;
+      }
+
     } finally {
       fr.delete();
     }

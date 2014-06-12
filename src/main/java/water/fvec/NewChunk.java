@@ -102,7 +102,7 @@ public class NewChunk extends Chunk {
           else if( _ds[i] !=0 || _ls[i] != 0 ) nzs++;
         _uuidCnt = _len2-nas;
       } else if( _ds != null ) { // Doubles?
-        assert _ls==null && _xs==null;
+        assert _xs==null;
         for( int i = 0; i < _len; ++i) if( Double.isNaN(_ds[i]) ) nas++; else if( _ds[i]!=0 ) nzs++;
       } else {                  // Longs and enums?
         if( _ls != null )

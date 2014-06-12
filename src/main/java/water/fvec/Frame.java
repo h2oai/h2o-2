@@ -611,7 +611,8 @@ public class Frame extends Lockable<Frame> {
           for( int i=0; i<len; i++ ) sb.append('-');
         } else {
           try {
-            sb.append(String.format(fs[c],vec.at8(idx)));
+            if( vec.isUUID() ) sb.append(PrettyPrint.UUID(vec.at16l(idx),vec.at16h(idx)));
+            else sb.append(String.format(fs[c],vec.at8(idx)));
           } catch( IllegalFormatException ife ) {
             System.out.println("Format: "+fs[c]+" col="+c+" not for ints");
             ife.printStackTrace();
@@ -862,7 +863,8 @@ public class Frame extends Lockable<Frame> {
               last_cs[c] = vecs[c].chunkForChunkIdx(last_ci);
           }
           for (int c = 0; c < vecs.length; c++)
-            ncs[c].addNum(last_cs[c].at(r));
+            if( vecs[c].isUUID() ) ncs[c].addUUID(last_cs[c].at16l(r),last_cs[c].at16h(r));
+            else ncs[c].addNum(last_cs[c].at(r));
         }
       }
     }
