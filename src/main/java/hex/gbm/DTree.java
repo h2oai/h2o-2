@@ -1351,7 +1351,7 @@ public class DTree extends Iced {
       sb.p(";").nl();
       sb.i(1).p("return pred;").nl().di(1);
       sb.i().p("}").nl();
-      sb.p(_grpsplit).di(1);
+      // sb.p(_grpsplit).di(1);
     }
 
     @Override protected void pre( int col, float fcmp, IcedBitSet gcmp, int equal ) {
@@ -1413,6 +1413,7 @@ public class DTree extends Iced {
       preamble(_sb, _subtrees++);   // TODO: Need to pass along group split BitSet
       visit();
       closure(_sb);
+      _sb.p(_grpsplit).di(1);
       _sb.p(_csb);
     }
   }

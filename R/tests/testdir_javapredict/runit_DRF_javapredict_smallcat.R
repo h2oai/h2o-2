@@ -28,10 +28,10 @@ print(paste(    "depth"     , depth))
 nodesize <- 10
 print(paste( "nodesize", nodesize))
 
-train <- locate("smalldata/dhisttest.csv")
+train <- locate("smalldata/histogram_test/alphabet_cattest.csv")
 print(paste(    "train"     , train))    
 
-test <- locate("smalldata/dhisttest.csv")
+test <- locate("smalldata/histogram_test/alphabet_cattest.csv")
 print(paste(    "test"     , test))    
 
 x = c("x1", "x2")

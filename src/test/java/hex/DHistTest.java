@@ -21,7 +21,7 @@ public class DHistTest extends TestUtil {
 
     try {
       // Configure DRF
-      drf.source = parseFrame(destTrain, "../smalldata/dhisttest.csv");
+      drf.source = parseFrame(destTrain, "../smalldata/histogram_test/alphabet_cattest.csv");
       drf.response = drf.source.vecs()[2];
       drf.classification = true;
       drf.ntrees = 100;
