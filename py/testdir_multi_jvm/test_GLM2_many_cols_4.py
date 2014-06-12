@@ -1,4 +1,4 @@
-import unittest, random, sys, time
+import unittest, random, sys, time, os
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_glm, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
 
@@ -10,46 +10,35 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED, translateList):
 
     for i in range(rowCount):
         rowData = []
-        rowTotal = 0
         for j in range(colCount):
-            # http://docs.scipy.org/doc/numpy/reference/generated/numpy.random.triangular.html
-            # except order here is low/high/mode
-            ri1 = r1.triangular(0,3,1.5)
-            ri1Int = int(round(ri1,0))
-            rowData.append(ri1Int)
-            rowTotal += ri1
+            ri1 = int(r1.triangular(0,4,2.5))
+            rowData.append(ri1)
 
+        rowTotal = sum(rowData)
         if translateList is not None:
             for i, iNum in enumerate(rowData):
                 rowData[i] = translateList[iNum]
 
         result = r2.randint(0,1)
-
-        resultStr = "%5.3f" % result
-        ### print colCount, rowTotal, resultStr, result
-
+        ### print colCount, rowTotal, result
         rowDataStr = map(str,rowData)
-        rowDataStr.append(resultStr)
-        # add the output twice, to try to match to it?
-        # can't duplicate output in input, perfect separation, failure to converge
-        ## rowDataStr.append(resultStr)
-
+        rowDataStr.append(str(result))
         rowDataCsv = ",".join(rowDataStr)
         dsf.write(rowDataCsv + "\n")
 
     dsf.close()
 
+
 paramDict = {
     'family': ['binomial'],
     'lambda': [1.0E-5],
     'alpha': [1.0],
-    'max_iter': [20],
-    'thresholds': [0.5],
-    'n_folds': [0],
+    'max_iter': [50],
+    'n_folds': [2],
     'beta_epsilon': [1.0E-4],
     }
 
-class test_GLM_prob_cols_4(unittest.TestCase):
+class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
 
@@ -67,13 +56,12 @@ class test_GLM_prob_cols_4(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_categorical_expand_and_probability_output(self):
+    def test_GLM2_many_cols_4(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         translateList = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u']
         tryList = [
-            (7919,  53, 'cA', 600),
-            # translated to enums, 4 per col, so don't go above 2k effective cols or too slow!
-            (2659,  400, 'cB', 600),
+            (100000,  100, 'cA', 600),
             ]
 
         ### h2b.browseTheCloud()
@@ -88,7 +76,6 @@ class test_GLM_prob_cols_4(unittest.TestCase):
 
             print "\nUpload and parse", csvPathname
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=240, retryDelaySecs=0.5)
-            print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
 
             # We should be able to see the parse result?
@@ -99,8 +86,9 @@ class test_GLM_prob_cols_4(unittest.TestCase):
             for k in paramDict:
                 paramDict2[k] = paramDict[k][0]
 
+            # since we add the output twice, it's no longer colCount-1
             y = colCount
-            kwargs = {'y': y, 'max_iter': 20}
+            kwargs = {'response': y, 'max_iter': 50}
             kwargs.update(paramDict2)
 
             start = time.time()

@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_browse as h2b, h2o_jobs, h2o_import as h2i
+import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_browse as h2b, h2o_jobs, h2o_import as h2i, h2o_gbm
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -19,7 +19,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_big1_nopoll(self):
+    def test_GLM2_big1_nopoll(self):
+        h2o.beta_features = True
         csvPathname = 'hhp_107_01.data.gz'
         print "\n" + csvPathname
 
@@ -30,8 +31,8 @@ class Basic(unittest.TestCase):
         glmInitial = []
         # dispatch multiple jobs back to back
         start = time.time()
-        for jobDispatch in range(10):
-            kwargs = {'x': x, 'y': y, 'n_folds': 1}
+        for jobDispatch in range(5):
+            kwargs = {'response': y, 'n_folds': 1, 'family': 'binomial'}
             # FIX! what model keys do these get?
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=300, noPoll=True, **kwargs)
             glmInitial.append(glm)
@@ -46,11 +47,24 @@ class Basic(unittest.TestCase):
         # we saved the initial response?
         # if we do another poll they should be done now, and better to get it that 
         # way rather than the inspect (to match what simpleCheckGLM is expected
-        for glm in glmInitial:
-            print "Checking completed job, with no polling using initial response:", h2o.dump_json(glm)
-        
-            a = h2o.nodes[0].poll_url(glm, noPoll=True)
-            h2o_glm.simpleCheckGLM(self, a, 'C58', **kwargs)
+        for g in glmInitial:
+            print "Checking completed job, with no polling using initial response:"
+            # this format is only in the first glm response (race?)
+            modelKey = g['destination_key']
+
+            glm = h2o.nodes[0].glm_view(_modelKey=modelKey)
+            h2o_glm.simpleCheckGLM(self, glm, None, noPrint=True, **kwargs)
+
+            print "glm", h2o.dump_json(glm)
+            cm = glm['glm_model']['submodels'][0]['validation']['_cms'][-1]['_arr']
+            print "cm:", cm
+            pctWrong = h2o_gbm.pp_cm_summary(cm);
+            # self.assertLess(pctWrong, 9,"Should see less than 9% error (class = 4)")
+
+            print "\nTrain\n==========\n"
+            print h2o_gbm.pp_cm(cm)
+
+            h2o_glm.simpleCheckGLM(self, glm, 'C58', **kwargs)
 
 if __name__ == '__main__':
     h2o.unit_main()

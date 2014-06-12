@@ -19,25 +19,21 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_C_hhp_107_01(self):
+    def test_GLM2_big2(self):
+        h2o.beta_features = True
         csvPathname = "hhp_107_01.data.gz"
         print "\n" + csvPathname
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put', timeoutSecs=15)
         ## h2b.browseTheCloud()
 
-        # build up the parameter string in X
         y = "106"
-        x = ""
-
         # go right to the big X and iterate on that case
         ### for trial in range(2):
         for trial in range(2):
             print "\nTrial #", trial, "start"
-            print "\nx:", x
-            print "y:", y
 
             start = time.time()
-            kwargs = {'y': y}
+            kwargs = {'response': y, 'alpha': 0.0}
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=200, **kwargs)
             h2o_glm.simpleCheckGLM(self, glm, 'C58', **kwargs)
             h2o.check_sandbox_for_errors()
