@@ -1,0 +1,21 @@
+.y-dialog-container
+  .y-dialog.y-scoring-visualization-dialog(data-dialog-width='450')
+    .y-dialog-title-bar
+      .y-dialog-title(data-bind='text:title')
+      .y-dialog-exit(data-bind='click:cancel')
+        i.fa.fa-times 
+    .y-dialog-body
+      .form
+        .form-group
+          label Visualization Type
+          select(data-bind="options:visualizationTypes, optionsText:'caption', value:visualizationType")
+        .form-group
+          label X-Axis Field
+          select(data-bind="options:variables, optionsCaption:'Choose...', optionsText:'caption', value:axisXVariable")
+        .form-group
+          label Y-Axis Field
+          select(data-bind="options:variables, optionsCaption:'Choose...', optionsText:'caption', value:axisYVariable")
+      .y-dialog-actions
+        button.btn(data-bind='click:cancel') Cancel
+        button.btn.btn-primary(data-bind='click:confirm, enable:canConfirm') OK
+

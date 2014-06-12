@@ -1,0 +1,2 @@
+Steam.ScoringFilterDialog = (_) ->
+

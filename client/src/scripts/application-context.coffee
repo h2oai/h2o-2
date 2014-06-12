@@ -91,6 +91,8 @@ Steam.ApplicationContext = ->
     scoringAvailable: do edge$
     rescore: do edge$
     configureStripPlot: do edge$
+    configureScoringVisualization: do edge$
+    filterScorings: do edge$
 
 
 

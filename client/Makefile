@@ -44,6 +44,8 @@ BROWSER_SCRIPTS=\
 	$(BUILD)/scripts/confirm-dialog.js \
 	$(BUILD)/scripts/select-frame-dialog.js \
 	$(BUILD)/scripts/configure-strip-plot-dialog.js \
+	$(BUILD)/scripts/scoring-visualization-dialog.js \
+	$(BUILD)/scripts/scoring-filter-dialog.js \
 	$(BUILD)/scripts/topic-list-view.js \
 	$(BUILD)/scripts/frame-list-view.js \
 	$(BUILD)/scripts/model-list-view.js \
@@ -74,6 +76,8 @@ TEST_SCRIPTS=\
 	$(BUILD)/scripts/confirm-dialog.js \
 	$(BUILD)/scripts/select-frame-dialog.js \
 	$(BUILD)/scripts/configure-strip-plot-dialog.js \
+	$(BUILD)/scripts/scoring-visualization-dialog.js \
+	$(BUILD)/scripts/scoring-filter-dialog.js \
 	$(BUILD)/scripts/topic-list-view.js \
 	$(BUILD)/scripts/frame-list-view.js \
 	$(BUILD)/scripts/model-list-view.js \
@@ -128,6 +132,8 @@ TEMPLATES=\
 	src/templates/confirm-dialog.jade \
 	src/templates/select-frame-dialog.jade \
 	src/templates/configure-strip-plot-dialog.jade \
+	src/templates/scoring-visualization-dialog.jade \
+	src/templates/scoring-filter-dialog.jade \
 	src/templates/topic-list-view.jade \
 	src/templates/frame-list-view.jade \
 	src/templates/model-list-view.jade \
@@ -139,6 +145,8 @@ TEMPLATES=\
 	src/templates/model-selection-view.jade \
 	src/templates/frame-inspection-view.jade \
 	src/templates/model-inspection-view.jade \
+	src/templates/scoring-filters.jade \
+	src/templates/discrete-scoring-filter.jade \
 	src/templates/scoring-view.jade \
 	src/templates/notification-view.jade \
 	src/templates/scoring-selection-view.jade

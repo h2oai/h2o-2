@@ -1,0 +1,8 @@
+.y-discrete-scoring-filter
+  h1(data-bind="text:caption")
+  // ko foreach:items
+  .checkbox
+    label
+      input(type='checkbox' data-bind="checked:isChecked")
+      span(data-bind="text:caption")
+  // /ko

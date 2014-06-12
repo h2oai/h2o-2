@@ -104,7 +104,16 @@
 
   // ko if:isSheetView
   // ko with:sheetView
+  button.btn.btn-primary(data-bind="click:displayFilters") Filter&hellip;
   div(data-bind="geyser:metricTable")
+
+  // ko foreach:visualizations
+  div(data-bind="geyser:$data")
+  // /ko
+
+  button.btn.btn-primary(data-bind="click:addVisualization")
+    i.fa.fa-plus &nbsp;
+    span Add Visualization&hellip;
   // /ko
   // /ko
   //- if:isSheetView
