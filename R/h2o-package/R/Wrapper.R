@@ -182,15 +182,16 @@ h2o.clusterStatus <- function(client) {
   # jar_file <- paste(.h2o.pkg.path, "java", "h2o.jar", sep = .Platform$file.sep)
   jar_file <- .h2o.downloadJar(overwrite = forceDL)
   jar_file <- paste('"', jar_file, '"', sep = "")
+
+  # Compose args
   args <- c(paste("-Xms", memory, sep=""),
-            paste("-Xmx", memory, sep=""),
-            "-jar", jar_file,
-            "-name", "H2O_started_from_R",
-            "-ip", "127.0.0.1",
-            "-port", "54321"
-            )
-  if(beta) args <- c(args, "-beta")
+            paste("-Xmx", memory, sep=""))
   if(assertion) args <- c(args, "-ea")
+  args <- c(args, "-jar", jar_file)
+  args <- c(args, "-name", "H2O_started_from_R")
+  args <- c(args, "-ip", "127.0.0.1")
+  args <- c(args, "-port", "54321")
+  if(beta) args <- c(args, "-beta")
   if(!is.null(license)) args <- c(args, "-license", license)
 
   cat("\n")
