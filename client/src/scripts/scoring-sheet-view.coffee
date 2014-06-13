@@ -134,7 +134,7 @@ forEach metricCriteriaVariable.domain, (metricCriterion, metricCriterionIndex) -
     metricVariables.push
       id: uniqueId()
       name: "#{metricCriterion.value}-#{metricType.value}"
-      caption: "#{metricCriterion.caption} #{metricType.caption}"
+      caption: "#{metricType.caption} (#{metricCriterion.caption})"
       type: 'float'
       read: (metric) -> +metric.data.auc[metricType.value][metricCriterionIndex]
       format: format4f
@@ -239,8 +239,30 @@ thresholdVariables = [
   name: 'cm'
   caption: 'Confusion Matrix'
   type: 'blob'
-  read: (metric, index) -> metric.data.auc.confusion_matrices[index]
-  format: -> #TODO
+  read: (metric, index) -> 
+    domain: metric.data.auc.actual_domain
+    cm: metric.data.auc.confusion_matrices[index]
+  format: (blob) ->
+    [ grid, tr, th, td ] = geyser.generate words 'table.table.table-bordered tr th td'
+    [ d1, d2 ] = blob.domain
+    [[tn, fp], [fn, tp]] = blob.cm
+    grid [
+      tr [
+        th ''
+        th d1
+        th d2
+      ]
+      tr [
+        th d1
+        td tn
+        td fp
+      ]
+      tr [
+        th d2
+        td fn
+        td tp
+      ]
+    ]
   domain: null
   extent: []
 ,
