@@ -203,8 +203,9 @@ public class Tree extends H2OCountedCompleter {
       else  fj0 = new FJBuild(ls,res[0],_depth+1, _seed + LTS_INIT);
       if (rs.isLeafNode() || rs.isImpossible()) {
         if (_regression) {
+
           float av = res[1].computeAverage();
-          nd._r = new LeafNode(-1, res[0].rows(), av);
+          nd._r = new LeafNode(-1, res[1].rows(), av);
         } else {
         nd._r = new LeafNode(_data.unmapClass(rs._split), res[1].rows(),-1);
         }

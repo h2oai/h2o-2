@@ -143,7 +143,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
       // Perform the regression scoring
       if (m.regression) {
-        float mse = cmTask._ss / ( (float) (cmTask._rowcnt) );
+        float mse = cmTask._ss / ( (float) (cmTask._rowcnt) ); //Also add in treecount?
         m.errs = Arrays.copyOf(old.errs, old.errs.length+1);
         m.errs[m.errs.length - 1] = mse;
         m.cms = Arrays.copyOf(old.cms, old.cms.length+1);

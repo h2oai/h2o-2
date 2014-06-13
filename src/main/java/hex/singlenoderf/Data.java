@@ -69,7 +69,7 @@ public class Data implements Iterable<Data.Row> {
       av += r.getRawClassColumnValueFromBin();
       nobs++;
     }
-    return nobs == 0 ? 0.f : av / (float)(nobs);
+    return nobs == 0 ? Float.POSITIVE_INFINITY : av / (float)(nobs);
   }
 
   public final Iterator<Row> iterator() { return new RowIter(start(), end()); }
@@ -185,12 +185,12 @@ public class Data implements Iterable<Data.Row> {
         for (int f = 0; f < response.length; ++f)
           response[f] = cols[_dapt.classColIdx()]._binned2raw[cols[_dapt.classColIdx()]._binned[f]];
       }
-      float cds[][][] = s._columnDistsRegression;
+      int cds[][][] = s._columnDistsRegression;
       int fs[] = s._features;
 
       for (int f: fs) {
         if (f == -1) break;
-        float cdsf[][] = cds[f];
+        int cdsf[][] = cds[f];
         short[] bins = cols[f]._binned;
 
         if (bins != null) {
@@ -199,18 +199,17 @@ public class Data implements Iterable<Data.Row> {
             int val = bins[permIdx];
             if (val == DataAdapter.BAD) continue; // ignore bad rows
             float resp = response[permIdx];    // Class-for-row
-            int response_bin = cols[_dapt.classColIdx()]._binned == null ? (cols[_dapt.classColIdx()]._rawB[permIdx] & 0xFF) : cols[_dapt.classColIdx()]._binned[permIdx];
+            int response_bin = _dapt.getEncodedClassColumnValue(permIdx); //cols[cols.length-1]._binned[permIdx]; //cols[_dapt.classColIdx()]._binned == null ? (cols[_dapt.classColIdx()]._rawB[permIdx] & 0xFF) : cols[_dapt.classColIdx()]._binned[permIdx];
             if (resp == DataAdapter.BAD) continue; // ignore rows with NA in response column
-            cdsf[val][response_bin] = resp;             // Bump histogram
+            cdsf[val][response_bin]++; // = resp;             // Bump histogram
           }
         } else {
           byte[] raw = cols[f]._rawB;
           for (int i = lo; i < hi; i++) {
             int permIdx = permutation[i];
             int val = (0xFF & raw[permIdx]);
-            float resp = response[permIdx];
-            int response_bin = cols[_dapt.classColIdx()]._binned == null ? (cols[_dapt.classColIdx()]._rawB[permIdx] & 0xFF) : cols[_dapt.classColIdx()]._binned[permIdx];
-            cdsf[val][response_bin] = resp;
+            int response_bin = _dapt.getEncodedClassColumnValue(permIdx); //cols[cols.length-1]._binned[permIdx]; //cols[_dapt.classColIdx()]._binned == null ? (cols[_dapt.classColIdx()]._rawB[permIdx] & 0xFF) : cols[_dapt.classColIdx()]._binned[permIdx];
+            cdsf[val][response_bin]++; // = resp;
           }
         }
       }
