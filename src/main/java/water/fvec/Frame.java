@@ -181,24 +181,25 @@ public class Frame extends Lockable<Frame> {
     return -1;
   }
 
-
-  /**
-   * Analogy of R's cbind.
-   * Makes a copy of the given frame compatible with this frame's vector group and adds it to this frame.
-   *
-   * Note: unlike in R, "this" frame gets updated IN-PLACE!
-   *
-   * @param f
-   * @return Frame with added vec
-   */
-  public Frame addCopy( Frame f) {
-    if(numRows() == 0)return add(f,f.names());
+  // Return Frame 'f' if 'f' is compatible with 'this'.
+  // Return a new Frame compatible with 'this' and a copy of 'f's data otherwise.
+  public Frame makeCompatible( Frame f) {
+    // Small data frames are always "compatible"
+    if( anyVec()==null ||       // No dest columns
+        numRows() <= 1e4 )      // Or it is small
+      return f;                 // Then must be compatible
+    // Same VectorGroup is also compatible
+    if( f.anyVec() == null ||
+        f.anyVec().group().equals(anyVec().group()) )
+      return f;
+    // Ok, here make some new Vecs with compatible layout
     Key k = Key.make();
     H2O.submitTask(new RebalanceDataSet(this, f, k)).join();
     Frame f2 = DKV.get(k).get();
     DKV.remove(k);
-    return add(f2, true);
+    return f2;
   }
+
  /** Appends a named column, keeping the last Vec as the response */
   public Frame add( String name, Vec vec ) {
     if( find(name) != -1 ) throw new IllegalArgumentException("Duplicate name '"+name+"' in Frame");
