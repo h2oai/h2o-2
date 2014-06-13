@@ -65,7 +65,8 @@ public class Vec extends Iced {
   /** RollupStats: min/max/mean of this Vec lazily computed.  */
   private double _min, _max, _mean, _sigma;
   long _size;
-  boolean _isInt;
+  boolean _isInt;               // All ints
+  boolean _isUUID;              // All UUIDs (or zero or missing)
   /** The count of missing elements.... or -2 if we have active writers and no
    *  rollup info can be computed (because the vector is being rapidly
    *  modified!), or -1 if rollups have not been computed since the last
@@ -79,24 +80,30 @@ public class Vec extends Iced {
   /** Main default constructor; requires the caller understand Chunk layout
    *  already, along with count of missing elements.  */
   public Vec( Key key, long espc[]) { this(key, espc, null); }
-  public Vec( Key key, long espc[], String[] domain) {
+  public Vec( Key key, long espc[], String[] domain) { this(key,espc,domain,false,(byte)-1); }
+  public Vec( Key key, long espc[], String[] domain, boolean hasUUID, byte time) {
     assert key._kb[0]==Key.VEC;
     _key = key;
     _espc = espc;
-    _time = -1;                 // not-a-time
+    _time = time;               // is-a-time, or not (and what flavor used to parse time)
+    _isUUID = hasUUID;          // all-or-nothing UUIDs
     _domain = domain;
   }
 
   protected Vec( Key key, Vec v ) { this(key, v._espc); assert group()==v.group(); }
 
-  public Vec [] makeZeros(int n){return makeZeros(n,null);}
-  public Vec [] makeZeros(int n, String [][] domain){ return makeCons(n, 0, domain);}
-  public Vec [] makeCons(int n, final long l, String [][] domain){
+  public Vec [] makeZeros(int n){return makeZeros(n,null,null,null);}
+  public Vec [] makeZeros(int n, String [][] domain, boolean[] uuids, byte[] times){ return makeCons(n, 0, domain, uuids, times);}
+  public Vec [] makeCons(int n, final long l, String [][] domain, boolean[] uuids, byte[] times){
     if( _espc == null ) throw H2O.unimpl(); // need to make espc for e.g. NFSFileVecs!
     final int nchunks = nChunks();
     Key [] keys = group().addVecs(n);
     final Vec [] vs = new Vec[keys.length];
-    for(int i = 0; i < vs.length; ++i) vs[i] = new Vec(keys[i],_espc,domain == null?null:domain[i]);
+    for(int i = 0; i < vs.length; ++i) 
+      vs[i] = new Vec(keys[i],_espc,
+                      domain == null ? null    : domain[i],
+                      uuids  == null ? false   : uuids [i],
+                      times  == null ? (byte)-1: times [i]);
     new DRemoteTask(){
       @Override public void lcompute(){
         addToPendingCount(vs.length);
@@ -142,8 +149,7 @@ public class Vec extends Iced {
     for (int i = 0; i<=chunks; ++i)
       espc[i] = i * rows / chunks;
     Vec v = new Vec(Vec.newKey(), espc);
-    Vec[] vecs = v.makeCons(cols, val, domain);
-    return vecs;
+    return v.makeCons(cols, val, domain,null,null);
   }
 
    /** Make a new vector with the same size and data layout as the old one, and
@@ -391,6 +397,7 @@ public class Vec extends Iced {
   /** Is the column a factor/categorical/enum?  Note: all "isEnum()" columns
    *  are are also "isInt()" but not vice-versa. */
   public final boolean isEnum(){return _domain != null;}
+  public final boolean isUUID(){return _isUUID;}
   /** Is the column constant.
    * <p>Returns true if the column contains only constant values and it is not full of NAs.</p> */
   public final boolean isConst() { return min() == max(); }
@@ -430,7 +437,8 @@ public class Vec extends Iced {
       throw new IllegalArgumentException("Cannot ask for roll-up stats while the vector is being actively written.");
     if( vthis._naCnt>= 0 )      // KV store has a better answer
       return vthis == this ? this : setRollupStats(vthis);
-                                // KV store reports we need to recompute
+    
+    // KV store reports we need to recompute
     RollupStats rs = new RollupStats().dfork(this);
     if(fs != null) fs.add(rs); else setRollupStats(rs.getResult());
     return this;
@@ -455,10 +463,18 @@ public class Vec extends Iced {
 
     @Override public void map( Chunk c ) {
       _size = c.byteSize();
+      // UUID columns do not compute min/max/mean/sigma
+      if( c._vec._isUUID ) {
+        _min = _max = _mean = _sigma = Double.NaN;
+        for( int i=0; i<c._len; i++ ) {
+          if( c.isNA0(i) ) _naCnt++;
+          else _rows++;
+        }
+        return;
+      }
+      // All other columns have useful rollups
       for( int i=0; i<c._len; i++ ) {
         double d = c.at0(i);
-        long v = Double.doubleToRawLongBits(d);
-
         if( Double.isNaN(d) ) _naCnt++;
         else {
           if( d < _min ) _min = d;
@@ -649,6 +665,10 @@ public class Vec extends Iced {
   /** Fetch the missing-status the slow way. */
   public final boolean isNA(long row){ return chunkForRow(row).isNA(row); }
 
+  /** Fetch element the slow way, as a long.  Throws if the value is missing or not a UUID. */
+  public final long  at16l( long i ) { return chunkForRow(i).at16l(i); }
+  public final long  at16h( long i ) { return chunkForRow(i).at16h(i); }
+
   /** Write element the VERY slow way, as a long.  There is no way to write a
    *  missing value with this call.  Under rare circumstances this can throw:
    *  if the long does not fit in a double (value is larger magnitude than
@@ -736,7 +756,7 @@ public class Vec extends Iced {
   /** Close all chunks that are local (not just the ones that are homed)
    * This should only be called from a Writer object
    * */
-  private final void close(Futures fs) {
+  private void close(Futures fs) {
     int nc = nChunks();
     for( int i=0; i<nc; i++ ) {
       if (H2O.get(chunkKey(i)) != null) {

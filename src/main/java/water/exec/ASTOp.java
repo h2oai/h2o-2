@@ -816,28 +816,26 @@ class ASTCbind extends ASTOp {
     }
 
     Frame fr = new Frame(new String[0],new Vec[0]);
-    int oldVecs = Integer.MAX_VALUE;
     for(int i = 0; i < argcnt-1; i++) {
       if( env.isAry(-argcnt+1+i) ) {
         String name = null;
         Frame fr2 = env.ary(-argcnt+1+i);
-        if(fr.numRows() == 0)
-          oldVecs = fr2.numCols();
-        fr.addCopy(fr2);
-//        if( fr2.numCols()==1 && apply != null && (name = apply._args[i+1].argName()) != null )
-//          fr.add(name,fr2.anyVec());
-//        else
-//          fr.add(fr2,true);
+        Frame fr3 = fr.makeCompatible(fr2);
+        if( fr3 != fr2 ) {      // If copied into a new Frame, need to adjust refs
+          env.addRef(fr3); 
+          env.subRef(fr2,null); 
+        }
+        // Take name from an embedded assign: "cbind(colNameX = some_frame, ...)"
+        if( fr2.numCols()==1 && apply != null && (name = apply._args[i+1].argName()) != null )
+          fr.add(name,fr3.anyVec());
+        else fr.add(fr3,true);
       } else {
         double d = env.dbl(-argcnt+1+i);
-        // Vec v = fr.vecs()[0].makeCon(d);
         Vec v = vmax == null ? Vec.make1Elem(d) : vmax.makeCon(d);
         fr.add("C" + String.valueOf(i+1), v);
         env.addRef(v);
       }
     }
-    for(int i = oldVecs; i < fr.vecs().length; ++i)
-      env.addRef(fr.vec(i));
     env._ary[env._sp-argcnt] = fr;  env._fcn[env._sp-argcnt] = null;
     env._sp -= argcnt-1;
     Arrays.fill(env._ary,env._sp,env._sp+(argcnt-1),null);

@@ -65,6 +65,7 @@
                         "idxs": { "type": "array", "items": { "type": "number" } },
                         "iteration": { "type": "number" },
                         "run_time": { "type": "number", },
+                        "sparseCoef": { "type": "string" }
                         "validation": { "type": "object", "properties": {
                             "_aic2": { "type": "number" },
                             # number of cms = # of thresholds

@@ -54,11 +54,11 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
-        n = 200
+        n = 500
         tryList = [
-            (n, 1, 'cD', 300), 
-            (n, 2, 'cE', 300), 
-            (n, 3, 'cF', 300), 
+            # (n, 1, 'cD', 300), 
+            # (n, 2, 'cE', 300), 
+            # (n, 3, 'cF', 300), 
             (n, 4, 'cG', 300), 
             (n, 5, 'cH', 300), 
             (n, 6, 'cI', 300), 
@@ -105,7 +105,7 @@ class Basic(unittest.TestCase):
                 h2o_cmd.columnInfoFromInspect(parseResult['destination_key'], exceptionOnMissingValues=True)
 
             y = colCount
-            kwargs = {'response': y, 'max_iter': 1, 'family': 'binomial', 'n_folds': 1, 'alpha': 0.2, 'lambda': 1e-5}
+            kwargs = {'response': y, 'max_iter': 8, 'family': 'binomial', 'n_folds': 2, 'alpha': 0.2, 'lambda': 1e-5}
             start = time.time()
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
             print "glm end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'

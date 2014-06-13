@@ -12,7 +12,6 @@ import water.deploy.NodeVM;
 
 public class ParserTest2 extends TestUtil {
   private double[] d(double... ds) { return ds; }
-  private String[] s(String...ss) { return ss; }
   private final double NaN = Double.NaN;
   private final char[] SEPARATORS = new char[] {',', ' '};
 
@@ -66,20 +65,20 @@ public class ParserTest2 extends TestUtil {
     for (char separator : SEPARATORS) {
       String[] dataset = getDataForSeparator(separator, data);
       StringBuilder sb = new StringBuilder();
-      for( int i = 0; i < dataset.length; ++i ) sb.append(dataset[i]).append("\n");
+      for( String s : dataset ) sb.append(s).append("\n");
       Key k = FVecTest.makeByteVec(Key.make().toString(),sb.toString());
       testParsed(k,exp);
       sb = new StringBuilder();
-      for( int i = 0; i < dataset.length; ++i ) sb.append(dataset[i]).append("\r\n");
+      for( String s : dataset ) sb.append(s).append("\r\n");
       k = FVecTest.makeByteVec(k.toString(),sb.toString());
       testParsed(k,exp);
     }
   }
 
-  // test correctnes of sparse chunks
+  // test correctness of sparse chunks
   // added after failing to encode properly following data as
   // 0s were not considered when computing compression strategy and then
-  // lemin was 6108 and there was Short overlfow when encoding zeros.
+  // lemin was 6108 and there was Short overflow when encoding zeros.
   // So, the first column was compressed into C2SChunk with 0s causing short overflow,
   @Test public void testSparse2(){
     String data =
@@ -247,19 +246,6 @@ public class ParserTest2 extends TestUtil {
         d(19,20, 2),
     };
 
-    String[][] expString = new String[][] {
-        s(null,null, "one"),
-        s(null,null, "two"),
-        s(null,null, "three"),
-        s(null,null, "one"),
-        s(null,null, "two"),
-        s(null,null, "three"),
-        s(null,null, "one"),
-        s(null,null, "two"),
-        s(null,null, " four"),
-        s(null,null, "three"),
-    };
-
     for (char separator : SEPARATORS) {
       String[] dataset = getDataForSeparator(separator, data);
       Key key = FVecTest.makeByteVec("NondecimalColumns",dataset);
@@ -385,9 +371,8 @@ public class ParserTest2 extends TestUtil {
     };
     for (char separator : SEPARATORS) {
       String[] dataset = getDataForSeparator(separator, data);
-      int i = 0;
       StringBuilder sb = new StringBuilder();
-      for( i = 0; i < dataset.length; ++i ) sb.append(dataset[i]).append("\n");
+      for( String s : dataset ) sb.append(s).append("\n");
       Key k = FVecTest.makeByteVec("test_"+separator,sb.toString());
       testParsed(k,exp);
     }
@@ -526,8 +511,7 @@ public class ParserTest2 extends TestUtil {
       d(  1., .1, .0, .0, .0, .5, .6, .0, .0, .0, 1, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
       d(  1., .0, .0, .0, .0, .0, .0, .0, .0, .0, 0, 0, 0, 0, 0, 0, 0, 0, 0,1.9, .0),
     };
-    String[] dataset = data;
-    Key k = FVecTest.makeByteVec(Key.make("svmtest_bits").toString(),dataset);
+    Key k = FVecTest.makeByteVec(Key.make("svmtest_bits").toString(),data);
     testParsed(k,exp);
   }
 
