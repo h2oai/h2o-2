@@ -611,25 +611,33 @@ Steam.ScoringSheetView = (_, _scorings) ->
 
   createMetricTable = ->
     [ table, thead, tbody, tr, th, thAsc, thDesc, td ] = geyser.generate words 'table.table.table-condensed thead tbody tr th th.y-sorted-asc th.y-sorted-desc td'
-    [ span ] = geyser.generate [ "a data-variable-id='$id'" ]
+    [ span, swatch ] = geyser.generate [ "a data-variable-id='$id'", ".y-legend-swatch style='background-color:$color'" ]
 
     # Sort
     _filteredMetrics.sort (metricA, metricB) ->
       a = _sortByVariable.read metricA
       b = _sortByVariable.read metricB
       if _sortAscending then a > b else b > a
+
+    columnVariables = clone _filteredMetricVariables
     
-    header = tr map _filteredMetricVariables, (variable) ->
+    headers = map columnVariables, (variable) ->
       tag = if variable isnt _sortByVariable then th else if _sortAscending then thAsc else thDesc
       tag span variable.caption, $id: variable.id
 
+    # Addition column to house legend swatches
+    headers.unshift th '&nbsp;'
+
     rows = map _filteredMetrics, (metric) ->
-      tr map _filteredMetricVariables, (variable) ->
+      cells = map columnVariables, (variable) ->
         td variable.format variable.read metric
+      # Add legend swatch 
+      cells.unshift td swatch '', $color:metric.color
+      cells
 
     markup = table [
-      thead header
-      tbody rows
+      thead tr headers
+      tbody map rows, tr
     ]
 
     behavior = ($element) ->
