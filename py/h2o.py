@@ -1773,7 +1773,7 @@ class H2O(object):
                        'select_stat_type': 'ENTROPY',
                        'strata_samples': None,
         }
-        check_params_update_kwargs(params_dict, kwargs, 'random_forest', print_params)
+        check_params_update_kwargs(params_dict, kwargs, 'SpeeDRF', print_params)
 
         if print_params:
             print "\n%s parameters:" % "SpeeDRF", params_dict

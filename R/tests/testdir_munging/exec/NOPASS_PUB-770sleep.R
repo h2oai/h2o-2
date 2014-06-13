@@ -14,22 +14,26 @@ source('../../findNSourceUtils.R')
 test.cbind <- function(conn) {
 
     # seemed to get different errors (cbind) if I pasted the stuff below in "paragraphs" into R
+    # adding delays to test
+    Sys.sleep(2)
     df = data.frame(matrix(1:300000, nrow=300000, ncol=150))
     sample.IDs <- 1:60000
     index <- data.frame(ifelse(df[,1] %in% sample.IDs,1,0))
     colnames(index) <- c("index")
 
+    Sys.sleep(2)
     df.hex = as.h2o(conn, df, key="df")
     index.h2o = as.h2o(conn, index, key="index.h2o")
 
+    Sys.sleep(2)
     df.hex = cbind(df.hex,index.h2o)
     summary(df.hex[,"index"])
 
+    Sys.sleep(2)
     df.train = h2o.assign(df.hex[df.hex$index==1,],"df.train")  
     df.test = h2o.assign(df.hex[df.hex$index==0,],"df.test")
 
-    # This works fine but a subsequent update of the added (or any other column
-    # seems to break the object
+    Sys.sleep(2)
     df.hex[,"index"] <- index.h2o[,"index"]
     summary(df.hex[,"index"])
     df.train = h2o.assign(df.hex[df.hex$index==1,],"df.train")  
