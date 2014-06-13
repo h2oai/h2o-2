@@ -1,22 +1,23 @@
 .y-dialog-container
-  .y-dialog.y-scoring-filter-dialog(data-dialog-width='450')
+  .y-dialog.y-scoring-filter-dialog(data-dialog-width='500')
     .y-dialog-title-bar
-      .y-dialog-title(data-bind='text:title')
+      .y-dialog-title Filter Scorings
       .y-dialog-exit(data-bind='click:cancel')
         i.fa.fa-times 
     .y-dialog-body
-      .form
-        .form-group
-          label Visualization Type
-          select(data-bind="options:visualizationTypes, optionsText:'caption', value:visualizationType")
-        .form-group
-          label X-Axis Field
-          select(data-bind="options:variables, optionsCaption:'Choose...', optionsText:'caption', value:axisXVariable")
-        .form-group
-          label Y-Axis Field
-          select(data-bind="options:variables, optionsCaption:'Choose...', optionsText:'caption', value:axisYVariable")
+      div(style='max-height:300px;overflow:auto')
+        // ko foreach:filters
+        div(style='margin-bottom:20px;border-bottom:1px solid #eee')
+          h1(data-bind="text:caption")
+          // ko foreach:items
+          .checkbox
+            label
+              input(type='checkbox' data-bind="checked:isChecked")
+              span(data-bind="text:caption")
+          // /ko
+        // /ko
       .y-dialog-actions
         button.btn(data-bind='click:cancel') Cancel
-        button.btn.btn-primary(data-bind='click:confirm, enable:canConfirm') OK
+        button.btn.btn-primary(data-bind='click:confirm') OK
 
 
