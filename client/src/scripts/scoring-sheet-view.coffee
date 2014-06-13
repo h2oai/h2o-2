@@ -596,7 +596,6 @@ Steam.ScoringSheetView = (_, _scorings) ->
 
   _visualizationTypes = [ _metricsVisualizationType, _thresholdVisualizationType ]
 
-
   initialize = (scorings) ->
     _metricFrame = createMetricFrameFromScorings scorings
     scoringVariable.domain = map _metricFrame.metrics, (metric) ->
@@ -608,7 +607,7 @@ Steam.ScoringSheetView = (_, _scorings) ->
     _allFilters = [ _scoringFilter, _metricTypeFilter, _metricCriteriaFilter ]
     updateFiltering()
     _metricTable createMetricTable _metricFrame 
-    _visualizations.push addThresholdVisualization thresholdVariablesIndex.fpr, thresholdVariablesIndex.tpr, yes
+    _visualizations.push createThresholdVisualizationPane thresholdVariablesIndex.fpr, thresholdVariablesIndex.tpr, yes
 
   updateFiltering = ->
     _filteredMetricVariables = filter _metricFrame.metricVariables, (variable) ->
@@ -624,6 +623,12 @@ Steam.ScoringSheetView = (_, _scorings) ->
 
   invalidate = ->
     _metricTable createMetricTable()
+    newVisualizations = []
+    forEach _visualizations(), (oldVisualization) ->
+      { type, variableX, variableY } = oldVisualization.data
+      createVisualizationPane type, variableX, variableY, (visualization) ->
+        newVisualizations.push visualization
+    _visualizations newVisualizations
 
   createMetricTable = ->
     [ table, thead, tbody, tr, th, thAsc, thDesc, td ] = geyser.generate words 'table.table.table-condensed thead tbody tr th th.y-sorted-asc th.y-sorted-desc td'
@@ -694,8 +699,8 @@ Steam.ScoringSheetView = (_, _scorings) ->
       _visualizations.splice index, 1, newVisualization
     return
 
-  addMetricsVisualization = (variableX, variableY) ->
-    rendering =  createMetricsVisualization _metricFrame.metrics, variableX, variableY, (metric) ->
+  createMetricsVisualizationPane = (variableX, variableY) ->
+    rendering =  createMetricsVisualization _filteredMetrics, variableX, variableY, (metric) ->
       _.inspect
         content: createMetricInspection _metricFrame.metricVariables, metric
         template: 'geyser'
@@ -718,8 +723,8 @@ Steam.ScoringSheetView = (_, _scorings) ->
 
     self
 
-  addThresholdVisualization = (variableX, variableY, showReferenceLine) ->
-    rendering =  createThresholdVisualization _metricFrame.metrics, variableX, variableY, showReferenceLine, (metric, index) ->
+  createThresholdVisualizationPane = (variableX, variableY, showReferenceLine) ->
+    rendering =  createThresholdVisualization _filteredMetrics, variableX, variableY, showReferenceLine, (metric, index) ->
       _.inspect
         content: createThresholdInspection _metricFrame.thresholdVariables, metric, index
         template: 'geyser'
@@ -741,6 +746,13 @@ Steam.ScoringSheetView = (_, _scorings) ->
 
     self
 
+  createVisualizationPane = (visualizationType, variableX, variableY, go) ->
+    switch visualizationType
+      when _metricsVisualizationType
+        go createMetricsVisualizationPane variableX, variableY
+      when _thresholdVisualizationType
+        go createThresholdVisualizationPane variableX, variableY, no
+
   configureVisualization = (caption, type, variableX, variableY, go) ->
     parameters =
       visualizationTypes: _visualizationTypes
@@ -751,11 +763,7 @@ Steam.ScoringSheetView = (_, _scorings) ->
     _.configureScoringVisualization caption, parameters, (action, response) ->
       switch action
         when 'confirm'
-          switch response.visualizationType
-            when _metricsVisualizationType
-              go addMetricsVisualization response.variableX, response.variableY
-            when _thresholdVisualizationType
-              go addThresholdVisualization response.variableX, response.variableY, no
+          createVisualizationPane response.visualizationType, response.variableX, response.variableY, go
 
   addVisualization = ->
     configureVisualization 'Add Visualization', _metricsVisualizationType, _metricsVisualizationType.variables[0], _metricsVisualizationType.variables[1], (visualization) -> _visualizations.push visualization
