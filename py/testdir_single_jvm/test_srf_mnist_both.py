@@ -79,26 +79,21 @@ class Basic(unittest.TestCase):
             # RF+RFView (train)****************************************
             # print "This is the 'ignore=' we'll use"
             # no longer use. depend on h2o to get it right.
-            ignore_x = h2o_glm.goodXFromColumnInfo(y, key=parseResult['destination_key'], timeoutSecs=300, forRF=True)
             ntree = 25
             params = {
-                'response_variable': 0,
-                # 'ignore': ignore_x, 
-                'ntree': ntree,
-                'iterative_cm': 1,
-                'out_of_bag_error_estimate': 1,
+                'response': 0,
+                'num_trees': ntree,
                 # 'data_key='mnist_training.csv.hex'
-                'features': 28, # fix because we ignore some cols, which will change the srt(cols) calc?
-                'exclusive_split_limit': None,
-                'depth': 2147483647,
-                'stat_type': 'ENTROPY',
+                'mtry': 28, # fix because we ignore some cols, which will change the srt(cols) calc?
+                'max_depth': 2147483647,
+                'select_stat_type': 'ENTROPY',
                 'sampling_strategy': 'RANDOM',
-                'sample': 67,
+                'sample': 0.67,
+                'oobee': 1,
                 # 'model_key': '__RFModel_7055e6cf-a0de-44db-b165-f5994730ac77',
-                'model_key': 'RF_model',
+                'destination_key': 'RF_model',
                 'bin_limit': 1024,
                 # 'seed': 784834182943470027,
-                'use_non_local_data': 1,
                #  'class_weights': '0=1.0,1=1.0,2=1.0,3=1.0,4=1.0,5=1.0,6=1.0,7=1.0,8=1.0,9=1.0',
                 }
 
@@ -112,7 +107,7 @@ class Basic(unittest.TestCase):
             print "Trying rf"
             timeoutSecs = 1800
             start = time.time()
-            rfView = h2o_cmd.runRF(parseResult=parseResult, rfView=True,
+            rfView = h2o_cmd.runSpeeDRF(parseResult=parseResult, 
                 timeoutSecs=timeoutSecs, pollTimeoutSecs=180, retryDelaySecs=2, **kwargs)
             elapsed = time.time() - start
             print "RF completed in", elapsed, "seconds.", \

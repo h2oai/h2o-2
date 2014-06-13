@@ -1,7 +1,6 @@
-import unittest, random, sys, time, getpass, re
+import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
-import h2o, h2o_browse as h2b, h2o_exec as h2e, h2o_hosts, h2o_import as h2i, h2o_cmd
-import h2o_gbm
+import h2o, h2o_hosts, h2o_import as h2i, h2o_cmd, h2o_exec as h2e
 
 exprList = [
     "Last.value.0 = cbind(df,indx)",
@@ -16,6 +15,9 @@ exprList = [
     "df.test = Last.value.7 ",
     "Last.value.8 = indx[,c(1)]",
     "Last.value.9 = Last.value.0[,c(151)] = Last.value.8",
+    #"Last.value.0[,c(151)] = Last.value.8",
+    # "Last.value.0[,151] = indx[,1]",
+    # "Last.value.0[,151] = Last.value.8",
 ]
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
@@ -80,7 +82,7 @@ class Basic(unittest.TestCase):
         print "numRows:", inspect['numRows']
         print "numCols:", inspect['numCols']
 
-        for trial in range(3):
+        for trial in range(10):
             for execExpr in exprList:
                 start = time.time()
                 execResult, result = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=300)
