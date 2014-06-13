@@ -580,15 +580,19 @@ Steam.ScoringSheetView = (_, _scorings) ->
   _metricTypeFilter = null
   _metricCriteriaFilter = null
   _allFilters = null
+
+  getSortedFloatVariables = (variables) ->
+    sortBy (filter variables, (variable) -> variable.type is 'float'), (variable) -> variable.caption
+
   _metricsVisualizationType =
     type: 'scoring'
     caption: 'Scoring'
-    variables: filter metricVariables, (variable) -> variable.type is 'float'
+    variables: getSortedFloatVariables metricVariables
 
   _thresholdVisualizationType =
     type: 'threshold'
     caption: 'Threshold'
-    variables: filter thresholdVariables, (variable) -> variable.type is 'float'
+    variables: getSortedFloatVariables thresholdVariables
 
   _visualizationTypes = [ _metricsVisualizationType, _thresholdVisualizationType ]
 
