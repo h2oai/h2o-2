@@ -5,16 +5,19 @@
       .y-dialog-exit(data-bind='click:cancel')
         i.fa.fa-times 
     .y-dialog-body
-      .form
+      .form-horizontal
         .form-group
-          label Visualization Type
-          select(data-bind="options:visualizationTypes, optionsText:'caption', value:visualizationType")
+          label.col-sm-3.control-label Compare
+          .col-sm-9
+            select.form-control(data-bind="options:visualizationTypes, optionsText:'caption', value:visualizationType")
         .form-group
-          label X-Axis Field
-          select(data-bind="options:variables, optionsCaption:'Choose...', optionsText:'caption', value:axisXVariable")
+          label.col-sm-3.control-label X-Axis Field
+          .col-sm-9
+            select.form-control(data-bind="options:variables, optionsCaption:'Choose...', optionsText:'caption', value:variableX")
         .form-group
-          label Y-Axis Field
-          select(data-bind="options:variables, optionsCaption:'Choose...', optionsText:'caption', value:axisYVariable")
+          label.col-sm-3.control-label Y-Axis Field
+          .col-sm-9
+            select.form-control(data-bind="options:variables, optionsCaption:'Choose...', optionsText:'caption', value:variableY")
       .y-dialog-actions
         button.btn(data-bind='click:cancel') Cancel
         button.btn.btn-primary(data-bind='click:confirm, enable:canConfirm') OK
