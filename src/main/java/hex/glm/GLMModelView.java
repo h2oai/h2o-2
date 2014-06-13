@@ -4,10 +4,9 @@ import hex.glm.GLMModel.Submodel;
 import hex.glm.GLMParams.Family;
 import hex.glm.GLMValidation.GLMXValidation;
 import water.*;
-import water.api.AUC;
-import water.api.DocGen;
-import water.api.Request;
+import water.api.*;
 import water.util.RString;
+import water.util.UIUtils;
 
 import java.text.DecimalFormat;
 
@@ -50,8 +49,10 @@ public class GLMModelView extends Request2 {
     }
     glm_model.get_params().makeJsonBox(sb);
     DocGen.HTML.paragraph(sb,"Model Key: "+glm_model._key);
-    if(glm_model.submodels != null)
+    if(glm_model.submodels != null) {
       DocGen.HTML.paragraph(sb,water.api.Predict.link(glm_model._key,"Predict!"));
+      DocGen.HTML.paragraph(sb,UIUtils.qlink(SaveModel.class, "model", glm_model._key, "Save model"));
+    }
     String succ = (glm_model.warnings == null || glm_model.warnings.length == 0)?"alert-success":"alert-warning";
     sb.append("<div class='alert " + succ + "'>");
     pprintTime(sb.append(glm_model.iteration() + " iterations computed in "),glm_model.run_time);
@@ -61,12 +62,18 @@ public class GLMModelView extends Request2 {
       sb.append("</ul>");
     }
     sb.append("</div>");
+    if(!Double.isNaN(lambda) && lambda != glm_model.lambdas[glm_model.best_lambda_idx]){ // show button to permanently set lambda to this value
+      sb.append("<div class='alert alert-warning'>\n");
+      sb.append(GLMModelUpdate.link("Set lambda to current value!",_modelKey,lambda) + "\n");
+      sb.append("</div>");
+    }
     sb.append("<h4>Parameters</h4>");
     parm(sb,"family",glm_model.glm.family);
     parm(sb,"link",glm_model.glm.link);
     parm(sb,"&epsilon;<sub>&beta;</sub>",glm_model.beta_eps);
     parm(sb,"&alpha;",glm_model.alpha);
-    parm(sb,"&lambda;<sub>max</sub>",DFORMAT2.format(glm_model.lambda_max));
+    if(!Double.isNaN(glm_model.lambda_max))
+      parm(sb,"&lambda;<sub>max</sub>",DFORMAT2.format(glm_model.lambda_max));
     parm(sb,"&lambda;",DFORMAT2.format(lambda));
 
     if(glm_model.submodels.length > 1){
@@ -160,9 +167,26 @@ public class GLMModelView extends Request2 {
     StringBuilder equation = new StringBuilder();
     StringBuilder vals = new StringBuilder();
     StringBuilder normVals = sm.norm_beta == null?null:new StringBuilder();
+    int [] sortedIds = new int[sm.beta.length];
+    for(int i = 0; i < sortedIds.length; ++i)
+      sortedIds[i] = i;
+    final double [] b = sm.norm_beta == null?sm.beta:sm.norm_beta;
+    // now sort the indeces according to their abs value from biggest to smallest (but keep intercept last)
+    int r = sortedIds.length-1;
+    for(int i = 1; i < r; ++i){
+      for(int j = 1; j < r-i;++j){
+        if(Math.abs(b[sortedIds[j-1]]) < Math.abs(b[sortedIds[j]])){
+          int jj = sortedIds[j];
+          sortedIds[j] = sortedIds[j-1];
+          sortedIds[j-1] = jj;
+        }
+      }
+    }
+
     String [] cNames = glm_model.coefficients_names;
     boolean first = true;
-    for(int i:sm.idxs){
+    int j = 0;
+    for(int i:sortedIds){
       names.append("<th>" + cNames[i] + "</th>");
       vals.append("<td>" + sm.beta[i] + "</td>");
       if(first){
@@ -175,6 +199,7 @@ public class GLMModelView extends Request2 {
       if(i < (cNames.length-1))
          equation.append("*x[" + cNames[i] + "]");
       if(sm.norm_beta != null) normVals.append("<td>" + sm.norm_beta[i] + "</td>");
+      ++j;
     }
     sb.append("<h4>Equation</h4>");
     RString eq = null;

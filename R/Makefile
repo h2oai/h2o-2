@@ -113,6 +113,7 @@ clean:
 	rm -f h2o-package/DESCRIPTION
 	rm -f h2o_package.pdf
 	rm -f h2o-package/man/h2o-package.Rd
+	rm -f h2o-package/inst/branch.txt
 	rm -fr h2o-package/inst/java
 	rm -f h2o_*.tar.gz
 	rm -f h2o_*.tgz

@@ -167,7 +167,7 @@ function() {
 
 .emitMultinomResults<-
 function() {
-  r <- list(multinomial_result = .confusionMatrix(), errs = multinom_errs)
+  r <- list(multinomial_result = .confusionMatrix()) #, errs = multinom_errs)
   .coda("MULTINOMIAL", r)
 }
 

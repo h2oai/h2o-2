@@ -9,6 +9,7 @@ import java.util.*;
 import jsr166y.*;
 import water.Job.JobCancelledException;
 import water.fvec.Chunk;
+import water.fvec.Frame;
 import water.nbhm.NonBlockingHashMap;
 import water.persist.*;
 import water.util.*;
@@ -70,8 +71,9 @@ public final class H2O {
   public static final int NUMCPUS = Runtime.getRuntime().availableProcessors();
 
   // Convenience error
-  public static RuntimeException unimpl() { return new RuntimeException("unimplemented"); }
-  public static RuntimeException fail() { return new RuntimeException("do not call"); }
+  public static final RuntimeException unimpl(String msg) { return new RuntimeException("unimplemented: " + msg); }
+  public static final RuntimeException unimpl() { return new RuntimeException("unimplemented"); }
+  public static final RuntimeException fail() { return new RuntimeException("do not call"); }
 
   // Central /dev/null for ignored exceptions
   public static void ignore(Throwable e)             { ignore(e,"[h2o] Problem ignored: "); }
@@ -494,6 +496,8 @@ public final class H2O {
     }
   }
 
+
+
   // --------------------------------------------------------------------------
   // The (local) set of Key/Value mappings.
   static final NonBlockingHashMap<Key,Value> STORE = new NonBlockingHashMap<Key, Value>();
@@ -571,34 +575,8 @@ public final class H2O {
   public static Collection<Value> values( ) { return STORE.values(); }
   public static int store_size() { return STORE.size(); }
 
-  // Global KeySet.
-  // Pulls global keys locally, then hands out a local keySet.
-  // Since this can get big, allow some filtering.
-  public static Set<Key> globalKeySet( String clzname ) {
-    new GlobalKeyFilterClass(clzname).invokeOnAllNodes();
-    return localKeySet();
-  }
-  private static class GlobalKeyFilterClass extends DRemoteTask<GlobalKeyFilterClass> {
-    final int _typeid;
-    final H2ONode _self;
-    GlobalKeyFilterClass( String clzname ) { _typeid = clzname==null ? 0 : TypeMap.onIce(clzname); _self = SELF; }
-    @Override public void lcompute() {
-      if( H2O.SELF != _self ) { // No need to send to self!
-        Futures fs = new Futures();
-        for( Key k : localKeySet() ) {
-          Value val = H2O.get(k);
-          if( val != null && k.home() && k.user_allowed() && // Exists, maybe needed at remote
-              !val.isReplicatedTo(_self) &&                  // Already replicated at remote?
-              (_typeid==0 || val.type()==_typeid)  ) // Filter for class
-            fs.add(RPC.call(_self,new TaskSendKey(k,val)));
-        }
-        fs.blockForPending();
-      }
-      tryComplete();
-    }
-    @Override public void reduce( GlobalKeyFilterClass gkfc ) { }
-    @Override public boolean logVerbose() { return false; }
-  }
+
+
 
 
   // --------------------------------------------------------------------------
@@ -926,6 +904,20 @@ public final class H2O {
     Log.info ("Machine physical memory: " + (totalMemory==-1 ? "NA" : String.format("%.2f gb", totalMemory / ONE_GB)));
   }
 
+  /**
+   * We had a report from a user that H2O didn't start properly on MacOS X in a
+   * case where the user was part of the root group.  So warn about it.
+   */
+  public static void printWarningIfRootOnMac() {
+    String os_name = System.getProperty("os.name");
+    if (os_name.equals("Mac OS X")) {
+      String user_name = System.getProperty("user.name");
+      if (user_name.equals("root")) {
+        Log.warn("Running as root on MacOS; check if java binary is unintentionally setuid");
+      }
+    }
+  }
+
   public static String getVersion() {
     String build_project_version = "(unknown)";
     try {
@@ -957,6 +949,7 @@ public final class H2O {
     ARGS = arguments.toStringArray();
 
     printAndLogVersion();
+    printWarningIfRootOnMac();
 
     if (OPT_ARGS.baseport != 0) {
       DEFAULT_PORT = OPT_ARGS.baseport;
@@ -1432,6 +1425,142 @@ public final class H2O {
     if( x < _dirty ) _dirty = x;
   }
 
+  public abstract static class KVFilter {
+    public abstract boolean filter(KeyInfo k);
+  }
+
+  public static final class KeyInfo extends Iced implements Comparable<KeyInfo>{
+    public final Key _key;
+    public final int _type;
+    public final boolean _rawData;
+    public final int _sz;
+    public final byte _backEnd;
+
+    public KeyInfo(Key k, Value v){
+      _key = k;
+      _type = v.type();
+      _rawData = v.isRawData();
+      _sz = v._max;
+      _backEnd = v.backend();
+    }
+    @Override public int compareTo(KeyInfo ki){ return _key.compareTo(ki._key);}
+
+    public boolean isFrame(){
+      return _type == TypeMap.onIce(Frame.class.getName());
+    }
+    public boolean isValueArray(){
+      return _type == TypeMap.onIce(ValueArray.class.getName());
+    }
+    public boolean isLockable(){
+      return TypeMap.newInstance(_type) instanceof Lockable;
+    }
+  }
+
+  public static class KeySnapshot extends Iced {
+    private static volatile long _lastUpdate;
+    private static final long _updateInterval = 1000;
+    private static volatile KeySnapshot _cache;
+    public final KeyInfo [] _keyInfos;
+
+    public long lastUpdated(){return _lastUpdate;}
+    public KeySnapshot cache(){return _cache;}
+
+    public KeySnapshot filter(KVFilter kvf){
+      ArrayList<KeyInfo> res = new ArrayList<KeyInfo>();
+      for(KeyInfo kinfo: _keyInfos)
+        if(kvf.filter(kinfo))res.add(kinfo);
+      return new KeySnapshot(res.toArray(new KeyInfo[res.size()]));
+    }
+
+    KeySnapshot(KeyInfo [] snapshot){
+      _keyInfos = snapshot;}
+
+    public Key [] keys(){
+      Key [] res = new Key[_keyInfos.length];
+      for(int i = 0; i < _keyInfos.length; ++i)
+        res[i] = _keyInfos[i]._key;
+      return res;
+    }
+
+    public <T extends Iced> Map<String, T> fetchAll(Class<T> c)                { return fetchAll(c,false,0,Integer.MAX_VALUE);}
+    public <T extends Iced> Map<String, T> fetchAll(Class<T> c, boolean exact) { return fetchAll(c,exact,0,Integer.MAX_VALUE);}
+    public <T extends Iced> Map<String, T> fetchAll(Class<T> c, boolean exact, int offset, int limit) {
+      TreeMap<String, T> res = new TreeMap<String, T>();
+      final int typeId = TypeMap.onIce(c.getName());
+      for (KeyInfo kinfo : _keyInfos) {
+        if (kinfo._type == typeId || (!exact && c.isAssignableFrom(TypeMap.newInstance(kinfo._type).getClass()))) {
+          if (offset > 0) {
+            --offset;
+            continue;
+          }
+          Value v = DKV.get(kinfo._key);
+          if (v != null) {
+            T t = v.get();
+            res.put(kinfo._key.toString(), t);
+            if (res.size() == limit)
+              break;
+          }
+        }
+      }
+      return res;
+    }
+    public static KeySnapshot localSnapshot(){return localSnapshot(false);}
+    public static KeySnapshot localSnapshot(boolean homeOnly){
+      Object [] kvs = STORE.raw_array();
+      ArrayList<KeyInfo> res = new ArrayList<KeyInfo>();
+      for(int i = 2; i < kvs.length; i+= 2){
+        Object ok = kvs[i], ov = kvs[i+1];
+        if( !(ok instanceof Key  ) ) continue; // Ignore tombstones and Primes and null's
+        Key key = (Key )ok;
+        if(!key.user_allowed())continue;
+        if(homeOnly && !key.home())continue;
+        if( !(ov instanceof Value) ) continue; // Ignore tombstones and Primes and null's
+        res.add(new KeyInfo(key,(Value)ov));
+      }
+      final KeyInfo [] arr = res.toArray(new KeyInfo[res.size()]);
+      Arrays.sort(arr);
+      return new KeySnapshot(arr);
+    }
+    public static KeySnapshot globalSnapshot(){ return globalSnapshot(-1);}
+    public static KeySnapshot globalSnapshot(long timeTolerance){
+      KeySnapshot res = _cache;
+      final long t = System.currentTimeMillis();
+      if(res == null || (t - _lastUpdate) > timeTolerance)
+        res = new KeySnapshot((new GlobalUKeySetTask().invokeOnAllNodes()._res));
+      else if(t - _lastUpdate > _updateInterval)
+        H2O.submitTask(new H2OCountedCompleter() {
+          @Override
+          public void compute2() {
+            new GlobalUKeySetTask().invokeOnAllNodes();
+          }
+        });
+      return res;
+    }
+    private static class GlobalUKeySetTask extends DRemoteTask<GlobalUKeySetTask> {
+      KeyInfo [] _res;
+
+      @Override public byte priority(){return H2O.GET_KEY_PRIORITY;}
+      @Override public void lcompute(){
+        _res = localSnapshot(true)._keyInfos;
+        tryComplete();
+      }
+      @Override public void reduce(GlobalUKeySetTask gbt){
+        if(_res == null)_res = gbt._res;
+        else if(gbt._res != null){ // merge sort keys together
+          KeyInfo [] res = new KeyInfo[_res.length + gbt._res.length];
+          int j = 0, k = 0;
+          for(int i = 0; i < res.length; ++i)
+            res[i] = j < gbt._res.length && (k == _res.length || gbt._res[j].compareTo(_res[k]) < 0)?gbt._res[j++]:_res[k++];
+          _res = res;
+        }
+      }
+      @Override public void postGlobal(){
+        _cache = new KeySnapshot(_res);
+        _lastUpdate = System.currentTimeMillis();
+      }
+    }
+  }
+
   // Periodically write user keys to disk
   public static class Cleaner extends Thread {
     // Desired cache level. Set by the MemoryManager asynchronously.
@@ -1546,7 +1675,7 @@ public final class H2O {
           if( touched > clean_to_age ) { // Too recently touched?
             // But can toss out a byte-array if already deserialized & on disk
             // (no need for both forms).  Note no savings for Chunks, for which m==p._mem
-            if( val.isPersisted() && m != null && p != null && !isChunk ) { 
+            if( val.isPersisted() && m != null && p != null && !isChunk ) {
               val.freeMem();      // Toss serialized form, since can rebuild from POJO
               freed += val._max;
             }

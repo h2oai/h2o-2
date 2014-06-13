@@ -41,7 +41,7 @@ class RealColumn:
                 val = int(val)
         else:
             if (self.is_integer):
-                val = randrange(self.min_val, self.max_val)
+                val = randrange(self.min_val, self.max_val + 1)
             else:
                 val = uniform(self.min_val, self.max_val)
 

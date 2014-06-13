@@ -54,7 +54,7 @@ def uploadit(n, bucket, path, src_key, hex_key, timeoutSecs=60, retryDelaySecs=1
     if DO_PARSE_ALSO:
         parseit(np1, importPattern, hex_key, 
             timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
-        h2o.nodes[0].rebalance(before=hex_key, after=hex_key + "_2", chunks=32)
+        h2o.nodes[0].rebalance(source=hex_key, after=hex_key + "_2", chunks=32)
     return (importPattern, hex_key)
 
 
@@ -95,7 +95,7 @@ class Basic(unittest.TestCase):
         # pool.join()
         h2o.tear_down_cloud()
 
-    def test_parse_covtype_loop_fvec(self):
+    def test_parse_multiprocess_fvec(self):
         h2o.beta_features = True
         # hdfs://<name node>/datasets/manyfiles-nflx-gz/file_1.dat.gz
         # don't raise exception if we find something bad in h2o stdout/stderr?

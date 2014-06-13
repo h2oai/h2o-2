@@ -151,6 +151,7 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
     if h2o.beta_features:
         varimp = rf_model['varimp']
         treeStats = rf_model['treeStats']
+        # print "json:", h2o.dump_json(rfv)
         data_key = rf_model['_dataKey']
         model_key = rf_model['_key']
         classification_error = pctWrong
@@ -218,7 +219,7 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
         h2o.verboseprint("RFView response: number_built:", number_built, "leaves:", leaves, "depth:", depth)
 
     ### modelInspect = node.inspect(model_key)
-    dataInspect = node.inspect(data_key)
+    dataInspect = h2o_cmd.runInspect(key=data_key)
     h2o.check_sandbox_for_errors()
     return (round(classification_error,2), classErrorPctList, totalScores)
 

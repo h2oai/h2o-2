@@ -61,41 +61,40 @@ public class Exec2 {
     ArrayList<ASTId> global = new ArrayList<ASTId>();
     ArrayList<Key>   locked = new ArrayList<Key>  ();
     Env env = new Env(locked);
-    H2O.globalKeySet( "water.fvec.Frame" ); // Bring Frames from all over local
-    H2O.globalKeySet( "water.ValueArray" ); // Bring VA's   from all over local
-    for( Key k : H2O.localKeySet() ) {      // Convert all VAs to Frames
-      Value val = H2O.raw_get(k);
-      if( val == null ) continue;
-      if( val.isArray() ) {
-        val = DKV.get(k);       // Fetch the whole thing
-        if( val == null ) continue; // Racing delete got it?
-        Frame frAuto = ValueArray.asFrame(val);
-        // Rename .hex.autoframe back to .hex changing the .hex type from VA to Frame.
-        // The VA is lost.
-        Frame fr2 = new Frame(k,frAuto._names,frAuto.vecs());
-        frAuto.remove(0,fr2.numCols()); // Remove Vecs from frAuto without deleting Vecs
-        frAuto.delete();                // Delete frAuto without deleting Vecs
-        fr2.delete_and_lock(null).unlock(null);
-        val = DKV.get(k);       // Pull it locally again; val is now a Frame
+    final Key [] frameKeys = H2O.KeySnapshot.globalSnapshot().filter(new H2O.KVFilter() {
+      @Override
+      public boolean filter(H2O.KeyInfo k) {
+        if(k._type == TypeMap.VALUE_ARRAY){
+          Value v = DKV.get(k._key);
+          if(v == null)return false;
+          Frame frAuto = ValueArray.asFrame(v);
+          // Rename .hex.autoframe back to .hex changing the .hex type from VA to Frame.
+          // The VA is lost.
+          Frame fr2 = new Frame(k._key,frAuto._names,frAuto.vecs());
+          frAuto.remove(0,fr2.numCols()); // Remove Vecs from frAuto without deleting Vecs
+          frAuto.delete();                // Delete frAuto without deleting Vecs
+          fr2.delete_and_lock(null).unlock(null);
+          return true;
+        } else
+          return k._type == TypeMap.FRAME;
       }
-      // Bad if it's already locked by 'null', because lock by 'null' is removed when you leave Exec. 
+    }).keys();
+    for( Key k : frameKeys ) {      // Convert all VAs to Frames
+      Value val = DKV.get(k);
+      if( val == null || !val.isFrame()) continue;
+      // Bad if it's already locked by 'null', because lock by 'null' is removed when you leave Exec.
       // Before was adding all frames with read-shared lock here.
       // Should be illegal to add any keys locked by "null' to exec? (is it only unparsed keys?)
       // undoing. this doesn't always work (gets stack trace)
-      if( val.isFrame() ) {
-        val = DKV.get(k);       // Fetch the whole thing
-        if( val == null ) continue; // Racing delete got it?
-        if( val.isRawData() ) continue; // don't add unparsed stuff
-        Frame fr = val.get();
-        String kstr = k.toString();
-        try {
-          env.push(fr,kstr);
-          global.add(new ASTId(Type.ARY,kstr,0,global.size()));
-          fr.read_lock(null);
-          locked.add(fr._key);
-        } catch( Exception e ) {
-          Log.err("Exception while adding frame "+k+" to Exec env");
-        }
+      Frame fr = val.get();
+      String kstr = k.toString();
+      try {
+        env.push(fr,kstr);
+        global.add(new ASTId(Type.ARY,kstr,0,global.size()));
+        fr.read_lock(null);
+        locked.add(fr._key);
+      } catch( Exception e ) {
+        Log.err("Exception while adding frame "+k+" to Exec env");
       }
     }
 

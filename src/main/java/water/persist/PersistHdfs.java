@@ -43,6 +43,7 @@ public final class PersistHdfs extends Persist {
       if( !p.exists() ) Log.die("Unable to open hdfs configuration file " + p.getAbsolutePath());
       conf.addResource(new Path(p.getAbsolutePath()));
       Log.debug(Sys.HDFS_, "resource ", p.getAbsolutePath(), " added to the hadoop configuration");
+      Log.info(Sys.HDFS_, "resource ", p.getAbsolutePath(), " added to the hadoop configuration");
     } else {
       conf = new Configuration();
       if( !Strings.isNullOrEmpty(H2O.OPT_ARGS.hdfs) ) {

@@ -202,7 +202,7 @@ public class
     case S3  : return "S3";
     case NFS : return "NFS";
     case TCP : return "TCP";
-    default  : return null;
+    default  : return "UNKNOWN(" + x + ")";
     }
   }
 

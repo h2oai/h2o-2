@@ -1,5 +1,6 @@
 package water.api;
 
+import water.util.Log;
 import static water.util.ModelUtils.getPredictions;
 import water.Func;
 import water.MRTask2;
@@ -61,9 +62,10 @@ public class HitRatio extends Func {
     try {
       va = vactual.toEnum(); // always returns TransfVec
       actual_domain = va._domain;
-
-      if (max_k > predict.numCols()-1)
-        throw new IllegalArgumentException("K cannot be larger than " + String.format("%,d", predict.numCols()-1));
+      if (max_k > predict.numCols()-1) {
+        Log.warn("Reducing Hitratio Top-K value to maximum value allowed: " + String.format("%,d", predict.numCols() - 1));
+        max_k = predict.numCols() - 1;
+      }
       final Frame actual_predict = new Frame(predict.names().clone(), predict.vecs().clone());
       actual_predict.replace(0, va); // place actual labels in first column
       hit_ratios = new HitRatioTask(max_k, seed).doAll(actual_predict).hit_ratios();
