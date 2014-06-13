@@ -168,7 +168,7 @@ public class Data implements Iterable<Data.Row> {
           for (int i = lo; i < hi; i++) {    // not-binned loop
             int permIdx = permutation[i]; // Get the row
             int val = (0xFF & raw[permIdx]);// raw byte value, has no bad rows
-            int cls = classs[permIdx];    // Class-for-row
+            int cls = classs[permIdx] & 0xFF;    // Class-for-row
             cdsf[val][cls]++;             // Bump histogram
           }
         }
