@@ -1,6 +1,7 @@
 import unittest, random, sys, time, re, math
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_browse as h2b, h2o_gbm
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm
+import h2o_util, h2o_browse as h2b, h2o_gbm
 
 # use randChars for the random chars to use
 def random_enum(randChars, maxEnumSize):
@@ -140,10 +141,7 @@ class Basic(unittest.TestCase):
 
             updateList= [ 
                 {'alpha': 0.5, 'lambda': 1e-4},
-                {'alpha': 0.25, 'lambda': 1e-6},
-                {'alpha': 0.0, 'lambda': 1e-8},
-                {'alpha': 0.5, 'lambda': 0.0},
-                {'alpha': 0.0, 'lambda': 0.0},
+                {'alpha': 0.25, 'lambda': 1e-4},
             ]
 
 
@@ -160,25 +158,8 @@ class Basic(unittest.TestCase):
                 parseResult = h2i.import_parse(path=csvScorePathname, schema='put', hex_key="B.hex",
                     timeoutSecs=30, separator=colSepInt)
 
-                predictKey = 'Predict.hex'
-                predictResult = h2o_cmd.runPredict(
-                    data_key="B.hex",
-                    model_key=modelKey,
-                    destination_key=predictKey,
-                    timeoutSecs=timeoutSecs)
-
-                predictCMResult = h2o.nodes[0].predict_confusion_matrix(
-                    actual="B.hex",
-                    vactual='C' + str(y+1),
-                    predict=predictKey,
-                    vpredict='predict',
-                    )
-
-                cm = predictCMResult['cm']
-                pctWrong = h2o_gbm.pp_cm_summary(cm);
-                print "\nTest\n==========\n"
-                print h2o_gbm.pp_cm(cm)
-
+                h2o_cmd.runScore(dataKey="B.hex", modelKey=modelKey, 
+                    vactual='C' + str(y+1), vpredict=1, expectedAuc=0.5)
 
 
 if __name__ == '__main__':

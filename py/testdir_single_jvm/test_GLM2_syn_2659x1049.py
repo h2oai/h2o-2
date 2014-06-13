@@ -6,7 +6,6 @@ params = {
     'response': 1049, 
     'family': 'binomial', 
     'beta_epsilon': 0.0001, 
-    'thresholds': 0.5, 
     'alpha': 1.0, 
     'lambda': 1e-05,
     'n_folds': 1, 

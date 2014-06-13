@@ -95,32 +95,7 @@ class Basic(unittest.TestCase):
                 # we can pass the warning, without stopping in the test, so we can 
                 # redo it in the browser for comparison
                 (warnings, coefficients, intercept) = h2o_glm.simpleCheckGLM(self, 
-                    glm, None, allowFailWarning=True, **kwargs)
-
-                if 1==0:
-                    print "\n", "\ncoefficients in col order:"
-                    # since we're loading the x50 file all the time..the real colCount 
-                    # should be 50 (0 to 49)
-                    showCols = colCount
-                    for c in range(showCols):
-                        print "%s:\t%.6e" % (c, coefficients[c])
-                    print "intercept:\t %.6e" % intercept
-
-                # gets the failed to converge, here, after we see it in the browser too
-                x = re.compile("[Ff]ailed")
-                if warnings:
-                    for w in warnings:
-                        if (re.search(x,w)): 
-                            # first
-                            if emsg is None: emsg = w
-                            print w
-                if emsg: break
-        
-            if not h2o.browse_disable:
-                h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
-                time.sleep(5)
-                h2b.browseJsonHistoryAsUrlLastMatch("GLM")
-                time.sleep(5)
+                    glm, None, **kwargs)
 
             # gets the failed to converge, here, after we see it in the browser too
             if emsg is not None:
