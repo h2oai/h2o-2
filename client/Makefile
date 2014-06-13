@@ -145,8 +145,6 @@ TEMPLATES=\
 	src/templates/model-selection-view.jade \
 	src/templates/frame-inspection-view.jade \
 	src/templates/model-inspection-view.jade \
-	src/templates/scoring-filters.jade \
-	src/templates/discrete-scoring-filter.jade \
 	src/templates/scoring-view.jade \
 	src/templates/notification-view.jade \
 	src/templates/scoring-selection-view.jade
