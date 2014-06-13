@@ -283,9 +283,7 @@ thresholdVariables = [
   extent: []
 ]
 
-computeExtents = (variables, data) ->
-  map variables, (variable) ->
-    d3.extent data, (datum) -> datum[variable.name]
+thresholdVariablesIndex = indexBy thresholdVariables, (variable) -> variable.name
 
 createMetricFrameFromScorings = (scores) ->
   uniqueScoringNames = {}
@@ -316,15 +314,15 @@ createMetricFrameFromScorings = (scores) ->
   modelVariables = null
 
   for variable in metricVariables when variable.type is 'float'
-    variable.extent = d3.extent metrics, variable.read
+    extent = d3.extent metrics, variable.read
+    [ l, u ] = extent
+    variable.extent = if (isNumber l) and (isNumber u) and l < u then extent else variable.domain
 
   for variable in thresholdVariables when variable.type is 'float'
     extents = map metrics, (metric) -> d3.extent times metric.data.auc.thresholds.length, (index) -> variable.read metric, index
-    lowerBound = d3.min extents, (extent) -> head extent
-    upperBound = d3.max extents, (extent) -> last extent
-    variable.extent = [ lowerBound, upperBound ]
-
-  console.log thresholdVariables
+    l = d3.min extents, (extent) -> head extent
+    u = d3.max extents, (extent) -> last extent
+    variable.extent = if (isNumber l) and (isNumber u) and l < u then [l, u] else variable.domain
 
   metrics: metrics
   modelVariables: modelVariables
