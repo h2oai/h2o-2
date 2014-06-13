@@ -105,16 +105,25 @@
   // ko if:isSheetView
   // ko with:sheetView
   button.btn.btn-primary(data-bind="click:displayFilters") Filter&hellip;
+  h2.y-subtitle(data-bind='collapse:false') Comparison Table
   div(data-bind="geyser:metricTable")
 
   h2.y-subtitle(data-bind='collapse:false') Visualizations
 
   // ko foreach:visualizations
-  div
+  .y-visualization-container
     h3.y-subheading(data-bind="text:caption, collapse:false")
-    div(data-bind="geyser:rendering")
+    .y-visualization
+      .y-rendering(data-bind="geyser:rendering")
+      .y-controls
+        button.btn(title='Edit Visualization' data-bind="click:edit")
+          i.fa.fa-pencil
+        button.btn(title='Remove Visualization' data-bind="click:remove")
+          i.fa.fa-times
+
   // /ko
 
+  h2.y-subtitle More Visualizations
   button.btn.btn-primary(data-bind="click:addVisualization")
     i.fa.fa-plus &nbsp;
     span Add Visualization&hellip;

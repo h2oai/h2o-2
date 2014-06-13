@@ -375,7 +375,7 @@ createThresholdInspection = (variables, metric, index) ->
   ]
 
 renderMetricsVisualization = (metrics, variableX, variableY, inspect) ->
-  margin = top: 20, right: 20, bottom: 20, left: 30
+  margin = top: 20, right: 20, bottom: 30, left: 30
   width = 200
   height = 200
 
@@ -580,6 +580,18 @@ Steam.ScoringSheetView = (_, _scorings) ->
   _metricTypeFilter = null
   _metricCriteriaFilter = null
   _allFilters = null
+  _metricsVisualizationType =
+    type: 'scoring'
+    caption: 'Scoring'
+    variables: filter metricVariables, (variable) -> variable.type is 'float'
+
+  _thresholdVisualizationType =
+    type: 'threshold'
+    caption: 'Threshold'
+    variables: filter thresholdVariables, (variable) -> variable.type is 'float'
+
+  _visualizationTypes = [ _metricsVisualizationType, _thresholdVisualizationType ]
+
 
   initialize = (scorings) ->
     _metricFrame = createMetricFrameFromScorings scorings
@@ -664,48 +676,85 @@ Steam.ScoringSheetView = (_, _scorings) ->
           updateFiltering()
           invalidate()
 
+  confirmVisualizationDeletion = (go) ->
+    confirmDialogOpts =
+      title: 'Delete Visualization?'
+      confirmCaption: 'Delete'
+      cancelCaption: 'Keep'
+    _.confirm 'This visualization will be deleted. Are you sure?', confirmDialogOpts, (response) ->
+      go() if response is 'confirm'
+
+  replaceVisualization = (oldVisualization, newVisualization) ->
+    index = _visualizations.indexOf oldVisualization
+    if index >= 0
+      _visualizations.splice index, 1, newVisualization
+    return
+
   addMetricsVisualization = (variableX, variableY) ->
     rendering =  createMetricsVisualization _metricFrame.metrics, variableX, variableY, (metric) ->
       _.inspect
         content: createMetricInspection _metricFrame.metricVariables, metric
         template: 'geyser'
-    caption: "#{variableX.caption} vs #{variableY.caption}"
-    rendering: rendering
+
+    edit = ->
+      configureVisualization 'Edit Visualization', self.data.type, self.data.variableX, self.data.variableY, (visualization) -> replaceVisualization self, visualization
+
+    remove = ->
+      confirmVisualizationDeletion -> _visualizations.remove self
+
+    self =
+      caption: "#{variableX.caption} vs #{variableY.caption}"
+      data:
+        type: _metricsVisualizationType
+        variableX: variableX
+        variableY: variableY
+      rendering: rendering
+      edit: edit
+      remove: remove
+
+    self
 
   addThresholdVisualization = (variableX, variableY, showReferenceLine) ->
     rendering =  createThresholdVisualization _metricFrame.metrics, variableX, variableY, showReferenceLine, (metric, index) ->
       _.inspect
         content: createThresholdInspection _metricFrame.thresholdVariables, metric, index
         template: 'geyser'
-    caption: if variableX is thresholdVariablesIndex.fpr and variableY is thresholdVariablesIndex.tpr then 'ROC Chart' else "#{variableX.caption} vs #{variableY.caption}"
-    rendering: rendering
 
-  addVisualization = ->
-    scoringVisualizationType =
-      type: 'scoring'
-      caption: 'Scoring'
-      variables: filter metricVariables, (variable) -> variable.type is 'float'
+    edit = ->
+      configureVisualization 'Edit Visualization', self.data.type, self.data.variableX, self.data.variableY, (visualization) -> replaceVisualization self, visualization
+    remove = ->
+      confirmVisualizationDeletion -> _visualizations.remove self
 
-    thresholdVisualizationType =
-      type: 'threshold'
-      caption: 'Threshold'
-      variables: filter thresholdVariables, (variable) -> variable.type is 'float'
+    self =
+      caption: if variableX is thresholdVariablesIndex.fpr and variableY is thresholdVariablesIndex.tpr then 'ROC Chart' else "#{variableX.caption} vs #{variableY.caption}"
+      data:
+        type: _thresholdVisualizationType
+        variableX: variableX
+        variableY: variableY
+      rendering: rendering
+      edit: edit
+      remove: remove
 
-    visualizationTypes = [ scoringVisualizationType, thresholdVisualizationType ]
+    self
 
+  configureVisualization = (caption, type, variableX, variableY, go) ->
     parameters =
-      visualizationTypes: visualizationTypes
-      visualizationType: scoringVisualizationType
-      variableX: scoringVisualizationType.variables[0]
-      variableY: scoringVisualizationType.variables[1]
-    _.configureScoringVisualization 'Add Visualization', parameters, (action, response) ->
+      visualizationTypes: _visualizationTypes
+      visualizationType: type
+      variableX: variableX
+      variableY: variableY
+
+    _.configureScoringVisualization caption, parameters, (action, response) ->
       switch action
         when 'confirm'
           switch response.visualizationType
-            when scoringVisualizationType
-              _visualizations.push addMetricsVisualization response.variableX, response.variableY
-            when thresholdVisualizationType
-              _visualizations.push addThresholdVisualization response.variableX, response.variableY, no
+            when _metricsVisualizationType
+              go addMetricsVisualization response.variableX, response.variableY
+            when _thresholdVisualizationType
+              go addThresholdVisualization response.variableX, response.variableY, no
+
+  addVisualization = ->
+    configureVisualization 'Add Visualization', _metricsVisualizationType, _metricsVisualizationType.variables[0], _metricsVisualizationType.variables[1], (visualization) -> _visualizations.push visualization
 
   initialize _scorings
 
