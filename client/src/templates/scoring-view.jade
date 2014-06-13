@@ -107,8 +107,12 @@
   button.btn.btn-primary(data-bind="click:displayFilters") Filter&hellip;
   div(data-bind="geyser:metricTable")
 
+  h2.y-subtitle(data-bind='collapse:false') Visualizations
+
   // ko foreach:visualizations
-  div(data-bind="geyser:$data")
+  div
+    h3.y-subheading(data-bind="text:caption, collapse:false")
+    div(data-bind="geyser:rendering")
   // /ko
 
   button.btn.btn-primary(data-bind="click:addVisualization")

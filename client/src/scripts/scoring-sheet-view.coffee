@@ -329,29 +329,73 @@ createMetricFrameFromScorings = (scores) ->
   metricVariables: metricVariables
   thresholdVariables: thresholdVariables
 
-createFilterLookup = (filter) ->
-  lookup = {}
-  for item in filter.items
-    lookup[item.factor.value] = yes if item.isChecked()
-  lookup
-
-createMetricsVisualization = (metrics, variableX, variableY) ->
+createMetricsVisualization = (metrics, variableX, variableY, inspect) ->
   [ div ] = geyser.generate [ 'div' ]
   render = ($element) ->
-    plot = renderMetricsVisualization metrics, variableX, variableY
+    plot = renderMetricsVisualization metrics, variableX, variableY, inspect
     $element.empty().append plot
   markup: div()
   behavior: render
 
-createThresholdVisualization = (metrics, variableX, variableY, showReferenceLine) ->
+createThresholdVisualization = (metrics, variableX, variableY, showReferenceLine, inspect) ->
   [ div ] = geyser.generate [ 'div' ]
   render = ($element) ->
-    plot = renderThresholdVisualization metrics, variableX, variableY, showReferenceLine
+    plot = renderThresholdVisualization metrics, variableX, variableY, showReferenceLine, inspect
     $element.empty().append plot
   markup: div()
   behavior: render
 
-renderMetricsVisualization = (metrics, variableX, variableY) ->
+createMetricInspection = (variables, metric) ->
+  [ div, h1, h2, table, tbody, tr, th, td ] = geyser.generate words 'div h1 h2 table.table.table-condensed tbody tr th td'
+
+  div [
+    h1 metric.caption
+    table tbody map variables, (variable) ->
+      value = variable.read metric
+      tr [
+        th variable.caption
+        td if isNaN value then 'NaN' else variable.format value
+      ]
+  ]
+
+createThresholdInspection = (variables, metric, index) ->
+  [ div, h1, h2, table, grid, tbody, tr, th, td ] = geyser.generate words 'div h1 h2 table.table.table-condensed table.table.table-bordered tbody tr th td'
+
+  formatConfusionMatrix = (domain, cm) ->
+    [ d1, d2 ] = domain
+    [[tn, fp], [fn, tp]] = cm
+    grid [
+      tr [
+        th ''
+        th d1
+        th d2
+      ]
+      tr [
+        th d1
+        td tn
+        td fp
+      ]
+      tr [
+        th d2
+        td fn
+        td tp
+      ]
+    ]
+
+  tabulateProperties = (index) ->
+    table tbody map variables, (variable) ->
+      tr [
+        th variable.caption
+        td variable.format variable.read metric, index
+      ]
+
+  div [
+    h1 metric.caption
+    h2 'Outputs'
+    tabulateProperties index
+  ]
+
+renderMetricsVisualization = (metrics, variableX, variableY, inspect) ->
   margin = top: 20, right: 20, bottom: 20, left: 30
   width = 200
   height = 200
@@ -424,13 +468,11 @@ renderMetricsVisualization = (metrics, variableX, variableY) ->
     .attr 'cx', (d) -> scaleX readX d
     .attr 'cy', (d) -> scaleY readY d
     .attr 'stroke', (d) -> d.color
-    .on 'click', (d) ->
-      _.inspect
-        content: createStripVisualizationValueInspection d
-        template: 'geyser'
+    .on 'click', (d) -> inspect d
+
   el
 
-renderThresholdVisualization = (metrics, variableX, variableY, showReferenceLine) ->
+renderThresholdVisualization = (metrics, variableX, variableY, showReferenceLine, inspect) ->
   margin = top: 20, right: 20, bottom: 20, left: 30
   width = 200
   height = 200
@@ -524,68 +566,82 @@ renderThresholdVisualization = (metrics, variableX, variableY, showReferenceLine
       .append 'circle'
       .attr 'class', 'dot'
       .attr 'r', 5
-      .attr 'cx', (d) -> scaleX variableX.read metric, d
-      .attr 'cy', (d) -> scaleY variableY.read metric, d
-      .on 'click', (d) ->
-        _.inspect
-          content: createThresholdPlotInspection metric, d
-          template: 'geyser'
-      .on 'mouseover', (d) ->
+      .attr 'cx', (index) -> scaleX variableX.read metric, index
+      .attr 'cy', (index) -> scaleY variableY.read metric, index
+      .on 'click', (index) -> inspect metric, index
+      .on 'mouseover', (index) ->
         d3.select(@).style 'stroke', metric.color
-      .on 'mouseout', (d) ->
+      .on 'mouseout', (index) ->
         d3.select(@).style 'stroke', 'none'
   el
+
+createFilter = (variable) ->
+  items = map variable.domain, (factor) ->
+    factor: factor
+    isSelected: yes
+  predicate = indexBy items, (item) -> item.factor.value
+
+  variable: variable
+  items: items
+  predicate: predicate
 
 Steam.ScoringSheetView = (_, _scorings) ->
   _metricFrame = null
   _metricTable = node$ null
-  _filtersView = null
-  _filtersIndex = null
   _sortByVariable = metricVariablesIndex.auc
   _sortAscending = no
   _visualizations = nodes$ []
+
+  #_filtersView = null
+  #_filtersIndex = null
+
   _filteredMetricVariables = null
   _filteredMetrics = null
+  _scoringFilter = null
+  _metricTypeFilter = null
+  _metricCriteriaFilter = null
+  _allFilters = null
 
   initialize = (scorings) ->
     _metricFrame = createMetricFrameFromScorings scorings
     scoringVariable.domain = map _metricFrame.metrics, (metric) ->
       value: metric.id
       caption: metric.caption
-    _filtersView = createFiltersView scoringVariable, metricTypeVariable, metricCriteriaVariable
-    _filtersIndex = indexBy _filtersView.filters, (filter) -> filter.variable.name
+    _scoringFilter = createFilter scoringVariable
+    _metricTypeFilter = createFilter metricTypeVariable
+    _metricCriteriaFilter = createFilter metricCriteriaVariable
+    _allFilters = [ _scoringFilter, _metricTypeFilter, _metricCriteriaFilter ]
     updateFiltering()
     _metricTable createMetricTable _metricFrame 
+    _visualizations.push addThresholdVisualization thresholdVariablesIndex.fpr, thresholdVariablesIndex.tpr, yes
 
   updateFiltering = ->
-    scoringFilterLookup = createFilterLookup _filtersIndex.scoring
-    metricTypeFilterLookup = createFilterLookup  _filtersIndex.metricType
-    metricCriteriaFilterLookup = createFilterLookup _filtersIndex.metricCriteria
     _filteredMetricVariables = filter _metricFrame.metricVariables, (variable) ->
       if variable.meta
-        if metricTypeFilterLookup[variable.meta.metricType.value] and metricCriteriaFilterLookup[variable.meta.metricCriterion.value]
+        if _metricTypeFilter.predicate[variable.meta.metricType.value] and _metricCriteriaFilter.predicate[variable.meta.metricCriterion.value]
           yes
         else
           no
       else
         #TODO AUC, Gini
         yes
-    _filteredMetrics = filter _metricFrame.metrics, (metric) -> scoringFilterLookup[metric.id]
+    _filteredMetrics = filter _metricFrame.metrics, (metric) -> _scoringFilter.predicate[metric.id]
 
   invalidate = ->
     _metricTable createMetricTable()
 
   createMetricTable = ->
-    [ table, thead, tbody, tr, th, td ] = geyser.generate words 'table.table.table-condensed thead tbody tr th td'
+    [ table, thead, tbody, tr, th, thAsc, thDesc, td ] = geyser.generate words 'table.table.table-condensed thead tbody tr th th.y-sorted-asc th.y-sorted-desc td'
     [ span ] = geyser.generate [ "a data-variable-id='$id'" ]
 
     # Sort
-    _metricFrame.metrics.sort (a, b) ->
+    _filteredMetrics.sort (a, b) ->
       diff = (_sortByVariable.read a) - (_sortByVariable.read b)
       if _sortAscending then diff else -diff
     
     header = tr map _filteredMetricVariables, (variable) ->
-      th span variable.caption, $id: variable.id
+      tag = if variable isnt _sortByVariable then th else if _sortAscending then thAsc else thDesc
+      tag span variable.caption, $id: variable.id
 
     rows = map _filteredMetrics, (metric) ->
       tr map _filteredMetricVariables, (variable) ->
@@ -602,67 +658,66 @@ Steam.ScoringSheetView = (_, _scorings) ->
         $anchor.click ->
           sortById = $anchor.attr 'data-variable-id'
           _sortByVariable = find _metricFrame.metricVariables, (variable) -> variable.id is sortById
-          #TODO toggle sort direction
+          _sortAscending = $anchor.parents('th').hasClass 'y-sorted-desc'
           invalidate()
 
     markup: markup
     behavior: behavior
 
-  createDiscreteFilterView = (variable) ->
-    initialized = no
-    items = map variable.domain, (factor) ->
-      isChecked = node$ yes
-      self =
-        caption: factor.caption
-        factor: factor
-        isChecked: isChecked
-      apply$ isChecked, (isChecked) ->
-        if initialized
+  displayFilters = ->
+    _.filterScorings _allFilters, (action, predicates) ->
+      switch action
+        when 'confirm'
+          for predicate, i in predicates
+            filter = _allFilters[i]
+            filter.predicate = predicate
+            for item in filter.items
+              item.isSelected = predicate[item.factor.value]
           updateFiltering()
           invalidate()
-      self
 
-    initialized = yes
+  addMetricsVisualization = (variableX, variableY) ->
+    rendering =  createMetricsVisualization _metricFrame.metrics, variableX, variableY, (metric) ->
+      _.inspect
+        content: createMetricInspection _metricFrame.metricVariables, metric
+        template: 'geyser'
+    caption: "#{variableX.caption} vs #{variableY.caption}"
+    rendering: rendering
 
-    caption: variable.caption
-    variable: variable
-    items: items
-    template: 'discrete-scoring-filter'
-
-  createFiltersView = (variables...) ->
-    filters: map variables, createDiscreteFilterView
-    filterTemplate: (filter) -> filter.template
-    template: 'scoring-filters'
-
-  displayFilters = ->
-    _.inspect _filtersView
+  addThresholdVisualization = (variableX, variableY, showReferenceLine) ->
+    rendering =  createThresholdVisualization _metricFrame.metrics, variableX, variableY, showReferenceLine, (metric, index) ->
+      _.inspect
+        content: createThresholdInspection _metricFrame.thresholdVariables, metric, index
+        template: 'geyser'
+    caption: if variableX is thresholdVariablesIndex.fpr and variableY is thresholdVariablesIndex.tpr then 'ROC Chart' else "#{variableX.caption} vs #{variableY.caption}"
+    rendering: rendering
 
   addVisualization = ->
     scoringVisualizationType =
       type: 'scoring'
       caption: 'Scoring'
-      variables: metricVariables
+      variables: filter metricVariables, (variable) -> variable.type is 'float'
 
     thresholdVisualizationType =
       type: 'threshold'
       caption: 'Threshold'
-      variables: thresholdVariables
+      variables: filter thresholdVariables, (variable) -> variable.type is 'float'
+
     visualizationTypes = [ scoringVisualizationType, thresholdVisualizationType ]
+
     parameters =
       visualizationTypes: visualizationTypes
       visualizationType: scoringVisualizationType
-      axisXVariable: scoringVisualizationType.variables[1]
-      axisYVariable: scoringVisualizationType.variables[2]
+      variableX: scoringVisualizationType.variables[0]
+      variableY: scoringVisualizationType.variables[1]
     _.configureScoringVisualization 'Add Visualization', parameters, (action, response) ->
       switch action
         when 'confirm'
           switch response.visualizationType
             when scoringVisualizationType
-              _visualizations.push createMetricsVisualization _metricFrame.metrics, response.axisXVariable, response.axisYVariable
+              _visualizations.push addMetricsVisualization response.variableX, response.variableY
             when thresholdVisualizationType
-              _visualizations.push createThresholdVisualization _metricFrame.metrics, response.axisXVariable, response.axisYVariable
-
-    
+              _visualizations.push addThresholdVisualization response.variableX, response.variableY, no
 
   initialize _scorings
 
