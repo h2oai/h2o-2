@@ -98,7 +98,7 @@ class Basic(unittest.TestCase):
                 print 'glm #', i, 'end on', csvPathname, 'took', time.time() - start, 'seconds'
                 # we can pass the warning, without stopping in the test, so we can 
                 # redo it in the browser for comparison
-                h2o_glm.simpleCheckGLMGrid(self, glm, None, allowFailWarning=True, **kwargs)
+                h2o_glm.simpleCheckGLMGrid(self, glm, None, **kwargs)
 
 if __name__ == '__main__':
     h2o.unit_main()

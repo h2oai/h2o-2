@@ -22,12 +22,15 @@ import h2o, h2o_cmd, h2o_glm, h2o_util, h2o_hosts, h2o_import as h2i
 
 def glm_doit(self, csvFilename, bucket, csvPathname, timeoutSecs=30):
     print "\nStarting GLM of", csvFilename
-    parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, hex_key=csvFilename + ".hex", schema='put', timeoutSecs=10)
-    y = "10"
+    parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, 
+        hex_key=csvFilename + ".hex", schema='put', timeoutSecs=10)
+    y = 10
     # Took n_folds out, because GLM doesn't include n_folds time and it's slow
     # wanted to compare GLM time to my measured time
     # hastie has two values, 1 and -1. need to use case for one of them
-    kwargs = {'response':  y, 'family': 'binomial'}
+    kwargs = {'response':  y, 'alpha': 0, 'family': 'binomial'}
+
+    h2o.nodes[0].to_enum(src_key=parseResult['destination_key'], column_index=y+1)
 
     start = time.time()
     glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
@@ -40,7 +43,7 @@ def glm_doit(self, csvFilename, bucket, csvPathname, timeoutSecs=30):
     validation = glm_model['submodels'][0]['validation']
 
     if self.validation1:
-        h2o_glm.compareToFirstGlm(self, 'err', validation, self.validation1)
+        h2o_glm.compareToFirstGlm(self, 'auc', validation, self.validation1)
     else:
         self.validation1 = copy.deepcopy(validation)
 

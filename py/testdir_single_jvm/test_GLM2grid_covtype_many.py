@@ -70,9 +70,7 @@ class Basic(unittest.TestCase):
         elapsed = time.time() - start
 
         for job_key, model_key in jobs:
-            glmResult = h2o.nodes[0].glm_view(_modelKey=model_key)
-            print "GLM Grid result", h2o.dump_json(glmResult)
-            # h2o_glm.simpleCheckGLMGrid(self, glmResult, **kwargs)
+            h2o_glm.simpleCheckGLMGrid(self, glmResult, **kwargs)
 
         print "All GLMGrid jobs completed in", elapsed, "seconds."
         print "totalGLMGridJobs:", totalGLMGridJobs

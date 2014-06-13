@@ -219,7 +219,7 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
         h2o.verboseprint("RFView response: number_built:", number_built, "leaves:", leaves, "depth:", depth)
 
     ### modelInspect = node.inspect(model_key)
-    dataInspect = node.inspect(data_key)
+    dataInspect = h2o_cmd.runInspect(key=data_key)
     h2o.check_sandbox_for_errors()
     return (round(classification_error,2), classErrorPctList, totalScores)
 
