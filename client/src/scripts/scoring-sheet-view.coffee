@@ -361,27 +361,6 @@ createMetricInspection = (variables, metric) ->
 createThresholdInspection = (variables, metric, index) ->
   [ div, h1, h2, table, grid, tbody, tr, th, td ] = geyser.generate words 'div h1 h2 table.table.table-condensed table.table.table-bordered tbody tr th td'
 
-  formatConfusionMatrix = (domain, cm) ->
-    [ d1, d2 ] = domain
-    [[tn, fp], [fn, tp]] = cm
-    grid [
-      tr [
-        th ''
-        th d1
-        th d2
-      ]
-      tr [
-        th d1
-        td tn
-        td fp
-      ]
-      tr [
-        th d2
-        td fn
-        td tp
-      ]
-    ]
-
   tabulateProperties = (index) ->
     table tbody map variables, (variable) ->
       tr [
@@ -635,9 +614,10 @@ Steam.ScoringSheetView = (_, _scorings) ->
     [ span ] = geyser.generate [ "a data-variable-id='$id'" ]
 
     # Sort
-    _filteredMetrics.sort (a, b) ->
-      diff = (_sortByVariable.read a) - (_sortByVariable.read b)
-      if _sortAscending then diff else -diff
+    _filteredMetrics.sort (metricA, metricB) ->
+      a = _sortByVariable.read metricA
+      b = _sortByVariable.read metricB
+      if _sortAscending then a > b else b > a
     
     header = tr map _filteredMetricVariables, (variable) ->
       tag = if variable isnt _sortByVariable then th else if _sortAscending then thAsc else thDesc
