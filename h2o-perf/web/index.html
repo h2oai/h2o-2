@@ -79,7 +79,7 @@ AND tr.test_name in ('singlenode_summary_one-billion-rows',
                      'singlenode_rf_va_mnist', 'multinode_rf_va_mnist',
                      'singlenode_rf_fv_mnist', 'multinode_rf_fv_mnist', 
                      'singlenode_gbm_covtype', 'multinode_gbm_covtype')
-ORDER BY tr.test_run_id DESC
+ORDER BY tr.start_epoch_ms;
                                             </textarea>
                                         <button class="btn btn-primary">Submit</button>
                                     </div>
@@ -119,7 +119,7 @@ ON tr.test_run_id = tp.test_run_id
 WHERE tp.phase_name = 'parse'
 /*AND (tr.test_name LIKE '%singlenode%' OR tr.test_name LIKE '%multinode%')*/
 AND tr.test_name LIKE '%billion%'
-ORDER BY tr.test_run_id DESC</textarea>
+ORDER BY tr.start_epoch_ms;</textarea>
                                         <button class="btn btn-primary">Submit</button>
                                     </div>
                                 </form>
@@ -167,7 +167,7 @@ ON tr.test_run_id = tp.test_run_id
 WHERE tp.phase_name = 'model'
 /*AND (tr.test_name LIKE '%singlenode%' OR tr.test_name LIKE '%multinode%')*/
 AND tr.test_name LIKE '%summary%'
-ORDER BY tr.test_run_id DESC</textarea>
+ORDER BY tr.start_epoch_ms;</textarea>
                                         <button class="btn btn-primary">Submit</button>
                                     </div>
                                 </form>
@@ -207,7 +207,7 @@ WHERE tp.phase_name = 'model'
 /*AND (tr.test_name LIKE '%singlenode%' OR tr.test_name LIKE '%multinode%')*/
 AND tr.test_name LIKE '%summary%'
 AND tr.test_name LIKE '%billion%'
-ORDER BY tr.test_run_id DESC</textarea>
+ORDER BY tr.start_epoch_ms;</textarea>
                                         <button class="btn btn-primary">Submit</button>
                                     </div>
                                 </form>
@@ -255,7 +255,7 @@ ON tr.test_run_id = tp.test_run_id
 WHERE tp.phase_name = 'model'
 /*AND (tr.test_name LIKE '%singlenode%' OR tr.test_name LIKE '%multinode%')*/
 AND tr.test_name LIKE '%pca%'
-ORDER BY tr.test_run_id DESC</textarea>
+ORDER BY tr.start_epoch_ms;</textarea>
                                         <button class="btn btn-primary">Submit</button>
                                     </div>
                                 </form>
@@ -295,7 +295,7 @@ WHERE tp.phase_name = 'model'
 /*AND (tr.test_name LIKE '%singlenode%' OR tr.test_name LIKE '%multinode%')*/
 AND tr.test_name LIKE '%pca%'
 AND tr.test_name LIKE '%billion%'
-ORDER BY tr.test_run_id DESC</textarea>
+ORDER BY tr.start_epoch_ms;</textarea>
                                         <button class="btn btn-primary">Submit</button>
                                     </div>
                                 </form>
@@ -344,7 +344,7 @@ ON tr.test_run_id = tp.test_run_id
 WHERE tp.phase_name = 'model'
 /*AND (tr.test_name LIKE '%singlenode%' OR tr.test_name LIKE '%multinode%')*/
 AND tr.test_name LIKE '%glm%'
-ORDER BY tr.test_run_id DESC</textarea>
+ORDER BY tr.start_epoch_ms;</textarea>
                                         <button class="btn btn-primary">Submit</button>
                                     </div>
                                 </form>
@@ -384,7 +384,7 @@ WHERE tp.phase_name = 'model'
 /*AND (tr.test_name LIKE '%singlenode%' OR tr.test_name LIKE '%multinode%')*/
 AND tr.test_name LIKE '%glm%'
 AND tr.test_name LIKE '%billion%'
-ORDER BY tr.test_run_id DESC</textarea>
+ORDER BY tr.start_epoch_ms;</textarea>
                                         <button class="btn btn-primary">Submit</button>
                                     </div>
                                 </form>
@@ -433,7 +433,7 @@ ON tr.test_run_id = tp.test_run_id
 WHERE tp.phase_name = 'model'
 /*AND (tr.test_name LIKE '%singlenode%' OR tr.test_name LIKE '%multinode%')*/
 AND tr.test_name LIKE '%kmeans%'
-ORDER BY tr.test_run_id DESC</textarea>
+ORDER BY tr.start_epoch_ms;</textarea>
                                         <button class="btn btn-primary">Submit</button>
                                     </div>
                                 </form>
@@ -473,7 +473,7 @@ WHERE tp.phase_name = 'model'
 /*AND (tr.test_name LIKE '%singlenode%' OR tr.test_name LIKE '%multinode%')*/
 AND tr.test_name LIKE '%kmeans%'
 AND tr.test_name LIKE '%billion%'
-ORDER BY tr.test_run_id DESC</textarea>
+ORDER BY tr.start_epoch_ms;</textarea>
                                         <button class="btn btn-primary">Submit</button>
                                     </div>
                                 </form>
@@ -522,7 +522,7 @@ ON tr.test_run_id = tp.test_run_id
 WHERE tp.phase_name = 'model'
 /*AND (tr.test_name LIKE '%singlenode%' OR tr.test_name LIKE '%multinode%')*/
 AND tr.test_name LIKE '%rf%'
-ORDER BY tr.test_run_id DESC</textarea>
+ORDER BY tr.start_epoch_ms;</textarea>
                                         <button class="btn btn-primary">Submit</button>
                                     </div>
                                 </form>
@@ -560,7 +560,7 @@ INNER JOIN test_run_phase_result p
 ON tr.test_run_id = p.test_run_id
 WHERE tr.test_name LIKE '%rf%'
 AND p.phase_name = 'model'
-ORDER BY tr.test_run_id DESC 
+ORDER BY tr.start_epoch_ms;
                                         </textarea>
                                         <button class="btn btn-primary">Submit</button>
                                     </div>
@@ -610,7 +610,7 @@ ON tr.test_run_id = tp.test_run_id
 WHERE tp.phase_name = 'model'
 /*AND (tr.test_name LIKE '%singlenode%' OR tr.test_name LIKE '%multinode%')*/
 AND tr.test_name LIKE '%gbm%'
-ORDER BY tr.test_run_id DESC</textarea>
+ORDER BY tr.start_epoch_ms;</textarea>
                                         <button class="btn btn-primary">Submit</button>
                                     </div>
                                 </form>
@@ -658,7 +658,7 @@ ON tr.test_run_id = tp.test_run_id
 WHERE tp.phase_name = 'model'
 /*AND (tr.test_name LIKE '%singlenode%' OR tr.test_name LIKE '%multinode%')*/
 AND tr.test_name LIKE '%deeplearning%'
-ORDER BY tr.test_run_id DESC</textarea>
+ORDER BY tr.start_epoch_ms;</textarea>
                                         <button class="btn btn-primary">Submit</button>
                                     </div>
                                 </form>
@@ -708,7 +708,7 @@ ON tr.test_run_id = tp.test_run_id
 WHERE tp.phase_name = 'model'
 /*AND (tr.test_name LIKE '%singlenode%' OR tr.test_name LIKE '%multinode%')*/
 AND tr.test_name LIKE '%ddply%'
-ORDER BY tr.test_run_id DESC</textarea>
+ORDER BY tr.start_epoch_ms;</textarea>
                                         <button class="btn btn-primary">Submit</button>
                                     </div>
                                 </form>
