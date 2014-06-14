@@ -168,6 +168,7 @@ class Basic(unittest.TestCase):
                 print '_names', _names
                 print 'coefficients_names', coefficients_names
                 # did beta get shortened? the simple check confirms names/beta/norm_beta are same length
+
                 print 'beta', beta
                 print 'iteration', iteration
                 print 'auc', auc
@@ -179,66 +180,8 @@ class Basic(unittest.TestCase):
                # Score **********************************************
                 print "Problems with test data having different enums than train? just use train for now"
                 testDataKey = hex_key
-                predictKey = 'Predict.hex'
-                start = time.time()
+                h2o_cmd.runScore(dataKey=testDataKey, modelKey=modelKey, vactual=y, vpredict=1, expectedAuc=0.5)
 
-                predictResult = h2o_cmd.runPredict(
-                    data_key=testDataKey,
-                    model_key=modelKey,
-                    destination_key=predictKey,
-                    timeoutSecs=timeoutSecs)
-
-                predictCMResult = h2o.nodes[0].predict_confusion_matrix(
-                    actual=testDataKey,
-                    vactual='C' + str(y+1),
-                    predict=predictKey,
-                    vpredict='predict',
-                    )
-
-                cm = predictCMResult['cm']
-
-                # These will move into the h2o_gbm.py
-                pctWrong = h2o_gbm.pp_cm_summary(cm);
-                # self.assertLess(pctWrong, 8,"Should see less than 7 pct error (class = 4): %s" % pctWrong)
-
-                print "\nTest\n==========\n"
-                print h2o_gbm.pp_cm(cm)
-
-
-                if 1==0:
-                    # stuff from GLM1
-
-                    classErr = glmScore['validation']['classErr']
-                    auc = glmScore['validation']['auc']
-                    err = glmScore['validation']['err']
-                    nullDev = glmScore['validation']['nullDev']
-                    resDev = glmScore['validation']['resDev']
-                    h2o_glm.simpleCheckGLMScore(self, glmScore, **kwargs)
-
-                    print "score classErr:", classErr
-                    print "score err:", err
-                    print "score auc:", auc
-                    print "score resDev:", resDev
-                    print "score nullDev:", nullDev
-
-                    if math.isnan(resDev):
-                        emsg = "Why is this resDev = 'nan'?? %6s %s" % ("resDev:\t", validation['resDev'])
-                        raise Exception(emsg)
-
-                    # what is reasonable?
-                    # self.assertAlmostEqual(err, 0.3, delta=0.15, msg="actual err: %s not close enough to 0.3" % err)
-                    self.assertAlmostEqual(auc, 0.5, delta=0.15, msg="actual auc: %s not close enough to 0.5" % auc)
-
-                    if math.isnan(err):
-                        emsg = "Why is this err = 'nan'?? %6s %s" % ("err:\t", err)
-                        raise Exception(emsg)
-
-                    if math.isnan(resDev):
-                        emsg = "Why is this resDev = 'nan'?? %6s %s" % ("resDev:\t", resDev)
-                        raise Exception(emsg)
-
-                    if math.isnan(nullDev):
-                        emsg = "Why is this nullDev = 'nan'?? %6s %s" % ("nullDev:\t", nullDev)
 
 if __name__ == '__main__':
     h2o.unit_main()

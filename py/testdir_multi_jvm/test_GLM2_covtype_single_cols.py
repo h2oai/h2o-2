@@ -20,7 +20,7 @@ class Basic(unittest.TestCase):
 
     def test_GLM2_covtype_single_cols(self):
         h2o.beta_features = True
-        timeoutSecs = 10
+        timeoutSecs = 120
         csvPathname = 'standard/covtype.data'
         print "\n" + csvPathname
 
@@ -29,6 +29,10 @@ class Basic(unittest.TestCase):
         ignore_x = ""
         parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put', 
             hex_key='A.hex', timeoutSecs=15)
+
+        case = 2
+        execExpr="A.hex[,%s]=(A.hex[,%s]==%s)" % (y+1, y+1, case)
+        h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
 
         print "GLM binomial ignoring 1 X column at a time" 
         print "Result check: abs. value of coefficient and intercept returned are bigger than zero"
@@ -45,9 +49,6 @@ class Basic(unittest.TestCase):
 
             start = time.time()
             kwargs = {'ignored_cols': ignore_x, 'response': y, 'n_folds': 6 }
-            case = 2
-            execExpr="A.hex[,%s]=(A.hex[,%s]==%s)" % (y+1, y+1, case)
-            h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
             glm = h2o_cmd.runGLM(parseResult={'destination_key': 'A.hex'}, timeoutSecs=timeoutSecs, **kwargs)
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'

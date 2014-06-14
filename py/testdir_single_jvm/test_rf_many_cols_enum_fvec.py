@@ -2,7 +2,7 @@ import unittest, random, sys, time, getpass
 sys.path.extend(['.','..','py'])
 
 # FIX! add cases with shuffled data!
-import h2o, h2o_cmd, h2o_hosts, h2o_gbm
+import h2o, h2o_cmd, h2o_hosts, h2o_rf, h2o_gbm
 import h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e, h2o_jobs as h2j
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED, translateList):
@@ -58,7 +58,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GBM_many_cols_enum(self):
+    def test_RF_many_cols_enum(self):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         translateList = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u']
@@ -92,12 +92,12 @@ class Basic(unittest.TestCase):
             eList = []
             fList = []
 
-            modelKey = 'GBMModelKey'
+            modelKey = 'RFModelKey'
 
             # Parse (train)****************************************
+            start = time.time()
             parseTrainResult = h2i.import_parse(bucket=None, path=csvPathname, schema='put', header=0,
                 hex_key=hex_key, timeoutSecs=timeoutSecs, doSummary=False)
-
             elapsed = time.time() - start
             print "train parse end on ", csvPathname, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
@@ -118,44 +118,39 @@ class Basic(unittest.TestCase):
             numCols = inspect['numCols']
             ### h2o_cmd.runSummary(key=parsTraineResult['destination_key'])
 
-            # GBM(train iterate)****************************************
+            # RF(train iterate)****************************************
             ntrees = 10
             for max_depth in [5,10,20,40]:
                 params = {
-                    'learn_rate': .2,
                     'nbins': 1024,
+                    'classification': 1,
                     'ntrees': ntrees,
                     'max_depth': max_depth,
                     'min_rows': 10,
                     'response': 'C' + str(numCols-1),
                     'ignored_cols_by_name': None,
                 }
-               # both response variants should work?
-                # if random.randint(0,1):
-                #    params['response'] = numCols-1,
-                
-                print "Using these parameters for GBM: ", params
+
+                print "Using these parameters for RF: ", params
                 kwargs = params.copy()
 
                 trainStart = time.time()
-                gbmTrainResult = h2o_cmd.runGBM(parseResult=parseTrainResult,
+                rfResult = h2o_cmd.runRF(parseResult=parseTrainResult,
                     timeoutSecs=timeoutSecs, destination_key=modelKey, **kwargs)
                 trainElapsed = time.time() - trainStart
-                print "GBM training completed in", trainElapsed, "seconds. On dataset: ", csvPathname
+                print "RF training completed in", trainElapsed, "seconds. On dataset: ", csvPathname
 
                 # Logging to a benchmark file
-                algo = "GBM " + " ntrees=" + str(ntrees) + " max_depth=" + str(max_depth)
+                algo = "RF " + " ntrees=" + str(ntrees) + " max_depth=" + str(max_depth)
                 l = '{:d} jvms, {:d}GB heap, {:s} {:s} {:6.2f} secs'.format(
                     len(h2o.nodes), h2o.nodes[0].java_heap_GB, algo, csvFilename, trainElapsed)
                 print l
                 h2o.cloudPerfH2O.message(l)
 
-                gbmTrainView = h2o_cmd.runGBMView(model_key=modelKey)
-                # errrs from end of list? is that the last tree?
-                errsLast = gbmTrainView['gbm_model']['errs'][-1]
-                print "GBM 'errsLast'", errsLast
+                errsLast = rfResult['drf_model']['errs'][-1]
+                print "RF 'errsLast'", errsLast
 
-                cm = gbmTrainView['gbm_model']['cms'][-1]['_arr'] # use the last one
+                cm = rfResult['drf_model']['cms'][-1]['_arr'] # use the last one
                 pctWrongTrain = h2o_gbm.pp_cm_summary(cm);
                 print "\nTrain\n==========\n"
                 print h2o_gbm.pp_cm(cm)
