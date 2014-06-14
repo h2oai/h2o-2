@@ -44,6 +44,7 @@ function makeTable(json, svg) {
      .on("mouseout", function(){d3.select(this).style("background-color", "white")})
      .text(function(d){return d;})
        .on("click", function(d, i) {
+        if ( (d.toString()).indexOf("http") > -1)    
             window.open(d, "", "height=800, width=800")
        })
      .style("font-size", "12px"); 
