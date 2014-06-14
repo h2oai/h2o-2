@@ -13,15 +13,25 @@ Holds utility and all purpose javascript
 function makeTable(json, svg) {
    var datas = new Array();
    var header = d3.keys(json.data[0]);
+   header.push("PerfGraphs")
    datas[0] = header;
    for(i = 0; i < json.data.length; i++) {
      datas[i+1] = d3.values(json.data[i]);
-   }   
-   
+     link = "http://192.168.1.171:4040/perflink.html?test_run_id=" + datas[i+1][0] + "&test_name=" + datas[i+1][2];
+     datas[i+1].push(link)
+   }
+
    d3.select(svg)
      .append("table")
      .style("border-collapse", "collapse")
      .style("border", "2px black solid")
+     .style("cursor", function(d) {
+       if ( (d.toString()).indexOf("http") > -1) {
+         return "pointer"
+       } else {
+         return "auto"
+        }
+     })
 
      .selectAll("tr")
      .data(datas).enter().append("tr")
@@ -33,6 +43,9 @@ function makeTable(json, svg) {
      .on("mouseover", function(){d3.select(this).style("background-color", "aliceblue")})
      .on("mouseout", function(){d3.select(this).style("background-color", "white")})
      .text(function(d){return d;})
+       .on("click", function(d, i) {
+           console.log(d)
+       })
      .style("font-size", "12px"); 
 }
 
@@ -257,3 +270,155 @@ function makeGraph(json, svg) {
       .style("text-anchor", "end")
       .text("Time (s)");
 }
+
+function nodePerfGraph(json, svgCPU, svgRSS) {
+    var margin = {top: 20, right: 80, bottom: 30, left: 50},
+        width = 2000 - margin.left - margin.right,
+        height = 500 -margin.top -margin.bottom;
+
+    var x = d3.scale.linear().range([0, width - 1000]);
+    var y = d3.scale.linear().range([height, 0]);
+    var color = d3.scale.category10();
+
+    var xAxis = d3.svg.axis().scale(x).orient("bottom").tickFormat(d3.format("d"));
+    var yAxis = d3.svg.axis().scale(y).orient("left");
+
+    var lineFunction = d3.svg.line().interpolate("ordinal")
+        .x(function(d) {return x(d[0]); })
+        .y(function(d) { return y(d[1]); });
+
+    var svg_cpu = d3.select(svgCPU).append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    var svg_rss = d3.select(svgRSS).append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    /**
+     * JSON:
+     *  {
+     *     "test_run_id"
+     *     "test_name"
+     *     "node_name"
+     *     "timevals": []
+     *     "sys_cpu": []
+     *     "user_cpu": []
+     *     "rss": []
+     */
+
+    var test_run_id = d3.values(json.data[0]);
+    var test_name = d3.values(json.data[1]);
+    var node_name = d3.values(json.data[2]);
+    var sys_cpu = zip(d3.values(json.data[3]), d3.values(json.data[4]));
+    var user_cpu = zip(d3.values(json.data[3]), d3.values(json.data[5]));
+    var rss = zip(d3.values(json.data[3]), d3.values(json.data[6]));
+
+
+    xCPU.domain([
+        d3.min(sys_cpu, function(c) { return d3.min(c.data, function(v) { return v[0]; }); }),
+        d3.max(sys_cpu, function(c) { return d3.max(c.data, function(v) { return v[0]; }); })
+    ]);
+
+    yCPU.domain([
+        0,
+        d3.max(sys_cpu, function(c) { return d3.max(c.data, function(v) { return +v[1]; }); })
+    ]);
+
+    xRSS.domain([
+        d3.min(rss, function(c) { return d3.min(c.data, function(v) { return v[0]; }); }),
+        d3.max(rss, function(c) { return d3.max(c.data, function(v) { return v[0]; }); })
+    ]);
+
+    yRSS.domain([
+        0,
+        d3.max(rss, function(c) { return d3.max(c.data, function(v) { return +v[1]; }); })
+    ]);
+
+    var cpu = [];
+    for (var pp in sys_cpu) {
+        cpu.push({
+            name: "sys",
+            color: "green",
+            data: pp
+        })
+    }
+    for (var pp in user_cpu) {
+        cpu.push({
+            name: "user",
+            color: "blue",
+            data: pp
+        })
+    }
+
+    // Make the CPU svg
+
+    var linesGroup = svg.append("g").attr("class", "line");
+    for (var i in cpu) {
+        linedata = cpu[i];
+
+        svg_cpu.selectAll(".point").data(linedata.data).enter()
+            .append("svg:circle")
+            .attr("stroke", "black")
+            .attr("fill", "black");
+
+        linesGroup.append("path")
+            .attr("d", lineFunction(linedata.data))
+            .attr("class", "lines")
+            .attr("fill", "none")
+            .attr("stroke", linedata.color);
+    }
+
+    svg_cpu.append("g")
+        .attr("class", "x axis")
+        .attr("transform", "translate(0," + height + ")")
+        .call(xAxis);
+
+    svg_cpu.append("g")
+        .attr("class", "y axis")
+        .call(yAxis)
+        .append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 6)
+        .attr("dy", ".71em")
+        .style("text-anchor", "end")
+        .text("Time (s)");
+
+    // Do the RSS graph
+
+    var linesGroup2 = svg.append("g").attr("class", "line");
+    for (var i in rss) {
+        linedata = rss[i];
+
+        svg_rss.selectAll(".point").data(linedata.data).enter()
+            .append("svg:circle")
+            .attr("stroke", "black")
+            .attr("fill", "black");
+
+        linesGroup2.append("path")
+            .attr("d", lineFunction(linedata.data))
+            .attr("class", "lines")
+            .attr("fill", "none")
+            .attr("stroke", linedata.color);
+    }
+
+    svg_rss.append("g")
+        .attr("class", "x axis")
+        .attr("transform", "translate(0," + height + ")")
+        .call(xAxis);
+
+    svg_rss.append("g")
+        .attr("class", "y axis")
+        .call(yAxis)
+        .append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 6)
+        .attr("dy", ".71em")
+        .style("text-anchor", "end")
+        .text("Time (s)");
+}
+
