@@ -85,6 +85,7 @@ JAVAC_ARGS="-g
     -Xlint:-deprecation
     -Xlint:-serial
     -Xlint:-rawtypes
+    -Xlint:-path
     -Xlint:-unchecked "
 JAR=`which jar`
 ZIP=`which zip`
