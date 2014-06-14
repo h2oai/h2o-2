@@ -25,14 +25,7 @@ function makeTable(json, svg) {
      .append("table")
      .style("border-collapse", "collapse")
      .style("border", "2px black solid")
-     .style("cursor", function(d) {
-       if ( (d.toString()).indexOf("http") > -1) {
-         return "pointer"
-       } else {
-         return "auto"
-        }
-     })
-
+     
      .selectAll("tr")
      .data(datas).enter().append("tr")
 
@@ -40,11 +33,18 @@ function makeTable(json, svg) {
      .data(function(d){return d}).enter().append("td")
      .style("border", "1px black solid")
      .style("padding", "5px")
+     .style("cursor", function(d) {
+      if ( (d.toString()).indexOf("http") > -1) {
+        return "pointer"
+      } else {
+        return "auto"
+       }   
+     })
      .on("mouseover", function(){d3.select(this).style("background-color", "aliceblue")})
      .on("mouseout", function(){d3.select(this).style("background-color", "white")})
      .text(function(d){return d;})
        .on("click", function(d, i) {
-           console.log(d)
+            window.open(d, "", "height=800, width=800")
        })
      .style("font-size", "12px"); 
 }
