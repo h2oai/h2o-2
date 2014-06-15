@@ -886,8 +886,8 @@ Steam.ScoringSheetView = (_, _scorings) ->
     _visualizations newVisualizations
 
   createMetricTable = ->
-    [ table, thead, tbody, tr, th, thAsc, thDesc, td ] = geyser.generate words 'table.table.table-condensed thead tbody tr th th.y-sorted-asc th.y-sorted-desc td'
-    [ columnHeader, scoringLink, swatch ] = geyser.generate [ "a.y-header data-variable-id='$id'", "a.y-scoring-link data-scoring-id='$id'", ".y-legend-swatch style='background-color:$color'" ]
+    [ div, table, thead, tbody, tr, th, thAsc, thDesc, td ] = geyser.generate words 'div table.table.table-condensed thead tbody tr th th.y-sorted-asc th.y-sorted-desc td'
+    [ columnHeader, scoringLink, swatch, checkbox, selectAllCheckbox, filterButton, filterOutButton] = geyser.generate [ "a.y-header data-variable-id='$id'", "a.y-scoring-link data-scoring-id='$id'", ".y-legend-swatch style='background-color:$color'", "input.y-select-one-checkbox type='checkbox' data-scoring-id='$id'", "input.y-select-all-checkbox type='checkbox'", 'button.btn.y-filter-button', "button.btn.y-filter-out-button style='margin-left:7px'"]
 
     # Sort
     _filteredMetrics.sort (metricA, metricB) ->
@@ -902,8 +902,9 @@ Steam.ScoringSheetView = (_, _scorings) ->
       tag = if variable isnt _sortByVariable then th else if _sortAscending then thAsc else thDesc
       tag columnHeader variable.caption, $id: variable.id
 
-    # Addition column to house legend swatches
+    # Additional column to house legend swatches
     headers.unshift th '&nbsp;'
+    headers.unshift th selectAllCheckbox ''
 
     rows = map _filteredMetrics, (metric) ->
       cells = map columnVariables, (variable) ->
@@ -913,11 +914,20 @@ Steam.ScoringSheetView = (_, _scorings) ->
           td variable.format variable.read metric
       # Add legend swatch 
       cells.unshift td swatch '', $color:metric.color
+
+      # Add checkbox
+      cells.unshift td checkbox '', $id: metric.id
       cells
 
-    markup = table [
-      thead tr headers
-      tbody map rows, tr
+    markup = div [
+      table [
+        thead tr headers
+        tbody map rows, tr
+      ]
+      div [
+        filterButton 'Edit this table&hellip;'
+        filterOutButton 'Remove selected'
+      ]
     ]
 
     behavior = ($element) ->
@@ -937,19 +947,39 @@ Steam.ScoringSheetView = (_, _scorings) ->
             _.inspect
               content: createMetricInspection _metricFrame.metricVariables, metric
               template: 'geyser'
+      $('.y-select-all-checkbox', $element).change ->
+        $checkbox = $ @
+        $('.y-select-one-checkbox', $element).prop 'checked', $checkbox.is ':checked'
+
+      $('.y-filter-button', $element).click -> displayFilters()
+
+      $('.y-filter-out-button', $element).click ->
+        scoringFilterPredicate = {}
+        $('.y-select-one-checkbox', $element).each ->
+          $checkbox = $ @
+          metricId = parseInt $checkbox.attr 'data-scoring-id'
+          scoringFilterPredicate[metricId] = not $checkbox.is ':checked'
+          return
+        applyFilter _scoringFilter, scoringFilterPredicate
+        updateFiltering()
+        invalidate()
 
     markup: markup
     behavior: behavior
+
+  applyFilter = (filter, predicate) ->
+    filter.predicate = predicate
+    for item in filter.items
+      item.isSelected = predicate[item.factor.value]
+    return
+  
 
   displayFilters = ->
     _.filterScorings _allFilters, (action, predicates) ->
       switch action
         when 'confirm'
           for predicate, i in predicates
-            filter = _allFilters[i]
-            filter.predicate = predicate
-            for item in filter.items
-              item.isSelected = predicate[item.factor.value]
+            applyFilter _allFilters[i], predicate
           updateFiltering()
           invalidate()
 
