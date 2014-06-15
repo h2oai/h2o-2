@@ -8,13 +8,14 @@
       div(style='max-height:300px;overflow:auto')
         // ko foreach:filters
         div(style='margin-bottom:20px;border-bottom:1px solid #eee')
-          h1(data-bind="text:caption")
-          // ko foreach:items
-          .checkbox
-            label
-              input(type='checkbox' data-bind="checked:isChecked")
-              span(data-bind="text:caption")
-          // /ko
+          h1(data-bind="text:caption, collapse:false")
+          div
+            // ko foreach:items
+            .checkbox
+              label
+                input(type='checkbox' data-bind="checked:isChecked")
+                span(data-bind="text:caption")
+            // /ko
         // /ko
       .y-dialog-actions
         button.btn(data-bind='click:cancel') Cancel
