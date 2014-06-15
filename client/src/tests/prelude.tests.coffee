@@ -88,6 +88,7 @@ test 'prelude availability in application scope', (t) ->
     isNaN
     isNull
     isNumber
+    isInteger
     isObject
     isPlainObject
     isRegExp
@@ -168,6 +169,15 @@ test 'isFalsy', (t) ->
 
   for arg in truthy
     t.equal (isFalsy arg), if arg then no else yes
+
+  t.end()
+
+test 'isInteger', (t) ->
+  for arg in [0, 1, 1.0]
+    t.equal (isInteger arg), yes
+
+  for arg in [0.1, 1.1, undefined, null, 'string', [], {}]
+    t.equal (isInteger arg), no
 
   t.end()
 

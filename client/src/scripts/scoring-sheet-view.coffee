@@ -1,4 +1,9 @@
-format4f = unless exports? then d3.format '.4f' else null
+unless exports?
+  format4f = d3.format '.4f' 
+  formatInteger = d3.format 'd'
+else
+  format4f = null
+  formatInteger = null
 
 computeTPR = (cm) ->
   [[tn, fp], [fn, tp]] = cm
@@ -7,6 +12,11 @@ computeTPR = (cm) ->
 computeFPR = (cm) ->
   [[tn, fp], [fn, tp]] = cm
   fp / (fp + tn)
+
+isNumericVariable = (variable) -> variable.type is 'float' or variable.type is 'integer'
+
+getSortedNumericVariables = (variables) ->
+  sortBy (filter variables, isNumericVariable), (variable) -> variable.caption
 
 
 metricCriteriaVariable =
@@ -18,30 +28,39 @@ metricCriteriaVariable =
   domain: [
     value: 'maximum F1'
     caption: 'Max F1'
+    isImportant: yes
   ,
     value: 'maximum F2'
     caption: 'Max F2'
+    isImportant: no
   ,
     value: 'maximum F0point5'
     caption: 'Max F0.5'
+    isImportant: no
   ,
     value: 'maximum Accuracy'
     caption: 'Max Accuracy'
+    isImportant: no
   ,
     value: 'maximum Precision'
     caption: 'Max Precision'
+    isImportant: no
   ,
     value: 'maximum Recall'
     caption: 'Max Recall'
+    isImportant: no
   ,
     value: 'maximum Specificity'
     caption: 'Max Specificity'
+    isImportant: no
   ,
     value: 'maximum absolute MCC'
     caption: 'Max Absolute MCC'
+    isImportant: no
   ,
     value: 'minimizing max per class Error'
     caption: 'Min MPCE'
+    isImportant: no
   ]
 
 metricTypeVariable =
@@ -54,49 +73,58 @@ metricTypeVariable =
     value: 'threshold_for_criteria'
     caption: 'Threshold'
     domain: [0, 1]
+    isImportant: yes
   ,
     value: 'error_for_criteria'
     caption: 'Error'
     domain: [0, 1]
+    isImportant: yes
   ,
     value: 'F0point5_for_criteria'
     caption: 'F0.5'
     domain: [0, 1]
+    isImportant: yes
   ,
     value: 'F1_for_criteria'
     caption: 'F1'
     domain: [0, 1]
+    isImportant: yes
   ,
     value: 'F2_for_criteria'
     caption: 'F2'
     domain: [0, 1]
+    isImportant: yes
   ,
     value: 'accuracy_for_criteria'
     caption: 'Accuracy'
     domain: [0, 1]
+    isImportant: yes
   ,
     value: 'precision_for_criteria'
     caption: 'Precision'
     domain: [0, 1]
+    isImportant: yes
   ,
     value: 'recall_for_criteria'
     caption: 'Recall'
     domain: [0, 1]
+    isImportant: yes
   ,
     value: 'specificity_for_criteria'
     caption: 'Specificity'
     domain: [0, 1]
+    isImportant: yes
   ,
     value: 'mcc_for_criteria'
     caption: 'MCC'
     domain: [-1, 1]
+    isImportant: yes
   ,
     value: 'max_per_class_error_for_criteria'
     caption: 'MPCE'
     domain: [0, 1]
+    isImportant: yes
   ]
-
-metricVariables = []
 
 scoringVariable = 
   id: uniqueId()
@@ -107,7 +135,59 @@ scoringVariable =
   domain: []
   format: identity
 
+inputsVariable =
+  id: uniqueId()
+  name: 'inputs'
+  caption: 'Inputs'
+  type: 'string'
+  read: (metric) -> 'NA'
+  domain: []
+  format: identity
+
+metricVariables = []
+
 metricVariables.push scoringVariable
+
+metricVariables.push
+  id: uniqueId()
+  name: 'frameKey'
+  caption: 'Frame'
+  type: 'string'
+  read: (metric) -> metric.data.frame.key
+  format: identity
+  domain: [ 0, 1 ]
+  extent: []
+
+metricVariables.push
+  id: uniqueId()
+  name: 'modelKey'
+  caption: 'Model'
+  type: 'string'
+  read: (metric) -> metric.model.key
+  format: identity
+  domain: [ 0, 1 ]
+  extent: []
+
+metricVariables.push
+  id: uniqueId()
+  name: 'method'
+  caption: 'Method'
+  type: 'string'
+  read: (metric) -> metric.model.model_algorithm
+  format: identity
+  domain: [ 0, 1 ]
+  extent: []
+
+metricVariables.push
+  id: uniqueId()
+  name: 'trainingDuration'
+  caption: 'Time (ms)'
+  type: 'integer'
+  read: (metric) -> metric.model.training_duration_in_ms
+  format: formatInteger
+  domain: [ 0, 1 ]
+  extent: []
+
 
 metricVariables.push
   id: uniqueId()
@@ -285,6 +365,159 @@ thresholdVariables = [
 
 thresholdVariablesIndex = indexBy thresholdVariables, (variable) -> variable.name
 
+createInputVariable = (algorithm, key, caption, type, inputType, domain, hasDifferences) ->
+  read = (metric) ->
+    if metric.model.model_algorithm is algorithm
+      switch inputType
+        when 'critical'
+          metric.model.critical_parameters[key]
+        when 'secondary'
+          metric.model.secondary_parameters[key]
+        when 'expert'
+          metric.model.expert_parameters[key]
+    else
+      undefined
+
+  extent =
+    if isArray domain
+      if domain.length is 2
+        if domain[0] is domain[1]
+          [ domain[0] - 1, domain[1] + 1 ]
+        else
+          domain
+      else
+        [0, 1]
+    else
+      [0, 1]
+
+  format = (value) ->
+    if isUndefined value
+      '-'
+    else
+      switch type
+        when 'integer'
+          formatInteger value
+        when 'float'
+          format4f value
+        when 'string'
+          value
+        when 'array'
+          value.join ', '
+        else
+          JSON.stringify value
+      
+  id: uniqueId()
+  name: caption
+  caption: caption
+  type: type
+  read: read
+  format: format
+  domain: domain
+  extent: extent
+  meta:
+    inputType: inputType
+    hasDifferences: hasDifferences
+
+createInputParameterAndValue2 = (algorithm, type, key, value) ->
+  key: key
+  algorithm: algorithm
+  type: type
+  value: value
+
+createInputParameterAndValue = (value, key) ->
+  # DL, DRF have array-valued params, so handle that case properly
+  scalarValue = if isArray value then value.join ', ' else value
+  key: key
+  value: scalarValue
+  isNumber: isNumber value
+
+determineType = (value) ->
+  if isNumber value
+    'float'
+  else if isString value
+    'string'
+  else if isArray value
+    'array'
+  else
+    'blob'
+
+createInputVariables = (inputParametersByCaption) ->
+  variables = []
+  for caption, inputs of inputParametersByCaption
+    type = null
+    key = null
+    algorithm = null
+    inputType = null
+    valid = no
+    for input in inputs
+      if type is null
+        type = determineType input.value
+        key = input.key
+        algorithm = input.algorithm
+        inputType = input.type
+        valid = yes
+      else
+        unless type is determineType input.value
+          valid = no
+          continue
+    if valid
+      switch type
+        when 'float'
+          domain = d3.extent inputs, (input) -> input.value
+          type = 'integer' if (every inputs, (input) -> isInteger input.value)
+        when 'string'
+          domain = unique map inputs, (input) -> input.value
+        else
+          domain = null
+      hasDifferences = domain is null or (domain isnt null and not same domain)
+      variables.push createInputVariable algorithm, key, caption, type, inputType, domain, hasDifferences
+
+  sortBy variables, (variable) -> variable.caption
+
+collateInputVariables = (metrics) ->
+  # Collate critcal, secondary, expert parameters for all models
+  inputParameters = map metrics, (metric) ->
+    model = metric.model
+    flatten [
+      mapWithKey model.critical_parameters, (value, key) -> createInputParameterAndValue2 model.model_algorithm, 'critical', key, value
+      mapWithKey model.secondary_parameters, (value, key) -> createInputParameterAndValue2 model.model_algorithm, 'secondary', key, value
+      mapWithKey model.expert_parameters, (value, key) -> createInputParameterAndValue2 model.model_algorithm, 'expert', key, value
+    ]
+  inputParametersByKey = groupBy (flatten inputParameters), (parameter) -> "#{parameter.algorithm}.#{parameter.key}"
+  createInputVariables inputParametersByKey
+
+collateInputParameters = (metrics) ->
+  models = map metrics, (metric) -> metric.model
+
+  # Collate critcal, secondary, expert parameters for all models
+  parametersByModel = map models, (model) ->
+    flatten [
+      mapWithKey model.critical_parameters, createInputParameterAndValue
+      mapWithKey model.secondary_parameters, createInputParameterAndValue
+      mapWithKey model.expert_parameters, createInputParameterAndValue
+    ]
+
+  # Filter only numeric parameters
+  numericParametersByModel = map parametersByModel, (parameters) -> filter parameters, (parameter) -> parameter.isNumber
+
+  # Find parameters that have numeric values defined for all models.
+  # This is to reject any parameters that have numeric values for some models and non-numeric ones for the others (in which case the number of parameter values will not match the number of models).
+  parametersByKey = groupBy (flatten numericParametersByModel), (parameter) -> parameter.key
+  plottableParameterKeys = []
+  for key, parameters of parametersByKey
+    if parameters.length is models.length
+      plottableParameterKeys.push key
+
+  # Create a dictionary of input parameters per metrics
+  inputParameters = times models.length, -> {}
+  for key in plottableParameterKeys
+    for parameter, i in parametersByKey[key]
+      inputParameters[i][key] = parameter.value
+
+  forEach metrics, (metric, i) -> metric.inputs = inputParameters[i]
+
+  [plottableParameterKeys, inputParameters]
+
 createMetricFrameFromScorings = (scores) ->
   uniqueScoringNames = {}
   createUniqueScoringName = (frameKey, modelKey) ->
@@ -310,22 +543,21 @@ createMetricFrameFromScorings = (scores) ->
     data: metric
     color: colorScale index
 
-  #TODO create variables for model inputs.
-  modelVariables = null
-
-  for variable in metricVariables when variable.type is 'float'
+  for variable in metricVariables when isNumericVariable variable
     extent = d3.extent metrics, variable.read
     [ l, u ] = extent
     variable.extent = if (isNumber l) and (isNumber u) and l < u then extent else variable.domain
 
-  for variable in thresholdVariables when variable.type is 'float'
+  for variable in thresholdVariables when isNumericVariable variable
     extents = map metrics, (metric) -> d3.extent times metric.data.auc.thresholds.length, (index) -> variable.read metric, index
     l = d3.min extents, (extent) -> head extent
     u = d3.max extents, (extent) -> last extent
     variable.extent = if (isNumber l) and (isNumber u) and l < u then [l, u] else variable.domain
 
+  inputVariables = collateInputVariables metrics
+
   metrics: metrics
-  modelVariables: modelVariables
+  inputVariables: inputVariables
   metricVariables: metricVariables
   thresholdVariables: thresholdVariables
 
@@ -557,8 +789,10 @@ renderThresholdVisualization = (metrics, variableX, variableY, showReferenceLine
 createFilter = (variable) ->
   items = map variable.domain, (factor) ->
     factor: factor
-    isSelected: yes
-  predicate = indexBy items, (item) -> item.factor.value
+    isSelected: factor.isImportant
+  predicate = {}
+  for item in items
+    predicate[item.factor.value] = item.isSelected
 
   variable: variable
   items: items
@@ -574,39 +808,51 @@ Steam.ScoringSheetView = (_, _scorings) ->
   #_filtersView = null
   #_filtersIndex = null
 
+  _metricsVisualizationType = null
+  _thresholdVisualizationType = null
+  _visualizationTypes = null
+
   _filteredMetricVariables = null
+  _filteredInputVariables = null
   _filteredMetrics = null
   _scoringFilter = null
+  _inputsFilter = null
   _metricTypeFilter = null
   _metricCriteriaFilter = null
   _allFilters = null
-
-  getSortedFloatVariables = (variables) ->
-    sortBy (filter variables, (variable) -> variable.type is 'float'), (variable) -> variable.caption
-
-  _metricsVisualizationType =
-    type: 'scoring'
-    caption: 'Scoring'
-    variables: getSortedFloatVariables metricVariables
-
-  _thresholdVisualizationType =
-    type: 'threshold'
-    caption: 'Threshold'
-    variables: getSortedFloatVariables thresholdVariables
-
-  _visualizationTypes = [ _metricsVisualizationType, _thresholdVisualizationType ]
 
   initialize = (scorings) ->
     _metricFrame = createMetricFrameFromScorings scorings
     scoringVariable.domain = map _metricFrame.metrics, (metric) ->
       value: metric.id
       caption: metric.caption
+      isImportant: yes
+
+    inputsVariable.domain = map _metricFrame.inputVariables, (variable) ->
+      value: variable.id
+      caption: variable.caption
+      isImportant: (variable.meta.inputType is 'critical') or (variable.meta.hasDifferences)
+
+    areModelsComparable = same _metricFrame.metrics, (a, b) -> a.model.model_category is b.model.model_category and a.model.model_algorithm is b.model.model_algorithm
+    _metricsVisualizationType =
+      type: 'scoring'
+      caption: 'Scoring'
+      variables: getSortedNumericVariables if areModelsComparable then (_metricFrame.inputVariables.concat metricVariables) else metricVariables
+
+    _thresholdVisualizationType =
+      type: 'threshold'
+      caption: 'Threshold'
+      variables: getSortedNumericVariables thresholdVariables
+
+    _visualizationTypes = [ _metricsVisualizationType, _thresholdVisualizationType ]
+
     _scoringFilter = createFilter scoringVariable
+    _inputsFilter = createFilter inputsVariable
     _metricTypeFilter = createFilter metricTypeVariable
     _metricCriteriaFilter = createFilter metricCriteriaVariable
-    _allFilters = [ _scoringFilter, _metricTypeFilter, _metricCriteriaFilter ]
+    _allFilters = [ _scoringFilter, _inputsFilter, _metricTypeFilter, _metricCriteriaFilter ]
     updateFiltering()
-    _metricTable createMetricTable _metricFrame 
+    _metricTable createMetricTable() 
     _visualizations.push createThresholdVisualizationPane thresholdVariablesIndex.fpr, thresholdVariablesIndex.tpr, yes
 
   updateFiltering = ->
@@ -617,8 +863,8 @@ Steam.ScoringSheetView = (_, _scorings) ->
         else
           no
       else
-        #TODO AUC, Gini
         yes
+    _filteredInputVariables = filter _metricFrame.inputVariables, (variable) -> _inputsFilter.predicate[variable.id] 
     _filteredMetrics = filter _metricFrame.metrics, (metric) -> _scoringFilter.predicate[metric.id]
 
   invalidate = ->
@@ -632,7 +878,7 @@ Steam.ScoringSheetView = (_, _scorings) ->
 
   createMetricTable = ->
     [ table, thead, tbody, tr, th, thAsc, thDesc, td ] = geyser.generate words 'table.table.table-condensed thead tbody tr th th.y-sorted-asc th.y-sorted-desc td'
-    [ span, swatch ] = geyser.generate [ "a data-variable-id='$id'", ".y-legend-swatch style='background-color:$color'" ]
+    [ columnHeader, scoringLink, swatch ] = geyser.generate [ "a.y-header data-variable-id='$id'", "a.y-scoring-link data-scoring-id='$id'", ".y-legend-swatch style='background-color:$color'" ]
 
     # Sort
     _filteredMetrics.sort (metricA, metricB) ->
@@ -641,17 +887,21 @@ Steam.ScoringSheetView = (_, _scorings) ->
       if _sortAscending then a > b else b > a
 
     columnVariables = clone _filteredMetricVariables
+    columnVariables.splice.apply columnVariables, flatten [ 7, 0, _filteredInputVariables ]
     
     headers = map columnVariables, (variable) ->
       tag = if variable isnt _sortByVariable then th else if _sortAscending then thAsc else thDesc
-      tag span variable.caption, $id: variable.id
+      tag columnHeader variable.caption, $id: variable.id
 
     # Addition column to house legend swatches
     headers.unshift th '&nbsp;'
 
     rows = map _filteredMetrics, (metric) ->
       cells = map columnVariables, (variable) ->
-        td variable.format variable.read metric
+        if variable.name is 'scoring'
+          td scoringLink (variable.read metric), $id: metric.id
+        else
+          td variable.format variable.read metric
       # Add legend swatch 
       cells.unshift td swatch '', $color:metric.color
       cells
@@ -662,13 +912,22 @@ Steam.ScoringSheetView = (_, _scorings) ->
     ]
 
     behavior = ($element) ->
-      $('a', $element).each ->
+      $('a.y-header', $element).each ->
         $anchor = $ @
         $anchor.click ->
           sortById = $anchor.attr 'data-variable-id'
-          _sortByVariable = find _metricFrame.metricVariables, (variable) -> variable.id is sortById
+          _sortByVariable = find columnVariables, (variable) -> variable.id is sortById
           _sortAscending = $anchor.parents('th').hasClass 'y-sorted-desc'
           invalidate()
+      $('a.y-scoring-link', $element).each ->
+        $anchor = $ @
+        $anchor.click ->
+          metricId = parseInt $anchor.attr 'data-scoring-id'
+          metric = find _metricFrame.metrics, (metric) -> metric.id is metricId
+          if metric
+            _.inspect
+              content: createMetricInspection _metricFrame.metricVariables, metric
+              template: 'geyser'
 
     markup: markup
     behavior: behavior
@@ -766,7 +1025,7 @@ Steam.ScoringSheetView = (_, _scorings) ->
           createVisualizationPane response.visualizationType, response.variableX, response.variableY, go
 
   addVisualization = ->
-    configureVisualization 'Add Visualization', _metricsVisualizationType, _metricsVisualizationType.variables[0], _metricsVisualizationType.variables[1], (visualization) -> _visualizations.push visualization
+    configureVisualization 'Add Visualization', _metricsVisualizationType, null, null, (visualization) -> _visualizations.push visualization
 
   initialize _scorings
 

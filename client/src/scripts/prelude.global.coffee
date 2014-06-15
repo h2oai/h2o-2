@@ -144,6 +144,7 @@ isFunction = _.isFunction
 isNaN = _.isNaN
 isNull = _.isNull
 isNumber = _.isNumber
+isInteger = (value) -> (isNumber value) and value % 1 is 0
 isObject = _.isObject
 isPlainObject = _.isPlainObject
 isRegExp = _.isRegExp
