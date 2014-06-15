@@ -168,6 +168,7 @@
     position relative
     width 290px
     height 260px
+    border y-border-transparent
 
     .y-rendering
       position absolute
@@ -178,9 +179,10 @@
       position absolute
       width 32px
       height 52px
-      border 1px solid #ddd
       right 0
       top 0
+      border y-border-light
+      box-shadow-light()
 
       button
         background transparent
@@ -194,6 +196,9 @@
     .y-controls
       display none
     &:hover
+      .y-visualization
+        border y-border-light
+        box-shadow-light()
       .y-controls
         display block
 
