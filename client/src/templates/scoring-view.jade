@@ -24,8 +24,8 @@
   // ko if:isComparisonView
   .y-tabs
     a.y-tab(data-bind='click:switchToTabularView, css:{active:isTabularComparisonView}') Tabular
-    a.y-tab(data-bind='click:switchToAdvancedView, css:{active:isAdvancedComparisonView}') Advanced
-    a.y-tab(data-bind='click:switchToSheetView, css:{active:isSheetView}') Sheet
+    // a.y-tab(data-bind='click:switchToAdvancedView, css:{active:isAdvancedComparisonView}') Advanced
+    a.y-tab(data-bind='click:switchToSheetView, css:{active:isSheetView}') Advanced
 
   // ko if:isTabularComparisonView
   div(data-bind='geyser:comparisonTable')
