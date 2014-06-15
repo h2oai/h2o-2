@@ -109,19 +109,19 @@
   div(data-bind="geyser:metricTable")
 
   h2.y-subtitle(data-bind='collapse:false') Visualizations
+  div
+    // ko foreach:visualizations
+    .y-visualization-container
+      h3.y-subheading(data-bind="text:caption, collapse:false")
+      .y-visualization
+        .y-rendering(data-bind="geyser:rendering")
+        .y-controls
+          button.btn(title='Edit Visualization' data-bind="click:edit")
+            i.fa.fa-pencil
+          button.btn(title='Remove Visualization' data-bind="click:remove")
+            i.fa.fa-times
 
-  // ko foreach:visualizations
-  .y-visualization-container
-    h3.y-subheading(data-bind="text:caption, collapse:false")
-    .y-visualization
-      .y-rendering(data-bind="geyser:rendering")
-      .y-controls
-        button.btn(title='Edit Visualization' data-bind="click:edit")
-          i.fa.fa-pencil
-        button.btn(title='Remove Visualization' data-bind="click:remove")
-          i.fa.fa-times
-
-  // /ko
+    // /ko
 
   h2.y-subtitle More Visualizations
   button.btn.btn-primary(data-bind="click:addVisualization")
