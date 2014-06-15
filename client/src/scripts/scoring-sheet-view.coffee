@@ -180,14 +180,23 @@ metricVariables.push
 
 metricVariables.push
   id: uniqueId()
-  name: 'trainingDuration'
-  caption: 'Time (ms)'
+  name: 'trainingTime'
+  caption: 'Training Time (ms)'
   type: 'integer'
   read: (metric) -> metric.model.training_duration_in_ms
   format: formatInteger
   domain: [ 0, 1 ]
   extent: []
 
+metricVariables.push
+  id: uniqueId()
+  name: 'scoringTime'
+  caption: 'Scoring Time (ms)'
+  type: 'integer'
+  read: (metric) -> metric.data.duration_in_ms
+  format: formatInteger
+  domain: [ 0, 1 ]
+  extent: []
 
 metricVariables.push
   id: uniqueId()
@@ -887,7 +896,7 @@ Steam.ScoringSheetView = (_, _scorings) ->
       if _sortAscending then a > b else b > a
 
     columnVariables = clone _filteredMetricVariables
-    columnVariables.splice.apply columnVariables, flatten [ 7, 0, _filteredInputVariables ]
+    columnVariables.splice.apply columnVariables, flatten [ 8, 0, _filteredInputVariables ]
     
     headers = map columnVariables, (variable) ->
       tag = if variable isnt _sortByVariable then th else if _sortAscending then thAsc else thDesc
