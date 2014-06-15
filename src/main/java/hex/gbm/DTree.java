@@ -6,10 +6,7 @@ import hex.VarImp;
 import hex.gbm.DTree.TreeModel.CompressedTree;
 import hex.gbm.DTree.TreeModel.TreeVisitor;
 import water.*;
-import water.api.AUC;
-import water.api.DocGen;
-import water.api.Inspect2;
-import water.api.Predict;
+import water.api.*;
 import water.api.Request.API;
 import water.fvec.Chunk;
 import water.license.LicenseManager;
@@ -554,22 +551,29 @@ public class DTree extends Iced {
     private final int num_folds;
     private transient volatile CompressedTree[/*N*/][/*nclasses OR 1 for regression*/] _treeBitsCache;
 
-    public TreeModel(Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, int num_folds) {
+    public TreeModel( Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, int num_folds) {
+      this(key, dataKey, testKey, names, domains, cmDomain, ntrees, max_depth, min_rows, nbins, num_folds, new Key[0][], new ConfusionMatrix[0], new double[0], null, null, null);
+    }
+    public TreeModel( Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, int num_folds,
+                      Key[][] treeKeys, ConfusionMatrix[] cms, double[] errs, TreeStats treeStats, VarImp varimp, AUC validAUC) {
       super(key,dataKey,names,domains);
-      this.N = ntrees; this.errs = new double[0];
-      this.testKey = testKey; this.cms = new ConfusionMatrix[0];
+      this.N = ntrees;
       this.max_depth = max_depth; this.min_rows = min_rows; this.nbins = nbins;
-      this.treeKeys = new Key[0][];
-      this.treeStats = null;
-      this.cmDomain = cmDomain!=null ? cmDomain : new String[0];;
-      this.varimp = null;
-      this.validAUC = null;
       this.num_folds = num_folds;
+      this.treeKeys = treeKeys;
+      this.treeStats = treeStats;
+      this.cmDomain = cmDomain!=null ? cmDomain : new String[0];;
+      this.testKey = testKey;
+      this.cms = cms;
+      this.errs = errs;
+      this.varimp = varimp;
+      this.validAUC = validAUC;
     }
     // Simple copy ctor, null value of parameter means copy from prior-model
-    private TreeModel(TreeModel prior, Key[][] treeKeys, double[] errs, ConfusionMatrix[] cms, TreeStats tstats, VarImp varimp, AUC validAUC) {
+    protected TreeModel(TreeModel prior, Key[][] treeKeys, double[] errs, ConfusionMatrix[] cms, TreeStats tstats, VarImp varimp, AUC validAUC) {
       super(prior._key,prior._dataKey,prior._names,prior._domains);
-      this.N = prior.N; this.testKey = prior.testKey;
+      this.N = prior.N;
+      this.testKey   = prior.testKey;
       this.max_depth = prior.max_depth;
       this.min_rows  = prior.min_rows;
       this.nbins     = prior.nbins;
@@ -590,7 +594,6 @@ public class DTree extends Iced {
     public TreeModel(TreeModel prior, DTree[] tree, TreeStats tstats) {
       this(prior, append(prior.treeKeys, tree), null, null, tstats, null, null);
     }
-
     public TreeModel(TreeModel prior, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
       this(prior, null, Utils.append(prior.errs, err), Utils.append(prior.cms, cm), null, varimp, validAUC);
     }
@@ -602,6 +605,35 @@ public class DTree extends Iced {
     }
 
     protected TreeModelType getTreeModelType() { return TreeModelType.UNKNOWN; }
+
+    /** Returns Producer if the model is under construction else null.
+     * <p>The implementation looks for writer lock. If it is present, then returns true.</p>
+     *
+     * <p>WARNING: the method is strictly for UI used, does not provide any atomicity!!!</p>*/
+    private final Key getProducer() {
+      return FetchProducer.fetch(_key);
+    }
+    private final boolean isProduced() {
+      return getProducer()!=null;
+    }
+
+    private static final class FetchProducer extends DTask<FetchProducer> {
+      final private Key _key;
+      private Key _producer;
+      public static Key fetch(Key key) {
+        FetchProducer fp = new FetchProducer(key);
+        if (key.home()) fp.compute2();
+        else fp = RPC.call(key.home_node(), fp).get();
+        return fp._producer;
+      }
+      private FetchProducer(Key k) { _key = k; }
+      @Override public void compute2() {
+        Lockable l = UKV.get(_key);
+        _producer = l!=null && l._lockers!=null && l._lockers.length > 0 ? l._lockers[0] : null;
+        tryComplete();
+      }
+      @Override public byte priority() { return H2O.ATOMIC_PRIORITY; }
+    }
 
     private static final Key[][] append(Key[][] prior, DTree[] tree ) {
       if (tree==null) return prior;
@@ -618,7 +650,7 @@ public class DTree extends Iced {
     public int ntrees() { return treeKeys.length; }
     // Most recent ConfusionMatrix
     @Override public ConfusionMatrix cm() {
-      ConfusionMatrix[] cms = this.cms; // Avoid racey update; read it once
+      ConfusionMatrix[] cms = this.cms; // Avoid race update; read it once
       if(cms != null && cms.length > 0){
         int n = cms.length-1;
         while(n > 0 && cms[n] == null)--n;
@@ -666,9 +698,7 @@ public class DTree extends Iced {
     // Score per line per tree
     public void score0(double data[], float preds[], int treeIdx) {
       CompressedTree ts[] = ctree(treeIdx);
-      for( int c=0; c<ts.length; c++ )
-        if( ts[c] != null )
-          preds[ts.length==1?0:c+1] += ts[c].score(data);
+      DTreeUtils.scoreTree(data, preds, ts);
     }
 
     /** Delete model trees */
@@ -692,6 +722,34 @@ public class DTree extends Iced {
       return fs;
     }
 
+    @Override public ModelAutobufferSerializer getModelSerializer() {
+      // Return a serializer which knows how to serialize keys
+      return new ModelAutobufferSerializer() {
+        @Override protected AutoBuffer postSave(Model m, AutoBuffer ab) {
+          int ntrees = treeKeys.length;
+          ab.put4(ntrees);
+          for (int i=0; i<ntrees; i++) {
+            CompressedTree[] ts = ctree(i);
+            ab.putA(ts);
+          }
+          return ab;
+        }
+        @Override protected AutoBuffer postLoad(Model m, AutoBuffer ab) {
+          int ntrees = ab.get4();
+          Futures fs = new Futures();
+          for (int i=0; i<ntrees; i++) {
+            CompressedTree[] ts = ab.getA(CompressedTree.class);
+            for (int j=0; j<ts.length; j++) {
+              Key k = ((TreeModel) m).treeKeys[i][j];
+              UKV.put(k, ts[j], fs);
+            }
+          }
+          fs.blockForPending();
+          return ab;
+        }
+      };
+    }
+
     public void generateHTML(String title, StringBuilder sb) {
       DocGen.HTML.title(sb,title);
       sb.append("<div class=\"alert\">").append("Actions: ");
@@ -700,7 +758,12 @@ public class DTree extends Iced {
       sb.append(Predict.link(_key,"Score on dataset")).append(", ");
       if (_dataKey != null)
         sb.append(UIUtils.builderModelLink(this.getClass(), _dataKey, responseName(), "Compute new model")).append(", ");
-      sb.append("<i class=\"icon-play\"></i>&nbsp;").append("Continue training this model");
+      sb.append(UIUtils.qlink(SaveModel.class, "model", _key, "Save model")).append(", ");
+      if (isProduced()) { // looks at locker field and check W-locker guy
+        sb.append("<i class=\"icon-stop\"></i>&nbsp;").append(Cancel.link(getProducer(), "Stop training this model"));
+      } else {
+        sb.append("<i class=\"icon-play\"></i>&nbsp;").append(UIUtils.builderLink(this.getClass(), _dataKey, responseName(), this._key, "Continue training this model"));
+      }
       sb.append("</div>");
       DocGen.HTML.paragraph(sb,"Model Key: "+_key);
       DocGen.HTML.paragraph(sb,"Max depth: "+max_depth+", Min rows: "+min_rows+", Nbins:"+nbins+", Trees: " + ntrees());
@@ -997,18 +1060,23 @@ public class DTree extends Iced {
     public void toJavaHtml( StringBuilder sb ) {
       if( treeStats == null ) return; // No trees yet
       sb.append("<br /><br /><div class=\"pull-right\"><a href=\"#\" onclick=\'$(\"#javaModel\").toggleClass(\"hide\");\'" +
-                "class=\'btn btn-inverse btn-mini\'>Java Model</a></div><br /><div class=\"hide\" id=\"javaModel\">"       +
-                "<pre style=\"overflow-y:scroll;\"><code class=\"language-java\">");
+                "class=\'btn btn-inverse btn-mini\'>Java Model</a></div><br /><div class=\"hide\" id=\"javaModel\">");
 
       boolean featureAllowed = isFeatureAllowed();
       if (! featureAllowed) {
-        sb.append("You have requested a premium feature (> 10 trees) and your H2O software is unlicensed.\n");
-        sb.append("\n");
-        sb.append("Please email support@0xdata.com to request a trial license.\n");
-        sb.append("Then restart H2O with the -license option.\n");
+        sb.append("<br/><div id=\'javaModelWarningBlock\' class=\"alert\" style=\"background:#eedd20;color:#636363;text-shadow:none;\">");
+        sb.append("<b>You have requested a premium feature (> 10 trees) and your H<sub>2</sub>O software is unlicensed.</b><br/><br/>");
+        sb.append("Please enter your email address below, and we will send you a trial license shortly.<br/>");
+        sb.append("This will also temporarily enable downloading Java models.<br/>");
+        sb.append("<form class=\'form-inline\'><input id=\"emailForJavaModel\" class=\"span5\" type=\"text\" placeholder=\"Email\"/> ");
+        sb.append("<a href=\"#\" onclick=\'processJavaModelLicense();\' class=\'btn btn-inverse\'>Send</a></form></div>");
+        sb.append("<div id=\"javaModelSource\" class=\"hide\"><pre style=\"overflow-y:scroll;\"><code class=\"language-java\">");
+        DocGen.HTML.escape(sb, toJava());
+        sb.append("</code></pre></div>");
       }
       else if( ntrees() * treeStats.meanLeaves > 5000 ) {
         String modelName = JCodeGen.toJavaId(_key.toString());
+        sb.append("<pre style=\"overflow-y:scroll;\"><code class=\"language-java\">");
         sb.append("/* Java code is too large to display, download it directly.\n");
         sb.append("   To obtain the code please invoke in your terminal:\n");
         sb.append("     curl http:/").append(H2O.SELF.toString()).append("/h2o-model.jar > h2o-model.jar\n");
@@ -1016,9 +1084,14 @@ public class DTree extends Iced {
         sb.append("     javac -cp h2o-model.jar -J-Xmx2g -J-XX:MaxPermSize=128m ").append(modelName).append(".java\n");
         sb.append("     java -cp h2o-model.jar:. -Xmx2g -XX:MaxPermSize=256m -XX:ReservedCodeCacheSize=256m ").append(modelName).append('\n');
         sb.append("*/");
-      } else
-        DocGen.HTML.escape(sb,toJava());
-      sb.append("</code></pre></div>");
+        sb.append("</code></pre>");
+      } else {
+        sb.append("<pre style=\"overflow-y:scroll;\"><code class=\"language-java\">");
+        DocGen.HTML.escape(sb, toJava());
+        sb.append("</code></pre>");
+      }
+      sb.append("</div>");
+      sb.append("<script type=\"text/javascript\">$(document).ready(showOrHideJavaModel);</script>");
     }
 
     @Override protected SB toJavaInit(SB sb, SB fileContextSB) {
@@ -1045,9 +1118,11 @@ public class DTree extends Iced {
       // Generate a data in separated class since we do not want to influence size of constant pool of model class
       if( _dataKey != null ) {
         Value dataval = DKV.get(_dataKey);
-        water.fvec.Frame frdata = ValueArray.asFrame(dataval);
-        water.fvec.Frame frsub = frdata.subframe(_names);
-        JCodeGen.toClass(fileContextSB, "// Sample of data used by benchmark\nclass DataSample", "DATA", frsub, 10, "Sample test data.");
+        if (dataval != null) {
+          water.fvec.Frame frdata = ValueArray.asFrame(dataval);
+          water.fvec.Frame frsub = frdata.subframe(_names);
+          JCodeGen.toClass(fileContextSB, "// Sample of data used by benchmark\nclass DataSample", "DATA", frsub, 10, "Sample test data.");
+        }
       }
       return sb;
     }

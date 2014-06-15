@@ -63,7 +63,7 @@ class Basic(unittest.TestCase):
 
         # params is mutable. This is default.
         params = {
-            'ntrees': 3, 
+            'ntrees': 2, 
             'destination_key': 'RF_model'
         }
 
@@ -81,7 +81,7 @@ class Basic(unittest.TestCase):
 
 
         start = time.time()
-        h2o_jobs.pollWaitJobs(pattern='RF_model', timeoutSecs=300, pollTimeoutSecs=120, retryDelaySecs=5)
+        h2o_jobs.pollWaitJobs(pattern='RF_model', timeoutSecs=360, pollTimeoutSecs=120, retryDelaySecs=5)
         print "rf job end on ", dataKeyTrain, 'took', time.time() - start, 'seconds'
 
         print "\nRFView start after job completion"

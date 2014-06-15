@@ -19,7 +19,6 @@ getting started from downloaded versions of  H\ :sub:`2`\ O, and using  H\
 .. toctree::
     :maxdepth: 1
     
-    newuser/introduction
     newuser/top
     Ruser/top
     userguide/top
@@ -92,6 +91,7 @@ H\ :sub:`2`\ O is open source, which means you have the opportunity to contribut
     :maxdepth: 1
 
     developuser/top_developer
+    developuser/h2o_sw_arch
 
 Miscellaneous
 =============

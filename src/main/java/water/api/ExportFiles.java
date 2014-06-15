@@ -1,16 +1,16 @@
 package water.api;
 
+import java.io.*;
+
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+
 import water.*;
 import water.api.RequestServer.API_VERSION;
 import water.fvec.Frame;
 import water.persist.PersistHdfs;
+import water.util.FSUtils;
 import water.util.Log;
-
-import java.io.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class ExportFiles extends Request2 {
   static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
@@ -42,7 +42,7 @@ public class ExportFiles extends Request2 {
    */
   boolean _local = false;
   @Override protected void registered(API_VERSION version) { super.registered(version); }
-  protected Response serve() {
+  @Override protected Response serve() {
     try {
       // pull everything local
       Log.info("ExportFiles processing (" + path + ")");
@@ -63,7 +63,7 @@ public class ExportFiles extends Request2 {
   }
 
   protected void serveHdfs(InputStream csv) throws IOException {
-    if (isBareS3NBucketWithoutTrailingSlash(path)) { path += "/"; }
+    if (FSUtils.isBareS3NBucketWithoutTrailingSlash(path)) { path += "/"; }
     Path p = new Path(path);
 
     org.apache.hadoop.fs.FileSystem fs = org.apache.hadoop.fs.FileSystem.get(p.toUri(), PersistHdfs.CONF);
@@ -106,13 +106,6 @@ public class ExportFiles extends Request2 {
     DocGen.HTML.section(sb, "Export done. Key '" + src_key.toString() +
             "' was written to " + (_local && H2O.CLOUD.size() > 1 ? H2O.SELF_ADDRESS + ":" : "") + path.toString());
     return true;
-  }
-
-  private boolean isBareS3NBucketWithoutTrailingSlash(String s) {
-    Pattern p = Pattern.compile("s3n://[^/]*");
-    Matcher m = p.matcher(s);
-    boolean b = m.matches();
-    return b;
   }
 
 }

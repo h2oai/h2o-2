@@ -100,10 +100,10 @@ class Test:
         self.model_process.scrape_phase()
         contamination = PerfUtils.run_contaminated(object)
 
-        #if self.predict_process:
-        #    self.predict_process.start(self.ip, self.port)
-        #    self.predict_process.block()
-        #    self.predict_process.scrape_phase()
+        if self.predict_process:
+            self.predict_process.start(self.ip, self.port)
+            self.predict_process.block()
+            self.predict_process.scrape_phase()
 
         self.end_ms = int(round(time.time() * 1000))
 

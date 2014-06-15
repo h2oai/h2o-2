@@ -560,7 +560,7 @@ INNER JOIN test_run_phase_result p
 ON tr.test_run_id = p.test_run_id
 WHERE tr.test_name LIKE '%rf%'
 AND p.phase_name = 'model'
-ORDER BY tr.test_name, tr.test_run_id; 
+ORDER BY tr.start_epoch_ms;
                                         </textarea>
                                         <button class="btn btn-primary">Submit</button>
                                     </div>

@@ -10,6 +10,7 @@ import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.TransfVec;
 import water.fvec.Vec;
+import water.serial.AutoBufferSerializer;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
@@ -461,9 +462,9 @@ public abstract class Model extends Lockable<Model> {
       double probsum=0;
       for( int c=1; c<scored.length; c++ ) {
         final double original_fraction = _priorClassDist[c-1];
-        assert(original_fraction > 0);
+        assert(original_fraction > 0) : "original fraction should be > 0, but is " + original_fraction;
         final double oversampled_fraction = _modelClassDist[c-1];
-        assert(oversampled_fraction > 0);
+        assert(oversampled_fraction > 0) : "oversampled fraction should be > 0, but is " + oversampled_fraction;
         assert(!Double.isNaN(scored[c]));
         scored[c] *= original_fraction / oversampled_fraction;
         probsum += scored[c];
@@ -823,4 +824,11 @@ public abstract class Model extends Lockable<Model> {
     }
   }
 
+  /** Helper type for serialization */
+  protected static class ModelAutobufferSerializer extends AutoBufferSerializer<Model> { }
+
+  /** Returns a model serializer into AutoBuffer. */
+  public AutoBufferSerializer<Model> getModelSerializer() {
+    return new ModelAutobufferSerializer();
+  }
 }

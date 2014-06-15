@@ -61,7 +61,7 @@ public final class ValueString extends Iced implements Comparable<ValueString> {
   // Converting to a String will truncate all bytes with high-order bits set,
   // even if they are otherwise a valid member of the field/ValueString.
   // Converting back to a ValueString will then make something with fewer
-  // characters than what you started with, and will fail all equals() tests.a
+  // characters than what you started with, and will fail all equals() tests.
   @Override public String toString(){
     return new String(_buf,_off,_len);
   }
@@ -86,6 +86,7 @@ public final class ValueString extends Iced implements Comparable<ValueString> {
     _len = _buf.length;
     return this;
   }
+  public void setOff(int off) { _off=off; }
 
   @Override public boolean equals(Object o){
     if(!(o instanceof ValueString)) return false;

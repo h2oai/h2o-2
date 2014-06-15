@@ -159,7 +159,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
 
   public GLMModel(GLM2 job, Key selfKey, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double lambda_max, double [] lambda, double ymu, double prior) {
     super(selfKey,null,dinfo._adaptedFrame);
-    parameters = job;
+    parameters = Job.hygiene((GLM2) job.clone());
     job_key = job.self();
     this.ymu = ymu;
     this.prior = prior;

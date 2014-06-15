@@ -166,11 +166,11 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   public hex.ConfusionMatrix cm() {
     final Errors lasterror = last_scored();
     if (errors == null) return null;
-    water.api.ConfusionMatrix cm = lasterror.validation ?
+    water.api.ConfusionMatrix cm = lasterror.validation || lasterror.num_folds > 0 ?
             lasterror.valid_confusion_matrix :
             lasterror.train_confusion_matrix;
     if (cm == null || cm.cm == null) {
-      if (lasterror.validation) {
+      if (lasterror.validation || lasterror.num_folds > 0) {
         return new ConfMat(lasterror.valid_err, lasterror.validAUC != null ? lasterror.validAUC.F1() : 0);
       } else {
         return new ConfMat(lasterror.train_err, lasterror.trainAUC != null ? lasterror.trainAUC.F1() : 0);
@@ -183,7 +183,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   @Override
   public double mse() {
     if (errors == null) return super.mse();
-    return last_scored().validation ? last_scored().valid_mse : last_scored().train_mse;
+    return last_scored().validation || last_scored().num_folds > 0 ? last_scored().valid_mse : last_scored().train_mse;
   }
 
   @Override
@@ -285,7 +285,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
     public DeepLearningModelInfo() {}
 
-    public DeepLearningModelInfo(final Job.ValidatedJob job, final DataInfo dinfo) {
+    public DeepLearningModelInfo(final Job job, final DataInfo dinfo) {
       this.job = job;
       data_info = dinfo;
       final int num_input = dinfo.fullN();
@@ -373,11 +373,11 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
           sb.append((i+1) + " " + String.format("%6d", neurons[i].units)
                   + " " + String.format("%16s", neurons[i].getClass().getSimpleName()));
           if (i == 0) {
-            sb.append("  " + formatPct(neurons[i].params.input_dropout_ratio) + " \n");
+            sb.append("  " + Utils.formatPct(neurons[i].params.input_dropout_ratio) + " \n");
             continue;
           }
           else if (i < neurons.length-1) {
-            sb.append("  " + formatPct(neurons[i].params.hidden_dropout_ratios[i-1]) + " ");
+            sb.append("  " + Utils.formatPct(neurons[i].params.hidden_dropout_ratios[i-1]) + " ");
           } else {
             sb.append("          ");
           }
@@ -1011,7 +1011,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
         if (i == 0) {
           sb.append("<td>");
-          sb.append(formatPct(neurons[i].params.input_dropout_ratio));
+          sb.append(Utils.formatPct(neurons[i].params.input_dropout_ratio));
           sb.append("</td>");
           sb.append("<td></td>");
           sb.append("<td></td>");
@@ -1024,7 +1024,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
         }
         else if (i < neurons.length-1) {
           sb.append("<td>");
-          sb.append(formatPct(neurons[i].params.hidden_dropout_ratios[i-1]));
+          sb.append(Utils.formatPct(neurons[i].params.hidden_dropout_ratios[i - 1]));
           sb.append("</td>");
         } else {
           sb.append("<td></td>");
@@ -1050,12 +1050,12 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     }
 
     if (isClassifier()) {
-      DocGen.HTML.section(sb, "Classification error on training data: " + formatPct(error.train_err));
+      DocGen.HTML.section(sb, "Classification error on training data: " + Utils.formatPct(error.train_err));
       if(error.validation) {
-        DocGen.HTML.section(sb, "Classification error on validation data: " + formatPct(error.valid_err));
+        DocGen.HTML.section(sb, "Classification error on validation data: " + Utils.formatPct(error.valid_err));
       } else if(error.num_folds > 0) {
         DocGen.HTML.section(sb, "Classification error on " + error.num_folds + "-fold cross-validated training data"
-                + (_have_cv_results ? ": " + formatPct(error.valid_err) : " is being computed - please reload this page later."));
+                + (_have_cv_results ? ": " + Utils.formatPct(error.valid_err) : " is being computed - please reload this page later."));
       }
     } else {
       DocGen.HTML.section(sb, "MSE on training data: " + String.format(mse_format, error.train_mse));
@@ -1261,9 +1261,9 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       sb.append("<td>" + String.format("%g", e.epoch_counter) + "</td>");
       sb.append("<td>" + String.format("%,d", e.training_samples) + "</td>");
       if (isClassifier()) {
-        sb.append("<td>" + formatPct(e.train_err) + "</td>");
+        sb.append("<td>" + Utils.formatPct(e.train_err) + "</td>");
         if (nclasses()==2) {
-          if (e.trainAUC != null) sb.append("<td>" + formatPct(e.trainAUC.AUC()) + "</td>");
+          if (e.trainAUC != null) sb.append("<td>" + Utils.formatPct(e.trainAUC.AUC()) + "</td>");
           else sb.append("<td>" + "N/A" + "</td>");
         }
       } else {
@@ -1271,9 +1271,9 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       }
       if(e.validation) {
         if (isClassifier()) {
-          sb.append("<td>" + formatPct(e.valid_err) + "</td>");
+          sb.append("<td>" + Utils.formatPct(e.valid_err) + "</td>");
           if (nclasses()==2) {
-            if (e.validAUC != null) sb.append("<td>" + formatPct(e.validAUC.AUC()) + "</td>");
+            if (e.validAUC != null) sb.append("<td>" + Utils.formatPct(e.validAUC.AUC()) + "</td>");
             else sb.append("<td>" + "N/A" + "</td>");
           }
         } else {
@@ -1283,9 +1283,9 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       else if(e.num_folds > 0) {
         if (i == errors.length - 1 && _have_cv_results) {
           if (isClassifier()) {
-            sb.append("<td>" + formatPct(e.valid_err) + "</td>");
+            sb.append("<td>" + Utils.formatPct(e.valid_err) + "</td>");
             if (nclasses() == 2) {
-              if (e.validAUC != null) sb.append("<td>" + formatPct(e.validAUC.AUC()) + "</td>");
+              if (e.validAUC != null) sb.append("<td>" + Utils.formatPct(e.validAUC.AUC()) + "</td>");
               else sb.append("<td>" + "N/A" + "</td>");
             }
           } else {
@@ -1301,13 +1301,6 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     }
     sb.append("</table>");
     return true;
-  }
-
-  private static String formatPct(double pct) {
-    String s = "N/A";
-    if( !isNaN(pct) )
-      s = String.format("%5.2f %%", 100 * pct);
-    return s;
   }
 
   public boolean toJavaHtml(StringBuilder sb) { return false; }

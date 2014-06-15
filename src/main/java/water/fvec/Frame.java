@@ -3,7 +3,6 @@ package water.fvec;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.exec.Flow;
-import water.fvec.Vec.VectorGroup;
 import water.util.Log;
 
 import java.io.IOException;
@@ -179,6 +178,25 @@ public class Frame extends Lockable<Frame> {
       if( vec.equals(_vecs[i]) )
         return i;
     return -1;
+  }
+
+  // Return Frame 'f' if 'f' is compatible with 'this'.
+  // Return a new Frame compatible with 'this' and a copy of 'f's data otherwise.
+  public Frame makeCompatible( Frame f) {
+    // Small data frames are always "compatible"
+    if( anyVec()==null ||       // No dest columns
+        numRows() <= 1e4 )      // Or it is small
+      return f;                 // Then must be compatible
+    // Same VectorGroup is also compatible
+    if( f.anyVec() == null ||
+        f.anyVec().group().equals(anyVec().group()) )
+      return f;
+    // Ok, here make some new Vecs with compatible layout
+    Key k = Key.make();
+    H2O.submitTask(new RebalanceDataSet(this, f, k)).join();
+    Frame f2 = DKV.get(k).get();
+    DKV.remove(k);
+    return f2;
   }
 
  /** Appends a named column, keeping the last Vec as the response */
@@ -371,6 +389,22 @@ public class Frame extends Lockable<Frame> {
     for( int i=0; i<vecs().length; i++ )
       ds[i] = vecs()[i].domain();
     return ds;
+  }
+
+  /** true/false every Vec is a UUID */
+  public boolean[] uuids() {
+    boolean bs[] = new boolean[vecs().length];
+    for( int i=0; i<vecs().length; i++ )
+      bs[i] = vecs()[i].isUUID();
+    return bs;
+  }
+
+  /** Time status for every Vec */
+  public byte[] times() {
+    byte bs[] = new byte[vecs().length];
+    for( int i=0; i<vecs().length; i++ )
+      bs[i] = vecs()[i]._time;
+    return bs;
   }
 
   private String[][] domains(int [] cols){
@@ -577,7 +611,8 @@ public class Frame extends Lockable<Frame> {
           for( int i=0; i<len; i++ ) sb.append('-');
         } else {
           try {
-            sb.append(String.format(fs[c],vec.at8(idx)));
+            if( vec.isUUID() ) sb.append(PrettyPrint.UUID(vec.at16l(idx),vec.at16h(idx)));
+            else sb.append(String.format(fs[c],vec.at8(idx)));
           } catch( IllegalFormatException ife ) {
             System.out.println("Format: "+fs[c]+" col="+c+" not for ints");
             ife.printStackTrace();
@@ -637,8 +672,9 @@ public class Frame extends Lockable<Frame> {
         for( int i = 0; i < vs.length; i++ ) {
           if(i > 0) sb.append(',');
           if(!vs[i].isNA(_row)) {
-            if(vs[i].isEnum()) sb.append('"' + vs[i]._domain[(int) vs[i].at8(_row)] + '"');
-            else if(vs[i].isInt()) sb.append(vs[i].at8(_row));
+            if( vs[i].isEnum() ) sb.append('"' + vs[i]._domain[(int) vs[i].at8(_row)] + '"');
+            else if( vs[i].isUUID() ) sb.append(PrettyPrint.UUID(vs[i].at16l(_row),vs[i].at16h(_row)));
+            else if( vs[i].isInt() ) sb.append(vs[i].at8(_row));
             else {
               // R 3.1 unfortunately changed the behavior of read.csv().
               // (Really type.convert()).
@@ -827,7 +863,8 @@ public class Frame extends Lockable<Frame> {
               last_cs[c] = vecs[c].chunkForChunkIdx(last_ci);
           }
           for (int c = 0; c < vecs.length; c++)
-            ncs[c].addNum(last_cs[c].at(r));
+            if( vecs[c].isUUID() ) ncs[c].addUUID(last_cs[c],r);
+            else                   ncs[c].addNum (last_cs[c].at(r));
         }
       }
     }
@@ -893,8 +930,9 @@ public class Frame extends Lockable<Frame> {
           NewChunk nc = nchks[      i ];
           if( _isInt[i] == 1 ) { // Slice on integer columns
             for( int j=rlo; j<rhi; j++ )
-              if( oc.isNA0(j) ) nc.addNA();
-              else              nc.addNum(oc.at80(j),0);
+              if( oc._vec.isUUID() ) nc.addUUID(oc,j);
+              else if( oc.isNA0(j) ) nc.addNA();
+              else                   nc.addNum(oc.at80(j),0);
           } else {                // Slice on double columns
             for( int j=rlo; j<rhi; j++ )
               nc.addNum(oc.at0(j));

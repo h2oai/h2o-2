@@ -84,7 +84,7 @@ public class ModelUtils {
     for (int i = 1; i < preds.length; ++i) {
       final Float prob = preds[i];
       final int label = i-1;
-      assert(prob >= 0 && prob <= 1);
+      assert(prob >= 0 && prob <= 1) : "prob is not inside [0,1]: " + prob;
       if (prob_idx.containsKey(prob)) {
         prob_idx.get(prob).add(label); //add all ties
       } else {

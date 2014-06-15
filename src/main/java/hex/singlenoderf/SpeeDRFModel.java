@@ -63,7 +63,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   @API(help = "AUC")                                                      public AUC validAUC;
   @API(help = "Variable Importance")                                      public VarImp varimp;
   /* Regression or Classification */                                      boolean regression;
-
+  /* Score each iteration? */                                             boolean score_each;
 
   /**
    * Extra helper variables.
@@ -94,6 +94,9 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     super(selfKey, dataKey, fr);
     this.dest_key = selfKey;
     this.parameters = params;
+    score_each = params.score_each_iteration;
+    regression = !(params.classification);
+    _domain = regression ? null : fr.lastVec().toEnum().domain();
   }
 
   public Vec get_response() {
@@ -109,52 +112,72 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   //FIXME: Model._domain should be used for nclasses() and classNames()
   static String[] _domain = null;
   @Override public int nclasses() { return classes(); }
-  @Override public String[] classNames() { return _domain; }
+  @Override public String[] classNames() { return regression ? null : _domain; }
 
+  private static boolean doScore(SpeeDRFModel m) {
+    return m.score_each || m.t_keys.length == 1 || m.t_keys.length == m.N;
+  }
 
   public static SpeeDRFModel make(SpeeDRFModel old, Key tkey, int nodeIdx) {
-    boolean cm_update = false;
+
+    // Create a new model for atomic update
     SpeeDRFModel m = (SpeeDRFModel)old.clone();
+
+    // Update the tree keys with the new one (tkey)
     m.t_keys = Arrays.copyOf(old.t_keys, old.t_keys.length + 1);
     m.t_keys[m.t_keys.length-1] = tkey;
 
+    // Update the local_forests
     m.local_forests[nodeIdx] = Arrays.copyOf(old.local_forests[nodeIdx],old.local_forests[nodeIdx].length+1);
     m.local_forests[nodeIdx][m.local_forests[nodeIdx].length-1] = tkey;
 
-    double f = (double)m.t_keys.length / (double)m.N;
-    if (m.t_keys.length == 1 && !m.regression) {
-      cm_update = true;
+    // Do not score every time because it's slow and isn't necessary.
+    // Only score the first tree and when the whole forest is available.
+    boolean shouldScore = doScore(m);
+
+    if (shouldScore) {
+
+      // Gather the results
       CMTask cmTask = new CMTask(m, m.size(), m.weights, m.oobee);
       cmTask.doAll(m.test_frame == null ? m.fr : m.test_frame, true);
-      m.confusion = CMTask.CMFinal.make(cmTask._matrix, m, cmTask.domain(), cmTask._errorsPerTree, m.oobee, cmTask._sum, cmTask._cms);
-      m.cm = cmTask._matrix._matrix;
-    }
-    if (f == 1.0 && !m.regression) {
-      cm_update = true;
-      CMTask cmTask = new CMTask(m, m.size(), m.weights, m.oobee);
-      cmTask.doAll(m.test_frame == null ? m.fr : m.test_frame, true);
-      m.confusion = CMTask.CMFinal.make(cmTask._matrix, m, cmTask.domain(), cmTask._errorsPerTree, m.oobee, cmTask._sum, cmTask._cms);
-      _domain = cmTask.domain(); //FIXME: Model._domain should be used
-      m.cm = cmTask._matrix._matrix;
-    }
-    if (!cm_update || m.regression) {
+
+      // Perform the regression scoring
+      if (m.regression) {
+        float mse = cmTask._ss / ( (float) (cmTask._rowcnt) ); //Also add in treecount?
+        m.errs = Arrays.copyOf(old.errs, old.errs.length+1);
+        m.errs[m.errs.length - 1] = mse;
+        m.cms = Arrays.copyOf(old.cms, old.cms.length+1);
+        m.cms[m.cms.length-1] = null;
+
+      // Perform the classification scoring
+      } else {
+        _domain = cmTask.domain();
+        m.confusion = CMTask.CMFinal.make(cmTask._matrix, m, cmTask.domain(), cmTask._errorsPerTree, m.oobee, cmTask._sum, cmTask._cms);
+        m.cm = cmTask._matrix._matrix;
+
+        m.errs = Arrays.copyOf(old.errs, old.errs.length+1);
+        m.errs[m.errs.length - 1] = m.confusion.mse();
+        m.cms = Arrays.copyOf(old.cms, old.cms.length+1);
+        ConfusionMatrix new_cm = new ConfusionMatrix(m.confusion._matrix);
+        m.cms[m.cms.length-1] = new_cm;
+
+        // Create the ROC Plot
+        if (m.classes() == 2) {
+          m.validAUC= makeAUC(toCMArray(m.confusion._cms), ModelUtils.DEFAULT_THRESHOLDS, m.cmDomain);
+        }
+
+        // Launch a Variable Importance Task
+        if (m.importance && !m.regression)
+          m.varimp = m.doVarImpCalc(m);
+      }
+    } else {
       m.errs = Arrays.copyOf(old.errs, old.errs.length+1);
       m.errs[m.errs.length - 1] = -1.f;
       m.cms = Arrays.copyOf(old.cms, old.cms.length+1);
       m.cms[m.cms.length-1] = null;
-    } else {
-      m.errs = Arrays.copyOf(old.errs, old.errs.length+1);
-      m.errs[m.errs.length - 1] = m.confusion.mse();
-      m.cms = Arrays.copyOf(old.cms, old.cms.length+1);
-      ConfusionMatrix new_cm = new ConfusionMatrix(m.confusion._matrix);
-      m.cms[m.cms.length-1] = new_cm;
-      if (m.classes() == 2) {
-        m.validAUC= makeAUC(toCMArray(m.confusion._cms), ModelUtils.DEFAULT_THRESHOLDS, m.cmDomain);
-      }
-      //Launch a Variable Importance Task
-      if (m.importance && !m.regression)
-        m.varimp = m.doVarImpCalc(m);
     }
+
+    // Tree Statistics
     JsonObject trees = new JsonObject();
     trees.addProperty(Constants.TREE_COUNT,  m.size());
     if( m.size() > 0 ) {
@@ -270,10 +293,19 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   public Counter leaves() { find_leaves_depth(); return _tl; }
   public Counter depth()  { find_leaves_depth(); return _td; }
 
+
+  private static int find(String n, String[] names) {
+    if( n == null ) return -1;
+    for( int j = 0; j<names.length; j++ )
+      if( n.equals(names[j]) )
+        return j;
+    return -1;
+  }
+
   public int[] colMap(String[] names) {
-    int res[] = new int[names.length];
+    int res[] = new int[fr._names.length]; //new int[names.length];
     for(int i = 0; i < res.length; i++) {
-      res[i] = fr.find(names[i]);
+      res[i] = find(fr.names()[i], names);
     }
     return res;
   }
@@ -423,8 +455,8 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       JsonObject obj = json.getAsJsonObject();
       return new double[]{
               obj.get(Constants.MIN).getAsDouble(),
-              obj.get(Constants.MAX).getAsDouble(),
-              obj.get(Constants.MEAN).getAsDouble()};
+              obj.get(Constants.MEAN).getAsDouble(),
+              obj.get(Constants.MAX).getAsDouble()};
     }
   }
 

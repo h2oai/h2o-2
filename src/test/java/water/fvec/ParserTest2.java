@@ -12,7 +12,6 @@ import water.deploy.NodeVM;
 
 public class ParserTest2 extends TestUtil {
   private double[] d(double... ds) { return ds; }
-  private String[] s(String...ss) { return ss; }
   private final double NaN = Double.NaN;
   private final char[] SEPARATORS = new char[] {',', ' '};
 
@@ -66,20 +65,20 @@ public class ParserTest2 extends TestUtil {
     for (char separator : SEPARATORS) {
       String[] dataset = getDataForSeparator(separator, data);
       StringBuilder sb = new StringBuilder();
-      for( int i = 0; i < dataset.length; ++i ) sb.append(dataset[i]).append("\n");
+      for( String s : dataset ) sb.append(s).append("\n");
       Key k = FVecTest.makeByteVec(Key.make().toString(),sb.toString());
       testParsed(k,exp);
       sb = new StringBuilder();
-      for( int i = 0; i < dataset.length; ++i ) sb.append(dataset[i]).append("\r\n");
+      for( String s : dataset ) sb.append(s).append("\r\n");
       k = FVecTest.makeByteVec(k.toString(),sb.toString());
       testParsed(k,exp);
     }
   }
 
-  // test correctnes of sparse chunks
+  // test correctness of sparse chunks
   // added after failing to encode properly following data as
   // 0s were not considered when computing compression strategy and then
-  // lemin was 6108 and there was Short overlfow when encoding zeros.
+  // lemin was 6108 and there was Short overflow when encoding zeros.
   // So, the first column was compressed into C2SChunk with 0s causing short overflow,
   @Test public void testSparse2(){
     String data =
@@ -247,19 +246,6 @@ public class ParserTest2 extends TestUtil {
         d(19,20, 2),
     };
 
-    String[][] expString = new String[][] {
-        s(null,null, "one"),
-        s(null,null, "two"),
-        s(null,null, "three"),
-        s(null,null, "one"),
-        s(null,null, "two"),
-        s(null,null, "three"),
-        s(null,null, "one"),
-        s(null,null, "two"),
-        s(null,null, " four"),
-        s(null,null, "three"),
-    };
-
     for (char separator : SEPARATORS) {
       String[] dataset = getDataForSeparator(separator, data);
       Key key = FVecTest.makeByteVec("NondecimalColumns",dataset);
@@ -385,9 +371,8 @@ public class ParserTest2 extends TestUtil {
     };
     for (char separator : SEPARATORS) {
       String[] dataset = getDataForSeparator(separator, data);
-      int i = 0;
       StringBuilder sb = new StringBuilder();
-      for( i = 0; i < dataset.length; ++i ) sb.append(dataset[i]).append("\n");
+      for( String s : dataset ) sb.append(s).append("\n");
       Key k = FVecTest.makeByteVec("test_"+separator,sb.toString());
       testParsed(k,exp);
     }
@@ -526,8 +511,7 @@ public class ParserTest2 extends TestUtil {
       d(  1., .1, .0, .0, .0, .5, .6, .0, .0, .0, 1, 0, 0, 0, 0, 0, 0, 0, 0, .0, .0),
       d(  1., .0, .0, .0, .0, .0, .0, .0, .0, .0, 0, 0, 0, 0, 0, 0, 0, 0, 0,1.9, .0),
     };
-    String[] dataset = data;
-    Key k = FVecTest.makeByteVec(Key.make("svmtest_bits").toString(),dataset);
+    Key k = FVecTest.makeByteVec(Key.make("svmtest_bits").toString(),data);
     testParsed(k,exp);
   }
 
@@ -642,6 +626,131 @@ public class ParserTest2 extends TestUtil {
       d( -.6e102,  -.7e102,  -.8e102, 1)
     };
     testParsed(TestUtil.parseFrame(null,"smalldata/test/test_parse_mix.csv"),exp,exp.length);
+  }
+
+  // Test of parsing numbers with many digits
+  @Test public void testParseManyDigits1() {
+    String pows10 = 
+      "1\n"+
+      "10\n"+
+      "100\n"+
+      "1000\n"+
+      "10000\n"+
+      "100000\n"+
+      "1000000\n"+
+      "10000000\n"+
+      "100000000\n"+
+      "1000000000\n"+
+      "10000000000\n"+
+      "100000000000\n"+
+      "1000000000000\n"+
+      "10000000000000\n"+
+      "100000000000000\n"+
+      "1000000000000000\n"+
+      "10000000000000000\n"+
+      "100000000000000000\n"+
+      "1000000000000000000\n"+
+      "10000000000000000000\n"+
+      "100000000000000000000\n"+
+      "1000000000000000000000\n"+
+      "10000000000000000000000\n"+
+      "100000000000000000000000\n";
+    double[][] pows10_exp = new double[][] {
+      d(1e0 ), d(1e1 ), d(1e2 ), d(1e3 ), d(1e4 ), d(1e5 ), d(1e6 ), d(1e7 ), d(1e8 ), d(1e9 ),
+      d(1e10), d(1e11), d(1e12), d(1e13), d(1e14), d(1e15), d(1e16), d(1e17), d(1e18), d(1e19),
+      d(1e20), d(1e21), d(1e22), d(1e23),
+    };
+    Key k = FVecTest.makeByteVec("test_digits.csv",pows10);
+    testParsed(k,pows10_exp);
+  }
+
+  // Test of parsing numbers with many digits
+  @Test public void testParseManyDigits2() {
+    String pows10 = 
+      "9\n"+
+      "99\n"+
+      "999\n"+
+      "9999\n"+
+      "99999\n"+
+      "999999\n"+
+      "9999999\n"+
+      "99999999\n"+
+      "999999999\n"+
+      "9999999999\n"+
+      "99999999999\n"+
+      "999999999999\n"+
+      "9999999999999\n"+
+      "99999999999999\n"+
+      "999999999999999\n"+
+      "9999999999999999\n"+
+      "99999999999999999\n"+
+      "999999999999999999\n"+
+      "9999999999999999999\n"+
+      "99999999999999999999\n"+
+      "999999999999999999999\n"+
+      "9999999999999999999999\n"+
+      "99999999999999999999999\n"+
+      "999999999999999999999999\n";
+    double[][] pows10_exp = new double[][] {
+      d(9L),
+      d(99L),
+      d(999L),
+      d(9999L),
+      d(99999L),
+      d(999999L),
+      d(9999999L),
+      d(99999999L),
+      d(999999999L),
+      d(9999999999L),
+      d(99999999999L),
+      d(999999999999L),
+      d(9999999999999L),
+      d(99999999999999L),
+      d(999999999999999L),
+      d(9999999999999999L),
+      d(99999999999999999L),
+      d(999999999999999999L),
+      d(9.99999999999999999e18),
+      d(9.99999999999999999e19),
+      d(9.99999999999999999e20),
+      d(9.99999999999999999e21),
+      d(9.99999999999999999e22),
+      d(9.99999999999999999e23),
+    };
+    Key k = FVecTest.makeByteVec("test_digits.csv",pows10);
+    testParsed(k,pows10_exp);
+  }
+
+  // Test of parsing numbers with many digits
+  @Test public void testParseManyDigits3() {
+    String pows10 = 
+      "0.00000000000001\n"+
+      "1000001\n"+
+      "2000001\n"+
+      "";
+    double[][] pows10_exp = new double[][] {
+      d(1e-14),
+      d(1000001L),
+      d(2000001L),
+    };
+    Key k = FVecTest.makeByteVec("test_digits.csv",pows10);
+    testParsed(k,pows10_exp);
+  }
+
+  // Test of parsing numbers with many digits
+  @Test public void testParseManyDigits4() {
+    String pows10 = 
+      "3\n"+
+      "1e-18\n"+
+      "1e-34\n"+
+      "";
+    double[][] pows10_exp = new double[][] {
+      d(3),
+      d(1e-18),
+      d(1e-34),
+    };
+    Key k = FVecTest.makeByteVec("test_digits.csv",pows10);
+    testParsed(k,pows10_exp);
   }
 
   void runTests(){

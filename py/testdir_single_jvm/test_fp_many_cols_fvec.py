@@ -108,6 +108,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_fp_many_cols_fvec(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         if H2O_SUPPORTS_OVER_500K_COLS:
@@ -125,10 +126,7 @@ class Basic(unittest.TestCase):
         else:
             print "Restricting number of columns tested to <=500,000"
             tryList = [
-                (100, 200000, 'cG', 400, 400),
-                (100, 300000, 'cH', 400, 400),
-                (100, 400000, 'cI', 400, 400),
-                (100, 500000, 'cJ', 400, 400),
+                (100, 100000, 'cG', 400, 400),
             ]
 
 

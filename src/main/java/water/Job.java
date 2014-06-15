@@ -201,11 +201,6 @@ public abstract class Job extends Func {
     return state == JobState.CANCELLED || state == JobState.FAILED;
   }
 
-  /** Returns true if the job was cancelled by the user.
-   * @return true if the job is in state {@link JobState#CANCELLED}.
-   */
-  public boolean isCancelledXX() { return state == JobState.CANCELLED; }
-
   /** Returns true if the job was terminated by unexpected exception.
    * @return true, if the job was terminated by unexpected exception.
    */
@@ -273,13 +268,10 @@ public abstract class Job extends Func {
    * @param jobkey job key
    * @return returns a job with given job key or null if a job is not found.
    */
-  public static final Job findJob(final Key jobkey) {
-    Job job = UKV.get(jobkey);
-    return job;
-  }
+  public static Job findJob(final Key jobkey) { return UKV.get(jobkey); }
 
   /** Finds a job with given dest key or returns null */
-  public static final Job findJobByDest(final Key destKey) {
+  public static Job findJobByDest(final Key destKey) {
     Job job = null;
     for( Job current : Job.all() ) {
       if( current.dest().equals(destKey) ) {
@@ -372,7 +364,7 @@ public abstract class Job extends Func {
         return;
       }
 
-      try { Thread.sleep (pollingIntervalMillis); } catch (Exception xe) {}
+      try { Thread.sleep (pollingIntervalMillis); } catch (Exception ignore) {}
     }
   }
 
@@ -390,8 +382,7 @@ public abstract class Job extends Func {
     final long _count;
     private final Status _status;
     final String _error;
-    protected DException _ex;
-    public enum Status { Computing, Done, Cancelled, Error };
+    public enum Status { Computing, Done, Cancelled, Error }
 
     public Status status() { return _status; }
 
@@ -556,7 +547,7 @@ public abstract class Job extends Func {
      */
     @Override public JsonObject toJSON() {
       JsonObject jo = super.toJSON();
-      if (!jo.has("source")) return jo;
+      if (!jo.has("source") || source==null) return jo;
       HashMap<String, int[]> map = new HashMap<String, int[]>();
       map.put("used_cols", cols);
       map.put("ignored_cols", ignored_cols);
@@ -586,6 +577,14 @@ public abstract class Job extends Func {
       if (!isEmpty(ignored_cols)) { specified++; }
       if (!isEmpty(ignored_cols_by_name)) { specified++; }
       if (specified > 1) throw new IllegalArgumentException("Arguments 'cols', 'ignored_cols_by_name', and 'ignored_cols' are exclusive");
+
+      Vec[] vecs = source.vecs();
+      for( int i = 0; i < vecs.length; i++ )
+        if( vecs[i].isUUID() ) {
+          if( ignored_cols==null ) ignored_cols = new int[0];
+          ignored_cols = Arrays.copyOf(ignored_cols,ignored_cols.length+1);
+          ignored_cols[ignored_cols.length-1] = i;
+       }
 
       // If the column are not specified, then select everything.
       if (isEmpty(cols)) {
@@ -657,12 +656,14 @@ public abstract class Job extends Func {
      */
     @Override public JsonObject toJSON() {
       JsonObject jo = super.toJSON();
-      int idx = source.find(response);
-      if( idx == -1 ) {
-        Vec vm = response.masterVec();
-        if( vm != null ) idx = source.find(vm);
+      if (source!=null) {
+        int idx = source.find(response);
+        if( idx == -1 ) {
+          Vec vm = response.masterVec();
+          if( vm != null ) idx = source.find(vm);
+        }
+        jo.getAsJsonObject("response").add("name", new JsonPrimitive(idx == -1 ? "null" : source._names[idx]));
       }
-      jo.getAsJsonObject("response").add("name", new JsonPrimitive(idx == -1 ? "null" : source._names[idx]));
       return jo;
     }
 
@@ -745,7 +746,7 @@ public abstract class Job extends Func {
     /** Names of columns */
     protected transient String[] _names;
     /** Name of validation response. Should be same as source response. */
-    protected transient String _responseName;
+    public transient String _responseName;
 
     /** Adapted validation frame to a computed model. */
     private transient Frame _adaptedValidation;
@@ -760,7 +761,7 @@ public abstract class Job extends Func {
     public int n_folds = 0;
 
     @API(help = "Keep cross-validation dataset splits", filter = Default.class, json = true)
-    public boolean keep_cross_validation_splits = true;
+    public boolean keep_cross_validation_splits = false;
 
     @API(help = "Cross-validation models", json = true)
     public Key[] xval_models;
@@ -884,7 +885,7 @@ public abstract class Job extends Func {
     protected String[] getVectorDomain(final Vec v) {
       assert v==null || v.isInt() || v.isEnum() : "Cannot get vector domain!";
       if (v==null) return null;
-      String[] r = null;
+      String[] r;
       if (v.isEnum()) {
         r = v.domain();
       } else {
@@ -989,4 +990,9 @@ public abstract class Job extends Func {
     public JobCancelledException(String msg){super("job was cancelled! with msg '" + msg + "'");}
   }
 
+  /** Hygienic method to prevent accidental capture of non desired values. */
+  public static <T extends FrameJob> T hygiene(T job) {
+    job.source = null;
+    return job;
+  }
 }

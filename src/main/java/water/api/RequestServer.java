@@ -169,6 +169,8 @@ public class RequestServer extends NanoHTTPD {
       registerRequest(new GapStatistic());
       registerRequest(new CreateFrame());
       registerRequest(new KillMinus3());
+      registerRequest(new SaveModel());
+      registerRequest(new LoadModel());
     } else {
       Request.addToNavbar(registerRequest(new hex.LR2()),              "Linear Regression2",   "Beta");
       Request.addToNavbar(registerRequest(new ReBalance()),            "ReBalance",            "Beta");
@@ -178,6 +180,8 @@ public class RequestServer extends NanoHTTPD {
       Request.addToNavbar(registerRequest(new GapStatistic()),         "Gap Statistic",        "Beta");
       Request.addToNavbar(registerRequest(new CreateFrame()),          "Create Frame",         "Beta");
       Request.addToNavbar(registerRequest(new KillMinus3()),           "Kill Minus 3",         "Beta");
+      Request.addToNavbar(registerRequest(new SaveModel()),            "Save Model",           "Beta");
+      Request.addToNavbar(registerRequest(new LoadModel()),            "Load Model",           "Beta");
 //      Request.addToNavbar(registerRequest(new ExportModel()),     "Export Model",         "Beta (FluidVecs!)");
 //      Request.addToNavbar(registerRequest(new ImportModel()),     "Import Model",         "Beta (FluidVecs!)");
     }

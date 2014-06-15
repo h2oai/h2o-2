@@ -4,6 +4,7 @@ import java.text.NumberFormat;
 import java.text.ParsePosition;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Locale;
 
 import water.*;
 import water.fvec.Chunk;
@@ -544,7 +545,7 @@ class ASTAssign extends AST {
 
 // --------------------------------------------------------------------------
 class ASTNum extends AST {
-  static final NumberFormat NF = NumberFormat.getInstance();
+  static final NumberFormat NF = NumberFormat.getInstance(Locale.US);
   static { NF.setGroupingUsed(false); }
   final double _d;
   ASTNum(double d) { super(Type.DBL); _d=d; }

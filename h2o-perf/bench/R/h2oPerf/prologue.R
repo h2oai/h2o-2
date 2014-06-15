@@ -182,6 +182,12 @@ function() {
 #check that two vectors are approximately equal
 checkEquals<-
 function(v1, v2) {
+    print("CHECKING RESULTS")
+    print("v1: ")
+    print(v1)
+    print("v2: ")
+    print(v2)
+
     #if v1 < v2 then it's OK
     if (all(v1 < v2)) {
       correct_pass <<- 1
@@ -189,7 +195,7 @@ function(v1, v2) {
     }
     new_v1 <- v1[v1>v2]
     new_v2 <- v2[v1>v2]
-    DIFFERENCE <- 0.01
+    DIFFERENCE <- 0.1
     v <- abs(v1-v2)
     if(sum(v > DIFFERENCE) > 0) {
       correct_pass <<- 0
@@ -446,6 +452,8 @@ function(expected_results=NULL, type=NULL) {
   if (!is.null(expected_results)) {
     if (type == "cm") {
       rr <- confusion_matrix[,dim(confusion_matrix)[2]]
+      rr <- data.frame(rr)[,1]
+      rr <- rr[1:(length(rr) - 2)] # -2 becuase the last row is totals, and the penultimate row is bogus fill by R
       checkEquals(rr, expected_results)
     }   
   }
@@ -476,6 +484,8 @@ function(expected_results=NULL, type=NULL) {
   if (!is.null(expected_results)) {
     if (type == "cm") {
       rr <- confusion_matrix[,dim(confusion_matrix)[2]]
+      rr <- data.frame(rr)[,1]
+      rr <- rr[1:(length(rr) - 2)] # -2 becuase the last row is totals, and the penultimate row is bogus fill by R
       checkEquals(rr, expected_results)
     }
   }
@@ -488,6 +498,8 @@ function(expected_results=NULL, type=NULL) {
   if (!is.null(expected_results)) {
     if (type == "cm") {
       rr <- confusion_matrix[,dim(confusion_matrix)[2]]
+      rr <- data.frame(rr)[,1]
+      rr <- rr[1:(length(rr) - 2)] # -2 becuase the last row is totals, and the penultimate row is bogus fill by R
       checkEquals(rr, expected_results)
     }   
   }

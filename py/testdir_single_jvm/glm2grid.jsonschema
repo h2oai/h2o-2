@@ -1,0 +1,19 @@
+# Inspect GLMGridResults like individual glm results?
+{
+  "Request2": 0,
+  "grid": {
+    "destination_keys": [
+      "GLMGridResults__816488976595b4beb6a09b3db30243eb_0",
+      "GLMGridResults__816488976595b4beb6a09b3db30243eb_1",
+      "GLMGridResults__816488976595b4beb6a09b3db30243eb_2"
+    ]
+  },
+  "response_info": {
+    "h2o": "pytest-kevin-4751",
+    "node": "/192.168.1.40:54321",
+    "redirect_url": null,
+    "status": "done",
+    "time": 1
+  }
+}
+
