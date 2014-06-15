@@ -22,6 +22,7 @@ public class AppendableVec extends Vec {
   public static final byte ENUM   = 2;
   public static final byte NUMBER = 4;
   public static final byte TIME   = 8;
+  public static final byte UUID   =16;
   byte [] _chunkTypes;
   long _naCnt;
   long _strCnt;
@@ -97,11 +98,12 @@ public class AppendableVec extends Vec {
     int nchunk = _espc.length;
     while( nchunk > 0 && _espc[nchunk-1] == 0 ) nchunk--;
     DKV.remove(chunkKey(nchunk)); // remove potential trailing key
-    boolean hasNumber = false, hasEnum = false, hasTime=false;
+    boolean hasNumber = false, hasEnum = false, hasTime=false, hasUUID=false;
     for( int i = 0; i < nchunk; ++i ) {
       if( (_chunkTypes[i] & TIME  ) != 0 ) { hasNumber = true; hasTime=true; }
       if( (_chunkTypes[i] & NUMBER) != 0 )   hasNumber = true;
       if( (_chunkTypes[i] & ENUM  ) != 0 )   hasEnum   = true;
+      if( (_chunkTypes[i] & UUID  ) != 0 )   hasUUID   = true;
     }
     // number wins, we need to go through the enum chunks and declare them all
     // NAs (chunk is considered enum iff it has only enums + possibly some nas)
@@ -110,6 +112,14 @@ public class AppendableVec extends Vec {
         if(_chunkTypes[i] == ENUM)
           DKV.put(chunkKey(i), new C0DChunk(Double.NaN, (int)_espc[i]),fs);
     }
+    // enum wins over UUID
+    if( hasUUID && hasEnum ) {
+      hasUUID=false;
+      for(int i = 0; i < nchunk; ++i)
+        if(_chunkTypes[i] == UUID)
+          DKV.put(chunkKey(i), new C0DChunk(Double.NaN, (int)_espc[i]),fs);
+    }
+
     // Make sure time is consistent
     int t = -1;
     if( hasTime ) {
@@ -138,8 +148,7 @@ public class AppendableVec extends Vec {
     }
     espc[nchunk]=x;             // Total element count in last
     // Replacement plain Vec for AppendableVec.
-    Vec vec = new Vec(_key, espc, _domain);
-    vec._time = (byte)t;        // Time parse, if any
+    Vec vec = new Vec(_key, espc, _domain, hasUUID, (byte)t);
     DKV.put(_key,vec,fs);       // Inject the header
     return vec;
   }

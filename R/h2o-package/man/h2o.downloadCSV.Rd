@@ -8,15 +8,16 @@ Download H2O Data to Disk
 Download a H2O dataset to a CSV file on local disk.
 }
 \usage{
-h2o.downloadCSV(data, filename)
+h2o.downloadCSV(data, filename, quiet = FALSE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{data}{An \code{\linkS4class{H2OParsedData}} object to be downloaded.}
   \item{filename}{A character string indicating the name that the CSV file should be saved to.}
+  \item{quiet}{(Optional) If \code{TRUE}, suppress status messages and progress bar.}
 }
 \details{
-This method requires wget or curl to be installed on your local system. WARNING: Files located on the H2O server may be very large! Make sure you have enough hard drive space to accommodate the entire file. 
+WARNING: Files located on the H2O server may be very large! Make sure you have enough hard drive space to accommodate the entire file. 
 }
 \seealso{
 \code{\linkS4class{H2OParsedData}, \linkS4class{H2OParsedDataVA}}

@@ -171,34 +171,8 @@ public class Frames extends Request2 {
    */
   protected static Map<String, Frame>fetchAll() {
     // Get all the fvec frame keys.
-    //
-    // NOTE: globalKeySet filters by class when it pulls stuff from other nodes,
-    // but still returns local keys of all types so we need to filter below.
-    Set<Key> keySet = H2O.globalKeySet("water.fvec.Frame"); // filter by class, how cool is that?
-
-    Map<String, Frame> framesMap = new TreeMap(); // Sort for pretty display and reliable ordering.
-
-    for (Key key : keySet) {
-      if( !key.user_allowed() ) // Also filter out for user-keys
-        continue;
-      if( H2O.get(key) == null )
-        continue;
-
-      String keyString = key.toString();
-
-      Value value = DKV.get(key);
-      Iced pojo = value.get();
-
-      if (! (pojo instanceof Frame))
-        continue;
-      Frame frame = (Frame)pojo;
-
-      framesMap.put(keyString, frame);
-    }
-
-    return framesMap;
+    return H2O.KeySnapshot.globalSnapshot().fetchAll(Frame.class); // Sort for pretty display and reliable ordering.
   }
-
 
   /**
    * For one or more Frame from the KV store, sumamrize and enhance them and Response containing a map of them.

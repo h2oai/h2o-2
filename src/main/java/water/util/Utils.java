@@ -13,6 +13,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.*;
 
+import static java.lang.Double.isNaN;
 import sun.misc.Unsafe;
 import water.*;
 import water.api.DocGen;
@@ -716,6 +717,13 @@ public class Utils {
       Utils.close(is);
     }
     return bs;
+  }
+
+  public static String formatPct(double pct) {
+    String s = "N/A";
+    if( !isNaN(pct) )
+      s = String.format("%5.2f %%", 100 * pct);
+    return s;
   }
 
   /**
@@ -1509,6 +1517,21 @@ public class Utils {
     if (sr<1f) r[i] = len - sum;
     else r[i-1] += (len-sum);
     return r;
+  }
+
+  /** Compute start row and length of <code>i</code>-th fold from <code>nfolds</code>.
+   *
+   * @param nrows  number of rows
+   * @param nfolds  number of folds
+   * @param i fold which is intended to be computed
+   * @return return start row and number of rows for <code>i</code>-th fold.
+   */
+  public static final long[] nfold(long nrows, int nfolds, int i) {
+    assert i>=0 && i<nfolds;
+    long foldSize = nrows / nfolds;
+    long start = i * foldSize;
+    long size  = i!=nfolds-1 ? foldSize : foldSize + (nrows % nfolds);
+    return new long[] {start,size};
   }
 
   /** Generate given numbers of keys by suffixing key by given numbered suffix. */

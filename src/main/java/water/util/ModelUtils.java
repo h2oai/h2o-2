@@ -4,10 +4,15 @@ import java.util.*;
 
 import water.H2O;
 
+
 /**
  * Shared static code to support modeling, prediction, and scoring.
  *
- *  Used by interpreted models as well as by generated model code.
+ * <p>Used by interpreted models as well as by generated model code.</p>
+ *
+ * <p><strong>WARNING:</strong> The class should have no other H2O dependencies
+ * since it is provided for generated code as h2o-model.jar which contains
+ * only a few files.</p>
  *
  */
 public class ModelUtils {
@@ -79,7 +84,7 @@ public class ModelUtils {
     for (int i = 1; i < preds.length; ++i) {
       final Float prob = preds[i];
       final int label = i-1;
-      assert(prob >= 0 && prob <= 1);
+      assert(prob >= 0 && prob <= 1) : "prob is not inside [0,1]: " + prob;
       if (prob_idx.containsKey(prob)) {
         prob_idx.get(prob).add(label); //add all ties
       } else {

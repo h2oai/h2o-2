@@ -48,7 +48,7 @@ public class FrameUtils {
   /** Parse given file into the form of frame represented by the given key.
    *
    * @param okey  destination key for parsed frame
-   * @param file  file to parse
+   * @param files  files to parse
    * @return a new frame
    */
   public static Frame parseFrame(Key okey, File ...files) {

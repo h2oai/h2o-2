@@ -1,6 +1,7 @@
 package hex.drf;
 
 import hex.ShuffleTask;
+import hex.gbm.DTreeUtils;
 import hex.gbm.DTree.TreeModel.CompressedTree;
 
 import java.util.Arrays;
@@ -106,9 +107,7 @@ public class TreeMeasuresCollector extends MRTask2<TreeMeasuresCollector> {
   public TreeSSE   resultSSE  () { return new TreeSSE  (_sse,   _nrows, _ntrees); }
   /* This is a copy of score0 method from DTree:615 */
   private void score0(double data[], float preds[], CompressedTree[] ts) {
-    for( int c=0; c<ts.length; c++ )
-      if( ts[c] != null )
-        preds[ts.length==1?0:c+1] += ts[c].score(data);
+    DTreeUtils.scoreTree(data, preds, ts);
   }
 
   private Chunk chk_resp( Chunk chks[] ) { return chks[_ncols]; }

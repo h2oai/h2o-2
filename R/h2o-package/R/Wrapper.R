@@ -182,15 +182,16 @@ h2o.clusterStatus <- function(client) {
   # jar_file <- paste(.h2o.pkg.path, "java", "h2o.jar", sep = .Platform$file.sep)
   jar_file <- .h2o.downloadJar(overwrite = forceDL)
   jar_file <- paste('"', jar_file, '"', sep = "")
+
+  # Compose args
   args <- c(paste("-Xms", memory, sep=""),
-            paste("-Xmx", memory, sep=""),
-            "-jar", jar_file,
-            "-name", "H2O_started_from_R",
-            "-ip", "127.0.0.1",
-            "-port", "54321"
-            )
-  if(beta) args <- c(args, "-beta")
+            paste("-Xmx", memory, sep=""))
   if(assertion) args <- c(args, "-ea")
+  args <- c(args, "-jar", jar_file)
+  args <- c(args, "-name", "H2O_started_from_R")
+  args <- c(args, "-ip", "127.0.0.1")
+  args <- c(args, "-port", "54321")
+  if(beta) args <- c(args, "-beta")
   if(!is.null(license)) args <- c(args, "-license", license)
 
   cat("\n")
@@ -292,17 +293,17 @@ h2o.clusterStatus <- function(client) {
   
   # Download if h2o.jar doesn't already exist or user specifies force overwrite
   if(overwrite || !file.exists(dest_file)) {
-    base_url <- paste("https://s3.amazonaws.com/h2o-release/h2o", branch, version, "Rjar", sep = "/")
-    h2o_url <- paste(base_url, "h2o.jar", sep = "/")
+    base_url <- paste("s3.amazonaws.com/h2o-release/h2o", branch, version, "Rjar", sep = "/")
+    h2o_url <- paste("http:/", base_url, "h2o.jar", sep = "/")
     
     # Get MD5 checksum
-    md5_url <- paste(base_url, "h2o.jar.md5", sep = "/")
+    md5_url <- paste("http:/", base_url, "h2o.jar.md5", sep = "/")
     # ttt <- getURLContent(md5_url, binary = FALSE)
     # tcon <- textConnection(ttt)
     # md5_check <- readLines(tcon, n = 1)
     # close(tcon)
     md5_file <- tempfile(fileext = ".md5")
-    download.file(md5_url, destfile = md5_file, mode = "w", cacheOK = FALSE, method = "curl", quiet = TRUE)
+    download.file(md5_url, destfile = md5_file, mode = "w", cacheOK = FALSE, quiet = TRUE)
     md5_check <- readLines(md5_file, n = 1)
     if (nchar(md5_check) != 32) stop("md5 malformed, must be 32 characters (see ", md5_url, ")")
     unlink(md5_file)
@@ -312,7 +313,7 @@ h2o.clusterStatus <- function(client) {
     cat("Performing one-time download of h2o.jar from\n")
     cat("    ", h2o_url, "\n")
     cat("(This could take a few minutes, please be patient...)\n")
-    download.file(url = h2o_url, destfile = temp_file, mode = "wb", cacheOK = FALSE, method = "curl", quiet = TRUE)
+    download.file(url = h2o_url, destfile = temp_file, mode = "wb", cacheOK = FALSE, quiet = TRUE)
 
     # Apply sanity checks
     if(!file.exists(temp_file))

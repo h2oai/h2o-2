@@ -5,6 +5,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 import water.*;
+import water.util.Log;
 import water.util.TimelineSnapshot;
 
 public class IOStatus extends Request {
@@ -31,7 +32,8 @@ public class IOStatus extends Request {
     long now = System.currentTimeMillis(); // Time 'now' just AFTER the snapshot
     for( TimelineSnapshot.Event event : events ) {
       int flavor = event.is_io();
-      if( flavor == -1 ) continue;
+//      if( flavor == -1 ) continue; //0 leads to problems below as nameOfPersist(0) == null
+      if( flavor <= 0 ) continue;
       int nidx = event._nodeId;
       int rw = event.send_recv();// 1 for receive or read
       long ctms = event.ms();   // Close-time msec

@@ -1,0 +1,94 @@
+{
+    "properties": {
+        "Request2": { "type":"number" },
+        "drf_model": {
+            "type":"object",
+            "properties": {
+                "N": { "type":"number" },
+                "_dataKey": { "type":"string" },
+                "_domains": { "type":"array", "items": { "type":"null" } },
+                "_key": { "type":"string" },
+                "_modelClassDist": { "type":"null" },
+                "_names": { "type":"array", "items": { "type":"string" } },
+                "_priorClassDist": { "type":"null" },
+                "cmDomain": { "type":"array", "items": { "type":"string" } },
+                "cms": { "type":"array", "items": { "type":"null" } },
+                "errs": { "type":"array", "items": { "type":"number" } },
+                "jobKey": { "type":"string" },
+                "max_depth": { "type":"number" },
+                "mtry": { "type":"number" },
+                "nbins": { "type":"number" },
+                "parameters": { "type":"object", "properties": {
+                        "Request2": { "type":"number" },
+                        "_exclusiveSplitLimit": { "type":"number" },
+                        "_useNonLocalData": { "type":"string" },
+                        "bin_limit": { "type":"number" },
+                        "class_weights": { "type":"array", "items": { "type":"number" } },
+                        "classification": { "type":"string" },
+                        "description": { "type":"string" },
+                        "destination_key": { "type":"string" },
+                        "end_time": { "type":"number" },
+                        "exception": { "type":"null" },
+                        "importance": { "type":"string" },
+                        "job_key": { "type":"string" },
+                        "keep_cross_validation_splits": { "type":"string" },
+                        "max_depth": { "type":"number" },
+                        "mtry": { "type":"number" },
+                        "n_folds": { "type":"number" },
+                        "num_trees": { "type":"number" },
+                        "oobee": { "type":"string" },
+                        "response_info": { "type":"object", "properties": {
+                                "h2o": { "type":"string" },
+                                "node": { "type":"string" },
+                                "redirect_url": { "type":"string" },
+                                "status": { "type":"string" },
+                                "time": { "type":"number" }
+                            }
+                        },
+                        "response": { "type":"object" },
+                        "sample": { "type":"number" },
+                        "sampling_strategy": { "type":"string" },
+                        "seed": { "type":"number" },
+                        "source": { "type":"object", "properties": {
+                                "_key": { "type":"string" }
+                            }
+                        },
+                        "start_time": { "type":"number" },
+                        "stat_type": { "type":"string" },
+                        "state": { "type":"string" },
+                        "strata_samples": { "type":"array", "items": { "type":"number" }
+                        },
+                        "validation": { "type":"null" },
+                        "xval_models": { "type":"array" }
+                    }
+                },
+                "sample": { "type":"number" },
+                "strata_samples": { "type":"array", "items": { "type":"number" } },
+                "t_keys": { "type":"array", "items": { "type":"string" } },
+                "testKey": { "type":"null" },
+                "treeStats": {
+                    "type":"object", "properties": {
+                        "maxDepth": { "type":"number" },
+                        "maxLeaves": { "type":"number" },
+                        "meanDepth": { "type":"number" },
+                        "meanLeaves": { "type":"number" },
+                        "minDepth": { "type":"number" },
+                        "minLeaves": { "type":"number" }
+                    }
+                },
+                "validAUC": { "type":"null" },
+                "varimp": { "type":"null" }
+            }
+        },
+        "response_info": {
+            "type":"object", "properties": {
+                "h2o": { "type":"string" },
+                "node": { "type":"string" },
+                "redirect_url": { "type":"null" },
+                "status": { "type":"string" },
+                "time": { "type":"number" }
+            }
+        }
+    }
+}
+

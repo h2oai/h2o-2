@@ -128,10 +128,12 @@ public class FrameSplitter extends H2OCountedCompleter {
     final int num = dataset.numCols(); // number of columns in input frame
     final int nsplits = espcPerSplit.length; // number of splits
     final String[][] domains = dataset.domains(); // domains
+    final boolean[] uuids = dataset.uuids();
+    final byte   [] times = dataset.times();
     Vec[][] t = new Vec[nsplits][/*num*/]; // resulting vectors for all
     for (int i=0; i<nsplits; i++) {
       // vectors for j-th split
-      t[i] = new Vec(Vec.newKey(),espcPerSplit[i/*-th split*/]).makeZeros(num, domains);
+      t[i] = new Vec(Vec.newKey(),espcPerSplit[i/*-th split*/]).makeZeros(num, domains, uuids, times);
     }
     return t;
   }
@@ -139,17 +141,20 @@ public class FrameSplitter extends H2OCountedCompleter {
   // The task computes ESPC per split
   static long[/*nsplits*/][/*nchunks*/] computeEspcPerSplit(long[] espc, long len, float[] ratios) {
     assert espc.length>0 && espc[0] == 0;
+    assert espc[espc.length-1] == len;
     long[] partSizes = Utils.partitione(len, ratios); // Split of whole vector
     int nparts = ratios.length+1;
     long[][] r = new long[nparts][espc.length]; // espc for each partition
     long nrows = 0;
+    long start = 0;
     for (int p=0,c=0; p<nparts; p++) {
       int nc = 0; // number of chunks for this partition
-      while(c<espc.length-1 && (nrows+=espc[c+1]-espc[c]) < partSizes[p]) { r[p][++nc] = nrows; c++; }
-      r[p][++nc] = partSizes[p]; // last item in espc contains number of rows
+      for(;c<espc.length-1 && (espc[c+1]-start) <= partSizes[p];c++) r[p][++nc] = espc[c+1]-start;
+      if (r[p][nc] < partSizes[p]) r[p][++nc] = partSizes[p]; // last item in espc contains number of rows
       r[p] = Arrays.copyOf(r[p], nc+1);
       // Transfer rest of lines to the next part
       nrows = nrows-partSizes[p];
+      start += partSizes[p];
     }
     return r;
   }
@@ -176,7 +181,6 @@ public class FrameSplitter extends H2OCountedCompleter {
       long[] partSizes = Utils.partitione(anyInVec.length(), _ratios);
       long pnrows = 0;
       for (int p=0; p<_partIdx; p++) pnrows += partSizes[p];
-      int _pcidx=0;
       long[] espc = anyInVec._espc;
       while (_pcidx < espc.length-1 && (pnrows -= (espc[_pcidx+1]-espc[_pcidx])) > 0 ) _pcidx++;
       assert pnrows <= 0;
@@ -189,7 +193,7 @@ public class FrameSplitter extends H2OCountedCompleter {
       int nrows = cs[0]._len;
       // For each output chunk extract appropriate rows for partIdx-th part
       for (int i=0; i<cs.length; i++) {
-        // WARNING: this implementation does not preserver co-location of chunks so we are forcing here network transfer!
+        // WARNING: this implementation does not preserve co-location of chunks so we are forcing here network transfer!
         ChunkSplitter.extractChunkPart(_srcVecs[i].chunkForChunkIdx(cinidx), cs[i], startRow, nrows, _fs);
       }
     }

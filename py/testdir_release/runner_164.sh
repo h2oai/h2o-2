@@ -83,35 +83,38 @@ myPy() {
 
 if [[ $TEST == "" ]] || [[ $TESTDIR == "" ]]
 then
-    myPy c1 test_c1_rel.py
-    myPy c2 test_c2_rel.py
+    # problems when import va gets mixed with fvec
+    # and keys aren't deleted? Exec starts to convert all (leading to timeout)
+    # just get rid of VA stuff
+    # myPy c1 test_c1_rel.py
+    # myPy c2 test_c2_rel.py
+    myPy c1 test_c1_fvec.py
     myPy c2 test_c2_nongz_fvec.py
-    myPy c3 test_c3_rel.py
+    # myPy c3 test_c3_rel.py
+    myPy c3 test_c3_exec_copy.py
     myPy c3 test_c3_nongz_fvec.py
     # myPy c4 test_c4_four_billion_rows.py
     # known failure last
-    myPy c6 test_c6_hdfs.py
+    myPy c5 test_c5_KMeans_sphere_26GB_fvec.py
+    myPy c6 test_c6_hdfs_fvec.py
     # fails with summary. currently disable summary
     # doesn't work. key gets locked. forget about it
     # myPy c7 test_c7_rel.py
-    myPy c8 test_c8_rf_airlines_hdfs.py
-    myPy c8 test_c8_rf_airlines_hdfs_fvec.py
+    # myPy c8 test_c8_rf_airlines_hdfs.py
+    # myPy c8 test_c8_rf_airlines_hdfs_fvec.py
     myPy c9 test_c9_GLM_rc_fvec.py
     myPy c9 test_c9_GLM_airlines_fvec.py
+    myPy c10 test_c10_glm_fvec.py
 
-
-    myPy c1 test_c1_fvec.py
     # myPy c2 test_c2_fvec.py
     # myPy c3 test_c3_fvec.py
     # myPy c4 test_c4_four_billion_rows_fvec.py
     # myPy c5 test_c5_KMeans_sphere15_180GB_fvec.py
-    myPy c5 test_c5_KMeans_sphere_26GB_fvec.py
     # myPy c5 test_c5_KMeans_sphere_67MB_fvec.py
     # myPy c6 test_c6_hdfs_fvec.py
     # myPy c6 test_c6_maprfs_fvec.py
 
     # causing problems. don't run for now
-    myPy c10 test_c10_glm_fvec.py
 else
     myPy $TESTDIR $TEST
 fi

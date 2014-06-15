@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 
 public class Tree extends H2OCountedCompleter {
+  static public enum SelectStatType {ENTROPY, GINI};
   static public enum StatType { ENTROPY, GINI, MSE};
 
   /** Left and right seed initializer number for statistics */
@@ -132,8 +133,12 @@ public class Tree extends H2OCountedCompleter {
         left.applyClassWeights();   // Weight the distributions
       hex.singlenoderf.Statistic.Split spl = left.split(d, false);
       if(spl.isLeafNode()) {
-        float av = d.computeAverage();
-        _tree = new LeafNode(-1, d.rows(), av);
+        if(_regression) {
+          float av = d.computeAverage();
+          _tree = new LeafNode(-1, d.rows(), av);
+        } else {
+          _tree =  new LeafNode(_data.unmapClass(spl._split), d.rows(),-1);
+        }
       } else {
         _tree = new FJBuild (spl, d, 0, _seed).compute();
       }
@@ -198,8 +203,9 @@ public class Tree extends H2OCountedCompleter {
       else  fj0 = new FJBuild(ls,res[0],_depth+1, _seed + LTS_INIT);
       if (rs.isLeafNode() || rs.isImpossible()) {
         if (_regression) {
+
           float av = res[1].computeAverage();
-          nd._r = new LeafNode(-1, res[0].rows(), av);
+          nd._r = new LeafNode(-1, res[1].rows(), av);
         } else {
         nd._r = new LeafNode(_data.unmapClass(rs._split), res[1].rows(),-1);
         }

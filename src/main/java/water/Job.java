@@ -47,6 +47,7 @@ public abstract class Job extends Func {
   @API(help = "Job state")       public JobState state;
 
   transient public H2OCountedCompleter _fjtask; // Top-level task you can block on
+  transient protected boolean _cv;
 
   /** Possible job states. */
   public static enum JobState {
@@ -200,11 +201,6 @@ public abstract class Job extends Func {
     return state == JobState.CANCELLED || state == JobState.FAILED;
   }
 
-  /** Returns true if the job was cancelled by the user.
-   * @return true if the job is in state {@link JobState#CANCELLED}.
-   */
-  public boolean isCancelledXX() { return state == JobState.CANCELLED; }
-
   /** Returns true if the job was terminated by unexpected exception.
    * @return true, if the job was terminated by unexpected exception.
    */
@@ -272,13 +268,10 @@ public abstract class Job extends Func {
    * @param jobkey job key
    * @return returns a job with given job key or null if a job is not found.
    */
-  public static final Job findJob(final Key jobkey) {
-    Job job = UKV.get(jobkey);
-    return job;
-  }
+  public static Job findJob(final Key jobkey) { return UKV.get(jobkey); }
 
   /** Finds a job with given dest key or returns null */
-  public static final Job findJobByDest(final Key destKey) {
+  public static Job findJobByDest(final Key destKey) {
     Job job = null;
     for( Job current : Job.all() ) {
       if( current.dest().equals(destKey) ) {
@@ -371,7 +364,7 @@ public abstract class Job extends Func {
         return;
       }
 
-      try { Thread.sleep (pollingIntervalMillis); } catch (Exception xe) {}
+      try { Thread.sleep (pollingIntervalMillis); } catch (Exception ignore) {}
     }
   }
 
@@ -389,8 +382,7 @@ public abstract class Job extends Func {
     final long _count;
     private final Status _status;
     final String _error;
-    protected DException _ex;
-    public enum Status { Computing, Done, Cancelled, Error };
+    public enum Status { Computing, Done, Cancelled, Error }
 
     public Status status() { return _status; }
 
@@ -555,7 +547,7 @@ public abstract class Job extends Func {
      */
     @Override public JsonObject toJSON() {
       JsonObject jo = super.toJSON();
-      if (!jo.has("source")) return jo;
+      if (!jo.has("source") || source==null) return jo;
       HashMap<String, int[]> map = new HashMap<String, int[]>();
       map.put("used_cols", cols);
       map.put("ignored_cols", ignored_cols);
@@ -577,6 +569,7 @@ public abstract class Job extends Func {
 
     @Override protected void init() {
       super.init();
+      if (_cv) return;
 
       // At most one of the following may be specified.
       int specified = 0;
@@ -584,6 +577,14 @@ public abstract class Job extends Func {
       if (!isEmpty(ignored_cols)) { specified++; }
       if (!isEmpty(ignored_cols_by_name)) { specified++; }
       if (specified > 1) throw new IllegalArgumentException("Arguments 'cols', 'ignored_cols_by_name', and 'ignored_cols' are exclusive");
+
+      Vec[] vecs = source.vecs();
+      for( int i = 0; i < vecs.length; i++ )
+        if( vecs[i].isUUID() ) {
+          if( ignored_cols==null ) ignored_cols = new int[0];
+          ignored_cols = Arrays.copyOf(ignored_cols,ignored_cols.length+1);
+          ignored_cols[ignored_cols.length-1] = i;
+       }
 
       // If the column are not specified, then select everything.
       if (isEmpty(cols)) {
@@ -655,12 +656,14 @@ public abstract class Job extends Func {
      */
     @Override public JsonObject toJSON() {
       JsonObject jo = super.toJSON();
-      int idx = source.find(response);
-      if( idx == -1 ) {
-        Vec vm = response.masterVec();
-        if( vm != null ) idx = source.find(vm);
+      if (source!=null) {
+        int idx = source.find(response);
+        if( idx == -1 ) {
+          Vec vm = response.masterVec();
+          if( vm != null ) idx = source.find(vm);
+        }
+        jo.getAsJsonObject("response").add("name", new JsonPrimitive(idx == -1 ? "null" : source._names[idx]));
       }
-      jo.getAsJsonObject("response").add("name", new JsonPrimitive(idx == -1 ? "null" : source._names[idx]));
       return jo;
     }
 
@@ -743,7 +746,7 @@ public abstract class Job extends Func {
     /** Names of columns */
     protected transient String[] _names;
     /** Name of validation response. Should be same as source response. */
-    protected transient String _responseName;
+    public transient String _responseName;
 
     /** Adapted validation frame to a computed model. */
     private transient Frame _adaptedValidation;
@@ -753,6 +756,75 @@ public abstract class Job extends Func {
 
     @API(help = "Validation frame", filter = Default.class, mustExist = true, json = true)
     public Frame validation;
+
+    @API(help = "Number of folds for cross-validation (if no validation data is specified)", filter = Default.class, json = true)
+    public int n_folds = 0;
+
+    @API(help = "Keep cross-validation dataset splits", filter = Default.class, json = true)
+    public boolean keep_cross_validation_splits = false;
+
+    @API(help = "Cross-validation models", json = true)
+    public Key[] xval_models;
+
+    /**
+     * Helper to specify which arguments trigger a refresh on change
+     * @param ver
+     */
+    @Override
+    protected void registered(RequestServer.API_VERSION ver) {
+      super.registered(ver);
+      for (Argument arg : _arguments) {
+        if ( arg._name.equals("validation")) {
+          arg.setRefreshOnChange();
+        }
+      }
+    }
+
+    /**
+     * Helper to handle arguments based on existing input values
+     * @param arg
+     * @param inputArgs
+     */
+    @Override protected void queryArgumentValueSet(Argument arg, java.util.Properties inputArgs) {
+      super.queryArgumentValueSet(arg, inputArgs);
+      if (arg._name.equals("n_folds") && validation != null) {
+        arg.disable("Only if no validation dataset is provided.");
+        n_folds = 0;
+      }
+    }
+
+    /**
+     * Cross-Validate this Job (to be overridden for each instance, which also calls genericCrossValidation)
+     * @param splits Frames containing train/test splits
+     * @param cv_preds Store the predictions for each cross-validation run
+     * @param offsets Array to store the offsets of starting row indices for each cross-validation run
+     * @param i Which fold of cross-validation to perform
+     */
+    public void crossValidate(Frame[] splits, Frame[] cv_preds, long[] offsets, int i) { throw H2O.unimpl(); }
+
+    /**
+     * Helper to perform the generic part of cross validation
+     * Expected to be called from each specific instance's crossValidate method
+     * @param splits Frames containing train/test splits
+     * @param offsets Array to store the offsets of starting row indices for each cross-validation run
+     * @param i Which fold of cross-validation to perform
+     */
+    final protected void genericCrossValidation(Frame[] splits, long[] offsets, int i) {
+      int respidx = source.find(_responseName);
+      assert(respidx != -1) : "response is not found in source!";
+      job_key = Key.make(job_key.toString() + "_xval" + i); //make a new Job for CV
+      assert(xval_models != null);
+      destination_key = xval_models[i];
+      source = splits[0];
+      validation = splits[1];
+      response = source.vecs()[respidx];
+      n_folds = 0;
+      state = Job.JobState.CREATED; //Hack to allow this job to run
+      DKV.put(self(), this); //Needed to pass the Job.isRunning(cvdl.self()) check in FrameTask
+      offsets[i + 1] = offsets[i] + validation.numRows();
+      _cv = true; //Hack to allow init() to pass for ColumnsJob (allow cols/ignored_cols to co-exist)
+      invoke();
+    }
 
     /**
      * Annotate the number of columns and rows of the validation data set in the job parameter JSON
@@ -768,7 +840,12 @@ public abstract class Job extends Func {
     }
 
     @Override protected void init() {
+      if ( validation != null && n_folds != 0 ) throw new UnsupportedOperationException("Cannot specify a validation dataset and non-zero number of cross-validation folds.");
+      if ( n_folds < 0 ) throw new UnsupportedOperationException("The number of cross-validation folds must be >= 0.");
       super.init();
+      xval_models = new Key[n_folds];
+      for (int i=0; i<xval_models.length; ++i)
+        xval_models[i] = Key.make(dest().toString() + "_xval" + i);
 
       int rIndex = 0;
       for( int i = 0; i < source.vecs().length; i++ )
@@ -808,7 +885,7 @@ public abstract class Job extends Func {
     protected String[] getVectorDomain(final Vec v) {
       assert v==null || v.isInt() || v.isEnum() : "Cannot get vector domain!";
       if (v==null) return null;
-      String[] r = null;
+      String[] r;
       if (v.isEnum()) {
         r = v.domain();
       } else {
@@ -905,7 +982,7 @@ public abstract class Job extends Func {
   /** Almost lightweight job handle containing the same content
    * as pure Job class.
    */
-  private static class JobHandle extends Job {
+  public static class JobHandle extends Job {
     public JobHandle(final Job job) { super(job); }
   }
   public static class JobCancelledException extends RuntimeException {
@@ -913,4 +990,9 @@ public abstract class Job extends Func {
     public JobCancelledException(String msg){super("job was cancelled! with msg '" + msg + "'");}
   }
 
+  /** Hygienic method to prevent accidental capture of non desired values. */
+  public static <T extends FrameJob> T hygiene(T job) {
+    job.source = null;
+    return job;
+  }
 }

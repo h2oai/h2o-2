@@ -1,11 +1,15 @@
 package water.fvec;
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
-import water.TestUtil;
-import water.UKV;
+import water.*;
 import water.fvec.Vec;
+
+import java.util.ArrayList;
+import java.util.Arrays;
 
 
 /** This test tests stability of Vec API. */
@@ -29,4 +33,39 @@ public class VecTest extends TestUtil {
       if (ef!=null) UKV.remove(ef._key);
     }
   }
+
+  // want this to be test but avoid serialization of outer class (due to use of anonymous mr2s)
+  private static final void testChangeDomainImpl(){
+    ArrayList<Key> madeKeys = new ArrayList<Key>();
+    try {
+      final String [] oldDomain = {"a", "b", "c"};
+      Vec v = Vec.makeNewCons(1000, 1, 0, new String[][]{oldDomain})[0];
+      madeKeys.add(v._key);
+      Vec.Writer vw = v.open();
+      for (long i = 0; i < v.length(); ++i)
+        vw.set(i, i % 3);
+      vw.close();
+      // now rebalance to ensure multiple chunks (and distribution to multiple nodes)
+      Key reblancedKey = Key.make("reblanced");
+      madeKeys.add(reblancedKey);
+      RebalanceDataSet rbd = new RebalanceDataSet(new Frame(v), reblancedKey, 100);
+      H2O.submitTask(rbd);
+      rbd.join();
+      Frame rebalancedFrame = DKV.get(reblancedKey).get();
+      new MRTask2() {
+        @Override public void map(Chunk c){
+          assertTrue(Arrays.deepEquals(c._vec.domain(), oldDomain));
+        }
+      }.doAll(rebalancedFrame);
+      madeKeys.add(rebalancedFrame.lastVec()._key);
+      final String [] newDomain = new String[]{"x", "y", "z"};
+      rebalancedFrame.lastVec().changeDomain(newDomain);
+      new MRTask2() {
+        @Override public void map(Chunk c){
+          assertTrue(Arrays.deepEquals(c._vec.domain(), newDomain));
+        }
+      }.doAll(rebalancedFrame);
+    } finally { for(Key k:madeKeys) DKV.remove(k);}
+  }
+  @Test public void testChangeDomain(){testChangeDomainImpl();}
 }
