@@ -402,7 +402,9 @@ Steam.ScoringView = (_, _scoring) ->
                 _thresholdPlot null
                 _stripPlot null
             when 'sheet'
-              _sheetView Steam.ScoringSheetView _, scorings
+              sheetView = _sheetView()
+              unless sheetView
+                _sheetView Steam.ScoringSheetView _, scorings
 
     _scoringType item.type
 
