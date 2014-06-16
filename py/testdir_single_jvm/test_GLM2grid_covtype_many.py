@@ -52,13 +52,13 @@ class Basic(unittest.TestCase):
             # assuming it doesn't complete right away, this is the first response
             # it differs for the last response
             job_key = glmResult['job_key']
-            model_key = glmResult['destination_key']
-            jobs.append( (job_key, model_key) )
+            grid_key = glmResult['destination_key']
+            jobs.append( (job_key, grid_key) )
             totalGLMGridJobs += 1
 
         # do some parse work in parallel. Don't poll for parse completion
         # don't bother checking the parses when they are completed (pollWaitJobs looks at all)
-        for i in range(10):
+        for i in range(4):
             time.sleep(3)
             hex_key = str(i) + ".hex"
             src_key = str(i) + ".src"
@@ -69,8 +69,12 @@ class Basic(unittest.TestCase):
         h2o_jobs.pollWaitJobs(timeoutSecs=300)
         elapsed = time.time() - start
 
-        for job_key, model_key in jobs:
-            h2o_glm.simpleCheckGLMGrid(self, glmResult, **kwargs)
+        # 2/GLMGridView.html?grid_key=asd
+        # 2/GLMModelView.html?_modelKey=asd_0&lambda=NaN
+        # 2/SaveModel.html?model=GLMGridResults__9a29646b78dd988aacd4f88e4d864ccd_1&path=adfs&force=1
+        for job_key, grid_key in jobs:
+            gridResult = h2o.nodes[0].glm_grid_view(grid_key=grid_key)
+            h2o_glm.simpleCheckGLMGrid(self, gridResult, **kwargs)
 
         print "All GLMGrid jobs completed in", elapsed, "seconds."
         print "totalGLMGridJobs:", totalGLMGridJobs
