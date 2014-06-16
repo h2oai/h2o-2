@@ -192,7 +192,7 @@ public class DeepLearningTask extends FrameTask<DeepLearningTask> {
       /**
        * Let neurons know the real-time number of processed rows -> for accurate learning rate decay, etc.
        */
-      minfo.add_processed_local(1);
+      if (training) minfo.add_processed_local(1);
     }
     catch(RuntimeException ex) {
       Log.warn(ex.getMessage());
