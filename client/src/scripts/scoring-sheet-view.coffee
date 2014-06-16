@@ -158,6 +158,26 @@ metricVariables.push
 
 metricVariables.push
   id: uniqueId()
+  name: 'auc'
+  caption: 'AUC'
+  type: 'float'
+  read: (metric) -> +metric.data.auc.AUC
+  format: format4f
+  domain: [ 0, 1 ]
+  extent: []
+
+metricVariables.push
+  id: uniqueId()
+  name: 'gini'
+  caption: 'Gini'
+  type: 'float'
+  read: (metric) -> +metric.data.auc.Gini
+  format: format4f
+  domain: [ 0, 1 ]
+  extent: []
+
+metricVariables.push
+  id: uniqueId()
   name: 'trainingTime'
   caption: 'Training Time (ms)'
   type: 'integer'
@@ -176,25 +196,6 @@ metricVariables.push
   domain: [ 0, 1 ]
   extent: []
 
-metricVariables.push
-  id: uniqueId()
-  name: 'auc'
-  caption: 'AUC'
-  type: 'float'
-  read: (metric) -> +metric.data.auc.AUC
-  format: format4f
-  domain: [ 0, 1 ]
-  extent: []
-
-metricVariables.push
-  id: uniqueId()
-  name: 'gini'
-  caption: 'Gini'
-  type: 'float'
-  read: (metric) -> +metric.data.auc.Gini
-  format: format4f
-  domain: [ 0, 1 ]
-  extent: []
 
 forEach metricCriteriaVariable.domain, (metricCriterion, metricCriterionIndex) ->
   forEach metricTypeVariable.domain, (metricType) -> 
@@ -894,7 +895,7 @@ Steam.ScoringSheetView = (_, _scorings) ->
     _filteredMetrics.reverse() unless _sortAscending
 
     columnVariables = clone _filteredMetricVariables
-    columnVariables.splice.apply columnVariables, flatten [ 8, 0, _filteredInputVariables ]
+    columnVariables.splice.apply columnVariables, flatten [ columnVariables.length - 3, 0, _filteredInputVariables ]
     
     headers = map columnVariables, (variable) ->
       tag = if variable isnt _sortByVariable then th else if _sortAscending then thAsc else thDesc
