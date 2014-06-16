@@ -13,30 +13,39 @@ public class h2oworker {
    * Start an H2O instance in the local JVM.
    */
   public static class UserMain {
+    private static void usage() {
+      // TODO
+      System.exit(1);
+    }
+
     private static void registerEmbeddedH2OConfig(String[] args) {
-      String ip = null;
-      int port = -1;
-      int mport = -1;
+      String zk = null;
+      String zkroot = null;
 
       for (int i = 0; i < args.length; i++) {
-        if (args[i].equals("-driverip")) {
+        if (args[i].equals("-zk")) {
           i++;
-          ip = args[i];
+          zk = args[i];
         }
-        else if (args[i].equals("-driverport")) {
+        else if (args[i].equals("-zkroot")) {
           i++;
-          port = Integer.parseInt(args[i]);
-        }
-        else if (args[i].equals("-mapperport")) {
-          i++;
-          mport = Integer.parseInt(args[i]);
+          zkroot = args[i];
         }
       }
 
+      if (zk == null) {
+        System.out.println("\nERROR: -zk must be specified\n");
+        usage();
+      }
+
+      if (zkroot == null) {
+        System.out.println("\nERROR: -zkroot must be specified\n");
+        usage();
+      }
+
       _embeddedH2OConfig = new EmbeddedH2OConfig();
-      _embeddedH2OConfig.setDriverCallbackIp(ip);
-      _embeddedH2OConfig.setDriverCallbackPort(port);
-      _embeddedH2OConfig.setMapperCallbackPort(mport);
+      _embeddedH2OConfig.setZk(zk);
+      _embeddedH2OConfig.setZkRoot(zkroot);
       H2O.setEmbeddedH2OConfig(_embeddedH2OConfig);
     }
 
@@ -47,22 +56,17 @@ public class h2oworker {
   }
 
   private static class EmbeddedH2OConfig extends water.AbstractEmbeddedH2OConfig {
-    volatile String _driverCallbackIp;
-    volatile int _driverCallbackPort = -1;
-    volatile int _mapperCallbackPort = -1;
+    volatile String _zk;
+    volatile String _zkroot;
     volatile String _embeddedWebServerIp = "(Unknown)";
     volatile int _embeddedWebServerPort = -1;
 
-    void setDriverCallbackIp(String value) {
-      _driverCallbackIp = value;
+    void setZk(String value) {
+      _zk = value;
     }
 
-    void setDriverCallbackPort(int value) {
-      _driverCallbackPort = value;
-    }
-
-    void setMapperCallbackPort(int value) {
-      _mapperCallbackPort = value;
+    void setZkRoot(String value) {
+      _zkroot = value;
     }
 
     @Override
@@ -108,7 +112,6 @@ public class h2oworker {
 
   public void run(String[] args) throws IOException, InterruptedException {
     try {
-      // TODO
       water.Boot.main(UserMain.class, args);
     }
     catch (Exception e) {
@@ -117,13 +120,10 @@ public class h2oworker {
     }
   }
 
-  /**
-   * For debugging only.
-   */
   public static void main (String[] args) {
     try {
       h2oworker m = new h2oworker();
-      m.run(null);
+      m.run(args);
     }
     catch (Exception e) {
       System.out.println (e);
