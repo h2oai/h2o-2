@@ -36,10 +36,16 @@ BROWSER_SCRIPTS=\
 	$(BUILD)/scripts/localStorage.js \
 	$(BUILD)/scripts/xhr.js \
 	$(BUILD)/scripts/h2o-proxy.js \
+	$(BUILD)/scripts/help-server.js \
+	$(BUILD)/scripts/help.js \
 	$(BUILD)/scripts/dialog-manager.js \
 	$(BUILD)/scripts/alert-dialog.js \
 	$(BUILD)/scripts/error-dialog.js \
+	$(BUILD)/scripts/confirm-dialog.js \
 	$(BUILD)/scripts/select-frame-dialog.js \
+	$(BUILD)/scripts/configure-strip-plot-dialog.js \
+	$(BUILD)/scripts/scoring-visualization-dialog.js \
+	$(BUILD)/scripts/scoring-filter-dialog.js \
 	$(BUILD)/scripts/topic-list-view.js \
 	$(BUILD)/scripts/frame-list-view.js \
 	$(BUILD)/scripts/model-list-view.js \
@@ -47,8 +53,11 @@ BROWSER_SCRIPTS=\
 	$(BUILD)/scripts/notification-list-view.js \
 	$(BUILD)/scripts/frame-view.js \
 	$(BUILD)/scripts/model-view.js \
+	$(BUILD)/scripts/frame-inspection-view.js \
+	$(BUILD)/scripts/model-inspection-view.js \
 	$(BUILD)/scripts/model-selection-view.js \
 	$(BUILD)/scripts/scoring-view.js \
+	$(BUILD)/scripts/scoring-sheet-view.js \
 	$(BUILD)/scripts/notification-view.js \
 	$(BUILD)/scripts/scoring-selection-view.js \
 	$(BUILD)/scripts/main-view.js \
@@ -60,9 +69,15 @@ TEST_SCRIPTS=\
 	$(BUILD)/scripts/application-context.js \
 	$(BUILD)/scripts/xhr.js \
 	$(BUILD)/scripts/h2o-proxy.js \
+	$(BUILD)/scripts/help-server.js \
+	$(BUILD)/scripts/help.js \
 	$(BUILD)/scripts/alert-dialog.js \
 	$(BUILD)/scripts/error-dialog.js \
+	$(BUILD)/scripts/confirm-dialog.js \
 	$(BUILD)/scripts/select-frame-dialog.js \
+	$(BUILD)/scripts/configure-strip-plot-dialog.js \
+	$(BUILD)/scripts/scoring-visualization-dialog.js \
+	$(BUILD)/scripts/scoring-filter-dialog.js \
 	$(BUILD)/scripts/topic-list-view.js \
 	$(BUILD)/scripts/frame-list-view.js \
 	$(BUILD)/scripts/model-list-view.js \
@@ -70,8 +85,11 @@ TEST_SCRIPTS=\
 	$(BUILD)/scripts/notification-list-view.js \
 	$(BUILD)/scripts/frame-view.js \
 	$(BUILD)/scripts/model-view.js \
+	$(BUILD)/scripts/frame-inspection-view.js \
+	$(BUILD)/scripts/model-inspection-view.js \
 	$(BUILD)/scripts/model-selection-view.js \
 	$(BUILD)/scripts/scoring-view.js \
+	$(BUILD)/scripts/scoring-sheet-view.js \
 	$(BUILD)/scripts/notification-view.js \
 	$(BUILD)/scripts/scoring-selection-view.js \
 	$(BUILD)/scripts/main-view.js \
@@ -107,9 +125,15 @@ TEST_LIB_SCRIPTS=\
 
 TEMPLATES=\
 	src/templates/main-view.jade \
+	src/templates/help.jade \
+	src/templates/geyser.jade \
 	src/templates/alert-dialog.jade \
 	src/templates/error-dialog.jade \
+	src/templates/confirm-dialog.jade \
 	src/templates/select-frame-dialog.jade \
+	src/templates/configure-strip-plot-dialog.jade \
+	src/templates/scoring-visualization-dialog.jade \
+	src/templates/scoring-filter-dialog.jade \
 	src/templates/topic-list-view.jade \
 	src/templates/frame-list-view.jade \
 	src/templates/model-list-view.jade \
@@ -119,6 +143,8 @@ TEMPLATES=\
 	src/templates/frame-view.jade \
 	src/templates/model-view.jade \
 	src/templates/model-selection-view.jade \
+	src/templates/frame-inspection-view.jade \
+	src/templates/model-inspection-view.jade \
 	src/templates/scoring-view.jade \
 	src/templates/notification-view.jade \
 	src/templates/scoring-selection-view.jade

@@ -547,7 +547,7 @@ public abstract class Job extends Func {
      */
     @Override public JsonObject toJSON() {
       JsonObject jo = super.toJSON();
-      if (!jo.has("source")) return jo;
+      if (!jo.has("source") || source==null) return jo;
       HashMap<String, int[]> map = new HashMap<String, int[]>();
       map.put("used_cols", cols);
       map.put("ignored_cols", ignored_cols);
@@ -656,12 +656,14 @@ public abstract class Job extends Func {
      */
     @Override public JsonObject toJSON() {
       JsonObject jo = super.toJSON();
-      int idx = source.find(response);
-      if( idx == -1 ) {
-        Vec vm = response.masterVec();
-        if( vm != null ) idx = source.find(vm);
+      if (source!=null) {
+        int idx = source.find(response);
+        if( idx == -1 ) {
+          Vec vm = response.masterVec();
+          if( vm != null ) idx = source.find(vm);
+        }
+        jo.getAsJsonObject("response").add("name", new JsonPrimitive(idx == -1 ? "null" : source._names[idx]));
       }
-      jo.getAsJsonObject("response").add("name", new JsonPrimitive(idx == -1 ? "null" : source._names[idx]));
       return jo;
     }
 
@@ -988,4 +990,9 @@ public abstract class Job extends Func {
     public JobCancelledException(String msg){super("job was cancelled! with msg '" + msg + "'");}
   }
 
+  /** Hygienic method to prevent accidental capture of non desired values. */
+  public static <T extends FrameJob> T hygiene(T job) {
+    job.source = null;
+    return job;
+  }
 }

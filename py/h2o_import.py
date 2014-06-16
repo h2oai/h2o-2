@@ -256,7 +256,15 @@ def import_only(node=None, schema='local', bucket=None, path=None,
                 print "aws_credentials: %s" % n.aws_credentials
                 # raise Exception("Something was missing for s3 on the java -jar cmd line when the cloud was built")
                 print "ERROR: Something was missing for s3 on the java -jar cmd line when the cloud was built"
-            importResult = node.import_s3(bucket, timeoutSecs=timeoutSecs)
+
+            # FIX. using the import_hdfs method here but since it's beta_features it's the common import2?
+            if h2o.beta_features:
+                if importParentDir:
+                    importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
+                else:
+                    importResult = node.import_hdfs(folderURI + "/" + pattern, timeoutSecs=timeoutSecs)
+            else:
+                importResult = node.import_s3(bucket, timeoutSecs=timeoutSecs)
 
         elif schema=='s3n' or node.redirect_import_folder_to_s3n_path:
             if not (n.use_hdfs and ((n.hdfs_version and n.hdfs_name_node) or n.hdfs_config)):

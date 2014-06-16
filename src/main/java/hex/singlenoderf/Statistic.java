@@ -19,7 +19,7 @@ abstract class Statistic {
   private HashSet<Integer> _remembered;    // Features already used
   final double[] _classWt;                 // Class weights
   private int _exclusiveSplitLimit;
-  protected final float[/*num_features*/][/*column_bins*/][/*response_bins*/] _columnDistsRegression;
+  protected final int[/*num_features*/][/*column_bins*/][/*response_bins*/] _columnDistsRegression;
   boolean _regression;
 
   /** Returns the best split for a given column   */
@@ -92,14 +92,14 @@ abstract class Statistic {
       for (int i = 0; i < dist.length; ++i) {
         float tmp = _columnDistsRegression[colIndex][j][i];
         sum += tmp;
-        dist[i] = tmp;
+        dist[i] += tmp;
       }
     }
     return sum;
   }
 
   Statistic(Data data, int featuresPerSplit, long seed, int exclusiveSplitLimit, boolean regression) {
-    _columnDistsRegression = new float[data.columns() - 1][][];
+    _columnDistsRegression = new int[data.columns() - 1][][];
     _columnDists = new int[data.columns()-1][][];
     _regression = regression;
     if (!regression) {
@@ -117,7 +117,7 @@ abstract class Statistic {
       _random = Utils.getRNG(seed);
       for (int i = 0; i < _columnDistsRegression.length; ++i)
         if(!data.isIgnored(i))
-          _columnDistsRegression[i] = new float[data.columnArity(i)+1][data.columnArityOfClassCol()];
+          _columnDistsRegression[i] = new int[data.columnArity(i)+1][data.columnArityOfClassCol()];
       _features = new int[featuresPerSplit];
       _remembered = null;
       _classWt = data.classWt();
@@ -170,7 +170,7 @@ abstract class Statistic {
         if( k < featuresPerSplit ) _features[k] = i;
         j++;
       }
-      for( int f : _features) if (f != -1) for( float[] d: _columnDistsRegression[f]) Arrays.fill(d,0.f);  // reset the column distributions
+      for( int f : _features) if (f != -1) for( int[] d: _columnDistsRegression[f]) Arrays.fill(d,0);  // reset the column distributions
     }
   }
 
@@ -187,7 +187,7 @@ abstract class Statistic {
           } else {
             short val = row.getEncodedColumnValue(f);
             short val2 = row.getEncodedClassColumnValue();
-            _columnDistsRegression[f][val][val2] = row.getRawClassColumnValueFromBin();
+            _columnDistsRegression[f][val][val2]++; // = row.getRawClassColumnValueFromBin();
           }
         }
       }

@@ -3,6 +3,7 @@ package water.fvec;
 import jsr166y.CountedCompleter;
 import water.*;
 import water.nbhm.NonBlockingHashMapLong;
+import water.util.Log;
 import water.util.Utils;
 
 import java.util.Arrays;
@@ -73,6 +74,9 @@ public class Vec extends Iced {
    *  modification.   */
   volatile long _naCnt=-1;
 
+  private long _last_write_timestamp = System.currentTimeMillis();
+  private long _checksum_timestamp = -1;
+  private long _checksum = 0;
 
   /** Maximal size of enum domain */
   public static final int MAX_ENUM_SIZE = 10000;
@@ -388,11 +392,26 @@ public class Vec extends Iced {
   /** Size of compressed vector data. */
   public long byteSize(){return rollupStats()._size; }
 
-  public byte[] hash() {
-    final Vec rst = rollupStats();
-    final int hi = new Double(rst._mean).hashCode();
-    final int lo = new Double(rst._sigma).hashCode();
-    return new byte[]{(byte)(hi >> 3), (byte)(hi >> 2), (byte)(hi >> 1), (byte)(hi >> 0), (byte)(lo >> 3),(byte)(lo >> 2),(byte)(lo >> 1), (byte)(lo >> 0)};
+  public long checksum() {
+    final long now = _last_write_timestamp;  // TODO: someone can be writing while we're checksuming. . .
+    if (-1 != now && now == _checksum_timestamp) {
+      return _checksum;
+    }
+    final long checksum = new ChecksummerTask().doAll(this).getChecksum();
+
+    new TAtomic<Vec>() {
+      @Override public Vec atomic(Vec v) {
+          if (v != null) {
+              v._checksum = checksum;
+              v._checksum_timestamp = now;
+          } return v;
+      }
+    }.invoke(_key);
+
+    this._checksum = checksum;
+    this._checksum_timestamp = now;
+
+    return checksum;
   }
   /** Is the column a factor/categorical/enum?  Note: all "isEnum()" columns
    *  are are also "isInt()" but not vice-versa. */
@@ -508,7 +527,31 @@ public class Vec extends Iced {
     }
     // Just toooo common to report always.  Drowning in multi-megabyte log file writes.
     @Override public boolean logVerbose() { return false; }
-  }
+  } // class RollupStats
+
+  /** A private class to compute the rollup stats */
+  private static class ChecksummerTask extends MRTask2<ChecksummerTask> {
+    public long checksum = 0;
+    public long getChecksum() { return checksum; }
+
+    @Override public void map( Chunk c ) {
+      long _start = c._start;
+
+      for( int i=0; i<c._len; i++ ) {
+        long l = 81985529216486895L; // 0x0123456789ABCDEF
+        if (! c.isNA0(i))
+          l = c.at80(i);
+        long global_row = _start + i;
+
+        checksum ^= (17 * global_row);
+        checksum ^= (23 * l);
+      }
+    } // map()
+
+    @Override public void reduce( ChecksummerTask that ) {
+      this.checksum ^= that.checksum;
+    }
+  } // class ChecksummerTask
 
   /** Writing into this Vector from *some* chunk.  Immediately clear all caches
    *  (_min, _max, _mean, etc).  Can be called repeatedly from one or all
@@ -532,7 +575,15 @@ public class Vec extends Iced {
     if( vthis._naCnt==-2 ) {
       _naCnt = vthis._naCnt=-1;
       new TAtomic<Vec>() {
-        @Override public Vec atomic(Vec v) { if( v!=null && v._naCnt==-2 ) v._naCnt=-1; return v; }
+        @Override public Vec atomic(Vec v) {
+          if( v != null ) {
+            v._last_write_timestamp = System.currentTimeMillis();
+            if (v._naCnt==-2 ) {
+                v._naCnt=-1;
+            } // _naCnt != -2
+          } // ! null
+          return v;
+        }
       }.invoke(_key);
     }
   }

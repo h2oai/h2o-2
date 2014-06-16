@@ -11,7 +11,11 @@ Steam.ApplicationContext = ->
     unschedule: do edge$
     timeout: do edge$
 
+    man: do edge$
+    help: do edge$
     status: do edge$
+
+    inspect: do edge$
 
     route: do edge$
     setRoute: do edge$
@@ -75,7 +79,6 @@ Steam.ApplicationContext = ->
     displayNotification: do edge$
 
     loadScorings: do edge$
-    scoringsLoaded: do edge$
     displayScoring: do edge$
     scoringSelectionChanged: do edge$
     scoringSelectionCleared: do edge$
@@ -85,6 +88,11 @@ Steam.ApplicationContext = ->
     clearScoringSelection: do edge$
     deleteScorings: do edge$
     deleteActiveScoring: do edge$
+    scoringAvailable: do edge$
+    rescore: do edge$
+    configureStripPlot: do edge$
+    configureScoringVisualization: do edge$
+    filterScorings: do edge$
 
 
 

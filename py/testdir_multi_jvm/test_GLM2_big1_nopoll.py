@@ -51,11 +51,9 @@ class Basic(unittest.TestCase):
             print "Checking completed job, with no polling using initial response:"
             # this format is only in the first glm response (race?)
             modelKey = g['destination_key']
-
             glm = h2o.nodes[0].glm_view(_modelKey=modelKey)
             h2o_glm.simpleCheckGLM(self, glm, None, noPrint=True, **kwargs)
 
-            print "glm", h2o.dump_json(glm)
             cm = glm['glm_model']['submodels'][0]['validation']['_cms'][-1]['_arr']
             print "cm:", cm
             pctWrong = h2o_gbm.pp_cm_summary(cm);
@@ -63,8 +61,6 @@ class Basic(unittest.TestCase):
 
             print "\nTrain\n==========\n"
             print h2o_gbm.pp_cm(cm)
-
-            h2o_glm.simpleCheckGLM(self, glm, 'C58', **kwargs)
 
 if __name__ == '__main__':
     h2o.unit_main()

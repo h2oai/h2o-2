@@ -126,10 +126,7 @@ class Basic(unittest.TestCase):
         else:
             print "Restricting number of columns tested to <=500,000"
             tryList = [
-                (100, 200000, 'cG', 400, 400),
-                (100, 300000, 'cH', 400, 400),
-                (100, 400000, 'cI', 400, 400),
-                (100, 500000, 'cJ', 400, 400),
+                (100, 100000, 'cG', 400, 400),
             ]
 
 

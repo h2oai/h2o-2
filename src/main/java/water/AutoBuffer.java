@@ -21,7 +21,7 @@ import water.util.Log;
  *
  * @author <a href="mailto:cliffc@0xdata.com"></a>
  */
-public final class AutoBuffer {
+public class AutoBuffer {
   public static final int TCP_WRITE_ATTEMPTS = 2;
   // The direct ByteBuffer for schlorping data about
   public ByteBuffer _bb;
@@ -187,6 +187,7 @@ public final class AutoBuffer {
     _persist = 0;               // No persistance
   }
 
+  @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("[AB ").append(_read ? "read " : "write ");

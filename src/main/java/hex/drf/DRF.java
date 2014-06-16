@@ -81,7 +81,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     //
     public DRFModel(DRF params, Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, int mtries, float sample_rate, long seed, int num_folds) {
       super(key,dataKey,testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, num_folds);
-      this.parameters = params;
+      this.parameters = Job.hygiene((DRF) params.clone());
       this.mtries = mtries;
       this.sample_rate = sample_rate;
       this.seed = seed;

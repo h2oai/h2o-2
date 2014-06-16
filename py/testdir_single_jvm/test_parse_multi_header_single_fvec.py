@@ -23,6 +23,7 @@ def write_syn_dataset(csvPathname, rowCount, headerData, rList):
         dsf.close()
         return rowCount # rows done
     else:
+        dsf.close()
         return 0 # rows done
 
 def rand_rowData(colCount):
@@ -107,6 +108,9 @@ class Basic(unittest.TestCase):
                 h2i.import_only(path=SYNDATASETS_DIR + "/" + f, schema='put', noPrint=True)
 
             header = h2i.find_key('syn_header')
+
+            if not header:
+                raise Exception("Didn't find syn_header* key in the import")
 
             # use regex. the only files in the dir will be the ones we just created with  *fileN* match
             print "Header Key = " + header
