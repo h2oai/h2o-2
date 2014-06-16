@@ -146,28 +146,6 @@ inputsVariable =
 
 metricVariables = []
 
-metricVariables.push scoringVariable
-
-metricVariables.push
-  id: uniqueId()
-  name: 'frameKey'
-  caption: 'Frame'
-  type: 'string'
-  read: (metric) -> metric.data.frame.key
-  format: identity
-  domain: [ 0, 1 ]
-  extent: []
-
-metricVariables.push
-  id: uniqueId()
-  name: 'modelKey'
-  caption: 'Model'
-  type: 'string'
-  read: (metric) -> metric.model.key
-  format: identity
-  domain: [ 0, 1 ]
-  extent: []
-
 metricVariables.push
   id: uniqueId()
   name: 'method'
@@ -233,6 +211,28 @@ forEach metricCriteriaVariable.domain, (metricCriterion, metricCriterionIndex) -
         metricType: metricType
         metricCriterion: metricCriterion
         metricCriterionIndex: metricCriterionIndex
+
+metricVariables.push scoringVariable
+
+metricVariables.push
+  id: uniqueId()
+  name: 'frameKey'
+  caption: 'Frame'
+  type: 'string'
+  read: (metric) -> metric.data.frame.key
+  format: identity
+  domain: [ 0, 1 ]
+  extent: []
+
+metricVariables.push
+  id: uniqueId()
+  name: 'modelKey'
+  caption: 'Model'
+  type: 'string'
+  read: (metric) -> metric.model.key
+  format: identity
+  domain: [ 0, 1 ]
+  extent: []
 
 metricVariablesIndex = indexBy metricVariables, (variable) -> variable.name
 
@@ -908,7 +908,7 @@ Steam.ScoringSheetView = (_, _scorings) ->
 
     rows = map _filteredMetrics, (metric) ->
       cells = map columnVariables, (variable) ->
-        if variable.name is 'scoring'
+        if variable.name is 'method' or variable.name is 'scoring'
           td scoringLink (variable.read metric), $id: metric.id
         else
           td variable.format variable.read metric
