@@ -68,12 +68,12 @@ user -> driver : User starts driver process
 activate driver
 note left
   User specifies zkConnectionString: a.b.c.d:e
-  User specifies zkRoot: /zk/path/h2o-cloud-for-john-
+  User specifies zkRoot: /zk/path/h2o-uuid
   User specifies numNodes: 2
 
   java -jar h2o-zookeeper.jar water.zookeeper.h2odriver
       -zk a.b.c.d:e
-      -zkroot "/zk/path/h2o-cloud-for-john-"
+      -zkroot "/zk/path/h2o-uuid"
       -nodes 2
       -start
 end note
@@ -82,18 +82,23 @@ end note
 
 driver -> zookeeper : Driver creates zkRoot
 note left
-  create("/zk/path/h2o-cloud-for-john-", (PERSISTENT, SEQUENCE))
+  create("/zk/path/h2o-uuid", (PERSISTENT))
   ZNode data: { "numNodes" : 2 }
+
+  User is responsible for providing
+  a unique cloud name (h2o-uuid).
 end note
 
-driver <- zookeeper : OK, ZooKeeper's chosen ZNode name\n"/zk/path/h2o-cloud-for-john-4"
-note right
-  This is the fourth cloud John has created.
-  ZooKeeper ensures each new cloud for John
-  gets a unique number.
+driver <- zookeeper : OK
+
+driver -> zookeeper : Driver creates zkRoot/nodes
+note left
+  create("/zk/path/h2o-uuid/nodes", (PERSISTENT))
 end note
 
-user <- driver : OK, ZooKeeper's chosen ZNode name\n"/zk/path/h2o-cloud-for-john-4"
+driver <- zookeeper : OK
+
+user <- driver : OK
 deactivate driver
 
 == Start workers ==
@@ -103,7 +108,7 @@ activate worker1
 note left
   java -jar h2o-zookeeper.jar water.zookeeper.h2oworker
       -zk a.b.c.d:e
-      -zkroot "/zk/path/h2o-cloud-for-john-4/node-"
+      -zkroot "/zk/path/h2o-uuid"
       -nodes 2
       [plus other H2O options]
 end note
@@ -112,7 +117,7 @@ activate h2o1
 worker1 <- h2o1 : H2O node 1 port chosen
 worker1 -> zookeeper : Worker creates ZNode
 note left
-  create("/zk/path/h2o-cloud-for-john-4/node-", (PERSISTENT, SEQUENCE))
+  create("/zk/path/h2o-uuid/nodes/", (PERSISTENT, SEQUENCE))
   ZNode data: { "ip" : "n1a.n1b.n1c.n1d", "port" : n1e, "pid" : pid1 }
 end note
 worker1 <- zookeeper : OK
@@ -122,7 +127,7 @@ activate worker2
 note left
   java -jar h2o-zookeeper.jar water.zookeeper.h2oworker
       -zk a.b.c.d:e
-      -zkroot "/zk/path/h2o-cloud-for-john-4/node-"
+      -zkroot "/zk/path/h2o-uuid"
       -nodes 2
       [plus other H2O options]
 end note
@@ -131,7 +136,7 @@ activate h2o2
 worker2 <- h2o2 : H2O node 2 port chosen
 worker2 -> zookeeper : Worker creates ZNode
 note left
-  create("/zk/path/h2o-cloud-for-john-4/node-", (PERSISTENT, SEQUENCE))
+  create("/zk/path/h2o-uuid/nodes/", (PERSISTENT, SEQUENCE))
   ZNode data: { "ip" : "n2a.n2b.n2c.n2d", "port" : n2e, "pid" : pid2 }
 end note
 worker2 <- zookeeper : OK
@@ -140,20 +145,20 @@ worker2 <- zookeeper : OK
 
 worker1 -> zookeeper : Poll for all nodes started
 note left
-  getChildren("/zk/path/h2o-cloud-for-john-4")
+  getChildren("/zk/path/h2o-uuid/nodes")
 end note
 worker1 <- zookeeper : OK
 note right
-  "/zk/path/h2o-cloud-for-john-4/node-1"
+  "/zk/path/h2o-uuid/nodes/1"
       { "ip" : "n1a.n1b.n1c.n1d", "port" : n1e, "pid" : pid1 }
 
-  "/zk/path/h2o-cloud-for-john-4/node-2"
+  "/zk/path/h2o-uuid/nodes/2"
       { "ip" : "n2a.n2b.n2c.n2d", "port" : n2e, "pid" : pid2 }
 end note
 
 worker2 -> zookeeper : Poll for all nodes started
 note left
-  getChildren("/zk/path/h2o-cloud-for-john-4")
+  getChildren("/zk/path/h2o-uuid/nodes")
 end note
 worker2 <- zookeeper : OK
 note right
@@ -180,7 +185,7 @@ worker2 <- h2o2 : cloud size 2
 
 worker1 -> zookeeper : Create cloud ready ZNode
 note left
-  create("/zk/path/h2o-cloud-for-john-4/master", (PERSISTENT))
+  create("/zk/path/h2o-uuid/master", (PERSISTENT))
   ZNode data: { "ip" : "n1a.n1b.n1c.n1d", "port" : n1e, "pid" : pid1 }
 end note
 worker1 <- zookeeper : OK
@@ -188,7 +193,7 @@ deactivate worker1
 
 worker2 -> zookeeper : Create master ZNode (cloud ready)
 note left
-  create("/zk/path/h2o-cloud-for-john-4/master", (PERSISTENT))
+  create("/zk/path/h2o-uuid/master", (PERSISTENT))
   ZNode data: { "ip" : "n2a.n2b.n2c.n2d", "port" : n2e, "pid" : pid2 }
 end note
 worker2 <- zookeeper : KeeperException.NodeExists
@@ -204,12 +209,12 @@ activate driver
 note left
   java -jar h2o-zookeeper.jar water.zookeeper.h2odriver
       -zk a.b.c.d:e
-      -zkroot "/zk/path/h2o-cloud-for-john-4"
-      -poll
+      -zkroot "/zk/path/h2o-uuid"
+      -wait
 end note
 driver -> zookeeper : Poll for master node ip and port of the new H2O cloud
 note left
-  getData("/zk/path/h2o-cloud-for-john-4/master")
+  getData("/zk/path/h2o-uuid/master")
 end note
 driver <- zookeeper : OK
 note right
