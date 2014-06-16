@@ -32,6 +32,16 @@ public class MSEStatistic extends Statistic {
     return sum == 0 ? Float.POSITIVE_INFINITY : res / (float) sum;
   }
 
+  private float[] computeDist(Data d, int colIndex) {
+    float[] res = new float[d.columnArityOfClassCol()];
+    for (int i = 0; i < _columnDistsRegression[colIndex].length - 1; ++i) {
+      for (int j = 0; j < _columnDistsRegression[colIndex][j].length - 1; ++j) {
+        res[j] += _columnDistsRegression[colIndex][i][j];
+      }
+    }
+    return res;
+  }
+
   @Override
   protected Split ltSplit(int colIndex, Data d, float[] dist, float distWeight, Random rand) {
     float bestSoFar = Float.POSITIVE_INFINITY;
@@ -40,7 +50,7 @@ public class MSEStatistic extends Statistic {
     int lW = 0;
     int rW = d.rows();
     float[] leftDist = new float[d.columnArityOfClassCol()];
-    float[] riteDist = dist.clone();
+    float[] riteDist = computeDist(d, colIndex); //dist.clone();
 
     for (int j = 0; j < _columnDistsRegression[colIndex].length - 1; ++j) {
       for (int i = 0; i < dist.length; ++i) {
@@ -62,7 +72,7 @@ public class MSEStatistic extends Statistic {
     }
 
     return bestSplit == -1
-            ? Split.impossible(Utils.maxIndex(dist, _random))
+            ? Split.impossible(Utils.maxIndex(computeDist(d, colIndex), _random))
             : Split.split(colIndex, bestSplit, bestSoFar);
   }
 

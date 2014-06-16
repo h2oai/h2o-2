@@ -146,28 +146,6 @@ inputsVariable =
 
 metricVariables = []
 
-metricVariables.push scoringVariable
-
-metricVariables.push
-  id: uniqueId()
-  name: 'frameKey'
-  caption: 'Frame'
-  type: 'string'
-  read: (metric) -> metric.data.frame.key
-  format: identity
-  domain: [ 0, 1 ]
-  extent: []
-
-metricVariables.push
-  id: uniqueId()
-  name: 'modelKey'
-  caption: 'Model'
-  type: 'string'
-  read: (metric) -> metric.model.key
-  format: identity
-  domain: [ 0, 1 ]
-  extent: []
-
 metricVariables.push
   id: uniqueId()
   name: 'method'
@@ -175,26 +153,6 @@ metricVariables.push
   type: 'string'
   read: (metric) -> metric.model.model_algorithm
   format: identity
-  domain: [ 0, 1 ]
-  extent: []
-
-metricVariables.push
-  id: uniqueId()
-  name: 'trainingTime'
-  caption: 'Training Time (ms)'
-  type: 'integer'
-  read: (metric) -> metric.model.training_duration_in_ms
-  format: formatInteger
-  domain: [ 0, 1 ]
-  extent: []
-
-metricVariables.push
-  id: uniqueId()
-  name: 'scoringTime'
-  caption: 'Scoring Time (ms)'
-  type: 'integer'
-  read: (metric) -> metric.data.duration_in_ms
-  format: formatInteger
   domain: [ 0, 1 ]
   extent: []
 
@@ -218,6 +176,27 @@ metricVariables.push
   domain: [ 0, 1 ]
   extent: []
 
+metricVariables.push
+  id: uniqueId()
+  name: 'trainingTime'
+  caption: 'Training Time (ms)'
+  type: 'integer'
+  read: (metric) -> metric.model.training_duration_in_ms
+  format: formatInteger
+  domain: [ 0, 1 ]
+  extent: []
+
+metricVariables.push
+  id: uniqueId()
+  name: 'scoringTime'
+  caption: 'Scoring Time (ms)'
+  type: 'integer'
+  read: (metric) -> metric.data.duration_in_ms
+  format: formatInteger
+  domain: [ 0, 1 ]
+  extent: []
+
+
 forEach metricCriteriaVariable.domain, (metricCriterion, metricCriterionIndex) ->
   forEach metricTypeVariable.domain, (metricType) -> 
     metricVariables.push
@@ -233,6 +212,28 @@ forEach metricCriteriaVariable.domain, (metricCriterion, metricCriterionIndex) -
         metricType: metricType
         metricCriterion: metricCriterion
         metricCriterionIndex: metricCriterionIndex
+
+metricVariables.push scoringVariable
+
+metricVariables.push
+  id: uniqueId()
+  name: 'frameKey'
+  caption: 'Frame'
+  type: 'string'
+  read: (metric) -> metric.data.frame.key
+  format: identity
+  domain: [ 0, 1 ]
+  extent: []
+
+metricVariables.push
+  id: uniqueId()
+  name: 'modelKey'
+  caption: 'Model'
+  type: 'string'
+  read: (metric) -> metric.model.key
+  format: identity
+  domain: [ 0, 1 ]
+  extent: []
 
 metricVariablesIndex = indexBy metricVariables, (variable) -> variable.name
 
@@ -890,13 +891,11 @@ Steam.ScoringSheetView = (_, _scorings) ->
     [ columnHeader, scoringLink, swatch, checkbox, selectAllCheckbox, filterButton, filterOutButton] = geyser.generate [ "a.y-header data-variable-id='$id'", "a.y-scoring-link data-scoring-id='$id'", ".y-legend-swatch style='background-color:$color'", "input.y-select-one-checkbox type='checkbox' data-scoring-id='$id'", "input.y-select-all-checkbox type='checkbox'", 'button.btn.y-filter-button', "button.btn.y-filter-out-button style='margin-left:7px'"]
 
     # Sort
-    _filteredMetrics.sort (metricA, metricB) ->
-      a = _sortByVariable.read metricA
-      b = _sortByVariable.read metricB
-      if _sortAscending then a > b else b > a
+    _filteredMetrics = sortBy _filteredMetrics, (metric) -> _sortByVariable.read metric
+    _filteredMetrics.reverse() unless _sortAscending
 
     columnVariables = clone _filteredMetricVariables
-    columnVariables.splice.apply columnVariables, flatten [ 8, 0, _filteredInputVariables ]
+    columnVariables.splice.apply columnVariables, flatten [ columnVariables.length - 3, 0, _filteredInputVariables ]
     
     headers = map columnVariables, (variable) ->
       tag = if variable isnt _sortByVariable then th else if _sortAscending then thAsc else thDesc
@@ -908,7 +907,7 @@ Steam.ScoringSheetView = (_, _scorings) ->
 
     rows = map _filteredMetrics, (metric) ->
       cells = map columnVariables, (variable) ->
-        if variable.name is 'scoring'
+        if variable.name is 'method' or variable.name is 'scoring'
           td scoringLink (variable.read metric), $id: metric.id
         else
           td variable.format variable.read metric
