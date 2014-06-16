@@ -617,6 +617,8 @@ def runScore(node=None, dataKey=None, modelKey=None, predictKey='Predict.hex',
         destination_key=predictKey,
         timeoutSecs=timeoutSecs)
 
+    # inspect = runInspect(key=dataKey)
+    # print dataKey, h2o.dump_json(inspect)
 
     # just get a predict and AUC on the same data. has to be binomial result
     if doAUC:
