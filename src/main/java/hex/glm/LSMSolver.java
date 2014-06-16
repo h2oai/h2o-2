@@ -74,7 +74,12 @@ public abstract class LSMSolver extends Iced{
 
 
   protected static double shrinkage(double x, double kappa) {
-    return Math.max(0, x - kappa) - Math.max(0, -x - kappa);
+    if(x < 0) x *= -1;
+    if(x < kappa) x = 0;
+    return x - kappa;
+//    double a = x - kappa;
+//    double b = -x - kappa;
+//    return Math.max(0, x - kappa) - Math.max(0, -x - kappa);
   }
 
   /**
@@ -166,6 +171,8 @@ public abstract class LSMSolver extends Iced{
     final public double _gradientEps;
     private static final double GLM1_RHO = 1.0e-3;
 
+    public double gerr;
+
     public boolean normalize() {return _lambda != 0;}
 
     public double _addedL2;
@@ -220,7 +227,6 @@ public abstract class LSMSolver extends Iced{
       return err;
     }
 
-    public double grad_err = Double.POSITIVE_INFINITY;
 
     private double getGrad(int i, Gram gram, double [] beta, double [] xy){
       double [] g = grad(gram,beta,xy);
@@ -295,7 +301,7 @@ public abstract class LSMSolver extends Iced{
         xyPrime[N-1] = xy[N-1];
         // updated x
         chol.solve(xyPrime);
-        // compute u and z update
+        // compute u and z updateADMM
         for( int j = 0; j < N-1; ++j ) {
           double x_hat = xyPrime[j];
           x_hat = x_hat * _orlx + (1 - _orlx) * z[j];
@@ -308,6 +314,7 @@ public abstract class LSMSolver extends Iced{
           gerr = getGrad(i,gram,z,xy);
           if(gerr < _gradientEps){
             _converged = true;
+            this.gerr = gerr;
             System.arraycopy(z,0,res,0,z.length);
             break;
           }
@@ -317,7 +324,8 @@ public abstract class LSMSolver extends Iced{
             if(_orlx < 1.8 && gerr > 5e-4) {
               _orlx = 1.8; // try if over-relaxation helps...
             } else {
-              _converged = gerr < 1e-4;
+              _converged = gerr < 1e-2;
+              this.gerr = gerr;
               break;
             }
           } else {
@@ -330,9 +338,9 @@ public abstract class LSMSolver extends Iced{
       gram.addDiag(-gram._diagAdded + d);
       assert gram._diagAdded == d;
       long solveTime = System.currentTimeMillis()-t;
-      if(Double.isInfinite(gradientErr)) gradientErr = getGrad(i,gram,res,xy);
+      if(Double.isInfinite(this.gerr)) this.gerr = getGrad(i,gram,res,xy);
       Log.info("ADMM finished in " + i + " iterations and (" + decompTIme + " + " + solveTime+ ")ms, max |subgradient| = " + gradientErr);
-      return _converged;
+      return _converged = (this.gerr < 1e-2);
     }
     @Override
     public String name() {return "ADMM";}

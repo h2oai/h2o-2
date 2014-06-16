@@ -49,9 +49,7 @@ public class GLMModelUpdate extends Request2 {
           threshold = glm_model.submodels[id].validation.best_threshold;
           break;
         }
-      glm_model.best_lambda_idx = id;
-      if(!Double.isNaN(threshold))
-        glm_model.threshold = threshold;
+      glm_model.setSubmodelIdx(id);
       glm_model.update(null);
       glm_model.unlock(null);
     }

@@ -323,7 +323,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
       for(int i = 0; i < _xmodels.length; ++i){
         _xvals[i].finalize_AIC_AUC();
         _xvals[i].nobs = _nobs-_xvals[i].nobs;
-        _xmodels[i].setAndTestValidation(_xvals[i]);
+        _xmodels[i].setValidation(_xvals[i]);
         DKV.put(_xmodels[i]._key, _xmodels[i],fs);
       }
       _res = new GLMXValidation(_model, _xmodels,_lambda,_nobs);
@@ -360,12 +360,16 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   }
   public int rank(double lambda) {return submodelForLambda(lambda).rank;}
 
+  public void setValidation(GLMValidation val ){
+    submodels[submodels.length-1].validation = val;
+  }
   public boolean setAndTestValidation(GLMValidation val ){
     submodels[submodels.length-1].validation = val;
-    if(best_lambda_idx == submodels.length-1 || submodels.length == 1){
-      setSubmodelIdx(submodels.length-1);
+    if(submodels.length == 1){
+      setSubmodelIdx(0);
       return true;
     }
+    assert best_lambda_idx != submodels.length-1;
     double diff = (submodels[best_lambda_idx].validation.residual_deviance - val.residual_deviance)/val.null_deviance;
     if(diff >= 0.01) {
       setSubmodelIdx(submodels.length - 1);
