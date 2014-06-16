@@ -314,9 +314,10 @@ public class MRUtils {
    * @param fr Input frame
    * @return Vec containing L2 values for each row, is in K-V store
    */
-  public static Vec getL2(final Frame fr) {
+  public static Vec getL2(final Frame fr, final double[] scale) {
     // add workspace vec at end
     final int idx = fr.numCols();
+    assert(scale.length == idx) : "Mismatch for number of columns";
     fr.add("L2", fr.anyVec().makeZero());
     Vec res;
     try {
@@ -326,7 +327,7 @@ public class MRUtils {
           for (int r = 0; r < cs[0]._len; r++) {
             double norm2 = 0;
             for (int i = 0; i < idx; i++)
-              norm2 += Math.pow(cs[i].at0(r), 2);
+              norm2 += Math.pow(cs[i].at0(r) * scale[i], 2);
             cs[idx].set0(r, Math.sqrt(norm2));
           }
         }
@@ -334,6 +335,7 @@ public class MRUtils {
     } finally {
       res = fr.remove(idx);
     }
+    res.rollupStats();
     return res;
   }
 }
