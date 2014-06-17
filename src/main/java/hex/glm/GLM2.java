@@ -624,40 +624,36 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       final double [] newBeta = MemoryManager.malloc8d(glmt._xy.length);
       ADMMSolver slvr = new ADMMSolver(lambda[_lambdaIdx],alpha[0], ADMM_GRAD_EPS, _addedL2);
       slvr._rho = lambda[_lambdaIdx]*alpha[0]*_rho_mul;
-      int attempts = 8;
       boolean solved = slvr.solve(glmt._gram,glmt._xy,glmt._yy,newBeta) || slvr.gerr < 1.2*_gradientErr;
-      if(solved) _rho_mul = Math.max(1,_rho_mul*0.9);
-      double bestErr = slvr.gerr;
-      double best_rho_mul = _rho_mul;
-      double rho_mul = _rho_mul*5;
-      double [] bestSolution = solved?null:newBeta.clone();
-      while(!solved && --attempts >= 0) {
-        slvr._rho = lambda[_lambdaIdx]*alpha[0]*rho_mul;
-        solved = slvr.solve(glmt._gram,glmt._xy,glmt._yy,newBeta);
-        if(slvr.gerr < bestErr){
-          System.arraycopy(newBeta,0,bestSolution,0,bestSolution.length);
-          bestErr = slvr.gerr;
-          best_rho_mul = rho_mul;
+      if(!solved) {
+        double bestErr = slvr.gerr;
+        double best_rho_mul = _rho_mul;
+        double rho_mul = _rho_mul * 2;
+        double[] bestSolution = solved ? null : newBeta.clone();
+        for (int i = 0; i < 8; ++i) {
+          slvr._rho = lambda[_lambdaIdx] * alpha[0] * rho_mul;
+          slvr.solve(glmt._gram, glmt._xy, glmt._yy, newBeta);
+          if (slvr.gerr < bestErr) {
+            System.arraycopy(newBeta, 0, bestSolution, 0, bestSolution.length);
+            bestErr = slvr.gerr;
+            best_rho_mul = rho_mul;
+          }
+          rho_mul *= 2;
         }
-        rho_mul *= 5;
-      }
-      attempts = 8;
-      rho_mul = _rho_mul *.2;
-      slvr._rho = lambda[_lambdaIdx]*alpha[0]*rho_mul;
-      while(!solved && --attempts >= 0) {
-        solved = slvr.solve(glmt._gram,glmt._xy,glmt._yy,newBeta);
-        if(slvr.gerr < bestErr){
-          System.arraycopy(newBeta,0,bestSolution,0,bestSolution.length);
-          bestErr = slvr.gerr;
-          best_rho_mul = rho_mul;
+        rho_mul = _rho_mul * 0.5;
+        for (int i = 0; i < 8; ++i) {
+          slvr._rho = lambda[_lambdaIdx] * alpha[0] * rho_mul;
+          slvr.solve(glmt._gram, glmt._xy, glmt._yy, newBeta);
+          if (slvr.gerr < bestErr) {
+            System.arraycopy(newBeta, 0, bestSolution, 0, bestSolution.length);
+            bestErr = slvr.gerr;
+            best_rho_mul = rho_mul;
+          }
+          rho_mul *= .5;
         }
-        rho_mul *= .2;
-        slvr._rho = lambda[_lambdaIdx]*alpha[0]*rho_mul;
-      }
-      _rho_mul = best_rho_mul;
-      if(!solved){
         System.arraycopy(bestSolution,0,newBeta,0,bestSolution.length);
         _gradientErr = bestErr;
+        _rho_mul = best_rho_mul;
       }
       _addedL2 = slvr._addedL2;
       if(Utils.hasNaNsOrInfs(newBeta)){

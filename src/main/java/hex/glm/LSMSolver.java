@@ -170,7 +170,7 @@ public abstract class LSMSolver extends Iced{
     final public double _gradientEps;
     private static final double GLM1_RHO = 1.0e-3;
 
-    public double gerr;
+    public double gerr = Double.POSITIVE_INFINITY;
 
     public boolean normalize() {return _lambda != 0;}
 
@@ -278,8 +278,10 @@ public abstract class LSMSolver extends Iced{
         System.arraycopy(xy, 0, res, 0, xy.length);
         chol.solve(res);
         gram.addDiag(-gram._diagAdded + d);
+        gerr = 0;
         return true;
       }
+      gerr = Double.POSITIVE_INFINITY;
       long t = System.currentTimeMillis();
       final double ABSTOL = Math.sqrt(N) * 1e-4;
       final double RELTOL = 1e-2;
