@@ -113,7 +113,7 @@ class Basic(unittest.TestCase):
             print "RF completed in", elapsed, "seconds.", \
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             # h2o_rf.simpleCheckRFView(None, rfView, **params)
-            modelKey = rfView['drf_model']['_key']
+            modelKey = rfView['speedrf_model']['_key']
 
             # RFView (score on test)****************************************
             start = time.time()

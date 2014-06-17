@@ -4,6 +4,7 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2o_util, h2o_gbm
 
 
+SPEEDRF = True
 MULTINOMIAL = 3
 DO_WITH_INT = False
 # use randChars for the random chars to use
@@ -88,6 +89,8 @@ class Basic(unittest.TestCase):
 
         for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
             enumList = create_enum_list(listSize=10)
+            # reverse the list
+            enumList.reverse()
 
             # using the comma is nice to ensure no craziness
             colSepHexString = '2c' # comma
@@ -131,22 +134,40 @@ class Basic(unittest.TestCase):
             y = colCount
             modelKey = 'enums'
             # limit depth and number of trees to accentuate the issue with categorical split decisions
-            kwargs = {
-                'destination_key': modelKey,
-                'response': y,
-                'classification': 1,
-                'ntrees': 1,
-                'max_depth': 100,
-                'validation': scoreDataKey,
-                'seed': 123456789,
-            }
+
+            if SPEEDRF:
+                kwargs = {
+                    'destination_key': modelKey,
+                    'response': y,
+                    'num_trees': 1,
+                    'max_depth': 100,
+                    'oobee': 1,
+                    'seed': 123456789,
+                }
+            else:
+                kwargs = {
+                    'destination_key': modelKey,
+                    'response': y,
+                    'classification': 1,
+                    'ntrees': 1,
+                    'max_depth': 100,
+                    'validation': scoreDataKey,
+                    'seed': 123456789,
+                }
 
             for r in range(4):
                 start = time.time()
-                rfResult = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
+                
+                if SPEEDRF:
+                    rfResult = h2o_cmd.runSpeeDRF(parseResult=parseResult, 
+                        timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
+                else:
+                    rfResult = h2o_cmd.runRF(parseResult=parseResult, 
+                        timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
+                
                 print "rf end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'
+                # print h2o.dump_json(rfResult)
                 (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfResult)
-                predictKey = 'Predict.hex'
                 h2o_cmd.runScore(dataKey=scoreDataKey, modelKey=modelKey, vactual=y, vpredict=1, doAUC=not MULTINOMIAL) # , expectedAuc=0.5)
                 
                 errorHistory.append(classification_error)
