@@ -14,7 +14,11 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         if (localhost):
             h2o.build_cloud(1, use_hdfs=True, 
-            hdfs_name_node='192.168.1.176', hdfs_version='cdh3',
+            # fail
+            # works with these two, and no hdfs_name_node
+            # hdfs_name_node='10.78.14.235:9000', hdfs_version='0.20.2', 
+            aws_credentials='/home/kevin/.ec2/AwsCredentials.properties',
+            hdfs_config="/home/kevin/.ec2/core-site.xml",
             java_heap_GB=20, base_port=54321,
             java_extra_args='-XX:+PrintGCDetails')
             

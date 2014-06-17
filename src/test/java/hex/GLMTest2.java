@@ -20,7 +20,7 @@ import java.util.concurrent.ExecutionException;
 
 public class GLMTest2  extends TestUtil {
 
-  final private void testHTML(GLMModel m) {
+  final static public void testHTML(GLMModel m) {
     StringBuilder sb = new StringBuilder();
     new GLMModelView(m).toHTML(sb);
     assert(sb.length() > 0);

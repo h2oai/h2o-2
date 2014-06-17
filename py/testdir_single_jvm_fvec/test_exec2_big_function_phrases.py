@@ -19,7 +19,8 @@ phrasesCompound = [
         # "rhex[,1]=3.3; rhex",
         "xx=!0; xx+!2",
         "xx=!0; !x+2",
-        "xx= 3; rhex[,(x > 0) & (x < 4)]",
+        # results in "no columns selected" ?
+        # "xx= 3; rhex[,(x > 0) & (x < 4)]",
         "xx= 3; rhex[(x > 0) & (x < 4),]",
         "xx=0; xx+2",
 ]

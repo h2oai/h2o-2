@@ -102,6 +102,24 @@ h2o.assign <- function(data, key) {
   return(data)
 }
 
+h2o.createFrame <- function(object, key, rows, cols, seed, randomize, value, real_range, categorical_fraction, factors, integer_fraction, integer_range, missing_fraction) {
+  if(!is.numeric(rows)) stop("rows must be a numeric value")
+  if(!is.numeric(cols)) stop("rows must be a numeric value")
+  if(!is.numeric(seed)) stop("rows must be a numeric value")
+  if(!is.logical(randomize)) stop("randomize must be a boolean value")
+  if(!is.numeric(value)) stop("value must be a numeric value")
+  if(!is.numeric(real_range)) stop("real_range must be a numeric value")
+  if(!is.numeric(categorical_fraction)) stop("categorical_fraction must be a numeric value")
+  if(!is.numeric(factors)) stop("factors must be a numeric value")
+  if(!is.numeric(integer_fraction)) stop("integer_fraction must be a numeric value")
+  if(!is.numeric(integer_range)) stop("integer_range must be a numeric value")
+  if(!is.numeric(missing_fraction)) stop("missing_fraction must be a numeric value")
+  
+  res = .h2o.__remoteSend(object, .h2o.__PAGE_CreateFrame, key = key, rows = rows, cols = cols, seed = seed, randomize = as.numeric(randomize), value = value, real_range = real_range,
+                          categorical_fraction = categorical_fraction, factors = factors, integer_fraction = integer_fraction, integer_range = integer_range, missing_fraction = missing_fraction)
+  new("H2OParsedData", h2o=object, key=key)
+}
+
 # ----------------------------------- File Import Operations --------------------------------- #
 # WARNING: You must give the FULL file/folder path name! Relative paths are taken with respect to the H2O server directory
 # ----------------------------------- Import Folder --------------------------------- #

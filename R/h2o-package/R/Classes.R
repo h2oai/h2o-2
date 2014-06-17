@@ -9,16 +9,15 @@ setClass("H2OModel", representation(key="character", data="H2OParsedData", model
 # setClass("H2OModel", representation(key="character", data="H2OParsedData", model="list", env="environment", "VIRTUAL"))
 setClass("H2OGrid", representation(key="character", data="H2OParsedData", model="list", sumtable="list", "VIRTUAL"))
 setClass("H2OPerfModel", representation(cutoffs="numeric", measure="numeric", perf="character", model="list", roc="data.frame"))
-setClassUnion("H2OParsedDataOrNULL", c("H2OParsedData", "NULL"))
 
 setClass("H2OGLMModel", contains="H2OModel", representation(xval="list"))
 # setClass("H2OGLMGrid", contains="H2OGrid")
 setClass("H2OKMeansModel", contains="H2OModel")
-setClass("H2ODeepLearningModel", contains="H2OModel", representation(valid="H2OParsedData"))
-setClass("H2ODRFModel", contains="H2OModel", representation(valid="H2OParsedDataOrNULL", xval="list"))
+setClass("H2ODeepLearningModel", contains="H2OModel", representation(valid="H2OParsedData", xval="list"))
+setClass("H2ODRFModel", contains="H2OModel", representation(valid="H2OParsedData", xval="list"))
 setClass("H2ONBModel", contains="H2OModel")
 setClass("H2OPCAModel", contains="H2OModel")
-setClass("H2OGBMModel", contains="H2OModel", representation(valid="H2OParsedDataOrNULL", xval="list"))
+setClass("H2OGBMModel", contains="H2OModel", representation(valid="H2OParsedData", xval="list"))
 setClass("H2OSpeeDRFModel", contains="H2OModel", representation(valid="H2OParsedData", xval="list"))
 
 setClass("H2OGLMGrid", contains="H2OGrid")
@@ -163,7 +162,12 @@ setMethod("show", "H2ODeepLearningModel", function(object) {
   cat("\n\nValidation classification error:", model$valid_class_error)
   cat("\nValidation square error:", model$valid_sqr_error)
   if(!is.null(model$confusion)) {
-    cat("\n\nConfusion matrix:\n"); cat("Reported on", object@valid@key, "\n"); print(model$confusion)
+    cat("\n\nConfusion matrix:\n")
+    if(is.na(object@valid@key))
+      cat("Reported on", paste(model$params$nfolds, "-fold cross-validated data", sep = ""), "\n")
+    else
+      cat("Reported on", object@valid@key, "\n")
+    print(model$confusion)
   }
 })
 
@@ -177,10 +181,13 @@ setMethod("show", "H2ODRFModel", function(object) {
   cat("\nTree statistics:\n"); print(model$forest)
   
   if(model$params$classification) {
-    if(!is.null(object@valid)) {
-      cat("\nConfusion matrix:\n"); cat("Reported on", object@valid@key, "\n")
-      print(model$confusion)
-    }
+    cat("\nConfusion matrix:\n")
+    if(is.na(object@valid@key))
+      cat("Reported on", paste(object@model$params$nfolds, "-fold cross-validated data", sep = ""), "\n")
+    else
+      cat("Reported on", object@valid@key, "\n")
+    print(model$confusion)
+    
     if(!is.null(model$auc) && !is.null(model$gini))
       cat("\nAUC:", model$auc, "\nGini:", model$gini, "\n")
   }
@@ -202,14 +209,20 @@ setMethod("show", "H2OSpeeDRFModel", function(object) {
   cat("\n\nClassification:", model$params$classification)
   cat("\nNumber of trees:", model$params$ntree)
   
-  if(!is.null(object@valid)) {
-    if(FALSE){ #model$params$oobee) {
-      cat("\nConfusion matrix:\n"); cat("Reported on oobee from", object@valid@key, "\n")
-    } else {
-      cat("\nConfusion matrix:\n"); cat("Reported on", object@valid@key,"\n")
-    }
-    print(model$confusion)
+  if(FALSE){ #model$params$oobee) {
+    cat("\nConfusion matrix:\n"); cat("Reported on oobee from", object@valid@key, "\n")
+    if(is.na(object@valid@key))
+      cat("Reported on oobee from", paste(object@model$params$nfolds, "-fold cross-validated data", sep = ""), "\n")
+    else
+      cat("Reported on oobee from", object@valid@key, "\n")
+  } else {
+    cat("\nConfusion matrix:\n");
+    if(is.na(object@valid@key))
+      cat("Reported on", paste(object@model$params$nfolds, "-fold cross-validated data", sep = ""), "\n")
+    else
+      cat("Reported on", object@valid@key, "\n")
   }
+  print(model$confusion)
  
   if(!is.null(model$varimp)) {
     cat("\nVariable importance:\n"); print(model$varimp)
@@ -248,10 +261,12 @@ setMethod("show", "H2OGBMModel", function(object) {
 
   model = object@model
   if(model$params$distribution %in% c("multinomial", "bernoulli")) {
-    if(!is.null(object@valid)) {
-      cat("\nConfusion matrix:\nReported on", object@valid@key, "\n");
-      print(model$confusion)
-    }
+    cat("\nConfusion matrix:\n")
+    if(is.na(object@valid@key))
+      cat("Reported on", paste(object@model$params$nfolds, "-fold cross-validated data", sep = ""), "\n")
+    else
+      cat("Reported on", object@valid@key, "\n")
+    print(model$confusion)
     
     if(!is.null(model$auc) && !is.null(model$gini))
       cat("\nAUC:", model$auc, "\nGini:", model$gini, "\n")

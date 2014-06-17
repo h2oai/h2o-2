@@ -106,7 +106,6 @@ class Basic(unittest.TestCase):
                 else:
                     execExpr="A.hex=%s" % (trainKey)
                     h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
-
                     execExpr="A.hex[,%s]=(A.hex[,%s]==%s)" % (y+1, y+1, c)
                     h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
 
@@ -148,7 +147,6 @@ class Basic(unittest.TestCase):
 
                 print "\nTrain\n==========\n"
                 print h2o_gbm.pp_cm(cm)
-
 
                 # Score *******************************
                 # this messes up if you use case_mode/case_vale above

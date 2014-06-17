@@ -256,7 +256,15 @@ def import_only(node=None, schema='local', bucket=None, path=None,
                 print "aws_credentials: %s" % n.aws_credentials
                 # raise Exception("Something was missing for s3 on the java -jar cmd line when the cloud was built")
                 print "ERROR: Something was missing for s3 on the java -jar cmd line when the cloud was built"
-            importResult = node.import_s3(bucket, timeoutSecs=timeoutSecs)
+
+            # FIX. using the import_hdfs method here but since it's beta_features it's the common import2?
+            if h2o.beta_features:
+                if importParentDir:
+                    importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
+                else:
+                    importResult = node.import_hdfs(folderURI + "/" + pattern, timeoutSecs=timeoutSecs)
+            else:
+                importResult = node.import_s3(bucket, timeoutSecs=timeoutSecs)
 
         elif schema=='s3n' or node.redirect_import_folder_to_s3n_path:
             if not (n.use_hdfs and ((n.hdfs_version and n.hdfs_name_node) or n.hdfs_config)):
@@ -443,6 +451,7 @@ def delete_keys(node=None, pattern=None, timeoutSecs=120):
 
 # if pattern is used, don't use the heavy h2o method
 def delete_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=120):
+    time.sleep(5)
     # TEMP: change this to remove_all_keys which ignores locking and removes keys?
     # getting problems when tests fail in multi-test-on-one-h2o-cluster runner*sh tests
     if not node: node = h2o.nodes[0]

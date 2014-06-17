@@ -6,6 +6,7 @@ import hex.GridSearch;
 import water.api.DocGen;
 import water.api.Request;
 import water.api.RequestArguments;
+import water.api.RequestBuilders.Response;
 import water.api.RequestServer.API_VERSION;
 import water.fvec.Frame;
 import water.util.Log;
@@ -371,6 +372,10 @@ public abstract class Request2 extends Request {
       throw new RuntimeException(e);
     }
     return request;
+  }
+
+  public Response servePublic() {
+    return serve();
   }
 
   // Expand grid search related argument sets

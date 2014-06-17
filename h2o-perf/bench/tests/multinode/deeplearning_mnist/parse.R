@@ -1,20 +1,16 @@
 source("../../../R/h2oPerf/prologue.R")
 
-data_source <<- "smalldata"
+data_source <<- "home-0xdiag-datasets"
 
-#trainData   <<-  "/Users/spencer/master/h2o/smalldata/mnist/train.csv.gz"
-#trainData    <<- "/home/0xdiag/datasets/mnist/mnist_training.csv.gz"
-trainData <<- "/home/0xdiag/datasets/mnist/train.csv.gz"
-response <<- "C785"
+trainData    <<- "/home/0xdiag/datasets/mnist/mnist_training.csv.gz"
+response <<- "C1"
 
-num_train_rows  <<- 50690
+num_train_rows  <<- 49749
 num_explan_cols <<- 784
 
 upload.FV("parsed.hex", trainData)
 
-#testData    <<- "/Users/spencer/master/h2o/smalldata/mnist/test.csv.gz"
-#testData     <<- "/home/0xdiag/datasets/mnist/mnist_testing.csv.gz"
-testData     <<- "/home/0xdiag/datasets/mnist/test.csv.gz"
+testData     <<- "/home/0xdiag/datasets/mnist/mnist_testing.csv.gz"
 upload.FV("test.hex", testData)
 
 source("../../../R/h2oPerf/epilogue.R")

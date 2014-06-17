@@ -45,6 +45,8 @@ function doQuery(phpQueryPage) {
     });
 }
 
+//function showPerfGraphs(test_name)
+
 
 $('#accordion').on('show.bs.collapse', function () {
     $('#accordion .in').collapse('hide');

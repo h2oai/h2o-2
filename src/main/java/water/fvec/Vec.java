@@ -3,6 +3,7 @@ package water.fvec;
 import jsr166y.CountedCompleter;
 import water.*;
 import water.nbhm.NonBlockingHashMapLong;
+import water.util.Log;
 import water.util.Utils;
 
 import java.util.Arrays;
@@ -65,13 +66,17 @@ public class Vec extends Iced {
   /** RollupStats: min/max/mean of this Vec lazily computed.  */
   private double _min, _max, _mean, _sigma;
   long _size;
-  boolean _isInt;
+  boolean _isInt;               // All ints
+  boolean _isUUID;              // All UUIDs (or zero or missing)
   /** The count of missing elements.... or -2 if we have active writers and no
    *  rollup info can be computed (because the vector is being rapidly
    *  modified!), or -1 if rollups have not been computed since the last
    *  modification.   */
   volatile long _naCnt=-1;
 
+  private long _last_write_timestamp = System.currentTimeMillis();
+  private long _checksum_timestamp = -1;
+  private long _checksum = 0;
 
   /** Maximal size of enum domain */
   public static final int MAX_ENUM_SIZE = 10000;
@@ -79,24 +84,30 @@ public class Vec extends Iced {
   /** Main default constructor; requires the caller understand Chunk layout
    *  already, along with count of missing elements.  */
   public Vec( Key key, long espc[]) { this(key, espc, null); }
-  public Vec( Key key, long espc[], String[] domain) {
+  public Vec( Key key, long espc[], String[] domain) { this(key,espc,domain,false,(byte)-1); }
+  public Vec( Key key, long espc[], String[] domain, boolean hasUUID, byte time) {
     assert key._kb[0]==Key.VEC;
     _key = key;
     _espc = espc;
-    _time = -1;                 // not-a-time
+    _time = time;               // is-a-time, or not (and what flavor used to parse time)
+    _isUUID = hasUUID;          // all-or-nothing UUIDs
     _domain = domain;
   }
 
   protected Vec( Key key, Vec v ) { this(key, v._espc); assert group()==v.group(); }
 
-  public Vec [] makeZeros(int n){return makeZeros(n,null);}
-  public Vec [] makeZeros(int n, String [][] domain){ return makeCons(n, 0, domain);}
-  public Vec [] makeCons(int n, final long l, String [][] domain){
+  public Vec [] makeZeros(int n){return makeZeros(n,null,null,null);}
+  public Vec [] makeZeros(int n, String [][] domain, boolean[] uuids, byte[] times){ return makeCons(n, 0, domain, uuids, times);}
+  public Vec [] makeCons(int n, final long l, String [][] domain, boolean[] uuids, byte[] times){
     if( _espc == null ) throw H2O.unimpl(); // need to make espc for e.g. NFSFileVecs!
     final int nchunks = nChunks();
     Key [] keys = group().addVecs(n);
     final Vec [] vs = new Vec[keys.length];
-    for(int i = 0; i < vs.length; ++i) vs[i] = new Vec(keys[i],_espc,domain == null?null:domain[i]);
+    for(int i = 0; i < vs.length; ++i) 
+      vs[i] = new Vec(keys[i],_espc,
+                      domain == null ? null    : domain[i],
+                      uuids  == null ? false   : uuids [i],
+                      times  == null ? (byte)-1: times [i]);
     new DRemoteTask(){
       @Override public void lcompute(){
         addToPendingCount(vs.length);
@@ -142,8 +153,7 @@ public class Vec extends Iced {
     for (int i = 0; i<=chunks; ++i)
       espc[i] = i * rows / chunks;
     Vec v = new Vec(Vec.newKey(), espc);
-    Vec[] vecs = v.makeCons(cols, val, domain);
-    return vecs;
+    return v.makeCons(cols, val, domain,null,null);
   }
 
    /** Make a new vector with the same size and data layout as the old one, and
@@ -382,15 +392,31 @@ public class Vec extends Iced {
   /** Size of compressed vector data. */
   public long byteSize(){return rollupStats()._size; }
 
-  public byte[] hash() {
-    final Vec rst = rollupStats();
-    final int hi = new Double(rst._mean).hashCode();
-    final int lo = new Double(rst._sigma).hashCode();
-    return new byte[]{(byte)(hi >> 3), (byte)(hi >> 2), (byte)(hi >> 1), (byte)(hi >> 0), (byte)(lo >> 3),(byte)(lo >> 2),(byte)(lo >> 1), (byte)(lo >> 0)};
+  public long checksum() {
+    final long now = _last_write_timestamp;  // TODO: someone can be writing while we're checksuming. . .
+    if (-1 != now && now == _checksum_timestamp) {
+      return _checksum;
+    }
+    final long checksum = new ChecksummerTask().doAll(this).getChecksum();
+
+    new TAtomic<Vec>() {
+      @Override public Vec atomic(Vec v) {
+          if (v != null) {
+              v._checksum = checksum;
+              v._checksum_timestamp = now;
+          } return v;
+      }
+    }.invoke(_key);
+
+    this._checksum = checksum;
+    this._checksum_timestamp = now;
+
+    return checksum;
   }
   /** Is the column a factor/categorical/enum?  Note: all "isEnum()" columns
    *  are are also "isInt()" but not vice-versa. */
   public final boolean isEnum(){return _domain != null;}
+  public final boolean isUUID(){return _isUUID;}
   /** Is the column constant.
    * <p>Returns true if the column contains only constant values and it is not full of NAs.</p> */
   public final boolean isConst() { return min() == max(); }
@@ -430,7 +456,8 @@ public class Vec extends Iced {
       throw new IllegalArgumentException("Cannot ask for roll-up stats while the vector is being actively written.");
     if( vthis._naCnt>= 0 )      // KV store has a better answer
       return vthis == this ? this : setRollupStats(vthis);
-                                // KV store reports we need to recompute
+    
+    // KV store reports we need to recompute
     RollupStats rs = new RollupStats().dfork(this);
     if(fs != null) fs.add(rs); else setRollupStats(rs.getResult());
     return this;
@@ -455,10 +482,18 @@ public class Vec extends Iced {
 
     @Override public void map( Chunk c ) {
       _size = c.byteSize();
+      // UUID columns do not compute min/max/mean/sigma
+      if( c._vec._isUUID ) {
+        _min = _max = _mean = _sigma = Double.NaN;
+        for( int i=0; i<c._len; i++ ) {
+          if( c.isNA0(i) ) _naCnt++;
+          else _rows++;
+        }
+        return;
+      }
+      // All other columns have useful rollups
       for( int i=0; i<c._len; i++ ) {
         double d = c.at0(i);
-        long v = Double.doubleToRawLongBits(d);
-
         if( Double.isNaN(d) ) _naCnt++;
         else {
           if( d < _min ) _min = d;
@@ -492,7 +527,31 @@ public class Vec extends Iced {
     }
     // Just toooo common to report always.  Drowning in multi-megabyte log file writes.
     @Override public boolean logVerbose() { return false; }
-  }
+  } // class RollupStats
+
+  /** A private class to compute the rollup stats */
+  private static class ChecksummerTask extends MRTask2<ChecksummerTask> {
+    public long checksum = 0;
+    public long getChecksum() { return checksum; }
+
+    @Override public void map( Chunk c ) {
+      long _start = c._start;
+
+      for( int i=0; i<c._len; i++ ) {
+        long l = 81985529216486895L; // 0x0123456789ABCDEF
+        if (! c.isNA0(i))
+          l = c.at80(i);
+        long global_row = _start + i;
+
+        checksum ^= (17 * global_row);
+        checksum ^= (23 * l);
+      }
+    } // map()
+
+    @Override public void reduce( ChecksummerTask that ) {
+      this.checksum ^= that.checksum;
+    }
+  } // class ChecksummerTask
 
   /** Writing into this Vector from *some* chunk.  Immediately clear all caches
    *  (_min, _max, _mean, etc).  Can be called repeatedly from one or all
@@ -516,7 +575,15 @@ public class Vec extends Iced {
     if( vthis._naCnt==-2 ) {
       _naCnt = vthis._naCnt=-1;
       new TAtomic<Vec>() {
-        @Override public Vec atomic(Vec v) { if( v!=null && v._naCnt==-2 ) v._naCnt=-1; return v; }
+        @Override public Vec atomic(Vec v) {
+          if( v != null ) {
+            v._last_write_timestamp = System.currentTimeMillis();
+            if (v._naCnt==-2 ) {
+                v._naCnt=-1;
+            } // _naCnt != -2
+          } // ! null
+          return v;
+        }
       }.invoke(_key);
     }
   }
@@ -649,6 +716,10 @@ public class Vec extends Iced {
   /** Fetch the missing-status the slow way. */
   public final boolean isNA(long row){ return chunkForRow(row).isNA(row); }
 
+  /** Fetch element the slow way, as a long.  Throws if the value is missing or not a UUID. */
+  public final long  at16l( long i ) { return chunkForRow(i).at16l(i); }
+  public final long  at16h( long i ) { return chunkForRow(i).at16h(i); }
+
   /** Write element the VERY slow way, as a long.  There is no way to write a
    *  missing value with this call.  Under rare circumstances this can throw:
    *  if the long does not fit in a double (value is larger magnitude than
@@ -736,7 +807,7 @@ public class Vec extends Iced {
   /** Close all chunks that are local (not just the ones that are homed)
    * This should only be called from a Writer object
    * */
-  private final void close(Futures fs) {
+  private void close(Futures fs) {
     int nc = nChunks();
     for( int i=0; i<nc; i++ ) {
       if (H2O.get(chunkKey(i)) != null) {
@@ -822,6 +893,9 @@ public class Vec extends Iced {
    *
    */
   public static class VectorGroup extends Iced {
+    public static VectorGroup newVectorGroup(){
+      return new Vec(Vec.newKey(),(long[])null).group();
+    }
     // The common shared vector group for length==1 vectors
     public static VectorGroup VG_LEN1 = new VectorGroup();
     final int _len;
@@ -902,6 +976,30 @@ public class Vec extends Iced {
     @Override public int hashCode() {
       return _key.hashCode();
     }
+  }
+
+  /**
+   * Method to change the domain of the Vec.
+   *
+   * Can only be applied to factors (Vec with non-null domain) and
+   * domain can only be set to domain of the same or greater length.
+   *
+   * Updating the domain requires updating the Vec header in the K/V and since chunks cache Vec header references,
+   * need to execute distributed task to flush (null) those references).
+   *
+   * @param newDomain
+   */
+  public void changeDomain(String [] newDomain){
+    if(_domain == null)throw new RuntimeException("Setting a domain to a non-factor Vector, call as.Factor() instead.");
+    if(newDomain == null)throw new RuntimeException("Can not set domain to null. You have to convert the vec to numbers explicitly");
+    if(newDomain.length < _domain.length) throw new RuntimeException("Setting domain to incompatible size. New domain must be at least the same length!");
+    _domain = newDomain;
+    // update the vec header in the K/V
+    DKV.put(_key,this);
+    // now flush the cached vec header references (still pointing to the old guy)
+    new MRTask2(){
+      @Override public void map(Chunk c){c._vec = null;}
+    }.doAll(this);
   }
 
   /** Collect numeric domain of given vector */
