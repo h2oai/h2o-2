@@ -469,7 +469,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * Activation functions
    */
   public enum Activation {
-    Tanh, TanhWithDropout, Rectifier, RectifierWithDropout, Maxout, MaxoutWithDropout //, TanhPrime
+    Tanh, TanhWithDropout, Rectifier, RectifierWithDropout, Maxout, MaxoutWithDropout
   }
 
   /**
