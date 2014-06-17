@@ -3,6 +3,9 @@ sys.path.extend(['.','..','py'])
 
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2o_util, h2o_gbm
 
+
+MULTINOMIAL = 3
+DO_WITH_INT = False
 # use randChars for the random chars to use
 def random_enum(randChars, maxEnumSize):
     choiceStr = randChars
@@ -10,26 +13,32 @@ def random_enum(randChars, maxEnumSize):
     return r
 
 def create_enum_list(randChars="abcd", maxEnumSize=8, listSize=10):
-    enumList = [random_enum(randChars, random.randint(2,maxEnumSize)) for i in range(listSize)]
+    if DO_WITH_INT:
+        enumList = range(listSize)
+    else:
+        enumList = [random_enum(randChars, random.randint(2,maxEnumSize)) for i in range(listSize)]
     return enumList
 
-def write_syn_dataset(csvPathname, enumList, rowCount, colCount=1, SEED='12345678', 
-        colSepChar=",", rowSepChar="\n"):
-    r1 = random.Random(SEED)
+def write_syn_dataset(csvPathname, enumList, rowCount, colCount=1,
+        colSepChar=",", rowSepChar="\n", SEED=12345678):
+
+    # always re-init with the same seed. that way the sequence of random choices from the enum list should stay the same
+    # for each call? But the enum list is randomized
+    robj = random.Random(SEED)
     dsf = open(csvPathname, "w+")
     for row in range(rowCount):
         rowData = []
         # keep a sum of all the index mappings for the enum chosen (for the features in a row)
         riIndexSum = 0
         for col in range(colCount):
-            riIndex = random.randint(0, len(enumList)-1)
+            riIndex = robj.randint(0, len(enumList)-1)
             rowData.append(enumList[riIndex])
             riIndexSum += riIndex
 
         # output column
         # make the output column match odd/even row mappings.
         # change...make it 1 if the sum of the enumList indices used is odd
-        ri = riIndexSum % 2
+        ri = riIndexSum % MULTINOMIAL
         rowData.append(ri)
         rowDataCsv = colSepChar.join(map(str,rowData)) + rowSepChar
         dsf.write(rowDataCsv)
@@ -60,15 +69,26 @@ class Basic(unittest.TestCase):
 
         n = 3000
         tryList = [
-            (n, 1, 'cD', 300), 
-            (n, 2, 'cE', 300), 
-            (n, 3, 'cF', 300), 
-            (n, 4, 'cG', 300), 
-            (n, 5, 'cH', 300), 
-            (n, 6, 'cI', 300), 
+            # (n, 1, 'cD', 300), 
+            # (n, 2, 'cE', 300), 
+            # (n, 3, 'cF', 300), 
+            # (n, 4, 'cG', 300), 
+            # (n, 5, 'cH', 300), 
+            # (n, 6, 'cI', 300), 
+            (n, 3, 'cI', 300), 
+            (n, 3, 'cI', 300), 
+            (n, 3, 'cI', 300), 
             ]
 
+        # SEED_FOR_TRAIN = random.randint(0, sys.maxint)
+        SEED_FOR_TRAIN = 1234567890
+        SEED_FOR_SCORE = 9876543210
+        errorHistory = []
+        enumHistory = []
+
         for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
+            enumList = create_enum_list(listSize=10)
+
             # using the comma is nice to ensure no craziness
             colSepHexString = '2c' # comma
             colSepChar = colSepHexString.decode('hex')
@@ -79,23 +99,22 @@ class Basic(unittest.TestCase):
             rowSepChar = rowSepHexString.decode('hex')
             print "rowSepChar:", rowSepChar
 
-            SEEDPERFILE = random.randint(0, sys.maxint)
             csvFilename = 'syn_enums_' + str(rowCount) + 'x' + str(colCount) + '.csv'
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
             csvScoreFilename = 'syn_enums_score_' + str(rowCount) + 'x' + str(colCount) + '.csv'
             csvScorePathname = SYNDATASETS_DIR + '/' + csvScoreFilename
 
-            enumList = create_enum_list(listSize=10)
             # use same enum List
             enumListForScore = enumList
 
             print "Creating random", csvPathname, "for rf model building"
-            write_syn_dataset(csvPathname, enumList, rowCount, colCount, SEEDPERFILE, 
-                colSepChar=colSepChar, rowSepChar=rowSepChar)
+            write_syn_dataset(csvPathname, enumList, rowCount, colCount, 
+                colSepChar=colSepChar, rowSepChar=rowSepChar, SEED=SEED_FOR_TRAIN)
 
             print "Creating random", csvScorePathname, "for rf scoring with prior model (using same enum list)"
-            write_syn_dataset(csvScorePathname, enumListForScore, rowCount, colCount, SEEDPERFILE, 
-                colSepChar=colSepChar, rowSepChar=rowSepChar)
+            # same enum list/mapping, but different dataset?
+            write_syn_dataset(csvScorePathname, enumListForScore, rowCount, colCount, 
+                colSepChar=colSepChar, rowSepChar=rowSepChar, SEED=SEED_FOR_SCORE)
 
             scoreDataKey = "score_" + hex_key
             parseResult = h2i.import_parse(path=csvScorePathname, schema='put', hex_key=scoreDataKey, 
@@ -117,16 +136,26 @@ class Basic(unittest.TestCase):
                 'response': y,
                 'classification': 1,
                 'ntrees': 1,
-                'max_depth': 10,
+                'max_depth': 100,
                 'validation': scoreDataKey,
+                'seed': 123456789,
             }
 
-            start = time.time()
-            rfResult = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
-            print "rf end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'
-            (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfResult)
-            predictKey = 'Predict.hex'
-            h2o_cmd.runScore(dataKey=scoreDataKey, modelKey=modelKey, vactual=y, vpredict=1) # , expectedAuc=0.5)
+            for r in range(4):
+                start = time.time()
+                rfResult = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
+                print "rf end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'
+                (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfResult)
+                predictKey = 'Predict.hex'
+                h2o_cmd.runScore(dataKey=scoreDataKey, modelKey=modelKey, vactual=y, vpredict=1, doAUC=not MULTINOMIAL) # , expectedAuc=0.5)
+                
+                errorHistory.append(classification_error)
+                enumHistory.append(enumList)
+
+            print "error from all runs on this dataset (with different enum mappings)"
+            print errorHistory
+            for e in enumHistory:
+                print e
 
 
 if __name__ == '__main__':
