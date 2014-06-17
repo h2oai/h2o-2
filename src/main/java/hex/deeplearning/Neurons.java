@@ -144,7 +144,7 @@ public abstract class Neurons {
     }
     if (training && (this instanceof MaxoutDropout || this instanceof TanhDropout
             || this instanceof RectifierDropout || this instanceof Input) ) {
-      _dropout = this instanceof Input ? new Dropout(units, params.input_dropout_ratio) : new Dropout(units, params.hidden_dropout_ratios[index-1]);
+      _dropout = this instanceof Input ? new Dropout(units, params.input_dropout_ratio) : new Dropout(units, params.hidden_dropout_ratios[_index]);
     }
     if (!(this instanceof Input)) {
       _previous = neurons[index-1]; //incoming neurons
