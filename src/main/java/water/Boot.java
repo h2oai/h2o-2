@@ -277,6 +277,7 @@ public class Boot extends ClassLoader {
       addInternalJars("log4j");
       addInternalJars("joda");
       addInternalJars("json");
+      addInternalJars("tachyon");
     }
 
     run(args);

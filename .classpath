@@ -35,6 +35,7 @@
 	<classpathentry kind="lib" path="lib/jogamp/gluegen-rt-natives-linux-amd64.jar"/>
 	<classpathentry kind="lib" path="lib/jogamp/gluegen-rt.jar" sourcepath="lib/jogamp/gluegen-rt-sources.jar"/>
 	<classpathentry kind="lib" path="lib/joda/joda-time-2.3.jar"/>
-	<classpathentry kind="lib" path="lib/json/JSON-java.jar"/>
+  <classpathentry kind="lib" path="lib/json/JSON-java.jar"/>
+  <classpathentry kind="lib" path="lib/tachyon/tachyon-0.4.1-thrift.jar"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>
