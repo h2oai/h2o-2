@@ -19,6 +19,7 @@ A vector describing the percentiles at the given cutoffs for the \code{\linkS4cl
 }
 
 \examples{
+\dontrun{
 # Request quantiles for an H2O parsed data set: 
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
@@ -29,4 +30,5 @@ prostate.hex = h2o.importFile(localH2O, path = prosPath)
 quantile(prostate.hex[,3])
 for(i in 1:ncol(prostate.hex))
   quantile(prostate.hex[,i])
+  }
 }

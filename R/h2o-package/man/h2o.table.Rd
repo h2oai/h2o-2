@@ -18,6 +18,7 @@ h2o.table(x)
 A \code{\linkS4class{H2OParsedData}} object containing the contingency table. If \code{x} has a single column, this will just be the counts of each factor level.
 }
 \examples{
+\dontrun{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 prosPath = system.file("extdata", "prostate.csv", package="h2o")
@@ -29,6 +30,7 @@ head(h2o.table(prostate.hex[,3]))
 
 # Two-way table of ages (rows) and race (cols) of all patients
 head(h2o.table(prostate.hex[,c(3,4)]))
+}
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

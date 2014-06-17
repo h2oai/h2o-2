@@ -23,6 +23,7 @@ WARNING: Files located on the H2O server may be very large! Make sure you have e
 \code{\linkS4class{H2OParsedData}, \linkS4class{H2OParsedDataVA}}
 }
 \examples{
+\dontrun{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 irisPath = system.file("extdata", "iris_wheader.csv", package = "h2o")
@@ -32,6 +33,7 @@ myFile = paste(getwd(), "my_iris_file.csv", sep = .Platform$file.sep)
 h2o.downloadCSV(iris.hex, myFile)
 file.info(myFile)
 file.remove(myFile)
+}
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

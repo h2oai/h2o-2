@@ -11,6 +11,7 @@
 }
 
 \examples{
+\dontrun{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 prosPath = system.file("extdata", "prostate.csv", package = "h2o")
@@ -21,4 +22,5 @@ PSA.outliers = h2o.assign(PSA.outliers, "PSA.outliers")
 summary(PSA.outliers)
 head(prostate.hex)
 head(PSA.outliers)
+}
 }

@@ -58,6 +58,7 @@ If \code{parse = TRUE}, the function returns an object of class \code{\linkS4cla
 \code{\link{h2o.importFolder}, \link{h2o.importHDFS}, \link{h2o.importURL}, \link{h2o.uploadFile}}
 }
 \examples{
+\dontrun{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 irisPath = system.file("extdata", "iris.csv", package = "h2o")
@@ -66,4 +67,5 @@ class(iris.hex)
 summary(iris.hex)
 iris.fv = h2o.importFile(localH2O, path = irisPath, key = "iris.fv", version = 2)
 class(iris.fv)
+}
 }

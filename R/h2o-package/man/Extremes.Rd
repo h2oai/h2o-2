@@ -25,11 +25,13 @@ Returns the maximum or minimum over all the input arguments. For a \code{\linkS4
 }
 
 \examples{
+\dontrun{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 ausPath = system.file("extdata", "australia.csv", package = "h2o")
 australia.hex = h2o.importFile(localH2O, path = ausPath, key = "australia.hex")
 min(australia.hex)
+}
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

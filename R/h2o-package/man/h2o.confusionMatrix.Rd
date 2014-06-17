@@ -22,6 +22,7 @@ Returns a confusion matrix with the actual value counts along the rows and the p
 \code{\linkS4class{H2OParsedData}}
 }
 \examples{
+\dontrun{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 prosPath = system.file("extdata", "prostate.csv", package="h2o")
@@ -29,6 +30,7 @@ prostate.hex = h2o.importFile(localH2O, path = prosPath)
 prostate.gbm = h2o.gbm(x = 3:9, y = 2, data = prostate.hex)
 prostate.pred = h2o.predict(prostate.gbm)
 h2o.confusionMatrix(prostate.pred[,1], prostate.hex[,2])
+}
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

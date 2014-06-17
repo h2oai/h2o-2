@@ -14,6 +14,7 @@ h2o.clearLogs()
 \code{\link{h2o.startLogging}, \link{h2o.stopLogging}, \link{h2o.openLog}, \link{h2o.getLogPath}, \link{h2o.setLogPath}}
 }
 \examples{
+\dontrun{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 h2o.startLogging()
@@ -21,6 +22,7 @@ ausPath = system.file("extdata", "australia.csv", package="h2o")
 australia.hex = h2o.importFile(localH2O, path = ausPath)
 h2o.stopLogging()
 h2o.clearLogs()
+}
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

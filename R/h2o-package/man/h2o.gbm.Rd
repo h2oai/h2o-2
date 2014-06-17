@@ -77,6 +77,7 @@ http://www.stanford.edu/~hastie/local.ftp/Springer/OLD//ESLII_print4.pdf
 For more information see: http://docs.0xdata.com
 }
 \examples{
+\dontrun{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 
@@ -92,4 +93,5 @@ h2o.gbm(y = dependent, x = independent, data = australia.hex, n.trees = 10, inte
 # Run multinomial classification GBM on australia data 
 h2o.gbm(y = dependent, x = independent, data = australia.hex, n.trees = 15, interaction.depth = 5, 
   n.minobsinnode = 2, shrinkage = 0.01, distribution= "multinomial")
+}
 }

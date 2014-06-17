@@ -13,6 +13,7 @@ h2o.ls(object, pattern)
 \value{Returns a list of hex keys in the current instance of H2O, and their associated sizes in bytes.}
 
 \examples{
+\dontrun{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 prosPath = system.file("extdata", "prostate.csv", package="h2o")
@@ -21,5 +22,6 @@ s = runif(nrow(prostate.hex))
 prostate.train = prostate.hex[s <= 0.8,]
 prostate.train = h2o.assign(prostate.train, "prostate.train")
 h2o.ls(localH2O)
+}
 }
 

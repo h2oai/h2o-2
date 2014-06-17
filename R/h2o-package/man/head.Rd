@@ -30,12 +30,14 @@ A data frame containing the first or last \code{n} rows of an \code{\linkS4class
 }
 
 \examples{
+\dontrun{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 ausPath = system.file("extdata", "australia.csv", package="h2o")
 australia.hex = h2o.importFile(localH2O, path = ausPath)
 head(australia.hex, 10)
 tail(australia.hex, 10)
+}
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

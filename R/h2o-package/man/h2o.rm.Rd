@@ -19,6 +19,7 @@ h2o.rm(object, keys)
 \code{\link{h2o.assign}}, \code{\link{h2o.ls}}
 }
 \examples{
+\dontrun{
 # Remove an H2O object from the server where H2O is running.
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
@@ -30,5 +31,6 @@ h2o.ls(localH2O)
 h2o.rm(object = localH2O, keys = "prostate.hex")
 remove(prostate.hex)
 h2o.ls(localH2O)
+}
 }
 

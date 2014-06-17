@@ -13,7 +13,9 @@
 \code{x} must be a \code{\linkS4class{H2OParsedData}} object so that H2O can generate random numbers aligned with the dataset for efficient large-scale sampling and filtering.
 }
 \value{A vector of random, uniformly distributed numbers. The elements are between 0 and 1 unless otherwise specified.}
+
 \examples{
+\dontrun{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 prosPath = system.file("extdata", "prostate.csv", package="h2o")
@@ -26,4 +28,5 @@ prostate.train = h2o.assign(prostate.train, "prostate.train")
 prostate.test = prostate.hex[s > 0.8,]
 prostate.test = h2o.assign(prostate.test, "prostate.test")
 nrow(prostate.train) + nrow(prostate.test)
+}
 }

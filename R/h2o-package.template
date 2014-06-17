@@ -38,6 +38,7 @@ Maintainer: Anqi Fu <anqi@0xdata.com>
 }
 \keyword{ package }
 \examples{
+\dontrun{
 # Check connection with H2O and ensure local H2O R package matches server version.
 # Optionally, ask for startH2O to start H2O if it's not already running.
 # Note that for startH2O to work, the IP must be 127.0.0.1 or localhost with port 54321.
@@ -53,4 +54,5 @@ summary(iris.hex)
 ??h2o
 demo(package = "h2o")
 demo(h2o.prcomp)
+}
 }

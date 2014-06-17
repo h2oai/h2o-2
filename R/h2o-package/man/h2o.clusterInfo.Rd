@@ -19,9 +19,11 @@ h2o.clusterInfo(client)
 \code{\linkS4class{H2OClient}}
 }
 \examples{
+\dontrun{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 h2o.clusterInfo(localH2O)
+}
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

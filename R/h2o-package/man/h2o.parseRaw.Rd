@@ -52,6 +52,7 @@ An object of class \code{\linkS4class{H2OParsedDataVA}} (\code{version = 1}) or 
 \code{\link{h2o.importFile}, \link{h2o.importFolder}, \link{h2o.importHDFS}, \link{h2o.importURL}, \link{h2o.uploadFile}}
 }
 \examples{
+\dontrun{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 prosPath = system.file("extdata", "prostate.csv", package="h2o")
@@ -59,6 +60,7 @@ prostate.raw = h2o.importFile(localH2O, path = prosPath, parse = FALSE)
 # Do not modify prostate.csv on disk at this point!
 prostate.hex = h2o.parseRaw(data = prostate.raw, key = "prostate.hex")
 # After parsing, it is okay to modify or delete prostate.csv
+}
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

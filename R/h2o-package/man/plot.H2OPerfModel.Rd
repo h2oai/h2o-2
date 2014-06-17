@@ -26,6 +26,7 @@ Arguments to be passed to methods, such as graphical parameters (see \code{\link
 \code{\linkS4class{H2OPerfModel}}, \code{\link{h2o.performance}}
 }
 \examples{
+\dontrun{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 
@@ -40,6 +41,7 @@ prostate.perf = h2o.performance(prostate.pred[,3], prostate.hex$CAPSULE, measure
 
 plot(prostate.perf, type = "cutoffs")     # Plot precision vs. thresholds
 plot(prostate.perf, type = "roc")         # Plot ROC curve
+}
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

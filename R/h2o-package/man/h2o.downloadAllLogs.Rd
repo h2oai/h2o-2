@@ -21,11 +21,13 @@ h2o.downloadAllLogs(client, dirname = ".", filename = NULL)
 \code{\linkS4class{H2OClient}}
 }
 \examples{
+\dontrun{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 h2o.downloadAllLogs(localH2O, dirname = getwd(), filename = "h2o_logs.log")
 file.info(paste(getwd(), "h2o_logs.log", sep = .Platform$file.sep))
 file.remove(paste(getwd(), "h2o_logs.log", sep = .Platform$file.sep))
+}
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

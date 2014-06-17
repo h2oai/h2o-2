@@ -31,9 +31,11 @@ This method is intended to be used in conjunction with \code{\link{h2o.ddply}}. 
 \code{\link{h2o.ddply}}
 }
 \examples{
+\dontrun{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 h2o.addFunction(localH2O, function(x) { 2*x + 5 }, "simpleFun")
+}
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

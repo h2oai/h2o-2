@@ -25,6 +25,7 @@ An \code{\linkS4class{H2OParsedData}} with the same columns, but all duplicate r
 }
 
 \examples{
+\dontrun{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 prosPath = system.file("extdata", "prostate.csv", package="h2o")
@@ -33,4 +34,5 @@ nrow(prostate.hex$AGE)
 prosAge.uniq = unique(prostate.hex$AGE)
 nrow(prosAge.uniq)
 head(prosAge.uniq)
+}
 }

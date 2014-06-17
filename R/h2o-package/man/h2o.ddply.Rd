@@ -48,6 +48,7 @@ Hadley Wickham (2011). The Split-Apply-Combine Strategy for Data Analysis. Journ
 \code{\link{h2o.addFunction}}
 }
 \examples{
+\dontrun{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 
@@ -62,6 +63,7 @@ h2o.addFunction(localH2O, fun)
 # Apply function to groups by class of flower
 res = h2o.ddply(iris.hex, "class", fun)
 head(res)
+}
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

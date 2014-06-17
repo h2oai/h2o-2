@@ -21,10 +21,12 @@ sum(\dots, na.rm = FALSE)
 }
 
 \examples{
+\dontrun{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 ausPath = system.file("extdata", "australia.csv", package="h2o")
 australia.hex = h2o.importFile(localH2O, path = ausPath, key = "australia.hex")
 sum(australia.hex)
 sum(c(400, 1234, -1250), TRUE, australia.hex[,1:4])
+}
 }

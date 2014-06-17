@@ -46,6 +46,7 @@ An object of class \code{\linkS4class{H2ONBModel}} with slots key, data, and mod
 For more information see: http://docs.0xdata.com
 }
 \examples{
+\dontrun{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 
@@ -59,4 +60,5 @@ h2o.naiveBayes(y = 1, x = 2:17, data = votes.hex, laplace = 3)
 irisPath = system.file("extdata", "iris.csv", package="h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath)
 h2o.naiveBayes(y = 5, x = 1:4, data = iris.hex)
+}
 }

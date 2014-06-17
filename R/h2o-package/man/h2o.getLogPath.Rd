@@ -18,9 +18,11 @@ h2o.getLogPath(type)
 \code{\link{h2o.startLogging}, \link{h2o.stopLogging}, \link{h2o.clearLogs}, \link{h2o.openLog}, \link{h2o.setLogPath}}
 }
 \examples{
+\dontrun{
 library(h2o)
 h2o.getLogPath("Command")
 h2o.getLogPath("Error")
+}
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

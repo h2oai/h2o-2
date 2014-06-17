@@ -19,6 +19,7 @@ h2o.cut(x, breaks)
 A \code{\linkS4class{H2OParsedData}} object containing the factored data with intervals as levels.
 }
 \examples{
+\dontrun{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 irisPath = system.file("extdata", "iris_wheader.csv", package="h2o")
@@ -29,6 +30,7 @@ summary(iris.hex)
 sepal_len.cut = h2o.cut(iris.hex$sepal_len, c(4.2, 4.8, 5.8, 6, 8))
 head(sepal_len.cut)
 summary(sepal_len.cut)
+}
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
