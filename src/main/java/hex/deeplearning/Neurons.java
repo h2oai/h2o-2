@@ -149,16 +149,13 @@ public abstract class Neurons {
     if (!(this instanceof Input)) {
       _previous = neurons[index-1]; //incoming neurons
       _minfo = minfo;
-//      _w = minfo.get_weights(index-1-(params.autoencoder && index == neurons.length-1 ? 1 : 0)); //incoming weights
       _w = minfo.get_weights(index-1); //incoming weights
       _b = minfo.get_biases(index-1); //bias for this layer (starting at hidden layer)
       if (minfo.has_momenta()) {
-//        _wm = minfo.get_weights_momenta(index-1-(params.autoencoder && index == neurons.length-1 ? 1 : 0)); //incoming weights
         _wm = minfo.get_weights_momenta(index-1); //incoming weights
         _bm = minfo.get_biases_momenta(index-1); //bias for this layer (starting at hidden layer)
       }
       if (minfo.adaDelta()) {
-//        _ada_dx_g = minfo.get_ada_dx_g(index-1-(params.autoencoder && index == neurons.length-1 ? 1 : 0));
         _ada_dx_g = minfo.get_ada_dx_g(index-1);
         _bias_ada_dx_g = minfo.get_biases_ada_dx_g(index - 1);
       }
@@ -483,6 +480,23 @@ public abstract class Neurons {
   }
 
   /**
+   * Helper to optionally compute the reconstruction error for auto-encoders
+   * @param g Regular gradient (will be returned if this is not the final layer of an auto-encoder)
+   * @param row neuron index
+   * @return g if this is not the final layer of an auto-encoder, otherwise return the difference
+   *         between the output (auto-encoder output layer activation) and the target (input layer activation)
+   */
+  protected float autoEncoderError(float g, int row) {
+    //last layer of auto-encoder: gradient is given by MSE
+    if (_minfo.get_params().autoencoder && _index == _minfo.get_params().hidden.length) {
+      if (params.loss != Loss.MeanSquare)
+        throw new UnsupportedOperationException("Auto-Encoder is only implemented for MeanSquare error.");
+      return (_input._a.get(row) - _a.get(row)); //target - activation
+    }
+    return g;
+  }
+
+  /**
    * Compute learning rate with AdaDelta
    * http://www.matthewzeiler.com/pubs/googleTR2012/googleTR2012.pdf
    * @param grad gradient
@@ -685,11 +699,7 @@ public abstract class Neurons {
         final int rows = _a.size();
         for (int row = 0; row < rows; row++) {
           float g = _e.get(row) * (1f - _a.get(row) * _a.get(row));
-          //last layer of auto-encoder: gradient is given by MSE
-          if (_minfo.get_params().autoencoder && _index == _minfo.get_params().hidden.length) {
-            if (params.loss != Loss.MeanSquare) throw new UnsupportedOperationException("Auto-Encoder is only implemented for MeanSquare error.");
-            g = (_input._a.get(row) - _a.get(row)); //target - activation
-          }
+          g = autoEncoderError(g, row);
           bprop(row, g, r, m);
         }
       }
@@ -716,91 +726,6 @@ public abstract class Neurons {
       }
     }
   }
-
-//  /**
-//   * TanhPrime neurons - for auto-encoder
-//   */
-//  public static class TanhPrime extends Neurons {
-//    public TanhPrime(int units) { super(units); }
-//    @Override protected void fprop(long seed, boolean training) {
-//      gemv((DenseVector)_a, _w, _previous._a, _b, _dropout != null ? _dropout.bits() : null);
-//      final int rows = _a.size();
-//      for( int row = 0; row < rows; row++ ) {
-//        _a.set(row, 1f - 2f / (1f + (float)Math.exp(2*_a.get(row)))); //evals faster than tanh(x), but is slightly less numerically stable - OK
-//      }
-//    }
-//    // Computing partial derivative g = dE/dnet = dE/dy * dy/dnet, where dE/dy is the backpropagated error
-//    // dy/dnet = (1 - a^2) for y(net) = tanh(net)
-//    protected void bprop() {
-//      long processed = _minfo.get_processed_total();
-//      float momentum = momentum(processed);
-//      float rate = rate(processed) * (1 - momentum);
-//      /*
-//      for( int row = 0; row < _a.size(); row++ ) {
-//        assert _previous._previous.units == units;
-//        float e = _previous._previous._a.get(row) - _a.get(row);
-//        float g = e;
-//        for( int col = 0; col < _previous._a.size(); col++ ) {
-//          // transposed matrix access
-//          if( _previous._e != null )
-//            _previous._e.add(col, g * _w.get(col,row));
-//          _w.add(col, row, (float) (r * (g * _previous._a.get(col) - _w.get(col,row) * params.l2 - Math.signum(_w.get(col,row)) * params.l1)));
-//        }
-//        //_b.add(row, r * g);
-//        _b.set(row, 0);
-//      }
-//      */
-//
-//      final float rho = (float) params.rho;
-//      final float eps = (float) params.epsilon;
-//      final float l1 = (float) params.l1;
-//      final float l2 = (float) params.l2;
-//      final boolean have_momenta = _minfo.has_momenta();
-//      final boolean have_ada = _minfo.adaDelta();
-//      final boolean nesterov = params.nesterov_accelerated_gradient;
-//      final boolean update_prev = _previous._e != null;
-//      for( int row = 0; row < _a.size(); row++ ) {
-//        float avg_grad2 = 0;
-//        final float partial_grad = _previous._previous._a.get(row) - _a.get(row);
-//        for( int col = 0; col < _previous._a.size(); col++ ) {
-//          final float weight = _w.get(col, row); //transposed
-//          if (update_prev)
-//            _previous._e.add(col, partial_grad * weight); // propagate the error dE/dnet to the previous layer, via connecting weights
-//          //this is the actual gradient dE/dw
-//          final float grad = partial_grad * _previous._a.get(col) - Math.signum(weight) * l1 - weight * l2;
-//          if (have_ada) {
-//            assert (!have_momenta);
-//            avg_grad2 += grad*grad;
-//            // either indexing order should work
-//            float brate = computeAdaDeltaRateForWeight(grad, row*_previous._a.size()+col, (DenseRowMatrix)_ada_dx_g, rho, eps);
-////            float brate = computeAdaDeltaRateForWeight(grad, col*_a.size()+row, (DenseRowMatrix)_ada_dx_g, rho, eps);
-//            _w.add(col, row, brate * grad);
-//          } else {
-//            if (!nesterov) {
-//              final float delta = rate * grad;
-//              _w.add(col, row, delta);
-//              if (have_momenta) {
-//                _w.add(col, row, momentum * _wm.get(row, col));
-//                _wm.set(col, row, delta);
-//              }
-//            } else {
-//              float tmp = grad;
-//              if (have_momenta) {
-//                float val = _wm.get(col, row);
-//                val *= momentum;
-//                val += tmp;
-//                tmp = val;
-//                _wm.set(col, row, val);
-//              }
-//              _w.add(col, row, rate * tmp);
-//            }
-//          }
-//        }
-//        if (have_ada) avg_grad2 /= _previous._a.size();
-//        update_bias(_b, _bm, row, partial_grad, avg_grad2, rate, momentum);
-//      }
-//    }
-//  }
 
   /**
    * Maxout neurons
@@ -857,6 +782,7 @@ public abstract class Neurons {
           float g = _e.get(row);
 //                if( _a[o] < 0 )   Not sure if we should be using maxout with a hard zero bottom
 //                    g = 0;
+          g = autoEncoderError(g, row);
           bprop(row, g, r, m);
         }
       }
@@ -905,7 +831,8 @@ public abstract class Neurons {
       if (_w instanceof DenseRowMatrix) {
         for (int row = 0; row < rows; row++) {
           //(d/dx)(max(0,x)) = 1 if x > 0, otherwise 0
-          final float g = _a.get(row) > 0f ? _e.get(row) : 0f;
+          float g = _a.get(row) > 0f ? _e.get(row) : 0f;
+          g = autoEncoderError(g, row);
           bprop(row, g, r, m);
         }
       }

@@ -233,13 +233,11 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     // accessors to (shared) weights and biases - those will be updated racily (c.f. Hogwild!)
     boolean has_momenta() { return get_params().momentum_start != 0 || get_params().momentum_stable != 0; }
     boolean adaDelta() { return get_params().adaptive_rate; }
-//    public int index_helper(int i) { return get_params().autoencoder && i == get_params().hidden.length ? i-1 : i; }
-    public int index_helper(int i) { return i; }
-    public final Neurons.Matrix get_weights(int i) { i = index_helper(i); return dense_row_weights[i] == null ? dense_col_weights[i] : dense_row_weights[i]; }
+    public final Neurons.Matrix get_weights(int i) { return dense_row_weights[i] == null ? dense_col_weights[i] : dense_row_weights[i]; }
     public final Neurons.DenseVector get_biases(int i) { return biases[i]; }
-    public final Neurons.Matrix get_weights_momenta(int i) { i = index_helper(i); return dense_row_weights_momenta[i] == null ? dense_col_weights_momenta[i] : dense_row_weights_momenta[i]; }
+    public final Neurons.Matrix get_weights_momenta(int i) { return dense_row_weights_momenta[i] == null ? dense_col_weights_momenta[i] : dense_row_weights_momenta[i]; }
     public final Neurons.DenseVector get_biases_momenta(int i) { return biases_momenta[i]; }
-    public final Neurons.Matrix get_ada_dx_g(int i) { i = index_helper(i); return dense_row_ada_dx_g[i] == null ? dense_col_ada_dx_g[i] : dense_row_ada_dx_g[i]; }
+    public final Neurons.Matrix get_ada_dx_g(int i) { return dense_row_ada_dx_g[i] == null ? dense_col_ada_dx_g[i] : dense_row_ada_dx_g[i]; }
     public final Neurons.DenseVector get_biases_ada_dx_g(int i) { return biases_ada_dx_g[i]; }
 
     @API(help = "Model parameters", json = true)
@@ -302,23 +300,15 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       units[0] = num_input;
       System.arraycopy(get_params().hidden, 0, units, 1, layers);
       units[layers+1] = num_output;
-      //final boolean ae = get_params().autoencoder;
-      final boolean ae = false;
       // weights (to connect layers)
-      dense_row_weights = new Neurons.DenseRowMatrix[ae ? 1 : layers+1];
-      dense_col_weights = new Neurons.DenseColMatrix[ae ? 1 : layers+1];
+      dense_row_weights = new Neurons.DenseRowMatrix[layers+1];
+      dense_col_weights = new Neurons.DenseColMatrix[layers+1];
 
       // decide format of weight matrices row-major or col-major
-      if (get_params().col_major) {
-        if (ae) throw H2O.unimpl();
-        dense_col_weights[0] = new Neurons.DenseColMatrix(units[1], units[0]);
-      }
+      if (get_params().col_major) dense_col_weights[0] = new Neurons.DenseColMatrix(units[1], units[0]);
       else dense_row_weights[0] = new Neurons.DenseRowMatrix(units[1], units[0]);
-      // auto-encoder: the two matrices are transposed version of each other (only need one)
-      if (!ae) {
-        for (int i = 1; i <= layers; ++i)
-          dense_row_weights[i] = new Neurons.DenseRowMatrix(units[i + 1] /*rows*/, units[i] /*cols*/);
-      }
+      for (int i = 1; i <= layers; ++i)
+        dense_row_weights[i] = new Neurons.DenseRowMatrix(units[i + 1] /*rows*/, units[i] /*cols*/);
 
       // biases (only for hidden layers and output layer)
       biases = new Neurons.DenseVector[layers+1];

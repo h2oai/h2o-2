@@ -106,34 +106,30 @@ public class DeepLearningTask extends FrameTask<DeepLearningTask> {
     // input
     neurons[0] = new Neurons.Input(dinfo.fullN(), dinfo);
     // hidden
-    for( int i = 0; i < h.length; i++ ) {
+    for( int i = 0; i < h.length + (params.autoencoder ? 1 : 0); i++ ) {
+      int n = params.autoencoder && i == h.length ? minfo.units[0] : h[i];
       switch( params.activation ) {
         case Tanh:
-          neurons[i+1] = new Neurons.Tanh(h[i]);
+          neurons[i+1] = new Neurons.Tanh(n);
           break;
         case TanhWithDropout:
-          neurons[i+1] = new Neurons.TanhDropout(h[i]);
+          neurons[i+1] = new Neurons.TanhDropout(n);
           break;
         case Rectifier:
-          neurons[i+1] = new Neurons.Rectifier(h[i]);
+          neurons[i+1] = new Neurons.Rectifier(n);
           break;
         case RectifierWithDropout:
-          neurons[i+1] = new Neurons.RectifierDropout(h[i]);
+          neurons[i+1] = new Neurons.RectifierDropout(n);
           break;
         case Maxout:
-          neurons[i+1] = new Neurons.Maxout(h[i]);
+          neurons[i+1] = new Neurons.Maxout(n);
           break;
         case MaxoutWithDropout:
-          neurons[i+1] = new Neurons.MaxoutDropout(h[i]);
+          neurons[i+1] = new Neurons.MaxoutDropout(n);
           break;
       }
     }
-    // output
-    if(params.autoencoder) {
-      assert(params.activation == DeepLearning.Activation.Tanh);
-      //neurons[neurons.length - 1] = new Neurons.TanhPrime(minfo.units[0]);
-      neurons[neurons.length - 1] = new Neurons.Tanh(minfo.units[0]);
-    } else {
+    if(!params.autoencoder) {
       if (params.classification)
         neurons[neurons.length - 1] = new Neurons.Softmax(minfo.units[minfo.units.length - 1]);
       else
