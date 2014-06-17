@@ -67,10 +67,10 @@ public class h2odriver {
   static void usage() {
     System.err.printf("" +
                     "Step 1: Create a new Zookeeper h2o cloud hierarchy:\n" +
-                    "    java -jar h2o-zookeeper.jar water.zookeeper.h2odriver -zk a:b:c:d:e -zkroot /zk/path/h2o-uuid -n <numNodes> -start\n" +
+                    "    java -cp h2o-zookeeper.jar water.zookeeper.h2odriver -zk a:b:c:d:e -zkroot /zk/path/h2o-uuid -n <numNodes> -start\n" +
                     "\n" +
                     "Step 2: Wait for an h2o cloud to come up:\n" +
-                    "    java -jar h2o-zookeeper.jar water.zookeeper.h2odriver -zk a:b:c:d:e -zkroot /zk/path/h2o-uuid -wait [-timeout sec]\n" +
+                    "    java -cp h2o-zookeeper.jar water.zookeeper.h2odriver -zk a:b:c:d:e -zkroot /zk/path/h2o-uuid -wait [-timeout sec]\n" +
                     "\n" +
                     "Exit value:\n" +
                     "          0 for success; nonzero otherwise.\n" +
