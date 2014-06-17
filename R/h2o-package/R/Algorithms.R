@@ -1367,6 +1367,10 @@ h2o.performance <- function(data, reference, measure = "accuracy", thresholds) {
   else
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_AUC, actual = reference@key, vactual = 0, predict = data@key, vpredict = 0, thresholds = .seq_to_string(thresholds), threshold_criterion = criterion)
 
+  if (is.list(res$thresholds)) {
+    res$thresholds <- as.numeric(unlist(res$thresholds))
+  }
+
   meas = as.numeric(res[[measure]])
   result = .h2o.__getPerfResults(res, criterion)
   roc = .get_roc(res$confusion_matrices)
