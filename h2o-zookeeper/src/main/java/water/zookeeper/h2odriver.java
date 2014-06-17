@@ -4,6 +4,8 @@ import org.apache.zookeeper.*;
 import water.zookeeper.nodes.ClusterPayload;
 import water.zookeeper.nodes.MasterPayload;
 
+import java.util.concurrent.TimeoutException;
+
 public class h2odriver {
   final static int CLOUD_FORMATION_SETTLE_DOWN_SECONDS = 2;
 
@@ -47,19 +49,41 @@ public class h2odriver {
     z.close();
   }
 
-  public void doWait() throws Exception {
+  public MasterPayload doWait() throws Exception {
     ZooKeeper z = ZooKeeperFactory.makeZk(_zk);
     byte[] payload;
     payload = z.getData(_zkroot, null, null);
     ClusterPayload cp = ClusterPayload.fromPayload(payload, ClusterPayload.class);
-    assert (cp.numNodes > 0);
-    System.out.println("cp numNodes: " + cp.numNodes);
-
-    payload = z.getData(_zkroot + "/master", null, null);
-    MasterPayload mp = MasterPayload.fromPayload(payload, MasterPayload.class);
-
-    // TODO
     z.close();
+    assert (cp.numNodes > 0);
+
+    long startMillis = System.currentTimeMillis();
+    while (true) {
+      z = ZooKeeperFactory.makeZk(_zk);
+      if (z.exists(_zkroot, false) == null) {
+        z.close();
+        throw new Exception("ZooKeeper node does not exist: " + _zkroot);
+      }
+
+      try {
+        payload = z.getData(_zkroot + "/master", null, null);
+        MasterPayload mp = MasterPayload.fromPayload(payload, MasterPayload.class);
+        z.close();
+        Thread.sleep(CLOUD_FORMATION_SETTLE_DOWN_SECONDS);
+        return mp;
+      }
+      catch (KeeperException.NoNodeException e) {
+        // This is OK, do nothing
+      }
+
+      long now = System.currentTimeMillis();
+      if (Math.abs(now - startMillis) > (_cloudFormationTimeoutSeconds * 1000)) {
+        z.close();
+        throw new TimeoutException("Timed out waiting for cloud to form");
+      }
+
+      Thread.sleep(1000);
+    }
   }
 
   /**
@@ -171,10 +195,11 @@ public class h2odriver {
       d.setZk(g_zk);
       d.setZkroot(g_zkroot);
       d.setCloudFormationTimeoutSeconds(g_cloudFormationTimeoutSeconds);
-      d.doWait();
+      MasterPayload mp = d.doWait();
+      System.out.println(mp.ip + ":" + mp.port);
     }
     else {
-      assert(false);
+      System.out.println("bad path");
       System.exit(1);
     }
   }
