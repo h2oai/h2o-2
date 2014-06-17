@@ -303,7 +303,7 @@ public class RequestBuilders extends RequestQueries {
     /** Response object for JSON requests.
      */
     protected final JsonObject _response;
-    protected final Request _req;
+    public final Request _req;
 
     protected boolean _strictJsonCompliance = true;
 

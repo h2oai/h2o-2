@@ -184,12 +184,13 @@ class Basic(unittest.TestCase):
                 'ntrees': ntrees,
             }
             start = time.time()
-            rfResult = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
+            rfResult = h2o_cmd.runRF(parseResult=parseResult, 
+                timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
             print "rf end on ", csvPathname, 'took', time.time() - start, 'seconds'
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfResult, ntree=ntrees)
-            modelKey = rfView['drf_model']['_key']
+            modelKey = rfResult['drf_model']['_key']
             h2o_cmd.runScore(dataKey=parseResult['destination_key'], modelKey=modelKey,
-                vactual=colCount+1, vpredict=1, expectedAuc=0.5, doAUC=False)
+                vactual=colCount, vpredict=1, expectedAuc=0.5, doAUC=False)
 
 
 if __name__ == '__main__':

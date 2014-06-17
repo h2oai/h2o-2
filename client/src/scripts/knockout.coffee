@@ -50,13 +50,16 @@ ko.bindingHandlers.geyser =
   update: (element, valueAccessor, allBindings, viewModel, bindingContext) ->
     if data = ko.unwrap valueAccessor()
       $element = $ element
-      markup = data.markup or data
-      $element.html geyser.render markup
-      if data.behaviors
-        for behavior in data.behaviors
-          behavior $element
+      if data.markup
+        $element.html geyser.render data.markup
+        if data.behavior
+          data.behavior $element
+        if data.dispose
+          ko.utils.domNodeDisposal.addDisposeCallback element, -> data.dispose()
+      else
+        $element.html geyser.render data
     else
-      $(element).text 'Loading. Please wait..'
+      $(element).text '-'
     return
 
 ko.bindingHandlers.icon =
@@ -146,9 +149,99 @@ ko.bindingHandlers.collapse =
     $el.css 'cursor', 'pointer'
     $el.attr 'title', 'Click to expand/collapse'
     $disclosureEl.css 'margin-left', '10px'
-    $el.click toggle
+    $el.on 'click', toggle
     toggle()
     ko.utils.domNodeDisposal.addDisposeCallback element, ->
       $el.off 'click'
     return
+
+ko.bindingHandlers.raw =
+  update: (element, valueAccessor, allBindings, viewModel, bindingContext) ->
+    arg = ko.unwrap valueAccessor()
+    if arg
+      $element = $ element
+      $element.empty()
+      $element.append arg
+    return
+
+
+ko.bindingHandlers.help =
+  init: (element, valueAccessor, allBindings, viewModel, bindingContext) ->
+    if steam = window.steam
+      $element = $ element
+      arg = ko.unwrap valueAccessor()
+      if isFunction arg
+        $element.on 'click', -> do arg
+      else if isString arg
+        $element.on 'click', -> steam.context.help arg
+      else
+        throw new Error 'Invalid argument'
+      ko.utils.domNodeDisposal.addDisposeCallback element, -> $element.off 'click'
+    return
+
+captureClickAndDrag = ($el, onClick, onDrag, onRelease) ->
+  $document = $ document
+
+  $el.on 'mousedown', (e) ->
+    return if e.which isnt 1 # Left clicks only
+    zIndex = $el.css 'z-index'
+    $el.css 'z-index', 1000
+
+    onMouseMove = (e) ->
+      onDrag e.pageX, e.pageY
+
+    onMouseUp = (e) ->
+      # restore z-index
+      $el.css 'z-index', zIndex
+      $document.off 'mousemove', onMouseMove
+      $document.off 'mouseup', onMouseUp
+      onRelease e.pageX, e.pageY
+
+    $document.on 'mousemove', onMouseMove
+    $document.on 'mouseup', onMouseUp
+
+    # disable selection
+    e.preventDefault()
+    onClick e.pageX, e.pageY
+    return
+
+makeGrabBar = ($el, _opts, go) ->
+  _offset = null
+  _left = _top = _width = _height = _x = _y = 0
+
+  readElementSize = ->
+    _width = $el.outerWidth()
+    _height = $el.outerHeight()
+    _offset = $el.offset()
+
+  onClick = (x, y) ->
+    readElementSize()
+    _x = _offset.left + _width - x
+    _y = _offset.top + _height - y
+
+  onDrag = (x, y) ->
+    left = if _opts.allowHorizontalMovement then x + _x - _width else _offset.left 
+    top = if _opts.allowVerticalMovement then y + _y - _height else _offset.top
+    if left isnt _left or top isnt _top
+      _left = left
+      _top = top
+      $el.offset left: left, top: top
+
+  onRelease = (x, y) ->
+    readElementSize()
+    go
+      left: _offset.left
+      top: _offset.top
+      width: _width
+      height: _height
+
+  captureClickAndDrag $el, onClick, onDrag, onRelease
+
+ko.bindingHandlers.draggable =
+  init: (element, valueAccessor, allBindings, viewModel, bindingContext) ->
+    $el = $ element
+    grabBarOpts =  allowVerticalMovement: yes, allowHorizontalMovement: no 
+    makeGrabBar $el, grabBarOpts, (rect) ->
+      #TODO - resize linked elements
+      console.log rect
 
