@@ -88,6 +88,7 @@ public class DeepLearningAutoEncoderTest extends TestUtil {
 
     // cleanup
     mymodel.delete();
+    frame.add("dummy", resp);
     frame.delete();
     p.delete();
     l2_frame.delete();
@@ -95,7 +96,6 @@ public class DeepLearningAutoEncoderTest extends TestUtil {
     reconstructed.delete();
     ((Frame)DKV.get(Key.make("Difference")).get()).delete();
     diff.delete();
-    resp.remove(null);
   }
 }
 
