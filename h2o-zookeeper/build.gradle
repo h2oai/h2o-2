@@ -31,7 +31,7 @@ dependencies {
 
 fatJar {
    manifest {
-      attributes 'Main-Class': 'water.zookeeper.h2odriver'
+      attributes 'Main-Class': 'water.zookeeper.help'
    }
 }
 
