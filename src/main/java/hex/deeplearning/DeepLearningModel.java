@@ -5,7 +5,10 @@ import hex.FrameTask.DataInfo;
 import hex.VarImp;
 import water.*;
 import water.api.*;
+import water.api.Exec2;
+import static water.api.Exec2.*;
 import water.api.Request.API;
+import water.exec.*;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
@@ -724,9 +727,9 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
         if (get_params().diagnostics) model_info().computeStats();
         if (get_params().autoencoder) {
           if (printme) Log.info("Scoring the auto-encoder.");
-          Log.info(get_params().source.toStringAll());
+//          Log.info(get_params().source.toStringAll());
           final Frame reconstructed = score(ftrain, false);
-          Log.info(reconstructed.toStringAll());
+//          Log.info(reconstructed.toStringAll());
           reconstructed.delete();
         }
         else {
@@ -990,6 +993,108 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       }
     }
     return preds;
+  }
+
+  /**
+   * Score auto-encoded reconstruction
+   * Currently allocates an extra 2x of the training data in memory
+   * @param frame Original data (can contain response, will be ignored)
+   * @return Vec containing L2 norm (MSE) of each reconstructed row, caller is responsible for deletion
+   */
+  //TODO: do this per row on the fly to save memory via MRTask2
+  public Vec scoreAutoEncoder(Frame frame) {
+    // make prediction (full copy of data)
+    Log.info("before: " + H2O.store_size());
+
+//    final Frame reconstructed = score(frame);
+
+    // score()
+    Frame fr = frame;
+    boolean adapt = true;
+    int ridx = fr.find(responseName());
+    if (ridx != -1) { // drop the response for scoring!
+      fr = new Frame(fr);
+      fr.remove(ridx);
+    }
+    // Adapt the Frame layout - returns adapted frame and frame containing only
+    // newly created vectors
+    Frame[] adaptFrms = adapt ? adapt(fr,false) : null;
+    // Adapted frame containing all columns - mix of original vectors from fr
+    // and newly created vectors serving as adaptors
+    Frame adaptFrm = adapt ? adaptFrms[0] : fr;
+    // Contains only newly created vectors. The frame eases deletion of these vectors.
+    Frame onlyAdaptFrm = adapt ? adaptFrms[1] : null;
+
+    // Invoke scoring
+//    Frame reconstructed = scoreImpl(adaptFrm);
+
+    final int len = _names.length-1;
+    String prefix = "reconstr_";
+    for( int c=0; c<len; c++ )
+      adaptFrm.add(prefix+adaptFrm.names()[c],adaptFrm.anyVec().makeZero());
+
+    new MRTask2() {
+      @Override public void map( Chunk chks[] ) {
+        double tmp [] = new double[len];
+        float preds[] = new float [len];
+        for( int row=0; row<chks[0]._len; row++ ) {
+          for( int i=0; i<_names.length-1; i++ )
+            tmp[i] = chks[i].at0(row);
+          float p[] = score0(tmp,preds);
+          for( int c=0; c<preds.length; c++ )
+            chks[len+c].set0(row,p[c]);
+        }
+      }
+    }.doAll(adaptFrm);
+
+    // Return just the output columns
+    int x=_names.length-1, y=adaptFrm.numCols();
+    Frame reconstructed = adaptFrm.extractFrame(x, y);
+
+
+    // Be nice to DKV and delete vectors which i created :-)
+    if (adapt) onlyAdaptFrm.delete();
+
+    Frame orig = new Frame(Key.make("Original"), fr.names(), fr.vecs());
+    orig.delete_and_lock(null);
+    orig.unlock(null);
+    Frame recon = new Frame(Key.make("Reconstruction"), reconstructed.names(), reconstructed.vecs());
+    recon.delete_and_lock(null);
+    recon.unlock(null);
+    Env ev = water.exec.Exec2.exec("Difference = Original - Reconstruction");
+    Frame diff = ev.popAry();
+    ev.remove_and_unlock();
+
+    // compute L2 norm of each reconstructed row (scaled back to normalized variables)
+    final Vec l2 = MRUtils.getL2(diff, model_info().data_info()._normMul);
+
+    // cleanup
+    ((Frame)DKV.get(Key.make("Difference")).get()).delete();
+    diff.delete();
+//    orig.delete();
+    ((Frame)DKV.get(Key.make("Original")).get()).delete();
+    recon.delete();
+//    reconstructed.delete();
+
+    Log.info("after: " + H2O.store_size());
+    return l2;
+  }
+
+  /**
+   * Compute quantile-based threshold (in reconstruction error) to find outliers
+   * @param l2 Vector containing L2 reconstruction errors
+   * @param quantile Quantile for cut-off
+   * @return Threshold in L2 value for a point to be above the quantile
+   */
+  public double calcOutlierThreshold(Vec l2, double quantile) {
+    Frame l2_frame = new Frame(Key.make(), new String[]{"L2"}, new Vec[]{l2});
+    QuantilesPage qp = new QuantilesPage();
+    qp.column = l2_frame.vec(0);
+    qp.source_key = l2_frame;
+    qp.quantile = quantile;
+    qp.invoke();
+    DKV.remove(l2_frame._key);
+    return qp.result;
   }
 
   public boolean generateHTML(String title, StringBuilder sb) {

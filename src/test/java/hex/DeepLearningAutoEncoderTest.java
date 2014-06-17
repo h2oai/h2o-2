@@ -24,7 +24,7 @@ public class DeepLearningAutoEncoderTest extends TestUtil {
     long seed = 0xDECAF;
 
     Key file = NFSFileVec.make(find_test_file(PATH));
-    Frame frame = ParseDataset2.parse(Key.make("Original"), new Key[]{file});
+    Frame frame = ParseDataset2.parse(Key.make(), new Key[]{file});
 
     DeepLearning p = new DeepLearning();
     p.source = frame;
@@ -49,53 +49,35 @@ public class DeepLearningAutoEncoderTest extends TestUtil {
     DeepLearningModel mymodel = UKV.get(p.dest());
 
     // Reconstruct data
-    Vec resp = frame.remove(0); //remove response
-    final Frame reconstructed = mymodel.score(frame);
-    // put Frame into K-V store
-    Frame recon = new Frame(Key.make("Reconstruction"), reconstructed.names(), reconstructed.vecs());
-    recon.delete_and_lock(null);
-    recon.unlock(null);
-
-    // compute reconstruction error
-    Env ev = Exec2.exec("Difference = Original - Reconstruction");
-    Frame diff = ev.popAry();
-    ev.remove_and_unlock();
-
-    // compute L2 norm of each reconstructed row (scaled back to normalized variables)
-    final Vec l2 = MRUtils.getL2(diff, mymodel.model_info().data_info()._normMul);
-
-    // compute the 95% quantile to have a threshold (in reconstruction error) to find the outliers
-    Frame l2_frame = new Frame(Key.make("l2_frame"), new String[]{"L2"}, new Vec[]{l2});
-    QuantilesPage qp = new QuantilesPage();
-    qp.column = l2_frame.vec(0);
-    qp.source_key = l2_frame;
-    double quantile = 0.95;
-    qp.quantile = quantile;
-    qp.invoke();
-    double thres = qp.result;
+    double quantile = 0.99;
+//    final Vec l2 = frame.lastVec();
+    final Vec l2 = mymodel.scoreAutoEncoder(frame);
+    double thres = mymodel.calcOutlierThreshold(l2, quantile);
 
     // print stats and outliers
     Log.info("L2 norm of reconstruction error (in normalized space):");
     StringBuilder sb = new StringBuilder();
     sb.append("Mean reconstruction error: " + l2.mean() + "\n");
     sb.append("The following points are reconstructed with an error above the " + quantile*100 + "-th percentile - outliers?\n");
-    for( int i=0; i<l2.length(); i++ ) {
+    for( long i=0; i<l2.length(); i++ ) {
       if (l2.at(i) > thres) {
         sb.append(String.format("row %d : l2 error = %5f\n", i, l2.at(i)));
       }
     }
     Log.info(sb);
 
+    assert(DKV.get(frame._key) != null);
     // cleanup
+    Log.info("before l2: " + H2O.store_size());
+    Futures fs = new Futures();
+    l2.remove(fs);
+    fs.blockForPending();
+    Log.info("after l2: " + H2O.store_size());
     mymodel.delete();
-    frame.add("dummy", resp);
+    Log.info("before frame: " + H2O.store_size());
     frame.delete();
+    Log.info("after frame: " + H2O.store_size());
     p.delete();
-    l2_frame.delete();
-    recon.delete();
-    reconstructed.delete();
-    ((Frame)DKV.get(Key.make("Difference")).get()).delete();
-    diff.delete();
   }
 }
 
