@@ -2127,6 +2127,16 @@ class H2O(object):
         verboseprint("\npca_view_result:", dump_json(a))
         return a
 
+    def glm_grid_view(self, timeoutSecs=300, print_params=False, **kwargs):
+        #this function is only for glm2, may remove it in future.
+        params_dict = {
+            'grid_key': None,
+        }
+        check_params_update_kwargs(params_dict, kwargs, 'glm_grid_view', print_params)
+        a = self.__do_json_request('2/GLMGridView.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint("\nglm_grid_view result:", dump_json(a))
+        return a
+
     def glm_view(self, modelKey=None, timeoutSecs=300, print_params=False, **kwargs):
         #this function is only for glm2, may remove it in future.
         params_dict = {
@@ -2135,6 +2145,18 @@ class H2O(object):
         check_params_update_kwargs(params_dict, kwargs, 'glm_view', print_params)
         a = self.__do_json_request('2/GLMModelView.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("\nglm_view result:", dump_json(a))
+        return a
+
+    def save_model(self, timeoutSecs=300, print_params=False, **kwargs):
+        #this function is only for glm2, may remove it in future.
+        params_dict = {
+            'model': None,
+            'path': None,
+            'force': None,
+        }
+        check_params_update_kwargs(params_dict, kwargs, 'save_model', print_params)
+        a = self.__do_json_request('2/SaveModel.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint("\nsave_model result:", dump_json(a))
         return a
 
     def generate_predictions(self, data_key, model_key, destination_key=None, timeoutSecs=300, print_params=True,

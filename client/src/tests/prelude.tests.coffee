@@ -88,6 +88,7 @@ test 'prelude availability in application scope', (t) ->
     isNaN
     isNull
     isNumber
+    isInteger
     isObject
     isPlainObject
     isRegExp
@@ -137,6 +138,7 @@ test 'prelude availability in application scope', (t) ->
     repeat
     mapWithKey
     zipCompare
+    same
     valuesAreEqual
   ]
   for func in funcs
@@ -167,6 +169,15 @@ test 'isFalsy', (t) ->
 
   for arg in truthy
     t.equal (isFalsy arg), if arg then no else yes
+
+  t.end()
+
+test 'isInteger', (t) ->
+  for arg in [0, 1, 1.0]
+    t.equal (isInteger arg), yes
+
+  for arg in [0.1, 1.1, undefined, null, 'string', [], {}]
+    t.equal (isInteger arg), no
 
   t.end()
 
@@ -348,6 +359,16 @@ test 'zipCompare', (t) ->
   t.ok zipCompare [10, 20], [10, 20]
   t.ok not zipCompare { foo: 'bar' }, { foo: 'bar' }
   t.ok zipCompare [{ foo: 'bar' }], [{ foo: 'bar' }], (a, b) -> a.foo is b.foo
+  t.end()
+
+test 'same', (t) ->
+  compareBaz = (a, b) -> a.baz is b.baz
+  t.ok same []
+  t.ok same [ 'bar' ]
+  t.ok same [ 'bar', 'bar' ]
+  t.ok not same [ 'bar', 'qux' ]
+  t.ok same [ { baz: 'bar' }, { baz: 'bar'} ], compareBaz
+  t.ok not same [ { baz: 'bar' }, { baz: 'qux' } ], compareBaz
   t.end()
 
 test 'valuesAreEqual', (t) ->

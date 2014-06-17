@@ -14,6 +14,12 @@
           .y-spinner.y-spinner-32
       // /ko
     // /ko
+
+  .y-predicate
+    .y-predicate-selector
+      input(type='checkbox' data-bind='checked:isSelectAll')
+    .y-predicate-caption(data-bind='paragraph:predicateCaption')
+    button.y-predicate-clear.btn.fa-btn.fa.fa-times-circle(data-bind='visible:canClearPredicate, click:clearPredicate' title='Clear')
   // /ko
 
   // ko ifnot:hasItems

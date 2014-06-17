@@ -128,15 +128,47 @@ public abstract class Model extends Lockable<Model> {
   }
 
   public void start_training(long training_start_time) {
+    Log.info("setting training_start_time to: " + training_start_time + " for Model: " + this);
+
+    final long t = training_start_time;
+    new TAtomic<Model>() {
+      @Override public Model atomic(Model m) {
+          if (m != null) {
+            m.training_start_time = t;
+          } return m;
+      }
+    }.invoke(_key);
     this.training_start_time = training_start_time;
   }
   public void start_training(Model previous) {
     training_start_time = System.currentTimeMillis();
+    Log.info("setting training_start_time to: " + training_start_time + " for Model: " + this + " (checkpoint case)");
     if (null != previous)
       training_duration_in_ms += previous.training_duration_in_ms;
+
+    final long t = training_start_time;
+    final long d = training_duration_in_ms;
+    new TAtomic<Model>() {
+      @Override public Model atomic(Model m) {
+          if (m != null) {
+            m.training_start_time = t;
+            m.training_duration_in_ms = d;
+          } return m;
+      }
+    }.invoke(_key);
   }
   public void stop_training() {
     training_duration_in_ms += (System.currentTimeMillis() - training_start_time);
+    Log.info("setting training_duration_in_ms to: " + training_duration_in_ms + " for Model: " + this);
+
+    final long d = training_duration_in_ms;
+    new TAtomic<Model>() {
+      @Override public Model atomic(Model m) {
+          if (m != null) {
+            m.training_duration_in_ms = d;
+          } return m;
+      }
+    }.invoke(_key);
   }
 
   public String responseName() { return   _names[  _names.length-1]; }
@@ -430,9 +462,9 @@ public abstract class Model extends Lockable<Model> {
       double probsum=0;
       for( int c=1; c<scored.length; c++ ) {
         final double original_fraction = _priorClassDist[c-1];
-        assert(original_fraction > 0) : "original fraction should be > 0, but is " + original_fraction;
+        assert(original_fraction > 0) : "original fraction should be > 0, but is " + original_fraction + ": not using enough training data?";
         final double oversampled_fraction = _modelClassDist[c-1];
-        assert(oversampled_fraction > 0) : "oversampled fraction should be > 0, but is " + oversampled_fraction;
+        assert(oversampled_fraction > 0) : "oversampled fraction should be > 0, but is " + oversampled_fraction + ": not using enough training data?";
         assert(!Double.isNaN(scored[c]));
         scored[c] *= original_fraction / oversampled_fraction;
         probsum += scored[c];
