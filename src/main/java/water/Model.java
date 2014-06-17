@@ -462,9 +462,9 @@ public abstract class Model extends Lockable<Model> {
       double probsum=0;
       for( int c=1; c<scored.length; c++ ) {
         final double original_fraction = _priorClassDist[c-1];
-        assert(original_fraction > 0) : "original fraction should be > 0, but is " + original_fraction;
+        assert(original_fraction > 0) : "original fraction should be > 0, but is " + original_fraction + ": not using enough training data?";
         final double oversampled_fraction = _modelClassDist[c-1];
-        assert(oversampled_fraction > 0) : "oversampled fraction should be > 0, but is " + oversampled_fraction;
+        assert(oversampled_fraction > 0) : "oversampled fraction should be > 0, but is " + oversampled_fraction + ": not using enough training data?";
         assert(!Double.isNaN(scored[c]));
         scored[c] *= original_fraction / oversampled_fraction;
         probsum += scored[c];
