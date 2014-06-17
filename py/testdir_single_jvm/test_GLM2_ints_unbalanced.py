@@ -19,7 +19,6 @@ def create_enum_list(randChars="012345679", maxEnumSize=MAX_ENUM_SIZE, listSize=
     # enumList = [random_enum(randChars, maxEnumSize) for i in range(listSize)]
     return enumList
 
-
 def write_syn_dataset(csvPathname, enumList, rowCount, colCount=1, SEED='12345678', 
         colSepChar=",", rowSepChar="\n"):
     enumRange = len(enumList)
@@ -128,11 +127,11 @@ class Basic(unittest.TestCase):
             y = colCount
             modelKey = 'xyz'
             kwargs = {
+                'n_folds': 0,
                 'destination_key': modelKey,
                 'response': y, 
                 'max_iter': 200, 
                 'family': 'binomial',
-                'n_folds': 10, 
                 'alpha': 0, 
                 'lambda': 0, 
                 }
@@ -140,8 +139,8 @@ class Basic(unittest.TestCase):
             start = time.time()
 
             updateList= [ 
-                {'alpha': 0.5, 'lambda': 1e-4},
-                {'alpha': 0.25, 'lambda': 1e-4},
+                {'alpha': 0.5, 'lambda': 1e-5},
+                # {'alpha': 0.25, 'lambda': 1e-4},
             ]
 
 
@@ -159,7 +158,7 @@ class Basic(unittest.TestCase):
                     timeoutSecs=30, separator=colSepInt)
 
                 h2o_cmd.runScore(dataKey="B.hex", modelKey=modelKey, 
-                    vactual='C' + str(y+1), vpredict=1, expectedAuc=0.5)
+                    vactual='C' + str(y+1), vpredict=1, expectedAuc=0.6)
 
 
 if __name__ == '__main__':

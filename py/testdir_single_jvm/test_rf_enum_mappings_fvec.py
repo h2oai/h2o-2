@@ -1,6 +1,7 @@
 import unittest, random, sys, time, re, math
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util
+
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2o_util, h2o_gbm
 
 # use randChars for the random chars to use
 def random_enum(randChars, maxEnumSize):
@@ -18,14 +19,17 @@ def write_syn_dataset(csvPathname, enumList, rowCount, colCount=1, SEED='1234567
     dsf = open(csvPathname, "w+")
     for row in range(rowCount):
         rowData = []
+        # keep a sum of all the index mappings for the enum chosen (for the features in a row)
+        riIndexSum = 0
         for col in range(colCount):
-            ri = random.choice(enumList)
-            rowData.append(ri)
+            riIndex = random.randint(0, len(enumList)-1)
+            rowData.append(enumList[riIndex])
+            riIndexSum += riIndex
 
         # output column
-        # ri = r1.randint(0,1)
-        # skew the binomial 0,1 distribution. (by rounding to 0 or 1
-        ri = round(r1.triangular(0,1,0.3), 0)
+        # make the output column match odd/even row mappings.
+        # change...make it 1 if the sum of the enumList indices used is odd
+        ri = riIndexSum % 2
         rowData.append(ri)
         rowDataCsv = colSepChar.join(map(str,rowData)) + rowSepChar
         dsf.write(rowDataCsv)
@@ -50,15 +54,15 @@ class Basic(unittest.TestCase):
         ### time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_GLM2_enums_score_subset(self):
+    def test_rf_enums_mappings_fvec(self):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
-        n = 500
+        n = 3000
         tryList = [
-            # (n, 1, 'cD', 300), 
-            # (n, 2, 'cE', 300), 
-            # (n, 3, 'cF', 300), 
+            (n, 1, 'cD', 300), 
+            (n, 2, 'cE', 300), 
+            (n, 3, 'cF', 300), 
             (n, 4, 'cG', 300), 
             (n, 5, 'cH', 300), 
             (n, 6, 'cI', 300), 
@@ -82,49 +86,47 @@ class Basic(unittest.TestCase):
             csvScorePathname = SYNDATASETS_DIR + '/' + csvScoreFilename
 
             enumList = create_enum_list(listSize=10)
-            # use half of the enums for creating the scoring dataset
-            enumListForScore = random.sample(enumList,5)
+            # use same enum List
+            enumListForScore = enumList
 
-            print "Creating random", csvPathname, "for glm model building"
+            print "Creating random", csvPathname, "for rf model building"
             write_syn_dataset(csvPathname, enumList, rowCount, colCount, SEEDPERFILE, 
                 colSepChar=colSepChar, rowSepChar=rowSepChar)
 
-            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, 
-                timeoutSecs=30, separator=colSepInt)
-
-            print "Creating random", csvScorePathname, "for glm scoring with prior model (using enum subset)"
+            print "Creating random", csvScorePathname, "for rf scoring with prior model (using same enum list)"
             write_syn_dataset(csvScorePathname, enumListForScore, rowCount, colCount, SEEDPERFILE, 
                 colSepChar=colSepChar, rowSepChar=rowSepChar)
 
-            parseResult = h2i.import_parse(path=csvScorePathname, schema='put', hex_key="score_" + hex_key, 
+            scoreDataKey = "score_" + hex_key
+            parseResult = h2i.import_parse(path=csvScorePathname, schema='put', hex_key=scoreDataKey, 
                 timeoutSecs=30, separator=colSepInt)
 
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key,
+                timeoutSecs=30, separator=colSepInt)
+            print "Parse result['destination_key']:", parseResult['destination_key']
 
             print "\n" + csvFilename
             (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
                 h2o_cmd.columnInfoFromInspect(parseResult['destination_key'], exceptionOnMissingValues=True)
 
             y = colCount
+            modelKey = 'enums'
+            # limit depth and number of trees to accentuate the issue with categorical split decisions
             kwargs = {
-                'response': y, 
-                'max_iter': 8, 
-                'family': 'binomial', 
-                'n_folds': 2, 
-                'alpha': 0.2,   
-                'lambda': 1e-5
+                'destination_key': modelKey,
+                'response': y,
+                'classification': 1,
+                'ntrees': 1,
+                'max_depth': 10,
+                'validation': scoreDataKey,
             }
+
             start = time.time()
-            glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
-            print "glm end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'
-
-            h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
-
-            # Score *******************************
-            # this messes up if you use case_mode/case_vale above
+            rfResult = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
+            print "rf end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'
+            (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfResult)
             predictKey = 'Predict.hex'
-            modelKey = glm['glm_model']['_key']
-            h2o_cmd.runScore(dataKey="score_" + hex_key, modelKey=modelKey, 
-                vactual=y, vpredict=1, expectedAuc=0.6)
+            h2o_cmd.runScore(dataKey=scoreDataKey, modelKey=modelKey, vactual=y, vpredict=1) # , expectedAuc=0.5)
 
 
 if __name__ == '__main__':
