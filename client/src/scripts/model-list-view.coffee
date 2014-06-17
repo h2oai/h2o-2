@@ -2,6 +2,17 @@ Steam.ModelListView = (_) ->
   _predicate = node$ type: 'all'
   _items = do nodes$
   _hasItems = lift$ _items, (items) -> items.length > 0
+  _isSelectAll = node$ no
+
+  #TODO ugly
+  _isLive = node$ yes
+
+  apply$ _isSelectAll, (isSelected) ->
+    _isLive no
+    for item in _items()
+      item.isSelected isSelected
+    _isLive yes
+    return
 
   _canClearPredicate = lift$ _predicate, (predicate) -> predicate.type isnt 'all'
   _predicateCaption = lift$ _predicate, (predicate) ->
@@ -12,9 +23,6 @@ Steam.ModelListView = (_) ->
         "Showing models compatible with\n#{predicate.frameKey}"
       else
         ''
-
-  #TODO ugly
-  _isLive = node$ yes
 
   displayItem = (item) ->
     if item
@@ -48,8 +56,8 @@ Steam.ModelListView = (_) ->
     self =
       data: model
       title: model.key
-      caption: model.model_category
-      cutline: 'Response Column: ' + model.response_column_name
+      caption: "#{model.response_column_name} (#{model.model_category})"
+      timestamp: model.creation_epoch_time_millis
       display: -> activateAndDisplayItem self
       isActive: node$ no
       isSelected: node$ no
@@ -113,5 +121,6 @@ Steam.ModelListView = (_) ->
   predicateCaption: _predicateCaption
   clearPredicate: clearPredicate
   canClearPredicate: _canClearPredicate
+  isSelectAll: _isSelectAll
   template: 'model-list-view'
 

@@ -722,6 +722,34 @@ public class DTree extends Iced {
       return fs;
     }
 
+    @Override public ModelAutobufferSerializer getModelSerializer() {
+      // Return a serializer which knows how to serialize keys
+      return new ModelAutobufferSerializer() {
+        @Override protected AutoBuffer postSave(Model m, AutoBuffer ab) {
+          int ntrees = treeKeys.length;
+          ab.put4(ntrees);
+          for (int i=0; i<ntrees; i++) {
+            CompressedTree[] ts = ctree(i);
+            ab.putA(ts);
+          }
+          return ab;
+        }
+        @Override protected AutoBuffer postLoad(Model m, AutoBuffer ab) {
+          int ntrees = ab.get4();
+          Futures fs = new Futures();
+          for (int i=0; i<ntrees; i++) {
+            CompressedTree[] ts = ab.getA(CompressedTree.class);
+            for (int j=0; j<ts.length; j++) {
+              Key k = ((TreeModel) m).treeKeys[i][j];
+              UKV.put(k, ts[j], fs);
+            }
+          }
+          fs.blockForPending();
+          return ab;
+        }
+      };
+    }
+
     public void generateHTML(String title, StringBuilder sb) {
       DocGen.HTML.title(sb,title);
       sb.append("<div class=\"alert\">").append("Actions: ");
@@ -730,6 +758,7 @@ public class DTree extends Iced {
       sb.append(Predict.link(_key,"Score on dataset")).append(", ");
       if (_dataKey != null)
         sb.append(UIUtils.builderModelLink(this.getClass(), _dataKey, responseName(), "Compute new model")).append(", ");
+      sb.append(UIUtils.qlink(SaveModel.class, "model", _key, "Save model")).append(", ");
       if (isProduced()) { // looks at locker field and check W-locker guy
         sb.append("<i class=\"icon-stop\"></i>&nbsp;").append(Cancel.link(getProducer(), "Stop training this model"));
       } else {
@@ -1035,10 +1064,12 @@ public class DTree extends Iced {
 
       boolean featureAllowed = isFeatureAllowed();
       if (! featureAllowed) {
-        sb.append("<br/><div id=\'javaModelWarningBlock\' class=\"alert\">You have requested a premium feature (> 10 trees) and your H<sub>2</sub>O software is unlicensed.<br/><br/>");
-        sb.append("Please enter your email address to temporarily enable downloading Java models:<br/>");
+        sb.append("<br/><div id=\'javaModelWarningBlock\' class=\"alert\" style=\"background:#eedd20;color:#636363;text-shadow:none;\">");
+        sb.append("<b>You have requested a premium feature (> 10 trees) and your H<sub>2</sub>O software is unlicensed.</b><br/><br/>");
+        sb.append("Please enter your email address below, and we will send you a trial license shortly.<br/>");
+        sb.append("This will also temporarily enable downloading Java models.<br/>");
         sb.append("<form class=\'form-inline\'><input id=\"emailForJavaModel\" class=\"span5\" type=\"text\" placeholder=\"Email\"/> ");
-        sb.append("<a href=\"#\" onclick=\'displayJavaModel();\' class=\'btn\'>Accept</a></form></div>");
+        sb.append("<a href=\"#\" onclick=\'processJavaModelLicense();\' class=\'btn btn-inverse\'>Send</a></form></div>");
         sb.append("<div id=\"javaModelSource\" class=\"hide\"><pre style=\"overflow-y:scroll;\"><code class=\"language-java\">");
         DocGen.HTML.escape(sb, toJava());
         sb.append("</code></pre></div>");
@@ -1060,6 +1091,7 @@ public class DTree extends Iced {
         sb.append("</code></pre>");
       }
       sb.append("</div>");
+      sb.append("<script type=\"text/javascript\">$(document).ready(showOrHideJavaModel);</script>");
     }
 
     @Override protected SB toJavaInit(SB sb, SB fileContextSB) {

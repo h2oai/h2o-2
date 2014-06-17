@@ -218,7 +218,7 @@ class Alert:
         return bn[0].strip().split('.')[-1]
 
     def _get_test_names(self):
-        epoch = datetime.datetime.utcfromtimestamp(0)
+        epoch = datetime.utcfromtimestamp(0)
         dt = datetime.now()
         dt2 = dt - timedelta(self.order)
         reference_time_millis = (dt2 - epoch).total_seconds() * 1000

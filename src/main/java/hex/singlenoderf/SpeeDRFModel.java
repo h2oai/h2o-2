@@ -63,6 +63,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   @API(help = "AUC")                                                      public AUC validAUC;
   @API(help = "Variable Importance")                                      public VarImp varimp;
   /* Regression or Classification */                                      boolean regression;
+  /* Score each iteration? */                                             boolean score_each;
 
   /**
    * Extra helper variables.
@@ -93,6 +94,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     super(selfKey, dataKey, fr);
     this.dest_key = selfKey;
     this.parameters = params;
+    score_each = params.score_each_iteration;
     regression = !(params.classification);
     _domain = regression ? null : fr.lastVec().toEnum().domain();
   }
@@ -113,9 +115,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   @Override public String[] classNames() { return regression ? null : _domain; }
 
   private static boolean doScore(SpeeDRFModel m) {
-    if (m.t_keys.length == 1) return true;
-    if (m.t_keys.length == m.N) return true;
-    return false;
+    return m.score_each || m.t_keys.length == 1 || m.t_keys.length == m.N;
   }
 
   public static SpeeDRFModel make(SpeeDRFModel old, Key tkey, int nodeIdx) {
@@ -143,7 +143,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
       // Perform the regression scoring
       if (m.regression) {
-        float mse = cmTask._ss / ( (float) (cmTask._rowcnt) );
+        float mse = cmTask._ss / ( (float) (cmTask._rowcnt) ); //Also add in treecount?
         m.errs = Arrays.copyOf(old.errs, old.errs.length+1);
         m.errs[m.errs.length - 1] = mse;
         m.cms = Arrays.copyOf(old.cms, old.cms.length+1);
@@ -455,8 +455,8 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       JsonObject obj = json.getAsJsonObject();
       return new double[]{
               obj.get(Constants.MIN).getAsDouble(),
-              obj.get(Constants.MAX).getAsDouble(),
-              obj.get(Constants.MEAN).getAsDouble()};
+              obj.get(Constants.MEAN).getAsDouble(),
+              obj.get(Constants.MAX).getAsDouble()};
     }
   }
 

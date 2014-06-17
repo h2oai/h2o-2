@@ -10,6 +10,7 @@ import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.TransfVec;
 import water.fvec.Vec;
+import water.serial.AutoBufferSerializer;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
@@ -127,15 +128,47 @@ public abstract class Model extends Lockable<Model> {
   }
 
   public void start_training(long training_start_time) {
+    Log.info("setting training_start_time to: " + training_start_time + " for Model: " + this);
+
+    final long t = training_start_time;
+    new TAtomic<Model>() {
+      @Override public Model atomic(Model m) {
+          if (m != null) {
+            m.training_start_time = t;
+          } return m;
+      }
+    }.invoke(_key);
     this.training_start_time = training_start_time;
   }
   public void start_training(Model previous) {
     training_start_time = System.currentTimeMillis();
+    Log.info("setting training_start_time to: " + training_start_time + " for Model: " + this + " (checkpoint case)");
     if (null != previous)
       training_duration_in_ms += previous.training_duration_in_ms;
+
+    final long t = training_start_time;
+    final long d = training_duration_in_ms;
+    new TAtomic<Model>() {
+      @Override public Model atomic(Model m) {
+          if (m != null) {
+            m.training_start_time = t;
+            m.training_duration_in_ms = d;
+          } return m;
+      }
+    }.invoke(_key);
   }
   public void stop_training() {
     training_duration_in_ms += (System.currentTimeMillis() - training_start_time);
+    Log.info("setting training_duration_in_ms to: " + training_duration_in_ms + " for Model: " + this);
+
+    final long d = training_duration_in_ms;
+    new TAtomic<Model>() {
+      @Override public Model atomic(Model m) {
+          if (m != null) {
+            m.training_duration_in_ms = d;
+          } return m;
+      }
+    }.invoke(_key);
   }
 
   public String responseName() { return   _names[  _names.length-1]; }
@@ -791,4 +824,11 @@ public abstract class Model extends Lockable<Model> {
     }
   }
 
+  /** Helper type for serialization */
+  protected static class ModelAutobufferSerializer extends AutoBufferSerializer<Model> { }
+
+  /** Returns a model serializer into AutoBuffer. */
+  public AutoBufferSerializer<Model> getModelSerializer() {
+    return new ModelAutobufferSerializer();
+  }
 }

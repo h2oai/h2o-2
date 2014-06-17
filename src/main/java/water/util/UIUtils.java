@@ -14,7 +14,7 @@ public class UIUtils {
     return link(page, RequestType.query, keyPlaceholder, k.toString(), content);
   }
   public static <T> String link(Class<T> page, String keyPlaceholder, String k, String content) {
-    return link(page, RequestType.www, keyPlaceholder, k.toString(), content);
+    return link(page, RequestType.www, keyPlaceholder, k, content);
   }
   public static <T> String link(Class<T> page, RequestType rtype, String keyPlaceholder, String k, String content) {
     RString rs = new RString("<a href='/2/%page%rtype?%keyPlaceholder=%$key'>%content</a>");

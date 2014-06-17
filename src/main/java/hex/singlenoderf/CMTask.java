@@ -454,7 +454,6 @@ public class CMTask extends MRTask2<CMTask> {
     protected boolean        _valid;
     final protected float _sum;
 
-
     private CMFinal() {
       _valid         = false;
       _SpeeDRFModelKey = null;
@@ -464,6 +463,7 @@ public class CMTask extends MRTask2<CMTask> {
       _sum = 0.f;
       _cms = null;
     }
+
     private CMFinal(CM cm, Key SpeeDRFModelKey, String[] domain, long[] errorsPerTree, boolean computedOOB, boolean valid, float sum, long[][][] cms) {
       _matrix = cm._matrix;
       _errors = cm._errors;
@@ -477,14 +477,17 @@ public class CMTask extends MRTask2<CMTask> {
       _sum = sum;
       _cms = cms;
     }
+
     /** Make non-valid confusion matrix */
     public static CMFinal make() {
       return new CMFinal();
     }
+
     /** Create a new confusion matrix. */
     public static CMFinal make(CM cm, SpeeDRFModel model, String[] domain, long[] errorsPerTree, boolean computedOOB, float sum, long[][][] cms) {
       return new CMFinal(cm, model._key, domain, errorsPerTree, computedOOB, true, sum, cms);
     }
+
     public String[] domain() { return _domain; }
     public int      dimension() { return _matrix.length; }
     public long     matrix(int i, int j) { return _matrix[i][j]; }
@@ -524,55 +527,94 @@ public class CMTask extends MRTask2<CMTask> {
     }
   }
 
+  /** Compute the sum of squared errors */
+  private float doSSECalc(int[] votes, float[] preds, int cclass) {
+    float err;
+
+    // Get the total number of votes for the row
+    float sum = doSum(votes);
+
+    // No votes for the row
+    if (sum == 0) {
+      err = 1f - (1f / (votes.length - 1f));
+      return err * err;
+    }
+
+    err = Float.isInfinite(sum)
+            ? (Float.isInfinite(preds[cclass + 1]) ? 0f : 1f)
+            : 1f - preds[cclass + 1] / sum;
+
+    return err * err;
+  }
+
+  private float doSum(int[] votes) {
+    float sum = 0f;
+    for (int v : votes)
+      sum += v;
+    return sum;
+  }
+
   /** Produce confusion matrix from given votes. */
-  final CM computeCM(int[][] votes, Chunk[] chks, boolean local) {
+  final CM computeCM(int[/**/][/**/] votes, Chunk[] chks, boolean local) {
     CM cm = new CM();
     int rows = votes.length;
     int validation_rows = 0;
     int cmin = (int) _data.vecs()[_classcol].min();
-    // Assemble the votes-per-class into predictions & score each row
-    cm._matrix = new long[_N][_N];          // Make an empty confusion matrix for this chunk
-    float preds[] = new float[_N+1];
-    for( int r = 0; r < rows; r++ ) { // Iterate over rows
-      float sum = 0.f;
-      int row = r + (int)chks[0]._start;
-      int[] vi = votes[r];                // Votes for i-th row
-      for( int v=0; v<_N; v++ ) preds[v+1] = vi[v];
-      if(_classWt != null )                 // Apply class weights
-        for( int v = 0; v<_N; v++) preds[v+1] *= _classWt[v];
-      int result = ModelUtils.getPrediction(preds, row); // Share logic to get a prediction for classifiers (solve ties)
-      if( vi[result]==0 ) { cm._skippedRows++; continue; } // Ignore rows with zero votes
 
+    // Assemble the votes-per-class into predictions & score each row
+
+    // Make an empty confusion matrix for this chunk
+    cm._matrix = new long[_N][_N];
+    float preds[] = new float[_N+1];
+
+    // Loop over the rows
+    for( int r = 0; r < rows; r++ ) {
+      int row = r + (int)chks[0]._start;
+
+      // The class votes for the i-th row
+      int[] vi = votes[r];
+
+      // Fill the predictions with the vote counts, keeping the 0th index unchanged
+      for( int v=0; v<_N; v++ ) preds[v+1] = vi[v];
+
+      // Apply class weights
+      if(_classWt != null )
+        for( int v = 0; v<_N; v++) preds[v+1] *= _classWt[v];
+
+      // `result` is the class with the most votes, accounting for ties in the shared logic in ModelUtils
+      int result = ModelUtils.getPrediction(preds, row);
+
+      // Get the class value from the response column for the current row
       int cclass = alignDataIdx((int) chks[_classcol].at8(row) - cmin);
       assert 0 <= cclass && cclass < _N : ("cclass " + cclass + " < " + _N);
+
+      // Ignore rows with zero votes, but still update the sum of squared errors
+      if( vi[result]==0 ) {
+        cm._skippedRows++;
+        if (!local) _sum += doSSECalc(vi, preds, cclass);
+        continue;
+      }
+
+      // Update the confusion matrix
       cm._matrix[cclass][result]++;
       if( result != cclass ) cm._errors++;
       validation_rows++;
-      for (int v : vi)
-        sum += (float)v;
 
-      float[] fs = new float[_N];
-      for (int i = 0; i < _N; ++i) {
-        fs[i] = (float)votes[r][i];
-      }
-      float err;
-      if(sum == 0) {
-        err = 1.0f-1.0f/_N;
-      } else {
-        err = fs[cclass] == 0 ? 0.f : 1.0f-fs[cclass]/sum;
-      }
-//      if (err == 0) {
-//        err = 1 - 1.f / _N;
-//      }
-      if (!local) _sum += err * err;
-      if(_N == 2 && !local) { // Binomial classification -> compute AUC, draw ROC
-        float snd = fs[1] / sum;// for validation dataset sum is always 1
+      // Update the sum of squared errors
+      if (!local) _sum += doSSECalc(vi, preds, cclass);
+      float sum = doSum(vi);
+
+      // Binomial classification -> compute AUC, draw ROC
+      if(_N == 2 && !local) {
+        float snd = preds[2] / sum;
         for(int i = 0; i < ModelUtils.DEFAULT_THRESHOLDS.length; i++) {
-          int p = snd >= ModelUtils.DEFAULT_THRESHOLDS[i] ? 1 : 0; // Compute prediction based on threshold
+          int p = snd >= ModelUtils.DEFAULT_THRESHOLDS[i] ? 1 : 0;
           _cms[i][cclass][p]++; // Increase matrix
         }
       }
     }
+
+    // End of loop over rows, return confusion matrix
     cm._rows=validation_rows;
     return cm;
   }

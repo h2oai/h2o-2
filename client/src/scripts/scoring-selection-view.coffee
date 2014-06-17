@@ -19,6 +19,7 @@ Steam.ScoringSelectionView = (_) ->
     defaultScoringComparisonMessage
 
   _canCompareScorings = lift$ _scoringComparisonMessage, (message) -> message is defaultScoringComparisonMessage
+  _hasScorings = node$ no
 
   compareScorings = ->
     _.loadScorings
@@ -32,17 +33,29 @@ Steam.ScoringSelectionView = (_) ->
     _.status if hover then _scoringComparisonMessage() else null
 
   deleteActiveScoring = ->
-    #TODO confirm dialog
-    _.deleteActiveScoring()
+    confirmDialogOpts =
+      title: 'Delete Scoring?'
+      confirmCaption: 'Delete'
+      cancelCaption: 'Keep'
+    _.confirm 'This scoring will be permanently deleted. Are you sure?', confirmDialogOpts, (response) ->
+      if response is 'confirm'
+        _.deleteActiveScoring()
 
   deleteScorings = ->
     # Send a clone of selections because the selections gets cleared
     #  when deleted from the selection list.
-    #TODO confirm dialog
-    _.deleteScorings clone _selections()
+    confirmDialogOpts =
+      title: 'Delete Scorings?'
+      confirmCaption: 'Delete'
+      cancelCaption: 'Keep'
+    _.confirm 'These scorings will be permanently deleted. Are you sure?', confirmDialogOpts, (response) ->
+      if response is 'confirm'
+        _.deleteScorings clone _selections()
 
   clearSelections = ->
     _.deselectAllScorings()
+
+  rescore = -> _.rescore()
 
   link$ _.scoringSelectionChanged, (isSelected, scoring) ->
     if isSelected
@@ -53,12 +66,16 @@ Steam.ScoringSelectionView = (_) ->
   link$ _.scoringSelectionCleared, ->
     _selections.removeAll()
 
+  link$ _.scoringAvailable, _hasScorings
+
   caption: _caption
   hasSelection: _hasSelection
   clearSelections: clearSelections
   canCompareScorings: _canCompareScorings
   tryCompareScorings: tryCompareScorings
+  rescore: rescore
   compareScorings: compareScorings
+  hasScorings: _hasScorings
   deleteScorings: deleteScorings
   deleteActiveScoring: deleteActiveScoring
   template: 'scoring-selection-view'

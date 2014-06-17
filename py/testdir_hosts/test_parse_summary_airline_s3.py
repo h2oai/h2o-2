@@ -22,6 +22,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_parse_summary_airline_s3(self):
+        h2o.beta_features = True
         csvFilelist = [
             ("allyears2k.csv",   300), #4.4MB
             ("year1987.csv",     600), #130MB

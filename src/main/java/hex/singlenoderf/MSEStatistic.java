@@ -23,30 +23,56 @@ public class MSEStatistic extends Statistic {
     super(data, features, seed, exclusiveSplitLimit, true /*regression*/);
   }
 
-  @Override
-  protected Split ltSplit(int colIndex, Data d, float[] dist, float distWeight, Random rand) {
-    float bestSoFar = 0.f;
-    int bestSplit = -1;
+  private float computeAv(float[] dist, Data d, int sum) {
+    float res = 0f;
+    for (int i = 0; i < dist.length; ++i) {
+      int tmp = (int) dist[i];
+      res += d._dapt._c[d._dapt._c.length - 1]._binned2raw[i] * tmp;
+    }
+    return sum == 0 ? Float.POSITIVE_INFINITY : res / (float) sum;
+  }
 
-    for (int j = 0; j < _columnDistsRegression[colIndex].length - 1; ++j) {
-      float Y_R = distWeight;
-      float Y_L = 0.f;
-      int nobs_R = d.rows();
-      int nobs_L = 0;
-      for (float aDist : dist) {
-        Y_L += aDist;
-        Y_R -= aDist;
-        nobs_L++;
-        nobs_R--;
-        float newSplitValue = (Y_L * Y_L / (float) nobs_L) + (Y_R * Y_R / (float) nobs_R);
-        if (newSplitValue > bestSoFar) {
-          bestSoFar = newSplitValue;
-          bestSplit = j;
-        }
+  private float[] computeDist(Data d, int colIndex) {
+    float[] res = new float[d.columnArityOfClassCol()];
+    for (int i = 0; i < _columnDistsRegression[colIndex].length - 1; ++i) {
+      for (int j = 0; j < _columnDistsRegression[colIndex][j].length - 1; ++j) {
+        res[j] += _columnDistsRegression[colIndex][i][j];
       }
     }
+    return res;
+  }
+
+  @Override
+  protected Split ltSplit(int colIndex, Data d, float[] dist, float distWeight, Random rand) {
+    float bestSoFar = Float.POSITIVE_INFINITY;
+    int bestSplit = -1;
+
+    int lW = 0;
+    int rW = d.rows();
+    float[] leftDist = new float[d.columnArityOfClassCol()];
+    float[] riteDist = computeDist(d, colIndex); //dist.clone();
+
+    for (int j = 0; j < _columnDistsRegression[colIndex].length - 1; ++j) {
+      for (int i = 0; i < dist.length; ++i) {
+        int t = _columnDistsRegression[colIndex][j][i];
+        lW += t;
+        rW -= t;
+        leftDist[i] += t;
+        riteDist[i] -= t;
+      }
+
+      float Y_R = computeAv(riteDist, d, rW);
+      float Y_L = computeAv(leftDist, d, lW);
+
+      float newSplitValue = Y_R + Y_L;
+      if (newSplitValue < bestSoFar) {
+        bestSoFar = newSplitValue;
+        bestSplit = j;
+      }
+    }
+
     return bestSplit == -1
-            ? Split.impossible(Utils.maxIndex(dist, _random))
+            ? Split.impossible(Utils.maxIndex(computeDist(d, colIndex), _random))
             : Split.split(colIndex, bestSplit, bestSoFar);
   }
 

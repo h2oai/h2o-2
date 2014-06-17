@@ -46,6 +46,9 @@ public class SpeeDRF extends Job.ValidatedJob {
   @API(help = "Sampling Rate at each split.", filter = Default.class, json  = true, dmin = 0, dmax = 1, importance = ParamImportance.EXPERT)
   public double sample = 0.67;
 
+  @API(help ="Score each iteration", filter = Default.class, json = true, importance = ParamImportance.SECONDARY)
+  public boolean score_each_iteration = false;
+
   @API(help = "OOBEE", filter = Default.class, json = true, importance = ParamImportance.SECONDARY)
   public boolean oobee = true;
 
@@ -70,8 +73,6 @@ public class SpeeDRF extends Job.ValidatedJob {
   private static final Random _seedGenerator = Utils.getDeterRNG(0xd280524ad7fe0602L);
 
   private boolean regression;
-
-  private Tree.StatType stat_type;
 
   /** Return the query link to this page */
 //  public static String link(Key k, String content) {
@@ -137,7 +138,6 @@ public class SpeeDRF extends Job.ValidatedJob {
         arg.disable("Variable Importance not supported in SpeeDRF regression.");
       }
     }
-
   }
 
   @Override protected void execImpl() {
@@ -146,7 +146,8 @@ public class SpeeDRF extends Job.ValidatedJob {
     buildForest(rf_model);
     // buildForest() caused a different SpeeDRFModel instance to get put into the DKV.  We
     // need to update that one, not rf_model
-    DRFTask.updateRFModelStopTraining(rf_model._key);
+//    DRFTask.updateRFModelStopTraining(rf_model._key);
+    rf_model.stop_training();
     if (n_folds > 0) CrossValUtils.crossValidate(this);
     cleanup();
     remove();
@@ -263,7 +264,8 @@ public class SpeeDRF extends Job.ValidatedJob {
     try {
       source.read_lock(self());
 
-      //Map the SelectStatType to the actual StatType
+      // Map the enum SelectStatType to the enum StatType
+      Tree.StatType stat_type;
       if (regression) {
         stat_type = Tree.StatType.MSE;
       } else {
@@ -291,21 +293,12 @@ public class SpeeDRF extends Job.ValidatedJob {
         // Handle bad user input for class weights
         class_weights = checkClassWeights(class_weights);
 
-        // If MSE is chosen for regression, then throw unimpl
-        if (stat_type == Tree.StatType.MSE) throw new IllegalArgumentException("Got a bad statistic type. Must use MSE for regression only.");
-
-
-      // Initialize regression specific model parameters
+        // Initialize regression specific model parameters
       } else {
 
         // Class Weights and Strata Samples do not apply to Regression
         class_weights = null;
         strata_samples = null;
-
-        // The only acceptable stat type is MSE
-        if (stat_type != Tree.StatType.MSE) {
-          stat_type = Tree.StatType.MSE;
-        }
 
         //TODO: Variable importance in regression not currently supported
         if (importance) throw new IllegalArgumentException("Variable Importance for SpeeDRF regression not currently supported.");
@@ -317,11 +310,15 @@ public class SpeeDRF extends Job.ValidatedJob {
       }
 
       // Prepare the train/test data sets based on the user input for the model.
-      Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, !regression /*toEnum is TRUE if regression is FALSE*/, false, false);
+      Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, !regression /*toEnum is TRUE if regression is FALSE*/, true, true);
       Frame test = null;
       if (validation != null) {
-        test = FrameTask.DataInfo.prepareFrame(validation, validation.vecs()[source.find(response)], ignored_cols, !regression, false, false);
+        test = FrameTask.DataInfo.prepareFrame(validation, validation.vecs()[source.find(response)], ignored_cols, !regression, true, true);
       }
+
+      if(classification && validation != null)
+        if (!( Arrays.equals( train.lastVec().toEnum().domain(), test.lastVec().toEnum().domain())))
+          throw new IllegalArgumentException("Train and Validation data have inconsistent response columns!");
 
       // Set the model parameters
       SpeeDRFModel model = new SpeeDRFModel(dest(), source._key, train, this);
@@ -360,7 +357,10 @@ public class SpeeDRF extends Job.ValidatedJob {
       model.strata_samples = regression ? null : new float[strata_samples.length];
 
       if (!regression) {
-        for (int i = 0; i < strata_samples.length; i++) model.strata_samples[i] = (float) strata_samples[i];
+        for (int i = 0; i < strata_samples.length; i++) {
+          assert model.strata_samples != null;
+          model.strata_samples[i] = (float) strata_samples[i];
+        }
       }
 
       if (mtry == -1) {

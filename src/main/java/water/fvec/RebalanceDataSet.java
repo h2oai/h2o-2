@@ -76,7 +76,7 @@ public class RebalanceDataSet extends H2O.H2OCountedCompleter {
   @Override
   public void compute2() {
     final Vec [] srcVecs = _in.vecs();
-    _out = new Frame(_okey,_in.names(), new Vec(_vg.addVec(),_espc).makeZeros(srcVecs.length,_in.domains()));
+    _out = new Frame(_okey,_in.names(), new Vec(_vg.addVec(),_espc).makeZeros(srcVecs.length,_in.domains(),_in.uuids(),_in.times()));
     _out.delete_and_lock(_jobKey);
     new RebalanceTask(this,srcVecs).asyncExec(_out);
   }

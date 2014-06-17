@@ -36,12 +36,13 @@ public class Inspect2 extends Request2 {
 
   // An internal JSON-output-only class
   static class ColSummary extends Iced {
-    public static enum ColType { Enum, Int, Real, Time };
+    public static enum ColType { Enum, Int, Real, Time, UUID };
     static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
     public ColSummary( String name, Vec vec ) {
       this.name = name;
-      this.type = vec.isEnum() ? ColType.Enum : vec.isInt() ? (vec.isTime() ? ColType.Time : ColType.Int) : ColType.Real;
+      this.type = vec.isEnum() ? ColType.Enum : vec.isUUID() ? ColType.UUID : (vec.isInt() ? (vec.isTime() ? ColType.Time : ColType.Int) : ColType.Real);
+      boolean numeric = !vec.isEnum() && !vec.isUUID();
       this.min  = vec.isEnum() ? Double.NaN : vec.min();
       this.max  = vec.isEnum() ? Double.NaN : vec.max();
       this.mean = vec.isEnum() ? Double.NaN : vec.mean();
@@ -194,7 +195,10 @@ public class Inspect2 extends Request2 {
     sb.append("<tr class='warning'>");
     sb.append("<td>").append("Mean").append("</td>");
     for( int i=0; i<cols.length; i++ )
-      sb.append("<td>").append(cols[i].type == ColType.Enum ? NA : mean_dformat.format(cols[i].mean)).append("</td>");
+      sb.append("<td>").append((cols[i].type == ColType.Enum) ||
+                               (cols[i].type == ColType.UUID) 
+                               ? NA 
+                               : mean_dformat.format(cols[i].mean)).append("</td>");
     sb.append("</tr>");
 
     // Cardinality row is shown only if dataset contains enum-column
@@ -259,8 +263,13 @@ public class Inspect2 extends Request2 {
   }
 
   // ---
-  // Return a well-formated string for this kind of Vec
-  public static String x0( Vec v, long row ) { return x1(v,row,v.at(row)); }
+  // Return a well-formatted string for this kind of Vec
+  public static String x0( Vec v, long row ) { 
+    if( !v.isUUID() ) return x1(v,row,v.at(row));
+    // UUID handling
+    if( v.isNA(row) ) return x1(v,row,Double.NaN);
+    return "<b style=\"font-family:monospace;\">"+PrettyPrint.UUID(v.at16l(row),v.at16h(row))+"</b>";
+  }
 
   // Format a row, OR the min/max
   public static String x1( Vec v, long row, double d ) {

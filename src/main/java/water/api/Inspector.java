@@ -6,6 +6,7 @@ import java.util.Map;
 import hex.GridSearch;
 import hex.glm.GLM2;
 import water.*;
+import water.api.RequestBuilders.Response;
 import water.fvec.Frame;
 import water.util.RString;
 import water.util.UIUtils;
@@ -75,4 +76,9 @@ public class Inspector extends Request2 {
   }
 
   private static String[] sa(String ...s) { return s; }
+
+  //Called from some other page, to redirect that other page to this page.
+  public static Response redirect(Request req, Key src_key) {
+    return Response.redirect(req, "/2/Inspector", "src_key", src_key.toString());
+  }
 }

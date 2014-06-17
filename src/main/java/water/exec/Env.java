@@ -284,7 +284,7 @@ public class Env extends Iced {
   Vec addRef( Vec vec ) {
     IcedInt I = _refcnt.get(vec);
     assert I==null || I._val>0;
-    assert vec.length() == 0 || (vec.at(0) > 0 || vec.at(0) <= 0 || Double.isNaN(vec.at(0)));
+    assert vec.length() == 0 || vec.isUUID() || (vec.at(0) > 0 || vec.at(0) <= 0 || Double.isNaN(vec.at(0)));
     _refcnt.put(vec,new IcedInt(I==null?1:I._val+1));
     if (vec.masterVec()!=null) addRef(vec.masterVec());
     return vec;

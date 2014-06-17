@@ -3,6 +3,7 @@ package water;
 import static org.junit.Assert.*;
 import hex.ConfusionMatrix;
 import hex.gbm.DTree.TreeModel;
+import hex.glm.GLMModel;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -426,7 +427,15 @@ public class TestUtil {
     }
   }
 
+  public static void assertModelEquals(Model a, Model b) {
+    assertArrayEquals("Model names has to equal!", a._names, b._names);
+    assertEquals("Model has to contain same number of domains!", a._domains.length, b._domains.length);
+    for (int i=0; i<a._domains.length; i++) {
+      assertArrayEquals("Model input column "+i+" has to contain same domain names!", a._domains[i], b._domains[i]);
+    }
+  }
   public static void assertTreeModelEquals(TreeModel a, TreeModel b) {
+    assertModelEquals(a,b);
     assertEquals("Number of demanded trees should be same!", a.N, b.N);
     assertEquals("Number of produced trees should be same!", a.ntrees(), b.ntrees());
     assertArrayEquals("All error fields should be same (requiring models build without skipping scoring)!", a.errs, b.errs, 0.00000001);
@@ -437,5 +446,8 @@ public class TestUtil {
         assertCMEquals(i+"-th CM should be same (requiring models build without skipping scoring)!", a.cms[i], b.cms[i]);
       }
     }
+  }
+  public static void assertModelBinaryEquals(Model a, Model b) {
+    assertArrayEquals("The serialized models are not binary same!", a.write(new AutoBuffer()).buf(), b.write(new AutoBuffer()).buf());
   }
 }
