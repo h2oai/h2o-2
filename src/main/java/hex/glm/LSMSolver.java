@@ -267,7 +267,7 @@ public abstract class LSMSolver extends Iced{
         gram.addDiag(_addedL2); // try to add L2 penalty to make the Gram issp
         gram.cholesky(chol);
       }
-      long decompTIme = (t2-t1);
+      long decompTime = (t2-t1);
 
       if(!chol.isSPD()){
         System.out.println("can not solve, got non-spd matrix and adding regularization did not help, matrix = \n" + gram);
@@ -283,17 +283,13 @@ public abstract class LSMSolver extends Iced{
       }
       gerr = Double.POSITIVE_INFINITY;
       long t = System.currentTimeMillis();
-      final double ABSTOL = Math.sqrt(N) * 1e-4;
-      final double RELTOL = 1e-2;
       double[] u = MemoryManager.malloc8d(N);
       double [] xyPrime = xy.clone();
       double kappa = _lambda*_alpha/rho;
-      double [] grad = null;
       int i;
       int k = 10;
-      double gradientErr = Double.POSITIVE_INFINITY;
+      double lastErr = Double.POSITIVE_INFINITY;
 
-      double gerr = Double.POSITIVE_INFINITY;
       double [] z = res.clone();
       for(i = 0; i < 2500; ++i ) {
         // first compute the x update
@@ -315,23 +311,20 @@ public abstract class LSMSolver extends Iced{
           gerr = getGrad(i,gram,z,xy);
           if(gerr < _gradientEps){
             _converged = true;
-            this.gerr = gerr;
             System.arraycopy(z,0,res,0,z.length);
             break;
           }
           // did not converge, check if we can converge in reasonable time
-          double diff = gradientErr - gerr;
+          double diff = lastErr - gerr;
           if(diff < 0 || (gerr/diff) > 1e3){ // we won't ever converge with this setup (maybe change rho and try again?)
             if(_orlx < 1.8 && gerr > 5e-4) {
               _orlx = 1.8; // try if over-relaxation helps...
             } else {
-              _converged = gerr < 1e-2;
-              this.gerr = gerr;
               break;
             }
           } else {
             System.arraycopy(z,0,res,0,z.length);
-            gradientErr = gerr;
+            lastErr = gerr;
           }
           k = i + 10; // test gradient every 10 iterations
         }
@@ -340,7 +333,7 @@ public abstract class LSMSolver extends Iced{
       assert gram._diagAdded == d;
       long solveTime = System.currentTimeMillis()-t;
       if(Double.isInfinite(this.gerr)) this.gerr = getGrad(i,gram,res,xy);
-      Log.info("ADMM finished in " + i + " iterations and (" + decompTIme + " + " + solveTime+ ")ms, max |subgradient| = " + gradientErr);
+      Log.info("ADMM finished in " + i + " iterations and (" + decompTime + " + " + solveTime+ ")ms, max |subgradient| = " + lastErr);
       return _converged = (this.gerr < 1e-2);
     }
     @Override

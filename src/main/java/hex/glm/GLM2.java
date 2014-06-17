@@ -554,18 +554,30 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       Log.info("GLM2 iteration(" + _iter + ") done in " + (System.currentTimeMillis() - _iterationStartTime) + "ms");
       if( !isRunning(self()) )  throw new JobCancelledException();
       boolean gotNaNsorInfs = Utils.hasNaNsOrInfs(glmt._xy) || glmt._gram.hasNaNsOrInfs();
+      boolean constBeta = true;
       if(gotNaNsorInfs){
-        System.out.println("Got NaNs/Infs, invoking line-search!");
+        Log.info("GLM2 got NaNs/Infs, invoking line-search.");
         setHighAccuracy();
+
         if(_lastResult == null) {
-          for (int i = 0; i < glmt._beta.length; ++i)
+          for (int i = 0; i < glmt._beta.length; ++i) {
             glmt._beta[i] *= 0.5;
+            constBeta &= glmt._beta[i] < beta_epsilon;
+          }
         } else {
           assert !Arrays.equals(glmt._beta,_lastResult._glmt._beta);
-          for (int i = 0; i < glmt._beta.length; ++i)
-            glmt._beta[i] = 0.5 * (glmt._beta[i] + _lastResult._glmt._beta[i]);
+          double [] lastBeta = resizeVec(_lastResult._glmt._beta,_activeCols,_lastResult._activeCols);
+          for (int i = 0; i < glmt._beta.length; ++i) {
+            glmt._beta[i] = 0.5 * (glmt._beta[i] + lastBeta[i]);
+            double diff = (glmt._beta[i] - lastBeta[i]);
+            constBeta &= (-beta_epsilon < diff && diff < beta_epsilon);
+          }
         }
-        new GLMIterationTask(GLM2.this,_activeData,glmt._glm, true, true, true, glmt._beta,_ymu,_reg,thresholds, new Iteration()).asyncExec(_activeData._adaptedFrame);
+        if(constBeta) { // line search failed to progress -> converge (if we a valid solution already, otherwise fail!)
+          if(_lastResult == null)throw new RuntimeException("GLM failed to solve! Got NaNs/Infs in the first iteration and line search did not help!");
+          nextLambda(_lastResult._glmt,_lastResult._glmt._beta);
+        } else // do the line search iteration
+          new GLMIterationTask(GLM2.this,_activeData,glmt._glm, true, true, true, glmt._beta,_ymu,_reg,thresholds, new Iteration()).asyncExec(_activeData._adaptedFrame);
         return;
       }
       currentLambdaIter++;
@@ -624,8 +636,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       final double [] newBeta = MemoryManager.malloc8d(glmt._xy.length);
       ADMMSolver slvr = new ADMMSolver(lambda[_lambdaIdx],alpha[0], ADMM_GRAD_EPS, _addedL2);
       slvr._rho = lambda[_lambdaIdx]*alpha[0]*_rho_mul;
-      boolean solved = slvr.solve(glmt._gram,glmt._xy,glmt._yy,newBeta) || slvr.gerr < 1.2*_gradientErr;
-      if(!solved) {
+      boolean solved = slvr.solve(glmt._gram,glmt._xy,glmt._yy,newBeta);
+      if(!solved) { // try grid search over rho parameter
         double bestErr = slvr.gerr;
         double best_rho_mul = _rho_mul;
         double rho_mul = _rho_mul * 2;
@@ -640,7 +652,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           }
           rho_mul *= 2;
         }
-        rho_mul = _rho_mul * 0.5;
+        rho_mul = _rho_mul * .5;
         for (int i = 0; i < 8; ++i) {
           slvr._rho = lambda[_lambdaIdx] * alpha[0] * rho_mul;
           slvr.solve(glmt._gram, glmt._xy, glmt._yy, newBeta);
@@ -654,7 +666,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         System.arraycopy(bestSolution,0,newBeta,0,bestSolution.length);
         _gradientErr = bestErr;
         _rho_mul = best_rho_mul;
-      }
+      } else _gradientErr = 0;
       _addedL2 = slvr._addedL2;
       if(Utils.hasNaNsOrInfs(newBeta)){
         Log.info("GLM2 forcibly converged by getting NaNs and/or Infs in beta");
