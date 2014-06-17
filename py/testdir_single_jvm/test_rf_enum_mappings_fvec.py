@@ -7,6 +7,7 @@ import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2
 SPEEDRF = True
 MULTINOMIAL = 3
 DO_WITH_INT = False
+ENUMS = 3
 # use randChars for the random chars to use
 def random_enum(randChars, maxEnumSize):
     choiceStr = randChars
@@ -88,7 +89,7 @@ class Basic(unittest.TestCase):
         enumHistory = []
 
         for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
-            enumList = create_enum_list(listSize=10)
+            enumList = create_enum_list(listSize=ENUMS)
             # reverse the list
             enumList.reverse()
 
