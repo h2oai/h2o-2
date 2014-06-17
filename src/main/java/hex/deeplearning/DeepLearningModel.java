@@ -5,10 +5,7 @@ import hex.FrameTask.DataInfo;
 import hex.VarImp;
 import water.*;
 import water.api.*;
-import water.api.Exec2;
-import static water.api.Exec2.*;
 import water.api.Request.API;
-import water.exec.*;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
@@ -996,19 +993,11 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   }
 
   /**
-   * Score auto-encoded reconstruction
-   * Currently allocates an extra 2x of the training data in memory
+   * Score auto-encoded reconstruction (on-the-fly)
    * @param frame Original data (can contain response, will be ignored)
-   * @return Vec containing L2 norm (MSE) of each reconstructed row, caller is responsible for deletion
+   * @return Frame containing one Vec with L2 norm (MSE) of each reconstructed row, caller is responsible for deletion
    */
-  //TODO: do this per row on the fly to save memory via MRTask2
-  public Vec scoreAutoEncoder(Frame frame) {
-    // make prediction (full copy of data)
-    Log.info("before: " + H2O.store_size());
-
-//    final Frame reconstructed = score(frame);
-
-    // score()
+  public Frame scoreAutoEncoder(Frame frame) {
     Frame fr = frame;
     boolean adapt = true;
     int ridx = fr.find(responseName());
@@ -1025,13 +1014,9 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     // Contains only newly created vectors. The frame eases deletion of these vectors.
     Frame onlyAdaptFrm = adapt ? adaptFrms[1] : null;
 
-    // Invoke scoring
-//    Frame reconstructed = scoreImpl(adaptFrm);
-
     final int len = _names.length-1;
-    String prefix = "reconstr_";
-    for( int c=0; c<len; c++ )
-      adaptFrm.add(prefix+adaptFrm.names()[c],adaptFrm.anyVec().makeZero());
+    adaptFrm.add("L2",adaptFrm.anyVec().makeZero());
+    final double[] normMul = model_info().data_info()._normMul;
 
     new MRTask2() {
       @Override public void map( Chunk chks[] ) {
@@ -1039,44 +1024,24 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
         float preds[] = new float [len];
         for( int row=0; row<chks[0]._len; row++ ) {
           for( int i=0; i<_names.length-1; i++ )
-            tmp[i] = chks[i].at0(row);
-          float p[] = score0(tmp,preds);
-          for( int c=0; c<preds.length; c++ )
-            chks[len+c].set0(row,p[c]);
+            tmp[i] = chks[i].at0(row); //original data
+          score0(tmp,preds); //fill predictions (reconstruction)
+//          Log.info("row: " + chks[0]._start + row);
+//          Log.info("actual" + ArrayUtils.toString(tmp));
+//          Log.info("recons" + ArrayUtils.toString(preds));
+          double l2 = 0;
+          for (int i=0; i<len; ++i)
+            l2 += Math.pow((preds[i] - tmp[i])*normMul[i], 2);
+//          Log.info("L2: " + l2);
+          chks[len].set0(row,l2); //last vector stores the per-row L2 error
         }
       }
     }.doAll(adaptFrm);
 
     // Return just the output columns
     int x=_names.length-1, y=adaptFrm.numCols();
-    Frame reconstructed = adaptFrm.extractFrame(x, y);
-
-
-    // Be nice to DKV and delete vectors which i created :-)
+    final Frame l2 = adaptFrm.extractFrame(x, y);
     if (adapt) onlyAdaptFrm.delete();
-
-    Frame orig = new Frame(Key.make("Original"), fr.names(), fr.vecs());
-    orig.delete_and_lock(null);
-    orig.unlock(null);
-    Frame recon = new Frame(Key.make("Reconstruction"), reconstructed.names(), reconstructed.vecs());
-    recon.delete_and_lock(null);
-    recon.unlock(null);
-    Env ev = water.exec.Exec2.exec("Difference = Original - Reconstruction");
-    Frame diff = ev.popAry();
-    ev.remove_and_unlock();
-
-    // compute L2 norm of each reconstructed row (scaled back to normalized variables)
-    final Vec l2 = MRUtils.getL2(diff, model_info().data_info()._normMul);
-
-    // cleanup
-    ((Frame)DKV.get(Key.make("Difference")).get()).delete();
-    diff.delete();
-//    orig.delete();
-    ((Frame)DKV.get(Key.make("Original")).get()).delete();
-    recon.delete();
-//    reconstructed.delete();
-
-    Log.info("after: " + H2O.store_size());
     return l2;
   }
 
