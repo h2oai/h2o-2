@@ -175,12 +175,12 @@ public class ImportFiles2 extends Request2 {
       String[] pathComponents = PersistTachyon.decode(path);
       String serverUri = pathComponents[0];
       // Be explicit, it would be possible to use default client URI, but better is throw an error
-      if (serverUri==null || serverUri.isEmpty()) throw new IllegalArgumentException("The " + path + " is not legall URI - it is missing tachyon server URI." );
-      client = (TachyonFS) Persist.I[Value.TACHYON].createClient();
+      if (serverUri==null || serverUri.isEmpty()) throw new IllegalArgumentException("The " + path + " is not legall URI - it is missing tachyon server URI (e.g., tachyon://localhost:19998/)." );
+      client = ((PersistTachyon) Persist.I[Value.TACHYON]).createClient(PersistTachyon.PREFIX+serverUri);
       String rootFolder = pathComponents[1];
-      List<ClientFileInfo> files= client.listStatus(rootFolder); // do a recursive descend
+      List<ClientFileInfo> filesOnTFS= client.listStatus(rootFolder); // do a recursive descend
       Futures fs = new Futures();
-      for (ClientFileInfo f : files ) {
+      for (ClientFileInfo f : filesOnTFS ) {
         try {
           succ.add(TachyonFileVec.make(serverUri, f, fs).toString());
         } catch (Throwable t) {
@@ -188,14 +188,14 @@ public class ImportFiles2 extends Request2 {
           Log.err("Failed to loadfile from Tachyon: path = " + f.path + ", error = " + t.getClass().getName() + ", msg = " + t.getMessage());
         }
       }
+      keys = succ.toArray(new String[succ.size()]);
+      files = keys;
+      fails = fail.toArray(new String[fail.size()]);
     } catch (IOException e) {
-      fillEmpty("Cannot access tachyon, because " + e.getMessage());
+      fillEmpty("Cannot access specified file(s) on tachyon FS, because " + e.getMessage());
     } finally {
       if (client!=null) try { client.close(); } catch (TException _ ) {};
     }
-    keys = succ.toArray(new String[succ.size()]);
-    files = keys;
-    fails = fail.toArray(new String[fail.size()]);
   }
 
   private void fillEmpty(String failure) {
