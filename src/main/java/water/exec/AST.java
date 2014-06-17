@@ -5,6 +5,8 @@ import java.text.ParsePosition;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+import com.amazonaws.util.json.JSONObject;
+import com.google.gson.JsonObject;
 import water.*;
 import water.fvec.Chunk;
 import water.fvec.Frame;
@@ -30,6 +32,42 @@ abstract public class AST extends Iced {
     // Return the infix: op1* expr {op2 op1* expr}*
     return ast;
   }
+
+  /**
+   *
+   * Switch off the node type to produce the AST
+   * Current possible node types are:
+   *
+   * <ASTOp, ASTNumeric, ASTFrame, ASTUnk, ASTString, ASTFun, ASTArg>
+   *
+   * Refer to the R code comments/documentation for further insight/information into these node types.
+   *
+   */
+  static AST parseNode(JsonObject jo) {
+
+    String op_id = jo.get("node_type").getAsString();
+
+    if (op_id.equals("ASTOP")) {
+
+      //new astop object
+      return ASTApply.parseOp(jo);
+
+    } else if (op_id.equals("ASTNumeric")) {// new ast numeric
+
+    } else if (op_id.equals("ASTFrame")) {// new ast frame
+
+    } else if (op_id.equals("ASTUnk")) {// new ast unkown (is this ASTId ?)
+
+    } else if (op_id.equals("ASTString")) {// new AST string
+
+    } else if (op_id.equals("ASTFun")) {// new ast function
+
+    } else if (op_id.equals("ASTArg")) {// new ast arg
+
+    } else {
+      throw new IllegalArgumentException("Unkown node type. Got: " + op_id);
+    }
+//  }
 
   static AST parseVal(Exec2 E, boolean EOS ) {
     E.skipWS(EOS);
@@ -72,6 +110,36 @@ class ASTStatement extends AST {
       asts.add(ast);
       if( !E.peekEOS() ) break; // if not finding statement separator, break
     }
+    if( asts.size()==0 ) return null;
+    return new ASTStatement(asts.toArray(new AST[asts.size()]));
+  }
+  @Override void exec(Env env) {
+    for( int i=0; i<_asts.length-1; i++ ) {
+      _asts[i].exec(env);       // Exec all statements
+      env.pop();                // Pop all intermediate results
+    }
+    _asts[_asts.length-1].exec(env); // Return final statement as result
+  }
+  @Override public String toString() { return ";;;"; }
+  @Override public StringBuilder toString( StringBuilder sb, int d ) {
+    for( int i=0; i<_asts.length-1; i++ )
+      _asts[i].toString(sb,d+1).append(";\n");
+    return _asts[_asts.length-1].toString(sb,d+1);
+  }
+}
+
+// --------------------------------------------------------------------------
+class ASTStatement2 extends AST {
+  final AST[] _asts;
+  ASTStatement2( AST[] asts ) { super(asts[asts.length-1]._t); _asts = asts; }
+
+  static ASTStatement parse(JsonObject jo) {
+    ArrayList<AST> asts = new ArrayList<AST>();
+
+    // The root node is always an astop.
+    JsonObject obj = jo.get("astop").getAsJsonObject();
+    AST ast = parseNode(obj);
+    asts.add(ast);
     if( asts.size()==0 ) return null;
     return new ASTStatement(asts.toArray(new AST[asts.size()]));
   }
@@ -184,6 +252,35 @@ class ASTApply extends AST {
         E.throwErr("Missing expr or unknown ID", op_x);
       ast = make(new AST[]{op,ast,rite},E,x);
     }
+  }
+
+  /**
+   * Got redirected here to make a new AST by recursing down the operands list for this operator.
+   *
+   * This will handle the case when the operator is both prefix and infix (there is no unary infix, R side will strip
+   * additional unary ops).
+   * @return object of type AST.
+   * @param jo
+   */
+
+  static AST parseOp(JsonObject jo) {
+
+    // What type of operator is it?
+    if (jo.get("type").getAsString().equals("BinaryOperator")) {
+
+      // Parse the left and right operands for this operator and return.
+      JsonObject operands = jo.get("operands").getAsJsonObject();
+      JsonObject left = operands.get("left").getAsJsonObject();
+      JsonObject rite = operands.get("right").getAsJsonObject();
+
+
+
+    } else if (jo.get("type").getAsString().equals("PrefixOperator")) {
+
+    } else {
+      throw new IllegalArgumentException("Unkown operator type: " + jo.get("type").getAsString());
+    }
+    return ast;
   }
 
   @Override public String toString() { return _args[0].toString()+"()"; }
@@ -374,7 +471,7 @@ class ASTId extends AST {
     }
     // Nested scope?  need to grab from the nested-scope closure
     ASTFunc fcn = env.fcnScope(_depth);
-    fcn._env.push_slot(_depth-1,_num,env);
+    fcn._env.push_slot(_depth - 1, _num, env);
   }
   @Override String argName() { return _id; }
   @Override public String toString() { return _id; }

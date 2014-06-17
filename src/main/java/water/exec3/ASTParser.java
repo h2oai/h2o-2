@@ -27,7 +27,8 @@ public class ASTParser extends Request2 {
     if (response.get("astop").getAsJsonObject().get("type").getAsString().equals("BinaryOperator")) {
       ASTOp op = ASTOp.BIN_INFIX_OPS.get(op_id);
       System.out.println(op);
-      op.make();
+
+//      op.make();
     }
 
     return Response.done(response);

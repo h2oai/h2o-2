@@ -228,11 +228,6 @@ function(expr) {
 function(piece) {
   f_call <- piece[[1]]
 
-  print("Debugging now....")
-  print(f_call)
-  print(piece)
-  print("OK carry on...")
-
   # Check if user defined function
   if (.isUDF(f_call)) {
 
@@ -276,13 +271,10 @@ function(fun) {
   if (.isUDF(fun)) {
     .pkg.env$call_list <- c(.pkg.env$call_list, fun)
     l <- as.list(body(fun))
-    print("THE LIST OF STATEMENTS")
-    print(l)
-    print(l[-1])
+
     statements <- lapply(l[-1], .funToASTHelper)
     if (length(l[-1]) == 1) {
-      print("statements is only length 1!")
-      print(l)
+
       statements <- .funToASTHelper(eval(parse(text=deparse(eval(l[-1])))))
     }
     if (length(statements) == 1 && is.null(statements[[1]])) { return(NULL) }

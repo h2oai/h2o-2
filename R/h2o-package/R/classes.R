@@ -508,7 +508,7 @@ setMethod("show", "H2ORFModelVA", function(object) {
 #' Every node in the abstract syntax tree will have a symbol table, which is a dictionary of types and names for
 #' all the relevant variables and functions defined in the current scope. A missing symbol is therefore discovered
 #' by looking up the tree to the nearest symbol table defining that symbol.
-setClass("Node", contains="H2OFrame")
+setClass("Node", representation(node_type="character"), contains="H2OFrame")
 
 #'
 #' The ASTNode class.
@@ -522,20 +522,23 @@ setClass("ASTNode", representation(root="Node", children="list"), contains="Node
 #'
 #' This class represents an operator between one or more H2O objects. ASTOp nodes are always root nodes in a tree and
 #' are never leaf nodes. Operators are discussed more in depth in ops.R.
-setClass("ASTOp", representation(type="character", operator="character", infix="logical"), contains="Node")
+setClass("ASTOp", representation(type="character", operator="character", infix="logical"), contains="Node",
+         prototype(node_type = "ASTOp"))
 
 #'
 #' The ASTNumeric class.
 #'
 #' This class represents a numeric leaf node in the abstract syntax tree. This may either be a raw numerical value or a
 #' variable containing a numerical value. In any case, the class of the object being placed is of type 'numeric'.
-setClass("ASTNumeric", representation(type="character", value="numeric"), contains="Node")
+setClass("ASTNumeric", representation(type="character", value="numeric"), contains="Node",
+         prototype(node_type = "ASTNumeric"))
 
 #'
-#' The ASTFRame class.
+#' The ASTFrame class.
 #'
 #' This class represents a leaf containing an H2OFrame object.
-setClass("ASTFrame", representation(type="character", value="character"), contains="Node")
+setClass("ASTFrame", representation(type="character", value="character"), contains="Node",
+         prototype(node_type = "ASTFrame"))
 
 #'
 #' The ASTUnk class.
@@ -545,28 +548,33 @@ setClass("ASTFrame", representation(type="character", value="character"), contai
 #' The distinction between these two cases is denoted by isFormal (TRUE -> Function arg, FALSE -> assignment)
 #'
 #' Note: Formal args are free variables.
-setClass("ASTUnk", representation(key="character", isFormal="logical"), contains="Node")
+setClass("ASTUnk", representation(key="character", isFormal="logical"), contains="Node",
+         prototype(node_type = "ASTUnk"))
 
 #'
 #' The ASTString class.
 #'
 #' This class represents a leaf holding a string expression to be passed into some function.
-setClass("ASTString", representation(type="character", value="character"), contains="Node")
+setClass("ASTString", representation(type="character", value="character"), contains="Node",
+         prototype(node_type = "ASTString"))
 
 #'
 #' The ASTFun class.
 #'
 #' This class represents a UDF.
-setClass("ASTFun", representation(type="character", name="character", statements="list", arguments="vector"), contains="Node")
+setClass("ASTFun", representation(type="character", name="character", statements="list", arguments="vector"), contains="Node",
+         prototype(node_type = "ASTFun"))
 
 #'
 #' The ASTArg class.
 #'
 #' This class represents an argument to a function.
-setClass("ASTArg", representation(arg_name="character", arg_number="numeric", arg_value="ANY", arg_type="ANY"), contains="Node")
+setClass("ASTArg", representation(arg_name="character", arg_number="numeric", arg_value="ANY", arg_type="ANY"), contains="Node",
+         prototype(node_type = "ASTArg"))
 
 #'
 #' The ASTSymbolTable Class.
 #'
 #' This class represents a symbol table. It is a table of free variables.
-setClass("ASTSymbolTable", representation(symbols="list"), contains="Node")
+setClass("ASTSymbolTable", representation(symbols="list"), contains="Node",
+         prototype(node_type = "ASTOp"))

@@ -259,7 +259,14 @@ function(a, name=NULL) {
   } else if (!is.null(name) && (name == "fun_args")) {
     .toSymbolTable(a, .pkg.env$formals)
   } else {
-    deparse(eval(a))
+    res <- eval(a)
+    if (is.vector(res)) {
+      if (length(res) > 1) {
+        return(toJSON(res))
+      }
+    } else {
+      return(deparse(eval(a)))
+    }
   }
 }
 
