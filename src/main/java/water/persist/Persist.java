@@ -1,15 +1,15 @@
 package water.persist;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
 
 import water.*;
 import water.api.Constants.Schemes;
-import water.fvec.Vec;
 import water.util.Log;
 
-public abstract class Persist {
+public abstract class Persist<T> {
   // All available back-ends, C.f. Value for indexes
   public static final Persist[] I = new Persist[8];
   public static final long UNKNOWN = 0;
@@ -31,10 +31,11 @@ public abstract class Persist {
 //        } else if( Schemes.NFS.equals(uri.getScheme()) ) {
 //          ice = new PersistNFS(uri);
 //        }
-      I[Value.ICE] = ice;
-      I[Value.HDFS] = new PersistHdfs();
-      I[Value.S3] = new PersistS3();
-      I[Value.NFS] = new PersistNFS();
+      I[Value.ICE    ] = ice;
+      I[Value.HDFS   ] = new PersistHdfs();
+      I[Value.S3     ] = new PersistS3();
+      I[Value.NFS    ] = new PersistNFS();
+      I[Value.TACHYON] = new PersistTachyon();
 
       // By popular demand, clear out ICE on startup instead of trying to preserve it
       if( H2O.OPT_ARGS.keepice == null ) ice.clear();
@@ -204,4 +205,11 @@ public abstract class Persist {
     // now in kb we have the key name
     return Key.make(Arrays.copyOf(kb, j));
   }
+
+  /** Return default URI of server to fetch data */
+  public String getDefaultURI() { return null; }
+  /** Create a client to communicate with default URI server */
+  public final T createClient() throws IOException { return createClient(getDefaultURI()); }
+  /** Create a client for given URI. */
+  public T createClient(String uri) throws IOException { throw H2O.unimpl(); }
 }

@@ -119,17 +119,18 @@ class Basic(unittest.TestCase):
             start = time.time()
             # FIX! 1 on oobe causes stack trace?
             kwargs = {'response_variable': y}
-            rfView = h2o_cmd.runRFView(data_key=testKey2, model_key=modelKey, ntree=ntree, out_of_bag_error_estimate=0, 
-                timeoutSecs=180, pollTimeoutSecs=180, noSimpleCheck=False, **kwargs)
-            elapsed = time.time() - start
-            print "RFView in",  elapsed, "secs", \
-                "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
+            #rfView = h2o_cmd.runRFView(data_key=testKey2, model_key=modelKey, ntree=ntree, out_of_bag_error_estimate=0, 
+            #    timeoutSecs=180, pollTimeoutSecs=180, noSimpleCheck=False, **kwargs)
+            #elapsed = time.time() - start
+            #print "RFView in",  elapsed, "secs", \
+            #    "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(None, rfView, **params)
             print "classification error is expected to be low because we included the test data in with the training!"
             self.assertAlmostEqual(classification_error, 0.0003, delta=0.0003, msg="Classification error %s differs too much" % classification_error)
-        
-            leaves = rfView['trees']['leaves']
+       
+            treeStats = rfView['speedrf_model']['treeStats'] 
+            leaves = {'min': treeStats['minLeaves'], 'mean': treeStats['meanLeaves'], 'max': treeStats['maxLeaves']}
             # Expected values are from this case:
             # ("mnist_training.csv.gz", "mnist_testing.csv.gz", 600, 784834182943470027),
             leavesExpected = {'min': 4996, 'mean': 5064.1, 'max': 5148}
@@ -140,7 +141,7 @@ class Basic(unittest.TestCase):
                 print d
                 allDelta.append(d)
 
-            depth = rfView['trees']['depth']
+            leaves = {'min': treeStats['minDepth'], 'mean': treeStats['meanDepth'], 'max': treeStats['maxDepth']}
             depthExpected = {'min': 21, 'mean': 23.8, 'max': 25}
             for l in depth:
                 # self.assertAlmostEqual(depth[l], depthExpected[l], delta=1, msg="depth %s %s %s differs too much" % (l, depth[l], depthExpected[l]))

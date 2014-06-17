@@ -31,6 +31,8 @@ Steam.ApplicationContext = ->
     confirm: do edge$
     fail: do edge$
 
+    measureTextWidth: do edge$
+
     invokeH2O: do edge$
 
     requestFrames: do edge$
