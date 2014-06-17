@@ -74,11 +74,10 @@ public abstract class LSMSolver extends Iced{
 
 
   protected static double shrinkage(double x, double kappa) {
-    if(x < 0) x *= -1;
-    if(x < kappa) x = 0;
-    return x - kappa;
-//    double a = x - kappa;
-//    double b = -x - kappa;
+    double sign = x < 0?-1:1;
+    double sx = x*sign;
+    if(sx <= kappa) return 0;
+    return sign*(sx - kappa);
 //    return Math.max(0, x - kappa) - Math.max(0, -x - kappa);
   }
 
