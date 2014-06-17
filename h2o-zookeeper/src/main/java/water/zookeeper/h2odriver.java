@@ -5,7 +5,6 @@ import water.zookeeper.nodes.ClusterPayload;
 import water.zookeeper.nodes.MasterPayload;
 
 public class h2odriver {
-  final static int DEFAULT_CLOUD_FORMATION_TIMEOUT_SECONDS = 120;
   final static int CLOUD_FORMATION_SETTLE_DOWN_SECONDS = 2;
 
   // Used by the running object.
@@ -18,7 +17,7 @@ public class h2odriver {
   public static String g_zk = "";
   public static String g_zkroot = "";
   public static int g_numNodes = -1;
-  public static int g_cloudFormationTimeoutSeconds = DEFAULT_CLOUD_FORMATION_TIMEOUT_SECONDS;
+  public static int g_cloudFormationTimeoutSeconds = Constants.DEFAULT_CLOUD_FORMATION_TIMEOUT_SECONDS;
   public static boolean g_start = false;
   public static boolean g_wait = false;
 
@@ -39,18 +38,17 @@ public class h2odriver {
   }
 
   public void doStart() throws Exception {
-    int sessionTimeoutMillis = Constants.SESSION_TIMEOUT_MILLIS;
-    ZooKeeper z = new ZooKeeper(_zk, sessionTimeoutMillis, null);
+    ZooKeeper z = ZooKeeperFactory.makeZk(_zk);
     ClusterPayload cp = new ClusterPayload();
     cp.numNodes = _numNodes;
     byte[] payload = cp.toPayload();
     z.create(_zkroot, payload, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
     z.create(_zkroot + "/nodes", new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+    z.close();
   }
 
   public void doWait() throws Exception {
-    int sessionTimeoutMillis = Constants.SESSION_TIMEOUT_MILLIS;
-    ZooKeeper z = new ZooKeeper(_zk, sessionTimeoutMillis, null);
+    ZooKeeper z = ZooKeeperFactory.makeZk(_zk);
     byte[] payload;
     payload = z.getData(_zkroot, null, null);
     ClusterPayload cp = ClusterPayload.fromPayload(payload, ClusterPayload.class);
@@ -59,6 +57,9 @@ public class h2odriver {
 
     payload = z.getData(_zkroot + "/master", null, null);
     MasterPayload mp = MasterPayload.fromPayload(payload, MasterPayload.class);
+
+    // TODO
+    z.close();
   }
 
   /**

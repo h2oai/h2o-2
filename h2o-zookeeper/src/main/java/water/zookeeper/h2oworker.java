@@ -25,7 +25,7 @@ public class h2oworker {
       String s =
       "H2O Zookeeper worker wrapper options:\n" +
       "\n" +
-      "Usage:  java [-Xmx<size>] -cp h2o-zookeeper.jar water.zookeeper.h2oworker -zk a:b:c:d:e -zkroot /zk/path/h2o-uuid [h2o options...]\n" +
+      "Usage:  java [-Xmx<size>] -cp h2o-zookeeper.jar water.zookeeper.h2oworker -zk a:b:c:d:e -zkroot /zk/path/h2o-uuid [-timeout sec] [h2o options...]\n" +
       "\n";
 
       System.out.println(s);
@@ -37,6 +37,7 @@ public class h2oworker {
     private static void registerEmbeddedH2OConfig(String[] args) {
       String zk = null;
       String zkroot = null;
+      long timeout = Constants.DEFAULT_CLOUD_FORMATION_TIMEOUT_SECONDS;
 
       for (int i = 0; i < args.length; i++) {
         if (args[i].equals("-zk")) {
@@ -46,6 +47,10 @@ public class h2oworker {
         else if (args[i].equals("-zkroot")) {
           i++;
           zkroot = args[i];
+        }
+        else if (args[i].equals("-timeout")) {
+          i++;
+          timeout = Long.parseLong(args[i]);
         }
       }
 
@@ -59,9 +64,14 @@ public class h2oworker {
         usage();
       }
 
+      if (timeout < 0) {
+        timeout = Integer.MAX_VALUE;    // Integer max value, big but not too big when multiplied by 1000.
+      }
+
       _embeddedH2OConfig = new EmbeddedH2OConfig();
       _embeddedH2OConfig.setZk(zk);
       _embeddedH2OConfig.setZkRoot(zkroot);
+      _embeddedH2OConfig.setCloudFormationTimeoutSeconds(timeout);
       H2O.setEmbeddedH2OConfig(_embeddedH2OConfig);
     }
 
@@ -74,6 +84,7 @@ public class h2oworker {
   private static class EmbeddedH2OConfig extends water.AbstractEmbeddedH2OConfig {
     volatile String _zk;
     volatile String _zkroot;
+    volatile long _cloudFormationTimeoutSeconds;
     volatile String _embeddedWebServerIp = "(Unknown)";
     volatile int _embeddedWebServerPort = -1;
     volatile int _numNodes = -1;
@@ -84,6 +95,10 @@ public class h2oworker {
 
     void setZkRoot(String value) {
       _zkroot = value;
+    }
+
+    void setCloudFormationTimeoutSeconds(long value) {
+      _cloudFormationTimeoutSeconds = value;
     }
 
     private static long getProcessId() throws Exception {
@@ -108,8 +123,7 @@ public class h2oworker {
       _embeddedWebServerPort = port;
 
       try {
-        int sessionTimeoutMillis = Constants.SESSION_TIMEOUT_MILLIS;
-        ZooKeeper z = new ZooKeeper(_zk, sessionTimeoutMillis, null);
+        ZooKeeper z = ZooKeeperFactory.makeZk(_zk);
         byte[] payload;
         payload = z.getData(_zkroot, null, null);
         ClusterPayload cp = ClusterPayload.fromPayload(payload, ClusterPayload.class);
@@ -123,11 +137,12 @@ public class h2oworker {
         wp.ip = ip.getHostAddress();
         wp.port = port;
         wp.pid = getProcessId();
-        payload = cp.toPayload();
+        payload = wp.toPayload();
         z.create(_zkroot + "/nodes/", payload, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT_SEQUENTIAL);
+        z.close();
       }
       catch (Exception e) {
-        System.out.println(e);
+        e.printStackTrace();
         System.exit(1);
       }
     }
@@ -141,23 +156,32 @@ public class h2oworker {
     public String fetchFlatfile() throws Exception {
       System.out.printf("EmbeddedH2OConfig: fetchFlatfile called\n");
 
-      int sessionTimeoutMillis = Constants.SESSION_TIMEOUT_MILLIS;
-      ZooKeeper z = new ZooKeeper(_zk, sessionTimeoutMillis, null);
-      String flatfile = "";
-
+      StringBuffer flatfile = new StringBuffer();
+      long startMillis = System.currentTimeMillis();
       while (true) {
+        ZooKeeper z = ZooKeeperFactory.makeZk(_zk);
         List<String> list = z.getChildren(_zkroot + "/nodes", true);
-
+        z.close();
         if (list.size() == _numNodes) {
           for (String child : list) {
-             System.out.println("TOM CHILD " + child);
+            byte[] payload;
+            String zkpath = _zkroot + "/nodes/" + child;
+            z = ZooKeeperFactory.makeZk(_zk);
+            payload = z.getData(zkpath, null, null);
+            WorkerPayload wp = WorkerPayload.fromPayload(payload, WorkerPayload.class);
+            flatfile.append(wp.ip).append(":").append(wp.port).append("\n");
+            z.close();
           }
-          System.out.println("TOM EXITING");
-          System.exit(1);
           break;
         }
         else if (list.size() > _numNodes) {
           System.out.println("EmbeddedH2OConfig: fetchFlatfile sees too many nodes (" + list.size() + " > " + _numNodes + ")");
+          System.exit(1);
+        }
+
+        long now = System.currentTimeMillis();
+        if (Math.abs(now - startMillis) > (_cloudFormationTimeoutSeconds * 1000)) {
+          System.out.printf("EmbeddedH2OConfig: fetchFlatfile timed out waiting for cloud to form\n");
           System.exit(1);
         }
 
@@ -168,7 +192,7 @@ public class h2oworker {
       System.out.println("------------------------------------------------------------");
       System.out.println(flatfile);
       System.out.println("------------------------------------------------------------");
-      return flatfile;
+      return flatfile.toString();
     }
 
     @Override
@@ -178,10 +202,10 @@ public class h2oworker {
 
       System.out.printf("EmbeddedH2OConfig: notifyAboutCloudSize called (%s, %d, %d)\n", ip.getHostAddress(), port, size);
       if (size == _numNodes) {
-        System.out.printf("EmbeddedH2OConfig: notifyAboutCloudSize claiming master...\n");
+        System.out.printf("EmbeddedH2OConfig: notifyAboutCloudSize attempting to claim master...\n");
+        ZooKeeper z = null;
         try {
-          int sessionTimeoutMillis = Constants.SESSION_TIMEOUT_MILLIS;
-          ZooKeeper z = new ZooKeeper(_zk, sessionTimeoutMillis, null);
+          z = ZooKeeperFactory.makeZk(_zk);
           MasterPayload mp = new MasterPayload();
           mp.ip = ip.getHostAddress();
           mp.port = port;
@@ -195,8 +219,13 @@ public class h2oworker {
           System.out.printf("EmbeddedH2OConfig: notifyAboutCloudSize lost claiming race to another node (this is normal)\n");
         }
         catch (Exception e) {
-          System.out.println(e);
+          e.printStackTrace();
           System.exit(1);
+        }
+        finally {
+          if (z != null) {
+            try { z.close(); } catch (Exception xe) {}
+          }
         }
       }
     }
@@ -218,7 +247,7 @@ public class h2oworker {
       water.Boot.main(UserMain.class, args);
     }
     catch (Exception e) {
-      System.out.println(e);
+      e.printStackTrace();
       System.exit(1);
     }
   }
@@ -229,7 +258,7 @@ public class h2oworker {
       m.run(args);
     }
     catch (Exception e) {
-      System.out.println (e);
+      e.printStackTrace();
     }
   }
 }
