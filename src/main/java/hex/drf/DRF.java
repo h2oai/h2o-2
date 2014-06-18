@@ -79,8 +79,8 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
 
     // Params that do not affect model quality:
     //
-    public DRFModel(DRF params, Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, int mtries, float sample_rate, long seed, int num_folds) {
-      super(key,dataKey,testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, num_folds);
+    public DRFModel(DRF params, Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, int mtries, float sample_rate, long seed, int num_folds, float[] priorClassDist, float[] classDist) {
+      super(key,dataKey,testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, num_folds, priorClassDist, classDist);
       this.parameters = Job.hygiene((DRF) params.clone());
       this.mtries = mtries;
       this.sample_rate = sample_rate;
@@ -143,8 +143,8 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
   public Frame score( Frame fr ) { return ((DRFModel)UKV.get(dest())).score(fr);  }
 
   @Override protected Log.Tag.Sys logTag() { return Sys.DRF__; }
-  @Override protected DRFModel makeModel(Key outputKey, Key dataKey, Key testKey, int ntrees, String[] names, String[][] domains, String[] cmDomain) {
-    return new DRFModel(this,outputKey,dataKey,validation==null?null:testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, mtries, sample_rate, _seed, n_folds);
+  @Override protected DRFModel makeModel(Key outputKey, Key dataKey, Key testKey, int ntrees, String[] names, String[][] domains, String[] cmDomain, float[] priorClassDist, float[] classDist) {
+    return new DRFModel(this,outputKey,dataKey,validation==null?null:testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, mtries, sample_rate, _seed, n_folds, priorClassDist, classDist);
   }
 
   @Override protected DRFModel makeModel( DRFModel model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
@@ -212,7 +212,6 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     if (importance) initTreeMeasurements();
   }
   @Override protected void initWorkFrame(DRFModel initialModel, Frame fr) {
-    if (classification) initialModel.setModelClassDistribution(new MRUtils.ClassDist(response).doAll(response).rel_dist());
     // Append number of trees participating in on-the-fly scoring
     fr.add("OUT_BAG_TREES", response.makeZero());
     // Prepare working columns

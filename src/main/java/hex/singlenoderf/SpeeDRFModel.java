@@ -92,7 +92,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   }
 
   public SpeeDRFModel(Key selfKey, Key dataKey, Frame fr, SpeeDRF params) {
-    super(selfKey, dataKey, fr);
+    super(selfKey, dataKey, fr, /* priorClassDistribution */ null);
     this.dest_key = selfKey;
     this.parameters = params;
     score_each = params.score_each_iteration;
@@ -101,7 +101,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   }
 
   protected SpeeDRFModel(SpeeDRFModel model, double err, ConfusionMatrix cm, VarImp varimp, AUC auc) {
-    super(model._key,model._dataKey,model._names,model._domains);
+    super(model._key,model._dataKey,model._names,model._domains, /* priorClassDistribution */ null, /* modelClassDistribution */ null);
     this.features = model.features;
     this.sampling_strategy = model.sampling_strategy;
     this.sample = model.sample;

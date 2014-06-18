@@ -630,7 +630,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
    * @param jobKey New job key (job which updates the model)
    */
   public DeepLearningModel(final DeepLearningModel cp, final Key destKey, final Key jobKey, final DataInfo dataInfo) {
-    super(destKey, cp._dataKey, dataInfo._adaptedFrame.names(), dataInfo._adaptedFrame.domains(), cp._priorClassDist != null ? cp._priorClassDist.clone() : null);
+    super(destKey, cp._dataKey, dataInfo._adaptedFrame.names(), dataInfo._adaptedFrame.domains(), cp._priorClassDist != null ? cp._priorClassDist.clone() : null, null);
     final boolean store_best_model = (jobKey == null);
     this.jobKey = jobKey;
     if (store_best_model) {

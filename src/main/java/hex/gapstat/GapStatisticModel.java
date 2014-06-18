@@ -44,7 +44,7 @@ public class GapStatisticModel extends Model implements Job.Progress {
    int k_best;
 
   public GapStatisticModel(Key selfKey, Key dataKey, Frame fr, int ks, double[] wks, double[] log_wks, double[] sk, int k_max, int b_max, int k, int b) {
-    super(selfKey, dataKey, fr);
+    super(selfKey, dataKey, fr,  /* priorClassDistribution */ null);
     this.ks = ks;
     this.wks = wks;
     this.wkbs = log_wks;

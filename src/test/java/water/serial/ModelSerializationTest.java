@@ -128,7 +128,7 @@ public class ModelSerializationTest extends TestUtil {
     final VarImp varimp;
 
     public BlahModel(Key selfKey, Key dataKey, String[] names, String[][] domains) {
-      super(selfKey, dataKey, names, domains);
+      super(selfKey, dataKey, names, domains, null, null);
       keys = new Key[3];
       varimp = new VarImp.VarImpRI(arf(1f, 1f, 1f));
     }
