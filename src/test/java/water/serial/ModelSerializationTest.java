@@ -113,7 +113,7 @@ public class ModelSerializationTest extends TestUtil {
     Frame f = parseFrame(dataset);
     Key modelKey = Key.make("GLM_model_for_"+dataset);
     try {
-      DataInfo dinfo = new DataInfo(f, response, false, true);
+      DataInfo dinfo = new DataInfo(f, response, false, DataInfo.TransformType.STANDARDIZE);
       GLMParams glm = new GLMParams(family,0,family.defaultLink,0);
       new GLM2("GLM test on "+dataset,Key.make(),modelKey,dinfo,glm,new double[]{0},0).fork().get();
       return DKV.get(modelKey).get();

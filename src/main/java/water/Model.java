@@ -232,7 +232,7 @@ public abstract class Model extends Lockable<Model> {
    * @param adaptFrm
    * @return
    */
-  private Frame scoreImpl(Frame adaptFrm) {
+  protected Frame scoreImpl(Frame adaptFrm) {
     int ridx = adaptFrm.find(responseName());
     assert ridx == -1 : "Adapted frame should not contain response in scoring method!";
     assert nfeatures() == adaptFrm.numCols() : "Number of model features " + nfeatures() + " != number of test set columns: " + adaptFrm.numCols();
