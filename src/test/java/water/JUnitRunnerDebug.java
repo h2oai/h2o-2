@@ -50,7 +50,8 @@ public class JUnitRunnerDebug {
 
       // Deep Learning tests
 //      tests.add(DeepLearningVsNeuralNet.class); //only passes for NODES=1, not clear why
-      tests.add(DeepLearningAutoEncoderTest.class); //test Deep Learning convergence
+//      tests.add(DeepLearningAutoEncoderTest.class); //test Deep Learning convergence
+      tests.add(DeepLearningAutoEncoderCategoricalTest.class); //test Deep Learning convergence
 //      tests.add(DeepLearningSpiralsTest.class); //test Deep Learning convergence
 //      tests.add(DeepLearningIrisTest.Short.class); //compare Deep Learning vs reference
 //      tests.add(DeepLearningIrisTest.Long.class); //compare Deep Learning vs reference
