@@ -65,13 +65,13 @@ class Basic(unittest.TestCase):
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=hex_key, schema='put')
         paramDict = define_params()
 
-        for trial in range(5):
+        for trial in range(3):
             # params is mutable. This is default.
             params = {'response': 'C55'}
             h2o_nn.pickRandDeepLearningParams(paramDict, params)
             kwargs = params.copy()
             start = time.time()
-            nn = h2o_cmd.runDeepLearning(timeoutSecs=300, parseResult=parseResult, **kwargs)
+            nn = h2o_cmd.runDeepLearning(timeoutSecs=500, parseResult=parseResult, **kwargs)
             print "nn result:", h2o.dump_json(nn)
             h2o.check_sandbox_for_errors()
             # FIX! simple check?
