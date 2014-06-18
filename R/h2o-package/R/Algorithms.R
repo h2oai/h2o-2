@@ -346,29 +346,17 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, nlambda = 1
 
     res2 = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLMModelView, '_modelKey'=res$destination_key)
     destKey = res2$glm_model$'_key'
-    if(return_all_lambda)
+    if(return_all_lambda) {
       lambda_all = res2$glm_model$parameters$lambda
-    else
-      lambda_all = res2$glm_model$parameters$lambda[res2$glm_model$best_lambda_idx+1]
-    
-    allLambdaModels = lapply(lambda_all, function(lambda, model_key, params) {
-      res2 = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLMModelView, '_modelKey'=model_key, lambda=lambda)
-      resModel = res2$glm_model; params$lambda = lambda
-      modelOrig = .h2o.__getGLM2Results(resModel, params)
-      
-      # Get results from cross-validation
-      res_xval = list()
-      if(nfolds >= 2) {
-        for(i in 1:nfolds) {
-          xvalKey = resModel$submodels[[resModel$best_lambda_idx+1]]$validation$xval_models
-          resX = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLMModelView, '_modelKey'=xvalKey[i])
-          modelXval = .h2o.__getGLM2Results(resX$glm_model, params)
-          res_xval[[i]] = new("H2OGLMModel", key=xvalKey[i], data=data, model=modelXval, xval=list())
-        }
-      }
-      new("H2OGLMModel", key=model_key, data=data, model=modelOrig, xval=res_xval)
-    }, destKey, params)
-    if(length(lambda_all) <= 1) return(allLambdaModels[[1]]) else return(allLambdaModels)
+      allLambdaModels = lapply(lambda_all, .h2o.__getGLM2LambdaModel, data=data, model_key=destKey, params=params)
+      if(length(allLambdaModels) <= 1) return(allLambdaModels[[1]]) else return(allLambdaModels)
+    } else {
+      params$lambda_all = res2$glm_model$parameters$lambda
+      best_lambda_idx = res2$glm_model$best_lambda_idx+1
+      best_lambda = res2$glm_model$parameters$lambda[best_lambda_idx]
+      allLambdaModels = .h2o.__getGLM2LambdaModel(best_lambda, data, destKey, params)
+      return(allLambdaModels)
+    }
   } else
     .h2o.glm2grid.internal(x_ignore, args$y, data, family, nfolds, alpha, nlambda, lambda.min.ratio, lambda, epsilon, standardize, prior, tweedie.p, iter.max, higher_accuracy, lambda_search, return_all_lambda)
 }
@@ -398,34 +386,51 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, nlambda = 1
     modelOrig = .h2o.__getGLM2Results(resH$glm_model, params)
     
     # BUG: For some reason, H2O always uses default number of lambda (100) during grid search
-    if(return_all_lambda)
+    if(return_all_lambda) {
       lambda_all = resH$glm_model$parameters$lambda
-    else
-      lambda_all = resH$glm_model$parameters$lambda[resH$glm_model$best_lambda_idx+1]
+      allLambdaModels = lapply(lambda_all, .h2o.__getGLM2LambdaModel, data=data, model_key=allModels[i], params=params)
+    } else {
+      params$lambda_all = resH$glm_model$parameters$lambda
+      best_lambda_idx = resH$glm_model$best_lambda_idx+1
+      best_lambda = resH$glm_model$parameters$lambda[best_lambda_idx]
+      allLambdaModels = .h2o.__getGLM2LambdaModel(best_lambda, data, allModels[i], params)
+    }
     
-    allLambdaModels = lapply(lambda_all, function(lambda, model_key, params) {
-      res2 = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLMModelView, '_modelKey'=model_key, lambda=lambda)
-      resModel = res2$glm_model; params$lambda = lambda
-      modelOrig = .h2o.__getGLM2Results(resModel, params)
-      
-      # Get results from cross-validation
-      res_xval = list()
-      if(nfolds >= 2) {
-        for(j in 1:nfolds) {
-          xvalKey = resModel$submodels[[resModel$best_lambda_idx+1]]$validation$xval_models
-          resX = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLMModelView, '_modelKey'=xvalKey[j])
-          modelXval = .h2o.__getGLM2Results(resX$glm_model, params)
-          res_xval[[j]] = new("H2OGLMModel", key=xvalKey[j], data=data, model=modelXval, xval=list())
-        }
-      }
-      new("H2OGLMModel", key=model_key, data=data, model=modelOrig, xval=res_xval)
-    }, allModels[i], params)
-    if(length(lambda_all) <= 1) 
-      result[[i]] = allLambdaModels[[1]]
-    else
-      result[[i]] = allLambdaModels
+    if(length(allLambdaModels) <= 1) result[[i]] = allLambdaModels[[1]]
+    else result[[i]] = allLambdaModels
   }
   new("H2OGLMGrid", key=destKey, data=data, model=result, sumtable=myModelSum)
+}
+
+h2o.getGLMLambdaModel <- function(model, lambda) {
+  if(class(model) != "H2OGLMModel") stop("model must be of class H2OGLMModel")
+  .h2o.__getGLM2LambdaModel(lambda, model@data, model@key, model@model$params)
+}
+
+.h2o.__getGLMLambdaModel <- function(lambda, data, model_key, params = list()) {
+  if(missing(lambda) || length(lambda) > 1 || !is.numeric(lambda)) stop("lambda must be a single number")
+  if(lambda < 0) stop("lambda must non-negative")
+  
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLMModelView, '_modelKey'=model_key, lambda=lambda)
+  resModel = res$glm_model; params$lambda = lambda
+  modelOrig = .h2o.__getGLM2Results(resModel, params)
+  
+  lambda_all = resModel$parameters$lambda
+  lambda_idx = which(lambda_all == lambda)
+  if(length(lambda_idx) == 0)
+    stop("Cannot find ", lambda, " in list of lambda searched over for this model")
+  xvalKey = resModel$submodels[[lambda_idx]]$validation$xval_models
+  
+  # Get results from cross-validation
+  res_xval = list()
+  if(!is.null(xvalKey) && length(xvalKey) >= 2) {
+    for(j in 1:length(xvalKey)) {
+      resX = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLMModelView, '_modelKey'=xvalKey[j])
+      modelXval = .h2o.__getGLM2Results(resX$glm_model, params)
+      res_xval[[j]] = new("H2OGLMModel", key=xvalKey[j], data=data, model=modelXval, xval=list())
+    }
+  }
+  new("H2OGLMModel", key=model_key, data=data, model=modelOrig, xval=res_xval)
 }
 
 .h2o.__getGLM2Summary <- function(model) {
@@ -1293,7 +1298,19 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, nfolds=0, validation,
     #}
 
     class_names = tail(res$'_domains', 1)[[1]]
-    result$confusion = .build_cm(tail(res$cms, 1)[[1]]$'_arr', class_names)
+
+    raw_cms <- tail(res$cms, 1)[[1]]$'_arr'
+    rrr <- NULL
+    if ( res$parameters$n_folds <= 0) {
+      f <- function(o) { o[-length(o)] }
+      rrr <- raw_cms
+      rrr <- lapply(rrr, f)
+      rrr <- rrr[-length(rrr)]
+      raw_cms <<- rrr
+    }
+   
+    if (!is.null(rrr)) {raw_cms <- rrr}
+    result$confusion = .build_cm(raw_cms, class_names)
   }
 
   if(params$importance) {

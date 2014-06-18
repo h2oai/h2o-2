@@ -20,7 +20,7 @@ h2o.build_cloud(node_count=2, java_heap_GB=2)
 
 # False == Use VA form of algorithms (when available) (e.g. RF1).
 # True == Use FVec form of algorithm (e.g. DRF2).
-h2o.beta_features = False
+h2o.beta_features = True
 
 
 print "--------------------------------------------------------------------------------"
