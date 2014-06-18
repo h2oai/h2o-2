@@ -605,7 +605,7 @@ def createIgnoredCols(key, cols, response):
 # example:
 # h2o_cmd.runScore(dataKey=scoreDataKey, modelKey=modelKey, vactual=y, vpredict=1, expectedAuc=0.5)
 def runScore(node=None, dataKey=None, modelKey=None, predictKey='Predict.hex', 
-    vactual='C1', vpredict=1, expectedAuc=None, doAUC=True, timeoutSecs=200):
+    vactual='C1', vpredict=1, expectedAuc=0.5, doAUC=True, timeoutSecs=200):
     # Score *******************************
     # this messes up if you use case_mode/case_vale above
     predictKey = 'Predict.hex'
@@ -631,9 +631,8 @@ def runScore(node=None, dataKey=None, modelKey=None, predictKey='Predict.hex',
 
         auc = resultAUC['AUC']
 
-        if expectedAuc:
-            h2o_util.assertApproxEqual(auc, expectedAuc, tol=0.15,
-                msg="actual auc: %s not close enough to %s" % (auc, expectedAuc))
+        h2o_util.assertApproxEqual(auc, expectedAuc, tol=0.15,
+            msg="actual auc: %s not close enough to %s" % (auc, expectedAuc))
 
     # don't do this unless binomial
     predictCMResult = h2o.nodes[0].predict_confusion_matrix(
