@@ -585,8 +585,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       if(gotNaNsorInfs){
         Log.info("GLM2 got NaNs/Infs, invoking line-search.");
         setHighAccuracy();
-
         if(_lastResult == null) {
+          if(glmt._beta == null) // failed in first iteration! throw an error
+            throw new RuntimeException("GLM2: can not solve. Got NaNs/Infs in the first iteration");
           for (int i = 0; i < glmt._beta.length; ++i) {
             glmt._beta[i] *= 0.5;
             constBeta &= glmt._beta[i] < beta_epsilon;
@@ -744,6 +745,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     if(highAccuracy() || lambda_search) // shortcut for fast & simple mode
       new YMUTask(GLM2.this,_dinfo,new H2OCallback<YMUTask>(GLM2.this) {
         @Override public void callback(final YMUTask ymut){
+          if(ymut._ymin == ymut._ymax)
+            throw new IllegalArgumentException("GLM2: attempted to run with constant response. Response == " + ymut._ymin + " for all rows in the training set." );
           run(ymut.ymu(),ymut.nobs());
         }
       }).asyncExec(_dinfo._adaptedFrame);
