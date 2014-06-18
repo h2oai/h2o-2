@@ -1082,7 +1082,8 @@ public class DTree extends Iced {
         sb.append("     curl http:/").append(H2O.SELF.toString()).append("/h2o-model.jar > h2o-model.jar\n");
         sb.append("     curl http:/").append(H2O.SELF.toString()).append("/2/").append(this.getClass().getSimpleName()).append("View.java?_modelKey=").append(_key).append(" > ").append(modelName).append(".java\n");
         sb.append("     javac -cp h2o-model.jar -J-Xmx2g -J-XX:MaxPermSize=128m ").append(modelName).append(".java\n");
-        sb.append("     java -cp h2o-model.jar:. -Xmx2g -XX:MaxPermSize=256m -XX:ReservedCodeCacheSize=256m ").append(modelName).append('\n');
+        if (GEN_BENCHMARK_CODE)
+          sb.append("     java -cp h2o-model.jar:. -Xmx2g -XX:MaxPermSize=256m -XX:ReservedCodeCacheSize=256m ").append(modelName).append('\n');
         sb.append("*/");
         sb.append("</code></pre>");
       } else {
@@ -1094,34 +1095,41 @@ public class DTree extends Iced {
       sb.append("<script type=\"text/javascript\">$(document).ready(showOrHideJavaModel);</script>");
     }
 
+    /** Debug flag to generate benchmar code */
+    static final boolean GEN_BENCHMARK_CODE = false;
+
     @Override protected SB toJavaInit(SB sb, SB fileContextSB) {
       sb = super.toJavaInit(sb, fileContextSB);
 
       String modelName = JCodeGen.toJavaId(_key.toString());
 
       sb.ii(1);
-      // Generate main method
-      sb.i().p("/**").nl();
-      sb.i().p(" * Sample program harness providing an example of how to call predict().").nl();
-      sb.i().p(" */").nl();
-      sb.i().p("public static void main(String[] args) throws Exception {").nl();
-      sb.i(1).p("int iters = args.length > 0 ? Integer.valueOf(args[0]) : DEFAULT_ITERATIONS;").nl();
-      sb.i(1).p(modelName).p(" model = new ").p(modelName).p("();").nl();
-      sb.i(1).p("model.bench(iters, DataSample.DATA, new float[NCLASSES+1], NTREES);").nl();
-      sb.i().p("}").nl();
-      sb.di(1);
-      sb.p(TO_JAVA_BENCH_FUNC);
+      // Generate main method with benchmark
+      if (GEN_BENCHMARK_CODE) {
+        sb.i().p("/**").nl();
+        sb.i().p(" * Sample program harness providing an example of how to call predict().").nl();
+        sb.i().p(" */").nl();
+        sb.i().p("public static void main(String[] args) throws Exception {").nl();
+        sb.i(1).p("int iters = args.length > 0 ? Integer.valueOf(args[0]) : DEFAULT_ITERATIONS;").nl();
+        sb.i(1).p(modelName).p(" model = new ").p(modelName).p("();").nl();
+        sb.i(1).p("model.bench(iters, DataSample.DATA, new float[NCLASSES+1], NTREES);").nl();
+        sb.i().p("}").nl();
+        sb.di(1);
+        sb.p(TO_JAVA_BENCH_FUNC);
+      }
 
       JCodeGen.toStaticVar(sb, "NTREES", ntrees(), "Number of trees in this model.");
       JCodeGen.toStaticVar(sb, "NTREES_INTERNAL", ntrees()*nclasses(), "Number of internal trees in this model (= NTREES*NCLASSES).");
-      JCodeGen.toStaticVar(sb, "DEFAULT_ITERATIONS", 10000, "Default number of iterations.");
+      if (GEN_BENCHMARK_CODE) JCodeGen.toStaticVar(sb, "DEFAULT_ITERATIONS", 10000, "Default number of iterations.");
       // Generate a data in separated class since we do not want to influence size of constant pool of model class
-      if( _dataKey != null ) {
-        Value dataval = DKV.get(_dataKey);
-        if (dataval != null) {
-          water.fvec.Frame frdata = ValueArray.asFrame(dataval);
-          water.fvec.Frame frsub = frdata.subframe(_names);
-          JCodeGen.toClass(fileContextSB, "// Sample of data used by benchmark\nclass DataSample", "DATA", frsub, 10, "Sample test data.");
+      if (GEN_BENCHMARK_CODE) {
+        if( _dataKey != null ) {
+          Value dataval = DKV.get(_dataKey);
+          if (dataval != null) {
+            water.fvec.Frame frdata = ValueArray.asFrame(dataval);
+            water.fvec.Frame frsub = frdata.subframe(_names);
+            JCodeGen.toClass(fileContextSB, "// Sample of data used by benchmark\nclass DataSample", "DATA", frsub, 10, "Sample test data.");
+          }
         }
       }
       return sb;
