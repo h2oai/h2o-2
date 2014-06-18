@@ -69,25 +69,17 @@ class Basic(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_exec2_sum(self):
+    def test_exec2_log_like_R(self):
         h2o.beta_features = True
         bucket = 'home-0xdiag-datasets'
-        # csvPathname = 'airlines/year2013.csv'
-        if localhost:
-            csvPathname = '1B/reals_100000x1000_15f.data'
-            # csvPathname = '1B/reals_1000000x1000_15f.data'
-            # csvPathname = '1B/reals_1000000x1_15f.data'
-            # csvPathname = '1B/reals_1B_15f.data'
-            # csvPathname = '1B/reals_100M_15f.data'
-        else:
-            csvPathname = '1B/reals_100000x1000_15f.data'
-            # csvPathname = '1B/reals_1000000x1000_15f.data'
-            # csvPathname = '1B/reals_1000000x1_15f.data'
-            # csvPathname = '1B/reals_1B_15f.data'
-            # csvPathname = '1B/reals_100M_15f.data'
+        csvPathname = 'airlines/year2013.csv'
+        # csvPathname = '1B/reals_100000x1000_15f.data'
+        # csvPathname = '1B/reals_1000000x1000_15f.data'
+        # csvPathname = '1B/reals_1000000x1_15f.data'
+        # csvPathname = '1B/reals_1B_15f.data'
+        # csvPathname = '1B/reals_100M_15f.data'
 
         hex_key = 'r1'
         parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local', 

@@ -1604,6 +1604,26 @@ class H2O(object):
         verboseprint("\n rebalance result:", dump_json(a))
         return a
 
+    def to_int(self, timeoutSecs=60, **kwargs):
+        params_dict = {
+            'src_key': None,
+            'column_index': None, # ugh. takes 1 based indexing
+        }
+        params_dict.update(kwargs)
+        a = self.__do_json_request('2/ToInt2.json', params=params_dict, timeout=timeoutSecs)
+        verboseprint("\n to_int result:", dump_json(a))
+        return a
+
+    def to_enum(self, timeoutSecs=60, **kwargs):
+        params_dict = {
+            'src_key': None,
+            'column_index': None, # ugh. takes 1 based indexing
+        }
+        params_dict.update(kwargs)
+        a = self.__do_json_request('2/ToEnum2.json', params=params_dict, timeout=timeoutSecs)
+        verboseprint("\n to_int result:", dump_json(a))
+        return a
+
     # There is also a RemoveAck in the browser, that asks for confirmation from
     # the user. This is after that confirmation.
     # UPDATE: ignore errors on remove..key might already be gone due to h2o removing it now
@@ -1753,7 +1773,7 @@ class H2O(object):
                        'select_stat_type': 'ENTROPY',
                        'strata_samples': None,
         }
-        check_params_update_kwargs(params_dict, kwargs, 'random_forest', print_params)
+        check_params_update_kwargs(params_dict, kwargs, 'SpeeDRF', print_params)
 
         if print_params:
             print "\n%s parameters:" % "SpeeDRF", params_dict
@@ -1768,15 +1788,15 @@ class H2O(object):
 
         time.sleep(2)
         rfView = self.poll_url(rf, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
-                               initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
-                               noise=noise, benchmarkLogging=benchmarkLogging, noPrint=noPrint)
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
+            noise=noise, benchmarkLogging=benchmarkLogging, noPrint=noPrint)
         return rfView
 
     # note ntree in kwargs can overwrite trees! (trees is legacy param)
     def random_forest(self, data_key, trees=None,
-                      timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
-                      noise=None, benchmarkLogging=None, noPoll=False, rfView=True,
-                      print_params=True, noPrint=False, **kwargs):
+        timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
+        noise=None, benchmarkLogging=None, noPoll=False, rfView=True,
+        print_params=True, noPrint=False, **kwargs):
 
         print "at top of random_forest, timeoutSec: ", timeoutSecs
         algo = '2/DRF' if beta_features else 'RF'
@@ -1861,7 +1881,6 @@ class H2O(object):
             # if we want to do noPoll, we have to name the model, so we know what to ask for when we do the completion view
             # HACK: wait more for first poll?
             time.sleep(5)
-            print "right ebfore call to poll_url, timeoutSec: ", timeoutSecs
             rfView = self.poll_url(rf, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                                    initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
                                    noise=noise, benchmarkLogging=benchmarkLogging, noPrint=noPrint)
@@ -2108,6 +2127,16 @@ class H2O(object):
         verboseprint("\npca_view_result:", dump_json(a))
         return a
 
+    def glm_grid_view(self, timeoutSecs=300, print_params=False, **kwargs):
+        #this function is only for glm2, may remove it in future.
+        params_dict = {
+            'grid_key': None,
+        }
+        check_params_update_kwargs(params_dict, kwargs, 'glm_grid_view', print_params)
+        a = self.__do_json_request('2/GLMGridView.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint("\nglm_grid_view result:", dump_json(a))
+        return a
+
     def glm_view(self, modelKey=None, timeoutSecs=300, print_params=False, **kwargs):
         #this function is only for glm2, may remove it in future.
         params_dict = {
@@ -2116,6 +2145,18 @@ class H2O(object):
         check_params_update_kwargs(params_dict, kwargs, 'glm_view', print_params)
         a = self.__do_json_request('2/GLMModelView.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("\nglm_view result:", dump_json(a))
+        return a
+
+    def save_model(self, timeoutSecs=300, print_params=False, **kwargs):
+        #this function is only for glm2, may remove it in future.
+        params_dict = {
+            'model': None,
+            'path': None,
+            'force': None,
+        }
+        check_params_update_kwargs(params_dict, kwargs, 'save_model', print_params)
+        a = self.__do_json_request('2/SaveModel.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint("\nsave_model result:", dump_json(a))
         return a
 
     def generate_predictions(self, data_key, model_key, destination_key=None, timeoutSecs=300, print_params=True,

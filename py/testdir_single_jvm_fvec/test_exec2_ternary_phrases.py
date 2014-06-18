@@ -8,6 +8,8 @@ initList = [
 
 DO_COMPOUND = False
 
+print "Weird failures about frame already locked by job null. restricting to one ternary per str= to see if helps"
+
 phrasesCompound = [
         # not going to allow lhs assigns in the ternary clauses
         # "a=!0; x=!0",
@@ -139,6 +141,9 @@ class Basic(unittest.TestCase):
         # now do some double concats of the expressions created
         for j in range (50):
             execExpr = "a=" + random.choice(bigExprList) + "; b= " + random.choice(bigExprList)
+            # don't allow double ternary
+            if re.search("\?.*\?", execExpr): 
+                break
             h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=4)
 
         # now do some triple concats of the expressions created

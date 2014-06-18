@@ -2,7 +2,7 @@ Steam.Application = (_) ->
 
   if window
     Steam.ErrorMonitor _
-    #Steam.MouseMonitor _
+    Steam.TextMetrics _
 
   Steam.Timers _
   Steam.EventLog _
@@ -10,6 +10,7 @@ Steam.Application = (_) ->
   Steam.LocalStorage _
   Steam.Xhr _
   Steam.H2OProxy _
+  Steam.HelpServer _
 
   #update URL fragment generating new history record
   #_.route 'home'

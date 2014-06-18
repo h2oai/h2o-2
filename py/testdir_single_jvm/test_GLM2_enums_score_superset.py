@@ -129,7 +129,7 @@ class Basic(unittest.TestCase):
             # Score *******************************
             # this messes up if you use case_mode/case_vale above
             predictKey = 'Predict.hex'
-            h2o_cmd.runGLM2Score(dataKey=scoreDataKey, modelKey=modelKey, vactual=y, vpredict=1, expectedAuc=0.5)
+            h2o_cmd.runScore(dataKey=scoreDataKey, modelKey=modelKey, vactual=y, vpredict=1, expectedAuc=0.5)
 
 
 if __name__ == '__main__':

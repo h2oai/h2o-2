@@ -67,7 +67,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
 
     public GBMModel(GBM job, Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, double learn_rate, Family family, int num_folds) {
       super(key,dataKey,testKey,names,domains,cmDomain,ntrees,max_depth,min_rows,nbins,num_folds);
-      this.parameters = job;
+      this.parameters = Job.hygiene((GBM) job.clone());
       this.learn_rate = learn_rate;
       this.family = family;
     }

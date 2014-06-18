@@ -53,7 +53,7 @@ public final class PersistS3 extends Persist {
     long _to;
     String[] _bk;
 
-    protected InputStream open(long offset) {
+    @Override protected InputStream open(long offset) {
       return getClient().getObject(new GetObjectRequest(_bk[0], _bk[1]).withRange(offset, _to)).getObjectContent();
     }
 

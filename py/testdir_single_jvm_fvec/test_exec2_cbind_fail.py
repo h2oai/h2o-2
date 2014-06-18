@@ -82,6 +82,37 @@ class Basic(unittest.TestCase):
 
         h2o.check_sandbox_for_errors()
 
+    def test_exec2_cbind_fail5(self):
+        print "try combining different compression schemes"
+
+        for i in range(5):
+            execExpr = "b=c(0,0,0,0,0,0,0,0,0,0,0,0)"
+            h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+            execExpr = 'a=runif(b, -1)',
+            h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+            execExpr = "d=b"
+            h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+            execExpr = "cbind(a,b,d)"
+            h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+
+        h2o.check_sandbox_for_errors()
+
+    def test_exec2_cbind_fail6(self):
+        print "fails with argument exception if rows are unequal size"
+
+        for i in range(5):
+            execExpr = "b=c(0,0,0,0,0,0,0,0,0,0,0,0)"
+            h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+            # have to make sure they're created as keys for reuse between execs
+            execExpr = "a=c(0,0,0,0,0,0,0,0,0,0,0,NA)"
+            h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+            execExpr = "d=b"
+            h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+            execExpr = "cbind(a,b,d)"
+            h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
+
+        h2o.check_sandbox_for_errors()
+
 
 if __name__ == '__main__':
     h2o.unit_main()

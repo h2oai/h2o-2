@@ -1,6 +1,7 @@
 package hex.glm;
 
 import hex.FrameTask.DataInfo;
+import hex.VarImp;
 import hex.glm.GLMParams.Family;
 import hex.glm.GLMValidation.GLMXValidation;
 import water.*;
@@ -159,9 +160,13 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
 
   final boolean useAllFactorLevels;
 
-  public GLMModel(GLM2 job, Key selfKey, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double lambda_max, double ymu, double prior) {
+
+  @API(help = "Variable importances", json=true)
+  VarImp variable_importances;
+
+  public GLMModel(GLM2 job, Key selfKey, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double lambda_max, double [] lambda, double ymu, double prior) {
     super(selfKey,null,dinfo._adaptedFrame);
-    parameters = job;
+    parameters = Job.hygiene((GLM2) job.clone());
     job_key = job.self();
     this.ymu = ymu;
     this.prior = prior;
@@ -341,13 +346,17 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     StringBuilder sb = new StringBuilder("GLM Model (key=" + _key + " , trained on " + _dataKey + ", family = " + glm.family + ", link = " + glm.link + ", #iterations = " + iteration() + "):\n");
     final int cats = data_info._cats;
     int k = 0;
-    for(int i = 0; i < cats; ++i)
-      for(int j = 1; j < _domains[i].length; ++j)
-        sb.append(_names[i] + "." + _domains[i][j] + ": " + beta[k++] + "\n");
-    final int nums = beta.length-k-1;
-    for(int i = 0; i < nums; ++i)
-      sb.append(_names[cats+i] + ": " + beta[k+i] + "\n");
-    sb.append("Intercept: " + beta[beta.length-1] + "\n");
+    for(int i = 0; i < cats; ++i) {
+      for(int j = 1; j < _domains[i].length; ++j) {
+        sb.append(_names[i] + "." + _domains[i][j] + ": " + (beta == null ? "null" : beta[k++]) + "\n");
+      }
+    }
+    if (null != beta) {
+      final int nums = beta.length-k-1;
+      for(int i = 0; i < nums; ++i)
+        sb.append(_names[cats+i] + ": " + beta[k+i] + "\n");
+      sb.append("Intercept: " + beta[beta.length-1] + "\n");
+    }
     return sb.toString();
   }
   public int rank() {return rank(submodels[best_lambda_idx].lambda);}
@@ -404,5 +413,26 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   }
   private String [] coefNames(){
     return Utils.append(data_info.coefNames(),new String[]{"Intercept"});
+  }
+
+  public VarImp varimp() {
+    return this.variable_importances;
+  }
+
+  protected void maybeComputeVariableImportances() {
+    GLM2 params = get_params();
+    this.variable_importances = null;
+
+    // Don't return results that might not include an important level. . .
+    if (! params.use_all_factor_levels)
+      return;
+
+    final double[] b = beta();
+    if (params.variable_importances && null != b) {
+      float[] coefs_abs_value = new float[b.length];
+      for (int i = 0; i < b.length; ++i)
+        coefs_abs_value[i] = (float)Math.abs(b[i]);
+      this.variable_importances = new VarImp(coefs_abs_value, coefficients_names);
+    }
   }
 }

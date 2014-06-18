@@ -1,0 +1,50 @@
+{ "type":"object", "properties": {
+        "AUC": { "type":"number" },
+        "F0point5_for_criteria": { "type":"array", "items": { "type":"number" } },
+        "F0point5": { "type":"array", "items": { "type":"number" } },
+        "F1_for_criteria": { "type":"array", "items": { "type":"number" } },
+        "F1": { "type":"array", "items": { "type":"number" } },
+        "F2_for_criteria": { "type":"array", "items": { "type":"number" } },
+        "F2": { "type":"array", "items": { "type":"number" } },
+        "Gini": { "type":"number" },
+        "Request2": { "type":"number" },
+        "accuracy_for_criteria": { "type":"array", "items": { "type":"number" } },
+        "accuracy": { "type":"array", "items": { "type":"number" } },
+        "actual_domain": { "type":"array", "items": { "type":"string" } },
+        "actual": { "type":"object", "properties": { 
+            "_key": { "type":"string" } } 
+        },
+        "confusion_matrices": { "type":"array", "items": { "type":"array" } },
+        "confusion_matrix_for_criteria": { "type":"array", "items": { "type":"array" } },
+        "error_for_criteria": { "type":"array", "items": { "type":"number" } },
+        "errorr": { "type":"array", "items": { "type":"number" } },
+        "max_per_class_error_for_criteria": { "type":"array", "items": { "type":"number" } },
+        "max_per_class_error": { "type":"array", "items": { "type":"number" } },
+        "mcc_for_criteria": { "type":"array", "items": { "type":"string" } },
+        "mcc": { "type":"array", "items": { "type":"string" } },
+        "precision_for_criteria": { "type":"array", "items": { "type":"number" } },
+        "precision": { "type":"array", "items": { "type":"number" } },
+        "predict": { "type":"object", "properties": { 
+            "_key": { "type":"string" } }
+        },
+        "recall_for_criteria": { "type":"array", "items": { "type":"number" } },
+        "recall": { "type":"array", "items": { "type":"number" } },
+        "response_info": { "type":"object", "properties": {
+                "h2o": { "type":"string" },
+                "node": { "type":"string" },
+                "redirect_url": { "type":"null" },
+                "status": { "type":"string" },
+                "time": { "type":"number" }
+            }
+        },
+        "specificity_for_criteria": { "type":"array", "items": { "type":"number" } },
+        "specificity": { "type":"array", "items": { "type":"number" } },
+        "threshold_criteria": { "type":"array", "items": { "type":"string" } },
+        "threshold_criterion": { "type":"string" },
+        "threshold_for_criteria": { "type":"array", "items": { "type":"number" } },
+        "thresholds": { "type":"array", "items": { "type":"number" } },
+        "vactual": { "type":"object" },
+        "vpredict": { "type":"object" }
+    }
+}
+

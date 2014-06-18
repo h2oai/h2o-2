@@ -337,6 +337,9 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
         print  "norm_beta:", norm_beta
 
         coefficients['Intercept'] = beta_used[-1]
+        print "len(coefficients_names)", len(coefficients_names)
+        print "len(idxs)", len(idxs)
+        print "idxs[-1]", idxs[-1]
         print "intercept demapping info:", \
             "coefficients_names[-i]:", coefficients_names[-1], \
             "idxs[-1]:", idxs[-1], \
@@ -497,6 +500,7 @@ def compareToFirstGlm(self, key, glm, firstglm):
     else:
         kList  = [glm[key]]
         firstkList = [firstglm[key]]
+        print "kbn:", kList, firstkList
 
     for k, firstk in zip(kList, firstkList):
         # delta must be a positive number ?
@@ -520,6 +524,11 @@ def simpleCheckGLMGrid(self, glmGridResult, colX=None, allowFailWarning=False, *
         models = inspectGG['glm_model']['submodels']
         h2o.verboseprint("GLMGrid inspect GLMGrid model 0(best):", h2o.dump_json(models[0]))
         g = simpleCheckGLM(self, inspectGG, colX, allowFailWarning=allowFailWarning, **kwargs)
+        # just to get some save_model testing
+        for i,m in enumerate(glmGridResult['grid']['destination_keys']):
+            print "Saving model", m, "to model"+str(i)
+            h2o.nodes[0].save_model(model=m, path='model'+str(i), force=1)
+
     else:
         destination_key = glmGridResult['destination_key']
         inspectGG = h2o_cmd.runInspect(None, destination_key)

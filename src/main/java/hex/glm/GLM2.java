@@ -90,6 +90,17 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   @API(help="prior probability for y==1. To be used only for logistic regression iff the data has been sampled and the mean of response does not reflect reality.",filter=Default.class)
   double prior = -1; // -1 is magic value for default value which is mean(y) computed on the current dataset
   private transient double _iceptAdjust; // adjustment due to the prior
+
+  /**
+   * Whether to compute variable importances for input features, based on the absolute
+   * value of the coefficients.  For safety this is only done if use_all_factor_levels,
+   * because an important factor level can be skipped and not appear if
+   * !use_all_factor_levels.
+   */
+  @API(help = "Compute variable importances for input features", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
+  public boolean variable_importances = true;
+
+
   // API input parameters END ------------------------------------------------------------
 
   // API output parameters BEGIN ------------------------------------------------------------
@@ -268,6 +279,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   }
 
   protected void complete(){
+    _model.maybeComputeVariableImportances();
     if(_addedL2 > 0){
       String warn = "Added L2 penalty (rho = " + _addedL2 + ")  due to non-spd matrix. ";
       if(_model.warnings == null || _model.warnings.length == 0)

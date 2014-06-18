@@ -4,10 +4,9 @@ import hex.glm.GLMModel.Submodel;
 import hex.glm.GLMParams.Family;
 import hex.glm.GLMValidation.GLMXValidation;
 import water.*;
-import water.api.AUC;
-import water.api.DocGen;
-import water.api.Request;
+import water.api.*;
 import water.util.RString;
+import water.util.UIUtils;
 
 import java.text.DecimalFormat;
 
@@ -50,8 +49,10 @@ public class GLMModelView extends Request2 {
     }
     glm_model.get_params().makeJsonBox(sb);
     DocGen.HTML.paragraph(sb,"Model Key: "+glm_model._key);
-    if(glm_model.submodels != null)
+    if(glm_model.submodels != null) {
       DocGen.HTML.paragraph(sb,water.api.Predict.link(glm_model._key,"Predict!"));
+      DocGen.HTML.paragraph(sb,UIUtils.qlink(SaveModel.class, "model", glm_model._key, "Save model"));
+    }
     String succ = (glm_model.warnings == null || glm_model.warnings.length == 0)?"alert-success":"alert-warning";
     sb.append("<div class='alert " + succ + "'>");
     pprintTime(sb.append(glm_model.iteration() + " iterations computed in "),glm_model.run_time);

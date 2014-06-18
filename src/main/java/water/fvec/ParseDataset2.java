@@ -287,7 +287,7 @@ public final class ParseDataset2 extends Job {
         boolean isCategorical = v.isEnum();
         boolean isConstant = (v.min() == v.max());
         String CStr = String.format("C%d:", i+1);
-        String typeStr = String.format("%s", (isCategorical ? "categorical" : "numeric"));
+        String typeStr = String.format("%s", (v._isUUID ? "UUID" : (isCategorical ? "categorical" : "numeric")));
         String minStr = String.format("min(%f)", v.min());
         String maxStr = String.format("max(%f)", v.max());
         long numNAs = v.naCnt();
@@ -650,10 +650,11 @@ public final class ParseDataset2 extends Job {
     boolean _closedVecs = false;
     private final VectorGroup _vg;
 
-    static final private byte UCOL = 0;
-    static final private byte NCOL = 1;
-    static final private byte ECOL = 2;
-    static final private byte TCOL = 3;
+    static final private byte UCOL = 0; // unknown col type
+    static final private byte NCOL = 1; // numeric col type
+    static final private byte ECOL = 2; // enum    col type
+    static final private byte TCOL = 3; // time    col typ
+    static final private byte ICOL = 4; // UUID    col typ
 
     private static final AppendableVec[] newAppendables(int n, VectorGroup vg, int vecIdStart){
       AppendableVec [] apps = new AppendableVec[n];
@@ -678,9 +679,9 @@ public final class ParseDataset2 extends Job {
         _nvs[i] = (NewChunk)_vecs[i].chunkForChunkIdx(_cidx);
     }
 
-    public FVecDataOut reduce(StreamDataOut sdout){
+    @Override public FVecDataOut reduce(StreamDataOut sdout){
       FVecDataOut dout = (FVecDataOut)sdout;
-      if(_vecs != dout._vecs){
+      if(dout!=null && _vecs != dout._vecs){
         _nCols = Math.max(_nCols,dout._nCols);
         if(dout._vecs.length > _vecs.length){
           AppendableVec [] v = _vecs;
@@ -761,7 +762,15 @@ public final class ParseDataset2 extends Job {
         }
         if(_ctypes[colIdx] == UCOL && ParseTime.attemptTimeParse(str) > 0)
           _ctypes[colIdx] = TCOL;
-        if(_ctypes[colIdx] == TCOL){
+        if( _ctypes[colIdx] == UCOL ) { // Attempt UUID parse
+          int old = str.get_off();
+          ParseTime.attemptUUIDParse0(str);
+          ParseTime.attemptUUIDParse1(str);
+          if( str.get_off() != -1 ) _ctypes[colIdx] = ICOL;
+          str.setOff(old);
+        }
+
+        if( _ctypes[colIdx] == TCOL ) {
           long l = ParseTime.attemptTimeParse(str);
           if( l == Long.MIN_VALUE ) addInvalidCol(colIdx);
           else {
@@ -770,6 +779,14 @@ public final class ParseDataset2 extends Job {
             addNumCol(colIdx, l, 0);               // Record time in msec
             _nvs[_col]._timCnt[time_pat]++; // Count histo of time parse patterns
           }
+        } else if( _ctypes[colIdx] == ICOL ) { // UUID column?  Only allow UUID parses
+          long lo = ParseTime.attemptUUIDParse0(str);
+          long hi = ParseTime.attemptUUIDParse1(str);
+          if( str.get_off() == -1 )  addInvalidCol(colIdx);
+          else {
+            if( colIdx < _nCols ) _nvs[_col = colIdx].addUUID(lo, hi);
+          }
+
         } else if(!_enums[_col = colIdx].isKilled()) {
           // store enum id into exponent, so that it will be interpreted as NA if compressing as numcol.
           int id = _enums[colIdx].addKey(str);

@@ -13,6 +13,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.*;
 
+import static java.lang.Double.isNaN;
 import sun.misc.Unsafe;
 import water.*;
 import water.api.DocGen;
@@ -716,6 +717,13 @@ public class Utils {
       Utils.close(is);
     }
     return bs;
+  }
+
+  public static String formatPct(double pct) {
+    String s = "N/A";
+    if( !isNaN(pct) )
+      s = String.format("%5.2f %%", 100 * pct);
+    return s;
   }
 
   /**

@@ -144,6 +144,7 @@ isFunction = _.isFunction
 isNaN = _.isNaN
 isNull = _.isNull
 isNumber = _.isNumber
+isInteger = (value) -> (isNumber value) and value % 1 is 0
 isObject = _.isObject
 isPlainObject = _.isPlainObject
 isRegExp = _.isRegExp
@@ -309,6 +310,21 @@ zipCompare = (array1, array2, areEqual) ->
       b = array2[i]
       return no if a isnt b
   yes
+
+same = (array, areEqual) ->
+  if array.length > 1
+    value = head array
+    if isFunction areEqual
+      for i in [ 1 ... array.length ]
+        unless areEqual value, array[i]
+          return no
+    else
+      for i in [ 1 ... array.length ]
+        if value isnt array[i]
+          return no
+    yes
+  else
+    yes
 
 valuesAreEqual = (array, pluck, areEqual) ->
   if array.length > 1

@@ -1,6 +1,6 @@
 source("../../../R/h2oPerf/prologue.R")
-runDL(x = 1:784,
-y = 785,
+runDL(x = 2:785,
+y = 1,
 activation="RectifierWithDropout",
 hidden=c(1024,1024,2048),
 epochs=32,

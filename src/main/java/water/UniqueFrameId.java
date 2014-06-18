@@ -31,7 +31,7 @@ public final class UniqueFrameId extends UniqueId {
 
   @Override
   public String getId() {
-    return Hex.encodeHexString(((Frame)DKV.get(frame).get()).hash());
+    return Long.toHexString(((Frame)DKV.get(frame).get()).checksum());
   }
 
   public JsonObject toJSON() {
