@@ -109,22 +109,7 @@ public class CMTask extends MRTask2<CMTask> {
   }
 
   public void init() {
-    // Make a mapping from chunk# to row# just for chunks on this node
-//    int total_home = 0;
-//    for (int i = 0; i < _data.anyVec().nChunks(); ++i) {
-//      if (_data.anyVec().chunkKey(i).home()) {
-//        total_home++;
-//      }
-//    }
-//    _chunk_row_mapping = new int[_data.anyVec().nChunks()];
-//
-//    int off=0;
-//    for (int i = 0; i < _data.anyVec().nChunks(); ++i) {
-//      if (_data.anyVec().chunkKey(i).home()) {
-//        _chunk_row_mapping[i] = off;
-//        off += _data.anyVec().chunkLen(i);
-//      }
-//    }
+
     // Initialize number of rows per node
     _rowsPerNode = new int[H2O.CLOUD.size()];
     long chunksCount = _data.anyVec().nChunks();
@@ -570,6 +555,9 @@ public class CMTask extends MRTask2<CMTask> {
     // Loop over the rows
     for( int r = 0; r < rows; r++ ) {
       int row = r + (int)chks[0]._start;
+
+      // Skip rows with missing response values
+      if (chks[_classcol].isNA(row)) continue;
 
       // The class votes for the i-th row
       int[] vi = votes[r];
