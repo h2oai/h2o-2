@@ -1148,6 +1148,7 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, validation,
                         nbins=1024, 
                         seed=-1,
                         stat.type="ENTROPY",
+                        balance.classes = FALSE,
                         classwt=NULL,
                         sampling_strategy = "RANDOM",
                         strata_samples=NULL) {
@@ -1180,10 +1181,10 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, validation,
 
   # NB: externally, 1 based indexing; internally, 0 based
   cols <- paste(args$x_i - 1, collapse=',')
-  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, response=args$y, ignored_cols=args$x_ignore, num_trees=ntree, max_depth=depth, validation=validation@key, importance=as.numeric(importance),
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, response=args$y, ignored_cols=args$x_ignore, balance_classes = as.numeric(balance.classes), num_trees=ntree, max_depth=depth, validation=validation@key, importance=as.numeric(importance),
                           sample=sample.rate, bin_limit=nbins, seed=seed, stat_type = stat.type, oobee=as.numeric(oobee), sampling_strategy=sampling_strategy, strata_samples=strata_samples, class_weights=classwt)
 
-  params = list(x=args$x, y=args$y, ntree=ntree, depth=depth, sample.rate=sample.rate, bin_limit=nbins, stat.type = stat.type, classwt=classwt, sampling_strategy=sampling_strategy, seed=seed, oobee = oobee, importance = importance)
+  params = list(x=args$x, y=args$y, ntree=ntree, depth=depth, sample.rate=sample.rate, bin_limit=nbins, balance_classes = as.numeric(balance.classes), stat.type = stat.type, classwt=classwt, sampling_strategy=sampling_strategy, seed=seed, oobee = oobee, importance = importance)
 
   if(length(ntree) == 1 && length(depth) == 1 && length(sample.rate) == 1 && length(nbins) == 1) { 
     .h2o.__waitOnJob(data@h2o, res$job_key)
