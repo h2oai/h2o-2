@@ -107,12 +107,13 @@ public class DeepLearningAutoEncoderTest extends TestUtil {
     // Reconstruct data using the same helper functions and verify that self-reported MSE agrees
     final Frame l2_frame_test = mymodel.scoreAutoEncoder(test);
     final Vec l2_test = l2_frame_test.anyVec();
-    double thresh_test = mymodel.calcOutlierThreshold(l2_test, quantile);
+    double mult = 10;
+    double thresh_test = mult*thresh_train;
     sb.append("\nFinding outliers.\n");
     sb.append("Mean reconstruction error (test): " + l2_test.mean() + "\n");
 
     // print stats and potential outliers
-    sb.append("The following test points are reconstructed with an error above the " + quantile*100 + "-th percentile - candidates for outliers.\n");
+    sb.append("The following test points are reconstructed with an error greater than " + mult + " times the mean reconstruction error of the training data:\n");
     HashSet<Long> outliers = new HashSet<Long>();
     for( long i=0; i<l2_test.length(); i++ ) {
       if (l2_test.at(i) > thresh_test) {
@@ -122,10 +123,11 @@ public class DeepLearningAutoEncoderTest extends TestUtil {
     }
     Log.info(sb);
 
-    // check that the two outliers are found
+    // check that the all outliers are found (and nothing else)
     Assert.assertTrue(outliers.contains(new Long(20)));
     Assert.assertTrue(outliers.contains(new Long(21)));
-    Assert.assertTrue(outliers.size() == 2);
+    Assert.assertTrue(outliers.contains(new Long(22)));
+    Assert.assertTrue(outliers.size() == 3);
 
     // cleanup
     p.delete();
