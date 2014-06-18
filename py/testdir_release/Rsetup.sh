@@ -89,10 +89,15 @@ if [[ $INSTALL_R_PACKAGES -eq 1 || $CREATE_FILES_ONLY -eq 1 ]]
 then 
     cat <<!  >> /tmp/libPaths.cmd
 # make the install conditional. Don't install if it's already there
+# update if allready there?
 usePackage <- function(p) {
     local({r <- getOption("repos"); r["CRAN"] <- "http://cran.us.r-project.org"; options(repos = r)})
-    if (!is.element(p, installed.packages()[,1]))
+    if (is.element(p, installed.packages()[,1])) {
+        update.packages(p, dep = TRUE)
+    }
+    else {
         install.packages(p, dep = TRUE)
+    }
     require(p, character.only = TRUE)
 }
 
