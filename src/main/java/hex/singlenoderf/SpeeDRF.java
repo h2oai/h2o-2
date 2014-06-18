@@ -349,12 +349,14 @@ public class SpeeDRF extends Job.ValidatedJob {
         test = FrameTask.DataInfo.prepareFrame(validation, validation.vecs()[source.find(response)], ignored_cols, !regression, true, true);
       }
 
+      float[] priorDist = classification ? new MRUtils.ClassDist(train.lastVec()).doAll(train.lastVec()).rel_dist() : null;
+
       // Handle imbalanced classes by stratified over/under-sampling
       // initWorkFrame sets the modeled class distribution, and model.score() corrects the probabilities back using the distribution ratios
       float[] trainSamplingFactors;
       Vec v = train.lastVec().toEnum();
+      Frame fr = train;
       if (classification && balance_classes) {
-        Frame fr = train;
         int response_idx = fr.find(_responseName);
         fr.replace(response_idx, v);
         trainSamplingFactors = new float[v.domain().length]; //leave initialized to 0 -> will be filled up below
@@ -370,10 +372,10 @@ public class SpeeDRF extends Job.ValidatedJob {
           throw new IllegalArgumentException("Train and Validation data have inconsistent response columns! They do not share the same factor levels.");
 
       // Set the model parameters
-      SpeeDRFModel model = new SpeeDRFModel(dest(), source._key, train, this);
+      SpeeDRFModel model = new SpeeDRFModel(dest(), source._key, fr, this, priorDist);
       int csize = H2O.CLOUD.size();
       model.fr = train;
-      model.response = regression ? train.lastVec() : train.lastVec().toEnum();
+      model.response = regression ? fr.lastVec() : fr.lastVec().toEnum();
       model.t_keys = new Key[0];
       model.time = 0;
       model.local_forests = new Key[csize][];
@@ -404,6 +406,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       model.time = 0;
       model.N = num_trees;
       model.strata_samples = regression ? null : new float[strata_samples.length];
+      model.setModelClassDistribution(new MRUtils.ClassDist(fr.lastVec()).doAll(fr.lastVec()).rel_dist());
 
       if (!regression) {
         for (int i = 0; i < strata_samples.length; i++) {
@@ -416,11 +419,11 @@ public class SpeeDRF extends Job.ValidatedJob {
         if(!regression) {
 
           // Classification uses the square root of the number of features by default
-          model.mtry = (int) Math.floor(Math.sqrt(train.numCols()));
+          model.mtry = (int) Math.floor(Math.sqrt(fr.numCols()));
         } else {
 
           // Regression uses about a third of the features by default
-          model.mtry = (int) Math.floor((float) train.numCols() / 3.0f);
+          model.mtry = (int) Math.floor((float) fr.numCols() / 3.0f);
         }
 
       } else {

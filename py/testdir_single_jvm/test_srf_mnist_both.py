@@ -22,6 +22,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_RF_mnist_both(self):
+        h2o.beta_features = True
         importFolderPath = "mnist"
         csvFilelist = [
             # ("mnist_training.csv.gz", "mnist_testing.csv.gz", 600, 784834182943470027),
@@ -113,6 +114,7 @@ class Basic(unittest.TestCase):
             print "RF completed in", elapsed, "seconds.", \
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             # h2o_rf.simpleCheckRFView(None, rfView, **params)
+            print "rfView", h2o.dump_json(rfView)
             modelKey = rfView['speedrf_model']['_key']
 
             # RFView (score on test)****************************************
@@ -127,7 +129,7 @@ class Basic(unittest.TestCase):
 
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(None, rfView, **params)
             print "classification error is expected to be low because we included the test data in with the training!"
-            self.assertAlmostEqual(classification_error, 0.0003, delta=0.0003, msg="Classification error %s differs too much" % classification_error)
+            self.assertAlmostEqual(classification_error, 2.85, delta=0.1, msg="Classification error %s differs too much" % classification_error)
        
             treeStats = rfView['speedrf_model']['treeStats'] 
             leaves = {'min': treeStats['minLeaves'], 'mean': treeStats['meanLeaves'], 'max': treeStats['maxLeaves']}
@@ -141,7 +143,7 @@ class Basic(unittest.TestCase):
                 print d
                 allDelta.append(d)
 
-            leaves = {'min': treeStats['minDepth'], 'mean': treeStats['meanDepth'], 'max': treeStats['maxDepth']}
+            depth = {'min': treeStats['minDepth'], 'mean': treeStats['meanDepth'], 'max': treeStats['maxDepth']}
             depthExpected = {'min': 21, 'mean': 23.8, 'max': 25}
             for l in depth:
                 # self.assertAlmostEqual(depth[l], depthExpected[l], delta=1, msg="depth %s %s %s differs too much" % (l, depth[l], depthExpected[l]))

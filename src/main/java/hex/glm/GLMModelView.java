@@ -109,6 +109,12 @@ public class GLMModelView extends Request2 {
       coefs2html(sm,sb);
     GLMValidation val = sm.validation;
     if(val != null)val2HTML(sm,val, sb);
+
+    // Variable importance
+    if (glm_model.varimp() != null) {
+      glm_model.varimp().toHTML(glm_model, sb);
+    }
+
     return true;
   }
 

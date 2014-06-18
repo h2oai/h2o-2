@@ -58,28 +58,28 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   @API(help = "beta_eps", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
   double beta_epsilon = DEFAULT_BETA_EPS;
 
-  @API(help="use line search (slower speed, to be used if glm does not converge otherwise)",filter=Default.class)
+  @API(help="use line search (slower speed, to be used if glm does not converge otherwise)",filter=Default.class, importance = ParamImportance.SECONDARY)
   boolean higher_accuracy;
 
-  @API(help="By default, first factor level is skipped from the possible set of predictors. Set this flag if you want use all of the levels. Needs sufficient regularization to solve!",filter=Default.class)
+  @API(help="By default, first factor level is skipped from the possible set of predictors. Set this flag if you want use all of the levels. Needs sufficient regularization to solve!",filter=Default.class, importance = ParamImportance.SECONDARY)
   boolean use_all_factor_levels;
 
-  @API(help="use lambda search starting at lambda max, given lambda is then interpreted as lambda min",filter=Default.class)
+  @API(help="use lambda search starting at lambda max, given lambda is then interpreted as lambda min",filter=Default.class, importance = ParamImportance.SECONDARY)
   boolean lambda_search;
 
-  @API(help="use strong rules to filter out inactive columns",filter=Default.class)
+  @API(help="use strong rules to filter out inactive columns",filter=Default.class, importance = ParamImportance.SECONDARY)
   boolean strong_rules_enabled = true;
 
   // intentionally not declared as API now
   int sparseCoefThreshold = 1000; // if more than this number of predictors, result vector of coefficients will be stored sparse
 
-  @API(help="number of lambdas to be used in a search",filter=Default.class)
+  @API(help="number of lambdas to be used in a search",filter=Default.class, importance = ParamImportance.EXPERT)
   int nlambdas = 100;
 
-  @API(help="min lambda used in lambda search, specified as a ratio of lambda_max",filter=Default.class)
+  @API(help="min lambda used in lambda search, specified as a ratio of lambda_max",filter=Default.class, importance = ParamImportance.EXPERT)
   double lambda_min_ratio = 0.0001;
 
-  @API(help="prior probability for y==1. To be used only for logistic regression iff the data has been sampled and the mean of response does not reflect reality.",filter=Default.class)
+  @API(help="prior probability for y==1. To be used only for logistic regression iff the data has been sampled and the mean of response does not reflect reality.",filter=Default.class, importance = ParamImportance.EXPERT)
   double prior = -1; // -1 is magic value for default value which is mean(y) computed on the current dataset
   private transient double _iceptAdjust; // adjustment due to the prior
 

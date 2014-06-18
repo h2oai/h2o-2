@@ -230,7 +230,10 @@ setMethod("show", "H2OSpeeDRFModel", function(object) {
 
   #mse <-model$mse[length(model$mse)] # (model$mse[is.na(model$mse) | model$mse <= 0] <- "")
 
-  cat("\nMean-squared Error from the",model$params$ntree, "trees: "); cat(model$mse, "\n")
+  if (model$mse != -1) {
+    cat("\nMean-squared Error from the",model$params$ntree, "trees: "); cat(model$mse, "\n")
+  }
+
   if(length(object@xval) > 0) {
     cat("\nCross-Validation Models:\n")
     print(sapply(object@xval, function(x) x@key))
