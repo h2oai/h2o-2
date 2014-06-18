@@ -861,7 +861,11 @@ public class DeepLearning extends Job.ValidatedJob {
    * @return DataInfo object
    */
   private DataInfo prepareDataInfo() {
-    final boolean del_enum_resp = (classification && !response.isEnum());
+    if (autoencoder) {
+      response = source.anyVec().makeZero();
+      source.add("dummy_response", response);
+    }
+    final boolean del_enum_resp = autoencoder || (classification && !response.isEnum());
     final Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, classification, ignore_const_cols, true /*drop >20% NA cols*/);
     final DataInfo dinfo = new FrameTask.DataInfo(train, 1, false,
             autoencoder ? DataInfo.TransformType.NORMALIZE : DataInfo.TransformType.STANDARDIZE, //transform predictors
@@ -869,6 +873,9 @@ public class DeepLearning extends Job.ValidatedJob {
     final Vec resp = dinfo._adaptedFrame.lastVec(); //convention from DataInfo: response is the last Vec
     assert(!classification ^ resp.isEnum()) : "Must have enum response for classification!"; //either regression or enum response
     if (del_enum_resp) ltrash(resp);
+    if (autoencoder) {
+      ltrash(source.remove("dummy_response"));
+    }
     return dinfo;
   }
 
