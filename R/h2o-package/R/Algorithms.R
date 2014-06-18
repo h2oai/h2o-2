@@ -1298,7 +1298,13 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, nfolds=0, validation,
     #}
 
     class_names = tail(res$'_domains', 1)[[1]]
-    result$confusion = .build_cm(tail(res$cms, 1)[[1]]$'_arr', class_names)
+    print("DEBUG")
+    
+    f <- function(o) { o[-length(o)] }
+    rrr <- tail(res$cms, 1)[[1]]$'_arr'
+    rrr <- lapply(rrr, f)
+    rrr <- rrr[-length(rrr)]
+    result$confusion = .build_cm(rrr, class_names)
   }
 
   if(params$importance) {
