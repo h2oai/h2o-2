@@ -414,10 +414,13 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
 
     final double[] b = beta();
     if (params.variable_importances && null != b) {
-      float[] coefs_abs_value = new float[b.length];
-      for (int i = 0; i < b.length; ++i)
+      float[] coefs_abs_value = new float[b.length - 1]; // Don't include the Intercept
+      String[] names = new String[b.length - 1];
+      for (int i = 0; i < b.length - 1; ++i) {
         coefs_abs_value[i] = (float)Math.abs(b[i]);
-      this.variable_importances = new VarImp(coefs_abs_value, coefficients_names);
+        names[i] = coefficients_names[i];
+      }
+      this.variable_importances = new VarImp(coefs_abs_value, names);
     }
   }
 }

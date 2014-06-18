@@ -118,6 +118,10 @@ public class GLMModelView extends Request2 {
       val2HTML(sm,sm.xvalidation,sb);
     else if(sm.validation != null)
       val2HTML(sm,sm.validation, sb);
+    // Variable importance
+    if (glm_model.varimp() != null) {
+      glm_model.varimp().toHTML(glm_model, sb);
+    }
     return true;
   }
 
