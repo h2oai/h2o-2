@@ -83,6 +83,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   @API(help="min lambda used in lambda search, specified as a ratio of lambda_max, recommended values are 1e-4 if nrows >> ncols, 1e-2 otherwise. -1 means automatic selection",filter=Default.class)
   double lambda_min_ratio = -1;
 
+  @API(help="lambda_Search stop condition: stop training when model has more than than this number of predictors (or don't use this option if -1).",filter=Default.class)
+  int max_predictors = -1;
+
 
   @API(help="prior probability for y==1. To be used only for logistic regression iff the data has been sampled and the mean of response does not reflect reality.",filter=Default.class)
   double prior = -1; // -1 is magic value for default value which is mean(y) computed on the current dataset
@@ -493,7 +496,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         }
         boolean significantLambda = _model.setAndTestValidation(glmt2._val);
         final GLMIterationTask glmt3;
-        boolean done = _iter == max_iter || _currentLambda <= lambda_min; // _iter < max_iter && (improved || _runAllLambdas) && _lambdaIdx < (lambda.length-1);
+        boolean done = _iter == max_iter || _currentLambda <= lambda_min || _model.rank() >= max_predictors; // _iter < max_iter && (improved || _runAllLambdas) && _lambdaIdx < (lambda.length-1);
         // now filter out the cols for the next lambda...
         if(!done && _activeCols != null){
           final int [] oldCols = _activeCols;
