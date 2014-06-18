@@ -808,6 +808,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         }
         lambda = (i >= lambda.length) ? new double[]{lambda_max} : Arrays.copyOfRange(lambda, i, lambda.length);
       }
+      _currentLambda = lambda[0];
     }
     _model = new GLMModel(GLM2.this,dest(),_dinfo, _glm,beta_epsilon,alpha[0],lambda_max,ymu,prior);
     _model.warnings = warns;
