@@ -407,7 +407,7 @@ h2o.getGLMLambdaModel <- function(model, lambda) {
   .h2o.__getGLM2LambdaModel(lambda, model@data, model@key, model@model$params)
 }
 
-.h2o.__getGLMLambdaModel <- function(lambda, data, model_key, params = list()) {
+.h2o.__getGLM2LambdaModel <- function(lambda, data, model_key, params = list()) {
   if(missing(lambda) || length(lambda) > 1 || !is.numeric(lambda)) stop("lambda must be a single number")
   if(lambda < 0) stop("lambda must non-negative")
   
