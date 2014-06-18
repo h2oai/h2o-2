@@ -191,7 +191,9 @@ public abstract class ParseTime {
     // First 14 digits are a random scramble; will never equal MIN_VALUE result
     // unless we have a failed parse in the last 2 digits
     lo = get2(lo,buf,i);
-    return lo == Long.MIN_VALUE ? badUUID(str) : lo;
+    return (lo == Long.MIN_VALUE || // broken UUID already, OR
+            // too many valid UUID digits
+            (i+2< buf.length && hdigit(0,buf[i+2]) != Long.MIN_VALUE)) ? badUUID(str) : lo;
   }
 
 

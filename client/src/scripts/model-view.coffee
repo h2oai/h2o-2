@@ -147,14 +147,19 @@ computeCumulativeScaledValues = (varImp) ->
   return
 
 createVariableImportanceModel = (inputColumnNames, variableImportances) ->
-  data = times (Math.min variableImportances.max_var, variableImportances.varimp.length), (index) ->
-    columnName: inputColumnNames[index]
+  #TODO always refer to .variables when variables are available in variable_importances.
+  variables = variableImportances.variables or inputColumnNames
+
+  data = times variableImportances.varimp.length, (index) ->
+    columnName: variables[index] or '' #TODO remove or... when variables are available in variable_importances
     value: variableImportances.varimp[index]
     cumulativeScaledValue: 0
     hasCumulativeScaledValues: no
+  
+  sortedData = sortBy data, (datum) -> -datum.value
 
   method: variableImportances.method
-  data: sortBy data, (datum) -> -datum.value
+  data: if sortedData.length < variableImportances.max_var then sortedData else sortedData.slice 0, variableImportances.max_var
 
 Steam.ModelView = (_, _model) ->
   stringify = (value) ->
