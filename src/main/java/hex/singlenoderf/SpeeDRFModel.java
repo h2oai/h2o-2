@@ -64,6 +64,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   @API(help = "Variable Importance")                                      public VarImp varimp;
   /* Regression or Classification */                                      boolean regression;
   /* Score each iteration? */                                             boolean score_each;
+  @API(help = "CV Error")                                                 public double cv_error;
 
   /**
    * Extra helper variables.
@@ -97,6 +98,48 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     score_each = params.score_each_iteration;
     regression = !(params.classification);
     _domain = regression ? null : fr.lastVec().toEnum().domain();
+  }
+
+  protected SpeeDRFModel(SpeeDRFModel model, double err, ConfusionMatrix cm, VarImp varimp, AUC auc) {
+    super(model._key,model._dataKey,model._names,model._domains);
+    this.features = model.features;
+    this.sampling_strategy = model.sampling_strategy;
+    this.sample = model.sample;
+    this.strata_samples = model.strata_samples;
+    this.mtry = model.mtry;
+    this.node_split_features = model.node_split_features;
+    this.N = model.N;
+    this.max_depth = model.max_depth;
+    this.t_keys = model.t_keys;
+    this.local_forests = model.local_forests;
+    this.time = model.time;
+    this.fr = model.fr;
+    this.response = model.response;
+    this.weights = model.weights;
+    this.nbins = model.nbins;
+    this.trees = model.trees;
+    this.jobKey = model.jobKey;
+    this.dest_key = model.dest_key;
+    this.current_status = model.current_status;
+    this.errs = model.errs;
+    this.statType = model.statType;
+    this.test_frame = model.test_frame;
+    this.testKey = model.testKey;
+    this.oobee = model.oobee;
+    this.zeed = model.zeed;
+    this.importance = model.importance;
+    this.confusion = model.confusion;
+    this.cms = Arrays.copyOf(model.cms, model.cms.length+1);
+    this.cms[this.cms.length-1] = cm;
+    this.parameters = model.parameters;
+    this.cm = cm._arr;
+    this.treeStats = model.treeStats;
+    this.cmDomain = model.cmDomain;
+    this.validAUC = auc;
+    this.varimp = varimp;
+    this.regression = model.regression;
+    this.score_each = model.score_each;
+    this.cv_error = err;
   }
 
   public Vec get_response() {
@@ -498,11 +541,16 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       cm.addProperty(JSON_CM_TREES,modelSize);
       // Signal end only and only if all trees were generated and confusion matrix is valid
 
-      DocGen.HTML.section(sb, "Confusion Matrix:");
-      if (testKey != null)
-        sb.append("<div class=\"alert\">Reported on ").append(Inspect2.link(testKey.toString(), testKey)).append("</div>");
-      else
-        sb.append("<div class=\"alert\">Reported on ").append(cm.get(JSON_CM_TYPE).getAsString()).append(" data</div>");
+      if (_have_cv_results) {
+        DocGen.HTML.section(sb, "Confusion Matrix:");
+        sb.append("<div class=\"alert\">Scoring results reported for ").append(this.parameters.n_folds + "-fold cross-validated training data ").append(Inspect2.link(_dataKey.toString(), _dataKey)).append("</div>");
+      } else {
+        DocGen.HTML.section(sb, "Confusion Matrix:");
+        if (testKey != null)
+          sb.append("<div class=\"alert\">Reported on ").append(Inspect2.link(testKey.toString(), testKey)).append("</div>");
+        else
+          sb.append("<div class=\"alert\">Reported on ").append(cm.get(JSON_CM_TYPE).getAsString()).append(" data</div>");
+      }
 
       if (cm.has(JSON_CM_MATRIX)) {
         sb.append("<dl class='dl-horizontal'>");
@@ -646,6 +694,8 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
   @Override protected void setCrossValidationError(Job.ValidatedJob job, double cv_error, water.api.ConfusionMatrix cm, water.api.AUC auc, water.api.HitRatio hr) {
     _have_cv_results = true;
-    // TODO: Update the model
+    SpeeDRFModel drfm = ((SpeeDRF)job).makeModel(this, cv_error, cm.cm == null ? null : new ConfusionMatrix(cm.cm, this.nclasses()), this.varimp, auc);
+    drfm._have_cv_results = true;
+    DKV.put(this._key, drfm); //overwrite this model
   }
 }
