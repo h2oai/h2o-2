@@ -23,9 +23,6 @@ public class DeepLearning extends Job.ValidatedJob {
   public static DocGen.FieldDoc[] DOC_FIELDS;
   public static final String DOC_GET = "Deep Learning";
 
-  @API(help = "Auto-Encoder", filter= Default.class, json = true)
-  public boolean autoencoder = false;
-
   /**
    * A model key associated with a previously trained Deep Learning
    * model. This option allows users to build a new model as a
@@ -457,6 +454,9 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Use a column major weight matrix for input layer. Can speed up forward propagation, but might slow down backpropagation (Experimental).", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
   public boolean col_major = false;
 
+  @API(help = "Auto-Encoder (Experimental)", filter= Default.class, json = true)
+  public boolean autoencoder = false;
+
   public enum ClassSamplingMethod {
     Uniform, Stratified
   }
@@ -511,6 +511,7 @@ public class DeepLearning extends Job.ValidatedJob {
           "single_node_mode",
           "sparse",
           "col_major",
+          "autoencoder",
   };
 
   // the following parameters can be modified when restarting from a checkpoint
@@ -579,10 +580,6 @@ public class DeepLearning extends Job.ValidatedJob {
             (initial_weight_distribution == InitialWeightDistribution.UniformAdaptive)
             ) {
       arg.disable("Using sqrt(6 / (# units + # units of previous layer)) for Uniform distribution.", inputArgs);
-    }
-    if(arg._name.equals("loss") && (!classification || autoencoder)) {
-      arg.disable("Using MeanSquare loss.", inputArgs);
-      loss = Loss.MeanSquare;
     }
     if (classification) {
       if(arg._name.equals("regression_stop")) {
@@ -831,12 +828,18 @@ public class DeepLearning extends Job.ValidatedJob {
       if (!classification) {
         if (!quiet_mode) Log.info("Automatically setting loss to MeanSquare for regression.");
         loss = Loss.MeanSquare;
-      } else {
+      }
+      else if (autoencoder) {
+        if (!quiet_mode) Log.info("Automatically setting loss to MeanSquare for auto-encoder.");
+        loss = Loss.MeanSquare;
+      }
+      else {
         if (!quiet_mode) Log.info("Automatically setting loss to Cross-Entropy for classification.");
         loss = Loss.CrossEntropy;
       }
     }
     if (!classification && loss == Loss.CrossEntropy) throw new IllegalArgumentException("Cannot use CrossEntropy loss function for regression.");
+    if (autoencoder && loss != Loss.MeanSquare) throw new IllegalArgumentException("Must use MeanSquare loss function for auto-encoder.");
 
     // make default job_key and destination_key in case they are missing
     if (dest() == null) {
@@ -865,7 +868,7 @@ public class DeepLearning extends Job.ValidatedJob {
       response = source.anyVec().makeZero();
       source.add("dummy_response", response);
     }
-    final boolean del_enum_resp = autoencoder || (classification && !response.isEnum());
+    final boolean del_enum_resp = classification && !response.isEnum();
     final Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, classification, ignore_const_cols, true /*drop >20% NA cols*/);
     final DataInfo dinfo = new FrameTask.DataInfo(train, 1, false,
             autoencoder ? DataInfo.TransformType.NORMALIZE : DataInfo.TransformType.STANDARDIZE, //transform predictors
