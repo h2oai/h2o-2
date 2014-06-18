@@ -51,7 +51,7 @@ function showPerfGraphs(test_run_id, total_hosts) {
 
         $.ajax({
             url: '../prototype/php/post2.php',
-            type: 'GET',
+            type: 'POST',
             dataType: 'JSON',
             data: 'SELECT * FROM stats WHERE test_run_id = ' + test_run_id + ' AND node_ip = \'192.168.1.164\'',
             success: function(data) {

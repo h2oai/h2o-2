@@ -272,6 +272,12 @@ function makeGraph(json, svg) {
       .text("Time (s)");
 }
 
+function zip(x, y) {
+    return $.map(x, function (el, idx) {
+        return [[el, y[idx]]];
+    });
+}
+
 function nodePerfGraph(json, svgCPU, svgRSS) {
     var margin = {top: 20, right: 80, bottom: 30, left: 50},
         width = 2000 - margin.left - margin.right,
