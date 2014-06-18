@@ -724,10 +724,24 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
         if (get_params().diagnostics) model_info().computeStats();
         if (get_params().autoencoder) {
           if (printme) Log.info("Scoring the auto-encoder.");
-//          Log.info(get_params().source.toStringAll());
-          final Frame reconstructed = score(ftrain, false);
-//          Log.info(reconstructed.toStringAll());
-          reconstructed.delete();
+          final Frame l2_frame = scoreAutoEncoder(ftrain);
+          final Vec l2 = l2_frame.anyVec();
+          Log.info("Mean reconstruction error: " + l2.mean() + "\n");
+          Errors err = new Errors();
+          err.train_mse = l2.mean();
+          err.epoch_counter = epoch_counter;
+          err.training_samples = model_info().get_processed_total();
+          err.training_time_ms = run_time;
+          l2_frame.delete();
+          // enlarge the error array by one, push latest score back
+          if (errors == null) {
+            errors = new Errors[]{err};
+          } else {
+            Errors[] err2 = new Errors[errors.length + 1];
+            System.arraycopy(errors, 0, err2, 0, errors.length);
+            err2[err2.length - 1] = err;
+            errors = err2;
+          }
         }
         else {
           if (printme) Log.info("Scoring the model.");
@@ -1094,7 +1108,10 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
     DocGen.HTML.paragraph(sb, "Model Key: " + _key);
     if (jobKey != null) DocGen.HTML.paragraph(sb, "Job Key: " + jobKey);
-    DocGen.HTML.paragraph(sb, "Model type: " + (get_params().classification ? " Classification" : " Regression") + ", predicting: " + responseName());
+    if (!get_params().autoencoder)
+      DocGen.HTML.paragraph(sb, "Model type: " + (get_params().classification ? " Classification" : " Regression") + ", predicting: " + responseName());
+    else
+      DocGen.HTML.paragraph(sb, "Model type: Auto-Encoder");
     DocGen.HTML.paragraph(sb, "Number of model parameters (weights/biases): " + String.format("%,d", model_info().size()));
 
     if (model_info.unstable()) {
@@ -1176,7 +1193,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       sb.append("</table>");
     }
 
-    if (isClassifier()) {
+    if (isClassifier() && !get_params().autoencoder) {
       DocGen.HTML.section(sb, "Classification error on training data: " + Utils.formatPct(error.train_err));
       if(error.validation) {
         DocGen.HTML.section(sb, "Classification error on validation data: " + Utils.formatPct(error.valid_err));
@@ -1356,7 +1373,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     sb.append("<th>Training Time</th>");
     sb.append("<th>Training Epochs</th>");
     sb.append("<th>Training Samples</th>");
-    if (isClassifier()) {
+    if (isClassifier() && !get_params().autoencoder) {
 //      sb.append("<th>Training MCE</th>");
       sb.append("<th>Training Error</th>");
       if (nclasses()==2) sb.append("<th>Training AUC</th>");
@@ -1387,7 +1404,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       sb.append("<td>" + PrettyPrint.msecs(e.training_time_ms, true) + "</td>");
       sb.append("<td>" + String.format("%g", e.epoch_counter) + "</td>");
       sb.append("<td>" + String.format("%,d", e.training_samples) + "</td>");
-      if (isClassifier()) {
+      if (isClassifier() && !get_params().autoencoder) {
         sb.append("<td>" + Utils.formatPct(e.train_err) + "</td>");
         if (nclasses()==2) {
           if (e.trainAUC != null) sb.append("<td>" + Utils.formatPct(e.trainAUC.AUC()) + "</td>");
