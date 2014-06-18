@@ -63,8 +63,11 @@ public class FrameUtils {
     Key[] fkeys = new Key[files.length];
     int cnt = 0;
     for (File f : files) fkeys[cnt++] = NFSFileVec.make(f);
-    return ParseDataset2.parse(okey,fkeys);
+    return parseFrame(okey, fkeys);
   }
 
-
+  public static Frame parseFrame(Key okey, Key ...ikeys) {
+    assert okey != null;
+    return ParseDataset2.parse(okey, ikeys);
+  }
 }

@@ -46,6 +46,17 @@
           // /ko
     .y-controls
       button.btn(data-bind='click:loadCompatibleFrames') View These Datasets&hellip;
+  // ko if:hasVariableImportance
+  h2.y-subtitle(data-bind='collapse:false') Variable Importance
+  .y-variable-importance-chart(data-bind="geyser:variableImportanceChart")
+  div
+    .form-horizontal
+      .checkbox
+        label 
+          input(type='checkbox' data-bind='checked:showParetoCurve') 
+          span Show Pareto Curve
+
+  // /ko
   h2.y-subtitle(data-bind='collapse:true') JSON
   pre(data-bind='json:data')
 

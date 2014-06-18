@@ -679,9 +679,9 @@ public final class ParseDataset2 extends Job {
         _nvs[i] = (NewChunk)_vecs[i].chunkForChunkIdx(_cidx);
     }
 
-    public FVecDataOut reduce(StreamDataOut sdout){
+    @Override public FVecDataOut reduce(StreamDataOut sdout){
       FVecDataOut dout = (FVecDataOut)sdout;
-      if(_vecs != dout._vecs){
+      if(dout!=null && _vecs != dout._vecs){
         _nCols = Math.max(_nCols,dout._nCols);
         if(dout._vecs.length > _vecs.length){
           AppendableVec [] v = _vecs;

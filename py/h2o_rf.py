@@ -43,10 +43,17 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
     # v2 doesn't have the response variable, so removed looking at it
     if h2o.beta_features:
         # if we are checking after confusion_matrix for predict, the jsonschema is different
+        if 'drf_model' in rfv:
+            rf_model = rfv['drf_model']
+        if 'speedrf_model' in rfv:
+            rf_model = rfv['speedrf_model']
+        if 'rf_model' in rfv:
+            rf_model = rfv['rf_model']
+
         if 'cm' in rfv:
             cm = rfv['cm'] # only one
         else:
-            cms = rfv['drf_model']['cms']
+            cms = rf_model['cms']
             print "number of cms:", len(cms)
             print "FIX! need to add reporting of h2o's _perr per class error"
             # FIX! what if regression. is rf only classification?
@@ -58,7 +65,6 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
         scoresList = cm
 
         if not checkScoringOnly:
-            rf_model = rfv['drf_model']
             used_trees = rf_model['N']
             errs = rf_model['errs']
             print "errs[0]:", errs[0]

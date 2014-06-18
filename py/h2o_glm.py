@@ -524,6 +524,11 @@ def simpleCheckGLMGrid(self, glmGridResult, colX=None, allowFailWarning=False, *
         models = inspectGG['glm_model']['submodels']
         h2o.verboseprint("GLMGrid inspect GLMGrid model 0(best):", h2o.dump_json(models[0]))
         g = simpleCheckGLM(self, inspectGG, colX, allowFailWarning=allowFailWarning, **kwargs)
+        # just to get some save_model testing
+        for i,m in enumerate(glmGridResult['grid']['destination_keys']):
+            print "Saving model", m, "to model"+str(i)
+            h2o.nodes[0].save_model(model=m, path='model'+str(i), force=1)
+
     else:
         destination_key = glmGridResult['destination_key']
         inspectGG = h2o_cmd.runInspect(None, destination_key)
