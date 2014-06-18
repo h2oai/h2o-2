@@ -968,7 +968,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   }
 
   /**
-   * Predict from raw double values representing
+   * Predict from raw double values representing the data
    * @param data raw array containing categorical values (horizontalized to 1,0,0,1,0,0 etc.) and numerical values (0.35,1.24,5.3234,etc), both can contain NaNs
    * @param preds predicted label and per-class probabilities (for classification), predicted target (regression), can contain NaNs
    * @return preds, can contain NaNs
