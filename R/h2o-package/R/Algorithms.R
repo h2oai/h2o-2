@@ -114,20 +114,26 @@ h2o.gbm <- function(x, y, distribution = 'multinomial', data, n.trees = 10, inte
 }
 
 # -------------------------- Generalized Linear Models (GLM) ------------------------ #
-h2o.glm <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e-5, epsilon = 1e-4, standardize = TRUE, prior, tweedie.p = ifelse(family == 'tweedie', 1.5, as.numeric(NA)), thresholds, iter.max, higher_accuracy, lambda_search, version = 2) {
+h2o.glm <- function(x, y, data, family, nfolds = 10, alpha = 0.5, nlambda, lambda.min.ratio, lambda = 1e-5, epsilon = 1e-4, standardize = TRUE, prior, tweedie.p = ifelse(family == 'tweedie', 1.5, as.numeric(NA)), thresholds, iter.max, higher_accuracy, lambda_search, return_all_lambda, version = 2) {
   if(version == 1) {
     if(missing(thresholds))
       thresholds = ifelse(family=='binomial', seq(0, 1, 0.01), as.numeric(NA))
     if(!missing(iter.max)) stop("iter.max not supported under ValueArray")
     if(!missing(higher_accuracy)) stop("line search not supported under ValueArray")
-    if(!missing(lambda_search)) stop("automated search over lambda not supported under ValueArray")
+    if(!missing(nlambda)) stop("nlambda not supported under ValueArray")
+    if(!missing(lambda.min.ratio)) stop("lambda.min.ratio not supported under ValueArray")
+    if(!missing(lambda_search) || !missing(return_all_lambda))
+      stop("automated search over lambda not supported under ValueArray")
     h2o.glm.VA(x, y, data, family, nfolds, alpha, lambda, epsilon, standardize, prior, tweedie.p, thresholds)
   } else if(version == 2) {
     if(!missing(thresholds)) stop("thresholds not supported under FluidVecs")
     if(missing(iter.max)) iter.max = 100
     if(missing(higher_accuracy)) higher_accuracy = FALSE
+    if(missing(nlambda)) nlambda = 100
+    if(missing(lambda.min.ratio)) lambda.min.ratio = 1e-4
     if(missing(lambda_search)) lambda_search = FALSE
-    h2o.glm.FV(x, y, data, family, nfolds, alpha, lambda, epsilon, standardize, prior, tweedie.p, iter.max, higher_accuracy, lambda_search)
+    if(missing(return_all_lambda)) return_all_lambda = FALSE
+    h2o.glm.FV(x, y, data, family, nfolds, alpha, nlambda, lambda.min.ratio, lambda, epsilon, standardize, prior, tweedie.p, iter.max, higher_accuracy, lambda_search, return_all_lambda)
   } else
     stop("version must be either 1 (ValueArray) or 2 (FluidVecs)")
 }
@@ -290,15 +296,22 @@ h2o.glm.VA <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e
 }
 
 # -------------------------- FluidVecs -------------------------- #
-h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e-5, epsilon = 1e-4, standardize = TRUE, prior, tweedie.p = ifelse(family == "tweedie", 1.5, as.numeric(NA)), iter.max = 100, higher_accuracy = FALSE, lambda_search = FALSE) {
+h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, nlambda = 100, lambda.min.ratio = 1e-4, lambda = 1e-5, epsilon = 1e-4, standardize = TRUE, prior, tweedie.p = ifelse(family == "tweedie", 1.5, as.numeric(NA)), iter.max = 100, higher_accuracy = FALSE, lambda_search = FALSE, return_all_lambda = FALSE) {
   args <- .verify_dataxy(data, x, y)
 
   if(!is.numeric(nfolds)) stop('nfolds must be numeric')
   if( nfolds < 0 ) stop('nfolds must be >= 0')
   if(!is.numeric(alpha)) stop('alpha must be numeric')
   if( any(alpha < 0) ) stop('alpha must be >= 0')
+  
+  if(!is.numeric(nlambda)) stop("nlambda must be numeric")
+  if(length(nlambda) > 1 || nlambda < 0) stop("nlambda must be a single number >= 0")
+  if(!is.numeric(lambda.min.ratio)) stop("lambda.min.ratio must be numeric")
+  if(length(lambda.min.ratio) > 1 || lambda.min.ratio < 0 || lambda.min.ratio > 1)
+    stop("lambda.min.ratio must be a single number in [0,1]")
   if(!is.numeric(lambda)) stop('lambda must be numeric')
   if( any(lambda < 0) ) stop('lambda must be >= 0')
+  
   if(!is.numeric(epsilon)) stop("epsilon must be numeric")
   if( epsilon < 0 ) stop('epsilon must be >= 0')
   if(!is.logical(standardize)) stop("standardize must be logical")
@@ -313,53 +326,63 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e
   if(!is.logical(higher_accuracy)) stop("higher_accuracy must be logical")
   if(!is.logical(lambda_search)) stop("lambda_search must be logical")
   if(lambda_search && length(lambda) > 1) stop("When automatically searching, must specify single numeric value as lambda, which is interpreted as minimum lambda in generated sequence")
-
+  if(!is.logical(return_all_lambda)) stop("return_all_lambda must be logical")
+  
   x_ignore = setdiff(1:ncol(data), c(args$x_i, args$y_i)) - 1
   if(length(x_ignore) == 0) x_ignore = ''
 
   if(length(alpha) == 1) {
     rand_glm_key = .h2o.__uniqID("GLM2Model")
     if(family == "tweedie")
-      res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, destination_key = rand_glm_key, response = args$y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, beta_epsilon = epsilon, standardize = as.numeric(standardize), max_iter = iter.max, higher_accuracy = as.numeric(higher_accuracy), lambda_search = as.numeric(lambda_search), tweedie_variance_power = tweedie.p)
+      res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, destination_key = rand_glm_key, response = args$y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, nlambdas = nlambda, lambda_min_ratio = lambda.min.ratio, lambda = lambda, beta_epsilon = epsilon, standardize = as.numeric(standardize), max_iter = iter.max, higher_accuracy = as.numeric(higher_accuracy), lambda_search = as.numeric(lambda_search), tweedie_variance_power = tweedie.p)
     else if(family == "binomial") {
       if(missing(prior)) prior = -1
-      res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, destination_key = rand_glm_key, response = args$y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, beta_epsilon = epsilon, standardize = as.numeric(standardize), max_iter = iter.max, higher_accuracy = as.numeric(higher_accuracy), lambda_search = as.numeric(lambda_search), prior = prior)
+      res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, destination_key = rand_glm_key, response = args$y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, nlambdas = nlambda, lambda_min_ratio = lambda.min.ratio, lambda = lambda, beta_epsilon = epsilon, standardize = as.numeric(standardize), max_iter = iter.max, higher_accuracy = as.numeric(higher_accuracy), lambda_search = as.numeric(lambda_search), prior = prior)
     } else
-      res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, destination_key = rand_glm_key, response = args$y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, beta_epsilon = epsilon, standardize = as.numeric(standardize), max_iter = iter.max, higher_accuracy = as.numeric(higher_accuracy), lambda_search = as.numeric(lambda_search))
-    params = list(x=args$x, y=args$y, family = .h2o.__getFamily(family, tweedie.var.p=tweedie.p), nfolds=nfolds, alpha=alpha, lambda=lambda, beta_epsilon=epsilon, standardize=standardize)
+      res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, destination_key = rand_glm_key, response = args$y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, nlambdas = nlambda, lambda_min_ratio = lambda.min.ratio, lambda = lambda, beta_epsilon = epsilon, standardize = as.numeric(standardize), max_iter = iter.max, higher_accuracy = as.numeric(higher_accuracy), lambda_search = as.numeric(lambda_search))
+    params = list(x=args$x, y=args$y, family = .h2o.__getFamily(family, tweedie.var.p=tweedie.p), nfolds=nfolds, alpha=alpha, nlambda=nlambda, lambda.min.ratio=lambda.min.ratio, lambda=lambda, beta_epsilon=epsilon, standardize=standardize)
     .h2o.__waitOnJob(data@h2o, res$job_key)
     # while(!.h2o.__isDone(data@h2o, "GLM2", res)) { Sys.sleep(1) }
 
     res2 = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLMModelView, '_modelKey'=res$destination_key)
-    resModel = res2$glm_model; destKey = resModel$'_key'
-    modelOrig = .h2o.__getGLM2Results(resModel, params)
-
-    # Get results from cross-validation
-    if(nfolds < 2)
-      return(new("H2OGLMModel", key=destKey, data=data, model=modelOrig, xval=list()))
-
-    res_xval = list()
-    for(i in 1:nfolds) {
-      xvalKey = resModel$submodels[[resModel$best_lambda_idx+1]]$validation$xval_models
-      resX = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLMModelView, '_modelKey'=xvalKey[i])
-      modelXval = .h2o.__getGLM2Results(resX$glm_model, params)
-      res_xval[[i]] = new("H2OGLMModel", key=xvalKey[i], data=data, model=modelXval, xval=list())
-    }
-    new("H2OGLMModel", key=destKey, data=data, model=modelOrig, xval=res_xval)
+    destKey = res2$glm_model$'_key'
+    if(return_all_lambda)
+      lambda_all = res2$glm_model$parameters$lambda
+    else
+      lambda_all = res2$glm_model$parameters$lambda[res2$glm_model$best_lambda_idx+1]
+    
+    allLambdaModels = lapply(lambda_all, function(lambda, model_key, params) {
+      res2 = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLMModelView, '_modelKey'=model_key, lambda=lambda)
+      resModel = res2$glm_model; params$lambda = lambda
+      modelOrig = .h2o.__getGLM2Results(resModel, params)
+      
+      # Get results from cross-validation
+      res_xval = list()
+      if(nfolds >= 2) {
+        for(i in 1:nfolds) {
+          xvalKey = resModel$submodels[[resModel$best_lambda_idx+1]]$validation$xval_models
+          resX = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLMModelView, '_modelKey'=xvalKey[i])
+          modelXval = .h2o.__getGLM2Results(resX$glm_model, params)
+          res_xval[[i]] = new("H2OGLMModel", key=xvalKey[i], data=data, model=modelXval, xval=list())
+        }
+      }
+      new("H2OGLMModel", key=model_key, data=data, model=modelOrig, xval=res_xval)
+    }, destKey, params)
+    if(length(lambda_all) <= 1) return(allLambdaModels[[1]]) else return(allLambdaModels)
   } else
-    .h2o.glm2grid.internal(x_ignore, args$y, data, family, nfolds, alpha, lambda, epsilon, standardize, prior, tweedie.p, iter.max, higher_accuracy, lambda_search)
+    .h2o.glm2grid.internal(x_ignore, args$y, data, family, nfolds, alpha, nlambda, lambda.min.ratio, lambda, epsilon, standardize, prior, tweedie.p, iter.max, higher_accuracy, lambda_search, return_all_lambda)
 }
 
-.h2o.glm2grid.internal <- function(x_ignore, y, data, family, nfolds, alpha, lambda, epsilon, standardize, prior, tweedie.p, iter.max, higher_accuracy, lambda_search) {
+.h2o.glm2grid.internal <- function(x_ignore, y, data, family, nfolds, alpha, nlambda, lambda.min.ratio, lambda, epsilon, standardize, prior, tweedie.p, iter.max, higher_accuracy, lambda_search, return_all_lambda) {
   if(family == "tweedie")
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, response = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, beta_epsilon = epsilon, standardize = as.numeric(standardize), max_iter = iter.max, higher_accuracy = as.numeric(higher_accuracy), lambda_search = as.numeric(lambda_search), tweedie_variance_power = tweedie.p)
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, response = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, nlambdas = nlambda, lambda_min_ratio = lambda.min.ratio, lambda = lambda, beta_epsilon = epsilon, standardize = as.numeric(standardize), max_iter = iter.max, higher_accuracy = as.numeric(higher_accuracy), lambda_search = as.numeric(lambda_search), tweedie_variance_power = tweedie.p)
   else if(family == "binomial") {
     if(missing(prior)) prior = -1
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, response = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, beta_epsilon = epsilon, standardize = as.numeric(standardize), max_iter = iter.max, higher_accuracy = as.numeric(higher_accuracy), lambda_search = as.numeric(lambda_search), prior = prior)
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, response = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, nlambdas = nlambda, lambda_min_ratio = lambda.min.ratio, lambda = lambda, beta_epsilon = epsilon, standardize = as.numeric(standardize), max_iter = iter.max, higher_accuracy = as.numeric(higher_accuracy), lambda_search = as.numeric(lambda_search), prior = prior)
   }
   else
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, response = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, lambda = lambda, beta_epsilon = epsilon, standardize = as.numeric(standardize), max_iter = iter.max, higher_accuracy = as.numeric(higher_accuracy), lambda_search = as.numeric(lambda_search))
-  params = list(x=setdiff(colnames(data)[-(x_ignore+1)], y), y=y, family=.h2o.__getFamily(family, tweedie.var.p=tweedie.p), nfolds=nfolds, alpha=alpha, lambda=lambda, beta_epsilon=epsilon, standardize=standardize)
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, response = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, nlambdas = nlambda, lambda_min_ratio = lambda.min.ratio, lambda = lambda, beta_epsilon = epsilon, standardize = as.numeric(standardize), max_iter = iter.max, higher_accuracy = as.numeric(higher_accuracy), lambda_search = as.numeric(lambda_search))
+  params = list(x=setdiff(colnames(data)[-(x_ignore+1)], y), y=y, family=.h2o.__getFamily(family, tweedie.var.p=tweedie.p), nfolds=nfolds, alpha=alpha, nlambda=nlambda, lambda.min.ratio=lambda.min.ratio, lambda=lambda, beta_epsilon=epsilon, standardize=standardize)
 
   .h2o.__waitOnJob(data@h2o, res$job_key)
   # while(!.h2o.__isDone(data@h2o, "GLM2", res)) { Sys.sleep(1); prog = .h2o.__poll(data@h2o, res$job_key); setTxtProgressBar(pb, prog) }
@@ -373,20 +396,34 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e
     resH = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLMModelView, '_modelKey'=allModels[i])
     myModelSum[[i]] = .h2o.__getGLM2Summary(resH$glm_model)
     modelOrig = .h2o.__getGLM2Results(resH$glm_model, params)
-
-    # Get results from cross-validation
-    if(nfolds < 2)
-      result[[i]] = new("H2OGLMModel", key=allModels[i], data=data, model=modelOrig, xval=list())
-    else {
+    
+    # BUG: For some reason, H2O always uses default number of lambda (100) during grid search
+    if(return_all_lambda)
+      lambda_all = resH$glm_model$parameters$lambda
+    else
+      lambda_all = resH$glm_model$parameters$lambda[resH$glm_model$best_lambda_idx+1]
+    
+    allLambdaModels = lapply(lambda_all, function(lambda, model_key, params) {
+      res2 = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLMModelView, '_modelKey'=model_key, lambda=lambda)
+      resModel = res2$glm_model; params$lambda = lambda
+      modelOrig = .h2o.__getGLM2Results(resModel, params)
+      
+      # Get results from cross-validation
       res_xval = list()
-      for(j in 1:nfolds) {
-         xvalKey = resH$glm_model$submodels[[resH$glm_model$best_lambda_idx+1]]$validation$xval_models
-         resX = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLMModelView, '_modelKey'=xvalKey[j])
-         modelXval = .h2o.__getGLM2Results(resX$glm_model, params)
-         res_xval[[j]] = new("H2OGLMModel", key=xvalKey, data=data, model=modelXval, xval=list())
+      if(nfolds >= 2) {
+        for(j in 1:nfolds) {
+          xvalKey = resModel$submodels[[resModel$best_lambda_idx+1]]$validation$xval_models
+          resX = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLMModelView, '_modelKey'=xvalKey[j])
+          modelXval = .h2o.__getGLM2Results(resX$glm_model, params)
+          res_xval[[j]] = new("H2OGLMModel", key=xvalKey[j], data=data, model=modelXval, xval=list())
+        }
       }
-      result[[i]] = new("H2OGLMModel", key=allModels[i], data=data, model=modelOrig, xval=res_xval)
-    }
+      new("H2OGLMModel", key=model_key, data=data, model=modelOrig, xval=res_xval)
+    }, allModels[i], params)
+    if(length(lambda_all) <= 1) 
+      result[[i]] = allLambdaModels[[1]]
+    else
+      result[[i]] = allLambdaModels
   }
   new("H2OGLMGrid", key=destKey, data=data, model=result, sumtable=myModelSum)
 }
@@ -417,7 +454,7 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e
 
   result <- list()
   params$alpha  <- model$alpha
-  params$lambda <- model$lambdas
+  # params$lambda <- model$lambdas
   params$best_lambda <- model$lambdas[[model$best_lambda_idx+1]]
   result$params <- params
   if(model$glm$family == "tweedie")

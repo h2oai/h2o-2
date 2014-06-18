@@ -5,6 +5,7 @@ import h2o_glm, h2o_gbm, h2o_rf # TODO: DeepLearning
 
 class ModelManagementTestCase(unittest.TestCase):
     tear_down_cloud = True
+    # tear_down_cloud = False
 
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -176,12 +177,12 @@ class ModelManagementTestCase(unittest.TestCase):
             'alpha': 0.5, 
             'standardize': 0, 
             'lambda': 1.0e-2, 
-            'n_folds': 0
+            'n_folds': 0,
+            'use_all_factor_levels': 1
         }
         glm_AirlinesTrain_1 = node.GLM(airlines_train_hex, **glm_AirlinesTrain_1_params)
         num_models = num_models + 1
-        # TODO: PUT BACK!
-        # h2o_glm.simpleCheckGLM(self, glm_AirlinesTrain_1, None, **glm_AirlinesTrain_1_params)
+        h2o_glm.simpleCheckGLM(self, glm_AirlinesTrain_1, None, **glm_AirlinesTrain_1_params)
 
 
         print "####################################################################"
@@ -270,7 +271,8 @@ class ModelManagementTestCase(unittest.TestCase):
             'response': 'IsDepDelayed', 
             'ignored_cols': 'IsDepDelayed_REC, IsDepDelayed_REC_recoded', 
             'hidden': [10, 10],
-            'classification': 1
+            'classification': 1,
+            'variable_importances': 1
         }
         dl_AirlinesTrain_1 = node.deep_learning(airlines_train_hex, **dl_AirlinesTrain_1_params)
         num_models = num_models + 1
@@ -287,12 +289,12 @@ class ModelManagementTestCase(unittest.TestCase):
             'alpha': 0.5, 
             'standardize': 0, 
             'lambda': 1.0e-2, 
-            'n_folds': 0
+            'n_folds': 0,
+            'use_all_factor_levels': 1
         }
         glm_AirlinesTrain_A = node.GLM(airlines_train_hex, **glm_AirlinesTrain_A_params)
         num_models = num_models + 1
-        # TODO: PUT BACK!
-        # h2o_glm.simpleCheckGLM(self, glm_AirlinesTrain_A, None, **glm_AirlinesTrain_A_params)
+        h2o_glm.simpleCheckGLM(self, glm_AirlinesTrain_A, None, **glm_AirlinesTrain_A_params)
 
 
         print "#########################################################"
@@ -304,12 +306,12 @@ class ModelManagementTestCase(unittest.TestCase):
             'ignored_cols': None, 
             'family': 'binomial', 
             'alpha': 0.5, 
-            'n_folds': 0
+            'n_folds': 0,
+            'use_all_factor_levels': 1
         }
         glm_Prostate_1 = node.GLM(prostate_hex, **glm_Prostate_1_params)
         num_models = num_models + 1
-        # TODO: PUT BACK!
-        # h2o_glm.simpleCheckGLM(self, glm_Prostate_1, None, **glm_Prostate_1_params)
+        h2o_glm.simpleCheckGLM(self, glm_Prostate_1, None, **glm_Prostate_1_params)
 
 
         print "###############################################################"
@@ -351,12 +353,12 @@ class ModelManagementTestCase(unittest.TestCase):
             'ignored_cols': None, 
             'family': 'gaussian', 
             'alpha': 0.5, 
-            'n_folds': 0
+            'n_folds': 0,
+            'use_all_factor_levels': 1
         }
         glm_Prostate_regression_1 = node.GLM(prostate_hex, **glm_Prostate_regression_1_params)
         num_models = num_models + 1
-        # TODO: PUT BACK!
-        # h2o_glm.simpleCheckGLM(self, glm_Prostate_regression_1, None, **glm_Prostate_regression_1_params)
+        h2o_glm.simpleCheckGLM(self, glm_Prostate_regression_1, None, **glm_Prostate_regression_1_params)
 
         # We were getting different results for each node.  Bad, bad bad. . .
         print "Checking " + str(len(h2o.nodes)) + " nodes for models: "

@@ -3,6 +3,7 @@ package hex.singlenoderf;
 
 import hex.ConfusionMatrix;
 import hex.FrameTask;
+import hex.VarImp;
 import jsr166y.ForkJoinTask;
 import water.*;
 import water.api.Constants;
@@ -84,6 +85,10 @@ public class SpeeDRF extends Job.ValidatedJob {
 //  }
 
   public DRFParams drfParams;
+
+  protected SpeeDRFModel makeModel( SpeeDRFModel model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
+    return new SpeeDRFModel(model, err, cm, varimp, validAUC);
+  }
 
   @Override protected void queryArgumentValueSet(Argument arg, java.util.Properties inputArgs) {
     super.queryArgumentValueSet(arg, inputArgs);
