@@ -17,7 +17,7 @@ function makeTable(json, svg) {
    datas[0] = header;
    for(i = 0; i < json.data.length; i++) {
      datas[i+1] = d3.values(json.data[i]);
-     link = "http://192.168.1.171:4040/perflink.html?test_run_id=" + datas[i+1][0] + "&test_name=" + datas[i+1][2];
+     link = "http://192.168.1.171:4040/perflink.html?test_run_id=" + datas[i+1][0] + "&test_name=" + datas[i+1][2] + "&num_hosts=" + datas[i+1][10];
      datas[i+1].push(link)
    }
 
