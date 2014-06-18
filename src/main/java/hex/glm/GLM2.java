@@ -68,7 +68,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   @API(help="By default, first factor level is skipped from the possible set of predictors. Set this flag if you want use all of the levels. Needs sufficient regularization to solve!",filter=Default.class)
   boolean use_all_factor_levels;
 
-  @API(help="use lambda search starting at lambda max, given lambda is then interpreted as lambda min",filter=Default.class)
+  @API(help="use lambda_value search starting at lambda_value max, given lambda_value is then interpreted as lambda_value min",filter=Default.class)
   boolean lambda_search;
 
   @API(help="use strong rules to filter out inactive columns",filter=Default.class)
@@ -80,7 +80,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   @API(help="number of lambdas to be used in a search, if value is -1 h2o will automatically pick appropriate number",filter=Default.class)
   int nlambdas = -1;
 
-  @API(help="min lambda used in lambda search, specified as a ratio of lambda_max, recommended values are 1e-4 if nrows >> ncols, 1e-2 otherwise. -1 means automatic selection",filter=Default.class)
+  @API(help="min lambda_value used in lambda_value search, specified as a ratio of lambda_max, recommended values are 1e-4 if nrows >> ncols, 1e-2 otherwise. -1 means automatic selection",filter=Default.class)
   double lambda_min_ratio = -1;
 
   @API(help="lambda_Search stop condition: stop training when model has more than than this number of predictors (or don't use this option if -1).",filter=Default.class)
@@ -123,7 +123,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   @API(help = "Tweedie link power", json=true, importance = ParamImportance.SECONDARY)
   double tweedie_link_power;
 
-  @API(help = "lambda max", json=true, importance = ParamImportance.SECONDARY)
+  @API(help = "lambda_value max", json=true, importance = ParamImportance.SECONDARY)
   double lambda_max = Double.NaN;
   double lambda_min = Double.NaN;
 
@@ -190,7 +190,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   @Override
   public JsonObject toJSON() {
     JsonObject jo = super.toJSON();
-    if (lambda == null) jo.addProperty("lambda", "automatic"); //better than not printing anything if lambda=null
+    if (lambda == null) jo.addProperty("lambda_value", "automatic"); //better than not printing anything if lambda_value=null
     return jo;
   }
 
@@ -307,7 +307,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   @Override public void init(){
     super.init();
     if(lambda_search && lambda.length > 1)
-      throw new IllegalArgumentException("Can not supply both lambda_search and multiple lambdas. If lambda_search is on, GLM expects only one value of lambda, representing the lambda min (smallest lambda in the lambda search).");
+      throw new IllegalArgumentException("Can not supply both lambda_search and multiple lambdas. If lambda_search is on, GLM expects only one value of lambda_value, representing the lambda_value min (smallest lambda_value in the lambda_value search).");
     // check the response
     if( response.isEnum() && family != Family.binomial)throw new IllegalArgumentException("Invalid response variable, trying to run regression with categorical response!");
     switch( family ) {
@@ -447,8 +447,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     _model.clone().update(self());
     ++_lambdaIdx;
     glmt._val = null;
-    if(glmt._gram == null){ // assume we had lambda search with strong rules
-      // we use strong rules so we can't really used this gram for the next lambda computation (different sets of coefficients)
+    if(glmt._gram == null){ // assume we had lambda_value search with strong rules
+      // we use strong rules so we can't really used this gram for the next lambda_value computation (different sets of coefficients)
       // I expect that:
       //  1) beta has been expanded to match current set of active cols
       //  2) it is new GLMIteration ready to be launched
@@ -456,7 +456,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       assert _activeCols == null || (glmt._beta.length == _activeCols.length+1);
       assert !glmt.isDone();
       glmt.asyncExec(_activeData._adaptedFrame);
-    } else // we have the right gram, just solve with with next lambda
+    } else // we have the right gram, just solve with with next lambda_value
       new Iteration().callback(glmt);
   }
 
@@ -469,7 +469,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         final double [] grad = glmt2.gradient(l2pen());
         if(_lastResult != null)
           _lastResult._fullGrad = glmt2.gradient(0);
-        // check the KKT conditions and filter data for next lambda
+        // check the KKT conditions and filter data for next lambda_value
         // check the gradient
         ADMMSolver.subgrad(alpha[0], _currentLambda, fullBeta, grad);
         double err = 0;
@@ -508,8 +508,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         }
         boolean significantLambda = _model.setAndTestValidation(glmt2._val);
         final GLMIterationTask glmt3;
-        boolean done = _iter == max_iter || _currentLambda <= lambda_min || (max_predictors != -1 && _model.rank() >= max_predictors); // _iter < max_iter && (improved || _runAllLambdas) && _lambdaIdx < (lambda.length-1);
-        // now filter out the cols for the next lambda...
+        boolean done = _iter == max_iter || _currentLambda <= lambda_min || (max_predictors != -1 && _model.rank() >= max_predictors); // _iter < max_iter && (improved || _runAllLambdas) && _lambdaIdx < (lambda_value.length-1);
+        // now filter out the cols for the next lambda_value...
         if(!done && _activeCols != null){
           final int [] oldCols = _activeCols;
           double previousLambda = _currentLambda;
@@ -702,7 +702,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       } else {
         setNewBeta(newBeta);
         final double bdiff = beta_diff(glmt._beta,newBeta);
-        if(_glm.family == Family.gaussian || bdiff < beta_epsilon || _iter == max_iter){ // Gaussian is non-iterative and gradient is ADMMSolver's gradient => just validate and move on to the next lambda
+        if(_glm.family == Family.gaussian || bdiff < beta_epsilon || _iter == max_iter){ // Gaussian is non-iterative and gradient is ADMMSolver's gradient => just validate and move on to the next lambda_value
           int diff = (int)Math.log10(bdiff);
           int nzs = 0;
           for(int i = 0; i < newBeta.length; ++i)
@@ -778,7 +778,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       max_iter = Math.max(300,max_iter);
       if(lambda_min_ratio == -1)
         lambda_min_ratio = lmaxt._nobs > 25*_dinfo.fullN()?1e-4:1e-2;
-      assert lmaxt != null:"running lambda search, but don't know what is the lambda max!";
+      assert lmaxt != null:"running lambda_value search, but don't know what is the lambda_value max!";
 
       final double d = Math.pow(lambda_min_ratio,1.0/nlambdas);
       if(nlambdas == -1) {
@@ -795,7 +795,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       _runAllLambdas = false;
     } else {
       lambda_min = lambda[lambda.length-1];
-      if (alpha[0] > 0 && lmaxt != null) { // make sure we start with lambda max (and discard all lambda > lambda max)
+      if (alpha[0] > 0 && lmaxt != null) { // make sure we start with lambda_value max (and discard all lambda_value > lambda_value max)
         final double lmax = lmaxt.lmax();
         int i = 0;
         while (i < lambda.length && lambda[i] >= lmax) ++i;
@@ -810,7 +810,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     _model.warnings = warns;
     _model.addSubmodel(_currentLambda);
     _model.clone().delete_and_lock(self());
-    if(_currentLambda == lambda_max && alpha[0] > 0){ // fill-in trivial solution for lambda max
+    if(_currentLambda == lambda_max && alpha[0] > 0){ // fill-in trivial solution for lambda_value max
       _beta = MemoryManager.malloc8d(_dinfo.fullN()+1);
       _beta[_beta.length-1] = _glm.link(ymu) + _iceptAdjust;
       _model.updateSubmodel(_currentLambda,_beta, _beta, 0, _dinfo.fullN() >= sparseCoefThreshold);
@@ -818,7 +818,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         _model.setValidation(lmaxt._val);
       _lambdaIdx = 1;
     }
-    if(lambda != null && _lambdaIdx == lambda.length) // ran only with one lambda > lambda_max => return null model
+    if(lambda != null && _lambdaIdx == lambda.length) // ran only with one lambda_value > lambda_max => return null model
       GLM2.this.complete(); // signal we're done to anyone waiting for the job
     else {
       ++_iter;
@@ -877,7 +877,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       _activeCols = Arrays.copyOf(cols,selected);
       _activeData = _dinfo.filterExpandedColumns(_activeCols);
     }
-    Log.info("GLM2 strong rule at lambda=" + l1 + ", got " + selected + " active cols out of " + _dinfo.fullN() + " total.");
+    Log.info("GLM2 strong rule at lambda_value=" + l1 + ", got " + selected + " active cols out of " + _dinfo.fullN() + " total.");
     return _activeCols;
   }
 

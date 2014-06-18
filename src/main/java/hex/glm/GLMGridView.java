@@ -63,9 +63,9 @@ public class GLMGridView extends Request2 {
       DocGen.HTML.arrayHead(sb);
       sb.append("<tr>");
       sb.append("<th>&alpha;</th>");
-      sb.append("<th>&lambda;<sub>max</sub></th>");
-      sb.append("<th>&lambda;<sub>min</sub></th>");
-      sb.append("<th>&lambda;<sub>best</sub></th>");
+      sb.append("<th>&lambda_value;<sub>max</sub></th>");
+      sb.append("<th>&lambda_value;<sub>min</sub></th>");
+      sb.append("<th>&lambda_value;<sub>best</sub></th>");
       sb.append("<th>nonzeros</th>");
       sb.append("<th>iterations</td>");
       if(models.get(0).glm.family == Family.binomial)
@@ -81,8 +81,8 @@ public class GLMGridView extends Request2 {
         GLMModel m = models.get(i);
         sb.append("<tr>");
         sb.append("<td>" + m.alpha + "</td>");
-        sb.append("<td>" + m.submodels[0].lambda + "</td>");
-        sb.append("<td>" + m.submodels[m.submodels.length-1].lambda + "</td>");
+        sb.append("<td>" + m.submodels[0].lambda_value + "</td>");
+        sb.append("<td>" + m.submodels[m.submodels.length-1].lambda_value + "</td>");
         sb.append("<td>" + m.lambda() + "</td>");
         sb.append("<td>" + (m.rank()-1) + "</td>");
         sb.append("<td>" + m.iteration() + "</td>");

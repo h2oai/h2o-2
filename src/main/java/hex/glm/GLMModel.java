@@ -18,7 +18,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-  @API(help="lambda max, smallest lambda which drives all coefficients to zero")
+  @API(help="lambda_value max, smallest lambda_value which drives all coefficients to zero")
   final double  lambda_max;
   @API(help="mean of response in the training dataset")
   final double     ymu;
@@ -51,7 +51,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @API(help="column names including expanded categorical values")
   public String [] coefficients_names;
 
-  @API(help="index of lambda giving best results")
+  @API(help="index of lambda_value giving best results")
   int best_lambda_idx;
 
   public double auc(){
@@ -104,8 +104,8 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-    @API(help="lambda value used for computation of this submodel")
-    final double lambda;
+    @API(help="lambda_value value used for computation of this submodel")
+    final double lambda_value;
     @API(help="number of iterations computed.")
     final int        iteration;
     @API(help="running time of the algo in ms.")
@@ -126,7 +126,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     final boolean sparseCoef;
 
     public Submodel(double lambda , double [] beta, double [] norm_beta, long run_time, int iteration, boolean sparseCoef){
-      this.lambda = lambda;
+      this.lambda_value = lambda;
       this.run_time = run_time;
       this.iteration = iteration;
       int r = 0;
@@ -152,10 +152,10 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
       this.sparseCoef = sparseCoef;
     }
     @Override
-    public Submodel clone(){return new Submodel(lambda,beta == null?null:beta.clone(),norm_beta == null?null:norm_beta.clone(),run_time,iteration,sparseCoef);}
+    public Submodel clone(){return new Submodel(lambda_value,beta == null?null:beta.clone(),norm_beta == null?null:norm_beta.clone(),run_time,iteration,sparseCoef);}
   }
 
-  @API(help = "models computed for particular lambda values")
+  @API(help = "models computed for particular lambda_value values")
   Submodel [] submodels;
 
   final boolean useAllFactorLevels;
@@ -164,7 +164,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @API(help = "Variable importances", json=true)
   VarImp variable_importances;
 
-  public GLMModel(GLM2 job, Key selfKey, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double lambda_max, double [] lambda, double ymu, double prior) {
+  public GLMModel(GLM2 job, Key selfKey, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double lambda_max, double ymu, double prior) {
     super(selfKey,null,dinfo._adaptedFrame);
     parameters = Job.hygiene((GLM2) job.clone());
     job_key = job.self();
@@ -197,7 +197,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   }
   public double lambda(){
     if(submodels == null)return Double.NaN;
-    return submodels[best_lambda_idx].lambda;
+    return submodels[best_lambda_idx].lambda_value;
   }
 
   public GLMValidation validation(){
@@ -214,7 +214,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   public double [] norm_beta(double lambda){
     int i = submodels.length-1;
     for(;i>=0;--i)
-      if(submodels[i].lambda == lambda) {
+      if(submodels[i].lambda_value == lambda) {
         if(submodels[i].norm_beta == null)
           return beta(); // not normalized
         double [] res = MemoryManager.malloc8d(beta().length);
@@ -223,7 +223,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
           res[j] = submodels[i].norm_beta[k++];
         return res;
       }
-    throw new RuntimeException("No submodel for lambda = " + lambda);
+    throw new RuntimeException("No submodel for lambda_value = " + lambda);
   }
 
   @Override protected float[] score0(double[] data, float[] preds) {
@@ -359,11 +359,11 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     }
     return sb.toString();
   }
-  public int rank() {return rank(submodels[best_lambda_idx].lambda);}
+  public int rank() {return rank(submodels[best_lambda_idx].lambda_value);}
   public Submodel  submodelForLambda(double lambda){
     int i = submodels.length-1;
     for(;i >=0; --i)
-      if(submodels[i].lambda == lambda)
+      if(submodels[i].lambda_value == lambda)
         return submodels[i];
     return null;
   }

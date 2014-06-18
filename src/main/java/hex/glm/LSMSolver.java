@@ -85,8 +85,8 @@ public abstract class LSMSolver extends Iced{
    * Compute least squares objective function value:
    *    lsm_obj(beta) = 0.5*(y - X*b)'*(y - X*b) + l1 + l2
    *                  = 0.5*y'y - (X'y)'*b + 0.5*b'*X'X*b) + l1 + l2
-   *    l1 = alpha*lambda*l1norm(beta)
-   *    l2 = (1-alpha)*lambda*l2norm(beta)/2
+   *    l1 = alpha*lambda_value*l1norm(beta)
+   *    l2 = (1-alpha)*lambda_value*l2norm(beta)/2
    * @param xy:   X'y
    * @param yy:   0.5*y'y
    * @param beta: b (vector of coefficients)
@@ -187,7 +187,7 @@ public abstract class LSMSolver extends Iced{
 
     public JsonObject toJson(){
       JsonObject res = new JsonObject();
-      res.addProperty("lambda",_lambda);
+      res.addProperty("lambda_value",_lambda);
       res.addProperty("alpha",_alpha);
       return res;
     }
