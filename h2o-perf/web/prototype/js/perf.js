@@ -283,16 +283,23 @@ function nodePerfGraph(json, svgCPU, svgRSS) {
         width = 2000 - margin.left - margin.right,
         height = 500 -margin.top -margin.bottom;
 
-    var x = d3.scale.linear().range([0, width - 1000]);
-    var y = d3.scale.linear().range([height, 0]);
-    var color = d3.scale.category10();
+    var xCPU = d3.scale.linear().range([0, width - 1000]);
+    var yCPU = d3.scale.linear().range([height, 0]);
+
+    var xRSS = d3.scale.linear().range([0, width - 1000]);
+    var yRSS = d3.scale.linear().range([height, 0]);
 
     var xAxis = d3.svg.axis().scale(x).orient("bottom").tickFormat(d3.format("d"));
     var yAxis = d3.svg.axis().scale(y).orient("left");
 
-    var lineFunction = d3.svg.line().interpolate("ordinal")
-        .x(function(d) {return x(d[0]); })
-        .y(function(d) { return y(d[1]); });
+    var lineFunctionCPU = d3.svg.line().interpolate("ordinal")
+        .x(function(d) {return xCPU(d[0]); })
+        .y(function(d) { return yCPU(d[1]); });
+
+    var lineFunctionRSS = d3.svg.line().interpolate("ordinal")
+        .x(function(d) {return xRSS(d[0]); })
+        .y(function(d) { return yRSS(d[1]); });
+
 
     var svg_cpu = d3.select(svgCPU).append("svg")
         .attr("width", width + margin.left + margin.right)
@@ -374,7 +381,7 @@ function nodePerfGraph(json, svgCPU, svgRSS) {
             .attr("fill", "black");
 
         linesGroup.append("path")
-            .attr("d", lineFunction(linedata.data))
+            .attr("d", lineFunctionCPU(linedata.data))
             .attr("class", "lines")
             .attr("fill", "none")
             .attr("stroke", linedata.color);
@@ -407,7 +414,7 @@ function nodePerfGraph(json, svgCPU, svgRSS) {
             .attr("fill", "black");
 
         linesGroup2.append("path")
-            .attr("d", lineFunction(linedata.data))
+            .attr("d", lineFunctionRSS(linedata.data))
             .attr("class", "lines")
             .attr("fill", "none")
             .attr("stroke", linedata.color);
