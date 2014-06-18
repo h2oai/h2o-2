@@ -4,6 +4,7 @@ import hex.deeplearning.DeepLearning;
 import hex.deeplearning.DeepLearningModel;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import water.JUnitRunnerDebug;
 import water.Key;
@@ -25,6 +26,7 @@ public class DeepLearningAutoEncoderCategoricalTest extends TestUtil {
   }
 
   @Test
+  @Ignore
   public void run() {
     long seed = 0xDECAF;
 
