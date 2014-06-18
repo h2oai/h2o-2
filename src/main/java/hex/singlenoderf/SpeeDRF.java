@@ -3,6 +3,7 @@ package hex.singlenoderf;
 
 import hex.ConfusionMatrix;
 import hex.FrameTask;
+import hex.VarImp;
 import jsr166y.ForkJoinTask;
 import water.*;
 import water.api.Constants;
@@ -11,6 +12,8 @@ import water.api.ParamImportance;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.*;
+import water.api.ParamImportance;
+import static water.util.MRUtils.sampleFrameStratified;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -49,6 +52,21 @@ public class SpeeDRF extends Job.ValidatedJob {
   @API(help ="Score each iteration", filter = Default.class, json = true, importance = ParamImportance.SECONDARY)
   public boolean score_each_iteration = false;
 
+  /*Imbalanced Classes*/
+  /**
+  * For imbalanced data, balance training data class counts via
+  * over/under-sampling. This can result in improved predictive accuracy.
+  */
+  @API(help = "Balance training data class counts via over/under-sampling (for imbalanced data)", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
+  public boolean balance_classes = false;
+
+   /**
+   * When classes are balanced, limit the resulting dataset size to the
+   * specified multiple of the original dataset size.
+   */
+   @API(help = "Maximum relative size of the training data after balancing class counts (can be less than 1.0)", filter = Default.class, json = true, dmin=1e-3, importance = ParamImportance.EXPERT)
+   public float max_after_balance_size = Float.POSITIVE_INFINITY;
+
   @API(help = "OOBEE", filter = Default.class, json = true, importance = ParamImportance.SECONDARY)
   public boolean oobee = true;
 
@@ -85,11 +103,22 @@ public class SpeeDRF extends Job.ValidatedJob {
 
   public DRFParams drfParams;
 
+  protected SpeeDRFModel makeModel( SpeeDRFModel model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
+    return new SpeeDRFModel(model, err, cm, varimp, validAUC);
+  }
+
   @Override protected void queryArgumentValueSet(Argument arg, java.util.Properties inputArgs) {
     super.queryArgumentValueSet(arg, inputArgs);
 
     if (arg._name.equals("classification")) {
       arg.setRefreshOnChange();
+    }
+
+    if (arg._name.equals("balance_classes")) {
+      arg.setRefreshOnChange();
+      if(regression) {
+        arg.disable("Class balancing is only for classification.");
+      }
     }
 
     // Regression is selected if classification is false and vice-versa.
@@ -136,6 +165,11 @@ public class SpeeDRF extends Job.ValidatedJob {
     if (arg._name.equals("importance")) {
       if (regression) {
         arg.disable("Variable Importance not supported in SpeeDRF regression.");
+      }
+    }
+    if(classification) {
+      if(arg._name.equals("max_after_balance_size") && !balance_classes) {
+        arg.disable("Requires balance_classes.", inputArgs);
       }
     }
   }
@@ -221,7 +255,6 @@ public class SpeeDRF extends Job.ValidatedJob {
       System.arraycopy(defaults, samples.length, result, samples.length, result.length - samples.length);
       return result;
     }
-
     return defaults;
   }
 
@@ -316,9 +349,25 @@ public class SpeeDRF extends Job.ValidatedJob {
         test = FrameTask.DataInfo.prepareFrame(validation, validation.vecs()[source.find(response)], ignored_cols, !regression, true, true);
       }
 
+      // Handle imbalanced classes by stratified over/under-sampling
+      // initWorkFrame sets the modeled class distribution, and model.score() corrects the probabilities back using the distribution ratios
+      float[] trainSamplingFactors;
+      Vec v = train.lastVec().toEnum();
+      if (classification && balance_classes) {
+        Frame fr = train;
+        int response_idx = fr.find(_responseName);
+        fr.replace(response_idx, v);
+        trainSamplingFactors = new float[v.domain().length]; //leave initialized to 0 -> will be filled up below
+        Frame stratified = sampleFrameStratified(fr, v, trainSamplingFactors, (long)(max_after_balance_size*fr.numRows()), seed, true, false);
+        if (stratified != fr) {
+          fr = stratified;
+          response = fr.vecs()[response_idx];
+          }
+      }
+
       if(classification && validation != null)
         if (!( Arrays.equals( train.lastVec().toEnum().domain(), test.lastVec().toEnum().domain())))
-          throw new IllegalArgumentException("Train and Validation data have inconsistent response columns!");
+          throw new IllegalArgumentException("Train and Validation data have inconsistent response columns! They do not share the same factor levels.");
 
       // Set the model parameters
       SpeeDRFModel model = new SpeeDRFModel(dest(), source._key, train, this);
@@ -367,11 +416,11 @@ public class SpeeDRF extends Job.ValidatedJob {
         if(!regression) {
 
           // Classification uses the square root of the number of features by default
-          model.mtry = (int) Math.floor(Math.sqrt(source.numCols()));
+          model.mtry = (int) Math.floor(Math.sqrt(train.numCols()));
         } else {
 
           // Regression uses about a third of the features by default
-          model.mtry = (int) Math.floor((float) source.numCols() / 3.0f);
+          model.mtry = (int) Math.floor((float) train.numCols() / 3.0f);
         }
 
       } else {

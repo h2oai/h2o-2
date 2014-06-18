@@ -79,13 +79,26 @@
                     </div>
                 </div>
             </div>
-            <div id="cpu_svg"></div>
+            <div id="cpu_svg">
+                <div id="cpu_svg1"></div>
+                <div id="cpu_svg2"></div>
+                <div id="cpu_svg3"></div>
+                <div id="cpu_svg4"></div>
+            </div>
+
             <div id="rss_svg">
+                <div id="rss_svg1"></div>
+                <div id="rss_svg2"></div>
+                <div id="rss_svg3"></div>
+                <div id="rss_svg4"></div>
+            </div>
+
               <script>
                 var params = GetUrlValue().split('&');
-                console.log(params)
-                var test_run_id = params[0].split('=')[1]
-                var test_name = params[1].split('=')[1]
+                var test_run_id = params[0].split('=')[1];
+                var test_name = params[1].split('=')[1];
+                var num_hosts = params[2].split('=')[1];
+
                 var h2 = document.createElement("H5");
                 var h = document.createElement("H5");
                 var h3 = document.createElement("H4");
@@ -104,14 +117,13 @@
                 document.getElementById("cpu_svg").appendChild(h3);
                 document.getElementById("cpu_svg").appendChild(document.createElement('hr'));
                 document.getElementById("rss_svg").appendChild(h4);
-                //$(document).ready(function() {
-                //  doQuery('../prototype/php/getJSON.php');
-                //});
+
+                $(document).ready(function() {
+                    showPerfGraphs(test_run_id, num_hosts)
+                });
               </script>
-              </div>
               <br />
             </div>
-        </div>
     </body>
 </html>
 

@@ -147,7 +147,7 @@ public abstract class ParseTime {
   public static long attemptUUIDParse0( ValueString str ) {
     final byte[] buf = str.get_buf();
     int i=str.get_off();
-    if( i+36>=buf.length ) return badUUID(str);
+    if( i+36>buf.length ) return badUUID(str);
     long lo=0;
     lo = get2(lo,buf,(i+=2)-2);
     lo = get2(lo,buf,(i+=2)-2);
@@ -203,7 +203,7 @@ public abstract class ParseTime {
   }
 
   private static long hdigit( long x, byte b ) {
-    if( false ) return Long.MIN_VALUE;
+    if( x == Long.MIN_VALUE ) return Long.MIN_VALUE;
     else if( b >= '0' && b <= '9' ) return (x<<4)+b-'0';
     else if( b >= 'A' && b <= 'F' ) return (x<<4)+b-'A'+10;
     else if( b >= 'a' && b <= 'f' ) return (x<<4)+b-'a'+10;
