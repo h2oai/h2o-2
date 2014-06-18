@@ -496,7 +496,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         }
         boolean significantLambda = _model.setAndTestValidation(glmt2._val);
         final GLMIterationTask glmt3;
-        boolean done = _iter == max_iter || _currentLambda <= lambda_min || _model.rank() >= max_predictors; // _iter < max_iter && (improved || _runAllLambdas) && _lambdaIdx < (lambda.length-1);
+        boolean done = _iter == max_iter || _currentLambda <= lambda_min || (max_predictors != -1 && _model.rank() >= max_predictors); // _iter < max_iter && (improved || _runAllLambdas) && _lambdaIdx < (lambda.length-1);
         // now filter out the cols for the next lambda...
         if(!done && _activeCols != null){
           final int [] oldCols = _activeCols;

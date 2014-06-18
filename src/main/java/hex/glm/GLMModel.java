@@ -103,7 +103,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-    @API(help="lambd avlue used for computation of this submodel")
+    @API(help="lambda value used for computation of this submodel")
     final double lambda;
     @API(help="number of iterations computed.")
     final int        iteration;

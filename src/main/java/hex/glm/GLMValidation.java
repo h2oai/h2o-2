@@ -66,7 +66,6 @@ public class GLMValidation extends Iced {
         xval_models[i] = xvalModels[i]._key;
       }
       finalize_AIC_AUC();
-      auc /= xvalModels.length;
       best_threshold = (float)(t/xvalModels.length);
       this.nobs = nobs;
     }
