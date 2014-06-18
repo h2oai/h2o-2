@@ -7,6 +7,7 @@ import jsr166y.ForkJoinTask;
 import water.*;
 import water.api.Constants;
 import water.api.DocGen;
+import water.api.ParamImportance;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Log;
@@ -14,6 +15,8 @@ import water.util.Utils;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Random;
+
+import static water.util.MRUtils.sampleFrameStratified;
 
 
 public class SpeeDRF extends Job.ValidatedJob {
@@ -44,6 +47,21 @@ public class SpeeDRF extends Job.ValidatedJob {
 
   @API(help = "Sampling Rate at each split.", filter = Default.class, json  = true, dmin = 0, dmax = 1)
   public double sample = 0.67;
+
+  /*Imbalanced Classes*/
+  /**
+   * For imbalanced data, balance training data class counts via
+   * over/under-sampling. This can result in improved predictive accuracy.
+   */
+  @API(help = "Balance training data class counts via over/under-sampling (for imbalanced data)", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
+  public boolean balance_classes = false;
+
+  /**
+   * When classes are balanced, limit the resulting dataset size to the
+   * specified multiple of the original dataset size.
+   */
+  @API(help = "Maximum relative size of the training data after balancing class counts (can be less than 1.0)", filter = Default.class, json = true, dmin=1e-3, importance = ParamImportance.EXPERT)
+  public float max_after_balance_size = Float.POSITIVE_INFINITY;
 
   @API(help = "OOBEE", filter = Default.class, json = true)
   public boolean oobee = true;
@@ -126,6 +144,11 @@ public class SpeeDRF extends Job.ValidatedJob {
       }
       if (regression) {
         arg.disable("No class weights for regression.");
+      }
+    }
+    if (classification) {
+      if(arg._name.equals("max_after_balance_size") && !balance_classes) {
+        arg.disable("Requires balance_classes.", inputArgs);
       }
     }
   }
@@ -216,17 +239,35 @@ public class SpeeDRF extends Job.ValidatedJob {
       if (seed == -1) {
         seed = _seedGenerator.nextLong();
       }
-      Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, false, false, false);
+
+      Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, !regression, true, true);
       Frame test = null;
       if (validation != null) {
-        test = FrameTask.DataInfo.prepareFrame(validation, validation.vecs()[source.find(response)], ignored_cols, false, false, false);
+        test = FrameTask.DataInfo.prepareFrame(validation, validation.vecs()[source.find(response)], ignored_cols, !regression, true, true);
       }
-      SpeeDRFModel model = new SpeeDRFModel(dest(), self(), source._key, train, response, new Key[0], seed, getCMDomain(), this);
+
+      // Handle imbalanced classes by stratified over/under-sampling
+      // initWorkFrame sets the modeled class distribution, and model.score() corrects the probabilities back using the distribution ratios
+      float[] trainSamplingFactors;
+      Vec v = train.lastVec().toEnum();
+      if (classification && balance_classes) {
+        Frame fr = train;
+        int response_idx = fr.find(_responseName);
+        fr.replace(response_idx, v);
+        trainSamplingFactors = new float[v.domain().length]; //leave initialized to 0 -> will be filled up below
+        Frame stratified = sampleFrameStratified(fr, v, trainSamplingFactors, (long)(max_after_balance_size*fr.numRows()), seed, true, false);
+        if (stratified != fr) {
+          fr = stratified;
+          response = fr.vecs()[response_idx];
+        }
+      }
+
+      SpeeDRFModel model = new SpeeDRFModel(dest(), self(), source._key, train, classification ? response.toEnum() : response, new Key[0], seed, getCMDomain(), this);
       model.nbins = bin_limit;
       if (mtry == -1) {
         if(!regression) {
-           model.mtry = (int) Math.floor(Math.sqrt(source.numCols()));
-        } else {model.mtry = (int) Math.floor((float) source.numCols() / 3.0f); }
+           model.mtry = (int) Math.floor(Math.sqrt(train.numCols()));
+        } else {model.mtry = (int) Math.floor((float) train.numCols() / 3.0f); }
       } else {
         model.mtry = mtry;
       }
