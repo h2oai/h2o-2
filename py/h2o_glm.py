@@ -161,7 +161,7 @@ def simpleCheckGLM(self, glm, colX, allowFailWarning=False, allowZeroCoeff=False
         print "lambda_max:", lambda_max
 
         # currently lambda_max is not set by tomas. ..i.e.not valid
-        if 1==0 and lambda_max <= submodels[best_lambda_idx].lambda_value
+        if 1==0 and (lambda_max <= submodels[best_lambda_idx].lambda_value):
             raise Exception("lambda_max %s should always be > the lambda result %s we're checking" % (lambda_max, submodels[best_lambda_idx].lambda_value))
 
         # submodels0 = submodels[0]
