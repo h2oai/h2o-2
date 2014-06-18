@@ -105,14 +105,7 @@ class Basic(unittest.TestCase):
                 h2o_cmd.columnInfoFromInspect(parseResult['destination_key'], exceptionOnMissingValues=True)
 
             y = colCount
-            kwargs = {
-                'response': y, 
-                'max_iter': 8, 
-                'family': 'binomial', 
-                'n_folds': 2, 
-                'alpha': 0.2,   
-                'lambda': 1e-5
-            }
+            kwargs = {'response': y, 'max_iter': 8, 'family': 'binomial', 'n_folds': 2, 'alpha': 0.2, 'lambda': 1e-5}
             start = time.time()
             glm = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
             print "glm end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'
@@ -123,8 +116,7 @@ class Basic(unittest.TestCase):
             # this messes up if you use case_mode/case_vale above
             predictKey = 'Predict.hex'
             modelKey = glm['glm_model']['_key']
-            h2o_cmd.runScore(dataKey="score_" + hex_key, modelKey=modelKey, 
-                vactual=y, vpredict=1, expectedAuc=0.6)
+            h2o_cmd.runScore(dataKey="score_" + hex_key, modelKey=modelKey, vactual=y, vpredict=1, expectedAuc=0.5)
 
 
 if __name__ == '__main__':

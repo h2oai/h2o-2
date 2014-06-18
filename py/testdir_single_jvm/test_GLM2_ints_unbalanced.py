@@ -159,7 +159,7 @@ class Basic(unittest.TestCase):
                     timeoutSecs=30, separator=colSepInt)
 
                 h2o_cmd.runScore(dataKey="B.hex", modelKey=modelKey, 
-                    vactual='C' + str(y+1), vpredict=1, expectedAuc=0.6)
+                    vactual='C' + str(y+1), vpredict=1, expectedAuc=0.5)
 
 
 if __name__ == '__main__':
