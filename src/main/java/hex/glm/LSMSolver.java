@@ -334,7 +334,7 @@ public abstract class LSMSolver extends Iced{
       long solveTime = System.currentTimeMillis()-t;
       if(Double.isInfinite(this.gerr)) this.gerr = getGrad(i,gram,res,xy);
       Log.info("ADMM finished in " + i + " iterations and (" + decompTime + " + " + solveTime+ ")ms, max |subgradient| = " + lastErr);
-      return _converged = (this.gerr < 1e-2);
+      return _converged = (gerr < 1e-2);
     }
     @Override
     public String name() {return "ADMM";}
