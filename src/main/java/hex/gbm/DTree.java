@@ -792,7 +792,9 @@ public class DTree extends Iced {
             sb.append("<div class=\"alert\">Reported on ").append(num_folds).append("-fold cross-validated training data</div>");
           else {
             sb.append("<div class=\"alert\">Reported on ").append(title.contains("DRF") ? "out-of-bag" : "training").append(" data");
-            if (num_folds > 0) sb.append(" (cross-validation results are being computed - please reload this page later).");
+            if (num_folds > 0) sb.append(" (cross-validation results are being computed - please reload this page later)");
+            sb.append(".");
+            if (_priorClassDist!=null && _modelClassDist!=null) sb.append("<br />Data were resampled to balance class distribution.");
             sb.append("</div>");
           }
         } else {

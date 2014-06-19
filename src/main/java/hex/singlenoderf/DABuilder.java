@@ -19,7 +19,7 @@ public class DABuilder {
     static DABuilder create(final SpeeDRF drf, final SpeeDRFModel rf_model) {
       switch( drf.drfParams.sampling_strategy ) {
         case RANDOM                :
-        case STRATIFIED_LOCAL      :
+//        case STRATIFIED_LOCAL      :
         default                    : return new DABuilder(drf, rf_model);
       }
     }

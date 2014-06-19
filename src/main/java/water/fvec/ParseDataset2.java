@@ -91,9 +91,8 @@ public final class ParseDataset2 extends Job {
 
     @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
       if(_job != null){
-        _job.cancel(ex.toString());
+        _job.cancel(ex);
       }
-      ex.printStackTrace();
       return true;
     }
   }

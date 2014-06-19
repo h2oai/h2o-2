@@ -16,6 +16,8 @@ import water.util.Log.Tag.Sys;
 
 import java.util.*;
 
+import org.apache.commons.math3.random.CorrelatedRandomVectorGenerator;
+
 /**
  * A Model models reality (hopefully).
  * A model can be used to 'score' a row, or a collection of rows on any
@@ -453,17 +455,7 @@ public abstract class Model extends Lockable<Model> {
     // C.f. http://gking.harvard.edu/files/0s.pdf Eq.(27)
     if (isClassifier() && _priorClassDist != null && _modelClassDist != null) {
       assert(scored.length == nclasses()+1); //1 label + nclasses probs
-      double probsum=0;
-      for( int c=1; c<scored.length; c++ ) {
-        final double original_fraction = _priorClassDist[c-1];
-        assert(original_fraction > 0) : "original fraction should be > 0, but is " + original_fraction + ": not using enough training data?";
-        final double oversampled_fraction = _modelClassDist[c-1];
-        assert(oversampled_fraction > 0) : "oversampled fraction should be > 0, but is " + oversampled_fraction + ": not using enough training data?";
-        assert(!Double.isNaN(scored[c]));
-        scored[c] *= original_fraction / oversampled_fraction;
-        probsum += scored[c];
-      }
-      for (int i=1;i<scored.length;++i) scored[i] /= probsum;
+      ModelUtils.correctProbabilities(scored, _priorClassDist, _modelClassDist);
       //set label based on corrected probabilities (max value wins, with deterministic tie-breaking)
       scored[0] = ModelUtils.getPrediction(scored, tmp);
     }
