@@ -868,20 +868,15 @@ public class DeepLearning extends Job.ValidatedJob {
    * @return DataInfo object
    */
   private DataInfo prepareDataInfo() {
-    if (autoencoder) {
-      response = source.anyVec().makeZero();
-      source.add("dummy_response", response);
-    }
     final boolean del_enum_resp = classification && !response.isEnum();
-    final Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, classification, ignore_const_cols, true /*drop >20% NA cols*/);
-    final DataInfo dinfo = new FrameTask.DataInfo(train, 1, autoencoder, //use all FactorLevels for auto-encoder
+    final Frame train = FrameTask.DataInfo.prepareFrame(source, autoencoder ? null : response, ignored_cols, classification, ignore_const_cols, true /*drop >20% NA cols*/);
+    final DataInfo dinfo = new FrameTask.DataInfo(train, autoencoder ? 0 : 1, autoencoder, //use all FactorLevels for auto-encoder
             autoencoder ? DataInfo.TransformType.NORMALIZE : DataInfo.TransformType.STANDARDIZE, //transform predictors
             classification ? DataInfo.TransformType.NONE : DataInfo.TransformType.STANDARDIZE);  //transform response
-    final Vec resp = dinfo._adaptedFrame.lastVec(); //convention from DataInfo: response is the last Vec
-    assert(!classification ^ resp.isEnum()) : "Must have enum response for classification!"; //either regression or enum response
-    if (del_enum_resp) ltrash(resp);
-    if (autoencoder) {
-      ltrash(source.remove("dummy_response"));
+    if (!autoencoder) {
+      final Vec resp = dinfo._adaptedFrame.lastVec(); //convention from DataInfo: response is the last Vec
+      assert (!classification ^ resp.isEnum()) : "Must have enum response for classification!"; //either regression or enum response
+      if (del_enum_resp) ltrash(resp);
     }
     return dinfo;
   }
