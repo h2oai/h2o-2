@@ -98,7 +98,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
    * because an important factor level can be skipped and not appear if
    * !use_all_factor_levels.
    */
-  @API(help = "Compute variable importances for input features", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
+  @API(help = "Compute variable importances for input features.  REQUIRES use_all_factor_levels.", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
   public boolean variable_importances = true;
 
 
