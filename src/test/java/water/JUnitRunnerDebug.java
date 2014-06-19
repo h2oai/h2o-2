@@ -16,7 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class JUnitRunnerDebug {
-  public static final int NODES = 1;
+  public static final int NODES = 3;
 
   public static void main(String[] args) throws Exception {
     int[] ports = new int[NODES];
