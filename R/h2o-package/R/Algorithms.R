@@ -297,7 +297,7 @@ h2o.glm.VA <- function(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e
 }
 
 # -------------------------- FluidVecs -------------------------- #
-h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, nlambda = 100, lambda.min.ratio = 1e-4, lambda = 1e-5, epsilon = 1e-4, standardize = TRUE, prior, tweedie.p = ifelse(family == "tweedie", 1.5, as.numeric(NA)), iter.max = 100, higher_accuracy = FALSE, lambda_search = FALSE, return_all_lambda = FALSE, max_predictors=-1) {
+h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, nlambda = -1, lambda.min.ratio = -1, lambda = 1e-5, epsilon = 1e-4, standardize = TRUE, prior, tweedie.p = ifelse(family == "tweedie", 1.5, as.numeric(NA)), iter.max = 100, higher_accuracy = FALSE, lambda_search = FALSE, return_all_lambda = FALSE, max_predictors=-1) {
   args <- .verify_dataxy(data, x, y)
 
   if(!is.numeric(nfolds)) stop('nfolds must be numeric')
@@ -306,9 +306,9 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, nlambda = 1
   if( any(alpha < 0) ) stop('alpha must be >= 0')
   
   if(!is.numeric(nlambda)) stop("nlambda must be numeric")
-  if(length(nlambda) > 1 || nlambda < 0) stop("nlambda must be a single number >= 0")
+  if((nlambda != -1) && (length(nlambda) > 1 || nlambda < 0)) stop("nlambda must be a single number >= 0")
   if(!is.numeric(lambda.min.ratio)) stop("lambda.min.ratio must be numeric")
-  if(length(lambda.min.ratio) > 1 || lambda.min.ratio < 0 || lambda.min.ratio > 1)
+  if((lambda.min.ratio != -1) && (length(lambda.min.ratio) > 1 || lambda.min.ratio < 0 || lambda.min.ratio > 1))
     stop("lambda.min.ratio must be a single number in [0,1]")
   if(!is.numeric(lambda)) stop('lambda must be numeric')
   if( any(lambda < 0) ) stop('lambda must be >= 0')
