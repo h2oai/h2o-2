@@ -332,8 +332,6 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, nlambda = -
   x_ignore = setdiff(1:ncol(data), c(args$x_i, args$y_i)) - 1
   if(length(x_ignore) == 0) x_ignore = ''
   
-  
-
   if(length(alpha) == 1) {
     rand_glm_key = .h2o.__uniqID("GLM2Model")
     if(family == "tweedie")
@@ -350,7 +348,8 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, nlambda = -
   } else
   .h2o.glm2grid.internal(x_ignore, args$y, data, family, nfolds, alpha, nlambda, lambda.min.ratio, lambda, epsilon, standardize, prior, tweedie.p, iter.max, higher_accuracy, lambda_search, return_all_lambda)
 }
-h2o.glm.get_model <- function (data,model_key,return_all_lambda=TRUE){
+
+h2o.glm.get_model <- function (data,model_key,return_all_lambda=TRUE) {
     res2 = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLMModelView, '_modelKey'=model_key)
     destKey = res2$glm_model$'_key'
     make_model <- function(x){
@@ -375,6 +374,7 @@ h2o.glm.get_model <- function (data,model_key,return_all_lambda=TRUE){
         make_model(res2$glm_model$best_lambda_idx+1)
     }
 }
+
 .h2o.glm2grid.internal <- function(x_ignore, y, data, family, nfolds, alpha, nlambda, lambda.min.ratio, lambda, epsilon, standardize, prior, tweedie.p, iter.max, higher_accuracy, lambda_search, return_all_lambda) {
   if(family == "tweedie")
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, response = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, nlambdas = nlambda, lambda_min_ratio = lambda.min.ratio, lambda = lambda, beta_epsilon = epsilon, standardize = as.numeric(standardize), max_iter = iter.max, higher_accuracy = as.numeric(higher_accuracy), lambda_search = as.numeric(lambda_search), tweedie_variance_power = tweedie.p)
@@ -447,10 +447,6 @@ h2o.getGLMLambdaModel <- function(model, lambda) {
   }
   new("H2OGLMModel", key=model_key, data=data, model=modelOrig, xval=res_xval)
 }
-
-
-
-
 
 .h2o.__getGLM2Summary <- function(model) {
   mySum = list()
