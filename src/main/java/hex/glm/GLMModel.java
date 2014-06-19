@@ -164,8 +164,8 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @API(help = "Variable importances", json=true)
   VarImp variable_importances;
 
-  public GLMModel(GLM2 job, Key selfKey, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double lambda_max, double ymu, double prior) {
-    super(selfKey,null,dinfo._adaptedFrame);
+  public GLMModel(GLM2 job, Key selfKey, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double lambda_max, double [] lambda, double ymu, double prior) {
+    super(selfKey,null,dinfo._adaptedFrame, /* priorClassDistribution */ null);
     parameters = Job.hygiene((GLM2) job.clone());
     job_key = job.self();
     this.ymu = ymu;

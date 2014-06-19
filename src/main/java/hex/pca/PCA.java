@@ -77,7 +77,7 @@ public class PCA extends ColumnsJob {
     if( fr.numCols() < 2 )
       throw new IllegalArgumentException("Need more than one column to run PCA");
 
-    DataInfo dinfo = new DataInfo(fr, 0, false, standardize);
+    DataInfo dinfo = new DataInfo(fr, 0, false, DataInfo.TransformType.STANDARDIZE);
     GramTask tsk = new GramTask(this, dinfo, false,false).doAll(dinfo._adaptedFrame);
     PCAModel myModel = buildModel(dinfo, tsk);
     myModel.delete_and_lock(self());

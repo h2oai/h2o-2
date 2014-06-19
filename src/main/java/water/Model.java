@@ -45,9 +45,12 @@ public abstract class Model extends Lockable<Model> {
   public final String _domains[][];
 
   @API(help = "Relative class distribution factors in original data")
-  final protected float[] _priorClassDist;
+  public final float[] _priorClassDist;
+
   @API(help = "Relative class distribution factors used for model building")
   protected float[] _modelClassDist;
+  // WARNING: be really careful to modify this POJO because
+  // modification does not involve update in DKV
   public void setModelClassDistribution(float[] classdist) {
     _modelClassDist = classdist.clone();
   }
@@ -64,24 +67,14 @@ public abstract class Model extends Lockable<Model> {
   protected boolean _have_cv_results;
 
   /** Full constructor from frame: Strips out the Vecs to just the names needed
-   *  to match columns later for future datasets.  */
+   *  to match columns later for future datasets.
+   */
   public Model( Key selfKey, Key dataKey, Frame fr, float[] priorClassDist ) {
-    this(selfKey,dataKey,fr.names(),fr.domains(),priorClassDist);
-  }
-
-  /** Constructor from frame (without prior class dist): Strips out the Vecs to just the names needed
-   *  to match columns later for future datasets.  */
-  public Model( Key selfKey, Key dataKey, Frame fr ) {
-    this(selfKey,dataKey,fr.names(),fr.domains(),null);
-  }
-
-  /** Constructor without prior class distribution */
-  public Model( Key selfKey, Key dataKey, String names[], String domains[][]) {
-    this(selfKey,dataKey,names,domains,null);
+    this(selfKey,dataKey,fr.names(),fr.domains(), priorClassDist, null);
   }
 
   /** Full constructor */
-  public Model( Key selfKey, Key dataKey, String names[], String domains[][], float[] priorClassDist ) {
+  public Model( Key selfKey, Key dataKey, String names[], String domains[][], float[] priorClassDist, float[] modelClassDist ) {
     super(selfKey);
     this.uniqueId = new UniqueId(_key);
     if( domains == null ) domains=new String[names.length+1][];
@@ -92,6 +85,7 @@ public abstract class Model extends Lockable<Model> {
     _names   = names;
     _domains = domains;
     _priorClassDist = priorClassDist;
+    _modelClassDist = modelClassDist;
   }
 
   // Currently only implemented by GLM2, DeepLearning, GBM and DRF:
@@ -102,7 +96,7 @@ public abstract class Model extends Lockable<Model> {
   public Request2 job() { throw new UnsupportedOperationException("job() has not yet been implemented in class: " + this.getClass()); }
 
   /** Simple shallow copy constructor to a new Key */
-  public Model( Key selfKey, Model m ) { this(selfKey,m._dataKey,m._names,m._domains); }
+  public Model( Key selfKey, Model m ) { this(selfKey,m._dataKey,m._names,m._domains, m._priorClassDist, m._modelClassDist); }
 
   public enum ModelCategory {
     Unknown,
@@ -238,7 +232,7 @@ public abstract class Model extends Lockable<Model> {
    * @param adaptFrm
    * @return
    */
-  private Frame scoreImpl(Frame adaptFrm) {
+  protected Frame scoreImpl(Frame adaptFrm) {
     int ridx = adaptFrm.find(responseName());
     assert ridx == -1 : "Adapted frame should not contain response in scoring method!";
     assert nfeatures() == adaptFrm.numCols() : "Number of model features " + nfeatures() + " != number of test set columns: " + adaptFrm.numCols();

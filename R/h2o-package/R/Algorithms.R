@@ -403,11 +403,13 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, nlambda = 1
 }
 
 h2o.getGLMLambdaModel <- function(model, lambda) {
+  if(missing(model) || length(model) == 0) stop("model must be specified")
+  if(class(model) == "list") model = model[[1]]
   if(class(model) != "H2OGLMModel") stop("model must be of class H2OGLMModel")
   .h2o.__getGLM2LambdaModel(lambda, model@data, model@key, model@model$params)
 }
 
-.h2o.__getGLMLambdaModel <- function(lambda, data, model_key, params = list()) {
+.h2o.__getGLM2LambdaModel <- function(lambda, data, model_key, params = list()) {
   if(missing(lambda) || length(lambda) > 1 || !is.numeric(lambda)) stop("lambda must be a single number")
   if(lambda < 0) stop("lambda must non-negative")
   
@@ -1298,7 +1300,19 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, nfolds=0, validation,
     #}
 
     class_names = tail(res$'_domains', 1)[[1]]
-    result$confusion = .build_cm(tail(res$cms, 1)[[1]]$'_arr', class_names)
+
+    raw_cms <- tail(res$cms, 1)[[1]]$'_arr'
+    rrr <- NULL
+    if ( res$parameters$n_folds <= 0) {
+      f <- function(o) { o[-length(o)] }
+      rrr <- raw_cms
+      rrr <- lapply(rrr, f)
+      rrr <- rrr[-length(rrr)]
+      raw_cms <<- rrr
+    }
+   
+    if (!is.null(rrr)) {raw_cms <- rrr}
+    result$confusion = .build_cm(raw_cms, class_names)
   }
 
   if(params$importance) {

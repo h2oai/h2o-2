@@ -64,7 +64,7 @@ public class KMeans2 extends ColumnsJob {
     Vec[] vecs = fr.vecs();
     if(vecs == null || vecs.length == 0)
       throw new IllegalArgumentException("No columns selected. Check that selected columns have not been dropped due to too many NAs.");
-    DataInfo dinfo = new DataInfo(fr, 0, false, normalize, false);
+    DataInfo dinfo = new DataInfo(fr, 0, false, DataInfo.TransformType.STANDARDIZE, DataInfo.TransformType.NONE);
 
     // Fill-in response based on K99
     String[] domain = new String[k];
@@ -349,7 +349,7 @@ public class KMeans2 extends ColumnsJob {
     private transient int _ncats, _nnums;
 
     public KMeans2Model(KMeans2 params, Key selfKey, Key dataKey, String names[], String domains[][]) {
-      super(selfKey, dataKey, names, domains);
+      super(selfKey, dataKey, names, domains, /* priorClassDistribution */ null, /* modelClassDistribution */ null);
       parameters = params;
       _clustersKey = Key.make(selfKey.toString() + "_clusters");
     }
