@@ -189,10 +189,10 @@ public class CMTask extends MRTask2<CMTask> {
         if( _computeOOB /*&& (isLocalTree || isRemoteTreeChunk) */) { // if OOBEE is computed then we need to take into account utilized sampling strategy
           switch( _model.sampling_strategy ) {
             case RANDOM          : if (sampledItem < _model.sample ) continue ROWS; break;
-            case STRATIFIED_LOCAL:
-              int clazz = (int) chks[_classcol].at8(row) - cmin;
-              if (sampledItem < _model.strata_samples[clazz] ) continue ROWS;
-              break;
+//            case STRATIFIED_LOCAL:
+//              int clazz = (int) chks[_classcol].at8(row) - cmin;
+//              if (sampledItem < _model.strata_samples[clazz] ) continue ROWS;
+//              break;
             default: assert false : "The selected sampling strategy does not support OOBEE replay!"; break;
           }
         }

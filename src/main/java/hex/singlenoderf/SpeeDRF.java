@@ -37,14 +37,14 @@ public class SpeeDRF extends Job.ValidatedJob {
   @API(help = "Split Criterion Type", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
   public Tree.SelectStatType select_stat_type = Tree.SelectStatType.ENTROPY;
 
-  @API(help = "Class Weights (0.0,0.2,0.4,0.6,0.8,1.0)", filter = Default.class, displayName = "class weights", json = true, importance = ParamImportance.SECONDARY)
+//  @API(help = "Class Weights (0.0,0.2,0.4,0.6,0.8,1.0)", filter = Default.class, displayName = "class weights", json = true, importance = ParamImportance.SECONDARY)
   public double[] class_weights = null;
 
   @API(help = "Sampling Strategy", filter = Default.class, json = true, importance = ParamImportance.SECONDARY)
   public Sampling.Strategy sampling_strategy = Sampling.Strategy.RANDOM;
 
-  @API(help = "Strata Samples", filter = Default.class, json = true, lmin = 0, lmax = 100, importance = ParamImportance.SECONDARY)
-  int[] strata_samples = null;
+//  @API(help = "Strata Samples", filter = Default.class, json = true, lmin = 0, lmax = 100, importance = ParamImportance.SECONDARY)
+//  int[] strata_samples = null;
 
   @API(help = "Sampling Rate at each split.", filter = Default.class, json  = true, dmin = 0, dmax = 1, importance = ParamImportance.EXPERT)
   public double sample = 0.67;
@@ -152,14 +152,14 @@ public class SpeeDRF extends Job.ValidatedJob {
     }
 
     // Strata samples are invalid for Random sampling and regression
-    if (arg._name.equals("strata_samples")) {
-      if (sampling_strategy != Sampling.Strategy.STRATIFIED_LOCAL) {
-        arg.disable("No Strata for Random sampling.");
-      }
-      if (regression) {
-        arg.disable("No strata for regression.");
-      }
-    }
+//    if (arg._name.equals("strata_samples")) {
+//      if (sampling_strategy != Sampling.Strategy.STRATIFIED_LOCAL) {
+//        arg.disable("No Strata for Random sampling.");
+//      }
+//      if (regression) {
+//        arg.disable("No strata for regression.");
+//      }
+//    }
 
     // Variable Importance disabled in SpeeDRF regression currently
     if (arg._name.equals("importance")) {
@@ -315,29 +315,29 @@ public class SpeeDRF extends Job.ValidatedJob {
       if(!regression) {
 
         // Handle bad user input for Stratified Samples (if Stratified Local is chosen)
-        if (sampling_strategy  == Sampling.Strategy.STRATIFIED_LOCAL) {
-          strata_samples = checkSamples(strata_samples);
+//        if (sampling_strategy  == Sampling.Strategy.STRATIFIED_LOCAL) {
+//          strata_samples = checkSamples(strata_samples);
 
           // If stratified local, turn of out of bag sampling
           oobee = false;
-        } else {
-          strata_samples = new int[response.toEnum().cardinality()];
-          for (int i = 0; i < strata_samples.length; i++) strata_samples[i] = 67;
+//        } else {
+//          strata_samples = new int[response.toEnum().cardinality()];
+//          for (int i = 0; i < strata_samples.length; i++) strata_samples[i] = 67;
         }
 
         // Handle bad user input for class weights
         class_weights = checkClassWeights(class_weights);
 
         // Initialize regression specific model parameters
-      } else {
+//      } else {
 
         // Class Weights and Strata Samples do not apply to Regression
         class_weights = null;
-        strata_samples = null;
+//        strata_samples = null;
 
         //TODO: Variable importance in regression not currently supported
         if (importance) throw new IllegalArgumentException("Variable Importance for SpeeDRF regression not currently supported.");
-      }
+//      }
 
       // Generate a new seed by default.
       if (seed == -1) {
@@ -407,15 +407,15 @@ public class SpeeDRF extends Job.ValidatedJob {
       model.weights = regression ? null : class_weights;
       model.time = 0;
       model.N = num_trees;
-      model.strata_samples = regression ? null : new float[strata_samples.length];
+//      model.strata_samples = regression ? null : new float[strata_samples.length];
       model.setModelClassDistribution(new MRUtils.ClassDist(fr.lastVec()).doAll(fr.lastVec()).rel_dist());
 
-      if (!regression) {
-        for (int i = 0; i < strata_samples.length; i++) {
-          assert model.strata_samples != null;
-          model.strata_samples[i] = (float) strata_samples[i];
-        }
-      }
+//      if (!regression) {
+//        for (int i = 0; i < strata_samples.length; i++) {
+//          assert model.strata_samples != null;
+//          model.strata_samples[i] = (float) strata_samples[i];
+//        }
+//      }
 
       if (mtry == -1) {
         if(!regression) {
@@ -642,10 +642,10 @@ public class SpeeDRF extends Job.ValidatedJob {
     static Sampling createSampler(final DRFParams params, int[] rowsPerChunks) {
       switch(params.sampling_strategy) {
         case RANDOM          : return new Sampling.Random(params.sample, rowsPerChunks);
-        case STRATIFIED_LOCAL:
-          float[] ss = new float[params.strata_samples.length];
-          for (int i=0;i<ss.length;i++) ss[i] = params.strata_samples[i] / 100.f;
-          return new Sampling.StratifiedLocal(ss, params._numrows);
+//        case STRATIFIED_LOCAL:
+//          float[] ss = new float[params.strata_samples.length];
+//          for (int i=0;i<ss.length;i++) ss[i] = params.strata_samples[i] / 100.f;
+//          return new Sampling.StratifiedLocal(ss, params._numrows);
         default:
           assert false : "Unsupported sampling strategy";
           return null;
