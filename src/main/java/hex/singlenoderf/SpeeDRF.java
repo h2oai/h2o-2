@@ -67,7 +67,7 @@ public class SpeeDRF extends Job.ValidatedJob {
    @API(help = "Maximum relative size of the training data after balancing class counts (can be less than 1.0)", filter = Default.class, json = true, dmin=1e-3, importance = ParamImportance.EXPERT)
    public float max_after_balance_size = Float.POSITIVE_INFINITY;
 
-  @API(help = "OOBEE", filter = Default.class, json = true, importance = ParamImportance.SECONDARY)
+  @API(help = "Out of bag error estimate", filter = Default.class, json = true, importance = ParamImportance.SECONDARY)
   public boolean oobee = true;
 
   @API(help = "Variable Importance", filter = Default.class, json = true)
@@ -167,9 +167,11 @@ public class SpeeDRF extends Job.ValidatedJob {
         arg.disable("Variable Importance not supported in SpeeDRF regression.");
       }
     }
+
+    // max balance size depends on balance_classes to be enabled
     if(classification) {
       if(arg._name.equals("max_after_balance_size") && !balance_classes) {
-        arg.disable("Requires balance_classes.", inputArgs);
+        arg.disable("Requires balance classes flag to be set.", inputArgs);
       }
     }
   }
@@ -605,8 +607,6 @@ public class SpeeDRF extends Job.ValidatedJob {
     @Override
     public void reduce(DRemoteTask drt) { }
   }
-
-
 
     private static final long ROOT_SEED_ADD  = 0x026244fd935c5111L;
     private static final long TREE_SEED_INIT = 0x1321e74a0192470cL;
