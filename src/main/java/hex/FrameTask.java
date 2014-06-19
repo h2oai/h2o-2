@@ -149,18 +149,20 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       final Vec[] vecs =  fr.vecs();
 
       // put response to the end (if not already)
-      for(int i = 0; i < vecs.length-1; ++i) {
-        if(vecs[i] == response){
-          final String n = fr._names[i];
-          if (toEnum && !vecs[i].isEnum()) fr.add(n, fr.remove(i).toEnum()); //convert int classes to enums
-          else fr.add(n, fr.remove(i));
-          break;
+      if (response != null) {
+        for (int i = 0; i < vecs.length - 1; ++i) {
+          if (vecs[i] == response) {
+            final String n = fr._names[i];
+            if (toEnum && !vecs[i].isEnum()) fr.add(n, fr.remove(i).toEnum()); //convert int classes to enums
+            else fr.add(n, fr.remove(i));
+            break;
+          }
         }
-      }
-      // special case for when response was at the end already
-      if (toEnum && !response.isEnum() && vecs[vecs.length-1] == response) {
-        final String n = fr._names[vecs.length-1];
-        fr.add(n, fr.remove(vecs.length-1).toEnum());
+        // special case for when response was at the end already
+        if (toEnum && !response.isEnum() && vecs[vecs.length - 1] == response) {
+          final String n = fr._names[vecs.length - 1];
+          fr.add(n, fr.remove(vecs.length - 1).toEnum());
+        }
       }
 
       ArrayList<Integer> constantOrNAs = new ArrayList<Integer>();
