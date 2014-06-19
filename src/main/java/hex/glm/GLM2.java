@@ -233,7 +233,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     _beta = beta;
     if((_proximalPenalty = proximalPenalty) != 0)
       _wgiven = beta;
-    this.alpha= new double[]{alpha};
+    this.alpha = new double[]{alpha};
     n_folds = nfolds;
     source = dinfo._adaptedFrame;
     response = dinfo._adaptedFrame.lastVec();
@@ -536,7 +536,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
             else
               glmt3 = new GLMIterationTask(GLM2.this, _activeData, glmt._glm, true, false, false, newBeta, glmt._ymu, glmt._reg, thresholds, new Iteration());
           } else glmt3 = glmt;
-          if (significantLambda)
+          if (lambda != null || significantLambda)
             _model.addSubmodel(_currentLambda);
         } else glmt3 = null;
         if(n_folds > 1 && (isDone || significantLambda))
@@ -803,6 +803,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       }
       _runAllLambdas = false;
     } else {
+
       lambda_min = lambda[lambda.length-1];
       if (alpha[0] > 0 && lmaxt != null) { // make sure we start with lambda_value max (and discard all lambda_value > lambda_value max)
         final double lmax = lmaxt.lmax();
