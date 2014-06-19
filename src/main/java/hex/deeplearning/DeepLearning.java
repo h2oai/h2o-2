@@ -840,6 +840,10 @@ public class DeepLearning extends Job.ValidatedJob {
     }
     if (!classification && loss == Loss.CrossEntropy) throw new IllegalArgumentException("Cannot use CrossEntropy loss function for regression.");
     if (autoencoder && loss != Loss.MeanSquare) throw new IllegalArgumentException("Must use MeanSquare loss function for auto-encoder.");
+    if (autoencoder && classification) { classification = false; Log.info("Using regression mode for auto-encoder.");}
+
+    // reason for the error message below is that validation might not have the same horizontalized features as the training data (or different order)
+    if (autoencoder && validation != null) throw new UnsupportedOperationException("Cannot specify a validation dataset for auto-encoder.");
 
     // make default job_key and destination_key in case they are missing
     if (dest() == null) {
@@ -870,7 +874,7 @@ public class DeepLearning extends Job.ValidatedJob {
     }
     final boolean del_enum_resp = classification && !response.isEnum();
     final Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, classification, ignore_const_cols, true /*drop >20% NA cols*/);
-    final DataInfo dinfo = new FrameTask.DataInfo(train, 1, false,
+    final DataInfo dinfo = new FrameTask.DataInfo(train, 1, autoencoder, //use all FactorLevels for auto-encoder
             autoencoder ? DataInfo.TransformType.NORMALIZE : DataInfo.TransformType.STANDARDIZE, //transform predictors
             classification ? DataInfo.TransformType.NONE : DataInfo.TransformType.STANDARDIZE);  //transform response
     final Vec resp = dinfo._adaptedFrame.lastVec(); //convention from DataInfo: response is the last Vec

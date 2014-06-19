@@ -446,6 +446,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
      * @param out output values (can be the same as input)
      */
     public final void softMaxCategoricals(float[] in, float[] out) {
+      if (_cats == 0) return;
       if (!_useAllFactorLevels) throw new UnsupportedOperationException("All factor levels must be present for re-scaling with SoftMax.");
       assert (in.length == out.length);
       assert (in.length == fullN());
@@ -472,6 +473,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
      * @param out output values (can be the same as input)
      */
     public final void unScaleNumericals(float[] in, float[] out) {
+      if (_nums == 0) return;
       assert (in.length == out.length);
       assert (in.length == fullN());
       for (int k=numStart(); k < fullN(); ++k)

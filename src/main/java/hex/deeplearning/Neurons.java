@@ -661,6 +661,7 @@ public abstract class Neurons {
      */
     public void setInput(long seed, final double[] nums, final int numcat, final int[] cats) {
       _a = _dvec;
+      Arrays.fill(_a.raw(), 0f);
       for (int i=0; i<numcat; ++i) _a.set(cats[i], 1f);
       for (int i=0; i<nums.length; ++i) _a.set(_dinfo.numStart() + i, Double.isNaN(nums[i]) ? 0f : (float) nums[i]);
 

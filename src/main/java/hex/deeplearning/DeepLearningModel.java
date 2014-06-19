@@ -400,18 +400,17 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     public String toStringAll() {
       StringBuilder sb = new StringBuilder();
       sb.append(toString());
-//      sb.append(weights.toString());
-//
-//      for (int i=0; i<weights.length; ++i)
-//        sb.append("\nweights["+i+"][]="+Arrays.toString(weights[i].raw()));
-//      for (int i=0; i<biases.length; ++i)
-//        sb.append("\nbiases["+i+"][]="+Arrays.toString(biases[i].raw()));
-//      if (weights_momenta != null) {
-//        for (int i=0; i<weights_momenta.length; ++i)
-//          sb.append("\nweights_momenta["+i+"][]="+Arrays.toString(weights_momenta[i].raw()));
-//      }
+
+      for (int i=0; i<units.length-1; ++i)
+        sb.append("\nweights["+i+"][]="+Arrays.toString(get_weights(i).raw()));
+      for (int i=0; i<units.length-1; ++i)
+        sb.append("\nbiases["+i+"][]="+Arrays.toString(get_biases(i).raw()));
+      if (has_momenta()) {
+        for (int i=0; i<units.length-1; ++i)
+          sb.append("\nweights_momenta["+i+"][]="+Arrays.toString(get_weights_momenta(i).raw()));
+      }
       if (biases_momenta != null) {
-        for (int i=0; i<biases_momenta.length; ++i)
+        for (int i=0; i<units.length-1; ++i)
           sb.append("\nbiases_momenta["+i+"][]="+Arrays.toString(biases_momenta[i].raw()));
       }
       sb.append("\nunits[]="+Arrays.toString(units));
@@ -720,41 +719,40 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
               (sinceLastScore > get_params().score_interval*1000 //don't score too often
                       &&(double)(_timeLastScoreEnd-_timeLastScoreStart)/sinceLastScore < get_params().score_duty_cycle) ) { //duty cycle
         final boolean printme = !get_params().quiet_mode;
+        final boolean adaptCM = (isClassifier() && vadaptor.needsAdaptation2CM());
         _timeLastScoreStart = now;
         if (get_params().diagnostics) model_info().computeStats();
+        Errors err = new Errors();
+        err.training_time_ms = run_time;
+        err.epoch_counter = epoch_counter;
+        err.training_samples = model_info().get_processed_total();
+        err.validation = ftest != null;
+        err.score_training_samples = ftrain.numRows();
+
         if (get_params().autoencoder) {
           if (printme) Log.info("Scoring the auto-encoder.");
-          final Frame l2_frame = scoreAutoEncoder(ftrain);
-          final Vec l2 = l2_frame.anyVec();
-          Log.info("Mean reconstruction error: " + l2.mean() + "\n");
-          Errors err = new Errors();
-          err.train_mse = l2.mean();
-          err.epoch_counter = epoch_counter;
-          err.training_samples = model_info().get_processed_total();
-          err.training_time_ms = run_time;
-          l2_frame.delete();
-          // enlarge the error array by one, push latest score back
-          if (errors == null) {
-            errors = new Errors[]{err};
-          } else {
-            Errors[] err2 = new Errors[errors.length + 1];
-            System.arraycopy(errors, 0, err2, 0, errors.length);
-            err2[err2.length - 1] = err;
-            errors = err2;
+          // training
+          {
+            final Frame l2_frame = scoreAutoEncoder(ftrain);
+            final Vec l2 = l2_frame.anyVec();
+            Log.info("Mean reconstruction error on training data: " + l2.mean() + "\n");
+            err.train_mse = l2.mean();
+            l2_frame.delete();
           }
-        }
-        else {
+          // validation
+          if (err.validation) {
+            final Frame valid_l2_frame = scoreAutoEncoder(ftest);
+            final Vec valid_l2 = valid_l2_frame.anyVec();
+            Log.info("Mean reconstruction error on validation data: " + valid_l2.mean() + "\n");
+            err.valid_mse = valid_l2.mean();
+            valid_l2_frame.delete();
+          }
+        } else {
           if (printme) Log.info("Scoring the model.");
           // compute errors
-          Errors err = new Errors();
           err.classification = isClassifier();
           assert (err.classification == get_params().classification);
-          err.training_time_ms = run_time;
-          err.epoch_counter = epoch_counter;
-          err.validation = ftest != null;
           err.num_folds = get_params().n_folds;
-          err.training_samples = model_info().get_processed_total();
-          err.score_training_samples = ftrain.numRows();
           err.train_confusion_matrix = new ConfusionMatrix();
           final int hit_k = Math.min(nclasses(), get_params().max_hit_ratio_k);
           if (err.classification && nclasses() == 2) err.trainAUC = new AUC();
@@ -772,7 +770,6 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
           trainPredict.delete();
 
-          final boolean adaptCM = (isClassifier() && vadaptor.needsAdaptation2CM());
           if (err.validation) {
             assert ftest != null;
             err.score_validation_samples = ftest.numRows();
@@ -821,18 +818,21 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
             err.train_confusion_matrix = null;
             err.valid_confusion_matrix = null;
           }
+        }
 
-          _timeLastScoreEnd = System.currentTimeMillis();
-          err.scoring_time = System.currentTimeMillis() - now;
-          // enlarge the error array by one, push latest score back
-          if (errors == null) {
-            errors = new Errors[]{err};
-          } else {
-            Errors[] err2 = new Errors[errors.length + 1];
-            System.arraycopy(errors, 0, err2, 0, errors.length);
-            err2[err2.length - 1] = err;
-            errors = err2;
-          }
+        _timeLastScoreEnd = System.currentTimeMillis();
+        err.scoring_time = System.currentTimeMillis() - now;
+        // enlarge the error array by one, push latest score back
+        if (errors == null) {
+          errors = new Errors[]{err};
+        } else {
+          Errors[] err2 = new Errors[errors.length + 1];
+          System.arraycopy(errors, 0, err2, 0, errors.length);
+          err2[err2.length - 1] = err;
+          errors = err2;
+        }
+
+        if (!get_params().autoencoder) {
           // always keep a copy of the best model so far (based on the following criterion)
           if (error() < _bestError && get_params().best_model_key != null) {
             _actual_best_model_key = get_params().best_model_key;
@@ -931,22 +931,32 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     return sb.toString();
   }
 
+  /**
+   * This is called from Model.score(). Make either a prediction or a reconstruction.
+   * @param adaptFrm Test dataset
+   * @return A frame containing the prediction or reconstruction
+   */
   @Override
   protected Frame scoreImpl(Frame adaptFrm) {
-    if (!get_params().autoencoder) return super.scoreImpl(adaptFrm);
-    else {
-      final int len = _names.length-1;
+    if (!get_params().autoencoder) {
+      return super.scoreImpl(adaptFrm); // Prediction
+    } else {
+      // Reconstruction
+      final int len = model_info().data_info().fullN();
       String prefix = "reconstr_";
+      String[] coefnames = model_info().data_info().coefNames();
+      assert(len == coefnames.length);
       for( int c=0; c<len; c++ )
-        adaptFrm.add(prefix+adaptFrm.names()[c],adaptFrm.anyVec().makeZero());
+        adaptFrm.add(prefix+coefnames[c],adaptFrm.anyVec().makeZero());
       new MRTask2() {
         @Override public void map( Chunk chks[] ) {
-          double tmp [] = new double[len];
+          double tmp [] = new double[_names.length-1];
           float preds[] = new float [len];
+          final Neurons[] neurons = DeepLearningTask.makeNeuronsForTesting(model_info);
           for( int row=0; row<chks[0]._len; row++ ) {
-            float p[] = score0(chks,row,tmp,preds);
+            float p[] = score_autoencoder(chks, row, tmp, preds, neurons);
             for( int c=0; c<preds.length; c++ )
-              chks[len+c].set0(row,p[c]);
+              chks[_names.length-1+c].set0(row,p[c]);
           }
         }
       }.doAll(adaptFrm);
@@ -957,14 +967,49 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     }
   }
 
-  @Override
-  protected float[] score0(Chunk[] chks, int row_in_chunk, double[] tmp, float[] preds) {
-    if (!get_params().autoencoder) return super.score0(chks, row_in_chunk, tmp, preds);
-    else {
-      for( int i=0; i<_names.length-1; i++ )
-        tmp[i] = chks[i].at0(row_in_chunk);
-      return score0(tmp,preds);
+  // Make (potentially expanded) reconstruction
+  private float[] score_autoencoder(Chunk[] chks, int row_in_chunk, double[] tmp, float[] preds, Neurons[] neurons) {
+    assert(get_params().autoencoder);
+    assert(tmp.length == _names.length-1);
+    for( int i=0; i<tmp.length; i++ )
+      tmp[i] = chks[i].at0(row_in_chunk);
+    score_autoencoder(tmp, preds, neurons); // this fills preds, returns L2 error (ignored here)
+    return preds;
+  }
+
+  /**
+   * Helper to reconstruct original data into preds array and compute the L2 reconstruction error (MSE)
+   * @param data Original data (unexpanded)
+   * @param preds Reconstruction (potentially expanded)
+   * @return L2 reconstruction error
+   */
+  private double score_autoencoder(double[] data, float[] preds, Neurons[] neurons) {
+    assert(model_info().get_params().autoencoder);
+    if (model_info().unstable()) {
+      throw new UnsupportedOperationException("Trying to predict with an unstable model.");
     }
+    ((Neurons.Input)neurons[0]).setInput(-1, data); // expands categoricals inside
+    DeepLearningTask.step(-1, neurons, model_info, false, null); // reconstructs data in expanded space
+    float[] in  = neurons[0]._a.raw(); //input (expanded)
+    float[] out = neurons[neurons.length - 1]._a.raw(); //output (expanded)
+    assert(in.length == out.length);
+
+    // First normalize categorical reconstructions to be probabilities
+    // (such that they can be better compared to the input where one factor was 1 and the rest was 0)
+    model_info().data_info().softMaxCategoricals(out,out); //only modifies the categoricals
+
+    // Compute MSE of reconstruction in expanded space (with categorical probabilities)
+    double l2 = 0;
+    for (int i = 0; i < in.length; ++i)
+      l2 += Math.pow((out[i] - in[i]), 2);
+    l2 /= in.length;
+
+    // Now scale back numerical columns to original data space (scale + shift)
+    model_info().data_info().unScaleNumericals(out, out); //only modifies the numericals
+
+    if (preds!=null)
+      System.arraycopy(out, 0, preds, 0, out.length); //copy reconstruction into preds
+    return l2;
   }
 
   /**
@@ -981,27 +1026,20 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     ((Neurons.Input)neurons[0]).setInput(-1, data);
     DeepLearningTask.step(-1, neurons, model_info, false, null);
     float[] out = neurons[neurons.length - 1]._a.raw();
-    if (get_params().autoencoder) {
-      assert(preds.length == out.length);
-      for (int i = 0; i < out.length; ++i) {
-        preds[i] = (float) (out[i] / model_info().data_info()._normMul[i] + model_info().data_info()._normSub[i]);
+    if (isClassifier()) {
+      assert (preds.length == out.length + 1);
+      for (int i = 0; i < preds.length - 1; ++i) {
+        preds[i + 1] = out[i];
+        if (Float.isNaN(preds[i + 1])) throw new RuntimeException("Predicted class probability NaN!");
       }
+      preds[0] = ModelUtils.getPrediction(preds, data);
     } else {
-      if (isClassifier()) {
-        assert (preds.length == out.length + 1);
-        for (int i = 0; i < preds.length - 1; ++i) {
-          preds[i + 1] = out[i];
-          if (Float.isNaN(preds[i + 1])) throw new RuntimeException("Predicted class probability NaN!");
-        }
-        preds[0] = ModelUtils.getPrediction(preds, data);
-      } else {
-        assert (preds.length == 1 && out.length == 1);
-        if (model_info().data_info()._normRespMul != null)
-          preds[0] = (float) (out[0] / model_info().data_info()._normRespMul[0] + model_info().data_info()._normRespSub[0]);
-        else
-          preds[0] = out[0];
-        if (Float.isNaN(preds[0])) throw new RuntimeException("Predicted regression target NaN!");
-      }
+      assert (preds.length == 1 && out.length == 1);
+      if (model_info().data_info()._normRespMul != null)
+        preds[0] = (float) (out[0] / model_info().data_info()._normRespMul[0] + model_info().data_info()._normRespSub[0]);
+      else
+        preds[0] = out[0];
+      if (Float.isNaN(preds[0])) throw new RuntimeException("Predicted regression target NaN!");
     }
     return preds;
   }
@@ -1030,24 +1068,14 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
     final int len = _names.length-1;
     adaptFrm.add("L2",adaptFrm.anyVec().makeZero());
-    final double[] normMul = model_info().data_info()._normMul;
-
     new MRTask2() {
       @Override public void map( Chunk chks[] ) {
         double tmp [] = new double[len];
-        float preds[] = new float [len];
+        final Neurons[] neurons = DeepLearningTask.makeNeuronsForTesting(model_info);
         for( int row=0; row<chks[0]._len; row++ ) {
           for( int i=0; i<_names.length-1; i++ )
             tmp[i] = chks[i].at0(row); //original data
-          score0(tmp,preds); //fill predictions (reconstruction)
-//          Log.info("row: " + chks[0]._start + row);
-//          Log.info("actual" + ArrayUtils.toString(tmp));
-//          Log.info("recons" + ArrayUtils.toString(preds));
-          double l2 = 0;
-          for (int i=0; i<len; ++i)
-            l2 += Math.pow((preds[i] - tmp[i])*normMul[i], 2);
-//          Log.info("L2: " + l2);
-          chks[len].set0(row,l2); //last vector stores the per-row L2 error
+          chks[len].set0(row, score_autoencoder(tmp, null, neurons)); //store the per-row reconstruction error (MSE) in the last column
         }
       }
     }.doAll(adaptFrm);
