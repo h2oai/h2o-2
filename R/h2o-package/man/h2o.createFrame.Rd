@@ -8,7 +8,7 @@ Create an H2O Frame
 Create an H2O data frame from scratch, with optional randomization. Supports categoricals, integers, reals and missing values.
 }
 \usage{
-h2o.createFrame(object, key, rows, cols, seed, randomize, value, categorical_fraction, factors, integer_fraction, integer_range, missing_fraction)
+h2o.createFrame(object, key, rows, cols, seed, randomize, value, categorical_fraction, factors, integer_fraction, integer_range, missing_fraction, response_factors)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -24,6 +24,7 @@ h2o.createFrame(object, key, rows, cols, seed, randomize, value, categorical_fra
   \item{integer_fraction}{Fraction of integer columns (for randomize=true)}
   \item{integer_range}{Range for integer variables (-range ... range)}
   \item{missing_fraction}{Fraction of missing values}
+  \item{response_factors}{Number of factor levels of the first column (1=real, 2=binomial, N=multinomial)}
 }
 \value{
 Returns an H2O data frame.
@@ -34,7 +35,7 @@ localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, beta = TRUE
 myframe = h2o.createFrame(localH2O, 'myframekey', rows = 1000, cols = 10, 
                           seed = -12301283, randomize = T, value = 0, real_range = 2.0,
                           categorical_fraction = 0.2, factors = 100, 
-                          integer_fraction = 0.2, integer_range = 100, missing_fraction = 0.1)
+                          integer_fraction = 0.2, integer_range = 100, missing_fraction = 0.1, response_factors = 2)
 head(myframe)
 summary(myframe)
 h2o.shutdown(localH2O)
