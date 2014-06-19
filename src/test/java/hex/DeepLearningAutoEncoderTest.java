@@ -59,7 +59,7 @@ public class DeepLearningAutoEncoderTest extends TestUtil {
 //    p.initial_weight_scale = 1e-3;
     p.epochs = 100;
 //    p.shuffle_training_data = true;
-    p.force_load_balance = false;
+    p.force_load_balance = true;
     p.invoke();
 
     DeepLearningModel mymodel = UKV.get(p.dest());
@@ -75,27 +75,28 @@ public class DeepLearningAutoEncoderTest extends TestUtil {
     double quantile = 0.95;
     final Frame l2_frame_train = mymodel.scoreAutoEncoder(train);
     final Vec l2_train = l2_frame_train.anyVec();
-    double thresh_train = mymodel.calcOutlierThreshold(l2_train, quantile);
     sb.append("Mean reconstruction error: " + l2_train.mean() + "\n");
-    Assert.assertEquals(mymodel.mse(), l2_train.mean(), 1e-6);
+    Assert.assertEquals(mymodel.mse(), l2_train.mean(), 1e-7);
 
     // manually compute L2
-    Frame reconstr = mymodel.score(train);
+    Frame reconstr = mymodel.score(train); //this creates real values in original space
     double mean_l2 = 0;
     for (int r=0; r<reconstr.numRows(); ++r) {
       double my_l2 = 0;
       for (int c = 0; c < reconstr.numCols(); ++c) {
-        my_l2 += Math.pow((reconstr.vec(c).at(r) - train.vec(c).at(r)) * mymodel.model_info().data_info()._normMul[c], 2);
+        my_l2 += Math.pow((reconstr.vec(c).at(r) - train.vec(c).at(r)) * mymodel.model_info().data_info()._normMul[c], 2); //undo normalization here
       }
+      my_l2 /= reconstr.numCols();
       mean_l2 += my_l2;
     }
     mean_l2 /= reconstr.numRows();
     reconstr.delete();
     sb.append("Mean reconstruction error (train): " + l2_train.mean() + "\n");
-    Assert.assertEquals(mymodel.mse(), mean_l2, 1e-6);
+    Assert.assertEquals(mymodel.mse(), mean_l2, 1e-7);
 
     // print stats and potential outliers
     sb.append("The following training points are reconstructed with an error above the " + quantile*100 + "-th percentile - check for \"goodness\" of training data.\n");
+    double thresh_train = mymodel.calcOutlierThreshold(l2_train, quantile);
     for( long i=0; i<l2_train.length(); i++ ) {
       if (l2_train.at(i) > thresh_train) {
         sb.append(String.format("row %d : l2_train error = %5f\n", i, l2_train.at(i)));
