@@ -170,7 +170,7 @@ public class ModelUtils {
       scored[c] *= original_fraction / oversampled_fraction;
       probsum += scored[c];
     }
-    for (int i=1;i<scored.length;++i) scored[i] /= probsum;
+    if (probsum>0) for (int i=1;i<scored.length;++i) scored[i] /= probsum;
     return scored;
   }
 
