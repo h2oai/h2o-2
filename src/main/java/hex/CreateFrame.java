@@ -1,6 +1,5 @@
 package hex;
 
-import com.amazonaws.services.cloudfront.model.InvalidArgumentException;
 import water.*;
 import water.api.DocGen;
 import water.fvec.*;
@@ -60,17 +59,17 @@ public class CreateFrame extends Request2 {
   @Override public Response serve() {
     try {
       if (integer_fraction + categorical_fraction > 1)
-        throw new InvalidArgumentException("Integer and categorical fractions must add up to <= 1.");
+        throw new IllegalArgumentException("Integer and categorical fractions must add up to <= 1.");
 
       if (cols <= 0 || rows <= 0)
-        throw new InvalidArgumentException("Must have number of rows > 0 and columns > 1.");
+        throw new IllegalArgumentException("Must have number of rows > 0 and columns > 1.");
 
       if (!randomize) {
         if (integer_fraction != 0 || categorical_fraction != 0)
-          throw new InvalidArgumentException("Cannot have integer or categorical fractions > 0 unless randomize=true.");
+          throw new IllegalArgumentException("Cannot have integer or categorical fractions > 0 unless randomize=true.");
       } else {
         if (value != 0)
-          throw new InvalidArgumentException("Cannot set data to a constant value if randomize=true.");
+          throw new IllegalArgumentException("Cannot set data to a constant value if randomize=true.");
       }
 
       final FrameCreator fct = new FrameCreator(this);
