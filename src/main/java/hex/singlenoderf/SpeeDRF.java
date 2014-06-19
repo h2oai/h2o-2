@@ -311,6 +311,10 @@ public class SpeeDRF extends Job.ValidatedJob {
         }
       }
 
+      if (validation != null) {
+        sample = 1.0;
+      }
+
       // Initialize classification specific model parameters
       if(!regression) {
 

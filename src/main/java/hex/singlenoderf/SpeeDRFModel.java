@@ -430,12 +430,12 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
       if (get_params().balance_classes) {
         for (int i = 0; i  < votes.length - 1; ++i)
-          preds[i+1] = ( (float)votes[i] / s) * ( (float)votes[i] / s);
+          preds[i+1] = ( (float)votes[i] / treeCount());
         return preds;
       }
 
       for (int i = 0; i  < votes.length - 1; ++i)
-        preds[i+1] = ( (float)votes[i] / s);
+        preds[i+1] = ( (float)votes[i] / (float)treeCount());
       preds[0] = (float) (classify(votes, null, null) + get_response().min());
       return preds;
     }

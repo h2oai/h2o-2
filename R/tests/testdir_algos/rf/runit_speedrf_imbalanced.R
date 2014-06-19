@@ -10,7 +10,7 @@ test.speedrf.imbalanced <- function(conn) {
   print(hh_balanced)
 
   # TODO: should ideally improve overall classification error...
-  #checkTrue(hh_imbalanced@model$confusion[4,4] > hh_balanced@model$confusion[4,4], "balance_classes makes it worse!")
+  checkTrue(hh_imbalanced@model$confusion[4,4] >= hh_balanced@model$confusion[4,4], "balance_classes makes it worse!")
 
   testEnd()
 }

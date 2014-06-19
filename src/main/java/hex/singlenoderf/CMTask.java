@@ -557,6 +557,8 @@ public class CMTask extends MRTask2<CMTask> {
     cm._matrix = new long[_N][_N];
     float preds[] = new float[_N+1];
 
+    float num_trees = _errorsPerTree.length;
+
     // Loop over the rows
     for( int r = 0; r < rows; r++ ) {
       int row = r + (int)chks[0]._start;
@@ -583,7 +585,7 @@ public class CMTask extends MRTask2<CMTask> {
         continue;
       }
       for (int i = 1; i  < vi.length; ++i)
-        scored[i] = ( scored[i] / s) * ( scored[i] / s);
+        scored[i] = ( scored[i] / num_trees);
 
       // Correct for imbalance, if classes have been rebalanced
       if (!_model.regression && _priorDist != null && _modelDist != null && _model.get_params().balance_classes) {
