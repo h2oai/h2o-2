@@ -335,6 +335,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     init();
     link = family.defaultLink;// TODO
     tweedie_link_power = 1 - tweedie_variance_power;// TODO
+    if(tweedie_link_power == 0)link = Link.log;
     _glm = new GLMParams(family, tweedie_variance_power, link, tweedie_link_power);
     if(alpha.length > 1) { // grid search
       if(destination_key == null)destination_key = Key.make("GLMGridResults_"+Key.make());
@@ -510,10 +511,10 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         boolean significantLambda = _model.setAndTestValidation(glmt2._val);
         final GLMIterationTask glmt3;
         boolean done = _iter == max_iter || _currentLambda <= lambda_min || (max_predictors != -1 && _model.rank() >= max_predictors); // _iter < max_iter && (improved || _runAllLambdas) && _lambdaIdx < (lambda_value.length-1);
+        final double previousLambda = _currentLambda;
         // now filter out the cols for the next lambda_value...
         if(!done && _activeCols != null){
           final int [] oldCols = _activeCols;
-          double previousLambda = _currentLambda;
           _currentLambda = lambda == null?pickNextLambda(_currentLambda, grad):lambda[_lambdaIdx+1];
           activeCols(_currentLambda,previousLambda,grad);
           if(_activeData.fullN() > MAX_PREDICTORS) done = true;
@@ -541,7 +542,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           xvalidate(_model, _currentLambda, new H2OCallback<GLMModel.GLMValidationTask>(GLM2.this) {
             @Override
             public void callback(GLMModel.GLMValidationTask v) {
-              _model.setXValidation(_currentLambda, (GLMValidation.GLMXValidation) v._res);
+              _model.setXValidation(previousLambda, (GLMValidation.GLMXValidation) v._res);
               if (isDone) GLM2.this.complete();
               else nextLambda(glmt3);
             }

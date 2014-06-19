@@ -78,7 +78,7 @@ public class GLMModelView extends Request2 {
 
     if(glm_model.submodels.length > 1){
       sb.append("\n<table class='table table-bordered table-condensed'>\n");
-      StringBuilder firstRow = new StringBuilder("\t<tr><th>&lambda_value;</th>\n");
+      StringBuilder firstRow = new StringBuilder("\t<tr><th>&lambda;</th>\n");
       StringBuilder secondRow = new StringBuilder("\t<tr><th>nonzeros</th>\n");
       StringBuilder thirdRow = new StringBuilder("\t<tr><th>Deviance Explained</th>\n");
       StringBuilder fourthRow = new StringBuilder("\t<tr><th>" + (glm_model.glm.family == Family.binomial?"AUC":"AIC") + "</th>\n");
