@@ -174,7 +174,13 @@ public abstract class Job extends Func {
     cancel(msg, js);
   }
   private void cancel(final String msg, JobState resultingState ) {
-    if(state == JobState.CANCELLED) Log.info("Job " + self() + "("  + description + ") was cancelled.");
+    if(resultingState == JobState.CANCELLED) {
+      Log.info("Job " + self() + "("  + description + ") was cancelled.");
+    }
+    else {
+      Log.err("Job " + self() + "("  + description + ") failed.");
+      Log.err(msg);
+    }
     exception = msg;
     state = resultingState;
     // replace finished job by a job handle
