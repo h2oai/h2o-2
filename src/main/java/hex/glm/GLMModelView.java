@@ -33,7 +33,7 @@ public class GLMModelView extends Request2 {
 
   public static String link(String txt, Key model) {return link(txt,model,Double.NaN);}
   public static String link(String txt, Key model, double lambda) {
-    return "<a href='GLMModelView.html?_modelKey=" + model + "&lambda_value=" + lambda + "'>" + txt + "</a>";
+    return "<a href='GLMModelView.html?_modelKey=" + model + "&lambda=" + lambda + "'>" + txt + "</a>";
   }
   public static Response redirect(Request req, Key modelKey) {
     return Response.redirect(req, "/2/GLMModelView", "_modelKey", modelKey);
@@ -73,12 +73,12 @@ public class GLMModelView extends Request2 {
     parm(sb,"&epsilon;<sub>&beta;</sub>",glm_model.beta_eps);
     parm(sb,"&alpha;",glm_model.alpha);
     if(!Double.isNaN(glm_model.lambda_max))
-      parm(sb,"&lambda_value;<sub>max</sub>",DFORMAT2.format(glm_model.lambda_max));
-    parm(sb,"&lambda_value;",DFORMAT2.format(lambda));
+      parm(sb,"&lambda;<sub>max</sub>",DFORMAT2.format(glm_model.lambda_max));
+    parm(sb,"&lambda;",DFORMAT2.format(lambda));
 
     if(glm_model.submodels.length > 1){
       sb.append("\n<table class='table table-bordered table-condensed'>\n");
-      StringBuilder firstRow = new StringBuilder("\t<tr><th>&lambda_value;</th>\n");
+      StringBuilder firstRow = new StringBuilder("\t<tr><th>&lambda;</th>\n");
       StringBuilder secondRow = new StringBuilder("\t<tr><th>nonzeros</th>\n");
       StringBuilder thirdRow = new StringBuilder("\t<tr><th>Deviance Explained</th>\n");
       StringBuilder fourthRow = new StringBuilder("\t<tr><th>" + (glm_model.glm.family == Family.binomial?"AUC":"AIC") + "</th>\n");
@@ -110,7 +110,7 @@ public class GLMModelView extends Request2 {
       sm = glm_model.submodels[0];
       while(glm_model.submodels[ii].lambda_value != lambda && ++ii < glm_model.submodels.length)
         sm = glm_model.submodels[ii];
-      if(ii == glm_model.submodels.length)throw new IllegalArgumentException("Unexpected value of lambda_value '" + lambda + "'");
+      if(ii == glm_model.submodels.length)throw new IllegalArgumentException("Unexpected value of lambda '" + lambda + "'");
     }
     if(glm_model.beta() != null)
       coefs2html(sm,sb);
@@ -200,7 +200,7 @@ public class GLMModelView extends Request2 {
     boolean first = true;
     int j = 0;
     for(int i:sortedIds){
-      names.append("<th>" + cNames[i] + "</th>");
+      names.append("<th>" + cNames[sm.idxs[i]] + "</th>");
       vals.append("<td>" + sm.beta[i] + "</td>");
       if(first){
         equation.append(DFORMAT.format(sm.beta[i]));

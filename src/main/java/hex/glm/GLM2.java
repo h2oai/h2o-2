@@ -98,7 +98,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
    * because an important factor level can be skipped and not appear if
    * !use_all_factor_levels.
    */
-  @API(help = "Compute variable importances for input features", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
+  @API(help = "Compute variable importances for input features.  REQUIRES use_all_factor_levels.", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
   public boolean variable_importances = true;
 
 
@@ -335,6 +335,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     init();
     link = family.defaultLink;// TODO
     tweedie_link_power = 1 - tweedie_variance_power;// TODO
+    if(tweedie_link_power == 0)link = Link.log;
     _glm = new GLMParams(family, tweedie_variance_power, link, tweedie_link_power);
     if(alpha.length > 1) { // grid search
       if(destination_key == null)destination_key = Key.make("GLMGridResults_"+Key.make());
@@ -510,38 +511,39 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         boolean significantLambda = _model.setAndTestValidation(glmt2._val);
         final GLMIterationTask glmt3;
         boolean done = _iter == max_iter || _currentLambda <= lambda_min || (max_predictors != -1 && _model.rank() >= max_predictors); // _iter < max_iter && (improved || _runAllLambdas) && _lambdaIdx < (lambda_value.length-1);
-        // now filter out the cols for the next lambda_value...
-        if(!done && _activeCols != null){
-          final int [] oldCols = _activeCols;
-          double previousLambda = _currentLambda;
-          _currentLambda = lambda == null?pickNextLambda(_currentLambda, grad):lambda[_lambdaIdx+1];
-          activeCols(_currentLambda,previousLambda,grad);
-          if(_activeData.fullN() > MAX_PREDICTORS) done = true;
-          // epxand the beta
-          final double [] fullBeta = glmt2._beta;
-          final double [] newBeta;
-          if(_activeCols != null){
-            newBeta = MemoryManager.malloc8d(_activeCols.length+1);
-            newBeta[newBeta.length-1] = fullBeta[fullBeta.length-1];
-            int j = 0;
-            for(int c:_activeCols)
-              newBeta[j++] = fullBeta[c];
-            assert j == newBeta.length-1;
-          } else
-            newBeta = fullBeta;
-          if(glmt._gram != null && Arrays.equals(oldCols,_activeCols) && (glmt._gram.fullN() == _activeCols.length+1)) // set of coefficients did not change
-            glmt3 = glmt;
-          else
-            glmt3 = new GLMIterationTask(GLM2.this,_activeData,glmt._glm,true,false,false,newBeta,glmt._ymu,glmt._reg,thresholds,new Iteration());
-        } else glmt3 = glmt;
+        final double previousLambda = _currentLambda;
         final boolean isDone = done;
-        if(!done && significantLambda)
-          _model.addSubmodel(_currentLambda);
+        if(!done) {
+          _currentLambda = lambda == null ? pickNextLambda(_currentLambda, grad) : lambda[_lambdaIdx + 1];
+          if (_activeCols != null) {
+            final int[] oldCols = _activeCols;
+            activeCols(_currentLambda, previousLambda, grad);
+            if (_activeData.fullN() > MAX_PREDICTORS) done = true;
+            // epxand the beta
+            final double[] fullBeta = glmt2._beta;
+            final double[] newBeta;
+            if (_activeCols != null) {
+              newBeta = MemoryManager.malloc8d(_activeCols.length + 1);
+              newBeta[newBeta.length - 1] = fullBeta[fullBeta.length - 1];
+              int j = 0;
+              for (int c : _activeCols)
+                newBeta[j++] = fullBeta[c];
+              assert j == newBeta.length - 1;
+            } else
+              newBeta = fullBeta;
+            if (glmt._gram != null && Arrays.equals(oldCols, _activeCols) && (glmt._gram.fullN() == _activeCols.length + 1)) // set of coefficients did not change
+              glmt3 = glmt;
+            else
+              glmt3 = new GLMIterationTask(GLM2.this, _activeData, glmt._glm, true, false, false, newBeta, glmt._ymu, glmt._reg, thresholds, new Iteration());
+          } else glmt3 = glmt;
+          if (significantLambda)
+            _model.addSubmodel(_currentLambda);
+        } else glmt3 = null;
         if(n_folds > 1 && (isDone || significantLambda))
           xvalidate(_model, _currentLambda, new H2OCallback<GLMModel.GLMValidationTask>(GLM2.this) {
             @Override
             public void callback(GLMModel.GLMValidationTask v) {
-              _model.setXValidation(_currentLambda, (GLMValidation.GLMXValidation) v._res);
+              _model.setXValidation(previousLambda, (GLMValidation.GLMXValidation) v._res);
               if (isDone) GLM2.this.complete();
               else nextLambda(glmt3);
             }
@@ -580,6 +582,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     public Iteration(){super(GLM2.this); _iterationStartTime = System.currentTimeMillis(); _model.start_training(null);}
     @Override public void callback(final GLMIterationTask glmt){
       Log.info("GLM2 iteration(" + _iter + ") done in " + (System.currentTimeMillis() - _iterationStartTime) + "ms");
+      if(_iter == 22){
+        System.out.println("haha");
+      }
       if( !isRunning(self()) )  throw new JobCancelledException();
       boolean gotNaNsorInfs = Utils.hasNaNsOrInfs(glmt._xy) || glmt._gram.hasNaNsOrInfs();
       boolean constBeta = true;
@@ -784,7 +789,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         lambda_min_ratio = lmaxt._nobs > 25*_dinfo.fullN()?1e-4:1e-2;
       assert lmaxt != null:"running lambda_value search, but don't know what is the lambda_value max!";
 
-      final double d = Math.pow(lambda_min_ratio,1.0/nlambdas);
+      final double d = Math.pow(lambda_min_ratio,1.0/(nlambdas-1));
       if(nlambdas == -1) {
         lambda = null;
         _currentLambda = lambda_max;
