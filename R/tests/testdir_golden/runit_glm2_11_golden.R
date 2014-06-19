@@ -21,7 +21,7 @@ function(conn) {
 
     res_dev = hh@model$deviance
     obs = nrow(mfrmr)
-    lambda = hh@model$params$best_lambda
+    lambda = hh@model$params$lambda
     alpha = hh@model$params$alpha
     cof = hh@model$normalized_coefficients
     cof = cof[1:length(cof)-1] # drop the intercept!

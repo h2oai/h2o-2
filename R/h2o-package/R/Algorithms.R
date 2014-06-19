@@ -483,7 +483,7 @@ h2o.getGLMLambdaModel <- function(model, lambda) {
   params <- list()
   result <- list()
   params$alpha  <- model$alpha
-  params$lambda <- model$submodels[[model$best_lambda_idx+1]]$lambda
+  params$lambda <- model$submodels[[model$best_lambda_idx+1]]$lambda_value
   result$params <- params
   if(model$glm$family == "tweedie")
     result$params$family <- .h2o.__getFamily(model$glm$family, model$glm$link, model$glm$tweedie_variance_power, model$glm$tweedie_link_power)
