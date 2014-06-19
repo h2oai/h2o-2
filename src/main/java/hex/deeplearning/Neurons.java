@@ -59,6 +59,7 @@ public abstract class Neurons {
    * References for feed-forward connectivity
    */
   public Neurons _previous;
+  public Neurons _input;
   DeepLearningModel.DeepLearningModelInfo _minfo; //reference to shared model info
   public Matrix _w;
   public DenseVector _b;
@@ -72,7 +73,7 @@ public abstract class Neurons {
   /**
    * References for ADADELTA
    */
-  private Matrix _ada_dx_g;
+  Matrix _ada_dx_g;
   DenseVector _bias_ada_dx_g;
 
   /**
@@ -143,7 +144,7 @@ public abstract class Neurons {
     }
     if (training && (this instanceof MaxoutDropout || this instanceof TanhDropout
             || this instanceof RectifierDropout || this instanceof Input) ) {
-      _dropout = this instanceof Input ? new Dropout(units, params.input_dropout_ratio) : new Dropout(units, params.hidden_dropout_ratios[index-1]);
+      _dropout = this instanceof Input ? new Dropout(units, params.input_dropout_ratio) : new Dropout(units, params.hidden_dropout_ratios[_index]);
     }
     if (!(this instanceof Input)) {
       _previous = neurons[index-1]; //incoming neurons
@@ -479,6 +480,23 @@ public abstract class Neurons {
   }
 
   /**
+   * Helper to optionally compute the reconstruction error for auto-encoders
+   * @param g Regular gradient (will be returned if this is not the final layer of an auto-encoder)
+   * @param row neuron index
+   * @return g if this is not the final layer of an auto-encoder, otherwise return the difference
+   *         between the output (auto-encoder output layer activation) and the target (input layer activation)
+   */
+  protected float autoEncoderError(float g, int row) {
+    //last layer of auto-encoder: gradient is given by MSE
+    if (_minfo.get_params().autoencoder && _index == _minfo.get_params().hidden.length) {
+      if (params.loss != Loss.MeanSquare)
+        throw new UnsupportedOperationException("Auto-Encoder is only implemented for MeanSquare error.");
+      return (_input._a.get(row) - _a.get(row)); //target - activation
+    }
+    return g;
+  }
+
+  /**
    * Compute learning rate with AdaDelta
    * http://www.matthewzeiler.com/pubs/googleTR2012/googleTR2012.pdf
    * @param grad gradient
@@ -526,8 +544,8 @@ public abstract class Neurons {
    * @param rate learning rate
    * @param momentum momentum factor (needed only if ADADELTA isn't used)
    */
-  private void update_bias(final DenseVector _b, final DenseVector _bm, final int row,
-                         final float partial_grad, final float avg_grad2, float rate, final float momentum) {
+  void update_bias(final DenseVector _b, final DenseVector _bm, final int row,
+                   final float partial_grad, final float avg_grad2, float rate, final float momentum) {
     final boolean have_momenta = _minfo.has_momenta();
     final boolean have_ada = _minfo.adaDelta();
 
@@ -681,6 +699,7 @@ public abstract class Neurons {
         final int rows = _a.size();
         for (int row = 0; row < rows; row++) {
           float g = _e.get(row) * (1f - _a.get(row) * _a.get(row));
+          g = autoEncoderError(g, row);
           bprop(row, g, r, m);
         }
       }
@@ -763,6 +782,7 @@ public abstract class Neurons {
           float g = _e.get(row);
 //                if( _a[o] < 0 )   Not sure if we should be using maxout with a hard zero bottom
 //                    g = 0;
+          g = autoEncoderError(g, row);
           bprop(row, g, r, m);
         }
       }
@@ -811,7 +831,8 @@ public abstract class Neurons {
       if (_w instanceof DenseRowMatrix) {
         for (int row = 0; row < rows; row++) {
           //(d/dx)(max(0,x)) = 1 if x > 0, otherwise 0
-          final float g = _a.get(row) > 0f ? _e.get(row) : 0f;
+          float g = _a.get(row) > 0f ? _e.get(row) : 0f;
+          g = autoEncoderError(g, row);
           bprop(row, g, r, m);
         }
       }

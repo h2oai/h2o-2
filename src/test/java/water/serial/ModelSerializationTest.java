@@ -113,7 +113,7 @@ public class ModelSerializationTest extends TestUtil {
     Frame f = parseFrame(dataset);
     Key modelKey = Key.make("GLM_model_for_"+dataset);
     try {
-      DataInfo dinfo = new DataInfo(f, response, false, true);
+      DataInfo dinfo = new DataInfo(f, response, false, DataInfo.TransformType.STANDARDIZE);
       GLMParams glm = new GLMParams(family,0,family.defaultLink,0);
       new GLM2("GLM test on "+dataset,Key.make(),modelKey,dinfo,glm,new double[]{0},0).fork().get();
       return DKV.get(modelKey).get();
@@ -128,7 +128,7 @@ public class ModelSerializationTest extends TestUtil {
     final VarImp varimp;
 
     public BlahModel(Key selfKey, Key dataKey, String[] names, String[][] domains) {
-      super(selfKey, dataKey, names, domains);
+      super(selfKey, dataKey, names, domains, null, null);
       keys = new Key[3];
       varimp = new VarImp.VarImpRI(arf(1f, 1f, 1f));
     }

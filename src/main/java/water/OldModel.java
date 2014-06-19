@@ -328,7 +328,7 @@ public abstract class OldModel extends Lockable<OldModel> {
       // This is a binomial classifier
       ds[ds.length-1] = new String[]{"F","T"};
     }
-    Model m = new Model(null,null,_va.colNames(),ds) {
+    Model m = new Model(null,null,_va.colNames(),ds, /* priorClassDistribution */ null, /* modelClassDistribution*/ null) {
         @Override
         protected float[] score0(double data[/*ncols*/], float preds[/*nclasses*/]) {
           float s = (float)OldModel.this.score0(data);

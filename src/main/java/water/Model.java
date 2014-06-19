@@ -16,6 +16,8 @@ import water.util.Log.Tag.Sys;
 
 import java.util.*;
 
+import org.apache.commons.math3.random.CorrelatedRandomVectorGenerator;
+
 /**
  * A Model models reality (hopefully).
  * A model can be used to 'score' a row, or a collection of rows on any
@@ -45,9 +47,12 @@ public abstract class Model extends Lockable<Model> {
   public final String _domains[][];
 
   @API(help = "Relative class distribution factors in original data")
-  final protected float[] _priorClassDist;
+  public final float[] _priorClassDist;
+
   @API(help = "Relative class distribution factors used for model building")
   protected float[] _modelClassDist;
+  // WARNING: be really careful to modify this POJO because
+  // modification does not involve update in DKV
   public void setModelClassDistribution(float[] classdist) {
     _modelClassDist = classdist.clone();
   }
@@ -64,24 +69,14 @@ public abstract class Model extends Lockable<Model> {
   protected boolean _have_cv_results;
 
   /** Full constructor from frame: Strips out the Vecs to just the names needed
-   *  to match columns later for future datasets.  */
+   *  to match columns later for future datasets.
+   */
   public Model( Key selfKey, Key dataKey, Frame fr, float[] priorClassDist ) {
-    this(selfKey,dataKey,fr.names(),fr.domains(),priorClassDist);
-  }
-
-  /** Constructor from frame (without prior class dist): Strips out the Vecs to just the names needed
-   *  to match columns later for future datasets.  */
-  public Model( Key selfKey, Key dataKey, Frame fr ) {
-    this(selfKey,dataKey,fr.names(),fr.domains(),null);
-  }
-
-  /** Constructor without prior class distribution */
-  public Model( Key selfKey, Key dataKey, String names[], String domains[][]) {
-    this(selfKey,dataKey,names,domains,null);
+    this(selfKey,dataKey,fr.names(),fr.domains(), priorClassDist, null);
   }
 
   /** Full constructor */
-  public Model( Key selfKey, Key dataKey, String names[], String domains[][], float[] priorClassDist ) {
+  public Model( Key selfKey, Key dataKey, String names[], String domains[][], float[] priorClassDist, float[] modelClassDist ) {
     super(selfKey);
     this.uniqueId = new UniqueId(_key);
     if( domains == null ) domains=new String[names.length+1][];
@@ -92,6 +87,7 @@ public abstract class Model extends Lockable<Model> {
     _names   = names;
     _domains = domains;
     _priorClassDist = priorClassDist;
+    _modelClassDist = modelClassDist;
   }
 
   // Currently only implemented by GLM2, DeepLearning, GBM and DRF:
@@ -102,7 +98,7 @@ public abstract class Model extends Lockable<Model> {
   public Request2 job() { throw new UnsupportedOperationException("job() has not yet been implemented in class: " + this.getClass()); }
 
   /** Simple shallow copy constructor to a new Key */
-  public Model( Key selfKey, Model m ) { this(selfKey,m._dataKey,m._names,m._domains); }
+  public Model( Key selfKey, Model m ) { this(selfKey,m._dataKey,m._names,m._domains, m._priorClassDist, m._modelClassDist); }
 
   public enum ModelCategory {
     Unknown,
@@ -128,7 +124,7 @@ public abstract class Model extends Lockable<Model> {
   }
 
   public void start_training(long training_start_time) {
-    Log.info("setting training_start_time to: " + training_start_time + " for Model: " + this);
+    Log.info("setting training_start_time to: " + training_start_time + " for Model: " + this.getClass().getSimpleName() + "@" + System.identityHashCode(this));
 
     final long t = training_start_time;
     new TAtomic<Model>() {
@@ -142,7 +138,7 @@ public abstract class Model extends Lockable<Model> {
   }
   public void start_training(Model previous) {
     training_start_time = System.currentTimeMillis();
-    Log.info("setting training_start_time to: " + training_start_time + " for Model: " + this + " (checkpoint case)");
+    Log.info("setting training_start_time to: " + training_start_time + " for Model: " + this.getClass().getSimpleName() + "@" + System.identityHashCode(this) + " (checkpoint case)");
     if (null != previous)
       training_duration_in_ms += previous.training_duration_in_ms;
 
@@ -159,7 +155,7 @@ public abstract class Model extends Lockable<Model> {
   }
   public void stop_training() {
     training_duration_in_ms += (System.currentTimeMillis() - training_start_time);
-    Log.info("setting training_duration_in_ms to: " + training_duration_in_ms + " for Model: " + this);
+    Log.info("setting training_duration_in_ms to: " + training_duration_in_ms + " for Model: " + this.getClass().getSimpleName() + "@" + System.identityHashCode(this));
 
     final long d = training_duration_in_ms;
     new TAtomic<Model>() {
@@ -238,7 +234,7 @@ public abstract class Model extends Lockable<Model> {
    * @param adaptFrm
    * @return
    */
-  private Frame scoreImpl(Frame adaptFrm) {
+  protected Frame scoreImpl(Frame adaptFrm) {
     int ridx = adaptFrm.find(responseName());
     assert ridx == -1 : "Adapted frame should not contain response in scoring method!";
     assert nfeatures() == adaptFrm.numCols() : "Number of model features " + nfeatures() + " != number of test set columns: " + adaptFrm.numCols();
@@ -459,17 +455,7 @@ public abstract class Model extends Lockable<Model> {
     // C.f. http://gking.harvard.edu/files/0s.pdf Eq.(27)
     if (isClassifier() && _priorClassDist != null && _modelClassDist != null) {
       assert(scored.length == nclasses()+1); //1 label + nclasses probs
-      double probsum=0;
-      for( int c=1; c<scored.length; c++ ) {
-        final double original_fraction = _priorClassDist[c-1];
-        assert(original_fraction > 0) : "original fraction should be > 0, but is " + original_fraction;
-        final double oversampled_fraction = _modelClassDist[c-1];
-        assert(oversampled_fraction > 0) : "oversampled fraction should be > 0, but is " + oversampled_fraction;
-        assert(!Double.isNaN(scored[c]));
-        scored[c] *= original_fraction / oversampled_fraction;
-        probsum += scored[c];
-      }
-      for (int i=1;i<scored.length;++i) scored[i] /= probsum;
+      ModelUtils.correctProbabilities(scored, _priorClassDist, _modelClassDist);
       //set label based on corrected probabilities (max value wins, with deterministic tie-breaking)
       scored[0] = ModelUtils.getPrediction(scored, tmp);
     }

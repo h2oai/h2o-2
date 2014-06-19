@@ -37,7 +37,7 @@ public class NBModel extends Model {
   final double laplace;
 
   public NBModel(Key selfKey, Key dataKey, DataInfo dinfo, NBTask tsk, double[] pprior, double[][][] pcond, double laplace) {
-    super(selfKey, dataKey, dinfo._adaptedFrame);
+    super(selfKey, dataKey, dinfo._adaptedFrame, /* priorClassDistribution */ null);
     this.rescnt = tsk._rescnt;
     this.pprior = pprior;
     this.pcond = pcond;

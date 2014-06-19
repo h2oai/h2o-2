@@ -21,9 +21,10 @@ function(conn) {
 
     res_dev = hh@model$deviance
     obs = nrow(mfrmr)
-    lambda = hh@model$params$best_lambda
+    lambda = hh@model$params$lambda
     alpha = hh@model$params$alpha
     cof = hh@model$normalized_coefficients
+    cof = cof[1:length(cof)-1] # drop the intercept!
     L1 = sum(abs(cof))
     L2 = sqrt(sum(cof^2)) 
     penalty = ( 0.5*(1-alpha)*L2^2 ) + ( alpha*L1 )

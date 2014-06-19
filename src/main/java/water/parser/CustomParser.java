@@ -54,7 +54,7 @@ public abstract class CustomParser extends Iced {
       return _errors != null && _errors.length > 0;
     }
 
-    public String toString(){
+    @Override public String toString(){
       if(!_isValid)
         return "Parser setup appears to be broken, got " + _setup.toString();
       else if(hasErrors())
@@ -118,7 +118,7 @@ public abstract class CustomParser extends Iced {
       }
       return conflictingNames;
     }
-    public ParserSetup clone(){
+    @Override public ParserSetup clone(){
       return new ParserSetup(_pType, _separator, _ncols,_header,null,_singleQuotes);
     }
     public boolean isCompatible(ParserSetup other){
@@ -139,7 +139,7 @@ public abstract class CustomParser extends Iced {
           throw H2O.unimpl();
       }
     }
-    public String toString(){
+    @Override public String toString(){
       StringBuilder sb = new StringBuilder(_pType.name());
       switch(_pType){
         case SVMLight:
@@ -279,9 +279,9 @@ public abstract class CustomParser extends Iced {
     @Override public int  getChunkDataStart(int cidx) {
       if( _cidx0 == cidx ) return _coff0;
       if( _cidx1 == cidx ) return _coff1;
-      return 0; 
+      return 0;
     }
-    @Override public void setChunkDataStart(int cidx, int offset) { 
+    @Override public void setChunkDataStart(int cidx, int offset) {
       if( _cidx0 == cidx ) _coff0 = offset;
       if( _cidx1 == cidx ) _coff1 = offset;
     }

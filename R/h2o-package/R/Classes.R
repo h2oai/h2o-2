@@ -33,7 +33,7 @@ setClass("H2OParsedDataVA", contains="H2OParsedData")
 setClass("H2OModelVA", representation(key="character", data="H2OParsedDataVA", model="list", "VIRTUAL"))
 # setClass("H2OModelVA", representation(key="character", data="H2OParsedDataVA", model="list", env="environment", "VIRTUAL"))
 setClass("H2OGridVA", representation(key="character", data="H2OParsedDataVA", model="list", sumtable="list", "VIRTUAL"))
-
+setClass("H2OGLMModelList",representation(models="list",best_model="numeric"))
 setClass("H2OGLMModelVA", contains="H2OModelVA", representation(xval="list"))
 setClass("H2OGLMGridVA", contains="H2OGridVA")
 setClass("H2OKMeansModelVA", contains="H2OModelVA")
@@ -140,16 +140,83 @@ setMethod("show", "H2OGLMModel", function(object) {
 })
 
 setMethod("show", "H2OKMeansModel", function(object) {
-  print(object@data)
-  cat("K-Means Model Key:", object@key)
+    print(object@data)
+    cat("K-Means Model Key:", object@key)
+    
+    model = object@model
+    cat("\n\nK-means clustering with", length(model$size), "clusters of sizes "); cat(model$size, sep=", ")
+    cat("\n\nCluster means:\n"); print(model$centers)
+    cat("\nClustering vector:\n"); print(summary(model$cluster))
+    cat("\nWithin cluster sum of squares by cluster:\n"); print(model$withinss)
+    cat("(between_SS / total_SS = ", round(100*sum(model$betweenss)/model$totss, 1), "%)\n")
+    cat("\nAvailable components:\n\n"); print(names(model))
+})
+setMethod("show", "H2OGLMModel", function(object) {
+    print(object@data)
+    cat("GLM2 Model Key:", object@key)
+    
+    model = object@model
+    cat("\n\nCoefficients:\n"); print(round(model$coefficients,5))
+    if(!is.null(model$normalized_coefficients)) {
+        cat("\nNormalized Coefficients:\n"); print(round(model$normalized_coefficients,5))
+    }
+    cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual")
+    cat("\nNull Deviance:    ", round(model$null.deviance,1))
+    cat("\nResidual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1))
+    cat("\nDeviance Explained:", round(1-model$deviance/model$null.deviance,5))
+    cat("\nAvg Training Error Rate:", round(model$train.err,5), "\n")
+    
+    family = model$params$family$family
+    if(family == "binomial") {
+        cat("AUC:", round(model$auc,5), " Best Threshold:", round(model$best_threshold,5))
+        cat("\n\nConfusion Matrix:\n"); print(model$confusion)
+    }
+    
+    if(length(object@xval) > 0) {
+        cat("\nCross-Validation Models:\n")
+        if(family == "binomial") {
+            modelXval = t(sapply(object@xval, function(x) { c(x@model$rank-1, x@model$auc, 1-x@model$deviance/x@model$null.deviance) }))
+            colnames(modelXval) = c("Nonzeros", "AUC", "Deviance Explained")
+        } else {
+            modelXval = t(sapply(object@xval, function(x) { c(x@model$rank-1, x@model$aic, 1-x@model$deviance/x@model$null.deviance) }))
+            colnames(modelXval) = c("Nonzeros", "AIC", "Deviance Explained")
+        }
+        rownames(modelXval) = paste("Model", 1:nrow(modelXval))
+        print(modelXval)
+    }
+})
 
-  model = object@model
-  cat("\n\nK-means clustering with", length(model$size), "clusters of sizes "); cat(model$size, sep=", ")
-  cat("\n\nCluster means:\n"); print(model$centers)
-  cat("\nClustering vector:\n"); print(summary(model$cluster))
-  cat("\nWithin cluster sum of squares by cluster:\n"); print(model$withinss)
-  cat("(between_SS / total_SS = ", round(100*sum(model$betweenss)/model$totss, 1), "%)\n")
-  cat("\nAvailable components:\n\n"); print(names(model))
+setMethod("summary","H2OGLMModelList", function(object) {
+    summary <- NULL
+    if(object@models[[1]]@model$params$family$family == 'binomial'){
+        for(m in object@models) {
+            model = m@model
+            if(is.null(summary)) {
+                summary = t(as.matrix(c(model$lambda, model$df.null-model$df.residual-1,round((1-model$deviance/model$null.deviance),2),round(model$auc,2))))
+            } else {
+                summary = rbind(summary,c(model$lambda,model$df.null-model$df.residual-1,round((1-model$deviance/model$null.deviance),2),round(model$auc,2)))
+            }
+        }
+        summary = cbind(1:nrow(summary),summary)
+        colnames(summary) <- c("id","lambda","predictors","dev.ratio"," AUC ")
+    } else {
+        for(m in object@models) {
+            model = m@model
+            if(is.null(summary)) {
+                summary = t(as.matrix(c(model$lambda, model$df.null-model$df.residual-1,round((1-model$deviance/model$null.deviance),2))))
+            } else {
+                summary = rbind(summary,c(model$lambda,model$df.null-model$df.residual-1,round((1-model$deviance/model$null.deviance),2)))
+            }
+        }
+        summary = cbind(1:nrow(summary),summary)
+        colnames(summary) <- c("id","lambda","predictors","explained dev")
+    }    
+    summary
+})
+
+setMethod("show", "H2OGLMModelList", function(object) {
+    print(summary(object))
+    cat("best model:",object@best_model)
 })
 
 setMethod("show", "H2ODeepLearningModel", function(object) {
@@ -230,7 +297,10 @@ setMethod("show", "H2OSpeeDRFModel", function(object) {
 
   #mse <-model$mse[length(model$mse)] # (model$mse[is.na(model$mse) | model$mse <= 0] <- "")
 
-  cat("\nMean-squared Error from the",model$params$ntree, "trees: "); cat(model$mse, "\n")
+  if (model$mse != -1) {
+    cat("\nMean-squared Error from the",model$params$ntree, "trees: "); cat(model$mse, "\n")
+  }
+
   if(length(object@xval) > 0) {
     cat("\nCross-Validation Models:\n")
     print(sapply(object@xval, function(x) x@key))

@@ -96,6 +96,11 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   @API(help = "Class distribution")
   protected long _distribution[];
 
+  // Distribution of classes in response
+  protected float[] _priorClassDist = null;
+  // New distribution of classes if input frame was modified (resampled, balanced)
+  protected float[] _modelClassDist = null;
+
   // Number of trees inherited from checkpoint
   protected int _ntreesFromCheckpoint;
 
@@ -189,8 +194,12 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       assert false : "Response domain' names should be always presented in case of classification";
     if( domain == null ) domain = new String[] {"r"}; // For regression, give a name to class 0
 
-    // Find the class distribution
-    _distribution = _nclass > 1 ? new MRUtils.ClassDist(_nclass).doAll(response).dist() : null;
+    // Compute class distribution
+    if (classification) {
+      MRUtils.ClassDist cdmt = new MRUtils.ClassDist(_nclass).doAll(response);
+      _distribution = cdmt.dist();
+      _priorClassDist = cdmt.rel_dist();
+    }
 
     // Handle imbalanced classes by stratified over/under-sampling
     // initWorkFrame sets the modeled class distribution, and model.score() corrects the probabilities back using the distribution ratios
@@ -204,8 +213,14 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
         fr = stratified;
         _nrows = fr.numRows();
         response = fr.vecs()[response_idx];
+        // Recompute distribution since the input frame was modified
+        MRUtils.ClassDist cdmt = new MRUtils.ClassDist(_nclass).doAll(response);
+        _distribution = cdmt.dist();
+        _modelClassDist = cdmt.rel_dist();
       }
     }
+    Log.info(logTag(), "Prior class distribution: " + Arrays.toString(_priorClassDist));
+    Log.info(logTag(), "Model class distribution: " + Arrays.toString(_modelClassDist));
 
     // Also add to the basic working Frame these sets:
     //   nclass Vecs of current forest results (sum across all trees)
@@ -231,8 +246,8 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     // Fetch checkpoint
     assert checkpoint==null || (!(overwrite_checkpoint && checkpoint!=null) || outputKey==checkpoint): "If checkpoint is to be overwritten then outputkey has to equal to checkpoint key";
     TM checkpointModel = checkpoint!=null ? (TM) UKV.get(checkpoint) : null;
-    // Create an initial model based on given parameters
-    TM model = makeModel(outputKey, dataKey, testKey, checkpointModel!=null?ntrees+checkpointModel.ntrees():ntrees,names, domains, getCMDomain());
+    // Create an INITIAL MODEL based on given parameters
+    TM model = makeModel(outputKey, dataKey, testKey, checkpointModel!=null?ntrees+checkpointModel.ntrees():ntrees,names, domains, getCMDomain(), _priorClassDist, _modelClassDist);
     // Update the model by a checkpoint
     if (checkpointModel!=null) {
       checkpointModel.read_lock(self()); // lock it for read to avoid any other job to start working on it
@@ -681,6 +696,18 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   // turns the results into a probability distribution.
   protected abstract float score1( Chunk chks[], float fs[/*nclass*/], int row );
 
+  // Call builder specific score code and then correct probabilities
+  // if it is necessary.
+  private float score2(Chunk chks[], float fs[/*nclass*/], int row ) {
+    float sum = score1(chks, fs, row);
+    if (classification && _priorClassDist!=null && _modelClassDist!=null && !Float.isInfinite(sum)  && sum>0f) {
+      Utils.div(fs, sum);
+      ModelUtils.correctProbabilities(fs, _priorClassDist, _modelClassDist);
+      sum = 1.0f;
+    }
+    return sum;
+  }
+
   // Score the *tree* columns, and produce a confusion matrix
   public class Score extends MRTask2<Score> {
     /* @OUT */ long    _cm[/*actual*/][/*predicted*/]; // Confusion matrix
@@ -691,13 +718,11 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     /* @IN */  boolean _validation;
     /* @IN */  int     _cmlen;
     /* @IN */  boolean _cavr; // true if validation response needs to be adapted to CM domain
-    //double _auc;               //Area under the ROC curve for _nclass == 2
 
     public double   sum()   { return _sum; }
     public long[][] cm ()   { return _cm;  }
     public long     nrows() { return _snrows; }
     public double   mse()   { return sum() / nrows(); }
-   // public double   auc()   { return _auc; }
 
     /**
      * Compute CM and MSE on either the training or testing dataset.
@@ -770,7 +795,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
           if (_nclass > 1 ) sum = 1.0f;  // Sum of a distribution is 1.0 for classification
           else              sum = fs[1]; // Sum is the same as prediction for regression.
         } else {               // Passed in the model-specific columns
-          sum = score1(chks,fs,row);
+          sum = score2(chks,fs,row);
         }
         float err;  int yact=0; // actual response from dataset
         int yact_orig = 0; // actual response from dataset before potential scaling
@@ -872,7 +897,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
    */
   protected abstract void initWorkFrame( TM initialModel, Frame fr);
 
-  protected abstract TM makeModel( Key outputKey, Key dataKey, Key testKey, int ntrees, String names[], String domains[][], String[] cmDomain);
+  protected abstract TM makeModel( Key outputKey, Key dataKey, Key testKey, int ntrees, String names[], String domains[][], String[] cmDomain, float[] priorClassDist, float[] classDist);
   protected abstract TM makeModel( TM model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC);
   protected abstract TM makeModel( TM model, DTree ktrees[], DTree.TreeModel.TreeStats tstats);
   protected abstract TM updateModel( TM model, TM checkpoint, boolean overwriteCheckpoint);

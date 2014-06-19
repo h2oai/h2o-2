@@ -181,6 +181,7 @@ public class AUC extends Func {
   private double[] _fprs;
   private hex.ConfusionMatrix[] _cms;
 
+
   public AUC() {}
 
   /**
@@ -251,7 +252,7 @@ public class AUC extends Func {
       if (_cms != null) {
         if (_cms.length != thresholds.length) throw new IllegalArgumentException("Number of thresholds differs from number of confusion matrices.");
       } else {
-        AUCTask at = new AUCTask(thresholds).doAll(va,vp);
+        AUCTask at = new AUCTask(thresholds,va.mean()).doAll(va,vp);
         _cms = at.getCMs();
       }
       // compute AUC and best thresholds
@@ -754,13 +755,26 @@ public class AUC extends Func {
   private static class AUCTask extends MRTask2<AUCTask> {
     /* @OUT CMs */ public final hex.ConfusionMatrix[] getCMs() { return _cms; }
     private hex.ConfusionMatrix[] _cms;
+    double nullDev;
+    double resDev;
+    final double ymu;
 
     /* IN thresholds */ final private float[] _thresh;
 
-    AUCTask(float[] thresh) {
+    AUCTask(float[] thresh, double mu) {
       _thresh = thresh.clone();
+      ymu = mu;
     }
 
+    static final double y_log_y(double y, double mu) {
+      if(y == 0)return 0;
+      if(mu < Double.MIN_NORMAL) mu = Double.MIN_NORMAL;
+      return y * Math.log(y / mu);
+    }
+
+    public static double binomial_deviance(double yreal, double ymodel){
+      return 2 * ((y_log_y(yreal, ymodel)) + y_log_y(1 - yreal, 1 - ymodel));
+    }
     @Override public void map( Chunk ca, Chunk cp ) {
       _cms = new hex.ConfusionMatrix[_thresh.length];
       for (int i=0;i<_cms.length;++i)
@@ -775,8 +789,9 @@ public class AUC extends Func {
 //          Log.warn("Skipping predicted NaN."); //some models predict NaN!
           continue;
         }
+        final double pr = cp.at80(i);
         for( int t=0; t < _cms.length; t++ ) {
-          final int p = cp.at0(i)>=_thresh[t]?1:0;
+          final int p = pr >= _thresh[t]?1:0;
           _cms[t].add(a, p);
         }
       }
@@ -786,6 +801,11 @@ public class AUC extends Func {
       for( int i=0; i<_cms.length; ++i) {
         _cms[i].add(other._cms[i]);
       }
+      nullDev += other.nullDev;
+      resDev  += other.resDev;
+    }
+
+    @Override public void postGlobal(){
     }
   }
 }

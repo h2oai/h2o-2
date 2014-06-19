@@ -16,6 +16,7 @@ class Basic(unittest.TestCase):
             h2o.build_cloud(node_count=3)
         else:
             h2o_hosts.build_cloud_with_hosts(node_count=3)
+        h2o.beta_features = True
 
     @classmethod
     def tearDownClass(cls):
@@ -25,19 +26,19 @@ class Basic(unittest.TestCase):
         h2o.verify_cloud_size()
 
     def test_B_RF_iris2(self):
-        parseResult = h2i.import_parse(bucket='smalldata', path='iris/iris2.csv', schema='put', noise=('StoreView',None), retryDelaySecs=0.1)
-        h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=10, noise=('StoreView',None), retryDelaySecs=0.1)
+        parseResult = h2i.import_parse(bucket='smalldata', path='iris/iris2.csv', schema='put', noise=('StoreView',None), retryDelaySecs=0.1, timeoutSecs=30)
+        h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=30, noise=('StoreView',None), retryDelaySecs=0.1)
 
     def test_C_RF_poker100(self):
-        parseResult = h2i.import_parse(bucket='smalldata', path='poker/poker100', schema='put', noise=('StoreView',None), retryDelaySecs=0.1)
-        h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=10, noise=('StoreView',None), retryDelaySecs=0.1)
+        parseResult = h2i.import_parse(bucket='smalldata', path='poker/poker100', schema='put', noise=('StoreView',None), retryDelaySecs=0.1, timeoutSecs=30)
+        h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=30, noise=('StoreView',None), retryDelaySecs=0.1)
 
     def test_D_GenParity1(self):
-        parseResult = h2i.import_parse(bucket='smalldata', path='parity_128_4_100_quad.data', schema='put', noise=('StoreView',None), retryDelaySecs=0.1)
-        h2o_cmd.runRF(parseResult=parseResult, trees=50, timeoutSecs=10, noise=('StoreView',None), retryDelaySecs=0.1)
+        parseResult = h2i.import_parse(bucket='smalldata', path='parity_128_4_100_quad.data', schema='put', noise=('StoreView',None), retryDelaySecs=0.1, timeoutSecs=30)
+        h2o_cmd.runRF(parseResult=parseResult, trees=50, timeoutSecs=30, noise=('StoreView',None), retryDelaySecs=0.1)
 
     def test_E_ParseManyCols(self):
-        parseResult = h2i.import_parse(bucket='smalldata', path='fail1_100x11000.csv.gz', schema='put', noise=('StoreView',None), retryDelaySecs=0.1)
+        parseResult = h2i.import_parse(bucket='smalldata', path='fail1_100x11000.csv.gz', schema='put', noise=('StoreView',None), retryDelaySecs=0.1, timeoutSecs=30)
 
         print "parseResult:", h2o.dump_json(parseResult)
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])

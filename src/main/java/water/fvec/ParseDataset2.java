@@ -91,9 +91,8 @@ public final class ParseDataset2 extends Job {
 
     @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
       if(_job != null){
-        _job.cancel(ex.toString());
+        _job.cancel(ex);
       }
-      ex.printStackTrace();
       return true;
     }
   }
@@ -679,9 +678,9 @@ public final class ParseDataset2 extends Job {
         _nvs[i] = (NewChunk)_vecs[i].chunkForChunkIdx(_cidx);
     }
 
-    public FVecDataOut reduce(StreamDataOut sdout){
+    @Override public FVecDataOut reduce(StreamDataOut sdout){
       FVecDataOut dout = (FVecDataOut)sdout;
-      if(_vecs != dout._vecs){
+      if(dout!=null && _vecs != dout._vecs){
         _nCols = Math.max(_nCols,dout._nCols);
         if(dout._vecs.length > _vecs.length){
           AppendableVec [] v = _vecs;
@@ -782,10 +781,8 @@ public final class ParseDataset2 extends Job {
         } else if( _ctypes[colIdx] == ICOL ) { // UUID column?  Only allow UUID parses
           long lo = ParseTime.attemptUUIDParse0(str);
           long hi = ParseTime.attemptUUIDParse1(str);
-          if( str.get_off() == -1 )  addInvalidCol(colIdx);
-          else {
-            if( colIdx < _nCols ) _nvs[_col = colIdx].addUUID(lo, hi);
-          }
+          if( str.get_off() == -1 )  { lo = C16Chunk._LO_NA; hi = C16Chunk._HI_NA; }
+          if( colIdx < _nCols ) _nvs[_col = colIdx].addUUID(lo, hi);
 
         } else if(!_enums[_col = colIdx].isKilled()) {
           // store enum id into exponent, so that it will be interpreted as NA if compressing as numcol.

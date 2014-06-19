@@ -10,8 +10,8 @@ public abstract class Sampling {
 
   /** Available sampling strategies. */
   public enum Strategy {
-    RANDOM(0),
-    STRATIFIED_LOCAL(1);
+    RANDOM(0); //,
+    //STRATIFIED_LOCAL(1);
     //    STRATIFIED_DISTRIBUTED(2);
     int _id; // redundant id
     private Strategy(int id) { _id = id; }
