@@ -389,15 +389,14 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, nlambda = 1
     if(return_all_lambda) {
       lambda_all = resH$glm_model$parameters$lambda
       allLambdaModels = lapply(lambda_all, .h2o.__getGLM2LambdaModel, data=data, model_key=allModels[i], params=params)
+      if(length(allLambdaModels) <= 1) result[[i]] = allLambdaModels[[1]]
+      else result[[i]] = allLambdaModels
     } else {
       params$lambda_all = resH$glm_model$parameters$lambda
       best_lambda_idx = resH$glm_model$best_lambda_idx+1
       best_lambda = resH$glm_model$parameters$lambda[best_lambda_idx]
-      allLambdaModels = .h2o.__getGLM2LambdaModel(best_lambda, data, allModels[i], params)
+      result[[i]] = .h2o.__getGLM2LambdaModel(best_lambda, data, allModels[i], params)
     }
-    
-    if(length(allLambdaModels) <= 1) result[[i]] = allLambdaModels[[1]]
-    else result[[i]] = allLambdaModels
   }
   new("H2OGLMGrid", key=destKey, data=data, model=result, sumtable=myModelSum)
 }
