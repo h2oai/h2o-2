@@ -200,7 +200,7 @@ public class GLMModelView extends Request2 {
     boolean first = true;
     int j = 0;
     for(int i:sortedIds){
-      names.append("<th>" + cNames[i] + "</th>");
+      names.append("<th>" + cNames[sm.idxs[i]] + "</th>");
       vals.append("<td>" + sm.beta[i] + "</td>");
       if(first){
         equation.append(DFORMAT.format(sm.beta[i]));
