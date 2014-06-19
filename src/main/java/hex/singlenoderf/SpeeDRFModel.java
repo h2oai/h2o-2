@@ -207,7 +207,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
   private static void scoreOnTrain(SpeeDRFModel m, SpeeDRFModel old) {
     // Gather the results
-    CMTask cmTask = new CMTask(m, m.size(), m.weights, m.oobee);
+    CMTask cmTask = new CMTask(m, m.size(), m.weights, m.oobee, m._priorClassDist, m._modelClassDist);
     cmTask.doAll(m.test_frame == null ? m.fr : m.test_frame, true);
 
     // Perform the regression scoring
@@ -261,13 +261,13 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     if (shouldScore) {
 
       // First check if there's a test frame... if so, then score on it with the score method, no need for CMTask.
-      if (m.test_frame != null) {
-        scoreOnTest(m, old);
-
-      // Otherwise score on train (OOB if set to true, which is the default!)
-      } else {
+//      if (m.test_frame != null) {
+//        scoreOnTest(m, old);
+//
+//      // Otherwise score on train (OOB if set to true, which is the default!)
+//      } else {
         scoreOnTrain(m, old);
-      }
+//      }
 
     // No scoring. Just plug CM with nulls and -1f for errs.
     } else {
@@ -424,10 +424,18 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       preds = new float[numClasses + 1];
       for( int i = 0; i < treeCount(); i++ )
         votes[(int) Tree.classify(new AutoBuffer(tree(i)), data, numClasses, false)]++;
+
       float s = 0.f;
       for (int v : votes) s += (float)v;
+
+      if (get_params().balance_classes) {
+        for (int i = 0; i  < votes.length - 1; ++i)
+          preds[i+1] = ( (float)votes[i] / s) * ( (float)votes[i] / s);
+        return preds;
+      }
+
       for (int i = 0; i  < votes.length - 1; ++i)
-        preds[i+1] = (float)votes[i] / s;
+        preds[i+1] = ( (float)votes[i] / s);
       preds[0] = (float) (classify(votes, null, null) + get_response().min());
       return preds;
     }
@@ -491,7 +499,6 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     if (_have_cv_results) {
       sb.append("<div class=\"alert\">Scoring results reported for ").append(this.parameters.n_folds).append("-fold cross-validated training data ").append(Inspect2.link(_dataKey.toString(), _dataKey)).append("</div>");
     } else {
-      DocGen.HTML.section(sb, "Confusion Matrix:");
       if (testKey != null)
         sb.append("<div class=\"alert\">Reported on ").append(Inspect2.link(testKey.toString(), testKey)).append("</div>");
       else
