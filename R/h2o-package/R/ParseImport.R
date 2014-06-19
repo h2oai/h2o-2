@@ -102,7 +102,7 @@ h2o.assign <- function(data, key) {
   return(data)
 }
 
-h2o.createFrame <- function(object, key, rows, cols, seed, randomize, value, real_range, categorical_fraction, factors, integer_fraction, integer_range, missing_fraction) {
+h2o.createFrame <- function(object, key, rows, cols, seed, randomize, value, real_range, categorical_fraction, factors, integer_fraction, integer_range, missing_fraction, response_factors) {
   if(!is.numeric(rows)) stop("rows must be a numeric value")
   if(!is.numeric(cols)) stop("rows must be a numeric value")
   if(!is.numeric(seed)) stop("rows must be a numeric value")
@@ -114,9 +114,10 @@ h2o.createFrame <- function(object, key, rows, cols, seed, randomize, value, rea
   if(!is.numeric(integer_fraction)) stop("integer_fraction must be a numeric value")
   if(!is.numeric(integer_range)) stop("integer_range must be a numeric value")
   if(!is.numeric(missing_fraction)) stop("missing_fraction must be a numeric value")
-  
+  if(!is.numeric(response_factors)) stop("response_factors must be a numeric value")
+
   res = .h2o.__remoteSend(object, .h2o.__PAGE_CreateFrame, key = key, rows = rows, cols = cols, seed = seed, randomize = as.numeric(randomize), value = value, real_range = real_range,
-                          categorical_fraction = categorical_fraction, factors = factors, integer_fraction = integer_fraction, integer_range = integer_range, missing_fraction = missing_fraction)
+                          categorical_fraction = categorical_fraction, factors = factors, integer_fraction = integer_fraction, integer_range = integer_range, missing_fraction = missing_fraction, response_factors = response_factors)
   new("H2OParsedData", h2o=object, key=key)
 }
 
