@@ -739,14 +739,6 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
             err.train_mse = l2.mean();
             l2_frame.delete();
           }
-          // validation
-          if (err.validation) {
-            final Frame valid_l2_frame = scoreAutoEncoder(ftest);
-            final Vec valid_l2 = valid_l2_frame.anyVec();
-            Log.info("Mean reconstruction error on validation data: " + valid_l2.mean() + "\n");
-            err.valid_mse = valid_l2.mean();
-            valid_l2_frame.delete();
-          }
         } else {
           if (printme) Log.info("Scoring the model.");
           // compute errors
