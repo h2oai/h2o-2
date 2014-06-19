@@ -330,6 +330,8 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, nlambda = 1
   
   x_ignore = setdiff(1:ncol(data), c(args$x_i, args$y_i)) - 1
   if(length(x_ignore) == 0) x_ignore = ''
+  
+  
 
   if(length(alpha) == 1) {
     rand_glm_key = .h2o.__uniqID("GLM2Model")
@@ -343,24 +345,35 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, nlambda = 1
     params = list(x=args$x, y=args$y, family = .h2o.__getFamily(family, tweedie.var.p=tweedie.p), nfolds=nfolds, alpha=alpha, nlambda=nlambda, lambda.min.ratio=lambda.min.ratio, lambda=lambda, beta_epsilon=epsilon, standardize=standardize)
     .h2o.__waitOnJob(data@h2o, res$job_key)
     # while(!.h2o.__isDone(data@h2o, "GLM2", res)) { Sys.sleep(1) }
-
-    res2 = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLMModelView, '_modelKey'=res$destination_key)
-    destKey = res2$glm_model$'_key'
-    if(return_all_lambda) {
-      lambda_all = res2$glm_model$parameters$lambda
-      allLambdaModels = lapply(lambda_all, .h2o.__getGLM2LambdaModel, data=data, model_key=destKey, params=params)
-      if(length(allLambdaModels) <= 1) return(allLambdaModels[[1]]) else return(allLambdaModels)
-    } else {
-      params$lambda_all = res2$glm_model$parameters$lambda
-      best_lambda_idx = res2$glm_model$best_lambda_idx+1
-      best_lambda = res2$glm_model$parameters$lambda[best_lambda_idx]
-      allLambdaModels = .h2o.__getGLM2LambdaModel(best_lambda, data, destKey, params)
-      return(allLambdaModels)
-    }
+    h2o.glm.get_model(data,res$destination_key,return_all_lambda)
   } else
-    .h2o.glm2grid.internal(x_ignore, args$y, data, family, nfolds, alpha, nlambda, lambda.min.ratio, lambda, epsilon, standardize, prior, tweedie.p, iter.max, higher_accuracy, lambda_search, return_all_lambda)
+  .h2o.glm2grid.internal(x_ignore, args$y, data, family, nfolds, alpha, nlambda, lambda.min.ratio, lambda, epsilon, standardize, prior, tweedie.p, iter.max, higher_accuracy, lambda_search, return_all_lambda)
 }
-
+h2o.glm.get_model <- function (data,model_key,return_all_lambda=TRUE){
+    res2 = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLMModelView, '_modelKey'=model_key)
+    destKey = res2$glm_model$'_key'
+    make_model <- function(x){
+        m = .h2o.__getGLM2Results(res2$glm_model, x);
+        res_xval = list()
+        if(!is.null(res2$glm_model$submodels[[x]]$xvalidation)){
+            xvalKey = res2$glm_model$submodels[[x]]$xvalidation$xval_models
+            # Get results from cross-validation
+            if(!is.null(xvalKey) && length(xvalKey) >= 2) {
+                for(j in 1:length(xvalKey)) {
+                    resX = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLMModelView, '_modelKey'=xvalKey[j])
+                    modelXval = .h2o.__getGLM2Results(resX$glm_model,1)
+                    res_xval[[j]] = new("H2OGLMModel", key=xvalKey[j], data=data, model=modelXval, xval=list())
+                }
+            }
+        }
+        new("H2OGLMModel", key=model_key, data=data, model=m, xval=res_xval)
+    }
+    if(return_all_lambda){
+        new("H2OGLMModelList", models=lapply(1:length(res2$glm_model$submodels),make_model),best_model=res2$glm_model$best_lambda_idx+1)
+    }else {
+        make_model(res2$glm_model$best_lambda_idx+1)
+    }
+}
 .h2o.glm2grid.internal <- function(x_ignore, y, data, family, nfolds, alpha, nlambda, lambda.min.ratio, lambda, epsilon, standardize, prior, tweedie.p, iter.max, higher_accuracy, lambda_search, return_all_lambda) {
   if(family == "tweedie")
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, response = y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, nlambdas = nlambda, lambda_min_ratio = lambda.min.ratio, lambda = lambda, beta_epsilon = epsilon, standardize = as.numeric(standardize), max_iter = iter.max, higher_accuracy = as.numeric(higher_accuracy), lambda_search = as.numeric(lambda_search), tweedie_variance_power = tweedie.p)
@@ -435,6 +448,10 @@ h2o.getGLMLambdaModel <- function(model, lambda) {
   new("H2OGLMModel", key=model_key, data=data, model=modelOrig, xval=res_xval)
 }
 
+
+
+
+
 .h2o.__getGLM2Summary <- function(model) {
   mySum = list()
   mySum$model_key = model$'_key'
@@ -454,31 +471,34 @@ h2o.getGLMLambdaModel <- function(model, lambda) {
   return(mySum)
 }
 
-# Pretty formatting of H2O GLM2 results
-.h2o.__getGLM2Results <- function(model, params) {
-  submod <- model$submodels[[model$best_lambda_idx+1]]
-  valid  <- submod$validation
 
+# Pretty formatting of H2O GLM2 results
+.h2o.__getGLM2Results <- function(model, lambda_idx) {
+  submod <- model$submodels[[lambda_idx]]
+  if(!is.null(submod$xvalidation)){
+    valid <- submod$xvalidation
+  } else {
+    valid  <- submod$validation
+  }
+  params <- list()
   result <- list()
   params$alpha  <- model$alpha
-  # params$lambda <- model$lambdas
-  params$best_lambda <- model$lambdas[[model$best_lambda_idx+1]]
+  params$lambda <- model$submodels[[model$best_lambda_idx+1]]$lambda
   result$params <- params
   if(model$glm$family == "tweedie")
     result$params$family <- .h2o.__getFamily(model$glm$family, model$glm$link, model$glm$tweedie_variance_power, model$glm$tweedie_link_power)
   else
     result$params$family <- .h2o.__getFamily(model$glm$family, model$glm$link)
-
   result$coefficients <- as.numeric(unlist(submod$beta))
   idxes <- submod$idxs + 1
   names(result$coefficients) <- model$coefficients_names[idxes] 
-  if(params$standardize) {
+  if(model$parameters$standardize) {
     result$normalized_coefficients = as.numeric(unlist(submod$norm_beta))
     names(result$normalized_coefficients) = model$coefficients_names[submod$idxs + 1]
   }
   result$rank = valid$'_rank'
   result$iter = submod$iteration
-
+  result$lambda = submod$lambda
   result$deviance = as.numeric(valid$residual_deviance)
   result$null.deviance = as.numeric(valid$null_deviance)
   result$df.residual = max(valid$nobs-result$rank,0)
