@@ -1208,10 +1208,11 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, nfolds=0, validation,
                         nbins=1024, 
                         seed=-1,
                         stat.type="ENTROPY",
-                        balance.classes=FALSE,
-                        classwt=NULL,
-                        sampling_strategy = "RANDOM",
-                        strata_samples=NULL) {
+                        balance.classes=FALSE
+                        #classwt=NULL,
+                        #sampling_strategy = "RANDOM",
+                        #strata_samples=NULL) {
+                        ) {
   args <- .verify_dataxy(data, x, y)
   if(!is.numeric(ntree)) stop('ntree must be a number')
   if( any(ntree < 1) ) stop('ntree must be >= 1')
@@ -1224,18 +1225,18 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, nfolds=0, validation,
   if(!is.numeric(seed)) stop("seed must be an integer")
   if(!(stat.type %in% c("ENTROPY", "GINI"))) stop(paste("stat.type must be either GINI or ENTROPY. Input was: ", stat.type, sep = ""))
   if(!(is.logical(oobee))) stop(paste("oobee must be logical (TRUE or FALSE). Input was: ", oobee, " and is of type ", mode(oobee), sep = ""))
-  if(!(sampling_strategy %in% c("RANDOM", "STRATIFIED"))) stop(paste("sampling_strategy must be either RANDOM or STRATIFIED. Input was: ", sampling_strategy, sep = ""))
+  #if(!(sampling_strategy %in% c("RANDOM", "STRATIFIED"))) stop(paste("sampling_strategy must be either RANDOM or STRATIFIED. Input was: ", sampling_strategy, sep = ""))
   
   if(!missing(ntree) && length(ntree) > 1 || !missing(depth) && length(depth) > 1 || !missing(sample.rate) && length(sample.rate) > 1 || !missing(nbins) && length(nbins) > 1) 
     stop("Random forest grid search not supported under SpeeDRF")
 
-  if(!is.numeric(classwt) && !is.null(classwt)) stop("classwt must be numeric")
-  if(!is.null(classwt)) {
-    if(any(classwt < 0)) stop("Class weights must all be positive")
-  }
-  if(!is.null(strata_samples)) {
-    if(any(strata_samples) < 0) stop("Strata samples must all be positive")
-  }
+  #if(!is.numeric(classwt) && !is.null(classwt)) stop("classwt must be numeric")
+  #if(!is.null(classwt)) {
+  #  if(any(classwt < 0)) stop("Class weights must all be positive")
+  #}
+  #if(!is.null(strata_samples)) {
+  #  if(any(strata_samples) < 0) stop("Strata samples must all be positive")
+  #}
   if(!is.numeric(nfolds)) stop("nfolds must be numeric")
   if(nfolds == 1) stop("nfolds cannot be 1")
   if(!missing(validation) && !class(validation) %in% c("H2OParsedData", "H2OParsedDataVA"))
@@ -1245,15 +1246,15 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, nfolds=0, validation,
     # Default to using training data as validation
     validation = data
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, response=args$y, ignored_cols=args$x_ignore, balance_classes = as.numeric(balance.classes), num_trees=ntree, max_depth=depth, validation=data@key, importance=as.numeric(importance),
-      sample=sample.rate, bin_limit=nbins, seed=seed, select_stat_type = stat.type, oobee=as.numeric(oobee), sampling_strategy=sampling_strategy, strata_samples=strata_samples, class_weights=classwt)
+      sample=sample.rate, bin_limit=nbins, seed=seed, select_stat_type = stat.type, oobee=as.numeric(oobee), sampling_strategy="RANDOM")
   } else if(missing(validation) && nfolds >= 2) {
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, response=args$y, ignored_cols=args$x_ignore, num_trees=ntree, balance_classes = as.numeric(balance.classes), max_depth=depth, n_folds=nfolds, importance=as.numeric(importance),
-      sample=sample.rate, bin_limit=nbins, seed=seed, select_stat_type=stat.type, oobee=as.numeric(oobee), sampling_strategy=sampling_strategy, strata_samples=strata_samples, class_weights=classwt)
+      sample=sample.rate, bin_limit=nbins, seed=seed, select_stat_type=stat.type, oobee=as.numeric(oobee), sampling_strategy="RANDOM")
   } else if(!missing(validation) && nfolds == 0) {
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, response=args$y, ignored_cols=args$x_ignore, balance_classes = as.numeric(balance.classes), num_trees=ntree, max_depth=depth, validation=validation@key, importance=as.numeric(importance),
-      sample=sample.rate, bin_limit=nbins, seed=seed, select_stat_type = stat.type, oobee=as.numeric(oobee), sampling_strategy=sampling_strategy, strata_samples=strata_samples, class_weights=classwt)
+      sample=sample.rate, bin_limit=nbins, seed=seed, select_stat_type = stat.type, oobee=as.numeric(oobee), sampling_strategy="RANDOM")
   } else stop("Cannot set both validation and nfolds at the same time")
-  params = list(x=args$x, y=args$y, ntree=ntree, depth=depth, sample.rate=sample.rate, bin_limit=nbins, stat.type = stat.type, balance_classes = as.numeric(balance.classes), classwt=classwt, sampling_strategy=sampling_strategy, seed=seed, oobee=oobee, nfolds=nfolds, importance=importance)
+  params = list(x=args$x, y=args$y, ntree=ntree, depth=depth, sample.rate=sample.rate, bin_limit=nbins, stat.type = stat.type, balance_classes = as.numeric(balance.classes), sampling_strategy="RANDOM", seed=seed, oobee=oobee, nfolds=nfolds, importance=importance)
 
   if(length(ntree) == 1 && length(depth) == 1 && length(sample.rate) == 1 && length(nbins) == 1)
     .h2o.singlerun.internal("SpeeDRF", data, res, nfolds, validation, params)
@@ -1298,19 +1299,22 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, nfolds=0, validation,
     #  result <- c(result, tmp)
     #}
 
-    class_names = tail(res$'_domains', 1)[[1]]
+    class_names <- tail(res$'_domains', 1)[[1]]
 
     raw_cms <- tail(res$cms, 1)[[1]]$'_arr'
-    rrr <- NULL
-    if ( res$parameters$n_folds <= 0) {
-      f <- function(o) { o[-length(o)] }
-      rrr <- raw_cms
-      rrr <- lapply(rrr, f)
-      rrr <- rrr[-length(rrr)]
-      raw_cms <<- rrr
-    }
-   
-    if (!is.null(rrr)) {raw_cms <- rrr}
+
+
+#    rrr <- NULL
+#    if ( res$parameters$n_folds <= 0) {
+#      f <- function(o) { o[-length(o)] }
+#      rrr <- raw_cms
+#      rrr <- lapply(rrr, f)
+#      rrr <- rrr[-length(rrr)]
+#      raw_cms <<- rrr
+#    }
+#
+#    if (!is.null(rrr)) {raw_cms <- rrr}
+
     result$confusion = .build_cm(raw_cms, class_names)
   }
 

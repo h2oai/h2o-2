@@ -323,21 +323,21 @@ public class SpeeDRF extends Job.ValidatedJob {
 //        } else {
 //          strata_samples = new int[response.toEnum().cardinality()];
 //          for (int i = 0; i < strata_samples.length; i++) strata_samples[i] = 67;
-        }
+//        }
 
         // Handle bad user input for class weights
         class_weights = checkClassWeights(class_weights);
 
         // Initialize regression specific model parameters
-//      } else {
+      } else {
 
         // Class Weights and Strata Samples do not apply to Regression
         class_weights = null;
 //        strata_samples = null;
 
         //TODO: Variable importance in regression not currently supported
-        if (importance) throw new IllegalArgumentException("Variable Importance for SpeeDRF regression not currently supported.");
-//      }
+        if (importance && regression) throw new IllegalArgumentException("Variable Importance for SpeeDRF regression not currently supported.");
+      }
 
       // Generate a new seed by default.
       if (seed == -1) {
