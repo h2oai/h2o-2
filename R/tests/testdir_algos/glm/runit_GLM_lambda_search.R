@@ -11,8 +11,6 @@ test.GLM.lambda.search <- function(conn) {
   Log.info("H2O GLM (binomial) with parameters: lambda_search = TRUE, nfolds: 2\n")
   prostate.nosearch = h2o.glm(x = 3:9, y = 2, data = prostate.hex, family = "binomial", nlambda = 50, lambda_search = FALSE, nfolds = 2)
   params.nosearch = prostate.nosearch@model$params
-  expect_equal(length(params.nosearch$lambda_all), 1)
-  expect_equal(params.nosearch$lambda, params.nosearch$lambda_all)
   expect_error(h2o.getGLMLambdaModel(prostate.nosearch, 0.5))
   
   # GLM with lambda search, return only model corresponding to best lambda as determined by H2O
@@ -33,7 +31,6 @@ test.GLM.lambda.search <- function(conn) {
   Log.info("H2O GLM (binomial) with parameters: lambda_search: TRUE, return_all_lambda: TRUE, nfolds: 2\n")
   prostate.search = h2o.glm(x = 3:9, y = 2, data = prostate.hex, family = "binomial", nlambda = 50, lambda_search = TRUE, return_all_lambda = TRUE, nfolds = 2)
   
-  # lambda_all = prostate.search[[1]]@model$params$lambda_all
   lambda_all = sapply(prostate.search, function(x) { x@model$params$lambda })
   lambda_idx = sample(1:length(lambda_all), 1)
   random_lambda = lambda_all[[lambda_idx]]
