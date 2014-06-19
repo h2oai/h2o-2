@@ -149,6 +149,31 @@ public class ModelUtils {
     throw H2O.fail();           // Should Not Reach Here
   }
 
+  /**
+   * Correct a given list of class probabilities produced as a prediction by a model back to prior class distribution
+   *
+   * <p>The implementation is based on Eq. (27) in  <a href="http://gking.harvard.edu/files/0s.pdf">the paper</a>.
+   *
+   * @param scored list of class probabilities beginning at index 1
+   * @param priorClassDist original class distribution
+   * @param modelClassDist class distribution used for model building (e.g., data was oversampled)
+   * @return corrected list of probabilities
+   */
+  public static float[] correctProbabilities(float[] scored, float[] priorClassDist, float[] modelClassDist) {
+    double probsum=0;
+    for( int c=1; c<scored.length; c++ ) {
+      final double original_fraction = priorClassDist[c-1];
+      assert(original_fraction > 0) : "original fraction should be > 0, but is " + original_fraction + ": not using enough training data?";
+      final double oversampled_fraction = modelClassDist[c-1];
+      assert(oversampled_fraction > 0) : "oversampled fraction should be > 0, but is " + oversampled_fraction + ": not using enough training data?";
+      assert(!Double.isNaN(scored[c]));
+      scored[c] *= original_fraction / oversampled_fraction;
+      probsum += scored[c];
+    }
+    if (probsum>0) for (int i=1;i<scored.length;++i) scored[i] /= probsum;
+    return scored;
+  }
+
 
   /**
    * Sample out-of-bag rows with given rate with help of given sampler.

@@ -134,10 +134,10 @@ public class VariableImportance extends MRTask2<VariableImportance> {
 
         switch( _model.sampling_strategy ) {
           case RANDOM          : if (sampledItem < _model.sample ) continue ROWS; break;
-          case STRATIFIED_LOCAL:
-            int clazz = (int) chks[_ncols - 1].at8(row) - cmin;
-            if (sampledItem < /*_model.strata_samples[clazz]*/ _model.sample ) continue ROWS;
-            break;
+//          case STRATIFIED_LOCAL:
+//            int clazz = (int) chks[_ncols - 1].at8(row) - cmin;
+//            if (sampledItem < /*_model.strata_samples[clazz]*/ _model.sample ) continue ROWS;
+//            break;
           default: assert false : "The selected sampling strategy does not support OOBEE replay!"; break;
         }
 

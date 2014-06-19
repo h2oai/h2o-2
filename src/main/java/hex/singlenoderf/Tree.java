@@ -487,8 +487,7 @@ public class Tree extends H2OCountedCompleter {
       }
     }
     if(regression) return ts.get4f();
-    int vote = ts.get1()&0xFF;
-    return vote;      // Return the leaf's class
+    return ts.get1()&0xFF;      // Return the leaf's class
   }
 
   public static int dataId( byte[] bits) { return UDP.get4(bits, 0); }
