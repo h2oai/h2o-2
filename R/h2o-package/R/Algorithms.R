@@ -403,11 +403,13 @@ h2o.glm.FV <- function(x, y, data, family, nfolds = 10, alpha = 0.5, nlambda = 1
 }
 
 h2o.getGLMLambdaModel <- function(model, lambda) {
+  if(missing(model) || length(model) == 0) stop("model must be specified")
+  if(class(model) == "list") model = model[[1]]
   if(class(model) != "H2OGLMModel") stop("model must be of class H2OGLMModel")
   .h2o.__getGLM2LambdaModel(lambda, model@data, model@key, model@model$params)
 }
 
-.h2o.__getGLMLambdaModel <- function(lambda, data, model_key, params = list()) {
+.h2o.__getGLM2LambdaModel <- function(lambda, data, model_key, params = list()) {
   if(missing(lambda) || length(lambda) > 1 || !is.numeric(lambda)) stop("lambda must be a single number")
   if(lambda < 0) stop("lambda must non-negative")
   

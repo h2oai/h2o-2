@@ -614,7 +614,7 @@ public class NeuralNet extends ValidatedJob {
     public boolean unstable = false;
 
     NeuralNetModel(Key selfKey, Key dataKey, Frame fr, Layer[] ls, NeuralNet p) {
-      super(selfKey, dataKey, fr);
+      super(selfKey, dataKey, fr, /* priorClassDistribution */ null);
       parameters = p;
       layers = ls;
       weights = new float[ls.length][];

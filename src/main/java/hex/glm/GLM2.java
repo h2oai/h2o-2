@@ -296,7 +296,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         //pass
     }
     Frame fr = DataInfo.prepareFrame(source, response, ignored_cols, family==Family.binomial, true,true);
-    _dinfo = new DataInfo(fr, 1, use_all_factor_levels || lambda_search, standardize,false);
+    _dinfo = new DataInfo(fr, 1, use_all_factor_levels || lambda_search, standardize ? DataInfo.TransformType.STANDARDIZE : DataInfo.TransformType.NONE, DataInfo.TransformType.NONE);
     if(higher_accuracy)setHighAccuracy();
   }
   @Override protected boolean filterNaCols(){return true;}
@@ -525,7 +525,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   private double [] setNewBeta(final double [] newBeta){
     final double [] fullBeta = (_activeCols == null)?newBeta:expandVec(newBeta,_activeCols);
     final double [] newBetaDeNorm;
-    if(_dinfo._standardize) {
+    if(_dinfo._predictor_transform == DataInfo.TransformType.STANDARDIZE) {
       newBetaDeNorm = fullBeta.clone();
       double norm = 0.0;        // Reverse any normalization on the intercept
       // denormalize only the numeric coefs (categoricals are not normalized)

@@ -189,8 +189,14 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       assert false : "Response domain' names should be always presented in case of classification";
     if( domain == null ) domain = new String[] {"r"}; // For regression, give a name to class 0
 
-    // Find the class distribution
-    _distribution = _nclass > 1 ? new MRUtils.ClassDist(_nclass).doAll(response).dist() : null;
+    float[] priorClassDist = null; // Distribution of classes in response
+    float[] classDist = null; // New distribution of classes if input frame was modified (resampled, balanced)
+    // Compute class distribution
+    if (classification) {
+      MRUtils.ClassDist cdmt = new MRUtils.ClassDist(_nclass).doAll(response);
+      _distribution = cdmt.dist();
+      priorClassDist = cdmt.rel_dist();
+    }
 
     // Handle imbalanced classes by stratified over/under-sampling
     // initWorkFrame sets the modeled class distribution, and model.score() corrects the probabilities back using the distribution ratios
@@ -204,8 +210,14 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
         fr = stratified;
         _nrows = fr.numRows();
         response = fr.vecs()[response_idx];
+        // Recompute distribution since the input frame was modified
+        MRUtils.ClassDist cdmt = new MRUtils.ClassDist(_nclass).doAll(response);
+        _distribution = cdmt.dist();
+        classDist = cdmt.rel_dist();
       }
     }
+    Log.info(logTag(), "Prior class distribution: " + Arrays.toString(priorClassDist));
+    Log.info(logTag(), "Model class distribution: " + Arrays.toString(classDist));
 
     // Also add to the basic working Frame these sets:
     //   nclass Vecs of current forest results (sum across all trees)
@@ -231,8 +243,8 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     // Fetch checkpoint
     assert checkpoint==null || (!(overwrite_checkpoint && checkpoint!=null) || outputKey==checkpoint): "If checkpoint is to be overwritten then outputkey has to equal to checkpoint key";
     TM checkpointModel = checkpoint!=null ? (TM) UKV.get(checkpoint) : null;
-    // Create an initial model based on given parameters
-    TM model = makeModel(outputKey, dataKey, testKey, checkpointModel!=null?ntrees+checkpointModel.ntrees():ntrees,names, domains, getCMDomain());
+    // Create an INITIAL MODEL based on given parameters
+    TM model = makeModel(outputKey, dataKey, testKey, checkpointModel!=null?ntrees+checkpointModel.ntrees():ntrees,names, domains, getCMDomain(), priorClassDist, classDist);
     // Update the model by a checkpoint
     if (checkpointModel!=null) {
       checkpointModel.read_lock(self()); // lock it for read to avoid any other job to start working on it
@@ -872,7 +884,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
    */
   protected abstract void initWorkFrame( TM initialModel, Frame fr);
 
-  protected abstract TM makeModel( Key outputKey, Key dataKey, Key testKey, int ntrees, String names[], String domains[][], String[] cmDomain);
+  protected abstract TM makeModel( Key outputKey, Key dataKey, Key testKey, int ntrees, String names[], String domains[][], String[] cmDomain, float[] priorClassDist, float[] classDist);
   protected abstract TM makeModel( TM model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC);
   protected abstract TM makeModel( TM model, DTree ktrees[], DTree.TreeModel.TreeStats tstats);
   protected abstract TM updateModel( TM model, TM checkpoint, boolean overwriteCheckpoint);

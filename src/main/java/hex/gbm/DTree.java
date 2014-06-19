@@ -551,12 +551,15 @@ public class DTree extends Iced {
     private final int num_folds;
     private transient volatile CompressedTree[/*N*/][/*nclasses OR 1 for regression*/] _treeBitsCache;
 
-    public TreeModel( Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, int num_folds) {
-      this(key, dataKey, testKey, names, domains, cmDomain, ntrees, max_depth, min_rows, nbins, num_folds, new Key[0][], new ConfusionMatrix[0], new double[0], null, null, null);
+    public TreeModel( Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, int num_folds, float[] priorClassDist, float[] classDist) {
+      this(key, dataKey, testKey, names, domains, cmDomain, ntrees, max_depth, min_rows, nbins, num_folds,
+          priorClassDist, classDist,
+          new Key[0][], new ConfusionMatrix[0], new double[0], null, null, null);
     }
-    public TreeModel( Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, int num_folds,
+    private TreeModel( Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, int num_folds,
+                      float[] priorClassDist, float[] classDist,
                       Key[][] treeKeys, ConfusionMatrix[] cms, double[] errs, TreeStats treeStats, VarImp varimp, AUC validAUC) {
-      super(key,dataKey,names,domains);
+      super(key,dataKey,names,domains,priorClassDist, classDist);
       this.N = ntrees;
       this.max_depth = max_depth; this.min_rows = min_rows; this.nbins = nbins;
       this.num_folds = num_folds;
@@ -571,7 +574,7 @@ public class DTree extends Iced {
     }
     // Simple copy ctor, null value of parameter means copy from prior-model
     protected TreeModel(TreeModel prior, Key[][] treeKeys, double[] errs, ConfusionMatrix[] cms, TreeStats tstats, VarImp varimp, AUC validAUC) {
-      super(prior._key,prior._dataKey,prior._names,prior._domains);
+      super(prior._key,prior._dataKey,prior._names,prior._domains,prior._priorClassDist, prior._modelClassDist);
       this.N = prior.N;
       this.testKey   = prior.testKey;
       this.max_depth = prior.max_depth;
@@ -587,7 +590,7 @@ public class DTree extends Iced {
       if (varimp   != null) this.varimp    = varimp;   else this.varimp    = prior.varimp;
       if (validAUC != null) this.validAUC  = validAUC; else this.validAUC  = prior.validAUC;
     }
-
+    // Additional copy ctors to update specific fields
     public TreeModel(TreeModel prior, DTree[] tree, double err, ConfusionMatrix cm, TreeStats tstats) {
       this(prior, append(prior.treeKeys, tree), Utils.append(prior.errs, err), Utils.append(prior.cms, cm), tstats, null, null);
     }
