@@ -924,7 +924,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   }
 
   /**
-   * This is called from Model.score(). Make either a prediction or a reconstruction.
+   * This is an overridden version of Model.score(). Make either a prediction or a reconstruction.
    * @param frame Test dataset
    * @return A frame containing the prediction or reconstruction
    */
@@ -934,14 +934,22 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       return super.score(frame);
     } else {
       // Reconstruction
-      Frame fr = new Frame(frame);
+      // Adapt the Frame layout - returns adapted frame and frame containing only
+      // newly created vectors
+      Frame[] adaptFrms = adapt(frame,false,false/*no response*/);
+      // Adapted frame containing all columns - mix of original vectors from fr
+      // and newly created vectors serving as adaptors
+      Frame adaptFrm = adaptFrms[0];
+      // Contains only newly created vectors. The frame eases deletion of these vectors.
+      Frame onlyAdaptFrm = adaptFrms[1];
+
       final int len = model_info().data_info().fullN();
       String prefix = "reconstr_";
       assert(model_info().data_info()._responses == 0);
       String[] coefnames = model_info().data_info().coefNames();
       assert(len == coefnames.length);
       for( int c=0; c<len; c++ )
-        fr.add(prefix+coefnames[c],fr.anyVec().makeZero());
+        adaptFrm.add(prefix+coefnames[c],adaptFrm.anyVec().makeZero());
       new MRTask2() {
         @Override public void map( Chunk chks[] ) {
           double tmp [] = new double[_names.length];
@@ -953,11 +961,12 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
               chks[_names.length+c].set0(row,p[c]);
           }
         }
-      }.doAll(fr);
+      }.doAll(adaptFrm);
 
       // Return just the output columns
-      int x=_names.length, y=fr.numCols();
-      return fr.extractFrame(x, y);
+      int x=_names.length, y=adaptFrm.numCols();
+      onlyAdaptFrm.delete();
+      return adaptFrm.extractFrame(x, y);
     }
   }
 
