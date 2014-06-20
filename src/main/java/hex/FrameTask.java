@@ -149,18 +149,20 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       final Vec[] vecs =  fr.vecs();
 
       // put response to the end (if not already)
-      for(int i = 0; i < vecs.length-1; ++i) {
-        if(vecs[i] == response){
-          final String n = fr._names[i];
-          if (toEnum && !vecs[i].isEnum()) fr.add(n, fr.remove(i).toEnum()); //convert int classes to enums
-          else fr.add(n, fr.remove(i));
-          break;
+      if (response != null) {
+        for (int i = 0; i < vecs.length - 1; ++i) {
+          if (vecs[i] == response) {
+            final String n = fr._names[i];
+            if (toEnum && !vecs[i].isEnum()) fr.add(n, fr.remove(i).toEnum()); //convert int classes to enums
+            else fr.add(n, fr.remove(i));
+            break;
+          }
         }
-      }
-      // special case for when response was at the end already
-      if (toEnum && !response.isEnum() && vecs[vecs.length-1] == response) {
-        final String n = fr._names[vecs.length-1];
-        fr.add(n, fr.remove(vecs.length-1).toEnum());
+        // special case for when response was at the end already
+        if (toEnum && !response.isEnum() && vecs[vecs.length - 1] == response) {
+          final String n = fr._names[vecs.length - 1];
+          fr.add(n, fr.remove(vecs.length - 1).toEnum());
+        }
       }
 
       ArrayList<Integer> constantOrNAs = new ArrayList<Integer>();
@@ -359,7 +361,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         }
       }
 
-      if(response_transform != TransformType.NONE){
+      if(response_transform != TransformType.NONE && _responses > 0){
         _normRespSub = MemoryManager.malloc8d(_responses);
         _normRespMul = MemoryManager.malloc8d(_responses); Arrays.fill(_normRespMul, 1);
       } else _normRespSub = _normRespMul = null;
@@ -438,6 +440,47 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       System.arraycopy(_adaptedFrame._names, _cats, res, k, nums);
       return res;
     }
+
+    /**
+     * Normalize horizontalized categoricals to become probabilities per factor level.
+     * This is done with the SoftMax function.
+     * @param in input values
+     * @param out output values (can be the same as input)
+     */
+    public final void softMaxCategoricals(float[] in, float[] out) {
+      if (_cats == 0) return;
+      if (!_useAllFactorLevels) throw new UnsupportedOperationException("All factor levels must be present for re-scaling with SoftMax.");
+      assert (in.length == out.length);
+      assert (in.length == fullN());
+      final Vec[] vecs = _adaptedFrame.vecs();
+      int k = 0;
+      for (int i = 0; i < _cats; ++i) {
+        final int factors = vecs[i]._domain.length;
+        final float max = Utils.maxValue(in, k, k + factors);
+        float scale = 0;
+        for (int j = 0; j < factors; ++j) {
+          out[k + j] = (float) Math.exp(in[k + j] - max);
+          scale += out[k + j];
+        }
+        for (int j = 0; j < factors; ++j)
+          out[k + j] /= scale;
+        k += factors;
+      }
+      assert(k == numStart());
+    }
+
+    /**
+     * Undo the standardization/normalization of numerical columns
+     * @param in input values
+     * @param out output values (can be the same as input)
+     */
+    public final void unScaleNumericals(float[] in, float[] out) {
+      if (_nums == 0) return;
+      assert (in.length == out.length);
+      assert (in.length == fullN());
+      for (int k=numStart(); k < fullN(); ++k)
+        out[k] = in[k] / (float)_normMul[k-numStart()] + (float)_normSub[k-numStart()];
+    }
   }
 
   @Override
@@ -467,7 +510,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     chunkInit();
     double [] nums = MemoryManager.malloc8d(_dinfo._nums);
     int    [] cats = MemoryManager.malloc4(_dinfo._cats);
-    double [] response = MemoryManager.malloc8d(_dinfo._responses);
+    double [] response = _dinfo._responses == 0 ? null : MemoryManager.malloc8d(_dinfo._responses);
     int start = 0;
     int end = nrows;
 

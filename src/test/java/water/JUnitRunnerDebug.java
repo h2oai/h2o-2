@@ -16,7 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class JUnitRunnerDebug {
-  public static final int NODES = 1;
+  public static final int NODES = 3;
 
   public static void main(String[] args) throws Exception {
     int[] ports = new int[NODES];
@@ -50,7 +50,7 @@ public class JUnitRunnerDebug {
 
       // Deep Learning tests
 //      tests.add(DeepLearningVsNeuralNet.class); //only passes for NODES=1, not clear why
-//      tests.add(DeepLearningAutoEncoderTest.class); //test Deep Learning convergence
+      tests.add(DeepLearningAutoEncoderTest.class); //test Deep Learning convergence
       tests.add(DeepLearningAutoEncoderCategoricalTest.class); //test Deep Learning convergence
 //      tests.add(DeepLearningSpiralsTest.class); //test Deep Learning convergence
 //      tests.add(DeepLearningIrisTest.Short.class); //compare Deep Learning vs reference

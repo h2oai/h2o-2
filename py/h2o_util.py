@@ -275,6 +275,15 @@ def choice_with_probability(tupleList):
             raise Exception("h2o_util.choice_with_probability() error, prob's sum > 1")
     return item
 
+# pick a random param from a dictionary of lists of params
+def pickRandParams(paramDict, params):
+    randomGroupSize = random.randint(1,len(paramDict))
+    for i in range(randomGroupSize):
+        randomKey = random.choice(paramDict.keys())
+        randomV = paramDict[randomKey]
+        randomValue = random.choice(randomV)
+        params[randomKey] = randomValue
+
 # this reads a single col out a csv file into a list, without using numpy
 # so we can port some jenkins tests without needing numpy
 def file_read_csv_col(csvPathname, col=0, skipHeader=True, datatype='float', preview=5):

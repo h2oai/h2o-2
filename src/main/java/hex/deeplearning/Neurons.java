@@ -147,17 +147,17 @@ public abstract class Neurons {
       _dropout = this instanceof Input ? new Dropout(units, params.input_dropout_ratio) : new Dropout(units, params.hidden_dropout_ratios[_index]);
     }
     if (!(this instanceof Input)) {
-      _previous = neurons[index-1]; //incoming neurons
+      _previous = neurons[_index]; //incoming neurons
       _minfo = minfo;
-      _w = minfo.get_weights(index-1); //incoming weights
-      _b = minfo.get_biases(index-1); //bias for this layer (starting at hidden layer)
+      _w = minfo.get_weights(_index); //incoming weights
+      _b = minfo.get_biases(_index); //bias for this layer (starting at hidden layer)
       if (minfo.has_momenta()) {
-        _wm = minfo.get_weights_momenta(index-1); //incoming weights
-        _bm = minfo.get_biases_momenta(index-1); //bias for this layer (starting at hidden layer)
+        _wm = minfo.get_weights_momenta(_index); //incoming weights
+        _bm = minfo.get_biases_momenta(_index); //bias for this layer (starting at hidden layer)
       }
       if (minfo.adaDelta()) {
-        _ada_dx_g = minfo.get_ada_dx_g(index-1);
-        _bias_ada_dx_g = minfo.get_biases_ada_dx_g(index - 1);
+        _ada_dx_g = minfo.get_ada_dx_g(_index);
+        _bias_ada_dx_g = minfo.get_biases_ada_dx_g(_index);
       }
       _shortcut = (params.fast_mode || (
               // not doing fast mode, but also don't have anything else to update (neither momentum nor ADADELTA history), and no L1/L2
@@ -661,6 +661,7 @@ public abstract class Neurons {
      */
     public void setInput(long seed, final double[] nums, final int numcat, final int[] cats) {
       _a = _dvec;
+      Arrays.fill(_a.raw(), 0f);
       for (int i=0; i<numcat; ++i) _a.set(cats[i], 1f);
       for (int i=0; i<nums.length; ++i) _a.set(_dinfo.numStart() + i, Double.isNaN(nums[i]) ? 0f : (float) nums[i]);
 
