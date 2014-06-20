@@ -14,11 +14,12 @@ public class DeepLearningTask2 extends DRemoteTask<DeepLearningTask2> {
    * @param model_info Initial DeepLearningModelInfo (weights + biases)
    * @param sync_fraction Fraction of the training data to use for one SGD iteration
    */
-  public DeepLearningTask2(Frame train, DeepLearningModel.DeepLearningModelInfo model_info, float sync_fraction) {
+  public DeepLearningTask2(Frame train, DeepLearningModel.DeepLearningModelInfo model_info, float sync_fraction, boolean computeSparsity) {
     assert(sync_fraction > 0);
     _fr = train;
     _model_info = model_info;
     _sync_fraction = sync_fraction;
+    _computeSparsity = computeSparsity;
   }
 
   /**
@@ -32,6 +33,7 @@ public class DeepLearningTask2 extends DRemoteTask<DeepLearningTask2> {
   final private Frame _fr;
   final private DeepLearningModel.DeepLearningModelInfo _model_info;
   final private float _sync_fraction;
+  final private boolean _computeSparsity;
   private DeepLearningTask _res;
 
   /**
@@ -42,7 +44,7 @@ public class DeepLearningTask2 extends DRemoteTask<DeepLearningTask2> {
    */
   @Override
   public void lcompute() {
-    _res = new DeepLearningTask(_model_info, _sync_fraction);
+    _res = new DeepLearningTask(_model_info, _sync_fraction, _computeSparsity);
     _res.setCompleter(this);
     _res.asyncExec(0, _fr, true /*run_local*/);
   }

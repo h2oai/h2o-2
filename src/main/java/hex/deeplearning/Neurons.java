@@ -169,9 +169,10 @@ public abstract class Neurons {
   /**
    * Forward propagation
    * @param seed For seeding the RNG inside (for dropout)
-   * @param training Whether training is done or just testing (no need for dropout)
+   * @param dropout Whether dropout is needed
+   * @param computeSparsity Whether sparsity should be computed
    */
-  protected abstract void fprop(long seed, boolean training);
+  protected abstract void fprop(long seed, boolean dropout, boolean computeSparsity);
 
   /**
    *  Back propagation
@@ -625,7 +626,7 @@ public abstract class Neurons {
     }
 
     @Override protected void bprop() { throw new UnsupportedOperationException(); }
-    @Override protected void fprop(long seed, boolean training) { throw new UnsupportedOperationException(); }
+    @Override protected void fprop(long seed, boolean dropout, boolean computeSparsity) { throw new UnsupportedOperationException(); }
 
     /**
      * One of two methods to set layer input values. This one is for raw double data, e.g. for scoring
@@ -683,7 +684,7 @@ public abstract class Neurons {
    */
   public static class Tanh extends Neurons {
     public Tanh(int units) { super(units); }
-    @Override protected void fprop(long seed, boolean training) {
+    @Override protected void fprop(long seed, boolean ignored, boolean computeSparsity) {
       gemv((DenseVector)_a, _w, _previous._a, _b, _dropout != null ? _dropout.bits() : null);
       final int rows = _a.size();
       for( int row = 0; row < rows; row++ ) {
@@ -715,14 +716,14 @@ public abstract class Neurons {
    */
   public static class TanhDropout extends Tanh {
     public TanhDropout(int units) { super(units); }
-    @Override protected void fprop(long seed, boolean training) {
-      if (training) {
+    @Override protected void fprop(long seed, boolean dropout, boolean computeSparsity) {
+      if (dropout) {
         seed += params.seed + 0xDA7A6000;
         _dropout.fillBytes(seed);
-        super.fprop(seed, true);
+        super.fprop(seed, true, computeSparsity);
       }
       else {
-        super.fprop(seed, false);
+        super.fprop(seed, false, computeSparsity);
         Utils.mult(_a.raw(), (float)params.hidden_dropout_ratios[_index]);
       }
     }
@@ -733,13 +734,13 @@ public abstract class Neurons {
    */
   public static class Maxout extends Neurons {
     public Maxout(int units) { super(units); }
-    @Override protected void fprop(long seed, boolean training) {
+    @Override protected void fprop(long seed, boolean dropout, boolean computeSparsity) {
       float max = 0;
       final int rows = _a.size();
       if (_previous._a instanceof DenseVector) {
         for( int row = 0; row < rows; row++ ) {
           _a.set(row, 0);
-          if( !training || _dropout == null || _dropout.unit_active(row) ) {
+          if( !dropout || _dropout == null || _dropout.unit_active(row) ) {
             _a.set(row, Float.NEGATIVE_INFINITY);
             for( int i = 0; i < _previous._a.size(); i++ )
               _a.set(row, Math.max(_a.get(row), _w.get(row, i) * _previous._a.get(i)));
@@ -754,7 +755,7 @@ public abstract class Neurons {
         SparseVector x = (SparseVector)_previous._a;
         for( int row = 0; row < _a.size(); row++ ) {
           _a.set(row, 0);
-          if( !training || _dropout == null || _dropout.unit_active(row) ) {
+          if( !dropout || _dropout == null || _dropout.unit_active(row) ) {
 //            _a.set(row, Float.NEGATIVE_INFINITY);
 //            for( int i = 0; i < _previous._a.size(); i++ )
 //              _a.set(row, Math.max(_a.get(row), _w.get(row, i) * _previous._a.get(i)));
@@ -798,14 +799,14 @@ public abstract class Neurons {
    */
   public static class MaxoutDropout extends Maxout {
     public MaxoutDropout(int units) { super(units); }
-    @Override protected void fprop(long seed, boolean training) {
-      if (training) {
+    @Override protected void fprop(long seed, boolean dropout, boolean computeSparsity) {
+      if (dropout) {
         seed += params.seed + 0x51C8D00D;
         _dropout.fillBytes(seed);
-        super.fprop(seed, true);
+        super.fprop(seed, true, computeSparsity);
       }
       else {
-        super.fprop(seed, false);
+        super.fprop(seed, false, computeSparsity);
         Utils.mult(_a.raw(), (float)params.hidden_dropout_ratios[_index]);
       }
     }
@@ -816,7 +817,7 @@ public abstract class Neurons {
    */
   public static class Rectifier extends Neurons {
     public Rectifier(int units) { super(units); }
-    @Override protected void fprop(long seed, boolean training) {
+    @Override protected void fprop(long seed, boolean ignored, boolean computeSparsity) {
       gemv((DenseVector)_a, _w, _previous._a, _b, _dropout != null ? _dropout.bits() : null);
       final int rows = _a.size();
       for( int row = 0; row < rows; row++ ) {
@@ -848,14 +849,14 @@ public abstract class Neurons {
    */
   public static class RectifierDropout extends Rectifier {
     public RectifierDropout(int units) { super(units); }
-    @Override protected void fprop(long seed, boolean training) {
-      if (training) {
+    @Override protected void fprop(long seed, boolean dropout, boolean computeSparsity) {
+      if (dropout) {
         seed += params.seed + 0x3C71F1ED;
         _dropout.fillBytes(seed);
-        super.fprop(seed, true);
+        super.fprop(seed, true, computeSparsity);
       }
       else {
-        super.fprop(seed, false);
+        super.fprop(seed, false, computeSparsity);
         Utils.mult(_a.raw(), (float)params.hidden_dropout_ratios[_index]);
       }
     }
@@ -866,7 +867,7 @@ public abstract class Neurons {
    */
   public static abstract class Output extends Neurons {
     Output(int units) { super(units); }
-    protected void fprop(long seed, boolean training) { throw new UnsupportedOperationException(); }
+    protected void fprop(long seed, boolean dropout, boolean computeSparsity) { throw new UnsupportedOperationException(); }
     protected void bprop() { throw new UnsupportedOperationException(); }
   }
 

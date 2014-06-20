@@ -11,6 +11,7 @@ import java.util.Random;
 
 public class DeepLearningTask extends FrameTask<DeepLearningTask> {
   final private boolean _training;
+  final private boolean _computeSparsity;
   private hex.deeplearning.DeepLearningModel.DeepLearningModelInfo _input;
   hex.deeplearning.DeepLearningModel.DeepLearningModelInfo _output;
   final public hex.deeplearning.DeepLearningModel.DeepLearningModelInfo model_info() { return _output; }
@@ -19,10 +20,11 @@ public class DeepLearningTask extends FrameTask<DeepLearningTask> {
 
   int _chunk_node_count = 1;
 
-  public DeepLearningTask(hex.deeplearning.DeepLearningModel.DeepLearningModelInfo input, float fraction){this(input,fraction,null);}
-  private DeepLearningTask(hex.deeplearning.DeepLearningModel.DeepLearningModelInfo input, float fraction, H2OCountedCompleter cmp){
+  public DeepLearningTask(hex.deeplearning.DeepLearningModel.DeepLearningModelInfo input, float fraction, boolean computeSparsity){this(input,fraction,computeSparsity, null);}
+  private DeepLearningTask(hex.deeplearning.DeepLearningModel.DeepLearningModelInfo input, float fraction, boolean computeSparsity, H2OCountedCompleter cmp){
     super(input.get_params(),input.data_info(),cmp);
     _training=true;
+    _computeSparsity = computeSparsity;
     _input=input;
     _useFraction=fraction;
     _shuffle = _input.get_params().shuffle_training_data;
@@ -50,7 +52,7 @@ public class DeepLearningTask extends FrameTask<DeepLearningTask> {
       seed = new Random().nextLong(); //multi-node: no point in being reproducible - better to be "good" at being random
     }
     ((Neurons.Input)_neurons[0]).setInput(seed, nums, numcats, cats);
-    step(seed, _neurons, _output, _training, responses);
+    step(seed, _neurons, _output, _training, _computeSparsity, responses);
   }
 
   @Override public void reduce(DeepLearningTask other){
@@ -149,13 +151,14 @@ public class DeepLearningTask extends FrameTask<DeepLearningTask> {
 
   // forward/backward propagation
   // assumption: layer 0 has _a filled with (horizontalized categoricals) double values
-  public static void step(long seed, Neurons[] neurons, DeepLearningModel.DeepLearningModelInfo minfo, boolean training, double[] responses) {
+  public static void step(long seed, Neurons[] neurons, DeepLearningModel.DeepLearningModelInfo minfo, boolean training, boolean computeSparsity, double[] responses) {
     try {
+      final boolean dropout = training || computeSparsity; //only need dropout during training (for now)
       for (int i=1; i<neurons.length-1; ++i) {
-        neurons[i].fprop(seed, training);
+        neurons[i].fprop(seed, dropout, computeSparsity);
       }
       if (minfo.get_params().autoencoder) {
-        neurons[neurons.length - 1].fprop(seed, training);
+        neurons[neurons.length - 1].fprop(seed, training, computeSparsity);
         if (training) {
           for (int i=neurons.length-1; i>0; --i) {
             neurons[i].bprop();
