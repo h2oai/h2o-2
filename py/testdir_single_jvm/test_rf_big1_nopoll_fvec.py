@@ -27,13 +27,15 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_rf_big1_nopoll(self):
+    def test_rf_big1_nopoll_fvec(self):
+        h2o.beta_features = True
         csvFilename = 'hhp_107_01.data.gz'
         hex_key = csvFilename + ".hex"
         
         print "\n" + csvFilename
 
-        parseResult = h2i.import_parse(bucket='smalldata', path=csvFilename, hex_key=hex_key, timeoutSecs=15, schema='put')
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvFilename, 
+            hex_key=hex_key, timeoutSecs=15, schema='put')
         rfViewInitial = []
         # dispatch multiple jobs back to back
         for jobDispatch in range(3):
@@ -55,8 +57,8 @@ class Basic(unittest.TestCase):
 
             # FIX! what model keys do these get?
             randomNode = h2o.nodes[random.randint(0,len(h2o.nodes)-1)]
-            h2o_cmd.runRF(node=randomNode, parseResult=parseResult, model_key=model_key, timeoutSecs=300,
-                 noPoll=False if OVERWRITE_RF_MODEL else True, **kwargs)
+            h2o_cmd.runRF(node=randomNode, parseResult=parseResult, destination_key=model_key, 
+                timeoutSecs=300, noPoll=False if OVERWRITE_RF_MODEL else True, **kwargs)
             # FIX! are these already in there?
             rfView = {}
             rfView['data_key'] = hex_key
@@ -77,8 +79,8 @@ class Basic(unittest.TestCase):
         for rfView in rfViewInitial:
             print "Checking completed job:", rfView
             print "rfView", h2o.dump_json(rfView)
-            data_key = rfView['data_key']
-            model_key = rfView['model_key']
+            data_key = rfView['_dataKey']
+            model_key = rfView['_key']
             ntree = rfView['ntree']
             print "Temporary hack: need to do two rf views minimum, to complete a RF (confusion matrix creation)"
             # allow it to poll to complete

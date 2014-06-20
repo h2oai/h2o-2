@@ -63,7 +63,6 @@ class Basic(unittest.TestCase):
 
             print "We won't use this pruning of x on test data. See if it prunes the same as the training"
             y = 0 # first column is pixel value
-            print "y:"
             x = h2o_glm.goodXFromColumnInfo(y, key=parseResult['destination_key'], timeoutSecs=300)
 
             # PARSE train****************************************
@@ -113,23 +112,11 @@ class Basic(unittest.TestCase):
             elapsed = time.time() - start
             print "RF completed in", elapsed, "seconds.", \
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
-            # h2o_rf.simpleCheckRFView(None, rfView, **params)
-            print "rfView", h2o.dump_json(rfView)
-            modelKey = rfView['speedrf_model']['_key']
-
             # RFView (score on test)****************************************
-            start = time.time()
-            # FIX! 1 on oobe causes stack trace?
-            kwargs = {'response_variable': y}
-            #rfView = h2o_cmd.runRFView(data_key=testKey2, model_key=modelKey, ntree=ntree, out_of_bag_error_estimate=0, 
-            #    timeoutSecs=180, pollTimeoutSecs=180, noSimpleCheck=False, **kwargs)
-            #elapsed = time.time() - start
-            #print "RFView in",  elapsed, "secs", \
-            #    "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
-
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(None, rfView, **params)
             print "classification error is expected to be low because we included the test data in with the training!"
-            self.assertAlmostEqual(classification_error, 2.85, delta=0.1, msg="Classification error %s differs too much" % classification_error)
+            self.assertAlmostEqual(classification_error, 0, delta=0.5, 
+                msg="Classification error %s differs too much" % classification_error)
        
             treeStats = rfView['speedrf_model']['treeStats'] 
             leaves = {'min': treeStats['minLeaves'], 'mean': treeStats['meanLeaves'], 'max': treeStats['maxLeaves']}
@@ -154,6 +141,7 @@ class Basic(unittest.TestCase):
 
             # Predict (on test)****************************************
             start = time.time()
+            modelKey = rfView['speedrf_model']['_key']
             predict = h2o.nodes[0].generate_predictions(model_key=modelKey, data_key=testKey2, timeoutSecs=timeoutSecs)
             elapsed = time.time() - start
             print "generate_predictions in",  elapsed, "secs", \

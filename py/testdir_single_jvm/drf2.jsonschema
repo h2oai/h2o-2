@@ -1,3 +1,47 @@
+
+ugly that the two definitions are not consistent (can the first response be the final response)
+first result if not final
+{
+    "Request2": 0, 
+    "_distribution": null, 
+    "_mtry": 2, 
+    "_seed": 3170528642942386000, 
+    "balance_classes": "true", 
+    "checkpoint": null, 
+    "classification": "true", 
+    "description": "Distributed RF", 
+    "destination_key": "DRF_80b37b4487b373cf24bbca52cf124931", 
+    "end_time": 0, 
+    "exception": null, 
+    "job_key": "$0301c0a8012832d4ffffffff$_b44fed870f3569d53ed1bcbfb7f74102", 
+    "keep_cross_validation_splits": "false", 
+    "max_after_balance_size": 7.0, 
+    "max_depth": 20, 
+    "min_rows": 1, 
+    "n_folds": 0, 
+    "nbins": 20, 
+    "ntrees": 6, 
+    "overwrite_checkpoint": "true", 
+    "response": {}, 
+    "response_info": {
+    "h2o": "pytest-kevin-7139", 
+    "node": "/192.168.1.40:54321", 
+    "redirect_url": "/2/DRFProgressPage.json?job_key=%240301c0a8012832d4ffffffff%24_b44fed870f3569d53ed1bcbfb7f74102&destination_key=DRF_80b37b4487b373cf24bbca52cf124931", 
+    "status": "redirect", 
+        "time": 2
+    }, 
+    "score_each_iteration": "false", 
+    "source": {
+        "_key": "iris.hex"
+    }, 
+    "start_time": 1403292197589, 
+    "state": "RUNNING", 
+    "validation": null, 
+    "xval_models": []
+}
+
+final result
+
 {
     "type":"object", "properties": {
         "Request2": { "type":"number" },

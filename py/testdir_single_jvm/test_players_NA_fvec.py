@@ -19,7 +19,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_players_NA(self):
+    def test_players_NA_fvec(self):
+        h2o.beta_features = True
         csvFilename = 'Players.csv'
         csvPathname = 'ncaa/' + csvFilename
         # hack it to ignore header (NA?) because it has duplicate col names

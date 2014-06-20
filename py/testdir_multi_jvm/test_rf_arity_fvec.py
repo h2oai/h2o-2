@@ -18,9 +18,10 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_arit_rf(self):
+    def test_arity_rf_fvec(self):
+        h2o.beta_features = True
         parseResult = h2i.import_parse(bucket='smalldata', path='test/arit.csv', schema='put')
-        h2o_cmd.runRF(parseResult=parseResult, trees=20, timeoutSecs=300)
+        h2o_cmd.runRF(parseResult=parseResult, trees=10, timeoutSecs=900)
 
 if __name__ == '__main__':
     h2o.unit_main()

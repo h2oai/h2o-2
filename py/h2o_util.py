@@ -565,6 +565,7 @@ class JsonDiff(object):
         if second != None:
             if not isinstance(first, type(second)):
                 message = '%s- %s, %s' % (path, type(first), type(second))
+                TYPE = None
                 self.save_diff(message, TYPE)
 
         if isinstance(first, dict):
@@ -580,6 +581,7 @@ class JsonDiff(object):
                         sec = second[key]
                     else:
                         #  there are key in the first, that is not presented in the second
+                        PATH = None
                         self.save_diff(new_path, PATH)
                         # prevent further values checking.
                         sec = None
@@ -588,6 +590,7 @@ class JsonDiff(object):
                     self.check(first[key], sec, path=new_path, with_values=with_values)
                 else:
                     # second is not dict. every key from first goes to the difference
+                    PATH = None
                     self.save_diff(new_path, PATH)                
                     self.check(first[key], second, path=new_path, with_values=with_values)
                 
@@ -602,6 +605,7 @@ class JsonDiff(object):
                         sec = second[index]
                     except (IndexError, KeyError):
                         # goes to difference
+                        TYPE = None
                         self.save_diff('%s - %s, %s' % (new_path, type(first), type(second)), TYPE)
                 # recursive call
                 self.check(first[index], sec, path=new_path, with_values=with_values)
