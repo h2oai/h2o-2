@@ -35,7 +35,7 @@ public class MSEStatistic extends Statistic {
   private float[] computeDist(Data d, int colIndex) {
     float[] res = new float[d.columnArityOfClassCol()];
     for (int i = 0; i < _columnDistsRegression[colIndex].length - 1; ++i) {
-      for (int j = 0; j < _columnDistsRegression[colIndex][j].length - 1; ++j) {
+      for (int j = 0; j < _columnDistsRegression[colIndex][i].length - 1; ++j) {
         res[j] += _columnDistsRegression[colIndex][i][j];
       }
     }

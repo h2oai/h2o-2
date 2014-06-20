@@ -211,7 +211,7 @@ public class CMTask extends MRTask2<CMTask> {
           votes[r][alignedPrediction]++; // Vote the row
           if (isLocalTree) localVotes[r][alignedPrediction]++; // Vote
         } else {
-          float pred = _model.classify0(ntree, _data, chks, row, _modelDataMap, numClasses, true /*regression*/);
+          float pred = _model.classify0(ntree, _data, chks, row, _modelDataMap, (short) 0, true /*regression*/);
           float actual = _data.vecs()[_classcol].at8(row);
           float delta = actual - pred;
           _ss += delta * delta;

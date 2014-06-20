@@ -65,6 +65,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   /* Regression or Classification */                                      boolean regression;
   /* Score each iteration? */                                             boolean score_each;
   @API(help = "CV Error")                                                 public double cv_error;
+  @API(help = "Verbose Mode")                                             public boolean verbose;
 
   /**
    * Extra helper variables.
@@ -140,6 +141,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     this.regression = model.regression;
     this.score_each = model.score_each;
     this.cv_error = err;
+    this.verbose = verbose;
   }
 
   public Vec get_response() {
@@ -416,9 +418,9 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     if (numClasses == 1) {
       float p = 0.f;
       for (int i = 0; i < treeCount(); ++i) {
-        p += Tree.classify(new AutoBuffer(tree(i)), data, numClasses, true);
+        p += Tree.classify(new AutoBuffer(tree(i)), data, 0.0, true) / (1. * treeCount());
       }
-      return new float[]{p / (float)(1. * treeCount())};
+      return new float[]{p};
     } else {
       int votes[] = new int[numClasses + 1/* +1 to catch broken rows */];
       preds = new float[numClasses + 1];

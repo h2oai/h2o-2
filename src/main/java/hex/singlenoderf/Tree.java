@@ -143,7 +143,7 @@ public class Tree extends H2OCountedCompleter {
         _tree = new FJBuild (spl, d, 0, _seed).compute();
       }
 
-      if (_verbose > 1)  Log.info(Sys.RANDF,computeStatistics().toString());
+//      if (_verbose > 1)  Log.info(Sys.RANDF,computeStatistics().toString());
       _stats = null; // GC
 
       // Atomically improve the Model as well
@@ -151,7 +151,7 @@ public class Tree extends H2OCountedCompleter {
       StringBuilder sb = new StringBuilder("[RF] Tree : ").append(_data_id+1);
       sb.append(" d=").append(_tree.depth()).append(" leaves=").append(_tree.leaves()).append(" done in ").append(timer).append('\n');
       Log.info(sb.toString());
-//      Log.info(Sys.RANDF,_tree.toString(sb,  _verbose > 0 ? Integer.MAX_VALUE : 200).toString());
+      Log.info(Sys.RANDF,_tree.toString(sb,  _verbose > 0 ? Integer.MAX_VALUE : 200).toString());
     }
     // Wait for completation
     tryComplete();

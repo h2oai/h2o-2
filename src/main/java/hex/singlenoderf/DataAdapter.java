@@ -99,6 +99,8 @@ final class DataAdapter  {
   }
   public short getEncodedClassColumnValue(int row) { return _c[_c.length-1].get(row); }
   public float getRawClassColumnValueFromBin(int row) {
+
+    
     int idx = _c.length-1;
     short btor = _c[idx].get(row);
     if (_c[idx]._binned == null) {

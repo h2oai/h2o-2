@@ -103,7 +103,7 @@ public class Vec extends Iced {
     final int nchunks = nChunks();
     Key [] keys = group().addVecs(n);
     final Vec [] vs = new Vec[keys.length];
-    for(int i = 0; i < vs.length; ++i) 
+    for(int i = 0; i < vs.length; ++i)
       vs[i] = new Vec(keys[i],_espc,
                       domain == null ? null    : domain[i],
                       uuids  == null ? false   : uuids [i],
@@ -456,7 +456,7 @@ public class Vec extends Iced {
       throw new IllegalArgumentException("Cannot ask for roll-up stats while the vector is being actively written.");
     if( vthis._naCnt>= 0 )      // KV store has a better answer
       return vthis == this ? this : setRollupStats(vthis);
-    
+
     // KV store reports we need to recompute
     RollupStats rs = new RollupStats().dfork(this);
     if(fs != null) fs.add(rs); else setRollupStats(rs.getResult());
@@ -539,8 +539,14 @@ public class Vec extends Iced {
 
       for( int i=0; i<c._len; i++ ) {
         long l = 81985529216486895L; // 0x0123456789ABCDEF
-        if (! c.isNA0(i))
-          l = c.at80(i);
+        if (! c.isNA0(i)) {
+          if (c instanceof C16Chunk) {
+            l = c.at16l(i);
+            l ^= (37 * c.at16h(i));
+          } else {
+            l = c.at80(i);
+          }
+        }
         long global_row = _start + i;
 
         checksum ^= (17 * global_row);

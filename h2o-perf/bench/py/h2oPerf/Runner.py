@@ -153,7 +153,9 @@ class PerfRunner:
     def begin_sys_profiling(self, test_name):
         this_path = os.path.dirname(os.path.realpath(__file__))
         hounds_py = os.path.join(this_path, "../hound.py")
-        cmd = ["python", hounds_py, str(self.perfdb.this_test_run_id),
+
+        next_test_run_id = self.perfdb.get_table_pk("test_run") + 1 
+        cmd = ["python", hounds_py, str(next_test_run_id),
                self.cloud[0].all_pids(), self.cloud[0].all_ips(), test_name]
         print
         print "Start scraping /proc for mem & cpu"

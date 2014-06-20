@@ -82,6 +82,9 @@ public class SpeeDRF extends Job.ValidatedJob {
   @API(help = "seed", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
   public long seed = -1;
 
+  @API(help = "Tree splits and extra statistics printed to stdout.", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
+  public boolean verbose = false;
+
   @API(help = "split limit", importance = ParamImportance.EXPERT)
   public int _exclusiveSplitLimit = 0;
 
@@ -199,7 +202,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       if (model == null) model = UKV.get(dest());
       model.write_lock(self());
       drfParams = DRFParams.create(model.fr.find(model.response), model.N, model.max_depth, (int)model.fr.numRows(), model.nbins,
-              model.statType, seed, model.weights, mtry, model.sampling_strategy, (float) sample, model.strata_samples, 1, _exclusiveSplitLimit, _useNonLocalData, regression);
+              model.statType, seed, model.weights, mtry, model.sampling_strategy, (float) sample, model.strata_samples, model.verbose ? 100 : 1, _exclusiveSplitLimit, _useNonLocalData, regression);
       logStart();
       DRFTask tsk = new DRFTask();
       tsk._job = Job.findJob(self());
@@ -360,7 +363,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       // Handle imbalanced classes by stratified over/under-sampling
       // initWorkFrame sets the modeled class distribution, and model.score() corrects the probabilities back using the distribution ratios
       float[] trainSamplingFactors;
-      Vec v = train.lastVec().toEnum();
+      Vec v =  regression ? null : train.lastVec().toEnum();
       Frame fr = train;
       if (classification && balance_classes) {
         int response_idx = fr.find(_responseName);
@@ -379,6 +382,7 @@ public class SpeeDRF extends Job.ValidatedJob {
 
       // Set the model parameters
       SpeeDRFModel model = new SpeeDRFModel(dest(), source._key, fr, this, priorDist);
+      model.verbose = verbose;
       int csize = H2O.CLOUD.size();
       model.fr = train;
       model.response = regression ? fr.lastVec() : fr.lastVec().toEnum();
@@ -412,7 +416,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       model.time = 0;
       model.N = num_trees;
 //      model.strata_samples = regression ? null : new float[strata_samples.length];
-      model.setModelClassDistribution(new MRUtils.ClassDist(fr.lastVec()).doAll(fr.lastVec()).rel_dist());
+      if (!regression) model.setModelClassDistribution(new MRUtils.ClassDist(fr.lastVec()).doAll(fr.lastVec()).rel_dist());
 
 //      if (!regression) {
 //        for (int i = 0; i < strata_samples.length; i++) {
