@@ -36,7 +36,7 @@ public class DeepLearningAutoEncoderCategoricalTest extends TestUtil {
     p.response = train.lastVec();
     p.seed = seed;
     p.hidden = new int[]{100, 50, 20};
-//    p.ignored_cols = new int[]{0,1,2,3,6,7,8,10}; //Optional: ignore all categoricals
+    p.ignored_cols = new int[]{0,1,2,3,6,7,8,10}; //Optional: ignore all categoricals
 //    p.ignored_cols = new int[]{4,5,9}; //Optional: ignore all numericals
     p.adaptive_rate = true;
     p.l1 = 1e-4;
@@ -57,7 +57,6 @@ public class DeepLearningAutoEncoderCategoricalTest extends TestUtil {
     sb.append("Reported mean reconstruction error: " + mymodel.mse() + "\n");
 
     // Training data
-
     // Reconstruct data using the same helper functions and verify that self-reported MSE agrees
     final Frame l2 = mymodel.scoreAutoEncoder(train);
     final Vec l2vec = l2.anyVec();

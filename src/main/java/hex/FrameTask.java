@@ -361,7 +361,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         }
       }
 
-      if(response_transform != TransformType.NONE){
+      if(response_transform != TransformType.NONE && _responses > 0){
         _normRespSub = MemoryManager.malloc8d(_responses);
         _normRespMul = MemoryManager.malloc8d(_responses); Arrays.fill(_normRespMul, 1);
       } else _normRespSub = _normRespMul = null;
@@ -510,7 +510,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     chunkInit();
     double [] nums = MemoryManager.malloc8d(_dinfo._nums);
     int    [] cats = MemoryManager.malloc4(_dinfo._cats);
-    double [] response = MemoryManager.malloc8d(_dinfo._responses);
+    double [] response = _dinfo._responses == 0 ? null : MemoryManager.malloc8d(_dinfo._responses);
     int start = 0;
     int end = nrows;
 

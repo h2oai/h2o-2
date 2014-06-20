@@ -925,44 +925,46 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
   /**
    * This is called from Model.score(). Make either a prediction or a reconstruction.
-   * @param adaptFrm Test dataset
+   * @param frame Test dataset
    * @return A frame containing the prediction or reconstruction
    */
   @Override
-  protected Frame scoreImpl(Frame adaptFrm) {
+  public Frame score(Frame frame) {
     if (!get_params().autoencoder) {
-      return super.scoreImpl(adaptFrm); // Prediction
+      return super.score(frame);
     } else {
       // Reconstruction
+      Frame fr = new Frame(frame);
       final int len = model_info().data_info().fullN();
       String prefix = "reconstr_";
+      assert(model_info().data_info()._responses == 0);
       String[] coefnames = model_info().data_info().coefNames();
       assert(len == coefnames.length);
       for( int c=0; c<len; c++ )
-        adaptFrm.add(prefix+coefnames[c],adaptFrm.anyVec().makeZero());
+        fr.add(prefix+coefnames[c],fr.anyVec().makeZero());
       new MRTask2() {
         @Override public void map( Chunk chks[] ) {
-          double tmp [] = new double[_names.length-1];
+          double tmp [] = new double[_names.length];
           float preds[] = new float [len];
           final Neurons[] neurons = DeepLearningTask.makeNeuronsForTesting(model_info);
           for( int row=0; row<chks[0]._len; row++ ) {
             float p[] = score_autoencoder(chks, row, tmp, preds, neurons);
             for( int c=0; c<preds.length; c++ )
-              chks[_names.length-1+c].set0(row,p[c]);
+              chks[_names.length+c].set0(row,p[c]);
           }
         }
-      }.doAll(adaptFrm);
+      }.doAll(fr);
 
       // Return just the output columns
-      int x=_names.length-1, y=adaptFrm.numCols();
-      return adaptFrm.extractFrame(x, y);
+      int x=_names.length, y=fr.numCols();
+      return fr.extractFrame(x, y);
     }
   }
 
   // Make (potentially expanded) reconstruction
   private float[] score_autoencoder(Chunk[] chks, int row_in_chunk, double[] tmp, float[] preds, Neurons[] neurons) {
     assert(get_params().autoencoder);
-    assert(tmp.length == _names.length-1);
+    assert(tmp.length == _names.length);
     for( int i=0; i<tmp.length; i++ )
       tmp[i] = chks[i].at0(row_in_chunk);
     score_autoencoder(tmp, preds, neurons); // this fills preds, returns L2 error (ignored here)
@@ -1037,35 +1039,27 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   }
 
   /**
-   * Score auto-encoded reconstruction (on-the-fly)
+   * Score auto-encoded reconstruction (on-the-fly, without allocating the reconstruction as done in Frame score(Frame fr))
    * @param frame Original data (can contain response, will be ignored)
    * @return Frame containing one Vec with L2 norm (MSE) of each reconstructed row, caller is responsible for deletion
    */
   public Frame scoreAutoEncoder(Frame frame) {
-    Frame fr = frame;
-    boolean adapt = true;
-    int ridx = fr.find(responseName());
-    if (ridx != -1) { // drop the response for scoring!
-      fr = new Frame(fr);
-      fr.remove(ridx);
-    }
+    final int len = _names.length;
     // Adapt the Frame layout - returns adapted frame and frame containing only
     // newly created vectors
-    Frame[] adaptFrms = adapt ? adapt(fr,false) : null;
+    Frame[] adaptFrms = adapt(frame,false,false/*no response*/);
     // Adapted frame containing all columns - mix of original vectors from fr
     // and newly created vectors serving as adaptors
-    Frame adaptFrm = adapt ? adaptFrms[0] : fr;
+    Frame adaptFrm = adaptFrms[0];
     // Contains only newly created vectors. The frame eases deletion of these vectors.
-    Frame onlyAdaptFrm = adapt ? adaptFrms[1] : null;
-
-    final int len = _names.length-1;
-    adaptFrm.add("L2",adaptFrm.anyVec().makeZero());
+    Frame onlyAdaptFrm = adaptFrms[1];
+    adaptFrm.add("L2", adaptFrm.anyVec().makeZero());
     new MRTask2() {
       @Override public void map( Chunk chks[] ) {
         double tmp [] = new double[len];
         final Neurons[] neurons = DeepLearningTask.makeNeuronsForTesting(model_info);
         for( int row=0; row<chks[0]._len; row++ ) {
-          for( int i=0; i<_names.length-1; i++ )
+          for( int i=0; i<_names.length; i++ )
             tmp[i] = chks[i].at0(row); //original data
           chks[len].set0(row, score_autoencoder(tmp, null, neurons)); //store the per-row reconstruction error (MSE) in the last column
         }
@@ -1073,9 +1067,9 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     }.doAll(adaptFrm);
 
     // Return just the output columns
-    int x=_names.length-1, y=adaptFrm.numCols();
+    int x=_names.length, y=adaptFrm.numCols();
     final Frame l2 = adaptFrm.extractFrame(x, y);
-    if (adapt) onlyAdaptFrm.delete();
+    onlyAdaptFrm.delete();
     return l2;
   }
 
