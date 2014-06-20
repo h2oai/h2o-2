@@ -1,28 +1,17 @@
 \name{h2o.kmeans}
 \alias{h2o.kmeans}
-\alias{h2o.kmeans.VA}
-\alias{h2o.kmeans.FV}
 \title{
 H2O: K-Means Clustering
 }
 \description{Performs k-means clustering on a data set.}
 \usage{
-## Default method:
 h2o.kmeans(data, centers, cols = "", iter.max = 10, normalize = FALSE, 
-  init = "none", seed = 0, dropNACols, version = 2)
-
-## Import to a ValueArray object:
-h2o.kmeans.VA(data, centers, cols = "", iter.max = 10, normalize = FALSE, 
-  init = "none", seed = 0)
-
-## Import to a FluidVecs object:
-h2o.kmeans.FV(data, centers, cols = "", iter.max = 10, normalize = FALSE, 
   init = "none", seed = 0, dropNACols = FALSE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{data}{
-An \code{\linkS4class{H2OParsedDataVA}} (\code{version = 1}) or \code{\linkS4class{H2OParsedData}} (\code{version = 2}) object containing the variables in the model.
+An \code{\linkS4class{H2OParsedData}} object containing the variables in the model.
 }
   \item{centers}{
 The number of clusters k.
@@ -45,19 +34,11 @@ The number of clusters k.
   \item{dropNACols}{
   (Optional) A logical value indicating whether to drop columns with more than 10\% entries that are NA.
   }
-  \item{version}{
-  (Optional) The version of k-means clustering to run. If \code{version = 1}, this will run the more stable ValueArray implementation, while \code{version = 2} selects the faster, but still beta stage FluidVecs implementation.
-  }
 }
-
-\details{
-IMPORTANT: Currently, to run k-means with \code{version = 1}, you must import data to a ValueArray object using \code{\link{h2o.importFile.VA}}, \code{\link{h2o.importFolder.VA}} or one of its variants. To run with \code{version = 2}, you must import data to a FluidVecs object using \code{\link{h2o.importFile.FV}}, \code{\link{h2o.importFolder.FV}} or one of its variants.
-}
-
 \value{
-An object of class \code{\linkS4class{H2OKMeansModelVA}} (\code{version = 1}) or \code{\linkS4class{H2OKMeansModel}} (\code{version = 2}) with slots key, data, and model, where the last is a list of the following components:
+An object of class \code{\linkS4class{H2OKMeansModel}} with slots key, data, and model, where the last is a list of the following components:
   \item{centers }{A matrix of cluster centers.}
-  \item{cluster }{A \code{\linkS4class{H2OParsedDataVA}} (\code{version = 1}) or \code{\linkS4class{H2OParsedData}} (\code{version = 2}) object containing the vector of integers (from 1 to k), which indicate the cluster to which each point is allocated.}
+  \item{cluster }{A \code{\linkS4class{H2OParsedData}} object containing the vector of integers (from 1 to k), which indicate the cluster to which each point is allocated.}
   \item{size }{The number of points in each cluster.}
   \item{withinss }{Vector of within-cluster sum of squares, with one component per cluster.}
   \item{tot.withinss }{Total within-cluster sum of squares, i.e., sum(withinss).}

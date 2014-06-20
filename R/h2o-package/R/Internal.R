@@ -97,14 +97,10 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__PAGE_CANCEL = "Cancel.json"
 .h2o.__PAGE_CLOUD = "Cloud.json"
 .h2o.__PAGE_GET = "GetVector.json"
-.h2o.__PAGE_IMPORTURL = "ImportUrl.json"
-.h2o.__PAGE_IMPORTFILES = "ImportFiles.json"
-.h2o.__PAGE_IMPORTHDFS = "ImportHdfs.json"
 .h2o.__PAGE_EXPORTHDFS = "ExportHdfs.json"
 .h2o.__PAGE_INSPECT = "Inspect.json"
 .h2o.__PAGE_JOBS = "Jobs.json"
 .h2o.__PAGE_PARSE = "Parse.json"
-.h2o.__PAGE_PREDICT = "GeneratePredictionsPage.json"
 .h2o.__PAGE_PUT = "PutVector.json"
 .h2o.__PAGE_REMOVE = "Remove.json"
 .h2o.__PAGE_REMOVEALL = "2/RemoveAll.json"
@@ -112,17 +108,6 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__PAGE_SHUTDOWN = "Shutdown.json"
 .h2o.__PAGE_VIEWALL = "StoreView.json"
 .h2o.__DOWNLOAD_LOGS = "LogDownload.json"
-
-.h2o.__PAGE_GLM = "GLM.json"
-.h2o.__PAGE_GLMProgress = "GLMProgressPage.json"
-.h2o.__PAGE_GLMGrid = "GLMGrid.json"
-.h2o.__PAGE_GLMGridProgress = "GLMGridProgress.json"
-.h2o.__PAGE_KMEANS = "KMeans.json"
-.h2o.__PAGE_KMAPPLY = "KMeansApply.json"
-.h2o.__PAGE_KMSCORE = "KMeansScore.json"
-.h2o.__PAGE_RF  = "RF.json"
-.h2o.__PAGE_RFVIEW = "RFView.json"
-.h2o.__PAGE_RFTREEVIEW = "RFTreeView.json"
 
 .h2o.__PAGE_EXEC2 = "2/Exec2.json"
 .h2o.__PAGE_IMPORTFILES2 = "2/ImportFiles2.json"
@@ -132,9 +117,7 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__PAGE_PREDICT2 = "2/Predict.json"
 .h2o.__PAGE_SUMMARY2 = "2/SummaryPage2.json"
 .h2o.__PAGE_LOG_AND_ECHO = "2/LogAndEcho.json"
-.h2o.__HACK_LEVELS = "Levels.json"
 .h2o.__HACK_LEVELS2 = "2/Levels2.json"
-.h2o.__HACK_SETCOLNAMES = "SetColumnNames.json"
 .h2o.__HACK_SETCOLNAMES2 = "2/SetColumnNames2.json"
 .h2o.__PAGE_CONFUSION = "2/ConfusionMatrix.json"
 .h2o.__PAGE_AUC = "2/AUC.json"
@@ -395,7 +378,7 @@ h2o.setLogPath <- function(path, type) {
 
 .h2o.__unop2 <- function(op, x) {
   if(missing(x)) stop("Must specify data set")
-  if(!(class(x) %in% c("H2OParsedData","H2OParsedDataVA"))) stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
+  if(class(x) != "H2OParsedData") stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
   
   expr = paste(op, "(", x@key, ")", sep = "")
   res = .h2o.__exec2(x@h2o, expr)
@@ -412,22 +395,18 @@ h2o.setLogPath <- function(path, type) {
   if(class(y) != "H2OParsedData" && length(y) != 1) stop("Unimplemented: y must be a scalar value")
   # if(!((ncol(x) == 1 || class(x) == "numeric") && (ncol(y) == 1 || class(y) == "numeric")))
   #  stop("Can only operate on single column vectors")
-  # LHS = ifelse(class(x) == "H2OParsedData", x@key, x)
-  LHS = ifelse(inherits(x, "H2OParsedData"), x@key, x)
+  LHS = ifelse(class(x) == "H2OParsedData", x@key, x)
   
-  # if((class(x) == "H2OParsedData" || class(y) == "H2OParsedData") && !( op %in% c('==', '!='))) {
-  if((inherits(x, "H2OParsedData") || inherits(y, "H2OParsedData")) && !( op %in% c('==', '!='))) {
+  if((class(x) == "H2OParsedData" || class(y) == "H2OParsedData") && !( op %in% c('==', '!='))) {
     anyFactorsX <- .h2o.__checkForFactors(x)
     anyFactorsY <- .h2o.__checkForFactors(y)
     anyFactors <- any(c(anyFactorsX, anyFactorsY))
     if(anyFactors) warning("Operation not meaningful for factors.")
   }
   
-  # RHS = ifelse(class(y) == "H2OParsedData", y@key, y)
-  RHS = ifelse(inherits(y, "H2OParsedData"), y@key, y)
+  RHS = ifelse(class(y) == "H2OParsedData", y@key, y)
   expr = paste(LHS, op, RHS)
-  # if(class(x) == "H2OParsedData") myClient = x@h2o
-  if(inherits(x, "H2OParsedData")) myClient = x@h2o
+  if(class(x) == "H2OParsedData") myClient = x@h2o
   else myClient = y@h2o
   res = .h2o.__exec2(myClient, expr)
   
@@ -437,16 +416,6 @@ h2o.setLogPath <- function(path, type) {
     new("H2OParsedData", h2o=myClient, key=res$dest_key, logic=TRUE)
   else
     new("H2OParsedData", h2o=myClient, key=res$dest_key, logic=FALSE)
-}
-
-.h2o.__castType <- function(object) {
-  if(!inherits(object, "H2OParsedData")) stop("object must be a H2OParsedData or H2OParsedDataVA object")
-  .h2o.__checkClientHealth(object@h2o)
-  res = .h2o.__remoteSend(object@h2o, .h2o.__PAGE_INSPECT, key = object@key)
-  if(is.null(res$value_size_bytes))
-    return(new("H2OParsedData", h2o=object@h2o, key=object@key))
-  else
-    return(new("H2OParsedDataVA", h2o=object@h2o, key=object@key))
 }
 
 #------------------------------------ Utilities ------------------------------------#
@@ -497,8 +466,7 @@ h2o.setLogPath <- function(path, type) {
 # }
 
 .h2o.__checkForFactors <- function(object) {
-  # if(class(object) != "H2OParsedData") return(FALSE)
-  if(!class(object) %in% c("H2OParsedData", "H2OParsedDataVA")) return(FALSE)
+  if(class(object) != "H2OParsedData") return(FALSE)
   h2o.anyFactor(object)
 }
 
