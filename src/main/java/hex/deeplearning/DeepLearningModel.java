@@ -733,11 +733,11 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
           if (printme) Log.info("Scoring the auto-encoder.");
           // training
           {
-            final Frame l2_frame = scoreAutoEncoder(ftrain);
-            final Vec l2 = l2_frame.anyVec();
+            final Frame mse_frame = scoreAutoEncoder(ftrain);
+            final Vec l2 = mse_frame.anyVec();
             Log.info("Mean reconstruction error on training data: " + l2.mean() + "\n");
             err.train_mse = l2.mean();
-            l2_frame.delete();
+            mse_frame.delete();
           }
         } else {
           if (printme) Log.info("Scoring the model.");
@@ -1005,7 +1005,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   /**
    * Score auto-encoded reconstruction (on-the-fly, without allocating the reconstruction as done in Frame score(Frame fr))
    * @param frame Original data (can contain response, will be ignored)
-   * @return Frame containing one Vec with L2 norm (MSE) of each reconstructed row, caller is responsible for deletion
+   * @return Frame containing one Vec with reconstruction error (MSE) of each reconstructed row, caller is responsible for deletion
    */
   public Frame scoreAutoEncoder(Frame frame) {
     final int len = _names.length;
@@ -1017,7 +1017,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     Frame adaptFrm = adaptFrms[0];
     // Contains only newly created vectors. The frame eases deletion of these vectors.
     Frame onlyAdaptFrm = adaptFrms[1];
-    adaptFrm.add("L2", adaptFrm.anyVec().makeZero());
+    adaptFrm.add("Reconstruction.MSE", adaptFrm.anyVec().makeZero());
     new MRTask2() {
       @Override public void map( Chunk chks[] ) {
         double tmp [] = new double[len];
@@ -1043,15 +1043,15 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     assert(tmp.length == _names.length);
     for( int i=0; i<tmp.length; i++ )
       tmp[i] = chks[i].at0(row_in_chunk);
-    score_autoencoder(tmp, preds, neurons); // this fills preds, returns L2 error (ignored here)
+    score_autoencoder(tmp, preds, neurons); // this fills preds, returns MSE error (ignored here)
     return preds;
   }
 
   /**
-   * Helper to reconstruct original data into preds array and compute the L2 reconstruction error (MSE)
+   * Helper to reconstruct original data into preds array and compute the reconstruction error (MSE)
    * @param data Original data (unexpanded)
    * @param preds Reconstruction (potentially expanded)
-   * @return L2 reconstruction error
+   * @return reconstruction error
    */
   private double score_autoencoder(double[] data, float[] preds, Neurons[] neurons) {
     assert(model_info().get_params().autoencoder);
@@ -1084,18 +1084,18 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
   /**
    * Compute quantile-based threshold (in reconstruction error) to find outliers
-   * @param l2 Vector containing L2 reconstruction errors
+   * @param mse Vector containing reconstruction errors
    * @param quantile Quantile for cut-off
-   * @return Threshold in L2 value for a point to be above the quantile
+   * @return Threshold in MSE value for a point to be above the quantile
    */
-  public double calcOutlierThreshold(Vec l2, double quantile) {
-    Frame l2_frame = new Frame(Key.make(), new String[]{"L2"}, new Vec[]{l2});
+  public double calcOutlierThreshold(Vec mse, double quantile) {
+    Frame mse_frame = new Frame(Key.make(), new String[]{"Reconstruction.MSE"}, new Vec[]{mse});
     QuantilesPage qp = new QuantilesPage();
-    qp.column = l2_frame.vec(0);
-    qp.source_key = l2_frame;
+    qp.column = mse_frame.vec(0);
+    qp.source_key = mse_frame;
     qp.quantile = quantile;
     qp.invoke();
-    DKV.remove(l2_frame._key);
+    DKV.remove(mse_frame._key);
     return qp.result;
   }
 

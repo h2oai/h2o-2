@@ -48,6 +48,9 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Enable expert mode (to access all options from GUI)", filter = Default.class, json = true)
   public boolean expert_mode = false;
 
+  @API(help = "Auto-Encoder (Experimental)", filter= Default.class, json = true)
+  public boolean autoencoder = false;
+
   /*Neural Net Topology*/
   /**
    * The activation function (non-linearity) to be used the neurons in the hidden layers.
@@ -454,9 +457,6 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Use a column major weight matrix for input layer. Can speed up forward propagation, but might slow down backpropagation (Experimental).", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
   public boolean col_major = false;
 
-  @API(help = "Auto-Encoder (Experimental)", filter= Default.class, json = true)
-  public boolean autoencoder = false;
-
   @API(help = "Sparsity (Experimental)", filter= Default.class, json = true)
   public double average_activation = -0.9;
 
@@ -518,6 +518,8 @@ public class DeepLearning extends Job.ValidatedJob {
           "sparse",
           "col_major",
           "autoencoder",
+          "average_activation",
+          "sparsity_beta",
   };
 
   // the following parameters can be modified when restarting from a checkpoint
