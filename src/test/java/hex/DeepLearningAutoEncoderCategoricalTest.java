@@ -33,8 +33,7 @@ public class DeepLearningAutoEncoderCategoricalTest extends TestUtil {
     DeepLearning p = new DeepLearning();
     p.source = train;
     p.autoencoder = true;
-    p.response = train.vecs()[0]; //ignored anyway
-
+    p.response = train.lastVec();
     p.seed = seed;
     p.hidden = new int[]{100, 50, 20};
 //    p.ignored_cols = new int[]{0,1,2,3,6,7,8,10}; //Optional: ignore all categoricals

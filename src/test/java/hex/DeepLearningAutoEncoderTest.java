@@ -44,7 +44,7 @@ public class DeepLearningAutoEncoderTest extends TestUtil {
     DeepLearning p = new DeepLearning();
     p.source = train;
     p.autoencoder = true;
-    p.response = train.vecs()[0]; //ignored anyway
+    p.response = train.lastVec();
     p.classification = false;
 
     p.seed = seed;
