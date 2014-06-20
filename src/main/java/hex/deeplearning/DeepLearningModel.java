@@ -1065,11 +1065,11 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       l2 += Math.pow((out[i] - in[i]), 2);
     l2 /= in.length;
 
-    // Now scale back numerical columns to original data space (scale + shift)
-    model_info().data_info().unScaleNumericals(out, out); //only modifies the numericals
-
-    if (preds!=null)
+    if (preds!=null) {
+      // Now scale back numerical columns to original data space (scale + shift)
+      model_info().data_info().unScaleNumericals(out, out); //only modifies the numericals
       System.arraycopy(out, 0, preds, 0, out.length); //copy reconstruction into preds
+    }
     return l2;
   }
 
