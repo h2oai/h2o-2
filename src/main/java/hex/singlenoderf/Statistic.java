@@ -177,7 +177,7 @@ abstract class Statistic {
   /** Adds the given row to the statistic. Updates the column distributions for
    * the analyzed columns. */
   void addQ(Row row, boolean regression) {
-    final int cls = regression ? -1 : row.classOf();
+    final int cls = row.classOf(); //regression ? -1 : row.classOf();
     for (int f : _features)
       if ( f != -1) {
         if (row.isValid() && row.hasValidValue(f)) {
@@ -186,8 +186,8 @@ abstract class Statistic {
             _columnDists[f][val][cls]++;
           } else {
             short val = row.getEncodedColumnValue(f);
-            short val2 = row.getEncodedClassColumnValue();
-            _columnDistsRegression[f][val][val2]++; // = row.getRawClassColumnValueFromBin();
+//            short val2 = row.getEncodedClassColumnValue();
+            _columnDistsRegression[f][val][cls]++; // = row.getRawClassColumnValueFromBin();
           }
         }
       }
