@@ -102,6 +102,7 @@ class ModelManagementTestCase(unittest.TestCase):
         prostate_hex = self.import_frame('prostate.hex', 'smalldata', 'prostate.csv', 'logreg', 380, 9)
         airlines_train_hex = self.import_frame('airlines_train.hex', 'smalldata', 'AirlinesTrain.csv.zip', 'airlines', 24421, 12)
         airlines_test_hex = self.import_frame('airlines_test.hex', 'smalldata', 'AirlinesTest.csv.zip', 'airlines', 2691, 12)
+        has_uuid_hex = self.import_frame('has_uuid.hex', 'smalldata', 'test_all_raw_top10rows.csv', 'test', 12, 89)
 
         # get the hashes
         print "Checking " + str(len(h2o.nodes)) + " nodes for frames: "
@@ -115,6 +116,7 @@ class ModelManagementTestCase(unittest.TestCase):
             self.assertKeysExist(frames, 'frames', ['airlines_train.hex'])
             self.assertKeysExist(frames, 'frames', ['airlines_test.hex'])
             self.assertKeysExist(frames, 'frames/airlines_test.hex', ['id'])
+            self.assertKeysExist(frames, 'frames', ['has_uuid.hex'])
 
             # Make sure we have the same checksums everywhere:
             tmp = frames['frames']['airlines_test.hex']['id']

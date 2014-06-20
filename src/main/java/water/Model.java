@@ -124,7 +124,7 @@ public abstract class Model extends Lockable<Model> {
   }
 
   public void start_training(long training_start_time) {
-    Log.info("setting training_start_time to: " + training_start_time + " for Model: " + this.getClass().getSimpleName() + "@" + System.identityHashCode(this));
+    Log.info("setting training_start_time to: " + training_start_time + " for Model: " + this._key.toString() + " (" + this.getClass().getSimpleName() + "@" + System.identityHashCode(this) + ")");
 
     final long t = training_start_time;
     new TAtomic<Model>() {
@@ -138,7 +138,7 @@ public abstract class Model extends Lockable<Model> {
   }
   public void start_training(Model previous) {
     training_start_time = System.currentTimeMillis();
-    Log.info("setting training_start_time to: " + training_start_time + " for Model: " + this.getClass().getSimpleName() + "@" + System.identityHashCode(this) + " (checkpoint case)");
+    Log.info("setting training_start_time to: " + training_start_time + " for Model: " + this._key.toString() + " (" + this.getClass().getSimpleName() + "@" + System.identityHashCode(this) + ") [checkpoint case]");
     if (null != previous)
       training_duration_in_ms += previous.training_duration_in_ms;
 
@@ -155,7 +155,7 @@ public abstract class Model extends Lockable<Model> {
   }
   public void stop_training() {
     training_duration_in_ms += (System.currentTimeMillis() - training_start_time);
-    Log.info("setting training_duration_in_ms to: " + training_duration_in_ms + " for Model: " + this.getClass().getSimpleName() + "@" + System.identityHashCode(this));
+    Log.info("setting training_duration_in_ms to: " + training_duration_in_ms + " for Model: " + this._key.toString() + " (" + this.getClass().getSimpleName() + "@" + System.identityHashCode(this) + ")");
 
     final long d = training_duration_in_ms;
     new TAtomic<Model>() {
