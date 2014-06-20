@@ -961,51 +961,6 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     }
   }
 
-  // Make (potentially expanded) reconstruction
-  private float[] score_autoencoder(Chunk[] chks, int row_in_chunk, double[] tmp, float[] preds, Neurons[] neurons) {
-    assert(get_params().autoencoder);
-    assert(tmp.length == _names.length);
-    for( int i=0; i<tmp.length; i++ )
-      tmp[i] = chks[i].at0(row_in_chunk);
-    score_autoencoder(tmp, preds, neurons); // this fills preds, returns L2 error (ignored here)
-    return preds;
-  }
-
-  /**
-   * Helper to reconstruct original data into preds array and compute the L2 reconstruction error (MSE)
-   * @param data Original data (unexpanded)
-   * @param preds Reconstruction (potentially expanded)
-   * @return L2 reconstruction error
-   */
-  private double score_autoencoder(double[] data, float[] preds, Neurons[] neurons) {
-    assert(model_info().get_params().autoencoder);
-    if (model_info().unstable()) {
-      throw new UnsupportedOperationException("Trying to predict with an unstable model.");
-    }
-    ((Neurons.Input)neurons[0]).setInput(-1, data); // expands categoricals inside
-    DeepLearningTask.step(-1, neurons, model_info, false, null); // reconstructs data in expanded space
-    float[] in  = neurons[0]._a.raw(); //input (expanded)
-    float[] out = neurons[neurons.length - 1]._a.raw(); //output (expanded)
-    assert(in.length == out.length);
-
-    // First normalize categorical reconstructions to be probabilities
-    // (such that they can be better compared to the input where one factor was 1 and the rest was 0)
-    model_info().data_info().softMaxCategoricals(out,out); //only modifies the categoricals
-
-    // Compute MSE of reconstruction in expanded space (with categorical probabilities)
-    double l2 = 0;
-    for (int i = 0; i < in.length; ++i)
-      l2 += Math.pow((out[i] - in[i]), 2);
-    l2 /= in.length;
-
-    // Now scale back numerical columns to original data space (scale + shift)
-    model_info().data_info().unScaleNumericals(out, out); //only modifies the numericals
-
-    if (preds!=null)
-      System.arraycopy(out, 0, preds, 0, out.length); //copy reconstruction into preds
-    return l2;
-  }
-
   /**
    * Predict from raw double values representing the data
    * @param data raw array containing categorical values (horizontalized to 1,0,0,1,0,0 etc.) and numerical values (0.35,1.24,5.3234,etc), both can contain NaNs
@@ -1070,6 +1025,51 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     int x=_names.length, y=adaptFrm.numCols();
     final Frame l2 = adaptFrm.extractFrame(x, y);
     onlyAdaptFrm.delete();
+    return l2;
+  }
+
+  // Make (potentially expanded) reconstruction
+  private float[] score_autoencoder(Chunk[] chks, int row_in_chunk, double[] tmp, float[] preds, Neurons[] neurons) {
+    assert(get_params().autoencoder);
+    assert(tmp.length == _names.length);
+    for( int i=0; i<tmp.length; i++ )
+      tmp[i] = chks[i].at0(row_in_chunk);
+    score_autoencoder(tmp, preds, neurons); // this fills preds, returns L2 error (ignored here)
+    return preds;
+  }
+
+  /**
+   * Helper to reconstruct original data into preds array and compute the L2 reconstruction error (MSE)
+   * @param data Original data (unexpanded)
+   * @param preds Reconstruction (potentially expanded)
+   * @return L2 reconstruction error
+   */
+  private double score_autoencoder(double[] data, float[] preds, Neurons[] neurons) {
+    assert(model_info().get_params().autoencoder);
+    if (model_info().unstable()) {
+      throw new UnsupportedOperationException("Trying to predict with an unstable model.");
+    }
+    ((Neurons.Input)neurons[0]).setInput(-1, data); // expands categoricals inside
+    DeepLearningTask.step(-1, neurons, model_info, false, null); // reconstructs data in expanded space
+    float[] in  = neurons[0]._a.raw(); //input (expanded)
+    float[] out = neurons[neurons.length - 1]._a.raw(); //output (expanded)
+    assert(in.length == out.length);
+
+    // First normalize categorical reconstructions to be probabilities
+    // (such that they can be better compared to the input where one factor was 1 and the rest was 0)
+    model_info().data_info().softMaxCategoricals(out,out); //only modifies the categoricals
+
+    // Compute MSE of reconstruction in expanded space (with categorical probabilities)
+    double l2 = 0;
+    for (int i = 0; i < in.length; ++i)
+      l2 += Math.pow((out[i] - in[i]), 2);
+    l2 /= in.length;
+
+    // Now scale back numerical columns to original data space (scale + shift)
+    model_info().data_info().unScaleNumericals(out, out); //only modifies the numericals
+
+    if (preds!=null)
+      System.arraycopy(out, 0, preds, 0, out.length); //copy reconstruction into preds
     return l2;
   }
 
