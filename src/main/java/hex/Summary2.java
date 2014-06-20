@@ -544,7 +544,7 @@ public class Summary2 extends Iced {
 
     int binIdxInt = (int) binIdx;
     assert (binIdxInt >= 0 && binIdx < hcnt.length) : 
-        "binIdxInt too big for hcnt2 "+binIdxInt+" "+hcnt.length+" "+val+" "+_start+" "+_binsz;
+        "binIdxInt bad for hcnt2. binIdxInt:"+binIdxInt+" hcnt.length:"+hcnt.length+" val:"+val+" _start:"+_start+" _binsz:"+_binsz;
     ++hcnt[binIdxInt];
   }
 
