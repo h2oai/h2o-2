@@ -204,9 +204,6 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       Log.warn(Sys.DRF__, "Sample rate is 100% and no validation dataset is required. There are no OOB data to perform validation!");
   }
 
-  // Out-of-bag trees counter - only one since it is shared via k-trees
-  protected Chunk chk_oobt(Chunk chks[]) { return chks[_ncols+1+_nclass+_nclass+_nclass]; }
-
   @Override protected void initAlgo(DRFModel initialModel) {
     // Initialize TreeVotes for classification, MSE arrays for regression
     if (importance) initTreeMeasurements();
@@ -332,6 +329,8 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     return new VarImp.VarImpMDA(varimp, varimpSD, model.ntrees());
   }
 
+  @Override public boolean supportsBagging() { return true; }
+
   /** Fill work columns:
    *   - classification: set 1 in the corresponding wrk col according to row response
    *   - regression:     copy response into work column (there is only 1 work column) */
@@ -455,7 +454,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       if( ktrees[i] != null )
         ktrees[i].leaves = ktrees[i].len() - leafs[i];
     // DEBUG: Print the generated K trees
-    // printGenerateTrees(ktrees);
+    //printGenerateTrees(ktrees);
 
     return ktrees;
   }
