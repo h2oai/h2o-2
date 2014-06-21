@@ -949,20 +949,10 @@ public class Frame extends Lockable<Frame> {
       Chunk pred = chks[chks.length-1];
       for(int i = 0; i < pred._len; ++i) {
         if(pred.at0(i) != 0) {
-          for (int j = 0; j < chks.length - 1; ++j) {
+          for( int j = 0; j < chks.length - 1; j++ ) {
             Chunk chk = chks[j];
-            if (chk instanceof C16Chunk) {
-              if (chks[j].isNA0(i)) {
-                nchks[j].addNA();
-              }
-              else {
-                long lo = chks[j].at16l0(i);
-                long hi = chks[j].at16h0(i);
-                nchks[j].addUUID(lo, hi);
-              }
-            } else {
-              nchks[j].addNum(chks[j].at0(i));
-            }
+            if( chk._vec.isUUID() ) nchks[j].addUUID(chk,i);
+            else nchks[j].addNum(chk.at0(i));
           }
         }
       }
