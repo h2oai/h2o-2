@@ -984,21 +984,11 @@ public class DeepLearning extends Job.ValidatedJob {
       Log.info("Starting to train the Deep Learning model.");
 
       //main loop
-      do {
-        // compute sparsity pattern ONLY (fprop, no bprop)
-        if (autoencoder && sparsity_beta > 0)
-          model.set_model_info(H2O.CLOUD.size() > 1 && mp.replicate_training_data ? ( mp.single_node_mode ?
-                  new DeepLearningTask2(train, model.model_info(), rowUsageFraction, true).invoke(Key.make()).model_info() : //replicated data + single node mode
-                  new DeepLearningTask2(train, model.model_info(), rowUsageFraction, true).invokeOnAllNodes().model_info() ) : //replicated data + multi-node mode
-                  new DeepLearningTask(model.model_info(), rowUsageFraction, true).doAll(train).model_info()); //distributed data (always in multi-node mode)
-
-        // train
-        model.set_model_info(H2O.CLOUD.size() > 1 && mp.replicate_training_data ? ( mp.single_node_mode ?
-                new DeepLearningTask2(train, model.model_info(), rowUsageFraction, false).invoke(Key.make()).model_info() : //replicated data + single node mode
-                new DeepLearningTask2(train, model.model_info(), rowUsageFraction, false).invokeOnAllNodes().model_info() ) : //replicated data + multi-node mode
-                new DeepLearningTask(model.model_info(), rowUsageFraction, false).doAll(train).model_info()); //distributed data (always in multi-node mode)
-
-      } while (model.doScoring(train, trainScoreFrame, validScoreFrame, self(), getValidAdaptor()));
+      do model.set_model_info(H2O.CLOUD.size() > 1 && mp.replicate_training_data ? ( mp.single_node_mode ?
+              new DeepLearningTask2(train, model.model_info(), rowUsageFraction).invoke(Key.make()).model_info() : //replicated data + single node mode
+              new DeepLearningTask2(train, model.model_info(), rowUsageFraction).invokeOnAllNodes().model_info() ) : //replicated data + multi-node mode
+              new DeepLearningTask(model.model_info(), rowUsageFraction).doAll(train).model_info()); //distributed data (always in multi-node mode)
+      while (model.doScoring(train, trainScoreFrame, validScoreFrame, self(), getValidAdaptor()));
       Log.info(model);
       Log.info("Finished training the Deep Learning model.");
       return model;

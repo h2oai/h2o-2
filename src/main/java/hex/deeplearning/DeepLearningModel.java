@@ -982,7 +982,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     }
     Neurons[] neurons = DeepLearningTask.makeNeuronsForTesting(model_info);
     ((Neurons.Input)neurons[0]).setInput(-1, data);
-    DeepLearningTask.step(-1, neurons, model_info, false, false, null);
+    DeepLearningTask.step(-1, neurons, model_info, false, null);
     float[] out = neurons[neurons.length - 1]._a.raw();
     if (isClassifier()) {
       assert (preds.length == out.length + 1);
@@ -1059,7 +1059,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       throw new UnsupportedOperationException("Trying to predict with an unstable model.");
     }
     ((Neurons.Input)neurons[0]).setInput(-1, data); // expands categoricals inside
-    DeepLearningTask.step(-1, neurons, model_info, false, false, null); // reconstructs data in expanded space
+    DeepLearningTask.step(-1, neurons, model_info, false, null); // reconstructs data in expanded space
     float[] in  = neurons[0]._a.raw(); //input (expanded)
     float[] out = neurons[neurons.length - 1]._a.raw(); //output (expanded)
     assert(in.length == out.length);

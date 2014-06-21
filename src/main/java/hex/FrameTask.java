@@ -64,8 +64,8 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
    * @param cats     - indexes of categoricals into the expanded beta-vector.
    * @param response - numeric value for the response
    */
-  protected void processRow(long gid, double [] nums, int ncats, int [] cats, double [] response){throw new RuntimeException("should've been overridden!");}
-  protected void processRow(long gid, double [] nums, int ncats, int [] cats, double [] response, NewChunk [] outputs){throw new RuntimeException("should've been overridden!");}
+  protected void processRow(long gid, double [] nums, int ncats, int [] cats, double [] response){throw new RuntimeException("should've been overriden!");}
+  protected void processRow(long gid, double [] nums, int ncats, int [] cats, double [] response, NewChunk [] outputs){throw new RuntimeException("should've been overriden!");}
 
 
   public static class DataInfo extends Iced {
