@@ -4,7 +4,7 @@ source('../../findNSourceUtils.R')
 test.GLM.covtype <- function(conn) {
   Log.info("Importing covtype.20k.data...\n")
   
-  covtype.hex = h2o.uploadFile.VA(conn, locate("smalldata/covtype/covtype.20k.data"))
+  covtype.hex = h2o.uploadFile(conn, locate("smalldata/covtype/covtype.20k.data"))
   covtype.sum = summary(covtype.hex)
   print(covtype.sum)
   

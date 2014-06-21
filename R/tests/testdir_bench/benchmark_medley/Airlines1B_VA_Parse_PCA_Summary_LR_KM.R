@@ -68,7 +68,7 @@ function(conn) {
   } else {
     start_parse <- round(System$currentTimeMillis())[[1]]
     print("DOING PARSE OF TRAINING DATA")
-    h2o.importHDFS.VA(h, "s3n://h2o-bench/AirlinesClean2", key = "air.hex", parse = TRUE)
+    h2o.importFile(h, "s3n://h2o-bench/AirlinesClean2", key = "air.hex", parse = TRUE)
     end_parse <- round(System$currentTimeMillis())[[1]]
     parseTime <<- (end_parse - start_parse)/1000
   }
@@ -96,19 +96,19 @@ function(conn) {
 
   print("DOING GLM-LR - 12 COLUMNS")
   start_model <- round(System$currentTimeMillis())[[1]]
-  m <- h2o.glm.VA(x = c("Year", "Month", "DayofMonth", "DayOfWeek", "CRSDepTime","CRSArrTime", "UniqueCarrier", "CRSElapsedTime", "Origin", "Dest", "Distance"), y = "IsDepDelayed", data = hex, family = "binomial")
+  m <- h2o.glm(x = c("Year", "Month", "DayofMonth", "DayOfWeek", "CRSDepTime","CRSArrTime", "UniqueCarrier", "CRSElapsedTime", "Origin", "Dest", "Distance"), y = "IsDepDelayed", data = hex, family = "binomial")
   end_model <- round(System$currentTimeMillis())[[1]]
   glmModelTime_12col <<- (end_model - start_model)/1000
  
   print("DOING GLM-LR - 9 COLUMNS")
   start_model <- round(System$currentTimeMillis())[[1]]
-  m <- h2o.glm.VA(x = c("Year", "Month", "DayofMonth", "DayOfWeek", "CRSDepTime","CRSArrTime", "CRSElapsedTime", "Distance"), y = "IsDepDelayed", data = hex, family = "binomial")
+  m <- h2o.glm(x = c("Year", "Month", "DayofMonth", "DayOfWeek", "CRSDepTime","CRSArrTime", "CRSElapsedTime", "Distance"), y = "IsDepDelayed", data = hex, family = "binomial")
   end_model <- round(System$currentTimeMillis())[[1]]
   glmModelTime_9col <<- (end_model - start_model)/1000
  
   print("DOING KMEANS")
   start_model <- round(System$currentTimeMillis())[[1]]
-  m <- h2o.kmeans.VA(hex, centers = 6, cols = c("Year", "Month", "DayofMonth", "DayOfWeek", "CRSDepTime","CRSArrTime", "Distance"), iter.max = 100) 
+  m <- h2o.kmeans(hex, centers = 6, cols = c("Year", "Month", "DayofMonth", "DayOfWeek", "CRSDepTime","CRSArrTime", "Distance"), iter.max = 100) 
   end_model <- round(System$currentTimeMillis())[[1]]
   kmModelTime_7col <<- (end_model - start_model)/1000
   
