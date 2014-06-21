@@ -11,12 +11,6 @@ public class RemoveAllKeysTask extends DRemoteTask {
     int nodeIdx = H2O.SELF.index();
     Log.info("Removing "+keysetSize+" keys on this node; nodeIdx("+nodeIdx+") numNodes("+numNodes+")");
 
-    // First cancel all jobs and wait for them to be done.
-    for (Job job : Job.all()) {
-      job.cancel();
-      Job.waitUntilJobEnded(job.self());
-    }
-
     // Now remove all keys.
     Futures fs = new Futures();
     for( Key key : H2O.localKeySet() )

@@ -1,6 +1,7 @@
 package water.api;
 
 import com.google.gson.JsonObject;
+import water.Job;
 import water.util.Log;
 import water.util.RemoveAllKeysTask;
 
@@ -12,8 +13,19 @@ public class RemoveAll extends JSONOnlyRequest {
   protected Response serve() {
     try {
       Log.info("Removing all keys for the cluster");
+
+      // First cancel all jobs and wait for them to be done.
+      Log.info("Cancelling all jobs...");
+      for (Job job : Job.all()) {
+        job.cancel();
+        Job.waitUntilJobEnded(job.self());
+      }
+      Log.info("Finished cancelling all jobs");
+
       RemoveAllKeysTask collector = new RemoveAllKeysTask();
       collector.invokeOnAllNodes();
+
+      Log.info("Finished removing keys");
     } catch( Throwable e ) {
       return Response.error(e);
     }
