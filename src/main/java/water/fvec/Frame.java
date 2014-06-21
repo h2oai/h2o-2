@@ -947,10 +947,19 @@ public class Frame extends Lockable<Frame> {
   private static class DeepSelect extends MRTask2<DeepSelect> {
     @Override public void map( Chunk chks[], NewChunk nchks[] ) {
       Chunk pred = chks[chks.length-1];
-      for(int i = 0; i < pred._len; ++i){
-        if(pred.at0(i) != 0)
-          for(int j = 0; j < chks.length-1; ++j)
-            nchks[j].addNum(chks[j].at0(i));
+      for(int i = 0; i < pred._len; ++i) {
+        if(pred.at0(i) != 0) {
+          for (int j = 0; j < chks.length - 1; ++j) {
+            Chunk chk = chks[j];
+            if (chk instanceof C16Chunk) {
+              long lo = chks[j].at16l0(i);
+              long hi = chks[j].at16h0(i);
+              nchks[j].addUUID(lo, hi);
+            } else {
+              nchks[j].addNum(chks[j].at0(i));
+            }
+          }
+        }
       }
     }
   }
