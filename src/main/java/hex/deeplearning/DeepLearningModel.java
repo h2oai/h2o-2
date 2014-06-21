@@ -207,6 +207,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     private Neurons.DenseRowMatrix[] dense_row_weights; //one 2D weight matrix per layer (stored as a 1D array each)
     private Neurons.DenseColMatrix[] dense_col_weights; //one 2D weight matrix per layer (stored as a 1D array each)
     private Neurons.DenseVector[] biases; //one 1D bias array per layer
+    private Neurons.DenseVector[] avg_activations; //one 1D array per layer
 
     // helpers for storing previous step deltas
     // Note: These two arrays *could* be made transient and then initialized freshly in makeNeurons() and in DeepLearningTask.initLocal()
@@ -313,6 +314,11 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       // biases (only for hidden layers and output layer)
       biases = new Neurons.DenseVector[layers+1];
       for (int i=0; i<=layers; ++i) biases[i] = new Neurons.DenseVector(units[i+1]);
+      // average activation (only for hidden layers)
+      if (get_params().autoencoder) {
+        avg_activations = new Neurons.DenseVector[layers];
+        for (int i = 0; i < layers; ++i) avg_activations[i] = new Neurons.DenseVector(units[i + 1]);
+      }
       fillHelpers();
       // for diagnostics
       mean_rate = new float[units.length];
@@ -444,6 +450,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       for (int i=0;i<dense_row_weights.length;++i)
         Utils.add(get_weights(i).raw(), other.get_weights(i).raw());
       for (int i=0;i<biases.length;++i) Utils.add(biases[i].raw(), other.biases[i].raw());
+      for (int i=0;i<avg_activations.length;++i) Utils.add(avg_activations[i].raw(), other.biases[i].raw());
       if (has_momenta()) {
         assert(other.has_momenta());
         for (int i=0;i<dense_row_weights_momenta.length;++i)
@@ -463,6 +470,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       for (int i=0; i<dense_row_weights.length; ++i)
         Utils.div(get_weights(i).raw(), N);
       for (Neurons.Vector bias : biases) Utils.div(bias.raw(), N);
+      for (Neurons.Vector avgac : avg_activations) Utils.div(avgac.raw(), N);
       if (has_momenta()) {
         for (int i=0; i<dense_row_weights_momenta.length; ++i)
           Utils.div(get_weights_momenta(i).raw(), N);
