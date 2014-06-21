@@ -314,9 +314,9 @@ public class SpeeDRF extends Job.ValidatedJob {
         }
       }
 
-      if (validation != null) {
-        sample = 1.0;
-      }
+//      if (validation != null) {
+//        sample = 1.0;
+//      }
 
       // Initialize classification specific model parameters
       if(!regression) {
@@ -384,7 +384,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       SpeeDRFModel model = new SpeeDRFModel(dest(), source._key, fr, this, priorDist);
       model.verbose = verbose;
       int csize = H2O.CLOUD.size();
-      model.fr = train;
+      model.fr = fr;
       model.response = regression ? fr.lastVec() : fr.lastVec().toEnum();
       model.t_keys = new Key[0];
       model.time = 0;
