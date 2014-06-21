@@ -952,9 +952,14 @@ public class Frame extends Lockable<Frame> {
           for (int j = 0; j < chks.length - 1; ++j) {
             Chunk chk = chks[j];
             if (chk instanceof C16Chunk) {
-              long lo = chks[j].at16l0(i);
-              long hi = chks[j].at16h0(i);
-              nchks[j].addUUID(lo, hi);
+              if (chks[j].isNA0(i)) {
+                nchks[j].addNA();
+              }
+              else {
+                long lo = chks[j].at16l0(i);
+                long hi = chks[j].at16h0(i);
+                nchks[j].addUUID(lo, hi);
+              }
             } else {
               nchks[j].addNum(chks[j].at0(i));
             }
