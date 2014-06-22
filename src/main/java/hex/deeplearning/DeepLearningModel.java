@@ -450,7 +450,9 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       for (int i=0;i<dense_row_weights.length;++i)
         Utils.add(get_weights(i).raw(), other.get_weights(i).raw());
       for (int i=0;i<biases.length;++i) Utils.add(biases[i].raw(), other.biases[i].raw());
-      for (int i=0;i<avg_activations.length;++i) Utils.add(avg_activations[i].raw(), other.biases[i].raw());
+      if (avg_activations != null)
+        for (int i=0;i<avg_activations.length;++i)
+          Utils.add(avg_activations[i].raw(), other.biases[i].raw());
       if (has_momenta()) {
         assert(other.has_momenta());
         for (int i=0;i<dense_row_weights_momenta.length;++i)
@@ -470,7 +472,9 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       for (int i=0; i<dense_row_weights.length; ++i)
         Utils.div(get_weights(i).raw(), N);
       for (Neurons.Vector bias : biases) Utils.div(bias.raw(), N);
-      for (Neurons.Vector avgac : avg_activations) Utils.div(avgac.raw(), N);
+      if (avg_activations != null)
+        for (Neurons.Vector avgac : avg_activations)
+          Utils.div(avgac.raw(), N);
       if (has_momenta()) {
         for (int i=0; i<dense_row_weights_momenta.length; ++i)
           Utils.div(get_weights_momenta(i).raw(), N);
