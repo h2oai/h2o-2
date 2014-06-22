@@ -56,6 +56,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_dkv(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilenameAll = [
             ("syn_10x8.csv", 'cA', 5),
@@ -73,7 +74,6 @@ class Basic(unittest.TestCase):
             write_syn_dataset(csvPathname, 10, SEEDPERFILE)
             # creates csvFilename.hex from file in importFolder dir 
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=2000)
-            print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
 
             # We should be able to see the parse result?

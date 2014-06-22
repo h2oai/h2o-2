@@ -1943,11 +1943,11 @@ class H2O(object):
 
             # data_key/model_key/ntree are all in **params_dict
             rfViewResult = self.random_forest_view(timeoutSecs=timeoutSecs,
-                                                   retryDelaySecs=retryDelaySecs, initialDelaySecs=initialDelaySecs,
-                                                   pollTimeoutSecs=pollTimeoutSecs,
-                                                   noise=noise, benchmarkLogging=benchmarkLogging,
-                                                   print_params=print_params, noPoll=noPoll,
-                                                   useRFScore=False, **params_dict)
+                retryDelaySecs=retryDelaySecs, initialDelaySecs=initialDelaySecs,
+                pollTimeoutSecs=pollTimeoutSecs,
+                noise=noise, benchmarkLogging=benchmarkLogging,
+                print_params=print_params, noPoll=noPoll,
+                useRFScore=False, **params_dict)
 
             verboseprint("random_forest_view:", rfViewResult)
             return rfViewResult

@@ -18,7 +18,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_rf_model_key_unique(self):
+    def test_rf_model_key_unique_fvec(self):
+        h2o.beta_features = True
         modelKeyDict = {}
         for trial in range (1,5):
             if trial == 1:
@@ -29,7 +30,8 @@ class Basic(unittest.TestCase):
             parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
             rfResult = h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=10, rfView=False)
             print "RF #%d" % trial,  "started on ", csvPathname, 'took', time.time() - start, 'seconds'
-            model_key = rfResult['model_key']
+            print "rfResult", h2o.dump_json(rfResult)
+            model_key = rfResult['destination_key']
             print "model_key:", model_key
             if model_key in modelKeyDict:
                 raise Exception("same model_key used in RF #%d that matches prior RF #%d" % (trial, modelKeyDict[model_key]))

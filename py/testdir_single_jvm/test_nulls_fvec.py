@@ -20,7 +20,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_file_with_nul_chars_inserted(self):
+    def test_nulls_fvec(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         # we're going to insert <NUL> (0x0) in between every byte!
@@ -62,7 +63,7 @@ class Basic(unittest.TestCase):
                 model_key = csvFilename + "_" + str(trials)
 
                 parseResult = h2i.import_parse(path=nulPathname, schema='put')
-                h2o_cmd.runRF(parseResult=parseResult, trees=trees, model_key=model_key, timeoutSecs=timeoutSecs, retryDelaySecs=1)
+                h2o_cmd.runRF(parseResult=parseResult, trees=trees, destination_key=model_key, timeoutSecs=timeoutSecs, retryDelaySecs=1)
                 sys.stdout.write('.')
                 sys.stdout.flush()
 

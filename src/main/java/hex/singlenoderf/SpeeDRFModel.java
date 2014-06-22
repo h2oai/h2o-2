@@ -263,13 +263,13 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     if (shouldScore) {
 
       // First check if there's a test frame... if so, then score on it with the score method, no need for CMTask.
-//      if (m.test_frame != null) {
-//        scoreOnTest(m, old);
-//
-//      // Otherwise score on train (OOB if set to true, which is the default!)
-//      } else {
+      if (m.test_frame != null) {
+        scoreOnTest(m, old);
+
+      // Otherwise score on train (OOB if set to true, which is the default!)
+      } else {
         scoreOnTrain(m, old);
-//      }
+      }
 
     // No scoring. Just plug CM with nulls and -1f for errs.
     } else {
