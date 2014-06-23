@@ -37,7 +37,7 @@ test.LiblineaR <- function(conn) {
                      nfolds       = 1,
                      lambda       = 1/ (7 * 100), #700,
                      alpha        = 0.0,
-                     epsilon = 1E-2, version = 1)
+                     epsilon = 1E-2)
     
     h2op         <- h2o.predict(h2o.m, testhex)
     h2opreds     <- head(h2op, nrow(h2op))
@@ -93,8 +93,7 @@ test.LiblineaR <- function(conn) {
                      nfolds       = 1, 
                      lambda       = 1/70,
                      alpha        = 0.00,
-                     epsilon = 1E-2, 
-                     version = 1)
+                     epsilon = 1E-2)
     
     h2op     <- h2o.predict(h2o.m, testhex)
     h2opreds <- head(h2op, nrow(h2op))

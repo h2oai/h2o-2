@@ -15,7 +15,7 @@ conn <- new("H2OClient", ip=myIP, port=myPort)
 path = locate("smalldata/iris/iris_wheader.nonspd.csv")
 iris.hex = h2o.uploadFile(conn, path, key="iris.hex")
 
-expect_warning(h2o.glm(x = c(1:4,6:8), y = "class", data = iris.hex, family = "binomial", lambda = 0, version = 1))
-expect_warning(h2o.glm(x = c(1:4,6:8), y = "class", data = iris.hex, family = "binomial", lambda = c(0,1e-5,0.1), version = 1))
+expect_warning(h2o.glm(x = c(1:4,6:8), y = "class", data = iris.hex, family = "binomial", lambda = 0))
+expect_warning(h2o.glm(x = c(1:4,6:8), y = "class", data = iris.hex, family = "binomial", lambda = c(0,1e-5,0.1)))
 
 PASS_BANNER()

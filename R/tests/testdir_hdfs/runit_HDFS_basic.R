@@ -60,7 +60,7 @@ print ("FV import worked")
 # Directory file cases.
 #----------------------------------------------------------------------
 
-heading("Testing directory importHDFS for FV")
+heading("Testing directory importHDFS")
 url <- sprintf("hdfs://%s%s", hdfs_name_node, hdfs_iris_dir)
 iris.FV.dir.hex <- h2o.importFolder(conn, url, pattern="*.csv")
 head(iris.FV.dir.hex)

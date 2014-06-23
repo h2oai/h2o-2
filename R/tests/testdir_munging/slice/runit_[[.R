@@ -7,8 +7,8 @@ source('../../findNSourceUtils.R')
 test.columndereference <- function(conn) {
   Log.info('test column dereference')
 
-  hdf <- h2o.uploadFile.FV(conn, locate('smalldata/jira/pub-180.csv'))
-  otherhdf <- h2o.uploadFile.FV(conn, locate('smalldata/jira/v-11.csv'))
+  hdf <- h2o.uploadFile(conn, locate('smalldata/jira/pub-180.csv'))
+  otherhdf <- h2o.uploadFile(conn, locate('smalldata/jira/v-11.csv'))
 
   column <- 'colgroup2'
 
