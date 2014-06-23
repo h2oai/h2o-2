@@ -21,7 +21,7 @@ test.GLMGrid.lambda.search <- function(conn) {
   # random_model = h2o.getGLMLambdaModel(model.bestlambda, random_lambda)
   # expect_equal(random_model@model$params$lambda, random_lambda)
   
-  Log.info(cat("Retrieving model corresponding to alpha =", params.bestlambda$alpha, "and best lambda", params.bestlambda$best_lambda, "\n"))
+  Log.info(cat("Retrieving model corresponding to alpha =", params.bestlambda$alpha, "and best lambda", params.bestlambda$lambda_best, "\n"))
   best_model = h2o.getGLMLambdaModel(model.bestlambda, params.bestlambda$lambda_best)
   expect_equal(best_model@model, model.bestlambda@model)
   
