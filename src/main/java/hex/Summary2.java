@@ -149,7 +149,7 @@ public class Summary2 extends Iced {
       _ninfs += other._ninfs;
       _zeros += other._zeros;
       if (Double.isNaN(_min2)) _min2 = other._min2;
-      else if (!Double.isNaN(other._min2)) _min2 = Math.min(_min2,other._min2);
+      else if (!Double.isNaN(other._min2)) _min2 = Math.min(_min2, other._min2);
       if (Double.isNaN(_max2)) _max2 = other._max2;
       else if (!Double.isNaN(other._max2)) _max2 = Math.max(_max2, other._max2);
       return this;
@@ -505,6 +505,7 @@ public class Summary2 extends Iced {
       }
 
       int binIdx2Int = (int) binIdx2;
+      assert (_start2 <= val) : "Why is val < _start2? val:"+val+" _start2:";
       assert (binIdx2Int >= 0 && binIdx2Int < hcnt2.length) : 
         "binIdx2Int too big for hcnt2 "+binIdx2Int+" "+hcnt2.length+" "+val+" "+_start2+" "+_binsz2;
 
@@ -543,6 +544,7 @@ public class Summary2 extends Iced {
     }
 
     int binIdxInt = (int) binIdx;
+    assert (_start <= val) : "Why is val < _start? val:"+val+" _start:";
     assert (binIdxInt >= 0 && binIdx < hcnt.length) : 
         "binIdxInt bad for hcnt2. binIdxInt:"+binIdxInt+" hcnt.length:"+hcnt.length+" val:"+val+" _start:"+_start+" _binsz:"+_binsz;
     ++hcnt[binIdxInt];
