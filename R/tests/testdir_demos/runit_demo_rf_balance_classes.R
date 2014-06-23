@@ -78,6 +78,6 @@ cat("\n\nSPEEDRF WITHOUT CLASS WT\n")
 func(air.speedrf)
 
 cat("\n\nSPEEDRF WITH CLASS WT\n")
-func(air.speedrf.classwt)
+func(air.speedrf.balance)
 
 PASS_BANNER()
