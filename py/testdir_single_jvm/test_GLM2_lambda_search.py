@@ -38,7 +38,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM2_params_rand2(self):
+    def test_GLM2_lambda_search(self):
         h2o.beta_features = True
         csvPathname = 'covtype/covtype.20k.data'
 
@@ -51,16 +51,19 @@ class Basic(unittest.TestCase):
 
         paramDict = define_params()
         for trial in range(20):
-            # params is mutable. This is default.
+            params = {}
+            colX = h2o_glm.pickRandGlmParams(paramDict, params)
+            # override choices with these
             params = {
                 'response': 54, 
                 'alpha': 0.1, 
+                'max_iter': 8,
                 # 'lambda': 1e-4, 
-                'lambda': 0,
+                # 'lambda': 0,
+                'lambda': None,
                 'lambda_search': 1, 
                 'n_folds': 1,
             }
-            colX = h2o_glm.pickRandGlmParams(paramDict, params)
             kwargs = params.copy()
 
             if 'family' not in kwargs or kwargs['family']=='binomial':

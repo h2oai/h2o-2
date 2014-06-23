@@ -54,17 +54,13 @@ class Basic(unittest.TestCase):
             r = params.get('randomize', 0)
             v = params.get('value', None)
             if r:
-                if v is not None:
-                    # if these are None, they are treated as >0 (default > 0?)
-                    params['integer_fraction'] = 0
-                    params['categorical_fraction'] = 0
-                elif (i and c) and (i + c) >= 1.0:
+                params['value'] = None
+                if (i and c) and (i + c) >= 1.0:
                     params['integer_fraction'] = i
                     params['categorical_fraction'] = 1.0 - i
             else:
                 params['integer_fraction'] = 0
                 params['categorical_fraction'] = 0
-                params['value'] = None
 
 
             kwargs = params.copy()
