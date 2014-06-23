@@ -981,6 +981,7 @@ public class DeepLearning extends Job.ValidatedJob {
       final float rowUsageFraction = computeRowUsageFraction(train.numRows(), mp.actual_train_samples_per_iteration, mp.replicate_training_data);
 
       if (!mp.quiet_mode) Log.info("Initial model:\n" + model.model_info());
+      if (autoencoder) model.doScoring(train, trainScoreFrame, validScoreFrame, self(), getValidAdaptor()); //get the null model reconstruction error
       Log.info("Starting to train the Deep Learning model.");
 
       //main loop

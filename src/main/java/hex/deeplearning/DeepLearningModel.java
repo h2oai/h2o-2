@@ -690,10 +690,12 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       get_params().state = ((DeepLearning)UKV.get(jobKey)).state; //make the job state consistent
     else
       get_params().state = ((Job.JobHandle)UKV.get(jobKey)).state; //make the job state consistent
-    errors = new Errors[1];
-    errors[0] = new Errors();
-    errors[0].validation = (params.validation != null);
-    errors[0].num_folds = params.n_folds;
+    if (!get_params().autoencoder) {
+      errors = new Errors[1];
+      errors[0] = new Errors();
+      errors[0].validation = (params.validation != null);
+      errors[0].num_folds = params.n_folds;
+    }
     assert(Arrays.equals(_key._kb, destKey._kb));
   }
 
