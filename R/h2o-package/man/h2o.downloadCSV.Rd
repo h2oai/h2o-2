@@ -20,7 +20,7 @@ h2o.downloadCSV(data, filename, quiet = FALSE)
 WARNING: Files located on the H2O server may be very large! Make sure you have enough hard drive space to accommodate the entire file. 
 }
 \seealso{
-\code{\linkS4class{H2OParsedData}, \linkS4class{H2OParsedDataVA}}
+\code{\linkS4class{H2OParsedData}}
 }
 \examples{
 library(h2o)

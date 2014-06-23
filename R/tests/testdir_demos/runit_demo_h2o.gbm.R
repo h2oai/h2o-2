@@ -26,7 +26,7 @@ test.h2o.gbm <- function(conn) {
   
   irisPath = system.file("extdata", "iris.csv", package="h2o")
   Log.info(paste("Uploading", irisPath))
-  iris.hex = h2o.uploadFile.FV(conn, path = irisPath, key = "iris.hex")
+  iris.hex = h2o.uploadFile(conn, path = irisPath, key = "iris.hex")
   
   Log.info("Print out summary of iris.csv")
   summary(iris.hex)

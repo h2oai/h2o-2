@@ -91,7 +91,7 @@ test.exec2.demo <- function(conn) {
   # prostate.hex[,11] = prostate.hex$PSA >= prostate.qs["75%"]
   
   Log.info("Run GLM2 with y = new boolean column, x = AGE, RACE, VOL, GLEASON")
-  prostate.glm.lin = h2o.glm.FV(y = 10, x = c("AGE", "RACE", "VOL", "GLEASON"), data = prostate.hex, family = "binomial")
+  prostate.glm.lin = h2o.glm(y = 10, x = c("AGE", "RACE", "VOL", "GLEASON"), data = prostate.hex, family = "binomial")
   print(prostate.glm.lin)
   
   testEnd()
