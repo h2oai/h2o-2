@@ -13,7 +13,7 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(node_count=3)
+            h2o.build_cloud(node_count=3, java_heap_GB=4)
         else:
             h2o_hosts.build_cloud_with_hosts(node_count=3)
         h2o.beta_features = True
@@ -38,7 +38,7 @@ class Basic(unittest.TestCase):
         h2o_cmd.runRF(parseResult=parseResult, trees=50, timeoutSecs=30, noise=('StoreView',None), retryDelaySecs=0.1)
 
     def test_E_ParseManyCols(self):
-        parseResult = h2i.import_parse(bucket='smalldata', path='fail1_100x11000.csv.gz', schema='put', noise=('StoreView',None), retryDelaySecs=0.1, timeoutSecs=30)
+        parseResult = h2i.import_parse(bucket='smalldata', path='fail1_100x11000.csv.gz', schema='put', noise=('StoreView',None), retryDelaySecs=0.1, timeoutSecs=120)
 
         print "parseResult:", h2o.dump_json(parseResult)
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])

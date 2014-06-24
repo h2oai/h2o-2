@@ -22,7 +22,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_rf_libsvm(self):
+    def test_rf_libsvm_fvec(self):
+        h2o.beta_features = True
         # just do the import folder once
 
         # make the timeout variable per dataset. it can be 10 secs for covtype 20x (col key creation)
@@ -62,7 +63,6 @@ class Basic(unittest.TestCase):
 
             # PARSE******************************************
             parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=2000)
-            print csvPathname, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
 
             # INSPECT******************************************
@@ -73,8 +73,8 @@ class Basic(unittest.TestCase):
 
             # RF******************************************
             kwargs = {
-                'ntree': 6,
-                'response_variable': 0,
+                'ntrees': 6,
+                'response': 0,
             }
 
             timeoutSecs = 600

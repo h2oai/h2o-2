@@ -10,7 +10,7 @@ ALLOWED_DELTA=40
 DO_MULTINOMIAL=False
 paramDict = {
     'response': 'C55',
-    'ntrees': 30,
+    'ntrees': 3,
     'max_depth': 30,
     'nbins': 100,
     # 'ignored_cols_by_name': "C1,C2,C6,C7,C8",

@@ -293,12 +293,6 @@ public class NewChunk extends Chunk {
     if( _len > Vec.CHUNK_SZ )
       throw new ArrayIndexOutOfBoundsException(_len);
     if(_ls != null && _ls.length > 0){
-      if(_id == null){ // check for sparseness
-        int nzs = 1; // assume one non-zero for the element currently being stored
-        for( int i=0; i<_ls.length; i++ ) if( _ls[0] != 0 || _ds[i] != 0 ) ++nzs;
-        if( nzs*MIN_SPARSE_RATIO < _len2)
-          set_sparse(nzs);
-      } else _id = MemoryManager.arrayCopyOf(_id, _len << 1);
       _ls = MemoryManager.arrayCopyOf(_ls,_len<<1);
       _ds = MemoryManager.arrayCopyOf(_ds,_len<<1);
     } else {

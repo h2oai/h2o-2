@@ -2,7 +2,7 @@ import unittest, time, sys, os
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_rf, h2o_util, h2o_import as h2i
 
-USE_LOCAL=True
+USE_LOCAL = True
 
 # RF train parameters
 
@@ -48,7 +48,7 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(2)
+            h2o.build_cloud(2, java_heap_GB=7)
         else:
             h2o_hosts.build_cloud_with_hosts()
         
@@ -77,41 +77,18 @@ class Basic(unittest.TestCase):
     
     def test_RF(self):
         h2o.beta_features = True
+        paramsTrainRF = { 
+            'ntrees': 2, 
+            'max_depth': 300,
+            'nbins': 200,
+            'timeoutSecs': 600,
+            'response': 'C55',
+        }
 
-        if h2o.beta_features:
-            paramsTrainRF = { 
-                'ntrees': 10, 
-                'max_depth': 300,
-                'nbins': 200,
-                'timeoutSecs': 600,
-                'response': 'C55',
-            }
-
-            paramsScoreRF = {
-                'vactual': 'C55',
-                'timeoutSecs': 600,
-            }
-
-        else:
-            paramsTrainRF = { 
-                'use_non_local_data' : 1,
-                'ntree'      : 10, 
-                'depth'      : 300,
-                'bin_limit'  : 20000,
-                'stat_type'  : 'ENTROPY',
-                'out_of_bag_error_estimate': 1, 
-                'exclusive_split_limit'    : 0,
-                'timeoutSecs': 60,
-            }
-
-            paramsScoreRF = {
-                # scoring requires the response_variable. it defaults to last, so normally
-                # we don't need to specify. But put this here and (above if used) 
-                # in case a dataset doesn't use last col 
-                'response_variable': None,
-                'timeoutSecs': 60,
-                'out_of_bag_error_estimate': 0, 
-            }
+        paramsScoreRF = {
+            'vactual': 'C55',
+            'timeoutSecs': 600,
+        }
 
         trainKey1 = self.loadData(trainDS1)
         kwargs   = paramsTrainRF.copy()
