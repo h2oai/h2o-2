@@ -65,7 +65,7 @@ class Basic(unittest.TestCase):
 
 
             kwargs = {
-                'ntrees': 20,
+                'ntrees': 2,
                 'max_depth': 20,
                 'nbins': 50,
             }

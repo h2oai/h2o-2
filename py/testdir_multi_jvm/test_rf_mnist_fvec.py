@@ -66,12 +66,12 @@ class Basic(unittest.TestCase):
             ignore_x = h2o_glm.goodXFromColumnInfo(y, key=parseResult['destination_key'], timeoutSecs=300, forRF=True)
 
             params = {
-                'response': 'C' + str(y),
+                'response': 'C' + str(y+1),
                 'cols': None,
                 'ignored_cols_by_name': ignore_x,
                 'classification': 1,
                 'validation': None,
-                'ntrees': 10,
+                'ntrees': 2,
                 'max_depth': 20,
                 'min_rows': None,
                 'nbins': 1000,
@@ -134,9 +134,7 @@ class Basic(unittest.TestCase):
             # "cm":[[3621,1399],[1515,3465]]}}
             rf_model = rfView['drf_model']
             cms = rf_model['cms']
-            ntrees = rf_model['N']
             errs = rf_model['errs']
-            N = rf_model['N']
 
             # FIX! should update this expected classification error
             ## (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView, ntree=ntrees)
