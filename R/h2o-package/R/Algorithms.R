@@ -173,7 +173,7 @@ h2o.glm.get_model <- function (data, model_key, return_all_lambda = TRUE, params
   make_model <- function(x, params) {
     m = .h2o.__getGLM2Results(res2$glm_model, params, x);
     res_xval = list()
-    if(!is.null(res2$glm_model$submodels[[x]]$xvalidation)){
+    if(!is.null(res2$glm_model$submodels[[x]]$xvalidation)) {
       xvalKey = res2$glm_model$submodels[[x]]$xvalidation$xval_models
       # Get results from cross-validation
       if(!is.null(xvalKey) && length(xvalKey) >= 2) {
@@ -313,10 +313,10 @@ h2o.getGLMLambdaModel <- function(model, lambda) {
     result$params$family <- .h2o.__getFamily(model$glm$family, model$glm$link)
   result$coefficients <- as.numeric(unlist(submod$beta))
   idxes <- submod$idxs + 1
-  names(result$coefficients) <- model$coefficients_names[idxes] 
-  if(model$parameters$standardize) {
+  names(result$coefficients) <- model$coefficients_names[idxes]
+  if(model$parameters$standardize == "true" && !is.null(submod$norm_beta)) {
     result$normalized_coefficients = as.numeric(unlist(submod$norm_beta))
-    names(result$normalized_coefficients) = model$coefficients_names[submod$idxs + 1]
+    names(result$normalized_coefficients) = model$coefficients_names[idxes]
   }
   result$rank = valid$'_rank'
   result$iter = submod$iteration

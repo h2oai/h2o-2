@@ -92,41 +92,6 @@ setMethod("show", "H2OGrid", function(object) {
   cat("\nSummary\n"); print(temp)
 })
 
-setMethod("show", "H2OGLMModel", function(object) {
-  print(object@data)
-  cat("GLM2 Model Key:", object@key)
-
-  model = object@model
-  cat("\n\nCoefficients:\n"); print(round(model$coefficients,5))
-  if(!is.null(model$normalized_coefficients)) {
-    cat("\nNormalized Coefficients:\n"); print(round(model$normalized_coefficients,5))
-  }
-  cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual")
-  cat("\nNull Deviance:    ", round(model$null.deviance,1))
-  cat("\nResidual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1))
-  cat("\nDeviance Explained:", round(1-model$deviance/model$null.deviance,5))
-  cat("\nAvg Training Error Rate:", round(model$train.err,5), "\n")
-
-  family = model$params$family$family
-  if(family == "binomial") {
-    cat("AUC:", round(model$auc,5), " Best Threshold:", round(model$best_threshold,5))
-    cat("\n\nConfusion Matrix:\n"); print(model$confusion)
-  }
-
-  if(length(object@xval) > 0) {
-    cat("\nCross-Validation Models:\n")
-    if(family == "binomial") {
-      modelXval = t(sapply(object@xval, function(x) { c(x@model$rank-1, x@model$auc, 1-x@model$deviance/x@model$null.deviance) }))
-      colnames(modelXval) = c("Nonzeros", "AUC", "Deviance Explained")
-    } else {
-      modelXval = t(sapply(object@xval, function(x) { c(x@model$rank-1, x@model$aic, 1-x@model$deviance/x@model$null.deviance) }))
-      colnames(modelXval) = c("Nonzeros", "AIC", "Deviance Explained")
-    }
-    rownames(modelXval) = paste("Model", 1:nrow(modelXval))
-    print(modelXval)
-  }
-})
-
 setMethod("show", "H2OKMeansModel", function(object) {
     print(object@data)
     cat("K-Means Model Key:", object@key)
@@ -152,8 +117,8 @@ setMethod("show", "H2OGLMModel", function(object) {
     cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual")
     cat("\nNull Deviance:    ", round(model$null.deviance,1))
     cat("\nResidual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1))
-    cat("\nDeviance Explained:", round(1-model$deviance/model$null.deviance,5))
-    cat("\nAvg Training Error Rate:", round(model$train.err,5), "\n")
+    cat("\nDeviance Explained:", round(1-model$deviance/model$null.deviance,5), "\n")
+    # cat("\nAvg Training Error Rate:", round(model$train.err,5), "\n")
     
     family = model$params$family$family
     if(family == "binomial") {
