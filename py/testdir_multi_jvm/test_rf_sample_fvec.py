@@ -42,7 +42,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud(h2o.nodes)
     
-    def test_rf_sample(self):
+    def test_rf_sample_fvec(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilename = "syn_ints.csv"
         csvPathname = SYNDATASETS_DIR + '/' + csvFilename
@@ -67,10 +68,10 @@ class Basic(unittest.TestCase):
 
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvPathname, \
-                "    num_rows:", "{:,}".format(inspect['num_rows']), \
-                "    num_cols:", "{:,}".format(inspect['num_cols'])
+                "    numRows:", "{:,}".format(inspect['numRows']), \
+                "    numCols:", "{:,}".format(inspect['numCols'])
 
-            kwargs = {'sample': 75, 'depth': 25, 'ntree': 1}
+            kwargs = {'sample_rate': 0.75, 'max_depth': 25, 'ntrees': 1}
             start = time.time()
             rfv = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=30, **kwargs)
             elapsed = time.time() - start
@@ -78,20 +79,6 @@ class Basic(unittest.TestCase):
             print "trial #", trial, "totalRows:", totalRows, "parse end on ", csvFilename, \
                 'took', time.time() - start, 'seconds'
 
-            cm = rfv['confusion_matrix']
-            rows_skipped = cm['rows_skipped']
-
-            # the sample is what we trained on. The CM for one tree is what's left
-            # it's not perfectly accurate..allow +-2
-            # NEW: after the # of trees is big enough, all the data is used, so we really can't compare
-            # any more
-            sample = kwargs['sample']
-            rowsUsed = sample * totalRows/100
-            rowsNotUsed = totalRows - rowsUsed
-
-            ## print "Allowing delta of 0-2"
-            ## print "predicted CM rows (rowsNotUsed):", rowsNotUsed, "actually:", totalRows - rows_skipped, "rows_skipped:", rows_skipped
-            ## self.assertAlmostEqual(rowsNotUsed, totalRows - rows_skipped, delta=2)
             h2o.check_sandbox_for_errors()
 
 
