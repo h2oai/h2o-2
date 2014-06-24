@@ -640,7 +640,7 @@ public final class ParseDataset2 extends Job {
     protected transient NewChunk [] _nvs;
     protected AppendableVec []_vecs;
     private transient final Enum [] _enums;
-    protected final byte [] _ctypes;
+    protected byte [] _ctypes;
     long _nLines;
     int _nCols;
     int _col = -1;
@@ -743,8 +743,10 @@ public final class ParseDataset2 extends Job {
     }
     protected long linenum(){return _nLines;}
     @Override public void addNumCol(int colIdx, long number, int exp) {
-      if( colIdx < _nCols ) _nvs[_col = colIdx].addNum(number,exp);
-      // else System.err.println("Additional column ("+ _nvs.length + " < " + colIdx + ":" + number + "," + exp + ") on line " + linenum());
+      if( colIdx < _nCols ) {
+        _nvs[_col = colIdx].addNum(number, exp);
+        if(_ctypes[colIdx] == UCOL ) _ctypes[colIdx] = NCOL;
+      }
     }
 
     @Override public final void addInvalidCol(int colIdx) {
