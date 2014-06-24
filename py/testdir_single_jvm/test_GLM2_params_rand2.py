@@ -57,7 +57,6 @@ class Basic(unittest.TestCase):
                 'alpha': 0.1, 
                 # 'lambda': 1e-4, 
                 'lambda': 0,
-                'lambda_search': 1, 
                 'n_folds': 1,
             }
             colX = h2o_glm.pickRandGlmParams(paramDict, params)

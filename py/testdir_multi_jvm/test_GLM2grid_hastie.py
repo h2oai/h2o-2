@@ -16,26 +16,18 @@ def glm_doit(self, csvFilename, bucket, csvPathname, timeoutSecs=30):
     print "\nStarting parse of", csvFilename
     parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='put', hex_key=csvFilename + ".hex", timeoutSecs=10)
     y = "10"
-    x = ""
     # NOTE: hastie has two values, -1 and 1. To make H2O work if two valued and not 0,1 have
     kwargs = {
-        'x': x, 'y':  y, 'case': '1',
-        # better classifier it flipped? (better AUC?)
+        'response':  y,
         'max_iter': 10,
-        'case': -1, 'case_mode': '=',
         'n_folds': 2,
         'lambda': '1e-8,1e-4,1e-3',
         'alpha': '0,0.25,0.8',
-        # hardwire threshold to 0.5 because the dataset is so senstive right around threshold
-        # otherwise, GLMGrid will pick a model with zero coefficients, if it has the best AUC
-        # to avoid my checker complaining about all zero coefficients, force the threshold to 0.5
-        'thresholds': '0.5',
-        # 'thresholds': '0.2:0.8:0.1'
         }
 
     start = time.time() 
     print "\nStarting GLMGrid of", csvFilename
-    glmGridResult = h2o_cmd.runGLMGrid(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+    glmGridResult = h2o_cmd.runGLM(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
     print "GLMGrid in",  (time.time() - start), "secs (python)"
 
     # still get zero coeffs..best model is AUC = 0.5 with intercept only.
@@ -59,7 +51,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_A_1mx10_hastie_10_2(self):
+    def test_GLM2grid_hastie(self):
+        h2o.beta_features = True
         # gunzip it and cat it to create 2x and 4x replications in SYNDATASETS_DIR
         # FIX! eventually we'll compare the 1x, 2x and 4x results like we do
         # in other tests. (catdata?)
