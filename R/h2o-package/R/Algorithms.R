@@ -29,7 +29,7 @@ h2o.gbm <- function(x, y, distribution = 'multinomial', data, n.trees = 10, inte
   
   if(!is.numeric(nfolds)) stop("nfolds must be numeric")
   if(nfolds == 1) stop("nfolds cannot be 1")
-  if(!missing(validation) && class(validatio) != "H2OParsedData")
+  if(!missing(validation) && class(validation) != "H2OParsedData")
     stop("validation must be an H2O parsed dataset")
   
   # NB: externally, 1 based indexing; internally, 0 based
@@ -1006,8 +1006,12 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, nfolds=0, validation,
     #}
     
     class_names <- tail(res$'_domains', 1)[[1]]
-    
     raw_cms <- tail(res$cms, 1)[[1]]$'_arr'
+    
+    dom_len <- length(class_names)
+    if(length(raw_cms) > dom_len)
+      raw_cms[[length(raw_cms)]] = NULL
+    raw_cms <- lapply(raw_cms, function(x) { if(length(x) > dom_len) x = x[1:dom_len]; return(x) })
     
     
     #    rrr <- NULL
