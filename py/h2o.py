@@ -1164,6 +1164,9 @@ class H2O(object):
         return key
 
     def get_key(self, key, timeoutSecs=30):
+        if beta_features:
+            raise Exception("get_key isn't supported with fvec")
+
         params = {'key': key}
         paramsStr = '?' + '&'.join(['%s=%s' % (k, v) for (k, v) in params.items()])
         url = self.__url('Get.html')
