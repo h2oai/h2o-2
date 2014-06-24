@@ -79,6 +79,7 @@
                     </div>
                 </div>
             </div>
+            <div id="header_div"></div>
             <div id="cpu_svg">
                 <div id="cpu_svg1"></div>
                 <div id="cpu_svg2"></div>
@@ -111,12 +112,12 @@
                 h2.appendChild(t2);
                 h3.appendChild(t3);
                 h4.appendChild(t4);
-                document.getElementById("cpu_svg").appendChild(h);
-                document.getElementById("cpu_svg").appendChild(h2);
+                document.getElementById("header_div").appendChild(h);
+                document.getElementById("header_div").appendChild(h2);
+                document.getElementById("header_div").appendChild(document.createElement('hr'));
+                document.getElementById("header_div").appendChild(h3);
                 document.getElementById("cpu_svg").appendChild(document.createElement('hr'));
-                document.getElementById("cpu_svg").appendChild(h3);
-                document.getElementById("cpu_svg").appendChild(document.createElement('hr'));
-                document.getElementById("rss_svg").appendChild(h4);
+                document.getElementById("cpu_svg").appendChild(h4);
 
                 $(document).ready(function() {
                     showPerfGraphs(test_run_id, num_hosts)

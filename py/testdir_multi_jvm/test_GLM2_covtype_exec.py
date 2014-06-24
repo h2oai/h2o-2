@@ -18,38 +18,31 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM_covtype(self):
+    def test_GLM2_covtype_exec(self):
+        h2o.beta_features = True
         csvFilename = 'covtype.data'
         csvPathname = 'standard/' + csvFilename
         hex_key = 'covtype.hex'
         parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put',
-            hex_key=hex_key, timeoutSecs=10)
+            hex_key=hex_key, timeoutSecs=30)
 
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         print "\n" + csvPathname, \
-            "    num_rows:", "{:,}".format(inspect['num_rows']), \
-            "    num_cols:", "{:,}".format(inspect['num_cols'])
+            "    numRows:", "{:,}".format(inspect['numRows']), \
+            "    numCols:", "{:,}".format(inspect['numCols'])
 
         print "WARNING: max_iter set to 8 for benchmark comparisons"
         max_iter = 8
 
         y = "54"
-        x = ""
 
-        print "Touching it with exec to trigger va to fvec (covtype.hex) , and then fvec to va (covtype2.hex)"
-        h2o_cmd.runExec(str='%s=%s' % ('covtype2.hex', hex_key))
-        # hack to use the new one
-        parseResult['destination_key'] = 'covtype2.hex'
+        h2o_cmd.runExec(str='%s[,55] = %s[,55]==1' % (hex_key, hex_key))
 
         # L2 
         kwargs = {
-            'x': x,
-            'y': y,
+            'response': y,
             'family': 'binomial',
-            'link': 'logit',
             'n_folds': 0,
-            'case_mode': '=',
-            'case': 1,
             'max_iter': max_iter,
             'beta_epsilon': 1e-3}
 

@@ -1,11 +1,11 @@
 <?php
   include 'DB2.php';
 
-  $a = array_keys($_POST);
-  $quer = htmlspecialchars($_POST[$a[0]]);
+  $test = $_POST['test_run_id'];
+  $ip   = $_POST['ip'];
 
-  $query = "SELECT * FROM stats WHERE test_run_id =" . $quer;
-  
+  $query = "SELECT * FROM stats WHERE test_run_id =" . $test . " AND node_ip = '" . $ip . "';";
+
   $result = mysqli_prepare($con, $query);
   if ( !$result ) { 
     printf('errno: %d, error: %s', $con->errno, $con->error);
@@ -16,6 +16,7 @@
 
   mysqli_stmt_execute($result);
   $results = fetch_records2($result);
+  
   echo json_encode($results);
 
 ?>

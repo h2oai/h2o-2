@@ -150,7 +150,7 @@ public class Frame extends Lockable<Frame> {
           @Override public byte priority(){return H2O.MIN_HI_PRIORITY;}
           @Override public void compute2() {
             Value v = DKV.get(k);
-            if( v==null ) Log.err("Missing vector during Frame fetch: "+k);
+            if( v==null ) Log.err("Missing vector #" + ii + " (" + _names[ii] + ") during Frame fetch: "+k);
             vecs[ii] = v.get();
             tryComplete();
           }
@@ -947,10 +947,14 @@ public class Frame extends Lockable<Frame> {
   private static class DeepSelect extends MRTask2<DeepSelect> {
     @Override public void map( Chunk chks[], NewChunk nchks[] ) {
       Chunk pred = chks[chks.length-1];
-      for(int i = 0; i < pred._len; ++i){
-        if(pred.at0(i) != 0)
-          for(int j = 0; j < chks.length-1; ++j)
-            nchks[j].addNum(chks[j].at0(i));
+      for(int i = 0; i < pred._len; ++i) {
+        if(pred.at0(i) != 0) {
+          for( int j = 0; j < chks.length - 1; j++ ) {
+            Chunk chk = chks[j];
+            if( chk._vec.isUUID() ) nchks[j].addUUID(chk,i);
+            else nchks[j].addNum(chk.at0(i));
+          }
+        }
       }
     }
   }

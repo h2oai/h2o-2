@@ -289,12 +289,18 @@ function nodePerfGraph(json, svgCPU, svgRSS) {
     var xRSS = d3.scale.linear().range([0, width - 1000]);
     var yRSS = d3.scale.linear().range([height, 0]);
 
-    var xAxis = d3.svg.axis().scale(x).orient("bottom").tickFormat(d3.format("d"));
-    var yAxis = d3.svg.axis().scale(y).orient("left");
+    var xAxisCPU = d3.svg.axis().scale(xCPU).orient("bottom").tickFormat(d3.format("d"));
+    var yAxisCPU = d3.svg.axis().scale(yCPU).orient("left");
+    
+    var xAxisRSS = d3.svg.axis().scale(xRSS).orient("bottom").tickFormat(d3.format("d"));
+    var yAxisRSS = d3.svg.axis().scale(yRSS).orient("left"); 
 
+  
     var lineFunctionCPU = d3.svg.line().interpolate("ordinal")
-        .x(function(d) {return xCPU(d[0]); })
-        .y(function(d) { return yCPU(d[1]); });
+        .x(function(d) {
+          return xCPU(d[0]); })
+        .y(function(d) { 
+          return yCPU(d[1]); });
 
     var lineFunctionRSS = d3.svg.line().interpolate("ordinal")
         .x(function(d) {return xRSS(d[0]); })
@@ -325,32 +331,34 @@ function nodePerfGraph(json, svgCPU, svgRSS) {
      *     "rss": []
      */
 
-    var test_run_id = d3.values(json.data[0]);
-    var test_name = d3.values(json.data[1]);
-    var node_name = d3.values(json.data[2]);
-    var sys_cpu = zip(d3.values(json.data[3]), d3.values(json.data[4]));
-    var user_cpu = zip(d3.values(json.data[3]), d3.values(json.data[5]));
-    var rss = zip(d3.values(json.data[3]), d3.values(json.data[6]));
+    var test_run_id = json.data[0]['test_run_id'];
+    var test_name = json.data[0]['test_name'];
+    var node_name = json.data[0]['node_ip'];
+    var ts_raw = json.data.map(function(d) { return d['ts'] });
+    var max_time = d3.max(ts_raw);
+    var ts = (ts_raw.map(function(d) { return max_time - d })).sort();
+    var sys_cpu = zip(ts, json.data.map(function(d) { return d['cum_cpu_sys'] }));
+    var user_cpu = zip(ts, json.data.map(function(d) { return d['cum_cpu_proc'] }));
+    var rss = zip(ts, json.data.map(function(d) { return d['rss'] / (1.0 * 1024 * 1024) }));
 
+    var cpu_min = d3.min( [d3.min(user_cpu.map(function(d) {return d[0];})),  d3.min(sys_cpu.map(function(d) { return d[0]; }))]);
+    var cpu_max = d3.max( [d3.max(user_cpu.map(function(d) {return d[0]; })),  d3.max(sys_cpu.map(function(d) { return d[0]; }))])
 
-    xCPU.domain([
-        d3.min(sys_cpu, function(c) { return d3.min(c.data, function(v) { return v[0]; }); }),
-        d3.max(sys_cpu, function(c) { return d3.max(c.data, function(v) { return v[0]; }); })
-    ]);
+    xCPU.domain([0, cpu_max]);
 
     yCPU.domain([
         0,
-        d3.max(sys_cpu, function(c) { return d3.max(c.data, function(v) { return +v[1]; }); })
+        100, 
     ]);
 
     xRSS.domain([
-        d3.min(rss, function(c) { return d3.min(c.data, function(v) { return v[0]; }); }),
-        d3.max(rss, function(c) { return d3.max(c.data, function(v) { return v[0]; }); })
+        0,
+        d3.max(rss.map(function(d) { return d[0] }))
     ]);
 
     yRSS.domain([
         0,
-        d3.max(rss, function(c) { return d3.max(c.data, function(v) { return +v[1]; }); })
+        d3.max(rss.map(function(d) {return d[1] }))
     ]);
 
     var cpu = [];
@@ -358,81 +366,107 @@ function nodePerfGraph(json, svgCPU, svgRSS) {
         cpu.push({
             name: "sys",
             color: "green",
-            data: pp
+            data: sys_cpu[pp]
         })
     }
     for (var pp in user_cpu) {
         cpu.push({
             name: "user",
             color: "blue",
-            data: pp
+            data: user_cpu[pp]
         })
     }
 
     // Make the CPU svg
+    var linesGroup = svg_cpu.append("g").attr("class", "line");
+  
+    svg_cpu.selectAll(".point").data(cpu).enter()
+      .append("svg:circle")
+      .attr("stroke", "black")
+      .attr("fill", "black")
+      .attr("cx", function(d, i) {
+        return xCPU(d.data[0])
+      })
+      .attr("cy", function(d, i) {
+        return yCPU(d.data[1])
+      })
+      .attr("r", 3)
+      .attr("stroke", function(d) { return d.color});
 
-    var linesGroup = svg.append("g").attr("class", "line");
-    for (var i in cpu) {
-        linedata = cpu[i];
+      
+    linesGroup.append("path")
+      .attr("d", lineFunctionCPU(sys_cpu))
+      .attr("class", "lines")
+      .attr("fill", "none")
+      .attr("stroke", "green");
 
-        svg_cpu.selectAll(".point").data(linedata.data).enter()
-            .append("svg:circle")
-            .attr("stroke", "black")
-            .attr("fill", "black");
-
-        linesGroup.append("path")
-            .attr("d", lineFunctionCPU(linedata.data))
-            .attr("class", "lines")
-            .attr("fill", "none")
-            .attr("stroke", linedata.color);
-    }
+    linesGroup.append("path")
+      .attr("d", lineFunctionCPU(user_cpu))
+      .attr("class", "lines")
+      .attr("fill", "none")
+      .attr("stroke", "blue");
 
     svg_cpu.append("g")
         .attr("class", "x axis")
         .attr("transform", "translate(0," + height + ")")
-        .call(xAxis);
+        .call(xAxisCPU)
+        .append("text")
+        .attr("y", 0)
+        .attr("x", xCPU(cpu_max +1 ))
+        .text("Time (s)");
 
     svg_cpu.append("g")
         .attr("class", "y axis")
-        .call(yAxis)
+        .call(yAxisCPU)
         .append("text")
         .attr("transform", "rotate(-90)")
         .attr("y", 6)
         .attr("dy", ".71em")
         .style("text-anchor", "end")
-        .text("Time (s)");
+        .text("Cumulative CPU %");
 
     // Do the RSS graph
+    var linesGroup2 = svg_rss.append("g").attr("class", "line");
+    
+    svg_rss.selectAll(".point").data(rss).enter()
+        
+    svg_rss.selectAll(".point").data(rss).enter()
+      .append("svg:circle")
+      .attr("stroke", "black")
+      .attr("fill", "black")
+      .attr("cx", function(d, i) {
+        console.log(d)
+        return xRSS(d[0])
+      })  
+      .attr("cy", function(d, i) {
+        return yRSS(d[1])
+      })  
+      .attr("r", 3)
+      .attr("stroke", "black");
 
-    var linesGroup2 = svg.append("g").attr("class", "line");
-    for (var i in rss) {
-        linedata = rss[i];
-
-        svg_rss.selectAll(".point").data(linedata.data).enter()
-            .append("svg:circle")
-            .attr("stroke", "black")
-            .attr("fill", "black");
-
-        linesGroup2.append("path")
-            .attr("d", lineFunctionRSS(linedata.data))
-            .attr("class", "lines")
-            .attr("fill", "none")
-            .attr("stroke", linedata.color);
-    }
+    linesGroup2.append("path")
+      .attr("d", lineFunctionRSS(rss))
+      .attr("class", "lines")
+      .attr("fill", "none")
+      .attr("stroke", "black");
 
     svg_rss.append("g")
         .attr("class", "x axis")
         .attr("transform", "translate(0," + height + ")")
-        .call(xAxis);
+        .call(xAxisRSS)
+        .append("text")
+        .attr("y", 0)
+        .attr("x", xRSS(cpu_max +1 ))
+        .text("Time (s)");
 
     svg_rss.append("g")
         .attr("class", "y axis")
-        .call(yAxis)
+        .call(yAxisRSS)
         .append("text")
         .attr("transform", "rotate(-90)")
         .attr("y", 6)
         .attr("dy", ".71em")
         .style("text-anchor", "end")
-        .text("Time (s)");
+        .text("Cumulative Memory Used"); 
 }
 

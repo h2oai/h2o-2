@@ -43,13 +43,16 @@ class Basic(unittest.TestCase):
 
             h2o.verboseprint("Trial", trial)
             start = time.time()
+
+            # without rfview, do we get the 'first" rf json?
             rfv = h2o_cmd.runRF(parseResult=parseResult, trees=1000, max_depth=2, rfView=False,
                 timeoutSecs=600, retryDelaySecs=3)
             print "RF #", trial,  "started on ", csvFilename, 'took', time.time() - start, 'seconds'
-            rf_model = rfv['drf_model']
-            used_trees = rf_model['N']
-            data_key = rf_model['_dataKey']
-            model_key = rf_model['_key']
+            # rf_model = rfv['drf_model']
+            # data_key = rf_model['_dataKey']
+            # model_key = rf_model['_key']
+            data_key = rfv['source']['_key']
+            model_key = rfv['destination_key']
 
             print "model_key:", model_key
 

@@ -282,6 +282,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 
   protected void complete(){
     _model.maybeComputeVariableImportances();
+    _model.stop_training();
     if(_addedL2 > 0){
       String warn = "Added L2 penalty (rho = " + _addedL2 + ")  due to non-spd matrix. ";
       if(_model.warnings == null || _model.warnings.length == 0)

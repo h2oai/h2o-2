@@ -27,11 +27,13 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_rf_big1_overwrite_model(self):
+    def test_rf_big1_overwrite_model_fvec(self):
+        h2o.beta_features = True
         csvFilename = 'hhp_107_01.data.gz'
         hex_key = csvFilename + ".hex"
         print "\n" + csvFilename
-        parseResult = h2i.import_parse(bucket='smalldata', path=csvFilename, hex_key=hex_key, timeoutSecs=15, schema='put')
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvFilename, 
+            hex_key=hex_key, timeoutSecs=15, schema='put')
         firstRfView = None
         # dispatch multiple jobs back to back
         for jobDispatch in range(3):
@@ -46,22 +48,21 @@ class Basic(unittest.TestCase):
             print "Change the number of trees, while keeping the rf model key name the same"
             print "Checks that we correctly overwrite previous rf model"
             if OVERWRITE_RF_MODEL:
-                kwargs['ntree'] = 7 + jobDispatch
+                kwargs['ntrees'] = 1 + jobDispatch
             else:
-                kwargs['ntree'] = 7
+                kwargs['ntrees'] = 1
                 # don't change the seed if we're overwriting the model. It should get 
                 # different results just from changing the tree count
                 kwargs['seed'] = random.randint(0, sys.maxint)
 
             # FIX! what model keys do these get?
             randomNode = h2o.nodes[random.randint(0,len(h2o.nodes)-1)]
-            h2o_cmd.runRF(node=randomNode, parseResult=parseResult, model_key=model_key, timeoutSecs=300,
+            h2o_cmd.runRF(node=randomNode, parseResult=parseResult, destination_key=model_key, timeoutSecs=300,
                  noPoll=True, **kwargs)
             # FIX! are these already in there?
             rfView = {}
-            rfView['data_key'] = hex_key
-            rfView['model_key'] = model_key
-            rfView['ntree'] = kwargs['ntree']
+            rfView['_dataKey'] = hex_key
+            rfView['_key'] = model_key
 
             print "rf job dispatch end on ", csvFilename, 'took', time.time() - start, 'seconds'
             print "\njobDispatch #", jobDispatch
@@ -72,12 +73,11 @@ class Basic(unittest.TestCase):
             # In this test we're waiting after each one, so we can save the RFView results for comparison to future
             print "Checking completed job:", rfView
             print "rfView", h2o.dump_json(rfView)
-            data_key = rfView['data_key']
-            model_key = rfView['model_key']
-            ntree = rfView['ntree']
+            data_key = rfView['_dataKey']
+            model_key = rfView['_key']
             print "Temporary hack: need to do two rf views minimum, to complete a RF (confusion matrix creation)"
             # allow it to poll to complete
-            rfViewResult = h2o_cmd.runRFView(None, data_key, model_key, ntree=ntree, timeoutSecs=60, noPoll=False)
+            rfViewResult = h2o_cmd.runRFView(None, data_key, model_key, timeoutSecs=60, noPoll=False)
             if firstRfView is None: # we'll use this to compare the others
                 firstRfView = rfViewResult.copy()
                 firstModelKey = model_key

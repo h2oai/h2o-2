@@ -12,37 +12,36 @@ function(conn) {
     
     mfrmr=h2o.uploadFile(conn,filepath,key = "mfrmr")
     str(mfrmr)
-    myX = 2:13
-    myY = 1 
-    alpha = 1 
+    myX   <- 2:13
+    myY   <- 1
+    alpha <- 1
     
-    #H2O GLM model  
-    hh=h2o.glm(x=myX,y=myY,data=mfrmr,family="gaussian",nfolds=0, alpha = alpha)
-
-    res_dev = hh@model$deviance
-    obs = nrow(mfrmr)
-    lambda = hh@model$params$best_lambda
-    alpha = hh@model$params$alpha
-    cof = hh@model$normalized_coefficients
-    L1 = sum(abs(cof))
-    L2 = sqrt(sum(cof^2)) 
-    penalty = ( 0.5*(1-alpha)*L2^2 ) + ( alpha*L1 )
-    objective = (res_dev/obs) + ( lambda * penalty )
+    # H2O GLM model
+    hh        <- h2o.glm(x=myX,y=myY,data=mfrmr,family="gaussian",nfolds=0, alpha = alpha)
+    res_dev   <- hh@model$deviance
+    obs       <- nrow(mfrmr)
+    lambda    <- hh@model$params$lambda_best
+    alpha     <- hh@model$params$alpha
+    cof       <- hh@model$normalized_coefficients
+    L1        <- sum(abs(cof))
+    L2        <- sqrt(sum(cof^2))
+    penalty   <- ( 0.5*(1-alpha)*L2^2 ) + ( alpha*L1 )
+    objective <- (res_dev/obs) + ( lambda * penalty )
     
     # GLMNET Model  
-    gg=glmnet(x=as.matrix(rr[,2:13]),y=(rr[,1]),alpha = alpha,lambda=lambda)
+    gg <- glmnet(x=as.matrix(rr[,2:13]),y=(rr[,1]),alpha = alpha,lambda=lambda)
 
-	# Sanity Check whether comparing models built on the same dataset
+	# Sanity check whether comparing models built on the same dataset
 	expect_equal( nrow(mfrmr), nrow(rr))
 	expect_equal(gg$nulldev,hh@model$null.deviance)
 
-	res_dev_R = deviance(gg)
-	obs = nrow(mfrmr)
-	cof_R = coef(gg,s= lambda)
-	L1_R = sum(abs(cof_R[,1]))
-	L2_R = sqrt(sum(cof_R[,1]^2))
-	penalty_R = ( 0.5*(1-alpha)*L2_R^2 ) + ( alpha*L1_R )
-	objective_R = (res_dev_R/obs) + ( lambda * penalty_R )
+	res_dev_R <- deviance(gg)
+	obs <- nrow(mfrmr)
+	cof_R <- coef(gg,s= lambda)
+	L1_R <- sum(abs(cof_R[,1]))
+	L2_R <- sqrt(sum(cof_R[,1]^2))
+	penalty_R <- ( 0.5*(1-alpha)*L2_R^2 ) + ( alpha*L1_R )
+	objective_R <- (res_dev_R/obs) + ( lambda * penalty_R )
 
 	print(paste("residual deviance from R:  ",res_dev_R, sep = ""))
 	print(paste("residual deviance from H2O:  ",res_dev, sep = ""))
@@ -56,9 +55,9 @@ function(conn) {
 	print(paste("Objective function for model from R:  ",objective_R, sep = ""))
 	print(paste("Objective function for model from H2O:  ",objective, sep = ""))
 
-	expect_true(objective<=objective_R)
+	expect_true(objective <= objective_R)
 
     testEnd()
 }
-doTest("Compares objective function results from H2O-glm and glmnet: marketing data with no NAs Smalldata", glm.objectiveFun.test)
 
+doTest("Compares objective function results from H2O-glm and glmnet: marketing data with no NAs Smalldata", glm.objectiveFun.test)

@@ -72,7 +72,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_badrf(self):
-        h2o.beta_features = False
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvPathname = SYNDATASETS_DIR + '/badrf.data'
         dsf = open(csvPathname, "w+")

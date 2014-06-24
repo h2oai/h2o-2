@@ -789,7 +789,7 @@ public class AUC extends Func {
 //          Log.warn("Skipping predicted NaN."); //some models predict NaN!
           continue;
         }
-        final double pr = cp.at80(i);
+        final double pr = cp.at0(i);
         for( int t=0; t < _cms.length; t++ ) {
           final int p = pr >= _thresh[t]?1:0;
           _cms[t].add(a, p);

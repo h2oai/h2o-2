@@ -124,7 +124,7 @@ public abstract class Model extends Lockable<Model> {
   }
 
   public void start_training(long training_start_time) {
-    Log.info("setting training_start_time to: " + training_start_time + " for Model: " + this.getClass().getSimpleName() + "@" + System.identityHashCode(this));
+    Log.info("setting training_start_time to: " + training_start_time + " for Model: " + this._key.toString() + " (" + this.getClass().getSimpleName() + "@" + System.identityHashCode(this) + ")");
 
     final long t = training_start_time;
     new TAtomic<Model>() {
@@ -138,7 +138,7 @@ public abstract class Model extends Lockable<Model> {
   }
   public void start_training(Model previous) {
     training_start_time = System.currentTimeMillis();
-    Log.info("setting training_start_time to: " + training_start_time + " for Model: " + this.getClass().getSimpleName() + "@" + System.identityHashCode(this) + " (checkpoint case)");
+    Log.info("setting training_start_time to: " + training_start_time + " for Model: " + this._key.toString() + " (" + this.getClass().getSimpleName() + "@" + System.identityHashCode(this) + ") [checkpoint case]");
     if (null != previous)
       training_duration_in_ms += previous.training_duration_in_ms;
 
@@ -155,7 +155,7 @@ public abstract class Model extends Lockable<Model> {
   }
   public void stop_training() {
     training_duration_in_ms += (System.currentTimeMillis() - training_start_time);
-    Log.info("setting training_duration_in_ms to: " + training_duration_in_ms + " for Model: " + this.getClass().getSimpleName() + "@" + System.identityHashCode(this));
+    Log.info("setting training_duration_in_ms to: " + training_duration_in_ms + " for Model: " + this._key.toString() + " (" + this.getClass().getSimpleName() + "@" + System.identityHashCode(this) + ")");
 
     final long d = training_duration_in_ms;
     new TAtomic<Model>() {
@@ -192,7 +192,7 @@ public abstract class Model extends Lockable<Model> {
    *
    * @see #score(Frame, boolean)
    */
-  public final Frame score(Frame fr) {
+  public Frame score(Frame fr) {
     return score(fr, true);
   }
   /** Bulk score the frame <code>fr</code>, producing a Frame result; the 1st Vec is the
@@ -355,13 +355,20 @@ public abstract class Model extends Lockable<Model> {
    *  second frame is to delete all adapted vectors with deletion of the
    *  frame). */
   public Frame[] adapt( final Frame fr, boolean exact) {
+    return adapt(fr, exact, true);
+  }
+
+  public Frame[] adapt( final Frame fr, boolean exact, boolean haveResponse) {
     Frame vfr = new Frame(fr); // To avoid modification of original frame fr
-    int ridx = vfr.find(_names[_names.length-1]);
-    if(ridx != -1 && ridx != vfr._names.length-1){ // Unify frame - put response to the end
-      String n = vfr._names[ridx];
-      vfr.add(n,vfr.remove(ridx));
+    int n = _names.length;
+    if (haveResponse) {
+      int ridx = vfr.find(_names[_names.length - 1]);
+      if (ridx != -1 && ridx != vfr._names.length - 1) { // Unify frame - put response to the end
+        String name = vfr._names[ridx];
+        vfr.add(name, vfr.remove(ridx));
+      }
+      n = ridx == -1 ? _names.length - 1 : _names.length;
     }
-    int n = ridx == -1?_names.length-1:_names.length;
     String [] names = Arrays.copyOf(_names, n);
     Frame  [] subVfr;
     // replace missing columns with NaNs (or 0s for DeepLearning with sparse data)
@@ -551,7 +558,6 @@ public abstract class Model extends Lockable<Model> {
   // Version where the user has just ponied-up an array of data to be scored.
   // Data must be in proper order.  Handy for JUnit tests.
   public double score(double [] data){ return Utils.maxIndex(score0(data,new float[nclasses()]));  }
-
 
   /** Return a String which is a valid Java program representing a class that
    *  implements the Model.  The Java is of the form:

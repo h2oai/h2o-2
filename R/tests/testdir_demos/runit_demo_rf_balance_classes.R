@@ -42,9 +42,9 @@ air.speedrf         = h2o.SpeeDRF(x = myX, y = myY, data = air.train, seed = 12,
 print(air.speedrf@model)
 
 # SpeeDRF
-air.speedrf.classwt = h2o.SpeeDRF(x = myX, y = myY, data = air.train, seed = 12, validation = air.valid, 
-                                  ntree = 10, depth = 20, classwt = c(1, 5))
-print(air.speedrf.classwt@model)
+air.speedrf.balance = h2o.SpeeDRF(x = myX, y = myY, data = air.train, seed = 12, validation = air.valid,
+                                  ntree = 10, depth = 20, balance.classes=T)
+print(air.speedrf.balance@model)
 
 #uploading test file to h2o
 testFilePath <-"../../../smalldata/airlines/AirlinesTest.csv.zip"
@@ -78,6 +78,6 @@ cat("\n\nSPEEDRF WITHOUT CLASS WT\n")
 func(air.speedrf)
 
 cat("\n\nSPEEDRF WITH CLASS WT\n")
-func(air.speedrf.classwt)
+func(air.speedrf.balance)
 
 PASS_BANNER()
