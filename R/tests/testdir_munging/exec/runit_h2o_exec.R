@@ -12,7 +12,7 @@ function(conn) {
 
     Log.info("Add together the first two columns of iris and store in 'res1'")
 
-    res1 <- h2o.exec(conn, hex[,1] + hex[,2], "res1")
+    res1 <- h2o.exec(hex[,1] + hex[,2])
     
     Log.info("Here's the result of res1")
     print(head(res1))
@@ -25,7 +25,7 @@ function(conn) {
     Log.info("Try a more complicated expression:")
     Log.info("Trying: hex[,1] + hex[, 2] + hex[, 3] * hex[,4] / hex[,1]")
 
-    res2 <- h2o.exec(client = conn, expr_to_execute= hex[,1] + hex[, 2] + hex[, 3] * hex[,4] / hex[,1], destination_key= "res2")
+    res2 <- h2o.exec(expr_to_execute= hex[,1] + hex[, 2] + hex[, 3] * hex[,4] / hex[,1])
    
     print(head(res2))
     
@@ -34,7 +34,7 @@ function(conn) {
 
     Log.info("Try intermixing scalars: hex[,1] + hex[, 2] + hex[, 3] + (hex[,4] / 2) - (hex[,2] / hex[,1]) * 12.3")
     
-    res3 <- h2o.exec(client = conn, expr_to_execute= hex[,1] + hex[, 2] + hex[, 3] + (hex[,4] / 2) - (hex[,2] / hex[,1]) * 12.3, destination_key= "res3")
+    res3 <- h2o.exec(expr_to_execute= hex[,1] + hex[, 2] + hex[, 3] + (hex[,4] / 2) - (hex[,2] / hex[,1]) * 12.3)
     print(head(res3))
 
     r_res3 <- iris[,1] + iris[,2] + iris[,3] + (iris[,4] / 2) - (iris[,2] / iris[,1]) * 12.3
@@ -42,7 +42,7 @@ function(conn) {
 
     Log.info("Multiple column selection")
     
-    res4 <- h2o.exec(client = conn, expr_to_execute = hex[,c(1,2)] + hex[,c(2,4)], destination_key = "res4")
+    res4 <- h2o.exec(expr_to_execute = hex[,c(1,2)] + hex[,c(2,4)])
     r_res4 <- iris[,c(1,2)] + iris[,c(2,4)]
 
     print(head(res4))
@@ -52,7 +52,7 @@ function(conn) {
     print(head(as.data.frame(res4)))
     expect_that(head(as.data.frame(res4)), equals(head(r_res4)))
 
-    res5 <- h2o.exec(client = conn, expr_to_execute = hex[,seq(1,4,1)] + hex[,seq(1,4,1)], destination_key = "res4")
+    res5 <- h2o.exec(expr_to_execute = hex[,seq(1,4,1)] + hex[,seq(1,4,1)])
     r_res5 <- iris[,1:4] + iris[,1:4]
 
     print(head(res5))
@@ -61,7 +61,17 @@ function(conn) {
     print(head(r_res5))
     print(head(as.data.frame(res5)))
     expect_that(head(as.data.frame(res5)), equals(head(r_res5)))
-  
+
+    res6 <- h2o.exec(expr_to_execute= ifelse(hex[,1] < 4.3, hex[,1], hex[,2] + hex[,3]))
+    print(head(res6))
+
+    r_res6 <- ifelse(iris[,1] < 4.3, iris[,1], iris[,2] + iris[,3])
+    
+    expect_that(head(res6)[,1], equals(head(r_res6)))
+
+
+    res99 <- h2o.exec(res99 <- ifelse(hex[,1] < 4.3, hex[,1], hex[,2] + hex[,3]))
+
 
     testEnd()
 }
