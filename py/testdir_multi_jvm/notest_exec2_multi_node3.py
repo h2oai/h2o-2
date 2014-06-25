@@ -75,7 +75,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_exec_multi_node3(self):
+    def test_exec2_multi_node3(self):
         h2o.beta_features = True
 
         for initTrial in range(1):
