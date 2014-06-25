@@ -13,26 +13,29 @@ import h2o, h2o_cmd, h2o_browse as h2b, h2o_hosts, h2o_import as h2i
 # makeEnum
 # bug?
 #        'Result<n> = slice(<keyX>[<col1>],<row>)',
+RAND_EXEC_NODE = False
 exprList = [
-        'Result1 = <keyX>[<col1>]',
-        'Result2 = min(<keyX>[<col1>])',
-        'Result1 = <keyX>[<col1>] + Result1',
-        'Result1 = max(<keyX>[<col1>]) + Result2',
-        'Result1 = <keyX>[<col1>] + Result1',
-        'Result1 = mean(<keyX>[<col1>]) + Result2',
-        'Result1 = <keyX>[<col1>] + Result1',
-        'Result1 = sum(<keyX>[<col1>]) + Result2',
-        'Result1 = <keyX>[<col1>] + Result1',
-        'Result1 = min(<keyX>[<col1>]) + Result2',
-        'Result1 = <keyX>[<col1>] + Result1',
-        'Result1 = max(<keyX>[<col1>]) + Result2',
-        'Result1 = <keyX>[<col1>] + Result1',
-        'Result1 = mean(<keyX>[<col1>]) + Result2',
-        'Result1 = <keyX>[<col1>] + Result1',
-        'Result1 = sum(<keyX>[<col1>]) + Result2',
+        # to make sure all possible inspects are initted
+        'Result1 = <keyX>[,<col1>]; Result2 = Result1; Result3 = Result1',
+        'Result2 = <keyX>[,<col1>]',
+        'Result4 = min(<keyX>[,<col1>])',
+        'Result3 = <keyX>[,<col1>] + Result1',
+        'Result4 = max(<keyX>[,<col1>]) + Result2',
+        'Result3 = <keyX>[,<col1>] + Result1',
+        'Result4 = mean(<keyX>[,<col1>]) + Result2',
+        'Result3 = <keyX>[,<col1>] + Result1',
+        'Result4 = sum(<keyX>[,<col1>]) + Result2',
+        'Result3 = <keyX>[,<col1>] + Result1',
+        'Result4 = min(<keyX>[,<col1>]) + Result2',
+        'Result3 = <keyX>[,<col1>] + Result1',
+        'Result4 = max(<keyX>[,<col1>]) + Result2',
+        'Result3 = <keyX>[,<col1>] + Result1',
+        'Result4 = mean(<keyX>[,<col1>]) + Result2',
+        'Result3 = <keyX>[,<col1>] + Result1',
+        'Result4 = sum(<keyX>[,<col1>]) + Result2',
     ]
 
-inspectList = ['Result1', 'Result2']
+inspectList = ['Result1', 'Result2', 'Result3']
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -84,8 +87,12 @@ class Basic(unittest.TestCase):
                 print "\nexecExpr:", execExpr, "on node", randNode
 
                 start = time.time()
-                resultExec = h2o_cmd.runExec(node=h2o.nodes[randNode], 
-                    execExpr=execExpr, timeoutSecs=15)
+                kwargs = {'str': execExpr}
+
+                if RAND_EXEC_NODE:
+                    resultExec = h2o_cmd.runExec(node=h2o.nodes[randNode], timeoutSecs=15, **kwargs)
+                else:
+                    resultExec = h2o_cmd.runExec(timeoutSecs=15, **kwargs)
                 h2o.verboseprint(h2o.dump_json(resultExec))
                 # print(h2o.dump_json(resultExec))
 
@@ -108,8 +115,8 @@ class Basic(unittest.TestCase):
                 # WARNING! we can't browse the Exec url history, since that will 
                 # cause the Exec to execute again thru the browser..i.e. it has side effects
                 # just look at the last inspect, which should be the resultInspect!
-                # h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
-                h2b.browseJsonHistoryAsUrlLastMatch("Exec")
+                h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
+                # h2b.browseJsonHistoryAsUrlLastMatch("Exec")
                 h2o.check_sandbox_for_errors()
                 print "exec end on ", "covtype.data" , 'took', time.time() - start, 'seconds'
                 print "Trial #", trial, "completed\n"
