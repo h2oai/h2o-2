@@ -1117,7 +1117,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
             + water.api.Predict.link(_key, "Score on dataset") + ", "
             + DeepLearning.link(_dataKey, "Compute new model", null, responseName(), val_key)
             + (bestModelKey != null && UKV.get(bestModelKey) != null && bestModelKey != _key ? ", " + DeepLearningModelView.link("Go to best model", bestModelKey) : "")
-            + (jobKey == null || (UKV.get(jobKey) != null && Job.isEnded(jobKey)) ? ", <i class=\"icon-play\"></i>" + DeepLearning.link(_dataKey, "Continue training this model", _key, responseName(), val_key) : "")
+            + (((jobKey != null && UKV.get(jobKey) == null)) || UKV.get(jobKey) != null && Job.isEnded(jobKey) ? ", <i class=\"icon-play\"></i>" + DeepLearning.link(_dataKey, "Continue training this model", _key, responseName(), val_key) : "")
             + "</div>");
 
     DocGen.HTML.paragraph(sb, "Model Key: " + _key);
