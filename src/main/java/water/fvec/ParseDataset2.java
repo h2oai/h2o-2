@@ -114,7 +114,7 @@ public final class ParseDataset2 extends Job {
     public void setException(DException ex){_ex = ex;}
     public DException getException(){return _ex;}
   }
-  static final void onProgress(final long len, final Key progress) {
+  static void onProgress(final long len, final Key progress) {
     new TAtomic<ParseProgress>() {
       @Override public ParseProgress atomic(ParseProgress old) {
         if (old == null) return null;
@@ -133,8 +133,6 @@ public final class ParseDataset2 extends Job {
     DKV.remove(_progress);
     super.remove();
   }
-
-  public enum ColType {I, F, E}
 
   /**
    * Task to update enum values to match the global numbering scheme.  Performs
@@ -295,7 +293,7 @@ public final class ParseDataset2 extends Job {
         String numLevelsStr = isCategorical ? String.format("numLevels(%d)", v.domain().length) : "";
 
         boolean printLogSeparatorToStdout = false;
-        boolean printColumnToStdout = false;
+        boolean printColumnToStdout;
         {
           // Print information to stdout for this many leading columns.
           final int MAX_HEAD_TO_PRINT_ON_STDOUT = 10;
@@ -332,7 +330,7 @@ public final class ParseDataset2 extends Job {
         }
       }
     }
-    catch (Exception xe) {}   // Don't fail due to logging issues.  Just ignore them.
+    catch (Exception ignore) {}   // Don't fail due to logging issues.  Just ignore them.
   }
 
   // --------------------------------------------------------------------------
@@ -355,7 +353,7 @@ public final class ParseDataset2 extends Job {
       if(uzpt._dout._vecs[i].shouldBeEnum())
         ecols[n++] = i;
     ecols =  Arrays.copyOf(ecols, n);
-    if( ecols != null && ecols.length > 0 ) {
+    if( ecols.length > 0 ) {
       EnumFetchTask eft = new EnumFetchTask(H2O.SELF.index(), uzpt._eKey, ecols).invokeOnAllNodes();
       Enum [] enums = eft._gEnums;
       ValueString [][] ds = new ValueString[ecols.length][];
@@ -384,13 +382,6 @@ public final class ParseDataset2 extends Job {
       l.unlock(job.self());
     }
     job.remove();
-  }
-
-  public static ParserSetup guessSetup(Key key, ParserSetup setup, boolean checkHeader){
-    ByteVec vec = (ByteVec) getVec(key);
-    byte [] bits = vec.chunkForChunkIdx(0)._mem;
-    Compression cpr = Utils.guessCompressionMethod(bits);
-    return ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), setup,checkHeader)._setup;
   }
 
   public static class ParseProgressMonitor extends Iced implements Job.ProgressMonitor {
@@ -435,10 +426,9 @@ public final class ParseDataset2 extends Job {
     public MultiFileParseTask dfork(Key... keys){
       _fileChunkOffsets = new IcedHashMap<Key, IcedInt>();
       int len = 0;
-      for(int i = 0; i < keys.length; ++i){
-        _fileChunkOffsets.put(keys[i],new IcedInt(len));
-        Vec v = getVec(keys[i]);
-        len += v.nChunks();
+      for( Key k : keys ) {
+        _fileChunkOffsets.put(k,new IcedInt(len));
+        len += getVec(k).nChunks();
       }
       _chunk2Enum = MemoryManager.malloc4(len);
       Arrays.fill(_chunk2Enum, -1);
@@ -469,7 +459,6 @@ public final class ParseDataset2 extends Job {
           // Then treat as no-headers, i.e., parse it as a normal row
           localSetup = new CustomParser.ParserSetup(ParserType.CSV,localSetup._separator, false);
       }
-      final int ncols = _setup._ncols;
 
       // Parse the file
       try {
@@ -655,7 +644,7 @@ public final class ParseDataset2 extends Job {
     static final private byte TCOL = 3; // time    col typ
     static final private byte ICOL = 4; // UUID    col typ
 
-    private static final AppendableVec[] newAppendables(int n, VectorGroup vg, int vecIdStart){
+    private static AppendableVec[] newAppendables(int n, VectorGroup vg, int vecIdStart){
       AppendableVec [] apps = new AppendableVec[n];
       for(int i = 0; i < n; ++i)
         apps[i] = new AppendableVec(vg.vecKey(vecIdStart + i));
@@ -741,7 +730,6 @@ public final class ParseDataset2 extends Job {
       }
       _col = -1;
     }
-    protected long linenum(){return _nLines;}
     @Override public void addNumCol(int colIdx, long number, int exp) {
       if( colIdx < _nCols ) {
         _nvs[_col = colIdx].addNum(number, exp);
@@ -797,9 +785,6 @@ public final class ParseDataset2 extends Job {
     }
 
     /** Adds double value to the column.
-    *
-    * @param colIdx
-    * @param value
     */
     public void addNumCol(int colIdx, double value) {
       if (Double.isNaN(value)) {
@@ -848,8 +833,5 @@ public final class ParseDataset2 extends Job {
     }
     @Override public int  getChunkDataStart(int cidx) { return -1; }
     @Override public void setChunkDataStart(int cidx, int offset) { }
-  }
-  public static class ParseException extends RuntimeException {
-    public ParseException(String msg) { super(msg); }
   }
 }
