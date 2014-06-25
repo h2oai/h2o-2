@@ -665,40 +665,40 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       ADMMSolver slvr = new ADMMSolver(_currentLambda,alpha[0], ADMM_GRAD_EPS, _addedL2);
       slvr._rho = _currentLambda*alpha[0]*_rho_mul;
       boolean solved = slvr.solve(glmt._gram,glmt._xy,glmt._yy,newBeta);
-//      if(!solved) { // try grid search over rho parameter
-//        double bestErr = slvr.gerr;
-//        double best_rho_mul = _rho_mul;
-//        double rho_mul = _rho_mul * 1.15;
-//        double[] bestSolution = solved ? null : newBeta.clone();
-//        for (int i = 0; !solved && i < 32; ++i) {
-//          System.out.println("rho_mul = " + rho_mul + ", bestErr = " + bestErr);
-//          slvr._rho = _currentLambda * alpha[0] * rho_mul;
-//          solved = slvr.solve(glmt._gram, glmt._xy, glmt._yy, newBeta);
-//          if (slvr.gerr < bestErr) {
-//            System.arraycopy(newBeta, 0, bestSolution, 0, bestSolution.length);
-//            bestErr = slvr.gerr;
-//            best_rho_mul = rho_mul;
-//          }
-//          rho_mul *= 1.15;
-//        }
-//        if(!solved) {
-//          rho_mul = _rho_mul * .85;
-//          for (int i = 0; !solved && i < 32; ++i) {
-//            slvr._rho = _currentLambda * alpha[0] * rho_mul;
-//            solved = slvr.solve(glmt._gram, glmt._xy, glmt._yy, newBeta);
-//            if (slvr.gerr < bestErr) {
-//              System.arraycopy(newBeta, 0, bestSolution, 0, bestSolution.length);
-//              bestErr = slvr.gerr;
-//              best_rho_mul = rho_mul;
-//            }
-//            rho_mul *= .75;
-//          }
-//        }
-//        System.arraycopy(bestSolution,0,newBeta,0,bestSolution.length);
-//        _gradientErr = bestErr;
-//        _rho_mul = best_rho_mul;
-//        System.out.println("best_rho_mul = " + _rho_mul + ", best_err = " + bestErr);
-//      } else _gradientErr = slvr.gerr;
+      if(!solved) { // try grid search over rho parameter
+        double bestErr = slvr.gerr;
+        double best_rho_mul = _rho_mul;
+        double rho_mul = _rho_mul * 1.15;
+        double[] bestSolution = solved ? null : newBeta.clone();
+        for (int i = 0; !solved && i < 32; ++i) {
+          System.out.println("rho_mul = " + rho_mul + ", bestErr = " + bestErr);
+          slvr._rho = _currentLambda * alpha[0] * rho_mul;
+          solved = slvr.solve(glmt._gram, glmt._xy, glmt._yy, newBeta);
+          if (slvr.gerr < bestErr) {
+            System.arraycopy(newBeta, 0, bestSolution, 0, bestSolution.length);
+            bestErr = slvr.gerr;
+            best_rho_mul = rho_mul;
+          }
+          rho_mul *= 1.15;
+        }
+        if(!solved) {
+          rho_mul = _rho_mul * .85;
+          for (int i = 0; !solved && i < 32; ++i) {
+            slvr._rho = _currentLambda * alpha[0] * rho_mul;
+            solved = slvr.solve(glmt._gram, glmt._xy, glmt._yy, newBeta);
+            if (slvr.gerr < bestErr) {
+              System.arraycopy(newBeta, 0, bestSolution, 0, bestSolution.length);
+              bestErr = slvr.gerr;
+              best_rho_mul = rho_mul;
+            }
+            rho_mul *= .75;
+          }
+        }
+        System.arraycopy(bestSolution,0,newBeta,0,bestSolution.length);
+        _gradientErr = bestErr;
+        _rho_mul = best_rho_mul;
+        System.out.println("best_rho_mul = " + _rho_mul + ", best_err = " + bestErr);
+      } else _gradientErr = slvr.gerr;
       _addedL2 = slvr._addedL2;
       if(Utils.hasNaNsOrInfs(newBeta)){
         Log.info("GLM2 forcibly converged by getting NaNs and/or Infs in beta");
