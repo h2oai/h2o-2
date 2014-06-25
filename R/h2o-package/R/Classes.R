@@ -374,6 +374,9 @@ h2o.exec <- function(expr_to_execute) {
   } else {
     res <- .h2o.__exec2_dest_key(.pkg.env$SERVER, deparse(expr), .pkg.env$DESTKEY)
   }
+
+  rm(COLNAMES, envir = .pkg.env)
+#  .pkg.env$COLNAMES <- NULL
   new("H2OParsedData", h2o = .pkg.env$SERVER, key = res$dest_key)
 }
 
