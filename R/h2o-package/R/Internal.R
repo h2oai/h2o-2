@@ -427,13 +427,13 @@ function(object, envir) {
 }
 
 .get_col_id<-
-function(ch) {
+function(ch, envir) {
   which(ch == .pkg.env$COLNAMES)
 }
 
 .swap_with_colid<-
 function(object, envir) {
-  object <- .get_col_id(as.character(object))
+  object <- .get_col_id(as.character(object), envir)
 }
 
 .replace_all<-
@@ -468,21 +468,26 @@ function(a_list, envir) {
 .replace_with_keys_helper<-
 function(some_expr_list, envir) {
   len <- length(some_expr_list)
-    while(len > 0) {
-      num_sub_lists <- length(unlist(some_expr_list[[len]])) / length(some_expr_list[[len]])
+  i <- 1
+    while(i <= len) {
+      num_sub_lists <- length(unlist(some_expr_list[[i]])) / length(some_expr_list[[i]])
       if (num_sub_lists > 1) {
-        some_expr_list[[len]] <- .replace_with_keys_helper(some_expr_list[[len]], envir)
+        some_expr_list[[i]] <- .replace_with_keys_helper(some_expr_list[[i]], envir)
       } else {
-        some_expr_list[[len]] <- .replace_all(some_expr_list[[len]], envir)
+        some_expr_list[[i]] <- .replace_all(some_expr_list[[i]], envir)
       }
-      len <- len - 1
+      i <- i + 1
     }
     return(some_expr_list)
 }
 
 .replace_with_keys<-
 function(expr, envir = globalenv()) {
-  dest_key <- ifelse( .isAssignment(as.list(expr)[[1]]), as.character(as.list(expr)[[2]]), "")
+  dest_key <- ""
+  if ( .isAssignment(as.list(expr)[[1]])) {
+    dest_key <- as.character(as.list(expr)[[2]])
+    expr <- as.list(expr)[[3]]
+  }
   assign("DESTKEY", dest_key, envir = .pkg.env)
   l <- lapply(as.list(expr), .as_list)
   l <- .replace_with_keys_helper(l, envir)
