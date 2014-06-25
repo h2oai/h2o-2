@@ -780,7 +780,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 
   private void run(final double ymu, final long nobs, LMAXTask lmaxt){
     String [] warns = new String[0];
-    if(lmaxt != null)
+    if(lmaxt != null) {
       lambda_max = lmaxt.lmax();
       double [] grad = lmaxt.gradient(0);
       System.out.println("lambda max = " + lambda_max + ",  + grad = " + Arrays.toString(grad));
