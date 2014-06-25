@@ -35,7 +35,7 @@ class Basic(unittest.TestCase):
         for trial in range(3):
             kwargs = params.copy()
             start = time.time()
-            glm = h2o_cmd.runGLM(timeoutSecs=70, parseResult=parseResult, **kwargs)
+            glm = h2o_cmd.runGLM(timeoutSecs=180, parseResult=parseResult, **kwargs)
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
             h2o.check_sandbox_for_errors()
             print "glm end on ", csvPathname, 'took', time.time() - start, 'seconds'

@@ -6,17 +6,14 @@ import h2o_util
 import multiprocessing, os, signal, time
 from multiprocessing import Process, Queue
 
-print "dueling increments"
-print "a variant with ability to do just reads, plus just  use of c(0) style, except for compares"
+print "just independent exec streams. no sharing"
 print "restrict outstanding to # of nodes"
+print "got rid of ternary ops here. still does read then write of unique per-node key"
 
 # overrides the calc below if not None
-NODES = 2
+NODES = 3
 OUTSTANDING = NODES
-OUTSTANDING = 1
 TRIALMAX = 10
-TEST_MUX = False
-READ_ONLY = True
 
 # problem with keyboard interrupt described
 # http://bryceboe.com/2012/02/14/python-multiprocessing-pool-and-keyboardinterrupt-revisited/
@@ -28,26 +25,11 @@ def function_no_keyboard_intr(result_queue, function, *args):
 def execit(n, bucket, path, src_key, hex_key, timeoutSecs=60, retryDelaySecs=1, pollTimeoutSecs=30):
     np1 = (n+1) % len(h2o.nodes)
     np = (n) % len(h2o.nodes)
-    # doesn't work cause we can't have racing writers
-    # execExpr = "r2 = (r2==%s) ? %s+1 : %s" % (np1, np1)
-    if np == 0:
-        if READ_ONLY:
-            execExpr = "(r%s==1) ? c(1) : c(0);" % np
-        else:
-            execExpr = "r%s = c(1)" % np1
-        print "Sending request to node: %s" % h2o.nodes[np1],
-        h2e.exec_expr(node=h2o.nodes[np1], execExpr=execExpr, timeoutSecs=30)
-    else:
-        # flip to one if the prior value is 1 (unless you're the zero case
-        if READ_ONLY:
-            execExpr = "(r%s==1) ? c(1) : c(0);" % np
-        else:
-            execExpr = "r%s = (r%s==1) ? c(1) : c(0);" % (np1, np)
-        print "Sending request to node: %s" % h2o.nodes[np1],
-        (resultExec, fpResult) = h2e.exec_expr(node=h2o.nodes[np1], execExpr=execExpr, timeoutSecs=30)
-        while fpResult != 1:
-            print "to node: %s" % h2o.nodes[np1]
-            (resultExec, fpResult) = h2e.exec_expr(node=h2o.nodes[np1], execExpr=execExpr, timeoutSecs=30)
+
+    # flip to one if the prior value is 1 (unless you're the zero case
+    execExpr = "r%s = (r%s==1);" % (np1, np1)
+    print "Sending request to node: %s" % h2o.nodes[np1],
+    (resultExec, fpResult) = h2e.exec_expr(node=h2o.nodes[np1], execExpr=execExpr, timeoutSecs=30)
 
     hex_key = np1
     return hex_key
@@ -77,19 +59,23 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_exec_multi_node2(self):
+    def test_exec2_multi_node(self):
         h2o.beta_features = True
-        for node in h2o.nodes:
-            # get this key known to this node
-            execExpr = "r0=c(0); r1 = c(0); r2 = c(0);"
-            print "Sending request to node: %s" % node
-            h2e.exec_expr(node=node, execExpr=execExpr, timeoutSecs=30)
+        for n, node in enumerate(h2o.nodes):
+            print "n:", n
+            np1 = (n+1) % len(h2o.nodes)
+            np = n % len(h2o.nodes)
 
-            if TEST_MUX:
-                # test the store expression
-                execExpr = "(r1==0) ? c(0) : c(1)"
-                print "Sending request to node: %s" % node
-                h2e.exec_expr(node=node, execExpr=execExpr, timeoutSecs=30)
+            # get this key known to this node
+            print "Init with independent targets. No shared target"
+            execExpr = "r%s = c(0)" % np1
+            print "Sending request to node: %s" % h2o.nodes[np1]
+            h2e.exec_expr(node=h2o.nodes[np1], execExpr=execExpr, timeoutSecs=30)
+
+            # test the store expression
+            execExpr = "(r%s==0)" % np1
+            print "Sending request to node: %s" % h2o.nodes[np1]
+            h2e.exec_expr(node=h2o.nodes[np1], execExpr=execExpr, timeoutSecs=30)
 
         global OUTSTANDING
         if not OUTSTANDING:

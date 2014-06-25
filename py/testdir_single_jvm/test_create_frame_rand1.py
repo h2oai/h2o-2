@@ -49,16 +49,25 @@ class Basic(unittest.TestCase):
         }
         for trial in range(10):
             h2o_util.pickRandParams(paramDict, params)
-            i = params.get('integer_fraction', 0)
-            c = params.get('categorical_fraction', 0)
-            r = params.get('randomize', 0)
+            i = params.get('integer_fraction', None)
+            c = params.get('categorical_fraction', None)
+            r = params.get('randomize', None)
             v = params.get('value', None)
+            # h2o does some strick checking on the combinations of these things
+            # fractions have to add up to <= 1 and only be used if randomize
+            # h2o default randomize=1?
             if r:
-                params['value'] = None
+                if not i:   
+                    i = 0
+                if not c:
+                    c = 0
                 if (i and c) and (i + c) >= 1.0:
                     params['integer_fraction'] = i
                     params['categorical_fraction'] = 1.0 - i
+                params['value'] = None
+                
             else:
+                params['randomize'] = 0
                 params['integer_fraction'] = 0
                 params['categorical_fraction'] = 0
 
