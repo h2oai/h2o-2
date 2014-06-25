@@ -465,7 +465,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     new GLMIterationTask(GLM2.this,_dinfo,_glm,false,true,true,fullBeta,_ymu,_reg,thresholds, new H2OCallback<GLMIterationTask>(GLM2.this){
       @Override public void callback(final GLMIterationTask glmt2){
         // first check KKT conditions!
-        double [] grad = glmt2.gradient(l2pen());
+        final double [] grad = glmt2.gradient(l2pen());
         if(_lastResult != null)
           _lastResult._fullGrad = glmt2.gradient(0);
         // check the KKT conditions and filter data for next lambda_value
@@ -509,10 +509,12 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         final double previousLambda = _currentLambda;
         final boolean isDone = done;
         if(!done) {
+          // NOTE: technically we should pickNewtLambda and filter next set of actove columns with new gradient (if alpa != 1, the l2 penalty has changed and so did the gradient!)
+          // but it seems to work fine this way and it's easier to pick next lambda
           _currentLambda = lambda == null ? pickNextLambda(_currentLambda, grad) : lambda[_lambdaIdx + 1];
           if (_activeCols != null) {
             final int[] oldCols = _activeCols;
-            if(alpha[0] != 1)grad = glmt2.gradient(l2pen()); // need to update gradient with new L2 penalty
+//            if(alpha[0] != 1)grad = glmt2.gradient(l2pen()); // need to update gradient with new L2 penalty
             activeCols(_currentLambda, previousLambda, grad);
             if (_activeData.fullN() > MAX_PREDICTORS) done = true;
             // epxand the beta
@@ -665,40 +667,40 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       ADMMSolver slvr = new ADMMSolver(_currentLambda,alpha[0], ADMM_GRAD_EPS, _addedL2);
       slvr._rho = _currentLambda*alpha[0]*_rho_mul;
       boolean solved = slvr.solve(glmt._gram,glmt._xy,glmt._yy,newBeta);
-//      if(!solved) { // try grid search over rho parameter
-//        double bestErr = slvr.gerr;
-//        double best_rho_mul = _rho_mul;
-//        double rho_mul = _rho_mul * 1.15;
-//        double[] bestSolution = solved ? null : newBeta.clone();
-//        for (int i = 0; !solved && i < 32; ++i) {
-//          System.out.println("rho_mul = " + rho_mul + ", bestErr = " + bestErr);
-//          slvr._rho = _currentLambda * alpha[0] * rho_mul;
-//          solved = slvr.solve(glmt._gram, glmt._xy, glmt._yy, newBeta);
-//          if (slvr.gerr < bestErr) {
-//            System.arraycopy(newBeta, 0, bestSolution, 0, bestSolution.length);
-//            bestErr = slvr.gerr;
-//            best_rho_mul = rho_mul;
-//          }
-//          rho_mul *= 1.15;
-//        }
-//        if(!solved) {
-//          rho_mul = _rho_mul * .85;
-//          for (int i = 0; !solved && i < 32; ++i) {
-//            slvr._rho = _currentLambda * alpha[0] * rho_mul;
-//            solved = slvr.solve(glmt._gram, glmt._xy, glmt._yy, newBeta);
-//            if (slvr.gerr < bestErr) {
-//              System.arraycopy(newBeta, 0, bestSolution, 0, bestSolution.length);
-//              bestErr = slvr.gerr;
-//              best_rho_mul = rho_mul;
-//            }
-//            rho_mul *= .75;
-//          }
-//        }
-//        System.arraycopy(bestSolution,0,newBeta,0,bestSolution.length);
-//        _gradientErr = bestErr;
-//        _rho_mul = best_rho_mul;
-//        System.out.println("best_rho_mul = " + _rho_mul + ", best_err = " + bestErr);
-//      } else _gradientErr = slvr.gerr;
+      if(!solved) { // try grid search over rho parameter
+        double bestErr = slvr.gerr;
+        double best_rho_mul = _rho_mul;
+        double rho_mul = _rho_mul * 1.15;
+        double[] bestSolution = solved ? null : newBeta.clone();
+        for (int i = 0; !solved && i < 32; ++i) {
+          System.out.println("rho_mul = " + rho_mul + ", bestErr = " + bestErr);
+          slvr._rho = _currentLambda * alpha[0] * rho_mul;
+          solved = slvr.solve(glmt._gram, glmt._xy, glmt._yy, newBeta);
+          if (slvr.gerr < bestErr) {
+            System.arraycopy(newBeta, 0, bestSolution, 0, bestSolution.length);
+            bestErr = slvr.gerr;
+            best_rho_mul = rho_mul;
+          }
+          rho_mul *= 1.15;
+        }
+        if(!solved) {
+          rho_mul = _rho_mul * .85;
+          for (int i = 0; !solved && i < 32; ++i) {
+            slvr._rho = _currentLambda * alpha[0] * rho_mul;
+            solved = slvr.solve(glmt._gram, glmt._xy, glmt._yy, newBeta);
+            if (slvr.gerr < bestErr) {
+              System.arraycopy(newBeta, 0, bestSolution, 0, bestSolution.length);
+              bestErr = slvr.gerr;
+              best_rho_mul = rho_mul;
+            }
+            rho_mul *= .75;
+          }
+        }
+        System.arraycopy(bestSolution,0,newBeta,0,bestSolution.length);
+        _gradientErr = bestErr;
+        _rho_mul = best_rho_mul;
+        System.out.println("best_rho_mul = " + _rho_mul + ", best_err = " + bestErr);
+      } else _gradientErr = slvr.gerr;
       _addedL2 = slvr._addedL2;
       if(Utils.hasNaNsOrInfs(newBeta)){
         Log.info("GLM2 forcibly converged by getting NaNs and/or Infs in beta");
@@ -783,9 +785,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     if(lmaxt != null) {
       lambda_max = lmaxt.lmax();
       double [] grad = lmaxt.gradient(0);
-      System.out.println("lambda max = " + lambda_max + ",  + grad = " + Arrays.toString(grad));
     }
-
     if(lambda_search){
       _model = new GLMModel(GLM2.this,dest(),_dinfo, _glm,beta_epsilon,alpha[0],lambda_max,ymu,prior);
       _model.addSubmodel(lambda_max);
@@ -869,7 +869,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     }
     Arrays.sort(g);
     double res = 0.5*(-g[maxNewVars]/alpha[0] + oldLambda);
-    return res < oldLambda?res:0.99*oldLambda;
+    return res < oldLambda?res:0.95*oldLambda;
 //    if(_activeCols != null && _activeCols.length < (_dinfo.fullN()))
 //      return res;
 //    return (res/oldLambda > 0.95)?0.9*oldLambda:res;
