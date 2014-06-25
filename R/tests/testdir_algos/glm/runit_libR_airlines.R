@@ -42,11 +42,11 @@ test.LiblineaR.airlines <- function(conn) {
     
     h2op         <- h2o.predict(h2o.m, testhex)
     h2opreds     <- head(h2op, nrow(h2op))
-    h2oCM        <- table(testLabels, h2opreds$IsDepDelayed_REC)
+    h2oCM        <- table(testLabels, h2opreds$predict)
     h2oPrecision <- h2oCM[1] / (h2oCM[1] + h2oCM[3])
     h2oRecall    <- h2oCM[1] / (h2oCM[1] + h2oCM[2])
     h2oF1        <- 2 * (h2oPrecision * h2oRecall) / (h2oPrecision + h2oRecall)
-    h2oAUC       <- performance(prediction(h2opreds$IsDepDelayed_REC, testLabels), measure = "auc")@y.values
+    h2oAUC       <- performance(prediction(h2opreds$predict, testLabels), measure = "auc")@y.values
     
     Log.info("                ============= H2O Performance =============\n")
     Log.info(paste("H2O AUC (performance(prediction(predictions,actual))): ", h2oAUC[[1]], "\n", sep = ""))
@@ -87,6 +87,12 @@ test.LiblineaR.airlines <- function(conn) {
   trainhex      <- h2o.uploadFile(conn, paste(exdir, "/AirlinesTrain.csv", sep = ""), "aTrain.hex")
   testhex       <- h2o.uploadFile(conn, paste(exdir, "/AirlinesTest.csv",  sep=""), "aTest.hex")
   remove_exdir(exdir)
+  
+  Log.info("Mapping column IsDepDelayed_REC from {-1,1} to {0,1}...\n")
+  aTrain$IsDepDelayed_REC <- aTrain$IsDepDelayed_REC == 1
+  aTest$IsDepDelayed_REC <- aTest$IsDepDelayed_REC == 1
+  trainhex$IsDepDelayed_REC <- trainhex$IsDepDelayed_REC == 1
+  testhex$IsDepDelayed_REC <- testhex$IsDepDelayed_REC == 1
   
   #xTrain  <- scale(model.matrix(IsDepDelayed_REC ~., aTrain[,-11])[,-1])
   xTrain  <- scale(data.frame(aTrain$DepTime, aTrain$ArrTime, aTrain$Distance))

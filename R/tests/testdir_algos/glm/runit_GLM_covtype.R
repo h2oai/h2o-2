@@ -3,14 +3,19 @@ source('../../findNSourceUtils.R')
 
 test.GLM.covtype <- function(conn) {
   Log.info("Importing covtype.20k.data...\n")
-  
   covtype.hex = h2o.uploadFile(conn, locate("smalldata/covtype/covtype.20k.data"))
-  covtype.sum = summary(covtype.hex)
-  print(covtype.sum)
   
   myY = 55
   myX = setdiff(1:54, c(21,29))   # Cols 21 and 29 are constant, so must be explicitly ignored
   myX = myX[which(myX != myY)];
+  
+  # Set response to be indicator of a particular class
+  res_class = sample(c(1,4), size = 1)
+  Log.info(paste("Setting response column", myY, "to be indicator of class", res_class, "\n"))
+  covtype.hex[,myY] = (covtype.hex[,myY] == res_class)
+  
+  covtype.sum = summary(covtype.hex)
+  print(covtype.sum)
   
   # L2: alpha = 0, lambda = 0
   start = Sys.time()
