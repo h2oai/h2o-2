@@ -141,12 +141,13 @@ public class NewChunk extends Chunk {
   }
 
   public void addEnum(int e) {append2(e,Integer.MIN_VALUE+1);}
-  public void addNA  (     ) {
+  public void addNA() {
     if( isUUID() ) addUUID(C16Chunk._LO_NA,C16Chunk._HI_NA);
     else append2(Long.MAX_VALUE,Integer.MIN_VALUE);
   }
   public void addNum (long val, int exp) {
-    if(_ds != null){
+    if( isUUID() ) addNA();
+    else if(_ds != null) {
       assert _ls == null;
       addNum(val*DParseTask.pow10(exp));
     } else {
@@ -158,6 +159,7 @@ public class NewChunk extends Chunk {
   }
   // Fast-path append double data
   public void addNum(double d) {
+    if( isUUID() ) { addNA(); return; }
     if(_id == null || d != 0) {
       if(_ls != null)switch_to_doubles();
       if( _ds == null || _len >= _ds.length ) {
@@ -197,7 +199,6 @@ public class NewChunk extends Chunk {
     if( c.isNA0(row) ) addUUID(C16Chunk._LO_NA,C16Chunk._HI_NA);
     else addUUID(c.at16l0(row),c.at16h0(row));
   }
-
 
   public final boolean isUUID(){return _ls != null && _ds != null; }
   public final boolean sparse(){return _id != null;}
