@@ -61,16 +61,6 @@ public interface IGeneratedModel {
     /** Returns domain values for all columns */
     public String[][] getDomainValues();
 
-    /**
-     * Returns mapping for given column from enum to its number.
-     * @param i 0-based index of column
-     * @return mapping from enum value to its ordinal value or null if the specified column is not categorical
-     */
-    public Map<String,Integer> getDomainValuesMap(int i);
-
-    /** Returns domain values for all columns */
-    public Map<String,Integer>[] getDomainValuesMap();
-
     /** Returns index of column with give name or -1 if column is not found. */
     public int getColIdx(String name);
 

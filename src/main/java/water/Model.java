@@ -642,8 +642,8 @@ public abstract class Model extends Lockable<Model> {
   /** Generate implementation for super class. */
   protected SB toJavaSuper( SB sb ) {
     sb.nl();
-    sb.i().p("public String[] getNames() { return NAMES; } ").nl();
-    sb.i().p("public Map<String,Integer>[] getDomainValuesMap() { return DOMAINS; }").nl();
+    sb.i().p("public String[]   getNames() { return NAMES; } ").nl();
+    sb.i().p("public String[][] getDomainValues() { return DOMAINS; }").nl();
     return sb;
   }
   private SB toJavaNAMES( SB sb ) {
@@ -659,7 +659,7 @@ public abstract class Model extends Lockable<Model> {
   private SB toJavaDOMAINS( SB sb, SB fileContextSB ) {
     sb.nl();
     sb.i().p("// Column domains. The last array contains domain of response column.").nl();
-    sb.i().p("public static final Map<String,Integer>[] DOMAINS = new Map[] {").nl();
+    sb.i().p("public static final String[][] DOMAINS = new String[][] {").nl();
     for (int i=0; i<_domains.length; i++) {
       String[] dom = _domains[i];
       String colInfoClazz = "ColInfo_"+i;
@@ -668,7 +668,7 @@ public abstract class Model extends Lockable<Model> {
       if (i!=_domains.length-1) sb.p(',');
       sb.nl();
       fileContextSB.i().p("// The class representing column ").p(_names[i]).nl();
-      JCodeGen.toClassWithMap(fileContextSB, null, colInfoClazz, dom);
+      JCodeGen.toClassWithArray(fileContextSB, null, colInfoClazz, dom);
     }
     return sb.i().p("};").nl();
   }

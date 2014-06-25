@@ -8,7 +8,6 @@ public abstract class GeneratedModel implements IGeneratedModel {
   @Override public int      getNumCols()      { return getNames().length - 1; }
   @Override public int      getResponseIdx () { return getNames().length - 1; }
   @Override public String   getResponseName() { return getNames()[getResponseIdx()]; }
-  @Override public String[] getDomainValues(int i) { return getDomainValues()[i]; }
   @Override public int      getNumResponseClasses() { return getNumClasses(getResponseIdx()); }
   @Override public boolean  isClassifier() { return getNumResponseClasses()!=-1; }
 
@@ -25,17 +24,8 @@ public abstract class GeneratedModel implements IGeneratedModel {
     int colIdx = getColIdx(name);
     return colIdx != -1 ? getDomainValues(colIdx) : null;
   }
-  @Override public Map<String, Integer> getDomainValuesMap(int i) {
-    return getDomainValuesMap()[i];
-  }
-  @Override public String[][] getDomainValues() {
-    int ncols = getNumCols();
-    String[][] ret = new String[ncols][];
-    Map<String,Integer>[] dom = getDomainValuesMap();
-    for (int i=0; i<ncols; i++) {
-      ret[i] = (String[]) dom[i].keySet().toArray();
-    }
-    return ret;
+  @Override public String[] getDomainValues(int i) {
+    return getDomainValues()[i];
   }
   @Override public int mapEnum(int colIdx, String enumValue) {
     String[] domain = getDomainValues(colIdx);

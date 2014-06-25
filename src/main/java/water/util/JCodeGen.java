@@ -46,13 +46,13 @@ public class JCodeGen {
    * @param values
    * @return
    */
-  public static SB toClassWithMap(SB sb, String modifiers, String className, String[] values) {
+  public static SB toClassWithArray(SB sb, String modifiers, String className, String[] values) {
     sb.i().p(modifiers!=null ? modifiers+" ": "").p("class ").p(className).p(" {").nl().ii(1);
-    sb.i().p("public static final Map<String, Integer> VALUES = ");
+    sb.i().p("public static final String[] VALUES = ");
     if (values==null)
       sb.p("null;").nl();
     else {
-      sb.p("new java.util.HashMap<String, Integer>(").p((int)(values.length*1.25f+1)).p(");").nl();
+      sb.p("new String[").p(values.length).p("];").nl();
 
       // Static part
       int s = 0;
@@ -61,7 +61,7 @@ public class JCodeGen {
       do {
         sb.i().p("static {").ii(1).nl();
           int len = Math.min(MAX_STRINGS_IN_CONST_POOL, remain);
-          toHashMap(sb, "VALUES", values, s, len);
+          toArrayFill(sb, "VALUES", values, s, len);
           s += len;
           remain -= len;
         sb.di(1).i().p("}").nl();
@@ -77,9 +77,9 @@ public class JCodeGen {
   /** Maximum number of string generated per class (static initializer) */
   public static int MAX_STRINGS_IN_CONST_POOL = 3000;
 
-  public static SB toHashMap(SB sb, String hmName, String[] values, int start, int len) {
+  public static SB toArrayFill(SB sb, String hmName, String[] values, int start, int len) {
     for (int i=0; i<len; i++) {
-      sb.i().p(hmName).p(".put(").ps(values[start+i]).p(",").p(start+i).p(");").nl();
+      sb.i().p(hmName).p("[").p(start+i).p("] = ").ps(values[start+i]).p(";").nl();
     }
     return sb;
   }
