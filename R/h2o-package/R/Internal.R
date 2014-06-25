@@ -401,7 +401,11 @@ function(expr) {
 
 .eval_class<-
 function(i, envir) {
-  val <- tryCatch(class(get(as.character(i), envir)), error = function(e) {return(NA)})
+  val <- tryCatch(class(get(as.character(i), envir)), error = function(e) {
+    tryCatch(class(i), error = function(e) {
+      return(NA)
+    })
+  })
 }
 
 .as_list<-
@@ -432,21 +436,49 @@ function(some_expr_list) {
 .swap_with_key<-
 function(object, envir) {
   assign("SERVER", get(as.character(object), envir = envir)@h2o, envir = .pkg.env)
+  if ( !exists("COLNAMES", .pkg.env)) {
+    assign("COLNAMES", colnames(get(as.character(object), envir = envir)), .pkg.env)
+  }
   object <- as.name(get(as.character(object), envir = envir)@key)
   return(object)
+}
+
+.get_col_id<-
+function(ch) {
+  which(ch == .pkg.env$COLNAMES)
+}
+
+.swap_with_colid<-
+function(object, envir) {
+  object <- .get_col_id(as.character(object))
 }
 
 .replace_all<-
 function(a_list, envir) {
   idxs <- which( "H2OParsedData" == unlist(lapply(a_list, .eval_class, envir)))
-  if (length(idxs) == 0) return(a_list)
-  for (i in idxs) {
-    if(length(a_list) == 1) {
-      a_list <- .swap_with_key(a_list, envir)
-    } else {
-      a_list[[i]] <- .swap_with_key(a_list[[i]], envir)
+  idx2 <- which( "character" == unlist(lapply(a_list, .eval_class, envir)))
+  if (length(idxs) == 0 && length(idx2) == 0) return(a_list)
+
+  if (length(idxs) != 0) {
+    for (i in idxs) {
+      if(length(a_list) == 1) {
+        a_list <- .swap_with_key(a_list, envir)
+      } else {
+        a_list[[i]] <- .swap_with_key(a_list[[i]], envir)
+      }
     }
   }
+
+  if (length(idx2) != 0) {
+    for (i in idx2) {
+      if (length(a_list) == 1) {
+        a_list <- .swap_with_colid(a_list, envir)
+      } else {
+        a_list[[i]] <- .swap_with_colid(a_list[[i]], envir)
+      }
+    }
+  }
+
   return(a_list)
 }
 

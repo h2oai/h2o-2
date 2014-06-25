@@ -11,7 +11,7 @@ function(conn) {
     print(head(hex))
 
     Log.info("Add together the first two columns of iris and store in 'res1'")
-
+    
     res1 <- h2o.exec(hex[,1] + hex[,2])
     
     Log.info("Here's the result of res1")
@@ -72,6 +72,68 @@ function(conn) {
 
     res99 <- h2o.exec(res99 <- ifelse(hex[,1] < 4.3, hex[,1], hex[,2] + hex[,3]))
 
+
+
+    Log.info("")
+    Log.info("")
+    Log.info("Now use column names!")
+    Log.info("")
+    Log.info("")
+
+
+    hex <- h2o.uploadFile(conn, locate("smalldata/iris/iris.csv"), "iris.hex")
+
+    Log.info("Add together the first two columns of iris and store in 'res1' WITH NAMES")
+
+    res1 <- h2o.exec(hex[,"C1"] + hex[,"C2"])
+
+    Log.info("Here's the result of res1 WITH NAMES")
+    print(head(res1))
+
+    r_res1 <- iris[,1] + iris[,2]
+    print(head(r_res1))
+    print(head(res1)[,1])
+    expect_that(head(res1)[,1], equals(head(r_res1)))
+
+    Log.info("Try a more complicated expression WITH NAMES:")
+    Log.info("Trying: hex[,1] + hex[, 2] + hex[, 3] * hex[,4] / hex[,1]")
+
+    res2 <- h2o.exec(expr_to_execute= hex[,"C1"] + hex[, "C2"] + hex[, "C3"] * hex[,"C4"] / hex[,"C1"])
+
+    print(head(res2))
+
+    r_res2 <- iris[,1] + iris[,2] + iris[,3] * (iris[,4] / iris[,1])
+    expect_that(head(res2)[,1], equals(head(r_res2)))
+
+    Log.info("Try intermixing scalars WITH NAMES: hex[,1] + hex[, 2] + hex[, 3] + (hex[,4] / 2) - (hex[,2] / hex[,1]) * 12.3")
+
+    res3 <- h2o.exec(expr_to_execute= hex[,"C1"] + hex[, "C2"] + hex[, "C3"] + (hex[,"C4"] / 2) - (hex[,"C2"] / hex[,"C1"]) * 12.3)
+    print(head(res3))
+
+    r_res3 <- iris[,1] + iris[,2] + iris[,3] + (iris[,4] / 2) - (iris[,2] / iris[,1]) * 12.3
+    expect_that(head(res3)[,1], equals(head(r_res3)))
+
+    Log.info("Multiple column selection WITH NAMES")
+
+    res4 <- h2o.exec(expr_to_execute = hex[,c("C1","C2")] + hex[,c("C2","C4")])
+    r_res4 <- iris[,c(1,2)] + iris[,c(2,4)]
+
+    print(head(res4))
+    expect_that(dim(res4), equals(dim(r_res4)))
+    colnames(r_res4) <- paste("C", 1:dim(r_res4)[2], sep = "")
+    print(head(r_res4))
+    print(head(as.data.frame(res4)))
+    expect_that(head(as.data.frame(res4)), equals(head(r_res4)))
+
+    res6 <- h2o.exec(expr_to_execute= ifelse(hex[,"C1"] < 4.3, hex[,"C1"], hex[,"C2"] + hex[,"C3"]))
+    print(head(res6))
+
+    r_res6 <- ifelse(iris[,1] < 4.3, iris[,1], iris[,2] + iris[,3])
+
+    expect_that(head(res6)[,1], equals(head(r_res6)))
+
+
+    res99 <- h2o.exec(res99 <- ifelse(hex[,"C1"] < 4.3, hex[,"C1"], hex[,"C2"] + hex[,"C3"]))
 
     testEnd()
 }
