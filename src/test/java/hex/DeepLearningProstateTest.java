@@ -176,6 +176,12 @@ public class DeepLearningProstateTest extends TestUtil {
                                 error = auc.err();
                                 Log.info(sb);
 
+                                // test AUC computation in more detail
+                                Assert.assertTrue(auc.AUC > 0.81); //min val = 0.8128 for long test
+                                Assert.assertTrue(auc.AUC < 0.86); //max val = 0.8548 for long test
+                                Assert.assertTrue(auc.threshold() > 0.16);  //min val = 0.1723 for long test
+                                Assert.assertTrue(auc.threshold() < 0.54); //max val = 0.5361 for long test
+
                                 // check that auc.cm() is the right CM
                                 Assert.assertEquals(new ConfusionMatrix(auc.cm()).err(), error, 1e-15);
 
