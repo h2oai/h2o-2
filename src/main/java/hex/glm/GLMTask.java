@@ -89,7 +89,6 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     public LMAXTask(Job job, DataInfo dinfo, GLMParams glm, double ymu, long nobs, double alpha, float [] thresholds, H2OCountedCompleter cmp) {
       super(job, dinfo, glm, false, true, true, glm.nullModelBeta(dinfo,ymu), ymu, 1.0/nobs, thresholds, cmp);
       _gPrimeMu = glm.linkDeriv(ymu);
-      _nobs = dinfo.fullN();
       _alpha = alpha;
     }
     @Override public void chunkInit(){
@@ -261,7 +260,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       if( _glm.family == Family.gaussian){
         w = 1;
         z = y;
-        mu = _validate?computeEta(ncats,cats,nums,_beta):0;
+        mu = (_validate || _computeGradient)?computeEta(ncats,cats,nums,_beta):0;
       } else {
         if( _beta == null ) {
           mu = _glm.mustart(y, _ymu);

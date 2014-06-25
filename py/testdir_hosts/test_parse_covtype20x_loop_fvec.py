@@ -15,7 +15,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_parse_covtype20x_loop(self):
+    def test_parse_covtype20x_loop_fvec(self):
+        h2o.beta_features = True
         csvFilename = "covtype20x.data"
         importFolderPath = "standard"
         csvPathname = importFolderPath + "/" + csvFilename

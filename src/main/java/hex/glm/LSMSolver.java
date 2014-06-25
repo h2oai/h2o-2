@@ -289,6 +289,7 @@ public abstract class LSMSolver extends Iced{
       int i;
       int k = 10;
       double lastErr = Double.POSITIVE_INFINITY;
+      double bestErr = Double.POSITIVE_INFINITY;
 
       double [] z = res.clone();
       for(i = 0; i < 2500; ++i ) {
@@ -309,10 +310,11 @@ public abstract class LSMSolver extends Iced{
         z[N-1] = xyPrime[N-1];
         if(i == k){
           gerr = getGrad(i,gram,z,xy);
-          if(gerr < _gradientEps){
-            _converged = true;
+          if(gerr < bestErr){
+            bestErr = gerr;
             System.arraycopy(z,0,res,0,z.length);
-            break;
+            if(gerr < _gradientEps)
+              break;
           }
           // did not converge, check if we can converge in reasonable time
           double diff = lastErr - gerr;
@@ -322,18 +324,16 @@ public abstract class LSMSolver extends Iced{
             } else {
               break;
             }
-          } else {
-            System.arraycopy(z,0,res,0,z.length);
+          } else
             lastErr = gerr;
-          }
           k = i + 10; // test gradient every 10 iterations
         }
       }
       gram.addDiag(-gram._diagAdded + d);
       assert gram._diagAdded == d;
       long solveTime = System.currentTimeMillis()-t;
-      if(Double.isInfinite(this.gerr)) this.gerr = getGrad(i,gram,res,xy);
-      Log.info("ADMM finished in " + i + " iterations and (" + decompTime + " + " + solveTime+ ")ms, max |subgradient| = " + lastErr);
+      this.gerr = bestErr;
+      Log.info("ADMM finished in " + i + " iterations and (" + decompTime + " + " + solveTime+ ")ms, max |subgradient| = " + bestErr);
       return _converged = (gerr < 1e-2);
     }
     @Override

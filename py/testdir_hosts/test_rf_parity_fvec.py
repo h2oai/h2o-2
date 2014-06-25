@@ -20,7 +20,7 @@ class Basic(unittest.TestCase):
             c = n.get_cloud()
             self.assertEqual(c['cloud_size'], len(h2o.nodes), 'inconsistent cloud size')
 
-    def test_B_GenParity1(self):
+    def test_rf_parity_fvec(self):
         # Create a directory for the created dataset files. ok if already exists
         SYNDATASETS_DIR = h2o.make_syn_dir()
         # always match the run below!
@@ -45,7 +45,7 @@ class Basic(unittest.TestCase):
         # Let's try it twice!
         for trials in xrange(1,7):
             # prime
-            trees = 6
+            trees = 2
 
             for x in xrange (161,240,20):
                 y = 10000 * x
@@ -60,7 +60,7 @@ class Basic(unittest.TestCase):
                 # change the model name each iteration, so they stay in h2o
                 model_key = csvFilename + "_" + str(trials)
                 parseResult = h2i.import_parse(path=csvPathname, schema='put')
-                h2o_cmd.runRF(parseResult=parseResult, trees=trees, model_key=model_key, 
+                h2o_cmd.runRF(parseResult=parseResult, ntrees=trees, destination_key=model_key, 
                     timeoutSecs=timeoutSecs, retryDelaySecs=1)
                 sys.stdout.write('.')
                 sys.stdout.flush()

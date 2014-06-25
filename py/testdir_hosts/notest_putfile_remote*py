@@ -16,6 +16,7 @@ class Basic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         h2o_hosts.build_cloud_with_hosts()
+        h2o.beta_features = True
 
     @classmethod
     def tearDownClass(cls):
@@ -34,7 +35,7 @@ class Basic(unittest.TestCase):
             sys.stdout.flush()
             h2o.verboseprint("put_file:", csvfile, "node:", node, "origSize:", origSize)
             key        = node.put_file(csvfile)
-            resultSize = node.inspect(key)['value_size_bytes']
+            resultSize = node.inspect(key)['byteSize']
             self.assertEqual(origSize,resultSize)
 
     # Try to put a file, get file and diff original file and returned file.

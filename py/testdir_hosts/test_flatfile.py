@@ -9,6 +9,7 @@ class Basic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         h2o_hosts.build_cloud_with_hosts(2,use_flatfile=True)
+        h2o.beta_features = True
 
     @classmethod
     def tearDownClass(cls):
@@ -44,7 +45,7 @@ class Basic(unittest.TestCase):
             csvFilename = "parity_128_4_" + str(x) + "_quad.data"  
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
             parseResult = h2i.import_parse(path=csvPathname, schema='put')
-            h2o_cmd.runRF(parseResult=parseResult, trees=trees, timeoutSecs=timeoutSecs)
+            h2o_cmd.runRF(parseResult=parseResult, ntrees=trees, timeoutSecs=timeoutSecs)
             trees += 10
 
 if __name__ == '__main__':
