@@ -94,11 +94,11 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 
   /**
    * Whether to compute variable importances for input features, based on the absolute
-   * value of the coefficients.  For safety this is only done if use_all_factor_levels,
-   * because an important factor level can be skipped and not appear if
-   * !use_all_factor_levels.
+   * value of the coefficients.  For safety this should only be done if
+   * use_all_factor_levels, because an important factor level can be skipped and not
+   * appear if !use_all_factor_levels.
    */
-  @API(help = "Compute variable importances for input features.  REQUIRES use_all_factor_levels.", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
+  @API(help = "Compute variable importances for input features.  NOTE: If use_all_factor_levels is off the importance of the base level will NOT be shown.", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
   public boolean variable_importances = true;
 
 
@@ -285,12 +285,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     _model.stop_training();
     if(_addedL2 > 0){
       String warn = "Added L2 penalty (rho = " + _addedL2 + ")  due to non-spd matrix. ";
-      if(_model.warnings == null || _model.warnings.length == 0)
-        _model.warnings = new String[]{warn};
-      else {
-        _model.warnings = Arrays.copyOf(_model.warnings,_model.warnings.length+1);
-        _model.warnings[_model.warnings.length-1] = warn;
-      }
+      _model.addWarning(warn);
       _model.update(self());
     }
     _model.unlock(self());
@@ -784,8 +779,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   }
 
   private void run(final double ymu, final long nobs, LMAXTask lmaxt){
-    String [] warns = null;
-    if(lmaxt != null) {
+    String [] warns = new String[0];
+    if(lmaxt != null)
       lambda_max = lmaxt.lmax();
       double [] grad = lmaxt.gradient(0);
       System.out.println("lambda max = " + lambda_max + ",  + grad = " + Arrays.toString(grad));

@@ -541,8 +541,8 @@ public class Vec extends Iced {
         long l = 81985529216486895L; // 0x0123456789ABCDEF
         if (! c.isNA0(i)) {
           if (c instanceof C16Chunk) {
-            l = c.at16l(i);
-            l ^= (37 * c.at16h(i));
+            l = c.at16l0(i);
+            l ^= (37 * c.at16h0(i));
           } else {
             l = c.at80(i);
           }
@@ -568,7 +568,7 @@ public class Vec extends Iced {
     _naCnt = -2;
     if( !writable() ) throw new IllegalArgumentException("Vector not writable");
     // Set remotely lazily.  This will trigger a cloud-wide invalidate of the
-    // existing Vec, and eventually we'll have to load a fresh copy of the Vec
+      // existing Vec, and eventually we'll have to load a fresh copy of the Vec
     // with active writing turned on, and caching disabled.
     new TAtomic<Vec>() {
       @Override public Vec atomic(Vec v) { if( v!=null ) v._naCnt=-2; return v; }

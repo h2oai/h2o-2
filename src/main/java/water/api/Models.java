@@ -60,6 +60,7 @@ public class Models extends Request2 {
   public static final Gson gson = new GsonBuilder().serializeSpecialFloatingPointValues().setPrettyPrinting().create();
 
   public static final class ModelSummary {
+    public String[] warnings = new String[0];
     public String model_algorithm = "unknown";
     public Model.ModelCategory model_category = Model.ModelCategory.Unknown;
     public Job.JobState state = Job.JobState.CREATED;
@@ -191,6 +192,8 @@ public class Models extends Request2 {
    */
   private static void summarizeModelCommonFields(ModelSummary summary, Model model) {
     String[] names = model._names;
+
+    summary.warnings = model.warnings;
 
     summary.model_algorithm = model.getClass().toString(); // fallback only
 

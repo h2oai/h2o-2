@@ -65,6 +65,10 @@ public abstract class Model extends Lockable<Model> {
   /** The duration in mS for model training. */
   public long training_duration_in_ms = 0L;
 
+  /** Any warnings thrown during model building. */
+  @API(help="warnings")
+  public String[]  warnings = new String[0];
+
   /** Whether or not this model has cross-validated results stored. */
   protected boolean _have_cv_results;
 
@@ -118,6 +122,14 @@ public abstract class Model extends Lockable<Model> {
   /** Remove any Model internal Keys */
   @Override public Futures delete_impl(Futures fs) { return fs; /* None in the default Model */ }
   @Override public String errStr() { return "Model"; }
+  public void addWarning(String warning) {
+    if(this.warnings == null || this.warnings.length == 0)
+      this.warnings = new String[]{warning};
+    else {
+      this.warnings = Arrays.copyOf(this.warnings,this.warnings.length+1);
+      this.warnings[this.warnings.length-1] = warning;
+    }
+  }
 
   public UniqueId getUniqueId() {
     return this.uniqueId;

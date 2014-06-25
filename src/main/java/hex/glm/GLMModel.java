@@ -37,8 +37,6 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @API(help="Input data info")
   DataInfo data_info;
 
-  @API(help="warnings")
-  String []  warnings;
   @API(help="Decision threshold.")
   double     threshold;
   @API(help="glm params")
@@ -74,7 +72,10 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @Override public GLMModel clone(){
     GLMModel res = (GLMModel)super.clone();
     res.submodels = submodels.clone();
-    if(warnings != null)res.warnings = warnings.clone();
+    if(warnings != null)
+      res.warnings = warnings.clone();
+    else
+      res.warnings = new String[0];
     return res;
   }
 
@@ -173,7 +174,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     this.glm = glm;
     threshold = 0.5;
     this.data_info = dinfo;
-    this.warnings = null;
+    this.warnings = new String[0];
     this.alpha = alpha;
     this.lambda_max = lambda_max;
     this.beta_eps = beta_eps;
@@ -408,9 +409,9 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     GLM2 params = get_params();
     this.variable_importances = null;
 
-    // Don't return results that might not include an important level. . .
+    // Warn if we may be returning results that might not include an important (base) level. . .
     if (! params.use_all_factor_levels)
-      return;
+      this.addWarning("Variable Importance may be missing important variables: because use_all_factor_levels is off the importance of base categorical levels will NOT be included.");
 
     final double[] b = beta();
     if (params.variable_importances && null != b) {
