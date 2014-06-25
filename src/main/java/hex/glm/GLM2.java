@@ -465,7 +465,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     new GLMIterationTask(GLM2.this,_dinfo,_glm,false,true,true,fullBeta,_ymu,_reg,thresholds, new H2OCallback<GLMIterationTask>(GLM2.this){
       @Override public void callback(final GLMIterationTask glmt2){
         // first check KKT conditions!
-        double [] grad = glmt2.gradient(l2pen());
+        final double [] grad = glmt2.gradient(l2pen());
         if(_lastResult != null)
           _lastResult._fullGrad = glmt2.gradient(0);
         // check the KKT conditions and filter data for next lambda_value
@@ -509,10 +509,12 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         final double previousLambda = _currentLambda;
         final boolean isDone = done;
         if(!done) {
+          // NOTE: technically we should pickNewtLambda and filter next set of actove columns with new gradient (if alpa != 1, the l2 penalty has changed and so did the gradient!)
+          // but it seems to work fine this way and it's easier to pick next lambda
           _currentLambda = lambda == null ? pickNextLambda(_currentLambda, grad) : lambda[_lambdaIdx + 1];
           if (_activeCols != null) {
             final int[] oldCols = _activeCols;
-            if(alpha[0] != 1)grad = glmt2.gradient(l2pen()); // need to update gradient with new L2 penalty
+//            if(alpha[0] != 1)grad = glmt2.gradient(l2pen()); // need to update gradient with new L2 penalty
             activeCols(_currentLambda, previousLambda, grad);
             if (_activeData.fullN() > MAX_PREDICTORS) done = true;
             // epxand the beta
@@ -783,9 +785,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     if(lmaxt != null) {
       lambda_max = lmaxt.lmax();
       double [] grad = lmaxt.gradient(0);
-      System.out.println("lambda max = " + lambda_max + ",  + grad = " + Arrays.toString(grad));
     }
-
     if(lambda_search){
       _model = new GLMModel(GLM2.this,dest(),_dinfo, _glm,beta_epsilon,alpha[0],lambda_max,ymu,prior);
       _model.addSubmodel(lambda_max);
@@ -869,7 +869,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     }
     Arrays.sort(g);
     double res = 0.5*(-g[maxNewVars]/alpha[0] + oldLambda);
-    return res < oldLambda?res:0.99*oldLambda;
+    return res < oldLambda?res:0.95*oldLambda;
 //    if(_activeCols != null && _activeCols.length < (_dinfo.fullN()))
 //      return res;
 //    return (res/oldLambda > 0.95)?0.9*oldLambda:res;
