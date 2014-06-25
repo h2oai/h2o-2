@@ -376,12 +376,19 @@ h2o.setLogPath <- function(path, type) {
   return(res)
 }
 
+#'
+#' Check for assignment with `<-` or `=`
+#'
 .isAssignment<-
 function(expr) {
   if (identical(expr, quote(`<-`)) || identical(expr, quote(`=`))) return(TRUE)
   return(FALSE)
 }
 
+#'
+#' Get the class of the object from the envir.
+#'
+#' The environment is the parent frame (i.e. wherever h2o.exec is called from)
 .eval_class<-
 function(i, envir) {
   val <- tryCatch(class(get(as.character(i), envir)), error = function(e) {
@@ -391,6 +398,9 @@ function(i, envir) {
   })
 }
 
+#'
+#' Helper function to recursively unfurl an expression into a list of statements/exprs/calls/names.
+#'
 .as_list<-
 function(expr) {
   if (is.call(expr)) {
@@ -399,6 +409,9 @@ function(expr) {
   return(expr)
 }
 
+#'
+#' Cast the expression list back to a call.
+#'
 .back_to_expr<-
 function(some_expr_list) {
   len <- length(some_expr_list)
@@ -416,6 +429,10 @@ function(some_expr_list) {
   return(as.call(some_expr_list))
 }
 
+#'
+#' Swap the variable with the key.
+#'
+#' Once there's a key, set its columns to the COLNAMES variable in the .pkg.env  (used by .get_col_id)
 .swap_with_key<-
 function(object, envir) {
   assign("SERVER", get(as.character(object), envir = envir)@h2o, envir = .pkg.env)
@@ -426,22 +443,38 @@ function(object, envir) {
   return(object)
 }
 
+#'
+#' Does the column id getting
+#'
 .get_col_id<-
 function(ch, envir) {
   which(ch == .pkg.env$COLNAMES)
 }
 
+#'
+#' Swap the column name with its index in the (H2O) data frame
+#'
+#' Calls .get_col_id to probe a variable in the .pkg.env environment
 .swap_with_colid<-
 function(object, envir) {
   object <- .get_col_id(as.character(object), envir)
 }
 
+#'
+#' Actually do the replacing of variable/column name with the h2o key names / indices
 .replace_all<-
 function(a_list, envir) {
+
+  # Check if there is H2OParsedData object to sub out, grab their indices.
   idxs <- which( "H2OParsedData" == unlist(lapply(a_list, .eval_class, envir)))
+
+  # Check if there are column names to sub out, grab their indices.
   idx2 <- which( "character" == unlist(lapply(a_list, .eval_class, envir)))
+
+  # If nothing to sub, return
   if (length(idxs) == 0 && length(idx2) == 0) return(a_list)
 
+  # Swap out keys
   if (length(idxs) != 0) {
     for (i in idxs) {
       if(length(a_list) == 1) {
@@ -452,6 +485,7 @@ function(a_list, envir) {
     }
   }
 
+  # Swap out column names with indices
   if (length(idx2) != 0) {
     for (i in idx2) {
       if (length(a_list) == 1) {
@@ -465,33 +499,63 @@ function(a_list, envir) {
   return(a_list)
 }
 
+#'
+#' Replace the R variable with a H2O key name.
+#' Replace column names with their indices.
 .replace_with_keys_helper<-
 function(some_expr_list, envir) {
+
+  #Loop over the length of the list
   len <- length(some_expr_list)
   i <- 1
-    while(i <= len) {
-      num_sub_lists <- length(unlist(some_expr_list[[i]])) / length(some_expr_list[[i]])
-      if (num_sub_lists > 1) {
-        some_expr_list[[i]] <- .replace_with_keys_helper(some_expr_list[[i]], envir)
-      } else {
-        some_expr_list[[i]] <- .replace_all(some_expr_list[[i]], envir)
-      }
-      i <- i + 1
+  while(i <= len) {
+
+    # Check if there are sub lists and recurse them
+    num_sub_lists <- length(unlist(some_expr_list[[i]])) / length(some_expr_list[[i]])
+    if (num_sub_lists > 1) {
+
+      # recurse on the sublist
+      some_expr_list[[i]] <- .replace_with_keys_helper(some_expr_list[[i]], envir)
+    } else {
+
+      # replace the item in the list with the key name (or column index)
+      some_expr_list[[i]] <- .replace_all(some_expr_list[[i]], envir)
     }
-    return(some_expr_list)
+    i <- i + 1
+  }
+  return(some_expr_list)
 }
 
+#'
+#' Front-end work for h2o.exec
+#'
+#' Discover the destination key (if there is one), the client, and sub in the actual key name for the R variable
+#' that contains the pointer to the key in H2O.
 .replace_with_keys<-
 function(expr, envir = globalenv()) {
   dest_key <- ""
+
+  # Is this an assignment?
   if ( .isAssignment(as.list(expr)[[1]])) {
+
+    # The destination key is the name that's being assigned to (covers both `<-` and `=`)
     dest_key <- as.character(as.list(expr)[[2]])
+
+    # Don't bother with the assignment anymore, discard it and iterate down the RHS.
     expr <- as.list(expr)[[3]]
   }
+
+  # Assign the dest_key if one was found to the .pkg.env for later use.
   assign("DESTKEY", dest_key, envir = .pkg.env)
+
+  # list-ify the expression
   l <- lapply(as.list(expr), .as_list)
+
+  # replace any R variable names with the key name in the cloud, also handles column names passed as strings
   l <- .replace_with_keys_helper(l, envir)
-  as.name(as.character(as.expression(.back_to_expr(l))))  # change slice by "name" to slice by c(index) ??
+
+  # return the modified expression
+  as.name(as.character(as.expression(.back_to_expr(l))))
 }
 
 .h2o.__unop2 <- function(op, x) {
