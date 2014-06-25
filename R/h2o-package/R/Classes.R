@@ -411,10 +411,16 @@ as.h2o <- function(client, object, key = "", header, sep = "") {
   }
 }
 
-h2o.exec <- function(client, expr_to_execute, destination_key) {
+h2o.exec <- function(expr_to_execute) {
   expr <- .replace_with_keys(substitute( expr_to_execute ), envir = parent.frame())
-  res <- .h2o.__exec2_dest_key(client, deparse(expr), destination_key)
-  new("H2OParsedData", h2o = client, key = res$dest_key)
+
+  res <- NULL
+  if (.pkg.env$DESTKEY == "") {
+    res <- .h2o.__exec2(.pkg.env$SERVER, deparse(expr))
+  } else {
+    res <- .h2o.__exec2_dest_key(.pkg.env$SERVER, deparse(expr), .pkg.env$DESTKEY)
+  }
+  new("H2OParsedData", h2o = .pkg.env$SERVER, key = res$dest_key)
 }
 
 h2o.cut <- function(x, breaks) {

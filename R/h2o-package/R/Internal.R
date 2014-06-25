@@ -33,7 +33,7 @@ h2o.startLogging     <- function() {
   
   cat("Appending to log file", .pkg.env$h2o.__LOG_COMMAND, "\n")
   cat("Appending to log file", .pkg.env$h2o.__LOG_ERROR, "\n")
-  assign("IS_LOGGING", TRUE, envir = .pkg.env) 
+  assign("IS_LOGGING", TRUE, envir = .pkg.env)
 }
 h2o.stopLogging      <- function() { cat("Logging stopped"); assign("IS_LOGGING", FALSE, envir = .pkg.env) }
 h2o.clearLogs        <- function() { file.remove(.pkg.env$h2o.__LOG_COMMAND)
@@ -393,6 +393,12 @@ h2o.setLogPath <- function(path, type) {
   return(res)
 }
 
+.isAssignment<-
+function(expr) {
+  if (identical(expr, quote(`<-`)) || identical(expr, quote(`=`))) return(TRUE)
+  return(FALSE)
+}
+
 .eval_class<-
 function(i, envir) {
   val <- tryCatch(class(get(as.character(i), envir)), error = function(e) {return(NA)})
@@ -425,6 +431,7 @@ function(some_expr_list) {
 
 .swap_with_key<-
 function(object, envir) {
+  assign("SERVER", get(as.character(object), envir = envir)@h2o, envir = .pkg.env)
   object <- as.name(get(as.character(object), envir = envir)@key)
   return(object)
 }
@@ -460,6 +467,8 @@ function(some_expr_list, envir) {
 
 .replace_with_keys<-
 function(expr, envir = globalenv()) {
+  dest_key <- ifelse( .isAssignment(as.list(expr)[[1]]), as.character(as.list(expr)[[2]]), "")
+  assign("DESTKEY", dest_key, envir = .pkg.env)
   l <- lapply(as.list(expr), .as_list)
   l <- .replace_with_keys_helper(l, envir)
   as.name(as.character(as.expression(.back_to_expr(l))))  # change slice by "name" to slice by c(index) ??
