@@ -1167,7 +1167,10 @@ setMethod("apply", "H2OParsedData", function(X, MARGIN, FUN, ...) {
     myfun = paste(myfun[1], paste(myfun[2:(len-1)], collapse = ";"), "}")
   else
     myfun = paste(myfun, collapse = "")
-  params = c(X@key, MARGIN, myfun)
+  if(length(MARGIN) > 1)
+    params = c(X@key, paste("c(", paste(MARGIN, collapse = ","), ")", sep = ""), myfun)
+  else
+    params = c(X@key, MARGIN, myfun)
   expr = paste("apply(", paste(params, collapse = ","), ")", sep="")
   res = .h2o.__exec2(X@h2o, expr)
   new("H2OParsedData", h2o=X@h2o, key=res$dest_key)
