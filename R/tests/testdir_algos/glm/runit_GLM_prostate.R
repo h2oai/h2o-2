@@ -5,7 +5,7 @@ test.GLM.prostate <- function(conn) {
   Log.info("Importing prostate.csv data...\n")
   # prostate.hex = h2o.importURL(conn, "https..//raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", "prostate.hex")
   # prostate.hex = h2o.importFile(conn, normalizePath("../../../smalldata/logreg/prostate.csv"), "prostate.hex")
-  prostate.hex = h2o.uploadFile.VA(conn, locate("smalldata/logreg/prostate.csv"), "prostate.hex")
+  prostate.hex = h2o.uploadFile(conn, locate("smalldata/logreg/prostate.csv"), "prostate.hex")
   prostate.sum = summary(prostate.hex)
   print(prostate.sum)
   

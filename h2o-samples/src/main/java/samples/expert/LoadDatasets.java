@@ -23,6 +23,7 @@ public class LoadDatasets extends Job {
   }
 
   void load() {
+    TestUtil.parseFromH2OFolder("smalldata/anomaly/ecg_discord.csv");
     TestUtil.parseFromH2OFolder("smalldata/./logreg/prostate.csv");
     TestUtil.parseFromH2OFolder("smalldata/./logreg/prostate_long.csv.gz");
     TestUtil.parseFromH2OFolder("smalldata/./mnist/test.csv.gz");

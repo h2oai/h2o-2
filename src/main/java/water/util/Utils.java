@@ -87,8 +87,11 @@ public class Utils {
     return result;
   }
   public static float maxValue(float[] from) {
-    float result = from[0];
-    for (int i = 1; i<from.length; ++i)
+    return maxValue(from, 0, from.length);
+  }
+  public static float maxValue(float[] from, int start, int end) {
+    float result = from[start];
+    for (int i = start+1; i<end; ++i)
       if (from[i]>result) result = from[i];
     return result;
   }

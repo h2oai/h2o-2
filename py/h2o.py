@@ -1164,6 +1164,9 @@ class H2O(object):
         return key
 
     def get_key(self, key, timeoutSecs=30):
+        if beta_features:
+            raise Exception("get_key isn't supported with fvec")
+
         params = {'key': key}
         paramsStr = '?' + '&'.join(['%s=%s' % (k, v) for (k, v) in params.items()])
         url = self.__url('Get.html')
@@ -1710,6 +1713,28 @@ class H2O(object):
 
         return a
 
+    def create_frame(self, timeoutSecs=120, **kwargs):
+        params_dict = {
+            'key': None,
+            'rows': None,
+            'cols': None,
+            'seed': None,
+            'randomize': None,
+            'value': None,
+            'real_range': None,
+            'categorical_fraction': None,
+            'factors': None,
+            'integer_fraction': None,
+            'integer_range': None,
+            'missing_fraction': None,
+            'response_factors': None,
+        }
+        browseAlso = kwargs.pop('browseAlso', False)
+        check_params_update_kwargs(params_dict, kwargs, 'create_frame', print_params=True)
+        a = self.__do_json_request('2/CreateFrame.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint("\ncreate_frame result:", dump_json(a))
+        return a
+
     def frame_split(self, timeoutSecs=120, **kwargs):
         params_dict = {
             'source': None,
@@ -1719,6 +1744,18 @@ class H2O(object):
         check_params_update_kwargs(params_dict, kwargs, 'frame_split', print_params=True)
         a = self.__do_json_request('2/FrameSplitPage.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("\nframe_split result:", dump_json(a))
+        return a
+
+    def frame_nfold_extract(self, timeoutSecs=120, **kwargs):
+        params_dict = {
+            'source': None,
+            'nfolds': None,
+            'afold': None, # Split to extract
+        }
+        browseAlso = kwargs.pop('browseAlso', False)
+        check_params_update_kwargs(params_dict, kwargs, 'frame_nfold_extract', print_params=True)
+        a = self.__do_json_request('2/NFoldFrameExtractPage.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint("\nframe_nfold_extract result:", dump_json(a))
         return a
 
     def gap_statistic(self, timeoutSecs=120, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
@@ -1788,15 +1825,15 @@ class H2O(object):
 
         time.sleep(2)
         rfView = self.poll_url(rf, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
-                               initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
-                               noise=noise, benchmarkLogging=benchmarkLogging, noPrint=noPrint)
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
+            noise=noise, benchmarkLogging=benchmarkLogging, noPrint=noPrint)
         return rfView
 
     # note ntree in kwargs can overwrite trees! (trees is legacy param)
     def random_forest(self, data_key, trees=None,
-                      timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
-                      noise=None, benchmarkLogging=None, noPoll=False, rfView=True,
-                      print_params=True, noPrint=False, **kwargs):
+        timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
+        noise=None, benchmarkLogging=None, noPoll=False, rfView=True,
+        print_params=True, noPrint=False, **kwargs):
 
         print "at top of random_forest, timeoutSec: ", timeoutSecs
         algo = '2/DRF' if beta_features else 'RF'
@@ -1909,11 +1946,11 @@ class H2O(object):
 
             # data_key/model_key/ntree are all in **params_dict
             rfViewResult = self.random_forest_view(timeoutSecs=timeoutSecs,
-                                                   retryDelaySecs=retryDelaySecs, initialDelaySecs=initialDelaySecs,
-                                                   pollTimeoutSecs=pollTimeoutSecs,
-                                                   noise=noise, benchmarkLogging=benchmarkLogging,
-                                                   print_params=print_params, noPoll=noPoll,
-                                                   useRFScore=False, **params_dict)
+                retryDelaySecs=retryDelaySecs, initialDelaySecs=initialDelaySecs,
+                pollTimeoutSecs=pollTimeoutSecs,
+                noise=noise, benchmarkLogging=benchmarkLogging,
+                print_params=print_params, noPoll=noPoll,
+                useRFScore=False, **params_dict)
 
             verboseprint("random_forest_view:", rfViewResult)
             return rfViewResult
@@ -2157,6 +2194,15 @@ class H2O(object):
         check_params_update_kwargs(params_dict, kwargs, 'save_model', print_params)
         a = self.__do_json_request('2/SaveModel.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("\nsave_model result:", dump_json(a))
+        return a
+
+    def load_model(self, timeoutSecs=300, print_params=False, **kwargs):
+        params_dict = {
+            'path': None,
+        }
+        check_params_update_kwargs(params_dict, kwargs, 'load_model', print_params)
+        a = self.__do_json_request('2/LoadModel.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint("\nload_model result:", dump_json(a))
         return a
 
     def generate_predictions(self, data_key, model_key, destination_key=None, timeoutSecs=300, print_params=True,

@@ -580,12 +580,15 @@ public class DTree extends Iced {
     private final int num_folds;
     private transient volatile CompressedTree[/*N*/][/*nclasses OR 1 for regression*/] _treeBitsCache;
 
-    public TreeModel( Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, int num_folds) {
-      this(key, dataKey, testKey, names, domains, cmDomain, ntrees, max_depth, min_rows, nbins, num_folds, new Key[0][], new ConfusionMatrix[0], new double[0], null, null, null);
+    public TreeModel( Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, int num_folds, float[] priorClassDist, float[] classDist) {
+      this(key, dataKey, testKey, names, domains, cmDomain, ntrees, max_depth, min_rows, nbins, num_folds,
+          priorClassDist, classDist,
+          new Key[0][], new ConfusionMatrix[0], new double[0], null, null, null);
     }
-    public TreeModel( Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, int num_folds,
+    private TreeModel( Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, int num_folds,
+                      float[] priorClassDist, float[] classDist,
                       Key[][] treeKeys, ConfusionMatrix[] cms, double[] errs, TreeStats treeStats, VarImp varimp, AUC validAUC) {
-      super(key,dataKey,names,domains);
+      super(key,dataKey,names,domains,priorClassDist, classDist);
       this.N = ntrees;
       this.max_depth = max_depth; this.min_rows = min_rows; this.nbins = nbins;
       this.num_folds = num_folds;
@@ -600,7 +603,7 @@ public class DTree extends Iced {
     }
     // Simple copy ctor, null value of parameter means copy from prior-model
     protected TreeModel(TreeModel prior, Key[][] treeKeys, double[] errs, ConfusionMatrix[] cms, TreeStats tstats, VarImp varimp, AUC validAUC) {
-      super(prior._key,prior._dataKey,prior._names,prior._domains);
+      super(prior._key,prior._dataKey,prior._names,prior._domains,prior._priorClassDist, prior._modelClassDist);
       this.N = prior.N;
       this.testKey   = prior.testKey;
       this.max_depth = prior.max_depth;
@@ -616,7 +619,7 @@ public class DTree extends Iced {
       if (varimp   != null) this.varimp    = varimp;   else this.varimp    = prior.varimp;
       if (validAUC != null) this.validAUC  = validAUC; else this.validAUC  = prior.validAUC;
     }
-
+    // Additional copy ctors to update specific fields
     public TreeModel(TreeModel prior, DTree[] tree, double err, ConfusionMatrix cm, TreeStats tstats) {
       this(prior, append(prior.treeKeys, tree), Utils.append(prior.errs, err), Utils.append(prior.cms, cm), tstats, null, null);
     }
@@ -818,7 +821,9 @@ public class DTree extends Iced {
             sb.append("<div class=\"alert\">Reported on ").append(num_folds).append("-fold cross-validated training data</div>");
           else {
             sb.append("<div class=\"alert\">Reported on ").append(title.contains("DRF") ? "out-of-bag" : "training").append(" data");
-            if (num_folds > 0) sb.append(" (cross-validation results are being computed - please reload this page later).");
+            if (num_folds > 0) sb.append(" (cross-validation results are being computed - please reload this page later)");
+            sb.append(".");
+            if (_priorClassDist!=null && _modelClassDist!=null) sb.append("<br />Data were resampled to balance class distribution.");
             sb.append("</div>");
           }
         } else {
@@ -1153,7 +1158,8 @@ public class DTree extends Iced {
         sb.append("     curl http:/").append(H2O.SELF.toString()).append("/h2o-model.jar > h2o-model.jar\n");
         sb.append("     curl http:/").append(H2O.SELF.toString()).append("/2/").append(this.getClass().getSimpleName()).append("View.java?_modelKey=").append(_key).append(" > ").append(modelName).append(".java\n");
         sb.append("     javac -cp h2o-model.jar -J-Xmx2g -J-XX:MaxPermSize=128m ").append(modelName).append(".java\n");
-        sb.append("     java -cp h2o-model.jar:. -Xmx2g -XX:MaxPermSize=256m -XX:ReservedCodeCacheSize=256m ").append(modelName).append('\n');
+        if (GEN_BENCHMARK_CODE)
+          sb.append("     java -cp h2o-model.jar:. -Xmx2g -XX:MaxPermSize=256m -XX:ReservedCodeCacheSize=256m ").append(modelName).append('\n');
         sb.append("*/");
         sb.append("</code></pre>");
       } else {
@@ -1171,28 +1177,32 @@ public class DTree extends Iced {
       String modelName = JCodeGen.toJavaId(_key.toString());
 
       sb.ii(1);
-      // Generate main method
-      sb.i().p("/**").nl();
-      sb.i().p(" * Sample program harness providing an example of how to call predict().").nl();
-      sb.i().p(" */").nl();
-      sb.i().p("public static void main(String[] args) throws Exception {").nl();
-      sb.i(1).p("int iters = args.length > 0 ? Integer.valueOf(args[0]) : DEFAULT_ITERATIONS;").nl();
-      sb.i(1).p(modelName).p(" model = new ").p(modelName).p("();").nl();
-      sb.i(1).p("model.bench(iters, DataSample.DATA, new float[NCLASSES+1], NTREES);").nl();
-      sb.i().p("}").nl();
-      sb.di(1);
-      sb.p(TO_JAVA_BENCH_FUNC);
+      // Generate main method with benchmark
+      if (GEN_BENCHMARK_CODE) {
+        sb.i().p("/**").nl();
+        sb.i().p(" * Sample program harness providing an example of how to call predict().").nl();
+        sb.i().p(" */").nl();
+        sb.i().p("public static void main(String[] args) throws Exception {").nl();
+        sb.i(1).p("int iters = args.length > 0 ? Integer.valueOf(args[0]) : DEFAULT_ITERATIONS;").nl();
+        sb.i(1).p(modelName).p(" model = new ").p(modelName).p("();").nl();
+        sb.i(1).p("model.bench(iters, DataSample.DATA, new float[NCLASSES+1], NTREES);").nl();
+        sb.i().p("}").nl();
+        sb.di(1);
+        sb.p(TO_JAVA_BENCH_FUNC);
+      }
 
       JCodeGen.toStaticVar(sb, "NTREES", ntrees(), "Number of trees in this model.");
       JCodeGen.toStaticVar(sb, "NTREES_INTERNAL", ntrees()*nclasses(), "Number of internal trees in this model (= NTREES*NCLASSES).");
-      JCodeGen.toStaticVar(sb, "DEFAULT_ITERATIONS", 10000, "Default number of iterations.");
+      if (GEN_BENCHMARK_CODE) JCodeGen.toStaticVar(sb, "DEFAULT_ITERATIONS", 10000, "Default number of iterations.");
       // Generate a data in separated class since we do not want to influence size of constant pool of model class
-      if( _dataKey != null ) {
-        Value dataval = DKV.get(_dataKey);
-        if (dataval != null) {
-          water.fvec.Frame frdata = ValueArray.asFrame(dataval);
-          water.fvec.Frame frsub = frdata.subframe(_names);
-          JCodeGen.toClass(fileContextSB, "// Sample of data used by benchmark\nclass DataSample", "DATA", frsub, 10, "Sample test data.");
+      if (GEN_BENCHMARK_CODE) {
+        if( _dataKey != null ) {
+          Value dataval = DKV.get(_dataKey);
+          if (dataval != null) {
+            water.fvec.Frame frdata = ValueArray.asFrame(dataval);
+            water.fvec.Frame frsub = frdata.subframe(_names);
+            JCodeGen.toClass(fileContextSB, "// Sample of data used by benchmark\nclass DataSample", "DATA", frsub, 10, "Sample test data.");
+          }
         }
       }
       return sb;
@@ -1237,8 +1247,14 @@ public class DTree extends Iced {
     /** Fill preds[0] based on already filled and unified preds[1,..NCLASSES]. */
     protected void toJavaFillPreds0(SB bodySb) {
       // Pick max index as a prediction
-      if (isClassifier()) bodySb.i().p("preds[0] = water.util.ModelUtils.getPrediction(preds,data);").nl();
-      else bodySb.i().p("preds[0] = preds[1];").nl();
+      if (isClassifier()) {
+        if (_priorClassDist!=null && _modelClassDist!=null) {
+          bodySb.i().p("water.util.ModelUtils.correctProbabilities(preds, PRIOR_CLASS_DISTRIB, MODEL_CLASS_DISTRIB);").nl();
+        }
+        bodySb.i().p("preds[0] = water.util.ModelUtils.getPrediction(preds,data);").nl();
+      } else {
+        bodySb.i().p("preds[0] = preds[1];").nl();
+      }
     }
 
     /* Numeric type used in generated code to hold predicted value between the calls. */

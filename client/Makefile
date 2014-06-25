@@ -37,6 +37,7 @@ BROWSER_SCRIPTS=\
 	$(BUILD)/scripts/xhr.js \
 	$(BUILD)/scripts/h2o-proxy.js \
 	$(BUILD)/scripts/help-server.js \
+	$(BUILD)/scripts/text-metrics.js \
 	$(BUILD)/scripts/help.js \
 	$(BUILD)/scripts/dialog-manager.js \
 	$(BUILD)/scripts/alert-dialog.js \
@@ -70,6 +71,7 @@ TEST_SCRIPTS=\
 	$(BUILD)/scripts/xhr.js \
 	$(BUILD)/scripts/h2o-proxy.js \
 	$(BUILD)/scripts/help-server.js \
+	$(BUILD)/scripts/text-metrics.js \
 	$(BUILD)/scripts/help.js \
 	$(BUILD)/scripts/alert-dialog.js \
 	$(BUILD)/scripts/error-dialog.js \

@@ -16,6 +16,8 @@ import water.util.Log.Tag.Sys;
 
 import java.util.*;
 
+import org.apache.commons.math3.random.CorrelatedRandomVectorGenerator;
+
 /**
  * A Model models reality (hopefully).
  * A model can be used to 'score' a row, or a collection of rows on any
@@ -45,9 +47,12 @@ public abstract class Model extends Lockable<Model> {
   public final String _domains[][];
 
   @API(help = "Relative class distribution factors in original data")
-  final protected float[] _priorClassDist;
+  public final float[] _priorClassDist;
+
   @API(help = "Relative class distribution factors used for model building")
   protected float[] _modelClassDist;
+  // WARNING: be really careful to modify this POJO because
+  // modification does not involve update in DKV
   public void setModelClassDistribution(float[] classdist) {
     _modelClassDist = classdist.clone();
   }
@@ -60,28 +65,22 @@ public abstract class Model extends Lockable<Model> {
   /** The duration in mS for model training. */
   public long training_duration_in_ms = 0L;
 
+  /** Any warnings thrown during model building. */
+  @API(help="warnings")
+  public String[]  warnings = new String[0];
+
   /** Whether or not this model has cross-validated results stored. */
   protected boolean _have_cv_results;
 
   /** Full constructor from frame: Strips out the Vecs to just the names needed
-   *  to match columns later for future datasets.  */
+   *  to match columns later for future datasets.
+   */
   public Model( Key selfKey, Key dataKey, Frame fr, float[] priorClassDist ) {
-    this(selfKey,dataKey,fr.names(),fr.domains(),priorClassDist);
-  }
-
-  /** Constructor from frame (without prior class dist): Strips out the Vecs to just the names needed
-   *  to match columns later for future datasets.  */
-  public Model( Key selfKey, Key dataKey, Frame fr ) {
-    this(selfKey,dataKey,fr.names(),fr.domains(),null);
-  }
-
-  /** Constructor without prior class distribution */
-  public Model( Key selfKey, Key dataKey, String names[], String domains[][]) {
-    this(selfKey,dataKey,names,domains,null);
+    this(selfKey,dataKey,fr.names(),fr.domains(), priorClassDist, null);
   }
 
   /** Full constructor */
-  public Model( Key selfKey, Key dataKey, String names[], String domains[][], float[] priorClassDist ) {
+  public Model( Key selfKey, Key dataKey, String names[], String domains[][], float[] priorClassDist, float[] modelClassDist ) {
     super(selfKey);
     this.uniqueId = new UniqueId(_key);
     if( domains == null ) domains=new String[names.length+1][];
@@ -92,6 +91,7 @@ public abstract class Model extends Lockable<Model> {
     _names   = names;
     _domains = domains;
     _priorClassDist = priorClassDist;
+    _modelClassDist = modelClassDist;
   }
 
   // Currently only implemented by GLM2, DeepLearning, GBM and DRF:
@@ -102,7 +102,7 @@ public abstract class Model extends Lockable<Model> {
   public Request2 job() { throw new UnsupportedOperationException("job() has not yet been implemented in class: " + this.getClass()); }
 
   /** Simple shallow copy constructor to a new Key */
-  public Model( Key selfKey, Model m ) { this(selfKey,m._dataKey,m._names,m._domains); }
+  public Model( Key selfKey, Model m ) { this(selfKey,m._dataKey,m._names,m._domains, m._priorClassDist, m._modelClassDist); }
 
   public enum ModelCategory {
     Unknown,
@@ -122,13 +122,21 @@ public abstract class Model extends Lockable<Model> {
   /** Remove any Model internal Keys */
   @Override public Futures delete_impl(Futures fs) { return fs; /* None in the default Model */ }
   @Override public String errStr() { return "Model"; }
+  public void addWarning(String warning) {
+    if(this.warnings == null || this.warnings.length == 0)
+      this.warnings = new String[]{warning};
+    else {
+      this.warnings = Arrays.copyOf(this.warnings,this.warnings.length+1);
+      this.warnings[this.warnings.length-1] = warning;
+    }
+  }
 
   public UniqueId getUniqueId() {
     return this.uniqueId;
   }
 
   public void start_training(long training_start_time) {
-    Log.info("setting training_start_time to: " + training_start_time + " for Model: " + this);
+    Log.info("setting training_start_time to: " + training_start_time + " for Model: " + this._key.toString() + " (" + this.getClass().getSimpleName() + "@" + System.identityHashCode(this) + ")");
 
     final long t = training_start_time;
     new TAtomic<Model>() {
@@ -142,7 +150,7 @@ public abstract class Model extends Lockable<Model> {
   }
   public void start_training(Model previous) {
     training_start_time = System.currentTimeMillis();
-    Log.info("setting training_start_time to: " + training_start_time + " for Model: " + this + " (checkpoint case)");
+    Log.info("setting training_start_time to: " + training_start_time + " for Model: " + this._key.toString() + " (" + this.getClass().getSimpleName() + "@" + System.identityHashCode(this) + ") [checkpoint case]");
     if (null != previous)
       training_duration_in_ms += previous.training_duration_in_ms;
 
@@ -159,7 +167,7 @@ public abstract class Model extends Lockable<Model> {
   }
   public void stop_training() {
     training_duration_in_ms += (System.currentTimeMillis() - training_start_time);
-    Log.info("setting training_duration_in_ms to: " + training_duration_in_ms + " for Model: " + this);
+    Log.info("setting training_duration_in_ms to: " + training_duration_in_ms + " for Model: " + this._key.toString() + " (" + this.getClass().getSimpleName() + "@" + System.identityHashCode(this) + ")");
 
     final long d = training_duration_in_ms;
     new TAtomic<Model>() {
@@ -196,7 +204,7 @@ public abstract class Model extends Lockable<Model> {
    *
    * @see #score(Frame, boolean)
    */
-  public final Frame score(Frame fr) {
+  public Frame score(Frame fr) {
     return score(fr, true);
   }
   /** Bulk score the frame <code>fr</code>, producing a Frame result; the 1st Vec is the
@@ -238,7 +246,7 @@ public abstract class Model extends Lockable<Model> {
    * @param adaptFrm
    * @return
    */
-  private Frame scoreImpl(Frame adaptFrm) {
+  protected Frame scoreImpl(Frame adaptFrm) {
     int ridx = adaptFrm.find(responseName());
     assert ridx == -1 : "Adapted frame should not contain response in scoring method!";
     assert nfeatures() == adaptFrm.numCols() : "Number of model features " + nfeatures() + " != number of test set columns: " + adaptFrm.numCols();
@@ -359,13 +367,20 @@ public abstract class Model extends Lockable<Model> {
    *  second frame is to delete all adapted vectors with deletion of the
    *  frame). */
   public Frame[] adapt( final Frame fr, boolean exact) {
+    return adapt(fr, exact, true);
+  }
+
+  public Frame[] adapt( final Frame fr, boolean exact, boolean haveResponse) {
     Frame vfr = new Frame(fr); // To avoid modification of original frame fr
-    int ridx = vfr.find(_names[_names.length-1]);
-    if(ridx != -1 && ridx != vfr._names.length-1){ // Unify frame - put response to the end
-      String n = vfr._names[ridx];
-      vfr.add(n,vfr.remove(ridx));
+    int n = _names.length;
+    if (haveResponse) {
+      int ridx = vfr.find(_names[_names.length - 1]);
+      if (ridx != -1 && ridx != vfr._names.length - 1) { // Unify frame - put response to the end
+        String name = vfr._names[ridx];
+        vfr.add(name, vfr.remove(ridx));
+      }
+      n = ridx == -1 ? _names.length - 1 : _names.length;
     }
-    int n = ridx == -1?_names.length-1:_names.length;
     String [] names = Arrays.copyOf(_names, n);
     Frame  [] subVfr;
     // replace missing columns with NaNs (or 0s for DeepLearning with sparse data)
@@ -459,17 +474,7 @@ public abstract class Model extends Lockable<Model> {
     // C.f. http://gking.harvard.edu/files/0s.pdf Eq.(27)
     if (isClassifier() && _priorClassDist != null && _modelClassDist != null) {
       assert(scored.length == nclasses()+1); //1 label + nclasses probs
-      double probsum=0;
-      for( int c=1; c<scored.length; c++ ) {
-        final double original_fraction = _priorClassDist[c-1];
-        assert(original_fraction > 0) : "original fraction should be > 0, but is " + original_fraction;
-        final double oversampled_fraction = _modelClassDist[c-1];
-        assert(oversampled_fraction > 0) : "oversampled fraction should be > 0, but is " + oversampled_fraction;
-        assert(!Double.isNaN(scored[c]));
-        scored[c] *= original_fraction / oversampled_fraction;
-        probsum += scored[c];
-      }
-      for (int i=1;i<scored.length;++i) scored[i] /= probsum;
+      ModelUtils.correctProbabilities(scored, _priorClassDist, _modelClassDist);
       //set label based on corrected probabilities (max value wins, with deterministic tie-breaking)
       scored[0] = ModelUtils.getPrediction(scored, tmp);
     }
@@ -566,6 +571,8 @@ public abstract class Model extends Lockable<Model> {
   // Data must be in proper order.  Handy for JUnit tests.
   public double score(double [] data){ return Utils.maxIndex(score0(data,new float[nclasses()]));  }
 
+  /** Debug flag to generate benchmar code */
+  protected static final boolean GEN_BENCHMARK_CODE = false;
 
   /** Return a String which is a valid Java program representing a class that
    *  implements the Model.  The Java is of the form:
@@ -593,7 +600,8 @@ public abstract class Model extends Lockable<Model> {
     SB fileContextSB = new SB(); // preserve file context
     String modelName = JCodeGen.toJavaId(_key.toString());
     // HEADER
-    sb.p("import java.util.Map;").nl().nl();
+    sb.p("import java.util.Map;").nl();
+    sb.p("import water.genmodel.GenUtils.*;").nl().nl();
     sb.p("// AUTOGENERATED BY H2O at ").p(new Date().toString()).nl();
     sb.p("// ").p(H2O.getBuildVersion().toString()).nl();
     sb.p("//").nl();
@@ -605,6 +613,7 @@ public abstract class Model extends Lockable<Model> {
     sb.p("//     curl http:/").p(H2O.SELF.toString()).p("/h2o-model.jar > h2o-model.jar").nl();
     sb.p("//     curl http:/").p(H2O.SELF.toString()).p("/2/").p(this.getClass().getSimpleName()).p("View.java?_modelKey=").pobj(_key).p(" > ").p(modelName).p(".java").nl();
     sb.p("//     javac -cp h2o-model.jar -J-Xmx2g -J-XX:MaxPermSize=128m ").p(modelName).p(".java").nl();
+    if (GEN_BENCHMARK_CODE)
     sb.p("//     java -cp h2o-model.jar:. -Xmx2g -XX:MaxPermSize=256m -XX:ReservedCodeCacheSize=256m ").p(modelName).nl();
     sb.p("//").nl();
     sb.p("//     (Note:  Try java argument -XX:+PrintCompilation to show runtime JIT compiler behavior.)").nl();
@@ -613,13 +622,10 @@ public abstract class Model extends Lockable<Model> {
     toJavaInit(sb, fileContextSB).nl();
     toJavaNAMES(sb);
     toJavaNCLASSES(sb);
-    toJavaDOMAINS(sb);
+    toJavaDOMAINS(sb, fileContextSB);
+    toJavaPROB(sb);
     toJavaSuper(sb); //
     toJavaPredict(sb, fileContextSB);
-    sb.p(TOJAVA_MAP);
-    sb.p(TOJAVA_PREDICT_MAP);
-    sb.p(TOJAVA_PREDICT_MAP_ALLOC1);
-    sb.p(TOJAVA_PREDICT_MAP_ALLOC2);
     sb.p("}").nl();
     sb.p(fileContextSB).nl(); // Append file
     return sb;
@@ -631,51 +637,47 @@ public abstract class Model extends Lockable<Model> {
     clz.addField(CtField.make(toJavaNCLASSES(new SB()).toString(),clz));
     toJavaInit(clz);            // Model-specific top-level goodness
     clz.addMethod(CtMethod.make(toJavaPredict(new SB(), new SB()).toString(),clz)); // FIX ME
-    clz.addMethod(CtMethod.make(TOJAVA_MAP,clz));
-    clz.addMethod(CtMethod.make(TOJAVA_PREDICT_MAP,clz));
-    clz.addMethod(CtMethod.make(TOJAVA_PREDICT_MAP_ALLOC1,clz));
-    clz.addMethod(CtMethod.make(TOJAVA_PREDICT_MAP_ALLOC2,clz));
     return clz;
   }
   /** Generate implementation for super class. */
   protected SB toJavaSuper( SB sb ) {
     sb.nl();
-    sb.ii(1);
-    sb.i().p("public String[] getNames() { return NAMES; } ").nl();
+    sb.i().p("public String[]   getNames() { return NAMES; } ").nl();
     sb.i().p("public String[][] getDomainValues() { return DOMAINS; }").nl();
-    sb.di(1);
     return sb;
   }
   private SB toJavaNAMES( SB sb ) {
     sb.nl();
-    sb.i(1).p("// Names of columns used by model.").nl();
-    return sb.i(1).p("public static final String[] NAMES = new String[] ").toJavaStringInit(_names).p(";").nl();
+    sb.i().p("// Names of columns used by model.").nl();
+    return sb.i().p("public static final String[] NAMES = new String[] ").toJavaStringInit(_names).p(";").nl();
   }
   private SB toJavaNCLASSES( SB sb ) {
     sb.nl();
-    sb.i(1).p("// Number of output classes included in training data response column,").nl();
-    return sb.i(1).p("public static final int NCLASSES = ").p(nclasses()).p(";").nl();
+    sb.i().p("// Number of output classes included in training data response column,").nl();
+    return sb.i().p("public static final int NCLASSES = ").p(nclasses()).p(";").nl();
   }
-  private SB toJavaDOMAINS( SB sb ) {
+  private SB toJavaDOMAINS( SB sb, SB fileContextSB ) {
     sb.nl();
-    sb.i(1).p("// Column domains. The last array contains domain of response column.").nl();
-    sb.i(1).p("public static final String[][] DOMAINS = new String[][] {").nl();
+    sb.i().p("// Column domains. The last array contains domain of response column.").nl();
+    sb.i().p("public static final String[][] DOMAINS = new String[][] {").nl();
     for (int i=0; i<_domains.length; i++) {
       String[] dom = _domains[i];
-      sb.i(2).p("/* ").p(_names[i]).p(" */ ");
-      if (dom==null) sb.p("null");
-      else {
-        sb.p("new String[] {");
-        for (int j=0; j<dom.length; j++) {
-          if (j>0) sb.p(',');
-          sb.p('"').pj(dom[j]).p('"');
-        }
-        sb.p("}");
-      }
+      String colInfoClazz = "ColInfo_"+i;
+      sb.i(1).p("/* ").p(_names[i]).p(" */ ");
+      sb.p(colInfoClazz).p(".VALUES");
       if (i!=_domains.length-1) sb.p(',');
       sb.nl();
+      fileContextSB.i().p("// The class representing column ").p(_names[i]).nl();
+      JCodeGen.toClassWithArray(fileContextSB, null, colInfoClazz, dom);
     }
-    return sb.i(1).p("};").nl();
+    return sb.i().p("};").nl();
+  }
+  private SB toJavaPROB( SB sb) {
+    sb.i().p("// Prior class distribution").nl();
+    JCodeGen.toField(sb, "public static final", "float[]", "PRIOR_CLASS_DISTRIB", new SB().toJavaStringInit(_priorClassDist).toString());
+    sb.i().p("// Class distribution used for model building").nl();
+    JCodeGen.toField(sb, "public static final", "float[]", "MODEL_CLASS_DISTRIB", new SB().toJavaStringInit(_modelClassDist).toString());
+    return sb;
   }
   // Override in subclasses to provide some top-level model-specific goodness
   protected SB toJavaInit(SB sb, SB fileContextSB) { return sb; }
@@ -704,37 +706,6 @@ public abstract class Model extends Lockable<Model> {
   }
 
   protected String toJavaDefaultMaxIters() { return "-1"; }
-
-  private static final String TOJAVA_MAP =
-    "\n"+
-    "  // Takes a HashMap mapping column names to doubles.  Looks up the column\n"+
-    "  // names needed by the model, and places the doubles into the data array in\n"+
-    "  // the order needed by the model.  Missing columns use NaN.\n"+
-    "  double[] map( Map<String, Double> row, double data[] ) {\n"+
-    "    for( int i=0; i<NAMES.length-1; i++ ) {\n"+
-    "      Double d = (Double)row.get(NAMES[i]);\n"+
-    "      data[i] = d==null ? Double.NaN : d;\n"+
-    "    }\n"+
-    "    return data;\n"+
-    "  }\n";
-  private static final String TOJAVA_PREDICT_MAP =
-    "\n"+
-    "  // Does the mapping lookup for every row, no allocation\n"+
-    "  float[] predict( Map<String, Double> row, double data[], float preds[] ) {\n"+
-    "    return predict(map(row,data),preds);\n"+
-    "  }\n";
-  private static final String TOJAVA_PREDICT_MAP_ALLOC1 =
-    "\n"+
-    "  // Allocates a double[] for every row\n"+
-    "  float[] predict( Map<String, Double> row, float preds[] ) {\n"+
-    "    return predict(map(row,new double[NAMES.length]),preds);\n"+
-    "  }\n";
-  private static final String TOJAVA_PREDICT_MAP_ALLOC2 =
-    "\n"+
-    "  // Allocates a double[] and a float[] for every row\n"+
-    "  float[] predict( Map<String, Double> row ) {\n"+
-    "    return predict(map(row,new double[NAMES.length]),new float[NCLASSES+1]);\n"+
-    "  }\n";
 
   // Convenience method for testing: build Java, convert it to a class &
   // execute it: compare the results of the new class's (JIT'd) scoring with

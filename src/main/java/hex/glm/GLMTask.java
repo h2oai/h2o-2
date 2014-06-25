@@ -8,6 +8,7 @@ import java.util.ArrayList;
 
 import water.H2O.H2OCountedCompleter;
 import water.*;
+import water.util.ModelUtils;
 import water.util.Utils;
 
 /**
@@ -85,17 +86,14 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     //public GLMIterationTask(Job job, DataInfo dinfo, GLMParams glm, boolean computeGram, boolean validate, boolean computeGradient, double [] beta, double ymu, double reg, H2OCountedCompleter cmp) {
 
 
-    public LMAXTask(Job job, DataInfo dinfo, GLMParams glm, double ymu, long nobs, double alpha, H2OCountedCompleter cmp) {
-      super(job, dinfo, glm, false, true, true, glm.nullModelBeta(dinfo,ymu), ymu, 1.0/nobs, cmp);
+    public LMAXTask(Job job, DataInfo dinfo, GLMParams glm, double ymu, long nobs, double alpha, float [] thresholds, H2OCountedCompleter cmp) {
+      super(job, dinfo, glm, false, true, true, glm.nullModelBeta(dinfo,ymu), ymu, 1.0/nobs, thresholds, cmp);
       _gPrimeMu = glm.linkDeriv(ymu);
-      _nobs = dinfo.fullN();
       _alpha = alpha;
     }
     @Override public void chunkInit(){
       super.chunkInit();
       _z = MemoryManager.malloc8d(_grad.length);
-      _val = new GLMValidation(null,_ymu,_glm,0);
-
     }
     @Override public void processRow(long gid, double[] nums, int ncats, int[] cats, double [] responses) {
       double w = (responses[0] - _ymu) * _gPrimeMu;
@@ -233,16 +231,20 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     protected final double _reg;
     long _nobs;
     final boolean _validate;
+    final float [] _thresholds;
     final boolean _computeGradient;
     final boolean _computeGram;
 
-    public GLMIterationTask(Job job, DataInfo dinfo, GLMParams glm, boolean computeGram, boolean validate, boolean computeGradient, double [] beta, double ymu, double reg, H2OCountedCompleter cmp) {
+    public GLMIterationTask(Job job, DataInfo dinfo, GLMParams glm, boolean computeGram, boolean validate, boolean computeGradient, double [] beta, double ymu, double reg, float [] thresholds, H2OCountedCompleter cmp) {
       super(job, dinfo,glm,cmp);
       _beta = beta;
       _ymu = ymu;
       _reg = reg;
       _computeGram = computeGram;
       _validate = validate;
+      assert thresholds != null;
+      _thresholds = _validate?thresholds:null;
+
       _computeGradient = computeGradient;
       assert !_computeGradient || validate;
     }
@@ -258,7 +260,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       if( _glm.family == Family.gaussian){
         w = 1;
         z = y;
-        mu = _validate?computeEta(ncats,cats,nums,_beta):0;
+        mu = (_validate || _computeGradient)?computeEta(ncats,cats,nums,_beta):0;
       } else {
         if( _beta == null ) {
           mu = _glm.mustart(y, _ymu);
@@ -299,7 +301,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       _xy = MemoryManager.malloc8d(_dinfo.fullN()+1); // + 1 is for intercept
       int rank = 0;
       if(_beta != null)for(double d:_beta)if(d != 0)++rank;
-      if(_validate)_val = new GLMValidation(null,_ymu, _glm,rank);
+      if(_validate)_val = new GLMValidation(null,_ymu, _glm,rank, _thresholds);
       if(_computeGradient)
         _grad = MemoryManager.malloc8d(_dinfo.fullN()+1); // + 1 is for intercept
     }

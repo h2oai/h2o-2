@@ -74,15 +74,19 @@ public abstract class LSMSolver extends Iced{
 
 
   protected static double shrinkage(double x, double kappa) {
-    return Math.max(0, x - kappa) - Math.max(0, -x - kappa);
+    double sign = x < 0?-1:1;
+    double sx = x*sign;
+    if(sx <= kappa) return 0;
+    return sign*(sx - kappa);
+//    return Math.max(0, x - kappa) - Math.max(0, -x - kappa);
   }
 
   /**
    * Compute least squares objective function value:
    *    lsm_obj(beta) = 0.5*(y - X*b)'*(y - X*b) + l1 + l2
    *                  = 0.5*y'y - (X'y)'*b + 0.5*b'*X'X*b) + l1 + l2
-   *    l1 = alpha*lambda*l1norm(beta)
-   *    l2 = (1-alpha)*lambda*l2norm(beta)/2
+   *    l1 = alpha*lambda_value*l1norm(beta)
+   *    l2 = (1-alpha)*lambda_value*l2norm(beta)/2
    * @param xy:   X'y
    * @param yy:   0.5*y'y
    * @param beta: b (vector of coefficients)
@@ -166,6 +170,8 @@ public abstract class LSMSolver extends Iced{
     final public double _gradientEps;
     private static final double GLM1_RHO = 1.0e-3;
 
+    public double gerr = Double.POSITIVE_INFINITY;
+
     public boolean normalize() {return _lambda != 0;}
 
     public double _addedL2;
@@ -181,7 +187,7 @@ public abstract class LSMSolver extends Iced{
 
     public JsonObject toJson(){
       JsonObject res = new JsonObject();
-      res.addProperty("lambda",_lambda);
+      res.addProperty("lambda_value",_lambda);
       res.addProperty("alpha",_alpha);
       return res;
     }
@@ -220,7 +226,6 @@ public abstract class LSMSolver extends Iced{
       return err;
     }
 
-    public double grad_err = Double.POSITIVE_INFINITY;
 
     private double getGrad(int i, Gram gram, double [] beta, double [] xy){
       double [] g = grad(gram,beta,xy);
@@ -262,7 +267,7 @@ public abstract class LSMSolver extends Iced{
         gram.addDiag(_addedL2); // try to add L2 penalty to make the Gram issp
         gram.cholesky(chol);
       }
-      long decompTIme = (t2-t1);
+      long decompTime = (t2-t1);
 
       if(!chol.isSPD()){
         System.out.println("can not solve, got non-spd matrix and adding regularization did not help, matrix = \n" + gram);
@@ -273,20 +278,19 @@ public abstract class LSMSolver extends Iced{
         System.arraycopy(xy, 0, res, 0, xy.length);
         chol.solve(res);
         gram.addDiag(-gram._diagAdded + d);
+        gerr = 0;
         return true;
       }
+      gerr = Double.POSITIVE_INFINITY;
       long t = System.currentTimeMillis();
-      final double ABSTOL = Math.sqrt(N) * 1e-4;
-      final double RELTOL = 1e-2;
       double[] u = MemoryManager.malloc8d(N);
       double [] xyPrime = xy.clone();
       double kappa = _lambda*_alpha/rho;
-      double [] grad = null;
       int i;
       int k = 10;
-      double gradientErr = Double.POSITIVE_INFINITY;
+      double lastErr = Double.POSITIVE_INFINITY;
+      double bestErr = Double.POSITIVE_INFINITY;
 
-      double gerr = Double.POSITIVE_INFINITY;
       double [] z = res.clone();
       for(i = 0; i < 2500; ++i ) {
         // first compute the x update
@@ -295,7 +299,7 @@ public abstract class LSMSolver extends Iced{
         xyPrime[N-1] = xy[N-1];
         // updated x
         chol.solve(xyPrime);
-        // compute u and z update
+        // compute u and z updateADMM
         for( int j = 0; j < N-1; ++j ) {
           double x_hat = xyPrime[j];
           x_hat = x_hat * _orlx + (1 - _orlx) * z[j];
@@ -306,33 +310,31 @@ public abstract class LSMSolver extends Iced{
         z[N-1] = xyPrime[N-1];
         if(i == k){
           gerr = getGrad(i,gram,z,xy);
-          if(gerr < _gradientEps){
-            _converged = true;
+          if(gerr < bestErr){
+            bestErr = gerr;
             System.arraycopy(z,0,res,0,z.length);
-            break;
+            if(gerr < _gradientEps)
+              break;
           }
           // did not converge, check if we can converge in reasonable time
-          double diff = gradientErr - gerr;
+          double diff = lastErr - gerr;
           if(diff < 0 || (gerr/diff) > 1e3){ // we won't ever converge with this setup (maybe change rho and try again?)
             if(_orlx < 1.8 && gerr > 5e-4) {
               _orlx = 1.8; // try if over-relaxation helps...
             } else {
-              _converged = gerr < 1e-4;
               break;
             }
-          } else {
-            System.arraycopy(z,0,res,0,z.length);
-            gradientErr = gerr;
-          }
+          } else
+            lastErr = gerr;
           k = i + 10; // test gradient every 10 iterations
         }
       }
       gram.addDiag(-gram._diagAdded + d);
       assert gram._diagAdded == d;
       long solveTime = System.currentTimeMillis()-t;
-      if(Double.isInfinite(gradientErr)) gradientErr = getGrad(i,gram,res,xy);
-      Log.info("ADMM finished in " + i + " iterations and (" + decompTIme + " + " + solveTime+ ")ms, max |subgradient| = " + gradientErr);
-      return _converged;
+      this.gerr = bestErr;
+      Log.info("ADMM finished in " + i + " iterations and (" + decompTime + " + " + solveTime+ ")ms, max |subgradient| = " + bestErr);
+      return _converged = (gerr < 1e-2);
     }
     @Override
     public String name() {return "ADMM";}

@@ -43,7 +43,7 @@ public abstract class Request extends RequestBuilders {
     String displayName() default "";
     boolean gridable() default true;
     Class<? extends Validator> validator() default NOPValidator.class;
-    ParamImportance importance() default ParamImportance.UNIMPORTANT;
+    ParamImportance importance() default ParamImportance.EXPERT; // Show show up in UI by default.
 
     // ============
     // NEW API

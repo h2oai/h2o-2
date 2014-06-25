@@ -13,10 +13,10 @@ heading("BEGIN TEST")
 conn <- new("H2OClient", ip=myIP, port=myPort)
 
 path = locate("smalldata/logreg/prostate.csv")
-prostate.hex = h2o.uploadFile.VA(conn, path, key="prostate.hex")
+prostate.hex = h2o.uploadFile(conn, path, key="prostate.hex")
 h2o.ls(conn)
     
-rf = h2o.randomForest.VA(x=c(1,4), y="CAPSULE", data=prostate.hex, ntree=5)
+rf = h2o.randomForest(x=c(1,4), y="CAPSULE", data=prostate.hex, ntree=5)
 h2o.ls(conn)
 
 PASS_BANNER()

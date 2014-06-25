@@ -65,8 +65,8 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     @API(help = "Initially predicted value (for zero trees)")
     double initialPrediction;
 
-    public GBMModel(GBM job, Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, double learn_rate, Family family, int num_folds) {
-      super(key,dataKey,testKey,names,domains,cmDomain,ntrees,max_depth,min_rows,nbins,num_folds);
+    public GBMModel(GBM job, Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, double learn_rate, Family family, int num_folds, float[] priorClassDist, float[] classDist) {
+      super(key,dataKey,testKey,names,domains,cmDomain,ntrees,max_depth,min_rows,nbins,num_folds,priorClassDist,classDist);
       this.parameters = Job.hygiene((GBM) job.clone());
       this.learn_rate = learn_rate;
       this.family = family;
@@ -167,8 +167,8 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   public Frame score( Frame fr ) { return ((GBMModel)UKV.get(dest())).score(fr);  }
 
   @Override protected Log.Tag.Sys logTag() { return Sys.GBM__; }
-  @Override protected GBMModel makeModel(Key outputKey, Key dataKey, Key testKey, int ntrees, String[] names, String[][] domains, String[] cmDomain) {
-    return new GBMModel(this, outputKey, dataKey, validation==null?null:testKey, names, domains, cmDomain, ntrees, max_depth, min_rows, nbins, learn_rate, family, n_folds);
+  @Override protected GBMModel makeModel(Key outputKey, Key dataKey, Key testKey, int ntrees, String[] names, String[][] domains, String[] cmDomain, float[] priorClassDist, float[] classDist) {
+    return new GBMModel(this, outputKey, dataKey, validation==null?null:testKey, names, domains, cmDomain, ntrees, max_depth, min_rows, nbins, learn_rate, family, n_folds,priorClassDist,classDist);
   }
   @Override protected GBMModel makeModel( GBMModel model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
     return new GBMModel(model, err, cm, varimp, validAUC);
@@ -217,7 +217,6 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       throw new IllegalArgumentException("Bernoulli requires the response to be a 2-class categorical");
   }
   @Override protected void initWorkFrame(GBMModel initialModel, Frame fr) {
-    if (classification) initialModel.setModelClassDistribution(new MRUtils.ClassDist(response).doAll(response).rel_dist());
     // Tag out rows missing the response column
     new ExcludeNAResponse().doAll(fr);
     // Initial value is mean(y)

@@ -9,13 +9,13 @@ source('../findNSourceUtils.R')
 
 na_comparisons <- function(conn){
   Log.info('uploading testing dataset')
-  df.h <- h2o.importFile(conn, locate('smalldata/jira/pub_213.csv'))
+  df.h <- h2o.uploadFile(conn, locate('smalldata/jira/pub_213.csv'))
 
   Log.info('printing from h2o')
   Log.info( head(df.h) )
 
   df.h[, ncol(df.h)+1] <- df.h[,1] > 0
-  res <- as.data.frame(table(df.h$l>0))
+  res <- as.data.frame(h2o.table(df.h$l>0))
 
   loc <- as.data.frame(df.h)
 

@@ -4,8 +4,11 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_rf, h2o_util, h2o_gbm
 
 
-MULTINOMIAL = 3
-DO_WITH_INT = False
+SPEEDRF = False
+MULTINOMIAL = 2
+DO_WITH_INT = True
+ENUMS = 3
+ENUMLIST = ['bacaa', 'cbcbcacd', 'dccdbda', 'efg', 'hij', 'jkl']
 # use randChars for the random chars to use
 def random_enum(randChars, maxEnumSize):
     choiceStr = randChars
@@ -16,7 +19,11 @@ def create_enum_list(randChars="abcd", maxEnumSize=8, listSize=10):
     if DO_WITH_INT:
         enumList = range(listSize)
     else:
-        enumList = [random_enum(randChars, random.randint(2,maxEnumSize)) for i in range(listSize)]
+        if ENUMLIST:
+            enumList = ENUMLIST
+        else:
+            enumList = [random_enum(randChars, random.randint(2,maxEnumSize)) for i in range(listSize)]
+
     return enumList
 
 def write_syn_dataset(csvPathname, enumList, rowCount, colCount=1,
@@ -28,11 +35,14 @@ def write_syn_dataset(csvPathname, enumList, rowCount, colCount=1,
     dsf = open(csvPathname, "w+")
     for row in range(rowCount):
         rowData = []
+        # keep a list of the indices used..return that for comparing multiple datasets
+        rowIndex = []
         # keep a sum of all the index mappings for the enum chosen (for the features in a row)
         riIndexSum = 0
         for col in range(colCount):
             riIndex = robj.randint(0, len(enumList)-1)
             rowData.append(enumList[riIndex])
+            rowIndex.append(riIndex)
             riIndexSum += riIndex
 
         # output column
@@ -43,6 +53,8 @@ def write_syn_dataset(csvPathname, enumList, rowCount, colCount=1,
         rowDataCsv = colSepChar.join(map(str,rowData)) + rowSepChar
         dsf.write(rowDataCsv)
     dsf.close()
+    rowIndexCsv = colSepChar.join(map(str,rowIndex)) + rowSepChar
+    return rowIndexCsv # last line as index
 
 class Basic(unittest.TestCase):
     def tearDown(self):
@@ -85,9 +97,13 @@ class Basic(unittest.TestCase):
         SEED_FOR_SCORE = 9876543210
         errorHistory = []
         enumHistory = []
+        lastcolsTrainHistory = []
+        lastcolsScoreHistory = []
 
         for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
-            enumList = create_enum_list(listSize=10)
+            enumList = create_enum_list(listSize=ENUMS)
+            # reverse the list
+            enumList.reverse()
 
             # using the comma is nice to ensure no craziness
             colSepHexString = '2c' # comma
@@ -108,13 +124,16 @@ class Basic(unittest.TestCase):
             enumListForScore = enumList
 
             print "Creating random", csvPathname, "for rf model building"
-            write_syn_dataset(csvPathname, enumList, rowCount, colCount, 
+            lastcols = write_syn_dataset(csvPathname, enumList, rowCount, colCount, 
                 colSepChar=colSepChar, rowSepChar=rowSepChar, SEED=SEED_FOR_TRAIN)
+
+            lastcolsTrainHistory.append(lastcols)
 
             print "Creating random", csvScorePathname, "for rf scoring with prior model (using same enum list)"
             # same enum list/mapping, but different dataset?
-            write_syn_dataset(csvScorePathname, enumListForScore, rowCount, colCount, 
+            lastcols = write_syn_dataset(csvScorePathname, enumListForScore, rowCount, colCount, 
                 colSepChar=colSepChar, rowSepChar=rowSepChar, SEED=SEED_FOR_SCORE)
+            lastcolsScoreHistory.append(lastcols)
 
             scoreDataKey = "score_" + hex_key
             parseResult = h2i.import_parse(path=csvScorePathname, schema='put', hex_key=scoreDataKey, 
@@ -131,22 +150,41 @@ class Basic(unittest.TestCase):
             y = colCount
             modelKey = 'enums'
             # limit depth and number of trees to accentuate the issue with categorical split decisions
-            kwargs = {
-                'destination_key': modelKey,
-                'response': y,
-                'classification': 1,
-                'ntrees': 1,
-                'max_depth': 100,
-                'validation': scoreDataKey,
-                'seed': 123456789,
-            }
+
+            if SPEEDRF:
+                kwargs = {
+                    'destination_key': modelKey,
+                    'response': y,
+                    'num_trees': 1,
+                    'max_depth': 100,
+                    'oobee': 1,
+                    'seed': 123456789,
+                }
+            else:
+                kwargs = {
+                    'destination_key': modelKey,
+                    'response': y,
+                    'classification': 1,
+                    'ntrees': 1,
+                    'max_depth': 100,
+                    'min_rows': 1,
+                    'validation': scoreDataKey,
+                    'seed': 123456789,
+                }
 
             for r in range(4):
                 start = time.time()
-                rfResult = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
+                
+                if SPEEDRF:
+                    rfResult = h2o_cmd.runSpeeDRF(parseResult=parseResult, 
+                        timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
+                else:
+                    rfResult = h2o_cmd.runRF(parseResult=parseResult, 
+                        timeoutSecs=timeoutSecs, pollTimeoutSecs=180, **kwargs)
+                
                 print "rf end on ", parseResult['destination_key'], 'took', time.time() - start, 'seconds'
+                # print h2o.dump_json(rfResult)
                 (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfResult)
-                predictKey = 'Predict.hex'
                 h2o_cmd.runScore(dataKey=scoreDataKey, modelKey=modelKey, vactual=y, vpredict=1, doAUC=not MULTINOMIAL) # , expectedAuc=0.5)
                 
                 errorHistory.append(classification_error)
@@ -157,6 +195,12 @@ class Basic(unittest.TestCase):
             for e in enumHistory:
                 print e
 
+            print "last row from all train datasets, as integer"
+            for l in lastcolsTrainHistory:
+                print l
+            print "last row from all score datasets, as integer"
+            for l in lastcolsScoreHistory:
+                print l
 
 if __name__ == '__main__':
     h2o.unit_main()

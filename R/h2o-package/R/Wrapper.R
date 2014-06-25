@@ -162,7 +162,7 @@ h2o.clusterStatus <- function(client) {
 #   
 #   require(RCurl); require(rjson)
 #   if(.h2o.startedH2O() && url.exists(myURL))
-#     h2o.shutdown(new("H2OClient", ip=ip, port=port), FALSE)
+#     h2o.shutdown(new("H2OClient", ip=ip, port=port), prompt = FALSE)
 # }
 
 .h2o.startJar <- function(memory = "1g", beta = FALSE, assertion = TRUE, forceDL = FALSE, license = NULL) {

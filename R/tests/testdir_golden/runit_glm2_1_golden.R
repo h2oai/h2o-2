@@ -5,12 +5,12 @@ test.glm2binregression.golden <- function(H2Oserver) {
 	
 #Import data: 
 Log.info("Importing CUSE data...") 
-cuseH2O<- h2o.uploadFile.FV(H2Oserver, locate("../../smalldata/cuseexpanded.csv"), key="cuseH2O")
+cuseH2O<- h2o.uploadFile(H2Oserver, locate("../../smalldata/cuseexpanded.csv"), key="cuseH2O")
 cuseR<- read.csv(locate("smalldata/cuseexpanded.csv"), header=T)
 
 Log.info("Test H2O treatment of FACTORS AS PREDICTORS")
 Log.info("Run matching models in R and H2O")
-fitH2O<- h2o.glm.FV(y="UsingBinom", x=c("Age", "Ed", "Wantsmore"), data=cuseH2O, family="binomial", lambda=0, alpha=0, nfolds=0)
+fitH2O<- h2o.glm(y="UsingBinom", x=c("Age", "Ed", "Wantsmore"), data=cuseH2O, family="binomial", lambda=0, alpha=0, nfolds=0)
 fitR<- glm(UsingBinom ~ AgeA + AgeC + AgeD + LowEd + MoreYes, family=binomial, data=cuseR)
 
 

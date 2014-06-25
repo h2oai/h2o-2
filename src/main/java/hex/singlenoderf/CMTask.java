@@ -42,6 +42,9 @@ public class CMTask extends MRTask2<CMTask> {
   public float _ss; // Sum of squares
   public int _rowcnt; // Rows used in scoring for regression
 
+  private float[] _priorDist;
+  private float[] _modelDist;
+
   /** Data to replay the sampling algorithm */
   private int[]     _chunk_row_mapping;
   /** Number of rows at each node */
@@ -60,7 +63,7 @@ public class CMTask extends MRTask2<CMTask> {
   /** Confusion matrix
    * @param model the ensemble used to classify
    */
-  public CMTask(SpeeDRFModel model, int treesToUse, double[] classWt, boolean computeOOB ) {
+  public CMTask(SpeeDRFModel model, int treesToUse, double[] classWt, boolean computeOOB, float[] priorDist, float[] modelDist ) {
     _modelKey   = model._key;
     _datakey    = model._dataKey;
     _classcol   = model.test_frame == null ?  (model.fr.numCols() - 1) : (model.test_frame.numCols() - 1);
@@ -70,6 +73,8 @@ public class CMTask extends MRTask2<CMTask> {
     _model = model;
     _varimp = null;
     _ss = 0.f;
+    _priorDist = priorDist;
+    _modelDist = modelDist;
     shared_init();
   }
 
@@ -79,7 +84,7 @@ public class CMTask extends MRTask2<CMTask> {
    confusion matrix. The default seed when deserializing is 42. */
     Random _rand = Utils.getRNG(0x92b5023f2cd40b7cL);
     _data = _model.test_frame == null ? _model.fr : _model.test_frame;
-
+    if (_model.test_frame != null) _computeOOB = false;
     _modelDataMap = _model.colMap(_model._names);
     assert !_computeOOB || _model._dataKey.equals(_datakey) : !_computeOOB + " || " + _model._dataKey + " equals " + _datakey ;
     Vec respModel = _model.get_response();
@@ -109,22 +114,7 @@ public class CMTask extends MRTask2<CMTask> {
   }
 
   public void init() {
-    // Make a mapping from chunk# to row# just for chunks on this node
-//    int total_home = 0;
-//    for (int i = 0; i < _data.anyVec().nChunks(); ++i) {
-//      if (_data.anyVec().chunkKey(i).home()) {
-//        total_home++;
-//      }
-//    }
-//    _chunk_row_mapping = new int[_data.anyVec().nChunks()];
-//
-//    int off=0;
-//    for (int i = 0; i < _data.anyVec().nChunks(); ++i) {
-//      if (_data.anyVec().chunkKey(i).home()) {
-//        _chunk_row_mapping[i] = off;
-//        off += _data.anyVec().chunkLen(i);
-//      }
-//    }
+
     // Initialize number of rows per node
     _rowsPerNode = new int[H2O.CLOUD.size()];
     long chunksCount = _data.anyVec().nChunks();
@@ -196,13 +186,13 @@ public class CMTask extends MRTask2<CMTask> {
         // Do not skip yet the rows with NAs in the rest of columns
         if( chks[_classcol].isNA(row)) continue;
 
-        if( _computeOOB /*&& (isLocalTree || isRemoteTreeChunk) */) { // if OOBEE is computed then we need to take into account utilized sampling strategy
+        if( _computeOOB) { // if OOBEE is computed then we need to take into account utilized sampling strategy
           switch( _model.sampling_strategy ) {
             case RANDOM          : if (sampledItem < _model.sample ) continue ROWS; break;
-            case STRATIFIED_LOCAL:
-              int clazz = (int) chks[_classcol].at8(row) - cmin;
-              if (sampledItem < _model.strata_samples[clazz] ) continue ROWS;
-              break;
+//            case STRATIFIED_LOCAL:
+//              int clazz = (int) chks[_classcol].at8(row) - cmin;
+//              if (sampledItem < _model.strata_samples[clazz] ) continue ROWS;
+//              break;
             default: assert false : "The selected sampling strategy does not support OOBEE replay!"; break;
           }
         }
@@ -221,7 +211,7 @@ public class CMTask extends MRTask2<CMTask> {
           votes[r][alignedPrediction]++; // Vote the row
           if (isLocalTree) localVotes[r][alignedPrediction]++; // Vote
         } else {
-          float pred = _model.classify0(ntree, _data, chks, row, _modelDataMap, numClasses, true /*regression*/);
+          float pred = _model.classify0(ntree, _data, chks, row, _modelDataMap, (short) 0, true /*regression*/);
           float actual = _data.vecs()[_classcol].at8(row);
           float delta = actual - pred;
           _ss += delta * delta;
@@ -567,9 +557,14 @@ public class CMTask extends MRTask2<CMTask> {
     cm._matrix = new long[_N][_N];
     float preds[] = new float[_N+1];
 
+    float num_trees = _errorsPerTree.length;
+
     // Loop over the rows
     for( int r = 0; r < rows; r++ ) {
       int row = r + (int)chks[0]._start;
+
+      // Skip rows with missing response values
+      if (chks[_classcol].isNA(row)) continue;
 
       // The class votes for the i-th row
       int[] vi = votes[r];
@@ -581,8 +576,37 @@ public class CMTask extends MRTask2<CMTask> {
       if(_classWt != null )
         for( int v = 0; v<_N; v++) preds[v+1] *= _classWt[v];
 
+
+
+      float[] scored = preds.clone();
+      float s = doSum(vi);
+      if (s == 0) {
+        cm._skippedRows++;
+        continue;
+      }
+      for (int i = 1; i  < vi.length; ++i)
+        scored[i] = ( scored[i] / s);
+
+      // Correct for imbalance, if classes have been rebalanced
+      if (!_model.regression && _priorDist != null && _modelDist != null && _model.get_params().balance_classes) {
+        assert (scored.length == _model.nclasses() + 1); //1 label + nclasses probs
+        double probsum = 0;
+        for (int c = 1; c < scored.length; c++) {
+          final double original_fraction = _priorDist[c - 1];
+          assert (original_fraction > 0) : "original fraction should be > 0, but is " + original_fraction + ": not using enough training data?";
+          final double oversampled_fraction = _modelDist[c - 1];
+          assert (oversampled_fraction > 0) : "oversampled fraction should be > 0, but is " + oversampled_fraction + ": not using enough training data?";
+          assert (!Double.isNaN(scored[c]));
+          scored[c] *= original_fraction / oversampled_fraction;
+          probsum += scored[c];
+        }
+        for (int i = 1; i < scored.length; ++i) scored[i] /= probsum;
+
+        scored[0] = ModelUtils.getPrediction(scored, row);
+      }
+
       // `result` is the class with the most votes, accounting for ties in the shared logic in ModelUtils
-      int result = ModelUtils.getPrediction(preds, row);
+      int result = _model.get_params().balance_classes ? (int) scored[0] : ModelUtils.getPrediction(preds, row);
 
       // Get the class value from the response column for the current row
       int cclass = alignDataIdx((int) chks[_classcol].at8(row) - cmin);

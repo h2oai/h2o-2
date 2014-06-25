@@ -3,6 +3,8 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_glm, h2o_import as h2i, h2o_exec as h2e
 
 def define_params():
+
+    
     paramDict = {
         'standardize': [None, 0,1],
         'beta_epsilon': [None, 0.0001],
@@ -13,7 +15,7 @@ def define_params():
         'max_iter': [None, 10],
         'higher_accuracy': [None, 0, 1],
         'use_all_factor_levels': [None, 0, 1],
-        'lambda_search': [None, 0, 1],
+        'lambda_search': [None, 0], # FIX! what if lambda is set when lambda_search=1
         'tweedie_variance_power': [None, 0, 1],
         }
     return paramDict
@@ -50,7 +52,13 @@ class Basic(unittest.TestCase):
         paramDict = define_params()
         for trial in range(20):
             # params is mutable. This is default.
-            params = {'response': 54, 'alpha': 0, 'lambda': 0, 'n_folds': 1}
+            params = {
+                'response': 54, 
+                'alpha': 0.1, 
+                # 'lambda': 1e-4, 
+                'lambda': 0,
+                'n_folds': 1,
+            }
             colX = h2o_glm.pickRandGlmParams(paramDict, params)
             kwargs = params.copy()
 
@@ -60,7 +68,7 @@ class Basic(unittest.TestCase):
                 bHack = parseResult
             
             start = time.time()
-            glm = h2o_cmd.runGLM(timeoutSecs=70, parseResult=bHack, **kwargs)
+            glm = h2o_cmd.runGLM(timeoutSecs=300, parseResult=bHack, **kwargs)
             # pass the kwargs with all the params, so we know what we asked for!
             h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
             h2o.check_sandbox_for_errors()

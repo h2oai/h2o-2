@@ -45,7 +45,38 @@ function doQuery(phpQueryPage) {
     });
 }
 
-//function showPerfGraphs(test_name)
+function showPerfGraphs(test_run_id, total_hosts) {
+    if (total_hosts == 1) {
+        // Just looks at node 192.168.1.164
+
+        $.ajax({
+            url: '../prototype/php/post2.php',
+            type: 'POST',
+            dataType: 'JSON',
+            data: 'test_run_id=' + test_run_id + '&ip=192.168.1.164',
+            success: function(data) {
+                nodePerfGraph(data, '#cpu_svg1', '#rss_svg1');
+            }
+        });
+    } else {
+        for (var i = 0; i < total_hosts; ++i) {
+            $.ajax({
+                url: '../prototype/php/post2.php',
+                type: 'POST',
+                dataType: 'JSON',
+                data: 'test_run_id=' + test_run_id + '&ip=192.168.1.16' + (i+1),
+                success: function(data) {
+                    console.log(data)
+                    nodePerfGraph(data, '#cpu_svg'+(i+1), '#rss_svg'+(i+1));
+                    console.log("FINISHED RUNNING nodePerfGraph...")
+                },
+                error: function (request, status, error) {
+                  console.log(request.responseText);
+                }
+            });
+        }
+    }
+}
 
 
 $('#accordion').on('show.bs.collapse', function () {
