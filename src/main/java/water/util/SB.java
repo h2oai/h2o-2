@@ -20,6 +20,7 @@ public class SB {
   public SB pobj( Object s ) { _sb.append(s.toString()); return this; }
   public SB i( int d ) { for( int i=0; i<d+_indent; i++ ) p("  "); return this; }
   public SB i( ) { return i(0); }
+  public SB s() { _sb.append(' '); return this; }
   // Java specific append of float
   public SB pj( float  s ) {
     if (Float.isInfinite(s))
@@ -39,9 +40,17 @@ public class SB {
   public SB nl( ) { return p('\n'); }
   // Convert a String[] into a valid Java String initializer
   public SB toJavaStringInit( String[] ss ) {
+    if (ss==null) return p("null");
     p('{');
     for( int i=0; i<ss.length-1; i++ )  p('"').pj(ss[i]).p("\",");
-    if( ss.length > 0 ) p('"').p(ss[ss.length-1]).p('"');
+    if( ss.length > 0 ) p('"').pj(ss[ss.length-1]).p('"');
+    return p('}');
+  }
+  public SB toJavaStringInit( float[] ss ) {
+    if (ss==null) return p("null");
+    p('{');
+    for( int i=0; i<ss.length-1; i++ ) pj(ss[i]).p(',');
+    if( ss.length > 0 ) pj(ss[ss.length-1]);
     return p('}');
   }
   public SB toJSArray(float[] nums) {

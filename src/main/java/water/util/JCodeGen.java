@@ -47,28 +47,30 @@ public class JCodeGen {
    * @return
    */
   public static SB toClassWithMap(SB sb, String modifiers, String className, String[] values) {
-    sb.i().p(modifiers!=null ? modifiers : "").p(" class ").p(className).p(" {").nl().ii(1);
+    sb.i().p(modifiers!=null ? modifiers+" ": "").p("class ").p(className).p(" {").nl().ii(1);
     sb.i().p("public static final Map<String, Integer> VALUES = ");
-    if (values!=null)
-      sb.p("new java.util.HashMap<String, Integer>(").p((int)(values.length*1.25f+1)).p(");").nl();
-    else
+    if (values==null)
       sb.p("null;").nl();
-    // Static part
-    int s = 0;
-    int remain = values.length;
-    int its = 0;
-    do {
-      sb.i().p("static {").ii(1).nl();
-        int len = Math.min(MAX_STRINGS_IN_CONST_POOL, remain);
-        toHashMap(sb, "VALUES", values, s, len);
-        s += len;
-        remain -= len;
-      sb.di(1).i().p("}").nl();
-      if (its>0) sb.di(1).i().p('}').nl();
-      if (remain>0) {
-        sb.i().p("static final class ").p(className).p("_").p(its++).p(" {").ii(1).nl();
-      }
-    } while (remain>0);
+    else {
+      sb.p("new java.util.HashMap<String, Integer>(").p((int)(values.length*1.25f+1)).p(");").nl();
+
+      // Static part
+      int s = 0;
+      int remain = values.length;
+      int its = 0;
+      do {
+        sb.i().p("static {").ii(1).nl();
+          int len = Math.min(MAX_STRINGS_IN_CONST_POOL, remain);
+          toHashMap(sb, "VALUES", values, s, len);
+          s += len;
+          remain -= len;
+        sb.di(1).i().p("}").nl();
+        if (its>0) sb.di(1).i().p('}').nl();
+        if (remain>0) {
+          sb.i().p("static final class ").p(className).p("_").p(its++).p(" {").ii(1).nl();
+        }
+      } while (remain>0);
+    }
     return sb.di(1).p("}").nl();
   }
 
@@ -79,6 +81,13 @@ public class JCodeGen {
     for (int i=0; i<len; i++) {
       sb.i().p(hmName).p(".put(").ps(values[start+i]).p(",").p(start+i).p(");").nl();
     }
+    return sb;
+  }
+
+  public static SB toField(SB sb, String modifiers, String type, String fname, String finit) {
+    sb.i().p(modifiers).s().p(type).s().p(fname);
+    if (finit!=null) sb.p(" = ").p(finit);
+    sb.p(";").nl();
     return sb;
   }
 

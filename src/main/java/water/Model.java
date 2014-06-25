@@ -571,6 +571,9 @@ public abstract class Model extends Lockable<Model> {
   // Data must be in proper order.  Handy for JUnit tests.
   public double score(double [] data){ return Utils.maxIndex(score0(data,new float[nclasses()]));  }
 
+  /** Debug flag to generate benchmar code */
+  protected static final boolean GEN_BENCHMARK_CODE = false;
+
   /** Return a String which is a valid Java program representing a class that
    *  implements the Model.  The Java is of the form:
    *  <pre>
@@ -610,6 +613,7 @@ public abstract class Model extends Lockable<Model> {
     sb.p("//     curl http:/").p(H2O.SELF.toString()).p("/h2o-model.jar > h2o-model.jar").nl();
     sb.p("//     curl http:/").p(H2O.SELF.toString()).p("/2/").p(this.getClass().getSimpleName()).p("View.java?_modelKey=").pobj(_key).p(" > ").p(modelName).p(".java").nl();
     sb.p("//     javac -cp h2o-model.jar -J-Xmx2g -J-XX:MaxPermSize=128m ").p(modelName).p(".java").nl();
+    if (GEN_BENCHMARK_CODE)
     sb.p("//     java -cp h2o-model.jar:. -Xmx2g -XX:MaxPermSize=256m -XX:ReservedCodeCacheSize=256m ").p(modelName).nl();
     sb.p("//").nl();
     sb.p("//     (Note:  Try java argument -XX:+PrintCompilation to show runtime JIT compiler behavior.)").nl();
@@ -619,6 +623,7 @@ public abstract class Model extends Lockable<Model> {
     toJavaNAMES(sb);
     toJavaNCLASSES(sb);
     toJavaDOMAINS(sb, fileContextSB);
+    toJavaPROB(sb);
     toJavaSuper(sb); //
     toJavaPredict(sb, fileContextSB);
     sb.p("}").nl();
@@ -637,37 +642,42 @@ public abstract class Model extends Lockable<Model> {
   /** Generate implementation for super class. */
   protected SB toJavaSuper( SB sb ) {
     sb.nl();
-    sb.ii(1);
     sb.i().p("public String[] getNames() { return NAMES; } ").nl();
     sb.i().p("public Map<String,Integer>[] getDomainValuesMap() { return DOMAINS; }").nl();
-    sb.di(1);
     return sb;
   }
   private SB toJavaNAMES( SB sb ) {
     sb.nl();
-    sb.i(1).p("// Names of columns used by model.").nl();
-    return sb.i(1).p("public static final String[] NAMES = new String[] ").toJavaStringInit(_names).p(";").nl();
+    sb.i().p("// Names of columns used by model.").nl();
+    return sb.i().p("public static final String[] NAMES = new String[] ").toJavaStringInit(_names).p(";").nl();
   }
   private SB toJavaNCLASSES( SB sb ) {
     sb.nl();
-    sb.i(1).p("// Number of output classes included in training data response column,").nl();
-    return sb.i(1).p("public static final int NCLASSES = ").p(nclasses()).p(";").nl();
+    sb.i().p("// Number of output classes included in training data response column,").nl();
+    return sb.i().p("public static final int NCLASSES = ").p(nclasses()).p(";").nl();
   }
   private SB toJavaDOMAINS( SB sb, SB fileContextSB ) {
     sb.nl();
-    sb.i(1).p("// Column domains. The last array contains domain of response column.").nl();
-    sb.i(1).p("public static final Map<String,Integer>[] DOMAINS = new Map[] {").nl();
+    sb.i().p("// Column domains. The last array contains domain of response column.").nl();
+    sb.i().p("public static final Map<String,Integer>[] DOMAINS = new Map[] {").nl();
     for (int i=0; i<_domains.length; i++) {
       String[] dom = _domains[i];
       String colInfoClazz = "ColInfo_"+i;
-      sb.i(2).p("/* ").p(_names[i]).p(" */ ");
+      sb.i(1).p("/* ").p(_names[i]).p(" */ ");
       sb.p(colInfoClazz).p(".VALUES");
       if (i!=_domains.length-1) sb.p(',');
       sb.nl();
       fileContextSB.i().p("// The class representing column ").p(_names[i]).nl();
       JCodeGen.toClassWithMap(fileContextSB, null, colInfoClazz, dom);
     }
-    return sb.i(1).p("};").nl();
+    return sb.i().p("};").nl();
+  }
+  private SB toJavaPROB( SB sb) {
+    sb.i().p("// Prior class distribution").nl();
+    JCodeGen.toField(sb, "public static final", "float[]", "PRIOR_CLASS_DISTRIB", new SB().toJavaStringInit(_priorClassDist).toString());
+    sb.i().p("// Class distribution used for model building").nl();
+    JCodeGen.toField(sb, "public static final", "float[]", "MODEL_CLASS_DISTRIB", new SB().toJavaStringInit(_modelClassDist).toString());
+    return sb;
   }
   // Override in subclasses to provide some top-level model-specific goodness
   protected SB toJavaInit(SB sb, SB fileContextSB) { return sb; }
