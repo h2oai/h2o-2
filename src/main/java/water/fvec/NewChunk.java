@@ -177,17 +177,10 @@ public class NewChunk extends Chunk {
   }
   // Append a UUID, stored in _ls & _ds
   public void addUUID( long lo, long hi ) {
-    if( _id == null || lo != 0 || hi != 0 ) {
-      if( _ls==null || _len >= _ls.length ) {
-        append2slowUUID();
-        addUUID(lo,hi); // call addUUID again since append2slow might have flipped to sparse
-        assert _len <= _len2;
-        return;
-      }
-      if( _id != null ) _id[_len] = _len2;
-      _ls[_len] = lo;
-      _ds[_len++] = Double.longBitsToDouble(hi);
-    }
+    if( _ls==null || _ds== null || _len >= _ls.length )
+      append2slowUUID();
+    _ls[_len] = lo;
+    _ds[_len++] = Double.longBitsToDouble(hi);
     _len2++;
     assert _len <= _len2;
   }
@@ -293,7 +286,13 @@ public class NewChunk extends Chunk {
   private void append2slowUUID() {
     if( _len > Vec.CHUNK_SZ )
       throw new ArrayIndexOutOfBoundsException(_len);
-    if(_ls != null && _ls.length > 0){
+    if( _ds==null && _ls!=null ) { // This can happen for columns with all NAs and then a UUID
+      for( int i=0; i<_len; i++ ) { assert _xs[i]==Integer.MIN_VALUE; assert _ls[i]==C16Chunk._LO_NA; }
+      _xs=null;
+      _ds = MemoryManager.malloc8d(_len);
+      Arrays.fill(_ds,Double.longBitsToDouble(C16Chunk._HI_NA));
+    }
+    if( _ls != null && _ls.length > 0 ) {
       _ls = MemoryManager.arrayCopyOf(_ls,_len<<1);
       _ds = MemoryManager.arrayCopyOf(_ds,_len<<1);
     } else {
