@@ -3,7 +3,7 @@ source('../findNSourceUtils.R')
 
 test.glmn1NullDev.golden <- function(H2Oserver) {
 
-airlines.hex =  h2o.importURL.VA(H2Oserver, path = "https://raw.github.com/0xdata/h2o/master/smalldata/airlines/AirlinesTrain.csv.zip")
+airlines.hex =  h2o.importURL(H2Oserver, path = "https://raw.github.com/0xdata/h2o/master/smalldata/airlines/AirlinesTrain.csv.zip")
 fitH2O<- h2o.glm(x = c('Distance', 'Origin', 'Dest', 'UniqueCarrier'), y = 'IsDepDelayed', family = 'binomial', data = airlines.hex)
 
 #Print deviances make sure we're returning a number
@@ -15,5 +15,5 @@ expect_false(fitH2O@model$null.deviance=="NaN")
 testEnd()
 }
 
-doTest("GLM1 Null Dev is numeric", test.glmn1NullDev.golden)
+doTest("GLM Null Dev is numeric", test.glmn1NullDev.golden)
 
