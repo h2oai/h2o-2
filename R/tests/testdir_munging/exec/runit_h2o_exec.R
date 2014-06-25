@@ -61,7 +61,13 @@ function(conn) {
     print(head(r_res5))
     print(head(as.data.frame(res5)))
     expect_that(head(as.data.frame(res5)), equals(head(r_res5)))
-  
+
+    res6 <- h2o.exec(conn, expr_to_execute= ifelse(hex[,1] < 4.3, hex[,1], hex[,2] + hex[,3]), destination_key = "res6")
+    print(head(res6))
+
+    r_res6 <- ifelse(iris[,1] < 4.3, iris[,1], iris[,2] + iris[,3])
+    
+    expect_that(head(res6)[,1], equals(head(r_res6)))
 
     testEnd()
 }
