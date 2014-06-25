@@ -1,6 +1,5 @@
 package water.util;
 
-import org.apache.commons.lang.StringEscapeUtils;
 
 // Tight/tiny StringBuilder wrapper.
 // Short short names on purpose; so they don't obscure the printing.
@@ -10,6 +9,7 @@ public class SB {
   private int _indent = 0;
   public SB(        ) { _sb = new StringBuilder( ); }
   public SB(String s) { _sb = new StringBuilder(s); }
+  public SB ps( String s ) { _sb.append("\""); pj(s); _sb.append("\""); return this;  }
   public SB p( String s ) { _sb.append(s); return this; }
   public SB p( float  s ) { if(  Float.isNaN(s) ) _sb.append( "Float.NaN"); else _sb.append(s); return this; }
   public SB p( double s ) { if( Double.isNaN(s) ) _sb.append("Double.NaN"); else _sb.append(s); return this; }
