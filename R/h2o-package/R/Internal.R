@@ -393,6 +393,78 @@ h2o.setLogPath <- function(path, type) {
   return(res)
 }
 
+.eval_class<-
+function(i, envir) {
+  val <- tryCatch(class(get(as.character(i), envir)), error = function(e) {return(NA)})
+}
+
+.as_list<-
+function(expr) {
+  if (is.call(expr)) {
+    return(lapply(as.list(expr), .as_list))
+  }
+  return(expr)
+}
+
+.back_to_expr<-
+function(some_expr_list) {
+  len <- length(some_expr_list)
+  while(len > 1) {
+    num_sub_lists <- length(unlist(some_expr_list[[len]])) / length(some_expr_list[[len]])
+    if (num_sub_lists > 1) {
+      some_expr_list[[len]] <- .back_to_expr(some_expr_list[[len]])
+    } else if (is.atomic(some_expr_list[[len]]) || is.name(some_expr_list[[len]])) {
+      some_expr_list[[len]] <- some_expr_list[[len]]
+    } else {
+      some_expr_list[[len]] <- as.call(some_expr_list[[len]])
+    }
+    len <- len - 1
+  }
+  return(as.call(some_expr_list))
+}
+
+.swap_with_key<-
+function(object, envir) {
+  object <- as.name(get(as.character(object), envir = envir)@key)
+  return(object)
+}
+
+.replace_all<-
+function(a_list, envir) {
+  idxs <- which( "H2OParsedData" == unlist(lapply(a_list, .eval_class, envir)))
+  if (length(idxs) == 0) return(a_list)
+  for (i in idxs) {
+    if(length(a_list) == 1) {
+      a_list <- .swap_with_key(a_list, envir)
+    } else {
+      a_list[[i]] <- .swap_with_key(a_list[[i]], envir)
+    }
+  }
+  return(a_list)
+}
+
+.replace_with_keys_helper<-
+function(some_expr_list, envir) {
+  len <- length(some_expr_list)
+    while(len > 0) {
+      num_sub_lists <- length(unlist(some_expr_list[[len]])) / length(some_expr_list[[len]])
+      if (num_sub_lists > 1) {
+        some_expr_list[[len]] <- .replace_with_keys_helper(some_expr_list[[len]], envir)
+      } else {
+        some_expr_list[[len]] <- .replace_all(some_expr_list[[len]], envir)
+      }
+      len <- len - 1
+    }
+    return(some_expr_list)
+}
+
+.replace_with_keys<-
+function(expr, envir = globalenv()) {
+  l <- lapply(as.list(expr), .as_list)
+  l <- .replace_with_keys_helper(l, envir)
+  as.name(as.character(as.expression(.back_to_expr(l))))  # change slice by "name" to slice by c(index) ??
+}
+
 .h2o.__unop2 <- function(op, x) {
   if(missing(x)) stop("Must specify data set")
   if(!(class(x) %in% c("H2OParsedData","H2OParsedDataVA"))) stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))

@@ -411,6 +411,12 @@ as.h2o <- function(client, object, key = "", header, sep = "") {
   }
 }
 
+h2o.exec <- function(client, expr_to_execute, destination_key) {
+  expr <- .replace_with_keys(substitute( expr_to_execute ), envir = parent.frame())
+  res <- .h2o.__exec2_dest_key(client, deparse(expr), destination_key)
+  new("H2OParsedData", h2o = client, key = res$dest_key)
+}
+
 h2o.cut <- function(x, breaks) {
   if(missing(x)) stop("Must specify data set")
   if(!inherits(x, "H2OParsedData")) stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
