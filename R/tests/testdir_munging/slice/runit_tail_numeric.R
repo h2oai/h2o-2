@@ -32,8 +32,8 @@ test.tail.numeric <- function(conn) {
   Log.info(tail_2)
   Log.info("tail(arrests.hex)")
   Log.info(tail_)
-  df <- tail_ == tail_2
-  expect_that(sum(!df), equals(0))
+  df <- tail_ - tail_2
+  expect_that(sum(df), is_less_than(1e-10))
   if( nrow(arrests.hex) <= view_max) {
     Log.info("Try doing tail ../ n > nrows(data). Should do same thing as R (returns all rows)")
     Log.info(paste("Data has ", paste(nrow(arrests.hex), " rows",sep=""),sep=""))
