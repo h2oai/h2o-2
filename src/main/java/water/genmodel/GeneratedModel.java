@@ -11,15 +11,26 @@ public abstract class GeneratedModel implements IGeneratedModel {
   @Override public int      getNumResponseClasses() { return getNumClasses(getResponseIdx()); }
   @Override public boolean  isClassifier() { return getNumResponseClasses()!=-1; }
 
+  /**
+   * Return <code>true</code> if the given index is in given bit array else false.
+   *
+   * <p>The method returns <code>false</code> if <code>idx</code> is less than
+   * <code>offset</code>. It also returns <code>false</code> if the <code>idx</code>
+   * is greater then length of given bit set!
+   * </p>
+   *
+   * @param gcmp bit set array
+   * @param offset number of bits skipped by default since there are 0
+   * @param idx index of bit to be checked if it is in bitset
+   * @return
+   */
   public static boolean grpContains(byte[] gcmp, int offset, int idx) {
     if(offset < 0) throw new IndexOutOfBoundsException("offset < 0: " + offset);
     if(idx < offset) return false;
     idx = idx - offset;
-
     int max_idx = (gcmp.length << 3) - 1;
     if(idx > max_idx) return false;
-    // if(idx < 0 || idx > max_idx)
-    //  throw new IndexOutOfBoundsException("Must have 0 <= idx <= " + max_idx + ": " + idx);
+
     return (gcmp[idx >> 3] & ((byte)1 << (idx % 8))) != 0;
   }
 

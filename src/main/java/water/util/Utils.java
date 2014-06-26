@@ -798,8 +798,6 @@ public class Utils {
     public final int _nbits;
     public final int _offset;   // Number of bits discarded from beginning (inclusive min)
 
-    public IcedBitSet(byte[] v) { this(v, v.length << 3, 0); }
-    public IcedBitSet(byte[] v, int nbits) { this(v, nbits, 0); }
     public IcedBitSet(byte[] v, int nbits, int offset) {
       if(nbits < 0) throw new NegativeArraySizeException("nbits < 0: " + nbits);
       if(offset < 0) throw new IndexOutOfBoundsException("offset < 0: " + offset);
@@ -880,7 +878,7 @@ public class Utils {
     @Override public String toString() {
       StringBuilder sb = new StringBuilder();
       sb.append("{");
-      if (_offset>0) sb.append("...").append(_offset).append("bits... ");
+      if (_offset>0) sb.append("...").append(_offset).append(" 0-bits... ");
 
       for(int i = 0; i < _val.length; i++) {
         if (i>0) sb.append(' ');
