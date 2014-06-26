@@ -1,30 +1,33 @@
 setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 source('../../findNSourceUtils.R')
 
-test.GLM.benign <- function(conn) {
-  Log.info("Importing benign.csv data...\n")
-  benign.hex = h2o.uploadFile.VA(conn, locate("smalldata/logreg/benign.csv"), "benign.hex")
-  benign.sum = summary(benign.hex)
-  print(benign.sum)
+glm2Benign <- function(conn) { 
+  # bhexFV <- h2o.importFile(conn, "./smalldata/logreg/benign.csv", key="benignFV.hex")
+  bhexFV <- h2o.uploadFile(conn, locate("../../../smalldata/logreg/benign.csv"), key="benignFV.hex")
+  maxX <- 11
+  Y <- 4
+  X   <- 3:maxX
+  X   <- X[ X != Y ] 
   
-  benign.data = read.csv(locate("smalldata/logreg/benign.csv"))
-  benign.data = na.omit(benign.data)
+  Log.info("Build the model")
+  mFV <- h2o.glm(y = Y, x = colnames(bhexFV)[X], data = bhexFV, family = "binomial", nfolds = 5, alpha = 0, lambda = 1e-5)
   
-  myY = 4;
-  for(maxx in 11:14) {
-    myX = 1:maxx;
-    myX = myX[which(myX != myY)]
-    
-    Log.info(cat("A)H2O GLM (binomial) with parameters:\nX:", myX, "\nY:", myY, "\n"))
-    benign.glm.h2o = h2o.glm(y = myY, x = myX, data = benign.hex, family = "binomial", nfolds = 5, alpha = 0.5)
-    print(benign.glm.h2o)
-    
-    benign.glm = glmnet(y = benign.data[,myY], x = data.matrix(benign.data[,myX]), family = "binomial", alpha = 0.5)
-    checkGLMModel(benign.glm.h2o, benign.glm)
-  }
- 
+  Log.info("Check that the columns used in the model are the ones we passed in.")
+  
+  Log.info("===================Columns passed in: ================")
+  Log.info(paste("index ", X ," ", names(bhexFV)[X], "\n", sep=""))
+  Log.info("======================================================")
+  preds <- names(mFV@model$coefficients)
+  preds <- preds[1:length(preds)-1]
+  Log.info("===================Columns Used in Model: =========================")
+  Log.info(paste(preds, "\n", sep=""))
+  Log.info("================================================================")
+  
+  #Check coeffs here
+  #tryCatch(expect_that(mFV@model$x, equals(colnames(bhexFV)[X])), error = function(e) Log.warn("Not getting colnames back, just indices"))
+   expect_that(preds, equals(colnames(bhexFV)[X]))
   testEnd()
 }
 
-doTest("GLM Test: Benign Data", test.GLM.benign)
+doTest("GLM: Benign Data", glm2Benign)
 

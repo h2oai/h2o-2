@@ -4,7 +4,7 @@ source('../findNSourceUtils.R')
 test.rdocpredict.golden <- function(H2Oserver) {
 	
 
-prostate.hex = h2o.importURL.VA(H2Oserver, path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", key = "prostate.hex")
+prostate.hex = h2o.importURL(H2Oserver, path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", key = "prostate.hex")
 prostate.glm = h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family="binomial", nfolds = 10, alpha = 0.5)
 prostate.fit = h2o.predict(object = prostate.glm, newdata = prostate.hex)
 prost <- summary(prostate.fit)

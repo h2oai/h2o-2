@@ -1,6 +1,5 @@
 package water.util;
 
-import org.apache.commons.lang.StringEscapeUtils;
 
 // Tight/tiny StringBuilder wrapper.
 // Short short names on purpose; so they don't obscure the printing.
@@ -10,6 +9,7 @@ public class SB {
   private int _indent = 0;
   public SB(        ) { _sb = new StringBuilder( ); }
   public SB(String s) { _sb = new StringBuilder(s); }
+  public SB ps( String s ) { _sb.append("\""); pj(s); _sb.append("\""); return this;  }
   public SB p( String s ) { _sb.append(s); return this; }
   public SB p( float  s ) { if(  Float.isNaN(s) ) _sb.append( "Float.NaN"); else _sb.append(s); return this; }
   public SB p( double s ) { if( Double.isNaN(s) ) _sb.append("Double.NaN"); else _sb.append(s); return this; }
@@ -20,6 +20,7 @@ public class SB {
   public SB pobj( Object s ) { _sb.append(s.toString()); return this; }
   public SB i( int d ) { for( int i=0; i<d+_indent; i++ ) p("  "); return this; }
   public SB i( ) { return i(0); }
+  public SB s() { _sb.append(' '); return this; }
   // Java specific append of float
   public SB pj( float  s ) {
     if (Float.isInfinite(s))
@@ -36,12 +37,22 @@ public class SB {
   public SB ii( int i) { _indent += i; return this; }
   // Decrease indentation
   public SB di( int i) { _indent -= i; return this; }
+  // Copy indent from given string buffer
+  public SB ci( SB sb) { _indent = sb._indent; return this; }
   public SB nl( ) { return p('\n'); }
   // Convert a String[] into a valid Java String initializer
   public SB toJavaStringInit( String[] ss ) {
+    if (ss==null) return p("null");
     p('{');
     for( int i=0; i<ss.length-1; i++ )  p('"').pj(ss[i]).p("\",");
-    if( ss.length > 0 ) p('"').p(ss[ss.length-1]).p('"');
+    if( ss.length > 0 ) p('"').pj(ss[ss.length-1]).p('"');
+    return p('}');
+  }
+  public SB toJavaStringInit( float[] ss ) {
+    if (ss==null) return p("null");
+    p('{');
+    for( int i=0; i<ss.length-1; i++ ) pj(ss[i]).p(',');
+    if( ss.length > 0 ) pj(ss[ss.length-1]);
     return p('}');
   }
   public SB toJSArray(float[] nums) {

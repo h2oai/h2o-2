@@ -30,7 +30,7 @@ public class
   // In any case, they will cause issues with both GC (giant pause times on
   // many collectors) and I/O (long term blocking of TCP I/O channels to
   // service a single request, causing starvation of other requests).
-  public static final int MAX = 10*1024*1024;
+  public static final int MAX = 20*1024*1024;
 
   // ---
   // Values are wads of bits; known small enough to 'chunk' politely on disk,

@@ -19,7 +19,7 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1)
+            h2o.build_cloud(1, java_heap_GB=14)
         else:
             h2o_hosts.build_cloud_with_hosts(1)
 
@@ -46,12 +46,12 @@ class Basic(unittest.TestCase):
                 model_key = 'RF_model'
             else:
                 model_key = 'RF_model' + str(jobDispatch)
-            kwargs['ntree'] = 7
+            kwargs['ntrees'] = 1
 
             if OVERWRITE_RF_MODEL:
                 print "Change the number of trees, while keeping the rf model key name the same"
                 print "Checks that we correctly overwrite previous rf model"
-                kwargs['ntree'] += 1
+                kwargs['ntrees'] += 1
 
             kwargs['seed'] = random.randint(0, sys.maxint)
 
@@ -59,13 +59,6 @@ class Basic(unittest.TestCase):
             randomNode = h2o.nodes[random.randint(0,len(h2o.nodes)-1)]
             h2o_cmd.runRF(node=randomNode, parseResult=parseResult, destination_key=model_key, 
                 timeoutSecs=300, noPoll=False if OVERWRITE_RF_MODEL else True, **kwargs)
-            # FIX! are these already in there?
-            rfView = {}
-            rfView['data_key'] = hex_key
-            rfView['model_key'] = model_key
-            rfView['ntree'] = kwargs['ntree']
-            rfViewInitial.append(rfView)
-
             print "rf job dispatch end on ", csvFilename, 'took', time.time() - start, 'seconds'
             print "\njobDispatch #", jobDispatch
 

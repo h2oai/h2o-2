@@ -5,7 +5,7 @@ test.glm2RidgeObjective.golden <- function(H2Oserver) {
 	
 #IMPORT DATA:
 Log.info("Importing handmade data...") 
-handmadeH2O<- h2o.uploadFile.FV(H2Oserver, locate("../../smalldata/handmade.csv"), key="handmade")
+handmadeH2O<- h2o.uploadFile(H2Oserver, locate("../../smalldata/handmade.csv"), key="handmade")
 handmadeR<- read.csv(locate("../../smalldata/handmade.csv"))
 
 Xvars<- as.matrix(cbind(handmadeR$a, handmadeR$b, handmadeR$c, handmadeR$d, handmadeR$e))
@@ -24,7 +24,7 @@ ridgeGLMNet <- function (X,y,L){
 
 #H2O RIDGE
 ridgeH2O <- function (X,y,L){
-  fitH2O=h2o.glm.FV(X, y, data=handmadeH2O, nfolds=0, alpha=0, lambda=L, family="gaussian", standardize=T)        
+  fitH2O=h2o.glm(X, y, data=handmadeH2O, nfolds=0, alpha=0, lambda=L, family="gaussian", standardize=T)        
   betah <- fitH2O@model$normalized_coefficients[hX]
   
   betah <- c(betah, fitH2O@model$normalized_coefficients[length(fitH2O@model$normalized_coefficients)])

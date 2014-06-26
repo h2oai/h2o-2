@@ -100,6 +100,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_many_fp_formats_libsvm_2(self):
+        h2o.beta_features = True
         # h2b.browseTheCloud()
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
@@ -128,8 +129,8 @@ class Basic(unittest.TestCase):
                 print csvFilename, 'parse time:', parseResult['response']['time']
                 print "Parse result['destination_key']:", parseResult['destination_key']
                 inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], max_column_display=colNumberMax+1, timeoutSecs=timeoutSecs)
-                num_cols = inspect['num_cols']
-                num_rows = inspect['num_rows']
+                numCols = inspect['numCols']
+                numRows = inspect['numRows']
                 print "\n" + csvFilename
 
                 # SUMMARY****************************************
@@ -145,7 +146,7 @@ class Basic(unittest.TestCase):
                     summaryResult = h2o_cmd.runSummary(key=selKey2, max_column_display=colNumberMax+1, timeoutSecs=timeoutSecs)
                     h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
 
-                self.assertEqual(colNumberMax+1, num_cols, msg="generated %s cols (including output).  parsed to %s cols" % (colNumberMax+1, num_cols))
+                self.assertEqual(colNumberMax+1, numCols, msg="generated %s cols (including output).  parsed to %s cols" % (colNumberMax+1, numCols))
 
                 # Exec (column sums)*************************************************
                 if DO_COMPARE_SUM:
@@ -156,7 +157,7 @@ class Basic(unittest.TestCase):
                     print "colResultList", colResultList
                     print "*************"
 
-                self.assertEqual(rowCount, num_rows, msg="generated %s rows, parsed to %s rows" % (rowCount, num_rows))
+                self.assertEqual(rowCount, numRows, msg="generated %s rows, parsed to %s rows" % (rowCount, numRows))
                 # need to fix this for compare to expected
                 # we should be able to keep the list of fp sums per col above
                 # when we generate the dataset

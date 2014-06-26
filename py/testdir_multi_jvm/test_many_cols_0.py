@@ -36,6 +36,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_many_cols_with_syn(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             (100, 10000, 'cI', 5),
@@ -52,7 +53,6 @@ class Basic(unittest.TestCase):
             write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
 
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=30)
-            print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], timeoutSecs=120)
             print "\n" + csvFilename

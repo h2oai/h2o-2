@@ -30,28 +30,28 @@ class Basic(unittest.TestCase):
         hex_key = csvFilename + ".hex"
         start = time.time()
         timeoutSecs=1200
-        airlines_hex = h2i.import_parse(bucket='/home/0xdiag/datasets', path=csvPathname, schema='local', hex_key=hex_key, 
-                    timeoutSecs=timeoutSecs, retryDelaySecs=4, pollTimeoutSecs=60, doSummary=False)
-        print "fv.parse done in ",(time.time()-start)
-        kwargs = {
-            'ignored_cols':'DepTime,ArrTime,TailNum,ActualElapsedTime,AirTime,ArrDelay,DepDelay,TaxiIn,TaxiOut,Cancelled,CancellationCode,Diverted,CarrierDelay,WeatherDelay,NASDelay,SecurityDelay,LateAircraftDelay,IsArrDelayed',
-            'standardize': 1,
-            'classification': 1,
-            'response': 'IsDepDelayed',
-            'family': 'binomial',
-            'n_folds': 0,
-            'max_iter': 50,
-            'beta_epsilon': 1e-4,
-            'lambda':1e-5
-        }
-        results = []
-        for i in range(5):
-            start = time.time()
-            glm = h2o_cmd.runGLM(parseResult=airlines_hex, timeoutSecs=timeoutSecs, **kwargs)
-            auc = glm['glm_model']['submodels'][0]['validation']['auc']
-            results.append('glm2(%d) done in %d,auc=%f' %(i,(time.time()-start),auc))
-        for s in results:
-            print s
+        # airlines_hex = h2i.import_parse(bucket='/home/0xdiag/datasets', path=csvPathname, schema='local', hex_key=hex_key, 
+        #             timeoutSecs=timeoutSecs, retryDelaySecs=4, pollTimeoutSecs=60, doSummary=False)
+        # print "fv.parse done in ",(time.time()-start)
+        # kwargs = {
+        #     'ignored_cols':'DepTime,ArrTime,TailNum,ActualElapsedTime,AirTime,ArrDelay,DepDelay,TaxiIn,TaxiOut,Cancelled,CancellationCode,Diverted,CarrierDelay,WeatherDelay,NASDelay,SecurityDelay,LateAircraftDelay,IsArrDelayed',
+        #     'standardize': 1,
+        #     'classification': 1,
+        #     'response': 'IsDepDelayed',
+        #     'family': 'binomial',
+        #     'n_folds': 0,
+        #     'max_iter': 50,
+        #     'beta_epsilon': 1e-4,
+        #     'lambda':1e-5
+        # }
+        # results = []
+        # for i in range(5):
+        #     start = time.time()
+        #     glm = h2o_cmd.runGLM(parseResult=airlines_hex, timeoutSecs=timeoutSecs, **kwargs)
+        #     auc = glm['glm_model']['submodels'][0]['validation']['auc']
+        #     results.append('glm2(%d) done in %d,auc=%f' %(i,(time.time()-start),auc))
+        # for s in results:
+        #     print s
         while 1:
           time.sleep(500000)
           print '.'

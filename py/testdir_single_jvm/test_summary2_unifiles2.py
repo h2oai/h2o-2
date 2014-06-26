@@ -34,20 +34,17 @@ class Basic(unittest.TestCase):
         global SEED, localhost
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
-        h2o.beta_features = True # to get the browser page special tab
         if (localhost):
             h2o.build_cloud(node_count=1, base_port=54321)
         else:
             h2o_hosts.build_cloud_with_hosts(node_count=1)
-        h2o.beta_features = False
-        # h2b.browseTheCloud()
 
     @classmethod
     def tearDownClass(cls):
-        # h2o.sleep(3600)
         h2o.tear_down_cloud()
 
     def test_summary2_unifiles2(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         # new with 1000 bins. copy expected from R
         tryList = [
@@ -89,8 +86,8 @@ class Basic(unittest.TestCase):
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvFilename
 
-            numRows = inspect["num_rows"]
-            numCols = inspect["num_cols"]
+            numRows = inspect["numRows"]
+            numCols = inspect["numCols"]
 
             h2o.beta_features = True
             # okay to get more cols than we want
@@ -200,7 +197,6 @@ class Basic(unittest.TestCase):
                             h2oQuantilesApprox=qresult_single,
                             h2oQuantilesExact=qresult,
                             )
-
 
                 scipyCol += 1
 

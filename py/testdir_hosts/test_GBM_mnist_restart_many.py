@@ -23,6 +23,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GBM_mnist_restart_many(self):
+        h2o.beta_features = True
         importFolderPath = "mnist"
         csvFilename = "train.csv.gz"
         timeoutSecs=1800
@@ -51,11 +52,9 @@ class Basic(unittest.TestCase):
                 }
 
             kwargs = params.copy()
-            h2o.beta_features = True
             timeoutSecs = 1800
             #noPoll -> False when GBM finished
             GBMResult = h2o_cmd.runGBM(parseResult=parseResult, noPoll=True, **kwargs)
-            h2o.beta_features = False
             # if it fails, should happen within 8 secs
             time.sleep(8)
             h2j.cancelAllJobs()

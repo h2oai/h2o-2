@@ -40,7 +40,7 @@ def browseJsonHistoryAsUrlLastMatch(matchme, swapme=None):
         url = re.sub(".json",".html",url)
 
         h2o.verboseprint("browseJsonHistoryAsUrlLastMatch:", url)
-        h2o.verboseprint("same, decoded:", urllib.unquote(url))
+        print "browseJsonHistoryAsUrlLastMatch,  decoded:", urllib.unquote(url)
         webbrowser.open_new_tab(url)
 
 # maybe not useful, but something to play with.
