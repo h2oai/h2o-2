@@ -163,7 +163,7 @@ public abstract class LSMSolver extends Iced{
   public static final class ADMMSolver extends LSMSolver {
     //public static final double DEFAULT_LAMBDA = 1e-5;
     public static final double DEFAULT_ALPHA = 0.5;
-    public double _orlx = 1;//1.4; // over relaxation param
+    public double _orlx = 1.4;//1.4; // over relaxation param
     public double _rho = Double.NaN;
     public double [] _wgiven;
     public double _proximalPenalty;
@@ -237,16 +237,15 @@ public abstract class LSMSolver extends Iced{
       return err;
     }
 
-    public boolean solve(Gram gram, double [] xy, double yy, double[] res, double objVal) {
+    public boolean solve(Gram gram, double [] xy, double yy, double[] z, double objVal) {
       double d = gram._diagAdded;
       final int N = xy.length;
-      Arrays.fill(res, 0);
+      Arrays.fill(z, 0);
       if(_lambda>0 || _addedL2 > 0)
         gram.addDiag(_lambda*(1-_alpha) + _addedL2);
       double rho = _rho;
       if(_alpha > 0 && _lambda > 0){
         if(Double.isNaN(_rho)) rho = _lambda*_alpha;// find rho value as min diag element + constant
-        System.out.println("rho = " + rho);
         gram.addDiag(rho);
       }
       if(_proximalPenalty > 0 && _wgiven != null){
@@ -270,13 +269,12 @@ public abstract class LSMSolver extends Iced{
       long decompTime = (t2-t1);
 
       if(!chol.isSPD()){
-        System.out.println("can not solve, got non-spd matrix and adding regularization did not help, matrix = \n" + gram);
         throw new NonSPDMatrixException(gram);
       }
       _rho = rho;
       if(_alpha == 0 || _lambda == 0){ // no l1 penalty
-        System.arraycopy(xy, 0, res, 0, xy.length);
-        chol.solve(res);
+        System.arraycopy(xy, 0, z, 0, xy.length);
+        chol.solve(z);
         gram.addDiag(-gram._diagAdded + d);
         gerr = 0;
         return true;
@@ -287,12 +285,8 @@ public abstract class LSMSolver extends Iced{
       double [] xyPrime = xy.clone();
       double kappa = _lambda*_alpha/rho;
       int i;
-      int k = 10;
-      double lastErr = Double.POSITIVE_INFINITY;
-      double bestErr = Double.POSITIVE_INFINITY;
-
-      double [] z = res.clone();
-      for(i = 0; i < 2500; ++i ) {
+      int k = 20;
+      for(i = 0; i < 10000; ++i ) {
         // first compute the x update
         // add rho*(z-u) to A'*y
         for( int j = 0; j < N-1; ++j )xyPrime[j] = xy[j] + rho*(z[j] - u[j]);
@@ -310,31 +304,17 @@ public abstract class LSMSolver extends Iced{
         z[N-1] = xyPrime[N-1];
         if(i == k){
           gerr = getGrad(i,gram,z,xy);
-          if(gerr < bestErr){
-            bestErr = gerr;
-            System.arraycopy(z,0,res,0,z.length);
-            if(gerr < _gradientEps)
-              break;
-          }
-          // did not converge, check if we can converge in reasonable time
-          double diff = lastErr - gerr;
-          if(diff < 0 || (gerr/diff) > 1e3){ // we won't ever converge with this setup (maybe change rho and try again?)
-            if(_orlx < 1.8 && gerr > 5e-4) {
-              _orlx = 1.8; // try if over-relaxation helps...
-            } else {
-              break;
-            }
-          } else
-            lastErr = gerr;
-          k = i + 10; // test gradient every 10 iterations
+          if(gerr < _gradientEps)
+            break;
+
+          k = i + 20; // test gradient every 10 iterations
         }
       }
       gram.addDiag(-gram._diagAdded + d);
       assert gram._diagAdded == d;
       long solveTime = System.currentTimeMillis()-t;
-      this.gerr = bestErr;
-      Log.info("ADMM finished in " + i + " iterations and (" + decompTime + " + " + solveTime+ ")ms, max |subgradient| = " + bestErr);
-      return _converged = (gerr < 1e-2);
+      Log.info("ADMM finished in " + i + " iterations and (" + decompTime + " + " + solveTime+ ")ms, max |subgradient| = " + gerr);
+      return _converged = (gerr < 5e-2);
     }
     @Override
     public String name() {return "ADMM";}

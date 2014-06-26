@@ -273,16 +273,17 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     return rs.toString();
   }
 
-  public static Job gridSearch(Key jobKey, Key destinationKey, DataInfo dinfo, GLMParams glm, double [] lambda, boolean lambda_search, double [] alpha, boolean higher_accuracy, int nfolds){
-    return gridSearch(jobKey, destinationKey, dinfo, glm, lambda, lambda_search, alpha, higher_accuracy, nfolds, DEFAULT_BETA_EPS);
+  public static Job gridSearch(Key jobKey, Key destinationKey, DataInfo dinfo, GLMParams glm, double lambda_min_ratio, int nlambdas, double [] lambda, boolean lambda_search, double [] alpha, boolean higher_accuracy, int nfolds){
+    return gridSearch(jobKey, destinationKey, dinfo, glm, lambda_min_ratio, nlambdas, lambda, lambda_search, alpha, higher_accuracy, nfolds, DEFAULT_BETA_EPS);
   }
-  public static Job gridSearch(Key jobKey, Key destinationKey, DataInfo dinfo, GLMParams glm, double [] lambda, boolean lambda_search, double [] alpha, boolean high_accuracy, int nfolds, double betaEpsilon){
-    return new GLMGridSearch(4, jobKey, destinationKey,dinfo,glm,lambda, lambda_search, alpha, high_accuracy, nfolds,betaEpsilon).fork();
+  public static Job gridSearch(Key jobKey, Key destinationKey, DataInfo dinfo, GLMParams glm, double lambda_min_ratio, int nlambdas, double [] lambda, boolean lambda_search, double [] alpha, boolean high_accuracy, int nfolds, double betaEpsilon){
+    return new GLMGridSearch(4, jobKey, destinationKey,dinfo,glm, lambda_min_ratio, nlambdas, lambda, lambda_search, alpha, high_accuracy, nfolds,betaEpsilon).fork();
   }
 
   protected void complete(){
     _model.maybeComputeVariableImportances();
     _model.stop_training();
+    _model.pickBestXval();
     if(_addedL2 > 0){
       String warn = "Added L2 penalty (rho = " + _addedL2 + ")  due to non-spd matrix. ";
       _model.addWarning(warn);
@@ -337,7 +338,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     if(alpha.length > 1) { // grid search
       if(destination_key == null)destination_key = Key.make("GLMGridResults_"+Key.make());
       if(job_key == null)job_key = Key.make((byte) 0, Key.JOB, H2O.SELF);;
-      Job j = gridSearch(self(),destination_key, _dinfo, _glm, lambda, lambda_search, alpha, higher_accuracy, n_folds);
+      Job j = gridSearch(self(),destination_key, _dinfo, _glm, lambda_min_ratio, nlambdas, lambda, lambda_search, alpha, higher_accuracy, n_folds);
       return GLMGridView.redirect(this,j.dest());
     } else {
       if(destination_key == null)destination_key = Key.make("GLMModel_"+Key.make());
@@ -514,7 +515,6 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         boolean significantLambda = _model.setAndTestValidation(glmt2._val);
         final GLMIterationTask glmt3;
         boolean done = _iter == max_iter || _currentLambda <= lambda_min || (max_predictors != -1 && _model.rank(_currentLambda) >= max_predictors); // _iter < max_iter && (improved || _runAllLambdas) && _lambdaIdx < (lambda_value.length-1);
-        System.out.println("rank = " + _model.rank() + ",max_predictors = " + max_predictors);
         final double previousLambda = _currentLambda;
         final boolean isDone = done;
         if(!done) {
@@ -671,10 +671,10 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 
       }
       final double [] newBeta = MemoryManager.malloc8d(glmt._xy.length);
-      ADMMSolver slvr = new ADMMSolver(_currentLambda,alpha[0], ADMM_GRAD_EPS, _addedL2);
+      ADMMSolver slvr = new ADMMSolver(_currentLambda,alpha[0], _gradientEps, _addedL2);
       slvr._rho = _currentLambda*alpha[0]*_rho_mul;
       slvr.solve(glmt._gram,glmt._xy,glmt._yy,newBeta);
-      _gradientEps = Math.min(slvr.gerr,0.01);
+      _gradientEps = Math.max(ADMM_GRAD_EPS,Math.min(slvr.gerr,0.01));
 //      if(!solved) { // try grid search over rho parameter
 //        double bestErr = slvr.gerr;
 //        double best_rho_mul = _rho_mul;
@@ -722,8 +722,6 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           int nzs = 0;
           for(int i = 0; i < newBeta.length; ++i)
             if(newBeta[i] != 0) ++nzs;
-          if(_lambdaIdx == 5)
-            System.out.println("xxx");
           Log.info("GLM2 (lambda_" + _lambdaIdx + "=" + _currentLambda + ") converged (reached a fixed point with ~ 1e" + diff + " precision) after " + _iter + "iterations, got " + nzs + " nzs");
           nextLambda(glmt,newBeta);
         } else { // not done yet, launch next iteration
@@ -871,7 +869,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 //  // filter the current active columns using the strong rules
 //  // note: strong rules are update so tha they keep all previous coefficients in, to prevent issues with line-search
   private double pickNextLambda(final double oldLambda, final double[] grad){
-    return pickNextLambda(oldLambda, grad, Math.max((int) (Math.min(_dinfo.fullN(),_nobs) * 0.05), 1));
+    return pickNextLambda(oldLambda, grad, Math.max((int) (Math.min(_dinfo.fullN(),_nobs) * 0.01), 1));
   }
   private double pickNextLambda(final double oldLambda, final double[] grad, int maxNewVars){
     double [] g = grad.clone();
@@ -881,9 +879,11 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       for (int i : _activeCols) g[i] *= -1;
     }
     Arrays.sort(g);
+    if(maxNewVars < (g.length-1) && g[maxNewVars] == g[maxNewVars+1]){
+      double x = g[maxNewVars];
+      while(maxNewVars > 0 && g[maxNewVars] == x)--maxNewVars;
+    }
     double res = 0.5*(-g[maxNewVars]/Math.max(1e-3,alpha[0]) + oldLambda);
-    if(res >= oldLambda)
-      System.out.println("failed to pick next lambda at lambda = " + oldLambda);
     return res < oldLambda?res:0.9545*oldLambda;
   }
   // filter the current active columns using the strong rules
@@ -976,7 +976,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 
     public final GLM2 [] _jobs;
 
-    public GLMGridSearch(int maxP, Key jobKey, Key dstKey, DataInfo dinfo, GLMParams glm, double [] lambdas, boolean lambda_search, double [] alphas, boolean high_accuracy, int nfolds, double betaEpsilon){
+    public GLMGridSearch(int maxP, Key jobKey, Key dstKey, DataInfo dinfo, GLMParams glm, double lambda_min_ratio, int nlambdas, double [] lambdas, boolean lambda_search, double [] alphas, boolean high_accuracy, int nfolds, double betaEpsilon){
       super(jobKey, dstKey);
       description = "GLM Grid with params " + glm.toString() + "on data " + dinfo.toString() ;
       _maxParallelism = maxP;
@@ -985,6 +985,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       for(int i = 0; i < _jobs.length; ++i) {
         _jobs[i] = new GLM2("GLM grid(" + i + ")",self(),Key.make(dstKey.toString() + "_" + i),dinfo,glm,lambdas,alphas[i], nfolds, betaEpsilon,self());
         _jobs[i]._grid = true;
+        _jobs[i].nlambdas = nlambdas;
+        _jobs[i].lambda_min_ratio = lambda_min_ratio;
         _jobs[i].lambda_search = lambda_search;
         _jobs[i].higher_accuracy = high_accuracy;
       }
