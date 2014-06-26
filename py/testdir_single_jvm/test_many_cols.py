@@ -42,7 +42,8 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
 
-    def test_many_cols_with_syn(self):
+    def test_many_cols(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             (100, 10000, 'cI', 5),

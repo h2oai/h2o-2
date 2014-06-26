@@ -43,7 +43,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_quantile_cmp_uniform(self):
+    def test_exec2_quant_cmp_uniform(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             # colname, (min, 25th, 50th, 75th, max)
@@ -91,8 +92,8 @@ class Basic(unittest.TestCase):
 
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvFilename
-            numRows = inspect["num_rows"]
-            numCols = inspect["num_cols"]
+            numRows = inspect["numRows"]
+            numCols = inspect["numCols"]
 
             h2o.beta_features = True
             summaryResult = h2o_cmd.runSummary(key=hex_key)

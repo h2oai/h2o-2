@@ -18,11 +18,12 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_stedo_testing_data(self):
+    def test_rf_stedo_fvec(self):
+        h2o.beta_features = True
         csvPathname = 'stego/stego_training.data'
         # Prediction class is the second column => class=1
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
-        h2o_cmd.runRF(parseResult=parseResult, trees=50, timeoutSecs=30, response_variable=1, out_of_bag_error_estimate=1)
+        h2o_cmd.runRF(parseResult=parseResult, ntrees=50, timeoutSecs=30, response=1)
 
 if __name__ == '__main__':
     h2o.unit_main() 

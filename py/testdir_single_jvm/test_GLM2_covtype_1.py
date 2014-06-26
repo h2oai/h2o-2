@@ -37,11 +37,6 @@ class Basic(unittest.TestCase):
         split0_ratio = fs['split_ratios'][0]
         split1_ratio = fs['split_ratios'][1]
 
-        # print "\n" + csvPathname, \
-        #     "    num_rows:", "{:,}".format(inspect['num_rows']), \
-        #     "    num_cols:", "{:,}".format(inspect['num_cols'])
-
-        x = ""
         print "WARNING: max_iter set to 8 for benchmark comparisons"
         max_iter = 8
 

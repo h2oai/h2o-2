@@ -112,6 +112,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_many_fp_formats_libsvm (self):
+        h2o.beta_features = True
         # h2b.browseTheCloud()
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
@@ -138,11 +139,10 @@ class Basic(unittest.TestCase):
 
                 selKey2 = hex_key + "_" + str(sel)
                 parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=selKey2, timeoutSecs=timeoutSecs)
-                print csvFilename, 'parse time:', parseResult['response']['time']
                 print "Parse result['destination_key']:", parseResult['destination_key']
                 inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
-                num_cols = inspect['num_cols']
-                num_rows = inspect['num_rows']
+                numCols = inspect['numCols']
+                numRows = inspect['numRows']
                 print "\n" + csvFilename
 
                 # SUMMARY****************************************
@@ -161,18 +161,18 @@ class Basic(unittest.TestCase):
 
                 # we might have added some zeros at the end, that our colNumberMax won't include
                 print synColSumDict.keys(), colNumberMax
-                self.assertEqual(colNumberMax+1, num_cols, 
-                    msg="generated %s cols (including output).  parsed to %s cols" % (colNumberMax+1, num_cols))
+                self.assertEqual(colNumberMax+1, numCols, 
+                    msg="generated %s cols (including output).  parsed to %s cols" % (colNumberMax+1, numCols))
 
                 # Exec (column sums)*************************************************
                 h2e.exec_zero_list(zeroList)
                 # how do we know the max dimension (synthetic may not generate anything for the last col)
-                # use num_cols?. num_cols should be <= colCount. 
+                # use numCols?. numCols should be <= colCount. 
 
                 colSumList = h2e.exec_expr_list_across_cols(None, exprList, selKey2, maxCol=colNumberMax+1,
                     timeoutSecs=timeoutSecs)
 
-                self.assertEqual(rowCount, num_rows, msg="generated %s rows, parsed to %s rows" % (rowCount, num_rows))
+                self.assertEqual(rowCount, numRows, msg="generated %s rows, parsed to %s rows" % (rowCount, numRows))
                 # need to fix this for compare to expected
                 # we should be able to keep the list of fp sums per col above
                 # when we generate the dataset
@@ -184,7 +184,7 @@ class Basic(unittest.TestCase):
                         continue
 
                     # k should be integers that match the number of cols
-                    self.assertTrue(k>=0 and k<len(colSumList), msg="k: %s len(colSumList): %s num_cols: %s" % (k, len(colSumList), num_cols))
+                    self.assertTrue(k>=0 and k<len(colSumList), msg="k: %s len(colSumList): %s numCols: %s" % (k, len(colSumList), numCols))
 
                     syn = {}
                     if k==0: 

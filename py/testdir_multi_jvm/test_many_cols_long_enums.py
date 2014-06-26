@@ -100,6 +100,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_many_cols_enums(self):
+        h2o.beta-features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             (5, 100, 'cA', 5),
@@ -127,7 +128,6 @@ class Basic(unittest.TestCase):
             SEPARATOR = ord(',')
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=10, 
                 header=0, separator=SEPARATOR) # don't force header..we have NAs in the rows, and NAs mess up headers
-            print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
 
             # We should be able to see the parse result?
