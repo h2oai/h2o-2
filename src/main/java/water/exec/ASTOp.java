@@ -347,7 +347,7 @@ class ASTIsNA extends ASTUniPrefixOp { @Override String opStr(){ return "is.na";
           Chunk c = chks[i];
           int rlen = c._len;
           for( int r=0; r<rlen; r++ )
-            n.addNum( c.isNA(r) ? 1.0 : 0.0);
+            n.addNum( c.isNA0(r) ? 1 : 0);
         }
       }
     }.doAll(fr.numCols(),fr).outputFrame(fr._names, null);
