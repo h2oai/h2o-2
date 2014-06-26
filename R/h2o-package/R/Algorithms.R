@@ -219,13 +219,30 @@ h2o.glm.get_model <- function (data, model_key, return_all_lambda = TRUE, params
     
     # BUG: For some reason, H2O always uses default number of lambda (100) during grid search
     if(return_all_lambda) {
-      # lambda_all = resH$glm_model$parameters$lambda
-      lambda_all = sapply(resH$glm_model$submodels, function(x) { x$lambda_value })
-      allLambdaModels = lapply(lambda_all, .h2o.__getGLM2LambdaModel, data=data, model_key=allModels[i], params=params)
-      if(length(allLambdaModels) <= 1) result[[i]] = allLambdaModels[[1]]
-      else result[[i]] = allLambdaModels
+      # lambda_all = sapply(resH$glm_model$submodels, function(x) { x$lambda_value })
+      # allLambdaModels = lapply(lambda_all, .h2o.__getGLM2LambdaModel, data=data, model_key=allModels[i], params=params)
+      # if(length(allLambdaModels) <= 1) result[[i]] = allLambdaModels[[1]]
+      # else result[[i]] = allLambdaModels
+      
+      make_model <- function(x, params) {
+        m = .h2o.__getGLM2Results(resH$glm_model, params, x);
+        res_xval = list()
+        if(!is.null(resH$glm_model$submodels[[x]]$xvalidation)) {
+          xvalKey = resH$glm_model$submodels[[x]]$xvalidation$xval_models
+          # Get results from cross-validation
+          if(!is.null(xvalKey) && length(xvalKey) >= 2) {
+            for(j in 1:length(xvalKey)) {
+              resX = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLMModelView, '_modelKey'=xvalKey[j])
+              modelXval = .h2o.__getGLM2Results(resX$glm_model, params, 1)
+              res_xval[[j]] = new("H2OGLMModel", key=xvalKey[j], data=data, model=modelXval, xval=list())
+            }
+          }
+        }
+        new("H2OGLMModel", key=destKey, data=data, model=m, xval=res_xval)
+      }
+      allLambdaModels = lapply(1:length(resH$glm_model$submodels), make_model, params)
+      result[[i]] = new("H2OGLMModelList", models=allLambdaModels, best_model=resH$glm_model$best_lambda_idx+1)
     } else {
-      # params$lambda_all = resH$glm_model$parameters$lambda
       params$lambda_all = sapply(resH$glm_model$submodels, function(x) { x$lambda_value })
       best_lambda_idx = resH$glm_model$best_lambda_idx+1
       # best_lambda = resH$glm_model$parameters$lambda[best_lambda_idx]

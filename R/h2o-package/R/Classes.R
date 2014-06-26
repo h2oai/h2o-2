@@ -11,7 +11,6 @@ setClass("H2OGrid", representation(key="character", data="H2OParsedData", model=
 setClass("H2OPerfModel", representation(cutoffs="numeric", measure="numeric", perf="character", model="list", roc="data.frame"))
 
 setClass("H2OGLMModel", contains="H2OModel", representation(xval="list"))
-# setClass("H2OGLMGrid", contains="H2OGrid")
 setClass("H2OKMeansModel", contains="H2OModel")
 setClass("H2ODeepLearningModel", contains="H2OModel", representation(valid="H2OParsedData", xval="list"))
 setClass("H2ODRFModel", contains="H2OModel", representation(valid="H2OParsedData", xval="list"))
