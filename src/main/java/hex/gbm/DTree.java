@@ -1365,7 +1365,7 @@ public class DTree extends Iced {
   nl();
 
   static class TreeJCodeGen extends TreeVisitor<RuntimeException> {
-    public static final int MAX_NODES = (1 << 12) / 4; // limit of decision nodes
+    public static final int MAX_NODES = (1 << 12) / 4; // limit for a number decision nodes
     final byte  _bits[]  = new byte [100];
     final float _fs  []  = new float[100];
     final SB    _sbs []  = new SB   [100];
@@ -1400,8 +1400,10 @@ public class DTree extends Iced {
     }
 
     @Override protected void pre( int col, float fcmp, IcedBitSet gcmp, int equal ) {
-      if(equal == 2 || equal == 3 && gcmp != null)
+      if(equal == 2 || equal == 3 && gcmp != null) {
+        _grpsplit.i(1).p("// ").p(gcmp.toString()).nl();
         _grpsplit.i(1).p("public static final byte[] GRPSPLIT").p(_grpcnt).p(" = new byte[] ").p(gcmp.toStrArray()).p(";").nl();
+      }
 
       if( _depth > 0 ) {
         int b = _bits[_depth-1];

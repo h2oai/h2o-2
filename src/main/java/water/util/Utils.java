@@ -880,17 +880,11 @@ public class Utils {
     @Override public String toString() {
       StringBuilder sb = new StringBuilder();
       sb.append("{");
+      if (_offset>0) sb.append("...").append(_offset).append("bits... ");
 
-      boolean first = true;
       for(int i = 0; i < _val.length; i++) {
-        if(_val[i] == 0) continue;
-        for(int j = 0; j < 8; j++) {
-          if((_val[i] & ((byte)1 << j)) == 1) {
-            if(!first) sb.append(", ");
-            sb.append(8*i + j);
-            first = false;
-          }
-        }
+        if (i>0) sb.append(' ');
+        sb.append(String.format("%8s", Integer.toBinaryString(0xFF & _val[i])).replace(' ', '0'));
       }
       sb.append("}");
       return sb.toString();
