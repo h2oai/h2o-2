@@ -183,7 +183,7 @@ config_json = None
 debugger = False
 random_udp_drop = False
 random_seed = None
-beta_features = False
+beta_features = True
 sleep_at_tear_down = False
 abort_after_import = False
 clone_cloud_json = None
@@ -259,7 +259,7 @@ def parse_our_args():
     debugger = args.debugger
     random_udp_drop = args.random_udp_drop
     random_seed = args.random_seed
-    beta_features = args.beta_features
+    # beta_features = args.beta_features
     sleep_at_tear_down = args.sleep_at_tear_down
     abort_after_import = args.abort_after_import
     clone_cloud_json = args.clone_cloud_json
@@ -1017,14 +1017,14 @@ class H2O(object):
             pass
 
         # fatal if no response
-        if not beta_features and not r:
+        if not r:
             raise Exception("Maybe bad url? no r in __do_json_request in %s:" % inspect.stack()[1][3])
 
         # this is used to open a browser on results, or to redo the operation in the browser
         # we don't' have that may urls flying around, so let's keep them all
         json_url_history.append(r.url)
-        if not beta_features and not r.json():
-            raise Exception("Maybe bad url? no r.json in __do_json_request in %s:" % inspect.stack()[1][3])
+        # if r.json():
+        #     raise Exception("Maybe bad url? no r.json in __do_json_request in %s:" % inspect.stack()[1][3])
 
         rjson = None
         if returnFast:
@@ -1036,9 +1036,7 @@ class H2O(object):
             if not isinstance(r, (list, dict)):
                 raise Exception("h2o json responses should always be lists or dicts, see previous for text")
 
-            raise Exception(
-                "Could not decode any json from the request. Do you have beta features turned on? beta_features: ",
-                beta_features)
+            raise Exception("Could not decode any json from the request.")
 
         # TODO: we should really only look in the response object.  This check
         # prevents us from having a field called "error" (e.g., for a scoring result).
@@ -1152,7 +1150,7 @@ class H2O(object):
 
         fileObj = open(f, 'rb')
         resp = self.__do_json_request(
-            '2/PostFile.json' if beta_features else 'PostFile.json',
+            '2/PostFile.json',
             cmd='post',
             timeout=timeoutSecs,
             params={"key": key},
@@ -1162,18 +1160,6 @@ class H2O(object):
         verboseprint("\nput_file response: ", dump_json(resp))
         fileObj.close()
         return key
-
-    def get_key(self, key, timeoutSecs=30):
-        if beta_features:
-            raise Exception("get_key isn't supported with fvec")
-
-        params = {'key': key}
-        paramsStr = '?' + '&'.join(['%s=%s' % (k, v) for (k, v) in params.items()])
-        url = self.__url('Get.html')
-        log('Start ' + url + paramsStr)
-
-        # how big does the data return get? I guess only use on relatively small file/key
-        return requests.get(url, params=params, timeout=timeoutSecs)
 
     # noise is a 2-tuple ("StoreView", none) for url plus args for doing during poll to create noise
     # so we can create noise with different urls!, and different parms to that url
@@ -1188,11 +1174,11 @@ class H2O(object):
         # for the rev 2 stuff..the job_key, destination_key and redirect_url are just in the response
         # look for 'response'..if not there, assume the rev 2
 
-        def get_redirect_url(response, beta_features):
+        def get_redirect_url(response):
             url = None
             params = None
             # StoreView has old style, while beta_features
-            if 'response_info' in response: # trigger v2 for GBM always?
+            if 'response_info' in response: 
                 response_info = response['response_info']
 
                 if 'redirect_url' not in response_info:
@@ -1232,7 +1218,7 @@ class H2O(object):
             progress = r.get('progress', "")
 
         doFirstPoll = status != 'done'
-        (url, params) = get_redirect_url(response, beta_features)
+        (url, params) = get_redirect_url(response)
         # no need to recreate the string for messaging, in the loop..
         if params:
             paramsStr = '&'.join(['%s=%s' % (k, v) for (k, v) in params.items()])
@@ -1263,7 +1249,7 @@ class H2O(object):
 
         # Don't follow the Parse redirect to Inspect, because we want parseResult['destination_key'] to be the end.
         # note this doesn't affect polling with Inspect? (since it doesn't redirect ?
-        while status == 'poll' or doFirstPoll or (beta_features and status == 'redirect' and 'Inspect' not in url):
+        while status == 'poll' or doFirstPoll or (status == 'redirect' and 'Inspect' not in url):
             count += 1
             if ((time.time() - start) > timeoutSecs):
                 # show what we're polling with
@@ -1303,17 +1289,11 @@ class H2O(object):
                 progress = ''
             else:
                 doFirstPoll = False
-                if beta_features or 'response_info' in response: # trigger v2 for GBM always?
-                    status = response['response_info']['status']
-                    progress = response.get('progress', "")
-                else:
-                    r = response['response']
-                    status = r['status']
-                    progress = r.get('progress', "")
-
+                status = response['response_info']['status']
+                progress = response.get('progress', "")
                 # get the redirect url
-                if beta_features and not reuseFirstPollUrl: # reuse url for all v1 stuff
-                    (url, params) = get_redirect_url(response, beta_features)
+                if not reuseFirstPollUrl: # reuse url for all v1 stuff
+                    (url, params) = get_redirect_url(response)
 
                 if noPoll:
                     return response
@@ -1409,36 +1389,24 @@ class H2O(object):
         # KMeans has more params than shown here
         # KMeans2 has these params?
         # max_iter=100&max_iter2=1&iterations=0
-        if beta_features:
-            params_dict = {
-                'initialization': 'Furthest',
-                'k': 1,
-                'source': key,
-                'destination_key': key2,
-                'seed': None,
-                'cols': None,
-                'ignored_cols': None,
-                'ignored_cols_by_name': None,
-                'max_iter': None,
-                'normalize': None,
-            }
-        else:
-            params_dict = {
-                'initialization': 'Furthest',
-                'k': 1,
-                'source_key': key,
-                'destination_key': key2,
-                'seed': None,
-                'cols': None,
-                'max_iter': None,
-                'normalize': None,
-            }
+        params_dict = {
+            'initialization': 'Furthest',
+            'k': 1,
+            'source': key,
+            'destination_key': key2,
+            'seed': None,
+            'cols': None,
+            'ignored_cols': None,
+            'ignored_cols_by_name': None,
+            'max_iter': None,
+            'normalize': None,
+        }
 
         if key2 is not None: params_dict['destination_key'] = key2
         browseAlso = kwargs.get('browseAlso', False)
         # only lets these params thru
         check_params_update_kwargs(params_dict, kwargs, 'kmeans', print_params=True)
-        algo = '2/KMeans2' if beta_features else 'KMeans'
+        algo = '2/KMeans2'
 
         print "\n%s params list:" % algo, params_dict
         a = self.__do_json_request(algo + '.json',
@@ -1473,7 +1441,7 @@ class H2O(object):
         # requests.defaults({max_retries : 4})
         # https://github.com/kennethreitz/requests/issues/719
         # it was closed saying Requests doesn't do retries. (documentation implies otherwise)
-        algo = "2/Parse2" if beta_features else "Parse"
+        algo = "2/Parse2"
         verboseprint("\n %s key: %s to key2: %s (if None, means default)" % (algo, key, key2))
         # other h2o parse parameters, not in the defauls
         # header
@@ -1504,10 +1472,6 @@ class H2O(object):
 
         # Check that the response has the right Progress url it's going to steer us to.
         verboseprint(algo + " result:", dump_json(a))
-
-        # FIX! not using h2o redirect info for Parse2 yet
-        if not beta_features and a['response']['redirect_request'] != 'Progress':
-            raise Exception('H2O %s redirect is not Progress. %s json response precedes.' % (algo, algo))
 
         if noPoll:
             return a
@@ -1550,25 +1514,16 @@ class H2O(object):
     # &view=
     # FIX! need to have max > 1000? 
     def inspect(self, key, offset=None, view=None, max_column_display=1000, ignoreH2oError=False,
-                timeoutSecs=30, useVA=False):
-        if beta_features and not useVA:
-            params = {
-                "src_key": key,
-                "offset": offset,
-                # view doesn't exist for 2. let it be passed here from old tests but not used
-            }
-        else:
-            params = {
-                "key": key,
-                "offset": offset,
-                "view": view,
-                "max_column_display": max_column_display
-            }
-
-        a = self.__do_json_request('2/Inspect2.json' if (beta_features and not useVA) else 'Inspect.json',
-                                   params=params,
-                                   ignoreH2oError=ignoreH2oError,
-                                   timeout=timeoutSecs
+                timeoutSecs=30):
+        params = {
+            "src_key": key,
+            "offset": offset,
+            # view doesn't exist for 2. let it be passed here from old tests but not used
+        }
+        a = self.__do_json_request('2/Inspect2.json',
+            params=params,
+            ignoreH2oError=ignoreH2oError,
+            timeout=timeoutSecs
         )
         return a
 
@@ -1657,22 +1612,22 @@ class H2O(object):
     # the param name for ImportFiles is 'file', but it can take a directory or a file.
     # 192.168.0.37:54323/ImportFiles.html?file=%2Fhome%2F0xdiag%2Fdatasets
     def import_files(self, path, timeoutSecs=180):
-        a = self.__do_json_request('2/ImportFiles2.json' if beta_features else 'ImportFiles.json',
-                                   timeout=timeoutSecs,
-                                   params={"path": path}
+        a = self.__do_json_request('2/ImportFiles2.json',
+            timeout=timeoutSecs,
+            params={"path": path}
         )
         verboseprint("\nimport_files result:", dump_json(a))
         return a
 
     def import_s3(self, bucket, timeoutSecs=180):
-        a = self.__do_json_request('2/ImportFiles2.json' if beta_features else 'ImportS3.json',
-                                   timeout=timeoutSecs, params={"bucket": bucket})
+        a = self.__do_json_request('2/ImportFiles2.json',
+            timeout=timeoutSecs, params={"bucket": bucket})
         verboseprint("\nimport_s3 result:", dump_json(a))
         return a
 
     def import_hdfs(self, path, timeoutSecs=180):
-        a = self.__do_json_request('2/ImportFiles2.json' if beta_features else 'ImportHdfs.json',
-                                   timeout=timeoutSecs, params={"path": path})
+        a = self.__do_json_request('2/ImportFiles2.json',
+            timeout=timeoutSecs, params={"path": path})
         verboseprint("\nimport_hdfs result:", dump_json(a))
         return a
 
@@ -1686,7 +1641,7 @@ class H2O(object):
         browseAlso = kwargs.pop('browseAlso', False)
         check_params_update_kwargs(params_dict, kwargs, 'exec_query', print_params=print_params)
         a = self.__do_json_request('2/Exec2.json',
-                                   timeout=timeoutSecs, ignoreH2oError=ignoreH2oError, params=params_dict)
+            timeout=timeoutSecs, ignoreH2oError=ignoreH2oError, params=params_dict)
         verboseprint("\nexec_query result:", dump_json(a))
         return a
 
@@ -1836,68 +1791,41 @@ class H2O(object):
         print_params=True, noPrint=False, **kwargs):
 
         print "at top of random_forest, timeoutSec: ", timeoutSecs
-        algo = '2/DRF' if beta_features else 'RF'
-        algoView = '2/DRFView' if beta_features else 'RFView'
+        algo = '2/DRF'
+        algoView = '2/DRFView'
 
-        if beta_features:
-            params_dict = {
-                'destination_key': None,
-                'source': data_key,
-                # 'model': None,
-                'response': None,
-                'balance_classes': 1, 
-                'classification': 1,
-                'cols': None,
-                'ignored_cols': None,
-                'ignored_cols_by_name': None,
-                'importance': 1, # enable variable importance by default
-                'max_after_balance_size': 7,
-                'max_depth': None,
-                'min_rows': None, # how many rows in leaves for stopping condition
-                'mtries': None,
-                'nbins': None,
-                'ntrees': trees,
-                'sample_rate': None,
-                'score_each_iteration': None,
-                'seed': None,
-                'validation': None,
-
-            }
-            if 'model_key' in kwargs:
-                kwargs['destination_key'] = kwargs['model_key'] # hmm..should we switch test to new param?
-
-
-        else:
-            params_dict = {
-                'data_key': data_key,
-                'ntree': trees,
-                'model_key': None,
-                # new default. h2o defaults to 0, better for tracking oobe problems
-                'out_of_bag_error_estimate': 1,
-                'use_non_local_data': None,
-                'iterative_cm': None,
-                'response_variable': None,
-                'class_weights': None,
-                'stat_type': None,
-                'depth': None,
-                'bin_limit': None,
-                'ignore': None,
-                'sample': None,
-                'seed': None,
-                'features': None,
-                'exclusive_split_limit': None,
-                'sampling_strategy': None,
-                'strata_samples': None,
-            }
+        params_dict = {
+            'destination_key': None,
+            'source': data_key,
+            # 'model': None,
+            'response': None,
+            'balance_classes': 1, 
+            'classification': 1,
+            'cols': None,
+            'ignored_cols': None,
+            'ignored_cols_by_name': None,
+            'importance': 1, # enable variable importance by default
+            'max_after_balance_size': 7,
+            'max_depth': None,
+            'min_rows': None, # how many rows in leaves for stopping condition
+            'mtries': None,
+            'nbins': None,
+            'ntrees': trees,
+            'sample_rate': None,
+            'score_each_iteration': None,
+            'seed': None,
+            'validation': None,
+        }
+        if 'model_key' in kwargs:
+            kwargs['destination_key'] = kwargs['model_key'] # hmm..should we switch test to new param?
 
         browseAlso = kwargs.pop('browseAlso', False)
         check_params_update_kwargs(params_dict, kwargs, 'random_forest', print_params)
 
-        if beta_features and params_dict['response'] is None:
-            # on v2, there is no default response. So if it's none, we should use the last column, for compatibility
-            inspect = h2o_cmd.runInspect(key=data_key)
-            # response only takes names. can't use col index..have to look it up
-            params_dict['response'] = str(inspect['cols'][-1]['name'])
+        # on v2, there is no default response. So if it's none, we should use the last column, for compatibility
+        inspect = h2o_cmd.runInspect(key=data_key)
+        # response only takes names. can't use col index..have to look it up
+        params_dict['response'] = str(inspect['cols'][-1]['name'])
 
         if print_params:
             print "\n%s parameters:" % algo, params_dict
@@ -1908,91 +1836,43 @@ class H2O(object):
         print "\n%s result:" % algo, dump_json(rf)
 
         # noPoll and rfView=False are similar?
-        if (noPoll or not rfView) or (beta_features and rfView == False):
+        if (noPoll or not rfView):
             # just return for now
             print "no rfView:", rfView, "noPoll", noPoll
             return rf
 
-        if beta_features:
-            # since we don't know the model key from the rf response, we just let rf redirect us to completion
-            # if we want to do noPoll, we have to name the model, so we know what to ask for when we do the completion view
-            # HACK: wait more for first poll?
-            time.sleep(5)
-            rfView = self.poll_url(rf, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
-                                   initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
-                                   noise=noise, benchmarkLogging=benchmarkLogging, noPrint=noPrint)
-            return rfView
-
-        else:
-            if rf['response']['redirect_request'] != algoView:
-                print dump_json(rf)
-                raise Exception('H2O %s redirect is not %s json response precedes.' % (algo, algoView))
-
-
-            # FIX! check all of these somehow?
-            # if we model_key was given to rf via **kwargs, remove it, since we're passing 
-            # model_key from rf. can't pass it in two places. (ok if it doesn't exist in kwargs)
-            data_key = rf['data_key']
-            model_key = rf['model_key']
-            rfCloud = rf['response']['h2o']
-            # this is important. it's the only accurate value for how many trees RF was asked for.
-            ntree = rf['ntree']
-            response_variable = rf['response_variable']
-
-            # Since I may not have passed a model_key or ntree to h2o, I have to learn what h2o used
-            # and be sure to pass that to RFView. just update params_dict. If I provided them
-            # I'm trusting h2o to have given them back to me correctly. Maybe fix that at some point.
-            params_dict.update({'ntree': ntree, 'model_key': model_key})
-
-            # data_key/model_key/ntree are all in **params_dict
-            rfViewResult = self.random_forest_view(timeoutSecs=timeoutSecs,
-                retryDelaySecs=retryDelaySecs, initialDelaySecs=initialDelaySecs,
-                pollTimeoutSecs=pollTimeoutSecs,
-                noise=noise, benchmarkLogging=benchmarkLogging,
-                print_params=print_params, noPoll=noPoll,
-                useRFScore=False, **params_dict)
-
-            verboseprint("random_forest_view:", rfViewResult)
-            return rfViewResult
+        # since we don't know the model key from the rf response, we just let rf redirect us to completion
+        # if we want to do noPoll, we have to name the model, so we know what to ask for when we do the completion view
+        # HACK: wait more for first poll?
+        time.sleep(5)
+        rfView = self.poll_url(rf, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
+            noise=noise, benchmarkLogging=benchmarkLogging, noPrint=noPrint)
+        return rfView
 
     def random_forest_view(self, data_key=None, model_key=None, timeoutSecs=300,
-                           retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
-                           noise=None, benchmarkLogging=None, print_params=False, noPoll=False,
-                           noPrint=False,
-                           useRFScore=False, **kwargs):
+        retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
+        noise=None, benchmarkLogging=None, print_params=False, noPoll=False,
+        noPrint=False, useRFScore=False, **kwargs):
 
-        if beta_features:
-            print "random_forest_view not supported in H2O fvec yet. hacking done response"
-            r = {'response': {'status': 'done'}, 'trees': {'number_built': 0}}
+        print "random_forest_view not supported in H2O fvec yet. hacking done response"
+        r = {'response': {'status': 'done'}, 'trees': {'number_built': 0}}
             # return r
 
-        # algo = '2/DRFView2' if beta_features else 'RFView'
         # for drf2, you can't pass a new dataset here, compared to what you trained with.
         # should complain or something if tried with a data_key
-        if beta_features and data_key:
+        if data_key:
             print "Can't pass a new data_key to random_forest_view for v2's DRFModelView. Not using"
 
-        algo = '2/DRFModelView' if beta_features else 'RFView'
+        algo = '2/DRFModelView'
         # No such thing as 2/DRFScore2
-        algoScore = '2/DRFScore2' if beta_features else 'RFScore'
+        algoScore = '2/DRFScore2'
         # is response_variable needed here? it shouldn't be
         # do_json_request will ignore any that remain = None
 
-        if beta_features:
-            params_dict = {
-                '_modelKey': model_key,
-            }
-        else:
-            params_dict = {
-                'data_key': data_key,
-                'model_key': model_key,
-                'out_of_bag_error_estimate': 1,
-                'iterative_cm': 0,
-                # is ntree not expected here?
-                'ntree': None,
-                'class_weights': None,
-                'response_variable': None,
-            }
+        params_dict = {
+            '_modelKey': model_key,
+        }
         browseAlso = kwargs.pop('browseAlso', False)
 
         # only update params_dict..don't add
@@ -2000,15 +1880,6 @@ class H2O(object):
         for k in kwargs:
             if k in params_dict:
                 params_dict[k] = kwargs[k]
-
-        if beta_features:
-            ntree = 0 # not used?
-
-        else:
-            if params_dict['ntree'] is None:
-                raise Exception('%s got no %s param: %s . Why? h2o needs?' % (algo, 'ntree', params_dict['ntree']))
-                # well assume we got the gold standard from the initial rf request
-            ntree = params_dict['ntree']
 
         if print_params:
             print "\n%s parameters:" % algo, params_dict
@@ -2027,38 +1898,12 @@ class H2O(object):
 
         # add a fake redirect_request and redirect_request_args
         # to the RF response, to make it look like everyone else
-        if beta_features:
-            rfView = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
-                                   initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
-                                   noPrint=noPrint, noise=noise, benchmarkLogging=benchmarkLogging)
-        else:
-            fake_a = a
-            fake_a['response'] = a['response']
-            fake_a['response']['redirect_request'] = whichUsed + ".json"
-            fake_a['response']['redirect_request_args'] = params_dict
+        rfView = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
+            noPrint=noPrint, noise=noise, benchmarkLogging=benchmarkLogging)
 
-            # no redirect_response in rfView? so need to pass params here
-            # FIX! do we have to do a 2nd if it's done in the first?
-            rfView = self.poll_url(fake_a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
-                                   initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
-                                   noise=noise, benchmarkLogging=benchmarkLogging, reuseFirstPollUrl=True)
-
-            # above we get this from what we're told from rf and passed to rfView
-            ## ntree = rfView['ntree']
-            verboseprint("%s done:" % whichUsed, dump_json(rfView))
-            status = rfView['response']['status']
-            if status != 'done': raise Exception('Unexpected status: ' + status)
-
-        if beta_features:
-            drf_model = rfView['drf_model']
-            numberBuilt = drf_model['N']
-        else:
-            pass
-            # rfView seems to have two ways of returning the number built
-            # this doesn't work when we call it directly?
-            # numberBuilt = rfView['trees']['number_built']
-            # if numberBuilt!=ntree:
-            #     raise Exception("%s done but number_built!=ntree: %s %s" % (whichUsed, numberBuilt, ntree))
+        drf_model = rfView['drf_model']
+        numberBuilt = drf_model['N']
 
         # want to double check all this because it's new
         # and we had problems with races/doneness before
@@ -2068,8 +1913,8 @@ class H2O(object):
 
         if errorInResponse:
             raise Exception("\nBad values in %s.json\n" % whichUsed +
-                            "progress: %s, progressTotal: %s, ntree: %s, numberBuilt: %s, status: %s" % \
-                            (progress, progressTotal, ntree, numberBuilt, status))
+                "progress: %s, progressTotal: %s, ntree: %s, numberBuilt: %s, status: %s" % \
+                (progress, progressTotal, ntree, numberBuilt, status))
 
         if (browseAlso | browse_json):
             h2b.browseJsonHistoryAsUrlLastMatch(whichUsed)
@@ -2081,21 +1926,12 @@ class H2O(object):
         return rfView
 
     def set_column_names(self, timeoutSecs=300, print_params=False, **kwargs):
-        if beta_features:
-            params_dict = {
-                'copy_from': None,
-                'source': None,
-                'cols': None,
-                'comma_separated_list': None,
-            }
-        else:
-            params_dict = {
-                'copy_from': None,
-                'target': None,
-                'cols': None,
-                'comma_separated_list': None,
-            }
-            # only lets these params thru
+        params_dict = {
+            'copy_from': None,
+            'source': None,
+            'cols': None,
+            'comma_separated_list': None,
+        }
         check_params_update_kwargs(params_dict, kwargs, 'set_column_names', print_params)
         a = self.__do_json_request('2/SetColumnNames2.json' if beta_features else 'SetColumnNames.json',
                                    timeout=timeoutSecs, params=params_dict)
@@ -2207,23 +2043,15 @@ class H2O(object):
 
     def generate_predictions(self, data_key, model_key, destination_key=None, timeoutSecs=300, print_params=True,
                              **kwargs):
-        algo = '2/Predict' if beta_features else 'GeneratePredictionsPage'
-        algoView = '2/Inspect2' if beta_features else 'Inspect'
+        algo = '2/Predict'
+        algoView = '2/Inspect2'
 
-        if beta_features:
-            params_dict = {
-                'data': data_key,
-                'model': model_key,
-                # 'prediction_key': destination_key,
-                'prediction': destination_key,
-            }
-        else:
-            params_dict = {
-                'data_key': data_key,
-                'model_key': model_key,
-                'destination_key': destination_key,
-            }
-
+        params_dict = {
+            'data': data_key,
+            'model': model_key,
+            # 'prediction_key': destination_key,
+            'prediction': destination_key,
+        }
         browseAlso = kwargs.pop('browseAlso', False)
         # only lets these params thru
         check_params_update_kwargs(params_dict, kwargs, 'generate_predictions', print_params)
