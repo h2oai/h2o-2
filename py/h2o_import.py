@@ -370,6 +370,7 @@ def import_parse(node=None, schema='local', bucket=None, path=None,
         # if parse blows up, we want error isolation ..i.e. find stack traces here, rather than the next guy blowing up
         h2o.check_sandbox_for_errors()
         inspect = node.inspect(parseResult['destination_key'], timeoutSecs=timeoutSecs)
+        print "h2o.beta_features", h2o.beta_features
         if h2o.beta_features:
             numRows = inspect['numRows']
             numCols = inspect['numCols']
