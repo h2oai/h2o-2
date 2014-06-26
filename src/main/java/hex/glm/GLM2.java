@@ -869,7 +869,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 //  // filter the current active columns using the strong rules
 //  // note: strong rules are update so tha they keep all previous coefficients in, to prevent issues with line-search
   private double pickNextLambda(final double oldLambda, final double[] grad){
-    return pickNextLambda(oldLambda, grad, Math.max((int) (Math.min(_dinfo.fullN(),_nobs) * 0.01), 1));
+    return pickNextLambda(oldLambda, grad, Math.max((int) (Math.min(_dinfo.fullN(),_nobs) * 0.05), 1));
   }
   private double pickNextLambda(final double oldLambda, final double[] grad, int maxNewVars){
     double [] g = grad.clone();
