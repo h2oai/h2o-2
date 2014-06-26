@@ -4,6 +4,8 @@ import org.junit.Assert;
 import org.junit.Test;
 import water.api.UnlockKeys;
 import water.fvec.Frame;
+import water.fvec.NFSFileVec;
+import water.fvec.ParseDataset2;
 import water.util.Log;
 
 public class UnlockTest extends TestUtil {
@@ -11,7 +13,9 @@ public class UnlockTest extends TestUtil {
   @Test
   public void run(){
     // Put chunks into KV store
-    Frame f = TestUtil.parseFromH2OFolder("smalldata/logreg/syn_2659x1049.csv");
+    String dataset = "smalldata/logreg/syn_2659x1049.csv";
+    Key file = NFSFileVec.make(find_test_file(dataset));
+    Frame f = ParseDataset2.parse(Key.make(), new Key[]{file});
     // Create two lockable frames in KV store
     Frame fr1 = new Frame(Key.make(), f.names(), f.vecs());
     Frame fr2 = new Frame(Key.make(), f.names(), f.vecs());
