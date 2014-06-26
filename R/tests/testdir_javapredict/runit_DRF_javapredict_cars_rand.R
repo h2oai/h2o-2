@@ -22,10 +22,10 @@ source(paste(TEST_ROOT_DIR, "findNSourceUtils.R", sep="/"))
 # for big models containing huge amount of trees. 
 # This case verify multi-classifiers.
 
-n.trees <- 5000
-interaction.depth <- 10
-n.minobsinnode <- 1
-shrinkage <- 0.1
+ntree    <- sample( 100, 1)
+depth    <- sample( 100, 1)
+nodesize <- sample(  20, 1)
+balance_classes <- sample( c(T,F), 1)
 
 train <- locate("smalldata/cars_nice_header.csv")
 test <- locate("smalldata/cars_nice_header.csv")
@@ -33,19 +33,7 @@ test <- locate("smalldata/cars_nice_header.csv")
 x = c("name","economy", "displacement","power","weight","acceleration","year")
 y = "cylinders"
 
-balance_classes <- sample( c(T,F), 1)
-
-heading("Run parameters")
-print(paste("n.trees", n.trees))
-print(paste("interaction.depth", interaction.depth))
-print(paste("n.minobsinnode", n.minobsinnode))
-print(paste("shrinkage", shrinkage))
-print(paste("train", train))
-print(paste("test", test))
-print(paste("x=", x))
-print(paste("y=", y))
-print(paste("balance_classes=", balance_classes))
 #----------------------------------------------------------------------
 # Run the test
 #----------------------------------------------------------------------
-source('../Utils/shared_javapredict_GBM.R')
+source('../Utils/shared_javapredict_RF.R')
