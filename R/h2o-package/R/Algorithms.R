@@ -160,7 +160,6 @@ h2o.glm <- function(x, y, data, family, nfolds = 10, alpha = 0.5, nlambda = -1, 
       res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, destination_key = rand_glm_key, response = args$y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds, alpha = alpha, nlambdas = nlambda, lambda_min_ratio = lambda.min.ratio, lambda = lambda, beta_epsilon = epsilon, standardize = as.numeric(standardize), max_iter = iter.max, higher_accuracy = as.numeric(higher_accuracy), lambda_search = as.numeric(lambda_search), max_predictors = max_predictors)
     params = list(x=args$x, y=args$y, family = .h2o.__getFamily(family, tweedie.var.p=tweedie.p), nfolds=nfolds, alpha=alpha, nlambda=nlambda, lambda.min.ratio=lambda.min.ratio, lambda=lambda, beta_epsilon=epsilon, standardize=standardize, max_predictors = max_predictors)
     .h2o.__waitOnJob(data@h2o, res$job_key)
-    # while(!.h2o.__isDone(data@h2o, "GLM2", res)) { Sys.sleep(1) }
     h2o.glm.get_model(data, res$destination_key, return_all_lambda, params)
   } else
     .h2o.glm2grid.internal(x_ignore, args$y, data, family, nfolds, alpha, nlambda, lambda.min.ratio, lambda, epsilon, standardize, prior, tweedie.p, iter.max, higher_accuracy, lambda_search, return_all_lambda)
@@ -168,13 +167,15 @@ h2o.glm <- function(x, y, data, family, nfolds = 10, alpha = 0.5, nlambda = -1, 
 
 h2o.glm.get_model <- function (data, model_key, return_all_lambda = TRUE, params = list()) {
   res2 = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLMModelView, '_modelKey'=model_key)
-  destKey = res2$glm_model$'_key'
+  resModel = res2$glm_model; destKey = resModel$'_key'
+  if(!is.null(resModel$warnings))
+    tmp = lapply(resModel$warnings, warning)
   
   make_model <- function(x, params) {
-    m = .h2o.__getGLM2Results(res2$glm_model, params, x);
+    m = .h2o.__getGLM2Results(resModel, params, x);
     res_xval = list()
-    if(!is.null(res2$glm_model$submodels[[x]]$xvalidation)) {
-      xvalKey = res2$glm_model$submodels[[x]]$xvalidation$xval_models
+    if(!is.null(resModel$submodels[[x]]$xvalidation)) {
+      xvalKey = resModel$submodels[[x]]$xvalidation$xval_models
       # Get results from cross-validation
       if(!is.null(xvalKey) && length(xvalKey) >= 2) {
         for(j in 1:length(xvalKey)) {
@@ -187,9 +188,9 @@ h2o.glm.get_model <- function (data, model_key, return_all_lambda = TRUE, params
     new("H2OGLMModel", key=model_key, data=data, model=m, xval=res_xval)
   }
   if(return_all_lambda) {
-    new("H2OGLMModelList", models=lapply(1:length(res2$glm_model$submodels), make_model, params), best_model=res2$glm_model$best_lambda_idx+1)
+    new("H2OGLMModelList", models=lapply(1:length(resModel$submodels), make_model, params), best_model=resModel$best_lambda_idx+1)
   } else {
-    make_model(res2$glm_model$best_lambda_idx+1, params)
+    make_model(resModel$best_lambda_idx+1, params)
   }
 }
 
@@ -214,21 +215,26 @@ h2o.glm.get_model <- function (data, model_key, return_all_lambda = TRUE, params
   result = list(); myModelSum = list()
   for(i in 1:length(allModels)) {
     resH = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLMModelView, '_modelKey'=allModels[i])
-    myModelSum[[i]] = .h2o.__getGLM2Summary(resH$glm_model)
-    # modelOrig = .h2o.__getGLM2Results(resH$glm_model, params)
+    resHModel = resH$glm_model
+    if(!is.null(resHModel$warnings)) {
+      cat("Model key", allModels[i], "generated the following messages:")
+      tmp = lapply(resHModel$warnings, warning)
+    }
+    myModelSum[[i]] = .h2o.__getGLM2Summary(resHModel)
+    # modelOrig = .h2o.__getGLM2Results(resHModel, params)
     
     # BUG: For some reason, H2O always uses default number of lambda (100) during grid search
     if(return_all_lambda) {
-      # lambda_all = sapply(resH$glm_model$submodels, function(x) { x$lambda_value })
+      # lambda_all = sapply(resHModel$submodels, function(x) { x$lambda_value })
       # allLambdaModels = lapply(lambda_all, .h2o.__getGLM2LambdaModel, data=data, model_key=allModels[i], params=params)
       # if(length(allLambdaModels) <= 1) result[[i]] = allLambdaModels[[1]]
       # else result[[i]] = allLambdaModels
       
       make_model <- function(x, params) {
-        m = .h2o.__getGLM2Results(resH$glm_model, params, x);
+        m = .h2o.__getGLM2Results(resHModel, params, x);
         res_xval = list()
-        if(!is.null(resH$glm_model$submodels[[x]]$xvalidation)) {
-          xvalKey = resH$glm_model$submodels[[x]]$xvalidation$xval_models
+        if(!is.null(resHModel$submodels[[x]]$xvalidation)) {
+          xvalKey = resHModel$submodels[[x]]$xvalidation$xval_models
           # Get results from cross-validation
           if(!is.null(xvalKey) && length(xvalKey) >= 2) {
             for(j in 1:length(xvalKey)) {
@@ -240,12 +246,12 @@ h2o.glm.get_model <- function (data, model_key, return_all_lambda = TRUE, params
         }
         new("H2OGLMModel", key=destKey, data=data, model=m, xval=res_xval)
       }
-      allLambdaModels = lapply(1:length(resH$glm_model$submodels), make_model, params)
-      result[[i]] = new("H2OGLMModelList", models=allLambdaModels, best_model=resH$glm_model$best_lambda_idx+1)
+      allLambdaModels = lapply(1:length(resHModel$submodels), make_model, params)
+      result[[i]] = new("H2OGLMModelList", models=allLambdaModels, best_model=resHModel$best_lambda_idx+1)
     } else {
-      params$lambda_all = sapply(resH$glm_model$submodels, function(x) { x$lambda_value })
-      best_lambda_idx = resH$glm_model$best_lambda_idx+1
-      # best_lambda = resH$glm_model$parameters$lambda[best_lambda_idx]
+      params$lambda_all = sapply(resHModel$submodels, function(x) { x$lambda_value })
+      best_lambda_idx = resHModel$best_lambda_idx+1
+      # best_lambda = resHModel$parameters$lambda[best_lambda_idx]
       best_lambda = params$lambda_all[best_lambda_idx]
       result[[i]] = .h2o.__getGLM2LambdaModel(best_lambda, data, allModels[i], params)
     }
