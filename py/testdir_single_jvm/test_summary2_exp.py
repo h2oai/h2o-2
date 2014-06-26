@@ -101,7 +101,6 @@ class Basic(unittest.TestCase):
             # add 5% for fp errors?
             maxDelta = 1.05 * maxDelta
 
-            h2o.beta_features = False
             csvPathnameFull = h2i.find_folder_and_filename(None, csvPathname, returnFullPath=True)
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=30, doSummary=False)
             print "Parse result['destination_key']:", parseResult['destination_key']
@@ -112,17 +111,6 @@ class Basic(unittest.TestCase):
             numRows = inspect["numRows"]
             numCols = inspect["numCols"]
 
-            h2o.beta_features = False
-            summary1Result = h2o_cmd.runSummary(key=hex_key)
-            h2o.verboseprint("Summary1 summary1Result:", h2o.dump_json(summary1Result))
-            percentiles1 = summary1Result['summary']['columns'][0]['percentiles']
-            thresholds1 = percentiles1['thresholds']
-            values1 = percentiles1['values']
-
-            print "Summary1 thresholds", h2o_util.twoDecimals(thresholds1)
-            print "Summary1 values", h2o_util.twoDecimals(values1)
-
-            h2o.beta_features = True
             summaryResult = h2o_cmd.runSummary(key=hex_key, max_qbins=MAX_QBINS)
             h2o.verboseprint("Summary2 summaryResult:", h2o.dump_json(summaryResult))
 

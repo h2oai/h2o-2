@@ -64,7 +64,6 @@ class Basic(unittest.TestCase):
         x = 0
         timeoutSecs = 60
         for (csvFilename, hex_key, skipHeader, expectedCols, bucket, pathPrefix) in tryList:
-            h2o.beta_features = False
 
             if pathPrefix:
                 csvPathname = pathPrefix + "/" + csvFilename
@@ -79,7 +78,6 @@ class Basic(unittest.TestCase):
             parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, 
                 schema='put', header=header, hex_key=hex_key, timeoutSecs=10, doSummary=False)
 
-            print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
 
             # We should be able to see the parse result?
