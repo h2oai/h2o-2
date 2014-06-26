@@ -725,7 +725,8 @@ public class DeepLearning extends Job.ValidatedJob {
       if (source == null || !Arrays.equals(source._key._kb, previous.model_info().get_params().source._key._kb)) {
         throw new IllegalArgumentException("source must be the same as for the checkpointed model.");
       }
-      if (response == null || !Arrays.equals(response._key._kb, previous.model_info().get_params().response._key._kb)) {
+      autoencoder = previous.model_info().get_params().autoencoder;
+      if (!autoencoder && (response == null || !Arrays.equals(response._key._kb, previous.model_info().get_params().response._key._kb))) {
         throw new IllegalArgumentException("response must be the same as for the checkpointed model.");
       }
       if (Utils.difference(ignored_cols, previous.model_info().get_params().ignored_cols).length != 0
@@ -852,6 +853,7 @@ public class DeepLearning extends Job.ValidatedJob {
 
     // reason for the error message below is that validation might not have the same horizontalized features as the training data (or different order)
     if (autoencoder && validation != null) throw new UnsupportedOperationException("Cannot specify a validation dataset for auto-encoder.");
+    if (autoencoder && activation == Activation.Maxout) throw new UnsupportedOperationException("Maxout activation is not supported for auto-encoder.");
 
     // make default job_key and destination_key in case they are missing
     if (dest() == null) {
