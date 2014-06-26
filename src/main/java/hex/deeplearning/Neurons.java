@@ -5,6 +5,7 @@ import hex.deeplearning.DeepLearning.Loss;
 import water.Iced;
 import water.MemoryManager;
 import water.api.Request.API;
+import water.util.Log;
 import water.util.Utils;
 
 import java.util.Arrays;
@@ -86,6 +87,8 @@ public abstract class Neurons {
    */
   private boolean _shortcut = false;
 
+  public DenseVector _avg_a;
+
 //  /**
 //   * We need a way to encode a missing value in the neural net forward/back-propagation scheme.
 //   * For simplicity and performance, we simply use the largest values to encode a missing value.
@@ -151,6 +154,8 @@ public abstract class Neurons {
       _minfo = minfo;
       _w = minfo.get_weights(_index); //incoming weights
       _b = minfo.get_biases(_index); //bias for this layer (starting at hidden layer)
+      if(minfo.get_params().autoencoder && _index < params.hidden.length)
+            _avg_a = minfo.get_avg_activations(_index);
       if (minfo.has_momenta()) {
         _wm = minfo.get_weights_momenta(_index); //incoming weights
         _bm = minfo.get_biases_momenta(_index); //bias for this layer (starting at hidden layer)
@@ -528,6 +533,19 @@ public abstract class Neurons {
     return rate;
   }
 
+
+  /**
+   * Helper to enforce learning rule to satisfy sparsity constraint
+   *
+   */
+   void compute_sparsity() {
+       if (_avg_a != null) {
+           for (int i = 0; i < _avg_a.size(); i++)
+               _avg_a._data[i] = (float)0.999*(_avg_a._data[i]) + (float)0.001*(_a.get(i));
+       }
+
+   }
+
   /**
    * Helper to update the bias values
    * @param _b bias vector
@@ -570,7 +588,10 @@ public abstract class Neurons {
       }
       _b.add(row, rate * d);
     }
-    if (Float.isInfinite(_b.get(row))) _minfo.set_unstable();
+    //update for sparsity constraint
+     //if (params.autoencoder && !(this instanceof Output) && !(this instanceof Input) && (_index != params.hidden.length))
+       // _b.add(row,- (float)(rate*_minfo.get_params().sparsity_beta*(_avg_a._data[row] - _minfo.get_params().average_activation)));
+    //if (Float.isInfinite(_b.get(row))) _minfo.set_unstable();
   }
 
 
@@ -683,9 +704,17 @@ public abstract class Neurons {
     @Override protected void fprop(long seed, boolean training) {
       gemv((DenseVector)_a, _w, _previous._a, _b, _dropout != null ? _dropout.bits() : null);
       final int rows = _a.size();
-      for( int row = 0; row < rows; row++ ) {
+      for( int row = 0; row < rows; row++ ) //{
         _a.set(row, 1f - 2f / (1f + (float)Math.exp(2*_a.get(row)))); //evals faster than tanh(x), but is slightly less numerically stable - OK
-      }
+        compute_sparsity();
+       // if (_avg_a != null) {
+            //_avg_a._data[row] = (float)0.999*(_avg_a._data[row]) + (float)0.001*(_a.get(row));
+           // _avg_a._data[row] = -1;
+            //Log.info("_avg_a["+row+"]=" + _avg_a._data[row]);
+        //}
+        //Log.info("_avg_a["+row+"]=" + _avg_a._data[row]);
+        //Log.info(_avg_a._data[row]);
+     // }
     }
     // Computing partial derivative g = dE/dnet = dE/dy * dy/dnet, where dE/dy is the backpropagated error
     // dy/dnet = (1 - a^2) for y(net) = tanh(net)
@@ -770,6 +799,7 @@ public abstract class Neurons {
         }
         if( max > 1f ) Utils.div(_a.raw(), max);
       }
+        compute_sparsity();
     }
     @Override protected void bprop() {
       final long processed = _minfo.get_processed_total();
@@ -821,6 +851,7 @@ public abstract class Neurons {
       final int rows = _a.size();
       for( int row = 0; row < rows; row++ ) {
         _a.set(row, Math.max(_a.get(row), 0f));
+        compute_sparsity();
       }
     }
 
