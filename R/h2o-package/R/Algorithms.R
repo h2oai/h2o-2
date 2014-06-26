@@ -300,10 +300,10 @@ h2o.getGLMLambdaModel <- function(model, lambda) {
   result <- list()
   params$alpha  <- model$alpha
   params$lambda <- model$submodels[[lambda_idx]]$lambda_value
-  if(!is.null(model$parameters$lambda))
-    params$lambda_all <- model$parameters$lambda
-  else
-    params$lambda_all <- sapply(model$submodels, function(x) { x$lambda_value })
+  # if(!is.null(model$parameters$lambda))
+  #  params$lambda_all <- model$parameters$lambda
+  # else
+  params$lambda_all <- sapply(model$submodels, function(x) { x$lambda_value })
   params$lambda_best <- params$lambda_all[[model$best_lambda_idx+1]]
   
   result$params <- params
