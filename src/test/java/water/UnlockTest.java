@@ -28,7 +28,7 @@ public class UnlockTest extends TestUtil {
       fr1.delete();
       fr2.delete(); // won't be reached
     } catch(Throwable t) {
-      Log.info("Correctly caught exception: " + t.getClass()); //either AssertionError if local or DistributedException if remote
+      Log.info("Correctly unable to delete (was locked): " + t.getClass()); //either AssertionError if local or DistributedException if remote
       i++;
     } finally {
       // second attempt: will unlock and delete properly
