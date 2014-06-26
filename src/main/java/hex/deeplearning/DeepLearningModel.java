@@ -1080,7 +1080,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
     // First normalize categorical reconstructions to be probabilities
     // (such that they can be better compared to the input where one factor was 1 and the rest was 0)
-    model_info().data_info().softMaxCategoricals(out,out); //only modifies the categoricals
+//    model_info().data_info().softMaxCategoricals(out,out); //only modifies the categoricals
 
     // Compute MSE of reconstruction in expanded space (with categorical probabilities)
     double l2 = 0;
