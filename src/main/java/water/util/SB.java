@@ -37,6 +37,8 @@ public class SB {
   public SB ii( int i) { _indent += i; return this; }
   // Decrease indentation
   public SB di( int i) { _indent -= i; return this; }
+  // Copy indent from given string buffer
+  public SB ci( SB sb) { _indent = sb._indent; return this; }
   public SB nl( ) { return p('\n'); }
   // Convert a String[] into a valid Java String initializer
   public SB toJavaStringInit( String[] ss ) {

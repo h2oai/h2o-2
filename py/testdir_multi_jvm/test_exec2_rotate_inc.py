@@ -46,8 +46,8 @@ class Basic(unittest.TestCase):
         # time.sleep(1500)
         h2o.tear_down_cloud()
 
-    def test_exec_rotate_inc(self):
-        ### h2b.browseTheCloud()
+    def test_exec2_rotate_inc(self):
+        h2o.beta_features = True
 
         lenNodes = len(h2o.nodes)
         # zero the list of Results using node[0]

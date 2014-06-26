@@ -32,14 +32,15 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_A_inspect_poker1000(self):
+        h2o.beta_features = True
         csvPathname = "poker/poker1000"
         res = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
         ary  = h2o_cmd.runInspect(key=res['destination_key'])
         # count lines in input file - there is no header for poker 1000
         fullPathname = h2i.find_folder_and_filename('smalldata', csvPathname, returnFullPath=True)
         rows = wcl(fullPathname)
-        self.assertEqual(rows, ary['num_rows'])
-        self.assertEqual(11, ary['num_cols'])
+        self.assertEqual(rows, ary['numRows'])
+        self.assertEqual(11, ary['numCols'])
 
     def test_B_inspect_column_names_multi_space_sep(self):
         self.inspect_columns("smalldata", "test/test_26cols_multi_space_sep.csv")
@@ -79,8 +80,8 @@ class Basic(unittest.TestCase):
         res = h2i.import_parse(bucket=bucket, path=csvPathname, schema='put')
         ary  = h2o_cmd.runInspect(key=res['destination_key'])
 
-        self.assertEqual(rows, ary['num_rows'])
-        self.assertEqual(cols, ary['num_cols'])
+        self.assertEqual(rows, ary['numRows'])
+        self.assertEqual(cols, ary['numCols'])
 
         # check column names
         if not columnNames is None:

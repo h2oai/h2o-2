@@ -65,6 +65,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_summary2_exp(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         LAMBD = random.uniform(0.005, 0.5)
         tryList = [
@@ -86,7 +87,6 @@ class Basic(unittest.TestCase):
         timeoutSecs = 60
         # rangeMin and rangeMax are not used right now
         for (rowCount, colCount, hex_key, rangeMin, rangeMax, expected) in tryList:
-            h2o.beta_features = False
             SEEDPERFILE = random.randint(0, sys.maxint)
             x += 1
 
@@ -109,8 +109,8 @@ class Basic(unittest.TestCase):
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvFilename
 
-            numRows = inspect["num_rows"]
-            numCols = inspect["num_cols"]
+            numRows = inspect["numRows"]
+            numCols = inspect["numCols"]
 
             h2o.beta_features = False
             summary1Result = h2o_cmd.runSummary(key=hex_key)

@@ -55,7 +55,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_parse_bounds_libsvm (self):
+    def test_summary_with_x_libsvm (self):
+        h2o.beta_features = True
         print "Empty rows except for the last, with all zeros for class. Single col at max"
         h2b.browseTheCloud()
         SYNDATASETS_DIR = h2o.make_syn_dir()
@@ -79,77 +80,30 @@ class Basic(unittest.TestCase):
                 print "Parse result['destination_key']:", parseResult['destination_key']
                 inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], max_column_display=colNumberMax+1, 
                     timeoutSecs=timeoutSecs)
-                num_cols = inspect['num_cols']
-                num_rows = inspect['num_rows']
+                numCols = inspect['numCols']
+                numRows = inspect['numRows']
 
-                self.assertEqual(colNumberMax+1, num_cols, 
-                    msg="generated %s cols (including output).  parsed to %s cols" % (colNumberMax+1, num_cols))
-                self.assertEqual(rowCount, num_rows, 
-                    msg="generated %s rows, parsed to %s rows" % (rowCount, num_rows))
+                self.assertEqual(colNumberMax+1, numCols, 
+                    msg="generated %s cols (including output).  parsed to %s cols" % (colNumberMax+1, numCols))
+                self.assertEqual(rowCount, numRows, 
+                    msg="generated %s rows, parsed to %s rows" % (rowCount, numRows))
 
-                for x in range(num_cols):
+                for x in range(numCols):
                     print "Doing summary with x=%s" % x
-                    summaryResult = h2o_cmd.runSummary(key=hex_key, x=x, timeoutSecs=timeoutSecs)
+                    summaryResult = h2o_cmd.runSummary(key=hex_key, cols=x, timeoutSecs=timeoutSecs)
                     # skip the infoFromSummary check
 
-                    if x==0:
-                        colName = "Target"
-                    else:
-                        colName = "V" + str(x)
+                    colName = "C" + str(x+1)
                     print "Doing summary with col name x=%s" % colName
-                    summaryResult = h2o_cmd.runSummary(key=hex_key, x=x, timeoutSecs=timeoutSecs)
+                    summaryResult = h2o_cmd.runSummary(key=hex_key, cols=colName, timeoutSecs=timeoutSecs)
 
                 # do a final one with all columns for the current check below
                 # FIX! we should update the check to check each individual summary result
                 print "Doing and checking summary with no x=%s" % x
-                summaryResult = h2o_cmd.runSummary(key=hex_key, max_column_display=colNumberMax+1, timeoutSecs=timeoutSecs)
+                summaryResult = h2o_cmd.runSummary(key=hex_key, max_ncols=colNumberMax+1, timeoutSecs=timeoutSecs)
                 h2o_cmd.infoFromSummary(summaryResult, noPrint=True)
 
-                summary = summaryResult['summary']
-                columnsList = summary['columns']
-                self.assertEqual(colNumberMax+1, len(columnsList), 
-                    msg="generated %s cols (including output).  summary has %s columns" % (colNumberMax+1, len(columnsList)))
-
-                for columns in columnsList:
-                    N = columns['N']
-                    # self.assertEqual(N, rowCount)
-                    name = columns['name']
-                    stype = columns['type']
-
-                    histogram = columns['histogram']
-                    bin_size = histogram['bin_size']
-                    bin_names = histogram['bin_names']
-                    bins = histogram['bins']
-                    nbins = histogram['bins']
-
-                    # definitely not enums
-                    zeros = columns['zeros']
-                    na = columns['na']
-                    smax = columns['max']
-                    smin = columns['min']
-                    mean = columns['mean']
-                    sigma = columns['sigma']
-
-                    # a single 1 in the last col
-                    # print name
-                    if name == ("V" + str(colNumberMax)): # h2o puts a "V" prefix
-                        synMean = 1.0/num_rows # why does this need to be a 1 entry list
-                        synMin = [0.0, 1.0]
-                        synMax = [1.0, 0.0]
-                    else:
-                        synMean = 0.0
-                        synMin = [0.0]
-                        synMax = [0.0]
-
-                    self.assertEqual(float(mean), synMean,
-                        msg='col %s mean %s is not equal to generated mean %s' % (name, mean, 0))
-                    # why are min/max one-entry lists in summary result. Oh..it puts N min, N max
-                    self.assertEqual(smin, synMin,
-                        msg='col %s min %s is not equal to generated min %s' % (name, smin, synMin))
-                    self.assertEqual(smax, synMax,
-                        msg='col %s max %s is not equal to generated max %s' % (name, smax, synMax))
-                    self.assertEqual(0, na,
-                        msg='col %s num_missing_values %d should be 0' % (name, na))
+                # FIX! add some result checking
 
 
 if __name__ == '__main__':

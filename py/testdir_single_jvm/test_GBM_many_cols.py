@@ -52,6 +52,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GBM_many_cols(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         if localhost:
@@ -84,7 +85,6 @@ class Basic(unittest.TestCase):
 
 
             # PARSE train****************************************
-            h2o.beta_features = False #turn off beta_features
             start = time.time()
             xList = []
             eList = []
@@ -120,10 +120,10 @@ class Basic(unittest.TestCase):
             # h2o.beta_features = True
             inspect = h2o_cmd.runInspect(key=parseTrainResult['destination_key'])
             print "\n" + csvPathname, \
-                "    num_rows:", "{:,}".format(inspect['num_rows']), \
-                "    num_cols:", "{:,}".format(inspect['num_cols'])
-            num_rows = inspect['num_rows']
-            num_cols = inspect['num_cols']
+                "    numRows:", "{:,}".format(inspect['numRows']), \
+                "    numCols:", "{:,}".format(inspect['numCols'])
+            numRows = inspect['numRows']
+            numCols = inspect['numCols']
             ### h2o_cmd.runSummary(key=parsTraineResult['destination_key'])
 
             # GBM(train iterate)****************************************
