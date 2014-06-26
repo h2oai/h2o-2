@@ -1,4 +1,3 @@
-//TODO: Rename this to something more appropriate (probably something like "Exec3")
 package water.exec3;
 
 import com.google.gson.*;
@@ -10,7 +9,7 @@ import water.exec.*;
 import java.util.Properties;
 
 
-public class ASTParser extends Request2 {
+public class AST2IR extends Request2 {
 
   static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
