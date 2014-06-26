@@ -259,6 +259,7 @@ def parse_our_args():
     debugger = args.debugger
     random_udp_drop = args.random_udp_drop
     random_seed = args.random_seed
+    # beta_features is hardwired to True
     # beta_features = args.beta_features
     sleep_at_tear_down = args.sleep_at_tear_down
     abort_after_import = args.abort_after_import
