@@ -25,7 +25,9 @@ test.tail.numeric <- function(conn) {
   expect_that(tail_, is_a("data.frame"))
   
   tail_2 <- tail(USArrests)
-  rownames(tail_2) <- 1:nrow(tail_2) #remove state names from USArrests
+  len <- nrow(USArrests)
+  len_tail <- nrow(tail_2)
+  rownames(tail_2) <- (len-len_tail+1):len #remove state names from USArrests
 
   Log.info("Check that the tail of the dataset is the same as what R produces: ")
   Log.info("tail(USArrests)")
@@ -40,8 +42,6 @@ test.tail.numeric <- function(conn) {
     tail_max <- tail(arrests.hex,nrow(arrests.hex) + 1)
   }
   testEnd()
- 
 }
 
 doTest("Tail Tests", test.tail.numeric)
-
