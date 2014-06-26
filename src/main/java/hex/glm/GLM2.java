@@ -447,6 +447,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     _model.clone().update(self());
     ++_lambdaIdx;
     glmt._val = null;
+    System.out.println("GLM2: Overall time between iterations = " + (System.currentTimeMillis() - _callbackStart ) + "ms");
     if(glmt._gram == null){ // assume we had lambda_value search with strong rules
       // we use strong rules so we can't really used this gram for the next lambda_value computation (different sets of coefficients)
       // I expect that:
@@ -580,13 +581,15 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     return fullBeta;
   }
 
+  private transient long _callbackStart = 0;
   private transient double _rho_mul = 1.0;
   private transient double _gradientEps = ADMM_GRAD_EPS;
   private class Iteration extends H2OCallback<GLMIterationTask> {
     public final long _iterationStartTime;
     public Iteration(){super(GLM2.this); _iterationStartTime = System.currentTimeMillis(); _model.start_training(null);}
     @Override public void callback(final GLMIterationTask glmt){
-      Log.info("GLM2 iteration(" + _iter + ") done in " + (System.currentTimeMillis() - _iterationStartTime) + "ms, lambda = " + _currentLambda + ", lambda_min = " + lambda_min);
+      _callbackStart = System.currentTimeMillis();
+      Log.info("GLM2 iteration(" + _iter + ") done in " + (_callbackStart - _iterationStartTime) + "ms, lambda = " + _currentLambda + ", lambda_min = " + lambda_min);
 
       if( !isRunning(self()) )  throw new JobCancelledException();
       boolean gotNaNsorInfs = Utils.hasNaNsOrInfs(glmt._xy) || glmt._gram.hasNaNsOrInfs();
