@@ -376,6 +376,20 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   public void setXValidation(double lambda, GLMXValidation val ){
     submodelForLambda(lambda).xvalidation = val;
   }
+  public int pickBestXval(){
+    int bestModel = best_lambda_idx;
+    GLMXValidation xval = null;
+    for(int i = 0; i < submodels.length; ++i){
+      if(submodels[i].xvalidation != null){
+        if(xval == null || xval.residual_deviance > submodels[i].xvalidation.residual_deviance) {
+          bestModel = i;
+          xval = submodels[i].xvalidation;
+        }
+      }
+    }
+    best_lambda_idx = bestModel;
+    return bestModel;
+  }
 
   public void setSubmodelIdx(int l){
     best_lambda_idx = l;

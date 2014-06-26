@@ -251,7 +251,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
 
     @Override public void processRow(long gid, final double [] nums, final int ncats, final int [] cats, double [] responses){
       ++_nobs;
-      double y = responses[0];
+      final double y = responses[0];
       assert ((_glm.family != Family.gamma) || y > 0) : "illegal response column, y must be > 0  for family=Gamma.";
       assert ((_glm.family != Family.binomial) || (0 <= y && y <= 1)) : "illegal response column, y must be <0,1>  for family=Binomial. got " + y;
       final double w, eta, mu, var, z;

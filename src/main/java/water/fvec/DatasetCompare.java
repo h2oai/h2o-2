@@ -98,7 +98,9 @@ public class DatasetCompare extends MRTask<DatasetCompare>{
   private static String [] datasets = new String[] {
     "/Users/tomasnykodym/h2o/smalldata/logreg/prostate.csv","prostate",
     "/Users/tomasnykodym/mydata/arcene/arcene_train.data","train_raw",
-    "/Users/tomasnykodym/mydata/arcene/arcene_train_labels.labels","labels"
+    "/Users/tomasnykodym/mydata/arcene/arcene_train_labels.labels","labels",
+    "/Users/tomasnykodym/mydata/coll/train.csv","dtrain",
+    "/Users/tomasnykodym/mydata/coll/test.csv","dtest"
   };
 
   private static String [] cmds = new String[] {
