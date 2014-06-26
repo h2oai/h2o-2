@@ -18,13 +18,14 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_RFhhp(self):
+    def test_rf_200x4_fvec(self):
+        h2o.beta_features = True
         csvPathname = 'hhp.cut3.214.data.gz'
 
         print "RF start on ", csvPathname, "this will probably take 1 minute.."
         start = time.time()
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
-        h2o_cmd.runRF(parseResult=parseResult, trees=10,
+        h2o_cmd.runRF(parseResult=parseResult, ntrees=5,
                 timeoutSecs=400, retryDelaySecs=15)
         print "RF end on ", csvPathname, 'took', time.time() - start, 'seconds'
 

@@ -21,6 +21,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_storeview_walk(self):
+        h2o.beta_features = True
         print "Walk storeview using offset, and just view=1"
         print "Do an import to get keys"
         # importFolderPath = "/home/0xdiag/datasets/manyfiles-nflx-gz"

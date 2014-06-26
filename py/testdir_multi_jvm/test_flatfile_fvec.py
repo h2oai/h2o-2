@@ -15,6 +15,7 @@ class Basic(unittest.TestCase):
             h2o.build_cloud(node_count=3,use_flatfile=True)
         else:
             h2o_hosts.build_cloud_with_hosts()
+        h2o.beta_features = True
 
     @classmethod
     def tearDownClass(cls):
@@ -27,11 +28,11 @@ class Basic(unittest.TestCase):
 
     def test_B_RF_iris2(self):
         parseResult = h2i.import_parse(bucket='smalldata', path='/iris/iris2.csv', schema='put')
-        h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs = 10)
+        h2o_cmd.runRF(parseResult=parseResult, ntrees=6, timeoutSecs = 10)
 
     def test_C_RF_poker100(self):
         parseResult = h2i.import_parse(bucket='smalldata', path='poker/poker100', schema='put')
-        h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs = 10)
+        h2o_cmd.runRF(parseResult=parseResult, ntrees=6, timeoutSecs = 10)
 
     def test_D_GenParity1(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
@@ -54,7 +55,7 @@ class Basic(unittest.TestCase):
             csvFilename = "parity_128_4_" + str(x) + "_quad.data"  
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
             parseResult = h2i.import_parse(path=csvPathname, schema='put')
-            h2o_cmd.runRF(parseResult=parseResult, trees=trees, timeoutSecs=timeoutSecs)
+            h2o_cmd.runRF(parseResult=parseResult, ntrees=trees, timeoutSecs=timeoutSecs)
             trees += 10
 
 if __name__ == '__main__':

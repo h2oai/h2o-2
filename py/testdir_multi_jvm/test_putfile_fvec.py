@@ -27,10 +27,11 @@ class Basic(unittest.TestCase):
         #pass
 
     def test_A_putfile(self):
+        h2o.beta_features = True
         cvsfile    = file_to_put()
         node       = h2o.nodes[0]
         key        = node.put_file(cvsfile)
-        resultSize = node.inspect(key)['value_size_bytes']
+        resultSize = node.inspect(key)['byteSize']
         origSize   = h2o_util.get_file_size(cvsfile)
         self.assertEqual(origSize,resultSize)
     
@@ -40,33 +41,9 @@ class Basic(unittest.TestCase):
         origSize = h2o_util.get_file_size(cvsfile)
         for node in h2o.nodes:
             key        = node.put_file(cvsfile)
-            resultSize = node.inspect(key)['value_size_bytes']
+            resultSize = node.inspect(key)['byteSize']
             self.assertEqual(origSize,resultSize)
     
-    print "Disabling test C and D because get_key doesn't seem to work?"
-    def notest_C_putfile_and_getfile(self):
-
-        cvsfile = file_to_put()
-        node    = h2o.nodes[0]
-        key     = node.put_file(cvsfile)
-        r       = node.get_key(key)
-        f       = open(cvsfile)
-        self.diff(r, f)
-        f.close()
-
-    def notest_D_putfile_and_getfile_to_all_nodes(self):
-
-        cvsfile = file_to_put()
-        for node in h2o.nodes:
-            key    = node.put_file(cvsfile)
-            r      = node.get_key(key)
-            f      = open(cvsfile)
-            self.diff(r, f)
-            f.close()
-
-    def diff(self,r, f):
-        for (r_chunk,f_chunk) in itertools.izip(r.iter_content(1024), h2o_util.iter_chunked_file(f, 1024)):
-            self.assertEqual(r_chunk,f_chunk)
 
 if __name__ == '__main__':
     h2o.unit_main()

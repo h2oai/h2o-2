@@ -23,6 +23,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GBMGrid_basic_benign(self):
+        h2o.beta_features = True
         csvFilename = "benign.csv"
         print "\nStarting", csvFilename 
         csvPathname = 'logreg/' + csvFilename
@@ -78,6 +79,7 @@ class Basic(unittest.TestCase):
 
 
     def test_GBMGrid_basic_prostate(self):
+        h2o.beta_features = True
         csvFilename = "prostate.csv"
         print "\nStarting", csvFilename
         # columns start at 0

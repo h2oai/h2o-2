@@ -58,7 +58,8 @@ class Basic(unittest.TestCase):
         # time.sleep(1500)
         h2o.tear_down_cloud()
 
-    def test_json_browse_both_exec(self):
+    def test_exec2_plus_browse(self):
+        h2o.beta_features = True
         lenNodes = len(h2o.nodes)
         csvPathname = 'standard/covtype.data'
         hex_key = 'c.hex'

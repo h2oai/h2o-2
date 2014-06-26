@@ -64,6 +64,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_NN2_params_rand2(self):
+        h2o.beta_features = True
         csvPathname = 'covtype/covtype.20k.data'
         hex_key = 'covtype.20k.hex'
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, hex_key=hex_key, schema='put')

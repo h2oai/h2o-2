@@ -17,6 +17,7 @@ class Basic(unittest.TestCase):
             h2o_hosts.build_cloud_with_hosts(node_count=1)
         global SYNDATASETS_DIR
         SYNDATASETS_DIR = h2o.make_syn_dir()
+        h2o.beta_features = True
 
     @classmethod
     def tearDownClass(cls):
@@ -30,10 +31,10 @@ class Basic(unittest.TestCase):
             timeoutSecs=10, header=0, separator=44)
 
         inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
-        num_cols = inspect['num_cols']
+        numCols = inspect['numCols']
         h2o_cmd.runRF(parseResult=parseResult, 
             trees=1, 
-            response_variable='C'+str(num_cols),
+            response_variable='C'+str(numCols),
             timeoutSecs=20)
 
     def test_B_randomdata2_1_lineend(self):
@@ -58,10 +59,10 @@ class Basic(unittest.TestCase):
             timeoutSecs=10, header=0, separator=44)
 
         inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
-        num_cols = inspect['num_cols']
+        numCols = inspect['numCols']
         h2o_cmd.runRF(parseResult=parseResult, 
             trees=1, 
-            response_variable='C'+str(num_cols),
+            response_variable='C'+str(numCols),
             timeoutSecs=20)
 
 

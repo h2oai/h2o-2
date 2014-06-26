@@ -20,6 +20,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_delete_all_keys(self):
+        h2o.beta_features = True
         # FIX! should have some model keys in here too, from RF etc.
         importFolderPath = 'standard'
         timeoutSecs = 500

@@ -58,18 +58,18 @@ public class JCodeGen {
       int s = 0;
       int remain = values.length;
       int its = 0;
-      do {
-        sb.i().p("static {").ii(1).nl();
+      SB sb4fillers = new SB().ci(sb);
+      sb.i().p("static {").ii(1).nl();
+      while (remain>0) {
+          String subClzName = className + "_" + its++;
           int len = Math.min(MAX_STRINGS_IN_CONST_POOL, remain);
-          toArrayFill(sb, "VALUES", values, s, len);
+          toClassWithArrayFill(sb4fillers, subClzName, values, s, len);
+          sb.i().p(subClzName).p(".fill(VALUES);").nl();
           s += len;
           remain -= len;
-        sb.di(1).i().p("}").nl();
-        if (its>0) sb.di(1).i().p('}').nl();
-        if (remain>0) {
-          sb.i().p("static final class ").p(className).p("_").p(its++).p(" {").ii(1).nl();
-        }
-      } while (remain>0);
+      }
+      sb.di(1).i().p("}").nl();
+      sb.p(sb4fillers);
     }
     return sb.di(1).p("}").nl();
   }
@@ -77,10 +77,14 @@ public class JCodeGen {
   /** Maximum number of string generated per class (static initializer) */
   public static int MAX_STRINGS_IN_CONST_POOL = 3000;
 
-  public static SB toArrayFill(SB sb, String hmName, String[] values, int start, int len) {
+  public static SB toClassWithArrayFill(SB sb, String clzName, String[] values, int start, int len) {
+    sb.i().p("static final class ").p(clzName).p(" {").ii(1).nl();
+    sb.i().p("static final void fill(String[] sa) {").ii(1).nl();
     for (int i=0; i<len; i++) {
-      sb.i().p(hmName).p("[").p(start+i).p("] = ").ps(values[start+i]).p(";").nl();
+      sb.i().p("sa[").p(start+i).p("] = ").ps(values[start+i]).p(";").nl();
     }
+    sb.di(1).i().p("}").nl();
+    sb.di(1).i().p("}").nl();
     return sb;
   }
 
