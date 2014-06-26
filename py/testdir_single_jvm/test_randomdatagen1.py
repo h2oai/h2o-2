@@ -34,7 +34,7 @@ class Basic(unittest.TestCase):
         numCols = inspect['numCols']
         h2o_cmd.runRF(parseResult=parseResult, 
             trees=1, 
-            response_variable='C'+str(numCols),
+            response='C'+str(numCols),
             timeoutSecs=20)
 
     def test_B_randomdata2_1_lineend(self):
@@ -62,7 +62,7 @@ class Basic(unittest.TestCase):
         numCols = inspect['numCols']
         h2o_cmd.runRF(parseResult=parseResult, 
             trees=1, 
-            response_variable='C'+str(numCols),
+            response='C'+str(numCols),
             timeoutSecs=20)
 
 

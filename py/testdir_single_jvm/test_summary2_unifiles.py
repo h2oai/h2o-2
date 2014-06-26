@@ -93,7 +93,6 @@ class Basic(unittest.TestCase):
             parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname,
                 schema='put', hex_key=hex_key, timeoutSecs=10, doSummary=False)
 
-            print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
 
             # We should be able to see the parse result?

@@ -32,7 +32,7 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1,java_heap_GB=4)
+            h2o.build_cloud(1,java_heap_GB=14)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -69,8 +69,8 @@ class Basic(unittest.TestCase):
             print "Creating random", csvPathname
             write_syn_dataset(csvPathname, rowCount, colCount, SEED)
 
-            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=30)
-            print csvFilename, 'parse time:', parseResult['response']['time']
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, 
+                timeoutSecs=120, doSummary=False)
             print "Parse result['destination_key']:", parseResult['destination_key']
 
             # We should be able to see the parse result?
