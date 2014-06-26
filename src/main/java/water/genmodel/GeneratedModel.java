@@ -17,8 +17,9 @@ public abstract class GeneratedModel implements IGeneratedModel {
     idx = idx - offset;
 
     int max_idx = (gcmp.length << 3) - 1;
-    if(idx < 0 || idx > max_idx)
-      throw new IndexOutOfBoundsException("Must have 0 <= idx <= " + max_idx + ": " + idx);
+    if(idx > max_idx) return false;
+    // if(idx < 0 || idx > max_idx)
+    //  throw new IndexOutOfBoundsException("Must have 0 <= idx <= " + max_idx + ": " + idx);
     return (gcmp[idx >> 3] & ((byte)1 << (idx % 8))) != 0;
   }
 
