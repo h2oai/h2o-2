@@ -1,0 +1,74 @@
+package water.exec3;
+
+
+import java.util.ArrayList;
+import java.util.Iterator;
+
+/**
+ * The Program class: A unit of work to be executed by Env.
+ *
+ * A program can lookup the types and values of identifiers.
+ * It may also write to the symbol table if it has permission.
+ *
+ * Valid operations are:
+ *
+ *  >push:   Push a blob of data onto the stack.
+ *  >pop:    Pop a blob of data from the stack.
+ *  >dup:    Push a copy of the data blob on the top of the stack back onto the stack.
+ *  >op:     Do some operator specific instruction (handles all binary & prefix operators)
+ *  >call:   Do some function call (handles all user-defined functions)
+ *  >return: Return the result of the program (possibly to some return address)
+ */
+public class Program implements Iterable<Program.Statement>{
+  private SymbolTable _global; // The global symbol table.
+  private SymbolTable _local;  // The local symbol table, null if program is main.
+  private boolean _isMain;     // A boolean stating that this program is main.
+  private ArrayList<Statement> _stmts;
+
+  public final class Statement {
+    String _op;    // One of the valid statement operations: push, pop, dup, op, call, return
+    String _name;  // The name (can be null) of some data blob used by _op.
+
+    Statement(String op, String name) {
+      _op = op;
+      _name = name;
+    }
+  }
+
+  Program(SymbolTable global, SymbolTable local) {
+    _global = global;
+    _local = local;
+    _isMain = _local == null;
+    _stmts = new ArrayList<Statement>();
+  }
+
+  protected int start() { return 0; }
+  protected int end() { return _stmts.size(); }
+  protected final boolean isMain() { return _isMain; }
+  protected final boolean canWriteToGlobal() { return isMain(); }
+
+  protected final String lookUpType(String name) {
+    if (_local.typeOf(name) != null) return _local.typeOf(name);
+    if (_global.typeOf(name)!= null) return _global.typeOf(name);
+    throw new IllegalArgumentException("Could not find the identifier in the local or global scopes: "+name);
+  }
+
+  protected final String lookUpValue(String name) {
+    if (_local.valueOf(name) != null) return _local.valueOf(name);
+    if (_global.valueOf(name)!= null) return _global.valueOf(name);
+    throw new IllegalArgumentException("Could not find the identifier in the local or global scopes: "+name);
+  }
+
+  protected final void addStatement(Statement stmt) { _stmts.add(stmt); }
+
+  protected Statement getStmt(int idx) {return _stmts.get(idx); }
+
+  public final Iterator<Statement> iterator() { return new StatementIter(start(), end()); }
+  private class StatementIter implements Iterator<Statement> {
+    int _pos = 0; final int _end;
+    public StatementIter(int start, int end) { _pos = start; _end = end;}
+    public boolean hasNext() { return _pos < _end;}
+    public Statement next() { return getStmt(_pos++); }
+    public void remove() { throw new RuntimeException("Unsupported"); }
+  }
+}
