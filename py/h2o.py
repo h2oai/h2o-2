@@ -1493,6 +1493,9 @@ class H2O(object):
     def jstack(self, timeoutSecs=30):
         return self.__do_json_request("JStack.json", timeout=timeoutSecs)
 
+    def jprofile(self, depth=5, timeoutSecs=30):
+        return self.__do_json_request("2/JProfile.json", params={'depth': depth}, timeout=timeoutSecs)
+
     def iostatus(self):
         return self.__do_json_request("IOStatus.json")
 
@@ -2131,27 +2134,6 @@ class H2O(object):
         verboseprint("\nauc result:", dump_json(a))
         return a
 
-
-    def random_forest_treeview(self, tree_number, data_key, model_key,
-                               timeoutSecs=10, ignoreH2oError=False, **kwargs):
-        params_dict = {
-            'tree_number': tree_number,
-            'data_key': data_key,
-            'model_key': model_key,
-        }
-
-        browseAlso = kwargs.pop('browseAlso', False)
-        params_dict.update(kwargs)
-
-        a = self.__do_json_request('RFTreeView.json', timeout=timeoutSecs, params=params_dict,
-                                   ignoreH2oError=ignoreH2oError)
-
-        verboseprint("\nrandom_forest_treeview result:", dump_json(a))
-        # Always do it to eyeball?
-        if (browseAlso | browse_json | True):
-            h2b.browseJsonHistoryAsUrlLastMatch("RFTreeView")
-            time.sleep(3) # to be able to see it
-        return a
 
     def gbm(self, data_key, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30,
             noPoll=False, print_params=True, **kwargs):
