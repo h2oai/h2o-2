@@ -27,6 +27,7 @@ public class Anomaly extends Job.FrameJob {
   @Override
   protected final void execImpl() {
     DeepLearningModel dlm = UKV.get(dl_autoencoder_model);
+    if (dlm == null) throw new InvalidArgumentException("Deep Learning Model not found.");
     if (!dlm.get_params().autoencoder) throw new InvalidArgumentException("Deep Learning Model must be build with autoencoder = true.");
 
     if (thresh == -1) {
