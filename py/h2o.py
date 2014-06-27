@@ -1934,8 +1934,7 @@ class H2O(object):
             'comma_separated_list': None,
         }
         check_params_update_kwargs(params_dict, kwargs, 'set_column_names', print_params)
-        a = self.__do_json_request('2/SetColumnNames2.json' if beta_features else 'SetColumnNames.json',
-                                   timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request('2/SetColumnNames2.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("\nset_column_names result:", dump_json(a))
         return a
 
@@ -2403,7 +2402,7 @@ class H2O(object):
             return a
 
         a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
-                          initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
         verboseprint("\nneural_net result:", dump_json(a))
         a['python_elapsed'] = time.time() - start
         a['python_%timeout'] = a['python_elapsed'] * 100 / timeoutSecs
@@ -2420,28 +2419,15 @@ class H2O(object):
         return a
 
     def summary_page(self, key, timeoutSecs=60, noPrint=True, useVA=False, numRows=None, numCols=None, **kwargs):
-        if beta_features and not useVA:
-            params_dict = {
-                'source': key,
-                'cols': None,
-                'max_ncols': 1000 if not numCols else numCols,
-                'max_qbins': None,
-            }
-        else:
-            params_dict = {
-                'key': key,
-                'x': None,
-                'max_column_display': 1000
-            }
+        params_dict = {
+            'source': key,
+            'cols': None,
+            'max_ncols': 1000 if not numCols else numCols,
+            'max_qbins': None,
+        }
         browseAlso = kwargs.pop('browseAlso', False)
         check_params_update_kwargs(params_dict, kwargs, 'summary_page', print_params=True)
-        a = self.__do_json_request('2/SummaryPage2.json' if (beta_features and not useVA) else 'SummaryPage.json',
-                                   timeout=timeoutSecs, params=params_dict)
-        # Too much stuff now!
-        # verboseprint("\nsummary_page result:", dump_json(a))
-
-        # FIX!..not there yet for 2
-        # if not beta_features:
+        a = self.__do_json_request('2/SummaryPage2.json', timeout=timeoutSecs, params=params_dict)
         h2o_cmd.infoFromSummary(a, noPrint=noPrint, numRows=numRows, numCols=numCols)
         return a
 
@@ -2504,60 +2490,34 @@ class H2O(object):
                    parentName=None, **kwargs):
 
         browseAlso = kwargs.pop('browseAlso', False)
-        if beta_features:
-            params_dict = {
-                'strong_rules_enabled': None,
-                'lambda_search': None,
-                'nlambdas': None,
-                'lambda_min_ratio': None,
-                'prior': None,
+        params_dict = {
+            'strong_rules_enabled': None,
+            'lambda_search': None,
+            'nlambdas': None,
+            'lambda_min_ratio': None,
+            'prior': None,
 
-                'source': key,
-                'destination_key': None,
-                'response': None,
-                'cols': None,
-                'ignored_cols': None,
-                'ignored_cols_by_name': None,
-                'max_iter': None,
-                'standardize': None,
-                'family': None,
-                'alpha': None,
-                'lambda': None,
-                'beta_epsilon': None, # GLMGrid doesn't use this name
-                'tweedie_variance_power': None,
-                'n_folds': None,
+            'source': key,
+            'destination_key': None,
+            'response': None,
+            'cols': None,
+            'ignored_cols': None,
+            'ignored_cols_by_name': None,
+            'max_iter': None,
+            'standardize': None,
+            'family': None,
+            'alpha': None,
+            'lambda': None,
+            'beta_epsilon': None, # GLMGrid doesn't use this name
+            'tweedie_variance_power': None,
+            'n_folds': None,
 
-                # only GLMGrid has this..we should complain about it on GLM?
-                'parallelism': None,
-                'beta_eps': None,
-                'higher_accuracy': None,
-                'use_all_factor_levels': None,
-            }
-        else:
-            params_dict = {
-                'key': key,
-                'destination_key': None,
-                'x': None,
-                'y': None,
-                'max_iter': None,
-                'standardize': None,
-                'family': None,
-                'link': None,
-                'alpha': None,
-                'lambda': None,
-                'beta_epsilon': None, # GLMGrid doesn't use this name
-                'tweedie_power': None,
-                'n_folds': None,
-                'case_mode': None,
-                'case': None,
-                'lsm_solver': None,
-                'expert_settings': None,
-                'thresholds': None,
-                'prior': None, # new
-                # only GLMGrid has these..we should complain about it on GLM?
-                'parallelism': None,
-                'beta_eps': None,
-            }
+            # only GLMGrid has this..we should complain about it on GLM?
+            'parallelism': None,
+            'beta_eps': None,
+            'higher_accuracy': None,
+            'use_all_factor_levels': None,
+        }
 
         check_params_update_kwargs(params_dict, kwargs, parentName, print_params=True)
         a = self.__do_json_request(parentName + '.json', timeout=timeoutSecs, params=params_dict)
@@ -2567,26 +2527,16 @@ class H2O(object):
     def GLM(self, key,
             timeoutSecs=300, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=180,
             noise=None, benchmarkLogging=None, noPoll=False, destination_key=None, **kwargs):
-        parentName = "2/GLM2" if beta_features else "GLM"
+        parentName = "2/GLM2"
         a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName=parentName,
                             destination_key=destination_key, **kwargs)
         # Check that the response has the right Progress url it's going to steer us to.
         if noPoll:
             return a
 
-        if not beta_features:
-            if a['response']['redirect_request'] != 'GLMProgressPage':
-                print dump_json(a)
-                raise Exception('H2O GLM redirect is not GLMProgressPage. GLM json response precedes.')
-        else:
-            print dump_json(a)
-
-        if noPoll:
-            return a
-
         a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
-                          initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
-                          noise=noise, benchmarkLogging=benchmarkLogging)
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
+            noise=noise, benchmarkLogging=benchmarkLogging)
         verboseprint("GLM done:", dump_json(a))
 
         browseAlso = kwargs.get('browseAlso', False)
@@ -2602,20 +2552,12 @@ class H2O(object):
 
         a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLMGrid", **kwargs)
 
-        # Check that the response has the right Progress url it's going to steer us to.
-        if not beta_features:
-            if a['response']['redirect_request'] != 'GLMGridProgress':
-                print dump_json(a)
-                raise Exception('H2O GLMGrid redirect is not GLMGridProgress. GLMGrid json response precedes.')
-        else:
-            print dump_json(a)
-
         if noPoll:
             return a
 
         a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
-                          initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
-                          noise=noise, benchmarkLogging=benchmarkLogging)
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
+            noise=noise, benchmarkLogging=benchmarkLogging)
         verboseprint("GLMGrid done:", dump_json(a))
 
         browseAlso = kwargs.get('browseAlso', False)
