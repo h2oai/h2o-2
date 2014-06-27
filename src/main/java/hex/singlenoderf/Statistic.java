@@ -116,8 +116,11 @@ abstract class Statistic {
     } else {
       _random = Utils.getRNG(seed);
       for (int i = 0; i < _columnDistsRegression.length; ++i)
-        if(!data.isIgnored(i))
-          _columnDistsRegression[i] = new int[data.columnArity(i)+1][data.columnArityOfClassCol()];
+        if(!data.isIgnored(i)) {
+          DataAdapter.Col c = data._dapt._c[i];
+          int colBins = c._isByte ? Utils.maxValue(c._rawB) : c._binned.length;
+          _columnDistsRegression[i] = new int[colBins + 1][ data.columnArityOfClassCol()];
+        }
       _features = new int[featuresPerSplit];
       _remembered = null;
       _classWt = data.classWt();
@@ -186,8 +189,11 @@ abstract class Statistic {
             _columnDists[f][val][cls]++;
           } else {
             short val = row.getEncodedColumnValue(f);
+            if (val == DataAdapter.BAD) continue;
+            int resp = row.getEncodedClassColumnValue();
+            if (resp == DataAdapter.BAD) continue;
 //            short val2 = row.getEncodedClassColumnValue();
-            _columnDistsRegression[f][val][cls]++; // = row.getRawClassColumnValueFromBin();
+            _columnDistsRegression[f][val][resp]++; // = row.getRawClassColumnValueFromBin();
           }
         }
       }

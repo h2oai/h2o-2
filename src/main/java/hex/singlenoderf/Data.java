@@ -32,6 +32,7 @@ public class Data implements Iterable<Data.Row> {
     }
     public final boolean hasValidValue(int colIndex) { return !_dapt.hasBadValue(_index, colIndex); }
     public final boolean isValid() { return !_dapt.isBadRow(_index); }
+    public final boolean isValidRaw() { return !_dapt.isBadRowRaw(_index); }
   }
 
   protected final DataAdapter _dapt;
@@ -66,10 +67,12 @@ public class Data implements Iterable<Data.Row> {
     float av = 0.f;
     int nobs = 0;
     for (Row r: this) {
-      av += r.getRawClassColumnValueFromBin();
+      if (r.isValid()) {
+        av += r.getRawClassColumnValueFromBin();
+      }
       nobs++;
     }
-    return nobs == 0 ? Float.POSITIVE_INFINITY : av / (float)(nobs);
+    return nobs == 0 ? 0 : av / (float)(nobs);
   }
 
   public final Iterator<Row> iterator() { return new RowIter(start(), end()); }
@@ -207,7 +210,10 @@ public class Data implements Iterable<Data.Row> {
           byte[] raw = cols[f]._rawB;
           for (int i = lo; i < hi; i++) {
             int permIdx = permutation[i];
-            int val = (0xFF & raw[permIdx]);
+            int val = raw[permIdx]&0xFF;
+            if (val == DataAdapter.BAD) continue;
+            short resp = cols[cols.length-1]._binned[permIdx];
+            if (resp == DataAdapter.BAD) continue;
             int response_bin = _dapt.getEncodedClassColumnValue(permIdx); //cols[cols.length-1]._binned[permIdx]; //cols[_dapt.classColIdx()]._binned == null ? (cols[_dapt.classColIdx()]._rawB[permIdx] & 0xFF) : cols[_dapt.classColIdx()]._binned[permIdx];
             cdsf[val][response_bin]++; // = resp;
           }
@@ -222,8 +228,6 @@ public class Data implements Iterable<Data.Row> {
     int l =  _dapt.hasAnyInvalid(cidx) || _dapt.hasAnyInvalid(_dapt.columns()-1)
             ? filterInv(node,permutation,ls,rs)
             : filterVal(node,permutation,ls,rs);
-    ls.applyClassWeights();     // Weight the distributions
-    rs.applyClassWeights();     // Weight the distributions
     ColumnInfo[] linfo = _columnInfo.clone();
     ColumnInfo[] rinfo = _columnInfo.clone();
     linfo[node._column]= linfo[node._column].left(node._split);
