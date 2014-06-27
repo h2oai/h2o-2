@@ -676,13 +676,23 @@ h2o.deeplearning <- function(x, y, data, classification = TRUE, nfolds = 0, vali
   #   params$epochs = model_params$epochs
   
   # result$params = params
-  model_params = res$model_info$parameters
+  # model_params = res$model_info$parameters
+  model_params = res$model_info$job
   model_params$Request2 = NULL; model_params$response_info = NULL
   model_params$'source' = NULL; model_params$validation = NULL
-  result$params = unlist(model_params, recursive = FALSE)
-  result$params = lapply(result$params, function(x) { if(is.character(x)) { switch(x, true = TRUE, false = FALSE, "Inf" = Inf, "-Inf" = -Inf, x) }
+  model_params$job_key = NULL; model_params$destination_key = NULL
+  model_params$response = NULL; model_params$description = NULL
+  if(!is.null(model_params$exception)) stop(model_params$exception)
+  model_params$exception = NULL; model_params$state = NULL
+  
+  # Remove all NULL elements and nested lists (the latter will cause problems in lapply)
+  if(length(model_params) > 0)
+    model_params = model_params[!sapply(model_params, function(x) { length(x) > 1 || is.null(x) })]
+  
+  # result$params = unlist(model_params, recursive = FALSE)
+  result$params = lapply(model_params, function(x) { if(is.character(x)) { switch(x, true = TRUE, false = FALSE, "Inf" = Inf, "-Inf" = -Inf, x) }
                                                       else return(x) })
-  result$params$nfolds = params$n_folds
+  result$params$nfolds = params$n_folds; params$n_folds = NULL
   errs = tail(res$errors, 1)[[1]]
   confusion = errs$valid_confusion_matrix
   
@@ -693,10 +703,10 @@ h2o.deeplearning <- function(x, y, data, classification = TRUE, nfolds = 0, vali
     # result$confusion = .build_cm(cm, confusion$actual_domain, confusion$predicted_domain)
     result$confusion = .build_cm(cm, confusion$domain) 
   }
-  result$train_class_error = errs$train_err
-  result$train_sqr_error = errs$train_mse
-  result$valid_class_error = errs$valid_err
-  result$valid_sqr_error = errs$valid_mse
+  result$train_class_error = as.numeric(errs$train_err)
+  result$train_sqr_error = as.numeric(errs$train_mse)
+  result$valid_class_error = as.numeric(errs$valid_err)
+  result$valid_sqr_error = as.numeric(errs$valid_mse)
   
   if(!is.null(errs$validAUC)) {
     tmp <- .h2o.__getPerfResults(errs$validAUC)
