@@ -25,8 +25,14 @@ import java.util.HashMap;
  *  are intercepted by the h2o R package and subsequently "packed away" into abstract syntax trees. These ASTs are
  *  converted to JSON, sent over the wire, and dropped here for further analysis.
  *
- *  First cut: Don't do any analysis or java code generation. Generate simple instructions for Env (the interpreter
- *  in the cloud)
+ *  First cut: Don't do any analysis or java code generation. Generate simple instructions for the interpreter.
+ *
+ *  The POJO returned from here is passed to an instance of Env. The POJO has is a map of programs to be executed:
+ *      AST2IR.getInstructionSet() will return a new HashMap<String, Program>(), where a Program is a list of
+ *      instructions plus the accompanying symbol tables.
+ *
+ *  There is a special type of program that is the "global" program. This is the __main__ program. It is responsible for
+ *  switching control to other programs (user-defined functions and other calls), and managing returned values.
  */
 public class AST2IR {
 
@@ -98,26 +104,48 @@ public class AST2IR {
     return false;
   }
 
-  private boolean isCall(String f) {
-  }
+  private boolean isCall(String f) { }
 
-  private boolean isId() {
-  }
+  private boolean isId() { }
 
-  private boolean isConst() {
-  }
+  private boolean isConst() { }
 
-  private boolean isString() {
-  }
+  private boolean isString() { }
 
-  private boolean isArg() {
-  }
+  private boolean isArg() { }
 
   private boolean isOp(JsonObject node) {
     return node.get("astop") != null;
   }
 
+  class Program {
+    SymbolTable _global;
+    SymbolTable _local;
+    boolean _isMain;
+    ArrayList<String> _stmts;
+
+    Program(SymbolTable global, SymbolTable local) {
+      _global = global;
+      _local = local;
+      _stmts = new ArrayList<String>();
+      _isMain = _local == null;
+    }
+
+    public String lookUpType(String name) {
+      if (_local.typeOf(name) != null) return _local.typeOf(name);
+      if (_global.typeOf(name)!= null) return _global.typeOf(name);
+      throw new IllegalArgumentException("Could not find the identifier in the local or global scopes: "+name);
+    }
+
+    public String lookUpValue(String name) {
+      if (_local.valueOf(name) != null) return _local.valueOf(name);
+      if (_global.valueOf(name)!= null) return _global.valueOf(name);
+      throw new IllegalArgumentException("Could not find the identifier in the local or global scopes: "+name);
+    }
+  }
 }
+
+
 /**
  *  The Symbol Table Data Structure: A mapping between identifiers and their values.
  *
@@ -169,4 +197,3 @@ class SymbolTable {
     public String valueOf() { return _value; }
   }
 }
-
