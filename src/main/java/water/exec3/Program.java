@@ -47,16 +47,38 @@ public class Program implements Iterable<Program.Statement>{
   protected final boolean isMain() { return _isMain; }
   protected final boolean canWriteToGlobal() { return isMain(); }
 
-  protected final String lookUpType(String name) {
-    if (_local.typeOf(name) != null) return _local.typeOf(name);
+  protected final String readType(String name) {
+    if (_local != null) {
+      if (_local.typeOf(name) != null) return _local.typeOf(name);
+    }
     if (_global.typeOf(name)!= null) return _global.typeOf(name);
-    throw new IllegalArgumentException("Could not find the identifier in the local or global scopes: "+name);
+    throw new IllegalArgumentException("Could not find the identifier in the local or global scope while looking up type of: "+name);
   }
 
-  protected final String lookUpValue(String name) {
-    if (_local.valueOf(name) != null) return _local.valueOf(name);
+  protected final String readValue(String name) {
+    if (_local != null) {
+      if (_local.valueOf(name) != null) return _local.valueOf(name);
+    }
     if (_global.valueOf(name)!= null) return _global.valueOf(name);
-    throw new IllegalArgumentException("Could not find the identifier in the local or global scopes: "+name);
+    throw new IllegalArgumentException("Could not find the identifier in the local or global scopes while looking up value of: "+name);
+  }
+
+  // Writing Types and Values to the symbol table means stomping on the attributes for a name already in the symbol table.
+  // At the 
+  protected final void writeType(String id, String type) {
+    if (canWriteToGlobal()) {
+      _global.writeType(id, type);
+    } else {
+      _local.writeValue(id, type);
+    }
+  }
+
+  protected final void writeValue(String id, String value) {
+    if (canWriteToGlobal()) {
+      _global.writeValue(id, value);
+    } else {
+      _local.writeValue(id, value);
+    }
   }
 
   protected final void addStatement(Statement stmt) { _stmts.add(stmt); }

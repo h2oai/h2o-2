@@ -173,6 +173,20 @@ class SymbolTable {
     return _table.get(name).valueOf();
   }
 
+  public void writeType(String name, String type) {
+    assert _table.containsKey(name) : "No such identifier in the symbol table: " + name;
+    SymbolAttributes attrs = _table.get(name);
+    attrs.writeType(type);
+    _table.put(name, attrs);
+  }
+
+  public void writeValue(String name, String value) {
+    assert _table.containsKey(name) : "No such identifier in the symbol table: " + name;
+    SymbolAttributes attrs = _table.get(name);
+    attrs.writeValue(value);
+    _table.put(name, attrs);
+  }
+
   private class SymbolAttributes {
     private String _type;
     private String _value;
@@ -180,6 +194,10 @@ class SymbolTable {
     SymbolAttributes(String type, String value) { _type = type; _value = value; }
 
     public String typeOf ()  { return _type;  }
-    public String valueOf() { return _value; }
+    public String valueOf()  { return  _value; }
+
+    public void writeType(String type)   { this._type  = type; }
+    public void writeValue(String value) { this._value = value;}
+
   }
 }
