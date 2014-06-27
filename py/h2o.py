@@ -1829,7 +1829,9 @@ class H2O(object):
         # on v2, there is no default response. So if it's none, we should use the last column, for compatibility
         inspect = h2o_cmd.runInspect(key=data_key)
         # response only takes names. can't use col index..have to look it up
-        params_dict['response'] = str(inspect['cols'][-1]['name'])
+
+        if isinstance(params_dict['response'], int): 
+            params_dict['response'] = str(inspect['cols'][params_dict['response']]['name'])
 
         if print_params:
             print "\n%s parameters:" % algo, params_dict
