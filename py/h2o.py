@@ -1803,13 +1803,13 @@ class H2O(object):
             'source': data_key,
             # 'model': None,
             'response': None,
-            'balance_classes': 1, 
+            'balance_classes': None, 
             'classification': 1,
             'cols': None,
             'ignored_cols': None,
             'ignored_cols_by_name': None,
             'importance': 1, # enable variable importance by default
-            'max_after_balance_size': 7,
+            'max_after_balance_size': None,
             'max_depth': None,
             'min_rows': None, # how many rows in leaves for stopping condition
             'mtries': None,
@@ -1829,8 +1829,10 @@ class H2O(object):
         # on v2, there is no default response. So if it's none, we should use the last column, for compatibility
         inspect = h2o_cmd.runInspect(key=data_key)
         # response only takes names. can't use col index..have to look it up
-
-        if isinstance(params_dict['response'], int): 
+        # or add last col
+        if ('response' not in params_dict) or (not params_dict['response']):
+            params_dict['response'] = str(inspect['cols'][-1]['name'])
+        elif isinstance(params_dict['response'], int): 
             params_dict['response'] = str(inspect['cols'][params_dict['response']]['name'])
 
         if print_params:
