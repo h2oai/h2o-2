@@ -961,6 +961,8 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, nfolds=0, validation,
   if(nfolds == 1) stop("nfolds cannot be 1")
   if(!missing(validation) && class(validation) != "H2OParsedData")
     stop("validation must be an H2O parsed dataset")
+
+  if(missing(verbose)) {verbose <- FALSE}
   
   if(missing(validation) && nfolds == 0) {
     # Default to using training data as validation
