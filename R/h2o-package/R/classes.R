@@ -54,7 +54,7 @@
 setClass("H2OClient", representation(ip="character", port="numeric"), prototype(ip="127.0.0.1", port=54321))
 
 setMethod("show", "H2OClient", function(object) {
-  cat("IP Address:", object@ip, "\n")
+  cat("IP Address:", object@ip,   "\n")
   cat("Port      :", object@port, "\n")
 })
 
@@ -543,7 +543,9 @@ setClass("ASTFrame", representation(type="character", value="character"), contai
 #'
 #' The ASTUnk class.
 #'
-#' This class represents a leaf that will be assigned to and has unkown type before evaluation -OR-
+#' This class represents a leaf that
+#' will be assigned to and has unkown type before evaluation
+#' -OR-
 #' it represents an operation on a function's argument if the symbol appears in the functions formals.
 #' The distinction between these two cases is denoted by isFormal (TRUE -> Function arg, FALSE -> assignment)
 #'
