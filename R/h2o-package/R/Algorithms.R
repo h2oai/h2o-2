@@ -685,13 +685,18 @@ h2o.deeplearning <- function(x, y, data, classification = TRUE, nfolds = 0, vali
   if(!is.null(model_params$exception)) stop(model_params$exception)
   model_params$exception = NULL; model_params$state = NULL
   
-  # Remove all NULL elements and nested lists (the latter will cause problems in lapply)
+  # Remove all NULL elements and cast to logical value
   if(length(model_params) > 0)
-    model_params = model_params[!sapply(model_params, function(x) { length(x) > 1 || is.null(x) })]
-  
+    model_params = model_params[!sapply(model_params, is.null)]
+  for(i in 1:length(model_params)) {
+    x = model_params[[i]]
+    if(length(x) == 1 && is.character(x))
+      model_params[[i]] = switch(x, true = TRUE, false = FALSE, "Inf" = Inf, "-Inf" = -Inf, x)
+  }
+  result$params = model_params
   # result$params = unlist(model_params, recursive = FALSE)
-  result$params = lapply(model_params, function(x) { if(is.character(x)) { switch(x, true = TRUE, false = FALSE, "Inf" = Inf, "-Inf" = -Inf, x) }
-                                                      else return(x) })
+  # result$params = lapply(model_params, function(x) { if(is.character(x)) { switch(x, true = TRUE, false = FALSE, "Inf" = Inf, "-Inf" = -Inf, x) }
+  #                                                    else return(x) })
   result$params$nfolds = params$n_folds; params$n_folds = NULL
   errs = tail(res$errors, 1)[[1]]
   confusion = errs$valid_confusion_matrix
