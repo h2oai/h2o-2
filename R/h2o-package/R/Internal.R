@@ -416,7 +416,12 @@ function(expr) {
 function(some_expr_list) {
   len <- length(some_expr_list)
   while(len > 1) {
-    num_sub_lists <- length(unlist(some_expr_list[[len]])) / length(some_expr_list[[len]])
+    num_sub_lists <- 0
+    if (length(some_expr_list[[len]]) == 1) {
+      num_sub_lists <- 1
+    } else {
+      num_sub_lists <- length(unlist(some_expr_list[[len]])) / length(some_expr_list[[len]])
+    }
     if (num_sub_lists > 1) {
       some_expr_list[[len]] <- .back_to_expr(some_expr_list[[len]])
     } else if (is.atomic(some_expr_list[[len]]) || is.name(some_expr_list[[len]])) {
@@ -511,7 +516,12 @@ function(some_expr_list, envir) {
   while(i <= len) {
 
     # Check if there are sub lists and recurse them
-    num_sub_lists <- length(unlist(some_expr_list[[i]])) / length(some_expr_list[[i]])
+    num_sub_lists <- 0
+    if (length(some_expr_list[[i]]) == 1) {
+      num_sub_lists <- 1
+    } else {
+      num_sub_lists <- length(unlist(some_expr_list[[i]])) / length(some_expr_list[[i]])
+    }
     if (num_sub_lists > 1) {
 
       # recurse on the sublist

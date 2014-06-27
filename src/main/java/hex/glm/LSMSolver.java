@@ -286,7 +286,8 @@ public abstract class LSMSolver extends Iced{
       double kappa = _lambda*_alpha/rho;
       int i;
       int k = 20;
-      for(i = 0; i < 10000; ++i ) {
+      int max_iter = Math.max(1000,10000/(1 + (xy.length/500)));
+      for(i = 0; i < max_iter; ++i ) {
         // first compute the x update
         // add rho*(z-u) to A'*y
         for( int j = 0; j < N-1; ++j )xyPrime[j] = xy[j] + rho*(z[j] - u[j]);

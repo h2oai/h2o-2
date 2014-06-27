@@ -66,6 +66,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   /* Score each iteration? */                                             boolean score_each;
   @API(help = "CV Error")                                                 public double cv_error;
   @API(help = "Verbose Mode")                                             public boolean verbose;
+  @API(help = "Verbose Output")                                           public String[] verbose_output;
 
   /**
    * Extra helper variables.
@@ -141,7 +142,8 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     this.regression = model.regression;
     this.score_each = model.score_each;
     this.cv_error = err;
-    this.verbose = verbose;
+    this.verbose = model.verbose;
+    this.verbose_output = model.verbose_output;
   }
 
   public Vec get_response() {
@@ -243,7 +245,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     }
   }
 
-  public static SpeeDRFModel make(SpeeDRFModel old, Key tkey, int nodeIdx) {
+  public static SpeeDRFModel make(SpeeDRFModel old, Key tkey, int nodeIdx, String tString) {
 
     // Create a new model for atomic update
     SpeeDRFModel m = (SpeeDRFModel)old.clone();
@@ -255,6 +257,12 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     // Update the local_forests
     m.local_forests[nodeIdx] = Arrays.copyOf(old.local_forests[nodeIdx],old.local_forests[nodeIdx].length+1);
     m.local_forests[nodeIdx][m.local_forests[nodeIdx].length-1] = tkey;
+
+    // Update the treeStrings?
+    if (old.verbose_output.length < 2) {
+      m.verbose_output = Arrays.copyOf(old.verbose_output, old.verbose_output.length + 1);
+      m.verbose_output[m.verbose_output.length - 1] = tString;
+    }
 
     // Do not score every time because it's slow and isn't necessary.
     // Only score the first tree and when the whole forest is available.
