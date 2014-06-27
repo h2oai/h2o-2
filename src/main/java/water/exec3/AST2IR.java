@@ -6,6 +6,7 @@ import com.google.gson.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 
 
 /**
@@ -32,7 +33,10 @@ import java.util.HashMap;
  *      instructions plus the accompanying symbol tables.
  *
  *  There is a special type of program that is the "global" program. This is the __main__ program. It is responsible for
- *  switching control to other programs (user-defined functions and other calls), and managing returned values.
+ *  switching control to other programs (user-defined functions and other calls), and managing returned values. There
+ *  is always a main, even in cases such as result <- f(...). The left-arrow assignment is the main in this case.
+ *  If f(...) is called without assignment, then there is a temporary key created and spit out to the console. The
+ *  lifetime of this temporary key is discussed elsewhere.
  */
 public class AST2IR {
 
@@ -117,34 +121,7 @@ public class AST2IR {
   private boolean isOp(JsonObject node) {
     return node.get("astop") != null;
   }
-
-  class Program {
-    SymbolTable _global;
-    SymbolTable _local;
-    boolean _isMain;
-    ArrayList<String> _stmts;
-
-    Program(SymbolTable global, SymbolTable local) {
-      _global = global;
-      _local = local;
-      _stmts = new ArrayList<String>();
-      _isMain = _local == null;
-    }
-
-    public String lookUpType(String name) {
-      if (_local.typeOf(name) != null) return _local.typeOf(name);
-      if (_global.typeOf(name)!= null) return _global.typeOf(name);
-      throw new IllegalArgumentException("Could not find the identifier in the local or global scopes: "+name);
-    }
-
-    public String lookUpValue(String name) {
-      if (_local.valueOf(name) != null) return _local.valueOf(name);
-      if (_global.valueOf(name)!= null) return _global.valueOf(name);
-      throw new IllegalArgumentException("Could not find the identifier in the local or global scopes: "+name);
-    }
-  }
 }
-
 
 /**
  *  The Symbol Table Data Structure: A mapping between identifiers and their values.
@@ -165,6 +142,15 @@ public class AST2IR {
  *    arg: An argument to a function call
  *    call: A function call (if UDF, value is the body of the function)
  *    key: An h2o key
+ *
+ *  Symbol Table Permissions:
+ *  -------------------------
+ *
+ *  Every Program object will have at most two symbol tables: the global and local tables.
+ *  The global table is read only by every Program that has a non-null local table.
+ *  The global table is read-write by the main program only.
+ *
+ *  NB: The existence of a non-null symbol table implies that operation is occurring in a non-global scope.
  */
 class SymbolTable {
 
