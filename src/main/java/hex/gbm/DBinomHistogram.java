@@ -59,13 +59,12 @@ public class DBinomHistogram extends DHistogram<DBinomHistogram> {
 
     // Store indices from sort to determine group split later
     Integer idx[] = new Integer[nbins];
-    for(int i = 0; i < nbins; i++) idx[i] = i;
+    for(int b = 0; b < nbins; b++) idx[b] = b;
 
     // Sort predictor levels in ascending order of mean response within each bin
     if(_isInt == 2 && _step == 1.0f && nbins >= 4) {
       final Double[] means = new Double[nbins];
-      for(int i = 0; i < nbins; i++)
-        means[i] = (double)_sums[i]/_bins[i];
+      for(int b = 0; b < nbins; b++) means[b] = mean(b);
       Arrays.sort(idx, new Comparator<Integer>() {
         @Override public int compare(Integer o1, Integer o2) { return means[o1].compareTo(means[o2]); }
       });
@@ -160,7 +159,7 @@ public class DBinomHistogram extends DHistogram<DBinomHistogram> {
       /* bs = new IcedBitSet(nbins, (int)_min);
       equal = (byte)(bs.numBytes() <= 4 ? 2 : 3);
       // for(int i = 0; i < best; i++) bs.set(idx[i]);
-      for(int i = best; i < nbins; i++) bs.set(idx[i]);*/
+      for(int i = best; i < nbins; i++) bs.set(idx[i]); */
 
       // Small cats: always use 4B to store and prepend offset # of zeros at front
       // Big cats: save offset and store only nbins # of bits that are left after trimming
