@@ -633,11 +633,15 @@ public abstract class Neurons {
       int    [] cats = MemoryManager.malloc4(_dinfo._cats); // a bit wasteful - reallocated each time
       int i = 0, ncats = 0;
       for(; i < _dinfo._cats; ++i){
-        int c = (int)data[i];
-        if (_dinfo._useAllFactorLevels)
-          cats[ncats++] = c + _dinfo._catOffsets[i];
-        else
-          if(c != 0) cats[ncats++] = c + _dinfo._catOffsets[i] - 1;
+        // Gracefully handle NaN input values -> don't activate any of the horizontalized input features
+        // (can occur when testing data has categorical levels that are not part of training)
+        if (!Double.isNaN(data[i])) {
+          int c = (int) data[i];
+          if (_dinfo._useAllFactorLevels)
+            cats[ncats++] = c + _dinfo._catOffsets[i];
+          else if (c != 0)
+            cats[ncats++] = c + _dinfo._catOffsets[i] - 1;
+        }
       }
       final int n = data.length; // data contains only input features - no response is included
       for(;i < n;++i){
