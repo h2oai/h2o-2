@@ -1969,6 +1969,26 @@ class H2O(object):
         verboseprint("\nnaive_bayes result:", dump_json(a))
         return a
 
+    def anomaly(self, timeoutSecs=300, print_params=True, **kwargs):
+        params_dict = {
+            'destination_key': None,
+            'source': None,
+            'dl_autoencoder_model': None,
+            'thresh': None,
+        }
+        check_params_update_kwargs(params_dict, kwargs, 'anomaly', print_params)
+        start = time.time()
+        a = self.__do_json_request('2/Anomaly.json', timeout=timeoutSecs, params=params_dict)
+
+        if noPoll:
+            return a
+
+        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, benchmarkLogging=benchmarkLogging,
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
+        verboseprint("\nanomaly :result:", dump_json(a))
+        a['python_elapsed'] = time.time() - start
+        a['python_%timeout'] = a['python_elapsed'] * 100 / timeoutSecs
+        return a
 
     def gbm_view(self, model_key, timeoutSecs=300, print_params=False, **kwargs):
         params_dict = {
@@ -2069,16 +2089,6 @@ class H2O(object):
 
         if (browseAlso | browse_json):
             h2b.browseJsonHistoryAsUrlLastMatch(algo)
-
-        # it will redirect to an inspect, so let's get that inspect stuff
-        # FIX! not supported in json yet if beta_features
-        # FIX! who checks the redirect is correct?
-        if beta_features:
-            print "%s response:" % algo, dump_json(a)
-        else:
-            resultKey = a['response']['redirect_request_args']['key']
-            a = self.__do_json_request(algoView, timeout=timeoutSecs, params={"key": resultKey})
-            verboseprint("\nInspect of " + resultKey, dump_json(a))
 
         return a
 
