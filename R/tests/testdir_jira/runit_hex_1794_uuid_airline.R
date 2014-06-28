@@ -59,11 +59,6 @@ test <- function(conn) {
 		print("Dimension of strongest predictions: ") ; dim(top.air)
 		print("Head of strongest predictions: ") ; head(top.air)
 
-	print("Export predictions with UUID to CSV")
-		h2o.exportFile(data=top.air, path="smalldata/airlines/airlineUUIDpredictions.csv",force=TRUE)
-		print("Check that error is raised when file exists and force=False")
-		assertError(h2o.exportFile(top.air, path="smalldata/airlines/airlineUUIDpredictions.csv",force=FALSE)) 
-		file.remove(locate("smalldata/airlines/airlineUUIDpredictions.csv"))  	
   testEnd()
 }
 
