@@ -22,7 +22,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GBM_mnist_fvec(self):
-        h2o.beta_features = False
+        h2o.beta_features = True
         importFolderPath = "mnist"
         csvFilename = "mnist_training.csv.gz"
         timeoutSecs=1800
@@ -33,6 +33,7 @@ class Basic(unittest.TestCase):
         start = time.time()
         parseResult = h2i.import_parse(bucket='home-0xdiag-datasets',  path=importFolderPath + "/" + csvFilename, schema='put',
             hex_key=trainKey, timeoutSecs=timeoutSecs)
+
         elapsed = time.time() - start
         print "parse end on ", csvFilename, 'took', elapsed, 'seconds',\
             "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
@@ -67,7 +68,10 @@ class Basic(unittest.TestCase):
 
         print "GBM 'errsLast'", errsLast
         if DO_CLASSIFICATION:
-            cm = gbmTrainView['gbm_model']['cms'][-1]['_arr'] # use the last one
+            cms = gbmTrainView['gbm_model']['cms']
+            cm = cms[-1]['_arr'] # use the last one
+            print "GBM cms[-1]['_predErr']:", cms[-1]['_predErr']
+            print "GBM cms[-1]['_classErr']:", cms[-1]['_classErr']
             pctWrongTrain = h2o_gbm.pp_cm_summary(cm);
             print "\nTrain\n==========\n"
             print h2o_gbm.pp_cm(cm)

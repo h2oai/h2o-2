@@ -454,7 +454,7 @@ public class Summary2 extends Iced {
 
   public Summary2 add(Chunk chk) {
     if( chk._vec.isUUID() ) {
-      Log.info("Summary2: isUUID() in add");
+      // Log.info("Summary2: isUUID() in add");
       return this;
     }
     for (int i = 0; i < chk._len; i++)
