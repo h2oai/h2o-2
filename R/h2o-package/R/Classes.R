@@ -24,6 +24,7 @@ setClass("H2OGBMGrid", contains="H2OGrid")
 setClass("H2OKMeansGrid", contains="H2OGrid")
 setClass("H2ODRFGrid", contains="H2OGrid")
 setClass("H2ODeepLearningGrid", contains="H2OGrid")
+setClass("H2OSpeeDRFGrid", contains="H2OGrid")
 setClass("H2OGLMModelList", representation(models="list",best_model="numeric"))
 
 # Register finalizers for H2O data and model objects

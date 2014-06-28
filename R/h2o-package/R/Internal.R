@@ -149,6 +149,7 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__PAGE_PCAProgress = "2/PCAProgressPage.json"
 .h2o.__PAGE_PCAModelView = "2/PCAModelView.json"
 .h2o.__PAGE_SpeeDRF = "2/SpeeDRF.json"
+.h2o.__PAGE_SpeeDRFProgress = "2/SpeeDRFProgressPage.json"
 .h2o.__PAGE_SpeeDRFModelView = "2/SpeeDRFModelView.json"
 .h2o.__PAGE_BAYES = "2/NaiveBayes.json"
 .h2o.__PAGE_NBProgress = "2/NBProgressPage.json"
