@@ -198,6 +198,7 @@ print("ALGO BINOMIAL COMPARISON")
 
 print("DLERROR")
 #print(1 - dl@model$accuracy)
+len <- length(dl$deeplearning_model$errors)
 print(1 - dl$deeplearning_model$errors[[len]]$validAUC$accuracy_for_criteria[1])
 
 print("GBMERROR")

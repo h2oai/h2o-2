@@ -1,0 +1,6 @@
+source("../../../R/h2oPerf/prologue.R")
+dl  <<- runDL(x = 3:23, y = 24,activation="RectifierWithDropout",hidden=c(100,100,100,100,100),epochs=1000,rho=0.99,epsilon=1E-8,l1 = 1E-3,nfolds = 5)
+gbm <<- runGBM(x = 3:23, y = 24, distribution = 'multinomial', n.trees = 500,  interaction.depth = 10, n.bins = 50, shrinkage = 0.1, nfolds = 5)
+drf <<- runRF(x = 3:23, y = 24, ntree=50, depth = 10, nbins = 50, nfolds = 5)
+srf <<- runSRF(x = 3:23, y = 24, ntree=50, depth = 10, nbins = 1024, nfolds = 5)
+source("../../../R/h2oPerf/specialEpilogue.R")
