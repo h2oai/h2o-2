@@ -17,7 +17,7 @@ function makeTable(json, svg) {
    datas[0] = header;
    for(i = 0; i < json.data.length; i++) {
      datas[i+1] = d3.values(json.data[i]);
-     link = "http://192.168.1.171:4040/perflink.html?test_run_id=" + datas[i+1][0] + "&test_name=" + datas[i+1][2] + "&num_hosts=" + datas[i+1][10];
+     link = "http://192.168.1.171:4040/perflink.html?test_run_id=" + datas[i+1][0] + "&test_name=" + datas[i+1][2] + "&num_hosts=" + datas[i+1][10] + "&rundate=" + datas[i+1][1].split('-').join('');
      datas[i+1].push(link)
    }
 
@@ -336,7 +336,7 @@ function nodePerfGraph(json, svgCPU, svgRSS) {
     var node_name = json.data[0]['node_ip'];
     var ts_raw = json.data.map(function(d) { return d['ts'] });
     var max_time = d3.max(ts_raw);
-    var ts = (ts_raw.map(function(d) { return max_time - d })).sort();
+    var ts = (ts_raw.map(function(d) { return max_time - d })).sort(function(a,b) {return a - b; });
     var sys_cpu = zip(ts, json.data.map(function(d) { return d['cum_cpu_sys'] }));
     var user_cpu = zip(ts, json.data.map(function(d) { return d['cum_cpu_proc'] }));
     var rss = zip(ts, json.data.map(function(d) { return d['rss'] / (1.0 * 1024 * 1024) }));
