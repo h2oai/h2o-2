@@ -368,26 +368,26 @@ class Alerter:
         res_path = os.path.join(this_path, '..', "results", "Alerts.txt")
         with open(res_path, 'w') as f:
 
-        # Check & Report Correctness Alerts
+            # Check & Report Correctness Alerts
+            f.write(CORRECT_ALERT_HEADER)
+            f.write('\n')
             if len(self.correct_alert.alert_list) > 0:
-                f.write(CORRECT_ALERT_HEADER)
-                f.write('\n')
                 for key in self.correct_alert.alert_list:
                     f.write("Test " + key + " failed:  " + self.correct_alert.alert_list[key])
                     f.write('\n')
 
-        # Check & Report Timing Alerts
+            # Check & Report Timing Alerts
+            f.write(TIMING_ALERT_HEADER)
+            f.write('\n')
             if len(self.speed_alert.alert_list) > 0:
-                f.write(TIMING_ALERT_HEADER)
-                f.write('\n')
-            for key in self.speed_alert.alert_list:
+                for key in self.speed_alert.alert_list:
                     f.write("Test " + key + " failed:  " + self.speed_alert.alert_list[key])
                     f.write('\n')
 
-        # Check & Report Infrastructure Alerts
+            # Check & Report Infrastructure Alerts
+            f.write(INFRASTRUCTURE_ALERT_HEADER)
+            f.write('\n')
             if len(self.infrastructure_alert.alert_list) > 0:
-                f.write(INFRASTRUCTURE_ALERT_HEADER)
-                f.write('\n')
-            for key in self.infrastructure_alert.alert_list:
+                for key in self.infrastructure_alert.alert_list:
                     f.write("Test " + key + " failed:  " + self.infrastructure_alert.alert_list[key])
                     f.write('\n')
