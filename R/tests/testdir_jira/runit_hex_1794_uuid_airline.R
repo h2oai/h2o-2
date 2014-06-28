@@ -63,7 +63,7 @@ test <- function(conn) {
 		h2o.exportFile(data=top.air, path="smalldata/airlines/airlineUUIDpredictions.csv",force=TRUE)
 		print("Check that error is raised when file exists and force=False")
 		assertError(h2o.exportFile(top.air, path="smalldata/airlines/airlineUUIDpredictions.csv",force=FALSE)) 
-		file.remove("smalldata/airlines/airlineUUIDpredictions.csv")  	
+		file.remove(locate("smalldata/airlines/airlineUUIDpredictions.csv"))  	
   testEnd()
 }
 
