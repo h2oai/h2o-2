@@ -5,6 +5,7 @@ import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.fvec.Vec.VectorGroup;
 import water.nbhm.NonBlockingHashMap;
+import water.nbhm.NonBlockingSetInt;
 import water.parser.*;
 import water.parser.CustomParser.ParserSetup;
 import water.parser.CustomParser.ParserType;
@@ -565,7 +566,7 @@ public final class ParseDataset2 extends Job {
       Key _removeKey;
       transient final MultiFileParseTask _outerMFPT;
       final int _nchunks;
-      transient private AtomicBoolean[] _visited;
+      transient private NonBlockingSetInt _visited;
 
       DParse(VectorGroup vg, CustomParser.ParserSetup setup, int vecIdstart, int startChunkIdx, MultiFileParseTask mfpt, int nchunks) {
         super(mfpt);
@@ -585,10 +586,7 @@ public final class ParseDataset2 extends Job {
           for(int i = 0; i < _setup._ncols; ++i)
             _appendables[i] = new AppendableVec(_vg.vecKey(_vecIdStart + i));
         }
-        _visited = new AtomicBoolean[_nchunks];
-        for(int i = 0; i < _visited.length; ++i)
-          _visited[i] = new AtomicBoolean();
-
+        _visited = new NonBlockingSetInt();
       }
       @Override public void map( Chunk in) {
         Enum [] enums = enums(_eKey,_setup._ncols);
@@ -614,16 +612,17 @@ public final class ParseDataset2 extends Job {
         onProgress(in._len, _progress); // Record bytes parsed
         final int cidx = in.cidx();
         // remove parsed data right away (each chunk is used by 2)
-        if(_visited[cidx].getAndSet(true)) {
-          Value v = DKV.get(in._vec.chunkKey(cidx));
-          if(v.isPersisted()) {
+
+        if(!_visited.add(cidx)) {
+          Value v = H2O.get(in._vec.chunkKey(cidx));
+          if(v != null && v.isPersisted()) {
             v.freePOJO();
             v.freeMem();
           }
         }
-        if(cidx+1 < _visited.length && _visited[cidx+1].getAndSet(true)) {
-          Value v = DKV.get(in._vec.chunkKey(cidx+1));
-          if(v.isPersisted()) {
+        if(!_visited.add(cidx+1)) {
+          Value v = H2O.get(in._vec.chunkKey(cidx+1));
+          if(v != null && v.isPersisted()) {
             v.freePOJO();
             v.freeMem();
           }
