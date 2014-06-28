@@ -339,7 +339,7 @@ function nodePerfGraph(json, svgCPU, svgRSS) {
     var ts = (ts_raw.map(function(d) { return max_time - d })).sort(function(a,b) {return a - b; });
     var sys_cpu = zip(ts, json.data.map(function(d) { return d['cum_cpu_sys'] }));
     var user_cpu = zip(ts, json.data.map(function(d) { return d['cum_cpu_proc'] }));
-    var rss = zip(ts, json.data.map(function(d) { return d['rss'] / (1.0 * 1024 * 1024) }));
+    var rss = zip(ts, json.data.map(function(d) { return d['rss'] / (1.0 * 1024) }));
 
     var cpu_min = d3.min( [d3.min(user_cpu.map(function(d) {return d[0];})),  d3.min(sys_cpu.map(function(d) { return d[0]; }))]);
     var cpu_max = d3.max( [d3.max(user_cpu.map(function(d) {return d[0]; })),  d3.max(sys_cpu.map(function(d) { return d[0]; }))])
@@ -467,6 +467,6 @@ function nodePerfGraph(json, svgCPU, svgRSS) {
         .attr("y", 6)
         .attr("dy", ".71em")
         .style("text-anchor", "end")
-        .text("Cumulative Memory Used"); 
+        .text("Cumulative Memory Used (GB)"); 
 }
 
