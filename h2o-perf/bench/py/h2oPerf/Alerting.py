@@ -335,41 +335,11 @@ class Alerter:
     alerting by email.
     """
 
-    def __init__(self, order):
+    def __init__(self, order, names):
         self.correct_alert = CorrectAlert(order)
         self.speed_alert = SpeedAlert(order)
         self.infrastructure_alert = InfrastructureAlert(order)
-
-        # This is a list of tests with a "modeling" phase
-        self.test_list = ['singlenode_deeplearning_mnist'
-                          'multinode_deeplearning_mnist'
-                          'singlenode_glm_va_airlines'
-                          'singlenode_pca_one-billion-rows'
-                          'singlenode_kmeans_va_airlines'
-                          'singlenode_summary_one-billion-rows'
-                          'singlenode_rf_va_mnist'
-                          'singlenode_summary_va_airlines'
-                          'singlenode_rf_fv_mnist'
-                          'singlenode_pca_airlines'
-                          'singlenode_ddply_airlines-1B'
-                          'singlenode_kmeans_fv_one-billion-rows'
-                          'singlenode_glm_fv_one-billion-rows'
-                          'singlenode_kmeans_one-billion-rows'
-                          'singlenode_gbm_covtype'
-                          'singlenode_glm_one-billion-rows'
-                          'multinode_kmeans_va_airlines'
-                          'multinode_rf_va_mnist'
-                          'multinode_summary_va_airlines'
-                          'multinode_rf_fv_mnist'
-                          'multinode_pca_airlines'
-                          'multinode_gbm_covtype'
-                          'singlenode_deeplearning_multinomial_correctness_mnist'
-                          'multinode_summary_one-billion-rows'
-                          'multinode_pca_one-billion-rows'
-                          'multinode_kmeans_fv_one-billion-rows'
-                          'multinode_glm_fv_one-billion-rows'
-                          'multinode_kmeans_one-billion-rows'
-                          'multinode_glm_one-billion-rows']
+        self.test_list = names
 
         self.test_names = self.correct_alert.test_names  # `correct_alert` chosen WLOG
 

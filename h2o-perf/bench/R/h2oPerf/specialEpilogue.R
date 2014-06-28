@@ -49,10 +49,12 @@ function() {
 
 .emitResults<-
 function() {
+  if (phase == "parse") {
+    correct_pass <<- 1
+  }
   .emitPhaseResults()
   cat("\n\n")
   if(phase == "parse") {
-    correct_pass <<- 1
     .emitParseResults()
     cat("\n\n")
   }
@@ -202,6 +204,11 @@ function() {
                      srf = ifelse(exists('srf_res'), 1 - srf_res@model$accuracy, "-1")))
   .coda("COMPARISON", js)
 }
+
+.emitPhaseResults()
+cat("\n\n")
+.emitKMeansResults()
+cat("\n\n")
 print("PREDICT TYPE:")
 print("comparison")
 .emitSpecial()

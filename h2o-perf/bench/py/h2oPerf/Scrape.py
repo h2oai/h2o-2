@@ -182,9 +182,15 @@ class ModelScraper(Scraper):
             self.test_run_clustering_result.row.update(kmeans_result)
             self.test_run_clustering_result.update()
 
-        self.test_run_model_result.row['model_json'] = \
+        comp_result = self.__scrape_comparison_result__()
+        if comp_result != "":
+            self.test_run_binomial_comparison_result = TableRow("test_run_binomial_comparison", self.perfdb)
+            self.test_run_binomial_comparison_result.row.update(comp_result['comparison_result'])
+            self.test_run_binomial_comparison_result.update()
+        else:
+            self.test_run_model_result.row['model_json'] = \
                           MySQLdb.escape_string(str(self.__scrape_model_result__()))
-        self.test_run_model_result.update()
+            self.test_run_model_result.update()
         return None
 
     def insert_phase_result(self):
@@ -195,6 +201,19 @@ class ModelScraper(Scraper):
         trpr.row['contamination_message'] = self.contamination_message
         trpr.row.update(self.__scrape_phase_result__())
         trpr.update()
+
+    def __scrape_comparison_result__(self):
+        comparison_r = ""
+        with open(self.output_file_name, "r") as f:
+            flag = False
+            for line in f:
+                if flag:
+                    comparison_r = json.loads(line)
+                    flag = False
+                    break
+                if "COMPARISON" in line and "print" not in line:
+                    flag = True
+        return comparison_r
 
     def __scrape_phase_result__(self):
         phase_r = ""
