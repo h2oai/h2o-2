@@ -54,7 +54,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_cols_enum_multi_import(self):
+    def test_cols_multi_permission(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         translateList = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u']
         tryList = [
@@ -79,16 +80,14 @@ class Basic(unittest.TestCase):
             parseResult = h2i.import_parse(path=SYNDATASETS_DIR + '/*'+rowxcol+'*', schema='local',
                 exclude=None, header=1, timeoutSecs=timeoutSecs)
             print "parseResult['destination_key']: " + parseResult['destination_key']
-            print 'parse time:', parseResult['response']['time']
-
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             h2o_cmd.infoFromInspect(inspect, csvPathname)
 
 
             # FIX! h2o strips one of the headers, but treats all the other files with headers as data
             print "\n" + parseResult['destination_key'] + ":", \
-                "    num_rows:", "{:,}".format(inspect['num_rows']), \
-                "    num_cols:", "{:,}".format(inspect['num_cols'])
+                "    numRows:", "{:,}".format(inspect['numRows']), \
+                "    numCols:", "{:,}".format(inspect['numCols'])
 
             # get uid/gid of files the test create (dir here)
             origUid = os.getuid()

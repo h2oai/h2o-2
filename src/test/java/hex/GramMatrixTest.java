@@ -49,7 +49,7 @@ GLEASON  2172.00  233.0   452757  1069.00  160303.0   5617.00  2725.00   40596.3
     Frame fr2=null;
     try{
       fr2=ParseDataset2.parse(okey2, new Key[]{ikey2});
-      DataInfo dinfo = new DataInfo(fr2, 0, false,  false);
+      DataInfo dinfo = new DataInfo(fr2, 0, false, DataInfo.TransformType.NONE);
       GramTask gt = new GramTask(null, dinfo, true,false);
       gt.doAll(dinfo._adaptedFrame);
       double [][] res = gt._gram.getXX();

@@ -10,7 +10,7 @@ import java.lang.reflect.Field;
 import java.util.Properties;
 
 import water.*;
-import water.api.ParamImportance;
+import water.api.*;
 import water.api.RequestArguments.Argument;
 import water.util.Log;
 
@@ -63,9 +63,24 @@ public abstract class DocGen {
     final Class _clazz; // Java type: subtypes of Argument are inputs, otherwise outputs
     final boolean _input, _required;
     final ParamImportance _importance;
+    final Direction _direction;
+    final String _path;
+    final Class _type;
+    final String _valid;
+    final String _enabled;
+    final String _visible;
+
     RequestArguments.Argument _arg; // Lazily filled in, as docs are asked for.
-    public FieldDoc( String name, String help, int min, int max, Class C, boolean input, boolean required, ParamImportance importance ) {
+    public FieldDoc( String name, String help, int min, int max, Class C, boolean input,
+        boolean required, ParamImportance importance, Direction direction, String path,
+        Class type, String valid, String enabled, String visible) {
       _name = name; _help = help; _since = min; _until = max; _clazz = C; _input = input; _required = required; _importance = importance;
+      _direction = direction;
+      _path = path;
+      _type = type;
+      _valid = valid;
+      _enabled = enabled;
+      _visible = visible;
     }
     @Override public String toString() {
       return "{"+_name+", from "+_since+" to "+_until+", "+_clazz.getSimpleName()+", "+_help+"}";

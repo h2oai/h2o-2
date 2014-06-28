@@ -11,9 +11,9 @@ heading("BEGIN TEST")
 conn <- new("H2OClient", ip=myIP, port=myPort)
 
 path <- locate("smalldata/logreg/prostate.csv")
-hex <- h2o.uploadFile.VA(conn, path, key="p.hex")
+hex <- h2o.uploadFile(conn, path, key="p.hex")
 
-m <- h2o.glm.VA(x = 3:8, y = 2, family = "binomial", data = hex)
+m <- h2o.glm(x = 3:8, y = 2, family = "binomial", data = hex)
 
 res <- .h2o.__remoteSend(conn, .h2o.__PAGE_PREDICT2, model = m@key, data = hex@key, prediction = "pred")
 res <- .h2o.__remoteSend(conn, .h2o.__PAGE_INSPECT2, src_key = "pred")

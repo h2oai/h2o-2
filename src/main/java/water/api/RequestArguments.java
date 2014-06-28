@@ -2617,6 +2617,16 @@ public class RequestArguments extends RequestStatics {
   /** A Class Vec/Column within a Frame.  Limited to 1000 classes, just to prevent madness. */
   public class FrameClassVec extends FrameKeyVec {
     public FrameClassVec(String name, TypeaheadKey key ) { super(name, key); }
+    @Override protected String[] selectValues() {
+      final Vec [] vecs = fr().vecs();
+      String[] names = new String[vecs.length];
+      int j = 0;
+      for( int i = 0; i < vecs.length; ++i) {
+        if( !vecs[i].isUUID() ) // No math on strings or UUIDs
+          names[j++] = fr()._names[i];
+      }
+      return Arrays.copyOf(names, j);
+    }
     @Override protected Vec defaultValue() {
       Frame fr = fr();
       return fr != null ? fr.vecs()[fr.vecs().length - 1] : null;
@@ -2649,7 +2659,8 @@ public class RequestArguments extends RequestStatics {
       addPrerequisite(response);
     }
     public boolean shouldIgnore(int i, Frame fr ) {
-      return _response != null && _response.value() == fr.vecs()[i];
+      return (_response != null && _response.value() == fr.vecs()[i]) ||
+        fr.vecs()[i].isUUID();
     }
     public void checkLegality(Vec v) throws IllegalArgumentException { }
     protected Comparator<Integer> colComp(final ValueArray ary){
@@ -2713,9 +2724,10 @@ public class RequestArguments extends RequestStatics {
       final Vec [] vecs = fr().vecs();
       int [] res = new int[vecs.length];
       int j = 0;
-      for(int i = 0; i < vecs.length; ++i){
+      for( int i = 0; i < vecs.length; ++i) {
         if(!(vecs[i].min() < vecs[i].max()) ||
-          (_filterNAs && ((double)vecs[i].naCnt())/vecs[i].length() > 0.1))
+          (_filterNAs && ((double)vecs[i].naCnt())/vecs[i].length() > 0.1) ||
+           vecs[i].isUUID() ) // No math on strings or UUIDs
           res[j++] = i; // ignore constant columns and columns with too many NAs
       }
       return Arrays.copyOf(res, j);

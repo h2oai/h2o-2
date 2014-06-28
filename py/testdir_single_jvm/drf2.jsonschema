@@ -1,64 +1,153 @@
+
+ugly that the two definitions are not consistent (can the first response be the final response)
+first result if not final
+{
+    "Request2": 0, 
+    "_distribution": null, 
+    "_mtry": 2, 
+    "_seed": 3170528642942386000, 
+    "balance_classes": "true", 
+    "checkpoint": null, 
+    "classification": "true", 
+    "description": "Distributed RF", 
+    "destination_key": "DRF_80b37b4487b373cf24bbca52cf124931", 
+    "end_time": 0, 
+    "exception": null, 
+    "job_key": "$0301c0a8012832d4ffffffff$_b44fed870f3569d53ed1bcbfb7f74102", 
+    "keep_cross_validation_splits": "false", 
+    "max_after_balance_size": 7.0, 
+    "max_depth": 20, 
+    "min_rows": 1, 
+    "n_folds": 0, 
+    "nbins": 20, 
+    "ntrees": 6, 
+    "overwrite_checkpoint": "true", 
+    "response": {}, 
+    "response_info": {
+    "h2o": "pytest-kevin-7139", 
+    "node": "/192.168.1.40:54321", 
+    "redirect_url": "/2/DRFProgressPage.json?job_key=%240301c0a8012832d4ffffffff%24_b44fed870f3569d53ed1bcbfb7f74102&destination_key=DRF_80b37b4487b373cf24bbca52cf124931", 
+    "status": "redirect", 
+        "time": 2
+    }, 
+    "score_each_iteration": "false", 
+    "source": {
+        "_key": "iris.hex"
+    }, 
+    "start_time": 1403292197589, 
+    "state": "RUNNING", 
+    "validation": null, 
+    "xval_models": []
+}
+
+final result
+
 {
     "type":"object", "properties": {
         "Request2": { "type":"number" },
-        "drf_model": { "type":"object", "properties": {
-            "N": { "type":"number" },
-            "_dataKey": { "type":"string" },
-            "_domains": { "type":"array", "items": [
-                { "type":"string" },
-                { "type":"array" }
-            ]
-            },
-            "_names": { "type":"array", "items":
-                { "type":"string" }
-            },
-            "_key": { "type":"string" },
-            "cmDomain": { "type":"string" },
-            "cms": { "type":"array", "items": {
-                "type":"object", "properties": {
-                    "_arr": { "type":"array", "items":
-                        { "type":"array", }
-                    },
-                    "_classErr": { "type":"array", "items":
-                        { "type":"number", }
-                    },
-                    "_predErr": { "type":"number", }
+        "drf_model": {
+            "type":"object", "properties": {
+                "N": { "type":"number" },
+                "_dataKey": { "type":"string" },
+                "_domains": { "type":"array", "items": { "type":"array" } },
+                "_key": { "type":"string" },
+                "_modelClassDist": { "type":"null" },
+                "_names": { "type":"array", "items": { "type":"string" } },
+                "_priorClassDist": { "type":"null" },
+                "cmDomain": { "type":"array", "items": { "type":"string" } },
+                "cms": { "type":"array", "items": { 
+                            "type":"object", "properties": {
+                                "_arr": { "type":"array", "items": { "type":"array" } },
+                                "_classErr": { "type":"array", "items": { "type":"number" } },
+                                "_predErr": { "type":"string" }
+                            }
+                        }
+                },
+                "errs": { "type":"array", "items": { "type":"string" } },
+                "max_depth": { "type":"number" },
+                "min_rows": { "type":"number" },
+                "mtries": { "type":"number" },
+                "nbins": { "type":"number" },
+                "parameters": { "type":"object", "properties": {
+                        "Request2": { "type":"number" },
+                        "_distribution": { "type":"array", "items": { "type":"number" } },
+                        "_mtry": { "type":"number" },
+                        "_seed": { "type":"number" },
+                        "balance_classes": { "type":"string" },
+                        "checkpoint": { "type":"null" },
+                        "classification": { "type":"string" },
+                        "description": { "type":"string" },
+                        "destination_key": { "type":"string" },
+                        "end_time": { "type":"number" },
+                        "exception": { "type":"null" },
+                        "job_key": { "type":"string" },
+                        "keep_cross_validation_splits": { "type":"string" },
+                        "max_after_balance_size": { "type":"number" },
+                        "max_depth": { "type":"number" },
+                        "min_rows": { "type":"number" },
+                        "n_folds": { "type":"number" },
+                        "nbins": { "type":"number" },
+                        "ntrees": { "type":"number" },
+                        "overwrite_checkpoint": { "type":"string" },
+                        "response_info": { "type":"object", "properties": {
+                                "h2o": { "type":"string" },
+                                "node": { "type":"string" },
+                                "redirect_url": { "type":"string" },
+                                "status": { "type":"string" },
+                                "time": { "type":"number" }
+                            }
+                        },
+                        "response": { "type":"object" },
+                        "score_each_iteration": { "type":"string" },
+                        "source": { "type":"object", "properties": {
+                                "_key": { "type":"string" }
+                            }
+                        },
+                        "start_time": { "type":"number" },
+                        "state": { "type":"string" },
+                        "validation": { "type":"null" },
+                        "xval_models": { "type":"array" }
+                    }
+                },
+                "sample_rate": { "type":"number" },
+                "seed": { "type":"number" },
+                "testKey": { "type":"null" },
+                "treeKeys": { "type":"array",
+                    "items": { "type":"array" } 
+                },
+                "treeStats": {
+                    "type":"object", "properties": {
+                        "maxDepth": { "type":"number" },
+                        "maxLeaves": { "type":"number" },
+                        "meanDepth": { "type":"number" },
+                        "meanLeaves": { "type":"number" },
+                        "minDepth": { "type":"number" },
+                        "minLeaves": { "type":"number" }
+                    }
+                },
+                "validAUC": { "type":"null" },
+                "varimp": { "type":"object", "properties": {
+                        "max_var": { "type":"number" },
+                        "method": { "type":"string" },
+                        "variables": { "type":"null" },
+                        "varimpSD": { "type":"array",
+                            "items": { "type":"number" }
+                        },
+                        "varimp": { "type":"array",
+                            "items": { "type":"number" } 
+                        }
+                    }
                 }
-            }   
-            },
-            "errs": { "type":"array", "items":
-                { "type":"number" }
-            },
-            "testKey": { "type":"string" },
-            "treeBits": { "type":"array", "items":
-                { "type":"array" }
-            },
-            "treeStats": { "type":"object", "properties": {
-                "maxDepth": { "type":"number" },
-                "maxLeaves": { "type":"number" },
-                "meanDepth": { "type":"number" },
-                "meanLeaves": { "type":"number" },
-                "minDepth": { "type":"number" },
-                "minLeaves": { "type":"number" }
             }
-            },
-            "validAUC": { "type":"number" }
-            }
-            "varimp": { "type":"array", "items":
-                { "type":"number" }
-            }
-            "varimpSD": { "type":"array", "items":
-                { "type":"number" }
-            }
-        }
         },
-        "response_info": { "type":"object", "properties": {
-            "h2o": { "type":"string" },
-            "node": { "type":"string" },
-            "redirect_url": { "type":"null" },
-            "status": { "type":"string" },
-            "time": { "type":"number" }
-        }
+        "response_info": {
+            "type":"object", "properties": {
+                "h2o": { "type":"string" },
+                "node": { "type":"string" },
+                "redirect_url": { "type":"null" },
+                "status": { "type":"string" },
+                "time": { "type":"number" }
+            }
         }
     }
 }

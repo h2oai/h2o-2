@@ -1,6 +1,6 @@
 package samples.expert;
 
-import static samples.expert.DeepLearningVisualization.visualize;
+//import static samples.expert.DeepLearningVisualization.visualize;
 import static water.util.MRUtils.sampleFrame;
 import hex.deeplearning.DeepLearning;
 import hex.deeplearning.DeepLearningModel;
@@ -95,7 +95,7 @@ public class DeepLearningMnist extends Job {
     p.quiet_mode = false;
     p.invoke();
 
-    visualize((DeepLearningModel) UKV.get(p.dest()));
+//    visualize((DeepLearningModel) UKV.get(p.dest()));
   }
 
 }

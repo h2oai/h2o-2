@@ -3,7 +3,6 @@ package water.fvec;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.exec.Flow;
-import water.fvec.Vec.VectorGroup;
 import water.util.Log;
 
 import java.io.IOException;
@@ -57,20 +56,19 @@ public class Frame extends Lockable<Frame> {
     return this.uniqueId;
   }
 
-  /** 64-bit hash of the hashes of the vecs.  SHA-265 hashes of the chunks are XORed
+  /** 64-bit checksum of the checksums of the vecs.  SHA-265 checksums of the chunks are XORed
    * together.  Since parse always parses the same pieces of files into the same offsets
-   * in some chunk this hash will be consistent across reparses.
+   * in some chunk this checksum will be consistent across reparses.
    */
-  public byte[] hash() {
+  public long checksum() {
     Vec [] vecs = vecs();
-    byte[] _hash = new byte[8];
+    long _checksum = 0;
     for(int i = 0; i < _names.length; ++i) {
-      byte[] vec_hash = vecs[i].hash();
-      for (int j = 0; j < 8; j++) {
-        _hash[j] ^= vec_hash[j];
-      }
+      long vec_checksum = vecs[i].checksum();
+      _checksum ^= vec_checksum;
+      _checksum ^= (2147483647 * i);
     }
-    return _hash;
+    return _checksum;
   }
 
   public Vec vec(String name){
@@ -152,7 +150,7 @@ public class Frame extends Lockable<Frame> {
           @Override public byte priority(){return H2O.MIN_HI_PRIORITY;}
           @Override public void compute2() {
             Value v = DKV.get(k);
-            if( v==null ) Log.err("Missing vector during Frame fetch: "+k);
+            if( v==null ) Log.err("Missing vector #" + ii + " (" + _names[ii] + ") during Frame fetch: "+k);
             vecs[ii] = v.get();
             tryComplete();
           }
@@ -182,24 +180,25 @@ public class Frame extends Lockable<Frame> {
     return -1;
   }
 
-
-  /**
-   * Analogy of R's cbind.
-   * Makes a copy of the given frame compatible with this frame's vector group and adds it to this frame.
-   *
-   * Note: unlike in R, "this" frame gets updated IN-PLACE!
-   *
-   * @param f
-   * @return Frame with added vec
-   */
-  public Frame addCopy( Frame f) {
-    if(numRows() == 0)return add(f,f.names());
+  // Return Frame 'f' if 'f' is compatible with 'this'.
+  // Return a new Frame compatible with 'this' and a copy of 'f's data otherwise.
+  public Frame makeCompatible( Frame f) {
+    // Small data frames are always "compatible"
+    if( anyVec()==null ||       // No dest columns
+        numRows() <= 1e4 )      // Or it is small
+      return f;                 // Then must be compatible
+    // Same VectorGroup is also compatible
+    if( f.anyVec() == null ||
+        f.anyVec().group().equals(anyVec().group()) )
+      return f;
+    // Ok, here make some new Vecs with compatible layout
     Key k = Key.make();
     H2O.submitTask(new RebalanceDataSet(this, f, k)).join();
     Frame f2 = DKV.get(k).get();
     DKV.remove(k);
-    return add(f2, true);
+    return f2;
   }
+
  /** Appends a named column, keeping the last Vec as the response */
   public Frame add( String name, Vec vec ) {
     if( find(name) != -1 ) throw new IllegalArgumentException("Duplicate name '"+name+"' in Frame");
@@ -216,6 +215,31 @@ public class Frame extends Lockable<Frame> {
     _names[len] = name;
     _vecs [len] = vec ;
     _keys [len] = vec._key;
+    return this;
+  }
+
+  /** Insert a named column as the first column */
+  public Frame prepend( String name, Vec vec ) {
+    if( find(name) != -1 ) throw new IllegalArgumentException("Duplicate name '"+name+"' in Frame");
+    if( _vecs.length != 0 ) {
+      if( !anyVec().group().equals(vec.group()) && !Arrays.equals(anyVec()._espc,vec._espc) )
+        throw new IllegalArgumentException("Vector groups differs - adding vec '"+name+"' into the frame " + Arrays.toString(_names));
+      if( numRows() != vec.length() )
+        throw new IllegalArgumentException("Vector lengths differ - adding vec '"+name+"' into the frame " + Arrays.toString(_names));
+    }
+    final int len = _names != null ? _names.length : 0;
+    String[] _names2 = new String[len+1];
+    Vec[]    _vecs2  = new Vec   [len+1];
+    Key[]    _keys2  = new Key   [len+1];
+    _names2[0] = name;
+    _vecs2 [0] = vec ;
+    _keys2 [0] = vec._key;
+    System.arraycopy(_names, 0, _names2, 1, len);
+    System.arraycopy(_vecs,  0, _vecs2,  1, len);
+    System.arraycopy(_keys,  0, _keys2,  1, len);
+    _names = _names2;
+    _vecs  = _vecs2;
+    _keys  = _keys2;
     return this;
   }
 
@@ -390,6 +414,22 @@ public class Frame extends Lockable<Frame> {
     for( int i=0; i<vecs().length; i++ )
       ds[i] = vecs()[i].domain();
     return ds;
+  }
+
+  /** true/false every Vec is a UUID */
+  public boolean[] uuids() {
+    boolean bs[] = new boolean[vecs().length];
+    for( int i=0; i<vecs().length; i++ )
+      bs[i] = vecs()[i].isUUID();
+    return bs;
+  }
+
+  /** Time status for every Vec */
+  public byte[] times() {
+    byte bs[] = new byte[vecs().length];
+    for( int i=0; i<vecs().length; i++ )
+      bs[i] = vecs()[i]._time;
+    return bs;
   }
 
   private String[][] domains(int [] cols){
@@ -596,7 +636,8 @@ public class Frame extends Lockable<Frame> {
           for( int i=0; i<len; i++ ) sb.append('-');
         } else {
           try {
-            sb.append(String.format(fs[c],vec.at8(idx)));
+            if( vec.isUUID() ) sb.append(PrettyPrint.UUID(vec.at16l(idx),vec.at16h(idx)));
+            else sb.append(String.format(fs[c],vec.at8(idx)));
           } catch( IllegalFormatException ife ) {
             System.out.println("Format: "+fs[c]+" col="+c+" not for ints");
             ife.printStackTrace();
@@ -656,8 +697,9 @@ public class Frame extends Lockable<Frame> {
         for( int i = 0; i < vs.length; i++ ) {
           if(i > 0) sb.append(',');
           if(!vs[i].isNA(_row)) {
-            if(vs[i].isEnum()) sb.append('"' + vs[i]._domain[(int) vs[i].at8(_row)] + '"');
-            else if(vs[i].isInt()) sb.append(vs[i].at8(_row));
+            if( vs[i].isEnum() ) sb.append('"' + vs[i]._domain[(int) vs[i].at8(_row)] + '"');
+            else if( vs[i].isUUID() ) sb.append(PrettyPrint.UUID(vs[i].at16l(_row),vs[i].at16h(_row)));
+            else if( vs[i].isInt() ) sb.append(vs[i].at8(_row));
             else {
               // R 3.1 unfortunately changed the behavior of read.csv().
               // (Really type.convert()).
@@ -846,7 +888,8 @@ public class Frame extends Lockable<Frame> {
               last_cs[c] = vecs[c].chunkForChunkIdx(last_ci);
           }
           for (int c = 0; c < vecs.length; c++)
-            ncs[c].addNum(last_cs[c].at(r));
+            if( vecs[c].isUUID() ) ncs[c].addUUID(last_cs[c],r);
+            else                   ncs[c].addNum (last_cs[c].at(r));
         }
       }
     }
@@ -912,8 +955,9 @@ public class Frame extends Lockable<Frame> {
           NewChunk nc = nchks[      i ];
           if( _isInt[i] == 1 ) { // Slice on integer columns
             for( int j=rlo; j<rhi; j++ )
-              if( oc.isNA0(j) ) nc.addNA();
-              else              nc.addNum(oc.at80(j),0);
+              if( oc._vec.isUUID() ) nc.addUUID(oc,j);
+              else if( oc.isNA0(j) ) nc.addNA();
+              else                   nc.addNum(oc.at80(j),0);
           } else {                // Slice on double columns
             for( int j=rlo; j<rhi; j++ )
               nc.addNum(oc.at0(j));
@@ -928,10 +972,14 @@ public class Frame extends Lockable<Frame> {
   private static class DeepSelect extends MRTask2<DeepSelect> {
     @Override public void map( Chunk chks[], NewChunk nchks[] ) {
       Chunk pred = chks[chks.length-1];
-      for(int i = 0; i < pred._len; ++i){
-        if(pred.at0(i) != 0)
-          for(int j = 0; j < chks.length-1; ++j)
-            nchks[j].addNum(chks[j].at0(i));
+      for(int i = 0; i < pred._len; ++i) {
+        if(pred.at0(i) != 0) {
+          for( int j = 0; j < chks.length - 1; j++ ) {
+            Chunk chk = chks[j];
+            if( chk._vec.isUUID() ) nchks[j].addUUID(chk,i);
+            else nchks[j].addNum(chk.at0(i));
+          }
+        }
       }
     }
   }

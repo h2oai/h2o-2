@@ -81,8 +81,8 @@ public class GLMGridView extends Request2 {
         GLMModel m = models.get(i);
         sb.append("<tr>");
         sb.append("<td>" + m.alpha + "</td>");
-        sb.append("<td>" + m.lambdaMax() + "</td>");
-        sb.append("<td>" + m.lambdaMin() + "</td>");
+        sb.append("<td>" + m.submodels[0].lambda_value + "</td>");
+        sb.append("<td>" + m.submodels[m.submodels.length-1].lambda_value + "</td>");
         sb.append("<td>" + m.lambda() + "</td>");
         sb.append("<td>" + (m.rank()-1) + "</td>");
         sb.append("<td>" + m.iteration() + "</td>");

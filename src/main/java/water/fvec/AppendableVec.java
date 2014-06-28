@@ -1,7 +1,6 @@
 package water.fvec;
 
 import water.*;
-import water.fvec.Vec;
 import water.util.Utils;
 import java.util.Arrays;
 
@@ -22,6 +21,7 @@ public class AppendableVec extends Vec {
   public static final byte ENUM   = 2;
   public static final byte NUMBER = 4;
   public static final byte TIME   = 8;
+  public static final byte UUID   =16;
   byte [] _chunkTypes;
   long _naCnt;
   long _strCnt;
@@ -58,9 +58,8 @@ public class AppendableVec extends Vec {
 
   // What kind of data did we find?  NA's?  Strings-only?  Floats or Ints?
   boolean shouldBeEnum() {
-    // TODO: we declare column to be string/enum only if it does not have ANY numbers in it.
-    if( _strCnt > 0 && (_strCnt + _naCnt) == _totalCnt ) return true;
-    return false;
+    // We declare column to be string/enum only if it does not have ANY numbers in it.
+    return _strCnt > 0 && (_strCnt + _naCnt) == _totalCnt;
   }
 
   // Class 'reduce' call on new vectors; to combine the roll-up info.
@@ -97,11 +96,12 @@ public class AppendableVec extends Vec {
     int nchunk = _espc.length;
     while( nchunk > 0 && _espc[nchunk-1] == 0 ) nchunk--;
     DKV.remove(chunkKey(nchunk)); // remove potential trailing key
-    boolean hasNumber = false, hasEnum = false, hasTime=false;
+    boolean hasNumber = false, hasEnum = false, hasTime=false, hasUUID=false;
     for( int i = 0; i < nchunk; ++i ) {
       if( (_chunkTypes[i] & TIME  ) != 0 ) { hasNumber = true; hasTime=true; }
       if( (_chunkTypes[i] & NUMBER) != 0 )   hasNumber = true;
       if( (_chunkTypes[i] & ENUM  ) != 0 )   hasEnum   = true;
+      if( (_chunkTypes[i] & UUID  ) != 0 )   hasUUID   = true;
     }
     // number wins, we need to go through the enum chunks and declare them all
     // NAs (chunk is considered enum iff it has only enums + possibly some nas)
@@ -110,6 +110,14 @@ public class AppendableVec extends Vec {
         if(_chunkTypes[i] == ENUM)
           DKV.put(chunkKey(i), new C0DChunk(Double.NaN, (int)_espc[i]),fs);
     }
+    // UUID wins over enum & number
+    if( hasUUID && (hasEnum || hasNumber) ) {
+      hasEnum=hasNumber=false;
+      for(int i = 0; i < nchunk; ++i)
+        if((_chunkTypes[i] & UUID)==0)
+          DKV.put(chunkKey(i), new C0DChunk(Double.NaN, (int)_espc[i]),fs);
+    }
+
     // Make sure time is consistent
     int t = -1;
     if( hasTime ) {
@@ -128,8 +136,6 @@ public class AppendableVec extends Vec {
 
     // Compute elems-per-chunk.
     // Roll-up elem counts, so espc[i] is the starting element# of chunk i.
-    // TODO: Complete fail: loads all data locally - will force OOM.  Needs to be
-    // an RPC to test Key existence, and return length & other metadata
     long espc[] = new long[nchunk+1]; // Shorter array
     long x=0;                   // Total row count so far
     for( int i=0; i<nchunk; i++ ) {
@@ -138,8 +144,7 @@ public class AppendableVec extends Vec {
     }
     espc[nchunk]=x;             // Total element count in last
     // Replacement plain Vec for AppendableVec.
-    Vec vec = new Vec(_key, espc, _domain);
-    vec._time = (byte)t;        // Time parse, if any
+    Vec vec = new Vec(_key, espc, _domain, hasUUID, (byte)t);
     DKV.put(_key,vec,fs);       // Inject the header
     return vec;
   }
@@ -163,8 +168,6 @@ public class AppendableVec extends Vec {
   int elem2ChunkIdx( long i ) { throw H2O.fail(); }
   @Override
   public long chunk2StartElem( int cidx ) { throw H2O.fail(); }
-  public long   get ( long i ) { throw H2O.fail(); }
-  public double getd( long i ) { throw H2O.fail(); }
 
   @Override
   public long byteSize() { return 0; }

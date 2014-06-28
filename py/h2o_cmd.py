@@ -52,9 +52,7 @@ def runExec(node=None, timeoutSecs=20, **kwargs):
     if not node: node = h2o.nodes[0]
     # no such thing as GLMView..don't use retryDelaySecs
     a = node.exec_query(timeoutSecs, **kwargs)
-    # temporary?
-    if h2o.beta_features:
-        h2o.check_sandbox_for_errors()
+    h2o.check_sandbox_for_errors()
     return a
 
 def runKMeans(node=None, parseResult=None, timeoutSecs=20, retryDelaySecs=2, **kwargs):
@@ -238,15 +236,9 @@ def checkKeyDistribution():
 def columnInfoFromInspect(key, exceptionOnMissingValues=True, **kwargs):
     inspect = runInspect(key=key, **kwargs)
 
-    if h2o.beta_features:
-        num_rows = inspect['numRows']
-        num_cols = inspect['numCols']
-        keyNA = 'naCnt'
-    else:
-        num_rows = inspect['num_rows']
-        num_cols = inspect['num_cols']
-        keyNA = 'num_missing_values'
-
+    num_rows = inspect['numRows']
+    num_cols = inspect['numCols']
+    keyNA = 'naCnt'
     cols = inspect['cols']
     # type
     # key
@@ -274,23 +266,16 @@ def columnInfoFromInspect(key, exceptionOnMissingValues=True, **kwargs):
         msg += " type: %s" % c['type']
         printMsg = False
 
-        if h2o.beta_features:
-            if c['type'] == 'Enum':
-                # enums now have 'NaN' returned for min/max
+        if c['type'] == 'Enum':
+            # enums now have 'NaN' returned for min/max
 
-                # if isinstance(c['min'], basestring) or isinstance(c['max'], basestring):
-                #     raise Exception("Didn't expect 'min': %s or 'max': %s to be str or unicode" % (c['min'], c['max']))
-                cardinality = c['cardinality']
-                msg += (" cardinality: %d" % cardinality)
-                # inspect2 doesn't have cardinality but this is equivalent
-                enumSizeDict[k] = cardinality
-                printMsg = True
-
-        else:
-            if c['type'] == 'enum':
-                msg += (" enum_domain_size: %d" % c['enum_domain_size'])
-                enumSizeDict[k] = c['enum_domain_size']
-                printMsg = True
+            # if isinstance(c['min'], basestring) or isinstance(c['max'], basestring):
+            #     raise Exception("Didn't expect 'min': %s or 'max': %s to be str or unicode" % (c['min'], c['max']))
+            cardinality = c['cardinality']
+            msg += (" cardinality: %d" % cardinality)
+            # inspect2 doesn't have cardinality but this is equivalent
+            enumSizeDict[k] = cardinality
+            printMsg = True
 
 
         if c[keyNA] != 0:
@@ -342,10 +327,7 @@ def infoFromInspect(inspect, csvPathname):
     # need more info about this dataset for debug
     cols = inspect['cols']
     # look for nonzero num_missing_values count in each col
-    if h2o.beta_features:
-        keyNA = 'naCnt'
-    else:
-        keyNA = 'num_missing_values'
+    keyNA = 'naCnt'
     missingValuesList = []
     for i, colDict in enumerate(cols):
         num_missing_values = colDict[keyNA]
@@ -353,26 +335,13 @@ def infoFromInspect(inspect, csvPathname):
             print "%s: col: %d, %s: %d" % (csvPathname, i, keyNA, num_missing_values)
             missingValuesList.append(num_missing_values)
 
-    if h2o.beta_features:
-        # no type per col in inspect2
-        numCols = inspect['numCols']
-        numRows = inspect['numRows']
-        byteSize = inspect['byteSize']
+    # no type per col in inspect2
+    numCols = inspect['numCols']
+    numRows = inspect['numRows']
+    byteSize = inspect['byteSize']
 
-        print "\n" + csvPathname, "numCols: %s, numRows: %s, byteSize: %s" % \
-               (numCols, numRows, byteSize)
-
-    else:
-        num_cols = inspect['num_cols']
-        num_rows = inspect['num_rows']
-        row_size = inspect['row_size']
-        ptype = inspect['type']
-        value_size_bytes = inspect['value_size_bytes']
-        response = inspect['response']
-        ptime = response['time']
-
-        print "\n" + csvPathname, "num_cols: %s, num_rows: %s, row_size: %s, ptype: %s, value_size_bytes: %s" % \
-               (num_cols, num_rows, row_size, ptype, value_size_bytes)
+    print "\n" + csvPathname, "numCols: %s, numRows: %s, byteSize: %s" % \
+           (numCols, numRows, byteSize)
 
     return missingValuesList
 
@@ -383,164 +352,81 @@ def infoFromInspect(inspect, csvPathname):
 def infoFromSummary(summaryResult, noPrint=False, numCols=None, numRows=None):
     if not summaryResult:
         raise Exception("summaryResult is empty for infoFromSummary")
-    if h2o.beta_features:
-        # names = summaryResult['names']
-        # means = summaryResult['means']
-        summaries = summaryResult['summaries']
 
-        # what if we didn't get the full # of cols in this summary view? 
-        # I guess the test should deal with that
-        if 1==0 and numCols and (len(summaries)!=numCols):
-            raise Exception("Expected numCols: %s cols in summary. Got %s" % (numCols, len(summaries)))
+    summaries = summaryResult['summaries']
+    # what if we didn't get the full # of cols in this summary view? 
+    # I guess the test should deal with that
+    if 1==0 and numCols and (len(summaries)!=numCols):
+        raise Exception("Expected numCols: %s cols in summary. Got %s" % (numCols, len(summaries)))
 
-        for column in summaries:
-            colname = column['colname']
-            coltype = column['type']
-            nacnt = column['nacnt']
-            stats = column['stats']
-            stattype = stats['type']
-            h2o_exec.checkForBadFP(nacnt, 'nacnt for colname: %s stattype: %s' % (colname, stattype))
+    for column in summaries:
+        colname = column['colname']
+        coltype = column['type']
+        nacnt = column['nacnt']
+        stats = column['stats']
+        stattype = stats['type']
+        h2o_exec.checkForBadFP(nacnt, 'nacnt for colname: %s stattype: %s' % (colname, stattype))
 
-            if stattype == 'Enum':
-                cardinality = stats['cardinality']
-                h2o_exec.checkForBadFP(cardinality, 'cardinality for colname: %s stattype: %s' % (colname, stattype))
-                
+        if stattype == 'Enum':
+            cardinality = stats['cardinality']
+            h2o_exec.checkForBadFP(cardinality, 'cardinality for colname: %s stattype: %s' % (colname, stattype))
+            
+        else:
+            mean = stats['mean']
+            sd = stats['sd']
+            zeros = stats['zeros']
+            mins = stats['mins']
+            maxs = stats['maxs']
+            pct = stats['pct']
+            pctile = stats['pctile']
+
+            # check for NaN/Infinity in some of these
+            # apparently we can get NaN in the mean for a numerica col with all NA?
+            h2o_exec.checkForBadFP(mean, 'mean for colname: %s stattype: %s' % (colname, stattype), nanOkay=True, infOkay=True)
+            h2o_exec.checkForBadFP(sd, 'sd for colname: %s stattype %s' % (colname, stattype), nanOkay=True, infOkay=True)
+            h2o_exec.checkForBadFP(zeros, 'zeros for colname: %s stattype %s' % (colname, stattype))
+
+            if numRows and (nacnt==numRows):
+                print "%s is all NAs with type: %s. no checking for min/max/mean/sigma" % (colname, stattype)
             else:
-                mean = stats['mean']
-                sd = stats['sd']
-                zeros = stats['zeros']
-                mins = stats['mins']
-                maxs = stats['maxs']
-                pct = stats['pct']
-                pctile = stats['pctile']
+                if not mins:
+                    print h2o.dump_json(column)
+                    # raise Exception ("Why is min[] empty for a %s col (%s) ? %s %s %s" % (mins, stattype, colname, nacnt, numRows))
+                    print "Why is min[] empty for a %s col (%s) ? %s %s %s" % (mins, stattype, colname, nacnt, numRows)
+                if not maxs:
+                    # this is failing on maprfs best buy...why? (va only?)
+                    print h2o.dump_json(column)
+                    # raise Exception ("Why is max[] empty for a %s col? (%s) ? %s %s %s" % (maxs, stattype, colname, nacnt, numRows))
+                    print "Why is max[] empty for a %s col? (%s) ? %s %s %s" % (maxs, stattype, colname, nacnt, numRows)
 
-                # check for NaN/Infinity in some of these
-                # apparently we can get NaN in the mean for a numerica col with all NA?
-                h2o_exec.checkForBadFP(mean, 'mean for colname: %s stattype: %s' % (colname, stattype), nanOkay=True, infOkay=True)
-                h2o_exec.checkForBadFP(sd, 'sd for colname: %s stattype %s' % (colname, stattype), nanOkay=True, infOkay=True)
-                h2o_exec.checkForBadFP(zeros, 'zeros for colname: %s stattype %s' % (colname, stattype))
+        hstart = column['hstart']
+        hstep = column['hstep']
+        hbrk = column['hbrk']
+        hcnt = column['hcnt']
 
-                if numRows and (nacnt==numRows):
-                    print "%s is all NAs with type: %s. no checking for min/max/mean/sigma" % (colname, stattype)
-                else:
-                    if not mins:
-                        print h2o.dump_json(column)
-                        # raise Exception ("Why is min[] empty for a %s col (%s) ? %s %s %s" % (mins, stattype, colname, nacnt, numRows))
-                        print "Why is min[] empty for a %s col (%s) ? %s %s %s" % (mins, stattype, colname, nacnt, numRows)
-                    if not maxs:
-                        # this is failing on maprfs best buy...why? (va only?)
-                        print h2o.dump_json(column)
-                        # raise Exception ("Why is max[] empty for a %s col? (%s) ? %s %s %s" % (maxs, stattype, colname, nacnt, numRows))
-                        print "Why is max[] empty for a %s col? (%s) ? %s %s %s" % (maxs, stattype, colname, nacnt, numRows)
+        if not noPrint:
+            print "\n\n************************"
+            print "colname:", colname
+            print "coltype:", coltype
+            print "nacnt:", nacnt
 
-            hstart = column['hstart']
-            hstep = column['hstep']
-            hbrk = column['hbrk']
-            hcnt = column['hcnt']
+            print "stattype:", stattype
+            if stattype == 'Enum':
+                print "cardinality:", cardinality
+            else:
+                print "mean:", mean
+                print "sd:", sd
+                print "zeros:", zeros
+                print "mins:", mins
+                print "maxs:", maxs
+                print "pct:", pct
+                print "pctile:", pctile
 
-            if not noPrint:
-                print "\n\n************************"
-                print "colname:", colname
-                print "coltype:", coltype
-                print "nacnt:", nacnt
-
-                print "stattype:", stattype
-                if stattype == 'Enum':
-                    print "cardinality:", cardinality
-                else:
-                    print "mean:", mean
-                    print "sd:", sd
-                    print "zeros:", zeros
-                    print "mins:", mins
-                    print "maxs:", maxs
-                    print "pct:", pct
-                    print "pctile:", pctile
-
-                # histogram stuff
-                print "hstart:", hstart
-                print "hstep:", hstep
-                print "hbrk:", hbrk
-                print "hcnt:", hcnt
-
-    else:
-        summary = summaryResult['summary']
-        columnList = summary['columns']
-        # can't get the right number of columns in summary? have to ask for more cols (does va support >  1000)
-        if 1==0 and numCols and (len(columnList)!=numCols):
-            raise Exception("Expected numCols: %s cols in summary. Got %s" % (numCols, len(columnList)))
-        for column in columnList:
-            N = column['N']
-            # self.assertEqual(N, rowCount)
-            name = column['name']
-            stype = column['type']
-            histogram = column['histogram']
-            bin_size = histogram['bin_size']
-            bin_names = histogram['bin_names']
-            # if not noPrint:
-            #     for b in bin_names:
-            #        print "bin_name:", b
-
-            bins = histogram['bins']
-            nbins = histogram['bins']
-            if not noPrint:
-                print "\n\n************************"
-                print "N:", N
-                print "name:", name
-                print "type:", stype
-                print "bin_size:", bin_size
-                print "len(bin_names):", len(bin_names), bin_names
-                print "len(bins):", len(bins), bins
-                print "len(nbins):", len(nbins), nbins
-
-            # not done if enum
-            if stype != "enum":
-                zeros = column['zeros']
-                na = column['na']
-                maxs = column['max']
-                mins = column['min']
-                mean = column['mean']
-                sigma = column['sigma']
-                if not noPrint:
-                    print "zeros:", zeros
-                    print "na:", na
-                    print "maxs:", maxs
-                    print "mins:", mins
-                    print "mean:", mean
-                    print "sigma:", sigma
-
-                if numRows and (na==numRows):
-                    print "%s is all NAs with type: %s. no checking for min/max/mean/sigma" % (name, stype)
-                else:
-                    if not mins:
-                        print h2o.dump_json(column)
-                        raise Exception ("Why is min[] empty for a %s col (%s) ? %s %s %s" % (mins, stype, N, na, numRows))
-                    if not maxs:
-                        print h2o.dump_json(column)
-                        # bestbuy dataset in maprfs is failing this ..for va only? not sure why. some nas?
-                        print "Why is max[] empty for a %s col? (%s) ? %s %s %s" % (maxs, stype, N, na, numRows)
-
-
-                # sometimes we don't get percentiles? (if 0 or 1 bins?)
-                if len(bins) >= 2:
-                    percentiles = column['percentiles']
-                    thresholds = percentiles['thresholds']
-                    values = percentiles['values']
-
-                    if not noPrint:
-                        # h2o shows 5 of them, ordered
-                        print "len(max):", len(maxs), maxs
-                        print "len(min):", len(mins), mins
-                        print "len(thresholds):", len(thresholds), thresholds
-                        print "len(values):", len(values), values
-
-                    for v in values:
-                        # 0 is the most max or most min
-                       if not v >= mins[0]:
-                            m = "Percentile value %s should all be >= the min dataset value %s" % (v, mins[0])
-                            raise Exception(m)
-                       if not v <= maxs[0]:
-                            m = "Percentile value %s should all be <= the max dataset value %s" % (v, maxs[0])
-                            raise Exception(m)
+            # histogram stuff
+            print "hstart:", hstart
+            print "hstep:", hstep
+            print "hbrk:", hbrk
+            print "hcnt:", hcnt
 
 def dot():
     sys.stdout.write('.')
@@ -603,9 +489,9 @@ def createIgnoredCols(key, cols, response):
 
 
 # example:
-# h2o_cmd.runGLM2Score(dataKey=scoreDataKey, modelKey=modelKey, vactual=y, vpredict=1, expectedAuc=0.5)
-def runGLM2Score(node=None, dataKey=None, modelKey=None, predictKey='Predict.hex', 
-    vactual='C1', vpredict=1, expectedAuc=0.5, timeoutSecs=200):
+# h2o_cmd.runScore(dataKey=scoreDataKey, modelKey=modelKey, vactual=y, vpredict=1, expectedAuc=0.5)
+def runScore(node=None, dataKey=None, modelKey=None, predictKey='Predict.hex', 
+    vactual='C1', vpredict=1, expectedAuc=None, doAUC=True, timeoutSecs=200):
     # Score *******************************
     # this messes up if you use case_mode/case_vale above
     predictKey = 'Predict.hex'
@@ -617,18 +503,25 @@ def runGLM2Score(node=None, dataKey=None, modelKey=None, predictKey='Predict.hex
         destination_key=predictKey,
         timeoutSecs=timeoutSecs)
 
+    # inspect = runInspect(key=dataKey)
+    # print dataKey, h2o.dump_json(inspect)
+
     # just get a predict and AUC on the same data. has to be binomial result
-    resultAUC = h2o.nodes[0].generate_auc(
-        thresholds=None,
-        actual=dataKey,
-        predict='Predict.hex',
-        vactual=vactual,
-        vpredict=vpredict)
+    if doAUC:
+        resultAUC = h2o.nodes[0].generate_auc(
+            thresholds=None,
+            actual=dataKey,
+            predict='Predict.hex',
+            vactual=vactual,
+            vpredict=vpredict)
 
-    auc = resultAUC['AUC']
-    h2o_util.assertApproxEqual(auc, expectedAuc, tol=0.15,
-        msg="actual auc: %s not close enough to %s" % (auc, expectedAuc))
+        auc = resultAUC['AUC']
 
+        if expectedAuc:
+            h2o_util.assertApproxEqual(auc, expectedAuc, tol=0.15,
+                msg="actual auc: %s not close enough to %s" % (auc, expectedAuc))
+
+    # don't do this unless binomial
     predictCMResult = h2o.nodes[0].predict_confusion_matrix(
         actual=dataKey,
         predict=predictKey,
@@ -636,13 +529,17 @@ def runGLM2Score(node=None, dataKey=None, modelKey=None, predictKey='Predict.hex
         vpredict='predict',
         )
 
-    cm = predictCMResult['cm']
+    # print "cm", h2o.dump_json(predictCMResult)
 
     # These will move into the h2o_gbm.py
-    pctWrong = h2o_gbm.pp_cm_summary(cm);
+    # if doAUC=False, means we're not binomial, and the cm is not what we expect
+    if doAUC:
+        cm = predictCMResult['cm']
+        pctWrong = h2o_gbm.pp_cm_summary(cm);
+        print h2o_gbm.pp_cm(cm)
 
-    print "\nTest\n==========\n"
-    print h2o_gbm.pp_cm(cm)
+    return predictCMResult
+        
 
 
 

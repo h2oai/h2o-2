@@ -74,6 +74,7 @@ public final class H2O {
   public static final RuntimeException unimpl(String msg) { return new RuntimeException("unimplemented: " + msg); }
   public static final RuntimeException unimpl() { return new RuntimeException("unimplemented"); }
   public static final RuntimeException fail() { return new RuntimeException("do not call"); }
+  public static final RuntimeException fail(String msg) { return new RuntimeException("FAILURE: " + msg); }
 
   // Central /dev/null for ignored exceptions
   public static void ignore(Throwable e)             { ignore(e,"[h2o] Problem ignored: "); }

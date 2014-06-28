@@ -71,8 +71,9 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
   public static class DataInfo extends Iced {
     public Frame _adaptedFrame;
     public int _responses; // number of responses
-    public boolean _standardize;
-    public boolean _standardize_response;
+    public enum TransformType { NONE, STANDARDIZE, NORMALIZE };
+    public TransformType _predictor_transform;
+    public TransformType _response_transform;
     public boolean _useAllFactorLevels;
     public int _nums;
     public int _cats;
@@ -95,8 +96,8 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
 
     private DataInfo(DataInfo dinfo, int foldId, int nfolds){
       assert dinfo._catLvls == null:"Should not be called with filtered levels (assuming the selected levels may change with fold id) ";
-      _standardize = dinfo._standardize;
-      _standardize_response = dinfo._standardize_response;
+      _predictor_transform = dinfo._predictor_transform;
+      _response_transform = dinfo._response_transform;
       _responses = dinfo._responses;
       _nums = dinfo._nums;
       _cats = dinfo._cats;
@@ -111,11 +112,11 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       _useAllFactorLevels = dinfo._useAllFactorLevels;
       _catLvls = null;
     }
-    public DataInfo(Frame fr, int hasResponses, boolean useAllFactorLvls, double [] normSub, double [] normMul) {
-      this(fr,hasResponses,useAllFactorLvls, normSub,normMul,null,null);
-    }
-    public DataInfo(Frame fr, int hasResponses, boolean useAllFactorLvls, double [] normSub, double [] normMul, double [] normRespSub, double [] normRespMul){
-      this(fr,hasResponses,useAllFactorLvls,normSub != null && normMul != null, normRespSub != null && normRespMul != null);
+
+    public DataInfo(Frame fr, int hasResponses, boolean useAllFactorLvls, double [] normSub, double [] normMul, TransformType predictor_transform, double [] normRespSub, double [] normRespMul){
+      this(fr,hasResponses,useAllFactorLvls,
+              normMul != null && normSub != null ? predictor_transform : TransformType.NONE, //just allocate, doesn't matter whether standardize or normalize is used (will be overwritten below)
+              normRespMul != null && normRespSub != null ? TransformType.STANDARDIZE : TransformType.NONE);
       assert (normSub == null) == (normMul == null);
       assert (normRespSub == null) == (normRespMul == null);
       if(normSub != null) {
@@ -148,18 +149,20 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       final Vec[] vecs =  fr.vecs();
 
       // put response to the end (if not already)
-      for(int i = 0; i < vecs.length-1; ++i) {
-        if(vecs[i] == response){
-          final String n = fr._names[i];
-          if (toEnum && !vecs[i].isEnum()) fr.add(n, fr.remove(i).toEnum()); //convert int classes to enums
-          else fr.add(n, fr.remove(i));
-          break;
+      if (response != null) {
+        for (int i = 0; i < vecs.length - 1; ++i) {
+          if (vecs[i] == response) {
+            final String n = fr._names[i];
+            if (toEnum && !vecs[i].isEnum()) fr.add(n, fr.remove(i).toEnum()); //convert int classes to enums
+            else fr.add(n, fr.remove(i));
+            break;
+          }
         }
-      }
-      // special case for when response was at the end already
-      if (toEnum && !response.isEnum() && vecs[vecs.length-1] == response) {
-        final String n = fr._names[vecs.length-1];
-        fr.add(n, fr.remove(vecs.length-1).toEnum());
+        // special case for when response was at the end already
+        if (toEnum && !response.isEnum() && vecs[vecs.length - 1] == response) {
+          final String n = fr._names[vecs.length - 1];
+          fr.add(n, fr.remove(vecs.length - 1).toEnum());
+        }
       }
 
       ArrayList<Integer> constantOrNAs = new ArrayList<Integer>();
@@ -239,13 +242,12 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       return prepareFrame(source, response, ignored_cols, toEnum, dropConstantCols, false);
     }
 
-    public DataInfo(Frame fr, int nResponses, boolean useAllFactors, boolean standardize) {
-      this(fr, nResponses, useAllFactors, standardize, false);
+    public DataInfo(Frame fr, int nResponses, boolean useAllFactors, TransformType predictor_transform) {
+      this(fr, nResponses, useAllFactors, predictor_transform, TransformType.NONE);
     }
 
-
-    //new DataInfo(f,catLvls, _responses, _standardize, _standardize_response);
-    private DataInfo(Frame fr, int [][] catLevels, int responses, boolean standardize, boolean standardizeResponse, int nfolds, int foldId){
+    //new DataInfo(f,catLvls, _responses, _standardize, _response_transform);
+    private DataInfo(Frame fr, int[][] catLevels, int responses, TransformType predictor_transform, TransformType response_transform, int foldId, int nfolds){
       _adaptedFrame = fr;
       _catOffsets = MemoryManager.malloc4(catLevels.length+1);
       int s = 0;
@@ -259,7 +261,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       _responses = responses;
       _cats = catLevels.length;
       _nums = fr.numCols()-_cats - responses;
-      if((_standardize = standardize) && _nums > 0){
+      if((_predictor_transform = predictor_transform) == TransformType.STANDARDIZE && _nums > 0){
         _normMul = MemoryManager.malloc8d(_nums);
         _normSub = MemoryManager.malloc8d(_nums);
         for(int i = 0; i < _nums; ++i){
@@ -267,16 +269,32 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
           _normMul[i] = (v.sigma() != 0)?1.0/v.sigma():1.0;
           _normSub[i] = v.mean();
         }
+      } else if((_predictor_transform = predictor_transform) == TransformType.NORMALIZE && _nums > 0){
+        _normMul = MemoryManager.malloc8d(_nums);
+        _normSub = MemoryManager.malloc8d(_nums);
+        for(int i = 0; i < _nums; ++i){
+          Vec v = fr.vec(catLevels.length+i);
+          _normMul[i] = (v.max() - v.min() > 0)?1.0/(v.max() - v.min()):1.0;
+          _normSub[i] = v.mean();
+        }
       } else {
         _normMul = null;
         _normSub = null;
       }
-      if((_standardize_response = standardizeResponse) && responses > 0){
+      if((_response_transform = response_transform) == TransformType.STANDARDIZE && responses > 0){
         _normRespMul = MemoryManager.malloc8d(responses);
         _normRespSub = MemoryManager.malloc8d(responses);
         for(int i = 0; i < responses; ++i){
           Vec v = fr.vec(fr.numCols()-responses+i);
           _normRespSub[i] = (v.sigma() != 0)?1.0/v.sigma():1.0;
+          _normRespSub[i] = v.mean();
+        }
+      } else if((_response_transform = response_transform) == TransformType.NORMALIZE && responses > 0){
+        _normRespMul = MemoryManager.malloc8d(responses);
+        _normRespSub = MemoryManager.malloc8d(responses);
+        for(int i = 0; i < responses; ++i){
+          Vec v = fr.vec(fr.numCols()-responses+i);
+          _normRespSub[i] = (v.max() - v.min() > 0)?1.0/(v.max() - v.min()):1.0;
           _normRespSub[i] = v.mean();
         }
       } else {
@@ -288,10 +306,10 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       _nfolds = nfolds;
       _foldId = foldId;
     }
-    public DataInfo(Frame fr, int nResponses, boolean useAllFactorLevels, boolean standardize, boolean standardize_response){
+    public DataInfo(Frame fr, int nResponses, boolean useAllFactorLevels, TransformType predictor_transform, TransformType response_transform) {
       _nfolds = _foldId = 0;
-      _standardize = standardize;
-      _standardize_response = standardize_response;
+      _predictor_transform = predictor_transform;
+      _response_transform = response_transform;
       _responses = nResponses;
       _useAllFactorLevels = useAllFactorLevels;
       _catLvls = null;
@@ -327,29 +345,34 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         names[i] = fr._names[cats[i]];
         _catOffsets[i+1] = (len += v.domain().length - (useAllFactorLevels?0:1));
       }
-      if(standardize){
+      if(predictor_transform != TransformType.NONE) {
         _normSub = MemoryManager.malloc8d(nnums);
         _normMul = MemoryManager.malloc8d(nnums); Arrays.fill(_normMul, 1);
       } else _normSub = _normMul = null;
       for(int i = 0; i < nnums; ++i){
         Vec v = (vecs2[i+ncats] = vecs[nums[i]]);
         names[i+ncats] = fr._names[nums[i]];
-        if(standardize){
+        if(predictor_transform == TransformType.STANDARDIZE){
           _normSub[i] = v.mean();
           _normMul[i] = v.sigma() != 0 ? 1.0/v.sigma() : 1.0;
+        } else if (predictor_transform == TransformType.NORMALIZE) {
+          _normSub[i] = v.mean();
+          _normMul[i] = (v.max() - v.min() > 0)?1.0/(v.max() - v.min()):1.0;
         }
       }
 
-      if(standardize_response){
+      if(response_transform != TransformType.NONE && _responses > 0){
         _normRespSub = MemoryManager.malloc8d(_responses);
         _normRespMul = MemoryManager.malloc8d(_responses); Arrays.fill(_normRespMul, 1);
       } else _normRespSub = _normRespMul = null;
       for(int i = 0; i < _responses; ++i){
         Vec v = (vecs2[nnums+ncats+i] = vecs[nnums+ncats+i]);
-        if(standardize_response){
+        if(response_transform == TransformType.STANDARDIZE){
           _normRespSub[i] = v.mean();
           _normRespMul[i] = v.sigma() != 0 ? 1.0/v.sigma() : 1.0;
-//          Log.info("normalization for response[" + i + ": mul " + _normRespMul[i] + ", sub " + _normRespSub[i]);
+        } else if(response_transform == TransformType.NORMALIZE){
+          _normRespSub[i] = v.mean();
+          _normRespMul[i] = (v.max() - v.min() > 0)?1.0/(v.max() - v.min()):1.0;
         }
       }
       _adaptedFrame = new Frame(names,vecs2);
@@ -394,7 +417,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       Frame f = new Frame(_adaptedFrame.names().clone(),_adaptedFrame.vecs().clone());
       if(ignoredCnt > 0) f.remove(Arrays.copyOf(ignoredCols,ignoredCnt));
       assert catLvls.length < f.numCols():"cats = " + catLvls.length + " numcols = " + f.numCols();
-      return new DataInfo(f,catLvls, _responses, _standardize, _standardize_response, _nfolds, _foldId);
+      return new DataInfo(f,catLvls, _responses, _predictor_transform, _response_transform, _foldId, _nfolds);
     }
     public String toString(){
       return "";
@@ -416,6 +439,47 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       final int nums = n-k;
       System.arraycopy(_adaptedFrame._names, _cats, res, k, nums);
       return res;
+    }
+
+    /**
+     * Normalize horizontalized categoricals to become probabilities per factor level.
+     * This is done with the SoftMax function.
+     * @param in input values
+     * @param out output values (can be the same as input)
+     */
+    public final void softMaxCategoricals(float[] in, float[] out) {
+      if (_cats == 0) return;
+      if (!_useAllFactorLevels) throw new UnsupportedOperationException("All factor levels must be present for re-scaling with SoftMax.");
+      assert (in.length == out.length);
+      assert (in.length == fullN());
+      final Vec[] vecs = _adaptedFrame.vecs();
+      int k = 0;
+      for (int i = 0; i < _cats; ++i) {
+        final int factors = vecs[i]._domain.length;
+        final float max = Utils.maxValue(in, k, k + factors);
+        float scale = 0;
+        for (int j = 0; j < factors; ++j) {
+          out[k + j] = (float) Math.exp(in[k + j] - max);
+          scale += out[k + j];
+        }
+        for (int j = 0; j < factors; ++j)
+          out[k + j] /= scale;
+        k += factors;
+      }
+      assert(k == numStart());
+    }
+
+    /**
+     * Undo the standardization/normalization of numerical columns
+     * @param in input values
+     * @param out output values (can be the same as input)
+     */
+    public final void unScaleNumericals(float[] in, float[] out) {
+      if (_nums == 0) return;
+      assert (in.length == out.length);
+      assert (in.length == fullN());
+      for (int k=numStart(); k < fullN(); ++k)
+        out[k] = in[k] / (float)_normMul[k-numStart()] + (float)_normSub[k-numStart()];
     }
   }
 
@@ -446,7 +510,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     chunkInit();
     double [] nums = MemoryManager.malloc8d(_dinfo._nums);
     int    [] cats = MemoryManager.malloc4(_dinfo._cats);
-    double [] response = MemoryManager.malloc8d(_dinfo._responses);
+    double [] response = _dinfo._responses == 0 ? null : MemoryManager.malloc8d(_dinfo._responses);
     int start = 0;
     int end = nrows;
 

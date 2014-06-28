@@ -1,6 +1,7 @@
 from h2oPerf.Table import *
 from h2oPerf import PerfUtils
 from h2oPerf.Runner import *
+from h2oPerf.Alerting import *
 
 import sys
 import os

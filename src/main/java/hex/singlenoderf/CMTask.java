@@ -42,6 +42,9 @@ public class CMTask extends MRTask2<CMTask> {
   public float _ss; // Sum of squares
   public int _rowcnt; // Rows used in scoring for regression
 
+  private float[] _priorDist;
+  private float[] _modelDist;
+
   /** Data to replay the sampling algorithm */
   private int[]     _chunk_row_mapping;
   /** Number of rows at each node */
@@ -60,7 +63,7 @@ public class CMTask extends MRTask2<CMTask> {
   /** Confusion matrix
    * @param model the ensemble used to classify
    */
-  public CMTask(SpeeDRFModel model, int treesToUse, double[] classWt, boolean computeOOB ) {
+  public CMTask(SpeeDRFModel model, int treesToUse, double[] classWt, boolean computeOOB, float[] priorDist, float[] modelDist ) {
     _modelKey   = model._key;
     _datakey    = model._dataKey;
     _classcol   = model.test_frame == null ?  (model.fr.numCols() - 1) : (model.test_frame.numCols() - 1);
@@ -70,6 +73,8 @@ public class CMTask extends MRTask2<CMTask> {
     _model = model;
     _varimp = null;
     _ss = 0.f;
+    _priorDist = priorDist;
+    _modelDist = modelDist;
     shared_init();
   }
 
@@ -79,7 +84,7 @@ public class CMTask extends MRTask2<CMTask> {
    confusion matrix. The default seed when deserializing is 42. */
     Random _rand = Utils.getRNG(0x92b5023f2cd40b7cL);
     _data = _model.test_frame == null ? _model.fr : _model.test_frame;
-
+    if (_model.test_frame != null) _computeOOB = false;
     _modelDataMap = _model.colMap(_model._names);
     assert !_computeOOB || _model._dataKey.equals(_datakey) : !_computeOOB + " || " + _model._dataKey + " equals " + _datakey ;
     Vec respModel = _model.get_response();
@@ -109,22 +114,7 @@ public class CMTask extends MRTask2<CMTask> {
   }
 
   public void init() {
-    // Make a mapping from chunk# to row# just for chunks on this node
-//    int total_home = 0;
-//    for (int i = 0; i < _data.anyVec().nChunks(); ++i) {
-//      if (_data.anyVec().chunkKey(i).home()) {
-//        total_home++;
-//      }
-//    }
-//    _chunk_row_mapping = new int[_data.anyVec().nChunks()];
-//
-//    int off=0;
-//    for (int i = 0; i < _data.anyVec().nChunks(); ++i) {
-//      if (_data.anyVec().chunkKey(i).home()) {
-//        _chunk_row_mapping[i] = off;
-//        off += _data.anyVec().chunkLen(i);
-//      }
-//    }
+
     // Initialize number of rows per node
     _rowsPerNode = new int[H2O.CLOUD.size()];
     long chunksCount = _data.anyVec().nChunks();
@@ -196,13 +186,13 @@ public class CMTask extends MRTask2<CMTask> {
         // Do not skip yet the rows with NAs in the rest of columns
         if( chks[_classcol].isNA(row)) continue;
 
-        if( _computeOOB /*&& (isLocalTree || isRemoteTreeChunk) */) { // if OOBEE is computed then we need to take into account utilized sampling strategy
+        if( _computeOOB) { // if OOBEE is computed then we need to take into account utilized sampling strategy
           switch( _model.sampling_strategy ) {
             case RANDOM          : if (sampledItem < _model.sample ) continue ROWS; break;
-            case STRATIFIED_LOCAL:
-              int clazz = (int) chks[_classcol].at8(row) - cmin;
-              if (sampledItem < _model.strata_samples[clazz] ) continue ROWS;
-              break;
+//            case STRATIFIED_LOCAL:
+//              int clazz = (int) chks[_classcol].at8(row) - cmin;
+//              if (sampledItem < _model.strata_samples[clazz] ) continue ROWS;
+//              break;
             default: assert false : "The selected sampling strategy does not support OOBEE replay!"; break;
           }
         }
@@ -221,7 +211,7 @@ public class CMTask extends MRTask2<CMTask> {
           votes[r][alignedPrediction]++; // Vote the row
           if (isLocalTree) localVotes[r][alignedPrediction]++; // Vote
         } else {
-          float pred = _model.classify0(ntree, _data, chks, row, _modelDataMap, numClasses, true /*regression*/);
+          float pred = _model.classify0(ntree, _data, chks, row, _modelDataMap, (short) 0, true /*regression*/);
           float actual = _data.vecs()[_classcol].at8(row);
           float delta = actual - pred;
           _ss += delta * delta;
@@ -454,7 +444,6 @@ public class CMTask extends MRTask2<CMTask> {
     protected boolean        _valid;
     final protected float _sum;
 
-
     private CMFinal() {
       _valid         = false;
       _SpeeDRFModelKey = null;
@@ -464,6 +453,7 @@ public class CMTask extends MRTask2<CMTask> {
       _sum = 0.f;
       _cms = null;
     }
+
     private CMFinal(CM cm, Key SpeeDRFModelKey, String[] domain, long[] errorsPerTree, boolean computedOOB, boolean valid, float sum, long[][][] cms) {
       _matrix = cm._matrix;
       _errors = cm._errors;
@@ -477,14 +467,17 @@ public class CMTask extends MRTask2<CMTask> {
       _sum = sum;
       _cms = cms;
     }
+
     /** Make non-valid confusion matrix */
     public static CMFinal make() {
       return new CMFinal();
     }
+
     /** Create a new confusion matrix. */
     public static CMFinal make(CM cm, SpeeDRFModel model, String[] domain, long[] errorsPerTree, boolean computedOOB, float sum, long[][][] cms) {
       return new CMFinal(cm, model._key, domain, errorsPerTree, computedOOB, true, sum, cms);
     }
+
     public String[] domain() { return _domain; }
     public int      dimension() { return _matrix.length; }
     public long     matrix(int i, int j) { return _matrix[i][j]; }
@@ -524,55 +517,128 @@ public class CMTask extends MRTask2<CMTask> {
     }
   }
 
+  /** Compute the sum of squared errors */
+  private float doSSECalc(int[] votes, float[] preds, int cclass) {
+    float err;
+
+    // Get the total number of votes for the row
+    float sum = doSum(votes);
+
+    // No votes for the row
+    if (sum == 0) {
+      err = 1f - (1f / (votes.length - 1f));
+      return err * err;
+    }
+
+    err = Float.isInfinite(sum)
+            ? (Float.isInfinite(preds[cclass + 1]) ? 0f : 1f)
+            : 1f - preds[cclass + 1] / sum;
+
+    return err * err;
+  }
+
+  private float doSum(int[] votes) {
+    float sum = 0f;
+    for (int v : votes)
+      sum += v;
+    return sum;
+  }
+
   /** Produce confusion matrix from given votes. */
-  final CM computeCM(int[][] votes, Chunk[] chks, boolean local) {
+  final CM computeCM(int[/**/][/**/] votes, Chunk[] chks, boolean local) {
     CM cm = new CM();
     int rows = votes.length;
     int validation_rows = 0;
     int cmin = (int) _data.vecs()[_classcol].min();
-    // Assemble the votes-per-class into predictions & score each row
-    cm._matrix = new long[_N][_N];          // Make an empty confusion matrix for this chunk
-    float preds[] = new float[_N+1];
-    for( int r = 0; r < rows; r++ ) { // Iterate over rows
-      float sum = 0.f;
-      int row = r + (int)chks[0]._start;
-      int[] vi = votes[r];                // Votes for i-th row
-      for( int v=0; v<_N; v++ ) preds[v+1] = vi[v];
-      if(_classWt != null )                 // Apply class weights
-        for( int v = 0; v<_N; v++) preds[v+1] *= _classWt[v];
-      int result = ModelUtils.getPrediction(preds, row); // Share logic to get a prediction for classifiers (solve ties)
-      if( vi[result]==0 ) { cm._skippedRows++; continue; } // Ignore rows with zero votes
 
+    // Assemble the votes-per-class into predictions & score each row
+
+    // Make an empty confusion matrix for this chunk
+    cm._matrix = new long[_N][_N];
+    float preds[] = new float[_N+1];
+
+    float num_trees = _errorsPerTree.length;
+
+    // Loop over the rows
+    for( int r = 0; r < rows; r++ ) {
+      int row = r + (int)chks[0]._start;
+
+      // Skip rows with missing response values
+      if (chks[_classcol].isNA(row)) continue;
+
+      // The class votes for the i-th row
+      int[] vi = votes[r];
+
+      // Fill the predictions with the vote counts, keeping the 0th index unchanged
+      for( int v=0; v<_N; v++ ) preds[v+1] = vi[v];
+
+      // Apply class weights
+      if(_classWt != null )
+        for( int v = 0; v<_N; v++) preds[v+1] *= _classWt[v];
+
+
+
+      float[] scored = preds.clone();
+      float s = doSum(vi);
+      if (s == 0) {
+        cm._skippedRows++;
+        continue;
+      }
+      for (int i = 1; i  < vi.length; ++i)
+        scored[i] = ( scored[i] / s);
+
+      // Correct for imbalance, if classes have been rebalanced
+      if (!_model.regression && _priorDist != null && _modelDist != null && _model.get_params().balance_classes) {
+        assert (scored.length == _model.nclasses() + 1); //1 label + nclasses probs
+        double probsum = 0;
+        for (int c = 1; c < scored.length; c++) {
+          final double original_fraction = _priorDist[c - 1];
+          assert (original_fraction > 0) : "original fraction should be > 0, but is " + original_fraction + ": not using enough training data?";
+          final double oversampled_fraction = _modelDist[c - 1];
+          assert (oversampled_fraction > 0) : "oversampled fraction should be > 0, but is " + oversampled_fraction + ": not using enough training data?";
+          assert (!Double.isNaN(scored[c]));
+          scored[c] *= original_fraction / oversampled_fraction;
+          probsum += scored[c];
+        }
+        for (int i = 1; i < scored.length; ++i) scored[i] /= probsum;
+
+        scored[0] = ModelUtils.getPrediction(scored, row);
+      }
+
+      // `result` is the class with the most votes, accounting for ties in the shared logic in ModelUtils
+      int result = _model.get_params().balance_classes ? (int) scored[0] : ModelUtils.getPrediction(preds, row);
+
+      // Get the class value from the response column for the current row
       int cclass = alignDataIdx((int) chks[_classcol].at8(row) - cmin);
       assert 0 <= cclass && cclass < _N : ("cclass " + cclass + " < " + _N);
+
+      // Ignore rows with zero votes, but still update the sum of squared errors
+      if( vi[result]==0 ) {
+        cm._skippedRows++;
+        if (!local) _sum += doSSECalc(vi, preds, cclass);
+        continue;
+      }
+
+      // Update the confusion matrix
       cm._matrix[cclass][result]++;
       if( result != cclass ) cm._errors++;
       validation_rows++;
-      for (int v : vi)
-        sum += (float)v;
 
-      float[] fs = new float[_N];
-      for (int i = 0; i < _N; ++i) {
-        fs[i] = (float)votes[r][i];
-      }
-      float err;
-      if(sum == 0) {
-        err = 1.0f-1.0f/_N;
-      } else {
-        err = fs[cclass] == 0 ? 0.f : 1.0f-fs[cclass]/sum;
-      }
-//      if (err == 0) {
-//        err = 1 - 1.f / _N;
-//      }
-      if (!local) _sum += err * err;
-      if(_N == 2 && !local) { // Binomial classification -> compute AUC, draw ROC
-        float snd = fs[1] / sum;// for validation dataset sum is always 1
+      // Update the sum of squared errors
+      if (!local) _sum += doSSECalc(vi, preds, cclass);
+      float sum = doSum(vi);
+
+      // Binomial classification -> compute AUC, draw ROC
+      if(_N == 2 && !local) {
+        float snd = preds[2] / sum;
         for(int i = 0; i < ModelUtils.DEFAULT_THRESHOLDS.length; i++) {
-          int p = snd >= ModelUtils.DEFAULT_THRESHOLDS[i] ? 1 : 0; // Compute prediction based on threshold
+          int p = snd >= ModelUtils.DEFAULT_THRESHOLDS[i] ? 1 : 0;
           _cms[i][cclass][p]++; // Increase matrix
         }
       }
     }
+
+    // End of loop over rows, return confusion matrix
     cm._rows=validation_rows;
     return cm;
   }

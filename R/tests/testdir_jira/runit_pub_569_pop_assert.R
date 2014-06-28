@@ -6,7 +6,7 @@ setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 source('../findNSourceUtils.R')
 
 the_test <- function(conn){
-  df = h2o.uploadFile.FV(conn, locate('smalldata/jira/pub-569.csv'))
+  df = h2o.uploadFile(conn, locate('smalldata/jira/pub-569.csv'))
 
   metric.quantilesScore <- function(valuesArray) {
     numberOfLevels <- 100

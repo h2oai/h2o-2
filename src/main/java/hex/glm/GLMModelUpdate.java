@@ -1,15 +1,8 @@
 package hex.glm;
 
-import hex.glm.GLMModel.Submodel;
-import hex.glm.GLMParams.Family;
-import hex.glm.GLMValidation.GLMXValidation;
 import water.*;
-import water.api.AUC;
 import water.api.DocGen;
 import water.api.Request;
-import water.util.RString;
-
-import java.text.DecimalFormat;
 
 public class GLMModelUpdate extends Request2 {
 
@@ -27,7 +20,7 @@ public class GLMModelUpdate extends Request2 {
   @API(help = "decision threshold",filter=Default.class)
   double threshold;
 
-  @API(help="lambda to be used in scoring",filter=Default.class)
+  @API(help="lambda_value to be used in scoring",filter=Default.class)
   double lambda = Double.NaN;
 
   public static String link(String txt, Key model) {return link(txt,model,Double.NaN);}
@@ -51,15 +44,12 @@ public class GLMModelUpdate extends Request2 {
       glm_model = v.get();
       glm_model.write_lock(null);
       int id = 0;
-      for(int i = 0; i < glm_model.lambdas.length; ++i)
-        if(lambda == glm_model.lambdas[i]){
-          id = i;
-          threshold = glm_model.submodels[i].validation.best_threshold;
+      for(; id < glm_model.submodels.length; ++id)
+        if(glm_model.submodels[id].lambda_value == lambda){
+          threshold = glm_model.submodels[id].validation.best_threshold;
           break;
         }
-      glm_model.best_lambda_idx = id;
-      if(!Double.isNaN(threshold))
-        glm_model.threshold = threshold;
+      glm_model.setSubmodelIdx(id);
       glm_model.update(null);
       glm_model.unlock(null);
     }
@@ -71,7 +61,7 @@ public class GLMModelUpdate extends Request2 {
 //    if(v == null)
 //      return Response.poll(this, 0, 100, "_modelKey", _modelKey.toString());
 //    glm_model = v.get();
-//    if(Double.isNaN(lambda))lambda = glm_model.lambdas[glm_model.best_lambda_idx];
+//    if(Double.isNaN(lambda_value))lambda_value = glm_model.lambdas[glm_model.best_lambda_idx];
 //    Job j;
 //    if((j = Job.findJob(glm_model.job_key)) != null && j.exception != null)
 //      return Response.error(j.exception);

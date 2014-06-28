@@ -17,7 +17,8 @@ DV<- as.matrix(cuseR[,14])
 expect_warning(fitR<- glmnet(x=DM, y=DV, family="gaussian", alpha=0, nlambda=0, standardize=F, intercept=T))
 
 #H2O should return a warning (similar to the behavior demostrated above) because we have specified nonspd matrix AND no regularization. Returning a model implies that we have regularized the coefficients, which is bad, because the user is getting a model other than the one they specified- the true specification is also not returned to the user. 
-expect_warning(fitH2O<- h2o.glm.FV(y="Percentuse", x=c("AgeA", "AgeB","AgeC", "AgeD", "LowEd", "HighEd",  "MoreYes", "MoreNo"), data=cuseH2O, family="gaussian", lambda=0, alpha=0, nfolds=0))
+cuseH2O <- h2o.importFile(H2Oserver, locate("smalldata/cuseexpanded.csv"))
+expect_warning(fitH2O<- h2o.glm(y="Percentuse", x=c("AgeA", "AgeB","AgeC", "AgeD", "LowEd", "HighEd",  "MoreYes", "MoreNo"), data=cuseH2O, family="gaussian", lambda=0, alpha=0, nfolds=0))
 
 expect_true(fitH2O@model$params$lambda > 0)
 

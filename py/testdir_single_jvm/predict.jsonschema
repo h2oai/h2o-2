@@ -1,0 +1,13 @@
+# doesn't have much
+# only has one column if GLM2 gaussian?
+predictResult {
+  "Request2": 0, 
+  "response_info": {
+    "h2o": "pytest-kevin-6930", 
+    "node": "/192.168.1.40:54321", 
+    "redirect_url": "/2/Inspect2.json?src_key=Predict.hex", 
+    "status": "redirect", 
+    "time": 149
+  }
+}
+

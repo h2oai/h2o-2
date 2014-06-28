@@ -174,7 +174,13 @@ public abstract class Job extends Func {
     cancel(msg, js);
   }
   private void cancel(final String msg, JobState resultingState ) {
-    if(state == JobState.CANCELLED) Log.info("Job " + self() + "("  + description + ") was cancelled.");
+    if(resultingState == JobState.CANCELLED) {
+      Log.info("Job " + self() + "("  + description + ") was cancelled.");
+    }
+    else {
+      Log.err("Job " + self() + "("  + description + ") failed.");
+      Log.err(msg);
+    }
     exception = msg;
     state = resultingState;
     // replace finished job by a job handle
@@ -200,11 +206,6 @@ public abstract class Job extends Func {
   public boolean isCancelledOrCrashed() {
     return state == JobState.CANCELLED || state == JobState.FAILED;
   }
-
-  /** Returns true if the job was cancelled by the user.
-   * @return true if the job is in state {@link JobState#CANCELLED}.
-   */
-  public boolean isCancelledXX() { return state == JobState.CANCELLED; }
 
   /** Returns true if the job was terminated by unexpected exception.
    * @return true, if the job was terminated by unexpected exception.
@@ -273,13 +274,10 @@ public abstract class Job extends Func {
    * @param jobkey job key
    * @return returns a job with given job key or null if a job is not found.
    */
-  public static final Job findJob(final Key jobkey) {
-    Job job = UKV.get(jobkey);
-    return job;
-  }
+  public static Job findJob(final Key jobkey) { return UKV.get(jobkey); }
 
   /** Finds a job with given dest key or returns null */
-  public static final Job findJobByDest(final Key destKey) {
+  public static Job findJobByDest(final Key destKey) {
     Job job = null;
     for( Job current : Job.all() ) {
       if( current.dest().equals(destKey) ) {
@@ -372,7 +370,7 @@ public abstract class Job extends Func {
         return;
       }
 
-      try { Thread.sleep (pollingIntervalMillis); } catch (Exception xe) {}
+      try { Thread.sleep (pollingIntervalMillis); } catch (Exception ignore) {}
     }
   }
 
@@ -390,8 +388,7 @@ public abstract class Job extends Func {
     final long _count;
     private final Status _status;
     final String _error;
-    protected DException _ex;
-    public enum Status { Computing, Done, Cancelled, Error };
+    public enum Status { Computing, Done, Cancelled, Error }
 
     public Status status() { return _status; }
 
@@ -556,7 +553,7 @@ public abstract class Job extends Func {
      */
     @Override public JsonObject toJSON() {
       JsonObject jo = super.toJSON();
-      if (!jo.has("source")) return jo;
+      if (!jo.has("source") || source==null) return jo;
       HashMap<String, int[]> map = new HashMap<String, int[]>();
       map.put("used_cols", cols);
       map.put("ignored_cols", ignored_cols);
@@ -587,7 +584,49 @@ public abstract class Job extends Func {
       if (!isEmpty(ignored_cols_by_name)) { specified++; }
       if (specified > 1) throw new IllegalArgumentException("Arguments 'cols', 'ignored_cols_by_name', and 'ignored_cols' are exclusive");
 
-      // If the column are not specified, then select everything.
+      // Unify all ignored cols specifiers to ignored_cols.
+      {
+        if (!isEmpty(ignored_cols_by_name)) {
+          assert (isEmpty(ignored_cols));
+          ignored_cols = ignored_cols_by_name;
+          ignored_cols_by_name = EMPTY;
+        }
+        if (ignored_cols == null) {
+          ignored_cols = new int[0];
+        }
+      }
+
+      // At this point, ignored_cols_by_name is dead.
+      assert (isEmpty(ignored_cols_by_name));
+
+      // Create map of ignored columns for speed.
+      HashMap<Integer,Integer> ignoredColsMap = new HashMap<Integer,Integer>();
+      for ( int i = 0; i < ignored_cols.length; i++) {
+        int value = ignored_cols[i];
+        ignoredColsMap.put(new Integer(value), new Integer(1));
+      }
+
+      // Add UUID cols to ignoredColsMap.  Duplicates get folded into one entry.
+      Vec[] vecs = source.vecs();
+      for( int i = 0; i < vecs.length; i++ ) {
+        if (vecs[i].isUUID()) {
+          ignoredColsMap.put(new Integer(i), new Integer(1));
+        }
+      }
+
+      // Rebuild ignored_cols from the map.  Sort it.
+      {
+        ignored_cols = new int[ignoredColsMap.size()];
+        int j = 0;
+        for (Integer key : ignoredColsMap.keySet()) {
+          ignored_cols[j] = key.intValue();
+          j++;
+        }
+
+        Arrays.sort(ignored_cols);
+      }
+
+      // If the columns are not specified, then select everything.
       if (isEmpty(cols)) {
         cols = new int[source.vecs().length];
         for( int i = 0; i < cols.length; i++ )
@@ -595,18 +634,20 @@ public abstract class Job extends Func {
       } else {
         if (!checkIdx(source, cols)) throw new IllegalArgumentException("Argument 'cols' specified invalid column!");
       }
-      // Make a set difference between cols and (ignored_cols || ignored_cols_by_name)
-      if (!isEmpty(ignored_cols) || !isEmpty(ignored_cols_by_name)) {
+
+      // Make a set difference between cols and ignored_cols.
+      if (!isEmpty(ignored_cols)) {
         int[] icols = ! isEmpty(ignored_cols) ? ignored_cols : ignored_cols_by_name;
-        if (!checkIdx(source, icols)) throw new IllegalArgumentException("Argument '"+(!isEmpty(ignored_cols) ? "ignored_cols" : "ignored_cols_by_name")+"' specified invalid column!");
+        if (!checkIdx(source, icols)) throw new IllegalArgumentException("Argument 'ignored_cols' or 'ignored_cols_by_name' specified invalid column!");
         cols = difference(cols, icols);
-        // Setup all variables in consistence way
+        // Setup all variables in consistent way
         ignored_cols = icols;
         ignored_cols_by_name = icols;
       }
 
-      if( cols.length == 0 )
+      if( cols.length == 0 ) {
         throw new IllegalArgumentException("No column selected");
+      }
     }
 
     protected final Vec[] selectVecs(Frame frame) {
@@ -657,12 +698,14 @@ public abstract class Job extends Func {
      */
     @Override public JsonObject toJSON() {
       JsonObject jo = super.toJSON();
-      int idx = source.find(response);
-      if( idx == -1 ) {
-        Vec vm = response.masterVec();
-        if( vm != null ) idx = source.find(vm);
+      if (source!=null) {
+        int idx = source.find(response);
+        if( idx == -1 ) {
+          Vec vm = response.masterVec();
+          if( vm != null ) idx = source.find(vm);
+        }
+        jo.getAsJsonObject("response").add("name", new JsonPrimitive(idx == -1 ? "null" : source._names[idx]));
       }
-      jo.getAsJsonObject("response").add("name", new JsonPrimitive(idx == -1 ? "null" : source._names[idx]));
       return jo;
     }
 
@@ -745,7 +788,7 @@ public abstract class Job extends Func {
     /** Names of columns */
     protected transient String[] _names;
     /** Name of validation response. Should be same as source response. */
-    protected transient String _responseName;
+    public transient String _responseName;
 
     /** Adapted validation frame to a computed model. */
     private transient Frame _adaptedValidation;
@@ -884,7 +927,7 @@ public abstract class Job extends Func {
     protected String[] getVectorDomain(final Vec v) {
       assert v==null || v.isInt() || v.isEnum() : "Cannot get vector domain!";
       if (v==null) return null;
-      String[] r = null;
+      String[] r;
       if (v.isEnum()) {
         r = v.domain();
       } else {
@@ -989,4 +1032,9 @@ public abstract class Job extends Func {
     public JobCancelledException(String msg){super("job was cancelled! with msg '" + msg + "'");}
   }
 
+  /** Hygienic method to prevent accidental capture of non desired values. */
+  public static <T extends FrameJob> T hygiene(T job) {
+    job.source = null;
+    return job;
+  }
 }

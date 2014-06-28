@@ -1,0 +1,18 @@
+# this is when you do confusion_matrix on a gaussian glm model
+# different when you do confusion_matrix on a binomial glm model
+cm {
+  "Request2": 0, 
+  "actual_domain": null, 
+  "cm": null, 
+  "domain": null, 
+  "mse": 0.999991113679316, 
+  "predicted_domain": null, 
+  "response_info": {
+    "h2o": "pytest-kevin-8190", 
+    "node": "/192.168.1.40:54321", 
+    "redirect_url": null, 
+    "status": "done", 
+    "time": 44
+  }
+}
+

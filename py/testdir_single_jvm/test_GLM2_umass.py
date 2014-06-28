@@ -46,7 +46,7 @@ class Basic(unittest.TestCase):
         for i in range(3):
             for (csvFilename, family, y, timeoutSecs, x) in csvFilenameList:
                 csvPathname = "logreg/umass_statdata/" + csvFilename
-                kwargs = {'n_folds': 2, 'response': y, 'family': family, 'alpha': 1, 'lambda': 1e-4}
+                kwargs = {'n_folds': 3, 'response': y, 'family': family, 'alpha': 1, 'lambda': 1e-4}
 
 
                 parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put', 

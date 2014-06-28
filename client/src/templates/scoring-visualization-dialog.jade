@@ -1,0 +1,24 @@
+.y-dialog-container
+  .y-dialog.y-scoring-visualization-dialog(data-dialog-width='450')
+    .y-dialog-title-bar
+      .y-dialog-title(data-bind='text:title')
+      .y-dialog-exit(data-bind='click:cancel')
+        i.fa.fa-times 
+    .y-dialog-body
+      .form-horizontal
+        .form-group
+          label.col-sm-3.control-label Compare
+          .col-sm-9
+            select.form-control(data-bind="options:visualizationTypes, optionsText:'caption', value:visualizationType")
+        .form-group
+          label.col-sm-3.control-label X-Axis Field
+          .col-sm-9
+            select.form-control(data-bind="options:variables, optionsCaption:'Choose...', optionsText:'caption', value:variableX")
+        .form-group
+          label.col-sm-3.control-label Y-Axis Field
+          .col-sm-9
+            select.form-control(data-bind="options:variables, optionsCaption:'Choose...', optionsText:'caption', value:variableY")
+      .y-dialog-actions
+        button.btn(data-bind='click:cancel') Cancel
+        button.btn.btn-primary(data-bind='click:confirm, enable:canConfirm') OK
+

@@ -1,12 +1,18 @@
 defaultStatusMessage = 'Ready.'
 Steam.MainView = (_) ->
+  _help = node$ null
+  _helpHistory = []
+  _helpHistoryIndex = -1
+  _canNavigateHelpBack = node$ no
+  _canNavigateHelpForward = node$ no
   _status = node$ defaultStatusMessage
   _listViews = do nodes$
   _selectionViews = do nodes$
   _pageViews = do nodes$
   _modalViews = do nodes$
   _modalDialogs = do nodes$
-  _isHelpHidden = node$ no
+  _inspectorViews = nodes$ null
+  _isInspectorHidden = node$ no
   _topic = node$ null
 
   _isDisplayingTopics = node$ no
@@ -21,12 +27,18 @@ Steam.MainView = (_) ->
   _topicTitle = lift$ _topic, _isDisplayingTopics, (topic, isDisplayingTopics) ->
     if isDisplayingTopics then 'Menu' else if topic then topic.title else ''
   toggleTopics = -> _isDisplayingTopics not _isDisplayingTopics()
-  toggleHelp = -> _isHelpHidden not _isHelpHidden()
+  toggleInspector = -> _isInspectorHidden not _isInspectorHidden()
   apply$ _isDisplayingTopics, (isDisplayingTopics) ->
     if isDisplayingTopics
       _listViews.push _topicListView
     else
       _listViews.remove _topicListView
+
+  initialize = ->
+    navigateHelpHome()
+
+    #TODO do this through hash uris
+    switchToFrames type: 'all'
 
   createTopic = (title, handle) ->
     self =
@@ -110,8 +122,70 @@ Steam.MainView = (_) ->
   switchPageView = (view) -> switchView _pageViews, view
   switchModalView = (view) -> switchView _modalViews, view
   fixDialogPlacement = (element) -> _.positionDialog element
+
+  #
+  # Status bar
+  #
+
+  displayStatus = (message) ->
+    if message
+      _status message
+      # Reset status bar after 7000ms
+      _.timeout 'status', 7000, -> _.status null
+    else
+      _status defaultStatusMessage
+
+  #
+  # Inspection
+  #
+  inspect = (view) ->
+    if view
+      switchView _inspectorViews, view
+    else
+      # Clear the inspector
+      # TODO put some default content here.
+      switchView _inspectorViews, null
+    return
+
+  #
+  # Help
+  #
+
+  navigateHelpHome = -> help 'home'
+
+  navigateHelp = ->
+    _help _.man _helpHistory[_helpHistoryIndex]
+    _canNavigateHelpBack _helpHistoryIndex > 0
+    _canNavigateHelpForward _helpHistoryIndex < _helpHistory.length - 1
+
+  navigateHelpBack = ->
+    if _helpHistoryIndex > 0
+      _helpHistoryIndex--
+      navigateHelp()
+
+  navigateHelpForward = ->
+    if _helpHistoryIndex < _helpHistory.length - 1
+      _helpHistoryIndex++
+      navigateHelp()
+
+  help = (id) ->
+    unless _helpHistory[_helpHistoryIndex] is id
+      if _helpHistoryIndex < _helpHistory.length - 1
+        # Chop off tail
+        _helpHistory.length = _helpHistoryIndex + 1 
+        _helpHistoryIndex = _helpHistory.length - 1
+      if _helpHistory.length > 50
+        # Chop off head
+        _helpHistory.splice 0, _helpHistory.length - 50
+        _helpHistoryIndex = _helpHistory.length - 1
+      _helpHistory.push id
+      navigateHelpForward()
  
   template = (view) -> view.template
+
+  #
+  # Links
+  #
 
   link$ _.loadDialog, (dialog) ->
     _modalDialogs.push dialog
@@ -138,26 +212,21 @@ Steam.MainView = (_) ->
   link$ _.switchToModels, switchToModels
   link$ _.switchToScoring, switchToScoring
   link$ _.switchToNotifications, switchToNotifications
+  link$ _.inspect, inspect
 
   # Not in use. Leaving this here as an example of how a modal view can be displayed.
   # link$ _.modelsSelected, -> switchModalView _modelSelectionView
   # link$ _.modelsDeselected, -> _modalViews.remove _modelSelectionView
-  
-  link$ _.status, (message) ->
-    if message
-      _status message
-      # Reset status bar after 7000ms
-      _.timeout 'status', 7000, -> _.status null
-    else
-      _status defaultStatusMessage
+
+  link$ _.status, displayStatus
+  link$ _.help, help
 
 
-  #TODO do this through hash uris
-  switchToFrames type: 'all'
+  do initialize
 
   topicTitle: _topicTitle
   toggleTopics: toggleTopics
-  toggleHelp: toggleHelp
+  toggleInspector: toggleInspector
   listViews: _listViews
   selectionViews: _selectionViews
   pageViews: _pageViews
@@ -168,7 +237,14 @@ Steam.MainView = (_) ->
   isNavigatorMasked: _isNavigatorMasked
   isListMasked: _isListMasked
   isViewMasked: _isViewMasked
-  isHelpHidden: _isHelpHidden
+  isInspectorHidden: _isInspectorHidden
+  inspectorViews: _inspectorViews
+  help: _help
+  navigateHelpHome: navigateHelpHome
+  canNavigateHelpBack: _canNavigateHelpBack
+  navigateHelpBack: navigateHelpBack
+  canNavigateHelpForward: _canNavigateHelpForward
+  navigateHelpForward: navigateHelpForward
   status: _status
   fixDialogPlacement: fixDialogPlacement
   template: template

@@ -13,6 +13,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.*;
 
+import static java.lang.Double.isNaN;
 import sun.misc.Unsafe;
 import water.*;
 import water.api.DocGen;
@@ -86,8 +87,11 @@ public class Utils {
     return result;
   }
   public static float maxValue(float[] from) {
-    float result = from[0];
-    for (int i = 1; i<from.length; ++i)
+    return maxValue(from, 0, from.length);
+  }
+  public static float maxValue(float[] from, int start, int end) {
+    float result = from[start];
+    for (int i = start+1; i<end; ++i)
       if (from[i]>result) result = from[i];
     return result;
   }
@@ -717,6 +721,21 @@ public class Utils {
     }
     return bs;
   }
+
+  public static String formatPct(double pct) {
+    String s = "N/A";
+    if( !isNaN(pct) )
+      s = String.format("%5.2f %%", 100 * pct);
+    return s;
+  }
+
+  public static int maxValue(byte[] from ) {
+    int result = from[0]&0xFF;
+    for (int i = 1; i < from.length; ++i)
+      if ( (from[i]&0xFF) > result) result = from[i]&0xFF;
+    return result;
+  }
+
 
   /**
    * Simple wrapper around ArrayList with support for H2O serialization

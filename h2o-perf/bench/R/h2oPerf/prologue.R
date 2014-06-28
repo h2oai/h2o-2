@@ -182,6 +182,12 @@ function() {
 #check that two vectors are approximately equal
 checkEquals<-
 function(v1, v2) {
+    print("CHECKING RESULTS")
+    print("v1: ")
+    print(v1)
+    print("v2: ")
+    print(v2)
+
     #if v1 < v2 then it's OK
     if (all(v1 < v2)) {
       correct_pass <<- 1
@@ -189,7 +195,7 @@ function(v1, v2) {
     }
     new_v1 <- v1[v1>v2]
     new_v2 <- v2[v1>v2]
-    DIFFERENCE <- 0.01
+    DIFFERENCE <- 0.1
     v <- abs(v1-v2)
     if(sum(v > DIFFERENCE) > 0) {
       correct_pass <<- 0
@@ -197,55 +203,23 @@ function(v1, v2) {
 }
 
 #Import/Parsing
-upload.VA<-
+upload<-
 function(pkey, dataPath) {
-  h2o.uploadFile.VA(h, path = dataPath, key = pkey)
+  h2o.uploadFile(h, dataPath, key = pkey)
 }
 
-upload.FV<-
+import<-
 function(pkey, dataPath) {
-  h2o.uploadFile.FV(h, dataPath, key = pkey)
+  h2o.importFile(h, dataPath, key = pkey)
 }
 
-import.VA<-
+hdfs<-
 function(pkey, dataPath) {
-  h2o.importFile.VA(h, dataPath, key = pkey)
-}
-
-import.FV<-
-function(pkey, dataPath) {
-  h2o.importFile.FV(h, dataPath, key = pkey)
-}
-
-hdfs.VA<-
-function(pkey, dataPath) {
-  h2o.importHDFS.VA(h, dataPath, key = pkey)
-source("../../R/h2oPerf/prologue.R")
-
-data_source <<- "s3://h2o-bench/AirlinesClean2"
-trainData   <<- "s3n://h2o-bench/AirlinesClean2"
-
-hex <- h2o.importFile.FV(h, "s3n://h2o-bench/AirlinesClean2")
-
-num_train_rows <<- 1021368222
-num_explan_cols <<- 12
-upload.VA("parsed.hex", trainData)
-source("../../R/h2oPerf/epilogue.R")
-}
-
-hdfs.FV<-
-function(pkey, dataPath) {
-  h2o.importHDFS.FV(h, dataPath, key = pkey)
+  h2o.importHDFS(h, dataPath, key = pkey)
 }
 
 #Modeling
-runSummary.VA<-
-function() {
-  data <- new("H2OParsedDataVA", h2o = h, key = "parsed.hex", logic = FALSE)
-  summary(data)
-}
-
-runSummary.FV<-
+runSummary<-
 function() {
   data <- new("H2OParsedData", h2o = h, key = "parsed.hex", logic = TRUE)
   summary(data)
@@ -258,64 +232,34 @@ function(.variables, .fun = NULL, ..., .progress = 'none') {
 }
 
 runGBM<-
-function(x, y, distribution='multinomial', 
+function(x, y, distribution='multinomial', nfolds = 0,
          n.trees=10, interaction.depth=5, 
          n.minobsinnode=10, shrinkage=0.02, 
          n.bins=100) {
   data <- new("H2OParsedData", h2o = h, key = "parsed.hex", logic = TRUE)
   model <<- h2o.gbm(x = x, y = y, distribution = distribution, data = data, n.trees = n.trees,
           interaction.depth = interaction.depth, n.minobsinnode = n.minobsinnode,
-          shrinkage = shrinkage, n.bins = n.bins)
+          shrinkage = shrinkage, n.bins = n.bins, nfolds = nfolds)
   model.json <<- .h2o.__remoteSend(h, .h2o.__PAGE_GBMModelView, '_modelKey' = model@key)
 }
 
-runGLM.VA<-
-function(x, y, family, nfolds=10, alpha=0.5, lambda=1.0e-5, epsilon=1.0e-5, 
-         standardize=TRUE, tweedie.p=ifelse(family=='tweedie', 1.5, as.numeric(NA)), 
-         thresholds=ifelse(family=='binomial', seq(0, 1, 0.01), as.numeric(NA))) {
-  data <- new("H2OParsedDataVA", h2o = h, key = "parsed.hex", logic = FALSE)
-  model <<- h2o.glm.VA(x = x, y = y, data = data, family = family, nfolds = nfolds,
-                       alpha = alpha, lambda = lambda, epsilon = epsilon, standardize = standardize,
-                       tweedie.p = tweedie.p, thresholds = thresholds)
-  model.json <<- .h2o.__remoteSend(h, .h2o.__PAGE_INSPECT, key = model@key)
-}
-
-runGLM.FV<-
+runGLM<-
 function(x, y, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, epsilon = 1.0e-5, 
          standardize = TRUE, tweedie.p = ifelse(family == "tweedie", 0, as.numeric(NA))) {
   data <- new("H2OParsedData", h2o = h, key = "parsed.hex", logic = TRUE)
-  model <<- h2o.glm.FV(x = x, y = y, data = data, family = family, nfolds = nfolds, alpha = alpha,
+  model <<- h2o.glm(x = x, y = y, data = data, family = family, nfolds = nfolds, alpha = alpha,
                        lambda = lambda, epsilon = epsilon, standardize = standardize, tweedie.p = tweedie.p)
   model.json <<- .h2o.__remoteSend(h, .h2o.__PAGE_GLMModelView, '_modelKey'=model@key)
 }
 
-runKMeans.FV<-
+runKMeans<-
 function(centers, cols = '', iter.max = 10, normalize = FALSE) {
   data <- new("H2OParsedData", h2o = h, key = "parsed.hex", logic = TRUE)
-  model <<- h2o.kmeans.FV(data = data, centers = centers, cols = cols, iter.max = iter.max, normalize = normalize)
+  model <<- h2o.kmeans(data = data, centers = centers, cols = cols, iter.max = iter.max, normalize = normalize)
   model.json <<- .h2o.__remoteSend(h, .h2o.__PAGE_KM2ModelView, model = model@key)
   kmeans_k <<- dim(model@model$centers)[1]
   kmeans_withinss <<- model@model$tot.withinss
 }
-
-runKMeans.VA<-
-function(centers, cols = '', iter.max = 10, normalize = FALSE) {
-  data <- new("H2OParsedDataVA", h2o = h, key = "parsed.hex", logic = TRUE)
-  model <<- h2o.kmeans.VA(data = data, centers = centers, cols = cols, iter.max = iter.max, normalize = normalize)
-  model.json <<- .h2o.__remoteSend(h, .h2o.__PAGE_INSPECT, key = model@key)
-  kmeans_k <<- dim(model@model$centers)[1]
-  kmeans_withinss <<- model@model$tot.withinss
-}
-
-#runNN<-
-#function(x, y, classification=T, activation='Tanh', layers=500, 
-#         rate=0.01, l1_reg=1e-4, l2_reg=0.0010, epoch=100) {
-#  data <- new("H2OParsedData", h2o = h, key = "parsed.hex", logic = TRUE)
-#  model <<- h2o.nn(x = x, y = y, data = data, classification = classification,
-#                   activation = activation, layers = layers, rate = rate, 
-#                   l1_reg = l1_reg, l2_reg = l2_reg, epoch = epoch)
-#  model.json <<- .h2o.__remoteSend(h, .h2o.__PAGE_NNModelView, '_modelKey'=model@key)
-#}
 
 runPCA<-
 function(tol = 0, standardize = TRUE, retx = FALSE) {
@@ -324,56 +268,53 @@ function(tol = 0, standardize = TRUE, retx = FALSE) {
   model.json <<- .h2o.__remoteSend(h, .h2o.__PAGE_PCAModelView, '_modelKey'=model@key)
 }
 
-runRF.VA<-
-function(x, y, ntree=50, depth=50, sample.rate=2/3, 
-         classwt=NULL, nbins=100, seed=-1, use_non_local=TRUE) {
-  data <- new("H2OParsedDataVA", h2o = h, key = "parsed.hex", logic = FALSE)
-  model <<- h2o.randomForest.VA(x = x, y = y, data = data, depth = depth,
-                                sample.rate = sample.rate, classwt = classwt,
-                                nbins = nbins, seed = seed, use_non_local = use_non_local)
-  model.json <<- .h2o.__remoteSend(h, .h2o.__PAGE_RFVIEW, model_key=model@key, data_key=data@key)
-}
-
-runRF.FV<-
-function(x, y, ntree=50, depth=50, nodesize=1, 
-         sample.rate=2/3, nbins=100, seed=-1) {
+runRF<-
+function(x, y, ntree=50, depth=50, nodesize=1, nfolds = 0,
+         sample.rate=2/3, nbins=100, seed=-1, mtry = -1) {
   data <- new("H2OParsedData", h2o = h, key = "parsed.hex", logic = TRUE)
-  model <<- h2o.randomForest.FV(x = x, y = y, data = data, ntree = ntree,
+  model <<- h2o.randomForest(x = x, y = y, data = data, ntree = ntree, nfolds = nfolds, mtries = mtry,
                                 depth = depth, nodesize = nodesize,
                                 sample.rate = sample.rate, nbins = nbins, seed = seed)
   model.json <<- .h2o.__remoteSend(h, .h2o.__PAGE_DRFModelView, '_modelKey'= model@key)
 }
 
+runSRF<-
+function(x, y, classification=TRUE, nfolds=0,
+          mtry=-1, ntree=50, depth=50, sample.rate=2/3,
+          oobee = TRUE,importance = FALSE,nbins=1024, seed=-1,
+          stat.type="ENTROPY",balance.classes=FALSE) {
+
+  data <- new("H2OParsedData", h2o = h, key = "parsed.hex", logic = FALSE)
+  model <<- h2o.SpeeDRF(x = x, y = y, data = data, ntree = ntree, depth = depth, nbins = nbins, sample.rate = sample.rate, nfolds = nfolds, mtry=mtry,
+                        oobee = oobee, importance = importance, seed = seed, stat.type = stat.type, balance.classes = balance.classes)
+
+}
+
 runDL<-
 function(x, y, activation="RectifierWithDropout", 
 hidden=c(1024,1024,2048), 
+nfolds = 0,
 epochs=32, 
 train_samples_per_iteration=-1, 
-seed=7514391364823515067, 
 adaptive_rate=TRUE, 
 rho=0.99, 
 epsilon=1E-6, 
 rate = 0.01, 
-rate_annealing=1.0E-6, 
+rate_annealing=1E-6,
 rate_decay=1.0, 
 momentum_start=0.0, 
 momentum_ramp=1000000, 
 momentum_stable=0.0, 
 nesterov_accelerated_gradient=TRUE, 
-input_dropout_ratio=0.2, 
-hidden_dropout_ratios=c(0.5,0.5,0.5), 
+input_dropout_ratio=0.0, 
 l1 = 1E-5, 
 l2 = 0.0, 
-max_w2=15, 
 initial_weight_distribution="UniformAdaptive", 
 initial_weight_scale=1.0, 
 loss="CrossEntropy", 
-score_interval=30.0, 
-score_training_samples=1000, 
-score_validation_samples=10000, 
+score_interval=5.0, 
+score_training_samples=10000, 
 score_duty_cycle=0.1, 
-classification_stop=-1, 
-regression_stop=1E-6, 
 quiet_mode=FALSE, 
 max_confusion_matrix_size=20, 
 max_hit_ratio_k=10, 
@@ -389,13 +330,11 @@ replicate_training_data=TRUE,
 single_node_mode=FALSE, 
 shuffle_training_data=FALSE) {
   data <- new("H2OParsedData", h2o = h, key = "parsed.hex", logic = TRUE)
-  val  <- new("H2OParsedData", h2o = h, key = "test.hex", logic = TRUE)
-  model <<- h2o.deeplearning(x = x, y = y, data = data, validation = val,
+  model <<- h2o.deeplearning(x = x, y = y, data = data, nfolds = nfolds,
       activation=activation,
       hidden=hidden,
       epochs=epochs,
       train_samples_per_iteration=train_samples_per_iteration,
-      seed=seed,
       adaptive_rate=adaptive_rate,
       rho=rho,
       epsilon=epsilon,
@@ -407,19 +346,14 @@ shuffle_training_data=FALSE) {
       momentum_stable=momentum_stable,
       nesterov_accelerated_gradient=nesterov_accelerated_gradient,
       input_dropout_ratio=input_dropout_ratio,
-      hidden_dropout_ratios=hidden_dropout_ratios,
       l1=l1,
       l2=l2,
-      max_w2=max_w2,
       initial_weight_distribution=initial_weight_distribution,
       initial_weight_scale=initial_weight_scale,
       loss=loss,
       score_interval=score_interval,
       score_training_samples=score_training_samples,
-      score_validation_samples=score_validation_samples,
       score_duty_cycle=score_duty_cycle,
-      classification_stop=classification_stop,
-      regression_stop=regression_stop,
       quiet_mode=quiet_mode,
       max_confusion_matrix_size=max_confusion_matrix_size,
       max_hit_ratio_k=max_hit_ratio_k,
@@ -446,36 +380,28 @@ function(expected_results=NULL, type=NULL) {
   if (!is.null(expected_results)) {
     if (type == "cm") {
       rr <- confusion_matrix[,dim(confusion_matrix)[2]]
+      rr <- data.frame(rr)[,1]
+      rr <- rr[1:(length(rr) - 2)] # -2 becuase the last row is totals, and the penultimate row is bogus fill by R
       checkEquals(rr, expected_results)
     }   
   }
 }
 
-runGLMScore.VA<-
+runGLMScore<-
 function() {
   testData <<- new("H2OParsedData", h2o = h, key = "test.hex", logic = TRUE)
   .predict(model)
 }
 
-runGLMScore.FV<-
-function() {
-  testData <<- new("H2OParsedData", h2o = h, key = "test.hex", logic = TRUE)
-  .predict(model)
-}
-
-runRFScore.VA<-
-function() {
-  testData <<- new("H2OParsedData", h2o = h, key = "test.hex", logic = TRUE)
-  .predict(model)
-}
-
-runRFScore.FV<-
+runRFScore<-
 function(expected_results=NULL, type=NULL) {
   testData <<- new("H2OParsedData", h2o = h, key = "test.hex", logic = TRUE)
   .predict(model)
   if (!is.null(expected_results)) {
     if (type == "cm") {
       rr <- confusion_matrix[,dim(confusion_matrix)[2]]
+      rr <- data.frame(rr)[,1]
+      rr <- rr[1:(length(rr) - 2)] # -2 becuase the last row is totals, and the penultimate row is bogus fill by R
       checkEquals(rr, expected_results)
     }
   }
@@ -488,13 +414,15 @@ function(expected_results=NULL, type=NULL) {
   if (!is.null(expected_results)) {
     if (type == "cm") {
       rr <- confusion_matrix[,dim(confusion_matrix)[2]]
+      rr <- data.frame(rr)[,1]
+      rr <- rr[1:(length(rr) - 2)] # -2 becuase the last row is totals, and the penultimate row is bogus fill by R
       checkEquals(rr, expected_results)
     }   
   }
 }
 
 .retrieveModel<-
-function(modelType, datatype = "VA") {
+function(modelType) {
   model_key <- h2o.ls(h)[1,1]
   return(.newModel(modelType, model_key, datatype))
 }
@@ -502,11 +430,7 @@ function(modelType, datatype = "VA") {
 .predict<-
 function(model) {
   print(model)
-  if( class(model)[1] == "H2OGLMModelVA") {
-    res <- .h2o.__remoteSend(h, .h2o.__PAGE_PREDICT, model_key = model@key, data_key=testData@key, destination_key = "h2opreds.hex")
-  } else {
-    res <- .h2o.__remoteSend(h, .h2o.__PAGE_PREDICT2, model = model@key, data="test.hex", prediction = "h2opreds.hex")
-  }
+  res <- .h2o.__remoteSend(h, .h2o.__PAGE_PREDICT2, model = model@key, data="test.hex", prediction = "h2opreds.hex")
   h2opred <- new("H2OParsedData", h2o = h, key = "h2opreds.hex")
   if (predict_type == "binomial") 
     .calcBinomResults(h2opred)

@@ -237,6 +237,7 @@ class ModelScraper(Scraper):
                     flag = True
         return model_r["model_result"]["model_json"]
 
+
 class PredictScraper(Scraper):
     """
     An object that performs the scraping for the Predict phase.
@@ -277,7 +278,7 @@ class PredictScraper(Scraper):
         self.test_run_cm_result = "" 
         self.test_run_phase_result = "" 
         self.test_run_regression_result = "" 
-
+        self.test_run_binomial_comparison_result = ""
         self.test_run_multinomial_classification_result = "" 
 
     def invoke(self):
@@ -362,6 +363,7 @@ class PredictScraper(Scraper):
                 'cm'         : self.__scrape_cm_result__,
                 'multinomial': self.__scrape_multinomial_result__,
                 'binomial'   : self.__scrape_binomial_result__,
+                'comparison' : self.__scrape_comparison_result__,
                 }.get(self.result_type, "bad key")
 
         if self.result_type in ['multinomial', 'binomial']:
@@ -427,4 +429,19 @@ class PredictScraper(Scraper):
             self.test_run_multinomial_classification_result = TableRow("test_run_multinomial_classification_result", self.perfdb)
             self.test_run_multinomial_classification_result.row.update(level)
             self.test_run_multinomial_classification_result.update()
+
+    def __scrape_comparison_result__(self):
+        comparison_r = ""
+        with open(self.output_file_name, "r") as f:
+            flag = False
+            for line in f:
+                if flag:
+                    comparison_r = json.loads(line)
+                    flag = False
+                    break
+                if "COMPARISON" in line and "print" not in line:
+                    flag = True
+        self.test_run_binomial_comparison_result = TableRow("test_run_binomial_comparison", self.perfdb)
+        self.test_run_binomial_comparison_result.row.update(comparison_r['comparison_result'])
+        self.test_run_binomial_comparison_result.update()
 

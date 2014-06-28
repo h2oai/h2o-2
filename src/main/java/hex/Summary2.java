@@ -5,12 +5,10 @@ import water.api.*;
 import water.api.Request.API;
 import water.fvec.*;
 import water.exec.Flow;
-import water.parser.*;
 import water.util.Utils;
 import water.util.Log;
 
 import java.util.Arrays;
-import java.util.Random;
 
 /**
  * Summary of a column.
@@ -131,6 +129,7 @@ public class Summary2 extends Iced {
       for(int i = 0; i < chk._len; i++) {
         double val;
         if (chk.isNA0(i)) { _nas++; continue; }
+        if( chk._vec.isUUID() ) continue;
         if (Double.isNaN(val = chk.at0(i))) { _nans++; continue; }
         if      (val == Double.POSITIVE_INFINITY) _pinfs++;
         else if (val == Double.NEGATIVE_INFINITY) _ninfs++;
@@ -150,7 +149,7 @@ public class Summary2 extends Iced {
       _ninfs += other._ninfs;
       _zeros += other._zeros;
       if (Double.isNaN(_min2)) _min2 = other._min2;
-      else if (!Double.isNaN(other._min2)) _min2 = Math.min(_min2,other._min2);
+      else if (!Double.isNaN(other._min2)) _min2 = Math.min(_min2, other._min2);
       if (Double.isNaN(_max2)) _max2 = other._max2;
       else if (!Double.isNaN(other._max2)) _max2 = Math.max(_max2, other._max2);
       return this;
@@ -167,21 +166,6 @@ public class Summary2 extends Iced {
       return this;
     }
 
-    /**
-     * @return number of filled elements, excluding NaN's as well.
-     */
-    public long len1() {
-      return _len - _nas - _nans;
-    }
-    /**
-     * Returns whether the fill density is less than the given percent.
-     * @param pct target percent.
-     * @param nan if true then NaN is counted as missing.
-     * @return true if less than {@code pct} of rows are filled. */
-    public boolean isSparse(double pct, boolean nan) {
-      assert 0 < pct && pct <= 1;
-      return (double)(_len - _nas - (nan?_nans:0)) / _len < pct;
-    }
   }
 
   public static class PrePass extends MRTask2<PrePass> {
@@ -312,7 +296,7 @@ public class Summary2 extends Iced {
   public Summary2(Vec vec, String name, BasicStat stat0, int max_qbins) {
     colname = name;
     _stat0 = stat0;
-    _type = vec.isEnum()?2:vec.isInt()?1:0;
+    _type = vec.isEnum()?T_ENUM:vec.isInt()?T_INT:T_REAL;
     _domain = vec.isEnum() ? vec.domain() : null;
     _gprows = 0;
     double sigma = Double.isNaN(vec.sigma()) ? 0 : vec.sigma();
@@ -469,6 +453,10 @@ public class Summary2 extends Iced {
   }
 
   public Summary2 add(Chunk chk) {
+    if( chk._vec.isUUID() ) {
+      // Log.info("Summary2: isUUID() in add");
+      return this;
+    }
     for (int i = 0; i < chk._len; i++)
       add(chk.at0(i));
     return this;
@@ -520,6 +508,7 @@ public class Summary2 extends Iced {
       }
 
       int binIdx2Int = (int) binIdx2;
+      assert (_start2 <= val) : "Why is val < _start2? val:"+val+" _start2:";
       assert (binIdx2Int >= 0 && binIdx2Int < hcnt2.length) : 
         "binIdx2Int too big for hcnt2 "+binIdx2Int+" "+hcnt2.length+" "+val+" "+_start2+" "+_binsz2;
 
@@ -558,8 +547,9 @@ public class Summary2 extends Iced {
     }
 
     int binIdxInt = (int) binIdx;
+    assert (_start <= val) : "Why is val < _start? val:"+val+" _start:";
     assert (binIdxInt >= 0 && binIdx < hcnt.length) : 
-        "binIdxInt too big for hcnt2 "+binIdxInt+" "+hcnt.length+" "+val+" "+_start+" "+_binsz;
+        "binIdxInt bad for hcnt2. binIdxInt:"+binIdxInt+" hcnt.length:"+hcnt.length+" val:"+val+" _start:"+_start+" _binsz:"+_binsz;
     ++hcnt[binIdxInt];
   }
 

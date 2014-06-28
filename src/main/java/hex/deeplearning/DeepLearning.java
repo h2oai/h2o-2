@@ -48,6 +48,9 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Enable expert mode (to access all options from GUI)", filter = Default.class, json = true)
   public boolean expert_mode = false;
 
+  @API(help = "Auto-Encoder (Experimental)", filter= Default.class, json = true)
+  public boolean autoencoder = false;
+
   /*Neural Net Topology*/
   /**
    * The activation function (non-linearity) to be used the neurons in the hidden layers.
@@ -454,6 +457,12 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Use a column major weight matrix for input layer. Can speed up forward propagation, but might slow down backpropagation (Experimental).", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
   public boolean col_major = false;
 
+  @API(help = "Sparsity (Experimental)", filter= Default.class, json = true)
+  public double average_activation = -0.9;
+
+  @API(help = "Sparsity regularization (Experimental)", filter= Default.class, json = true)
+  public double sparsity_beta = 0;
+
   public enum ClassSamplingMethod {
     Uniform, Stratified
   }
@@ -508,6 +517,9 @@ public class DeepLearning extends Job.ValidatedJob {
           "single_node_mode",
           "sparse",
           "col_major",
+          "autoencoder",
+          "average_activation",
+          "sparsity_beta",
   };
 
   // the following parameters can be modified when restarting from a checkpoint
@@ -576,10 +588,6 @@ public class DeepLearning extends Job.ValidatedJob {
             (initial_weight_distribution == InitialWeightDistribution.UniformAdaptive)
             ) {
       arg.disable("Using sqrt(6 / (# units + # units of previous layer)) for Uniform distribution.", inputArgs);
-    }
-    if(arg._name.equals("loss") && !classification) {
-      arg.disable("Using MeanSquare loss for regression.", inputArgs);
-      loss = Loss.MeanSquare;
     }
     if (classification) {
       if(arg._name.equals("regression_stop")) {
@@ -717,7 +725,8 @@ public class DeepLearning extends Job.ValidatedJob {
       if (source == null || !Arrays.equals(source._key._kb, previous.model_info().get_params().source._key._kb)) {
         throw new IllegalArgumentException("source must be the same as for the checkpointed model.");
       }
-      if (response == null || !Arrays.equals(response._key._kb, previous.model_info().get_params().response._key._kb)) {
+      autoencoder = previous.model_info().get_params().autoencoder;
+      if (!autoencoder && (response == null || !Arrays.equals(response._key._kb, previous.model_info().get_params().response._key._kb))) {
         throw new IllegalArgumentException("response must be the same as for the checkpointed model.");
       }
       if (Utils.difference(ignored_cols, previous.model_info().get_params().ignored_cols).length != 0
@@ -828,12 +837,23 @@ public class DeepLearning extends Job.ValidatedJob {
       if (!classification) {
         if (!quiet_mode) Log.info("Automatically setting loss to MeanSquare for regression.");
         loss = Loss.MeanSquare;
-      } else {
+      }
+      else if (autoencoder) {
+        if (!quiet_mode) Log.info("Automatically setting loss to MeanSquare for auto-encoder.");
+        loss = Loss.MeanSquare;
+      }
+      else {
         if (!quiet_mode) Log.info("Automatically setting loss to Cross-Entropy for classification.");
         loss = Loss.CrossEntropy;
       }
     }
     if (!classification && loss == Loss.CrossEntropy) throw new IllegalArgumentException("Cannot use CrossEntropy loss function for regression.");
+    if (autoencoder && loss != Loss.MeanSquare) throw new IllegalArgumentException("Must use MeanSquare loss function for auto-encoder.");
+    if (autoencoder && classification) { classification = false; Log.info("Using regression mode for auto-encoder.");}
+
+    // reason for the error message below is that validation might not have the same horizontalized features as the training data (or different order)
+    if (autoencoder && validation != null) throw new UnsupportedOperationException("Cannot specify a validation dataset for auto-encoder.");
+    if (autoencoder && activation == Activation.Maxout) throw new UnsupportedOperationException("Maxout activation is not supported for auto-encoder.");
 
     // make default job_key and destination_key in case they are missing
     if (dest() == null) {
@@ -858,12 +878,16 @@ public class DeepLearning extends Job.ValidatedJob {
    * @return DataInfo object
    */
   private DataInfo prepareDataInfo() {
-    final boolean del_enum_resp = (classification && !response.isEnum());
-    final Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, classification, ignore_const_cols, true /*drop >20% NA cols*/);
-    final DataInfo dinfo = new FrameTask.DataInfo(train, 1, false, true, !classification);
-    final Vec resp = dinfo._adaptedFrame.lastVec(); //convention from DataInfo: response is the last Vec
-    assert(!classification ^ resp.isEnum()) : "Must have enum response for classification!"; //either regression or enum response
-    if (del_enum_resp) ltrash(resp);
+    final boolean del_enum_resp = classification && !response.isEnum();
+    final Frame train = FrameTask.DataInfo.prepareFrame(source, autoencoder ? null : response, ignored_cols, classification, ignore_const_cols, true /*drop >20% NA cols*/);
+    final DataInfo dinfo = new FrameTask.DataInfo(train, autoencoder ? 0 : 1, autoencoder, //use all FactorLevels for auto-encoder
+            autoencoder ? DataInfo.TransformType.NORMALIZE : DataInfo.TransformType.STANDARDIZE, //transform predictors
+            classification ? DataInfo.TransformType.NONE : DataInfo.TransformType.STANDARDIZE);  //transform response
+    if (!autoencoder) {
+      final Vec resp = dinfo._adaptedFrame.lastVec(); //convention from DataInfo: response is the last Vec
+      assert (!classification ^ resp.isEnum()) : "Must have enum response for classification!"; //either regression or enum response
+      if (del_enum_resp) ltrash(resp);
+    }
     return dinfo;
   }
 
@@ -959,6 +983,7 @@ public class DeepLearning extends Job.ValidatedJob {
       final float rowUsageFraction = computeRowUsageFraction(train.numRows(), mp.actual_train_samples_per_iteration, mp.replicate_training_data);
 
       if (!mp.quiet_mode) Log.info("Initial model:\n" + model.model_info());
+      if (autoencoder) model.doScoring(train, trainScoreFrame, validScoreFrame, self(), getValidAdaptor()); //get the null model reconstruction error
       Log.info("Starting to train the Deep Learning model.");
 
       //main loop
@@ -967,6 +992,7 @@ public class DeepLearning extends Job.ValidatedJob {
               new DeepLearningTask2(train, model.model_info(), rowUsageFraction).invokeOnAllNodes().model_info() ) : //replicated data + multi-node mode
               new DeepLearningTask(model.model_info(), rowUsageFraction).doAll(train).model_info()); //distributed data (always in multi-node mode)
       while (model.doScoring(train, trainScoreFrame, validScoreFrame, self(), getValidAdaptor()));
+      Log.info(model);
       Log.info("Finished training the Deep Learning model.");
       return model;
     }

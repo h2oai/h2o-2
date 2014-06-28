@@ -13,16 +13,19 @@ Holds utility and all purpose javascript
 function makeTable(json, svg) {
    var datas = new Array();
    var header = d3.keys(json.data[0]);
+   header.push("PerfGraphs")
    datas[0] = header;
    for(i = 0; i < json.data.length; i++) {
      datas[i+1] = d3.values(json.data[i]);
-   }   
-   
+     link = "http://192.168.1.171:4040/perflink.html?test_run_id=" + datas[i+1][0] + "&test_name=" + datas[i+1][2] + "&num_hosts=" + datas[i+1][10];
+     datas[i+1].push(link)
+   }
+
    d3.select(svg)
      .append("table")
      .style("border-collapse", "collapse")
      .style("border", "2px black solid")
-
+     
      .selectAll("tr")
      .data(datas).enter().append("tr")
 
@@ -30,9 +33,20 @@ function makeTable(json, svg) {
      .data(function(d){return d}).enter().append("td")
      .style("border", "1px black solid")
      .style("padding", "5px")
+     .style("cursor", function(d) {
+      if ( (d.toString()).indexOf("http") > -1) {
+        return "pointer"
+      } else {
+        return "auto"
+       }   
+     })
      .on("mouseover", function(){d3.select(this).style("background-color", "aliceblue")})
      .on("mouseout", function(){d3.select(this).style("background-color", "white")})
      .text(function(d){return d;})
+       .on("click", function(d, i) {
+        if ( (d.toString()).indexOf("http") > -1)    
+            window.open(d, "", "height=800, width=800")
+       })
      .style("font-size", "12px"); 
 }
 
@@ -257,3 +271,202 @@ function makeGraph(json, svg) {
       .style("text-anchor", "end")
       .text("Time (s)");
 }
+
+function zip(x, y) {
+    return $.map(x, function (el, idx) {
+        return [[el, y[idx]]];
+    });
+}
+
+function nodePerfGraph(json, svgCPU, svgRSS) {
+    var margin = {top: 20, right: 80, bottom: 30, left: 50},
+        width = 2000 - margin.left - margin.right,
+        height = 500 -margin.top -margin.bottom;
+
+    var xCPU = d3.scale.linear().range([0, width - 1000]);
+    var yCPU = d3.scale.linear().range([height, 0]);
+
+    var xRSS = d3.scale.linear().range([0, width - 1000]);
+    var yRSS = d3.scale.linear().range([height, 0]);
+
+    var xAxisCPU = d3.svg.axis().scale(xCPU).orient("bottom").tickFormat(d3.format("d"));
+    var yAxisCPU = d3.svg.axis().scale(yCPU).orient("left");
+    
+    var xAxisRSS = d3.svg.axis().scale(xRSS).orient("bottom").tickFormat(d3.format("d"));
+    var yAxisRSS = d3.svg.axis().scale(yRSS).orient("left"); 
+
+  
+    var lineFunctionCPU = d3.svg.line().interpolate("ordinal")
+        .x(function(d) {
+          return xCPU(d[0]); })
+        .y(function(d) { 
+          return yCPU(d[1]); });
+
+    var lineFunctionRSS = d3.svg.line().interpolate("ordinal")
+        .x(function(d) {return xRSS(d[0]); })
+        .y(function(d) { return yRSS(d[1]); });
+
+
+    var svg_cpu = d3.select(svgCPU).append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    var svg_rss = d3.select(svgRSS).append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    /**
+     * JSON:
+     *  {
+     *     "test_run_id"
+     *     "test_name"
+     *     "node_name"
+     *     "timevals": []
+     *     "sys_cpu": []
+     *     "user_cpu": []
+     *     "rss": []
+     */
+
+    var test_run_id = json.data[0]['test_run_id'];
+    var test_name = json.data[0]['test_name'];
+    var node_name = json.data[0]['node_ip'];
+    var ts_raw = json.data.map(function(d) { return d['ts'] });
+    var max_time = d3.max(ts_raw);
+    var ts = (ts_raw.map(function(d) { return max_time - d })).sort();
+    var sys_cpu = zip(ts, json.data.map(function(d) { return d['cum_cpu_sys'] }));
+    var user_cpu = zip(ts, json.data.map(function(d) { return d['cum_cpu_proc'] }));
+    var rss = zip(ts, json.data.map(function(d) { return d['rss'] / (1.0 * 1024 * 1024) }));
+
+    var cpu_min = d3.min( [d3.min(user_cpu.map(function(d) {return d[0];})),  d3.min(sys_cpu.map(function(d) { return d[0]; }))]);
+    var cpu_max = d3.max( [d3.max(user_cpu.map(function(d) {return d[0]; })),  d3.max(sys_cpu.map(function(d) { return d[0]; }))])
+
+    xCPU.domain([0, cpu_max]);
+
+    yCPU.domain([
+        0,
+        100, 
+    ]);
+
+    xRSS.domain([
+        0,
+        d3.max(rss.map(function(d) { return d[0] }))
+    ]);
+
+    yRSS.domain([
+        0,
+        d3.max(rss.map(function(d) {return d[1] }))
+    ]);
+
+    var cpu = [];
+    for (var pp in sys_cpu) {
+        cpu.push({
+            name: "sys",
+            color: "green",
+            data: sys_cpu[pp]
+        })
+    }
+    for (var pp in user_cpu) {
+        cpu.push({
+            name: "user",
+            color: "blue",
+            data: user_cpu[pp]
+        })
+    }
+
+    // Make the CPU svg
+    var linesGroup = svg_cpu.append("g").attr("class", "line");
+  
+    svg_cpu.selectAll(".point").data(cpu).enter()
+      .append("svg:circle")
+      .attr("stroke", "black")
+      .attr("fill", "black")
+      .attr("cx", function(d, i) {
+        return xCPU(d.data[0])
+      })
+      .attr("cy", function(d, i) {
+        return yCPU(d.data[1])
+      })
+      .attr("r", 3)
+      .attr("stroke", function(d) { return d.color});
+
+      
+    linesGroup.append("path")
+      .attr("d", lineFunctionCPU(sys_cpu))
+      .attr("class", "lines")
+      .attr("fill", "none")
+      .attr("stroke", "green");
+
+    linesGroup.append("path")
+      .attr("d", lineFunctionCPU(user_cpu))
+      .attr("class", "lines")
+      .attr("fill", "none")
+      .attr("stroke", "blue");
+
+    svg_cpu.append("g")
+        .attr("class", "x axis")
+        .attr("transform", "translate(0," + height + ")")
+        .call(xAxisCPU)
+        .append("text")
+        .attr("y", 0)
+        .attr("x", xCPU(cpu_max +1 ))
+        .text("Time (s)");
+
+    svg_cpu.append("g")
+        .attr("class", "y axis")
+        .call(yAxisCPU)
+        .append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 6)
+        .attr("dy", ".71em")
+        .style("text-anchor", "end")
+        .text("Cumulative CPU %");
+
+    // Do the RSS graph
+    var linesGroup2 = svg_rss.append("g").attr("class", "line");
+    
+    svg_rss.selectAll(".point").data(rss).enter()
+        
+    svg_rss.selectAll(".point").data(rss).enter()
+      .append("svg:circle")
+      .attr("stroke", "black")
+      .attr("fill", "black")
+      .attr("cx", function(d, i) {
+        console.log(d)
+        return xRSS(d[0])
+      })  
+      .attr("cy", function(d, i) {
+        return yRSS(d[1])
+      })  
+      .attr("r", 3)
+      .attr("stroke", "black");
+
+    linesGroup2.append("path")
+      .attr("d", lineFunctionRSS(rss))
+      .attr("class", "lines")
+      .attr("fill", "none")
+      .attr("stroke", "black");
+
+    svg_rss.append("g")
+        .attr("class", "x axis")
+        .attr("transform", "translate(0," + height + ")")
+        .call(xAxisRSS)
+        .append("text")
+        .attr("y", 0)
+        .attr("x", xRSS(cpu_max +1 ))
+        .text("Time (s)");
+
+    svg_rss.append("g")
+        .attr("class", "y axis")
+        .call(yAxisRSS)
+        .append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 6)
+        .attr("dy", ".71em")
+        .style("text-anchor", "end")
+        .text("Cumulative Memory Used"); 
+}
+

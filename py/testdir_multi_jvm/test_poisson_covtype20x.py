@@ -20,6 +20,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_poisson_covtype20x(self):
+        h2o.beta_features = True
         if localhost:
             csvFilenameList = [
                 ('covtype20x.data', 480),
@@ -40,8 +41,8 @@ class Basic(unittest.TestCase):
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, timeoutSecs=2000)
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvPathname, \
-                "    num_rows:", "{:,}".format(inspect['num_rows']), \
-                "    num_cols:", "{:,}".format(inspect['num_cols'])
+                "    numRows:", "{:,}".format(inspect['numRows']), \
+                "    numCols:", "{:,}".format(inspect['numCols'])
 
             if (1==0):
                 print "WARNING: just doing the first 33 features, for comparison to allstate numbers"
@@ -57,7 +58,7 @@ class Basic(unittest.TestCase):
             
             kwargs = {
                 'x': x,
-                'y': y, 
+                'response': y, 
                 'family': 'poisson',
                 'link': 'log',
                 'n_folds': 0, 

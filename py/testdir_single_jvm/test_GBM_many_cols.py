@@ -52,6 +52,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GBM_many_cols(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         if localhost:
@@ -70,7 +71,6 @@ class Basic(unittest.TestCase):
                 (10000, 1000, 'cI', 300), 
                 ]
 
-        ### h2b.browseTheCloud()
         for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
             SEEDPERFILE = random.randint(0, sys.maxint)
             # csvFilename = 'syn_' + str(SEEDPERFILE) + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
@@ -84,7 +84,6 @@ class Basic(unittest.TestCase):
 
 
             # PARSE train****************************************
-            h2o.beta_features = False #turn off beta_features
             start = time.time()
             xList = []
             eList = []
@@ -93,15 +92,10 @@ class Basic(unittest.TestCase):
             modelKey = 'GBMModelKey'
 
             # Parse (train)****************************************
-            if h2o.beta_features:
-                print "Parsing to fvec directly! Have to noPoll=true!, and doSummary=False!"
             parseTrainResult = h2i.import_parse(bucket=None, path=csvPathname, schema='put',
-                hex_key=hex_key, timeoutSecs=timeoutSecs, noPoll=h2o.beta_features, doSummary=False)
+                hex_key=hex_key, timeoutSecs=timeoutSecs, 
+                doSummary=False)
             # hack
-            if h2o.beta_features:
-                h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
-                print "Filling in the parseTrainResult['destination_key'] for h2o"
-                parseTrainResult['destination_key'] = trainKey
 
             elapsed = time.time() - start
             print "train parse end on ", csvPathname, 'took', elapsed, 'seconds',\
@@ -116,14 +110,12 @@ class Basic(unittest.TestCase):
             print l
             h2o.cloudPerfH2O.message(l)
 
-            # if you set beta_features here, the fvec translate will happen with the Inspect not the GBM
-            # h2o.beta_features = True
             inspect = h2o_cmd.runInspect(key=parseTrainResult['destination_key'])
             print "\n" + csvPathname, \
-                "    num_rows:", "{:,}".format(inspect['num_rows']), \
-                "    num_cols:", "{:,}".format(inspect['num_cols'])
-            num_rows = inspect['num_rows']
-            num_cols = inspect['num_cols']
+                "    numRows:", "{:,}".format(inspect['numRows']), \
+                "    numCols:", "{:,}".format(inspect['numCols'])
+            numRows = inspect['numRows']
+            numCols = inspect['numCols']
             ### h2o_cmd.runSummary(key=parsTraineResult['destination_key'])
 
             # GBM(train iterate)****************************************
@@ -139,17 +131,15 @@ class Basic(unittest.TestCase):
 
                 # upload and parse the header to a hex
 
-                h2o.beta_features = False # can't put with fvec yet
                 hdr_hex_key = prefix + "_hdr.hex"
                 parseHdrResult = h2i.import_parse(bucket=None, path=hdrPathname, schema='put',
                     header=1, # REQUIRED! otherwise will interpret as enums
-                    hex_key=hdr_hex_key, 
-                    timeoutSecs=timeoutSecs, noPoll=h2o.beta_features, doSummary=False)
+                    hex_key=hdr_hex_key, timeoutSecs=timeoutSecs, doSummary=False)
                 # Set Column Names (before autoframe is created)
-                h2o.nodes[0].set_column_names(target=hex_key, copy_from=hdr_hex_key)
+                h2o.nodes[0].set_column_names(source=hex_key, copy_from=hdr_hex_key)
 
                 # GBM
-                print "The response col name is changing each iteration, since we're parsing a new header"
+                print "response col name is changing each iteration: parsing a new header"
                 params = {
                     'learn_rate': .2,
                     'nbins': 1024,
@@ -162,14 +152,10 @@ class Basic(unittest.TestCase):
 
                 print "Using these parameters for GBM: ", params
                 kwargs = params.copy()
-                h2o.beta_features = True
 
                 trainStart = time.time()
                 gbmTrainResult = h2o_cmd.runGBM(parseResult=parseTrainResult,
-                    noPoll=h2o.beta_features, timeoutSecs=timeoutSecs, destination_key=modelKey, **kwargs)
-                # hack
-                if h2o.beta_features:
-                    h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
+                    timeoutSecs=timeoutSecs, destination_key=modelKey, **kwargs)
                 trainElapsed = time.time() - trainStart
                 print "GBM training completed in", trainElapsed, "seconds. On dataset: ", csvPathname
 
@@ -198,7 +184,6 @@ class Basic(unittest.TestCase):
                 # works if you delete the autoframe
                 ### h2o_import.delete_keys_at_all_nodes(pattern='autoframe')
 
-        h2o.beta_features = False
         # just plot the last one
         if DO_PLOT:
             xLabel = 'max_depth'

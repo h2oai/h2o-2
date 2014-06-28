@@ -905,6 +905,23 @@ public class DParseTask extends MRTask<DParseTask> implements CustomParser.DataO
           }
           return;
         }
+
+        // Attempt a UUID parse
+        if( _colTypes[colIdx] == UCOL ) {
+          int old = str.get_off();
+          ParseTime.attemptUUIDParse0(str);
+          ParseTime.attemptUUIDParse1(str);
+          if( str.get_off() != -1 ) _colTypes[colIdx] = ICOL;
+          str.setOff(old);
+        }
+        if( _colTypes[colIdx] == ICOL ) { // UUID column?  Only allow UUID parses
+          long lo = ParseTime.attemptUUIDParse0(str);
+          long hi = ParseTime.attemptUUIDParse1(str);
+          if( str.get_off() == -1 )  ++_invalidValues[colIdx];
+          // No min/max/mean rollups on UUID
+          return;
+        }
+
         // Now attempt to make this an Enum col
         Enum e = _enums[colIdx];
         if( e == null || e.isKilled() ) return;

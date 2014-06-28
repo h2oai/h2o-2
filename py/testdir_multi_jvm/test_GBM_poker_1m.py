@@ -28,6 +28,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GBM_poker_1m(self):
+        h2o.beta_features = True
         for trial in range(2):
             # PARSE train****************************************
             h2o.beta_features = False #turn off beta_features
@@ -69,10 +70,10 @@ class Basic(unittest.TestCase):
             # h2o.beta_features = True
             inspect = h2o_cmd.runInspect(key=parseTrainResult['destination_key'])
             print "\n" + csvPathname, \
-                "    num_rows:", "{:,}".format(inspect['num_rows']), \
-                "    num_cols:", "{:,}".format(inspect['num_cols'])
-            num_rows = inspect['num_rows']
-            num_cols = inspect['num_cols']
+                "    numRows:", "{:,}".format(inspect['numRows']), \
+                "    numCols:", "{:,}".format(inspect['numCols'])
+            numRows = inspect['numRows']
+            numCols = inspect['numCols']
             ### h2o_cmd.runSummary(key=parsTraineResult['destination_key'])
 
             # GBM(train iterate)****************************************
@@ -85,7 +86,7 @@ class Basic(unittest.TestCase):
                     'ntrees': ntrees,
                     'max_depth': max_depth,
                     'min_rows': 10,
-                    'response': num_cols-1,
+                    'response': numCols-1,
                     'ignored_cols_by_name': None,
                 }
                 print "Using these parameters for GBM: ", params

@@ -23,6 +23,7 @@ def write_syn_dataset(csvPathname, rowCount, headerData, rList):
         dsf.close()
         return rowCount # rows done
     else:
+        dsf.close()
         return 0 # rows done
 
 def rand_rowData(colCount):
@@ -47,17 +48,16 @@ class Basic(unittest.TestCase):
             h2o.build_cloud(2,java_heap_MB=1300,use_flatfile=True)
         else:
             h2o_hosts.build_cloud_with_hosts()
-        h2o.beta_features = True
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
     
-    def test_parse_multi_header_single(self):
+    def test_parse_multi_header_single_fvec(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilename = "syn_ints.csv"
         csvPathname = SYNDATASETS_DIR + '/' + csvFilename
-
         headerData = "ID,CAPSULE,AGE,RACE,DPROS,DCAPS,PSA,VOL,GLEASON,output"
 
         # cols must be 9 to match the header above, otherwise a different bug is hit
@@ -105,8 +105,12 @@ class Basic(unittest.TestCase):
             fileList = os.listdir(SYNDATASETS_DIR)
             for f in fileList:
                 h2i.import_only(path=SYNDATASETS_DIR + "/" + f, schema='put', noPrint=True)
+                print f
 
-            header = h2i.find_key('syn_header')
+            if HEADER:
+                header = h2i.find_key('syn_header')
+                if not header:
+                    raise Exception("Didn't find syn_header* key in the import")
 
             # use regex. the only files in the dir will be the ones we just created with  *fileN* match
             print "Header Key = " + header
