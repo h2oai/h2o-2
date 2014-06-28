@@ -229,7 +229,7 @@ class Alert:
 
     @staticmethod
     def _get_build_number(branch):
-        build_number = requests.get("http://s3.amazonaws.com/h2o-release/h2o/" + branch + "/latest")
+        build_number = requests.get("http://s3.amazonaws.com/h2o-release/h2o/" + branch + "/latest").text
         return str(build_number.strip())
 
 
