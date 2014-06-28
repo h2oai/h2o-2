@@ -53,7 +53,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   Errors last_scored() { return errors[errors.length-1]; }
 
   @Override public final DeepLearning get_params() { return model_info.get_params(); }
-  @Override public final Request2 job() { return get_params(); }
+  @Override public final Request2 job() { return model_info.get_job(); }
 
   @Override protected double missingColumnsType() { return get_params().sparse ? 0 : Double.NaN; }
 
@@ -242,9 +242,9 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     public final Neurons.DenseVector get_biases_ada_dx_g(int i) { return biases_ada_dx_g[i]; }
 
     @API(help = "Model parameters", json = true)
-    private Job job;
+    private Request2 job;
     public final DeepLearning get_params() { return (DeepLearning)job; }
-    public final Job get_job() { return job; }
+    public final Request2 get_job() { return job; }
 
     @API(help = "Mean rate", json = true)
     private float[] mean_rate;

@@ -788,7 +788,7 @@ public abstract class Model extends Lockable<Model> {
       sb.append("<tr><th>Model</th></tr>");
       for (Key k : job.xval_models) {
         sb.append("<tr>");
-        sb.append("<td>" + (UKV.get(k) != null ? Inspector.link(k.toString(), k.toString()) : "In progress") + "</td>");
+        sb.append("<td>" + (UKV.get(k) != null ? Inspector.link(k.toString(), k.toString()) : "Pending") + "</td>");
         sb.append("</tr>");
       }
       sb.append("</table>");
