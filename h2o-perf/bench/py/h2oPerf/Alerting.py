@@ -349,6 +349,7 @@ class Alerter:
 
     def _gather_alerts(self):
         for name in self.test_names:
+            if name not in self.test_list: continue
             if self.correct_alert.should_alert(name):
                 self.correct_alert.add_to_alert_list(name, "Failed correctness.")
 
