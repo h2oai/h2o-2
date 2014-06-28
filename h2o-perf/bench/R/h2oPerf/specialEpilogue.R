@@ -193,7 +193,7 @@ function() {
 }
 .emitSpecial<-
 function() {
-  len <- length(dl$deeplearning_model$errors)
+  len <- length(dl_res$deeplearning_model$errors)
   js <- list(comparison_result = 
                 list(glm = ifelse(exists('glm_res'), 1 - glm_res$glm_model$validAUC$accuracy_for_criteria[1], "-1"),
                      dl  = ifelse(exists('dl_res'),  1 - dl_res$deeplearning_model$errors[[len]]$validAUC$accuracy_for_criteria[1], "-1"),
