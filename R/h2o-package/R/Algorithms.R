@@ -1035,11 +1035,11 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, nfolds=0, validation,
   result$verbose_output <- res$verbose_output
   
   if(params$classification) {
-    #if(!is.null(res$validAUC)) {
-    #  tmp <- .h2o.__getPerfResults(res$validAUC)
-    #  tmp$confusion <- NULL
-    #  result <- c(result, tmp)
-    #}
+    if(!is.null(res$validAUC)) {
+      tmp <- .h2o.__getPerfResults(res$validAUC)
+      tmp$confusion <- NULL
+      result <- c(result, tmp)
+    }
     
     class_names <- tail(res$'_domains', 1)[[1]]
     raw_cms <- tail(res$cms, 1)[[1]]$'_arr'
