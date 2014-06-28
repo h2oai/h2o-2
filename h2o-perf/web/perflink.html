@@ -79,6 +79,7 @@
                     </div>
                 </div>
             </div>
+            <h3>NB: Graphs cover the <u><em>entire test run!</em></u></h3>
             <div id="header_div"></div>
             <div id="cpu_svg">
                 <div id="cpu_svg1"></div>
@@ -99,6 +100,7 @@
                 var test_run_id = params[0].split('=')[1];
                 var test_name = params[1].split('=')[1];
                 var num_hosts = params[2].split('=')[1];
+                var run_date  = params[3].split('=')[1];
 
                 var h2 = document.createElement("H5");
                 var h = document.createElement("H5");
@@ -120,7 +122,7 @@
                 document.getElementById("cpu_svg").appendChild(h4);
 
                 $(document).ready(function() {
-                    showPerfGraphs(test_run_id, num_hosts)
+                    showPerfGraphs(test_name, num_hosts, run_date)
                 });
               </script>
               <br />
