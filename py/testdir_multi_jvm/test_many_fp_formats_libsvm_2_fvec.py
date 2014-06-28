@@ -99,7 +99,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_many_fp_formats_libsvm_2(self):
+    def test_many_fp_formats_libsvm_2_fvec(self):
         h2o.beta_features = True
         # h2b.browseTheCloud()
         SYNDATASETS_DIR = h2o.make_syn_dir()
@@ -126,7 +126,6 @@ class Basic(unittest.TestCase):
                 print "This dataset requires telling h2o parse it's a libsvm..doesn't detect automatically"
                 parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=selKey2, 
                     timeoutSecs=timeoutSecs, doSummary=False, parser_type='SVMLight')
-                print csvFilename, 'parse time:', parseResult['response']['time']
                 print "Parse result['destination_key']:", parseResult['destination_key']
                 inspect = h2o_cmd.runInspect(None, parseResult['destination_key'], max_column_display=colNumberMax+1, timeoutSecs=timeoutSecs)
                 numCols = inspect['numCols']
@@ -181,9 +180,9 @@ class Basic(unittest.TestCase):
                     self.assertAlmostEqual(mean, synMean, places=0,
                         msg='col %s mean %0.6f is not equal to generated mean %0.6f' % (k, mean, synMean))
 
-                    num_missing_values = inspect['cols'][k]['num_missing_values']
-                    self.assertEqual(0, num_missing_values,
-                        msg='col %s num_missing_values %d should be 0' % (k, num_missing_values))
+                    naCnt = inspect['cols'][k]['naCnt']
+                    self.assertEqual(0, naCnt,
+                        msg='col %s naCnt %d should be 0' % (k, naCnt))
 
 
 
