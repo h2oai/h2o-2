@@ -60,10 +60,10 @@ test <- function(conn) {
 		print("Head of strongest predictions: ") ; head(top.air)
 
 	print("Export predictions with UUID to CSV")
-		h2o.exportFile(data=top.air, path="/Users/arielrao/Documents/R/UUID/airlineUUID.csv",force=TRUE)
+		h2o.exportFile(data=top.air, path="smalldata/airlines/airlineUUIDpredictions.csv",force=TRUE)
 		print("Check that error is raised when file exists and force=False")
-		assertError(h2o.exportFile(top.air, path="/Users/arielrao/Documents/R/UUID/airlineUUID.csv",force=FALSE))   	
-  
+		assertError(h2o.exportFile(top.air, path="smalldata/airlines/airlineUUIDpredictions.csv",force=FALSE)) 
+		file.remove("smalldata/airlines/airlineUUIDpredictions.csv")  	
   testEnd()
 }
 
