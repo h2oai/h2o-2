@@ -165,6 +165,8 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     return m.score_each || m.t_keys.length == 1 || m.t_keys.length == m.N;
   }
 
+  @Override public ConfusionMatrix cm() { return cms[cms.length-1]; }
+
   private static void scoreOnTest(SpeeDRFModel m, SpeeDRFModel old) {
 
     // Gather results

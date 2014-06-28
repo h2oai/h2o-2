@@ -6,6 +6,8 @@ import hex.NeuralNet.NeuralNetModel;
 import hex.drf.DRF.DRFModel;
 import hex.gbm.GBM.GBMModel;
 import hex.deeplearning.DeepLearningModel;
+import hex.singlenoderf.SpeeDRFModel;
+import hex.singlenoderf.SpeeDRFModelView;
 import water.*;
 import water.api.*;
 import water.util.Utils;
@@ -168,6 +170,8 @@ public class GridSearch extends Job {
               link = DeepLearningModelView.link(link, info._job.dest());
             if( info._model instanceof KMeans2Model )
               link = KMeans2ModelView.link(link, info._job.dest());
+            if (info._model instanceof SpeeDRFModel)
+              link = SpeeDRFModelView.link(link, info._job.dest());
             else
               link = Inspect.link(link, info._job.dest());
           }
