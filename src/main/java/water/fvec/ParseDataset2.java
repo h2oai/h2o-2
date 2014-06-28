@@ -19,6 +19,7 @@ import water.util.Utils.IcedInt;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -457,7 +458,7 @@ public final class ParseDataset2 extends Job {
       // Local setup: nearly the same as the global all-files setup, but maybe
       // has the header-flag changed.
       if(!_setup.isCompatible(localSetup)) {
-        _parserr = "Conflicting file layouts, expecting: "+_setup+" but found "+localSetup;
+        _parserr = "Conflicting file layouts, expecting: " + _setup + " but found "+localSetup;
         return;
       }
 
@@ -477,7 +478,7 @@ public final class ParseDataset2 extends Job {
         switch( cpr ) {
         case NONE:
           if(localSetup._pType.parallelParseSupported){
-            DParse dp = new DParse(_vg,localSetup, _vecIdStart, chunkStartIdx,this);
+            DParse dp = new DParse(_vg,localSetup, _vecIdStart, chunkStartIdx,this, vec.nChunks());
             addToPendingCount(1);
             dp._removeKey = vec._key;
             dp.exec(new Frame(vec));
@@ -575,9 +576,10 @@ public final class ParseDataset2 extends Job {
       final Key _progress;
       Key _removeKey;
       transient final MultiFileParseTask _outerMFPT;
+      final int _nchunks;
+      transient private AtomicBoolean[] _visited;
 
-
-      DParse(VectorGroup vg, CustomParser.ParserSetup setup, int vecIdstart, int startChunkIdx, MultiFileParseTask mfpt) {
+      DParse(VectorGroup vg, CustomParser.ParserSetup setup, int vecIdstart, int startChunkIdx, MultiFileParseTask mfpt, int nchunks) {
         super(mfpt);
         _vg = vg;
         _setup = setup;
@@ -586,6 +588,7 @@ public final class ParseDataset2 extends Job {
         _outerMFPT = mfpt;
         _eKey = mfpt._eKey;
         _progress = mfpt._progress;
+        _nchunks = nchunks;
       }
       @Override public void setupLocal(){
         super.setupLocal();
@@ -594,8 +597,12 @@ public final class ParseDataset2 extends Job {
           for(int i = 0; i < _setup._ncols; ++i)
             _appendables[i] = new AppendableVec(_vg.vecKey(_vecIdStart + i));
         }
+        _visited = new AtomicBoolean[_nchunks];
+        for(int i = 0; i < _visited.length; ++i)
+          _visited[i] = new AtomicBoolean();
+
       }
-      @Override public void map( Chunk in ) {
+      @Override public void map( Chunk in) {
         Enum [] enums = enums(_eKey,_setup._ncols);
         // Break out the input & output vectors before the parse loop
         // The Parser
@@ -617,6 +624,22 @@ public final class ParseDataset2 extends Job {
         p.parallelParse(in.cidx(),din,dout);
         (_dout = dout).close(_fs);
         onProgress(in._len, _progress); // Record bytes parsed
+        final int cidx = in.cidx();
+        // remove parsed data right away (each chunk is used by 2)
+        if(_visited[cidx].getAndSet(true)) {
+          Value v = DKV.get(in._vec.chunkKey(cidx));
+          if(v.isPersisted()) {
+            v.freePOJO();
+            v.freeMem();
+          }
+        }
+        if(cidx+1 < _visited.length && _visited[cidx+1].getAndSet(true)) {
+          Value v = DKV.get(in._vec.chunkKey(cidx+1));
+          if(v.isPersisted()) {
+            v.freePOJO();
+            v.freeMem();
+          }
+        }
       }
       @Override public void reduce(DParse dp){
         if(_dout == null)_dout = dp._dout;
