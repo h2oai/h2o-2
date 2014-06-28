@@ -232,14 +232,14 @@ function(.variables, .fun = NULL, ..., .progress = 'none') {
 }
 
 runGBM<-
-function(x, y, distribution='multinomial', 
+function(x, y, distribution='multinomial', nfolds = 0,
          n.trees=10, interaction.depth=5, 
          n.minobsinnode=10, shrinkage=0.02, 
          n.bins=100) {
   data <- new("H2OParsedData", h2o = h, key = "parsed.hex", logic = TRUE)
   model <<- h2o.gbm(x = x, y = y, distribution = distribution, data = data, n.trees = n.trees,
           interaction.depth = interaction.depth, n.minobsinnode = n.minobsinnode,
-          shrinkage = shrinkage, n.bins = n.bins)
+          shrinkage = shrinkage, n.bins = n.bins, nfolds = nfolds)
   model.json <<- .h2o.__remoteSend(h, .h2o.__PAGE_GBMModelView, '_modelKey' = model@key)
 }
 
@@ -269,18 +269,31 @@ function(tol = 0, standardize = TRUE, retx = FALSE) {
 }
 
 runRF<-
-function(x, y, ntree=50, depth=50, nodesize=1, 
+function(x, y, ntree=50, depth=50, nodesize=1, nfolds = 0,
          sample.rate=2/3, nbins=100, seed=-1) {
   data <- new("H2OParsedData", h2o = h, key = "parsed.hex", logic = TRUE)
-  model <<- h2o.randomForest(x = x, y = y, data = data, ntree = ntree,
+  model <<- h2o.randomForest(x = x, y = y, data = data, ntree = ntree, nfolds = nfolds,
                                 depth = depth, nodesize = nodesize,
                                 sample.rate = sample.rate, nbins = nbins, seed = seed)
   model.json <<- .h2o.__remoteSend(h, .h2o.__PAGE_DRFModelView, '_modelKey'= model@key)
 }
 
+runSRF<-
+function(x, y, classification=TRUE, nfolds=0, 
+          mtry=-1, ntree=50, depth=50, sample.rate=2/3,
+          oobee = TRUE,importance = FALSE,nbins=1024, seed=-1,
+          stat.type="ENTROPY",balance.classes=FALSE) {
+
+  data <- new("H2OParsedData", h2o = h, key = "parsed.hex", logic = FALSE)
+  model <<- h2o.SpeeDRF(x = x, y = y, data = data, ntree = ntree, depth = depth, nbins = nbins, sample.rate = sample.rate, nfolds = nfolds,
+                        oobee = oobee, importance = importance, seed = seed, stat.type = stat.type, balance.classes = balance.classes)
+
+}
+
 runDL<-
 function(x, y, activation="RectifierWithDropout", 
 hidden=c(1024,1024,2048), 
+nfolds = 0,
 epochs=32, 
 train_samples_per_iteration=-1, 
 seed=7514391364823515067, 
@@ -295,7 +308,6 @@ momentum_ramp=1000000,
 momentum_stable=0.0, 
 nesterov_accelerated_gradient=TRUE, 
 input_dropout_ratio=0.2, 
-hidden_dropout_ratios=c(0.5,0.5,0.5), 
 l1 = 1E-5, 
 l2 = 0.0, 
 max_w2=15, 
@@ -323,8 +335,8 @@ replicate_training_data=TRUE,
 single_node_mode=FALSE, 
 shuffle_training_data=FALSE) {
   data <- new("H2OParsedData", h2o = h, key = "parsed.hex", logic = TRUE)
-  val  <- new("H2OParsedData", h2o = h, key = "test.hex", logic = TRUE)
-  model <<- h2o.deeplearning(x = x, y = y, data = data, validation = val,
+#  val  <- new("H2OParsedData", h2o = h, key = "test.hex", logic = TRUE)
+  model <<- h2o.deeplearning(x = x, y = y, data = data, nfolds = nfolds,
       activation=activation,
       hidden=hidden,
       epochs=epochs,
@@ -341,7 +353,6 @@ shuffle_training_data=FALSE) {
       momentum_stable=momentum_stable,
       nesterov_accelerated_gradient=nesterov_accelerated_gradient,
       input_dropout_ratio=input_dropout_ratio,
-      hidden_dropout_ratios=hidden_dropout_ratios,
       l1=l1,
       l2=l2,
       max_w2=max_w2,
