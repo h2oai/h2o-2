@@ -375,6 +375,9 @@ class Alerter:
                 for key in self.correct_alert.alert_list:
                     f.write("Test " + key + " failed:  " + self.correct_alert.alert_list[key])
                     f.write('\n')
+            else:
+                f.write("All tests were correct.")
+                f.write("\n")
 
             # Check & Report Timing Alerts
             f.write(TIMING_ALERT_HEADER)
@@ -383,6 +386,9 @@ class Alerter:
                 for key in self.speed_alert.alert_list:
                     f.write("Test " + key + " failed:  " + self.speed_alert.alert_list[key])
                     f.write('\n')
+            else:
+                f.write("No tests failed due to untimeliness.")
+                f.write("\n")
 
             # Check & Report Infrastructure Alerts
             f.write(INFRASTRUCTURE_ALERT_HEADER)
@@ -391,3 +397,7 @@ class Alerter:
                 for key in self.infrastructure_alert.alert_list:
                     f.write("Test " + key + " failed:  " + self.infrastructure_alert.alert_list[key])
                     f.write('\n')
+            else:
+                f.write("All tests ran.")
+                f.write("\n")
+
