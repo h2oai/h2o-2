@@ -51,7 +51,7 @@ h2o.gbm <- function(x, y, distribution = 'multinomial', data, n.trees = 10, inte
   if(length(n.trees) == 1 && length(interaction.depth) == 1 && length(n.minobsinnode) == 1 && length(shrinkage) == 1 && length(n.bins) == 1 && length(max.after.balance.size) == 1)
     .h2o.singlerun.internal("GBM", data, res, nfolds, validation, params)
   else
-    .h2o.gridsearch.internal("GBM", data, res, validation, params)
+    .h2o.gridsearch.internal("GBM", data, res, nfolds, validation, params)
 }
 
 .h2o.__getGBMSummary <- function(res, params) {
@@ -114,7 +114,7 @@ h2o.gbm <- function(x, y, distribution = 'multinomial', data, n.trees = 10, inte
 }
 
 # -------------------------- Generalized Linear Models (GLM) ------------------------ #
-h2o.glm <- function(x, y, data, family, nfolds = 10, alpha = 0.5, nlambda = -1, lambda.min.ratio = -1, lambda = 1e-5, epsilon = 1e-4, standardize = TRUE, prior, tweedie.p = ifelse(family == "tweedie", 1.5, as.numeric(NA)), iter.max = 100, higher_accuracy = FALSE, lambda_search = FALSE, return_all_lambda = FALSE, max_predictors=-1) {
+h2o.glm <- function(x, y, data, family, nfolds = 0, alpha = 0.5, nlambda = -1, lambda.min.ratio = -1, lambda = 1e-5, epsilon = 1e-4, standardize = TRUE, prior, tweedie.p = ifelse(family == "tweedie", 1.5, as.numeric(NA)), iter.max = 100, higher_accuracy = FALSE, lambda_search = FALSE, return_all_lambda = FALSE, max_predictors=-1) {
   args <- .verify_dataxy(data, x, y)
   
   if(!is.numeric(nfolds)) stop('nfolds must be numeric')
@@ -490,8 +490,15 @@ h2o.kmeans <- function(data, centers, cols = '', iter.max = 10, normalize = FALS
 
 .addNumericArrayParm <- function(parms, k, v) {
   if (! missing(v)) {
-    if (! is.numeric(v)) stop(sprintf("%s must be of type numeric"), k)
-    arrAsString = paste(v, collapse=",")
+    # if (! is.numeric(v)) stop(sprintf("%s must be of type numeric"), k)
+    # arrAsString = paste(v, collapse=",")
+    if(!all(sapply(v, is.numeric))) stop(sprintf("%s must contain all numeric elements"), k)
+    # if(is.list(v) && length(v) == 1) v = v[[1]]
+    arrAsString = sapply(v, function(x) {
+        if(length(x) <= 1) return(x)
+        paste("(", paste(x, collapse=","), ")", sep = "")
+      })
+    arrAsString = paste(arrAsString, collapse = ",")
     parms = .addParm(parms, k, arrAsString)
   }
   return(parms)
@@ -559,7 +566,7 @@ h2o.deeplearning <- function(x, y, data, classification = TRUE, nfolds = 0, vali
   colargs <- .verify_dataxy(data, x, y)
   parms = list()
   
-  parms$source = data@key
+  parms$'source' = data@key
   parms$response = colargs$y
   parms$ignored_cols = colargs$x_ignore
   
@@ -576,9 +583,10 @@ h2o.deeplearning <- function(x, y, data, classification = TRUE, nfolds = 0, vali
   if(missing(validation) && nfolds == 0) {
     validation = data
     parms$validation = validation@key
-  } else if(missing(validation) && nfolds >= 2)
+  } else if(missing(validation) && nfolds >= 2) {
+    validation = new("H2OParsedData", key = as.character(NA))
     parms$n_folds = nfolds
-  else if(!missing(validation) && nfolds == 0)
+  } else if(!missing(validation) && nfolds == 0)
     parms$validation = validation@key
   else stop("Cannot set both validation and nfolds at the same time")
   
@@ -632,12 +640,11 @@ h2o.deeplearning <- function(x, y, data, classification = TRUE, nfolds = 0, vali
   
   res = .h2o.__remoteSendWithParms(data@h2o, .h2o.__PAGE_DeepLearning, parms)
   
-  noGrid = T
+  noGrid = missing(hidden) || !(is.list(hidden) && length(hidden) > 1)
   if(noGrid)
     .h2o.singlerun.internal("DeepLearning", data, res, nfolds, validation, parms)
   else {
-    # .h2o.gridsearch.internal("DeepLearning", data, res, validation, params)
-    .h2o.gridsearch.internal("DeepLearning", data, res, validation)
+    .h2o.gridsearch.internal("DeepLearning", data, res, nfolds, validation, parms)
   }
 }
 
@@ -676,13 +683,28 @@ h2o.deeplearning <- function(x, y, data, classification = TRUE, nfolds = 0, vali
   #   params$epochs = model_params$epochs
   
   # result$params = params
-  model_params = res$model_info$parameters
+  # model_params = res$model_info$parameters
+  model_params = res$model_info$job
   model_params$Request2 = NULL; model_params$response_info = NULL
   model_params$'source' = NULL; model_params$validation = NULL
-  result$params = unlist(model_params, recursive = FALSE)
-  result$params = lapply(result$params, function(x) { if(is.character(x)) { switch(x, true = TRUE, false = FALSE, "Inf" = Inf, "-Inf" = -Inf, x) }
-                                                      else return(x) })
-  result$params$nfolds = params$n_folds
+  model_params$job_key = NULL; model_params$destination_key = NULL
+  model_params$response = NULL; model_params$description = NULL
+  if(!is.null(model_params$exception)) stop(model_params$exception)
+  model_params$exception = NULL; model_params$state = NULL
+  
+  # Remove all NULL elements and cast to logical value
+  if(length(model_params) > 0)
+    model_params = model_params[!sapply(model_params, is.null)]
+  for(i in 1:length(model_params)) {
+    x = model_params[[i]]
+    if(length(x) == 1 && is.character(x))
+      model_params[[i]] = switch(x, true = TRUE, false = FALSE, "Inf" = Inf, "-Inf" = -Inf, x)
+  }
+  result$params = model_params
+  # result$params = unlist(model_params, recursive = FALSE)
+  # result$params = lapply(model_params, function(x) { if(is.character(x)) { switch(x, true = TRUE, false = FALSE, "Inf" = Inf, "-Inf" = -Inf, x) }
+  #                                                    else return(x) })
+  result$params$nfolds = params$n_folds; params$n_folds = NULL
   errs = tail(res$errors, 1)[[1]]
   confusion = errs$valid_confusion_matrix
   
@@ -693,10 +715,10 @@ h2o.deeplearning <- function(x, y, data, classification = TRUE, nfolds = 0, vali
     # result$confusion = .build_cm(cm, confusion$actual_domain, confusion$predicted_domain)
     result$confusion = .build_cm(cm, confusion$domain) 
   }
-  result$train_class_error = errs$train_err
-  result$train_sqr_error = errs$train_mse
-  result$valid_class_error = errs$valid_err
-  result$valid_sqr_error = errs$valid_mse
+  result$train_class_error = as.numeric(errs$train_err)
+  result$train_sqr_error = as.numeric(errs$train_mse)
+  result$valid_class_error = as.numeric(errs$valid_err)
+  result$valid_sqr_error = as.numeric(errs$valid_mse)
   
   if(!is.null(errs$validAUC)) {
     tmp <- .h2o.__getPerfResults(errs$validAUC)
@@ -870,7 +892,7 @@ h2o.randomForest <- function(x, y, data, classification=TRUE, ntree=50, depth=20
   if(length(ntree) == 1 && length(depth) == 1 && length(nodesize) == 1 && length(sample.rate) == 1 && length(nbins) == 1 && length(max.after.balance.size) == 1)
     .h2o.singlerun.internal("RF", data, res, nfolds, validation, params)
   else
-    .h2o.gridsearch.internal("RF", data, res, validation, params)
+    .h2o.gridsearch.internal("RF", data, res, nfolds, validation, params)
 }
 
 .h2o.__getDRFSummary <- function(res) {
@@ -981,7 +1003,7 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, nfolds=0, validation,
   if(length(ntree) == 1 && length(depth) == 1 && length(sample.rate) == 1 && length(nbins) == 1)
     .h2o.singlerun.internal("SpeeDRF", data, res, nfolds, validation, params)
   else
-    .h2o.gridsearch.internal("SpeeDRF", data, res, validation, params)
+    .h2o.gridsearch.internal("SpeeDRF", data, res, nfolds, validation, params)
 }
 
 .h2o.__getSpeeDRFSummary <- function(res) {
@@ -1248,8 +1270,9 @@ plot.H2OPerfModel <- function(x, type = "cutoffs", ...) {
   list(cols=cols, cols_ind=cols_ind, cols_ignore=cols_ignore)
 }
 
-.h2o.singlerun.internal <- function(algo, data, response, nfolds = 0, validation = NULL, params = list()) {
+.h2o.singlerun.internal <- function(algo, data, response, nfolds = 0, validation = new("H2OParsedData", key = as.character(NA)), params = list()) {
   if(!algo %in% c("GBM", "RF", "DeepLearning", "SpeeDRF")) stop("Unsupported algorithm ", algo)
+  if(missing(validation)) validation = new("H2OParsedData", key = as.character(NA))
   model_obj = switch(algo, GBM = "H2OGBMModel", RF = "H2ODRFModel", DeepLearning = "H2ODeepLearningModel", SpeeDRF = "H2OSpeeDRFModel")
   model_view = switch(algo, GBM = .h2o.__PAGE_GBMModelView, RF = .h2o.__PAGE_DRFModelView, DeepLearning = .h2o.__PAGE_DeepLearningModelView, SpeeDRF = .h2o.__PAGE_SpeeDRFModelView)
   results_fun = switch(algo, GBM = .h2o.__getGBMResults, RF = .h2o.__getDRFResults, DeepLearning = .h2o.__getDeepLearningResults, SpeeDRF = .h2o.__getSpeeDRFResults)
@@ -1261,26 +1284,16 @@ plot.H2OPerfModel <- function(x, type = "cutoffs", ...) {
   res2 = .h2o.__remoteSend(data@h2o, model_view, '_modelKey'=dest_key)
   modelOrig = results_fun(res2[[3]], params)
   
-  # Get results from cross-validation
-  if(nfolds == 0)
-    return(new(model_obj, key=dest_key, data=data, model=modelOrig, valid=validation, xval=list()))
-  
-  res_xval = list()
-  if(algo == "DeepLearning")
-    xvalKey = res2[[3]]$model_info$job$xval_models
+  if(algo == "SpeeDRF")
+    res_xval = list()
   else
-    xvalKey = res2[[3]]$parameters$xval_models
-  for(i in 1:nfolds) {
-    resX = .h2o.__remoteSend(data@h2o, model_view, '_modelKey'=xvalKey[i])
-    modelXval = results_fun(resX[[3]], params)
-    res_xval[[i]] = new(model_obj, key=xvalKey[i], data=data, model=modelXval, valid=new("H2OParsedData", key=as.character(NA)), xval=list())
-  }
-  new(model_obj, key=dest_key, data=data, model=modelOrig, valid=new("H2OParsedData", key=as.character(NA)), xval=res_xval)
+    res_xval = .h2o.crossvalidation(algo, data, res2[[3]], nfolds, params)
+  new(model_obj, key=dest_key, data=data, model=modelOrig, valid=validation, xval=res_xval)
 }
 
-# .h2o.gridsearch.internal <- function(algo, data, job_key, dest_key, validation = NULL, forGBMIsClassificationAndYesTheBloodyModelShouldReportIt=T) {
-.h2o.gridsearch.internal <- function(algo, data, response, validation = NULL, params = list()) {
+.h2o.gridsearch.internal <- function(algo, data, response, nfolds = 0, validation = new("H2OParsedData", key = as.character(NA)), params = list()) {
   if(!algo %in% c("GBM", "KM", "RF", "DeepLearning")) stop("General grid search not supported for ", algo)
+  if(missing(validation)) validation = new("H2OParsedData", key = as.character(NA))
   prog_view = switch(algo, GBM = .h2o.__PAGE_GBMProgress, KM = .h2o.__PAGE_KM2Progress, RF = .h2o.__PAGE_DRFProgress, DeepLearning = .h2o.__PAGE_DeepLearningProgress)
   
   job_key = response$job_key
@@ -1293,6 +1306,7 @@ plot.H2OPerfModel <- function(x, type = "cutoffs", ...) {
   model_obj = switch(algo, GBM = "H2OGBMModel", KM = "H2OKMeansModel", RF = "H2ODRFModel", DeepLearning = "H2ODeepLearningModel")
   grid_obj = switch(algo, GBM = "H2OGBMGrid", KM = "H2OKMeansGrid", RF = "H2ODRFGrid", DeepLearning = "H2ODeepLearningGrid")
   model_view = switch(algo, GBM = .h2o.__PAGE_GBMModelView, KM = .h2o.__PAGE_KM2ModelView, RF = .h2o.__PAGE_DRFModelView, DeepLearning = .h2o.__PAGE_DeepLearningModelView)
+  results_fun = switch(algo, GBM = .h2o.__getGBMResults, KM = .h2o.__getKM2Results, RF = .h2o.__getDRFResults, DeepLearning = .h2o.__getDeepLearningResults)
   
   result = list(); myModelSum = list()
   for(i in 1:length(allModels)) {
@@ -1304,14 +1318,37 @@ plot.H2OPerfModel <- function(x, type = "cutoffs", ...) {
     myModelSum[[i]] = switch(algo, GBM = .h2o.__getGBMSummary(resH[[3]], params), KM = .h2o.__getKM2Summary(resH[[3]]), RF = .h2o.__getDRFSummary(resH[[3]]), DeepLearning = .h2o.__getDeepLearningSummary(resH[[3]]))
     myModelSum[[i]]$prediction_error = allErrs[[i]]
     myModelSum[[i]]$run_time = allModels[[i]]$end_time - allModels[[i]]$start_time
-    modelOrig = switch(algo, GBM = .h2o.__getGBMResults(resH[[3]], params), KM = .h2o.__getKM2Results(resH[[3]], data, params), RF = .h2o.__getDRFResults(resH[[3]], params), DeepLearning = .h2o.__getDeepLearningResults(resH[[3]], params))
+    modelOrig = results_fun(resH[[3]], params)
     
     if(algo == "KM")
       result[[i]] = new(model_obj, key=allModels[[i]]$destination_key, data=data, model=modelOrig)
-    else
-      result[[i]] = new(model_obj, key=allModels[[i]]$destination_key, data=data, model=modelOrig, valid=validation)
+    else {
+      res_xval = .h2o.crossvalidation(algo, data, resH[[3]], nfolds, params)
+      result[[i]] = new(model_obj, key=allModels[[i]]$destination_key, data=data, model=modelOrig, valid=validation, xval=res_xval)
+    }
   }
   new(grid_obj, key=dest_key, data=data, model=result, sumtable=myModelSum)
+}
+
+.h2o.crossvalidation <- function(algo, data, resModel, nfolds = 0, params = list()) {
+  if(!algo %in% c("GBM", "RF", "DeepLearning")) stop("Cross-validation modeling not supported for ", algo)
+  if(nfolds == 0) return(list())
+  
+  model_obj = switch(algo, GBM = "H2OGBMModel", KM = "H2OKMeansModel", RF = "H2ODRFModel", DeepLearning = "H2ODeepLearningModel")
+  model_view = switch(algo, GBM = .h2o.__PAGE_GBMModelView, KM = .h2o.__PAGE_KM2ModelView, RF = .h2o.__PAGE_DRFModelView, DeepLearning = .h2o.__PAGE_DeepLearningModelView)
+  results_fun = switch(algo, GBM = .h2o.__getGBMResults, KM = .h2o.__getKM2Results, RF = .h2o.__getDRFResults, DeepLearning = .h2o.__getDeepLearningResults)
+  
+  res_xval = list()
+  if(algo == "DeepLearning")
+    xvalKey = resModel$model_info$job$xval_models
+  else
+    xvalKey = resModel$parameters$xval_models
+  for(i in 1:nfolds) {
+      resX = .h2o.__remoteSend(data@h2o, model_view, '_modelKey'=xvalKey[i])
+      modelXval = results_fun(resX[[3]], params)
+      res_xval[[i]] = new(model_obj, key=xvalKey[i], data=data, model=modelXval, valid=new("H2OParsedData", key=as.character(NA)), xval=list())
+    }
+  return(res_xval)
 }
 
 .build_cm <- function(cm, actual_names = NULL, predict_names = actual_names, transpose = TRUE) {

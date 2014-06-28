@@ -1,12 +1,12 @@
 setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 source('../../findNSourceUtils.R')
 
-test.rf.imbalanced <- function(conn) {
+test.gbm.imbalanced <- function(conn) {
   prostate = h2o.uploadFile(conn, locate("smalldata/logreg/prostate.csv"))
 
-  hh_imbalanced=h2o.randomForest(x=c(1,2,3,5),y=4,ntree=5,data=prostate,validation=prostate,balance.classes=F)
+  hh_imbalanced=h2o.gbm(x=c(1,2,3,5),y=4,n.trees=10,data=prostate,validation=prostate,balance.classes=F)
   print(hh_imbalanced)
-  hh_balanced=h2o.randomForest(x=c(1,2,3,5),y=4,ntree=5,data=prostate,validation=prostate,balance.classes=T)
+  hh_balanced=h2o.gbm(x=c(1,2,3,5),y=4,n.trees=10,data=prostate,validation=prostate,balance.classes=T)
   print(hh_balanced)
 
   # test that it improves the overall classification error...
@@ -15,4 +15,4 @@ test.rf.imbalanced <- function(conn) {
   testEnd()
 }
 
-doTest("rf imbalanced", test.rf.imbalanced)
+doTest("gbm imbalanced", test.gbm.imbalanced)

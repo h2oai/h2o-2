@@ -7,7 +7,7 @@ H2O: Generalized Linear Models
 Fit a generalized linear model, specified by a response variable, a set of predictors, and a description of the error distribution.
 }
 \usage{
-h2o.glm(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e-5, epsilon = 1e-4, 
+h2o.glm(x, y, data, family, nfolds = 0, alpha = 0.5, lambda = 1e-5, epsilon = 1e-4, 
   standardize = TRUE, prior, tweedie.p = ifelse(family == 'tweedie', 1.5, 
   as.numeric(NA)), iter.max = 100, higher_accuracy = FALSE, lambda_search = FALSE)
 }
@@ -25,7 +25,7 @@ An \code{\linkS4class{H2OParsedData}} object containing the variables in the mod
 A description of the error distribution and corresponding link function to be used in the model. Currently, Gaussian, binomial, Poisson, gamma, and Tweedie are supported. When a model is specified as Tweedie, users must also specify the appropriate Tweedie power. 
 }
   \item{nfolds}{
-(Optional) Number of folds for cross-validation. The default is 10.
+(Optional) Number of folds for cross-validation.
 }
   \item{alpha}{
 (Optional) The elastic-net mixing parameter, which must be in [0,1]. The penalty is defined to be \deqn{P(\alpha,\beta) = (1-\alpha)/2||\beta||_2^2 + \alpha||\beta||_1 = \sum_j [(1-\alpha)/2 \beta_j^2 + \alpha|\beta_j|]} so \code{alpha=1} is the lasso penalty, while \code{alpha=0} is the ridge penalty.

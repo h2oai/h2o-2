@@ -1493,6 +1493,9 @@ class H2O(object):
     def jstack(self, timeoutSecs=30):
         return self.__do_json_request("JStack.json", timeout=timeoutSecs)
 
+    def jprofile(self, depth=5, timeoutSecs=30):
+        return self.__do_json_request("2/JProfile.json", params={'depth': depth}, timeout=timeoutSecs)
+
     def iostatus(self):
         return self.__do_json_request("IOStatus.json")
 
@@ -1800,13 +1803,13 @@ class H2O(object):
             'source': data_key,
             # 'model': None,
             'response': None,
-            'balance_classes': 1, 
+            'balance_classes': None, 
             'classification': 1,
             'cols': None,
             'ignored_cols': None,
             'ignored_cols_by_name': None,
             'importance': 1, # enable variable importance by default
-            'max_after_balance_size': 7,
+            'max_after_balance_size': None,
             'max_depth': None,
             'min_rows': None, # how many rows in leaves for stopping condition
             'mtries': None,
@@ -1826,7 +1829,11 @@ class H2O(object):
         # on v2, there is no default response. So if it's none, we should use the last column, for compatibility
         inspect = h2o_cmd.runInspect(key=data_key)
         # response only takes names. can't use col index..have to look it up
-        params_dict['response'] = str(inspect['cols'][-1]['name'])
+        # or add last col
+        if ('response' not in params_dict) or (not params_dict['response']):
+            params_dict['response'] = str(inspect['cols'][-1]['name'])
+        elif isinstance(params_dict['response'], int): 
+            params_dict['response'] = str(inspect['cols'][params_dict['response']]['name'])
 
         if print_params:
             print "\n%s parameters:" % algo, params_dict
@@ -1934,8 +1941,7 @@ class H2O(object):
             'comma_separated_list': None,
         }
         check_params_update_kwargs(params_dict, kwargs, 'set_column_names', print_params)
-        a = self.__do_json_request('2/SetColumnNames2.json' if beta_features else 'SetColumnNames.json',
-                                   timeout=timeoutSecs, params=params_dict)
+        a = self.__do_json_request('2/SetColumnNames2.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("\nset_column_names result:", dump_json(a))
         return a
 
@@ -1969,6 +1975,26 @@ class H2O(object):
         verboseprint("\nnaive_bayes result:", dump_json(a))
         return a
 
+    def anomaly(self, timeoutSecs=300, print_params=True, **kwargs):
+        params_dict = {
+            'destination_key': None,
+            'source': None,
+            'dl_autoencoder_model': None,
+            'thresh': None,
+        }
+        check_params_update_kwargs(params_dict, kwargs, 'anomaly', print_params)
+        start = time.time()
+        a = self.__do_json_request('2/Anomaly.json', timeout=timeoutSecs, params=params_dict)
+
+        if noPoll:
+            return a
+
+        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, benchmarkLogging=benchmarkLogging,
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
+        verboseprint("\nanomaly :result:", dump_json(a))
+        a['python_elapsed'] = time.time() - start
+        a['python_%timeout'] = a['python_elapsed'] * 100 / timeoutSecs
+        return a
 
     def gbm_view(self, model_key, timeoutSecs=300, print_params=False, **kwargs):
         params_dict = {
@@ -2070,16 +2096,6 @@ class H2O(object):
         if (browseAlso | browse_json):
             h2b.browseJsonHistoryAsUrlLastMatch(algo)
 
-        # it will redirect to an inspect, so let's get that inspect stuff
-        # FIX! not supported in json yet if beta_features
-        # FIX! who checks the redirect is correct?
-        if beta_features:
-            print "%s response:" % algo, dump_json(a)
-        else:
-            resultKey = a['response']['redirect_request_args']['key']
-            a = self.__do_json_request(algoView, timeout=timeoutSecs, params={"key": resultKey})
-            verboseprint("\nInspect of " + resultKey, dump_json(a))
-
         return a
 
     def predict_confusion_matrix(self, timeoutSecs=300, print_params=True, **kwargs):
@@ -2122,27 +2138,6 @@ class H2O(object):
         verboseprint("\nauc result:", dump_json(a))
         return a
 
-
-    def random_forest_treeview(self, tree_number, data_key, model_key,
-                               timeoutSecs=10, ignoreH2oError=False, **kwargs):
-        params_dict = {
-            'tree_number': tree_number,
-            'data_key': data_key,
-            'model_key': model_key,
-        }
-
-        browseAlso = kwargs.pop('browseAlso', False)
-        params_dict.update(kwargs)
-
-        a = self.__do_json_request('RFTreeView.json', timeout=timeoutSecs, params=params_dict,
-                                   ignoreH2oError=ignoreH2oError)
-
-        verboseprint("\nrandom_forest_treeview result:", dump_json(a))
-        # Always do it to eyeball?
-        if (browseAlso | browse_json | True):
-            h2b.browseJsonHistoryAsUrlLastMatch("RFTreeView")
-            time.sleep(3) # to be able to see it
-        return a
 
     def gbm(self, data_key, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30,
             noPoll=False, print_params=True, **kwargs):
@@ -2393,7 +2388,7 @@ class H2O(object):
             return a
 
         a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
-                          initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
         verboseprint("\nneural_net result:", dump_json(a))
         a['python_elapsed'] = time.time() - start
         a['python_%timeout'] = a['python_elapsed'] * 100 / timeoutSecs
@@ -2410,28 +2405,15 @@ class H2O(object):
         return a
 
     def summary_page(self, key, timeoutSecs=60, noPrint=True, useVA=False, numRows=None, numCols=None, **kwargs):
-        if beta_features and not useVA:
-            params_dict = {
-                'source': key,
-                'cols': None,
-                'max_ncols': 1000 if not numCols else numCols,
-                'max_qbins': None,
-            }
-        else:
-            params_dict = {
-                'key': key,
-                'x': None,
-                'max_column_display': 1000
-            }
+        params_dict = {
+            'source': key,
+            'cols': None,
+            'max_ncols': 1000 if not numCols else numCols,
+            'max_qbins': None,
+        }
         browseAlso = kwargs.pop('browseAlso', False)
         check_params_update_kwargs(params_dict, kwargs, 'summary_page', print_params=True)
-        a = self.__do_json_request('2/SummaryPage2.json' if (beta_features and not useVA) else 'SummaryPage.json',
-                                   timeout=timeoutSecs, params=params_dict)
-        # Too much stuff now!
-        # verboseprint("\nsummary_page result:", dump_json(a))
-
-        # FIX!..not there yet for 2
-        # if not beta_features:
+        a = self.__do_json_request('2/SummaryPage2.json', timeout=timeoutSecs, params=params_dict)
         h2o_cmd.infoFromSummary(a, noPrint=noPrint, numRows=numRows, numCols=numCols)
         return a
 
@@ -2494,60 +2476,34 @@ class H2O(object):
                    parentName=None, **kwargs):
 
         browseAlso = kwargs.pop('browseAlso', False)
-        if beta_features:
-            params_dict = {
-                'strong_rules_enabled': None,
-                'lambda_search': None,
-                'nlambdas': None,
-                'lambda_min_ratio': None,
-                'prior': None,
+        params_dict = {
+            'strong_rules_enabled': None,
+            'lambda_search': None,
+            'nlambdas': None,
+            'lambda_min_ratio': None,
+            'prior': None,
 
-                'source': key,
-                'destination_key': None,
-                'response': None,
-                'cols': None,
-                'ignored_cols': None,
-                'ignored_cols_by_name': None,
-                'max_iter': None,
-                'standardize': None,
-                'family': None,
-                'alpha': None,
-                'lambda': None,
-                'beta_epsilon': None, # GLMGrid doesn't use this name
-                'tweedie_variance_power': None,
-                'n_folds': None,
+            'source': key,
+            'destination_key': None,
+            'response': None,
+            'cols': None,
+            'ignored_cols': None,
+            'ignored_cols_by_name': None,
+            'max_iter': None,
+            'standardize': None,
+            'family': None,
+            'alpha': None,
+            'lambda': None,
+            'beta_epsilon': None, # GLMGrid doesn't use this name
+            'tweedie_variance_power': None,
+            'n_folds': None,
 
-                # only GLMGrid has this..we should complain about it on GLM?
-                'parallelism': None,
-                'beta_eps': None,
-                'higher_accuracy': None,
-                'use_all_factor_levels': None,
-            }
-        else:
-            params_dict = {
-                'key': key,
-                'destination_key': None,
-                'x': None,
-                'y': None,
-                'max_iter': None,
-                'standardize': None,
-                'family': None,
-                'link': None,
-                'alpha': None,
-                'lambda': None,
-                'beta_epsilon': None, # GLMGrid doesn't use this name
-                'tweedie_power': None,
-                'n_folds': None,
-                'case_mode': None,
-                'case': None,
-                'lsm_solver': None,
-                'expert_settings': None,
-                'thresholds': None,
-                'prior': None, # new
-                # only GLMGrid has these..we should complain about it on GLM?
-                'parallelism': None,
-                'beta_eps': None,
-            }
+            # only GLMGrid has this..we should complain about it on GLM?
+            'parallelism': None,
+            'beta_eps': None,
+            'higher_accuracy': None,
+            'use_all_factor_levels': None,
+        }
 
         check_params_update_kwargs(params_dict, kwargs, parentName, print_params=True)
         a = self.__do_json_request(parentName + '.json', timeout=timeoutSecs, params=params_dict)
@@ -2557,26 +2513,16 @@ class H2O(object):
     def GLM(self, key,
             timeoutSecs=300, retryDelaySecs=0.5, initialDelaySecs=None, pollTimeoutSecs=180,
             noise=None, benchmarkLogging=None, noPoll=False, destination_key=None, **kwargs):
-        parentName = "2/GLM2" if beta_features else "GLM"
+        parentName = "2/GLM2"
         a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName=parentName,
                             destination_key=destination_key, **kwargs)
         # Check that the response has the right Progress url it's going to steer us to.
         if noPoll:
             return a
 
-        if not beta_features:
-            if a['response']['redirect_request'] != 'GLMProgressPage':
-                print dump_json(a)
-                raise Exception('H2O GLM redirect is not GLMProgressPage. GLM json response precedes.')
-        else:
-            print dump_json(a)
-
-        if noPoll:
-            return a
-
         a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
-                          initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
-                          noise=noise, benchmarkLogging=benchmarkLogging)
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
+            noise=noise, benchmarkLogging=benchmarkLogging)
         verboseprint("GLM done:", dump_json(a))
 
         browseAlso = kwargs.get('browseAlso', False)
@@ -2592,20 +2538,12 @@ class H2O(object):
 
         a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLMGrid", **kwargs)
 
-        # Check that the response has the right Progress url it's going to steer us to.
-        if not beta_features:
-            if a['response']['redirect_request'] != 'GLMGridProgress':
-                print dump_json(a)
-                raise Exception('H2O GLMGrid redirect is not GLMGridProgress. GLMGrid json response precedes.')
-        else:
-            print dump_json(a)
-
         if noPoll:
             return a
 
         a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
-                          initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
-                          noise=noise, benchmarkLogging=benchmarkLogging)
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
+            noise=noise, benchmarkLogging=benchmarkLogging)
         verboseprint("GLMGrid done:", dump_json(a))
 
         browseAlso = kwargs.get('browseAlso', False)

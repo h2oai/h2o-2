@@ -1,6 +1,5 @@
 package hex.anomaly;
 
-import com.amazonaws.services.cloudfront.model.InvalidArgumentException;
 import hex.deeplearning.DeepLearningModel;
 import water.*;
 import water.api.*;
@@ -27,7 +26,8 @@ public class Anomaly extends Job.FrameJob {
   @Override
   protected final void execImpl() {
     DeepLearningModel dlm = UKV.get(dl_autoencoder_model);
-    if (!dlm.get_params().autoencoder) throw new InvalidArgumentException("Deep Learning Model must be build with autoencoder = true.");
+    if (dlm == null) throw new IllegalArgumentException("Deep Learning Model not found.");
+    if (!dlm.get_params().autoencoder) throw new IllegalArgumentException("Deep Learning Model must be build with autoencoder = true.");
 
     if (thresh == -1) {
       Log.info("Mean reconstruction error (MSE) of model on training data: " + dlm.mse());
