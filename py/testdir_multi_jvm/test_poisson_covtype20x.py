@@ -58,7 +58,7 @@ class Basic(unittest.TestCase):
             
             kwargs = {
                 'x': x,
-                'y': y, 
+                'response': y, 
                 'family': 'poisson',
                 'link': 'log',
                 'n_folds': 0, 

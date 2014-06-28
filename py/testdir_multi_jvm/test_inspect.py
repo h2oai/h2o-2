@@ -72,7 +72,7 @@ class Basic(unittest.TestCase):
 
     def test_H_enum_domain_size(self):
         cinsp = self.inspect_columns("smalldata", "test/test_enum_domain_size.csv", 
-            rows=4, cols=3, columnNames=['A1', 'A2', 'A3'], columnTypes=['int','int','enum'])
+            rows=4, cols=3, columnNames=['A1', 'A2', 'A3'], columnTypes=['Int','Int','Enum'])
         self.assertEqual(4, cinsp['cols'][2]['enum_domain_size'])
 
     # Shared test implementation for smalldata/test/test_26cols_*.csv

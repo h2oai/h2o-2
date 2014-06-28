@@ -1493,6 +1493,9 @@ class H2O(object):
     def jstack(self, timeoutSecs=30):
         return self.__do_json_request("JStack.json", timeout=timeoutSecs)
 
+    def jprofile(self, depth=5, timeoutSecs=30):
+        return self.__do_json_request("2/JProfile.json", params={'depth': depth}, timeout=timeoutSecs)
+
     def iostatus(self):
         return self.__do_json_request("IOStatus.json")
 
@@ -1800,13 +1803,13 @@ class H2O(object):
             'source': data_key,
             # 'model': None,
             'response': None,
-            'balance_classes': 1, 
+            'balance_classes': None, 
             'classification': 1,
             'cols': None,
             'ignored_cols': None,
             'ignored_cols_by_name': None,
             'importance': 1, # enable variable importance by default
-            'max_after_balance_size': 7,
+            'max_after_balance_size': None,
             'max_depth': None,
             'min_rows': None, # how many rows in leaves for stopping condition
             'mtries': None,
@@ -1826,7 +1829,11 @@ class H2O(object):
         # on v2, there is no default response. So if it's none, we should use the last column, for compatibility
         inspect = h2o_cmd.runInspect(key=data_key)
         # response only takes names. can't use col index..have to look it up
-        params_dict['response'] = str(inspect['cols'][-1]['name'])
+        # or add last col
+        if ('response' not in params_dict) or (not params_dict['response']):
+            params_dict['response'] = str(inspect['cols'][-1]['name'])
+        elif isinstance(params_dict['response'], int): 
+            params_dict['response'] = str(inspect['cols'][params_dict['response']]['name'])
 
         if print_params:
             print "\n%s parameters:" % algo, params_dict
@@ -2131,27 +2138,6 @@ class H2O(object):
         verboseprint("\nauc result:", dump_json(a))
         return a
 
-
-    def random_forest_treeview(self, tree_number, data_key, model_key,
-                               timeoutSecs=10, ignoreH2oError=False, **kwargs):
-        params_dict = {
-            'tree_number': tree_number,
-            'data_key': data_key,
-            'model_key': model_key,
-        }
-
-        browseAlso = kwargs.pop('browseAlso', False)
-        params_dict.update(kwargs)
-
-        a = self.__do_json_request('RFTreeView.json', timeout=timeoutSecs, params=params_dict,
-                                   ignoreH2oError=ignoreH2oError)
-
-        verboseprint("\nrandom_forest_treeview result:", dump_json(a))
-        # Always do it to eyeball?
-        if (browseAlso | browse_json | True):
-            h2b.browseJsonHistoryAsUrlLastMatch("RFTreeView")
-            time.sleep(3) # to be able to see it
-        return a
 
     def gbm(self, data_key, timeoutSecs=600, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30,
             noPoll=False, print_params=True, **kwargs):
