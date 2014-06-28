@@ -68,22 +68,3 @@ test <- function(conn) {
 }
 
 doTest("Test parsing, splitting, modelling, and computation on data with UUID column", test)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
