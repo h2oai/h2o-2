@@ -196,10 +196,10 @@ function() {
   len <- length(dl$deeplearning_model$errors)
   js <- list(comparison_result = 
                 list(glm = ifelse(exists('glm_res'), 1 - glm_res$glm_model$validAUC$accuracy_for_criteria[1], "-1"),
-                     dl  = ifelse(exists('dl_res'),  1 - dl$deeplearning_model$errors[[len]]$validAUC$accuracy_for_criteria[1], "-1"),
-                     gbm = ifelse(exists('gbm_res'), 1 - gbm$gbm_model$validAUC$accuracy_for_criteria[1], "-1"),
-                     drf = ifelse(exists('drf_res'), 1 - drf$drf_model$validAUC$accuracy_for_criteria[1], "-1"),
-                     srf = ifelse(exists('srf_res'), 1 - srf@model$accuracy, "-1")))
+                     dl  = ifelse(exists('dl_res'),  1 - dl_res$deeplearning_model$errors[[len]]$validAUC$accuracy_for_criteria[1], "-1"),
+                     gbm = ifelse(exists('gbm_res'), 1 - gbm_res$gbm_model$validAUC$accuracy_for_criteria[1], "-1"),
+                     drf = ifelse(exists('drf_res'), 1 - drf_res$drf_model$validAUC$accuracy_for_criteria[1], "-1"),
+                     srf = ifelse(exists('srf_res'), 1 - srf_res@model$accuracy, "-1")))
   .coda("COMPARISON", js)
 }
 print("PREDICT TYPE:")
