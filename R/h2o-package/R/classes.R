@@ -544,7 +544,7 @@ setClass("ASTFrame", representation(type="character", value="character"), contai
 #' The ASTUnk class.
 #'
 #' This class represents a leaf that
-#' will be assigned to and has unkown type before evaluation
+#' will be assigned to and has unkown type before evaluation (it's an 'unknown' identifier)
 #' -OR-
 #' it represents an operation on a function's argument if the symbol appears in the functions formals.
 #' The distinction between these two cases is denoted by isFormal (TRUE -> Function arg, FALSE -> assignment)
