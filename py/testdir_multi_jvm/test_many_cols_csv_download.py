@@ -39,7 +39,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_many_cols_with_syn(self):
+    def test_many_cols_csv_download(self):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
@@ -74,7 +74,7 @@ class Basic(unittest.TestCase):
             missingValuesListA = h2o_cmd.infoFromInspect(inspect, csvPathname)
             numColsA = inspect['numCols']
             numRowsA = inspect['numRows']
-            sizeBytesA = inspect['sizeBytes']
+            byteSizeA = inspect['byteSize']
 
             # do a little testing of saving the key as a csv
             csvDownloadPathname = SYNDATASETS_DIR + "/csvDownload.csv"
@@ -93,7 +93,7 @@ class Basic(unittest.TestCase):
             missingValuesListB = h2o_cmd.infoFromInspect(inspect, csvPathname)
             numColsB = inspect['numCols']
             numRowsB = inspect['numRows']
-            sizeBytesB = inspect['sizeBytes']
+            byteSizeB = inspect['byteSize']
 
             self.assertEqual(missingValuesListA, missingValuesListB,
                 "missingValuesList mismatches after re-parse of downloadCsv result")
@@ -101,8 +101,8 @@ class Basic(unittest.TestCase):
                 "numCols mismatches after re-parse of downloadCsv result %d %d" % (numColsA, numColsB))
             self.assertEqual(numRowsA, numRowsB,
                 "numRows mismatches after re-parse of downloadCsv result %d %d" % (numRowsA, numRowsB))
-            # self.assertEqual(sizeBytesA, sizeBytesB,
-            #    "sizeBytes mismatches after re-parse of downloadCsv result %d %d" % (sizeBytesA, sizeBytesB))
+            # self.assertEqual(byteSizeA, byteSizeB,
+            #    "byteSize mismatches after re-parse of downloadCsv result %d %d" % (byteSizeA, byteSizeB))
             h2o.check_sandbox_for_errors()
 
 if __name__ == '__main__':

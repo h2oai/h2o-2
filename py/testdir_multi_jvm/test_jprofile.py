@@ -57,15 +57,13 @@ class JProfileApi(unittest.TestCase):
                         # look for interesting ones
                         i = 0
                         while i < len(procs):
-                            # if 'JProfile' in procs[i]:
-                            if True:
-                                # print the next 10
-                                print "\n" + procs[i]
-                                for j in range(10):
-                                    print procs[i+j]
-                                i = i + 10
-                            else:
-                                i = i + 1
+                            # print the next 10
+                            print "\n" + procs[i]
+                            for j in range(10):
+                                if i+j > (len(procs) - 1):
+                                    break
+                                print procs[i+j]
+                            i = i + 10
                 
                     h2o.verboseprint(json.dumps(stats,indent=2))
 

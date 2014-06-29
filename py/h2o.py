@@ -1975,7 +1975,8 @@ class H2O(object):
         verboseprint("\nnaive_bayes result:", dump_json(a))
         return a
 
-    def anomaly(self, timeoutSecs=300, print_params=True, **kwargs):
+    def anomaly(self, timeoutSecs=300, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30,
+        noPoll=False, print_params=True, **kwargs):
         params_dict = {
             'destination_key': None,
             'source': None,

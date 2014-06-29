@@ -45,8 +45,8 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (100000, 10, 'cA', 30),
-            (100, 1000, 'cB', 30),
+            (100000, 10, 'cA', 180),
+            (100, 1000, 'cB', 180),
             # (100, 900, 'cC', 30),
             # (100, 500, 'cD', 30),
             # (100, 100, 'cE', 30),
