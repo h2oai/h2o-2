@@ -22,8 +22,9 @@ import java.util.Iterator;
 public class Program implements Iterable<Program.Statement>{
   private SymbolTable _global; // The global symbol table.
   private SymbolTable _local;  // The local symbol table, null if program is main.
-  private boolean _isMain;     // A boolean stating that this program is main.
-  private ArrayList<Statement> _stmts;
+  private boolean     _isMain; // A boolean stating that this program is main.
+  private String      _name;   // The program's name.
+  private ArrayList<Statement> _stmts;  // The list of program statements
 
   public final class Statement {
     String _op;    // One of the valid statement operations: push, pop, dup, op, call, return
@@ -35,13 +36,15 @@ public class Program implements Iterable<Program.Statement>{
     }
   }
 
-  Program(SymbolTable global, SymbolTable local) {
+  Program(SymbolTable global, SymbolTable local, String name) {
     _global = global;
-    _local = local;
+    _local  = local;
     _isMain = _local == null;
-    _stmts = new ArrayList<Statement>();
+    _name   = name;
+    _stmts  = new ArrayList<Statement>();
   }
 
+  public String name() { return _name; }
   protected int start() { return 0; }
   protected int end() { return _stmts.size(); }
   protected final boolean isMain() { return _isMain; }
@@ -63,8 +66,8 @@ public class Program implements Iterable<Program.Statement>{
     throw new IllegalArgumentException("Could not find the identifier in the local or global scopes while looking up value of: "+name);
   }
 
-  // Writing Types and Values to the symbol table means stomping on the attributes for a name already in the symbol table.
-  // At the 
+  // These write methods will stomp on the attributes for identifiers in the symbol table.
+  // The symbol tables are 
   protected final void writeType(String id, String type) {
     if (canWriteToGlobal()) {
       _global.writeType(id, type);

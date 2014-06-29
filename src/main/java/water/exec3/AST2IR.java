@@ -2,15 +2,13 @@ package water.exec3;
 
 
 import com.google.gson.*;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Iterator;
 
 
 /**
- *  Transform the high-level AST passed from R into ymbol tables along with an instruction set.
+ *  Transform the high-level AST passed from R into symbol tables along with an instruction set.
  *
  *  Walk the R-AST and produce execution instructions and symbol tables to be passed into an object of type Env. There
  *  are at most two symbol tables for every scope (i.e. every Env represents its own scope, see Env.java for more):
@@ -38,89 +36,113 @@ import java.util.Iterator;
  *  If f(...) is called without assignment, then there is a temporary key created and spit out to the console. The
  *  lifetime of this temporary key is discussed elsewhere.
  */
+
+
 public class AST2IR {
+  private final JsonObject _ast;
+  private SymbolTable _global;
+  private ArrayList<Program> _program;
 
-
-//  static AST parseOp(JsonObject jo) {
-//
-//    // What type of operator is it?
-//    if (jo.get("type").getAsString().equals("BinaryOperator")) {
-//
-//      // Parse the left and right operands for this operator and return.
-//      JsonObject operands = jo.get("operands").getAsJsonObject();
-//      JsonObject left = operands.get("left").getAsJsonObject();
-//      JsonObject rite = operands.get("right").getAsJsonObject();
-//
-//
-//
-//    } else if (jo.get("type").getAsString().equals("PrefixOperator")) {
-//
-//    } else {
-//      throw new IllegalArgumentException("Unkown operator type: " + jo.get("type").getAsString());
-//    }
-//    return ast;
-//  }
-
-
-  JsonObject _ast;
-  SymbolTable _global;
-  String[] arithmeticOps = new String[]{"+", "-", "/", "*"};
-  String[] bitwiseOps = new String[]{"&", "&&", "|", "||", "!"};
-  String[] compareOps = new String[]{"!=", "<=", "==", ">=", "<", ">"};
-
-  //Arrays.asList(...).contains(...)
+  final private String[] ARITHMETICOPS = new String[]{"+", "-", "/", "*"};
+  final private String[] BITWISEOPS = new String[]{"&", "&&", "|", "||", "!"};
+  final private String[] COMPAREOPS = new String[]{"!=", "<=", "==", ">=", "<", ">"};
 
   public AST2IR(JsonObject ast) {
     _ast = ast;
     _global = new SymbolTable();
+    _program = new ArrayList<Program>();
   }
 
+  public JsonObject    ast() { return _ast; }
+  public SymbolTable table() { return _global; }
+  public Program[] program() { return _program.toArray(new Program[_program.size()]); }
+
+  //--------------------------------------------------------------------------------------------------------------------
+  // Node peekers and inspectors
+  //--------------------------------------------------------------------------------------------------------------------
+
+  // Simple util function for getting the node type as a String
+  private String getNodeType(JsonObject node) {
+    return node.get("node_type").getAsString();
+  }
+
+  // Check if the node we have is an ASTOp of some sort if true, can check the type of Op below
+  private boolean isASTOp(JsonObject node) {
+    String node_type = node.get("node_type").getAsString();
+    return node_type != null && node_type.equals("ASTOp");
+  }
+
+  // Check for standard arithmetic operations
   private boolean isArithmeticOp(JsonObject node) {
     if (isOp(node)) {
       JsonObject jo = node.get("astop").getAsJsonObject();
       if (jo.get("type").getAsString().equals("BinaryOperator")) {
-        if (Arrays.asList(arithmeticOps).contains(jo.get("operator").getAsString()))
+        if (Arrays.asList(ARITHMETICOPS).contains(jo.get("operator").getAsString()))
           return true;
       }
     }
     return false;
   }
 
+  // Check for bitwise operations
   private boolean isBitwiseOp(JsonObject node) {
     if (isOp(node)) {
       JsonObject jo = node.get("astop").getAsJsonObject();
       if (jo.get("type").getAsString().equals("BinaryOperator")) {
-        if (Arrays.asList(bitwiseOps).contains(jo.get("operator").getAsString()))
+        if (Arrays.asList(BITWISEOPS).contains(jo.get("operator").getAsString()))
           return true;
       }
     }
     return false;
   }
 
+  // Check if any of the node is a comparison node
   private boolean isCompareOp(JsonObject node) {
     if (isOp(node)) {
       JsonObject jo = node.get("astop").getAsJsonObject();
       if (jo.get("type").getAsString().equals("BinaryOperator")) {
-        if (Arrays.asList(compareOps).contains(jo.get("operator").getAsString()))
+        if (Arrays.asList(COMPAREOPS).contains(jo.get("operator").getAsString()))
           return true;
       }
     }
     return false;
   }
 
-  private boolean isCall(String f) { }
+  // A function call has a top level entry point called "astcall", similar to "astop"
+  private boolean isCall(JsonObject node) { return node.get("astcall") != null; }
 
-  private boolean isId() { }
-
-  private boolean isConst() { }
-
-  private boolean isString() { }
-
-  private boolean isArg() { }
-
-  private boolean isOp(JsonObject node) {
-    return node.get("astop") != null;
+  // Any name that is being assigned to is an ID. These are ASTUnk types where isFormal is false.
+  private boolean isId(JsonObject node) {
+    String node_type = getNodeType(node);
+    return node_type != null && node_type.equals("ASTUnk") && !node.get("isFormal").getAsBoolean();
   }
+
+  // Check if the node has a type of numeric.
+  private boolean isConst(JsonObject node) {
+    String node_type = getNodeType(node);
+    return node_type != null && node_type.equals("ASTNumeric");
+  }
+
+  // Check if the node has a type of String.
+  private boolean isString(JsonObject node) {
+    String node_type = getNodeType(node);
+    return node_type != null && node_type.equals("ASTString");
+  }
+
+  // Check if the node is an arg to a call
+  private boolean isArg(JsonObject node) {
+    String node_type = getNodeType(node);
+    return node_type != null && node_type.equals("ASTUnk") && node.get("isFormal").getAsBoolean();
+  }
+
+  // Differs from isASTOp in that the JSON structure has "astop : { ast_opNode : {node_type : "ASTOp", ...},...}"
+  private boolean isOp(JsonObject node) { return node.get("astop") != null; }
+
+  //--------------------------------------------------------------------------------------------------------------------
+  // Node getters
+  //--------------------------------------------------------------------------------------------------------------------
+
+
 }
 
 /**
@@ -201,3 +223,26 @@ class SymbolTable {
 
   }
 }
+
+
+
+
+//  static AST parseOp(JsonObject jo) {
+//
+//    // What type of operator is it?
+//    if (jo.get("type").getAsString().equals("BinaryOperator")) {
+//
+//      // Parse the left and right operands for this operator and return.
+//      JsonObject operands = jo.get("operands").getAsJsonObject();
+//      JsonObject left = operands.get("left").getAsJsonObject();
+//      JsonObject rite = operands.get("right").getAsJsonObject();
+//
+//
+//
+//    } else if (jo.get("type").getAsString().equals("PrefixOperator")) {
+//
+//    } else {
+//      throw new IllegalArgumentException("Unkown operator type: " + jo.get("type").getAsString());
+//    }
+//    return ast;
+//  }
