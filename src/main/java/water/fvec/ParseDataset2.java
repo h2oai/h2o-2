@@ -373,7 +373,7 @@ public final class ParseDataset2 extends Job {
       eut.doAll(evecs);
     }
 
-//    logParseResults(job, fr);
+    logParseResults(job, fr);
 
     // Release the frame for overwriting
     fr.unlock(job.self());
