@@ -143,21 +143,54 @@ public class AST2IR extends Iced {
   //--------------------------------------------------------------------------------------------------------------------
   // Node getters
   //--------------------------------------------------------------------------------------------------------------------
-  private double getNum     (JsonObject node) { return node.get("value").getAsDouble();           }
-  private boolean getBoolean(JsonObject node) { return node.get("value").getAsBoolean();          }
-  private String getString  (JsonObject node) { return node.get("value").getAsString();           }
-  private Key getKey        (JsonObject node) { return Key.make(node.get("value").getAsString()); }
-  private String getArgName (JsonObject node) { return node.get("arg_name").getAsString();        }
-  private String getArgType (JsonObject node) { return node.get("arg_type").getAsString();        }
-  private String getArgValue(JsonObject node) { return node.get("arg_value").getAsString();       }
-  private int getArgNumber  (JsonObject node) { return node.get("arg_number").getAsInt();         }
-  private String getIdValue (JsonObject node) { return node.get("key").getAsString();             }
+  private double  getNum      (JsonObject node) { return node.get("value").getAsDouble();           }
+  private boolean getBoolean  (JsonObject node) { return node.get("value").getAsBoolean();          }
+  private String  getString   (JsonObject node) { return node.get("value").getAsString();           }
+  private Key     getKey      (JsonObject node) { return Key.make(node.get("value").getAsString()); }
+  private String  getArgName  (JsonObject node) { return node.get("arg_name").getAsString();        }
+  private String  getArgType  (JsonObject node) { return node.get("arg_type").getAsString();        }
+  private String  getArgValue (JsonObject node) { return node.get("arg_value").getAsString();       }
+  private int     getArgNumber(JsonObject node) { return node.get("arg_number").getAsInt();         }
+  private String  getIdValue  (JsonObject node) { return node.get("key").getAsString();             }
 
   //--------------------------------------------------------------------------------------------------------------------
-  // Tree Walker
+  // Tree Walker -- Code Generator
   //--------------------------------------------------------------------------------------------------------------------
+  public void make() {
+    treeWalk(_ast, 0);
+  }
 
+  /**
+   * Walk an AST and fill in _program.
+   * @param tree A node of the AST -- preferably some kind of root node.
+   * @param lineNum A line number in the program. Programs start at 0 and go up.
+   *
+   * This is a delicate method, and it is absolutely crucial to get correct.
+   *
+   * A root node in the AST has a few different possible key names:
+   *  a. "astop": Has operands list of nodes that must be recursed
+   *  b. "call" : Must create a new Program object
+   *  c. "left" : Recurse down this guy, should not need to be checked. ever.
+   *  d. "right": Same as 'c'.           should not need to be checked. ever.
+   */
+  private void treeWalk(JsonObject tree, int lineNum) {
 
+    // First check if we're a top-level node
+    if (isOp(tree)) {
+
+      // Can be a binary arithmetic operator
+      if (isArithmeticOp(tree)) {
+
+      // Can be a bitwise operator
+      } else if (isBitwiseOp(tree)) {
+
+      // Can be comparison operator (also binary)
+      } else if (isCompareOp(tree)) {
+
+      }
+    } else if (isCall(tree)) {
+
+  }
 }
 
 /**
