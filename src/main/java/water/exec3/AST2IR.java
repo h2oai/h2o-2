@@ -1,6 +1,7 @@
 package water.exec3;
 
 
+import water.*;
 import com.google.gson.*;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -26,19 +27,16 @@ import java.util.HashMap;
  *
  *  First cut: Don't do any analysis or java code generation. Generate simple instructions for the interpreter.
  *
- *  The POJO returned from here is passed to an instance of Env. The POJO has is a map of programs to be executed:
- *      AST2IR.getInstructionSet() will return a new HashMap<String, Program>(), where a Program is a list of
- *      instructions plus the accompanying symbol tables.
+ *  This phase generates an array of Program objects, which hold references to Symbol Tables and instructions for the
+ *  interpreter.
  *
- *  There is a special type of program that is the "global" program. This is the __main__ program. It is responsible for
+ *  There is a special type of program that is the "global" program. This is the *main* program. It is responsible for
  *  switching control to other programs (user-defined functions and other calls), and managing returned values. There
- *  is always a main, even in cases such as result <- f(...). The left-arrow assignment is the main in this case.
+ *  is always a main, even in cases such as "result <- f(...)". The left-arrow assignment is the main in this case.
  *  If f(...) is called without assignment, then there is a temporary key created and spit out to the console. The
  *  lifetime of this temporary key is discussed elsewhere.
  */
-
-
-public class AST2IR {
+public class AST2IR extends Iced {
   private final JsonObject _ast;
   private SymbolTable _global;
   private ArrayList<Program> _program;
@@ -58,9 +56,8 @@ public class AST2IR {
   public Program[] program() { return _program.toArray(new Program[_program.size()]); }
 
   //--------------------------------------------------------------------------------------------------------------------
-  // Node peekers and inspectors
+  // Node inspectors
   //--------------------------------------------------------------------------------------------------------------------
-
   // Simple util function for getting the node type as a String
   private String getNodeType(JsonObject node) {
     return node.get("node_type").getAsString();
@@ -138,8 +135,26 @@ public class AST2IR {
   // Differs from isASTOp in that the JSON structure has "astop : { ast_opNode : {node_type : "ASTOp", ...},...}"
   private boolean isOp(JsonObject node) { return node.get("astop") != null; }
 
+  // Can get the numeric node value as a boolean...
+  private boolean canGetAsBoolean(JsonObject node) {
+    return node.get("value").getAsDouble() == 1.0 || node.get("value").getAsDouble() == 0.0;
+  }
+
   //--------------------------------------------------------------------------------------------------------------------
   // Node getters
+  //--------------------------------------------------------------------------------------------------------------------
+  private double getNum     (JsonObject node) { return node.get("value").getAsDouble();           }
+  private boolean getBoolean(JsonObject node) { return node.get("value").getAsBoolean();          }
+  private String getString  (JsonObject node) { return node.get("value").getAsString();           }
+  private Key getKey        (JsonObject node) { return Key.make(node.get("value").getAsString()); }
+  private String getArgName (JsonObject node) { return node.get("arg_name").getAsString();        }
+  private String getArgType (JsonObject node) { return node.get("arg_type").getAsString();        }
+  private String getArgValue(JsonObject node) { return node.get("arg_value").getAsString();       }
+  private int getArgNumber  (JsonObject node) { return node.get("arg_number").getAsInt();         }
+  private String getIdValue (JsonObject node) { return node.get("key").getAsString();             }
+
+  //--------------------------------------------------------------------------------------------------------------------
+  // Tree Walker
   //--------------------------------------------------------------------------------------------------------------------
 
 
@@ -174,7 +189,7 @@ public class AST2IR {
  *
  *  NB: The existence of a non-null symbol table implies that operation is occurring in a non-global scope.
  */
-class SymbolTable {
+class SymbolTable extends Iced {
 
   HashMap<String, SymbolAttributes> _table;
   SymbolTable() { _table = new HashMap<String, SymbolAttributes>(); }

@@ -33,7 +33,7 @@ import water.H2O;
 import water.NanoHTTPD;
 import water.api.Upload.PostFile;
 import water.deploy.LaunchJar;
-import water.exec3.ASTParser;
+import water.exec3.Exec3;
 import water.util.Log;
 import water.util.Log.Tag.Sys;
 import water.util.Utils.ExpectedExceptionForDebug;
@@ -203,7 +203,7 @@ public class RequestServer extends NanoHTTPD {
     }
 
 
-    registerRequest(new ASTParser());
+    registerRequest(new Exec3());
 
     registerRequest(new Get()); // Download
     //Column Expand
