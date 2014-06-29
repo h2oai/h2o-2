@@ -67,7 +67,6 @@ public class Program implements Iterable<Program.Statement>{
   }
 
   // These write methods will stomp on the attributes for identifiers in the symbol table.
-  // The symbol tables are 
   protected final void writeType(String id, String type) {
     if (canWriteToGlobal()) {
       _global.writeType(id, type);
