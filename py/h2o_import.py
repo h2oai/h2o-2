@@ -258,9 +258,9 @@ def import_only(node=None, schema='local', bucket=None, path=None,
                 print "ERROR: Something was missing for s3 on the java -jar cmd line when the cloud was built"
 
             if importParentDir:
-                importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
+                importResult = node.import_file(folderURI, timeoutSecs=timeoutSecs)
             else:
-                importResult = node.import_hdfs(folderURI + "/" + pattern, timeoutSecs=timeoutSecs)
+                importResult = node.import_files(folderURI + "/" + pattern, timeoutSecs=timeoutSecs)
 
         elif schema=='s3n' or node.redirect_import_folder_to_s3n_path:
             if not (n.use_hdfs and ((n.hdfs_version and n.hdfs_name_node) or n.hdfs_config)):
@@ -270,9 +270,9 @@ def import_only(node=None, schema='local', bucket=None, path=None,
                 print "ERROR: Something was missing for s3n on the java -jar cmd line when the cloud was built"
             folderURI = "s3n://" + folderOffset
             if importParentDir:
-                importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
+                importResult = node.import_files(folderURI, timeoutSecs=timeoutSecs)
             else:
-                importResult = node.import_hdfs(folderURI + "/" + pattern, timeoutSecs=timeoutSecs)
+                importResult = node.import_files(folderURI + "/" + pattern, timeoutSecs=timeoutSecs)
 
         elif schema=='maprfs':
             if not n.use_maprfs:
@@ -288,9 +288,9 @@ def import_only(node=None, schema='local', bucket=None, path=None,
                 # folderURI = "maprfs:///" + folderOffset
                 folderURI = "maprfs:/" + folderOffset
             if importParentDir:
-                importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
+                importResult = node.import_files(folderURI, timeoutSecs=timeoutSecs)
             else:
-                importResult = node.import_hdfs(folderURI + "/" + pattern, timeoutSecs=timeoutSecs)
+                importResult = node.import_files(folderURI + "/" + pattern, timeoutSecs=timeoutSecs)
 
         elif schema=='hdfs':
             # check that some state from the cloud building time was right
@@ -307,9 +307,9 @@ def import_only(node=None, schema='local', bucket=None, path=None,
                 # this is different than maprfs? normally we specify the name though
                 folderURI = "hdfs://" + folderOffset
             if importParentDir:
-                importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
+                importResult = node.import_files(folderURI, timeoutSecs=timeoutSecs)
             else:
-                importResult = node.import_hdfs(folderURI + "/" + pattern, timeoutSecs=timeoutSecs)
+                importResult = node.import_files(folderURI + "/" + pattern, timeoutSecs=timeoutSecs)
 
         else: 
             raise Exception("schema not understood: %s" % schema)
