@@ -1105,7 +1105,6 @@ public class DTree extends Iced {
 
       String modelName = JCodeGen.toJavaId(_key.toString());
 
-      sb.ii(1);
       // Generate main method with benchmark
       if (GEN_BENCHMARK_CODE) {
         sb.i().p("/**").nl();
