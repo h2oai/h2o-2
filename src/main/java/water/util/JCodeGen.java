@@ -32,11 +32,45 @@ public class JCodeGen {
   }
 
   public static SB toStaticVar(SB sb, String varname, int value) {
-    return toStaticVar(sb, varname, value,null);
+    return toStaticVar(sb, varname, value, null);
   }
   public static SB toStaticVar(SB sb, String varname, int value, String comment) {
     if (comment!=null) sb.i(1).p("// ").p(comment).nl();
     return sb.i(1).p("public static final int ").p(varname).p(" = ").p(value).p(';').nl();
+  }
+
+  public static SB toStaticVar(SB sb, String varname, String[] values) {
+    return toStaticVar(sb, varname, values, null);
+  }
+  public static SB toStaticVar(SB sb, String varname, String[] values, String comment) {
+    if (comment!=null) sb.i(1).p("// ").p(comment).nl();
+    sb.i(1).p("public static final String[] ").p(varname).p(" = ");
+    if (values == null) return sb.p("null;").nl();
+    sb.p("{").p("\""+values[0]+"\"");
+    for (int i = 1; i < values.length; ++i) sb.p(",").p("\""+values[i]+"\"");
+    return sb.p("};").nl();
+  }
+  public static SB toStaticVar(SB sb, String varname, int[] values) {
+    return toStaticVar(sb, varname, values, null);
+  }
+  public static SB toStaticVar(SB sb, String varname, int[] values, String comment) {
+    if (comment!=null) sb.i(1).p("// ").p(comment).nl();
+    sb.i(1).p("public static final int[] ").p(varname).p(" = ");
+    if (values == null) return sb.p("null;").nl();
+    sb.p("{").p(values[0]);
+    for (int i = 1; i < values.length; ++i) sb.p(",").p(values[i]);
+    return sb.p("};").nl();
+  }
+  public static SB toStaticVar(SB sb, String varname, float[] values) {
+    return toStaticVar(sb, varname, values, null);
+  }
+  public static SB toStaticVar(SB sb, String varname, float[] values, String comment) {
+    if (comment!=null) sb.i(1).p("// ").p(comment).nl();
+    sb.i(1).p("public static final float[] ").p(varname).p(" = ");
+    if (values == null) return sb.p("null;").nl();
+    sb.p("{").pj(values[0]);
+    for (int i = 1; i < values.length; ++i) sb.p(",").pj(values[i]);
+    return sb.p("};").nl();
   }
 
   /**
