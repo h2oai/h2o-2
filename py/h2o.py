@@ -1623,18 +1623,6 @@ class H2O(object):
         verboseprint("\nimport_files result:", dump_json(a))
         return a
 
-    def import_s3(self, bucket, timeoutSecs=180):
-        a = self.__do_json_request('2/ImportFiles2.json',
-            timeout=timeoutSecs, params={"bucket": bucket})
-        verboseprint("\nimport_s3 result:", dump_json(a))
-        return a
-
-    def import_hdfs(self, path, timeoutSecs=180):
-        a = self.__do_json_request('2/ImportFiles2.json',
-            timeout=timeoutSecs, params={"path": path})
-        verboseprint("\nimport_hdfs result:", dump_json(a))
-        return a
-
     # 'destination_key', 'escape_nan' 'expression'
     def exec_query(self, timeoutSecs=20, ignoreH2oError=False, print_params=True, **kwargs):
         # only v2 now
@@ -1976,7 +1964,7 @@ class H2O(object):
         return a
 
     def anomaly(self, timeoutSecs=300, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30,
-        noPoll=False, print_params=True, **kwargs):
+        noPoll=False, print_params=True, benchmarkLogging=None, **kwargs):
         params_dict = {
             'destination_key': None,
             'source': None,

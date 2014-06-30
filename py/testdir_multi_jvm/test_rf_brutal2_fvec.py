@@ -2,6 +2,13 @@ import unittest, time, sys, os
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_rf, h2o_util, h2o_import as h2i
 
+# with 100% bagging, (sample_rate), the results are always the same with fixed seed.
+# for sorted or unsorted dataset. So that's good. That says the algo histograming is working right.
+# but if you do any bagging, with fixed seed, the data you get varies depending on the dataset order
+# so you'll get different results with sort vs non-sort.
+# it's most obvious with one tree.
+# with 50 trees, the results avg out so they're not as obvious.
+
 USE_LOCAL=True
 
 # RF test parameters
@@ -81,8 +88,11 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
 
         paramsTrainRF = {
-            'ntrees': 3,
+            'seed': '1234567890',
+            'ntrees': 1,
             'max_depth': 10,
+            # 'sample_rate': 1.0,
+            'sample_rate': 1.0, 
             'nbins': 50,
             'timeoutSecs': 600,
             'response': 'C55',
@@ -96,10 +106,9 @@ class Basic(unittest.TestCase):
 
         # train1
         trainKey1 = self.loadData(trainDS1)
-        kwargs   = paramsTrainRF.copy()
-        trainResult1 = h2o_rf.trainRF(trainKey1, **kwargs)
-
         scoreKey1 = self.loadData(scoreDS1)
+        kwargs   = paramsTrainRF.copy()
+        trainResult1 = h2o_rf.trainRF(trainKey1, scoreKey1, **kwargs)
         kwargs   = paramsScoreRF.copy()
         h2o_cmd.runInspect(key='scoreDS1.hex', verbose=True)
         scoreResult1 = h2o_rf.scoreRF(scoreKey1, trainResult1, **kwargs)
@@ -112,10 +121,9 @@ class Basic(unittest.TestCase):
 
         # train2
         trainKey2 = self.loadData(trainDS2)
-        kwargs   = paramsTrainRF.copy()
-        trainResult2 = h2o_rf.trainRF(trainKey2, **kwargs)
-
         scoreKey2 = self.loadData(scoreDS2)
+        kwargs   = paramsTrainRF.copy()
+        trainResult2 = h2o_rf.trainRF(trainKey2, scoreKey2, **kwargs)
         kwargs   = paramsScoreRF.copy()
         h2o_cmd.runInspect(key='scoreDS2.hex', verbose=True)
         scoreResult2 = h2o_rf.scoreRF(scoreKey2, trainResult2, **kwargs)
@@ -125,14 +133,21 @@ class Basic(unittest.TestCase):
         print "\nScore2\n=========="
         h2o_rf.simpleCheckRFScore(node=None, rfv=scoreResult2, noPrint=False, **kwargs)
 
-        if 1==0:
-            print "\nTraining: JsonDiff sorted data results, to non-sorted results (json responses)"
-            df = h2o_util.JsonDiff(trainResult1, trainResult2, with_values=True)
-            print "df.difference:", h2o.dump_json(df.difference)
+        print "\nTraining: JsonDiff sorted data results, to non-sorted results (json responses)"
+        df = h2o_util.JsonDiff(trainResult1, trainResult2, with_values=True)
+        print "df.difference:", h2o.dump_json(df.difference)
 
-            print "\nScoring: JsonDiff sorted data results, to non-sorted results (json responses)"
-            df = h2o_util.JsonDiff(scoreResult1, scoreResult2, with_values=True)
-            print "df.difference:", h2o.dump_json(df.difference)
+        print "\nScoring: JsonDiff sorted data results, to non-sorted results (json responses)"
+        df = h2o_util.JsonDiff(scoreResult1, scoreResult2, with_values=True)
+        print "df.difference:", h2o.dump_json(df.difference)
+        # should only be two diffs
+        if len(df.difference) > 2:
+            raise Exception ("Too many diffs in JsonDiff sorted vs non-sorted %s" % len(df.difference))
+        # Scoring: JsonDiff sorted data results, to non-sorted results (json responses)
+        # df.difference: [
+        # "diff: response_info.time - 28 | 11",
+        # "diff: python_call_timer - 0.526123046875 | 0.498980998993"
+        # ]
 
 if __name__ == '__main__':
     h2o.unit_main()
