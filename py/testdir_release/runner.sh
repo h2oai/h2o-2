@@ -105,13 +105,17 @@ then
     # myPy c2 test_c2_rel.py
     # myPy c3 test_c3_rel.py
     # myPy c4 test_c4_four_billion_rows.py
-    myPy c6 test_c6_hdfs_fvec.py
-    myPy c8 test_c8_rf_airlines_hdfs_fvec.py
-    myPy c9 test_c9_GBM_airlines_hdfs.py
-    myPy c9 test_c9_GLM_airlines_hdfs_fvec.py
+
+    if 1==0:
+        myPy c6 test_c6_hdfs_fvec.py
+        myPy c8 test_c8_rf_airlines_hdfs_fvec.py
+        myPy c9 test_c9_GBM_airlines_hdfs.py
+        myPy c9 test_c9_GLM_airlines_hdfs_fvec.py
+        myPy c10  test_c10_rel_gbm.py
+    else:
+        myPy c8 test_c8_rf_airlines_hdfs_fvec.py
     # myPy c9 test_c9_GLM_rc_fvec.py
 
-    myPy c10  test_c10_rel_gbm.py
     # put known failure last
     # doesn't work. key gets locked. forget about it
     # myPy c7 test_c7_rel.py
