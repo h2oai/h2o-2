@@ -95,20 +95,33 @@ class Basic(unittest.TestCase):
             'timeoutSecs': 600,
         }
 
+        # 90% data
         trainKey1 = self.loadData(trainDS1)
         scoreKey1 = self.loadData(scoreDS1)
         kwargs   = paramsTrainRF.copy()
         trainResult1 = h2o_rf.trainRF(trainKey1, scoreKey1, **kwargs)
+        (classification_error1, classErrorPctList1, totalScores1) = h2o_rf.simpleCheckRFView(rfv=trainResult1)
+        self.assertEqual(4.29, classification_error1)
+        self.assertEqual([4.17, 2.98, 4.09, 14.91, 21.12, 15.38, 5.22], classErrorPctList1)
+        self.assertEqual(58101, totalScores1)
+
         kwargs   = paramsScoreRF.copy()
         scoreResult1 = h2o_rf.scoreRF(scoreKey1, trainResult1, **kwargs)
 
+        # 10% data
         trainKey2 = self.loadData(trainDS2)
         scoreKey2 = self.loadData(scoreDS2)
         kwargs   = paramsTrainRF.copy()
         trainResult2 = h2o_rf.trainRF(trainKey2, scoreKey2, **kwargs)
+        (classification_error2, classErrorPctList2, totalScores2) = h2o_rf.simpleCheckRFView(rfv=trainResult2)
+        self.assertEqual(4.29, classification_error2)
+        self.assertEqual([4.17, 2.98, 4.09, 14.91, 21.12, 15.38, 5.22], classErrorPctList2)
+        self.assertEqual(58101, totalScores2)
+
         kwargs   = paramsScoreRF.copy()
         scoreResult2 = h2o_rf.scoreRF(scoreKey2, trainResult2, **kwargs)
 
+      
         print "\nTraining: JsonDiff sorted data results, to non-sorted results (json responses)"
         df = h2o_util.JsonDiff(trainResult1, trainResult2, with_values=True)
         print "df.difference:", h2o.dump_json(df.difference)
