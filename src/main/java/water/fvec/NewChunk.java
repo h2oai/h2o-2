@@ -870,6 +870,7 @@ public class NewChunk extends Chunk {
       if(idx >= 0) i = idx;
       else return 0;
     }
+    if(isNA2(i))throw new RuntimeException("Attempting to acess NA as integer value.");
     if( _ls == null ) return (long)_ds[i];
     return _ls[i]*DParseTask.pow10i(_xs[i]);
   }

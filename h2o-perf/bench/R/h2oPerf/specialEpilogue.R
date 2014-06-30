@@ -8,7 +8,6 @@
 ##                                                      ##
 .NaN = -1
 end_time     <<- round(System$currentTimeMillis())[[1]]
-#correct_pass <<- 1
 time_pass    <<- 1
 passed       <<- ifelse(correct_pass && time_pass, 1, 0)
 
@@ -50,10 +49,12 @@ function() {
 
 .emitResults<-
 function() {
+  if (phase == "parse") {
+    correct_pass <<- 1
+  }
   .emitPhaseResults()
   cat("\n\n")
   if(phase == "parse") {
-    correct_pass <<- 1
     .emitParseResults()
     cat("\n\n")
   }
@@ -135,8 +136,6 @@ function() {
 
 .emitBinomResults<-
 function() {
-  print("DEBUG")
-  print("bin results here....")
   print(confusion_matrix)
   r <- list(binomial_result = 
                 list(auc = ifelse(auc == "NaN", .Nan, auc),
@@ -192,8 +191,26 @@ function() {
     .emitMultinomResults()
   }
   cat("\n\n")
+
 }
-.calcPredictType()
-.emitResults()
+.emitSpecial<-
+function() {
+  len <- length(dl_res$deeplearning_model$errors)
+  js <- list(comparison_result = 
+                list(glm = ifelse(exists('glm_res'), 1 - glm_res$glm_model$validAUC$accuracy_for_criteria[1], "-1"),
+                     dl  = ifelse(exists('dl_res'),  1 - dl_res$deeplearning_model$errors[[len]]$validAUC$accuracy_for_criteria[1], "-1"),
+                     gbm = ifelse(exists('gbm_res'), 1 - gbm_res$gbm_model$validAUC$accuracy_for_criteria[1], "-1"),
+                     drf = ifelse(exists('drf_res'), 1 - drf_res$drf_model$validAUC$accuracy_for_criteria[1], "-1"),
+                     srf = ifelse(exists('srf_res'), 1 - srf_res@model$accuracy, "-1")))
+  .coda("COMPARISON", js)
+}
+
+.emitPhaseResults()
+cat("\n\n")
+.emitKMeansResults()
+cat("\n\n")
+print("PREDICT TYPE:")
+print("comparison")
+.emitSpecial()
 .saveRData()
 

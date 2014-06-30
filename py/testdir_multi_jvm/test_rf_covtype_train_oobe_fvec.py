@@ -15,7 +15,8 @@ paramDict = {
     'nbins': 100,
     # 'ignored_cols_by_name': "C1,C2,C6,C7,C8",
     'sample_rate': 0.66,
-    'classification': 1
+    'classification': 1,
+    'seed': '1234567890',
     # 'mtries': 6, 
     }
 
