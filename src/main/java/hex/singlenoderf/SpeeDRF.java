@@ -96,15 +96,6 @@ public class SpeeDRF extends Job.ValidatedJob {
 
   private boolean regression;
 
-  /** Return the query link to this page */
-//  public static String link(Key k, String content) {
-//    RString rs = new RString("<a href='RF.query?%key_param=%$key'>%content</a>");
-//    rs.replace("key_param", DATA_KEY);
-//    rs.replace("key", k.toString());
-//    rs.replace("content", content);
-//    return rs.toString();
-//  }
-
   public DRFParams drfParams;
 
   protected SpeeDRFModel makeModel( SpeeDRFModel model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {

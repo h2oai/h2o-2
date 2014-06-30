@@ -704,7 +704,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   // if it is necessary.
   private float score2(Chunk chks[], float fs[/*nclass*/], int row ) {
     float sum = score1(chks, fs, row);
-    if (classification && _priorClassDist!=null && _modelClassDist!=null && !Float.isInfinite(sum)  && sum>0f) {
+    if (/*false &&*/ classification && _priorClassDist!=null && _modelClassDist!=null && !Float.isInfinite(sum)  && sum>0f) {
       Utils.div(fs, sum);
       ModelUtils.correctProbabilities(fs, _priorClassDist, _modelClassDist);
       sum = 1.0f;
