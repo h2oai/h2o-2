@@ -115,6 +115,12 @@ public class AST2IR extends Iced {
   }
 
   // Check if the node has a type of numeric.
+  private boolean isFrame(JsonObject node) {
+    String node_type = getNodeType(node);
+    return node_type != null && node_type.equals("ASTFrame");
+  }
+
+  // Check if the node has a type of numeric.
   private boolean isConst(JsonObject node) {
     String node_type = getNodeType(node);
     return node_type != null && node_type.equals("ASTNumeric");
@@ -156,40 +162,60 @@ public class AST2IR extends Iced {
   //--------------------------------------------------------------------------------------------------------------------
   // Tree Walker -- Code Generator
   //--------------------------------------------------------------------------------------------------------------------
-  public void make() {
-    treeWalk(_ast, 0);
-  }
+  public void make() { treeWalk(_ast, 0, new Program(_global, null, "main")); }
 
   /**
    * Walk an AST and fill in _program.
    * @param tree A node of the AST -- preferably some kind of root node.
    * @param lineNum A line number in the program. Programs start at 0 and go up.
    *
-   * This is a delicate method, and it is absolutely crucial to get correct.
    *
    * A root node in the AST has a few different possible key names:
-   *  a. "astop": Has operands list of nodes that must be recursed
-   *  b. "call" : Must create a new Program object
-   *  c. "left" : Recurse down this guy, should not need to be checked. ever.
-   *  d. "right": Same as 'c'.           should not need to be checked. ever.
+   *  a. "astop"   : Has operands list of nodes that must be recursed
+   *  b. "astcall" : Must create a new Program object
+   *  c. "left"    : Recurse down this guy, should not need to be checked. ever.
+   *  d. "right"   : Same as 'c'.           should not need to be checked. ever.
+   *
+   * Inspect the tree node and append a statement to the Program p.
    */
-  private void treeWalk(JsonObject tree, int lineNum) {
+  private void treeWalk(JsonObject tree, int lineNum, Program p) {
 
-    // First check if we're a top-level node
+    // First check if we're a top-level node of type astop
     if (isOp(tree)) {
 
       // Can be a binary arithmetic operator
       if (isArithmeticOp(tree)) {
 
-      // Can be a bitwise operator
+
+        // Can be a bitwise operator
       } else if (isBitwiseOp(tree)) {
 
-      // Can be comparison operator (also binary)
+        // Can be comparison operator (also binary)
       } else if (isCompareOp(tree)) {
 
       }
-    } else if (isCall(tree)) {
 
+    // Check if we have an argument node
+    } else if (isArg(tree)) {
+
+    // Check if we have an argument node
+    } else if (isString(tree)) {
+
+    // Check if we have an argument node
+    } else if (isConst(tree)) {
+
+    // Check if we have an argument node
+    } else if (isFrame(tree)) {
+
+    // Check if we're a top-level node of type astcall, this should be parsed into a seperate program...
+    } else if (isCall(tree)) {
+      JsonObject call_tree = tree.get("astcall").getAsJsonObject();
+      String call_name = call_tree.getAsString();
+      treeWalk(call_tree, 0, new Program(_global, new SymbolTable(), call_name));
+    }
+
+    // Add the program to the list and exit
+    _program.add(p);
   }
 }
 
