@@ -886,7 +886,7 @@ h2o.randomForest <- function(x, y, data, classification=TRUE, ntree=50, depth=20
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRF, source=data@key, response=args$y, cols=cols, ntrees=ntree, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, seed=seed, importance=as.numeric(importance), 
                             classification=as.numeric(classification), validation=validation@key, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size))
   } else stop("Cannot set both validation and nfolds at the same time")
-  params = list(x=args$x, y=args$y, ntree=ntree, mtries = mtries, depth=depth, sample.rate=sample.rate, nbins=nbins, importance=importance, nfolds=nfolds, balance.classes=balance.classes, max.after.balance.size=max.after.balance.size)
+  params = list(x=args$x, y=args$y, ntree=ntree, mtries = mtries, depth=depth, sample.rate=sample.rate, nbins=nbins, importance=importance, nfolds=nfolds, balance.classes=balance.classes, max.after.balance.size=max.after.balance.size, nodesize=nodesize)
   
   if(.is_singlerun("RF", params))
     .h2o.singlerun.internal("RF", data, res, nfolds, validation, params)
