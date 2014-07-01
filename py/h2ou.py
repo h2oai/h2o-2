@@ -83,28 +83,24 @@ def get_ip_address():
         verboseprint("get_ip case 3:", ip)
 
     ipa = None
-    badHosts = ['lg1', 'ch-0', 'ch-63']
-    # hack for hosts that don't support this
-    # the gethostbyname_ex can be slow. the timeout above will save us quickly
-    if hostname not in badHosts:
-        try:
-            # Translate a host name to IPv4 address format, extended interface. 
-            # Return a triple (hostname, aliaslist, ipaddrlist) 
-            # where hostname is the primary host name responding to the given ip_address, 
-            # aliaslist is a (possibly empty) list of alternative host names for the same address, and 
-            # ipaddrlist is a list of IPv4 addresses for the same interface on the same host
-            ghbx = socket.gethostbyname_ex(hostname)
-            for ips in ghbx[2]:
-                # only take the first
-                if ipa is None and not ips.startswith("127."):
-                    ipa = ips[:]
-                    verboseprint("get_ip case 4:", ipa)
-                    if ip != ipa:
-                        print "\nAssuming", ip, "is the ip address h2o will use but", ipa, "is probably the real ip?"
-                        print "You might have a vpn active. Best to use '-ip " + ipa + "' to get python and h2o the same."
-        except:
-            pass
-            # print "Timeout during socket.gethostbyname_ex(hostname)"
+    try:
+        # Translate a host name to IPv4 address format, extended interface. 
+        # Return a triple (hostname, aliaslist, ipaddrlist) 
+        # where hostname is the primary host name responding to the given ip_address, 
+        # aliaslist is a (possibly empty) list of alternative host names for the same address, and 
+        # ipaddrlist is a list of IPv4 addresses for the same interface on the same host
+        ghbx = socket.gethostbyname_ex(hostname)
+        for ips in ghbx[2]:
+            # only take the first
+            if ipa is None and not ips.startswith("127."):
+                ipa = ips[:]
+                verboseprint("get_ip case 4:", ipa)
+                if ip != ipa:
+                    print "\nAssuming", ip, "is the ip address h2o will use but", ipa, "is probably the real ip?"
+                    print "You might have a vpn active. Best to use '-ip " + ipa + "' to get python and h2o the same."
+    except:
+        pass
+        # print "Timeout during socket.gethostbyname_ex(hostname)"
 
     verboseprint("get_ip_address:", ip)
     # set it back to default higher timeout (None would be no timeout?)
@@ -151,8 +147,6 @@ random_seed = None
 beta_features = True
 sleep_at_tear_down = False
 abort_after_import = False
-clone_cloud_json = None
-disable_time_stamp = False
 debug_rest = False
 # jenkins gets this assign, but not the unit_main one?
 python_test_name = inspect.stack()[1][1]
@@ -196,11 +190,6 @@ def parse_our_args():
     parser.add_argument('-aai', '--abort_after_import',
                         help='abort the test after printing the full path to the first dataset used by import_parse/import_only',
                         action='store_true')
-    parser.add_argument('-ccj', '--clone_cloud_json', type=str,
-                        help='a h2o-nodes.json file can be passed (see build_cloud(create_json=True). This will create a cloned set of node objects, so any test that builds a cloud, can also be run on an existing cloud without changing the test')
-    parser.add_argument('-dts', '--disable_time_stamp',
-                        help='Disable the timestamp on all stdout. Useful when trying to capture some stdout (like json prints) for use elsewhere',
-                        action='store_true')
     parser.add_argument('-debug_rest', '--debug_rest', help='Print REST API interactions to rest.log',
                         action='store_true')
 
@@ -214,7 +203,7 @@ def parse_our_args():
         h2p.disable_colors()
 
     global browse_disable, browse_json, verbose, ipaddr_from_cmd_line, config_json, debugger, random_udp_drop
-    global random_seed, beta_features, sleep_at_tear_down, abort_after_import, clone_cloud_json, disable_time_stamp, debug_rest
+    global random_seed, beta_features, sleep_at_tear_down, abort_after_import, debug_rest
 
     browse_disable = args.browse_disable or getpass.getuser() == 'jenkins'
     browse_json = args.browse_json
@@ -228,8 +217,6 @@ def parse_our_args():
     # beta_features = args.beta_features
     sleep_at_tear_down = args.sleep_at_tear_down
     abort_after_import = args.abort_after_import
-    clone_cloud_json = args.clone_cloud_json
-    disable_time_stamp = args.disable_time_stamp
     debug_rest = args.debug_rest
 
     # Set sys.argv to the unittest args (leav sys.argv[0] as is)
@@ -412,7 +399,7 @@ nodes = []
 # but it uses hosts, so if that got shuffled, we got it covered?
 # the i in xrange part is not shuffled. maybe create the list first, for possible random shuffle
 # FIX! default to random_shuffle for now..then switch to not.
-def write_flatfile(node_count=2, base_port=54321, hosts=None, rand_shuffle=True):
+def write_flatfile(node_count=2, base_port=54321, hosts=None):
     # always create the flatfile.
     ports_per_node = 2
     pff = open(flatfile_name(), "w+")
@@ -428,9 +415,6 @@ def write_flatfile(node_count=2, base_port=54321, hosts=None, rand_shuffle=True)
                 # removed leading "/"
                 hostPortList.append(h.addr + ":" + str(base_port + ports_per_node * i))
 
-    # note we want to shuffle the full list of host+port
-    if rand_shuffle:
-        random.shuffle(hostPortList)
     for hp in hostPortList:
         pff.write(hp + "\n")
     pff.close()
@@ -484,12 +468,11 @@ def setup_random_seed(seed=None):
 
 # node_count is per host if hosts is specified.
 def build_cloud(node_count=1, base_port=54321, hosts=None,
-                timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=True,
-                conservative=False, create_json=False, clone_cloud=None, **kwargs):
+                timeoutSecs=30, retryDelaySecs=1, cleanup=True, 
+                conservative=False, **kwargs):
     # redirect to build_cloud_with_json if a command line arg
     # wants to force a test to ignore it's build_cloud/build_cloud_with_hosts
     # (both come thru here)
-    # clone_cloud is just another way to get the effect (maybe ec2 config file thru
     # build_cloud_with_hosts?
 
     # moved to here from unit_main. so will run with nosetests too!
@@ -523,8 +506,6 @@ def build_cloud(node_count=1, base_port=54321, hosts=None,
             # best to just create it all the time..may or may not be used
             write_flatfile(node_count=node_count, base_port=base_port)
             hostCount = 1
-            if rand_shuffle:
-                random.shuffle(portList)
             for p in portList:
                 verboseprint("psutil starting node", i)
                 newNode = LocalH2O(port=p, node_id=totalNodes, **kwargs)
@@ -541,7 +522,6 @@ def build_cloud(node_count=1, base_port=54321, hosts=None,
             for h in hosts:
                 for port in portList:
                     hostPortList.append((h, port))
-            if rand_shuffle: random.shuffle(hostPortList)
             for (h, p) in hostPortList:
                 verboseprint('ssh starting node', totalNodes, 'via', h)
                 newNode = h.remote_h2o(port=p, node_id=totalNodes, **kwargs)
