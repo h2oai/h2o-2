@@ -906,8 +906,10 @@ public abstract class Job extends Func {
 
       int rIndex = 0;
       for( int i = 0; i < source.vecs().length; i++ )
-        if( source.vecs()[i] == response )
+        if( source.vecs()[i] == response ) {
           rIndex = i;
+          break;
+        }
       _responseName = source._names != null && rIndex >= 0 ? source._names[rIndex] : "response";
 
       _train = selectVecs(source);

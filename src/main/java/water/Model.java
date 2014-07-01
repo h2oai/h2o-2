@@ -780,11 +780,16 @@ public abstract class Model extends Lockable<Model> {
     }
 
     // Now score the model on the
-    AUC auc = nclasses() == 2 ? new AUC() : null;
-    water.api.ConfusionMatrix cm = new water.api.ConfusionMatrix();
-    HitRatio hr = isClassifier() ? new HitRatio() : null;
-    double cv_error = calcError(source, response, cv_pred, cv_pred, "cross-validated", true, 10, cm, auc, hr);
-    setCrossValidationError(job, cv_error, cm, auc, hr);
+    try {
+      AUC auc = nclasses() == 2 ? new AUC() : null;
+      water.api.ConfusionMatrix cm = new water.api.ConfusionMatrix();
+      HitRatio hr = isClassifier() ? new HitRatio() : null;
+      double cv_error = calcError(source, response, cv_pred, cv_pred, "cross-validated", true, 10, cm, auc, hr);
+      setCrossValidationError(job, cv_error, cm, auc, hr);
+    } finally {
+      // cleanup temporary frame wit predictions
+      cv_pred.delete();
+    }
   }
 
   protected void setCrossValidationError(Job.ValidatedJob job, double cv_error, water.api.ConfusionMatrix cm, AUC auc, HitRatio hr) { throw H2O.unimpl(); }

@@ -1,25 +1,19 @@
 package hex.singlenoderf;
 
 
+import static water.util.MRUtils.sampleFrameStratified;
+import hex.*;
 import hex.ConfusionMatrix;
-import hex.FrameTask;
-import hex.VarImp;
+
+import java.util.*;
+
 import jsr166y.ForkJoinTask;
 import water.*;
-import water.api.Constants;
-import water.api.DocGen;
-import water.api.ParamImportance;
+import water.Timer;
+import water.api.*;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.*;
-import water.api.ParamImportance;
-import static water.util.MRUtils.sampleFrameStratified;
-
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Random;
-
 
 public class SpeeDRF extends Job.ValidatedJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
