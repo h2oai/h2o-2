@@ -26,11 +26,11 @@ public class Program implements Iterable<Program.Statement>{
   private String      _name;   // The program's name.
   private ArrayList<Statement> _stmts;  // The list of program statements
 
-  public final class Statement {
+  public static final class Statement<T> {
     String _op;    // One of the valid statement operations: push, pop, dup, op, call, return
-    String _name;  // The name (can be null) of some data blob used by _op.
+    T _name;       // The name (can be null) of some data blob used by _op (can be a Key, String, Double, Boolean, etc.)
 
-    Statement(String op, String name) {
+    Statement(String op, T name) {
       _op = op;
       _name = name;
     }
@@ -80,6 +80,14 @@ public class Program implements Iterable<Program.Statement>{
       _global.writeValue(id, value);
     } else {
       _local.writeValue(id, value);
+    }
+  }
+
+  protected final void putToTable(String name, String type, String value) {
+    if (canWriteToGlobal()) {
+      _global.put(name, type, value);
+    } else {
+      _local.put(name, type, value);
     }
   }
 

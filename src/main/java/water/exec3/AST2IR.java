@@ -146,11 +146,26 @@ public class AST2IR extends Iced {
     return node.get("value").getAsDouble() == 1.0 || node.get("value").getAsDouble() == 0.0;
   }
 
+  // Add a new op statement to the program list of statements
+  private void addNewOpStatement(String op, Program p) {
+    p.addStatement(new Program.Statement(op, null));
+  }
+
+  // Add a new call statement to the program list of statements
+  private void addNewCallStatement(String call, Program p) {
+    p.addStatement(new Program.Statement("call", call));
+  }
+
+  // Add a push statement to the program list of statements
+  private <T> void addPushStatement(T thingToPush, Program p) {
+    p.addStatement(new Program.Statement("push", thingToPush));
+  }
+
   //--------------------------------------------------------------------------------------------------------------------
   // Node getters
   //--------------------------------------------------------------------------------------------------------------------
-  private double  getNum      (JsonObject node) { return node.get("value").getAsDouble();           }
-  private boolean getBoolean  (JsonObject node) { return node.get("value").getAsBoolean();          }
+  private Double  getNum      (JsonObject node) { return node.get("value").getAsDouble();           }
+  private Boolean getBoolean  (JsonObject node) { return node.get("value").getAsBoolean();          }
   private String  getString   (JsonObject node) { return node.get("value").getAsString();           }
   private Key     getKey      (JsonObject node) { return Key.make(node.get("value").getAsString()); }
   private String  getArgName  (JsonObject node) { return node.get("arg_name").getAsString();        }
@@ -183,34 +198,51 @@ public class AST2IR extends Iced {
     // First check if we're a top-level node of type astop
     if (isOp(tree)) {
 
+      tree = tree.get("astop").getAsJsonObject();
+      JsonObject operands = tree.get("operands").getAsJsonObject();
+
       // Can be a binary arithmetic operator
       if (isArithmeticOp(tree)) {
+        addNewOpStatement(tree.get("operator").getAsString(), p);
 
-
-        // Can be a bitwise operator
+      // Can be a bitwise operator
       } else if (isBitwiseOp(tree)) {
+        addNewOpStatement(tree.get("operator").getAsString(), p);
 
-        // Can be comparison operator (also binary)
+      // Can be comparison operator (also binary)
       } else if (isCompareOp(tree)) {
+        addNewOpStatement(tree.get("operator").getAsString(), p);
 
       }
+      treeWalk(operands.get("left").getAsJsonObject(), lineNum++, p);
+      treeWalk(operands.get("right").getAsJsonObject(), lineNum++, p);
 
     // Check if we have an argument node
     } else if (isArg(tree)) {
+      p.putToTable(getArgName(tree), getArgType(tree), getArgValue(tree));
 
     // Check if we have an argument node
     } else if (isString(tree)) {
+      addPushStatement(getString(tree), p);
 
     // Check if we have an argument node
     } else if (isConst(tree)) {
+      addPushStatement(getNum(tree), p);
 
     // Check if we have an argument node
     } else if (isFrame(tree)) {
+      addPushStatement(getKey(tree), p);
 
-    // Check if we're a top-level node of type astcall, this should be parsed into a seperate program...
+    // Check if we're a top-level node of type astcall, this should be parsed into a separate program...
     } else if (isCall(tree)) {
       JsonObject call_tree = tree.get("astcall").getAsJsonObject();
       String call_name = call_tree.getAsString();
+
+      //TODO: Have an isRecursive field??
+
+      // Add the call statement to the program
+      addNewCallStatement(call_name, p);
+
       treeWalk(call_tree, 0, new Program(_global, new SymbolTable(), call_name));
     }
 
@@ -225,7 +257,7 @@ public class AST2IR extends Iced {
  *  The role of the symbol table is to track the various identifiers and their attributes that appear in the nodes of
  *  the AST passed from R. There are three cases that are of interest:
  *    1. The identifier is a variable that references some blob of data having a type, value, and scope.
- *    2. The identifier is part of an assignment and its type is whatever the type is on the left-hand side.
+ *    2. The identifier is part of an assignment and its type is whatever the type is on the right-hand side.
  *    3. There is no identifier: a non-case, but worth mentioning.
  *
  *  As already stated, each identifier has a name, type, value, and scope. The scoping is implied by the Env object,
@@ -289,7 +321,7 @@ class SymbolTable extends Iced {
 
     SymbolAttributes(String type, String value) { _type = type; _value = value; }
 
-    public String typeOf ()  { return _type;  }
+    public String typeOf ()  { return  _type;  }
     public String valueOf()  { return  _value; }
 
     public void writeType(String type)   { this._type  = type; }
@@ -297,8 +329,6 @@ class SymbolTable extends Iced {
 
   }
 }
-
-
 
 
 //  static AST parseOp(JsonObject jo) {
