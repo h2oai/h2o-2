@@ -132,7 +132,15 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
 
     #****************************
     # more testing for RFView
-    if (totalScores<=0 or totalScores>5e9):
+
+    # it's legal to get 0's for oobe error # if sample_rate = 1
+
+    sample_rate = kwargs.get('sample_rate', None)
+    validation = kwargs.get('validation', None)
+    print "kevin:", sample_rate, validation
+    if (sample_rate==1 and not validation): 
+        pass
+    elif (totalScores<=0 or totalScores>5e9):
         raise Exception("scores in RFView seems wrong. scores:", scoresList)
 
     varimp = rf_model['varimp']

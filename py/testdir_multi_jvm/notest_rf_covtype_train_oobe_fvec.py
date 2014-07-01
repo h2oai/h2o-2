@@ -14,7 +14,8 @@ paramDict = {
     'max_depth': 30,
     'nbins': 100,
     # 'ignored_cols_by_name': "C1,C2,C6,C7,C8",
-    'sample_rate': 0.66,
+    # since comparing sorted vs not, need 100% sample to use same data for training
+    'sample_rate': 1.0,
     'classification': 1,
     'seed': '1234567890',
     # 'mtries': 6, 
@@ -95,7 +96,7 @@ class Basic(unittest.TestCase):
             print "RF end on ", csvPathname, 'took', elapsed, 'seconds.', \
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
 
-            (error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfv)
+            (error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfv, **kwargs)
             # oobeTrainPctRight = 100 * (1.0 - error)
             oobeTrainPctRight = 100 - error
             if checkExpectedResults:
@@ -113,7 +114,7 @@ class Basic(unittest.TestCase):
 
             rfvScoring = h2o_cmd.runRFView(None, dataKeyTest, model_key, used_trees,
                 timeoutSecs, retryDelaySecs=1, **kwargs)
-            (error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfvScoring)
+            (error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfvScoring, **kwargs)
             fullScorePctRight = 100 - error
 
             h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
@@ -140,8 +141,7 @@ class Basic(unittest.TestCase):
         niceFp = ["{0:0.2f}".format(i) for i in actualDelta]
         print "actualDelta =", niceFp
 
-        # return the last rfv done during training
-        return rfv
+        return rfvScoring
 
     def test_rf_covtype_train_oobe_fvec(self):
         h2o.beta_features = True
