@@ -3,6 +3,7 @@ package water.util;
 import hex.NFoldFrameExtractor;
 import water.*;
 import water.fvec.Frame;
+import water.fvec.Vec;
 
 public class CrossValUtils {
 
@@ -30,15 +31,16 @@ public class CrossValUtils {
       job._cv_count++;
     }
     if (job.state != Job.JobState.RUNNING) return;
+    final int resp_idx = job.source.find(job._responseName);
+    Vec response = job.source.vecs()[resp_idx];
     boolean put_back = UKV.get(job.response._key) == null;
     if (put_back) {
-      final int resp_idx = job.source.find(job._responseName);
-      job.response = job.source.vecs()[resp_idx];
+      job.response = response;
       if (job.classification)
         job.response = job.response.toEnum();
       DKV.put(job.response._key, job.response); //put enum-ified response back to K-V store
     }
-    ((Model)UKV.get(job.destination_key)).scoreCrossValidation(job, job.source, job.response, cv_preds, offsets);
+    ((Model)UKV.get(job.destination_key)).scoreCrossValidation(job, job.source, response, cv_preds, offsets);
     if (put_back) UKV.remove(job.response._key);
   }
 }
