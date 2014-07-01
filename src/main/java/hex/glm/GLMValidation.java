@@ -53,19 +53,15 @@ public class GLMValidation extends Iced {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-    @API(help="n-fold models built for cross-validation")
-    Key [] xval_models;
     public GLMXValidation(GLMModel mainModel, GLMModel [] xvalModels, double lambda, long nobs) {
       super(mainModel._dataKey, mainModel.ymu, mainModel.glm, mainModel.rank(lambda));
-      xval_models = new Key[xvalModels.length];
       double t = 0;
       for(int i = 0; i < xvalModels.length; ++i){
         GLMValidation val = xvalModels[i].validation();
         add(val);
         t += val.best_threshold;
-        xval_models[i] = xvalModels[i]._key;
       }
-      finalize_AIC_AUC();
+      computeAUC();
       best_threshold = (float)(t/xvalModels.length);
       this.nobs = nobs;
     }
@@ -138,13 +134,8 @@ public class GLMValidation extends Iced {
     }
     aic += 2*_rank;
   }
-  @Override
-  public String toString(){
-    return "null_dev = " + null_deviance + ", res_dev = " + residual_deviance + ", auc = " + auc();
-  }
 
-  protected void finalize_AIC_AUC(){
-    computeAIC();
+  protected void computeAUC(){
     if(_glm.family == Family.binomial){
       for(ConfusionMatrix cm:_cms)cm.reComputeErrors();
       AUC auc = new AUC(_cms,thresholds,/*TODO: add CM domain*/null);
@@ -152,6 +143,13 @@ public class GLMValidation extends Iced {
       best_threshold = auc.threshold();
     }
   }
+  @Override
+  public String toString(){
+    return "null_dev = " + null_deviance + ", res_dev = " + residual_deviance + ", auc = " + auc();
+  }
+
+
+
   /**
    * Computes area under the ROC curve. The ROC curve is computed from the confusion matrices
    * (there is one for each computed threshold). Area under this curve is then computed as a sum

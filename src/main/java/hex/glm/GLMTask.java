@@ -327,7 +327,10 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     }
 
     @Override public void postGlobal(){
-      if(_val != null)_val.finalize_AIC_AUC();
+      if(_val != null){
+        _val.computeAIC();
+        _val.computeAUC();
+      }
     }
     public double [] gradient(double l2pen){
       final double [] res = _grad.clone();
