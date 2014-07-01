@@ -115,6 +115,7 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__PAGE_INSPECT2 = "2/Inspect2.json"
 .h2o.__PAGE_PARSE2 = "2/Parse2.json"
 .h2o.__PAGE_PREDICT2 = "2/Predict.json"
+.h2o.__PAGE_GLMPREDICT2 = "2/GLMPredict.json"
 .h2o.__PAGE_SUMMARY2 = "2/SummaryPage2.json"
 .h2o.__PAGE_LOG_AND_ECHO = "2/LogAndEcho.json"
 .h2o.__HACK_LEVELS2 = "2/Levels2.json"
