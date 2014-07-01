@@ -1,6 +1,8 @@
 package water.exec3;
 
 
+import water.Key;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -26,13 +28,39 @@ public class Program implements Iterable<Program.Statement>{
   private String      _name;   // The program's name.
   private ArrayList<Statement> _stmts;  // The list of program statements
 
-  public static final class Statement<T> {
-    String _op;    // One of the valid statement operations: push, pop, dup, op, call, return
-    T _name;       // The name (can be null) of some data blob used by _op (can be a Key, String, Double, Boolean, etc.)
+  public static final class Statement {
+    String _op;       // One of the valid statement operations: push, pop, dup, op, call, return
+    String _name;     // The value of the blob being pushed (boolean, double, string, etc.), or the name of a call/op.
+    String _dataType; // The data type of the object being pushed (null if a call/op --> not involved in push statement)
 
-    Statement(String op, T name) {
+    Statement(String op) {
       _op = op;
-      _name = name;
+      _name = op;
+      _dataType = null;
+    }
+
+    Statement(String op, String call_name, int i /*just to differentiate from the Statement constructor for strings*/) {
+      _op = op;
+      _name = call_name;
+      _dataType = null;
+    }
+
+    Statement(String op, double num) {
+      _op = op;
+      _name = String.valueOf(num);
+      _dataType = "double";
+    }
+
+    Statement(String op, String string) {
+      _op = op;
+      _name = string;
+      _dataType = "String";
+    }
+
+    Statement(String op, Key key) {
+      _op = op;
+      _name = key.toString();
+      _dataType = "Key";
     }
   }
 
@@ -92,7 +120,6 @@ public class Program implements Iterable<Program.Statement>{
   }
 
   protected final void addStatement(Statement stmt) { _stmts.add(stmt); }
-
   protected Statement getStmt(int idx) {return _stmts.get(idx); }
 
   public final Iterator<Statement> iterator() { return new StatementIter(start(), end()); }

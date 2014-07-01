@@ -59,9 +59,7 @@ public class AST2IR extends Iced {
   // Node inspectors
   //--------------------------------------------------------------------------------------------------------------------
   // Simple util function for getting the node type as a String
-  private String getNodeType(JsonObject node) {
-    return node.get("node_type").getAsString();
-  }
+  private String getNodeType(JsonObject node) { return node.get("node_type").getAsString(); }
 
   // Check if the node we have is an ASTOp of some sort if true, can check the type of Op below
   private boolean isASTOp(JsonObject node) {
@@ -147,19 +145,15 @@ public class AST2IR extends Iced {
   }
 
   // Add a new op statement to the program list of statements
-  private void addNewOpStatement(String op, Program p) {
-    p.addStatement(new Program.Statement(op, null));
-  }
+  private void addNewOpStatement(String op, Program p) { p.addStatement(new Program.Statement(op)); }
 
   // Add a new call statement to the program list of statements
-  private void addNewCallStatement(String call, Program p) {
-    p.addStatement(new Program.Statement("call", call));
-  }
+  private void addNewCallStatement(String call, Program p) { p.addStatement(new Program.Statement("call", call, 0)); }
 
   // Add a push statement to the program list of statements
-  private <T> void addPushStatement(T thingToPush, Program p) {
-    p.addStatement(new Program.Statement("push", thingToPush));
-  }
+  private void stringPushStatement(String obj, Program p) { p.addStatement(new Program.Statement("push", obj)); }
+  private void numPushStatement(   double obj, Program p) { p.addStatement(new Program.Statement("push", obj)); }
+  private void keyPushStatement(   Key    obj, Program p) { p.addStatement(new Program.Statement("push", obj)); }
 
   //--------------------------------------------------------------------------------------------------------------------
   // Node getters
@@ -199,39 +193,48 @@ public class AST2IR extends Iced {
     if (isOp(tree)) {
 
       tree = tree.get("astop").getAsJsonObject();
-      JsonObject operands = tree.get("operands").getAsJsonObject();
 
-      // Can be a binary arithmetic operator
-      if (isArithmeticOp(tree)) {
-        addNewOpStatement(tree.get("operator").getAsString(), p);
+      if (isASTOp(tree)) {
+        JsonObject operands = tree.get("operands").getAsJsonObject();
 
-      // Can be a bitwise operator
-      } else if (isBitwiseOp(tree)) {
-        addNewOpStatement(tree.get("operator").getAsString(), p);
+        // Can be a binary arithmetic operator
+        if (isArithmeticOp(tree)) {
+          addNewOpStatement(tree.get("operator").getAsString(), p);
 
-      // Can be comparison operator (also binary)
-      } else if (isCompareOp(tree)) {
-        addNewOpStatement(tree.get("operator").getAsString(), p);
+          // Can be a bitwise operator
+        } else if (isBitwiseOp(tree)) {
+          addNewOpStatement(tree.get("operator").getAsString(), p);
 
+          // Can be comparison operator (also binary)
+        } else if (isCompareOp(tree)) {
+          addNewOpStatement(tree.get("operator").getAsString(), p);
+        }
+
+        treeWalk(operands.get("left").getAsJsonObject(), lineNum++, p);
+        treeWalk(operands.get("right").getAsJsonObject(), lineNum++, p);
+      } else {
+        throw new IllegalArgumentException("Unkown operator type: "+getNodeType(tree));
       }
-      treeWalk(operands.get("left").getAsJsonObject(), lineNum++, p);
-      treeWalk(operands.get("right").getAsJsonObject(), lineNum++, p);
 
     // Check if we have an argument node
     } else if (isArg(tree)) {
       p.putToTable(getArgName(tree), getArgType(tree), getArgValue(tree));
 
     // Check if we have an argument node
+    } else if (isId(tree)) {
+      p.putToTable(getIdValue(tree), null,  null);
+
+    // Check if we have an argument node
     } else if (isString(tree)) {
-      addPushStatement(getString(tree), p);
+      stringPushStatement(getString(tree), p);
 
     // Check if we have an argument node
     } else if (isConst(tree)) {
-      addPushStatement(getNum(tree), p);
+      numPushStatement(getNum(tree), p);
 
     // Check if we have an argument node
     } else if (isFrame(tree)) {
-      addPushStatement(getKey(tree), p);
+      keyPushStatement(getKey(tree), p);
 
     // Check if we're a top-level node of type astcall, this should be parsed into a separate program...
     } else if (isCall(tree)) {
@@ -278,7 +281,7 @@ public class AST2IR extends Iced {
  *  The global table is read only by every Program that has a non-null local table.
  *  The global table is read-write by the main program only.
  *
- *  NB: The existence of a non-null symbol table implies that operation is occurring in a non-global scope.
+ *  NB: The existence of a non-null symbol table implies that execution is occurring in a non-global scope.
  */
 class SymbolTable extends Iced {
 
@@ -329,24 +332,3 @@ class SymbolTable extends Iced {
 
   }
 }
-
-
-//  static AST parseOp(JsonObject jo) {
-//
-//    // What type of operator is it?
-//    if (jo.get("type").getAsString().equals("BinaryOperator")) {
-//
-//      // Parse the left and right operands for this operator and return.
-//      JsonObject operands = jo.get("operands").getAsJsonObject();
-//      JsonObject left = operands.get("left").getAsJsonObject();
-//      JsonObject rite = operands.get("right").getAsJsonObject();
-//
-//
-//
-//    } else if (jo.get("type").getAsString().equals("PrefixOperator")) {
-//
-//    } else {
-//      throw new IllegalArgumentException("Unkown operator type: " + jo.get("type").getAsString());
-//    }
-//    return ast;
-//  }
