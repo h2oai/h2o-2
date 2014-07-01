@@ -34,6 +34,9 @@ public class GLMValidation extends Iced {
   @API(help="")
   double auc = Double.NaN;
 
+  @API(help="corss validation models")
+  Key [] xval_models;
+
   @API(help="AIC")
   double aic;// internal aic used only for poisson family!
   @API(help="internal aic used only for poisson family!")
@@ -55,6 +58,9 @@ public class GLMValidation extends Iced {
 
     public GLMXValidation(GLMModel mainModel, GLMModel [] xvalModels, double lambda, long nobs) {
       super(mainModel._dataKey, mainModel.ymu, mainModel.glm, mainModel.rank(lambda));
+      xval_models = new Key[xvalModels.length];
+      for(int i = 0; i < xval_models.length; ++i)
+        xval_models[i] = xvalModels[i]._key;
       double t = 0;
       for(int i = 0; i < xvalModels.length; ++i){
         GLMValidation val = xvalModels[i].validation();

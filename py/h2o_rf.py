@@ -165,10 +165,20 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
 def simpleCheckRFScore(node=None, rfv=None, noPrint=False, **kwargs):
     simpleCheckRFView(node=node, rfv=rfv, noPrint=noPrint, checkScoringOnly=True, **kwargs)
 
-def trainRF(trainParseResult, **kwargs):
+def trainRF(trainParseResult, scoreParseResult=None, **kwargs):
     # Train RF
     start = time.time()
-    trainResult = h2o_cmd.runRF(parseResult=trainParseResult, **kwargs)
+
+    if scoreParseResult:
+        trainResult = h2o_cmd.runRF(
+            parseResult=trainParseResult, 
+            validation=scoreParseResult['destination_key'],
+            **kwargs)
+    else:
+        trainResult = h2o_cmd.runRF(
+           parseResult=trainParseResult, 
+           **kwargs)
+
     rftime      = time.time()-start 
     h2o.verboseprint("RF train results: ", trainResult)
     h2o.verboseprint("RF computation took {0} sec".format(rftime))

@@ -285,7 +285,8 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     }
     @Override public void reduce(GLMValidationTask gval){_res.add(gval._res);}
     @Override public void postGlobal(){
-      _res.finalize_AIC_AUC();
+      _res.computeAIC();
+      _res.computeAUC();
     }
   }
   // use general score to reduce number of possible different code paths
@@ -327,7 +328,8 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     @Override public void postGlobal(){
       Futures fs = new Futures();
       for(int i = 0; i < _xmodels.length; ++i){
-        _xvals[i].finalize_AIC_AUC();
+        _xvals[i].computeAIC();
+        _xvals[i].computeAUC();
         _xvals[i].nobs = _nobs-_xvals[i].nobs;
         _xmodels[i].setValidation(_xvals[i]);
         DKV.put(_xmodels[i]._key, _xmodels[i],fs);
