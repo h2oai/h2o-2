@@ -133,8 +133,11 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new NaiveBayes()),  "Naive Bayes (Beta)",       "Model");
     Request.addToNavbar(registerRequest(new Anomaly()),     "Anomaly Detection (Beta)", "Model");
 
+
     // FVec scoring
     Request.addToNavbar(registerRequest(new Predict()),     "Predict",                  "Score");
+    // only for glm to allow for overriding of lambda_submodel
+    registerRequest(new GLMPredict());
     Request.addToNavbar(registerRequest(new ConfusionMatrix()), "Confusion Matrix",     "Score");
     Request.addToNavbar(registerRequest(new AUC()),         "AUC",                      "Score");
     Request.addToNavbar(registerRequest(new HitRatio()),    "HitRatio",                 "Score");
