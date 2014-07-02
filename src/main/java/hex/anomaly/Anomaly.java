@@ -40,8 +40,7 @@ public class Anomaly extends Job.FrameJob {
 
     Frame mse = dlm.scoreAutoEncoder(source);
     sb.append("Storing the reconstruction error (MSE) for all rows under: " + dest() + ".\n");
-    Frame output = new Frame(dest(), source.names(), source.vecs());
-    output.prepend("Reconstruction.MSE", mse.anyVec());
+    Frame output = new Frame(dest(), new String[]{"Reconstruction.MSE"}, new Vec[]{mse.vecs()[0]});
     output.delete_and_lock(null);
     output.unlock(null);
     final Vec mse_test = mse.anyVec();
