@@ -184,12 +184,11 @@ public class Frame extends Lockable<Frame> {
   // Return a new Frame compatible with 'this' and a copy of 'f's data otherwise.
   public Frame makeCompatible( Frame f) {
     // Small data frames are always "compatible"
-    if( anyVec()==null ||       // No dest columns
-        numRows() <= 1e4 )      // Or it is small
+    if( anyVec()==null)      // Or it is small
       return f;                 // Then must be compatible
     // Same VectorGroup is also compatible
     if( f.anyVec() == null ||
-        f.anyVec().group().equals(anyVec().group()) )
+        f.anyVec().group().equals(anyVec().group()) && Arrays.equals(f.anyVec()._espc,anyVec()._espc))
       return f;
     // Ok, here make some new Vecs with compatible layout
     Key k = Key.make();
