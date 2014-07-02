@@ -285,7 +285,8 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     }
     @Override public void reduce(GLMValidationTask gval){_res.add(gval._res);}
     @Override public void postGlobal(){
-      _res.finalize_AIC_AUC();
+      _res.computeAIC();
+      _res.computeAUC();
     }
   }
   // use general score to reduce number of possible different code paths
@@ -327,7 +328,8 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     @Override public void postGlobal(){
       Futures fs = new Futures();
       for(int i = 0; i < _xmodels.length; ++i){
-        _xvals[i].finalize_AIC_AUC();
+        _xvals[i].computeAIC();
+        _xvals[i].computeAUC();
         _xvals[i].nobs = _nobs-_xvals[i].nobs;
         _xmodels[i].setValidation(_xvals[i]);
         DKV.put(_xmodels[i]._key, _xmodels[i],fs);
@@ -346,12 +348,17 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     return ("GLM Model (key=" + _key + " , trained on " + _dataKey + ", family = " + glm.family + ", link = " + glm.link + ", #iterations = " + iteration() + ")");
   }
   public int rank() {return rank(submodels[best_lambda_idx].lambda_value);}
-  public Submodel  submodelForLambda(double lambda){
+
+  public int  submodelIdForLambda(double lambda){
     int i = submodels.length-1;
     for(;i >=0; --i)
-      if(submodels[i].lambda_value == lambda)
-        return submodels[i];
-    return null;
+      if(Math.abs(submodels[i].lambda_value - lambda) < 1e-5)
+        return i;
+    return -1;
+  }
+  public Submodel  submodelForLambda(double lambda){
+    int i = submodelIdForLambda(lambda);
+    return i < 0?null:submodels[i];
   }
   public int rank(double lambda) {return submodelForLambda(lambda).rank;}
 

@@ -886,7 +886,7 @@ h2o.randomForest <- function(x, y, data, classification=TRUE, ntree=50, depth=20
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRF, source=data@key, response=args$y, cols=cols, ntrees=ntree, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, seed=seed, importance=as.numeric(importance), 
                             classification=as.numeric(classification), validation=validation@key, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size))
   } else stop("Cannot set both validation and nfolds at the same time")
-  params = list(x=args$x, y=args$y, ntree=ntree, mtries = mtries, depth=depth, sample.rate=sample.rate, nbins=nbins, importance=importance, nfolds=nfolds, balance.classes=balance.classes, max.after.balance.size=max.after.balance.size)
+  params = list(x=args$x, y=args$y, ntree=ntree, mtries = mtries, depth=depth, sample.rate=sample.rate, nbins=nbins, importance=importance, nfolds=nfolds, balance.classes=balance.classes, max.after.balance.size=max.after.balance.size, nodesize=nodesize)
   
   if(.is_singlerun("RF", params))
     .h2o.singlerun.internal("RF", data, res, nfolds, validation, params)
@@ -1073,13 +1073,13 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, nfolds=0, validation,
 }
 
 # ------------------------------- Prediction ---------------------------------------- #
-h2o.predict <- function(object, newdata) {
+h2o.predict <- function(object, newdata) {  
   if( missing(object) ) stop('Must specify object')
   if(!inherits(object, "H2OModel")) stop("object must be an H2O model")
   if( missing(newdata) ) newdata <- object@data
   if(class(newdata) != "H2OParsedData") stop('newdata must be a H2O dataset')
   
-  if(class(object) %in% c("H2OGBMModel", "H2OKMeansModel", "H2ODRFModel", "H2OGLMModel", "H2ONBModel", "H2ODeepLearningModel", "H2OSpeeDRFModel")) {
+  if(class(object) %in% c("H2OGBMModel", "H2OKMeansModel", "H2ODRFModel", "H2ONBModel", "H2ODeepLearningModel", "H2OSpeeDRFModel")) {
     # Set randomized prediction key
     key_prefix = switch(class(object), "H2OGBMModel" = "GBMPredict", "H2OKMeansModel" = "KMeansPredict",
                         "H2ODRFModel" = "DRFPredict", "H2OGLMModel" = "GLM2Predict", "H2ONBModel" = "NBPredict",
@@ -1095,6 +1095,13 @@ h2o.predict <- function(object, newdata) {
     numPC = min(length(numMatch[numMatch == TRUE]), object@model$num_pc)
     res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_PCASCORE, source=newdata@key, model=object@key, destination_key=rand_pred_key, num_pc=numPC)
     .h2o.__waitOnJob(object@data@h2o, res$job_key)
+    new("H2OParsedData", h2o=object@data@h2o, key=rand_pred_key)
+  } else if(class(object) == "H2OGLMModel"){
+ # Set randomized prediction key
+    key_prefix = "GLM2Predict"
+    rand_pred_key = .h2o.__uniqID(key_prefix)    
+    res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_GLMPREDICT2, model=object@key, data=newdata@key, lambda=object@model$lambda,prediction=rand_pred_key)
+    res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_INSPECT2, src_key=rand_pred_key)
     new("H2OParsedData", h2o=object@data@h2o, key=rand_pred_key)
   } else
     stop(paste("Prediction has not yet been implemented for", class(object)))

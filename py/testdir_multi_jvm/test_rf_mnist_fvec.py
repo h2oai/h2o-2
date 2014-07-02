@@ -22,7 +22,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_RF_mnist_fvec(self):
+    def test_rf_mnist_fvec(self):
         h2o.beta_features = True
         importFolderPath = "mnist"
         csvFilelist = [
@@ -120,7 +120,7 @@ class Basic(unittest.TestCase):
 
             rfView = h2o_cmd.runRFView(None, model_key=model_key, timeoutSecs=60, noPoll=not DO_POLL, doSimpleCheck=False)
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView)
-            self.assertAlmostEqual(classification_error, 10, delta=2, msg="Classification error %s differs too much" % classification_error)
+            self.assertAlmostEqual(classification_error, 20, delta=2, msg="Classification error %s differs too much" % classification_error)
 
 
             if not DO_POLL:
