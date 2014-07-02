@@ -729,6 +729,14 @@ public class Utils {
     return s;
   }
 
+  public static int maxValue(byte[] from ) {
+    int result = from[0]&0xFF;
+    for (int i = 1; i < from.length; ++i)
+      if ( (from[i]&0xFF) > result) result = from[i]&0xFF;
+    return result;
+  }
+
+
   /**
    * Simple wrapper around ArrayList with support for H2O serialization
    * @author tomasnykodym

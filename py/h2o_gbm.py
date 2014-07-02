@@ -264,7 +264,7 @@ def showGBMGridResults(GBMResult, expectedErrorMax, classification=True):
         _distribution = j['_distribution']
         model_key = j['destination_key']
         job_key = j['job_key']
-        inspect = h2o_cmd.runInspect(key=model_key)
+        # inspect = h2o_cmd.runInspect(key=model_key)
         # print "jobnum:", jobnum, h2o.dump_json(inspect)
         gbmTrainView = h2o_cmd.runGBMView(model_key=model_key)
         print "jobnum:", jobnum, h2o.dump_json(gbmTrainView)

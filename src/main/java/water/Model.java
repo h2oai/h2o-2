@@ -1,6 +1,7 @@
 package water;
 
 import water.api.*;
+import static water.util.JCodeGen.toStaticVar;
 import static water.util.Utils.contains;
 import hex.ConfusionMatrix;
 import hex.VarImp;
@@ -642,22 +643,16 @@ public abstract class Model extends Lockable<Model> {
   /** Generate implementation for super class. */
   protected SB toJavaSuper( SB sb ) {
     sb.nl();
+    sb.ii(1);
     sb.i().p("public String[]   getNames() { return NAMES; } ").nl();
     sb.i().p("public String[][] getDomainValues() { return DOMAINS; }").nl();
     return sb;
   }
-  private SB toJavaNAMES( SB sb ) {
-    sb.nl();
-    sb.i().p("// Names of columns used by model.").nl();
-    return sb.i().p("public static final String[] NAMES = new String[] ").toJavaStringInit(_names).p(";").nl();
-  }
-  private SB toJavaNCLASSES( SB sb ) {
-    sb.nl();
-    sb.i().p("// Number of output classes included in training data response column,").nl();
-    return sb.i().p("public static final int NCLASSES = ").p(nclasses()).p(";").nl();
-  }
+  private SB toJavaNAMES( SB sb ) { return JCodeGen.toStaticVar(sb, "NAMES", _names, "Names of columns used by model."); }
+  private SB toJavaNCLASSES( SB sb ) { return JCodeGen.toStaticVar(sb, "NCLASSES", nclasses(), "Number of output classes included in training data response column."); }
   private SB toJavaDOMAINS( SB sb, SB fileContextSB ) {
     sb.nl();
+    sb.ii(1);
     sb.i().p("// Column domains. The last array contains domain of response column.").nl();
     sb.i().p("public static final String[][] DOMAINS = new String[][] {").nl();
     for (int i=0; i<_domains.length; i++) {
@@ -673,10 +668,9 @@ public abstract class Model extends Lockable<Model> {
     return sb.i().p("};").nl();
   }
   private SB toJavaPROB( SB sb) {
-    sb.i().p("// Prior class distribution").nl();
-    JCodeGen.toField(sb, "public static final", "float[]", "PRIOR_CLASS_DISTRIB", new SB().toJavaStringInit(_priorClassDist).toString());
-    sb.i().p("// Class distribution used for model building").nl();
-    JCodeGen.toField(sb, "public static final", "float[]", "MODEL_CLASS_DISTRIB", new SB().toJavaStringInit(_modelClassDist).toString());
+    sb.di(1);
+    toStaticVar(sb, "PRIOR_CLASS_DISTRIB", _priorClassDist, "Prior class distribution");
+    toStaticVar(sb, "MODEL_CLASS_DISTRIB", _modelClassDist, "Class distribution used for model building");
     return sb;
   }
   // Override in subclasses to provide some top-level model-specific goodness
@@ -720,6 +714,22 @@ public abstract class Model extends Lockable<Model> {
     catch( CannotCompileException cce ) { throw new Error(cce); }
     catch( InstantiationException cce ) { throw new Error(cce); }
     catch( IllegalAccessException cce ) { throw new Error(cce); }
+  }
+
+  /** Generates code which unify preds[1,...NCLASSES] */
+  protected void toJavaUnifyPreds(SB bodySb) {
+  }
+  /** Fill preds[0] based on already filled and unified preds[1,..NCLASSES]. */
+  protected void toJavaFillPreds0(SB bodySb) {
+    // Pick max index as a prediction
+    if (isClassifier()) {
+      if (_priorClassDist!=null && _modelClassDist!=null) {
+        bodySb.i().p("water.util.ModelUtils.correctProbabilities(preds, PRIOR_CLASS_DISTRIB, MODEL_CLASS_DISTRIB);").nl();
+      }
+      bodySb.i().p("preds[0] = water.util.ModelUtils.getPrediction(preds,data);").nl();
+    } else {
+      bodySb.i().p("preds[0] = preds[1];").nl();
+    }
   }
 
   /**
@@ -788,7 +798,7 @@ public abstract class Model extends Lockable<Model> {
       sb.append("<tr><th>Model</th></tr>");
       for (Key k : job.xval_models) {
         sb.append("<tr>");
-        sb.append("<td>" + (UKV.get(k) != null ? Inspector.link(k.toString(), k.toString()) : "In progress") + "</td>");
+        sb.append("<td>" + (UKV.get(k) != null ? Inspector.link(k.toString(), k.toString()) : "Pending") + "</td>");
         sb.append("</tr>");
       }
       sb.append("</table>");

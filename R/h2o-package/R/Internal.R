@@ -115,6 +115,7 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__PAGE_INSPECT2 = "2/Inspect2.json"
 .h2o.__PAGE_PARSE2 = "2/Parse2.json"
 .h2o.__PAGE_PREDICT2 = "2/Predict.json"
+.h2o.__PAGE_GLMPREDICT2 = "2/GLMPredict.json"
 .h2o.__PAGE_SUMMARY2 = "2/SummaryPage2.json"
 .h2o.__PAGE_LOG_AND_ECHO = "2/LogAndEcho.json"
 .h2o.__HACK_LEVELS2 = "2/Levels2.json"
@@ -149,6 +150,7 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__PAGE_PCAProgress = "2/PCAProgressPage.json"
 .h2o.__PAGE_PCAModelView = "2/PCAModelView.json"
 .h2o.__PAGE_SpeeDRF = "2/SpeeDRF.json"
+.h2o.__PAGE_SpeeDRFProgress = "2/SpeeDRFProgressPage.json"
 .h2o.__PAGE_SpeeDRFModelView = "2/SpeeDRFModelView.json"
 .h2o.__PAGE_BAYES = "2/NaiveBayes.json"
 .h2o.__PAGE_NBProgress = "2/NBProgressPage.json"
@@ -416,7 +418,12 @@ function(expr) {
 function(some_expr_list) {
   len <- length(some_expr_list)
   while(len > 1) {
-    num_sub_lists <- length(unlist(some_expr_list[[len]])) / length(some_expr_list[[len]])
+    num_sub_lists <- 0
+    if (length(some_expr_list[[len]]) == 1) {
+      num_sub_lists <- 1
+    } else {
+      num_sub_lists <- length(unlist(some_expr_list[[len]])) / length(some_expr_list[[len]])
+    }
     if (num_sub_lists > 1) {
       some_expr_list[[len]] <- .back_to_expr(some_expr_list[[len]])
     } else if (is.atomic(some_expr_list[[len]]) || is.name(some_expr_list[[len]])) {
@@ -511,7 +518,12 @@ function(some_expr_list, envir) {
   while(i <= len) {
 
     # Check if there are sub lists and recurse them
-    num_sub_lists <- length(unlist(some_expr_list[[i]])) / length(some_expr_list[[i]])
+    num_sub_lists <- 0
+    if (length(some_expr_list[[i]]) == 1) {
+      num_sub_lists <- 1
+    } else {
+      num_sub_lists <- length(unlist(some_expr_list[[i]])) / length(some_expr_list[[i]])
+    }
     if (num_sub_lists > 1) {
 
       # recurse on the sublist

@@ -184,12 +184,11 @@ public class Frame extends Lockable<Frame> {
   // Return a new Frame compatible with 'this' and a copy of 'f's data otherwise.
   public Frame makeCompatible( Frame f) {
     // Small data frames are always "compatible"
-    if( anyVec()==null ||       // No dest columns
-        numRows() <= 1e4 )      // Or it is small
+    if( anyVec()==null)      // Or it is small
       return f;                 // Then must be compatible
     // Same VectorGroup is also compatible
     if( f.anyVec() == null ||
-        f.anyVec().group().equals(anyVec().group()) )
+        f.anyVec().group().equals(anyVec().group()) && Arrays.equals(f.anyVec()._espc,anyVec()._espc))
       return f;
     // Ok, here make some new Vecs with compatible layout
     Key k = Key.make();
@@ -215,6 +214,31 @@ public class Frame extends Lockable<Frame> {
     _names[len] = name;
     _vecs [len] = vec ;
     _keys [len] = vec._key;
+    return this;
+  }
+
+  /** Insert a named column as the first column */
+  public Frame prepend( String name, Vec vec ) {
+    if( find(name) != -1 ) throw new IllegalArgumentException("Duplicate name '"+name+"' in Frame");
+    if( _vecs.length != 0 ) {
+      if( !anyVec().group().equals(vec.group()) && !Arrays.equals(anyVec()._espc,vec._espc) )
+        throw new IllegalArgumentException("Vector groups differs - adding vec '"+name+"' into the frame " + Arrays.toString(_names));
+      if( numRows() != vec.length() )
+        throw new IllegalArgumentException("Vector lengths differ - adding vec '"+name+"' into the frame " + Arrays.toString(_names));
+    }
+    final int len = _names != null ? _names.length : 0;
+    String[] _names2 = new String[len+1];
+    Vec[]    _vecs2  = new Vec   [len+1];
+    Key[]    _keys2  = new Key   [len+1];
+    _names2[0] = name;
+    _vecs2 [0] = vec ;
+    _keys2 [0] = vec._key;
+    System.arraycopy(_names, 0, _names2, 1, len);
+    System.arraycopy(_vecs,  0, _vecs2,  1, len);
+    System.arraycopy(_keys,  0, _keys2,  1, len);
+    _names = _names2;
+    _vecs  = _vecs2;
+    _keys  = _keys2;
     return this;
   }
 

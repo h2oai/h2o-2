@@ -43,7 +43,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_quantile_cmp_uniform(self):
+    def test_exec2_quant_cmp_uniform(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             # colname, (min, 25th, 50th, 75th, max)
@@ -76,7 +77,6 @@ class Basic(unittest.TestCase):
             # add 5% for fp errors?
             maxDelta = 1.05 * maxDelta
 
-            h2o.beta_features = False
             SEEDPERFILE = random.randint(0, sys.maxint)
             x += 1
             csvFilename = 'syn_' + "binary" + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
@@ -84,17 +84,15 @@ class Basic(unittest.TestCase):
 
             print "Creating random", csvPathname
             write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax, SEEDPERFILE)
-            h2o.beta_features = False
             csvPathnameFull = h2i.find_folder_and_filename(None, csvPathname, returnFullPath=True)
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=10, doSummary=False)
             print "Parse result['destination_key']:", parseResult['destination_key']
 
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvFilename
-            numRows = inspect["num_rows"]
-            numCols = inspect["num_cols"]
+            numRows = inspect["numRows"]
+            numCols = inspect["numCols"]
 
-            h2o.beta_features = True
             summaryResult = h2o_cmd.runSummary(key=hex_key)
             h2o.verboseprint("summaryResult:", h2o.dump_json(summaryResult))
 
@@ -166,7 +164,6 @@ class Basic(unittest.TestCase):
             # execExpr = "quantile(%s[,1],%s);" % (hex_key, thresholds)
 
             print "Comparing (two places) each of the summary2 threshold quantile results, to single exec quantile"
-            h2o.beta_features = True
             for i, threshold in enumerate(thresholds):
                 # FIX! do two of the same?..use same one for the 2nd
                 if i!=0:

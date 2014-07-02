@@ -19,10 +19,11 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_rf_hhp_2_fvec(self):
+        h2o.beta_features = True
         # NAs cause CM to zero..don't run for now
         csvPathname = 'hhp_9_17_12.predict.data.gz'
-        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
-        h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=30)
+        parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put', timeoutSecs=30)
+        h2o_cmd.runRF(parseResult=parseResult, trees=6, timeoutSecs=300)
 
 if __name__ == '__main__':
     h2o.unit_main()

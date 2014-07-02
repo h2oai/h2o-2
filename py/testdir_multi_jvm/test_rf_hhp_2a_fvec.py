@@ -58,7 +58,7 @@ class Basic(unittest.TestCase):
             #    3488 15
 
             execExpr = "%s[,%s] = %s[,%s]==14" % (dataKeyTrain, numCols, dataKeyTrain, numCols)
-            h2o_exec.exec_expr(None, execExpr, resultKey=dataKeyTrain, timeoutSecs=10)
+            h2o_exec.exec_expr(None, execExpr, resultKey=dataKeyTrain, timeoutSecs=30)
             inspect = h2o_cmd.runInspect(key=dataKeyTrain)
             h2o_cmd.infoFromInspect(inspect, "going into RF")
             execResult = {'destination_key': dataKeyTrain}
@@ -69,7 +69,7 @@ class Basic(unittest.TestCase):
                 'max_depth': 20,
                 'nbins': 50,
             }
-            rfView = h2o_cmd.runRF(parseResult=execResult, timeoutSecs=900, retryDelaySecs=10, **kwargs)
+            rfView = h2o_cmd.runRF(parseResult=execResult, timeoutSecs=900, retryDelaySecs=300, **kwargs)
             print "RF end on ", csvPathname, 'took', time.time() - start, 'seconds'
             (error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView)
 

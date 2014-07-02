@@ -4,11 +4,9 @@ package water.api;
 import water.*;
 import water.util.Log;
 
-import java.util.Set;
-
 public class UnlockKeys extends Request2 {
 
-  @Override protected Response serve() {
+  @Override public Response serve() {
     try {
       Log.info("Unlocking all locked keys on the cluster.");
       new UnlockTask().invokeOnAllNodes();

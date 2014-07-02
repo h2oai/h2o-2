@@ -11,7 +11,6 @@ setClass("H2OGrid", representation(key="character", data="H2OParsedData", model=
 setClass("H2OPerfModel", representation(cutoffs="numeric", measure="numeric", perf="character", model="list", roc="data.frame"))
 
 setClass("H2OGLMModel", contains="H2OModel", representation(xval="list"))
-# setClass("H2OGLMGrid", contains="H2OGrid")
 setClass("H2OKMeansModel", contains="H2OModel")
 setClass("H2ODeepLearningModel", contains="H2OModel", representation(valid="H2OParsedData", xval="list"))
 setClass("H2ODRFModel", contains="H2OModel", representation(valid="H2OParsedData", xval="list"))
@@ -25,6 +24,7 @@ setClass("H2OGBMGrid", contains="H2OGrid")
 setClass("H2OKMeansGrid", contains="H2OGrid")
 setClass("H2ODRFGrid", contains="H2OGrid")
 setClass("H2ODeepLearningGrid", contains="H2OGrid")
+setClass("H2OSpeeDRFGrid", contains="H2OGrid")
 setClass("H2OGLMModelList", representation(models="list",best_model="numeric"))
 
 # Register finalizers for H2O data and model objects
@@ -182,6 +182,7 @@ setMethod("show", "H2ODeepLearningModel", function(object) {
   cat("\nTraining mean square error:", model$train_sqr_error)
   cat("\n\nValidation classification error:", model$valid_class_error)
   cat("\nValidation square error:", model$valid_sqr_error)
+  
   if(!is.null(model$confusion)) {
     cat("\n\nConfusion matrix:\n")
     if(is.na(object@valid@key))
@@ -189,6 +190,16 @@ setMethod("show", "H2ODeepLearningModel", function(object) {
     else
       cat("Reported on", object@valid@key, "\n")
     print(model$confusion)
+  }
+  
+  if(!is.null(model$hit_ratios)) {
+    cat("\nHit Ratios for Multi-class Classification:\n")
+    print(model$hit_ratios)
+  }
+  
+  if(!is.null(object@xval) && length(object@xval) > 0) {
+    cat("\nCross-Validation Models:\n")
+    temp = lapply(object@xval, function(x) { cat(" ", x@key, "\n") })
   }
 })
 
@@ -309,7 +320,12 @@ setMethod("show", "H2OGBMModel", function(object) {
 setMethod("show", "H2OPerfModel", function(object) {
   model = object@model
   tmp = t(data.frame(model[-length(model)]))
-  rownames(tmp) = c("AUC", "Gini", "Best Cutoff", "F1", "Accuracy", "Precision", "Recall", "Specificity", "Max per Class Error")
+  
+  if(object@perf == "mcc")
+    criterion = "MCC"
+  else
+    criterion = paste(toupper(substring(object@perf, 1, 1)), substring(object@perf, 2), sep = "")
+  rownames(tmp) = c("AUC", "Gini", paste("Best Cutoff for", criterion), "F1", "Accuracy", "Error", "Precision", "Recall", "Specificity", "MCC", "Max per Class Error")
   colnames(tmp) = "Value"; print(tmp)
   cat("\n\nConfusion matrix:\n"); print(model$confusion)
 })

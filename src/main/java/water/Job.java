@@ -584,15 +584,49 @@ public abstract class Job extends Func {
       if (!isEmpty(ignored_cols_by_name)) { specified++; }
       if (specified > 1) throw new IllegalArgumentException("Arguments 'cols', 'ignored_cols_by_name', and 'ignored_cols' are exclusive");
 
-      Vec[] vecs = source.vecs();
-      for( int i = 0; i < vecs.length; i++ )
-        if( vecs[i].isUUID() ) {
-          if( ignored_cols==null ) ignored_cols = new int[0];
-          ignored_cols = Arrays.copyOf(ignored_cols,ignored_cols.length+1);
-          ignored_cols[ignored_cols.length-1] = i;
-       }
+      // Unify all ignored cols specifiers to ignored_cols.
+      {
+        if (!isEmpty(ignored_cols_by_name)) {
+          assert (isEmpty(ignored_cols));
+          ignored_cols = ignored_cols_by_name;
+          ignored_cols_by_name = EMPTY;
+        }
+        if (ignored_cols == null) {
+          ignored_cols = new int[0];
+        }
+      }
 
-      // If the column are not specified, then select everything.
+      // At this point, ignored_cols_by_name is dead.
+      assert (isEmpty(ignored_cols_by_name));
+
+      // Create map of ignored columns for speed.
+      HashMap<Integer,Integer> ignoredColsMap = new HashMap<Integer,Integer>();
+      for ( int i = 0; i < ignored_cols.length; i++) {
+        int value = ignored_cols[i];
+        ignoredColsMap.put(new Integer(value), new Integer(1));
+      }
+
+      // Add UUID cols to ignoredColsMap.  Duplicates get folded into one entry.
+      Vec[] vecs = source.vecs();
+      for( int i = 0; i < vecs.length; i++ ) {
+        if (vecs[i].isUUID()) {
+          ignoredColsMap.put(new Integer(i), new Integer(1));
+        }
+      }
+
+      // Rebuild ignored_cols from the map.  Sort it.
+      {
+        ignored_cols = new int[ignoredColsMap.size()];
+        int j = 0;
+        for (Integer key : ignoredColsMap.keySet()) {
+          ignored_cols[j] = key.intValue();
+          j++;
+        }
+
+        Arrays.sort(ignored_cols);
+      }
+
+      // If the columns are not specified, then select everything.
       if (isEmpty(cols)) {
         cols = new int[source.vecs().length];
         for( int i = 0; i < cols.length; i++ )
@@ -600,18 +634,20 @@ public abstract class Job extends Func {
       } else {
         if (!checkIdx(source, cols)) throw new IllegalArgumentException("Argument 'cols' specified invalid column!");
       }
-      // Make a set difference between cols and (ignored_cols || ignored_cols_by_name)
-      if (!isEmpty(ignored_cols) || !isEmpty(ignored_cols_by_name)) {
+
+      // Make a set difference between cols and ignored_cols.
+      if (!isEmpty(ignored_cols)) {
         int[] icols = ! isEmpty(ignored_cols) ? ignored_cols : ignored_cols_by_name;
-        if (!checkIdx(source, icols)) throw new IllegalArgumentException("Argument '"+(!isEmpty(ignored_cols) ? "ignored_cols" : "ignored_cols_by_name")+"' specified invalid column!");
+        if (!checkIdx(source, icols)) throw new IllegalArgumentException("Argument 'ignored_cols' or 'ignored_cols_by_name' specified invalid column!");
         cols = difference(cols, icols);
-        // Setup all variables in consistence way
+        // Setup all variables in consistent way
         ignored_cols = icols;
         ignored_cols_by_name = icols;
       }
 
-      if( cols.length == 0 )
+      if( cols.length == 0 ) {
         throw new IllegalArgumentException("No column selected");
+      }
     }
 
     protected final Vec[] selectVecs(Frame frame) {

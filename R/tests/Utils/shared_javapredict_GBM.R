@@ -7,7 +7,8 @@ iris_train.hex <- h2o.uploadFile(conn, train)
 
 heading("Creating GBM model in H2O")
 distribution <- if (exists("distribution")) distribution else "multinomial"
-iris.gbm.h2o <- h2o.gbm(x = x, y = y, data = iris_train.hex, distribution = distribution, n.trees = n.trees, interaction.depth = interaction.depth, n.minobsinnode = n.minobsinnode, shrinkage = shrinkage)
+balance_classes <- if (exists("balance_classes")) balance_classes else FALSE
+iris.gbm.h2o <- h2o.gbm(x = x, y = y, data = iris_train.hex, distribution = distribution, n.trees = n.trees, interaction.depth = interaction.depth, n.minobsinnode = n.minobsinnode, shrinkage = shrinkage, balance.classes = balance_classes)
 print(iris.gbm.h2o)
 
 heading("Downloading Java prediction model code from H2O")

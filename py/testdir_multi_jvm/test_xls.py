@@ -20,15 +20,15 @@ class TestExcel(unittest.TestCase):
 
     def test_iris_xls(self):
         parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path='xls/iris.xls', schema='put')
-        h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=5)
+        h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=60)
 
     def test_iris_xlsx(self):
         parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path='xls/iris.xlsx', schema='put')
-        h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=5)
+        h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=60)
 
     def test_poker_xls(self):
         parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path='xls/poker-hand-testing.xls', schema='put')
-        h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=10)
+        h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=60)
 
     def test_poker_xlsx(self):
         parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path='xls/poker-hand-testing.xlsx', schema='put',

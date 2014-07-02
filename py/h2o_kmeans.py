@@ -21,29 +21,19 @@ def simpleCheckKMeans(self, kmeans, **kwargs):
             if re.search(x,w): raise Exception(w)
 
     # Check other things in the json response dictionary 'kmeans' here
-    if h2o.beta_features:
-        destination_key = kmeans['model']['_key']
-        # Exception: rjson error in inspect: Argument 'src_key' error: benign_k.hex:Key is not a Frame
+    destination_key = kmeans['model']['_key']
+    # Exception: rjson error in inspect: Argument 'src_key' error: benign_k.hex:Key is not a Frame
 
-        # can't use inspect on a model key? now?
-        kmeansResult = kmeans
-    else:
-        destination_key = kmeans["destination_key"]
-        kmeansResult = h2o_cmd.runInspect(key=destination_key)
+    # can't use inspect on a model key? now?
+    kmeansResult = kmeans
 
-    if h2o.beta_features:
-        model = kmeansResult['model']
-        clusters = model["centers"]
-        cluster_variances = model["within_cluster_variances"]
-        error = model["total_within_SS"]
-        iterations = model["iterations"]
-        normalized = model["normalized"]
-        max_iter = model["max_iter"]
-    else:
-        h2o.verboseprint('kmeans result:', h2o.dump_json(kmeansResult))
-        model = kmeansResult['KMeansModel']
-        clusters = model['clusters']
-        error = model["error"]
+    model = kmeansResult['model']
+    clusters = model["centers"]
+    cluster_variances = model["within_cluster_variances"]
+    error = model["total_within_SS"]
+    iterations = model["iterations"]
+    normalized = model["normalized"]
+    max_iter = model["max_iter"]
 
     for i,c in enumerate(clusters):
         for n in c:
@@ -58,52 +48,24 @@ def simpleCheckKMeans(self, kmeans, **kwargs):
 
 def bigCheckResults(self, kmeans, csvPathname, parseResult, applyDestinationKey, **kwargs):
     simpleCheckKMeans(self, kmeans, **kwargs)
-    if h2o.beta_features:
-        # can't use inspect on a model key? now?
-        model = kmeans['model']
-        model_key = model['_key']
-        centers = model['centers']
-        cluster_variances = model["within_cluster_variances"]
-        error = model["total_within_SS"]
-        kmeansResult = kmeans
-    else:
-        model_key = kmeans["destination_key"]
-        kmeansResult = h2o_cmd.runInspect(key=model_key)
-        h2o.verboseprint('kmeans result:', h2o.dump_json(kmeansResult))
-        model = kmeansResult['KMeansModel']
-        centers = model['clusters']
-        error = model["error"]
+    # can't use inspect on a model key? now?
+    model = kmeans['model']
+    model_key = model['_key']
+    centers = model['centers']
+    cluster_variances = model["within_cluster_variances"]
+    error = model["total_within_SS"]
+    kmeansResult = kmeans
 
-    if h2o.beta_features:
-        # need to use Predict2?
-        pass 
-        # no scoring on Kmeans2?..just reuse
-        # cols/max_ncols params?
-        predictKey = applyDestinationKey
-        predictResult = h2o.nodes[0].generate_predictions(data_key=parseResult['destination_key'], model_key=model_key, destination_key=predictKey)
-        summaryResult = h2o.nodes[0].summary_page(key=predictKey)
-        hcnt = summaryResult['summaries'][0]['hcnt'] # histogram
-        rows_per_cluster = hcnt
-        # FIX! does the cluster order/naming match, compared to cluster variances
-        sqr_error_per_cluster = cluster_variances
+    # no scoring on Kmeans2?..just reuse
+    # cols/max_ncols params?
+    predictKey = applyDestinationKey
+    predictResult = h2o.nodes[0].generate_predictions(data_key=parseResult['destination_key'], model_key=model_key, destination_key=predictKey)
+    summaryResult = h2o.nodes[0].summary_page(key=predictKey)
+    hcnt = summaryResult['summaries'][0]['hcnt'] # histogram
+    rows_per_cluster = hcnt
+    # FIX! does the cluster order/naming match, compared to cluster variances
+    sqr_error_per_cluster = cluster_variances
     
-    else:
-        kmeansApplyResult = h2o.nodes[0].kmeans_apply(
-            data_key=parseResult['destination_key'], model_key=model_key,
-            destination_key=applyDestinationKey)
-        inspect = h2o_cmd.runInspect(None, applyDestinationKey)
-        h2o_cmd.infoFromInspect(inspect, csvPathname)
-
-        # this was failing
-        summaryResult = h2o_cmd.runSummary(key=applyDestinationKey)
-        h2o_cmd.infoFromSummary(summaryResult, noPrint=False)
-
-        kmeansScoreResult = h2o.nodes[0].kmeans_score(
-            key=parseResult['destination_key'], model_key=model_key)
-        score = kmeansScoreResult['score']
-        rows_per_cluster = score['rows_per_cluster']
-        sqr_error_per_cluster = score['sqr_error_per_cluster']
-
     tupleResultList = []
     print "\nerror: ", error
     for i,c in enumerate(centers):
@@ -152,13 +114,6 @@ def compareResultsToExpected(self, tupleResultList, expected=None, allowedDelta=
             absAllowedDelta = abs(allowedDelta[1] * expRows)
             self.assertAlmostEqual(expRows, actRows, delta=absAllowedDelta,
                 msg="Trial %d Rows expected: %s actual: %s delta > %s" % (trial, expRows, actRows, absAllowedDelta))
-
-            if not h2o.beta_features:
-                if expError is not None: # don't always check this
-                    absAllowedDelta = abs(allowedDelta[2] * expError)
-                    self.assertAlmostEqual(expError, actError, delta=absAllowedDelta,
-                        msg="Trial %d Error expected: %s actual: %s delta > %s" % (trial, expError, actError, absAllowedDelta))
-
 
 # compare this clusters to last one. since the files are concatenations, 
 # the results should be similar? 10% of first is allowed delta

@@ -257,14 +257,10 @@ def import_only(node=None, schema='local', bucket=None, path=None,
                 # raise Exception("Something was missing for s3 on the java -jar cmd line when the cloud was built")
                 print "ERROR: Something was missing for s3 on the java -jar cmd line when the cloud was built"
 
-            # FIX. using the import_hdfs method here but since it's beta_features it's the common import2?
-            if h2o.beta_features:
-                if importParentDir:
-                    importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
-                else:
-                    importResult = node.import_hdfs(folderURI + "/" + pattern, timeoutSecs=timeoutSecs)
+            if importParentDir:
+                importResult = node.import_file(folderURI, timeoutSecs=timeoutSecs)
             else:
-                importResult = node.import_s3(bucket, timeoutSecs=timeoutSecs)
+                importResult = node.import_files(folderURI + "/" + pattern, timeoutSecs=timeoutSecs)
 
         elif schema=='s3n' or node.redirect_import_folder_to_s3n_path:
             if not (n.use_hdfs and ((n.hdfs_version and n.hdfs_name_node) or n.hdfs_config)):
@@ -274,9 +270,9 @@ def import_only(node=None, schema='local', bucket=None, path=None,
                 print "ERROR: Something was missing for s3n on the java -jar cmd line when the cloud was built"
             folderURI = "s3n://" + folderOffset
             if importParentDir:
-                importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
+                importResult = node.import_files(folderURI, timeoutSecs=timeoutSecs)
             else:
-                importResult = node.import_hdfs(folderURI + "/" + pattern, timeoutSecs=timeoutSecs)
+                importResult = node.import_files(folderURI + "/" + pattern, timeoutSecs=timeoutSecs)
 
         elif schema=='maprfs':
             if not n.use_maprfs:
@@ -292,9 +288,9 @@ def import_only(node=None, schema='local', bucket=None, path=None,
                 # folderURI = "maprfs:///" + folderOffset
                 folderURI = "maprfs:/" + folderOffset
             if importParentDir:
-                importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
+                importResult = node.import_files(folderURI, timeoutSecs=timeoutSecs)
             else:
-                importResult = node.import_hdfs(folderURI + "/" + pattern, timeoutSecs=timeoutSecs)
+                importResult = node.import_files(folderURI + "/" + pattern, timeoutSecs=timeoutSecs)
 
         elif schema=='hdfs':
             # check that some state from the cloud building time was right
@@ -311,9 +307,9 @@ def import_only(node=None, schema='local', bucket=None, path=None,
                 # this is different than maprfs? normally we specify the name though
                 folderURI = "hdfs://" + folderOffset
             if importParentDir:
-                importResult = node.import_hdfs(folderURI, timeoutSecs=timeoutSecs)
+                importResult = node.import_files(folderURI, timeoutSecs=timeoutSecs)
             else:
-                importResult = node.import_hdfs(folderURI + "/" + pattern, timeoutSecs=timeoutSecs)
+                importResult = node.import_files(folderURI + "/" + pattern, timeoutSecs=timeoutSecs)
 
         else: 
             raise Exception("schema not understood: %s" % schema)
@@ -346,10 +342,6 @@ def import_parse(node=None, schema='local', bucket=None, path=None,
     benchmarkLogging=None, noPoll=False, doSummary=True, noPrint=True, 
     importParentDir=True, **kwargs):
 
-    ## if h2o.beta_features:
-    ##     print "HACK: temporarily disabling Summary always in v2 import_parse"
-    ##     doSummary = False
-
     if not node: node = h2o.nodes[0]
 
     (importResult, importPattern) = import_only(node, schema, bucket, path,
@@ -370,13 +362,8 @@ def import_parse(node=None, schema='local', bucket=None, path=None,
         # if parse blows up, we want error isolation ..i.e. find stack traces here, rather than the next guy blowing up
         h2o.check_sandbox_for_errors()
         inspect = node.inspect(parseResult['destination_key'], timeoutSecs=timeoutSecs)
-        if h2o.beta_features:
-            numRows = inspect['numRows']
-            numCols = inspect['numCols']
-        else:
-            numRows = inspect['num_rows']
-            numCols = inspect['num_cols']
-                
+        numRows = inspect['numRows']
+        numCols = inspect['numCols']
         # we pass numCols, for detecting whether the na cnt means a col is all NAs, (for ignoring min/max/mean/sigma)
         node.summary_page(parseResult['destination_key'], timeoutSecs=timeoutSecs, noPrint=noPrint, numRows=numRows, numCols=numCols)
         # for now, don't worry about error isolating summary 
