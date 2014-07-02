@@ -581,8 +581,10 @@ h2o.deeplearning <- function(x, y, data, classification = TRUE, nfolds = 0, vali
     stop("validation must be an H2O parsed dataset")
   
   if(missing(validation) && nfolds == 0) {
-    validation = data
-    parms$validation = validation@key
+    # validation = data
+    # parms$validation = validation@key
+    validation = new ("H2OParsedData", key = as.character(NA))
+    parms$n_folds = nfolds
   } else if(missing(validation) && nfolds >= 2) {
     validation = new("H2OParsedData", key = as.character(NA))
     parms$n_folds = nfolds
@@ -725,6 +727,11 @@ h2o.deeplearning <- function(x, y, data, classification = TRUE, nfolds = 0, vali
     result <- c(result, tmp) 
   }
   
+  if(!is.null(errs$valid_hitratio)) {
+    max_k <- errs$valid_hitratio$max_k
+    hit_ratios <- errs$valid_hitratio$hit_ratios
+    result$hit_ratios <- data.frame(k = 1:max_k, hit_ratios = hit_ratios)
+  }
   return(result)
 }
 
