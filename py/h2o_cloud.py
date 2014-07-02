@@ -1,15 +1,11 @@
 import time, os, stat, json, signal, tempfile, shutil, datetime, inspect, threading, getpass
-import requests, psutil, argparse, sys, unittest, glob
+import requests, argparse, sys, unittest, glob
+import urlparse, logging, random
+import psutil, requests,
 import h2o_browse as h2b, h2o_perf, h2o_util, h2o_cmd, h2o_os_util
 import h2o_sandbox, h2o_print as h2p
-import re, webbrowser, random
 # used in shutil.rmtree permission hack for windows
 import errno
-# use to unencode the urls sent to h2o?
-import urlparse
-import logging
-# for log_download
-import requests, zipfile, StringIO
 
 # For checking ports in use, using netstat thru a subprocess.
 from subprocess import Popen, PIPE
@@ -117,35 +113,21 @@ def get_sandbox_name():
 
 def unit_main():
     global python_test_name, python_cmd_args, python_cmd_line, python_cmd_ip, python_username
-    # if I remember correctly there was an issue with using sys.argv[0]
-    # under nosetests?. yes, see above. We just duplicate it here although sys.argv[0] might be fine here
     python_test_name = inspect.stack()[1][1]
     python_cmd_args = " ".join(sys.argv[1:])
     python_cmd_line = "python %s %s" % (python_test_name, python_cmd_args)
     python_username = getpass.getuser()
-    # if test was run with nosestests, it wouldn't execute unit_main() so we won't see this
-    # so this is correct, for stuff run with 'python ..."
     print "\nTest: %s    command line: %s" % (python_test_name, python_cmd_line)
 
-    # moved clean_sandbox out of here, because nosetests doesn't execute h2o.unit_main in our tests.
-    # UPDATE: ..is that really true? I'm seeing the above print in the console output runnning
-    # jenkins with nosetests
     parse_our_args()
     unittest.main()
 
-# Global disable. used to prevent browsing when running nosetests, or when given -bd arg
-# Defaults to true, if user=jenkins, h2o.unit_main isn't executed, so parse_our_args isn't executed.
-# Since nosetests doesn't execute h2o.unit_main, it should have the browser disabled.
-browse_disable = True
-browse_json = False
 verbose = False
 ipaddr_from_cmd_line = None
 config_json = None
 debugger = False
-random_udp_drop = False
 random_seed = None
 beta_features = True
-sleep_at_tear_down = False
 abort_after_import = False
 debug_rest = False
 # jenkins gets this assign, but not the unit_main one?
@@ -167,28 +149,14 @@ python_username = getpass.getuser()
 def parse_our_args():
     parser = argparse.ArgumentParser()
     # can add more here
-    parser.add_argument('-bd', '--browse_disable',
-                        help="Disable any web browser stuff. Needed for batch. nosetests and jenkins disable browser through other means already, so don't need",
-                        action='store_true')
-    parser.add_argument('-b', '--browse_json',
-                        help='Pops a browser to selected json equivalent urls. Selective. Also keeps test alive (and H2O alive) till you ctrl-c. Then should do clean exit',
-                        action='store_true')
     parser.add_argument('-v', '--verbose', help='increased output', action='store_true')
     parser.add_argument('-ip', '--ip', type=str, help='IP address to use for single host H2O with psutil control')
     parser.add_argument('-cj', '--config_json',
                         help='Use this json format file to provide multi-host defaults. Overrides the default file pytest_config-<username>.json. These are used only if you do build_cloud_with_hosts()')
     parser.add_argument('-dbg', '--debugger', help='Launch java processes with java debug attach mechanisms',
                         action='store_true')
-    parser.add_argument('-rud', '--random_udp_drop', help='Drop 20 pct. of the UDP packets at the receive side',
-                        action='store_true')
     parser.add_argument('-s', '--random_seed', type=int, help='initialize SEED (64-bit integer) for random generators')
     parser.add_argument('-bf', '--beta_features', help='enable or switch to beta features (import2/parse2)',
-                        action='store_true')
-    parser.add_argument('-slp', '--sleep_at_tear_down',
-                        help='open browser and time.sleep(3600) at tear_down_cloud() (typical test end/fail)',
-                        action='store_true')
-    parser.add_argument('-aai', '--abort_after_import',
-                        help='abort the test after printing the full path to the first dataset used by import_parse/import_only',
                         action='store_true')
     parser.add_argument('-debug_rest', '--debug_rest', help='Print REST API interactions to rest.log',
                         action='store_true')
@@ -202,21 +170,14 @@ def parse_our_args():
     if args.nocolor:
         h2p.disable_colors()
 
-    global browse_disable, browse_json, verbose, ipaddr_from_cmd_line, config_json, debugger, random_udp_drop
-    global random_seed, beta_features, sleep_at_tear_down, abort_after_import, debug_rest
+    global verbose, ipaddr_from_cmd_line, config_json, debugger, 
+    global random_seed, beta_features, debug_rest
 
-    browse_disable = args.browse_disable or getpass.getuser() == 'jenkins'
-    browse_json = args.browse_json
     verbose = args.verbose
     ipaddr_from_cmd_line = args.ip
     config_json = args.config_json
     debugger = args.debugger
-    random_udp_drop = args.random_udp_drop
     random_seed = args.random_seed
-    # beta_features is hardwired to True
-    # beta_features = args.beta_features
-    sleep_at_tear_down = args.sleep_at_tear_down
-    abort_after_import = args.abort_after_import
     debug_rest = args.debug_rest
 
     # Set sys.argv to the unittest args (leav sys.argv[0] as is)
@@ -388,10 +349,6 @@ def spawn_cmd_and_wait(name, cmd, capture_output=True, timeout=None, **kwargs):
     (ps, stdout, stderr) = spawn_cmd(name, cmd, capture_output, **kwargs)
     spawn_wait(ps, stdout, stderr, capture_output, timeout)
 
-# used to get a browser pointing to the last RFview
-global json_url_history
-json_url_history = []
-
 global nodes
 nodes = []
 
@@ -470,12 +427,6 @@ def setup_random_seed(seed=None):
 def build_cloud(node_count=1, base_port=54321, hosts=None,
                 timeoutSecs=30, retryDelaySecs=1, cleanup=True, 
                 conservative=False, **kwargs):
-    # redirect to build_cloud_with_json if a command line arg
-    # wants to force a test to ignore it's build_cloud/build_cloud_with_hosts
-    # (both come thru here)
-    # build_cloud_with_hosts?
-
-    # moved to here from unit_main. so will run with nosetests too!
     clean_sandbox()
     log("#*********************************************************************")
     log("Starting new test: " + python_test_name + " at build_cloud()")
@@ -631,13 +582,6 @@ def check_sandbox_for_errors(cloudShutdownIsError=False, sandboxIgnoreErrors=Fal
 
 
 def tear_down_cloud(nodeList=None, sandboxIgnoreErrors=False):
-    if sleep_at_tear_down:
-        print "Opening browser to cloud, and sleeping for 3600 secs, before cloud teardown (for debug)"
-        import h2o_browse
-
-        h2b.browseTheCloud()
-        sleep(3600)
-
     if not nodeList: nodeList = nodes
     try:
         for n in nodeList:
@@ -847,12 +791,6 @@ class H2O(object):
         if not r:
             raise Exception("Maybe bad url? no r in __do_json_request in %s:" % inspect.stack()[1][3])
 
-        # this is used to open a browser on results, or to redo the operation in the browser
-        # we don't' have that may urls flying around, so let's keep them all
-        json_url_history.append(r.url)
-        # if r.json():
-        #     raise Exception("Maybe bad url? no r.json in __do_json_request in %s:" % inspect.stack()[1][3])
-
         rjson = None
         if returnFast:
             return
@@ -944,9 +882,6 @@ class H2O(object):
         ### print "poll_url: pollTimeoutSecs", pollTimeoutSecs
         verboseprint('poll_url input: response:', dump_json(response))
         print "at top of poll_url, timeoutSec: ", timeoutSecs
-
-        # for the rev 2 stuff..the job_key, destination_key and redirect_url are just in the response
-        # look for 'response'..if not there, assume the rev 2
 
         def get_redirect_url(response):
             url = None
@@ -1259,10 +1194,6 @@ class H2O(object):
         if self.aws_credentials:
             args += ['--aws_credentials=' + self.aws_credentials]
 
-        # passed thru build_cloud in test, or global from commandline arg
-        if self.random_udp_drop or random_udp_drop:
-            args += ['--random_udp_drop']
-
         if self.disable_h2o_log:
             args += ['--nolog']
 
@@ -1281,9 +1212,6 @@ class H2O(object):
                  aws_credentials=None,
                  use_flatfile=False, java_heap_GB=None, java_heap_MB=None, java_extra_args=None,
                  use_home_for_ice=False, node_id=None, username=None,
-                 random_udp_drop=False,
-                 redirect_import_folder_to_s3_path=None,
-                 redirect_import_folder_to_s3n_path=None,
                  disable_h2o_log=False,
                  enable_benchmark_log=False,
                  h2o_remote_buckets_root=None,
@@ -1312,9 +1240,6 @@ class H2O(object):
                     hdfs_version = "cdh3"
                 else: # ec2
                     hdfs_version = "0.20.2"
-
-        self.redirect_import_folder_to_s3_path = redirect_import_folder_to_s3_path
-        self.redirect_import_folder_to_s3n_path = redirect_import_folder_to_s3n_path
 
         self.aws_credentials = aws_credentials
         self.port = port
@@ -1364,7 +1289,6 @@ class H2O(object):
         self.sandbox_error_was_reported = False
         self.sandbox_ignore_errors = False
 
-        self.random_udp_drop = random_udp_drop
         self.disable_h2o_log = disable_h2o_log
 
         # this dumps stats from tests, and perf stats while polling to benchmark.log
