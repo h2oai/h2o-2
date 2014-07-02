@@ -30,7 +30,7 @@ h2o.deeplearning(x, y, data, classification = TRUE, nfolds = 0, validation,
         \item{classification}{ (Optional) A logical value indicating whether the algorithm should conduct classification. }
         \item{nfolds}{(Optional) Number of folds for cross-validation. If \code{nfolds >= 2}, then \code{validation} must remain empty.}
         \item{validation}{(Optional) An \code{\linkS4class{H2OParsedData}} object indicating the validation dataset used to construct confusion matrix. If left blank, this defaults to the training data when \code{nfolds = 0}.}
-        \item{activation}{A string indicating the activation function to use. Must be either "Tanh", "TanhDropout", "Rectifier", "RectifierDropout", "Maxout" or "MaxoutDropout".}
+        \item{activation}{A string indicating the activation function to use. Must be either "Tanh", "TanhWithDropout", "Rectifier", "RectifierWithDropout", "Maxout" or "MaxoutWithDropout".}
         \item{hidden}{ Hidden layer sizes (e.g. c(100,100)}
 
         %- BEGIN AUTO-GENERATED CODE
