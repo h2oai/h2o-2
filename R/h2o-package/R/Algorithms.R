@@ -1163,12 +1163,12 @@ h2o.performance <- function(data, reference, measure = "accuracy", thresholds) {
   if(class(reference) != "H2OParsedData") stop("reference must be an H2O parsed dataset")
   if(ncol(data) != 1) stop("Must specify exactly one column for data")
   if(ncol(reference) != 1) stop("Must specify exactly one column for reference")
-  if(!measure %in% c("F1", "accuracy", "precision", "recall", "specificity", "max_per_class_error"))
-    stop("measure must be one of [F1, accuracy, precision, recall, specificity, max_per_class_error]")
+  if(!measure %in% c("F1", "F2", "accuracy", "precision", "recall", "specificity", "mcc", "max_per_class_error"))
+    stop("measure must be one of [F1, F2, accuracy, precision, recall, specificity, mcc, max_per_class_error]")
   if(!missing(thresholds) && !is.numeric(thresholds)) stop("thresholds must be a numeric vector")
   
-  criterion = switch(measure, F1 = "maximum_F1", accuracy = "maximum_Accuracy", precision = "maximum_Precision",
-                     recall = "maximum_Recall", specificity = "maximum_Specificity", max_per_class_error = "minimizing_max_per_class_Error")
+  criterion = switch(measure, F1 = "maximum_F1", F2 = "maximum_F2", accuracy = "maximum_Accuracy", precision = "maximum_Precision",
+                     recall = "maximum_Recall", specificity = "maximum_Specificity", mcc = "maximum_absolute_MCC", max_per_class_error = "minimizing_max_per_class_Error")
   if(missing(thresholds))
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_AUC, actual = reference@key, vactual = 0, predict = data@key, vpredict = 0, threshold_criterion = criterion)
   else
@@ -1194,10 +1194,12 @@ h2o.performance <- function(data, reference, measure = "accuracy", thresholds) {
   result$gini = res$Gini
   result$best_cutoff = res$threshold_for_criteria[[idx]]
   result$F1 = res$F1_for_criteria[[idx]]
+  result$F2 = res$F2_for_criteria[[idx]]
   result$accuracy = res$accuracy_for_criteria[[idx]]
   result$precision = res$precision_for_criteria[[idx]]
   result$recall = res$recall_for_criteria[[idx]]
   result$specificity = res$specificity_for_criteria[[idx]]
+  result$mcc = res$mcc_for_criteria[[idx]]
   result$max_per_class_err = res$max_per_class_error_for_criteria[[idx]]
   result = lapply(result, function(x) { if(x == "NaN") x = NaN; return(x) })   # HACK: NaNs are returned as strings, not numeric values
   
