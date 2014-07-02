@@ -1485,7 +1485,211 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     return true;
   }
 
-  public boolean toJavaHtml(StringBuilder sb) { return false; }
-  @Override public String toJava() { return "Not yet implemented."; }
+  public void toJavaHtml(StringBuilder sb) {
+    sb.append("<br /><br /><div class=\"pull-right\"><a href=\"#\" onclick=\'$(\"#javaModel\").toggleClass(\"hide\");\'" +
+            "class=\'btn btn-inverse btn-mini\'>Java Model</a></div><br /><div class=\"hide\" id=\"javaModel\">");
+
+    boolean featureAllowed = true; //isFeatureAllowed();
+    if (! featureAllowed) {
+      sb.append("<br/><div id=\'javaModelWarningBlock\' class=\"alert\" style=\"background:#eedd20;color:#636363;text-shadow:none;\">");
+      sb.append("<b>You have requested a premium feature and your H<sub>2</sub>O software is unlicensed.</b><br/><br/>");
+      sb.append("Please enter your email address below, and we will send you a trial license shortly.<br/>");
+      sb.append("This will also temporarily enable downloading Java models.<br/>");
+      sb.append("<form class=\'form-inline\'><input id=\"emailForJavaModel\" class=\"span5\" type=\"text\" placeholder=\"Email\"/> ");
+      sb.append("<a href=\"#\" onclick=\'processJavaModelLicense();\' class=\'btn btn-inverse\'>Send</a></form></div>");
+      sb.append("<div id=\"javaModelSource\" class=\"hide\"><pre style=\"overflow-y:scroll;\"><code class=\"language-java\">");
+      DocGen.HTML.escape(sb, toJava());
+      sb.append("</code></pre></div>");
+    }
+    else if( model_info().size() > 100000 ) {
+      String modelName = JCodeGen.toJavaId(_key.toString());
+      sb.append("<pre style=\"overflow-y:scroll;\"><code class=\"language-java\">");
+      sb.append("/* Java code is too large to display, download it directly.\n");
+      sb.append("   To obtain the code please invoke in your terminal:\n");
+      sb.append("     curl http:/").append(H2O.SELF.toString()).append("/h2o-model.jar > h2o-model.jar\n");
+      sb.append("     curl http:/").append(H2O.SELF.toString()).append("/2/").append(this.getClass().getSimpleName()).append("View.java?_modelKey=").append(_key).append(" > ").append(modelName).append(".java\n");
+      sb.append("     javac -cp h2o-model.jar -J-Xmx2g -J-XX:MaxPermSize=128m ").append(modelName).append(".java\n");
+      sb.append("*/");
+      sb.append("</code></pre>");
+    } else {
+      sb.append("<pre style=\"overflow-y:scroll;\"><code class=\"language-java\">");
+      DocGen.HTML.escape(sb, toJava());
+      sb.append("</code></pre>");
+    }
+    sb.append("</div>");
+    sb.append("<script type=\"text/javascript\">$(document).ready(showOrHideJavaModel);</script>");
+  }
+
+  @Override protected SB toJavaInit(SB sb, SB fileContextSB) {
+    sb = super.toJavaInit(sb, fileContextSB);
+    JCodeGen.toStaticVar(sb, "NUMS", new double[model_info().data_info()._nums], "Workspace for storing numerical input variables.");
+    JCodeGen.toStaticVar(sb, "CATS", new int[model_info().data_info()._cats], "Workspace for storing categorical input variables.");
+    JCodeGen.toStaticVar(sb, "CATOFFSETS", model_info().data_info()._catOffsets, "Workspace for categorical offsets.");
+    JCodeGen.toStaticVar(sb, "NORMMUL", model_info().data_info()._normMul, "Standardization/Normalization scaling factor for numerical variables.");
+    JCodeGen.toStaticVar(sb, "NORMSUB", model_info().data_info()._normSub, "Standardization/Normalization offset for numerical variables.");
+    JCodeGen.toStaticVar(sb, "NORMRESPMUL", model_info().data_info()._normRespMul, "Standardization/Normalization scaling factor for response.");
+    JCodeGen.toStaticVar(sb, "NORMRESPSUB", model_info().data_info()._normRespSub, "Standardization/Normalization offset for response.");
+
+    Neurons[] neurons = DeepLearningTask.makeNeuronsForTesting(model_info());
+    int[] layers = new int[neurons.length];
+    for (int i=0;i<neurons.length;++i)
+      layers[i] = neurons[i].units;
+    JCodeGen.toStaticVar(sb, "NEURONS", layers, "Number of neurons for each layer.");
+
+    // activation storage
+    sb.i().p("// Storage for neuron activation values.").nl();
+    sb.i().p("public static final float[][] ACTIVATION = new float[][] {").nl();
+    for (int i=0; i<neurons.length; i++) {
+      String colInfoClazz = "Activation_"+i;
+      sb.i(1).p("/* ").p(neurons[i].getClass().getSimpleName()).p(" */ ");
+      sb.p(colInfoClazz).p(".VALUES");
+      if (i!=neurons.length-1) sb.p(',');
+      sb.nl();
+      fileContextSB.i().p("// Neuron activation values for ").p(neurons[i].getClass().getSimpleName()).p(" layer").nl();
+      JCodeGen.toClassWithArray(fileContextSB, null, colInfoClazz, new float[layers[i]]);
+    }
+    sb.i().p("};").nl();
+
+    // biases
+    sb.i().p("// Neuron bias values.").nl();
+    sb.i().p("public static final float[][] BIAS = new float[][] {").nl();
+    for (int i=0; i<neurons.length; i++) {
+      String colInfoClazz = "Bias_"+i;
+      sb.i(1).p("/* ").p(neurons[i].getClass().getSimpleName()).p(" */ ");
+      sb.p(colInfoClazz).p(".VALUES");
+      if (i!=neurons.length-1) sb.p(',');
+      sb.nl();
+      fileContextSB.i().p("// Neuron bias values for ").p(neurons[i].getClass().getSimpleName()).p(" layer").nl();
+      float[] bias = i == 0 ? null : new float[model_info().get_biases(i-1).size()];
+      if (i>0) {
+        for (int j=0; j<bias.length; ++j) bias[j] = model_info().get_biases(i-1).get(j);
+      }
+      JCodeGen.toClassWithArray(fileContextSB, null, colInfoClazz, bias);
+    }
+    sb.i().p("};").nl();
+
+    // weights
+    sb.i().p("// Connecting weights between neurons.").nl();
+    sb.i().p("public static final float[][] WEIGHT = new float[][] {").nl();
+    for (int i=0; i<neurons.length; i++) {
+      String colInfoClazz = "Weight_"+i;
+      sb.i(1).p("/* ").p(neurons[i].getClass().getSimpleName()).p(" */ ");
+      sb.p(colInfoClazz).p(".VALUES");
+      if (i!=neurons.length-1) sb.p(',');
+      sb.nl();
+      if (i > 0) {
+        fileContextSB.i().p("// Neuron weights connecting ").
+                p(neurons[i - 1].getClass().getSimpleName()).p(" and ").
+                p(neurons[i].getClass().getSimpleName()).
+                p(" layer").nl();
+      }
+      float[] weights = i == 0 ? null : new float[model_info().get_weights(i-1).rows()*model_info().get_weights(i-1).cols()];
+      if (i>0) {
+        final int rows = model_info().get_weights(i-1).rows();
+        final int cols = model_info().get_weights(i-1).cols();
+        for (int j=0; j<rows; ++j)
+          for (int k=0; k<cols; ++k)
+            weights[j*cols+k] = model_info().get_weights(i-1).get(j,k);
+      }
+      JCodeGen.toClassWithArray(fileContextSB, null, colInfoClazz, weights);
+    }
+    sb.i().p("};").nl();
+
+    return sb;
+  }
+
+  @Override protected void toJavaPredictBody( final SB bodySb, final SB classCtxSb, final SB fileCtxSb) {
+    SB model = new SB();
+    bodySb.i().p("java.util.Arrays.fill(preds,0f);").nl();
+    // initialize input layer
+    if (model_info().data_info()._nums > 0) bodySb.i().p("java.util.Arrays.fill(NUMS,0f);").nl();
+    if (model_info().data_info()._cats > 0) bodySb.i().p("java.util.Arrays.fill(CATS,0);").nl();
+    bodySb.i().p("int i = 0, ncats = 0;").nl();
+    final int cats = model_info().data_info()._cats;
+    if (cats > 0) {
+      bodySb.i().p("for(; i<"+cats+"; ++i) {").nl();
+      bodySb.i(1).p("if (!Double.isNaN(data[i])) {").nl();
+      bodySb.i(2).p("int c = (int) data[i];").nl();
+      if (model_info().data_info()._useAllFactorLevels)
+        bodySb.i(2).p("CATS[ncats++] = c + CATOFFSETS[i];").nl();
+      else
+        bodySb.i(2).p("if (c != 0) CATS[ncats++] = c + CATOFFSETS[i] - 1;").nl();
+      bodySb.i(1).p("}").nl();
+      bodySb.i().p("}").nl();
+    }
+    bodySb.i().p("final int n = data.length;").nl();
+    bodySb.i().p("for(; i<n; ++i) {").nl();
+    bodySb.i(1).p("NUMS[i"+(cats>0?"-"+cats:"")+"] = Double.isNaN(data[i]) ? 0 : ");
+    if (model_info().data_info()._normMul != null) {
+      bodySb.p("(data[i] - NORMSUB[i" + (cats > 0 ? "-" + cats : "") + "])*NORMMUL[i" + (cats > 0 ? "-" + cats : "") + "];").nl();
+    }
+    else {
+      bodySb.i(1).p("data[i];").nl();
+    }
+    bodySb.i(0).p("}").nl();
+    if (model_info().data_info()._cats > 0) {
+      bodySb.i().p("for (i=0; i<ncats; ++i) ACTIVATION[0][CATS[i]] = 1f;").nl();
+    }
+    if (model_info().data_info()._nums > 0) {
+      bodySb.i().p("for (i=0; i<NUMS.length; ++i) {").nl().i(1).p("ACTIVATION[0][CATOFFSETS[CATOFFSETS.length-1] + i] = Double.isNaN(NUMS[i]) ? 0f : (float) NUMS[i];").nl();
+      bodySb.i().p("}").nl();
+    }
+
+    // make prediction: forward propagation
+    bodySb.i().p("for (i=1; i<ACTIVATION.length; ++i) {").nl();
+    bodySb.i(1).p("java.util.Arrays.fill(ACTIVATION[i],0f);").nl();
+    bodySb.i(1).p("for (int r=0; r<ACTIVATION[i].length; ++r) {").nl();
+    bodySb.i(2).p("final int cols = ACTIVATION[i-1].length;").nl();
+    bodySb.i(2).p("for (int c = 0; c < cols; ++c) {").nl();
+    bodySb.i(3).p("ACTIVATION[i][r] += ACTIVATION[i-1][c] * WEIGHT[i][r*cols+c];").nl();
+    bodySb.i(2).p("}").nl();
+    bodySb.i(2).p("ACTIVATION[i][r] += BIAS[i][r];").nl();
+    bodySb.i(1).p("}").nl();
+    bodySb.i(1).p("if (i<ACTIVATION.length-1) {").nl();
+    bodySb.i(2).p("for (int r=0; r<ACTIVATION[i].length; ++r) {").nl();
+    if (get_params().activation == DeepLearning.Activation.Tanh
+            || get_params().activation == DeepLearning.Activation.TanhWithDropout)
+      bodySb.i(3).p("ACTIVATION[i][r] = 1f - 2f / (1f + (float)Math.exp(2*ACTIVATION[i][r]));").nl();
+    else if (get_params().activation == DeepLearning.Activation.Rectifier
+            || get_params().activation == DeepLearning.Activation.RectifierWithDropout)
+      bodySb.i(3).p("ACTIVATION[i][r] = Math.max(0f, ACTIVATION[i][r]);").nl();
+    else throw new UnsupportedOperationException("Maxout POJO scoring is not yet implemented.");
+    bodySb.i(2).p("}").nl();
+    bodySb.i(1).p("}").nl();
+    if (isClassifier()) {
+      bodySb.i(1).p("else {").nl();
+        // softmax
+        bodySb.i(2).p("float max = ACTIVATION[i][0];").nl();
+        bodySb.i(2).p("for (int r = 1; r < ACTIVATION[i].length; r++) {").nl();
+          bodySb.i(3).p("if (ACTIVATION[i][r]>max) max = ACTIVATION[i][r];").nl();
+        bodySb.i(2).p("}").nl();
+        bodySb.i(2).p("float scale = 0f;").nl();
+        bodySb.i(2).p("for (int r = 0; r < ACTIVATION[i].length; r++) {").nl();
+          bodySb.i(3).p("ACTIVATION[i][r] = (float) Math.exp(ACTIVATION[i][r] - max);").nl();
+          bodySb.i(3).p("scale += ACTIVATION[i][r];").nl();
+        bodySb.i(2).p("}").nl();
+        bodySb.i(2).p("for (int r = 0; r < ACTIVATION[i].length; r++) {").nl();
+          bodySb.i(3).p("if (Float.isNaN(ACTIVATION[i][r]))").nl();
+            bodySb.i(4).p("throw new RuntimeException(\"Numerical instability, predicted NaN.\");").nl();
+          bodySb.i(3).p("ACTIVATION[i][r] /= scale;").nl();
+          bodySb.i(3).p("preds[r+1] = ACTIVATION[i][r];").nl();
+        bodySb.i(2).p("}").nl();
+      bodySb.i(1).p("}").nl();
+      bodySb.i().p("}").nl();
+    } else {
+      bodySb.i().p("}").nl();
+      // regression: set preds[1], FillPreds0 will put it into preds[0]
+      if (model_info().data_info()._normRespMul != null) {
+        bodySb.i().p("preds[1] = (float) (ACTIVATION[ACTIVATION.length-1][0] / NORMRESPMUL[0] + NORMRESPSUB[0]);").nl();
+      }
+      else
+        bodySb.i().p("preds[1] = ACTIVATION[ACTIVATION.length-1][0];").nl();
+      bodySb.i().p("if (Float.isNaN(preds[1])) throw new RuntimeException(\"Predicted regression target NaN!\");").nl();
+    }
+
+    fileCtxSb.p(model);
+    toJavaUnifyPreds(bodySb);
+    toJavaFillPreds0(bodySb);
+  }
 }
 
