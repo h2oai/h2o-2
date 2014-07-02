@@ -384,7 +384,10 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
             continue;
           }
           else if (i < neurons.length-1) {
-            sb.append("  " + Utils.formatPct(neurons[i].params.hidden_dropout_ratios[i - 1]) + " ");
+            if (neurons[i].params.hidden_dropout_ratios == null)
+              sb.append("  " + Utils.formatPct(0) + " ");
+            else
+              sb.append("  " + Utils.formatPct(neurons[i].params.hidden_dropout_ratios[i - 1]) + " ");
           } else {
             sb.append("          ");
           }
@@ -1206,7 +1209,10 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
         }
         else if (i < neurons.length-1) {
           sb.append("<td>");
-          sb.append(Utils.formatPct(neurons[i].params.hidden_dropout_ratios[i - 1]));
+          if (neurons[i].params.hidden_dropout_ratios == null)
+            sb.append(Utils.formatPct(0));
+          else
+            sb.append(Utils.formatPct(neurons[i].params.hidden_dropout_ratios[i - 1]));
           sb.append("</td>");
         } else {
           sb.append("<td></td>");
@@ -1522,13 +1528,22 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
   @Override protected SB toJavaInit(SB sb, SB fileContextSB) {
     sb = super.toJavaInit(sb, fileContextSB);
-    JCodeGen.toStaticVar(sb, "NUMS", new double[model_info().data_info()._nums], "Workspace for storing numerical input variables.");
-    JCodeGen.toStaticVar(sb, "CATS", new int[model_info().data_info()._cats], "Workspace for storing categorical input variables.");
+    if (model_info().data_info()._nums > 0) {
+      JCodeGen.toStaticVar(sb, "NUMS", new double[model_info().data_info()._nums], "Workspace for storing numerical input variables.");
+      JCodeGen.toStaticVar(sb, "NORMMUL", model_info().data_info()._normMul, "Standardization/Normalization scaling factor for numerical variables.");
+      JCodeGen.toStaticVar(sb, "NORMSUB", model_info().data_info()._normSub, "Standardization/Normalization offset for numerical variables.");
+    }
+    if (model_info().data_info()._cats > 0) {
+      JCodeGen.toStaticVar(sb, "CATS", new int[model_info().data_info()._cats], "Workspace for storing categorical input variables.");
+    }
     JCodeGen.toStaticVar(sb, "CATOFFSETS", model_info().data_info()._catOffsets, "Workspace for categorical offsets.");
-    JCodeGen.toStaticVar(sb, "NORMMUL", model_info().data_info()._normMul, "Standardization/Normalization scaling factor for numerical variables.");
-    JCodeGen.toStaticVar(sb, "NORMSUB", model_info().data_info()._normSub, "Standardization/Normalization offset for numerical variables.");
-    JCodeGen.toStaticVar(sb, "NORMRESPMUL", model_info().data_info()._normRespMul, "Standardization/Normalization scaling factor for response.");
-    JCodeGen.toStaticVar(sb, "NORMRESPSUB", model_info().data_info()._normRespSub, "Standardization/Normalization offset for response.");
+    if (model_info().data_info()._normRespMul != null) {
+      JCodeGen.toStaticVar(sb, "NORMRESPMUL", model_info().data_info()._normRespMul, "Standardization/Normalization scaling factor for response.");
+      JCodeGen.toStaticVar(sb, "NORMRESPSUB", model_info().data_info()._normRespSub, "Standardization/Normalization offset for response.");
+    }
+    if (get_params().hidden_dropout_ratios != null) {
+      JCodeGen.toStaticVar(sb, "HIDDEN_DROPOUT_RATIOS", get_params().hidden_dropout_ratios, "Hidden layer dropout ratios.");
+    }
 
     Neurons[] neurons = DeepLearningTask.makeNeuronsForTesting(model_info());
     int[] layers = new int[neurons.length];
@@ -1601,11 +1616,12 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   @Override protected void toJavaPredictBody( final SB bodySb, final SB classCtxSb, final SB fileCtxSb) {
     SB model = new SB();
     bodySb.i().p("java.util.Arrays.fill(preds,0f);").nl();
-    // initialize input layer
-    if (model_info().data_info()._nums > 0) bodySb.i().p("java.util.Arrays.fill(NUMS,0f);").nl();
-    if (model_info().data_info()._cats > 0) bodySb.i().p("java.util.Arrays.fill(CATS,0);").nl();
-    bodySb.i().p("int i = 0, ncats = 0;").nl();
     final int cats = model_info().data_info()._cats;
+    final int nums = model_info().data_info()._nums;
+    // initialize input layer
+    if (nums > 0) bodySb.i().p("java.util.Arrays.fill(NUMS,0f);").nl();
+    if (cats > 0) bodySb.i().p("java.util.Arrays.fill(CATS,0);").nl();
+    bodySb.i().p("int i = 0, ncats = 0;").nl();
     if (cats > 0) {
       bodySb.i().p("for(; i<"+cats+"; ++i) {").nl();
       bodySb.i(1).p("if (!Double.isNaN(data[i])) {").nl();
@@ -1617,21 +1633,23 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       bodySb.i(1).p("}").nl();
       bodySb.i().p("}").nl();
     }
-    bodySb.i().p("final int n = data.length;").nl();
-    bodySb.i().p("for(; i<n; ++i) {").nl();
-    bodySb.i(1).p("NUMS[i"+(cats>0?"-"+cats:"")+"] = Double.isNaN(data[i]) ? 0 : ");
-    if (model_info().data_info()._normMul != null) {
-      bodySb.p("(data[i] - NORMSUB[i" + (cats > 0 ? "-" + cats : "") + "])*NORMMUL[i" + (cats > 0 ? "-" + cats : "") + "];").nl();
+    if (nums > 0) {
+      bodySb.i().p("final int n = data.length;").nl();
+      bodySb.i().p("for(; i<n; ++i) {").nl();
+        bodySb.i(1).p("NUMS[i" + (cats > 0 ? "-" + cats : "") + "] = Double.isNaN(data[i]) ? 0 : ");
+      if (model_info().data_info()._normMul != null) {
+        bodySb.i(1).p("(data[i] - NORMSUB[i" + (cats > 0 ? "-" + cats : "") + "])*NORMMUL[i" + (cats > 0 ? "-" + cats : "") + "];").nl();
+      } else {
+        bodySb.i(1).p("data[i];").nl();
+      }
+      bodySb.i(0).p("}").nl();
     }
-    else {
-      bodySb.i(1).p("data[i];").nl();
-    }
-    bodySb.i(0).p("}").nl();
-    if (model_info().data_info()._cats > 0) {
+    if (cats > 0) {
       bodySb.i().p("for (i=0; i<ncats; ++i) ACTIVATION[0][CATS[i]] = 1f;").nl();
     }
-    if (model_info().data_info()._nums > 0) {
-      bodySb.i().p("for (i=0; i<NUMS.length; ++i) {").nl().i(1).p("ACTIVATION[0][CATOFFSETS[CATOFFSETS.length-1] + i] = Double.isNaN(NUMS[i]) ? 0f : (float) NUMS[i];").nl();
+    if (nums > 0) {
+      bodySb.i().p("for (i=0; i<NUMS.length; ++i) {").nl();
+        bodySb.i(1).p("ACTIVATION[0][CATOFFSETS[CATOFFSETS.length-1] + i] = Double.isNaN(NUMS[i]) ? 0f : (float) NUMS[i];").nl();
       bodySb.i().p("}").nl();
     }
 
@@ -1639,22 +1657,24 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     bodySb.i().p("for (i=1; i<ACTIVATION.length; ++i) {").nl();
     bodySb.i(1).p("java.util.Arrays.fill(ACTIVATION[i],0f);").nl();
     bodySb.i(1).p("for (int r=0; r<ACTIVATION[i].length; ++r) {").nl();
-    bodySb.i(2).p("final int cols = ACTIVATION[i-1].length;").nl();
-    bodySb.i(2).p("for (int c = 0; c < cols; ++c) {").nl();
-    bodySb.i(3).p("ACTIVATION[i][r] += ACTIVATION[i-1][c] * WEIGHT[i][r*cols+c];").nl();
-    bodySb.i(2).p("}").nl();
-    bodySb.i(2).p("ACTIVATION[i][r] += BIAS[i][r];").nl();
+      bodySb.i(2).p("final int cols = ACTIVATION[i-1].length;").nl();
+      bodySb.i(2).p("for (int c = 0; c < cols; ++c) {").nl();
+        bodySb.i(3).p("ACTIVATION[i][r] += ACTIVATION[i-1][c] * WEIGHT[i][r*cols+c];").nl();
+      bodySb.i(2).p("}").nl();
+      bodySb.i(2).p("ACTIVATION[i][r] += BIAS[i][r];").nl();
     bodySb.i(1).p("}").nl();
     bodySb.i(1).p("if (i<ACTIVATION.length-1) {").nl();
-    bodySb.i(2).p("for (int r=0; r<ACTIVATION[i].length; ++r) {").nl();
+      bodySb.i(2).p("for (int r=0; r<ACTIVATION[i].length; ++r) {").nl();
     if (get_params().activation == DeepLearning.Activation.Tanh
             || get_params().activation == DeepLearning.Activation.TanhWithDropout)
-      bodySb.i(3).p("ACTIVATION[i][r] = 1f - 2f / (1f + (float)Math.exp(2*ACTIVATION[i][r]));").nl();
+        bodySb.i(3).p("ACTIVATION[i][r] = 1f - 2f / (1f + (float)Math.exp(2*ACTIVATION[i][r]));").nl();
     else if (get_params().activation == DeepLearning.Activation.Rectifier
             || get_params().activation == DeepLearning.Activation.RectifierWithDropout)
-      bodySb.i(3).p("ACTIVATION[i][r] = Math.max(0f, ACTIVATION[i][r]);").nl();
+        bodySb.i(3).p("ACTIVATION[i][r] = Math.max(0f, ACTIVATION[i][r]);").nl();
     else throw new UnsupportedOperationException("Maxout POJO scoring is not yet implemented.");
-    bodySb.i(2).p("}").nl();
+    if (get_params().hidden_dropout_ratios != null)
+        bodySb.i(3).p("ACTIVATION[i][r] *= HIDDEN_DROPOUT_RATIOS[i-1];").nl();
+      bodySb.i(2).p("}").nl();
     bodySb.i(1).p("}").nl();
     if (isClassifier()) {
       bodySb.i(1).p("else {").nl();

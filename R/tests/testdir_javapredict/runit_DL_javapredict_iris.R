@@ -28,10 +28,20 @@ classification = T
 # Run the tests
 #----------------------------------------------------------------------
 
+activation = "Tanh"
 balance_classes = T
 source('../Utils/shared_javapredict_DL.R')
 
 balance_classes = F
+source('../Utils/shared_javapredict_DL.R')
+
+activation = "TanhWithDropout"
+source('../Utils/shared_javapredict_DL.R')
+
+activation = "Rectifier"
+source('../Utils/shared_javapredict_DL.R')
+
+activation = "RectifierWithDropout"
 source('../Utils/shared_javapredict_DL.R')
 
 classification = F
