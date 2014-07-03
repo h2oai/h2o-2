@@ -1,7 +1,6 @@
 package hex.singlenoderf;
 
 import static org.junit.Assert.assertEquals;
-import hex.singlenoderf.Tree.StatType;
 import org.junit.BeforeClass;
 import water.*;
 import water.fvec.Frame;
