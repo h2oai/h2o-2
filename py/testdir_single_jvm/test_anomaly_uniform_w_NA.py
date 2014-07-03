@@ -3,12 +3,8 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_util, h2o_print as h2p
 
 ROWS = 10000 # passes
-ROWS = 100000 # passes
-ROWS = 1000000 # corrupted hcnt2_min/max and ratio 5
+COLS = 4
 NA_ROW_RATIO = 1
-
-print "Same as test_anomaly_uniform.py except for every data row,"
-print "5 rows of synthetic NA rows are added. results should be the same for quantiles"
 
 def write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax, SEED):
     r1 = random.Random(SEED)
@@ -24,14 +20,13 @@ def write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax,
         dsf.write(rowDataCsv + "\n")
 
         # add 5 rows of NAs, for every row of valid dat
-        if 1==1:
-            rowData = []
-            for j in range(colCount):
-                # this shouldn't be h2o parsed as an enum?...NA is special?
-                rowData.append(',,')
-            rowDataCsv = ",".join(map(str,rowData))
-            for k in range(NA_ROW_RATIO):
-                dsf.write(rowDataCsv + "\n")
+        rowData = []
+        for j in range(colCount):
+            # this shouldn't be h2o parsed as an enum?...NA is special?
+            rowData.append(',,')
+        rowDataCsv = ",".join(map(str,rowData))
+        for k in range(NA_ROW_RATIO):
+            dsf.write(rowDataCsv + "\n")
 
     dsf.close()
 
@@ -58,29 +53,25 @@ class Basic(unittest.TestCase):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             # colname, (min, 25th, 50th, 75th, max)
-            (ROWS, 1, 'x.hex', 1, 20000,        ('C1',  1.10, 5000.0, 10000.0, 15000.0, 20000.00)),
-            (ROWS, 1, 'x.hex', -5000, 0,        ('C1', -5001.00, -3750.0, -2445, -1200.0, 99)),
-            (ROWS, 1, 'x.hex', -100000, 100000, ('C1',  -100001.0, -50000.0, 1613.0, 50000.0, 100000.0)),
-            (ROWS, 1, 'x.hex', -1, 1,           ('C1',  -1.05, -0.48, 0.0087, 0.50, 1.00)),
+            (ROWS, COLS, 'x.hex', 1, 20000),
+            (ROWS, COLS, 'x.hex', -5000, 0),
+            (ROWS, COLS, 'x.hex', -100000, 100000),
+            (ROWS, COLS, 'x.hex', -1, 1),
 
-            (ROWS, 1, 'A.hex', 1, 100,          ('C1',   1.05, 26.00, 51.00, 76.00, 100.0)),
-            (ROWS, 1, 'A.hex', -99, 99,         ('C1',  -99, -50.0, 0, 50.00, 99)),
+            (ROWS, COLS, 'A.hex', 1, 100),
+            (ROWS, COLS, 'A.hex', -99, 99),
 
-            (ROWS, 1, 'B.hex', 1, 10000,        ('C1',   1.05, 2501.00, 5001.00, 7501.00, 10000.00)),
-            (ROWS, 1, 'B.hex', -100, 100,       ('C1',  -100.10, -50.0, 0.85, 51.7, 100,00)),
+            (ROWS, COLS, 'B.hex', 1, 10000),
+            (ROWS, COLS, 'B.hex', -100, 100),
 
-            (ROWS, 1, 'C.hex', 1, 100000,       ('C1',   1.05, 25002.00, 50002.00, 75002.00, 100000.00)),
-            (ROWS, 1, 'C.hex', -101, 101,       ('C1',  -100.10, -50.45, -1.18, 49.28, 100.00)),
+            (ROWS, COLS, 'C.hex', 1, 100000),
+            (ROWS, COLS, 'C.hex', -101, 101),
         ]
 
-        timeoutSecs = 10
         trial = 1
-        n = h2o.nodes[0]
-        lenNodes = len(h2o.nodes)
-
         x = 0
         timeoutSecs = 60
-        for (rowCount, colCount, hex_key, expectedMin, expectedMax, expected) in tryList:
+        for (rowCount, colCount, hex_key, expectedMin, expectedMax) in tryList:
             SEEDPERFILE = random.randint(0, sys.maxint)
             x += 1
 
@@ -98,15 +89,61 @@ class Basic(unittest.TestCase):
             numCols = inspect["numCols"]
             print "numRows:", numRows, "numCols:", numCols
 
+            model_key = "m.hex"
             kwargs = {
-                'destination_key': 'a.hex',
+                'ignored_cols'                 : None,
+                'response'                     : numCols-1,
+                'classification'               : 0,
+                'activation'                   : 'RectifierWithDropout',
+                'input_dropout_ratio'          : 0.2,
+                'hidden'                       : '117',
+                'adaptive_rate'                : 0,
+                'rate'                         : 0.005,
+                'rate_annealing'               : 1e-6,
+                'momentum_start'               : 0.5,
+                'momentum_ramp'                : 100000,
+                'momentum_stable'              : 0.9,
+                'l1'                           : 0.00001,
+                'l2'                           : 0.0000001,
+                'seed'                         : 98037452452,
+                # 'loss'                         : 'CrossEntropy',
+                'max_w2'                       : 15,
+                'initial_weight_distribution'  : 'UniformAdaptive',
+                #'initial_weight_scale'         : 0.01,
+                'epochs'                       : 2.0,
+                'destination_key'              : model_key,
+                # 'validation'                   : None,
+                'score_interval'               : 10000,
+                'autoencoder'                  : 1,
+                }
+
+            timeoutSecs = 600
+            start = time.time()
+            nn = h2o_cmd.runDeepLearning(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+            print "neural net end. took", time.time() - start, "seconds"
+
+
+            kwargs = {
+                'destination_key': "a.hex",
                 'source': parseResult['destination_key'],
-                'dl_autoencoder_model': 'd.hex',
+                'dl_autoencoder_model': model_key,
                 'thresh': 1.0
             }
 
-            # FIX! should try without polling (multiple)
-            anomaly = h2o.nodes[0].anomaly(None, **kwargs)
+            anomaly = h2o.nodes[0].anomaly(timeoutSecs=30, **kwargs)
+            inspect = h2o_cmd.runInspect(None, "a.hex")
+            numRows = inspect["numRows"]
+            numCols = inspect["numCols"]
+            print "anomaly: numRows:", numRows, "numCols:", numCols
+            self.assertEqual(numCols,1)
+            # twice as many rows because of NA injection
+            self.assertEqual(numRows,rowCount*(1 + NA_ROW_RATIO))
+
+            # first col has the anomaly info. other cols are the same as orig data
+            aSummary = h2o_cmd.runSummary(key='a.hex', cols=0)
+            h2o_cmd.infoFromSummary(aSummary)
+
+
             print "anomaly:", h2o.dump_json(anomaly)
             trial += 1
             h2i.delete_keys_at_all_nodes()

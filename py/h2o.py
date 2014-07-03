@@ -1170,7 +1170,7 @@ class H2O(object):
                  noise=None, benchmarkLogging=None, noPoll=False, reuseFirstPollUrl=False, noPrint=False):
         ### print "poll_url: pollTimeoutSecs", pollTimeoutSecs
         verboseprint('poll_url input: response:', dump_json(response))
-        print "at top of poll_url, timeoutSec: ", timeoutSecs
+        print "at top of poll_url, timeoutSecs: ", timeoutSecs
 
         # for the rev 2 stuff..the job_key, destination_key and redirect_url are just in the response
         # look for 'response'..if not there, assume the rev 2
@@ -2310,6 +2310,7 @@ class H2O(object):
     def deep_learning(self, data_key, timeoutSecs=60, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30,
                       noPoll=False, print_params=True, **kwargs):
         params_dict = {
+            'autoencoder': None,
             'destination_key': None,
             'source': data_key,
             'cols': None,
@@ -2396,7 +2397,7 @@ class H2O(object):
     def summary_page(self, key, timeoutSecs=60, noPrint=True, useVA=False, numRows=None, numCols=None, **kwargs):
         params_dict = {
             'source': key,
-            'cols': None,
+            'cols': None, # is this zero based like everything else?
             'max_ncols': 1000 if not numCols else numCols,
             'max_qbins': None,
         }
