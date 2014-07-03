@@ -1638,9 +1638,9 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       bodySb.i().p("for(; i<n; ++i) {").nl();
         bodySb.i(1).p("NUMS[i" + (cats > 0 ? "-" + cats : "") + "] = Double.isNaN(data[i]) ? 0 : ");
       if (model_info().data_info()._normMul != null) {
-        bodySb.i(1).p("(data[i] - NORMSUB[i" + (cats > 0 ? "-" + cats : "") + "])*NORMMUL[i" + (cats > 0 ? "-" + cats : "") + "];").nl();
+        bodySb.p("(data[i] - NORMSUB[i" + (cats > 0 ? "-" + cats : "") + "])*NORMMUL[i" + (cats > 0 ? "-" + cats : "") + "];").nl();
       } else {
-        bodySb.i(1).p("data[i];").nl();
+        bodySb.p("data[i];").nl();
       }
       bodySb.i(0).p("}").nl();
     }
@@ -1653,47 +1653,72 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       bodySb.i().p("}").nl();
     }
 
+    boolean tanh=(get_params().activation == DeepLearning.Activation.Tanh || get_params().activation == DeepLearning.Activation.TanhWithDropout);
+    boolean relu=(get_params().activation == DeepLearning.Activation.Rectifier || get_params().activation == DeepLearning.Activation.RectifierWithDropout);
+    boolean maxout=(get_params().activation == DeepLearning.Activation.Maxout || get_params().activation == DeepLearning.Activation.MaxoutWithDropout);
+
     // make prediction: forward propagation
     bodySb.i().p("for (i=1; i<ACTIVATION.length; ++i) {").nl();
     bodySb.i(1).p("java.util.Arrays.fill(ACTIVATION[i],0f);").nl();
+    if (maxout) {
+      bodySb.i(1).p("float rmax = 0;").nl();
+    }
     bodySb.i(1).p("for (int r=0; r<ACTIVATION[i].length; ++r) {").nl();
-      bodySb.i(2).p("final int cols = ACTIVATION[i-1].length;").nl();
-      bodySb.i(2).p("for (int c = 0; c < cols; ++c) {").nl();
-        bodySb.i(3).p("ACTIVATION[i][r] += ACTIVATION[i-1][c] * WEIGHT[i][r*cols+c];").nl();
-      bodySb.i(2).p("}").nl();
-      bodySb.i(2).p("ACTIVATION[i][r] += BIAS[i][r];").nl();
+    bodySb.i(2).p("final int cols = ACTIVATION[i-1].length;").nl();
+    if (maxout) {
+      bodySb.i(2).p("float cmax = Float.NEGATIVE_INFINITY;").nl();
+    }
+    bodySb.i(2).p("for (int c=0; c<cols; ++c) {").nl();
+    if (!maxout) {
+      bodySb.i(3).p("ACTIVATION[i][r] += ACTIVATION[i-1][c] * WEIGHT[i][r*cols+c];").nl();
+    } else {
+      bodySb.i(3).p("if (i<ACTIVATION.length-1) cmax = Math.max(ACTIVATION[i-1][c] * WEIGHT[i][r*cols+c], cmax);").nl();
+      bodySb.i(3).p("else ACTIVATION[i][r] += ACTIVATION[i-1][c] * WEIGHT[i][r*cols+c];").nl();
+    }
+    bodySb.i(2).p("}").nl();
+    if (maxout) {
+      bodySb.i(2).p("if (i<ACTIVATION.length-1) ACTIVATION[i][r] = Float.isInfinite(cmax) ? 0f : cmax;").nl();
+    }
+    bodySb.i(2).p("ACTIVATION[i][r] += BIAS[i][r];").nl();
+    if (maxout) {
+      bodySb.i(2).p("if (i<ACTIVATION.length-1) rmax = Math.max(rmax, ACTIVATION[i][r]);").nl();
+    }
     bodySb.i(1).p("}").nl();
-    bodySb.i(1).p("if (i<ACTIVATION.length-1) {").nl();
-      bodySb.i(2).p("for (int r=0; r<ACTIVATION[i].length; ++r) {").nl();
-    if (get_params().activation == DeepLearning.Activation.Tanh
-            || get_params().activation == DeepLearning.Activation.TanhWithDropout)
-        bodySb.i(3).p("ACTIVATION[i][r] = 1f - 2f / (1f + (float)Math.exp(2*ACTIVATION[i][r]));").nl();
-    else if (get_params().activation == DeepLearning.Activation.Rectifier
-            || get_params().activation == DeepLearning.Activation.RectifierWithDropout)
-        bodySb.i(3).p("ACTIVATION[i][r] = Math.max(0f, ACTIVATION[i][r]);").nl();
-    else throw new UnsupportedOperationException("Maxout POJO scoring is not yet implemented.");
-    if (get_params().hidden_dropout_ratios != null)
-        bodySb.i(3).p("ACTIVATION[i][r] *= HIDDEN_DROPOUT_RATIOS[i-1];").nl();
-      bodySb.i(2).p("}").nl();
-    bodySb.i(1).p("}").nl();
+
+    if (!maxout) bodySb.i(1).p("if (i<ACTIVATION.length-1) {").nl();
+    bodySb.i(2).p("for (int r=0; r<ACTIVATION[i].length; ++r) {").nl();
+    if (tanh) {
+      bodySb.i(3).p("ACTIVATION[i][r] = 1f - 2f / (1f + (float)Math.exp(2*ACTIVATION[i][r]));").nl();
+    } else if (relu) {
+      bodySb.i(3).p("ACTIVATION[i][r] = Math.max(0f, ACTIVATION[i][r]);").nl();
+    } else if (maxout) {
+      bodySb.i(3).p("if (rmax > 1 ) ACTIVATION[i][r] /= rmax;").nl();
+    }
+    if (get_params().hidden_dropout_ratios != null) {
+      if (maxout) bodySb.i(1).p("if (i<ACTIVATION.length-1) {").nl();
+      bodySb.i(3).p("ACTIVATION[i][r] *= HIDDEN_DROPOUT_RATIOS[i-1];").nl();
+      if (maxout) bodySb.i(1).p("}").nl();
+    }
+    bodySb.i(2).p("}").nl();
+    if (!maxout) bodySb.i(1).p("}").nl();
     if (isClassifier()) {
-      bodySb.i(1).p("else {").nl();
-        // softmax
-        bodySb.i(2).p("float max = ACTIVATION[i][0];").nl();
-        bodySb.i(2).p("for (int r = 1; r < ACTIVATION[i].length; r++) {").nl();
-          bodySb.i(3).p("if (ACTIVATION[i][r]>max) max = ACTIVATION[i][r];").nl();
-        bodySb.i(2).p("}").nl();
-        bodySb.i(2).p("float scale = 0f;").nl();
-        bodySb.i(2).p("for (int r = 0; r < ACTIVATION[i].length; r++) {").nl();
-          bodySb.i(3).p("ACTIVATION[i][r] = (float) Math.exp(ACTIVATION[i][r] - max);").nl();
-          bodySb.i(3).p("scale += ACTIVATION[i][r];").nl();
-        bodySb.i(2).p("}").nl();
-        bodySb.i(2).p("for (int r = 0; r < ACTIVATION[i].length; r++) {").nl();
-          bodySb.i(3).p("if (Float.isNaN(ACTIVATION[i][r]))").nl();
-            bodySb.i(4).p("throw new RuntimeException(\"Numerical instability, predicted NaN.\");").nl();
-          bodySb.i(3).p("ACTIVATION[i][r] /= scale;").nl();
-          bodySb.i(3).p("preds[r+1] = ACTIVATION[i][r];").nl();
-        bodySb.i(2).p("}").nl();
+      bodySb.i(1).p("if (i == ACTIVATION.length-1) {").nl();
+      // softmax
+      bodySb.i(2).p("float max = ACTIVATION[i][0];").nl();
+      bodySb.i(2).p("for (int r=1; r<ACTIVATION[i].length; r++) {").nl();
+      bodySb.i(3).p("if (ACTIVATION[i][r]>max) max = ACTIVATION[i][r];").nl();
+      bodySb.i(2).p("}").nl();
+      bodySb.i(2).p("float scale = 0f;").nl();
+      bodySb.i(2).p("for (int r=0; r<ACTIVATION[i].length; r++) {").nl();
+      bodySb.i(3).p("ACTIVATION[i][r] = (float) Math.exp(ACTIVATION[i][r] - max);").nl();
+      bodySb.i(3).p("scale += ACTIVATION[i][r];").nl();
+      bodySb.i(2).p("}").nl();
+      bodySb.i(2).p("for (int r=0; r<ACTIVATION[i].length; r++) {").nl();
+      bodySb.i(3).p("if (Float.isNaN(ACTIVATION[i][r]))").nl();
+      bodySb.i(4).p("throw new RuntimeException(\"Numerical instability, predicted NaN.\");").nl();
+      bodySb.i(3).p("ACTIVATION[i][r] /= scale;").nl();
+      bodySb.i(3).p("preds[r+1] = ACTIVATION[i][r];").nl();
+      bodySb.i(2).p("}").nl();
       bodySb.i(1).p("}").nl();
       bodySb.i().p("}").nl();
     } else {
@@ -1702,8 +1727,9 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       if (model_info().data_info()._normRespMul != null) {
         bodySb.i().p("preds[1] = (float) (ACTIVATION[ACTIVATION.length-1][0] / NORMRESPMUL[0] + NORMRESPSUB[0]);").nl();
       }
-      else
+      else {
         bodySb.i().p("preds[1] = ACTIVATION[ACTIVATION.length-1][0];").nl();
+      }
       bodySb.i().p("if (Float.isNaN(preds[1])) throw new RuntimeException(\"Predicted regression target NaN!\");").nl();
     }
 
