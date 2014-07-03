@@ -30,7 +30,7 @@ epochs = 2
 #----------------------------------------------------------------------
 
 # large network
-hidden = c(1000,1000,1000)
+hidden = c(500,500,500)
 source('../Utils/shared_javapredict_DL.R')
 
 # with imbalance correction
