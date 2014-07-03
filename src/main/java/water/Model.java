@@ -649,7 +649,7 @@ public abstract class Model extends Lockable<Model> {
     return sb;
   }
   private SB toJavaNAMES( SB sb ) { return JCodeGen.toStaticVar(sb, "NAMES", _names, "Names of columns used by model."); }
-  private SB toJavaNCLASSES( SB sb ) { return JCodeGen.toStaticVar(sb, "NCLASSES", nclasses(), "Number of output classes included in training data response column."); }
+  private SB toJavaNCLASSES( SB sb ) { return isClassifier() ? JCodeGen.toStaticVar(sb, "NCLASSES", nclasses(), "Number of output classes included in training data response column.") : sb; }
   private SB toJavaDOMAINS( SB sb, SB fileContextSB ) {
     sb.nl();
     sb.ii(1);
@@ -692,7 +692,7 @@ public abstract class Model extends Lockable<Model> {
     ccsb.p("  public final float[] predict( double[] data, float[] preds) { return predict( data, preds, "+toJavaDefaultMaxIters()+"); }").nl();
     ccsb.p("  public final float[] predict( double[] data, float[] preds, int maxIters ) {").nl();
     SB classCtxSb = new SB();
-    toJavaPredictBody(ccsb.ii(2), classCtxSb, fileCtxSb); ccsb.di(1);
+    toJavaPredictBody(ccsb.ii(1), classCtxSb, fileCtxSb); ccsb.di(1);
     ccsb.p("    return preds;").nl();
     ccsb.p("  }").nl();
     ccsb.p(classCtxSb);

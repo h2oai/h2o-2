@@ -1552,25 +1552,25 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     JCodeGen.toStaticVar(sb, "NEURONS", layers, "Number of neurons for each layer.");
 
     // activation storage
-    sb.i().p("// Storage for neuron activation values.").nl();
-    sb.i().p("public static final float[][] ACTIVATION = new float[][] {").nl();
+    sb.i(1).p("// Storage for neuron activation values.").nl();
+    sb.i(1).p("public static final float[][] ACTIVATION = new float[][] {").nl();
     for (int i=0; i<neurons.length; i++) {
       String colInfoClazz = "Activation_"+i;
-      sb.i(1).p("/* ").p(neurons[i].getClass().getSimpleName()).p(" */ ");
+      sb.i(2).p("/* ").p(neurons[i].getClass().getSimpleName()).p(" */ ");
       sb.p(colInfoClazz).p(".VALUES");
       if (i!=neurons.length-1) sb.p(',');
       sb.nl();
       fileContextSB.i().p("// Neuron activation values for ").p(neurons[i].getClass().getSimpleName()).p(" layer").nl();
       JCodeGen.toClassWithArray(fileContextSB, null, colInfoClazz, new float[layers[i]]);
     }
-    sb.i().p("};").nl();
+    sb.i(1).p("};").nl();
 
     // biases
-    sb.i().p("// Neuron bias values.").nl();
-    sb.i().p("public static final float[][] BIAS = new float[][] {").nl();
+    sb.i(1).p("// Neuron bias values.").nl();
+    sb.i(1).p("public static final float[][] BIAS = new float[][] {").nl();
     for (int i=0; i<neurons.length; i++) {
       String colInfoClazz = "Bias_"+i;
-      sb.i(1).p("/* ").p(neurons[i].getClass().getSimpleName()).p(" */ ");
+      sb.i(2).p("/* ").p(neurons[i].getClass().getSimpleName()).p(" */ ");
       sb.p(colInfoClazz).p(".VALUES");
       if (i!=neurons.length-1) sb.p(',');
       sb.nl();
@@ -1581,14 +1581,14 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       }
       JCodeGen.toClassWithArray(fileContextSB, null, colInfoClazz, bias);
     }
-    sb.i().p("};").nl();
+    sb.i(1).p("};").nl();
 
     // weights
-    sb.i().p("// Connecting weights between neurons.").nl();
-    sb.i().p("public static final float[][] WEIGHT = new float[][] {").nl();
+    sb.i(1).p("// Connecting weights between neurons.").nl();
+    sb.i(1).p("public static final float[][] WEIGHT = new float[][] {").nl();
     for (int i=0; i<neurons.length; i++) {
       String colInfoClazz = "Weight_"+i;
-      sb.i(1).p("/* ").p(neurons[i].getClass().getSimpleName()).p(" */ ");
+      sb.i(2).p("/* ").p(neurons[i].getClass().getSimpleName()).p(" */ ");
       sb.p(colInfoClazz).p(".VALUES");
       if (i!=neurons.length-1) sb.p(',');
       sb.nl();
@@ -1608,7 +1608,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       }
       JCodeGen.toClassWithArray(fileContextSB, null, colInfoClazz, weights);
     }
-    sb.i().p("};").nl();
+    sb.i(1).p("};").nl();
 
     return sb;
   }
