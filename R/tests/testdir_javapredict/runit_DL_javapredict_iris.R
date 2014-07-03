@@ -60,10 +60,27 @@ source('../Utils/shared_javapredict_DL.R')
 
 # regression
 classification = F
+activation = "Tanh"
 x = c("species","sepal_len","sepal_wid","petal_len")
 y = c("petal_wid")
 source('../Utils/shared_javapredict_DL.R')
 
 # ignore a column
 x = c("species","sepal_wid","petal_len")
+source('../Utils/shared_javapredict_DL.R')
+
+# other activation functions
+activation = "TanhWithDropout"
+source('../Utils/shared_javapredict_DL.R')
+
+activation = "Rectifier"
+source('../Utils/shared_javapredict_DL.R')
+
+activation = "RectifierWithDropout"
+source('../Utils/shared_javapredict_DL.R')
+
+activation = "Maxout"
+source('../Utils/shared_javapredict_DL.R')
+
+activation = "MaxoutWithDropout"
 source('../Utils/shared_javapredict_DL.R')
