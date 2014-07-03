@@ -50,7 +50,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   private Key _actual_best_model_key;
 
   // return the most up-to-date model metrics
-  Errors last_scored() { return errors[errors.length-1]; }
+  Errors last_scored() { return errors == null ? null : errors[errors.length-1]; }
 
   @Override public final DeepLearning get_params() { return model_info.get_params(); }
   @Override public final Request2 job() { return model_info.get_job(); }
@@ -1162,6 +1162,8 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       DocGen.HTML.section(sb, msg);
       DocGen.HTML.section(sb, "=======================================================================================");
     }
+
+    if (error == null) return true;
 
     DocGen.HTML.title(sb, "Progress");
     // update epoch counter every time the website is displayed
