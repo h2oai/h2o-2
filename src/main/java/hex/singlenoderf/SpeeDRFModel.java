@@ -455,7 +455,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
   @Override
   public float progress() {
-    return (float) t_keys.length / (float) N;
+    return get_params().cv_progress(t_keys.length / (float) N);
   }
 
   static String[] cfDomain(final CMTask.CMFinal cm, int maxClasses) {

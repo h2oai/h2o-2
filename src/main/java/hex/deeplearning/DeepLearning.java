@@ -691,8 +691,10 @@ public class DeepLearning extends Job.ValidatedJob {
   @Override public float progress(){
     if(UKV.get(dest()) == null)return 0;
     DeepLearningModel m = UKV.get(dest());
-    if (m != null && m.model_info()!=null )
-      return (float)Math.min(1, (m.epoch_counter / m.model_info().get_params().epochs));
+    if (m != null && m.model_info()!=null ) {
+      final float p = (float) Math.min(1, (m.epoch_counter / m.model_info().get_params().epochs));
+      return cv_progress(p);
+    }
     return 0;
   }
 

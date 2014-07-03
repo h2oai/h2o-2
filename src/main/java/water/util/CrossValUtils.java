@@ -3,7 +3,6 @@ package water.util;
 import hex.NFoldFrameExtractor;
 import water.*;
 import water.fvec.Frame;
-import water.fvec.Vec;
 
 public class CrossValUtils {
 
@@ -28,6 +27,7 @@ public class CrossValUtils {
       Frame[] splits = nffe.getResult();
       job.crossValidate(splits, cv_preds, offsets, i); //this removes the enum-ified response!
       if (!job.keep_cross_validation_splits) for(Frame f : splits) f.delete();
+      job._cv_count++;
     }
     if (job.state != Job.JobState.RUNNING) return;
     boolean put_back = UKV.get(job.response._key) == null;

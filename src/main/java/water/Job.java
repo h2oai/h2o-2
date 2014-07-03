@@ -808,6 +808,21 @@ public abstract class Job extends Func {
     @API(help = "Cross-validation models", json = true)
     public Key[] xval_models;
 
+    public int _cv_count = 0;
+
+    /**
+     * Helper to compute the actual progress if we're doing cross-validation.
+     * This method is supposed to be called by the progress() implementation for CV-capable algos.
+     * @param p Progress reported by the main job
+     * @return actual progress if CV is done, otherwise returns p
+     */
+    public float cv_progress(float p) {
+      if (n_folds >= 2) {
+        return (p + _cv_count) / (n_folds + 1); //divide by 1 more to account for final scoring as extra work
+      }
+      return p;
+    }
+
     /**
      * Helper to specify which arguments trigger a refresh on change
      * @param ver
