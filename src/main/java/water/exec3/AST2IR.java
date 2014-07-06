@@ -55,6 +55,19 @@ public class AST2IR extends Iced {
   public SymbolTable table() { return _global; }
   public Program[] program() { return _program.toArray(new Program[_program.size()]); }
 
+  // Walk the ast and fill in the _program and _global components.
+  public void make() { treeWalk(_ast, 0, new Program(_global, null, "main")); }
+
+  // toString the program as text instructions
+  public String[] _toString() {
+    Program[] programs = program();
+    String[] progs = new String[programs.length];
+    for (int i = 0; i < progs.length; ++i) {
+      progs[i] = programs[i].toString();
+    }
+    return progs;
+  }
+
   //--------------------------------------------------------------------------------------------------------------------
   // Node inspectors
   //--------------------------------------------------------------------------------------------------------------------
@@ -139,6 +152,11 @@ public class AST2IR extends Iced {
   // Differs from isASTOp in that the JSON structure has "astop : { ast_opNode : {node_type : "ASTOp", ...},...}"
   private boolean isOp(JsonObject node) { return node.get("astop") != null; }
 
+  // Check if the node is a leaf
+  private boolean isLeaf(JsonObject node) {
+    return isId(node) || isFrame(node) || isConst(node) || isCall(node) || isString(node) || isArg(node);
+  }
+
   // Can get the numeric node value as a boolean...
   private boolean canGetAsBoolean(JsonObject node) {
     return node.get("value").getAsDouble() == 1.0 || node.get("value").getAsDouble() == 0.0;
@@ -171,7 +189,6 @@ public class AST2IR extends Iced {
   //--------------------------------------------------------------------------------------------------------------------
   // Tree Walker -- Code Generator
   //--------------------------------------------------------------------------------------------------------------------
-  public void make() { treeWalk(_ast, 0, new Program(_global, null, "main")); }
 
   /**
    * Walk an AST and fill in _program.
@@ -197,25 +214,27 @@ public class AST2IR extends Iced {
       if (isASTOp(tree)) {
         JsonObject operands = tree.get("operands").getAsJsonObject();
 
-        // Can be a binary arithmetic operator
-        if (isArithmeticOp(tree)) {
-          addNewOpStatement(tree.get("operator").getAsString(), p);
+//TODO: Operator-specific instructions may be needed?
+//        // Can be a binary arithmetic operator
+//        if (isArithmeticOp(tree)) {
+//          addNewOpStatement(tree.get("operator").getAsString(), p);
+//
+//        // Can be a bitwise operator
+//        } else if (isBitwiseOp(tree)) {
+//          addNewOpStatement(tree.get("operator").getAsString(), p);
+//
+//        // Can be comparison operator (also binary)
+//        } else if (isCompareOp(tree)) {
+//          addNewOpStatement(tree.get("operator").getAsString(), p);
+//        }
 
-          // Can be a bitwise operator
-        } else if (isBitwiseOp(tree)) {
-          addNewOpStatement(tree.get("operator").getAsString(), p);
+        treeWalk(operands.get("right").getAsJsonObject(), lineNum + 1, p);
+        treeWalk(operands.get("left").getAsJsonObject(), lineNum + 1, p);
+        addNewOpStatement(tree.get("operator").getAsString(), p);
 
-          // Can be comparison operator (also binary)
-        } else if (isCompareOp(tree)) {
-          addNewOpStatement(tree.get("operator").getAsString(), p);
-        }
-
-        treeWalk(operands.get("left").getAsJsonObject(), lineNum++, p);
-        treeWalk(operands.get("right").getAsJsonObject(), lineNum++, p);
       } else {
         throw new IllegalArgumentException("Unkown operator type: "+getNodeType(tree));
       }
-
     // Check if we have an argument node
     } else if (isArg(tree)) {
       p.putToTable(getArgName(tree), getArgType(tree), getArgValue(tree));
@@ -250,7 +269,7 @@ public class AST2IR extends Iced {
     }
 
     // Add the program to the list and exit
-    _program.add(p);
+    if(!isLeaf(tree) && lineNum == 0) { _program.add(p); }
   }
 }
 
