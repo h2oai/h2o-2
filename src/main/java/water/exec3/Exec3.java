@@ -21,14 +21,9 @@ public class Exec3 extends Request2 {
     JsonElement el = (new Gson()).fromJson(ast, JsonElement.class);
     System.out.println(ast);
     JsonObject response = el.getAsJsonObject();
-    String op_id = response.get("astop").getAsJsonObject().get("operator").getAsString();
 
-    if (response.get("astop").getAsJsonObject().get("type").getAsString().equals("BinaryOperator")) {
-      ASTOp op = ASTOp.BIN_INFIX_OPS.get(op_id);
-      System.out.println(op);
-
-//      op.make();
-    }
+    AST2IR main = new AST2IR(response);
+    main.make();
 
     return Response.done(response);
   }
