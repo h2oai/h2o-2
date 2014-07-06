@@ -35,7 +35,7 @@ public class Program implements Iterable<Program.Statement>{
 
     Statement(String op) {
       _op = op;
-      _name = op;
+      _name = null;
       _dataType = null;
     }
 
@@ -62,6 +62,13 @@ public class Program implements Iterable<Program.Statement>{
       _name = key.toString();
       _dataType = "Key";
     }
+
+    @Override public String toString() {
+      String op   = this._op       == null ? "" : this._op;
+      String name = this._name     == null ? "" : this._name;
+      String type = this._dataType == null ? "" : "("+this._dataType+")";
+      return op + " " + name + " " + type + "\n";
+    }
   }
 
   Program(SymbolTable global, SymbolTable local, String name) {
@@ -77,6 +84,14 @@ public class Program implements Iterable<Program.Statement>{
   protected int end() { return _stmts.size(); }
   protected final boolean isMain() { return _isMain; }
   protected final boolean canWriteToGlobal() { return isMain(); }
+
+  @Override public String toString() {
+    String str = "";
+    for (Statement s : this) {
+      str += s.toString();
+    }
+    return str;
+  }
 
   protected final String readType(String name) {
     if (_local != null) {
