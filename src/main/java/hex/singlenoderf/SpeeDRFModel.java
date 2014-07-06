@@ -89,9 +89,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   private final SpeeDRF parameters;
 
   @Override public final SpeeDRF get_params() { return parameters; }
-  @Override public final Request2 job() {
-    return get_params();
-  }
+  @Override public final Request2 job() { return get_params(); }
 
   public SpeeDRFModel(Key selfKey, Key dataKey, Frame fr, SpeeDRF params, float[] priorDist) {
     super(selfKey, dataKey, fr, priorDist);
@@ -146,15 +144,11 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     this.verbose_output = model.verbose_output;
   }
 
-  public Vec get_response() {
-    return response;
-  }
+  public Vec get_response() { return response; }
 
   public int treeCount() { return t_keys.length; }
   public int size()      { return t_keys.length; }
-  public int classes()   {
-    return regression ? 1 : (int)(response.max() - response.min() + 1);
-  }
+  public int classes()   { return regression ? 1 : (int)(response.max() - response.min() + 1); }
 
   //FIXME: Model._domain should be used for nclasses() and classNames()
   static String[] _domain = null;
