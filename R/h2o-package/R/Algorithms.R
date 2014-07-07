@@ -624,7 +624,7 @@ h2o.deeplearning <- function(x, y, data, classification = TRUE, nfolds = 0, vali
   parms$'source' = data@key
   parms$response = colargs$y
   parms$ignored_cols = colargs$x_ignore
-  parms$expert_model = 1
+  parms$expert_mode = 1
   
   if (! missing(classification)) {
     if (! is.logical(classification)) stop('classification must be TRUE or FALSE')
