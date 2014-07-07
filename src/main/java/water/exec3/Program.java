@@ -98,7 +98,8 @@ public class Program implements Iterable<Program.Statement>{
       if (_local.typeOf(name) != null) return _local.typeOf(name);
     }
     if (_global.typeOf(name)!= null) return _global.typeOf(name);
-    throw new IllegalArgumentException("Could not find the identifier in the local or global scope while looking up type of: "+name);
+    throw new IllegalArgumentException(
+            "Could not find the identifier in the local or global scope while looking up type of: "+name);
   }
 
   protected final String readValue(String name) {
@@ -106,7 +107,8 @@ public class Program implements Iterable<Program.Statement>{
       if (_local.valueOf(name) != null) return _local.valueOf(name);
     }
     if (_global.valueOf(name)!= null) return _global.valueOf(name);
-    throw new IllegalArgumentException("Could not find the identifier in the local or global scopes while looking up value of: "+name);
+    throw new IllegalArgumentException(
+            "Could not find the identifier in the local or global scopes while looking up value of: "+name);
   }
 
   // These write methods will stomp on the attributes for identifiers in the symbol table.
