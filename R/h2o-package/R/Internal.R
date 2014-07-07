@@ -127,6 +127,7 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__PAGE_GAPSTATVIEW = "2/GapStatisticModelView.json"
 .h2o.__PAGE_QUANTILES = "2/QuantilesPage.json"
 .h2o.__PAGE_INSPECTOR = "2/Inspector.json"
+.h2o.__PAGE_ANOMALY = "2/Anomaly.json"
 
 .h2o.__PAGE_DRF = "2/DRF.json"
 .h2o.__PAGE_DRFProgress = "2/DRFProgressPage.json"
