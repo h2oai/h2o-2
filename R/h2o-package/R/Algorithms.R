@@ -1295,7 +1295,7 @@ h2o.anomaly <- function(data, model, key = "", threshold = -1.0) {
   if(!is.character(key)) stop("key must be of class character")
   if(!is.numeric(threshold)) stop("threshold must be of class numeric")
   
-  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_ANOMALY, source = data@key, dl_autoencoder_model = model@key, destination_key = dest_key, thresh = threshold)
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_ANOMALY, source = data@key, dl_autoencoder_model = model@key, destination_key = key, thresh = threshold)
   .h2o.__waitOnJob(data@h2o, res$job_key)
   new("H2OParsedData", h2o=data@h2o, key=res$destination_key)
 }
