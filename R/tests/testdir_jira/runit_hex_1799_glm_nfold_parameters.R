@@ -1,0 +1,34 @@
+######################################################################################
+# Test for HEX-1799
+# h2o.glm with nfolds >= 2 should have model parameters that match the main glm model.
+######################################################################################
+
+setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
+options(echo=TRUE)
+source('../findNSourceUtils.R')
+
+heading("BEGIN TEST")
+
+
+hex_1799_test <-
+function(conn) {
+
+  path <- locate("smalldata/logreg/prostate.csv")
+  prostate.hex <- h2o.uploadFile(conn, path, key="prostate.hex")
+  
+  main_model <- h2o.glm(x = 3:8, y = 2, data = prostate.hex, nfold = 2, standardize = FALSE, family = "binomial")
+  
+  first_xval <- h2o.fetchModel(conn, main_model@xval[[1]]@key)
+  
+  Log.info("Expect that the xval model has a family binomial, just like the main model...")
+  expect_that(first_xval$glm_model$parameters$family, equals("binomial"))
+  expect_that(first_xval$glm_model$parameters$family, equals(main_model@model$params$family$family))
+  
+  Log.info("Expect that the xval model has standardize set to FALSE as it is in the main model.")
+  expect_that(first_xval$glm_model$parameters$standardize, equals("true"))
+  expect_that(as.logical(first_xval$glm_model$parameters$standardize), equals(main_model@model$params$standardize))
+  testEnd()
+}
+
+
+doTest("Perform the test for hex 1799", hex_1799_test)

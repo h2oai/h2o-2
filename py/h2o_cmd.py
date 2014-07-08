@@ -320,7 +320,7 @@ def columnInfoFromInspect(key, exceptionOnMissingValues=True, **kwargs):
 
     return (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) 
 
-def infoFromInspect(inspect, csvPathname):
+def infoFromInspect(inspect, csvPathname='none'):
     if not inspect:
         raise Exception("inspect is empty for infoFromInspect")
 

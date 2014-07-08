@@ -19,7 +19,7 @@ h2o.deeplearning(x, y, data, classification = TRUE, nfolds = 0, validation,
     max_after_balance_size, score_validation_sampling, diagnostics,
     variable_importances, fast_mode, ignore_const_cols, force_load_balance,
     replicate_training_data, single_node_mode, shuffle_training_data,
-    sparse, col_major)
+    sparse, col_major, autoencoder)
 }
 
 %- maybe also 'usage' for other objects documented here.
@@ -77,6 +77,7 @@ h2o.deeplearning(x, y, data, classification = TRUE, nfolds = 0, validation,
         \item{shuffle_training_data}{ Enable shuffling of training data (recommended if training data is replicated and train_samples_per_iteration is close to #nodes x #rows)}
         \item{sparse}{ Sparse data handling (Experimental).}
         \item{col_major}{ Use a column major weight matrix for input layer. Can speed up forward propagation, but might slow down backpropagation (Experimental).}
+        \item{autoencoder}{ Enable auto-encoder for model building.}
         %- END AUTO-GENERATED CODE
   }
 

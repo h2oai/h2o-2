@@ -194,6 +194,7 @@ public class Vec extends Iced {
     final Vec v0 = new Vec(group().addVecs(1)[0],_espc);
     new DRemoteTask(){
       @Override public void lcompute(){
+        getFutures();
         long row=0;                 // Start row
         Key k;
         for( int i=0; i<nchunks; i++ ) {

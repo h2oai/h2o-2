@@ -8,7 +8,7 @@ import codecs, string
 
 # MAX_CHAR = 255
 MAX_CHAR = 127
-ENUM_WIDTH = 3
+ENUM_WIDTH = 64 
 JUST_EASY_CHARS = True
 JUST_EASIER_CHARS = True
 
@@ -33,7 +33,9 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
             # . apparently gets considered as num and can flip cols to NA
             # legalChars = string.letters + "',$ \t +"
             # legalChars = string.printable
-            print "Avoiding plus, minus and period and odd whitespace chars. % also..but $ okay?. Comma causes issues?"
+
+            # print "Avoiding plus, minus and period and odd whitespace chars. % also..but $ okay?. Comma causes issues?"
+
             # print string.punctuation
             # !"#$%&'()*+,-./:;<=>?@[\]^_`{|}~
 
@@ -57,7 +59,7 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
             if n==0:
                 rowData.append('')
             else:
-                for k in range(ENUM_WIDTH):
+                for k in range(random.randint(1,ENUM_WIDTH)):
                     if JUST_EASY_CHARS | JUST_EASIER_CHARS:
                         uStr = random.choice(legalChars)
                     else:
@@ -89,7 +91,7 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(3, java_heap_GB=1) # enum processing is more interesting with multiple jvms
+            h2o.build_cloud(3, java_heap_GB=4) # enum processing is more interesting with multiple jvms
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -99,22 +101,15 @@ class Basic(unittest.TestCase):
         # time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_many_cols_long_enums(self):
+    def test_many_rows_long_enums(self):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (5, 100, 'cA', 5),
-            (5, 100, 'cA', 5),
-            (5, 100, 'cA', 5),
-            (5, 100, 'cA', 5),
-            (5, 100, 'cA', 5),
-            (5, 100, 'cA', 5),
-            (5, 100, 'cA', 5),
-            (5, 100, 'cA', 5),
+            (1000000, 1, 'cA', 5),
+            (1000000, 1, 'cA', 5),
             ]
 
-        h2b.browseTheCloud()
-        lenNodes = len(h2o.nodes)
+        # h2b.browseTheCloud()
 
         cnum = 0
         for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
@@ -126,21 +121,17 @@ class Basic(unittest.TestCase):
             write_syn_dataset(csvPathname, rowCount, colCount, SEED)
 
             SEPARATOR = ord(',')
-            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=10, 
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=300, 
                 header=0, separator=SEPARATOR) # don't force header..we have NAs in the rows, and NAs mess up headers
             print "Parse result['destination_key']:", parseResult['destination_key']
 
             # We should be able to see the parse result?
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
+            missingValuesList = h2o_cmd.infoFromInspect(inspect, csvPathname)
+            numCols = inspect['numCols']
+            numRows = inspect['numRows']
+
             print "\n" + csvFilename
-
-            if not h2o.browse_disable:
-                h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
-                time.sleep(5)
-
-            # try new offset/view
-            inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
-
 
 if __name__ == '__main__':
     h2o.unit_main()
