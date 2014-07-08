@@ -1001,11 +1001,11 @@ h2o.randomForest <- function(x, y, data, classification=TRUE, ntree=50, depth=20
   if(params$classification) {
     if(!is.null(res$validAUC)) {
       tmp <- .h2o.__getPerfResults(res$validAUC)
-      tmp$confusion <- NULL
       result <- c(result, tmp)
+    } else {
+      class_names = res$'cmDomain'
+      result$confusion = .build_cm(tail(res$'cms', 1)[[1]]$'_arr', class_names) 
     }
-    class_names = res$'cmDomain' # tail(res$'_domains', 1)[[1]]
-    result$confusion = .build_cm(tail(res$'cms', 1)[[1]]$'_arr', class_names)  #res$'_domains'[[length(res$'_domains')]])
   }
   
   if(params$importance) {
