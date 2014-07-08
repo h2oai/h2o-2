@@ -158,7 +158,7 @@ public final class ParseDataset2 extends Job {
     public int[][] emap(int nodeId){
       if(_emap == null)_emap = new int[_lEnums.length][][];
       if(_emap[nodeId] == null){
-        int [][] emap = _emap[nodeId] = new int[_gDomain.length][];
+        int [][] emap = new int[_gDomain.length][];
         for( int i = 0; i < _gDomain.length; ++i ) {
           if(_gDomain[i] != null){
             assert _lEnums[nodeId] != null:"missing lEnum of node "  + nodeId + ", enums = " + Arrays.toString(_lEnums);
@@ -174,6 +174,7 @@ public final class ParseDataset2 extends Job {
             }
           }
         }
+        _emap[nodeId] = emap;
       }
       return _emap[nodeId];
     }
@@ -188,8 +189,23 @@ public final class ParseDataset2 extends Job {
         else for( int j = 0; j < chk._len; ++j){
           if( chk.isNA0(j) )continue;
           long l = chk.at80(j);
-          assert l >= 0 && l < emap[i].length : "Found OOB index "+l+" pulling from "+chk.getClass().getSimpleName();
-          assert emap[i][(int)l] >= 0: H2O.SELF.toString() + ": missing enum at col:" + i + ", line: " + j + ", val = " + l + ", chunk=" + chk.getClass().getSimpleName();
+          if (l < 0 || l >= emap[i].length) {
+            StringBuilder sb = new StringBuilder("Enum renumber task: Found OOB index " + l + " (expected 0 - " + emap[i].length + ") pulled from " + chk.getClass().getSimpleName() + " with min, max = " + chk._vec.min() + ", " + chk._vec.max() + "\n");
+            int k = 0;
+            for(; k < Math.min(5,chk._len); ++k)
+              sb.append("at8[" + (k+chk._start) + "] = " + chk.at80(k) + "\n");
+            k = Math.max(k,j-2);
+            sb.append("...\n");
+            for(; k < Math.min(chk._len,j+2); ++k)
+              sb.append("at8[" + (k+chk._start) + "] = " + chk.at80(k) + "\n");
+            sb.append("...\n");
+            k = Math.max(k,chk._len-5);
+            for(; k < chk._len; ++k)
+              sb.append("at8[" + (k+chk._start) + "] = " + chk.at80(k) + "\n");
+            throw new RuntimeException(sb.toString());
+          }
+          if(emap[i][(int)l] < 0)
+            throw new RuntimeException(H2O.SELF.toString() + ": missing enum at col:" + i + ", line: " + j + ", val = " + l + ", chunk=" + chk.getClass().getSimpleName());
           chk.set0(j, emap[i][(int)l]);
         }
         chk.close(cidx, _fs);
