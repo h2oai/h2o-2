@@ -164,7 +164,6 @@ public class SpeeDRF extends Job.ValidatedJob {
 //    DRFTask.updateRFModelStopTraining(rf_model._key);
     rf_model.stop_training();
     if (n_folds > 0) CrossValUtils.crossValidate(this);
-    cleanup();
     remove();
   }
 

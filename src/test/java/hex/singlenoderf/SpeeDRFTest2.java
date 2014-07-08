@@ -1,12 +1,19 @@
 package hex.singlenoderf;
 
+import hex.trees.TreeTestWithBalanceAndCrossVal;
 import junit.framework.Assert;
 import water.*;
 import water.fvec.Frame;
 import water.fvec.Vec;
-import hex.trees.TreeTestWithBalanceAndCrossVal;
 
 public class SpeeDRFTest2 extends TreeTestWithBalanceAndCrossVal {
+/*
+  @Override public void testCarBalanceAndCrossValidation() {
+  }
+  @Override public void testCovtypeBalanceAndCrossValidation() {
+  }
+  @Override public void testWeatherDataset() {
+  } */
 
   @Override protected void testBalanceWithCrossValidation(String dataset, int response, int[] ignored_cols, int ntrees, int nfolds) {
     Frame f = parseFrame(dataset);
