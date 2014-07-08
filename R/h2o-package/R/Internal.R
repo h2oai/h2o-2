@@ -541,6 +541,36 @@ function(some_expr_list, envir) {
 }
 
 #'
+#' Process the LHS of an assignment.
+#'
+#' Swap out any H2OparsedData objects with their key names,
+#' Swap out a '$' "slice" with a [,] slice
+.process_assignment<-
+function(expr, envir) {
+  l <- lapply(as.list(expr), .as_list)
+
+  # Have a single column sliced out that we want to a) replace -OR- b) create
+  if (identical(l[[1]], quote(`$`))) {
+    l[[1]] <- quote(`[`)  # This handles both cases (unkown and known colnames... should just work!)
+    cols <- colnames(get(as.character(l[[2]]), envir = envir))
+    numCols <- length(cols)
+    colname <- as.character(l[[3]])
+    if (! (colname %in% cols)) {
+      assign("NEWCOL", colname, envir = .pkg.env)
+      assign("NUMCOLS", numCols, envir = .pkg.env)
+      assign("FRAMEKEY", get(as.character(l[[2]]), envir = envir)@key, envir = .pkg.env)
+      l[[4]] <- numCols + 1
+    } else {
+      l[[4]] <- l[[3]]
+    }
+    l[[3]] <- as.list(substitute(l[,1]))[[3]]
+    l <- .replace_with_keys_helper(l, envir)
+    return(as.name(as.character(as.expression(.back_to_expr(l)))))
+  }
+  return(as.character(expr))
+}
+
+#'
 #' Front-end work for h2o.exec
 #'
 #' Discover the destination key (if there is one), the client, and sub in the actual key name for the R variable
@@ -548,12 +578,15 @@ function(some_expr_list, envir) {
 .replace_with_keys<-
 function(expr, envir = globalenv()) {
   dest_key <- ""
+  assign("NEWCOL", "", envir = .pkg.env)
+  assign("NUMCOLS", "", envir = .pkg.env)
+  assign("FRAMEKEY", "", envir = .pkg.env)
 
   # Is this an assignment?
   if ( .isAssignment(as.list(expr)[[1]])) {
 
     # The destination key is the name that's being assigned to (covers both `<-` and `=`)
-    dest_key <- as.character(as.list(expr)[[2]])
+    dest_key <- .process_assignment(as.list(expr)[[2]], envir)
 
     # Don't bother with the assignment anymore, discard it and iterate down the RHS.
     expr <- as.list(expr)[[3]]
