@@ -386,17 +386,25 @@ as.h2o <- function(client, object, key = "", header, sep = "") {
 
 h2o.exec <- function(expr_to_execute) {
   expr <- .replace_with_keys(substitute( expr_to_execute ), envir = parent.frame())
-
   res <- NULL
   if (.pkg.env$DESTKEY == "") {
     res <- .h2o.__exec2(.pkg.env$SERVER, deparse(expr))
   } else {
     res <- .h2o.__exec2_dest_key(.pkg.env$SERVER, deparse(expr), .pkg.env$DESTKEY)
   }
-
+  if (.pkg.env$NEWCOL != "") {
+    .h2o.__remoteSend(.pkg.env$SERVER, .h2o.__HACK_SETCOLNAMES2, source=.pkg.env$FRAMEKEY,
+                       cols=.pkg.env$NUMCOLS, comma_separated_list=.pkg.env$NEWCOL)
+  }
   rm(COLNAMES, envir = .pkg.env)
-#  .pkg.env$COLNAMES <- NULL
-  new("H2OParsedData", h2o = .pkg.env$SERVER, key = res$dest_key)
+
+  key <- res$dest_key
+
+  if (.pkg.env$FRAMEKEY != "") {
+    key <- .pkg.env$FRAMEKEY
+  }
+
+  new("H2OParsedData", h2o = .pkg.env$SERVER, key = key)
 }
 
 h2o.cut <- function(x, breaks) {

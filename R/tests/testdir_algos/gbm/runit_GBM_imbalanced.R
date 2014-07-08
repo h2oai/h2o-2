@@ -4,9 +4,9 @@ source('../../findNSourceUtils.R')
 test.gbm.imbalanced <- function(conn) {
   prostate = h2o.uploadFile(conn, locate("smalldata/logreg/prostate.csv"))
 
-  hh_imbalanced=h2o.gbm(x=c(1,2,3,5),y=4,n.trees=10,data=prostate,validation=prostate,balance.classes=F)
+  hh_imbalanced=h2o.gbm(x=c(1,2,3,5),y=4,n.trees=50,data=prostate,balance.classes=F,nfolds=10)
   print(hh_imbalanced)
-  hh_balanced=h2o.gbm(x=c(1,2,3,5),y=4,n.trees=10,data=prostate,validation=prostate,balance.classes=T)
+  hh_balanced=h2o.gbm(x=c(1,2,3,5),y=4,n.trees=50,data=prostate,balance.classes=T,nfolds=10)
   print(hh_balanced)
 
   # test that it improves the overall classification error...
