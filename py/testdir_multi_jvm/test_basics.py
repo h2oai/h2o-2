@@ -32,7 +32,7 @@ class Basic(h2o_common.SetupUnitTest, unittest.TestCase):
     # default now wants all data at each node? too slow?
     def test_F_RF_covtype(self):
         parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path='standard/covtype.data', schema='put', timeoutSecs=100)
-        h2o_cmd.runRF(parseResult=parseResult, trees=1, timeoutSecs=300, retryDelaySecs=0.5, iterative_cm=0)
+        h2o_cmd.runRF(parseResult=parseResult, trees=1, timeoutSecs=300, retryDelaySecs=0.5)
 
     def test_G_StoreView(self):
         h2i.delete_keys_at_all_nodes(timeoutSecs=30)

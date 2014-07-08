@@ -42,7 +42,7 @@ ${SEP}${JAR_ROOT}/s3/*\
 ${SEP}${JAR_ROOT}/jets3t/*\
 ${SEP}${JAR_ROOT}/log4j/*\
 ${SEP}${JAR_ROOT}/joda/*\
-${SEP}${JAR_ROOT}/mockito/*\
+${SEP}${JAR_ROOT}/tachyon/*\
 ${SEP}${JAR_ROOT}/jogamp/*"
 
 DEFAULT_HADOOP_VERSION="cdh3"
@@ -85,6 +85,7 @@ JAVAC_ARGS="-g
     -Xlint:-deprecation
     -Xlint:-serial
     -Xlint:-rawtypes
+    -Xlint:-path
     -Xlint:-unchecked "
 JAR=`which jar`
 ZIP=`which zip`

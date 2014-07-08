@@ -7,13 +7,33 @@ Steam.ApplicationContext = ->
     fatal: do edge$
     notify: do edge$
 
+    schedule: do edge$
+    unschedule: do edge$
+    timeout: do edge$
+
+    man: do edge$
+    help: do edge$
+    status: do edge$
+
+    inspect: do edge$
+
     route: do edge$
     setRoute: do edge$
     getRoute: do edge$
     onRouteSucceeded: do edge$
     onRouteFailed: do edge$
 
-    requestJSON: do edge$
+    loadDialog: do edge$
+    unloadDialog: do edge$
+    positionDialog: do edge$
+
+    alert: do edge$
+    confirm: do edge$
+    fail: do edge$
+
+    measureTextWidth: do edge$
+
+    invokeH2O: do edge$
 
     requestFrames: do edge$
     requestFramesAndCompatibleModels: do edge$
@@ -46,14 +66,14 @@ Steam.ApplicationContext = ->
     displayEmpty: do edge$
 
     loadFrames: do edge$
+    framesLoaded: do edge$
     displayFrame: do edge$
+    promptForFrame: do edge$
 
     loadModels: do edge$
     displayModel: do edge$
     modelSelectionChanged: do edge$
     modelSelectionCleared: do edge$
-    modelsSelected: do edge$
-    modelsDeselected: do edge$
     deselectAllModels: do edge$
     clearModelSelection: do edge$
 
@@ -63,8 +83,18 @@ Steam.ApplicationContext = ->
     loadScorings: do edge$
     displayScoring: do edge$
     scoringSelectionChanged: do edge$
+    scoringSelectionCleared: do edge$
     scoringsSelected: do edge$
     scoringsDeselected: do edge$
     deselectAllScorings: do edge$
     clearScoringSelection: do edge$
+    deleteScorings: do edge$
+    deleteActiveScoring: do edge$
+    scoringAvailable: do edge$
+    rescore: do edge$
+    configureStripPlot: do edge$
+    configureScoringVisualization: do edge$
+    filterScorings: do edge$
+
+
 

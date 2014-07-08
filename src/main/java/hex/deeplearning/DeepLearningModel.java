@@ -6,6 +6,7 @@ import hex.VarImp;
 import water.*;
 import water.api.*;
 import water.api.Request.API;
+import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.*;
@@ -49,10 +50,12 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   private Key _actual_best_model_key;
 
   // return the most up-to-date model metrics
-  Errors last_scored() { return errors[errors.length-1]; }
+  Errors last_scored() { return errors == null ? null : errors[errors.length-1]; }
 
   @Override public final DeepLearning get_params() { return model_info.get_params(); }
-  @Override public final Request2 job() { return get_params(); }
+  @Override public final Request2 job() { return model_info.get_job(); }
+
+  @Override protected double missingColumnsType() { return get_params().sparse ? 0 : Double.NaN; }
 
   public float error() { return (float) (isClassifier() ? cm().err() : mse()); }
 
@@ -77,6 +80,8 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     //training/validation sets
     @API(help = "Whether a validation set was provided")
     boolean validation;
+    @API(help = "Number of folds for cross-validation (for validation=false)")
+    int num_folds;
     @API(help = "Number of training set samples for scoring")
     public long score_training_samples;
     @API(help = "Number of validation set samples for scoring")
@@ -130,13 +135,15 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
                 + String.format("%.2f", 100*train_err) + "%");
 
         if (trainAUC != null) sb.append(", AUC on training data: " + String.format("%.4f", 100*trainAUC.AUC) + "%");
-        if (validation) sb.append("\nError on validation data (misclassification)"
+        if (validation || num_folds>0)
+          sb.append("\nError on " + (num_folds>0 ? num_folds + "-fold cross-":"")+ "validation data (misclassification)"
                 + (validAUC != null ? " [using threshold for " + validAUC.threshold_criterion.toString().replace("_"," ") +"]: ": ": ")
                 + String.format("%.2f", (100*valid_err)) + "%");
         if (validAUC != null) sb.append(", AUC on validation data: " + String.format("%.4f", 100*validAUC.AUC) + "%");
       } else if (!Double.isInfinite(train_mse)) {
         sb.append("Error on training data (MSE): " + train_mse);
-        if (validation) sb.append("\nError on validation data (MSE): " + valid_mse);
+        if (validation || num_folds>0)
+          sb.append("\nError on "+ (num_folds>0 ? num_folds + "-fold cross-":"")+ "validation data (MSE): " + valid_mse);
       }
       return sb.toString();
     }
@@ -160,11 +167,11 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   public hex.ConfusionMatrix cm() {
     final Errors lasterror = last_scored();
     if (errors == null) return null;
-    water.api.ConfusionMatrix cm = lasterror.validation ?
+    water.api.ConfusionMatrix cm = lasterror.validation || lasterror.num_folds > 0 ?
             lasterror.valid_confusion_matrix :
             lasterror.train_confusion_matrix;
     if (cm == null || cm.cm == null) {
-      if (lasterror.validation) {
+      if (lasterror.validation || lasterror.num_folds > 0) {
         return new ConfMat(lasterror.valid_err, lasterror.validAUC != null ? lasterror.validAUC.F1() : 0);
       } else {
         return new ConfMat(lasterror.train_err, lasterror.trainAUC != null ? lasterror.trainAUC.F1() : 0);
@@ -177,7 +184,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   @Override
   public double mse() {
     if (errors == null) return super.mse();
-    return last_scored().validation ? last_scored().valid_mse : last_scored().train_mse;
+    return last_scored().validation || last_scored().num_folds > 0 ? last_scored().valid_mse : last_scored().train_mse;
   }
 
   @Override
@@ -200,6 +207,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     private Neurons.DenseRowMatrix[] dense_row_weights; //one 2D weight matrix per layer (stored as a 1D array each)
     private Neurons.DenseColMatrix[] dense_col_weights; //one 2D weight matrix per layer (stored as a 1D array each)
     private Neurons.DenseVector[] biases; //one 1D bias array per layer
+    private Neurons.DenseVector[] avg_activations; //one 1D array per layer
 
     // helpers for storing previous step deltas
     // Note: These two arrays *could* be made transient and then initialized freshly in makeNeurons() and in DeepLearningTask.initLocal()
@@ -234,8 +242,9 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     public final Neurons.DenseVector get_biases_ada_dx_g(int i) { return biases_ada_dx_g[i]; }
 
     @API(help = "Model parameters", json = true)
-    private DeepLearning parameters;
-    public final DeepLearning get_params() { return parameters; }
+    private Request2 job;
+    public final DeepLearning get_params() { return (DeepLearning)job; }
+    public final Request2 get_job() { return job; }
 
     @API(help = "Mean rate", json = true)
     private float[] mean_rate;
@@ -278,13 +287,13 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
     public DeepLearningModelInfo() {}
 
-    public DeepLearningModelInfo(final DeepLearning params, final DataInfo dinfo) {
+    public DeepLearningModelInfo(final Job job, final DataInfo dinfo) {
+      this.job = job;
       data_info = dinfo;
       final int num_input = dinfo.fullN();
-      final int num_output = params.classification ? dinfo._adaptedFrame.domains()[dinfo._adaptedFrame.domains().length-1].length : 1;
+      final int num_output = get_params().autoencoder ? num_input : get_params().classification ? dinfo._adaptedFrame.domains()[dinfo._adaptedFrame.domains().length-1].length : 1;
       assert(num_input > 0);
       assert(num_output > 0);
-      parameters = params;
       if (has_momenta() && adaDelta()) throw new IllegalArgumentException("Cannot have non-zero momentum and adaptive rate at the same time.");
       final int layers=get_params().hidden.length;
       // units (# neurons for each layer)
@@ -297,14 +306,19 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       dense_col_weights = new Neurons.DenseColMatrix[layers+1];
 
       // decide format of weight matrices row-major or col-major
-      if (params.col_major) dense_col_weights[0] = new Neurons.DenseColMatrix(units[1], units[0]);
+      if (get_params().col_major) dense_col_weights[0] = new Neurons.DenseColMatrix(units[1], units[0]);
       else dense_row_weights[0] = new Neurons.DenseRowMatrix(units[1], units[0]);
-      for (int i=1; i<=layers; ++i)
-        dense_row_weights[i] = new Neurons.DenseRowMatrix(units[i+1] /*rows*/, units[i] /*cols*/);
+      for (int i = 1; i <= layers; ++i)
+        dense_row_weights[i] = new Neurons.DenseRowMatrix(units[i + 1] /*rows*/, units[i] /*cols*/);
 
       // biases (only for hidden layers and output layer)
       biases = new Neurons.DenseVector[layers+1];
       for (int i=0; i<=layers; ++i) biases[i] = new Neurons.DenseVector(units[i+1]);
+      // average activation (only for hidden layers)
+      if (get_params().autoencoder) {
+        avg_activations = new Neurons.DenseVector[layers];
+        for (int i = 0; i < layers; ++i) avg_activations[i] = new Neurons.DenseVector(units[i + 1]);
+      }
       fillHelpers();
       // for diagnostics
       mean_rate = new float[units.length];
@@ -366,11 +380,14 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
           sb.append((i+1) + " " + String.format("%6d", neurons[i].units)
                   + " " + String.format("%16s", neurons[i].getClass().getSimpleName()));
           if (i == 0) {
-            sb.append("  " + formatPct(neurons[i].params.input_dropout_ratio) + " \n");
+            sb.append("  " + Utils.formatPct(neurons[i].params.input_dropout_ratio) + " \n");
             continue;
           }
           else if (i < neurons.length-1) {
-            sb.append("  " + formatPct(neurons[i].params.hidden_dropout_ratios[i-1]) + " ");
+            if (neurons[i].params.hidden_dropout_ratios == null)
+              sb.append("  " + Utils.formatPct(0) + " ");
+            else
+              sb.append("  " + Utils.formatPct(neurons[i].params.hidden_dropout_ratios[i - 1]) + " ");
           } else {
             sb.append("          ");
           }
@@ -392,18 +409,17 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     public String toStringAll() {
       StringBuilder sb = new StringBuilder();
       sb.append(toString());
-//      sb.append(weights.toString());
-//
-//      for (int i=0; i<weights.length; ++i)
-//        sb.append("\nweights["+i+"][]="+Arrays.toString(weights[i].raw()));
-//      for (int i=0; i<biases.length; ++i)
-//        sb.append("\nbiases["+i+"][]="+Arrays.toString(biases[i].raw()));
-//      if (weights_momenta != null) {
-//        for (int i=0; i<weights_momenta.length; ++i)
-//          sb.append("\nweights_momenta["+i+"][]="+Arrays.toString(weights_momenta[i].raw()));
-//      }
+
+      for (int i=0; i<units.length-1; ++i)
+        sb.append("\nweights["+i+"][]="+Arrays.toString(get_weights(i).raw()));
+      for (int i=0; i<units.length-1; ++i)
+        sb.append("\nbiases["+i+"][]="+Arrays.toString(get_biases(i).raw()));
+      if (has_momenta()) {
+        for (int i=0; i<units.length-1; ++i)
+          sb.append("\nweights_momenta["+i+"][]="+Arrays.toString(get_weights_momenta(i).raw()));
+      }
       if (biases_momenta != null) {
-        for (int i=0; i<biases_momenta.length; ++i)
+        for (int i=0; i<units.length-1; ++i)
           sb.append("\nbiases_momenta["+i+"][]="+Arrays.toString(biases_momenta[i].raw()));
       }
       sb.append("\nunits[]="+Arrays.toString(units));
@@ -437,6 +453,9 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       for (int i=0;i<dense_row_weights.length;++i)
         Utils.add(get_weights(i).raw(), other.get_weights(i).raw());
       for (int i=0;i<biases.length;++i) Utils.add(biases[i].raw(), other.biases[i].raw());
+      if (avg_activations != null)
+        for (int i=0;i<avg_activations.length;++i)
+          Utils.add(avg_activations[i].raw(), other.biases[i].raw());
       if (has_momenta()) {
         assert(other.has_momenta());
         for (int i=0;i<dense_row_weights_momenta.length;++i)
@@ -456,6 +475,9 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       for (int i=0; i<dense_row_weights.length; ++i)
         Utils.div(get_weights(i).raw(), N);
       for (Neurons.Vector bias : biases) Utils.div(bias.raw(), N);
+      if (avg_activations != null)
+        for (Neurons.Vector avgac : avg_activations)
+          Utils.div(avgac.raw(), N);
       if (has_momenta()) {
         for (int i=0; i<dense_row_weights_momenta.length; ++i)
           Utils.div(get_weights_momenta(i).raw(), N);
@@ -484,7 +506,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
                 get_weights(w).set(i,j, (float)uniformDist(rng, -range, range));
             }
             else if (get_params().initial_weight_distribution == DeepLearning.InitialWeightDistribution.Uniform) {
-              get_weights(w).set(i,j, (float)uniformDist(rng, -get_params().initial_weight_scale, parameters.initial_weight_scale));
+              get_weights(w).set(i,j, (float)uniformDist(rng, -get_params().initial_weight_scale, get_params().initial_weight_scale));
             }
             else if (get_params().initial_weight_distribution == DeepLearning.InitialWeightDistribution.Normal) {
               get_weights(w).set(i,j, (float)(rng.nextGaussian() * get_params().initial_weight_scale));
@@ -623,7 +645,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
    * @param jobKey New job key (job which updates the model)
    */
   public DeepLearningModel(final DeepLearningModel cp, final Key destKey, final Key jobKey, final DataInfo dataInfo) {
-    super(destKey, cp._dataKey, dataInfo._adaptedFrame.names(), dataInfo._adaptedFrame.domains(), cp._priorClassDist != null ? cp._priorClassDist.clone() : null);
+    super(destKey, cp._dataKey, dataInfo._adaptedFrame.names(), dataInfo._adaptedFrame.domains(), cp._priorClassDist != null ? cp._priorClassDist.clone() : null, null);
     final boolean store_best_model = (jobKey == null);
     this.jobKey = jobKey;
     if (store_best_model) {
@@ -666,10 +688,17 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     start_time = System.currentTimeMillis();
     _timeLastScoreEnter = start_time;
     model_info = new DeepLearningModelInfo(params, dinfo);
-    get_params().state = ((DeepLearning)UKV.get(jobKey)).state; //make the job state consistent
-    errors = new Errors[1];
-    errors[0] = new Errors();
-    errors[0].validation = (params.validation != null);
+    Object job = UKV.get(jobKey);
+    if (job instanceof DeepLearning)
+      get_params().state = ((DeepLearning)UKV.get(jobKey)).state; //make the job state consistent
+    else
+      get_params().state = ((Job.JobHandle)UKV.get(jobKey)).state; //make the job state consistent
+    if (!get_params().autoencoder) {
+      errors = new Errors[1];
+      errors[0] = new Errors();
+      errors[0].validation = (params.validation != null);
+      errors[0].num_folds = params.n_folds;
+    }
     assert(Arrays.equals(_key._kb, destKey._kb));
   }
 
@@ -701,88 +730,103 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
                 + ". Processed " + String.format("%,d", samples) + " samples" + " (" + String.format("%.3f", epoch_counter) + " epochs)."
                 + " Speed: " + String.format("%.3f", 1000.*samples/run_time) + " samples/sec.");
       }
+
       // this is potentially slow - only do every so often
       if( !keep_running ||
               (sinceLastScore > get_params().score_interval*1000 //don't score too often
                       &&(double)(_timeLastScoreEnd-_timeLastScoreStart)/sinceLastScore < get_params().score_duty_cycle) ) { //duty cycle
         final boolean printme = !get_params().quiet_mode;
-        if (printme) Log.info("Scoring the model.");
+        final boolean adaptCM = (isClassifier() && vadaptor.needsAdaptation2CM());
         _timeLastScoreStart = now;
-        // compute errors
+        if (get_params().diagnostics) model_info().computeStats();
         Errors err = new Errors();
-        err.classification = isClassifier();
-        assert(err.classification == get_params().classification);
         err.training_time_ms = run_time;
         err.epoch_counter = epoch_counter;
-        err.validation = ftest != null;
         err.training_samples = model_info().get_processed_total();
+        err.validation = ftest != null;
         err.score_training_samples = ftrain.numRows();
-        err.train_confusion_matrix = new ConfusionMatrix();
-        final int hit_k = Math.min(nclasses(), get_params().max_hit_ratio_k);
-        if (err.classification && nclasses()==2) err.trainAUC = new AUC();
-        if (err.classification && nclasses() > 2 && hit_k > 0) {
-          err.train_hitratio = new HitRatio();
-          err.train_hitratio.set_max_k(hit_k);
-        }
-        if (get_params().diagnostics) model_info().computeStats();
-        final String m = model_info().toString();
-        if (m.length() > 0) Log.info(m);
-        final Frame trainPredict = score(ftrain, false);
-        final double trainErr = calcError(ftrain, ftrain.lastVec(), trainPredict, trainPredict, "training",
-                printme, get_params().max_confusion_matrix_size, err.train_confusion_matrix, err.trainAUC, err.train_hitratio);
-        if (isClassifier()) err.train_err = trainErr;
-        else err.train_mse = trainErr;
 
-        trainPredict.delete();
-
-        final boolean adaptCM = (isClassifier() && vadaptor.needsAdaptation2CM());
-        if (err.validation) {
-          assert ftest != null;
-          err.score_validation_samples = ftest.numRows();
-          err.valid_confusion_matrix = new ConfusionMatrix();
-          if (err.classification && nclasses()==2) err.validAUC = new AUC();
+        if (get_params().autoencoder) {
+          if (printme) Log.info("Scoring the auto-encoder.");
+          // training
+          {
+            final Frame mse_frame = scoreAutoEncoder(ftrain);
+            final Vec l2 = mse_frame.anyVec();
+            Log.info("Mean reconstruction error on training data: " + l2.mean() + "\n");
+            err.train_mse = l2.mean();
+            mse_frame.delete();
+          }
+        } else {
+          if (printme) Log.info("Scoring the model.");
+          // compute errors
+          err.classification = isClassifier();
+          assert (err.classification == get_params().classification);
+          err.num_folds = get_params().n_folds;
+          err.train_confusion_matrix = new ConfusionMatrix();
+          final int hit_k = Math.min(nclasses(), get_params().max_hit_ratio_k);
+          if (err.classification && nclasses() == 2) err.trainAUC = new AUC();
           if (err.classification && nclasses() > 2 && hit_k > 0) {
-            err.valid_hitratio = new HitRatio();
-            err.valid_hitratio.set_max_k(hit_k);
+            err.train_hitratio = new HitRatio();
+            err.train_hitratio.set_max_k(hit_k);
           }
-          final String adaptRespName = vadaptor.adaptedValidationResponse(responseName());
-          Vec adaptCMresp = null;
-          if (adaptCM) {
-            Vec[] v = ftest.vecs();
-            assert(ftest.find(adaptRespName) == v.length-1); //make sure to have (adapted) response in the test set
-            adaptCMresp = ftest.remove(v.length-1); //model would remove any extra columns anyway (need to keep it here for later)
+          final String m = model_info().toString();
+          if (m.length() > 0) Log.info(m);
+          final Frame trainPredict = score(ftrain, false);
+          final double trainErr = calcError(ftrain, ftrain.lastVec(), trainPredict, trainPredict, "training",
+                  printme, get_params().max_confusion_matrix_size, err.train_confusion_matrix, err.trainAUC, err.train_hitratio);
+          if (isClassifier()) err.train_err = trainErr;
+          else err.train_mse = trainErr;
+
+          trainPredict.delete();
+
+          if (err.validation) {
+            assert ftest != null;
+            err.score_validation_samples = ftest.numRows();
+            err.valid_confusion_matrix = new ConfusionMatrix();
+            if (err.classification && nclasses() == 2) err.validAUC = new AUC();
+            if (err.classification && nclasses() > 2 && hit_k > 0) {
+              err.valid_hitratio = new HitRatio();
+              err.valid_hitratio.set_max_k(hit_k);
+            }
+            final String adaptRespName = vadaptor.adaptedValidationResponse(responseName());
+            Vec adaptCMresp = null;
+            if (adaptCM) {
+              Vec[] v = ftest.vecs();
+              assert (ftest.find(adaptRespName) == v.length - 1); //make sure to have (adapted) response in the test set
+              adaptCMresp = ftest.remove(v.length - 1); //model would remove any extra columns anyway (need to keep it here for later)
+            }
+
+            final Frame validPredict = score(ftest, adaptCM);
+            final Frame hitratio_validPredict = new Frame(validPredict);
+            // Adapt output response domain, in case validation domain is different from training domain
+            // Note: doesn't change predictions, just the *possible* label domain
+            if (adaptCM) {
+              assert (adaptCMresp != null);
+              assert (ftest.find(adaptRespName) == -1);
+              ftest.add(adaptRespName, adaptCMresp);
+              final Vec CMadapted = vadaptor.adaptModelResponse2CM(validPredict.vecs()[0]);
+              validPredict.replace(0, CMadapted); //replace label
+              validPredict.add("to_be_deleted", CMadapted); //keep the Vec around to be deleted later (no leak)
+            }
+            final double validErr = calcError(ftest, ftest.lastVec(), validPredict, hitratio_validPredict, "validation",
+                    printme, get_params().max_confusion_matrix_size, err.valid_confusion_matrix, err.validAUC, err.valid_hitratio);
+            if (isClassifier()) err.valid_err = validErr;
+            else err.valid_mse = validErr;
+            validPredict.delete();
           }
 
-          final Frame validPredict = score(ftest, adaptCM);
-          final Frame hitratio_validPredict = new Frame(validPredict);
-          // Adapt output response domain, in case validation domain is different from training domain
-          // Note: doesn't change predictions, just the *possible* label domain
-          if (adaptCM) {
-            assert(adaptCMresp != null);
-            assert(ftest.find(adaptRespName) == -1);
-            ftest.add(adaptRespName, adaptCMresp);
-            final Vec CMadapted = vadaptor.adaptModelResponse2CM(validPredict.vecs()[0]);
-            validPredict.replace(0, CMadapted); //replace label
-            validPredict.add("to_be_deleted", CMadapted); //keep the Vec around to be deleted later (no leak)
+          if (get_params().variable_importances) {
+            if (!get_params().quiet_mode) Log.info("Computing variable importances.");
+            final float[] vi = model_info().computeVariableImportances();
+            err.variable_importances = new VarImp(vi, Arrays.copyOfRange(model_info().data_info().coefNames(), 0, vi.length));
           }
-          final double validErr = calcError(ftest, ftest.lastVec(), validPredict, hitratio_validPredict, "validation",
-                  printme, get_params().max_confusion_matrix_size, err.valid_confusion_matrix, err.validAUC, err.valid_hitratio);
-          if (isClassifier()) err.valid_err = validErr;
-          else err.valid_mse = validErr;
-          validPredict.delete();
-        }
 
-        if (get_params().variable_importances) {
-          if (!get_params().quiet_mode) Log.info("Computing variable importances.");
-          final float [] vi = model_info().computeVariableImportances();
-          err.variable_importances = new VarImp(vi, Arrays.copyOfRange(model_info().data_info().coefNames(), 0, vi.length));
-        }
-
-        // only keep confusion matrices for the last step if there are fewer than specified number of output classes
-        if (err.train_confusion_matrix.cm != null
-                && err.train_confusion_matrix.cm.length-1 >= get_params().max_confusion_matrix_size) {
-          err.train_confusion_matrix = null;
-          err.valid_confusion_matrix = null;
+          // only keep confusion matrices for the last step if there are fewer than specified number of output classes
+          if (err.train_confusion_matrix.cm != null
+                  && err.train_confusion_matrix.cm.length - 1 >= get_params().max_confusion_matrix_size) {
+            err.train_confusion_matrix = null;
+            err.valid_confusion_matrix = null;
+          }
         }
 
         _timeLastScoreEnd = System.currentTimeMillis();
@@ -791,46 +835,51 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
         if (errors == null) {
           errors = new Errors[]{err};
         } else {
-          Errors[] err2 = new Errors[errors.length+1];
+          Errors[] err2 = new Errors[errors.length + 1];
           System.arraycopy(errors, 0, err2, 0, errors.length);
-          err2[err2.length-1] = err;
+          err2[err2.length - 1] = err;
           errors = err2;
         }
-        // always keep a copy of the best model so far (based on the following criterion)
-        if (error() < _bestError && get_params().best_model_key != null) {
-          _actual_best_model_key = get_params().best_model_key;
-          final Key bestModelKey = _actual_best_model_key;
-          if (!get_params().quiet_mode) Log.info("Error reduced from " + _bestError + " to " + error() + ". Storing best model so far under key " + bestModelKey.toString() + ".");
-          _bestError = error();
-          final Key job = null;
-          final DeepLearningModel cp = this;
-          DeepLearningModel bestModel = new DeepLearningModel(cp, bestModelKey, job, model_info().data_info());
-          bestModel.delete_and_lock(job);
-          bestModel.unlock(job);
-          assert(UKV.get(bestModelKey) != null);
-          assert(bestModel.compareTo(this) <= 0);
-          assert(((DeepLearningModel)UKV.get(bestModelKey)).error() == _bestError);
 
-          // debugging check
-          if (false) {
-            bestModel = UKV.get(bestModelKey);
-            final Frame fr = ftest != null ? ftest : ftrain;
-            final Frame bestPredict = bestModel.score(fr, ftest != null ? adaptCM : false);
-            final Frame hitRatio_bestPredict = new Frame(bestPredict);
-            // Adapt output response domain, in case validation domain is different from training domain
-            // Note: doesn't change predictions, just the *possible* label domain
-            if (adaptCM) {
-              final Vec CMadapted = vadaptor.adaptModelResponse2CM(bestPredict.vecs()[0]);
-              bestPredict.replace(0, CMadapted); //replace label
-              bestPredict.add("to_be_deleted", CMadapted); //keep the Vec around to be deleted later (no leak)
+        if (!get_params().autoencoder) {
+          // always keep a copy of the best model so far (based on the following criterion)
+          if (error() < _bestError && get_params().best_model_key != null) {
+            _actual_best_model_key = get_params().best_model_key;
+            final Key bestModelKey = _actual_best_model_key;
+            if (!get_params().quiet_mode)
+              Log.info("Error reduced from " + _bestError + " to " + error() + ". Storing best model so far under key " + bestModelKey.toString() + ".");
+            _bestError = error();
+            final Key job = null;
+            final DeepLearningModel cp = this;
+            DeepLearningModel bestModel = new DeepLearningModel(cp, bestModelKey, job, model_info().data_info());
+            bestModel.delete_and_lock(job);
+            bestModel.unlock(job);
+            assert (UKV.get(bestModelKey) != null);
+            assert (bestModel.compareTo(this) <= 0);
+            assert (((DeepLearningModel) UKV.get(bestModelKey)).error() == _bestError);
+
+            // debugging check
+            if (false) {
+              bestModel = UKV.get(bestModelKey);
+              final Frame fr = ftest != null ? ftest : ftrain;
+              final Frame bestPredict = bestModel.score(fr, ftest != null ? adaptCM : false);
+              final Frame hitRatio_bestPredict = new Frame(bestPredict);
+              // Adapt output response domain, in case validation domain is different from training domain
+              // Note: doesn't change predictions, just the *possible* label domain
+              if (adaptCM) {
+                final Vec CMadapted = vadaptor.adaptModelResponse2CM(bestPredict.vecs()[0]);
+                bestPredict.replace(0, CMadapted); //replace label
+                bestPredict.add("to_be_deleted", CMadapted); //keep the Vec around to be deleted later (no leak)
+              }
+              final double err3 = calcError(fr, fr.lastVec(), bestPredict, hitRatio_bestPredict, "cross-check",
+                      printme, get_params().max_confusion_matrix_size, new water.api.ConfusionMatrix(), isClassifier() && nclasses() == 2 ? new AUC() : null, null);
+              if (isClassifier())
+                assert (ftest != null ? Math.abs(err.valid_err - err3) < 1e-5 : Math.abs(err.train_err - err3) < 1e-5);
+              else
+                assert (ftest != null ? Math.abs(err.valid_mse - err3) < 1e-5 : Math.abs(err.train_mse - err3) < 1e-5);
+              bestPredict.delete();
             }
-            final double err3 = calcError(fr, fr.lastVec(), bestPredict, hitRatio_bestPredict, "cross-check",
-                    printme, get_params().max_confusion_matrix_size, new water.api.ConfusionMatrix(), isClassifier() && nclasses() == 2 ? new AUC() : null, null);
-            if (isClassifier()) assert (ftest != null ? Math.abs(err.valid_err - err3) < 1e-5 : Math.abs(err.train_err - err3) < 1e-5);
-            else assert (ftest != null ? Math.abs(err.valid_mse - err3) < 1e-5 : Math.abs(err.train_mse - err3) < 1e-5);
-            bestPredict.delete();
           }
-        }
 //        else {
 //          // keep output JSON small
 //          if (errors.length > 1) {
@@ -840,9 +889,10 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 //          }
 //        }
 
-        // print the freshly scored model to ASCII
-        for (String s : toString().split("\n")) Log.info(s);
-        if (printme) Log.info("Time taken for scoring and diagnostics: " + PrettyPrint.msecs(err.scoring_time, true));
+          // print the freshly scored model to ASCII
+          for (String s : toString().split("\n")) Log.info(s);
+          if (printme) Log.info("Time taken for scoring and diagnostics: " + PrettyPrint.msecs(err.scoring_time, true));
+        }
       }
       if (model_info().unstable()) {
         Log.err("Canceling job since the model is unstable (exponential growth observed).");
@@ -863,6 +913,19 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     }
   }
 
+  @Override protected void setCrossValidationError(Job.ValidatedJob job, double cv_error, ConfusionMatrix cm, AUC auc, HitRatio hr) {
+    _have_cv_results = true;
+    if (!get_params().classification)
+      last_scored().valid_mse = cv_error;
+    else
+      last_scored().valid_err = cv_error;
+    last_scored().score_validation_samples = last_scored().score_training_samples / get_params().n_folds;
+    last_scored().num_folds = get_params().n_folds;
+    last_scored().valid_confusion_matrix = cm;
+    last_scored().validAUC = auc;
+    last_scored().valid_hitratio = hr;
+  }
+
   @Override public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append(model_info.toString());
@@ -878,7 +941,55 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   }
 
   /**
-   * Predict from raw double values representing
+   * This is an overridden version of Model.score(). Make either a prediction or a reconstruction.
+   * @param frame Test dataset
+   * @return A frame containing the prediction or reconstruction
+   */
+  @Override
+  public Frame score(Frame frame) {
+    if (!get_params().autoencoder) {
+      return super.score(frame);
+    } else {
+      // Reconstruction
+      // Adapt the Frame layout - returns adapted frame and frame containing only
+      // newly created vectors
+      Frame[] adaptFrms = adapt(frame,false,false/*no response*/);
+      // Adapted frame containing all columns - mix of original vectors from fr
+      // and newly created vectors serving as adaptors
+      Frame adaptFrm = adaptFrms[0];
+      // Contains only newly created vectors. The frame eases deletion of these vectors.
+      Frame onlyAdaptFrm = adaptFrms[1];
+
+      final int len = model_info().data_info().fullN();
+      String prefix = "reconstr_";
+      assert(model_info().data_info()._responses == 0);
+      String[] coefnames = model_info().data_info().coefNames();
+      assert(len == coefnames.length);
+      for( int c=0; c<len; c++ )
+        adaptFrm.add(prefix+coefnames[c],adaptFrm.anyVec().makeZero());
+      new MRTask2() {
+        @Override public void map( Chunk chks[] ) {
+          double tmp [] = new double[_names.length];
+          float preds[] = new float [len];
+          final Neurons[] neurons = DeepLearningTask.makeNeuronsForTesting(model_info);
+          for( int row=0; row<chks[0]._len; row++ ) {
+            float p[] = score_autoencoder(chks, row, tmp, preds, neurons);
+            for( int c=0; c<preds.length; c++ )
+              chks[_names.length+c].set0(row,p[c]);
+          }
+        }
+      }.doAll(adaptFrm);
+
+      // Return the predicted columns
+      int x=_names.length, y=adaptFrm.numCols();
+      Frame f = adaptFrm.extractFrame(x, y); //this will call vec_impl() and we cannot call the delete() below just yet
+      onlyAdaptFrm.delete();
+      return f;
+    }
+  }
+
+  /**
+   * Predict from raw double values representing the data
    * @param data raw array containing categorical values (horizontalized to 1,0,0,1,0,0 etc.) and numerical values (0.35,1.24,5.3234,etc), both can contain NaNs
    * @param preds predicted label and per-class probabilities (for classification), predicted target (regression), can contain NaNs
    * @return preds, can contain NaNs
@@ -892,16 +1003,16 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     DeepLearningTask.step(-1, neurons, model_info, false, null);
     float[] out = neurons[neurons.length - 1]._a.raw();
     if (isClassifier()) {
-      assert(preds.length == out.length+1);
-      for (int i=0; i<preds.length-1; ++i) {
-        preds[i+1] = out[i];
-        if (Float.isNaN(preds[i+1])) throw new RuntimeException("Predicted class probability NaN!");
+      assert (preds.length == out.length + 1);
+      for (int i = 0; i < preds.length - 1; ++i) {
+        preds[i + 1] = out[i];
+        if (Float.isNaN(preds[i + 1])) throw new RuntimeException("Predicted class probability NaN!");
       }
       preds[0] = ModelUtils.getPrediction(preds, data);
     } else {
-      assert(preds.length == 1 && out.length == 1);
+      assert (preds.length == 1 && out.length == 1);
       if (model_info().data_info()._normRespMul != null)
-        preds[0] = (float)(out[0] / model_info().data_info()._normRespMul[0] + model_info().data_info()._normRespSub[0]);
+        preds[0] = (float) (out[0] / model_info().data_info()._normRespMul[0] + model_info().data_info()._normRespSub[0]);
       else
         preds[0] = out[0];
       if (Float.isNaN(preds[0])) throw new RuntimeException("Predicted regression target NaN!");
@@ -909,11 +1020,111 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     return preds;
   }
 
+  /**
+   * Score auto-encoded reconstruction (on-the-fly, without allocating the reconstruction as done in Frame score(Frame fr))
+   * @param frame Original data (can contain response, will be ignored)
+   * @return Frame containing one Vec with reconstruction error (MSE) of each reconstructed row, caller is responsible for deletion
+   */
+  public Frame scoreAutoEncoder(Frame frame) {
+    final int len = _names.length;
+    // Adapt the Frame layout - returns adapted frame and frame containing only
+    // newly created vectors
+    Frame[] adaptFrms = adapt(frame,false,false/*no response*/);
+    // Adapted frame containing all columns - mix of original vectors from fr
+    // and newly created vectors serving as adaptors
+    Frame adaptFrm = adaptFrms[0];
+    // Contains only newly created vectors. The frame eases deletion of these vectors.
+    Frame onlyAdaptFrm = adaptFrms[1];
+    adaptFrm.add("Reconstruction.MSE", adaptFrm.anyVec().makeZero());
+    new MRTask2() {
+      @Override public void map( Chunk chks[] ) {
+        double tmp [] = new double[len];
+        final Neurons[] neurons = DeepLearningTask.makeNeuronsForTesting(model_info);
+        for( int row=0; row<chks[0]._len; row++ ) {
+          for( int i=0; i<_names.length; i++ )
+            tmp[i] = chks[i].at0(row); //original data
+          chks[len].set0(row, score_autoencoder(tmp, null, neurons)); //store the per-row reconstruction error (MSE) in the last column
+        }
+      }
+    }.doAll(adaptFrm);
+
+    // Return just the output columns
+    int x=_names.length, y=adaptFrm.numCols();
+    final Frame l2 = adaptFrm.extractFrame(x, y);
+    onlyAdaptFrm.delete();
+    return l2;
+  }
+
+  // Make (potentially expanded) reconstruction
+  private float[] score_autoencoder(Chunk[] chks, int row_in_chunk, double[] tmp, float[] preds, Neurons[] neurons) {
+    assert(get_params().autoencoder);
+    assert(tmp.length == _names.length);
+    for( int i=0; i<tmp.length; i++ )
+      tmp[i] = chks[i].at0(row_in_chunk);
+    score_autoencoder(tmp, preds, neurons); // this fills preds, returns MSE error (ignored here)
+    return preds;
+  }
+
+  /**
+   * Helper to reconstruct original data into preds array and compute the reconstruction error (MSE)
+   * @param data Original data (unexpanded)
+   * @param preds Reconstruction (potentially expanded)
+   * @return reconstruction error
+   */
+  private double score_autoencoder(double[] data, float[] preds, Neurons[] neurons) {
+    assert(model_info().get_params().autoencoder);
+    if (model_info().unstable()) {
+      throw new UnsupportedOperationException("Trying to predict with an unstable model.");
+    }
+    ((Neurons.Input)neurons[0]).setInput(-1, data); // expands categoricals inside
+    DeepLearningTask.step(-1, neurons, model_info, false, null); // reconstructs data in expanded space
+    float[] in  = neurons[0]._a.raw(); //input (expanded)
+    float[] out = neurons[neurons.length - 1]._a.raw(); //output (expanded)
+    assert(in.length == out.length);
+
+    // First normalize categorical reconstructions to be probabilities
+    // (such that they can be better compared to the input where one factor was 1 and the rest was 0)
+//    model_info().data_info().softMaxCategoricals(out,out); //only modifies the categoricals
+
+    // Compute MSE of reconstruction in expanded space (with categorical probabilities)
+    double l2 = 0;
+    for (int i = 0; i < in.length; ++i)
+      l2 += Math.pow((out[i] - in[i]), 2);
+    l2 /= in.length;
+
+    if (preds!=null) {
+      // Now scale back numerical columns to original data space (scale + shift)
+      model_info().data_info().unScaleNumericals(out, out); //only modifies the numericals
+      System.arraycopy(out, 0, preds, 0, out.length); //copy reconstruction into preds
+    }
+    return l2;
+  }
+
+  /**
+   * Compute quantile-based threshold (in reconstruction error) to find outliers
+   * @param mse Vector containing reconstruction errors
+   * @param quantile Quantile for cut-off
+   * @return Threshold in MSE value for a point to be above the quantile
+   */
+  public double calcOutlierThreshold(Vec mse, double quantile) {
+    Frame mse_frame = new Frame(Key.make(), new String[]{"Reconstruction.MSE"}, new Vec[]{mse});
+    QuantilesPage qp = new QuantilesPage();
+    qp.column = mse_frame.vec(0);
+    qp.source_key = mse_frame;
+    qp.quantile = quantile;
+    qp.invoke();
+    DKV.remove(mse_frame._key);
+    return qp.result;
+  }
+
   public boolean generateHTML(String title, StringBuilder sb) {
     if (_key == null) {
       DocGen.HTML.title(sb, "No model yet");
       return true;
     }
+
+    // optional JFrame creation for visualization of weights
+//    DeepLearningVisualization.visualize(this);
 
     final String mse_format = "%g";
 //    final String cross_entropy_format = "%2.6f";
@@ -933,12 +1144,15 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
             + water.api.Predict.link(_key, "Score on dataset") + ", "
             + DeepLearning.link(_dataKey, "Compute new model", null, responseName(), val_key)
             + (bestModelKey != null && UKV.get(bestModelKey) != null && bestModelKey != _key ? ", " + DeepLearningModelView.link("Go to best model", bestModelKey) : "")
-            + (jobKey == null || (UKV.get(jobKey) != null && Job.isEnded(jobKey)) ? ", <i class=\"icon-play\"></i>" + DeepLearning.link(_dataKey, "Continue training this model", _key, responseName(), val_key) : "")
+            + (((jobKey != null && UKV.get(jobKey) == null)) || UKV.get(jobKey) != null && Job.isEnded(jobKey) ? ", <i class=\"icon-play\"></i>" + DeepLearning.link(_dataKey, "Continue training this model", _key, responseName(), val_key) : "")
             + "</div>");
 
     DocGen.HTML.paragraph(sb, "Model Key: " + _key);
     if (jobKey != null) DocGen.HTML.paragraph(sb, "Job Key: " + jobKey);
-    DocGen.HTML.paragraph(sb, "Model type: " + (get_params().classification ? " Classification" : " Regression") + ", predicting: " + responseName());
+    if (!get_params().autoencoder)
+      DocGen.HTML.paragraph(sb, "Model type: " + (get_params().classification ? " Classification" : " Regression") + ", predicting: " + responseName());
+    else
+      DocGen.HTML.paragraph(sb, "Model type: Auto-Encoder");
     DocGen.HTML.paragraph(sb, "Number of model parameters (weights/biases): " + String.format("%,d", model_info().size()));
 
     if (model_info.unstable()) {
@@ -948,6 +1162,8 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       DocGen.HTML.section(sb, msg);
       DocGen.HTML.section(sb, "=======================================================================================");
     }
+
+    if (error == null) return true;
 
     DocGen.HTML.title(sb, "Progress");
     // update epoch counter every time the website is displayed
@@ -982,7 +1198,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
         if (i == 0) {
           sb.append("<td>");
-          sb.append(formatPct(neurons[i].params.input_dropout_ratio));
+          sb.append(Utils.formatPct(neurons[i].params.input_dropout_ratio));
           sb.append("</td>");
           sb.append("<td></td>");
           sb.append("<td></td>");
@@ -995,7 +1211,10 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
         }
         else if (i < neurons.length-1) {
           sb.append("<td>");
-          sb.append(formatPct(neurons[i].params.hidden_dropout_ratios[i-1]));
+          if (neurons[i].params.hidden_dropout_ratios == null)
+            sb.append(Utils.formatPct(0));
+          else
+            sb.append(Utils.formatPct(neurons[i].params.hidden_dropout_ratios[i - 1]));
           sb.append("</td>");
         } else {
           sb.append("<td></td>");
@@ -1020,17 +1239,21 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       sb.append("</table>");
     }
 
-    if (isClassifier()) {
-      DocGen.HTML.section(sb, "Classification error on training data: " + formatPct(error.train_err));
-//      DocGen.HTML.section(sb, "Training cross entropy: " + String.format(cross_entropy_format, error.train_mce));
+    if (isClassifier() && !get_params().autoencoder) {
+      DocGen.HTML.section(sb, "Classification error on training data: " + Utils.formatPct(error.train_err));
       if(error.validation) {
-        DocGen.HTML.section(sb, "Classification error on validation data: " + formatPct(error.valid_err));
-//        DocGen.HTML.section(sb, "Validation mean cross entropy: " + String.format(cross_entropy_format, error.valid_mce));
+        DocGen.HTML.section(sb, "Classification error on validation data: " + Utils.formatPct(error.valid_err));
+      } else if(error.num_folds > 0) {
+        DocGen.HTML.section(sb, "Classification error on " + error.num_folds + "-fold cross-validated training data"
+                + (_have_cv_results ? ": " + Utils.formatPct(error.valid_err) : " is being computed - please reload this page later."));
       }
     } else {
       DocGen.HTML.section(sb, "MSE on training data: " + String.format(mse_format, error.train_mse));
       if(error.validation) {
         DocGen.HTML.section(sb, "MSE on validation data: " + String.format(mse_format, error.valid_mse));
+      } else if(error.num_folds > 0) {
+        DocGen.HTML.section(sb, "MSE on " + error.num_folds + "-fold cross-validated training data"
+                + (_have_cv_results ? ": " + String.format(mse_format, error.valid_mse) : " is being computed - please reload this page later."));
       }
     }
     DocGen.HTML.paragraph(sb, "Training samples: " + String.format("%,d", model_info().get_processed_total()));
@@ -1050,11 +1273,35 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     long score_train = error.score_training_samples;
     long score_valid = error.score_validation_samples;
     final boolean fulltrain = score_train==0 || score_train == training_rows;
-    final boolean fullvalid = score_valid==0 || score_valid == get_params().validation.numRows();
+    final boolean fullvalid = error.validation && get_params().n_folds == 0 && (score_valid==0 || score_valid == get_params().validation.numRows());
 
     final String toolarge = " Confusion matrix not shown here - too large: number of classes (" + model_info.units[model_info.units.length-1]
             + ") is greater than the specified limit of " + get_params().max_confusion_matrix_size + ".";
     boolean smallenough = model_info.units[model_info.units.length-1] <= get_params().max_confusion_matrix_size;
+
+    if (!error.validation) {
+      if (_have_cv_results) {
+        RString v_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
+        v_rs.replace("key", get_params().source._key);
+        String cmTitle = "<div class=\"alert\">Scoring results reported for " + error.num_folds + "-fold cross-validated training data " + v_rs.toString() + ":</div>";
+        sb.append("<h5>" + cmTitle);
+        sb.append("</h5>");
+      }
+      else {
+        RString t_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
+        t_rs.replace("key", get_params().source._key);
+        String cmTitle = "<div class=\"alert\">Scoring results reported on training data " + t_rs.toString() + (fulltrain ? "" : " (" + score_train + " samples)") + ":</div>";
+        sb.append("<h5>" + cmTitle);
+        sb.append("</h5>");
+      }
+    }
+    else {
+      RString v_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
+      v_rs.replace("key", get_params().validation._key != null ? get_params().validation._key : "");
+      String cmTitle = "<div class=\"alert\">Scoring results reported on validation data " + v_rs.toString() + (fullvalid ? "" : " (" + score_valid + " samples)") + ":</div>";
+      sb.append("<h5>" + cmTitle);
+      sb.append("</h5>");
+    }
 
     if (isClassifier()) {
       // print AUC
@@ -1066,25 +1313,22 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       }
       else {
         if (error.validation) {
-          RString v_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
-          v_rs.replace("key", get_params().validation._key != null ? get_params().validation._key : "");
-          String cmTitle = "<div class=\"alert\">Scoring results reported on validation data " + v_rs.toString() + (fullvalid ? "" : " (" + score_valid + " samples)") + ":</div>";
-          sb.append("<h5>" + cmTitle);
           if (error.valid_confusion_matrix != null && smallenough) {
-            sb.append("</h5>");
             error.valid_confusion_matrix.toHTML(sb);
-          } else if (smallenough) sb.append(" Confusion matrix not yet computed.</h5>");
-          else sb.append(toolarge + "</h5>");
-        } else {
-          RString t_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
-          t_rs.replace("key", get_params().source._key);
-          String cmTitle = "<div class=\"alert\">Scoring results reported on training data " + t_rs.toString() + (fulltrain ? "" : " (" + score_train + " samples)") + ":</div>";
-          sb.append("<h5>" + cmTitle);
+          } else if (smallenough) sb.append("<h5>Confusion matrix on validation data is not yet computed.</h5>");
+          else sb.append(toolarge);
+        }
+        else if (_have_cv_results) {
+          if (error.valid_confusion_matrix != null && smallenough) {
+            error.valid_confusion_matrix.toHTML(sb);
+          } else if (smallenough) sb.append("<h5>Confusion matrix on " + error.num_folds + "-fold cross-validated training data is not yet computed.</h5>");
+          else sb.append(toolarge);
+        }
+        else {
           if (error.train_confusion_matrix != null && smallenough) {
-            sb.append("</h5>");
             error.train_confusion_matrix.toHTML(sb);
-          } else if (smallenough) sb.append(" Confusion matrix not yet computed.</h5>");
-          else sb.append(toolarge + "</h5>");
+          } else if (smallenough) sb.append("<h5>Confusion matrix on training data is not yet computed.</h5>");
+          else sb.append(toolarge);
         }
       }
     }
@@ -1098,9 +1342,10 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
     // Variable importance
     if (error.variable_importances != null) {
-      error.variable_importances.toHTML(sb);
-        sb.append("<button id=\"sortBars\" class=\"btn btn-primary\">Sort</button>\n");
+      error.variable_importances.toHTML(this, sb);
     }
+
+    printCrossValidationModelsHTML(sb);
 
     DocGen.HTML.title(sb, "Scoring history");
     if (errors.length > 1) {
@@ -1174,7 +1419,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     sb.append("<th>Training Time</th>");
     sb.append("<th>Training Epochs</th>");
     sb.append("<th>Training Samples</th>");
-    if (isClassifier()) {
+    if (isClassifier() && !get_params().autoencoder) {
 //      sb.append("<th>Training MCE</th>");
       sb.append("<th>Training Error</th>");
       if (nclasses()==2) sb.append("<th>Training AUC</th>");
@@ -1190,6 +1435,14 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
         sb.append("<th>Validation MSE</th>");
       }
     }
+    else if (error.num_folds > 0) {
+      if (isClassifier()) {
+        sb.append("<th>Cross-Validation Error</th>");
+        if (nclasses()==2) sb.append("<th>Cross-Validation AUC</th>");
+      } else {
+        sb.append("<th>Cross-Validation MSE</th>");
+      }
+    }
     sb.append("</tr>");
     for( int i = errors.length - 1; i >= 0; i-- ) {
       final Errors e = errors[i];
@@ -1197,11 +1450,10 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       sb.append("<td>" + PrettyPrint.msecs(e.training_time_ms, true) + "</td>");
       sb.append("<td>" + String.format("%g", e.epoch_counter) + "</td>");
       sb.append("<td>" + String.format("%,d", e.training_samples) + "</td>");
-      if (isClassifier()) {
-//        sb.append("<td>" + String.format(cross_entropy_format, e.train_mce) + "</td>");
-        sb.append("<td>" + formatPct(e.train_err) + "</td>");
+      if (isClassifier() && !get_params().autoencoder) {
+        sb.append("<td>" + Utils.formatPct(e.train_err) + "</td>");
         if (nclasses()==2) {
-          if (e.trainAUC != null) sb.append("<td>" + formatPct(e.trainAUC.AUC()) + "</td>");
+          if (e.trainAUC != null) sb.append("<td>" + Utils.formatPct(e.trainAUC.AUC()) + "</td>");
           else sb.append("<td>" + "N/A" + "</td>");
         }
       } else {
@@ -1209,14 +1461,30 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       }
       if(e.validation) {
         if (isClassifier()) {
-//          sb.append("<td>" + String.format(cross_entropy_format, e.valid_mce) + "</td>");
-          sb.append("<td>" + formatPct(e.valid_err) + "</td>");
+          sb.append("<td>" + Utils.formatPct(e.valid_err) + "</td>");
           if (nclasses()==2) {
-            if (e.validAUC != null) sb.append("<td>" + formatPct(e.validAUC.AUC()) + "</td>");
+            if (e.validAUC != null) sb.append("<td>" + Utils.formatPct(e.validAUC.AUC()) + "</td>");
             else sb.append("<td>" + "N/A" + "</td>");
           }
         } else {
           sb.append("<td>" + String.format(mse_format, e.valid_mse) + "</td>");
+        }
+      }
+      else if(e.num_folds > 0) {
+        if (i == errors.length - 1 && _have_cv_results) {
+          if (isClassifier()) {
+            sb.append("<td>" + Utils.formatPct(e.valid_err) + "</td>");
+            if (nclasses() == 2) {
+              if (e.validAUC != null) sb.append("<td>" + Utils.formatPct(e.validAUC.AUC()) + "</td>");
+              else sb.append("<td>" + "N/A" + "</td>");
+            }
+          } else {
+            sb.append("<td>" + String.format(mse_format, e.valid_mse) + "</td>");
+          }
+        }
+        else {
+          sb.append("<td>N/A</td>");
+          if (nclasses() == 2) sb.append("<td>N/A</td>");
         }
       }
       sb.append("</tr>");
@@ -1225,14 +1493,251 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     return true;
   }
 
-  private static String formatPct(double pct) {
-    String s = "N/A";
-    if( !isNaN(pct) )
-      s = String.format("%5.2f %%", 100 * pct);
-    return s;
+  public void toJavaHtml(StringBuilder sb) {
+    sb.append("<br /><br /><div class=\"pull-right\"><a href=\"#\" onclick=\'$(\"#javaModel\").toggleClass(\"hide\");\'" +
+            "class=\'btn btn-inverse btn-mini\'>Java Model</a></div><br /><div class=\"hide\" id=\"javaModel\">");
+
+    boolean featureAllowed = true; //isFeatureAllowed();
+    if (! featureAllowed) {
+      sb.append("<br/><div id=\'javaModelWarningBlock\' class=\"alert\" style=\"background:#eedd20;color:#636363;text-shadow:none;\">");
+      sb.append("<b>You have requested a premium feature and your H<sub>2</sub>O software is unlicensed.</b><br/><br/>");
+      sb.append("Please enter your email address below, and we will send you a trial license shortly.<br/>");
+      sb.append("This will also temporarily enable downloading Java models.<br/>");
+      sb.append("<form class=\'form-inline\'><input id=\"emailForJavaModel\" class=\"span5\" type=\"text\" placeholder=\"Email\"/> ");
+      sb.append("<a href=\"#\" onclick=\'processJavaModelLicense();\' class=\'btn btn-inverse\'>Send</a></form></div>");
+      sb.append("<div id=\"javaModelSource\" class=\"hide\"><pre style=\"overflow-y:scroll;\"><code class=\"language-java\">");
+      DocGen.HTML.escape(sb, toJava());
+      sb.append("</code></pre></div>");
+    }
+    else if( model_info().size() > 100000 ) {
+      String modelName = JCodeGen.toJavaId(_key.toString());
+      sb.append("<pre style=\"overflow-y:scroll;\"><code class=\"language-java\">");
+      sb.append("/* Java code is too large to display, download it directly.\n");
+      sb.append("   To obtain the code please invoke in your terminal:\n");
+      sb.append("     curl http:/").append(H2O.SELF.toString()).append("/h2o-model.jar > h2o-model.jar\n");
+      sb.append("     curl http:/").append(H2O.SELF.toString()).append("/2/").append(this.getClass().getSimpleName()).append("View.java?_modelKey=").append(_key).append(" > ").append(modelName).append(".java\n");
+      sb.append("     javac -cp h2o-model.jar -J-Xmx2g -J-XX:MaxPermSize=128m ").append(modelName).append(".java\n");
+      sb.append("*/");
+      sb.append("</code></pre>");
+    } else {
+      sb.append("<pre style=\"overflow-y:scroll;\"><code class=\"language-java\">");
+      DocGen.HTML.escape(sb, toJava());
+      sb.append("</code></pre>");
+    }
+    sb.append("</div>");
+    sb.append("<script type=\"text/javascript\">$(document).ready(showOrHideJavaModel);</script>");
   }
 
-  public boolean toJavaHtml(StringBuilder sb) { return false; }
-  @Override public String toJava() { return "Not yet implemented."; }
+  @Override protected SB toJavaInit(SB sb, SB fileContextSB) {
+    sb = super.toJavaInit(sb, fileContextSB);
+    if (model_info().data_info()._nums > 0) {
+      JCodeGen.toStaticVar(sb, "NUMS", new double[model_info().data_info()._nums], "Workspace for storing numerical input variables.");
+      JCodeGen.toStaticVar(sb, "NORMMUL", model_info().data_info()._normMul, "Standardization/Normalization scaling factor for numerical variables.");
+      JCodeGen.toStaticVar(sb, "NORMSUB", model_info().data_info()._normSub, "Standardization/Normalization offset for numerical variables.");
+    }
+    if (model_info().data_info()._cats > 0) {
+      JCodeGen.toStaticVar(sb, "CATS", new int[model_info().data_info()._cats], "Workspace for storing categorical input variables.");
+    }
+    JCodeGen.toStaticVar(sb, "CATOFFSETS", model_info().data_info()._catOffsets, "Workspace for categorical offsets.");
+    if (model_info().data_info()._normRespMul != null) {
+      JCodeGen.toStaticVar(sb, "NORMRESPMUL", model_info().data_info()._normRespMul, "Standardization/Normalization scaling factor for response.");
+      JCodeGen.toStaticVar(sb, "NORMRESPSUB", model_info().data_info()._normRespSub, "Standardization/Normalization offset for response.");
+    }
+    if (get_params().hidden_dropout_ratios != null) {
+      JCodeGen.toStaticVar(sb, "HIDDEN_DROPOUT_RATIOS", get_params().hidden_dropout_ratios, "Hidden layer dropout ratios.");
+    }
+
+    Neurons[] neurons = DeepLearningTask.makeNeuronsForTesting(model_info());
+    int[] layers = new int[neurons.length];
+    for (int i=0;i<neurons.length;++i)
+      layers[i] = neurons[i].units;
+    JCodeGen.toStaticVar(sb, "NEURONS", layers, "Number of neurons for each layer.");
+
+    // activation storage
+    sb.i(1).p("// Storage for neuron activation values.").nl();
+    sb.i(1).p("public static final float[][] ACTIVATION = new float[][] {").nl();
+    for (int i=0; i<neurons.length; i++) {
+      String colInfoClazz = "Activation_"+i;
+      sb.i(2).p("/* ").p(neurons[i].getClass().getSimpleName()).p(" */ ");
+      sb.p(colInfoClazz).p(".VALUES");
+      if (i!=neurons.length-1) sb.p(',');
+      sb.nl();
+      fileContextSB.i().p("// Neuron activation values for ").p(neurons[i].getClass().getSimpleName()).p(" layer").nl();
+      JCodeGen.toClassWithArray(fileContextSB, null, colInfoClazz, new float[layers[i]]);
+    }
+    sb.i(1).p("};").nl();
+
+    // biases
+    sb.i(1).p("// Neuron bias values.").nl();
+    sb.i(1).p("public static final float[][] BIAS = new float[][] {").nl();
+    for (int i=0; i<neurons.length; i++) {
+      String colInfoClazz = "Bias_"+i;
+      sb.i(2).p("/* ").p(neurons[i].getClass().getSimpleName()).p(" */ ");
+      sb.p(colInfoClazz).p(".VALUES");
+      if (i!=neurons.length-1) sb.p(',');
+      sb.nl();
+      fileContextSB.i().p("// Neuron bias values for ").p(neurons[i].getClass().getSimpleName()).p(" layer").nl();
+      float[] bias = i == 0 ? null : new float[model_info().get_biases(i-1).size()];
+      if (i>0) {
+        for (int j=0; j<bias.length; ++j) bias[j] = model_info().get_biases(i-1).get(j);
+      }
+      JCodeGen.toClassWithArray(fileContextSB, null, colInfoClazz, bias);
+    }
+    sb.i(1).p("};").nl();
+
+    // weights
+    sb.i(1).p("// Connecting weights between neurons.").nl();
+    sb.i(1).p("public static final float[][] WEIGHT = new float[][] {").nl();
+    for (int i=0; i<neurons.length; i++) {
+      String colInfoClazz = "Weight_"+i;
+      sb.i(2).p("/* ").p(neurons[i].getClass().getSimpleName()).p(" */ ");
+      sb.p(colInfoClazz).p(".VALUES");
+      if (i!=neurons.length-1) sb.p(',');
+      sb.nl();
+      if (i > 0) {
+        fileContextSB.i().p("// Neuron weights connecting ").
+                p(neurons[i - 1].getClass().getSimpleName()).p(" and ").
+                p(neurons[i].getClass().getSimpleName()).
+                p(" layer").nl();
+      }
+      float[] weights = i == 0 ? null : new float[model_info().get_weights(i-1).rows()*model_info().get_weights(i-1).cols()];
+      if (i>0) {
+        final int rows = model_info().get_weights(i-1).rows();
+        final int cols = model_info().get_weights(i-1).cols();
+        for (int j=0; j<rows; ++j)
+          for (int k=0; k<cols; ++k)
+            weights[j*cols+k] = model_info().get_weights(i-1).get(j,k);
+      }
+      JCodeGen.toClassWithArray(fileContextSB, null, colInfoClazz, weights);
+    }
+    sb.i(1).p("};").nl();
+
+    return sb;
+  }
+
+  @Override protected void toJavaPredictBody( final SB bodySb, final SB classCtxSb, final SB fileCtxSb) {
+    SB model = new SB();
+    bodySb.i().p("java.util.Arrays.fill(preds,0f);").nl();
+    final int cats = model_info().data_info()._cats;
+    final int nums = model_info().data_info()._nums;
+    // initialize input layer
+    if (nums > 0) bodySb.i().p("java.util.Arrays.fill(NUMS,0f);").nl();
+    if (cats > 0) bodySb.i().p("java.util.Arrays.fill(CATS,0);").nl();
+    bodySb.i().p("int i = 0, ncats = 0;").nl();
+    if (cats > 0) {
+      bodySb.i().p("for(; i<"+cats+"; ++i) {").nl();
+      bodySb.i(1).p("if (!Double.isNaN(data[i])) {").nl();
+      bodySb.i(2).p("int c = (int) data[i];").nl();
+      if (model_info().data_info()._useAllFactorLevels)
+        bodySb.i(2).p("CATS[ncats++] = c + CATOFFSETS[i];").nl();
+      else
+        bodySb.i(2).p("if (c != 0) CATS[ncats++] = c + CATOFFSETS[i] - 1;").nl();
+      bodySb.i(1).p("}").nl();
+      bodySb.i().p("}").nl();
+    }
+    if (nums > 0) {
+      bodySb.i().p("final int n = data.length;").nl();
+      bodySb.i().p("for(; i<n; ++i) {").nl();
+        bodySb.i(1).p("NUMS[i" + (cats > 0 ? "-" + cats : "") + "] = Double.isNaN(data[i]) ? 0 : ");
+      if (model_info().data_info()._normMul != null) {
+        bodySb.p("(data[i] - NORMSUB[i" + (cats > 0 ? "-" + cats : "") + "])*NORMMUL[i" + (cats > 0 ? "-" + cats : "") + "];").nl();
+      } else {
+        bodySb.p("data[i];").nl();
+      }
+      bodySb.i(0).p("}").nl();
+    }
+    if (cats > 0) {
+      bodySb.i().p("for (i=0; i<ncats; ++i) ACTIVATION[0][CATS[i]] = 1f;").nl();
+    }
+    if (nums > 0) {
+      bodySb.i().p("for (i=0; i<NUMS.length; ++i) {").nl();
+        bodySb.i(1).p("ACTIVATION[0][CATOFFSETS[CATOFFSETS.length-1] + i] = Double.isNaN(NUMS[i]) ? 0f : (float) NUMS[i];").nl();
+      bodySb.i().p("}").nl();
+    }
+
+    boolean tanh=(get_params().activation == DeepLearning.Activation.Tanh || get_params().activation == DeepLearning.Activation.TanhWithDropout);
+    boolean relu=(get_params().activation == DeepLearning.Activation.Rectifier || get_params().activation == DeepLearning.Activation.RectifierWithDropout);
+    boolean maxout=(get_params().activation == DeepLearning.Activation.Maxout || get_params().activation == DeepLearning.Activation.MaxoutWithDropout);
+
+    // make prediction: forward propagation
+    bodySb.i().p("for (i=1; i<ACTIVATION.length; ++i) {").nl();
+    bodySb.i(1).p("java.util.Arrays.fill(ACTIVATION[i],0f);").nl();
+    if (maxout) {
+      bodySb.i(1).p("float rmax = 0;").nl();
+    }
+    bodySb.i(1).p("for (int r=0; r<ACTIVATION[i].length; ++r) {").nl();
+    bodySb.i(2).p("final int cols = ACTIVATION[i-1].length;").nl();
+    if (maxout) {
+      bodySb.i(2).p("float cmax = Float.NEGATIVE_INFINITY;").nl();
+    }
+    bodySb.i(2).p("for (int c=0; c<cols; ++c) {").nl();
+    if (!maxout) {
+      bodySb.i(3).p("ACTIVATION[i][r] += ACTIVATION[i-1][c] * WEIGHT[i][r*cols+c];").nl();
+    } else {
+      bodySb.i(3).p("if (i<ACTIVATION.length-1) cmax = Math.max(ACTIVATION[i-1][c] * WEIGHT[i][r*cols+c], cmax);").nl();
+      bodySb.i(3).p("else ACTIVATION[i][r] += ACTIVATION[i-1][c] * WEIGHT[i][r*cols+c];").nl();
+    }
+    bodySb.i(2).p("}").nl();
+    if (maxout) {
+      bodySb.i(2).p("if (i<ACTIVATION.length-1) ACTIVATION[i][r] = Float.isInfinite(cmax) ? 0f : cmax;").nl();
+    }
+    bodySb.i(2).p("ACTIVATION[i][r] += BIAS[i][r];").nl();
+    if (maxout) {
+      bodySb.i(2).p("if (i<ACTIVATION.length-1) rmax = Math.max(rmax, ACTIVATION[i][r]);").nl();
+    }
+    bodySb.i(1).p("}").nl();
+
+    if (!maxout) bodySb.i(1).p("if (i<ACTIVATION.length-1) {").nl();
+    bodySb.i(2).p("for (int r=0; r<ACTIVATION[i].length; ++r) {").nl();
+    if (tanh) {
+      bodySb.i(3).p("ACTIVATION[i][r] = 1f - 2f / (1f + (float)Math.exp(2*ACTIVATION[i][r]));").nl();
+    } else if (relu) {
+      bodySb.i(3).p("ACTIVATION[i][r] = Math.max(0f, ACTIVATION[i][r]);").nl();
+    } else if (maxout) {
+      bodySb.i(3).p("if (rmax > 1 ) ACTIVATION[i][r] /= rmax;").nl();
+    }
+    if (get_params().hidden_dropout_ratios != null) {
+      if (maxout) bodySb.i(1).p("if (i<ACTIVATION.length-1) {").nl();
+      bodySb.i(3).p("ACTIVATION[i][r] *= HIDDEN_DROPOUT_RATIOS[i-1];").nl();
+      if (maxout) bodySb.i(1).p("}").nl();
+    }
+    bodySb.i(2).p("}").nl();
+    if (!maxout) bodySb.i(1).p("}").nl();
+    if (isClassifier()) {
+      bodySb.i(1).p("if (i == ACTIVATION.length-1) {").nl();
+      // softmax
+      bodySb.i(2).p("float max = ACTIVATION[i][0];").nl();
+      bodySb.i(2).p("for (int r=1; r<ACTIVATION[i].length; r++) {").nl();
+      bodySb.i(3).p("if (ACTIVATION[i][r]>max) max = ACTIVATION[i][r];").nl();
+      bodySb.i(2).p("}").nl();
+      bodySb.i(2).p("float scale = 0f;").nl();
+      bodySb.i(2).p("for (int r=0; r<ACTIVATION[i].length; r++) {").nl();
+      bodySb.i(3).p("ACTIVATION[i][r] = (float) Math.exp(ACTIVATION[i][r] - max);").nl();
+      bodySb.i(3).p("scale += ACTIVATION[i][r];").nl();
+      bodySb.i(2).p("}").nl();
+      bodySb.i(2).p("for (int r=0; r<ACTIVATION[i].length; r++) {").nl();
+      bodySb.i(3).p("if (Float.isNaN(ACTIVATION[i][r]))").nl();
+      bodySb.i(4).p("throw new RuntimeException(\"Numerical instability, predicted NaN.\");").nl();
+      bodySb.i(3).p("ACTIVATION[i][r] /= scale;").nl();
+      bodySb.i(3).p("preds[r+1] = ACTIVATION[i][r];").nl();
+      bodySb.i(2).p("}").nl();
+      bodySb.i(1).p("}").nl();
+      bodySb.i().p("}").nl();
+    } else {
+      bodySb.i().p("}").nl();
+      // regression: set preds[1], FillPreds0 will put it into preds[0]
+      if (model_info().data_info()._normRespMul != null) {
+        bodySb.i().p("preds[1] = (float) (ACTIVATION[ACTIVATION.length-1][0] / NORMRESPMUL[0] + NORMRESPSUB[0]);").nl();
+      }
+      else {
+        bodySb.i().p("preds[1] = ACTIVATION[ACTIVATION.length-1][0];").nl();
+      }
+      bodySb.i().p("if (Float.isNaN(preds[1])) throw new RuntimeException(\"Predicted regression target NaN!\");").nl();
+    }
+
+    fileCtxSb.p(model);
+    toJavaUnifyPreds(bodySb);
+    toJavaFillPreds0(bodySb);
+  }
 }
 

@@ -3,8 +3,10 @@ package water.api;
 import java.util.HashMap;
 import java.util.Map;
 
+import hex.GridSearch;
 import hex.glm.GLM2;
 import water.*;
+import water.api.RequestBuilders.Response;
 import water.fvec.Frame;
 import water.util.RString;
 import water.util.UIUtils;
@@ -32,6 +34,7 @@ public class Inspector extends Request2 {
     // All attempts to view a model redirect to <model_name>View
     REDIRECTS.put(Model.class,    sa("/2/%typename{}View", "_modelKey"));
     REDIRECTS.put(GLM2.GLMGrid.class, sa("/2/GLMGridView", "grid_key"));
+    REDIRECTS.put(GridSearch.class, sa("/2/%typename{}Progress", "destination_key"));
   }
 
   @API(help="H2O key to inspect.", filter=Default.class, json=true, required=true, gridable=false)
@@ -59,7 +62,7 @@ public class Inspector extends Request2 {
       // This is critical error since it should not happen
       return Response.error(e);
     }
-    throw new IllegalArgumentException("Uknown key type! Key = " + src_key + " and type = " + typename);
+    throw new IllegalArgumentException("Unknown key type! Key = " + src_key + " and type = " + typename);
   }
 
   public static String link(String txt, String key) {
@@ -73,4 +76,9 @@ public class Inspector extends Request2 {
   }
 
   private static String[] sa(String ...s) { return s; }
+
+  //Called from some other page, to redirect that other page to this page.
+  public static Response redirect(Request req, Key src_key) {
+    return Response.redirect(req, "/2/Inspector", "src_key", src_key.toString());
+  }
 }

@@ -15,6 +15,7 @@ import hex.drf.DRF
 import water.fvec.NewChunk
 import water.api.QuantilesPage
 import hex.deeplearning.{DeepLearning, DeepLearningModel}
+import hex.gbm.GBM
 
 trait TRef {}
 
@@ -304,6 +305,15 @@ trait T_H2O_Env[K<:HexKey, VT <: DFrame] { // Operating with only given represen
     if (params!=null) params(drf)
     drf.invoke()
     return UKV.get(drf.dest())
+  }
+
+  def gbm(ftrain: VT, ftest:VT, x:Seq[Int], y:Int, params: (GBM)=>GBM ): GBM.GBMModel = {
+    val gbm:GBM = new GBM()
+    gbm.source = ftrain(x++Seq(y)).frame()
+    gbm.response = ftrain.frame().vec(y)
+    if (params!=null) params(gbm)
+    gbm.invoke()
+    return UKV.get(gbm.dest())
   }
   
   def quantiles(f: VT, column:Int): scala.Double = {

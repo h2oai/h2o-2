@@ -75,7 +75,13 @@ myPackages = rownames(installed.packages())
 if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
 # this will only remove from the first library in .libPaths()
 # may need permission to remove from other libraries
-if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
+# remove from all possible locations in .libPaths()
+if ("h2o" %in% rownames(installed.packages())) { 
+    remove.packages("h2o",.libPaths()[1]) 
+    remove.packages("h2o",.libPaths()[2]) 
+    remove.packages("h2o",.libPaths()[3]) 
+    remove.packages("h2o",.libPaths()[4]) 
+}
 !
 fi
 
@@ -83,14 +89,22 @@ if [[ $INSTALL_R_PACKAGES -eq 1 || $CREATE_FILES_ONLY -eq 1 ]]
 then 
     cat <<!  >> /tmp/libPaths.cmd
 # make the install conditional. Don't install if it's already there
+# update if allready there?
 usePackage <- function(p) {
     local({r <- getOption("repos"); r["CRAN"] <- "http://cran.us.r-project.org"; options(repos = r)})
-    if (!is.element(p, installed.packages()[,1]))
+    if (is.element(p, installed.packages()[,1])) {
+        update.packages(p, dep = TRUE)
+    }
+    else {
         install.packages(p, dep = TRUE)
+    }
     require(p, character.only = TRUE)
 }
 
 # what packages did the h2o_master_test need?
+usePackage("R.utils")
+usePackage("R.oo")
+usePackage("R.methodsS3")
 usePackage("RCurl")
 usePackage("rjson")
 usePackage("statmod")
@@ -103,7 +117,6 @@ usePackage("caTools")
 usePackage("gplots")
 usePackage("ROCR")
 usePackage("digest")
-usePackage("R.utils")
 usePackage("penalized")
 
 # these came from source('../findNSourceUtils.R')
@@ -139,3 +152,9 @@ fi
 
 echo "If RCurl didn't install, you probably need libcurl-devel. ('sudo yum install libcurl-devel' on centos). libcurl not enough?"
 echo "you might want to check 'apt-get install libatlas-dev libblas-dev' for liblinear also, and lapack for Matrix"
+echo "apt-get install libblas3gf"
+echo "apt-get install libblas-doc"
+echo "apt-get install libblas-dev"
+echo "apt-get install liblapack3gf"
+echo "apt-get install liblapack-doc"
+echo "apt-get install liblapack-dev"

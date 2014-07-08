@@ -65,7 +65,7 @@ def run_glms(file,configs):
         output.close()
     
 def parse_file(f):
-    v = h2o.nodes[0].import_hdfs(f)['succeeded'][0]
+    v = h2o.nodes[0].import_files()['succeeded'][0]
     return h2o.nodes[0].parse(v['key'],timeoutSecs=3600)['destination_key']
 
 if __name__ == '__main__':

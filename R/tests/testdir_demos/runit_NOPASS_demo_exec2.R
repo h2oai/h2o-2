@@ -24,7 +24,7 @@ test.exec2.demo <- function(conn) {
   
   Log.info("Display count of AGE column levels")
   Log.info("Note: Currently only working on a single integer or factor column")
-  age.count = table(prostate.hex$AGE)
+  age.count = h2o.table(prostate.hex$AGE)
   print(head(age.count))
   
   Log.info("Run GLM2 on random sample of 50 observations")
@@ -34,7 +34,7 @@ test.exec2.demo <- function(conn) {
   expect_that(nrow(prostate.samp), equals(50))
   expect_that(nrow(prostate.samp.df), equals(50))
   # glm(CAPSULE ~ AGE + PSA + VOL + GLEASON, family = binomial(), data = prostate.samp.df)
-  prostate.glm = h2o.glm.FV(x = c("AGE", "RACE", "PSA", "VOL", "GLEASON"), y = "CAPSULE", data = prostate.samp, family = "binomial")
+  prostate.glm = h2o.glm(x = c("AGE", "RACE", "PSA", "VOL", "GLEASON"), y = "CAPSULE", data = prostate.samp, family = "binomial")
   print(prostate.glm)
   
   Log.info("Get quantiles of PSA column")
@@ -91,7 +91,7 @@ test.exec2.demo <- function(conn) {
   # prostate.hex[,11] = prostate.hex$PSA >= prostate.qs["75%"]
   
   Log.info("Run GLM2 with y = new boolean column, x = AGE, RACE, VOL, GLEASON")
-  prostate.glm.lin = h2o.glm.FV(y = 10, x = c("AGE", "RACE", "VOL", "GLEASON"), data = prostate.hex, family = "binomial")
+  prostate.glm.lin = h2o.glm(y = 10, x = c("AGE", "RACE", "VOL", "GLEASON"), data = prostate.hex, family = "binomial")
   print(prostate.glm.lin)
   
   testEnd()

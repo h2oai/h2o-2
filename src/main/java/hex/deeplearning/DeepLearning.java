@@ -1,21 +1,15 @@
 package hex.deeplearning;
 
+import hex.*;
+import water.*;
+import water.util.*;
 import static water.util.MRUtils.sampleFrame;
 import static water.util.MRUtils.sampleFrameStratified;
-import hex.FrameTask;
 import hex.FrameTask.DataInfo;
-import water.H2O;
-import water.Job;
-import water.Key;
-import water.UKV;
 import water.api.*;
 import water.fvec.Frame;
 import water.fvec.RebalanceDataSet;
 import water.fvec.Vec;
-import water.util.Log;
-import water.util.MRUtils;
-import water.util.RString;
-import water.util.Utils;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
@@ -34,7 +28,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * model. This option allows users to build a new model as a
    * continuation of a previously generated model (e.g., by a grid search).
    */
-  @API(help = "Model checkpoint to resume training with", filter= Default.class, json = true, gridable = false)
+  @API(help = "Model checkpoint to resume training with", filter= Default.class, json = true)
   public Key checkpoint;
 
   /**
@@ -42,7 +36,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * Model performance is measured by MSE for regression and overall
    * error rate for classification (at F1-optimal threshold for binary classification).
    */
-  @API(help = "Key to store the always-best model under", filter= Default.class, json = true, gridable = false)
+  @API(help = "Key to store the always-best model under", filter= Default.class, json = true)
   public Key best_model_key = null;
 
   /**
@@ -51,8 +45,11 @@ public class DeepLearning extends Job.ValidatedJob {
    * values is fine for many problems, but best results on complex datasets are often
    * only attainable via expert mode options.
    */
-  @API(help = "Enable expert mode (to access all options from GUI)", filter = Default.class, json = true, gridable = false)
+  @API(help = "Enable expert mode (to access all options from GUI)", filter = Default.class, json = true)
   public boolean expert_mode = false;
+
+  @API(help = "Auto-Encoder (Experimental)", filter= Default.class, json = true)
+  public boolean autoencoder = false;
 
   /*Neural Net Topology*/
   /**
@@ -343,7 +340,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * training data scoring dataset. When the error is at or below this threshold,
    * training stops.
    */
-  @API(help = "Stopping criterion for classification error fraction on training data (-1 to disable)", filter = Default.class, dmin=-1, dmax=1, json = true, gridable = false, importance = ParamImportance.EXPERT)
+  @API(help = "Stopping criterion for classification error fraction on training data (-1 to disable)", filter = Default.class, dmin=-1, dmax=1, json = true, importance = ParamImportance.EXPERT)
   public double classification_stop = 0;
 
   /**
@@ -351,13 +348,13 @@ public class DeepLearning extends Job.ValidatedJob {
    * data scoring dataset. When the error is at or below this threshold, training
    * stops.
    */
-  @API(help = "Stopping criterion for regression error (MSE) on training data (-1 to disable)", filter = Default.class, dmin=-1, json = true, gridable = false, importance = ParamImportance.EXPERT)
+  @API(help = "Stopping criterion for regression error (MSE) on training data (-1 to disable)", filter = Default.class, dmin=-1, json = true, importance = ParamImportance.EXPERT)
   public double regression_stop = 1e-6;
 
   /**
    * Enable quiet mode for less output to standard output.
    */
-  @API(help = "Enable quiet mode for less output to standard output", filter = Default.class, json = true, gridable = false)
+  @API(help = "Enable quiet mode for less output to standard output", filter = Default.class, json = true)
   public boolean quiet_mode = false;
 
   /**
@@ -365,13 +362,13 @@ public class DeepLearning extends Job.ValidatedJob {
    * confusion matrix for it to be printed. This option is meant to avoid printing
    * extremely large confusion matrices.
    */
-  @API(help = "Max. size (number of classes) for confusion matrices to be shown", filter = Default.class, json = true, gridable = false)
+  @API(help = "Max. size (number of classes) for confusion matrices to be shown", filter = Default.class, json = true)
   public int max_confusion_matrix_size = 20;
 
   /**
    * The maximum number (top K) of predictions to use for hit ratio computation (for multi-class only, 0 to disable)
    */
-  @API(help = "Max. number (top K) of predictions to use for hit ratio computation (for multi-class only, 0 to disable)", filter = Default.class, lmin=0, json = true, gridable = false, importance = ParamImportance.EXPERT)
+  @API(help = "Max. number (top K) of predictions to use for hit ratio computation (for multi-class only, 0 to disable)", filter = Default.class, lmin=0, json = true, importance = ParamImportance.EXPERT)
   public int max_hit_ratio_k = 10;
 
   /*Imbalanced Classes*/
@@ -379,20 +376,20 @@ public class DeepLearning extends Job.ValidatedJob {
    * For imbalanced data, balance training data class counts via
    * over/under-sampling. This can result in improved predictive accuracy.
    */
-  @API(help = "Balance training data class counts via over/under-sampling (for imbalanced data)", filter = Default.class, json = true, gridable = false, importance = ParamImportance.EXPERT)
+  @API(help = "Balance training data class counts via over/under-sampling (for imbalanced data)", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
   public boolean balance_classes = false;
 
   /**
    * When classes are balanced, limit the resulting dataset size to the
    * specified multiple of the original dataset size.
    */
-  @API(help = "Maximum relative size of the training data after balancing class counts (can be less than 1.0)", filter = Default.class, json = true, dmin=1e-3, gridable = false, importance = ParamImportance.EXPERT)
+  @API(help = "Maximum relative size of the training data after balancing class counts (can be less than 1.0)", filter = Default.class, json = true, dmin=1e-3, importance = ParamImportance.EXPERT)
   public float max_after_balance_size = 5.0f;
 
   /**
    * Method used to sample the validation dataset for scoring, see Score Validation Samples above.
    */
-  @API(help = "Method used to sample validation dataset for scoring", filter = Default.class, json = true, gridable = false, importance = ParamImportance.EXPERT)
+  @API(help = "Method used to sample validation dataset for scoring", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
   public ClassSamplingMethod score_validation_sampling = ClassSamplingMethod.Uniform;
 
   /*Misc*/
@@ -400,7 +397,7 @@ public class DeepLearning extends Job.ValidatedJob {
    * Gather diagnostics for hidden layers, such as mean and RMS values of learning
    * rate, momentum, weights and biases.
    */
-  @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = true, gridable = false)
+  @API(help = "Enable diagnostics for hidden layers", filter = Default.class, json = true)
   public boolean diagnostics = true;
 
   /**
@@ -460,6 +457,12 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Use a column major weight matrix for input layer. Can speed up forward propagation, but might slow down backpropagation (Experimental).", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
   public boolean col_major = false;
 
+  @API(help = "Sparsity (Experimental)", filter= Default.class, json = true)
+  public double average_activation = -0.9;
+
+  @API(help = "Sparsity regularization (Experimental)", filter= Default.class, json = true)
+  public double sparsity_beta = 0;
+
   public enum ClassSamplingMethod {
     Uniform, Stratified
   }
@@ -514,6 +517,9 @@ public class DeepLearning extends Job.ValidatedJob {
           "single_node_mode",
           "sparse",
           "col_major",
+          "autoencoder",
+          "average_activation",
+          "sparsity_beta",
   };
 
   // the following parameters can be modified when restarting from a checkpoint
@@ -582,10 +588,6 @@ public class DeepLearning extends Job.ValidatedJob {
             (initial_weight_distribution == InitialWeightDistribution.UniformAdaptive)
             ) {
       arg.disable("Using sqrt(6 / (# units + # units of previous layer)) for Uniform distribution.", inputArgs);
-    }
-    if(arg._name.equals("loss") && !classification) {
-      arg.disable("Using MeanSquare loss for regression.", inputArgs);
-      loss = Loss.MeanSquare;
     }
     if (classification) {
       if(arg._name.equals("regression_stop")) {
@@ -689,26 +691,44 @@ public class DeepLearning extends Job.ValidatedJob {
   @Override public float progress(){
     if(UKV.get(dest()) == null)return 0;
     DeepLearningModel m = UKV.get(dest());
-    if (m != null && m.model_info()!=null )
-      return (float)Math.min(1, (m.epoch_counter / m.model_info().get_params().epochs));
+    if (m != null && m.model_info()!=null ) {
+      final float p = (float) Math.min(1, (m.epoch_counter / m.model_info().get_params().epochs));
+      return cv_progress(p);
+    }
     return 0;
+  }
+
+  @Override
+  protected final void execImpl() {
+    buildModel();
+    if (n_folds > 0) CrossValUtils.crossValidate(this);
+    delete();
   }
 
   /**
    * Train a Deep Learning model, assumes that all members are populated
+   * If checkpoint == null, then start training a new model, otherwise continue from a checkpoint
    */
-  @Override
-  public final void execImpl() {
+  private void buildModel() {
     DeepLearningModel cp = null;
-    if (checkpoint == null) cp = initModel();
-    else {
+    if (checkpoint == null) {
+      cp = initModel();
+      cp.start_training(null);
+    } else {
       final DeepLearningModel previous = UKV.get(checkpoint);
       if (previous == null) throw new IllegalArgumentException("Checkpoint not found.");
       Log.info("Resuming from checkpoint.");
+      if (n_folds != 0) {
+        throw new UnsupportedOperationException("n_folds must be 0: Cross-validation is not supproted during checkpoint restarts.");
+      }
+      else {
+        ((ValidatedJob)previous.job()).xval_models = null; //remove existing cross-validation keys after checkpoint restart
+      }
       if (source == null || !Arrays.equals(source._key._kb, previous.model_info().get_params().source._key._kb)) {
         throw new IllegalArgumentException("source must be the same as for the checkpointed model.");
       }
-      if (response == null || !Arrays.equals(response._key._kb, previous.model_info().get_params().response._key._kb)) {
+      autoencoder = previous.model_info().get_params().autoencoder;
+      if (!autoencoder && (response == null || !Arrays.equals(response._key._kb, previous.model_info().get_params().response._key._kb))) {
         throw new IllegalArgumentException("response must be the same as for the checkpointed model.");
       }
       if (Utils.difference(ignored_cols, previous.model_info().get_params().ignored_cols).length != 0
@@ -716,7 +736,7 @@ public class DeepLearning extends Job.ValidatedJob {
         ignored_cols = previous.model_info().get_params().ignored_cols;
         Log.warn("Automatically re-using ignored_cols from the checkpointed model.");
       }
-      if ((validation!=null) != (previous.model_info().get_params().validation != null)
+      if ((validation == null) == (previous.model_info().get_params().validation != null)
               || (validation != null && validation._key != null && previous.model_info().get_params().validation._key != null
               && !Arrays.equals(validation._key._kb, previous.model_info().get_params().validation._key._kb))) {
         throw new IllegalArgumentException("validation must be the same as for the checkpointed model.");
@@ -730,9 +750,10 @@ public class DeepLearning extends Job.ValidatedJob {
         final DataInfo dataInfo = prepareDataInfo();
         cp = new DeepLearningModel(previous, destination_key, job_key, dataInfo);
         cp.write_lock(self());
+        cp.start_training(previous);
         assert(state==JobState.RUNNING);
-        final DeepLearning mp = cp.model_info().get_params();
-        Object A = mp, B = this;
+        final DeepLearning A = cp.model_info().get_params();
+        Object B = this;
         for (Field fA : A.getClass().getDeclaredFields()) {
           if (Utils.contains(cp_modifiable, fA.getName())) {
             if (!expert_mode && Utils.contains(expert_options, fA.getName())) continue;
@@ -751,13 +772,17 @@ public class DeepLearning extends Job.ValidatedJob {
             }
           }
         }
+        if (A.n_folds != 0) {
+          Log.warn("Disabling cross-validation: Not supported when resuming training from a checkpoint.");
+          A.n_folds = 0;
+        }
         cp.update(self());
       } finally {
         if (cp != null) cp.unlock(self());
       }
     }
     trainModel(cp);
-    delete();
+    cp.stop_training();
   }
 
   /**
@@ -783,17 +808,15 @@ public class DeepLearning extends Job.ValidatedJob {
 
     //Auto-fill defaults
     if (hidden_dropout_ratios == null) {
-      hidden_dropout_ratios = new double[hidden.length];
       if (activation == Activation.TanhWithDropout || activation == Activation.MaxoutWithDropout || activation == Activation.RectifierWithDropout) {
+        hidden_dropout_ratios = new double[hidden.length];
         if (!quiet_mode) Log.info("Automatically setting all hidden dropout ratios to 0.5.");
         Arrays.fill(hidden_dropout_ratios, 0.5);
       }
     }
     else if (hidden_dropout_ratios.length != hidden.length) throw new IllegalArgumentException("Must have " + hidden.length + " hidden layer dropout ratios.");
-    else if (hidden_dropout_ratios != null) {
-      if (activation != Activation.TanhWithDropout && activation != Activation.MaxoutWithDropout && activation != Activation.RectifierWithDropout) {
-        if (!quiet_mode) Log.info("Ignoring hidden_dropout_ratios because a non-Dropout activation function was specified.");
-      }
+    else if (activation != Activation.TanhWithDropout && activation != Activation.MaxoutWithDropout && activation != Activation.RectifierWithDropout) {
+      if (!quiet_mode) Log.info("Ignoring hidden_dropout_ratios because a non-Dropout activation function was specified.");
     }
 
     if (!quiet_mode) {
@@ -814,12 +837,23 @@ public class DeepLearning extends Job.ValidatedJob {
       if (!classification) {
         if (!quiet_mode) Log.info("Automatically setting loss to MeanSquare for regression.");
         loss = Loss.MeanSquare;
-      } else {
+      }
+      else if (autoencoder) {
+        if (!quiet_mode) Log.info("Automatically setting loss to MeanSquare for auto-encoder.");
+        loss = Loss.MeanSquare;
+      }
+      else {
         if (!quiet_mode) Log.info("Automatically setting loss to Cross-Entropy for classification.");
         loss = Loss.CrossEntropy;
       }
     }
     if (!classification && loss == Loss.CrossEntropy) throw new IllegalArgumentException("Cannot use CrossEntropy loss function for regression.");
+    if (autoencoder && loss != Loss.MeanSquare) throw new IllegalArgumentException("Must use MeanSquare loss function for auto-encoder.");
+    if (autoencoder && classification) { classification = false; Log.info("Using regression mode for auto-encoder.");}
+
+    // reason for the error message below is that validation might not have the same horizontalized features as the training data (or different order)
+    if (autoencoder && validation != null) throw new UnsupportedOperationException("Cannot specify a validation dataset for auto-encoder.");
+    if (autoencoder && activation == Activation.Maxout) throw new UnsupportedOperationException("Maxout activation is not supported for auto-encoder.");
 
     // make default job_key and destination_key in case they are missing
     if (dest() == null) {
@@ -843,13 +877,17 @@ public class DeepLearning extends Job.ValidatedJob {
    * Helper to create a DataInfo object from the source and response
    * @return DataInfo object
    */
-  private final DataInfo prepareDataInfo() {
-    final boolean del_enum_resp = (classification && !response.isEnum());
-    final Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, classification, ignore_const_cols, true /*drop >20% NA cols*/);
-    final DataInfo dinfo = new FrameTask.DataInfo(train, 1, false, true, !classification);
-    final Vec resp = dinfo._adaptedFrame.lastVec(); //convention from DataInfo: response is the last Vec
-    assert(!classification ^ resp.isEnum()) : "Must have enum response for classification!"; //either regression or enum response
-    if (del_enum_resp) ltrash(resp);
+  private DataInfo prepareDataInfo() {
+    final boolean del_enum_resp = classification && !response.isEnum();
+    final Frame train = FrameTask.DataInfo.prepareFrame(source, autoencoder ? null : response, ignored_cols, classification, ignore_const_cols, true /*drop >20% NA cols*/);
+    final DataInfo dinfo = new FrameTask.DataInfo(train, autoencoder ? 0 : 1, autoencoder, //use all FactorLevels for auto-encoder
+            autoencoder ? DataInfo.TransformType.NORMALIZE : DataInfo.TransformType.STANDARDIZE, //transform predictors
+            classification ? DataInfo.TransformType.NONE : DataInfo.TransformType.STANDARDIZE);  //transform response
+    if (!autoencoder) {
+      final Vec resp = dinfo._adaptedFrame.lastVec(); //convention from DataInfo: response is the last Vec
+      assert (!classification ^ resp.isEnum()) : "Must have enum response for classification!"; //either regression or enum response
+      if (del_enum_resp) ltrash(resp);
+    }
     return dinfo;
   }
 
@@ -864,7 +902,7 @@ public class DeepLearning extends Job.ValidatedJob {
       final DataInfo dinfo = prepareDataInfo();
       final Vec resp = dinfo._adaptedFrame.lastVec(); //convention from DataInfo: response is the last Vec
       float[] priorDist = classification ? new MRUtils.ClassDist(resp).doAll(resp).rel_dist() : null;
-      final DeepLearningModel model = new DeepLearningModel(dest(), self(), source._key, dinfo, this, priorDist);
+      final DeepLearningModel model = new DeepLearningModel(dest(), self(), source._key, dinfo, (DeepLearning)this.clone(), priorDist);
       model.model_info().initializeMembers();
       return model;
     }
@@ -936,7 +974,7 @@ public class DeepLearning extends Job.ValidatedJob {
       }
 
       // Set train_samples_per_iteration size (cannot be done earlier since this depends on whether stratified sampling is done)
-      mp.actual_train_samples_per_iteration = computeTrainSamplesPerIteration(mp.train_samples_per_iteration, train.numRows(), mp.replicate_training_data, mp.single_node_mode, mp.quiet_mode);
+      mp.actual_train_samples_per_iteration = computeTrainSamplesPerIteration(mp.train_samples_per_iteration, train.numRows(), mp.replicate_training_data, mp.quiet_mode);
       // Determine whether shuffling is enforced
       if(mp.replicate_training_data && (mp.actual_train_samples_per_iteration == train.numRows()*H2O.CLOUD.size()) && !mp.shuffle_training_data && H2O.CLOUD.size() > 1) {
         Log.warn("Enabling training data shuffling, because all nodes train on the full dataset (replicated training data).");
@@ -945,6 +983,7 @@ public class DeepLearning extends Job.ValidatedJob {
       final float rowUsageFraction = computeRowUsageFraction(train.numRows(), mp.actual_train_samples_per_iteration, mp.replicate_training_data);
 
       if (!mp.quiet_mode) Log.info("Initial model:\n" + model.model_info());
+      if (autoencoder) model.doScoring(train, trainScoreFrame, validScoreFrame, self(), getValidAdaptor()); //get the null model reconstruction error
       Log.info("Starting to train the Deep Learning model.");
 
       //main loop
@@ -953,9 +992,7 @@ public class DeepLearning extends Job.ValidatedJob {
               new DeepLearningTask2(train, model.model_info(), rowUsageFraction).invokeOnAllNodes().model_info() ) : //replicated data + multi-node mode
               new DeepLearningTask(model.model_info(), rowUsageFraction).doAll(train).model_info()); //distributed data (always in multi-node mode)
       while (model.doScoring(train, trainScoreFrame, validScoreFrame, self(), getValidAdaptor()));
-
-      state = JobState.DONE; //for JSON REST response
-      model.get_params().state = state; //for parameter JSON on the HTML page
+      Log.info(model);
       Log.info("Finished training the Deep Learning model.");
       return model;
     }
@@ -997,6 +1034,16 @@ public class DeepLearning extends Job.ValidatedJob {
     cleanup();
     if (_fakejob) UKV.remove(job_key);
     remove();
+
+    // HACK: update the state of the model's Job/parameter object
+    // (since we cloned the Job/parameters several times and we're not sharing a reference)
+    Value v = DKV.get(dest());
+    if (v != null) {
+      DeepLearningModel m = v.get();
+      m.get_params().state = state;
+      DKV.put(dest(), m);
+    }
+
   }
 
   /**
@@ -1018,8 +1065,7 @@ public class DeepLearning extends Job.ValidatedJob {
     RebalanceDataSet rb = new RebalanceDataSet(fr, newKey, chunks);
     H2O.submitTask(rb);
     rb.join();
-    Frame rebalanced = UKV.get(newKey);
-    return rebalanced;
+    return UKV.get(newKey);
   }
 
   /**
@@ -1027,10 +1073,9 @@ public class DeepLearning extends Job.ValidatedJob {
    * @param train_samples_per_iteration user-given train_samples_per_iteration size
    * @param numRows number of training rows
    * @param replicate_training_data whether or not the training data is replicated on each node
-   * @param single_node_mode whether or not the single node mode is enabled
    * @return The total number of training rows to be processed per iteration (summed over on all nodes)
    */
-  private static long computeTrainSamplesPerIteration(final long train_samples_per_iteration, final long numRows, final boolean replicate_training_data, final boolean single_node_mode, final boolean quiet_mode) {
+  private static long computeTrainSamplesPerIteration(final long train_samples_per_iteration, final long numRows, final boolean replicate_training_data, final boolean quiet_mode) {
     long tspi = train_samples_per_iteration;
     assert(tspi == 0 || tspi == -1 || tspi >= 1);
     if (tspi == 0 || (!replicate_training_data && tspi == -1) ) {
@@ -1059,4 +1104,18 @@ public class DeepLearning extends Job.ValidatedJob {
     return rowUsageFraction;
   }
 
+  /**
+   * Cross-Validate a DeepLearning model by building new models on N train/test holdout splits
+   * @param splits Frames containing train/test splits
+   * @param cv_preds Array of Frames to store the predictions for each cross-validation run
+   * @param offsets Array to store the offsets of starting row indices for each cross-validation run
+   * @param i Which fold of cross-validation to perform
+   */
+  @Override public void crossValidate(Frame[] splits, Frame[] cv_preds, long[] offsets, int i) {
+    // Train a clone with slightly modified parameters (to account for cross-validation)
+    DeepLearning cv = (DeepLearning) this.clone();
+    cv.best_model_key = null; // model-specific stuff
+    cv.genericCrossValidation(splits, offsets, i);
+    cv_preds[i] = ((DeepLearningModel) UKV.get(cv.dest())).score(cv.validation);
+  }
 }

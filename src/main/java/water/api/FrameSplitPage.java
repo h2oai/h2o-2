@@ -1,10 +1,12 @@
 package water.api;
 
+import hex.FrameSplitter;
+
 import java.util.Arrays;
 
-import hex.FrameSplitter;
 import water.*;
 import water.fvec.Frame;
+import water.util.MRUtils;
 import water.util.Utils;
 
 /** Small utility page to split frame
@@ -27,6 +29,9 @@ public class FrameSplitPage extends Func {
 
   @API(help = "Split ratio - can be an array of split ratios", required = true, filter = Default.class)
   public float[] ratios = new float[] {0.75f}; // n-values => n+1 output datasets
+
+  @API(help = "Shuffle rows before splitting", required = false, filter = Default.class)
+  public boolean shuffle = false;
 
   @API(help = "Keys for each split partition.")
   public Key[] split_keys;
@@ -54,8 +59,16 @@ public class FrameSplitPage extends Func {
 
   // Run the function
   @Override protected void execImpl() {
-    FrameSplitter fs = new FrameSplitter(source, ratios);
-    H2O.submitTask(fs).join();
+    Frame frame = source;
+    if (shuffle) {
+      // FIXME: switch to global shuffle
+      frame = MRUtils.shuffleFramePerChunk(Utils.generateShuffledKey(frame._key), frame, 12);
+      frame.delete_and_lock(null).unlock(null); // save frame to DKV
+      // delete frame on the end
+      gtrash(frame);
+    }
+    FrameSplitter fs = new FrameSplitter(frame, ratios);
+    H2O.submitTask(fs);
 
     Frame[] splits = fs.getResult();
 

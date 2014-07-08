@@ -47,7 +47,7 @@ class Basic(unittest.TestCase):
             print "Iteration", s, "split0_rows:", split0_rows, "split1_rows:", split1_rows
             splitMe = split1_key
             # split should be within 1 row accuracy. let's say within 20 for now
-            self.assertLess(abs(split1_rows - split0_rows), 20)
+            self.assertLess(abs(split1_rows - split0_rows), 2)
             self.assertEqual(numRows, (split1_rows + split0_rows))
             self.assertEqual(numCols, origNumCols)
             if split0_rows <= 2:

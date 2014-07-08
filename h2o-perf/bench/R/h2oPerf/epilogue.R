@@ -135,6 +135,9 @@ function() {
 
 .emitBinomResults<-
 function() {
+  print("DEBUG")
+  print("bin results here....")
+  print(confusion_matrix)
   r <- list(binomial_result = 
                 list(auc = ifelse(auc == "NaN", .Nan, auc),
                      preccision = ifelse(precision[[1]] == "NaN", .NaN, precision[[1]]),
@@ -167,7 +170,7 @@ function() {
 
 .emitMultinomResults<-
 function() {
-  r <- list(multinomial_result = .confusionMatrix(), errs = multinom_errs)
+  r <- list(multinomial_result = .confusionMatrix()) #, errs = multinom_errs)
   .coda("MULTINOMIAL", r)
 }
 

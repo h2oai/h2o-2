@@ -1,7 +1,11 @@
 package water.api;
 
+import water.Func;
 import water.H2O;
 import water.Iced;
+import water.Request2;
+import water.fvec.Frame;
+import water.fvec.Vec;
 import water.util.Log;
 import water.util.ProfileCollectorTask;
 
@@ -11,13 +15,16 @@ import java.util.Date;
 import java.util.Map;
 import java.util.TreeMap;
 
-public class JProfile extends Request {
+public class JProfile extends Func {
   static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
   // This Request supports the HTML 'GET' command, and this is the help text
   // for GET.
   static final String DOC_GET = "Displays profile dumps from all nodes.";
+
+  @API(help="Stack trace depth", required=true, filter=Default.class, json=true)
+  public int depth = 5;
 
   @API(help="This node's name")
   public String node_name;
@@ -27,6 +34,7 @@ public class JProfile extends Request {
 
   @API(help="Current time")
   public String time;
+
 
   public static class ProfileSummary extends Iced {
     static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
@@ -38,8 +46,8 @@ public class JProfile extends Request {
   @API(help="Array of Profiles, one per Node in the Cluster")
   public ProfileSummary nodes[];
 
-  @Override public Response serve() {
-    ProfileCollectorTask.NodeProfile profiles[] = new ProfileCollectorTask().invokeOnAllNodes()._result;
+  @Override public void execImpl() {
+    ProfileCollectorTask.NodeProfile profiles[] = new ProfileCollectorTask(depth).invokeOnAllNodes()._result;
     nodes = new ProfileSummary[H2O.CLOUD.size()];
     for( int i=0; i<nodes.length; i++ )
       nodes[i] = new ProfileSummary(H2O.CLOUD._memary[i].toString(),profiles[i]);
@@ -48,7 +56,6 @@ public class JProfile extends Request {
     time = DateFormat.getInstance().format(new Date());
     for( int i=0; i<nodes.length; i++ )
       Log.debug(Log.Tag.Sys.WATER,nodes[i].name,nodes[i].profile);
-    return Response.done(this);
   }
 
   @Override public boolean toHTML( StringBuilder sb ) {
@@ -68,19 +75,8 @@ public class JProfile extends Request {
     for( int i = 0; i < nodes.length; ++i ) {
       sb.append("<div class='tab-pane").append(i == 0 ? " active": "").append("' ");
       sb.append("id='tab").append(i).append("'>\n");
-      Map<Integer, String> sorted = new TreeMap<Integer, String>(Collections.reverseOrder());
-      for (int j=0; j<nodes[i].profile._counts.length; ++j) {
-        if (nodes[i].profile._stacktraces[j].length() > 0
-                && !nodes[i].profile._stacktraces[j].split("\n")[0].equals("sun.misc.Unsafe.park(Native Method)")
-                && !nodes[i].profile._stacktraces[j].split("\n")[0].equals("java.lang.Object.wait(Native Method)")
-                && !nodes[i].profile._stacktraces[j].split("\n")[0].equals("java.lang.Thread.sleep(Native Method)")
-                && !nodes[i].profile._stacktraces[j].split("\n")[0].equals("java.lang.Thread.yield(Native Method)")
-                && !nodes[i].profile._stacktraces[j].split("\n")[0].equals("java.net.PlainSocketImpl.socketAccept(Native Method)")
-                )
-          sorted.put(nodes[i].profile._counts[j], nodes[i].profile._stacktraces[j]);
-      }
-      for (Map.Entry<Integer, String> e : sorted.entrySet()) {
-        sb.append("<pre>").append(e.getKey()).append("\n").append(e.getValue()).append("</pre>");
+      for (int j=0; j<nodes[i].profile.counts.length; ++j) {
+        sb.append("<pre>").append(nodes[i].profile.counts[j]).append("\n").append(nodes[i].profile.stacktraces[j]).append("</pre>");
       }
       sb.append("</div>");
     }

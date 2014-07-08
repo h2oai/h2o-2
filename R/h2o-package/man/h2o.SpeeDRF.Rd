@@ -7,10 +7,10 @@ H2O: Single-Node Random Forest
 Performs single-node random forest classification on a data set.
 }
 \usage{
-h2o.SpeeDRF(x, y, data, classification = TRUE, validation, mtry = -1, ntree = 50, 
-  depth = 50, sample.rate = 2/3, oobee = TRUE, nbins = 1024, seed = -1, 
-  stat.type = "ENTROPY", classwt = NULL, sampling_strategy = "RANDOM", 
-  strata_samples = NULL)
+h2o.SpeeDRF(x, y, data, classification = TRUE, nfolds = 0, validation, mtry = -1, 
+  ntree = 50, depth = 50, sample.rate = 2/3, oobee = TRUE, importance = FALSE, 
+  nbins = 1024, seed = -1, stat.type = "ENTROPY", classwt = NULL, 
+  sampling_strategy = "RANDOM", strata_samples = NULL)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -26,8 +26,11 @@ An \code{\linkS4class{H2OParsedData}} object containing the variables in the mod
   \item{classification}{
 (Optional) A logical value indicating whether a classification model should be built (as opposed to regression).
   }
+    \item{nfolds}{
+  (Optional) Number of folds for cross-validation. If \code{nfolds >= 2}, then \code{validation} must remain empty.
+}
   \item{validation}{
-  (Optional) An \code{\linkS4class{H2OParsedData}} object indicating the validation dataset used to construct confusion matrix. If left blank, this defaults to the training data.}
+  (Optional) An \code{\linkS4class{H2OParsedData}} object indicating the validation dataset used to construct confusion matrix. If left blank, this defaults to the training data when \code{nfolds = 0}.}
   \item{mtry}{
   (Optional) Number of features to randomly select at each split in the tree. If set to the default of -1, this will be set to \code{sqrt(ncol(data))}, rounded down to the nearest integer.
   }
@@ -43,6 +46,9 @@ An \code{\linkS4class{H2OParsedData}} object containing the variables in the mod
   \item{oobee}{
   (Optional) A logical value indicating whether to calculate the out of bag error estimate.
   }
+  \item{importance}{
+  (Optional) A logical value indicating whether to compute variable importance measures. (If set to \code{TRUE}, the algorithm will take longer to finish.)
+  }
   \item{nbins}{
   (Optional) Build a histogram of this many bins, then split at best point.
   }
@@ -51,15 +57,6 @@ An \code{\linkS4class{H2OParsedData}} object containing the variables in the mod
   }
   \item{stat.type}{
   (Optional) Type of statistic to use, equal to either "ENTROPY" or "GINI".
-  }
-  \item{classwt}{
-  (Optional) Numeric vector of class weights for a categorical response.
-  }
-  \item{sampling_strategy}{
-  (Optional) Sampling strategy to use, equal to either "RANDOM" or "STRATIFIED_LOCAL".
-  }
-  \item{strata_samples}{
-  (Optional) A numeric sequence indicating the strata for sampling. Only used if \code{sampling_strategy = "STRATIFIED_LOCAL"}.
   }
 }
 
@@ -92,7 +89,6 @@ localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, beta = TRUE
 irisPath = system.file("extdata", "iris.csv", package = "h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
 h2o.SpeeDRF(x = c(2,3,4), y = 5, data = iris.hex, ntree = 50, depth = 100)
-h2o.shutdown(localH2O)
 }
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

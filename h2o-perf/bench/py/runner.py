@@ -1,6 +1,7 @@
 from h2oPerf.Table import *
 from h2oPerf import PerfUtils
 from h2oPerf.Runner import *
+from h2oPerf.Alerting import *
 
 import sys
 import os
@@ -63,8 +64,11 @@ def main(argv):
     signal.signal(signal.SIGINT, PerfUtils.signal_handler)
     signal.signal(signal.SIGTERM, PerfUtils.signal_handler)
 
-    #run tests
+    # Run tests
     perf_runner.run_tests()
+
+    # Alerts
+    ( Alerter(order=10, names=perf_runner.names) ).alert() #  Parens around Alerter to make explicit that alert() is non-static
 
 if __name__ == "__main__":
     main(sys.argv)

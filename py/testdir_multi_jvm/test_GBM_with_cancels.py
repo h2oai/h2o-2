@@ -31,10 +31,10 @@ class Basic(unittest.TestCase):
         timeoutSecs = 500
         csvFilenameAll = [
             # have to use col name for response?
-            ("manyfiles-nflx-gz", "file_1.dat.gz", 378),
-            ("manyfiles-nflx-gz", "file_1.dat.gz", 378),
+            # ("manyfiles-nflx-gz", "file_1.dat.gz", 378),
+            # ("manyfiles-nflx-gz", "file_1.dat.gz", 378),
             # ("manyfiles-nflx-gz", "file_[1-9].dat.gz", 378),
-            # ("standard", "covtype.data", 54),
+            ("standard", "covtype.data", 54),
             # ("standard", "covtype20x.data", 54),
             ]
         # csvFilenameList = random.sample(csvFilenameAll,1)
@@ -116,7 +116,7 @@ class Basic(unittest.TestCase):
             print "\nGBMFirstResult:", h2o.dump_json(GBMFirstResult)
             # no pattern waits for all
 
-            for i in range(20):
+            for i in range(15):
                 # now issue a couple background GBM jobs that we'll kill
                 jobids = []     
                 for j in range(5):

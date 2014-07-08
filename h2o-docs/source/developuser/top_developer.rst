@@ -15,3 +15,5 @@ Getting Started with Development in H\ :sub:`2`\ O
    ScalaGen/README
    java
    rest
+   developer_cookbook
+

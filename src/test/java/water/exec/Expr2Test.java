@@ -11,7 +11,7 @@ import water.*;
 import water.fvec.*;
 
 public class Expr2Test extends TestUtil {
-  @BeforeClass public static void stall() { stall_till_cloudsize(3); }
+  @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
   @Rule
   public ExpectedException thrown = ExpectedException.none();

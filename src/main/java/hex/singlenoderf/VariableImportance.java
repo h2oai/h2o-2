@@ -106,7 +106,6 @@ public class VariableImportance extends MRTask2<VariableImportance> {
     float [] preds = new float[_nclasses+1];
     final int rows = chks[0]._len;
     int _N = _nclasses;
-//    ArrayList<Integer> oob = new ArrayList<Integer>();  // oob rows
     int[] soob = null; // shuffled oob rows
     boolean collectOOB = true;
     final int cmin =  (int) _model.response.min();
@@ -135,10 +134,10 @@ public class VariableImportance extends MRTask2<VariableImportance> {
 
         switch( _model.sampling_strategy ) {
           case RANDOM          : if (sampledItem < _model.sample ) continue ROWS; break;
-          case STRATIFIED_LOCAL:
-            int clazz = (int) chks[_ncols - 1].at8(row) - cmin;
-            if (sampledItem < _model.strata_samples[clazz] ) continue ROWS;
-            break;
+//          case STRATIFIED_LOCAL:
+//            int clazz = (int) chks[_ncols - 1].at8(row) - cmin;
+//            if (sampledItem < /*_model.strata_samples[clazz]*/ _model.sample ) continue ROWS;
+//            break;
           default: assert false : "The selected sampling strategy does not support OOBEE replay!"; break;
         }
 
@@ -148,7 +147,7 @@ public class VariableImportance extends MRTask2<VariableImportance> {
         }
 
         // Predict with this tree - produce 0-based class index
-        int prediction = _model.classify0(ntree, _data, chks, row, _modelDataMap, (short)_N );
+        int prediction = (int)_model.classify0(ntree, _data, chks, row, _modelDataMap, (short)_N, false);
         if( prediction >= _nclasses ) continue; // Junk row cannot be predicted
         // Check tree miss
         int alignedPrediction = alignModelIdx(prediction);
@@ -163,7 +162,7 @@ public class VariableImportance extends MRTask2<VariableImportance> {
       //score on shuffled data...
       if (soob==null || soob.length < oobcnt) soob = new int[oobcnt];
       Utils.shuffleArray(_oobs, oobcnt, soob, seedForOob, 0); // Shuffle array and copy results into <code>soob</code>
-      for(int j = 1; j < oobcnt; j++) {
+      for(int j = 0; j < oobcnt; j++) {
         int row = _oobs[j];
         row -= chks[0]._start;
         // Do scoring:
@@ -172,11 +171,11 @@ public class VariableImportance extends MRTask2<VariableImportance> {
           data[i] = chks[i].at0(row); // 1+i - one free is expected by prediction
         }
         // - permute variable
-        if (_var>=0) data[_var] = chks[_var].at0(soob[j-1] - (int)chks[0]._start);
-        else assert soob==null;
+        if (_var>=0) data[_var] = chks[_var].at0(soob[j] - (int)chks[0]._start);
+        else assert false;
         // - score data
         // - score only the tree
-        int prediction = (int) Tree.classify(new AutoBuffer(_model.tree(ntree)), data, (double)_N); //.classify0(ntree, _data, chks, row, _modelDataMap, numClasses );
+        int prediction = (int) Tree.classify(new AutoBuffer(_model.tree(ntree)), data, (double)_N, false); //.classify0(ntree, _data, chks, row, _modelDataMap, numClasses );
         if( prediction >= _nclasses ) continue;
         int pred = alignModelIdx(prediction);
         int actu = alignDataIdx((int) chks[_classcol].at8(_oobs[j]) - cmin);
@@ -199,6 +198,7 @@ public class VariableImportance extends MRTask2<VariableImportance> {
     else
       return modelClazz + _cmin_model_mapping;
   }
+
   /** Transforms 0-based class from input data to CF zero-based */
   private int alignDataIdx(int dataClazz) {
     if (_data_classes_mapping!=null)
@@ -232,7 +232,6 @@ public class VariableImportance extends MRTask2<VariableImportance> {
     return idx;
   }
 
-
   public TreeVotes[] resultVotes() {
 
     return new TreeVotes[]{new TreeVotes(_votesOOB, _nrows, _ntrees), new TreeVotes(_votesSOOB, _nrows, _ntrees)};
@@ -263,7 +262,6 @@ public class VariableImportance extends MRTask2<VariableImportance> {
   public static TreeVotes[] collectVotes(int trees, int nclasses, Frame f, int ncols, float rate, int variable, SpeeDRFModel model) {
     return new VariableImportance(trees, nclasses, ncols, rate, variable, model).doAll(f).resultVotes();
   }
-
 
 //  public static TreeSSE collectSSE(CompressedTree[/*nclass || 1 for regression*/] tree, int nclasses, Frame f, int ncols, float rate, int variable) {
 //    return new TreeMeasuresCollector(new CompressedTree[][] {tree}, nclasses, ncols, rate, variable).doAll(f).resultSSE();

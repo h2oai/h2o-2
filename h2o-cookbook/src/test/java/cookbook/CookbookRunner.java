@@ -89,12 +89,14 @@ public class CookbookRunner {
       // tests.add(cookbook.Cookbook.class);
       tests.add(H2OCookbook.class);
       tests.add(FrameCookbook.class);
-      tests.add(cookbook.GroupedQuantilesCookbook.class);
       tests.add(VecChunkDemo.class);
       tests.add(KeyDemo.class);
-   //    tests.add(FillNAsWithMeanDemo01.class);
-   //    tests.add(FillNAsWithMeanDemo03.class);
-   //    tests.add(FillNAsWithMeanDemo02.class);
+      tests.add(FillNAsWithMeanDemo01.class);
+      tests.add(FillNAsWithMeanDemo02.class);
+      tests.add(FillNAsWithMeanDemo03.class);
+      tests.add(FramDemo.class);
+      tests.add(VecDemo.class);
+      tests.add(ChunkDemo.class);
       //
       // Run tests.
       //

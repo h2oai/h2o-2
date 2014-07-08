@@ -4,10 +4,15 @@ import java.util.*;
 
 import water.H2O;
 
+
 /**
  * Shared static code to support modeling, prediction, and scoring.
  *
- *  Used by interpreted models as well as by generated model code.
+ * <p>Used by interpreted models as well as by generated model code.</p>
+ *
+ * <p><strong>WARNING:</strong> The class should have no other H2O dependencies
+ * since it is provided for generated code as h2o-model.jar which contains
+ * only a few files.</p>
  *
  */
 public class ModelUtils {
@@ -79,7 +84,7 @@ public class ModelUtils {
     for (int i = 1; i < preds.length; ++i) {
       final Float prob = preds[i];
       final int label = i-1;
-      assert(prob >= 0 && prob <= 1);
+      assert(prob >= 0 && prob <= 1) : "prob is not inside [0,1]: " + prob;
       if (prob_idx.containsKey(prob)) {
         prob_idx.get(prob).add(label); //add all ties
       } else {
@@ -144,6 +149,31 @@ public class ModelUtils {
     throw H2O.fail();           // Should Not Reach Here
   }
 
+  /**
+   * Correct a given list of class probabilities produced as a prediction by a model back to prior class distribution
+   *
+   * <p>The implementation is based on Eq. (27) in  <a href="http://gking.harvard.edu/files/0s.pdf">the paper</a>.
+   *
+   * @param scored list of class probabilities beginning at index 1
+   * @param priorClassDist original class distribution
+   * @param modelClassDist class distribution used for model building (e.g., data was oversampled)
+   * @return corrected list of probabilities
+   */
+  public static float[] correctProbabilities(float[] scored, float[] priorClassDist, float[] modelClassDist) {
+    double probsum=0;
+    for( int c=1; c<scored.length; c++ ) {
+      final double original_fraction = priorClassDist[c-1];
+      assert(original_fraction > 0) : "original fraction should be > 0, but is " + original_fraction + ": not using enough training data?";
+      final double oversampled_fraction = modelClassDist[c-1];
+      assert(oversampled_fraction > 0) : "oversampled fraction should be > 0, but is " + oversampled_fraction + ": not using enough training data?";
+      assert(!Double.isNaN(scored[c]));
+      scored[c] *= original_fraction / oversampled_fraction;
+      probsum += scored[c];
+    }
+    if (probsum>0) for (int i=1;i<scored.length;++i) scored[i] /= probsum;
+    return scored;
+  }
+
 
   /**
    * Sample out-of-bag rows with given rate with help of given sampler.
@@ -158,12 +188,12 @@ public class ModelUtils {
    * can be greater than number of sampled rows.
    */
   public static int[] sampleOOBRows(int nrows, float rate, Random sampler) {
-    return sampleOOBRows(nrows, rate, sampler, new int[1+(int)((1f-rate)*nrows*1.2f)]);
+    return sampleOOBRows(nrows, rate, sampler, new int[2+Math.round((1f-rate)*nrows*1.2f+0.5f)]);
   }
   /**
    * In-situ version of {@link #sampleOOBRows(int, float, Random)}.
    *
-   * @param oob an initial array to hold sampled rows. Can be internally realocted.
+   * @param oob an initial array to hold sampled rows. Can be internally reallocated.
    * @return an array containing sampled rows.
    *
    * @see #sampleOOBRows(int, float, Random)
@@ -174,7 +204,7 @@ public class ModelUtils {
     for(int row = 0; row < nrows; row++) {
       if (sampler.nextFloat() >= rate) { // it is out-of-bag row
         oob[1+oobcnt++] = row;
-        if (1+oobcnt>=oob.length) oob = Arrays.copyOf(oob, (int)(1.2f*oob.length)+1);
+        if (1+oobcnt>=oob.length) oob = Arrays.copyOf(oob, Math.round(1.2f*nrows+0.5f)+2);
       }
     }
     oob[0] = oobcnt;

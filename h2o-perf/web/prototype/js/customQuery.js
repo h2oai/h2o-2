@@ -45,6 +45,54 @@ function doQuery(phpQueryPage) {
     });
 }
 
+function showPerfGraphs(test_name, total_hosts, dt) {
+    if (total_hosts == 1) {
+        // Just looks at node 192.168.1.164
+
+        $.ajax({
+            url: '../prototype/php/post2.php',
+            type: 'POST',
+            dataType: 'JSON',
+            data: 'test_name=' + test_name + '&ip=192.168.1.164&dt='+dt,
+            success: function(data) {
+              console.log(data)
+              if(data.data.length == 0) {
+                d3.select("#cpu_svg1").append("text").text("No CPU Data Captured!");
+                d3.select("#rss_svg1").append("text").text("No RSS Data Captured!");
+              } else {
+                  nodePerfGraph(data, '#cpu_svg', '#rss_svg');
+              }
+            },
+            error: function(request, status, error) {
+              console.log(request.responseText);
+            }
+        });
+    } else {
+        for (var i = 0; i < total_hosts; ++i) {
+            $.ajax({
+                url: '../prototype/php/post2.php',
+                type: 'POST',
+                dataType: 'JSON',
+                data: 'test_name=' + test_name + '&ip=192.168.1.16' + (i+1) + '&dt='+dt,
+                async: false,
+                success: function(data) {
+                    if(data.data.length == 0) {
+                      if (i < 1) {
+                        d3.select("#cpu_svg1").append("text").text("No CPU Data Captured!");
+                        d3.select("#rss_svg1").append("text").text("No RSS Data Captured!");
+                      }
+                    } else {
+                      nodePerfGraph(data, '#cpu_svg'+(i+1), '#rss_svg'+(i+1));
+                    }
+                },
+                error: function (request, status, error) {
+                  console.log(request.responseText);
+                }
+            });
+        }
+    }
+}
+
 
 $('#accordion').on('show.bs.collapse', function () {
     $('#accordion .in').collapse('hide');

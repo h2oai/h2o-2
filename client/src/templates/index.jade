@@ -27,6 +27,24 @@ html(lang='en')
     //- Recursively include other .jade files
     include main-view
 
+    script(type="text/html" id="help")
+      include help
+    script(type="text/html" id="geyser")
+      include geyser
+    script(type="text/html" id="alert-dialog")
+      include alert-dialog
+    script(type="text/html" id="error-dialog")
+      include error-dialog
+    script(type="text/html" id="confirm-dialog")
+      include confirm-dialog
+    script(type="text/html" id="select-frame-dialog")
+      include select-frame-dialog
+    script(type="text/html" id="configure-strip-plot-dialog")
+      include configure-strip-plot-dialog
+    script(type="text/html" id="scoring-visualization-dialog")
+      include scoring-visualization-dialog
+    script(type="text/html" id="scoring-filter-dialog")
+      include scoring-filter-dialog
     script(type="text/html" id="topic-list-view")
       include topic-list-view
     script(type="text/html" id="frame-list-view")
@@ -41,8 +59,12 @@ html(lang='en')
       include empty-view
     script(type="text/html" id="frame-view")
       include frame-view
+    script(type="text/html" id="model-inspection-view")
+      include model-inspection-view
     script(type="text/html" id="model-view")
       include model-view
+    script(type="text/html" id="frame-inspection-view")
+      include frame-inspection-view
     script(type="text/html" id="model-selection-view")
       include model-selection-view
     script(type="text/html" id="scoring-view")

@@ -99,6 +99,7 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTFactor());
     putPrefix(new ASTIsFactor());
     putPrefix(new ASTAnyFactor());   // For Runit testing
+    putPrefix(new ASTCanBeCoercedToLogical());
     putPrefix(new ASTAnyNA());
     putPrefix(new ASTIsTRUE());
     putPrefix(new ASTMTrans());
@@ -331,7 +332,30 @@ class ASTCeil extends ASTUniPrefixOp { @Override String opStr(){ return "ceil"; 
 class ASTFlr  extends ASTUniPrefixOp { @Override String opStr(){ return "floor"; } @Override ASTOp make() {return new ASTFlr ();} @Override double op(double d) { return Math.floor(d);}}
 class ASTLog  extends ASTUniPrefixOp { @Override String opStr(){ return "log";   } @Override ASTOp make() {return new ASTLog ();} @Override double op(double d) { return Math.log(d);}}
 class ASTExp  extends ASTUniPrefixOp { @Override String opStr(){ return "exp";   } @Override ASTOp make() {return new ASTExp ();} @Override double op(double d) { return Math.exp(d);}}
-class ASTIsNA extends ASTUniPrefixOp { @Override String opStr(){ return "is.na"; } @Override ASTOp make() {return new ASTIsNA();} @Override double op(double d) { return Double.isNaN(d)?1:0;}}
+//class ASTIsNA extends ASTUniPrefixOp { @Override String opStr(){ return "is.na"; } @Override ASTOp make() {return new ASTIsNA();} @Override double op(double d) { return Double.isNaN(d)?1:0;}}
+class ASTIsNA extends ASTUniPrefixOp { @Override String opStr(){ return "is.na";} @Override ASTOp make() { return new ASTIsNA();} @Override double op(double d) { return Double.isNaN(d)?1:0;}
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    // Expect we can broadcast across all functions as needed.
+    if( !env.isAry() ) { env.poppush(op(env.popDbl())); return; }
+    Frame fr = env.popAry();
+    String skey = env.key();
+    final ASTUniOp uni = this;  // Final 'this' so can use in closure
+    Frame fr2 = new MRTask2() {
+      @Override public void map( Chunk chks[], NewChunk nchks[] ) {
+        for( int i=0; i<nchks.length; i++ ) {
+          NewChunk n = nchks[i];
+          Chunk c = chks[i];
+          int rlen = c._len;
+          for( int r=0; r<rlen; r++ )
+            n.addNum( c.isNA0(r) ? 1 : 0);
+        }
+      }
+    }.doAll(fr.numCols(),fr).outputFrame(fr._names, null);
+    env.subRef(fr,skey);
+    env.pop();                  // Pop self
+    env.push(fr2);
+  }
+}
 
 class ASTNrow extends ASTUniPrefixOp {
   ASTNrow() { super(VARS1,new Type[]{Type.DBL,Type.ARY}); }
@@ -403,6 +427,29 @@ class ASTAnyFactor extends ASTUniPrefixOp {
     Vec[] v = fr.vecs();
     for(int i = 0; i < v.length; i++) {
       if(v[i].isEnum()) { d = 1; break; }
+    }
+    env.subRef(fr,skey);
+    env.poppush(d);
+  }
+}
+
+class ASTCanBeCoercedToLogical extends ASTUniPrefixOp {
+  ASTCanBeCoercedToLogical() { super(VARS1,new Type[]{Type.DBL,Type.ARY}); }
+  @Override String opStr() { return "canBeCoercedToLogical"; }
+  @Override ASTOp make() {return this;}
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    if(!env.isAry()) { env.poppush(0); return; }
+    Frame fr = env.popAry();
+    String skey = env.key();
+    double d = 0;
+    Vec[] v = fr.vecs();
+    for (Vec aV : v) {
+      if (aV.isInt()) {
+        if (aV.min() == 0 && aV.max() == 1) {
+          d = 1;
+          break;
+        }
+      }
     }
     env.subRef(fr,skey);
     env.poppush(d);
@@ -796,13 +843,17 @@ class ASTCbind extends ASTOp {
       if( env.isAry(-argcnt+1+i) ) {
         String name = null;
         Frame fr2 = env.ary(-argcnt+1+i);
+        Frame fr3 = fr.makeCompatible(fr2);
+        if( fr3 != fr2 ) {      // If copied into a new Frame, need to adjust refs
+          env.addRef(fr3); 
+          env.subRef(fr2,null); 
+        }
+        // Take name from an embedded assign: "cbind(colNameX = some_frame, ...)"
         if( fr2.numCols()==1 && apply != null && (name = apply._args[i+1].argName()) != null )
-          fr.add(name,fr2.anyVec());
-        else
-          fr.add(fr2,true);
+          fr.add(name,fr3.anyVec());
+        else fr.add(fr3,true);
       } else {
         double d = env.dbl(-argcnt+1+i);
-        // Vec v = fr.vecs()[0].makeCon(d);
         Vec v = vmax == null ? Vec.make1Elem(d) : vmax.makeCon(d);
         fr.add("C" + String.valueOf(i+1), v);
         env.addRef(v);
@@ -1271,7 +1322,7 @@ class ASTVar extends ASTOp {
         sdev[i] = fr.vecs()[i].sigma();
 
       // TODO: Might be more efficient to modify DataInfo to allow for separate standardization of mean and std dev
-      DataInfo dinfo = new DataInfo(fr, 0, true, true);
+      DataInfo dinfo = new DataInfo(fr, 0, true, DataInfo.TransformType.STANDARDIZE);
       GramTask tsk = new GramTask(null, dinfo, false, false).doAll(dinfo._adaptedFrame);
       double[][] var = tsk._gram.getXX();
       long nobs = tsk._nobs;
@@ -1773,7 +1824,7 @@ class ASTLs extends ASTOp {
   @Override String opStr() { return "ls"; }
   @Override ASTOp make() {return new ASTLs();}
   @Override void apply(Env env, int argcnt, ASTApply apply) {
-    for( Key key : H2O.globalKeySet(null) )
+    for( Key key : H2O.KeySnapshot.globalSnapshot().keys())
       if( key.user_allowed() && H2O.get(key) != null )
         env._sb.append(key.toString());
     // Pop the self-function and push a zero.

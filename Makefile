@@ -112,6 +112,7 @@ build:
 	@echo
 	$(MAKE) build_rjar 1> target/logs/rjar_build.log
 	$(MAKE) -C R PROJECT_VERSION=$(PROJECT_VERSION) BUILD_NUMBER=$(BUILD_NUMBER) 1> target/logs/r_build.log
+	$(MAKE) build_rcran 1> target/logs/rcran_build.log 2> target/logs/rcran_build.err
 
 	@echo
 	@echo "PHASE: Building zip package..."
@@ -152,6 +153,7 @@ else
 	md5deep target/h2o.jar | cut -d'' -f1 > target/h2o.jar.md5
 endif
 
+# Strip out stuff from h2o.jar that isn't needed for R.
 build_rjar:
 	rm -fr target/Rjar
 	mkdir -p target/Rjar/tmp
@@ -169,6 +171,18 @@ ifneq ($(shell uname),Windows_NT)
 else
 	md5deep target/Rjar/h2o.jar | cut -d'' -f1 > target/Rjar/h2o.jar.md5
 endif
+
+# Build the file for submission to CRAN by stripping out h2o.jar.
+H2O_R_SOURCE_FILE = h2o_$(PROJECT_VERSION).tar.gz
+build_rcran:
+	rm -fr target/Rcran
+	mkdir target/Rcran
+	cp target/R/src/contrib/$(H2O_R_SOURCE_FILE) target/Rcran/tmp.tar.gz
+	cd target/Rcran && tar zxvf tmp.tar.gz
+	rm -f target/Rcran/tmp.tar.gz
+	rm -f target/Rcran/h2o/inst/java/h2o.jar
+	cd target/Rcran && tar zcvf $(H2O_R_SOURCE_FILE) h2o
+	rm -fr target/Rcran/h2o
 
 build_package:
 	echo $(PROJECT_VERSION) > target/project_version
@@ -215,6 +229,7 @@ docs-website-clean:
 	rm -rf h2o-docs/source/developuser/DocGen
 	rm -rf h2o-docs/source/developuser/ScalaGen
 	$(MAKE) -C h2o-docs clean
+	$(MAKE) -C docs/uml clean
 endif
 
 dw_announce:
@@ -227,12 +242,22 @@ PORT := $(shell expr "63600" "+" "(" $(RANDOM_NUMBER) "%" "100" ")")
 TMPDIR := $(shell echo /tmp/tmp.h2o.docgen.$(PORT))
 dw_1:
 	rm -fr $(BUILD_WEBSITE_DIR)
+
 	rm -fr h2o-docs/source/developuser/DocGen
 	mkdir -p h2o-docs/source/developuser/DocGen
 	cd h2o-docs/source/developuser/DocGen && java -Xmx1g -jar "$(TOPDIR)/target/h2o.jar" -runClass water.api.DocGen -port $(PORT) -name $(TMPDIR) -ice_root $(TMPDIR) 1> /dev/null
 	rm -rf $(TMPDIR)
+
+	rm -fr h2o-docs/source/developuser/ScalaGen
 	mkdir -p h2o-docs/source/developuser/ScalaGen
 	cp -p h2o-scala/README.rst h2o-docs/source/developuser/ScalaGen/README.rst
+
+	$(MAKE) -C docs/uml
+	rm -fr h2o-docs/source/developuser/PngGen
+	mkdir -p h2o-docs/source/developuser/PngGen/pictures
+	mkdir -p h2o-docs/source/developuser/PngGen/uml
+	cp -p docs/pictures/*.png h2o-docs/source/developuser/PngGen/pictures
+	cp -p docs/uml/*.png h2o-docs/source/developuser/PngGen/uml
 
 # If this fails, you might need to do the following:
 #     $ (possibly sudo) easy_install pip
@@ -251,6 +276,7 @@ dw_3:
 	cp -p hadoop/README.txt $(BUILD_WEBSITE_DIR)/bits/hadoop
 	cp -p docs/H2O_on_Hadoop_0xdata.pdf $(BUILD_WEBSITE_DIR)/bits/hadoop
 	cp -p docs/h2o_datasheet.pdf $(BUILD_WEBSITE_DIR)/bits
+	cp -p docs/H2ODeveloperCookbook.pdf $(BUILD_WEBSITE_DIR)/bits
 	mkdir -p $(BUILD_WEBSITE_DIR)/bits/ec2
 	cp -p ec2/README.txt $(BUILD_WEBSITE_DIR)/bits/ec2
 	@if [ -f R/h2o_package.pdf ]; then \

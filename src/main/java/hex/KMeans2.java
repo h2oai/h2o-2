@@ -66,12 +66,12 @@ public class KMeans2 extends ColumnsJob {
       sourceKey = Key.make(sourceArg);
 
     // Drop ignored cols and, if user asks for it, cols with too many NAs
-    Frame fr = DataInfo.prepareFrame(source, ignored_cols, false, false, drop_na_cols);
-    DataInfo dinfo = new DataInfo(fr, 0, true, normalize, false);
-    String[] names = dinfo._adaptedFrame.names();
-    Vec[] vecs = dinfo._adaptedFrame.vecs();
+    Frame fr = DataInfo.prepareFrame(source, ignored_cols, false, drop_na_cols);
+    String[] names = fr.names();
+    Vec[] vecs = fr.vecs();
     if(vecs == null || vecs.length == 0)
       throw new IllegalArgumentException("No columns selected. Check that selected columns have not been dropped due to too many NAs.");
+    DataInfo dinfo = new DataInfo(fr, 0, false, DataInfo.TransformType.STANDARDIZE, DataInfo.TransformType.NONE);
 
     // Fill-in response based on K99
     String[] domain = new String[k];
@@ -368,7 +368,7 @@ public class KMeans2 extends ColumnsJob {
     private transient int _ncats, _nnums;
 
     public KMeans2Model(KMeans2 params, Key selfKey, Key dataKey, String names[], String domains[][]) {
-      super(selfKey, dataKey, names, domains);
+      super(selfKey, dataKey, names, domains, /* priorClassDistribution */ null, /* modelClassDistribution */ null);
       parameters = params;
       _clustersKey = Key.make(selfKey.toString() + "_clusters");
     }

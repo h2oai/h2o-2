@@ -20,7 +20,7 @@ public class FillNAsWithMeanDemo02 extends AbstractCookbook {
 	@Test
 	public void frame_001() {
 		
-		String fileName = "../cookbookData/iris_withNA.csv";
+		String fileName = "./cookbookData/iris_withNA.csv";
 		//String fileName = "/Users/nidhimehta/Desktop/iris_withNA.csv";
 
 		File file = new File(fileName);
@@ -53,7 +53,8 @@ public class FillNAsWithMeanDemo02 extends AbstractCookbook {
 		
 		//logThisH2OInstanceWebBrowserAddress();
         //sleepForever();
-	}
+        Frame.delete(okey);
+    }
 	public static class FillNasWithMean extends MRTask2<FillNasWithMean> {
 		final double[] _meanX;
 

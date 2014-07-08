@@ -37,16 +37,16 @@ test.LiblineaR <- function(conn) {
                      nfolds       = 1,
                      lambda       = 1/ (7 * 100), #700,
                      alpha        = 0.0,
-                     epsilon = 1E-2, version = 1)
+                     epsilon = 1E-2)
     
     h2op         <- h2o.predict(h2o.m, testhex)
     h2opreds     <- head(h2op, nrow(h2op))
-    h2oCM        <- table(testLabels, h2opreds$CAPSULE)
+    h2oCM        <- table(testLabels, h2opreds$predict)
     
     h2oPrecision <- h2oCM[1]/ (h2oCM[1] + h2oCM[3])
     h2oRecall    <- h2oCM[1]/ (h2oCM[1] + h2oCM[2])
     h2oF1        <- 2 * (h2oPrecision * h2oRecall)/ (h2oPrecision + h2oRecall)
-    h2oAUC       <- performance(prediction(h2opreds$CAPSULE, testLabels), measure = "auc")@y.values
+    h2oAUC       <- performance(prediction(h2opreds$predict, testLabels), measure = "auc")@y.values
     
     Log.info("                ============= H2O Performance =============\n")
     Log.info(paste("H2O AUC (performance(prediction(predictions,actual))): ", h2oAUC[[1]], "\n", sep = ""))
@@ -93,17 +93,16 @@ test.LiblineaR <- function(conn) {
                      nfolds       = 1, 
                      lambda       = 1/70,
                      alpha        = 0.00,
-                     epsilon = 1E-2, 
-                     version = 1)
+                     epsilon = 1E-2)
     
     h2op     <- h2o.predict(h2o.m, testhex)
     h2opreds <- head(h2op, nrow(h2op))
-    h2oCM    <- table(testLabels, h2opreds$CAPSULE)
+    h2oCM    <- table(testLabels, h2opreds$predict)
     
     h2oPrecision <- h2oCM[1]/ (h2oCM[1] + h2oCM[3])
     h2oRecall    <- h2oCM[1]/ (h2oCM[1] + h2oCM[2])
     h2oF1        <- 2 * (h2oPrecision * h2oRecall)/ (h2oPrecision + h2oRecall)
-    h2oAUC       <- performance(prediction(h2opreds$CAPSULE, testLabels), measure = "auc")@y.values
+    h2oAUC       <- performance(prediction(h2opreds$predict, testLabels), measure = "auc")@y.values
     
     Log.info("                ============= H2O Performance =============\n")
     Log.info(paste("H2O AUC (performance(prediction(predictions,actual))): ", h2oAUC[[1]], "\n",sep=""))
@@ -140,8 +139,8 @@ test.LiblineaR <- function(conn) {
   }
 
   Log.info("Importing prostate test/train data...\n")
-  prostate.train.hex <- h2o.uploadFile.VA(conn, locate("../../../smalldata/logreg/prostate_train.csv"), "pTrain.hex")
-  prostate.test.hex  <- h2o.uploadFile.VA(conn, locate("../../../smalldata/logreg/prostate_test.csv"), "pTest.hex")
+  prostate.train.hex <- h2o.uploadFile(conn, locate("../../../smalldata/logreg/prostate_train.csv"), "pTrain.hex")
+  prostate.test.hex  <- h2o.uploadFile(conn, locate("../../../smalldata/logreg/prostate_test.csv"), "pTest.hex")
   prostate.train.dat <- read.csv(locate("../../../smalldata/logreg/prostate_train.csv")) #head(prostate.train.hex,nrow(prostate.train.hex))
   prostate.test.dat  <- read.csv(locate("../../../smalldata/logreg/prostate_test.csv")) #head(prostate.test.hex,nrow(prostate.test.hex))
   xTrain             <- prostate.train.dat[,-1]

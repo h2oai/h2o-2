@@ -21,6 +21,5 @@ s = runif(nrow(prostate.hex))
 prostate.train = prostate.hex[s <= 0.8,]
 prostate.train = h2o.assign(prostate.train, "prostate.train")
 h2o.ls(localH2O)
-h2o.shutdown(localH2O)
 }
 

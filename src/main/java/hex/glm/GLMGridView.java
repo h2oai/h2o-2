@@ -81,8 +81,8 @@ public class GLMGridView extends Request2 {
         GLMModel m = models.get(i);
         sb.append("<tr>");
         sb.append("<td>" + m.alpha + "</td>");
-        sb.append("<td>" + m.lambdaMax() + "</td>");
-        sb.append("<td>" + m.lambdaMin() + "</td>");
+        sb.append("<td>" + m.submodels[0].lambda_value + "</td>");
+        sb.append("<td>" + m.submodels[m.submodels.length-1].lambda_value + "</td>");
         sb.append("<td>" + m.lambda() + "</td>");
         sb.append("<td>" + (m.rank()-1) + "</td>");
         sb.append("<td>" + m.iteration() + "</td>");
@@ -107,7 +107,7 @@ public class GLMGridView extends Request2 {
     if((j = UKV.get(grid._jobKey)) != null){
       switch(j.state){
         case DONE:     return Response.done(this);
-        case CRASHED:  return Response.error(j.exception);
+        case FAILED:  return Response.error(j.exception);
         case CANCELLED:return Response.error("Job was cancelled by user!");
         case RUNNING:  return Response.poll(this, (int) (100 * j.progress()), 100, "grid_key", grid_key.toString());
         default: break;

@@ -39,16 +39,16 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
 
-    def test_many_cols_with_syn(self):
+    def test_many_cols_enum(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (100, 11000, 'cA', 5),
-            (100, 10000, 'cB', 5),
-            (100, 9000, 'cC', 5),
-            (100, 8000, 'cD', 5),
-            (100, 7000, 'cE', 5),
-            (100, 6000, 'cF', 5),
-            (100, 5000, 'cG', 5),
+            (100, 11000, 'cA', 50),
+            (100, 10000, 'cB', 50),
+            (100, 9000, 'cC', 50),
+            (100, 8000, 'cD', 50),
+            (100, 7000, 'cE', 50),
+            (100, 6000, 'cF', 50),
+            (100, 5000, 'cG', 50),
             ]
 
         ### h2b.browseTheCloud()
@@ -63,8 +63,7 @@ class Basic(unittest.TestCase):
             print "Creating random", csvPathname
             write_syn_dataset(csvPathname, rowCount, colCount, SEED)
 
-            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=10)
-            print csvFilename, 'parse time:', parseResult['response']['time']
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=60)
             print "Parse result['destination_key']:", parseResult['destination_key']
 
             # We should be able to see the parse result?

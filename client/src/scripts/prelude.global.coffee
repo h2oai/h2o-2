@@ -144,6 +144,7 @@ isFunction = _.isFunction
 isNaN = _.isNaN
 isNull = _.isNull
 isNumber = _.isNumber
+isInteger = (value) -> (isNumber value) and value % 1 is 0
 isObject = _.isObject
 isPlainObject = _.isPlainObject
 isRegExp = _.isRegExp
@@ -261,13 +262,17 @@ unshift = (array, arg) ->
   array.unshift arg
   array
 
+unshiftAll = (array, elements) ->
+  array.splice.apply array, [0, 0].concat elements
+  array
+
 shift = (array) -> array.shift()
 
 push = (array, arg) ->
   array.push arg
   array
 
-shove = (array, elements) ->
+pushAll = (array, elements) ->
   for element in elements
     array.push element
   array
@@ -305,6 +310,36 @@ zipCompare = (array1, array2, areEqual) ->
       b = array2[i]
       return no if a isnt b
   yes
+
+same = (array, areEqual) ->
+  if array.length > 1
+    value = head array
+    if isFunction areEqual
+      for i in [ 1 ... array.length ]
+        unless areEqual value, array[i]
+          return no
+    else
+      for i in [ 1 ... array.length ]
+        if value isnt array[i]
+          return no
+    yes
+  else
+    yes
+
+valuesAreEqual = (array, pluck, areEqual) ->
+  if array.length > 1
+    value = pluck head array
+    if isFunction areEqual
+      for i in [ 1 ... array.length ]
+        unless areEqual value, pluck array[i]
+          return no
+    else
+      for i in [ 1 ... array.length ]
+        if value isnt pluck array[i]
+          return no
+    yes
+  else
+    yes
 
 # Object ops
 

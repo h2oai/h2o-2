@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>RESULTS</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="http://code.jquery.com/jquery.js"></script>
+        <link href="../vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
+        <link href="../vendor/bootstrap/css/bootstrap-responsive.min.css" rel="stylesheet">
+        <script src="../vendor/bootstrap/js/bootstrap.min.js"></script>
+        <script src="../vendor/bootstrap/js/bootstrap-typeahead.js"></script>
+        <script type="text/javascript" src="../prototype/js/customQuery.js"></script>
+        <script type="text/javascript" src="../prototype/js/perf.js"></script>
+        <script type="text/javascript" src="../prototype/js/handleTypeahead.js"></script>
+        <script type="text/javascript" src="http://d3js.org/d3.v3.min.js"></script>
+    </head>
+    <style>
+        @font-face {
+            font-family: 'robotothin';
+            src: url("./Roboto-Medium.ttf");
+        }
+        .axis path,
+        .axis line {
+          fill: none;
+          stroke: #000;
+          shape-rendering: crispEdges;
+        }
+        
+        .x.axis path {
+          display: none;
+        }
+        
+        .line {
+          fill: none;
+          stroke: steelblue;
+          stroke-width: 1.5px;
+        }
+      
+        .link {
+          fill: none;
+          stroke: #666;
+          stroke-width: 1.5px;
+        }
+
+        .node circle {
+          fill: #ccc;
+          stroke: #fff;
+          stroke-width: 1.5px;
+        }
+
+        div.tooltip {   
+            position: absolute;           
+            text-align: center;           
+            width: 90px;
+            height: 35px;
+            padding: 2px;
+            font: 12px;        
+            border:2px solid steelblue;
+            background:rgba(255, 255, 255, 1.0);
+            box-shadow:#333333 0px 0px 10px;
+            border-radius: 8px;
+            pointer-events: none;
+            z-index:10500;
+            font-family: 'robotothin';
+            font-weight:bold;
+          }
+
+  </style>
+    <body>
+        <script>
+            $(document).ready(function() {
+              var params = GetUrlValue();
+            });
+        </script>
+        <div class="container-fluid">
+            <div class="row-fluid">
+                <div class="span6 offset3">
+                    <div class="page-header">
+                        <h1>CPU and RSS Over Time</h1>
+                    </div>
+                </div>
+            </div>
+            <h3>NB: Graphs cover the <u><em>entire test run!</em></u></h3>
+            <div id="header_div"></div>
+            <div id="cpu_svg">
+                <div id="cpu_svg1"></div>
+                <div id="cpu_svg2"></div>
+                <div id="cpu_svg3"></div>
+                <div id="cpu_svg4"></div>
+            </div>
+
+            <div id="rss_svg">
+                <div id="rss_svg1"></div>
+                <div id="rss_svg2"></div>
+                <div id="rss_svg3"></div>
+                <div id="rss_svg4"></div>
+            </div>
+
+              <script>
+                var params = GetUrlValue().split('&');
+                var test_run_id = params[0].split('=')[1];
+                var test_name = params[1].split('=')[1];
+                var num_hosts = params[2].split('=')[1];
+                var run_date  = params[3].split('=')[1];
+
+                var h2 = document.createElement("H5");
+                var h = document.createElement("H5");
+                var h3 = document.createElement("H4");
+                var h4 = document.createElement("H4");
+                var t = document.createTextNode("TEST ID : " + test_run_id);
+                var t2 = document.createTextNode("TEST NAME : " + test_name);
+                var t3 = document.createTextNode("CPU Over Time: User (blue), System (green)")
+                var t4 = document.createTextNode("RSS Over Time")
+                h.appendChild(t);
+                h2.appendChild(t2);
+                h3.appendChild(t3);
+                h4.appendChild(t4);
+                document.getElementById("header_div").appendChild(h);
+                document.getElementById("header_div").appendChild(h2);
+                document.getElementById("header_div").appendChild(document.createElement('hr'));
+                document.getElementById("header_div").appendChild(h3);
+                document.getElementById("cpu_svg").appendChild(document.createElement('hr'));
+                document.getElementById("cpu_svg").appendChild(h4);
+
+                $(document).ready(function() {
+                    showPerfGraphs(test_name, num_hosts, run_date)
+                });
+              </script>
+              <br />
+            </div>
+    </body>
+</html>
+

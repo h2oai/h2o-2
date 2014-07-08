@@ -5,93 +5,101 @@ import java.util.Random;
 
 /** Computes the mse split statistics.
  *
- * For regression. Try to minimize the squared error at each split.
- *
- * Compute
- *
- *
- *
+ * For regression: Try to minimize the squared error at each split.
  */
 public class MSEStatistic extends Statistic {
 
   public MSEStatistic(Data data, int features, long seed, int exclusiveSplitLimit) {
-    super(data, features, seed, exclusiveSplitLimit);
+    super(data, features, seed, exclusiveSplitLimit, true /*regression*/);
   }
 
-  private double gini(int[] dd, int sum) {
-    double result = 1.0;
-    double sd = (double)sum;
-    for (int d : dd) {
-      double tmp = ((double)d)/sd;
-      result -= tmp*tmp;
+  private float computeAv(float[] dist, Data d, int sum) {
+    float res = 0f;
+    for (int i = 0; i < dist.length; ++i) {
+      int tmp = (int) dist[i];
+      res += d._dapt._c[d._dapt._c.length - 1]._binned2raw[i] * tmp;
     }
-    return result;
+    return sum == 0 ? Float.POSITIVE_INFINITY : res / (float) sum;
   }
 
-  @Override protected Split ltSplit(int col, Data d, int[] dist, int distWeight, Random _) {
-    int[] leftDist = new int[d.classes()];
-    int[] riteDist = dist.clone();
-    int lW = 0;
-    int rW = distWeight;
-    double totWeight = rW;
-    // we are not a single class, calculate the best split for the column
-    int bestSplit = -1;
-    double bestFitness = 0.0;
-    assert leftDist.length==_columnDists[col][0].length;
+  private float[] computeDist(Data d, int colIndex) {
+    float[] res = new float[d.columnArityOfClassCol()];
+    for (int i = 0; i < _columnDistsRegression[colIndex].length - 1; ++i) {
+      for (int j = 0; j < _columnDistsRegression[colIndex][i].length - 1; ++j) {
+        res[j] += _columnDistsRegression[colIndex][i][j];
+      }
+    }
+    return res;
+  }
 
-    for (int i = 0; i < _columnDists[col].length-1; ++i) {
-      // first copy the i-th guys from rite to left
-      for (int j = 0; j < leftDist.length; ++j) {
-        int t = _columnDists[col][i][j];
+  @Override
+  protected Split ltSplit(int colIndex, Data d, float[] dist, float distWeight, Random rand) {
+    float bestSoFar = Float.POSITIVE_INFINITY;
+    int bestSplit = -1;
+
+    int lW = 0;
+    int rW = d.rows();
+    float[] leftDist = new float[d.columnArityOfClassCol()];
+    float[] riteDist = computeDist(d, colIndex); //dist.clone();
+
+    for (int j = 0; j < _columnDistsRegression[colIndex].length - 1; ++j) {
+      for (int i = 0; i < dist.length; ++i) {
+        int t = _columnDistsRegression[colIndex][j][i];
         lW += t;
         rW -= t;
-        leftDist[j] += t;
-        riteDist[j] -= t;
+        leftDist[i] += t;
+        riteDist[i] -= t;
       }
-      // now make sure we have something to split
-      if( lW == 0 || rW == 0 ) continue;
-      double f = 1.0 -
-              (gini(leftDist,lW) * ((double)lW / totWeight) +
-                      gini(riteDist,rW) * ((double)rW / totWeight));
-      if( f>bestFitness ) { // Take split with largest fitness
-        bestSplit = i;
-        bestFitness = f;
+
+      float Y_R = computeAv(riteDist, d, rW);
+      float Y_L = computeAv(leftDist, d, lW);
+
+      float newSplitValue = Y_R + Y_L;
+      if (newSplitValue < bestSoFar) {
+        bestSoFar = newSplitValue;
+        bestSplit = j;
       }
     }
-    return bestSplit == -1
-            ? Split.impossible(Utils.maxIndex(dist, _random))
-            : Split.split(col, bestSplit, bestFitness);
+
+    return (bestSplit == -1 || bestSoFar == Float.POSITIVE_INFINITY)
+            ? Split.impossible(Utils.maxIndex(computeDist(d, colIndex), _random))
+            : Split.split(colIndex, bestSplit, bestSoFar);
   }
 
-  @Override protected Split eqSplit(int colIndex, Data d, int[] dist, int distWeight, Random _) {
-    int[] inclDist = new int[d.classes()];
-    int[] exclDist = dist.clone();
+  @Override
+  protected Split eqSplit(int colIndex, Data d, float[] dist, float distWeight, Random rand) {
     // we are not a single class, calculate the best split for the column
     int bestSplit = -1;
-    double bestFitness = 0.0;   // Fitness to maximize
+    float bestSoFar = 0.f;   // Fitness to maximize
     for( int i = 0; i < _columnDists[colIndex].length-1; ++i ) {
-      // first copy the i-th guys from rite to left
-      int sumt = 0;
-      for( int j = 0; j < inclDist.length; ++j ) {
-        int t = _columnDists[colIndex][i][j];
-        sumt += t;
-        inclDist[j] = t;
-        exclDist[j] = dist[j] - t;
-      }
-      int inclW = sumt;
-      int exclW = distWeight - inclW;
-      // now make sure we have something to split
-      if( inclW == 0 || exclW == 0 ) continue;
-      double f = 1.0 -
-              (gini(inclDist,inclW) * ((double)inclW / distWeight) +
-                      gini(exclDist,exclW) * ((double)exclW / distWeight));
-      if( f>bestFitness ) { // Take split with largest fitness
-        bestSplit = i;
-        bestFitness = f;
+      float Y_incl = 0.f;
+      float Y_excl = distWeight;
+      int nobs_incl = 0;
+      int nobs_excl = d.rows();
+      for (float aDist : dist) {
+        Y_incl += aDist;
+        Y_excl -= aDist;
+        nobs_incl++;
+        nobs_excl--;
+        float newSplitValue = (Y_incl * Y_incl / (float) nobs_incl) + (Y_excl * Y_excl / (float) nobs_excl);
+        if (newSplitValue > bestSoFar) {
+          bestSoFar = newSplitValue;
+          bestSplit = i;
+        }
       }
     }
     return bestSplit == -1
             ? Split.impossible(Utils.maxIndex(dist, _random))
-            : Split.exclusion(colIndex, bestSplit, bestFitness);
+            : Split.exclusion(colIndex, bestSplit, bestSoFar);
+  }
+
+
+
+  @Override protected Split ltSplit(int col, Data d, int[] dist, int distWeight, Random r) {
+    return null; //not called for regression
+  }
+
+  @Override protected Split eqSplit(int colIndex, Data d, int[] dist, int distWeight, Random r) {
+    return null; //not called for regression
   }
 }

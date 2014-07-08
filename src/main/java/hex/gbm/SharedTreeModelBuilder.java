@@ -4,6 +4,7 @@ import static water.util.MRUtils.sampleFrameStratified;
 import static water.util.ModelUtils.getPrediction;
 import hex.ConfusionMatrix;
 import hex.VarImp;
+import hex.drf.DRF;
 import hex.rng.MersenneTwisterRNG;
 import jsr166y.CountedCompleter;
 import water.*;
@@ -24,17 +25,23 @@ import water.util.Utils;
 import java.util.Arrays;
 import java.util.Random;
 
-// Build (distributed) Trees.  Used for both Gradient Boosted Method and Random
-// Forest, and really could be used for any decision-tree builder.
-//
-// While this is a wholly H2O-design, we found these papers afterwards that
-// describes our design fairly well.
-//   Parallel GBRT http://www.cse.wustl.edu/~kilian/papers/fr819-tyreeA.pdf
-//   Streaming parallel decision tree http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf
-// Note that our dynamic Histogram technique is different (surely faster, and
-// probably less mathematically clean).  I'm sure a host of other smaller details
-// differ also - but in the Big Picture the paper and our algorithm are similar.
-
+/**
+ *  Shared (distributed) trees builder.
+ *
+ *  <p>Used for both <em>Gradient Boosted Method</em> (see {@link GBM}) and <em>Random
+ *  Forest</em> (see {@link DRF}), and really could be used for any decision-tree builder.</p>
+ *
+ *  <p>While this is a wholly H<sub>2</sub>O-design, we found these papers afterwards that
+ *  describes our design fairly well:</p>
+ * <ul>
+ *  <li><a href="http://www.cse.wustl.edu/~kilian/papers/fr819-tyreeA.pdf">Parallel GBRT</a></li>
+ *  <li><a href="http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf">Streaming parallel decision tree</a></li>
+ * </ul>
+ *
+ * <p>Note that our <em>dynamic histogram</em> technique is different (surely faster, and
+ * probably less mathematically clean).  I'm sure a host of other smaller details
+ * differ also - but in the Big Picture the paper and our algorithm are similar.</p>
+*/
 public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends ValidatedJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
@@ -61,15 +68,21 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
    * For imbalanced data, balance training data class counts via
    * over/under-sampling. This can result in improved predictive accuracy.
    */
-  @API(help = "Balance training data class counts via over/under-sampling (for imbalanced data)", filter = Default.class, json = true, gridable = false, importance = ParamImportance.EXPERT)
+  @API(help = "Balance training data class counts via over/under-sampling (for imbalanced data)", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
   public boolean balance_classes = false;
 
   /**
    * When classes are balanced, limit the resulting dataset size to the
    * specified multiple of the original dataset size.
    */
-  @API(help = "Maximum relative size of the training data after balancing class counts (can be less than 1.0)", filter = Default.class, json = true, dmin=1e-3, gridable = true, importance = ParamImportance.EXPERT)
+  @API(help = "Maximum relative size of the training data after balancing class counts (can be less than 1.0)", filter = Default.class, json = true, dmin=1e-3, importance = ParamImportance.EXPERT)
   public float max_after_balance_size = Float.POSITIVE_INFINITY;
+
+  @API(help = "Model checkpoint to start building a new model from", filter = Default.class, json = true, required = false)
+  public Key checkpoint;
+
+  @API(help = "Overwrite checkpoint", filter = Default.class, json = true, required = false)
+  public boolean overwrite_checkpoint = true;
 
 //  @API(help = "Active feature columns")
   protected int _ncols;
@@ -82,6 +95,14 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
 
   @API(help = "Class distribution")
   protected long _distribution[];
+
+  // Distribution of classes in response
+  protected float[] _priorClassDist = null;
+  // New distribution of classes if input frame was modified (resampled, balanced)
+  protected float[] _modelClassDist = null;
+
+  // Number of trees inherited from checkpoint
+  protected int _ntreesFromCheckpoint;
 
   private transient boolean _gen_enum; // True if we need to cleanup an enum response column at the end
 
@@ -96,7 +117,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   @Override public float progress(){
     Value value = DKV.get(dest());
     DTree.TreeModel m = value != null ? (DTree.TreeModel) value.get() : null;
-    return m == null ? 0 : m.ntrees() / (float) m.N;
+    return m == null ? 0 : cv_progress(m.ntrees() / (float) m.N);
   }
 
   // Verify input parameters
@@ -136,16 +157,23 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       usableColumns++;
     }
     if (usableColumns==0) throw new IllegalArgumentException("There is no usable column to generate model!");
+
+    if (checkpoint!=null && DKV.get(checkpoint)==null) throw new IllegalArgumentException("Checkpoint "+checkpoint.toString() + " does not exists!");
+  }
+
+  @Override protected Key defaultDestKey() {
+    if (checkpoint!=null && overwrite_checkpoint)
+      return checkpoint;
+    else
+      return super.defaultDestKey();
   }
 
   // --------------------------------------------------------------------------
   // Driver for model-building.
   public void buildModel(long seed) {
     final Key outputKey = dest();
-    String sd = input("source");
-    final Key dataKey = (sd==null||sd.length()==0)?null:Key.make(sd);
-    String sv = input("validation");
-    final Key testKey = (sv==null||sv.length()==0)?dataKey:Key.make(sv);
+    final Key dataKey = source != null ? source._key : null;
+    final Key testKey = validation != null ? validation._key : dataKey;
 
     // Lock the input datasets against deletes
     source.read_lock(self());
@@ -166,8 +194,12 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       assert false : "Response domain' names should be always presented in case of classification";
     if( domain == null ) domain = new String[] {"r"}; // For regression, give a name to class 0
 
-    // Find the class distribution
-    _distribution = _nclass > 1 ? new MRUtils.ClassDist(_nclass).doAll(response).dist() : null;
+    // Compute class distribution
+    if (classification) {
+      MRUtils.ClassDist cdmt = new MRUtils.ClassDist(_nclass).doAll(response);
+      _distribution = cdmt.dist();
+      _priorClassDist = cdmt.rel_dist();
+    }
 
     // Handle imbalanced classes by stratified over/under-sampling
     // initWorkFrame sets the modeled class distribution, and model.score() corrects the probabilities back using the distribution ratios
@@ -181,8 +213,14 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
         fr = stratified;
         _nrows = fr.numRows();
         response = fr.vecs()[response_idx];
+        // Recompute distribution since the input frame was modified
+        MRUtils.ClassDist cdmt = new MRUtils.ClassDist(_nclass).doAll(response);
+        _distribution = cdmt.dist();
+        _modelClassDist = cdmt.rel_dist();
       }
     }
+    Log.info(logTag(), "Prior class distribution: " + Arrays.toString(_priorClassDist));
+    Log.info(logTag(), "Model class distribution: " + Arrays.toString(_modelClassDist));
 
     // Also add to the basic working Frame these sets:
     //   nclass Vecs of current forest results (sum across all trees)
@@ -204,10 +242,28 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
 
     // Timer  for model building
     Timer bm_timer =  new Timer();
-    // Create an initial model
-    TM model = makeModel(outputKey, dataKey, testKey, names, domains, getCMDomain());
+    long before = System.currentTimeMillis();
+    // Fetch checkpoint
+    assert checkpoint==null || (!(overwrite_checkpoint && checkpoint!=null) || outputKey==checkpoint): "If checkpoint is to be overwritten then outputkey has to equal to checkpoint key";
+    TM checkpointModel = checkpoint!=null ? (TM) UKV.get(checkpoint) : null;
+    // Create an INITIAL MODEL based on given parameters
+    TM model = makeModel(outputKey, dataKey, testKey, checkpointModel!=null?ntrees+checkpointModel.ntrees():ntrees,names, domains, getCMDomain(), _priorClassDist, _modelClassDist);
+    // Update the model by a checkpoint
+    if (checkpointModel!=null) {
+      checkpointModel.read_lock(self()); // lock it for read to avoid any other job to start working on it
+      try {
+        // Create a new initial model based on given checkpoint
+        // TODO: check compatibility of parameters !
+        model = updateModel(model, checkpointModel, overwrite_checkpoint);
+        _ntreesFromCheckpoint = checkpointModel.ntrees();
+      } finally { checkpointModel.unlock(self()); }
+    }
+
     // Save the model ! (delete_and_lock has side-effect of saving model into DKV)
-    model.delete_and_lock(self());
+    if (checkpoint!=null && overwrite_checkpoint)
+      model.write_lock(self()); // do not delete previous model since it would trigger delete of stored trees which we need
+    else
+      model.delete_and_lock(self()); // we can safely delete any previous model since this one should be the first one
     // Prepare and cache adapted validation dataset if it is necessary
     prepareValidationWithModel(model);
 
@@ -222,6 +278,8 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     } finally {
       model.unlock(self());  // Update and unlock model
       cleanUp(fr,bm_timer);  // Shared cleanup
+      model.start_training(before);
+      model.stop_training();
     }
   }
 
@@ -240,8 +298,6 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     source.unlock(self());
     if( validation != null && !source._key.equals(validation._key) )
       validation.unlock(self());
-
-    remove();                   // Remove Job
   }
 
   transient long _timeLastScoreStart, _timeLastScoreEnd, _firstScore;
@@ -251,8 +307,8 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     long sinceLastScore = now-_timeLastScoreStart;
     Score sc = null;
     // If validation is specified we use a model for scoring, so we need to update it!
-    // First we save model with trees and then update it with resulting error
-    // Double update - before scoring
+    // First we save model with trees (i.e., make them available for scoring)
+    // and then update it with resulting error
     model = makeModel(model, ktrees, tstats);
     model.update(self());
     // Now model already contains tid-trees in serialized form
@@ -263,7 +319,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
         (sinceLastScore > 4000 && // Limit scoring updates to every 4sec
          (double)(_timeLastScoreEnd-_timeLastScoreStart)/sinceLastScore < 0.1) ) { // 10% duty cycle
       _timeLastScoreStart = now;
-      // Perform scoring
+      // Perform scoring - first get adapted validation response
       Response2CMAdaptor vadaptor = getValidAdaptor();
       sc = new Score().doIt(model, fTrain, vadaptor, oob, build_tree_one_node).report(logTag(),tid,ktrees);
       _timeLastScoreEnd = System.currentTimeMillis();
@@ -274,7 +330,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     if (importance && ktrees!=null) { // compute this tree votes but skip the first scoring call which is done over empty forest
       Timer vi_timer = new Timer();
       varimp  = doVarImpCalc(model, ktrees, tid-1, fTrain, false);
-      Log.info(Sys.DRF__, "Computation of variable importance with "+tid+"th-tree took: " + vi_timer.toString());
+      Log.info(logTag(), "Computation of variable importance with "+tid+"th-tree took: " + vi_timer.toString());
     }
     // Double update - after scoring
     model = makeModel(model,
@@ -296,6 +352,8 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     return res;
   }
 
+  public boolean supportsBagging() { return false; }
+
   // --------------------------------------------------------------------------
   // Convenvience accessor for a complex chunk layout.
   // Wish I could name the array elements nicer...
@@ -303,9 +361,12 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   protected Chunk chk_tree( Chunk chks[], int c ) { return chks[_ncols+1+c]; }
   protected Chunk chk_work( Chunk chks[], int c ) { return chks[_ncols+1+_nclass+c]; }
   protected Chunk chk_nids( Chunk chks[], int t ) { return chks[_ncols+1+_nclass+_nclass+t]; }
+  // Out-of-bag trees counter - only one since it is shared via k-trees
+  protected Chunk chk_oobt(Chunk chks[]) { return chks[_ncols+1+_nclass+_nclass+_nclass]; }
 
   protected final Vec vec_nids( Frame fr, int t) { return fr.vecs()[_ncols+1+_nclass+_nclass+t]; }
   protected final Vec vec_resp( Frame fr, int t) { return fr.vecs()[_ncols]; }
+  protected final Vec vec_tree( Frame fr, int c ) { return fr.vecs()[_ncols+1+c]; }
 
   protected double[] data_row( Chunk chks[], int row, double[] data) {
     assert data.length == _ncols;
@@ -639,6 +700,18 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   // turns the results into a probability distribution.
   protected abstract float score1( Chunk chks[], float fs[/*nclass*/], int row );
 
+  // Call builder specific score code and then correct probabilities
+  // if it is necessary.
+  private float score2(Chunk chks[], float fs[/*nclass*/], int row ) {
+    float sum = score1(chks, fs, row);
+    if (classification && _priorClassDist!=null && _modelClassDist!=null && !Float.isInfinite(sum)  && sum>0f) {
+      Utils.div(fs, sum);
+      ModelUtils.correctProbabilities(fs, _priorClassDist, _modelClassDist);
+      sum = 1.0f;
+    }
+    return sum;
+  }
+
   // Score the *tree* columns, and produce a confusion matrix
   public class Score extends MRTask2<Score> {
     /* @OUT */ long    _cm[/*actual*/][/*predicted*/]; // Confusion matrix
@@ -649,13 +722,11 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     /* @IN */  boolean _validation;
     /* @IN */  int     _cmlen;
     /* @IN */  boolean _cavr; // true if validation response needs to be adapted to CM domain
-    //double _auc;               //Area under the ROC curve for _nclass == 2
 
     public double   sum()   { return _sum; }
     public long[][] cm ()   { return _cm;  }
     public long     nrows() { return _snrows; }
     public double   mse()   { return sum() / nrows(); }
-   // public double   auc()   { return _auc; }
 
     /**
      * Compute CM and MSE on either the training or testing dataset.
@@ -728,23 +799,25 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
           if (_nclass > 1 ) sum = 1.0f;  // Sum of a distribution is 1.0 for classification
           else              sum = fs[1]; // Sum is the same as prediction for regression.
         } else {               // Passed in the model-specific columns
-          sum = score1(chks,fs,row);
+          sum = score2(chks,fs,row);
         }
         float err;  int yact=0; // actual response from dataset
         int yact_orig = 0; // actual response from dataset before potential scaling
         if (_oob && inBagRow(chks, row)) continue; // score only on out-of-bag rows
         if( _nclass > 1 ) {    // Classification
-          if( sum == 0 ) {       // This tree does not predict this row *at all*?
-            err = 1.0f-1.0f/_nclass; // Then take ycls=0, uniform predictive power
+          // Compute error
+          if( sum == 0 ) {                          // This tree does not predict this row *at all* ! In prediction we will make random decision, but here compute error based on number of classes
+            yact = yact_orig = (int) ys.at80(row);  // OPS: Pick an actual prediction adapted to model values <0, nclass-1)
+            err = 1.0f-1.0f/_nclass;                // Then take ycls=0, uniform predictive power
           } else {
-            if (_cavr && ys.isNA0(row)) { // Handle adapted validation response - actual response was adapted but does not contain NA - it is implicit misprediction,
+            if (_cavr && ys.isNA0(row)) {           // Handle adapted validation response - actual response was adapted but does not contain NA - it is implicit misprediction,
               err = 1f;
-            } else { // No adaptation of validation response
-              yact = yact_orig = (int) ys.at80(row); // Pick an actual prediction adapted to model values <0, nclass-1)
+            } else {                                // No adaptation of validation response
+              yact = yact_orig = (int) ys.at80(row);// OPS: Pick an actual prediction adapted to model values <0, nclass-1)
               assert 0 <= yact && yact < _nclass : "weird ycls="+yact+", y="+ys.at0(row);
               err = Float.isInfinite(sum)
                 ? (Float.isInfinite(fs[yact+1]) ? 0f : 1f)
-                : 1.0f-fs[yact+1]/sum; // Error: distance from predicting ycls as 1.0
+                : 1.0f-fs[yact+1]/sum;              // Error: distance from predicting ycls as 1.0
             }
           }
           assert !Double.isNaN(err) : "fs[cls]="+fs[yact+1] + ", sum=" + sum;
@@ -830,9 +903,10 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
    */
   protected abstract void initWorkFrame( TM initialModel, Frame fr);
 
-  protected abstract TM makeModel( Key outputKey, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain);
+  protected abstract TM makeModel( Key outputKey, Key dataKey, Key testKey, int ntrees, String names[], String domains[][], String[] cmDomain, float[] priorClassDist, float[] classDist);
   protected abstract TM makeModel( TM model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC);
   protected abstract TM makeModel( TM model, DTree ktrees[], DTree.TreeModel.TreeStats tstats);
+  protected abstract TM updateModel( TM model, TM checkpoint, boolean overwriteCheckpoint);
 
   protected water.api.AUC makeAUC(ConfusionMatrix[] cms, float[] threshold) {
     assert _nclass == 2;
@@ -857,5 +931,25 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     for( int k=0; k<trees.length; k++ )
       if( trees[k] != null )
         System.out.println(trees[k].root().toString2(new StringBuilder(),0));
+  }
+
+  protected final void debugPrintTreeColumns(Frame fr) {
+    new MRTask2() {
+      @Override public void map(Chunk[] cs) {
+        for (int r=0; r<cs[0]._len; r++) {
+          System.err.print("Row "+ r +": ");
+          for (int i=0; i<_nclass; i++) {
+            Chunk c = chk_tree(cs, i);
+            System.err.print(c.at0(r));
+            System.err.print(',');
+          }
+          if (supportsBagging()) {
+            Chunk c = chk_oobt(cs);
+            System.err.print(c.at80(r)>0 ? ":OUT" : ":IN");
+          }
+          System.err.println();
+        }
+      }
+    }.doAll(fr);
   }
 }

@@ -30,7 +30,7 @@ public class
   // In any case, they will cause issues with both GC (giant pause times on
   // many collectors) and I/O (long term blocking of TCP I/O channels to
   // service a single request, causing starvation of other requests).
-  public static final int MAX = 10*1024*1024;
+  public static final int MAX = 20*1024*1024;
 
   // ---
   // Values are wads of bits; known small enough to 'chunk' politely on disk,
@@ -83,7 +83,7 @@ public class
     byte[] mem = _mem;          // Read once!
     if( mem != null ) return mem;
     Freezable pojo = _pojo;     // Read once!
-    if( pojo != null ) 
+    if( pojo != null )
       if( pojo instanceof Chunk ) return (_mem = ((Chunk)pojo).getBytes());
       else return (_mem = pojo.write(new AutoBuffer()).buf());
     if( _max == 0 ) return (_mem = new byte[0]);
@@ -102,6 +102,7 @@ public class
   // Will (re)build the POJO from the _mem array.
   // Never returns NULL.
   public <T extends Iced> T get() {
+    touch();
     Iced pojo = (Iced)_pojo;    // Read once!
     if( pojo != null ) return (T)pojo;
     pojo = TypeMap.newInstance(_type);
@@ -109,21 +110,19 @@ public class
     pojo.init(_key);
     return (T)(_pojo = pojo);
   }
-  public <T> T get(Class<T> fc) {
+  public <T extends Freezable> T get(Class<T> fc) {
+    T pojo = getFreezable();
+    assert fc.isAssignableFrom(pojo.getClass());
+    return pojo;
+  }
+  public <T extends Freezable> T getFreezable() {
+    touch();
     Freezable pojo = _pojo;     // Read once!
     if( pojo != null ) return (T)pojo;
     pojo = TypeMap.newFreezable(_type);
     pojo.read(new AutoBuffer(memOrLoad()));
-    assert fc.isAssignableFrom(pojo.getClass());
-    return (T)(_pojo = pojo);
-  }
-  public Freezable getFreezable() {
-    Freezable pojo = _pojo;     // Read once!
-    if( pojo != null ) return pojo;
-    pojo = TypeMap.newFreezable(_type);
-    pojo.read(new AutoBuffer(memOrLoad()));
     if( pojo instanceof Iced ) ((Iced)pojo).init(_key);
-    return (_pojo = pojo);
+    return (T)(_pojo = pojo);
   }
 
   // ---
@@ -157,6 +156,7 @@ public class
   public final static byte HDFS= 2<<0; // HDFS: backed by hadoop cluster
   public final static byte S3  = 3<<0; // Amazon S3
   public final static byte NFS = 4<<0; // NFS: Standard file system
+  public final static byte TACHYON = 5<<0; // Support for tachyon FS
   public final static byte TCP = 7<<0; // TCP: For profile purposes, not a storage system
   public final static byte BACKEND_MASK = (8-1);
   public final static byte NOTdsk = 0<<3; // latest _mem is persisted or not
@@ -168,10 +168,11 @@ public class
 
   // ---
   // Interface for using the persistence layer(s).
-  public boolean onICE (){ return (backend()) ==  ICE; }
-  public boolean onHDFS(){ return (backend()) == HDFS; }
-  public boolean onNFS (){ return (backend()) ==  NFS; }
-  public boolean onS3  (){ return (backend()) ==   S3; }
+  public boolean onICE    () { return (backend()) ==     ICE; }
+  public boolean onHDFS   () { return (backend()) ==    HDFS; }
+  public boolean onNFS    () { return (backend()) ==     NFS; }
+  public boolean onS3     () { return (backend()) ==      S3; }
+  public boolean onTachyon() { return (backend()) == TACHYON; }
 
   /** Store complete Values to disk */
   void storePersist() throws IOException {
@@ -201,7 +202,7 @@ public class
     case S3  : return "S3";
     case NFS : return "NFS";
     case TCP : return "TCP";
-    default  : return null;
+    default  : return "UNKNOWN(" + x + ")";
     }
   }
 
@@ -286,6 +287,7 @@ public class
     if(onNFS() ) return PersistNFS .openStream(_key  );
     if(onHDFS()) return PersistHdfs.openStream(_key,p);
     if(onS3()  ) return PersistS3  .openStream(_key,p);
+    if(onTachyon()) return PersistTachyon.openStream(_key,p);
     if(isArray())return ((ValueArray)get()).openStream(p);
     if( isFrame() ) throw new IllegalArgumentException("Tried to pass a Frame to openStream (maybe tried to parse a (already-parsed) Frame?)");
     assert _type==TypeMap.PRIM_B : "Expected byte[] type but got "+TypeMap.className(_type);
@@ -351,7 +353,7 @@ public class
     _key = k;
     _pojo = pojo;
     _type = (short)pojo.frozenType();
-    _mem = pojo.write(new AutoBuffer()).buf();
+    _mem = (pojo instanceof Chunk)?((Chunk)pojo).getBytes():pojo.write(new AutoBuffer()).buf();
     _max = _mem.length;
     // For the ICE backend, assume new values are not-yet-written.
     // For HDFS & NFS backends, assume we from global data and preserve the
@@ -381,7 +383,6 @@ public class
   // and the normal serializer then might ship over a null instead of the
   // intended byte[].  Also, the value is NOT on the deserialize'd machines disk
   public AutoBuffer write(AutoBuffer bb) {
-    touch();
     byte p = _persist;
     if( onICE() ) p &= ~ON_dsk; // Not on the remote disk
     return bb.put1(p).put2(_type).putA1(memOrLoad());
@@ -563,9 +564,9 @@ public class
     assert h2o != H2O.SELF;     // Do not track self as a replica
     _key = key;
     // Set the replica bit for the one node we know about, and leave the
-    // rest clear.  
+    // rest clear.
     _replicas.add(h2o._unique_idx);
-    _rwlock.set(0);             // No GETs are in-flight at this time. 
+    _rwlock.set(0);             // No GETs are in-flight at this time.
     //System.out.println(key+", init "+_rwlock.get());
   }
 

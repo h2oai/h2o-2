@@ -48,7 +48,7 @@ public class PCAModel extends Model {
   PCA params;
 
   public PCAModel(PCA params, Key selfKey, Key dataKey, DataInfo dinfo, GramTask gramt, double[] sdev, double[] propVar, double[] cumVar, double[][] eigVec, int rank, int num_pc) {
-    super(selfKey, dataKey, dinfo._adaptedFrame);
+    super(selfKey, dataKey, dinfo._adaptedFrame, /* priorClassDistribution */ null);
     this.sdev = sdev;
     this.propVar = propVar;
     this.cumVar = cumVar;

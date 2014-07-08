@@ -1,6 +1,4 @@
 .y-model-view
-  padding 0 35px
-
   .y-tag
     font-size 11px
     text-transform uppercase
@@ -25,3 +23,28 @@
   .y-input-columns
     max-height 200px
     overflow auto
+
+  .y-variable-importance-chart
+    .bar 
+      fill #adadad
+    .bar:hover 
+      fill #888
+    .bar-label, .dot-label
+      font 10px sans-serif
+    .dot
+      fill red
+      stroke none
+      shape-rendering crispEdges
+    .curve
+      fill none
+      stroke red
+      stroke-width 1px
+    .axis 
+      font 10px sans-serif
+    .axis path, .axis line 
+      fill none
+      stroke #000
+      shape-rendering crispEdges
+    .y.axis path 
+      display none
+

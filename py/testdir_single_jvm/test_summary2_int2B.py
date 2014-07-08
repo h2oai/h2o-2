@@ -53,6 +53,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_summary2_int2B(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             # colname, (min, 25th, 50th, 75th, max)
@@ -78,7 +79,6 @@ class Basic(unittest.TestCase):
             maxShift = distMean * .01
             maxDelta = maxDelta + maxShift
 
-            h2o.beta_features = False
             SEEDPERFILE = random.randint(0, sys.maxint)
             x += 1
 
@@ -87,7 +87,6 @@ class Basic(unittest.TestCase):
 
             print "Creating random", csvPathname
             write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax, SEEDPERFILE)
-            h2o.beta_features = False
             csvPathnameFull = h2i.find_folder_and_filename(None, csvPathname, returnFullPath=True)
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=60, doSummary=False)
             print "Parse result['destination_key']:", parseResult['destination_key']
@@ -95,10 +94,9 @@ class Basic(unittest.TestCase):
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
             print "\n" + csvFilename
 
-            numRows = inspect["num_rows"]
-            numCols = inspect["num_cols"]
+            numRows = inspect["numRows"]
+            numCols = inspect["numCols"]
 
-            h2o.beta_features = True
             summaryResult = h2o_cmd.runSummary(key=hex_key, max_qbins=MAX_QBINS)
             h2o.verboseprint("summaryResult:", h2o.dump_json(summaryResult))
 

@@ -275,6 +275,15 @@ def choice_with_probability(tupleList):
             raise Exception("h2o_util.choice_with_probability() error, prob's sum > 1")
     return item
 
+# pick a random param from a dictionary of lists of params
+def pickRandParams(paramDict, params):
+    randomGroupSize = random.randint(1,len(paramDict))
+    for i in range(randomGroupSize):
+        randomKey = random.choice(paramDict.keys())
+        randomV = paramDict[randomKey]
+        randomValue = random.choice(randomV)
+        params[randomKey] = randomValue
+
 # this reads a single col out a csv file into a list, without using numpy
 # so we can port some jenkins tests without needing numpy
 def file_read_csv_col(csvPathname, col=0, skipHeader=True, datatype='float', preview=5):
@@ -556,6 +565,7 @@ class JsonDiff(object):
         if second != None:
             if not isinstance(first, type(second)):
                 message = '%s- %s, %s' % (path, type(first), type(second))
+                TYPE = None
                 self.save_diff(message, TYPE)
 
         if isinstance(first, dict):
@@ -571,6 +581,7 @@ class JsonDiff(object):
                         sec = second[key]
                     else:
                         #  there are key in the first, that is not presented in the second
+                        PATH = None
                         self.save_diff(new_path, PATH)
                         # prevent further values checking.
                         sec = None
@@ -579,6 +590,7 @@ class JsonDiff(object):
                     self.check(first[key], sec, path=new_path, with_values=with_values)
                 else:
                     # second is not dict. every key from first goes to the difference
+                    PATH = None
                     self.save_diff(new_path, PATH)                
                     self.check(first[key], second, path=new_path, with_values=with_values)
                 
@@ -593,6 +605,7 @@ class JsonDiff(object):
                         sec = second[index]
                     except (IndexError, KeyError):
                         # goes to difference
+                        TYPE = None
                         self.save_diff('%s - %s, %s' % (new_path, type(first), type(second)), TYPE)
                 # recursive call
                 self.check(first[index], sec, path=new_path, with_values=with_values)

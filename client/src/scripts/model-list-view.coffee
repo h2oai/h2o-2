@@ -2,6 +2,17 @@ Steam.ModelListView = (_) ->
   _predicate = node$ type: 'all'
   _items = do nodes$
   _hasItems = lift$ _items, (items) -> items.length > 0
+  _isSelectAll = node$ no
+
+  #TODO ugly
+  _isLive = node$ yes
+
+  apply$ _isSelectAll, (isSelected) ->
+    _isLive no
+    for item in _items()
+      item.isSelected isSelected
+    _isLive yes
+    return
 
   _canClearPredicate = lift$ _predicate, (predicate) -> predicate.type isnt 'all'
   _predicateCaption = lift$ _predicate, (predicate) ->
@@ -12,9 +23,6 @@ Steam.ModelListView = (_) ->
         "Showing models compatible with\n#{predicate.frameKey}"
       else
         ''
-
-  #TODO ugly
-  _isLive = node$ yes
 
   displayItem = (item) ->
     if item
@@ -47,15 +55,15 @@ Steam.ModelListView = (_) ->
 
     self =
       data: model
-      title: model.model_algorithm
-      caption: model.model_category
-      cutline: 'Response Column: ' + model.response_column_name
+      title: model.key
+      caption: "#{model.response_column_name} (#{model.model_category})"
+      timestamp: model.creation_epoch_time_millis
       display: -> activateAndDisplayItem self
       isActive: node$ no
       isSelected: node$ no
 
     apply$ _isLive, self.isSelected, (isLive, isSelected) ->
-      _.modelSelectionChanged isSelected, _predicate(), model if isLive
+      _.modelSelectionChanged isSelected, self if isLive
 
     self
 
@@ -69,22 +77,36 @@ Steam.ModelListView = (_) ->
 
     switch predicate.type
       when 'all'
-        _.requestModels (error, data) ->
+        _.requestModelsAndCompatibleFrames (error, data) ->
           if error
             #TODO handle errors
           else
             displayModels data.models
 
       when 'compatibleWithFrame'
+        #FIXME Need an api call to get "models and compatible frames for all models compatible with a frame"
         _.requestFrameAndCompatibleModels predicate.frameKey, (error, data) ->
           if error
             #TODO handle errors
           else
-            # data.frames[predicate.frameKey], data.models
-            displayModels (head data.frames).compatible_models
+            compatibleModelsByKey = indexBy (head data.frames).compatible_models, (model) -> model.key
+            _.requestModelsAndCompatibleFrames (error, data) ->
+              if error
+                #TODO handle errors
+              else
+                displayModels filter data.models, (model) -> if compatibleModelsByKey[model.key] then yes else no
     return
+  
+  deselectAllModels = ->
+    #TODO ugly
+    _isLive no
+    for item in _items()
+      item.isSelected no
+    _isLive yes
 
-  clearPredicate = -> _predicate type: 'all'
+  clearPredicate = ->
+    deselectAllModels()
+    _predicate type: 'all'
 
   link$ _.loadModels, (predicate) ->
     if predicate
@@ -92,17 +114,13 @@ Steam.ModelListView = (_) ->
     else
       displayActiveItem()
 
-  link$ _.deselectAllModels, ->
-    #TODO ugly
-    _isLive no
-    for item in _items()
-      item.isSelected no
-    _isLive yes
+  link$ _.deselectAllModels, deselectAllModels
 
   items: _items
   hasItems: _hasItems
   predicateCaption: _predicateCaption
   clearPredicate: clearPredicate
   canClearPredicate: _canClearPredicate
+  isSelectAll: _isSelectAll
   template: 'model-list-view'
 

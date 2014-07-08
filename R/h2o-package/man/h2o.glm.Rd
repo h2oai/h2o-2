@@ -1,7 +1,5 @@
 \name{h2o.glm}
 \alias{h2o.glm}
-\alias{h2o.glm.VA}
-\alias{h2o.glm.FV}
 \title{
 H2O: Generalized Linear Models
 }
@@ -9,19 +7,7 @@ H2O: Generalized Linear Models
 Fit a generalized linear model, specified by a response variable, a set of predictors, and a description of the error distribution.
 }
 \usage{
-## Default method:
-h2o.glm(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e-5, epsilon = 1e-4, 
-  standardize = TRUE, prior, tweedie.p = ifelse(family == 'tweedie', 1.5, 
-  as.numeric(NA)), thresholds, iter.max, higher_accuracy, lambda_search, version = 2)
-
-## Import to a ValueArray object:
-h2o.glm.VA(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e-5, epsilon = 1e-4, 
-  standardize = TRUE, prior, tweedie.p = ifelse(family == 'tweedie', 1.5, 
-  as.numeric(NA)), thresholds = ifelse(family == 'binomial', seq(0, 1, 0.01), 
-  as.numeric(NA)))
-
-## Import to a FluidVecs object:
-h2o.glm.FV(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e-5, epsilon = 1e-4, 
+h2o.glm(x, y, data, family, nfolds = 0, alpha = 0.5, lambda = 1e-5, epsilon = 1e-4, 
   standardize = TRUE, prior, tweedie.p = ifelse(family == 'tweedie', 1.5, 
   as.numeric(NA)), iter.max = 100, higher_accuracy = FALSE, lambda_search = FALSE)
 }
@@ -33,13 +19,13 @@ A vector containing the names of the predictors in the model.
 The name of the response variable in the model.
 }
   \item{data}{
-An \code{\linkS4class{H2OParsedDataVA}} (\code{version = 1}) or \code{\linkS4class{H2OParsedData}} (\code{version = 2}) object containing the variables in the model.
+An \code{\linkS4class{H2OParsedData}} object containing the variables in the model.
 }
   \item{family}{
 A description of the error distribution and corresponding link function to be used in the model. Currently, Gaussian, binomial, Poisson, gamma, and Tweedie are supported. When a model is specified as Tweedie, users must also specify the appropriate Tweedie power. 
 }
   \item{nfolds}{
-(Optional) Number of folds for cross-validation. The default is 10.
+(Optional) Number of folds for cross-validation.
 }
   \item{alpha}{
 (Optional) The elastic-net mixing parameter, which must be in [0,1]. The penalty is defined to be \deqn{P(\alpha,\beta) = (1-\alpha)/2||\beta||_2^2 + \alpha||\beta||_1 = \sum_j [(1-\alpha)/2 \beta_j^2 + \alpha|\beta_j|]} so \code{alpha=1} is the lasso penalty, while \code{alpha=0} is the ridge penalty.
@@ -70,15 +56,15 @@ A description of the error distribution and corresponding link function to be us
   \item{lambda_search}{
   (Optional) A logical value indicating whether to onduct a search over the space of lambda values, starting from lambda_max. When this is set to TRUE, \code{lambda} will be interpreted as lambda_min.
   }
-  \item{version}{
-  (Optional) The version of GLM to run. If \code{version = 1}, this will run the more stable ValueArray implementation, while \code{version = 2} runs the faster, but still beta stage FluidVecs implementation.
+  \item{variable_importances}{
+  (Optional) A numeric value either 0 or 1 to indicate whether the variable importances should be computed.  Compute variable importances for input features. NOTE: If use_all_factor_levels is off the importance of the base level will NOT be shown.
+  }
+  \item{use_all_factor_levels}{
+  (Optional) A numeric value either 0 or 1 to indicate whether all factor levels should be used. By default, first factor level is skipped from the possible set of predictors. Set this flag if you want use all of the levels. Needs sufficient regularization to solve!
   }
 }
-\details{
-IMPORTANT: Currently, to run GLM with \code{version = 1}, you must import data to a ValueArray object using \code{\link{h2o.importFile.VA}}, \code{\link{h2o.importFolder.VA}} or one of its variants. To run with \code{version = 2}, you must import data to a FluidVecs object using \code{\link{h2o.importFile.FV}}, \code{\link{h2o.importFolder.FV}} or one of its variants.
-}
 \value{
-An object of class \code{\linkS4class{H2OGLMModelVA}} (\code{version = 1}) or \code{\linkS4class{H2OGLMModel}} (\code{version = 2}) with slots key, data, model and xval. The slot model is a list of the following components:
+An object of class \code{\linkS4class{H2OGLMModel}} with slots key, data, model and xval. The slot model is a list of the following components:
 \item{coefficients }{A named vector of the coefficients estimated in the model.}
 \item{rank }{The numeric rank of the fitted linear model.}
 \item{family }{The family of the error distribution.}
@@ -94,7 +80,7 @@ An object of class \code{\linkS4class{H2OGLMModelVA}} (\code{version = 1}) or \c
 \item{training.err }{Average training error.}
 \item{threshold }{Best threshold.}
 \item{confusion }{Confusion matrix.}
-The slot xval is a list of \code{\linkS4class{H2OGLMModel}} or \code{\linkS4class{H2OGLMModelVA}} objects representing the cross-validation models. (Each of these objects themselves has xval equal to an empty list).
+The slot xval is a list of \code{\linkS4class{H2OGLMModel}} objects representing the cross-validation models. (Each of these objects themselves has xval equal to an empty list).
 }
 \seealso{
 %% ~~objects to See Also as \code{\link{help}}, ~~~
@@ -112,7 +98,6 @@ h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, f
 # Run GLM of VOL ~ CAPSULE + AGE + RACE + PSA + GLEASON
 myX = setdiff(colnames(prostate.hex), c("ID", "DPROS", "DCAPS", "VOL"))
 h2o.glm(y = "VOL", x = myX, data = prostate.hex, family = "gaussian", nfolds = 5, alpha = 0.1)
-h2o.shutdown(localH2O)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

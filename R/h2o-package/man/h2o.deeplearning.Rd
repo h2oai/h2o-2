@@ -7,8 +7,8 @@ H2O: Deep Learning Neural Networks
 Performs Deep Learning neural networks on an \code{\linkS4class{H2OParsedData}} object.
 }
 \usage{
-h2o.deeplearning(x, y, data, classification = TRUE, validation, activation,
-    hidden, epochs, train_samples_per_iteration, seed, adaptive_rate,
+h2o.deeplearning(x, y, data, classification = TRUE, nfolds = 0, validation, 
+    activation, hidden, epochs, train_samples_per_iteration, seed, adaptive_rate,
     rho, epsilon, rate, rate_annealing, rate_decay, momentum_start,
     momentum_ramp, momentum_stable, nesterov_accelerated_gradient,
     input_dropout_ratio, hidden_dropout_ratios, l1, l2, max_w2,
@@ -19,7 +19,7 @@ h2o.deeplearning(x, y, data, classification = TRUE, validation, activation,
     max_after_balance_size, score_validation_sampling, diagnostics,
     variable_importances, fast_mode, ignore_const_cols, force_load_balance,
     replicate_training_data, single_node_mode, shuffle_training_data,
-    sparse, col_major)
+    sparse, col_major, autoencoder)
 }
 
 %- maybe also 'usage' for other objects documented here.
@@ -28,8 +28,9 @@ h2o.deeplearning(x, y, data, classification = TRUE, validation, activation,
         \item{y}{ The name of the response variable in the model. }
         \item{data}{ An \code{\linkS4class{H2OParsedData}} object containing the variables in the model. }
         \item{classification}{ (Optional) A logical value indicating whether the algorithm should conduct classification. }
-        \item{validation}{(Optional) An \code{\linkS4class{H2OParsedData}} object indicating the validation dataset used to construct confusion matrix. If left blank, this defaults to the training data.}
-        \item{activation}{A string indicating the activation function to use. Must be either "Tanh", "TanhDropout", "Rectifier", "RectifierDropout", "Maxout" or "MaxoutDropout".}
+        \item{nfolds}{(Optional) Number of folds for cross-validation. If \code{nfolds >= 2}, then \code{validation} must remain empty.}
+        \item{validation}{(Optional) An \code{\linkS4class{H2OParsedData}} object indicating the validation dataset used to construct confusion matrix. If left blank, this defaults to the training data when \code{nfolds = 0}.}
+        \item{activation}{A string indicating the activation function to use. Must be either "Tanh", "TanhWithDropout", "Rectifier", "RectifierWithDropout", "Maxout" or "MaxoutWithDropout".}
         \item{hidden}{ Hidden layer sizes (e.g. c(100,100)}
 
         %- BEGIN AUTO-GENERATED CODE
@@ -76,6 +77,7 @@ h2o.deeplearning(x, y, data, classification = TRUE, validation, activation,
         \item{shuffle_training_data}{ Enable shuffling of training data (recommended if training data is replicated and train_samples_per_iteration is close to #nodes x #rows)}
         \item{sparse}{ Sparse data handling (Experimental).}
         \item{col_major}{ Use a column major weight matrix for input layer. Can speed up forward propagation, but might slow down backpropagation (Experimental).}
+        \item{autoencoder}{ Enable auto-encoder for model building.}
         %- END AUTO-GENERATED CODE
   }
 
@@ -95,5 +97,4 @@ irisPath = system.file("extdata", "iris.csv", package = "h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath)
 h2o.deeplearning(x = 1:4, y = 5, data = iris.hex, activation = "Tanh", 
 hidden = c(50, 50, 50), epochs = 500)
-h2o.shutdown(localH2O)
 }

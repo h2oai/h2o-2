@@ -4,10 +4,9 @@ import hex.glm.GLMModel.Submodel;
 import hex.glm.GLMParams.Family;
 import hex.glm.GLMValidation.GLMXValidation;
 import water.*;
-import water.api.AUC;
-import water.api.DocGen;
-import water.api.Request;
+import water.api.*;
 import water.util.RString;
+import water.util.UIUtils;
 
 import java.text.DecimalFormat;
 
@@ -50,8 +49,10 @@ public class GLMModelView extends Request2 {
     }
     glm_model.get_params().makeJsonBox(sb);
     DocGen.HTML.paragraph(sb,"Model Key: "+glm_model._key);
-    if(glm_model.submodels != null)
-      DocGen.HTML.paragraph(sb,water.api.Predict.link(glm_model._key,"Predict!"));
+    if(glm_model.submodels != null) {
+      DocGen.HTML.paragraph(sb,water.api.GLMPredict.link(glm_model._key,lambda,"Predict!"));
+      DocGen.HTML.paragraph(sb,UIUtils.qlink(SaveModel.class, "model", glm_model._key, "Save model"));
+    }
     String succ = (glm_model.warnings == null || glm_model.warnings.length == 0)?"alert-success":"alert-warning";
     sb.append("<div class='alert " + succ + "'>");
     pprintTime(sb.append(glm_model.iteration() + " iterations computed in "),glm_model.run_time);
@@ -61,12 +62,18 @@ public class GLMModelView extends Request2 {
       sb.append("</ul>");
     }
     sb.append("</div>");
+    if(!Double.isNaN(lambda) && lambda != glm_model.submodels[glm_model.best_lambda_idx].lambda_value){ // show button to permanently set lambda_value to this value
+      sb.append("<div class='alert alert-warning'>\n");
+      sb.append(GLMModelUpdate.link("Set lambda_value to current value!",_modelKey,lambda) + "\n");
+      sb.append("</div>");
+    }
     sb.append("<h4>Parameters</h4>");
     parm(sb,"family",glm_model.glm.family);
     parm(sb,"link",glm_model.glm.link);
     parm(sb,"&epsilon;<sub>&beta;</sub>",glm_model.beta_eps);
     parm(sb,"&alpha;",glm_model.alpha);
-    parm(sb,"&lambda;<sub>max</sub>",DFORMAT2.format(glm_model.lambda_max));
+    if(!Double.isNaN(glm_model.lambda_max))
+      parm(sb,"&lambda;<sub>max</sub>",DFORMAT2.format(glm_model.lambda_max));
     parm(sb,"&lambda;",DFORMAT2.format(lambda));
 
     if(glm_model.submodels.length > 1){
@@ -78,11 +85,18 @@ public class GLMModelView extends Request2 {
       for(int i = 0; i < glm_model.submodels.length; ++i){
         final Submodel sm = glm_model.submodels[i];
         if(sm.validation == null)break;
-        if(glm_model.lambdas[i] == lambda)firstRow.append("\t\t<td><b>" + DFORMAT2.format(glm_model.lambdas[i]) + "</b></td>\n");
-        else firstRow.append("\t\t<td>" + link(DFORMAT2.format(glm_model.lambdas[i]),glm_model._key,glm_model.lambdas[i]) + "</td>\n");
-        secondRow.append("\t\t<td>" + (sm.rank-1) + "</td>\n");
-        thirdRow.append("\t\t<td>" + DFORMAT.format(1-sm.validation.residual_deviance/sm.validation.null_deviance) + "</td>\n");
-        fourthRow.append("\t\t<td>" + DFORMAT.format(glm_model.glm.family==Family.binomial?sm.validation.auc:sm.validation.aic) + "</td>\n");
+        if (glm_model.submodels[i].lambda_value == lambda)
+          firstRow.append("\t\t<td><b>" + DFORMAT2.format(glm_model.submodels[i].lambda_value) + "</b></td>\n");
+        else
+          firstRow.append("\t\t<td>" + link(DFORMAT2.format(glm_model.submodels[i].lambda_value), glm_model._key, glm_model.submodels[i].lambda_value) + "</td>\n");
+        secondRow.append("\t\t<td>" + (sm.rank - 1) + "</td>\n");
+        if(sm.xvalidation != null){
+          thirdRow.append("\t\t<td>"  + DFORMAT.format(1 - sm.xvalidation.residual_deviance / sm.validation.null_deviance) + "<sub>x</sub>(" + DFORMAT.format(1 - sm.validation.residual_deviance / sm.validation.null_deviance) + ")" + "</td>\n");
+          fourthRow.append("\t\t<td>" + DFORMAT.format(glm_model.glm.family == Family.binomial ? sm.xvalidation.auc : sm.xvalidation.aic) + "<sub>x</sub>("+ DFORMAT.format(glm_model.glm.family == Family.binomial ? sm.validation.auc : sm.validation.aic) + ")</td>\n");
+        } else {
+          thirdRow.append("\t\t<td>" + DFORMAT.format(1 - sm.validation.residual_deviance / sm.validation.null_deviance) + "</td>\n");
+          fourthRow.append("\t\t<td>" + DFORMAT.format(glm_model.glm.family == Family.binomial ? sm.validation.auc : sm.validation.aic) + "</td>\n");
+        }
       }
       sb.append(firstRow.append("\t</tr>\n"));
       sb.append(secondRow.append("\t</tr>\n"));
@@ -91,17 +105,23 @@ public class GLMModelView extends Request2 {
       sb.append("</table>\n");
     }
     Submodel sm = glm_model.submodels[glm_model.best_lambda_idx];
-    if(!Double.isNaN(lambda) && glm_model.lambdas[glm_model.best_lambda_idx] != lambda){
+    if(!Double.isNaN(lambda) && glm_model.submodels[glm_model.best_lambda_idx].lambda_value != lambda){
       int ii = 0;
       sm = glm_model.submodels[0];
-      while(glm_model.lambdas[ii] != lambda && ++ii < glm_model.submodels.length)
+      while(glm_model.submodels[ii].lambda_value != lambda && ++ii < glm_model.submodels.length)
         sm = glm_model.submodels[ii];
       if(ii == glm_model.submodels.length)throw new IllegalArgumentException("Unexpected value of lambda '" + lambda + "'");
     }
     if(glm_model.beta() != null)
       coefs2html(sm,sb);
-    GLMValidation val = sm.validation;
-    if(val != null)val2HTML(sm,val, sb);
+    if(sm.xvalidation != null)
+      val2HTML(sm,sm.xvalidation,sb);
+    else if(sm.validation != null)
+      val2HTML(sm,sm.validation, sb);
+    // Variable importance
+    if (glm_model.varimp() != null) {
+      glm_model.varimp().toHTML(glm_model, sb);
+    }
     return true;
   }
 
@@ -149,199 +169,6 @@ public class GLMModelView extends Request2 {
     return DFORMAT3.format(0.01*(int)(100*d));
   }
 
-  private static void confusionHTML( hex.ConfusionMatrix cm, StringBuilder sb) {
-    if( cm == null ) return;
-
-    sb.append("<table class='table table-bordered table-condensed'>");
-//    sb.append("<tr><th>Actual / Predicted</th><th>false</th><th>true</th><th>Err</th></tr>");
-    sb.append("<tr><th>Actual / Predicted</th><th>false</th><th>true</th></tr>");
-//    double err0 = cm._arr[0][1]/(double)(cm._arr[0][0]+cm._arr[0][1]);
-    sb.append("<tr><th>false</th><td id='TN'>" + cm._arr[0][0] + "</td><td id='FN'>" + cm._arr[0][1] + "</td></tr>");
-    sb.append("<tr><th>true</th><td id='FP'>" + cm._arr[1][0] + "</td><td id='TP'>" + cm._arr[1][1] + "</td></tr>");
-//    cmRow(sb,"false",cm._arr[0][0],cm._arr[0][1],err0);
-//    double err1 = cm._arr[1][0]/(double)(cm._arr[1][0]+cm._arr[1][1]);
-//    cmRow(sb,"true ",cm._arr[1][0],cm._arr[1][1],err1);
-//    double err2 = cm._arr[1][0]/(double)(cm._arr[0][0]+cm._arr[1][0]);
-//    double err3 = cm._arr[0][1]/(double)(cm._arr[0][1]+cm._arr[1][1]);
-//    cmRow(sb,"Err ",err2,err3,cm.err());
-    sb.append("</table>");
-  }
-
-  private static void cmRow( StringBuilder sb, String hd, double c0, double c1, double cerr ) {
-    sb.append("<tr><th>").append(hd).append("</th><td>");
-    if( !Double.isNaN(c0)) sb.append(DFORMAT.format(c0));
-    sb.append("</td><td>");
-    if( !Double.isNaN(c1)) sb.append(DFORMAT.format(c1));
-    sb.append("</td><td>");
-    if( !Double.isNaN(cerr)) sb.append(DFORMAT.format(cerr));
-    sb.append("</td></tr>");
-  }
-
-
-
-  public void ROCc(StringBuilder sb, GLMValidation xval) {
-    sb.append("<script type=\"text/javascript\" src='/h2o/js/d3.v3.min.js'></script>");
-    sb.append("<div id=\"ROC\">");
-    sb.append("<style type=\"text/css\">");
-    sb.append(".axis path," +
-            ".axis line {\n" +
-            "fill: none;\n" +
-            "stroke: black;\n" +
-            "shape-rendering: crispEdges;\n" +
-            "}\n" +
-
-            ".axis text {\n" +
-            "font-family: sans-serif;\n" +
-            "font-size: 11px;\n" +
-            "}\n");
-
-    sb.append("</style>");
-    sb.append("<div id=\"rocCurve\" style=\"display:inline;\">");
-    sb.append("<script type=\"text/javascript\">");
-
-    sb.append("//Width and height\n");
-    sb.append("var w = 500;\n"+
-            "var h = 300;\n"+
-            "var padding = 40;\n"
-    );
-    sb.append("var dataset = [");
-    for(int c = 0; c < xval._cms.length; c++) {
-      if (c == 0) {
-        sb.append("["+String.valueOf(xval.fprs[c])+",").append(String.valueOf(xval.tprs[c])).append("]");
-      }
-      sb.append(", ["+String.valueOf(xval.fprs[c])+",").append(String.valueOf(xval.tprs[c])).append("]");
-    }
-    for(int c = 0; c < 2*xval._cms.length; c++) {
-        sb.append(", ["+String.valueOf(c/(2.0*xval._cms.length))+",").append(String.valueOf(c/(2.0*xval._cms.length))).append("]");
-    }
-    sb.append("];\n");
-
-    sb.append(
-            "//Create scale functions\n"+
-                    "var xScale = d3.scale.linear()\n"+
-                    ".domain([0, d3.max(dataset, function(d) { return d[0]; })])\n"+
-                    ".range([padding, w - padding * 2]);\n"+
-
-                    "var yScale = d3.scale.linear()"+
-                    ".domain([0, d3.max(dataset, function(d) { return d[1]; })])\n"+
-                    ".range([h - padding, padding]);\n"+
-
-                    "var rScale = d3.scale.linear()"+
-                    ".domain([0, d3.max(dataset, function(d) { return d[1]; })])\n"+
-                    ".range([2, 5]);\n"+
-
-                    "//Define X axis\n"+
-                    "var xAxis = d3.svg.axis()\n"+
-                    ".scale(xScale)\n"+
-                    ".orient(\"bottom\")\n"+
-                    ".ticks(5);\n"+
-
-                    "//Define Y axis\n"+
-                    "var yAxis = d3.svg.axis()\n"+
-                    ".scale(yScale)\n"+
-                    ".orient(\"left\")\n"+
-                    ".ticks(5);\n"+
-
-                    "//Create SVG element\n"+
-                    "var svg = d3.select(\"#rocCurve\")\n"+
-                    ".append(\"svg\")\n"+
-                    ".attr(\"width\", w)\n"+
-                    ".attr(\"height\", h);\n"+
-
-                    "//Create circles\n"+
-                    "svg.selectAll(\"circle\")\n"+
-                    ".data(dataset)\n"+
-                    ".enter()\n"+
-                    ".append(\"circle\")\n"+
-                    ".attr(\"cx\", function(d) {\n"+
-                    "return xScale(d[0]);\n"+
-                    "})\n"+
-                    ".attr(\"cy\", function(d) {\n"+
-                    "return yScale(d[1]);\n"+
-                    "})\n"+
-                    ".attr(\"fill\", function(d) {\n"+
-                    "  if (d[0] == d[1]) {\n"+
-                    "    return \"red\"\n"+
-                    "  } else {\n"+
-                    "  return \"blue\"\n"+
-                    "  }\n"+
-                    "})\n"+
-                    ".attr(\"r\", function(d) {\n"+
-                    "  if (d[0] == d[1]) {\n"+
-                    "    return 1\n"+
-                    "  } else {\n"+
-                    "  return 2\n"+
-                    "  }\n"+
-                    "})\n" +
-                    ".on(\"mouseover\", function(d,i){\n" +
-                    "   if(i <= 100) {" +
-                    "     document.getElementById(\"select\").selectedIndex = 100 - i\n" +
-                    "     show_cm(i)\n" +
-                    "   }\n" +
-                    "});\n"+
-
-                    "/*"+
-                    "//Create labels\n"+
-                    "svg.selectAll(\"text\")"+
-                    ".data(dataset)"+
-                    ".enter()"+
-                    ".append(\"text\")"+
-                    ".text(function(d) {"+
-                    "return d[0] + \",\" + d[1];"+
-                    "})"+
-                    ".attr(\"x\", function(d) {"+
-                    "return xScale(d[0]);"+
-                    "})"+
-                    ".attr(\"y\", function(d) {"+
-                    "return yScale(d[1]);"+
-                    "})"+
-                    ".attr(\"font-family\", \"sans-serif\")"+
-                    ".attr(\"font-size\", \"11px\")"+
-                    ".attr(\"fill\", \"red\");"+
-                    "*/\n"+
-
-                    "//Create X axis\n"+
-                    "svg.append(\"g\")"+
-                    ".attr(\"class\", \"axis\")"+
-                    ".attr(\"transform\", \"translate(0,\" + (h - padding) + \")\")"+
-                    ".call(xAxis);\n"+
-
-                    "//X axis label\n"+
-                    "d3.select('#rocCurve svg')"+
-                    ".append(\"text\")"+
-                    ".attr(\"x\",w/2)"+
-                    ".attr(\"y\",h - 5)"+
-                    ".attr(\"text-anchor\", \"middle\")"+
-                    ".text(\"False Positive Rate\");\n"+
-
-                    "//Create Y axis\n"+
-                    "svg.append(\"g\")"+
-                    ".attr(\"class\", \"axis\")"+
-                    ".attr(\"transform\", \"translate(\" + padding + \",0)\")"+
-                    ".call(yAxis);\n"+
-
-                    "//Y axis label\n"+
-                    "d3.select('#rocCurve svg')"+
-                    ".append(\"text\")"+
-                    ".attr(\"x\",150)"+
-                    ".attr(\"y\",-5)"+
-                    ".attr(\"transform\", \"rotate(90)\")"+
-                    //".attr(\"transform\", \"translate(0,\" + (h - padding) + \")\")"+
-                    ".attr(\"text-anchor\", \"middle\")"+
-                    ".text(\"True Positive Rate\");\n"+
-
-                    "//Title\n"+
-                    "d3.select('#rocCurve svg')"+
-                    ".append(\"text\")"+
-                    ".attr(\"x\",w/2)"+
-                    ".attr(\"y\",padding - 20)"+
-                    ".attr(\"text-anchor\", \"middle\")"+
-                    ".text(\"ROC\");\n");
-
-    sb.append("</script>");
-    sb.append("</div>");
-  }
-
   private static void parm( StringBuilder sb, String x, Object... y ) {
     sb.append("<span><b>").append(x).append(": </b>").append(y[0]).append("</span> ");
   }
@@ -353,13 +180,31 @@ public class GLMModelView extends Request2 {
     StringBuilder equation = new StringBuilder();
     StringBuilder vals = new StringBuilder();
     StringBuilder normVals = sm.norm_beta == null?null:new StringBuilder();
+    int [] sortedIds = new int[sm.beta.length];
+    for(int i = 0; i < sortedIds.length; ++i)
+      sortedIds[i] = i;
+    final double [] b = sm.norm_beta == null?sm.beta:sm.norm_beta;
+    // now sort the indeces according to their abs value from biggest to smallest (but keep intercept last)
+    int r = sortedIds.length-1;
+    for(int i = 1; i < r; ++i){
+      for(int j = 1; j < r-i;++j){
+        if(Math.abs(b[sortedIds[j-1]]) < Math.abs(b[sortedIds[j]])){
+          int jj = sortedIds[j];
+          sortedIds[j] = sortedIds[j-1];
+          sortedIds[j-1] = jj;
+        }
+      }
+    }
+
     String [] cNames = glm_model.coefficients_names;
     boolean first = true;
-    for(int i:sm.idxs){
-      names.append("<th>" + cNames[i] + "</th>");
+    int j = 0;
+    for(int i:sortedIds){
+      names.append("<th>" + cNames[sm.idxs[i]] + "</th>");
       vals.append("<td>" + sm.beta[i] + "</td>");
       if(first){
         equation.append(DFORMAT.format(sm.beta[i]));
+        first = false;
       } else {
         equation.append(sm.beta[i] > 0?" + ":" - ");
         equation.append(DFORMAT.format(Math.abs(sm.beta[i])));
@@ -367,6 +212,7 @@ public class GLMModelView extends Request2 {
       if(i < (cNames.length-1))
          equation.append("*x[" + cNames[i] + "]");
       if(sm.norm_beta != null) normVals.append("<td>" + sm.norm_beta[i] + "</td>");
+      ++j;
     }
     sb.append("<h4>Equation</h4>");
     RString eq = null;
@@ -421,7 +267,7 @@ public class GLMModelView extends Request2 {
     Value v = DKV.get(_modelKey);
     if(v != null){
       glm_model = v.get();
-      if(Double.isNaN(lambda))lambda = glm_model.lambdas[glm_model.best_lambda_idx];
+      if(Double.isNaN(lambda))lambda = glm_model.submodels[glm_model.best_lambda_idx].lambda_value;
     }
     if( jjob == null || jjob.end_time > 0 || jjob.isCancelledOrCrashed() )
       return Response.done(this);
@@ -433,7 +279,7 @@ public class GLMModelView extends Request2 {
 //    if(v == null)
 //      return Response.poll(this, 0, 100, "_modelKey", _modelKey.toString());
 //    glm_model = v.get();
-//    if(Double.isNaN(lambda))lambda = glm_model.lambdas[glm_model.best_lambda_idx];
+//    if(Double.isNaN(lambda_value))lambda_value = glm_model.lambdas[glm_model.best_lambda_idx];
 //    Job j;
 //    if((j = Job.findJob(glm_model.job_key)) != null && j.exception != null)
 //      return Response.error(j.exception);

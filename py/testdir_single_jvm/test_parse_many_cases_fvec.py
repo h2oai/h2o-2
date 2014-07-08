@@ -45,10 +45,14 @@ class Basic(unittest.TestCase):
         # throw in some variants for leading 0 on the decimal, and scientific notation
         # new: change the @ to an alternate legal SEP if the special HIVE SEP is in play
         rows = [
-        "# 'comment, is okay",
-        '# "this comment, is okay too',
-        "# 'this' comment, is okay too",
-        "@FirstName@|@Middle@Initials@|@LastName@|@Date@of@Birth@", # had to remove the trailing space to avoid bad parse
+        # get rid of comments. We don't really support?
+        # "# 'comment, is okay",
+        # '# "this comment, is okay too',
+        # "# 'this' comment, is okay too",
+
+        # don't test comma's in the header. get rid of all secondary separator-like char here
+        # "@FirstName@|@Middle@Initials@|@LastName@|@Date@of@Birth@", # had to remove the trailing space to avoid bad parse
+        "FirstName|MiddleInitials|LastName|DateofBirth", # had to remove the trailing space to avoid bad parse
         "0|0.5|1|0",
         "3|NaN|4|1",
         "6||8|0",
@@ -243,7 +247,13 @@ class Basic(unittest.TestCase):
                         str(sepCase) + \
                         '.data'
                     self.writeRows(csvPathname,newRows2,eol)
-                    parseResult = h2i.import_parse(path=csvPathname, schema='put', noPrint=not h2o.verbose)
+                    if "'" in tcd[tokenCase][0]:
+                        single_quotes = 1
+                    else:
+                        single_quotes = 0
+                    parseResult = h2i.import_parse(path=csvPathname, schema='put', single_quotes=single_quotes,
+                        noPrint=not h2o.verbose)
+
                     h2o_cmd.runRF(parseResult=parseResult, trees=1,
                         timeoutSecs=10, retryDelaySecs=0.1, noPrint=True, print_params=True)
                     h2o.verboseprint("Set", set)

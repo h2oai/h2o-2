@@ -10,8 +10,8 @@ public abstract class Sampling {
 
   /** Available sampling strategies. */
   public enum Strategy {
-    RANDOM(0),
-    STRATIFIED_LOCAL(1);
+    RANDOM(0); //,
+    //STRATIFIED_LOCAL(1);
     //    STRATIFIED_DISTRIBUTED(2);
     int _id; // redundant id
     private Strategy(int id) { _id = id; }
@@ -88,7 +88,7 @@ public abstract class Sampling {
 
     private int[] sampleLocalStratified(final Data data, long seed, int rowsPerChunk) {
       // preconditions
-      assert _strataSamples.length == data._dapt.classes() : "There is not enought number of samples for individual stratas!";
+      assert _strataSamples.length == data._dapt.classes() : "There is not enough number of samples for individual stratas!";
       // precomputing - find the largest sample and compute the bag size for it
       float largestSample = 0.0f;
       for (float sample : _strataSamples) if (sample > largestSample) largestSample = sample;

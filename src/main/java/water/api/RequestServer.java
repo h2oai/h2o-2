@@ -2,20 +2,20 @@ package water.api;
 
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
+
+import hex.CreateFrame;
 import hex.GridSearch.GridSearchProgress;
 import hex.KMeans2;
 import hex.KMeans2.KMeans2ModelView;
 import hex.KMeans2.KMeans2Progress;
 import hex.ReBalance;
+import hex.anomaly.Anomaly;
 import hex.deeplearning.DeepLearning;
 import hex.drf.DRF;
 import hex.gapstat.GapStatistic;
 import hex.gapstat.GapStatisticModelView;
 import hex.gbm.GBM;
-import hex.glm.GLM2;
-import hex.glm.GLMGridView;
-import hex.glm.GLMModelView;
-import hex.glm.GLMProgress;
+import hex.glm.*;
 import hex.nb.NBModelView;
 import hex.nb.NBProgressPage;
 import hex.gapstat.GapStatisticProgressPage;
@@ -27,27 +27,39 @@ import hex.pca.PCAScore;
 import hex.singlenoderf.SpeeDRF;
 import hex.singlenoderf.SpeeDRFModelView;
 import hex.singlenoderf.SpeeDRFProgressPage;
+import water.AutoBuffer;
 import water.Boot;
 import water.H2O;
 import water.NanoHTTPD;
 import water.api.Upload.PostFile;
+import water.api.handlers.ModelBuildersMetadataHandlerV1;
 import water.deploy.LaunchJar;
+import water.schemas.HTTP404V1;
+import water.schemas.HTTP500V1;
+import water.schemas.Schema;
 import water.util.Log;
 import water.util.Log.Tag.Sys;
+import water.util.RString;
 import water.util.Utils.ExpectedExceptionForDebug;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Method;
 import java.net.ServerSocket;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 /** This is a simple web server. */
 public class RequestServer extends NanoHTTPD {
+  private static final int LATEST_VERSION = 2;
+
   public enum API_VERSION {
     V_1(1, "/"),
     V_2(2, "/2/"); // FIXME: better should be /v2/
@@ -62,8 +74,15 @@ public class RequestServer extends NanoHTTPD {
   private static final ConcurrentHashMap<String,byte[]> _cache = new ConcurrentHashMap();
   protected static final HashMap<String,Request> _requests = new HashMap();
 
+  // An array of regexs-over-URLs and handling Methods.
+  // The list is searched in-order, first match gets dispatched.
+  protected static final LinkedHashMap<String,Method> _handlers = new LinkedHashMap<String,Method>();
+
   static final Request _http404;
   static final Request _http500;
+
+  public static final Response response404(NanoHTTPD server, Properties parms) { return _http404.serve(server, parms, Request.RequestType.www); }
+  public static final Response response500(NanoHTTPD server, Properties parms) { return _http500.serve(server, parms, Request.RequestType.www); }
 
   // initialization ------------------------------------------------------------
   static {
@@ -74,6 +93,11 @@ public class RequestServer extends NanoHTTPD {
 
 
 //    Request.addToNavbar(registerRequest(new Inspect4UX()),  "NEW Inspect",                "Data"); //disable for now
+    // REST API helper
+    // Request.addToNavbar(registerRequest(new GBMSchemaV1()),    "GBM API call", "REST");
+    // Request.addToNavbar(registerRequest(new GBMSchemaBloody()), "GBM Bloody", "REST");
+    registerGET("/1/metadata/modelbuilders/.*", ModelBuildersMetadataHandlerV1.class, "show");
+    registerGET("/1/metadata/modelbuilders", ModelBuildersMetadataHandlerV1.class, "list");
 
     // Data
     Request.addToNavbar(registerRequest(new ImportFiles2()),  "Import Files",           "Data");
@@ -82,6 +106,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new Inspector()),     "Inspect",                "Data");
     Request.addToNavbar(registerRequest(new SummaryPage2()),  "Summary",                "Data");
     Request.addToNavbar(registerRequest(new QuantilesPage()), "Quantiles",              "Data");
+    Request.addToNavbar(registerRequest(new FrameSplitPage()),"Split frame",            "Data");
     Request.addToNavbar(registerRequest(new StoreView()),     "View All",               "Data");
     Request.addToNavbar(registerRequest(new ExportFiles()),   "Export Files",           "Data");
     // Register Inspect2 just for viewing frames
@@ -101,13 +126,18 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new PCA()),         "PCA",                      "Model");
     Request.addToNavbar(registerRequest(new GBM()),         "GBM",                      "Model");
     Request.addToNavbar(registerRequest(new DeepLearning()),"Deep Learning",            "Model");
-    Request.addToNavbar(registerRequest(new DRF()),         "Distributed RF (Beta)",    "Model");
-    Request.addToNavbar(registerRequest(new GLM2()),        "GLM (Beta)",               "Model");
+    Request.addToNavbar(registerRequest(new DRF()),         "Distributed RF",           "Model");
+    Request.addToNavbar(registerRequest(new GLM2()),        "GLM",                      "Model");
+    Request.addToNavbar(registerRequest(new SpeeDRF()),     "SpeeDRF (Beta)",           "Model");
     Request.addToNavbar(registerRequest(new KMeans2()),     "KMeans (Beta)",            "Model");
     Request.addToNavbar(registerRequest(new NaiveBayes()),  "Naive Bayes (Beta)",       "Model");
+    Request.addToNavbar(registerRequest(new Anomaly()),     "Anomaly Detection (Beta)", "Model");
+
 
     // FVec scoring
     Request.addToNavbar(registerRequest(new Predict()),     "Predict",                  "Score");
+    // only for glm to allow for overriding of lambda_submodel
+    registerRequest(new GLMPredict());
     Request.addToNavbar(registerRequest(new ConfusionMatrix()), "Confusion Matrix",     "Score");
     Request.addToNavbar(registerRequest(new AUC()),         "AUC",                      "Score");
     Request.addToNavbar(registerRequest(new HitRatio()),    "HitRatio",                 "Score");
@@ -119,10 +149,11 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new Cloud()),       "Cluster Status",           "Admin");
     Request.addToNavbar(registerRequest(new IOStatus()),    "Cluster I/O",              "Admin");
     Request.addToNavbar(registerRequest(new Timeline()),    "Timeline",                 "Admin");
+    Request.addToNavbar(registerRequest(new JProfile()),    "Profiler",                 "Admin");
     Request.addToNavbar(registerRequest(new JStack()),      "Stack Dump",               "Admin");
-    Request.addToNavbar(registerRequest(new JProfile()),    "Profile Dump",             "Admin");
     Request.addToNavbar(registerRequest(new Debug()),       "Debug Dump",               "Admin");
     Request.addToNavbar(registerRequest(new LogView()),     "Inspect Log",              "Admin");
+    Request.addToNavbar(registerRequest(new UnlockKeys()),  "Unlock Keys",              "Admin");
     Request.addToNavbar(registerRequest(new Shutdown()),    "Shutdown",                 "Admin");
 
     // Help and Tutorials
@@ -139,23 +170,28 @@ public class RequestServer extends NanoHTTPD {
     if(H2O.OPT_ARGS.beta == null) {
       registerRequest(new hex.LR2());
       registerRequest(new ReBalance());
-      registerRequest(new FrameSplitPage());
+      registerRequest(new NFoldFrameExtractPage());
       registerRequest(new GapStatistic());
-      registerRequest(new SpeeDRF());
+      registerRequest(new CreateFrame());
+      registerRequest(new KillMinus3());
+      registerRequest(new SaveModel());
+      registerRequest(new LoadModel());
     } else {
-      Request.addToNavbar(registerRequest(new hex.LR2()),        "Linear Regression2",   "Beta");
-      Request.addToNavbar(registerRequest(new ReBalance()),      "ReBalance",            "Beta");
-      Request.addToNavbar(registerRequest(new FrameSplitPage()), "Split frame",          "Beta");
-      Request.addToNavbar(registerRequest(new Console()),        "Console",              "Beta");
-      Request.addToNavbar(registerRequest(new GapStatistic()),   "Gap Statistic",        "Beta");
-      Request.addToNavbar(registerRequest(new SpeeDRF()),        "SpeeDRF",              "Beta");
-      Request.addToNavbar(registerRequest(new UnlockKeys()),     "Unlock Keys",          "Beta");
-//      Request.addToNavbar(registerRequest(new ExportModel()),    "Export Model",         "Beta (FluidVecs!)");
-//      Request.addToNavbar(registerRequest(new ImportModel()),    "Import Model",         "Beta (FluidVecs!)");
+      Request.addToNavbar(registerRequest(new hex.LR2()),              "Linear Regression2",   "Beta");
+      Request.addToNavbar(registerRequest(new ReBalance()),            "ReBalance",            "Beta");
+      Request.addToNavbar(registerRequest(new NFoldFrameExtractPage()),"N-Fold frame extract", "Beta");
+      Request.addToNavbar(registerRequest(new Console()),              "Console",              "Beta");
+      Request.addToNavbar(registerRequest(new GapStatistic()),         "Gap Statistic",        "Beta");
+      Request.addToNavbar(registerRequest(new CreateFrame()),          "Create Frame",         "Beta");
+      Request.addToNavbar(registerRequest(new KillMinus3()),           "Kill Minus 3",         "Beta");
+      Request.addToNavbar(registerRequest(new SaveModel()),            "Save Model",           "Beta");
+      Request.addToNavbar(registerRequest(new LoadModel()),            "Load Model",           "Beta");
+//      Request.addToNavbar(registerRequest(new ExportModel()),     "Export Model",         "Beta (FluidVecs!)");
+//      Request.addToNavbar(registerRequest(new ImportModel()),     "Import Model",         "Beta (FluidVecs!)");
     }
 
-    // VA stuff
-    if (false) {
+    // VA stuff is only shown with -beta
+    if(H2O.OPT_ARGS.beta == null) {
       registerRequest(new Inspect());
       registerRequest(new SummaryPage());
       registerRequest(new Parse());
@@ -265,6 +301,7 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new TestRedirect());
 //    registerRequest(new GLMProgressPage2());
     registerRequest(new GLMModelView());
+    registerRequest(new GLMModelUpdate());
     registerRequest(new GLMGridView());
 //    registerRequest(new GLMValidationView());
     registerRequest(new LaunchJar());
@@ -296,6 +333,71 @@ public class RequestServer extends NanoHTTPD {
       _requests.remove(href);
     }
   }
+
+  /** Registers the request with the request server.  */
+  public static String registerGET   (String url, Class hclass, String hmeth) { return register("GET"   ,url,hclass,hmeth); }
+  public static String registerPUT   (String url, Class hclass, String hmeth) { return register("PUT"   ,url,hclass,hmeth); }
+  public static String registerDELETE(String url, Class hclass, String hmeth) { return register("DELETE",url,hclass,hmeth); }
+  public static String registerPOST  (String url, Class hclass, String hmeth) { return register("POST"  ,url,hclass,hmeth); }
+  private static String register(String method, String url, Class hclass, String hmeth) {
+    try {
+      assert lookup(method,url)==null; // Not shadowed
+      Method meth = hclass.getDeclaredMethod(hmeth);
+      _handlers.put(method+url,meth);
+      return url;
+    } catch( NoSuchMethodException nsme ) {
+      throw new Error("NoSuchMethodException: "+hclass.getName()+"."+hmeth);
+    }
+  }
+
+  // Lookup the method/url in the register list, and return a matching Method
+  private static Method lookup( String method, String url ) {
+    String s = method+url;
+    for( String x : _handlers.keySet() )
+      if( x.equals(s) )         // TODO: regex
+        return _handlers.get(x);
+    return null;
+  }
+
+  // Handling ------------------------------------------------------------------
+  private Schema handle( Request.RequestType type, Method meth, int version, Properties parms ) throws Exception {
+    Schema S;
+    switch( type ) {
+    // case html: // These request-types only dictate the response-type;
+    case java: // the normal action is always done.
+    case json:
+    case xml: {
+      Class x = meth.getDeclaringClass();
+      Class<Handler> clz = (Class<Handler>)x;
+      Handler h = clz.newInstance();
+      return h.handle(version,meth,parms); // Can throw any Exception the handler throws
+    }
+    case query:
+    case help:
+    default:
+      throw H2O.unimpl();
+    }
+  }
+
+  private Response wrap( String http_code, Schema S, RequestStatics.RequestType type ) {
+    // Convert Schema to desired output flavor
+    switch( type ) {
+    case json:   return new Response(http_code, MIME_JSON, new String(S.writeJSON(new AutoBuffer()).buf()));
+/*
+    case xml:  //return new Response(http_code, MIME_XML , new String(S.writeXML (new AutoBuffer()).buf()));
+    case java:
+      throw H2O.unimpl();
+    case html: {
+      RString html = new RString(_htmlTemplate);
+      html.replace("CONTENTS", S.writeHTML(new water.util.DocGen.HTML()).toString());
+      return new Response(http_code, MIME_HTML, html.toString());
+    }
+*/
+    default:
+      throw H2O.fail();
+    }
+  }
+
 
   // Keep spinning until we get to launch the NanoHTTPD
   public static void start() {
@@ -367,6 +469,43 @@ public class RequestServer extends NanoHTTPD {
     Log.info(Sys.HTTPD, log);
   }
 
+  ///////// Stuff for URL parsing brought over from H2O2:
+  /** Returns the name of the request, that is the request url without the
+   *  request suffix.  E.g. converts "/GBM.html/crunk" into "/GBM/crunk" */
+  String requestName(String url) {
+    String s = "."+toString();
+    int i = url.indexOf(s);
+    if( i== -1 ) return url;    // No, or default, type
+    return url.substring(0,i)+url.substring(i+s.length());
+  }
+
+  // Parse version number.  Java has no ref types, bleah, so return the version
+  // number and the "parse pointer" by shift-by-16 compaction.
+  // /1/xxx     --> version 1
+  // /2/xxx     --> version 2
+  // /v1/xxx    --> version 1
+  // /v2/xxx    --> version 2
+  // /latest/xxx--> LATEST_VERSION
+  // /xxx       --> LATEST_VERSION
+  private int parseVersion( String uri ) {
+    if( uri.length() <= 1 || uri.charAt(0) != '/' ) // If not a leading slash, then I am confused
+      return (0<<16)|LATEST_VERSION;
+    if( uri.startsWith("/latest") )
+      return (("/latest".length())<<16)|LATEST_VERSION;
+    int idx=1;                  // Skip the leading slash
+    int version=0;
+    char c = uri.charAt(idx);   // Allow both /### and /v###
+    if( c=='v' ) c = uri.charAt(++idx);
+    while( idx < uri.length() && '0' <= c && c <= '9' ) {
+      version = version*10+(c-'0');
+      c = uri.charAt(++idx);
+    }
+    if( idx > 10 || version > LATEST_VERSION || version < 1 || uri.charAt(idx) != '/' )
+      return (0<<16)|LATEST_VERSION; // Failed number parse or baloney version
+    // Happy happy version
+    return (idx<<16)|version;
+  }
+
   @Override public NanoHTTPD.Response serve( String uri, String method, Properties header, Properties parms ) {
     // Jack priority for user-visible requests
     Thread.currentThread().setPriority(Thread.MAX_PRIORITY-1);
@@ -377,6 +516,29 @@ public class RequestServer extends NanoHTTPD {
     String requestName = type.requestName(uri);
 
     maybeLogRequest(uri, method, parms);
+
+    // determine version
+    int version = parseVersion(uri);
+    int idx = version>>16;
+    version &= 0xFFFF;
+    String uripath = uri.substring(idx);
+
+    String path = requestName(uripath); // Strip suffix type from middle of URI
+    Method meth = null;
+    try {
+      // Find handler for url
+      meth = lookup(method,path);
+      if (meth != null) {
+        return wrap(HTTP_OK,handle(type,meth,version,parms),type);
+      }
+    } catch( IllegalArgumentException e ) {
+      return wrap(HTTP_BADREQUEST,new HTTP404V1(e.getMessage(),uri),type);
+    } catch( Exception e ) {
+      // make sure that no Exception is ever thrown out from the request
+      return wrap(e.getMessage()!="unimplemented"? HTTP_INTERNALERROR : HTTP_NOTIMPLEMENTED, new HTTP500V1(e),type);
+    }
+
+    // Wasn't a new type of handler:
     try {
       // determine if we have known resource
       Request request = _requests.get(requestName);

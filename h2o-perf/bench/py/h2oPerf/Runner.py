@@ -34,6 +34,7 @@ class PerfRunner:
         self.tests_not_started = []
         self.tests_running = []
         self.__create_output_dir__()
+        self.names = []
 
     def build_test_list(self, test_to_run):
         """
@@ -95,8 +96,10 @@ class PerfRunner:
             return
         print "DEBUG: TESTS TO BE RUN:"
         names = [test.test_name for test in self.tests]
+        self.names = names
         for n in names:
             print n
+            
 
         num_tests = len(self.tests)
         self.__log__("")
@@ -146,7 +149,6 @@ class PerfRunner:
                 print '-' * 60
                 traceback.print_exc(file=sys.stdout)
                 print '-' * 60
-                p.terminate()
                 PerfUtils.stop_cloud(self, test.remote_hosts)
                 self.cloud.pop(0)
                 self.perfdb.this_test_run_id += 1
@@ -154,7 +156,9 @@ class PerfRunner:
     def begin_sys_profiling(self, test_name):
         this_path = os.path.dirname(os.path.realpath(__file__))
         hounds_py = os.path.join(this_path, "../hound.py")
-        cmd = ["python", hounds_py, str(self.perfdb.this_test_run_id),
+
+        next_test_run_id = self.perfdb.get_table_pk("test_run") + 1 
+        cmd = ["python", hounds_py, str(next_test_run_id),
                self.cloud[0].all_pids(), self.cloud[0].all_ips(), test_name]
         print
         print "Start scraping /proc for mem & cpu"

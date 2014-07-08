@@ -13,6 +13,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.*;
 
+import static java.lang.Double.isNaN;
 import sun.misc.Unsafe;
 import water.*;
 import water.api.DocGen;
@@ -26,6 +27,21 @@ public class Utils {
    * In case of a tie, an the index is selected randomly.
    */
   public static int maxIndex(int[] from, Random rand) {
+    assert rand != null;
+    int result = 0;
+    int maxCount = 0; // count of maximal element for a 1 item reservoir sample
+    for( int i = 1; i < from.length; ++i ) {
+      if( from[i] > from[result] ) {
+        result = i;
+        maxCount = 1;
+      } else if( from[i] == from[result] ) {
+        if( rand.nextInt(++maxCount) == 0 ) result = i;
+      }
+    }
+    return result;
+  }
+
+  public static int maxIndex(float[] from, Random rand) {
     assert rand != null;
     int result = 0;
     int maxCount = 0; // count of maximal element for a 1 item reservoir sample
@@ -71,8 +87,11 @@ public class Utils {
     return result;
   }
   public static float maxValue(float[] from) {
-    float result = from[0];
-    for (int i = 1; i<from.length; ++i)
+    return maxValue(from, 0, from.length);
+  }
+  public static float maxValue(float[] from, int start, int end) {
+    float result = from[start];
+    for (int i = start+1; i<end; ++i)
       if (from[i]>result) result = from[i];
     return result;
   }
@@ -357,15 +376,28 @@ public class Utils {
     }
   }
 
+  /**
+   * Extract a shuffled array of integers
+   * @param a input array
+   * @param n number of elements to extract
+   * @param result array to store the results into (will be of size n)
+   * @param seed random number seed
+   * @param startIndex offset into a
+   * @return result
+   */
   public static int[] shuffleArray(int[] a, int n, int result[], long seed, int startIndex) {
     if (n<=0) return result;
     Random random = getDeterRNG(seed);
+    if (result == null || result.length != n)
+      result = new int[n];
     result[0] = a[startIndex];
     for (int i = 1; i < n; i++) {
       int j = random.nextInt(i+1);
-      if (j!=i) result[i] = a[startIndex+j];
+      if (j!=i) result[i] = result[j];
       result[j] = a[startIndex+i];
     }
+    for (int i = 0; i < n; ++i)
+      assert(Utils.contains(result, a[startIndex+i]));
     return result;
   }
 
@@ -689,6 +721,21 @@ public class Utils {
     }
     return bs;
   }
+
+  public static String formatPct(double pct) {
+    String s = "N/A";
+    if( !isNaN(pct) )
+      s = String.format("%5.2f %%", 100 * pct);
+    return s;
+  }
+
+  public static int maxValue(byte[] from ) {
+    int result = from[0]&0xFF;
+    for (int i = 1; i < from.length; ++i)
+      if ( (from[i]&0xFF) > result) result = from[i]&0xFF;
+    return result;
+  }
+
 
   /**
    * Simple wrapper around ArrayList with support for H2O serialization
@@ -1370,7 +1417,7 @@ public class Utils {
     // Header
     if (html) {
       sb.append("<tr class='warning' style='min-width:60px'>");
-      sb.append("<th>Actual / Predicted</th>");
+      sb.append("<th>&darr; Actual / Predicted &rarr;</th>");
       for( int p=0; p<pdomain.length; p++ )
         if( pdomain[p] != null )
           sb.append("<th style='min-width:60px'>").append(pdomain[p]).append("</th>");
@@ -1468,6 +1515,35 @@ public class Utils {
     else r[i-1] += (len-sum);
     return r;
   }
+  public static final long[] partitione(long len, float[] ratio) {
+    long[] r = new long[ratio.length+1];
+    long sum = 0;
+    int i = 0;
+    float sr = 0;
+    for (i=0; i<ratio.length; i++) {
+      r[i] = (int) (ratio[i]*len);
+      sum += r[i];
+      sr  += ratio[i];
+    }
+    if (sr<1f) r[i] = len - sum;
+    else r[i-1] += (len-sum);
+    return r;
+  }
+
+  /** Compute start row and length of <code>i</code>-th fold from <code>nfolds</code>.
+   *
+   * @param nrows  number of rows
+   * @param nfolds  number of folds
+   * @param i fold which is intended to be computed
+   * @return return start row and number of rows for <code>i</code>-th fold.
+   */
+  public static final long[] nfold(long nrows, int nfolds, int i) {
+    assert i>=0 && i<nfolds;
+    long foldSize = nrows / nfolds;
+    long start = i * foldSize;
+    long size  = i!=nfolds-1 ? foldSize : foldSize + (nrows % nfolds);
+    return new long[] {start,size};
+  }
 
   /** Generate given numbers of keys by suffixing key by given numbered suffix. */
   public static Key[] generateNumKeys(Key mk, int num) { return generateNumKeys(mk, num, "_part"); }
@@ -1481,6 +1557,15 @@ public class Utils {
     }
     for (int i=0; i<num; i++) ks[i] = Key.make(n+delim+i+suffix);
     return ks;
+  }
+  public static Key generateShuffledKey(Key mk) {
+    String n = mk!=null ? mk.toString() : "noname";
+    String suffix = "";
+    if (n.endsWith(".hex")) {
+      n = n.substring(0, n.length()-4); // be nice
+      suffix = ".hex";
+    }
+    return Key.make(n+"_shuffled"+suffix);
   }
 
 }

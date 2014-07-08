@@ -1,8 +1,10 @@
 package hex;
 
+import java.util.Arrays;
+
 import jsr166y.CountedCompleter;
-import water.H2O.H2OCountedCompleter;
 import water.*;
+import water.H2O.H2OCountedCompleter;
 import water.fvec.*;
 import water.util.Utils;
 
@@ -13,16 +15,20 @@ import water.util.Utils;
  * <p>The task creates <code>ratios.length+1</code> output frame each containing a
  * demanded fraction of rows from source dataset</p>
  *
- * <p>The task internally processes each chunk of each column of source dataset
- * and extract i-th fraction of chunk rows into output chunk. The task does not
- * shuffle rows inside the tasks, nevertheless it would be possible.</p>
+ * <p>The tasks internally extract data from source chunks and create output chunks in preserving order of parts.
+ * I.e., the 1st partition contains the first P1-rows, the 2nd partition contains following P2-rows, ...
+ * </p>
  *
  * <p>Assumptions and invariants</p>
  * <ul>
  * <li>number of demanding split parts is reasonable number, i.e., &lt;10. The task is not designed to split into many small parts.</li>
- * <li>the worker preserves distribution of new chunks over the cloud according to source dataset chunks.</li>
- * <li>rows inside one chunk are not shuffled, they are extracted deterministically in the same order based on output part index.</li>
+ * <li>the worker DOES NOT preserves distribution of new chunks over the cloud according to source dataset chunks.</li>
+ * <li>rows inside one output chunk are not shuffled, they are extracted deterministically in the same order as they appear in source chunk.</li>
+ * <li>workers can enforce data transfers if they need to obtain data from remote chunks.</li>
  * </ul>
+ *
+ * <p>NOTE: the implementation is data-transfer expensive and in some cases it would be beneficial to use original
+ * implementation from <a href="https://github.com/0xdata/h2o/commits/9af3f4e">9af3f4e</a>.</p>.
  */
 public class FrameSplitter extends H2OCountedCompleter {
   /** Dataset to split */
@@ -33,17 +39,16 @@ public class FrameSplitter extends H2OCountedCompleter {
   final Key[]   destKeys;
   /** Optional job key */
   final Key     jobKey;
-  /** Random seed */
-  final long    seed;
 
   /** Output frames for each output split part */
   private Frame[] splits;
+  /** Temporary variable holding exceptions of workers */
+  private Throwable[] workersExceptions;
 
-  public FrameSplitter(Frame dataset, float[] ratios) { this(dataset, ratios, 43); }
-  public FrameSplitter(Frame dataset, float[] ratios, long seed) {
-    this(dataset, ratios, null, null, seed);
+  public FrameSplitter(Frame dataset, float[] ratios) {
+    this(dataset, ratios, null, null);
   }
-  public FrameSplitter(Frame dataset, float[] ratios, Key[] destKeys, Key jobKey, long seed) {
+  public FrameSplitter(Frame dataset, float[] ratios, Key[] destKeys, Key jobKey) {
     assert ratios.length > 0 : "No ratio specified!";
     assert ratios.length < 100 : "Too many frame splits demanded!";
     this.dataset  = dataset;
@@ -51,10 +56,10 @@ public class FrameSplitter extends H2OCountedCompleter {
     this.destKeys = destKeys!=null ? destKeys : Utils.generateNumKeys(dataset._key, ratios.length+1);
     assert this.destKeys.length == this.ratios.length+1 : "Unexpected number of destination keys.";
     this.jobKey   = jobKey;
-    this.seed     = seed;
   }
 
   @Override public void compute2() {
+    // Lock all possible data
     dataset.read_lock(jobKey);
     // Create a template vector for each segment
     final Vec[][] templates = makeTemplates(dataset, ratios);
@@ -68,99 +73,129 @@ public class FrameSplitter extends H2OCountedCompleter {
       split.delete_and_lock(jobKey);
       splits[s] = split;
     }
-    setPendingCount(nsplits);
-    for (int s=0; s<nsplits; s++) {
-      new FrameSplitTask(this, datasetVecs, ratios, s).asyncExec(splits[s]);
-    }
-    tryComplete();
-  }
-  @Override public void onCompletion(CountedCompleter caller) {
-    onDone(false);
-  }
-  @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
-    onDone(true);
-    return true;
-  }
-
-  public Frame[] getResult() { join(); return splits; }
-
-  // Make vector templates for all output frame vectors
-  private Vec[][] makeTemplates(Frame dataset, float[] ratios) {
-    final long[][] espcPerSplit = computeEspcPerSplit(dataset.anyVec(), ratios);
-    final int num = dataset.numCols(); // number of columns in input frame
-    final int nsplits = espcPerSplit.length; // number of splits
-    final String[][] domains = dataset.domains(); // domains
-    Vec[][] t = new Vec[nsplits][/*num*/]; // resulting vectors for all
-    for (int i=0; i<nsplits; i++) {
-      // vectors for j-th split
-      t[i] = new Vec(Vec.newKey(),espcPerSplit[i/*-th split*/]).makeZeros(num, domains);
-    }
-    return t;
-  }
-
-  private long[/*nsplits*/][/*nchunks*/] computeEspcPerSplit(Vec v, float[] ratios) {
-    long[] espc = v._espc;
-    long[][] r = new long[ratios.length+1][espc.length];
-    for (int i=0; i<espc.length-1; i++) {
-      int nrows = (int) (espc[i+1]-espc[i]);
-      int[] splits = Utils.partitione(nrows, ratios);
-      assert splits.length == ratios.length+1 : "Unexpected number of splits";
-      for (int j=0; j<splits.length; j++) {
-        //assert splits[j] > 0 : "Ups, no rows for " + j + "-th segment!";
-        r[j][i+1] = r[j][i] + splits[j]; // previous + current number of rows
+    setPendingCount(1);
+    H2O.submitTask(new H2OCountedCompleter(FrameSplitter.this) {
+      @Override public void compute2() {
+        setPendingCount(nsplits);
+        for (int s=0; s<nsplits; s++) {
+          new FrameSplitTask(new H2OCountedCompleter(this) { // Completer for this task
+            @Override public void compute2() { }
+            @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
+              synchronized( FrameSplitter.this ) { // synchronized on this since can be accessed from different workers
+                workersExceptions = workersExceptions!=null ? Arrays.copyOf(workersExceptions, workersExceptions.length+1) : new Throwable[1];
+                workersExceptions[workersExceptions.length-1] = ex;
+              }
+              tryComplete(); // we handle the exception so wait perform normal completion
+              return false;
+            }
+          }, datasetVecs, ratios, s).asyncExec(splits[s]);
+        }
+        tryComplete(); // complete the computation of nsplits-tasks
       }
-    }
-    return r;
+    });
+    tryComplete(); // complete the computation of thrown tasks
   }
 
-  private void onDone(boolean exceptional) {
+  /** Blocking call to obtain a result of computation. */
+  public Frame[] getResult() {
+    join();
+    if (workersExceptions!=null) throw new RuntimeException(workersExceptions[0]);
+    return splits;
+  }
+
+  @Override public void onCompletion(CountedCompleter caller) {
+    boolean exceptional = workersExceptions!=null;
     dataset.unlock(jobKey);
-    if (splits!=null) { // if exception is hit before splits array is allocated
+    if (splits!=null) {
       for (Frame s : splits) {
-        if (!exceptional) { // just unlock if everything was ok
-          s.update(jobKey);
-          s.unlock(jobKey);
-        } else { // else delete current half-done results
-          if (s!=null) s.delete(jobKey,0f);
+        if (s!=null) {
+          if (!exceptional) {
+            s.update(jobKey);
+            s.unlock(jobKey);
+          } else { // Have to unlock and delete here
+            s.unlock(jobKey);
+            s.delete(jobKey, 3.14f); // delete all splits
+          }
         }
       }
     }
   }
 
+  // Make vector templates for all output frame vectors
+  private Vec[][] makeTemplates(Frame dataset, float[] ratios) {
+    Vec anyVec = dataset.anyVec();
+    final long[][] espcPerSplit = computeEspcPerSplit(anyVec._espc, anyVec.length(), ratios);
+    final int num = dataset.numCols(); // number of columns in input frame
+    final int nsplits = espcPerSplit.length; // number of splits
+    final String[][] domains = dataset.domains(); // domains
+    final boolean[] uuids = dataset.uuids();
+    final byte   [] times = dataset.times();
+    Vec[][] t = new Vec[nsplits][/*num*/]; // resulting vectors for all
+    for (int i=0; i<nsplits; i++) {
+      // vectors for j-th split
+      t[i] = new Vec(Vec.newKey(),espcPerSplit[i/*-th split*/]).makeZeros(num, domains, uuids, times);
+    }
+    return t;
+  }
+
+  // The task computes ESPC per split
+  static long[/*nsplits*/][/*nchunks*/] computeEspcPerSplit(long[] espc, long len, float[] ratios) {
+    assert espc.length>0 && espc[0] == 0;
+    assert espc[espc.length-1] == len;
+    long[] partSizes = Utils.partitione(len, ratios); // Split of whole vector
+    int nparts = ratios.length+1;
+    long[][] r = new long[nparts][espc.length]; // espc for each partition
+    long nrows = 0;
+    long start = 0;
+    for (int p=0,c=0; p<nparts; p++) {
+      int nc = 0; // number of chunks for this partition
+      for(;c<espc.length-1 && (espc[c+1]-start) <= partSizes[p];c++) r[p][++nc] = espc[c+1]-start;
+      if (r[p][nc] < partSizes[p]) r[p][++nc] = partSizes[p]; // last item in espc contains number of rows
+      r[p] = Arrays.copyOf(r[p], nc+1);
+      // Transfer rest of lines to the next part
+      nrows = nrows-partSizes[p];
+      start += partSizes[p];
+    }
+    return r;
+  }
+
   /** MR task extract specified part of <code>_srcVecs</code>
    * into output chunk.*/
   private static class FrameSplitTask extends MRTask2<FrameSplitTask> {
-    final Vec  [] _srcVecs;
-    final float[] _ratios;
-    final int     _partIdx;
+    final Vec  [] _srcVecs; // a source frame given by list of its columns
+    final float[] _ratios;  // split ratios
+    final int     _partIdx; // part index
+
+    transient int _pcidx; // Start chunk index for this partition
+    transient int _psrow; // Start row in chunk for this partition
+
     public FrameSplitTask(H2OCountedCompleter completer, Vec[] srcVecs, float[] ratios, int partIdx) {
       super(completer);
       _srcVecs = srcVecs;
       _ratios  = ratios;
       _partIdx = partIdx;
     }
-    @Override public void map(Chunk[] cs) {
-      // Get corresponding input chunk for this chunk and its length
-      // NOTE: expecting the same distribution of input chunks as output chanks
-      int cidx = cs[0].cidx();
-      int len = _srcVecs[0].chunkLen(cidx); // get length of original chunk
-      int[] splits = Utils.partitione(len, _ratios); // compute partitions for different parts
-      int startRow = 0;
-      for (int i=0; i<_partIdx; i++) startRow += splits[i];
+    @Override protected void setupLocal() {
+      // Precompute the first input chunk index and start row inside that chunk for this partition
+      Vec anyInVec = _srcVecs[0];
+      long[] partSizes = Utils.partitione(anyInVec.length(), _ratios);
+      long pnrows = 0;
+      for (int p=0; p<_partIdx; p++) pnrows += partSizes[p];
+      long[] espc = anyInVec._espc;
+      while (_pcidx < espc.length-1 && (pnrows -= (espc[_pcidx+1]-espc[_pcidx])) > 0 ) _pcidx++;
+      assert pnrows <= 0;
+      _psrow = (int) (pnrows + espc[_pcidx+1]-espc[_pcidx]);
+    }
+    @Override public void map(Chunk[] cs) { // Output chunks
+      int coutidx = cs[0].cidx(); // Index of output Chunk
+      int cinidx = _pcidx + coutidx;
+      int startRow = coutidx > 0 ? 0 : _psrow; // where to start extracting
+      int nrows = cs[0]._len;
       // For each output chunk extract appropriate rows for partIdx-th part
       for (int i=0; i<cs.length; i++) {
-        // Extract correct rows of _partIdx-th split from i-th input vector into the i-th chunk
-        assert cs[i]._len == splits[_partIdx]; // Be sure that we correctly prepared vector template
-        // NOTE: we preserve co-location of cs[i] chunks with _srcVecs[i] chunks so it is local load of chunk
-        ChunkSplitter.extractChunkPart(_srcVecs[i].chunkForChunkIdx(cidx), cs[i], startRow, splits[_partIdx], _fs);
-        //extractPartXXX(_srcVecs[i].chunkForChunkIdx(cidx), cs[i], startRow, splits[_partIdx]);
+        // WARNING: this implementation does not preserve co-location of chunks so we are forcing here network transfer!
+        ChunkSplitter.extractChunkPart(_srcVecs[i].chunkForChunkIdx(cinidx), cs[i], startRow, nrows, _fs);
       }
-    }
-    // Now extract does not do any shuffling
-    private void extractPartXXX(Chunk ic, Chunk oc, int startRow, int nrows) {
-       // Dummy implementation
-       for (int r=0; r<nrows; r++)
-         oc.set0(r, ic.at0(startRow+r));
     }
   }
 }

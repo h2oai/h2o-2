@@ -1,8 +1,6 @@
 \name{head}
 \alias{head.H2OParsedData}
 \alias{tail.H2OParsedData}
-\alias{head.H2OParsedDataVA}
-\alias{tail.H2OParsedDataVA}
 \title{
 Return the First or Last Part of a H2O Dataset
 }
@@ -12,8 +10,6 @@ Returns the first or last rows of an H2O parsed data object.
 \usage{
 \method{head}{H2OParsedData}(x, n = 6L, \dots)
 \method{tail}{H2OParsedData}(x, n = 6L, \dots)
-\method{head}{H2OParsedDataVA}(x, n = 6L, \dots)
-\method{tail}{H2OParsedDataVA}(x, n = 6L, \dots)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -36,7 +32,6 @@ ausPath = system.file("extdata", "australia.csv", package="h2o")
 australia.hex = h2o.importFile(localH2O, path = ausPath)
 head(australia.hex, 10)
 tail(australia.hex, 10)
-h2o.shutdown(localH2O)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

@@ -26,5 +26,4 @@ prosPath = system.file("extdata", "prostate.csv", package="h2o")
 prostate.hex = h2o.importFile.FV(localH2O, path = prosPath)
 prostate.cbind = cbind(prostate.hex, prostate.hex)
 head(prostate.cbind)
-h2o.shutdown(localH2O)
 }

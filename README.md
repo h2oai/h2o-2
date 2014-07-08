@@ -42,11 +42,10 @@ Users will use JSON/REST-api via H2O.R through connects the Analytics Engine int
 
 Community
 ---------------------------------
-We will breathe & sustain a vibrant community with the focus of taking software engineering approach to data science and empower everyone interested in data to be able to hack data using math and algorithms.
+We will build & sustain a vibrant community with the focus of taking software engineering approaches to data science and empowering everyone interested in data to be able to hack data using math and algorithms.
 Join us on google groups [h2ostream](https://groups.google.com/forum/#!forum/h2ostream).
 
 Team
-
 ```
 SriSatish Ambati
 Cliff Click
@@ -66,8 +65,10 @@ Amy Wang
 Max Schloemer
 Ray Peck
 Anand Avati
+```
 
-Opensource:
+Open Source
+```
 Jan Vitek
 Mr.Jenkins
 Petr Maj

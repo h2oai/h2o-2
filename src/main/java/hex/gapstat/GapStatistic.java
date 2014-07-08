@@ -115,10 +115,7 @@ public class GapStatistic extends Job.ColumnsJob {
           KMeans2.KMeans2Model res_bs = UKV.get(km_bs.dest());
           fs = new Futures();
           DKV.remove(Key.make(km_bs.dest()+"_clusters"), fs);
-          DKV.remove(km_bs.dest());
           bwkbs[b] = Math.log(res_bs.mse());
-          bs.delete();
-          res.delete();
           gs_model.b++;
           gs_model.update(self());
         }

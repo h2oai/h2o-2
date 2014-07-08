@@ -5,12 +5,12 @@ test.glm2Poissonregression.golden <- function(H2Oserver) {
 	
 #Import data: 
 Log.info("Importing CUSE data...") 
-cuseH2O<- h2o.uploadFile.FV(H2Oserver, locate("../../smalldata/cuseexpanded.csv"), key="cuseH2O")
+cuseH2O<- h2o.uploadFile(H2Oserver, locate("../../smalldata/cuseexpanded.csv"), key="cuseH2O")
 cuseR<- read.csv(locate("smalldata/cuseexpanded.csv"), header=T)
 
 Log.info("Test H2O Poisson not regularized")
 Log.info("Run matching models in R and H2O")
-fitH2O<- h2o.glm.FV(y="Using", x=c("Age", "Ed", "Wantsmore"), data=cuseH2O, family="poisson", lambda=0, alpha=0, nfolds=0)
+fitH2O<- h2o.glm(y="Using", x=c("Age", "Ed", "Wantsmore"), data=cuseH2O, family="poisson", lambda=0, alpha=0, nfolds=0)
 fitR<- glm(Using ~ AgeA + AgeC + AgeD + LowEd + MoreYes, family=poisson, data=cuseR)
 
 

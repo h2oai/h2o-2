@@ -3,8 +3,8 @@ source('../../findNSourceUtils.R')
 
 test.summary.numeric <- function(conn) {
   Log.info("Importing USArrests.csv data...\n")
-  # arrests.hex <- h2o.importFile.VA(conn, locate("smalldata/pca_test/USArrests.csv", schema = "local"), "arrests.hex")
-  arrests.hex = h2o.importFile.VA(conn, normalizePath(locate("smalldata/pca_test/USArrests.csv")), "arrests.hex")  
+  # arrests.hex <- h2o.importFile(conn, locate("smalldata/pca_test/USArrests.csv", schema = "local"), "arrests.hex")
+  arrests.hex = h2o.importFile(conn, normalizePath(locate("smalldata/pca_test/USArrests.csv")), "arrests.hex")  
 
   Log.info("Check that summary works...")
   summary(arrests.hex)
