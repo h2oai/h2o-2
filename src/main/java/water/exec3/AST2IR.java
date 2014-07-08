@@ -204,6 +204,7 @@ public class AST2IR extends Iced {
    *
    * Inspect the tree node and append a statement to the Program p.
    */
+  //TODO: Need to handle prefix ops as well, currently only supports binary infix.
   private void treeWalk(JsonObject tree, int lineNum, Program p) {
 
     // First check if we're a top-level node of type astop
@@ -219,11 +220,11 @@ public class AST2IR extends Iced {
 //        if (isArithmeticOp(tree)) {
 //          addNewOpStatement(tree.get("operator").getAsString(), p);
 //
-//        // Can be a bitwise operator
+//        // Can be a binary bitwise operator
 //        } else if (isBitwiseOp(tree)) {
 //          addNewOpStatement(tree.get("operator").getAsString(), p);
 //
-//        // Can be comparison operator (also binary)
+//        // Can be a binary comparison operator (also binary)
 //        } else if (isCompareOp(tree)) {
 //          addNewOpStatement(tree.get("operator").getAsString(), p);
 //        }
