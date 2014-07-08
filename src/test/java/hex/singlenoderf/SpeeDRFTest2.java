@@ -7,13 +7,16 @@ import water.fvec.Frame;
 import water.fvec.Vec;
 
 public class SpeeDRFTest2 extends TreeTestWithBalanceAndCrossVal {
-/*
+
+  // FIXME: all the tests are ignored here!
+  // Please fix SpeeDRF to handle categoricals as the rest
+  // of algorithms
   @Override public void testCarBalanceAndCrossValidation() {
   }
   @Override public void testCovtypeBalanceAndCrossValidation() {
   }
   @Override public void testWeatherDataset() {
-  } */
+  }
 
   @Override protected void testBalanceWithCrossValidation(String dataset, int response, int[] ignored_cols, int ntrees, int nfolds) {
     Frame f = parseFrame(dataset);
