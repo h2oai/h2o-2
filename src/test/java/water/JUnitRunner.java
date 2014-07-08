@@ -1,11 +1,14 @@
 package water;
 
 import hex.*;
+import hex.trees.TreeTestWithBalanceAndCrossVal;
+
 import org.apache.commons.lang.ArrayUtils;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
+
 import water.deploy.Node;
 import water.deploy.NodeVM;
 import water.parser.ParseFolderTestBig;
@@ -37,6 +40,8 @@ public class JUnitRunner {
     tests.remove(ValueArrayToFrameTestAll.class);
     tests.remove(DeepLearningIrisTest.Long.class);
     tests.remove(DeepLearningProstateTest.Long.class);
+    // Skip abstract test
+    tests.remove(TreeTestWithBalanceAndCrossVal.class);
 
     // Pure JUnit test
 //    tests.remove(CBSChunkTest.class);
