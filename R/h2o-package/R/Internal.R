@@ -703,17 +703,18 @@ function(h2o, key) {
 #'
 #' Fetch the Model for the given key.
 #'
-#'
 #' Fetch all of the json that the key can get!
-h2o.fetchModel<-
+doNotCallThisMethod...Unsupported<-
 function(h2o, key) {
+  if ( ! (key %in% h2o.ls(h2o)$Key)) stop( paste("The h2o instance at ", h2o@ip, ":", h2o@port, " does not have key: \"", key, "\"", sep = ""))
   .fetchJSON(h2o, key)
 }
 
 #'
-#' Fetch the Frame for the given key.
-h2o.fetchFrame<-
+#' Get the reference to a frame with the given key.
+h2o.getFrame<-
 function(h2o, key) {
+  if ( ! (key %in% h2o.ls(h2o)$Key)) stop( paste("The h2o instance at ", h2o@ip, ":", h2o@port, " does not have key: \"", key, "\"", sep = ""))
   new("H2OParsedData", h2o = h2o, key = key)
 }
 
