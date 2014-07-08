@@ -5,9 +5,9 @@ check.deeplearning_imbalanced <- function(conn) {
   Log.info("Test checks if Deep Learning works fine with an imbalanced dataset")
   
   prostate = h2o.uploadFile(conn, locate("smalldata/logreg/prostate.csv"))
-  hh_imbalanced=h2o.deeplearning(x=c(1,2,3,5),y=4,epochs=100,data=prostate,validation=prostate,balance_classes=F)
+  hh_imbalanced=h2o.deeplearning(x=c(1,2,3,5),y=4,hidden=c(20,20,20),epochs=1000,data=prostate,balance_classes=F,nfolds=10)
   print(hh_imbalanced)
-  hh_balanced=h2o.deeplearning(x=c(1,2,3,5),y=4,epochs=100,data=prostate,validation=prostate,balance_classes=T)
+  hh_balanced=h2o.deeplearning(x=c(1,2,3,5),y=4,hidden=c(20,20,20),epochs=1000,data=prostate,balance_classes=T,nfolds=10)
   print(hh_balanced)
   checkTrue(hh_imbalanced@model$valid_class_error > hh_balanced@model$valid_class_error, "balance_classes makes it worse!")
 
