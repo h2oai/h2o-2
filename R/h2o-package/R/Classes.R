@@ -185,9 +185,12 @@ setMethod("show", "H2ODeepLearningModel", function(object) {
   
   if(!is.null(model$confusion)) {
     cat("\n\nConfusion matrix:\n")
-    if(is.na(object@valid@key))
-      cat("Reported on", paste(model$params$nfolds, "-fold cross-validated data", sep = ""), "\n")
-    else
+    if(is.na(object@valid@key)) {
+      if(model$params$nfolds == 0)
+        cat("Reported on", object@data@key, "\n")
+      else
+        cat("Reported on", paste(model$params$nfolds, "-fold cross-validated data", sep = ""), "\n")
+    } else
       cat("Reported on", object@valid@key, "\n")
     print(model$confusion)
   }
