@@ -767,17 +767,14 @@ h2o.deeplearning <- function(x, y, data, classification = TRUE, nfolds = 0, vali
   errs = tail(res$errors, 1)[[1]]
   
   # BUG: Why is the confusion matrix returning an extra row and column with all zeroes?
-  if(is.null(errs$valid_confusion_matrix)) {
-    domain = errs$train_confusion_matrix$domain
-    cm = errs$trainAUC$confusion_matrix_for_criteria[[1]]
-    result$confusion = .build_cm(cm, domain)
-  } else {
+  if(is.null(errs$valid_confusion_matrix))
+    confusion = errs$train_confusion_matrix
+  else
     confusion = errs$valid_confusion_matrix
-    cm = confusion$cm[-length(confusion$cm)]
-    cm = lapply(cm, function(x) { x[-length(x)] })
-    # result$confusion = .build_cm(cm, confusion$actual_domain, confusion$predicted_domain)
-    result$confusion = .build_cm(cm, confusion$domain)
-  }
+  cm = confusion$cm[-length(confusion$cm)]
+  cm = lapply(cm, function(x) { x[-length(x)] })
+  # result$confusion = .build_cm(cm, confusion$actual_domain, confusion$predicted_domain)
+  result$confusion = .build_cm(cm, confusion$domain)
   
   result$train_class_error = as.numeric(errs$train_err)
   result$train_sqr_error = as.numeric(errs$train_mse)
