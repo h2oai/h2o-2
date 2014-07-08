@@ -22,19 +22,27 @@ test <- locate("smalldata/iris/iris_test.csv")
 x = c("sepal_len","sepal_wid","petal_len","petal_wid");
 y = "species"
 classification = T
-
+activation = "Tanh"
+epochs = 2
 
 #----------------------------------------------------------------------
 # Run the tests
 #----------------------------------------------------------------------
 
-activation = "Tanh"
+# large network
+hidden = c(500,500,500)
+source('../Utils/shared_javapredict_DL.R')
+
+# with imbalance correction
+hidden = c(13,17,50,3)
 balance_classes = T
 source('../Utils/shared_javapredict_DL.R')
 
+# without imbalance correction
 balance_classes = F
 source('../Utils/shared_javapredict_DL.R')
 
+# other activation functions
 activation = "TanhWithDropout"
 source('../Utils/shared_javapredict_DL.R')
 
@@ -44,7 +52,35 @@ source('../Utils/shared_javapredict_DL.R')
 activation = "RectifierWithDropout"
 source('../Utils/shared_javapredict_DL.R')
 
+activation = "Maxout"
+source('../Utils/shared_javapredict_DL.R')
+
+activation = "MaxoutWithDropout"
+source('../Utils/shared_javapredict_DL.R')
+
+# regression
 classification = F
-x = c("sepal_len","sepal_wid","petal_len")
+activation = "Tanh"
+x = c("species","sepal_len","sepal_wid","petal_len")
 y = c("petal_wid")
+source('../Utils/shared_javapredict_DL.R')
+
+# ignore a column
+x = c("species","sepal_wid","petal_len")
+source('../Utils/shared_javapredict_DL.R')
+
+# other activation functions
+activation = "TanhWithDropout"
+source('../Utils/shared_javapredict_DL.R')
+
+activation = "Rectifier"
+source('../Utils/shared_javapredict_DL.R')
+
+activation = "RectifierWithDropout"
+source('../Utils/shared_javapredict_DL.R')
+
+activation = "Maxout"
+source('../Utils/shared_javapredict_DL.R')
+
+activation = "MaxoutWithDropout"
 source('../Utils/shared_javapredict_DL.R')

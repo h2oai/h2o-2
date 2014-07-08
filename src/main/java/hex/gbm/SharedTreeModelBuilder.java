@@ -117,7 +117,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   @Override public float progress(){
     Value value = DKV.get(dest());
     DTree.TreeModel m = value != null ? (DTree.TreeModel) value.get() : null;
-    return m == null ? 0 : m.ntrees() / (float) m.N;
+    return m == null ? 0 : cv_progress(m.ntrees() / (float) m.N);
   }
 
   // Verify input parameters

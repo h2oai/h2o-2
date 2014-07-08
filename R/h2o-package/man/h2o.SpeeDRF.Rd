@@ -58,15 +58,6 @@ An \code{\linkS4class{H2OParsedData}} object containing the variables in the mod
   \item{stat.type}{
   (Optional) Type of statistic to use, equal to either "ENTROPY" or "GINI".
   }
-  \item{classwt}{
-  (Optional) Numeric vector of class weights for a categorical response.
-  }
-  \item{sampling_strategy}{
-  (Optional) Sampling strategy to use, equal to either "RANDOM" or "STRATIFIED_LOCAL".
-  }
-  \item{strata_samples}{
-  (Optional) A numeric sequence indicating the strata for sampling. Only used if \code{sampling_strategy = "STRATIFIED_LOCAL"}.
-  }
 }
 
 \details{

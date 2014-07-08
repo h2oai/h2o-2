@@ -44,8 +44,7 @@ public class DeepLearningModelView extends Request2 {
   @Override protected String serveJava() {
     deeplearning_model = UKV.get(_modelKey);
     if (deeplearning_model!=null
-            && !deeplearning_model.get_params().autoencoder //not yet implemented
-            && deeplearning_model.get_params().activation != DeepLearning.Activation.Maxout) //not yet implemented
+            && !deeplearning_model.get_params().autoencoder) //not yet implemented
       return deeplearning_model.toJava();
     else
       return "";

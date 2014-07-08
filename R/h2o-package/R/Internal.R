@@ -126,6 +126,8 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__PAGE_GAPSTAT = "2/GapStatistic.json"
 .h2o.__PAGE_GAPSTATVIEW = "2/GapStatisticModelView.json"
 .h2o.__PAGE_QUANTILES = "2/QuantilesPage.json"
+.h2o.__PAGE_INSPECTOR = "2/Inspector.json"
+.h2o.__PAGE_ANOMALY = "2/Anomaly.json"
 
 .h2o.__PAGE_DRF = "2/DRF.json"
 .h2o.__PAGE_DRFProgress = "2/DRFProgressPage.json"
@@ -648,6 +650,38 @@ function(expr, envir = globalenv()) {
     paste(sample(hex_digits, 12, replace=TRUE), collapse='', sep=''), sep='-')
   temp = gsub("-", "", temp)
   paste(prefix, temp, sep="_")
+}
+
+
+#'
+#' Fetch the JSON for a given model key.
+#'
+#' Grabs all of the JSON and returns it as a named list. Do this by using the 2/Inspector.json page, which provides
+#' a redirect URL to the appropriate Model View page.
+.fetchJSON<-
+function(h2o, key) {
+  redirect_url <- .h2o.__remoteSend(h2o, .h2o.__PAGE_INSPECTOR, src_key = key)$response_info$redirect_url
+  page <- strsplit(redirect_url, '\\?')[[1]][1]                         # returns a list of two items
+  page <- paste(strsplit(page, '')[[1]][-1], sep = "", collapse = "")   # strip off the leading '/'
+  key  <- strsplit(strsplit(redirect_url, '\\?')[[1]][2], '=')[[1]][2]  # split the second item into a list of two items
+  .h2o.__remoteSend(h2o, page, '_modelKey' = key)
+}
+
+#'
+#' Fetch the Model for the given key.
+#'
+#'
+#' Fetch all of the json that the key can get!
+h2o.fetchModel<-
+function(h2o, key) {
+  .fetchJSON(h2o, key)
+}
+
+#'
+#' Fetch the Frame for the given key.
+h2o.fetchFrame<-
+function(h2o, key) {
+  new("H2OParsedData", h2o = h2o, key = key)
 }
 
 # Check if key_env$key exists in H2O and remove if it does

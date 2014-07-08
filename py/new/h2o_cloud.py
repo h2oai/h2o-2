@@ -1,15 +1,13 @@
 import time, os, stat, json, signal, tempfile, shutil, datetime, inspect, threading, getpass
 import requests, argparse, sys, unittest, glob
 import urlparse, logging, random
-import psutil, requests,
-import h2o_browse as h2b, h2o_perf, h2o_util, h2o_cmd, h2o_os_util
-import h2o_sandbox, h2o_print as h2p
+import psutil, requests
+import h2o_sandbox
 # used in shutil.rmtree permission hack for windows
 import errno
 
 # For checking ports in use, using netstat thru a subprocess.
 from subprocess import Popen, PIPE
-import stat
 
 
 def verboseprint(*args, **kwargs):
@@ -32,7 +30,6 @@ def flatfile_name():
 # only usable after you've built a cloud (junit, watch out)
 def cloud_name():
     return nodes[0].cloud_name
-
 
 def __drain(src, dst):
     for l in src:
@@ -113,7 +110,8 @@ def get_sandbox_name():
 
 def unit_main():
     global python_test_name, python_cmd_args, python_cmd_line, python_cmd_ip, python_username
-    python_test_name = inspect.stack()[1][1]
+    # python_test_name = inspect.stack()[1][1]
+    python_test_name = ""
     python_cmd_args = " ".join(sys.argv[1:])
     python_cmd_line = "python %s %s" % (python_test_name, python_cmd_args)
     python_username = getpass.getuser()
@@ -131,7 +129,8 @@ beta_features = True
 abort_after_import = False
 debug_rest = False
 # jenkins gets this assign, but not the unit_main one?
-python_test_name = inspect.stack()[1][1]
+# python_test_name = inspect.stack()[1][1]
+python_test_name = ""
 
 # trust what the user says!
 if ipaddr_from_cmd_line:
@@ -161,16 +160,10 @@ def parse_our_args():
     parser.add_argument('-debug_rest', '--debug_rest', help='Print REST API interactions to rest.log',
                         action='store_true')
 
-    parser.add_argument('-nc', '--nocolor', help="don't emit the chars that cause color printing", action='store_true')
-
     parser.add_argument('unittest_args', nargs='*')
     args = parser.parse_args()
 
-    # disable colors if we pipe this into a file to avoid extra chars
-    if args.nocolor:
-        h2p.disable_colors()
-
-    global verbose, ipaddr_from_cmd_line, config_json, debugger, 
+    global verbose, ipaddr_from_cmd_line, config_json, debugger
     global random_seed, beta_features, debug_rest
 
     verbose = args.verbose
@@ -393,36 +386,6 @@ def default_hosts_file():
         return os.environ["H2O_HOSTS_FILE"]
     return 'pytest_config-{0}.json'.format(getpass.getuser())
 
-# node_count is number of H2O instances per host if hosts is specified.
-def decide_if_localhost():
-    # First, look for local hosts file
-    hostsFile = default_hosts_file()
-    if config_json:
-        print "* Using config JSON you passed as -cj argument:", config_json
-        return False
-    if os.path.exists(hostsFile):
-        print "* Using config JSON file discovered in this directory: {0}.".format(hostsFile)
-        return False
-    if 'hosts' in os.getcwd():
-        print "Since you're in a *hosts* directory, we're using a config json"
-        print "* Expecting default username's config json here. Better exist!"
-        return False
-    print "No config json used. Launching local cloud..."
-    return True
-
-
-def setup_random_seed(seed=None):
-    if random_seed is not None:
-        SEED = random_seed
-    elif seed is not None:
-        SEED = seed
-    else:
-        SEED = random.randint(0, sys.maxint)
-    random.seed(SEED)
-    print "\nUsing random seed:", SEED
-    return SEED
-
-
 # node_count is per host if hosts is specified.
 def build_cloud(node_count=1, base_port=54321, hosts=None,
                 timeoutSecs=30, retryDelaySecs=1, cleanup=True, 
@@ -487,7 +450,7 @@ def build_cloud(node_count=1, base_port=54321, hosts=None,
         verboseprint(len(nodeList), "Last added node stabilized in ", time.time() - start, " secs")
         verboseprint("Built cloud: %d nodes on %d hosts, in %d s" % (len(nodeList),
                                                                      hostCount, (time.time() - start)))
-        h2p.red_print("Built cloud:", nodeList[0].java_heap_GB, "GB java heap(s) with", len(nodeList), "total nodes")
+        print "Built cloud:", nodeList[0].java_heap_GB, "GB java heap(s) with", len(nodeList), "total nodes"
 
         # FIX! using "consensus" in node[-1] should mean this is unnecessary?
         # maybe there's a bug. For now do this. long term: don't want?
@@ -590,13 +553,6 @@ def tear_down_cloud(nodeList=None, sandboxIgnoreErrors=False):
     finally:
         check_sandbox_for_errors(sandboxIgnoreErrors=sandboxIgnoreErrors, python_test_name=python_test_name)
         nodeList[:] = []
-
-# don't need any more?
-# Used before to make sure cloud didn't go away between unittest defs
-def touch_cloud(nodeList=None):
-    if not nodeList: nodeList = nodes
-    for n in nodeList:
-        n.is_alive()
 
 # timeoutSecs is per individual node get_cloud()
 def verify_cloud_size(nodeList=None, verbose=False, timeoutSecs=10, ignoreHealth=False):
@@ -761,8 +717,7 @@ class H2O(object):
             exc_info = sys.exc_info()
             # use this to ignore the initial connection errors during build cloud when h2o is coming up
             if not noExtraErrorCheck: 
-                h2p.red_print(
-                    "ERROR: got exception on %s to h2o. \nGoing to check sandbox, then rethrow.." % (url + paramsStr))
+                print "ERROR: got exception on %s to h2o. \nGoing to check sandbox, then rethrow.." % (url + paramsStr)
                 time.sleep(2)
                 check_sandbox_for_errors(python_test_name=python_test_name);
             log_rest("")
@@ -1317,7 +1272,6 @@ class LocalH2O(H2O):
         self.flatfile = flatfile_name()
         self.remoteH2O = False # so we can tell if we're remote or local
 
-        h2o_os_util.check_port_group(self.port)
         if self.node_id is not None:
             logPrefix = 'local-h2o-' + str(self.node_id)
         else:

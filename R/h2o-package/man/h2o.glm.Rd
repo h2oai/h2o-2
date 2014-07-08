@@ -56,6 +56,12 @@ A description of the error distribution and corresponding link function to be us
   \item{lambda_search}{
   (Optional) A logical value indicating whether to onduct a search over the space of lambda values, starting from lambda_max. When this is set to TRUE, \code{lambda} will be interpreted as lambda_min.
   }
+  \item{variable_importances}{
+  (Optional) A numeric value either 0 or 1 to indicate whether the variable importances should be computed.  Compute variable importances for input features. NOTE: If use_all_factor_levels is off the importance of the base level will NOT be shown.
+  }
+  \item{use_all_factor_levels}{
+  (Optional) A numeric value either 0 or 1 to indicate whether all factor levels should be used. By default, first factor level is skipped from the possible set of predictors. Set this flag if you want use all of the levels. Needs sufficient regularization to solve!
+  }
 }
 \value{
 An object of class \code{\linkS4class{H2OGLMModel}} with slots key, data, model and xval. The slot model is a list of the following components:
