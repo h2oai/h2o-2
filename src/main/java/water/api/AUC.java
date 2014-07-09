@@ -214,7 +214,7 @@ public class AUC extends Func {
     if( vactual==null || vpredict==null )
       throw new IllegalArgumentException("Missing vactual or vpredict!");
     if (vactual.length() != vpredict.length())
-      throw new IllegalArgumentException("Both arguments must have the same length!");
+      throw new IllegalArgumentException("Both arguments must have the same length ("+vactual.length()+"!="+vpredict.length()+")!");
     if (!vactual.isInt())
       throw new IllegalArgumentException("Actual column must be integer class labels!");
   }

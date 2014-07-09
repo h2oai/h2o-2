@@ -1,25 +1,19 @@
 package hex.singlenoderf;
 
 
+import static water.util.MRUtils.sampleFrameStratified;
+import hex.*;
 import hex.ConfusionMatrix;
-import hex.FrameTask;
-import hex.VarImp;
+
+import java.util.*;
+
 import jsr166y.ForkJoinTask;
 import water.*;
-import water.api.Constants;
-import water.api.DocGen;
-import water.api.ParamImportance;
+import water.Timer;
+import water.api.*;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.*;
-import water.api.ParamImportance;
-import static water.util.MRUtils.sampleFrameStratified;
-
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Random;
-
 
 public class SpeeDRF extends Job.ValidatedJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -96,15 +90,6 @@ public class SpeeDRF extends Job.ValidatedJob {
 
   private boolean regression;
 
-  /** Return the query link to this page */
-//  public static String link(Key k, String content) {
-//    RString rs = new RString("<a href='RF.query?%key_param=%$key'>%content</a>");
-//    rs.replace("key_param", DATA_KEY);
-//    rs.replace("key", k.toString());
-//    rs.replace("content", content);
-//    return rs.toString();
-//  }
-
   public DRFParams drfParams;
 
   protected SpeeDRFModel makeModel( SpeeDRFModel model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
@@ -179,7 +164,6 @@ public class SpeeDRF extends Job.ValidatedJob {
 //    DRFTask.updateRFModelStopTraining(rf_model._key);
     rf_model.stop_training();
     if (n_folds > 0) CrossValUtils.crossValidate(this);
-    cleanup();
     remove();
   }
 
@@ -351,10 +335,12 @@ public class SpeeDRF extends Job.ValidatedJob {
           }
       }
 
-      // Check that that test/train
+      // Check that that test/train data are consistent, throw warning if not
       if(classification && validation != null) {
-        if (!isSubset(test.lastVec().toEnum().domain(), train.lastVec().toEnum().domain()))
-          throw new IllegalArgumentException("Train and Validation data have inconsistent response columns! They do not share the same factor levels.");
+        if (!isSubset(test.lastVec().toEnum().domain(), train.lastVec().toEnum().domain())) {
+          Log.warn("Test set domain: " + Arrays.toString(test.lastVec().toEnum().domain()) + " \nTrain set domain: " + Arrays.toString(train.lastVec().toEnum().domain()));
+          Log.warn("Train and Validation data have inconsistent response columns! Test data has a response not found in the Train data!");
+        }
       }
 
       Key src_key = source._key;
