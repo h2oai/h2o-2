@@ -16,6 +16,7 @@ import water.api.ParamImportance;
 import static water.util.MRUtils.sampleFrameStratified;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Random;
 
@@ -346,16 +347,20 @@ public class SpeeDRF extends Job.ValidatedJob {
         Frame stratified = sampleFrameStratified(fr, v, trainSamplingFactors, (long)(max_after_balance_size*fr.numRows()), seed, true, false);
         if (stratified != fr) {
           fr = stratified;
-          response = fr.vecs()[response_idx];
+//          response = fr.vecs()[response_idx];
           }
       }
 
-      if(classification && validation != null)
-        if (!( Arrays.equals( train.lastVec().toEnum().domain(), test.lastVec().toEnum().domain())))
+      // Check that that test/train
+      if(classification && validation != null) {
+        if (!isSubset(test.lastVec().toEnum().domain(), train.lastVec().toEnum().domain()))
           throw new IllegalArgumentException("Train and Validation data have inconsistent response columns! They do not share the same factor levels.");
+      }
 
+      Key src_key = source._key;
+      int src_ncols = source.numCols();
       // Set the model parameters
-      SpeeDRFModel model = new SpeeDRFModel(dest(), source._key, fr, this, priorDist);
+      SpeeDRFModel model = new SpeeDRFModel(dest(), src_key, fr, this, priorDist);
       model.verbose = verbose;
       int csize = H2O.CLOUD.size();
       model.fr = fr;
@@ -384,7 +389,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       model.testKey = validation == null ? null : validation._key;
       model.importance = importance;
       model.regression = regression;
-      model.features = source.numCols();
+      model.features = src_ncols;
       model.sampling_strategy = regression ? Sampling.Strategy.RANDOM : sampling_strategy;
       model.sample = (float) sample;
       model.weights = regression ? null : class_weights;
@@ -418,6 +423,14 @@ public class SpeeDRF extends Job.ValidatedJob {
 
   public Frame score( Frame fr ) { return ((SpeeDRFModel)UKV.get(dest())).score(fr);  }
 
+  private boolean isSubset(String[] sub, String[] container) {
+    HashSet<String> hs = new HashSet<String>();
+    Collections.addAll(hs, container);
+    for (String s: sub) {
+      if (!hs.contains(s)) return false;
+    }
+    return true;
+  }
 
   public final static class DRFTask extends DRemoteTask {
     /** The RF Model.  Contains the dataset being worked on, the classification
