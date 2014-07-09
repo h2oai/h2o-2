@@ -541,6 +541,36 @@ function(some_expr_list, envir) {
 }
 
 #'
+#' Process the LHS of an assignment.
+#'
+#' Swap out any H2OparsedData objects with their key names,
+#' Swap out a '$' "slice" with a [,] slice
+.process_assignment<-
+function(expr, envir) {
+  l <- lapply(as.list(expr), .as_list)
+
+  # Have a single column sliced out that we want to a) replace -OR- b) create
+  if (identical(l[[1]], quote(`$`))) {
+    l[[1]] <- quote(`[`)  # This handles both cases (unkown and known colnames... should just work!)
+    cols <- colnames(get(as.character(l[[2]]), envir = envir))
+    numCols <- length(cols)
+    colname <- as.character(l[[3]])
+    if (! (colname %in% cols)) {
+      assign("NEWCOL", colname, envir = .pkg.env)
+      assign("NUMCOLS", numCols, envir = .pkg.env)
+      assign("FRAMEKEY", get(as.character(l[[2]]), envir = envir)@key, envir = .pkg.env)
+      l[[4]] <- numCols + 1
+    } else {
+      l[[4]] <- l[[3]]
+    }
+    l[[3]] <- as.list(substitute(l[,1]))[[3]]
+    l <- .replace_with_keys_helper(l, envir)
+    return(as.name(as.character(as.expression(.back_to_expr(l)))))
+  }
+  return(as.character(expr))
+}
+
+#'
 #' Front-end work for h2o.exec
 #'
 #' Discover the destination key (if there is one), the client, and sub in the actual key name for the R variable
@@ -548,12 +578,15 @@ function(some_expr_list, envir) {
 .replace_with_keys<-
 function(expr, envir = globalenv()) {
   dest_key <- ""
+  assign("NEWCOL", "", envir = .pkg.env)
+  assign("NUMCOLS", "", envir = .pkg.env)
+  assign("FRAMEKEY", "", envir = .pkg.env)
 
   # Is this an assignment?
   if ( .isAssignment(as.list(expr)[[1]])) {
 
     # The destination key is the name that's being assigned to (covers both `<-` and `=`)
-    dest_key <- as.character(as.list(expr)[[2]])
+    dest_key <- .process_assignment(as.list(expr)[[2]], envir)
 
     # Don't bother with the assignment anymore, discard it and iterate down the RHS.
     expr <- as.list(expr)[[3]]
@@ -670,17 +703,18 @@ function(h2o, key) {
 #'
 #' Fetch the Model for the given key.
 #'
-#'
 #' Fetch all of the json that the key can get!
-h2o.fetchModel<-
+doNotCallThisMethod...Unsupported<-
 function(h2o, key) {
+  if ( ! (key %in% h2o.ls(h2o)$Key)) stop( paste("The h2o instance at ", h2o@ip, ":", h2o@port, " does not have key: \"", key, "\"", sep = ""))
   .fetchJSON(h2o, key)
 }
 
 #'
-#' Fetch the Frame for the given key.
-h2o.fetchFrame<-
+#' Get the reference to a frame with the given key.
+h2o.getFrame<-
 function(h2o, key) {
+  if ( ! (key %in% h2o.ls(h2o)$Key)) stop( paste("The h2o instance at ", h2o@ip, ":", h2o@port, " does not have key: \"", key, "\"", sep = ""))
   new("H2OParsedData", h2o = h2o, key = key)
 }
 

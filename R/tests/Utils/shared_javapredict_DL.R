@@ -53,10 +53,10 @@ if (nrow(prediction1) != nrow(prediction2)) {
   stop("Number of rows mismatch")
 }
 
-match <- all(norm(as.matrix(prediction1[,-1] - prediction2[,-1]), type="M") < 1e-6)
+match <- all(norm(as.matrix(prediction1[,-1] - prediction2[,-1]), type="M") < 1e-4)
 if (! match) {
   for (i in 1:nrow(prediction1)) {
-    rowmatches <- (norm(as.matrix(prediction1[i,-1] - prediction2[i,-1]), type="M") < 1e-6)
+    rowmatches <- (norm(as.matrix(prediction1[i,-1] - prediction2[i,-1]), type="M") < 1e-4)
     if (! rowmatches) {
       print("----------------------------------------------------------------------")
       print("")

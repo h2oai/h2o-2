@@ -18,7 +18,7 @@ function(conn) {
   
   main_model <- h2o.glm(x = 3:8, y = 2, data = prostate.hex, nfold = 2, standardize = FALSE, family = "binomial")
   
-  first_xval <- h2o.fetchModel(conn, main_model@xval[[1]]@key)
+  first_xval <- doNotCallThisMethod...Unsupported(conn, main_model@xval[[1]]@key)
   
   Log.info("Expect that the xval model has a family binomial, just like the main model...")
   expect_that(first_xval$glm_model$parameters$family, equals("binomial"))

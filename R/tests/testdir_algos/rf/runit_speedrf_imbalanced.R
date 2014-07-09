@@ -4,9 +4,9 @@ source('../../findNSourceUtils.R')
 test.speedrf.imbalanced <- function(conn) {
   prostate = h2o.uploadFile(conn, locate("smalldata/logreg/prostate.csv"))
 
-  hh_imbalanced=h2o.SpeeDRF(x=c(1,2,3,5),y=4,ntree=5,data=prostate,validation=prostate,balance.classes=F)
+  hh_imbalanced=h2o.SpeeDRF(x=c(1,2,3,5),y=4,ntree=5,data=prostate,balance.classes=F,nfolds=10)
   print(hh_imbalanced)
-  hh_balanced=h2o.SpeeDRF(x=c(1,2,3,5),y=4,ntree=5,data=prostate,validation=prostate,balance.classes=T)
+  hh_balanced=h2o.SpeeDRF(x=c(1,2,3,5),y=4,ntree=5,data=prostate,balance.classes=T,nfolds=10)
   print(hh_balanced)
 
   # test that it improves the overall classification error...

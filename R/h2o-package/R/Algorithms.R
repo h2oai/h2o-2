@@ -624,7 +624,7 @@ h2o.deeplearning <- function(x, y, data, classification = TRUE, nfolds = 0, vali
   parms$'source' = data@key
   parms$response = colargs$y
   parms$ignored_cols = colargs$x_ignore
-  parms$expert_mode = 1
+  parms$expert_mode = ifelse(!missing(autoencoder) && autoencoder, 1, 0)
   
   if (! missing(classification)) {
     if (! is.logical(classification)) stop('classification must be TRUE or FALSE')
@@ -771,10 +771,13 @@ h2o.deeplearning <- function(x, y, data, classification = TRUE, nfolds = 0, vali
     confusion = errs$train_confusion_matrix
   else
     confusion = errs$valid_confusion_matrix
-  cm = confusion$cm[-length(confusion$cm)]
-  cm = lapply(cm, function(x) { x[-length(x)] })
-  # result$confusion = .build_cm(cm, confusion$actual_domain, confusion$predicted_domain)
-  result$confusion = .build_cm(cm, confusion$domain)
+  
+  if(!is.null(confusion$cm)) {
+    cm = confusion$cm[-length(confusion$cm)]
+    cm = lapply(cm, function(x) { x[-length(x)] })
+    # result$confusion = .build_cm(cm, confusion$actual_domain, confusion$predicted_domain)
+    result$confusion = .build_cm(cm, confusion$domain)
+  }
   
   result$train_class_error = as.numeric(errs$train_err)
   result$train_sqr_error = as.numeric(errs$train_mse)
