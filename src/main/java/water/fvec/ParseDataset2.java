@@ -189,7 +189,7 @@ public final class ParseDataset2 extends Job {
         else for( int j = 0; j < chk._len; ++j){
           if( chk.isNA0(j) )continue;
           long l = chk.at80(j);
-          if (1==1 || l < 0 || l >= emap[i].length) {
+          if (l < 0 || l >= emap[i].length) {
             Chunk chk2 = chk._chk2;
             chk._chk2 = null;
             StringBuilder sb = new StringBuilder("Enum renumber task: Found OOB index " + l + " (expected 0 - " + emap[i].length + ") pulled from " + chk.getClass().getSimpleName() +  "\n");
