@@ -1,17 +1,18 @@
 package hex.drf;
 
+import junit.framework.Assert;
+import hex.drf.DRF.DRFModel;
+import hex.trees.TreeTestWithBalanceAndCrossVal;
+
 import org.junit.*;
 
-import water.TestUtil;
+import water.*;
 import water.fvec.Frame;
+import water.fvec.Vec;
 
-public class DRFTest2 extends TestUtil {
+public class DRFTest2 extends TreeTestWithBalanceAndCrossVal {
 
-  @BeforeClass public static void stall() { stall_till_cloudsize(1); }
-
-  static final String[] s(String...arr)  { return arr; }
-  static final long[]   a(long ...arr)   { return arr; }
-  static final long[][] a(long[] ...arr) { return arr; }
+  //@BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
   // A bigger DRF test, useful for tracking memory issues.
   /*@Test*/ public void testAirlines() throws Throwable {
@@ -23,14 +24,14 @@ public class DRFTest2 extends TestUtil {
         "../datasets/UCI/UCI-large/covtype/covtype.data", "covtype.hex", null, null,
         new DRFTest.PrepData() { @Override int prep(Frame fr) { return fr.numCols()-1; } },
         10/*ntree*/,
-        a( a( 199019,   7697,    15,    0,  180,    45,   546),
-           a(   8012, 267788,   514,    7,  586,   329,   181),
-           a(     16,    707, 33424,  162,   53,   639,     0),
-           a(      1,      5,   353, 2211,    0,    99,     0),
-           a(    181,   1456,   134,    0, 7455,    43,     4),
-           a(     30,    540,  1171,   96,   33, 15109,     0),
-           a(    865,    167,     0,    0,    9,     0, 19075)),
-        s("1", "2", "3", "4", "5", "6", "7"),
+        ar( ar( 199019,   7697,    15,    0,  180,    45,   546),
+           ar(   8012, 267788,   514,    7,  586,   329,   181),
+           ar(     16,    707, 33424,  162,   53,   639,     0),
+           ar(      1,      5,   353, 2211,    0,    99,     0),
+           ar(    181,   1456,   134,    0, 7455,    43,     4),
+           ar(     30,    540,  1171,   96,   33, 15109,     0),
+           ar(    865,    167,     0,    0,    9,     0, 19075)),
+        ar("1", "2", "3", "4", "5", "6", "7"),
 
         //"./smalldata/iris/iris_wheader.csv", "iris.hex", null, null,
         //new DRFTest.PrepData() { @Override int prep(Frame fr) { return fr.numCols()-1; } },
@@ -57,5 +58,39 @@ public class DRFTest2 extends TestUtil {
   }
   @Test @Ignore public void dummy_test() {
     /* this is just a dummy test to avoid JUnit complains about missing test */
+  }
+
+  @Override
+  protected void testBalanceWithCrossValidation(String dataset, int response, int[] ignored_cols, int ntrees, int nfolds) {
+    Frame f = parseFrame(dataset);
+    DRFModel model = null;
+    DRF drf = new DRF();
+    try {
+      Vec respVec = f.vec(response);
+      // Build a model
+      drf.source = f;
+      drf.response = respVec;
+      drf.ignored_cols = ignored_cols;
+      drf.classification = true;
+      drf.ntrees = ntrees;
+      drf.seed = 42;
+      drf.balance_classes = true;
+      drf.n_folds = nfolds;
+      drf.keep_cross_validation_splits = false;
+      drf.invoke();
+      Assert.assertEquals("Number of cross validation model is wrond!", nfolds, drf.xval_models.length);
+      model = UKV.get(drf.dest());
+    } finally {
+      if (f!=null) f.delete();
+      if (model!=null) {
+        if (drf.xval_models!=null) {
+          for (Key k : drf.xval_models) {
+            Model m = UKV.get(k);
+            m.delete();
+          }
+        }
+        model.delete();
+      }
+    }
   }
 }

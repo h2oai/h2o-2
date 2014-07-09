@@ -67,8 +67,8 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_exec_arith_precedence(self):
-        h2b.browseTheCloud()
+    def test_exec2_arith_precedence(self):
+        h2o.beta_features = True
         lenNodes = len(h2o.nodes)
         trial = 0
         for (execExpr, expectedResult) in zip(exprList, resultList):

@@ -33,7 +33,7 @@ h2o.startLogging     <- function() {
   
   cat("Appending to log file", .pkg.env$h2o.__LOG_COMMAND, "\n")
   cat("Appending to log file", .pkg.env$h2o.__LOG_ERROR, "\n")
-  assign("IS_LOGGING", TRUE, envir = .pkg.env) 
+  assign("IS_LOGGING", TRUE, envir = .pkg.env)
 }
 h2o.stopLogging      <- function() { cat("Logging stopped"); assign("IS_LOGGING", FALSE, envir = .pkg.env) }
 h2o.clearLogs        <- function() { file.remove(.pkg.env$h2o.__LOG_COMMAND)
@@ -97,14 +97,10 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__PAGE_CANCEL = "Cancel.json"
 .h2o.__PAGE_CLOUD = "Cloud.json"
 .h2o.__PAGE_GET = "GetVector.json"
-.h2o.__PAGE_IMPORTURL = "ImportUrl.json"
-.h2o.__PAGE_IMPORTFILES = "ImportFiles.json"
-.h2o.__PAGE_IMPORTHDFS = "ImportHdfs.json"
 .h2o.__PAGE_EXPORTHDFS = "ExportHdfs.json"
 .h2o.__PAGE_INSPECT = "Inspect.json"
 .h2o.__PAGE_JOBS = "Jobs.json"
 .h2o.__PAGE_PARSE = "Parse.json"
-.h2o.__PAGE_PREDICT = "GeneratePredictionsPage.json"
 .h2o.__PAGE_PUT = "PutVector.json"
 .h2o.__PAGE_REMOVE = "Remove.json"
 .h2o.__PAGE_REMOVEALL = "2/RemoveAll.json"
@@ -113,28 +109,16 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__PAGE_VIEWALL = "StoreView.json"
 .h2o.__DOWNLOAD_LOGS = "LogDownload.json"
 
-.h2o.__PAGE_GLM = "GLM.json"
-.h2o.__PAGE_GLMProgress = "GLMProgressPage.json"
-.h2o.__PAGE_GLMGrid = "GLMGrid.json"
-.h2o.__PAGE_GLMGridProgress = "GLMGridProgress.json"
-.h2o.__PAGE_KMEANS = "KMeans.json"
-.h2o.__PAGE_KMAPPLY = "KMeansApply.json"
-.h2o.__PAGE_KMSCORE = "KMeansScore.json"
-.h2o.__PAGE_RF  = "RF.json"
-.h2o.__PAGE_RFVIEW = "RFView.json"
-.h2o.__PAGE_RFTREEVIEW = "RFTreeView.json"
-
 .h2o.__PAGE_EXEC2 = "2/Exec2.json"
 .h2o.__PAGE_IMPORTFILES2 = "2/ImportFiles2.json"
 .h2o.__PAGE_EXPORTFILES = "2/ExportFiles.json"
 .h2o.__PAGE_INSPECT2 = "2/Inspect2.json"
 .h2o.__PAGE_PARSE2 = "2/Parse2.json"
 .h2o.__PAGE_PREDICT2 = "2/Predict.json"
+.h2o.__PAGE_GLMPREDICT2 = "2/GLMPredict.json"
 .h2o.__PAGE_SUMMARY2 = "2/SummaryPage2.json"
 .h2o.__PAGE_LOG_AND_ECHO = "2/LogAndEcho.json"
-.h2o.__HACK_LEVELS = "Levels.json"
 .h2o.__HACK_LEVELS2 = "2/Levels2.json"
-.h2o.__HACK_SETCOLNAMES = "SetColumnNames.json"
 .h2o.__HACK_SETCOLNAMES2 = "2/SetColumnNames2.json"
 .h2o.__PAGE_CONFUSION = "2/ConfusionMatrix.json"
 .h2o.__PAGE_AUC = "2/AUC.json"
@@ -142,6 +126,8 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__PAGE_GAPSTAT = "2/GapStatistic.json"
 .h2o.__PAGE_GAPSTATVIEW = "2/GapStatisticModelView.json"
 .h2o.__PAGE_QUANTILES = "2/QuantilesPage.json"
+.h2o.__PAGE_INSPECTOR = "2/Inspector.json"
+.h2o.__PAGE_ANOMALY = "2/Anomaly.json"
 
 .h2o.__PAGE_DRF = "2/DRF.json"
 .h2o.__PAGE_DRFProgress = "2/DRFProgressPage.json"
@@ -166,6 +152,7 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__PAGE_PCAProgress = "2/PCAProgressPage.json"
 .h2o.__PAGE_PCAModelView = "2/PCAModelView.json"
 .h2o.__PAGE_SpeeDRF = "2/SpeeDRF.json"
+.h2o.__PAGE_SpeeDRFProgress = "2/SpeeDRFProgressPage.json"
 .h2o.__PAGE_SpeeDRFModelView = "2/SpeeDRFModelView.json"
 .h2o.__PAGE_BAYES = "2/NaiveBayes.json"
 .h2o.__PAGE_NBProgress = "2/NBProgressPage.json"
@@ -247,7 +234,7 @@ h2o.setLogPath <- function(path, type) {
   m2 <- ifelse(node_name != NULL, paste("The sick node is identified to be: ", node_name, "\n", sep = "", collapse = ""), "")
   m3 <- paste("Check cloud status here: ", url, sep = "", collapse = "")
   m <- paste(m1, m2, "\n", m3, sep = "")
-  stop(m)
+  warning(m)
 }
 
 .h2o.__checkClientHealth <- function(client) {
@@ -263,7 +250,7 @@ h2o.setLogPath <- function(path, type) {
     elapsed <- node$elapsed_time
     nport <- unlist(strsplit(node$name, ":"))[2]
     if(!status) .h2o.__cloudSick(node_name = node$name, client = client)
-    if(elapsed > 45000) .h2o.__cloudSick(node_name = NULL, client = client)
+    if(elapsed > 60000) .h2o.__cloudSick(node_name = NULL, client = client)
     if(elapsed > 10000) {
         Sys.sleep(5)
         lapply(grabCloudStatus(client)$nodes, checker, client)
@@ -393,9 +380,234 @@ h2o.setLogPath <- function(path, type) {
   return(res)
 }
 
+#'
+#' Check for assignment with `<-` or `=`
+#'
+.isAssignment<-
+function(expr) {
+  if (identical(expr, quote(`<-`)) || identical(expr, quote(`=`))) return(TRUE)
+  return(FALSE)
+}
+
+#'
+#' Get the class of the object from the envir.
+#'
+#' The environment is the parent frame (i.e. wherever h2o.exec is called from)
+.eval_class<-
+function(i, envir) {
+  val <- tryCatch(class(get(as.character(i), envir)), error = function(e) {
+    tryCatch(class(i), error = function(e) {
+      return(NA)
+    })
+  })
+}
+
+#'
+#' Helper function to recursively unfurl an expression into a list of statements/exprs/calls/names.
+#'
+.as_list<-
+function(expr) {
+  if (is.call(expr)) {
+    return(lapply(as.list(expr), .as_list))
+  }
+  return(expr)
+}
+
+#'
+#' Cast the expression list back to a call.
+#'
+.back_to_expr<-
+function(some_expr_list) {
+  len <- length(some_expr_list)
+  while(len > 1) {
+    num_sub_lists <- 0
+    if (length(some_expr_list[[len]]) == 1) {
+      num_sub_lists <- 1
+    } else {
+      num_sub_lists <- length(unlist(some_expr_list[[len]])) / length(some_expr_list[[len]])
+    }
+    if (num_sub_lists > 1) {
+      some_expr_list[[len]] <- .back_to_expr(some_expr_list[[len]])
+    } else if (is.atomic(some_expr_list[[len]]) || is.name(some_expr_list[[len]])) {
+      some_expr_list[[len]] <- some_expr_list[[len]]
+    } else {
+      some_expr_list[[len]] <- as.call(some_expr_list[[len]])
+    }
+    len <- len - 1
+  }
+  return(as.call(some_expr_list))
+}
+
+#'
+#' Swap the variable with the key.
+#'
+#' Once there's a key, set its columns to the COLNAMES variable in the .pkg.env  (used by .get_col_id)
+.swap_with_key<-
+function(object, envir) {
+  assign("SERVER", get(as.character(object), envir = envir)@h2o, envir = .pkg.env)
+  if ( !exists("COLNAMES", .pkg.env)) {
+    assign("COLNAMES", colnames(get(as.character(object), envir = envir)), .pkg.env)
+  }
+  object <- as.name(get(as.character(object), envir = envir)@key)
+  return(object)
+}
+
+#'
+#' Does the column id getting
+#'
+.get_col_id<-
+function(ch, envir) {
+  which(ch == .pkg.env$COLNAMES)
+}
+
+#'
+#' Swap the column name with its index in the (H2O) data frame
+#'
+#' Calls .get_col_id to probe a variable in the .pkg.env environment
+.swap_with_colid<-
+function(object, envir) {
+  object <- .get_col_id(as.character(object), envir)
+}
+
+#'
+#' Actually do the replacing of variable/column name with the h2o key names / indices
+.replace_all<-
+function(a_list, envir) {
+
+  # Check if there is H2OParsedData object to sub out, grab their indices.
+  idxs <- which( "H2OParsedData" == unlist(lapply(a_list, .eval_class, envir)))
+
+  # Check if there are column names to sub out, grab their indices.
+  idx2 <- which( "character" == unlist(lapply(a_list, .eval_class, envir)))
+
+  # If nothing to sub, return
+  if (length(idxs) == 0 && length(idx2) == 0) return(a_list)
+
+  # Swap out keys
+  if (length(idxs) != 0) {
+    for (i in idxs) {
+      if(length(a_list) == 1) {
+        a_list <- .swap_with_key(a_list, envir)
+      } else {
+        a_list[[i]] <- .swap_with_key(a_list[[i]], envir)
+      }
+    }
+  }
+
+  # Swap out column names with indices
+  if (length(idx2) != 0) {
+    for (i in idx2) {
+      if (length(a_list) == 1) {
+        a_list <- .swap_with_colid(a_list, envir)
+      } else {
+        a_list[[i]] <- .swap_with_colid(a_list[[i]], envir)
+      }
+    }
+  }
+
+  return(a_list)
+}
+
+#'
+#' Replace the R variable with a H2O key name.
+#' Replace column names with their indices.
+.replace_with_keys_helper<-
+function(some_expr_list, envir) {
+
+  #Loop over the length of the list
+  len <- length(some_expr_list)
+  i <- 1
+  while(i <= len) {
+
+    # Check if there are sub lists and recurse them
+    num_sub_lists <- 0
+    if (length(some_expr_list[[i]]) == 1) {
+      num_sub_lists <- 1
+    } else {
+      num_sub_lists <- length(unlist(some_expr_list[[i]])) / length(some_expr_list[[i]])
+    }
+    if (num_sub_lists > 1) {
+
+      # recurse on the sublist
+      some_expr_list[[i]] <- .replace_with_keys_helper(some_expr_list[[i]], envir)
+    } else {
+
+      # replace the item in the list with the key name (or column index)
+      some_expr_list[[i]] <- .replace_all(some_expr_list[[i]], envir)
+    }
+    i <- i + 1
+  }
+  return(some_expr_list)
+}
+
+#'
+#' Process the LHS of an assignment.
+#'
+#' Swap out any H2OparsedData objects with their key names,
+#' Swap out a '$' "slice" with a [,] slice
+.process_assignment<-
+function(expr, envir) {
+  l <- lapply(as.list(expr), .as_list)
+
+  # Have a single column sliced out that we want to a) replace -OR- b) create
+  if (identical(l[[1]], quote(`$`))) {
+    l[[1]] <- quote(`[`)  # This handles both cases (unkown and known colnames... should just work!)
+    cols <- colnames(get(as.character(l[[2]]), envir = envir))
+    numCols <- length(cols)
+    colname <- as.character(l[[3]])
+    if (! (colname %in% cols)) {
+      assign("NEWCOL", colname, envir = .pkg.env)
+      assign("NUMCOLS", numCols, envir = .pkg.env)
+      assign("FRAMEKEY", get(as.character(l[[2]]), envir = envir)@key, envir = .pkg.env)
+      l[[4]] <- numCols + 1
+    } else {
+      l[[4]] <- l[[3]]
+    }
+    l[[3]] <- as.list(substitute(l[,1]))[[3]]
+    l <- .replace_with_keys_helper(l, envir)
+    return(as.name(as.character(as.expression(.back_to_expr(l)))))
+  }
+  return(as.character(expr))
+}
+
+#'
+#' Front-end work for h2o.exec
+#'
+#' Discover the destination key (if there is one), the client, and sub in the actual key name for the R variable
+#' that contains the pointer to the key in H2O.
+.replace_with_keys<-
+function(expr, envir = globalenv()) {
+  dest_key <- ""
+  assign("NEWCOL", "", envir = .pkg.env)
+  assign("NUMCOLS", "", envir = .pkg.env)
+  assign("FRAMEKEY", "", envir = .pkg.env)
+
+  # Is this an assignment?
+  if ( .isAssignment(as.list(expr)[[1]])) {
+
+    # The destination key is the name that's being assigned to (covers both `<-` and `=`)
+    dest_key <- .process_assignment(as.list(expr)[[2]], envir)
+
+    # Don't bother with the assignment anymore, discard it and iterate down the RHS.
+    expr <- as.list(expr)[[3]]
+  }
+
+  # Assign the dest_key if one was found to the .pkg.env for later use.
+  assign("DESTKEY", dest_key, envir = .pkg.env)
+
+  # list-ify the expression
+  l <- lapply(as.list(expr), .as_list)
+
+  # replace any R variable names with the key name in the cloud, also handles column names passed as strings
+  l <- .replace_with_keys_helper(l, envir)
+
+  # return the modified expression
+  as.name(as.character(as.expression(.back_to_expr(l))))
+}
+
 .h2o.__unop2 <- function(op, x) {
   if(missing(x)) stop("Must specify data set")
-  if(!(class(x) %in% c("H2OParsedData","H2OParsedDataVA"))) stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
+  if(class(x) != "H2OParsedData") stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
   
   expr = paste(op, "(", x@key, ")", sep = "")
   res = .h2o.__exec2(x@h2o, expr)
@@ -412,22 +624,18 @@ h2o.setLogPath <- function(path, type) {
   if(class(y) != "H2OParsedData" && length(y) != 1) stop("Unimplemented: y must be a scalar value")
   # if(!((ncol(x) == 1 || class(x) == "numeric") && (ncol(y) == 1 || class(y) == "numeric")))
   #  stop("Can only operate on single column vectors")
-  # LHS = ifelse(class(x) == "H2OParsedData", x@key, x)
-  LHS = ifelse(inherits(x, "H2OParsedData"), x@key, x)
+  LHS = ifelse(class(x) == "H2OParsedData", x@key, x)
   
-  # if((class(x) == "H2OParsedData" || class(y) == "H2OParsedData") && !( op %in% c('==', '!='))) {
-  if((inherits(x, "H2OParsedData") || inherits(y, "H2OParsedData")) && !( op %in% c('==', '!='))) {
+  if((class(x) == "H2OParsedData" || class(y) == "H2OParsedData") && !( op %in% c('==', '!='))) {
     anyFactorsX <- .h2o.__checkForFactors(x)
     anyFactorsY <- .h2o.__checkForFactors(y)
     anyFactors <- any(c(anyFactorsX, anyFactorsY))
     if(anyFactors) warning("Operation not meaningful for factors.")
   }
   
-  # RHS = ifelse(class(y) == "H2OParsedData", y@key, y)
-  RHS = ifelse(inherits(y, "H2OParsedData"), y@key, y)
+  RHS = ifelse(class(y) == "H2OParsedData", y@key, y)
   expr = paste(LHS, op, RHS)
-  # if(class(x) == "H2OParsedData") myClient = x@h2o
-  if(inherits(x, "H2OParsedData")) myClient = x@h2o
+  if(class(x) == "H2OParsedData") myClient = x@h2o
   else myClient = y@h2o
   res = .h2o.__exec2(myClient, expr)
   
@@ -437,16 +645,6 @@ h2o.setLogPath <- function(path, type) {
     new("H2OParsedData", h2o=myClient, key=res$dest_key, logic=TRUE)
   else
     new("H2OParsedData", h2o=myClient, key=res$dest_key, logic=FALSE)
-}
-
-.h2o.__castType <- function(object) {
-  if(!inherits(object, "H2OParsedData")) stop("object must be a H2OParsedData or H2OParsedDataVA object")
-  .h2o.__checkClientHealth(object@h2o)
-  res = .h2o.__remoteSend(object@h2o, .h2o.__PAGE_INSPECT, key = object@key)
-  if(is.null(res$value_size_bytes))
-    return(new("H2OParsedData", h2o=object@h2o, key=object@key))
-  else
-    return(new("H2OParsedDataVA", h2o=object@h2o, key=object@key))
 }
 
 #------------------------------------ Utilities ------------------------------------#
@@ -487,6 +685,39 @@ h2o.setLogPath <- function(path, type) {
   paste(prefix, temp, sep="_")
 }
 
+
+#'
+#' Fetch the JSON for a given model key.
+#'
+#' Grabs all of the JSON and returns it as a named list. Do this by using the 2/Inspector.json page, which provides
+#' a redirect URL to the appropriate Model View page.
+.fetchJSON<-
+function(h2o, key) {
+  redirect_url <- .h2o.__remoteSend(h2o, .h2o.__PAGE_INSPECTOR, src_key = key)$response_info$redirect_url
+  page <- strsplit(redirect_url, '\\?')[[1]][1]                         # returns a list of two items
+  page <- paste(strsplit(page, '')[[1]][-1], sep = "", collapse = "")   # strip off the leading '/'
+  key  <- strsplit(strsplit(redirect_url, '\\?')[[1]][2], '=')[[1]][2]  # split the second item into a list of two items
+  .h2o.__remoteSend(h2o, page, '_modelKey' = key)
+}
+
+#'
+#' Fetch the Model for the given key.
+#'
+#' Fetch all of the json that the key can get!
+doNotCallThisMethod...Unsupported<-
+function(h2o, key) {
+  if ( ! (key %in% h2o.ls(h2o)$Key)) stop( paste("The h2o instance at ", h2o@ip, ":", h2o@port, " does not have key: \"", key, "\"", sep = ""))
+  .fetchJSON(h2o, key)
+}
+
+#'
+#' Get the reference to a frame with the given key.
+h2o.getFrame<-
+function(h2o, key) {
+  if ( ! (key %in% h2o.ls(h2o)$Key)) stop( paste("The h2o instance at ", h2o@ip, ":", h2o@port, " does not have key: \"", key, "\"", sep = ""))
+  new("H2OParsedData", h2o = h2o, key = key)
+}
+
 # Check if key_env$key exists in H2O and remove if it does
 # .h2o.__finalizer <- function(key_env) {
 #   if("h2o" %in% ls(key_env) && "key" %in% ls(key_env) && class(key_env$h2o) == "H2OClient" && class(key_env$key) == "character" && key_env$key != "") {
@@ -497,8 +728,7 @@ h2o.setLogPath <- function(path, type) {
 # }
 
 .h2o.__checkForFactors <- function(object) {
-  # if(class(object) != "H2OParsedData") return(FALSE)
-  if(!class(object) %in% c("H2OParsedData", "H2OParsedDataVA")) return(FALSE)
+  if(class(object) != "H2OParsedData") return(FALSE)
   h2o.anyFactor(object)
 }
 

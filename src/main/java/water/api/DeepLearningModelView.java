@@ -1,6 +1,8 @@
 package water.api;
 
+import hex.deeplearning.DeepLearning;
 import hex.deeplearning.DeepLearningModel;
+import hex.deeplearning.Neurons;
 import water.Key;
 import water.Request2;
 import water.UKV;
@@ -36,11 +38,14 @@ public class DeepLearningModelView extends Request2 {
     else return Response.done(this);
   }
 
-  @Override public void toJava(StringBuilder sb) { deeplearning_model.toJavaHtml(sb); }
+  @Override public void toJava(StringBuilder sb) {
+    deeplearning_model.toJavaHtml(sb);
+  }
   @Override protected String serveJava() {
-    DeepLearningModel m = UKV.get(_modelKey);
-    if (m!=null)
-      return m.toJava();
+    deeplearning_model = UKV.get(_modelKey);
+    if (deeplearning_model!=null
+            && !deeplearning_model.get_params().autoencoder) //not yet implemented
+      return deeplearning_model.toJava();
     else
       return "";
   }

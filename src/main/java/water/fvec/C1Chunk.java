@@ -41,7 +41,7 @@ public class C1Chunk extends Chunk {
     nc._ls = MemoryManager.malloc8(_len);
     for( int i=0; i<_len; i++ ) {
       int res = 0xFF&_mem[i+OFF];
-      if( res == C1Chunk._NA ) nc._xs[i] = Integer.MIN_VALUE;
+      if( res == C1Chunk._NA ) nc.setNA_impl2(i);
       else                     nc._ls[i] = res;
     }
     return nc;

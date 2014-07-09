@@ -35,7 +35,7 @@ class Basic(unittest.TestCase):
         parseResult = h2o_cmd.parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=30)
 
         print "kick off jobs, then cancel them"
-        for trial in range (1,50):
+        for trial in range (1,5):
             # random 0 or 1 delay
             delay = random.uniform(0,1)
             time.sleep(delay)
@@ -48,7 +48,7 @@ class Basic(unittest.TestCase):
             h2o.check_sandbox_for_errors()
 
         # do one last good one
-        rfView = h2o_cmd.runRF(parseResult=parseResult, trees=trial, max_depth=50, rfView=False, noPoll=False, timeoutSecs=600, retryDelaySecs=3)
+        rfView = h2o_cmd.runRF(parseResult=parseResult, trees=trial, max_depth=50, timeoutSecs=600, retryDelaySecs=3)
         (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView, ntree=trial)
 
 

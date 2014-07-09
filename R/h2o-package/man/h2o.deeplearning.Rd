@@ -7,7 +7,8 @@ H2O: Deep Learning Neural Networks
 Performs Deep Learning neural networks on an \code{\linkS4class{H2OParsedData}} object.
 }
 \usage{
-h2o.deeplearning(x, y, data, classification = TRUE, nfolds = 0, validation, 
+h2o.deeplearning(x, y, data, classification = TRUE, nfolds = 0, validation,
+    autoencoder, use_all_factor_levels,
     activation, hidden, epochs, train_samples_per_iteration, seed, adaptive_rate,
     rho, epsilon, rate, rate_annealing, rate_decay, momentum_start,
     momentum_ramp, momentum_stable, nesterov_accelerated_gradient,
@@ -30,10 +31,12 @@ h2o.deeplearning(x, y, data, classification = TRUE, nfolds = 0, validation,
         \item{classification}{ (Optional) A logical value indicating whether the algorithm should conduct classification. }
         \item{nfolds}{(Optional) Number of folds for cross-validation. If \code{nfolds >= 2}, then \code{validation} must remain empty.}
         \item{validation}{(Optional) An \code{\linkS4class{H2OParsedData}} object indicating the validation dataset used to construct confusion matrix. If left blank, this defaults to the training data when \code{nfolds = 0}.}
-        \item{activation}{A string indicating the activation function to use. Must be either "Tanh", "TanhDropout", "Rectifier", "RectifierDropout", "Maxout" or "MaxoutDropout".}
+        \item{activation}{A string indicating the activation function to use. Must be either "Tanh", "TanhWithDropout", "Rectifier", "RectifierWithDropout", "Maxout" or "MaxoutWithDropout".}
         \item{hidden}{ Hidden layer sizes (e.g. c(100,100)}
 
         %- BEGIN AUTO-GENERATED CODE
+        \item{autoencoder}{ Enable auto-encoder for model building.}
+        \item{use_all_factor_levels}{ Use all factor levels of categorical variables. Otherwise, the first factor level is omitted (without loss of accuracy). Useful for variable importances and auto-enabled for autoencoder. }
         \item{epochs}{ How many times the dataset should be iterated (streamed), can be fractional}
         \item{train_samples_per_iteration}{ Number of training samples (globally) per MapReduce iteration. Special values are 0: one epoch, -1: all available data (e.g., replicated training data)}
         \item{seed}{ Seed for random numbers (affects sampling) - Note: only reproducible when running single threaded}

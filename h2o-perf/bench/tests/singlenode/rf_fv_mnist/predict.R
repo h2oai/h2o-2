@@ -1,3 +1,3 @@
 source("../../../R/h2oPerf/prologue.R")
-runRFScore.FV()
+runRFScore()
 source("../../../R/h2oPerf/epilogue.R")

@@ -480,20 +480,14 @@ public abstract class Neurons {
   }
 
   /**
-   * Helper to optionally compute the reconstruction error for auto-encoders
-   * @param g Regular gradient (will be returned if this is not the final layer of an auto-encoder)
+   * Helper to compute the reconstruction error for auto-encoders (part of the gradient computation)
    * @param row neuron index
-   * @return g if this is not the final layer of an auto-encoder, otherwise return the difference
-   *         between the output (auto-encoder output layer activation) and the target (input layer activation)
+   * @return difference between the output (auto-encoder output layer activation) and the target (input layer activation)
    */
-  protected float autoEncoderError(float g, int row) {
-    //last layer of auto-encoder: gradient is given by MSE
-    if (_minfo.get_params().autoencoder && _index == _minfo.get_params().hidden.length) {
-      if (params.loss != Loss.MeanSquare)
-        throw new UnsupportedOperationException("Auto-Encoder is only implemented for MeanSquare error.");
-      return (_input._a.get(row) - _a.get(row)); //target - activation
-    }
-    return g;
+  protected float autoEncoderError(int row) {
+    assert (_minfo.get_params().autoencoder && _index == _minfo.get_params().hidden.length);
+    assert (params.loss == Loss.MeanSquare);
+    return (_input._a.get(row) - _a.get(row));
   }
 
   /**
@@ -639,8 +633,15 @@ public abstract class Neurons {
       int    [] cats = MemoryManager.malloc4(_dinfo._cats); // a bit wasteful - reallocated each time
       int i = 0, ncats = 0;
       for(; i < _dinfo._cats; ++i){
-        int c = (int)data[i];
-        if(c != 0)cats[ncats++] = c + _dinfo._catOffsets[i] - 1;
+        // Gracefully handle NaN input values -> don't activate any of the horizontalized input features
+        // (can occur when testing data has categorical levels that are not part of training)
+        if (!Double.isNaN(data[i])) {
+          int c = (int) data[i];
+          if (_dinfo._useAllFactorLevels)
+            cats[ncats++] = c + _dinfo._catOffsets[i];
+          else if (c != 0)
+            cats[ncats++] = c + _dinfo._catOffsets[i] - 1;
+        }
       }
       final int n = data.length; // data contains only input features - no response is included
       for(;i < n;++i){
@@ -699,8 +700,9 @@ public abstract class Neurons {
       if (_w instanceof DenseRowMatrix) {
         final int rows = _a.size();
         for (int row = 0; row < rows; row++) {
+          if (_minfo.get_params().autoencoder && _index == _minfo.get_params().hidden.length)
+            _e.set(row, autoEncoderError(row));
           float g = _e.get(row) * (1f - _a.get(row) * _a.get(row));
-          g = autoEncoderError(g, row);
           bprop(row, g, r, m);
         }
       }
@@ -780,10 +782,12 @@ public abstract class Neurons {
       if (_w instanceof DenseRowMatrix) {
         final int rows = _a.size();
         for( int row = 0; row < rows; row++ ) {
+          assert (!_minfo.get_params().autoencoder);
+//          if (_minfo.get_params().autoencoder && _index == _minfo.get_params().hidden.length)
+//            _e.set(row, autoEncoderError(row));
           float g = _e.get(row);
 //                if( _a[o] < 0 )   Not sure if we should be using maxout with a hard zero bottom
 //                    g = 0;
-          g = autoEncoderError(g, row);
           bprop(row, g, r, m);
         }
       }
@@ -832,8 +836,9 @@ public abstract class Neurons {
       if (_w instanceof DenseRowMatrix) {
         for (int row = 0; row < rows; row++) {
           //(d/dx)(max(0,x)) = 1 if x > 0, otherwise 0
+          if (_minfo.get_params().autoencoder && _index == _minfo.get_params().hidden.length)
+            _e.set(row, autoEncoderError(row));
           float g = _a.get(row) > 0f ? _e.get(row) : 0f;
-          g = autoEncoderError(g, row);
           bprop(row, g, r, m);
         }
       }

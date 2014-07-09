@@ -2,7 +2,7 @@ import unittest, time, sys, os
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_rf, h2o_util, h2o_import as h2i
 
-USE_LOCAL=True
+USE_LOCAL = True
 
 # RF train parameters
 
@@ -48,7 +48,7 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(2)
+            h2o.build_cloud(2, java_heap_GB=7)
         else:
             h2o_hosts.build_cloud_with_hosts()
         
@@ -77,58 +77,51 @@ class Basic(unittest.TestCase):
     
     def test_RF(self):
         h2o.beta_features = True
+        paramsTrainRF = { 
+            'seed': '1234567890',
+            # if I use 100, and just one tree, I should get same results for sorted/shuffled?
+            # i.e. the bagging always sees everything. Means oobe will be messed up
+            # so will specify validation = the 10pct holdout data (could reuse the training data?)
+            'sample_rate': 1.0,
+            'ntrees': 3, 
+            'max_depth': 300,
+            'nbins': 200,
+            'timeoutSecs': 600,
+            'response': 'C55',
+        }
 
-        if h2o.beta_features:
-            paramsTrainRF = { 
-                'ntrees': 10, 
-                'max_depth': 300,
-                'nbins': 200,
-                'timeoutSecs': 600,
-                'response': 'C55',
-            }
+        paramsScoreRF = {
+            'vactual': 'C55',
+            'timeoutSecs': 600,
+        }
 
-            paramsScoreRF = {
-                'vactual': 'C55',
-                'timeoutSecs': 600,
-            }
-
-        else:
-            paramsTrainRF = { 
-                'use_non_local_data' : 1,
-                'ntree'      : 10, 
-                'depth'      : 300,
-                'bin_limit'  : 20000,
-                'stat_type'  : 'ENTROPY',
-                'out_of_bag_error_estimate': 1, 
-                'exclusive_split_limit'    : 0,
-                'timeoutSecs': 60,
-            }
-
-            paramsScoreRF = {
-                # scoring requires the response_variable. it defaults to last, so normally
-                # we don't need to specify. But put this here and (above if used) 
-                # in case a dataset doesn't use last col 
-                'response_variable': None,
-                'timeoutSecs': 60,
-                'out_of_bag_error_estimate': 0, 
-            }
-
+        # 90% data
         trainKey1 = self.loadData(trainDS1)
-        kwargs   = paramsTrainRF.copy()
-        trainResult1 = h2o_rf.trainRF(trainKey1, **kwargs)
-
         scoreKey1 = self.loadData(scoreDS1)
+        kwargs   = paramsTrainRF.copy()
+        trainResult1 = h2o_rf.trainRF(trainKey1, scoreKey1, **kwargs)
+        (classification_error1, classErrorPctList1, totalScores1) = h2o_rf.simpleCheckRFView(rfv=trainResult1)
+        self.assertEqual(4.29, classification_error1)
+        self.assertEqual([4.17, 2.98, 4.09, 14.91, 21.12, 15.38, 5.22], classErrorPctList1)
+        self.assertEqual(58101, totalScores1)
+
         kwargs   = paramsScoreRF.copy()
         scoreResult1 = h2o_rf.scoreRF(scoreKey1, trainResult1, **kwargs)
 
+        # 10% data
         trainKey2 = self.loadData(trainDS2)
-        kwargs   = paramsTrainRF.copy()
-        trainResult2 = h2o_rf.trainRF(trainKey2, **kwargs)
-
         scoreKey2 = self.loadData(scoreDS2)
+        kwargs   = paramsTrainRF.copy()
+        trainResult2 = h2o_rf.trainRF(trainKey2, scoreKey2, **kwargs)
+        (classification_error2, classErrorPctList2, totalScores2) = h2o_rf.simpleCheckRFView(rfv=trainResult2)
+        self.assertEqual(4.29, classification_error2)
+        self.assertEqual([4.17, 2.98, 4.09, 14.91, 21.12, 15.38, 5.22], classErrorPctList2)
+        self.assertEqual(58101, totalScores2)
+
         kwargs   = paramsScoreRF.copy()
         scoreResult2 = h2o_rf.scoreRF(scoreKey2, trainResult2, **kwargs)
 
+      
         print "\nTraining: JsonDiff sorted data results, to non-sorted results (json responses)"
         df = h2o_util.JsonDiff(trainResult1, trainResult2, with_values=True)
         print "df.difference:", h2o.dump_json(df.difference)
@@ -136,6 +129,16 @@ class Basic(unittest.TestCase):
         print "\nScoring: JsonDiff sorted data results, to non-sorted results (json responses)"
         df = h2o_util.JsonDiff(scoreResult1, scoreResult2, with_values=True)
         print "df.difference:", h2o.dump_json(df.difference)
+
+        # should only be two diffs
+        if len(df.difference) > 2:
+            raise Exception ("Too many diffs in JsonDiff sorted vs non-sorted %s" % len(df.difference))
+        # Scoring: JsonDiff sorted data results, to non-sorted results (json responses)
+        # df.difference: [
+        # "diff: response_info.time - 28 | 11",
+        # "diff: python_call_timer - 0.526123046875 | 0.498980998993"
+        # ]
+
 
 if __name__ == '__main__':
     h2o.unit_main()

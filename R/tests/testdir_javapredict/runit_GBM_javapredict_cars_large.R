@@ -33,6 +33,8 @@ test <- locate("smalldata/cars_nice_header.csv")
 x = c("name","economy", "displacement","power","weight","acceleration","year")
 y = "cylinders"
 
+balance_classes <- sample( c(T,F), 1)
+
 heading("Run parameters")
 print(paste("n.trees", n.trees))
 print(paste("interaction.depth", interaction.depth))
@@ -42,6 +44,7 @@ print(paste("train", train))
 print(paste("test", test))
 print(paste("x=", x))
 print(paste("y=", y))
+print(paste("balance_classes=", balance_classes))
 #----------------------------------------------------------------------
 # Run the test
 #----------------------------------------------------------------------

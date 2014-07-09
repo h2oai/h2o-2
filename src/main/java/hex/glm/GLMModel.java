@@ -37,8 +37,6 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @API(help="Input data info")
   DataInfo data_info;
 
-  @API(help="warnings")
-  String []  warnings;
   @API(help="Decision threshold.")
   double     threshold;
   @API(help="glm params")
@@ -74,7 +72,10 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @Override public GLMModel clone(){
     GLMModel res = (GLMModel)super.clone();
     res.submodels = submodels.clone();
-    if(warnings != null)res.warnings = warnings.clone();
+    if(warnings != null)
+      res.warnings = warnings.clone();
+    else
+      res.warnings = new String[0];
     return res;
   }
 
@@ -173,7 +174,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     this.glm = glm;
     threshold = 0.5;
     this.data_info = dinfo;
-    this.warnings = null;
+    this.warnings = new String[0];
     this.alpha = alpha;
     this.lambda_max = lambda_max;
     this.beta_eps = beta_eps;
@@ -284,7 +285,8 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     }
     @Override public void reduce(GLMValidationTask gval){_res.add(gval._res);}
     @Override public void postGlobal(){
-      _res.finalize_AIC_AUC();
+      _res.computeAIC();
+      _res.computeAUC();
     }
   }
   // use general score to reduce number of possible different code paths
@@ -326,7 +328,8 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     @Override public void postGlobal(){
       Futures fs = new Futures();
       for(int i = 0; i < _xmodels.length; ++i){
-        _xvals[i].finalize_AIC_AUC();
+        _xvals[i].computeAIC();
+        _xvals[i].computeAUC();
         _xvals[i].nobs = _nobs-_xvals[i].nobs;
         _xmodels[i].setValidation(_xvals[i]);
         DKV.put(_xmodels[i]._key, _xmodels[i],fs);
@@ -345,12 +348,17 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     return ("GLM Model (key=" + _key + " , trained on " + _dataKey + ", family = " + glm.family + ", link = " + glm.link + ", #iterations = " + iteration() + ")");
   }
   public int rank() {return rank(submodels[best_lambda_idx].lambda_value);}
-  public Submodel  submodelForLambda(double lambda){
+
+  public int  submodelIdForLambda(double lambda){
     int i = submodels.length-1;
     for(;i >=0; --i)
-      if(submodels[i].lambda_value == lambda)
-        return submodels[i];
-    return null;
+      if(Math.abs(submodels[i].lambda_value - lambda) < 1e-5)
+        return i;
+    return -1;
+  }
+  public Submodel  submodelForLambda(double lambda){
+    int i = submodelIdForLambda(lambda);
+    return i < 0?null:submodels[i];
   }
   public int rank(double lambda) {return submodelForLambda(lambda).rank;}
 
@@ -374,6 +382,20 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
 
   public void setXValidation(double lambda, GLMXValidation val ){
     submodelForLambda(lambda).xvalidation = val;
+  }
+  public int pickBestXval(){
+    int bestModel = best_lambda_idx;
+    GLMXValidation xval = null;
+    for(int i = 0; i < submodels.length; ++i){
+      if(submodels[i].xvalidation != null){
+        if(xval == null || xval.residual_deviance > submodels[i].xvalidation.residual_deviance) {
+          bestModel = i;
+          xval = submodels[i].xvalidation;
+        }
+      }
+    }
+    best_lambda_idx = bestModel;
+    return bestModel;
   }
 
   public void setSubmodelIdx(int l){
@@ -408,9 +430,9 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     GLM2 params = get_params();
     this.variable_importances = null;
 
-    // Don't return results that might not include an important level. . .
+    // Warn if we may be returning results that might not include an important (base) level. . .
     if (! params.use_all_factor_levels)
-      return;
+      this.addWarning("Variable Importance may be missing important variables: because use_all_factor_levels is off the importance of base categorical levels will NOT be included.");
 
     final double[] b = beta();
     if (params.variable_importances && null != b) {

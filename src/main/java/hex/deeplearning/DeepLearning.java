@@ -48,6 +48,12 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Enable expert mode (to access all options from GUI)", filter = Default.class, json = true)
   public boolean expert_mode = false;
 
+  @API(help = "Auto-Encoder (Experimental)", filter= Default.class, json = true)
+  public boolean autoencoder = false;
+
+  @API(help="Use all factor levels of categorical variables. Otherwise, the first factor level is omitted (without loss of accuracy). Useful for variable importances and auto-enabled for autoencoder.",filter=Default.class, json=true, importance = ParamImportance.SECONDARY)
+  public boolean use_all_factor_levels = false;
+
   /*Neural Net Topology*/
   /**
    * The activation function (non-linearity) to be used the neurons in the hidden layers.
@@ -454,8 +460,11 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Use a column major weight matrix for input layer. Can speed up forward propagation, but might slow down backpropagation (Experimental).", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
   public boolean col_major = false;
 
-  @API(help = "Auto-Encoder (Experimental)", filter= Default.class, json = true)
-  public boolean autoencoder = false;
+  @API(help = "Sparsity (Experimental)", filter= Default.class, json = true)
+  public double average_activation = -0.9;
+
+  @API(help = "Sparsity regularization (Experimental)", filter= Default.class, json = true)
+  public double sparsity_beta = 0;
 
   public enum ClassSamplingMethod {
     Uniform, Stratified
@@ -482,6 +491,7 @@ public class DeepLearning extends Job.ValidatedJob {
 
   // the following parameters can only be specified in expert mode
   transient final String [] expert_options = new String[] {
+          "use_all_factor_levels",
           "loss",
           "max_w2",
           "score_training_samples",
@@ -512,6 +522,8 @@ public class DeepLearning extends Job.ValidatedJob {
           "sparse",
           "col_major",
           "autoencoder",
+          "average_activation",
+          "sparsity_beta",
   };
 
   // the following parameters can be modified when restarting from a checkpoint
@@ -635,6 +647,10 @@ public class DeepLearning extends Job.ValidatedJob {
       arg.disable("Only for multi-node operation with replication.");
       single_node_mode = false;
     }
+    if (arg._name.equals("use_all_factor_levels") && autoencoder ) {
+      arg.disable("Automatically enabled for auto-encoders.");
+      use_all_factor_levels = true;
+    }
   }
 
   /** Print model parameters as JSON */
@@ -683,8 +699,10 @@ public class DeepLearning extends Job.ValidatedJob {
   @Override public float progress(){
     if(UKV.get(dest()) == null)return 0;
     DeepLearningModel m = UKV.get(dest());
-    if (m != null && m.model_info()!=null )
-      return (float)Math.min(1, (m.epoch_counter / m.model_info().get_params().epochs));
+    if (m != null && m.model_info()!=null ) {
+      final float p = (float) Math.min(1, (m.epoch_counter / m.model_info().get_params().epochs));
+      return cv_progress(p);
+    }
     return 0;
   }
 
@@ -717,7 +735,8 @@ public class DeepLearning extends Job.ValidatedJob {
       if (source == null || !Arrays.equals(source._key._kb, previous.model_info().get_params().source._key._kb)) {
         throw new IllegalArgumentException("source must be the same as for the checkpointed model.");
       }
-      if (response == null || !Arrays.equals(response._key._kb, previous.model_info().get_params().response._key._kb)) {
+      autoencoder = previous.model_info().get_params().autoencoder;
+      if (!autoencoder && (response == null || !Arrays.equals(response._key._kb, previous.model_info().get_params().response._key._kb))) {
         throw new IllegalArgumentException("response must be the same as for the checkpointed model.");
       }
       if (Utils.difference(ignored_cols, previous.model_info().get_params().ignored_cols).length != 0
@@ -797,17 +816,15 @@ public class DeepLearning extends Job.ValidatedJob {
 
     //Auto-fill defaults
     if (hidden_dropout_ratios == null) {
-      hidden_dropout_ratios = new double[hidden.length];
       if (activation == Activation.TanhWithDropout || activation == Activation.MaxoutWithDropout || activation == Activation.RectifierWithDropout) {
+        hidden_dropout_ratios = new double[hidden.length];
         if (!quiet_mode) Log.info("Automatically setting all hidden dropout ratios to 0.5.");
         Arrays.fill(hidden_dropout_ratios, 0.5);
       }
     }
     else if (hidden_dropout_ratios.length != hidden.length) throw new IllegalArgumentException("Must have " + hidden.length + " hidden layer dropout ratios.");
-    else if (hidden_dropout_ratios != null) {
-      if (activation != Activation.TanhWithDropout && activation != Activation.MaxoutWithDropout && activation != Activation.RectifierWithDropout) {
-        if (!quiet_mode) Log.info("Ignoring hidden_dropout_ratios because a non-Dropout activation function was specified.");
-      }
+    else if (activation != Activation.TanhWithDropout && activation != Activation.MaxoutWithDropout && activation != Activation.RectifierWithDropout) {
+      if (!quiet_mode) Log.info("Ignoring hidden_dropout_ratios because a non-Dropout activation function was specified.");
     }
 
     if (!quiet_mode) {
@@ -844,6 +861,7 @@ public class DeepLearning extends Job.ValidatedJob {
 
     // reason for the error message below is that validation might not have the same horizontalized features as the training data (or different order)
     if (autoencoder && validation != null) throw new UnsupportedOperationException("Cannot specify a validation dataset for auto-encoder.");
+    if (autoencoder && activation == Activation.Maxout) throw new UnsupportedOperationException("Maxout activation is not supported for auto-encoder.");
 
     // make default job_key and destination_key in case they are missing
     if (dest() == null) {
@@ -870,7 +888,7 @@ public class DeepLearning extends Job.ValidatedJob {
   private DataInfo prepareDataInfo() {
     final boolean del_enum_resp = classification && !response.isEnum();
     final Frame train = FrameTask.DataInfo.prepareFrame(source, autoencoder ? null : response, ignored_cols, classification, ignore_const_cols, true /*drop >20% NA cols*/);
-    final DataInfo dinfo = new FrameTask.DataInfo(train, autoencoder ? 0 : 1, autoencoder, //use all FactorLevels for auto-encoder
+    final DataInfo dinfo = new FrameTask.DataInfo(train, autoencoder ? 0 : 1, autoencoder || use_all_factor_levels, //use all FactorLevels for auto-encoder
             autoencoder ? DataInfo.TransformType.NORMALIZE : DataInfo.TransformType.STANDARDIZE, //transform predictors
             classification ? DataInfo.TransformType.NONE : DataInfo.TransformType.STANDARDIZE);  //transform response
     if (!autoencoder) {
@@ -973,6 +991,7 @@ public class DeepLearning extends Job.ValidatedJob {
       final float rowUsageFraction = computeRowUsageFraction(train.numRows(), mp.actual_train_samples_per_iteration, mp.replicate_training_data);
 
       if (!mp.quiet_mode) Log.info("Initial model:\n" + model.model_info());
+      if (autoencoder) model.doScoring(train, trainScoreFrame, validScoreFrame, self(), getValidAdaptor()); //get the null model reconstruction error
       Log.info("Starting to train the Deep Learning model.");
 
       //main loop

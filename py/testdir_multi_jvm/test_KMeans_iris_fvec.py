@@ -65,7 +65,7 @@ class Basic(unittest.TestCase):
             allowedDelta = (0.01, 0.01, 0.01) 
             h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, trial=trial)
 
-            gs = h2o.nodes[0].gap_statistic(source=hex_key, ignored_cols=ignored_cols, k_max=k)
+            gs = h2o.nodes[0].gap_statistic(source=hex_key, ignored_cols=ignored_cols, k_max=k+1)
             print "gap_statistic:", h2o.dump_json(gs)
 
             k_best = gs['gap_model']['k_best']

@@ -1,7 +1,5 @@
 \name{h2o.randomForest}
 \alias{h2o.randomForest}
-\alias{h2o.randomForest.VA}
-\alias{h2o.randomForest.FV}
 \title{
 H2O: Random Forest
 }
@@ -9,18 +7,7 @@ H2O: Random Forest
 Performs random forest classification on a data set.
 }
 \usage{
-## Default method:
 h2o.randomForest(x, y, data, classification = TRUE, ntree = 50, depth = 20, 
-  sample.rate = 2/3, classwt = NULL, nbins = 100, seed = -1, nfolds = 0, 
-  importance = FALSE, validation, nodesize = 1, balance.classes = FALSE, 
-  max.after.balance.size = 5, use_non_local = TRUE, version = 2)
-
-## Import to a ValueArray object:
-h2o.randomForest.VA(x, y, data, ntree = 50, depth = 20, sample.rate = 2/3, 
-  classwt = NULL, nbins = 100, seed = -1, use_non_local = TRUE)
-
-## Import to a FluidVecs object:
-h2o.randomForest.FV(x, y, data, classification = TRUE, ntree = 50, depth = 20, 
   sample.rate = 2/3, nbins = 100, seed = -1, importance = FALSE, nfolds = 0,
   validation, nodesize = 1, balance.classes = FALSE, max.after.balance.size = 5)
 }
@@ -47,9 +34,6 @@ An \code{\linkS4class{H2OParsedDataVA}} (\code{version = 1}) or \code{\linkS4cla
   \item{sample.rate}{
   (Optional) Sampling rate for constructing data from which individual trees are grown.
   }
-  \item{classwt}{
-  (Optional) Numeric vector of class weights for a categorical response.
-  }
   \item{nbins}{
   (Optional) Build a histogram of this many bins, then split at best point.
   }
@@ -63,7 +47,7 @@ An \code{\linkS4class{H2OParsedDataVA}} (\code{version = 1}) or \code{\linkS4cla
   (Optional) Number of folds for cross-validation. If \code{nfolds >= 2}, then \code{validation} must remain empty.
 }
   \item{validation}{
-  (Optional) An \code{\linkS4class{H2OParsedDataVA}} (\code{version = 1}) or \code{\linkS4class{H2OParsedData}} (\code{version = 2}) object indicating the validation dataset used to construct confusion matrix. If left blank, this defaults to the training data when \code{nfolds = 0}.}
+  (Optional) An \code{\linkS4class{H2OParsedData}} object indicating the validation dataset used to construct confusion matrix. If left blank, this defaults to the training data when \code{nfolds = 0}.}
   \item{nodesize}{
   (Optional) Number of nodes to use for computation.
   }
@@ -72,17 +56,10 @@ An \code{\linkS4class{H2OParsedDataVA}} (\code{version = 1}) or \code{\linkS4cla
   \item{use_non_local}{
   (Optional) Logical value indicating whether to use non-local data in building random forest model.
   }
-  \item{version}{
-  (Optional) The version of random forest to run. If \code{version = 1}, this will run the single-node ValueArray implementation, while \code{version = 2} selects the distributed, but still beta stage FluidVecs implementation.
-  }
-}
-
-\details{
-IMPORTANT: Currently, to run k-means with \code{version = 1}, you must import data to a ValueArray object using \code{\link{h2o.importFile.VA}}, \code{\link{h2o.importFolder.VA}} or one of its variants. To run with \code{version = 2}, you must import data to a FluidVecs object using \code{\link{h2o.importFile.FV}}, \code{\link{h2o.importFolder.FV}} or one of its variants.
 }
 
 \value{
-An object of class \code{\linkS4class{H2ORFModelVA}} (\code{version = 1}) or \code{\linkS4class{H2ODRFModel}} (\code{version = 2}) with slots key, data, and model, where the last is a list of the following components:
+An object of class \code{\linkS4class{H2ODRFModel}} with slots key, data, and model, where the last is a list of the following components:
 \item{ntree }{Number of trees grown.}
 \item{mse }{Mean-squared error for each tree.}
 \item{forest }{A matrix giving the minimum, mean, and maximum of the tree depth and number of leaves.}

@@ -214,7 +214,7 @@ public class AUC extends Func {
     if( vactual==null || vpredict==null )
       throw new IllegalArgumentException("Missing vactual or vpredict!");
     if (vactual.length() != vpredict.length())
-      throw new IllegalArgumentException("Both arguments must have the same length!");
+      throw new IllegalArgumentException("Both arguments must have the same length ("+vactual.length()+"!="+vpredict.length()+")!");
     if (!vactual.isInt())
       throw new IllegalArgumentException("Actual column must be integer class labels!");
   }
@@ -789,7 +789,7 @@ public class AUC extends Func {
 //          Log.warn("Skipping predicted NaN."); //some models predict NaN!
           continue;
         }
-        final double pr = cp.at80(i);
+        final double pr = cp.at0(i);
         for( int t=0; t < _cms.length; t++ ) {
           final int p = pr >= _thresh[t]?1:0;
           _cms[t].add(a, p);

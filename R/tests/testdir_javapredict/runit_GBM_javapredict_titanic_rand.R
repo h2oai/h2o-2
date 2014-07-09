@@ -48,6 +48,7 @@ print(x)
 y = "survived"
 print(paste("y", y))
 
+balance_classes <- sample(c(T, F), 1)
 
 #----------------------------------------------------------------------
 # Run the test

@@ -22,6 +22,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GBM_basic_benign(self):
+        h2o.beta_features = True
         csvFilename = "benign.csv"
         print "\nStarting", csvFilename 
         csvPathname = 'logreg/' + csvFilename

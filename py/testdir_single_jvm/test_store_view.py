@@ -51,6 +51,7 @@ class Basic(unittest.TestCase):
         cnt_items = 0  # counter of returned items
         for p in range(0,pages):
             r = h2o.nodes[0].store_view(offset=offset, view=items_per_page)
+            print h2o.dump_json(r)
             cnt_items += len(r['keys']) 
             offset += items_per_page
 

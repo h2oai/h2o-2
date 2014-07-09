@@ -1,24 +1,19 @@
 package hex.singlenoderf;
 
 
+import static water.util.MRUtils.sampleFrameStratified;
+import hex.*;
 import hex.ConfusionMatrix;
-import hex.FrameTask;
-import hex.VarImp;
+
+import java.util.*;
+
 import jsr166y.ForkJoinTask;
 import water.*;
-import water.api.Constants;
-import water.api.DocGen;
-import water.api.ParamImportance;
+import water.Timer;
+import water.api.*;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.*;
-import water.api.ParamImportance;
-import static water.util.MRUtils.sampleFrameStratified;
-
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Random;
-
 
 public class SpeeDRF extends Job.ValidatedJob {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -95,15 +90,6 @@ public class SpeeDRF extends Job.ValidatedJob {
 
   private boolean regression;
 
-  /** Return the query link to this page */
-//  public static String link(Key k, String content) {
-//    RString rs = new RString("<a href='RF.query?%key_param=%$key'>%content</a>");
-//    rs.replace("key_param", DATA_KEY);
-//    rs.replace("key", k.toString());
-//    rs.replace("content", content);
-//    return rs.toString();
-//  }
-
   public DRFParams drfParams;
 
   protected SpeeDRFModel makeModel( SpeeDRFModel model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
@@ -154,16 +140,6 @@ public class SpeeDRF extends Job.ValidatedJob {
       }
     }
 
-    // Strata samples are invalid for Random sampling and regression
-//    if (arg._name.equals("strata_samples")) {
-//      if (sampling_strategy != Sampling.Strategy.STRATIFIED_LOCAL) {
-//        arg.disable("No Strata for Random sampling.");
-//      }
-//      if (regression) {
-//        arg.disable("No strata for regression.");
-//      }
-//    }
-
     // Variable Importance disabled in SpeeDRF regression currently
     if (arg._name.equals("importance")) {
       if (regression) {
@@ -188,7 +164,6 @@ public class SpeeDRF extends Job.ValidatedJob {
 //    DRFTask.updateRFModelStopTraining(rf_model._key);
     rf_model.stop_training();
     if (n_folds > 0) CrossValUtils.crossValidate(this);
-    cleanup();
     remove();
   }
 
@@ -314,23 +289,8 @@ public class SpeeDRF extends Job.ValidatedJob {
         }
       }
 
-      if (validation != null) {
-        sample = 1.0;
-      }
-
       // Initialize classification specific model parameters
       if(!regression) {
-
-        // Handle bad user input for Stratified Samples (if Stratified Local is chosen)
-//        if (sampling_strategy  == Sampling.Strategy.STRATIFIED_LOCAL) {
-//          strata_samples = checkSamples(strata_samples);
-
-          // If stratified local, turn of out of bag sampling
-          oobee = false;
-//        } else {
-//          strata_samples = new int[response.toEnum().cardinality()];
-//          for (int i = 0; i < strata_samples.length; i++) strata_samples[i] = 67;
-//        }
 
         // Handle bad user input for class weights
         class_weights = checkClassWeights(class_weights);
@@ -340,7 +300,6 @@ public class SpeeDRF extends Job.ValidatedJob {
 
         // Class Weights and Strata Samples do not apply to Regression
         class_weights = null;
-//        strata_samples = null;
 
         //TODO: Variable importance in regression not currently supported
         if (importance && regression) throw new IllegalArgumentException("Variable Importance for SpeeDRF regression not currently supported.");
@@ -372,23 +331,28 @@ public class SpeeDRF extends Job.ValidatedJob {
         Frame stratified = sampleFrameStratified(fr, v, trainSamplingFactors, (long)(max_after_balance_size*fr.numRows()), seed, true, false);
         if (stratified != fr) {
           fr = stratified;
-          response = fr.vecs()[response_idx];
+//          response = fr.vecs()[response_idx];
           }
       }
 
-      if(classification && validation != null)
-        if (!( Arrays.equals( train.lastVec().toEnum().domain(), test.lastVec().toEnum().domain())))
+      // Check that that test/train
+      if(classification && validation != null) {
+        if (!isSubset(test.lastVec().toEnum().domain(), train.lastVec().toEnum().domain()))
           throw new IllegalArgumentException("Train and Validation data have inconsistent response columns! They do not share the same factor levels.");
+      }
 
+      Key src_key = source._key;
+      int src_ncols = source.numCols();
       // Set the model parameters
-      SpeeDRFModel model = new SpeeDRFModel(dest(), source._key, fr, this, priorDist);
+      SpeeDRFModel model = new SpeeDRFModel(dest(), src_key, fr, this, priorDist);
       model.verbose = verbose;
       int csize = H2O.CLOUD.size();
-      model.fr = train;
+      model.fr = fr;
       model.response = regression ? fr.lastVec() : fr.lastVec().toEnum();
       model.t_keys = new Key[0];
       model.time = 0;
       model.local_forests = new Key[csize][];
+      model.verbose_output = new String[]{""};
       for(int i=0;i<csize;i++) model.local_forests[i] = new Key[0];
       model.node_split_features = new int[csize];
       for( Key tkey : model.t_keys ) assert DKV.get(tkey)!=null;
@@ -409,21 +373,13 @@ public class SpeeDRF extends Job.ValidatedJob {
       model.testKey = validation == null ? null : validation._key;
       model.importance = importance;
       model.regression = regression;
-      model.features = source.numCols();
+      model.features = src_ncols;
       model.sampling_strategy = regression ? Sampling.Strategy.RANDOM : sampling_strategy;
       model.sample = (float) sample;
       model.weights = regression ? null : class_weights;
       model.time = 0;
       model.N = num_trees;
-//      model.strata_samples = regression ? null : new float[strata_samples.length];
       if (!regression) model.setModelClassDistribution(new MRUtils.ClassDist(fr.lastVec()).doAll(fr.lastVec()).rel_dist());
-
-//      if (!regression) {
-//        for (int i = 0; i < strata_samples.length; i++) {
-//          assert model.strata_samples != null;
-//          model.strata_samples[i] = (float) strata_samples[i];
-//        }
-//      }
 
       if (mtry == -1) {
         if(!regression) {
@@ -451,6 +407,14 @@ public class SpeeDRF extends Job.ValidatedJob {
 
   public Frame score( Frame fr ) { return ((SpeeDRFModel)UKV.get(dest())).score(fr);  }
 
+  private boolean isSubset(String[] sub, String[] container) {
+    HashSet<String> hs = new HashSet<String>();
+    Collections.addAll(hs, container);
+    for (String s: sub) {
+      if (!hs.contains(s)) return false;
+    }
+    return true;
+  }
 
   public final static class DRFTask extends DRemoteTask {
     /** The RF Model.  Contains the dataset being worked on, the classification
@@ -650,10 +614,6 @@ public class SpeeDRF extends Job.ValidatedJob {
     static Sampling createSampler(final DRFParams params, int[] rowsPerChunks) {
       switch(params.sampling_strategy) {
         case RANDOM          : return new Sampling.Random(params.sample, rowsPerChunks);
-//        case STRATIFIED_LOCAL:
-//          float[] ss = new float[params.strata_samples.length];
-//          for (int i=0;i<ss.length;i++) ss[i] = params.strata_samples[i] / 100.f;
-//          return new Sampling.StratifiedLocal(ss, params._numrows);
         default:
           assert false : "Unsupported sampling strategy";
           return null;

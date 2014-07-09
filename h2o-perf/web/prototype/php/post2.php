@@ -1,11 +1,13 @@
 <?php
   include 'DB2.php';
 
-  $a = array_keys($_POST);
-  $quer = htmlspecialchars($_POST[$a[0]]);
+  $test = $_POST['test_name'];
+  $ip   = $_POST['ip'];
+  $dt   = $_POST['dt'];
 
-  $query = "SELECT * FROM stats WHERE test_run_id =" . $quer;
-  
+  $query = "SELECT * FROM stats WHERE test_name ='" . $test . "' AND node_ip = '" . $ip . "' AND from_unixtime(ts, '%Y%m%d') = '" . $dt . "' AND test_run_id IN (SELECT MAX(test_run_id) FROM stats WHERE test_name  ='" . $test . "' AND node_ip = '" . $ip . "' AND from_unixtime(ts, '%Y%m%d') = '" . $dt . "');";
+
+
   $result = mysqli_prepare($con, $query);
   if ( !$result ) { 
     printf('errno: %d, error: %s', $con->errno, $con->error);
@@ -16,6 +18,7 @@
 
   mysqli_stmt_execute($result);
   $results = fetch_records2($result);
+  
   echo json_encode($results);
 
 ?>

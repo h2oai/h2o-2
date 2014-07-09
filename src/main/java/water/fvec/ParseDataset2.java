@@ -5,6 +5,7 @@ import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.fvec.Vec.VectorGroup;
 import water.nbhm.NonBlockingHashMap;
+import water.nbhm.NonBlockingSetInt;
 import water.parser.*;
 import water.parser.CustomParser.ParserSetup;
 import water.parser.CustomParser.ParserType;
@@ -19,6 +20,7 @@ import water.util.Utils.IcedInt;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -114,7 +116,7 @@ public final class ParseDataset2 extends Job {
     public void setException(DException ex){_ex = ex;}
     public DException getException(){return _ex;}
   }
-  static final void onProgress(final long len, final Key progress) {
+  static void onProgress(final long len, final Key progress) {
     new TAtomic<ParseProgress>() {
       @Override public ParseProgress atomic(ParseProgress old) {
         if (old == null) return null;
@@ -133,8 +135,6 @@ public final class ParseDataset2 extends Job {
     DKV.remove(_progress);
     super.remove();
   }
-
-  public enum ColType {I, F, E}
 
   /**
    * Task to update enum values to match the global numbering scheme.  Performs
@@ -158,7 +158,7 @@ public final class ParseDataset2 extends Job {
     public int[][] emap(int nodeId){
       if(_emap == null)_emap = new int[_lEnums.length][][];
       if(_emap[nodeId] == null){
-        int [][] emap = _emap[nodeId] = new int[_gDomain.length][];
+        int [][] emap = new int[_gDomain.length][];
         for( int i = 0; i < _gDomain.length; ++i ) {
           if(_gDomain[i] != null){
             assert _lEnums[nodeId] != null:"missing lEnum of node "  + nodeId + ", enums = " + Arrays.toString(_lEnums);
@@ -174,9 +174,11 @@ public final class ParseDataset2 extends Job {
             }
           }
         }
+        _emap[nodeId] = emap;
       }
       return _emap[nodeId];
     }
+
 
     @Override public void map(Chunk [] chks){
       int [][] emap = emap(_chunk2Enum[chks[0].cidx()]);
@@ -188,8 +190,25 @@ public final class ParseDataset2 extends Job {
         else for( int j = 0; j < chk._len; ++j){
           if( chk.isNA0(j) )continue;
           long l = chk.at80(j);
-          assert l >= 0 && l < emap[i].length : "Found OOB index "+l+" pulling from "+chk.getClass().getSimpleName();
-          assert emap[i][(int)l] >= 0: H2O.SELF.toString() + ": missing enum at col:" + i + ", line: " + j + ", val = " + l + ", chunk=" + chk.getClass().getSimpleName();
+          if (l < 0 || l >= emap[i].length) {
+            Chunk chk2 = chk._chk2;
+            chk._chk2 = null;
+            StringBuilder sb = new StringBuilder("Enum renumber task, column # " + i + ": Found OOB index " + l + " (expected 0 - " + emap[i].length + ", global domain has " + _gDomain[i].length + " levels) pulled from " + chk.getClass().getSimpleName() +  "\n");
+            int k = 0;
+            for(; k < Math.min(5,chk._len); ++k)
+              sb.append("at8[" + (k+chk._start) + "] = " + chk.at80(k) + ", chk2 = " + (chk2 != null?chk2.at80(k):"") + "\n");
+            k = Math.max(k,j-2);
+            sb.append("...\n");
+            for(; k < Math.min(chk._len,j+2); ++k)
+              sb.append("at8[" + (k+chk._start) + "] = " + chk.at80(k) + ", chk2 = " + (chk2 != null?chk2.at80(k):"") + "\n");
+            sb.append("...\n");
+            k = Math.max(k,chk._len-5);
+            for(; k < chk._len; ++k)
+              sb.append("at8[" + (k+chk._start) + "] = " + chk.at80(k) + ", chk2 = " + (chk2 != null?chk2.at80(k):"") + "\n");
+            throw new RuntimeException(sb.toString());
+          }
+          if(emap[i][(int)l] < 0)
+            throw new RuntimeException(H2O.SELF.toString() + ": missing enum at col:" + i + ", line: " + j + ", val = " + l + ", chunk=" + chk.getClass().getSimpleName());
           chk.set0(j, emap[i][(int)l]);
         }
         chk.close(cidx, _fs);
@@ -295,7 +314,7 @@ public final class ParseDataset2 extends Job {
         String numLevelsStr = isCategorical ? String.format("numLevels(%d)", v.domain().length) : "";
 
         boolean printLogSeparatorToStdout = false;
-        boolean printColumnToStdout = false;
+        boolean printColumnToStdout;
         {
           // Print information to stdout for this many leading columns.
           final int MAX_HEAD_TO_PRINT_ON_STDOUT = 10;
@@ -332,7 +351,7 @@ public final class ParseDataset2 extends Job {
         }
       }
     }
-    catch (Exception xe) {}   // Don't fail due to logging issues.  Just ignore them.
+    catch (Exception ignore) {}   // Don't fail due to logging issues.  Just ignore them.
   }
 
   // --------------------------------------------------------------------------
@@ -355,7 +374,7 @@ public final class ParseDataset2 extends Job {
       if(uzpt._dout._vecs[i].shouldBeEnum())
         ecols[n++] = i;
     ecols =  Arrays.copyOf(ecols, n);
-    if( ecols != null && ecols.length > 0 ) {
+    if( ecols.length > 0 ) {
       EnumFetchTask eft = new EnumFetchTask(H2O.SELF.index(), uzpt._eKey, ecols).invokeOnAllNodes();
       Enum [] enums = eft._gEnums;
       ValueString [][] ds = new ValueString[ecols.length][];
@@ -384,13 +403,6 @@ public final class ParseDataset2 extends Job {
       l.unlock(job.self());
     }
     job.remove();
-  }
-
-  public static ParserSetup guessSetup(Key key, ParserSetup setup, boolean checkHeader){
-    ByteVec vec = (ByteVec) getVec(key);
-    byte [] bits = vec.chunkForChunkIdx(0)._mem;
-    Compression cpr = Utils.guessCompressionMethod(bits);
-    return ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), setup,checkHeader)._setup;
   }
 
   public static class ParseProgressMonitor extends Iced implements Job.ProgressMonitor {
@@ -435,10 +447,9 @@ public final class ParseDataset2 extends Job {
     public MultiFileParseTask dfork(Key... keys){
       _fileChunkOffsets = new IcedHashMap<Key, IcedInt>();
       int len = 0;
-      for(int i = 0; i < keys.length; ++i){
-        _fileChunkOffsets.put(keys[i],new IcedInt(len));
-        Vec v = getVec(keys[i]);
-        len += v.nChunks();
+      for( Key k : keys ) {
+        _fileChunkOffsets.put(k,new IcedInt(len));
+        len += getVec(k).nChunks();
       }
       _chunk2Enum = MemoryManager.malloc4(len);
       Arrays.fill(_chunk2Enum, -1);
@@ -456,7 +467,7 @@ public final class ParseDataset2 extends Job {
       // Local setup: nearly the same as the global all-files setup, but maybe
       // has the header-flag changed.
       if(!_setup.isCompatible(localSetup)) {
-        _parserr = "Conflicting file layouts, expecting: "+_setup+" but found "+localSetup;
+        _parserr = "Conflicting file layouts, expecting: " + _setup + " but found "+localSetup;
         return;
       }
 
@@ -469,14 +480,13 @@ public final class ParseDataset2 extends Job {
           // Then treat as no-headers, i.e., parse it as a normal row
           localSetup = new CustomParser.ParserSetup(ParserType.CSV,localSetup._separator, false);
       }
-      final int ncols = _setup._ncols;
 
       // Parse the file
       try {
         switch( cpr ) {
         case NONE:
           if(localSetup._pType.parallelParseSupported){
-            DParse dp = new DParse(_vg,localSetup, _vecIdStart, chunkStartIdx,this);
+            DParse dp = new DParse(_vg,localSetup, _vecIdStart, chunkStartIdx,this, vec.nChunks());
             addToPendingCount(1);
             dp._removeKey = vec._key;
             dp.exec(new Frame(vec));
@@ -574,9 +584,10 @@ public final class ParseDataset2 extends Job {
       final Key _progress;
       Key _removeKey;
       transient final MultiFileParseTask _outerMFPT;
+      final int _nchunks;
+      transient private NonBlockingSetInt _visited;
 
-
-      DParse(VectorGroup vg, CustomParser.ParserSetup setup, int vecIdstart, int startChunkIdx, MultiFileParseTask mfpt) {
+      DParse(VectorGroup vg, CustomParser.ParserSetup setup, int vecIdstart, int startChunkIdx, MultiFileParseTask mfpt, int nchunks) {
         super(mfpt);
         _vg = vg;
         _setup = setup;
@@ -585,6 +596,7 @@ public final class ParseDataset2 extends Job {
         _outerMFPT = mfpt;
         _eKey = mfpt._eKey;
         _progress = mfpt._progress;
+        _nchunks = nchunks;
       }
       @Override public void setupLocal(){
         super.setupLocal();
@@ -593,8 +605,9 @@ public final class ParseDataset2 extends Job {
           for(int i = 0; i < _setup._ncols; ++i)
             _appendables[i] = new AppendableVec(_vg.vecKey(_vecIdStart + i));
         }
+        _visited = new NonBlockingSetInt();
       }
-      @Override public void map( Chunk in ) {
+      @Override public void map( Chunk in) {
         Enum [] enums = enums(_eKey,_setup._ncols);
         // Break out the input & output vectors before the parse loop
         // The Parser
@@ -616,6 +629,23 @@ public final class ParseDataset2 extends Job {
         p.parallelParse(in.cidx(),din,dout);
         (_dout = dout).close(_fs);
         onProgress(in._len, _progress); // Record bytes parsed
+        final int cidx = in.cidx();
+        // remove parsed data right away (each chunk is used by 2)
+
+        if(!_visited.add(cidx)) {
+          Value v = H2O.get(in._vec.chunkKey(cidx));
+          if(v != null && v.isPersisted()) {
+            v.freePOJO();
+            v.freeMem();
+          }
+        }
+        if(!_visited.add(cidx+1)) {
+          Value v = H2O.get(in._vec.chunkKey(cidx+1));
+          if(v != null && v.isPersisted()) {
+            v.freePOJO();
+            v.freeMem();
+          }
+        }
       }
       @Override public void reduce(DParse dp){
         if(_dout == null)_dout = dp._dout;
@@ -640,7 +670,7 @@ public final class ParseDataset2 extends Job {
     protected transient NewChunk [] _nvs;
     protected AppendableVec []_vecs;
     private transient final Enum [] _enums;
-    protected final byte [] _ctypes;
+    protected byte [] _ctypes;
     long _nLines;
     int _nCols;
     int _col = -1;
@@ -655,7 +685,7 @@ public final class ParseDataset2 extends Job {
     static final private byte TCOL = 3; // time    col typ
     static final private byte ICOL = 4; // UUID    col typ
 
-    private static final AppendableVec[] newAppendables(int n, VectorGroup vg, int vecIdStart){
+    private static AppendableVec[] newAppendables(int n, VectorGroup vg, int vecIdStart){
       AppendableVec [] apps = new AppendableVec[n];
       for(int i = 0; i < n; ++i)
         apps[i] = new AppendableVec(vg.vecKey(vecIdStart + i));
@@ -741,10 +771,11 @@ public final class ParseDataset2 extends Job {
       }
       _col = -1;
     }
-    protected long linenum(){return _nLines;}
     @Override public void addNumCol(int colIdx, long number, int exp) {
-      if( colIdx < _nCols ) _nvs[_col = colIdx].addNum(number,exp);
-      // else System.err.println("Additional column ("+ _nvs.length + " < " + colIdx + ":" + number + "," + exp + ") on line " + linenum());
+      if( colIdx < _nCols ) {
+        _nvs[_col = colIdx].addNum(number, exp);
+        if(_ctypes[colIdx] == UCOL ) _ctypes[colIdx] = NCOL;
+      }
     }
 
     @Override public final void addInvalidCol(int colIdx) {
@@ -795,9 +826,6 @@ public final class ParseDataset2 extends Job {
     }
 
     /** Adds double value to the column.
-    *
-    * @param colIdx
-    * @param value
     */
     public void addNumCol(int colIdx, double value) {
       if (Double.isNaN(value)) {
@@ -846,8 +874,5 @@ public final class ParseDataset2 extends Job {
     }
     @Override public int  getChunkDataStart(int cidx) { return -1; }
     @Override public void setChunkDataStart(int cidx, int offset) { }
-  }
-  public static class ParseException extends RuntimeException {
-    public ParseException(String msg) { super(msg); }
   }
 }

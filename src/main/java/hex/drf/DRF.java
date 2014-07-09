@@ -124,7 +124,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     @Override protected void generateModelDescription(StringBuilder sb) {
       DocGen.HTML.paragraph(sb,"mtries: "+mtries+", Sample rate: "+sample_rate+", Seed: "+seed);
       if (testKey==null && sample_rate==1f) {
-        sb.append("<div class=\"alert alert-danger\">There are now OOB data to report out-of-bag error, since sampling rate is 100%!</div>");
+        sb.append("<div class=\"alert alert-danger\">There are no out-of-bag data to compute out-of-bag error estimate, since sampling rate is 1!</div>");
       }
     }
     @Override protected void toJavaUnifyPreds(SB bodySb) {
@@ -201,11 +201,8 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     if (DEBUG_DETERMINISTIC && seed == -1) _seed = 0x1321e74a0192470cL; // fixed version of seed
     else if (seed == -1) _seed = _seedGenerator.nextLong(); else _seed = seed;
     if (sample_rate==1f && validation!=null)
-      Log.warn(Sys.DRF__, "Sample rate is 100% and no validation dataset is required. There are no OOB data to perform validation!");
+      Log.warn(Sys.DRF__, "Sample rate is 100% and no validation dataset is specified. There are no OOB data to compute out-of-bag error estimation!");
   }
-
-  // Out-of-bag trees counter - only one since it is shared via k-trees
-  protected Chunk chk_oobt(Chunk chks[]) { return chks[_ncols+1+_nclass+_nclass+_nclass]; }
 
   @Override protected void initAlgo(DRFModel initialModel) {
     // Initialize TreeVotes for classification, MSE arrays for regression
@@ -332,6 +329,8 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     return new VarImp.VarImpMDA(varimp, varimpSD, model.ntrees());
   }
 
+  @Override public boolean supportsBagging() { return true; }
+
   /** Fill work columns:
    *   - classification: set 1 in the corresponding wrk col according to row response
    *   - regression:     copy response into work column (there is only 1 work column) */
@@ -455,7 +454,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       if( ktrees[i] != null )
         ktrees[i].leaves = ktrees[i].len() - leafs[i];
     // DEBUG: Print the generated K trees
-    // printGenerateTrees(ktrees);
+    //printGenerateTrees(ktrees);
 
     return ktrees;
   }
@@ -664,6 +663,6 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     // Train a clone with slightly modified parameters (to account for cross-validation)
     DRF cv = (DRF) this.clone();
     cv.genericCrossValidation(splits, offsets, i);
-    cv_preds[i] = ((DRFModel) UKV.get(cv.dest())).score(cv.validation);
+    cv_preds[i] = ((DRFModel) UKV.get(cv.dest())).score(cv.validation); // cv_preds is escaping the context of this function and needs to be DELETED by the caller!!!
   }
 }

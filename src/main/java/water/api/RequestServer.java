@@ -9,6 +9,7 @@ import hex.KMeans2;
 import hex.KMeans2.KMeans2ModelView;
 import hex.KMeans2.KMeans2Progress;
 import hex.ReBalance;
+import hex.anomaly.Anomaly;
 import hex.deeplearning.DeepLearning;
 import hex.drf.DRF;
 import hex.gapstat.GapStatistic;
@@ -105,6 +106,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new Inspector()),     "Inspect",                "Data");
     Request.addToNavbar(registerRequest(new SummaryPage2()),  "Summary",                "Data");
     Request.addToNavbar(registerRequest(new QuantilesPage()), "Quantiles",              "Data");
+    Request.addToNavbar(registerRequest(new FrameSplitPage()),"Split frame",            "Data");
     Request.addToNavbar(registerRequest(new StoreView()),     "View All",               "Data");
     Request.addToNavbar(registerRequest(new ExportFiles()),   "Export Files",           "Data");
     // Register Inspect2 just for viewing frames
@@ -129,9 +131,13 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new SpeeDRF()),     "SpeeDRF (Beta)",           "Model");
     Request.addToNavbar(registerRequest(new KMeans2()),     "KMeans (Beta)",            "Model");
     Request.addToNavbar(registerRequest(new NaiveBayes()),  "Naive Bayes (Beta)",       "Model");
+    Request.addToNavbar(registerRequest(new Anomaly()),     "Anomaly Detection (Beta)", "Model");
+
 
     // FVec scoring
     Request.addToNavbar(registerRequest(new Predict()),     "Predict",                  "Score");
+    // only for glm to allow for overriding of lambda_submodel
+    registerRequest(new GLMPredict());
     Request.addToNavbar(registerRequest(new ConfusionMatrix()), "Confusion Matrix",     "Score");
     Request.addToNavbar(registerRequest(new AUC()),         "AUC",                      "Score");
     Request.addToNavbar(registerRequest(new HitRatio()),    "HitRatio",                 "Score");
@@ -164,7 +170,6 @@ public class RequestServer extends NanoHTTPD {
     if(H2O.OPT_ARGS.beta == null) {
       registerRequest(new hex.LR2());
       registerRequest(new ReBalance());
-      registerRequest(new FrameSplitPage());
       registerRequest(new NFoldFrameExtractPage());
       registerRequest(new GapStatistic());
       registerRequest(new CreateFrame());
@@ -174,7 +179,6 @@ public class RequestServer extends NanoHTTPD {
     } else {
       Request.addToNavbar(registerRequest(new hex.LR2()),              "Linear Regression2",   "Beta");
       Request.addToNavbar(registerRequest(new ReBalance()),            "ReBalance",            "Beta");
-      Request.addToNavbar(registerRequest(new FrameSplitPage()),       "Split frame",          "Beta");
       Request.addToNavbar(registerRequest(new NFoldFrameExtractPage()),"N-Fold frame extract", "Beta");
       Request.addToNavbar(registerRequest(new Console()),              "Console",              "Beta");
       Request.addToNavbar(registerRequest(new GapStatistic()),         "Gap Statistic",        "Beta");

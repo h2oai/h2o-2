@@ -61,7 +61,7 @@ public class C2SChunk extends Chunk {
     nc._ls = MemoryManager.malloc8(_len);
     for( int i=0; i<_len; i++ ) {
       int res = UDP.get2(_mem,(i<<1)+OFF);
-      if( res == C2Chunk._NA ) nc._xs[i] = Integer.MIN_VALUE;
+      if( res == C2Chunk._NA ) nc.setNA_impl2(i);
       else                     nc._ls[i] = res+_bias;
     }
     return nc;

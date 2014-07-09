@@ -84,7 +84,7 @@ public class CMTask extends MRTask2<CMTask> {
    confusion matrix. The default seed when deserializing is 42. */
     Random _rand = Utils.getRNG(0x92b5023f2cd40b7cL);
     _data = _model.test_frame == null ? _model.fr : _model.test_frame;
-
+    if (_model.test_frame != null) _computeOOB = false;
     _modelDataMap = _model.colMap(_model._names);
     assert !_computeOOB || _model._dataKey.equals(_datakey) : !_computeOOB + " || " + _model._dataKey + " equals " + _datakey ;
     Vec respModel = _model.get_response();
@@ -186,7 +186,7 @@ public class CMTask extends MRTask2<CMTask> {
         // Do not skip yet the rows with NAs in the rest of columns
         if( chks[_classcol].isNA(row)) continue;
 
-        if( _computeOOB /*&& (isLocalTree || isRemoteTreeChunk) */) { // if OOBEE is computed then we need to take into account utilized sampling strategy
+        if( _computeOOB) { // if OOBEE is computed then we need to take into account utilized sampling strategy
           switch( _model.sampling_strategy ) {
             case RANDOM          : if (sampledItem < _model.sample ) continue ROWS; break;
 //            case STRATIFIED_LOCAL:
@@ -585,7 +585,7 @@ public class CMTask extends MRTask2<CMTask> {
         continue;
       }
       for (int i = 1; i  < vi.length; ++i)
-        scored[i] = ( scored[i] / num_trees);
+        scored[i] = ( scored[i] / s);
 
       // Correct for imbalance, if classes have been rebalanced
       if (!_model.regression && _priorDist != null && _modelDist != null && _model.get_params().balance_classes) {

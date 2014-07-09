@@ -1100,15 +1100,11 @@ public class DTree extends Iced {
       sb.append("<script type=\"text/javascript\">$(document).ready(showOrHideJavaModel);</script>");
     }
 
-    /** Debug flag to generate benchmar code */
-    static final boolean GEN_BENCHMARK_CODE = false;
-
     @Override protected SB toJavaInit(SB sb, SB fileContextSB) {
       sb = super.toJavaInit(sb, fileContextSB);
 
       String modelName = JCodeGen.toJavaId(_key.toString());
 
-      sb.ii(1);
       // Generate main method with benchmark
       if (GEN_BENCHMARK_CODE) {
         sb.i().p("/**").nl();
@@ -1171,16 +1167,6 @@ public class DTree extends Iced {
       fileCtxSb.p(forest);
       toJavaUnifyPreds(bodySb);
       toJavaFillPreds0(bodySb);
-    }
-
-    /** Generates code which unify preds[1,...NCLASSES] */
-    protected void toJavaUnifyPreds(SB bodySb) {
-    }
-    /** Fill preds[0] based on already filled and unified preds[1,..NCLASSES]. */
-    protected void toJavaFillPreds0(SB bodySb) {
-      // Pick max index as a prediction
-      if (isClassifier()) bodySb.i().p("preds[0] = water.util.ModelUtils.getPrediction(preds,data);").nl();
-      else bodySb.i().p("preds[0] = preds[1];").nl();
     }
 
     /* Numeric type used in generated code to hold predicted value between the calls. */

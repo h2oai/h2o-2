@@ -50,7 +50,7 @@ public class GLMModelView extends Request2 {
     glm_model.get_params().makeJsonBox(sb);
     DocGen.HTML.paragraph(sb,"Model Key: "+glm_model._key);
     if(glm_model.submodels != null) {
-      DocGen.HTML.paragraph(sb,water.api.Predict.link(glm_model._key,"Predict!"));
+      DocGen.HTML.paragraph(sb,water.api.GLMPredict.link(glm_model._key,lambda,"Predict!"));
       DocGen.HTML.paragraph(sb,UIUtils.qlink(SaveModel.class, "model", glm_model._key, "Save model"));
     }
     String succ = (glm_model.warnings == null || glm_model.warnings.length == 0)?"alert-success":"alert-warning";

@@ -32,7 +32,7 @@ print(air.gbm@model)
 air.gbm@model$auc
 
 #RF
-air.rf=h2o.randomForest.FV(x=myX,y=myY,data=air.train,ntree=10,
+air.rf=h2o.randomForest(x=myX,y=myY,data=air.train,ntree=10,
                            depth=20,seed=12,importance=T,validation=air.valid)
 print(air.rf@model)
 

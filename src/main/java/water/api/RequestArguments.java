@@ -2622,10 +2622,8 @@ public class RequestArguments extends RequestStatics {
       String[] names = new String[vecs.length];
       int j = 0;
       for( int i = 0; i < vecs.length; ++i) {
-        if( vecs[i].min() < vecs[i].max() &&
-            ((double)vecs[i].naCnt())/vecs[i].length() <= 0.1 &&
-            !vecs[i].isUUID() ) // No math on strings or UUIDs
-          names[j++] = fr()._names[i]; // ignore constant columns and columns with too many NAs
+        if( !vecs[i].isUUID() ) // No math on strings or UUIDs
+          names[j++] = fr()._names[i];
       }
       return Arrays.copyOf(names, j);
     }

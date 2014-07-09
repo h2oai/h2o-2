@@ -82,6 +82,7 @@ public class TestUtil {
     DKV.remove(Log.LOG_KEY);
     DKV.write_barrier();
     int leaked_keys = H2O.store_size() - _initial_keycnt;
+    int nvecs = 0, nchunks = 0, nframes = 0, nmodels = 0, nothers = 0;
     if( leaked_keys > 0 ) {
       for( Key k : H2O.localKeySet() ) {
         Value value = DKV.get(k);
@@ -90,11 +91,18 @@ public class TestUtil {
         // Ok to leak VectorGroups
         if( o instanceof Vec.VectorGroup )
           leaked_keys--;
-        else
+        else {
           System.err.println("Leaked key: " + k + " = " + o);
+          if (k.isDVec()) nchunks++;
+          else if (k.isVec()) nvecs++;
+          else if (o instanceof Frame) nframes++;
+          else if (o instanceof Model) nmodels++;
+          else nothers++;
+        }
       }
     }
-    assertTrue("No keys leaked", leaked_keys <= 0);
+    assertTrue("Key leak! #keys(" + leaked_keys + ") = #vecs("+nvecs+")+#chunks("+nchunks+")+#frames("+nframes+")+#nmodels("+nmodels+")+#others("+nothers+")", leaked_keys <= 0);
+
     _initial_keycnt = H2O.store_size();
   }
 
@@ -420,6 +428,12 @@ public class TestUtil {
     return r;
   }
 
+  public static void assertCM(long[][] expectedCM, long[][] givenCM) {
+    Assert.assertEquals("Confusion matrix dimension does not match", expectedCM.length, givenCM.length);
+    String m = "Expected: " + Arrays.deepToString(expectedCM) + ", but was: " + Arrays.deepToString(givenCM);
+    for (int i=0; i<expectedCM.length; i++) Assert.assertArrayEquals(m, expectedCM[i], givenCM[i]);
+  }
+
   public static void assertCMEquals(String msg, ConfusionMatrix a, ConfusionMatrix b) {
     Assert.assertEquals(msg + " - Confusion matrix should be of the same size", a._arr.length, b._arr.length);
     for (int i=0; i< a._arr.length; i++) {
@@ -449,5 +463,9 @@ public class TestUtil {
   }
   public static void assertModelBinaryEquals(Model a, Model b) {
     assertArrayEquals("The serialized models are not binary same!", a.write(new AutoBuffer()).buf(), b.write(new AutoBuffer()).buf());
+  }
+
+  public static void sleep(int msec) {
+    try { Thread.sleep(msec); } catch (InterruptedException e) {}
   }
 }

@@ -141,9 +141,13 @@ public class NewChunk extends Chunk {
   }
 
   public void addEnum(int e) {append2(e,Integer.MIN_VALUE+1);}
-  public void addNA  (     ) {append2(Long.MAX_VALUE,Integer.MIN_VALUE  ); }
+  public void addNA() {
+    if( isUUID() ) addUUID(C16Chunk._LO_NA,C16Chunk._HI_NA);
+    else append2(Long.MAX_VALUE,Integer.MIN_VALUE);
+  }
   public void addNum (long val, int exp) {
-    if(_ds != null){
+    if( isUUID() ) addNA();
+    else if(_ds != null) {
       assert _ls == null;
       addNum(val*DParseTask.pow10(exp));
     } else {
@@ -155,6 +159,7 @@ public class NewChunk extends Chunk {
   }
   // Fast-path append double data
   public void addNum(double d) {
+    if( isUUID() ) { addNA(); return; }
     if(_id == null || d != 0) {
       if(_ls != null)switch_to_doubles();
       if( _ds == null || _len >= _ds.length ) {
@@ -172,17 +177,10 @@ public class NewChunk extends Chunk {
   }
   // Append a UUID, stored in _ls & _ds
   public void addUUID( long lo, long hi ) {
-    if( _id == null || lo != 0 || hi != 0 ) {
-      if( _ls==null || _len >= _ls.length ) {
-        append2slowUUID();
-        addUUID(lo,hi); // call addUUID again since append2slow might have flipped to sparse
-        assert _len <= _len2;
-        return;
-      }
-      if( _id != null ) _id[_len] = _len2;
-      _ls[_len] = lo;
-      _ds[_len++] = Double.longBitsToDouble(hi);
-    }
+    if( _ls==null || _ds== null || _len >= _ls.length )
+      append2slowUUID();
+    _ls[_len] = lo;
+    _ds[_len++] = Double.longBitsToDouble(hi);
     _len2++;
     assert _len <= _len2;
   }
@@ -194,7 +192,6 @@ public class NewChunk extends Chunk {
     if( c.isNA0(row) ) addUUID(C16Chunk._LO_NA,C16Chunk._HI_NA);
     else addUUID(c.at16l0(row),c.at16h0(row));
   }
-
 
   public final boolean isUUID(){return _ls != null && _ds != null; }
   public final boolean sparse(){return _id != null;}
@@ -289,13 +286,13 @@ public class NewChunk extends Chunk {
   private void append2slowUUID() {
     if( _len > Vec.CHUNK_SZ )
       throw new ArrayIndexOutOfBoundsException(_len);
-    if(_ls != null && _ls.length > 0){
-      if(_id == null){ // check for sparseness
-        int nzs = 1; // assume one non-zero for the element currently being stored
-        for( int i=0; i<_ls.length; i++ ) if( _ls[0] != 0 || _ds[i] != 0 ) ++nzs;
-        if( nzs*MIN_SPARSE_RATIO < _len2)
-          set_sparse(nzs);
-      } else _id = MemoryManager.arrayCopyOf(_id, _len << 1);
+    if( _ds==null && _ls!=null ) { // This can happen for columns with all NAs and then a UUID
+      _xs=null;
+      _ds = MemoryManager.malloc8d(_len);
+      Arrays.fill(_ls,C16Chunk._LO_NA);
+      Arrays.fill(_ds,Double.longBitsToDouble(C16Chunk._HI_NA));
+    }
+    if( _ls != null && _ls.length > 0 ) {
       _ls = MemoryManager.arrayCopyOf(_ls,_len<<1);
       _ds = MemoryManager.arrayCopyOf(_ds,_len<<1);
     } else {
@@ -873,6 +870,7 @@ public class NewChunk extends Chunk {
       if(idx >= 0) i = idx;
       else return 0;
     }
+    if(isNA2(i))throw new RuntimeException("Attempting to acess NA as integer value.");
     if( _ls == null ) return (long)_ds[i];
     return _ls[i]*DParseTask.pow10i(_xs[i]);
   }

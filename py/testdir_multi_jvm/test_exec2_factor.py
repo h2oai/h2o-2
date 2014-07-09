@@ -59,6 +59,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_exec2_factor(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         # use SEED so the file isn't cached?
         csvFilenameAll = [
@@ -76,7 +77,6 @@ class Basic(unittest.TestCase):
             write_syn_dataset(csvPathname, 1000000, SEEDPERFILE)
             # creates csvFilename.hex from file in importFolder dir 
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=2000)
-            print csvFilename, 'parse time:', parseResult['response']['time']
             print "Parse result['destination_key']:", parseResult['destination_key']
 
             # We should be able to see the parse result?

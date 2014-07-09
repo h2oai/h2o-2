@@ -20,6 +20,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_delete_all_keys(self):
+        h2o.beta_features = True
         # FIX! should have some model keys in here too, from RF etc.
         importFolderPath = 'standard'
         timeoutSecs = 500
@@ -37,7 +38,6 @@ class Basic(unittest.TestCase):
                 parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, timeoutSecs=500)
                 elapsed = time.time() - start
                 print csvFilename, "parsed in", elapsed, "seconds.", "%d pct. of timeout" % ((elapsed*100)/timeoutSecs), "\n"
-                print csvFilename, 'H2O reports parse time:', parseResult['response']['time']
 
                 print "Parse result['destination_key']:", parseResult['destination_key']
                 print "\n" + csvFilename

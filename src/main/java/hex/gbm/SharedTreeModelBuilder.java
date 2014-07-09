@@ -104,8 +104,6 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   // Number of trees inherited from checkpoint
   protected int _ntreesFromCheckpoint;
 
-  private transient boolean _gen_enum; // True if we need to cleanup an enum response column at the end
-
   /** Maximal number of supported levels in response. */
   public static final int MAX_SUPPORTED_LEVELS = 1000;
 
@@ -117,7 +115,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   @Override public float progress(){
     Value value = DKV.get(dest());
     DTree.TreeModel m = value != null ? (DTree.TreeModel) value.get() : null;
-    return m == null ? 0 : m.ntrees() / (float) m.N;
+    return m == null ? 0 : cv_progress(m.ntrees() / (float) m.N);
   }
 
   // Verify input parameters
@@ -141,7 +139,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     // TODO: moved to shared model job
     if( !response.isEnum() && classification ) {
       response = response.toEnum();
-      _gen_enum = true;
+      gtrash(response); //_gen_enum = true;
     }
     _nclass = response.isEnum() ? (char)(response.domain().length) : 1;
     if (classification && _nclass <= 1)
@@ -217,6 +215,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
         MRUtils.ClassDist cdmt = new MRUtils.ClassDist(_nclass).doAll(response);
         _distribution = cdmt.dist();
         _modelClassDist = cdmt.rel_dist();
+        gtrash(stratified);
       }
     }
     Log.info(logTag(), "Prior class distribution: " + Arrays.toString(_priorClassDist));
@@ -292,7 +291,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     while( fr.numCols() > _ncols+1/*Do not delete the response vector*/ )
       UKV.remove(fr.remove(fr.numCols()-1)._key);
     // If we made a response column with toEnum, nuke it.
-    if( _gen_enum ) UKV.remove(response._key);
+    //if( _gen_enum ) UKV.remove(response._key);
 
     // Unlock the input datasets against deletes
     source.unlock(self());
@@ -352,6 +351,8 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     return res;
   }
 
+  public boolean supportsBagging() { return false; }
+
   // --------------------------------------------------------------------------
   // Convenvience accessor for a complex chunk layout.
   // Wish I could name the array elements nicer...
@@ -359,6 +360,8 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   protected Chunk chk_tree( Chunk chks[], int c ) { return chks[_ncols+1+c]; }
   protected Chunk chk_work( Chunk chks[], int c ) { return chks[_ncols+1+_nclass+c]; }
   protected Chunk chk_nids( Chunk chks[], int t ) { return chks[_ncols+1+_nclass+_nclass+t]; }
+  // Out-of-bag trees counter - only one since it is shared via k-trees
+  protected Chunk chk_oobt(Chunk chks[]) { return chks[_ncols+1+_nclass+_nclass+_nclass]; }
 
   protected final Vec vec_nids( Frame fr, int t) { return fr.vecs()[_ncols+1+_nclass+_nclass+t]; }
   protected final Vec vec_resp( Frame fr, int t) { return fr.vecs()[_ncols]; }
@@ -700,7 +703,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   // if it is necessary.
   private float score2(Chunk chks[], float fs[/*nclass*/], int row ) {
     float sum = score1(chks, fs, row);
-    if (classification && _priorClassDist!=null && _modelClassDist!=null && !Float.isInfinite(sum)  && sum>0f) {
+    if (/*false &&*/ classification && _priorClassDist!=null && _modelClassDist!=null && !Float.isInfinite(sum)  && sum>0f) {
       Utils.div(fs, sum);
       ModelUtils.correctProbabilities(fs, _priorClassDist, _modelClassDist);
       sum = 1.0f;
@@ -801,17 +804,19 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
         int yact_orig = 0; // actual response from dataset before potential scaling
         if (_oob && inBagRow(chks, row)) continue; // score only on out-of-bag rows
         if( _nclass > 1 ) {    // Classification
-          if( sum == 0 ) {       // This tree does not predict this row *at all*?
-            err = 1.0f-1.0f/_nclass; // Then take ycls=0, uniform predictive power
+          // Compute error
+          if( sum == 0 ) {                          // This tree does not predict this row *at all* ! In prediction we will make random decision, but here compute error based on number of classes
+            yact = yact_orig = (int) ys.at80(row);  // OPS: Pick an actual prediction adapted to model values <0, nclass-1)
+            err = 1.0f-1.0f/_nclass;                // Then take ycls=0, uniform predictive power
           } else {
-            if (_cavr && ys.isNA0(row)) { // Handle adapted validation response - actual response was adapted but does not contain NA - it is implicit misprediction,
+            if (_cavr && ys.isNA0(row)) {           // Handle adapted validation response - actual response was adapted but does not contain NA - it is implicit misprediction,
               err = 1f;
-            } else { // No adaptation of validation response
-              yact = yact_orig = (int) ys.at80(row); // Pick an actual prediction adapted to model values <0, nclass-1)
+            } else {                                // No adaptation of validation response
+              yact = yact_orig = (int) ys.at80(row);// OPS: Pick an actual prediction adapted to model values <0, nclass-1)
               assert 0 <= yact && yact < _nclass : "weird ycls="+yact+", y="+ys.at0(row);
               err = Float.isInfinite(sum)
                 ? (Float.isInfinite(fs[yact+1]) ? 0f : 1f)
-                : 1.0f-fs[yact+1]/sum; // Error: distance from predicting ycls as 1.0
+                : 1.0f-fs[yact+1]/sum;              // Error: distance from predicting ycls as 1.0
             }
           }
           assert !Double.isNaN(err) : "fs[cls]="+fs[yact+1] + ", sum=" + sum;
@@ -937,8 +942,10 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
             System.err.print(c.at0(r));
             System.err.print(',');
           }
-          //Chunk c = chk_oobt(cs);
-          //System.err.print(c.at80(r)>0 ? ":OUT" : ":IN");
+          if (supportsBagging()) {
+            Chunk c = chk_oobt(cs);
+            System.err.print(c.at80(r)>0 ? ":OUT" : ":IN");
+          }
           System.err.println();
         }
       }

@@ -22,14 +22,14 @@ class TestKaggle(unittest.TestCase):
     def test_cs_training(self):
         h2o.beta_features = True
         parseResult = h2i.import_parse(bucket='smalldata', path='kaggle/creditsample-training.csv.gz', schema='put', timeoutSecs=120)
-        h2o_cmd.runRF(parseResult=parseResult, ntrees=100, max_depth=100, timeoutSecs=500, 
+        h2o_cmd.runRF(parseResult=parseResult, ntrees=5, max_depth=100, timeoutSecs=500, 
             response='SeriousDlqin2yrs')
         # h2b.browseJsonHistoryAsUrlLastMatch("RFView")
 
     def test_cs_test(self):
         h2o.beta_features = True
         parseResult = h2i.import_parse(bucket='smalldata', path='kaggle/creditsample-training.csv.gz', schema='put')
-        h2o_cmd.runRF(parseResult=parseResult, ntrees=100, max_depth=100, timeoutSecs=500,
+        h2o_cmd.runRF(parseResult=parseResult, ntrees=5, max_depth=100, timeoutSecs=500,
             response='SeriousDlqin2yrs')
         # h2b.browseJsonHistoryAsUrlLastMatch("RFView")
 

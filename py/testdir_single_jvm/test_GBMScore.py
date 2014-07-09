@@ -17,7 +17,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GBMScore(self):
-        h2o.beta_features = False
+        h2o.beta_features = True
         importFolderPath = 'standard'
         csvTrainPath = importFolderPath + '/allyears2k.csv'
         csvTestPath = csvTrainPath
@@ -29,7 +29,6 @@ class Basic(unittest.TestCase):
         parseTrainResult = h2i.import_parse(bucket='home-0xdiag-datasets', path = csvTrainPath, schema = 'local', hex_key = trainhex, timeoutSecs = 2400, doSummary = False)
         parseTestResult = h2i.import_parse(bucket='home-0xdiag-datasets', path = csvTestPath, schema = 'local', hex_key = testhex, timeoutSecs = 2400, doSummary = False)
         inspect_test   = h2o.nodes[0].inspect(testhex, timeoutSecs=8000)
-        h2o.beta_features = True
         response = 'IsDepDelayed'
         ignored_cols = 'DepTime,ArrTime,FlightNum,TailNum,ActualElapsedTime,AirTime,ArrDelay,DepDelay,TaxiIn,TaxiOut,Cancelled,CancellationCode,Diverted,CarrierDelay,WeatherDelay,NASDelay,SecurityDelay,LateAircraftDelay,IsArrDelayed'
 
@@ -52,7 +51,7 @@ class Basic(unittest.TestCase):
         h2o.nodes[0].generate_predictions(model_key = 'GBMScore', data_key = trainhex)
         scoreElapsed = time.time() - scoreStart
 
-        print "It took ", scoreElapsed, " seconds to score ", inspect_test['num_rows'], " rows. Using a GBM with 100 10-deep trees."
+        print "It took ", scoreElapsed, " seconds to score ", inspect_test['numRows'], " rows. Using a GBM with 100 10-deep trees."
         print "That's ", 1.0*scoreElapsed / 100.0  ," seconds per 10-deep tree."
 
 

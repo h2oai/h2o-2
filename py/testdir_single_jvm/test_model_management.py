@@ -102,6 +102,7 @@ class ModelManagementTestCase(unittest.TestCase):
         prostate_hex = self.import_frame('prostate.hex', 'smalldata', 'prostate.csv', 'logreg', 380, 9)
         airlines_train_hex = self.import_frame('airlines_train.hex', 'smalldata', 'AirlinesTrain.csv.zip', 'airlines', 24421, 12)
         airlines_test_hex = self.import_frame('airlines_test.hex', 'smalldata', 'AirlinesTest.csv.zip', 'airlines', 2691, 12)
+        has_uuid_hex = self.import_frame('has_uuid.hex', 'smalldata', 'test_all_raw_top10rows.csv', 'test', 12, 89)
 
         # get the hashes
         print "Checking " + str(len(h2o.nodes)) + " nodes for frames: "
@@ -115,6 +116,7 @@ class ModelManagementTestCase(unittest.TestCase):
             self.assertKeysExist(frames, 'frames', ['airlines_train.hex'])
             self.assertKeysExist(frames, 'frames', ['airlines_test.hex'])
             self.assertKeysExist(frames, 'frames/airlines_test.hex', ['id'])
+            self.assertKeysExist(frames, 'frames', ['has_uuid.hex'])
 
             # Make sure we have the same checksums everywhere:
             tmp = frames['frames']['airlines_test.hex']['id']
@@ -168,7 +170,7 @@ class ModelManagementTestCase(unittest.TestCase):
 
         print "##############################################################"
         print "Generating AirlinesTrain GLM2 binary classification model. . ."
-        # h2o.glm.FV(y = "IsDepDelayed", x = c("Origin", "Dest", "fDayofMonth", "fYear", "UniqueCarrier", "fDayOfWeek", "fMonth", "DepTime", "ArrTime", "Distance"), data = airlines_train.hex, family = "binomial", alpha=0.05, lambda=1.0e-2, standardize=FALSE, nfolds=0)
+        # R equivalent: h2o.glm.FV(y = "IsDepDelayed", x = c("Origin", "Dest", "fDayofMonth", "fYear", "UniqueCarrier", "fDayOfWeek", "fMonth", "DepTime", "ArrTime", "Distance"), data = airlines_train.hex, family = "binomial", alpha=0.05, lambda=1.0e-2, standardize=FALSE, nfolds=0)
         glm_AirlinesTrain_1_params = {
             'destination_key': 'glm_AirlinesTrain_binary_1',
             'response': 'IsDepDelayed', 
@@ -187,7 +189,7 @@ class ModelManagementTestCase(unittest.TestCase):
 
         print "####################################################################"
         print "Generating AirlinesTrain simple GBM binary classification model. . ."
-        # h2o.gbm(y = "IsDepDelayed", x = c("Origin", "Dest", "fDayofMonth", "fYear", "UniqueCarrier", "fDayOfWeek", "fMonth", "DepTime", "ArrTime", "Distance"), data = airlines_train.hex, n.trees=3, interaction.depth=1, distribution="multinomial", n.minobsinnode=2, shrinkage=.1)
+        # R equivalent: h2o.gbm(y = "IsDepDelayed", x = c("Origin", "Dest", "fDayofMonth", "fYear", "UniqueCarrier", "fDayOfWeek", "fMonth", "DepTime", "ArrTime", "Distance"), data = airlines_train.hex, n.trees=3, interaction.depth=1, distribution="multinomial", n.minobsinnode=2, shrinkage=.1)
         gbm_AirlinesTrain_1_params = {
             'destination_key': 'gbm_AirlinesTrain_binary_1',
             'response': 'IsDepDelayed', 
@@ -203,7 +205,7 @@ class ModelManagementTestCase(unittest.TestCase):
 
         print "#####################################################################"
         print "Generating AirlinesTrain complex GBM binary classification model. . ."
-        # h2o.gbm(y = "IsDepDelayed", x = c("Origin", "Dest", "fDayofMonth", "fYear", "UniqueCarrier", "fDayOfWeek", "fMonth", "DepTime", "ArrTime", "Distance"), data = airlines_train.hex, n.trees=50, interaction.depth=5, distribution="multinomial", n.minobsinnode=2, shrinkage=.1)
+        # R equivalent: h2o.gbm(y = "IsDepDelayed", x = c("Origin", "Dest", "fDayofMonth", "fYear", "UniqueCarrier", "fDayOfWeek", "fMonth", "DepTime", "ArrTime", "Distance"), data = airlines_train.hex, n.trees=50, interaction.depth=5, distribution="multinomial", n.minobsinnode=2, shrinkage=.1)
         gbm_AirlinesTrain_2_params = {
             'destination_key': 'gbm_AirlinesTrain_binary_2',
             'response': 'IsDepDelayed', 
@@ -219,7 +221,7 @@ class ModelManagementTestCase(unittest.TestCase):
 
         print "####################################################################"
         print "Generating AirlinesTrain simple DRF binary classification model. . ."
-        # h2o.randomForest.FV(y = "IsDepDelayed", x = c("Origin", "Dest", "fDayofMonth", "fYear", "UniqueCarrier", "fDayOfWeek", "fMonth", "DepTime", "ArrTime", "Distance"), data = airlines_train.hex, ntree=5, depth=2)
+        # R equivalent: h2o.randomForest.FV(y = "IsDepDelayed", x = c("Origin", "Dest", "fDayofMonth", "fYear", "UniqueCarrier", "fDayOfWeek", "fMonth", "DepTime", "ArrTime", "Distance"), data = airlines_train.hex, ntree=5, depth=2)
         rf_AirlinesTrain_1_params = {
             'destination_key': 'rf_AirlinesTrain_binary_1',
             'response': 'IsDepDelayed', 
@@ -234,7 +236,7 @@ class ModelManagementTestCase(unittest.TestCase):
 
         print "#####################################################################"
         print "Generating AirlinesTrain complex DRF binary classification model. . ."
-        # h2o.randomForest.FV(y = "IsDepDelayed", x = c("Origin", "Dest", "fDayofMonth", "fYear", "UniqueCarrier", "fDayOfWeek", "fMonth", "DepTime", "ArrTime", "Distance"), data = airlines_train.hex, ntree=50, depth=10)
+        # R equivalent: h2o.randomForest.FV(y = "IsDepDelayed", x = c("Origin", "Dest", "fDayofMonth", "fYear", "UniqueCarrier", "fDayOfWeek", "fMonth", "DepTime", "ArrTime", "Distance"), data = airlines_train.hex, ntree=50, depth=10)
         rf_AirlinesTrain_2_params = {
             'destination_key': 'rf_AirlinesTrain_binary_2',
             'response': 'IsDepDelayed', 
@@ -265,7 +267,7 @@ class ModelManagementTestCase(unittest.TestCase):
 
         print "######################################################################"
         print "Generating AirlinesTrain DeepLearning binary classification model. . ."
-        # h2o.deeplearning(y = "IsDepDelayed", x = c("Origin", "Dest", "fDayofMonth", "fYear", "UniqueCarrier", "fDayOfWeek", "fMonth", "DepTime", "ArrTime", "Distance"), data = airlines_train.hex, classification=TRUE, hidden=c(10, 10))
+        # R equivalent: h2o.deeplearning(y = "IsDepDelayed", x = c("Origin", "Dest", "fDayofMonth", "fYear", "UniqueCarrier", "fDayOfWeek", "fMonth", "DepTime", "ArrTime", "Distance"), data = airlines_train.hex, classification=TRUE, hidden=c(10, 10))
         dl_AirlinesTrain_1_params = {
             'destination_key': 'dl_AirlinesTrain_binary_1',
             'response': 'IsDepDelayed', 
@@ -280,7 +282,7 @@ class ModelManagementTestCase(unittest.TestCase):
 
         print "##############################################################################################"
         print "Generating AirlinesTrain GLM2 binary classification model with different response column. . ."
-        # h2o.glm.FV(y = "IsDepDelayed_REC", x = c("Origin", "Dest", "fDayofMonth", "fYear", "UniqueCarrier", "fDayOfWeek", "fMonth", "DepTime", "ArrTime", "Distance"), data = airlines_train.hex, family = "binomial", alpha=0.05, lambda=1.0e-2, standardize=FALSE, nfolds=0)
+        # R equivalent: h2o.glm.FV(y = "IsDepDelayed_REC", x = c("Origin", "Dest", "fDayofMonth", "fYear", "UniqueCarrier", "fDayOfWeek", "fMonth", "DepTime", "ArrTime", "Distance"), data = airlines_train.hex, family = "binomial", alpha=0.05, lambda=1.0e-2, standardize=FALSE, nfolds=0)
         glm_AirlinesTrain_A_params = {
             'destination_key': 'glm_AirlinesTrain_binary_A',
             'response': 'IsDepDelayed_REC_recoded', 
@@ -299,7 +301,7 @@ class ModelManagementTestCase(unittest.TestCase):
 
         print "#########################################################"
         print "Generating Prostate GLM2 binary classification model. . ."
-        # h2o.glm.FV(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family = "binomial", nfolds = 0, alpha = 0.5)
+        # R equivalent: h2o.glm.FV(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family = "binomial", nfolds = 0, alpha = 0.5)
         glm_Prostate_1_params = {
             'destination_key': 'glm_Prostate_binary_1',
             'response': 'CAPSULE', 
@@ -307,7 +309,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'family': 'binomial', 
             'alpha': 0.5, 
             'n_folds': 0,
-            'use_all_factor_levels': 1
+            'use_all_factor_levels': 0 # should get warning about variable importances!
         }
         glm_Prostate_1 = node.GLM(prostate_hex, **glm_Prostate_1_params)
         num_models = num_models + 1
@@ -316,7 +318,7 @@ class ModelManagementTestCase(unittest.TestCase):
 
         print "###############################################################"
         print "Generating Prostate simple DRF binary classification model. . ."
-        # h2o.randomForest.FV(y = "CAPSULE", x = c("AGE","RACE","DCAPS"), data = prostate.hex, ntree=10, depth=5)
+        # R equivalent: h2o.randomForest.FV(y = "CAPSULE", x = c("AGE","RACE","DCAPS"), data = prostate.hex, ntree=10, depth=5)
         rf_Prostate_1_params = {
             'destination_key': 'rf_Prostate_binary_1',
             'response': 'CAPSULE', 
@@ -346,7 +348,7 @@ class ModelManagementTestCase(unittest.TestCase):
 
         print "##############################################"
         print "Generating Prostate GLM2 regression model. . ."
-        # h2o.glm.FV(y = "AGE", x = c("CAPSULE","RACE","PSA","DCAPS"), data = prostate.hex, family = "gaussian", nfolds = 0, alpha = 0.5)
+        # R equivalent: h2o.glm.FV(y = "AGE", x = c("CAPSULE","RACE","PSA","DCAPS"), data = prostate.hex, family = "gaussian", nfolds = 0, alpha = 0.5)
         glm_Prostate_regression_1_params = {
             'destination_key': 'glm_Prostate_regression_1',
             'response': 'AGE', 
@@ -463,7 +465,8 @@ class ApiTestCase(ModelManagementTestCase):
         print "Testing /2/Models list. . ."
         models = node.models()
         self.assertKeysExist(models, 'models', ['glm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_2', 'rf_AirlinesTrain_binary_1', 'rf_AirlinesTrain_binary_2', 'dl_AirlinesTrain_binary_1', 'glm_AirlinesTrain_binary_A', 'glm_Prostate_binary_1', 'rf_Prostate_binary_1', 'glm_Prostate_regression_1'])
-        self.assertKeysExist(models, 'models/glm_AirlinesTrain_binary_1', ['id', 'key', 'creation_epoch_time_millis', 'model_category', 'state', 'input_column_names', 'response_column_name', 'critical_parameters', 'secondary_parameters', 'expert_parameters', 'compatible_frames'])
+        self.assertKeysExist(models, 'models/glm_AirlinesTrain_binary_1', ['id', 'key', 'creation_epoch_time_millis', 'model_category', 'state', 'input_column_names', 'response_column_name', 'critical_parameters', 'secondary_parameters', 'expert_parameters', 'compatible_frames', 'warnings'])
+        self.assertEqual(0, len(models['models']['glm_AirlinesTrain_binary_1']['warnings']), msg="Expect no warnings for glm_AirlinesTrain_binary_1.")
         self.assertEqual(models['models']['glm_AirlinesTrain_binary_1']['key'], 'glm_AirlinesTrain_binary_1', "key should equal our key: " + "glm_AirlinesTrain_binary_1")
         self.assertKeysDontExist(models, 'models', ['airlines_train.hex', 'airlines_test.hex', 'prostate.hex'])
         self.assertKeysDontExist(models, '', ['frames'])
@@ -473,6 +476,8 @@ class ApiTestCase(ModelManagementTestCase):
         print "Testing /2/Models?key=rf_Prostate_binary_1. . ."
         models = node.models(key='rf_Prostate_binary_1')
         self.assertKeysExist(models, 'models', ['rf_Prostate_binary_1'])
+        self.assertKeysExist(models, 'models/rf_Prostate_binary_1', ['warnings'])
+        self.assertEqual(0, len(models['models']['rf_Prostate_binary_1']['warnings']), msg="Expect no warnings for rf_Prostate_binary_1.")
         self.assertKeysDontExist(models, 'models', ['airlines_train.hex', 'airlines_test.hex', 'prostate.hex', 'glm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_2', 'rf_AirlinesTrain_binary_1', 'rf_AirlinesTrain_binary_2', 'dl_AirlinesTrain_binary_1', 'glm_AirlinesTrain_binary_A', 'glm_Prostate_binary_1', 'glm_Prostate_regression_1'])
         self.assertKeysDontExist(models, '', ['frames'])
 
@@ -487,6 +492,14 @@ class ApiTestCase(ModelManagementTestCase):
         self.assertKeysExist(models, 'frames', ['prostate.hex'])
         self.assertKeysDontExist(models, 'frames', ['airlines_train.hex', 'airlines_test.hex'])
 
+
+        print "##############################################"
+        print "Testing /2/Models?key=glm_Prostate_binary_1 variable importance warning. . ."
+        models = node.models(key='glm_Prostate_binary_1')
+        self.assertKeysExist(models, 'models', ['glm_Prostate_binary_1'])
+        self.assertKeysExist(models, 'models/glm_Prostate_binary_1', ['warnings'])
+        self.assertEqual(1, len(models['models']['glm_Prostate_binary_1']['warnings']), msg="Expect one warning for glm_Prostate_binary_1.")
+        self.assertTrue("use_all_factor_levels" in models['models']['glm_Prostate_binary_1']['warnings'][0], "Expect variable importances warning since we aren't using use_all_factor_levels.")
 
 
     def test_binary_classifiers(self):
@@ -574,7 +587,7 @@ class ApiTestCase(ModelManagementTestCase):
         # Run `make test -C path_to_h2o/client`
         command_string = "make test -C " + client_dir
 
-        # Ideally there should have been some kind of exit code checking or exception handling here. 
+
         # However, when `make test` fails, h2o.spawn_wait() fails hard without an exit code. 
         # Further, if this is trapped in a try/except, the failed tests are not routed to stdout.
         (ps, outpath, errpath) =  h2o.spawn_cmd('steam_tests', command_string.split())

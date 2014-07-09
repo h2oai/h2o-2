@@ -89,7 +89,6 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     public LMAXTask(Job job, DataInfo dinfo, GLMParams glm, double ymu, long nobs, double alpha, float [] thresholds, H2OCountedCompleter cmp) {
       super(job, dinfo, glm, false, true, true, glm.nullModelBeta(dinfo,ymu), ymu, 1.0/nobs, thresholds, cmp);
       _gPrimeMu = glm.linkDeriv(ymu);
-      _nobs = dinfo.fullN();
       _alpha = alpha;
     }
     @Override public void chunkInit(){
@@ -252,7 +251,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
 
     @Override public void processRow(long gid, final double [] nums, final int ncats, final int [] cats, double [] responses){
       ++_nobs;
-      double y = responses[0];
+      final double y = responses[0];
       assert ((_glm.family != Family.gamma) || y > 0) : "illegal response column, y must be > 0  for family=Gamma.";
       assert ((_glm.family != Family.binomial) || (0 <= y && y <= 1)) : "illegal response column, y must be <0,1>  for family=Binomial. got " + y;
       final double w, eta, mu, var, z;
@@ -261,7 +260,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       if( _glm.family == Family.gaussian){
         w = 1;
         z = y;
-        mu = _validate?computeEta(ncats,cats,nums,_beta):0;
+        mu = (_validate || _computeGradient)?computeEta(ncats,cats,nums,_beta):0;
       } else {
         if( _beta == null ) {
           mu = _glm.mustart(y, _ymu);
@@ -328,7 +327,10 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     }
 
     @Override public void postGlobal(){
-      if(_val != null)_val.finalize_AIC_AUC();
+      if(_val != null){
+        _val.computeAIC();
+        _val.computeAUC();
+      }
     }
     public double [] gradient(double l2pen){
       final double [] res = _grad.clone();

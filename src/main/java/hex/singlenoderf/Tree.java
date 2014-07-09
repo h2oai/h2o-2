@@ -147,11 +147,13 @@ public class Tree extends H2OCountedCompleter {
       _stats = null; // GC
 
       // Atomically improve the Model as well
-      appendKey(_job.dest(),toKey());
+      appendKey(_job.dest(),toKey(), _verbose > 10 ? _tree.toString(new StringBuilder(""), Integer.MAX_VALUE).toString() : "");
       StringBuilder sb = new StringBuilder("[RF] Tree : ").append(_data_id+1);
       sb.append(" d=").append(_tree.depth()).append(" leaves=").append(_tree.leaves()).append(" done in ").append(timer).append('\n');
       Log.info(sb.toString());
-      Log.info(Sys.RANDF,_tree.toString(sb,  _verbose > 0 ? Integer.MAX_VALUE : 200).toString());
+      if (_verbose > 10) {
+        Log.info(Sys.RANDF, _tree.toString(sb, Integer.MAX_VALUE).toString());
+      }
     }
     // Wait for completation
     tryComplete();
@@ -159,12 +161,12 @@ public class Tree extends H2OCountedCompleter {
 
   // Stupid static method to make a static anonymous inner class
   // which serializes "for free".
-  static void appendKey(Key model, final Key tKey) {
+  static void appendKey(Key model, final Key tKey, final String tString) {
     final int selfIdx = H2O.SELF.index();
     new TAtomic<SpeeDRFModel>() {
       @Override public SpeeDRFModel atomic(SpeeDRFModel old) {
         if(old == null) return null;
-        return SpeeDRFModel.make(old, tKey, selfIdx);
+        return SpeeDRFModel.make(old, tKey, selfIdx, tString);
       }
     }.invoke(model);
   }
