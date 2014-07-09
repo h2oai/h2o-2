@@ -25,7 +25,9 @@ public class NewVectorTest extends TestUtil {
     nv._xs = xs;
     nv._len= nv._len2 = ls.length;
     Chunk bv = nv.compress();
-    bv._vec = av.close(new Futures());
+    Futures fs = new Futures();
+    bv._vec = av.close(fs);
+    fs.blockForPending();
     // Compression returns the expected compressed-type:
     assertTrue( "Found chunk class "+bv.getClass()+" but expected "+C, C.isInstance(bv) );
     assertEquals( hasFloat, bv.hasFloat() );

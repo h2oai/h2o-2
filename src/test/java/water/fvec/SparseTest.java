@@ -29,7 +29,9 @@ public class SparseTest extends TestUtil {
       else nv.addNum(d);
     }
     nv.close(0,null);
-    Vec vec = av.close(new Futures());
+    Futures fs = new Futures();
+    Vec vec = av.close(fs);
+    fs.blockForPending();
     return vec.chunkForChunkIdx(0);
   }
 
