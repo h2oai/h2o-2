@@ -221,10 +221,10 @@ public class CMTask extends MRTask2<CMTask> {
     }
     if(!_model.regression) {
       // Assemble the votes-per-class into predictions & score each row
-      _matrix = computeCM(votes, chks, false /*Do the _cms once*/); // Make a confusion matrix for this chunk
+      _matrix = computeCM(votes, chks, false /*Do the _cms once*/, _model.get_params().balance_classes); // Make a confusion matrix for this chunk
       if (localVotes!=null) {
         _localMatrices = new CM[H2O.CLOUD.size()];
-        _localMatrices[H2O.SELF.index()] = computeCM(localVotes, chks, true /*Don't compute the _cms again!*/);
+        _localMatrices[H2O.SELF.index()] = computeCM(localVotes, chks, true /*Don't compute the _cms again!*/, _model.get_params().balance_classes);
       }
     }
   }
@@ -544,8 +544,15 @@ public class CMTask extends MRTask2<CMTask> {
     return sum;
   }
 
+  private float[] toProbs(float[] preds, float s ) {
+    for (int i = 1; i < preds.length; ++i) {
+      preds[i] /= s;
+    }
+    return preds;
+  }
+
   /** Produce confusion matrix from given votes. */
-  final CM computeCM(int[/**/][/**/] votes, Chunk[] chks, boolean local) {
+  final CM computeCM(int[/**/][/**/] votes, Chunk[] chks, boolean local, boolean balance) {
     CM cm = new CM();
     int rows = votes.length;
     int validation_rows = 0;
@@ -572,41 +579,34 @@ public class CMTask extends MRTask2<CMTask> {
       // Fill the predictions with the vote counts, keeping the 0th index unchanged
       for( int v=0; v<_N; v++ ) preds[v+1] = vi[v];
 
-      // Apply class weights
-      if(_classWt != null )
-        for( int v = 0; v<_N; v++) preds[v+1] *= _classWt[v];
-
-
-
-      float[] scored = preds.clone();
+//      float[] scored = preds.clone();
       float s = doSum(vi);
       if (s == 0) {
         cm._skippedRows++;
         continue;
       }
-      for (int i = 1; i  < vi.length; ++i)
-        scored[i] = ( scored[i] / s);
+//      for (int i = 1; i  < vi.length; ++i)
+//        scored[i] = ( scored[i] / s);
 
-      // Correct for imbalance, if classes have been rebalanced
-      if (!_model.regression && _priorDist != null && _modelDist != null && _model.get_params().balance_classes) {
-        assert (scored.length == _model.nclasses() + 1); //1 label + nclasses probs
-        double probsum = 0;
-        for (int c = 1; c < scored.length; c++) {
-          final double original_fraction = _priorDist[c - 1];
-          assert (original_fraction > 0) : "original fraction should be > 0, but is " + original_fraction + ": not using enough training data?";
-          final double oversampled_fraction = _modelDist[c - 1];
-          assert (oversampled_fraction > 0) : "oversampled fraction should be > 0, but is " + oversampled_fraction + ": not using enough training data?";
-          assert (!Double.isNaN(scored[c]));
+      int result;
+      if (balance) {
+        float[] scored = toProbs(preds.clone(), doSum(vi));
+        double probsum=0;
+        for( int c=1; c<scored.length; c++ ) {
+          final double original_fraction = _model.priordist()[c-1];
+          assert(original_fraction > 0) : "original fraction should be > 0, but is " + original_fraction + ": not using enough training data?";
+          final double oversampled_fraction = _model.modeldist()[c-1];
+          assert(oversampled_fraction > 0) : "oversampled fraction should be > 0, but is " + oversampled_fraction + ": not using enough training data?";
+          assert(!Double.isNaN(scored[c]));
           scored[c] *= original_fraction / oversampled_fraction;
           probsum += scored[c];
         }
-        for (int i = 1; i < scored.length; ++i) scored[i] /= probsum;
-
-        scored[0] = ModelUtils.getPrediction(scored, row);
+        for (int i=1;i<scored.length;++i) scored[i] /= probsum;
+        result = ModelUtils.getPrediction(scored, row);
+      } else {
+        // `result` is the class with the most votes, accounting for ties in the shared logic in ModelUtils
+        result = ModelUtils.getPrediction(preds, row);
       }
-
-      // `result` is the class with the most votes, accounting for ties in the shared logic in ModelUtils
-      int result = _model.get_params().balance_classes ? (int) scored[0] : ModelUtils.getPrediction(preds, row);
 
       // Get the class value from the response column for the current row
       int cclass = alignDataIdx((int) chks[_classcol].at8(row) - cmin);
