@@ -335,10 +335,12 @@ public class SpeeDRF extends Job.ValidatedJob {
           }
       }
 
-      // Check that that test/train
+      // Check that that test/train data are consistent, throw warning if not
       if(classification && validation != null) {
-        if (!isSubset(test.lastVec().toEnum().domain(), train.lastVec().toEnum().domain()))
-          throw new IllegalArgumentException("Train and Validation data have inconsistent response columns! They do not share the same factor levels.");
+        if (!isSubset(test.lastVec().toEnum().domain(), train.lastVec().toEnum().domain())) {
+          Log.warn("Test set domain: " + Arrays.toString(test.lastVec().toEnum().domain()) + " \nTrain set domain: " + Arrays.toString(train.lastVec().toEnum().domain()));
+          Log.warn("Train and Validation data have inconsistent response columns! Test data has a response not found in the Train data!");
+        }
       }
 
       Key src_key = source._key;
