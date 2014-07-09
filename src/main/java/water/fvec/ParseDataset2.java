@@ -189,19 +189,21 @@ public final class ParseDataset2 extends Job {
         else for( int j = 0; j < chk._len; ++j){
           if( chk.isNA0(j) )continue;
           long l = chk.at80(j);
-          if (l < 0 || l >= emap[i].length) {
-            StringBuilder sb = new StringBuilder("Enum renumber task: Found OOB index " + l + " (expected 0 - " + emap[i].length + ") pulled from " + chk.getClass().getSimpleName() + " with min, max = " + chk._vec.min() + ", " + chk._vec.max() + "\n");
+          if (1==1 || l < 0 || l >= emap[i].length) {
+            Chunk chk2 = chk._chk2;
+            chk._chk2 = null;
+            StringBuilder sb = new StringBuilder("Enum renumber task: Found OOB index " + l + " (expected 0 - " + emap[i].length + ") pulled from " + chk.getClass().getSimpleName() +  "\n");
             int k = 0;
             for(; k < Math.min(5,chk._len); ++k)
-              sb.append("at8[" + (k+chk._start) + "] = " + chk.at80(k) + "\n");
+              sb.append("at8[" + (k+chk._start) + "] = " + chk.at80(k) + ", chk2 = " + (chk2 != null?chk2.at80(k):"") + "\n");
             k = Math.max(k,j-2);
             sb.append("...\n");
             for(; k < Math.min(chk._len,j+2); ++k)
-              sb.append("at8[" + (k+chk._start) + "] = " + chk.at80(k) + "\n");
+              sb.append("at8[" + (k+chk._start) + "] = " + chk.at80(k) + ", chk2 = " + (chk2 != null?chk2.at80(k):"") + "\n");
             sb.append("...\n");
             k = Math.max(k,chk._len-5);
             for(; k < chk._len; ++k)
-              sb.append("at8[" + (k+chk._start) + "] = " + chk.at80(k) + "\n");
+              sb.append("at8[" + (k+chk._start) + "] = " + chk.at80(k) + ", chk2 = " + (chk2 != null?chk2.at80(k):"") + "\n");
             throw new RuntimeException(sb.toString());
           }
           if(emap[i][(int)l] < 0)
