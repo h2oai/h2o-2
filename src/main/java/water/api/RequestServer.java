@@ -239,6 +239,7 @@ public class RequestServer extends NanoHTTPD {
     // internal handlers
     //registerRequest(new StaticHTMLPage("/h2o/CoefficientChart.html","chart"));
     registerRequest(new Cancel());
+    registerRequest(new DomainMapping());
     registerRequest(new DRFModelView());
     registerRequest(new DRFProgressPage());
     registerRequest(new DownloadDataset());
