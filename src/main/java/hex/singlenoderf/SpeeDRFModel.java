@@ -91,6 +91,9 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   @Override public final SpeeDRF get_params() { return parameters; }
   @Override public final Request2 job() { return get_params(); }
 
+  public float[] priordist() { return this._priorClassDist; }
+  public float[] modeldist() { return this._modelClassDist; }
+
   public SpeeDRFModel(Key selfKey, Key dataKey, Frame fr, SpeeDRF params, float[] priorDist) {
     super(selfKey, dataKey, fr, priorDist);
     this.dest_key = selfKey;

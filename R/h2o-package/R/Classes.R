@@ -804,6 +804,24 @@ setMethod("|", c("logical", "H2OParsedData"), function(e1, e2) { .h2o.__binop2("
 setMethod("&", c("H2OParsedData", "logical"), function(e1, e2) { .h2o.__binop2("&", e1, as.numeric(e2)) })
 setMethod("|", c("H2OParsedData", "logical"), function(e1, e2) { .h2o.__binop2("|", e1, as.numeric(e2)) })
 
+#'
+#' Get the domain mapping of an int and a String
+#'
+.getDomainMapping <- function(vec, s="") {
+  if(class(vec) != "H2OParsedData") stop("Object must be a H2OParsedData object. Input was: ", vec)
+  .h2o.__remoteSend(vec@h2o, .h2o.__DOMAIN_MAPPING, src_key = vec@key, str = s)
+}
+
+setMethod("==", c("H2OParsedData", "character"), function(e1, e2) {
+  m <- .getDomainMapping(e1,e2)$map
+  .h2o.__binop2("==", e1, m)
+})
+
+setMethod("==", c("character", "H2OParsedData"), function(e1, e2) {
+  m <- .getDomainMapping(e2,e1)$map
+  .h2o.__binop2("==", m, e2)
+})
+
 setMethod("!",       "H2OParsedData", function(x) { .h2o.__unop2("!",     x) })
 setMethod("abs",     "H2OParsedData", function(x) { .h2o.__unop2("abs",   x) })
 setMethod("sign",    "H2OParsedData", function(x) { .h2o.__unop2("sgn",   x) })

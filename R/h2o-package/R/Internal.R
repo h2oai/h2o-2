@@ -108,6 +108,7 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__PAGE_SHUTDOWN = "Shutdown.json"
 .h2o.__PAGE_VIEWALL = "StoreView.json"
 .h2o.__DOWNLOAD_LOGS = "LogDownload.json"
+.h2o.__DOMAIN_MAPPING = "2/DomainMapping.json"
 
 .h2o.__PAGE_EXEC2 = "2/Exec2.json"
 .h2o.__PAGE_IMPORTFILES2 = "2/ImportFiles2.json"
@@ -234,7 +235,7 @@ h2o.setLogPath <- function(path, type) {
   m2 <- ifelse(node_name != NULL, paste("The sick node is identified to be: ", node_name, "\n", sep = "", collapse = ""), "")
   m3 <- paste("Check cloud status here: ", url, sep = "", collapse = "")
   m <- paste(m1, m2, "\n", m3, sep = "")
-  stop(m)
+  warning(m)
 }
 
 .h2o.__checkClientHealth <- function(client) {
@@ -250,7 +251,7 @@ h2o.setLogPath <- function(path, type) {
     elapsed <- node$elapsed_time
     nport <- unlist(strsplit(node$name, ":"))[2]
     if(!status) .h2o.__cloudSick(node_name = node$name, client = client)
-    if(elapsed > 45000) .h2o.__cloudSick(node_name = NULL, client = client)
+    if(elapsed > 60000) .h2o.__cloudSick(node_name = NULL, client = client)
     if(elapsed > 10000) {
         Sys.sleep(5)
         lapply(grabCloudStatus(client)$nodes, checker, client)

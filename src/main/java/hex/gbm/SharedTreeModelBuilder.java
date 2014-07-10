@@ -104,8 +104,6 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   // Number of trees inherited from checkpoint
   protected int _ntreesFromCheckpoint;
 
-  private transient boolean _gen_enum; // True if we need to cleanup an enum response column at the end
-
   /** Maximal number of supported levels in response. */
   public static final int MAX_SUPPORTED_LEVELS = 1000;
 
@@ -141,7 +139,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     // TODO: moved to shared model job
     if( !response.isEnum() && classification ) {
       response = response.toEnum();
-      _gen_enum = true;
+      gtrash(response); //_gen_enum = true;
     }
     _nclass = response.isEnum() ? (char)(response.domain().length) : 1;
     if (classification && _nclass <= 1)
@@ -217,6 +215,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
         MRUtils.ClassDist cdmt = new MRUtils.ClassDist(_nclass).doAll(response);
         _distribution = cdmt.dist();
         _modelClassDist = cdmt.rel_dist();
+        gtrash(stratified);
       }
     }
     Log.info(logTag(), "Prior class distribution: " + Arrays.toString(_priorClassDist));
@@ -292,7 +291,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     while( fr.numCols() > _ncols+1/*Do not delete the response vector*/ )
       UKV.remove(fr.remove(fr.numCols()-1)._key);
     // If we made a response column with toEnum, nuke it.
-    if( _gen_enum ) UKV.remove(response._key);
+    //if( _gen_enum ) UKV.remove(response._key);
 
     // Unlock the input datasets against deletes
     source.unlock(self());
@@ -704,7 +703,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   // if it is necessary.
   private float score2(Chunk chks[], float fs[/*nclass*/], int row ) {
     float sum = score1(chks, fs, row);
-    if (classification && _priorClassDist!=null && _modelClassDist!=null && !Float.isInfinite(sum)  && sum>0f) {
+    if (/*false &&*/ classification && _priorClassDist!=null && _modelClassDist!=null && !Float.isInfinite(sum)  && sum>0f) {
       Utils.div(fs, sum);
       ModelUtils.correctProbabilities(fs, _priorClassDist, _modelClassDist);
       sum = 1.0f;

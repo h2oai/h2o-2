@@ -124,7 +124,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     @Override protected void generateModelDescription(StringBuilder sb) {
       DocGen.HTML.paragraph(sb,"mtries: "+mtries+", Sample rate: "+sample_rate+", Seed: "+seed);
       if (testKey==null && sample_rate==1f) {
-        sb.append("<div class=\"alert alert-danger\">There are now OOB data to report out-of-bag error, since sampling rate is 100%!</div>");
+        sb.append("<div class=\"alert alert-danger\">There are no out-of-bag data to compute out-of-bag error estimate, since sampling rate is 1!</div>");
       }
     }
     @Override protected void toJavaUnifyPreds(SB bodySb) {
@@ -201,7 +201,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     if (DEBUG_DETERMINISTIC && seed == -1) _seed = 0x1321e74a0192470cL; // fixed version of seed
     else if (seed == -1) _seed = _seedGenerator.nextLong(); else _seed = seed;
     if (sample_rate==1f && validation!=null)
-      Log.warn(Sys.DRF__, "Sample rate is 100% and no validation dataset is required. There are no OOB data to perform validation!");
+      Log.warn(Sys.DRF__, "Sample rate is 100% and no validation dataset is specified. There are no OOB data to compute out-of-bag error estimation!");
   }
 
   @Override protected void initAlgo(DRFModel initialModel) {
@@ -663,6 +663,6 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     // Train a clone with slightly modified parameters (to account for cross-validation)
     DRF cv = (DRF) this.clone();
     cv.genericCrossValidation(splits, offsets, i);
-    cv_preds[i] = ((DRFModel) UKV.get(cv.dest())).score(cv.validation);
+    cv_preds[i] = ((DRFModel) UKV.get(cv.dest())).score(cv.validation); // cv_preds is escaping the context of this function and needs to be DELETED by the caller!!!
   }
 }

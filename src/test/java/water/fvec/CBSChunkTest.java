@@ -26,6 +26,7 @@ public class CBSChunkTest extends TestUtil {
     AppendableVec av = new AppendableVec(Vec.newKey());
     Futures fs = new Futures();
     Vec vv = av.close(fs);
+    fs.blockForPending();
     // Create a new chunk
     NewChunk nc = new NewChunk(av,0);
     nc._ls = ls;
@@ -36,7 +37,8 @@ public class CBSChunkTest extends TestUtil {
     // Compress chunk
     Chunk cc = nc.compress();
     assert cc instanceof CBSChunk;
-    cc._vec = av.close(new Futures());
+    cc._vec = av.close(fs);
+    fs.blockForPending();
     assertTrue( "Found chunk class "+cc.getClass()+" but expected " + CBSChunk.class, CBSChunk.class.isInstance(cc) );
     assertEquals(nc._len, cc._len);
     assertEquals(expGap, ((CBSChunk)cc)._gap);

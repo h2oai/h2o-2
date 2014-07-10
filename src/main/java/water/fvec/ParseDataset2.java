@@ -179,6 +179,7 @@ public final class ParseDataset2 extends Job {
       return _emap[nodeId];
     }
 
+
     @Override public void map(Chunk [] chks){
       int [][] emap = emap(_chunk2Enum[chks[0].cidx()]);
       final int cidx = chks[0].cidx();
@@ -192,7 +193,7 @@ public final class ParseDataset2 extends Job {
           if (l < 0 || l >= emap[i].length) {
             Chunk chk2 = chk._chk2;
             chk._chk2 = null;
-            StringBuilder sb = new StringBuilder("Enum renumber task: Found OOB index " + l + " (expected 0 - " + emap[i].length + ") pulled from " + chk.getClass().getSimpleName() +  "\n");
+            StringBuilder sb = new StringBuilder("Enum renumber task, column # " + i + ": Found OOB index " + l + " (expected 0 - " + emap[i].length + ", global domain has " + _gDomain[i].length + " levels) pulled from " + chk.getClass().getSimpleName() +  "\n");
             int k = 0;
             for(; k < Math.min(5,chk._len); ++k)
               sb.append("at8[" + (k+chk._start) + "] = " + chk.at80(k) + ", chk2 = " + (chk2 != null?chk2.at80(k):"") + "\n");
