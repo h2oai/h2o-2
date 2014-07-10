@@ -10,7 +10,7 @@ source('../findNSourceUtils.R')
 
 factorfilter <- function(conn){
   Log.info('uploading ddply testing dataset')
-  df.h <- h2o.importFile(conn, locate('smalldata/jira/pub-180.csv'))
+  df.h <- h2o.importFile(conn, normalizePath(locate('smalldata/jira/pub-180.csv')))
 
   Log.info('printing from h2o')
   Log.info( head(df.h) )

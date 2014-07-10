@@ -804,6 +804,9 @@ setMethod("|", c("logical", "H2OParsedData"), function(e1, e2) { .h2o.__binop2("
 setMethod("&", c("H2OParsedData", "logical"), function(e1, e2) { .h2o.__binop2("&", e1, as.numeric(e2)) })
 setMethod("|", c("H2OParsedData", "logical"), function(e1, e2) { .h2o.__binop2("|", e1, as.numeric(e2)) })
 
+setMethod("==", c("H2OParsedData", "character"), function(e1, e2) { .h2o.__binop2("==", e1, deparse(e2)) })
+setMethod("==", c("character", "H2OParsedData"), function(e1, e2) { .h2o.__binop2("==", deparse(e1), e2) })
+
 setMethod("!",       "H2OParsedData", function(x) { .h2o.__unop2("!",     x) })
 setMethod("abs",     "H2OParsedData", function(x) { .h2o.__unop2("abs",   x) })
 setMethod("sign",    "H2OParsedData", function(x) { .h2o.__unop2("sgn",   x) })
