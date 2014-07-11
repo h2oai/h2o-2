@@ -13,8 +13,8 @@ import water.util.Utils;
 public class DRealHistogram extends DHistogram<DRealHistogram> {
   private double _sums[], _ssqs[]; // Sums & square-sums, shared, atomically incremented
 
-  public DRealHistogram( String name, final int nbins, byte isInt, float min, float maxEx, long nelems ) {
-    super(name,nbins,isInt,min,maxEx,nelems);
+  public DRealHistogram( String name, final int nbins, byte isInt, float min, float maxEx, long nelems, boolean doGrpSplit ) {
+    super(name,nbins,isInt,min,maxEx,nelems,doGrpSplit);
   }
   @Override boolean isBinom() { return false; }
 

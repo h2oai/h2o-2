@@ -16,8 +16,8 @@ import water.util.Utils.IcedBitSet;
 public class DBinomHistogram extends DHistogram<DBinomHistogram> {
   private long _sums[]; // Sums (& square-sums since only 0 & 1 allowed), shared, atomically incremented
 
-  public DBinomHistogram( String name, final int nbins, byte isInt, float min, float maxEx, long nelems ) {
-    super(name,nbins,isInt,min,maxEx,nelems);
+  public DBinomHistogram( String name, final int nbins, byte isInt, float min, float maxEx, long nelems, boolean doGrpSplit ) {
+    super(name,nbins,isInt,min,maxEx,nelems,doGrpSplit);
   }
   @Override boolean isBinom() { return true; }
 
@@ -62,7 +62,7 @@ public class DBinomHistogram extends DHistogram<DBinomHistogram> {
     for(int b = 0; b < nbins; b++) idx[b] = b;
 
     // Sort predictor levels in ascending order of mean response within each bin
-    if(_isInt == 2 && _step == 1.0f && nbins >= 4) {
+    if(_isInt == 2 && _step == 1.0f && nbins >= 4 && _doGrpSplit) {
       final Double[] means = new Double[nbins];
       for(int b = 0; b < nbins; b++) means[b] = mean(b);
       Arrays.sort(idx, new Comparator<Integer>() {
@@ -155,12 +155,7 @@ public class DBinomHistogram extends DHistogram<DBinomHistogram> {
 
     // For categorical predictors, set bits for levels grouped to right of split
     IcedBitSet bs = null;
-    if(_isInt == 2 && _step == 1.0f && nbins >= 4) {
-      /* bs = new IcedBitSet(nbins, (int)_min);
-      equal = (byte)(bs.numBytes() <= 4 ? 2 : 3);
-      // for(int i = 0; i < best; i++) bs.set(idx[i]);
-      for(int i = best; i < nbins; i++) bs.set(idx[i]); */
-
+    if(_isInt == 2 && _step == 1.0f && nbins >= 4 && _doGrpSplit) {
       // Small cats: always use 4B to store and prepend offset # of zeros at front
       // Big cats: save offset and store only nbins # of bits that are left after trimming
       int offset = (int)_min;
