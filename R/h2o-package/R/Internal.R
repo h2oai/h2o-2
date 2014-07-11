@@ -520,7 +520,7 @@ function(a_list, envir) {
         # If the col_id comes back as null, swap with domain mapping.
         swap_in <- .swap_with_colid(a_list, envir)
         if(length(swap_in) == 0) {
-          colKey <- new("H2OParsedData", h2o = .pkg.env$SERVER, key = .pkg.env$CURKEY)[, as.character(.pkg.env$CURCOL)]
+          colKey <- new("H2OParsedData", h2o = .pkg.env$SERVER, key = as.character(.pkg.env$CURKEY))[, as.character(.pkg.env$CURCOL)]
           a_list <- .getDomainMapping(colKey, a_list)$map
         } else {
           assign("CURCOL", swap_in, envir = .pkg.env)
@@ -580,17 +580,19 @@ function(expr, envir) {
     l[[1]] <- quote(`[`)  # This handles both cases (unkown and known colnames... should just work!)
     cols <- colnames(get(as.character(l[[2]]), envir = envir))
     numCols <- length(cols)
-    colname <- as.character(l[[3]])
+    colname <- ifelse( length(l) == 3, as.character(l[[3]]), as.character(l[[4]]))
     if (! (colname %in% cols)) {
       assign("NEWCOL", colname, envir = .pkg.env)
       assign("NUMCOLS", numCols, envir = .pkg.env)
       assign("FRAMEKEY", get(as.character(l[[2]]), envir = envir)@key, envir = .pkg.env)
       l[[4]] <- numCols + 1
     } else {
-      l[[4]] <- l[[3]]
+      if(length(l) == 4) l[[4]] <- l[[3]]
+      assign("FRAMEKEY", get(as.character(l[[2]]), envir = envir)@key, envir = .pkg.env)
     }
     l[[3]] <- as.list(substitute(l[,1]))[[3]]
     l <- .replace_with_keys_helper(l, envir)
+
     return(as.name(as.character(as.expression(.back_to_expr(l)))))
   }
   return(as.character(expr))
