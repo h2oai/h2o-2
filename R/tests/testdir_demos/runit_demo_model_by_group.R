@@ -23,7 +23,7 @@ h <- h2o.init()
 
 # Read in the data
 # Path is relative to the location that I started h2o (i.e. which dir did I java -jar in?)
-flights <- h2o.importFile(h, "./smalldata/airlines/allyears2k_headers.zip", "flights.hex")
+flights <- h2o.importFile(h, "../../../smalldata/airlines/allyears2k_headers.zip", "flights.hex")
 
 #################################################################################
 #
