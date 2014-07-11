@@ -16,11 +16,26 @@
 #'   `[`             -- How to slice a dataset using factors (takes place in the h2o.glm call)
 #'   other           -- How to mix lapply, ldply, and other R-specific functionality to produce interesting results that _will_ scale
 
-# Let's fit logistic regressions to each subgroup of the airlines data for the `origin` variable
+
+
+# Some H2O-specifc R-Unit Header Boilerplate. You may ignore this################
+#                                                                               #
+setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))          #   
+source('../findNSourceUtils.R')                                                 #   
+options(echo=TRUE)                                                              #   
+heading("BEGIN TEST")                                                           #   
+h <- new("H2OClient", ip=myIP, port=myPort)                                     #   
+#################################################################################
 library(h2o)
 library(plyr)
-h <- h2o.init()
+#
+##
+### Begin the Demo 
+##
+#
 
+
+# Let's fit logistic regressions to each subgroup of the airlines data for the `origin` variable
 # Read in the data
 # Path is relative to the location that I started h2o (i.e. which dir did I java -jar in?)
 flights <- h2o.importFile(h, "../../../smalldata/airlines/allyears2k_headers.zip", "flights.hex")
@@ -66,8 +81,9 @@ frequent.origin.codes <- as.character(ordered.cnts$Origin[1:30])
 # Fit logistic regression for IsDepDelayed for some origin
 lr.fit <-
 function(origin, dataset) {
+  data <- dataset[dataset$Origin == origin,]
   t0 <- Sys.time()
-  model <- h2o.glm(x = c(FlightDate, ScheduledTimes, FlightInfo), y = Delayed, data = dataset[dataset$Dest == origin,], family = "binomial", nfolds = 10)
+  model <- h2o.glm(x = c(FlightDate, ScheduledTimes, FlightInfo), y = Delayed, data = dataset, family = "binomial", nfolds = 10)
   elapsed_seconds <- as.numeric(Sys.time() - t0)
   modelkey <- model@key
   result <- list(list(model, origin, elapsed_seconds))
@@ -101,3 +117,9 @@ models.sort.by.auc
 # Total model building time
 total_time <- sum(models.sort.by.auc$train_time)
 cat("Built 300 GLM models in ", total_time, " seconds.", '\n')
+
+#
+##
+### End of Demo
+##
+#

@@ -18,10 +18,24 @@
 #'
 #'   lapply                   --Builds on the previous demo's use of lapply for iterating over algos and origin codes.
 
-# Let's fit logistic regressions to each subgroup of the airlines data for the `origin` variable
+# Some H2O-specifc R-Unit Header Boilerplate. You may ignore this################
+#                                                                               #
+setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))          #   
+source('../findNSourceUtils.R')                                                 #   
+options(echo=TRUE)                                                              #   
+heading("BEGIN TEST")                                                           #   
+h <- new("H2OClient", ip=myIP, port=myPort)                                     #
+#################################################################################
 library(h2o)
 library(plyr)
-h <- h2o.init()
+
+
+#
+##
+### Begin the Demo
+##
+#
+
 
 # Read in the data
 # Path is relative to the location that I started h2o (i.e. which dir did I java -jar in?)
@@ -65,9 +79,10 @@ frequent.origin.codes <- as.character(ordered.cnts$Origin[1:2])
 # Fit logistic regression for IsDepDelayed for some origin
 lr.fit<-
 function(origin, dataset) {
+  dataset <- dataset[dataset$Origin == origin,]
   print("Beginning GLM with 10-fold Cross Validation\n")
   t0 <- Sys.time()
-  model <- h2o.glm(x = c(FlightDate, ScheduledTimes, FlightInfo), y = Delayed, data = dataset[dataset$Dest == origin,], family = "binomial", nfolds = 10)
+  model <- h2o.glm(x = c(FlightDate, ScheduledTimes, FlightInfo), y = Delayed, data = dataset, family = "binomial", nfolds = 10)
   elapsed_seconds <- as.numeric(Sys.time() - t0)
   modelkey <- model@key
   result <- list(list(model, origin, elapsed_seconds))
@@ -77,9 +92,10 @@ function(origin, dataset) {
 
 rf.fit<-
 function(origin, dataset) {
+  dataset <- dataset[dataset$Origin == origin,]
   print("Beginning Random Forest with 50 trees, 20 depth, and 10-fold Cross Validation\n")
   t0 <- Sys.time()
-  model <- h2o.randomForest(x = c(FlightDate, ScheduledTimes, FlightInfo), y = Delayed, data = dataset[dataset$Dest == origin,], ntree = 50, depth = 20, nfolds = 10) 
+  model <- h2o.randomForest(x = c(FlightDate, ScheduledTimes, FlightInfo), y = Delayed, data = dataset, ntree = 50, depth = 20, nfolds = 10) 
   elapsed_seconds <- as.numeric(Sys.time() - t0) 
   modelkey <- model@key
   result <- list(list(model, origin, elapsed_seconds))
@@ -89,9 +105,10 @@ function(origin, dataset) {
 
 srf.fit<-
 function(origin, dataset) {
+  dataset <- dataset[dataset$Origin == origin,]
   print("Beginning Speedy Random Forest with 50 trees, 20 depth, and 10-fold Cross Validation\n")
   t0 <- Sys.time()
-  model <- h2o.SpeeDRF(x = c(FlightDate, ScheduledTimes, FlightInfo), y = Delayed, data = dataset[dataset$Dest == origin,], ntree = 50, depth = 20, nfolds = 10) 
+  model <- h2o.SpeeDRF(x = c(FlightDate, ScheduledTimes, FlightInfo), y = Delayed, data = dataset, ntree = 50, depth = 20, nfolds = 10) 
   elapsed_seconds <- as.numeric(Sys.time() - t0) 
   modelkey <- model@key
   result <- list(list(model, origin, elapsed_seconds))
@@ -101,9 +118,10 @@ function(origin, dataset) {
 
 gbm.fit<-
 function(origin, dataset) {
+  dataset <- dataset[dataset$Origin == origin,]
   print("Beginning Gradient Boosted Machine with 100 trees, 5 depth, and 10-fold Cross Validation\n")
   t0 <- Sys.time()
-  model <- h2o.gbm(x = c(FlightDate, ScheduledTimes, FlightInfo), y = Delayed, data = dataset[dataset$Dest == origin,], n.trees = 100, shrinkage = 0.01, nfolds = 10) 
+  model <- h2o.gbm(x = c(FlightDate, ScheduledTimes, FlightInfo), y = Delayed, data = dataset, n.trees = 100, shrinkage = 0.01, nfolds = 10) 
   elapsed_seconds <- as.numeric(Sys.time() - t0) 
   modelkey <- model@key
   result <- list(list(model, origin, elapsed_seconds))
@@ -113,9 +131,10 @@ function(origin, dataset) {
 
 dl.fit<-
 function(origin, dataset) {
+  dataset <- dataset[dataset$Origin == origin,]
   print("Beginning Deep Learning with 3 hidden layers and 10-fold Cross Validation\n")
   t0 <- Sys.time()
-  model <- h2o.deeplearning(x = c(FlightDate, ScheduledTimes, FlightInfo), y = Delayed, data = dataset[dataset$Dest == origin,], hidden = c(200,200,200), activation = "RectifierWithDropout", input_dropout_ratio = 0.2, l1 = 1e-5, train_samples_per_iteration = 10000, epochs = 100, nfolds = 10)
+  model <- h2o.deeplearning(x = c(FlightDate, ScheduledTimes, FlightInfo), y = Delayed, data = dataset, hidden = c(200,200,200), activation = "RectifierWithDropout", input_dropout_ratio = 0.2, l1 = 1e-5, train_samples_per_iteration = 10000, epochs = 100, nfolds = 10)
   elapsed_seconds <- as.numeric(Sys.time() - t0) 
   modelkey <- model@key
   result <- list(list(model, origin, elapsed_seconds))
@@ -155,15 +174,17 @@ total_time <- sum(models.sort.by.auc$train_time)
 cat("Built all models in ", total_time, " seconds.", '\n')
 
 
-
-
-
-
-
-
-#### Notes:
 #
-  # In order to save space here, make use of R's functional aspects:
+##
+### End of Demo
+##
+#
+
+
+
+# **Notes**:
+#
+# In order to save space here, make use of R's functional aspects:
 # Transform:
 #   models.by.airport.origin      <- unlist(recursive = F, lapply(frequent.origin.codes, lr.fit, flights))
 #   models.by.airport.origin      <- c(models.by.airport.origin, unlist(recursive = F, lapply(frequent.origin.codes, rf.fit, flights)))
@@ -172,6 +193,3 @@ cat("Built all models in ", total_time, " seconds.", '\n')
 #   models.by.airport.origin      <- c(models.by.airport.origin, unlist(recursive = F, lapply(frequent.origin.codes, dl.fit, flights)))
 # Into a one-liner:
 #   models.by.airport.origin <- unlist(recursive = F, lapply(model.fit.fcns, all.fit, frequent.origin.codes, flights))
-
-#
-#
