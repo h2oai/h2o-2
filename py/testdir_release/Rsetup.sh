@@ -129,6 +129,7 @@ usePackage("gbm")
 usePackage("lattice")
 # usePackage("parallel")
 usePackage("RUnit")
+usePackage("plyr")
 
 # usePackage("h2o")
 # usePackage("h2oRClient")
