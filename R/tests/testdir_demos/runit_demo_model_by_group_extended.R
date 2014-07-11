@@ -115,7 +115,7 @@ dl.fit<-
 function(origin, dataset) {
   print("Beginning Deep Learning with 3 hidden layers and 10-fold Cross Validation\n")
   t0 <- Sys.time()
-  model <- h2o.deeplearning(x = c(FlightDate, ScheduledTimes, FlightInfo), y = Delayed, data = dataset[dataset$Dest == origin,], nfolds = 10) 
+  model <- h2o.deeplearning(x = c(FlightDate, ScheduledTimes, FlightInfo), y = Delayed, data = dataset[dataset$Dest == origin,], hidden = c(200,200,200), activation = "RectifierWithDropout", input_dropout_ratio = 0.2, l1 = 1e-5, train_samples_per_iteration = 10000, epochs = 100, nfolds = 10)
   elapsed_seconds <- as.numeric(Sys.time() - t0) 
   modelkey <- model@key
   result <- list(list(model, origin, elapsed_seconds))
