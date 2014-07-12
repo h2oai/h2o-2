@@ -76,13 +76,13 @@ ArrivalDelayed <- vars[30]         # "IsArrDelayed"
 #'      2. improve memory efficiency (does not create so many Last.value.* temporary values
 
 # Make a new column of 1s and 0s from Delayed variable
-#h2o.exec(flights[,"newResponse_1_0"] <- ifelse(flights[, "IsDepDelayed"] == "YES", 1, 0))
+h2o.exec(flights[,"newResponse_1_0"] <- ifelse(flights[, "IsDepDelayed"] == "YES", 1, 0))
 
 # Make a new column of 2s and 3s from Delayed variable
-#h2o.exec(flights$newResponse2_3 <- ifelse(flights$IsDepDelayed == "YES", 3, 2))
+h2o.exec(flights$newResponse2_3 <- ifelse(flights$IsDepDelayed == "YES", 3, 2))
 
 # Make a new column of `0` and `-1` from Delayed variable
-#h2o.exec(flights[, "newResponse_0_neg1"] <- ifelse(flights[,Delayed] == "YES", 0, -1))
+h2o.exec(flights[, "newResponse_0_neg1"] <- ifelse(flights[,Delayed] == "YES", 0, -1))
 
 # OK too slow to do this by hand: use lapply! Here's where `invisible` is used:
 f<-
@@ -94,8 +94,8 @@ function(i, hex) {
   invisible(h2o.exec(hex[, newColName] <- ifelse(hex[,Delayed] == "YES", pos_value, neg_value)))
 }
 
-# Make 5 more "fake" response columns
-invisible(lapply(1:5, f, flights))
+# Make 3 more "fake" response columns
+invisible(lapply(1:3, f, flights))
 
 vars <- colnames(flights)
 #################################################################################
@@ -115,7 +115,7 @@ vars <- colnames(flights)
 #[28] "SecurityDelay"      "LateAircraftDelay"  "IsArrDelayed"      
 #[31] "IsDepDelayed"       "newResponse_1_0"    "newResponse2_3"    
 #[34] "newResponse_0_neg1" "newResponse1"       "newResponse2"      
-#[37] "newResponse3"       "newResponse4"       "newResponse5"      
+#[37] "newResponse3"     
 ############################################################################################
 
 #factorize the new response columns
@@ -124,7 +124,7 @@ function(tgt, data) {
   h2o.exec(data[,tgt] <- factor(data[,tgt])) 
 }
 
-tgts <- vars[32] #:39]
+tgts <- vars[32:37]
 invisible(lapply(tgts, factorize, flights))
 
 # Show the types of each column
