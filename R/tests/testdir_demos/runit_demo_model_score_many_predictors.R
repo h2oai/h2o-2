@@ -131,6 +131,12 @@ invisible(lapply(tgts, factorize, flights))
 # Show the types of each column
 str(flights)
 
+# Finally lets split the flights data into train/test splits (80/20)
+
+split.keys <- h2o.splitFrame(flights, ratios = .80, shuffle = FALSE)
+train <- split.keys[[1]]
+test  <- split.keys[[2]]
+
 # Here's a function that takes a model and a testing dataset and calculates the AUC on the testdata...
 test_performance <-
 function(model, testdata, response) {
@@ -231,9 +237,7 @@ function(fitMethod, responses, dataset, testdata) {
 model.fit.fcns <- c(lr.fit, rf.fit, srf.fit, gbm.fit, dl.fit)
 
 # This will loop over all of the models and score for each of the responses in tgts
-# Just use the flights data again as the "holdout" set ... This will give some really great AUCs, but they are bogus
-holdout_testdata <- flights
-models.by.tgt <- unlist(recursive = F, lapply(model.fit.fcns, all.fit, tgts, flights, holdout_testdata))
+models.by.tgt <- unlist(recursive = F, lapply(model.fit.fcns, all.fit, tgts, train, test))
 
 ##
 ## Now display the results in a frame sorted by AUC
