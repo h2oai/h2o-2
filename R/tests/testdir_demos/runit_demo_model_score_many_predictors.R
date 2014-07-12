@@ -8,9 +8,6 @@
 #'  and we want to build models for each one. As always, these demos strive to stress the
 #'  flexibility and conciseness of the R language.
 #'  
-#' This demo walks through a smalldata case where a data scientist wants to build a model based
-#' on groupings of her data. We use flight record data in modeling against departure delays by 
-#' airport origin code.
 #'
 #'
 #' This demo assumes coverage of the related demos: runit_demo_model_by_group.R, runit_demo_model_by_group_extended2.R
@@ -138,6 +135,8 @@ str(flights)
 test_performance <-
 function(model, testdata, response) {
   preds <- h2o.predict(model, testdata)
+  
+  # p(success)  is the last column in the frame returned by h2o.predict, that's what the ncol(preds) is for below
   perf  <- h2o.performance(data = preds[, ncol(preds)], reference = testdata[, response])
   perf@model$auc
 }
@@ -258,6 +257,8 @@ models.sort.by.auc
 total_time <- sum(models.sort.by.auc$train_time)
 cat("Built all models in ", total_time, " seconds.", '\n')
 
+# Store the results to the local directory
+write.csv(models.sort.by.auc, "models_sort_by_auc.csv", row.names=F)
 
 #
 ##
