@@ -159,7 +159,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   @Override public String[] classNames() { return regression ? null : _domain; }
 
   private static boolean shouldDoScore(SpeeDRFModel m) {
-    return m.score_each || m.t_keys.length == 1 || m.t_keys.length == m.N;
+    return m.score_each || m.t_keys.length == 2 || m.t_keys.length == m.N;
   }
 
   @Override public ConfusionMatrix cm() { return cms[cms.length-1]; }
