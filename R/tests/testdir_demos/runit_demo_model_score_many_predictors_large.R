@@ -10,7 +10,7 @@
 #'  
 #'
 #'
-#' This demo assumes coverage of the related demos: runit_demo_model_by_group.R, runit_demo_model_by_group_extended2.R
+#' This demo assumes coverage of the related demos: runit_demo_model_by_group.R, runit_demo_model_by_group_extended.R
 #'
 #' What this demo covers:
 #'  h2o.splitFrame        --How to split a data frame into train/test splits.
