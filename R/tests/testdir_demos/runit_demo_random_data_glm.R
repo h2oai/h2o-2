@@ -70,10 +70,10 @@ data
 
 
 # Visualization 
-library(rgl) 
-open3d() 
-cf3d.dat <- data.frame(cols=as.vector(col(data)), rows=as.vector(row(data)), value=as.vector(data)) 
-plot3d(cf3d.dat$cols,cf3d.dat$rows,cf3d.dat$value,type='h',lwd=3,xlab="col",ylab="row",zlab="",) 
-text3d(cf3d.dat$cols,cf3d.dat$rows,cf3d.dat$value,texts=sprintf("%.2f",cf3d.dat$value)) 
+#library(rgl) 
+#open3d() 
+#cf3d.dat <- data.frame(cols=as.vector(col(data)), rows=as.vector(row(data)), value=as.vector(data)) 
+#plot3d(cf3d.dat$cols,cf3d.dat$rows,cf3d.dat$value,type='h',lwd=3,xlab="col",ylab="row",zlab="",) 
+#text3d(cf3d.dat$cols,cf3d.dat$rows,cf3d.dat$value,texts=sprintf("%.2f",cf3d.dat$value)) 
 
 PASS_BANNER()
