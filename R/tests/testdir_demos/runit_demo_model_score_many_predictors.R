@@ -42,8 +42,6 @@ library(plyr)
 
 
 # Read in the data
-# This dataset has a number of "fake" predictors
-#   They are simply the IsDepDelayed column copied 30 times
 flights <- h2o.importFile(h, "../../../smalldata/airlines/allyears2k_headers.zip", "flights.hex")
 
 #################################################################################
