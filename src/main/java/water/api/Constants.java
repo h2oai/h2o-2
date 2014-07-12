@@ -122,7 +122,7 @@ public class Constants extends Iced {
   public static final String NORMALIZE             = "normalize";
   public static final String NUM_COLS              = "num_cols";
   public static final String NUM_CPUS              = "num_cpus";
-  public static final String GFLOPS                = "gflops";
+  public static final String GFLOPS                = "linpack_gflops";
   public static final String NUM_KEYS              = "num_keys";
   public static final String NUM_MISSING_VALUES    = "num_missing_values";
   public static final String NUM_ROWS              = "num_rows";
