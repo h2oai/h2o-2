@@ -34,7 +34,7 @@ h2o.importFolder(object, path, pattern = "", key = "", parse = TRUE, header,
 (Optional) The field separator character. Values on each line of the file are separated by this character. If \code{sep = ""}, the parser will automatically detect the separator.
   }
   \item{col.names}{
-(Optional) A \code{\linkS4class{H2OParsedDataVA}} (\code{version = 1}) or \code{\linkS4class{H2OParsedData}} (\code{version = 2}) object containing a single delimited line with the column names for the file.
+(Optional) An \code{\linkS4class{H2OParsedData}} object containing a single delimited line with the column names for the file.
   }
 }
 
@@ -58,8 +58,6 @@ myPath = system.file("extdata", "prostate_folder", package = "h2o")
 prostate_all.hex = h2o.importFolder(localH2O, path = myPath)
 class(prostate_all.hex)
 summary(prostate_all.hex)
-prostate_all.fv = h2o.importFolder(localH2O, path = myPath, version = 2)
-class(prostate_all.fv)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

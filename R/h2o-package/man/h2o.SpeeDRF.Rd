@@ -9,8 +9,7 @@ Performs single-node random forest classification on a data set.
 \usage{
 h2o.SpeeDRF(x, y, data, classification = TRUE, nfolds = 0, validation, mtry = -1, 
   ntree = 50, depth = 50, sample.rate = 2/3, oobee = TRUE, importance = FALSE, 
-  nbins = 1024, seed = -1, stat.type = "ENTROPY", classwt = NULL, 
-  sampling_strategy = "RANDOM", strata_samples = NULL)
+  nbins = 1024, seed = -1, stat.type = "ENTROPY", balance.classes = FALSE, verbose)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -63,7 +62,7 @@ An \code{\linkS4class{H2OParsedData}} object containing the variables in the mod
 \details{
 IMPORTANT: Currently, you must initialize H2O with the flag \code{beta = TRUE} in \code{h2o.init} in order to use this method!
 
-This method runs random forest model building on a single node, as opposed to the multi-node implementation in \code{\link{h2o.randomForest.FV}}.
+This method runs random forest model building on a single node, as opposed to the multi-node implementation in \code{\link{h2o.randomForest}}.
 }
 
 \value{

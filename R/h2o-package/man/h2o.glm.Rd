@@ -7,9 +7,11 @@ H2O: Generalized Linear Models
 Fit a generalized linear model, specified by a response variable, a set of predictors, and a description of the error distribution.
 }
 \usage{
-h2o.glm(x, y, data, family, nfolds = 0, alpha = 0.5, lambda = 1e-5, epsilon = 1e-4, 
-  standardize = TRUE, prior, tweedie.p = ifelse(family == 'tweedie', 1.5, 
-  as.numeric(NA)), iter.max = 100, higher_accuracy = FALSE, lambda_search = FALSE)
+h2o.glm(x, y, data, family, nfolds = 0, alpha = 0.5, nlambda = -1, lambda.min.ratio = -1, 
+  lambda = 1e-5, epsilon = 1e-4, standardize = TRUE, prior, variable_importances = 1, 
+  use_all_factor_levels = 0, tweedie.p = ifelse(family == 'tweedie', 1.5, 
+  as.numeric(NA)), iter.max = 100, higher_accuracy = FALSE, lambda_search = FALSE, 
+  return_all_lambda = FALSE, max_predictors = -1)
 }
 \arguments{
   \item{x}{
@@ -41,12 +43,15 @@ A description of the error distribution and corresponding link function to be us
   \item{prior}{
 (Optional) Prior probability of class 1. Only used if \code{family = "binomial"}. When omitted, prior will default to the frequency of class 1 in the response column.
   }
+  \item{variable_importances}{
+  (Optional) A numeric value either 0 or 1 to indicate whether the variable importances should be computed.  Compute variable importances for input features. NOTE: If use_all_factor_levels is off the importance of the base level will NOT be shown.
+  }
+  \item{use_all_factor_levels}{
+  (Optional) A numeric value either 0 or 1 to indicate whether all factor levels should be used. By default, first factor level is skipped from the possible set of predictors. Set this flag if you want use all of the levels. Needs sufficient regularization to solve!
+  }
   \item{tweedie.p}{
   (Optional) The index of the power variance function for the tweedie distribution. Only used if \code{family = "tweedie"}.
 }
-  \item{thresholds}{
-  (Optional) Degree to which to weight the sensitivity (the proportion of correctly classified 1's) and specificity (the proportion of correctly classified 0s). The default option is joint optimization for the overall classification rate. Changing this will alter the confusion matrix and the AUC. Only used if \code{family = "binomial"}.
-  }
   \item{iter.max}{
   (Optional) Maximum number of iterations allowed.
   }
@@ -55,12 +60,6 @@ A description of the error distribution and corresponding link function to be us
   }
   \item{lambda_search}{
   (Optional) A logical value indicating whether to onduct a search over the space of lambda values, starting from lambda_max. When this is set to TRUE, \code{lambda} will be interpreted as lambda_min.
-  }
-  \item{variable_importances}{
-  (Optional) A numeric value either 0 or 1 to indicate whether the variable importances should be computed.  Compute variable importances for input features. NOTE: If use_all_factor_levels is off the importance of the base level will NOT be shown.
-  }
-  \item{use_all_factor_levels}{
-  (Optional) A numeric value either 0 or 1 to indicate whether all factor levels should be used. By default, first factor level is skipped from the possible set of predictors. Set this flag if you want use all of the levels. Needs sufficient regularization to solve!
   }
 }
 \value{

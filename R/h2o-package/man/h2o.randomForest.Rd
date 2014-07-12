@@ -8,8 +8,9 @@ Performs random forest classification on a data set.
 }
 \usage{
 h2o.randomForest(x, y, data, classification = TRUE, ntree = 50, depth = 20, 
-  sample.rate = 2/3, nbins = 100, seed = -1, importance = FALSE, nfolds = 0,
-  validation, nodesize = 1, balance.classes = FALSE, max.after.balance.size = 5)
+  mtries = -1, sample.rate = 2/3, nbins = 100, seed = -1, importance = FALSE, 
+  nfolds = 0, validation, nodesize = 1, balance.classes = FALSE, 
+  max.after.balance.size = 5)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -20,7 +21,7 @@ A vector containing the names or indices of the predictor variables to use in bu
 The name or index of the response variable. If the data does not contain a header, this is the column index, designated by increasing numbers from left to right. (The response must be either an integer or a categorical variable).
 }
   \item{data}{
-An \code{\linkS4class{H2OParsedDataVA}} (\code{version = 1}) or \code{\linkS4class{H2OParsedData}} (\code{version = 2}) object containing the variables in the model.
+An \code{\linkS4class{H2OParsedData}} object containing the variables in the model.
 }
   \item{classification}{
 (Optional) A logical value indicating whether a classification model should be built (as opposed to regression).
@@ -30,6 +31,9 @@ An \code{\linkS4class{H2OParsedDataVA}} (\code{version = 1}) or \code{\linkS4cla
 }
   \item{depth}{
   (Optional) Maximum depth to grow the tree.
+  }
+  \item{mtries}{
+  (Optional) Number of variables randomly sampled as candidates at each split. If set to -1, defaults to sqrt{p} for classification, and p/3 for regression, where p is the number of predictors. 
   }
   \item{sample.rate}{
   (Optional) Sampling rate for constructing data from which individual trees are grown.
@@ -53,9 +57,6 @@ An \code{\linkS4class{H2OParsedDataVA}} (\code{version = 1}) or \code{\linkS4cla
   }
   \item{balance.classes}{(Optional) Balance training data class counts via over/under-sampling (for imbalanced data)}
   \item{max.after.balance.size}{Maximum relative size of the training data after balancing class counts (can be less than 1.0)}
-  \item{use_non_local}{
-  (Optional) Logical value indicating whether to use non-local data in building random forest model.
-  }
 }
 
 \value{
