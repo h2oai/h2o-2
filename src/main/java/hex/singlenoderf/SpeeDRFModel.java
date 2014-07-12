@@ -194,7 +194,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       m.cms[m.cms.length - 1] = new_cm;
 
       // Create the ROC Plot
-      if (m.classes() == 2) {
+      if (m.classes() == 2 && !scored.lastVec().isInt()) {
         AUC auc_calc = new AUC();
         auc_calc.vactual = cm.vactual;
         auc_calc.vpredict = scored.lastVec(); // lastVec is class1
