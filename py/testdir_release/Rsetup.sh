@@ -118,6 +118,7 @@ usePackage("gplots")
 usePackage("ROCR")
 usePackage("digest")
 usePackage("penalized")
+usePackage("rgl")
 
 # these came from source('../findNSourceUtils.R')
 usePackage("expm")
