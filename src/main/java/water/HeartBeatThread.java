@@ -77,7 +77,7 @@ public class HeartBeatThread extends Thread {
       hb._keys       = (H2O.STORE.size ());
       hb.set_valsz     (myHisto.histo(false)._cached);
       hb._num_cpus   = (char)run.availableProcessors();
-      if (counter % 300 == 0) hb._gflops   = new Linpack().run(); //run every 5 mins
+      if (counter % 300 == 2) hb._gflops   = new Linpack().run(); //run every 5 mins
       Object load = null;
       try {
         load = mbs.getAttribute(os, "SystemLoadAverage");
