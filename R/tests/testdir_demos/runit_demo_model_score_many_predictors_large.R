@@ -94,7 +94,7 @@ function(i, hex) {
 }
 
 # Make 5 more "fake" response columns
-invisible(lapply(1:1, f, flights))
+invisible(lapply(1:5, f, flights))
 
 vars <- colnames(flights)
 #################################################################################
