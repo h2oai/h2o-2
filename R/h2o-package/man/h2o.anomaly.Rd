@@ -21,7 +21,7 @@ h2o.anomaly(data, model, key = "", threshold = -1.0)
 Returns an \code{\linkS4class{H2OParsedData}} object with a single column containing the reconstruction MSE. 
 }
 \seealso{
-\code{\linkS4class{H2OParsedData}, \link{H2ODeepLearningModel}, \link{h2o.deeplearning}}
+\code{\linkS4class{H2OParsedData}, \linkS4class{H2ODeepLearningModel}, \link{h2o.deeplearning}}
 }
 \examples{
 library(h2o)

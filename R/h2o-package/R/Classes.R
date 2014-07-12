@@ -401,9 +401,8 @@ h2o.exec <- function(expr_to_execute) {
   key <- res$dest_key
 
   if (.pkg.env$FRAMEKEY != "") {
-    key <- .pkg.env$FRAMEKEY
+    key <- as.character(.pkg.env$FRAMEKEY)
   }
-
   new("H2OParsedData", h2o = .pkg.env$SERVER, key = key)
 }
 

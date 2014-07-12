@@ -42,6 +42,8 @@
 \alias{==,H2OParsedData,H2OParsedData-method}
 \alias{==,H2OParsedData,numeric-method}
 \alias{==,numeric,H2OParsedData-method}
+\alias{==,H2OParsedData,character-method}
+\alias{==,character,H2OParsedData-method}
 \alias{>,H2OParsedData,H2OParsedData-method}
 \alias{>,H2OParsedData,numeric-method}
 \alias{>,numeric,H2OParsedData-method}

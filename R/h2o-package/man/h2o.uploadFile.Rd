@@ -57,8 +57,6 @@ prosPath = system.file("extdata", "prostate.csv", package = "h2o")
 prostate.hex = h2o.uploadFile(localH2O, path = prosPath, key = "prostate.hex")
 class(prostate.hex)
 summary(prostate.hex)
-prostate.fv = h2o.uploadFile(localH2O, path = prosPath, key = "prostate.fv", version = 2)
-class(prostate.fv)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

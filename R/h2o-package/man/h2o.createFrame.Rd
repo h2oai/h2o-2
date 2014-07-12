@@ -8,11 +8,15 @@ Create an H2O Frame
 Create an H2O data frame from scratch, with optional randomization. Supports categoricals, integers, reals and missing values.
 }
 \usage{
-h2o.createFrame(object, key, rows, cols, seed, randomize, value, categorical_fraction, factors, integer_fraction, integer_range, missing_fraction, response_factors)
+h2o.createFrame(object, key, rows, cols, seed, randomize, value, real_range, 
+  categorical_fraction, factors, integer_fraction, integer_range, 
+  missing_fraction, response_factors)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
-  \item{key}{Name (Key) of frame to be created}
+  \item{object}{An \code{\linkS4class{H2OClient}} object containing the IP address and port of the server running H2O.}
+  \item{key}{
+  The unique hex key assigned to the created frame.}
   \item{rows}{Number of rows}
   \item{cols}{Number of columns}
   \item{seed}{Random number seed}
@@ -33,9 +37,10 @@ Returns an H2O data frame.
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE, beta = TRUE)
 myframe = h2o.createFrame(localH2O, 'myframekey', rows = 1000, cols = 10, 
-                          seed = -12301283, randomize = T, value = 0, real_range = 2.0,
+                          seed = -12301283, randomize = TRUE, value = 0, real_range = 2.0,
                           categorical_fraction = 0.2, factors = 100, 
-                          integer_fraction = 0.2, integer_range = 100, missing_fraction = 0.1, response_factors = 2)
+                          integer_fraction = 0.2, integer_range = 100, missing_fraction = 0.1, 
+                          response_factors = 2)
 head(myframe)
 summary(myframe)
 h2o.shutdown(localH2O)

@@ -159,7 +159,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   @Override public String[] classNames() { return regression ? null : _domain; }
 
   private static boolean shouldDoScore(SpeeDRFModel m) {
-    return m.score_each || m.t_keys.length == 1 || m.t_keys.length == m.N;
+    return m.score_each || m.t_keys.length == 2 || m.t_keys.length == m.N;
   }
 
   @Override public ConfusionMatrix cm() { return cms[cms.length-1]; }
@@ -194,7 +194,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       m.cms[m.cms.length - 1] = new_cm;
 
       // Create the ROC Plot
-      if (m.classes() == 2) {
+      if (m.classes() == 2 && !scored.lastVec().isInt()) {
         AUC auc_calc = new AUC();
         auc_calc.vactual = cm.vactual;
         auc_calc.vpredict = scored.lastVec(); // lastVec is class1

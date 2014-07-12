@@ -2,6 +2,9 @@
 options(echo=FALSE)
 local({r <- getOption("repos"); r["CRAN"] <- "http://cran.us.r-project.org"; options(repos = r)})
 if (!"R.utils" %in% rownames(installed.packages())) install.packages("R.utils")
+if (!"plyr" %in% rownames(installed.packages())) install.packages("plyr")
+if (!"rgl" %in% rownames(installed.packages())) install.packages("rgl")
+
 library(R.utils)
 ##
 # Utilities for relative paths in R

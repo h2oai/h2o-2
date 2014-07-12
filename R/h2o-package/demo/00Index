@@ -10,3 +10,4 @@ h2o.kmeans.remote   H2O K-means using prostate cancer data run on a remote serve
 h2o.naiveBayes.remote   H2O naive Bayes using iris and Congressional voting data run on a remote server provided by the user
 h2o.prcomp.remote   H2O PCA using Australia coast data run on a remote server provided by user
 h2o.randomForest.remote   H2O random forest classification using iris data run on a remote server provided by user
+h2o.deeplearning   H2O deep learning using prostate cancer data
