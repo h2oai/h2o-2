@@ -120,6 +120,17 @@ h2o.createFrame <- function(object, key, rows, cols, seed, randomize, value, rea
   new("H2OParsedData", h2o=object, key=key)
 }
 
+h2o.splitFrame <- function(data, ratios = 0.75, shuffle = FALSE) {
+  if(class(data) != "H2OParsedData") stop("data must be of class H2OParsedData")
+  if(!is.numeric(ratios)) stop("ratios must be numeric")
+  if(any(ratios < 0 | ratios > 1)) stop("ratios must be between 0 and 1 exclusive")
+  if(sum(ratios) >= 1) stop("sum of ratios must be strictly less than 1")
+  if(!is.logical(shuffle)) stop("shuffle must be a logical value")
+  
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SplitFrame, source = data@key, ratios = ratios, shuffle = as.numeric(shuffle))
+  lapply(res$split_keys, function(key) { new("H2OParsedData", h2o=data@h2o, key=key) })
+}
+
 # ----------------------------------- File Import Operations --------------------------------- #
 # WARNING: You must give the FULL file/folder path name! Relative paths are taken with respect to the H2O server directory
 # ----------------------------------- Import Folder --------------------------------- #  

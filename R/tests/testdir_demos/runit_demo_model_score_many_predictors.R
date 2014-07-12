@@ -1,34 +1,35 @@
 #'
-#' An H2O Demo: Building Many Models By Group 
+#' An H2O Demo: Building Many Models By Group And Scoring With Validation
 #'
+#'
+#' New in this demo:
+#'
+#'  This demo covers additional workflows when the dataset contains several binary predictors
+#'  and we want to build models for each one. As always, these demos strive to stress the
+#'  flexibility and conciseness of the R language.
 #'  
 #' This demo walks through a smalldata case where a data scientist wants to build a model based
 #' on groupings of her data. We use flight record data in modeling against departure delays by 
 #' airport origin code.
 #'
-#' This demo assumes coverage of the related demo: runit_demo_model_by_group.R
+#'
+#' This demo assumes coverage of the related demos: runit_demo_model_by_group.R, runit_demo_model_by_group_extended2.R
 #'
 #' What this demo covers:
-#'  Algorithms:
-#'   h2o.randomForest         --The distributed random forest algorithm
-#'   h2o.SpeeDRF              --A faster random forest, but not as accurate
-#'   h2o.deeplearning         --Distributed, parallel deep learning
-#'   h2o.gbm                  --Gradient Boosted Machines (a tree-based algo)
-#'   h2o.glm                  --GLM again
-#'
-#'   lapply                   --Builds on the previous demo's use of lapply for iterating over algos and origin codes.
+#'  h2o.performance       --Useful for binary responses: computes the AUC and best thresholds for a variety of quality metrics
+#'  
+#' 
+#'  Additionally, we demonstrate best practices in storing model quality information and other meta data.
 
-
-# Some H2O-specifc R-Unit Header Boilerplate. You may ignore this
-#################################################################################
+# Some H2O-specifc R-Unit Header Boilerplate. You may ignore this################
+#                                                                               #
 setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))          #   
 source('../findNSourceUtils.R')                                                 #   
 options(echo=TRUE)                                                              #   
 heading("BEGIN TEST")                                                           #   
-h <- new("H2OClient", ip=myIP, port=myPort)                                     #   
+h <- new("H2OClient", ip=myIP, port=myPort)                                     #
 #################################################################################
 library(h2o)
-library(plyr)
 
 #
 ##
@@ -38,8 +39,9 @@ library(plyr)
 
 
 # Read in the data
-# Path is relative to the location that I started h2o (i.e. which dir did I java -jar in?)
-flights <- h2o.importFile(h, "../../../smalldata/airlines/allyears2k_headers.zip", "flights.hex")
+# This dataset has a number of "fake" predictors
+#   They are simply the IsDepDelayed column copied 30 times
+flights <- h2o.importFile(h, "../../../smalldata/airlines/allyears2k_many_predictors.csv", "flights.hex")
 
 #################################################################################
 #
@@ -56,25 +58,19 @@ flights <- h2o.importFile(h, "../../../smalldata/airlines/allyears2k_headers.zip
 #[22] "Cancelled"         "CancellationCode"  "Diverted"         
 #[25] "CarrierDelay"      "WeatherDelay"      "NASDelay"         
 #[28] "SecurityDelay"     "LateAircraftDelay" "IsArrDelayed"     
-#[31] "IsDepDelayed"     
+#[31] "IsDepDelayed"  
 #################################################################################
 vars <- colnames(flights)
 
 # Suggested Explanatory Variables:
 FlightDate     <- vars[1:4]        # "Year", "Month", "DayofMonth", "DayOfWeek"
 ScheduledTimes <- vars[c(6,8,13)]  # "CRSDepTime", "CRSArrTime", "CRSElapsedTime"
-FlightInfo     <- vars[c(9,18,19)] # "UniqueCarrier", "Dest", "Distance"
+FlightInfo     <- vars[c(9,17,18,19)] # "UniqueCarrier", "Origin", "Dest", "Distance"
 
 # Response
 Delayed        <- vars[31]         # "IsDepDelayed"
 
-#take a peek at the number of unique origin airport codes
-counts.by.origincode <- h2o::ddply(flights, "Origin", nrow)
-cnts <- as.data.frame(counts.by.origincode)
-ordered.cnts <- cnts[with(cnts, order(-C1)),]  # ORDER BY count DESC
 
-# Choose the top 2 most frequently used airports to fly out from
-frequent.origin.codes <- as.character(ordered.cnts$Origin[1:2])
 
 # Fit logistic regression for IsDepDelayed for some origin
 lr.fit<-

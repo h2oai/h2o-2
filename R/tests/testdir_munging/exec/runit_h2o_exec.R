@@ -204,12 +204,20 @@ function(conn) {
 
 
     res99 <- h2o.exec(res99 <- ifelse(hex[,"C1"] < 4.3, hex[,"C1"], hex[,"C2"] + hex[,"C3"]))
+    head(res99)
 
     Log.info("Try a simple case where we create new columns, do assignments, and use '$' operator")
     h2o.exec(hex$x1 <- log(hex$C1 + 1))
+    head(hex)
 
     Log.info("Do a more complicated case where rows are also subset")
     h2o.exec(hex <- hex[ hex$x1 < 1.3, "C2"])
+    head(hex)
+
+    Log.info("Now try it with the `[` operator")
+    hex <- h2o.uploadFile(conn, locate("smalldata/airlines/allyears2k_headers.zip"), "flights.hex")
+    print(head(h2o.exec(hex[,"newcol1"] <- ifelse(hex$IsDepDelayed == "YES", 1,0))))
+    print(head(hex))
 
     testEnd()
 }

@@ -159,6 +159,7 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__PAGE_NBProgress = "2/NBProgressPage.json"
 .h2o.__PAGE_NBModelView = "2/NBModelView.json"
 .h2o.__PAGE_CreateFrame = "2/CreateFrame.json"
+.h2o.__PAGE_SplitFrame = "2/FrameSplitPage.json"
 
 # client -- Connection object returned from h2o.init().
 # page   -- URL to access within the H2O server.
@@ -442,10 +443,12 @@ function(some_expr_list) {
 #'
 #' Swap the variable with the key.
 #'
-#' Once there's a key, set its columns to the COLNAMES variable in the .pkg.env  (used by .get_col_id)
+#' Once there's a key available, set its columns to the COLNAMES variable in the .pkg.env  (used by .get_col_id)
+#' Save the key as well!
 .swap_with_key<-
 function(object, envir) {
   assign("SERVER", get(as.character(object), envir = envir)@h2o, envir = .pkg.env)
+  assign("CURKEY", get(as.character(object), envir = envir)@key, envir = .pkg.env)
   if ( !exists("COLNAMES", .pkg.env)) {
     assign("COLNAMES", colnames(get(as.character(object), envir = envir)), .pkg.env)
   }
@@ -475,6 +478,20 @@ function(object, envir) {
 .replace_all<-
 function(a_list, envir) {
 
+  # Snoop for a column name and intercept it into .pkg.env$CURCOL
+  if (length(a_list) == 3) {
+    # In the case of subsetting a column by a factor/character, we need to get the column name.
+    if (identical(a_list[[1]], quote(`$`))) {
+
+      # if subsetting with `$`, then column name is the 3rd in the list
+      assign("CURCOL", a_list[[3]], envir = .pkg.env)
+    } else if (identical(a_list[[1]], quote(`[`))) {
+
+      # if subsetting with `[`, then column name is the 4th in the list
+      assign("CURCOL", a_list[[4]], envir = .pkg.env)
+    }
+  }
+
   # Check if there is H2OParsedData object to sub out, grab their indices.
   idxs <- which( "H2OParsedData" == unlist(lapply(a_list, .eval_class, envir)))
 
@@ -495,17 +512,25 @@ function(a_list, envir) {
     }
   }
 
-  # Swap out column names with indices
+  # Swap out column names with indices OR swap out the enum with its domain mapping
   if (length(idx2) != 0) {
     for (i in idx2) {
       if (length(a_list) == 1) {
-        a_list <- .swap_with_colid(a_list, envir)
+
+        # If the col_id comes back as null, swap with domain mapping.
+        swap_in <- .swap_with_colid(a_list, envir)
+        if(length(swap_in) == 0) {
+          colKey <- new("H2OParsedData", h2o = .pkg.env$SERVER, key = as.character(.pkg.env$CURKEY))[, as.character(.pkg.env$CURCOL)]
+          a_list <- .getDomainMapping(colKey, a_list)$map
+        } else {
+          assign("CURCOL", swap_in, envir = .pkg.env)
+          a_list <- swap_in
+        }
       } else {
         a_list[[i]] <- .swap_with_colid(a_list[[i]], envir)
       }
     }
   }
-
   return(a_list)
 }
 
@@ -551,21 +576,23 @@ function(expr, envir) {
   l <- lapply(as.list(expr), .as_list)
 
   # Have a single column sliced out that we want to a) replace -OR- b) create
-  if (identical(l[[1]], quote(`$`))) {
+  if (identical(l[[1]], quote(`$`)) || identical(l[[1]], quote(`[`))) {
     l[[1]] <- quote(`[`)  # This handles both cases (unkown and known colnames... should just work!)
     cols <- colnames(get(as.character(l[[2]]), envir = envir))
     numCols <- length(cols)
-    colname <- as.character(l[[3]])
+    colname <- ifelse( length(l) == 3, as.character(l[[3]]), as.character(l[[4]]))
     if (! (colname %in% cols)) {
       assign("NEWCOL", colname, envir = .pkg.env)
       assign("NUMCOLS", numCols, envir = .pkg.env)
       assign("FRAMEKEY", get(as.character(l[[2]]), envir = envir)@key, envir = .pkg.env)
       l[[4]] <- numCols + 1
     } else {
-      l[[4]] <- l[[3]]
+      if(length(l) == 4) l[[4]] <- l[[3]]
+      assign("FRAMEKEY", get(as.character(l[[2]]), envir = envir)@key, envir = .pkg.env)
     }
     l[[3]] <- as.list(substitute(l[,1]))[[3]]
     l <- .replace_with_keys_helper(l, envir)
+
     return(as.name(as.character(as.expression(.back_to_expr(l)))))
   }
   return(as.character(expr))
