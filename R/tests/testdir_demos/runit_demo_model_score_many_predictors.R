@@ -33,7 +33,7 @@ heading("BEGIN TEST")                                                           
 h <- new("H2OClient", ip=myIP, port=myPort)                                     #
 #################################################################################
 library(h2o)
-
+library(plyr)
 #
 ##
 ### Begin the Demo
