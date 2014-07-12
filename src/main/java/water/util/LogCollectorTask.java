@@ -72,6 +72,7 @@ public class LogCollectorTask extends DRemoteTask {
         FileInputStream fis = new FileInputStream(f);
         // create a new zip entry
         ZipEntry anEntry = new ZipEntry(f.getPath());
+        anEntry.setTime(f.lastModified());
         //place the zip entry in the ZipOutputStream object
         zos.putNextEntry(anEntry);
         //now write the content of the file to the ZipOutputStream
