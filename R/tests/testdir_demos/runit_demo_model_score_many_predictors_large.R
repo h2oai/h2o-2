@@ -14,12 +14,10 @@
 #'
 #' What this demo covers:
 #'  h2o.performance       --Useful for binary responses: computes the AUC and best thresholds for a variety of quality metrics
-#'  
+#'  get priors            --How to get the priors from the model: @model$priorDistribution
 #'  h2o.exec              --Execute an arbitrary R-like expresion in the H2O cloud (expression must contain an H2OParsedData object).
-#'
 #'  invisible             --An interesting & useful base package function. See ?invisible for more
-#'  
-#'  Additionally, we demonstrate best practices in storing model quality information and other meta data.
+#'  write.csv             --Store all of the models into a csv grouped by the different responses and sorted by the AUC on testing data
 
 # Some H2O-specifc R-Unit Header Boilerplate. You may ignore this
 #################################################################################
@@ -77,13 +75,13 @@ ArrivalDelayed <- vars[30]         # "IsArrDelayed"
 #'      2. improve memory efficiency (does not create so many Last.value.* temporary values
 
 # Make a new column of 1s and 0s from Delayed variable
-h2o.exec(flights[,"newResponse_1_0"] <- ifelse(flights[, "IsDepDelayed"] == "YES", 1, 0))
+#h2o.exec(flights[,"newResponse_1_0"] <- ifelse(flights[, "IsDepDelayed"] == "YES", 1, 0))
 
 # Make a new column of 2s and 3s from Delayed variable
-h2o.exec(flights$newResponse2_3 <- ifelse(flights$IsDepDelayed == "YES", 3, 2))
+#h2o.exec(flights$newResponse2_3 <- ifelse(flights$IsDepDelayed == "YES", 3, 2))
 
 # Make a new column of `0` and `-1` from Delayed variable
-h2o.exec(flights[, "newResponse_0_neg1"] <- ifelse(flights[,Delayed] == "YES", 0, -1))
+#h2o.exec(flights[, "newResponse_0_neg1"] <- ifelse(flights[,Delayed] == "YES", 0, -1))
 
 # OK too slow to do this by hand: use lapply! Here's where `invisible` is used:
 f<-
@@ -96,7 +94,7 @@ function(i, hex) {
 }
 
 # Make 5 more "fake" response columns
-invisible(lapply(1:5, f, flights))
+invisible(lapply(1:1, f, flights))
 
 vars <- colnames(flights)
 #################################################################################
@@ -125,7 +123,7 @@ function(tgt, data) {
   h2o.exec(data[,tgt] <- factor(data[,tgt])) 
 }
 
-tgts <- vars[32:39]
+tgts <- vars[32] #:39]
 invisible(lapply(tgts, factorize, flights))
 
 # Show the types of each column
@@ -150,80 +148,85 @@ function(model, testdata, response) {
 # Fit logistic regression for IsDepDelayed for some origin
 lr.fit<-
 function(response, dataset, testdata) {
-  print("Beginning GLM with 3-fold Cross Validation\n")
+  print("Beginning GLM with 2-fold Cross Validation\n")
   t0 <- Sys.time()
-  model <- h2o.glm(x = c(FlightDate, ScheduledTimes, FlightInfo), y = response, data = dataset, family = "binomial", nfolds = 3)
+  model <- h2o.glm(x = c(FlightDate, ScheduledTimes, FlightInfo), y = response, data = dataset, family = "binomial", nfolds = 2)
   elapsed_seconds <- as.numeric(Sys.time() - t0)
   modelkey <- model@key
 
   #perform the holdout computation  
   test_auc <- test_performance(model, testdata, response)
 
-  result <- list(list(model, response, elapsed_seconds, test_auc))
+  priors <- c(NA, NA) # GLM doesn't compute the prior and model distributions. It has no option to 'balance classes'
+  result <- list(list(model, response, elapsed_seconds, test_auc, priors))
   names(result) <- model@key
   return(result)
 }
 
 rf.fit<-
 function(response, dataset, testdata) {
-  print("Beginning Random Forest with 50 trees, 20 depth, and 3-fold Cross Validation\n")
+  print("Beginning Random Forest with 10 trees, 20 depth, and 2-fold Cross Validation\n")
   t0 <- Sys.time()
-  model <- h2o.randomForest(x = c(FlightDate, ScheduledTimes, FlightInfo), y = response, data = dataset, ntree = 50, depth = 20, nfolds = 3) 
+  model <- h2o.randomForest(x = c(FlightDate, ScheduledTimes, FlightInfo), y = response, data = dataset, ntree = 10, depth = 20, nfolds = 2, balance.classes = T) 
   elapsed_seconds <- as.numeric(Sys.time() - t0) 
   modelkey <- model@key
  
   #perform the holdout computation  
   test_auc <- test_performance(model, testdata, response)
 
-  result <- list(list(model, response, elapsed_seconds, test_auc)) 
+  priors <- model@model$priorDistribution  # Can obtain the model distributions with model@model$modelDistribution
+  result <- list(list(model, response, elapsed_seconds, test_auc, priors)) 
   names(result) <- model@key
   return(result)
 }
 
 srf.fit<-
 function(response, dataset, testdata) {
-  print("Beginning Speedy Random Forest with 50 trees, 20 depth, and 3-fold Cross Validation\n")
+  print("Beginning Speedy Random Forest with 10 trees, 20 depth, and 2-fold Cross Validation\n")
   t0 <- Sys.time()
-  model <- h2o.SpeeDRF(x = c(FlightDate, ScheduledTimes, FlightInfo), y = response, data = dataset, ntree = 50, depth = 20, nfolds = 3) 
+  model <- h2o.SpeeDRF(x = c(FlightDate, ScheduledTimes, FlightInfo), y = response, data = dataset, ntree = 10, depth = 20, nfolds = 2, balance.classes = T)
   elapsed_seconds <- as.numeric(Sys.time() - t0) 
   modelkey <- model@key
  
   #perform the holdout computation  
   test_auc <- test_performance(model, testdata, response)
 
-  result <- list(list(model, response, elapsed_seconds, test_auc)) 
+  priors <- model@model$priorDistribution
+  result <- list(list(model, response, elapsed_seconds, test_auc, priors)) 
   names(result) <- model@key
   return(result)
 }
 
 gbm.fit<-
 function(response, dataset, testdata) {
-  print("Beginning Gradient Boosted Machine with 100 trees, 5 depth, and 3-fold Cross Validation\n")
+  print("Beginning Gradient Boosted Machine with 50 trees, 5 depth, and 2-fold Cross Validation\n")
   t0 <- Sys.time()
-  model <- h2o.gbm(x = c(FlightDate, ScheduledTimes, FlightInfo), y = response, data = dataset, n.trees = 100, shrinkage = 0.01, nfolds = 3) 
+  model <- h2o.gbm(x = c(FlightDate, ScheduledTimes, FlightInfo), y = response, data = dataset, n.trees = 50, shrinkage = 1/50, nfolds = 2, balance.classes = T) 
   elapsed_seconds <- as.numeric(Sys.time() - t0) 
   modelkey <- model@key
  
   #perform the holdout computation  
   test_auc <- test_performance(model, testdata, response)
 
-  result <- list(list(model, response, elapsed_seconds, test_auc)) 
+  priors <- model@model$priorDistribution
+  result <- list(list(model, response, elapsed_seconds, test_auc, priors)) 
   names(result) <- model@key
   return(result)
 }
 
 dl.fit<-
 function(response, dataset, testdata) {
-  print("Beginning Deep Learning with 3 hidden layers and 3-fold Cross Validation\n")
+  print("Beginning Deep Learning with 3 hidden layers and 2-fold Cross Validation\n")
   t0 <- Sys.time()
-  model <- h2o.deeplearning(x = c(FlightDate, ScheduledTimes, FlightInfo), y = response, data = dataset, hidden = c(200,200,200), activation = "RectifierWithDropout", input_dropout_ratio = 0.2, l1 = 1e-5, train_samples_per_iteration = 10000, epochs = 100, nfolds = 3)
+  model <- h2o.deeplearning(x = c(FlightDate, ScheduledTimes, FlightInfo), y = response, data = dataset, hidden = c(200,200,200), activation = "RectifierWithDropout", input_dropout_ratio = 0.2, l1 = 1e-5, train_samples_per_iteration = 10000, epochs = 100, nfolds = 2, balance_classes = T)
   elapsed_seconds <- as.numeric(Sys.time() - t0)
   modelkey <- model@key
 
   #perform the holdout computation  
   test_auc <- test_performance(model, testdata, response)
 
-  result <- list(list(model, response, elapsed_seconds, test_auc))
+  priors <- model@model$priorDistribution
+  result <- list(list(model, response, elapsed_seconds, test_auc, priors))
   names(result) <- model@key
   return(result)
 }
@@ -244,15 +247,23 @@ models.by.tgt <- unlist(recursive = F, lapply(model.fit.fcns, all.fit, tgts, tra
 ##
 
 # Use ldply to iterate over the list of models, extracting the model key, the model auc, the response, and the elapsed training time in seconds
-models.auc.response.frame <- ldply(models.by.tgt, function(x) { c(model_key = x[[1]]@key, train_auc = as.numeric(x[[1]]@model$auc), test_auc = as.numeric(x[[4]]), response = x[[2]], train_time = as.numeric(x[[3]])) })
+models.auc.response.frame <- ldply(models.by.tgt, function(x) { 
+                                  c(model_key = x[[1]]@key, 
+                                    train_auc = as.numeric(x[[1]]@model$auc), 
+                                    test_auc = as.numeric(x[[4]]), 
+                                    response = x[[2]], 
+                                    train_time = as.numeric(x[[3]]),
+                                    prior_neg_class = x[[5]][1], prior_pos_class = x[[5]][2]) })
 
 # sort the models by auc from worst to best
 models.sort.by.auc <- models.auc.response.frame[with(models.auc.response.frame, order(response, test_auc)),-1]
 
 # convert the `auc` and `train_time` columns into numerics
-models.sort.by.auc$train_auc  <- as.numeric(models.sort.by.auc$train_auc)
-models.sort.by.auc$test_auc   <- as.numeric(models.sort.by.auc$test_auc)
-models.sort.by.auc$train_time <- as.numeric(models.sort.by.auc$train_time)
+models.sort.by.auc$train_auc       <- as.numeric(models.sort.by.auc$train_auc)
+models.sort.by.auc$test_auc        <- as.numeric(models.sort.by.auc$test_auc)
+models.sort.by.auc$train_time      <- as.numeric(models.sort.by.auc$train_time)
+models.sort.by.auc$prior_pos_class <- as.numeric(models.sort.by.auc$prior_pos_class)
+models.sort.by.auc$prior_neg_class <- as.numeric(models.sort.by.auc$prior_neg_class)
 
 # display the frame
 models.sort.by.auc
