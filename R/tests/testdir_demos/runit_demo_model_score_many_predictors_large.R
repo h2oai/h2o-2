@@ -13,6 +13,7 @@
 #' This demo assumes coverage of the related demos: runit_demo_model_by_group.R, runit_demo_model_by_group_extended2.R
 #'
 #' What this demo covers:
+#'  h2o.splitFrame        --How to split a data frame into train/test splits.
 #'  h2o.performance       --Useful for binary responses: computes the AUC and best thresholds for a variety of quality metrics
 #'  get priors            --How to get the priors from the model: @model$priorDistribution
 #'  h2o.exec              --Execute an arbitrary R-like expresion in the H2O cloud (expression must contain an H2OParsedData object).
