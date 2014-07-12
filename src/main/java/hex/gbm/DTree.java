@@ -1075,11 +1075,9 @@ public class DTree extends Iced {
         sb.append("This will also temporarily enable downloading Java models.<br/>");
         sb.append("<form class=\'form-inline\'><input id=\"emailForJavaModel\" class=\"span5\" type=\"text\" placeholder=\"Email\"/> ");
         sb.append("<a href=\"#\" onclick=\'processJavaModelLicense();\' class=\'btn btn-inverse\'>Send</a></form></div>");
-        sb.append("<div id=\"javaModelSource\" class=\"hide\"><pre style=\"overflow-y:scroll;\"><code class=\"language-java\">");
-        DocGen.HTML.escape(sb, toJava());
-        sb.append("</code></pre></div>");
+        sb.append("<div id=\"javaModelSource\" class=\"hide\">");
       }
-      else if( ntrees() * treeStats.meanLeaves > 5000 ) {
+      if( ntrees() * treeStats.meanLeaves > 5000 ) {
         String modelName = JCodeGen.toJavaId(_key.toString());
         sb.append("<pre style=\"overflow-y:scroll;\"><code class=\"language-java\">");
         sb.append("/* Java code is too large to display, download it directly.\n");
@@ -1096,6 +1094,7 @@ public class DTree extends Iced {
         DocGen.HTML.escape(sb, toJava());
         sb.append("</code></pre>");
       }
+      if (!featureAllowed) sb.append("</div>"); // close license blog
       sb.append("</div>");
       sb.append("<script type=\"text/javascript\">$(document).ready(showOrHideJavaModel);</script>");
     }
