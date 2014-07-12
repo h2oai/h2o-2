@@ -43,8 +43,13 @@ import water.util.Utils;
 
 public class Linpack {
 
-  public static void main(String[] args)
-  {
+  public static void main(String[] args) {
+    double sumgflops = run();
+    int num_threads = Runtime.getRuntime().availableProcessors();
+    Log.info("CPU speed (" + num_threads + " cores) : " + sumgflops + " Gflops.");
+  }
+
+  public static double run() {
     int num_threads = Runtime.getRuntime().availableProcessors();
     final double gflops[] = new double[num_threads];
     Thread[] threads = new Thread[num_threads];
@@ -67,7 +72,7 @@ public class Linpack {
         e.printStackTrace();
       }
     }
-    Log.info("CPU speed (" + num_threads + " cores) : " + Utils.sum(gflops) + " Gflops.");
+    return Utils.sum(gflops);
   }
 
   final double abs (double d) {
@@ -113,7 +118,7 @@ public class Linpack {
     ops = (2.0e0*(n*n*n))/3.0 + 2.0*(n*n);
 
     norma = matgen(a,lda,n,b);
-    int repeats = 500;
+    int repeats = 200;
 
     //warmup JIT
     for (int r=0; r<10; ++r) {

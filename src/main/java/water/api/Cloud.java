@@ -63,6 +63,7 @@ public class Cloud extends Request {
       node.addProperty(FREE_DISK, hb.get_free_disk());
       node.addProperty(MAX_DISK, hb.get_max_disk());
       node.addProperty(NUM_CPUS, (int)hb._num_cpus);
+      node.addProperty(GFLOPS, hb._gflops);
       node.addProperty(SYSTEM_LOAD, hb._system_load_average);
 
       Long elapsed = System.currentTimeMillis() - h2o._last_heard_from;
