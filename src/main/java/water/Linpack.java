@@ -49,6 +49,9 @@ public class Linpack {
     Log.info("CPU speed (" + num_threads + " cores) : " + sumgflops + " Gflops.");
   }
 
+  /**
+   * Compute system CPU speed in Gflops
+   */
   public static double run() {
     int num_threads = Runtime.getRuntime().availableProcessors();
     final double gflops[] = new double[num_threads];

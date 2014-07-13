@@ -11,7 +11,7 @@ import com.google.common.collect.Lists;
 import com.google.gson.*;
 
 public class Check {
-  private static final Pattern JSON_PATTERN = Pattern.compile("[_a-z0-9]*");
+  private static final Pattern JSON_PATTERN = Pattern.compile("[_a-z0-9]*[/_a-z]*");
   private static final List<String> RESERVED_WORDS = Lists.newArrayList(
     // python reserved words
     "and", "assert", "break", "class", "continue", "def", "del", "elif",

@@ -60,6 +60,7 @@ public class Cloud extends Request {
       node.addProperty(FREE_MEM, hb.get_free_mem());
       node.addProperty(TOT_MEM, hb.get_tot_mem());
       node.addProperty(MAX_MEM, hb.get_max_mem());
+      node.addProperty(MEM_BW, hb._membw);
       node.addProperty(FREE_DISK, hb.get_free_disk());
       node.addProperty(MAX_DISK, hb.get_max_disk());
       node.addProperty(NUM_CPUS, (int)hb._num_cpus);

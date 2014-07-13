@@ -104,6 +104,7 @@ public class Constants extends Iced {
   public static final String MAX_DISK              = "max_disk" + Suffixes.BYTES;
   public static final String MAX_ITER              = "max_iter";
   public static final String MAX_MEM               = "max_mem" + Suffixes.BYTES;
+  public static final String MEM_BW                = "mem_bandwidth" + Suffixes.BYTES_PER_SECOND;
   public static final String MAX_ROWS              = "max_rows";
   public static final String MEAN                  = "mean";
   public static final String MIN                   = "min";
