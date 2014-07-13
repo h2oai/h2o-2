@@ -46,23 +46,23 @@ public class MemoryBandwidth {
     final long M = Math.min(10000000l, Runtime.getRuntime().maxMemory()/10);
     int[] vals = MemoryManager.malloc4((int)M);
     double total;
-    int repeats = 10;
+    int repeats = 20;
     Timer timer = new Timer(); //ms
     long sum = 0;
     // write repeats * M ints
     // read  repeats * M ints
     for (int l=repeats-1; l>=0; --l) {
-      sum = 0;
       for (int i=0; i<M; ++i) {
         vals[i] = i + l;
       }
+      sum = 0;
       for (int i=0; i<M; ++i) {
         sum += vals[i];
       }
     }
     total = (double)timer.time()/1000./repeats;
     //use the sum in a way that doesn't affect the result (don't want the compiler to optimize it away)
-    double time = total + (((long)M*(M-1)/2) - sum); // == total
+    double time = total + ((M*(M-1)/2) - sum); // == total
     return (double)2*M*4/time; //(read+write) * 4 bytes
   }
 
