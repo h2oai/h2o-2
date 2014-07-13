@@ -109,7 +109,7 @@ mySetup() {
     echo "Running this cmd:"
     echo $cmd
     # it's gotten long now because of all the installs
-    python ./sh2junit.py -name 'libPaths' -timeout 300 -- $cmd
+    python ./sh2junit.py -name 'libPaths' -timeout 1800 -- $cmd
 }
 
 myR() {
