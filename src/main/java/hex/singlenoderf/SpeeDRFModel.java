@@ -164,51 +164,51 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
   @Override public ConfusionMatrix cm() { return cms[cms.length-1]; }
 
-  private static void scoreOnTest(SpeeDRFModel m, SpeeDRFModel old) {
+//  private static void scoreOnTest(SpeeDRFModel m, SpeeDRFModel old) {
+//
+//    // Gather results
+//    Frame scored = m.score(m.test_frame);
+//    water.api.ConfusionMatrix cm = new water.api.ConfusionMatrix();
+//    cm.vactual = m.test_frame.lastVec();
+//    cm.vpredict = scored.anyVec();
+//    cm.invoke();
+//
+//    // Regression scoring
+//    if (m.regression) {
+//      float mse = (float) cm.mse;
+//      m.errs = Arrays.copyOf(old.errs, old.errs.length + 1);
+//      m.errs[m.errs.length - 1] = mse;
+//      m.cms = Arrays.copyOf(old.cms, old.cms.length + 1);
+//      m.cms[m.cms.length - 1] = null;
+//
+//    // Classification scoring
+//    } else {
+//      _domain = m.cmDomain;
+////      m.confusion = CMTask.CMFinal.make(cm.cm, m, _domain, /*errors per tree*/, false, -1, m.cms)
+//      m.cm = cm.cm;
+//
+//      m.errs = Arrays.copyOf(old.errs, old.errs.length + 1);
+//      m.errs[m.errs.length - 1] = -1f;
+//      m.cms = Arrays.copyOf(old.cms, old.cms.length + 1);
+//      ConfusionMatrix new_cm = new ConfusionMatrix(m.cm);
+//      m.cms[m.cms.length - 1] = new_cm;
+//
+//      // Create the ROC Plot
+//      if (m.classes() == 2 && !scored.lastVec().isInt()) {
+//        AUC auc_calc = new AUC();
+//        auc_calc.vactual = cm.vactual;
+//        auc_calc.vpredict = scored.lastVec(); // lastVec is class1
+//        auc_calc.invoke();
+//        m.validAUC = auc_calc; //makeAUC(toCMArray(m.confusion._cms), ModelUtils.DEFAULT_THRESHOLDS, m.cmDomain);
+//      }
+//
+//      // Launch a Variable Importance Task
+//      if (m.importance && !m.regression)
+//        m.varimp = m.doVarImpCalc(m);
+//    }
+//  }
 
-    // Gather results
-    Frame scored = m.score(m.test_frame);
-    water.api.ConfusionMatrix cm = new water.api.ConfusionMatrix();
-    cm.vactual = m.test_frame.lastVec();
-    cm.vpredict = scored.anyVec();
-    cm.invoke();
-
-    // Regression scoring
-    if (m.regression) {
-      float mse = (float) cm.mse;
-      m.errs = Arrays.copyOf(old.errs, old.errs.length + 1);
-      m.errs[m.errs.length - 1] = mse;
-      m.cms = Arrays.copyOf(old.cms, old.cms.length + 1);
-      m.cms[m.cms.length - 1] = null;
-
-    // Classification scoring
-    } else {
-      _domain = m.cmDomain;
-//      m.confusion = CMTask.CMFinal.make(cm.cm, m, _domain, /*errors per tree*/, false, -1, m.cms)
-      m.cm = cm.cm;
-
-      m.errs = Arrays.copyOf(old.errs, old.errs.length + 1);
-      m.errs[m.errs.length - 1] = -1f;
-      m.cms = Arrays.copyOf(old.cms, old.cms.length + 1);
-      ConfusionMatrix new_cm = new ConfusionMatrix(m.cm);
-      m.cms[m.cms.length - 1] = new_cm;
-
-      // Create the ROC Plot
-      if (m.classes() == 2 && !scored.lastVec().isInt()) {
-        AUC auc_calc = new AUC();
-        auc_calc.vactual = cm.vactual;
-        auc_calc.vpredict = scored.lastVec(); // lastVec is class1
-        auc_calc.invoke();
-        m.validAUC = auc_calc; //makeAUC(toCMArray(m.confusion._cms), ModelUtils.DEFAULT_THRESHOLDS, m.cmDomain);
-      }
-
-      // Launch a Variable Importance Task
-      if (m.importance && !m.regression)
-        m.varimp = m.doVarImpCalc(m);
-    }
-  }
-
-  private static void scoreOnTrain(SpeeDRFModel m, SpeeDRFModel old) {
+  private static void scoreIt(SpeeDRFModel m, SpeeDRFModel old) {
     // Gather the results
     CMTask cmTask = new CMTask(m, m.size(), m.weights, m.oobee, m._priorClassDist, m._modelClassDist);
     cmTask.doAll(m.test_frame == null ? m.fr : m.test_frame, true);
@@ -269,14 +269,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
     if (shouldScore) {
 
-      // First check if there's a test frame... if so, then score on it with the score method, no need for CMTask.
-      if (m.test_frame != null) {
-        scoreOnTest(m, old);
-
-      // Otherwise score on train (OOB if set to true, which is the default!)
-      } else {
-        scoreOnTrain(m, old);
-      }
+      scoreIt(m, old);
 
     // No scoring. Just plug CM with nulls and -1f for errs.
     } else {
@@ -298,12 +291,12 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     double[] leaf_stats = stats(trees.get(Constants.TREE_LEAVES));
 
     if(depth_stats != null) {
-      treeStats.minDepth = (int)depth_stats[0];
-      treeStats.meanDepth = (float)depth_stats[1];
-      treeStats.maxDepth = (int)depth_stats[2];
-      treeStats.minLeaves = (int)leaf_stats[0];
+      treeStats.minDepth   = (int)depth_stats[0];
+      treeStats.meanDepth  = (float)depth_stats[1];
+      treeStats.maxDepth   = (int)depth_stats[2];
+      treeStats.minLeaves  = (int)leaf_stats[0];
       treeStats.meanLeaves = (float)leaf_stats[1];
-      treeStats.maxLeaves = (int)leaf_stats[2];
+      treeStats.maxLeaves  = (int)leaf_stats[2];
     } else {
       treeStats = null;
     }
@@ -411,16 +404,15 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     return -1;
   }
 
-  public int[] colMap(String[] names) {
-    int res[] = new int[fr._names.length]; //new int[names.length];
+  public int[] colMap(Frame df) {
+    int res[] = new int[df._names.length]; //new int[names.length];
     for(int i = 0; i < res.length; i++) {
-      res[i] = find(fr.names()[i], names);
+      res[i] = find(df.names()[i], _names);
     }
     return res;
   }
 
-  @Override
-  protected float[] score0(double[] data, float[] preds) {
+  @Override protected float[] score0(double[] data, float[] preds) {
     int numClasses = classes();
     if (numClasses == 1) {
       float p = 0.f;
@@ -450,10 +442,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     }
   }
 
-  @Override
-  public float progress() {
-    return get_params().cv_progress(t_keys.length / (float) N);
-  }
+  @Override public float progress() { return get_params().cv_progress(t_keys.length / (float) N); }
 
   static String[] cfDomain(final CMTask.CMFinal cm, int maxClasses) {
     String[] dom = cm.domain();

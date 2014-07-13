@@ -159,9 +159,6 @@ public class SpeeDRF extends Job.ValidatedJob {
     SpeeDRFModel rf_model = initModel();
     rf_model.start_training(null);
     buildForest(rf_model);
-    // buildForest() caused a different SpeeDRFModel instance to get put into the DKV.  We
-    // need to update that one, not rf_model
-//    DRFTask.updateRFModelStopTraining(rf_model._key);
     rf_model.stop_training();
     if (n_folds > 0) CrossValUtils.crossValidate(this);
     remove();
@@ -311,10 +308,10 @@ public class SpeeDRF extends Job.ValidatedJob {
       }
 
       // Prepare the train/test data sets based on the user input for the model.
-      Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, !regression /*toEnum is TRUE if regression is FALSE*/, true, true);
+      Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, !regression /*toEnum is TRUE if regression is FALSE*/, false, false);
       Frame test = null;
       if (validation != null) {
-        test = FrameTask.DataInfo.prepareFrame(validation, validation.vecs()[source.find(response)], ignored_cols, !regression, true, true);
+        test = FrameTask.DataInfo.prepareFrame(validation, validation.vecs()[source.find(response)], ignored_cols, !regression, false, false);
       }
 
       float[] priorDist = classification ? new MRUtils.ClassDist(train.lastVec()).doAll(train.lastVec()).rel_dist() : null;

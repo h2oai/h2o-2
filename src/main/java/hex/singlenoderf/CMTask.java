@@ -46,7 +46,7 @@ public class CMTask extends MRTask2<CMTask> {
   private float[] _modelDist;
 
   /** Data to replay the sampling algorithm */
-  private int[]     _chunk_row_mapping;
+  private long[]     _chunk_row_mapping;
   /** Number of rows at each node */
   private int[]     _rowsPerNode;
   /** Computed mapping of model prediction classes to confusion matrix classes */
@@ -85,8 +85,8 @@ public class CMTask extends MRTask2<CMTask> {
     Random _rand = Utils.getRNG(0x92b5023f2cd40b7cL);
     _data = _model.test_frame == null ? _model.fr : _model.test_frame;
     if (_model.test_frame != null) _computeOOB = false;
-    _modelDataMap = _model.colMap(_model._names);
-    assert !_computeOOB || _model._dataKey.equals(_datakey) : !_computeOOB + " || " + _model._dataKey + " equals " + _datakey ;
+    _modelDataMap = _model.colMap(_data);
+    assert !_computeOOB || _model._dataKey.equals(_datakey) : !_computeOOB + " || " + _model._dataKey + " equals " + _datakey;
     Vec respModel = _model.get_response();
     Vec respData  = _data.vecs()[_classcol];
     int model_max = (int)respModel.max();
@@ -114,6 +114,26 @@ public class CMTask extends MRTask2<CMTask> {
   }
 
   public void init() {
+
+    // Make a mapping from chunk# to row# just for chunks on this node
+
+    // First compute the number of chunks homed to this node
+    int total_home = 0;
+    for (int i = 0; i < _data.anyVec().nChunks(); ++i) {
+      if (_data.anyVec().chunkKey(i).home()) {
+        total_home++;
+      }
+    }
+
+    // Now generate the mapping
+    _chunk_row_mapping = new long[total_home];
+    int off=0;
+    int cidx=0;
+    for (int i = 0; i < _data.anyVec().nChunks(); ++i) {
+      if (_data.anyVec().chunkKey(i).home()) {
+        _chunk_row_mapping[cidx++] = _data.anyVec().chunkForChunkIdx(i)._start;
+      }
+    }
 
     // Initialize number of rows per node
     _rowsPerNode = new int[H2O.CLOUD.size()];
@@ -167,32 +187,34 @@ public class CMTask extends MRTask2<CMTask> {
       byte    producerId  = _model.producerId(ntree);
       int     init_row    =   (int)chks[0]._start; //_chunk_row_mapping[chks[0].cidx()]; //
       boolean isLocalTree = _computeOOB && isLocalTree(producerId); // tree is local
-//      boolean isRemote = false; // Left around for legacy reasons... data is never remote, but trees might be.
-      boolean isRemoteTreeChunk = false; //_computeOOB && isRemote; // this is chunk which was used for construction the tree by another node
-//      if (isRemoteTreeChunk) init_row = _rowsPerNode[producerId] + producerRemoteRows(producerId, chks[0]._vec.chunkKey(chks[0].cidx())); //(int)chks[0]._start;
+      boolean isRemote    = true;
+      for (long a_chunk_row_mapping : _chunk_row_mapping) {
+        if (chks[0]._start == a_chunk_row_mapping) {
+          isRemote = false;
+          break;
+        }
+      }
+      boolean isRemoteTreeChunk = _computeOOB && isRemote; // this is chunk which was used for construction the tree by another node
+      if (isRemoteTreeChunk) init_row = _rowsPerNode[producerId] + (int)chks[0]._start; // producerRemoteRows(producerId, chks[0]._vec.chunkKey(chks[0].cidx())); //(int)chks[0]._start;
       /* NOTE: Before changing used generator think about which kind of random generator you need:
        * if always deterministic or non-deterministic version - see hex.rf.Utils.get{Deter}RNG */
       // DEBUG: if( _computeOOB && (isLocalTree || isRemoteTreeChunk)) System.err.println(treeSeed + " : " + init_row + " (CM) " + isRemoteTreeChunk);
       long seed = Sampling.chunkSampleSeed(treeSeed, init_row);
       Random rand = Utils.getDeterRNG(seed);
       // Now for all rows, classify & vote!
-      ROWS: for( int r = 0; r < rows; r++ ) {
-        int row = r + (int)chks[0]._start;
+      ROWS: for( int row = 0; row < rows; row++ ) {
+//        int row = r + (int)chks[0]._start;
         // ------ THIS CODE is crucial and serve to replay the same sequence
         // of random numbers as in the method Data.sampleFair()
         // Skip row used during training if OOB is computed
         float sampledItem = rand.nextFloat();
         // Bail out of broken rows with NA in class column.
         // Do not skip yet the rows with NAs in the rest of columns
-        if( chks[_classcol].isNA(row)) continue;
+        if( chks[_classcol].isNA0(row)) continue;
 
-        if( _computeOOB) { // if OOBEE is computed then we need to take into account utilized sampling strategy
+        if( _computeOOB && (isLocalTree || isRemoteTreeChunk)) { // if OOBEE is computed then we need to take into account utilized sampling strategy
           switch( _model.sampling_strategy ) {
             case RANDOM          : if (sampledItem < _model.sample ) continue ROWS; break;
-//            case STRATIFIED_LOCAL:
-//              int clazz = (int) chks[_classcol].at8(row) - cmin;
-//              if (sampledItem < _model.strata_samples[clazz] ) continue ROWS;
-//              break;
             default: assert false : "The selected sampling strategy does not support OOBEE replay!"; break;
           }
         }
@@ -208,8 +230,8 @@ public class CMTask extends MRTask2<CMTask> {
           if (alignedPrediction != alignedData) {
             _errorsPerTree[ntree]++;
           }
-          votes[r][alignedPrediction]++; // Vote the row
-          if (isLocalTree) localVotes[r][alignedPrediction]++; // Vote
+          votes[row][alignedPrediction]++; // Vote the row
+          if (isLocalTree) localVotes[row][alignedPrediction]++; // Vote
         } else {
           float pred = _model.classify0(ntree, _data, chks, row, _modelDataMap, (short) 0, true /*regression*/);
           float actual = _data.vecs()[_classcol].at8(row);
