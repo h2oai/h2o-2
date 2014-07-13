@@ -439,13 +439,12 @@ public class Tree extends H2OCountedCompleter {
     ts.get1();    // Skip producer id
     byte b;
 
-    int rowNum = row;
     while( (b = (byte) ts.get1()) != '[' ) { // While not a leaf indicator
       assert b == '(' || b == 'S' || b == 'E';
       int col = modelDataMap[ts.get2()]; // Column number in model-space mapped to data-space
       float fcmp = ts.get4f();  // Float to compare against
-      if( chks[col].isNA(rowNum) ) return badData;
-      float fdat = (float)chks[col].at(rowNum);
+      if( chks[col].isNA0(row) ) return badData;
+      float fdat = (float)chks[col].at0(row);
       int skip = (ts.get1()&0xFF);
       if( skip == 0 ) skip = ts.get3();
       if (b == 'E') {
