@@ -6,7 +6,7 @@
 
 \title{Class \code{"H2OSpeeDRFModel"}}
 \description{
-A class for representing single-node random forest ensembles built on FluidVecs data.
+A class for representing single-node random forest ensembles.
 }
 \section{Objects from the Class}{
 Objects can be created by calls of the form \code{new("H2OSpeeDRFModel", ...)}.

@@ -5,7 +5,7 @@
 
 \title{Class \code{"H2OModel"}}
 \description{
-Object representing the model built by an H2O algorithm on a FluidVecs dataset.
+Object representing the model built by an H2O algorithm.
 }
 \section{Objects from the Class}{A virtual Class: No objects may be created from it.}
 \section{Slots}{
