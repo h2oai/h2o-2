@@ -217,8 +217,8 @@ public class AUC extends Func {
       throw new IllegalArgumentException("Both arguments must have the same length ("+vactual.length()+"!="+vpredict.length()+")!");
     if (!vactual.isInt())
       throw new IllegalArgumentException("Actual column must be integer class labels!");
-    if (vpredict.isInt())
-      throw new IllegalArgumentException("Integer type for vactual. Must be a probability.");
+    if (vpredict.isEnum())
+      throw new IllegalArgumentException("vpredict cannot be class labels, expect probabilities.");
   }
 
   @Override protected void execImpl() {
