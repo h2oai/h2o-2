@@ -367,12 +367,12 @@ h2o.downloadAllLogs <- function(client, dirname = ".", filename = NULL) {
 # }
 
 # ------------------- Show H2O recommended columns to ignore ----------------------------------------------------
-h2o.ignoreColumns <- function(object, ...) {
+h2o.ignoreColumns <- function(object, max_na = 0.2) {
   digits = 12L
   if(ncol(object) > .MAX_INSPECT_COL_VIEW)
     warning(object@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
   
-  naThreshold = nrow(object) * .2
+  naThreshold = nrow(object) * max_na
   cardinalityThreshold = nrow(object)
   
   res = .h2o.__remoteSend(object@h2o, .h2o.__PAGE_SUMMARY2, source=object@key, max_ncols=.Machine$integer.max)
