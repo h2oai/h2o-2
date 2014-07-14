@@ -6,7 +6,7 @@
 
 \title{Class \code{"H2OGrid"}}
 \description{
-Object representing the models built by a H2O grid search algorithm on a FluidVecs dataset.
+Object representing the models built by a H2O grid search algorithm.
 }
 \section{Objects from the Class}{A virtual Class: No objects may be created from it.}
 \section{Slots}{
