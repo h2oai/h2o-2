@@ -603,10 +603,10 @@ public class SpeeDRF extends Job.ValidatedJob {
         long treeSeed = rnd.nextLong() + TREE_SEED_INIT; // make sure that enough bits is initialized
         trees[i] = new Tree(job, localData, producerId, drfParams.max_depth, drfParams.stat_type, numSplitFeatures, treeSeed,
                 i, drfParams._exclusiveSplitLimit, sampler, drfParams._verbose, drfParams.regression);
-        if (!drfParams.parallel)   ForkJoinTask.invokeAll(new Tree[]{trees[i]});
+//        if (!drfParams.parallel)   ForkJoinTask.invokeAll(new Tree[]{trees[i]});
       }
 
-      if(drfParams.parallel) DRemoteTask.invokeAll(trees);
+      DRemoteTask.invokeAll(trees);
       Log.debug(Log.Tag.Sys.RANDF,"All trees ("+ntrees+") done in "+ t_alltrees);
     }
 
@@ -680,6 +680,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       drfp._verbose = verbose;
       drfp.classcol = col;
       drfp.regression = regression;
+      drfp.parallel   = true;
       return drfp;
     }
   }
