@@ -22,7 +22,20 @@ public class NewChunk extends Chunk {
   transient int    _xs[];       // Exponent, or if _ls==0, NA or Enum or Rows
   transient int    _id[];       // Indices (row numbers) of stored values, used for sparse
   transient double _ds[];       // Doubles, for inflating via doubles
+
+  long  [] alloc_mantissa(int l) { return _ls = MemoryManager.malloc8(l); }
+  int   [] alloc_exponent(int l) { return _xs = MemoryManager.malloc4(l); }
+  int   [] alloc_indices(int l)  { return _id = MemoryManager.malloc4(l); }
+  double[] alloc_doubles(int l)  { return _ds = MemoryManager.malloc8d(l); }
+
+  final protected long  [] mantissa() { return _ls; }
+  final protected int   [] exponent() { return _xs; }
+  final protected int   []  indices() { return _id; }
+  final protected double[]  doubles() { return _ds; }
+
   int _len2;                    // Actual rows, if the data is sparse
+  public int len2() { return _len2; }
+  public int set_len2(int l) { _len2 = l; return _len2; }
   int _naCnt=-1;                // Count of NA's   appended
   int _strCnt;                  // Count of Enum's appended
   int _nzCnt;                   // Count of non-zero's appended
