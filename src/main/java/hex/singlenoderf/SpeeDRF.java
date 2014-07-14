@@ -198,6 +198,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       }
       source.unlock(self());
       emptyLTrash();
+      cleanup();
     }
   }
 
@@ -328,7 +329,7 @@ public class SpeeDRF extends Job.ValidatedJob {
         Frame stratified = sampleFrameStratified(fr, v, trainSamplingFactors, (long)(max_after_balance_size*fr.numRows()), seed, true, false);
         if (stratified != fr) {
           fr = stratified;
-//          response = fr.vecs()[response_idx];
+          gtrash(stratified);
           }
       }
 
