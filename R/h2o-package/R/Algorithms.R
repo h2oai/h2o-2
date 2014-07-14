@@ -193,14 +193,14 @@ h2o.glm <- function(x, y, data, family, nfolds = 0, alpha = 0.5, nlambda = -1, l
                   beta_epsilon=epsilon, standardize=standardize, max_predictors = max_predictors,
                   variable_importances = variable_importances, use_all_factor_levels = use_all_factor_levels, h2o = data@h2o)
     .h2o.__waitOnJob(data@h2o, res$job_key)
-    h2o.glm.get_model(data, res$destination_key, return_all_lambda, params)
+    .h2o.glm.get_model(data, res$destination_key, return_all_lambda, params)
   } else
     .h2o.glm2grid.internal(x_ignore, args$y, data, family, nfolds, alpha, nlambda, lambda.min.ratio, lambda, epsilon,
                            standardize, prior, tweedie.p, iter.max, higher_accuracy, lambda_search, return_all_lambda,
                            variable_importances = variable_importances, use_all_factor_levels = use_all_factor_levels)
 }
 
-h2o.glm.get_model <- function (data, model_key, return_all_lambda = TRUE, params = list()) {
+.h2o.glm.get_model <- function (data, model_key, return_all_lambda = TRUE, params = list()) {
   res2 = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLMModelView, '_modelKey'=model_key)
   resModel = res2$glm_model; destKey = resModel$'_key'
   if(!is.null(resModel$warnings))
@@ -1045,7 +1045,7 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, nfolds=0, validation,
                         seed=-1,
                         stat.type="ENTROPY",
                         balance.classes=FALSE,
-                        verbose
+                        verbose=FALSE
 ) {
   args <- .verify_dataxy(data, x, y)
   if(!is.numeric(ntree)) stop('ntree must be a number')
@@ -1065,8 +1065,7 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, nfolds=0, validation,
   if(nfolds == 1) stop("nfolds cannot be 1")
   if(!missing(validation) && class(validation) != "H2OParsedData")
     stop("validation must be an H2O parsed dataset")
-
-  if(missing(verbose)) {verbose <- FALSE}
+  if(!is.logical(verbose)) stop("verbose must be a logical value")
 
   if (missing(validation) && nfolds == 0 && oobee) {
     res <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, response=args$y, ignored_cols=args$x_ignore, balance_classes = as.numeric(balance.classes), num_trees=ntree, max_depth=depth, importance=as.numeric(importance),

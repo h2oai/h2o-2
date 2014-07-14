@@ -9,7 +9,8 @@ Performs single-node random forest classification on a data set.
 \usage{
 h2o.SpeeDRF(x, y, data, classification = TRUE, nfolds = 0, validation, mtry = -1, 
   ntree = 50, depth = 50, sample.rate = 2/3, oobee = TRUE, importance = FALSE, 
-  nbins = 1024, seed = -1, stat.type = "ENTROPY", balance.classes = FALSE, verbose)
+  nbins = 1024, seed = -1, stat.type = "ENTROPY", balance.classes = FALSE, 
+  verbose = FALSE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -56,6 +57,12 @@ An \code{\linkS4class{H2OParsedData}} object containing the variables in the mod
   }
   \item{stat.type}{
   (Optional) Type of statistic to use, equal to either "ENTROPY" or "GINI".
+  }
+  \item{balance.classes}{
+  (Optional) A logical value indicating whether classes should be rebalanced. Use for datasets where the levels of the response class are very unbalanced.
+  }
+  \item{verbose}{
+  (Optional) A logical value indicating whether verbose results should be returned.
   }
 }
 
