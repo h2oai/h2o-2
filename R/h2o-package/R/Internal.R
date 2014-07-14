@@ -655,6 +655,7 @@ function(expr, envir = globalenv()) {
   l <- .replace_with_keys_helper(l, envir)
 
   # return the modified expression
+  rm("COLNAMES", envir = .pkg.env)
   as.name(as.character(as.expression(.back_to_expr(l))))
 }
 

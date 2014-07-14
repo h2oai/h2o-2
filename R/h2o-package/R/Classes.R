@@ -396,8 +396,7 @@ h2o.exec <- function(expr_to_execute) {
     .h2o.__remoteSend(.pkg.env$SERVER, .h2o.__HACK_SETCOLNAMES2, source=.pkg.env$FRAMEKEY,
                        cols=.pkg.env$NUMCOLS, comma_separated_list=.pkg.env$NEWCOL)
   }
-  rm(COLNAMES, envir = .pkg.env)
-
+  
   key <- res$dest_key
 
   if (.pkg.env$FRAMEKEY != "") {
