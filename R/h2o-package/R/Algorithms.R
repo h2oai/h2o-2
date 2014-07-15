@@ -1220,6 +1220,16 @@ h2o.confusionMatrix <- function(data, reference) {
   .build_cm(cm, res$domain, transpose = TRUE)
 }
 
+h2o.mse <- function(data, reference) {
+  if(!class(data) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("data must be an H2O parsed dataset")
+  if(!class(reference) %in% c("H2OParsedData", "H2OParsedDataVA")) stop("reference must be an H2O parsed dataset")
+  if(ncol(data) != 1) stop("Must specify exactly one column for data")
+  if(ncol(reference) != 1) stop("Must specify exactly one column for reference")
+  
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_CONFUSION, actual = reference@key, vactual = 0, predict = data@key, vpredict = 0)
+  return(res$mse)
+}
+
 h2o.hitRatio <- function(prediction, reference, k = 10, seed = 0) {
   if(class(prediction) != "H2OParsedData") stop("prediction must be an H2O parsed dataset")
   if(class(reference) != "H2OParsedData") stop("reference must be an H2O parsed dataset")
