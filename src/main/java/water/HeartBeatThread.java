@@ -79,8 +79,8 @@ public class HeartBeatThread extends Thread {
       hb._num_cpus   = (char)run.availableProcessors();
       if (counter % 300 == 2) {
         //run mini-benchmark every 5 mins
-        hb._gflops   = new Linpack().run();
-        hb._membw    = new MemoryBandwidth().run();
+        hb._gflops   = Linpack.run();
+        hb._membw    = MemoryBandwidth.run();
       }
       Object load = null;
       try {
