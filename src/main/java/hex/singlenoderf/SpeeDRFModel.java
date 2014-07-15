@@ -67,6 +67,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   @API(help = "CV Error")                                                 public double cv_error;
   @API(help = "Verbose Mode")                                             public boolean verbose;
   @API(help = "Verbose Output")                                           public String[] verbose_output;
+  @API(help = "Use non-local data")                                       public boolean useNonLocal;
 
   /**
    * Extra helper variables.
@@ -145,6 +146,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     this.cv_error = err;
     this.verbose = model.verbose;
     this.verbose_output = model.verbose_output;
+    this.useNonLocal = model.useNonLocal;
   }
 
   public Vec get_response() { return response; }
@@ -210,12 +212,22 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
   private static void scoreIt(SpeeDRFModel m, SpeeDRFModel old) {
     // Gather the results
-    CMTask cmTask = new CMTask(m, m.size(), m.weights, m.oobee, m._priorClassDist, m._modelClassDist);
-    cmTask.doAll(m.test_frame == null ? m.fr : m.test_frame, true);
+    Futures fs = new Futures();
+    final SpeeDRFModel score_model = m;
+    final CMTask[] cmTask = new CMTask[1];
+    H2O.H2OCountedCompleter task4var = new H2O.H2OCountedCompleter() {
+      @Override public void compute2() {
+        cmTask[0] = CMTask.scoreTask(score_model.test_frame == null ? score_model.fr : score_model.test_frame, score_model, score_model.size(), score_model.weights, score_model.oobee, score_model._priorClassDist, score_model._modelClassDist);
+        tryComplete();
+      }
+    };
+    H2O.submitTask(task4var);
+    fs.add(task4var);
+    fs.blockForPending();
 
     // Perform the regression scoring
     if (m.regression) {
-      float mse = cmTask._ss / ((float) (cmTask._rowcnt)); //Also add in treecount?
+      float mse = cmTask[0]._ss / ((float) (cmTask[0]._rowcnt)); //Also add in treecount?
       m.errs = Arrays.copyOf(old.errs, old.errs.length + 1);
       m.errs[m.errs.length - 1] = mse;
       m.cms = Arrays.copyOf(old.cms, old.cms.length + 1);
@@ -223,9 +235,9 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
       // Perform the classification scoring
     } else {
-      _domain = cmTask.domain();
-      m.confusion = CMTask.CMFinal.make(cmTask._matrix, m, cmTask.domain(), cmTask._errorsPerTree, m.oobee, cmTask._sum, cmTask._cms);
-      m.cm = cmTask._matrix._matrix;
+      _domain = cmTask[0].domain();
+      m.confusion = CMTask.CMFinal.make(cmTask[0]._matrix, m, cmTask[0].domain(), cmTask[0]._errorsPerTree, m.oobee, cmTask[0]._sum, cmTask[0]._cms);
+      m.cm = cmTask[0]._matrix._matrix;
 
       m.errs = Arrays.copyOf(old.errs, old.errs.length + 1);
       m.errs[m.errs.length - 1] = m.confusion.mse();
@@ -271,7 +283,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
       scoreIt(m, old);
 
-    // No scoring. Just plug CM with nulls and -1f for errs.
+//    No scoring. Just plug CM with nulls and -1f for errs.
     } else {
       m.errs = Arrays.copyOf(old.errs, old.errs.length+1);
       m.errs[m.errs.length - 1] = -1.f;
@@ -334,20 +346,20 @@ public class SpeeDRFModel extends Model implements Job.Progress {
    * @param modelDataMap  mapping from model/tree columns to data columns
    * @return the predicted response class, or class+1 for broken rows
    */
-  public float classify0(int tree_id, Frame fr, Chunk[] chunks, int row, int modelDataMap[], short badrow, boolean regression) {
-    return Tree.classify(new AutoBuffer(tree(tree_id)), fr, chunks, row, modelDataMap, badrow, regression);
+  public float classify0(int tree_id, Chunk[] chunks, int row, int modelDataMap[], short badrow, boolean regression) {
+    return Tree.classify(new AutoBuffer(tree(tree_id)), chunks, row, modelDataMap, badrow, regression);
   }
 
-  private void vote(Frame fr, Chunk[] chks, int row, int modelDataMap[], int[] votes) {
+  private void vote(Chunk[] chks, int row, int modelDataMap[], int[] votes) {
     int numClasses = classes();
     assert votes.length == numClasses + 1 /* +1 to catch broken rows */;
     for( int i = 0; i < treeCount(); i++ )
-      votes[(int)classify0(i, fr, chks, row, modelDataMap, (short) numClasses, false)]++;
+      votes[(int)classify0(i, chks, row, modelDataMap, (short) numClasses, false)]++;
   }
 
-  public short classify(Frame fr, Chunk[] chks, int row, int modelDataMap[], int[] votes, double[] classWt, Random rand ) {
+  public short classify(Chunk[] chks, int row, int modelDataMap[], int[] votes, double[] classWt, Random rand ) {
     // Vote all the trees for the row
-    vote(fr, chks, row, modelDataMap, votes);
+    vote(chks, row, modelDataMap, votes);
     return classify(votes, classWt, rand);
   }
 

@@ -19,7 +19,6 @@ public class DABuilder {
     static DABuilder create(final SpeeDRF drf, final SpeeDRFModel rf_model) {
       switch( drf.drfParams.sampling_strategy ) {
         case RANDOM                :
-//        case STRATIFIED_LOCAL      :
         default                    : return new DABuilder(drf, rf_model);
       }
     }
@@ -28,7 +27,7 @@ public class DABuilder {
 
     DABuilder(final SpeeDRF drf, final SpeeDRFModel rf_model) { _drf = drf; _rfmodel = rf_model; }
 
-    final DataAdapter build(Frame fr) { return inhaleData(fr); }
+    final DataAdapter build(Frame fr, boolean useNonLocal) { return inhaleData(fr, useNonLocal); }
 
     /** Check that we have proper number of valid columns vs. features selected, if not cap*/
     private void checkAndLimitFeatureUsedPerSplit() {
@@ -41,9 +40,7 @@ public class DABuilder {
     }
 
     /** Return the number of rows on this node. */
-    private int getRowCount(Frame fr) {
-      return (int)fr.numRows();
-    }
+    private int getRowCount(Frame fr) { return (int)fr.numRows(); }
 
     /** Return chunk index of the first chunk on this node. Used to identify the trees built here.*/
     private long getChunkId(final Frame fr) {
@@ -73,7 +70,7 @@ public class DABuilder {
     }
 
     /** Build data adapter for given frame */
-    protected DataAdapter inhaleData(Frame fr) {
+    protected DataAdapter inhaleData(Frame fr, boolean useNonLocal) {
       long id = getChunkId(fr);
       if (id == -99999) {
         return null;
@@ -102,11 +99,26 @@ public class DABuilder {
 
       // Collects jobs loading local chunks
       ArrayList<RecursiveAction> dataInhaleJobs = new ArrayList<RecursiveAction>();
+
+      Log.info("\n\nTOTAL NUMBER OF CHUNKS: " + fr.anyVec().nChunks()+"\n\n");
+
+      int cnter_local = 0;
+      int cnter_remote = 0;
       for(int i = 0; i < fr.anyVec().nChunks(); ++i) {
-        dataInhaleJobs.add(loadChunkAction(dapt, fr, i, _isByteCol, _naCnts, rfmodel.regression));
+        if (useNonLocal) {
+          cnter_remote++;
+          dataInhaleJobs.add(loadChunkAction(dapt, fr, i, _isByteCol, _naCnts, rfmodel.regression));
+        } else if (fr.anyVec().chunkKey(i).home()) {
+          cnter_local++;
+          dataInhaleJobs.add(loadChunkAction(dapt, fr, i, _isByteCol, _naCnts, rfmodel.regression));
+        }
       }
+
+      Log.info("\n\nTotal local  chunks to load: "+cnter_local+"\n\nTotal remote chunks to load:" +cnter_remote);
+
       _rfmodel.current_status = "Inhaling Data";
       _rfmodel.update(_rfmodel.jobKey);
+      Log.info(Log.Tag.Sys.RANDF,"Beginning Random Forest Inhale.");
       ForkJoinTask.invokeAll(dataInhaleJobs);
 
       // Shrink data

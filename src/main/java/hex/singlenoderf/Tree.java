@@ -433,7 +433,7 @@ public class Tree extends H2OCountedCompleter {
   /** Classify this serialized tree - withOUT inflating it to a full tree.
    Use row 'row' in the dataset 'ary' (with pre-fetched bits 'databits')
    Returns classes from 0 to N-1*/
-  public static float classify( AutoBuffer ts, Frame fr, Chunk[] chks, int row, int modelDataMap[], short badData, boolean regression ) {
+  public static float classify( AutoBuffer ts, Chunk[] chks, int row, int modelDataMap[], short badData, boolean regression ) {
     ts.get4();    // Skip tree-id
     ts.get8();    // Skip seed
     ts.get1();    // Skip producer id

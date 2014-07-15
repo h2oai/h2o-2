@@ -134,10 +134,6 @@ public class VariableImportance extends MRTask2<VariableImportance> {
 
         switch( _model.sampling_strategy ) {
           case RANDOM          : if (sampledItem < _model.sample ) continue ROWS; break;
-//          case STRATIFIED_LOCAL:
-//            int clazz = (int) chks[_ncols - 1].at8(row) - cmin;
-//            if (sampledItem < /*_model.strata_samples[clazz]*/ _model.sample ) continue ROWS;
-//            break;
           default: assert false : "The selected sampling strategy does not support OOBEE replay!"; break;
         }
 
@@ -147,7 +143,7 @@ public class VariableImportance extends MRTask2<VariableImportance> {
         }
 
         // Predict with this tree - produce 0-based class index
-        int prediction = (int)_model.classify0(ntree, _data, chks, row, _modelDataMap, (short)_N, false);
+        int prediction = (int)_model.classify0(ntree, chks, row, _modelDataMap, (short)_N, false);
         if( prediction >= _nclasses ) continue; // Junk row cannot be predicted
         // Check tree miss
         int alignedPrediction = alignModelIdx(prediction);
