@@ -73,7 +73,7 @@ public class VariableImportance extends MRTask2<VariableImportance> {
   }
 
   private void init() {
-    _modelDataMap = _model.colMap(_model._names);
+    _modelDataMap = _model.colMap(_data);
     Vec respModel = _model.get_response();
     Vec respData  = _data.vecs()[_classcol];
     int model_min = (int)respModel.min();
@@ -122,22 +122,18 @@ public class VariableImportance extends MRTask2<VariableImportance> {
       long seed = Sampling.chunkSampleSeed(treeSeed, init_row);
       Random rand = Utils.getDeterRNG(seed);
       // Now for all rows, classify & vote!
-      ROWS: for( int r = 0; r < rows; r++ ) {
-        int row = r + (int)chks[0]._start;
+      ROWS: for( int row = 0; row < rows; row++ ) {
+//        int row = r + (int)chks[0]._start;
         // ------ THIS CODE is crucial and serve to replay the same sequence
         // of random numbers as in the method Data.sampleFair()
         // Skip row used during training if OOB is computed
         float sampledItem = rand.nextFloat();
         // Bail out of broken rows with NA in class column.
         // Do not skip yet the rows with NAs in the rest of columns
-        if( chks[_ncols - 1].isNA(row)) continue;
+        if( chks[_ncols - 1].isNA0(row)) continue;
 
         switch( _model.sampling_strategy ) {
           case RANDOM          : if (sampledItem < _model.sample ) continue ROWS; break;
-//          case STRATIFIED_LOCAL:
-//            int clazz = (int) chks[_ncols - 1].at8(row) - cmin;
-//            if (sampledItem < /*_model.strata_samples[clazz]*/ _model.sample ) continue ROWS;
-//            break;
           default: assert false : "The selected sampling strategy does not support OOBEE replay!"; break;
         }
 
@@ -147,11 +143,11 @@ public class VariableImportance extends MRTask2<VariableImportance> {
         }
 
         // Predict with this tree - produce 0-based class index
-        int prediction = (int)_model.classify0(ntree, _data, chks, row, _modelDataMap, (short)_N, false);
+        int prediction = (int)_model.classify0(ntree, chks, row, _modelDataMap, (short)_N, false);
         if( prediction >= _nclasses ) continue; // Junk row cannot be predicted
         // Check tree miss
         int alignedPrediction = alignModelIdx(prediction);
-        int alignedData       = alignDataIdx((int) chks[_classcol].at8(row) - cmin);
+        int alignedData       = alignDataIdx((int) chks[_classcol].at80(row) - cmin);
         if (alignedPrediction == alignedData) _votesOOB[ntree]++;
       }
 //      if (collectOOB) {
@@ -164,21 +160,21 @@ public class VariableImportance extends MRTask2<VariableImportance> {
       Utils.shuffleArray(_oobs, oobcnt, soob, seedForOob, 0); // Shuffle array and copy results into <code>soob</code>
       for(int j = 0; j < oobcnt; j++) {
         int row = _oobs[j];
-        row -= chks[0]._start;
+//        row -= chks[0]._start;
         // Do scoring:
         // - prepare a row data
         for (int i=0;i<chks.length - 1;i++) {
           data[i] = chks[i].at0(row); // 1+i - one free is expected by prediction
         }
         // - permute variable
-        if (_var>=0) data[_var] = chks[_var].at0(soob[j] - (int)chks[0]._start);
+        if (_var>=0) data[_var] = chks[_var].at0(soob[j]);
         else assert false;
         // - score data
         // - score only the tree
         int prediction = (int) Tree.classify(new AutoBuffer(_model.tree(ntree)), data, (double)_N, false); //.classify0(ntree, _data, chks, row, _modelDataMap, numClasses );
         if( prediction >= _nclasses ) continue;
         int pred = alignModelIdx(prediction);
-        int actu = alignDataIdx((int) chks[_classcol].at8(_oobs[j]) - cmin);
+        int actu = alignDataIdx((int) chks[_classcol].at80(_oobs[j]) - cmin);
         if (pred == actu) _votesSOOB[ntree]++;
         _nrows[ntree]++;
       }

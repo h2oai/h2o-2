@@ -6,7 +6,7 @@
 
 \title{Class \code{"H2OSpeeDRFModel"}}
 \description{
-A class for representing single-node random forest ensembles built on FluidVecs data.
+A class for representing single-node random forest ensembles.
 }
 \section{Objects from the Class}{
 Objects can be created by calls of the form \code{new("H2OSpeeDRFModel", ...)}.
@@ -24,6 +24,7 @@ Objects can be created by calls of the form \code{new("H2OSpeeDRFModel", ...)}.
         }
       }
     \item{\code{valid}:}{Object of class \code{"H2OParsedData"}, which is the data used for validating the model.}
+    \item{\code{xval}:}{List of objects of class \code{"H2OSpeeDRFModel"}, representing the n-fold cross-validation models.}
   }
 }
 \section{Extends}{

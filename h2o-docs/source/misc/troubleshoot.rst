@@ -30,7 +30,6 @@ Download and Send Us Your Logs
   and work to resolve your issue. 
 
 
-
 Other Common Troubleshooting Topics
 """"""""""""""""""""""""""""""""""""
 
@@ -41,22 +40,36 @@ This can occur when a user’s local disk is full or almost full.
 Free up space on your local disk, and the behavior should resolve. 
 
 
-**Common Question: How Do I Manage Dependencies in R?"**
-  
-  The  H\ :sub:`2`\ O R package utilizes other R packages
-  (like lattice, and curl). From time to time R will fail to download
-  from CRAN and give an error. In that case it's best to get the
-  binary from CRAN directly and install the package manually using the call:
+**Common Question: I launched H2O instances on my nodes but why won't they cloud up?**
 
-:: 
+When launching without specifying the IP address by adding argument -ip:
 
-  >install.packages("path/to/fpc/binary/file", repos = NULL, type = "binary")
+::
+
+  $ java -Xmx20g -jar h2o.jar -flatfile flatfile.txt -port 54321
+
+and multiple local IP addresses are detected, H\ :sub:`2`\ O will fall back to default 127.0.0.1 as shown below:
+
+::
+
+  10:26:32.266 main      WARN WATER: Multiple local IPs detected:
+  +                                    /198.168.1.161  /198.168.58.102
+  +                                  Attempting to determine correct address...
+  10:26:32.284 main      WARN WATER: Failed to determine IP, falling back to localhost.
+  10:26:32.325 main      INFO WATER: Internal communication uses port: 54322
+  +                                  Listening for HTTP and REST traffic on http://127.0.0.1:54321/
+  10:26:32.378 main      WARN WATER: Flatfile configuration does not include self:
+  /127.0.0.1:54321 but contains [/192.168.1.161:54321, /192.168.1.162:54321]
+
+To avoid falling back to 127.0.0.1 on servers with multiple local IP addresses just run the command with the -ip argument forcing a launch at the appropriate location:
+
+::
+
+  $ java -Xmx20g -jar h2o.jar -flatfile flatfile.txt -ip 192.168.1.161 -port 54321
 
 
-  Users may find this page on installing dependencies helpful:
-  http://stat.ethz.ch/R-manual/R-devel/library/utils/html/install.packages.html
-
-**R and H2O** 
+R and H\ :sub:`2`\ O
+""""""""""""""""""""""""""""""""""""
 
   In order for H\ :sub:`2`\ O and R to work together, an instance of
   H\ :sub:`2`\ O must be running, and that instance of H\ :sub:`2`\ O
@@ -66,18 +79,50 @@ Free up space on your local disk, and the behavior should resolve.
   H\ :sub:`2`\ O's distributed analysis, and will no longer be able to
   get info mation back. Even if a new instance of H\ :sub:`2`\ O is
   started with the exact same IP and port number, users
-  will need to reestablish the connection between  H\:sub:`2`\ O and R
+  will need to reestablish the connection between  H\ :sub:`2`\ O and R
   using the call h2o.init(), and will have
-  to restart their H\:sub:`2`\ O work session. 
+  to restart their H\ :sub:`2`\ O work session. 
+  
+
+**Updating the R Package aka. Avoid Version Mismatch!**
+
+H\ :sub:`2`\ O's R package is now available for download on CRAN but typically the 0xdata team continues to push new releases faster than CRAN typically upload more recent packages. To avoid a version mismatch when upgrading or changing your version of H\ :sub:`2`\ O in R please run through the following steps :
+
+#. Close any Java instances up to kill any rogue H\ :sub:`2`\ O instances that hasn't been properly shut down or terminated.
+
+#. Uninstall previous version of H\ :sub:`2`\ O from R by running :
+
+	::
+    
+	  if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
+	  if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
+
+#. For Windows especially check to make sure there are no remanants of H\ :sub:`2`\ O in your personal R library (typically located "C:\Users\~\Documents\R\win-library\3.0" in Windows).
+
+#. Download and/or install the H\ :sub:`2`\ O package version by following the instructions in our R user documentation.
+
+#. If you still run into trouble with h2o.init() try running in the terminal:
+
+	::
+  
+	  $ java -Xmx1g -jar h2o.jar
+
+#. Go back to R and try running h2o.init() again. If the problem persist please contact us at support@0xdata.com.
 
 
-**Updating the R Package**
+**Common Question: How Do I Manage Dependencies in R?**
 
-  H\ :sub:`2`\ O's R package is headed for CRAN, but aren't there yet, and
-  until recently, they were still "in . Follow the instructions in our R user
-  documentation to install h2o in R (even if it is already
-  installed), in order to ensure that you have the most recent
-  version. If your issue persists, please let us know. 
+The H\ :sub:`2`\ O R package utilizes other R packages (like lattice, and curl). From time to time
+R will fail to download from CRAN and give an error. In that case it's best to get the binary from C
+RAN directly and install the package manually using the call:
+
+::
+
+  >install.packages("path/to/fpc/binary/file", repos = NULL, type = "binary")
+
+Users may find this page on installing dependencies helpful:
+
+http://stat.ethz.ch/R-manual/R-devel/library/utils/html/install.packages.html
 
 **Internal Server Error in R**
    
@@ -88,15 +133,15 @@ Free up space on your local disk, and the behavior should resolve.
   cd /usr/bin
   sudo ln -s /usr/local/opt/gnu-tar/libexec/gnubin/tar gnutar
 
-H2O On Windows
+H\ :sub:`2`\ O On Windows
 """""""""""""""
 
 **Using CMD Shell** as an alternative to using terminal for windows
 users allows windows users to execute instructions as written for
-installign and running H\ :sub: `2`\ O in general. 
+installign and running H\ :sub:`2`\ O in general. 
 
 In order to install and run R on Windows 8 (any and all R packages,
-including those distributed by H\ :sub: `2`\ O) users will need read 
+including those distributed by H\ :sub:`2`\ O) users will need read 
 and write persmissions to   
 
 
@@ -110,7 +155,7 @@ Log in to the machine where H\ :sub:`2`\ O will run using ssh
 
 **Step 2**
 
-Start an instance of H\ :sub:`2` \O by locating the working directory and 
+Start an instance of H\ :sub:`2`\ O by locating the working directory and 
 calling a java command similar to the following ( the port number chosen here
 is arbitrary and users might choose something different). 
 ::
@@ -155,8 +200,8 @@ specified port numbers and IP address will be different)
 
 Check cluster status
 
-You are now using H\ :sub:`2` \O from localhost:55577, but the
-instance of H\ :sub:`2` \O is running on the remote server (in this
+You are now using H\ :sub:`2`\O from localhost:55577, but the
+instance of H\ :sub:`2`\O is running on the remote server (in this
 case the server with the ip address 192.168.1.xxx) at port number 55599. 
 
 To see this in action note that the web UI is pointed at

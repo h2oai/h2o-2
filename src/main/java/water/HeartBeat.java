@@ -14,6 +14,8 @@ public class HeartBeat extends Iced {
   public long _jvm_boot_msec;   // Boot time of JVM
   public byte[] _jar_md5;       // JAR file digest
   public char _num_cpus;        // Number of CPUs for this Node, limit of 65535
+  public double _gflops;        // Number of GFlops for this node
+  public double _membw;         // Memory bandwidth in GB/s
   public float _system_load_average;
   public long _system_idle_ticks;
   public long _system_total_ticks;

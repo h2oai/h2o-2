@@ -50,11 +50,6 @@ prostate.hex = h2o.importURL(localH2O, path = paste("https://raw.github.com",
   "0xdata/h2o/master/smalldata/logreg/prostate.csv", sep = "/"), key = "prostate.hex")
 class(prostate.hex)
 summary(prostate.hex)
-
-prostate.fv = h2o.importURL(localH2O, path = paste("https://raw.github.com", 
-  "0xdata/h2o/master/smalldata/logreg/prostate.csv", sep = "/"), key = "prostate.hex", 
-  version = 2)
-class(prostate.fv)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

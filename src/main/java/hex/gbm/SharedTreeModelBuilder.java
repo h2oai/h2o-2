@@ -686,7 +686,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       _hcs[_k] = new DHistogram[new_leafs][/*ncol*/];
       for( int nl = tmax; nl<_tree.len(); nl ++ )
         _hcs[_k][nl-tmax] = _tree.undecided(nl)._hs;
-      _tree.depth++;            // Next layer done
+      if (new_leafs>0) _tree.depth++; // Next layer done but update tree depth only if new leaves are generated
     }
   }
 

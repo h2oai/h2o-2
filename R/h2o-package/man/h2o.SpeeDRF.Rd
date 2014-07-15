@@ -9,8 +9,8 @@ Performs single-node random forest classification on a data set.
 \usage{
 h2o.SpeeDRF(x, y, data, classification = TRUE, nfolds = 0, validation, mtry = -1, 
   ntree = 50, depth = 50, sample.rate = 2/3, oobee = TRUE, importance = FALSE, 
-  nbins = 1024, seed = -1, stat.type = "ENTROPY", classwt = NULL, 
-  sampling_strategy = "RANDOM", strata_samples = NULL)
+  nbins = 1024, seed = -1, stat.type = "ENTROPY", balance.classes = FALSE, 
+  verbose = FALSE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -58,12 +58,24 @@ An \code{\linkS4class{H2OParsedData}} object containing the variables in the mod
   \item{stat.type}{
   (Optional) Type of statistic to use, equal to either "ENTROPY" or "GINI".
   }
+  \item{balance.classes}{
+  (Optional) A logical value indicating whether classes should be rebalanced. Use for datasets where the levels of the response class are very unbalanced.
+  }
+  \item{verbose}{
+  (Optional) A logical value indicating whether verbose results should be returned.
+  }
+  \item{local_mode}{
+  (Optional) A logical value stating whether to
+         TRUE) build the random forest on local data to the node in a distributed and parallel fashion -OR-
+        FALSE) first pull all of the data local to each node and then build a random forest in a distributed and parallel fashion
+        Note: local_mode typically has poorer predictive performance for smaller datasets, but roughly equivalent performance with non-local mode.
+  }
 }
 
 \details{
 IMPORTANT: Currently, you must initialize H2O with the flag \code{beta = TRUE} in \code{h2o.init} in order to use this method!
 
-This method runs random forest model building on a single node, as opposed to the multi-node implementation in \code{\link{h2o.randomForest.FV}}.
+This method runs random forest model building on a single node, as opposed to the multi-node implementation in \code{\link{h2o.randomForest}}.
 }
 
 \value{

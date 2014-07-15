@@ -25,7 +25,7 @@ setClass("H2OKMeansGrid", contains="H2OGrid")
 setClass("H2ODRFGrid", contains="H2OGrid")
 setClass("H2ODeepLearningGrid", contains="H2OGrid")
 setClass("H2OSpeeDRFGrid", contains="H2OGrid")
-setClass("H2OGLMModelList", representation(models="list",best_model="numeric"))
+setClass("H2OGLMModelList", representation(models="list", best_model="numeric"))
 
 # Register finalizers for H2O data and model objects
 # setMethod("initialize", "H2ORawData", function(.Object, h2o = new("H2OClient"), key = "") {
@@ -396,14 +396,12 @@ h2o.exec <- function(expr_to_execute) {
     .h2o.__remoteSend(.pkg.env$SERVER, .h2o.__HACK_SETCOLNAMES2, source=.pkg.env$FRAMEKEY,
                        cols=.pkg.env$NUMCOLS, comma_separated_list=.pkg.env$NEWCOL)
   }
-  rm(COLNAMES, envir = .pkg.env)
-
+  
   key <- res$dest_key
 
   if (.pkg.env$FRAMEKEY != "") {
-    key <- .pkg.env$FRAMEKEY
+    key <- as.character(.pkg.env$FRAMEKEY)
   }
-
   new("H2OParsedData", h2o = .pkg.env$SERVER, key = key)
 }
 
