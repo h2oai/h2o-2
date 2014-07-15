@@ -19,7 +19,7 @@ public abstract class TreeTestWithBalanceAndCrossVal extends TestUtil {
   */
  @Test
  public void testWeatherDataset() {
-   testBalanceWithCrossValidation("smalldata/weather/weather.csv", 23, ari(0,1,22), 2, 10);
+   testBalanceWithCrossValidation("smalldata/weather.csv", 23, ari(0,1,22), 2, 10);
  }
 
  /** Another test which is testing execution of balance and cross validation workflow on cars data
