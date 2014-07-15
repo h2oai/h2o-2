@@ -5,6 +5,7 @@ import org.junit.Test;
 import water.TestUtil;
 
 import java.util.Arrays;
+import java.util.Iterator;
 
 public class CX0ChunkTest extends TestUtil {
   @Test
@@ -23,7 +24,17 @@ public class CX0ChunkTest extends TestUtil {
     Assert.assertTrue(cc instanceof CX0Chunk);
     for (int i = 0; i < vals.length; ++i) Assert.assertEquals(vals[i], cc.at80(i));
 
-    Chunk cc2 = cc.inflate_impl(new NewChunk(null, 0)).compress();
+    nc = new NewChunk(null, 0);
+    cc.inflate_impl(nc);
+    Assert.assertEquals(vals.length , nc.len2());
+    Assert.assertEquals(2, nc.len());
+    Iterator<NewChunk.Value> it = nc.values(0, vals.length);
+    Assert.assertTrue(it.next().rowId0() == 3);
+    Assert.assertTrue(it.next().rowId0() == 101);
+    Assert.assertTrue(!it.hasNext());
+    for (int i = 0; i < vals.length; ++i) Assert.assertEquals(vals[i], nc.at80(i));
+
+    Chunk cc2 = nc.compress();
     Assert.assertEquals(vals.length , cc.len());
     Assert.assertTrue(cc2 instanceof CX0Chunk);
     for (int i = 0; i < vals.length; ++i) Assert.assertEquals(vals[i], cc2.at80(i));
