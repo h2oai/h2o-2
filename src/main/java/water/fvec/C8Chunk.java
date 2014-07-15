@@ -32,12 +32,8 @@ public class C8Chunk extends Chunk {
     return this;
   }
   @Override NewChunk inflate_impl(NewChunk nc) {
-    //nothing to inflate - just copy
-    nc._ls = MemoryManager.malloc8(_len);
-    nc._xs = MemoryManager.malloc4(_len);
-    nc._len = 0;
-    nc._len2 = 0;
-    for( int i=0; i<_len; i++ ) //use unsafe?
+    nc.set_len(nc.set_len2(0));
+    for( int i=0; i< len(); i++ )
       if(isNA0(i))nc.addNA();
       else nc.addNum(at80(i),0);
     return nc;

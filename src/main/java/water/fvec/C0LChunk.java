@@ -33,15 +33,14 @@ public class C0LChunk extends Chunk {
     return this;
   }
   @Override NewChunk inflate_impl(NewChunk nc) {
-    if(_con == 0) {
-      nc._id = new int[0];
-      nc._ls = new long[0];
-      nc._xs = new int[0];
-    }
-    else {
-      nc._ls = MemoryManager.malloc8(_len);
-      Arrays.fill(nc._ls,_con);
-      nc._xs = MemoryManager.malloc4(_len);
+    nc.set_len(nc.set_len2(0));
+    if(_con != 0) {
+      nc.alloc_mantissa(len());
+      Arrays.fill(nc.mantissa(), _con);
+      nc.alloc_exponent(len());
+      nc.set_len(nc.set_len2(len()));
+    } else {
+      nc.addZeros(len());
     }
     return nc;
   }

@@ -48,25 +48,25 @@ public abstract class Chunk extends Iced implements Cloneable {
   public final double at( long i ) {
     long x = i-_start;
     if( 0 <= x && x < _len ) return at0((int)x);
-    throw new ArrayIndexOutOfBoundsException(""+_start+" <= "+i+" < "+(_start+_len));
+    throw new ArrayIndexOutOfBoundsException(getClass().getSimpleName() + " " +_start+" <= "+i+" < "+(_start+_len));
   }
 
   /** Fetch the missing-status the slow way. */
   public final boolean isNA(long i) {
     long x = i-_start;
     if( 0 <= x && x < _len ) return isNA0((int)x);
-    throw new ArrayIndexOutOfBoundsException(""+_start+" <= "+i+" < "+(_start+_len));
+    throw new ArrayIndexOutOfBoundsException(getClass().getSimpleName() + " " +_start+" <= "+i+" < "+(_start+_len));
   }
 
   public final long at16l( long i ) {
     long x = i-_start;
     if( 0 <= x && x < _len ) return at16l0((int)x);
-    throw new ArrayIndexOutOfBoundsException(""+_start+" <= "+i+" < "+(_start+_len));
+    throw new ArrayIndexOutOfBoundsException(getClass().getSimpleName() + " " +_start+" <= "+i+" < "+(_start+_len));
   }
   public final long at16h( long i ) {
     long x = i-_start;
     if( 0 <= x && x < _len ) return at16h0((int)x);
-    throw new ArrayIndexOutOfBoundsException(""+_start+" <= "+i+" < "+(_start+_len));
+    throw new ArrayIndexOutOfBoundsException(getClass().getSimpleName() + " " +_start+" <= "+i+" < "+(_start+_len));
   }
 
   /** The zero-based API.  Somewhere between 10% to 30% faster in a tight-loop

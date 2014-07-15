@@ -48,8 +48,6 @@ public class NewChunk extends Chunk {
   // Constructor used when inflating a Chunk.
   public NewChunk( Chunk C ) {
     this(C._vec, C._vec.elem2ChunkIdx(C._start));
-    _len2 = C._len;
-    _len = C.sparseLen();
     _start = C._start;
   }
 
@@ -156,6 +154,7 @@ public class NewChunk extends Chunk {
   public void addEnum(int e) {append2(e,Integer.MIN_VALUE+1);}
   public void addNA() {
     if( isUUID() ) addUUID(C16Chunk._LO_NA,C16Chunk._HI_NA);
+    else if (_ds != null) addNum(Double.NaN);
     else append2(Long.MAX_VALUE,Integer.MIN_VALUE);
   }
   public void addNum (long val, int exp) {
@@ -292,8 +291,8 @@ public class NewChunk extends Chunk {
           set_sparse(nzs);
       } else _id = MemoryManager.arrayCopyOf(_id, _len << 1);
       _ds = MemoryManager.arrayCopyOf(_ds,_len<<1);
-    } else _ds = MemoryManager.malloc8d(4);
-    assert _len == 0 || _ds.length > _len:"_ds.length = " + _ds.length + ", _len = " + _len;
+    } else alloc_doubles(4);
+    assert len() == 0 || _ds.length > len() :"_ds.length = " + _ds.length + ", _len = " + len();
   }
   // Slow-path append data
   private void append2slowUUID() {
@@ -301,7 +300,7 @@ public class NewChunk extends Chunk {
       throw new ArrayIndexOutOfBoundsException(_len);
     if( _ds==null && _ls!=null ) { // This can happen for columns with all NAs and then a UUID
       _xs=null;
-      _ds = MemoryManager.malloc8d(_len);
+      alloc_doubles(len());
       Arrays.fill(_ls,C16Chunk._LO_NA);
       Arrays.fill(_ds,Double.longBitsToDouble(C16Chunk._HI_NA));
     }
@@ -309,8 +308,8 @@ public class NewChunk extends Chunk {
       _ls = MemoryManager.arrayCopyOf(_ls,_len<<1);
       _ds = MemoryManager.arrayCopyOf(_ds,_len<<1);
     } else {
-      _ls = MemoryManager.malloc8 (4);
-      _ds = MemoryManager.malloc8d(4);
+      alloc_mantissa(4);
+      alloc_doubles(4);
     }
     assert _len == 0 || _ls.length > _len:"_ls.length = " + _ls.length + ", _len = " + _len;
   }
@@ -338,9 +337,9 @@ public class NewChunk extends Chunk {
       _ls = MemoryManager.arrayCopyOf(_ls,_len<<1);
       _xs = MemoryManager.arrayCopyOf(_xs,_len<<1);
     } else {
-      _ls = MemoryManager.malloc8(4);
-      _xs = MemoryManager.malloc4(4);
-      _id = _id == null?null:MemoryManager.malloc4(4);
+      alloc_mantissa(4);
+      alloc_exponent(4);
+      if (_id != null) alloc_indices(4);
     }
     assert _len == 0 || _len < _ls.length:"_len = " + _len + ", _ls.length = " + _ls.length;
     assert _id == null || _id.length == _ls.length;
@@ -416,8 +415,8 @@ public class NewChunk extends Chunk {
       }
     } else {
       assert nzeros < _ds.length;
-      _id = MemoryManager.malloc4(_ds.length);
-      for(int i = 0; i < _len; ++i){
+      _id = alloc_indices(_ds.length);
+      for(int i = 0; i < len(); ++i){
         if(_ds[i] == 0)++zs;
         else {
           _ds[i-zs] = _ds[i];
@@ -499,16 +498,24 @@ public class NewChunk extends Chunk {
     // plain longs.  If not, we give up and use doubles.
     if( _ds != null ) {
       int i=0;
-      for( ; i<_len; i++ ) // Attempt to inject all doubles into longs
-        if( !Double.isNaN(_ds[i]) && (double)(long)_ds[i] != _ds[i] ) break;
-      if(i < _len)
-        return sparse?new CXDChunk(_len2,_len,8,bufD(8)):chunkD();
+      boolean isConstant = true;
+      boolean isInteger = true;
+      for( ; i< len(); i++ ) {
+        if (!Double.isNaN(_ds[i])) isInteger &= (double) (long) _ds[i] == _ds[i];
+        isConstant &= _ds[i] == _ds[0];
+      }
+      if (!isInteger) {
+        if (isConstant) return new C0DChunk(_ds[0], len());
+        if (sparse) return new CXDChunk(len2(), len(), 8, bufD(8));
+        else return chunkD();
+      }
+
       _ls = new long[_ds.length]; // Else flip to longs
       _xs = new int [_ds.length];
       double [] ds = _ds;
       _ds = null;
       final int naCnt = _naCnt;
-      for( i=0; i<_len; i++ )   // Inject all doubles into longs
+      for( i=0; i< len(); i++ )   // Inject all doubles into longs
         if( Double.isNaN(ds[i]) )setNA_impl2(i);
         else                     _ls[i] = (long)ds[i];
       // setNA_impl2 will set _naCnt to -1!
@@ -548,7 +555,7 @@ public class NewChunk extends Chunk {
       double d = l*DParseTask.pow10(x);
       if( d < min ) { min = d; llo=l; xlo=x; }
       if( d > max ) { max = d; lhi=l; xhi=x; }
-      floatOverflow = Math.abs(l) > MAX_FLOAT_MANTISSA;
+      floatOverflow = l < Integer.MIN_VALUE+1 && l > Integer.MAX_VALUE;
       xmin = Math.min(xmin,x);
     }
 
@@ -559,10 +566,13 @@ public class NewChunk extends Chunk {
     }
 
     // Constant column?
-    if( _naCnt==0 && min==max ) {
-      return ((long)min  == min)
-          ? new C0LChunk((long)min,_len2)
-          : new C0DChunk(      min,_len2);
+    if( _naCnt==0 && (min==max)) {
+      if (llo == lhi && xlo == 0 && xhi == 0)
+        return new C0LChunk(llo, len2());
+      else if ((long)min == min)
+        return new C0LChunk((long)min, len2());
+      else
+        return new C0DChunk(min, len2());
     }
 
     // Compute min & max, as scaled integers in the xmin scale.
@@ -618,14 +628,16 @@ public class NewChunk extends Chunk {
       return chunkD();
     if( fpoint ) {
       if( (int)lemin == lemin && (int)lemax == lemax ) {
-        if(lemax-lemin < 255 && (int)lemin == lemin ) // Fits in scaled biased byte?
+        if(lemax-lemin < 255) // Fits in scaled biased byte?
           return new C1SChunk( bufX(lemin,xmin,C1SChunk.OFF,0),(int)lemin,DParseTask.pow10(xmin));
-        if(lemax-lemin < 65535 ) { // we use signed 2B short, add -32k to the bias!
+        if(lemax-lemin < 65535) { // we use signed 2B short, add -32k to the bias!
           long bias = 32767 + lemin;
           return new C2SChunk( bufX(bias,xmin,C2SChunk.OFF,1),(int)bias,DParseTask.pow10(xmin));
         }
-        if(lemax - lemin < Integer.MAX_VALUE)
-          return new C4SChunk(bufX(lemin, xmin,C4SChunk.OFF,2),(int)lemin,DParseTask.pow10(xmin));
+      }
+      if(lemax-lemin < 4294967295l) {
+        long bias = 2147483647l + lemin;
+        return new C4SChunk( bufX(bias,xmin,C4SChunk.OFF,2),bias,DParseTask.pow10(xmin));
       }
       return chunkD();
     } // else an integer column

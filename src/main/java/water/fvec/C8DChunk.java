@@ -36,10 +36,10 @@ public class C8DChunk extends Chunk {
     return this;
   }
   @Override NewChunk inflate_impl(NewChunk nc) {
-    //nothing to inflate - just copy
-    nc._ds = MemoryManager.malloc8d(_len);
-    for( int i=0; i<_len; i++ ) //use unsafe?
-      nc._ds[i] = UDP.get8d(_mem,(i<<3));
+    nc.alloc_doubles(len());
+    for( int i=0; i< len(); i++ )
+      nc.doubles()[i] = UDP.get8d(_mem,(i<<3));
+    nc.set_len(nc.set_len2(len()));
     return nc;
   }
   // 3.3333333e33

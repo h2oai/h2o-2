@@ -753,7 +753,7 @@ public abstract class Model extends Lockable<Model> {
       for (int c=(isClassifier() ? 1 : 0); c<cv_preds[i].numCols(); ++c) {
         Vec.Writer vw = cv_pred.vec(c).open();
         try {
-          for (int r=0; r < cv_preds[i].numRows(); ++r) {
+          for (long r=0; r < cv_preds[i].numRows(); ++r) {
             vw.set(offsets[i] + r, cv_preds[i].vec(c).at(r));
           }
         } finally {
@@ -765,12 +765,12 @@ public abstract class Model extends Lockable<Model> {
         float[] probs = new float[cv_preds[i].numCols()];
         Vec.Writer vw = cv_pred.vec(0).open();
         try {
-          for (int r = 0; r < cv_preds[i].numRows(); ++r) {
+          for (long r = 0; r < cv_preds[i].numRows(); ++r) {
             //probs[0] stays 0, is not used in getPrediction
             for (int c = 1; c < cv_preds[i].numCols(); ++c) {
               probs[c] = (float) cv_preds[i].vec(c).at(r);
             }
-            final int label = ModelUtils.getPrediction(probs, r);
+            final int label = ModelUtils.getPrediction(probs, (int)r);
             vw.set(offsets[i] + r, label);
           }
         } finally {

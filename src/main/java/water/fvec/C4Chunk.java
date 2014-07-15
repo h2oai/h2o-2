@@ -36,14 +36,14 @@ public class C4Chunk extends Chunk {
     return this;
   }
   @Override NewChunk inflate_impl(NewChunk nc) {
-    //nothing to inflate - just copy
-    nc._ls = MemoryManager.malloc8(_len);
-    nc._xs = MemoryManager.malloc4(_len);
-    nc._len = 0;
-    nc._len2 = 0;
-    for( int i=0; i<_len; i++ ) //use unsafe?
-      if(isNA0(i))nc.addNA();
-      else nc.addNum(at80(i),0);
+    nc.set_len(0);
+    nc.set_len2(0);
+    final int len = len();
+    for( int i=0; i<len; i++ ) {
+      int res = UDP.get4(_mem,(i<<2));
+      if( res == _NA ) nc.addNA();
+      else             nc.addNum(res,0);
+    }
     return nc;
   }
 }

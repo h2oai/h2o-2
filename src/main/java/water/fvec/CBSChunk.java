@@ -58,12 +58,11 @@ public class CBSChunk extends Chunk {
     return this;
   }
   @Override NewChunk inflate_impl(NewChunk nc) {
-    nc._xs = MemoryManager.malloc4(_len);
-    nc._ls = MemoryManager.malloc8(_len);
-    for (int i=0; i<_len; i++) {
+    nc.set_len(nc.set_len2(0));
+    for (int i=0; i< len(); i++) {
       int res = atb(i);
-      if (res == _NA) nc._xs[i] = Integer.MIN_VALUE;
-      else            nc._ls[i] = res;
+      if (res == _NA) nc.addNA();
+      else            nc.addNum(res,0);
     }
     return nc;
   }
