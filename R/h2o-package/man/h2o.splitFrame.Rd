@@ -27,7 +27,6 @@ iris.hex = h2o.importFile(localH2O, path = irisPath)
 iris.split = h2o.splitFrame(iris.hex, ratios = c(0.2, 0.5))
 head(iris.split[[1]])
 summary(iris.split[[1]])
-h2o.shutdown(localH2O)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
