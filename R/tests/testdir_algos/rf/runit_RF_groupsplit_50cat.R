@@ -17,7 +17,6 @@ test.DRF.groupsplit <- function(conn) {
   # Test dataset has all 50 categories cat1 through cat50
   Log.info("Importing 50_cattest_test.csv data...\n")
   test.hex <- h2o.uploadFile(conn, locate("smalldata/histogram_test/50_cattest_test.csv"), key="test.hex")
-  test.hex$y <- as.factor(test.hex$y)
   Log.info("Summary of 50_cattest_test.csv from H2O:\n")
   print(summary(test.hex))
   
