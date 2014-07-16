@@ -143,7 +143,11 @@ public abstract class Job extends Func {
    * @see UKV
    */
   public <T> T get() {
-    _fjtask.join();             // Block until top-level job is done
+    try {
+      _fjtask.join();             // Block until top-level job is done
+    } catch( Throwable e ) {
+      System.out.println("crunk");
+    }
     T ans = (T) UKV.get(destination_key);
     remove();                   // Remove self-job
     return ans;

@@ -61,7 +61,24 @@ public final class ParseDataset2 extends Job {
     new Frame(job.dest(),new String[0],new Vec[0]).delete_and_lock(job.self()); // Lock BEFORE returning
     for( Key k : keys ) Lockable.read_lock(k,job.self()); // Lock BEFORE returning
     ParserFJTask fjt = new ParserFJTask(job, keys, setup, delete_on_done); // Fire off background parse
-    job.start(fjt);
+
+    H2OCountedCompleter cleanup = new H2OCountedCompleter() {
+        @Override public void compute2() { 
+          System.out.println("cleanup compute2");
+        }
+        @Override public void onCompletion(CountedCompleter caller) { 
+          System.out.println("cleanup completion");
+        }
+        @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller ) {
+          System.out.println("parser canceled, removing keys1");
+          for( Key k : keys ) UKV.remove(k);
+          System.out.println("parser canceled, removing keys2");
+          return true;
+        }
+      };
+    fjt.setCompleter(cleanup);
+
+    job.start(cleanup);
     H2O.submitTask(fjt);
     return job;
   }
@@ -92,9 +109,7 @@ public final class ParseDataset2 extends Job {
     }
 
     @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
-      if(_job != null){
-        _job.cancel(ex);
-      }
+      if(_job != null) _job.cancel(ex);
       return true;
     }
   }

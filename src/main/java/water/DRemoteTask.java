@@ -75,9 +75,9 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
       try { get(); }
       catch(ExecutionException eex) { // skip the execution part
         Throwable tex = eex.getCause();
-        if( tex instanceof Error ) throw (Error)tex;
-        if( tex instanceof DistributedException ) throw (DistributedException)tex;
-        if(tex instanceof JobCancelledException)throw (JobCancelledException)tex;
+        if( tex instanceof                 Error) throw (                Error)tex;
+        if( tex instanceof  DistributedException) throw ( DistributedException)tex;
+        if( tex instanceof JobCancelledException) throw (JobCancelledException)tex;
         throw new RuntimeException(tex);
       }
       catch(CancellationException cex) { Log.errRTExcept(cex); }
