@@ -730,7 +730,7 @@ public final class ParseDataset2 extends Job {
     }
      public void check(){
        if(_nvs != null) for(NewChunk nv:_nvs)
-        assert (nv._len2 == _nLines):"unexpected number of lines in NewChunk, got " + nv._len2 + ", but expected " + _nLines;
+        assert (nv._len == _nLines):"unexpected number of lines in NewChunk, got " + nv._len + ", but expected " + _nLines;
     }
     @Override public FVecDataOut close(Futures fs){
       if( _nvs == null ) return this; // Might call close twice

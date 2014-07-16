@@ -36,8 +36,7 @@ public class C4Chunk extends Chunk {
     return this;
   }
   @Override NewChunk inflate_impl(NewChunk nc) {
-    nc.set_len(0);
-    nc.set_len2(0);
+    nc.set_len(nc.set_sparseLen(0));
     final int len = len();
     for( int i=0; i<len; i++ ) {
       int res = UDP.get4(_mem,(i<<2));

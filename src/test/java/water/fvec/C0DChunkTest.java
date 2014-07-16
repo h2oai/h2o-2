@@ -13,8 +13,8 @@ public class C0DChunkTest extends TestUtil {
     for (Double d : new Double[]{3.14159265358, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY, Double.MAX_VALUE, Double.NaN}) {
       NewChunk nc = new NewChunk(null, 0);
       for (int i=0;i<K;++i) nc.addNum(d);
-      Assert.assertEquals(K, nc.len2());
       Assert.assertEquals(K, nc.len());
+      Assert.assertEquals(K, nc.sparseLen());
 
       Chunk cc = nc.compress();
       Assert.assertEquals(K, cc.len());

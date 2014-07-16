@@ -32,7 +32,7 @@ public class C8Chunk extends Chunk {
     return this;
   }
   @Override NewChunk inflate_impl(NewChunk nc) {
-    nc.set_len(nc.set_len2(0));
+    nc.set_len(nc.set_sparseLen(0));
     for( int i=0; i< len(); i++ )
       if(isNA0(i))nc.addNA();
       else nc.addNum(at80(i),0);

@@ -35,7 +35,7 @@ public class CBSChunkTest extends TestUtil {
     NewChunk nc = new NewChunk(av,0);
     nc._ls = ls;
     nc._xs = xs;
-    nc._len = nc._len2 = ls.length;
+    nc._len = nc._sparseLen = ls.length;
     nc.type();                  // Compute rollups, including NA
     assertEquals(expNA, nc._naCnt);
     // Compress chunk
@@ -112,7 +112,7 @@ public class CBSChunkTest extends TestUtil {
 
       nc = new NewChunk(null, 0);
       cc.inflate_impl(nc);
-      Assert.assertEquals(vals.length+l+1, nc.len2());
+      Assert.assertEquals(vals.length+l+1, nc.sparseLen());
       Assert.assertEquals(vals.length+l+1, nc.len());
 
       Iterator<NewChunk.Value> it = nc.values(0, vals.length+1+l);

@@ -39,10 +39,9 @@ public class C16Chunk extends Chunk {
   }
   @Override NewChunk inflate_impl(NewChunk nc) {
     //nothing to inflate - just copy
-    nc._ls = MemoryManager.malloc8 (_len);
-    nc._ds = MemoryManager.malloc8d(_len);
-    nc._len = _len;
-    nc._len2 = _len;
+    nc.alloc_mantissa(len());
+    nc.alloc_doubles(len());
+    nc.set_len(nc.set_sparseLen(len()));
     for( int i=0; i<_len; i++ ) { //use unsafe?
       nc._ls[i] =                         UDP.get8(_mem,(i<<4)  );
       nc._ds[i] = Double.longBitsToDouble(UDP.get8(_mem,(i<<4)+8));

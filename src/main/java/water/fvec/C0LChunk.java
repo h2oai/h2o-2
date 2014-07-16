@@ -2,7 +2,6 @@ package water.fvec;
 
 import java.util.Arrays;
 import water.AutoBuffer;
-import water.MemoryManager;
 import water.UDP;
 
 /**
@@ -33,14 +32,16 @@ public class C0LChunk extends Chunk {
     return this;
   }
   @Override NewChunk inflate_impl(NewChunk nc) {
-    nc.set_len(nc.set_len2(0));
     if(_con != 0) {
       nc.alloc_mantissa(len());
       Arrays.fill(nc.mantissa(), _con);
       nc.alloc_exponent(len());
-      nc.set_len(nc.set_len2(len()));
+      nc.set_len(nc.set_sparseLen(len()));
     } else {
+      nc.set_len(nc.set_sparseLen(0));
+      nc.set_sparse(0);
       nc.addZeros(len());
+      assert(nc.sparseLen() == 0);
     }
     return nc;
   }

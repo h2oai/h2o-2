@@ -32,7 +32,7 @@ public abstract class Chunk extends Iced implements Cloneable {
     * <p>
     * Slightly slower than 'at0' since it range checks within a chunk. */
   public final long  at8( long i ) {
-    long x = i-_start;
+    long x = i - (_start>0 ? _start : 0);
     if( 0 <= x && x < _len ) return at80((int)x);
     throw new ArrayIndexOutOfBoundsException(""+_start+" <= "+i+" < "+(_start+_len));
   }
@@ -46,25 +46,25 @@ public abstract class Chunk extends Iced implements Cloneable {
    * <p>
    * Slightly slower than 'at80' since it range checks within a chunk. */
   public final double at( long i ) {
-    long x = i-_start;
+    long x = i - (_start>0 ? _start : 0);
     if( 0 <= x && x < _len ) return at0((int)x);
     throw new ArrayIndexOutOfBoundsException(getClass().getSimpleName() + " " +_start+" <= "+i+" < "+(_start+_len));
   }
 
   /** Fetch the missing-status the slow way. */
   public final boolean isNA(long i) {
-    long x = i-_start;
+    long x = i - (_start>0 ? _start : 0);
     if( 0 <= x && x < _len ) return isNA0((int)x);
     throw new ArrayIndexOutOfBoundsException(getClass().getSimpleName() + " " +_start+" <= "+i+" < "+(_start+_len));
   }
 
   public final long at16l( long i ) {
-    long x = i-_start;
+    long x = i - (_start>0 ? _start : 0);
     if( 0 <= x && x < _len ) return at16l0((int)x);
     throw new ArrayIndexOutOfBoundsException(getClass().getSimpleName() + " " +_start+" <= "+i+" < "+(_start+_len));
   }
   public final long at16h( long i ) {
-    long x = i-_start;
+    long x = i - (_start>0 ? _start : 0);
     if( 0 <= x && x < _len ) return at16h0((int)x);
     throw new ArrayIndexOutOfBoundsException(getClass().getSimpleName() + " " +_start+" <= "+i+" < "+(_start+_len));
   }
