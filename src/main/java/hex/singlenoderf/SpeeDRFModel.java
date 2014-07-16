@@ -172,6 +172,10 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     return m.score_each || m.t_keys.length == 2 || m.t_keys.length == m.N || m.get_params().local_mode;
   }
 
+  private static boolean shouldDoScore0(SpeeDRFModel m) {
+    return m.score_each || m.t_keys.length == 2 || m.t_keys.length == m.N;
+  }
+
   @Override public ConfusionMatrix cm() { return cms[cms.length-1]; }
 
 //  private static void scoreOnTest(SpeeDRFModel m, SpeeDRFModel old) {
@@ -218,11 +222,10 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 //    }
 //  }
 
-  private static void scoreIt(SpeeDRFModel m, SpeeDRFModel old) {
+  private static void scoreIt(SpeeDRFModel m, SpeeDRFModel old, boolean score_new_only) {
     // Gather the results
     Futures fs = new Futures();
-    final SpeeDRFModel score_model = m;
-//    final CMTask[] cmTask = new CMTask[1];
+    //    final CMTask[] cmTask = new CMTask[1];
 //
 //    H2O.H2OCountedCompleter task4var = new H2O.H2OCountedCompleter() {
 //      @Override public void compute2() {
@@ -234,7 +237,11 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 //    fs.add(task4var);
 //    fs.blockForPending();
 
-    CMTask[] cmTask = new CMTask[]{CMTask.scoreTask(score_model.test_frame == null ? score_model.fr : score_model.test_frame, score_model, score_model.size(), score_model.weights, score_model.oobee, score_model._priorClassDist, score_model._modelClassDist)};
+    CMTask[] cmTask = new CMTask[]{CMTask.scoreTask(m.test_frame == null
+                                    ? m.fr
+                                    : m.test_frame, m, m.size(),
+                                      m.weights, m.oobee, m._priorClassDist,
+                                      m._modelClassDist, score_new_only)};
 
     // Perform the regression scoring
     if (m.regression) {
@@ -245,7 +252,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       m.cms[m.cms.length - 1] = null;
 
       // Perform the classification scoring
-    } else {
+    } else if (!score_new_only) {
       _domain = cmTask[0].domain();
       m.confusion = CMTask.CMFinal.make(cmTask[0]._matrix, m, cmTask[0].domain(), cmTask[0]._errorsPerTree, m.oobee, cmTask[0]._sum, cmTask[0]._cms);
       m.cm = cmTask[0]._matrix._matrix;
@@ -264,6 +271,13 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       // Launch a Variable Importance Task
       if (m.importance && !m.regression)
         m.varimp = m.doVarImpCalc(m);
+    } else {
+      m.errorsPerTree = old.errorsPerTree == null ? cmTask[0]._errorsPerTree : Arrays.copyOf(old.errorsPerTree, old.errorsPerTree.length+1);
+      m.errorsPerTree[m.errorsPerTree.length-1] = cmTask[0]._errorsPerTree[cmTask[0]._errorsPerTree.length-1];
+      m.errs = Arrays.copyOf(old.errs, old.errs.length+1);
+      m.errs[m.errs.length - 1] = -1.f;
+      m.cms = Arrays.copyOf(old.cms, old.cms.length+1);
+      m.cms[m.cms.length-1] = null;
     }
   }
 
@@ -299,8 +313,11 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     boolean shouldScore = shouldDoScore(m);
 
     if (shouldScore) {
-
-      scoreIt(m, old);
+      if (shouldDoScore0(m) ) {
+        scoreIt(m, old, false);
+      } else {
+        scoreIt(m, old, m.get_params().local_mode);
+      }
 
 //    No scoring. Just plug CM with nulls and -1f for errs.
     } else {

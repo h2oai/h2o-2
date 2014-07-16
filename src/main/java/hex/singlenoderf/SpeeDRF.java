@@ -31,7 +31,7 @@ public class SpeeDRF extends Job.ValidatedJob {
   @API(help = "Split Criterion Type", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
   public Tree.SelectStatType select_stat_type = Tree.SelectStatType.ENTROPY;
 
-  @API(help = "Use local data. Auto-enabled if data does not fit in a single node -- may be slightly less accurate for small data.", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
+  @API(help = "Use local data. Auto-enabled if data does not fit in a single node.", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
   public boolean local_mode = false;
 
   /* Legacy parameter: */
@@ -348,11 +348,11 @@ public class SpeeDRF extends Job.ValidatedJob {
         if(!regression) {
 
           // Classification uses the square root of the number of features by default
-          model.mtry = (int) Math.floor(Math.sqrt(fr.numCols()));
+          model.mtry = (int) Math.floor(Math.sqrt(fr.numCols() - 1)); // do not count class column
         } else {
 
           // Regression uses about a third of the features by default
-          model.mtry = (int) Math.floor((float) fr.numCols() / 3.0f);
+          model.mtry = (int) Math.floor((float) (fr.numCols() - 1) / 3.0f);  // do not count class column
         }
 
       } else {
