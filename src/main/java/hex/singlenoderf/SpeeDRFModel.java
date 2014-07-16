@@ -15,9 +15,11 @@ import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Counter;
+import water.util.Log;
 import water.util.ModelUtils;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Random;
 
 
@@ -39,6 +41,8 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   @API(help = "Max depth to grow trees to")                               int max_depth;
   @API(help = "All the trees in the model.")                              Key[] t_keys;
   /* Local forests produced by nodes */                                   Key[][] local_forests;
+  /* Errors Per Tree                 */                                   long[] errorsPerTree;
+//  /* Local forests train Rows.       */                                   transient HashMap<Key, long[]> trees_non_oob;
   /* Total time in seconds to produce the model */                        long time;
   /* Frame being operated on */                                           Frame fr;
   /* Response Vector */                                                   Vec response;
@@ -68,6 +72,8 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   @API(help = "Verbose Mode")                                             public boolean verbose;
   @API(help = "Verbose Output")                                           public String[] verbose_output;
   @API(help = "Use non-local data")                                       public boolean useNonLocal;
+
+  /* Tree pojos */                                                        public TreeP[] tree_pojos;
 
   /**
    * Extra helper variables.
@@ -147,10 +153,12 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     this.verbose = model.verbose;
     this.verbose_output = model.verbose_output;
     this.useNonLocal = model.useNonLocal;
+//    this.trees_non_oob = model.trees_non_oob;
+    this.errorsPerTree = model.errorsPerTree;
+    this.tree_pojos = model.tree_pojos;
   }
 
   public Vec get_response() { return response; }
-
   public int treeCount() { return t_keys.length; }
   public int size()      { return t_keys.length; }
   public int classes()   { return regression ? 1 : (int)(response.max() - response.min() + 1); }
@@ -161,7 +169,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   @Override public String[] classNames() { return regression ? null : _domain; }
 
   private static boolean shouldDoScore(SpeeDRFModel m) {
-    return m.score_each || m.t_keys.length == 2 || m.t_keys.length == m.N;
+    return m.score_each || m.t_keys.length == 2 || m.t_keys.length == m.N || m.get_params().local_mode;
   }
 
   @Override public ConfusionMatrix cm() { return cms[cms.length-1]; }
@@ -214,16 +222,19 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     // Gather the results
     Futures fs = new Futures();
     final SpeeDRFModel score_model = m;
-    final CMTask[] cmTask = new CMTask[1];
-    H2O.H2OCountedCompleter task4var = new H2O.H2OCountedCompleter() {
-      @Override public void compute2() {
-        cmTask[0] = CMTask.scoreTask(score_model.test_frame == null ? score_model.fr : score_model.test_frame, score_model, score_model.size(), score_model.weights, score_model.oobee, score_model._priorClassDist, score_model._modelClassDist);
-        tryComplete();
-      }
-    };
-    H2O.submitTask(task4var);
-    fs.add(task4var);
-    fs.blockForPending();
+//    final CMTask[] cmTask = new CMTask[1];
+//
+//    H2O.H2OCountedCompleter task4var = new H2O.H2OCountedCompleter() {
+//      @Override public void compute2() {
+//        cmTask[0] = CMTask.scoreTask(score_model.test_frame == null ? score_model.fr : score_model.test_frame, score_model, score_model.size(), score_model.weights, score_model.oobee, score_model._priorClassDist, score_model._modelClassDist);
+//        tryComplete();
+//      }
+//    };
+//    H2O.submitTask(task4var);
+//    fs.add(task4var);
+//    fs.blockForPending();
+
+    CMTask[] cmTask = new CMTask[]{CMTask.scoreTask(score_model.test_frame == null ? score_model.fr : score_model.test_frame, score_model, score_model.size(), score_model.weights, score_model.oobee, score_model._priorClassDist, score_model._modelClassDist)};
 
     // Perform the regression scoring
     if (m.regression) {
@@ -238,7 +249,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       _domain = cmTask[0].domain();
       m.confusion = CMTask.CMFinal.make(cmTask[0]._matrix, m, cmTask[0].domain(), cmTask[0]._errorsPerTree, m.oobee, cmTask[0]._sum, cmTask[0]._cms);
       m.cm = cmTask[0]._matrix._matrix;
-
+      m.errorsPerTree = cmTask[0]._errorsPerTree;
       m.errs = Arrays.copyOf(old.errs, old.errs.length + 1);
       m.errs[m.errs.length - 1] = m.confusion.mse();
       m.cms = Arrays.copyOf(old.cms, old.cms.length + 1);
@@ -256,7 +267,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     }
   }
 
-  public static SpeeDRFModel make(SpeeDRFModel old, Key tkey, int nodeIdx, String tString) {
+  public static SpeeDRFModel make(SpeeDRFModel old, Key tkey, int nodeIdx, String tString, TreeP tp) {
 
     // Create a new model for atomic update
     SpeeDRFModel m = (SpeeDRFModel)old.clone();
@@ -264,6 +275,14 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     // Update the tree keys with the new one (tkey)
     m.t_keys = Arrays.copyOf(old.t_keys, old.t_keys.length + 1);
     m.t_keys[m.t_keys.length-1] = tkey;
+//    Log.info("UPDATING NON OOB ROWS:");
+//    Log.info("IS trees_non_oob null ???");
+//    Log.info(m.trees_non_oob == null);
+//    Log.info("IS non_oob null ???");
+//    if (m.trees_non_oob == null) m.trees_non_oob = new HashMap<Key, long[]>();
+//    m.trees_non_oob.put(tkey, non_oob);
+    m.tree_pojos = Arrays.copyOf(old.tree_pojos, old.tree_pojos.length + 1);
+    m.tree_pojos[m.tree_pojos.length-1] = tp;
 
     // Update the local_forests
     m.local_forests[nodeIdx] = Arrays.copyOf(old.local_forests[nodeIdx],old.local_forests[nodeIdx].length+1);
