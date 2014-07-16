@@ -32,7 +32,7 @@ public class SpeeDRF extends Job.ValidatedJob {
   public Tree.SelectStatType select_stat_type = Tree.SelectStatType.ENTROPY;
 
   @API(help = "Use local data. Auto-enabled if data does not fit in a single node -- may be slightly less accurate for small data.", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
-  public boolean local_mode = true;
+  public boolean local_mode = false;
 
   /* Legacy parameter: */
   public double[] class_weights = null;
@@ -161,9 +161,7 @@ public class SpeeDRF extends Job.ValidatedJob {
     remove();
   }
 
-  @Override protected Response redirect() {
-    return SpeeDRFProgressPage.redirect(this, self(), dest());
-  }
+  @Override protected Response redirect() { return SpeeDRFProgressPage.redirect(this, self(), dest()); }
 
   public final void buildForest(SpeeDRFModel model) {
     try {
@@ -341,6 +339,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       model.sample = (float) sample;
       model.weights = regression ? null : class_weights;
       model.time = 0;
+      model.tree_pojos = new TreeP[1];
       model.N = num_trees;
       model.useNonLocal = !local_mode;
       if (!regression) model.setModelClassDistribution(new MRUtils.ClassDist(fr.lastVec()).doAll(fr.lastVec()).rel_dist());
@@ -569,7 +568,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       for (int i = 0; i < ntrees; ++i) {
         long treeSeed = rnd.nextLong() + TREE_SEED_INIT; // make sure that enough bits is initialized
         trees[i] = new Tree(job, localData, producerId, drfParams.max_depth, drfParams.stat_type, numSplitFeatures, treeSeed,
-                i, drfParams._exclusiveSplitLimit, sampler, drfParams._verbose, drfParams.regression);
+                i, drfParams._exclusiveSplitLimit, sampler, drfParams._verbose, drfParams.regression, !drfParams._useNonLocalData);
       }
 
       Log.info("Invoking the tree build tasks on all nodes.");

@@ -2,6 +2,8 @@ package hex.singlenoderf;
 
 import water.MemoryManager;
 import water.util.Utils;
+
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Random;
 
@@ -33,6 +35,7 @@ public class Data implements Iterable<Data.Row> {
     public final boolean hasValidValue(int colIndex) { return !_dapt.hasBadValue(_index, colIndex); }
     public final boolean isValid() { return !_dapt.isBadRow(_index); }
     public final boolean isValidRaw() { return !_dapt.isBadRowRaw(_index); }
+    public final double getRawColumnValue(int colIndex) { return _dapt.getRawColumnValue(_index, colIndex); }
   }
 
   protected final DataAdapter _dapt;
@@ -75,6 +78,14 @@ public class Data implements Iterable<Data.Row> {
     return nobs == 0 ? 0 : av / (float)(nobs);
   }
 
+  public double[] unpackRow(Row r) {
+    double[] res = new double[_dapt._c.length-1];
+    for (int i = 0; i < _dapt._c.length-1; ++i)  res[i] = r.getRawColumnValue(i);
+    return res;
+  }
+
+  public Row at(int i) { Row _r = new Row(); _r._index = permute(i); return _r;}
+
   public final Iterator<Row> iterator() { return new RowIter(start(), end()); }
   private class RowIter implements Iterator<Row> {
     final Row _r = new Row();
@@ -108,6 +119,14 @@ public class Data implements Iterable<Data.Row> {
       }
     }
     return l;
+  }
+
+  public long[] nonOOB() {
+    ArrayList<Integer> res = new ArrayList<Integer>();
+    for (Row r : this) res.add(r._index);
+    long[] rr = new long[res.size()];
+    for (int i = 0; i < rr.length; ++i) rr[i] = res.get(i);
+    return rr;
   }
 
   // Filter a column, with all valid data.  i.e., skip the invalid check
