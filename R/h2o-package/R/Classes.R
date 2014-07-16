@@ -602,7 +602,8 @@ setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
 
 setMethod("$", "H2OParsedData", function(x, name) {
   myNames = colnames(x)
-  if(!(name %in% myNames)) return(NULL)
+  # if(!(name %in% myNames)) return(NULL)
+  if(!(name %in% myNames)) stop(paste("Column", name, "does not exist!"))
   cind = match(name, myNames)
   expr = paste(x@key, "[,", cind, "]", sep="")
   res = .h2o.__exec2(x@h2o, expr)
@@ -700,7 +701,8 @@ setMethod("$<-", "H2OParsedData", function(x, name, value) {
 setMethod("[[", "H2OParsedData", function(x, i, exact = TRUE) {
   if(missing(i)) return(x)
   if(length(i) > 1) stop("[[]] may only select one column")
-  if(!i %in% colnames(x) ) return(NULL)
+  # if(!i %in% colnames(x) ) return(NULL)
+  if(!i %in% colnames(x) ) stop(paste("Column", i, "does not exist!"))
   x[, i]
 })
 
@@ -1187,7 +1189,8 @@ setMethod("ifelse", "H2OParsedData", function(test, yes, no) {
 })
 
 setMethod("levels", "H2OParsedData", function(x) {
-  if(ncol(x) != 1) return(NULL)
+  # if(ncol(x) != 1) return(NULL)
+  if(ncol(x) != 1) stop("Can only retrieve levels of one column.")
   res = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS2, source = x@key, max_ncols = .Machine$integer.max)
   res$levels[[1]]
 })
