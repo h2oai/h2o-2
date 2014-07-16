@@ -10,7 +10,7 @@ Performs random forest classification on a data set.
 h2o.randomForest(x, y, data, key = "", classification = TRUE, ntree = 50, 
   depth = 20, mtries = -1, sample.rate = 2/3, nbins = 100, seed = -1, 
   importance = FALSE, nfolds = 0, validation, nodesize = 1, 
-  balance.classes = FALSE, max.after.balance.size = 5)
+  balance.classes = FALSE, max.after.balance.size = 5, doGrpSplit = TRUE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -60,6 +60,7 @@ An \code{\linkS4class{H2OParsedData}} object containing the variables in the mod
   }
   \item{balance.classes}{(Optional) Balance training data class counts via over/under-sampling (for imbalanced data)}
   \item{max.after.balance.size}{Maximum relative size of the training data after balancing class counts (can be less than 1.0)}
+  \item{doGrpSplit}{Check non-contiguous group splits for categorical predictors}
 }
 
 \value{
