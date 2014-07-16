@@ -11,9 +11,9 @@ import water.api.Request.API;
 import water.fvec.Chunk;
 import water.license.LicenseManager;
 import water.util.*;
+import water.util.Utils.IcedBitSet;
 
-import java.util.Arrays;
-import java.util.Random;
+import java.util.*;
 
 /**
    A Decision Tree, laid over a Frame of Vecs, and built distributed.
@@ -110,13 +110,14 @@ public class DTree extends Iced {
   // Records a column, a bin to split at within the column, and the MSE.
   public static class Split extends Iced {
     final int _col, _bin;       // Column to split, bin where being split
-    final boolean _equal;       // Split is < or == ?
+    final IcedBitSet _bs;       // For binary y and categorical x (with >= 4 levels), split into 2 non-contiguous groups
+    final byte _equal;          // Split is 0: <, 1: == with single split point, 2: == with group split (<= 32 levels), 3: == with group split (> 32 levels)
     final double _se0, _se1;    // Squared error of each subsplit
     final long    _n0,  _n1;    // Rows in each final split
     final double  _p0,  _p1;    // Predicted value for each split
 
-    public Split( int col, int bin, boolean equal, double se0, double se1, long n0, long n1, double p0, double p1 ) {
-      _col = col;  _bin = bin;  _equal = equal;
+    public Split( int col, int bin, IcedBitSet bs, byte equal, double se0, double se1, long n0, long n1, double p0, double p1 ) {
+      _col = col;  _bin = bin;  _bs = bs;  _equal = equal;
       _n0 = n0;  _n1 = n1;  _se0 = se0;  _se1 = se1;
       _p0 = p0;  _p1 = p1;
     }
@@ -146,7 +147,7 @@ public class DTree extends Iced {
     float splat(DHistogram hs[]) {
       DHistogram h = hs[_col];
       assert _bin > 0 && _bin < h.nbins();
-      if( _equal ) { assert h.bins(_bin)!=0; return h.binAt(_bin); }
+      if( _equal == 1 ) { assert h.bins(_bin)!=0; return h.binAt(_bin); }
       // Find highest non-empty bin below the split
       int x=_bin-1;
       while( x >= 0 && h.bins(x)==0 ) x--;
@@ -206,7 +207,7 @@ public class DTree extends Iced {
         // Tighter bounds on the column getting split: exactly each new
         // DHistogram's bound are the bins' min & max.
         if( _col==j ) {
-          if( _equal ) {        // Equality split; no change on unequals-side
+          if( _equal != 0 ) {        // Equality split; no change on unequals-side
             if( way == 1 ) continue; // but know exact bounds on equals-side - and this col will not split again
           } else {              // Less-than split
             if( h._bins[_bin]==0 )
@@ -221,7 +222,7 @@ public class DTree extends Iced {
         if( h._isInt > 0 && !(min+1 < maxEx ) ) continue; // This column will not split again
         if( min >  maxEx ) continue; // Happens for all-NA subsplits
         assert min < maxEx && n > 1 : ""+min+"<"+maxEx+" n="+n;
-        nhists[j] = DHistogram.make(h._name,adj_nbins,h._isInt,min,maxEx,n,h.isBinom());
+        nhists[j] = DHistogram.make(h._name,adj_nbins,h._isInt,min,maxEx,n,h._doGrpSplit,h.isBinom());
         cnt++;                    // At least some chance of splitting
       }
       return cnt == 0 ? null : nhists;
@@ -391,7 +392,7 @@ public class DTree extends Iced {
         Arrays.fill(_nids,-1);
         return;
       }
-      _splat = _split.splat(hs); // Split-at value
+      _splat = (_split._equal == 0 || _split._equal == 1) ? _split.splat(hs) : -1; // Split-at value (-1 for group-wise splits)
       final char nbins   = _tree._nbins;
       final int min_rows = _tree._min_rows;
 
@@ -410,7 +411,13 @@ public class DTree extends Iced {
         return 0;                        // NAs always to bin 0
       // Note that during *scoring* (as opposed to training), we can be exposed
       // to data which is outside the bin limits.
-      return _split._equal ? (d != _splat ? 0 : 1) : (d < _splat ? 0 : 1);
+      if(_split._equal == 0)
+        return d < _splat ? 0 : 1;
+      else if(_split._equal == 1)
+        return d != _splat ? 0 : 1;
+      else
+        return _split._bs.contains((int)d) ? 1 : 0;
+      // return _split._equal ? (d != _splat ? 0 : 1) : (d < _splat ? 0 : 1);
     }
 
     public int ns( Chunk chks[], int row ) { return _nids[bin(chks,row)]; }
@@ -420,10 +427,14 @@ public class DTree extends Iced {
     @Override public String toString() {
       if( _split._col == -1 ) return "Decided has col = -1";
       int col = _split._col;
-      if( _split._equal )
+      if( _split._equal == 1 )
         return
           _tree._names[col]+" != "+_splat+"\n"+
           _tree._names[col]+" == "+_splat+"\n";
+      else if( _split._equal == 2 || _split._equal == 3 )
+        return
+          _tree._names[col]+" != "+_split._bs.toString()+"\n"+
+          _tree._names[col]+" == "+_split._bs.toString()+"\n";
       return
         _tree._names[col]+" < "+_splat+"\n"+
         _splat+" <="+_tree._names[col]+"\n";
@@ -433,10 +444,10 @@ public class DTree extends Iced {
       int i = _nids[0]==nid ? 0 : 1;
       assert _nids[i]==nid : "No child nid "+nid+"? " +Arrays.toString(_nids);
       sb.append("[").append(_tree._names[_split._col]);
-      sb.append(_split._equal
+      sb.append(_split._equal != 0
                 ? (i==0 ? " != " : " == ")
                 : (i==0 ? " <  " : " >= "));
-      sb.append(_splat).append("]");
+      sb.append((_split._equal == 2 || _split._equal == 3) ? _split._bs.toString() : _splat).append("]");
       return sb;
     }
 
@@ -447,10 +458,10 @@ public class DTree extends Iced {
         if( _split._col < 0 ) sb.append("init");
         else {
           sb.append(_tree._names[_split._col]);
-          sb.append(_split._equal
+          sb.append(_split._equal != 0
                     ? (i==0 ? " != " : " == ")
                     : (i==0 ? " <  " : " >= "));
-          sb.append(_splat).append("\n");
+          sb.append((_split._equal == 2 || _split._equal == 3) ? _split._bs.toString() : _splat).append("\n");
         }
         if( _nids[i] >= 0 && _nids[i] < _tree._len )
           _tree.node(_nids[i]).toString2(sb,depth+1);
@@ -463,14 +474,17 @@ public class DTree extends Iced {
       if( _size != 0 ) return _size; // Cached size
 
       assert _nodeType == 0:"unexpected node type: " + _nodeType;
-      if( _split._equal ) _nodeType |= (byte)4;
+      if(_split._equal != 0)
+        _nodeType |= _split._equal == 1 ? 4 : (_split._equal == 2 ? 8 : 12);
 
-      int res = 7; // 1B node type + flags, 2B colId, 4B float split val
+      // int res = 7;  // 1B node type + flags, 2B colId, 4B float split val
+      // 1B node type + flags, 2B colId, 4B split val/small group or (2B offset + 2B size) + large group
+      int res = _split._equal == 3 ? 7 + _split._bs.numBytes() : 7;
 
       Node left = _tree.node(_nids[0]);
       int lsz = left.size();
       res += lsz;
-      if( left instanceof LeafNode ) _nodeType |= (byte)(24 << 0*2);
+      if( left instanceof LeafNode ) _nodeType |= (byte)(48 << 0*2);
       else {
         int slen = lsz < 256 ? 0 : (lsz < 65535 ? 1 : (lsz<(1<<24) ? 2 : 3));
         _nodeType |= slen; // Set the size-skip bits
@@ -478,9 +492,9 @@ public class DTree extends Iced {
       }
 
       Node rite = _tree.node(_nids[1]);
-      if( rite instanceof LeafNode ) _nodeType |= (byte)(24 << 1*2);
+      if( rite instanceof LeafNode ) _nodeType |= (byte)(48 << 1*2);
       res += rite.size();
-      assert (_nodeType&0x1B) != 27;
+      assert (_nodeType&0x33) != 51;
       assert res != 0;
       return (_size = res);
     }
@@ -492,9 +506,24 @@ public class DTree extends Iced {
       ab.put1(_nodeType);          // Includes left-child skip-size bits
       assert _split._col != -1;    // Not a broken root non-decision?
       ab.put2((short)_split._col);
-      ab.put4f(_splat);
+
+      // Save split-at-value or group
+      if(_split._equal == 0 || _split._equal == 1)
+        ab.put4f(_splat);
+      else if(_split._equal == 2) {
+        /* byte[] ary = MemoryManager.malloc1(4);
+        for(int i = 0; i < 4; i++)
+          ary[i] = _split._bs._val[i];
+        ab.putA1(ary, 4); */
+        ab.putA1(_split._bs._val, 4);
+      } else {
+        ab.put2((char)_split._bs._offset);
+        ab.put2((char)_split._bs.numBytes());
+        ab.putA1(_split._bs._val, _split._bs.numBytes());
+      }
+
       Node left = _tree.node(_nids[0]);
-      if( (_nodeType&24) == 0 ) { // Size bits are optional for left leaves !
+      if( (_nodeType&48) == 0 ) { // Size bits are optional for left leaves !
         int sz = left.size();
         if(sz < 256)            ab.put1(       sz);
         else if (sz < 65535)    ab.put2((short)sz);
@@ -908,12 +937,12 @@ public class DTree extends Iced {
     // Highly compressed tree encoding:
     //    tree: 1B nodeType, 2B colId, 4B splitVal, left-tree-size, left, right
     //    nodeType: (from lsb):
-    //        2 bits ( 1,2) skip-tree-size-size,
-    //        1 bit  ( 4) operator flag (0 --> <, 1 --> == ),
-    //        1 bit  ( 8) left leaf flag,
-    //        1 bit  (16) left leaf type flag, (unused)
-    //        1 bit  (32) right leaf flag,
-    //        1 bit  (64) right leaf type flag (unused)
+    //        2 bits (1,2) skip-tree-size-size,
+    //        2 bits (4,8) operator flag (0 --> <, 1 --> ==, 2 --> small (4B) group, 3 --> big (var size) group),
+    //        1 bit  ( 16) left leaf flag,
+    //        1 bit  ( 32) left leaf type flag (0: subtree, 1: small cat, 2: big cat, 3: float)
+    //        1 bit  ( 64) right leaf flag,
+    //        1 bit  (128) right leaf type flag (0: subtree, 1: small cat, 2: big cat, 3: float)
     //    left, right: tree | prediction
     //    prediction: 4 bytes of float
     public static class CompressedTree extends Iced {
@@ -927,34 +956,58 @@ public class DTree extends Iced {
           int nodeType = ab.get1();
           int colId = ab.get2();
           if( colId == 65535 ) return scoreLeaf(ab);
-          float splitVal = ab.get4f();
 
-          boolean equal = ((nodeType&4)==4);
+          // boolean equal = ((nodeType&4)==4);
+          int equal = (nodeType&12) >> 2;
+          assert (equal >= 0 && equal <= 3): "illegal equal value " + equal+" at "+ab.position()+" in bitpile "+Arrays.toString(_bits);
+
+          // Extract value or group to split on
+          float splitVal = -1;
+          boolean grpContains = false;
+          if(equal == 0 || equal == 1)
+            splitVal = ab.get4f();
+          else {
+            int off = (equal == 3) ? ab.get2() : 0;
+            int sz = (equal == 3) ? ab.get2() : 4;
+            int idx = (int)row[colId];
+
+            if(Double.isNaN(idx) || idx < off) {
+              grpContains = false;
+              ab.skip(sz);
+            } else {
+              idx = idx - off;
+              ab.skip(idx >> 3);
+              grpContains = (ab.get1() & ((byte)1 << (idx % 8))) != 0;
+              ab.skip(sz-(idx >> 3)-1);
+            }
+          }
+
           // Compute the amount to skip.
-          int lmask =  nodeType & 0x1B;
-          int rmask = (nodeType & 0x60) >> 2;
+          int lmask =  nodeType & 0x33;
+          int rmask = (nodeType & 0xC0) >> 2;
           int skip = 0;
           switch(lmask) {
-          case 0:  skip = ab.get1();  break;
-          case 1:  skip = ab.get2();  break;
-          case 2:  skip = ab.get3();  break;
-          case 3:  skip = ab.get4();  break;
-          case 8:  skip = _nclass < 256?1:2;  break; // Small leaf
-          case 24: skip = 4;          break; // skip the prediction
-          default: assert false:"illegal lmask value " + lmask+" at "+ab.position()+" in bitpile "+Arrays.toString(_bits);
-          }
+            case 0:  skip = ab.get1();  break;
+            case 1:  skip = ab.get2();  break;
+            case 2:  skip = ab.get3();  break;
+            case 3:  skip = ab.get4();  break;
+            case 16: skip = _nclass < 256?1:2;  break; // Small leaf
+            case 48: skip = 4;          break; // skip the prediction
+            default: assert false:"illegal lmask value " + lmask+" at "+ab.position()+" in bitpile "+Arrays.toString(_bits);
+           }
 
           // WARNING: Generated code has to be consistent with this code:
           //   - Double.NaN <  3.7f => return false => BUT left branch has to be selected (i.e., ab.position())
           //   - Double.NaN != 3.7f => return true  => left branch has to be select selected (i.e., ab.position())
           if( !Double.isNaN(row[colId]) ) { // NaNs always go to bin 0
-            if( ( equal && ((float)row[colId]) == splitVal) ||
-                (!equal && ((float)row[colId]) >= splitVal) ) {
+            if( ( equal==0 && ((float)row[colId]) >= splitVal) ||
+                ( equal==1 && ((float)row[colId]) == splitVal) ||
+                ( (equal==2 || equal==3) && grpContains )) {
               ab.position(ab.position()+skip); // Skip to the right subtree
               lmask = rmask;                   // And set the leaf bits into common place
             }
           } /* else Double.isNaN() is true => use left branch */
-          if( (lmask&8)==8 ) return scoreLeaf(ab);
+          if( (lmask&16)==16 ) return scoreLeaf(ab);
         }
       }
 
@@ -972,9 +1025,9 @@ public class DTree extends Iced {
     /** Abstract visitor class for serialized trees.*/
     public static abstract class TreeVisitor<T extends Exception> {
       // Override these methods to get walker behavior.
-      protected void pre ( int col, float fcmp, boolean equal ) throws T { }
-      protected void mid ( int col, float fcmp, boolean equal ) throws T { }
-      protected void post( int col, float fcmp, boolean equal ) throws T { }
+      protected void pre ( int col, float fcmp, IcedBitSet gcmp, int equal ) throws T { }
+      protected void mid ( int col, float fcmp, int equal ) throws T { }
+      protected void post( int col, float fcmp, int equal ) throws T { }
       protected void leaf( float pred )                         throws T { }
       long  result( ) { return 0; } // Override to return simple results
 
@@ -990,7 +1043,7 @@ public class DTree extends Iced {
 
       // Call either the single-class leaf or the full-prediction leaf
       private final void leaf2( int mask ) throws T {
-        assert (mask==0 || ( (mask&8)== 8 && (mask&16)==16) ) : "Unknown mask: " + mask;   // Is a leaf or a special leaf on the top of tree
+        assert (mask==0 || ( (mask&16)==16 && (mask&32)==32) ) : "Unknown mask: " + mask;   // Is a leaf or a special leaf on the top of tree
         leaf(_ts.get4f());
       }
 
@@ -998,26 +1051,41 @@ public class DTree extends Iced {
         int nodeType = _ts.get1();
         int col = _ts.get2();
         if( col==65535 ) { leaf2(nodeType); return; }
-        float fcmp = _ts.get4f();
-        boolean equal = ((nodeType&4)==4);
+        // float fcmp = _ts.get4f();
+        // boolean equal = ((nodeType&4)==4);
+        int equal = (nodeType&12) >> 2;
+
+        // Extract value or group to split on
+        float fcmp = -1;
+        IcedBitSet gcmp = null;
+        if(equal == 0 || equal == 1)
+          fcmp = _ts.get4f();
+        else {
+          int off = (equal == 3) ? _ts.get2() : 0;
+          int sz = (equal == 3) ? _ts.get2() : 4;
+          byte[] buf = MemoryManager.malloc1(sz);
+          _ts.read(buf, 0, sz);
+          gcmp = new IcedBitSet(buf, sz << 3, off);
+        }
+
         // Compute the amount to skip.
-        int lmask =  nodeType & 0x1B;
-        int rmask = (nodeType & 0x60) >> 2;
+        int lmask =  nodeType & 0x33;
+        int rmask = (nodeType & 0xC0) >> 2;
         int skip = 0;
         switch(lmask) {
-        case 0:  skip = _ts.get1();  break;
-        case 1:  skip = _ts.get2();  break;
-        case 2:  skip = _ts.get3();  break;
-        case 3:  skip = _ts.get4();  break;
-        case 8:  skip = _ct._nclass < 256?1:2;  break; // Small leaf
-        case 24: skip = _ct._nclass*4;  break; // skip the p-distribution
-        default: assert false:"illegal lmask value " + lmask;
+          case 0:  skip = _ts.get1();  break;
+          case 1:  skip = _ts.get2();  break;
+          case 2:  skip = _ts.get3();  break;
+          case 3:  skip = _ts.get4();  break;
+          case 16: skip = _ct._nclass < 256?1:2;  break; // Small leaf
+          case 48: skip = _ct._nclass*4;  break; // skip the p-distribution
+          default: assert false:"illegal lmask value " + lmask;
         }
-        pre (col,fcmp,equal);   // Pre-walk
+        pre(col,fcmp,gcmp,equal);   // Pre-walk
         _depth++;
-        if( (lmask & 0x8)==8 ) leaf2(lmask);  else  visit();
-        mid (col,fcmp,equal);   // Mid-walk
-        if( (rmask & 0x8)==8 ) leaf2(rmask);  else  visit();
+        if( (lmask & 0x10)==16 ) leaf2(lmask);  else  visit();
+        mid(col,fcmp,equal);   // Mid-walk
+        if( (rmask & 0x10)==16 ) leaf2(rmask);  else  visit();
         _depth--;
         post(col,fcmp,equal);
         _nodes++;
@@ -1026,9 +1094,12 @@ public class DTree extends Iced {
 
     StringBuilder toString(final String res, CompressedTree ct, final StringBuilder sb ) {
       new TreeVisitor<RuntimeException>(this,ct) {
-        @Override protected void pre( int col, float fcmp, boolean equal ) {
+        @Override protected void pre( int col, float fcmp, IcedBitSet gcmp, int equal ) {
           for( int i=0; i<_depth; i++ ) sb.append("  ");
-          sb.append(_names[col]).append(equal?"==":"< ").append(fcmp).append('\n');
+          if(equal == 2 || equal == 3)
+            sb.append(_names[col]).append("==").append(gcmp.toString()).append('\n');
+          else
+            sb.append(_names[col]).append(equal==1?"==":"< ").append(fcmp).append('\n');
         }
         @Override protected void leaf( float pred ) {
           for( int i=0; i<_depth; i++ ) sb.append("  ");
@@ -1188,7 +1259,7 @@ public class DTree extends Iced {
 
     // Produce prediction code for one tree
     protected void toJavaTreePredictFct(final SB sb, final CompressedTree cts, int treeIdx, int classIdx) {
-      // generate top-leve class definition
+      // generate top-level class definition
       sb.nl();
       sb.i().p("// Tree predictor for ").p(treeIdx).p("-tree and ").p(classIdx).p("-class").nl();
       sb.i().p("class Tree_").p(treeIdx).p("_class_").p(classIdx).p(" {").nl().ii(1);
@@ -1276,23 +1347,26 @@ public class DTree extends Iced {
   nl();
 
   static class TreeJCodeGen extends TreeVisitor<RuntimeException> {
-    public static final int MAX_NODES = (1 << 12) / 4; // limit of decision nodes
+    public static final int MAX_NODES = (1 << 12) / 4; // limit for a number decision nodes
     final byte  _bits[]  = new byte [100];
     final float _fs  []  = new float[100];
     final SB    _sbs []  = new SB   [100];
     final int   _nodesCnt[] = new int  [100];
     SB _sb;
     SB _csb;
+    SB _grpsplit;
 
     int _subtrees = 0;
+    int _grpcnt = 0;
 
     public TreeJCodeGen(TreeModel tm, CompressedTree ct, SB sb) {
       super(tm, ct);
       _sb = sb;
       _csb = new SB();
+      _grpsplit = new SB();
     }
 
-    // code preambule
+    // code preamble
     protected void preamble(SB sb, int subtree) throws RuntimeException {
       String subt = subtree>0?String.valueOf(subtree):"";
       sb.i().p("static final ").p(TreeModel.PRED_TYPE).p(" predict").p(subt).p("(double[] data) {").nl().ii(1); // predict method for one tree
@@ -1303,10 +1377,16 @@ public class DTree extends Iced {
     protected void closure(SB sb) throws RuntimeException {
       sb.p(";").nl();
       sb.i(1).p("return pred;").nl().di(1);
-      sb.i().p("}").nl().di(1);
+      sb.i().p("}").nl();
+      // sb.p(_grpsplit).di(1);
     }
 
-    @Override protected void pre( int col, float fcmp, boolean equal ) {
+    @Override protected void pre( int col, float fcmp, IcedBitSet gcmp, int equal ) {
+      if(equal == 2 || equal == 3 && gcmp != null) {
+        _grpsplit.i(1).p("// ").p(gcmp.toString()).nl();
+        _grpsplit.i(1).p("public static final byte[] GRPSPLIT").p(_grpcnt).p(" = new byte[] ").p(gcmp.toStrArray()).p(";").nl();
+      }
+
       if( _depth > 0 ) {
         int b = _bits[_depth-1];
         assert b > 0 : Arrays.toString(_bits)+"\n"+_sb.toString();
@@ -1325,7 +1405,13 @@ public class DTree extends Iced {
         _subtrees++;
       }
       // All NAs are going always to the left
-      _sb.p(" (Double.isNaN(data[").p(col).p("]) || (float) data[").p(col).p(" /* ").p(_tm._names[col]).p(" */").p("] ").p(equal?"!= ":"< ").pj(fcmp); // then left and then right (left is !=)
+      _sb.p(" (Double.isNaN(data[").p(col).p("]) || ");
+      if(equal == 0 || equal == 1)
+        _sb.p("(float) data[").p(col).p(" /* ").p(_tm._names[col]).p(" */").p("] ").p(equal==1?"!= ":"< ").pj(fcmp); // then left and then right (left is !=)
+      else {
+        _sb.p("!water.genmodel.GeneratedModel.grpContains(GRPSPLIT").p(_grpcnt).p(", ").p(gcmp._offset).p(", (int) data[").p(col).p(" /* ").p(_tm._names[col]).p(" */").p("])");
+        _grpcnt++;
+      }
       assert _bits[_depth]==0;
       _bits[_depth]=1;
     }
@@ -1333,7 +1419,7 @@ public class DTree extends Iced {
       assert _depth==0 || _bits[_depth-1] > 0 : Arrays.toString(_bits); // it can be degenerated tree
       if( _depth==0) { // it is de-generated tree
         _sb.pj(pred);
-      } else if( _bits[_depth-1] == 1 ) { // No prior leaf; just memoize this leaf
+      } else if( _bits[_depth-1] == 1 ) { // No prior leaf; just memorize this leaf
         _bits[_depth-1]=2; _fs[_depth-1]=pred;
       } else {          // Else==2 (prior leaf) or 3 (prior tree)
         if( _bits[_depth-1] == 2 ) _sb.p(" ? ").pj(_fs[_depth-1]).p(" ");
@@ -1341,7 +1427,7 @@ public class DTree extends Iced {
         _sb.p(": ").pj(pred);
       }
     }
-    @Override protected void post( int col, float fcmp, boolean equal ) {
+    @Override protected void post( int col, float fcmp, int equal ) {
       _sb.p(')');
       _bits[_depth]=0;
       if (_sbs[_depth]!=null) {
@@ -1353,9 +1439,10 @@ public class DTree extends Iced {
       }
     }
     public void generate() {
-      preamble(_sb, _subtrees++);
+      preamble(_sb, _subtrees++);   // TODO: Need to pass along group split BitSet
       visit();
       closure(_sb);
+      _sb.p(_grpsplit).di(1);
       _sb.p(_csb);
     }
   }

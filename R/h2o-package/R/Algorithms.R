@@ -1,10 +1,13 @@
 # Model-building operations and algorithms
 # ----------------------- Generalized Boosting Machines (GBM) ----------------------- #
 # TODO: don't support missing x; default to everything?
-h2o.gbm <- function(x, y, distribution = 'multinomial', data, n.trees = 10, interaction.depth = 5, n.minobsinnode = 10, shrinkage = 0.1,
+h2o.gbm <- function(x, y, distribution = 'multinomial', data, key = "", n.trees = 10, interaction.depth = 5, n.minobsinnode = 10, shrinkage = 0.1,
                     n.bins = 100, importance = FALSE, nfolds = 0, validation, balance.classes = FALSE, max.after.balance.size = 5) {
   args <- .verify_dataxy(data, x, y)
   
+  if(!is.character(key)) stop("key must be of class character")
+  if(nchar(key) > 0 && regexpr("^[a-zA-Z_][a-zA-Z0-9_.]*$", key)[1] == -1)
+    stop("key must match the regular expression '^[a-zA-Z_][a-zA-Z0-9_.]*$'")
   if(!is.numeric(n.trees)) stop('n.trees must be numeric')
   if( any(n.trees < 1) ) stop('n.trees must be >= 1')
   if(!is.numeric(interaction.depth)) stop('interaction.depth must be numeric')
@@ -37,13 +40,13 @@ h2o.gbm <- function(x, y, distribution = 'multinomial', data, n.trees = 10, inte
   if(missing(validation) && nfolds == 0) {
     # Default to using training data as validation
     validation = data
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GBM, source=data@key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, family=family,
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GBM, source=data@key, destination_key=key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, family=family,
                             min_rows=n.minobsinnode, classification=classification, nbins=n.bins, importance=as.numeric(importance), validation=data@key, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size))
   } else if(missing(validation) && nfolds >= 2) {
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GBM, source=data@key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, family=family,
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GBM, source=data@key, destination_key=key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, family=family,
                             min_rows=n.minobsinnode, classification=classification, nbins=n.bins, importance=as.numeric(importance), n_folds=nfolds, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size))
   } else if(!missing(validation) && nfolds == 0) {
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GBM, source=data@key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, family=family,
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GBM, source=data@key, destination_key=key, response=args$y, cols=cols, ntrees=n.trees, max_depth=interaction.depth, learn_rate=shrinkage, family=family,
                             min_rows=n.minobsinnode, classification=classification, nbins=n.bins, importance=as.numeric(importance), validation=validation@key, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size))
   } else stop("Cannot set both validation and nfolds at the same time")
   params = list(x=args$x, y=args$y, distribution=distribution, n.trees=n.trees, interaction.depth=interaction.depth, shrinkage=shrinkage, n.minobsinnode=n.minobsinnode, n.bins=n.bins, importance=importance, nfolds=nfolds, balance.classes=balance.classes, max.after.balance.size=max.after.balance.size,
@@ -117,12 +120,15 @@ h2o.gbm <- function(x, y, distribution = 'multinomial', data, n.trees = 10, inte
 }
 
 # -------------------------- Generalized Linear Models (GLM) ------------------------ #
-h2o.glm <- function(x, y, data, family, nfolds = 0, alpha = 0.5, nlambda = -1, lambda.min.ratio = -1, lambda = 1e-5,
+h2o.glm <- function(x, y, data, key = "", family, nfolds = 0, alpha = 0.5, nlambda = -1, lambda.min.ratio = -1, lambda = 1e-5,
                     epsilon = 1e-4, standardize = TRUE, prior, variable_importances = 1, use_all_factor_levels = 0,
                     tweedie.p = ifelse(family == "tweedie", 1.5, as.numeric(NA)), iter.max = 100,
                     higher_accuracy = FALSE, lambda_search = FALSE, return_all_lambda = FALSE, max_predictors=-1) {
   args <- .verify_dataxy(data, x, y)
 
+  if(!is.character(key)) stop("key must be of class character")
+  if(nchar(key) > 0 && regexpr("^[a-zA-Z_][a-zA-Z0-9_.]*$", key)[1] == -1)
+    stop("key must match the regular expression '^[a-zA-Z_][a-zA-Z0-9_.]*$'")
   if(!(variable_importances %in% c(0,1)))  stop(paste("variable_importances must be either 0 or 1. Got: ", variable_importances, sep = ""))
   if(!(use_all_factor_levels %in% c(0,1))) stop(paste("use_all_factor_levels must be either 0 or 1. Got: ", use_all_factor_levels, sep = ""))
   if(!is.numeric(nfolds)) stop('nfolds must be numeric')
@@ -158,9 +164,8 @@ h2o.glm <- function(x, y, data, family, nfolds = 0, alpha = 0.5, nlambda = -1, l
   if(length(x_ignore) == 0) x_ignore = ''
   
   if(length(alpha) == 1) {
-    rand_glm_key = .h2o.__uniqID("GLM2Model")
     if(family == "tweedie")
-      res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, destination_key = rand_glm_key,
+      res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, destination_key = key,
                               response = args$y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family,
                               n_folds = nfolds, alpha = alpha, nlambdas = nlambda, lambda_min_ratio = lambda.min.ratio,
                               lambda = lambda, beta_epsilon = epsilon, standardize = as.numeric(standardize),
@@ -170,7 +175,7 @@ h2o.glm <- function(x, y, data, family, nfolds = 0, alpha = 0.5, nlambda = -1, l
                               use_all_factor_levels = use_all_factor_levels)
     else if(family == "binomial") {
       if(missing(prior)) prior = -1
-      res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, destination_key = rand_glm_key,
+      res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, destination_key = key,
                               response = args$y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family,
                               n_folds = nfolds, alpha = alpha, nlambdas = nlambda, lambda_min_ratio = lambda.min.ratio,
                               lambda = lambda, beta_epsilon = epsilon, standardize = as.numeric(standardize),
@@ -179,7 +184,7 @@ h2o.glm <- function(x, y, data, family, nfolds = 0, alpha = 0.5, nlambda = -1, l
                               max_predictors = max_predictors, variable_importances = variable_importances,
                               use_all_factor_levels = use_all_factor_levels)
     } else
-      res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, destination_key = rand_glm_key,
+      res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, destination_key = key,
                               response = args$y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family,
                               n_folds = nfolds, alpha = alpha, nlambdas = nlambda, lambda_min_ratio = lambda.min.ratio,
                               lambda = lambda, beta_epsilon = epsilon, standardize = as.numeric(standardize),
@@ -195,7 +200,7 @@ h2o.glm <- function(x, y, data, family, nfolds = 0, alpha = 0.5, nlambda = -1, l
     .h2o.__waitOnJob(data@h2o, res$job_key)
     .h2o.glm.get_model(data, res$destination_key, return_all_lambda, params)
   } else
-    .h2o.glm2grid.internal(x_ignore, args$y, data, family, nfolds, alpha, nlambda, lambda.min.ratio, lambda, epsilon,
+    .h2o.glm2grid.internal(x_ignore, args$y, data, key, family, nfolds, alpha, nlambda, lambda.min.ratio, lambda, epsilon,
                            standardize, prior, tweedie.p, iter.max, higher_accuracy, lambda_search, return_all_lambda,
                            variable_importances = variable_importances, use_all_factor_levels = use_all_factor_levels)
 }
@@ -229,10 +234,10 @@ h2o.glm <- function(x, y, data, family, nfolds = 0, alpha = 0.5, nlambda = -1, l
   }
 }
 
-.h2o.glm2grid.internal <- function(x_ignore, y, data, family, nfolds, alpha, nlambda, lambda.min.ratio, lambda, epsilon, standardize, prior, tweedie.p, iter.max, higher_accuracy, lambda_search, return_all_lambda,
+.h2o.glm2grid.internal <- function(x_ignore, y, data, key, family, nfolds, alpha, nlambda, lambda.min.ratio, lambda, epsilon, standardize, prior, tweedie.p, iter.max, higher_accuracy, lambda_search, return_all_lambda,
                                    variable_importances, use_all_factor_levels) {
   if(family == "tweedie")
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, response = y,
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, destination_key = key, response = y,
                             ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds,
                             alpha = alpha, nlambdas = nlambda, lambda_min_ratio = lambda.min.ratio, lambda = lambda,
                             beta_epsilon = epsilon, standardize = as.numeric(standardize), max_iter = iter.max,
@@ -241,7 +246,7 @@ h2o.glm <- function(x, y, data, family, nfolds = 0, alpha = 0.5, nlambda = -1, l
                             variable_importances = variable_importances, use_all_factor_levels = use_all_factor_levels)
   else if(family == "binomial") {
     if(missing(prior)) prior = -1
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, response = y,
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, destination_key = key, response = y,
                             ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds,
                             alpha = alpha, nlambdas = nlambda, lambda_min_ratio = lambda.min.ratio, lambda = lambda,
                             beta_epsilon = epsilon, standardize = as.numeric(standardize), max_iter = iter.max,
@@ -250,7 +255,7 @@ h2o.glm <- function(x, y, data, family, nfolds = 0, alpha = 0.5, nlambda = -1, l
                             variable_importances = variable_importances, use_all_factor_levels = use_all_factor_levels)
   }
   else
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, response = y,
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, destination_key = key, response = y,
                             ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds,
                             alpha = alpha, nlambdas = nlambda, lambda_min_ratio = lambda.min.ratio, lambda = lambda,
                             beta_epsilon = epsilon, standardize = as.numeric(standardize), max_iter = iter.max,
@@ -432,8 +437,12 @@ h2o.getGLMLambdaModel <- function(model, lambda) {
 }
 
 # ------------------------------ K-Means Clustering --------------------------------- #
-h2o.kmeans <- function(data, centers, cols = '', iter.max = 10, normalize = FALSE, init = "none", seed = 0, dropNACols = FALSE) {
+h2o.kmeans <- function(data, centers, cols = '', key = "", iter.max = 10, normalize = FALSE, init = "none", seed = 0, dropNACols = FALSE) {
   args <- .verify_datacols(data, cols)
+  
+  if(!is.character(key)) stop("key must be of class character")
+  if(nchar(key) > 0 && regexpr("^[a-zA-Z_][a-zA-Z0-9_.]*$", key)[1] == -1)
+    stop("key must match the regular expression '^[a-zA-Z_][a-zA-Z0-9_.]*$'")
   if( missing(centers) ) stop('must specify centers')
   if(!is.numeric(centers) && !is.integer(centers)) stop('centers must be a positive integer')
   if( any(centers < 1) ) stop("centers must be an integer greater than 0")
@@ -448,7 +457,7 @@ h2o.kmeans <- function(data, centers, cols = '', iter.max = 10, normalize = FALS
   if(h2o.anyFactor(data[,args$cols_ind])) stop("Unimplemented: K-means can only model on numeric data")
   myInit = switch(init, none = "None", plusplus = "PlusPlus", furthest = "Furthest")
   
-  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_KMEANS2, source=data@key, ignored_cols=args$cols_ignore, k=centers, max_iter=iter.max, normalize=as.numeric(normalize), initialization=myInit, seed=seed, drop_na_cols=as.numeric(dropNACols))
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_KMEANS2, source=data@key, destination_key=key, ignored_cols=args$cols_ignore, k=centers, max_iter=iter.max, normalize=as.numeric(normalize), initialization=myInit, seed=seed, drop_na_cols=as.numeric(dropNACols))
   params = list(cols=args$cols, centers=centers, iter.max=iter.max, normalize=normalize, init=myInit, seed=seed)
   
   if(.is_singlerun("KM", params)) {
@@ -573,7 +582,7 @@ h2o.kmeans <- function(data, centers, cols = '', iter.max = 10, normalize = FALS
 }
 
 # ---------------------------- Deep Learning - Neural Network ------------------------- #
-h2o.deeplearning <- function(x, y, data, classification = TRUE, nfolds = 0, validation,
+h2o.deeplearning <- function(x, y, data, key = "", classification = TRUE, nfolds = 0, validation,
                              # ----- AUTOGENERATED PARAMETERS BEGIN -----
                              autoencoder,
                              use_all_factor_levels,
@@ -637,6 +646,11 @@ h2o.deeplearning <- function(x, y, data, classification = TRUE, nfolds = 0, vali
     if (! is.logical(classification)) stop('classification must be TRUE or FALSE')
     parms$classification = as.numeric(classification)
   }
+  
+  if(!is.character(key)) stop("key must be of class character")
+  if(nchar(key) > 0 && regexpr("^[a-zA-Z_][a-zA-Z0-9_.]*$", key)[1] == -1)
+    stop("key must match the regular expression '^[a-zA-Z_][a-zA-Z0-9_.]*$'")
+  parms$destination_key = key
   
   if(!is.numeric(nfolds)) stop("nfolds must be numeric")
   if(nfolds == 1) stop("nfolds cannot be 1")
@@ -811,8 +825,12 @@ h2o.deeplearning <- function(x, y, data, classification = TRUE, nfolds = 0, vali
 }
 
 # -------------------------------- Naive Bayes ----------------------------- #
-h2o.naiveBayes <- function(x, y, data, laplace = 0, dropNACols = FALSE) {
+h2o.naiveBayes <- function(x, y, data, key = "", laplace = 0, dropNACols = FALSE) {
   args <- .verify_dataxy(data, x, y)
+  
+  if(!is.character(key)) stop("key must be of class character")
+  if(nchar(key) > 0 && regexpr("^[a-zA-Z_][a-zA-Z0-9_.]*$", key)[1] == -1)
+    stop("key must match the regular expression '^[a-zA-Z_][a-zA-Z0-9_.]*$'")
   if(!is.numeric(laplace)) stop("laplace must be numeric")
   if(laplace < 0) stop("laplace must be a non-negative number")
   
@@ -846,15 +864,19 @@ h2o.naiveBayes <- function(x, y, data, laplace = 0, dropNACols = FALSE) {
 }
 
 # ----------------------- Principal Components Analysis ----------------------------- #
-h2o.prcomp <- function(data, tol=0, cols = "", standardize=TRUE, retx=FALSE) {
+h2o.prcomp <- function(data, tol=0, cols = "", key = "", standardize=TRUE, retx=FALSE) {
   args <- .verify_datacols(data, cols)
+  
+  if(!is.character(key)) stop("key must be of class character")
+  if(nchar(key) > 0 && regexpr("^[a-zA-Z_][a-zA-Z0-9_.]*$", key)[1] == -1)
+    stop("key must match the regular expression '^[a-zA-Z_][a-zA-Z0-9_.]*$'")
   if(!is.numeric(tol)) stop('tol must be numeric')
   if(!is.logical(standardize)) stop('standardize must be TRUE or FALSE')
   if(!is.logical(retx)) stop('retx must be TRUE or FALSE')
   
-  destKey = .h2o.__uniqID("PCAModel")
-  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_PCA, source=data@key, destination_key=destKey, ignored_cols = args$cols_ignore, tolerance=tol, standardize=as.numeric(standardize))
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_PCA, source=data@key, destination_key=key, ignored_cols = args$cols_ignore, tolerance=tol, standardize=as.numeric(standardize))
   .h2o.__waitOnJob(data@h2o, res$job_key)
+  destKey = res$destination_key
   # while(!.h2o.__isDone(data@h2o, "PCA", res)) { Sys.sleep(1) }
   res2 = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_PCAModelView, '_modelKey'=destKey)
   res2 = res2$pca_model
@@ -873,9 +895,12 @@ h2o.prcomp <- function(data, tol=0, cols = "", standardize=TRUE, retx=FALSE) {
   new("H2OPCAModel", key=destKey, data=data, model=result)
 }
 
-h2o.pcr <- function(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, epsilon = 1.0e-5, tweedie.p = ifelse(family=="tweedie", 0, as.numeric(NA))) {
+h2o.pcr <- function(x, y, data, key = "", ncomp, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, epsilon = 1.0e-5, tweedie.p = ifelse(family=="tweedie", 0, as.numeric(NA))) {
   args <- .verify_dataxy(data, x, y)
   
+  if(!is.character(key)) stop("key must be of class character")
+  if(nchar(key) > 0 && regexpr("^[a-zA-Z_][a-zA-Z0-9_.]*$", key)[1] == -1)
+    stop("key must match the regular expression '^[a-zA-Z_][a-zA-Z0-9_.]*$'")
   if( !is.numeric(nfolds) ) stop('nfolds must be numeric')
   if( nfolds < 0 ) stop('nfolds must be >= 0')
   if( !is.numeric(alpha) ) stop('alpha must be numeric')
@@ -897,6 +922,7 @@ h2o.pcr <- function(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda 
   h2o.glm(x = 1:ncomp,
           y = ncomp+1,
           data = myGLMData,
+          key = key,
           family = family,
           nfolds = nfolds,
           alpha = alpha,
@@ -928,8 +954,12 @@ h2o.pcr <- function(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda 
 }
 
 # ----------------------------------- Random Forest --------------------------------- #
-h2o.randomForest <- function(x, y, data, classification=TRUE, ntree=50, depth=20, mtries = -1, sample.rate=2/3, nbins=100, seed=-1, importance=FALSE, nfolds=0, validation, nodesize=1, balance.classes=FALSE, max.after.balance.size=5) {
+h2o.randomForest <- function(x, y, data, key="", classification=TRUE, ntree=50, depth=20, mtries = -1, sample.rate=2/3, nbins=100, seed=-1, importance=FALSE, nfolds=0, validation, nodesize=1, balance.classes=FALSE, max.after.balance.size=5, doGrpSplit=TRUE) {
   args <- .verify_dataxy(data, x, y)
+  
+  if(!is.character(key)) stop("key must be of class character")
+  if(nchar(key) > 0 && regexpr("^[a-zA-Z_][a-zA-Z0-9_.]*$", key)[1] == -1)
+    stop("key must match the regular expression '^[a-zA-Z_][a-zA-Z0-9_.]*$'")
   if(!is.logical(classification)) stop("classification must be logical (TRUE or FALSE)")
   if(!is.numeric(ntree)) stop('ntree must be a number')
   if( any(ntree < 1) ) stop('ntree must be >= 1')
@@ -948,6 +978,7 @@ h2o.randomForest <- function(x, y, data, classification=TRUE, ntree=50, depth=20
   if(balance.classes && !classification) stop('balance.classes can only be used for classification')
   if(!is.numeric(nodesize)) stop('nodesize must be a number')
   if( any(nodesize < 1) ) stop('nodesize must be >= 1')
+  if(!is.logical(doGrpSplit)) stop("doGrpSplit must be logical (TRUE or FALSE)")
   
   if(!is.numeric(nfolds)) stop("nfolds must be numeric")
   if(nfolds == 1) stop("nfolds cannot be 1")
@@ -959,14 +990,14 @@ h2o.randomForest <- function(x, y, data, classification=TRUE, ntree=50, depth=20
   if(missing(validation) && nfolds == 0) {
     # Default to using training data as validation
     validation = data
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRF, source=data@key, response=args$y, cols=cols, ntrees=ntree, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, mtries = mtries, seed=seed, importance=as.numeric(importance),
-                            classification=as.numeric(classification), validation=data@key, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size))
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRF, source=data@key, destination_key=key, response=args$y, cols=cols, ntrees=ntree, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, mtries = mtries, seed=seed, importance=as.numeric(importance),
+                            classification=as.numeric(classification), validation=data@key, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size), do_grpsplit=as.numeric(doGrpSplit))
   } else if(missing(validation) && nfolds >= 2) {
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRF, source=data@key, response=args$y, cols=cols, ntrees=ntree, mtries = mtries, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, seed=seed, importance=as.numeric(importance),
-                            classification=as.numeric(classification), n_folds=nfolds, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size))
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRF, source=data@key, destination_key=key, response=args$y, cols=cols, ntrees=ntree, mtries = mtries, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, seed=seed, importance=as.numeric(importance),
+                            classification=as.numeric(classification), n_folds=nfolds, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size), do_grpsplit=as.numeric(doGrpSplit))
   } else if(!missing(validation) && nfolds == 0) {
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRF, source=data@key, response=args$y, cols=cols, ntrees=ntree, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, seed=seed, importance=as.numeric(importance), 
-                            classification=as.numeric(classification), validation=validation@key, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size))
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DRF, source=data@key, destination_key=key, response=args$y, cols=cols, ntrees=ntree, max_depth=depth, min_rows=nodesize, sample_rate=sample.rate, nbins=nbins, seed=seed, importance=as.numeric(importance), 
+                            classification=as.numeric(classification), validation=validation@key, balance_classes=as.numeric(balance.classes), max_after_balance_size=as.numeric(max.after.balance.size), do_grpsplit=as.numeric(doGrpSplit))
   } else stop("Cannot set both validation and nfolds at the same time")
   params = list(x=args$x, y=args$y, ntree=ntree, mtries = mtries, depth=depth, sample.rate=sample.rate, nbins=nbins, importance=importance, nfolds=nfolds, balance.classes=balance.classes, max.after.balance.size=max.after.balance.size, nodesize=nodesize, h2o = data@h2o)
   
@@ -1013,11 +1044,11 @@ h2o.randomForest <- function(x, y, data, classification=TRUE, ntree=50, depth=20
   if(params$classification) {
     if(!is.null(res$validAUC)) {
       tmp <- .h2o.__getPerfResults(res$validAUC)
-      tmp$confusion <- NULL
       result <- c(result, tmp)
+    } else {
+      class_names = res$'cmDomain'
+      result$confusion = .build_cm(tail(res$'cms', 1)[[1]]$'_arr', class_names) 
     }
-    class_names = res$'cmDomain' # tail(res$'_domains', 1)[[1]]
-    result$confusion = .build_cm(tail(res$'cms', 1)[[1]]$'_arr', class_names)  #res$'_domains'[[length(res$'_domains')]])
   }
 
   extra_json <- doNotCallThisMethod...Unsupported(params$h2o, res$'_key')
@@ -1034,7 +1065,7 @@ h2o.randomForest <- function(x, y, data, classification=TRUE, ntree=50, depth=20
 }
 
 # -------------------------- SpeeDRF -------------------------- #
-h2o.SpeeDRF <- function(x, y, data, classification=TRUE, nfolds=0, validation,
+h2o.SpeeDRF <- function(x, y, data, key="", classification=TRUE, nfolds=0, validation,
                         mtry=-1, 
                         ntree=50, 
                         depth=50, 
@@ -1049,6 +1080,10 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, nfolds=0, validation,
                         local_mode = TRUE
 ) {
   args <- .verify_dataxy(data, x, y)
+  
+  if(!is.character(key)) stop("key must be of class character")
+  if(nchar(key) > 0 && regexpr("^[a-zA-Z_][a-zA-Z0-9_.]*$", key)[1] == -1)
+    stop("key must match the regular expression '^[a-zA-Z_][a-zA-Z0-9_.]*$'")
   if(!is.numeric(ntree)) stop('ntree must be a number')
   if( any(ntree < 1) ) stop('ntree must be >= 1')
   if(!is.numeric(depth)) stop('depth must be a number')
@@ -1070,23 +1105,23 @@ h2o.SpeeDRF <- function(x, y, data, classification=TRUE, nfolds=0, validation,
   if(!is.logical(verbose)) stop("verbose must be a logical value")
 
   if (missing(validation) && nfolds == 0 && oobee) {
-    res <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, response=args$y, ignored_cols=args$x_ignore, balance_classes = as.numeric(balance.classes), num_trees=ntree, max_depth=depth, importance=as.numeric(importance),
+    res <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, balance_classes = as.numeric(balance.classes), num_trees=ntree, max_depth=depth, importance=as.numeric(importance),
                                 sample=sample.rate, bin_limit=nbins, seed=seed, select_stat_type = stat.type, oobee=as.numeric(oobee), sampling_strategy="RANDOM", verbose = as.numeric(verbose), local_mode = as.numeric(local_mode))
 
   } else if(missing(validation) && nfolds >= 2 && oobee) {
-        res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, response=args$y, ignored_cols=args$x_ignore, num_trees=ntree, balance_classes = as.numeric(balance.classes), max_depth=depth, n_folds=nfolds, importance=as.numeric(importance),
+        res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, num_trees=ntree, balance_classes = as.numeric(balance.classes), max_depth=depth, n_folds=nfolds, importance=as.numeric(importance),
                                 sample=sample.rate, bin_limit=nbins, seed=seed, select_stat_type=stat.type, oobee=as.numeric(oobee), sampling_strategy="RANDOM", verbose = as.numeric(verbose), local_mode = as.numeric(local_mode))
 
   } else if(missing(validation) && nfolds == 0) {
     # Default to using training data as validation if oobee is false...
     validation = data
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, response=args$y, ignored_cols=args$x_ignore, balance_classes = as.numeric(balance.classes), num_trees=ntree, max_depth=depth, validation=data@key, importance=as.numeric(importance),
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, balance_classes = as.numeric(balance.classes), num_trees=ntree, max_depth=depth, validation=data@key, importance=as.numeric(importance),
                             sample=sample.rate, bin_limit=nbins, seed=seed, select_stat_type = stat.type, oobee=as.numeric(oobee), sampling_strategy="RANDOM", verbose = as.numeric(verbose), local_mode = as.numeric(local_mode))
   } else if(missing(validation) && nfolds >= 2) {
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, response=args$y, ignored_cols=args$x_ignore, num_trees=ntree, balance_classes = as.numeric(balance.classes), max_depth=depth, n_folds=nfolds, importance=as.numeric(importance),
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, num_trees=ntree, balance_classes = as.numeric(balance.classes), max_depth=depth, n_folds=nfolds, importance=as.numeric(importance),
                             sample=sample.rate, bin_limit=nbins, seed=seed, select_stat_type=stat.type, oobee=as.numeric(oobee), sampling_strategy="RANDOM", verbose = as.numeric(verbose), local_mode = as.numeric(local_mode))
   } else if(!missing(validation) && nfolds == 0) {
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, response=args$y, ignored_cols=args$x_ignore, balance_classes = as.numeric(balance.classes), num_trees=ntree, max_depth=depth, validation=validation@key, importance=as.numeric(importance),
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, balance_classes = as.numeric(balance.classes), num_trees=ntree, max_depth=depth, validation=validation@key, importance=as.numeric(importance),
                             sample=sample.rate, bin_limit=nbins, seed=seed, select_stat_type = stat.type, oobee=as.numeric(oobee), sampling_strategy="RANDOM", verbose = as.numeric(verbose), local_mode = as.numeric(local_mode))
   } else stop("Cannot set both validation and nfolds at the same time")
   params = list(x=args$x, y=args$y, ntree=ntree, depth=depth, sample.rate=sample.rate, bin_limit=nbins, stat.type = stat.type, balance_classes = as.numeric(balance.classes),

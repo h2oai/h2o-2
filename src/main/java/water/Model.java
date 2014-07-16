@@ -678,7 +678,7 @@ public abstract class Model extends Lockable<Model> {
   protected void toJavaInit(CtClass ct) { }
   // Override in subclasses to provide some inside 'predict' call goodness
   // Method returns code which should be appended into generated top level class after
-  // predit method.
+  // predict method.
   protected void toJavaPredictBody(SB bodySb, SB classCtxSb, SB fileCtxSb) {
     throw new IllegalArgumentException("This model type does not support conversion to Java");
   }

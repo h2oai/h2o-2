@@ -9,7 +9,7 @@ H2O: Naive Bayes Classifier
 \description{Builds gradient boosted classification trees, and gradient boosted regression trees on a parsed data set.
 }
 \usage{
-h2o.naiveBayes(x, y, data, laplace = 0, dropNACols = FALSE)
+h2o.naiveBayes(x, y, data, key = "", laplace = 0, dropNACols = FALSE)
 }
 \arguments{
   \item{x}{
@@ -20,6 +20,9 @@ The name of the response variable in the model.
 }
   \item{data}{
 An \code{\linkS4class{H2OParsedData}} (\code{version = 2}) object containing the variables in the model.
+}
+  \item{key}{
+(Optional) The unique hex key assigned to the resulting model. If none is given, a key will automatically be generated.
 }
   \item{laplace}{
 (Optional) A positive number controlling Laplace smoothing. The default (0) disables Laplace smoothing.
