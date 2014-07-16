@@ -152,7 +152,7 @@ public class Linpack {
       normx = (normx > abs(x[i])) ? normx : abs(x[i]);
     }
 
-    eps_result = epslon((double)1.0);
+    eps_result = epslon(1.0);
 /*
 
     residn_result = resid/( n*norma*normx*eps_result );
