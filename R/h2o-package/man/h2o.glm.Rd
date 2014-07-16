@@ -7,11 +7,12 @@ H2O: Generalized Linear Models
 Fit a generalized linear model, specified by a response variable, a set of predictors, and a description of the error distribution.
 }
 \usage{
-h2o.glm(x, y, data, family, nfolds = 0, alpha = 0.5, nlambda = -1, lambda.min.ratio = -1, 
-  lambda = 1e-5, epsilon = 1e-4, standardize = TRUE, prior, variable_importances = 1, 
-  use_all_factor_levels = 0, tweedie.p = ifelse(family == 'tweedie', 1.5, 
-  as.numeric(NA)), iter.max = 100, higher_accuracy = FALSE, lambda_search = FALSE, 
-  return_all_lambda = FALSE, max_predictors = -1)
+h2o.glm(x, y, data, key = "", family, nfolds = 0, alpha = 0.5, nlambda = -1, 
+  lambda.min.ratio = -1, lambda = 1e-5, epsilon = 1e-4, standardize = TRUE, 
+  prior, variable_importances = 1, use_all_factor_levels = 0, tweedie.p = 
+  ifelse(family == 'tweedie', 1.5, as.numeric(NA)), iter.max = 100, 
+  higher_accuracy = FALSE, lambda_search = FALSE, return_all_lambda = FALSE, 
+  max_predictors = -1)
 }
 \arguments{
   \item{x}{
@@ -22,6 +23,9 @@ The name of the response variable in the model.
 }
   \item{data}{
 An \code{\linkS4class{H2OParsedData}} object containing the variables in the model.
+}
+  \item{key}{
+(Optional) The unique hex key assigned to the resulting model. If none is given, a key will automatically be generated.
 }
   \item{family}{
 A description of the error distribution and corresponding link function to be used in the model. Currently, Gaussian, binomial, Poisson, gamma, and Tweedie are supported. When a model is specified as Tweedie, users must also specify the appropriate Tweedie power. 

@@ -5,8 +5,8 @@ H2O: K-Means Clustering
 }
 \description{Performs k-means clustering on a data set.}
 \usage{
-h2o.kmeans(data, centers, cols = "", iter.max = 10, normalize = FALSE, 
-  init = "none", seed = 0, dropNACols = FALSE)
+h2o.kmeans(data, centers, cols = "", key = "", iter.max = 10, 
+  normalize = FALSE, init = "none", seed = 0, dropNACols = FALSE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -18,6 +18,9 @@ The number of clusters k.
 }
   \item{cols}{
 (Optional) A vector containing the names of the data columns on which k-means runs. If blank, k-means clustering will be run on the entire data set.
+}
+  \item{key}{
+(Optional) The unique hex key assigned to the resulting model. If none is given, a key will automatically be generated.
 }
   \item{iter.max}{
 (Optional) The maximum number of iterations allowed.
