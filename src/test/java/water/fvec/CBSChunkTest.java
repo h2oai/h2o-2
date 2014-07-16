@@ -12,6 +12,7 @@ import water.TestUtil;
 import water.UKV;
 
 import java.util.Arrays;
+import java.util.Iterator;
 
 /** Test for CBSChunk implementation.
  *
@@ -107,7 +108,20 @@ public class CBSChunkTest extends TestUtil {
       for (int i = 0; i < vals.length; ++i) Assert.assertEquals(vals[i], cc.at80(l+i));
       Assert.assertTrue(cc.isNA0(vals.length+l));
 
-      Chunk cc2 = cc.inflate_impl(new NewChunk(null, 0)).compress();
+      nc = new NewChunk(null, 0);
+      cc.inflate_impl(nc);
+      Assert.assertEquals(vals.length+l+1, nc.len2());
+      Assert.assertEquals(vals.length+l+1, nc.len());
+
+      Iterator<NewChunk.Value> it = nc.values(0, vals.length+1+l);
+      for (int i = 0; i < vals.length+1+l; ++i) Assert.assertTrue(it.next().rowId0() == i);
+      Assert.assertTrue(!it.hasNext());
+
+      if (l==1) Assert.assertTrue(nc.isNA0(0));
+      for (int i = 0; i < vals.length; ++i) Assert.assertEquals(vals[i], nc.at80(l+i));
+      Assert.assertTrue(nc.isNA0(vals.length+l));
+
+      Chunk cc2 = nc.compress();
       Assert.assertEquals(vals.length + 1 + l, cc.len());
       Assert.assertTrue(cc2 instanceof CBSChunk);
       for (int i = 0; i < vals.length; ++i) Assert.assertEquals(vals[i], cc2.at80(l+i));
