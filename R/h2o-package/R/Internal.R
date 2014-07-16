@@ -797,15 +797,15 @@ function(h2o, key) {
   
   if(missing(link)) {
     switch(family,
-           gaussian = gaussian(),
-           binomial = binomial(),
-           poisson = poisson(),
-           gamma = gamma())
+           "gaussian" = gaussian(),
+           "binomial" = binomial(),
+           "poisson" = poisson(),
+           "gamma" = Gamma())
   } else {
     switch(family,
-           gaussian = gaussian(link),
-           binomial = binomial(link),
-           poisson = poisson(link),
-           gamma = gamma(link))
+           "gaussian" = gaussian(link),
+           "binomial" = binomial(link),
+           "poisson" = poisson(link),
+           "gamma" = Gamma(link))
   }
 }
