@@ -64,6 +64,12 @@ An \code{\linkS4class{H2OParsedData}} object containing the variables in the mod
   \item{verbose}{
   (Optional) A logical value indicating whether verbose results should be returned.
   }
+  \item{local_mode}{
+  (Optional) A logical value stating whether to
+         TRUE) build the random forest on local data to the node in a distributed and parallel fashion -OR-
+        FALSE) first pull all of the data local to each node and then build a random forest in a distributed and parallel fashion
+        Note: local_mode typically has poorer predictive performance for smaller datasets, but roughly equivalent performance with non-local mode.
+  }
 }
 
 \details{

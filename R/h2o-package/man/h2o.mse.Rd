@@ -26,7 +26,8 @@ library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 prosPath = system.file("extdata", "prostate.csv", package="h2o")
 prostate.hex = h2o.importFile(localH2O, path = prosPath)
-prostate.glm = prostate.glm = h2o.glm(x = c("RACE","PSA","DCAPS"), y = "AGE", data = prostate.hex, family = "gaussian", nfolds = 10, alpha = 0.5)
+prostate.glm = prostate.glm = h2o.glm(x = c("RACE","PSA","DCAPS"), y = "AGE", 
+  data = prostate.hex, family = "gaussian", nfolds = 10, alpha = 0.5)
 prostate.pred = h2o.predict(prostate.glm)
 h2o.mse(prostate.pred[,1], prostate.hex[,2])
 }

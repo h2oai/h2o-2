@@ -367,15 +367,16 @@ h2o.downloadAllLogs <- function(client, dirname = ".", filename = NULL) {
 # }
 
 # ------------------- Show H2O recommended columns to ignore ----------------------------------------------------
-h2o.ignoreColumns <- function(object, max_na = 0.2) {
+h2o.ignoreColumns <- function(data, max_na = 0.2) {
   digits = 12L
-  if(ncol(object) > .MAX_INSPECT_COL_VIEW)
-    warning(object@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
+  if(ncol(data) > .MAX_INSPECT_COL_VIEW)
+    warning(data@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
   
-  naThreshold = nrow(object) * max_na
-  cardinalityThreshold = nrow(object)
+  numRows = nrow(data)
+  naThreshold = numRows * max_na
+  cardinalityThreshold = numRows
   
-  res = .h2o.__remoteSend(object@h2o, .h2o.__PAGE_SUMMARY2, source=object@key, max_ncols=.Machine$integer.max)
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SUMMARY2, source=data@key, max_ncols=.Machine$integer.max)
   columns = res$summaries
   ignore = sapply(columns, function(col) {
     if(col$stats$type != 'Enum'){# Numeric Column

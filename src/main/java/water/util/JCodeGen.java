@@ -85,11 +85,15 @@ public class JCodeGen {
   }
 
   /**
+   * Generates a new class with one static member called <em>VALUES</em> which
+   * is filled by values of given array.
+   * <p>The generator can generate more classes to avoid limit of class constant
+   * pool holding all generated literals</p>.
    *
-   * @param sb
-   * @param className
-   * @param values
-   * @return
+   * @param sb output
+   * @param className name of generated class
+   * @param values array holding values which should be hold in generated field VALUES.
+   * @return output buffer
    */
   public static SB toClassWithArray(SB sb, String modifiers, String className, String[] values) {
     sb.i().p(modifiers!=null ? modifiers+" ": "").p("class ").p(className).p(" {").nl().ii(1);

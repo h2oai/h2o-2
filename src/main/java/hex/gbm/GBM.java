@@ -428,7 +428,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
         // DRF picks a random different set of columns for the 2nd tree.
         if( k==1 && _nclass==2 ) continue;
         ktrees[k] = new DTree(fr._names,_ncols,(char)nbins,(char)_nclass,min_rows);
-        new GBMUndecidedNode(ktrees[k],-1,DHistogram.initialHist(fr,_ncols,adj_nbins,hcs[k][0],false) ); // The "root" node
+        new GBMUndecidedNode(ktrees[k],-1,DHistogram.initialHist(fr,_ncols,adj_nbins,hcs[k][0],false,false) ); // The "root" node
       }
     }
     int[] leafs = new int[_nclass]; // Define a "working set" of leaf splits, from here to tree._len
@@ -614,7 +614,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     // Find the column with the best split (lowest score).  Unlike RF, GBM
     // scores on all columns and selects splits on all columns.
     @Override public DTree.Split bestCol( UndecidedNode u, DHistogram[] hs ) {
-      DTree.Split best = new DTree.Split(-1,-1,false,Double.MAX_VALUE,Double.MAX_VALUE,0L,0L,0,0);
+      DTree.Split best = new DTree.Split(-1,-1,null,(byte)0,Double.MAX_VALUE,Double.MAX_VALUE,0L,0L,0,0);
       if( hs == null ) return best;
       for( int i=0; i<hs.length; i++ ) {
         if( hs[i]==null || hs[i].nbins() <= 1 ) continue;

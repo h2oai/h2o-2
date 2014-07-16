@@ -13,8 +13,8 @@ import water.util.Utils;
 public class DRealHistogram extends DHistogram<DRealHistogram> {
   private double _sums[], _ssqs[]; // Sums & square-sums, shared, atomically incremented
 
-  public DRealHistogram( String name, final int nbins, byte isInt, float min, float maxEx, long nelems ) {
-    super(name,nbins,isInt,min,maxEx,nelems);
+  public DRealHistogram( String name, final int nbins, byte isInt, float min, float maxEx, long nelems, boolean doGrpSplit ) {
+    super(name,nbins,isInt,min,maxEx,nelems,doGrpSplit);
   }
   @Override boolean isBinom() { return false; }
 
@@ -106,7 +106,7 @@ public class DRealHistogram extends DHistogram<DRealHistogram> {
     int best=0;                         // The no-split
     double best_se0=Double.MAX_VALUE;   // Best squared error
     double best_se1=Double.MAX_VALUE;   // Best squared error
-    boolean equal=false;                // Ranged check
+    byte equal=0;                // Ranged check
     for( int b=1; b<=nbins-1; b++ ) {
       if( _bins[b] == 0 ) continue; // Ignore empty splits
       // We're making an unbiased estimator, so that MSE==Var.
@@ -139,18 +139,18 @@ public class DRealHistogram extends DHistogram<DRealHistogram> {
         double sx = _ssqs[b] - _sums[b]*_sums[b]/_bins[b]; // Just 'b'
         if( si+sx < best_se0+best_se1 ) { // Strictly less error?
           best_se0 = si;   best_se1 = sx;
-          best = b;        equal = true; // Equality check
+          best = b;        equal = 1; // Equality check
         }
       }
     }
 
     if( best==0 ) return null;  // No place to split
     assert best > 0 : "Must actually pick a split "+best;
-    long   n0 = !equal ?   ns0[best] :   ns0[best]+  ns1[best+1];
-    long   n1 = !equal ?   ns1[best] : _bins[best]              ;
-    double p0 = !equal ? sums0[best] : sums0[best]+sums1[best+1];
-    double p1 = !equal ? sums1[best] : _sums[best]              ;
-    return new DTree.Split(col,best,equal,best_se0,best_se1,n0,n1,p0/n0,p1/n1);
+    long   n0 = equal == 0 ?   ns0[best] :   ns0[best]+  ns1[best+1];
+    long   n1 = equal == 0 ?   ns1[best] : _bins[best]              ;
+    double p0 = equal == 0 ? sums0[best] : sums0[best]+sums1[best+1];
+    double p1 = equal == 0 ? sums1[best] : _sums[best]              ;
+    return new DTree.Split(col,best,null,equal,best_se0,best_se1,n0,n1,p0/n0,p1/n1);
   }
 
   @Override public long byteSize0() {

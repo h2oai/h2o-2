@@ -3,7 +3,7 @@
 \title{ Returns columns' names of a parsed H2O data object that are recommended to be ignored in an analysis}
 \description{Returns columns' names of a parsed  \code{\linkS4class{H2OParsedData} object if the columns have high counts of NA entries, threshold for high NA count can be set by user, or are columns with only one value.}}
 \usage{
-h2o.ignoreColumns (data, max_na = 0.2)
+h2o.ignoreColumns(data, max_na = 0.2)
 }
 \arguments{
   \item{data}{ An\code{\linkS4class{H2OParsedData}} object.}

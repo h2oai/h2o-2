@@ -444,6 +444,7 @@ public class AutoBuffer {
     return this;
   }
 
+  public void skip( int sz ) { assert sz <= _bb.remaining(); _bb.position(_bb.position()+sz); }
 
   /** Ensure the buffer has space for sz more bytes */
   private ByteBuffer getSp( int sz ) { return sz > _bb.remaining() ? getImpl(sz) : _bb; }

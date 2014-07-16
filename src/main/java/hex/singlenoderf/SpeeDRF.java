@@ -7,7 +7,6 @@ import hex.ConfusionMatrix;
 
 import java.util.*;
 
-import jsr166y.ForkJoinTask;
 import water.*;
 import water.Timer;
 import water.api.*;
@@ -32,14 +31,15 @@ public class SpeeDRF extends Job.ValidatedJob {
   @API(help = "Split Criterion Type", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
   public Tree.SelectStatType select_stat_type = Tree.SelectStatType.ENTROPY;
 
-//  @API(help = "Class Weights (0.0,0.2,0.4,0.6,0.8,1.0)", filter = Default.class, displayName = "class weights", json = true, importance = ParamImportance.SECONDARY)
+  @API(help = "Use local data. Auto-enabled if data does not fit in a single node -- may be slightly less accurate for small data.", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
+  public boolean local_mode = true;
+
+  /* Legacy parameter: */
   public double[] class_weights = null;
 
   @API(help = "Sampling Strategy", filter = Default.class, json = true, importance = ParamImportance.SECONDARY)
   public Sampling.Strategy sampling_strategy = Sampling.Strategy.RANDOM;
 
-//  @API(help = "Strata Samples", filter = Default.class, json = true, lmin = 0, lmax = 100, importance = ParamImportance.SECONDARY)
-//  int[] strata_samples = null;
 
   @API(help = "Sampling Rate at each split.", filter = Default.class, json  = true, dmin = 0, dmax = 1, importance = ParamImportance.EXPERT)
   public double sample = 0.67;
@@ -55,12 +55,12 @@ public class SpeeDRF extends Job.ValidatedJob {
   @API(help = "Balance training data class counts via over/under-sampling (for imbalanced data)", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
   public boolean balance_classes = false;
 
-   /**
-   * When classes are balanced, limit the resulting dataset size to the
-   * specified multiple of the original dataset size.
-   */
-   @API(help = "Maximum relative size of the training data after balancing class counts (can be less than 1.0)", filter = Default.class, json = true, dmin=1e-3, importance = ParamImportance.EXPERT)
-   public float max_after_balance_size = Float.POSITIVE_INFINITY;
+  /**
+  * When classes are balanced, limit the resulting dataset size to the
+  * specified multiple of the original dataset size.
+  */
+  @API(help = "Maximum relative size of the training data after balancing class counts (can be less than 1.0)", filter = Default.class, json = true, dmin=1e-3, importance = ParamImportance.EXPERT)
+  public float max_after_balance_size = Float.POSITIVE_INFINITY;
 
   @API(help = "Out of bag error estimate", filter = Default.class, json = true, importance = ParamImportance.SECONDARY)
   public boolean oobee = true;
@@ -82,9 +82,6 @@ public class SpeeDRF extends Job.ValidatedJob {
 
   @API(help = "split limit", importance = ParamImportance.EXPERT)
   public int _exclusiveSplitLimit = 0;
-
-  @API(help = "use non local data", importance = ParamImportance.EXPERT)
-  public boolean _useNonLocalData = true;
 
   private static final Random _seedGenerator = Utils.getDeterRNG(0xd280524ad7fe0602L);
 
@@ -174,7 +171,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       if (model == null) model = UKV.get(dest());
       model.write_lock(self());
       drfParams = DRFParams.create(model.fr.find(model.response), model.N, model.max_depth, (int)model.fr.numRows(), model.nbins,
-              model.statType, seed, model.weights, mtry, model.sampling_strategy, (float) sample, model.strata_samples, model.verbose ? 100 : 1, _exclusiveSplitLimit, _useNonLocalData, regression);
+              model.statType, seed, model.weights, mtry, model.sampling_strategy, (float) sample, model.strata_samples, model.verbose ? 100 : 1, _exclusiveSplitLimit, !local_mode, regression);
       logStart();
       DRFTask tsk = new DRFTask();
       tsk._job = Job.findJob(self());
@@ -200,40 +197,6 @@ public class SpeeDRF extends Job.ValidatedJob {
       emptyLTrash();
       cleanup();
     }
-  }
-
-
-  /**
-   * Check the user inputted samples if Stratified Local is selected.
-   * @param samples: The user input samples.
-   * @return : Return a an array ints.
-   */
-
-  private int[] checkSamples(int[] samples) {
-
-    //Fill the defaults with 67 as the sampling rate.
-    int [] defaults = new int[response.toEnum().cardinality()];
-    for (int i = 0; i < defaults.length; ++i) defaults[i] = 67;
-
-    //User gave no samples, use defaults.
-    if (samples == null) return defaults;
-
-    //Create a results vector to be filled in below
-    int [] result = new int[defaults.length];
-
-    //User input more samples than classes, only use the first N
-    if (samples.length > defaults.length)  {
-      System.arraycopy(samples, 0, result, 0, result.length);
-      return result;
-    }
-
-    //User specified fewer samples than classes, pad with defaults
-    if (samples.length < defaults.length) {
-      System.arraycopy(samples, 0, result, 0, samples.length);
-      System.arraycopy(defaults, samples.length, result, samples.length, result.length - samples.length);
-      return result;
-    }
-    return defaults;
   }
 
   /**
@@ -379,6 +342,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       model.weights = regression ? null : class_weights;
       model.time = 0;
       model.N = num_trees;
+      model.useNonLocal = !local_mode;
       if (!regression) model.setModelClassDistribution(new MRUtils.ClassDist(fr.lastVec()).doAll(fr.lastVec()).rel_dist());
 
       if (mtry == -1) {
@@ -429,7 +393,7 @@ public class SpeeDRF extends Job.ValidatedJob {
     /**Inhale the data, build a DataAdapter and kick-off the computation.
      * */
     @Override public final void lcompute() {
-      final DataAdapter dapt = DABuilder.create(_drf, _rfmodel).build(_rfmodel.fr);
+      final DataAdapter dapt = DABuilder.create(_drf, _rfmodel).build(_rfmodel.fr, _params._useNonLocalData);
       if (dapt == null) {
         tryComplete();
         return;
@@ -467,15 +431,15 @@ public class SpeeDRF extends Job.ValidatedJob {
       }.invoke(modelKey);
     }
 
-    static void updateRFModelStopTraining(Key modelKey) {
-      new TAtomic<SpeeDRFModel>() {
-        @Override public SpeeDRFModel atomic(SpeeDRFModel m) {
-          if(m == null) return null;
-          m.stop_training();
-          return m;
-        }
-      }.invoke(modelKey);
-    }
+//    static void updateRFModelStopTraining(Key modelKey) {
+//      new TAtomic<SpeeDRFModel>() {
+//        @Override public SpeeDRFModel atomic(SpeeDRFModel m) {
+//          if(m == null) return null;
+//          m.stop_training();
+//          return m;
+//        }
+//      }.invoke(modelKey);
+//    }
 
     /** Unless otherwise specified each split looks at sqrt(#features). */
     private int howManySplitFeatures() {
@@ -518,7 +482,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       return result;
     }
 
-    private void validateInputData(){
+    private void validateInputData() {
       Vec[] vecs = _rfmodel.fr.vecs();
       Vec c = _rfmodel.response;
       String err = "Response column must be an integer in the interval [2,254]";
@@ -535,11 +499,13 @@ public class SpeeDRF extends Job.ValidatedJob {
       if (_params.num_split_features!=-1 && (_params.num_split_features< 1 || _params.num_split_features>vecs.length-1))
         throw new IllegalArgumentException("Number of split features exceeds available data. Should be in [1,"+(vecs.length-1)+"]");
       ChunkAllocInfo cai = new ChunkAllocInfo();
-      if (_params._useNonLocalData && !canLoadAll( _rfmodel.fr, cai ))
-        throw new IllegalArgumentException(
-                "Cannot load all data from remote nodes - " +
-                        "the node " + cai.node + " requires " + PrettyPrint.bytes(cai.requiredMemory) + " to load all data and perform computation but there is only " + PrettyPrint.bytes(cai.availableMemory) + " of available memory. " +
-                        "Please provide more memory for JVMs or disable the option '"+ Constants.USE_NON_LOCAL_DATA+"' (however, it may affect resulting accuracy).");
+      if (_params._useNonLocalData && !canLoadAll( _rfmodel.fr, cai )) {
+        Log.warn("Cannot load all data from remote nodes - " +
+                "the node " + cai.node + " requires " + PrettyPrint.bytes(cai.requiredMemory) + " to load all data and perform computation but there is only " + PrettyPrint.bytes(cai.availableMemory) + " of available memory. " +
+                "Please provide more memory for JVMs or disable the option '"+ Constants.USE_NON_LOCAL_DATA+"' (however, it may affect resulting accuracy).");
+        Log.warn("Automatically disabling fast mode.");
+        _params._useNonLocalData = false; /* In other words, use local data only... */
+      }
     }
 
     private boolean canLoadAll(final Frame fr, ChunkAllocInfo cai) {
@@ -593,9 +559,9 @@ public class SpeeDRF extends Job.ValidatedJob {
             int[] rowsPerChunks) {
       Timer  t_alltrees = new Timer();
       Tree[] trees      = new Tree[ntrees];
-      Log.debug(Log.Tag.Sys.RANDF,"Building "+ntrees+" trees");
-      Log.debug(Log.Tag.Sys.RANDF,"Number of split features: "+ numSplitFeatures);
-      Log.debug(Log.Tag.Sys.RANDF,"Starting RF computation with "+ localData.rows()+" rows ");
+      Log.info(Log.Tag.Sys.RANDF,"Building "+ntrees+" trees");
+      Log.info(Log.Tag.Sys.RANDF,"Number of split features: "+ numSplitFeatures);
+      Log.info(Log.Tag.Sys.RANDF,"Starting RF computation with "+ localData.rows()+" rows ");
 
       Random rnd = Utils.getRNG(localData.seed() + ROOT_SEED_ADD);
       Sampling sampler = createSampler(drfParams, rowsPerChunks);
@@ -604,11 +570,11 @@ public class SpeeDRF extends Job.ValidatedJob {
         long treeSeed = rnd.nextLong() + TREE_SEED_INIT; // make sure that enough bits is initialized
         trees[i] = new Tree(job, localData, producerId, drfParams.max_depth, drfParams.stat_type, numSplitFeatures, treeSeed,
                 i, drfParams._exclusiveSplitLimit, sampler, drfParams._verbose, drfParams.regression);
-//        if (!drfParams.parallel)   ForkJoinTask.invokeAll(new Tree[]{trees[i]});
       }
 
+      Log.info("Invoking the tree build tasks on all nodes.");
       DRemoteTask.invokeAll(trees);
-      Log.debug(Log.Tag.Sys.RANDF,"All trees ("+ntrees+") done in "+ t_alltrees);
+      Log.info(Log.Tag.Sys.RANDF,"All trees ("+ntrees+") done in "+ t_alltrees);
     }
 
     static Sampling createSampler(final DRFParams params, int[] rowsPerChunks) {

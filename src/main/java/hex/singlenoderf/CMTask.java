@@ -63,7 +63,7 @@ public class CMTask extends MRTask2<CMTask> {
   /** Confusion matrix
    * @param model the ensemble used to classify
    */
-  public CMTask(SpeeDRFModel model, int treesToUse, double[] classWt, boolean computeOOB, float[] priorDist, float[] modelDist ) {
+  private CMTask(SpeeDRFModel model, int treesToUse, double[] classWt, boolean computeOOB, float[] priorDist, float[] modelDist ) {
     _modelKey   = model._key;
     _datakey    = model._dataKey;
     _classcol   = model.test_frame == null ?  (model.fr.numCols() - 1) : (model.test_frame.numCols() - 1);
@@ -76,6 +76,12 @@ public class CMTask extends MRTask2<CMTask> {
     _priorDist = priorDist;
     _modelDist = modelDist;
     shared_init();
+  }
+
+  public static CMTask scoreTask(Frame fr, SpeeDRFModel model, int treesToUse, double[] classWt, boolean computeOOB, float[] priorDist, float[] modelDist ) {
+    CMTask tsk = new CMTask(model, treesToUse, classWt, computeOOB, priorDist, modelDist);
+    tsk.doAll(fr);
+    return tsk;
   }
 
   /** Shared init: pre-compute local data for new Confusions, for remote Confusions*/
@@ -131,7 +137,7 @@ public class CMTask extends MRTask2<CMTask> {
     int cidx=0;
     for (int i = 0; i < _data.anyVec().nChunks(); ++i) {
       if (_data.anyVec().chunkKey(i).home()) {
-        _chunk_row_mapping[cidx++] = _data.anyVec().chunkForChunkIdx(i)._start;
+        _chunk_row_mapping[cidx++] = _data.anyVec().chunk2StartElem(i);
       }
     }
 
@@ -171,7 +177,9 @@ public class CMTask extends MRTask2<CMTask> {
 
   @Override public void map(Chunk[] chks) {
     final int rows = chks[0]._len;
-    final int cmin       = (int) _data.vecs()[_classcol].min();
+
+//    Log.info("Beginning CMTask map call on "+rows+" rows...");
+    final int cmin       = (int) _model.response.min();//_data.vecs()[_classcol].min();
     short     numClasses = (short)_model.classes();
     _cms = new long[ModelUtils.DEFAULT_THRESHOLDS.length][2][2];
 
@@ -212,7 +220,7 @@ public class CMTask extends MRTask2<CMTask> {
         // Do not skip yet the rows with NAs in the rest of columns
         if( chks[_classcol].isNA0(row)) continue;
 
-        if( _computeOOB && (isLocalTree || isRemoteTreeChunk)) { // if OOBEE is computed then we need to take into account utilized sampling strategy
+        if( _computeOOB && (isLocalTree || isRemoteTreeChunk) ) { // if OOBEE is computed then we need to take into account utilized sampling strategy
           switch( _model.sampling_strategy ) {
             case RANDOM          : if (sampledItem < _model.sample ) continue ROWS; break;
             default: assert false : "The selected sampling strategy does not support OOBEE replay!"; break;
@@ -222,19 +230,19 @@ public class CMTask extends MRTask2<CMTask> {
 
         // Predict with this tree - produce 0-based class index
         if (!_model.regression) {
-          int prediction = (int)_model.classify0(ntree, _data, chks, row, _modelDataMap, numClasses, false /*Not regression*/);
+          int prediction = (int)_model.classify0(ntree, chks, row, _modelDataMap, numClasses, false /*Not regression*/);
           if( prediction >= numClasses ) continue; // Junk row cannot be predicted
           // Check tree miss
           int alignedPrediction = alignModelIdx(prediction);
-          int alignedData       = alignDataIdx((int) _data.vecs()[_classcol].at8(row) - cmin);
+          int alignedData       = alignDataIdx((int) chks[_classcol].at80(row) - cmin);
           if (alignedPrediction != alignedData) {
             _errorsPerTree[ntree]++;
           }
           votes[row][alignedPrediction]++; // Vote the row
-          if (isLocalTree) localVotes[row][alignedPrediction]++; // Vote
+//          if (isLocalTree) localVotes[row][alignedPrediction]++; // Vote
         } else {
-          float pred = _model.classify0(ntree, _data, chks, row, _modelDataMap, (short) 0, true /*regression*/);
-          float actual = _data.vecs()[_classcol].at8(row);
+          float pred = _model.classify0(ntree, chks, row, _modelDataMap, (short) 0, true /*regression*/);
+          float actual = chks[_classcol].at80(row);
           float delta = actual - pred;
           _ss += delta * delta;
           _rowcnt++;
@@ -589,26 +597,22 @@ public class CMTask extends MRTask2<CMTask> {
     float num_trees = _errorsPerTree.length;
 
     // Loop over the rows
-    for( int r = 0; r < rows; r++ ) {
-      int row = r + (int)chks[0]._start;
+    for( int row = 0; row < rows; row++ ) {
 
       // Skip rows with missing response values
-      if (chks[_classcol].isNA(row)) continue;
+      if (chks[_classcol].isNA0(row)) continue;
 
       // The class votes for the i-th row
-      int[] vi = votes[r];
+      int[] vi = votes[row];
 
       // Fill the predictions with the vote counts, keeping the 0th index unchanged
       for( int v=0; v<_N; v++ ) preds[v+1] = vi[v];
 
-//      float[] scored = preds.clone();
       float s = doSum(vi);
       if (s == 0) {
         cm._skippedRows++;
         continue;
       }
-//      for (int i = 1; i  < vi.length; ++i)
-//        scored[i] = ( scored[i] / s);
 
       int result;
       if (balance) {
@@ -631,7 +635,7 @@ public class CMTask extends MRTask2<CMTask> {
       }
 
       // Get the class value from the response column for the current row
-      int cclass = alignDataIdx((int) chks[_classcol].at8(row) - cmin);
+      int cclass = alignDataIdx((int) chks[_classcol].at80(row) - cmin);
       assert 0 <= cclass && cclass < _N : ("cclass " + cclass + " < " + _N);
 
       // Ignore rows with zero votes, but still update the sum of squared errors
