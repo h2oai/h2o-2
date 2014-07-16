@@ -36,16 +36,17 @@ public class ParseFolderTest extends TestUtil {
       chk._mem = null;                     // Illegal setup: Chunk _mem should never be null
 
       Frame fr = ParseDataset2.parse(okey, new Key[]{fkey0,fkey1,fkey2});
-      System.out.println("Number of chunks: "+fr.anyVec().nChunks());
-      fr.delete();
+      assertTrue("Parse should throw",false);
+
     } catch( Throwable e2 ) {
       ex = e2;
-      System.out.println("parse throws "+ex+" as expected");
     } finally {
       assertTrue( "Parse did not throw out an NPE", ex != null ) ;
     }
     assertTrue( "All input & output keys not removed", DKV.get(fkey0)==null );
-    assertTrue( "All input & output keys not removed", DKV.get(fkey1)==null );
+    Value v = DKV.get(fkey1);
+    if( v != null ) System.out.println("get "+fkey1);
+    assertTrue( "All input & output keys not removed", v==null );
     assertTrue( "All input & output keys not removed", DKV.get(fkey2)==null );
     assertTrue( "All input & output keys not removed", DKV.get(okey )==null );
 
