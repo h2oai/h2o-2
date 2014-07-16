@@ -10,7 +10,7 @@ Performs single-node random forest classification on a data set.
 h2o.SpeeDRF(x, y, data, key = "", classification = TRUE, nfolds = 0, validation, 
   mtry = -1, ntree = 50, depth = 50, sample.rate = 2/3, oobee = TRUE, 
   importance = FALSE, nbins = 1024, seed = -1, stat.type = "ENTROPY", 
-  balance.classes = FALSE, verbose = FALSE)
+  balance.classes = FALSE, verbose = FALSE, local_mode = FALSE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
