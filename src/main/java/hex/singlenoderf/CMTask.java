@@ -41,6 +41,7 @@ public class CMTask extends MRTask2<CMTask> {
   public Key[][] _remoteChunksKeys;
   public float _ss; // Sum of squares
   public int _rowcnt; // Rows used in scoring for regression
+  public boolean _score_new_tree_only;
 
   private float[] _priorDist;
   private float[] _modelDist;
@@ -63,7 +64,7 @@ public class CMTask extends MRTask2<CMTask> {
   /** Confusion matrix
    * @param model the ensemble used to classify
    */
-  private CMTask(SpeeDRFModel model, int treesToUse, double[] classWt, boolean computeOOB, float[] priorDist, float[] modelDist ) {
+  private CMTask(SpeeDRFModel model, int treesToUse, double[] classWt, boolean computeOOB, float[] priorDist, float[] modelDist, boolean score_new_only) {
     _modelKey   = model._key;
     _datakey    = model._dataKey;
     _classcol   = model.test_frame == null ?  (model.fr.numCols() - 1) : (model.test_frame.numCols() - 1);
@@ -75,11 +76,12 @@ public class CMTask extends MRTask2<CMTask> {
     _ss = 0.f;
     _priorDist = priorDist;
     _modelDist = modelDist;
+    _score_new_tree_only = score_new_only;
     shared_init();
   }
 
-  public static CMTask scoreTask(Frame fr, SpeeDRFModel model, int treesToUse, double[] classWt, boolean computeOOB, float[] priorDist, float[] modelDist ) {
-    CMTask tsk = new CMTask(model, treesToUse, classWt, computeOOB, priorDist, modelDist);
+  public static CMTask scoreTask(Frame fr, SpeeDRFModel model, int treesToUse, double[] classWt, boolean computeOOB, float[] priorDist, float[] modelDist, boolean score_new) {
+    CMTask tsk = new CMTask(model, treesToUse, classWt, computeOOB, priorDist, modelDist, score_new);
     tsk.doAll(fr);
     return tsk;
   }
@@ -189,6 +191,7 @@ public class CMTask extends MRTask2<CMTask> {
     // Replay the Data.java's "sample_fair" sampling algorithm to exclude data
     // we trained on during voting.
     for( int ntree = 0; ntree < _model.treeCount(); ntree++ ) {
+      if (_score_new_tree_only) ntree = _model.treeCount() - 1;
       long    treeSeed    = _model.seed(ntree);
       byte    producerId  = _model.producerId(ntree);
       int     init_row    =   (int)chks[0]._start;
