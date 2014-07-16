@@ -25,9 +25,14 @@ public class CXIChunkTest extends TestUtil {
       Chunk cc = nc.compress();
       Assert.assertEquals(vals.length + 1 + l, cc.len());
       Assert.assertTrue(cc instanceof CXIChunk);
-      if (l==1) Assert.assertTrue(cc.isNA0(0));
+      if (l==1) {
+        Assert.assertTrue(cc.isNA0(0));
+        Assert.assertTrue(cc.isNA(0));
+      }
       for (int i = 0; i < vals.length; ++i) Assert.assertEquals(vals[i], cc.at80(i+l));
+      for (int i = 0; i < vals.length; ++i) Assert.assertEquals(vals[i], cc.at8(i+l));
       Assert.assertTrue(cc.isNA0(vals.length+l));
+      Assert.assertTrue(cc.isNA(vals.length+l));
 
       nc = new NewChunk(null, 0);
       cc.inflate_impl(nc);
@@ -39,16 +44,26 @@ public class CXIChunkTest extends TestUtil {
       Assert.assertTrue(it.next().rowId0() == 101+l);
       Assert.assertTrue(it.next().rowId0() == vals.length+l);
       Assert.assertTrue(!it.hasNext());
-      if (l==1) Assert.assertTrue(nc.isNA0(0));
+      if (l==1) {
+        Assert.assertTrue(nc.isNA0(0));
+        Assert.assertTrue(nc.isNA(0));
+      }
       for (int i = 0; i < vals.length; ++i) Assert.assertEquals(vals[i], nc.at80(l+i));
+      for (int i = 0; i < vals.length; ++i) Assert.assertEquals(vals[i], nc.at8(l+i));
       Assert.assertTrue(nc.isNA0(vals.length+l));
+      Assert.assertTrue(nc.isNA(vals.length+l));
 
       Chunk cc2 = nc.compress();
       Assert.assertEquals(vals.length+1+l, cc.len());
       Assert.assertTrue(cc2 instanceof CXIChunk);
-      if (l==1) Assert.assertTrue(cc2.isNA0(0));
+      if (l==1) {
+        Assert.assertTrue(cc2.isNA0(0));
+        Assert.assertTrue(cc2.isNA(0));
+      }
       for (int i = 0; i < vals.length; ++i) Assert.assertEquals(vals[i], cc2.at80(i+l));
+      for (int i = 0; i < vals.length; ++i) Assert.assertEquals(vals[i], cc2.at8(i+l));
       Assert.assertTrue(cc2.isNA0(vals.length+l));
+      Assert.assertTrue(cc2.isNA(vals.length+l));
 
       Assert.assertTrue(Arrays.equals(cc._mem, cc2._mem));
     }

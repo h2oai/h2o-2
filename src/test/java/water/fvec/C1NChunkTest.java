@@ -18,11 +18,13 @@ public class C1NChunkTest extends TestUtil {
     Assert.assertEquals(vals.length, cc.len());
     Assert.assertTrue(cc instanceof C1NChunk);
     for (int i=0;i<vals.length;++i) Assert.assertEquals(vals[i], cc.at80(i));
+    for (int i=0;i<vals.length;++i) Assert.assertEquals(vals[i], cc.at8(i));
 
     Chunk cc2 = cc.inflate_impl(new NewChunk(null, 0)).compress();
     Assert.assertEquals(vals.length, cc.len());
     Assert.assertTrue(cc2 instanceof C1NChunk);
     for (int i=0;i<vals.length;++i) Assert.assertEquals(vals[i], cc2.at80(i));
+    for (int i=0;i<vals.length;++i) Assert.assertEquals(vals[i], cc2.at8(i));
 
     Assert.assertTrue(Arrays.equals(cc._mem, cc2._mem));
   }

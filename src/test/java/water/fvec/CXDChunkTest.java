@@ -25,9 +25,14 @@ public class CXDChunkTest extends TestUtil {
       Chunk cc = nc.compress();
       Assert.assertEquals(vals.length + 1 + l, cc.len());
       Assert.assertTrue(cc instanceof CXDChunk);
-      if (l==1) Assert.assertTrue(cc.isNA0(0));
+      if (l==1) {
+        Assert.assertTrue(cc.isNA0(0));
+        Assert.assertTrue(cc.isNA(0));
+      }
       for (int i = 0; i < vals.length; ++i) Assert.assertEquals(vals[i], cc.at0(i+l), 0);
+      for (int i = 0; i < vals.length; ++i) Assert.assertEquals(vals[i], cc.at(i+l), 0);
       Assert.assertTrue(cc.isNA0(vals.length+l));
+      Assert.assertTrue(cc.isNA(vals.length+l));
 
       nc = new NewChunk(null, 0);
       cc.inflate_impl(nc);
@@ -39,16 +44,26 @@ public class CXDChunkTest extends TestUtil {
       Assert.assertTrue(it.next().rowId0() == 101+l);
       Assert.assertTrue(it.next().rowId0() == vals.length+l);
       Assert.assertTrue(!it.hasNext());
-      if (l==1) Assert.assertTrue(nc.isNA0(0));
+      if (l==1) {
+        Assert.assertTrue(nc.isNA0(0));
+        Assert.assertTrue(nc.isNA(0));
+      }
       for (int i = 0; i < vals.length; ++i) Assert.assertEquals(vals[i], nc.at0(l+i), 0);
+      for (int i = 0; i < vals.length; ++i) Assert.assertEquals(vals[i], nc.at(l+i), 0);
       Assert.assertTrue(nc.isNA0(vals.length+l));
+      Assert.assertTrue(nc.isNA(vals.length+l));
 
       Chunk cc2 = nc.compress();
       Assert.assertEquals(vals.length+1+l, cc.len());
       Assert.assertTrue(cc2 instanceof CXDChunk);
-      if (l==1) Assert.assertTrue(cc2.isNA0(0));
+      if (l==1) {
+        Assert.assertTrue(cc2.isNA0(0));
+        Assert.assertTrue(cc2.isNA(0));
+      }
       for (int i = 0; i < vals.length; ++i) Assert.assertEquals(vals[i], cc2.at0(i+l), 0);
+      for (int i = 0; i < vals.length; ++i) Assert.assertEquals(vals[i], cc2.at(i+l), 0);
       Assert.assertTrue(cc2.isNA0(vals.length+l));
+      Assert.assertTrue(cc2.isNA(vals.length+l));
 
       Assert.assertTrue(Arrays.equals(cc._mem, cc2._mem));
     }

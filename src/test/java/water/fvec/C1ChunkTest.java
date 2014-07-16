@@ -20,13 +20,19 @@ public class C1ChunkTest extends TestUtil {
       Assert.assertEquals(vals.length + 1 + l, cc.len());
       Assert.assertTrue(cc instanceof C1Chunk);
       for (int i = 0; i < vals.length; ++i) Assert.assertEquals(vals[i], cc.at80(l+i));
+      for (int i = 0; i < vals.length; ++i) Assert.assertEquals(vals[i], cc.at8(l+i));
       Assert.assertTrue(cc.isNA0(vals.length+l));
+      Assert.assertTrue(cc.isNA(vals.length+l));
 
       Chunk cc2 = cc.inflate_impl(new NewChunk(null, 0)).compress();
       Assert.assertEquals(vals.length + 1 + l, cc.len());
       Assert.assertTrue(cc2 instanceof C1Chunk);
+      if (l==1) Assert.assertTrue(cc2.isNA0(0));
+      if (l==1) Assert.assertTrue(cc2.isNA(0));
       for (int i = 0; i < vals.length; ++i) Assert.assertEquals(vals[i], cc2.at80(l+i));
+      for (int i = 0; i < vals.length; ++i) Assert.assertEquals(vals[i], cc2.at8(l+i));
       Assert.assertTrue(cc2.isNA0(vals.length+l));
+      Assert.assertTrue(cc2.isNA(vals.length+l));
 
       Assert.assertTrue(Arrays.equals(cc._mem, cc2._mem));
     }
