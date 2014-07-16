@@ -8,7 +8,7 @@ Principal Components Analysis
 Performs principal components analysis on the given data set.
 }
 \usage{
-h2o.prcomp(data, tol = 0, cols = "", standardize = TRUE, retx = FALSE)
+h2o.prcomp(data, tol = 0, cols = "", key = "", standardize = TRUE, retx = FALSE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -21,6 +21,9 @@ h2o.prcomp(data, tol = 0, cols = "", standardize = TRUE, retx = FALSE)
   \item{cols}{
   (Optional) A vector of column names or indices indicating the features to perform PCA on. By default, all columns in the dataset are analyzed.
   }
+    \item{key}{
+  (Optional) The unique hex key assigned to the resulting model. If none is given, a key will automatically be generated.
+}
   \item{standardize}{
   (Optional) A logical value indicating whether the variables should be shifted to be zero centered and scaled to have unit variance before the analysis takes place.
   }
