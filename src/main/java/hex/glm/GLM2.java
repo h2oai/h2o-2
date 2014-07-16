@@ -47,6 +47,10 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   @API(help = "Family.", filter = Default.class, json=true, importance = ParamImportance.CRITICAL)
   Family family = Family.gaussian;
 
+  @API(help = "", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
+  Link link = Link.family_default;
+
+
   @API(help = "Tweedie variance power", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
   double tweedie_variance_power;
 
@@ -118,8 +122,6 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   @API(help = "", json=true, importance = ParamImportance.SECONDARY)
   private boolean _runAllLambdas = true;
 
-  @API(help = "", json=true, importance = ParamImportance.SECONDARY)
-  Link link = Link.identity;
 
   @API(help = "Tweedie link power", json=true, importance = ParamImportance.SECONDARY)
   double tweedie_link_power;
@@ -331,7 +333,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   @Override protected boolean filterNaCols(){return true;}
   @Override protected Response serve() {
     init();
-    link = family.defaultLink;// TODO
+    if(link == Link.family_default)
+      link = family.defaultLink;
     tweedie_link_power = 1 - tweedie_variance_power;// TODO
     if(tweedie_link_power == 0)link = Link.log;
     _glm = new GLMParams(family, tweedie_variance_power, link, tweedie_link_power);
