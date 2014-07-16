@@ -14,7 +14,7 @@ public abstract class Chunk extends Iced implements Cloneable {
   public int _len;            // Number of elements in this chunk
   protected Chunk _chk2;      // Normally==null, changed if chunk is written to
   public Vec _vec;            // Owning Vec; filled after AutoBuffer.read
-  byte[] _mem; // Short-cut to the embedded memory; WARNING: holds onto a large array
+  public byte[] _mem; // Short-cut to the embedded memory; WARNING: holds onto a large array
 
   public final boolean readable( ) { return _vec.readable(); }
   public final boolean writable( ) { return _vec.writable(); }
