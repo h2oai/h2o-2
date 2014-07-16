@@ -1077,7 +1077,7 @@ h2o.SpeeDRF <- function(x, y, data, key="", classification=TRUE, nfolds=0, valid
                         stat.type="ENTROPY",
                         balance.classes=FALSE,
                         verbose=FALSE,
-                        local_mode = TRUE
+                        local_mode = FALSE
 ) {
   args <- .verify_dataxy(data, x, y)
   

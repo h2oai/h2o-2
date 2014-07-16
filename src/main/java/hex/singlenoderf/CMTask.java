@@ -41,6 +41,7 @@ public class CMTask extends MRTask2<CMTask> {
   public Key[][] _remoteChunksKeys;
   public float _ss; // Sum of squares
   public int _rowcnt; // Rows used in scoring for regression
+  public boolean _score_new_tree_only;
 
   private float[] _priorDist;
   private float[] _modelDist;
@@ -63,7 +64,7 @@ public class CMTask extends MRTask2<CMTask> {
   /** Confusion matrix
    * @param model the ensemble used to classify
    */
-  private CMTask(SpeeDRFModel model, int treesToUse, double[] classWt, boolean computeOOB, float[] priorDist, float[] modelDist ) {
+  private CMTask(SpeeDRFModel model, int treesToUse, double[] classWt, boolean computeOOB, float[] priorDist, float[] modelDist, boolean score_new_only) {
     _modelKey   = model._key;
     _datakey    = model._dataKey;
     _classcol   = model.test_frame == null ?  (model.fr.numCols() - 1) : (model.test_frame.numCols() - 1);
@@ -75,11 +76,12 @@ public class CMTask extends MRTask2<CMTask> {
     _ss = 0.f;
     _priorDist = priorDist;
     _modelDist = modelDist;
+    _score_new_tree_only = score_new_only;
     shared_init();
   }
 
-  public static CMTask scoreTask(Frame fr, SpeeDRFModel model, int treesToUse, double[] classWt, boolean computeOOB, float[] priorDist, float[] modelDist ) {
-    CMTask tsk = new CMTask(model, treesToUse, classWt, computeOOB, priorDist, modelDist);
+  public static CMTask scoreTask(Frame fr, SpeeDRFModel model, int treesToUse, double[] classWt, boolean computeOOB, float[] priorDist, float[] modelDist, boolean score_new) {
+    CMTask tsk = new CMTask(model, treesToUse, classWt, computeOOB, priorDist, modelDist, score_new);
     tsk.doAll(fr);
     return tsk;
   }
@@ -177,9 +179,7 @@ public class CMTask extends MRTask2<CMTask> {
 
   @Override public void map(Chunk[] chks) {
     final int rows = chks[0]._len;
-
-//    Log.info("Beginning CMTask map call on "+rows+" rows...");
-    final int cmin       = (int) _model.response.min();//_data.vecs()[_classcol].min();
+    final int cmin       = (int) _model.response.min();
     short     numClasses = (short)_model.classes();
     _cms = new long[ModelUtils.DEFAULT_THRESHOLDS.length][2][2];
 
@@ -191,9 +191,10 @@ public class CMTask extends MRTask2<CMTask> {
     // Replay the Data.java's "sample_fair" sampling algorithm to exclude data
     // we trained on during voting.
     for( int ntree = 0; ntree < _model.treeCount(); ntree++ ) {
+      if (_score_new_tree_only) ntree = _model.treeCount() - 1;
       long    treeSeed    = _model.seed(ntree);
       byte    producerId  = _model.producerId(ntree);
-      int     init_row    =   (int)chks[0]._start; //_chunk_row_mapping[chks[0].cidx()]; //
+      int     init_row    =   (int)chks[0]._start;
       boolean isLocalTree = _computeOOB && isLocalTree(producerId); // tree is local
       boolean isRemote    = true;
       for (long a_chunk_row_mapping : _chunk_row_mapping) {
@@ -203,7 +204,7 @@ public class CMTask extends MRTask2<CMTask> {
         }
       }
       boolean isRemoteTreeChunk = _computeOOB && isRemote; // this is chunk which was used for construction the tree by another node
-      if (isRemoteTreeChunk) init_row = _rowsPerNode[producerId] + (int)chks[0]._start; // producerRemoteRows(producerId, chks[0]._vec.chunkKey(chks[0].cidx())); //(int)chks[0]._start;
+      if (isRemoteTreeChunk) init_row = _rowsPerNode[producerId] + (int)chks[0]._start + producerRemoteRows(producerId, chks[0]._vec.chunkKey(chks[0].cidx()));
       /* NOTE: Before changing used generator think about which kind of random generator you need:
        * if always deterministic or non-deterministic version - see hex.rf.Utils.get{Deter}RNG */
       // DEBUG: if( _computeOOB && (isLocalTree || isRemoteTreeChunk)) System.err.println(treeSeed + " : " + init_row + " (CM) " + isRemoteTreeChunk);
@@ -211,7 +212,6 @@ public class CMTask extends MRTask2<CMTask> {
       Random rand = Utils.getDeterRNG(seed);
       // Now for all rows, classify & vote!
       ROWS: for( int row = 0; row < rows; row++ ) {
-//        int row = r + (int)chks[0]._start;
         // ------ THIS CODE is crucial and serve to replay the same sequence
         // of random numbers as in the method Data.sampleFair()
         // Skip row used during training if OOB is computed
@@ -221,9 +221,19 @@ public class CMTask extends MRTask2<CMTask> {
         if( chks[_classcol].isNA0(row)) continue;
 
         if( _computeOOB && (isLocalTree || isRemoteTreeChunk) ) { // if OOBEE is computed then we need to take into account utilized sampling strategy
-          switch( _model.sampling_strategy ) {
-            case RANDOM          : if (sampledItem < _model.sample ) continue ROWS; break;
-            default: assert false : "The selected sampling strategy does not support OOBEE replay!"; break;
+          if (!_model.get_params().local_mode) {
+            if ( _model.tree_pojos[ntree+1] == null || (_model.tree_pojos[ntree+1] != null &&_model.tree_pojos[ntree+1]._nonOOB_indexes == null)) {
+              switch (_model.sampling_strategy) {
+                case RANDOM:
+                  if (sampledItem < _model.sample) continue ROWS;
+                  break;
+                default:
+                  assert false : "The selected sampling strategy does not support OOBEE replay!";
+                  break;
+              }
+            }
+          } else {
+            if (!_model.tree_pojos[ntree+1].isOOB(row + (int)chks[0]._start)) continue;
           }
         }
         // --- END OF CRUCIAL CODE ---
