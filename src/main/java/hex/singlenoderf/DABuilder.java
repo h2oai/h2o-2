@@ -100,13 +100,13 @@ public class DABuilder {
       // Collects jobs loading local chunks
       ArrayList<RecursiveAction> dataInhaleJobs = new ArrayList<RecursiveAction>();
 
-      Log.info("\n\nTOTAL NUMBER OF CHUNKS: " + fr.anyVec().nChunks()+"\n\n");
+      Log.info("\n\nTotal Number of Chunks: " + fr.anyVec().nChunks()+"\n\n");
 
       int cnter_local = 0;
       int cnter_remote = 0;
       for(int i = 0; i < fr.anyVec().nChunks(); ++i) {
         if (useNonLocal) {
-          cnter_remote++;
+          if (fr.anyVec().chunkKey(i).home()) { cnter_local++; } else { cnter_remote++; }
           dataInhaleJobs.add(loadChunkAction(dapt, fr, i, _isByteCol, _naCnts, rfmodel.regression));
         } else if (fr.anyVec().chunkKey(i).home()) {
           cnter_local++;
