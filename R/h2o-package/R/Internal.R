@@ -760,6 +760,7 @@ function(h2o, key) {
 #' Fetch all of the json that the key can get!
 doNotCallThisMethod...Unsupported<-
 function(h2o, key) {
+  warning("This method is not supported ... do not expect it to give you anything reasonable!")
   if ( ! (key %in% h2o.ls(h2o)$Key)) stop( paste("The h2o instance at ", h2o@ip, ":", h2o@port, " does not have key: \"", key, "\"", sep = ""))
   .fetchJSON(h2o, key)
 }
