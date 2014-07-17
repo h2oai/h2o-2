@@ -34,7 +34,7 @@ print(paste(    "train"     , train))
 test <- locate("smalldata/histogram_test/alphabet_cattest.csv")
 print(paste(    "test"     , test))    
 
-x = c("x1", "x2")
+x = "X"
 print(    "x"     )    
 print(x) 
 
