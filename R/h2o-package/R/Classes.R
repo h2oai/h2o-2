@@ -423,11 +423,24 @@ h2o.cut <- function(x, breaks) {
 }
 
 # TODO: H2O doesn't support any arguments beyond the single H2OParsedData object (with <= 2 cols)
-h2o.table <- function(x) {
+h2o.table <- function(x, return.in.R = FALSE) {
   if(missing(x)) stop("Must specify data set")
   if(!inherits(x, "H2OParsedData")) stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
   if(ncol(x) > 2) stop("Unimplemented")
-  .h2o.__unop2("table", x)
+  if(!is.logical(return.in.R)) stop("return.in.R must be TRUE or FALSE")
+  
+  tb <- .h2o.__unop2("table", x)
+  if(return.in.R) {
+    df <- as.data.frame(tb)
+    if(!is.null(df$Count))
+      return(xtabs(Count ~ ., data = df))
+    rownames(df) <- df$'row.names'
+    df$'row.names' <- NULL
+    tb <- as.table(as.matrix(df))
+    # TODO: Dimension names should be the names of the columns containing the cross-classifying factors
+    dimnames(tb) <- list("row.levels" = rownames(tb), "col.levels" = colnames(tb))
+  }
+  return(tb)
 }
 
 h2o.ddply <- function (.data, .variables, .fun = NULL, ..., .progress = 'none'){
@@ -970,6 +983,8 @@ setMethod("var", "H2OParsedData", function(x, y = NULL, na.rm = FALSE, use) {
 })
 
 as.data.frame.H2OParsedData <- function(x, ...) {
+  if(class(x) != "H2OParsedData") stop("x must be of class H2OParsedData")
+  
   # Versions of R prior to 3.1 should not use hex string.
   # Versions of R including 3.1 and later should use hex string.
   use_hex_string = FALSE
@@ -978,7 +993,7 @@ as.data.frame.H2OParsedData <- function(x, ...) {
       use_hex_string = TRUE
     }
   }
-
+  
   url <- paste('http://', x@h2o@ip, ':', x@h2o@port,
                '/2/DownloadDataset',
                '?src_key=', URLencode(x@key),
@@ -986,27 +1001,27 @@ as.data.frame.H2OParsedData <- function(x, ...) {
                sep='')
   ttt <- getURL(url)
   n = nchar(ttt)
-
+  
   # Delete last 1 or 2 characters if it's a newline.
   # Handle \r\n (for windows) or just \n (for not windows).
   chars_to_trim = 0
   if (n >= 2) {
-      c = substr(ttt, n, n)
-      if (c == "\n") {
-          chars_to_trim = chars_to_trim + 1
+    c = substr(ttt, n, n)
+    if (c == "\n") {
+      chars_to_trim = chars_to_trim + 1
+    }
+    if (chars_to_trim > 0) {
+      c = substr(ttt, n-1, n-1)
+      if (c == "\r") {
+        chars_to_trim = chars_to_trim + 1
       }
-      if (chars_to_trim > 0) {
-          c = substr(ttt, n-1, n-1)
-          if (c == "\r") {
-              chars_to_trim = chars_to_trim + 1
-          }
-      }    
+    }    
   }
-
+  
   if (chars_to_trim > 0) {
-      ttt2 = substr(ttt, 1, n-chars_to_trim)
-      # Is this going to use an extra copy?  Or should we assign directly to ttt?
-      ttt = ttt2
+    ttt2 = substr(ttt, 1, n-chars_to_trim)
+    # Is this going to use an extra copy?  Or should we assign directly to ttt?
+    ttt = ttt2
   }
   
   # if((df.ncol = ncol(df)) != (x.ncol = ncol(x)))
@@ -1026,6 +1041,7 @@ as.data.frame.H2OParsedData <- function(x, ...) {
 }
 
 as.matrix.H2OParsedData <- function(x, ...) { as.matrix(as.data.frame(x, ...)) }
+as.table.H2OParsedData <- function(x, ...) { as.table(as.matrix(x, ...))}
 
 head.H2OParsedData <- function(x, n = 6L, ...) {
   numRows = nrow(x)

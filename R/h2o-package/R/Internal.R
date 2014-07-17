@@ -770,14 +770,12 @@ function(expr, envir = globalenv()) {
   paste(prefix, temp, sep="_")
 }
 
-
 #'
 #' Fetch the JSON for a given model key.
 #'
 #' Grabs all of the JSON and returns it as a named list. Do this by using the 2/Inspector.json page, which provides
 #' a redirect URL to the appropriate Model View page.
-.fetchJSON<-
-function(h2o, key) {
+.fetchJSON <- function(h2o, key) {
   redirect_url <- .h2o.__remoteSend(h2o, .h2o.__PAGE_INSPECTOR, src_key = key)$response_info$redirect_url
   page <- strsplit(redirect_url, '\\?')[[1]][1]                         # returns a list of two items
   page <- paste(strsplit(page, '')[[1]][-1], sep = "", collapse = "")   # strip off the leading '/'
@@ -798,8 +796,7 @@ function(h2o, key) {
 
 #'
 #' Get the reference to a frame with the given key.
-h2o.getFrame<-
-function(h2o, key) {
+h2o.getFrame <- function(h2o, key) {
   if ( ! (key %in% h2o.ls(h2o)$Key)) stop( paste("The h2o instance at ", h2o@ip, ":", h2o@port, " does not have key: \"", key, "\"", sep = ""))
   new("H2OParsedData", h2o = h2o, key = key)
 }
