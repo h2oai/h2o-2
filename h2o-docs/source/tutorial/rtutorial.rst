@@ -45,8 +45,7 @@ Getting Started
   Before beginning, be sure to have an instance of H\ :sub:`2`\ O
   running. Additionally, users who are using H\ :sub:`2`\ O for the
   first time can find help for installing the R package at 
-  http://docs.0xdata.com/Ruser/Rh2opackage.html. 
-
+  http://docs.0xdata.com/Ruser/Rinstall.html.
 
   **Step 1**
 
