@@ -132,9 +132,20 @@ public class VariableImportance extends MRTask2<VariableImportance> {
         // Do not skip yet the rows with NAs in the rest of columns
         if( chks[_ncols - 1].isNA0(row)) continue;
 
-        switch( _model.sampling_strategy ) {
-          case RANDOM          : if (sampledItem < _model.sample ) continue ROWS; break;
-          default: assert false : "The selected sampling strategy does not support OOBEE replay!"; break;
+
+        if (!_model.get_params().local_mode) {
+          if ( _model.tree_pojos[ntree+1] == null || (_model.tree_pojos[ntree+1] != null &&_model.tree_pojos[ntree+1]._nonOOB_indexes == null)) {
+            switch (_model.sampling_strategy) {
+              case RANDOM:
+                if (sampledItem < _model.sample) continue ROWS;
+                break;
+              default:
+                assert false : "The selected sampling strategy does not support OOBEE replay!";
+                break;
+            }
+          }
+        } else {
+          if (!_model.tree_pojos[ntree+1].isOOB(row + (int)chks[0]._start)) continue;
         }
 
         if (collectOOB) {
