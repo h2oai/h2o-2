@@ -382,6 +382,32 @@ h2o.setLogPath <- function(path, type) {
   return(res)
 }
 
+
+#'
+#' Check if any item in the expression is an H2OParsedData object.
+#'
+#' Useful when trying to determine whether to unravel the expression, or can just ship it up to h2o with .h2o.exec2
+.anyH2O<-
+function(expr, envir) {
+ l <- unlist(recursive = T, lapply(as.list(expr), .as_list))
+ any( "H2OParsedData" == unlist(lapply(l, .eval_class, envir)))
+}
+
+#'
+#' Ship a non-H2OParsedData involving expression to H2O.
+#'
+#' No need to do any fancy footwork here (handles arbitrary expressions like sum(c(1,2,3))
+.h2o.exec2 <- function(h2o, expr, dest_key = "") {
+  if (missing(h2o)) stop("Must specify an instance of h2o to operate on non-H2OParsedData objects!")
+  if (dest_key == "")
+    res <- .h2o.__exec2(h2o, expr)
+  else
+    res <- .h2o.__exec2_dest_key(h2o, expr, dest_key)
+
+  key <- res$dest_key
+  new("H2OParsedData", h2o = h2o, key = key)
+}
+
 #'
 #' Check for assignment with `<-` or `=`
 #'

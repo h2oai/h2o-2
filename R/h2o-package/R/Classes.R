@@ -384,9 +384,13 @@ as.h2o <- function(client, object, key = "", header, sep = "") {
   }
 }
 
-h2o.exec <- function(expr_to_execute) {
+h2o.exec <- function(expr_to_execute, h2o = NULL, dest_key = "") {
+  if (!is.null(h2o) && !.anyH2O(substitute(expr_to_execute), envir = parent.frame())) {
+    return(.h2o.exec2(h2o, deparse(substitute(expr_to_execute)), dest_key))
+  }
   expr <- .replace_with_keys(substitute( expr_to_execute ), envir = parent.frame())
   res <- NULL
+  if (dest_key != "") .pkg.env$DESTKEY <- dest_key
   if (.pkg.env$DESTKEY == "") {
     res <- .h2o.__exec2(.pkg.env$SERVER, deparse(expr))
   } else {
