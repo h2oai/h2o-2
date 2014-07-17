@@ -10,7 +10,6 @@ Steam.ScoringSelectionView = (_) ->
     return 'Remove pending scorings from your selection.' if some selections, (selection) -> not selection.isReady()
     return 'Remove failed scorings from your selection.' if some selections, (selection) -> selection.hasFailed()
     return 'Remove comparison tables from your selection.' if some selections, (selection) -> selection.type is 'comparison'
-    return 'Ensure that all selected scorings refer to conforming datasets.' unless valuesAreEqual selections, (selection) -> selection.data.input.frameKey
     return 'Ensure that all selected scorings belong to the same model category.' unless valuesAreEqual selections, (selection) -> selection.data.input.model.model_category
     return 'Ensure that all selected scorings refer to the same response column.' unless valuesAreEqual selections, (selection) -> selection.data.input.model.response_column_name
 
