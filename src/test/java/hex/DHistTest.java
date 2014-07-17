@@ -22,7 +22,7 @@ public class DHistTest extends TestUtil {
     try {
       // Configure DRF
       drf.source = parseFrame(destTrain, "../smalldata/histogram_test/alphabet_cattest.csv");
-      drf.response = drf.source.vecs()[2];
+      drf.response = drf.source.vecs()[1];
       drf.classification = true;
       drf.ntrees = 100;
       drf.max_depth = 5; // = interaction.depth
