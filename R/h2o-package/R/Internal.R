@@ -677,12 +677,17 @@ function(expr, envir = globalenv()) {
   # list-ify the expression
   l <- lapply(as.list(expr), .as_list)
 
-  # replace any R variable names with the key name in the cloud, also handles column names passed as strings
-  l <- .replace_with_keys_helper(l, envir)
+  if (length(l) == 1) {
+    l <- unlist(.replace_all(l, envir))
+  } else {
 
-  # return the modified expression
-  rm("COLNAMES", envir = .pkg.env)
-  as.name(as.character(as.expression(.back_to_expr(l))))
+    # replace any R variable names with the key name in the cloud, also handles column names passed as strings
+    l <- .replace_with_keys_helper(l, envir)
+
+    # return the modified expression
+    rm("COLNAMES", envir = .pkg.env)
+    as.name(as.character(as.expression(.back_to_expr(l))))
+  }
 }
 
 .h2o.__unop2 <- function(op, x) {
