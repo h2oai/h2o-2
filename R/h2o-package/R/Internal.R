@@ -366,7 +366,7 @@ h2o.setLogPath <- function(path, type) {
 #------------------------------------ Exec2 ------------------------------------#
 .h2o.__exec2 <- function(client, expr) {
   destKey = paste(.TEMP_KEY, ".", .pkg.env$temp_count, sep="")
-  .pkg.env$temp_count = (.pkg.env$temp_count + 1) %% .RESULT_MAX
+  .pkg.env$temp_count <- (.pkg.env$temp_count + 1) %% .RESULT_MAX
   .h2o.__exec2_dest_key(client, expr, destKey)
   # .h2o.__exec2_dest_key(client, expr, .TEMP_KEY)
 }
@@ -374,11 +374,11 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__exec2_dest_key <- function(client, expr, destKey) {
   type = tryCatch({ typeof(expr) }, error = function(e) { "expr" })
   if (type != "character")
-    expr = deparse(substitute(expr))
-  expr = paste(destKey, "=", expr)
-  res = .h2o.__remoteSend(client, .h2o.__PAGE_EXEC2, str=expr)
+    expr <- deparse(substitute(expr))
+  expr <- paste(destKey, "=", expr)
+  res  <- .h2o.__remoteSend(client, .h2o.__PAGE_EXEC2, str=expr)
   if(!is.null(res$response$status) && res$response$status == "error") stop("H2O returned an error!")
-  res$dest_key = destKey
+  res$dest_key <- destKey
   return(res)
 }
 
@@ -397,15 +397,42 @@ function(expr, envir) {
 #' Ship a non-H2OParsedData involving expression to H2O.
 #'
 #' No need to do any fancy footwork here (handles arbitrary expressions like sum(c(1,2,3))
-.h2o.exec2 <- function(h2o, expr, dest_key = "") {
+.h2o.exec2<-
+function(h2o, expr, dest_key = "") {
   if (missing(h2o)) stop("Must specify an instance of h2o to operate on non-H2OParsedData objects!")
   if (dest_key == "")
     res <- .h2o.__exec2(h2o, expr)
   else
     res <- .h2o.__exec2_dest_key(h2o, expr, dest_key)
-
   key <- res$dest_key
-  new("H2OParsedData", h2o = h2o, key = key)
+  new("H2OParsedData", h2o = h2o, key = key, col_names = .getColNames(res), nrows = .getRows(res), ncols = .getCols(res), any_enum = .getAnyEnum(res))
+}
+
+#'
+#' Boolean if any of the returned column types are enum.
+.getAnyEnum<-
+function(json) {
+  res <- unlist(lapply(json$cols, function(x) as.character(x$type)))
+  any(res == "Enum")
+}
+
+#'
+#' Get the column names out of the Exec2 JSON output.
+.getColNames<-
+function(json) {
+  res <- unlist(lapply(json$cols, function(x) as.character(x$name)))
+  if (is.null(res)) return("")
+  res
+}
+
+.getRows<-
+function(json) {
+  json$num_rows
+}
+
+.getCols<-
+function(json) {
+  json$num_cols
 }
 
 #'
@@ -499,6 +526,18 @@ function(object, envir) {
   object <- .get_col_id(as.character(eval(object, envir = envir)), envir)
 }
 
+.lookUp<-
+function(object) {
+ cnt <- 1
+ object <- as.character(object)
+ if (!exists(object, globalenv())) { return(-1) }
+ if (exists(object, parent.frame(cnt))) {
+    return(1 + cnt)
+ } else {
+    return(.lookUp(object) + 1)
+ }
+}
+
 #'
 #' Actually do the replacing of variable/column name with the h2o key names / indices
 .replace_all<-
@@ -558,7 +597,7 @@ function(a_list, envir) {
         # If the col_id comes back as null, swap with domain mapping.
         swap_in <- .swap_with_colid(eval(a_list, envir = envir), envir)
         if(length(swap_in) == 0) {
-          colKey <- new("H2OParsedData", h2o = .pkg.env$SERVER, key = as.character(.pkg.env$CURKEY))[, as.character(.pkg.env$CURCOL)]
+          colKey <- .h2o.exec2(as.character(.pkg.env$CURKEY), h2o = .pkg.env$SERVER, as.character(.pkg.env$CURKEY))[, as.character(.pkg.env$CURCOL)]
           a_list <- .getDomainMapping(colKey, a_list)$map
         } else {
           assign("CURCOL", swap_in, envir = .pkg.env)
@@ -693,15 +732,15 @@ function(expr, envir = globalenv()) {
 .h2o.__unop2 <- function(op, x) {
   if(missing(x)) stop("Must specify data set")
   if(class(x) != "H2OParsedData") stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
-  
-  expr = paste(op, "(", x@key, ")", sep = "")
-  res = .h2o.__exec2(x@h2o, expr)
+
+  expr <- paste(op, "(", x@key, ")", sep = "")
+  res <- .h2o.__exec2(x@h2o, expr)
   if(res$num_rows == 0 && res$num_cols == 0)
     return(ifelse(op %in% .LOGICAL_OPERATORS, as.logical(res$scalar), res$scalar))
-  if(op %in% .LOGICAL_OPERATORS)
-    new("H2OParsedData", h2o=x@h2o, key=res$dest_key, logic=TRUE)
-  else
-    new("H2OParsedData", h2o=x@h2o, key=res$dest_key, logic=FALSE)
+
+  res <- .h2o.exec2(expr = res$dest_key, h2o = x@h2o, dest_key = res$dest_key)
+  res@logic <- op %in% .LOGICAL_OPERATORS
+  res
 }
 
 .h2o.__binop2 <- function(op, x, y) {
@@ -726,10 +765,10 @@ function(expr, envir = globalenv()) {
   
   if(res$num_rows == 0 && res$num_cols == 0)
     return(ifelse(op %in% .LOGICAL_OPERATORS, as.logical(res$scalar), res$scalar))
-  if(op %in% .LOGICAL_OPERATORS)
-    new("H2OParsedData", h2o=myClient, key=res$dest_key, logic=TRUE)
-  else
-    new("H2OParsedData", h2o=myClient, key=res$dest_key, logic=FALSE)
+
+  res <- .h2o.exec2(expr = res$dest_key, h2o = x@h2o, dest_key = res$dest_key)
+  res@logic <- op %in% .LOGICAL_OPERATORS
+  res
 }
 
 #------------------------------------ Utilities ------------------------------------#
@@ -801,7 +840,7 @@ function(h2o, key) {
 h2o.getFrame<-
 function(h2o, key) {
   if ( ! (key %in% h2o.ls(h2o)$Key)) stop( paste("The h2o instance at ", h2o@ip, ":", h2o@port, " does not have key: \"", key, "\"", sep = ""))
-  new("H2OParsedData", h2o = h2o, key = key)
+  .h2o.exec2(expr = key, h2o = h2o, dest_key = key)
 }
 
 # Check if key_env$key exists in H2O and remove if it does

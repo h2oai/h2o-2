@@ -12,15 +12,14 @@
                 Log.info("Filtering out rows by <= from dataset prostate_9 and column \"2\" using value 56.0114571468")
                      filterHex <- hex[hex[,c(2)] <= 56.0114571468,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"2" <= 56.0114571468,]
+                    filterHex <- hex[hex$"C2" <= 56.0114571468,]
                 Log.info("Filtering out rows by <= from dataset prostate_9 and column \"2\" using value 69.546804632")
                      filterHex <- hex[hex[,c(2)] <= 69.546804632,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"2" <= 69.546804632,]
+                    filterHex <- hex[hex$"C2" <= 69.546804632,]
                 Log.info("Filtering out rows by <= from dataset prostate_9 and column \"0\" using value 367.175558983")
                      filterHex <- hex[hex[,c(1)] <= 367.175558983,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"0" <= 367.175558983,]
                     Log.info("Filtering out rows by <= from dataset prostate_9 and column \"2\" using value 66.7755540008, and also subsetting columns.")
                      filterHex <- hex[hex[,c(2)] <= 66.7755540008, c(2)]
                     Log.info("Now do the same filter & subset, but select complement of columns.")
