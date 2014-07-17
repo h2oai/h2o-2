@@ -669,7 +669,7 @@ public class Utils {
     // Look for ZIP magic
     if( bits.length > ZipFile.LOCHDR && UDP.get4(bits,0) == ZipFile.LOCSIG )
       return Compression.ZIP;
-    if( bits.length > 2 && UDP.get2(bits,0) == GZIPInputStream.GZIP_MAGIC )
+    if( bits.length > 2 && UDP.get2u(bits,0) == GZIPInputStream.GZIP_MAGIC )
       return Compression.GZIP;
     return Compression.NONE;
   }

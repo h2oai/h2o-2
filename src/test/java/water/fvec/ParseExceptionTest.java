@@ -17,19 +17,15 @@ public class ParseExceptionTest extends TestUtil {
       fkey0 = NFSFileVec.make(new File("smalldata/parse_folder_test/prostate_0.csv"));
       fkey1 = NFSFileVec.make(new File("smalldata/parse_folder_test/prostate_1.csv"));
       fkey2 = NFSFileVec.make(new File("smalldata/parse_folder_test/prostate_2.csv"));
-      // Now "break" one of the files.
-      Vec vec = DKV.get(fkey1).get();
-      Chunk chk = vec.chunkForChunkIdx(0); // Load the chunk (which otherwise loads only lazily)
-      chk._mem = null;                     // Illegal setup: Chunk _mem should never be null
+      // Now "break" one of the files.  Globally.
+      new Break(fkey1).invokeOnAllNodes();
 
       ParseDataset2.parse(okey, new Key[]{fkey0,fkey1,fkey2});
-      assertTrue("Parse should throw",false);
 
     } catch( Throwable e2 ) {
-      ex = e2;
-    } finally {
-      assertTrue( "Parse did not throw out an NPE", ex != null ) ;
+      ex = e2;                  // Record expected exception
     }
+    assertTrue( "Parse should throw an NPE",ex!=null);
     assertTrue( "All input & output keys not removed", DKV.get(fkey0)==null );
     assertTrue( "All input & output keys not removed", DKV.get(fkey1)==null );
     assertTrue( "All input & output keys not removed", DKV.get(fkey2)==null );
@@ -48,6 +44,18 @@ public class ParseExceptionTest extends TestUtil {
     assertTrue( "All input & output keys not removed", DKV.get(fkey1)==null );
     assertTrue( "All input & output keys not removed", DKV.get(fkey2)==null );
     assertTrue( "All input & output keys not removed", DKV.get(okey )==null );
+  }
+
+  private static class Break extends DRemoteTask<Break> {
+    final Key _key;
+    Break(Key key ) { _key = key; }
+    @Override public void lcompute() {
+      Vec vec = DKV.get(_key).get();
+      Chunk chk = vec.chunkForChunkIdx(0); // Load the chunk (which otherwise loads only lazily)
+      chk._mem = null;                     // Illegal setup: Chunk _mem should never be null
+      tryComplete();
+    }
+    @Override public void reduce(Break drt ) {}
   }
 
 }

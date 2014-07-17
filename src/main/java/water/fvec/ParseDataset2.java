@@ -104,16 +104,16 @@ public final class ParseDataset2 extends Job {
 
     // Took a crash/NPE somewhere in the parser.  Attempt cleanup.
     @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
-      // Assume the input is corrupt - or already partially deleted after
-      // parsing.  Nuke it all - no partial Vecs lying around.
       Futures fs = new Futures();
-      for( Key k : _keys ) UKV.remove(k,fs);
       if( _job != null ) {
         UKV.remove(_job.destination_key,fs);
         UKV.remove(_job._progress,fs);
         // Find & remove all partially-built output vecs & chunks
         if( _job._mfpt != null ) _job._mfpt.onExceptionCleanup(fs);
       }
+      // Assume the input is corrupt - or already partially deleted after
+      // parsing.  Nuke it all - no partial Vecs lying around.
+      for( Key k : _keys ) UKV.remove(k,fs);
       fs.blockForPending();
       // As soon as the job is canceled, threads blocking on the job will
       // wake up.  Better have all cleanup done first!
@@ -694,6 +694,7 @@ public final class ParseDataset2 extends Job {
         for( int c = 0; c < nchunks; ++c )
           DKV.remove(Vec.chunkKey(vkey,c),fs);
       }
+      cancel(true);
       return fs;
     }
   }
