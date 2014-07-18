@@ -87,7 +87,7 @@ h2o.gbm <- function(x, y, distribution = 'multinomial', data, key = "", n.trees 
   params$shrinkage = res$learn_rate
   params$n.bins = res$nbins
   result$params = params
-  extra_json <- doNotCallThisMethod...Unsupported(params$h2o, res$'_key')
+  extra_json <- .fetchJSON(params$h2o, res$'_key')
   result$priorDistribution <- extra_json$gbm_model$"_priorClassDist"
   result$modelDistribution <- extra_json$gbm_model$"_modelClassDist"
   params$balance.classes = res$balance_classes
@@ -383,9 +383,9 @@ h2o.getGLMLambdaModel <- function(model, lambda) {
   }
   
   result <- list()
-#  extra_json <- doNotCallThisMethod...Unsupported(params$h2o, model$'_key')
-#  result$priorDistribution <- extra_json$speedrf_model$"_priorClassDist"
-#  result$modelDistribution <- extra_json$speedrf_model$"_modelClassDist"
+  extra_json <- .fetchJSON(params$h2o, model$'_key')
+  result$priorDistribution <- extra_json$speedrf_model$"_priorClassDist"
+  result$modelDistribution <- extra_json$speedrf_model$"_modelClassDist"
   params$alpha  <- model$alpha
   params$lambda <- model$submodels[[lambda_idx]]$lambda_value
   # if(!is.null(model$parameters$lambda))
@@ -787,7 +787,7 @@ h2o.deeplearning <- function(x, y, data, key = "", classification = TRUE, nfolds
   #                                                    else return(x) })
   result$params$nfolds = model_params$n_folds
   result$params$n_folds = NULL
-  extra_json <- doNotCallThisMethod...Unsupported(params$h2o, res$'_key')
+  extra_json <- .fetchJSON(params$h2o, res$'_key')
   result$priorDistribution <- extra_json$deeplearning_model$"_priorClassDist"
   result$modelDistribution <- extra_json$deeplearning_model$"_modelClassDist"
   errs = tail(res$errors, 1)[[1]]
@@ -1051,7 +1051,7 @@ h2o.randomForest <- function(x, y, data, key="", classification=TRUE, ntree=50, 
     }
   }
 
-  extra_json <- doNotCallThisMethod...Unsupported(params$h2o, res$'_key')
+  extra_json <- .fetchJSON(params$h2o, res$'_key')
   result$priorDistribution <- extra_json$drf_model$"_priorClassDist"
   result$modelDistribution <- extra_json$drf_model$"_modelClassDist"
   
@@ -1203,7 +1203,7 @@ h2o.SpeeDRF <- function(x, y, data, key="", classification=TRUE, nfolds=0, valid
   }
 
 
-  extra_json <- doNotCallThisMethod...Unsupported(params$h2o, res$'_key')
+  extra_json <- .fetchJSON(params$h2o, res$'_key')
   result$priorDistribution <- extra_json$speedrf_model$"_priorClassDist"
   result$modelDistribution <- extra_json$speedrf_model$"_modelClassDist"
   
