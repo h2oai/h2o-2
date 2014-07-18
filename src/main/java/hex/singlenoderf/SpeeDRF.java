@@ -97,7 +97,7 @@ public class SpeeDRF extends Job.ValidatedJob {
     super.queryArgumentValueSet(arg, inputArgs);
 
     if (arg._name.equals("classification")) {
-      arg.setRefreshOnChange();
+      arg._hideInQuery = true;
     }
 
     if (arg._name.equals("balance_classes")) {
