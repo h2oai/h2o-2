@@ -845,8 +845,8 @@ class ASTCbind extends ASTOp {
         Frame fr2 = env.ary(-argcnt+1+i);
         Frame fr3 = fr.makeCompatible(fr2);
         if( fr3 != fr2 ) {      // If copied into a new Frame, need to adjust refs
-          env.addRef(fr3); 
-          env.subRef(fr2,null); 
+          env.addRef(fr3);
+          env.subRef(fr2,null);
         }
         // Take name from an embedded assign: "cbind(colNameX = some_frame, ...)"
         if( fr2.numCols()==1 && apply != null && (name = apply._args[i+1].argName()) != null )
@@ -1662,7 +1662,7 @@ class ASTCut extends ASTOp {
         @Override public void map(Chunk chk, NewChunk nchk) {
           for(int r = 0; r < chk._len; r++) {
             double x = chk.at0(r);
-            if(x <= cutoffs[0] || x > cutoffs[cutoffs.length-1])
+            if(Double.isNaN(x) || x <= cutoffs[0] || x > cutoffs[cutoffs.length-1])
               nchk.addNum(Double.NaN);
             else {
               for(int i = 1; i < cutoffs.length; i++) {
