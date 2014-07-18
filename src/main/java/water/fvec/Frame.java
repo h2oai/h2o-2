@@ -244,7 +244,7 @@ public class Frame extends Lockable<Frame> {
 
   /** Appends an entire Frame */
   public Frame add( Frame fr, String names[] ) {
-    assert _vecs.length==0 || anyVec().group().equals(fr.anyVec().group()) : "Adding a vector from different vector group. Current frame contains "+Arrays.toString(_names)+ " vectors. New frame contains "+Arrays.toString(fr.names()) + " vectors.";
+    assert _vecs.length==0 || (anyVec().group().equals(fr.anyVec().group()) || Arrays.equals(anyVec()._espc,fr.anyVec()._espc)): "Adding a vector from different vector group. Current frame contains "+Arrays.toString(_names)+ " vectors. New frame contains "+Arrays.toString(fr.names()) + " vectors.";
     if( _names != null && fr._names != null )
       for( String name : names )
         if( find(name) != -1 ) throw new IllegalArgumentException("Duplicate name '"+name+"' in Frame");
