@@ -11,7 +11,7 @@ source('../findNSourceUtils.R')
 datetest <- function(conn){
 
   Log.info('uploading date testing dataset')
-  hdf <- h2o.importFile(conn, locate('smalldata/jira/v-11.csv'))
+  hdf <- h2o.importFile(conn, normalizePath(locate('smalldata/jira/v-11.csv')))
   # df should be 5 columns: ds1:5
 
   Log.info('data as loaded into h2o:')

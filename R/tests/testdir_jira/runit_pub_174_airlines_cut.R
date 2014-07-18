@@ -3,7 +3,7 @@ source('../findNSourceUtils.R')
 
 test.pub_174_cut <- function(conn) {
   Log.info('Uploading allyears2k_header.csv to H2O...')
-  air.hex <- h2o.importFile(conn, normalizePath(locate('smalldata/airlines/allyears2k_headers.csv')))
+  air.hex <- h2o.importFile(conn, normalizePath(locate('smalldata/airlines/allyears2k_headers.zip')))
   
   Log.info("Cut ArrDelay column with user-specified breaks")
   air.cut <- h2o.cut(air.hex$ArrDelay, breaks = c(-1000, -20, 0, 5, 15, 60, 120, 160, 1500))
