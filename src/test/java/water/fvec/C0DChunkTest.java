@@ -22,7 +22,13 @@ public class C0DChunkTest extends TestUtil {
       for (int i=0;i<K;++i) Assert.assertEquals(d, cc.at0(i), 0);
       for (int i=0;i<K;++i) Assert.assertEquals(d, cc.at(i), 0);
 
-      Chunk cc2 = cc.inflate_impl(new NewChunk(null, 0)).compress();
+      nc = cc.inflate_impl(new NewChunk(null, 0));
+      Assert.assertEquals(K, nc.len());
+      Assert.assertEquals(K, nc.sparseLen());
+      for (int i=0;i<K;++i) Assert.assertEquals(d, nc.at0(i), 0);
+      for (int i=0;i<K;++i) Assert.assertEquals(d, nc.at(i), 0);
+
+      Chunk cc2 = nc.compress();
       Assert.assertEquals(K, cc2.len());
       Assert.assertTrue(cc2 instanceof C0DChunk);
       for (int i=0;i<K;++i) Assert.assertEquals(d, cc2.at0(i), 0);

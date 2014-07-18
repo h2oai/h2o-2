@@ -33,7 +33,21 @@ public class C1SChunkTest extends TestUtil {
       Assert.assertTrue(cc.isNA0(man.length + l));
       Assert.assertTrue(cc.isNA(man.length + l));
 
-      Chunk cc2 = cc.inflate_impl(new NewChunk(null, 0)).compress();
+      nc = cc.inflate_impl(new NewChunk(null, 0));
+      Assert.assertEquals(man.length + 1 + l, nc.len());
+      Assert.assertEquals(man.length + 1 + l, nc.sparseLen());
+      if (l==1) {
+        Assert.assertTrue(nc.isNA0(0));
+        Assert.assertTrue(nc.isNA(0));
+      }
+      for (int i = 0; i < man.length; ++i) {
+        Assert.assertEquals((float) (man[i] * Math.pow(10, exp[i])), (float) nc.at0(l + i), 0);
+        Assert.assertEquals((float) (man[i] * Math.pow(10, exp[i])), (float) nc.at(l + i), 0);
+      }
+      Assert.assertTrue(nc.isNA0(man.length + l));
+      Assert.assertTrue(nc.isNA(man.length + l));
+
+      Chunk cc2 = nc.compress();
       Assert.assertEquals(man.length + 1 + l, cc.len());
       Assert.assertTrue(cc2 instanceof C1SChunk);
       if (l==1) {
@@ -67,7 +81,21 @@ public class C1SChunkTest extends TestUtil {
         Assert.assertEquals((float) (man[i] * Math.pow(10, exp[i])), (float) cc.at0(l + i), 0);
       Assert.assertTrue(cc.isNA0(man.length + l));
 
-      Chunk cc2 = cc.inflate_impl(new NewChunk(null, 0)).compress();
+      nc = cc.inflate_impl(new NewChunk(null, 0));
+      Assert.assertEquals(man.length + 1 + l, nc.len());
+      Assert.assertEquals(man.length + 1 + l, nc.sparseLen());
+      if (l==1) {
+        Assert.assertTrue(nc.isNA0(0));
+        Assert.assertTrue(nc.isNA(0));
+      }
+      for (int i = 0; i < man.length; ++i) {
+        Assert.assertEquals((float) (man[i] * Math.pow(10, exp[i])), (float) nc.at0(l + i), 0);
+        Assert.assertEquals((float) (man[i] * Math.pow(10, exp[i])), (float) nc.at(l + i), 0);
+      }
+      Assert.assertTrue(nc.isNA0(man.length + l));
+      Assert.assertTrue(nc.isNA(man.length + l));
+
+      Chunk cc2 = nc.compress();
       Assert.assertEquals(man.length + 1 + l, cc.len());
       Assert.assertTrue(cc2 instanceof C1SChunk);
       if (l==1) Assert.assertTrue(cc2.isNA0(0));

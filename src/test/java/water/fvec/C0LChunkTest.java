@@ -25,7 +25,7 @@ public class C0LChunkTest extends TestUtil {
       nc = new NewChunk(null, 0);
       cc.inflate_impl(nc);
       Assert.assertEquals(K, nc.len());
-      if (l != 0l) Assert.assertEquals(l == 0l ? 0 : K, nc.len()); //special case for sparse length
+      Assert.assertEquals(l == 0 ? 0 : K, nc.sparseLen());
 
       Iterator<NewChunk.Value> it = nc.values(0, K);
       if (l != 0l) { //if all 0s, then we're already at end

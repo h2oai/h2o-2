@@ -25,7 +25,14 @@ public class C8DChunkTest extends TestUtil {
       Assert.assertTrue(cc.isNA0(vals.length+l));
       Assert.assertTrue(cc.isNA(vals.length+l));
 
-      Chunk cc2 = cc.inflate_impl(new NewChunk(null, 0)).compress();
+      nc = cc.inflate_impl(new NewChunk(null, 0));
+      Assert.assertEquals(vals.length + 1 + l, nc.len());
+      for (int i = 0; i < vals.length; ++i) Assert.assertEquals(vals[i], nc.at0(l+i), 0);
+      for (int i = 0; i < vals.length; ++i) Assert.assertEquals(vals[i], nc.at(l+i), 0);
+      Assert.assertTrue(nc.isNA0(vals.length+l));
+      Assert.assertTrue(nc.isNA(vals.length+l));
+
+      Chunk cc2 = nc.compress();
       Assert.assertEquals(vals.length + 1 + l, cc.len());
       Assert.assertTrue(cc2 instanceof C8DChunk);
       for (int i = 0; i < vals.length; ++i) Assert.assertEquals(vals[i], cc2.at0(l+i), 0);
