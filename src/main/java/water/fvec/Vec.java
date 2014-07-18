@@ -629,8 +629,9 @@ public class Vec extends Iced {
   }
 
   /** Get a Chunk Key from a chunk-index.  Basically the index-to-key map. */
-  public Key chunkKey(int cidx ) {
-    byte [] bits = _key._kb.clone();
+  public Key chunkKey(int cidx ) { return chunkKey(_key,cidx); }
+  static public Key chunkKey(Key veckey, int cidx ) {
+    byte [] bits = veckey._kb.clone();
     bits[0] = Key.DVEC;
     UDP.set4(bits,6,cidx); // chunk#
     return Key.make(bits);

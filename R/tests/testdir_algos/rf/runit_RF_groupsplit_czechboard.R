@@ -24,4 +24,4 @@ test.DRF.Czechboard <- function(conn) {
   testEnd()
 }
 
-doTest("DRF Test: Classification with Checkboard Group Split", test.DRF.Czechboard)
+doTest("DRF Test: Classification with Checkerboard Group Split", test.DRF.Czechboard)

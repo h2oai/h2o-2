@@ -494,7 +494,7 @@ h2o.kmeans <- function(data, centers, cols = '', key = "", iter.max = 10, normal
   params$iter.max = res$max_iter
   result$params = params
   
-  result$cluster = new("H2OParsedData", h2o=data@h2o, key=clusters_key)
+  result$cluster = .h2o.exec2(clusters_key, h2o = data@h2o, clusters_key)
   feat = res$'_names'[-length(res$'_names')]     # Get rid of response column name
   result$centers = t(matrix(unlist(res$centers), ncol = res$k))
   dimnames(result$centers) = list(seq(1,res$k), feat)
@@ -918,7 +918,7 @@ h2o.pcr <- function(x, y, data, key = "", ncomp, family, nfolds = 10, alpha = 0.
   myScore <- h2o.predict(myModel)
   
   myScore[,ncomp+1] = data[,args$y_i]    # Bind response to frame of principal components
-  myGLMData = new("H2OParsedData", h2o=data@h2o, key=myScore@key)
+  myGLMData = .h2o.exec2(myScore@key, h2o = data@h2o, myScore@key)
   h2o.glm(x = 1:ncomp,
           y = ncomp+1,
           data = myGLMData,
@@ -1224,8 +1224,8 @@ h2o.predict <- function(object, newdata) {
                         "H2ODeepLearningModel" = "DeepLearningPredict", "H2OSpeeDRFModel" = "SpeeDRFPredict")
     rand_pred_key = .h2o.__uniqID(key_prefix)
     res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_PREDICT2, model=object@key, data=newdata@key, prediction=rand_pred_key)
-    res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_INSPECT2, src_key=rand_pred_key)
-    new("H2OParsedData", h2o=object@data@h2o, key=rand_pred_key)
+#    res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_INSPECT2, src_key=rand_pred_key)
+    .h2o.exec2(rand_pred_key, h2o = object@data@h2o, rand_pred_key)
   } else if(class(object) == "H2OPCAModel") {
     # Set randomized prediction key
     rand_pred_key = .h2o.__uniqID("PCAPredict")
@@ -1233,14 +1233,14 @@ h2o.predict <- function(object, newdata) {
     numPC = min(length(numMatch[numMatch == TRUE]), object@model$num_pc)
     res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_PCASCORE, source=newdata@key, model=object@key, destination_key=rand_pred_key, num_pc=numPC)
     .h2o.__waitOnJob(object@data@h2o, res$job_key)
-    new("H2OParsedData", h2o=object@data@h2o, key=rand_pred_key)
+    .h2o.exec2(rand_pred_key, h2o = object@data@h2o, rand_pred_key)
   } else if(class(object) == "H2OGLMModel"){
  # Set randomized prediction key
     key_prefix = "GLM2Predict"
     rand_pred_key = .h2o.__uniqID(key_prefix)    
     res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_GLMPREDICT2, model=object@key, data=newdata@key, lambda=object@model$lambda,prediction=rand_pred_key)
     res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_INSPECT2, src_key=rand_pred_key)
-    new("H2OParsedData", h2o=object@data@h2o, key=rand_pred_key)
+    .h2o.exec2(rand_pred_key, h2o = object@data@h2o, rand_pred_key)
   } else
     stop(paste("Prediction has not yet been implemented for", class(object)))
 }
@@ -1372,7 +1372,7 @@ h2o.anomaly <- function(data, model, key = "", threshold = -1.0) {
   
   res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_ANOMALY, source = data@key, dl_autoencoder_model = model@key, destination_key = key, thresh = threshold)
   .h2o.__waitOnJob(data@h2o, res$job_key)
-  new("H2OParsedData", h2o=data@h2o, key=res$destination_key)
+  .h2o.exec2(res$destination_key, h2o = data@h2o, res$destination_key)
 }
 
 # ------------------------------- Helper Functions ---------------------------------------- #

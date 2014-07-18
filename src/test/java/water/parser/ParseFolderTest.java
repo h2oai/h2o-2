@@ -1,14 +1,12 @@
 package water.parser;
 
 import static org.junit.Assert.assertTrue;
-
 import org.junit.Test;
-
 import water.*;
 
 public class ParseFolderTest extends TestUtil {
 
-  @Test public void  testProstate(){
+  @Test public void testProstate() {
     Key k1 = null,k2 = null;
     try {
       k2 = loadAndParseFolder("multipart.hex","smalldata/parse_folder_test" );

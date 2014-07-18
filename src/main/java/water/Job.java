@@ -159,12 +159,12 @@ public abstract class Job extends Func {
    * @param ex exception causing the termination of job.
    */
   public void cancel(Throwable ex){
-    if(_fjtask != null && !_fjtask.isDone()) _fjtask.completeExceptionally(ex);
     StringWriter sw = new StringWriter();
     PrintWriter pw = new PrintWriter(sw);
     ex.printStackTrace(pw);
     String stackTrace = sw.toString();
     cancel("Got exception '" + ex.getClass() + "', with msg '" + ex.getMessage() + "'\n" + stackTrace, JobState.FAILED);
+    if(_fjtask != null && !_fjtask.isDone()) _fjtask.completeExceptionally(ex);
   }
   /** Signal exceptional cancellation of this job.
    * @param msg cancellation message explaining reason for cancelation

@@ -12,31 +12,31 @@
                 Log.info("Filtering out rows by < from dataset poker-hand-testing and column \"2\" using value 2.23642866663")
                      filterHex <- hex[hex[,c(2)] < 2.23642866663,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"2" < 2.23642866663,]
+                    filterHex <- hex[hex$"C2" < 2.23642866663,]
                 Log.info("Filtering out rows by < from dataset poker-hand-testing and column \"8\" using value 2.95084471966")
                      filterHex <- hex[hex[,c(8)] < 2.95084471966,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"8" < 2.95084471966,]
+                    filterHex <- hex[hex$"C8" < 2.95084471966,]
                 Log.info("Filtering out rows by < from dataset poker-hand-testing and column \"7\" using value 2.78026201228")
                      filterHex <- hex[hex[,c(7)] < 2.78026201228,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"7" < 2.78026201228,]
+                    filterHex <- hex[hex$"C7" < 2.78026201228,]
                 Log.info("Filtering out rows by < from dataset poker-hand-testing and column \"1\" using value 1.76819787065")
                      filterHex <- hex[hex[,c(1)] < 1.76819787065,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"1" < 1.76819787065,]
+                    filterHex <- hex[hex$"C1" < 1.76819787065,]
                 Log.info("Filtering out rows by < from dataset poker-hand-testing and column \"7\" using value 1.07700714002")
                      filterHex <- hex[hex[,c(7)] < 1.07700714002,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"7" < 1.07700714002,]
+                    filterHex <- hex[hex$"C7" < 1.07700714002,]
                 Log.info("Filtering out rows by < from dataset poker-hand-testing and column \"2\" using value 3.88314866536")
                      filterHex <- hex[hex[,c(2)] < 3.88314866536,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"2" < 3.88314866536,]
+                    filterHex <- hex[hex$"C2" < 3.88314866536,]
                 Log.info("Filtering out rows by < from dataset poker-hand-testing and column \"7\" using value 5.39272253473")
                      filterHex <- hex[hex[,c(7)] < 5.39272253473,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"7" < 5.39272253473,]
+                    filterHex <- hex[hex$"C7" < 5.39272253473,]
                     Log.info("Filtering out rows by < from dataset poker-hand-testing and column \"3\" using value 4.73575268454, and also subsetting columns.")
                      filterHex <- hex[hex[,c(3)] < 4.73575268454, c(3)]
                     Log.info("Now do the same filter & subset, but select complement of columns.")

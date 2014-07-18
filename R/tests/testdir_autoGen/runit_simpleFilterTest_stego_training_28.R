@@ -12,43 +12,42 @@
                 Log.info("Filtering out rows by == from dataset stego_training and column \"118\" using value 0.0652700861753")
                      filterHex <- hex[hex[,c(118)] == 0.0652700861753,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"118" == 0.0652700861753,]
+                    filterHex <- hex[hex$"C118" == 0.0652700861753,]
                 Log.info("Filtering out rows by == from dataset stego_training and column \"41\" using value 0.177056764273")
                      filterHex <- hex[hex[,c(41)] == 0.177056764273,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"41" == 0.177056764273,]
+                    filterHex <- hex[hex$"C41" == 0.177056764273,]
                 Log.info("Filtering out rows by == from dataset stego_training and column \"73\" using value 0.0299776482627")
                      filterHex <- hex[hex[,c(73)] == 0.0299776482627,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"73" == 0.0299776482627,]
+                    filterHex <- hex[hex$"C73" == 0.0299776482627,]
                 Log.info("Filtering out rows by == from dataset stego_training and column \"12\" using value 0.0324090246436")
                      filterHex <- hex[hex[,c(12)] == 0.0324090246436,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"12" == 0.0324090246436,]
+                    filterHex <- hex[hex$"C12" == 0.0324090246436,]
                 Log.info("Filtering out rows by == from dataset stego_training and column \"101\" using value 0.0710927414817")
                      filterHex <- hex[hex[,c(101)] == 0.0710927414817,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"101" == 0.0710927414817,]
+                    filterHex <- hex[hex$"C101" == 0.0710927414817,]
                 Log.info("Filtering out rows by == from dataset stego_training and column \"137\" using value 0.0537514075556")
                      filterHex <- hex[hex[,c(137)] == 0.0537514075556,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"137" == 0.0537514075556,]
+                    filterHex <- hex[hex$"C137" == 0.0537514075556,]
                 Log.info("Filtering out rows by == from dataset stego_training and column \"79\" using value 0.153820032498")
                      filterHex <- hex[hex[,c(79)] == 0.153820032498,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"79" == 0.153820032498,]
+                    filterHex <- hex[hex$"C79" == 0.153820032498,]
                 Log.info("Filtering out rows by == from dataset stego_training and column \"16\" using value 0.0583329926999")
                      filterHex <- hex[hex[,c(16)] == 0.0583329926999,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"16" == 0.0583329926999,]
+                    filterHex <- hex[hex$"C16" == 0.0583329926999,]
                 Log.info("Filtering out rows by == from dataset stego_training and column \"0\" using value 399.162211968")
                      filterHex <- hex[hex[,c(1)] == 399.162211968,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"0" == 399.162211968,]
                 Log.info("Filtering out rows by == from dataset stego_training and column \"26\" using value 0.114763398012")
                      filterHex <- hex[hex[,c(26)] == 0.114763398012,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"26" == 0.114763398012,]
+                    filterHex <- hex[hex$"C26" == 0.114763398012,]
                     Log.info("Filtering out rows by == from dataset stego_training and column \"72\" using value 0.0285598421838, and also subsetting columns.")
                      filterHex <- hex[hex[,c(72)] == 0.0285598421838, c(72)]
                     Log.info("Now do the same filter & subset, but select complement of columns.")
