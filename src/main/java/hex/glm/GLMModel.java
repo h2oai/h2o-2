@@ -155,13 +155,6 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
       rank = r;
       this.sparseCoef = sparseCoef;
     }
-    @Override
-    public Submodel clone(){
-      Submodel sm = new Submodel(lambda_value,beta == null?null:beta.clone(),norm_beta == null?null:norm_beta.clone(),run_time,iteration,sparseCoef);
-      sm.validation = validation;
-      sm.xvalidation = xvalidation;
-      return sm;
-    }
   }
 
   @API(help = "models computed for particular lambda_value values")
@@ -264,7 +257,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
         _res = (GLMModel)H2O.get(_modelKey).get().clone();
         Submodel sm = _res.submodelForLambda(_lambda);
         assert sm != null:"GLM[" + _modelKey + "]: missing submodel for lambda " + _lambda;
-        sm = sm.clone();
+        sm = (Submodel)sm.clone();
         _res.submodels = new Submodel[]{sm};
         _res.setSubmodelIdx(0);
         tryComplete();
@@ -278,7 +271,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
       public GLMModel atomic(GLMModel old) {
         old.submodels = old.submodels.clone();
         int id = old.submodelIdForLambda(lambda);
-        old.submodels[id] = old.submodels[id].clone();
+        old.submodels[id] = (Submodel)old.submodels[id].clone();
         old.submodels[id].xvalidation = val;
         old.pickBestModel(false);
         return old;
@@ -295,15 +288,16 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
         if(old.submodels == null){
           old.submodels = new Submodel[]{sm};
         } else {
-          old.submodels = old.submodels.clone();
           int id = old.submodelIdForLambda(lambda);
           if (id < 0) {
             id = -id - 1;
             old.submodels = Arrays.copyOf(old.submodels, old.submodels.length + 1);
             for (int i = old.submodels.length - 1; i > id; --i)
               old.submodels[i] = old.submodels[i - 1];
-          } else if(old.submodels[id].iteration >= sm.iteration)
+          } else if (old.submodels[id].iteration > sm.iteration)
             return old;
+          else
+            old.submodels = old.submodels.clone();
           old.submodels[id] = sm;
           old.run_time = Math.max(old.run_time,sm.run_time);
         }
