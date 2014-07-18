@@ -705,9 +705,24 @@ abstract class ASTBinOp extends ASTOp {
                  !(lf && rf && chks[i+nchks.length]._vec.isEnum())) ||
                 bin instanceof ASTEQ ||
                 bin instanceof ASTNE ) {
-              for( int r=0; r<rlen; r++ )
-                n.addNum(bin.op(lf ? chks[i                      ].at0(r) : df0,
-                                rf ? chks[i+(lf ? nchks.length:0)].at0(r) : df1));
+              for( int r=0; r<rlen; r++ ) {
+                double lv; double rv;
+                if (lf) {
+                  if(chks[i].isNA0(r)) { n.addNum(Double.NaN); continue; }
+                  lv = chks[i].at0(r);
+                } else {
+                  if (Double.isNaN(df0)) { n.addNum(Double.NaN); continue; }
+                  lv = df0;
+                }
+                if (rf) {
+                  if(chks[i].isNA0(r)) { n.addNum(Double.NaN); continue; }
+                  rv = chks[i].at0(r);
+                } else {
+                  if (Double.isNaN(df0)) { n.addNum(Double.NaN); continue; }
+                  rv = df0;
+                }
+                n.addNum(bin.op(lv, rv));
+              }
             } else {
               for( int r=0; r<rlen; r++ )  n.addNA();
             }
