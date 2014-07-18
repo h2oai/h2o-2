@@ -31,6 +31,7 @@ h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, forceDL = 
   
   if((verH2O = .h2o.__version(H2Oserver)) != (verPkg = packageVersion("h2o")))
     stop("Version mismatch! H2O is running version ", verH2O, " but R package is version ", toString(verPkg), "\n")
+  assign("SERVER", H2Oserver, .pkg.env)
   return(H2Oserver)
 }
 

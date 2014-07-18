@@ -724,7 +724,7 @@ function(expr, envir = globalenv()) {
     l <- .replace_with_keys_helper(l, envir)
 
     # return the modified expression
-    rm("COLNAMES", envir = .pkg.env)
+    tryCatch(rm("COLNAMES", envir = .pkg.env), warning = function(w) { invisible(w)}, error = function(e) { invisible(e)})
     as.name(as.character(as.expression(.back_to_expr(l))))
   }
 }
