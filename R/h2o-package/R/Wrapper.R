@@ -168,7 +168,8 @@ h2o.clusterStatus <- function(client) {
             "----------------------------------------------------------------------\n",
             sep = "")
       warning(msg)
-    }
+    })
+  }
 }
 
 #.onDetach <- function(libpath) {
