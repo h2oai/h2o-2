@@ -716,7 +716,7 @@ abstract class ASTBinOp extends ASTOp {
                 }
                 if (rf) {
                   if(chks[i].isNA0(r)) { n.addNum(Double.NaN); continue; }
-                  rv = chks[i].at0(r);
+                  rv = chks[i+(lf ? nchks.length:0)].at0(r);
                 } else {
                   if (Double.isNaN(df1)) { n.addNum(Double.NaN); continue; }
                   rv = df1;
