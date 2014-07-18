@@ -5,6 +5,7 @@ import hex.glm.GLMParams.Family;
 import hex.gram.Gram;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import water.H2O.H2OCountedCompleter;
 import water.*;
@@ -20,15 +21,15 @@ import water.util.Utils;
 
 public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
   final protected GLMParams _glm;
-  public GLMTask(Job job, DataInfo dinfo, GLMParams glm){this(job,dinfo,glm,null);}
-  public GLMTask(Job job, DataInfo dinfo, GLMParams glm,H2OCountedCompleter cmp){super(job,dinfo,cmp);_glm = glm;}
+  public GLMTask(Key jobKey, DataInfo dinfo, GLMParams glm){this(jobKey,dinfo,glm,null);}
+  public GLMTask(Key jobKey, DataInfo dinfo, GLMParams glm,H2OCountedCompleter cmp){super(jobKey,dinfo,cmp);_glm = glm;}
 
   //helper function to compute eta - i.e. beta * row
   protected final double computeEta(final int ncats, final int [] cats, final double [] nums, final double [] beta){
     double res = 0;
     for(int i = 0; i < ncats; ++i)res += beta[cats[i]];
     final int numStart = _dinfo.numStart();
-    for(int i = 0; i < nums.length; ++i)res += nums[i]*beta[numStart+i];
+    for (int i = 0; i < nums.length; ++i) res += nums[i] * beta[numStart + i];
     res += beta[beta.length-1]; // intercept
     return res;
   }
@@ -40,39 +41,67 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
    *
    */
   static class YMUTask extends FrameTask<YMUTask>{
-    private long   _nobs;
-    protected double _ymu;
-    public double _ymin = Double.POSITIVE_INFINITY;
-    public double _ymax = Double.NEGATIVE_INFINITY;
-    public YMUTask(Job job, DataInfo dinfo) {this(job,dinfo,null);}
-    public YMUTask(Job job, DataInfo dinfo, H2OCountedCompleter cmp) {
-      super(job,dinfo,cmp);
+    private long []  _nobs;
+    protected double [] _ymu;
+    public double [] _ymin;
+    public double [] _ymax;
+    final int _nfolds;
+    public YMUTask(Key jobKey, DataInfo dinfo,int nfolds) {this(jobKey,dinfo, nfolds, null);}
+    public YMUTask(Key jobKey, DataInfo dinfo,int nfolds,  H2OCountedCompleter cmp) {
+      super(jobKey,dinfo,cmp);
+      _nfolds = nfolds;
+    }
+    @Override public void chunkInit(){
+      super.chunkInit();
+      _ymu = new double[_nfolds+1];
+      _nobs = new long[_nfolds+1];
+      _ymax = new double[_nfolds+1];
+      _ymin = new double[_nfolds+1];
+      Arrays.fill(_ymax,Double.NEGATIVE_INFINITY);
+      Arrays.fill(_ymax,Double.POSITIVE_INFINITY);
     }
     @Override protected void processRow(long gid, double[] nums, int ncats, int[] cats, double [] responses) {
       double response = responses[0];
-      _ymu += response;
-      if(response < _ymin)_ymin = response;
-      if(response > _ymax)_ymax = response;
-      ++_nobs;
+      _ymu[0] += response;
+      ++_nobs[0];
+      if(response < _ymin[0])_ymin[0] = response;
+      if(response > _ymax[0])_ymax[0] = response;
+      for(int i = 1; i < _nfolds+1; ++i) {
+        if(gid % _nfolds == (i-1))
+          continue;
+        _ymu[i] += response;
+        ++_nobs[i];
+        if(response < _ymin[0])_ymin[i] = response;
+        if(response > _ymax[i])_ymax[i] = response;
+      }
     }
     @Override public void reduce(YMUTask t){
-      if(t._nobs != 0){
-        if(_nobs == 0){
+      if(t._nobs[0] != 0){
+        if(_nobs[0] == 0){
           _ymu = t._ymu;
           _nobs = t._nobs;
           _ymin = t._ymin;
           _ymax = t._ymax;
         } else {
-          _ymu = _ymu*((double)_nobs/(_nobs+t._nobs)) + t._ymu*t._nobs/(_nobs+t._nobs);
-          _nobs += t._nobs;
-          _ymax = Math.max(_ymax,t._ymax);
-          _ymin = Math.min(_ymin,t._ymin);
+          for(int i = 0; i < _nfolds+1; ++i) {
+            _ymu[i] = _ymu[i] * ((double) _nobs[i] / (_nobs[i] + t._nobs[i])) + t._ymu[i] * t._nobs[i] / (_nobs[i] + t._nobs[i]);
+            _nobs[i] += t._nobs[i];
+            if(t._ymax[i] > _ymax[i])
+              _ymax[i] = t._ymax[i];
+            if(t._ymin[i] < _ymin[i])
+              _ymin[i] = t._ymin[i];
+          }
         }
       }
     }
-    @Override protected void chunkDone(){_ymu /= _nobs;}
-    public double ymu(){return _ymu;}
-    public long nobs(){return _nobs;}
+    @Override protected void chunkDone(){
+      for(int i = 0; i < _ymu.length; ++i)
+        _ymu[i] /= _nobs[i];
+    }
+    public double ymu(){return ymu(-1);}
+    public long nobs(){return nobs(-1);}
+    public double ymu(int foldId){return _ymu[foldId+1];}
+    public long nobs(int foldId){return _nobs[foldId+1];}
   }
   /**
    * Task to compute Lambda Max for the given dataset.
@@ -86,8 +115,8 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     //public GLMIterationTask(Job job, DataInfo dinfo, GLMParams glm, boolean computeGram, boolean validate, boolean computeGradient, double [] beta, double ymu, double reg, H2OCountedCompleter cmp) {
 
 
-    public LMAXTask(Job job, DataInfo dinfo, GLMParams glm, double ymu, long nobs, double alpha, float [] thresholds, H2OCountedCompleter cmp) {
-      super(job, dinfo, glm, false, true, true, glm.nullModelBeta(dinfo,ymu), ymu, 1.0/nobs, thresholds, cmp);
+    public LMAXTask(Key jobKey, DataInfo dinfo, GLMParams glm, double ymu, long nobs, double alpha, float [] thresholds, H2OCountedCompleter cmp) {
+      super(jobKey, dinfo, glm, false, true, true, glm.nullModelBeta(dinfo,ymu), ymu, 1.0/nobs, thresholds, cmp);
       _gPrimeMu = glm.linkDeriv(ymu);
       _alpha = alpha;
     }
@@ -129,20 +158,24 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     final double _l1pen;
     final double _l2pen;
     final double _reg;
-    public GLMLineSearchTask(Job job, DataInfo dinfo, GLMParams glm, double [] oldBeta, double [] newBeta, double minStep, long nobs, double alpha, double lambda, H2OCountedCompleter cmp){
-      super(job,dinfo,glm,cmp);
+    public GLMLineSearchTask(Key jobKey, DataInfo dinfo, GLMParams glm, double [] oldBeta, double [] newBeta, double minStep, long nobs, double alpha, double lambda, H2OCountedCompleter cmp){
+      super(jobKey,dinfo,glm,cmp);
       _l2pen = 0.5*(1-alpha)*lambda;
       _l1pen = alpha*lambda;
       _reg = 1.0/nobs;
       ArrayList<double[]> betas = new ArrayList<double[]>();
-      double step = 0.5;
-      while(step >= minStep){
+      double diff = 1;
+      while(diff > 1e-4 && betas.size() < 100){
+        diff = 0;
         double [] b = MemoryManager.malloc8d(oldBeta.length);
-        for(int i = 0; i < oldBeta.length; ++i)
-          b[i] = 0.5*(oldBeta[i] + newBeta[i]);
+        for(int i = 0; i < oldBeta.length; ++i) {
+          b[i] = 0.5 * (oldBeta[i] + newBeta[i]);
+          double d = b[i] - oldBeta[i];
+          if(d > diff || -d > diff)
+            diff = d;
+        }
         betas.add(b);
         newBeta = b;
-        step *= 0.5;
       }
       _betas = new double[betas.size()][];
       betas.toArray(_betas);
@@ -171,49 +204,49 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     public void reduce(GLMLineSearchTask git){Utils.add(_objvals,git._objvals);}
   }
 
-  public static final class LMIterationTask extends FrameTask<LMIterationTask>{
-    public final int n_folds;
-    public long _n;
-    Gram [] _gram;
-    double [][] _xy;
-    public LMIterationTask(Job job, DataInfo dinfo,int nfolds, H2OCountedCompleter cmp){
-      super(job, dinfo, cmp);
-      n_folds = Math.max(1,nfolds);
-    }
-    @Override public void chunkInit(){
-      _gram = new Gram[n_folds];
-      _xy = new double[n_folds][];
-      for(int i = 0; i < n_folds; ++i){
-        _gram[i] = new Gram(_dinfo.fullN(), _dinfo.largestCat(), _dinfo._nums, _dinfo._cats,true);
-        _xy[i] = MemoryManager.malloc8d(_dinfo.fullN()+1); // + 1 is for intercept
-      }
-    }
-    @Override public final void processRow(long gid, final double [] nums, final int ncats, final int [] cats, double [] responses){
-      final int fold = n_folds == 1?0:(int)_n % n_folds;
-      final double y = responses[0];
-      _gram[fold].addRow(nums, ncats, cats, 1);
-      for(int i = 0; i < ncats; ++i){
-        final int ii = cats[i];
-        _xy[fold][ii] += responses[0];
-      }
-      final int numStart = _dinfo.numStart();
-      for(int i = 0; i < nums.length; ++i){
-        _xy[fold][numStart+i] += y*nums[i];
-      }
-      ++_n;
-    }
-
-    @Override public void chunkDone(){
-
-    }
-
-    @Override public void reduce(LMIterationTask lmit){
-      for(int i = 0; i < n_folds; ++i){
-        _gram[i].add(lmit._gram[i]);
-        Utils.add(_xy[i],lmit._xy[i]);
-      }
-    }
-  }
+//  public static final class LMIterationTask extends FrameTask<LMIterationTask>{
+//    public final int n_folds;
+//    public long _n;
+//    Gram [] _gram;
+//    double [][] _xy;
+//    public LMIterationTask(Key jobKey, DataInfo dinfo,int nfolds, H2OCountedCompleter cmp){
+//      super(jobKey, dinfo, cmp);
+//      n_folds = Math.max(1,nfolds);
+//    }
+//    @Override public void chunkInit(){
+//      _gram = new Gram[n_folds];
+//      _xy = new double[n_folds][];
+//      for(int i = 0; i < n_folds; ++i){
+//        _gram[i] = new Gram(_dinfo.fullN(), _dinfo.largestCat(), _dinfo._nums, _dinfo._cats,true);
+//        _xy[i] = MemoryManager.malloc8d(_dinfo.fullN()+1); // + 1 is for intercept
+//      }
+//    }
+//    @Override public final void processRow(long gid, final double [] nums, final int ncats, final int [] cats, double [] responses){
+//      final int fold = n_folds == 1?0:(int)_n % n_folds;
+//      final double y = responses[0];
+//      _gram[fold].addRow(nums, ncats, cats, 1);
+//      for(int i = 0; i < ncats; ++i){
+//        final int ii = cats[i];
+//        _xy[fold][ii] += responses[0];
+//      }
+//      final int numStart = _dinfo.numStart();
+//      for(int i = 0; i < nums.length; ++i){
+//        _xy[fold][numStart+i] += y*nums[i];
+//      }
+//      ++_n;
+//    }
+//
+//    @Override public void chunkDone(){
+//
+//    }
+//
+//    @Override public void reduce(LMIterationTask lmit){
+//      for(int i = 0; i < n_folds; ++i){
+//        _gram[i].add(lmit._gram[i]);
+//        Utils.add(_xy[i],lmit._xy[i]);
+//      }
+//    }
+//  }
 
   /**
    * One iteration of glm, computes weighted gram matrix and t(x)*y vector and t(y)*y scalar.
@@ -235,8 +268,9 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     final boolean _computeGradient;
     final boolean _computeGram;
 
-    public GLMIterationTask(Job job, DataInfo dinfo, GLMParams glm, boolean computeGram, boolean validate, boolean computeGradient, double [] beta, double ymu, double reg, float [] thresholds, H2OCountedCompleter cmp) {
-      super(job, dinfo,glm,cmp);
+    public GLMIterationTask(Key jobKey, DataInfo dinfo, GLMParams glm, boolean computeGram, boolean validate, boolean computeGradient, double [] beta, double ymu, double reg, float [] thresholds, H2OCountedCompleter cmp) {
+      super(jobKey, dinfo,glm,cmp);
+      assert beta == null || beta.length == dinfo.fullN()+1:"beta.leng != dinfo.fullN(), beta = " + beta.length + " dinfo = " + dinfo.fullN();
       _beta = beta;
       _ymu = ymu;
       _reg = reg;
@@ -332,9 +366,10 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
         _val.computeAUC();
       }
     }
-    public double [] gradient(double l2pen){
+    public double [] gradient(double alpha, double lambda){
       final double [] res = _grad.clone();
-      for(int i = 0; i < _grad.length-1; ++i) res[i] += l2pen*_beta[i];
+      if(_beta != null)
+        for(int i = 0; i < res.length-1; ++i) res[i] += (1-alpha)*lambda*_beta[i];
       return res;
     }
   }

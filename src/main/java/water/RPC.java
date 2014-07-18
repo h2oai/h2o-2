@@ -120,8 +120,18 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
   // Make an initial RPC, or re-send a packet.  Always called on 1st send; also
   // called on a timeout.
   public synchronized RPC<V> call() {
-    // completer should be added to the RPC call, not DTask! It will not be carried over to remote
-    assert _dt.getCompleter() == null:"Invoking RPC with DTask with non-null completer! Completer's should be added to the RPC object!";
+    // completer will not be carried over to remote
+    // add it to the RPC call.
+    if(_dt.getCompleter() != null){
+      CountedCompleter cc = _dt.getCompleter();
+      assert cc instanceof H2OCountedCompleter;
+      boolean alreadyIn = false;
+      if(_fjtasks != null)
+        for(H2OCountedCompleter hcc:_fjtasks)
+          if(hcc == cc)alreadyIn = true;
+      if(!alreadyIn)
+        addCompleter((H2OCountedCompleter)cc);
+    }
     // If running on self, just submit to queues & do locally
     if( _target==H2O.SELF ) {
       _dt.setCompleter(new H2O.H2OCallback<DTask>() {
