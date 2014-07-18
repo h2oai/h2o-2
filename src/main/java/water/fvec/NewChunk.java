@@ -918,7 +918,7 @@ public class NewChunk extends Chunk {
       if(idx >= 0) i = idx;
       else return 0;
     }
-    if(isNA2(i))throw new RuntimeException("Attempting to acess NA as integer value.");
+    if(isNA2(i))throw new RuntimeException("Attempting to access NA as integer value.");
     if( _ls == null ) return (long)_ds[i];
     return _ls[i]*DParseTask.pow10i(_xs[i]);
   }
@@ -928,7 +928,9 @@ public class NewChunk extends Chunk {
       if(idx >= 0) i = idx;
       else return 0;
     }
-    if( _ds == null ) return at8_impl(i);
+    // if exponent is Integer.MIN_VALUE (for missing value) or >=0, then go the integer path (at8_impl)
+    // negative exponents need to be handled right here
+    if( _ds == null ) return isNA2(i) || _xs[i] >= 0 ? at8_impl(i) : _ls[i]*Math.pow(10,_xs[i]);
     assert _xs==null; return _ds[i];
   }
   @Override public boolean isNA_impl( int i ) {
