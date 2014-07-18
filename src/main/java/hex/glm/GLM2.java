@@ -457,8 +457,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         }
         step *= 0.5;
       } // no line step worked, forcibly converge
-      LogInfo("Line search did not find feasible step, go forward with step = " + step + ".");
-      new GLMIterationTask(GLM2.this.self(),_activeData,_glm,true,true,true,glmt._betas[glmt._betas.length-1],_ymu,1.0/_nobs,thresholds, new Iteration(false)).asyncExec(_activeData._adaptedFrame);
+      LogInfo("Line search did not find feasible step. Converged.");
+      checkKKTAndComplete(_lastResult._glmt,glmt._betas[glmt._betas.length-1]);
     }
   }
 
@@ -476,7 +476,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   private transient H2OCountedCompleter _cmp;
 
   private void LogInfo(String msg){ Log.info("GLM2[dest=" + dest() + ", iteration=" + _iter + "]: " + msg); }
-  private void checkKKTAndComplete(final GLMIterationTask glmt, final double [] newBeta, final boolean failedLineSearch){
+  private void checkKKTAndComplete(final GLMIterationTask glmt, final double [] newBeta){
     assert GLM2.this._cmp != null;
     final double [] fullBeta = expandVec(newBeta,_activeCols);
     // now we need full gradient (on all columns) using this beta
@@ -493,7 +493,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         double[] subgrad = grad.clone();
         ADMMSolver.subgrad(alpha[0], _currentLambda, fullBeta, subgrad);
         double err = GLM_GRAD_EPS;
-        if (!failedLineSearch &&_activeCols != null) {
+        if (_activeCols != null) {
           for (int c : _activeCols)
             if (subgrad[c] > err) err = subgrad[c];
             else if (subgrad[c] < -err) err = -subgrad[c];
@@ -597,7 +597,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         }
         if(constBeta) { // line search failed to progress -> converge (if we a valid solution already, otherwise fail!)
           if(_lastResult == null)throw new RuntimeException("GLM failed to solve! Got NaNs/Infs in the first iteration and line search did not help!");
-          checkKKTAndComplete(_lastResult._glmt.clone(),_lastResult._glmt._beta,false);
+          checkKKTAndComplete(_lastResult._glmt.clone(),_lastResult._glmt._beta);
           return;
         } else // do the line search iteration
           new GLMIterationTask(GLM2.this.self(),_activeData,glmt._glm, true, true, true, glmt._beta,_ymu,1.0/_nobs,thresholds, new Iteration(true)).asyncExec(_activeData._adaptedFrame);
@@ -631,7 +631,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         LogInfo("gradient after " + _iter + " iterations = " + err);
         if(_doLineSearch && err <= GLM_GRAD_EPS){
           LogInfo("converged by reaching small enough gradient, with max |subgradient| = " + err + ", cmp = " + _cmp);
-          checkKKTAndComplete(glmt, glmt._beta,false);
+          checkKKTAndComplete(glmt, glmt._beta);
           return;
         }
       }
@@ -674,7 +674,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           for(int i = 0; i < newBeta.length; ++i)
             if(newBeta[i] != 0) ++nzs;
           LogInfo("lambda_" + _lambdaIdx + "=" + _currentLambda + " converged (reached a fixed point with ~ 1e" + diff + " precision) after " + _iter + "iterations, got " + nzs + " nzs");
-          checkKKTAndComplete(glmt,newBeta,false);
+          checkKKTAndComplete(glmt,newBeta);
           return;
         } else { // not done yet, launch next iteration
           if(glmt._beta != null)

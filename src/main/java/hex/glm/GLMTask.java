@@ -158,14 +158,14 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     final double _l1pen;
     final double _l2pen;
     final double _reg;
-    public GLMLineSearchTask(Key jobKey, DataInfo dinfo, GLMParams glm, double [] oldBeta, double [] newBeta, double minStep, long nobs, double alpha, double lambda, H2OCountedCompleter cmp){
+    public GLMLineSearchTask(Key jobKey, DataInfo dinfo, GLMParams glm, double [] oldBeta, double [] newBeta, double betaEps, long nobs, double alpha, double lambda, H2OCountedCompleter cmp){
       super(jobKey,dinfo,glm,cmp);
       _l2pen = 0.5*(1-alpha)*lambda;
       _l1pen = alpha*lambda;
       _reg = 1.0/nobs;
       ArrayList<double[]> betas = new ArrayList<double[]>();
       double diff = 1;
-      while(diff > 1e-4 && betas.size() < 100){
+      while(diff > betaEps && betas.size() < 100){
         diff = 0;
         double [] b = MemoryManager.malloc8d(oldBeta.length);
         for(int i = 0; i < oldBeta.length; ++i) {
