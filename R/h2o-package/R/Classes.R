@@ -3,9 +3,8 @@
 setClass("H2OClient", representation(ip="character", port="numeric"), prototype(ip="127.0.0.1", port=54321))
 setClass("H2ORawData", representation(h2o="H2OClient", key="character"))
 # setClass("H2ORawData", representation(h2o="H2OClient", key="character", env="environment"))
-setClass("H2OParsedData",
-            representation(h2o="H2OClient", key="character", logic="logical", col_names="vector", nrows="numeric", ncols="numeric", any_enum="logical"),
-            prototype(logic=FALSE, col_names="", ncols=-1, nrows=-1, any_enum = FALSE))
+setClass("H2OParsedData", representation(h2o="H2OClient", key="character", logic="logical", col_names="vector", nrows="numeric", ncols="numeric", any_enum="logical"),
+          prototype(logic=FALSE, col_names="", ncols=-1, nrows=-1, any_enum = FALSE))
 # setClass("H2OParsedData", representation(h2o="H2OClient", key="character", env="environment", logic="logical"), prototype(logic=FALSE))
 setClass("H2OModel", representation(key="character", data="H2OParsedData", model="list", "VIRTUAL"))
 # setClass("H2OModel", representation(key="character", data="H2OParsedData", model="list", env="environment", "VIRTUAL"))
@@ -381,7 +380,7 @@ as.h2o <- function(client, object, key = "", header, sep = "") {
     return(.h2o.exec2(res$dest_key, h2o = client, res$dest_key))
   } else {
     tmpf <- tempfile(fileext=".csv")
-    write.csv(object, file=tmpf, quote=F, row.names=F)
+    write.csv(object, file=tmpf, quote = TRUE, row.names = FALSE)
     h2f <- h2o.uploadFile(client, tmpf, key=key, header=header, sep=sep)
     unlink(tmpf)
     return(h2f)
@@ -433,7 +432,19 @@ h2o.table <- function(x) {
   if(missing(x)) stop("Must specify data set")
   if(!inherits(x, "H2OParsedData")) stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
   if(ncol(x) > 2) stop("Unimplemented")
-  .h2o.__unop2("table", x)
+  tb <- .h2o.__unop2("table", x)
+  
+  if(return.in.R) {
+    df <- as.data.frame(tb)
+    if(!is.null(df$Count))
+      return(xtabs(Count ~ ., data = df))
+    rownames(df) <- df$'row.names'
+    df$'row.names' <- NULL
+    tb <- as.table(as.matrix(df))
+    # TODO: Dimension names should be the names of the columns containing the cross-classifying factors
+    dimnames(tb) <- list("row.levels" = rownames(tb), "col.levels" = colnames(tb))
+  }
+  return(tb)
 }
 
 h2o.ddply <- function (.data, .variables, .fun = NULL, ..., .progress = 'none') {
@@ -983,6 +994,7 @@ setMethod("var", "H2OParsedData", function(x, y = NULL, na.rm = FALSE, use) {
 })
 
 as.data.frame.H2OParsedData <- function(x, ...) {
+  if(class(x) != "H2OParsedData") stop("x must be of class H2OParsedData")
   # Versions of R prior to 3.1 should not use hex string.
   # Versions of R including 3.1 and later should use hex string.
   use_hex_string = FALSE
@@ -1039,6 +1051,7 @@ as.data.frame.H2OParsedData <- function(x, ...) {
 }
 
 as.matrix.H2OParsedData <- function(x, ...) { as.matrix(as.data.frame(x, ...)) }
+as.table.H2OParsedData <- function(x, ...) { as.table(as.matrix(x, ...))}
 
 head.H2OParsedData <- function(x, n = 6L, ...) {
   numRows = nrow(x)
