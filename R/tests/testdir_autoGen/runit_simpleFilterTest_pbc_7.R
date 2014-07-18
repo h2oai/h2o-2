@@ -12,35 +12,35 @@
                 Log.info("Filtering out rows by < from dataset pbc and column \"5\" using value 0.378721689865")
                      filterHex <- hex[hex[,c(5)] < 0.378721689865,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"5" < 0.378721689865,]
+                    filterHex <- hex[hex$"C5" < 0.378721689865,]
                 Log.info("Filtering out rows by < from dataset pbc and column \"4\" using value 29.5506397705")
                      filterHex <- hex[hex[,c(4)] < 29.5506397705,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"4" < 29.5506397705,]
+                    filterHex <- hex[hex$"C4" < 29.5506397705,]
                 Log.info("Filtering out rows by < from dataset pbc and column \"19\" using value 0.946990198784")
                      filterHex <- hex[hex[,c(19)] < 0.946990198784,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"19" < 0.946990198784,]
+                    filterHex <- hex[hex$"C19" < 0.946990198784,]
                 Log.info("Filtering out rows by < from dataset pbc and column \"4\" using value 69.526356506")
                      filterHex <- hex[hex[,c(4)] < 69.526356506,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"4" < 69.526356506,]
+                    filterHex <- hex[hex$"C4" < 69.526356506,]
                 Log.info("Filtering out rows by < from dataset pbc and column \"3\" using value 1.24542678853")
                      filterHex <- hex[hex[,c(3)] < 1.24542678853,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"3" < 1.24542678853,]
+                    filterHex <- hex[hex$"C3" < 1.24542678853,]
                 Log.info("Filtering out rows by < from dataset pbc and column \"11\" using value 1189.47787681")
                      filterHex <- hex[hex[,c(11)] < 1189.47787681,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"11" < 1189.47787681,]
+                    filterHex <- hex[hex$"C11" < 1189.47787681,]
                 Log.info("Filtering out rows by < from dataset pbc and column \"15\" using value 416.218705344")
                      filterHex <- hex[hex[,c(15)] < 416.218705344,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"15" < 416.218705344,]
+                    filterHex <- hex[hex$"C15" < 416.218705344,]
                 Log.info("Filtering out rows by < from dataset pbc and column \"11\" using value 362.827079129")
                      filterHex <- hex[hex[,c(11)] < 362.827079129,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"11" < 362.827079129,]
+                    filterHex <- hex[hex$"C11" < 362.827079129,]
                     Log.info("Filtering out rows by < from dataset pbc and column \"19\" using value 2.64180417548, and also subsetting columns.")
                      filterHex <- hex[hex[,c(19)] < 2.64180417548, c(19)]
                     Log.info("Now do the same filter & subset, but select complement of columns.")

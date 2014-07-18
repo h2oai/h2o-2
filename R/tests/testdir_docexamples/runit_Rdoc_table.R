@@ -9,6 +9,8 @@ summary(prostate.hex)
 head(h2o.table(prostate.hex[,3]))
 head(h2o.table(prostate.hex[,c(3,4)]))
 
+h2o.table(prostate.hex[,3], return.in.R = TRUE)
+h2o.table(prostate.hex[,c(3,4)], return.in.R = TRUE)
 testEnd()
 }
 

@@ -734,14 +734,7 @@ public final class H2O {
     public H2OCallback(Job j){this(j,null);}
     public H2OCallback(Job j, H2OCountedCompleter cc){super(cc); _job = j;}
     @Override public void compute2(){throw new UnsupportedOperationException();}
-    @Override public void onCompletion(CountedCompleter caller){
-      try {
-        callback((T)caller);
-      } catch(Throwable ex){
-        ex.printStackTrace();
-        completeExceptionally(ex);
-      }
-    }
+    @Override public void onCompletion(CountedCompleter caller){ callback((T)caller); }
     @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
       if(_job != null) _job.cancel(ex);
       else ex.printStackTrace();

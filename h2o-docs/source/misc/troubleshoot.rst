@@ -30,6 +30,43 @@ Download and Send Us Your Logs
   and work to resolve your issue. 
 
 
+Hadoop - Copy and Paste Your YARN Logs
+"""""""""""""""""""""""""""""""
+In the event H\ :sub:`2`\ O fails to launch properly on Hadoop send us the YARN logs.
+
+When launching H\ :sub:`2`\ O on Hadoop the following messages will show up first regardless of failure or success, otherwise the argument has not been entered correctly:
+
+::
+
+  amy@mr-0xb1:~/h2o-2.5.0.99999/hadoop$ hadoop jar h2odriver_hdp1.3.2.jar water.hadoop.h2odriver
+  -libjars ../h2o.jar -mapperXmx 10g -nodes 4 -output output903 -verbose:class
+  Determining driver host interface for mapper->driver callback...
+      [Possible callback IP address: 192.168.1.161]
+      [Possible callback IP address: 127.0.0.1]
+  Using mapper->driver callback IP address and port: 192.168.1.161:37244
+  (You can override these with -driverif and -driverport.)
+  Driver program compiled with MapReduce V1 (Classic)
+  Memory Settings:
+  mapred.child.java.opts:      -Xms10g -Xmx10g -verbose:class
+  mapred.map.child.java.opts:  -Xms10g -Xmx10g -verbose:class
+  Extra memory percent:        10
+  mapreduce.map.memory.mb:     11264
+  Job name 'H2O_74206' submitted
+  JobTracker job ID is 'job_201407040936_0030'
+  For YARN users, logs command is 'yarn logs -applicationId application_201407040936_0030'
+  Waiting for H2O cluster to come up...
+
+
+To view the YARN log execute the command specify on line "For YARN users, logs command is <>"
+
+::
+
+  yarn logs -applicationId application_201407040936_0030
+
+Copy and email the logs to support@0xdata.com or paste to h2ostream@googlegroups.com with a brief
+description of your Hadoop environment including the distribution and version of Hadoop.
+
+
 Other Common Troubleshooting Topics
 """"""""""""""""""""""""""""""""""""
 

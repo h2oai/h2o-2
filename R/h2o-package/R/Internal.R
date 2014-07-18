@@ -366,7 +366,7 @@ h2o.setLogPath <- function(path, type) {
 #------------------------------------ Exec2 ------------------------------------#
 .h2o.__exec2 <- function(client, expr) {
   destKey = paste(.TEMP_KEY, ".", .pkg.env$temp_count, sep="")
-  .pkg.env$temp_count = (.pkg.env$temp_count + 1) %% .RESULT_MAX
+  .pkg.env$temp_count <- (.pkg.env$temp_count + 1) %% .RESULT_MAX
   .h2o.__exec2_dest_key(client, expr, destKey)
   # .h2o.__exec2_dest_key(client, expr, .TEMP_KEY)
 }
@@ -374,12 +374,65 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__exec2_dest_key <- function(client, expr, destKey) {
   type = tryCatch({ typeof(expr) }, error = function(e) { "expr" })
   if (type != "character")
-    expr = deparse(substitute(expr))
-  expr = paste(destKey, "=", expr)
-  res = .h2o.__remoteSend(client, .h2o.__PAGE_EXEC2, str=expr)
+    expr <- deparse(substitute(expr))
+  expr <- paste(destKey, "=", expr)
+  res  <- .h2o.__remoteSend(client, .h2o.__PAGE_EXEC2, str=expr)
   if(!is.null(res$response$status) && res$response$status == "error") stop("H2O returned an error!")
-  res$dest_key = destKey
+  res$dest_key <- destKey
   return(res)
+}
+
+
+#'
+#' Check if any item in the expression is an H2OParsedData object.
+#'
+#' Useful when trying to determine whether to unravel the expression, or can just ship it up to h2o with .h2o.exec2
+.anyH2O<-
+function(expr, envir) {
+ l <- unlist(recursive = T, lapply(as.list(expr), .as_list))
+ any( "H2OParsedData" == unlist(lapply(l, .eval_class, envir)))
+}
+
+#'
+#' Ship a non-H2OParsedData involving expression to H2O.
+#'
+#' No need to do any fancy footwork here (handles arbitrary expressions like sum(c(1,2,3))
+.h2o.exec2<-
+function(h2o, expr, dest_key = "") {
+  if (missing(h2o)) stop("Must specify an instance of h2o to operate on non-H2OParsedData objects!")
+  if (dest_key == "")
+    res <- .h2o.__exec2(h2o, expr)
+  else
+    res <- .h2o.__exec2_dest_key(h2o, expr, dest_key)
+  key <- res$dest_key
+  new("H2OParsedData", h2o = h2o, key = key, col_names = .getColNames(res), nrows = .getRows(res), ncols = .getCols(res), any_enum = .getAnyEnum(res))
+}
+
+#'
+#' Boolean if any of the returned column types are enum.
+.getAnyEnum<-
+function(json) {
+  res <- unlist(lapply(json$cols, function(x) as.character(x$type)))
+  any(res == "Enum")
+}
+
+#'
+#' Get the column names out of the Exec2 JSON output.
+.getColNames<-
+function(json) {
+  res <- unlist(lapply(json$cols, function(x) as.character(x$name)))
+  if (is.null(res)) return("")
+  res
+}
+
+.getRows<-
+function(json) {
+  json$num_rows
+}
+
+.getCols<-
+function(json) {
+  json$num_cols
 }
 
 #'
@@ -473,6 +526,18 @@ function(object, envir) {
   object <- .get_col_id(as.character(eval(object, envir = envir)), envir)
 }
 
+.lookUp<-
+function(object) {
+ cnt <- 1
+ object <- as.character(object)
+ if (!exists(object, globalenv())) { return(-1) }
+ if (exists(object, parent.frame(cnt))) {
+    return(1 + cnt)
+ } else {
+    return(.lookUp(object) + 1)
+ }
+}
+
 #'
 #' Actually do the replacing of variable/column name with the h2o key names / indices
 .replace_all<-
@@ -532,7 +597,7 @@ function(a_list, envir) {
         # If the col_id comes back as null, swap with domain mapping.
         swap_in <- .swap_with_colid(eval(a_list, envir = envir), envir)
         if(length(swap_in) == 0) {
-          colKey <- new("H2OParsedData", h2o = .pkg.env$SERVER, key = as.character(.pkg.env$CURKEY))[, as.character(.pkg.env$CURCOL)]
+          colKey <- .h2o.exec2(as.character(.pkg.env$CURKEY), h2o = .pkg.env$SERVER, as.character(.pkg.env$CURKEY))[, as.character(.pkg.env$CURCOL)]
           a_list <- .getDomainMapping(colKey, a_list)$map
         } else {
           assign("CURCOL", swap_in, envir = .pkg.env)
@@ -651,26 +716,31 @@ function(expr, envir = globalenv()) {
   # list-ify the expression
   l <- lapply(as.list(expr), .as_list)
 
-  # replace any R variable names with the key name in the cloud, also handles column names passed as strings
-  l <- .replace_with_keys_helper(l, envir)
+  if (length(l) == 1) {
+    l <- unlist(.replace_all(l, envir))
+  } else {
 
-  # return the modified expression
-  rm("COLNAMES", envir = .pkg.env)
-  as.name(as.character(as.expression(.back_to_expr(l))))
+    # replace any R variable names with the key name in the cloud, also handles column names passed as strings
+    l <- .replace_with_keys_helper(l, envir)
+
+    # return the modified expression
+    rm("COLNAMES", envir = .pkg.env)
+    as.name(as.character(as.expression(.back_to_expr(l))))
+  }
 }
 
 .h2o.__unop2 <- function(op, x) {
   if(missing(x)) stop("Must specify data set")
   if(class(x) != "H2OParsedData") stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
-  
-  expr = paste(op, "(", x@key, ")", sep = "")
-  res = .h2o.__exec2(x@h2o, expr)
+
+  expr <- paste(op, "(", x@key, ")", sep = "")
+  res <- .h2o.__exec2(x@h2o, expr)
   if(res$num_rows == 0 && res$num_cols == 0)
     return(ifelse(op %in% .LOGICAL_OPERATORS, as.logical(res$scalar), res$scalar))
-  if(op %in% .LOGICAL_OPERATORS)
-    new("H2OParsedData", h2o=x@h2o, key=res$dest_key, logic=TRUE)
-  else
-    new("H2OParsedData", h2o=x@h2o, key=res$dest_key, logic=FALSE)
+
+  res <- .h2o.exec2(expr = res$dest_key, h2o = x@h2o, dest_key = res$dest_key)
+  res@logic <- op %in% .LOGICAL_OPERATORS
+  res
 }
 
 .h2o.__binop2 <- function(op, x, y) {
@@ -678,7 +748,7 @@ function(expr, envir = globalenv()) {
   if(class(y) != "H2OParsedData" && length(y) != 1) stop("Unimplemented: y must be a scalar value")
   # if(!((ncol(x) == 1 || class(x) == "numeric") && (ncol(y) == 1 || class(y) == "numeric")))
   #  stop("Can only operate on single column vectors")
-  LHS = ifelse(class(x) == "H2OParsedData", x@key, x)
+  LHS <- ifelse(class(x) == "H2OParsedData", x@key, x)
   
   if((class(x) == "H2OParsedData" || class(y) == "H2OParsedData") && !( op %in% c('==', '!='))) {
     anyFactorsX <- .h2o.__checkForFactors(x)
@@ -687,18 +757,18 @@ function(expr, envir = globalenv()) {
     if(anyFactors) warning("Operation not meaningful for factors.")
   }
   
-  RHS = ifelse(class(y) == "H2OParsedData", y@key, y)
-  expr = paste(LHS, op, RHS)
+  RHS <- ifelse(class(y) == "H2OParsedData", y@key, y)
+  expr <- paste(LHS, op, RHS)
   if(class(x) == "H2OParsedData") myClient = x@h2o
-  else myClient = y@h2o
-  res = .h2o.__exec2(myClient, expr)
+  else myClient <- y@h2o
+  res <- .h2o.__exec2(myClient, expr)
   
   if(res$num_rows == 0 && res$num_cols == 0)
     return(ifelse(op %in% .LOGICAL_OPERATORS, as.logical(res$scalar), res$scalar))
-  if(op %in% .LOGICAL_OPERATORS)
-    new("H2OParsedData", h2o=myClient, key=res$dest_key, logic=TRUE)
-  else
-    new("H2OParsedData", h2o=myClient, key=res$dest_key, logic=FALSE)
+
+  res <- .h2o.exec2(expr = res$dest_key, h2o = myClient, dest_key = res$dest_key)
+  res@logic <- op %in% .LOGICAL_OPERATORS
+  res
 }
 
 #------------------------------------ Utilities ------------------------------------#
@@ -739,14 +809,12 @@ function(expr, envir = globalenv()) {
   paste(prefix, temp, sep="_")
 }
 
-
 #'
 #' Fetch the JSON for a given model key.
 #'
 #' Grabs all of the JSON and returns it as a named list. Do this by using the 2/Inspector.json page, which provides
 #' a redirect URL to the appropriate Model View page.
-.fetchJSON<-
-function(h2o, key) {
+.fetchJSON <- function(h2o, key) {
   redirect_url <- .h2o.__remoteSend(h2o, .h2o.__PAGE_INSPECTOR, src_key = key)$response_info$redirect_url
   page <- strsplit(redirect_url, '\\?')[[1]][1]                         # returns a list of two items
   page <- paste(strsplit(page, '')[[1]][-1], sep = "", collapse = "")   # strip off the leading '/'
@@ -767,10 +835,9 @@ function(h2o, key) {
 
 #'
 #' Get the reference to a frame with the given key.
-h2o.getFrame<-
-function(h2o, key) {
+h2o.getFrame <- function(h2o, key) {
   if ( ! (key %in% h2o.ls(h2o)$Key)) stop( paste("The h2o instance at ", h2o@ip, ":", h2o@port, " does not have key: \"", key, "\"", sep = ""))
-  new("H2OParsedData", h2o = h2o, key = key)
+  .h2o.exec2(expr = key, h2o = h2o, dest_key = key)
 }
 
 # Check if key_env$key exists in H2O and remove if it does

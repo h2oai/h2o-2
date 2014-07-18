@@ -12,7 +12,7 @@
                 Log.info("Filtering out rows by != from dataset HTWO-87-two-lines-dataset and column \"7\" using value 5.0")
                      filterHex <- hex[hex[,c(7)] != 5.0,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"7" != 5.0,]
+                    filterHex <- hex[hex$"C7" != 5.0,]
                     Log.info("Filtering out rows by != from dataset HTWO-87-two-lines-dataset and column \"6\" using value 0.0, and also subsetting columns.")
                      filterHex <- hex[hex[,c(6)] != 0.0, c(6)]
                     Log.info("Now do the same filter & subset, but select complement of columns.")
