@@ -110,6 +110,10 @@ Objects can be created by calls of the form \code{new("H2OParsedData", ...)}.
     \item{\code{h2o}:}{Object of class \code{"H2OClient"}, which is the client object that was passed into the function call.}
     \item{\code{key}:}{Object of class \code{"character"}, which is the hex key assigned to the imported data.}
     \item{\code{logic}:}{Object of class \code{"logical"}, indicating whether the \code{"H2OParsedData"} object represents logical data}
+    \item{\code{any_enum}:}{Object of class \code{"logical"}, indicating whether the frame has any factor columns.}
+    \item{\code{ncols}:}{Object of class \code{"numeric"}, holds the number of columns of the \code{"H2OParsedData"} object.}
+    \item{\code{nrows}:}{Object of class \code{"numeric"}, holds the number of rows of the \code{"H2OParsedData"} object.}
+    \item{\code{col_names}:}{Object of class \code{"vector"}, holds the column names of the \code{"H2OParsedData"} object.}
   }
 }
 \section{Methods}{

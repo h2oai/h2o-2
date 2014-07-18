@@ -97,7 +97,7 @@ public class SpeeDRF extends Job.ValidatedJob {
     super.queryArgumentValueSet(arg, inputArgs);
 
     if (arg._name.equals("classification")) {
-      arg.setRefreshOnChange();
+      arg._hideInQuery = true;
     }
 
     if (arg._name.equals("balance_classes")) {
@@ -498,12 +498,20 @@ public class SpeeDRF extends Job.ValidatedJob {
       if (_params.num_split_features!=-1 && (_params.num_split_features< 1 || _params.num_split_features>vecs.length-1))
         throw new IllegalArgumentException("Number of split features exceeds available data. Should be in [1,"+(vecs.length-1)+"]");
       ChunkAllocInfo cai = new ChunkAllocInfo();
-      if (_params._useNonLocalData && !canLoadAll( _rfmodel.fr, cai )) {
+      boolean can_load_all = canLoadAll(_rfmodel.fr, cai);
+      if (_params._useNonLocalData && !can_load_all) {
         Log.warn("Cannot load all data from remote nodes - " +
                 "the node " + cai.node + " requires " + PrettyPrint.bytes(cai.requiredMemory) + " to load all data and perform computation but there is only " + PrettyPrint.bytes(cai.availableMemory) + " of available memory. " +
                 "Please provide more memory for JVMs or disable the option '"+ Constants.USE_NON_LOCAL_DATA+"' (however, it may affect resulting accuracy).");
         Log.warn("Automatically disabling fast mode.");
         _params._useNonLocalData = false; /* In other words, use local data only... */
+        _drf.local_mode = true;
+      }
+
+      if (can_load_all) {
+        _params._useNonLocalData = true;
+        _drf.local_mode = false;
+        Log.info("Enough room to compute fast speedrf... Pulling all data locally and then launching RF.");
       }
     }
 

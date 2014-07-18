@@ -18,6 +18,7 @@ import water.util.Counter;
 import water.util.Log;
 import water.util.ModelUtils;
 
+import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Random;
@@ -178,70 +179,27 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
   @Override public ConfusionMatrix cm() { return cms[cms.length-1]; }
 
-//  private static void scoreOnTest(SpeeDRFModel m, SpeeDRFModel old) {
-//
-//    // Gather results
-//    Frame scored = m.score(m.test_frame);
-//    water.api.ConfusionMatrix cm = new water.api.ConfusionMatrix();
-//    cm.vactual = m.test_frame.lastVec();
-//    cm.vpredict = scored.anyVec();
-//    cm.invoke();
-//
-//    // Regression scoring
-//    if (m.regression) {
-//      float mse = (float) cm.mse;
-//      m.errs = Arrays.copyOf(old.errs, old.errs.length + 1);
-//      m.errs[m.errs.length - 1] = mse;
-//      m.cms = Arrays.copyOf(old.cms, old.cms.length + 1);
-//      m.cms[m.cms.length - 1] = null;
-//
-//    // Classification scoring
-//    } else {
-//      _domain = m.cmDomain;
-////      m.confusion = CMTask.CMFinal.make(cm.cm, m, _domain, /*errors per tree*/, false, -1, m.cms)
-//      m.cm = cm.cm;
-//
-//      m.errs = Arrays.copyOf(old.errs, old.errs.length + 1);
-//      m.errs[m.errs.length - 1] = -1f;
-//      m.cms = Arrays.copyOf(old.cms, old.cms.length + 1);
-//      ConfusionMatrix new_cm = new ConfusionMatrix(m.cm);
-//      m.cms[m.cms.length - 1] = new_cm;
-//
-//      // Create the ROC Plot
-//      if (m.classes() == 2 && !scored.lastVec().isInt()) {
-//        AUC auc_calc = new AUC();
-//        auc_calc.vactual = cm.vactual;
-//        auc_calc.vpredict = scored.lastVec(); // lastVec is class1
-//        auc_calc.invoke();
-//        m.validAUC = auc_calc; //makeAUC(toCMArray(m.confusion._cms), ModelUtils.DEFAULT_THRESHOLDS, m.cmDomain);
-//      }
-//
-//      // Launch a Variable Importance Task
-//      if (m.importance && !m.regression)
-//        m.varimp = m.doVarImpCalc(m);
-//    }
-//  }
-
-  private static void scoreIt(SpeeDRFModel m, SpeeDRFModel old, boolean score_new_only) {
+  private static void scoreIt(SpeeDRFModel m, SpeeDRFModel old, final boolean score_new_only) {
     // Gather the results
     Futures fs = new Futures();
-    //    final CMTask[] cmTask = new CMTask[1];
-//
-//    H2O.H2OCountedCompleter task4var = new H2O.H2OCountedCompleter() {
-//      @Override public void compute2() {
-//        cmTask[0] = CMTask.scoreTask(score_model.test_frame == null ? score_model.fr : score_model.test_frame, score_model, score_model.size(), score_model.weights, score_model.oobee, score_model._priorClassDist, score_model._modelClassDist);
-//        tryComplete();
-//      }
-//    };
-//    H2O.submitTask(task4var);
-//    fs.add(task4var);
-//    fs.blockForPending();
+    final CMTask[] cmTask = new CMTask[1];
+    final SpeeDRFModel score_model = (SpeeDRFModel)m.clone();
 
-    CMTask[] cmTask = new CMTask[]{CMTask.scoreTask(m.test_frame == null
-                                    ? m.fr
-                                    : m.test_frame, m, m.size(),
-                                      m.weights, m.oobee, m._priorClassDist,
-                                      m._modelClassDist, score_new_only)};
+    H2O.H2OCountedCompleter task4var = new H2O.H2OCountedCompleter() {
+      @Override public void compute2() {
+        cmTask[0] = CMTask.scoreTask(score_model.test_frame == null ? score_model.fr : score_model.test_frame, score_model, score_model.size(), score_model.weights, score_model.oobee, score_model._priorClassDist, score_model._modelClassDist, score_new_only);
+        tryComplete();
+      }
+    };
+    H2O.submitTask(task4var);
+    fs.add(task4var);
+    fs.blockForPending();
+
+//    CMTask[] cmTask = new CMTask[]{CMTask.scoreTask(m.test_frame == null
+//                                    ? m.fr
+//                                    : m.test_frame, m, m.size(),
+//                                      m.weights, m.oobee, m._priorClassDist,
+//                                      m._modelClassDist, score_new_only)};
 
     // Perform the regression scoring
     if (m.regression) {
@@ -289,18 +247,21 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     // Update the tree keys with the new one (tkey)
     m.t_keys = Arrays.copyOf(old.t_keys, old.t_keys.length + 1);
     m.t_keys[m.t_keys.length-1] = tkey;
-//    Log.info("UPDATING NON OOB ROWS:");
-//    Log.info("IS trees_non_oob null ???");
-//    Log.info(m.trees_non_oob == null);
-//    Log.info("IS non_oob null ???");
-//    if (m.trees_non_oob == null) m.trees_non_oob = new HashMap<Key, long[]>();
-//    m.trees_non_oob.put(tkey, non_oob);
     m.tree_pojos = Arrays.copyOf(old.tree_pojos, old.tree_pojos.length + 1);
     m.tree_pojos[m.tree_pojos.length-1] = tp;
 
     // Update the local_forests
     m.local_forests[nodeIdx] = Arrays.copyOf(old.local_forests[nodeIdx],old.local_forests[nodeIdx].length+1);
-    m.local_forests[nodeIdx][m.local_forests[nodeIdx].length-1] = tkey;
+
+    try {
+      m.local_forests[nodeIdx][m.local_forests[nodeIdx].length - 1] = tkey;
+    } catch(ArrayIndexOutOfBoundsException aioobe) {
+      Log.info("Node Index in: "+nodeIdx);
+      Log.info("Length of old local_forests[nodeIdx]: "+old.local_forests[nodeIdx].length);
+      Log.info("Length of new local_forests[nodeIdx]: "+m.local_forests[nodeIdx].length);
+      Log.info("Appending to the node index @: "+(m.local_forests[nodeIdx].length-1));
+      throw H2O.fail(aioobe.getMessage());
+    }
 
     // Update the treeStrings?
     if (old.verbose_output.length < 2) {
