@@ -428,7 +428,7 @@ h2o.cut <- function(x, breaks) {
 }
 
 # TODO: H2O doesn't support any arguments beyond the single H2OParsedData object (with <= 2 cols)
-h2o.table <- function(x) {
+h2o.table <- function(x, return.in.R = FALSE) {
   if(missing(x)) stop("Must specify data set")
   if(!inherits(x, "H2OParsedData")) stop(cat("\nData must be an H2O data set. Got ", class(x), "\n"))
   if(ncol(x) > 2) stop("Unimplemented")
