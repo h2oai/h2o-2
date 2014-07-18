@@ -748,7 +748,7 @@ function(expr, envir = globalenv()) {
   if(class(y) != "H2OParsedData" && length(y) != 1) stop("Unimplemented: y must be a scalar value")
   # if(!((ncol(x) == 1 || class(x) == "numeric") && (ncol(y) == 1 || class(y) == "numeric")))
   #  stop("Can only operate on single column vectors")
-  LHS = ifelse(class(x) == "H2OParsedData", x@key, x)
+  LHS <- ifelse(class(x) == "H2OParsedData", x@key, x)
   
   if((class(x) == "H2OParsedData" || class(y) == "H2OParsedData") && !( op %in% c('==', '!='))) {
     anyFactorsX <- .h2o.__checkForFactors(x)
@@ -757,16 +757,16 @@ function(expr, envir = globalenv()) {
     if(anyFactors) warning("Operation not meaningful for factors.")
   }
   
-  RHS = ifelse(class(y) == "H2OParsedData", y@key, y)
-  expr = paste(LHS, op, RHS)
+  RHS <- ifelse(class(y) == "H2OParsedData", y@key, y)
+  expr <- paste(LHS, op, RHS)
   if(class(x) == "H2OParsedData") myClient = x@h2o
-  else myClient = y@h2o
-  res = .h2o.__exec2(myClient, expr)
+  else myClient <- y@h2o
+  res <- .h2o.__exec2(myClient, expr)
   
   if(res$num_rows == 0 && res$num_cols == 0)
     return(ifelse(op %in% .LOGICAL_OPERATORS, as.logical(res$scalar), res$scalar))
 
-  res <- .h2o.exec2(expr = res$dest_key, h2o = x@h2o, dest_key = res$dest_key)
+  res <- .h2o.exec2(expr = res$dest_key, h2o = myClient, dest_key = res$dest_key)
   res@logic <- op %in% .LOGICAL_OPERATORS
   res
 }
