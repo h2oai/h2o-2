@@ -35,7 +35,7 @@ public class NewChunk extends Chunk {
 
   @Override public boolean isSparse() { return sparse(); }
 
-  int _sparseLen;                    // Logical length
+  int _sparseLen;
   int set_sparseLen(int l) { _sparseLen = l; return l;}
   @Override public int sparseLen() { return _sparseLen; }
 
@@ -346,7 +346,7 @@ public class NewChunk extends Chunk {
       alloc_mantissa(4);
       alloc_exponent(4);
       if (_id != null) alloc_indices(4);
-      }
+    }
     assert _sparseLen == 0 || _sparseLen < _ls.length:"_sparseLen = " + _sparseLen + ", _ls.length = " + _ls.length;
     assert _id == null || _id.length == _ls.length;
     assert _sparseLen <= _len;

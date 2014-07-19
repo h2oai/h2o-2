@@ -35,7 +35,7 @@ public class C0DChunk extends Chunk {
   }
   @Override public int sparseLen(){return _con == 0?0:_len;}
   @Override NewChunk inflate_impl(NewChunk nc) {
-    nc.set_len(nc.set_sparseLen(0)); //Work-around because NewChunk(Chunk) constructor already set the length from the Chunk
+    nc.set_len(nc.set_sparseLen(0));
     if(_con == 0) {
       nc.addZeros(len());
     } else {
