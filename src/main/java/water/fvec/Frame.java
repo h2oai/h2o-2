@@ -817,6 +817,9 @@ public class Frame extends Lockable<Frame> {
     else if (orows instanceof long[]) {
       final long CHK_ROWS=1000000;
       long[] rows = (long[])orows;
+      if (this.numRows() == 0) {
+        return this;
+      }
       if( rows.length==0 || rows[0] < 0 ) {
         if (rows[0] < 0) {
           Vec v = (new SelectVec(rows)).doAll(this.anyVec().makeZero()).getResult()._fr.anyVec();
