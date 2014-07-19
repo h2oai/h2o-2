@@ -25,10 +25,11 @@ public class C1NChunk extends Chunk {
     return this;
   }
   @Override NewChunk inflate_impl(NewChunk nc) {
-    nc._xs = MemoryManager.malloc4(_len);
-    nc._ls = MemoryManager.malloc8(_len);
-    for( int i=0; i<_len; i++ )
-      nc._ls[i] = 0xFF&_mem[i+OFF];
+    nc.alloc_exponent(len());
+    nc.alloc_mantissa(len());
+    for( int i=0; i< len(); i++ )
+      nc.mantissa()[i] = 0xFF&_mem[i+OFF];
+    nc.set_len(nc.set_sparseLen(len()));
     return nc;
   }
 }

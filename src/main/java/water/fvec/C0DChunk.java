@@ -1,8 +1,6 @@
 package water.fvec;
 
-import java.util.Arrays;
 import water.AutoBuffer;
-import water.MemoryManager;
 import water.UDP;
 
 /**
@@ -37,14 +35,11 @@ public class C0DChunk extends Chunk {
   }
   @Override public int sparseLen(){return _con == 0?0:_len;}
   @Override NewChunk inflate_impl(NewChunk nc) {
+    nc.set_len(nc.set_sparseLen(0)); //Work-around because NewChunk(Chunk) constructor already set the length from the Chunk
     if(_con == 0) {
-      nc._id = new int[0];
-      nc._ls = new long[0];
-      nc._xs = new int[0];
-    }
-    else {
-      nc._ds = MemoryManager.malloc8d(_len);
-      Arrays.fill(nc._ds,_con);
+      nc.addZeros(len());
+    } else {
+      for (int i=0; i<len(); ++i) nc.addNum(_con);
     }
     return nc;
   }

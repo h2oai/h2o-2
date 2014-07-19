@@ -3,6 +3,7 @@ package water.fvec;
 import java.util.Arrays;
 import water.*;
 import water.parser.DParseTask;
+import static water.parser.DParseTask.fitsIntoInt;
 
 /**
  * The scale/bias function, where data is in SIGNED bytes before scaling.
@@ -56,13 +57,13 @@ public class C2SChunk extends Chunk {
   }
   @Override NewChunk inflate_impl(NewChunk nc) {
     double dx = Math.log10(_scale);
-    assert DParseTask.fitsIntoInt(dx);
-    Arrays.fill(nc._xs = MemoryManager.malloc4(_len), (int)dx);
-    nc._ls = MemoryManager.malloc8(_len);
-    for( int i=0; i<_len; i++ ) {
+    assert fitsIntoInt(dx);
+    nc.set_len(nc.set_sparseLen(0));
+    final int len = len();
+    for( int i=0; i<len; i++ ) {
       int res = UDP.get2(_mem,(i<<1)+OFF);
-      if( res == C2Chunk._NA ) nc.setNA_impl2(i);
-      else                     nc._ls[i] = res+_bias;
+      if( res == C2Chunk._NA ) nc.addNA();
+      else nc.addNum((long)(res+_bias),(int)dx);
     }
     return nc;
   }
