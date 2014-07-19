@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 
+import hex.GLMTest2;
 import hex.glm.GLM2;
 import hex.glm.GLMParams;
 import water.*;
@@ -12,6 +13,7 @@ import water.deploy.NodeVM;
 import water.exec.Env;
 import water.exec.Exec2;
 import water.parser.ParseDataset;
+import water.serial.ModelSerializationTest;
 
 public class DatasetCompare extends MRTask<DatasetCompare>{
   Frame _fr;
@@ -107,16 +109,20 @@ public class DatasetCompare extends MRTask<DatasetCompare>{
     "train2 <- cbind(train_raw,labels);","train",
   };
 
-  public static void main(String [] args) throws InterruptedException, ExecutionException{
+  public static void main(String [] args) throws InterruptedException, ExecutionException, Exception{
     System.out.println("Running Parser Cmp Test with args=" + Arrays.toString(args));
     System.out.println(Arrays.equals((int[])null,(int[])null));
-    final int nnodes = 1;
+    final int nnodes = 3;
     for( int i = 1; i < nnodes; i++ ) {
       Node n = new NodeVM(args);
       n.inheritIO();
       n.start();
     }
-    H2O.waitForCloudSize(nnodes);
+    H2O.waitForCloudSize(nnodes,20000);
+    new GLMTest2().testCars();
+    new ModelSerializationTest().testGLMModel();
+    new NewVectorTest().testCompression();
+    System.out.println("compression ok");
     for(int i = 0; i < datasets.length; i += 2){
       File f = new File(datasets[i]);
       if(!f.exists()) throw new RuntimeException("did not find file " + f.getAbsolutePath());

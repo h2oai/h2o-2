@@ -729,17 +729,10 @@ public final class H2O {
 
 
   public static abstract class H2OCallback<T extends H2OCountedCompleter> extends H2OCountedCompleter{
-    final Job _job;
-    public H2OCallback(){this(null,null);}
-    public H2OCallback(Job j){this(j,null);}
-    public H2OCallback(Job j, H2OCountedCompleter cc){super(cc); _job = j;}
+    public H2OCallback(){}
+    public H2OCallback(H2OCountedCompleter cc){super(cc);}
     @Override public void compute2(){throw new UnsupportedOperationException();}
-    @Override public void onCompletion(CountedCompleter caller){ callback((T)caller); }
-    @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
-      if(_job != null) _job.cancel(ex);
-      else ex.printStackTrace();
-      return true;
-    }
+    @Override public void onCompletion(CountedCompleter caller){callback((T) caller);}
     public abstract void callback(T t);
   }
 

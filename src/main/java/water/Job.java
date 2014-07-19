@@ -155,9 +155,20 @@ public abstract class Job extends Func {
   public void cancel() {
     cancel((String)null, JobState.CANCELLED);
   }
-  /** Signal exceptional cancellation of this job.
-   * @param ex exception causing the termination of job.
-   */
+
+  public static class JobCancelTask extends  TAtomic<Job> {
+    public boolean _res;
+    final Job _job;
+    public JobCancelTask(Job j){ _job = j;}
+    @Override
+    public Job atomic(Job old) {
+      if(!old.isCancelledOrCrashed()) {
+        _res = true;
+        return _job;
+      }
+      return old;
+    }
+  };
   public void cancel(Throwable ex){
     StringWriter sw = new StringWriter();
     PrintWriter pw = new PrintWriter(sw);

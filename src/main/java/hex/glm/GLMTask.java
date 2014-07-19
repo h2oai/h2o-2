@@ -351,13 +351,15 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     }
     @Override
     public void reduce(GLMIterationTask git){
-      Utils.add(_xy, git._xy);
-      if(_computeGram)_gram.add(git._gram);
-      _yy += git._yy;
-      _nobs += git._nobs;
-      if(_validate) _val.add(git._val);
-      if(_computeGradient) Utils.add(_grad,git._grad);
-      super.reduce(git);
+      if(_jobKey == null || Job.isRunning(_jobKey)) {
+        Utils.add(_xy, git._xy);
+        if (_computeGram) _gram.add(git._gram);
+        _yy += git._yy;
+        _nobs += git._nobs;
+        if (_validate) _val.add(git._val);
+        if (_computeGradient) Utils.add(_grad, git._grad);
+        super.reduce(git);
+      }
     }
 
     @Override public void postGlobal(){

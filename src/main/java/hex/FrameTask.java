@@ -16,7 +16,7 @@ import java.util.Random;
 
 public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
   final protected DataInfo _dinfo;
-  final Key _jobKey;
+  final protected Key _jobKey;
 //  double    _ymu = Double.NaN; // mean of the response
   // size of the expanded vector of parameters
 
