@@ -41,7 +41,7 @@ public class Exec2 extends Request2 {
         Frame fr = env.peekAry();
         String skey = env.peekKey();
         num_rows = fr.numRows();
-        num_cols = fr.numCols();
+        num_cols = num_rows == 0 ? 0 : fr.numCols();
         cols = new Inspect2.ColSummary[num_cols];
         for( int i=0; i<num_cols; i++ )
           cols[i] = new Inspect2.ColSummary(fr._names[i],fr.vecs()[i]);
