@@ -1,5 +1,6 @@
 package water.fvec;
 
+import org.junit.Assert;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -9,6 +10,9 @@ import org.junit.Test;
 import water.Futures;
 import water.TestUtil;
 import water.UKV;
+
+import java.util.Arrays;
+import java.util.Iterator;
 
 /** Test for CBSChunk implementation.
  *
@@ -31,7 +35,7 @@ public class CBSChunkTest extends TestUtil {
     NewChunk nc = new NewChunk(av,0);
     nc._ls = ls;
     nc._xs = xs;
-    nc._len = nc._len2 = ls.length;
+    nc._len = nc._sparseLen = ls.length;
     nc.type();                  // Compute rollups, including NA
     assertEquals(expNA, nc._naCnt);
     // Compress chunk
@@ -87,5 +91,52 @@ public class CBSChunkTest extends TestUtil {
    testImpl(new long[] {Long.MAX_VALUE,Long.MAX_VALUE,Long.MAX_VALUE,1, 0,Long.MAX_VALUE,1,Long.MAX_VALUE},
             new int [] {Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,0, 0,Integer.MIN_VALUE,0,Integer.MIN_VALUE},
             2, 0, 2, 5);
+  }
+
+  @Test public void test_inflate_impl() {
+    for (int l=0; l<2; ++l) {
+      NewChunk nc = new NewChunk(null, 0);
+
+      int[] vals = new int[]{0, 1, 0, 1, 0, 0, 1};
+      if (l==1) nc.addNA();
+      for (int v : vals) nc.addNum(v);
+      nc.addNA();
+
+      Chunk cc = nc.compress();
+      Assert.assertEquals(vals.length + 1 + l, cc.len());
+      Assert.assertTrue(cc instanceof CBSChunk);
+      for (int i = 0; i < vals.length; ++i) Assert.assertEquals(vals[i], cc.at80(l+i));
+      for (int i = 0; i < vals.length; ++i) Assert.assertEquals(vals[i], cc.at8(l+i));
+      Assert.assertTrue(cc.isNA0(vals.length+l));
+      Assert.assertTrue(cc.isNA(vals.length+l));
+
+      nc = new NewChunk(null, 0);
+      cc.inflate_impl(nc);
+      Assert.assertEquals(vals.length+l+1, nc.sparseLen());
+      Assert.assertEquals(vals.length+l+1, nc.len());
+
+      Iterator<NewChunk.Value> it = nc.values(0, vals.length+1+l);
+      for (int i = 0; i < vals.length+1+l; ++i) Assert.assertTrue(it.next().rowId0() == i);
+      Assert.assertTrue(!it.hasNext());
+
+      if (l==1) {
+        Assert.assertTrue(nc.isNA0(0));
+        Assert.assertTrue(nc.isNA(0));
+      }
+      for (int i = 0; i < vals.length; ++i) Assert.assertEquals(vals[i], nc.at80(l+i));
+      for (int i = 0; i < vals.length; ++i) Assert.assertEquals(vals[i], nc.at8(l+i));
+      Assert.assertTrue(nc.isNA0(vals.length+l));
+      Assert.assertTrue(nc.isNA(vals.length+l));
+
+      Chunk cc2 = nc.compress();
+      Assert.assertEquals(vals.length + 1 + l, cc.len());
+      Assert.assertTrue(cc2 instanceof CBSChunk);
+      for (int i = 0; i < vals.length; ++i) Assert.assertEquals(vals[i], cc2.at80(l+i));
+      for (int i = 0; i < vals.length; ++i) Assert.assertEquals(vals[i], cc2.at8(l+i));
+      Assert.assertTrue(cc2.isNA0(vals.length + l));
+      Assert.assertTrue(cc2.isNA(vals.length + l));
+
+      Assert.assertTrue(Arrays.equals(cc._mem, cc2._mem));
+    }
   }
 }
