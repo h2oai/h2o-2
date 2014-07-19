@@ -766,7 +766,7 @@ cbind.H2OParsedData <- function(..., deparse.level = 1) {
   if(is.null(names(l)))
     tmp <- Map(function(x) x@key, l)
   else
-    tmp <- mapply(function(x,n) { ifelse(is.null(n) || is.na(n) || nchar(n) == 0, x@key, paste(n, x@key, sep = "=")) }, l, names(l))
+    tmp <- mapply(function(x,n) { if(is.null(n) || is.na(n) || nchar(n) == 0) x@key else paste(n, x@key, sep = "=") }, l, names(l))
   
   exec_cmd <- sprintf("cbind(%s)", paste(as.vector(tmp), collapse = ","))
   res <- .h2o.__exec2(h2o, exec_cmd)
@@ -1204,22 +1204,26 @@ screeplot.H2OPCAModel <- function(x, npcs = min(10, length(x@model$sdev)), type 
   as.logical(.h2o.__unop2("canBeCoercedToLogical", vec))
 }
 
-setMethod("ifelse", "H2OParsedData", function(test, yes, no) {
+setMethod("ifelse", signature(test="H2OParsedData", yes="ANY", no="ANY"), function(test, yes, no) {
   if(!(is.numeric(yes) || class(yes) == "H2OParsedData") || !(is.numeric(no) || class(no) == "H2OParsedData"))
     stop("Unimplemented")
   if(!test@logic && !.canBeCoercedToLogical(test)) stop(test@key, " is not a H2O logical data type")
-  yes = ifelse(class(yes) == "H2OParsedData", yes@key, yes)
-  no = ifelse(class(no) == "H2OParsedData", no@key, no)
-  expr = paste("ifelse(", test@key, ",", yes, ",", no, ")", sep="")
-  res = .h2o.__exec2(test@h2o, expr)
-  if(res$num_rows == 0 && res$num_cols == 0)   # TODO: If logical operator, need to indicate
-    res$scalar
-  else {
-    res <- .h2o.exec2(res$dest_key, h2o = test@h2o, res$dest_key)
-    res@logic <- FALSE
-    print(res)
-    return(res)
-  }
+  .h2o.__multop2("ifelse", test, yes, no)
+})
+
+setMethod("ifelse", signature(test="logical", yes="H2OParsedData", no="numeric"), function(test, yes, no) {
+  if(length(test) > 1) stop("test must be a single logical value")
+  .h2o.__multop2("ifelse", as.numeric(test), yes, no)
+})
+
+setMethod("ifelse", signature(test="logical", yes="numeric", no="H2OParsedData"), function(test, yes, no) {
+  if(length(test) > 1) stop("test must be a single logical value")
+  .h2o.__multop2("ifelse", as.numeric(test), yes, no)
+})
+
+setMethod("ifelse", signature(test="logical", yes="H2OParsedData", no="H2OParsedData"), function(test, yes, no) {
+  if(length(test) > 1) stop("test must be a single logical value")
+  .h2o.__multop2("ifelse", as.numeric(test), yes, no)
 })
 
 setMethod("levels", "H2OParsedData", function(x) {

@@ -397,8 +397,7 @@ function(expr, envir) {
 #' Ship a non-H2OParsedData involving expression to H2O.
 #'
 #' No need to do any fancy footwork here (handles arbitrary expressions like sum(c(1,2,3))
-.h2o.exec2<-
-function(h2o, expr, dest_key = "") {
+.h2o.exec2 <- function(h2o, expr, dest_key = "") {
   if (missing(h2o)) stop("Must specify an instance of h2o to operate on non-H2OParsedData objects!")
   if (dest_key == "")
     res <- .h2o.__exec2(h2o, expr)
@@ -659,8 +658,7 @@ function(some_expr_list, envir) {
 #'
 #' Swap out any H2OparsedData objects with their key names,
 #' Swap out a '$' "slice" with a [,] slice
-.process_assignment<-
-function(expr, envir) {
+.process_assignment <- function(expr, envir) {
   l <- lapply(as.list(expr), .as_list)
 
   # Have a single column sliced out that we want to a) replace -OR- b) create
@@ -669,8 +667,8 @@ function(expr, envir) {
     cols <- colnames(get(as.character(l[[2]]), envir = envir))
     numCols <- length(cols)
     colname <- tryCatch(
-        ifelse( length(l) == 3, as.character(eval(l[[3]], envir = envir)), as.character(eval(l[[4]], envir = envir))),
-        error = function(e) { return(ifelse( length(l) == 3, as.character(l[[3]]), as.character(l[[4]])))})
+        if(length(l) == 3) as.character(eval(l[[3]], envir = envir)) else as.character(eval(l[[4]], envir = envir)),
+        error = function(e) { return(if(length(l) == 3) as.character(l[[3]]) else as.character(l[[4]]))})
 
     if (! (colname %in% cols)) {
       assign("NEWCOL", colname, envir = .pkg.env)
@@ -735,8 +733,10 @@ function(expr, envir = globalenv()) {
 
   expr <- paste(op, "(", x@key, ")", sep = "")
   res <- .h2o.__exec2(x@h2o, expr)
-  if(res$num_rows == 0 && res$num_cols == 0)
-    return(ifelse(op %in% .LOGICAL_OPERATORS, as.logical(res$scalar), res$scalar))
+  if(res$num_rows == 0 && res$num_cols == 0) {
+    if(op %in% .LOGICAL_OPERATORS) res$scalar <- as.logical(res$scalar)
+    return(res$scalar)
+  }
 
   res <- .h2o.exec2(expr = res$dest_key, h2o = x@h2o, dest_key = res$dest_key)
   res@logic <- op %in% .LOGICAL_OPERATORS
@@ -748,7 +748,7 @@ function(expr, envir = globalenv()) {
   if(class(y) != "H2OParsedData" && length(y) != 1) stop("Unimplemented: y must be a scalar value")
   # if(!((ncol(x) == 1 || class(x) == "numeric") && (ncol(y) == 1 || class(y) == "numeric")))
   #  stop("Can only operate on single column vectors")
-  LHS <- ifelse(class(x) == "H2OParsedData", x@key, x)
+  if(class(x) == "H2OParsedData") LHS <- x@key else LHS <- x
   
   if((class(x) == "H2OParsedData" || class(y) == "H2OParsedData") && !( op %in% c('==', '!='))) {
     anyFactorsX <- .h2o.__checkForFactors(x)
@@ -757,18 +757,39 @@ function(expr, envir = globalenv()) {
     if(anyFactors) warning("Operation not meaningful for factors.")
   }
   
-  RHS <- ifelse(class(y) == "H2OParsedData", y@key, y)
+  if(class(y) == "H2OParsedData") RHS <- y@key else RHS <- y
   expr <- paste(LHS, op, RHS)
   if(class(x) == "H2OParsedData") myClient = x@h2o
   else myClient <- y@h2o
   res <- .h2o.__exec2(myClient, expr)
   
-  if(res$num_rows == 0 && res$num_cols == 0)
-    return(ifelse(op %in% .LOGICAL_OPERATORS, as.logical(res$scalar), res$scalar))
+  if(res$num_rows == 0 && res$num_cols == 0) {
+    if(op %in% .LOGICAL_OPERATORS) res$scalar <- as.logical(res$scalar)
+    return(res$scalar)
+  }
 
   res <- .h2o.exec2(expr = res$dest_key, h2o = myClient, dest_key = res$dest_key)
   res@logic <- op %in% .LOGICAL_OPERATORS
   res
+}
+
+# Note: Currently only written to work with ifelse method
+.h2o.__multop2 <- function(op, ...) {
+  myInput = list(...)
+  idx = which(sapply(myInput, function(x) { class(x) == "H2OParsedData" }))[1]
+  if(is.na(idx)) stop("H2OClient not specified in any input parameter!")
+  myClient = myInput[[idx]]@h2o
+  
+  myArgs = lapply(myInput, function(x) { if(class(x) == "H2OParsedData") x@key else x })
+  expr = paste(op, "(", paste(myArgs, collapse = ","), ")", sep="")
+  res = .h2o.__exec2(myClient, expr)
+  if(res$num_rows == 0 && res$num_cols == 0)   # TODO: If logical operator, need to indicate
+    res$scalar
+  else {
+    res = .h2o.exec2(res$dest_key, h2o = myClient, res$dest_key)
+    res@logic = FALSE
+    return(res)
+  }
 }
 
 #------------------------------------ Utilities ------------------------------------#

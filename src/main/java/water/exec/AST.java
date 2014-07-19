@@ -9,6 +9,7 @@ import java.util.Locale;
 import water.*;
 import water.fvec.Chunk;
 import water.fvec.Frame;
+import water.fvec.NewChunk;
 import water.fvec.Vec;
 
 /** Parse a generic R string and build an AST, in the context of an H2O Cloud
@@ -504,29 +505,65 @@ class ASTAssign extends AST {
 
     // Partial row assignment?
     if( rows != null ) {
-      throw H2O.unimpl();
-    }
-    assert cols != null; // all/all assignment uses simple-assignment
 
-    // Convert constant into a whole vec
-    if( ary_rhs == null )
-      ary_rhs = new Frame(ary.anyVec().makeCon(d));
-    // Make sure we either have 1 col (repeated) or exactly a matching count
-    long[] cs = (long[]) cols;  // Columns to act on
-    if( ary_rhs.numCols() != 1 &&
-        ary_rhs.numCols() != cs.length )
-      throw new IllegalArgumentException("Can only assign to a matching set of columns; trying to assign "+ary_rhs.numCols()+" cols over "+cs.length+" cols");
-    // Replace the LHS cols with the RHS cols
-    Vec rvecs[] = ary_rhs.vecs();
-    Futures fs = null;
-    for(int i = 0; i < cs.length; i++) {
-      int cidx = (int)cs[i]-1;      // Convert 1-based to 0-based
-      Vec rv = env.addRef(rvecs[rvecs.length==1?0:i]);
-      if( cidx == ary.numCols() ) ary.add("C"+String.valueOf(cidx+1),rv);     // New column name created with 1-based index
-      else fs = env.subRef(ary.replace(cidx,rv),fs);
-    }
-    if( fs != null )  fs.blockForPending();
+      // Only have partial row assignment
+      if (cols == null) {
 
+        // For every col at the range of indexes, set the value to be the rhs.
+        // If the rhs is a double, then fill with doubles, NA where type is Enum.
+        if (ary_rhs == null) {
+          // Make a new Vec where each row to be written over has the value d
+          Vec v = (new Frame.SelectVec2((long[])rows, d)).doAll(ary.anyVec().makeZero()).getResult()._fr.anyVec();
+          // MRTask over the lhs array
+          final double d0 = d;
+          new MRTask2() {
+            @Override public void map(Chunk[] chks) {
+              // Replace anything that is non-zero in the rep_vec.
+              Chunk rep_vec = chks[chks.length-1];
+              for (int row = 0; row < chks[0]._len; ++row) {
+                if (rep_vec.at0(row) == 0) continue;
+                for (Chunk chk : chks) {
+                  if (chk._vec.isEnum()) { chk.setNA0(row); } else { chk.set0(row, d0); }
+                }
+              }
+            }
+          }.doAll(ary.numCols(), ary.add("rep_vec",v));
+          UKV.remove(v._key);
+          UKV.remove(ary.remove(ary.numCols()-1)._key);
+
+        // If the rhs is an array, then fail if `height` of the rhs != rows.length. Otherwise, fetch-n-fill! (expensive)
+        } else {
+          throw H2O.unimpl();
+        }
+
+      // Have partial row and col assignment
+      } else {
+        throw H2O.unimpl();
+      }
+//      throw H2O.unimpl();
+    } else {
+      assert cols != null; // all/all assignment uses simple-assignment
+
+      // Convert constant into a whole vec
+      if (ary_rhs == null)
+        ary_rhs = new Frame(ary.anyVec().makeCon(d));
+      // Make sure we either have 1 col (repeated) or exactly a matching count
+      long[] cs = (long[]) cols;  // Columns to act on
+      if (ary_rhs.numCols() != 1 &&
+              ary_rhs.numCols() != cs.length)
+        throw new IllegalArgumentException("Can only assign to a matching set of columns; trying to assign " + ary_rhs.numCols() + " cols over " + cs.length + " cols");
+      // Replace the LHS cols with the RHS cols
+      Vec rvecs[] = ary_rhs.vecs();
+      Futures fs = null;
+      for (int i = 0; i < cs.length; i++) {
+        int cidx = (int) cs[i] - 1;      // Convert 1-based to 0-based
+        Vec rv = env.addRef(rvecs[rvecs.length == 1 ? 0 : i]);
+        if (cidx == ary.numCols())
+          ary.add("C" + String.valueOf(cidx + 1), rv);     // New column name created with 1-based index
+        else fs = env.subRef(ary.replace(cidx, rv), fs);
+      }
+      if (fs != null) fs.blockForPending();
+    }
     // After slicing, pop all expressions (cannot lower refcnt till after all uses)
     int narg = 0;
     if( rows!= null ) narg++;
