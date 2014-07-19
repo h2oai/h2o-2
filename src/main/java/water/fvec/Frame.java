@@ -868,13 +868,27 @@ public class Frame extends Lockable<Frame> {
 
   private static class SelectVec extends MRTask2<SelectVec> {
     final long[] _rows;
-    SelectVec(long[] rows) { _rows = rows; }
+    final double _d;
+    SelectVec(long[] rows) { _rows = rows; _d = 1;}
     @Override public void map(Chunk cs) {
       for (long er : _rows) {
         if (er >= 0) continue;
         er = Math.abs(er) - 1; // 1-based -> 0-based
         if (er < cs._start || er > (cs._len + cs._start - 1)) continue;
-        cs.set0((int) (er - cs._start), 1);
+        cs.set0((int) (er - cs._start), _d);
+      }
+    }
+  }
+
+  public static class SelectVec2 extends MRTask2<SelectVec2> {
+    final long[] _rows;
+    final double _d;
+    public SelectVec2(long[] rows, double d) { _rows = rows; _d = d; }
+    @Override public void map(Chunk cs) {
+      for (long er : _rows) {
+        er = Math.abs(er) - 1; // 1-based -> 0-based
+        if (er < cs._start || er > (cs._len + cs._start - 1)) continue;
+        cs.set0((int)(er - cs._start), _d);
       }
     }
   }
