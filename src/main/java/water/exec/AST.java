@@ -513,9 +513,20 @@ class ASTAssign extends AST {
         // If the rhs is a double, then fill with doubles, NA where type is Enum.
         if (ary_rhs == null) {
           // Make a new Vec where each row to be written over has the value d
-          Vec v = (new Frame.SelectVec2((long[])rows, d)).doAll(ary.anyVec().makeZero()).getResult()._fr.anyVec();
-          // MRTask over the lhs array
+          final long[] rows0 = (long[]) rows;
           final double d0 = d;
+          Vec v = new MRTask2() {
+            @Override
+            public void map(Chunk cs) {
+              for (long er : rows0) {
+                er = Math.abs(er) - 1; // 1-based -> 0-based
+                if (er < cs._start || er > (cs._len + cs._start - 1)) continue;
+                cs.set0((int) (er - cs._start), d0);
+              }
+            }
+          }.doAll(ary.anyVec().makeZero()).getResult()._fr.anyVec();
+
+          // MRTask over the lhs array
           new MRTask2() {
             @Override public void map(Chunk[] chks) {
               // Replace anything that is non-zero in the rep_vec.
