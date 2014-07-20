@@ -816,13 +816,22 @@ public class Frame extends Lockable<Frame> {
       return copyRollups(new DeepSlice(null,c2,vecs()).doAll(c2.length,this).outputFrame(names(c2),domains(c2)),true);
     else if (orows instanceof long[]) {
       final long CHK_ROWS=1000000;
-      long[] rows = (long[])orows;
+      final long[] rows = (long[])orows;
       if (this.numRows() == 0) {
         return this;
       }
       if( rows.length==0 || rows[0] < 0 ) {
         if (rows[0] < 0) {
-          Vec v = (new SelectVec(rows)).doAll(this.anyVec().makeZero()).getResult()._fr.anyVec();
+          Vec v = new MRTask2() {
+            @Override public void map(Chunk cs) {
+              for (long er : rows) {
+                if (er >= 0) continue;
+                er = Math.abs(er) - 1; // 1-based -> 0-based
+                if (er < cs._start || er > (cs._len + cs._start - 1)) continue;
+                cs.set0((int) (er - cs._start), 1);
+              }
+            }
+          }.doAll(this.anyVec().makeZero()).getResult()._fr.anyVec();
           Frame slicedFrame = new DeepSlice(rows, c2, vecs()).doAll(c2.length, this.add("select_vec", v)).outputFrame(names(c2), domains(c2));
           UKV.remove(v._key);
           UKV.remove(this.remove(this.numCols()-1)._key);
@@ -864,33 +873,6 @@ public class Frame extends Lockable<Frame> {
     vecs[c2.length] = vrows;
     names[c2.length] = "predicate";
     return new DeepSelect().doAll(c2.length,new Frame(names,vecs)).outputFrame(names(c2),domains(c2));
-  }
-
-  private static class SelectVec extends MRTask2<SelectVec> {
-    final long[] _rows;
-    final double _d;
-    SelectVec(long[] rows) { _rows = rows; _d = 1;}
-    @Override public void map(Chunk cs) {
-      for (long er : _rows) {
-        if (er >= 0) continue;
-        er = Math.abs(er) - 1; // 1-based -> 0-based
-        if (er < cs._start || er > (cs._len + cs._start - 1)) continue;
-        cs.set0((int) (er - cs._start), _d);
-      }
-    }
-  }
-
-  public static class SelectVec2 extends MRTask2<SelectVec2> {
-    final long[] _rows;
-    final double _d;
-    public SelectVec2(long[] rows, double d) { _rows = rows; _d = d; }
-    @Override public void map(Chunk cs) {
-      for (long er : _rows) {
-        er = Math.abs(er) - 1; // 1-based -> 0-based
-        if (er < cs._start || er > (cs._len + cs._start - 1)) continue;
-        cs.set0((int)(er - cs._start), _d);
-      }
-    }
   }
 
   // Slice and return in the form of new chunks.
