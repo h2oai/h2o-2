@@ -20,7 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class JUnitRunnerDebug {
-  public static final int NODES = 3;
+  public static final int NODES = 1;
 
   public static void main(String[] args) throws Exception {
     int[] ports = new int[NODES];
@@ -54,16 +54,16 @@ public class JUnitRunnerDebug {
 
       // Deep Learning tests
 //      tests.add(DeepLearningVsNeuralNet.class); //only passes for NODES=1, not clear why
-      tests.add(DeepLearningAutoEncoderTest.class); //test Deep Learning convergence
-      tests.add(DeepLearningAutoEncoderCategoricalTest.class); //test Deep Learning convergence
-      tests.add(DeepLearningSpiralsTest.class); //test Deep Learning convergence
-      tests.add(DeepLearningIrisTest.Short.class); //compare Deep Learning vs reference
-//      tests.add(DeepLearningIrisTest.Long.class); //compare Deep Learning vs reference
-      tests.add(DeepLearningProstateTest.Short.class); //test Deep Learning
-//      tests.add(DeepLearningProstateTest.Long.class); //test Deep Learning
-      tests.add(NeuronsTest.class); //test Deep Learning
-      tests.add(MRUtilsTest.class); //test MR sampling/rebalancing
-      tests.add(DropoutTest.class); //test NN Dropput
+//      tests.add(DeepLearningAutoEncoderTest.class); //test Deep Learning convergence
+//      tests.add(DeepLearningAutoEncoderCategoricalTest.class); //test Deep Learning convergence
+//      tests.add(DeepLearningSpiralsTest.class); //test Deep Learning convergence
+//      tests.add(DeepLearningIrisTest.Short.class); //compare Deep Learning vs reference
+////      tests.add(DeepLearningIrisTest.Long.class); //compare Deep Learning vs reference
+//      tests.add(DeepLearningProstateTest.Short.class); //test Deep Learning
+////      tests.add(DeepLearningProstateTest.Long.class); //test Deep Learning
+//      tests.add(NeuronsTest.class); //test Deep Learning
+//      tests.add(MRUtilsTest.class); //test MR sampling/rebalancing
+//      tests.add(DropoutTest.class); //test NN Dropput
 
       // Chunk tests
       tests.add(C0LChunkTest.class);
@@ -77,17 +77,18 @@ public class JUnitRunnerDebug {
       tests.add(C4SChunkTest.class);
       tests.add(C8ChunkTest.class);
       tests.add(C8DChunkTest.class);
+      tests.add(C16ChunkTest.class);
       tests.add(CBSChunkTest.class);
       tests.add(CX0ChunkTest.class);
       tests.add(CXIChunkTest.class);
       tests.add(CXDChunkTest.class);
 
-      tests.add(GLMTest2.class);
-      tests.add(DRFTest.class);
-      tests.add(DRFTest2.class);
-      tests.add(GBMTest.class);
-      tests.add(KMeans2Test.class);
-      tests.add(PCATest.class);
+//      tests.add(GLMTest2.class);
+//      tests.add(DRFTest.class);
+//      tests.add(DRFTest2.class);
+//      tests.add(GBMTest.class);
+//      tests.add(KMeans2Test.class);
+//      tests.add(PCATest.class);
 
       // Uncomment this to sleep here and use the browser.
       // try { Thread.sleep(10000000); } catch (Exception _) {}
