@@ -95,6 +95,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   double prior = -1; // -1 is magic value for default value which is mean(y) computed on the current dataset
   private double _iceptAdjust; // adjustment due to the prior
 
+  public final int MAX_ITERATIONS_PER_LAMBDA = 5;
   /**
    * Whether to compute variable importances for input features, based on the absolute
    * value of the coefficients.  For safety this should only be done if
@@ -446,13 +447,13 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       for(int i = 0; i < glmt._objvals.length; ++i){
         if(!needLineSearch(glmt._betas[i],glmt._objvals[i],step)){
           LogInfo("line search: found admissible step = " + step);
-          new GLMIterationTask(GLM2.this.self(),_activeData,_glm,true,true,true,glmt._betas[i],_ymu,1.0/_nobs,thresholds, new Iteration(getCompleter(),false)).asyncExec(_activeData._adaptedFrame);
+          new GLMIterationTask(GLM2.this.self(),_activeData,_glm,true,true,true,glmt._betas[i],_ymu,1.0/_nobs,thresholds, new Iteration(getCompleter(),false,false)).asyncExec(_activeData._adaptedFrame);
           return;
         }
         step *= 0.5;
       } // no line step worked, forcibly converge
       LogInfo("Line search did not find feasible step, go forward with step = " + step + ".");
-      new GLMIterationTask(GLM2.this.self(),_activeData,_glm,true,true,true,glmt._betas[glmt._betas.length-1],_ymu,1.0/_nobs,thresholds, new Iteration(getCompleter(),false)).asyncExec(_activeData._adaptedFrame);
+      new GLMIterationTask(GLM2.this.self(),_activeData,_glm,true,true,true,glmt._betas[glmt._betas.length-1],_ymu,1.0/_nobs,thresholds, new Iteration(getCompleter(),false,false)).asyncExec(_activeData._adaptedFrame);
     }
   }
 
@@ -498,14 +499,18 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   private class Iteration extends H2OCallback<GLMIterationTask> {
     public final long _iterationStartTime;
     final boolean _doLineSearch;
-    public Iteration(CountedCompleter cmp, boolean doLineSearch){
+    final boolean _countIteration;
+    public Iteration(CountedCompleter cmp, boolean doLineSearch){ this(cmp,doLineSearch,true);}
+    public Iteration(CountedCompleter cmp, boolean doLineSearch, boolean countIteration){
       super((H2OCountedCompleter)cmp);
       cmp.addToPendingCount(1);
-      _doLineSearch = doLineSearch; _iterationStartTime = System.currentTimeMillis(); }
+      _doLineSearch = doLineSearch;
+      _countIteration = countIteration;
+      _iterationStartTime = System.currentTimeMillis(); }
     @Override public void callback(final GLMIterationTask glmt){
       assert _activeCols == null || glmt._beta == null || glmt._beta.length == (_activeCols.length+1):"betalen = " + glmt._beta.length + ", activecols = " + _activeCols.length;
       assert _activeCols == null || _activeCols.length == _activeData.fullN();
-      ++_iter;
+      if(_countIteration)++_iter;
       _callbackStart = System.currentTimeMillis();
       LogInfo("iteration done in " + (_callbackStart - _iterationStartTime) + "ms, lambda = " + _currentLambda + ", lambda_min = " + lambda_min + ", cmp = " + getCompleter());
       if( !isRunning(self()) )  throw new JobCancelledException();
@@ -603,7 +608,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         GLM2.this.complete(); // signal we're done to anyone waiting for the job
       } else {
         final double bdiff = beta_diff(glmt._beta,newBeta);
-        if(_glm.family == Family.gaussian || bdiff < beta_epsilon || _iter == max_iter){ // Gaussian is non-iterative and gradient is ADMMSolver's gradient => just validate and move on to the next lambda_value
+        if(_glm.family == Family.gaussian || bdiff < beta_epsilon || _iter >= max_iter){ // Gaussian is non-iterative and gradient is ADMMSolver's gradient => just validate and move on to the next lambda_value
           int diff = (int)Math.log10(bdiff);
           int nzs = 0;
           for(int i = 0; i < newBeta.length; ++i)
@@ -687,7 +692,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     @Override
     public void callback(H2OCountedCompleter h2OCountedCompleter) {
       // check if we're done otherwise launch next lambda computation
-      boolean done = _iter == max_iter
+      boolean done = _iter >= max_iter
         || _currentLambda <= lambda_min
         || (max_predictors != -1 && nzs(_beta) > max_predictors); // _iter < max_iter && (improved || _runAllLambdas) && _lambdaIdx < (lambda_value.length-1);;
       if(!done) {
@@ -903,6 +908,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       pgs.fork();
       return;
     } else {
+      if(lambda_search){ // if we are in lambda_search, we want only limited number of iters per lambda!
+        max_iter = _iter + MAX_ITERATIONS_PER_LAMBDA;
+      }
       final double[] grad = _lastResult.fullGrad(alpha[0],previousLambda);
       assert grad != null;
       activeCols(_currentLambda, previousLambda, grad);

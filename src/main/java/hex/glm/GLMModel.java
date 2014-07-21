@@ -195,7 +195,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     int bestId = submodels.length-1;
     if(submodels.length > 2) {
       final boolean xval = submodels[1].xvalidation != null;
-      GLMValidation bestVal = xval ? submodels[0].xvalidation : submodels[0].validation;
+      GLMValidation bestVal = xval ? submodels[1].xvalidation : submodels[1].validation;
       for (int i = 1; i < submodels.length; ++i) {
         GLMValidation val = xval ? submodels[i].xvalidation : submodels[i].validation;
         if (val == null) continue;
