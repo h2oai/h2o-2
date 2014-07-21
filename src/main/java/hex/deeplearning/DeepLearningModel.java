@@ -50,7 +50,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   private Key _actual_best_model_key;
 
   // return the most up-to-date model metrics
-  Errors last_scored() { return errors[errors.length-1]; }
+  Errors last_scored() { return errors == null ? null : errors[errors.length-1]; }
 
   @Override public final DeepLearning get_params() { return model_info.get_params(); }
   @Override public final Request2 job() { return get_params(); }
@@ -166,7 +166,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   @Override
   public hex.ConfusionMatrix cm() {
     final Errors lasterror = last_scored();
-    if (errors == null) return null;
+    if (lasterror == null) return null;
     water.api.ConfusionMatrix cm = lasterror.validation || lasterror.num_folds > 0 ?
             lasterror.valid_confusion_matrix :
             lasterror.train_confusion_matrix;
@@ -324,8 +324,10 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       // average activation (only for hidden layers)
       if (get_params().autoencoder) {
         avg_activations = new Neurons.DenseVector[layers];
-        mean_a = new float[layers]; // for diagnostics
-        for (int i = 0; i < layers; ++i) avg_activations[i] = new Neurons.DenseVector(units[i+1]);
+        if (get_params().sparsity_beta > 0) {
+          mean_a = new float[layers];
+          for (int i = 0; i < layers; ++i) avg_activations[i] = new Neurons.DenseVector(units[i + 1]);
+        }
       }
       fillHelpers();
       // for diagnostics
@@ -335,7 +337,6 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       rms_bias = new float[units.length];
       mean_weight = new float[units.length];
       rms_weight = new float[units.length];
-     // mean_a = new float[avg_activations.length];
     }
 
     // deep clone all weights/biases
@@ -384,8 +385,11 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
         Neurons[] neurons = DeepLearningTask.makeNeuronsForTesting(this);
 
         sb.append("Number of hidden layers is " + get_params().hidden.length + " \n");
-        for(int k = 0; k < get_params().hidden.length; k++)
-            sb.append("Average Activation in hidden layer " + k + " is  " + mean_a[k] + " \n");
+
+        if (get_params().sparsity_beta > 0) {
+          for (int k = 0; k < get_params().hidden.length; k++)
+            sb.append("Average activation in hidden layer " + k + " is  " + mean_a[k] + " \n");
+        }
 
         sb.append("Status of Neuron Layers:\n");
         sb.append("#  Units         Type      Dropout    L1       L2    " + (get_params().adaptive_rate ? "  Rate (Mean,RMS)   " : "  Rate      Momentum") + "   Weight (Mean, RMS)      Bias (Mean,RMS)\n");
@@ -412,7 +416,9 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
                           + " (" + String.format(format, mean_bias[i])
                           + ", " + String.format(format, rms_bias[i]) + ")\n");
 
-         // sb.append("  " + String.format(format, mean_a[i]) + " \n");
+          if (get_params().sparsity_beta > 0) {
+            // sb.append("  " + String.format(format, mean_a[i]) + " \n");
+          }
         }
       }
       return sb.toString();
@@ -599,10 +605,13 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     public void computeStats() {
       float[][] rate = get_params().adaptive_rate ? new float[units.length-1][] : null;
 
-      for(int k=0; k<get_params().hidden.length; k++) {
+      if (get_params().sparsity_beta > 0) {
+        for (int k = 0; k < get_params().hidden.length; k++) {
           mean_a[k] = 0;
-          for(int j=0; j<avg_activations[k].size(); j++) mean_a[k] += avg_activations[k].get(j);
+          for (int j = 0; j < avg_activations[k].size(); j++)
+            mean_a[k] += avg_activations[k].get(j);
           mean_a[k] /= avg_activations[k].size();
+        }
       }
 
       for( int y = 1; y < units.length; y++ ) {

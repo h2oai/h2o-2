@@ -154,8 +154,9 @@ public abstract class Neurons {
       _minfo = minfo;
       _w = minfo.get_weights(_index); //incoming weights
       _b = minfo.get_biases(_index); //bias for this layer (starting at hidden layer)
-      if(minfo.get_params().autoencoder && _index < params.hidden.length)
-            _avg_a = minfo.get_avg_activations(_index);
+      if(minfo.get_params().autoencoder && _index < params.hidden.length) {
+        _avg_a = minfo.get_avg_activations(_index);
+      }
       if (minfo.has_momenta()) {
         _wm = minfo.get_weights_momenta(_index); //incoming weights
         _bm = minfo.get_biases_momenta(_index); //bias for this layer (starting at hidden layer)
@@ -214,8 +215,8 @@ public abstract class Neurons {
 
     if (_w instanceof DenseRowMatrix && _previous._a instanceof DenseVector)
       bprop_dense_row_dense(
-              (DenseRowMatrix)_w, (DenseRowMatrix)_wm, (DenseRowMatrix)_ada_dx_g,
-              (DenseVector)_previous._a, _previous._e, _b, _bm, row, partial_grad, rate, momentum);
+              (DenseRowMatrix) _w, (DenseRowMatrix) _wm, (DenseRowMatrix) _ada_dx_g,
+              (DenseVector) _previous._a, _previous._e, _b, _bm, row, partial_grad, rate, momentum);
     else if (_w instanceof DenseRowMatrix && _previous._a instanceof SparseVector)
       bprop_dense_row_sparse(
               (DenseRowMatrix)_w, (DenseRowMatrix)_wm, (DenseRowMatrix)_ada_dx_g,
@@ -535,16 +536,16 @@ public abstract class Neurons {
 
 
   /**
-   * Helper to enforce learning rule to satisfy sparsity constraint
-   *
+   * Helper to enforce learning rule to satisfy sparsity constraint:
+   * Computes the (rolling) average activation for each (hidden) neuron.
    */
-   void compute_sparsity() {
-       if (_avg_a != null) {
-           for (int i = 0; i < _avg_a.size(); i++)
-               _avg_a._data[i] = (float)0.999*(_avg_a._data[i]) + (float)0.001*(_a.get(i));
-       }
-
-   }
+  void compute_sparsity() {
+    if (_avg_a != null) {
+      for (int row = 0; row < _avg_a.size(); row++) {
+        _avg_a.set(row, (float) 0.999 * (_avg_a.get(row)) + (float) 0.001 * (_a.get(row)));
+      }
+    }
+  }
 
   /**
    * Helper to update the bias values
@@ -570,7 +571,6 @@ public abstract class Neurons {
       final float invRMS_g = Utils.approxInvSqrt(_bias_ada_dx_g.get(2*row+1) + eps);
       rate = RMS_dx*invRMS_g;
       _bias_ada_dx_g.set(2*row, rho * _bias_ada_dx_g.get(2*row) + (1f - rho) * rate * rate * avg_grad2);
-
     }
     if (!params.nesterov_accelerated_gradient) {
       final float delta = rate * partial_grad;
@@ -589,9 +589,10 @@ public abstract class Neurons {
       _b.add(row, rate * d);
     }
     //update for sparsity constraint
-     //if (params.autoencoder && !(this instanceof Output) && !(this instanceof Input) && (_index != params.hidden.length))
-       // _b.add(row,- (float)(rate*_minfo.get_params().sparsity_beta*(_avg_a._data[row] - _minfo.get_params().average_activation)));
-    //if (Float.isInfinite(_b.get(row))) _minfo.set_unstable();
+    if (params.autoencoder && !(this instanceof Output) && !(this instanceof Input) && (_index != params.hidden.length)) {
+      _b.add(row, -(float) (rate * _minfo.get_params().sparsity_beta * (_avg_a._data[row] - _minfo.get_params().average_activation)));
+    }
+    if (Float.isInfinite(_b.get(row))) _minfo.set_unstable();
   }
 
 
@@ -708,17 +709,9 @@ public abstract class Neurons {
     @Override protected void fprop(long seed, boolean training) {
       gemv((DenseVector)_a, _w, _previous._a, _b, _dropout != null ? _dropout.bits() : null);
       final int rows = _a.size();
-      for( int row = 0; row < rows; row++ ) //{
+      for( int row = 0; row < rows; row++ )
         _a.set(row, 1f - 2f / (1f + (float)Math.exp(2*_a.get(row)))); //evals faster than tanh(x), but is slightly less numerically stable - OK
-        compute_sparsity();
-       // if (_avg_a != null) {
-            //_avg_a._data[row] = (float)0.999*(_avg_a._data[row]) + (float)0.001*(_a.get(row));
-           // _avg_a._data[row] = -1;
-            //Log.info("_avg_a["+row+"]=" + _avg_a._data[row]);
-        //}
-        //Log.info("_avg_a["+row+"]=" + _avg_a._data[row]);
-        //Log.info(_avg_a._data[row]);
-     // }
+      compute_sparsity();
     }
     // Computing partial derivative g = dE/dnet = dE/dy * dy/dnet, where dE/dy is the backpropagated error
     // dy/dnet = (1 - a^2) for y(net) = tanh(net)
@@ -803,7 +796,7 @@ public abstract class Neurons {
         }
         if( max > 1f ) Utils.div(_a.raw(), max);
       }
-        compute_sparsity();
+      compute_sparsity();
     }
     @Override protected void bprop() {
       final long processed = _minfo.get_processed_total();
