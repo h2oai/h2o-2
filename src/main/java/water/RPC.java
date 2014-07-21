@@ -329,6 +329,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     }
     // When the task completes, ship results back to client
     @Override public void onCompletion( CountedCompleter caller ) {
+      if(_dt == null)return; // if task(job) is cancelled _dt can already be null, should assert on it
       // Send results back
       DTask origDt = _dt;
       DTask dt = origDt; // _dt can go null the instant its send over wire
@@ -361,8 +362,8 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     @Override public boolean onExceptionalCompletion( Throwable ex, CountedCompleter caller ) {
       _computed = true;
       if(!_firstException.getAndSet(true)){
-        if(_dt == null)
-        _dt.setException(ex);
+        if(_dt != null) // _dt is set to null after ackack! (can happen in cancelled task)
+          _dt.setException(ex);
         onCompletion(caller);
       }
       return false;

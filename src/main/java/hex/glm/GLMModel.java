@@ -53,19 +53,24 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   int best_lambda_idx;
 
   public double auc(){
-    if(glm.family == Family.binomial && submodels != null && submodels[best_lambda_idx].validation != null)
-      return submodels[best_lambda_idx].validation.auc;
+    if(glm.family == Family.binomial && submodels != null && submodels[best_lambda_idx].validation != null) {
+      Submodel sm = submodels[best_lambda_idx];
+      return sm.xvalidation != null?sm.xvalidation.auc:sm.validation.auc;
+    }
     return -1;
   }
   public double aic(){
-    if(submodels != null && submodels[best_lambda_idx].validation != null)
-      return submodels[best_lambda_idx].validation.aic;
+    if(submodels != null && submodels[best_lambda_idx].validation != null){
+      Submodel sm = submodels[best_lambda_idx];
+      return sm.xvalidation != null?sm.xvalidation.aic:sm.validation.aic;
+    }
     return Double.MAX_VALUE;
   }
   public double devExplained(){
     if(submodels == null || submodels[best_lambda_idx].validation == null)
       return 0;
-    GLMValidation val = submodels[best_lambda_idx].validation;
+    Submodel sm = submodels[best_lambda_idx];
+    GLMValidation val = sm.xvalidation == null?sm.validation:sm.xvalidation;
     return 1.0 - val.residual_deviance/val.null_deviance;
   }
 
@@ -187,9 +192,9 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   }
 
   public void pickBestModel(boolean useAuc){
-    int bestId = 0;
-    if(submodels.length > 1) {
-      final boolean xval = submodels[0].xvalidation != null;
+    int bestId = submodels.length-1;
+    if(submodels.length > 2) {
+      final boolean xval = submodels[1].xvalidation != null;
       GLMValidation bestVal = xval ? submodels[0].xvalidation : submodels[0].validation;
       for (int i = 1; i < submodels.length; ++i) {
         GLMValidation val = xval ? submodels[i].xvalidation : submodels[i].validation;
@@ -269,6 +274,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     new TAtomic<GLMModel>(cmp){
       @Override
       public GLMModel atomic(GLMModel old) {
+        if(old == null)return old; // job could've been cancelled
         old.submodels = old.submodels.clone();
         int id = old.submodelIdForLambda(lambda);
         old.submodels[id] = (Submodel)old.submodels[id].clone();
@@ -285,6 +291,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     new TAtomic<GLMModel>(cmp){
       @Override
       public GLMModel atomic(GLMModel old) {
+        if(old == null)return old; // job could've been cancelled!
         if(old.submodels == null){
           old.submodels = new Submodel[]{sm};
         } else {

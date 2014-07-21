@@ -306,16 +306,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   }
 
   @Override public void cancel(Throwable ex){
-    if(ex instanceof JobCancelledException)
-      cancel();
-    else
-      super.cancel(ex);
-    JobCancelTask t = new JobCancelTask(this);
-    t.invoke(self());
-    if(t._res) {
-      Value v = DKV.get(dest());
-      if (v != null) v.<GLMModel>get().unlock(self());
-    }
+    super.cancel(ex);
+    DKV.remove(dest());
   }
 
   @Override public void init(){
@@ -725,7 +717,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         GLM2.this.complete();
       }
       @Override public boolean onExceptionalCompletion(Throwable t, CountedCompleter cmp){
-        if(!(t instanceof JobCancelledException))
+        if(!(t instanceof JobCancelledException) && !t.getMessage().contains("JobCancelled"))
           GLM2.this.cancel(t);
         return true;
       }
@@ -1046,17 +1038,32 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     @Override
     public Job fork(){
       DKV.put(destination_key, new GLMGrid(self(),_jobs));
+      // keep *this* separate from what's stored in K/V as job (will be changing it!)
+      Futures fs = new Futures();
+      Key progressKey = Key.make(dest().toString() + "_progress", (byte) 1, Key.HIDDEN_USER_KEY, dest().home_node());
+      int total = _jobs[0].max_iter;
+      if(_jobs[0].lambda_search)
+        total = 3*_jobs[0].nlambdas;
+      total *= _jobs.length;
+      DKV.put(progressKey,new GLM2_Progress(total*(_jobs[0].n_folds+1)),fs);
+      for(GLM2 g:_jobs)
+        g._progressKey = progressKey;
       assert _maxParallelism >= 1;
+      final Job job = this;
       H2OCountedCompleter fjtask = new H2OCountedCompleter() {
         @Override
         public void compute2() {}
         @Override public void onCompletion(CountedCompleter cmp){
+          job.remove();
         }
         @Override public boolean onExceptionalCompletion(Throwable t, CountedCompleter cmp){
+          if(!(t instanceof JobCancelledException) && !t.getMessage().contains("job was cancelled"))
+            job.cancel(t);
           return true;
         }
       };
-      ((GLM2)clone()).start(fjtask); // modifying GLM2 object, don't want job object to be the same instance
+      start(fjtask); // modifying GLM2 object, don't want job object to be the same instance
+      fs.blockForPending();
       H2O.submitTask(new ParallelGLMs(this,_jobs,Double.NaN,H2O.CLOUD.size(),fjtask));
       return this;
     }
@@ -1078,7 +1085,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     }
     @Override
     public void compute2() {
-      assert _glm._lastResult._fullGrad != null:"GLM[" + _glm.dest() + "]: missing full gradient at lambda = " + _glm._currentLambda;
+      assert Double.isNaN(_lambda) || _glm._lastResult._fullGrad != null:"GLM[" + _glm.dest() + "]: missing full gradient at lambda = " + _glm._currentLambda;
       if(Double.isNaN(_lambda))
         _glm.run(true,this);
       else
@@ -1114,7 +1121,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     }
     private void forkDTask(final int i, H2ONode n){
       _tasks[i] = new GLMT(new Callback(n),_glms[i],_lambda);
-      assert _tasks[i]._glm._lastResult._fullGrad != null;
+      assert Double.isNaN(_lambda) || _tasks[i]._glm._lastResult._fullGrad != null;
       if(n == H2O.SELF) H2O.submitTask(_tasks[i]);
       else new RPC(n,_tasks[i]).call();
     }
@@ -1134,7 +1141,6 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     }
     @Override public void compute2(){
       addToPendingCount(_glms.length);
-      for(GLM2 g:_glms)assert g.n_folds <= 1;
       final int n = Math.min(_maxP, _glms.length);
       _nextTask = new AtomicInteger(n);
       for(int i = 0; i < n; ++i)
