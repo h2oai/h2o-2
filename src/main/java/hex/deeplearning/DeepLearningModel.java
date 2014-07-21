@@ -1003,10 +1003,11 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
         }
       }.doAll(adaptFrm);
 
-      // Return just the output columns
+      // Return the predicted columns
       int x=_names.length, y=adaptFrm.numCols();
+      Frame f = adaptFrm.extractFrame(x, y); //this will call vec_impl() and we cannot call the delete() below just yet
       onlyAdaptFrm.delete();
-      return adaptFrm.extractFrame(x, y);
+      return f;
     }
   }
 
