@@ -14,10 +14,10 @@ test <- function(conn) {
     print("Generate balanced dataset by column in R")
         y.a = sample(0:0, 200, replace=T)
         y.b = sample(1:1, 200, replace=T)
-        x1.a = sample(-1:-10, 200, replace=T)
-        x1.b = runif(200, 5.0, 20.0)
-        x2.a = sample(6:10, 200, replace=T)
-        x2.b = runif(200, -6.0, 2.0)
+        x1.a = sample(-1203:-1, 200, replace=T)
+        x1.b = sample(1:1, 200, replace=T)
+        x2.a = sample(0:0, 200, replace=T)
+        x2.b = sample(1:1203, 200, replace=T)
         data.a = cbind(y.a, x1.a, x2.a)
         data.b = cbind(y.b, x1.b, x2.b)
         data.balanced = rbind(data.a, data.b)
@@ -28,12 +28,20 @@ test <- function(conn) {
     print("Dimensions of dataset: ")
         print(dim(data.b.hex))
     print("Fit model on dataset.")
-        model.balanced <- h2o.glm(x=c("x1", "x2"), y="y", data.b.hex, family="binomial", lambda_search=TRUE, use_all_factor_levels=1, alpha=0.5, nfolds=0, higher_accuracy=T, lambda=0)
+        model.balanced <- h2o.glm(x=c("x1", "x2"), y="y", data.b.hex, family="binomial", lambda_search=TRUE, use_all_factor_levels=1, alpha=0.5, nfolds=0, higher_accuracy=TRUE, lambda=0)
+    print("Check line search invoked even with higher_accuracy off")
+        model.balanced.ls <- h2o.glm(x=c("x1", "x2"), y="y", data.b.hex, family="binomial", lambda_search=TRUE, use_all_factor_levels=1, alpha=0.5, nfolds=0, higher_accuracy=FALSE, lambda=0)
 
-    print("Extract model coefficients")
+    print("Extract models' coefficients")
+    print("Balanced dataset; higher_accuracy TRUE")
         coef <- model.balanced@model$coefficients
         suppressWarnings((coef$"Intercept"<-NULL))
         stopifnot(coef < 50)
+    print("Balanced dataset; higher_accuracy FALSE")
+        coef.ls <- model.balanced.ls@model$coefficients
+        suppressWarnings((coef.ls$"Intercept"<-NULL))
+        stopifnot(coef.ls < 50)
+
 
     print("Generate unbalanced dataset by column in R")
         y = sample(0:0, 10000, replace=T)
@@ -47,12 +55,19 @@ test <- function(conn) {
     print("Dimensions of dataset: ")
         print(dim(data.u.hex))
     print("Fit model on dataset.")
-        model.unbalanced <- h2o.glm(x=c("x1", "x2"), y="y", data.u.hex, family="binomial", lambda_search=TRUE, use_all_factor_levels=1, alpha=0.5, nfolds=0, higher_accuracy=T, lambda=0)
+        model.unbalanced <- h2o.glm(x=c("x1", "x2"), y="y", data.u.hex, family="binomial", lambda_search=TRUE, use_all_factor_levels=1, alpha=0.5, nfolds=0, higher_accuracy=TRUE, lambda=0)
+    print("Check line search invoked even with higher_accuracy off")
+        model.unbalanced.ls <- h2o.glm(x=c("x1", "x2"), y="y", data.u.hex, family="binomial", lambda_search=TRUE, use_all_factor_levels=1, alpha=0.5, nfolds=0, higher_accuracy=FALSE, lambda=0)
 
-    print("Extract model coefficients")
-        coef <- model.unbalanced@model$coefficients
+    print("Extract models' coefficients")
+    print("Unbalanced dataset; higher_accuracy TRUE")
+            coef <- model.unbalanced@model$coefficients
         suppressWarnings((coef$"Intercept"<-NULL))
         stopifnot(coef < 50)
+    print("Unbalanced dataset; higher_accuracy FALSE")
+            coef.ls <- model.unbalanced.ls@model$coefficients
+        suppressWarnings((coef.ls$"Intercept"<-NULL))
+        stopifnot(coef.ls < 50)
 
     testEnd()
 }
