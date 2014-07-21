@@ -103,9 +103,9 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     @API(help = "Classification error on validation data")
     public double valid_err = 1;
     @API(help = "AUC on training data")
-    public AUC trainAUC;
+    public AUCData trainAUC;
     @API(help = "AUC on validation data")
-    public AUC validAUC;
+    public AUCData validAUC;
     @API(help = "Hit ratio on training data")
     public water.api.HitRatio train_hitratio;
     @API(help = "Hit ratio on validation data")
@@ -764,7 +764,6 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
           err.num_folds = get_params().n_folds;
           err.train_confusion_matrix = new ConfusionMatrix();
           final int hit_k = Math.min(nclasses(), get_params().max_hit_ratio_k);
-          if (err.classification && nclasses() == 2) err.trainAUC = new AUC();
           if (err.classification && nclasses() > 2 && hit_k > 0) {
             err.train_hitratio = new HitRatio();
             err.train_hitratio.set_max_k(hit_k);
@@ -772,9 +771,12 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
           final String m = model_info().toString();
           if (m.length() > 0) Log.info(m);
           final Frame trainPredict = score(ftrain, false);
+          AUC trainAUC = null;
+          if (err.classification && nclasses() == 2) trainAUC = new AUC();
           final double trainErr = calcError(ftrain, ftrain.lastVec(), trainPredict, trainPredict, "training",
-                  printme, get_params().max_confusion_matrix_size, err.train_confusion_matrix, err.trainAUC, err.train_hitratio);
+                  printme, get_params().max_confusion_matrix_size, err.train_confusion_matrix, trainAUC, err.train_hitratio);
           if (isClassifier()) err.train_err = trainErr;
+          if (trainAUC != null) err.trainAUC = trainAUC.data();
           else err.train_mse = trainErr;
 
           trainPredict.delete();
@@ -783,7 +785,6 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
             assert ftest != null;
             err.score_validation_samples = ftest.numRows();
             err.valid_confusion_matrix = new ConfusionMatrix();
-            if (err.classification && nclasses() == 2) err.validAUC = new AUC();
             if (err.classification && nclasses() > 2 && hit_k > 0) {
               err.valid_hitratio = new HitRatio();
               err.valid_hitratio.set_max_k(hit_k);
@@ -808,9 +809,12 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
               validPredict.replace(0, CMadapted); //replace label
               validPredict.add("to_be_deleted", CMadapted); //keep the Vec around to be deleted later (no leak)
             }
+            AUC validAUC = null;
+            if (err.classification && nclasses() == 2) validAUC = new AUC();
             final double validErr = calcError(ftest, ftest.lastVec(), validPredict, hitratio_validPredict, "validation",
-                    printme, get_params().max_confusion_matrix_size, err.valid_confusion_matrix, err.validAUC, err.valid_hitratio);
+                    printme, get_params().max_confusion_matrix_size, err.valid_confusion_matrix, validAUC, err.valid_hitratio);
             if (isClassifier()) err.valid_err = validErr;
+            if (trainAUC != null) err.validAUC = validAUC.data();
             else err.valid_mse = validErr;
             validPredict.delete();
           }
@@ -913,7 +917,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     }
   }
 
-  @Override protected void setCrossValidationError(Job.ValidatedJob job, double cv_error, ConfusionMatrix cm, AUC auc, HitRatio hr) {
+  @Override protected void setCrossValidationError(Job.ValidatedJob job, double cv_error, ConfusionMatrix cm, AUCData auc, HitRatio hr) {
     _have_cv_results = true;
     if (!get_params().classification)
       last_scored().valid_mse = cv_error;

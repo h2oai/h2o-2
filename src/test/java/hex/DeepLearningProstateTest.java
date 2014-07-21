@@ -10,6 +10,7 @@ import water.Key;
 import water.TestUtil;
 import water.UKV;
 import water.api.AUC;
+import water.api.AUCData;
 import water.exec.Env;
 import water.exec.Exec2;
 import water.fvec.Frame;
@@ -30,8 +31,8 @@ public class DeepLearningProstateTest extends TestUtil {
     Random rng = new Random(seed);
     String[] datasets = new String[2];
     int[][] responses = new int[datasets.length][];
-    datasets[0] = "smalldata/./logreg/prostate.csv"; responses[0] = new int[]{1,2,8};
-    datasets[1] = "smalldata/iris/iris.csv";  responses[1] = new int[]{4};
+    datasets[0] = "smalldata/./logreg/prostate.csv"; responses[0] = new int[]{1,2,8}; //CAPSULE (binomial), AGE (regression), GLEASON (multi-class)
+    datasets[1] = "smalldata/iris/iris.csv";  responses[1] = new int[]{4}; //Iris-type (multi-class)
 
     int testcount = 0;
     int count = 0;
@@ -166,27 +167,28 @@ public class DeepLearningProstateTest extends TestUtil {
                               // binary
                               if (mymodel.nclasses()==2) {
                                 auc.actual = valid;
+                                assert(resp == 1);
                                 auc.vactual = valid.vecs()[resp];
                                 auc.predict = pred;
                                 auc.vpredict = pred.vecs()[2];
-                                auc.threshold_criterion = AUC.ThresholdCriterion.maximum_F1;
                                 auc.invoke();
                                 auc.toASCII(sb);
-                                threshold = auc.threshold();
-                                error = auc.err();
+                                AUCData aucd = auc.data();
+                                threshold = aucd.threshold();
+                                error = aucd.err();
                                 Log.info(sb);
 
                                 // test AUC computation in more detail
-                                Assert.assertTrue(auc.AUC > 0.75); //min val = 0.81 for long test
-                                Assert.assertTrue(auc.AUC < 0.9);  //max val = 0.85 for long test
-                                Assert.assertTrue(auc.threshold() > 0.1);  //min val = 0.17 for long test
-                                Assert.assertTrue(auc.threshold() < 0.6);  //max val = 0.53 for long test
+                                Assert.assertTrue(aucd.AUC > 0.75); //min val = 0.81 for long test
+                                Assert.assertTrue(aucd.AUC < 0.9);  //max val = 0.85 for long test
+                                Assert.assertTrue(aucd.threshold() > 0.1);  //min val = 0.17 for long test
+                                Assert.assertTrue(aucd.threshold() < 0.6);  //max val = 0.53 for long test
 
                                 // check that auc.cm() is the right CM
-                                Assert.assertEquals(new ConfusionMatrix(auc.cm()).err(), error, 1e-15);
+                                Assert.assertEquals(new ConfusionMatrix(aucd.cm()).err(), error, 1e-15);
 
                                 // check that calcError() is consistent as well (for CM=null, AUC!=null)
-                                Assert.assertEquals(mymodel.calcError(valid, valid.lastVec(), pred, pred, "training", false, 0, null, auc, null), error, 1e-15);
+                                Assert.assertEquals(mymodel.calcError(valid, auc.vactual, pred, pred, "training", false, 0, null, auc, null), error, 1e-15);
                               }
 
                               // Compute CM

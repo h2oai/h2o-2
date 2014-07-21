@@ -89,7 +89,7 @@ public class SpeeDRF extends Job.ValidatedJob {
 
   public DRFParams drfParams;
 
-  protected SpeeDRFModel makeModel( SpeeDRFModel model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
+  protected SpeeDRFModel makeModel( SpeeDRFModel model, double err, ConfusionMatrix cm, VarImp varimp, AUCData validAUC) {
     return new SpeeDRFModel(model, err, cm, varimp, validAUC);
   }
 

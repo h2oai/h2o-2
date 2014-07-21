@@ -96,14 +96,14 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       this.sample_rate = prior.sample_rate;
       this.seed = prior.seed;
     }
-    private DRFModel(DRFModel prior, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
+    private DRFModel(DRFModel prior, double err, ConfusionMatrix cm, VarImp varimp, AUCData validAUC) {
       super(prior, err, cm, varimp, validAUC);
       this.parameters = prior.parameters;
       this.mtries = prior.mtries;
       this.sample_rate = prior.sample_rate;
       this.seed = prior.seed;
     }
-    private DRFModel(DRFModel prior, Key[][] treeKeys, double[] errs, ConfusionMatrix[] cms, TreeStats tstats, VarImp varimp, AUC validAUC) {
+    private DRFModel(DRFModel prior, Key[][] treeKeys, double[] errs, ConfusionMatrix[] cms, TreeStats tstats, VarImp varimp, AUCData validAUC) {
       super(prior, treeKeys, errs, cms, tstats, varimp, validAUC);
       this.parameters = prior.parameters;
       this.mtries = prior.mtries;
@@ -137,7 +137,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
         bodySb.i().p("if (sum>0) for(int i=1; i<preds.length; i++) preds[i] /= sum;").nl();
       } else bodySb.i().p("preds[1] = preds[1]/NTREES;").nl();
     }
-    @Override protected void setCrossValidationError(ValidatedJob job, double cv_error, water.api.ConfusionMatrix cm, water.api.AUC auc, water.api.HitRatio hr) {
+    @Override protected void setCrossValidationError(ValidatedJob job, double cv_error, water.api.ConfusionMatrix cm, AUCData auc, HitRatio hr) {
       DRFModel drfm = ((DRF)job).makeModel(this, cv_error, cm.cm == null ? null : new ConfusionMatrix(cm.cm, cms[0].nclasses()), this.varimp, auc);
       drfm._have_cv_results = true;
       DKV.put(this._key, drfm); //overwrite this model
@@ -150,7 +150,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
     return new DRFModel(this,outputKey,dataKey,validation==null?null:testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, mtries, sample_rate, _seed, n_folds, priorClassDist, classDist);
   }
 
-  @Override protected DRFModel makeModel( DRFModel model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
+  @Override protected DRFModel makeModel( DRFModel model, double err, ConfusionMatrix cm, VarImp varimp, AUCData validAUC) {
     return new DRFModel(model, err, cm, varimp, validAUC);
   }
   @Override protected DRFModel makeModel( DRFModel model, DTree ktrees[], TreeStats tstats) {
