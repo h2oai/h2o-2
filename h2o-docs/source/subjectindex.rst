@@ -69,10 +69,6 @@ Index By Subject
 
   * :ref:`Idea`
 
-**Introduction to H2O**
-
-  * :ref:`Introduction`
-  
 **Java**
 
   * :ref:`Java`
