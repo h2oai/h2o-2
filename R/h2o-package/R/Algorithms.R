@@ -1315,14 +1315,14 @@ h2o.performance <- function(data, reference, measure = "accuracy", thresholds) {
   else
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_AUC, actual = reference@key, vactual = 0, predict = data@key, vpredict = 0, thresholds = .seq_to_string(thresholds), threshold_criterion = criterion)
   
-  if (is.list(res$thresholds)) {
-    res$thresholds <- as.numeric(unlist(res$thresholds))
+  if (is.list(res$aucdata$thresholds)) {
+    res$aucdata$thresholds <- as.numeric(unlist(res$aucdata$thresholds))
   }
   
-  meas = as.numeric(res[[measure]])
-  result = .h2o.__getPerfResults(res, criterion)
-  roc = .get_roc(res$confusion_matrices)
-  new("H2OPerfModel", cutoffs = res$thresholds, measure = meas, perf = measure, model = result, roc = roc)
+  meas = as.numeric(res$aucdata[[measure]])
+  result = .h2o.__getPerfResults(res$aucdata, criterion)
+  roc = .get_roc(res$aucdata$confusion_matrices)
+  new("H2OPerfModel", cutoffs = res$aucdata$thresholds, measure = meas, perf = measure, model = result, roc = roc)
 }
 
 .h2o.__getPerfResults <- function(res, criterion) {
