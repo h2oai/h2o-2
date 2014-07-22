@@ -58,7 +58,7 @@ abstract public class AST extends Iced {
 // --------------------------------------------------------------------------
 class ASTNop extends AST {
   ASTNop() { super(Type.DBL); }
-  @Override void exec(Env env) { env.push(0.0); }
+  @Override void exec(Env env) { env.push(Double.NaN); }
 }
 
 // --------------------------------------------------------------------------

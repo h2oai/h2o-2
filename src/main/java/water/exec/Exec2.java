@@ -209,6 +209,7 @@ public class Exec2 {
     // These are calls to R's matrix operators.
     if( _x+2 <= _buf.length && c == '%' && _buf[_x+1] == '%' ) {
       if( _buf[_x] == '*' ) { _x+=2; return "%*%"; }
+      if (_buf[_x] == '/' ) { _x+=2; return "%/%"; }
     }
 
     // If first char is special, accept 1 or 2 special chars.

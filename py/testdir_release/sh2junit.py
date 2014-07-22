@@ -206,6 +206,7 @@ def sh2junit(name='NoName', cmd_string='/bin/ls', timeout=300, shdir=None, **kwa
             lineBurstCnt += 1
             # maybe I should use p.communicate() instead. have to keep it to stdout? or do stdout+stderr here
             sys.stdout.write("R->" + line) # to our python stdout, with a prefix so it's obviously from R
+            sys.stdout.flush()
             os.write(outfd, line) # to sandbox R stdout
             elapsed = time.time() - start
             if elapsed > timeout:
@@ -224,6 +225,7 @@ def sh2junit(name='NoName', cmd_string='/bin/ls', timeout=300, shdir=None, **kwa
         while line:
             lineBurstCnt += 1
             sys.stdout.write("Re->" + line) # to our python stdout, with a prefix so it's obviously from R stderr
+            sys.stdout.flush()
             os.write(errfd, line) # to sandbox R stderr
             line = ps.stderr.readline()
         print "lineBurstCnt:", lineBurstCnt
