@@ -7,7 +7,6 @@ import water.*;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
-import water.util.Log;
 import water.util.Utils;
 
 import java.util.HashSet;
@@ -49,8 +48,9 @@ public class AUC extends Func {
     minimizing_max_per_class_Error
   }
 
-  AUCData _aucdata;
-  public AUCData data() { return _aucdata; }
+  @API(help = "AUC Data", json = true)
+  AUCData aucdata;
+  public AUCData data() { return aucdata; }
 
   public AUC() {}
 
@@ -69,7 +69,7 @@ public class AUC extends Func {
    * @param domain Domain
    */
   public AUC(hex.ConfusionMatrix[] cms, float[] thresh, String[] domain) {
-    _aucdata = new AUCData().compute(cms, thresh, domain, threshold_criterion);
+    aucdata = new AUCData().compute(cms, thresh, domain, threshold_criterion);
   }
 
   @Override protected void init() throws IllegalArgumentException {
@@ -114,7 +114,7 @@ public class AUC extends Func {
         sort(thresholds);
       }
       // compute CMs
-      _aucdata = new AUCData().compute(new AUCTask(thresholds,va.mean()).doAll(va,vp).getCMs(), thresholds, va._domain, threshold_criterion);
+      aucdata = new AUCData().compute(new AUCTask(thresholds,va.mean()).doAll(va,vp).getCMs(), thresholds, va._domain, threshold_criterion);
     } finally {       // Delete adaptation vectors
       if (va!=null) UKV.remove(va._key);
     }
@@ -153,8 +153,8 @@ public class AUC extends Func {
     }
   }
 
-  @Override public boolean toHTML( StringBuilder sb ) { return _aucdata.toHTML(sb); }
-  public void toASCII( StringBuilder sb ) { _aucdata.toASCII(sb); }
+  @Override public boolean toHTML( StringBuilder sb ) { return aucdata.toHTML(sb); }
+  public void toASCII( StringBuilder sb ) { aucdata.toASCII(sb); }
 
   // Compute CMs for different thresholds via MRTask2
   private static class AUCTask extends MRTask2<AUCTask> {
@@ -189,8 +189,6 @@ public class AUC extends Func {
         if (ca.isNA0(i))
           throw new UnsupportedOperationException("Actual class label cannot be a missing value!");
         final int a = (int)ca.at80(i); //would be a 0 if double was NaN
-        if (a != 0 && a != 1)
-          Log.info("rap");
         assert (a == 0 || a == 1) : "Invalid values in vactual: must be binary (0 or 1).";
         if (cp.isNA0(i)) {
 //          Log.warn("Skipping predicted NaN."); //some models predict NaN!
