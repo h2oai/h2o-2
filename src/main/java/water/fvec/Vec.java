@@ -212,10 +212,6 @@ public class Vec extends Iced {
     return v0;
   }
   public static Vec makeSeq( long len) {
-    int chunks = (int)Math.ceil((double)len / Vec.CHUNK_SZ);
-    long[] espc = new long[chunks+1];
-    for (int i = 1; i<=chunks; ++i)
-      espc[i] = Math.min(espc[i-1] + Vec.CHUNK_SZ, len);
     return new MRTask2() {
       @Override
       public void map(Chunk[] cs) {
@@ -225,7 +221,7 @@ public class Vec extends Iced {
             c.set0(r, r+1+c._start);
         }
       }
-    }.doAll(new Vec(VectorGroup.VG_LEN1.addVec(), espc).makeZero()).vecs(0);
+    }.doAll(makeConSeq(0, len)).vecs(0);
   }
   public static Vec makeConSeq(double x, long len) {
     int chunks = (int)Math.ceil((double)len / Vec.CHUNK_SZ);

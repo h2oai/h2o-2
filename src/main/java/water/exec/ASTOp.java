@@ -1083,7 +1083,7 @@ class ASTSeqLen extends ASTOp {
   }
   @Override ASTOp make() { return this; }
   @Override void apply(Env env, int argcnt, ASTApply apply) {
-    int len = (int)env.popDbl();
+    long len = (long)env.popDbl();
     if (len <= 0)
       throw new IllegalArgumentException("Error in seq_len(" +len+"): argument must be coercible to positive integer");
     env.poppush(1,new Frame(new String[]{"c"}, new Vec[]{Vec.makeSeq(len)}),null);
@@ -1148,7 +1148,7 @@ class ASTRepLen extends ASTOp {
   @Override void apply(Env env, int argcnt, ASTApply apply) {
     if(env.isAry(-2)) H2O.unimpl();
     else {
-      int len = (int)env.popDbl();
+      long len = (long)env.popDbl();
       if(len <= 0)
         throw new IllegalArgumentException("Error in rep_len: argument length.out must be coercible to a positive integer");
       double x = env.popDbl();
