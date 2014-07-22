@@ -49,15 +49,14 @@ public class ChunkSummary extends MRTask2<ChunkSummary> {
 
   @Override
   public void map(Chunk[] cs) {
-    for (int col=0; col<cs.length; ++col) {
+    for (Chunk c : cs) {
       boolean found = false;
       for (int j = 0; j < chunkTypes.length; ++j) {
-        Chunk ck = cs[col];
-        if (ck.getClass().getSimpleName().equals(chunkTypes[j])) {
+        if (c.getClass().getSimpleName().equals(chunkTypes[j])) {
           found = true;
           chunk_counts[j]++;
-          chunk_byte_sizes[j] += ck.byteSize();
-          byte_size_per_node[H2O.SELF.index()] += ck.byteSize();
+          chunk_byte_sizes[j] += c.byteSize();
+          byte_size_per_node[H2O.SELF.index()] += c.byteSize();
         }
       }
       if (!found) {
@@ -101,17 +100,17 @@ public class ChunkSummary extends MRTask2<ChunkSummary> {
     byte_size_per_node_min = Float.MAX_VALUE;
     byte_size_per_node_max = Float.MIN_VALUE;
     byte_size_per_node_mean = 0;
-    for (int i = 0; i<byte_size_per_node.length; ++i) {
-      byte_size_per_node_min = Math.min(byte_size_per_node[i], byte_size_per_node_min);
-      byte_size_per_node_max = Math.max(byte_size_per_node[i], byte_size_per_node_max);
-      byte_size_per_node_mean += byte_size_per_node[i];
+    for (long aByte_size_per_node : byte_size_per_node) {
+      byte_size_per_node_min = Math.min(aByte_size_per_node, byte_size_per_node_min);
+      byte_size_per_node_max = Math.max(aByte_size_per_node, byte_size_per_node_max);
+      byte_size_per_node_mean += aByte_size_per_node;
     }
     byte_size_per_node_mean /= byte_size_per_node.length;
 
     // compute standard deviation (doesn't have to be single pass...)
     byte_size_per_node_stddev = 0;
-    for (int i = 0; i<byte_size_per_node.length; ++i) {
-      byte_size_per_node_stddev += Math.pow(byte_size_per_node[i] - byte_size_per_node_mean, 2);
+    for (long aByte_size_per_node : byte_size_per_node) {
+      byte_size_per_node_stddev += Math.pow(aByte_size_per_node - byte_size_per_node_mean, 2);
     }
     byte_size_per_node_stddev /= byte_size_per_node.length;
     byte_size_per_node_stddev = (float)Math.sqrt(byte_size_per_node_stddev);
@@ -123,13 +122,13 @@ public class ChunkSummary extends MRTask2<ChunkSummary> {
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("Internal FluidVec compression/distribution summary:\n");
-    sb.append("Chunk type      count       size     fraction     rel. size\n");
+    sb.append("Chunk type      count     fraction       size     rel. size\n");
     for (int j = 0; j < chunkTypes.length; ++j) {
-      sb.append(String.format("%10s %10d %10s %10.3f %% %10.3f %%\n",
+      sb.append(String.format("%10s %10d %10.3f %% %10s %10.3f %%\n",
               chunkTypes[j],
               chunk_counts[j],
-              display(chunk_byte_sizes[j]),
               (float) chunk_counts[j] / total_chunk_count * 100.,
+              display(chunk_byte_sizes[j]),
               (float) chunk_byte_sizes[j] / total_chunk_byte_size * 100.));
     }
     // if more than 50% is double data, inform the user to consider compressing to single precision
