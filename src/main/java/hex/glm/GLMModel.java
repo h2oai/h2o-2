@@ -249,22 +249,30 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
 
   public static class GetScoringModelTask extends DTask<GetScoringModelTask>{
     final Key _modelKey;
+    final Key _jobKey;
     final double _lambda;
     GLMModel _res;
-    public GetScoringModelTask(H2OCountedCompleter cmp, Key modelKey, double lambda){
+    public GetScoringModelTask(H2OCountedCompleter cmp, Key jobKey, Key modelKey, double lambda){
       super(cmp);
+      _jobKey = jobKey;
       _modelKey = modelKey;
       _lambda = lambda;
     }
     @Override
     public void compute2() {
       if(_modelKey.home()){
-        _res = (GLMModel)H2O.get(_modelKey).get().clone();
-        Submodel sm = _res.submodelForLambda(_lambda);
-        assert sm != null:"GLM[" + _modelKey + "]: missing submodel for lambda " + _lambda;
-        sm = (Submodel)sm.clone();
-        _res.submodels = new Submodel[]{sm};
-        _res.setSubmodelIdx(0);
+        Value v = H2O.get(_modelKey);
+        if(v == null){
+          assert !Job.isRunning(_jobKey):"missing model (" + _modelKey + " ) while job is still running";
+          throw new Job.JobCancelledException();
+        } else {
+          _res = (GLMModel) v.get().clone();
+          Submodel sm = _res.submodelForLambda(_lambda);
+          assert sm != null : "GLM[" + _modelKey + "]: missing submodel for lambda " + _lambda;
+          sm = (Submodel) sm.clone();
+          _res.submodels = new Submodel[]{sm};
+          _res.setSubmodelIdx(0);
+        }
         tryComplete();
       } else new RPC(_modelKey.home_node(),this).addCompleter(this).call();
     }
