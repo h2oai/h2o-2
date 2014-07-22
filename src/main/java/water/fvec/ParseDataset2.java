@@ -12,6 +12,7 @@ import water.parser.CustomParser.ParserType;
 import water.parser.CustomParser.StreamDataOut;
 import water.parser.Enum;
 import water.parser.ParseDataset.Compression;
+import water.util.FrameUtils;
 import water.util.Log;
 import water.util.Utils;
 import water.util.Utils.IcedHashMap;
@@ -373,6 +374,7 @@ public final class ParseDataset2 extends Job {
           Log.info_no_stdout(String.format("    %-8s %15s %20s %20s %15s %11s %16s", CStr, typeStr, minStr, maxStr, naStr, isConstantStr, numLevelsStr));
         }
       }
+      Log.info(FrameUtils.chunkSummary(fr).toString());
     }
     catch (Exception ignore) {}   // Don't fail due to logging issues.  Just ignore them.
   }
