@@ -516,10 +516,9 @@ public abstract class Model extends Lockable<Model> {
       auc.vactual = vactual;
       auc.predict = fpreds;
       auc.vpredict = fpreds.vecs()[2]; //binary classifier (label, prob0, prob1 (THIS ONE), adaptedlabel)
-      auc.threshold_criterion = AUC.ThresholdCriterion.maximum_F1;
       auc.invoke();
       auc.toASCII(sb);
-      error = auc.err(); //using optimal threshold for F1
+      error = auc.data().err(); //using optimal threshold for F1
     }
     // populate CM
     if (cm != null) {
@@ -530,14 +529,15 @@ public abstract class Model extends Lockable<Model> {
       cm.invoke();
       if (isClassifier()) {
         if (auc != null) {
+          AUCData aucd = auc.data();
           //override the CM with the one computed by AUC (using optimal threshold)
           //Note: must still call invoke above to set the domains etc.
           cm.cm = new long[3][3]; // 1 extra layer for NaNs (not populated here, since AUC skips them)
-          cm.cm[0][0] = auc.cm()[0][0];
-          cm.cm[1][0] = auc.cm()[1][0];
-          cm.cm[0][1] = auc.cm()[0][1];
-          cm.cm[1][1] = auc.cm()[1][1];
-          assert(new hex.ConfusionMatrix(cm.cm).err() == auc.err()); //check consistency with AUC-computed error
+          cm.cm[0][0] = aucd.cm()[0][0];
+          cm.cm[1][0] = aucd.cm()[1][0];
+          cm.cm[0][1] = aucd.cm()[0][1];
+          cm.cm[1][1] = aucd.cm()[1][1];
+          assert(new hex.ConfusionMatrix(cm.cm).err() == aucd.err()); //check consistency with AUC-computed error
         } else {
           error = new hex.ConfusionMatrix(cm.cm).err(); //only set error if AUC didn't already set the error
         }
@@ -785,14 +785,14 @@ public abstract class Model extends Lockable<Model> {
       water.api.ConfusionMatrix cm = new water.api.ConfusionMatrix();
       HitRatio hr = isClassifier() ? new HitRatio() : null;
       double cv_error = calcError(source, response, cv_pred, cv_pred, "cross-validated", true, 10, cm, auc, hr);
-      setCrossValidationError(job, cv_error, cm, auc, hr);
+      setCrossValidationError(job, cv_error, cm, auc == null ? null : auc.data(), hr);
     } finally {
       // cleanup temporary frame wit predictions
       cv_pred.delete();
     }
   }
 
-  protected void setCrossValidationError(Job.ValidatedJob job, double cv_error, water.api.ConfusionMatrix cm, AUC auc, HitRatio hr) { throw H2O.unimpl(); }
+  protected void setCrossValidationError(Job.ValidatedJob job, double cv_error, water.api.ConfusionMatrix cm, AUCData auc, HitRatio hr) { throw H2O.unimpl(); }
 
   protected void printCrossValidationModelsHTML(StringBuilder sb) {
     if (job() == null) return;

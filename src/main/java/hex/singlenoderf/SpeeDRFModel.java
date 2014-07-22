@@ -18,9 +18,7 @@ import water.util.Counter;
 import water.util.Log;
 import water.util.ModelUtils;
 
-import java.lang.reflect.Array;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Random;
 
 
@@ -65,7 +63,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   /* Confusion Matrix */                                                  long[][] cm;
   @API(help = "Tree Statistics")                                          TreeStats treeStats;
   @API(help = "cmDomain")                                                 String[] cmDomain;
-  @API(help = "AUC")                                                      public AUC validAUC;
+  @API(help = "AUC")                                                      public AUCData validAUC;
   @API(help = "Variable Importance")                                      public VarImp varimp;
   /* Regression or Classification */                                      boolean regression;
   /* Score each iteration? */                                             boolean score_each;
@@ -111,7 +109,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     _domain = regression ? null : fr.lastVec().toEnum().domain();
   }
 
-  protected SpeeDRFModel(SpeeDRFModel model, double err, ConfusionMatrix cm, VarImp varimp, AUC auc) {
+  protected SpeeDRFModel(SpeeDRFModel model, double err, ConfusionMatrix cm, VarImp varimp, AUCData auc) {
     super(model._key,model._dataKey,model._names,model._domains, model._priorClassDist,model._modelClassDist);
     this.features = model.features;
     this.sampling_strategy = model.sampling_strategy;
@@ -707,8 +705,8 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     return res;
   }
 
-  protected static water.api.AUC makeAUC(ConfusionMatrix[] cms, float[] threshold, String[] cmDomain) {
-    return cms != null ? new AUC(cms, threshold, cmDomain) : null;
+  protected static AUCData makeAUC(ConfusionMatrix[] cms, float[] threshold, String[] cmDomain) {
+    return cms != null ? new AUC(cms, threshold, cmDomain).data() : null;
   }
 
   protected void generateHTMLAUC(StringBuilder sb) {
@@ -782,7 +780,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     return res;
   }
 
-  @Override protected void setCrossValidationError(Job.ValidatedJob job, double cv_error, water.api.ConfusionMatrix cm, water.api.AUC auc, water.api.HitRatio hr) {
+  @Override protected void setCrossValidationError(Job.ValidatedJob job, double cv_error, water.api.ConfusionMatrix cm, AUCData auc, HitRatio hr) {
     _have_cv_results = true;
     SpeeDRFModel drfm = ((SpeeDRF)job).makeModel(this, cv_error, cm.cm == null ? null : new ConfusionMatrix(cm.cm, this.nclasses()), this.varimp, auc);
     drfm._have_cv_results = true;
