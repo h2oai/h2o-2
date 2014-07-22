@@ -8,6 +8,7 @@ import org.junit.Test;
 import water.*;
 import water.fvec.Vec;
 import static water.fvec.Vec.makeConSeq;
+import static water.fvec.Vec.makeSeq;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -115,6 +116,21 @@ public class VecTest extends TestUtil {
             v._espc[1] == Vec.CHUNK_SZ   &&
             v._espc[2] == Vec.CHUNK_SZ*2 &&
             v._espc[3] == Vec.CHUNK_SZ*3
+    );
+    v.remove(new Futures()).blockForPending();
+  }
+  // Test HEX-1819
+  @Test public void testMakeSeq() {
+    Vec v = makeSeq(3*Vec.CHUNK_SZ);
+    assertTrue(v.at(0) == 1);
+    assertTrue(v.at(234) == 235);
+    assertTrue(v.at(2*Vec.CHUNK_SZ) == 2*Vec.CHUNK_SZ+1);
+    assertTrue(v._espc.length == 4);
+    assertTrue(
+            v._espc[0] == 0 &&
+            v._espc[1] == Vec.CHUNK_SZ &&
+            v._espc[2] == Vec.CHUNK_SZ * 2 &&
+            v._espc[3] == Vec.CHUNK_SZ * 3
     );
     v.remove(new Futures()).blockForPending();
   }

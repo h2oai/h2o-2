@@ -211,17 +211,23 @@ public class Vec extends Iced {
     fs.blockForPending();
     return v0;
   }
-  public static Vec makeSeq( int len ) {
-    Futures fs = new Futures();
-    AppendableVec av = new AppendableVec(VectorGroup.VG_LEN1.addVec());
-    NewChunk nc = new NewChunk(av,0);
-    for (int r = 0; r < len; r++) nc.addNum(r+1);
-    nc.close(0,fs);
-    Vec v = av.close(fs);
-    fs.blockForPending();
-    return v;
+  public static Vec makeSeq( long len) {
+    int chunks = (int)Math.ceil((double)len / Vec.CHUNK_SZ);
+    long[] espc = new long[chunks+1];
+    for (int i = 1; i<=chunks; ++i)
+      espc[i] = Math.min(espc[i-1] + Vec.CHUNK_SZ, len);
+    return new MRTask2() {
+      @Override
+      public void map(Chunk[] cs) {
+        for (int i = 0; i < cs.length; i++) {
+          Chunk c = cs[i];
+          for (int r = 0; r < c._len; r++)
+            c.set0(r, r+1+c._start);
+        }
+      }
+    }.doAll(new Vec(VectorGroup.VG_LEN1.addVec(), espc).makeZero()).vecs(0);
   }
-  public static Vec makeConSeq(double x, int len) {
+  public static Vec makeConSeq(double x, long len) {
     int chunks = (int)Math.ceil((double)len / Vec.CHUNK_SZ);
     long[] espc = new long[chunks+1];
     for (int i = 1; i<=chunks; ++i)
