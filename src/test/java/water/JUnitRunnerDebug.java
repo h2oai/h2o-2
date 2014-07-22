@@ -13,7 +13,6 @@ import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
 import water.deploy.NodeCL;
 import water.fvec.*;
-import static water.fvec.Vec.makeConSeq;
 import water.util.Log;
 import water.util.Utils;
 
@@ -21,7 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class JUnitRunnerDebug {
-  public static final int NODES =1;
+  public static final int NODES = 3;
 
   public static void main(String[] args) throws Exception {
     int[] ports = new int[NODES];
