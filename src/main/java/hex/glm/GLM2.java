@@ -307,6 +307,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   }
 
   @Override public void cancel(Throwable ex){
+    LogInfo(ex.toString());
     super.cancel(ex);
     DKV.remove(dest());
   }
@@ -510,6 +511,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     @Override public void callback(final GLMIterationTask glmt){
       assert _activeCols == null || glmt._beta == null || glmt._beta.length == (_activeCols.length+1):"betalen = " + glmt._beta.length + ", activecols = " + _activeCols.length;
       assert _activeCols == null || _activeCols.length == _activeData.fullN();
+      assert !_doLineSearch || Arrays.equals(_lastResult._activeCols,_activeCols);
       if(_countIteration)++_iter;
       _callbackStart = System.currentTimeMillis();
       LogInfo("iteration done in " + (_callbackStart - _iterationStartTime) + "ms, lambda = " + _currentLambda + ", lambda_min = " + lambda_min + ", cmp = " + getCompleter());
@@ -544,7 +546,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         return;
       }
       if(glmt._val != null){
-        if(!(glmt._val.residual_deviance < glmt._val.null_deviance)){ // complete fail, look if we can restart with higher_accuracy on
+        if(family != Family.gaussian && !(glmt._val.residual_deviance <= glmt._val.null_deviance)){ // complete fail, look if we can restart with higher_accuracy on
           if(!highAccuracy()){
             LogInfo("reached negative explained deviance without line-search, rerunning with high accuracy settings.");
             setHighAccuracy();
@@ -668,7 +670,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
               Arrays.sort(_activeCols);
               LogInfo(fcnt + " variables failed KKT conditions check! Adding them to the model and continuing computation... (grad_eps = " + grad_eps + ", activeCols = " + Arrays.toString(_activeCols));
               _activeData = _dinfo.filterExpandedColumns(_activeCols);
-              new GLMIterationTask(GLM2.this.self(), _activeData, _glm, true, false, false, resizeVec(newBeta, _activeCols, oldActiveCols), glmt._ymu, glmt._reg, thresholds, new Iteration(getCompleter(),false)).asyncExec(_activeData._adaptedFrame);
+              new GLMIterationTask(GLM2.this.self(), _activeData, _glm, true, true, true, resizeVec(newBeta, _activeCols, oldActiveCols), glmt._ymu, glmt._reg, thresholds, new Iteration(getCompleter(),false)).asyncExec(_activeData._adaptedFrame);
               return;
             }
           }
@@ -722,7 +724,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         GLM2.this.complete();
       }
       @Override public boolean onExceptionalCompletion(Throwable t, CountedCompleter cmp){
-        if(!(t instanceof JobCancelledException) && !t.getMessage().contains("JobCancelled"))
+        if(!(t instanceof JobCancelledException) && (t.getMessage() == null || !t.getMessage().contains("JobCancelled")))
           GLM2.this.cancel(t);
         return true;
       }
@@ -740,7 +742,6 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     public XvalidationCallback(H2OCountedCompleter cmp){super(cmp);}
     @Override
     public void callback(H2OCountedCompleter cc) {
-      System.out.println("======================= " + "Xval at lambda = " + _currentLambda + " =======================");
       ParallelGLMs pgs = (ParallelGLMs)cc;
       _xvals = pgs._glms;
       for(int i = 0; i < _xvals.length; ++i)
@@ -895,6 +896,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   }
 
   void nextLambda(final double currentLambda, final H2OCountedCompleter cmp){
+    LogInfo("starting computation of lambda = " + currentLambda + ", previous lambda = " + _currentLambda);
     final double previousLambda = _currentLambda;
     _currentLambda = currentLambda;
     if(n_folds > 1){ // if we're cross-validated tasks, just fork off the parallel glms and wait for result!
@@ -921,7 +923,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 //        new Iteration(cmp, false).callback(_lastResult._glmt);
 //        _lastResult._glmt.tryComplete();  // shortcut to reuse the last gram if same active columns
 //      } else
-        new GLMIterationTask(GLM2.this.self(), _activeData, _glm, true, true, true, resizeVec(_lastResult._glmt._beta, _activeCols, _lastResult._activeCols), _ymu, 1.0 / _nobs, thresholds, new Iteration(cmp,false)).asyncExec(_activeData._adaptedFrame);;
+        new GLMIterationTask(GLM2.this.self(), _activeData, _glm, true, false, false, resizeVec(_lastResult._glmt._beta, _activeCols, _lastResult._activeCols), _ymu, 1.0 / _nobs, thresholds, new Iteration(cmp,false)).asyncExec(_activeData._adaptedFrame);;
     }
   }
 
@@ -970,6 +972,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       _activeData = _dinfo.filterExpandedColumns(_activeCols);
     }
     LogInfo("strong rule at lambda_value=" + l1 + ", got " + selected + " active cols out of " + _dinfo.fullN() + " total.");
+    assert _activeCols == null || _activeData.fullN() == _activeCols.length:"mismatched number of cols, got " + _activeCols.length + " active cols, but data info claims " + _activeData.fullN();
     return _activeCols;
   }
 
@@ -1096,10 +1099,13 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       assert Double.isNaN(_lambda) || _glm._lastResult._fullGrad != null:"GLM[" + _glm.dest() + "]: missing full gradient at lambda = " + _glm._currentLambda;
       if(Double.isNaN(_lambda))
         _glm.run(true,this);
-      else
-        _glm.nextLambda(_lambda,this);
+      else {
+        _glm.nextLambda(_lambda, this);
+      }
     }
     @Override public void onCompletion(CountedCompleter cc){
+      System.out.flush();
+      try{Thread.sleep(1000);}catch(Throwable t){}
       assert _glm._lastResult._fullGrad != null:"GLM[" + _glm.dest() + "] missing full gradient at lambda = " + _glm._currentLambda;
     }
   }
