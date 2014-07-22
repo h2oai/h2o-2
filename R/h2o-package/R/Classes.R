@@ -410,6 +410,18 @@ h2o.exec <- function(expr_to_execute, h2o = NULL, dest_key = "") {
   key <- res$dest_key
   if (.pkg.env$FRAMEKEY != "") {
     key <- as.character(.pkg.env$FRAMEKEY)
+    newFrame <- .h2o.exec2(key, h2o = .pkg.env$SERVER, key)
+    topCall <- sys.calls()[[1]]
+    idxs <- which( "H2OParsedData" == unlist(lapply(as.list(topCall), .eval_class, envir=parent.frame())))
+    obj_name <- as.character(.pkg.env$CURS4)
+    if (length(idxs) != 0) obj_name <- as.character(topCall[[idxs]])[1]
+
+    env <- .lookUp(obj_name)
+    if (is.null(env)) {
+      env <- parent.frame()
+    }
+    assign(obj_name, newFrame, env)
+    return(newFrame)
   }
   .h2o.exec2(key, h2o = .pkg.env$SERVER, key)
 }
