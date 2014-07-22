@@ -773,7 +773,10 @@ public class DTree extends Iced {
             CompressedTree[] ts = ab.getA(CompressedTree.class);
             for (int j=0; j<ts.length; j++) {
               Key k = ((TreeModel) m).treeKeys[i][j];
-              UKV.put(k, ts[j], fs);
+              assert k == null && ts[j] == null || k != null && ts[j] != null : "Incosistency in model serialization: key is null but model is not null, OR vice versa!";
+              if (k!=null) {
+                UKV.put(k, ts[j], fs);
+              }
             }
           }
           fs.blockForPending();
