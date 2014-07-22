@@ -1,4 +1,6 @@
 ##
+# NOPASS TEST: The following bug is associated with JIRA PUB-857
+# 'GLM models differ on data after shuffling'
 # Testing glm consistency on 1 chunk dataset with and without shuffling rows.
 ##
 
@@ -33,7 +35,8 @@ test <- function(conn) {
     	print("Comparing 2 models from original dataset")
     		stopifnot(h2o.model@model$coefficients == h2o.model2@model$coefficients)
     	print("Comparing models from original and shuffled dataset")
-    		stopifnot(h2o.model@model$coefficients == h2o.model.s@model$coefficients)
+            # The following line is expected to pass; all models created on same single chunk data should be identical
+            stopifnot(h2o.model@model$coefficients == h2o.model.s@model$coefficients)
 
     testEnd()
 }
