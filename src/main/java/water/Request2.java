@@ -498,7 +498,7 @@ public abstract class Request2 extends Request {
    * Arguments to fields casts.
    */
 
-  private static boolean compatible(Class type, Object o) {
+  private static boolean compatible(Class type, Iced o) {
     if( type == Frame.class && o instanceof ValueArray )
       return true;
     return type.isInstance(o);
