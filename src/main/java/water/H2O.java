@@ -958,6 +958,7 @@ public final class H2O {
       DEFAULT_PORT = OPT_ARGS.baseport;
     }
     SINGLE_PRECISION = OPT_ARGS.single_precision != null;
+    if (SINGLE_PRECISION) Log.info("Using single precision for floating-point numbers.");
 
     // Get ice path before loading Log or Persist class
     String ice = DEFAULT_ICE_ROOT();
