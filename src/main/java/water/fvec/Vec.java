@@ -222,14 +222,11 @@ public class Vec extends Iced {
     return v;
   }
   public static Vec makeConSeq(double x, int len) {
-    Futures fs = new Futures();
-    AppendableVec av = new AppendableVec(VectorGroup.VG_LEN1.addVec());
-    NewChunk nc = new NewChunk(av,0);
-    for (int r = 0; r < len; r++) nc.addNum(x);
-    nc.close(0,fs);
-    Vec v = av.close(fs);
-    fs.blockForPending();
-    return v;
+    int chunks = (int)Math.ceil((double)len / Vec.CHUNK_SZ);
+    long[] espc = new long[chunks+1];
+    for (int i = 1; i<=chunks; ++i)
+      espc[i] = Math.min(espc[i-1] + Vec.CHUNK_SZ, len);
+    return new Vec(VectorGroup.VG_LEN1.addVec(), espc).makeCon(x);
   }
 
   /** Create a new 1-element vector in the shared vector group for 1-element vectors. */
@@ -837,9 +834,11 @@ public class Vec extends Iced {
     return s+"}]";
   }
 
-  public void remove( Futures fs ) {
+  public Futures remove( Futures fs ) {
     for( int i=0; i<nChunks(); i++ )
       UKV.remove(chunkKey(i),fs);
+    DKV.remove(_key);
+    return fs;
   }
 
   @Override public boolean equals( Object o ) {

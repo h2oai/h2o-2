@@ -13,6 +13,7 @@ import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
 import water.deploy.NodeCL;
 import water.fvec.*;
+import static water.fvec.Vec.makeConSeq;
 import water.util.Log;
 import water.util.Utils;
 
@@ -20,7 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class JUnitRunnerDebug {
-  public static final int NODES = 3;
+  public static final int NODES =1;
 
   public static void main(String[] args) throws Exception {
     int[] ports = new int[NODES];
@@ -69,15 +70,16 @@ public class JUnitRunnerDebug {
       tests.add(CX0ChunkTest.class);
       tests.add(CXIChunkTest.class);
       tests.add(CXDChunkTest.class);
+      tests.add(VecTest.class);
 
       // Deep Learning tests
 //      tests.add(DeepLearningVsNeuralNet.class); //only passes for NODES=1, not clear why
 //      tests.add(DeepLearningAutoEncoderTest.class); //test Deep Learning convergence
 //      tests.add(DeepLearningAutoEncoderCategoricalTest.class); //test Deep Learning convergence
 //      tests.add(DeepLearningSpiralsTest.class); //test Deep Learning convergence
-      tests.add(DeepLearningIrisTest.Short.class); //compare Deep Learning vs reference
+//      tests.add(DeepLearningIrisTest.Short.class); //compare Deep Learning vs reference
 //      tests.add(DeepLearningIrisTest.Long.class); //compare Deep Learning vs reference
-      tests.add(DeepLearningProstateTest.Short.class); //test Deep Learning
+//      tests.add(DeepLearningProstateTest.Short.class); //test Deep Learning
 //      tests.add(DeepLearningProstateTest.Long.class); //test Deep Learning
 //      tests.add(NeuronsTest.class); //test Deep Learning
 //      tests.add(MRUtilsTest.class); //test MR sampling/rebalancing

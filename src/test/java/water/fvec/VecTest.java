@@ -7,6 +7,7 @@ import org.junit.Test;
 
 import water.*;
 import water.fvec.Vec;
+import static water.fvec.Vec.makeConSeq;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -65,7 +66,56 @@ public class VecTest extends TestUtil {
           assertTrue(Arrays.deepEquals(c._vec.domain(), newDomain));
         }
       }.doAll(rebalancedFrame);
-    } finally { for(Key k:madeKeys) DKV.remove(k);}
+    } finally { for(Key k:madeKeys) UKV.remove(k);}
   }
   @Test public void testChangeDomain(){testChangeDomainImpl();}
+
+  // Test HEX-1819
+  @Test public void testMakeConSeq() {
+    Vec v;
+
+    v = makeConSeq(0xCAFE,Vec.CHUNK_SZ);
+    assertTrue(v.at(234) == 0xCAFE);
+    assertTrue(v._espc.length == 2);
+    assertTrue(
+            v._espc[0] == 0              &&
+            v._espc[1] == Vec.CHUNK_SZ
+    );
+    v.remove(new Futures()).blockForPending();
+
+    v = makeConSeq(0xCAFE,2*Vec.CHUNK_SZ);
+    assertTrue(v.at(234) == 0xCAFE);
+    assertTrue(v.at(2*Vec.CHUNK_SZ-1) == 0xCAFE);
+    assertTrue(v._espc.length == 3);
+    assertTrue(
+            v._espc[0] == 0              &&
+            v._espc[1] == Vec.CHUNK_SZ   &&
+            v._espc[2] == Vec.CHUNK_SZ*2
+    );
+    v.remove(new Futures()).blockForPending();
+
+    v = makeConSeq(0xCAFE,2*Vec.CHUNK_SZ+1);
+    assertTrue(v.at(234) == 0xCAFE);
+    assertTrue(v.at(2*Vec.CHUNK_SZ) == 0xCAFE);
+    assertTrue(v._espc.length == 4);
+    assertTrue(
+            v._espc[0] == 0              &&
+            v._espc[1] == Vec.CHUNK_SZ   &&
+            v._espc[2] == Vec.CHUNK_SZ*2 &&
+            v._espc[3] == Vec.CHUNK_SZ*2+1
+    );
+    v.remove(new Futures()).blockForPending();
+
+    v = makeConSeq(0xCAFE,3*Vec.CHUNK_SZ);
+    assertTrue(v.at(234) == 0xCAFE);
+    assertTrue(v.at(3*Vec.CHUNK_SZ-1) == 0xCAFE);
+    assertTrue(v._espc.length == 4);
+    assertTrue(
+            v._espc[0] == 0              &&
+            v._espc[1] == Vec.CHUNK_SZ   &&
+            v._espc[2] == Vec.CHUNK_SZ*2 &&
+            v._espc[3] == Vec.CHUNK_SZ*3
+    );
+    v.remove(new Futures()).blockForPending();
+  }
 }

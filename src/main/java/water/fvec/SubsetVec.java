@@ -23,9 +23,10 @@ public class SubsetVec extends WrappedVec {
     return new SubsetChunk(crows,this,masterVec());
   }
 
-  @Override public void remove(Futures fs) { 
+  @Override public Futures remove(Futures fs) {
     super.remove(fs);
-    UKV.remove(_subsetRowsKey,fs); 
+    UKV.remove(_subsetRowsKey,fs);
+    return fs;
   }
 
   // 
