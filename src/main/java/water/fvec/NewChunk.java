@@ -794,18 +794,33 @@ public class NewChunk extends Chunk {
 
   // Compute a compressed double buffer
   private Chunk chunkD() {
-    final byte [] bs = MemoryManager.malloc1(_len*8,true);
-    int j = 0;
-    for(int i = 0; i < _len; ++i){
-      double d = 0;
-      if(_id == null || _id.length == 0 || (j < _id.length && _id[j] == i)) {
-        d = _ds != null?_ds[j]:(isNA2(j)||isEnum(j))?Double.NaN:_ls[j]*DParseTask.pow10(_xs[j]);
-        ++j;
+    if (H2O.SINGLE_PRECISION) {
+      final byte[] bs = MemoryManager.malloc1(_len * 4, true);
+      int j = 0;
+      for (int i = 0; i < _len; ++i) {
+        float f = 0;
+        if (_id == null || _id.length == 0 || (j < _id.length && _id[j] == i)) {
+          f = _ds != null ? (float)_ds[j] : (isNA2(j) || isEnum(j)) ? Float.NaN : (float)(_ls[j] * DParseTask.pow10(_xs[j]));
+          ++j;
+        }
+        UDP.set4f(bs, 4 * i, f);
       }
-      UDP.set8d(bs, 8*i, d);
+      assert j == _sparseLen : "j = " + j + ", _sparseLen = " + _sparseLen;
+      return new C4FChunk(bs);
+    } else {
+      final byte[] bs = MemoryManager.malloc1(_len * 8, true);
+      int j = 0;
+      for (int i = 0; i < _len; ++i) {
+        double d = 0;
+        if (_id == null || _id.length == 0 || (j < _id.length && _id[j] == i)) {
+          d = _ds != null ? _ds[j] : (isNA2(j) || isEnum(j)) ? Double.NaN : _ls[j] * DParseTask.pow10(_xs[j]);
+          ++j;
+        }
+        UDP.set8d(bs, 8 * i, d);
+      }
+      assert j == _sparseLen : "j = " + j + ", _sparseLen = " + _sparseLen;
+      return new C8DChunk(bs);
     }
-    assert j == _sparseLen:"j = " + j + ", _sparseLen = " + _sparseLen;
-    return new C8DChunk(bs);
   }
 
   // Compute a compressed UUID buffer

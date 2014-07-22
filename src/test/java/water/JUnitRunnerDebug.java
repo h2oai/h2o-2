@@ -34,6 +34,10 @@ public class JUnitRunnerDebug {
 
     for( int i = 0; i < ports.length; i++ ) {
       Class c = i == 0 ? UserCode.class : H2O.class;
+      // single precision
+//      new NodeCL(c, ("-ip 127.0.0.1 -single_precision -port " + ports[i] + " -flatfile " + flat).split(" ")).start();
+
+      // double precision
       new NodeCL(c, ("-ip 127.0.0.1 -port " + ports[i] + " -flatfile " + flat).split(" ")).start();
     }
   }
@@ -61,6 +65,7 @@ public class JUnitRunnerDebug {
       tests.add(C2ChunkTest.class);
       tests.add(C2SChunkTest.class);
       tests.add(C4ChunkTest.class);
+      tests.add(C4FChunkTest.class);
       tests.add(C4SChunkTest.class);
       tests.add(C8ChunkTest.class);
       tests.add(C8DChunkTest.class);
