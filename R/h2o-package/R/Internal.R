@@ -404,7 +404,8 @@ function(expr, envir) {
   else
     res <- .h2o.__exec2_dest_key(h2o, expr, dest_key)
   key <- res$dest_key
-  new("H2OParsedData", h2o = h2o, key = key, col_names = .getColNames(res), nrows = .getRows(res), ncols = .getCols(res), any_enum = .getAnyEnum(res))
+  newFrame <- new("H2OParsedData", h2o = h2o, key = key, col_names = .getColNames(res), nrows = .getRows(res), ncols = .getCols(res), any_enum = .getAnyEnum(res))
+  return(newFrame)
 }
 
 #'
@@ -472,6 +473,7 @@ function(expr) {
 #'
 .back_to_expr<-
 function(some_expr_list) {
+  if (!is.list(some_expr_list) && length(some_expr_list == 1)) return(some_expr_list)
   len <- length(some_expr_list)
   while(len > 1) {
     num_sub_lists <- 0
@@ -501,6 +503,7 @@ function(some_expr_list) {
 function(object, envir) {
   assign("SERVER", get(as.character(object), envir = envir)@h2o, envir = .pkg.env)
   assign("CURKEY", get(as.character(object), envir = envir)@key, envir = .pkg.env)
+  assign("CURS4",  as.character(object), envir = .pkg.env)
   if ( !exists("COLNAMES", .pkg.env)) {
     assign("COLNAMES", colnames(get(as.character(object), envir = envir)), .pkg.env)
   }
@@ -526,15 +529,15 @@ function(object, envir) {
 }
 
 .lookUp<-
-function(object) {
- cnt <- 1
- object <- as.character(object)
- if (!exists(object, globalenv())) { return(-1) }
- if (exists(object, parent.frame(cnt))) {
-    return(1 + cnt)
- } else {
-    return(.lookUp(object) + 1)
- }
+function(object, envir = parent.frame()) {
+  if (identical(envir, emptyenv())) {
+    NULL
+#    stop("No such variable name: ", object, call. = FALSE)
+  } else if (exists(object, envir = envir, inherits = FALSE)) {
+    envir
+  } else {
+    .lookUp(object, parent.env(envir))
+  }
 }
 
 #'
@@ -664,11 +667,16 @@ function(some_expr_list, envir) {
   # Have a single column sliced out that we want to a) replace -OR- b) create
   if (identical(l[[1]], quote(`$`)) || identical(l[[1]], quote(`[`))) {
     l[[1]] <- quote(`[`)  # This handles both cases (unkown and known colnames... should just work!)
-    cols <- colnames(get(as.character(l[[2]]), envir = envir))
+    cols <- .h2o.exec2(h2o = get(as.character(l[[2]]), envir = envir)@h2o, expr = get(as.character(l[[2]]), envir = envir)@key, dest_key = get(as.character(l[[2]]), envir = envir)@key)@col_names
     numCols <- length(cols)
     colname <- tryCatch(
-        if(length(l) == 3) as.character(eval(l[[3]], envir = envir)) else as.character(eval(as.expression(.back_to_expr(l[[4]])), envir = envir)),
-        error = function(e) { return(if(length(l) == 3) as.character(l[[3]]) else as.character(l[[4]]))})
+        if(length(l) == 3) as.character(eval(l[[3]], envir = envir))
+        else if (!is.list(l[[4]]) && length(l[[4]]) == 1) {
+          as.character(eval(l[[4]], envir = envir))
+        } else {
+          as.character(eval(as.expression(.back_to_expr(l[[4]])), envir = envir))
+        },
+        error = function(e) {return(if(length(l) == 3) as.character(l[[3]]) else as.character(l[[4]]))})
 
     if (! (colname %in% cols)) {
       assign("NEWCOL", colname, envir = .pkg.env)
