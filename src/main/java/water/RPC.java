@@ -333,6 +333,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       // Send results back
       DTask origDt = _dt;
       DTask dt = origDt; // _dt can go null the instant its send over wire
+
       do {           // Retry loop for broken TCP sends
         AutoBuffer ab = null;
         try {
@@ -341,7 +342,9 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
           _computed = true;   // After the TCP reply flag set, set computed bit
           boolean t = ab.hasTCP(); // Resends do not need to repeat TCP result
           dt._repliedTcp = t;
-          ab.close(t,false);  // Then close; send final byte
+          AutoBuffer ab2 = ab;
+          ab = null;
+          ab2.close(t,false);  // Then close; send final byte
           break;              // Break out of retry loop
         } catch( AutoBuffer.TCPIsUnreliableException e ) {
           Log.info("Task cancelled or network congestion: TCPACK "+e._ioe.getMessage()+", t#"+_tsknum+" AB="+ab+", waiting and retrying...");
