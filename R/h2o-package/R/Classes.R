@@ -824,6 +824,11 @@ setMethod("&", c("logical", "H2OParsedData"), function(e1, e2) { .h2o.__binop2("
 setMethod("|", c("logical", "H2OParsedData"), function(e1, e2) { .h2o.__binop2("|", as.numeric(e1), e2) })
 setMethod("&", c("H2OParsedData", "logical"), function(e1, e2) { .h2o.__binop2("&", e1, as.numeric(e2)) })
 setMethod("|", c("H2OParsedData", "logical"), function(e1, e2) { .h2o.__binop2("|", e1, as.numeric(e2)) })
+setMethod("%/%", c("numeric", "H2OParsedData"), function(e1, e2) {.h2o.__binop2("%/%", as.numeric(e1), e2) })
+setMethod("%/%", c("H2OParsedData", "numeric"), function(e1, e2){ .h2o.__binop2("%/%", e1, as.numeric(e2)) })
+setMethod("^", c("numeric", "H2OParsedData"), function(e1, e2) {.h2o.__binop2("^", as.numeric(e1), e2) })
+setMethod("^", c("H2OParsedData", "numeric"), function(e1, e2){ .h2o.__binop2("^", e1, as.numeric(e2)) })
+
 
 #'
 #' Get the domain mapping of an int and a String
