@@ -41,7 +41,7 @@ public class Exec2 extends Request2 {
         Frame fr = env.peekAry();
         String skey = env.peekKey();
         num_rows = fr.numRows();
-        num_cols = num_rows == 0 ? 0 : fr.numCols();
+        num_cols = fr.numCols();
         cols = new Inspect2.ColSummary[num_cols];
         for( int i=0; i<num_cols; i++ )
           cols[i] = new Inspect2.ColSummary(fr._names[i],fr.vecs()[i]);
@@ -61,6 +61,7 @@ public class Exec2 extends Request2 {
         sb.append(Double.toString(scalar));
       }
       result=sb.toString();
+//      num_cols = num_rows == 0 ? 0 : num_cols;
       return Response.done(this);
     }
     catch( IllegalArgumentException pe ) { e=pe;} // No logging user typo's

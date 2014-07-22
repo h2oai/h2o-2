@@ -667,7 +667,7 @@ function(some_expr_list, envir) {
     cols <- colnames(get(as.character(l[[2]]), envir = envir))
     numCols <- length(cols)
     colname <- tryCatch(
-        if(length(l) == 3) as.character(eval(l[[3]], envir = envir)) else as.character(eval(l[[4]], envir = envir)),
+        if(length(l) == 3) as.character(eval(l[[3]], envir = envir)) else as.character(eval(as.expression(.back_to_expr(l[[4]])), envir = envir)),
         error = function(e) { return(if(length(l) == 3) as.character(l[[3]]) else as.character(l[[4]]))})
 
     if (! (colname %in% cols)) {
