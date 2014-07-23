@@ -80,6 +80,7 @@ public class DRFTest2 extends TreeTestWithBalanceAndCrossVal {
       drf.invoke();
       Assert.assertEquals("Number of cross validation model is wrond!", nfolds, drf.xval_models.length);
       model = UKV.get(drf.dest());
+      Assert.assertTrue(model.get_params().state == Job.JobState.DONE); //HEX-1817
     } finally {
       if (f!=null) f.delete();
       if (model!=null) {
