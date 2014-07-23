@@ -472,7 +472,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   }
 
   private String LogInfo(String msg){
-    msg = "GLM2[dest=" + dest() + ", iteration=" + _iter + "]: " + msg;
+    msg = "GLM2[dest=" + dest() + ", iteration=" + _iter + ", lambda = " + _currentLambda + "]: " + msg;
     Log.info(msg);
     return msg;
   }
@@ -520,7 +520,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       assert getCompleter().getPendingCount() == 1:LogInfo("unexpected pending count, expected 1, got " + getCompleter().getPendingCount()); // will be decreased by 1 after we leave this callback
       if(_countIteration)++_iter;
       _callbackStart = System.currentTimeMillis();
-      LogInfo("iteration done in " + (_callbackStart - _iterationStartTime) + "ms, lambda = " + _currentLambda + ", lambda_min = " + lambda_min + ", cmp = " + getCompleter());
+      LogInfo("iteration done in " + (_callbackStart - _iterationStartTime) + "ms");
       if( !isRunning(self()) )  throw new JobCancelledException();
       boolean gotNaNsorInfs = Utils.hasNaNsOrInfs(glmt._xy) || glmt._gram.hasNaNsOrInfs();
       boolean constBeta = true;
@@ -529,7 +529,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         setHighAccuracy();
         if(_lastResult == null) {
           if(glmt._beta == null) // failed in first iteration! throw an error
-            throw new RuntimeException("GLM2: can not solve. Got NaNs/Infs in the first iteration");
+            throw new RuntimeException(LogInfo("GLM2: can not solve. Got NaNs/Infs in the first iteration"));
           for (int i = 0; i < glmt._beta.length; ++i) {
             glmt._beta[i] *= 0.5;
             constBeta &= glmt._beta[i] < beta_epsilon;
@@ -544,7 +544,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           }
         }
         if(constBeta) { // line search failed to progress -> converge (if we a valid solution already, otherwise fail!)
-          if(_lastResult == null)throw new RuntimeException("GLM failed to solve! Got NaNs/Infs in the first iteration and line search did not help!");
+          if(_lastResult == null)throw new RuntimeException(LogInfo("GLM failed to solve! Got NaNs/Infs in the first iteration and line search did not help!"));
           checkKKTAndComplete(_lastResult._glmt.clone(),_lastResult._glmt._beta,false);
           return;
         } else // do the line search iteration
@@ -594,7 +594,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
             }
           }
           final double [] b = resizeVec(_lastResult._glmt._beta, _activeCols, _lastResult._activeCols);
-          assert (b.length == glmt._beta.length):b.length + " != " + glmt._beta.length + ", pickNextLambda = " + _activeCols.length;
+          assert (b.length == glmt._beta.length):LogInfo(b.length + " != " + glmt._beta.length + ", pickNextLambda = " + _activeCols.length);
           new GLMTask.GLMLineSearchTask(GLM2.this.self(),_activeData,_glm, b,glmt._beta,1e-4,glmt._nobs,alpha[0],_currentLambda, new LineSearchIteration(getCompleter())).asyncExec(_activeData._adaptedFrame);
           return;
         }
@@ -619,7 +619,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           int nzs = 0;
           for(int i = 0; i < newBeta.length; ++i)
             if(newBeta[i] != 0) ++nzs;
-          LogInfo("lambda_" + _lambdaIdx + "=" + _currentLambda + " converged (reached a fixed point with ~ 1e" + diff + " precision) after " + _iter + "iterations, got " + nzs + " nzs");
+          LogInfo("converged (reached a fixed point with ~ 1e" + diff + " precision), got " + nzs + " nzs");
           checkKKTAndComplete(glmt,newBeta,false);
           return;
         } else { // not done yet, launch next iteration
@@ -632,7 +632,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     }
     private void checkKKTAndComplete(final GLMIterationTask glmt, final double [] newBeta, final boolean failedLineSearch){
       final double [] fullBeta = expandVec(newBeta,_activeCols);
-      assert getCompleter().getPendingCount() == 1:"pending count = " + getCompleter().getPendingCount() + ", epxected 1";
+      assert getCompleter().getPendingCount() == 1:LogInfo("pending count = " + getCompleter().getPendingCount() + ", epxected 1");
       // now we need full gradient (on all columns) using this beta
       new GLMIterationTask(GLM2.this.self(),_dinfo,_glm,false,true,true,fullBeta,_ymu,1.0/_nobs,thresholds, new H2OCallback<GLMIterationTask>((H2OCountedCompleter)getCompleter()) {
         @Override
@@ -673,7 +673,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
               for (int i = 0; i < fcnt; ++i)
                 _activeCols[n + i] = failedCols[i];
               Arrays.sort(_activeCols);
-              LogInfo(fcnt + " variables failed KKT conditions check! Adding them to the model and continuing computation... (grad_eps = " + grad_eps + ", activeCols = " + Arrays.toString(_activeCols));
+              LogInfo(fcnt + " variables failed KKT conditions check! Adding them to the model and continuing computation.(grad_eps = " + grad_eps + ", activeCols = " + (_activeCols.length > 100?"lost":Arrays.toString(_activeCols)));
               _activeData = _dinfo.filterExpandedColumns(_activeCols);
               // NOTE: tricky completer game here:
               // We expect 0 pending in this method since this is the end-point, ( actually it's racy, can be 1 with pending 1 decrement from the original Iteration callback, end result is 0 though)
@@ -686,7 +686,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           }
           GLM2.this.setSubmodel(newBeta, glmt2._val,(H2OCountedCompleter)getCompleter().getCompleter());
           _done = true;
-          LogInfo("computation of lambda = " + _currentLambda + " done in " + (System.currentTimeMillis() - GLM2.this.start_time) + "ms");
+          LogInfo("computation of current lambda done in " + (System.currentTimeMillis() - GLM2.this.start_time) + "ms");
           assert _lastResult._fullGrad != null;
         }
       }).asyncExec(_dinfo._adaptedFrame);
@@ -754,10 +754,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     public void callback(H2OCountedCompleter cc) {
       ParallelGLMs pgs = (ParallelGLMs)cc;
       _xvals = pgs._glms;
-      LogInfo("Xvalidation at lambda = " + pgs._glms[0]._currentLambda);
       for(int i = 0; i < _xvals.length; ++i){
-        assert _xvals[i]._lastResult._fullGrad != null:"";
-        assert _xvals[i]._lastResult._glmt._val != null:"last result missing validation!";
+        assert _xvals[i]._lastResult._fullGrad != null:LogInfo("last result missing full gradient!");
+        assert _xvals[i]._lastResult._glmt._val != null:LogInfo("last result missing validation!");
       }
       _iter = _xvals[0]._iter;
       _lastResult = (IterationInfo)pgs._glms[0]._lastResult.clone();
@@ -800,7 +799,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       @Override
       public void callback(final YMUTask ymut) {
         if (ymut._ymin == ymut._ymax)
-          throw new IllegalArgumentException("GLM2: attempted to run with constant response. Response == " + ymut._ymin + " for all rows in the training set.");
+          throw new IllegalArgumentException(LogInfo("GLM2: attempted to run with constant response. Response == " + ymut._ymin + " for all rows in the training set."));
         _ymu = ymut.ymu();
         _nobs = ymut.nobs();
         if(_glm.family == Family.binomial && prior != -1 && prior != _ymu && !Double.isNaN(prior)) {
@@ -864,7 +863,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
               if (lambda_min_ratio == -1)
                 lambda_min_ratio = _nobs > 25 * _dinfo.fullN() ? 1e-4 : 1e-2;
               lambda_min = lambda_max * lambda_min_ratio;
-              assert !Double.isNaN(lambda_max) : "running lambda_value search, but don't know what is the lambda_value max!";
+              assert !Double.isNaN(lambda_max) : LogInfo("running lambda_value search, but don't know what is the lambda_value max!");
               if (nlambdas == -1) {
                 lambda = null;
               } else {
@@ -913,7 +912,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     if(n_folds > 1){ // if we're cross-validated tasks, just fork off the parallel glms and wait for result!
       for(int i = 0; i < _xvals.length; ++i)
         if(_xvals[i]._lastResult._fullGrad == null){
-          RuntimeException re = new RuntimeException("missing full gradient at lambda = " + previousLambda + " at fold " + i);
+          RuntimeException re = new RuntimeException(LogInfo("missing full gradient at lambda = " + previousLambda + " at fold " + i));
           Log.err(re);
           throw re;
         }
@@ -983,7 +982,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       _activeData = _dinfo.filterExpandedColumns(_activeCols);
     }
     LogInfo("strong rule at lambda_value=" + l1 + ", got " + selected + " active cols out of " + _dinfo.fullN() + " total.");
-    assert _activeCols == null || _activeData.fullN() == _activeCols.length:"mismatched number of cols, got " + _activeCols.length + " active cols, but data info claims " + _activeData.fullN();
+    assert _activeCols == null || _activeData.fullN() == _activeCols.length:LogInfo("mismatched number of cols, got " + _activeCols.length + " active cols, but data info claims " + _activeData.fullN());
     return _activeCols;
   }
 
@@ -1107,7 +1106,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     }
     @Override
     public void compute2() {
-      assert Double.isNaN(_lambda) || _glm._lastResult._fullGrad != null:"GLM[" + _glm.dest() + "]: missing full gradient at lambda = " + _glm._currentLambda;
+      assert Double.isNaN(_lambda) || _glm._lastResult._fullGrad != null:_glm.LogInfo("missing full gradient");
       if(Double.isNaN(_lambda))
         _glm.run(true,this);
       else {
@@ -1115,13 +1114,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       }
     }
     @Override public void onCompletion(CountedCompleter cc){
-      System.out.flush();
-      assert _glm._done:"GLM2[dest=" + _glm.dest() + "]: onCompletion but nod done yet! cc = " + cc;
-      assert _glm._lastResult._fullGrad != null:"GLM2[dest=" + _glm.dest() + "] missing full gradient at lambda = " + _glm._currentLambda;
-    }
-
-    @Override public void onAck(){
-      Log.info("GLM[" + _glm.dest() + "]: GLMT with lambda = " + _glm._currentLambda + " done(local onAck).");
+      assert _glm._done:_glm.LogInfo("GLMT hit onCompletion but glm is not done yet!");
+      assert _glm._lastResult._fullGrad != null:_glm.LogInfo(" GLMT done with missing full gradient");
     }
   }
   // class to execute multiple GLM runs in parallel
