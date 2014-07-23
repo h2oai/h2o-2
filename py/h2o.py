@@ -2458,6 +2458,7 @@ class H2O(object):
         # unzipped file should be in LOG_DIR now
         for zname in nameList:
             resultList = h2o_util.flat_unzip(logDir + "/" + zname, logDir)
+            print "resultList:", resultList
         return resultList
 
     # kwargs used to pass many params
