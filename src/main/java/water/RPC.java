@@ -120,8 +120,18 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
   // Make an initial RPC, or re-send a packet.  Always called on 1st send; also
   // called on a timeout.
   public synchronized RPC<V> call() {
-    // completer should be added to the RPC call, not DTask! It will not be carried over to remote
-    assert _dt.getCompleter() == null:"Invoking RPC with DTask with non-null completer! Completer's should be added to the RPC object!";
+    // completer will not be carried over to remote
+    // add it to the RPC call.
+    if(_dt.getCompleter() != null){
+      CountedCompleter cc = _dt.getCompleter();
+      assert cc instanceof H2OCountedCompleter;
+      boolean alreadyIn = false;
+      if(_fjtasks != null)
+        for(H2OCountedCompleter hcc:_fjtasks)
+          if(hcc == cc)alreadyIn = true;
+      if(!alreadyIn)
+        addCompleter((H2OCountedCompleter)cc);
+    }
     // If running on self, just submit to queues & do locally
     if( _target==H2O.SELF ) {
       _dt.setCompleter(new H2O.H2OCallback<DTask>() {
@@ -319,9 +329,11 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     }
     // When the task completes, ship results back to client
     @Override public void onCompletion( CountedCompleter caller ) {
+      if(_dt == null)return; // if task(job) is cancelled _dt can already be null, should assert on it
       // Send results back
       DTask origDt = _dt;
       DTask dt = origDt; // _dt can go null the instant its send over wire
+
       do {           // Retry loop for broken TCP sends
         AutoBuffer ab = null;
         try {
@@ -330,7 +342,9 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
           _computed = true;   // After the TCP reply flag set, set computed bit
           boolean t = ab.hasTCP(); // Resends do not need to repeat TCP result
           dt._repliedTcp = t;
-          ab.close(t,false);  // Then close; send final byte
+          AutoBuffer ab2 = ab;
+          ab = null;
+          ab2.close(t,false);  // Then close; send final byte
           break;              // Break out of retry loop
         } catch( AutoBuffer.TCPIsUnreliableException e ) {
           Log.info("Task cancelled or network congestion: TCPACK "+e._ioe.getMessage()+", t#"+_tsknum+" AB="+ab+", waiting and retrying...");
@@ -349,8 +363,10 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     }
     // exception occured when processing this task locally, set exception and send it back to the caller
     @Override public boolean onExceptionalCompletion( Throwable ex, CountedCompleter caller ) {
+      _computed = true;
       if(!_firstException.getAndSet(true)){
-        _dt.setException(ex);
+        if(_dt != null) // _dt is set to null after ackack! (can happen in cancelled task)
+          _dt.setException(ex);
         onCompletion(caller);
       }
       return false;

@@ -214,7 +214,7 @@ public class H2ONode extends Iced implements Comparable {
     return sock2;
   }
   public synchronized void freeTCPSocket( SocketChannel sock ) {
-    assert 0 <= _socksAvail && _socksAvail < _socks.length;
+    assert 0 <= _socksAvail && _socksAvail < _socks.length:"socks available = " + _socksAvail + ", _socks.length = " + _socks.length;
     if( sock != null && !sock.isOpen() ) sock = null;
     _socks[_socksAvail++] = sock;
     assert TCPS.get() > 0;
@@ -307,7 +307,8 @@ public class H2ONode extends Iced implements Comparable {
     // around a long time - and the dt might be big.
     DTask dt = rpc._dt;         // The existing DTask, if any
     if( dt != null && RPC.RPCCall.CAS_DT.compareAndSet(rpc,dt,null) ) {
-      assert rpc._computed : "Still not done #"+task+" "+dt.getClass()+" from "+rpc._client;
+      // task could've been cancelled/ got exception, in which case we remove it even if it's still not done (it should be, but there is a race)
+      // assert rpc._computed : "Still not done #"+task+" "+dt.getClass()+" from "+rpc._client;
       AckAckTimeOutThread.PENDING.remove(rpc);
       dt.onAckAck();            // One-time call on stop-tracking
     }
