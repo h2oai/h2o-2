@@ -251,7 +251,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     final Key _modelKey;
     final Key _jobKey;
     final double _lambda;
-    GLMModel _res;
+    public GLMModel _res;
     public GetScoringModelTask(H2OCountedCompleter cmp, Key jobKey, Key modelKey, double lambda){
       super(cmp);
       _jobKey = jobKey;
@@ -262,7 +262,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     public void compute2() {
       if(_modelKey.home()){
         Value v = H2O.get(_modelKey);
-        if(v == null){
+        if(v == null && _jobKey != null){
           assert !Job.isRunning(_jobKey):"missing model (" + _modelKey + " ) while job is still running";
           throw new Job.JobCancelledException();
         } else {

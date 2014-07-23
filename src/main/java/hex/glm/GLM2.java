@@ -135,9 +135,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   public static int MAX_PREDICTORS = 7000;
 
   // API output parameters END ------------------------------------------------------------
-
-
-  private static double GLM_GRAD_EPS = 1e-5; // done (converged) if subgrad < this value.
+  private static double GLM_GRAD_EPS = 1e-4; // done (converged) if subgrad < this value.
 
   private boolean highAccuracy(){return higher_accuracy;}
   private void setHighAccuracy(){
