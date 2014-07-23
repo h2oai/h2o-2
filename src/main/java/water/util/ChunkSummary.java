@@ -3,6 +3,7 @@ import water.H2O;
 import water.MRTask2;
 import water.PrettyPrint;
 import water.fvec.Chunk;
+import water.fvec.Vec;
 
 /**
  * Simple summary of how many chunks of each type are in a Frame
@@ -42,14 +43,10 @@ public class ChunkSummary extends MRTask2<ChunkSummary> {
   private float byte_size_per_node_stddev;
 
   @Override
-  protected void setupLocal() {
+  public void map(Chunk[] cs) {
     chunk_counts = new long[chunkTypes.length];
     chunk_byte_sizes = new long[chunkTypes.length];
     byte_size_per_node = new long[H2O.CLOUD.size()];
-  }
-
-  @Override
-  public void map(Chunk[] cs) {
     for (Chunk c : cs) {
       boolean found = false;
       for (int j = 0; j < chunkTypes.length; ++j) {
@@ -60,7 +57,9 @@ public class ChunkSummary extends MRTask2<ChunkSummary> {
           byte_size_per_node[H2O.SELF.index()] += c.byteSize();
         }
       }
-      assert(found);
+      if (!found) {
+        throw H2O.unimpl();
+      }
     }
   }
 
@@ -87,14 +86,11 @@ public class ChunkSummary extends MRTask2<ChunkSummary> {
       total_chunk_count += chunk_counts[j];
     }
 
-    /*
     long check = 0;
-    for (int i=0; i<_fr.numCols(); ++i) {
-      check += _fr.vecs()[i].nChunks();
-    }
+    for (Vec v : _fr.vecs())
+      check += v.nChunks();
     assert(total_chunk_count == check);
     assert(total_chunk_byte_size == _fr.byteSize());
-    */
 
     // compute min, max, mean
     byte_size_per_node_min = Float.MAX_VALUE;
