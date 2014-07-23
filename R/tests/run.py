@@ -208,6 +208,45 @@ class H2OCloudNode:
         print("")
         sys.exit(1)
 
+    def scrape_cloudsize_from_stdout(self, nodes_per_cloud):
+        """
+        Look at the stdout log and wait until the cloud of proper size is formed.
+        This call is blocking.
+        Exit if this fails.
+
+        @return: none
+        """
+        retries = 30
+        while (retries > 0):
+            if (self.terminated):
+                return
+            f = open(self.output_file_name, "r")
+            s = f.readline()
+            while (len(s) > 0):
+                if (self.terminated):
+                    return
+                match_groups = re.search(r"Cloud of size (\d+) formed", s)
+                if (match_groups is not None):
+                    size = match_groups.group(1)
+                    if (size is not None):
+                        size = int(size)
+                        if (size == nodes_per_cloud):
+                            f.close()
+                            return
+
+                s = f.readline()
+
+            f.close()
+            retries -= 1
+            if (self.terminated):
+                return
+            time.sleep(1)
+
+        print("")
+        print("ERROR: Too many retries starting cloud.")
+        print("")
+        sys.exit(1)
+
     def stop(self):
         """
         Normal node shutdown.
@@ -293,12 +332,6 @@ class H2OCloud:
 
         @return: none
         """
-        if (self.nodes_per_cloud > 1):
-            print("")
-            print("ERROR: Unimplemented: wait for cloud size > 1.")
-            print("")
-            sys.exit(1)
-
         for node in self.nodes:
             node.start()
 
@@ -309,6 +342,7 @@ class H2OCloud:
         @return: none
         """
         self._scrape_port_from_stdout()
+        self._scrape_cloudsize_from_stdout()
 
     def stop(self):
         """
@@ -341,6 +375,10 @@ class H2OCloud:
     def _scrape_port_from_stdout(self):
         for node in self.nodes:
             node.scrape_port_from_stdout()
+
+    def _scrape_cloudsize_from_stdout(self):
+        for node in self.nodes:
+            node.scrape_cloudsize_from_stdout(self.nodes_per_cloud)
 
     def __str__(self):
         s = ""
@@ -797,12 +835,14 @@ class RUnitRunner:
             out.close()
 
         num_tests = len(self.tests)
-        num_nodes = len(self.clouds * self.nodes_per_cloud)
+        num_nodes = self.num_clouds * self.nodes_per_cloud
         self._log("")
         if (self.use_cloud):
             self._log("Starting {} tests...".format(num_tests))
         else:
-            self._log("Starting {} tests on {} total H2O nodes...".format(num_tests, num_nodes))
+            self._log("Starting {} tests on {} clouds with {} total H2O nodes...".format(num_tests,
+                                                                                         self.num_clouds,
+                                                                                         num_nodes))
         self._log("")
 
         # Start the first n tests, where n is the lesser of the total number of tests and the total number of clouds.
@@ -1059,6 +1099,7 @@ class RUnitRunner:
 g_script_name = ""
 g_base_port = 40000
 g_num_clouds = 5
+g_nodes_per_cloud = 1
 g_wipe_test_state = False
 g_wipe_output_dir = False
 g_test_to_run = None
@@ -1112,6 +1153,7 @@ def usage():
           " [--wipe]"
           " [--baseport port]"
           " [--numclouds n]"
+          " [--nodespercloud n]"
           " [--test path/to/test.R]"
           " [--testlist path/to/list/file]"
           " [--testgroup group]"
@@ -1133,6 +1175,9 @@ def usage():
     print("")
     print("    --numclouds   The number of clouds to start.")
     print("                  Each test is randomly assigned to a cloud.")
+    print("")
+    print("    --numnodes    The number of nodes in the cloud.")
+    print("                  When this is specified, numclouds must be 1.")
     print("")
     print("    --test        If you only want to run one test, specify it like this.")
     print("")
@@ -1201,9 +1246,17 @@ def bad_arg(s):
     usage()
 
 
+def error(s):
+    print("")
+    print("ERROR: " + s)
+    print("")
+    usage()
+
+
 def parse_args(argv):
     global g_base_port
     global g_num_clouds
+    global g_nodes_per_cloud
     global g_wipe_test_state
     global g_wipe_output_dir
     global g_test_to_run
@@ -1232,6 +1285,11 @@ def parse_args(argv):
             if (i > len(argv)):
                 usage()
             g_num_clouds = int(argv[i])
+        elif (s == "--numnodes"):
+            i += 1
+            if (i > len(argv)):
+                usage()
+            g_nodes_per_cloud = int(argv[i])
         elif (s == "--wipeall"):
             g_wipe_test_state = True
             g_wipe_output_dir = True
@@ -1292,6 +1350,9 @@ def parse_args(argv):
 
         i += 1
 
+    if ((g_num_clouds > 1) and (g_nodes_per_cloud > 1)):
+        error("num clouds and nodes per cloud cannot both be greater than 1")
+
 
 def wipe_output_dir():
     print("")
@@ -1343,6 +1404,7 @@ def main(argv):
     """
     global g_script_name
     global g_num_clouds
+    global g_nodes_per_cloud
     global g_output_dir
     global g_failed_output_dir
     global g_test_to_run
@@ -1358,7 +1420,6 @@ def main(argv):
     g_failed_output_dir = os.path.join(g_output_dir, str("failed"))
 
     # Calculate and set other variables.
-    nodes_per_cloud = 1
     h2o_jar = os.path.abspath(
         os.path.join(os.path.join(os.path.join(os.path.join(
             test_root_dir, ".."), ".."), "target"), "h2o.jar"))
@@ -1381,7 +1442,7 @@ def main(argv):
 
     g_runner = RUnitRunner(test_root_dir,
                            g_use_cloud, g_use_ip, g_use_port,
-                           g_num_clouds, nodes_per_cloud, h2o_jar, g_base_port, g_jvm_xmx,
+                           g_num_clouds, g_nodes_per_cloud, h2o_jar, g_base_port, g_jvm_xmx,
                            g_output_dir, g_failed_output_dir)
 
     # Build test list.

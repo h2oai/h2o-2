@@ -96,7 +96,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                     # convert to binomial
                     execExpr="A.hex=%s" % parseResult['destination_key']
                     h2e.exec_expr(execExpr=execExpr, timeoutSecs=180)
-                    execExpr="A.hex[,%s]=(A.hex[,%s]>%s)" % ('379', '379', 15)
+                    execExpr="A.hex[,%s]=(A.hex[,%s]!=%s)" % ('379', '379', 0)
                     h2e.exec_expr(execExpr=execExpr, timeoutSecs=180)
                     aHack = {'destination_key': "A.hex"}
 

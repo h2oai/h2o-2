@@ -1,7 +1,7 @@
 import unittest, time, sys, os
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_exec
-import h2o_glm, h2o_gbm, h2o_rf # TODO: DeepLearning
+import h2o_glm, h2o_gbm, h2o_rf
 
 class ModelManagementTestCase(unittest.TestCase):
     tear_down_cloud = True

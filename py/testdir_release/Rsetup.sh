@@ -119,6 +119,7 @@ usePackage("ROCR")
 usePackage("digest")
 usePackage("penalized")
 usePackage("rgl")
+usePackage("randomForest")
 
 # these came from source('../findNSourceUtils.R')
 usePackage("expm")

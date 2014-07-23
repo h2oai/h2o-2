@@ -244,7 +244,7 @@ public class Frame extends Lockable<Frame> {
 
   /** Appends an entire Frame */
   public Frame add( Frame fr, String names[] ) {
-    assert _vecs.length==0 || anyVec().group().equals(fr.anyVec().group()) : "Adding a vector from different vector group. Current frame contains "+Arrays.toString(_names)+ " vectors. New frame contains "+Arrays.toString(fr.names()) + " vectors.";
+    assert _vecs.length==0 || (anyVec().group().equals(fr.anyVec().group()) || Arrays.equals(anyVec()._espc,fr.anyVec()._espc)): "Adding a vector from different vector group. Current frame contains "+Arrays.toString(_names)+ " vectors. New frame contains "+Arrays.toString(fr.names()) + " vectors.";
     if( _names != null && fr._names != null )
       for( String name : names )
         if( find(name) != -1 ) throw new IllegalArgumentException("Duplicate name '"+name+"' in Frame");
@@ -354,6 +354,8 @@ public class Frame extends Lockable<Frame> {
   }
 
   public Vec replace(int col, Vec nv) {
+    if (col >= numCols())
+      throw new IllegalArgumentException("Trying to select column "+(col+1)+" but only "+numCols()+" present.");
     Vec rv = vecs()[col];
     assert rv.group().equals(nv.group());
     _vecs[col] = nv;
@@ -813,12 +815,33 @@ public class Frame extends Lockable<Frame> {
     // Do Da Slice
     // orows is either a long[] or a Vec
     if (orows == null)
-      return copyRollups(new DeepSlice((long[])orows,c2,vecs()).doAll(c2.length,this).outputFrame(names(c2),domains(c2)),true);
+      return copyRollups(new DeepSlice(null,c2,vecs()).doAll(c2.length,this).outputFrame(names(c2),domains(c2)),true);
     else if (orows instanceof long[]) {
       final long CHK_ROWS=1000000;
-      long[] rows = (long[])orows;
-      if( rows.length==0 || rows[0] < 0 )
-        return copyRollups(new DeepSlice(rows,c2,vecs()).doAll(c2.length, this).outputFrame(names(c2), domains(c2)),rows.length==0);
+      final long[] rows = (long[])orows;
+      if (this.numRows() == 0) {
+        return this;
+      }
+      if( rows.length==0 || rows[0] < 0 ) {
+        if (rows[0] < 0) {
+          Vec v = new MRTask2() {
+            @Override public void map(Chunk cs) {
+              for (long er : rows) {
+                if (er >= 0) continue;
+                er = Math.abs(er) - 1; // 1-based -> 0-based
+                if (er < cs._start || er > (cs._len + cs._start - 1)) continue;
+                cs.set0((int) (er - cs._start), 1);
+              }
+            }
+          }.doAll(this.anyVec().makeZero()).getResult()._fr.anyVec();
+          Frame slicedFrame = new DeepSlice(rows, c2, vecs()).doAll(c2.length, this.add("select_vec", v)).outputFrame(names(c2), domains(c2));
+          UKV.remove(v._key);
+          UKV.remove(this.remove(this.numCols()-1)._key);
+          return copyRollups(slicedFrame, rows.length == 0);
+        } else {
+          return copyRollups(new DeepSlice(rows, c2, vecs()).doAll(c2.length, this).outputFrame(names(c2), domains(c2)), rows.length == 0);
+        }
+      }
       // Vec'ize the index array
       Futures fs = new Futures();
       AppendableVec av = new AppendableVec("rownames");
@@ -914,56 +937,57 @@ public class Frame extends Lockable<Frame> {
       int rx = 0;               // Which row to in/ex-clude
       int rlo = 0;              // Lo/Hi for this block of rows
       int rhi = rlen;
-      while( true ) {           // Still got rows to include?
-        if( _rows != null ) {   // Got a row selector?
-          if( rx >= _rows.length ) break; // All done with row selections
-          long r = _rows[rx++]-1;// Next row selector
-          if( r < 0 ) {          // Row exclusion
-            if(rx > 0 && _rows[rx - 1] < _rows[rx]) throw H2O.unimpl();
-            long er = Math.abs(r) - 2;
-            if ( er < rstart) continue;
-            //scoop up all of the rows before the first exclusion
-            if (rx == 1 && ( (int)(er + 1 - rstart)) > 0 && _ex) {
-              rlo = (int)rstart;
-              rhi = (int)(er - rstart);
-              _ex = false;
-              rx--;
-            } else {
-              rlo = (int)(er + 1 - rstart);
-              //TODO: handle jumbled row indices ( e.g. -c(1,5,3) )
-              while(rx < _rows.length && (_rows[rx] + 1 == _rows[rx - 1] && rlo < rlen)) {
-                if(rx < _rows.length - 1 && _rows[rx] < _rows[rx + 1]) throw H2O.unimpl();
-                rx++; rlo++;    //Exclude consecutive rows
-              }
-              rhi = rx >= _rows.length ? rlen : (int)Math.abs(_rows[rx] - 1) - 2;
-              if(rx < _rows.length - 1 && _rows[rx] < _rows[rx + 1]) throw H2O.unimpl();
+      if (_rows != null && _rows[0] < 0) {
+        // Skip any rows that have 1 in the last column!
+        Chunk select_vec = chks[chks.length-1];
+        for (int i = 0; i < _cols.length; i++) {
+          Chunk oc = chks[_cols[i]];
+          NewChunk nc = nchks[i];
+          if (_isInt[i] == 1) { // Slice on integer columns
+            for (int j = 0; j < oc._len; j++) {
+              if (select_vec.at80(j) == 1) continue;
+              if (oc._vec.isUUID()) nc.addUUID(oc, j);
+              else if (oc.isNA0(j)) nc.addNA();
+              else nc.addNum(oc.at80(j), 0);
             }
-          } else {              // Positive row list?
-            if( r < rstart ) continue;
-            rlo = (int)(r-rstart);
-            rhi = rlo+1;        // Stop at the next row
-            while( rx < _rows.length && (_rows[rx]-1-rstart)==rhi && rhi < rlen ) {
-              rx++; rhi++;      // Grab sequential rows
-            }
-          }
-        }
-        // Process this next set of rows
-        // For all cols in the new set
-        for( int i=0; i<_cols.length; i++ ) {
-          Chunk    oc =  chks[_cols[i]];
-          NewChunk nc = nchks[      i ];
-          if( _isInt[i] == 1 ) { // Slice on integer columns
-            for( int j=rlo; j<rhi; j++ )
-              if( oc._vec.isUUID() ) nc.addUUID(oc,j);
-              else if( oc.isNA0(j) ) nc.addNA();
-              else                   nc.addNum(oc.at80(j),0);
           } else {                // Slice on double columns
-            for( int j=rlo; j<rhi; j++ )
+            for (int j = 0; j < oc._len; j++) {
+              if (select_vec.at80(j) == 1) continue;
               nc.addNum(oc.at0(j));
+            }
           }
         }
-        rlo=rhi;
-        if( _rows==null ) break;
+      } else {
+        while (true) {           // Still got rows to include?
+          if (_rows != null) {   // Got a row selector?
+            if (rx >= _rows.length) break; // All done with row selections
+            long r = _rows[rx++] - 1;// Next row selector
+            if (r < rstart) continue;
+            rlo = (int) (r - rstart);
+            rhi = rlo + 1;        // Stop at the next row
+            while (rx < _rows.length && (_rows[rx] - 1 - rstart) == rhi && rhi < rlen) {
+              rx++;
+              rhi++;      // Grab sequential rows
+            }
+          }
+          // Process this next set of rows
+          // For all cols in the new set
+          for (int i = 0; i < _cols.length; i++) {
+            Chunk oc = chks[_cols[i]];
+            NewChunk nc = nchks[i];
+            if (_isInt[i] == 1) { // Slice on integer columns
+              for (int j = rlo; j < rhi; j++)
+                if (oc._vec.isUUID()) nc.addUUID(oc, j);
+                else if (oc.isNA0(j)) nc.addNA();
+                else nc.addNum(oc.at80(j), 0);
+            } else {                // Slice on double columns
+              for (int j = rlo; j < rhi; j++)
+                nc.addNum(oc.at0(j));
+            }
+          }
+          rlo = rhi;
+          if (_rows == null) break;
+        }
       }
     }
   }

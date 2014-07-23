@@ -1,7 +1,7 @@
 .. _STEAM_tutorial:
 
-STEAM Tutorial
-==============
+Multimodel Scoring Tutorial
+==============================
 
 The purpose of this tutorial is to walk users new to H\ :sub:`2`\ O's new scoring feature through H\ :sub:`2`\ O's Multi-modeling Scoring Engine. The tutorial assumes that the user have had some experience building models in H\ :sub:`2`\ O and wants to compare the different models build. The Multi-modeling Scoring Engine makes model comparison and model selection user friendly and easy.
 
@@ -23,7 +23,7 @@ The data is then farther split into test and train subsets, the training set is 
 
 
 Model Comparison
-"""""""""""""""
+"""""""""""""""""
 
 On the main page you'll be prompted to choose a dataset and a list of compatible models will be generated. The models are compatible to a chosen dataset when the headers of said dataset is the same as the headers of the data used to build the models on the list.
 
@@ -57,7 +57,7 @@ On the main page you'll be prompted to choose a dataset and a list of compatible
 
 
 Adding visualizations
-""""""""""""""""
+""""""""""""""""""""""""""""""""
 In the advance tab, you can sort your model by the AUC value and choose the model that most accurately classified your validation set. What's more you can add additional graphs and visuals to compare all the different statistics. For example let's plot the models' AUC by their training time.
 
 #. Underneath the ROC curve in the advanced tab, choose to *Add Visualizations*.

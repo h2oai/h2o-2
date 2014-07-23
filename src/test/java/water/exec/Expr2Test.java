@@ -80,6 +80,7 @@ public class Expr2Test extends TestUtil {
 
       // Simple array handling; broadcast operators
       checkStr("h.hex");        // Simple ref
+      checkStr("sum(apply(h.hex[,c(4,5)],1,mean))",183.96); // Row-wise apply on mean
       checkStr("h.hex[2,3]",1); // Scalar selection
       checkStr("h.hex[2,+]","Must be scalar or array\n"+"h.hex[2,+]\n"+"        ^-^\n");   // Function not allowed
       checkStr("h.hex[2+4,-4]");// Select row 6, all-cols but 4
@@ -188,7 +189,6 @@ public class Expr2Test extends TestUtil {
       checkStr("apply(h.hex,2,function(x){h.hex})","apply requires that ary fun(ary x) return 1 column");
       checkStr("apply(h.hex,2,function(x){sum(x)/nrow(x)})");
       checkStr("mean=function(x){apply(x,2,sum)/nrow(x)};mean(h.hex)");
-      checkStr("sum(apply(h.hex[,c(4,5)],1,mean))",184.96); // Row-wise apply on mean
 
       // Conditional selection;
       checkStr("ifelse(0,1,2)",2);

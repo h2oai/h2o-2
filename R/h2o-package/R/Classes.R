@@ -410,6 +410,18 @@ h2o.exec <- function(expr_to_execute, h2o = NULL, dest_key = "") {
   key <- res$dest_key
   if (.pkg.env$FRAMEKEY != "") {
     key <- as.character(.pkg.env$FRAMEKEY)
+    newFrame <- .h2o.exec2(key, h2o = .pkg.env$SERVER, key)
+    topCall <- sys.calls()[[1]]
+    idxs <- which( "H2OParsedData" == unlist(lapply(as.list(topCall), .eval_class, envir=parent.frame())))
+    obj_name <- as.character(.pkg.env$CURS4)
+    if (length(idxs) != 0) obj_name <- as.character(topCall[[idxs]])[1]
+
+    env <- .lookUp(obj_name)
+    if (is.null(env)) {
+      env <- parent.frame()
+    }
+    assign(obj_name, newFrame, env)
+    return(newFrame)
   }
   .h2o.exec2(key, h2o = .pkg.env$SERVER, key)
 }
@@ -584,6 +596,18 @@ setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
       expr <- paste(x@key, "[,c(", paste(j, collapse=","), ")]", sep="")
     else stop(paste("Column index of type", class(j), "unsupported!"))
   } else if(!missing(i) && missing(j)) {
+    # treat `i` as a column selector in this case...
+    if (is.character(i)) {
+      myCol <- colnames(x)
+      if (any(!(i %in% myCol))) stop ("Undefined columns selected")
+      i <- match(i, myCol)
+      if(is.logical(i)) i <- which(i)
+      if(class(i) == "H2OParsedData" && i@logic)
+        expr <- paste(x@key, "[", i@key, ",]", sep="")
+      else if(is.numeric(i) || is.integer(i))
+        expr <- paste(x@key, "[,c(", paste(i, collapse=","), ")]", sep="")
+      else stop(paste("Column index of type", class(i), "unsupported!"))
+    } else {
     # if(is.logical(i)) i = -which(!i)
     if(is.logical(i)) i = which(i)
     # if(class(i) == "H2OLogicalData")
@@ -592,6 +616,7 @@ setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
     else if(is.numeric(i) || is.integer(i))
       expr <- paste(x@key, "[c(", paste(i, collapse=","), "),]", sep="")
     else stop(paste("Row index of type", class(i), "unsupported!"))
+   }
   } else {
     # if(is.logical(i)) i = -which(!i)
     if(is.logical(i)) i <- which(i)
@@ -641,7 +666,7 @@ setMethod("[<-", "H2OParsedData", function(x, i, j, ..., value) {
   # if((!missing(i) && is.numeric(i) && any(abs(i) < 1 || abs(i) > numRows)) ||
   #     (!missing(j) && is.numeric(j) && any(abs(j) < 1 || abs(j) > numCols)))
   #  stop("Array index out of bounds!")
-  if(!(missing(i) || is.numeric(i)) || !(missing(j) || is.numeric(j) || is.character(j)))
+  if(!(missing(i) || is.numeric(i) || is.character(i)) || !(missing(j) || is.numeric(j) || is.character(j)))
     stop("Row/column types not supported!")
   if(class(value) != "H2OParsedData" && !is.numeric(value))
     stop("value can only be numeric or an H2OParsedData object")
@@ -674,8 +699,20 @@ setMethod("[<-", "H2OParsedData", function(x, i, j, ..., value) {
     cind <- paste("c(", paste(cind, collapse = ","), ")", sep = "")
     lhs <- paste(x@key, "[,", cind, "]", sep = "")
   } else if(!missing(i) && missing(j)) {
-      rind <- paste("c(", paste(i, collapse = ","), ")", sep = "")
-      lhs <- paste(x@key, "[", rind, ",]", sep = "")
+      # treat `i` as a column selector in this case...
+      if (is.character(i)) {
+        myNames <- colnames(x)
+        if (any(!(i %in% myNames))) {
+          if (length(i) == 1) return(do.call("$<-", list(x, i, value)))
+          else stop("Unimplemented: undefined column names specified")
+          }
+        cind <- match(i, myNames)
+        cind <- paste("c(", paste(cind, collapse = ","), ")", sep = "")
+        lhs <- paste(x@key, "[,", cind, "]", sep = "")
+        } else {
+        rind <- paste("c(", paste(i, collapse = ","), ")", sep = "")
+        lhs <- paste(x@key, "[", rind, ",]", sep = "")
+      }
   } else {
     if(is.character(j)) {
       myNames <- colnames(x)
@@ -766,7 +803,7 @@ cbind.H2OParsedData <- function(..., deparse.level = 1) {
   if(is.null(names(l)))
     tmp <- Map(function(x) x@key, l)
   else
-    tmp <- mapply(function(x,n) { ifelse(is.null(n) || is.na(n) || nchar(n) == 0, x@key, paste(n, x@key, sep = "=")) }, l, names(l))
+    tmp <- mapply(function(x,n) { if(is.null(n) || is.na(n) || nchar(n) == 0) x@key else paste(n, x@key, sep = "=") }, l, names(l))
   
   exec_cmd <- sprintf("cbind(%s)", paste(as.vector(tmp), collapse = ","))
   res <- .h2o.__exec2(h2o, exec_cmd)
@@ -824,6 +861,11 @@ setMethod("&", c("logical", "H2OParsedData"), function(e1, e2) { .h2o.__binop2("
 setMethod("|", c("logical", "H2OParsedData"), function(e1, e2) { .h2o.__binop2("|", as.numeric(e1), e2) })
 setMethod("&", c("H2OParsedData", "logical"), function(e1, e2) { .h2o.__binop2("&", e1, as.numeric(e2)) })
 setMethod("|", c("H2OParsedData", "logical"), function(e1, e2) { .h2o.__binop2("|", e1, as.numeric(e2)) })
+setMethod("%/%", c("numeric", "H2OParsedData"), function(e1, e2) {.h2o.__binop2("%/%", as.numeric(e1), e2) })
+setMethod("%/%", c("H2OParsedData", "numeric"), function(e1, e2){ .h2o.__binop2("%/%", e1, as.numeric(e2)) })
+setMethod("^", c("numeric", "H2OParsedData"), function(e1, e2) {.h2o.__binop2("^", as.numeric(e1), e2) })
+setMethod("^", c("H2OParsedData", "numeric"), function(e1, e2){ .h2o.__binop2("^", e1, as.numeric(e2)) })
+
 
 #'
 #' Get the domain mapping of an int and a String
@@ -1204,22 +1246,26 @@ screeplot.H2OPCAModel <- function(x, npcs = min(10, length(x@model$sdev)), type 
   as.logical(.h2o.__unop2("canBeCoercedToLogical", vec))
 }
 
-setMethod("ifelse", "H2OParsedData", function(test, yes, no) {
+setMethod("ifelse", signature(test="H2OParsedData", yes="ANY", no="ANY"), function(test, yes, no) {
   if(!(is.numeric(yes) || class(yes) == "H2OParsedData") || !(is.numeric(no) || class(no) == "H2OParsedData"))
     stop("Unimplemented")
   if(!test@logic && !.canBeCoercedToLogical(test)) stop(test@key, " is not a H2O logical data type")
-  yes = ifelse(class(yes) == "H2OParsedData", yes@key, yes)
-  no = ifelse(class(no) == "H2OParsedData", no@key, no)
-  expr = paste("ifelse(", test@key, ",", yes, ",", no, ")", sep="")
-  res = .h2o.__exec2(test@h2o, expr)
-  if(res$num_rows == 0 && res$num_cols == 0)   # TODO: If logical operator, need to indicate
-    res$scalar
-  else {
-    res <- .h2o.exec2(res$dest_key, h2o = test@h2o, res$dest_key)
-    res@logic <- FALSE
-    print(res)
-    return(res)
-  }
+  .h2o.__multop2("ifelse", test, yes, no)
+})
+
+setMethod("ifelse", signature(test="logical", yes="H2OParsedData", no="numeric"), function(test, yes, no) {
+  if(length(test) > 1) stop("test must be a single logical value")
+  .h2o.__multop2("ifelse", as.numeric(test), yes, no)
+})
+
+setMethod("ifelse", signature(test="logical", yes="numeric", no="H2OParsedData"), function(test, yes, no) {
+  if(length(test) > 1) stop("test must be a single logical value")
+  .h2o.__multop2("ifelse", as.numeric(test), yes, no)
+})
+
+setMethod("ifelse", signature(test="logical", yes="H2OParsedData", no="H2OParsedData"), function(test, yes, no) {
+  if(length(test) > 1) stop("test must be a single logical value")
+  .h2o.__multop2("ifelse", as.numeric(test), yes, no)
 })
 
 setMethod("levels", "H2OParsedData", function(x) {

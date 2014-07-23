@@ -397,15 +397,15 @@ function(expr, envir) {
 #' Ship a non-H2OParsedData involving expression to H2O.
 #'
 #' No need to do any fancy footwork here (handles arbitrary expressions like sum(c(1,2,3))
-.h2o.exec2<-
-function(h2o, expr, dest_key = "") {
+.h2o.exec2 <- function(h2o, expr, dest_key = "") {
   if (missing(h2o)) stop("Must specify an instance of h2o to operate on non-H2OParsedData objects!")
   if (dest_key == "")
     res <- .h2o.__exec2(h2o, expr)
   else
     res <- .h2o.__exec2_dest_key(h2o, expr, dest_key)
   key <- res$dest_key
-  new("H2OParsedData", h2o = h2o, key = key, col_names = .getColNames(res), nrows = .getRows(res), ncols = .getCols(res), any_enum = .getAnyEnum(res))
+  newFrame <- new("H2OParsedData", h2o = h2o, key = key, col_names = .getColNames(res), nrows = .getRows(res), ncols = .getCols(res), any_enum = .getAnyEnum(res))
+  return(newFrame)
 }
 
 #'
@@ -473,6 +473,7 @@ function(expr) {
 #'
 .back_to_expr<-
 function(some_expr_list) {
+  if (!is.list(some_expr_list) && length(some_expr_list == 1)) return(some_expr_list)
   len <- length(some_expr_list)
   while(len > 1) {
     num_sub_lists <- 0
@@ -502,6 +503,7 @@ function(some_expr_list) {
 function(object, envir) {
   assign("SERVER", get(as.character(object), envir = envir)@h2o, envir = .pkg.env)
   assign("CURKEY", get(as.character(object), envir = envir)@key, envir = .pkg.env)
+  assign("CURS4",  as.character(object), envir = .pkg.env)
   if ( !exists("COLNAMES", .pkg.env)) {
     assign("COLNAMES", colnames(get(as.character(object), envir = envir)), .pkg.env)
   }
@@ -527,15 +529,15 @@ function(object, envir) {
 }
 
 .lookUp<-
-function(object) {
- cnt <- 1
- object <- as.character(object)
- if (!exists(object, globalenv())) { return(-1) }
- if (exists(object, parent.frame(cnt))) {
-    return(1 + cnt)
- } else {
-    return(.lookUp(object) + 1)
- }
+function(object, envir = parent.frame()) {
+  if (identical(envir, emptyenv())) {
+    NULL
+#    stop("No such variable name: ", object, call. = FALSE)
+  } else if (exists(object, envir = envir, inherits = FALSE)) {
+    envir
+  } else {
+    .lookUp(object, parent.env(envir))
+  }
 }
 
 #'
@@ -659,18 +661,22 @@ function(some_expr_list, envir) {
 #'
 #' Swap out any H2OparsedData objects with their key names,
 #' Swap out a '$' "slice" with a [,] slice
-.process_assignment<-
-function(expr, envir) {
+.process_assignment <- function(expr, envir) {
   l <- lapply(as.list(expr), .as_list)
 
   # Have a single column sliced out that we want to a) replace -OR- b) create
   if (identical(l[[1]], quote(`$`)) || identical(l[[1]], quote(`[`))) {
     l[[1]] <- quote(`[`)  # This handles both cases (unkown and known colnames... should just work!)
-    cols <- colnames(get(as.character(l[[2]]), envir = envir))
+    cols <- .h2o.exec2(h2o = get(as.character(l[[2]]), envir = envir)@h2o, expr = get(as.character(l[[2]]), envir = envir)@key, dest_key = get(as.character(l[[2]]), envir = envir)@key)@col_names
     numCols <- length(cols)
     colname <- tryCatch(
-        ifelse( length(l) == 3, as.character(eval(l[[3]], envir = envir)), as.character(eval(l[[4]], envir = envir))),
-        error = function(e) { return(ifelse( length(l) == 3, as.character(l[[3]]), as.character(l[[4]])))})
+        if(length(l) == 3) as.character(eval(l[[3]], envir = envir))
+        else if (!is.list(l[[4]]) && length(l[[4]]) == 1) {
+          as.character(eval(l[[4]], envir = envir))
+        } else {
+          as.character(eval(as.expression(.back_to_expr(l[[4]])), envir = envir))
+        },
+        error = function(e) {return(if(length(l) == 3) as.character(l[[3]]) else as.character(l[[4]]))})
 
     if (! (colname %in% cols)) {
       assign("NEWCOL", colname, envir = .pkg.env)
@@ -724,7 +730,7 @@ function(expr, envir = globalenv()) {
     l <- .replace_with_keys_helper(l, envir)
 
     # return the modified expression
-    rm("COLNAMES", envir = .pkg.env)
+    tryCatch(rm("COLNAMES", envir = .pkg.env), warning = function(w) { invisible(w)}, error = function(e) { invisible(e)})
     as.name(as.character(as.expression(.back_to_expr(l))))
   }
 }
@@ -735,8 +741,10 @@ function(expr, envir = globalenv()) {
 
   expr <- paste(op, "(", x@key, ")", sep = "")
   res <- .h2o.__exec2(x@h2o, expr)
-  if(res$num_rows == 0 && res$num_cols == 0)
-    return(ifelse(op %in% .LOGICAL_OPERATORS, as.logical(res$scalar), res$scalar))
+  if(res$num_rows == 0 && res$num_cols == 0) {
+    if(op %in% .LOGICAL_OPERATORS) res$scalar <- as.logical(res$scalar)
+    return(res$scalar)
+  }
 
   res <- .h2o.exec2(expr = res$dest_key, h2o = x@h2o, dest_key = res$dest_key)
   res@logic <- op %in% .LOGICAL_OPERATORS
@@ -748,7 +756,7 @@ function(expr, envir = globalenv()) {
   if(class(y) != "H2OParsedData" && length(y) != 1) stop("Unimplemented: y must be a scalar value")
   # if(!((ncol(x) == 1 || class(x) == "numeric") && (ncol(y) == 1 || class(y) == "numeric")))
   #  stop("Can only operate on single column vectors")
-  LHS <- ifelse(class(x) == "H2OParsedData", x@key, x)
+  if(class(x) == "H2OParsedData") LHS <- x@key else LHS <- x
   
   if((class(x) == "H2OParsedData" || class(y) == "H2OParsedData") && !( op %in% c('==', '!='))) {
     anyFactorsX <- .h2o.__checkForFactors(x)
@@ -757,18 +765,39 @@ function(expr, envir = globalenv()) {
     if(anyFactors) warning("Operation not meaningful for factors.")
   }
   
-  RHS <- ifelse(class(y) == "H2OParsedData", y@key, y)
+  if(class(y) == "H2OParsedData") RHS <- y@key else RHS <- y
   expr <- paste(LHS, op, RHS)
   if(class(x) == "H2OParsedData") myClient = x@h2o
   else myClient <- y@h2o
   res <- .h2o.__exec2(myClient, expr)
   
-  if(res$num_rows == 0 && res$num_cols == 0)
-    return(ifelse(op %in% .LOGICAL_OPERATORS, as.logical(res$scalar), res$scalar))
+  if(res$num_rows == 0 && res$num_cols == 0) {
+    if(op %in% .LOGICAL_OPERATORS) res$scalar <- as.logical(res$scalar)
+    return(res$scalar)
+  }
 
   res <- .h2o.exec2(expr = res$dest_key, h2o = myClient, dest_key = res$dest_key)
   res@logic <- op %in% .LOGICAL_OPERATORS
   res
+}
+
+# Note: Currently only written to work with ifelse method
+.h2o.__multop2 <- function(op, ...) {
+  myInput = list(...)
+  idx = which(sapply(myInput, function(x) { class(x) == "H2OParsedData" }))[1]
+  if(is.na(idx)) stop("H2OClient not specified in any input parameter!")
+  myClient = myInput[[idx]]@h2o
+  
+  myArgs = lapply(myInput, function(x) { if(class(x) == "H2OParsedData") x@key else x })
+  expr = paste(op, "(", paste(myArgs, collapse = ","), ")", sep="")
+  res = .h2o.__exec2(myClient, expr)
+  if(res$num_rows == 0 && res$num_cols == 0)   # TODO: If logical operator, need to indicate
+    res$scalar
+  else {
+    res = .h2o.exec2(res$dest_key, h2o = myClient, res$dest_key)
+    res@logic = FALSE
+    return(res)
+  }
 }
 
 #------------------------------------ Utilities ------------------------------------#

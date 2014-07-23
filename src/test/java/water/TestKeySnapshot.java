@@ -1,16 +1,17 @@
 package water;
 
+import java.util.Map;
+
+import org.junit.Test;
+
 import junit.framework.Assert;
 import water.util.Utils;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Map;
 
 /**
  * Created by tomasnykodym on 5/30/14.
  */
 public class TestKeySnapshot extends TestUtil {
+  @Test
   public void testGlobalKeySet(){
     try {
       Futures fs = new Futures();
@@ -29,6 +30,7 @@ public class TestKeySnapshot extends TestUtil {
     }
   }
 
+  @Test
   public void testLocalKeySet(){
     Key [] userKeys = new Key[100];
     Key [] systemKeys = new Key[100];
@@ -53,6 +55,7 @@ public class TestKeySnapshot extends TestUtil {
     }
   }
 
+  @Test
   public void testFetchAll(){
     Key [] userKeys = new Key[200];
     Key [] systemKeys = new Key[200];

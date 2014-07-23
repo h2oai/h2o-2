@@ -26,6 +26,7 @@ public abstract class ASTOp extends AST {
   static final public int OPP_POWER    = 13;  /* ^ */
   static final public int OPP_UPLUS    = 12;  /* + */
   static final public int OPP_UMINUS   = 12;  /* - */
+  static final public int OPP_INTDIV   = 11;  /* %/% */
   static final public int OPP_MOD      = 11;  /* %xyz% */
   static final public int OPP_MUL      = 10;  /* * */
   static final public int OPP_DIV      = 10;  /* / */
@@ -82,6 +83,7 @@ public abstract class ASTOp extends AST {
     putBinInfix(new ASTLA());
     putBinInfix(new ASTLO());
     putBinInfix(new ASTMMult());
+    putBinInfix(new ASTIntDiv());
 
     // Unary prefix ops
     putPrefix(new ASTIsNA());
@@ -705,9 +707,24 @@ abstract class ASTBinOp extends ASTOp {
                  !(lf && rf && chks[i+nchks.length]._vec.isEnum())) ||
                 bin instanceof ASTEQ ||
                 bin instanceof ASTNE ) {
-              for( int r=0; r<rlen; r++ )
-                n.addNum(bin.op(lf ? chks[i                      ].at0(r) : df0,
-                                rf ? chks[i+(lf ? nchks.length:0)].at0(r) : df1));
+              for( int r=0; r<rlen; r++ ) {
+                double lv; double rv;
+                if (lf) {
+                  if(chks[i].isNA0(r)) { n.addNum(Double.NaN); continue; }
+                  lv = chks[i].at0(r);
+                } else {
+                  if (Double.isNaN(df0)) { n.addNum(Double.NaN); continue; }
+                  lv = df0;
+                }
+                if (rf) {
+                  if(chks[i].isNA0(r)) { n.addNum(Double.NaN); continue; }
+                  rv = chks[i+(lf ? nchks.length:0)].at0(r);
+                } else {
+                  if (Double.isNaN(df1)) { n.addNum(Double.NaN); continue; }
+                  rv = df1;
+                }
+                n.addNum(bin.op(lv, rv));
+              }
             } else {
               for( int r=0; r<rlen; r++ )  n.addNA();
             }
@@ -739,7 +756,7 @@ class ASTEQ       extends ASTBinOp { ASTEQ()       { super(OPF_INFIX, OPP_EQ,   
 class ASTNE       extends ASTBinOp { ASTNE()       { super(OPF_INFIX, OPP_NE,     OPA_LEFT); }  @Override String opStr(){ return "!=" ;} @Override ASTOp make() {return new ASTNE  ();} @Override double op(double d0, double d1) { return Utils.equalsWithinOneSmallUlp(d0,d1)?0:1;}}
 class ASTLA       extends ASTBinOp { ASTLA()       { super(OPF_INFIX, OPP_AND,    OPA_LEFT); }  @Override String opStr(){ return "&"  ;} @Override ASTOp make() {return new ASTLA  ();} @Override double op(double d0, double d1) { return (d0!=0 && d1!=0) ? (Double.isNaN(d0) || Double.isNaN(d1)?Double.NaN:1) :0;}}
 class ASTLO       extends ASTBinOp { ASTLO()       { super(OPF_INFIX, OPP_OR,     OPA_LEFT); }  @Override String opStr(){ return "|"  ;} @Override ASTOp make() {return new ASTLO  ();} @Override double op(double d0, double d1) { return (d0==0 && d1==0) ? (Double.isNaN(d0) || Double.isNaN(d1)?Double.NaN:0) :1;}}
-
+class ASTIntDiv   extends ASTBinOp { ASTIntDiv()   { super(OPF_INFIX, OPP_INTDIV, OPA_LEFT); }  @Override String opStr(){ return "%/%";} @Override ASTOp make() {return new ASTIntDiv();} @Override double op(double d0, double d1) { return Math.floor(d0/d1); }}
 // Variable length; instances will be created of required length
 abstract class ASTReducerOp extends ASTOp {
   final double _init;
@@ -1068,7 +1085,7 @@ class ASTSeqLen extends ASTOp {
   }
   @Override ASTOp make() { return this; }
   @Override void apply(Env env, int argcnt, ASTApply apply) {
-    int len = (int)env.popDbl();
+    long len = (long)env.popDbl();
     if (len <= 0)
       throw new IllegalArgumentException("Error in seq_len(" +len+"): argument must be coercible to positive integer");
     env.poppush(1,new Frame(new String[]{"c"}, new Vec[]{Vec.makeSeq(len)}),null);
@@ -1133,7 +1150,7 @@ class ASTRepLen extends ASTOp {
   @Override void apply(Env env, int argcnt, ASTApply apply) {
     if(env.isAry(-2)) H2O.unimpl();
     else {
-      int len = (int)env.popDbl();
+      long len = (long)env.popDbl();
       if(len <= 0)
         throw new IllegalArgumentException("Error in rep_len: argument length.out must be coercible to a positive integer");
       double x = env.popDbl();

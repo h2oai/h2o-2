@@ -85,14 +85,14 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       this.family = prior.family;
       this.initialPrediction = prior.initialPrediction;
     }
-    private GBMModel(GBMModel prior, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
+    private GBMModel(GBMModel prior, double err, ConfusionMatrix cm, VarImp varimp, AUCData validAUC) {
       super(prior, err, cm, varimp, validAUC);
       this.parameters = prior.parameters;
       this.learn_rate = prior.learn_rate;
       this.family = prior.family;
       this.initialPrediction = prior.initialPrediction;
     }
-    private GBMModel(GBMModel prior, Key[][] treeKeys, double[] errs, ConfusionMatrix[] cms, TreeStats tstats, VarImp varimp, AUC validAUC) {
+    private GBMModel(GBMModel prior, Key[][] treeKeys, double[] errs, ConfusionMatrix[] cms, TreeStats tstats, VarImp varimp, AUCData validAUC) {
       super(prior, treeKeys, errs, cms, tstats, varimp, validAUC);
       this.parameters = prior.parameters;
       this.learn_rate = prior.learn_rate;
@@ -158,7 +158,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
         bodyCtxSB.i().p("preds[1] += "+initialPrediction+";").nl();
       }
     }
-    @Override protected void setCrossValidationError(ValidatedJob job, double cv_error, water.api.ConfusionMatrix cm, water.api.AUC auc, water.api.HitRatio hr) {
+    @Override protected void setCrossValidationError(ValidatedJob job, double cv_error, water.api.ConfusionMatrix cm, AUCData auc, HitRatio hr) {
       GBMModel gbmm = ((GBM)job).makeModel(this, cv_error, cm.cm == null ? null : new ConfusionMatrix(cm.cm, cms[0].nclasses()), this.varimp, auc);
       gbmm._have_cv_results = true;
       DKV.put(this._key, gbmm); //overwrite this model
@@ -170,7 +170,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   @Override protected GBMModel makeModel(Key outputKey, Key dataKey, Key testKey, int ntrees, String[] names, String[][] domains, String[] cmDomain, float[] priorClassDist, float[] classDist) {
     return new GBMModel(this, outputKey, dataKey, validation==null?null:testKey, names, domains, cmDomain, ntrees, max_depth, min_rows, nbins, learn_rate, family, n_folds,priorClassDist,classDist);
   }
-  @Override protected GBMModel makeModel( GBMModel model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
+  @Override protected GBMModel makeModel( GBMModel model, double err, ConfusionMatrix cm, VarImp varimp, AUCData validAUC) {
     return new GBMModel(model, err, cm, varimp, validAUC);
   }
   @Override protected GBMModel makeModel(GBMModel model, DTree[] ktrees, TreeStats tstats) {

@@ -86,7 +86,7 @@ class Basic(unittest.TestCase):
             # remove the original parsed key. source was already removed by h2o
             h2o.nodes[0].remove_key(hex_key)
             start = time.time()
-            parseResultB = h2i.import_parse(path=csvDownloadPathname, schema='put', hex_key=hex_key, timeoutSecs=timeoutSecs)
+            parseResultB = h2i.import_parse(path=csvDownloadPathname, schema='put', hex_key=hex_key, timeoutSecs=3*timeoutSecs)
             print "\nB Trial #", trial, "rowCount:", rowCount, "colCount:", colCount, "parse end on ", \
                 csvFilename, 'took', time.time() - start, 'seconds'
             inspect = h2o_cmd.runInspect(key=hex_key)

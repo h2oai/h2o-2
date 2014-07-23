@@ -515,7 +515,7 @@ def runScore(node=None, dataKey=None, modelKey=None, predictKey='Predict.hex',
             vactual=vactual,
             vpredict=vpredict)
 
-        auc = resultAUC['AUC']
+        auc = resultAUC['aucdata']['AUC']
 
         if expectedAuc:
             h2o_util.assertApproxEqual(auc, expectedAuc, tol=0.15,

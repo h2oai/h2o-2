@@ -10,17 +10,17 @@ import water.Futures;
 public class ChunkSplitter {
   /** Reset len fields of given chunk */
   public static NewChunk resetLen(NewChunk nc) {
-    nc._len = nc._len2 = 0;
+    nc._len = nc._sparseLen = 0;
     return nc;
   }
 
   /** Extract portion of given chunk into given output chunk. */
   public static void extractChunkPart(Chunk ic, Chunk oc, int startRow, int nrows, Futures fs) {
     NewChunk dst = new NewChunk(oc);
-    dst._len = dst._len2 = 0;
+    dst._len = dst._sparseLen = 0;
     NewChunk src = new NewChunk(ic);
     src = ic.inflate_impl(src);
-    assert src._len2 == ic._len;
+    assert src._len == ic._len;
     // Iterate over values skip all 0
     int remain = nrows;
     Iterator<NewChunk.Value> it = src.values(startRow,startRow+nrows);
@@ -39,7 +39,7 @@ public class ChunkSplitter {
     // Handle case when last added value is followed by zeros till startRow+nrows
     dst.addZeros(remain);
 
-    assert dst._len2 == oc._len : "NewChunk.dst.len2 = " + dst._len2 + ", oc._len = " + oc._len;
+    assert dst._len == oc._len : "NewChunk.dst.len = " + dst._len + ", oc._len = " + oc._len;
     dst.close(dst.cidx(),fs);
 
     return ;

@@ -221,13 +221,13 @@ function(pkey, dataPath) {
 #Modeling
 runSummary<-
 function() {
-  data <- new("H2OParsedData", h2o = h, key = "parsed.hex", logic = TRUE)
+  data <- h2o.getFrame(h2o = h, key = "parsed.hex") 
   summary(data)
 }
 
 runH2o.ddply<-
 function(.variables, .fun = NULL, ..., .progress = 'none') {
-  data <- new("H2OParsedDataVA", h2o = h, key = "parsed.hex", logic = FALSE)
+  data <- h2o.getFrame(h2o = h, key = "parsed.hex")
   h2o.ddply(data, .variables, .fun, ..., .progress)
 }
 
@@ -236,7 +236,7 @@ function(x, y, distribution='multinomial', nfolds = 0,
          n.trees=10, interaction.depth=5, 
          n.minobsinnode=10, shrinkage=0.02, 
          n.bins=100) {
-  data <- new("H2OParsedData", h2o = h, key = "parsed.hex", logic = TRUE)
+  data <- h2o.getFrame(h2o = h, key = "parsed.hex")
   model <<- h2o.gbm(x = x, y = y, distribution = distribution, data = data, n.trees = n.trees,
           interaction.depth = interaction.depth, n.minobsinnode = n.minobsinnode,
           shrinkage = shrinkage, n.bins = n.bins, nfolds = nfolds)
@@ -246,7 +246,7 @@ function(x, y, distribution='multinomial', nfolds = 0,
 runGLM<-
 function(x, y, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, epsilon = 1.0e-5, 
          standardize = TRUE, tweedie.p = ifelse(family == "tweedie", 0, as.numeric(NA))) {
-  data <- new("H2OParsedData", h2o = h, key = "parsed.hex", logic = TRUE)
+  data <- h2o.getFrame(h2o = h, key = "parsed.hex")
   model <<- h2o.glm(x = x, y = y, data = data, family = family, nfolds = nfolds, alpha = alpha,
                        lambda = lambda, epsilon = epsilon, standardize = standardize, tweedie.p = tweedie.p)
   model.json <<- .h2o.__remoteSend(h, .h2o.__PAGE_GLMModelView, '_modelKey'=model@key)
@@ -254,7 +254,7 @@ function(x, y, family, nfolds = 10, alpha = 0.5, lambda = 1.0e-5, epsilon = 1.0e
 
 runKMeans<-
 function(centers, cols = '', iter.max = 10, normalize = FALSE) {
-  data <- new("H2OParsedData", h2o = h, key = "parsed.hex", logic = TRUE)
+  data <- h2o.getFrame(h2o = h, key = "parsed.hex")
   model <<- h2o.kmeans(data = data, centers = centers, cols = cols, iter.max = iter.max, normalize = normalize)
   model.json <<- .h2o.__remoteSend(h, .h2o.__PAGE_KM2ModelView, model = model@key)
   kmeans_k <<- dim(model@model$centers)[1]
@@ -263,7 +263,7 @@ function(centers, cols = '', iter.max = 10, normalize = FALSE) {
 
 runPCA<-
 function(tol = 0, standardize = TRUE, retx = FALSE) {
-  data <- new("H2OParsedData", h2o = h, key = "parsed.hex", logic = TRUE)
+  data <- h2o.getFrame(h2o = h, key = "parsed.hex")
   model <<- h2o.prcomp(data = data, tol = tol, standardize = standardize, retx = retx)
   model.json <<- .h2o.__remoteSend(h, .h2o.__PAGE_PCAModelView, '_modelKey'=model@key)
 }
@@ -271,7 +271,7 @@ function(tol = 0, standardize = TRUE, retx = FALSE) {
 runRF<-
 function(x, y, ntree=50, depth=50, nodesize=1, nfolds = 0,
          sample.rate=2/3, nbins=100, seed=-1, mtry = -1) {
-  data <- new("H2OParsedData", h2o = h, key = "parsed.hex", logic = TRUE)
+  data <- h2o.getFrame(h2o = h, key = "parsed.hex")
   model <<- h2o.randomForest(x = x, y = y, data = data, ntree = ntree, nfolds = nfolds, mtries = mtry,
                                 depth = depth, nodesize = nodesize,
                                 sample.rate = sample.rate, nbins = nbins, seed = seed)
@@ -284,7 +284,7 @@ function(x, y, classification=TRUE, nfolds=0,
           oobee = TRUE,importance = FALSE,nbins=1024, seed=-1,
           stat.type="ENTROPY",balance.classes=FALSE) {
 
-  data <- new("H2OParsedData", h2o = h, key = "parsed.hex", logic = FALSE)
+  data <- h2o.getFrame(h2o = h, key = "parsed.hex")
   model <<- h2o.SpeeDRF(x = x, y = y, data = data, ntree = ntree, depth = depth, nbins = nbins, sample.rate = sample.rate, nfolds = nfolds, mtry=mtry,
                         oobee = oobee, importance = importance, seed = seed, stat.type = stat.type, balance.classes = balance.classes)
 
@@ -329,7 +329,7 @@ force_load_balance=TRUE,
 replicate_training_data=TRUE, 
 single_node_mode=FALSE, 
 shuffle_training_data=FALSE) {
-  data <- new("H2OParsedData", h2o = h, key = "parsed.hex", logic = TRUE)
+  data <- h2o.getFrame(h2o = h, key = "parsed.hex") 
   model <<- h2o.deeplearning(x = x, y = y, data = data, nfolds = nfolds,
       activation=activation,
       hidden=hidden,
@@ -375,7 +375,7 @@ shuffle_training_data=FALSE) {
 #Scoring/Predicting
 runGBMScore<-
 function(expected_results=NULL, type=NULL) {
-  testData <<- new("H2OParsedData", h2o = h, key = "test.hex", logic = TRUE)
+  testData <<- h2o.getFrame(h2o = h, key = "test.hex") 
   .predict(model)
   if (!is.null(expected_results)) {
     if (type == "cm") {
@@ -389,13 +389,13 @@ function(expected_results=NULL, type=NULL) {
 
 runGLMScore<-
 function() {
-  testData <<- new("H2OParsedData", h2o = h, key = "test.hex", logic = TRUE)
+  testData <<- h2o.getFrame(h2o = h, key = "test.hex") 
   .predict(model)
 }
 
 runRFScore<-
 function(expected_results=NULL, type=NULL) {
-  testData <<- new("H2OParsedData", h2o = h, key = "test.hex", logic = TRUE)
+  testData <<- h2o.getFrame(h2o = h, key = "test.hex") 
   .predict(model)
   if (!is.null(expected_results)) {
     if (type == "cm") {
@@ -409,7 +409,7 @@ function(expected_results=NULL, type=NULL) {
 
 runDLScore<-
 function(expected_results=NULL, type=NULL) {
-  testData <<- new("H2OParsedData", h2o = h, key = "test.hex", logic = TRUE)
+  testData <<- h2o.getFrame(h2o = h, key = "test.hex") 
   .predict(model)
   if (!is.null(expected_results)) {
     if (type == "cm") {
@@ -431,7 +431,7 @@ function(modelType) {
 function(model) {
   print(model)
   res <- .h2o.__remoteSend(h, .h2o.__PAGE_PREDICT2, model = model@key, data="test.hex", prediction = "h2opreds.hex")
-  h2opred <- new("H2OParsedData", h2o = h, key = "h2opreds.hex")
+  h2opred <- h2o.getFrame(h2o = h, key = "h2opreds.hex")  
   if (predict_type == "binomial") 
     .calcBinomResults(h2opred)
   if (predict_type == "multinomial")

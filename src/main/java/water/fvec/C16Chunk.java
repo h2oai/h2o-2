@@ -38,14 +38,11 @@ public class C16Chunk extends Chunk {
     return this;
   }
   @Override NewChunk inflate_impl(NewChunk nc) {
-    //nothing to inflate - just copy
-    nc._ls = MemoryManager.malloc8 (_len);
-    nc._ds = MemoryManager.malloc8d(_len);
-    nc._len = _len;
-    nc._len2 = _len;
-    for( int i=0; i<_len; i++ ) { //use unsafe?
-      nc._ls[i] =                         UDP.get8(_mem,(i<<4)  );
-      nc._ds[i] = Double.longBitsToDouble(UDP.get8(_mem,(i<<4)+8));
+    nc.set_len(nc.set_sparseLen(0));
+    for( int i=0; i< len(); i++ ) {
+      long lo = UDP.get8(_mem,(i<<4)  );
+      long hi = UDP.get8(_mem,(i << 4) + 8);
+      nc.addUUID(lo, hi);
     }
     return nc;
   }

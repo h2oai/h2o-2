@@ -27,7 +27,7 @@ res1 = h2o.exec(hex[,1] + hex[,2])
 head(res1)
 res2 = h2o.exec(hex[,1] + hex[, 2] + hex[, 3] * hex[,4] / hex[,1])
 head(res2)
-res3 <- h2o.exec(hex$newCol <- ifelse(hex[,1] < 5, log(hex[,3] + 1), hex[,"Petal.Width"] / hex$Sepal.Width))
+res3<- h2o.exec(hex$nc<- ifelse(hex[,1]<5,log(hex[,3]+1),hex[,"Petal.Width"]/hex$Sepal.Width))
 head(res3)
 head(hex)
 }

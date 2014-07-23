@@ -61,6 +61,7 @@ public class Exec2 extends Request2 {
         sb.append(Double.toString(scalar));
       }
       result=sb.toString();
+//      num_cols = num_rows == 0 ? 0 : num_cols;
       return Response.done(this);
     }
     catch( IllegalArgumentException pe ) { e=pe;} // No logging user typo's
