@@ -1,13 +1,4 @@
 source("../../../R/h2oPerf/prologue.R")
-#runGLM.VA(x = c("Year", "Month",
-#                "DayofMonth", "DayOfWeek",
-#                "CRSDepTime","CRSArrTime",
-#                "UniqueCarrier", "CRSElapsedTime",
-#                "Origin", "Dest", "Distance"),
-#          y = "IsDepDelayed",
-#          family = "binomial",
-#          nfolds = 0)
-
-runGLM.FV(x = 1:11, y = 12, family = "binomial", nfolds = 0)
+runGLM(x = 1:11, y = 12, family = "binomial", nfolds = 0)
 #correct_pass <<- abs(res$auc - 0.6379) < 0.03
 source("../../../R/h2oPerf/epilogue.R")

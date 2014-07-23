@@ -47,7 +47,7 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (1000, 500, 'cA', 1800, 1800),
+            (100, 500, 'cA', 1800, 1800),
             ]
 
         h2b.browseTheCloud()
@@ -58,7 +58,7 @@ class Basic(unittest.TestCase):
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
             # create sym links
-            multifile = 1000
+            multifile = 100
             # there is already one file. assume it's the "0" case
             for p in range(1, multifile):
                 csvPathnameLink = csvPathname + "_" + str(p)
@@ -67,7 +67,7 @@ class Basic(unittest.TestCase):
             print "\nCreating random", csvPathname
             write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
 
-            for trial in range(10):
+            for trial in range(5):
                 hex_key = orig_hex_key + str(trial)
                 start = time.time()
                 parseResult = h2i.import_parse(path=csvPathname + "*", schema='local', hex_key=hex_key, delete_on_done=1,

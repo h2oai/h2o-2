@@ -1,9 +1,9 @@
 import unittest, random, sys, time, string
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_pca, h2o_jobs as h2j
+import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_pca, h2o_jobs as h2j, h2o_gbm
 
 
-def write_syn_dataset(csvPathname, rowCount, colCount, SEED, translateList):
+def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
     # do we need more than one random generator?
     r1 = random.Random(SEED)
     dsf = open(csvPathname, "w+")
@@ -48,13 +48,22 @@ class Basic(unittest.TestCase):
     def test_PCA_many_cols_enum_fvec(self):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
-        translateList = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u']
 
         tryList = [
             # (10000, 10, 'cB', 300), 
             # (10000, 50, 'cC', 300), 
-            (100, 100, 'cD', 300), 
+            (10, 5, 'cD', 300), 
+            (10, 10, 'cD', 300), 
+            (10, 20, 'cD', 300), 
+            (10, 40, 'cD', 300), 
+            (10, 80, 'cD', 300), 
+            (10, 160, 'cD', 300), 
+            (10, 200, 'cD', 300), 
             ]
+
+        xList = []
+        eList = []
+        fList = []
 
         ### h2b.browseTheCloud()
         for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
@@ -62,7 +71,7 @@ class Basic(unittest.TestCase):
             csvFilename = 'syn_' + "binary" + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
             print "Creating random", csvPathname
-            write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, translateList)
+            write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
 
             # PARSE ****************************************
             start = time.time()
@@ -92,7 +101,8 @@ class Basic(unittest.TestCase):
             numCols = inspect['numCols']
 
             # PCA(tolerance iterate)****************************************
-            for tolerance in [i/10.0 for i in range(11)]:
+            for tolerance in [0.1]:
+            # for tolerance in [i/10.0 for i in range(1)]:
                 params = {
                     'ignored_cols': 'C1',
                     'destination_key': modelKey,
@@ -131,6 +141,22 @@ class Basic(unittest.TestCase):
                 print "PCA: Proportions of variance by eigenvector are :", propVars
                 print
                 print
+                # xList.append(ntrees)
+                xList.append(numCols)
+                eList.append(tolerance)
+                fList.append(elapsed)
+
+
+        # just plot the last one
+        if 1==1:
+            xLabel = 'numCols'
+            eLabel = 'tolerance'
+            fLabel = 'elapsed'
+            eListTitle = ""
+            fListTitle = ""
+            h2o_gbm.plotLists(xList, xLabel, eListTitle, eList, eLabel, fListTitle, fList, fLabel)
+
+
 
 if __name__ == '__main__':
     h2o.unit_main()

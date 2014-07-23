@@ -194,6 +194,7 @@ public class Vec extends Iced {
     final Vec v0 = new Vec(group().addVecs(1)[0],_espc);
     new DRemoteTask(){
       @Override public void lcompute(){
+        getFutures();
         long row=0;                 // Start row
         Key k;
         for( int i=0; i<nchunks; i++ ) {
@@ -210,25 +211,24 @@ public class Vec extends Iced {
     fs.blockForPending();
     return v0;
   }
-  public static Vec makeSeq( int len ) {
-    Futures fs = new Futures();
-    AppendableVec av = new AppendableVec(VectorGroup.VG_LEN1.addVec());
-    NewChunk nc = new NewChunk(av,0);
-    for (int r = 0; r < len; r++) nc.addNum(r+1);
-    nc.close(0,fs);
-    Vec v = av.close(fs);
-    fs.blockForPending();
-    return v;
+  public static Vec makeSeq( long len) {
+    return new MRTask2() {
+      @Override
+      public void map(Chunk[] cs) {
+        for (int i = 0; i < cs.length; i++) {
+          Chunk c = cs[i];
+          for (int r = 0; r < c._len; r++)
+            c.set0(r, r+1+c._start);
+        }
+      }
+    }.doAll(makeConSeq(0, len)).vecs(0);
   }
-  public static Vec makeConSeq(double x, int len) {
-    Futures fs = new Futures();
-    AppendableVec av = new AppendableVec(VectorGroup.VG_LEN1.addVec());
-    NewChunk nc = new NewChunk(av,0);
-    for (int r = 0; r < len; r++) nc.addNum(x);
-    nc.close(0,fs);
-    Vec v = av.close(fs);
-    fs.blockForPending();
-    return v;
+  public static Vec makeConSeq(double x, long len) {
+    int chunks = (int)Math.ceil((double)len / Vec.CHUNK_SZ);
+    long[] espc = new long[chunks+1];
+    for (int i = 1; i<=chunks; ++i)
+      espc[i] = Math.min(espc[i-1] + Vec.CHUNK_SZ, len);
+    return new Vec(VectorGroup.VG_LEN1.addVec(), espc).makeCon(x);
   }
 
   /** Create a new 1-element vector in the shared vector group for 1-element vectors. */
@@ -628,8 +628,9 @@ public class Vec extends Iced {
   }
 
   /** Get a Chunk Key from a chunk-index.  Basically the index-to-key map. */
-  public Key chunkKey(int cidx ) {
-    byte [] bits = _key._kb.clone();
+  public Key chunkKey(int cidx ) { return chunkKey(_key,cidx); }
+  static public Key chunkKey(Key veckey, int cidx ) {
+    byte [] bits = veckey._kb.clone();
     bits[0] = Key.DVEC;
     UDP.set4(bits,6,cidx); // chunk#
     return Key.make(bits);
@@ -835,9 +836,11 @@ public class Vec extends Iced {
     return s+"}]";
   }
 
-  public void remove( Futures fs ) {
+  public Futures remove( Futures fs ) {
     for( int i=0; i<nChunks(); i++ )
       UKV.remove(chunkKey(i),fs);
+    DKV.remove(_key);
+    return fs;
   }
 
   @Override public boolean equals( Object o ) {

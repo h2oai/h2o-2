@@ -73,7 +73,7 @@ class Basic(unittest.TestCase):
 
             # RF******************************************
             kwargs = {
-                'ntrees': 6,
+                'ntrees': 1,
                 'response': 0,
             }
 

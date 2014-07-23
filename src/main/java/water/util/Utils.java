@@ -666,11 +666,10 @@ public class Utils {
   }
 
   public static Compression guessCompressionMethod(byte [] bits){
-    AutoBuffer ab = new AutoBuffer(bits);
     // Look for ZIP magic
-    if( bits.length > ZipFile.LOCHDR && ab.get4(0) == ZipFile.LOCSIG )
+    if( bits.length > ZipFile.LOCHDR && UDP.get4(bits,0) == ZipFile.LOCSIG )
       return Compression.ZIP;
-    if( bits.length > 2 && ab.get2(0) == GZIPInputStream.GZIP_MAGIC )
+    if( bits.length > 2 && UDP.get2u(bits,0) == GZIPInputStream.GZIP_MAGIC )
       return Compression.GZIP;
     return Compression.NONE;
   }
@@ -728,6 +727,14 @@ public class Utils {
       s = String.format("%5.2f %%", 100 * pct);
     return s;
   }
+
+  public static int maxValue(byte[] from ) {
+    int result = from[0]&0xFF;
+    for (int i = 1; i < from.length; ++i)
+      if ( (from[i]&0xFF) > result) result = from[i]&0xFF;
+    return result;
+  }
+
 
   /**
    * Simple wrapper around ArrayList with support for H2O serialization
@@ -792,6 +799,109 @@ public class Utils {
     }
     @Override public int hashCode() { return (int)Double.doubleToLongBits(_val); }
     @Override public String toString() { return Double.toString(_val); }
+  }
+  public static class IcedBitSet extends Iced {
+    public final byte[] _val;
+    public final int _nbits;
+    public final int _offset;   // Number of bits discarded from beginning (inclusive min)
+
+    public IcedBitSet(byte[] v, int nbits, int offset) {
+      if(nbits < 0) throw new NegativeArraySizeException("nbits < 0: " + nbits);
+      if(offset < 0) throw new IndexOutOfBoundsException("offset < 0: " + offset);
+      assert (nbits >> 3) <= v.length;
+      _val = v; _nbits = nbits; _offset = offset;
+    }
+    public IcedBitSet(int nbits) { this(nbits, 0); }
+    public IcedBitSet(int nbits, int offset) {
+      if(nbits < 0) throw new NegativeArraySizeException("nbits < 0: " + nbits);
+      if(offset < 0) throw new IndexOutOfBoundsException("offset < 0: " + offset);
+      _nbits = nbits;
+      _offset = offset;
+      _val = new byte[((nbits-1) >> 3) + 1];
+    }
+
+    public boolean get(int idx) {
+      if(idx < 0 || idx >= _nbits)
+        throw new IndexOutOfBoundsException("Must have 0 <= idx <= " + Integer.toString(_nbits-1) + ": " + idx);
+      return (_val[idx >> 3] & ((byte)1 << (idx % 8))) != 0;
+    }
+    public boolean contains(int idx) {
+      if(idx < 0) throw new IndexOutOfBoundsException("idx < 0: " + idx);
+      if(Double.isNaN(idx) || idx >= _nbits) return false;
+      return get(idx);
+    }
+    public void set(int idx) {
+      if(idx < 0 || idx >= _nbits)
+        throw new IndexOutOfBoundsException("Must have 0 <= idx <= " + Integer.toString(_nbits-1) + ": " + idx);
+      _val[idx >> 3] |= ((byte)1 << (idx % 8));
+    }
+    public void clear(int idx) {
+      if(idx < 0 || idx >= _nbits)
+        throw new IndexOutOfBoundsException("Must have 0 <= idx <= " + Integer.toString(_nbits-1) + ": " + idx);
+      _val[idx >> 3] &= ~((byte)1 << (idx % 8));
+    }
+    public int cardinality() {
+      int nbits = 0;
+      for(int i = 0; i < _val.length; i++)
+        nbits += Integer.bitCount(_val[i]);
+      return nbits;
+    }
+
+    public int nextSetBit(int idx) {
+      if(idx < 0 || idx >= _nbits)
+        throw new IndexOutOfBoundsException("Must have 0 <= idx <= " + Integer.toString(_nbits-1) + ": " + idx);
+      int idx_next = idx >> 3;
+      byte bt_next = (byte)(_val[idx_next] & ((byte)0xff << idx));
+
+      while(bt_next == 0) {
+        if(++idx_next >= _val.length) return -1;
+        bt_next = _val[idx_next];
+      }
+      return (idx_next << 3) + Integer.numberOfTrailingZeros(bt_next);
+    }
+
+    public int nextClearBit(int idx) {
+      if(idx < 0 || idx >= _nbits)
+        throw new IndexOutOfBoundsException("Must have 0 <= idx <= " + Integer.toString(_nbits-1) + ": " + idx);
+      int idx_next = idx >> 3;
+      byte bt_next = (byte)(~_val[idx_next] & ((byte)0xff << idx));
+
+      // Mask out leftmost bits not in use
+      if(idx_next == _val.length-1 && _nbits % 8 > 0)
+        bt_next &= ~((byte)0xff << (_nbits % 8));
+
+      while(bt_next == 0) {
+        if(++idx_next >= _val.length) return -1;
+        bt_next = (byte)(~_val[idx_next]);
+        if(idx_next == _val.length-1 && _nbits % 8 > 0)
+          bt_next &= ~((byte)0xff << (_nbits % 8));
+      }
+      return (idx_next << 3) + Integer.numberOfTrailingZeros(bt_next);
+    }
+
+    public int size() { return _val.length << 3; }
+    public int numBytes() { return _val.length; };
+
+    @Override public String toString() {
+      StringBuilder sb = new StringBuilder();
+      sb.append("{");
+      if (_offset>0) sb.append("...").append(_offset).append(" 0-bits... ");
+
+      for(int i = 0; i < _val.length; i++) {
+        if (i>0) sb.append(' ');
+        sb.append(String.format("%8s", Integer.toBinaryString(0xFF & _val[i])).replace(' ', '0'));
+      }
+      sb.append("}");
+      return sb.toString();
+    }
+    public String toStrArray() {
+      StringBuilder sb = new StringBuilder();
+      sb.append("{").append(_val[0]);
+      for(int i = 1; i < _val.length; i++)
+        sb.append(", ").append(_val[i]);
+      sb.append("}");
+      return sb.toString();
+    }
   }
   /**
    * Simple wrapper around HashMap with support for H2O serialization

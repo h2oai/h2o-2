@@ -17,7 +17,7 @@ import water.util.FrameUtils;
 class ASTRApply extends ASTOp {
   static final String VARS[] = new String[]{ "", "ary", "dbl1.2", "fcn"};
   ASTRApply( ) { super(VARS,
-                       new Type[]{ Type.ARY, Type.ARY, Type.DBL, Type.fcn(new Type[]{Type.dblary(),Type.ARY}) },
+                       new Type[]{ Type.ARY, Type.dblary(), Type.dblary(), Type.fcn(new Type[]{Type.dblary(),Type.ARY}) },
                        OPF_PREFIX,
                        OPP_PREFIX,
                        OPA_RIGHT); }

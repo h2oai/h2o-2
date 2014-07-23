@@ -25,7 +25,7 @@ public class GLMModelUpdate extends Request2 {
 
   public static String link(String txt, Key model) {return link(txt,model,Double.NaN);}
   public static String link(String txt, Key model, double lambda) {
-    return "<a href='GLMModelUpdate.html?_modelKey=" + model + "&lambda_value=" + lambda + "'>" + txt + "</a>";
+    return "<a href='GLMModelUpdate.html?_modelKey=" + model + "&lambda=" + lambda + "'>" + txt + "</a>";
   }
   public static Response redirect(Request req, Key modelKey) {
     return Response.redirect(req, "/2/GLMModelUpdate", "_modelKey", modelKey);

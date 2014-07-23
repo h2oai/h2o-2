@@ -1,17 +1,13 @@
 package hex.drf;
 
 import hex.drf.DRF.DRFModel;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import water.Key;
-import water.TestUtil;
-import water.UKV;
+
+import org.junit.*;
+
+import water.*;
 import water.api.DRFModelView;
 import water.fvec.Frame;
 import water.fvec.Vec;
-
-import java.util.Arrays;
 
 public class DRFTest extends TestUtil {
 
@@ -31,7 +27,6 @@ public class DRFTest extends TestUtil {
   static final long[]   a(long ...arr)   { return arr; }
   static final long[][] a(long[] ...arr) { return arr; }
 
-  //  @Ignore
   @Test public void testClassIris1() throws Throwable {
 
     // iris ntree=1
@@ -46,7 +41,6 @@ public class DRFTest extends TestUtil {
           s("Iris-setosa","Iris-versicolor","Iris-virginica") );
   }
 
-  //  @Ignore
   //[[30, 0, 0], [0, 31, 3], [0, 4, 32]], but was: [[28, 0, 0], [0, 30, 2], [0, 2, 28]]: arrays first differed at element [0]; expected:<30> but was:<28>
   @Test public void testClassIris5() throws Throwable {
     // iris ntree=50
@@ -60,7 +54,6 @@ public class DRFTest extends TestUtil {
           s("Iris-setosa","Iris-versicolor","Iris-virginica") );
   }
 
-  //  @Ignore
   @Test public void testClassCars1() throws Throwable {
     // cars ntree=1
     basicDRFTestOOBE(
@@ -199,6 +192,7 @@ public class DRFTest extends TestUtil {
       drf.invoke();
       // Get the model
       model = UKV.get(drf.dest());
+      Assert.assertTrue(model.get_params().state == Job.JobState.DONE); //HEX-1817
       testHTML(model);
       // And compare CMs
       assertCM(expCM, model.cms[model.cms.length-1]._arr);
@@ -217,11 +211,5 @@ public class DRFTest extends TestUtil {
       if( model != null ) model.delete(); // Remove the model
       if( pred != null ) pred.delete();
     }
-  }
-
-  void assertCM(long[][] expectedCM, long[][] givenCM) {
-    Assert.assertEquals("Confusion matrix dimension does not match", expectedCM.length, givenCM.length);
-    String m = "Expected: " + Arrays.deepToString(expectedCM) + ", but was: " + Arrays.deepToString(givenCM);
-    for (int i=0; i<expectedCM.length; i++) Assert.assertArrayEquals(m, expectedCM[i], givenCM[i]);
   }
 }

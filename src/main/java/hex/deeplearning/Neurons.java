@@ -154,7 +154,7 @@ public abstract class Neurons {
       _minfo = minfo;
       _w = minfo.get_weights(_index); //incoming weights
       _b = minfo.get_biases(_index); //bias for this layer (starting at hidden layer)
-      if(minfo.get_params().autoencoder && _index < params.hidden.length) {
+      if(params.autoencoder && params.sparsity_beta > 0 && _index < params.hidden.length) {
         _avg_a = minfo.get_avg_activations(_index);
       }
       if (minfo.has_momenta()) {
@@ -167,7 +167,7 @@ public abstract class Neurons {
       }
       _shortcut = (params.fast_mode || (
               // not doing fast mode, but also don't have anything else to update (neither momentum nor ADADELTA history), and no L1/L2
-              !_minfo.get_params().adaptive_rate && !_minfo.has_momenta() && params.l1 == 0.0 && params.l2 == 0.0));
+              !params.adaptive_rate && !_minfo.has_momenta() && params.l1 == 0.0 && params.l2 == 0.0));
     }
     sanityCheck(training);
   }
@@ -589,8 +589,8 @@ public abstract class Neurons {
       _b.add(row, rate * d);
     }
     //update for sparsity constraint
-    if (params.autoencoder && !(this instanceof Output) && !(this instanceof Input) && (_index != params.hidden.length)) {
-      _b.add(row, -(float) (rate * _minfo.get_params().sparsity_beta * (_avg_a._data[row] - _minfo.get_params().average_activation)));
+    if (params.autoencoder && params.sparsity_beta > 0 && !(this instanceof Output) && !(this instanceof Input) && (_index != params.hidden.length)) {
+      _b.add(row, -(float) (rate * params.sparsity_beta * (_avg_a._data[row] - params.average_activation)));
     }
     if (Float.isInfinite(_b.get(row))) _minfo.set_unstable();
   }

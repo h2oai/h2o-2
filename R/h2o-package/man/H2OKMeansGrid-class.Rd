@@ -5,7 +5,7 @@
 
 \title{Class \code{"H2OKMeansGrid"}}
 \description{
-Object representing the models built by a H2O K-Means grid search on FluidVecs.
+Object representing the models built by a H2O K-Means grid search.
 }
 \section{Objects from the Class}{
 Objects can be created by calls of the form \code{new("H2OKMeansGrid", ...)}.

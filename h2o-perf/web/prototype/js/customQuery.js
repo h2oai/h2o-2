@@ -45,7 +45,7 @@ function doQuery(phpQueryPage) {
     });
 }
 
-function showPerfGraphs(test_run_id, total_hosts) {
+function showPerfGraphs(test_name, total_hosts, dt) {
     if (total_hosts == 1) {
         // Just looks at node 192.168.1.164
 
@@ -53,9 +53,18 @@ function showPerfGraphs(test_run_id, total_hosts) {
             url: '../prototype/php/post2.php',
             type: 'POST',
             dataType: 'JSON',
-            data: 'test_run_id=' + test_run_id + '&ip=192.168.1.164',
+            data: 'test_name=' + test_name + '&ip=192.168.1.164&dt='+dt,
             success: function(data) {
-                nodePerfGraph(data, '#cpu_svg1', '#rss_svg1');
+              console.log(data)
+              if(data.data.length == 0) {
+                d3.select("#cpu_svg1").append("text").text("No CPU Data Captured!");
+                d3.select("#rss_svg1").append("text").text("No RSS Data Captured!");
+              } else {
+                  nodePerfGraph(data, '#cpu_svg', '#rss_svg');
+              }
+            },
+            error: function(request, status, error) {
+              console.log(request.responseText);
             }
         });
     } else {
@@ -64,11 +73,17 @@ function showPerfGraphs(test_run_id, total_hosts) {
                 url: '../prototype/php/post2.php',
                 type: 'POST',
                 dataType: 'JSON',
-                data: 'test_run_id=' + test_run_id + '&ip=192.168.1.16' + (i+1),
+                data: 'test_name=' + test_name + '&ip=192.168.1.16' + (i+1) + '&dt='+dt,
+                async: false,
                 success: function(data) {
-                    console.log(data)
-                    nodePerfGraph(data, '#cpu_svg'+(i+1), '#rss_svg'+(i+1));
-                    console.log("FINISHED RUNNING nodePerfGraph...")
+                    if(data.data.length == 0) {
+                      if (i < 1) {
+                        d3.select("#cpu_svg1").append("text").text("No CPU Data Captured!");
+                        d3.select("#rss_svg1").append("text").text("No RSS Data Captured!");
+                      }
+                    } else {
+                      nodePerfGraph(data, '#cpu_svg'+(i+1), '#rss_svg'+(i+1));
+                    }
                 },
                 error: function (request, status, error) {
                   console.log(request.responseText);

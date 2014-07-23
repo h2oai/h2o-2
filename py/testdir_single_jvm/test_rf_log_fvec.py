@@ -1,6 +1,6 @@
 import unittest, random, sys, time, math
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_rf as h2o_rf, h2o_hosts, h2o_import as h2i, h2o_exec
+import h2o, h2o_cmd, h2o_rf as h2o_rf, h2o_hosts, h2o_import as h2i, h2o_exec, h2o_util
 import h2o_browse as h2b
 
 print "This test will be good for testing RF against continuous feature (note the output depends only on col 0)"
@@ -108,8 +108,8 @@ class Basic(unittest.TestCase):
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfv, ntree=used_trees)
             oobeTrainPctRight = 100.0 - classification_error
             expectTrainPctRight = 94
-            self.assertTrue(oobeTrainPctRight >= expectTrainPctRight,\
-                msg="OOBE: pct. right for training not close enough %6.2f %6.2f"% (oobeTrainPctRight, expectTrainPctRight))
+            h2o_util.assertApproxEqual(oobeTrainPctRight, expectTrainPctRight, rel=.1,
+                msg="OOBE: pct. right for training not close enough %6.2f %6.2f" % (oobeTrainPctRight, expectTrainPctRight))
 
             # RF score******************************************************
             print "Now score with the 2nd random dataset"
@@ -117,13 +117,15 @@ class Basic(unittest.TestCase):
                 timeoutSecs=timeoutSecs, retryDelaySecs=1)
 
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfv, ntree=used_trees)
-            self.assertTrue(classification_error<=5.0, msg="Classification error %s too big" % classification_error)
+            h2o_util.assertApproxEqual(classification_error, 6.0, rel=.1,
+                msg="Classification error %s too big" % classification_error)
+
             predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
 
             fullScorePctRight = 100.0 - classification_error
             expectScorePctRight = 94
-            self.assertTrue(fullScorePctRight >= expectScorePctRight,
-                msg="Full: pct. right for scoring not close enough %6.2f %6.2f"% (fullScorePctRight, expectScorePctRight))
+            h2o_util.assertApproxEqual(fullScorePctRight, expectScorePctRight, rel=.1,
+                msg="Full: pct. right for scoring not close enough %6.2f %6.2f" % (fullScorePctRight, expectScorePctRight))
 
 
 if __name__ == '__main__':

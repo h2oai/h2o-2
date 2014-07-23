@@ -12,119 +12,118 @@
                 Log.info("Filtering out rows by >= from dataset stego_testing and column \"140\" using value 0.0892707366817")
                      filterHex <- hex[hex[,c(140)] >= 0.0892707366817,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"140" >= 0.0892707366817,]
+                    filterHex <- hex[hex$"C140" >= 0.0892707366817,]
                 Log.info("Filtering out rows by >= from dataset stego_testing and column \"32\" using value 0.231234377862")
                      filterHex <- hex[hex[,c(32)] >= 0.231234377862,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"32" >= 0.231234377862,]
+                    filterHex <- hex[hex$"C32" >= 0.231234377862,]
                 Log.info("Filtering out rows by >= from dataset stego_testing and column \"68\" using value 0.0888510352114")
                      filterHex <- hex[hex[,c(68)] >= 0.0888510352114,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"68" >= 0.0888510352114,]
+                    filterHex <- hex[hex$"C68" >= 0.0888510352114,]
                 Log.info("Filtering out rows by >= from dataset stego_testing and column \"131\" using value 0.334062868422")
                      filterHex <- hex[hex[,c(131)] >= 0.334062868422,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"131" >= 0.334062868422,]
+                    filterHex <- hex[hex$"C131" >= 0.334062868422,]
                 Log.info("Filtering out rows by >= from dataset stego_testing and column \"41\" using value 0.0481030331377")
                      filterHex <- hex[hex[,c(41)] >= 0.0481030331377,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"41" >= 0.0481030331377,]
+                    filterHex <- hex[hex$"C41" >= 0.0481030331377,]
                 Log.info("Filtering out rows by >= from dataset stego_testing and column \"101\" using value 0.0359644755278")
                      filterHex <- hex[hex[,c(101)] >= 0.0359644755278,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"101" >= 0.0359644755278,]
+                    filterHex <- hex[hex$"C101" >= 0.0359644755278,]
                 Log.info("Filtering out rows by >= from dataset stego_testing and column \"95\" using value 0.139419130855")
                      filterHex <- hex[hex[,c(95)] >= 0.139419130855,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"95" >= 0.139419130855,]
+                    filterHex <- hex[hex$"C95" >= 0.139419130855,]
                 Log.info("Filtering out rows by >= from dataset stego_testing and column \"64\" using value 0.0207348242717")
                      filterHex <- hex[hex[,c(64)] >= 0.0207348242717,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"64" >= 0.0207348242717,]
+                    filterHex <- hex[hex$"C64" >= 0.0207348242717,]
                 Log.info("Filtering out rows by >= from dataset stego_testing and column \"137\" using value 0.0720152823062")
                      filterHex <- hex[hex[,c(137)] >= 0.0720152823062,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"137" >= 0.0720152823062,]
+                    filterHex <- hex[hex$"C137" >= 0.0720152823062,]
                 Log.info("Filtering out rows by >= from dataset stego_testing and column \"130\" using value 0.0875441157709")
                      filterHex <- hex[hex[,c(130)] >= 0.0875441157709,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"130" >= 0.0875441157709,]
+                    filterHex <- hex[hex$"C130" >= 0.0875441157709,]
                 Log.info("Filtering out rows by >= from dataset stego_testing and column \"134\" using value 0.0213378833745")
                      filterHex <- hex[hex[,c(134)] >= 0.0213378833745,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"134" >= 0.0213378833745,]
+                    filterHex <- hex[hex$"C134" >= 0.0213378833745,]
                 Log.info("Filtering out rows by >= from dataset stego_testing and column \"150\" using value 0.208177355341")
                      filterHex <- hex[hex[,c(150)] >= 0.208177355341,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"150" >= 0.208177355341,]
+                    filterHex <- hex[hex$"C150" >= 0.208177355341,]
                 Log.info("Filtering out rows by >= from dataset stego_testing and column \"126\" using value 0.0610954483328")
                      filterHex <- hex[hex[,c(126)] >= 0.0610954483328,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"126" >= 0.0610954483328,]
+                    filterHex <- hex[hex$"C126" >= 0.0610954483328,]
                 Log.info("Filtering out rows by >= from dataset stego_testing and column \"10\" using value 0.288951496822")
                      filterHex <- hex[hex[,c(10)] >= 0.288951496822,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"10" >= 0.288951496822,]
+                    filterHex <- hex[hex$"C10" >= 0.288951496822,]
                 Log.info("Filtering out rows by >= from dataset stego_testing and column \"143\" using value 0.0475153109497")
                      filterHex <- hex[hex[,c(143)] >= 0.0475153109497,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"143" >= 0.0475153109497,]
+                    filterHex <- hex[hex$"C143" >= 0.0475153109497,]
                 Log.info("Filtering out rows by >= from dataset stego_testing and column \"13\" using value 0.0288878640019")
                      filterHex <- hex[hex[,c(13)] >= 0.0288878640019,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"13" >= 0.0288878640019,]
+                    filterHex <- hex[hex$"C13" >= 0.0288878640019,]
                 Log.info("Filtering out rows by >= from dataset stego_testing and column \"122\" using value 0.222543954718")
                      filterHex <- hex[hex[,c(122)] >= 0.222543954718,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"122" >= 0.222543954718,]
+                    filterHex <- hex[hex$"C122" >= 0.222543954718,]
                 Log.info("Filtering out rows by >= from dataset stego_testing and column \"64\" using value 0.00696241333679")
                      filterHex <- hex[hex[,c(64)] >= 0.00696241333679,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"64" >= 0.00696241333679,]
+                    filterHex <- hex[hex$"C64" >= 0.00696241333679,]
                 Log.info("Filtering out rows by >= from dataset stego_testing and column \"144\" using value 0.0506679859339")
                      filterHex <- hex[hex[,c(144)] >= 0.0506679859339,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"144" >= 0.0506679859339,]
+                    filterHex <- hex[hex$"C144" >= 0.0506679859339,]
                 Log.info("Filtering out rows by >= from dataset stego_testing and column \"121\" using value 0.0287894228539")
                      filterHex <- hex[hex[,c(121)] >= 0.0287894228539,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"121" >= 0.0287894228539,]
+                    filterHex <- hex[hex$"C121" >= 0.0287894228539,]
                 Log.info("Filtering out rows by >= from dataset stego_testing and column \"136\" using value 0.0294970295901")
                      filterHex <- hex[hex[,c(136)] >= 0.0294970295901,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"136" >= 0.0294970295901,]
+                    filterHex <- hex[hex$"C136" >= 0.0294970295901,]
                 Log.info("Filtering out rows by >= from dataset stego_testing and column \"107\" using value 0.113350394775")
                      filterHex <- hex[hex[,c(107)] >= 0.113350394775,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"107" >= 0.113350394775,]
+                    filterHex <- hex[hex$"C107" >= 0.113350394775,]
                 Log.info("Filtering out rows by >= from dataset stego_testing and column \"115\" using value 0.0576453541341")
                      filterHex <- hex[hex[,c(115)] >= 0.0576453541341,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"115" >= 0.0576453541341,]
+                    filterHex <- hex[hex$"C115" >= 0.0576453541341,]
                 Log.info("Filtering out rows by >= from dataset stego_testing and column \"44\" using value 0.0895010282548")
                      filterHex <- hex[hex[,c(44)] >= 0.0895010282548,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"44" >= 0.0895010282548,]
+                    filterHex <- hex[hex$"C44" >= 0.0895010282548,]
                 Log.info("Filtering out rows by >= from dataset stego_testing and column \"39\" using value 0.0749186976044")
                      filterHex <- hex[hex[,c(39)] >= 0.0749186976044,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"39" >= 0.0749186976044,]
+                    filterHex <- hex[hex$"C39" >= 0.0749186976044,]
                 Log.info("Filtering out rows by >= from dataset stego_testing and column \"143\" using value 0.0589294146148")
                      filterHex <- hex[hex[,c(143)] >= 0.0589294146148,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"143" >= 0.0589294146148,]
+                    filterHex <- hex[hex$"C143" >= 0.0589294146148,]
                 Log.info("Filtering out rows by >= from dataset stego_testing and column \"15\" using value 0.0491452268657")
                      filterHex <- hex[hex[,c(15)] >= 0.0491452268657,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"15" >= 0.0491452268657,]
+                    filterHex <- hex[hex$"C15" >= 0.0491452268657,]
                 Log.info("Filtering out rows by >= from dataset stego_testing and column \"0\" using value 10738.3292973")
                      filterHex <- hex[hex[,c(1)] >= 10738.3292973,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"0" >= 10738.3292973,]
                 Log.info("Filtering out rows by >= from dataset stego_testing and column \"22\" using value 0.174958892429")
                      filterHex <- hex[hex[,c(22)] >= 0.174958892429,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"22" >= 0.174958892429,]
+                    filterHex <- hex[hex$"C22" >= 0.174958892429,]
                     Log.info("Filtering out rows by >= from dataset stego_testing and column \"93\" using value 0.128368497897, and also subsetting columns.")
                      filterHex <- hex[hex[,c(93)] >= 0.128368497897, c(93)]
                     Log.info("Now do the same filter & subset, but select complement of columns.")

@@ -94,13 +94,10 @@ final class DataAdapter  {
   public int columnArityOfClassCol() { return _c[_c.length - 1].arity(); }
 
   /** Return a short that represents the binned value of the original row,column value.  */
-  public short getEncodedColumnValue(int row, int col) {
-    return _c[col].get(row);
-  }
+  public short getEncodedColumnValue(int row, int col) { return _c[col].get(row); }
   public short getEncodedClassColumnValue(int row) { return _c[_c.length-1].get(row); }
+  public double getRawColumnValue(int row, int col) { return _c[col].getRaw(row); }
   public float getRawClassColumnValueFromBin(int row) {
-
-    
     int idx = _c.length-1;
     short btor = _c[idx].get(row);
     if (_c[idx]._binned == null) {
@@ -126,6 +123,7 @@ final class DataAdapter  {
   public final void    addBad(int row, int col)       { _c[col].addBad(row); }
   public final boolean hasBadValue(int row, int col)  { return _c[col].isBad(row); }
   public final boolean isBadRow(int row)              { return _c[_c.length-1].isBad(row); }
+  public final boolean isBadRowRaw(int row)           { return _c[_c.length-1].isBadRaw(row); }
   public final boolean isIgnored(int col)             { return _c[col].isIgnored(); }
   public final void    markIgnoredRow(int row)        { _c[_c.length-1].addBad(row);  }
   public final int     classColIdx()                  { return _c.length - 1; }
@@ -165,11 +163,12 @@ final class DataAdapter  {
       _ignored = false;
     }
 
-    boolean isFloat()   { return _isFloat; }
-    boolean isIgnored() { return _ignored; }
-    int arity()         { return _ignored ? -1 : _arity; }
-    String name()       { return _name;        }
-    short get(int row)  { return (short) (_isByte ? (_rawB[row]&0xFF) : _binned[row]); }
+    boolean isFloat()      { return _isFloat; }
+    boolean isIgnored()    { return _ignored; }
+    int arity()            { return _ignored ? -1 : _arity; }
+    String name()          { return _name;        }
+    short get(int row)     { return (short) (_isByte ? (_rawB[row]&0xFF) : _binned[row]); }
+    double getRaw(int row) { return (double)(_isByte ? (_rawB[row]&0xFF) : _binned2raw[_binned[row]]);}
 
     void add(int row, float val) {
       _raw [row] = val; }
@@ -178,7 +177,9 @@ final class DataAdapter  {
     void addBad(int row)         { if (!_isByte) _raw[row] = Float.NaN; else _rawB[row] = (byte)255; }
 
     private boolean isBadRaw(float f) { return Float.isNaN(f); }
-    boolean isBad(int row)            { return _isByte ? (_rawB[row]&0xFF)==255 : _binned[row] == BAD; }
+    boolean isBad(int row)            {
+      return _isByte ? (_rawB[row]&0xFF)==255 : _binned[row] == BAD;
+    }
 
     /** For all columns - encode all floats as unique shorts. */
     void shrink() {

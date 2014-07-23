@@ -27,7 +27,7 @@ class Basic(unittest.TestCase):
             # h.log_download(timeoutSecs=5)
 
         # this gets them all thru node 0
-        (logNameList, lineCountList) = h2o_log.checkH2OLogs()
+        (logNameList, lineCountList) = h2o_log.checkH2OLogs(timeoutSecs=180)
 
         self.assertEqual(len(logNameList), len(h2o.nodes), "Should be %d logs" % len(h2o.nodes))
         self.assertEqual(len(lineCountList), len(h2o.nodes), "Should be %d logs" % len(h2o.nodes))

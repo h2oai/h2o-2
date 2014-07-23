@@ -57,10 +57,8 @@ class Basic(unittest.TestCase):
             y = "54"
             
             kwargs = {
-                'x': x,
-                'y': y, 
+                'response': y, 
                 'family': 'poisson',
-                'link': 'log',
                 'n_folds': 0, 
                 # 'case_mode': '=', 
                 # 'case': 1, 

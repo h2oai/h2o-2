@@ -54,8 +54,13 @@ public class JProfile extends Func {
     node_name = H2O.SELF.toString();
     cloud_name = H2O.NAME;
     time = DateFormat.getInstance().format(new Date());
-    for( int i=0; i<nodes.length; i++ )
-      Log.debug(Log.Tag.Sys.WATER,nodes[i].name,nodes[i].profile);
+    for( int i=0; i<nodes.length; i++ ) {
+      Log.info(nodes[i].name);
+      for (int j = 0; j < nodes[i].profile.counts.length; ++j) {
+        Log.info(nodes[i].profile.counts[j]);
+        Log.info(nodes[i].profile.stacktraces[j]);
+      }
+    }
   }
 
   @Override public boolean toHTML( StringBuilder sb ) {

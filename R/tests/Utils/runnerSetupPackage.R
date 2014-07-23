@@ -1,6 +1,9 @@
 options(echo=F)
 local({r <- getOption("repos"); r["CRAN"] <- "http://cran.us.r-project.org"; options(repos = r)})
 if (!"R.utils" %in% rownames(installed.packages())) install.packages("R.utils")
+if (!"plyr" %in% rownames(installed.packages())) install.packages("plyr")
+#if (!"rgl" %in% rownames(installed.packages())) install.packages("rgl")
+if (!"randomForest" %in% rownames(installed.packages())) install.packages("randomForest")
 library(R.utils)
 
 setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))

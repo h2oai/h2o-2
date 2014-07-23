@@ -51,6 +51,9 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Auto-Encoder (Experimental)", filter= Default.class, json = true)
   public boolean autoencoder = false;
 
+  @API(help="Use all factor levels of categorical variables. Otherwise, the first factor level is omitted (without loss of accuracy). Useful for variable importances and auto-enabled for autoencoder.",filter=Default.class, json=true, importance = ParamImportance.SECONDARY)
+  public boolean use_all_factor_levels = false;
+
   /*Neural Net Topology*/
   /**
    * The activation function (non-linearity) to be used the neurons in the hidden layers.
@@ -488,6 +491,7 @@ public class DeepLearning extends Job.ValidatedJob {
 
   // the following parameters can only be specified in expert mode
   transient final String [] expert_options = new String[] {
+          "use_all_factor_levels",
           "loss",
           "max_w2",
           "score_training_samples",
@@ -643,6 +647,10 @@ public class DeepLearning extends Job.ValidatedJob {
       arg.disable("Only for multi-node operation with replication.");
       single_node_mode = false;
     }
+    if (arg._name.equals("use_all_factor_levels") && autoencoder ) {
+      arg.disable("Automatically enabled for auto-encoders.");
+      use_all_factor_levels = true;
+    }
   }
 
   /** Print model parameters as JSON */
@@ -691,16 +699,29 @@ public class DeepLearning extends Job.ValidatedJob {
   @Override public float progress(){
     if(UKV.get(dest()) == null)return 0;
     DeepLearningModel m = UKV.get(dest());
-    if (m != null && m.model_info()!=null )
-      return (float)Math.min(1, (m.epoch_counter / m.model_info().get_params().epochs));
+    if (m != null && m.model_info()!=null ) {
+      final float p = (float) Math.min(1, (m.epoch_counter / m.model_info().get_params().epochs));
+      return cv_progress(p);
+    }
     return 0;
   }
 
   @Override
   protected final void execImpl() {
-    buildModel();
-    if (n_folds > 0) CrossValUtils.crossValidate(this);
-    delete();
+    try {
+      buildModel();
+      if (n_folds > 0) CrossValUtils.crossValidate(this);
+    } finally {
+      delete();
+      state = UKV.<Job>get(self()).state;
+      new TAtomic<DeepLearningModel>() {
+        @Override
+        public DeepLearningModel atomic(DeepLearningModel m) {
+          if (m != null) m.get_params().state = state;
+          return m;
+        }
+      }.invoke(dest());
+    }
   }
 
   /**
@@ -806,17 +827,15 @@ public class DeepLearning extends Job.ValidatedJob {
 
     //Auto-fill defaults
     if (hidden_dropout_ratios == null) {
-      hidden_dropout_ratios = new double[hidden.length];
       if (activation == Activation.TanhWithDropout || activation == Activation.MaxoutWithDropout || activation == Activation.RectifierWithDropout) {
+        hidden_dropout_ratios = new double[hidden.length];
         if (!quiet_mode) Log.info("Automatically setting all hidden dropout ratios to 0.5.");
         Arrays.fill(hidden_dropout_ratios, 0.5);
       }
     }
     else if (hidden_dropout_ratios.length != hidden.length) throw new IllegalArgumentException("Must have " + hidden.length + " hidden layer dropout ratios.");
-    else if (hidden_dropout_ratios != null) {
-      if (activation != Activation.TanhWithDropout && activation != Activation.MaxoutWithDropout && activation != Activation.RectifierWithDropout) {
-        if (!quiet_mode) Log.info("Ignoring hidden_dropout_ratios because a non-Dropout activation function was specified.");
-      }
+    else if (activation != Activation.TanhWithDropout && activation != Activation.MaxoutWithDropout && activation != Activation.RectifierWithDropout) {
+      if (!quiet_mode) Log.info("Ignoring hidden_dropout_ratios because a non-Dropout activation function was specified.");
     }
 
     if (!quiet_mode) {
@@ -892,7 +911,7 @@ public class DeepLearning extends Job.ValidatedJob {
   private DataInfo prepareDataInfo() {
     final boolean del_enum_resp = classification && !response.isEnum();
     final Frame train = FrameTask.DataInfo.prepareFrame(source, autoencoder ? null : response, ignored_cols, classification, ignore_const_cols, true /*drop >20% NA cols*/);
-    final DataInfo dinfo = new FrameTask.DataInfo(train, autoencoder ? 0 : 1, autoencoder, //use all FactorLevels for auto-encoder
+    final DataInfo dinfo = new FrameTask.DataInfo(train, autoencoder ? 0 : 1, autoencoder || use_all_factor_levels, //use all FactorLevels for auto-encoder
             autoencoder ? DataInfo.TransformType.NORMALIZE : DataInfo.TransformType.STANDARDIZE, //transform predictors
             classification ? DataInfo.TransformType.NONE : DataInfo.TransformType.STANDARDIZE);  //transform response
     if (!autoencoder) {
@@ -1046,16 +1065,6 @@ public class DeepLearning extends Job.ValidatedJob {
     cleanup();
     if (_fakejob) UKV.remove(job_key);
     remove();
-
-    // HACK: update the state of the model's Job/parameter object
-    // (since we cloned the Job/parameters several times and we're not sharing a reference)
-    Value v = DKV.get(dest());
-    if (v != null) {
-      DeepLearningModel m = v.get();
-      m.get_params().state = state;
-      DKV.put(dest(), m);
-    }
-
   }
 
   /**

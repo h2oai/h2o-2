@@ -1,6 +1,7 @@
 package water;
 
 import water.api.*;
+import static water.util.JCodeGen.toStaticVar;
 import static water.util.Utils.contains;
 import hex.ConfusionMatrix;
 import hex.VarImp;
@@ -515,10 +516,9 @@ public abstract class Model extends Lockable<Model> {
       auc.vactual = vactual;
       auc.predict = fpreds;
       auc.vpredict = fpreds.vecs()[2]; //binary classifier (label, prob0, prob1 (THIS ONE), adaptedlabel)
-      auc.threshold_criterion = AUC.ThresholdCriterion.maximum_F1;
       auc.invoke();
       auc.toASCII(sb);
-      error = auc.err(); //using optimal threshold for F1
+      error = auc.data().err(); //using optimal threshold for F1
     }
     // populate CM
     if (cm != null) {
@@ -529,14 +529,15 @@ public abstract class Model extends Lockable<Model> {
       cm.invoke();
       if (isClassifier()) {
         if (auc != null) {
+          AUCData aucd = auc.data();
           //override the CM with the one computed by AUC (using optimal threshold)
           //Note: must still call invoke above to set the domains etc.
           cm.cm = new long[3][3]; // 1 extra layer for NaNs (not populated here, since AUC skips them)
-          cm.cm[0][0] = auc.cm()[0][0];
-          cm.cm[1][0] = auc.cm()[1][0];
-          cm.cm[0][1] = auc.cm()[0][1];
-          cm.cm[1][1] = auc.cm()[1][1];
-          assert(new hex.ConfusionMatrix(cm.cm).err() == auc.err()); //check consistency with AUC-computed error
+          cm.cm[0][0] = aucd.cm()[0][0];
+          cm.cm[1][0] = aucd.cm()[1][0];
+          cm.cm[0][1] = aucd.cm()[0][1];
+          cm.cm[1][1] = aucd.cm()[1][1];
+          assert(new hex.ConfusionMatrix(cm.cm).err() == aucd.err()); //check consistency with AUC-computed error
         } else {
           error = new hex.ConfusionMatrix(cm.cm).err(); //only set error if AUC didn't already set the error
         }
@@ -642,22 +643,16 @@ public abstract class Model extends Lockable<Model> {
   /** Generate implementation for super class. */
   protected SB toJavaSuper( SB sb ) {
     sb.nl();
+    sb.ii(1);
     sb.i().p("public String[]   getNames() { return NAMES; } ").nl();
     sb.i().p("public String[][] getDomainValues() { return DOMAINS; }").nl();
     return sb;
   }
-  private SB toJavaNAMES( SB sb ) {
-    sb.nl();
-    sb.i().p("// Names of columns used by model.").nl();
-    return sb.i().p("public static final String[] NAMES = new String[] ").toJavaStringInit(_names).p(";").nl();
-  }
-  private SB toJavaNCLASSES( SB sb ) {
-    sb.nl();
-    sb.i().p("// Number of output classes included in training data response column,").nl();
-    return sb.i().p("public static final int NCLASSES = ").p(nclasses()).p(";").nl();
-  }
+  private SB toJavaNAMES( SB sb ) { return JCodeGen.toStaticVar(sb, "NAMES", _names, "Names of columns used by model."); }
+  private SB toJavaNCLASSES( SB sb ) { return isClassifier() ? JCodeGen.toStaticVar(sb, "NCLASSES", nclasses(), "Number of output classes included in training data response column.") : sb; }
   private SB toJavaDOMAINS( SB sb, SB fileContextSB ) {
     sb.nl();
+    sb.ii(1);
     sb.i().p("// Column domains. The last array contains domain of response column.").nl();
     sb.i().p("public static final String[][] DOMAINS = new String[][] {").nl();
     for (int i=0; i<_domains.length; i++) {
@@ -673,10 +668,9 @@ public abstract class Model extends Lockable<Model> {
     return sb.i().p("};").nl();
   }
   private SB toJavaPROB( SB sb) {
-    sb.i().p("// Prior class distribution").nl();
-    JCodeGen.toField(sb, "public static final", "float[]", "PRIOR_CLASS_DISTRIB", new SB().toJavaStringInit(_priorClassDist).toString());
-    sb.i().p("// Class distribution used for model building").nl();
-    JCodeGen.toField(sb, "public static final", "float[]", "MODEL_CLASS_DISTRIB", new SB().toJavaStringInit(_modelClassDist).toString());
+    sb.di(1);
+    toStaticVar(sb, "PRIOR_CLASS_DISTRIB", _priorClassDist, "Prior class distribution");
+    toStaticVar(sb, "MODEL_CLASS_DISTRIB", _modelClassDist, "Class distribution used for model building");
     return sb;
   }
   // Override in subclasses to provide some top-level model-specific goodness
@@ -684,7 +678,7 @@ public abstract class Model extends Lockable<Model> {
   protected void toJavaInit(CtClass ct) { }
   // Override in subclasses to provide some inside 'predict' call goodness
   // Method returns code which should be appended into generated top level class after
-  // predit method.
+  // predict method.
   protected void toJavaPredictBody(SB bodySb, SB classCtxSb, SB fileCtxSb) {
     throw new IllegalArgumentException("This model type does not support conversion to Java");
   }
@@ -698,7 +692,7 @@ public abstract class Model extends Lockable<Model> {
     ccsb.p("  public final float[] predict( double[] data, float[] preds) { return predict( data, preds, "+toJavaDefaultMaxIters()+"); }").nl();
     ccsb.p("  public final float[] predict( double[] data, float[] preds, int maxIters ) {").nl();
     SB classCtxSb = new SB();
-    toJavaPredictBody(ccsb.ii(2), classCtxSb, fileCtxSb); ccsb.di(1);
+    toJavaPredictBody(ccsb.ii(1), classCtxSb, fileCtxSb); ccsb.di(1);
     ccsb.p("    return preds;").nl();
     ccsb.p("  }").nl();
     ccsb.p(classCtxSb);
@@ -722,6 +716,22 @@ public abstract class Model extends Lockable<Model> {
     catch( IllegalAccessException cce ) { throw new Error(cce); }
   }
 
+  /** Generates code which unify preds[1,...NCLASSES] */
+  protected void toJavaUnifyPreds(SB bodySb) {
+  }
+  /** Fill preds[0] based on already filled and unified preds[1,..NCLASSES]. */
+  protected void toJavaFillPreds0(SB bodySb) {
+    // Pick max index as a prediction
+    if (isClassifier()) {
+      if (_priorClassDist!=null && _modelClassDist!=null) {
+        bodySb.i().p("water.util.ModelUtils.correctProbabilities(preds, PRIOR_CLASS_DISTRIB, MODEL_CLASS_DISTRIB);").nl();
+      }
+      bodySb.i().p("preds[0] = water.util.ModelUtils.getPrediction(preds,data);").nl();
+    } else {
+      bodySb.i().p("preds[0] = preds[1];").nl();
+    }
+  }
+
   /**
    * Compute the cross validation error from an array of predictions for N folds.
    * Also stores the results in the model for display/query.
@@ -743,7 +753,7 @@ public abstract class Model extends Lockable<Model> {
       for (int c=(isClassifier() ? 1 : 0); c<cv_preds[i].numCols(); ++c) {
         Vec.Writer vw = cv_pred.vec(c).open();
         try {
-          for (int r=0; r < cv_preds[i].numRows(); ++r) {
+          for (long r=0; r < cv_preds[i].numRows(); ++r) {
             vw.set(offsets[i] + r, cv_preds[i].vec(c).at(r));
           }
         } finally {
@@ -755,12 +765,12 @@ public abstract class Model extends Lockable<Model> {
         float[] probs = new float[cv_preds[i].numCols()];
         Vec.Writer vw = cv_pred.vec(0).open();
         try {
-          for (int r = 0; r < cv_preds[i].numRows(); ++r) {
+          for (long r = 0; r < cv_preds[i].numRows(); ++r) {
             //probs[0] stays 0, is not used in getPrediction
             for (int c = 1; c < cv_preds[i].numCols(); ++c) {
               probs[c] = (float) cv_preds[i].vec(c).at(r);
             }
-            final int label = ModelUtils.getPrediction(probs, r);
+            final int label = ModelUtils.getPrediction(probs, (int)r);
             vw.set(offsets[i] + r, label);
           }
         } finally {
@@ -770,14 +780,19 @@ public abstract class Model extends Lockable<Model> {
     }
 
     // Now score the model on the
-    AUC auc = nclasses() == 2 ? new AUC() : null;
-    water.api.ConfusionMatrix cm = new water.api.ConfusionMatrix();
-    HitRatio hr = isClassifier() ? new HitRatio() : null;
-    double cv_error = calcError(source, response, cv_pred, cv_pred, "cross-validated", true, 10, cm, auc, hr);
-    setCrossValidationError(job, cv_error, cm, auc, hr);
+    try {
+      AUC auc = nclasses() == 2 ? new AUC() : null;
+      water.api.ConfusionMatrix cm = new water.api.ConfusionMatrix();
+      HitRatio hr = isClassifier() ? new HitRatio() : null;
+      double cv_error = calcError(source, response, cv_pred, cv_pred, "cross-validated", true, 10, cm, auc, hr);
+      setCrossValidationError(job, cv_error, cm, auc == null ? null : auc.data(), hr);
+    } finally {
+      // cleanup temporary frame wit predictions
+      cv_pred.delete();
+    }
   }
 
-  protected void setCrossValidationError(Job.ValidatedJob job, double cv_error, water.api.ConfusionMatrix cm, AUC auc, HitRatio hr) { throw H2O.unimpl(); }
+  protected void setCrossValidationError(Job.ValidatedJob job, double cv_error, water.api.ConfusionMatrix cm, AUCData auc, HitRatio hr) { throw H2O.unimpl(); }
 
   protected void printCrossValidationModelsHTML(StringBuilder sb) {
     if (job() == null) return;
@@ -788,7 +803,7 @@ public abstract class Model extends Lockable<Model> {
       sb.append("<tr><th>Model</th></tr>");
       for (Key k : job.xval_models) {
         sb.append("<tr>");
-        sb.append("<td>" + (UKV.get(k) != null ? Inspector.link(k.toString(), k.toString()) : "In progress") + "</td>");
+        sb.append("<td>" + (UKV.get(k) != null ? Inspector.link(k.toString(), k.toString()) : "Pending") + "</td>");
         sb.append("</tr>");
       }
       sb.append("</table>");

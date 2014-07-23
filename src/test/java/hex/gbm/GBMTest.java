@@ -54,6 +54,7 @@ public class GBMTest extends TestUtil {
       gbm.score_each_iteration=true;
       gbm.invoke();
       gbmmodel = UKV.get(gbm.dest());
+      Assert.assertTrue(gbmmodel.get_params().state == Job.JobState.DONE); //HEX-1817
 
       Frame preds = gbm.score(gbm.source);
       double sq_err = new CompErr().doAll(gbm.response,preds.vecs()[0])._sum;
@@ -181,6 +182,7 @@ public class GBMTest extends TestUtil {
       gbm.invoke();
       gbmmodel = UKV.get(gbm.dest());
       testHTML(gbmmodel);
+      Assert.assertTrue(gbmmodel.get_params().state == Job.JobState.DONE); //HEX-1817
       //System.out.println(gbmmodel.toJava());
 
       Frame preds = gbm.score(gbm.source);
@@ -220,6 +222,7 @@ public class GBMTest extends TestUtil {
       gbm.invoke();
       gbmmodel = UKV.get(gbm.dest());
       testHTML(gbmmodel);
+      Assert.assertTrue(gbmmodel.get_params().state == Job.JobState.DONE); //HEX-1817
 
       // Test on the train data
       ftest = ParseDataset2.parse(dest2,new Key[]{fkey2});
@@ -268,6 +271,7 @@ public class GBMTest extends TestUtil {
       gbm.invoke();
       gbmmodel = UKV.get(gbm.dest());
       testHTML(gbmmodel);
+      Assert.assertTrue(gbmmodel.get_params().state == Job.JobState.DONE); //HEX-1817
 
       // The test data set has a few more enums than the train
       Frame ftest = ParseDataset2.parse(dest2,new Key[]{fkey2});
@@ -310,6 +314,7 @@ public class GBMTest extends TestUtil {
       }
 
       GBM.GBMModel model = gbm.get();
+      Assert.assertTrue(model.get_params().state == Job.JobState.DONE); //HEX-1817
       if( model != null ) model.delete();
 
     } finally {

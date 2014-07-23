@@ -85,7 +85,7 @@ public class TypeMap {
     Iced f = (Iced) GOLD[id];
     if( f == null ) {
       try { GOLD[id] = f = (Iced) Class.forName(CLAZZES[id]).newInstance(); }
-      catch( Exception e ) { throw Log.errRTExcept(e); }
+      catch( Exception e ) { Log.err("Failed newinstance for class "+className(id)); throw Log.errRTExcept(e); }
     }
     return f.newInstance();
   }

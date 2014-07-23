@@ -41,7 +41,7 @@ class Basic(unittest.TestCase):
             else:
                 kwargs = {
                     'response': 'classifier',
-                    'ntrees': 200,
+                    'ntrees': 1,
                     # 'features': None,
                     'mtry': 7,
                     'sample_rate': 0.67,
@@ -53,7 +53,7 @@ class Basic(unittest.TestCase):
                 kwargs['validation'] 
 
             start = time.time()
-            RFview = h2o_cmd.runRF(parseResult=parseResult, ntrees=5, timeoutSecs=300, retryDelaySecs=1.0, **kwargs)
+            RFview = h2o_cmd.runRF(parseResult=parseResult, ntrees=1, timeoutSecs=300, retryDelaySecs=1.0, **kwargs)
             print "RF end on ", csvFilename, 'took', time.time() - start, 'seconds'
 
             ### h2b.browseJsonHistoryAsUrlLastMatch("RFView")

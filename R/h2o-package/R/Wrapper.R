@@ -31,6 +31,7 @@ h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, forceDL = 
   
   if((verH2O = .h2o.__version(H2Oserver)) != (verPkg = packageVersion("h2o")))
     stop("Version mismatch! H2O is running version ", verH2O, " but R package is version ", toString(verPkg), "\n")
+  assign("SERVER", H2Oserver, .pkg.env)
   return(H2Oserver)
 }
 
@@ -149,12 +150,35 @@ h2o.clusterStatus <- function(client) {
   }, onexit = TRUE)
 }
 
-# .onDetach <- function(libpath) {
+
+.onDetach <- function(libpath) {
+  ip    <- "127.0.0.1";
+  port  <- 54321
+  myURL <- paste("http://", ip, ":", port, sep = "")
+  if (url.exists(myURL)) {
+    tryCatch(h2o.shutdown(new("H2OClient", ip = ip, port = port), prompt = FALSE), error = function(e) {
+      msg = paste(
+        "\n",
+        "----------------------------------------------------------------------\n",
+            "\n",
+            "Could not shut down the H2O Java Process!\n",
+            "Please shutdown H2O manually by navigating to `http://localhost:54321/Shutdown`\n\n",
+            "Windows requires the shutdown of h2o before re-installing -or- updating the h2o package.\n",
+            "For more information visit http://docs.0xdata.com\n",
+            "\n",
+            "----------------------------------------------------------------------\n",
+            sep = "")
+      warning(msg)
+    })
+  }
+}
+
+#.onDetach <- function(libpath) {
 #   if(exists(".LastOriginal", mode = "function"))
 #      assign(".Last", get(".LastOriginal"), envir = .GlobalEnv)
 #   else if(exists(".Last", envir = .GlobalEnv))
 #     rm(".Last", envir = .GlobalEnv)
-# }
+#}
 
 # .onUnload <- function(libpath) {
 #   ip = "127.0.0.1"; port = 54321

@@ -85,14 +85,14 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       this.family = prior.family;
       this.initialPrediction = prior.initialPrediction;
     }
-    private GBMModel(GBMModel prior, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
+    private GBMModel(GBMModel prior, double err, ConfusionMatrix cm, VarImp varimp, AUCData validAUC) {
       super(prior, err, cm, varimp, validAUC);
       this.parameters = prior.parameters;
       this.learn_rate = prior.learn_rate;
       this.family = prior.family;
       this.initialPrediction = prior.initialPrediction;
     }
-    private GBMModel(GBMModel prior, Key[][] treeKeys, double[] errs, ConfusionMatrix[] cms, TreeStats tstats, VarImp varimp, AUC validAUC) {
+    private GBMModel(GBMModel prior, Key[][] treeKeys, double[] errs, ConfusionMatrix[] cms, TreeStats tstats, VarImp varimp, AUCData validAUC) {
       super(prior, treeKeys, errs, cms, tstats, varimp, validAUC);
       this.parameters = prior.parameters;
       this.learn_rate = prior.learn_rate;
@@ -158,7 +158,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
         bodyCtxSB.i().p("preds[1] += "+initialPrediction+";").nl();
       }
     }
-    @Override protected void setCrossValidationError(ValidatedJob job, double cv_error, water.api.ConfusionMatrix cm, water.api.AUC auc, water.api.HitRatio hr) {
+    @Override protected void setCrossValidationError(ValidatedJob job, double cv_error, water.api.ConfusionMatrix cm, AUCData auc, HitRatio hr) {
       GBMModel gbmm = ((GBM)job).makeModel(this, cv_error, cm.cm == null ? null : new ConfusionMatrix(cm.cm, cms[0].nclasses()), this.varimp, auc);
       gbmm._have_cv_results = true;
       DKV.put(this._key, gbmm); //overwrite this model
@@ -170,7 +170,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   @Override protected GBMModel makeModel(Key outputKey, Key dataKey, Key testKey, int ntrees, String[] names, String[][] domains, String[] cmDomain, float[] priorClassDist, float[] classDist) {
     return new GBMModel(this, outputKey, dataKey, validation==null?null:testKey, names, domains, cmDomain, ntrees, max_depth, min_rows, nbins, learn_rate, family, n_folds,priorClassDist,classDist);
   }
-  @Override protected GBMModel makeModel( GBMModel model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC) {
+  @Override protected GBMModel makeModel( GBMModel model, double err, ConfusionMatrix cm, VarImp varimp, AUCData validAUC) {
     return new GBMModel(model, err, cm, varimp, validAUC);
   }
   @Override protected GBMModel makeModel(GBMModel model, DTree[] ktrees, TreeStats tstats) {
@@ -195,10 +195,21 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
   }
 
   @Override protected void execImpl() {
-    logStart();
-    buildModel(seed);
-    if (n_folds > 0) CrossValUtils.crossValidate(this);
-    remove();                   // Remove Job
+    try {
+      logStart();
+      buildModel(seed);
+      if (n_folds > 0) CrossValUtils.crossValidate(this);
+    } finally {
+      remove();                   // Remove Job
+      state = UKV.<Job>get(self()).state;
+      new TAtomic<GBMModel>() {
+        @Override
+        public GBMModel atomic(GBMModel m) {
+          if (m != null) m.get_params().state = state;
+          return m;
+        }
+      }.invoke(dest());
+    }
   }
 
   @Override public int gridParallelism() {
@@ -428,7 +439,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
         // DRF picks a random different set of columns for the 2nd tree.
         if( k==1 && _nclass==2 ) continue;
         ktrees[k] = new DTree(fr._names,_ncols,(char)nbins,(char)_nclass,min_rows);
-        new GBMUndecidedNode(ktrees[k],-1,DHistogram.initialHist(fr,_ncols,adj_nbins,hcs[k][0],false) ); // The "root" node
+        new GBMUndecidedNode(ktrees[k],-1,DHistogram.initialHist(fr,_ncols,adj_nbins,hcs[k][0],false,false) ); // The "root" node
       }
     }
     int[] leafs = new int[_nclass]; // Define a "working set" of leaf splits, from here to tree._len
@@ -614,7 +625,7 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
     // Find the column with the best split (lowest score).  Unlike RF, GBM
     // scores on all columns and selects splits on all columns.
     @Override public DTree.Split bestCol( UndecidedNode u, DHistogram[] hs ) {
-      DTree.Split best = new DTree.Split(-1,-1,false,Double.MAX_VALUE,Double.MAX_VALUE,0L,0L,0,0);
+      DTree.Split best = new DTree.Split(-1,-1,null,(byte)0,Double.MAX_VALUE,Double.MAX_VALUE,0L,0L,0,0);
       if( hs == null ) return best;
       for( int i=0; i<hs.length; i++ ) {
         if( hs[i]==null || hs[i].nbins() <= 1 ) continue;

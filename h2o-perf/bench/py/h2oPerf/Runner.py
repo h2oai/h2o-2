@@ -34,6 +34,7 @@ class PerfRunner:
         self.tests_not_started = []
         self.tests_running = []
         self.__create_output_dir__()
+        self.names = []
 
     def build_test_list(self, test_to_run):
         """
@@ -95,8 +96,10 @@ class PerfRunner:
             return
         print "DEBUG: TESTS TO BE RUN:"
         names = [test.test_name for test in self.tests]
+        self.names = names
         for n in names:
             print n
+            
 
         num_tests = len(self.tests)
         self.__log__("")

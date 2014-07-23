@@ -1,5 +1,6 @@
 package hex.gbm;
 
+import water.api.AUCData;
 import static water.util.MRUtils.sampleFrameStratified;
 import static water.util.ModelUtils.getPrediction;
 import hex.ConfusionMatrix;
@@ -104,8 +105,6 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   // Number of trees inherited from checkpoint
   protected int _ntreesFromCheckpoint;
 
-  private transient boolean _gen_enum; // True if we need to cleanup an enum response column at the end
-
   /** Maximal number of supported levels in response. */
   public static final int MAX_SUPPORTED_LEVELS = 1000;
 
@@ -117,7 +116,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   @Override public float progress(){
     Value value = DKV.get(dest());
     DTree.TreeModel m = value != null ? (DTree.TreeModel) value.get() : null;
-    return m == null ? 0 : m.ntrees() / (float) m.N;
+    return m == null ? 0 : cv_progress(m.ntrees() / (float) m.N);
   }
 
   // Verify input parameters
@@ -141,7 +140,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     // TODO: moved to shared model job
     if( !response.isEnum() && classification ) {
       response = response.toEnum();
-      _gen_enum = true;
+      gtrash(response); //_gen_enum = true;
     }
     _nclass = response.isEnum() ? (char)(response.domain().length) : 1;
     if (classification && _nclass <= 1)
@@ -217,6 +216,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
         MRUtils.ClassDist cdmt = new MRUtils.ClassDist(_nclass).doAll(response);
         _distribution = cdmt.dist();
         _modelClassDist = cdmt.rel_dist();
+        gtrash(stratified);
       }
     }
     Log.info(logTag(), "Prior class distribution: " + Arrays.toString(_priorClassDist));
@@ -292,7 +292,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     while( fr.numCols() > _ncols+1/*Do not delete the response vector*/ )
       UKV.remove(fr.remove(fr.numCols()-1)._key);
     // If we made a response column with toEnum, nuke it.
-    if( _gen_enum ) UKV.remove(response._key);
+    //if( _gen_enum ) UKV.remove(response._key);
 
     // Unlock the input datasets against deletes
     source.unlock(self());
@@ -687,7 +687,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
       _hcs[_k] = new DHistogram[new_leafs][/*ncol*/];
       for( int nl = tmax; nl<_tree.len(); nl ++ )
         _hcs[_k][nl-tmax] = _tree.undecided(nl)._hs;
-      _tree.depth++;            // Next layer done
+      if (new_leafs>0) _tree.depth++; // Next layer done but update tree depth only if new leaves are generated
     }
   }
 
@@ -704,7 +704,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   // if it is necessary.
   private float score2(Chunk chks[], float fs[/*nclass*/], int row ) {
     float sum = score1(chks, fs, row);
-    if (classification && _priorClassDist!=null && _modelClassDist!=null && !Float.isInfinite(sum)  && sum>0f) {
+    if (/*false &&*/ classification && _priorClassDist!=null && _modelClassDist!=null && !Float.isInfinite(sum)  && sum>0f) {
       Utils.div(fs, sum);
       ModelUtils.correctProbabilities(fs, _priorClassDist, _modelClassDist);
       sum = 1.0f;
@@ -881,7 +881,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   protected abstract water.util.Log.Tag.Sys logTag();
   /**
    * Builds model
-   * @param initialModel initial model created by {@link #makeModel(Key, Key, Key, String[], String[][], String[])} method.
+   * @param initialModel initial model created by makeModel() method.
    * @param trainFr training dataset which can contain additional temporary vectors prepared by buildModel() method.
    * @param names names of columns in <code>trainFr</code> used for model training
    * @param domains domains of columns in <code>trainFr</code> used for model training
@@ -904,13 +904,13 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   protected abstract void initWorkFrame( TM initialModel, Frame fr);
 
   protected abstract TM makeModel( Key outputKey, Key dataKey, Key testKey, int ntrees, String names[], String domains[][], String[] cmDomain, float[] priorClassDist, float[] classDist);
-  protected abstract TM makeModel( TM model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC);
+  protected abstract TM makeModel( TM model, double err, ConfusionMatrix cm, VarImp varimp, AUCData validAUC);
   protected abstract TM makeModel( TM model, DTree ktrees[], DTree.TreeModel.TreeStats tstats);
   protected abstract TM updateModel( TM model, TM checkpoint, boolean overwriteCheckpoint);
 
-  protected water.api.AUC makeAUC(ConfusionMatrix[] cms, float[] threshold) {
+  protected AUCData makeAUC(ConfusionMatrix[] cms, float[] threshold) {
     assert _nclass == 2;
-    return cms != null ? new AUC(cms, threshold, _cmDomain) : null;
+    return cms != null ? new AUC(cms, threshold, _cmDomain).data() : null;
   }
 
   protected boolean inBagRow(Chunk[] chks, int row) { return false; }

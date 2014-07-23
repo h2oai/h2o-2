@@ -47,7 +47,7 @@ class Basic(unittest.TestCase):
             'rows': 1, 
             'cols': 1
         }
-        for trial in range(10):
+        for trial in range(20):
             h2o_util.pickRandParams(paramDict, params)
             i = params.get('integer_fraction', None)
             c = params.get('categorical_fraction', None)
@@ -62,8 +62,9 @@ class Basic(unittest.TestCase):
                 if not c:
                     c = 0
                 if (i and c) and (i + c) >= 1.0:
-                    params['integer_fraction'] = i
-                    params['categorical_fraction'] = 1.0 - i
+                    c = 1.0 - i
+                params['integer_fraction'] = i
+                params['categorical_fraction'] = c
                 params['value'] = None
                 
             else:

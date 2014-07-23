@@ -58,6 +58,7 @@ public class HeartBeatThread extends Thread {
       throw  Log.errRTExcept(e);
     }
     Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
+    int counter = 0;
     while( true ) {
       // Once per second, for the entire cloud a Node will multi-cast publish
       // itself, so other unrelated Clouds discover each other and form up.
@@ -76,6 +77,11 @@ public class HeartBeatThread extends Thread {
       hb._keys       = (H2O.STORE.size ());
       hb.set_valsz     (myHisto.histo(false)._cached);
       hb._num_cpus   = (char)run.availableProcessors();
+      if (counter % 300 == 2) {
+        //run mini-benchmark every 5 mins
+        hb._gflops   = Linpack.run();
+        hb._membw    = MemoryBandwidth.run();
+      }
       Object load = null;
       try {
         load = mbs.getAttribute(os, "SystemLoadAverage");
@@ -141,6 +147,7 @@ public class HeartBeatThread extends Thread {
           h2o._announcedLostContact = false;
         }
       }
+      counter++;
     }
   }
 }

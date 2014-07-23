@@ -5,7 +5,7 @@
 
 \title{Class \code{"H2OGLMGrid"}}
 \description{
-Object representing the models built by a H2O GLM grid search on FluidVecs.
+Object representing the models built by a H2O GLM grid search.
 }
 \section{Objects from the Class}{
 Objects can be created by calls of the form \code{new("H2OGLMGrid", ...)}.

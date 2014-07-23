@@ -46,6 +46,7 @@ public class KMeans2Test extends TestUtil {
       algo.invoke();
       KMeans2Model res = UKV.get(algo.dest());
       testHTML(res);
+      Assert.assertTrue(res.get_params().state == Job.JobState.DONE); //HEX-1817
       double[][] clusters = res.centers;
       Assert.assertEquals(1.125, clusters[0][0], 0.000001);
       Assert.assertEquals(4.65, clusters[1][0], 0.000001);

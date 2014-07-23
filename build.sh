@@ -122,6 +122,7 @@ LOCAL_PROPERTIES_FILE="./build.local.conf"
 function clean() {
     echo "cleaning..."
     rm -fr ${OUTDIR}
+    rm -fr lib/javassist
     if [ "$WIPE_TMP" = "true" ]; then
         echo " - wiping tmp..."
         rm -fr /tmp/h2o-"${MYNAME}"/h2o-temp-*

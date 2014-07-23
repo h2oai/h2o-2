@@ -4,20 +4,22 @@ import java.io.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import water.DRemoteTask;
+import jsr166y.CountedCompleter;
+import water.DTask;
 import water.H2O;
 
-public class LogCollectorTask extends DRemoteTask {
+
+
+public class LogCollectorTask extends DTask {
   final int MB = 1 << 20;
   final int MAX_SIZE = 10 * MB;
-  public byte[][] _result;
+  public byte[] _result;
 
   public LogCollectorTask() {}
 
   private transient ByteArrayOutputStream baos = null;
 
-  @Override public void lcompute() {
-    _result = new byte[H2O.CLOUD._memary.length][];
+  @Override public void compute2() {
     int idx = H2O.SELF.index();
     baos = new ByteArrayOutputStream();
     ZipOutputStream zos = new ZipOutputStream(baos);
@@ -36,12 +38,16 @@ public class LogCollectorTask extends DRemoteTask {
         // do nothing
       }
 
-      byte[] arr = baos.toByteArray();
-      _result[idx] = arr;
+      _result = baos.toByteArray();
 
       tryComplete();
     }
   }
+
+  @Override public void onCompletion(CountedCompleter cc) {
+      System.out.println(this + "on completion");
+  }
+
 
   //here is the code for the method
   private void zipDir(String dir2zip, ZipOutputStream zos) throws IOException
@@ -72,6 +78,7 @@ public class LogCollectorTask extends DRemoteTask {
         FileInputStream fis = new FileInputStream(f);
         // create a new zip entry
         ZipEntry anEntry = new ZipEntry(f.getPath());
+        anEntry.setTime(f.lastModified());
         //place the zip entry in the ZipOutputStream object
         zos.putNextEntry(anEntry);
         //now write the content of the file to the ZipOutputStream
@@ -98,13 +105,6 @@ public class LogCollectorTask extends DRemoteTask {
     }
   }
 
-  @Override public void reduce(DRemoteTask drt) {
-    LogCollectorTask another = (LogCollectorTask) drt;
-    if( _result == null ) _result = another._result;
-    else for (int i=0; i<_result.length; ++i)
-      if (_result[i] == null)
-        _result[i] = another._result[i];
-  }
 
   @Override public byte priority() { return H2O.GUI_PRIORITY; }
 }

@@ -19,9 +19,7 @@ public class SummaryTest extends TestUtil {
     int[] cols = new int[ary.numCols()];
     for( int i=0; i<cols.length; i++ ) cols[i]=i;
     Summary sum = new ColSummaryTask(ary,cols).invoke(vkey).result();
-    for( int i=0; i<cols.length; i++ ) {
-      sum._sums[i].toJson();
-    }
+    sum.toJson();
 
     Summary.ColSummary csum = sum._sums[0];
     assertEquals(1,csum._bins.length);

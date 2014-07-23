@@ -15,7 +15,7 @@ public final class Matrix {
     int yrows = (int) y.numRows();
     int ycols =       y.numCols();
     if(xcols != yrows)
-      throw new IllegalArgumentException("Matrices do not match: ["+xrows+"x"+xcols+"] * ["+yrows+"x"+ycols+"]");
+      throw new IllegalArgumentException("Matrices are not compatible for multiplication: ["+xrows+"x"+xcols+"] * ["+yrows+"x"+ycols+"]. Requires [n x m] * [m x p]");
 
     Vec[] x_vecs = _x.vecs();
     Vec[] y_vecs =  y.vecs();

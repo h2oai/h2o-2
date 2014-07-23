@@ -40,15 +40,8 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (100, 10000, 'cI', 5),
             (100, 5000, 'cA', 5),
-            (100, 6000, 'cB', 5),
-            (100, 7000, 'cC', 5),
-            (100, 8000, 'cD', 5),
-            (100, 8200, 'cE', 5),
-            (100, 8500, 'cF', 5),
-            (100, 9000, 'cG', 5),
-            (100, 11000, 'cH', 5),
+            (100, 10000, 'cI', 5),
             ]
 
         ### h2b.browseTheCloud()
@@ -61,7 +54,8 @@ class Basic(unittest.TestCase):
             print "Creating random", csvPathname
             write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
 
-            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=30)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=120, 
+                doSummary=False)
             print "Parse result['destination_key']:", parseResult['destination_key']
 
             # We should be able to see the parse result?
