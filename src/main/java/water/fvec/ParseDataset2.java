@@ -745,6 +745,8 @@ public final class ParseDataset2 extends Job {
       _vg = vg;
       _vecIdStart = vecIdStart;
       _ctypes = MemoryManager.malloc1(ncols);
+      if( H2O.OPT_ARGS.forceEnumCol != 0 && H2O.OPT_ARGS.forceEnumCol <= ncols )
+        _ctypes[H2O.OPT_ARGS.forceEnumCol-1/*1-based numbering*/] = ECOL;
       for(int i = 0; i < ncols; ++i)
         _nvs[i] = (NewChunk)_vecs[i].chunkForChunkIdx(_cidx);
     }
@@ -816,6 +818,7 @@ public final class ParseDataset2 extends Job {
       if( colIdx < _nCols ) {
         _nvs[_col = colIdx].addNum(number, exp);
         if(_ctypes[colIdx] == UCOL ) _ctypes[colIdx] = NCOL;
+        assert _ctypes[colIdx] == NCOL;
       }
     }
 
@@ -823,7 +826,9 @@ public final class ParseDataset2 extends Job {
       if(colIdx < _nCols) _nvs[_col = colIdx].addNA();
 //      else System.err.println("Additional column ("+ _nvs.length + " < " + colIdx + " NA) on line " + linenum());
     }
-    @Override public final boolean isString(int colIdx) { return false; }
+    @Override public final boolean isString(int colIdx) { 
+      return H2O.OPT_ARGS.forceEnumCol != 0 && H2O.OPT_ARGS.forceEnumCol-1/*1-based numbering*/ == colIdx;
+    }
 
     @Override public final void addStrCol(int colIdx, ValueString str) {
       if(colIdx < _nvs.length){
