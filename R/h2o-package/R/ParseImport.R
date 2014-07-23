@@ -62,19 +62,19 @@ h2o.ls <- function(object, pattern = "") {
   i = 0
   myList = list()
   page_keys = .MAX_INSPECT_ROW_VIEW
-
+  
   # Need to pull all keys from every page in StoreView
   while(page_keys == .MAX_INSPECT_ROW_VIEW) {
     res = .h2o.__remoteSend(object, .h2o.__PAGE_VIEWALL, filter=pattern, offset=i*.MAX_INSPECT_ROW_VIEW, view=.MAX_INSPECT_ROW_VIEW)
     if(length(res$keys) == 0) return(myList)
     temp = lapply(res$keys, function(y) c(y$key, y$value_size_bytes))
-
+    
     i = i + 1
     myList = c(myList, temp)
     page_keys = res$num_keys
   }
   tot_keys = page_keys + (i-1)*.MAX_INSPECT_ROW_VIEW
-
+  
   temp = data.frame(matrix(unlist(myList), nrow=tot_keys, ncol=2, byrow = TRUE))
   colnames(temp) = c("Key", "Bytesize")
   temp$Key = as.character(temp$Key)
@@ -85,7 +85,7 @@ h2o.ls <- function(object, pattern = "") {
 h2o.rm <- function(object, keys) {
   if(class(object) != "H2OClient") stop("object must be of class H2OClient")
   if(!is.character(keys)) stop("keys must be of class character")
-
+  
   for(i in 1:length(keys))
     .h2o.__remoteSend(object, .h2o.__PAGE_REMOVE, key=keys[[i]])
 }
@@ -95,7 +95,10 @@ h2o.assign <- function(data, key) {
   if(!is.character(key)) stop("key must be of class character")
   if(nchar(key) == 0) stop("key cannot be an empty string")
   if(key == data@key) stop(paste("Destination key must differ from data key", data@key))
-  .h2o.exec2(expr = data@key, h2o = data@h2o, dest_key = key)
+  
+  res = .h2o.__exec2_dest_key(data@h2o, data@key, key)
+  data@key = key
+  return(data)
 }
 
 h2o.createFrame <- function(object, key, rows, cols, seed, randomize, value, real_range, categorical_fraction, factors, integer_fraction, integer_range, missing_fraction, response_factors) {
@@ -112,9 +115,9 @@ h2o.createFrame <- function(object, key, rows, cols, seed, randomize, value, rea
   if(!is.numeric(missing_fraction)) stop("missing_fraction must be a numeric value")
   if(!is.numeric(response_factors)) stop("response_factors must be a numeric value")
 
-  res <- .h2o.__remoteSend(object, .h2o.__PAGE_CreateFrame, key = key, rows = rows, cols = cols, seed = seed, randomize = as.numeric(randomize), value = value, real_range = real_range,
+  res = .h2o.__remoteSend(object, .h2o.__PAGE_CreateFrame, key = key, rows = rows, cols = cols, seed = seed, randomize = as.numeric(randomize), value = value, real_range = real_range,
                           categorical_fraction = categorical_fraction, factors = factors, integer_fraction = integer_fraction, integer_range = integer_range, missing_fraction = missing_fraction, response_factors = response_factors)
-  .h2o.exec2(expr = key, h2o = object, dest_key = key)
+  new("H2OParsedData", h2o=object, key=key)
 }
 
 h2o.splitFrame <- function(data, ratios = 0.75, shuffle = FALSE) {
@@ -125,7 +128,7 @@ h2o.splitFrame <- function(data, ratios = 0.75, shuffle = FALSE) {
   if(!is.logical(shuffle)) stop("shuffle must be a logical value")
   
   res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SplitFrame, source = data@key, ratios = ratios, shuffle = as.numeric(shuffle))
-  lapply(res$split_keys, function(key) { .h2o.exec2(expr = key, h2o = data@h2o, dest_key = key) })
+  lapply(res$split_keys, function(key) { new("H2OParsedData", h2o=data@h2o, key=key) })
 }
 
 # ----------------------------------- File Import Operations --------------------------------- #
@@ -155,8 +158,6 @@ h2o.importFolder <- function(object, path, pattern = "", key = "", parse = TRUE,
       if(substr(path, nchar(path), nchar(path)) == .Platform$file.sep)
         path <- substr(path, 1, nchar(path)-1)
       regPath = paste(path, pattern, sep=.Platform$file.sep)
-      if(.Platform$OS.type == "windows")
-        regPath = gsub("/", "\\\\", regPath)
       srcKey = ifelse(length(res$keys) == 1, res$keys[[1]], paste("*", regPath, "*", sep=""))
       rawData = new("H2ORawData", h2o=object, key=srcKey)
       h2o.parseRaw(data=rawData, key=key, header=header, sep=sep, col.names=col.names) 
@@ -229,8 +230,7 @@ h2o.parseRaw <- function(data, key = "", header, sep = "", col.names) {
   
   # on.exit(.h2o.__cancelJob(data@h2o, res$job_key))
   .h2o.__waitOnJob(data@h2o, res$job_key)
-  .h2o.exec2(expr = res$destination_key, h2o = data@h2o, dest_key = res$destination_key)
-#  parsedData <- new("H2OParsedData", h2o=data@h2o, key=res$destination_key, col_names = .getColNames(res), nrows = .getRows(res), ncols = .getCols(res))
+  parsedData = new("H2OParsedData", h2o=data@h2o, key=res$destination_key)
 }
       
 #-------------------------------- Miscellaneous -----------------------------------#
