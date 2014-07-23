@@ -296,8 +296,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   public static void setSubmodel(H2OCountedCompleter cmp, Key modelKey, final double lambda, double[] beta, double[] norm_beta, final int iteration, long runtime, boolean sparseCoef, final GLMValidation val){
     final Submodel sm = new Submodel(lambda,beta, norm_beta, runtime, iteration,sparseCoef);
     sm.validation = val;
-//    cmp.addToPendingCount(1);
-    cmp = null;
+    cmp.addToPendingCount(1);
     new TAtomic<GLMModel>(cmp){
       @Override
       public GLMModel atomic(GLMModel old) {
