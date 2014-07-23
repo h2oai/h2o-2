@@ -791,6 +791,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     // just fork off the nfolds+1 tasks and wait for the results
     assert alpha.length == 1;
     start_time = System.currentTimeMillis();
+    if(nlambdas == -1)nlambdas = 100;
     Futures fs = new Futures();
     Key dst = dest();
     cmp.addToPendingCount(1);
