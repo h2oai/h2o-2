@@ -818,7 +818,6 @@ public final class ParseDataset2 extends Job {
       if( colIdx < _nCols ) {
         _nvs[_col = colIdx].addNum(number, exp);
         if(_ctypes[colIdx] == UCOL ) _ctypes[colIdx] = NCOL;
-        assert _ctypes[colIdx] == NCOL;
       }
     }
 
