@@ -5,10 +5,7 @@ import hex.deeplearning.DeepLearningModel;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import water.JUnitRunnerDebug;
-import water.Key;
-import water.TestUtil;
-import water.UKV;
+import water.*;
 import water.api.AUC;
 import water.api.AUCData;
 import water.exec.Env;
@@ -132,6 +129,7 @@ public class DeepLearningProstateTest extends TestUtil {
                             {
                               DeepLearning p = new DeepLearning();
                               final DeepLearningModel tmp_model = UKV.get(dest_tmp); //this actually *requires* frame to also still be in UKV (because of DataInfo...)
+                              Assert.assertTrue(tmp_model.get_params().state == Job.JobState.DONE); //HEX-1817
                               assert(tmp_model != null);
                               assert(!Arrays.equals(p.job_key._kb, tmp_model.get_params().job_key._kb));
                               p.checkpoint = dest_tmp;
@@ -151,6 +149,7 @@ public class DeepLearningProstateTest extends TestUtil {
 
                             // score and check result (on full data)
                             final DeepLearningModel mymodel = UKV.get(dest); //this actually *requires* frame to also still be in UKV (because of DataInfo...)
+                            Assert.assertTrue(mymodel.get_params().state == Job.JobState.DONE); //HEX-1817
                             // test HTML
                             {
                               StringBuilder sb = new StringBuilder();
@@ -282,6 +281,7 @@ public class DeepLearningProstateTest extends TestUtil {
 
                               // get the error reported by the stored best model
                               DeepLearningModel bestmodel = UKV.get(mymodel.get_params().best_model_key);
+                              Assert.assertTrue(bestmodel.get_params().state == Job.JobState.DONE); //HEX-1817
 //                              Log.info("Best model\n" + bestmodel.toString());
                               final Frame fr = valid;
                               Frame bestPredict = bestmodel.score(fr);

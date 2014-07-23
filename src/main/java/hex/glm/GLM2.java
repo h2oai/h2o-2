@@ -293,6 +293,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       model.addWarning(warn);
     }
     state = JobState.DONE;
+    model.get_params().state = state;
     model.update(self());
     model.unlock(self());
     if(n_folds > 1)

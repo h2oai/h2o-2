@@ -75,6 +75,7 @@ public abstract class CustomParser extends Iced {
     public boolean _singleQuotes;
     public String [] _columnNames;
     public final int _ncols;
+    public final int _forceEnumCol;
 
     public ParserSetup() {
       _pType = ParserType.AUTO;
@@ -82,9 +83,10 @@ public abstract class CustomParser extends Iced {
       _header = false;
       _ncols = 0;
       _columnNames = null;
+      _forceEnumCol = H2O.OPT_ARGS.forceEnumCol;
     }
     protected ParserSetup(ParserType t) {
-      this(t,CsvParser.AUTO_SEP,0,false,null,false);
+      this(t,CsvParser.AUTO_SEP,0,false,null,false,H2O.OPT_ARGS.forceEnumCol);
     }
     public ParserSetup(ParserType t, byte sep, boolean header) {
       _pType = t;
@@ -92,14 +94,16 @@ public abstract class CustomParser extends Iced {
       _header = header;
       _columnNames = null;
       _ncols = 0;
+      _forceEnumCol = H2O.OPT_ARGS.forceEnumCol;
     }
-    public ParserSetup(ParserType t, byte sep, int ncolumns, boolean header, String [] columnNames, boolean singleQuotes) {
+    public ParserSetup(ParserType t, byte sep, int ncolumns, boolean header, String [] columnNames, boolean singleQuotes, int forceEnumCol) {
       _pType = t;
       _separator = sep;
       _ncols = ncolumns;
       _header = header;
       _columnNames = columnNames;
       _singleQuotes = singleQuotes;
+      _forceEnumCol = forceEnumCol;
     }
     public boolean isSpecified(){
       return _pType != ParserType.AUTO && _separator != CsvParser.AUTO_SEP && (_header || _ncols > 0);
@@ -119,7 +123,7 @@ public abstract class CustomParser extends Iced {
       return conflictingNames;
     }
     @Override public ParserSetup clone(){
-      return new ParserSetup(_pType, _separator, _ncols,_header,null,_singleQuotes);
+      return new ParserSetup(_pType, _separator, _ncols,_header,null,_singleQuotes,_forceEnumCol);
     }
     public boolean isCompatible(ParserSetup other){
       if(other == null || _pType != other._pType)return false;
