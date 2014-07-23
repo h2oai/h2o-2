@@ -964,14 +964,14 @@ public class DTree extends Iced {
           // Extract value or group to split on
           float splitVal = -1;
           boolean grpContains = false;
-          if(equal == 0 || equal == 1)
+          if(equal == 0 || equal == 1) {
             splitVal = ab.get4f();
-          else {
+          } else {
             int off = (equal == 3) ? ab.get2() : 0;
             int sz = (equal == 3) ? ab.get2() : 4;
             int idx = (int)row[colId];
 
-            if(Double.isNaN(idx) || idx < off) {
+            if(Double.isNaN(row[colId]) || idx < off) {
               grpContains = false;
               ab.skip(sz);
             } else {
