@@ -517,6 +517,7 @@ public class DTree extends Iced {
         ab.putA1(ary, 4); */
         ab.putA1(_split._bs._val, 4);
       } else {
+        assert _split._equal == 3;
         ab.put2((char)_split._bs._offset);
         ab.put2((char)_split._bs.numBytes());
         ab.putA1(_split._bs._val, _split._bs.numBytes());
@@ -773,7 +774,10 @@ public class DTree extends Iced {
             CompressedTree[] ts = ab.getA(CompressedTree.class);
             for (int j=0; j<ts.length; j++) {
               Key k = ((TreeModel) m).treeKeys[i][j];
-              UKV.put(k, ts[j], fs);
+              assert k == null && ts[j] == null || k != null && ts[j] != null : "Incosistency in model serialization: key is null but model is not null, OR vice versa!";
+              if (k!=null) {
+                UKV.put(k, ts[j], fs);
+              }
             }
           }
           fs.blockForPending();
@@ -964,21 +968,27 @@ public class DTree extends Iced {
           // Extract value or group to split on
           float splitVal = -1;
           boolean grpContains = false;
-          if(equal == 0 || equal == 1)
+          if(equal == 0 || equal == 1) {
             splitVal = ab.get4f();
-          else {
-            int off = (equal == 3) ? ab.get2() : 0;
-            int sz = (equal == 3) ? ab.get2() : 4;
-            int idx = (int)row[colId];
+          } else {
+            int off = (equal == 3) ? ab.get2() : 0; // number of zero-bits skipped during serialization
+            int sz = (equal == 3) ? ab.get2() : 4;  // size of serialized bitset (part containing some non-zeros) in bytes
+            int idx = (int)row[colId];              // the input value driving decision
 
-            if(Double.isNaN(idx) || idx < off) {
+            if(Double.isNaN(row[colId]) || idx < off ) {
               grpContains = false;
               ab.skip(sz);
             } else {
               idx = idx - off;
-              ab.skip(idx >> 3);
-              grpContains = (ab.get1() & ((byte)1 << (idx % 8))) != 0;
-              ab.skip(sz-(idx >> 3)-1);
+              int bbskip = idx >> 3;
+              if (sz-bbskip>0) {
+                ab.skip(bbskip);
+                grpContains = (ab.get1() & ((byte)1 << (idx % 8))) != 0;
+                ab.skip(sz-bbskip-1);
+              } else { // value is not in bit set at all (it is even out of value)
+                grpContains = false;
+                ab.skip(sz);
+              }
             }
           }
 
@@ -1078,7 +1088,7 @@ public class DTree extends Iced {
           case 2:  skip = _ts.get3();  break;
           case 3:  skip = _ts.get4();  break;
           case 16: skip = _ct._nclass < 256?1:2;  break; // Small leaf
-          case 48: skip = _ct._nclass*4;  break; // skip the p-distribution
+          case 48: skip =  4;  break; // skip is always 4 for direct leaves (see DecidedNode.size() and LeafNode.size() methods)
           default: assert false:"illegal lmask value " + lmask;
         }
         pre(col,fcmp,gcmp,equal);   // Pre-walk

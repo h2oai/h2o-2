@@ -31,7 +31,7 @@ Download and Send Us Your Logs
 
 
 Hadoop - Copy and Paste Your YARN Logs
-"""""""""""""""""""""""""""""""
+"""""""""""""""""""""""""""""""""""""""""""
 In the event H\ :sub:`2`\ O fails to launch properly on Hadoop send us the YARN logs.
 
 When launching H\ :sub:`2`\ O on Hadoop the following messages will show up first regardless of failure or success, otherwise the argument has not been entered correctly:
@@ -104,6 +104,33 @@ To avoid falling back to 127.0.0.1 on servers with multiple local IP addresses j
 
   $ java -Xmx20g -jar h2o.jar -flatfile flatfile.txt -ip 192.168.1.161 -port 54321
 
+  
+**Common Question: Why are my string entries being converted into NAs during Parse?**
+
+At the moment columns with numeric values will have the string entries converted to NAs when the data is being ingested:
+
+::
+
+   Data Frame in R		Data Frame in H2O
+	V1  V2  V3  V4		     V1  V2  V3  V4
+   1     1   6  11   A		1     1   6  11  NA
+   2	 2   B   A   A		2     2  NA  NA  NA
+   3 	 3   A  13  18		3     3  NA  13  18
+   4	 4   C  14  19		4     4  NA  14  19
+   5     5  10  15  20		5     5  10  15  20
+
+If the numeric values in the column were meant to be additional factor levels then you can concatenate the values with a string and the column will parse as a enumerator column:
+
+::
+
+	V1  V2  V3  V4
+   1     1  i6 i11   A
+   2     2   B   A   A
+   3     3   A i13 i18
+   4     4   C i14 i19
+   5     5 i10 i15 i20
+
+
 
 R and H\ :sub:`2`\ O
 """"""""""""""""""""""""""""""""""""
@@ -171,7 +198,7 @@ http://stat.ethz.ch/R-manual/R-devel/library/utils/html/install.packages.html
   sudo ln -s /usr/local/opt/gnu-tar/libexec/gnubin/tar gnutar
 
 H\ :sub:`2`\ O On Windows
-"""""""""""""""
+""""""""""""""""""""""""""""""
 
 **Using CMD Shell** as an alternative to using terminal for windows
 users allows windows users to execute instructions as written for

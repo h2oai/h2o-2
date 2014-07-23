@@ -410,6 +410,18 @@ h2o.exec <- function(expr_to_execute, h2o = NULL, dest_key = "") {
   key <- res$dest_key
   if (.pkg.env$FRAMEKEY != "") {
     key <- as.character(.pkg.env$FRAMEKEY)
+    newFrame <- .h2o.exec2(key, h2o = .pkg.env$SERVER, key)
+    topCall <- sys.calls()[[1]]
+    idxs <- which( "H2OParsedData" == unlist(lapply(as.list(topCall), .eval_class, envir=parent.frame())))
+    obj_name <- as.character(.pkg.env$CURS4)
+    if (length(idxs) != 0) obj_name <- as.character(topCall[[idxs]])[1]
+
+    env <- .lookUp(obj_name)
+    if (is.null(env)) {
+      env <- parent.frame()
+    }
+    assign(obj_name, newFrame, env)
+    return(newFrame)
   }
   .h2o.exec2(key, h2o = .pkg.env$SERVER, key)
 }
@@ -584,6 +596,18 @@ setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
       expr <- paste(x@key, "[,c(", paste(j, collapse=","), ")]", sep="")
     else stop(paste("Column index of type", class(j), "unsupported!"))
   } else if(!missing(i) && missing(j)) {
+    # treat `i` as a column selector in this case...
+    if (is.character(i)) {
+      myCol <- colnames(x)
+      if (any(!(i %in% myCol))) stop ("Undefined columns selected")
+      i <- match(i, myCol)
+      if(is.logical(i)) i <- which(i)
+      if(class(i) == "H2OParsedData" && i@logic)
+        expr <- paste(x@key, "[", i@key, ",]", sep="")
+      else if(is.numeric(i) || is.integer(i))
+        expr <- paste(x@key, "[,c(", paste(i, collapse=","), ")]", sep="")
+      else stop(paste("Column index of type", class(i), "unsupported!"))
+    } else {
     # if(is.logical(i)) i = -which(!i)
     if(is.logical(i)) i = which(i)
     # if(class(i) == "H2OLogicalData")
@@ -592,6 +616,7 @@ setMethod("[", "H2OParsedData", function(x, i, j, ..., drop = TRUE) {
     else if(is.numeric(i) || is.integer(i))
       expr <- paste(x@key, "[c(", paste(i, collapse=","), "),]", sep="")
     else stop(paste("Row index of type", class(i), "unsupported!"))
+   }
   } else {
     # if(is.logical(i)) i = -which(!i)
     if(is.logical(i)) i <- which(i)
@@ -641,7 +666,7 @@ setMethod("[<-", "H2OParsedData", function(x, i, j, ..., value) {
   # if((!missing(i) && is.numeric(i) && any(abs(i) < 1 || abs(i) > numRows)) ||
   #     (!missing(j) && is.numeric(j) && any(abs(j) < 1 || abs(j) > numCols)))
   #  stop("Array index out of bounds!")
-  if(!(missing(i) || is.numeric(i)) || !(missing(j) || is.numeric(j) || is.character(j)))
+  if(!(missing(i) || is.numeric(i) || is.character(i)) || !(missing(j) || is.numeric(j) || is.character(j)))
     stop("Row/column types not supported!")
   if(class(value) != "H2OParsedData" && !is.numeric(value))
     stop("value can only be numeric or an H2OParsedData object")
@@ -674,8 +699,20 @@ setMethod("[<-", "H2OParsedData", function(x, i, j, ..., value) {
     cind <- paste("c(", paste(cind, collapse = ","), ")", sep = "")
     lhs <- paste(x@key, "[,", cind, "]", sep = "")
   } else if(!missing(i) && missing(j)) {
-      rind <- paste("c(", paste(i, collapse = ","), ")", sep = "")
-      lhs <- paste(x@key, "[", rind, ",]", sep = "")
+      # treat `i` as a column selector in this case...
+      if (is.character(i)) {
+        myNames <- colnames(x)
+        if (any(!(i %in% myNames))) {
+          if (length(i) == 1) return(do.call("$<-", list(x, i, value)))
+          else stop("Unimplemented: undefined column names specified")
+          }
+        cind <- match(i, myNames)
+        cind <- paste("c(", paste(cind, collapse = ","), ")", sep = "")
+        lhs <- paste(x@key, "[,", cind, "]", sep = "")
+        } else {
+        rind <- paste("c(", paste(i, collapse = ","), ")", sep = "")
+        lhs <- paste(x@key, "[", rind, ",]", sep = "")
+      }
   } else {
     if(is.character(j)) {
       myNames <- colnames(x)

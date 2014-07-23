@@ -100,13 +100,13 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   public float[] priordist() { return this._priorClassDist; }
   public float[] modeldist() { return this._modelClassDist; }
 
-  public SpeeDRFModel(Key selfKey, Key dataKey, Frame fr, SpeeDRF params, float[] priorDist) {
+  public SpeeDRFModel(Key selfKey, Key dataKey, Frame fr, String[] domain, SpeeDRF params, float[] priorDist) {
     super(selfKey, dataKey, fr, priorDist);
     this.dest_key = selfKey;
     this.parameters = params;
     score_each = params.score_each_iteration;
     regression = !(params.classification);
-    _domain = regression ? null : fr.lastVec().toEnum().domain();
+    _domain = domain;
   }
 
   protected SpeeDRFModel(SpeeDRFModel model, double err, ConfusionMatrix cm, VarImp varimp, AUCData auc) {
@@ -160,11 +160,9 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   public Vec get_response() { return response; }
   public int treeCount() { return t_keys.length; }
   public int size()      { return t_keys.length; }
-  public int classes()   { return regression ? 1 : (int)(response.max() - response.min() + 1); }
+  public int classes()   { return nclasses(); }
 
-  //FIXME: Model._domain should be used for nclasses() and classNames()
-  static String[] _domain = null;
-  @Override public int nclasses() { return classes(); }
+  String[] _domain;
   @Override public String[] classNames() { return regression ? null : _domain; }
 
   private static boolean shouldDoScore(SpeeDRFModel m) {
@@ -175,7 +173,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     return m.score_each || m.t_keys.length == 2 || m.t_keys.length == m.N;
   }
 
-  @Override public ConfusionMatrix cm() { return cms[cms.length-1]; }
+  @Override public ConfusionMatrix cm() { return validAUC == null ? cms[cms.length-1] : validAUC.CM(); }
 
   private static void scoreIt(SpeeDRFModel m, SpeeDRFModel old, final boolean score_new_only) {
     // Gather the results
@@ -209,7 +207,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
       // Perform the classification scoring
     } else if (!score_new_only) {
-      _domain = cmTask[0].domain();
+      m._domain = cmTask[0].domain();
       m.confusion = CMTask.CMFinal.make(cmTask[0]._matrix, m, cmTask[0].domain(), cmTask[0]._errorsPerTree, m.oobee, cmTask[0]._sum, cmTask[0]._cms);
       m.cm = cmTask[0]._matrix._matrix;
       m.errorsPerTree = cmTask[0]._errorsPerTree;

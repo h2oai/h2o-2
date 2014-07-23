@@ -9,6 +9,7 @@ import org.apache.poi.hssf.eventusermodel.dummyrecord.MissingCellDummyRecord;
 import org.apache.poi.hssf.record.*;
 import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 
+import water.H2O;
 import water.util.Log;
 import water.util.Log.Tag.Sys;
 
@@ -19,7 +20,7 @@ public class XlsParser extends CustomParser implements HSSFListener {
   private transient final ValueString _str = new ValueString();
   private transient CustomParser.DataOut _dout;
 
-  public XlsParser(){super(new ParserSetup(ParserType.XLS,CsvParser.AUTO_SEP,0,false,null,false));}
+  public XlsParser(){super(new ParserSetup(ParserType.XLS,CsvParser.AUTO_SEP,0,false,null,false, 0));}
   public XlsParser(CustomParser.ParserSetup setup){super(null);}
   public XlsParser clone(){return new XlsParser(_setup);}
 
@@ -51,7 +52,7 @@ public class XlsParser extends CustomParser implements HSSFListener {
     XlsParser p = new XlsParser();
     CustomInspectDataOut dout = new CustomInspectDataOut();
     try{p.streamParse(is, dout);}catch(Exception e){}
-    return new PSetupGuess(new ParserSetup(ParserType.XLS,CsvParser.AUTO_SEP,dout._ncols, dout._header,dout._header?dout.data()[0]:null,false),dout._nlines,dout._invalidLines,dout.data(),dout._nlines > dout._invalidLines,null);
+    return new PSetupGuess(new ParserSetup(ParserType.XLS,CsvParser.AUTO_SEP,dout._ncols, dout._header,dout._header?dout.data()[0]:null,false,0),dout._nlines,dout._invalidLines,dout.data(),dout._nlines > dout._invalidLines,null);
   }
 
   transient ArrayList<String> _columnNames = new ArrayList();

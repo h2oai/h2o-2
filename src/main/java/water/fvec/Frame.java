@@ -354,6 +354,8 @@ public class Frame extends Lockable<Frame> {
   }
 
   public Vec replace(int col, Vec nv) {
+    if (col >= numCols())
+      throw new IllegalArgumentException("Trying to select column "+(col+1)+" but only "+numCols()+" present.");
     Vec rv = vecs()[col];
     assert rv.group().equals(nv.group());
     _vecs[col] = nv;

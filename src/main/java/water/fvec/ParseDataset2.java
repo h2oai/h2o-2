@@ -12,6 +12,7 @@ import water.parser.CustomParser.ParserType;
 import water.parser.CustomParser.StreamDataOut;
 import water.parser.Enum;
 import water.parser.ParseDataset.Compression;
+import water.util.FrameUtils;
 import water.util.Log;
 import water.util.Utils;
 import water.util.Utils.IcedHashMap;
@@ -373,6 +374,7 @@ public final class ParseDataset2 extends Job {
           Log.info_no_stdout(String.format("    %-8s %15s %20s %20s %15s %11s %16s", CStr, typeStr, minStr, maxStr, naStr, isConstantStr, numLevelsStr));
         }
       }
+      Log.info(FrameUtils.chunkSummary(fr).toString());
     }
     catch (Exception ignore) {}   // Don't fail due to logging issues.  Just ignore them.
   }
@@ -583,7 +585,7 @@ public final class ParseDataset2 extends Job {
     // parse local chunks; distribute chunks later.
     private FVecDataOut streamParse( final InputStream is, final CustomParser.ParserSetup localSetup, int vecIdStart, int chunkStartIdx, ParseProgressMonitor pmon) throws IOException {
       // All output into a fresh pile of NewChunks, one per column
-      FVecDataOut dout = new FVecDataOut(_vg, chunkStartIdx, localSetup._ncols, vecIdStart, enums(_eKey,localSetup._ncols));
+      FVecDataOut dout = new FVecDataOut(_vg, chunkStartIdx, localSetup._ncols, vecIdStart, enums(_eKey,localSetup._ncols),localSetup._forceEnumCol);
       CustomParser p = localSetup.parser();
       // assume 2x inflation rate
       if(localSetup._pType.parallelParseSupported)
@@ -642,7 +644,7 @@ public final class ParseDataset2 extends Job {
         switch(_setup._pType){
           case CSV:
             p = new CsvParser(_setup);
-            dout = new FVecDataOut(_vg,_startChunkIdx + in.cidx(),_setup._ncols,_vecIdStart,enums,_appendables);
+            dout = new FVecDataOut(_vg,_startChunkIdx + in.cidx(),_setup._ncols,_vecIdStart,enums,_appendables,_setup._forceEnumCol);
             break;
           case SVMLight:
             p = new SVMLightParser(_setup);
@@ -717,6 +719,7 @@ public final class ParseDataset2 extends Job {
     final int _vecIdStart;
     boolean _closedVecs = false;
     private final VectorGroup _vg;
+    final int _forceEnumCol;
 
     static final private byte UCOL = 0; // unknown col type
     static final private byte NCOL = 1; // numeric col type
@@ -730,11 +733,11 @@ public final class ParseDataset2 extends Job {
         apps[i] = new AppendableVec(vg.vecKey(vecIdStart + i));
       return apps;
     }
-    public FVecDataOut(VectorGroup vg, int cidx, int ncols, int vecIdStart, Enum [] enums){
-      this(vg,cidx,ncols,vecIdStart,enums,newAppendables(ncols,vg,vecIdStart));
+    public FVecDataOut(VectorGroup vg, int cidx, int ncols, int vecIdStart, Enum [] enums, int forceEnumCol){
+      this(vg,cidx,ncols,vecIdStart,enums,newAppendables(ncols,vg,vecIdStart),forceEnumCol);
     }
 
-    public FVecDataOut(VectorGroup vg, int cidx, int ncols, int vecIdStart, Enum [] enums, AppendableVec [] appendables){
+    public FVecDataOut(VectorGroup vg, int cidx, int ncols, int vecIdStart, Enum [] enums, AppendableVec [] appendables, int forceEnumCol){
       _vecs = appendables;
       _nvs = new NewChunk[ncols];
       _enums = enums;
@@ -742,7 +745,10 @@ public final class ParseDataset2 extends Job {
       _cidx = cidx;
       _vg = vg;
       _vecIdStart = vecIdStart;
+      _forceEnumCol = forceEnumCol;
       _ctypes = MemoryManager.malloc1(ncols);
+      if( forceEnumCol != 0 && forceEnumCol <= ncols )
+        _ctypes[forceEnumCol-1/*1-based numbering*/] = ECOL;
       for(int i = 0; i < ncols; ++i)
         _nvs[i] = (NewChunk)_vecs[i].chunkForChunkIdx(_cidx);
     }
@@ -778,7 +784,7 @@ public final class ParseDataset2 extends Job {
       return this;
     }
     @Override public FVecDataOut nextChunk(){
-      return  new FVecDataOut(_vg, _cidx+1, _nCols, _vecIdStart, _enums);
+      return  new FVecDataOut(_vg, _cidx+1, _nCols, _vecIdStart, _enums, _forceEnumCol);
     }
 
     private Vec [] closeVecs(){
@@ -821,7 +827,9 @@ public final class ParseDataset2 extends Job {
       if(colIdx < _nCols) _nvs[_col = colIdx].addNA();
 //      else System.err.println("Additional column ("+ _nvs.length + " < " + colIdx + " NA) on line " + linenum());
     }
-    @Override public final boolean isString(int colIdx) { return false; }
+    @Override public final boolean isString(int colIdx) { 
+      return _ctypes[colIdx]==ECOL;
+    }
 
     @Override public final void addStrCol(int colIdx, ValueString str) {
       if(colIdx < _nvs.length){
