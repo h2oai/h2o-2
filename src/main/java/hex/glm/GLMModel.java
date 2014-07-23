@@ -279,6 +279,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   }
 
   public static void setXvalidation(H2OCountedCompleter cmp, Key modelKey, final double lambda, final GLMValidation val){
+    // expected cmp has already set correct pending count
     new TAtomic<GLMModel>(cmp){
       @Override
       public GLMModel atomic(GLMModel old) {

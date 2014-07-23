@@ -37,6 +37,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   @API(help = "max-iterations", filter = Default.class, lmin=1, lmax=1000000, json=true, importance = ParamImportance.CRITICAL)
   int max_iter = 100;
 
+  transient public boolean _done = false;
   @API(help = "Standardize numeric columns to have zero mean and unit variance.", filter = Default.class, json=true, importance = ParamImportance.CRITICAL)
   boolean standardize = true;
 
@@ -444,6 +445,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   private class LineSearchIteration extends H2OCallback<GLMTask.GLMLineSearchTask> {
     LineSearchIteration(CountedCompleter cmp){super((H2OCountedCompleter)cmp); cmp.addToPendingCount(1);}
     @Override public void callback(final GLMTask.GLMLineSearchTask glmt) {
+      assert getCompleter().getPendingCount() == 1:"unexpected pending count, expected 1, got " + getCompleter().getPendingCount();
       double step = 0.5;
       for(int i = 0; i < glmt._objvals.length; ++i){
         if(!needLineSearch(glmt._betas[i],glmt._objvals[i],step)){
@@ -515,6 +517,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     @Override public void callback(final GLMIterationTask glmt){
       assert _activeCols == null || glmt._beta == null || glmt._beta.length == (_activeCols.length+1):LogInfo("betalen = " + glmt._beta.length + ", activecols = " + _activeCols.length);
       assert _activeCols == null || _activeCols.length == _activeData.fullN();
+      assert getCompleter().getPendingCount() == 1:LogInfo("unexpected pending count, expected 1, got " + getCompleter().getPendingCount()); // will be decreased by 1 after we leave this callback
       if(_countIteration)++_iter;
       _callbackStart = System.currentTimeMillis();
       LogInfo("iteration done in " + (_callbackStart - _iterationStartTime) + "ms, lambda = " + _currentLambda + ", lambda_min = " + lambda_min + ", cmp = " + getCompleter());
@@ -621,7 +624,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           return;
         } else { // not done yet, launch next iteration
           if(glmt._beta != null)
-            setSubmodel(glmt._beta, glmt._val,(H2OCountedCompleter)getCompleter()); // update current intermediate result
+            setSubmodel(glmt._beta, glmt._val,(H2OCountedCompleter)getCompleter().getCompleter()); // update current intermediate result
           final boolean validate = higher_accuracy || (_iter % 5) == 0;
           new GLMIterationTask(GLM2.this.self(),_activeData,glmt._glm, true, validate, validate, newBeta,_ymu,1.0/_nobs,thresholds, new Iteration(getCompleter(),validate)).asyncExec(_activeData._adaptedFrame);
         }
@@ -629,6 +632,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     }
     private void checkKKTAndComplete(final GLMIterationTask glmt, final double [] newBeta, final boolean failedLineSearch){
       final double [] fullBeta = expandVec(newBeta,_activeCols);
+      assert getCompleter().getPendingCount() == 1:"pending count = " + getCompleter().getPendingCount() + ", epxected 1";
       // now we need full gradient (on all columns) using this beta
       new GLMIterationTask(GLM2.this.self(),_dinfo,_glm,false,true,true,fullBeta,_ymu,1.0/_nobs,thresholds, new H2OCallback<GLMIterationTask>((H2OCountedCompleter)getCompleter()) {
         @Override
@@ -671,11 +675,17 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
               Arrays.sort(_activeCols);
               LogInfo(fcnt + " variables failed KKT conditions check! Adding them to the model and continuing computation... (grad_eps = " + grad_eps + ", activeCols = " + Arrays.toString(_activeCols));
               _activeData = _dinfo.filterExpandedColumns(_activeCols);
+              // NOTE: tricky completer game here:
+              // We expect 0 pending in this method since this is the end-point, ( actually it's racy, can be 1 with pending 1 decrement from the original Iteration callback, end result is 0 though)
+              // while iteration expects pending count of 1, so we need to increase it here (Iteration itself adds 1 but 1 will be subtracted when we leave this method since we're in the callback which is called by onCompletion!
+              // [unlike at the start of nextLambda call when we're not inside onCompletion]))
+              getCompleter().addToPendingCount(1);
               new GLMIterationTask(GLM2.this.self(), _activeData, _glm, true, true, true, resizeVec(newBeta, _activeCols, oldActiveCols), glmt._ymu, glmt._reg, thresholds, new Iteration(getCompleter(),false)).asyncExec(_activeData._adaptedFrame);
               return;
             }
           }
-          GLM2.this.setSubmodel(newBeta, glmt2._val,(H2OCountedCompleter)getCompleter());
+          GLM2.this.setSubmodel(newBeta, glmt2._val,(H2OCountedCompleter)getCompleter().getCompleter());
+          _done = true;
           LogInfo("computation of lambda = " + _currentLambda + " done in " + (System.currentTimeMillis() - GLM2.this.start_time) + "ms");
           assert _lastResult._fullGrad != null;
         }
@@ -897,6 +907,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 
   void nextLambda(final double currentLambda, final H2OCountedCompleter cmp){
     LogInfo("starting computation of lambda = " + currentLambda + ", previous lambda = " + _currentLambda);
+    _done = false;
     final double previousLambda = _currentLambda;
     _currentLambda = currentLambda;
     if(n_folds > 1){ // if we're cross-validated tasks, just fork off the parallel glms and wait for result!
@@ -923,7 +934,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 //        new Iteration(cmp, false).callback(_lastResult._glmt);
 //        _lastResult._glmt.tryComplete();  // shortcut to reuse the last gram if same active columns
 //      } else
-        new GLMIterationTask(GLM2.this.self(), _activeData, _glm, true, false, false, resizeVec(_lastResult._glmt._beta, _activeCols, _lastResult._activeCols), _ymu, 1.0 / _nobs, thresholds, new Iteration(cmp,false)).asyncExec(_activeData._adaptedFrame);;
+       new GLMIterationTask(GLM2.this.self(), _activeData, _glm, true, false, false, resizeVec(_lastResult._glmt._beta, _activeCols, _lastResult._activeCols), _ymu, 1.0 / _nobs, thresholds, new Iteration(cmp,false)).asyncExec(_activeData._adaptedFrame);;
     }
   }
 
@@ -1104,10 +1115,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       }
     }
     @Override public void onCompletion(CountedCompleter cc){
-      Log.info("GLM[" + _glm.dest() + "]: GLMT with lambda = " + _glm._currentLambda + " done(remote).");
       System.out.flush();
-      try{Thread.sleep(1000);}catch(Throwable t){}
-      assert _glm._lastResult._fullGrad != null:"GLM[" + _glm.dest() + "] missing full gradient at lambda = " + _glm._currentLambda;
+      assert _glm._done:"GLM2[dest=" + _glm.dest() + "]: onCompletion but nod done yet! cc = " + cc;
+      assert _glm._lastResult._fullGrad != null:"GLM2[dest=" + _glm.dest() + "] missing full gradient at lambda = " + _glm._currentLambda;
     }
 
     @Override public void onAck(){
@@ -1128,10 +1138,12 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     public ParallelGLMs(Job j, GLM2 [] glms, double lambda, int maxP){
       _job = j; _lambda = lambda;  _glms = glms; _maxP = maxP;
       _tasks = new GLMT[_glms.length];
+      addToPendingCount(_glms.length);
     }
     public ParallelGLMs(Job j, GLM2 [] glms, double lambda, int maxP, H2OCountedCompleter cmp){
       super(cmp); _lambda = lambda; _job = j; _glms = glms; _maxP = maxP;
       _tasks = new GLMT[_glms.length];
+      addToPendingCount(_glms.length);
     }
 
     private void forkDTask(int i){
@@ -1139,15 +1151,15 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       forkDTask(i,H2O.CLOUD._memary[nodeId]);
     }
     private void forkDTask(final int i, H2ONode n){
-      _tasks[i] = new GLMT(new Callback(n),_glms[i],_lambda);
-      Log.info("GLM[" + _tasks[i]._glm.dest() + "]: sending computation of lambda = " + _lambda + " to node " + n);
+      _tasks[i] = new GLMT(new Callback(n,i),_glms[i],_lambda);
       assert Double.isNaN(_lambda) || _tasks[i]._glm._lastResult._fullGrad != null;
       if(n == H2O.SELF) H2O.submitTask(_tasks[i]);
       else new RPC(n,_tasks[i]).call();
     }
     class Callback extends H2OCallback<H2OCountedCompleter> {
+      final int i;
       final H2ONode n;
-      public Callback(H2ONode n){super(ParallelGLMs.this); this.n = n;}
+      public Callback(H2ONode n, int i){super(ParallelGLMs.this); this.n = n; this.i = i;}
       @Override public void callback(H2OCountedCompleter cc){
         int i;
         if((i = _nextTask.getAndIncrement()) < _glms.length) { // not done yet
@@ -1160,7 +1172,6 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       }
     }
     @Override public void compute2(){
-      addToPendingCount(_glms.length);
       final int n = Math.min(_maxP, _glms.length);
       _nextTask = new AtomicInteger(n);
       for(int i = 0; i < n; ++i)
