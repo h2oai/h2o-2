@@ -32,7 +32,7 @@ public class ModelSerializationTest extends TestUtil {
   }
 
   @Test
-  public void testGBMModel() throws IOException {
+  public void testGBMModelMultinomial() throws IOException {
     GBMModel model = null, loadedModel = null;
     try {
       model = prepareGBMModel("smalldata/iris/iris.csv", EIA, 4, true, 5);
@@ -47,10 +47,40 @@ public class ModelSerializationTest extends TestUtil {
   }
 
   @Test
-  public void testDRFModel() throws IOException {
+  public void testGBMModelBinomial() throws IOException {
+    GBMModel model = null, loadedModel = null;
+    try {
+      model = prepareGBMModel("smalldata/logreg/prostate.csv", ari(0), 1, true, 5);
+      loadedModel = saveAndLoad(model);
+      // And compare
+      assertTreeModelEquals(model, loadedModel);
+      assertModelBinaryEquals(model, loadedModel);
+    } finally {
+      if (model!=null) model.delete();
+      if (loadedModel!=null) loadedModel.delete();
+    }
+  }
+
+  @Test
+  public void testDRFModelMultinomial() throws IOException {
     DRFModel model = null, loadedModel = null;
     try {
       model = prepareDRFModel("smalldata/iris/iris.csv", EIA, 4, true, 5);
+      loadedModel = saveAndLoad(model);
+      // And compare
+      assertTreeModelEquals(model, loadedModel);
+      assertModelBinaryEquals(model, loadedModel);
+    } finally {
+      if (model!=null) model.delete();
+      if (loadedModel!=null) loadedModel.delete();
+    }
+  }
+
+  @Test
+  public void testDRFModelBinomial() throws IOException {
+    DRFModel model = null, loadedModel = null;
+    try {
+      model = prepareDRFModel("smalldata/logreg/prostate.csv", ari(0), 1, true, 5);
       loadedModel = saveAndLoad(model);
       // And compare
       assertTreeModelEquals(model, loadedModel);

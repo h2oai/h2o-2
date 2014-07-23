@@ -24,10 +24,12 @@ na_comparisons <- function(conn){
   expect_that( nrow(res), equals(1))
   expect_that( res[1,1], equals(1))
   expect_that( res[1,2], equals(5))
-
-  expect_that( all(loc[,3] == c(1,1,1,NA,1,NA,1)), equals(T))
-
-
+  print(loc[,3])
+  
+  print(c(1,1,1,NA,1,NA,1))
+  print(is.na(loc[,3]))
+  
+  expect_true(all(is.na(loc[,3]) == c(FALSE,FALSE,FALSE,TRUE,FALSE,TRUE,FALSE)))
   testEnd()
 }
 

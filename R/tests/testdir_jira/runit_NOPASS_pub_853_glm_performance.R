@@ -1,4 +1,6 @@
 ##
+# NOPASS TEST: The following bug is associated with JIRA PUB-853 
+# 'Early termination in glm resulting in underfitting'
 # Testing glm modeling performance with Arcene and Gisette datasets with and without strong rules. 
 ##
 
@@ -38,6 +40,7 @@ test <- function(conn) {
 
     print("Check that modeling with additional columns takes more time to compute without strong rules, ie doesn't quit too early.")
         # looks at total elapsed time
+        # The following line is expected to pass; GLM without strong rules should take longer to compute with additional columns 
         stopifnot(time.noSR.3000[3] <= time.noSR.3250[3])
 
     print("Test models on validation set.")
@@ -54,6 +57,7 @@ test <- function(conn) {
         
     print("Check that prediction AUC better than guessing (0.5).")
         stopifnot(auc.noSR.3000 > 0.5)
+        # The following line is expected to pass; AUC with 3000 columns well over 0.7, AUC with 3250 columns should be better than 0.5 
         stopifnot(auc.noSR.3250 > 0.5)
 
     print("Reading in Gisette data for gaussian modeling.")
@@ -80,6 +84,9 @@ test <- function(conn) {
         time.SR.4500
 
     print("Run model on all 5000 columns of Gisette with strong rules on.")
+        #java OutOfMemory error, with strong rules on. 
+        #if run with more allocated space, produces same under fitting issues as arcene, but does not take less time, 
+        #ie. 5000 columns takes more time to run than 4500 columns
         time.SR.5000 <- system.time(model.SR.5000 <- h2o.glm(x=c(1:5000), y="gisette.train.label", data=gisette.train.full, family="gaussian", lambda_search=TRUE, alpha=1, use_all_factor_levels=1, nfolds=0, higher_accuracy=TRUE))
         time.SR.5000
 

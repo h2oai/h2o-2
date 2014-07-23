@@ -1,5 +1,6 @@
 package hex.gbm;
 
+import water.api.AUCData;
 import static water.util.MRUtils.sampleFrameStratified;
 import static water.util.ModelUtils.getPrediction;
 import hex.ConfusionMatrix;
@@ -880,7 +881,7 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   protected abstract water.util.Log.Tag.Sys logTag();
   /**
    * Builds model
-   * @param initialModel initial model created by {@link #makeModel(Key, Key, Key, String[], String[][], String[])} method.
+   * @param initialModel initial model created by makeModel() method.
    * @param trainFr training dataset which can contain additional temporary vectors prepared by buildModel() method.
    * @param names names of columns in <code>trainFr</code> used for model training
    * @param domains domains of columns in <code>trainFr</code> used for model training
@@ -903,13 +904,13 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
   protected abstract void initWorkFrame( TM initialModel, Frame fr);
 
   protected abstract TM makeModel( Key outputKey, Key dataKey, Key testKey, int ntrees, String names[], String domains[][], String[] cmDomain, float[] priorClassDist, float[] classDist);
-  protected abstract TM makeModel( TM model, double err, ConfusionMatrix cm, VarImp varimp, water.api.AUC validAUC);
+  protected abstract TM makeModel( TM model, double err, ConfusionMatrix cm, VarImp varimp, AUCData validAUC);
   protected abstract TM makeModel( TM model, DTree ktrees[], DTree.TreeModel.TreeStats tstats);
   protected abstract TM updateModel( TM model, TM checkpoint, boolean overwriteCheckpoint);
 
-  protected water.api.AUC makeAUC(ConfusionMatrix[] cms, float[] threshold) {
+  protected AUCData makeAUC(ConfusionMatrix[] cms, float[] threshold) {
     assert _nclass == 2;
-    return cms != null ? new AUC(cms, threshold, _cmDomain) : null;
+    return cms != null ? new AUC(cms, threshold, _cmDomain).data() : null;
   }
 
   protected boolean inBagRow(Chunk[] chks, int row) { return false; }

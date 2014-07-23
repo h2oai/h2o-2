@@ -145,8 +145,8 @@ public class GLMValidation extends Iced {
     if(_glm.family == Family.binomial){
       for(ConfusionMatrix cm:_cms)cm.reComputeErrors();
       AUC auc = new AUC(_cms,thresholds,/*TODO: add CM domain*/null);
-      this.auc = auc.AUC();
-      best_threshold = auc.threshold();
+      this.auc = auc.data().AUC();
+      best_threshold = auc.data().threshold();
     }
   }
   @Override
