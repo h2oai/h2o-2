@@ -708,9 +708,20 @@ public class DeepLearning extends Job.ValidatedJob {
 
   @Override
   protected final void execImpl() {
-    buildModel();
-    if (n_folds > 0) CrossValUtils.crossValidate(this);
-    delete();
+    try {
+      buildModel();
+      if (n_folds > 0) CrossValUtils.crossValidate(this);
+    } finally {
+      delete();
+      state = UKV.<Job>get(self()).state;
+      new TAtomic<DeepLearningModel>() {
+        @Override
+        public DeepLearningModel atomic(DeepLearningModel m) {
+          if (m != null) m.get_params().state = state;
+          return m;
+        }
+      }.invoke(dest());
+    }
   }
 
   /**
@@ -1042,16 +1053,6 @@ public class DeepLearning extends Job.ValidatedJob {
     cleanup();
     if (_fakejob) UKV.remove(job_key);
     remove();
-
-    // HACK: update the state of the model's Job/parameter object
-    // (since we cloned the Job/parameters several times and we're not sharing a reference)
-    Value v = DKV.get(dest());
-    if (v != null) {
-      DeepLearningModel m = v.get();
-      m.get_params().state = state;
-      DKV.put(dest(), m);
-    }
-
   }
 
   /**

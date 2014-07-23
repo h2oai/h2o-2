@@ -283,17 +283,28 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   }
 
   protected void complete(){
-    _model.maybeComputeVariableImportances();
-    _model.stop_training();
-    _model.pickBestXval();
-    if(_addedL2 > 0){
-      String warn = "Added L2 penalty (rho = " + _addedL2 + ")  due to non-spd matrix. ";
-      _model.addWarning(warn);
-      _model.update(self());
+    try {
+      _model.maybeComputeVariableImportances();
+      _model.stop_training();
+      _model.pickBestXval();
+      if (_addedL2 > 0) {
+        String warn = "Added L2 penalty (rho = " + _addedL2 + ")  due to non-spd matrix. ";
+        _model.addWarning(warn);
+        _model.update(self());
+      }
+    } finally {
+      _model.unlock(self());
+      if (_dinfo._nfolds == 0 && !_grid) remove(); // Remove/complete job only for top-level, not xval GLM2s
+      state = UKV.<Job>get(self()).state;
+      new TAtomic<GLMModel>() {
+        @Override
+        public GLMModel atomic(GLMModel m) {
+          if (m != null) m.get_params().state = state;
+          return m;
+        }
+      }.invoke(dest());
     }
-    _model.unlock(self());
-    if( _dinfo._nfolds == 0 && !_grid)remove(); // Remove/complete job only for top-level, not xval GLM2s
-    state = JobState.DONE;
+
     if(_fjtask != null)_fjtask.tryComplete();
   }
 

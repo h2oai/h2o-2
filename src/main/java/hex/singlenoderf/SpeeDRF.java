@@ -153,48 +153,50 @@ public class SpeeDRF extends Job.ValidatedJob {
   }
 
   @Override protected void execImpl() {
-    SpeeDRFModel rf_model = initModel();
-    rf_model.start_training(null);
-    buildForest(rf_model);
-    rf_model.stop_training();
-    if (n_folds > 0) CrossValUtils.crossValidate(this);
-    remove();
-  }
-
-  @Override protected Response redirect() { return SpeeDRFProgressPage.redirect(this, self(), dest()); }
-
-  public final void buildForest(SpeeDRFModel model) {
+    SpeeDRFModel rf_model = null;
     try {
       source.read_lock(self());
-      if (model == null) model = UKV.get(dest());
-      model.write_lock(self());
-      drfParams = DRFParams.create(model.fr.find(model.response), model.N, model.max_depth, (int)model.fr.numRows(), model.nbins,
-              model.statType, seed, model.weights, mtry, model.sampling_strategy, (float) sample, model.strata_samples, model.verbose ? 100 : 1, _exclusiveSplitLimit, !local_mode, regression);
-      logStart();
-      DRFTask tsk = new DRFTask();
-      tsk._job = Job.findJob(self());
-      tsk._params = drfParams;
-      tsk._rfmodel = model;
-      tsk._drf = this;
-      tsk.validateInputData();
-      tsk.invokeOnAllNodes();
+      rf_model = initModel();
+      rf_model.start_training(null);
+      rf_model.write_lock(self());
+      buildForest(rf_model);
+      rf_model.stop_training();
     }
     catch(JobCancelledException ex) {
       Log.info("Random Forest building was cancelled.");
+      throw ex;
     }
     catch(Exception ex) {
       ex.printStackTrace();
       throw new RuntimeException(ex);
     }
-    finally {
-      if (model != null) {
-        model = UKV.get(dest());
-        model.unlock(self());
-      }
+    finally{
       source.unlock(self());
+      if (n_folds > 0) CrossValUtils.crossValidate(this);
+      remove();
+      if (rf_model != null) {
+        rf_model = UKV.get(dest());
+        rf_model.get_params().state = UKV.<Job>get(self()).state;
+        rf_model.unlock(self());
+      }
       emptyLTrash();
       cleanup();
     }
+  }
+
+  @Override protected Response redirect() { return SpeeDRFProgressPage.redirect(this, self(), dest()); }
+
+  private final void buildForest(SpeeDRFModel model) {
+    drfParams = DRFParams.create(model.fr.find(model.response), model.N, model.max_depth, (int)model.fr.numRows(), model.nbins,
+            model.statType, seed, model.weights, mtry, model.sampling_strategy, (float) sample, model.strata_samples, model.verbose ? 100 : 1, _exclusiveSplitLimit, !local_mode, regression);
+    logStart();
+    DRFTask tsk = new DRFTask();
+    tsk._job = Job.findJob(self());
+    tsk._params = drfParams;
+    tsk._rfmodel = model;
+    tsk._drf = this;
+    tsk.validateInputData();
+    tsk.invokeOnAllNodes();
   }
 
   /**
@@ -206,7 +208,9 @@ public class SpeeDRF extends Job.ValidatedJob {
   private double[] checkClassWeights(double[] weights) {
 
     // Fill the defaults with 1.0 weight
-    double [] defaults = new double[response.toEnum().cardinality()];
+    Vec resp = response.toEnum();
+    double [] defaults = new double[resp.cardinality()]; //can leak if not yet enum
+    gtrash(resp);
     for (int i = 0; i < defaults.length; ++i) defaults[i] = 1.0;
 
     //Create a results vector to be filled in below
@@ -233,139 +237,137 @@ public class SpeeDRF extends Job.ValidatedJob {
 
   // Initialize defaults and user specified model params
   public SpeeDRFModel initModel() {
-    try {
-      source.read_lock(self());
-
-      // Map the enum SelectStatType to the enum StatType
-      Tree.StatType stat_type;
-      if (regression) {
-        stat_type = Tree.StatType.MSE;
+    // Map the enum SelectStatType to the enum StatType
+    Tree.StatType stat_type;
+    if (regression) {
+      stat_type = Tree.StatType.MSE;
+    } else {
+      if (select_stat_type == Tree.SelectStatType.ENTROPY) {
+        stat_type = Tree.StatType.ENTROPY;
       } else {
-        if (select_stat_type == Tree.SelectStatType.ENTROPY) {
-          stat_type = Tree.StatType.ENTROPY;
-        } else {
-          stat_type = Tree.StatType.GINI;
-        }
+        stat_type = Tree.StatType.GINI;
       }
+    }
 
-      // Initialize classification specific model parameters
+    // Initialize classification specific model parameters
+    if(!regression) {
+
+      // Handle bad user input for class weights
+//      class_weights = checkClassWeights(class_weights);
+
+      // Initialize regression specific model parameters
+    } else {
+
+      // Class Weights and Strata Samples do not apply to Regression
+      class_weights = null;
+
+      //TODO: Variable importance in regression not currently supported
+      if (importance && regression) throw new IllegalArgumentException("Variable Importance for SpeeDRF regression not currently supported.");
+    }
+
+    // Generate a new seed by default.
+    if (seed == -1) {
+      seed = _seedGenerator.nextLong();
+    }
+
+    // Prepare the train/test data sets based on the user input for the model.
+    Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, !regression /*toEnum is TRUE if regression is FALSE*/, false, false);
+    if (train.lastVec().masterVec() != null && train.lastVec() != response) gtrash(train.lastVec());
+    Frame test = null;
+    if (validation != null) {
+      test = FrameTask.DataInfo.prepareFrame(validation, validation.vecs()[source.find(response)], ignored_cols, !regression, false, false);
+    }
+
+    float[] priorDist = classification ? new MRUtils.ClassDist(train.lastVec()).doAll(train.lastVec()).rel_dist() : null;
+
+    // Handle imbalanced classes by stratified over/under-sampling
+    // initWorkFrame sets the modeled class distribution, and model.score() corrects the probabilities back using the distribution ratios
+    float[] trainSamplingFactors;
+    Vec resp =  regression ? null : train.lastVec().toEnum();
+    if (resp != null) gtrash(resp);
+    Frame fr = train;
+    if (classification && balance_classes) {
+      int response_idx = fr.find(_responseName);
+      fr.replace(response_idx, resp);
+      trainSamplingFactors = new float[resp.domain().length]; //leave initialized to 0 -> will be filled up below
+      Frame stratified = sampleFrameStratified(fr, resp, trainSamplingFactors, (long)(max_after_balance_size*fr.numRows()), seed, true, false);
+      if (stratified != fr) {
+        fr = stratified;
+        gtrash(stratified);
+      }
+    }
+
+    // Check that that test/train data are consistent, throw warning if not
+    if(classification && validation != null) {
+      Vec testresp = test.lastVec().toEnum();
+      gtrash(testresp);
+      if (!isSubset(testresp.domain(), resp.domain())) {
+        Log.warn("Test set domain: " + Arrays.toString(testresp.domain()) + " \nTrain set domain: " + Arrays.toString(resp.domain()));
+        Log.warn("Train and Validation data have inconsistent response columns! Test data has a response not found in the Train data!");
+      }
+    }
+
+    Key src_key = source._key;
+    int src_ncols = source.numCols();
+    // Set the model parameters
+    SpeeDRFModel model = new SpeeDRFModel(dest(), src_key, fr, regression ? null : resp.domain(), this, priorDist);
+    model.verbose = verbose;
+    int csize = H2O.CLOUD.size();
+    model.fr = fr;
+    model.response = regression ? fr.lastVec() : fr.lastVec().toEnum();
+    if (!regression) gtrash(model.response);
+    model.t_keys = new Key[0];
+    model.time = 0;
+    model.local_forests = new Key[csize][];
+    model.verbose_output = new String[]{""};
+    for(int i=0;i<csize;i++) model.local_forests[i] = new Key[0];
+    model.node_split_features = new int[csize];
+    for( Key tkey : model.t_keys ) assert DKV.get(tkey)!=null;
+    model.jobKey = self();
+    model.current_status = "Initializing Model";
+    model.confusion = null;
+    model.zeed = seed;
+    model.cmDomain = getCMDomain();
+    model.varimp = null;
+    model.validAUC = null;
+    model.cms = new ConfusionMatrix[1];
+    model.errs = new float[]{-1.f};
+    model.nbins = bin_limit;
+    model.max_depth = max_depth;
+    model.oobee = validation == null && oobee;
+    model.statType = regression ? Tree.StatType.MSE : stat_type;
+    model.test_frame = test;
+    model.testKey = validation == null ? null : validation._key;
+    model.importance = importance;
+    model.regression = regression;
+    model.features = src_ncols;
+    model.sampling_strategy = regression ? Sampling.Strategy.RANDOM : sampling_strategy;
+    model.sample = (float) sample;
+    model.weights = regression ? null : class_weights;
+    model.time = 0;
+    model.tree_pojos = new TreeP[1];
+    model.N = num_trees;
+    model.useNonLocal = !local_mode;
+    if (!regression) model.setModelClassDistribution(new MRUtils.ClassDist(fr.lastVec()).doAll(fr.lastVec()).rel_dist());
+
+    if (mtry == -1) {
       if(!regression) {
 
-        // Handle bad user input for class weights
-        class_weights = checkClassWeights(class_weights);
-
-        // Initialize regression specific model parameters
+        // Classification uses the square root of the number of features by default
+        model.mtry = (int) Math.floor(Math.sqrt(fr.numCols() - 1)); // do not count class column
       } else {
 
-        // Class Weights and Strata Samples do not apply to Regression
-        class_weights = null;
-
-        //TODO: Variable importance in regression not currently supported
-        if (importance && regression) throw new IllegalArgumentException("Variable Importance for SpeeDRF regression not currently supported.");
+        // Regression uses about a third of the features by default
+        model.mtry = (int) Math.floor((float) (fr.numCols() - 1) / 3.0f);  // do not count class column
       }
 
-      // Generate a new seed by default.
-      if (seed == -1) {
-        seed = _seedGenerator.nextLong();
-      }
+    } else {
 
-      // Prepare the train/test data sets based on the user input for the model.
-      Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, !regression /*toEnum is TRUE if regression is FALSE*/, false, false);
-      Frame test = null;
-      if (validation != null) {
-        test = FrameTask.DataInfo.prepareFrame(validation, validation.vecs()[source.find(response)], ignored_cols, !regression, false, false);
-      }
-
-      float[] priorDist = classification ? new MRUtils.ClassDist(train.lastVec()).doAll(train.lastVec()).rel_dist() : null;
-
-      // Handle imbalanced classes by stratified over/under-sampling
-      // initWorkFrame sets the modeled class distribution, and model.score() corrects the probabilities back using the distribution ratios
-      float[] trainSamplingFactors;
-      Vec v =  regression ? null : train.lastVec().toEnum();
-      Frame fr = train;
-      if (classification && balance_classes) {
-        int response_idx = fr.find(_responseName);
-        fr.replace(response_idx, v);
-        trainSamplingFactors = new float[v.domain().length]; //leave initialized to 0 -> will be filled up below
-        Frame stratified = sampleFrameStratified(fr, v, trainSamplingFactors, (long)(max_after_balance_size*fr.numRows()), seed, true, false);
-        if (stratified != fr) {
-          fr = stratified;
-          gtrash(stratified);
-          }
-      }
-
-      // Check that that test/train data are consistent, throw warning if not
-      if(classification && validation != null) {
-        if (!isSubset(test.lastVec().toEnum().domain(), train.lastVec().toEnum().domain())) {
-          Log.warn("Test set domain: " + Arrays.toString(test.lastVec().toEnum().domain()) + " \nTrain set domain: " + Arrays.toString(train.lastVec().toEnum().domain()));
-          Log.warn("Train and Validation data have inconsistent response columns! Test data has a response not found in the Train data!");
-        }
-      }
-
-      Key src_key = source._key;
-      int src_ncols = source.numCols();
-      // Set the model parameters
-      SpeeDRFModel model = new SpeeDRFModel(dest(), src_key, fr, this, priorDist);
-      model.verbose = verbose;
-      int csize = H2O.CLOUD.size();
-      model.fr = fr;
-      model.response = regression ? fr.lastVec() : fr.lastVec().toEnum();
-      model.t_keys = new Key[0];
-      model.time = 0;
-      model.local_forests = new Key[csize][];
-      model.verbose_output = new String[]{""};
-      for(int i=0;i<csize;i++) model.local_forests[i] = new Key[0];
-      model.node_split_features = new int[csize];
-      for( Key tkey : model.t_keys ) assert DKV.get(tkey)!=null;
-      model.jobKey = self();
-      model.current_status = "Initializing Model";
-      model.confusion = null;
-      model.zeed = seed;
-      model.cmDomain = getCMDomain();
-      model.varimp = null;
-      model.validAUC = null;
-      model.cms = new ConfusionMatrix[1];
-      model.errs = new float[]{-1.f};
-      model.nbins = bin_limit;
-      model.max_depth = max_depth;
-      model.oobee = validation == null && oobee;
-      model.statType = regression ? Tree.StatType.MSE : stat_type;
-      model.test_frame = test;
-      model.testKey = validation == null ? null : validation._key;
-      model.importance = importance;
-      model.regression = regression;
-      model.features = src_ncols;
-      model.sampling_strategy = regression ? Sampling.Strategy.RANDOM : sampling_strategy;
-      model.sample = (float) sample;
-      model.weights = regression ? null : class_weights;
-      model.time = 0;
-      model.tree_pojos = new TreeP[1];
-      model.N = num_trees;
-      model.useNonLocal = !local_mode;
-      if (!regression) model.setModelClassDistribution(new MRUtils.ClassDist(fr.lastVec()).doAll(fr.lastVec()).rel_dist());
-
-      if (mtry == -1) {
-        if(!regression) {
-
-          // Classification uses the square root of the number of features by default
-          model.mtry = (int) Math.floor(Math.sqrt(fr.numCols() - 1)); // do not count class column
-        } else {
-
-          // Regression uses about a third of the features by default
-          model.mtry = (int) Math.floor((float) (fr.numCols() - 1) / 3.0f);  // do not count class column
-        }
-
-      } else {
-
-        // The user specified mtry
-        model.mtry = mtry;
-      }
-
-      return model;
+      // The user specified mtry
+      model.mtry = mtry;
     }
-    finally {
-      source.unlock(self());
-    }
+
+    return model;
   }
 
   public Frame score( Frame fr ) { return ((SpeeDRFModel)UKV.get(dest())).score(fr);  }
