@@ -460,8 +460,8 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Use a column major weight matrix for input layer. Can speed up forward propagation, but might slow down backpropagation (Experimental).", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
   public boolean col_major = false;
 
-  @API(help = "Sparsity (Experimental)", filter= Default.class, json = true)
-  public double average_activation = -0.9;
+  @API(help = "Average activation for sparse auto-encoder (Experimental)", filter= Default.class, json = true)
+  public double average_activation = 0;
 
   @API(help = "Sparsity regularization (Experimental)", filter= Default.class, json = true)
   public double sparsity_beta = 0;
@@ -866,6 +866,18 @@ public class DeepLearning extends Job.ValidatedJob {
         loss = Loss.CrossEntropy;
       }
     }
+
+    if(autoencoder && sparsity_beta > 0) {
+      if (activation == Activation.Tanh || activation == Activation.TanhWithDropout) {
+        if (average_activation >= 1 || average_activation <= -1)
+          throw new IllegalArgumentException("Tanh average activation must be in (-1,1).");
+      }
+      else if (activation == Activation.Rectifier || activation == Activation.RectifierWithDropout) {
+        if (average_activation <= 0)
+          throw new IllegalArgumentException("Rectifier average activation must be positive.");
+      }
+    }
+
     if (!classification && loss == Loss.CrossEntropy) throw new IllegalArgumentException("Cannot use CrossEntropy loss function for regression.");
     if (autoencoder && loss != Loss.MeanSquare) throw new IllegalArgumentException("Must use MeanSquare loss function for auto-encoder.");
     if (autoencoder && classification) { classification = false; Log.info("Using regression mode for auto-encoder.");}

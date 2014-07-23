@@ -181,7 +181,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
             _sentTcp = t;       // Set after close (and any other possible fail)
             break;              // Break out of retry loop
           } catch( AutoBuffer.TCPIsUnreliableException e ) {
-            Log.info("Network congestion: TCPcall "+e._ioe.getMessage()+",  AB="+ab+", for task#"+_tasknum+", waiting and retrying...");
+            Log.info_no_DKV(Log.Tag.Sys.WATER,"Network congestion: TCPcall "+e._ioe.getMessage()+",  AB="+ab+", for task#"+_tasknum+", waiting and retrying...");
             ab.close(true,true);
             try { Thread.sleep(500); } catch (InterruptedException ie) {}
           }
