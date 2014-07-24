@@ -1,5 +1,5 @@
 ##
-# Testing splicing on data with UUID column using '+' expression
+# Testing '+' expression for h2o data objects
 ##
 
 
@@ -17,12 +17,11 @@ test <- function(conn) {
   print("Check dimensions for airline matches UUIDs")
   assertCondition((nrow(airlines.test.hex)==(nrow(uuid.hex))))
   
-  print("Splice UUID to both predictions :: '+' operator")
-  air.uuid <- h2o.assign((airline.test.hex + uuid.hex), key="air.uuid")
-  head(air.uuid)
+  print("Error with splice UUID to both predictions :: '+' operator")
+  assertError(air.uuid <- h2o.assign((airline.test.hex + uuid.hex), key="air.uuid"))
   
   testEnd()
 }
 
-doTest("Test splicing UUID column using '+' expression", test)
+doTest("Testing '+' expression for h2o data objects, test)
 
