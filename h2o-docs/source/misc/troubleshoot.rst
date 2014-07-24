@@ -161,7 +161,7 @@ H\ :sub:`2`\ O's R package is now available for download on CRAN but typically t
 	  if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
 	  if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
 
-#. For Windows especially check to make sure there are no remanants of H\ :sub:`2`\ O in your personal R library (typically located "C:\Users\~\Documents\R\win-library\3.0" in Windows).
+#. For Windows especially check to make sure there are no remanants of H\ :sub:`2`\ O in your personal R library.
 
 #. Download and/or install the H\ :sub:`2`\ O package version by following the instructions in our R user documentation.
 

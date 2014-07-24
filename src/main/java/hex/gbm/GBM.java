@@ -300,8 +300,10 @@ public class GBM extends SharedTreeModelBuilder<GBM.GBMModel> {
       // Check latest predictions
       tstats.updateBy(ktrees);
     }
-    // Final scoring
-    model = doScoring(model, fr, ktrees, tid, tstats, true, false, false);
+    // Final scoring (skip if job was cancelled)
+    if (Job.isRunning(self())) {
+      model = doScoring(model, fr, ktrees, tid, tstats, true, false, false);
+    }
 
     return model;
   }

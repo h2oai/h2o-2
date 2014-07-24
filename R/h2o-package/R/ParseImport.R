@@ -364,10 +364,10 @@ h2o.downloadAllLogs <- function(client, dirname = ".", filename = NULL) {
 
 # ------------------- Show H2O recommended columns to ignore ----------------------------------------------------
 h2o.ignoreColumns <- function(data, max_na = 0.2) {
-  digits = 12L
   if(ncol(data) > .MAX_INSPECT_COL_VIEW)
     warning(data@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
-  
+  if(missing(data)) stop('Must specify object')
+  if(class(data) != 'H2OParsedData') stop('object not a h2o data type')
   numRows = nrow(data)
   naThreshold = numRows * max_na
   cardinalityThreshold = numRows
@@ -393,3 +393,28 @@ h2o.ignoreColumns <- function(data, max_na = 0.2) {
   )
   unlist(ignore)
 }
+
+
+# ------------------- Save H2O Model to Disk ----------------------------------------------------
+h2o.saveModel <- function(object, dir="", name="", force=FALSE) {
+  if(missing(object)) stop('Must specify object')
+  if(!inherits(object,'H2OModel')) stop('object must be an H2O model')
+  if(!is.character(dir)) stop('path must be of class character')
+  if(!is.character(name)) stop('name must be of class character')
+  if(!is.logical(force)) stop('force is not a boolean')
+  if(name == "") name=data.glm@key
+  
+  force = ifelse(force==TRUE, 1, 0)
+  res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_SaveModel, model=object@key, path=gsub('//','/',paste(dir,name,sep='/')), force=force)
+  gsub('//','/',paste(dir,name,sep='/'))
+  }
+
+# ------------------- Load H2O Model from Disk ----------------------------------------------------
+#h2o.loadModel <- function(object, path="") {
+#  if(missing(object)) stop('Must specify object')
+#  if(class(object) != 'H2OClient') stop('object must be of class H2OClient')
+#  if(!is.character(path)) stop('path must be of class character')
+
+#  res = .h2o.__remoteSend(object, .h2o.__PAGE_LoadModel, path = path)
+#  key = model$model$parameters$destination_key
+#}

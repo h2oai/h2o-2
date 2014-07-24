@@ -265,10 +265,11 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       // Check latest predictions
       tstats.updateBy(ktrees);
     }
-
-    model = doScoring(model, fr, ktrees, tid, tstats, true, !hasValidation(), build_tree_one_node);
-    // Make sure that we did not miss any votes
-    assert !importance || _treeMeasuresOnOOB.npredictors() == _treeMeasuresOnSOOB[0/*variable*/].npredictors() : "Missing some tree votes in variable importance voting?!";
+    if( Job.isRunning(self()) ) { // do not perform final scoring and finish
+      model = doScoring(model, fr, ktrees, tid, tstats, true, !hasValidation(), build_tree_one_node);
+      // Make sure that we did not miss any votes
+      assert !importance || _treeMeasuresOnOOB.npredictors() == _treeMeasuresOnSOOB[0/*variable*/].npredictors() : "Missing some tree votes in variable importance voting?!";
+    }
 
     return model;
   }
