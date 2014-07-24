@@ -314,10 +314,15 @@ public abstract class LSMSolver extends Iced{
             if(err < _gradientEps)
               break;
           }
-          // did not converge, check if we can converge in reasonable time
-          double diff = Math.abs(lastErr - err);
-          if ((err / diff) > max_iter) { // we won't ever converge with this setup (maybe change rho and try again?)
+          boolean allzeros = true;
+          for(int x = 0; allzeros && x < z.length-1; ++x)
+            allzeros = z[i] == 0;
+          if(!allzeros) { // only want this check if we're past the warm up period (there can be many iterations with all zeros!)
+            // did not converge, check if we can converge in reasonable time
+            double diff = Math.abs(lastErr - err);
+            if ((err / diff) > max_iter) { // we won't ever converge with this setup (maybe change rho and try again?)
               break;
+            }
           }
           lastErr = err;
           k = i + round;
