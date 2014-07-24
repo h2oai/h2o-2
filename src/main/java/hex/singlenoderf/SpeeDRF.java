@@ -178,7 +178,6 @@ public class SpeeDRF extends Job.ValidatedJob {
           return m;
         }
       }.invoke(dest());
-//      ((SpeeDRFModel)UKV.get(dest())).unlock(self());
       emptyLTrash();
       cleanup();
     }
@@ -201,8 +200,10 @@ public class SpeeDRF extends Job.ValidatedJob {
       tsk._drf = this;
       tsk.validateInputData();
       tsk.invokeOnAllNodes();
-    } finally {
-//      model.unlock(self());
+      model = UKV.get(dest());
+    }
+    finally {
+      model.unlock(self());
       model.stop_training();
     }
   }
