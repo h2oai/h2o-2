@@ -290,6 +290,8 @@ public class SpeeDRF extends Job.ValidatedJob {
       test = FrameTask.DataInfo.prepareFrame(validation, validation.vecs()[source.find(response)], ignored_cols, !regression, false, false);
     }
 
+    if (test != null && test.lastVec().masterVec() != null) gtrash(test.lastVec());
+
     float[] priorDist = classification ? new MRUtils.ClassDist(train.lastVec()).doAll(train.lastVec()).rel_dist() : null;
 
     // Handle imbalanced classes by stratified over/under-sampling
