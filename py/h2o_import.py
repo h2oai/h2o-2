@@ -258,7 +258,7 @@ def import_only(node=None, schema='local', bucket=None, path=None,
                 print "ERROR: Something was missing for s3 on the java -jar cmd line when the cloud was built"
 
             if importParentDir:
-                importResult = node.import_file(folderURI, timeoutSecs=timeoutSecs)
+                importResult = node.import_files(folderURI, timeoutSecs=timeoutSecs)
             else:
                 importResult = node.import_files(folderURI + "/" + pattern, timeoutSecs=timeoutSecs)
 

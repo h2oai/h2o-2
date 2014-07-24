@@ -727,6 +727,9 @@ public abstract class Job extends Func {
       // Check if it make sense to build a model
       if (source.numRows()==0)
         throw new H2OIllegalArgumentException(find("source"), "Cannot build a model on empty dataset!");
+      // Check if there is a response
+      if (response == null)
+        throw new H2OIllegalArgumentException(find("response"), "Response is not specified!");
       // Does not alter the Response to an Enum column if Classification is
       // asked for: instead use the classification flag to decide between
       // classification or regression.
