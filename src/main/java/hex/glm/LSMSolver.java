@@ -316,7 +316,7 @@ public abstract class LSMSolver extends Iced{
           }
           boolean allzeros = true;
           for(int x = 0; allzeros && x < z.length-1; ++x)
-            allzeros = z[i] == 0;
+            allzeros = z[x] == 0;
           if(!allzeros) { // only want this check if we're past the warm up period (there can be many iterations with all zeros!)
             // did not converge, check if we can converge in reasonable time
             double diff = Math.abs(lastErr - err);
