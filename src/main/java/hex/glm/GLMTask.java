@@ -171,8 +171,8 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
         for(int i = 0; i < oldBeta.length; ++i) {
           b[i] = 0.5 * (oldBeta[i] + newBeta[i]);
           double d = b[i] - oldBeta[i];
-          if(d > diff || -d > diff)
-            diff = d;
+          if(d > diff) diff = d;
+          else if(d < -diff) diff = -d;
         }
         betas.add(b);
         newBeta = b;

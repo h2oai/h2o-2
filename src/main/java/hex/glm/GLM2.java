@@ -185,6 +185,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     public IterationInfo(int i, GLMIterationTask glmt, final int [] activeCols, double [] gradient){
       _iter = i;
       _glmt = glmt.clone();
+      if(_glmt._grad == null)
+        _glmt._grad = GLM2.contractVec(gradient,activeCols);
+      assert _glmt._grad != null;
       _activeCols = activeCols;
       _fullGrad = gradient;
       assert _glmt._beta != null && _glmt._val != null;
@@ -409,7 +412,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     return res;
   }
 
-  private final double [] contractVec(double [] beta, final int [] activeCols){
+  private static final double [] contractVec(double [] beta, final int [] activeCols){
     if(beta == null)return null;
     if(activeCols == null)return beta.clone();
     double [] res = MemoryManager.malloc8d(activeCols.length+1);
@@ -453,8 +456,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           return;
         }
         step *= 0.5;
-      } // no line step worked, forcibly converge
-      LogInfo("Line search did not find feasible step, go forward with step = " + step + ".");
+      } // no line step worked converge
+      LogInfo("Line search did not find feasible step, going forward with step = " + step + ".");
       new GLMIterationTask(GLM2.this.self(),_activeData,_glm,true,true,true,glmt._betas[glmt._betas.length-1],_ymu,1.0/_nobs,thresholds, new Iteration(getCompleter(),false,false)).asyncExec(_activeData._adaptedFrame);
     }
   }
