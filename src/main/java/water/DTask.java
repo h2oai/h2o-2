@@ -33,8 +33,7 @@ public abstract class DTask<T extends DTask> extends H2OCountedCompleter impleme
   protected int [] _lineNum;
   protected String [] _cls, _mth, _fname;
 
-  public synchronized void setException(Throwable ex){
-    if(_exception != null)return;
+  public void setException(Throwable ex){
     _exception = ex.getClass().getName();
     _msg = ex.getMessage();
     _eFromNode = H2O.SELF.toString();
