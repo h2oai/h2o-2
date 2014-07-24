@@ -78,10 +78,11 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             print "\n"+l
             h2o.cloudPerfH2O.message(l)
 
-            inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
+            inspect = h2o_cmd.runInspect(key=parseResult['destination_key'], timeoutSecs=300)
             numRows = inspect['numRows']
             numCols = inspect['numCols']
-            summary = h2o_cmd.runSummary(key=parseResult['destination_key'], numRows=numRows, numCols=numCols)
+            summary = h2o_cmd.runSummary(key=parseResult['destination_key'], numRows=numRows, numCols=numCols, 
+                timeoutSecs=300)
             h2o_cmd.infoFromSummary(summary)
 
 
