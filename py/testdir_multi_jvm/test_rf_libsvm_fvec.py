@@ -35,7 +35,8 @@ class Basic(unittest.TestCase):
             # ("colon-cancer.svm",   "cA", 30, 1),
             ("connect4.svm",       "cB", 30, 1),
             ("syn_6_1000_10.svm",  "cK", 30, 1),
-            ("syn_0_100_1000.svm", "cL", 30, 1),
+            # float response requires regression
+            # ("syn_0_100_1000.svm", "cL", 30, 1),
             ("mushrooms.svm",      "cG", 30, 1),
             # rf doesn't like reals
             # ("duke.svm",           "cD", 30, 1),
