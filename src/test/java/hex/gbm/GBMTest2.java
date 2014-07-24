@@ -28,6 +28,7 @@ public class GBMTest2 extends TreeTestWithBalanceAndCrossVal {
       gbm.invoke();
       Assert.assertEquals("Number of cross validation model is wrond!", nfolds, gbm.xval_models.length);
       model = UKV.get(gbm.dest());
+      Assert.assertTrue(model.get_params().state == Job.JobState.DONE); //HEX-1817
     } finally {
       if (f!=null) f.delete();
       if (model!=null) {

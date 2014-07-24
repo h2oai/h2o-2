@@ -192,6 +192,7 @@ public class DRFTest extends TestUtil {
       drf.invoke();
       // Get the model
       model = UKV.get(drf.dest());
+      Assert.assertTrue(model.get_params().state == Job.JobState.DONE); //HEX-1817
       testHTML(model);
       // And compare CMs
       assertCM(expCM, model.cms[model.cms.length-1]._arr);

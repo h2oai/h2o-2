@@ -1,5 +1,6 @@
 package hex;
 
+import org.junit.Assert;
 import static org.junit.Assert.assertEquals;
 import hex.FrameTask.DataInfo;
 import hex.glm.*;
@@ -43,6 +44,7 @@ public class GLMTest2  extends TestUtil {
      new GLM2("GLM test of gaussian(linear) regression.",Key.make(),modelKey,dinfo,glm,new double[]{0},0).fork().get();
      model = DKV.get(modelKey).get();
      testHTML(model);
+     Assert.assertTrue(model.get_params().state == Job.JobState.DONE); //HEX-1817
      HashMap<String, Double> coefs = model.coefficients();
      assertEquals(0.0,coefs.get("Intercept"),1e-4);
      assertEquals(0.1,coefs.get("x"),1e-4);
@@ -236,6 +238,7 @@ public class GLMTest2  extends TestUtil {
       new GLM2("GLM test on prostate.",Key.make(),modelKey,dinfo,glm,new double[]{0},0).fork().get();
 
       model = DKV.get(modelKey).get();
+      Assert.assertTrue(model.get_params().state == Job.JobState.DONE); //HEX-1817
       testHTML(model);
       HashMap<String, Double> coefs = model.coefficients();
       for(int i = 0; i < cfs1.length; ++i)

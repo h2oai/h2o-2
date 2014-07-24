@@ -1,5 +1,6 @@
 package hex.singlenoderf;
 
+import org.junit.Assert;
 import static org.junit.Assert.assertEquals;
 import org.junit.BeforeClass;
 import water.*;
@@ -51,6 +52,8 @@ public class SpeeDRFTest extends TestUtil {
 
     spdrf.invoke();
     SpeeDRFModel m = UKV.get(spdrf.dest());
+    Assert.assertTrue(m.get_params().state == Job.JobState.DONE); //HEX-1817
+    testHTML(m);
 
     assertEquals("Number of classes", 2,  m.classes());
     assertEquals("Number of trees", 3, m.size());
@@ -77,6 +80,8 @@ public class SpeeDRFTest extends TestUtil {
 
     spdrf.invoke();
     SpeeDRFModel m = UKV.get(spdrf.dest());
+    Assert.assertTrue(m.get_params().state == Job.JobState.DONE); //HEX-1817
+    testHTML(m);
 
     assertEquals("Number of classes", 7,  m.classes());
     assertEquals("Number of trees", 8, m.size());

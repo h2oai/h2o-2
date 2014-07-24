@@ -17,7 +17,7 @@ import java.util.Random;
 /**
  * The Deep Learning model
  * It contains a DeepLearningModelInfo with the most up-to-date model,
- * a scoring history, as well as some helpers to indicated the progress
+ * a scoring history, as well as some helpers to indicate the progress
  */
 public class DeepLearningModel extends Model implements Comparable<DeepLearningModel> {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -166,7 +166,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   @Override
   public hex.ConfusionMatrix cm() {
     final Errors lasterror = last_scored();
-    if (errors == null) return null;
+    if (lasterror == null) return null;
     water.api.ConfusionMatrix cm = lasterror.validation || lasterror.num_folds > 0 ?
             lasterror.valid_confusion_matrix :
             lasterror.train_confusion_matrix;
@@ -203,11 +203,11 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     private DataInfo data_info;
     public DataInfo data_info() { return data_info; }
 
-    // model is described by parameters and the following 2 arrays
+    // model is described by parameters and the following arrays
     private Neurons.DenseRowMatrix[] dense_row_weights; //one 2D weight matrix per layer (stored as a 1D array each)
     private Neurons.DenseColMatrix[] dense_col_weights; //one 2D weight matrix per layer (stored as a 1D array each)
     private Neurons.DenseVector[] biases; //one 1D bias array per layer
-    private Neurons.DenseVector[] avg_activations; //one 1D array per layer
+    private Neurons.DenseVector[] avg_activations; //one 1D array per hidden layer
 
     // helpers for storing previous step deltas
     // Note: These two arrays *could* be made transient and then initialized freshly in makeNeurons() and in DeepLearningTask.initLocal()
@@ -241,6 +241,10 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     public final Neurons.Matrix get_ada_dx_g(int i) { return dense_row_ada_dx_g[i] == null ? dense_col_ada_dx_g[i] : dense_row_ada_dx_g[i]; }
     public final Neurons.DenseVector get_biases_ada_dx_g(int i) { return biases_ada_dx_g[i]; }
 
+    //accessor to shared parameter defining avg activations
+    public final Neurons.DenseVector get_avg_activations(int i) { return avg_activations[i]; }
+
+
     @API(help = "Model parameters", json = true)
     private Request2 job;
     public final DeepLearning get_params() { return (DeepLearning)job; }
@@ -263,6 +267,9 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
     @API(help = "RMS weight", json = true)
     public float[] rms_weight;
+
+    @API(help = "Mean Activation", json = true)
+    public float[] mean_a;
 
     @API(help = "Unstable", json = true)
     private volatile boolean unstable = false;
@@ -315,8 +322,9 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       biases = new Neurons.DenseVector[layers+1];
       for (int i=0; i<=layers; ++i) biases[i] = new Neurons.DenseVector(units[i+1]);
       // average activation (only for hidden layers)
-      if (get_params().autoencoder) {
+      if (get_params().autoencoder && get_params().sparsity_beta > 0) {
         avg_activations = new Neurons.DenseVector[layers];
+        mean_a = new float[layers];
         for (int i = 0; i < layers; ++i) avg_activations[i] = new Neurons.DenseVector(units[i + 1]);
       }
       fillHelpers();
@@ -373,6 +381,14 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       StringBuilder sb = new StringBuilder();
       if (get_params().diagnostics && !get_params().quiet_mode) {
         Neurons[] neurons = DeepLearningTask.makeNeuronsForTesting(this);
+
+        sb.append("Number of hidden layers is " + get_params().hidden.length + " \n");
+
+        if (get_params().sparsity_beta > 0) {
+          for (int k = 0; k < get_params().hidden.length; k++)
+            sb.append("Average activation in hidden layer " + k + " is  " + mean_a[k] + " \n");
+        }
+
         sb.append("Status of Neuron Layers:\n");
         sb.append("#  Units         Type      Dropout    L1       L2    " + (get_params().adaptive_rate ? "  Rate (Mean,RMS)   " : "  Rate      Momentum") + "   Weight (Mean, RMS)      Bias (Mean,RMS)\n");
         final String format = "%7g";
@@ -400,6 +416,10 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
                           + ", " + String.format(format, rms_weight[i]) + ")"
                           + " (" + String.format(format, mean_bias[i])
                           + ", " + String.format(format, rms_bias[i]) + ")\n");
+
+          if (get_params().sparsity_beta > 0) {
+            // sb.append("  " + String.format(format, mean_a[i]) + " \n");
+          }
         }
       }
       return sb.toString();
@@ -585,6 +605,16 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     // compute stats on all nodes
     public void computeStats() {
       float[][] rate = get_params().adaptive_rate ? new float[units.length-1][] : null;
+
+      if (get_params().autoencoder && get_params().sparsity_beta > 0) {
+        for (int k = 0; k < get_params().hidden.length; k++) {
+          mean_a[k] = 0;
+          for (int j = 0; j < avg_activations[k].size(); j++)
+            mean_a[k] += avg_activations[k].get(j);
+          mean_a[k] /= avg_activations[k].size();
+        }
+      }
+
       for( int y = 1; y < units.length; y++ ) {
         mean_rate[y] = rms_rate[y] = 0;
         mean_bias[y] = rms_bias[y] = 0;
@@ -604,7 +634,10 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
             mean_rate[y] += rate[y-1][u];
           }
         }
+
+
         mean_bias[y] /= biases[y-1].size();
+
         mean_weight[y] /= get_weights(y-1).size();
         if (rate != null) mean_rate[y] /= rate[y-1].length;
 

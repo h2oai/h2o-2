@@ -671,7 +671,7 @@ NEXT_CHAR:
       }
     }
     if(lines.isEmpty())
-      return new PSetupGuess(new ParserSetup(ParserType.AUTO,CsvParser.AUTO_SEP,0,false,null,setup._singleQuotes),0,0,null,false,new String[]{"No data!"});
+      return new PSetupGuess(new ParserSetup(ParserType.AUTO,CsvParser.AUTO_SEP,0,false,null,setup._singleQuotes,setup._forceEnumCol),0,0,null,false,new String[]{"No data!"});
     boolean hasHeader = false;
     final int single_quote = setup._singleQuotes ? CHAR_SINGLE_QUOTE : -1;
     byte sep = setup._separator;
@@ -685,7 +685,7 @@ NEXT_CHAR:
           sep = ' ';
         else {
           data[0] = new String[]{lines.get(0)};
-          return new PSetupGuess(new ParserSetup(ParserType.CSV,CsvParser.AUTO_SEP,1,false,null,setup._singleQuotes),lines.size(),0,data,false,new String[]{"Failed to guess separator."});
+          return new PSetupGuess(new ParserSetup(ParserType.CSV,CsvParser.AUTO_SEP,1,false,null,setup._singleQuotes,setup._forceEnumCol),lines.size(),0,data,false,new String[]{"Failed to guess separator."});
         }
       }
       if(lines.size() == 1)
@@ -718,7 +718,7 @@ NEXT_CHAR:
           hasHeader = true;
       }
     }
-    ParserSetup resSetup = new ParserSetup(ParserType.CSV, sep, ncols,hasHeader, hasHeader?data[0]:null,setup._singleQuotes);
+    ParserSetup resSetup = new ParserSetup(ParserType.CSV, sep, ncols,hasHeader, hasHeader?data[0]:null,setup._singleQuotes,setup._forceEnumCol);
     ArrayList<String> errors = new ArrayList<String>();
     int ilines = 0;
     for(int i = 0; i < data.length; ++i){
