@@ -97,8 +97,8 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   @Override public final SpeeDRF get_params() { return parameters; }
   @Override public final Request2 job() { return get_params(); }
 
-  public float[] priordist() { return this._priorClassDist; }
-  public float[] modeldist() { return this._modelClassDist; }
+  public float[] priordist() { return _priorClassDist; }
+  public float[] modeldist() { return _modelClassDist; }
 
   public SpeeDRFModel(Key selfKey, Key dataKey, Frame fr, String[] domain, SpeeDRF params, float[] priorDist) {
     super(selfKey, dataKey, fr, priorDist);
@@ -152,7 +152,6 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     this.verbose = model.verbose;
     this.verbose_output = model.verbose_output;
     this.useNonLocal = model.useNonLocal;
-//    this.trees_non_oob = model.trees_non_oob;
     this.errorsPerTree = model.errorsPerTree;
     this.tree_pojos = model.tree_pojos;
     this.resp_min = model.resp_min;
@@ -176,7 +175,65 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
   @Override public ConfusionMatrix cm() { return validAUC == null ? cms[cms.length-1] : validAUC.CM(); }
 
-  private static void scoreIt(SpeeDRFModel m, SpeeDRFModel old, final boolean score_new_only) {
+
+  private static void scoreOnTest(SpeeDRFModel m, SpeeDRFModel old) {
+
+    // Gather results
+    Frame scored = m.score(m.test_frame);
+    water.api.ConfusionMatrix cm = new water.api.ConfusionMatrix();
+    cm.vactual = m.test_frame.lastVec();
+    cm.vpredict = scored.anyVec();
+    cm.invoke();
+
+    // Regression scoring
+    if (m.regression) {
+      float mse = (float) cm.mse;
+      m.errs = Arrays.copyOf(old.errs, old.errs.length + 1);
+      m.errs[m.errs.length - 1] = mse;
+      m.cms = Arrays.copyOf(old.cms, old.cms.length + 1);
+      m.cms[m.cms.length - 1] = null;
+
+      // Classification scoring
+    } else {
+//      _domain = m.cmDomain;
+      //      m.confusion = CMTask.CMFinal.make(cm.cm, m, _domain, /*errors per tree*/, false, -1, m.cms)
+      m.cm = cm.cm;
+
+      m.errs = Arrays.copyOf(old.errs, old.errs.length + 1);
+      m.errs[m.errs.length - 1] = -1f;
+      m.cms = Arrays.copyOf(old.cms, old.cms.length + 1);
+      ConfusionMatrix new_cm = new ConfusionMatrix(m.cm);
+      m.cms[m.cms.length - 1] = new_cm;
+
+      // Create the ROC Plot
+      if (m.classes() == 2 && !scored.lastVec().isInt()) {
+        AUC auc_calc = new AUC();
+        auc_calc.vactual = cm.vactual;
+        auc_calc.vpredict = scored.lastVec(); // lastVec is class1
+        auc_calc.invoke();
+        m.validAUC = auc_calc.data(); //makeAUC(toCMArray(m.confusion._cms), ModelUtils.DEFAULT_THRESHOLDS, m.cmDomain);
+      }
+
+      // Launch a Variable Importance Task
+      if (m.importance && !m.regression)
+        m.varimp = m.doVarImpCalc(m);
+    }
+  }
+
+  private static void scoreIt(final SpeeDRFModel m, final SpeeDRFModel old, final boolean score_new_only) {
+    if (m.get_params().validation != null) {
+      Futures fs = new Futures();
+      H2O.H2OCountedCompleter scoretsk = new H2O.H2OCountedCompleter() {
+        @Override public void compute2() {
+          scoreOnTest(m, old);
+          tryComplete();
+        }
+      };
+      H2O.submitTask(scoretsk);
+      fs.add(scoretsk);
+      fs.blockForPending();
+      return;
+    }
     // Gather the results
     Futures fs = new Futures();
     final CMTask[] cmTask = new CMTask[1];
@@ -331,6 +388,13 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   @Override public Futures delete_impl(Futures fs) {
     for( Key k : t_keys )
       UKV.remove(k,fs);
+    if (testKey != null) UKV.remove(testKey, fs);
+//    if (test_frame != null) {
+//      for (Vec v : test_frame.vecs()) UKV.remove(v._key, fs);
+//    }
+//    if (fr != null) for (Vec v : fr.vecs()) UKV.remove(v._key, fs);
+//    if (response != null) UKV.remove(response._key, fs);
+    for (Key[] ka : local_forests) for (Key k : ka) UKV.remove(k, fs);
     return fs;
   }
 
