@@ -203,8 +203,10 @@ public class SpeeDRF extends Job.ValidatedJob {
       model = UKV.get(dest());
     }
     finally {
-      model.unlock(self());
-      model.stop_training();
+      if (model != null) {
+        model.unlock(self());
+        model.stop_training();
+      }
     }
   }
 
