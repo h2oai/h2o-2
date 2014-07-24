@@ -11,7 +11,7 @@ public class GLMPredict extends Request2 {
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
   @API(help = "Model key", required = true, filter = Default.class)
-  public Key modelKey; // Type to Model when retired OldModel
+  public Key model; // Type to Model when retired OldModel
 
   @API(help="lambda",required=false,filter=Default.class)
   double lambda = Double.NaN;
@@ -32,10 +32,10 @@ public class GLMPredict extends Request2 {
 
   @Override protected Response serve() {
     try {
-      if( modelKey == null )
+      if( model == null )
         throw new IllegalArgumentException("Model is required to perform validation!");
       final Key predictionKey = ( prediction == null )?Key.make("__Prediction_" + Key.make()):prediction;
-      GLMModel.GetScoringModelTask task = new GLMModel.GetScoringModelTask(null,null,modelKey,lambda);
+      GLMModel.GetScoringModelTask task = new GLMModel.GetScoringModelTask(null,null, model,lambda);
       H2O.submitTask(task);
       task.get();
       GLMModel model= task._res;
