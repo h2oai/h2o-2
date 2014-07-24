@@ -41,10 +41,10 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   @API(help = "All the trees in the model.")                              Key[] t_keys;
   /* Local forests produced by nodes */                                   Key[][] local_forests;
   /* Errors Per Tree                 */                                   long[] errorsPerTree;
-//  /* Local forests train Rows.       */                                   transient HashMap<Key, long[]> trees_non_oob;
   /* Total time in seconds to produce the model */                        long time;
   /* Frame being operated on */                                           Frame fr;
   /* Response Vector */                                                   Vec response;
+  /* Response Min    */                                                   int resp_min;
   /* Class weights */                                                     double[] weights;
   @API(help = "bin limit")                                                int nbins;
   /* Raw tree data. for faster classification passes */                   transient byte[][] trees;
@@ -155,6 +155,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 //    this.trees_non_oob = model.trees_non_oob;
     this.errorsPerTree = model.errorsPerTree;
     this.tree_pojos = model.tree_pojos;
+    this.resp_min = model.resp_min;
   }
 
   public Vec get_response() { return response; }
@@ -183,7 +184,9 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
     H2O.H2OCountedCompleter task4var = new H2O.H2OCountedCompleter() {
       @Override public void compute2() {
-        cmTask[0] = CMTask.scoreTask(score_model.test_frame == null ? score_model.fr : score_model.test_frame, score_model, score_model.size(), score_model.weights, score_model.oobee, score_model._priorClassDist, score_model._modelClassDist, score_new_only);
+        cmTask[0] = CMTask.scoreTask(score_model.test_frame == null ? score_model.fr : score_model.test_frame,
+                score_model, score_model.size(), score_model.weights, score_model.oobee, score_model._priorClassDist,
+                score_model._modelClassDist, score_new_only);
         tryComplete();
       }
     };
@@ -442,7 +445,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
       for (int i = 0; i  < votes.length - 1; ++i)
         preds[i+1] = ( (float)votes[i] / (float)treeCount());
-      preds[0] = (float) (classify(votes, null, null) + get_response().min());
+      preds[0] = (float) (classify(votes, null, null) + resp_min);
       return preds;
     }
   }

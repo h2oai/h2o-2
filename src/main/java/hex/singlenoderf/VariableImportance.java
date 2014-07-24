@@ -108,7 +108,7 @@ public class VariableImportance extends MRTask2<VariableImportance> {
     int _N = _nclasses;
     int[] soob = null; // shuffled oob rows
     boolean collectOOB = true;
-    final int cmin =  (int) _model.response.min();
+    final int cmin = _model.resp_min;
 
     //Need the chunk of code to score over every tree...
     //Doesn't do anything with the first tree, we score time last *manually* (after looping over all da trees)

@@ -179,7 +179,7 @@ public class CMTask extends MRTask2<CMTask> {
 
   @Override public void map(Chunk[] chks) {
     final int rows = chks[0]._len;
-    final int cmin       = (int) _model.response.min();
+    final int cmin       = _model.resp_min;
     short     numClasses = (short)_model.classes();
     _cms = new long[ModelUtils.DEFAULT_THRESHOLDS.length][2][2];
 
