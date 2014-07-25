@@ -17,16 +17,21 @@ function(conn) {
   prostate.hex <- h2o.uploadFile(conn, path, key="prostate.hex")
   
   main_model <- h2o.glm(x = 3:8, y = 2, data = prostate.hex, nfold = 2, standardize = FALSE, family = "binomial")
+
+
+  print(main_model@key)
   
-  first_xval <- doNotCallThisMethod...Unsupported(conn, main_model@xval[[1]]@key)
+  print(conn)
   
+  first_xval <- h2o.getModel(conn, main_model@key)@xval[[1]]
+
   Log.info("Expect that the xval model has a family binomial, just like the main model...")
-  expect_that(first_xval$glm_model$parameters$family, equals("binomial"))
-  expect_that(first_xval$glm_model$parameters$family, equals(main_model@model$params$family$family))
+  expect_that(first_xval@model$params$family$family, equals("binomial"))
+  expect_that(first_xval@model$params$family$family, equals(main_model@model$params$family$family))
   
   Log.info("Expect that the xval model has standardize set to FALSE as it is in the main model.")
-  expect_that(first_xval$glm_model$parameters$standardize, equals("true"))
-  expect_that(as.logical(first_xval$glm_model$parameters$standardize), equals(main_model@model$params$standardize))
+  expect_that(first_xval@model$params$standardize, equals("false"))
+  expect_that(as.logical(first_xval@model$params$standardize), equals(main_model@model$params$standardize))
   testEnd()
 }
 

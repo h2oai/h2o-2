@@ -829,6 +829,12 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
               for(int i = 0; i < xvals.length; ++i){
                 xvals[i] = (GLM2)GLM2.this.clone();
                 xvals[i].n_folds = 0;
+                xvals[i].standardize = standardize;
+                xvals[i].family = family;
+                xvals[i].link = link;
+                xvals[i].beta_epsilon = beta_epsilon;
+                xvals[i].max_iter = max_iter;
+                xvals[i].variable_importances = variable_importances;
                 if(i != 0){
                   xvals[i]._dinfo = _dinfo.getFold(i-1,n_folds);
                   xvals[i].destination_key = Key.make(dest().toString() + "_xval_" + i, (byte) 1, Key.HIDDEN_USER_KEY, H2O.SELF);
