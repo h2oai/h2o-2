@@ -8,6 +8,8 @@ covtype.hex <- h2o.importFile(localH2O, normalizePath(locate("smalldata/covtype/
 hex <- covtype.hex
 
 print(ifelse(TRUE, hex, hex[,1] <- hex[,1] + 1))
+print(h2o.exec(ifelse(1, hex, hex[,1] <- hex[,1] + 1)))
+
 
 #ensure that base ifelse is not broken
 print(ifelse(TRUE, iris, iris[,1] <- iris[,1] + 1))

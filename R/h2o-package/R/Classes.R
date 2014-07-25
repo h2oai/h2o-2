@@ -1247,8 +1247,8 @@ screeplot.H2OPCAModel <- function(x, npcs = min(10, length(x@model$sdev)), type 
 function(test, yes, no, type) {
  if (type == "test") {
    return(class(test) == "H2OParsedData"
-            && (is.numeric(yes) || class(yes) == "H2OParsedData")
-            && (is.numeric(no) || class(no) == "H2OParsedData")
+            && (is.numeric(yes) || class(yes) == "H2OParsedData" || is.logical(yes))
+            && (is.numeric(no) || class(no) == "H2OParsedData" || is.logical(no))
             && (test@logic || .canBeCoercedToLogical(test)))
  }
 }
@@ -1257,12 +1257,18 @@ ifelse<-
 function (test, yes, no)
 {
     if (.check.ifelse.conditions(test, yes, no, "test")) {
+      if (is.logical(yes)) yes <- as.numeric(yes)
+      if (is.logical(no)) no <- as.numeric(no)
       return(.h2o.__multop2("ifelse", test, yes, no))
 
     } else if ( class(yes) == "H2OParsedData" && class(test) == "logical") {
+      if (is.logical(yes)) yes <- as.numeric(yes)
+      if (is.logical(no)) no <- as.numeric(no)
       return(.h2o.__multop2("ifelse", as.numeric(test), yes, no))
 
     } else if (class(no) == "H2OParsedData" && class(test) == "logical") {
+      if (is.logical(yes)) yes <- as.numeric(yes)
+      if (is.logical(no)) no <- as.numeric(no)
       return(.h2o.__multop2("ifelse", as.numeric(test), yes, no))
     }
     if (is.atomic(test))
