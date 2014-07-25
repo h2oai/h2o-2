@@ -11,6 +11,8 @@ test.pub.696 <- function(conn) {
   print(d)
   print(dim(d))
 
+  a2 <- h2o.exec(a2 <- rep_len(0,1000000000))
+  b2 <- h2o.exec(b2 <- runif(a, -1))
 
   testEnd()
 }
