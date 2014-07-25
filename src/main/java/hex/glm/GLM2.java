@@ -481,6 +481,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 
 
   private double [] setSubmodel(final double[] newBeta, GLMValidation val, H2OCountedCompleter cmp){
+    assert cmp instanceof H2OJobCompleter || cmp instanceof ParallelGLMs.Callback:"cmp = " + cmp;
     final double [] fullBeta = (_activeCols == null || newBeta == null)?newBeta:expandVec(newBeta,_activeCols);
     final double [] newBetaDeNorm;
     if(_dinfo._predictor_transform == DataInfo.TransformType.STANDARDIZE) {
@@ -519,7 +520,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     @Override public void callback(final GLMIterationTask glmt){
       assert _activeCols == null || glmt._beta == null || glmt._beta.length == (_activeCols.length+1):LogInfo("betalen = " + glmt._beta.length + ", activecols = " + _activeCols.length);
       assert _activeCols == null || _activeCols.length == _activeData.fullN();
-      assert getCompleter().getPendingCount() == 1:LogInfo("unexpected pending count, expected 1, got " + getCompleter().getPendingCount()); // will be decreased by 1 after we leave this callback
+      assert getCompleter().getPendingCount() >= 1:LogInfo("unexpected pending count, expected >=  1, got " + getCompleter().getPendingCount()); // will be decreased by 1 after we leave this callback
       if(_countIteration)++_iter;
       _callbackStart = System.currentTimeMillis();
       LogInfo("iteration done in " + (_callbackStart - _iterationStartTime) + "ms");
@@ -708,15 +709,30 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     public void callback(H2OCountedCompleter h2OCountedCompleter) {
       // check if we're done otherwise launch next lambda computation
       boolean done = _currentLambda <= lambda_min
-        || (max_predictors != -1 && nzs(_beta) > max_predictors); // _iter < max_iter && (improved || _runAllLambdas) && _lambdaIdx < (lambda_value.length-1);;
+        || (max_predictors != -1 && nzs(_lastResult._glmt._beta) > max_predictors); // _iter < max_iter && (improved || _runAllLambdas) && _lambdaIdx < (lambda_value.length-1);;
       if(!done) {
         H2OCountedCompleter cmp = (H2OCountedCompleter)getCompleter();
         cmp.addToPendingCount(1);
         nextLambda(nextLambdaValue(), new LambdaIteration(cmp));
-      }
+      } else _done = true;
     }
   }
 
+  private class H2OJobCompleter extends H2OCountedCompleter {
+
+    @Override
+    public void compute2() {
+      run(true,this);
+    }
+    @Override public void onCompletion(CountedCompleter cmp){
+      GLM2.this.complete();
+    }
+    @Override public boolean onExceptionalCompletion(Throwable t, CountedCompleter cmp){
+      if(!(t instanceof JobCancelledException) && (t.getMessage() == null || !t.getMessage().contains("JobCancelled")))
+        GLM2.this.cancel(t);
+      return true;
+    }
+  }
   @Override
   public GLM2 fork(){
     // keep *this* separate from what's stored in K/V as job (will be changing it!)
@@ -727,20 +743,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       total = 3*nlambdas;
     DKV.put(_progressKey,new GLM2_Progress(total*(n_folds+1)),fs);
     fs.blockForPending();
-    H2OCountedCompleter fjtask = new H2OCountedCompleter() {
-      @Override
-      public void compute2() {
-        run(true,this);
-      }
-      @Override public void onCompletion(CountedCompleter cmp){
-        GLM2.this.complete();
-      }
-      @Override public boolean onExceptionalCompletion(Throwable t, CountedCompleter cmp){
-        if(!(t instanceof JobCancelledException) && (t.getMessage() == null || !t.getMessage().contains("JobCancelled")))
-          GLM2.this.cancel(t);
-        return true;
-      }
-    };
+    H2OCountedCompleter fjtask = new H2OJobCompleter();
     GLM2 j = (GLM2)clone();
     j.start(fjtask); // modifying GLM2 object, don't want job object to be the same instance
     H2O.submitTask(fjtask);
