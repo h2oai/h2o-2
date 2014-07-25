@@ -161,10 +161,17 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTPrint ());
     putPrefix(new ASTLs    ());
   }
+  static private boolean isReserved(String fn) {
+    return UNI_INFIX_OPS.containsKey(fn) || BIN_INFIX_OPS.containsKey(fn) || PREFIX_OPS.containsKey(fn);
+  }
   static private void putUniInfix(ASTOp ast) { UNI_INFIX_OPS.put(ast.opStr(),ast); }
   static private void putBinInfix(ASTOp ast) { BIN_INFIX_OPS.put(ast.opStr(),ast); }
   static private void putPrefix  (ASTOp ast) {    PREFIX_OPS.put(ast.opStr(),ast); }
-  static         void putUDF     (ASTOp ast, String fn) {     UDF_OPS.put(fn,ast); }
+  static         void putUDF     (ASTOp ast, String fn) {
+    if (isReserved(fn)) throw new IllegalArgumentException("Trying to overload a reserved method: "+fn+". Must not overload a reserved method with a user-defined function.");
+    if (UDF_OPS.containsKey(fn)) removeUDF(fn);
+    UDF_OPS.put(fn,ast);
+  }
   static         void removeUDF  (String fn) { UDF_OPS.remove(fn); }
   static public ASTOp isOp(String id) {
     // This order matters. If used as a prefix OP, `+` and `-` are binary only.
@@ -447,7 +454,7 @@ class ASTCanBeCoercedToLogical extends ASTUniPrefixOp {
     Vec[] v = fr.vecs();
     for (Vec aV : v) {
       if (aV.isInt()) {
-        if (aV.min() == 0 && aV.max() == 1) {
+        if ((aV.min() == 0 && aV.max() == 1) || (aV.min() == 0 && aV.min() == aV.max()) || (aV.min() == 1 && aV.min() == aV.max())) {
           d = 1;
           break;
         }
