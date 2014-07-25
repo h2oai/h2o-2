@@ -498,6 +498,12 @@ h2o.ddply <- function (.data, .variables, .fun = NULL, ..., .progress = 'none') 
   if( any(bad) ) stop( sprintf('can\'t recognize .variables %s', paste(vars[bad], sep=',')) )
   
   fun_name <- mm[[ '.fun' ]]
+
+  if(identical(as.list(substitute(.fun))[[1]], quote(`function`))) {
+    h2o.addFunction(.data@h2o, .fun, "anonymous")
+    fun_name <- "anonymous"
+  }
+
   exec_cmd <- sprintf('ddply(%s,c(%s),%s)', .data@key, paste(idx, collapse=','), as.character(fun_name))
   res <- .h2o.__exec2(.data@h2o, exec_cmd)
   .h2o.exec2(res$dest_key, h2o = .data@h2o, res$dest_key)
@@ -520,7 +526,7 @@ h2o.addFunction <- function(object, fun, name){
     if( class(name) != 'character' ) stop('name must be a name')
     fun_name <- name
   } else {
-    fun_name <- match.call()[['fun']]
+    fun_name <- "anonymous" #fun_name <- match.call()[['fun']]
   }
   src <- paste(deparse(fun), collapse='\n')
   exec_cmd <- sprintf('%s <- %s', as.character(fun_name), src)
