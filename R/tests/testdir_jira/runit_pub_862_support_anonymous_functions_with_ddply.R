@@ -15,7 +15,7 @@ expect_equal(55, dim(covtype.local)[2])
 # execs
 ###########################################################
 
-h2o.exec(ddply(covtype.hex, c(2), function(x) { mean( x[,2]) }))
+ddply(covtype.hex, c(2), function(x) { mean( x[,2]) })
 
 testEnd()
 
