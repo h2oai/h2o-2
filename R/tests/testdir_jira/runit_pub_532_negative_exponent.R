@@ -14,10 +14,26 @@ h2o.exec(covtype.hex$C55^2)
 h2o.exec(covtype.hex$C55^(-2))
 
 # currently fails:
-h2o.exec(covtype.hex$C55^-2)
+val0 <- h2o.exec(covtype.hex$C55^-2)
 h2o.exec(covtype.hex$C55^ -2)
 h2o.exec(covtype.hex$C55 ^-2)
 h2o.exec(covtype.hex$C55 ^-2 )
+
+
+#w/o h2o.exec:
+val <- covtype.hex$C55^-2
+covtype.hex$C55^ -2
+covtype.hex$C55 ^-2
+covtype.hex$C55 ^-2 
+
+print(val0)
+
+print("================")
+
+print(val)
+
+print(tail(val))
+
 
 testEnd()
 
