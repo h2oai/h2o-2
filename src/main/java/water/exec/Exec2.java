@@ -99,6 +99,8 @@ public class Exec2 {
     }
 
     // Some global constants
+    global.add(new ASTId(Type.DBL,"TRUE",0,global.size())); env.push(1.0);
+    global.add(new ASTId(Type.DBL,"FALSE",0,global.size())); env.push(0.0);
     global.add(new ASTId(Type.DBL,"T",0,global.size()));  env.push(1.0);
     global.add(new ASTId(Type.DBL,"F",0,global.size()));  env.push(0.0);
     global.add(new ASTId(Type.DBL,"NA",0,global.size()));  env.push(Double.NaN);
