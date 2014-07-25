@@ -87,7 +87,8 @@ setMethod("show", "H2OParsedData", function(object) {
 })
 
 setMethod("show", "H2OGrid", function(object) {
-  print(object@data)
+  print(object@data@h2o)
+  cat("Parsed Data Key:", object@data@key, "\n\n")
   cat("Grid Search Model Key:", object@key, "\n")
 
   temp = data.frame(t(sapply(object@sumtable, c)))
