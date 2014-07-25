@@ -96,7 +96,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   double prior = -1; // -1 is magic value for default value which is mean(y) computed on the current dataset
   private double _iceptAdjust; // adjustment due to the prior
 
-  public final int MAX_ITERATIONS_PER_LAMBDA = 10;
+  public final int MAX_ITERATIONS_PER_LAMBDA = 20;
   /**
    * Whether to compute variable importances for input features, based on the absolute
    * value of the coefficients.  For safety this should only be done if
