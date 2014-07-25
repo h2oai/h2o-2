@@ -195,6 +195,7 @@ public class Exec2 {
     if( isReserved(c) ) return null;
     // Fail on leading numeric
     if( isDigit(c) ) return null;
+    if (c == '^' && _buf[_x+1] == '-') return _str.substring(++_x -1, _x);
     _x++;                       // Accept parse of 1 char
 
     // If first char is letter, standard ID
