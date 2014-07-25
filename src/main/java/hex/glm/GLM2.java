@@ -559,11 +559,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           if(!highAccuracy()){
             LogInfo("reached negative explained deviance without line-search, rerunning with high accuracy settings.");
             setHighAccuracy();
-            if(_lastResult != null)
+            if(_lastResult != null && Arrays.equals(_lastResult._activeCols,_activeCols))
               new GLMIterationTask(GLM2.this.self(),_activeData,glmt._glm, true, true, true, _lastResult._glmt._beta,_ymu,1.0/_nobs,thresholds, new Iteration(getCompleter(),false)).asyncExec(_activeData._adaptedFrame);
-            else if(_lambdaIdx > 2) // > 2 because 0 is null model, we don't wan to run with that
-                throw H2O.unimpl();
-//              new GLMIterationTask(GLM2.this,_activeData,glmt._glm, true, true, true, _model.submodels[_lambdaIdx-1].norm_beta,_ymu,1.0/_nobs,thresholds, new Iteration()).asyncExec(_activeData._adaptedFrame);
             else // no sane solution to go back to, start from scratch!
               new GLMIterationTask(GLM2.this.self(),_activeData,glmt._glm, true, false, false, null,_ymu,1.0/_nobs,thresholds, new Iteration(getCompleter(),false)).asyncExec(_activeData._adaptedFrame);
             _lastResult = null;
