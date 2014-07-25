@@ -481,7 +481,6 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 
 
   private double [] setSubmodel(final double[] newBeta, GLMValidation val, H2OCountedCompleter cmp){
-    assert cmp instanceof H2OJobCompleter || cmp instanceof ParallelGLMs.Callback:"cmp = " + cmp;
     final double [] fullBeta = (_activeCols == null || newBeta == null)?newBeta:expandVec(newBeta,_activeCols);
     final double [] newBetaDeNorm;
     if(_dinfo._predictor_transform == DataInfo.TransformType.STANDARDIZE) {
@@ -632,7 +631,6 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     }
     private void checkKKTAndComplete(final GLMIterationTask glmt, final double [] newBeta, final boolean failedLineSearch){
       final double [] fullBeta = expandVec(newBeta,_activeCols);
-      assert getCompleter().getPendingCount() == 1:LogInfo("pending count = " + getCompleter().getPendingCount() + ", epxected 1");
       // now we need full gradient (on all columns) using this beta
       new GLMIterationTask(GLM2.this.self(),_dinfo,_glm,false,true,true,fullBeta,_ymu,1.0/_nobs,thresholds, new H2OCallback<GLMIterationTask>((H2OCountedCompleter)getCompleter()) {
         @Override
