@@ -1108,15 +1108,10 @@ head.H2OParsedData <- function(x, n = 6L, ...) {
   stopifnot(length(n) == 1L)
   n <- ifelse(n < 0L, max(numRows + n, 0L), min(n, numRows))
   if(n == 0) return(data.frame())
-  
-  x.slice = as.data.frame(x[seq_len(n),])
-#   if(ncol(x) > .MAX_INSPECT_COL_VIEW)
-#     warning(x@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
-#   res = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS2, source = x@key, max_ncols = .Machine$integer.max)
-#   for(i in 1:ncol(x)) {
-#     if(!is.null(res$levels[[i]]))
-#       x.slice[,i] <- factor(x.slice[,i], levels = res$levels[[i]])
-#   }
+
+  tmp_head <- x[seq_len(n),]
+  x.slice = as.data.frame(tmp_head)
+  h2o.rm(tmp_head@h2o, tmp_head@key)
   return(x.slice)
 }
 
@@ -1127,16 +1122,10 @@ tail.H2OParsedData <- function(x, n = 6L, ...) {
   if(n == 0) return(data.frame())
   
   idx <- seq.int(to = nrx, length.out = n)
-  x.slice <- as.data.frame(x[idx,])
+  tmp_tail <- x[idx,]
+  x.slice <- as.data.frame(tmp_tail)
+  h2o.rm(tmp_tail@h2o, tmp_tail@key)
   rownames(x.slice) <- idx
-  
-#   if(ncol(x) > .MAX_INSPECT_COL_VIEW)
-#     warning(x@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
-#   res = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS2, source = x@key, max_ncols = .Machine$integer.max)
-#   for(i in 1:ncol(x)) {
-#     if(!is.null(res$levels[[i]]))
-#       x.slice[,i] <- factor(x.slice[,i], levels = res$levels[[i]])
-#   }
   return(x.slice)
 }
 
