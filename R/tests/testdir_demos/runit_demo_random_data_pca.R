@@ -1,5 +1,6 @@
 #----------------------------------------------------------------------
 # Purpose:  Create random data and run 20 iterations of GLM on it.
+# Timings for R's pca (prcomp()) added; view by removing '#R#'s 
 #----------------------------------------------------------------------
 
 setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
@@ -20,6 +21,7 @@ cols
 create_frm_time = matrix(NA, nrow = length(rows), ncol = length(cols)) 
 frm_size = matrix(NA, nrow=length(rows), ncol = length(cols)) 
 algo_run_time = matrix(NA, nrow = length(rows), ncol = length(cols)) 
+#R# algo_run_time_R = matrix(NA, nrow = length(rows), ncol = length(cols)) 
 col_grid = rep(NA,length(cols)) 
 row_grid = rep(NA,length(rows)) 
 names <- c() 
@@ -37,6 +39,8 @@ for(i in 1:length(rows)){ # changing number of rows
                                                  categorical_fraction = 0.0, factors = 10, 
                                                  integer_fraction = 0.4, integer_range = 100, 
                                                  missing_fraction = 0, response_factors = 1) ) 
+    
+
     create_frm_time[i,j] = as.numeric(sst[3]) 
     mem = h2o.ls(conn,"myframe") 
     frm_size[i,j] = as.numeric(mem[2]) 
@@ -48,6 +52,13 @@ for(i in 1:length(rows)){ # changing number of rows
 
     aat = system.time(myframe.pca<-h2o.prcomp(data=myframe))
     algo_run_time[i,j] = aat[3] 
+
+    #Run R's  PCA on same data
+    #R# myframe.R <- as.data.frame(myframe)
+    #R# myframe.R <- sapply(myframe.R, as.numeric)
+    #R# myframe.R <- as.data.frame(myframe.R)
+    #R# aat.R = system.time(myframe.Rpca<-prcomp(~., myframe.R, scale=T))
+    #R# algo_run_time_R[i,j] = aat.R[3]
   } 
 } 
 myframe = NULL 
@@ -62,12 +73,17 @@ plot(frm_size[1:3])
 #col_grid 
 #row_grid 
 
+#format timing data from h2o
 data = algo_run_time 
 dimnames(data)<-list(row_grid,col_grid) 
 
+#format timing data from R
+#R# data_R = algo_run_time_R
+#R# dimnames(data_R)<-list(row_grid,col_grid) 
+
 # Report timing results 
 data 
-
+#R# data_R
 
 # Visualization 
 #library(rgl) 
