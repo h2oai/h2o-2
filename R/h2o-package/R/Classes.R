@@ -1243,34 +1243,77 @@ screeplot.H2OPCAModel <- function(x, npcs = min(10, length(x@model$sdev)), type 
   as.logical(.h2o.__unop2("canBeCoercedToLogical", vec))
 }
 
-setMethod("ifelse", signature(test="H2OParsedData", yes="ANY", no="ANY"), function(test, yes, no) {
-  if(!(is.numeric(yes) || class(yes) == "H2OParsedData") || !(is.numeric(no) || class(no) == "H2OParsedData"))
-    stop("Unimplemented")
-  if(!test@logic && !.canBeCoercedToLogical(test)) stop(test@key, " is not a H2O logical data type")
-  .h2o.__multop2("ifelse", test, yes, no)
-})
+.check.ifelse.conditions <-
+function(test, yes, no, type) {
+ if (type == "test") {
+   return(class(test) == "H2OParsedData"
+            && (is.numeric(yes) || class(yes) == "H2OParsedData")
+            && (is.numeric(no) || class(no) == "H2OParsedData")
+            && (test@logic || .canBeCoercedToLogical(test)))
+ }
+}
 
-setMethod("ifelse", signature(test="logical", yes="H2OParsedData", no="numeric"), function(test, yes, no) {
-  if(length(test) > 1) stop("test must be a single logical value")
-  .h2o.__multop2("ifelse", as.numeric(test), yes, no)
-})
+ifelse<-
+function (test, yes, no)
+{
+    if (.check.ifelse.conditions(test, yes, no, "test")) {
+      return(.h2o.__multop2("ifelse", test, yes, no))
 
-setMethod("ifelse", signature(test="logical", yes="numeric", no="H2OParsedData"), function(test, yes, no) {
-  if(length(test) > 1) stop("test must be a single logical value")
-  .h2o.__multop2("ifelse", as.numeric(test), yes, no)
-})
+    } else if ( class(yes) == "H2OParsedData" && class(test) == "logical") {
+      return(.h2o.__multop2("ifelse", as.numeric(test), yes, no))
 
-setMethod("ifelse", signature(test="logical", yes="H2OParsedData", no="H2OParsedData"), function(test, yes, no) {
-  if(length(test) > 1) stop("test must be a single logical value")
-  .h2o.__multop2("ifelse", as.numeric(test), yes, no)
-})
+    } else if (class(no) == "H2OParsedData" && class(test) == "logical") {
+      return(.h2o.__multop2("ifelse", as.numeric(test), yes, no))
+    }
+    if (is.atomic(test))
+        storage.mode(test) <- "logical"
+    else test <- if (isS4(test))
+        as(test, "logical")
+    else as.logical(test)
+    ans <- test
+    ok <- !(nas <- is.na(test))
+    if (any(test[ok]))
+        ans[test & ok] <- rep(yes, length.out = length(ans))[test &
+            ok]
+    if (any(!test[ok]))
+        ans[!test & ok] <- rep(no, length.out = length(ans))[!test &
+            ok]
+    ans[nas] <- NA
+    ans
+}
 
-setMethod("levels", "H2OParsedData", function(x) {
-  # if(ncol(x) != 1) return(NULL)
-  if(ncol(x) != 1) stop("Can only retrieve levels of one column.")
-  res = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS2, source = x@key, max_ncols = .Machine$integer.max)
-  res$levels[[1]]
-})
+#setMethod("ifelse", signature(test="H2OParsedData", yes="ANY", no="ANY"), function(test, yes, no) {
+#  if(!(is.numeric(yes) || class(yes) == "H2OParsedData") || !(is.numeric(no) || class(no) == "H2OParsedData"))
+#    stop("Unimplemented")
+#  if(!test@logic && !.canBeCoercedToLogical(test)) stop(test@key, " is not a H2O logical data type")
+#  h2o.exec(ifelse(test, yes, no))
+##  .h2o.__multop2("ifelse", eval(test), yes, no)
+#})
+##
+#setMethod("ifelse", signature(test="logical", yes="H2OParsedData", no="ANY"), function(test, yes, no) {
+#  if(length(test) > 1) stop("test must be a single logical value")
+#  h2o.exec(ifelse(test, yes, no))
+##  .h2o.__multop2("ifelse", as.numeric(test), eval(yes), no)
+#})
+#
+#setMethod("ifelse", signature(test="logical", yes="ANY", no="H2OParsedData"), function(test, yes, no) {
+#  if(length(test) > 1) stop("test must be a single logical value")
+#  h2o.exec(ifelse(test, yes, no))
+##  .h2o.__multop2("ifelse", as.numeric(test), yes, eval(no))
+#})
+#
+#setMethod("ifelse", signature(test="logical", yes="H2OParsedData", no="H2OParsedData"), function(test, yes, no) {
+#  if(length(test) > 1) stop("test must be a single logical value")
+#  h2o.exec(ifelse(test, yes, no))
+##  .h2o.__multop2("ifelse", as.numeric(test), eval(yes), eval(no))
+#})
+#
+#setMethod("levels", "H2OParsedData", function(x) {
+#  # if(ncol(x) != 1) return(NULL)
+#  if(ncol(x) != 1) stop("Can only retrieve levels of one column.")
+#  res = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS2, source = x@key, max_ncols = .Machine$integer.max)
+#  res$levels[[1]]
+#})
 
 #----------------------------- Work in Progress -------------------------------#
 # TODO: Need to change ... to environment variables and pass to substitute method,
