@@ -95,7 +95,8 @@ setMethod("show", "H2OGrid", function(object) {
 })
 
 setMethod("show", "H2OKMeansModel", function(object) {
-    print(object@data)
+    print(object@data@h2o)
+    cat("Parsed Data Key:", object@data@key, "\n\n")
     cat("K-Means Model Key:", object@key)
     
     model = object@model
@@ -108,7 +109,8 @@ setMethod("show", "H2OKMeansModel", function(object) {
 })
 
 setMethod("show", "H2OGLMModel", function(object) {
-    print(object@data)
+    print(object@data@h2o)
+    cat("Parsed Data Key:", object@data@key, "\n\n")
     cat("GLM2 Model Key:", object@key)
     
     model = object@model
@@ -176,7 +178,8 @@ setMethod("show", "H2OGLMModelList", function(object) {
 })
 
 setMethod("show", "H2ODeepLearningModel", function(object) {
-  print(object@data)
+  print(object@data@h2o)
+  cat("Parsed Data Key:", object@data@key, "\n\n")
   cat("Deep Learning Model Key:", object@key)
 
   model = object@model
@@ -209,7 +212,8 @@ setMethod("show", "H2ODeepLearningModel", function(object) {
 })
 
 setMethod("show", "H2ODRFModel", function(object) {
-  print(object@data)
+  print(object@data@h2o)
+  cat("Parsed Data Key:", object@data@key, "\n\n")
   cat("Distributed Random Forest Model Key:", object@key)
 
   model = object@model
@@ -239,7 +243,8 @@ setMethod("show", "H2ODRFModel", function(object) {
 })
 
 setMethod("show", "H2OSpeeDRFModel", function(object) {
-  print(object@data)
+  print(object@data@h2o)
+  cat("Parsed Data Key:", object@data@key, "\n\n")
   cat("SpeeDRF Model Key:", object@key)
 
   model = object@model
@@ -278,7 +283,8 @@ setMethod("show", "H2OSpeeDRFModel", function(object) {
 })
 
 setMethod("show", "H2OPCAModel", function(object) {
-  print(object@data)
+  print(object@data@h2o)
+  cat("Parsed Data Key:", object@data@key, "\n\n")
   cat("PCA Model Key:", object@key)
 
   model = object@model
@@ -287,7 +293,8 @@ setMethod("show", "H2OPCAModel", function(object) {
 })
 
 setMethod("show", "H2ONBModel", function(object) {
-  print(object@data)
+  print(object@data@h2o)
+  cat("Parsed Data Key:", object@data@key, "\n\n")
   cat("Naive Bayes Model Key:", object@key)
   
   model = object@model
@@ -296,7 +303,8 @@ setMethod("show", "H2ONBModel", function(object) {
 })
 
 setMethod("show", "H2OGBMModel", function(object) {
-  print(object@data)
+  print(object@data@h2o)
+  cat("Parsed Data Key:", object@data@key, "\n\n")
   cat("GBM Model Key:", object@key, "\n")
 
   model = object@model
