@@ -527,7 +527,7 @@ h2o.addFunction <- function(object, fun, name){
     if( class(name) != 'character' ) stop('name must be a name')
     fun_name <- name
   } else {
-    fun_name <- "anonymous" #fun_name <- match.call()[['fun']]
+    fun_name <- match.call()[['fun']]
   }
   src <- paste(deparse(fun), collapse='\n')
   exec_cmd <- sprintf('%s <- %s', as.character(fun_name), src)
