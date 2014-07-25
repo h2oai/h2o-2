@@ -1320,12 +1320,12 @@ function (test, yes, no)
 ##  .h2o.__multop2("ifelse", as.numeric(test), eval(yes), eval(no))
 #})
 #
-#setMethod("levels", "H2OParsedData", function(x) {
-#  # if(ncol(x) != 1) return(NULL)
-#  if(ncol(x) != 1) stop("Can only retrieve levels of one column.")
-#  res = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS2, source = x@key, max_ncols = .Machine$integer.max)
-#  res$levels[[1]]
-#})
+setMethod("levels", "H2OParsedData", function(x) {
+  # if(ncol(x) != 1) return(NULL)
+  if(ncol(x) != 1) stop("Can only retrieve levels of one column.")
+  res = .h2o.__remoteSend(x@h2o, .h2o.__HACK_LEVELS2, source = x@key, max_ncols = .Machine$integer.max)
+  res$levels[[1]]
+})
 
 #----------------------------- Work in Progress -------------------------------#
 # TODO: Need to change ... to environment variables and pass to substitute method,
