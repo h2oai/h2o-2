@@ -278,11 +278,12 @@ public final class Key extends Iced implements Comparable {
   }
 
   // Hide a user key by turning it into a system key of type HIDDEN_USER_KEY
-  final public static Key makeUserHidden(final Key orig) {
-    if (!orig.user_allowed()) return orig; //already hidden
-    byte[] kb = orig._kb.clone();
-    kb[0] = Key.HIDDEN_USER_KEY;
-    return Key.make(kb);
+  final public static Key makeSystem(String s) {
+    byte[] kb= decodeKeyName(s);
+    byte[] kb2 = new byte[kb.length+1];
+    System.arraycopy(kb,0,kb2,1,kb.length);
+    kb2[0] = Key.BUILT_IN_KEY;
+    return Key.make(kb2);
   }
 
   // Custom Serialization Reader: Keys must be interned on construction.

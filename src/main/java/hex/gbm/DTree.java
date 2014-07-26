@@ -1301,7 +1301,7 @@ public class DTree extends Iced {
   }
 
   private Key defaultTreeKey() {
-    return Key.makeUserHidden(Key.make("__Tree_"+Key.rand()));
+    return Key.makeSystem("__Tree_"+Key.rand());
   }
 
   private static final SB TO_JAVA_BENCH_FUNC = new SB().
