@@ -3,13 +3,16 @@ package water;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotSame;
-import com.google.gson.JsonObject;
+
 import java.io.File;
 import org.junit.*;
+import water.fvec.Chunk;
+import water.fvec.Vec;
+import water.util.Utils;
 
 public class KVTest extends TestUtil {
 
-  @BeforeClass public static void stall() { stall_till_cloudsize(1); }
+  @BeforeClass public static void stall() { stall_till_cloudsize(3); }
 
   // ---
   // Run some basic tests.  Create a key, test that it does not exist, insert a
@@ -112,7 +115,7 @@ public class KVTest extends TestUtil {
     File file = find_test_file("target/h2o.jar");
     Key h2okey = load_test_file(file);
     ByteHisto bh = new ByteHisto();
-    bh.invoke(h2okey);
+    bh.doAll((Vec)DKV.get(h2okey).get());
     int sum=0;
     for( int i=0; i<bh._x.length; i++ )
       sum += bh._x[i];
@@ -122,22 +125,17 @@ public class KVTest extends TestUtil {
   }
   
   // Byte-wise histogram
-  public static class ByteHisto extends MRTask {
+  public static class ByteHisto extends MRTask2<ByteHisto> {
     int[] _x;
     // Count occurrences of bytes
-    public void map( Key key ) {
+    public void map( Chunk c ) {
       _x = new int[256];        // One-time set histogram array
-      Value val = DKV.get(key); // Get the Value for the Key
-      byte[] bits = val.memOrLoad();  // Compute local histogram
+      byte[] bits = c._mem;
       for( int i=0; i<bits.length; i++ )
         _x[bits[i]&0xFF]++;
     }
     // ADD together all results
-    public void reduce( DRemoteTask rbs ) {
-      ByteHisto bh = (ByteHisto)rbs;
-      if( _x == null ) { _x = bh._x; return; }
-      for( int i=0; i<_x.length; i++ )
-        _x[i] += bh._x[i];
+    public void reduce( ByteHisto bh ) { Utils.add(_x,bh._x); 
     }
   }
 
