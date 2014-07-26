@@ -238,7 +238,6 @@ public class
   }
 
   public boolean isLockable(){ return _type != TypeMap.PRIM_B && (TypeMap.newInstance(_type) instanceof Lockable); }
-  public boolean isArray()   { return _type == TypeMap.VALUE_ARRAY; }
   public boolean isFrame()   { return _type == TypeMap.FRAME; }
   public boolean isVec()     { return _type != TypeMap.PRIM_B && (TypeMap.newInstance(_type) instanceof Vec); }
   public boolean isByteVec() { return _type != TypeMap.PRIM_B && (TypeMap.newInstance(_type) instanceof ByteVec); }
