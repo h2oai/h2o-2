@@ -157,11 +157,14 @@ public class Tree extends H2OCountedCompleter {
       Key tkey = toKey();
       TreeP tp = _local_mode ? new TreeP(d.rows(), -1, d.nonOOB(), tkey) : null;
       appendKey(_job.dest(), tkey, _verbose > 10 ? _tree.toString(new StringBuilder(""), Integer.MAX_VALUE).toString() : "", tp);
+      // added
+//      appendKey(_job.dest(), tkey, _verbose > 10 ? _tree.toJava(new StringBuilder(""), Integer.MAX_VALUE).toString() : "", tp);
       StringBuilder sb = new StringBuilder("[RF] Tree : ").append(_data_id+1);
       sb.append(" d=").append(_tree.depth()).append(" leaves=").append(_tree.leaves()).append(" done in ").append(timer).append('\n');
       Log.info(sb.toString());
       if (_verbose > 10) {
         Log.info(Sys.RANDF, _tree.toString(sb, Integer.MAX_VALUE).toString());
+        Log.info(Sys.RANDF, _tree.toJava(sb, Integer.MAX_VALUE).toString());
       }
     }
     // Wait for completation
@@ -248,6 +251,7 @@ public class Tree extends H2OCountedCompleter {
     abstract int leaves();      // Number of leaves
     abstract void computeStats(ArrayList<SplitInfo>[] stats);
     abstract StringBuilder toString( StringBuilder sb, int len );
+    abstract StringBuilder toJava( StringBuilder sb, int len, int... depth );
     final boolean isLeaf() { return depth() == 0; }
 
     public abstract void print(TreePrinter treePrinter) throws IOException;
@@ -281,6 +285,10 @@ public class Tree extends H2OCountedCompleter {
     @Override public void computeStats(ArrayList<SplitInfo>[] stats) { /* do nothing for leaves */ }
     @Override public float classify(Row r) { if (_class == -1) { return _c; } else return (float)_class; }
     @Override public StringBuilder toString(StringBuilder sb, int n ) { return sb.append('[').append(_class).append(']').append('{').append(_rows).append('}'); }
+    @Override public StringBuilder toJava(StringBuilder sb, int n, int... depth ) {
+//      for (int i = -1 ; i < depth[0] ; i++) {sb.append("  ");}
+      return sb.append(_class).append(' ');
+    }
     @Override public void print(TreePrinter p) throws IOException { p.printNode(this); }
     @Override void write( AutoBuffer bs ) {
       bs.put1('[');             // Leaf indicator
@@ -365,6 +373,25 @@ public class Tree extends H2OCountedCompleter {
       sb = _l.toString(sb,n).append(',');
       if( sb.length() > n ) return sb;
       sb = _r.toString(sb,n).append(')');
+      return sb;
+    }
+    @Override public StringBuilder toJava( StringBuilder sb, int n, int... depth) {
+      int d = 0;
+      if (depth.length==0) {
+        //root
+        sb.append("  static final float predict(double[] data) {\n" +
+                "    float pred = ");
+      } else {d = depth[0];}
+      // d is the distance from the node to its root.
+      sb.append("Double.isNaN(data["+Integer.toString(_column)+"]) || (float) data["+Integer.toString(_column)+"] /* "+_name+"*/ ").append("<= ").append(Utils.p2d(split_value())).append("\n");
+      if( sb.length() > n ) return sb;
+      for (int i = -3 ; i < d ; i++) {sb.append("  ");}
+      sb.append(" ? ");
+      sb = _l.toJava(sb,n,d+1).append("\n");
+      if( sb.length() > n ) return sb;
+      for (int i = -3 ; i < d ; i++) {sb.append("  ");}
+      sb.append(" : ");
+      sb = _r.toJava(sb,n,d+1);
       return sb;
     }
 
