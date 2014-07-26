@@ -50,20 +50,16 @@ public final class ModelMetrics extends Iced {
     this.cm = cm;
   }
 
-  private static Key makeKey(String keyName) {
-    return Key.makeUserHidden(Key.make(keyName));
-  }
-
   public static Key buildKey(Model model, Frame frame) {
-    return makeKey("modelmetrics_" + model.getUniqueId().getId() + "_on_" + frame.getUniqueId().getId());
+    return Key.makeSystem("modelmetrics_" + model.getUniqueId().getId() + "_on_" + frame.getUniqueId().getId());
   }
 
   public static Key buildKey(UniqueId model, UniqueId frame) {
-    return makeKey("modelmetrics_" + model.getId() + "_on_" + frame.getId());
+    return Key.makeSystem("modelmetrics_" + model.getId() + "_on_" + frame.getId());
   }
 
   public Key buildKey() {
-    return makeKey("modelmetrics_" + this.model.getId() + "_on_" + this.frame.getId());
+    return Key.makeSystem("modelmetrics_" + this.model.getId() + "_on_" + this.frame.getId());
   }
 
   public void putInDKV() {
