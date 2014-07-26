@@ -40,6 +40,8 @@ public class JUnitRunner {
     tests.remove(ValueArrayToFrameTestAll.class);
     tests.remove(DeepLearningIrisTest.Long.class);
     tests.remove(DeepLearningProstateTest.Long.class);
+    tests.remove(GLMRandomTest.Short.class);
+    tests.remove(GLMRandomTest.Long.class);
     // Skip abstract test
     tests.remove(TreeTestWithBalanceAndCrossVal.class);
 

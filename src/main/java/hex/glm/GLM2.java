@@ -35,27 +35,27 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   // API input parameters BEGIN ------------------------------------------------------------
 
   @API(help = "max-iterations", filter = Default.class, lmin=1, lmax=1000000, json=true, importance = ParamImportance.CRITICAL)
-  int max_iter = 100;
+  public int max_iter = 100;
 
   transient public boolean _done = false;
   @API(help = "Standardize numeric columns to have zero mean and unit variance.", filter = Default.class, json=true, importance = ParamImportance.CRITICAL)
-  boolean standardize = true;
+  public boolean standardize = true;
 
   @API(help = "validation folds", filter = Default.class, lmin=0, lmax=100, json=true, importance = ParamImportance.CRITICAL)
-  int n_folds;
+  public int n_folds;
 
   @API(help = "Family.", filter = Default.class, json=true, importance = ParamImportance.CRITICAL)
-  Family family = Family.gaussian;
+  public Family family = Family.gaussian;
 
   @API(help = "", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
-  Link link = Link.family_default;
+  public Link link = Link.family_default;
 
 
   @API(help = "Tweedie variance power", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
-  double tweedie_variance_power;
+  public double tweedie_variance_power;
 
   @API(help = "distribution of regularization between L1 and L2.", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
-  double [] alpha = new double[]{0.5};
+  public double [] alpha = new double[]{0.5};
 
   @API(help = "regularization strength", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
   public double [] lambda = new double[]{1e-5};
@@ -64,36 +64,36 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 
 
   @API(help = "beta_eps", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
-  double beta_epsilon = DEFAULT_BETA_EPS;
+  public double beta_epsilon = DEFAULT_BETA_EPS;
 
   @API(help="use line search (slower speed, to be used if glm does not converge otherwise)",filter=Default.class, importance = ParamImportance.SECONDARY)
-  boolean higher_accuracy;
+  public boolean higher_accuracy;
 
   @API(help="By default, first factor level is skipped from the possible set of predictors. Set this flag if you want use all of the levels. Needs sufficient regularization to solve!",filter=Default.class, importance = ParamImportance.SECONDARY)
-  boolean use_all_factor_levels;
+  public boolean use_all_factor_levels;
 
 
   @API(help="use lambda search starting at lambda max, given lambda is then interpreted as lambda min",filter=Default.class, importance = ParamImportance.SECONDARY)
-  boolean lambda_search;
+  public boolean lambda_search;
 
   @API(help="use strong rules to filter out inactive columns",filter=Default.class, importance = ParamImportance.SECONDARY)
-  boolean strong_rules_enabled = true;
+  public boolean strong_rules_enabled = true;
 
   // intentionally not declared as API now
   int sparseCoefThreshold = 1000; // if more than this number of predictors, result vector of coefficients will be stored sparse
 
   @API(help="lambda_Search stop condition: stop training when model has more than than this number of predictors (or don't use this option if -1).",filter=Default.class, importance = ParamImportance.EXPERT)
-  int max_predictors = -1;
+  public int max_predictors = -1;
 
   @API(help="number of lambdas to be used in a search",filter=Default.class, importance = ParamImportance.EXPERT)
-  int nlambdas = 100;
+  public int nlambdas = 100;
 
   @API(help="min lambda used in lambda search, specified as a ratio of lambda_max",filter=Default.class, importance = ParamImportance.EXPERT)
-  double lambda_min_ratio = -1;
+  public double lambda_min_ratio = -1;
 
 
   @API(help="prior probability for y==1. To be used only for logistic regression iff the data has been sampled and the mean of response does not reflect reality.",filter=Default.class, importance = ParamImportance.EXPERT)
-  double prior = -1; // -1 is magic value for default value which is mean(y) computed on the current dataset
+  public double prior = -1; // -1 is magic value for default value which is mean(y) computed on the current dataset
   private double _iceptAdjust; // adjustment due to the prior
 
   public final int MAX_ITERATIONS_PER_LAMBDA = 20;
