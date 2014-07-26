@@ -6,6 +6,8 @@ import hex.deeplearning.NeuronsTest;
 import hex.drf.DRFTest;
 import hex.drf.DRFTest2;
 import hex.gbm.GBMTest;
+import hex.singlenoderf.SpeeDRFTest;
+import hex.singlenoderf.SpeeDRFTest2;
 import org.junit.internal.TextListener;
 import org.junit.runner.Description;
 import org.junit.runner.JUnitCore;
@@ -57,39 +59,42 @@ public class JUnitRunnerDebug {
 //      tests.add(NeuralNetIrisTest.class); //compare NeuralNet vs reference
 
       // Chunk tests
-      tests.add(C0LChunkTest.class);
-      tests.add(C0DChunkTest.class);
-      tests.add(C1ChunkTest.class);
-      tests.add(C1NChunkTest.class);
-      tests.add(C1SChunkTest.class);
-      tests.add(C2ChunkTest.class);
-      tests.add(C2SChunkTest.class);
-      tests.add(C4ChunkTest.class);
-      tests.add(C4FChunkTest.class);
-      tests.add(C4SChunkTest.class);
-      tests.add(C8ChunkTest.class);
-      tests.add(C8DChunkTest.class);
-      tests.add(C16ChunkTest.class);
-      tests.add(CBSChunkTest.class);
-      tests.add(CX0ChunkTest.class);
-      tests.add(CXIChunkTest.class);
-      tests.add(CXDChunkTest.class);
-      tests.add(VecTest.class);
+//      tests.add(C0LChunkTest.class);
+//      tests.add(C0DChunkTest.class);
+//      tests.add(C1ChunkTest.class);
+//      tests.add(C1NChunkTest.class);
+//      tests.add(C1SChunkTest.class);
+//      tests.add(C2ChunkTest.class);
+//      tests.add(C2SChunkTest.class);
+//      tests.add(C4ChunkTest.class);
+//      tests.add(C4FChunkTest.class);
+//      tests.add(C4SChunkTest.class);
+//      tests.add(C8ChunkTest.class);
+//      tests.add(C8DChunkTest.class);
+//      tests.add(C16ChunkTest.class);
+//      tests.add(CBSChunkTest.class);
+//      tests.add(CX0ChunkTest.class);
+//      tests.add(CXIChunkTest.class);
+//      tests.add(CXDChunkTest.class);
+//      tests.add(VecTest.class);
 
       // Deep Learning tests
 //      tests.add(DeepLearningVsNeuralNet.class); //only passes for NODES=1, not clear why
-      tests.add(DeepLearningAutoEncoderTest.class); //test Deep Learning convergence
-      tests.add(DeepLearningAutoEncoderCategoricalTest.class); //test Deep Learning convergence
-      tests.add(DeepLearningSpiralsTest.class); //test Deep Learning convergence
-      tests.add(DeepLearningIrisTest.Short.class); //compare Deep Learning vs reference
+//      tests.add(DeepLearningAutoEncoderTest.class); //test Deep Learning convergence
+//      tests.add(DeepLearningAutoEncoderCategoricalTest.class); //test Deep Learning convergence
+//      tests.add(DeepLearningSpiralsTest.class); //test Deep Learning convergence
+//      tests.add(DeepLearningIrisTest.Short.class); //compare Deep Learning vs reference
 //      tests.add(DeepLearningIrisTest.Long.class); //compare Deep Learning vs reference
-      tests.add(DeepLearningProstateTest.Short.class); //test Deep Learning
+//      tests.add(DeepLearningProstateTest.Short.class); //test Deep Learning
 //      tests.add(DeepLearningProstateTest.Long.class); //test Deep Learning
 //      tests.add(NeuronsTest.class); //test Deep Learning
 //      tests.add(MRUtilsTest.class); //test MR sampling/rebalancing
 //      tests.add(DropoutTest.class); //test NN Dropput
 
-//      tests.add(GLMTest2.class);
+      tests.add(GLMRandomTest.Short.class);
+//      tests.add(SpeeDRFTest.class);
+//      tests.add(SpeeDRFTest2.class);
+////      tests.add(GLMTest2.class);
 //      tests.add(DRFTest.class);
 //      tests.add(DRFTest2.class);
 //      tests.add(GBMTest.class);

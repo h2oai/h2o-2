@@ -118,6 +118,8 @@ public class FrameCreator extends H2O.H2OCountedCompleter {
         setSeed(rng, 0, cs[0]._start + r);
         if (_createFrame.response_factors >1)
           cs[0].set0(r, (int)(rng.nextDouble() * _createFrame.response_factors)); //classification
+        else if (_createFrame.positive_response)
+          cs[0].set0(r, _createFrame.real_range * rng.nextDouble()); //regression with positive response
         else
           cs[0].set0(r, _createFrame.real_range * (1 - 2 * rng.nextDouble())); //regression
       }
