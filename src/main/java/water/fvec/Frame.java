@@ -823,7 +823,7 @@ public class Frame extends Lockable<Frame> {
         return this;
       }
       if( rows.length==0 || rows[0] < 0 ) {
-        if (rows[0] < 0) {
+        if (rows.length != 0 && rows[0] < 0) {
           Vec v = new MRTask2() {
             @Override public void map(Chunk cs) {
               for (long er : rows) {

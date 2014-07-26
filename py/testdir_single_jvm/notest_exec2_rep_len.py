@@ -24,10 +24,21 @@ class Basic(unittest.TestCase):
 
         for i in range(5):
             # have to make sure they're created as keys for reuse between execs
-            execExpr = "a=rep_len(0,1000000); b = runif(a,-1)"
-            h2e.exec_expr(execExpr=execExpr, timeoutSecs=180)
-            execExpr = "b=a; d=a; f=a; g=a;"
-            h2e.exec_expr(execExpr=execExpr, timeoutSecs=180)
+            expr1 = "a=rep_len(0,1000000)"
+            expr2 = " b = runif(a,-1)"
+            h2e.exec_expr(execExpr=expr1, timeoutSecs=180)
+            h2e.exec_expr(execExpr=expr2)
+            #execExpr = "b=a;;; d=a;;; f=a;;; g=a;;;"
+
+            expr3 = "b = a"
+            expr4 = "d = a"
+            expr5 = "f = a"
+            expr6 = "g = a"
+            h2e.exec_expr(execExpr=expr3)
+            h2e.exec_expr(execExpr=expr4)
+            h2e.exec_expr(execExpr=expr5)
+            h2e.exec_expr(execExpr=expr6)
+            
             execExpr = "h <- cbind(a ,b)"
             h2e.exec_expr(execExpr=execExpr, timeoutSecs=180)
             execExpr = "h <- cbind(a ,b, d)"
