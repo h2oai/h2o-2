@@ -40,7 +40,6 @@ public class DownloadDataset extends Request2 {
     // filename.  Without this code, my FireFox would claim something silly
     // like "no helper app installed", then fail the download.
     String s = src_key.toString();
-    if( DKV.isConvertedFrameKeyString(s) ) s = DKV.unconvertFrameKeyString(s);
     int x = s.length()-1;
     boolean dot=false;
     for( ; x >= 0; x-- )

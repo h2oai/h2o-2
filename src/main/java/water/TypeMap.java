@@ -10,7 +10,6 @@ public class TypeMap {
   static public final short PRIM_B = 1;
   static public final short C1NCHUNK;
   static public final short FRAME;
-  static public final short VALUE_ARRAY;
   static final public String BOOTSTRAP_CLASSES[] = {
     " BAD",
     "[B",
@@ -42,7 +41,6 @@ public class TypeMap {
     IDS = id;
     C1NCHUNK    = (short)onIce("water.fvec.C1NChunk");
     FRAME       = (short)onIce("water.fvec.Frame");
-    VALUE_ARRAY = (short)onIce("water.ValueArray");
   }
 
   // During first Icing, get a globally unique class ID for a className

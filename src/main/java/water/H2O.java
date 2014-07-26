@@ -1411,7 +1411,7 @@ public final class H2O {
       TreeMap<String, T> res = new TreeMap<String, T>();
       final int typeId = TypeMap.onIce(c.getName());
       for (KeyInfo kinfo : _keyInfos) {
-        if (kinfo._type == typeId || (!exact && c.isAssignableFrom(TypeMap.newInstance(kinfo._type).getClass()))) {
+        if (kinfo._type == typeId || (!exact && c.isAssignableFrom(TypeMap.clazz(kinfo._type)))) {
           if (offset > 0) {
             --offset;
             continue;
@@ -1580,18 +1580,6 @@ public final class H2O {
           if( val.isLockable() ) continue; // we do not want to throw out Lockables.
           boolean isChunk = p instanceof Chunk;
 
-          // ValueArrays covering large files in global filesystems such as NFS
-          // or HDFS are only made on import (right now), and not reconstructed
-          // by inspection of the Key or filesystem.... so we cannot toss them
-          // out because they will not be reconstructed merely by loading the Value.
-          if( val.isArray() &&
-              (val._persist & Value.BACKEND_MASK)!=Value.ICE ) {
-            // But can toss out a byte-array if already deserialized
-            // (no need for both forms).
-            if( m != null && p != null ) { val.freeMem(); freed += val._max; }
-            continue; // Cannot throw out
-          }
-
           // Ignore things younger than the required age.  In particular, do
           // not spill-to-disk all dirty things we find.
           long touched = val._lastAccessedTime;
@@ -1717,10 +1705,6 @@ public final class H2O {
           if( p instanceof Chunk ) len -= val._max; // Do not double-count Chunks
           if( len == 0 ) continue;
           cached += len; // Accumulate total amount of cached keys
-
-          if( val.isArray() &&
-              (val._persist & Value.BACKEND_MASK)!=Value.ICE )
-            continue; // Cannot throw out (so not in histogram buckets)
 
           if( val._lastAccessedTime < oldest ) { // Found an older Value?
             vold = val; // Record oldest Value seen
