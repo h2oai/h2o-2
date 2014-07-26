@@ -24,6 +24,7 @@ import water.util.Utils;
 import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class GLM2 extends Job.ModelJobWithoutClassificationField {
@@ -287,7 +288,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     return new GLMGridSearch(4, jobKey, destinationKey,dinfo,glm, lambda_min_ratio, nlambdas, lambda, lambda_search, alpha, high_accuracy, nfolds,betaEpsilon).fork();
   }
 
+  private transient AtomicBoolean _jobdone = new AtomicBoolean(false);
   protected void complete(){
+    assert !_jobdone.getAndSet(true):"double job complete!";
     GLMModel model = DKV.get(dest()).get();
     model.maybeComputeVariableImportances();
     model.stop_training();
