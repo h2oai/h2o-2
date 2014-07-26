@@ -16,24 +16,24 @@ import java.util.Random;
 
 public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
   final protected DataInfo _dinfo;
-  final protected Key _jobKey;
+  final Job _job;
 //  double    _ymu = Double.NaN; // mean of the response
   // size of the expanded vector of parameters
 
   protected float _useFraction = 1.0f;
   protected boolean _shuffle = false;
 
-  public FrameTask(Key jobKey, DataInfo dinfo) {
-    this(jobKey,dinfo,null);
+  public FrameTask(Job job, DataInfo dinfo) {
+    this(job,dinfo,null);
   }
-  public FrameTask(Key jobKey, DataInfo dinfo, H2OCountedCompleter cmp) {
+  public FrameTask(Job job, DataInfo dinfo, H2OCountedCompleter cmp) {
     super(cmp);
-    _jobKey = jobKey;
+    _job = job;
     _dinfo = dinfo;
   }
   protected FrameTask(FrameTask ft){
     _dinfo = ft._dinfo;
-    _jobKey = ft._jobKey;
+    _job = ft._job;
     _useFraction = ft._useFraction;
     _shuffle = ft._shuffle;
   }
@@ -504,7 +504,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
    * and adapts response according to the CaseMode/CaseValue if set.
    */
   @Override public final void map(Chunk [] chunks, NewChunk [] outputs){
-    if(_jobKey != null && !Job.isRunning(_jobKey))throw new JobCancelledException();
+    if(_job != null && _job.self() != null && !Job.isRunning(_job.self()))throw new JobCancelledException();
     final int nrows = chunks[0]._len;
     final long offset = chunks[0]._start;
     chunkInit();

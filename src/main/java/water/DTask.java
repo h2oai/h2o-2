@@ -94,7 +94,11 @@ public abstract class DTask<T extends DTask> extends H2OCountedCompleter impleme
    *  will swamp all other logging output. */
   public boolean logVerbose() { return true; }
 
-  
+  // the exception should be forwarded and handled later, do not do anything here (mask stack trace printing of H2OCountedCompleter)
+  public boolean onExceptionalCompletion( Throwable ex, CountedCompleter caller ) {
+    setException(ex);
+    return true;
+  }
 
   @Override public AutoBuffer write(AutoBuffer bb) {
     return

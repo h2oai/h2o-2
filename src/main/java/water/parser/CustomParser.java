@@ -14,12 +14,8 @@ public abstract class CustomParser extends Iced {
   public static final byte CHAR_LF = 10;
   public static final byte CHAR_SPACE = ' ';
   public static final byte CHAR_CR = 13;
-  public static final byte CHAR_VT = 11;
-  public static final byte CHAR_FF = 12;
   public static final byte CHAR_DOUBLE_QUOTE = '"';
   public static final byte CHAR_SINGLE_QUOTE = '\'';
-  public static final byte CHAR_NULL = 0;
-  public static final byte CHAR_COMMA = ',';
 
   public final static int MAX_PREVIEW_COLS  = 100;
   public final static int MAX_PREVIEW_LINES = 50;
@@ -326,7 +322,7 @@ public abstract class CustomParser extends Iced {
     @Override public boolean isString(int colIdx) {return false;}
     @Override public void addNumCol(int colIdx, long number, int exp) {
       if(colIdx < _ncols && _nlines < MAX_PREVIEW_LINES)
-        _data[_nlines][colIdx] = Double.toString(number*DParseTask.pow10(exp));
+        _data[_nlines][colIdx] = Double.toString(number*PrettyPrint.pow10(exp));
     }
     @Override public void addNumCol(int colIdx, double d) {
       _ncols = Math.max(_ncols,colIdx);

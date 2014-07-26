@@ -42,47 +42,6 @@ public class DHistTest extends TestUtil {
     }
   }
 
-  @Test public void testDBinomRandGen() {
-    DRF drf = new DRF();
-    Key destTrain = Key.make("data.hex");
-    DRFModel model = null;
-    ValueArray va = null;
-
-    int n = 50;
-    long seed = 12345;
-    String[] levels = new String[] {"A", "B", "C", "D"};
-    try {
-      // Make some data to test with.
-      String[] vals = sample(levels, n, seed);
-      byte  [] resp = new byte[n];
-      for(int i = 0; i < n; i++) {
-        resp[i] = (byte)(Math.random() < prob(vals[i]) ? 1 : 0);
-      }
-      va = va_maker(destTrain, vals, resp);
-
-      // Configure DRF
-      drf.source = va.asFrame();
-      drf.response = drf.source.vecs()[1];
-      drf.classification = true;
-      drf.ntrees = 1;
-      drf.max_depth = 1;
-      drf.min_rows = 1; // = nodesize
-      drf.nbins = 100;
-      drf.destination_key = Key.make("DRF_model_dhist.hex");
-
-      // Invoke DRF and block till the end
-      drf.invoke();
-
-      // Get the model
-      model = UKV.get(drf.dest());
-    } finally {
-      va.delete();
-      drf.source.delete();
-      drf.remove();
-      if(model != null) model.delete(); // Remove the model
-    }
-  }
-
   public String[] sample(String[] levels, int n, long seed) {
     Random rand = new Random(seed);
     int ncat = levels.length;

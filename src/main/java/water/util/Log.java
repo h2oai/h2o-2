@@ -77,7 +77,7 @@ public abstract class Log {
   static String LOG_DIR = null;
 
   /** Key for the log in the KV store */
-  public final static Key LOG_KEY = Key.make("Log", (byte) 0, Key.BUILT_IN_KEY);
+  public static Key LOG_KEY = null;
   /** Time from when this class loaded. */
   static final Timer time = new Timer();
   /** Some guess at the process ID. */
@@ -437,6 +437,12 @@ public abstract class Log {
   }
   /** We also log events to the store. */
   private static void logToKV(final String date, final String thr, final Kind kind, final Sys sys, final String msg) {
+    // Make the LOG_KEY lazily, since we cannot make it before the cloud forms
+    if( LOG_KEY == null )
+      if( !Paxos._cloudLocked ) return; // No K/V logging before cloud formed
+      synchronized(Log.class) {
+        if( LOG_KEY == null ) LOG_KEY = Key.make("Log", (byte) 0, Key.BUILT_IN_KEY);
+      }
     final long pid = PID; // Run locally
     final H2ONode h2o = H2O.SELF; // Run locally
     new TAtomic<LogStr>() {

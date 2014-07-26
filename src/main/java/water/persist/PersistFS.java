@@ -110,23 +110,6 @@ public final class PersistFS extends Persist {
     assert !v.isPersisted();   // Upper layers already cleared out
     File f = getFile(v);
     f.delete();
-    if( v.isArray() ) { // Also nuke directory if the top-level ValueArray dies
-      f = new File(_dir.toString(), getIceDirectory(v._key));
-      f.delete();
-    }
-  }
-
-  @Override public Value lazyArrayChunk(Key key) {
-    assert key._kb[0] == Key.ARRAYLET_CHUNK;
-    assert key.home();          // Only do this on the home node
-    File f = new File(_dir, getIceName(key, (byte) 'V'/*
-                                                       * typed as a Value chunk, not the array
-                                                       * header
-                                                       */));
-    if( !f.isFile() ) return null;
-    Value val = new Value(key, (int) f.length());
-    val.setdsk();               // But its already on disk.
-    return val;
   }
 
   @Override public long getUsableSpace() {

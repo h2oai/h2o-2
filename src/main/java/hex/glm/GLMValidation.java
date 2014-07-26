@@ -56,18 +56,18 @@ public class GLMValidation extends Iced {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-    public GLMXValidation(GLMModel mainModel, GLMModel [] xvalModels, GLMValidation [] xvals, double lambda, long nobs) {
+    public GLMXValidation(GLMModel mainModel, GLMModel [] xvalModels, double lambda, long nobs) {
       super(mainModel._dataKey, mainModel.ymu, mainModel.glm, mainModel.rank(lambda));
       xval_models = new Key[xvalModels.length];
       for(int i = 0; i < xval_models.length; ++i)
         xval_models[i] = xvalModels[i]._key;
       double t = 0;
       for(int i = 0; i < xvalModels.length; ++i){
-        add(xvals[i]);
-        t += xvals[i].best_threshold;
+        GLMValidation val = xvalModels[i].validation();
+        add(val);
+        t += val.best_threshold;
       }
       computeAUC();
-      computeAIC();
       best_threshold = (float)(t/xvalModels.length);
       this.nobs = nobs;
     }

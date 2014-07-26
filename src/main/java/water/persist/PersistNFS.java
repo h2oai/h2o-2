@@ -31,7 +31,6 @@ public final class PersistNFS extends Persist {
   }
 
   public static InputStream openStream(Key k) throws IOException {
-    assert (k._kb[0] != Key.ARRAYLET_CHUNK) : "open stream should only be used on a value/value array head";
     return new FileInputStream(getFileForKey(k));
   }
 
@@ -42,14 +41,9 @@ public final class PersistNFS extends Persist {
   @Override public byte[] load(Value v) {
     long skip = 0;
     Key k = v._key;
-    // Convert an arraylet chunk into a long-offset from the base file.
-    if( k._kb[0] == Key.ARRAYLET_CHUNK ) {
-      skip = ValueArray.getChunkOffset(k); // The offset
-      k = ValueArray.getArrayKey(k);       // From the base file key
-    }
-    if( k._kb[0] == Key.DVEC ) {
+    // Convert a chunk into a long-offset from the base file.
+    if( k._kb[0] == Key.DVEC )
       skip = water.fvec.NFSFileVec.chunkOffset(k); // The offset
-    }
     try {
       FileInputStream s = null;
       try {
@@ -76,8 +70,6 @@ public final class PersistNFS extends Persist {
     if( !v._key.home() ) return;
     // A perhaps useless cutout: the upper layers should test this first.
     if( v.isPersisted() ) return;
-    // Never store arraylets on NFS, instead we'll store the entire array.
-    assert !v.isArray();
     try {
       File f = getFileForKey(v._key);
       f.mkdirs();
@@ -93,20 +85,6 @@ public final class PersistNFS extends Persist {
     } catch( IOException e ) {
       H2O.ignore(e);
     }
-  }
-
-  @Override public Value lazyArrayChunk(Key key) {
-    Key arykey = ValueArray.getArrayKey(key);  // From the base file key
-    long off = ValueArray.getChunkOffset(key); // The offset
-    long size = getFileForKey(arykey).length();
-    long rem = size - off;
-
-    // the last chunk can be fat, so it got packed into the earlier chunk
-    if( rem < ValueArray.CHUNK_SZ && off > 0 ) return null;
-    int sz = (rem >= ValueArray.CHUNK_SZ * 2) ? (int) ValueArray.CHUNK_SZ : (int) rem;
-    Value val = new Value(key, sz, Value.NFS);
-    val.setdsk(); // But its already on disk.
-    return val;
   }
 
   // TODO needed if storing ice to S3

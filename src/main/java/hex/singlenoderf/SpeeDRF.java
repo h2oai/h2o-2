@@ -153,11 +153,14 @@ public class SpeeDRF extends Job.ValidatedJob {
   }
 
   @Override protected void execImpl() {
+    SpeeDRFModel rf_model = null;
     try {
-      logStart();
       source.read_lock(self());
-      buildForest();
-      if (n_folds > 0) CrossValUtils.crossValidate(this);
+      rf_model = initModel();
+      rf_model.start_training(null);
+      rf_model.write_lock(self());
+      buildForest(rf_model);
+      rf_model.stop_training();
     }
     catch(JobCancelledException ex) {
       Log.info("Random Forest building was cancelled.");
@@ -169,15 +172,13 @@ public class SpeeDRF extends Job.ValidatedJob {
     }
     finally{
       source.unlock(self());
+      if (n_folds > 0) CrossValUtils.crossValidate(this);
       remove();
-      state = UKV.<Job>get(self()).state;
-      new TAtomic<SpeeDRFModel>() {
-        @Override
-        public SpeeDRFModel atomic(SpeeDRFModel m) {
-          if (m != null) m.get_params().state = state;
-          return m;
-        }
-      }.invoke(dest());
+      if (rf_model != null) {
+        rf_model = UKV.get(dest());
+        rf_model.get_params().state = UKV.<Job>get(self()).state;
+        rf_model.unlock(self());
+      }
       emptyLTrash();
       cleanup();
     }
@@ -185,31 +186,18 @@ public class SpeeDRF extends Job.ValidatedJob {
 
   @Override protected Response redirect() { return SpeeDRFProgressPage.redirect(this, self(), dest()); }
 
-  private void buildForest() {
-    SpeeDRFModel model = null;
-    try {
-      model = initModel();
-      model.start_training(null);
-      model.write_lock(self());
-      drfParams = DRFParams.create(model.fr.find(model.response), model.N, model.max_depth, (int) model.fr.numRows(), model.nbins,
-              model.statType, seed, model.weights, mtry, model.sampling_strategy, (float) sample, model.strata_samples, model.verbose ? 100 : 1, _exclusiveSplitLimit, !local_mode, regression);
-      DRFTask tsk = new DRFTask();
-      tsk._job = Job.findJob(self());
-      tsk._params = drfParams;
-      tsk._rfmodel = model;
-      tsk._drf = this;
-      tsk.validateInputData();
-      tsk.invokeOnAllNodes();
-      model = UKV.get(dest());
-    }
-    finally {
-      if (model != null) {
-        model.unlock(self());
-        model.stop_training();
-      }
-    }
+  private final void buildForest(SpeeDRFModel model) {
+    drfParams = DRFParams.create(model.fr.find(model.response), model.N, model.max_depth, (int)model.fr.numRows(), model.nbins,
+            model.statType, seed, model.weights, mtry, model.sampling_strategy, (float) sample, model.strata_samples, model.verbose ? 100 : 1, _exclusiveSplitLimit, !local_mode, regression);
+    logStart();
+    DRFTask tsk = new DRFTask();
+    tsk._job = Job.findJob(self());
+    tsk._params = drfParams;
+    tsk._rfmodel = model;
+    tsk._drf = this;
+    tsk.validateInputData();
+    tsk.invokeOnAllNodes();
   }
-
 
   /**
    * Check the user inputted class weights for errors.
@@ -290,8 +278,6 @@ public class SpeeDRF extends Job.ValidatedJob {
       test = FrameTask.DataInfo.prepareFrame(validation, validation.vecs()[source.find(response)], ignored_cols, !regression, false, false);
     }
 
-    if (test != null && test.lastVec().masterVec() != null) gtrash(test.lastVec());
-
     float[] priorDist = classification ? new MRUtils.ClassDist(train.lastVec()).doAll(train.lastVec()).rel_dist() : null;
 
     // Handle imbalanced classes by stratified over/under-sampling
@@ -363,7 +349,6 @@ public class SpeeDRF extends Job.ValidatedJob {
     model.N = num_trees;
     model.useNonLocal = !local_mode;
     if (!regression) model.setModelClassDistribution(new MRUtils.ClassDist(fr.lastVec()).doAll(fr.lastVec()).rel_dist());
-    model.resp_min = (int) resp.min();
 
     if (mtry == -1) {
       if(!regression) {

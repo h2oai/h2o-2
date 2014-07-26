@@ -49,8 +49,8 @@ public class ExportFiles extends Request2 {
       if (DKV.get(src_key) == null) throw new IllegalArgumentException(src_key.toString() + " not found.");
       Object value = DKV.get(src_key).get();
       // create a stream to read the entire VA or Frame
-      if (!(value instanceof ValueArray) && !(value instanceof Frame)) throw new UnsupportedOperationException("Can only export Frames or ValueArrays.");
-      InputStream csv = value instanceof ValueArray ? new ValueArray.CsvVAStream((ValueArray) value, null) : ((Frame) value).toCSV(true);
+      if( !(value instanceof Frame) ) throw new UnsupportedOperationException("Can only export Frames.");
+      InputStream csv = ((Frame) value).toCSV(true);
       String p2 = path.toLowerCase();
       if( p2.startsWith("hdfs://" ) ) serveHdfs(csv);
       else if( p2.startsWith("s3n://"  ) ) serveHdfs(csv);

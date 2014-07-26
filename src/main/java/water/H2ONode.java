@@ -3,6 +3,7 @@ package water;
 import water.nbhm.NonBlockingHashMap;
 import water.nbhm.NonBlockingHashMapLong;
 import water.util.Log;
+import water.util.UnsafeUtils;
 
 import java.io.IOException;
 import java.net.*;
@@ -106,6 +107,14 @@ public class H2ONode extends Iced implements Comparable {
     return h2o;
   }
   public static final H2ONode intern( InetAddress ip, int port ) { return intern(new H2Okey(ip,port)); }
+
+  public static H2ONode intern( byte[] bs, int off ) {
+    byte[] b = new byte[4];
+    UnsafeUtils.set4(b, 0, UnsafeUtils.get4(bs, off));
+    int port = UnsafeUtils.get2(bs,off+4)&0xFFFF;
+    try { return intern(InetAddress.getByAddress(b),port); } 
+    catch( UnknownHostException e ) { throw Log.errRTExcept(e); }
+  }
 
   public static final H2ONode intern( int ip, int port ) {
     byte[] b = new byte[4];
@@ -214,7 +223,7 @@ public class H2ONode extends Iced implements Comparable {
     return sock2;
   }
   public synchronized void freeTCPSocket( SocketChannel sock ) {
-    assert 0 <= _socksAvail && _socksAvail < _socks.length:"socks available = " + _socksAvail + ", _socks.length = " + _socks.length;
+    assert 0 <= _socksAvail && _socksAvail < _socks.length;
     if( sock != null && !sock.isOpen() ) sock = null;
     _socks[_socksAvail++] = sock;
     assert TCPS.get() > 0;
@@ -238,7 +247,7 @@ public class H2ONode extends Iced implements Comparable {
 
   // ---------------
   // The Work-In-Progress list.  Each item is a UDP packet's worth of work.
-  // When the RPCCall to _computedAndReplied, then it's Completed work instead
+  // When the RPCCall to _computed, then it's Completed work instead
   // work-in-progress.  Completed work can be short-circuit replied-to by
   // resending the RPC._dt back.  Work that we're sure the this Node has seen
   // the reply to can be removed - but we must remember task-completion for all
@@ -307,8 +316,7 @@ public class H2ONode extends Iced implements Comparable {
     // around a long time - and the dt might be big.
     DTask dt = rpc._dt;         // The existing DTask, if any
     if( dt != null && RPC.RPCCall.CAS_DT.compareAndSet(rpc,dt,null) ) {
-      // task could've been cancelled/ got exception, in which case we remove it even if it's still not done (it should be, but there is a race)
-      assert rpc._computed: "Still not done #"+task+" "+dt.getClass()+" from "+rpc._client;
+      assert rpc._computed : "Still not done #"+task+" "+dt.getClass()+" from "+rpc._client;
       AckAckTimeOutThread.PENDING.remove(rpc);
       dt.onAckAck();            // One-time call on stop-tracking
     }
@@ -343,7 +351,7 @@ public class H2ONode extends Iced implements Comparable {
         // Interrupted while waiting for a packet?
         // Blow it off and go wait again...
         catch( InterruptedException e ) { continue; }
-        assert r._computedAndReplied : "Found RPCCall not computed "+r._tsknum;
+        assert r._computed : "Found RPCCall not computed "+r._tsknum;
         if( !H2O.CLOUD.contains(r._client) ) { // RPC from somebody who dropped out of cloud?
           r._client.remove_task_tracking(r._tsknum);
           continue;
