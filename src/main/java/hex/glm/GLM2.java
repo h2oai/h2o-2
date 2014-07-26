@@ -40,61 +40,63 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 
   transient public boolean _done = false;
   @API(help = "Standardize numeric columns to have zero mean and unit variance.", filter = Default.class, json=true, importance = ParamImportance.CRITICAL)
-  public boolean standardize = true;
+  protected boolean standardize = true;
 
   @API(help = "validation folds", filter = Default.class, lmin=0, lmax=100, json=true, importance = ParamImportance.CRITICAL)
-  public int n_folds;
+  protected int n_folds;
 
   @API(help = "Family.", filter = Default.class, json=true, importance = ParamImportance.CRITICAL)
-  public Family family = Family.gaussian;
+  protected Family family = Family.gaussian;
 
   @API(help = "", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
-  public Link link = Link.family_default;
+  protected Link link = Link.family_default;
 
 
   @API(help = "Tweedie variance power", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
-  public double tweedie_variance_power;
+  protected double tweedie_variance_power;
 
   @API(help = "distribution of regularization between L1 and L2.", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
-  public double [] alpha = new double[]{0.5};
+  protected double [] alpha = new double[]{0.5};
+
+  public final double DEFAULT_LAMBDA = 1e-5;
 
   @API(help = "regularization strength", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
-  public double [] lambda = new double[]{1e-5};
+  protected double [] lambda = new double[]{DEFAULT_LAMBDA};
 
   private double _currentLambda = Double.POSITIVE_INFINITY;
 
 
   @API(help = "beta_eps", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
-  public double beta_epsilon = DEFAULT_BETA_EPS;
+  protected double beta_epsilon = DEFAULT_BETA_EPS;
 
   @API(help="use line search (slower speed, to be used if glm does not converge otherwise)",filter=Default.class, importance = ParamImportance.SECONDARY)
-  public boolean higher_accuracy;
+  protected boolean higher_accuracy;
 
   @API(help="By default, first factor level is skipped from the possible set of predictors. Set this flag if you want use all of the levels. Needs sufficient regularization to solve!",filter=Default.class, importance = ParamImportance.SECONDARY)
-  public boolean use_all_factor_levels;
+  protected boolean use_all_factor_levels;
 
 
   @API(help="use lambda search starting at lambda max, given lambda is then interpreted as lambda min",filter=Default.class, importance = ParamImportance.SECONDARY)
-  public boolean lambda_search;
+  protected boolean lambda_search;
 
   @API(help="use strong rules to filter out inactive columns",filter=Default.class, importance = ParamImportance.SECONDARY)
-  public boolean strong_rules_enabled = true;
+  protected boolean strong_rules_enabled = true;
 
   // intentionally not declared as API now
   int sparseCoefThreshold = 1000; // if more than this number of predictors, result vector of coefficients will be stored sparse
 
   @API(help="lambda_Search stop condition: stop training when model has more than than this number of predictors (or don't use this option if -1).",filter=Default.class, importance = ParamImportance.EXPERT)
-  public int max_predictors = -1;
+  protected int max_predictors = -1;
 
   @API(help="number of lambdas to be used in a search",filter=Default.class, importance = ParamImportance.EXPERT)
-  public int nlambdas = 100;
+  protected int nlambdas = 100;
 
   @API(help="min lambda used in lambda search, specified as a ratio of lambda_max",filter=Default.class, importance = ParamImportance.EXPERT)
-  public double lambda_min_ratio = -1;
+  protected double lambda_min_ratio = -1;
 
 
   @API(help="prior probability for y==1. To be used only for logistic regression iff the data has been sampled and the mean of response does not reflect reality.",filter=Default.class, importance = ParamImportance.EXPERT)
-  public double prior = -1; // -1 is magic value for default value which is mean(y) computed on the current dataset
+  protected double prior = -1; // -1 is magic value for default value which is mean(y) computed on the current dataset
   private double _iceptAdjust; // adjustment due to the prior
 
   public final int MAX_ITERATIONS_PER_LAMBDA = 20;
@@ -281,16 +283,17 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     return rs.toString();
   }
 
-  public static Job gridSearch(Key jobKey, Key destinationKey, DataInfo dinfo, GLMParams glm, double lambda_min_ratio, int nlambdas, double [] lambda, boolean lambda_search, double [] alpha, boolean higher_accuracy, int nfolds){
+  public static GLMGridSearch gridSearch(Key jobKey, Key destinationKey, DataInfo dinfo, GLMParams glm, double lambda_min_ratio, int nlambdas, double [] lambda, boolean lambda_search, double [] alpha, boolean higher_accuracy, int nfolds){
     return gridSearch(jobKey, destinationKey, dinfo, glm, lambda_min_ratio, nlambdas, lambda, lambda_search, alpha, higher_accuracy, nfolds, DEFAULT_BETA_EPS);
   }
-  public static Job gridSearch(Key jobKey, Key destinationKey, DataInfo dinfo, GLMParams glm, double lambda_min_ratio, int nlambdas, double [] lambda, boolean lambda_search, double [] alpha, boolean high_accuracy, int nfolds, double betaEpsilon){
+  public static GLMGridSearch gridSearch(Key jobKey, Key destinationKey, DataInfo dinfo, GLMParams glm, double lambda_min_ratio, int nlambdas, double [] lambda, boolean lambda_search, double [] alpha, boolean high_accuracy, int nfolds, double betaEpsilon){
     return new GLMGridSearch(4, jobKey, destinationKey,dinfo,glm, lambda_min_ratio, nlambdas, lambda, lambda_search, alpha, high_accuracy, nfolds,betaEpsilon).fork();
   }
 
   private transient AtomicBoolean _jobdone = new AtomicBoolean(false);
   protected void complete(){
     assert !_jobdone.getAndSet(true):"double job complete!";
+    _done = true;
     GLMModel model = DKV.get(dest()).get();
     model.maybeComputeVariableImportances();
     model.stop_training();
@@ -309,7 +312,6 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       remove(); // Remove/complete job only for top-level, not xval GLM2s
       DKV.remove(_progressKey);
     }
-    if(_fjtask != null)_fjtask.tryComplete();
   }
 
   @Override public void cancel(Throwable ex){
@@ -354,12 +356,15 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     if(alpha.length > 1) { // grid search
       if(destination_key == null)destination_key = Key.make("GLMGridResults_"+Key.make());
       if(job_key == null)job_key = Key.make((byte) 0, Key.JOB, H2O.SELF);;
-      Job j = gridSearch(self(),destination_key, _dinfo, _glm, lambda_min_ratio, nlambdas, lambda, lambda_search, alpha, higher_accuracy, n_folds);
+      GLMGridSearch j = gridSearch(self(),destination_key, _dinfo, _glm, lambda_min_ratio, nlambdas, lambda, lambda_search, alpha, higher_accuracy, n_folds);
+      _fjtask = j._fjtask;
+      assert _fjtask != null;
       return GLMGridView.redirect(this,j.dest());
     } else {
       if(destination_key == null)destination_key = Key.make("GLMModel_"+Key.make());
       if(job_key == null)job_key = Key.make("GLM2Job_"+Key.make());
       fork();
+      assert _fjtask != null;
       return GLMProgress.redirect(this,job_key, dest());
     }
   }
@@ -706,13 +711,13 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     @Override
     public void callback(H2OCountedCompleter h2OCountedCompleter) {
       // check if we're done otherwise launch next lambda computation
-      boolean done = _currentLambda <= lambda_min
+      _done = _currentLambda <= lambda_min
         || (max_predictors != -1 && nzs(_lastResult._glmt._beta) > max_predictors); // _iter < max_iter && (improved || _runAllLambdas) && _lambdaIdx < (lambda_value.length-1);;
-      if(!done) {
+      if(!_done) {
         H2OCountedCompleter cmp = (H2OCountedCompleter)getCompleter();
         cmp.addToPendingCount(1);
         nextLambda(nextLambdaValue(), new LambdaIteration(cmp));
-      } else _done = true;
+      }
     }
   }
 
@@ -745,6 +750,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     GLM2 j = (GLM2)clone();
     j.start(fjtask); // modifying GLM2 object, don't want job object to be the same instance
     H2O.submitTask(fjtask);
+    _fjtask = fjtask;
     return j;
   }
 
@@ -798,7 +804,6 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     if(nlambdas == -1)nlambdas = 100;
     Futures fs = new Futures();
     Key dst = dest();
-    cmp.addToPendingCount(1);
     new YMUTask(GLM2.this.self(), _dinfo, n_folds,new H2OCallback<YMUTask>(cmp) {
       @Override
       public void callback(final YMUTask ymut) {
@@ -878,31 +883,42 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
                 lambda = null;
               } else {
                 final double d = Math.pow(lambda_min_ratio, 1.0 / (nlambdas - 1));
+                if(nlambdas == 0)throw new IllegalArgumentException("nlambdas must be > 0 when running lambda search.");
                 lambda = new double[nlambdas];
                 lambda[0] = lambda_max;
+                if(nlambdas == 1){
+                  model.addWarning("Got lambda search with nlambda == 1, i.e. returning just the null model.");
+                  model.delete_and_lock(self());
+                  addLmaxSubmodel(model,t._val);
+                  _done = true;
+                  return;
+                }
                 for (int i = 1; i < lambda.length; ++i)
                   lambda[i] = lambda[i - 1] * d;
                 lambda_min = lambda[lambda.length - 1];
               }
               _runAllLambdas = false;
             } else {
+              if(lambda == null || lambda.length == 0)
+                lambda = new double[]{DEFAULT_LAMBDA};
               lambda_min = lambda[lambda.length-1];
               int i = 0;
               while(i < lambda.length && lambda[i] >= lambda_max)++i;
               if(i == lambda.length) {
                 model.addWarning("All lambdas were greater than lambda_max, returning the null model.");
                 addLmaxSubmodel(model,t._val);
-                model.delete_and_lock(self());
-                model.unlock(self());
-                GLM2.this.complete();
+                return;
               } else if(i > 0) {
                 model.addWarning("removed " + i + " lambdas greater than lambda_max.");
                 lambda = Utils.append(new double[]{lambda_max},Arrays.copyOfRange(lambda,i,lambda.length));
                 model = addLmaxSubmodel(model,t._val);
                 _lambdaIdx = 0;
+                _done = true;
+                return;
               }
             }
             model.delete_and_lock(self());
+            getCompleter().addToPendingCount(1);
             nextLambda(nextLambdaValue(), new LambdaIteration(getCompleter()));
           }
         }).asyncExec(_dinfo._adaptedFrame);
@@ -1067,7 +1083,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       return sum/_jobs.length;
     }
     @Override
-    public Job fork(){
+    public GLMGridSearch fork(){
       DKV.put(destination_key, new GLMGrid(self(),_jobs));
       // keep *this* separate from what's stored in K/V as job (will be changing it!)
       Futures fs = new Futures();
