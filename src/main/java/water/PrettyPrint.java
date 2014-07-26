@@ -43,4 +43,62 @@ public class PrettyPrint {
     return String.format("%08X-%04X-%04X-%04X-%012X",lo0,lo1,lo2,hi0,hi1);
   }
 
+  static double [] powers10 = new double[]{
+    0.0000000001,
+    0.000000001,
+    0.00000001,
+    0.0000001,
+    0.000001,
+    0.00001,
+    0.0001,
+    0.001,
+    0.01,
+    0.1,
+    1.0,
+    10.0,
+    100.0,
+    1000.0,
+    10000.0,
+    100000.0,
+    1000000.0,
+    10000000.0,
+    100000000.0,
+    1000000000.0,
+    10000000000.0,
+  };
+
+  static public long [] powers10i = new long[]{
+    1l,
+    10l,
+    100l,
+    1000l,
+    10000l,
+    100000l,
+    1000000l,
+    10000000l,
+    100000000l,
+    1000000000l,
+    10000000000l,
+    100000000000l,
+    1000000000000l,
+    10000000000000l,
+    100000000000000l,
+    1000000000000000l,
+    10000000000000000l,
+    100000000000000000l,
+    1000000000000000000l,
+  };
+
+  public static double pow10(int exp){
+    return ((exp >= -10 && exp <= 10)?powers10[exp+10]:Math.pow(10, exp));
+  }
+
+  public static long pow10i(int exp){
+    return powers10i[exp];
+  }
+
+  public static final boolean fitsIntoInt(double d){
+    return Math.abs((int)d - d) < 1e-8;
+  }
+
 }

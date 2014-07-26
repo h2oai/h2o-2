@@ -1,7 +1,6 @@
 package hex;
 
 import hex.FrameTask.DataInfo;
-import hex.KMeans.Initialization;
 import water.*;
 import water.Job.ColumnsJob;
 import water.api.DocGen;
@@ -27,6 +26,9 @@ public class KMeans2 extends ColumnsJob {
   static final int API_WEAVER = 1;
   static public DocGen.FieldDoc[] DOC_FIELDS;
   static final String DOC_GET = "k-means";
+  public enum Initialization {
+    None, PlusPlus, Furthest
+  };
 
   @API(help = "Cluster initialization: None - chooses initial centers at random; Plus Plus - choose first center at random, subsequent centers chosen from probability distribution weighted so that points further from first center are more likey to be selected; Furthest - chooses initial point at random, subsequent point taken as the point furthest from prior point.", filter = Default.class, json=true)
   public Initialization initialization = Initialization.None;
@@ -45,6 +47,15 @@ public class KMeans2 extends ColumnsJob {
 
   @API(help = "Drop columns with more than 20% missing values", filter = Default.class)
   public boolean drop_na_cols = true;
+
+  // Make a link that lands on this page
+  public static String link(Key k, String content) {
+    RString rs = new RString("<a href='KMeans2.query?%key_param=%$key'>%content</a>");
+    rs.replace("key_param", SOURCE_KEY);
+    rs.replace("key", k.toString());
+    rs.replace("content", content);
+    return rs.toString();
+  }
 
   public KMeans2() {
     description = "K-means";

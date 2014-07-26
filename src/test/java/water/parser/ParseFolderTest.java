@@ -1,10 +1,12 @@
 package water.parser;
 
 import static org.junit.Assert.assertTrue;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import water.*;
 
 public class ParseFolderTest extends TestUtil {
+  @BeforeClass public static void stall() { stall_till_cloudsize(3); }
 
   @Test public void testProstate() {
     Key k1 = null,k2 = null;

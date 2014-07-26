@@ -4,10 +4,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotSame;
 import com.google.gson.JsonObject;
-import hex.LinearRegression;
 import java.io.File;
 import org.junit.*;
-import water.parser.ParseDataset;
 
 public class KVTest extends TestUtil {
 
@@ -184,19 +182,4 @@ public class KVTest extends TestUtil {
     }
   }
   
-  // ---
-  // Test parsing "cars.csv" and running LinearRegression
-  @Test public void testLinearRegression() {
-    Key fkey = load_test_file("smalldata/cars.csv");
-    Key okey = Key.make("cars.hex");
-    ParseDataset.parse(okey,new Key[]{fkey});
-    ValueArray va = DKV.get(okey).get();
-    // Compute LinearRegression between columns 2 & 3
-    JsonObject res = LinearRegression.run(va,2,3);
-    assertEquals( 58.326241377521995, res.get("Beta1"      ).getAsDouble(), 0.000001);
-    assertEquals(-124.57816399564385, res.get("Beta0"      ).getAsDouble(), 0.000001);
-    assertEquals( 0.9058985668996267, res.get("RSquared"   ).getAsDouble(), 0.000001);
-    assertEquals( 0.9352584499359637, res.get("Beta1StdErr").getAsDouble(), 0.000001);
-    va.delete();
-  }
 }

@@ -1,19 +1,18 @@
 package water.api;
 
 import com.google.gson.JsonObject;
-import water.*;
-import water.parser.CsvParser;
-import water.parser.CustomParser;
-import water.parser.ParseDataset;
-import water.util.RString;
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Set;
 import java.util.regex.Pattern;
+import water.*;
+import water.parser.CsvParser;
+import water.parser.CustomParser;
+import water.parser.GuessSetup;
+import water.util.RString;
 
-public class Parse extends Request {
+abstract public class Parse extends Request {
 
   private   final ParserType     _parserType= new ParserType(PARSER_TYPE);
   private   final Separator      _separator = new Separator(SEPARATOR);
@@ -101,8 +100,8 @@ public class Parse extends Request {
       CustomParser.ParserSetup userSetup =  new CustomParser.ParserSetup(_parserType.value(),_separator.value(),hasHeader);
       CustomParser.PSetupGuess setup = null;
       try {
-       setup = ParseDataset.guessSetup(keys, hKey, userSetup,checkHeader);
-      }catch(ParseDataset.ParseSetupGuessException e){
+       setup = GuessSetup.guessSetup(keys, hKey, userSetup,checkHeader);
+      }catch(GuessSetup.ParseSetupGuessException e){
         throw new IllegalArgumentException(e.getMessage());
       }
       if(setup._isValid){
@@ -305,30 +304,30 @@ public class Parse extends Request {
     return rs.toString();
   }
 
-  @Override protected Response serve() {
-    PSetup p = _source.value();
-    if(!p._setup._isValid)
-      return Response.error("Given parser setup is not valid, I can not parse this file.");
-    CustomParser.ParserSetup setup = p._setup._setup;
-    setup._singleQuotes = _sQuotes.value();
-    Key dest = Key.make(_dest.value());
-    try {
-      // Make a new Setup, with the 'header' flag set according to user wishes.
-      Key[] keys = p._keys.toArray(new Key[p._keys.size()]);
-      Job job = ParseDataset.forkParseDataset(dest, keys,setup);
-      if (_blocking.value()) {
-        Job.waitUntilJobEnded(job.self());
-      }
-      JsonObject response = new JsonObject();
-      response.addProperty(RequestStatics.JOB, job.self().toString());
-      response.addProperty(RequestStatics.DEST_KEY,dest.toString());
-      Response r = Progress.redirect(response, job.self(), dest);
-      r.setBuilder(RequestStatics.DEST_KEY, new KeyElementBuilder());
-      return r;
-    } catch( Throwable e ) {
-      return Response.error(e);
-    }
-  }
+  //@Override protected Response serve() {
+  //  PSetup p = _source.value();
+  //  if(!p._setup._isValid)
+  //    return Response.error("Given parser setup is not valid, I can not parse this file.");
+  //  CustomParser.ParserSetup setup = p._setup._setup;
+  //  setup._singleQuotes = _sQuotes.value();
+  //  Key dest = Key.make(_dest.value());
+  //  try {
+  //    // Make a new Setup, with the 'header' flag set according to user wishes.
+  //    Key[] keys = p._keys.toArray(new Key[p._keys.size()]);
+  //    Job job = ParseDataset.forkParseDataset(dest, keys,setup);
+  //    if (_blocking.value()) {
+  //      Job.waitUntilJobEnded(job.self());
+  //    }
+  //    JsonObject response = new JsonObject();
+  //    response.addProperty(RequestStatics.JOB, job.self().toString());
+  //    response.addProperty(RequestStatics.DEST_KEY,dest.toString());
+  //    Response r = Progress.redirect(response, job.self(), dest);
+  //    r.setBuilder(RequestStatics.DEST_KEY, new KeyElementBuilder());
+  //    return r;
+  //  } catch( Throwable e ) {
+  //    return Response.error(e);
+  //  }
+  //}
   private class Separator extends InputSelect<Byte> {
     public Separator(String name) {
       super(name,false);

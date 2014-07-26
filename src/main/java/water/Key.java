@@ -3,6 +3,7 @@ package water;
 import java.util.Arrays;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
+import water.util.UnsafeUtils;
 
 /**
 * Keys
@@ -34,8 +35,6 @@ public final class Key extends Iced implements Comparable {
   // The user keys must be ASCII, so the values 0..31 are reserved for system
   // keys. When you create a system key, please do add its number to this list
 
-  public static final byte ARRAYLET_CHUNK = 0;
-
   public static final byte BUILT_IN_KEY = 2; // C.f. Constants.BUILT_IN_KEY_*
 
   public static final byte JOB = 3;
@@ -50,6 +49,65 @@ public final class Key extends Iced implements Comparable {
 
   public static final byte USER_KEY = 32;
 
+  // *Desired* distribution function on keys & replication factor. Replica #0
+  // is the master, replica #1, 2, 3, etc represent additional desired
+  // replication nodes. Note that this function is just the distribution
+  // function - it does not DO any replication, nor does it dictate any policy
+  // on how fast replication occurs. Returns -1 if the desired replica
+  // is nonsense, e.g. asking for replica #3 in a 2-Node system.
+  int D( int repl ) {
+    int hsz = H2O.CLOUD.size();
+  
+    // See if this is a specifically homed Key
+    if( !user_allowed() && repl < _kb[1] ) { // Asking for a replica# from the homed list?
+      assert _kb[0] != Key.DVEC;
+      H2ONode h2o = H2ONode.intern(_kb,2+repl*(4+2/*serialized bytesize of H2OKey*/));
+      // Reverse the home to the index
+      int idx = h2o.index();
+      if( idx >= 0 ) return idx;
+      // Else homed to a node which is no longer in the cloud!
+      // Fall back to the normal home mode
+    }
+  
+    // Distribution of Fluid Vectors is a special case.
+    // Fluid Vectors are grouped into vector groups, each of which must have
+    // the same distribution of chunks so that MRTask2 run over group of
+    // vectors will keep data-locality.  The fluid vecs from the same group
+    // share the same key pattern + each has 4 bytes identifying particular
+    // vector in the group.  Since we need the same chunks end up on the same
+    // node in the group, we need to skip the 4 bytes containing vec# from the
+    // hash.  Apart from that, we keep the previous mode of operation, so that
+    // ByteVec would have first 64MB distributed around cloud randomly and then
+    // go round-robin in 64MB chunks.
+    if( _kb[0] == DVEC ) {
+      // Homed Chunk?
+      if( _kb[1] != -1 ) throw H2O.unimpl();
+      // For round-robin on Chunks in the following pattern:
+      // 1 Chunk-per-node, until all nodes have 1 chunk (max parallelism).
+      // Then 2 chunks-per-node, once around, then 4, then 8, then 16.
+      // Getting several chunks-in-a-row on a single Node means that stencil
+      // calculations that step off the end of one chunk into the next won't
+      // force a chunk local - replicating the data.  If all chunks round robin
+      // exactly, then any stencil calc will double the cached volume of data
+      // (every node will have it's own chunk, plus a cached next-chunk).
+      // Above 16-chunks-in-a-row we hit diminishing returns.
+      int cidx = UnsafeUtils.get4(_kb, 1 + 1 + 4); // Chunk index
+      int x = cidx/hsz; // Multiples of cluster size
+      // 0 -> 1st trip around the cluster;            nidx= (cidx- 0*hsz)>>0
+      // 1,2 -> 2nd & 3rd trip; allocate in pairs:    nidx= (cidx- 1*hsz)>>1
+      // 3,4,5,6 -> next 4 rounds; allocate in quads: nidx= (cidx- 3*hsz)>>2
+      // 7-14 -> next 8 rounds in octets:             nidx= (cidx- 7*hsz)>>3
+      // 15+ -> remaining rounds in groups of 16:     nidx= (cidx-15*hsz)>>4
+      int z = x==0 ? 0 : (x<=2 ? 1 : (x<=6 ? 2 : (x<=14 ? 3 : 4)));
+      int nidx = (cidx-((1<<z)-1)*hsz)>>z;
+      return ((nidx+repl)&0x7FFFFFFF) % hsz;
+    }
+  
+    // Easy Cheesy Stupid:
+    return ((_hash+repl)&0x7FFFFFFF) % hsz;
+  }
+
+
   /** List of illegal characters which are not allowed in user keys. */
   public static final CharSequence ILLEGAL_USER_KEY_CHARS = " !@#$%^&*()+={}[]|\\;:\"'<>,/?";
 
@@ -61,7 +119,8 @@ public final class Key extends Iced implements Comparable {
     AtomicLongFieldUpdater.newUpdater(Key.class, "_cache");
 
   public final boolean isVec () { return _kb != null && _kb.length > 0 && _kb[0] == VEC; }
-  public final boolean isDVec() { return _kb != null && _kb.length > 0 && _kb[0] == DVEC; }
+  public final boolean isChunkKey() { return _kb != null && _kb.length > 0 && _kb[0] == DVEC; }
+  public final Key getVecKey() { assert isChunkKey(); return water.fvec.Vec.getVecKey(this); }
 
   // Accessors and updaters for the Cloud-specific cached stuff.
   // The Cloud index, a byte uniquely identifying the last 256 Clouds. It
@@ -122,12 +181,12 @@ public final class Key extends Iced implements Comparable {
     // Cache missed! Probaby it just needs (atomic) updating.
     // But we might be holding the stale cloud...
     // Figure out home Node in this Cloud
-    char home = (char)cloud.D(this,0);
+    char home = (char)D(0);
     // Figure out what replica # I am, if any
     int desired = desired(x);
     int replica = -1;
     for( int i=0; i<desired; i++ ) {
-      int idx = cloud.D(this,i);
+      int idx = D(i);
       if( idx >= 0 && cloud._memary[idx] == H2O.SELF ) {
         replica = i;
         break;
@@ -142,38 +201,21 @@ public final class Key extends Iced implements Comparable {
   // k-v pairs start with this replication factor.
   public static final byte DEFAULT_DESIRED_REPLICA_FACTOR = 2;
 
-  static public int hash(byte [] bits, int from, int to){
-    assert bits.length >= to;
-    assert to > from;
-    int hash = 0;
+  // Construct a new Key.
+  private Key(byte[] kb) {
+    if( kb.length > KEY_LENGTH ) throw new IllegalArgumentException("Key length would be "+kb.length);
+    _kb = kb;
     // Quicky hash: http://en.wikipedia.org/wiki/Jenkins_hash_function
-    for(int i = from;  i < to; ++i ) {
-      hash += bits[i];
+    int hash = 0;
+    for( byte b : kb ) {
+      hash += b;
       hash += (hash << 10);
       hash ^= (hash >> 6);
     }
     hash += (hash << 3);
     hash ^= (hash >> 11);
     hash += (hash << 15);
-    return hash;
-  }
-  // Construct a new Key.
-  private Key(byte[] kb) {
-    if( kb.length > KEY_LENGTH ) throw new IllegalArgumentException("Key length would be "+kb.length);
-    _kb = kb;
-    // For arraylets, arrange that the first 64Megs/Keys worth spread nicely,
-    // but that the next 64Meg (and each 64 after that) target the same node,
-    // so that HDFS blocks hit only 1 node in the typical spread.
-    int i=0; // Include these header bytes or not
-    int chk = 0; // Chunk number, for chunks beyond 64Meg
-    if( kb.length >= 10 && kb[0] == ARRAYLET_CHUNK && kb[1] == 0 ) {
-      long off = UDP.get8(kb,2);
-      i += 2+8; // Skip the length bytes; they are now not part of hash
-      boolean big = (off>>20) >= 64; // Is offset >= 64Meg?
-      chk = (int)(off >>> ((big?6:2)+20)); // Divide by 64Meg or 4Meg; comes up with a "block number"
-    }
-    int hash = hash(kb, i, kb.length);
-    _hash = hash+chk; // Add sequential block numbering
+    _hash = hash;
   }
 
   // Make new Keys.  Optimistically attempt interning, but no guarantee.

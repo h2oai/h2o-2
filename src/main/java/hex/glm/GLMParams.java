@@ -26,35 +26,7 @@ public final class GLMParams extends Iced {
   public GLMParams(Family f, double twVar){this(f,twVar,f.defaultLink,1-twVar);}
   public GLMParams(Family f, double twVar, Link l, double twLnk){
     family = f;
-    if(l == Link.family_default)
-      link = family.defaultLink;
-    else { // check we have compatible link
-      link = l;
-      switch(family){
-        case gaussian:
-          if(link != Link.identity && link != Link.log && link != Link.inverse)
-            throw new IllegalArgumentException("Incompatible link function for selected family. Only identity, log and inverse links are allowed for family=gaussian.");
-          break;
-        case binomial:
-          if(link != Link.logit && link != Link.log)
-            throw new IllegalArgumentException("Incompatible link function for selected family. Only logit and log links are allowed for family=binomial.");
-          break;
-        case poisson:
-          if(link != Link.log && link != Link.identity)
-            throw new IllegalArgumentException("Incompatible link function for selected family. Only log and identity links are allowed for family=poisson.");
-          break;
-        case gamma:
-          if(link != Link.inverse && link != Link.log && link != Link.identity)
-            throw new IllegalArgumentException("Incompatible link function for selected family. Only inverse, log and identity links are allowed for family=gamma.");
-          break;
-        case tweedie:
-          if(link != Link.tweedie)
-            throw new IllegalArgumentException("Incompatible link function for selected family. Only tweedie link allowed for family=tweedie.");
-          break;
-        default:
-          H2O.fail();
-      }
-    }
+    link = l;
     tweedie_variance_power = twVar;
     tweedie_link_power = twLnk;
   }
@@ -64,7 +36,7 @@ public final class GLMParams extends Iced {
       case gaussian:
         return 1;
       case binomial:
-//        assert (0 <= mu && mu <= 1) : "mu out of bounds<0,1>:" + mu;
+        assert (0 <= mu && mu <= 1) : "mu out of bounds<0,1>:" + mu;
         return mu * (1 - mu);
       case poisson:
         return mu;
@@ -222,7 +194,7 @@ public final class GLMParams extends Iced {
     public final Link defaultLink;
     Family(Link link){defaultLink = link;}
   }
-  public static enum Link {family_default, identity, logit, log,inverse,tweedie;}
+  public static enum Link {identity, logit, log,inverse,tweedie;}
 
   // helper function
   static final double y_log_y(double y, double mu) {

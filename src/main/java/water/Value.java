@@ -9,6 +9,7 @@ import water.Job.ProgressMonitor;
 import water.fvec.*;
 import water.nbhm.NonBlockingSetInt;
 import water.persist.*;
+import water.util.Utils;
 
 /**
  * The core Value stored in the distributed K/V store.  It contains an
@@ -247,14 +248,12 @@ public class
       return fr.vecs().length == 1 && (fr.vecs()[0] instanceof ByteVec);
     }
     // either simple value with bytearray, un-parsed value array or byte vec
-    return _type == TypeMap.PRIM_B || (isArray() && !isHex()) || isByteVec();
+    return _type == TypeMap.PRIM_B || isByteVec();
   }
 
   public byte[] getFirstBytes() {
     Value v = this;
-    if(isArray())
-      v = DKV.get(ValueArray.getChunkKey(0,_key));
-    else if(isByteVec()){
+    if(isByteVec()){
       ByteVec vec = get();
       return vec.chunkForChunkIdx(0).getBytes();
     } else if(isFrame()){
@@ -269,10 +268,7 @@ public class
   // For ValueArrays, the length of all chunks.
   // For Frames, the compressed size of all vecs within the frame.
   public long length() {
-    if (isArray()) {
-      return ((ValueArray)get()).length();
-    }
-    else if (isFrame()) {
+    if (isFrame()) {
       return ((Frame)get()).byteSize();
     }
 
@@ -288,42 +284,49 @@ public class
     if(onHDFS()) return PersistHdfs.openStream(_key,p);
     if(onS3()  ) return PersistS3  .openStream(_key,p);
     if(onTachyon()) return PersistTachyon.openStream(_key,p);
-    if(isArray())return ((ValueArray)get()).openStream(p);
     if( isFrame() ) throw new IllegalArgumentException("Tried to pass a Frame to openStream (maybe tried to parse a (already-parsed) Frame?)");
     assert _type==TypeMap.PRIM_B : "Expected byte[] type but got "+TypeMap.className(_type);
     return new ByteArrayInputStream(memOrLoad());
   }
 
-  // Heuristic to guess if this is unparsed CSV text or not
-  public boolean isHex() {
-    assert isArray();
-    ValueArray va = get();
-    if( va._cols == null || va._cols.length == 0 ) return false;
-    if( va._cols.length > 1 ) return true;
-    if( va._cols[0]._size != 1 ) return true;
-    return _key.toString().endsWith(water.api.Constants.Extensions.HEX);
-  }
-
   public boolean isBitIdentical( Value v ) {
     if( this == v ) return true;
-    if( !isArray() && !v.isArray() )
+    if( !isFrame() && !v.isFrame() )
       return Arrays.equals(getBytes(), v.getBytes());
-    if( isArray() && v.isArray() ) {
-      ValueArray thisAry =   get();
-      ValueArray thatAry = v.get();
-      if( thisAry.length() == thatAry.length() &&
-          thisAry._numrows == thatAry._numrows &&
-          thisAry._rowsize == thatAry._rowsize &&
-          thisAry._cols.length == thatAry._cols.length ) {
-        for( int i = 0; i < thisAry._cols.length; ++i )
-          if( !thisAry._cols[i].equals(thatAry._cols[i]) )
-            return false;
-        // headers are the same (except for the keys), now compare the chunk bits
-        BitsCmpTask res = new BitsCmpTask(thisAry); res.invoke(v._key);
-        return res._res;
+    Frame fr0 =   get();
+    Frame fr1 = v.get();
+    if( fr0.numRows() != fr1.numRows() ) return false;
+    if( fr0.numCols() != fr1.numCols() ) return false;
+    return new BitCmp(fr1).doAll(fr0)._eq;
+  }
+  private static class BitCmp extends MRTask2<BitCmp> {
+    final Frame _fr;
+    BitCmp( Frame fr ) { _fr = fr; }
+    boolean _eq;
+    @Override public void map( Chunk[] chks ) {
+      int cols = chks.length;
+      int rows = chks[0]._len;
+      long start = chks[0]._start;
+      for( int c=0; c<cols; c++ ) {
+        Chunk c0 = chks[c    ];
+        Vec v1 = _fr.vecs()[c];
+        if( c0._vec.isUUID() ) {
+          for( int r=0; r<rows; r++ )
+            if( !( c0.isNA0(r) && v1. isNA(r+start)) &&
+                (( c0. isNA0(r)&&!v1. isNA(r+start)) || 
+                 (!c0. isNA0(r)&& v1. isNA(r+start)) ||
+                 ( c0.at16l0(r)!= v1.at16l(r+start))|| 
+                 ( c0.at16h0(r)!= v1.at16h(r+start))) )
+              return;
+        } else {
+          for( int r=0; r<rows; r++ )
+            if( !Utils.compareDoubles(c0.at0(r),v1.at(r+start)) )
+              return;
+        }
       }
+      _eq = true;
     }
-    return false;
+    @Override public void reduce( BitCmp bc ) { _eq &= bc._eq; }
   }
 
   // --------------------------------------------------------------------------
@@ -402,19 +405,6 @@ public class
     _rwlock.set(-1);            // Set as 'remote put is done'
     touch();
     return this;
-  }
-
-  /** Lazily manifest data chunks on demand.  Requires a pre-existing ValueArray.
-   * Probably should be moved into HDFS-land, except that the same logic applies
-   * to all stores providing large-file access by default including S3. */
-  public static Value lazyArrayChunk( Key key ) {
-    if( key._kb[0] != Key.ARRAYLET_CHUNK ) return null; // Not an arraylet chunk
-    if( !key.home() ) return null; // Only on home node, so the replica tracking is correct
-    Key arykey = ValueArray.getArrayKey(key);
-    Value v1 = DKV.get(arykey,Integer.MAX_VALUE,H2O.ARY_KEY_PRIORITY);
-    if( v1 == null ) return null;       // Nope; not there
-    if( !v1.isArray() ) return null; // Or not a ValueArray
-    return Persist.I[v1.backend()].lazyArrayChunk(key);
   }
 
   // ---------------------

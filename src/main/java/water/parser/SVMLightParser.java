@@ -1,11 +1,11 @@
 package water.parser;
 
-import water.Iced;
-
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import water.Iced;
+import water.PrettyPrint;
 
 /**
  * Parser for SVM light format.
@@ -13,8 +13,6 @@ import java.util.Arrays;
  *
  */
 public class SVMLightParser extends CustomParser{
-  final boolean isWhiteSpace(char c){return c == ' '  || c == '\t';}
-  final boolean isNewLine(char c)   {return c == '\r' || c == '\n';}
   private static final byte SKIP_LINE = 0;
   private static final byte EXPECT_COND_LF = 1;
   private static final byte EOL = 2;
@@ -38,11 +36,8 @@ public class SVMLightParser extends CustomParser{
 
   private static final long LARGEST_DIGIT_NUMBER = 1000000000000000000L;
 
-  final static char COMMENT_CHR = '#';
   final static char DECIMAL_SEP = '.';
-  int _failedLines = 0;
 
-  public SVMLightParser() {super(new ParserSetup(ParserType.SVMLight, CsvParser.AUTO_SEP, false));}
   public SVMLightParser(ParserSetup setup) {super(setup);}
   @Override
   public SVMLightParser clone(){return new SVMLightParser(_setup);}
@@ -217,7 +212,7 @@ public class SVMLightParser extends CustomParser{
                     if(number <= colIdx)
                       err = "Columns come in non-increasing sequence. Got " + number + " after " + colIdx + ".";
                     else if(exp != 0)
-                      err = "Got non-integer as column id: " + number*DParseTask.pow10(exp);
+                      err = "Got non-integer as column id: " + number*PrettyPrint.pow10(exp);
                     else
                       err = "column index out of range, " + number + " does not fit into integer.";
                     dout.invalidLine("invalid column id:" + err);
@@ -244,7 +239,7 @@ public class SVMLightParser extends CustomParser{
             }
             if ((c > '0') && (c <= '9')) {
               if (number < LARGEST_DIGIT_NUMBER) {
-                number = (number*DParseTask.pow10i(zeros+1))+(c-'0');
+                number = (number*PrettyPrint.pow10i(zeros+1))+(c-'0');
               } else {
                 dout.invalidLine("number " + number + " is out of bounds.");
                 lstate = SKIP_LINE;
@@ -397,7 +392,7 @@ public class SVMLightParser extends CustomParser{
     @Override public void addNumCol(int colIdx, long number, int exp) {
       _ncols = Math.max(_ncols,colIdx);
       if(colIdx < MAX_COLS && _nlines < MAX_LINES)
-        _data[_nlines][colIdx] = Double.toString(number*DParseTask.pow10(exp));
+        _data[_nlines][colIdx] = Double.toString(number*PrettyPrint.pow10(exp));
     }
     @Override public void addNumCol(int colIdx, double d) {
       _ncols = Math.max(_ncols,colIdx);

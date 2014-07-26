@@ -11,7 +11,6 @@ import water.parser.CustomParser.ParserSetup;
 import water.parser.CustomParser.ParserType;
 import water.parser.CustomParser.StreamDataOut;
 import water.parser.Enum;
-import water.parser.ParseDataset.Compression;
 import water.util.FrameUtils;
 import water.util.Log;
 import water.util.Utils;
@@ -28,6 +27,7 @@ import java.util.zip.ZipInputStream;
 public final class ParseDataset2 extends Job {
   public final Key  _progress;  // Job progress Key
   private MultiFileParseTask _mfpt; // Access to partially built vectors for cleanup after parser crash
+  public static enum Compression { NONE, ZIP, GZIP }
 
   // --------------------------------------------------------------------------
   // Parse an array of csv input/file keys into an array of distributed output Vecs
@@ -38,7 +38,7 @@ public final class ParseDataset2 extends Job {
     ByteVec v = (ByteVec)getVec(k);
     byte [] bits = v.chunkForChunkIdx(0).getBytes();
     Compression cpr = Utils.guessCompressionMethod(bits);
-    globalSetup = ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), globalSetup,true)._setup;
+    globalSetup = GuessSetup.guessSetup(Utils.unzipBytes(bits,cpr), globalSetup,true)._setup;
     if( globalSetup._ncols == 0 ) throw new java.lang.IllegalArgumentException(globalSetup.toString());
     return forkParseDataset(okey, keys, globalSetup, delete_on_done).get();
   }
@@ -489,7 +489,7 @@ public final class ParseDataset2 extends Job {
       byte [] bits = vec.chunkForChunkIdx(0)._mem;
       final int chunkStartIdx = _fileChunkOffsets.get(key)._val;
       Compression cpr = Utils.guessCompressionMethod(bits);
-      CustomParser.ParserSetup localSetup = ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), _setup,false)._setup;
+      CustomParser.ParserSetup localSetup = GuessSetup.guessSetup(Utils.unzipBytes(bits,cpr), _setup,false)._setup;
       // Local setup: nearly the same as the global all-files setup, but maybe
       // has the header-flag changed.
       if(!_setup.isCompatible(localSetup)) {

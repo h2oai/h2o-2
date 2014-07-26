@@ -44,12 +44,6 @@ public abstract class UKV {
   // Right now, just gets chunk#0 from a ValueArray, or a normal Value otherwise.
   static public Value getValue( Key key ) {
     Value val = DKV.get(key);
-    if( val != null && val.isArray() ) {
-      Key k2 = ValueArray.getChunkKey(0,key);
-      Value vchunk0 = DKV.get(k2);
-      assert vchunk0 != null : "missed looking for key "+k2+" from "+key;
-      return vchunk0;           // Else just get the prefix asked for
-    }
     return val;
   }
 

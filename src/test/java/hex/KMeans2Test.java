@@ -1,7 +1,7 @@
 package hex;
 
-import hex.KMeans.Initialization;
 import hex.KMeans2.KMeans2Model;
+import hex.KMeans2.Initialization;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;

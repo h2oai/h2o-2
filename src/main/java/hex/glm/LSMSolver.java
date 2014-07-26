@@ -171,8 +171,7 @@ public abstract class LSMSolver extends Iced{
     private static final double GLM1_RHO = 1.0e-3;
 
     public double gerr = Double.POSITIVE_INFINITY;
-    public int iterations = 0;
-    public long decompTime;
+
     public boolean normalize() {return _lambda != 0;}
 
     public double _addedL2;
@@ -262,11 +261,12 @@ public abstract class LSMSolver extends Iced{
       while(!chol.isSPD() && attempts < 10){
         if(_addedL2 == 0) _addedL2 = 1e-5;
         else _addedL2 *= 10;
+        Log.info("GLM ADMM: BUMPED UP RHO TO " + rho + _addedL2);
         ++attempts;
         gram.addDiag(_addedL2); // try to add L2 penalty to make the Gram issp
         gram.cholesky(chol);
       }
-      decompTime = (t2-t1);
+      long decompTime = (t2-t1);
 
       if(!chol.isSPD()){
         throw new NonSPDMatrixException(gram);
@@ -327,7 +327,7 @@ public abstract class LSMSolver extends Iced{
       assert gram._diagAdded == d;
       long solveTime = System.currentTimeMillis()-t;
       this.gerr = bestErr;
-      iterations = i;
+      Log.info("ADMM finished in " + i + " iterations and (" + decompTime + " + " + solveTime+ ")ms, max |subgradient| = " + bestErr);
       return _converged = (gerr < _gradientEps);
     }
     @Override

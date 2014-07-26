@@ -92,10 +92,6 @@ public class RequestServer extends NanoHTTPD {
     _http500 = registerRequest(new HTTP500());
 
 
-//    Request.addToNavbar(registerRequest(new Inspect4UX()),  "NEW Inspect",                "Data"); //disable for now
-    // REST API helper
-    // Request.addToNavbar(registerRequest(new GBMSchemaV1()),    "GBM API call", "REST");
-    // Request.addToNavbar(registerRequest(new GBMSchemaBloody()), "GBM Bloody", "REST");
     registerGET("/1/metadata/modelbuilders/.*", ModelBuildersMetadataHandlerV1.class, "show");
     registerGET("/1/metadata/modelbuilders", ModelBuildersMetadataHandlerV1.class, "list");
 
@@ -112,24 +108,14 @@ public class RequestServer extends NanoHTTPD {
     // Register Inspect2 just for viewing frames
     registerRequest(new Inspect2());
 
-    // Not supported for now
-//    Request.addToNavbar(registerRequest(new ExportS3()),    "Export S3",                  "Data");
-//    Request.addToNavbar(registerRequest(new ExportHdfs()),  "Export HDFS",                "Data");
-
-    // Remove VA based algos from GUI
-//    Request.addToNavbar(registerRequest(new GLM()),         "GLM",                        "Model");
-//    Request.addToNavbar(registerRequest(new GLMGrid()),     "GLM Grid",                   "Model");
-//    Request.addToNavbar(registerRequest(new KMeans()),      "KMeans",                     "Model");
-//    Request.addToNavbar(registerRequest(new RF()),          "Single Node RF",             "Model");
-
     // FVec models
     Request.addToNavbar(registerRequest(new PCA()),         "PCA",                      "Model");
     Request.addToNavbar(registerRequest(new GBM()),         "GBM",                      "Model");
     Request.addToNavbar(registerRequest(new DeepLearning()),"Deep Learning",            "Model");
-    Request.addToNavbar(registerRequest(new DRF()),         "Distributed RF",           "Model");
+    Request.addToNavbar(registerRequest(new SpeeDRF()),     "Speed RF",                 "Model");
+    Request.addToNavbar(registerRequest(new DRF()),         "BigData RF",               "Model");
     Request.addToNavbar(registerRequest(new GLM2()),        "GLM",                      "Model");
-    Request.addToNavbar(registerRequest(new SpeeDRF()),     "SpeeDRF (Beta)",           "Model");
-    Request.addToNavbar(registerRequest(new KMeans2()),     "KMeans (Beta)",            "Model");
+    Request.addToNavbar(registerRequest(new KMeans2()),     "KMeans",                   "Model");
     Request.addToNavbar(registerRequest(new NaiveBayes()),  "Naive Bayes (Beta)",       "Model");
     Request.addToNavbar(registerRequest(new Anomaly()),     "Anomaly Detection (Beta)", "Model");
 
@@ -186,51 +172,6 @@ public class RequestServer extends NanoHTTPD {
       Request.addToNavbar(registerRequest(new KillMinus3()),           "Kill Minus 3",         "Beta");
       Request.addToNavbar(registerRequest(new SaveModel()),            "Save Model",           "Beta");
       Request.addToNavbar(registerRequest(new LoadModel()),            "Load Model",           "Beta");
-//      Request.addToNavbar(registerRequest(new ExportModel()),     "Export Model",         "Beta (FluidVecs!)");
-//      Request.addToNavbar(registerRequest(new ImportModel()),     "Import Model",         "Beta (FluidVecs!)");
-    }
-
-    // VA stuff is only shown with -beta
-    if(H2O.OPT_ARGS.beta == null) {
-      registerRequest(new Inspect());
-      registerRequest(new SummaryPage());
-      registerRequest(new Parse());
-      registerRequest(new ImportFiles());
-      registerRequest(new Upload());
-      registerRequest(new ImportUrl());
-      registerRequest(new ImportS3());
-      registerRequest(new ExportS3());
-      registerRequest(new ImportHdfs());
-      registerRequest(new GLM());
-      registerRequest(new GLMGrid());
-      registerRequest(new KMeans());
-      registerRequest(new RF());
-      registerRequest(new RFScore());
-      registerRequest(new GLMScore());
-      registerRequest(new KMeansScore());
-      registerRequest(new KMeansApply());
-      registerRequest(new GeneratePredictionsPage());
-      registerRequest(new Score());
-    } else {
-      Request.addToNavbar(registerRequest(new Upload()), "Upload", "VA (deprecated)");
-      Request.addToNavbar(registerRequest(new ImportFiles()), "Import", "VA (deprecated)");
-      Request.addToNavbar(registerRequest(new ImportUrl()), "ImportURL", "VA (deprecated)");
-      Request.addToNavbar(registerRequest(new ImportS3()), "ImportS3", "VA (deprecated)");
-      Request.addToNavbar(registerRequest(new ImportHdfs()), "ImportHDFS", "VA (deprecated)");
-      Request.addToNavbar(registerRequest(new Parse()), "Parse", "VA (deprecated)");
-      Request.addToNavbar(registerRequest(new Inspect()), "Inspect", "VA (deprecated)");
-      Request.addToNavbar(registerRequest(new SummaryPage()), "Summary", "VA (deprecated)");
-//    Request.addToNavbar(registerRequest(new ExportS3()), "ExportS3", "VA (deprecated)");
-      Request.addToNavbar(registerRequest(new GLM()), "GLM", "VA (deprecated)");
-      Request.addToNavbar(registerRequest(new GLMGrid()), "GLMGrid", "VA (deprecated)");
-      Request.addToNavbar(registerRequest(new GLMScore()), "GLMScore", "VA (deprecated)");
-      Request.addToNavbar(registerRequest(new KMeans()), "KMeans", "VA (deprecated)");
-      Request.addToNavbar(registerRequest(new KMeansScore()), "KMeansScore", "VA (deprecated)");
-      Request.addToNavbar(registerRequest(new KMeansApply()), "KMeansApply", "VA (deprecated)");
-      Request.addToNavbar(registerRequest(new RF()), "RF", "VA (deprecated)");
-      Request.addToNavbar(registerRequest(new RFScore()), "RFScore", "VA (deprecated)");
-      Request.addToNavbar(registerRequest(new GeneratePredictionsPage()), "GeneratePredictionsPage", "VA (deprecated)");
-      Request.addToNavbar(registerRequest(new Score()), "Score", "VA (deprecated)");
     }
 
     registerRequest(new Get()); // Download
@@ -244,11 +185,8 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new DRFProgressPage());
     registerRequest(new DownloadDataset());
     registerRequest(new Exec2());
-    registerRequest(new ExportS3Progress());
     registerRequest(new GBMModelView());
     registerRequest(new GBMProgressPage());
-    registerRequest(new GLMGridProgress());
-    registerRequest(new GLMProgressPage());
     registerRequest(new GridSearchProgress());
     registerRequest(new LogView.LogDownload());
     registerRequest(new NeuralNetModelView());
@@ -265,32 +203,22 @@ public class RequestServer extends NanoHTTPD {
     registerRequest(new PCAModelView());
     registerRequest(new PostFile());
     registerRequest(new water.api.Upload2.PostFile());
-    registerRequest(new Progress());
     registerRequest(new Progress2());
     registerRequest(new PutValue());
-    registerRequest(new RFTreeView());
-    registerRequest(new RFView());
-    registerRequest(new RReaderProgress());
     registerRequest(new Remove());
     registerRequest(new RemoveAll());
     registerRequest(new RemoveAck());
-    registerRequest(new SetColumnNames());
     registerRequest(new SpeeDRFModelView());
     registerRequest(new SpeeDRFProgressPage());
     registerRequest(new water.api.SetColumnNames2());     // Set colnames for FluidVec objects
     registerRequest(new LogAndEcho());
-    registerRequest(new ToEnum());
     registerRequest(new ToEnum2());
     registerRequest(new ToInt2());
     registerRequest(new GLMProgress());
     registerRequest(new hex.glm.GLMGridProgress());
     registerRequest(new water.api.Levels2());    // Temporary hack to get factor levels efficiently
-    registerRequest(new water.api.Levels());    // Ditto the above for ValueArray objects
     // Typeahead
     registerRequest(new TypeaheadModelKeyRequest());
-    registerRequest(new TypeaheadGLMModelKeyRequest());
-    registerRequest(new TypeaheadRFModelKeyRequest());
-    registerRequest(new TypeaheadKMeansModelKeyRequest());
     registerRequest(new TypeaheadPCAModelKeyRequest());
     registerRequest(new TypeaheadHexKeyRequest());
     registerRequest(new TypeaheadFileRequest());

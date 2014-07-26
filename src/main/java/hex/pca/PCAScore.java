@@ -82,7 +82,7 @@ public class PCAScore extends FrameJob {
     final double[][] _eigvec; // eigenvector matrix
 
     public PCAScoreTask(Job job, DataInfo dinfo, int nfeat, int ncomp, double[][] eigvec) {
-      super(job.self(), dinfo);
+      super(job, dinfo);
       _nfeat = nfeat;
       _ncomp = ncomp;
       _eigvec = eigvec;
