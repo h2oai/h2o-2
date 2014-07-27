@@ -23,7 +23,7 @@ zeroList = [
 # bug?
 #        ['Result<n> = slice(c.hex[<col1>],<row>)',
 exprList = [
-        'Result<n>[,<col1>] = (c.hex[,2]==0) ? 54321 : 54321',
+        'Result<n>[,1] = (c.hex[,2]==0) ? 54321 : 54321',
         'Result<n> = c.hex[,<col1>]',
         'Result<n> = min(c.hex[,<col1>])',
         'Result<n> = max(c.hex[,<col1>]) + Result[,1]',
