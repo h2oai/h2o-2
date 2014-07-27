@@ -1363,7 +1363,7 @@ class H2O(object):
     def kmeans_model_view(self, model, timeoutSecs=30, **kwargs):
         # defaults
         params_dict = {
-            'model': model,
+            '_modelKey': model,
         }
         browseAlso = kwargs.get('browseAlso', False)
         # only lets these params thru
