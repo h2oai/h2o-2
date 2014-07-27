@@ -43,9 +43,6 @@ public class CMTask extends MRTask2<CMTask> {
   public int _rowcnt; // Rows used in scoring for regression
   public boolean _score_new_tree_only;
 
-  private float[] _priorDist;
-  private float[] _modelDist;
-
   /** Data to replay the sampling algorithm */
   private long[]     _chunk_row_mapping;
   /** Number of rows at each node */
@@ -64,7 +61,7 @@ public class CMTask extends MRTask2<CMTask> {
   /** Confusion matrix
    * @param model the ensemble used to classify
    */
-  private CMTask(SpeeDRFModel model, int treesToUse, boolean computeOOB, float[] priorDist, float[] modelDist, Frame fr, Vec resp) {
+  private CMTask(SpeeDRFModel model, int treesToUse, boolean computeOOB, Frame fr, Vec resp) {
     _modelKey   = model._key;
     _datakey    = model._dataKey;
     _classcol   = fr.numCols() - 1; //model.test_frame == null ?  (model.fr.numCols() - 1) : (model.test_frame.numCols() - 1);
@@ -74,13 +71,11 @@ public class CMTask extends MRTask2<CMTask> {
     _varimp = null;
     _ss = 0.f;
     _data = fr;
-    _priorDist = priorDist;
-    _modelDist = modelDist;
     shared_init(resp);
   }
 
-  public static CMTask scoreTask(SpeeDRFModel model, int treesToUse, boolean computeOOB, float[] priorDist, float[] modelDist, Frame fr, Vec resp) {
-    CMTask tsk = new CMTask(model, treesToUse, computeOOB, priorDist, modelDist, fr, resp);
+  public static CMTask scoreTask(SpeeDRFModel model, int treesToUse, boolean computeOOB, Frame fr, Vec resp) {
+    CMTask tsk = new CMTask(model, treesToUse, computeOOB, fr, resp);
     tsk.doAll(fr);
     return tsk;
   }

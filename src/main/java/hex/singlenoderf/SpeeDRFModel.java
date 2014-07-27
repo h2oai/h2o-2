@@ -199,7 +199,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   }
 
   private void scoreOnTrain(Frame fr, Vec modelResp) {
-    final CMTask cmTask = CMTask.scoreTask(this, treeCount(), oobee, priordist(), modeldist(), fr, modelResp);
+    final CMTask cmTask = CMTask.scoreTask(this, treeCount(), oobee, fr, modelResp);
     if (regression) {
       float mse = cmTask._ss / ( (float) (cmTask._rowcnt));
       errs = Arrays.copyOf(errs, errs.length + 1);
@@ -370,7 +370,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
   /** Internal computation of depth and number of leaves. */
   public void find_leaves_depth() {
-    if( _tl != null ) return;
+//    if( _tl != null ) return;
     _td = new Counter();
     _tl = new Counter();
     for( Key tkey : t_keys ) {
@@ -546,13 +546,13 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     double[] leaf_stats = stats(trees.get(Constants.TREE_LEAVES));
 
     sb.append("<tr><th>Depth</th>")
-            .append("<td>").append(depth_stats != null ? depth_stats[0]  : NA).append("</td>")
+            .append("<td>").append(depth_stats != null ? (int)depth_stats[0]  : NA).append("</td>")
             .append("<td>").append(depth_stats != null ? depth_stats[1] : NA).append("</td>")
-            .append("<td>").append(depth_stats != null ? depth_stats[2] : NA).append("</td></tr>");
+            .append("<td>").append(depth_stats != null ? (int)depth_stats[2] : NA).append("</td></tr>");
     sb.append("<th>Leaves</th>")
-            .append("<td>").append(leaf_stats != null ? leaf_stats[0]  : NA).append("</td>")
+            .append("<td>").append(leaf_stats != null ? (int)leaf_stats[0]  : NA).append("</td>")
             .append("<td>").append(leaf_stats != null ? leaf_stats[1] : NA).append("</td>")
-            .append("<td>").append(leaf_stats != null ? leaf_stats[2]  : NA).append("</td></tr>");
+            .append("<td>").append(leaf_stats != null ? (int)leaf_stats[2]  : NA).append("</td></tr>");
     DocGen.HTML.arrayTail(sb);
 
     if(depth_stats != null && leaf_stats != null) {
@@ -574,9 +574,9 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     } else {
       JsonObject obj = json.getAsJsonObject();
       return new double[]{
-              obj.get(Constants.MIN).getAsDouble(),
-              obj.get(Constants.MEAN).getAsDouble(),
-              obj.get(Constants.MAX).getAsDouble()};
+              Math.round(obj.get(Constants.MIN).getAsDouble() * 1000.0) / 1000.0,
+              Math.round(obj.get(Constants.MEAN).getAsDouble() * 1000.0) / 1000.0,
+              Math.round(obj.get(Constants.MAX).getAsDouble() * 1000.0) / 1000.0};
     }
   }
 
