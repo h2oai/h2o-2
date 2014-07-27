@@ -216,6 +216,7 @@ public class GLMRandomTest extends TestUtil {
                                                         try {
                                                           p.invokeServe();
                                                         } catch (IllegalArgumentException t) {
+                                                          Log.info("Skipping invalid combination of arguments.");
                                                           // accept IllegalArgumentException, but nothing else
                                                         } finally {
                                                           UKV.remove(dest);
@@ -259,6 +260,6 @@ public class GLMRandomTest extends TestUtil {
   }
 
   public static class Short extends GLMRandomTest {
-    @Test public void run() throws Throwable { GLM2Test.runFraction(1e-9f); }
+    @Test public void run() throws Throwable { GLM2Test.runFraction(1e-6f); }
   }
 }
