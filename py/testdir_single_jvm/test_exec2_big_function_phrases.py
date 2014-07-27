@@ -9,7 +9,7 @@ DO_IRIS = False
 #        "a=rhex; function(x){x=a;a=3;nrow(x)*a}(a)",
 #        "function(x){y=x*2; y+1}(2)",
 #        "a=1; a=2; function(x){x=a;a=3}",
-#        "mean=function(x){apply(x,1,sum)/nrow(x)};mean(rhex)",
+#        "mean2=function(x){apply(x,1,sum)/nrow(x)};mean2(rhex)",
 phrasesCompound = [
         "aa=!0; xx=!0",
         "ab=0; xy=0",

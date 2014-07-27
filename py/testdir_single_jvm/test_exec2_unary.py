@@ -12,8 +12,8 @@ initList = [
         ('r3.hex', 'r3.hex=i.hex'),
         # ('x', 'x=r.hex[,1]; rcnt=nrow(x)-sum(is.na(x))'),
         # ('x', 'x=r.hex[,1]; total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x))'),
-        # ('x', 'x=r.hex[,1]; total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt'),
-        # ('x', 'x=r.hex[,1]; total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt; x=ifelse(is.na(x),mean,x)'),
+        # ('x', 'x=r.hex[,1]; total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean2=total / rcnt'),
+        # ('x', 'x=r.hex[,1]; total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean2=total / rcnt; x=ifelse(is.na(x),mean2,x)'),
         ]
 
 if 1==0:
@@ -163,8 +163,8 @@ else:
         # "apply(r.hex,1,function(x){x=1;r.hex})",
         # doesn't work
         # "apply(r.hex,1,function(x){r.hex})",
-        "mean=function(x){apply(x,2,sum)/nrow(x)};mean(r.hex)",
-        # "mean=function(x){apply(x,1,sum)/nrow(x)};mean(r.hex)",
+        "mean2=function(x){apply(x,2,sum)/nrow(x)};mean2(r.hex)",
+        # "mean2=function(x){apply(x,1,sum)/nrow(x)};mean2(r.hex)",
 
         #  Conditional selection; 
         "ifelse(0,1,2)",
@@ -175,7 +175,7 @@ else:
         "(1? r.hex : (r.hex+1))[1,2]",#  True (vs false) test
         #  Impute the mean
         # doesn't work
-        # "apply(r.hex,2,function(x){total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt; ifelse(is.na(x),mean,x)})",
+        # "apply(r.hex,2,function(x){total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean2=total / rcnt; ifelse(is.na(x),mean2,x)})",
         "factor(r.hex[,5])",
 
         #  Slice assignment & map
