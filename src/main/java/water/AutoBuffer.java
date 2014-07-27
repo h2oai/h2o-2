@@ -22,7 +22,6 @@ import water.util.Log;
  * @author <a href="mailto:cliffc@0xdata.com"></a>
  */
 public class AutoBuffer {
-  public static final int TCP_WRITE_ATTEMPTS = 2;
   // The direct ByteBuffer for schlorping data about
   public ByteBuffer _bb;
 
@@ -220,7 +219,7 @@ public class AutoBuffer {
     while( true ) {             // Repeat loop for DBB OutOfMemory errors
       ByteBuffer bb = null;
       try { bb = BBS.pollFirst(0,TimeUnit.SECONDS); }
-      catch( InterruptedException e ) { throw  Log.errRTExcept(e); }
+      catch( InterruptedException e ) { throw Log.errRTExcept(e); }
       if( bb != null ) {
         bbstats(BBCACHE);
         return bb;
@@ -244,7 +243,7 @@ public class AutoBuffer {
   }
 
   private final int bbFree() {
-    if( _bb.isDirect() ) bbFree(_bb);
+    if( _bb != null && _bb.isDirect() ) bbFree(_bb);
     _bb = null;
     return 0;                   // Flow-coding
   }
@@ -306,7 +305,7 @@ public class AutoBuffer {
             // Read the writer-handshake-byte.
             int x = sock.socket().getInputStream().read();
             // either TCP con was dropped or other side closed connection without reading/confirming (e.g. task was cancelled).
-            if( x == -1 ) new IOException("Other side closed connection unexpectedly.");
+            if( x == -1 ) throw new IOException("Other side closed connection unexpectedly.");
             assert x == 0xcd : "Handshake; writer expected a 0xcd from reader but got "+x;
           }
         } catch( IOException ioe ) {
@@ -314,7 +313,7 @@ public class AutoBuffer {
           sock = null;
           throw ioe;            // Rethrow after close
         } finally {
-          if( !_read ) _h2o.freeTCPSocket(sock); // Recycle writeable TCP channel
+          if( !_read && !failed) _h2o.freeTCPSocket(sock); // Recycle writable TCP channel
           restorePriority();        // And if we raised priority, lower it back
         }
 
@@ -342,15 +341,18 @@ public class AutoBuffer {
     _chan = _h2o.getTCPSocket();
     raisePriority();
   }
-  // Just close the channel here without reading anything. Without the task object at hand we do not know what (how many bytes) should
-  // we read from the channel. And since the other side will try to read confirmation from us in before closing the channel,
-  // we can not read till the end. So we just close the channel and let the other side to deal with it and figure out the task has been cancelled
-  // (still sending ack ack back).
+
+  // Just close the channel here without reading anything.  Without the task
+  // object at hand we do not know what (how many bytes) should we read from
+  // the channel.  And since the other side will try to read confirmation from
+  // us before closing the channel, we can not read till the end.  So we just
+  // close the channel and let the other side to deal with it and figure out
+  // the task has been cancelled (still sending ack ack back).
   public void drainClose() {
     try {
-      try {
-        Log.info("drain-closing channel to " + ((SocketChannel) _chan).socket().getInetAddress());
-      }catch(Throwable t){Log.info("drain-closing channel to unknown node");}
+      // Appears to work reasonably now; removing noisy printout
+      //try {              Log.info("drainClose channel to " + ((SocketChannel) _chan).socket().getInetAddress()); }
+      //catch(Throwable t){Log.info("drainClose channel to unknown node");}
       _chan.close();
       restorePriority();        // And if we raised priority, lower it back
       bbFree();
