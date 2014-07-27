@@ -170,7 +170,7 @@ exprListFull = [
         "runif(r4.hex[,1], -1)",
     
         # doesn't work
-        "mean=function(x){apply(x,1,sum)/nrow(x)};mean(r.hex)",
+        "mean2=function(x){apply(x,1,sum)/nrow(x)};mean2(r.hex)",
         ]
 
 
