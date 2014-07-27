@@ -8,16 +8,6 @@ import water.fvec.Vec;
 
 public class SpeeDRFTest2 extends TreeTestWithBalanceAndCrossVal {
 
-  // FIXME: all the tests are ignored here!
-  // Please fix SpeeDRF to handle categoricals as the rest
-  // of algorithms
-  @Override public void testCarBalanceAndCrossValidation() {
-  }
-  @Override public void testCovtypeBalanceAndCrossValidation() {
-  }
-  @Override public void testWeatherDataset() {
-  }
-
   @Override protected void testBalanceWithCrossValidation(String dataset, int response, int[] ignored_cols, int ntrees, int nfolds) {
     Frame f = parseFrame(dataset);
     SpeeDRFModel model = null;
@@ -34,7 +24,7 @@ public class SpeeDRFTest2 extends TreeTestWithBalanceAndCrossVal {
       spdrf.n_folds = nfolds;
       spdrf.keep_cross_validation_splits = false;
       spdrf.invoke();
-      Assert.assertEquals("Number of cross validation model is wrond!", nfolds, spdrf.xval_models.length);
+      Assert.assertEquals("Number of cross validation model is wrong!", nfolds, spdrf.xval_models.length);
       model = UKV.get(spdrf.dest());
     } finally {
       if (f!=null) f.delete();
