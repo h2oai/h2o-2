@@ -31,7 +31,7 @@ public class SpeeDRF extends Job.ValidatedJob {
   @API(help = "Split Criterion Type", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
   public Tree.SelectStatType select_stat_type = Tree.SelectStatType.ENTROPY;
 
-  @API(help = "Use local data. Auto-enabled if data does not fit in a single node.", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
+  @API(help = "Use local data. Auto-enabled if data does not fit in a single node.") /*, filter = Default.class, json = true, importance = ParamImportance.EXPERT) */
   public boolean local_mode = false;
 
   /* Legacy parameter: */
@@ -88,6 +88,8 @@ public class SpeeDRF extends Job.ValidatedJob {
   private boolean regression;
 
   public DRFParams drfParams;
+
+  Tree.StatType stat_type;
 
   protected SpeeDRFModel makeModel( SpeeDRFModel model, double err, ConfusionMatrix cm, VarImp varimp, AUCData validAUC) {
     return new SpeeDRFModel(model, err, cm, varimp, validAUC);
@@ -167,7 +169,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       ex.printStackTrace();
       throw new RuntimeException(ex);
     }
-    finally{
+    finally {
       source.unlock(self());
       remove();
       state = UKV.<Job>get(self()).state;
@@ -188,19 +190,28 @@ public class SpeeDRF extends Job.ValidatedJob {
   private void buildForest() {
     SpeeDRFModel model = null;
     try {
-      model = initModel();
+      Frame train = setTrain(); Frame test  = setTest();
+      Vec resp = regression ? null : train.lastVec().toEnum();
+      if (resp != null) gtrash(resp);
+      float[] priorDist = setPriorDist(train);
+      Frame fr = setStrat(train, test, resp);
+      model = initModel(fr, priorDist);
       model.start_training(null);
       model.write_lock(self());
-      drfParams = DRFParams.create(model.fr.find(model.response), model.N, model.max_depth, (int) model.fr.numRows(), model.nbins,
+      drfParams = DRFParams.create(fr.find(resp), model.N, model.max_depth, (int) fr.numRows(), model.nbins,
               model.statType, seed, model.weights, mtry, model.sampling_strategy, (float) sample, model.strata_samples, model.verbose ? 100 : 1, _exclusiveSplitLimit, !local_mode, regression);
       DRFTask tsk = new DRFTask();
       tsk._job = Job.findJob(self());
       tsk._params = drfParams;
       tsk._rfmodel = model;
       tsk._drf = this;
+      tsk._fr = fr;
+      tsk._resp = resp;
+
       tsk.validateInputData();
       tsk.invokeOnAllNodes();
       model = UKV.get(dest());
+      model.scoreAllTrees(fr, resp);
     }
     finally {
       if (model != null) {
@@ -210,147 +221,24 @@ public class SpeeDRF extends Job.ValidatedJob {
     }
   }
 
-
-  /**
-   * Check the user inputted class weights for errors.
-   * @param weights: The user input class weights.
-   * @return : Return an array of doubles.
-   */
-
-  private double[] checkClassWeights(double[] weights) {
-
-    // Fill the defaults with 1.0 weight
-    Vec resp = response.toEnum();
-    double [] defaults = new double[resp.cardinality()]; //can leak if not yet enum
-    gtrash(resp);
-    for (int i = 0; i < defaults.length; ++i) defaults[i] = 1.0;
-
-    //Create a results vector to be filled in below
-    double [] result = new double[defaults.length];
-
-    // User gave no weights, use defaults
-    if (weights == null) return defaults;
-
-    // User gave more weights than classes, only use the first N
-    if (weights.length > defaults.length) {
-      System.arraycopy(weights, 0, result, 0, defaults.length);
-      return result;
-    }
-
-    //User specified fewer samples than classes, pad with defaults
-    if (weights.length < defaults.length) {
-      System.arraycopy(weights, 0, result, 0, weights.length);
-      System.arraycopy(defaults, weights.length, result, weights.length, defaults.length - weights.length);
-      return result;
-    }
-
-    return defaults;
-  }
-
-  // Initialize defaults and user specified model params
-  public SpeeDRFModel initModel() {
-    // Map the enum SelectStatType to the enum StatType
-    Tree.StatType stat_type;
-    if (regression) {
-      stat_type = Tree.StatType.MSE;
-    } else {
-      if (select_stat_type == Tree.SelectStatType.ENTROPY) {
-        stat_type = Tree.StatType.ENTROPY;
-      } else {
-        stat_type = Tree.StatType.GINI;
-      }
-    }
-
-    // Initialize classification specific model parameters
-    if(!regression) {
-
-      // Handle bad user input for class weights
-//      class_weights = checkClassWeights(class_weights);
-
-      // Initialize regression specific model parameters
-    } else {
-
-      // Class Weights and Strata Samples do not apply to Regression
-      class_weights = null;
-
-      //TODO: Variable importance in regression not currently supported
-      if (importance && regression) throw new IllegalArgumentException("Variable Importance for SpeeDRF regression not currently supported.");
-    }
-
-    // Generate a new seed by default.
-    if (seed == -1) {
-      seed = _seedGenerator.nextLong();
-    }
-
-    // Prepare the train/test data sets based on the user input for the model.
-    Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, !regression /*toEnum is TRUE if regression is FALSE*/, false, false);
-    if (train.lastVec().masterVec() != null && train.lastVec() != response) gtrash(train.lastVec());
-    Frame test = null;
-    if (validation != null) {
-      test = FrameTask.DataInfo.prepareFrame(validation, validation.vecs()[source.find(response)], ignored_cols, !regression, false, false);
-    }
-
-    if (test != null && test.lastVec().masterVec() != null) gtrash(test.lastVec());
-
-    float[] priorDist = classification ? new MRUtils.ClassDist(train.lastVec()).doAll(train.lastVec()).rel_dist() : null;
-
-    // Handle imbalanced classes by stratified over/under-sampling
-    // initWorkFrame sets the modeled class distribution, and model.score() corrects the probabilities back using the distribution ratios
-    float[] trainSamplingFactors;
-    Vec resp =  regression ? null : train.lastVec().toEnum();
-    if (resp != null) gtrash(resp);
-    Frame fr = train;
-    if (classification && balance_classes) {
-      int response_idx = fr.find(_responseName);
-      fr.replace(response_idx, resp);
-      trainSamplingFactors = new float[resp.domain().length]; //leave initialized to 0 -> will be filled up below
-      Frame stratified = sampleFrameStratified(fr, resp, trainSamplingFactors, (long)(max_after_balance_size*fr.numRows()), seed, true, false);
-      if (stratified != fr) {
-        fr = stratified;
-        gtrash(stratified);
-      }
-    }
-
-    // Check that that test/train data are consistent, throw warning if not
-    if(classification && validation != null) {
-      Vec testresp = test.lastVec().toEnum();
-      gtrash(testresp);
-      if (!isSubset(testresp.domain(), resp.domain())) {
-        Log.warn("Test set domain: " + Arrays.toString(testresp.domain()) + " \nTrain set domain: " + Arrays.toString(resp.domain()));
-        Log.warn("Train and Validation data have inconsistent response columns! Test data has a response not found in the Train data!");
-      }
-    }
-
+  public SpeeDRFModel initModel(Frame fr, float[] priorDist) {
+    setStatType();
+    if (seed == -1 )setSeed();
+    if (mtry == -1) setMtry(regression, fr.numCols() - 1);
     Key src_key = source._key;
     int src_ncols = source.numCols();
-    // Set the model parameters
-    SpeeDRFModel model = new SpeeDRFModel(dest(), src_key, fr, regression ? null : resp.domain(), this, priorDist);
-    model.verbose = verbose;
-    int csize = H2O.CLOUD.size();
-    model.fr = fr;
-    model.response = regression ? fr.lastVec() : fr.lastVec().toEnum();
-    if (!regression) gtrash(model.response);
-    model.t_keys = new Key[0];
-    model.time = 0;
-    model.local_forests = new Key[csize][];
-    model.verbose_output = new String[]{""};
-    for(int i=0;i<csize;i++) model.local_forests[i] = new Key[0];
-    model.node_split_features = new int[csize];
-    for( Key tkey : model.t_keys ) assert DKV.get(tkey)!=null;
-    model.jobKey = self();
-    model.current_status = "Initializing Model";
+
+    SpeeDRFModel model = new SpeeDRFModel(dest(), src_key, fr, regression ? null : fr.lastVec().domain(), this, priorDist);
+
+    // Model INPUTS
+    model.verbose = verbose; model.verbose_output = new String[]{""};
     model.confusion = null;
     model.zeed = seed;
     model.cmDomain = getCMDomain();
-    model.varimp = null;
-    model.validAUC = null;
-    model.cms = new ConfusionMatrix[1];
-    model.errs = new float[]{-1.f};
     model.nbins = bin_limit;
     model.max_depth = max_depth;
     model.oobee = validation == null && oobee;
     model.statType = regression ? Tree.StatType.MSE : stat_type;
-    model.test_frame = test;
     model.testKey = validation == null ? null : validation._key;
     model.importance = importance;
     model.regression = regression;
@@ -359,34 +247,62 @@ public class SpeeDRF extends Job.ValidatedJob {
     model.sample = (float) sample;
     model.weights = regression ? null : class_weights;
     model.time = 0;
-    model.tree_pojos = new TreeP[1];
     model.N = num_trees;
     model.useNonLocal = !local_mode;
     if (!regression) model.setModelClassDistribution(new MRUtils.ClassDist(fr.lastVec()).doAll(fr.lastVec()).rel_dist());
-    model.resp_min = (int) resp.min();
+    model.resp_min = (int) fr.lastVec().min();
+    model.mtry = mtry;
+    int csize = H2O.CLOUD.size();
+    model.local_forests = new Key[csize][]; for(int i=0;i<csize;i++) model.local_forests[i] = new Key[0];
+    model.node_split_features = new int[csize];
+    model.t_keys = new Key[0];
+    model.time = 0;
+    for( Key tkey : model.t_keys ) assert DKV.get(tkey)!=null;
+    model.jobKey = self();
+    model.current_status = "Initializing Model";
 
-    if (mtry == -1) {
-      if(!regression) {
-
-        // Classification uses the square root of the number of features by default
-        model.mtry = (int) Math.floor(Math.sqrt(fr.numCols() - 1)); // do not count class column
-      } else {
-
-        // Regression uses about a third of the features by default
-        model.mtry = (int) Math.floor((float) (fr.numCols() - 1) / 3.0f);  // do not count class column
-      }
-
-    } else {
-
-      // The user specified mtry
-      model.mtry = mtry;
-    }
-
+    // Model OUTPUTS
+    model.varimp = null; model.validAUC = null; model.cms = new ConfusionMatrix[1]; model.errs = new float[]{-1.f};
     return model;
   }
 
-  public Frame score( Frame fr ) { return ((SpeeDRFModel)UKV.get(dest())).score(fr);  }
+  private void setStatType() { if (regression) stat_type = Tree.StatType.MSE; stat_type = select_stat_type == Tree.SelectStatType.ENTROPY ? Tree.StatType.ENTROPY : Tree.StatType.GINI; }
+  private void setSeed() { seed = _seedGenerator.nextLong(); }
+  private void setMtry(boolean reg, int numCols) { mtry = reg ? (int) Math.floor((float) (numCols) / 3.0f) : (int) Math.floor(Math.sqrt(numCols)); }
+  private Frame setTrain() { Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, !regression /*toEnum is TRUE if regression is FALSE*/, false, false); if (train.lastVec().masterVec() != null && train.lastVec() != response) gtrash(train.lastVec()); return train; }
+  private Frame setTest() { Frame test = null; if (validation != null) test = FrameTask.DataInfo.prepareFrame(validation, validation.vecs()[source.find(response)], ignored_cols, !regression, false, false); if (test != null && test.lastVec().masterVec() != null) gtrash(test.lastVec()); return test; }
+  private Frame setStrat(Frame train, Frame test, Vec resp) {
+    Frame fr = train;
+    float[] trainSamplingFactors;
+    if (classification && balance_classes) {
+      assert resp != null : "Regression called and stratified sampling was invoked to balance classes!";
+      // Handle imbalanced classes by stratified over/under-sampling
+      // initWorkFrame sets the modeled class distribution, and model.score() corrects the probabilities back using the distribution ratios
+      int response_idx = fr.find(_responseName);
+      fr.replace(response_idx, resp);
+      trainSamplingFactors = new float[resp.domain().length]; //leave initialized to 0 -> will be filled up below
+      Frame stratified = sampleFrameStratified(fr, resp, trainSamplingFactors, (long) (max_after_balance_size * fr.numRows()), seed, true, false);
+      if (stratified != fr) {
+        fr = stratified;
+        gtrash(stratified);
+      }
+    }
 
+    // Check that that test/train data are consistent, throw warning if not
+    if(classification && validation != null) {
+      assert resp != null : "Regression called and stratified sampling was invoked to balance classes!";
+      Vec testresp = test.lastVec().toEnum();
+      gtrash(testresp);
+      if (!isSubset(testresp.domain(), resp.domain())) {
+        Log.warn("Test set domain: " + Arrays.toString(testresp.domain()) + " \nTrain set domain: " + Arrays.toString(resp.domain()));
+        Log.warn("Train and Validation data have inconsistent response columns! Test data has a response not found in the Train data!");
+      }
+    }
+    return fr;
+  }
+
+  private float[] setPriorDist(Frame train) { return classification ? new MRUtils.ClassDist(train.lastVec()).doAll(train.lastVec()).rel_dist() : null; }
+  public Frame score( Frame fr ) { return ((SpeeDRFModel)UKV.get(dest())).score(fr);  }
   private boolean isSubset(String[] sub, String[] container) {
     HashSet<String> hs = new HashSet<String>();
     Collections.addAll(hs, container);
@@ -405,11 +321,13 @@ public class SpeeDRF extends Job.ValidatedJob {
     /** RF parameters. */
     public DRFParams _params;
     public SpeeDRF _drf;
+    public Frame _fr;
+    public Vec _resp;
 
     /**Inhale the data, build a DataAdapter and kick-off the computation.
      * */
     @Override public final void lcompute() {
-      final DataAdapter dapt = DABuilder.create(_drf, _rfmodel).build(_rfmodel.fr, _params._useNonLocalData);
+      final DataAdapter dapt = DABuilder.create(_drf, _rfmodel).build(_fr, _params._useNonLocalData);
       if (dapt == null) {
         tryComplete();
         return;
@@ -417,7 +335,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       Data localData        = Data.make(dapt);
       int numSplitFeatures  = howManySplitFeatures();
       int ntrees            = howManyTrees();
-      int[] rowsPerChunks   = howManyRPC(_rfmodel.fr);
+      int[] rowsPerChunks   = howManyRPC(_fr);
       updateRFModel(_rfmodel._key, numSplitFeatures);
       updateRFModelStatus(_rfmodel._key, "Building Forest");
       SpeeDRF.build(_job, _params, localData, ntrees, numSplitFeatures, rowsPerChunks);
@@ -447,20 +365,10 @@ public class SpeeDRF extends Job.ValidatedJob {
       }.invoke(modelKey);
     }
 
-//    static void updateRFModelStopTraining(Key modelKey) {
-//      new TAtomic<SpeeDRFModel>() {
-//        @Override public SpeeDRFModel atomic(SpeeDRFModel m) {
-//          if(m == null) return null;
-//          m.stop_training();
-//          return m;
-//        }
-//      }.invoke(modelKey);
-//    }
-
     /** Unless otherwise specified each split looks at sqrt(#features). */
     private int howManySplitFeatures() {
       if (_params.num_split_features!=-1) return _params.num_split_features;
-      return (int)Math.sqrt(_rfmodel.fr.numCols()-1/*we don't used the class column*/);
+      return (int)Math.sqrt(_fr.numCols()-1/*we don't use the class column*/);
     }
 
     /** Figure the number of trees to make locally, so the total hits ntrees.
@@ -469,7 +377,7 @@ public class SpeeDRF extends Job.ValidatedJob {
      *  trees.  Round down for later nodes, and round up for earlier nodes.
      */
     private int howManyTrees() {
-      Frame fr = _rfmodel.fr;
+      Frame fr = _fr;
       final long num_chunks = fr.anyVec().nChunks();
       final int  num_nodes  = H2O.CLOUD.size();
       HashSet<H2ONode> nodes = new HashSet<H2ONode>();
@@ -499,8 +407,8 @@ public class SpeeDRF extends Job.ValidatedJob {
     }
 
     private void validateInputData() {
-      Vec[] vecs = _rfmodel.fr.vecs();
-      Vec c = _rfmodel.response;
+      Vec[] vecs = _fr.vecs();
+      Vec c = _resp;
       String err = "Response column must be an integer in the interval [2,254]";
       if( !_rfmodel.regression & (!(c.isEnum() || c.isInt())))
         throw new IllegalArgumentException("Classification cannot be performed on a float column: "+err);
@@ -515,20 +423,21 @@ public class SpeeDRF extends Job.ValidatedJob {
       if (_params.num_split_features!=-1 && (_params.num_split_features< 1 || _params.num_split_features>vecs.length-1))
         throw new IllegalArgumentException("Number of split features exceeds available data. Should be in [1,"+(vecs.length-1)+"]");
       ChunkAllocInfo cai = new ChunkAllocInfo();
-      boolean can_load_all = canLoadAll(_rfmodel.fr, cai);
+      boolean can_load_all = canLoadAll(_fr, cai);
       if (_params._useNonLocalData && !can_load_all) {
         Log.warn("Cannot load all data from remote nodes - " +
                 "the node " + cai.node + " requires " + PrettyPrint.bytes(cai.requiredMemory) + " to load all data and perform computation but there is only " + PrettyPrint.bytes(cai.availableMemory) + " of available memory. " +
                 "Please provide more memory for JVMs or disable the option '"+ Constants.USE_NON_LOCAL_DATA+"' (however, it may affect resulting accuracy).");
         Log.warn("Automatically disabling fast mode.");
-        _params._useNonLocalData = false; /* In other words, use local data only... */
-        _drf.local_mode = true;
+        throw new IllegalArgumentException("Cannot compute fast RF: Use big data Random Forest.");
+//        _params._useNonLocalData = false; /* In other words, use local data only... */
+//        _drf.local_mode = true;
       }
 
       if (can_load_all) {
         _params._useNonLocalData = true;
         _drf.local_mode = false;
-        Log.info("Enough room to compute fast speedrf... Pulling all data locally and then launching RF.");
+        Log.info("Enough available free memory to compute on all data. Pulling all data locally and then launching RF.");
       }
     }
 
@@ -655,13 +564,13 @@ public class SpeeDRF extends Job.ValidatedJob {
                                          boolean useNonLocalData, boolean regression) {
 
       DRFParams drfp = new DRFParams();
-      drfp.num_trees           = ntrees;
-      drfp.max_depth            = depth;
-      drfp.sample           = sample;
-      drfp.bin_limit         = binLimit;
-      drfp.stat_type             = statType;
-      drfp.seed             = seed;
-      drfp.class_weights          = classWt;
+      drfp.num_trees = ntrees;
+      drfp.max_depth = depth;
+      drfp.sample = sample;
+      drfp.bin_limit = binLimit;
+      drfp.stat_type = statType;
+      drfp.seed = seed;
+      drfp.class_weights = classWt;
       drfp.num_split_features = numSplitFeatures;
       drfp.sampling_strategy = samplingStrategy;
       drfp.strata_samples    = strataSamples;
@@ -671,7 +580,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       drfp._verbose = verbose;
       drfp.classcol = col;
       drfp.regression = regression;
-      drfp.parallel   = true;
+      drfp.parallel = true;
       return drfp;
     }
   }
