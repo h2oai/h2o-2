@@ -28,10 +28,6 @@ public class AppendableVec extends Vec {
   final long _timCnt[] = new long[ParseTime.TIME_PARSE.length];
   long _totalCnt;
 
-  public AppendableVec( String keyName ) {
-    this(Key.make(keyName, (byte) 0, Key.VEC));
-  }
-
   public AppendableVec( Key key) {
     super(key, (long[])null);
     _espc = new long[4];
