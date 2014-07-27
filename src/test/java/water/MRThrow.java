@@ -64,7 +64,11 @@ public class MRThrow extends TestUtil {
         }
       }
     } finally {
+      // currently canceled RPC calls do not properly wait for all other nodes...
+      // so once a map() call fails, other map calls can lazily load data after we call delete()
+      try { Thread.sleep(10); } catch( InterruptedException ignore ) {}
       Lockable.delete(h2okey);
+      System.out.println(H2O.store_size());
     }
   }
 

@@ -839,7 +839,7 @@ public class Vec extends Iced {
   public Futures remove( Futures fs ) {
     for( int i=0; i<nChunks(); i++ )
       UKV.remove(chunkKey(i),fs);
-    DKV.remove(_key);
+    DKV.remove(_key,fs);
     return fs;
   }
 

@@ -15,7 +15,8 @@ public class DdplyTest extends TestUtil {
   // This test is intended to use a file large enough to strip across multiple
   // nodes with multiple groups, to test that all generated groups are both
   // built and executed distributed.
-  @Test public void testDdplyBig() {
+  //@Test
+  public void testDdplyBig() {
     Key k0 = Key.make("cars.hex");
     Key k1 = Key.make("orange.hex");
     try {

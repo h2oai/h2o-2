@@ -6,10 +6,7 @@ import hex.FrameTask;
 import hex.glm.LSMSolver.ADMMSolver.NonSPDMatrixException;
 import jsr166y.ForkJoinTask;
 import jsr166y.RecursiveAction;
-import water.Futures;
-import water.Iced;
-import water.Job;
-import water.MemoryManager;
+import water.*;
 import water.util.Log;
 import water.util.Utils;
 
@@ -484,8 +481,8 @@ public final class Gram extends Iced {
     public final boolean _hasIntercept;
     public final boolean _isWeighted; // last response is weight vector?
 
-    public GramTask(Job job, DataInfo dinfo, boolean hasIntercept, boolean isWeighted){
-      super(job,dinfo);
+    public GramTask(Key jobKey, DataInfo dinfo, boolean hasIntercept, boolean isWeighted){
+      super(jobKey,dinfo);
       _hasIntercept = hasIntercept;
       _isWeighted = isWeighted;
     }

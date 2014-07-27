@@ -91,7 +91,7 @@ public class GLMModelView extends Request2 {
           firstRow.append("\t\t<td>" + link(DFORMAT2.format(glm_model.submodels[i].lambda_value), glm_model._key, glm_model.submodels[i].lambda_value) + "</td>\n");
         secondRow.append("\t\t<td>" + (sm.rank - 1) + "</td>\n");
         if(sm.xvalidation != null){
-          thirdRow.append("\t\t<td>"  + DFORMAT.format(1 - sm.xvalidation.residual_deviance / sm.validation.null_deviance) + "<sub>x</sub>(" + DFORMAT.format(1 - sm.validation.residual_deviance / sm.validation.null_deviance) + ")" + "</td>\n");
+          thirdRow.append("\t\t<td>"  + DFORMAT.format(1 - sm.xvalidation.residual_deviance / sm.xvalidation.null_deviance) + "<sub>x</sub>(" + DFORMAT.format(1 - sm.validation.residual_deviance / sm.validation.null_deviance) + ")" + "</td>\n");
           fourthRow.append("\t\t<td>" + DFORMAT.format(glm_model.glm.family == Family.binomial ? sm.xvalidation.auc : sm.xvalidation.aic) + "<sub>x</sub>("+ DFORMAT.format(glm_model.glm.family == Family.binomial ? sm.validation.auc : sm.validation.aic) + ")</td>\n");
         } else {
           thirdRow.append("\t\t<td>" + DFORMAT.format(1 - sm.validation.residual_deviance / sm.validation.null_deviance) + "</td>\n");
@@ -104,6 +104,7 @@ public class GLMModelView extends Request2 {
       sb.append(fourthRow.append("\t</tr>\n"));
       sb.append("</table>\n");
     }
+    if(glm_model.submodels.length == 0)return true;
     Submodel sm = glm_model.submodels[glm_model.best_lambda_idx];
     if(!Double.isNaN(lambda) && glm_model.submodels[glm_model.best_lambda_idx].lambda_value != lambda){
       int ii = 0;
@@ -112,7 +113,7 @@ public class GLMModelView extends Request2 {
         sm = glm_model.submodels[ii];
       if(ii == glm_model.submodels.length)throw new IllegalArgumentException("Unexpected value of lambda '" + lambda + "'");
     }
-    if(glm_model.beta() != null)
+    if(glm_model.submodels != null)
       coefs2html(sm,sb);
     if(sm.xvalidation != null)
       val2HTML(sm,sm.xvalidation,sb);
@@ -267,7 +268,8 @@ public class GLMModelView extends Request2 {
     Value v = DKV.get(_modelKey);
     if(v != null){
       glm_model = v.get();
-      if(Double.isNaN(lambda))lambda = glm_model.submodels[glm_model.best_lambda_idx].lambda_value;
+      if(Double.isNaN(lambda) && glm_model.submodels.length != 0)
+        lambda = glm_model.submodels[glm_model.best_lambda_idx].lambda_value;
     }
     if( jjob == null || jjob.end_time > 0 || jjob.isCancelledOrCrashed() )
       return Response.done(this);
