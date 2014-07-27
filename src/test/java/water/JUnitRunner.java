@@ -12,6 +12,7 @@ import org.junit.runner.notification.Failure;
 import water.deploy.Node;
 import water.deploy.NodeVM;
 import water.parser.ParseFolderTestBig;
+import water.parser.ParserTest;
 import water.util.Log;
 import water.util.Utils;
 
@@ -41,6 +42,7 @@ public class JUnitRunner {
     tests.remove(DeepLearningProstateTest.Long.class);
     tests.remove(GLMRandomTest.Short.class);
     tests.remove(GLMRandomTest.Long.class);
+    tests.remove(ParserTest.ParseAllSmalldata.class);
     // Skip abstract test
     tests.remove(TreeTestWithBalanceAndCrossVal.class);
 

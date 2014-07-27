@@ -28,9 +28,9 @@ class Basic(unittest.TestCase):
         parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='put', hex_key=hexKey)
 
         if DO_UNIMPLEMENTED:
-            execExpr = "mean=function(x){apply(x,2,sum)/nrow(x)};mean(i.hex)"
+            execExpr = "mean2=function(x){apply(x,2,sum)/nrow(x)};mean2(i.hex)"
         else:
-            execExpr = "mean=function(x){apply(x,1,sum)/nrow(x)};mean(i.hex)"
+            execExpr = "mean2=function(x){apply(x,1,sum)/nrow(x)};mean2(i.hex)"
 
         start = time.time()
         h2e.exec_expr(execExpr=execExpr, timeoutSecs=30) # unneeded but interesting

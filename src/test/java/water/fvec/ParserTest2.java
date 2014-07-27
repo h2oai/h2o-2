@@ -7,6 +7,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import water.*;
+import water.api.ImportFiles2;
 import water.deploy.Node;
 import water.deploy.NodeVM;
 
@@ -753,6 +754,26 @@ public class ParserTest2 extends TestUtil {
     testParsed(k,pows10_exp);
   }
 
+  @Test public void testMultiFileParseSmall(){
+    Key [] files = null,files2 = null;
+    Frame f1 = null,f2 = null;
+    try {
+      files = ImportFiles2.importPath("smalldata/parse_folder_test");
+      f1 = ParseDataset2.parse(Key.make("multifile"), files);
+      files2 = ImportFiles2.importPath("smalldata/glm_test/prostate_cat_replaced.csv");
+      f2 = f1.makeCompatible(ParseDataset2.parse(Key.make("singleFile"), files2));
+      DKV.put(f2._key,f2); // annoyingly, have to put the frame back into KV
+      // can not assert on bit-identity, enums will generally have different types depending on how they were created,
+      // since during parse they are first numbered racily (so the initial compression does not have to be optimal!)
+      // and then renumbered later, but not recompressed (if they fit within the original compresison scheme)
+      assertTrue(f1.isIdentical(f2));
+    } finally {
+      if(f1 != null) f1.delete();
+      if(f2 != null)f2.delete();
+      if(files != null) for(Key k:files)UKV.remove(k);
+      if(files2 != null) for(Key k:files2)UKV.remove(k);
+    }
+  }
   void runTests(){
     System.out.println("testBasic");
     testBasic();
