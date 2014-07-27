@@ -133,7 +133,9 @@ public class DABuilder {
           try {
             Chunk[] chks = new Chunk[fr.numCols()];
             int ncolumns = chks.length;
-            for(int i = 0; i < chks.length; ++i) { chks[i] = fr.vecs()[i].chunkForChunkIdx(cidx); }
+            for(int i = 0; i < chks.length; ++i) {
+              chks[i] = fr.vecs()[i].chunkForChunkIdx(cidx);
+            }
             for (int j = 0; j < chks[0]._len; ++j) {
               int rowNum = (int)chks[0]._start + j;
               boolean rowIsValid = false;
