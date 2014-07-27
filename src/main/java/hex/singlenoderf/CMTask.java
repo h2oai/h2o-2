@@ -220,22 +220,7 @@ public class CMTask extends MRTask2<CMTask> {
         if( chks[_classcol].isNA0(row)) continue;
 
         if( _computeOOB && (isLocalTree || isRemoteTreeChunk) ) { // if OOBEE is computed then we need to take into account utilized sampling strategy
-
-          // LOCAL MODE: disabeled
-//          if (!_model.get_params().local_mode) {
-//            if ( _model.tree_pojos[ntree+1] == null || (_model.tree_pojos[ntree+1] != null &&_model.tree_pojos[ntree+1]._nonOOB_indexes == null)) {
-//              switch (_model.sampling_strategy) {
-//                case RANDOM:
-//                  if (sampledItem < _model.sample) continue ROWS;
-//                  break;
-//                default:
-//                  assert false : "The selected sampling strategy does not support OOBEE replay!";
-//                  break;
-//              }
-//            }
-//          } else {
-//            if (!_model.tree_pojos[ntree+1].isOOB(row + (int)chks[0]._start)) continue;
-//          }
+          if (sampledItem < _model.sample) continue;
         }
         // --- END OF CRUCIAL CODE ---
 

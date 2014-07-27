@@ -42,8 +42,6 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   /* Local forests produced by nodes */                                   Key[][] local_forests;
   /* Errors Per Tree                 */                                   long[] errorsPerTree;
   /* Total time in seconds to produce the model */                        long time;
-//  /* Frame being operated on */                                           Frame fr;
-//  /* Response Vector */                                                   Vec response;
   /* Is there a validation set?*/                                         boolean validation;
   /* Response Min    */                                                   int resp_min;
   /* Class weights */                                                     double[] weights;
@@ -54,7 +52,6 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   /* Current model status */                                              String current_status;
   @API(help = "MSE by tree")                                              float[] errs;
   /* Statistic Type */                                                    Tree.StatType statType;
-//  /* Adapted Validation Frame */                                          Frame test_frame;
   @API(help = "Test Key")                                                 Key testKey;
   /* Out of bag error estimate */                                         boolean oobee;
   /* Seed */                                                              protected long zeed;
@@ -220,7 +217,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       cms[cms.length - 1] = new ConfusionMatrix(confusion._matrix);
 
       if (classes() == 2) validAUC =  makeAUC(toCMArray(confusion._cms), ModelUtils.DEFAULT_THRESHOLDS, cmDomain);
-      if (importance && !regression) doVarImpCalc(fr, this, modelResp);
+      if (importance && !regression) varimp = doVarImpCalc(fr, this, modelResp);
     }
   }
 
@@ -509,7 +506,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       DocGen.HTML.section(sb,"Mean Squared Error by Tree");
       DocGen.HTML.arrayHead(sb);
       sb.append("<tr style='min-width:60px'><th>Trees</th>");
-      int last = this.size(); // + 1;
+      int last = this.size() + 1;
       for( int i=last; i>=0; i-- )
         sb.append("<td style='min-width:60px'>").append(i).append("</td>");
       sb.append("</tr>");

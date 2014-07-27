@@ -562,7 +562,6 @@ public class SpeeDRF extends Job.ValidatedJob {
                                          int numSplitFeatures, Sampling.Strategy samplingStrategy, float sample,
                                          float[] strataSamples, int verbose, int exclusiveSplitLimit,
                                          boolean useNonLocalData, boolean regression) {
-
       DRFParams drfp = new DRFParams();
       drfp.num_trees = ntrees;
       drfp.max_depth = depth;
