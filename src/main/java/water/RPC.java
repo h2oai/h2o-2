@@ -321,7 +321,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     @Override public void onCompletion( CountedCompleter caller ) {
       // Send results back
       DTask dt, origDt = _dt;
-      while( (dt=_dt) != null ) { // Retry loop for broken TCP sends
+      while((dt = _dt) != null ) { // Retry loop for broken TCP sends
         AutoBuffer ab = null;
         try {
           ab = new AutoBuffer(_client).putTask(UDP.udp.ack,_tsknum).put1(SERVER_UDP_SEND);
@@ -334,7 +334,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
         } catch( AutoBuffer.TCPIsUnreliableException e ) {
           Log.info("Task cancelled or network congestion: TCPACK "+e._ioe.getMessage()+", t#"+_tsknum+" AB="+ab+", waiting and retrying...");
           if( ab != null ) ab.close(true,true);
-          try { Thread.sleep(500); } catch (InterruptedException ie) {}
+          try { Thread.sleep(500); } catch (InterruptedException ignore) {}
         } catch( Exception e ) { // Custom serializer just barfed?
           Log.err(e);            // Log custom serializer exception
           if( ab != null ) ab.close(true,true);
