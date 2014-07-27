@@ -159,7 +159,6 @@ public class StableAPITest {
     regPy(GBM.class, "cols", "destination_key", "learn_rate", "max_depth", "min_rows", "nbins", "ntrees", "response", "source", "validation");
     regPy(GBMModelView.class, "_modelKey");
     regPy(GBMProgressPage.class);
-    regPy(GLMGridProgress.class, "destination_key", "job");
     regPy(Get.class, "key");
     regPy(HTTP404.class);
     regPy(HTTP500.class);
