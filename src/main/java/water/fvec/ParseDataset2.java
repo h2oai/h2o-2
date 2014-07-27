@@ -33,8 +33,29 @@ public final class ParseDataset2 extends Job {
   public static Frame parse(Key okey, Key [] keys) {return parse(okey,keys,new ParserSetup(),true);}
 
   public static Frame parse(Key okey, Key [] keys, CustomParser.ParserSetup globalSetup, boolean delete_on_done) {
-    Key k = keys[0];
-    ByteVec v = (ByteVec)getVec(k);
+    // keep the files in alphabetical order
+    Arrays.sort(keys);
+    // first check if there are any empty files and if so remove them
+    Vec [] vecs = new Vec [keys.length];
+    int c = 0;
+    for(int i = 0; i < vecs.length; ++i) {
+      vecs[i] = getVec(keys[i]);
+      if(vecs[i].length() == 0) c++;
+    }
+    if(c > 0){ // filter out empty files
+      Key [] ks = new Key[keys.length-c];
+      Vec [] vs = new Vec[vecs.length-c];
+      int j = 0;
+      for(int i = 0; i < keys.length; ++i)
+        if(vecs[i].length() != 0){
+          ks[j] = keys[i];
+          vs[j] = vecs[i];
+          ++j;
+        }
+      keys = ks;
+      vecs = vs;
+    }
+    ByteVec v = (ByteVec)vecs[0];
     byte [] bits = v.chunkForChunkIdx(0).getBytes();
     Compression cpr = Utils.guessCompressionMethod(bits);
     globalSetup = ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), globalSetup,true)._setup;
@@ -447,7 +468,7 @@ public final class ParseDataset2 extends Job {
     public MultiFileParseTask dfork(Key... keys){
       _fileChunkOffsets = new IcedHashMap<Key, IcedInt>();
       int len = 0;
-      for( Key k : keys ) {
+      for( Key k:keys) {
         _fileChunkOffsets.put(k,new IcedInt(len));
         len += getVec(k).nChunks();
       }
@@ -461,6 +482,10 @@ public final class ParseDataset2 extends Job {
       // Get parser setup info for this chunk
       ByteVec vec = (ByteVec) getVec(key);
       byte [] bits = vec.chunkForChunkIdx(0)._mem;
+      if(bits.length == 0){
+        assert false:"encountered empty file during multifile parse? should've been filtered already";
+        return; // should not really get here
+      }
       final int chunkStartIdx = _fileChunkOffsets.get(key)._val;
       Compression cpr = Utils.guessCompressionMethod(bits);
       CustomParser.ParserSetup localSetup = ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), _setup,false)._setup;
