@@ -195,7 +195,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       if (resp != null) gtrash(resp);
       float[] priorDist = setPriorDist(train);
       Frame fr = setStrat(train, test, resp);
-      model = initModel(fr, priorDist);
+      model = initModel(fr, test, priorDist);
       model.start_training(null);
       model.write_lock(self());
       drfParams = DRFParams.create(fr.find(resp), model.N, model.max_depth, (int) fr.numRows(), model.nbins,
@@ -211,7 +211,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       tsk.validateInputData();
       tsk.invokeOnAllNodes();
       model = UKV.get(dest());
-      model.scoreAllTrees(fr, resp);
+      model.scoreAllTrees(test == null ? fr : test, resp);
     }
     finally {
       if (model != null) {
@@ -221,17 +221,18 @@ public class SpeeDRF extends Job.ValidatedJob {
     }
   }
 
-  public SpeeDRFModel initModel(Frame fr, float[] priorDist) {
+  public SpeeDRFModel initModel(Frame train, Frame test, float[] priorDist) {
     setStatType();
     if (seed == -1 )setSeed();
-    if (mtry == -1) setMtry(regression, fr.numCols() - 1);
+    if (mtry == -1) setMtry(regression, train.numCols() - 1);
     Key src_key = source._key;
     int src_ncols = source.numCols();
 
-    SpeeDRFModel model = new SpeeDRFModel(dest(), src_key, fr, regression ? null : fr.lastVec().domain(), this, priorDist);
+    SpeeDRFModel model = new SpeeDRFModel(dest(), src_key, train, regression ? null : train.lastVec().domain(), this, priorDist);
 
     // Model INPUTS
     model.verbose = verbose; model.verbose_output = new String[]{""};
+    model.validation = test != null;
     model.confusion = null;
     model.zeed = seed;
     model.cmDomain = getCMDomain();
@@ -249,8 +250,8 @@ public class SpeeDRF extends Job.ValidatedJob {
     model.time = 0;
     model.N = num_trees;
     model.useNonLocal = !local_mode;
-    if (!regression) model.setModelClassDistribution(new MRUtils.ClassDist(fr.lastVec()).doAll(fr.lastVec()).rel_dist());
-    model.resp_min = (int) fr.lastVec().min();
+    if (!regression) model.setModelClassDistribution(new MRUtils.ClassDist(train.lastVec()).doAll(train.lastVec()).rel_dist());
+    model.resp_min = (int) train.lastVec().min();
     model.mtry = mtry;
     int csize = H2O.CLOUD.size();
     model.local_forests = new Key[csize][]; for(int i=0;i<csize;i++) model.local_forests[i] = new Key[0];

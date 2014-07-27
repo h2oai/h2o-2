@@ -146,6 +146,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     this.useNonLocal = model.useNonLocal;
     this.errorsPerTree = model.errorsPerTree;
     this.resp_min = model.resp_min;
+    this.validation = model.validation;
   }
 
 //  public Vec get_response() { return response; }
