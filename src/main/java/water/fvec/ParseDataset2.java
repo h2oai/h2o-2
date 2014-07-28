@@ -853,7 +853,9 @@ public final class ParseDataset2 extends Job {
 //      else System.err.println("Additional column ("+ _nvs.length + " < " + colIdx + " NA) on line " + linenum());
     }
     @Override public final boolean isString(int colIdx) { 
-      return _ctypes[colIdx]==ECOL;
+      if (colIdx < _nCols) {
+        return _ctypes[colIdx]==ECOL;
+      } else return false;
     }
 
     @Override public final void addStrCol(int colIdx, ValueString str) {
