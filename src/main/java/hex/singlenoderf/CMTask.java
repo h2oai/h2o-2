@@ -43,9 +43,6 @@ public class CMTask extends MRTask2<CMTask> {
   public int _rowcnt; // Rows used in scoring for regression
   public boolean _score_new_tree_only;
 
-  private float[] _priorDist;
-  private float[] _modelDist;
-
   /** Data to replay the sampling algorithm */
   private long[]     _chunk_row_mapping;
   /** Number of rows at each node */
@@ -64,38 +61,35 @@ public class CMTask extends MRTask2<CMTask> {
   /** Confusion matrix
    * @param model the ensemble used to classify
    */
-  private CMTask(SpeeDRFModel model, int treesToUse, double[] classWt, boolean computeOOB, float[] priorDist, float[] modelDist, boolean score_new_only) {
+  private CMTask(SpeeDRFModel model, int treesToUse, boolean computeOOB, Frame fr, Vec resp) {
     _modelKey   = model._key;
     _datakey    = model._dataKey;
-    _classcol   = model.test_frame == null ?  (model.fr.numCols() - 1) : (model.test_frame.numCols() - 1);
-    _classWt    = classWt != null && classWt.length > 0 ? classWt : null;
+    _classcol   = fr.numCols() - 1; //model.test_frame == null ?  (model.fr.numCols() - 1) : (model.test_frame.numCols() - 1);
     _treesUsed  = treesToUse;
     _computeOOB = computeOOB;
     _model = model;
     _varimp = null;
     _ss = 0.f;
-    _priorDist = priorDist;
-    _modelDist = modelDist;
-    _score_new_tree_only = score_new_only;
-    shared_init();
+    _data = fr;
+    shared_init(resp);
   }
 
-  public static CMTask scoreTask(Frame fr, SpeeDRFModel model, int treesToUse, double[] classWt, boolean computeOOB, float[] priorDist, float[] modelDist, boolean score_new) {
-    CMTask tsk = new CMTask(model, treesToUse, classWt, computeOOB, priorDist, modelDist, score_new);
+  public static CMTask scoreTask(SpeeDRFModel model, int treesToUse, boolean computeOOB, Frame fr, Vec resp) {
+    CMTask tsk = new CMTask(model, treesToUse, computeOOB, fr, resp);
     tsk.doAll(fr);
     return tsk;
   }
 
   /** Shared init: pre-compute local data for new Confusions, for remote Confusions*/
-  private void shared_init() {
+  private void shared_init(Vec resp) {
     /* For reproducibility we can control the randomness in the computation of the
    confusion matrix. The default seed when deserializing is 42. */
     Random _rand = Utils.getRNG(0x92b5023f2cd40b7cL);
-    _data = _model.test_frame == null ? _model.fr : _model.test_frame;
-    if (_model.test_frame != null) _computeOOB = false;
+//    _data = _model.test_frame == null ? _model.fr : _model.test_frame;
+    if (_model.validation) _computeOOB = false;
     _modelDataMap = _model.colMap(_data);
     assert !_computeOOB || _model._dataKey.equals(_datakey) : !_computeOOB + " || " + _model._dataKey + " equals " + _datakey;
-    Vec respModel = _model.get_response();
+    Vec respModel = resp;
     Vec respData  = _data.vecs()[_classcol];
     int model_max = (int)respModel.max();
     int model_min = (int)respModel.min();
@@ -221,20 +215,7 @@ public class CMTask extends MRTask2<CMTask> {
         if( chks[_classcol].isNA0(row)) continue;
 
         if( _computeOOB && (isLocalTree || isRemoteTreeChunk) ) { // if OOBEE is computed then we need to take into account utilized sampling strategy
-          if (!_model.get_params().local_mode) {
-            if ( _model.tree_pojos[ntree+1] == null || (_model.tree_pojos[ntree+1] != null &&_model.tree_pojos[ntree+1]._nonOOB_indexes == null)) {
-              switch (_model.sampling_strategy) {
-                case RANDOM:
-                  if (sampledItem < _model.sample) continue ROWS;
-                  break;
-                default:
-                  assert false : "The selected sampling strategy does not support OOBEE replay!";
-                  break;
-              }
-            }
-          } else {
-            if (!_model.tree_pojos[ntree+1].isOOB(row + (int)chks[0]._start)) continue;
-          }
+          if (sampledItem < _model.sample) continue;
         }
         // --- END OF CRUCIAL CODE ---
 
@@ -402,8 +383,8 @@ public class CMTask extends MRTask2<CMTask> {
   }
 
   /** Compute confusion matrix domain based on model and data key. */
-  public String[] domain() {
-    return domain(_N, _model.get_response(), _data.vecs()[_classcol], _model_classes_mapping, _data_classes_mapping);
+  public String[] domain(Vec modelResp) {
+    return domain(_N, modelResp, _data.vecs()[_classcol], _model_classes_mapping, _data_classes_mapping);
   }
 
   /** Return number of classes - in fact dimension of CM. */

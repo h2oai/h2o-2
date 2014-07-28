@@ -402,7 +402,7 @@ h2o.saveModel <- function(object, dir="", name="", force=FALSE) {
   if(!is.character(dir)) stop('path must be of class character')
   if(!is.character(name)) stop('name must be of class character')
   if(!is.logical(force)) stop('force is not a boolean')
-  if(name == "") name=data.glm@key
+  if(name == "") name=object@key
   
   force = ifelse(force==TRUE, 1, 0)
   res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_SaveModel, model=object@key, path=gsub('//','/',paste(dir,name,sep='/')), force=force)

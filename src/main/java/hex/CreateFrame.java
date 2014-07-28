@@ -56,6 +56,8 @@ public class CreateFrame extends Request2 {
   @API(help = "Number of factor levels of the first column (1=real, 2=binomial, N=multinomial)", filter = Default.class, json=true)
   public int response_factors = 2;
 
+  public boolean positive_response; // only for response_factors=1
+
   @Override public Response serve() {
     try {
       if (integer_fraction + categorical_fraction > 1)

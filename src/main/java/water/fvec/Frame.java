@@ -1,5 +1,6 @@
 package water.fvec;
 
+import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.exec.Flow;
@@ -33,6 +34,7 @@ public class Frame extends Lockable<Frame> {
   public Frame( Vec... vecs ){ this(null,vecs);}
   public Frame( String[] names, Vec[] vecs ) { this(null,names,vecs); }
 
+
   public Frame( Key key, String[] names, Vec[] vecs ) {
     super(key);
     this.uniqueId = new UniqueFrameId(_key, this);
@@ -52,6 +54,51 @@ public class Frame extends Lockable<Frame> {
     assert checkCompatible();
   }
 
+  /**
+   * Task to compare the two frames, returns true if they are identical.
+   * We can't in general expect frames to be bit-compatible so we compare the numbers,
+   * integers are compared exaclty, doubles only with given precision (1e-8 is default).
+   * (compression scheme may be altered by the way they were parsed and by rebalancing)
+   * The frames are expected to be compatible.
+   * @param f
+   * @return
+   */
+  public final boolean isIdentical(Frame f){
+    FrameIdenticalTask fbt = new FrameIdenticalTask(this,f);
+    H2O.submitTask(fbt);
+    fbt.join();
+    return fbt._res;
+  }
+  public static class FrameIdenticalTask extends H2OCountedCompleter {
+    final Frame _f1;
+    final Frame _f2;
+    public FrameIdenticalTask(Frame f1, Frame f2){_f1 = f1; _f2 = f2;}
+    boolean _res;
+    double _fpointPrecision = 1e-8;
+    private Vec.VecIdenticalTask[] _vts;
+    @Override
+    public void compute2() {
+      if(_f1 == _f2){
+        _res = true;
+      } else if(Arrays.deepEquals(_f1.names(), _f2.names())){
+        _vts = new Vec.VecIdenticalTask[_f1.numCols()];
+        addToPendingCount(_vts.length);
+        for(int i = 0; i < _vts.length; ++i) {
+          _vts[i] = new Vec.VecIdenticalTask(this,_fpointPrecision);
+          _vts[i].asyncExec(_f1.vec(i),_f2.vec(i));
+        }
+      }
+      tryComplete();
+    }
+
+    @Override public void onCompletion(CountedCompleter cc){
+      if(_vts != null){
+        _res = _vts[0]._res;
+        for(int i = 1; i < _vts.length; ++i)
+          _res = _res && _vts[i]._res;
+      }
+    }
+  }
   public UniqueId getUniqueId() {
     return this.uniqueId;
   }
@@ -823,7 +870,7 @@ public class Frame extends Lockable<Frame> {
         return this;
       }
       if( rows.length==0 || rows[0] < 0 ) {
-        if (rows[0] < 0) {
+        if (rows.length != 0 && rows[0] < 0) {
           Vec v = new MRTask2() {
             @Override public void map(Chunk cs) {
               for (long er : rows) {
