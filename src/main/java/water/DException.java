@@ -23,7 +23,7 @@ public class DException extends Iced {
       _stk[i] = new Stk(stk[i]);
   }
 
-  public DistributedException toEx() {
+  DistributedException toEx() {
     String msg = "from "+_h2o+"; "+_exClass+": "+_msg;
     DistributedException e = new DistributedException(msg,_cause==null ? null : _cause.toEx());
     StackTraceElement stk[] = new StackTraceElement[_stk.length];
