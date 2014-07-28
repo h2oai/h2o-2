@@ -24,6 +24,7 @@ import water.util.Utils;
 import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class GLM2 extends Job.ModelJobWithoutClassificationField {
@@ -35,68 +36,70 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   // API input parameters BEGIN ------------------------------------------------------------
 
   @API(help = "max-iterations", filter = Default.class, lmin=1, lmax=1000000, json=true, importance = ParamImportance.CRITICAL)
-  int max_iter = 100;
+  public int max_iter = 100;
 
   transient public boolean _done = false;
   @API(help = "Standardize numeric columns to have zero mean and unit variance.", filter = Default.class, json=true, importance = ParamImportance.CRITICAL)
-  boolean standardize = true;
+  protected boolean standardize = true;
 
   @API(help = "validation folds", filter = Default.class, lmin=0, lmax=100, json=true, importance = ParamImportance.CRITICAL)
-  int n_folds;
+  protected int n_folds;
 
   @API(help = "Family.", filter = Default.class, json=true, importance = ParamImportance.CRITICAL)
-  Family family = Family.gaussian;
+  protected Family family = Family.gaussian;
 
   @API(help = "", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
-  Link link = Link.family_default;
+  protected Link link = Link.family_default;
 
 
   @API(help = "Tweedie variance power", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
-  double tweedie_variance_power;
+  protected double tweedie_variance_power;
 
   @API(help = "distribution of regularization between L1 and L2.", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
-  double [] alpha = new double[]{0.5};
+  protected double [] alpha = new double[]{0.5};
+
+  public final double DEFAULT_LAMBDA = 1e-5;
 
   @API(help = "regularization strength", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
-  public double [] lambda = new double[]{1e-5};
+  protected double [] lambda = new double[]{DEFAULT_LAMBDA};
 
   private double _currentLambda = Double.POSITIVE_INFINITY;
 
 
   @API(help = "beta_eps", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
-  double beta_epsilon = DEFAULT_BETA_EPS;
+  protected double beta_epsilon = DEFAULT_BETA_EPS;
 
   @API(help="use line search (slower speed, to be used if glm does not converge otherwise)",filter=Default.class, importance = ParamImportance.SECONDARY)
-  boolean higher_accuracy;
+  protected boolean higher_accuracy;
 
   @API(help="By default, first factor level is skipped from the possible set of predictors. Set this flag if you want use all of the levels. Needs sufficient regularization to solve!",filter=Default.class, importance = ParamImportance.SECONDARY)
-  boolean use_all_factor_levels;
+  protected boolean use_all_factor_levels;
 
 
   @API(help="use lambda search starting at lambda max, given lambda is then interpreted as lambda min",filter=Default.class, importance = ParamImportance.SECONDARY)
-  boolean lambda_search;
+  protected boolean lambda_search;
 
   @API(help="use strong rules to filter out inactive columns",filter=Default.class, importance = ParamImportance.SECONDARY)
-  boolean strong_rules_enabled = true;
+  protected boolean strong_rules_enabled = true;
 
   // intentionally not declared as API now
   int sparseCoefThreshold = 1000; // if more than this number of predictors, result vector of coefficients will be stored sparse
 
   @API(help="lambda_Search stop condition: stop training when model has more than than this number of predictors (or don't use this option if -1).",filter=Default.class, importance = ParamImportance.EXPERT)
-  int max_predictors = -1;
+  protected int max_predictors = -1;
 
   @API(help="number of lambdas to be used in a search",filter=Default.class, importance = ParamImportance.EXPERT)
-  int nlambdas = 100;
+  protected int nlambdas = 100;
 
   @API(help="min lambda used in lambda search, specified as a ratio of lambda_max",filter=Default.class, importance = ParamImportance.EXPERT)
-  double lambda_min_ratio = -1;
+  protected double lambda_min_ratio = -1;
 
 
   @API(help="prior probability for y==1. To be used only for logistic regression iff the data has been sampled and the mean of response does not reflect reality.",filter=Default.class, importance = ParamImportance.EXPERT)
-  double prior = -1; // -1 is magic value for default value which is mean(y) computed on the current dataset
+  protected double prior = -1; // -1 is magic value for default value which is mean(y) computed on the current dataset
   private double _iceptAdjust; // adjustment due to the prior
 
-  public final int MAX_ITERATIONS_PER_LAMBDA = 10;
+  public final int MAX_ITERATIONS_PER_LAMBDA = 20;
   /**
    * Whether to compute variable importances for input features, based on the absolute
    * value of the coefficients.  For safety this should only be done if
@@ -280,14 +283,17 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     return rs.toString();
   }
 
-  public static Job gridSearch(Key jobKey, Key destinationKey, DataInfo dinfo, GLMParams glm, double lambda_min_ratio, int nlambdas, double [] lambda, boolean lambda_search, double [] alpha, boolean higher_accuracy, int nfolds){
+  public static GLMGridSearch gridSearch(Key jobKey, Key destinationKey, DataInfo dinfo, GLMParams glm, double lambda_min_ratio, int nlambdas, double [] lambda, boolean lambda_search, double [] alpha, boolean higher_accuracy, int nfolds){
     return gridSearch(jobKey, destinationKey, dinfo, glm, lambda_min_ratio, nlambdas, lambda, lambda_search, alpha, higher_accuracy, nfolds, DEFAULT_BETA_EPS);
   }
-  public static Job gridSearch(Key jobKey, Key destinationKey, DataInfo dinfo, GLMParams glm, double lambda_min_ratio, int nlambdas, double [] lambda, boolean lambda_search, double [] alpha, boolean high_accuracy, int nfolds, double betaEpsilon){
+  public static GLMGridSearch gridSearch(Key jobKey, Key destinationKey, DataInfo dinfo, GLMParams glm, double lambda_min_ratio, int nlambdas, double [] lambda, boolean lambda_search, double [] alpha, boolean high_accuracy, int nfolds, double betaEpsilon){
     return new GLMGridSearch(4, jobKey, destinationKey,dinfo,glm, lambda_min_ratio, nlambdas, lambda, lambda_search, alpha, high_accuracy, nfolds,betaEpsilon).fork();
   }
 
+  private transient AtomicBoolean _jobdone = new AtomicBoolean(false);
   protected void complete(){
+    assert !_jobdone.getAndSet(true):"double job complete!";
+    _done = true;
     GLMModel model = DKV.get(dest()).get();
     model.maybeComputeVariableImportances();
     model.stop_training();
@@ -306,7 +312,6 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       remove(); // Remove/complete job only for top-level, not xval GLM2s
       DKV.remove(_progressKey);
     }
-    if(_fjtask != null)_fjtask.tryComplete();
   }
 
   @Override public void cancel(Throwable ex){
@@ -351,12 +356,15 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     if(alpha.length > 1) { // grid search
       if(destination_key == null)destination_key = Key.make("GLMGridResults_"+Key.make());
       if(job_key == null)job_key = Key.make((byte) 0, Key.JOB, H2O.SELF);;
-      Job j = gridSearch(self(),destination_key, _dinfo, _glm, lambda_min_ratio, nlambdas, lambda, lambda_search, alpha, higher_accuracy, n_folds);
+      GLMGridSearch j = gridSearch(self(),destination_key, _dinfo, _glm, lambda_min_ratio, nlambdas, lambda, lambda_search, alpha, higher_accuracy, n_folds);
+      _fjtask = j._fjtask;
+      assert _fjtask != null;
       return GLMGridView.redirect(this,j.dest());
     } else {
       if(destination_key == null)destination_key = Key.make("GLMModel_"+Key.make());
       if(job_key == null)job_key = Key.make("GLM2Job_"+Key.make());
       fork();
+      assert _fjtask != null;
       return GLMProgress.redirect(this,job_key, dest());
     }
   }
@@ -519,7 +527,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     @Override public void callback(final GLMIterationTask glmt){
       assert _activeCols == null || glmt._beta == null || glmt._beta.length == (_activeCols.length+1):LogInfo("betalen = " + glmt._beta.length + ", activecols = " + _activeCols.length);
       assert _activeCols == null || _activeCols.length == _activeData.fullN();
-      assert getCompleter().getPendingCount() == 1:LogInfo("unexpected pending count, expected 1, got " + getCompleter().getPendingCount()); // will be decreased by 1 after we leave this callback
+      assert getCompleter().getPendingCount() >= 1:LogInfo("unexpected pending count, expected >=  1, got " + getCompleter().getPendingCount()); // will be decreased by 1 after we leave this callback
       if(_countIteration)++_iter;
       _callbackStart = System.currentTimeMillis();
       LogInfo("iteration done in " + (_callbackStart - _iterationStartTime) + "ms");
@@ -558,14 +566,14 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           if(!highAccuracy()){
             LogInfo("reached negative explained deviance without line-search, rerunning with high accuracy settings.");
             setHighAccuracy();
-            if(_lastResult != null)
-              new GLMIterationTask(GLM2.this.self(),_activeData,glmt._glm, true, true, true, _lastResult._glmt._beta,_ymu,1.0/_nobs,thresholds, new Iteration(getCompleter(),false)).asyncExec(_activeData._adaptedFrame);
-            else if(_lambdaIdx > 2) // > 2 because 0 is null model, we don't wan to run with that
-                throw H2O.unimpl();
-//              new GLMIterationTask(GLM2.this,_activeData,glmt._glm, true, true, true, _model.submodels[_lambdaIdx-1].norm_beta,_ymu,1.0/_nobs,thresholds, new Iteration()).asyncExec(_activeData._adaptedFrame);
-            else // no sane solution to go back to, start from scratch!
-              new GLMIterationTask(GLM2.this.self(),_activeData,glmt._glm, true, false, false, null,_ymu,1.0/_nobs,thresholds, new Iteration(getCompleter(),false)).asyncExec(_activeData._adaptedFrame);
-            _lastResult = null;
+            if(_lastResult != null && Arrays.equals(_lastResult._activeCols,_activeCols)) {
+              double [] beta = _lastResult._glmt._beta;
+              _lastResult = null;
+              new GLMIterationTask(GLM2.this.self(), _activeData, glmt._glm, true, true, true, beta, _ymu, 1.0 / _nobs, thresholds, new Iteration(getCompleter(), false)).asyncExec(_activeData._adaptedFrame);
+            } else { // no sane solution to go back to, start from scratch!
+              _lastResult = null;
+              new GLMIterationTask(GLM2.this.self(), _activeData, glmt._glm, true, false, false, null, _ymu, 1.0 / _nobs, thresholds, new Iteration(getCompleter(), false)).asyncExec(_activeData._adaptedFrame);
+            }
             return;
           }
         }
@@ -628,13 +636,12 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           if(glmt._beta != null)
             setSubmodel(glmt._beta, glmt._val,(H2OCountedCompleter)getCompleter().getCompleter()); // update current intermediate result
           final boolean validate = higher_accuracy || (_iter % 5) == 0;
-          new GLMIterationTask(GLM2.this.self(),_activeData,glmt._glm, true, validate, validate, newBeta,_ymu,1.0/_nobs,thresholds, new Iteration(getCompleter(),validate)).asyncExec(_activeData._adaptedFrame);
+          new GLMIterationTask(GLM2.this.self(),_activeData,glmt._glm, true, validate, validate, newBeta,_ymu,1.0/_nobs,thresholds, new Iteration(getCompleter(),validate && _lastResult != null)).asyncExec(_activeData._adaptedFrame);
         }
       }
     }
     private void checkKKTAndComplete(final GLMIterationTask glmt, final double [] newBeta, final boolean failedLineSearch){
       final double [] fullBeta = expandVec(newBeta,_activeCols);
-      assert getCompleter().getPendingCount() == 1:LogInfo("pending count = " + getCompleter().getPendingCount() + ", epxected 1");
       // now we need full gradient (on all columns) using this beta
       new GLMIterationTask(GLM2.this.self(),_dinfo,_glm,false,true,true,fullBeta,_ymu,1.0/_nobs,thresholds, new H2OCallback<GLMIterationTask>((H2OCountedCompleter)getCompleter()) {
         @Override
@@ -707,9 +714,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     @Override
     public void callback(H2OCountedCompleter h2OCountedCompleter) {
       // check if we're done otherwise launch next lambda computation
-      boolean done = _currentLambda <= lambda_min
-        || (max_predictors != -1 && nzs(_beta) > max_predictors); // _iter < max_iter && (improved || _runAllLambdas) && _lambdaIdx < (lambda_value.length-1);;
-      if(!done) {
+      _done = _currentLambda <= lambda_min
+        || (max_predictors != -1 && nzs(_lastResult._glmt._beta) > max_predictors); // _iter < max_iter && (improved || _runAllLambdas) && _lambdaIdx < (lambda_value.length-1);;
+      if(!_done) {
         H2OCountedCompleter cmp = (H2OCountedCompleter)getCompleter();
         cmp.addToPendingCount(1);
         nextLambda(nextLambdaValue(), new LambdaIteration(cmp));
@@ -717,6 +724,21 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     }
   }
 
+  private class H2OJobCompleter extends H2OCountedCompleter {
+
+    @Override
+    public void compute2() {
+      run(true,this);
+    }
+    @Override public void onCompletion(CountedCompleter cmp){
+      GLM2.this.complete();
+    }
+    @Override public boolean onExceptionalCompletion(Throwable t, CountedCompleter cmp){
+      if(!(t instanceof JobCancelledException) && (t.getMessage() == null || !t.getMessage().contains("JobCancelled")))
+        GLM2.this.cancel(t);
+      return true;
+    }
+  }
   @Override
   public GLM2 fork(){
     // keep *this* separate from what's stored in K/V as job (will be changing it!)
@@ -727,23 +749,11 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       total = 3*nlambdas;
     DKV.put(_progressKey,new GLM2_Progress(total*(n_folds+1)),fs);
     fs.blockForPending();
-    H2OCountedCompleter fjtask = new H2OCountedCompleter() {
-      @Override
-      public void compute2() {
-        run(true,this);
-      }
-      @Override public void onCompletion(CountedCompleter cmp){
-        GLM2.this.complete();
-      }
-      @Override public boolean onExceptionalCompletion(Throwable t, CountedCompleter cmp){
-        if(!(t instanceof JobCancelledException) && (t.getMessage() == null || !t.getMessage().contains("JobCancelled")))
-          GLM2.this.cancel(t);
-        return true;
-      }
-    };
+    H2OCountedCompleter fjtask = new H2OJobCompleter();
     GLM2 j = (GLM2)clone();
     j.start(fjtask); // modifying GLM2 object, don't want job object to be the same instance
     H2O.submitTask(fjtask);
+    _fjtask = fjtask;
     return j;
   }
 
@@ -797,7 +807,6 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     if(nlambdas == -1)nlambdas = 100;
     Futures fs = new Futures();
     Key dst = dest();
-    cmp.addToPendingCount(1);
     new YMUTask(GLM2.this.self(), _dinfo, n_folds,new H2OCallback<YMUTask>(cmp) {
       @Override
       public void callback(final YMUTask ymut) {
@@ -829,6 +838,12 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
               for(int i = 0; i < xvals.length; ++i){
                 xvals[i] = (GLM2)GLM2.this.clone();
                 xvals[i].n_folds = 0;
+                xvals[i].standardize = standardize;
+                xvals[i].family = family;
+                xvals[i].link = link;
+                xvals[i].beta_epsilon = beta_epsilon;
+                xvals[i].max_iter = max_iter;
+                xvals[i].variable_importances = variable_importances;
                 if(i != 0){
                   xvals[i]._dinfo = _dinfo.getFold(i-1,n_folds);
                   xvals[i].destination_key = Key.make(dest().toString() + "_xval_" + i, (byte) 1, Key.HIDDEN_USER_KEY, H2O.SELF);
@@ -871,31 +886,42 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
                 lambda = null;
               } else {
                 final double d = Math.pow(lambda_min_ratio, 1.0 / (nlambdas - 1));
+                if(nlambdas == 0)throw new IllegalArgumentException("nlambdas must be > 0 when running lambda search.");
                 lambda = new double[nlambdas];
                 lambda[0] = lambda_max;
+                if(nlambdas == 1){
+                  model.addWarning("Got lambda search with nlambda == 1, i.e. returning just the null model.");
+                  model.delete_and_lock(self());
+                  addLmaxSubmodel(model,t._val);
+                  _done = true;
+                  return;
+                }
                 for (int i = 1; i < lambda.length; ++i)
                   lambda[i] = lambda[i - 1] * d;
                 lambda_min = lambda[lambda.length - 1];
               }
               _runAllLambdas = false;
             } else {
+              if(lambda == null || lambda.length == 0)
+                lambda = new double[]{DEFAULT_LAMBDA};
               lambda_min = lambda[lambda.length-1];
               int i = 0;
               while(i < lambda.length && lambda[i] >= lambda_max)++i;
               if(i == lambda.length) {
                 model.addWarning("All lambdas were greater than lambda_max, returning the null model.");
                 addLmaxSubmodel(model,t._val);
-                model.delete_and_lock(self());
-                model.unlock(self());
-                GLM2.this.complete();
+                return;
               } else if(i > 0) {
                 model.addWarning("removed " + i + " lambdas greater than lambda_max.");
                 lambda = Utils.append(new double[]{lambda_max},Arrays.copyOfRange(lambda,i,lambda.length));
                 model = addLmaxSubmodel(model,t._val);
                 _lambdaIdx = 0;
+                _done = true;
+                return;
               }
             }
             model.delete_and_lock(self());
+            getCompleter().addToPendingCount(1);
             nextLambda(nextLambdaValue(), new LambdaIteration(getCompleter()));
           }
         }).asyncExec(_dinfo._adaptedFrame);
@@ -1060,7 +1086,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       return sum/_jobs.length;
     }
     @Override
-    public Job fork(){
+    public GLMGridSearch fork(){
       DKV.put(destination_key, new GLMGrid(self(),_jobs));
       // keep *this* separate from what's stored in K/V as job (will be changing it!)
       Futures fs = new Futures();

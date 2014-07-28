@@ -28,18 +28,18 @@ class Basic(unittest.TestCase):
             ('chdage.dat', 'binomial', 2, 5, None),
     
             # leave out ID and birth weight
-            ('clslowbwt.dat', 'binomial', 7, 10, [1,2,3,4,5]),
-            ('icu.dat', 'binomial', 1, 10, None),
+            ('clslowbwt.dat', 'binomial', 7, 30, [1,2,3,4,5]),
+            ('icu.dat', 'binomial', 1, 30, None),
             # need to exclude col 0 (ID) and col 10 (bwt)
             # but -x doesn't work..so do 2:9...range doesn't work? FIX!
-            ('lowbwt.dat', 'binomial', 1, 10, [2,3,4,5,6,7,8,9]),
-            ('lowbwtm11.dat', 'binomial', 1, 10, None),
-            ('meexp.dat', 'gaussian', 3, 10, None),
-            ('nhanes3.dat', 'binomial', 15, 10, None),
-            ('pbc.dat', 'gaussian', 1, 10, None),
-            ('pharynx.dat', 'gaussian', 12, 10, None),
-            ('pros.dat', 'binomial', 1, 10, None),
-            ('uis.dat', 'binomial', 8, 10, None),
+            ('lowbwt.dat', 'binomial', 1, 30, [2,3,4,5,6,7,8,9]),
+            ('lowbwtm11.dat', 'binomial', 1, 30, None),
+            ('meexp.dat', 'gaussian', 3, 30, None),
+            ('nhanes3.dat', 'binomial', 15, 30, None),
+            ('pbc.dat', 'gaussian', 1, 30, None),
+            ('pharynx.dat', 'gaussian', 12, 30, None),
+            ('pros.dat', 'binomial', 1, 30, None),
+            ('uis.dat', 'binomial', 8, 30, None),
             ]
 
         trial = 0

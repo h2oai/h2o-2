@@ -14,7 +14,7 @@ phrasesCompound = [
     # "a=1; a=2; function(x){x=a;a=3}",
     # "a=r.hex; function(x){x=a;a=3;nrow(x)*a}(a)",
     # "function(x){y=x*2; y+1}(2)",
-    # "mean=function(x){apply(x,1,sum)/nrow(x)};mean(r.hex)",
+    # "mean2=function(x){apply(x,1,sum)/nrow(x)};mean2(r.hex)",
 ]
 
 badPhrases = [

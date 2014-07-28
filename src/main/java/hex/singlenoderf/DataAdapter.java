@@ -43,9 +43,9 @@ final class DataAdapter  {
     _numClasses = model.regression ? 1 : model.classes();
     _regression = model.regression;
 
-    _c = new Col[model.fr.numCols()];
+    _c = new Col[fr.numCols()];
     for( int i = 0; i < _c.length; i++ ) {
-      assert fr._names[modelDataMap[i]].equals(model.fr._names[i]);
+      assert fr._names[modelDataMap[i]].equals(fr._names[i]);
       Vec v = fr.vecs()[i];
       if( isByteCol(v,rows, i == _c.length-1, _regression) ) // we do not bin for small values
         _c[i] = new Col(fr._names[i], rows, i == _c.length-1);

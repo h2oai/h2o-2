@@ -32,7 +32,7 @@ tail(pred)
 
 # Check performance of binary classification model and return the probability threshold ("Best Cutoff") for optimal F1 score
 ?h2o.performance
-per = h2o.performance(prediction[,1], train[,2], measure = "F1")
+per = h2o.performance(prediction[,3], train[,2], measure = "F1")
 per
 
 ######## END

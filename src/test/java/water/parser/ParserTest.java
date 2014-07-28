@@ -4,8 +4,9 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import water.*;
-import water.fvec.FVecTest;
+import water.fvec.NFSFileVec;
 import water.fvec.ParseDataset2;
+import water.util.Log;
 
 public class ParserTest extends TestUtil {
 
@@ -444,4 +445,5 @@ public class ParserTest extends TestUtil {
     };
     testParsed(okey, exp, fkey);
   }
+
 }

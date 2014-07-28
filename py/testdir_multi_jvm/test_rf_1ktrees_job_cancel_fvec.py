@@ -61,9 +61,10 @@ class Basic(unittest.TestCase):
             print "jobs_admin():", h2o.dump_json(a)
             # this is the wrong key to ancel with
             # "destination_key": "pytest_model", 
-            print "cancelling with a bad key"
-            b = h2o.nodes[0].jobs_cancel(key=model_key)
-            print "jobs_cancel():", h2o.dump_json(b)
+
+            # print "cancelling with a bad key"
+            # b = h2o.nodes[0].jobs_cancel(key=model_key)
+            # print "jobs_cancel():", h2o.dump_json(b)
 
 
 if __name__ == '__main__':

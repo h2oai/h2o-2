@@ -163,7 +163,6 @@ public abstract class LSMSolver extends Iced{
   public static final class ADMMSolver extends LSMSolver {
     //public static final double DEFAULT_LAMBDA = 1e-5;
     public static final double DEFAULT_ALPHA = 0.5;
-    public double _orlx = 1.4;
     public double _rho = Double.NaN;
     public double [] _wgiven;
     public double _proximalPenalty;
@@ -246,7 +245,7 @@ public abstract class LSMSolver extends Iced{
         gram.addDiag(_lambda*(1-_alpha) + _addedL2);
       double rho = _rho;
       if(_alpha > 0 && _lambda > 0){
-        if(Double.isNaN(_rho)) rho = _lambda*_alpha;// find rho value as min diag element + constant
+        if(Double.isNaN(_rho)) rho = _lambda*_alpha;
         gram.addDiag(rho);
       }
       if(_proximalPenalty > 0 && _wgiven != null){
@@ -291,6 +290,7 @@ public abstract class LSMSolver extends Iced{
       int max_iter = (int)(10000*(250.0/(1+xy.length)));
       final int round = (int)(max_iter*0.01);
       int k = round;
+      double orlx = 1.8; // over-relaxation
       for(i = 0; i < max_iter; ++i ) {
         // first compute the x update
         // add rho*(z-u) to A'*y
@@ -301,7 +301,7 @@ public abstract class LSMSolver extends Iced{
         // compute u and z updateADMM
         for( int j = 0; j < N-1; ++j ) {
           double x_hat = xyPrime[j];
-          x_hat = x_hat * _orlx + (1 - _orlx) * z[j];
+          x_hat = x_hat * orlx + (1 - orlx) * z[j];
           z[j] = shrinkage(x_hat + u[j], kappa);
           u[j] += x_hat - z[j];
         }
@@ -315,22 +315,24 @@ public abstract class LSMSolver extends Iced{
               break;
           }
           boolean allzeros = true;
-          for(int x = 0; allzeros && x < z.length-1; ++x)
+          for (int x = 0; allzeros && x < z.length - 1; ++x)
             allzeros = z[x] == 0;
-          if(!allzeros) { // only want this check if we're past the warm up period (there can be many iterations with all zeros!)
+          if (!allzeros) { // only want this check if we're past the warm up period (there can be many iterations with all zeros!)
             // did not converge, check if we can converge in reasonable time
             double diff = Math.abs(lastErr - err);
-            if ((err / diff) > max_iter) { // we won't ever converge with this setup (maybe change rho and try again?)
+            if (err < 5e-2 && (err / diff) > max_iter) { // we won't ever converge with this setup (maybe change rho and try again?)
               break;
             }
-          }
+            orlx = (1 + 15*orlx)*0.0625;
+          } else
+            orlx = 1.8;
+
           lastErr = err;
           k = i + round;
         }
       }
       gram.addDiag(-gram._diagAdded + d);
       assert gram._diagAdded == d;
-      long solveTime = System.currentTimeMillis()-t;
       this.gerr = bestErr;
       iterations = i;
       return _converged = (gerr < _gradientEps);

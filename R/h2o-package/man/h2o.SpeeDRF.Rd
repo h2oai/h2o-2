@@ -10,7 +10,7 @@ Performs single-node random forest classification on a data set.
 h2o.SpeeDRF(x, y, data, key = "", classification = TRUE, nfolds = 0, validation, 
   mtry = -1, ntree = 50, depth = 50, sample.rate = 2/3, oobee = TRUE, 
   importance = FALSE, nbins = 1024, seed = -1, stat.type = "ENTROPY", 
-  balance.classes = FALSE, verbose = FALSE, local_mode = FALSE)
+  balance.classes = FALSE, verbose = FALSE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -66,12 +66,6 @@ An \code{\linkS4class{H2OParsedData}} object containing the variables in the mod
   }
   \item{verbose}{
   (Optional) A logical value indicating whether verbose results should be returned.
-  }
-  \item{local_mode}{
-  (Optional) A logical value stating whether to
-         TRUE) build the random forest on local data to the node in a distributed and parallel fashion -OR-
-        FALSE) first pull all of the data local to each node and then build a random forest in a distributed and parallel fashion
-        Note: local_mode typically has poorer predictive performance for smaller datasets, but roughly equivalent performance with non-local mode.
   }
 }
 

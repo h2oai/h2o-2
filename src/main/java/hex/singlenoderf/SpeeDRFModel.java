@@ -42,8 +42,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   /* Local forests produced by nodes */                                   Key[][] local_forests;
   /* Errors Per Tree                 */                                   long[] errorsPerTree;
   /* Total time in seconds to produce the model */                        long time;
-  /* Frame being operated on */                                           Frame fr;
-  /* Response Vector */                                                   Vec response;
+  /* Is there a validation set?*/                                         boolean validation;
   /* Response Min    */                                                   int resp_min;
   /* Class weights */                                                     double[] weights;
   @API(help = "bin limit")                                                int nbins;
@@ -53,7 +52,6 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   /* Current model status */                                              String current_status;
   @API(help = "MSE by tree")                                              float[] errs;
   /* Statistic Type */                                                    Tree.StatType statType;
-  /* Adapted Validation Frame */                                          Frame test_frame;
   @API(help = "Test Key")                                                 Key testKey;
   /* Out of bag error estimate */                                         boolean oobee;
   /* Seed */                                                              protected long zeed;
@@ -71,9 +69,6 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   @API(help = "Verbose Mode")                                             public boolean verbose;
   @API(help = "Verbose Output")                                           public String[] verbose_output;
   @API(help = "Use non-local data")                                       public boolean useNonLocal;
-
-  /* Tree pojos */                                                        public TreeP[] tree_pojos;
-
   /**
    * Extra helper variables.
    */
@@ -122,8 +117,6 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     this.t_keys = model.t_keys;
     this.local_forests = model.local_forests;
     this.time = model.time;
-    this.fr = model.fr;
-    this.response = model.response;
     this.weights = model.weights;
     this.nbins = model.nbins;
     this.trees = model.trees;
@@ -132,7 +125,6 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     this.current_status = model.current_status;
     this.errs = model.errs;
     this.statType = model.statType;
-    this.test_frame = model.test_frame;
     this.testKey = model.testKey;
     this.oobee = model.oobee;
     this.zeed = model.zeed;
@@ -153,11 +145,11 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     this.verbose_output = model.verbose_output;
     this.useNonLocal = model.useNonLocal;
     this.errorsPerTree = model.errorsPerTree;
-    this.tree_pojos = model.tree_pojos;
     this.resp_min = model.resp_min;
+    this.validation = model.validation;
   }
 
-  public Vec get_response() { return response; }
+//  public Vec get_response() { return response; }
   public int treeCount() { return t_keys.length; }
   public int size()      { return t_keys.length; }
   public int classes()   { return nclasses(); }
@@ -165,137 +157,77 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   String[] _domain;
   @Override public String[] classNames() { return regression ? null : _domain; }
 
-  private static boolean shouldDoScore(SpeeDRFModel m) {
-    return m.score_each || m.t_keys.length == 2 || m.t_keys.length == m.N || m.get_params().local_mode;
-  }
-
-  private static boolean shouldDoScore0(SpeeDRFModel m) {
-    return m.score_each || m.t_keys.length == 2 || m.t_keys.length == m.N;
-  }
-
   @Override public ConfusionMatrix cm() { return validAUC == null ? cms[cms.length-1] : validAUC.CM(); }
 
+  private void scoreOnTest(Frame fr, Vec modelResp) {
 
-  private static void scoreOnTest(SpeeDRFModel m, SpeeDRFModel old) {
-
-    // Gather results
-    Frame scored = m.score(m.test_frame);
+    Frame scored = score(fr);
     water.api.ConfusionMatrix cm = new water.api.ConfusionMatrix();
-    cm.vactual = m.test_frame.lastVec();
+    cm.vactual = fr.lastVec();
     cm.vpredict = scored.anyVec();
     cm.invoke();
 
     // Regression scoring
-    if (m.regression) {
+    if (regression) {
       float mse = (float) cm.mse;
-      m.errs = Arrays.copyOf(old.errs, old.errs.length + 1);
-      m.errs[m.errs.length - 1] = mse;
-      m.cms = Arrays.copyOf(old.cms, old.cms.length + 1);
-      m.cms[m.cms.length - 1] = null;
+//      errs = Arrays.copyOf(errs, errs.length + 1);
+      errs[errs.length - 1] = mse;
+//      cms = Arrays.copyOf(cms, cms.length + 1);
+      cms[cms.length - 1] = null;
 
       // Classification scoring
     } else {
-//      _domain = m.cmDomain;
-      //      m.confusion = CMTask.CMFinal.make(cm.cm, m, _domain, /*errors per tree*/, false, -1, m.cms)
-      m.cm = cm.cm;
-
-      m.errs = Arrays.copyOf(old.errs, old.errs.length + 1);
-      m.errs[m.errs.length - 1] = -1f;
-      m.cms = Arrays.copyOf(old.cms, old.cms.length + 1);
-      ConfusionMatrix new_cm = new ConfusionMatrix(m.cm);
-      m.cms[m.cms.length - 1] = new_cm;
+      this.cm = cm.cm;
+//      errs = Arrays.copyOf(errs, errs.length + 1);
+      errs[errs.length - 1] = -1f;
+//      cms = Arrays.copyOf(cms, cms.length + 1);
+      ConfusionMatrix new_cm = new ConfusionMatrix(this.cm);
+      cms[cms.length - 1] = new_cm;
 
       // Create the ROC Plot
-      if (m.classes() == 2 && !scored.lastVec().isInt()) {
+      if (classes() == 2 && !scored.lastVec().isInt()) {
         AUC auc_calc = new AUC();
         auc_calc.vactual = cm.vactual;
         auc_calc.vpredict = scored.lastVec(); // lastVec is class1
         auc_calc.invoke();
-        m.validAUC = auc_calc.data(); //makeAUC(toCMArray(m.confusion._cms), ModelUtils.DEFAULT_THRESHOLDS, m.cmDomain);
+        validAUC = auc_calc.data(); //makeAUC(toCMArray(m.confusion._cms), ModelUtils.DEFAULT_THRESHOLDS, m.cmDomain);
       }
 
       // Launch a Variable Importance Task
-      if (m.importance && !m.regression)
-        m.varimp = m.doVarImpCalc(m);
+      if (importance && !regression)
+        varimp = doVarImpCalc(fr, this, modelResp);
     }
   }
 
-  private static void scoreIt(final SpeeDRFModel m, final SpeeDRFModel old, final boolean score_new_only) {
-    if (m.get_params().validation != null) {
-      Futures fs = new Futures();
-      H2O.H2OCountedCompleter scoretsk = new H2O.H2OCountedCompleter() {
-        @Override public void compute2() {
-          scoreOnTest(m, old);
-          tryComplete();
-        }
-      };
-      H2O.submitTask(scoretsk);
-      fs.add(scoretsk);
-      fs.blockForPending();
-      return;
-    }
-    // Gather the results
-    Futures fs = new Futures();
-    final CMTask[] cmTask = new CMTask[1];
-    final SpeeDRFModel score_model = (SpeeDRFModel)m.clone();
-
-    H2O.H2OCountedCompleter task4var = new H2O.H2OCountedCompleter() {
-      @Override public void compute2() {
-        cmTask[0] = CMTask.scoreTask(score_model.test_frame == null ? score_model.fr : score_model.test_frame,
-                score_model, score_model.size(), score_model.weights, score_model.oobee, score_model._priorClassDist,
-                score_model._modelClassDist, score_new_only);
-        tryComplete();
-      }
-    };
-    H2O.submitTask(task4var);
-    fs.add(task4var);
-    fs.blockForPending();
-
-//    CMTask[] cmTask = new CMTask[]{CMTask.scoreTask(m.test_frame == null
-//                                    ? m.fr
-//                                    : m.test_frame, m, m.size(),
-//                                      m.weights, m.oobee, m._priorClassDist,
-//                                      m._modelClassDist, score_new_only)};
-
-    // Perform the regression scoring
-    if (m.regression) {
-      float mse = cmTask[0]._ss / ((float) (cmTask[0]._rowcnt)); //Also add in treecount?
-      m.errs = Arrays.copyOf(old.errs, old.errs.length + 1);
-      m.errs[m.errs.length - 1] = mse;
-      m.cms = Arrays.copyOf(old.cms, old.cms.length + 1);
-      m.cms[m.cms.length - 1] = null;
-
-      // Perform the classification scoring
-    } else if (!score_new_only) {
-      m._domain = cmTask[0].domain();
-      m.confusion = CMTask.CMFinal.make(cmTask[0]._matrix, m, cmTask[0].domain(), cmTask[0]._errorsPerTree, m.oobee, cmTask[0]._sum, cmTask[0]._cms);
-      m.cm = cmTask[0]._matrix._matrix;
-      m.errorsPerTree = cmTask[0]._errorsPerTree;
-      m.errs = Arrays.copyOf(old.errs, old.errs.length + 1);
-      m.errs[m.errs.length - 1] = m.confusion.mse();
-      m.cms = Arrays.copyOf(old.cms, old.cms.length + 1);
-      ConfusionMatrix new_cm = new ConfusionMatrix(m.confusion._matrix);
-      m.cms[m.cms.length - 1] = new_cm;
-
-      // Create the ROC Plot
-      if (m.classes() == 2) {
-        m.validAUC = makeAUC(toCMArray(m.confusion._cms), ModelUtils.DEFAULT_THRESHOLDS, m.cmDomain);
-      }
-
-      // Launch a Variable Importance Task
-      if (m.importance && !m.regression)
-        m.varimp = m.doVarImpCalc(m);
+  private void scoreOnTrain(Frame fr, Vec modelResp) {
+    final CMTask cmTask = CMTask.scoreTask(this, treeCount(), oobee, fr, modelResp);
+    if (regression) {
+      float mse = cmTask._ss / ( (float) (cmTask._rowcnt));
+//      errs = Arrays.copyOf(errs, errs.length + 1);
+      errs[errs.length - 1] = mse;
+//      cms = Arrays.copyOf(cms, cms.length + 1);
+      cms[cms.length - 1] = null;
     } else {
-      m.errorsPerTree = old.errorsPerTree == null ? cmTask[0]._errorsPerTree : Arrays.copyOf(old.errorsPerTree, old.errorsPerTree.length+1);
-      m.errorsPerTree[m.errorsPerTree.length-1] = cmTask[0]._errorsPerTree[cmTask[0]._errorsPerTree.length-1];
-      m.errs = Arrays.copyOf(old.errs, old.errs.length+1);
-      m.errs[m.errs.length - 1] = -1.f;
-      m.cms = Arrays.copyOf(old.cms, old.cms.length+1);
-      m.cms[m.cms.length-1] = null;
+      _domain = cmTask.domain(modelResp);
+      confusion = CMTask.CMFinal.make(cmTask._matrix, this, _domain, cmTask._errorsPerTree, oobee, cmTask._sum, cmTask._cms);
+      this.cm = cmTask._matrix._matrix;
+      errorsPerTree = cmTask._errorsPerTree;
+//      errs = Arrays.copyOf(errs, errs.length + 1);
+      errs[errs.length - 1] = confusion.mse();
+//      cms = Arrays.copyOf(cms, cms.length + 1);
+      cms[cms.length - 1] = new ConfusionMatrix(confusion._matrix);
+
+      if (classes() == 2) validAUC =  makeAUC(toCMArray(confusion._cms), ModelUtils.DEFAULT_THRESHOLDS, cmDomain);
+      if (importance && !regression) varimp = doVarImpCalc(fr, this, modelResp);
     }
   }
 
-  public static SpeeDRFModel make(SpeeDRFModel old, Key tkey, int nodeIdx, String tString, TreeP tp) {
+  public void scoreAllTrees(Frame fr, Vec modelResp) {
+    if (this.validation) scoreOnTest(fr, modelResp);
+    else scoreOnTrain(fr, modelResp);
+  }
+
+  public static SpeeDRFModel make(SpeeDRFModel old, Key tkey, int nodeIdx, String tString) {
 
     // Create a new model for atomic update
     SpeeDRFModel m = (SpeeDRFModel)old.clone();
@@ -303,8 +235,6 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     // Update the tree keys with the new one (tkey)
     m.t_keys = Arrays.copyOf(old.t_keys, old.t_keys.length + 1);
     m.t_keys[m.t_keys.length-1] = tkey;
-    m.tree_pojos = Arrays.copyOf(old.tree_pojos, old.tree_pojos.length + 1);
-    m.tree_pojos[m.tree_pojos.length-1] = tp;
 
     // Update the local_forests
     m.local_forests[nodeIdx] = Arrays.copyOf(old.local_forests[nodeIdx],old.local_forests[nodeIdx].length+1);
@@ -325,24 +255,10 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       m.verbose_output[m.verbose_output.length - 1] = tString;
     }
 
-    // Do not score every time because it's slow and isn't necessary.
-    // Only score the first tree and when the whole forest is available.
-    boolean shouldScore = shouldDoScore(m);
-
-    if (shouldScore) {
-      if (shouldDoScore0(m) ) {
-        scoreIt(m, old, false);
-      } else {
-        scoreIt(m, old, m.get_params().local_mode);
-      }
-
-//    No scoring. Just plug CM with nulls and -1f for errs.
-    } else {
-      m.errs = Arrays.copyOf(old.errs, old.errs.length+1);
-      m.errs[m.errs.length - 1] = -1.f;
-      m.cms = Arrays.copyOf(old.cms, old.cms.length+1);
-      m.cms[m.cms.length-1] = null;
-    }
+    m.errs = Arrays.copyOf(old.errs, old.errs.length+1);
+    m.errs[m.errs.length - 1] = -1.f;
+    m.cms = Arrays.copyOf(old.cms, old.cms.length+1);
+    m.cms[m.cms.length-1] = null;
 
     // Tree Statistics
     JsonObject trees = new JsonObject();
@@ -455,7 +371,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
   /** Internal computation of depth and number of leaves. */
   public void find_leaves_depth() {
-    if( _tl != null ) return;
+//    if( _tl != null ) return;
     _td = new Counter();
     _tl = new Counter();
     for( Key tkey : t_keys ) {
@@ -540,7 +456,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     DocGen.HTML.title(sb,title);
     sb.append("<div class=\"alert\">").append("Actions: ");
     sb.append(Inspect2.link("Inspect training data (" + _dataKey.toString() + ")", _dataKey)).append(", ");
-    if (this.test_frame != null)
+    if (validation)
       sb.append(Inspect2.link("Inspect testing data (" + testKey.toString() + ")", testKey)).append(", ");
     sb.append(Predict.link(_key, "Score on dataset" ));
     if (this.size() > 0 && this.size() < N && !Job.findJob(jobKey).isCancelledOrCrashed()) {
@@ -631,13 +547,13 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     double[] leaf_stats = stats(trees.get(Constants.TREE_LEAVES));
 
     sb.append("<tr><th>Depth</th>")
-            .append("<td>").append(depth_stats != null ? depth_stats[0]  : NA).append("</td>")
+            .append("<td>").append(depth_stats != null ? (int)depth_stats[0]  : NA).append("</td>")
             .append("<td>").append(depth_stats != null ? depth_stats[1] : NA).append("</td>")
-            .append("<td>").append(depth_stats != null ? depth_stats[2] : NA).append("</td></tr>");
+            .append("<td>").append(depth_stats != null ? (int)depth_stats[2] : NA).append("</td></tr>");
     sb.append("<th>Leaves</th>")
-            .append("<td>").append(leaf_stats != null ? leaf_stats[0]  : NA).append("</td>")
+            .append("<td>").append(leaf_stats != null ? (int)leaf_stats[0]  : NA).append("</td>")
             .append("<td>").append(leaf_stats != null ? leaf_stats[1] : NA).append("</td>")
-            .append("<td>").append(leaf_stats != null ? leaf_stats[2]  : NA).append("</td></tr>");
+            .append("<td>").append(leaf_stats != null ? (int)leaf_stats[2]  : NA).append("</td></tr>");
     DocGen.HTML.arrayTail(sb);
 
     if(depth_stats != null && leaf_stats != null) {
@@ -659,9 +575,9 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     } else {
       JsonObject obj = json.getAsJsonObject();
       return new double[]{
-              obj.get(Constants.MIN).getAsDouble(),
-              obj.get(Constants.MEAN).getAsDouble(),
-              obj.get(Constants.MAX).getAsDouble()};
+              Math.round(obj.get(Constants.MIN).getAsDouble() * 1000.0) / 1000.0,
+              Math.round(obj.get(Constants.MEAN).getAsDouble() * 1000.0) / 1000.0,
+              Math.round(obj.get(Constants.MAX).getAsDouble() * 1000.0) / 1000.0};
     }
   }
 
@@ -785,20 +701,20 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     }
   }
 
-  protected VarImp doVarImpCalc(final SpeeDRFModel model) {
-    _treeMeasuresOnOOB  = new VariableImportance.TreeVotes[model.fr.numCols() - 1];
-    _treeMeasuresOnSOOB = new VariableImportance.TreeVotes[model.fr.numCols() - 1];
-    for (int i=0; i<model.fr.numCols() - 1; i++) _treeMeasuresOnOOB[i] = new VariableImportance.TreeVotes(model.treeCount());
-    for (int i=0; i<model.fr.numCols() - 1; i++) _treeMeasuresOnSOOB[i] = new VariableImportance.TreeVotes(model.treeCount());
-    final int ncols = model.fr.numCols();
-    final int trees = model.treeCount();
+  protected VarImp doVarImpCalc(final Frame fr, final SpeeDRFModel model, final Vec resp) {
+    _treeMeasuresOnOOB  = new VariableImportance.TreeVotes[fr.numCols() - 1];
+    _treeMeasuresOnSOOB = new VariableImportance.TreeVotes[fr.numCols() - 1];
+    for (int i=0; i<fr.numCols() - 1; i++) _treeMeasuresOnOOB[i] = new VariableImportance.TreeVotes(treeCount());
+    for (int i=0; i<fr.numCols() - 1; i++) _treeMeasuresOnSOOB[i] = new VariableImportance.TreeVotes(treeCount());
+    final int ncols = fr.numCols();
+    final int trees = treeCount();
     for (int i=0; i<ncols - 1; i++) _treeMeasuresOnSOOB[i] = new VariableImportance.TreeVotes(trees);
     Futures fs = new Futures();
     for (int var=0; var<ncols - 1; var++) {
       final int variable = var;
       H2O.H2OCountedCompleter task4var = new H2O.H2OCountedCompleter() {
         @Override public void compute2() {
-          VariableImportance.TreeVotes[] cd = VariableImportance.collectVotes(trees, model.classes(), model.fr, ncols - 1, model.sample, variable, model);
+          VariableImportance.TreeVotes[] cd = VariableImportance.collectVotes(trees, classes(), fr, ncols - 1, sample, variable, model, resp);
           asVotes(_treeMeasuresOnOOB[variable]).append(cd[0]);
           asVotes(_treeMeasuresOnSOOB[variable]).append(cd[1]);
           tryComplete();

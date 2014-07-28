@@ -76,6 +76,7 @@ class Basic(unittest.TestCase):
             kwargs = {
                 'ntrees': 1,
                 'response': 0,
+                'classification': 0,
             }
 
             timeoutSecs = 600

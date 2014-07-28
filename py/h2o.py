@@ -1310,7 +1310,7 @@ class H2O(object):
         # defaults
         params_dict = {
             'destination_key': destination_key,
-            'model_key': model_key,
+            '_modelKey': model_key,
             'data_key': data_key,
         }
         browseAlso = kwargs.get('browseAlso', False)
@@ -1342,7 +1342,7 @@ class H2O(object):
         # defaults
         params_dict = {
             'key': key,
-            'model_key': model_key,
+            '_modelKey': model_key,
         }
         browseAlso = kwargs.get('browseAlso', False)
         # only lets these params thru
@@ -1363,7 +1363,7 @@ class H2O(object):
     def kmeans_model_view(self, model, timeoutSecs=30, **kwargs):
         # defaults
         params_dict = {
-            'model': model,
+            '_modelKey': model,
         }
         browseAlso = kwargs.get('browseAlso', False)
         # only lets these params thru
@@ -1755,6 +1755,7 @@ class H2O(object):
                        'sampling_strategy': 'RANDOM',
                        'seed': -1.0,
                        'select_stat_type': 'ENTROPY',
+                       'importance':0,
                        'strata_samples': None,
         }
         check_params_update_kwargs(params_dict, kwargs, 'SpeeDRF', print_params)
@@ -2004,6 +2005,13 @@ class H2O(object):
         check_params_update_kwargs(params_dict, kwargs, 'gbm_search_progress', print_params)
         a = self.__do_json_request('2/GridSearchProgress.json', timeout=timeoutSecs, params=params_dict)
         print "\ngbm_search_progress result:", dump_json(a)
+        return a
+
+    def speedrf_view(self, modelKey, timeoutSecs=300, print_params=False, **kwargs):
+        params_dict = { '_modelKey': modelKey, }
+        check_params_update_kwargs(params_dict, kwargs, 'speedrf_view', print_params)
+        a = self.__do_json_request('2/SpeeDRFModelView.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint("\nspeedrf_view_result:", dump_json(a))
         return a
 
     def pca_view(self, modelKey, timeoutSecs=300, print_params=False, **kwargs):

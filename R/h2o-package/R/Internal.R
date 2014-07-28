@@ -846,11 +846,31 @@ function(expr, envir = globalenv()) {
 #' Grabs all of the JSON and returns it as a named list. Do this by using the 2/Inspector.json page, which provides
 #' a redirect URL to the appropriate Model View page.
 .fetchJSON <- function(h2o, key) {
+#  if (grepl("GLMModel", key)) {
+#    print("DEBUGGING GLM MODEL PARAM GRAB!!!")
+#    print(key)
+#    res <- .h2o.__remoteSend(client = h2o, page = .h2o.__PAGE_GLMModelView, '_modelKey' = key)
+#
+#     print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+#        print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+#        print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+#        print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+#        print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+#    print(res$glm_model$parameters)
+#    print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+#    print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+#    print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+#    print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+#    print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+#    return(res$glm_model$parameters)
+##    stop(res)
+#  }
   redirect_url <- .h2o.__remoteSend(h2o, .h2o.__PAGE_INSPECTOR, src_key = key)$response_info$redirect_url
   page <- strsplit(redirect_url, '\\?')[[1]][1]                         # returns a list of two items
   page <- paste(strsplit(page, '')[[1]][-1], sep = "", collapse = "")   # strip off the leading '/'
   key  <- strsplit(strsplit(redirect_url, '\\?')[[1]][2], '=')[[1]][2]  # split the second item into a list of two items
-  .h2o.__remoteSend(h2o, page, '_modelKey' = key)
+  if (grepl("GLMGrid", page)) .h2o.__remoteSend(client = h2o, page = page, grid_key = key)
+  else .h2o.__remoteSend(client = h2o, page = page, '_modelKey' = key)
 }
 
 #'
@@ -862,6 +882,79 @@ function(h2o, key) {
   warning("This method is not supported ... do not expect it to give you anything reasonable!")
   if ( ! (key %in% h2o.ls(h2o)$Key)) stop( paste("The h2o instance at ", h2o@ip, ":", h2o@port, " does not have key: \"", key, "\"", sep = ""))
   .fetchJSON(h2o, key)
+}
+
+#'
+#' Fetch the model from the key
+h2o.getModel<-
+function(h2o, key) {
+  json <- .fetchJSON(h2o, key)
+  algo <- model.type <- names(json)[3]
+  if (algo == "grid") return(.getGLMGridResults(json, h2o, key, TRUE))
+  params <- json[[model.type]]$parameters #.fill.params(model.type, json)
+  params$h2o <- h2o
+  model_obj  <- switch(algo, gbm_model = "H2OGBMModel", drf_model = "H2ODRFModel", deeplearning_model = "H2ODeepLearningModel", speedrf_model = "H2OSpeeDRFModel", model= "H2OKMeansModel", glm_model = "H2OGLMModel", nb_model = "H2ONBModel", pca_model = "H2OPCAModel")
+  results_fun <- switch(algo, gbm_model = .h2o.__getGBMResults,
+                              drf_model = .h2o.__getDRFResults,
+                              glm_model = .get.glm.model, #.h2o.glm.get_model, #.h2o.__getGLM2Results,
+                              deeplearning_model = .h2o.__getDeepLearningResults,
+                              speedrf_model = .h2o.__getSpeeDRFResults,
+                              model = .h2o.__getKM2Results,
+                              nb_model = .h2o.__getNBResults)
+
+  response   <- json[[model.type]]
+  job_key    <- params$job_key #response$job_key
+  dest_key   <- key #params$destination_key
+
+  train_fr   <- h2o.getFrame(h2o, response$"_dataKey")
+  params$importance <- !is.null(params$varimp)
+  if (!is.null(params$family) && model.type == "gbm_model") {
+    params$distribution <- "multinomial"
+    if (params$family == "AUTO") {
+      if (!is.null(json[[model.type]]$validAUC)) params$distribution <- "bernoulli"
+    }
+  }
+  if (algo == "glm_model") {
+    model <- results_fun(train_fr, key, FALSE) #TODO: return all lambdas case
+    return(model)
+  }
+  if (algo == "model") {
+    newModel <- new(model_obj, key = dest_key, data = train_fr, model = results_fun(json[[model.type]], train_fr, params))
+    return(newModel)
+  }
+
+  if (algo == "pca_model") {
+    return(.get.pca.results(train_fr, json[[model.type]], key, params))
+  }
+  modelOrig<- results_fun(json[[model.type]], params)
+  res_xval <- list()
+  if (algo == "gbm_model") algo <- "GBM"
+  if (algo == "drf_model") algo <- "RF"
+  if (algo == "deeplearning_model") algo <- "DeepLearning"
+  if (algo == "speedrf_model") algo <- "SpeeDRF"
+  if (algo == "glm_model") algo <- "GLM"
+  if (algo %in% c("GBM", "RF", "DeepLearning", "SpeeDRF", "GLM") && !is.null(params$n_folds)) res_xval <- .h2o.crossvalidation(algo, train_fr, json[[model.type]], params$n_folds, params)
+  if (is.null(params$validation)) valid <- new("H2OParsedData", key=as.character(NA))
+  else valid <- .h2o.exec2(h2o = h2o, expr = params$validation$"_key", dest_key = params$validation$"_key")
+  new(model_obj, key=dest_key, data=train_fr, model=modelOrig, valid=valid, xval=res_xval)
+}
+
+.get.glm.params <-
+function(h2o, key) {
+  res <- .h2o.__remoteSend(client = h2o, page = .h2o.__PAGE_GLMModelView, '_modelKey' = key)
+  params <- res$glm_model$parameters
+  params$h2o <- h2o
+  params
+}
+
+.get_model_params <-
+function(h2o, key) {
+  json <- .fetchJSON(h2o, key)
+  algo <- model.type <- names(json)[3]
+  if (algo == "grid") return("")
+  params <- json[[model.type]]$parameters
+  params$h2o <- h2o
+  params
 }
 
 #'

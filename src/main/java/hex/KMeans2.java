@@ -212,15 +212,21 @@ public class KMeans2 extends ColumnsJob {
     @API(help = "KMeans2 Model", json = true, filter = Default.class)
     public KMeans2Model model;
 
+    @API(help="KMeans2 Model Key", required = true, filter = KMeans2Filter.class)
+    Key _modelKey;
+    class KMeans2Filter extends H2OKey { public KMeans2Filter() { super("",true); } }
+
     public static String link(String txt, Key model) {
-      return "<a href='" + new KMeans2ModelView().href() + ".html?model=" + model + "'>" + txt + "</a>";
+      return "<a href='" + new KMeans2ModelView().href() + ".html?_modelKey=" + model + "'>" + txt + "</a>";
     }
 
     public static Response redirect(Request req, Key model) {
-      return Response.redirect(req, new KMeans2ModelView().href(), "model", model);
+      return Response.redirect(req, "/2/KMeans2ModelView", "_modelKey", model);
+//      return Response.redirect(req, new KMeans2ModelView().href(), "_modelKey", model);
     }
 
     @Override protected Response serve() {
+      model = DKV.get(_modelKey).get();
       return Response.done(this);
     }
 

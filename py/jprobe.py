@@ -43,8 +43,6 @@ parse.add_argument('-v', '--verbose', help="dump the last N stdout from the fail
 group.add_argument('-c', help="do a hardwired special job copy between jenkins",  type=int, action='store', default=None)
 args = parse.parse_args()
 
-print "creates jsandbox (cleaned), and puts aTxt.txt and aConsole.txt in there, along with artifacts"
-print " also creates fails* and regress* in there"
 # can refer to this by zero-based index with -n 0  or -n 1  etc
 # or by job name with -j h2o_master_test
 
@@ -146,7 +144,8 @@ if not (args.jobname or args.x or args.e or args.s):
     eDone = False
     xDone = False
     while not jobname: 
-        allAllowedJobs = allowedJobsE + allowedJobsX + allowedJobsS
+        # allAllowedJobs = allowedJobsE + allowedJobsX + allowedJobsS
+        allAllowedJobs = allowedJobsE + allowedJobsX
         for j, job in enumerate(allAllowedJobs):
             # first boundary
             if not eDone and j==(subtract + len(allowedJobsE)):
