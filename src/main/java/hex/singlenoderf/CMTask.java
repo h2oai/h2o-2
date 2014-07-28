@@ -19,7 +19,6 @@ import hex.VarImp;
  * request from the Confusion compute on any new trees (if any), and report a
  * matrix. Cheap if all trees already computed.
  */
-@SuppressWarnings("ConstantConditions")
 public class CMTask extends MRTask2<CMTask> {
   public double[] _classWt;
   public boolean _computeOOB;
@@ -84,7 +83,6 @@ public class CMTask extends MRTask2<CMTask> {
   private void shared_init(Vec resp) {
     /* For reproducibility we can control the randomness in the computation of the
    confusion matrix. The default seed when deserializing is 42. */
-    Random _rand = Utils.getRNG(0x92b5023f2cd40b7cL);
 //    _data = _model.test_frame == null ? _model.fr : _model.test_frame;
     if (_model.validation) _computeOOB = false;
     _modelDataMap = _model.colMap(_data);

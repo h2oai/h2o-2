@@ -18,7 +18,7 @@ public abstract class Sampling {
     private Strategy(int id) { _id = id; }
   }
 
-  abstract Data sample(final Data data, long seed, Key key, boolean local_mode);
+  abstract Data sample(final Data data, long seed, Key modelKey, boolean local_mode);
 
   /** Deterministically sample the Data at the bagSizePct.  Toss out
    invalid rows (as-if not sampled), but maintain the sampling rate. */

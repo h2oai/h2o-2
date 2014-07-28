@@ -32,7 +32,7 @@ public class SpeeDRF extends Job.ValidatedJob {
   public Tree.SelectStatType select_stat_type = Tree.SelectStatType.ENTROPY;
 
   @API(help = "Use local data. Auto-enabled if data does not fit in a single node.") /*, filter = Default.class, json = true, importance = ParamImportance.EXPERT) */
-  public boolean local_mode = false;
+  public boolean local_mode = false; // FIXME: Is it necessary to have this variable ? What is its semantics
 
   /* Legacy parameter: */
   public double[] class_weights = null;
@@ -154,25 +154,40 @@ public class SpeeDRF extends Job.ValidatedJob {
     }
   }
 
+  // Put here all precondition verification
+  @Override protected void init() {
+    super.init();
+    assert 0 <= num_trees && num_trees < 1000000; // Sanity check
+    // Not enough rows to run
+    if (source.numRows() - response.naCnt() <=0)
+      throw new IllegalArgumentException("Dataset contains too many NAs!");
+
+    if( !classification && (!(response.isEnum() || response.isInt())))
+      throw new IllegalArgumentException("Classification cannot be performed on a float column!");
+
+    if(classification) {
+      final int classes = (int)(response.max() - response.min())+1; // FIXME: check if cardinality call can be used
+      if( !(2 <= classes && classes <= 254 ) )
+        throw new IllegalArgumentException("Response contains " + classes+" classes, but algorithm supports only 254 levels");
+    if (0.0f > sample || sample > 1.0f)
+      throw new IllegalArgumentException("Sampling rate must be in [0,1] but found " + sample);
+    }
+  }
+
   @Override protected void execImpl() {
     try {
       logStart();
       source.read_lock(self());
       buildForest();
       if (n_folds > 0) CrossValUtils.crossValidate(this);
-    }
-    catch(JobCancelledException ex) {
-      Log.info("Random Forest building was cancelled.");
-      throw ex;
-    }
-    catch(Exception ex) {
+    } catch(Exception ex) {
       ex.printStackTrace();
       throw new RuntimeException(ex);
-    }
-    finally {
+    } finally {
       source.unlock(self());
       remove();
       state = UKV.<Job>get(self()).state;
+      // Argh, this is horrible
       new TAtomic<SpeeDRFModel>() {
         @Override
         public SpeeDRFModel atomic(SpeeDRFModel m) {
@@ -190,7 +205,8 @@ public class SpeeDRF extends Job.ValidatedJob {
   private void buildForest() {
     SpeeDRFModel model = null;
     try {
-      Frame train = setTrain(); Frame test  = setTest();
+      Frame train = setTrain();
+      Frame test  = setTest();
       Vec resp = regression ? null : train.lastVec().toEnum();
       if (resp != null) gtrash(resp);
       float[] priorDist = setPriorDist(train);
@@ -201,19 +217,18 @@ public class SpeeDRF extends Job.ValidatedJob {
       drfParams = DRFParams.create(fr.find(resp), model.N, model.max_depth, (int) fr.numRows(), model.nbins,
               model.statType, seed, model.weights, mtry, model.sampling_strategy, (float) sample, model.strata_samples, model.verbose ? 100 : 1, _exclusiveSplitLimit, !local_mode, regression);
       DRFTask tsk = new DRFTask();
-      tsk._job = Job.findJob(self());
-      tsk._params = drfParams;
+      tsk._jobKey = self();
+      tsk._rfParams = drfParams;
       tsk._rfmodel = model;
-      tsk._drf = this;
       tsk._fr = fr;
       tsk._resp = resp;
 
+      // FXIME: should be in init() call since now it the cleanup is difficult
       tsk.validateInputData();
       tsk.invokeOnAllNodes();
       model = UKV.get(dest());
       model.scoreAllTrees(test == null ? fr : test, resp);
-    }
-    finally {
+    } finally {
       if (model != null) {
         model.unlock(self());
         model.stop_training();
@@ -263,7 +278,10 @@ public class SpeeDRF extends Job.ValidatedJob {
     model.current_status = "Initializing Model";
 
     // Model OUTPUTS
-    model.varimp = null; model.validAUC = null; model.cms = new ConfusionMatrix[1]; model.errs = new float[]{-1.f};
+    model.varimp = null;
+    model.validAUC = null;
+    model.cms = new ConfusionMatrix[1];
+    model.errs = new float[]{-1.f};
     return model;
   }
 
@@ -318,17 +336,18 @@ public class SpeeDRF extends Job.ValidatedJob {
      *  column, and the training columns.  */
     public SpeeDRFModel _rfmodel;
     /** Job representing this DRF execution. */
-    public Job _job;
+    public Key _jobKey;
     /** RF parameters. */
-    public DRFParams _params;
-    public SpeeDRF _drf;
+    public DRFParams _rfParams;
+    // ------ FIXME: remove this
     public Frame _fr;
     public Vec _resp;
+    // ------
 
     /**Inhale the data, build a DataAdapter and kick-off the computation.
      * */
     @Override public final void lcompute() {
-      final DataAdapter dapt = DABuilder.create(_drf, _rfmodel).build(_fr, _params._useNonLocalData);
+      final DataAdapter dapt = DABuilder.create(_rfParams, _rfmodel).build(_fr, _rfParams._useNonLocalData);
       if (dapt == null) {
         tryComplete();
         return;
@@ -339,7 +358,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       int[] rowsPerChunks   = howManyRPC(_fr);
       updateRFModel(_rfmodel._key, numSplitFeatures);
       updateRFModelStatus(_rfmodel._key, "Building Forest");
-      SpeeDRF.build(_job, _params, localData, ntrees, numSplitFeatures, rowsPerChunks);
+      SpeeDRF.build(_jobKey, _rfmodel._key, _rfParams, localData, ntrees, numSplitFeatures, rowsPerChunks);
       tryComplete();
     }
 
@@ -368,7 +387,7 @@ public class SpeeDRF extends Job.ValidatedJob {
 
     /** Unless otherwise specified each split looks at sqrt(#features). */
     private int howManySplitFeatures() {
-      if (_params.num_split_features!=-1) return _params.num_split_features;
+      if (_rfParams.num_split_features!=-1) return _rfParams.num_split_features;
       return (int)Math.sqrt(_fr.numCols()-1/*we don't use the class column*/);
     }
 
@@ -392,8 +411,8 @@ public class SpeeDRF extends Job.ValidatedJob {
       Arrays.sort(array);
       // Give each H2ONode ntrees/#nodes worth of trees.  Round down for later nodes,
       // and round up for earlier nodes
-      int ntrees = _params.num_trees/nodes.size();
-      if( Arrays.binarySearch(array, H2O.SELF) < _params.num_trees - ntrees*nodes.size() )
+      int ntrees = _rfParams.num_trees/nodes.size();
+      if( Arrays.binarySearch(array, H2O.SELF) < _rfParams.num_trees - ntrees*nodes.size() )
         ++ntrees;
 
       return ntrees;
@@ -411,21 +430,12 @@ public class SpeeDRF extends Job.ValidatedJob {
       Vec[] vecs = _fr.vecs();
       Vec c = _resp;
       String err = "Response column must be an integer in the interval [2,254]";
-      if( !_rfmodel.regression & (!(c.isEnum() || c.isInt())))
-        throw new IllegalArgumentException("Classification cannot be performed on a float column: "+err);
 
-      if(!_rfmodel.regression) {
-        final int classes = (int)(c.max() - c.min())+1;
-        if( !(2 <= classes && classes <= 254 ) )
-          throw new IllegalArgumentException("Found " + classes+" classes: "+err);
-      if (0.0f > _params.sample || _params.sample > 1.0f)
-        throw new IllegalArgumentException("Sampling rate must be in [0,1] but found "+ _params.sample);
-      }
-      if (_params.num_split_features!=-1 && (_params.num_split_features< 1 || _params.num_split_features>vecs.length-1))
+      if (_rfParams.num_split_features!=-1 && (_rfParams.num_split_features< 1 || _rfParams.num_split_features>vecs.length-1))
         throw new IllegalArgumentException("Number of split features exceeds available data. Should be in [1,"+(vecs.length-1)+"]");
       ChunkAllocInfo cai = new ChunkAllocInfo();
       boolean can_load_all = canLoadAll(_fr, cai);
-      if (_params._useNonLocalData && !can_load_all) {
+      if (_rfParams._useNonLocalData && !can_load_all) {
         Log.warn("Cannot load all data from remote nodes - " +
                 "the node " + cai.node + " requires " + PrettyPrint.bytes(cai.requiredMemory) + " to load all data and perform computation but there is only " + PrettyPrint.bytes(cai.availableMemory) + " of available memory. " +
                 "Please provide more memory for JVMs or disable the option '"+ Constants.USE_NON_LOCAL_DATA+"' (however, it may affect resulting accuracy).");
@@ -436,8 +446,8 @@ public class SpeeDRF extends Job.ValidatedJob {
       }
 
       if (can_load_all) {
-        _params._useNonLocalData = true;
-        _drf.local_mode = false;
+        _rfParams._useNonLocalData = true;
+        //_drf.local_mode = false; // local mode variable is duplicated
         Log.info("Enough available free memory to compute on all data. Pulling all data locally and then launching RF.");
       }
     }
@@ -485,7 +495,8 @@ public class SpeeDRF extends Job.ValidatedJob {
 
     /** Build random forest for data stored on this node. */
     public static void build(
-            final Job job,
+            final Key jobKey,
+            final Key modelKey,
             final DRFParams drfParams,
             final Data localData,
             int ntrees,
@@ -502,7 +513,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       byte producerId = (byte) H2O.SELF.index();
       for (int i = 0; i < ntrees; ++i) {
         long treeSeed = rnd.nextLong() + TREE_SEED_INIT; // make sure that enough bits is initialized
-        trees[i] = new Tree(job, localData, producerId, drfParams.max_depth, drfParams.stat_type, numSplitFeatures, treeSeed,
+        trees[i] = new Tree(jobKey, modelKey, localData, producerId, drfParams.max_depth, drfParams.stat_type, numSplitFeatures, treeSeed,
                 i, drfParams._exclusiveSplitLimit, sampler, drfParams._verbose, drfParams.regression, !drfParams._useNonLocalData);
       }
 
