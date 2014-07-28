@@ -9,7 +9,7 @@ public class PCAImpute extends FrameJob {
   static public DocGen.FieldDoc[] DOC_FIELDS;
   static final String DOC_GET = "pca_imputation";
 
-  @API(help = "Number of principal components to use", filter = Default.class, lmin = 1, lmax = 10000)
+  @API(help = "Number of principal components to use", filter = Default.class, lmin = 1, lmax = 5000)
   int num_pc = 1;
 
   @API(help = "Threshold for convergence", filter = Default.class)
