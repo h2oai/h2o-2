@@ -202,7 +202,7 @@ public class SpeeDRF extends Job.ValidatedJob {
               model.statType, seed, model.weights, mtry, model.sampling_strategy, (float) sample, model.strata_samples, model.verbose ? 100 : 1, _exclusiveSplitLimit, !local_mode, regression);
       DRFTask tsk = new DRFTask();
       tsk._job = Job.findJob(self());
-      tsk._params = drfParams;
+      tsk._rfParams = drfParams;
       tsk._rfmodel = model;
       tsk._drf = this;
       tsk._fr = fr;
@@ -320,7 +320,7 @@ public class SpeeDRF extends Job.ValidatedJob {
     /** Job representing this DRF execution. */
     public Job _job;
     /** RF parameters. */
-    public DRFParams _params;
+    public DRFParams _rfParams;
     public SpeeDRF _drf;
     public Frame _fr;
     public Vec _resp;
@@ -328,7 +328,7 @@ public class SpeeDRF extends Job.ValidatedJob {
     /**Inhale the data, build a DataAdapter and kick-off the computation.
      * */
     @Override public final void lcompute() {
-      final DataAdapter dapt = DABuilder.create(_drf, _rfmodel).build(_fr, _params._useNonLocalData);
+      final DataAdapter dapt = DABuilder.create(_rfParams, _rfmodel).build(_fr, _rfParams._useNonLocalData);
       if (dapt == null) {
         tryComplete();
         return;
@@ -339,7 +339,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       int[] rowsPerChunks   = howManyRPC(_fr);
       updateRFModel(_rfmodel._key, numSplitFeatures);
       updateRFModelStatus(_rfmodel._key, "Building Forest");
-      SpeeDRF.build(_job, _params, localData, ntrees, numSplitFeatures, rowsPerChunks);
+      SpeeDRF.build(_job, _rfParams, localData, ntrees, numSplitFeatures, rowsPerChunks);
       tryComplete();
     }
 
@@ -368,7 +368,7 @@ public class SpeeDRF extends Job.ValidatedJob {
 
     /** Unless otherwise specified each split looks at sqrt(#features). */
     private int howManySplitFeatures() {
-      if (_params.num_split_features!=-1) return _params.num_split_features;
+      if (_rfParams.num_split_features!=-1) return _rfParams.num_split_features;
       return (int)Math.sqrt(_fr.numCols()-1/*we don't use the class column*/);
     }
 
@@ -392,8 +392,8 @@ public class SpeeDRF extends Job.ValidatedJob {
       Arrays.sort(array);
       // Give each H2ONode ntrees/#nodes worth of trees.  Round down for later nodes,
       // and round up for earlier nodes
-      int ntrees = _params.num_trees/nodes.size();
-      if( Arrays.binarySearch(array, H2O.SELF) < _params.num_trees - ntrees*nodes.size() )
+      int ntrees = _rfParams.num_trees/nodes.size();
+      if( Arrays.binarySearch(array, H2O.SELF) < _rfParams.num_trees - ntrees*nodes.size() )
         ++ntrees;
 
       return ntrees;
@@ -418,14 +418,14 @@ public class SpeeDRF extends Job.ValidatedJob {
         final int classes = (int)(c.max() - c.min())+1;
         if( !(2 <= classes && classes <= 254 ) )
           throw new IllegalArgumentException("Found " + classes+" classes: "+err);
-      if (0.0f > _params.sample || _params.sample > 1.0f)
-        throw new IllegalArgumentException("Sampling rate must be in [0,1] but found "+ _params.sample);
+      if (0.0f > _rfParams.sample || _rfParams.sample > 1.0f)
+        throw new IllegalArgumentException("Sampling rate must be in [0,1] but found "+ _rfParams.sample);
       }
-      if (_params.num_split_features!=-1 && (_params.num_split_features< 1 || _params.num_split_features>vecs.length-1))
+      if (_rfParams.num_split_features!=-1 && (_rfParams.num_split_features< 1 || _rfParams.num_split_features>vecs.length-1))
         throw new IllegalArgumentException("Number of split features exceeds available data. Should be in [1,"+(vecs.length-1)+"]");
       ChunkAllocInfo cai = new ChunkAllocInfo();
       boolean can_load_all = canLoadAll(_fr, cai);
-      if (_params._useNonLocalData && !can_load_all) {
+      if (_rfParams._useNonLocalData && !can_load_all) {
         Log.warn("Cannot load all data from remote nodes - " +
                 "the node " + cai.node + " requires " + PrettyPrint.bytes(cai.requiredMemory) + " to load all data and perform computation but there is only " + PrettyPrint.bytes(cai.availableMemory) + " of available memory. " +
                 "Please provide more memory for JVMs or disable the option '"+ Constants.USE_NON_LOCAL_DATA+"' (however, it may affect resulting accuracy).");
@@ -436,7 +436,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       }
 
       if (can_load_all) {
-        _params._useNonLocalData = true;
+        _rfParams._useNonLocalData = true;
         _drf.local_mode = false;
         Log.info("Enough available free memory to compute on all data. Pulling all data locally and then launching RF.");
       }
