@@ -2006,6 +2006,13 @@ class H2O(object):
         print "\ngbm_search_progress result:", dump_json(a)
         return a
 
+    def speedrf_view(self, modelKey, timeoutSecs=300, print_params=False, **kwargs):
+        params_dict = { '_modelKey': modelKey, }
+        check_params_update_kwargs(params_dict, kwargs, 'speedrf_view', print_params)
+        a = self.__do_json_request('2/SpeeDRFModelView.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint("\nspeedrf_view_result:", dump_json(a))
+        return a
+
     def pca_view(self, modelKey, timeoutSecs=300, print_params=False, **kwargs):
         #this function is only for pca on fvec! may replace in future.
         params_dict = {
