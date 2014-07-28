@@ -1755,6 +1755,7 @@ class H2O(object):
                        'sampling_strategy': 'RANDOM',
                        'seed': -1.0,
                        'select_stat_type': 'ENTROPY',
+                       'importance':0,
                        'strata_samples': None,
         }
         check_params_update_kwargs(params_dict, kwargs, 'SpeeDRF', print_params)
