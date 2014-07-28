@@ -155,8 +155,8 @@ public class Tree extends H2OCountedCompleter {
 
       // Atomically improve the Model as well
       Key tkey = toKey();
-      TreeP tp = _local_mode ? new TreeP(d.rows(), -1, d.nonOOB(), tkey) : null;
-      appendKey(_job.dest(), tkey, _verbose > 10 ? _tree.toString(new StringBuilder(""), Integer.MAX_VALUE).toString() : "", tp);
+//      TreeP tp = _local_mode ? new TreeP(d.rows(), -1, d.nonOOB(), tkey) : null;
+      appendKey(_job.dest(), tkey, _verbose > 10 ? _tree.toString(new StringBuilder(""), Integer.MAX_VALUE).toString() : "");
       StringBuilder sb = new StringBuilder("[RF] Tree : ").append(_data_id+1);
       sb.append(" d=").append(_tree.depth()).append(" leaves=").append(_tree.leaves()).append(" done in ").append(timer).append('\n');
       Log.info(sb.toString());
@@ -170,12 +170,12 @@ public class Tree extends H2OCountedCompleter {
 
   // Stupid static method to make a static anonymous inner class
   // which serializes "for free".
-  static void appendKey(Key model, final Key tKey, final String tString, final TreeP tp) {
+  static void appendKey(Key model, final Key tKey, final String tString) {
     final int selfIdx = H2O.SELF.index();
     new TAtomic<SpeeDRFModel>() {
       @Override public SpeeDRFModel atomic(SpeeDRFModel old) {
         if(old == null) return null;
-        return SpeeDRFModel.make(old, tKey, selfIdx, tString, tp);
+        return SpeeDRFModel.make(old, tKey, selfIdx, tString);
       }
     }.invoke(model);
   }
@@ -554,22 +554,22 @@ public class Tree extends H2OCountedCompleter {
 }
 
 
-class TreeP extends Iced {
-  int    _trainSize;
-  long   _numErrs;
-  long[] _nonOOB_indexes;
-  int    _tree_id;
-  Key    _tk;
-  public TreeP(int train, long numErr, long[] nonOOB, Key tk) {
-    _trainSize = train;
-    _numErrs = numErr;
-    _nonOOB_indexes = nonOOB;
-    _tk = tk;
-  }
-
-  public boolean isOOB(Row r) { return !contains(_nonOOB_indexes, r._index); }
-  public boolean isOOB(int r) { return !contains(_nonOOB_indexes, r); }
-  public long get_numErrs()  { return _numErrs;   }
-  public int get_trainSize() { return _trainSize; }
-  public boolean contains(final long[] array, final long key) { return Arrays.asList(array).contains(key); }
-}
+//class TreeP extends Iced {
+//  int    _trainSize;
+//  long   _numErrs;
+//  long[] _nonOOB_indexes;
+//  int    _tree_id;
+//  Key    _tk;
+//  public TreeP(int train, long numErr, long[] nonOOB, Key tk) {
+//    _trainSize = train;
+//    _numErrs = numErr;
+//    _nonOOB_indexes = nonOOB;
+//    _tk = tk;
+//  }
+//
+//  public boolean isOOB(Row r) { return !contains(_nonOOB_indexes, r._index); }
+//  public boolean isOOB(int r) { return !contains(_nonOOB_indexes, r); }
+//  public long get_numErrs()  { return _numErrs;   }
+//  public int get_trainSize() { return _trainSize; }
+//  public boolean contains(final long[] array, final long key) { return Arrays.asList(array).contains(key); }
+//}

@@ -1,5 +1,6 @@
 #!/bin/bash
 
+echo "Can use -p or -f arg, for incremental and full install, or use the commands and files below"
 #****************************************************************************************************
 CLEAN_R_STUFF=0
 REMOVE_H2O_PACKAGES=0
@@ -154,10 +155,18 @@ else
 fi
 
 echo "If RCurl didn't install, you probably need libcurl-devel. ('sudo yum install libcurl-devel' on centos). libcurl not enough?"
-echo "you might want to check 'apt-get install libatlas-dev libblas-dev' for liblinear also, and lapack for Matrix"
-echo "apt-get install libblas3gf"
-echo "apt-get install libblas-doc"
-echo "apt-get install libblas-dev"
-echo "apt-get install liblapack3gf"
-echo "apt-get install liblapack-doc"
-echo "apt-get install liblapack-dev"
+echo "you might want to check 'sudo apt-get install libatlas-dev libblas-dev' for liblinear also, and lapack for Matrix"
+echo "sudo apt-get install libblas3gf"
+echo "sudo apt-get install libblas-doc"
+echo "sudo apt-get install libblas-dev"
+echo "sudo apt-get install liblapack3gf"
+echo "sudo apt-get install liblapack-doc"
+echo "sudo apt-get install liblapack-dev"
+
+echo ""
+echo "If rgl didn't install because of GL/gl.h in ubuntu, do this install first"
+echo "sudo apt-get install libglu1-mesa-dev"
+echo ""
+echo "If it complained about no package named 'h2o' you need to do a make"
+
+
