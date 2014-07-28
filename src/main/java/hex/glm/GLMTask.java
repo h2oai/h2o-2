@@ -84,6 +84,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
           _ymax = t._ymax;
         } else {
           for(int i = 0; i < _nfolds+1; ++i) {
+            if(_nobs[i] + t._nobs[i] == 0)continue;
             _ymu[i] = _ymu[i] * ((double) _nobs[i] / (_nobs[i] + t._nobs[i])) + t._ymu[i] * t._nobs[i] / (_nobs[i] + t._nobs[i]);
             _nobs[i] += t._nobs[i];
             if(t._ymax[i] > _ymax[i])
@@ -96,7 +97,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     }
     @Override protected void chunkDone(){
       for(int i = 0; i < _ymu.length; ++i)
-        _ymu[i] /= _nobs[i];
+        if(_nobs[i] != 0)_ymu[i] /= _nobs[i];
     }
     public double ymu(){return ymu(-1);}
     public long nobs(){return nobs(-1);}
@@ -270,7 +271,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
 
     public GLMIterationTask(Key jobKey, DataInfo dinfo, GLMParams glm, boolean computeGram, boolean validate, boolean computeGradient, double [] beta, double ymu, double reg, float [] thresholds, H2OCountedCompleter cmp) {
       super(jobKey, dinfo,glm,cmp);
-      assert beta == null || beta.length == dinfo.fullN()+1:"beta.leng != dinfo.fullN(), beta = " + beta.length + " dinfo = " + dinfo.fullN();
+      assert beta == null || beta.length == dinfo.fullN()+1:"beta.length != dinfo.fullN(), beta = " + beta.length + " dinfo = " + dinfo.fullN();
       _beta = beta;
       _ymu = ymu;
       _reg = reg;
