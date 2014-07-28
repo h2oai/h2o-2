@@ -566,11 +566,14 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           if(!highAccuracy()){
             LogInfo("reached negative explained deviance without line-search, rerunning with high accuracy settings.");
             setHighAccuracy();
-            if(_lastResult != null && Arrays.equals(_lastResult._activeCols,_activeCols))
-              new GLMIterationTask(GLM2.this.self(),_activeData,glmt._glm, true, true, true, _lastResult._glmt._beta,_ymu,1.0/_nobs,thresholds, new Iteration(getCompleter(),false)).asyncExec(_activeData._adaptedFrame);
-            else // no sane solution to go back to, start from scratch!
-              new GLMIterationTask(GLM2.this.self(),_activeData,glmt._glm, true, false, false, null,_ymu,1.0/_nobs,thresholds, new Iteration(getCompleter(),false)).asyncExec(_activeData._adaptedFrame);
-            _lastResult = null;
+            if(_lastResult != null && Arrays.equals(_lastResult._activeCols,_activeCols)) {
+              double [] beta = _lastResult._glmt._beta;
+              _lastResult = null;
+              new GLMIterationTask(GLM2.this.self(), _activeData, glmt._glm, true, true, true, beta, _ymu, 1.0 / _nobs, thresholds, new Iteration(getCompleter(), false)).asyncExec(_activeData._adaptedFrame);
+            } else { // no sane solution to go back to, start from scratch!
+              _lastResult = null;
+              new GLMIterationTask(GLM2.this.self(), _activeData, glmt._glm, true, false, false, null, _ymu, 1.0 / _nobs, thresholds, new Iteration(getCompleter(), false)).asyncExec(_activeData._adaptedFrame);
+            }
             return;
           }
         }
@@ -633,7 +636,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           if(glmt._beta != null)
             setSubmodel(glmt._beta, glmt._val,(H2OCountedCompleter)getCompleter().getCompleter()); // update current intermediate result
           final boolean validate = higher_accuracy || (_iter % 5) == 0;
-          new GLMIterationTask(GLM2.this.self(),_activeData,glmt._glm, true, validate, validate, newBeta,_ymu,1.0/_nobs,thresholds, new Iteration(getCompleter(),validate)).asyncExec(_activeData._adaptedFrame);
+          new GLMIterationTask(GLM2.this.self(),_activeData,glmt._glm, true, validate, validate, newBeta,_ymu,1.0/_nobs,thresholds, new Iteration(getCompleter(),validate && _lastResult != null)).asyncExec(_activeData._adaptedFrame);
         }
       }
     }

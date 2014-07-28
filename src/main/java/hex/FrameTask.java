@@ -550,7 +550,8 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     OUTER:
       for(int rr = start; rr < end; ++rr){
         final int r = shuf_map != null ? (int)shuf_map[rr-start] : rr;
-        if ((_dinfo._nfolds > 0 && (r % _dinfo._nfolds) == _dinfo._foldId)
+        final long lr = r + chunks[0]._start;
+        if ((_dinfo._nfolds > 0 && (lr % _dinfo._nfolds) == _dinfo._foldId)
                 || (skip_rng != null && skip_rng.nextFloat() > _useFraction))continue;
         for(Chunk c:chunks)if(c.isNA0(r))continue OUTER; // skip rows with NAs!
         int i = 0, ncats = 0;
