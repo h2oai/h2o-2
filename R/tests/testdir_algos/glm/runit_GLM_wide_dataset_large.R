@@ -38,9 +38,9 @@ test <- function(conn) {
         time.noSR.3250 <- system.time(model.noSR.3250 <- h2o.glm(x=c(1:3250), y="arcene.train.label", data=arcene.train.full, family="binomial", lambda_search=FALSE, alpha=1, nfolds=0, use_all_factor_levels=1, higher_accuracy=TRUE))
         print(time.noSR.3250)
 
-    print("Check that modeling with additional columns takes more time to compute without strong rules, ie doesn't quit too early.")
+    #print("Check that modeling with additional columns takes more time to compute without strong rules, ie doesn't quit too early.")
         # looks at total elapsed time
-        stopifnot(time.noSR.3000[3] <= time.noSR.3250[3])
+        #stopifnot(time.noSR.3000[3] <= time.noSR.3250[3])
 
     print("Test models on validation set.")
         predict.noSR.3000 <- h2o.predict(model.noSR.3000, arcene.valid.full)
