@@ -847,25 +847,6 @@ function(expr, envir = globalenv()) {
 #' Grabs all of the JSON and returns it as a named list. Do this by using the 2/Inspector.json page, which provides
 #' a redirect URL to the appropriate Model View page.
 .fetchJSON <- function(h2o, key) {
-#  if (grepl("GLMModel", key)) {
-#    print("DEBUGGING GLM MODEL PARAM GRAB!!!")
-#    print(key)
-#    res <- .h2o.__remoteSend(client = h2o, page = .h2o.__PAGE_GLMModelView, '_modelKey' = key)
-#
-#     print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-#        print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-#        print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-#        print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-#        print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-#    print(res$glm_model$parameters)
-#    print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-#    print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-#    print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-#    print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-#    print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-#    return(res$glm_model$parameters)
-##    stop(res)
-#  }
   redirect_url <- .h2o.__remoteSend(h2o, .h2o.__PAGE_INSPECTOR, src_key = key)$response_info$redirect_url
   page <- strsplit(redirect_url, '\\?')[[1]][1]                         # returns a list of two items
   page <- paste(strsplit(page, '')[[1]][-1], sep = "", collapse = "")   # strip off the leading '/'
@@ -904,6 +885,8 @@ function(h2o, key) {
                               nb_model = .h2o.__getNBResults)
 
   response   <- json[[model.type]]
+  if(!is.null(response$warnings))
+      tmp <- lapply(response$warnings, warning)
   job_key    <- params$job_key #response$job_key
   dest_key   <- key #params$destination_key
 
