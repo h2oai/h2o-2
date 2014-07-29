@@ -175,6 +175,7 @@ public class SpeeDRF extends Job.ValidatedJob {
     try {
       logStart();
       source.read_lock(self());
+      if (validation != null && validation != source) validation.read_lock(self());
       buildForest();
       if (n_folds > 0) CrossValUtils.crossValidate(this);
     } catch(Exception ex) {
@@ -182,6 +183,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       throw new RuntimeException(ex);
     } finally {
       source.unlock(self());
+      if (validation != null && validation != source) validation.unlock(self());
       remove();
       state = UKV.<Job>get(self()).state;
       // Argh, this is horrible
