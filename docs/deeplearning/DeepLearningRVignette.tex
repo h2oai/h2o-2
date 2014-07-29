@@ -466,7 +466,7 @@ l1_params
 
 \subsection{Checkpoint model}
 
-Checkpoint model keys can be used to start off where you left off, if you feel that you want to further train a particular model with more iterations, more data, different data, and so forth. If we felt that our initial model should be trained further, we can use its key (destination key) as a checkpoint argument in a new model.
+Checkpoint model keys can be used to start off where you left off, if you feel that you want to further train a particular model with more iterations, more data, different data, and so forth. If we felt that our initial model should be trained further, we can use it (or its key) as a checkpoint argument in a new model. Note that the training and validation datasets and the response column etc. have to match for checkpoint restarts.
 
 \begin{spverbatim}
 mnist_checkpoint_model = h2o.deeplearning(x=1:784, y=785, data=train_images.hex, checkpoint=mnist_model_grid@model[[1]], validation = test_images.hex, epochs=9)
