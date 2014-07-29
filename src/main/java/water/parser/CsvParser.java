@@ -741,14 +741,11 @@ NEXT_CHAR:
     if(res._isValid){ // now guess the types
       InputStream is = new ByteArrayInputStream(bits);
       CsvParser p = new CsvParser(res._setup);
-
       TypeGuesserDataOut dout = new TypeGuesserDataOut(res._setup._ncols);
       try{
         p.streamParse(is, dout);
         res._setup._types = dout.guessTypes();
-      }catch(Exception e){
-        e.printStackTrace();
-      }
+      }catch(Throwable e){}
     }
     return res;
   }
