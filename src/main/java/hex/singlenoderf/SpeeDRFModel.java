@@ -101,7 +101,6 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     this.parameters = params;
     score_each = params.score_each_iteration;
     regression = !(params.classification);
-//    _domain = domain;
   }
 
   protected SpeeDRFModel(SpeeDRFModel model, double err, ConfusionMatrix cm, VarImp varimp, AUCData auc) {
@@ -153,8 +152,6 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   public int size()      { return t_keys.length; }
   public int classes()   { return nclasses(); }
 
-//  String[] _domain;
-//  @Override public String[] classNames() { return regression ? null : _domain; }
   @Override public ConfusionMatrix cm() { return validAUC == null ? cms[cms.length-1] : validAUC.CM(); }
 
   private void scoreOnTest(Frame fr, Vec modelResp) {
@@ -168,17 +165,13 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     // Regression scoring
     if (regression) {
       float mse = (float) cm.mse;
-//      errs = Arrays.copyOf(errs, errs.length + 1);
       errs[errs.length - 1] = mse;
-//      cms = Arrays.copyOf(cms, cms.length + 1);
       cms[cms.length - 1] = null;
 
       // Classification scoring
     } else {
       this.cm = cm.cm;
-//      errs = Arrays.copyOf(errs, errs.length + 1);
       errs[errs.length - 1] = -1f;
-//      cms = Arrays.copyOf(cms, cms.length + 1);
       ConfusionMatrix new_cm = new ConfusionMatrix(this.cm);
       cms[cms.length - 1] = new_cm;
 
@@ -201,18 +194,13 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     final CMTask cmTask = CMTask.scoreTask(this, treeCount(), oobee, fr, modelResp);
     if (regression) {
       float mse = cmTask._ss / ( (float) (cmTask._rowcnt));
-//      errs = Arrays.copyOf(errs, errs.length + 1);
       errs[errs.length - 1] = mse;
-//      cms = Arrays.copyOf(cms, cms.length + 1);
       cms[cms.length - 1] = null;
     } else {
-//      _domain = cmTask.domain(modelResp);
       confusion = CMTask.CMFinal.make(cmTask._matrix, this, classNames(), cmTask._errorsPerTree, oobee, cmTask._sum, cmTask._cms);
       this.cm = cmTask._matrix._matrix;
       errorsPerTree = cmTask._errorsPerTree;
-//      errs = Arrays.copyOf(errs, errs.length + 1);
       errs[errs.length - 1] = confusion.mse();
-//      cms = Arrays.copyOf(cms, cms.length + 1);
       cms[cms.length - 1] = new ConfusionMatrix(confusion._matrix);
 
       if (classes() == 2) validAUC =  makeAUC(toCMArray(confusion._cms), ModelUtils.DEFAULT_THRESHOLDS, cmDomain);
