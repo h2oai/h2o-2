@@ -717,17 +717,17 @@ abstract class ASTBinOp extends ASTOp {
               for( int r=0; r<rlen; r++ ) {
                 double lv; double rv;
                 if (lf) {
-//                  if(chks[i].isNA0(r)) { n.addNum(Double.NaN); continue; }
+                  if(chks[i].isNA0(r) && !bin.opStr().equals("|")) { n.addNum(Double.NaN); continue; }
                   lv = chks[i].at0(r);
                 } else {
-//                  if (Double.isNaN(df0)) { n.addNum(Double.NaN); continue; }
+                  if (Double.isNaN(df0) && !bin.opStr().equals("|")) { n.addNum(Double.NaN); continue; }
                   lv = df0;
                 }
                 if (rf) {
-//                  if(chks[i].isNA0(r)) { n.addNum(Double.NaN); continue; }
+                  if(chks[i].isNA0(r) && !bin.opStr().equals("|")) { n.addNum(Double.NaN); continue; }
                   rv = chks[i+(lf ? nchks.length:0)].at0(r);
                 } else {
-//                  if (Double.isNaN(df1)) { n.addNum(Double.NaN); continue; }
+                  if (Double.isNaN(df1) && !bin.opStr().equals("|")) { n.addNum(Double.NaN); continue; }
                   rv = df1;
                 }
                 n.addNum(bin.op(lv, rv));
