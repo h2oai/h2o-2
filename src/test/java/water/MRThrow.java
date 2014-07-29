@@ -14,7 +14,7 @@ import water.util.Utils;
 
 public class MRThrow extends TestUtil {
 
-  @BeforeClass public static void stall() { stall_till_cloudsize(3); }
+  @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
   // ---
   // Map in h2o.jar - a multi-megabyte file - into Arraylets.
@@ -40,6 +40,9 @@ public class MRThrow extends TestUtil {
         }
       }
     } finally {
+      // currently canceled RPC calls do not properly wait for all other nodes...
+      // so once a map() call fails, other map calls can lazily load data after we call delete()
+      try { Thread.sleep(100); } catch( InterruptedException ignore ) {}
       Lockable.delete(h2okey);
     }
   }
@@ -66,9 +69,8 @@ public class MRThrow extends TestUtil {
     } finally {
       // currently canceled RPC calls do not properly wait for all other nodes...
       // so once a map() call fails, other map calls can lazily load data after we call delete()
-      try { Thread.sleep(10); } catch( InterruptedException ignore ) {}
+      try { Thread.sleep(100); } catch( InterruptedException ignore ) {}
       Lockable.delete(h2okey);
-      System.out.println(H2O.store_size());
     }
   }
 
@@ -100,26 +102,12 @@ public class MRThrow extends TestUtil {
         }
       }
     } finally {
+      // currently canceled RPC calls do not properly wait for all other nodes...
+      // so once a map() call fails, other map calls can lazily load data after we call delete()
+      try { Thread.sleep(100); } catch( InterruptedException ignore ) {}
       Lockable.delete(h2okey);
     }
   }
-
-//  @Test public void testDTask(){
-//    for(int i = 0; i < H2O.CLOUD._memary.length; ++i){
-//      try{
-//        RPC.call(H2O.CLOUD._memary[i], new DTask<DTask>() {
-//          @Override public void compute2() {
-//            throw new RuntimeException("test");
-//          }
-//        }).get();
-//        fail("should've thrown");
-//      }catch(RuntimeException rex){
-//       assertTrue(rex.getCause().getMessage().equals("test"));
-//      } catch(Throwable t){
-//        fail("Expected RuntimException");
-//      }
-//    }
-//  }
 
   // Byte-wise histogram
   public static class ByteHistoThrow extends MRTask2<ByteHistoThrow> {

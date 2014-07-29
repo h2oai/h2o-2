@@ -229,9 +229,8 @@ class ASTddply extends ASTOp {
     Frame res = new Frame(names,vres);
 
     // Delete the group row vecs
-    for( Vec v : vecs ) UKV.remove(v._key,fs);
-    UKV.remove(envkey,fs);
-    fs.blockForPending();
+    for( Vec v : vecs ) UKV.remove(v._key);
+    UKV.remove(envkey);
     env.poppush(4,res,null);
   }
 
