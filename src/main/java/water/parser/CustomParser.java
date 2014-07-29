@@ -352,7 +352,7 @@ public abstract class CustomParser extends Iced {
       for(int i = 0; i < _ncols; ++i){
         if(_domains[i].size() <= 1 && _nnums[i] >= .2) // clear number
           res[i]._type = ParserSetup.Coltype.NUM;
-        else if(_domains[i].size() > 2 && (double)_nstrings[i]/_nlines >= .2) { // clear strting/enum
+        else if(_domains[i].size() > 2 && (double)_nstrings[i]/_nlines >= .5) { // clear string/enum
           res[i]._type = ParserSetup.Coltype.STR;
           res[i]._strongGuess = (double)_nstrings[i]/_nlines >= .5;
         } else if(_domains[i].size() == 2) { // possibly enum
@@ -379,9 +379,9 @@ public abstract class CustomParser extends Iced {
             if (_nzeros[i] > 0 && _nzeros[i] + _nstrings[i] == _nlines)
               res[i]._naStr = new ValueString("0");
           } else { // some generic two strings, could be garbage or enums
-            if ((double)_nstrings[i] / _nlines >= .2) {
+            if ((double)_nstrings[i] / _nlines >= .5) {
               res[i]._type = ParserSetup.Coltype.STR;
-              res[i]._strongGuess = (double)_nstrings[i]/_nlines >= .5;
+              res[i]._strongGuess = (double)_nstrings[i]/_nlines >= .75;
             } else if (_nnums[i] > 0 && (double)_nnums[i] / _nlines > .2)
               res[i]._type = ParserSetup.Coltype.NUM;
           }
