@@ -26,7 +26,6 @@ dataSet <- doSelect()
 dataName <- names(dataSet)
 print(dataName)
 print(dataSet)
-q()
 
 
 test.slice.div <- function(conn) {
