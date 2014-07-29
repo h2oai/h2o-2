@@ -526,36 +526,39 @@ class ApiTestCase(ModelManagementTestCase):
 
 
         print "##############################################"
-        print "Scoring compatible frames for compatible models for /2/Models?key=airlines_train.hex&find_compatible_models=true. . ."
-        frames = node.frames(key='airlines_train.hex', find_compatible_models=1)
-        compatible_models = frames['frames']['airlines_train.hex']['compatible_models']
+        test_frames = ["prostate.hex", "airlines_train.hex"]
 
-        # NOTE: we start with frame airlines_train.hex and find the compatible models.
-        # Then for each of those models we find all the compatible frames (there are at least two)
-        # and score them.
-        for model_key in compatible_models:
-            # find all compatible frames
-            models = node.models(key=model_key, find_compatible_frames=1)
-            compatible_frames = models['models'][model_key]['compatible_frames']
-            self.assertKeysExist(models, 'models/' + model_key, ['training_duration_in_ms'])
-            self.assertNotEqual(models['models'][model_key]['training_duration_in_ms'], 0, "Expected non-zero training time for model: " + model_key)
+        for test_frame in test_frames:
+            print "Scoring compatible frames for compatible models for /2/Models?key=" + test_frame + "&find_compatible_models=true. . ."
+            frames = node.frames(key=test_frame, find_compatible_models=1)
+            compatible_models = frames['frames'][test_frame]['compatible_models']
 
-            for frame_key in compatible_frames:
-                print "Scoring: /2/Models?key=" + model_key + "&score_frame=" + frame_key
-                scoring_result = node.models(key=model_key, score_frame=frame_key)
+            # NOTE: we start with frame airlines_train.hex and find the compatible models.
+            # Then for each of those models we find all the compatible frames (there are at least two)
+            # and score them.
+            for model_key in compatible_models:
+                # find all compatible frames
+                models = node.models(key=model_key, find_compatible_frames=1)
+                compatible_frames = models['models'][model_key]['compatible_frames']
+                self.assertKeysExist(models, 'models/' + model_key, ['training_duration_in_ms'])
+                self.assertNotEqual(models['models'][model_key]['training_duration_in_ms'], 0, "Expected non-zero training time for model: " + model_key)
 
-                self.assertKeysExist(scoring_result, '', ['metrics'])
-                self.assertKeysExist(scoring_result, 'metrics[0]', ['model', 'frame', 'duration_in_ms'])
-                self.assertKeysExist(scoring_result, 'metrics[0]/model', ['key', 'model_category', 'id', 'creation_epoch_time_millis'])
-                model_category = scoring_result['metrics'][0]['model']['model_category']
-                self.assertEqual(scoring_result['metrics'][0]['model']['key'], model_key, "Expected model key: " + model_key + " but got: " + scoring_result['metrics'][0]['model']['key'])
-                self.assertEqual(scoring_result['metrics'][0]['frame']['key'], frame_key, "Expected frame key: " + frame_key + " but got: " + scoring_result['metrics'][0]['frame']['key'])
-                if model_category == 'Binomial':
-                    self.validate_binomial_classifier_metrics(scoring_result['metrics'][0])
+                for frame_key in compatible_frames:
+                    print "Scoring: /2/Models?key=" + model_key + "&score_frame=" + frame_key
+                    scoring_result = node.models(key=model_key, score_frame=frame_key)
 
-                if model_category == 'Regression':
-                    # self.assertKeysDontExist(scoring_result, 'metrics[0]', ['cm', 'auc']) # TODO: HitRatio
-                    None
+                    self.assertKeysExist(scoring_result, '', ['metrics'])
+                    self.assertKeysExist(scoring_result, 'metrics[0]', ['model', 'frame', 'duration_in_ms'])
+                    self.assertKeysExist(scoring_result, 'metrics[0]/model', ['key', 'model_category', 'id', 'creation_epoch_time_millis'])
+                    model_category = scoring_result['metrics'][0]['model']['model_category']
+                    self.assertEqual(scoring_result['metrics'][0]['model']['key'], model_key, "Expected model key: " + model_key + " but got: " + scoring_result['metrics'][0]['model']['key'])
+                    self.assertEqual(scoring_result['metrics'][0]['frame']['key'], frame_key, "Expected frame key: " + frame_key + " but got: " + scoring_result['metrics'][0]['frame']['key'])
+                    if model_category == 'Binomial':
+                        self.validate_binomial_classifier_metrics(scoring_result['metrics'][0])
+
+                    if model_category == 'Regression':
+                        # self.assertKeysDontExist(scoring_result, 'metrics[0]', ['cm', 'auc']) # TODO: HitRatio
+                        None
 
 
         print "##############################################"
