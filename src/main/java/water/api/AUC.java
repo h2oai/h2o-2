@@ -186,8 +186,8 @@ public class AUC extends Func {
         _cms[i] = new hex.ConfusionMatrix(2);
       final int len = Math.min(ca._len, cp._len);
       for( int i=0; i < len; i++ ) {
-        if (ca.isNA0(i))
-          throw new UnsupportedOperationException("Actual class label cannot be a missing value!");
+        if (ca.isNA0(i)) continue;
+//          throw new UnsupportedOperationException("Actual class label cannot be a missing value!");
         final int a = (int)ca.at80(i); //would be a 0 if double was NaN
         assert (a == 0 || a == 1) : "Invalid values in vactual: must be binary (0 or 1).";
         if (cp.isNA0(i)) {
