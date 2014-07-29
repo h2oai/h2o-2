@@ -6,6 +6,7 @@ import jsr166y.ForkJoinTask;
 import jsr166y.RecursiveAction;
 import water.Key;
 import water.Timer;
+import water.UKV;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.util.Log;
@@ -15,16 +16,16 @@ import java.util.ArrayList;
 
 public class DABuilder {
     protected final DRFParams    _rfParams;
-    protected final SpeeDRFModel _rfModel;
+    protected final Key _rfModel;
 
-    static DABuilder create(final DRFParams rfParams, final SpeeDRFModel rfModel) {
+    static DABuilder create(final DRFParams rfParams, final Key rfModel) {
       switch( rfParams.sampling_strategy ) {
         case RANDOM                :
         default                    : return new DABuilder(rfParams, rfModel);
       }
     }
 
-    DABuilder(final DRFParams rfparams, final SpeeDRFModel rfmodel) { _rfParams = rfparams; _rfModel = rfmodel; }
+    DABuilder(final DRFParams rfparams, final Key rfmodel) { _rfParams = rfparams; _rfModel = rfmodel; }
 
     final DataAdapter build(Frame fr, boolean useNonLocal) { return inhaleData(fr, useNonLocal); }
 
@@ -75,7 +76,7 @@ public class DABuilder {
         return null;
       }
       Timer t_inhale = new Timer();
-      final SpeeDRFModel rfmodel = _rfModel;
+      final SpeeDRFModel rfmodel = UKV.get(_rfModel);
       boolean[] _isByteCol = new boolean[fr.numCols()];
       long[] _naCnts = new long[fr.numCols()];
       for (int i = 0; i < _isByteCol.length; ++i) {
@@ -115,8 +116,7 @@ public class DABuilder {
 
       Log.info("\n\nTotal local  chunks to load: "+cnter_local+"\n\nTotal remote chunks to load:" +cnter_remote);
 
-      _rfModel.current_status = "Inhaling Data";
-      _rfModel.update(_rfModel.jobKey);
+      SpeeDRF.DRFTask.updateRFModelStatus(_rfModel, "Inhaling Data.");
       Log.info(Log.Tag.Sys.RANDF,"Beginning Random Forest Inhale.");
       ForkJoinTask.invokeAll(dataInhaleJobs);
 

@@ -144,7 +144,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
      * @return Frame to be used by FrameTask
      */
     public static Frame prepareFrame(Frame source, Vec response, int[] ignored_cols, boolean toEnum, boolean dropConstantCols, boolean dropNACols) {
-      Frame fr = new Frame(Key.make(), source._names.clone(), source.vecs().clone());
+      Frame fr = new Frame(Key.makeUserHidden(Key.make()), source._names.clone(), source.vecs().clone());
       if (ignored_cols != null) fr.remove(ignored_cols);
       final Vec[] vecs =  fr.vecs();
 
@@ -200,7 +200,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     }
 
     public static Frame prepareFrame(Frame source, int[] ignored_cols, boolean dropConstantCols, boolean dropNACols) {
-      Frame fr = new Frame(source._names.clone(), source.vecs().clone());
+      Frame fr = new Frame(Key.makeUserHidden(Key.make()), source._names.clone(), source.vecs().clone());
       if (ignored_cols != null) fr.remove(ignored_cols);
       final Vec[] vecs =  fr.vecs();
 

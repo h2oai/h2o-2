@@ -302,15 +302,10 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
   /** Free all internal tree keys. */
   @Override public Futures delete_impl(Futures fs) {
-    for( Key k : t_keys )
-      UKV.remove(k,fs);
-    if (testKey != null) UKV.remove(testKey, fs);
-//    if (test_frame != null) {
-//      for (Vec v : test_frame.vecs()) UKV.remove(v._key, fs);
-//    }
-//    if (fr != null) for (Vec v : fr.vecs()) UKV.remove(v._key, fs);
-//    if (response != null) UKV.remove(response._key, fs);
+    for( Key k : t_keys ) UKV.remove(k,fs);
+    if (testKey != null)  UKV.remove(testKey, fs);
     for (Key[] ka : local_forests) for (Key k : ka) UKV.remove(k, fs);
+
     return fs;
   }
 
