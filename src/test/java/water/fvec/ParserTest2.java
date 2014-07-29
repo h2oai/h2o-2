@@ -1405,4 +1405,54 @@ public class ParserTest2 extends TestUtil {
     testParsed(fr,exp,12);
   }
 
+
+  // test 0,n,y -> NA,0,1
+  @Test public void testBinaryColMultiFile() {
+    Key [] files = ImportFiles2.importPath("smalldata/test/binaryCol");
+    Frame f1 = ParseDataset2.parse(Key.make("multifile"), files);
+
+    double[][] exp = new double[][] {
+            d( 1,0,NaN),
+            d( 2,1,NaN),
+            d( 3,2,NaN),
+            d( 4,0,NaN),
+            d( 5,1,NaN),
+            d( 6,2,NaN),
+            d( 7,0,NaN),
+            d( 8,1,NaN),
+            d( 9,2,NaN),
+            d(10,0,NaN),
+            d(11,1,NaN),
+            d(12,2,NaN),
+
+            d( 1,0,NaN),
+            d( 2,1,NaN),
+            d( 3,2,0),
+            d( 4,0,NaN),
+            d( 5,1,NaN),
+            d( 6,2,0),
+            d( 7,0,NaN),
+            d( 8,1,NaN),
+            d( 9,2,NaN),
+            d(10,0,1),
+            d(11,1,NaN),
+            d(12,2,NaN),
+
+            d( 1,0,NaN),
+            d( 2,1,NaN),
+            d( 3,2,0),
+            d( 4,0,NaN),
+            d( 5,1,NaN),
+            d( 6,2,0),
+            d( 7,0,NaN),
+            d( 8,1,NaN),
+            d( 9,2,NaN),
+            d(10,0,0),
+            d(11,1,NaN),
+            d(12,2,NaN),
+    };
+    Log.info(f1.toStringAll());
+    testParsed(f1,exp,36);
+  }
+
 }
