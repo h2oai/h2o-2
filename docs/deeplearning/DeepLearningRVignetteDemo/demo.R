@@ -105,7 +105,7 @@ mnist_checkpoint_model = h2o.deeplearning(x=1:784, y=785, data=train_images.hex,
 #This model should result in a test set error of 0.9% or better - runs for several hours
 #super_model = h2o.deeplearning(x=1:784, y=785, data=train_images.hex, activation="RectifierWithDropout",
 #hidden=c(1024,1024,2048), validation=test_images.hex, epochs=2000, l1=1e-5, input_dropout_ratio=0.2, 
-#rho=0.99, epsilon=1e-8, max_w2=15, classification_stop=-1, train_samples_per_iteration=0)
+#rho=0.99, epsilon=1e-8, max_w2=15, classification_stop=-1, train_samples_per_iteration=-1)
 
 
 #Section 4: Deep autoencoders used for anomaly detection
