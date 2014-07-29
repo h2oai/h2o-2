@@ -101,8 +101,8 @@ test.slice.div <- function(conn) {
   print(head(hexDivHex))
   Log.info("head(as.data.frame(fiveDivSliced)/as.data.frame(slicedDivFive))")
   print(head(as.data.frame(fiveDivSliced)/as.data.frame(slicedDivFive)))
-  A <- data.frame(na.omit(as.data.frame(hexDivHex)))
-  B <- data.frame(na.omit(as.data.frame(fiveDivSliced)) / na.omit(as.data.frame(slicedDivFive) ) )
+  A <- na.omit(data.frame(na.omit(as.data.frame(hexDivHex))))
+  B <- na.omit(data.frame(na.omit(as.data.frame(fiveDivSliced)) / na.omit(as.data.frame(slicedDivFive) ) ))
 
   cat("\n\n\n FRAME A:")
   print(A)
@@ -118,7 +118,11 @@ test.slice.div <- function(conn) {
     D <- cbind(A,B)
     C <- sum(A == B)
     print(C)
-    expect_true(sum(D[,1] - D[,2]) < 1E-5 || C == nrow(A))
+    print(A[A != B,])
+    print(B[A != B,])
+
+    res <- sum(na.omit(D[,1] - D[,2]))
+    expect_true( res < 1E-4 || C == nrow(A))
   }
 
   testEnd()
