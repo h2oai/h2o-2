@@ -1,4 +1,4 @@
-import unittest, time, sys, os
+import unittest, time, sys, os, re
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_exec
 import h2o_glm, h2o_gbm, h2o_rf
@@ -408,6 +408,14 @@ class ApiTestCase(ModelManagementTestCase):
         for key in keys:
             assert key in d, "Failed to find key: " + key + " in dict: " + repr(d)
 
+    def assertKeysExistAndNonNull(self, d, path, keys):
+        path_elems = path.split("/")
+
+        d = self.followPath(d, path_elems)
+        for key in keys:
+            assert key in d, "Failed to find key: " + key + " in dict: " + repr(d)
+            assert d[key] != None, "Value unexpectedly null: " + key + " in dict: " + repr(d)
+
     def assertKeysDontExist(self, d, path, keys):
         path_elems = path.split("/")
 
@@ -417,17 +425,89 @@ class ApiTestCase(ModelManagementTestCase):
 
 
     # TODO: look more inside the auc and cm elements
-    def validate_binomial_classifier_metrics(self, metrics):
-        self.assertKeysExist(metrics, "", ['cm', 'auc']) # TODO: HitRatio
+    def validate_binomial_classifier_metrics(self, metrics, model, frame):
+        self.assertKeysExistAndNonNull(metrics, "", ['cm', 'auc', 'model', 'model_category', 'frame', 'duration_in_ms', 'scoring_time']) # TODO: HitRatio
+
+        # test auc object
         self.assertNotEqual(None, metrics['auc'])
+
+        # What fields should we find in the AUC object?  Well. . . the criteria:
+        criteria = ['F1', 'F2', 'F0point5', 'accuracy', 'precision', 'recall', 'specificity', 'mcc', 'max_per_class_error']
+        # And the "accuracy_for_criteria" and so on:
+        criteria_max_min = [criterion + '_for_criteria' for criterion in criteria ]
+
+        # And now hackage, because the error field is called "errorr" due to limitations of R:
+        criteria += ['errorr']
+        criteria_max_min += ['error_for_criteria']
+
+        # then a bunch of other fields:
+        misc_fields = ['thresholds', 'threshold_criterion', 'actual_domain', 'AUC', 'Gini', 'confusion_matrices', 'threshold_criteria', 'threshold_for_criteria', 'confusion_matrix_for_criteria']
+        self.assertKeysExistAndNonNull(metrics, "auc", criteria + criteria_max_min + misc_fields)
+
+        # So far so good.  Now, what about what's in the fields?  First the criteria lists that contain a value for each threshold:
+        assert type(metrics['auc']['thresholds']) is list, "thresholds value is a list."
+        assert len(metrics['auc']['thresholds']) > 0, "thresholds value is a list of more than 0 elments."
+        num_thresholds = len(metrics['auc']['thresholds'])
+
+        for criterion in criteria:
+            assert len(metrics['auc'][criterion]) == num_thresholds, criterion + " list is the same length as thresholds list."
+            assert metrics['auc'][criterion][num_thresholds / 2] != 0.0, criterion + " list has a non-zero median element."
+
+
+        # Now the criteria lists that contain a value for each criterion:
+        assert type(metrics['auc']['threshold_criteria']) is list, "threshold_criteria value is a list."
+        assert len(metrics['auc']['threshold_criteria']) > 0, "threshold_criteria value is a list of more than 0 elments."
+        num_threshold_criteria = len(metrics['auc']['threshold_criteria'])
+
+        # Are we testing all of them?  Note that the threshold criteria sections don't include error / errorrrrrrr
+        assert num_threshold_criteria == len(criteria) - 1, "We are testing all the threshold criteria (test a)."
+        assert num_threshold_criteria == len(criteria_max_min) - 1, "We are testing all the threshold criteria (test b)."
+
+        for criterion_mm in criteria_max_min:
+            assert len(metrics['auc'][criterion_mm]) == num_threshold_criteria, criterion_mm + " list is the same length as threshold_criteria list."
+            assert metrics['auc'][criterion_mm][num_threshold_criteria / 2] != 0.0, criterion_mm + " list has a non-zero median element."
+
+        # confusion_matrix_for_criteria:
+        assert len(metrics['auc']['confusion_matrix_for_criteria']) == num_threshold_criteria, "confusion_matrix_for_criteria list is the same length as threshold_criteria list."
+        assert type(metrics['auc']['confusion_matrix_for_criteria']) is list, "confusion_matrix_for_criteria is a list."
+        assert type(metrics['auc']['confusion_matrix_for_criteria'][num_threshold_criteria / 2]) is list, "confusion_matrix_for_criteria is a list of lists."
+        assert type(metrics['auc']['confusion_matrix_for_criteria'][num_threshold_criteria / 2][0]) is list, "confusion_matrix_for_criteria is a list of lists of lists."
+        assert metrics['auc']['confusion_matrix_for_criteria'][num_threshold_criteria / 2][0][0] != 0.0, "confusion_matrix_for_criteria list has a non-zero median element."
+
+        # test cm object
         self.assertNotEqual(None, metrics['cm'])
-        # self.assertNotEqual(None, metrics['cm']['response_info'])
-        self.assertNotEqual(None, metrics['cm']['actual_domain'])
-        self.assertNotEqual(None, metrics['cm']['predicted_domain'])
-        self.assertNotEqual(None, metrics['cm']['domain'])
-        self.assertNotEqual(None, metrics['cm']['cm'])
-        self.assertNotEqual(None, metrics['cm']['mse'])
+        self.assertKeysExistAndNonNull(metrics, "cm", ['actual_domain', 'predicted_domain', 'domain', 'cm', 'mse'])
+        assert type(metrics['cm']['actual_domain']) is list, "actual_domain is a list."
+        assert type(metrics['cm']['predicted_domain']) is list, "predicted_domain is a list."
+        assert type(metrics['cm']['domain']) is list, "domain is a list."
+        assert len(metrics['cm']['actual_domain']) > 0, "actual_domain is a list of more than 0 elements."
+        assert len(metrics['cm']['predicted_domain']) > 0, "predicted_domain is a list of more than 0 elements."
+        assert len(metrics['cm']['domain']) > 0, "domain is a list of more than 0 elements."
+
+        assert type(metrics['cm']['cm']) is list, "cm is a list."
+        assert type(metrics['cm']['cm'][0]) is list, "cm is a list of lists."
+        assert sum(metrics['cm']['cm'][0]) > 0, "first domain of cm has at least one non-zero value."
         self.assertNotEqual(0.0, metrics['cm']['mse'])
+
+        # misc fields
+        self.assertEquals(metrics['model_category'], 'Binomial')
+        # self.assertNotEqual(0, metrics['duration_in_ms']) # NOTE: it's possible, but unlikely, for this to be 0 legitimately
+        self.assertNotEqual(0, metrics['scoring_time'])
+        
+        # check model fields
+        assert type(metrics['model']) is dict, "model field is an object."
+        self.assertKeysExistAndNonNull(metrics, 'model', ['key', 'creation_epoch_time_millis', 'id', 'model_category'])
+        self.assertEquals(metrics['model']['model_category'], 'Binomial')
+        self.assertEquals(metrics['model']['key'], model)
+        self.assertNotEqual(0, metrics['model']['creation_epoch_time_millis'])
+        assert re.compile("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}").match(metrics['model']['id'])
+        
+        # check frame fields
+        assert type(metrics['frame']) is dict, "frame field is an object."
+        self.assertKeysExistAndNonNull(metrics, 'frame', ['key', 'creation_epoch_time_millis', 'id'])
+        self.assertEquals(metrics['frame']['key'], frame)
+        self.assertNotEqual(0, metrics['frame']['creation_epoch_time_millis'])
+        assert re.compile("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}").match(metrics['frame']['id'])
 
 
     def test_endpoints(self):
@@ -554,7 +634,7 @@ class ApiTestCase(ModelManagementTestCase):
                     self.assertEqual(scoring_result['metrics'][0]['model']['key'], model_key, "Expected model key: " + model_key + " but got: " + scoring_result['metrics'][0]['model']['key'])
                     self.assertEqual(scoring_result['metrics'][0]['frame']['key'], frame_key, "Expected frame key: " + frame_key + " but got: " + scoring_result['metrics'][0]['frame']['key'])
                     if model_category == 'Binomial':
-                        self.validate_binomial_classifier_metrics(scoring_result['metrics'][0])
+                        self.validate_binomial_classifier_metrics(scoring_result['metrics'][0], model_key, frame_key)
 
                     if model_category == 'Regression':
                         # self.assertKeysDontExist(scoring_result, 'metrics[0]', ['cm', 'auc']) # TODO: HitRatio
@@ -570,26 +650,26 @@ class ApiTestCase(ModelManagementTestCase):
         print "##############################################"
         test_frames = ["prostate.hex", "airlines_test.hex"]
 
-        for test_frame in test_frames:
-            print "Scoring compatible models for /2/Frames?key=" + test_frame + "&find_compatible_models=true. . ."
-            frames = node.frames(key=test_frame, find_compatible_models=1)
-            compatible_models = frames['frames'][test_frame]['compatible_models']
+        for frame_key in test_frames:
+            print "Scoring compatible models for /2/Frames?key=" + frame_key + "&find_compatible_models=true. . ."
+            frames = node.frames(key=frame_key, find_compatible_models=1)
+            compatible_models = frames['frames'][frame_key]['compatible_models']
 
             for model_key in compatible_models:
-                print "Scoring: /2/Frames?key=" + test_frame + "&score_model=" + model_key
-                scoring_result = node.frames(key=test_frame, score_model=model_key)
+                print "Scoring: /2/Frames?key=" + frame_key + "&score_model=" + model_key
+                scoring_result = node.frames(key=frame_key, score_model=model_key)
 
                 self.assertKeysExist(scoring_result, '', ['metrics'])
                 self.assertKeysExist(scoring_result, 'metrics[0]', ['model_category'])
                 model_category = scoring_result['metrics'][0]['model_category']
                 self.assertKeysExist(scoring_result, 'metrics[0]', ['model', 'frame', 'duration_in_ms'])
                 self.assertEqual(scoring_result['metrics'][0]['model']['key'], model_key, "Expected model key: " + model_key + " but got: " + scoring_result['metrics'][0]['model']['key'])
-                self.assertEqual(scoring_result['metrics'][0]['frame']['key'], test_frame, "Expected frame key: " + test_frame + " but got: " + scoring_result['metrics'][0]['frame']['key'])
+                self.assertEqual(scoring_result['metrics'][0]['frame']['key'], frame_key, "Expected frame key: " + frame_key + " but got: " + scoring_result['metrics'][0]['frame']['key'])
 
                 print "the model_category: ", model_category
 
                 if model_category == 'Binomial':
-                    self.validate_binomial_classifier_metrics(scoring_result['metrics'][0])
+                    self.validate_binomial_classifier_metrics(scoring_result['metrics'][0], model_key, frame_key)
 
                 # TODO: look inside the auc and cm elements
                 if model_category == 'Regression':
