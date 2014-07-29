@@ -84,8 +84,9 @@ public class JUnitRunnerDebug {
 //      tests.add(MRUtilsTest.class); //test MR sampling/rebalancing
 //      tests.add(DropoutTest.class); //test NN Dropput
 
+      tests.add(ParserTest2.class);
       tests.add(ParserTest2.ParseAllSmalldata.class);
-      tests.add(GLMRandomTest.Short.class);
+//      tests.add(GLMRandomTest.Short.class);
 //      tests.add(SpeeDRFTest.class);
 //      tests.add(SpeeDRFTest2.class);
 ////      tests.add(GLMTest2.class);
