@@ -223,6 +223,14 @@ h2o.clusterStatus <- function(client) {
   cat(sprintf("           %s\n", stdout))
   cat(sprintf("           %s\n", stderr))
   cat("\n")
+  
+  # Throw an error if GNU Java is being used
+  jver <- system2(command, "-version", stdout = TRUE, stderr = TRUE)
+  if(any(grepl("GNU libgcj", jver))) {
+    stop("Sorry, GNU Java is not supported for H2O.\n
+          Please download the latest Java SE JDK 7 from the following URL:\n
+          http://www.oracle.com/technetwork/java/javase/downloads/jdk7-downloads-1880260.html")
+  }
   system2(command, c("-version"))
   cat("\n")
   rc = system2(command,
