@@ -16,7 +16,7 @@ class ModelManagementTestCase(unittest.TestCase):
 
         cloud_size = 5
 
-        if h2o.clone_cloud_json is not None:
+        if h2o.clone_cloud_json != None:
             print "NOTE: Connecting to existing cloud, and leaving the cloud running afterwards: " + os.path.abspath(h2o.clone_cloud_json)
 
         localhost = h2o.decide_if_localhost()
@@ -32,7 +32,7 @@ class ModelManagementTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        if h2o.clone_cloud_json is None:
+        if h2o.clone_cloud_json == None:
             if ModelManagementTestCase.tear_down_cloud:
                 h2o.tear_down_cloud()
             else:
@@ -260,9 +260,9 @@ class ModelManagementTestCase(unittest.TestCase):
             'max_depth': 10,
             'classification': 1
         }
-# TODO: put back; fails to complete in multinode
-#        speedrf_AirlinesTrain_1 = node.speedrf(airlines_train_hex, **speedrf_AirlinesTrain_1_params)
-#        num_models = num_models + 1
+        # Fails to complete in multinode
+        speedrf_AirlinesTrain_1 = node.speedrf(airlines_train_hex, **speedrf_AirlinesTrain_1_params)
+        num_models = num_models + 1
 
 
         print "######################################################################"
@@ -416,6 +416,19 @@ class ApiTestCase(ModelManagementTestCase):
             assert key not in d, "Unexpectedly found key: " + key + " in dict: " + repr(d)
 
 
+    def validate_binomial_classifier_metrics(self, metrics):
+        self.assertKeysExist(metrics, "", ['cm', 'auc']) # TODO: HitRatio
+        self.assertNotEqual(None, metrics['auc'])
+        self.assertNotEqual(None, metrics['cm'])
+        self.assertNotEqual(None, metrics['cm']['response_info'])
+        self.assertNotEqual(None, metrics['cm']['actual_domain'])
+        self.assertNotEqual(None, metrics['cm']['predicted_domain'])
+        self.assertNotEqual(None, metrics['cm']['domain'])
+        self.assertNotEqual(None, metrics['cm']['cm'])
+        self.assertNotEqual(None, metrics['cm']['mse'])
+        self.assertNotEqual(0.0, metrics['cm']['mse'])
+
+
     def test_endpoints(self):
         node = h2o.nodes[0]
 
@@ -536,10 +549,11 @@ class ApiTestCase(ModelManagementTestCase):
                 model_category = scoring_result['metrics'][0]['model']['model_category']
                 self.assertEqual(scoring_result['metrics'][0]['model']['key'], model_key, "Expected model key: " + model_key + " but got: " + scoring_result['metrics'][0]['model']['key'])
                 self.assertEqual(scoring_result['metrics'][0]['frame']['key'], frame_key, "Expected frame key: " + frame_key + " but got: " + scoring_result['metrics'][0]['frame']['key'])
-                if model_category is 'Binomial':
-                    self.assertKeysExist(scoring_result, 'metrics[0]', ['cm', 'auc']) # TODO: HitRatio
+                if model_category == 'Binomial':
+                    self.validate_binomial_classifier_metrics(scoring_result['metrics'][0])
+
                 # TODO: look inside the auc and cm elements
-                if model_category is 'Regression':
+                if model_category == 'Regression':
                     self.assertKeysDontExist(scoring_result, 'metrics[0]', ['cm', 'auc']) # TODO: HitRatio
 
 
@@ -550,25 +564,32 @@ class ApiTestCase(ModelManagementTestCase):
 
 
         print "##############################################"
-        print "Scoring compatible models for /2/Frames?key=prostate.hex&find_compatible_models=true. . ."
-        frames = node.frames(key='prostate.hex', find_compatible_models=1)
-        compatible_models = frames['frames']['prostate.hex']['compatible_models']
+        test_frames = ["prostate.hex", "airlines_test.hex"]
 
-        for model_key in compatible_models:
-            print "Scoring: /2/Frames?key=prostate.hex&score_model=" + model_key
-            scoring_result = node.frames(key='prostate.hex', score_model=model_key)
+        for test_frame in test_frames:
+            print "Scoring compatible models for /2/Frames?key=" + test_frame + "&find_compatible_models=true. . ."
+            frames = node.frames(key=test_frame, find_compatible_models=1)
+            compatible_models = frames['frames'][test_frame]['compatible_models']
 
-            self.assertKeysExist(scoring_result, '', ['metrics'])
-            self.assertKeysExist(scoring_result, 'metrics[0]', ['model_category'])
-            model_category = scoring_result['metrics'][0]['model_category']
-            self.assertKeysExist(scoring_result, 'metrics[0]', ['model', 'frame', 'duration_in_ms'])
-            self.assertEqual(scoring_result['metrics'][0]['model']['key'], model_key, "Expected model key: " + model_key + " but got: " + scoring_result['metrics'][0]['model']['key'])
-            self.assertEqual(scoring_result['metrics'][0]['frame']['key'], 'prostate.hex', "Expected frame key: " + 'prostate.hex' + " but got: " + scoring_result['metrics'][0]['frame']['key'])
-            if model_category is 'Binomial':
-                self.assertKeysExist(scoring_result, 'metrics[0]', ['cm', 'auc']) # TODO: HitRatio
-            # TODO: look inside the auc and cm elements
-            if model_category is 'Regression':
-                self.assertKeysDontExist(scoring_result, 'metrics[0]', ['cm', 'auc']) # TODO: HitRatio
+            for model_key in compatible_models:
+                print "Scoring: /2/Frames?key=" + test_frame + "&score_model=" + model_key
+                scoring_result = node.frames(key=test_frame, score_model=model_key)
+
+                self.assertKeysExist(scoring_result, '', ['metrics'])
+                self.assertKeysExist(scoring_result, 'metrics[0]', ['model_category'])
+                model_category = scoring_result['metrics'][0]['model_category']
+                self.assertKeysExist(scoring_result, 'metrics[0]', ['model', 'frame', 'duration_in_ms'])
+                self.assertEqual(scoring_result['metrics'][0]['model']['key'], model_key, "Expected model key: " + model_key + " but got: " + scoring_result['metrics'][0]['model']['key'])
+                self.assertEqual(scoring_result['metrics'][0]['frame']['key'], test_frame, "Expected frame key: " + test_frame + " but got: " + scoring_result['metrics'][0]['frame']['key'])
+
+                print "the model_category: ", model_category
+
+                if model_category == 'Binomial':
+                    self.validate_binomial_classifier_metrics(scoring_result['metrics'][0])
+
+                # TODO: look inside the auc and cm elements
+                if model_category == 'Regression':
+                    self.assertKeysDontExist(scoring_result, 'metrics[0]', ['cm', 'auc']) # TODO: HitRatio
 
 
     def test_steam(self):
