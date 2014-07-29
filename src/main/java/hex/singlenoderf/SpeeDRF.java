@@ -44,7 +44,7 @@ public class SpeeDRF extends Job.ValidatedJob {
   @API(help = "Sampling Rate at each split.", filter = Default.class, json  = true, dmin = 0, dmax = 1, importance = ParamImportance.EXPERT)
   public double sample = 0.67;
 
-  @API(help ="Score each iteration", filter = Default.class, json = true, importance = ParamImportance.SECONDARY)
+//  @API(help ="Score each iteration", filter = Default.class, json = true, importance = ParamImportance.SECONDARY)
   public boolean score_each_iteration = false;
 
   /*Imbalanced Classes*/
