@@ -101,7 +101,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     this.parameters = params;
     score_each = params.score_each_iteration;
     regression = !(params.classification);
-    _domain = domain;
+//    _domain = domain;
   }
 
   protected SpeeDRFModel(SpeeDRFModel model, double err, ConfusionMatrix cm, VarImp varimp, AUCData auc) {
@@ -149,14 +149,12 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     this.validation = model.validation;
   }
 
-//  public Vec get_response() { return response; }
   public int treeCount() { return t_keys.length; }
   public int size()      { return t_keys.length; }
   public int classes()   { return nclasses(); }
 
-  String[] _domain;
-  @Override public String[] classNames() { return regression ? null : _domain; }
-
+//  String[] _domain;
+//  @Override public String[] classNames() { return regression ? null : _domain; }
   @Override public ConfusionMatrix cm() { return validAUC == null ? cms[cms.length-1] : validAUC.CM(); }
 
   private void scoreOnTest(Frame fr, Vec modelResp) {
@@ -208,8 +206,8 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 //      cms = Arrays.copyOf(cms, cms.length + 1);
       cms[cms.length - 1] = null;
     } else {
-      _domain = cmTask.domain(modelResp);
-      confusion = CMTask.CMFinal.make(cmTask._matrix, this, _domain, cmTask._errorsPerTree, oobee, cmTask._sum, cmTask._cms);
+//      _domain = cmTask.domain(modelResp);
+      confusion = CMTask.CMFinal.make(cmTask._matrix, this, classNames(), cmTask._errorsPerTree, oobee, cmTask._sum, cmTask._cms);
       this.cm = cmTask._matrix._matrix;
       errorsPerTree = cmTask._errorsPerTree;
 //      errs = Arrays.copyOf(errs, errs.length + 1);
