@@ -74,6 +74,26 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     return 1.0 - val.residual_deviance/val.null_deviance;
   }
 
+  public void removeXvals(){
+    if(submodels != null)
+      for(Submodel sm:submodels)
+        if(sm.xvalidation != null && (sm.xvalidation instanceof GLMXValidation)){ // note: xval can be standard Validation for xval models
+          GLMXValidation xval = (GLMXValidation)sm.xvalidation;
+          for(Key k:xval.xval_models)
+            DKV.<GLMModel>get(k).delete();
+        }
+  }
+  public void unlockXvals(Key job_key){
+    if(submodels != null)
+      for(Submodel sm:submodels)
+        if(sm.xvalidation != null && (sm.xvalidation instanceof GLMXValidation)){ // note: xval can be standard Validation for xval models
+          GLMXValidation xval = (GLMXValidation)sm.xvalidation;
+          for(Key k:xval.xval_models){
+            GLMModel m = DKV.get(k).get();
+            m.unlock(job_key);
+          }
+        }
+  }
   @Override public GLMModel clone(){
     GLMModel res = (GLMModel)super.clone();
     res.submodels = submodels.clone();
@@ -274,7 +294,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
           _res.setSubmodelIdx(0);
         }
         tryComplete();
-      } else new RPC(_modelKey.home_node(),this).addCompleter(this).call();
+      } else new RPC(_modelKey.home_node(),this).call();
     }
   }
 
@@ -456,12 +476,9 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     long _nobs;
     public static Key makeKey(){return Key.make("__GLMValidation_" + Key.make().toString());}
 
-
-    public final transient  H2OCountedCompleter _cmp;
     public GLMXValidationTask(GLMModel mainModel,double lambda, GLMModel [] xmodels){this(mainModel,lambda,xmodels,null);}
     public GLMXValidationTask(GLMModel mainModel,double lambda, GLMModel [] xmodels, final H2OCountedCompleter completer){
-      super(mainModel, lambda,null);
-      _cmp = completer;
+      super(mainModel, lambda,completer);
       _xmodels = xmodels;
     }
     @Override public void map(Chunk [] chunks){
@@ -493,15 +510,15 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
         _xvals[i].add(gval._xvals[i]);}
 
     @Override public void postGlobal() {
-      if (_cmp != null) _cmp.addToPendingCount(_xvals.length + 1);
+      H2OCountedCompleter cmp = (H2OCountedCompleter)getCompleter();
+      if(cmp != null)cmp.addToPendingCount(_xvals.length + 1);
       for (int i = 0; i < _xvals.length; ++i) {
         _xvals[i].computeAIC();
         _xvals[i].computeAUC();
         _xvals[i].nobs = _nobs - _xvals[i].nobs;
-        GLMModel.setXvalidation(_cmp, _xmodels[i]._key, _lambda, _xvals[i]);
+        GLMModel.setXvalidation(cmp, _xmodels[i]._key, _lambda, _xvals[i]);
       }
-      GLMModel.setXvalidation(_cmp, _model._key, _lambda, new GLMXValidation(_model, _xmodels, _xvals, _lambda, _nobs));
-      if (_cmp != null) _cmp.tryComplete();
+      GLMModel.setXvalidation(cmp, _model._key, _lambda, new GLMXValidation(_model, _xmodels, _xvals, _lambda, _nobs));
     }
   }
 

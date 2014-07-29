@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 
+import hex.GLMRandomTest;
 import hex.GLMTest2;
 import hex.glm.GLM2;
 import hex.glm.GLMParams;
@@ -109,7 +110,7 @@ public class DatasetCompare extends MRTask<DatasetCompare>{
     "train2 <- cbind(train_raw,labels);","train",
   };
 
-  public static void main(String [] args) throws InterruptedException, ExecutionException, Exception{
+  public static void main(String [] args) throws InterruptedException, ExecutionException, Throwable {
     System.out.println("Running Parser Cmp Test with args=" + Arrays.toString(args));
     System.out.println(Arrays.equals((int[])null,(int[])null));
     final int nnodes = 3;
@@ -119,10 +120,9 @@ public class DatasetCompare extends MRTask<DatasetCompare>{
       n.start();
     }
     H2O.waitForCloudSize(nnodes,20000);
-    new GLMTest2().testCars();
-    new ModelSerializationTest().testGLMModel();
-    new NewVectorTest().testCompression();
-    System.out.println("compression ok");
+//    new ParserTest2().testMultiFileParseSmall();
+//    new GLMRandomTest.Short().run();
+//    new GLMRandomTest.Long().run();
     for(int i = 0; i < datasets.length; i += 2){
       File f = new File(datasets[i]);
       if(!f.exists()) throw new RuntimeException("did not find file " + f.getAbsolutePath());
@@ -138,6 +138,7 @@ public class DatasetCompare extends MRTask<DatasetCompare>{
       DKV.put(Key.make(cmds[i+1]),fr,fs);
     }
     fs.blockForPending();
+
 //    new GLMTest2().testCars();
 //    File f = new File("/Users/tomasnykodym/h2o/smalldata/airlines/allyears2k_headers.csv");
 //    assert f.exists():"did not find file " + f.getPath();

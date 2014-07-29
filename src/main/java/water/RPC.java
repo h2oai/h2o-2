@@ -127,7 +127,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       boolean alreadyIn = false;
       if(_fjtasks != null)
         for(H2OCountedCompleter hcc:_fjtasks)
-          if(hcc == cc)alreadyIn = true;
+          if(hcc == cc || hcc == _dt)alreadyIn = true;
       if(!alreadyIn)
         addCompleter((H2OCountedCompleter)cc);
     }
