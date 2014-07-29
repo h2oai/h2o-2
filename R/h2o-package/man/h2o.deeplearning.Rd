@@ -7,7 +7,7 @@ H2O: Deep Learning Neural Networks
 Performs Deep Learning neural networks on an \code{\linkS4class{H2OParsedData}} object.
 }
 \usage{
-h2o.deeplearning(x, y, data, key = "", classification = TRUE, nfolds = 0, 
+h2o.deeplearning(x, y, data, key = "", checkpoint = "", classification = TRUE, nfolds = 0,
     validation, autoencoder, use_all_factor_levels,
     activation, hidden, epochs, train_samples_per_iteration, seed, adaptive_rate,
     rho, epsilon, rate, rate_annealing, rate_decay, momentum_start,
@@ -28,7 +28,8 @@ h2o.deeplearning(x, y, data, key = "", classification = TRUE, nfolds = 0,
         \item{x}{ A vector containing the names of the predictors in the model. }
         \item{y}{ The name of the response variable in the model. }
         \item{data}{ An \code{\linkS4class{H2OParsedData}} object containing the variables in the model. }
-          \item{key}{ (Optional) The unique hex key assigned to the resulting model. If none is given, a key will automatically be generated.}
+        \item{key}{ (Optional) The unique hex key assigned to the resulting model. If none is given, a key will automatically be generated.}
+        \item{checkpoint}{"Model checkpoint (either key or H2ODeepLearningModel) to resume training with."}
         \item{classification}{ (Optional) A logical value indicating whether the algorithm should conduct classification. }
         \item{nfolds}{(Optional) Number of folds for cross-validation. If \code{nfolds >= 2}, then \code{validation} must remain empty.}
         \item{validation}{(Optional) An \code{\linkS4class{H2OParsedData}} object indicating the validation dataset used to construct confusion matrix. If left blank, this defaults to the training data when \code{nfolds = 0}.}
