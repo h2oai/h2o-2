@@ -22,10 +22,12 @@ import water.util.ModelUtils;
 import water.util.RString;
 import water.util.Utils;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class GLM2 extends Job.ModelJobWithoutClassificationField {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
@@ -283,16 +285,18 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     return rs.toString();
   }
 
-  public static GLMGridSearch gridSearch(Key jobKey, Key destinationKey, DataInfo dinfo, GLMParams glm, double lambda_min_ratio, int nlambdas, double [] lambda, boolean lambda_search, double [] alpha, boolean higher_accuracy, int nfolds){
+  public  GLMGridSearch gridSearch(Key jobKey, Key destinationKey, DataInfo dinfo, GLMParams glm, double lambda_min_ratio, int nlambdas, double [] lambda, boolean lambda_search, double [] alpha, boolean higher_accuracy, int nfolds){
     return gridSearch(jobKey, destinationKey, dinfo, glm, lambda_min_ratio, nlambdas, lambda, lambda_search, alpha, higher_accuracy, nfolds, DEFAULT_BETA_EPS);
   }
-  public static GLMGridSearch gridSearch(Key jobKey, Key destinationKey, DataInfo dinfo, GLMParams glm, double lambda_min_ratio, int nlambdas, double [] lambda, boolean lambda_search, double [] alpha, boolean high_accuracy, int nfolds, double betaEpsilon){
+  public GLMGridSearch gridSearch(Key jobKey, Key destinationKey, DataInfo dinfo, GLMParams glm, double lambda_min_ratio, int nlambdas, double [] lambda, boolean lambda_search, double [] alpha, boolean high_accuracy, int nfolds, double betaEpsilon){
     return new GLMGridSearch(4, jobKey, destinationKey,dinfo,glm, lambda_min_ratio, nlambdas, lambda, lambda_search, alpha, high_accuracy, nfolds,betaEpsilon).fork();
   }
 
   private transient AtomicBoolean _jobdone = new AtomicBoolean(false);
   protected void complete(){
-    assert !_jobdone.getAndSet(true):"double job complete!";
+    if(_jobdone.getAndSet(true)) {
+      assert !_jobdone.getAndSet(true) : "double job complete! dest = " + dest();
+    }
     _done = true;
     GLMModel model = DKV.get(dest()).get();
     model.maybeComputeVariableImportances();
@@ -304,10 +308,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     state = JobState.DONE;
     model.get_params().state = state;
     model.update(self());
+    model.unlockXvals(self());
     model.unlock(self());
-    if(n_folds > 1)
-      for(int i = 1; i < _xvals.length; ++i)
-        DKV.get(_xvals[i].dest()).<GLMModel>get().unlock(self());
     if( _dinfo._nfolds == 0 && !_grid) {
       remove(); // Remove/complete job only for top-level, not xval GLM2s
       DKV.remove(_progressKey);
@@ -438,6 +440,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   }
   protected boolean needLineSearch(final double [] beta,double objval, double step){
     if(Double.isNaN(objval))return true; // needed for gamma (and possibly others...)
+    assert _lastResult._glmt._grad != null:"missing gradient in last result!";
     final double [] grad = Arrays.equals(_activeCols,_lastResult._activeCols)
       ?_lastResult._glmt.gradient(alpha[0],_currentLambda)
       :contractVec(_lastResult.fullGrad(alpha[0],_currentLambda),_activeCols);
@@ -460,13 +463,13 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       for(int i = 0; i < glmt._objvals.length; ++i){
         if(!needLineSearch(glmt._betas[i],glmt._objvals[i],step)){
           LogInfo("line search: found admissible step = " + step);
-          new GLMIterationTask(GLM2.this.self(),_activeData,_glm,true,true,true,glmt._betas[i],_ymu,1.0/_nobs,thresholds, new Iteration(getCompleter(),false,false)).asyncExec(_activeData._adaptedFrame);
+          new GLMIterationTask(GLM2.this.self(),_activeData,_glm,true,true,true,glmt._betas[i],_ymu,1.0/_nobs,thresholds, new Iteration(getCompleter(),true,false,step)).asyncExec(_activeData._adaptedFrame);
           return;
         }
         step *= 0.5;
       } // no line step worked converge
       LogInfo("Line search did not find feasible step, going forward with step = " + step + ".");
-      new GLMIterationTask(GLM2.this.self(),_activeData,_glm,true,true,true,glmt._betas[glmt._betas.length-1],_ymu,1.0/_nobs,thresholds, new Iteration(getCompleter(),false,false)).asyncExec(_activeData._adaptedFrame);
+      new GLMIterationTask(GLM2.this.self(),_activeData,_glm,true,true,true,glmt._betas[glmt._betas.length-1],_ymu,1.0/_nobs,thresholds, new Iteration(getCompleter(),false,false,step)).asyncExec(_activeData._adaptedFrame);
     }
   }
 
@@ -517,9 +520,11 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     public final long _iterationStartTime;
     final boolean _doLineSearch;
     final boolean _countIteration;
-    public Iteration(CountedCompleter cmp, boolean doLineSearch){ this(cmp,doLineSearch,true);}
-    public Iteration(CountedCompleter cmp, boolean doLineSearch, boolean countIteration){
+    final double _lineSearchStep;
+    public Iteration(CountedCompleter cmp, boolean doLineSearch){ this(cmp,doLineSearch,true,1.0);}
+    public Iteration(CountedCompleter cmp, boolean doLineSearch, boolean countIteration,double lineSearchStep){
       super((H2OCountedCompleter)cmp);
+      _lineSearchStep = lineSearchStep;
       cmp.addToPendingCount(1);
       _doLineSearch = doLineSearch;
       _countIteration = countIteration;
@@ -594,7 +599,11 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         }
       }
       if(glmt._beta != null && glmt._val!=null && glmt._computeGradient && _glm.family != Family.tweedie){
-        if(_doLineSearch && needLineSearch(glmt._beta,objval(glmt),1)){
+        if(_lastResult != null && needLineSearch(glmt._beta,objval(glmt),_lineSearchStep)){
+          if(!_doLineSearch){ // no progress, converge
+            checkKKTAndComplete(glmt, glmt._beta,true);
+            return;
+          }
           if(!highAccuracy()){
             setHighAccuracy();
             if(_lastResult._iter < (_iter-2)){ // there is a gap form last result...return to it and start again
@@ -725,12 +734,14 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   }
 
   private class H2OJobCompleter extends H2OCountedCompleter {
+    AtomicReference<CountedCompleter> _cmp = new AtomicReference<CountedCompleter>();
 
     @Override
     public void compute2() {
       run(true,this);
     }
     @Override public void onCompletion(CountedCompleter cmp){
+      assert _cmp.compareAndSet(null, cmp):"double completion, first from " + _cmp.get().getClass().getName() + ", second from " + cmp.getClass().getName();
       GLM2.this.complete();
     }
     @Override public boolean onExceptionalCompletion(Throwable t, CountedCompleter cmp){
@@ -774,13 +785,18 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       _lastResult = (IterationInfo)pgs._glms[0]._lastResult.clone();
       final GLMModel [] xvalModels = new GLMModel[_xvals.length-1];
       final double curentLambda = _currentLambda;
+      final H2OCountedCompleter mainCmp = (H2OCountedCompleter)getCompleter().getCompleter();
+      mainCmp.addToPendingCount(1);
       final GLMModel.GetScoringModelTask [] tasks = new GLMModel.GetScoringModelTask[pgs._glms.length];
-      H2OCallback c = new H2OCallback(null) {
+      H2OCallback c = new H2OCallback(mainCmp) {
+        AtomicReference<CountedCompleter> _cmp = new AtomicReference<CountedCompleter>();
         @Override
-        public void callback(H2OCountedCompleter h2OCountedCompleter) {
+        public void callback(H2OCountedCompleter cc) {
+          assert _cmp.compareAndSet(null,cc):"Double completion, first " + _cmp.get().getClass().getName() + ", second from " + cc.getClass().getName();
           for(int i = 1; i < tasks.length; ++i)
             xvalModels[i-1] = tasks[i]._res;
-          new GLMXValidationTask(tasks[0]._res, curentLambda, xvalModels, null).asyncExec(_dinfo._adaptedFrame);
+          mainCmp.addToPendingCount(1);
+          new GLMXValidationTask(tasks[0]._res, curentLambda, xvalModels, mainCmp).asyncExec(_dinfo._adaptedFrame);
         }
       };
       c.addToPendingCount(tasks.length-1);
@@ -812,6 +828,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       public void callback(final YMUTask ymut) {
         if (ymut._ymin == ymut._ymax)
           throw new IllegalArgumentException(LogInfo("GLM2: attempted to run with constant response. Response == " + ymut._ymin + " for all rows in the training set."));
+        if(Double.isNaN(ymut.ymu(-1)))
+          System.out.println("haha");
         _ymu = ymut.ymu();
         _nobs = ymut.nobs();
         if(_glm.family == Family.binomial && prior != -1 && prior != _ymu && !Double.isNaN(prior)) {
@@ -830,7 +848,6 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           @Override public void callback(final LMAXTask t){
             _currentLambda = lambda_max = t.lmax();
             _lastResult = new IterationInfo(0,t,null,t.gradient(0,0));
-            GLMModel model = new GLMModel(GLM2.this, dest(), _dinfo, _glm, beta_epsilon, alpha[0], lambda_max, _ymu, prior);
             if(n_folds > 1){
               final H2OCountedCompleter futures = new H2O.H2OEmptyCompleter();
               final GLM2 [] xvals = new GLM2[n_folds+1];
@@ -874,6 +891,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
               _xvals = xvals;
               futures.join();
             }
+            GLMModel model = new GLMModel(GLM2.this, dest(), _dinfo, _glm, beta_epsilon, alpha[0], lambda_max, _ymu, prior);
             if(lambda_search) {
               _lambdaIdx = 0;
               model = addLmaxSubmodel(model,t._val);
@@ -891,9 +909,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
                 lambda[0] = lambda_max;
                 if(nlambdas == 1){
                   model.addWarning("Got lambda search with nlambda == 1, i.e. returning just the null model.");
-                  model.delete_and_lock(self());
                   addLmaxSubmodel(model,t._val);
                   _done = true;
+                  model.delete_and_lock(self());
                   return;
                 }
                 for (int i = 1; i < lambda.length; ++i)
@@ -910,6 +928,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
               if(i == lambda.length) {
                 model.addWarning("All lambdas were greater than lambda_max, returning the null model.");
                 addLmaxSubmodel(model,t._val);
+                model.delete_and_lock(self());
                 return;
               } else if(i > 0) {
                 model.addWarning("removed " + i + " lambdas greater than lambda_max.");
@@ -917,6 +936,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
                 model = addLmaxSubmodel(model,t._val);
                 _lambdaIdx = 0;
                 _done = true;
+                model.delete_and_lock(self());
                 return;
               }
             }
@@ -1042,7 +1062,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     final Key _jobKey;
     final long _startTime;
     @API(help="mean of response in the training dataset")
-    final Key [] destination_keys;
+    public final Key [] destination_keys;
     final double [] _alphas;
 
     public GLMGrid (Key jobKey, GLM2 [] jobs){
@@ -1058,7 +1078,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   }
 
 
-  public static class GLMGridSearch extends Job {
+  public class GLMGridSearch extends Job {
     public final int _maxParallelism;
     transient private AtomicInteger _idx;
 
@@ -1100,17 +1120,27 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         g._progressKey = progressKey;
       assert _maxParallelism >= 1;
       final Job job = this;
-      H2OCountedCompleter fjtask = new H2OCountedCompleter() {
+      H2OCountedCompleter fjtask = new H2OCallback<ParallelGLMs>() {
         @Override
-        public void compute2() {}
-        @Override public void onCompletion(CountedCompleter cmp){
-          job.remove();
+        public void callback(ParallelGLMs parallelGLMs) {
+          for(GLM2 g:parallelGLMs._glms) {
+            GLM2.this._done = true;
+            Value v = DKV.get(g.dest());
+            if(v != null){
+              GLMModel m = v.get();
+              m.unlockXvals(self());
+              m.unlock(self());
+            }
+          }
+          remove();
         }
         @Override public boolean onExceptionalCompletion(Throwable t, CountedCompleter cmp){
           if(!(t instanceof JobCancelledException) && (t.getMessage() == null || !t.getMessage().contains("job was cancelled")))
             job.cancel(t);
           return true;
         }
+
+
       };
       start(fjtask); // modifying GLM2 object, don't want job object to be the same instance
       fs.blockForPending();

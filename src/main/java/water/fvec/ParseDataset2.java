@@ -31,7 +31,9 @@ public final class ParseDataset2 extends Job {
 
   // --------------------------------------------------------------------------
   // Parse an array of csv input/file keys into an array of distributed output Vecs
-  public static Frame parse(Key okey, Key [] keys) {return parse(okey,keys,new ParserSetup(),true);}
+  public static Frame parse(Key okey, Key [] keys) {
+    return parse(okey,keys,new ParseDataset.GuessSetupTsk(new ParserSetup(),true).invoke(keys)._gSetup._setup,true);
+  }
 
   public static Frame parse(Key okey, Key [] keys, CustomParser.ParserSetup globalSetup, boolean delete_on_done) {
     // keep the files in alphabetical order
@@ -56,10 +58,6 @@ public final class ParseDataset2 extends Job {
       keys = ks;
       vecs = vs;
     }
-    ByteVec v = (ByteVec)vecs[0];
-    byte [] bits = v.chunkForChunkIdx(0).getBytes();
-    Compression cpr = Utils.guessCompressionMethod(bits);
-    globalSetup = ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), globalSetup,true)._setup;
     if( globalSetup._ncols == 0 ) throw new java.lang.IllegalArgumentException(globalSetup.toString());
     return forkParseDataset(okey, keys, globalSetup, delete_on_done).get();
   }
