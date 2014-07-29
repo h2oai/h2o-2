@@ -47,11 +47,8 @@ public class Tree extends H2OCountedCompleter {
   final long     _seed;         // Pseudo random seed: used to playback sampling
   int            _exclusiveSplitLimit;
   int            _verbose;
-  float          _err;
   final byte     _producerId;   // Id of node producing this tree
   final boolean  _regression; // If true, will build regression tree.
-  Key            _tk;         // The tree's key.
-  int            _tree_id;    // The id of this particular tree.
   boolean        _local_mode;
 
   /**

@@ -31,8 +31,8 @@ public class SpeeDRF extends Job.ValidatedJob {
   @API(help = "Split Criterion Type", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
   public Tree.SelectStatType select_stat_type = Tree.SelectStatType.ENTROPY;
 
-  @API(help = "Use local data. Auto-enabled if data does not fit in a single node.") /*, filter = Default.class, json = true, importance = ParamImportance.EXPERT) */
-  public boolean local_mode = false; // FIXME: Is it necessary to have this variable ? What is its semantics
+//  @API(help = "Use local data. Auto-enabled if data does not fit in a single node.") /*, filter = Default.class, json = true, importance = ParamImportance.EXPERT) */
+//  public boolean local_mode = false;
 
   /* Legacy parameter: */
   public double[] class_weights = null;
@@ -214,7 +214,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       model.start_training(null);
       model.write_lock(self());
       drfParams = DRFParams.create(train.find(resp), model.N, model.max_depth, (int) train.numRows(), model.nbins,
-              model.statType, seed, model.weights, mtry, model.sampling_strategy, (float) sample, model.strata_samples, model.verbose ? 100 : 1, _exclusiveSplitLimit, !local_mode, regression);
+              model.statType, seed, model.weights, mtry, model.sampling_strategy, (float) sample, model.strata_samples, model.verbose ? 100 : 1, _exclusiveSplitLimit, true, regression);
 
       DRFTask tsk = new DRFTask(self(), train, drfParams, model._key);
       tsk.validateInputData(train);
@@ -257,7 +257,7 @@ public class SpeeDRF extends Job.ValidatedJob {
     model.weights = regression ? null : class_weights;
     model.time = 0;
     model.N = num_trees;
-    model.useNonLocal = !local_mode;
+    model.useNonLocal = true;
     if (!regression) model.setModelClassDistribution(new MRUtils.ClassDist(train.lastVec()).doAll(train.lastVec()).rel_dist());
     model.resp_min = (int) train.lastVec().min();
     model.mtry = mtry;
