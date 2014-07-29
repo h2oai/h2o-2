@@ -378,9 +378,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     return res;
   }
   private static class GLM2_Progress extends Iced{
-    final int _total;
-    int _done;
-    public GLM2_Progress(int total){_total = total;}
+    final long _total;
+    double _done;
+    public GLM2_Progress(int total){_total = total; assert _total > 0;}
     public float progess(){
       return 0.01f*((int)(100*(double)_done/(double)_total));
     }
@@ -398,7 +398,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     if(isDone())return 1.0f;
     Value v = DKV.get(_progressKey);
     if(v == null)return 0;
-    return v.<GLM2_Progress>get().progess();
+    float res = v.<GLM2_Progress>get().progess();
+    assert res >= 0 && res <= 1:"progress out of range: " + res;
+    return res;
   }
 
   protected double l2norm(double[] beta){
