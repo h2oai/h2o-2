@@ -50,7 +50,7 @@ public final class ParseDataset extends Job {
     final CustomParser.ParserSetup _userSetup;
     final boolean _checkHeader;
     boolean _empty = true;
-    PSetupGuess _gSetup;
+    public PSetupGuess _gSetup;
     IcedArrayList<Key> _failedSetup;
     IcedArrayList<Key> _conflicts;
 
@@ -63,7 +63,7 @@ public final class ParseDataset extends Job {
     public static final int MAX_ERRORS = 64;
     @Override public void map(Key key) {
       byte [] bits = Utils.getFirstUnzipedBytes(key);
-      if(bits.length > 0) {
+      if(bits != null && bits.length > 0) {
         _empty = false;
         _failedSetup = new IcedArrayList<Key>();
         _conflicts = new IcedArrayList<Key>();
