@@ -8,7 +8,7 @@ source('../findNSourceUtils.R')
 
 test <- function(conn) {
 print("Reading in prostate dataset")
-pros.hex = h2o.importFile(conn,"/Users/nidhimehta/h2o/smalldata/logreg/prostate.csv", key="pros.hex")
+pros.hex = h2o.importFile(conn,normalizePath(locate("smalldata/logreg/prostate.csv")), key="pros.hex")
 print ("Run summary")
 summary(pros.hex)
 print("Summary of a column")
