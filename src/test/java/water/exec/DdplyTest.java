@@ -10,12 +10,12 @@ import water.TestUtil;
 import water.fvec.Frame;
 
 public class DdplyTest extends TestUtil {
-  @BeforeClass public static void stall() { stall_till_cloudsize(1); }
+  @BeforeClass public static void stall() { stall_till_cloudsize(3); }
 
   // This test is intended to use a file large enough to strip across multiple
   // nodes with multiple groups, to test that all generated groups are both
   // built and executed distributed.
-  //@Test
+  @Test
   public void testDdplyBig() {
     Key k0 = Key.make("cars.hex");
     Key k1 = Key.make("orange.hex");

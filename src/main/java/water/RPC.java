@@ -134,6 +134,28 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     // If running on self, just submit to queues & do locally
     if( _target==H2O.SELF ) {
       assert _dt.getCompleter()==null;
+      _dt.setCompleter(new H2O.H2OCallback<DTask>() {
+          @Override public void callback(DTask dt){
+            synchronized(RPC.this) {
+              _done = true;
+              RPC.this.notifyAll();
+            }
+            Exception e = _dt.getDException();
+            if( _fjtasks != null )
+              for( H2OCountedCompleter fjt : _fjtasks )
+                if( e==null ) fjt.tryComplete();
+                else fjt.completeExceptionally(e);
+          }
+          @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
+            synchronized(RPC.this) {
+              if( _done ) return true;
+              _done = true;
+            }
+            _dt.setException(ex);
+            compute2();
+            return true;
+          }
+        });
       H2O.submitTask(_dt);
       return this;
     }
@@ -241,11 +263,11 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
   }
 
   // Done if target is dead or canceled, or we have a result.
-  public final boolean isDone() {  return _target==null || _done;  }
+  @Override public final boolean isDone() {  return _target==null || _done;  }
   // Done if target is dead or canceled
-  public final boolean isCancelled() { return _target==null; }
+  @Override public final boolean isCancelled() { return _target==null; }
   // Attempt to cancel job
-  public final boolean cancel( boolean mayInterruptIfRunning ) {
+  @Override public final boolean cancel( boolean mayInterruptIfRunning ) {
     boolean did = false;
     synchronized(this) {        // Install the answer under lock
       if( !isCancelled() ) {
@@ -309,7 +331,27 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     // that this is called only once with no onExceptionalCompletion calls - or
     // 1-or-more onExceptionalCompletion calls.
     @Override public void onCompletion( CountedCompleter caller ) {
-      _computed = true;
+      synchronized(this) {
+        assert !_computed;
+        _computed = true;
+      }
+      sendAck();
+    }
+    // Exception occured when processing this task locally, set exception and
+    // send it back to the caller.  Can be called lots of times (e.g., once per
+    // MRTask2.map call that throws).
+    @Override public boolean onExceptionalCompletion( Throwable ex, CountedCompleter caller ) {
+      if( _computed ) return false;
+      synchronized(this) {    // Filter dup calls to onExCompletion
+        if( _computed ) return false;
+        _computed = true;
+      }
+      _dt.setException(ex);
+      sendAck();
+      return false;
+    }
+
+    private void sendAck() {
       // Send results back
       DTask dt, origDt = _dt; // _dt can go null the instant it is send over wire
       assert origDt!=null;    // Freed after completion
@@ -319,8 +361,8 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
           ab = new AutoBuffer(_client).putTask(UDP.udp.ack,_tsknum).put1(SERVER_UDP_SEND);
           dt.write(ab);         // Write the DTask - could be very large write
           dt._repliedTcp = ab.hasTCP(); // Resends do not need to repeat TCP result
-          _computedAndReplied = true;   // After the TCP reply flag set, set computed bit
           ab.close();                   // Then close; send final byte
+          _computedAndReplied = true;   // After the final handshake, set computed+replied bit
           break;                        // Break out of retry loop
         } catch( AutoBuffer.AutoBufferException e ) {
           Log.info("IOException during ACK, "+e._ioe.getMessage()+", t#"+_tsknum+" AB="+ab+", waiting and retrying...");
@@ -335,25 +377,12 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
         Log.info("Cancelled remote task#"+_tsknum+" "+origDt.getClass()+" to "+_client + " has been cancelled by remote");
       else {
         if( (dt instanceof DRemoteTask || dt instanceof MRTask2) && dt.logVerbose() )
-          Log.debug("Done  remote task#"+_tsknum+" "+dt.getClass()+" to "+_client);
+          Log.debug("Done remote task#"+_tsknum+" "+dt.getClass()+" to "+_client);
         _client.record_task_answer(this); // Setup for retrying Ack & AckAck, if not canceled
       }
     }
 
-    // Exception occured when processing this task locally, set exception and
-    // send it back to the caller.  Can be called lots of times (e.g., once per
-    // MRTask2.map call that throws).
-    @Override public boolean onExceptionalCompletion( Throwable ex, CountedCompleter caller ) {
-      if( !_computed )
-        synchronized(this) {    // Filter dup calls to onExCompletion
-          if( _computed ) return false;
-          _computed = true;
-        }
-      DTask dt = _dt;
-      if( dt != null ) dt.setException(ex);
-      onCompletion(caller);
-      return false;
-    }
+
     // Re-send strictly the ack, because we're missing an AckAck
     public final void resend_ack() {
       assert _computedAndReplied : "Found RPCCall not computed "+_tsknum;

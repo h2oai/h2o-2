@@ -229,8 +229,9 @@ class ASTddply extends ASTOp {
     Frame res = new Frame(names,vres);
 
     // Delete the group row vecs
-    for( Vec v : vecs ) UKV.remove(v._key);
-    UKV.remove(envkey);
+    for( Vec v : vecs ) UKV.remove(v._key,fs);
+    UKV.remove(envkey,fs);
+    fs.blockForPending();
     env.poppush(4,res,null);
   }
 
@@ -333,7 +334,7 @@ class ASTddply extends ASTOp {
       _groups = m0;
       p1._groups = null;
     }
-    @Override public String toString() { return _groups.toString(); }
+    @Override public String toString() { return _groups==null ? null : _groups.toString(); }
     // Save local results for pass2
     @Override public void closeLocal() { if( _gatherRows ) PASS1TMP.put(_uniq,this); }
 

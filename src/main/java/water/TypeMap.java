@@ -23,6 +23,7 @@ public class TypeMap {
     "water.Value",        // Needed to write that first Key
     "water.TaskGetKey",   // Read that first Key
     "water.Job$List",     // First Key which locks the cloud for all JUnit tests
+    "water.DException",   // Do not fetch clazz during distributed exception reporting
   };
   // String -> ID mapping
   static private final NonBlockingHashMap<String, Integer> MAP = new NonBlockingHashMap();

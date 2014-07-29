@@ -287,7 +287,6 @@ public class AutoBuffer {
       // the reader will have to wait for.
       if( hasTCP() ) {          // TCP connection?
         try {
-          assert _oldPrior != -1; // Original priority captured, and local priority raised during TCP
           if( _read ) {         // Reader?
             int x = get1();     // Read 1 more byte
             assert x == 0xab : "AB.close instead of 0xab sentinel got "+x+", "+this;
@@ -310,7 +309,7 @@ public class AutoBuffer {
           _chan = null;         // No channel now, since i/o error
           throw ioe;            // Rethrow after close
         } finally {
-          if( !_read && _chan != null ) _h2o.freeTCPSocket((SocketChannel)_chan); // Recycle writable TCP channel
+          if( !_read ) _h2o.freeTCPSocket((SocketChannel)_chan); // Recycle writable TCP channel
           restorePriority();        // And if we raised priority, lower it back
         }
 

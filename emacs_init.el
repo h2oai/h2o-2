@@ -70,7 +70,9 @@
   "04Dec2001 - sailor, to clear the eshell buffer."
   (interactive)
   (let ((inhibit-read-only t))
-    (erase-buffer)))
+    (erase-buffer))
+  (setq eshell-history-size 1000)
+  )
 
 (custom-set-variables
   ;; custom-set-variables was added by Custom.

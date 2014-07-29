@@ -120,7 +120,7 @@ public class ChunkSummary extends MRTask2<ChunkSummary> {
     sb.append("Internal FluidVec compression/distribution summary:\n");
     sb.append("Chunk type    count     fraction       size     rel. size\n");
     for (int j = 0; j < chunkTypes.length; ++j) {
-      if (chunk_counts[j] > 0)
+      if (chunk_counts != null && chunk_counts[j] > 0)
         sb.append(String.format("%8s %10d %10.3f %% %10s %10.3f %%\n",
                 chunkTypes[j],
                 chunk_counts[j],
@@ -129,7 +129,7 @@ public class ChunkSummary extends MRTask2<ChunkSummary> {
                 (float) chunk_byte_sizes[j] / total_chunk_byte_size * 100.));
     }
     // if more than 50% is double data, inform the user to consider compressing to single precision
-    if ((float)chunk_byte_sizes[chunk_byte_sizes.length-1] / total_chunk_byte_size > 0.5 && !H2O.SINGLE_PRECISION) {
+    if (chunk_byte_sizes != null && (float)chunk_byte_sizes[chunk_byte_sizes.length-1] / total_chunk_byte_size > 0.5 && !H2O.SINGLE_PRECISION) {
       sb.append("** Warning: Significant amount of double precision data (C8DChunk),\n" +
               "   consider launching with -single_precision to reduce memory consumption **\n");
     }
@@ -141,7 +141,7 @@ public class ChunkSummary extends MRTask2<ChunkSummary> {
       }
     }
     // display chunk distribution
-    if (byte_size_per_node.length > 1) {
+    if (byte_size_per_node != null && byte_size_per_node.length > 1) {
       sb.append(" mean size per node : " + display((long) byte_size_per_node_mean) + "\n");
       sb.append("  min size per node : " + display((long) byte_size_per_node_min) + "\n");
       sb.append("  max size per node : " + display((long) byte_size_per_node_max) + "\n");
