@@ -80,7 +80,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
         if(sm.xvalidation != null && (sm.xvalidation instanceof GLMXValidation)){ // note: xval can be standard Validation for xval models
           GLMXValidation xval = (GLMXValidation)sm.xvalidation;
           for(Key k:xval.xval_models)
-            DKV.<GLMModel>get(k).delete();
+            DKV.get(k).<GLMModel>get().delete();
         }
   }
   public void unlockXvals(Key job_key){
