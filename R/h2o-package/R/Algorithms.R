@@ -61,13 +61,13 @@ h2o.gbm <- function(x, y, distribution = 'multinomial', data, key = "", n.trees 
 .h2o.__getGBMSummary <- function(res, params) {
   mySum = list()
   mySum$model_key = res$'_key'
-  mySum$ntrees = res$N
-  mySum$max_depth = res$max_depth
-  mySum$min_rows = res$min_rows
-  mySum$nbins = res$nbins
-  mySum$learn_rate = res$learn_rate
-  mySum$balance_classes = res$balance_classes
-  mySum$max_after_balance_size = res$max_after_balance_size
+  mySum$n.trees = res$N
+  mySum$interaction.depth = res$max_depth
+  mySum$n.minobsinnode = res$min_rows
+  mySum$n.bins = res$nbins
+  mySum$shrinkage = res$learn_rate
+  mySum$balance.classes = res$balance_classes
+  mySum$max.after.balance.size = res$max_after_balance_size
   
   # if(params$distribution == "multinomial") {
   # temp = matrix(unlist(res$cm), nrow = length(res$cm))
@@ -86,12 +86,12 @@ h2o.gbm <- function(x, y, distribution = 'multinomial', data, key = "", n.trees 
   params$n.minobsinnode = res$min_rows
   params$shrinkage = res$learn_rate
   params$n.bins = res$nbins
-  result$params = params
   extra_json <- .fetchJSON(params$h2o, res$'_key')
   result$priorDistribution <- extra_json$gbm_model$"_priorClassDist"
   result$modelDistribution <- extra_json$gbm_model$"_modelClassDist"
   params$balance.classes = res$balance_classes
   params$max.after.balance.size = res$max_after_balance_size
+  result$params = params
   
   if(result$params$distribution %in% c("multinomial", "bernoulli")) {
     class_names = res$'cmDomain' # tail(res$'_domains', 1)[[1]]
