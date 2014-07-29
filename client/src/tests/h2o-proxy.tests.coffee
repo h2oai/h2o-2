@@ -94,19 +94,19 @@ test 'requestFramesAndCompatibleModels', (t) ->
   _ = Steam.ApplicationContext()
   Steam.Xhr _
   Steam.H2OProxy _
-  t.plan 23
+  t.plan 24
   _.requestFramesAndCompatibleModels (error, result) ->
     typecheckFramesResult t, error, result
     { frames } = result
     t.ok frames.length > 0
-    t.ok every frames, (frame) -> frame.compatible_models.length > 0
+    # t.ok every frames, (frame) -> frame.compatible_models.length > 0
     t.end()
 
 test 'requestFrameAndCompatibleModels', (t) ->
   _ = Steam.ApplicationContext()
   Steam.Xhr _
   Steam.H2OProxy _
-  t.plan 15
+  t.plan 16
   _.requestFrameAndCompatibleModels 'airlines_train.hex', (error, result) ->
     typecheckFramesResult t, error, result
     { response, frames } = result
@@ -151,7 +151,7 @@ test 'requestModelsAndCompatibleFrames', (t) ->
   _ = Steam.ApplicationContext()
   Steam.Xhr _
   Steam.H2OProxy _
-  t.plan 23
+  t.plan 25
   _.requestModelsAndCompatibleFrames (error, result) ->
     typecheckModelsResult t, error, result
     { models } = result

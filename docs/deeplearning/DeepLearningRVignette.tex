@@ -1,0 +1,583 @@
+\documentclass[12pt]{article}
+\usepackage[english]{babel}
+\usepackage{amsmath,amsthm,amsfonts,amssymb,epsfig}
+\usepackage[left=1.1in,top=1in,right=1.1in]{geometry}
+\usepackage{array}
+\usepackage{datetime}
+\usepackage{lipsum}
+\usepackage{spverbatim}
+\usepackage{hyperref}
+\hypersetup{colorlinks, urlcolor={blue}}
+\usepackage{graphicx}
+\graphicspath{ {images/} }
+
+\begin{document}
+
+\thispagestyle{empty} %removes page number
+
+\begin{center}
+\textsc{\Large\bf{Deep Learning with H2O's R Package}}
+\\
+\bigskip
+\textsc{Arno Candel \hspace{40pt} Viraj Parmar}
+\\
+\bigskip
+\textsc{July 2014}
+\end{center}
+
+
+\bigskip
+
+\bigskip
+
+
+\tableofcontents
+
+\newpage
+
+
+\section{Introduction}
+
+This vignette presents the deep learning framework in the \href{http://cran.r-project.org/web/packages/h2o/index.html}{H2O} package. Further documentation on H2O's system and algorithms can be found at the 0xdata \href{http://docs.0xdata.com}{website} and the R package \href{http://cran.r-project.org/web/packages/h2o/h2o.pdf}{manual}. The full datasets and code of this vignette can be found at the H2O Github. This introductory section provides instructions on getting H2O started, followed by a brief overview of deep learning.
+
+\subsection{Installation}
+
+You can load the latest CRAN H2O package by running
+
+\begin{spverbatim}
+install.packages("h2o")
+\end{spverbatim}
+\bigskip
+\noindent
+Alternatively, you can (and should for this tutorial) download the latest H2O build by following the ``Install in R" instructions in the H2O \href{http://s3.amazonaws.com/h2o-release/h2o/master/latest.html}{download table}. Open your R Console and run the following to install the latest H2O build in R:
+
+\begin{spverbatim}
+# The following two commands remove any previously installed H2O packages for R.
+if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
+
+if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
+
+# Next, we download, install and initialize the H2O package for R (filling in the *'s with the appropriate version number)
+install.packages("h2o", repos=(c("http://s3.amazonaws.com/h2o-release/h2o/master/****/R", getOption("repos"))))
+
+library(h2o)
+
+\end{spverbatim}
+\noindent
+If you are operating on a single node then initialize H2O with
+
+\begin{spverbatim}
+h2o_server = h2o.init()
+
+\end{spverbatim}
+\noindent
+With this command, the H2O R module will start an instance of H2O automatically at localhost:54321.
+\\
+Alternatively,  to specify a connection with an existing H2O cluster node (other than localhost at port 54321) you must explicitly state the IP address and port number in the \texttt{h2o.init()} call. An example is given below, but do not cut and paste; you should specify the IP and port number appropriate to your specific environment.
+
+\begin{spverbatim}
+h2o_cluster = h2o.init(ip = "192.555.1.123", port = 12345, startH2O = FALSE)
+
+\end{spverbatim}
+\noindent
+An automatic demo is available to see h2o.deeplearning at work. Run the following command to observe an example binary classification model built through H2O's Deep Learning.
+
+\begin{spverbatim}
+demo(h2o.deeplearning)
+\end{spverbatim}
+
+\subsection{Support}
+
+Users of the H2O package may submit general enquiries and bug reports to the 0xdata \href{h2ostream@googlegroups.com}{support address}. Alternatively, specific bugs or issues may be filed to the 0xdata \href{https://0xdata.atlassian.net/secure/Dashboard.jspa}{JIRA}.
+
+\subsection{Deep learning overview}
+
+First we present a brief overview of deep neural networks for supervised learning tasks. There are several theoretical frameworks for deep learning, and here we summarize the feedforward architecture used by H2O. 
+\\
+\begin{figure}[h]
+\centering
+\includegraphics[scale=0.5]{neuron.png}
+\end{figure}
+\\
+\noindent
+The basic unit in the model (shown above) is the neuron, a biologically inspired model of the human neuron. For humans, varying strengths of neurons' output signals travel along the synaptic junctions and are then aggregated  as input for a connected neuron's activation. In the model, the weighted combination $\alpha = \sum_{j=1}^{n} w_i x_i + b$ of input signals is aggregated, and then an output signal $f(\alpha)$ transmitted by the connected neuron. The function $f$ represents the nonlinear activation function used throughout the network, and the bias $b$ accounts for the neuron's activation threshold. 
+\\
+\begin{figure}[h!]
+\centering
+\includegraphics[scale=0.3]{net.png}
+\end{figure}
+\\
+\noindent
+Multi-layer, feedforward neural networks consist of many layers of interconnected neuron units: beginning with an input layer to match the feature space; followed by multiple layers of nonlinearity; and terminating with a linear regression or classification layer to match the output space. The inputs and outputs of the model's units follow the basic logic of the single neuron described above. Bias units are included in each non-output layer of the network. The weights linking neurons and biases with other neurons fully determine the output of the entire network, and learning occurs when these weights are adapted to minimize the error on labeled training data. More specificially, for each training example $j$ the objective is to minimize a loss function 
+\begin{center}
+$L(W,B$ $|$ $j)$.
+\end{center}
+Here $W$ is the collection $\left\{W_i\right\}_{1:N-1}$, where $W_i$ denotes the weight matrix connecting layers $i$ and $i+1$ for a network of $N$ layers; similarly $b$ is the collection $\left\{b_i\right\}_{1:N-1}$, where $b_i$ denotes the column vector of biases for layer $i+1$. 
+\\
+\\
+This basic framework of multi-layer neural networks can be used to accomplish deep learning tasks. Deep learning architectures are models of hierarchical feature extraction, typically involving multiple levels of nonlinearity. Such models are able to learn useful representations of raw data, and have exhibited high performance on complex data such as images, speech, and text \href{http://www.iro.umontreal.ca/~lisa/pointeurs/TR1312.pdf}{(Bengio, 2009)}. 
+
+
+\section{H2O's Deep Learning architecture}
+
+As described above, H2O follows the model of multi-layer, feedforward neural networks for predictive modeling. This section provides a more detailed description of H2O's Deep Learning features, parameter configurations, and computational implementation.
+
+\subsection{Summary of features}
+H2O's Deep Learning functionalities include:
+
+\begin{itemize}
+
+\item purely supervised training protocol for regression and classification tasks
+
+\item multi-threaded parallel computation to be run on either a single node or a multi-node cluster
+
+\item advanced training options including adaptive learning, momentum training, rate annealing, and dropout
+
+\item regularization options to prevent model overfitting
+
+\item fast and memory-efficient Java implementations of the underlying algorithms
+
+\item elegant web interface to mirror the model building and scoring process running in R
+
+\item grid search for hyperparameter optimization and model selection
+
+\item model checkpointing
+
+\item model export in plain java code for deployment in production environments
+
+\item additional parameters for model tuning
+
+\item deep autoencoders for unsupervised feature learning and anomaly detection capabilities
+
+\end{itemize}
+
+
+\subsection{Training protocol}
+The training protocol described below follows many of the ideas and advances in the recent deep learning literature. 
+\noindent
+\\
+\\
+\textsc{Initialization}
+\\
+\\
+\noindent
+Various deep learning architectures employ a combination of unsupervised pretraining followed by supervised training, but H2O uses a purely supervised training protocol. The default initialization scheme is the uniform adaptive option, which is an optimized initialization based on the size of the network. Alternatively, you may select a random initialization to be drawn from either a uniform or normal distribution, for which a scaling parameter may be specified as well.
+\\
+\\
+\textsc{Activation and loss functions}
+\\
+\\
+\noindent
+In the introduction we introduced the nonlinear activation function $f$, for which the choices are summarized in Table 1. Note here that $x_i$ and $w_i$ denonote the firing neuron's input values and their weights, respectively; $\alpha$ denotes the weighted combination $\alpha = \sum_i w_i x_i+b$.
+\\
+\begin{table}[ht] 
+\caption{Activation functions }
+% title of Table 
+\centering % used for centering table 
+\begin{tabular}{c c c} % centered columns (4 columns) 
+\hline\hline %inserts double horizontal lines 
+Function & Formula & Range \\ [0.5ex] % inserts table 
+%heading 
+\hline % inserts single horizontal line 
+Tanh & $f(\cdot) = \frac{e^{\alpha} - e ^{-\alpha}}{e^\alpha + e ^{-\alpha}}$ & $f(\cdot) \in [-1,1]$ \\ % inserting body of the table 
+Rectified Linear & $f(\cdot) = \max(0,\alpha)$ & $f(\cdot) \in \mathbb{R}_+$ \\
+Maxout & $f(\cdot) = \max (w_i x_i + b) \text{, rescale if} \max f(\cdot) \geq 1 $ & $f(\cdot) \in [-\infty,1]$\\  % [1ex] adds vertical space
+
+\hline %inserts single line 
+\end{tabular} 
+\label{table:nonlin} % is used to refer this table in the text 
+\end{table}
+\\
+\\
+The $\tanh$ function is a rescaled and shifted logistic function and its symmetry around 0 allows the training algorithm to converge faster. The rectified linear activation function has demonstrated high performance on image recognition tasks, and is a more biologically accurate model of neuron activations (\href{http://yann.lecun.com/exdb/publis/pdf/lecun-98b.pdf}{LeCun et al, 1998}). Maxout activation works particularly well with dropout, a regularization method discussed later in this vignette (\href{http://arxiv.org/pdf/1302.4389.pdf}{Goodfellow et al, 2013}). It is difficult to determine a ``best" activation function to use; each may outperform the others in separate scenarios, but grid search models (also described later) can help to compare activation functions and other parameters. The default activation is the $\tanh$ function. Each of these activation functions also has options in conjunction with dropout.
+\\
+\\
+The following choices for the loss function $L(W,B$ $|$ $ j)$ are summarized in Table 2. The system default enforces the table's typical use rule based on whether regression or classification is being performed. Note here that $t^{(j)}$ and $o^{(j)}$ are the target output and actual output, respectively, for training example $j$; further, let $y$ denote the output units and $O$ the output layer.  
+\\
+\begin{table}[ht] 
+\caption{Loss functions }
+% title of Table 
+\centering % used for centering table 
+\begin{tabular}{c c c} % centered columns (4 columns) 
+\hline\hline %inserts double horizontal lines 
+Function & Formula & Typical use \\ [0.5ex] % inserts table 
+%heading 
+\hline % inserts single horizontal line 
+Mean Squared Error & $L(W,B | j) = \frac{1}{2}\|t^{(j)} - o^{(j)}\|_2^2$ & Regression \\ % inserting body of the table 
+Cross Entropy & $L(W,B | j) = \sum\limits_{y \in O} -\ln(o_y^{(j)}) \cdot t_y^{(j)}$ & Classification \\  
+\hline %inserts single line 
+\end{tabular} 
+\label{table:nonlin} % is used to refer this table in the text 
+\end{table}
+\\
+\\
+\noindent
+\textsc{Parallel distributed network training}
+\\
+\\
+\noindent
+The procedure to minimize the loss function $L(W,B$ $|$ $j)$ is a parallelized version of stochastic gradient descent (SGD). Standard SGD can be summarized as follows, with the gradient $\nabla L(W,B$ $|$ $j)$ computed via backpropagation (\href{http://yann.lecun.com/exdb/publis/pdf/lecun-98b.pdf}{LeCun et al, 1998}). The constant $\alpha$ indicates the learning rate, which controls the step sizes during gradient descent.
+\\
+\\
+{\bf{\footnotesize{Standard stochastic gradient descent}}}
+\\
+\line(1,0){275}
+\\
+Initialize $W,B$ 
+\\
+Iterate until convergence criterion reached
+\\
+\indent Get training example $i$
+\\
+\indent Update all weights $w_{jk} \in W$, biases $b_{jk} \in B$
+\\
+\indent \indent $w_{jk} := w_{jk} - \alpha \frac{\partial L(W,B | j)}{\partial w_{jk}}$
+\\
+\indent \indent $b_{jk} := b_{jk} - \alpha \frac{\partial L(W,B | j)}{\partial b_{jk}}$
+\\
+\line(1,0){275}
+\\
+\\
+Stochastic gradient descent is known to be fast and memory-efficient, but not easily parallelizable without becoming slow. We utilize \textsc{Hogwild!}, the recently developed lock-free parallelization scheme from \href{http://i.stanford.edu/hazy/papers/hogwild-nips.pdf}{Niu et al, 2011}. \textsc{Hogwild!} follows a shared memory model where multiple cores, each handling separate subsets (or all) of the training data, are able to make independent contributions to the gradient updates $\nabla L(W,B$ $ |$ $j)$ asynchronously. In a multi-node system this parallelization scheme works on top of H2O's distributed setup, where the training data is distributed across the cluster. Each node operates in parallel on its local data until the final parameters $W,b$ are obtained by averaging. Below is a rough summmary.
+\\
+\\
+\noindent
+{\bf{\footnotesize{Parallel distributed and multi-threaded training with SGD in H2O Deep Learning}}}
+\\
+\line(1,0){440}
+\\
+Initialize global model parameters $W,B$
+\\
+Distribute training data $\mathcal{T}$ across nodes (can be disjoint or replicated)
+\\
+Iterate until convergence criterion reached
+\\
+\indent For nodes $n$ with training subset $\mathcal{T}_n$, do in parallel:
+\\
+\indent \indent Obtain copy of the global model parameters $W_n, B_n$
+\\
+\indent \indent Select active subset $\mathcal{T}_{na} \subset \mathcal{T}_n$ (user-given number of samples per iteration)
+\\
+\indent \indent Partition $\mathcal{T}_{na}$ into $\mathcal{T}_{nac}$ by cores $n_c$
+\\
+\indent \indent For cores $n_c$ on node $n$, do in parallel:
+\\
+\indent \indent \indent Get training example $i \in \mathcal{T}_{nac}$
+\\
+\indent \indent \indent  Update all weights $w_{jk} \in W_n$, biases $b_{jk} \in B_n$
+\\
+\indent \indent \indent  \indent $w_{jk} := w_{jk} - \alpha \frac{\partial L(W,B | j)}{\partial w_{jk}}$
+\\
+\indent \indent \indent  \indent $b_{jk} := b_{jk} - \alpha \frac{\partial L(W,B | j)}{\partial b_{jk}}$
+\\
+\indent Set $W,B := $ Avg$_n$ $W_n,$ $ $Avg$_n$ $B_n$
+\\
+\indent Optionally score the model on (potentially sampled) train/validation scoring sets
+\\
+\line(1,0){440}
+\\
+\\
+Here, the weights and bias updates follow the asynchronous  $\textsc{Hogwild!}$ procedure to incrementally adjust each node's parameters $W_n,B_n$ after seeing example $i$. The Avg$_n$ notation refers to the final averaging of these local parameters across all nodes to obtain the global model parameters and complete training.
+\\
+\\
+\noindent
+\textsc{Specifying the number of training samples per iteration}
+\\
+\\
+The number of training examples (globally) presented to the distributed SGD worker nodes between model averaging is controlled by the important parameter \\ \texttt{train\_samples\_per\_iteration}. The default value is -1, which results in all nodes processing all their local training data per iteration. Note that if \texttt{replicate\_training\_data} is enabled (true by default), this will result in training N epochs per iteration on N nodes, otherwise 1 epoch will be trained per iteration. Another special value is 0, which always results in 1 epoch per iteration, independent of the number of compute nodes. In general, any user-given positive number is permissible for this parameter. For large datasets, it might make sense to specify a fraction of the dataset. For example, if the training data contains $10$ million rows, and we specify the number of training samples per iteration as $100,000$ when running on $4$ nodes, then each node will process $25,000$ examples per iteration, and it will take $40$ such distributed iterations to process one epoch. If the value is set too high, it might take too long between synchronization and model convergence can be slow.  If the value is set too low, network communication overhead will dominate the runtime, and computational performance will suffer.
+\\
+\\
+\noindent
+\textsc{Regularization}
+\\
+\\
+\noindent
+H2O's Deep Learning framework supports regularization techniques to prevent overfitting. 
+\\
+\\
+$\ell_1$ and $\ell_2$ regularization enforce the same penalties as they do with other models, that is, modifying the loss function so as to minimize some
+\\
+\begin{center}
+$L'(W,B$ $|$ $j) = L(W,B$ $|$ $j) + \lambda_1 R_1(W,B$ $|$ $j) + \lambda_2 R_2(W,B$ $|$ $j)$
+\end{center}
+
+For $\ell_1$ regularization, $R_1(W,B$ $|$ $j)$ represents of the sum of all $\ell_1$ norms of the weights in the network; $R_2(W,B$ $|$ $j)$ represents the sum of squares of all the weights in the network. The constants $\lambda_1$ and $\lambda_2$ are generally chosen to be very small, for example $10^{-3}$. 
+\\
+The second type of regularization available for deep learning is a recent innovation called dropout (\href{http://arxiv.org/pdf/1207.0580.pdf}{Hinton et al., 2012}). Dropout constrains the online optimization such that during forward propagation for a given training example, each neuron in the network suppresses its activation with probability $\textsc{P}$, generally taken to be 0.1 or 0.2 for input neurons and 0.5 for hidden neurons. The effect is twofold: as with $\ell_2$ regularization, the network weight values are scaled toward 0; furthermore, each training example trains a different model, albeit sharing the same global parameters. Thus dropout allows an exponentially large number of models to be averaged as an ensemble, which prevents overfitting and improves generalization. 
+
+\subsection{Advanced optimization}
+H2O features both manual and automatic versions of advanced optimization. The manual mode features include momentum training and rate annealing, while automatic mode features adaptive learning rate.
+\\
+\\
+\textsc{Momentum training}
+\\
+\\
+\noindent
+Momentum modifies back propagation by allowing prior iterations to influence the current update. In particular, a velocity vector $v$ is defined to modify the updates as follows, with $\theta$ representing the parameters $W,B$; $\mu$ representing the momentum coefficient, and $\alpha$ denoting 
+the learning rate. 
+\begin{center}
+$v_{t+1} = \mu v_t - \alpha \nabla L(\theta_t)$
+\\
+$\theta_{t+1} = \theta_t + v_{t+1}$
+\end{center}
+Using the momentum parameter can aid in avoiding 
+local minima and the associated instability (\href{http://www.cs.toronto.edu/~fritz/absps/momentum.pdf}{Sutskever et al, 2014}). Too much momentum can lead to instabilities, which is why the momentum is best ramped up slowly.
+\\
+\\
+A recommended improvement when using momentum updates is the Nesterov accelerated gradient method. Under this method the updates are further modified such that 
+\begin{center}
+$v_{t+1} = \mu v_t - \alpha \nabla L(\theta_t + \mu v_t)$
+\\
+$W_{t+1} = W_t + v_{t+1}$
+\end{center}
+\textsc{Rate annealing}
+\\
+\\
+\noindent
+Throughout training, as the model approaches a minimum the chance of oscillation or ``optimum skipping" creates the need for a slower learning rate. Instead of specifying a constant learning rate $\alpha$, learning rate annealing gradually reduces the learning rate $\alpha_t$ to ``freeze" into local minima in the optimization landscape (\href{http://arxiv.org/pdf/1212.5701v1.pdf}{Zeiler, 2012}).  
+\\
+\\
+For H2O, the annealing rate is the inverse of the number of training samples it takes to cut the learning rate in half (e.g., $10^{-6}$ means that it takes $10^6$ training samples to halve the learning rate).
+\\
+\\
+\textsc{Adaptive learning}
+\\
+\\
+\noindent
+The implemented adaptive learning rate algorithm ADADELTA (\href{http://arxiv.org/pdf/1212.5701v1.pdf}{Zeiler, 2012})  automatically combines the benefits of learning rate annealing and momentum training to avoid slow convergence. Specification of only two parameters $\rho$ and $\epsilon$  simplifies hyper parameter search. In some cases, manually controlled (non-adaptive) learning rate and momentum specifications can lead to better results, but require the hyperparameter search of up to 7 parameters. If the model is built on a topology with many local minima or long plateaus, it is possible for a constant learning rate to produce sub-optimal results. In general, however, we find adaptive learning rate to produce the best results, and this option is kept as the default. 
+\\
+\\
+The first of two hyper parameters for adaptive learning is $\rho$. It is similar to momentum and relates to the memory to prior weight updates. Typical values are between 0.9 and 0.999. The second of two hyper parameters $\epsilon$ for adaptive learning is similar to learning rate annealing during initial training and momentum at later stages where it allows forward progress.
+Typical values are between $10^{-10}$ and $10^{-4}$.
+\\
+\\
+\subsection{Loading data}
+
+Loading a dataset in R for use with H2O is slightly different from the usual methodology, as we must convert our datasets into \texttt{H2OParsedData} objects. For an example, we use a toy weather dataset which can be downloaded \href{https://raw.githubusercontent.com/0xdata/h2o/master/smalldata/weather.csv}{here}. First load the data to your current working directory in your R Console (do this henceforth for dataset downloads), and then run the following command.
+\begin{spverbatim}
+weather.hex = h2o.uploadFile(h2o_server, path = "weather.csv", 
+header = TRUE, sep = ",", key = "weather.hex")
+\end{spverbatim}
+To see a quick summary of the data, run the following command.
+\begin{spverbatim}
+summary(weather.hex)
+\end{spverbatim}
+
+\subsubsection{Standardization}
+
+Along with categorical encoding, H2O preprocesses data to be standardized for compatibility with the activation functions. Recall Table 1's summary of each activation function's target space. Since in general the activation function does not map into $\mathbb{R}$, we first standardize our data to be drawn from $\mathcal{N}(0,1)$. Standardizing again after network propagation allows us to compute more precise errors in this standardized space rather than in the raw feature space. 
+
+\subsection{Additional parameters}
+
+This section has reviewed some background on the various parameter configurations in H2O's Deep Learning architecture. H2O Deep Learning models may seem daunting since there are dozens of possible parameter arguments when creating models. However, most parameters do not need to be tuned or experimented with; the default settings are safe and recommended. Those parameters for which experimentation is possible and perhaps necessary have mostly been discussed here but there a couple more which deserve mention.
+\\
+\\
+There is no default for both hidden layer size/number as well as epochs. Practice building deep learning models with different network topologies and different datasets will lead to intuition for these parameters but two general rules of thumb should be applied. First, choose larger network sizes, as they can perform higher-level feature extraction, and techniques like dropout may train only subsets of the network at once. Second, use more epochs for greater predictive accuracy, but only when able to afford the computational cost. Many example tests can be found in the H2O \href{https://github.com/0xdata/h2o/}{Github} repository for pointers on specific values and results for these (and other) parameters.
+\\
+\\
+For a full list of H2O Deep Learning model parameters and default values, see Appendix A. 
+
+\section{Use case: MNIST digit classification}
+
+
+\subsection{MNIST overview}
+
+The \href{http://yann.lecun.com/exdb/mnist/}{MNIST database} is a famous academic dataset used to benchmark classification performance. The data consists of 60,000 training images and 10,000 test images, each a standardized $28^2$ pixel greyscale image of a single handwritten digit. You can download the training data and the test data \href{https://github.com/0xdata/h2o/tree/master/smalldata/mnist}{here}. Remember to save these .csv files to your working directory. Following the weather data example, we begin by loading these datasets into R as \texttt{H2OParsedData} objects. 
+
+\begin{spverbatim}
+train_images.hex = h2o.uploadFile(h2o_server, path = "mnist_train.csv", header = FALSE, sep = ",", key = "train_images.hex")
+test_images.hex = h2o.uploadFile(h2o_server, path = "mnist_test.csv", header = FALSE, sep = ",", key = "test_images.hex")
+\end{spverbatim}
+
+
+\subsection{Performing a trial run}
+The trial run below is illustrative of the relative simplicity that underlies most H2O Deep Learning model parameter configurations, thanks to the defaults. We use the first $28^2 = 784$ values of each row to represent the full image, and the final value to denote the digit class. As mentioned before, Rectified linear activation is popular with image processing and has performed well on the MNIST database previously; and dropout has been known to enhance performance on this dataset as well -- so we use train our model accordingly. 
+\begin{spverbatim}
+
+#Train the model for digit classification
+mnist_model = h2o.deeplearning(x = 1:784, y = 785, data = train_images.hex, activation = "RectifierWithDropout", hidden = c(200,200,200), input_dropout_ratio = 0.2, l1 = 1e-5, validation = test_images.hex, epochs = 10)
+
+\end{spverbatim}
+\noindent
+The model is run for only 10 epochs since it is meant just as a trial run. In this trial run we also specified the validation set to be the test set, but another option is to use n-fold validation by specifying, for example, \texttt{nfolds=5} instead of \texttt{validation=test\_images}. 
+
+\subsubsection{Extracting and handling the results}
+
+We can extract both the parameters of our model as well as score the model on new data. 
+
+\begin{spverbatim}
+#Get the full details of your deep learning model
+mnist_model@model$params
+
+#Perform classification on the test set
+prediction = h2o.predict(mnist_model, newdata=test_images.hex)
+
+#Copy predictions from H2O to R
+pred = as.data.frame(prediction)
+
+#Get the confusion matrix on the validation set 
+mnist_model@$confusion
+\end{spverbatim} 
+
+\subsection{Web interface}
+
+H2O R users have access to a slick web interface to mirror the model building process in R. After loading data or training a model in R, point your browser to your IP address+port number (e.g., localhost:12345) to launch the web interface. From here you can click on \textsc{Admin} $>$ \textsc{Jobs} to view your specific model details. You can also click on \textsc{Data} $>$ \textsc{View All} to view and keep track of your datasets in current use. 
+
+\subsubsection{Variable importances}
+
+One particularly useful visualization in the web interface is the variable importances, which can be enabled with the additional argument \texttt{variable\_importanes=TRUE}. This features allows us to witness the absolute and relative predictive strength of each feature in the classification task. For the purposes of digit classification, this aspect is less useful since each feature merely correponds to a pixel number that is not relevant to the model's more abstract feature representation; but it is useful in general for less uniform data. 
+
+\subsubsection{Java model}
+
+Another important feature of the web interface is the Java (POJO) model, accessible from the \textsc{Java model} button in the top right of a model summary page. This button allows access to Java code which, when called from a main method in a Java program, builds the model at hand. Instructions for downloading and running this Java code are available from the web interface, and example production scoring  code is available as well.
+
+\subsection{Grid search for model comparison}
+
+H2O supports grid search capabilities for model tuning by allowing users to tweak certain parameters and observe changes in model behavior. This is done by specifying sets of values for parameter arguments. For example, below is an example of a grid search:
+
+\begin{spverbatim}
+#Create a set of network topologies
+hidden_layers = list(c(200,200), c(100,300,100),c(500,500,500))
+
+mnist_model_grid = h2o.deeplearning(x=1:784, y=785, data=train_images.hex, activation="RectifierWithDropout", hidden=hidden_layers, validation=
+test_images.hex, epochs=1, l1=c(1e-5,1e-7), input_dropout_ratio=0.2)
+
+\end{spverbatim}
+\noindent
+This effectively trains six different models, over the combinations of the three hidden layer configurations and two $\ell_1$ norm regularization weights. 
+
+\begin{spverbatim}
+#print out all prediction errors and run times of the models
+mnist_model_grid
+mnist_model_grid@model
+
+#print out a *short* summary of each of the models (indexed by parameter)
+mnist_model_grid@sumtable
+
+#print out *full* summary of each of the models
+all_params = lapply(mnist_model_grid@model, function(x) { x@model$params })
+all_params
+
+#access a particular parameter across all models
+l1_params = lapply(mnist_model_grid@model, function(x) { x@model$params$l1 })
+l1_params
+\end{spverbatim}
+
+
+\subsection{Checkpoint model}
+
+Checkpoint model keys can be used to start off where you left off, if you feel that you want to further train a particular model with more iterations, more data, different data, and so forth. If we felt that our initial model should be trained further, we can use it (or its key) as a checkpoint argument in a new model. Note that the training and validation datasets and the response column etc. have to match for checkpoint restarts.
+
+\begin{spverbatim}
+mnist_checkpoint_model = h2o.deeplearning(x=1:784, y=785, data=train_images.hex, checkpoint=mnist_model_grid@model[[1]], validation = test_images.hex, epochs=9)
+\end{spverbatim}
+
+\noindent
+With more epochs you will hopefully see the predictive accuracy improved further. 
+
+\subsection{Achieving state-of-the-art performance}
+
+Without distortions, convolutions, or other advanced image processing techniques, the best-ever published test set error for the MNIST dataset is $0.83$\% by Microsoft. After training for $2,000$ epochs (took about 4 hours) on 4 compute nodes (with \texttt{l1}=1e-5 and \texttt{input\_dropout=0.2}) we obtain $0.87\%$ test set error, which is a world-record-level result (within the statistical noise of $\approx 0.1$\% with 10,000 test points), notably achieved using a distributed configuration. Accuracies around $1\%$ test set errors are typically achieved within 1 hour when running on 1 node.
+
+\section{Deep autoencoders}
+
+\subsection{Nonlinear dimensionality reduction}
+So far we have discussed purely supervised deep learning tasks. However, deep learning can also be used for unsupervised feature learning or, more specficially, nonlinear dimensionality reduction  (\href{http://www.cs.toronto.edu/~hinton/science.pdf}{Hinton et al, 2006}). Consider the diagram on the following page of a three-layer neural network with one hidden layer. If we treat our input data as labeled with the same input values, then the network is forced to learn the identity via a nonlinear, reduced representation of the original data. Such an algorithm is called a deep autoencoder; these models have been used extensively for unsupervised, layer-wise pretraining of supervised deep learning tasks, but here we consider the autoencoder's application for discovering anomalies in data. 
+\\
+\begin{figure}[h!]
+\centering
+\includegraphics[scale=0.7]{autoencoder.png}
+\end{figure}
+\subsection{Use case: anomaly detection}
+Consider the deep autoencoder model described above. Given enough training data resembling some underlying pattern, the network will train itself to easily learn the identity when confronted with that pattern. However, if some ``anomalous" test point not matching the learned pattern arrives, the autoencoder will likely have a high error in reconstructing this data, which indicates it is anomalous data.
+\\
+\\
+We use this framework to develop an anomaly detection demonstration using a deep autoencoder. The dataset is an ECG time series of heartbeats, and the goal is to determine which heartbeats are outliers. The training data (20 ``good" heartbeats) is available \href{https://raw.githubusercontent.com/0xdata/h2o/master/smalldata/anomaly/ecg_discord_train.csv}{here}, and the test data (training data with 3 ``bad" heartbeats appended for simplicity) \href{https://raw.githubusercontent.com/0xdata/h2o/master/smalldata/anomaly/ecg_discord_test.csv}{here}. Each row represents a single heartbeat. The autoencoder is trained as follows: 
+
+\begin{spverbatim}
+
+train_ecg.hex = h2o.uploadFile(localH2O, path="ecg_train.csv", header=F, sep=",", key="train_ecg.hex") 
+test_ecg.hex = h2o.uploadFile(localH2O, path="ecg_test.csv", header=F, sep=",", key="test_ecg.hex") 
+
+#Train deep autoencoder learning model on "normal" training data, y ignored 
+anomaly_model = h2o.deeplearning(x=1:210, y=1, train_ecg.hex, activation = "Tanh", classification=F, autoencoder=T, hidden = c(50,20,50), l1=1E-4, 
+epochs=100)                 
+                              
+#Compute reconstruction error with the Anomaly detection app (MSE between
+output layer and input layer)
+recon_error.hex = h2o.anomaly(test_ecg.hex, anomaly_model)
+                              
+#Pull reconstruction error data into R and plot to find outliers (last 3
+heartbeats)
+recon_error = as.data.frame(recon_error.hex)
+recon_error
+plot.ts(recon_error)
+
+#Note: Testing = Reconstructing the test dataset
+test_recon.hex = h2o.predict(anomaly_model, test_ecg.hex) 
+head(test_recon.hex)              
+
+\end{spverbatim}
+\noindent
+
+\newpage
+
+\section{Appendix A: Complete parameter list}
+\begin{itemize}
+\item \texttt{x}: A vector containing the names of the predicts in the model. \textsc{No default}
+\item \texttt{y}: The name of the response variable in the model. \textsc{No default}
+\item \texttt{data}: An \texttt{H2OParsedData} object containing the variables in the model
+\item \texttt{classification} (Optional): A logical value indicating whether the algorithm should conduct classification. Otherwise, regression is performed on a numeric response variable.
+\item \texttt{validation} (Optional): An \texttt{H2OParsedData} object indicating the validation dataset used to construct confusion matrix. If left blank, this defaults to the training data
+\item \texttt{activation}: The choice of nonlinear, differentiable activation function used throughout the network. Options are \texttt{Tanh, TanhWithDropout, Rectifier, RectifierWithDropout, Maxout, MaxoutWithDropout}, and the default is \texttt{Tanh}. See the description in Section 2.2 for more details.
+\item \texttt{hidden}: The number and size of each hidden layer in the model. For example, if c(100,200,100) is specified, a model with 3 hidden layers will be produced, and the middle hidden layer wil have 200 neurons. The default is c(200,200). For grid search, use list(c(10,10), c(20,20)) etc. See Section 2.5.
+\item \texttt{epochs}: The number of passes over the training dataset to be carried out. It is recommended to start with lower values for initial grid searches. The value can be modified during checkpoint restarts and allows continuation of selected models. The default is 10. See Section 2.5 of this document for more details. 
+\item \texttt{train\_samples\_per\_iteration}: The default is -1, but performance might depend greatly on this parameter. See Section 2.2 for more details. 
+\item \texttt{seed}: The random seed controls sampling and initialization. Reproducible results are only expected with single-threaded operation (i.e. when running on one node, turning off load balancing and providing a small dataset that fits in one chunk).  In general, the multi-threaded asynchronous updates to the model parameters will result in (intentional) race conditions and non-reproducible results. Note that deterministic sampling and initialization might still lead to some weak sense of determinism in the model. The default is a random real number.
+\item \texttt{adaptive\_rate}: The default enables this feature for adaptive learning rate. See Section 2.3  for more details. 
+\item \texttt{rho}: The first of two hyperparameters for adaptive learning rate (when it is enabled). This parameter is similar to momentum and relates to the memory to prior weight updates. Typical values are between 0.9 and 0.999. The default value is 0.95. See Section 2.3 of this document for more details. 
+\item \texttt{epsilon}: The second of two hyperparameters for adaptive learning rate (when it is enabled). This parameter is similar to learning rate annealing during initial training and momentum at later stages where it allows forward progress. Typical values are between 1e-10 and 1e-4. This parameter is only active if adaptive learning rate is enabled. The defaulit is 1e-6. See Section 2.3 of this document. 
+\item \texttt{rate}: The learning rate $\alpha$. Higher values lead to less stable models  while lower values  lead to slower convergence. The default is 0.005.
+\item \texttt{rate\_annealing}: The default value is 1e-6 (when adaptive learning is disabled). See Section 2.3 for more details.
+\item \texttt{rate\_decay}: The default is 1.0 (when adaptive learning is disabled). The learning rate decay parameter controls the change of learning rate across layers. 
+\item \texttt{momentum\_start}: The momentum\_start parameter controls the amount of momentum at the beginning of training (when adaptive learning is disabled). The default is 0. See Section 2.3 for more details. 
+\item \texttt{momentum\_ramp}: The momentum\_ramp parameter controls the amount of learning for which momentum increases assuming momentum\_stable is larger than momentum\_start. It can be enabled when adaptive learning is disabled. The ramp is measured in the number of training samples. The default is 1e-6. 
+\item \texttt{momentum\_stable}: The momentum\_stable parameter controls the final momentum value reached after momentum\_ramp training samples (when adaptive learning is disabled). The momentum used for training will remain the same for training beyond reaching that point. The default is 0. 
+\item \texttt{neverov\_accelerated\_gradient}: The default is true (when adaptive learning is disabled). See Section 2.3 for more details.
+\item \texttt{input\_dropout\_ratio}: The default is 0. See Section 2.2 for more details.
+\item \texttt{hidden\_dropout\_ratio}: The default is 0. See Section 2.2 for more details.
+\item \texttt{l1}: The default is 0. See Section 2.2 for more details. 
+\item \texttt{l2}: The default is 0. See Section 2.2 for more details.
+\item \texttt{max\_w2}: A maximum on the sum of the squared incoming weights into any one neuron. This tuning parameter is especially useful for unbound activation functions such as Maxout or Rectifier. The default leaves this maximum unbounded.
+\item \texttt{initial\_weight\_distribution}:The distribution from which initial weights are to be drawn. The default is the uniform adaptive option. See Section 2.2 for more details. 
+\item \texttt{initial\_weight\_scale}: The scale of the distribution function for Uniform or Normal distributions. For Uniform, the values are drawn uniformly from (-initial\_weight\_scale, initial\_weight\_scale). For Normal, the values are drawn from a Normal distribution with a standard deviation of initial\_weight\_scale. The default is 1.0. See Section 2.2 for more details.  
+\item \texttt{loss}: The default is automatic based on the particular learning problem. See Section 2.2 for more details.
+\item \texttt{score\_interval}: The minimum time (in seconds) to elapse between model scoring. The actual interval is determined by the number of training samples per iteration and the scoring duty cycle. The default is 5. 
+\item \texttt{score\_training\_samples}: The number of training dataset points to be used for scoring. Will be randomly sampled. Use 0 for selecting the entire training dataset. The default is 1000.
+\item \texttt{score\_validation\_samples}: The number of validation dataset points to be used for scoring. Can be randomly sampled or stratified (if "balance classes" is set and "score validation sampling" is set to stratify). Use 0 for selecting the entire training dataset (this is also the default).
+\item \texttt{score\_duty\_cycle}: Maximum fraction of wall clock time spent on model scoring on training and validation samples, and on diagnostics such as computation of feature importances (i.e., not on training). The default is 0.1.
+\item \texttt{classification\_stop}: The stopping criteria in terms of classification error (1-accuracy) on the training data scoring dataset. When the error is at or below this threshold, training stops. The default is 0.
+\item \texttt{regression\_stop}: The stopping criteria in terms of regression error (MSE) on the training data scoring dataset. When the error is at or below this threshold, training stops. The default is 1e-6. 
+\item \texttt{quiet\_mode}: Enable quiet mode for less output to standard output. The default disables this option.
+\item \texttt{max\_confusion\_matrix\_size}: For classification models, the maximum size (in terms of classes) of the confusion matrix for it to be printed. This option is meant to avoid printing extremely large confusion matrices. The default is 20.
+\item \texttt{max\_hit\_ratio\_k}: The maximum number (top K) of predictions to use for hit ratio computation (for multi-class only, 0 to disable). The default is 10.
+\item \texttt{balance\_classes}: For imbalanced data, balance training data class counts via over/under-sampling. This can result in improved predictive accuracy. The default disables this option. 
+\item \texttt{max\_after\_balance\_size}: When classes are balanced, limit the resulting dataset size to the specified multiple of the original dataset size. This is the maximum relative size of the training data after balancing class counts (can be less than 1.0). The default is 5.0.
+\item \texttt{score\_validation\_sampling}: The number of validation dataset points to be used for scoring. Can be randomly sampled or stratified (if "balance classes" is set and "score validation sampling" is set to stratify). Use 0 for selecting the entire training dataset. The default is 0.
+\item \texttt{diagnostis}: Gather diagnostics for hidden layers, such as mean and RMS values of learning rate, momentum, weights and biases. The default enables this option.
+\item \texttt{variable\_importances}: Whether to compute variable importances for input features. The implementation considers the weights connecting the input features to the first two hidden layers. The default disables this option.
+\item \texttt{fast\_mode}: Enable fast mode (minor approximation in back-propagation), should not affect results significantly. The default enables this option.
+\item \texttt{ignore\_const\_cols}: Ignore constant training columns (no information can be gained anyway). The default enables this option.
+\item \texttt{force\_load\_balance}:  Increase training speed on small datasets by splitting it into many chunks to allow utilization of all cores. The default enables this option.
+\item \texttt{replicate\_training\_data}:  Replicate the entire training dataset onto every node for faster training on small datasets. The default enables this option.
+\item \texttt{single\_node\_mode}:  Run on a single node for fine-tuning of model parameters. Can be useful for faster convergence during checkpoint resumes after training on a very large count of nodes (for fast initial convergence). The default disables this (experimental) option.
+\item \texttt{shuffle\_training\_data}: Enable shuffling of training data (on each node). This option is recommended if training data is replicated on N nodes, and the number of training samples per iteration is close to N times the dataset size, where all nodes train will (almost) all the data. It is automatically enabled if the number of training samples per iteration is set to -1 (or to N times the dataset size or larger), otherwise it is disabled by default.
+\item \texttt{checkpoint}: A model key associated with a previously trained Deep Learning model. This option allows users to build a new model as a continuation of a previously generated model (e.g., by a grid search). There is no default.
+\item \texttt{best\_model\_key}: If given, store the best model so far under this key. Model performance is measured by MSE for regression and overall error rate for classification (at F1-optimal threshold for binary classification). There is no default.
+\item \texttt{expert\_mode}: Unlock expert mode parameters than can affect model building speed, predictive accuracy and scoring. Leaving expert mode parameters at default values is fine for many problems, but best results on complex datasets are often only attainable via expert mode options. The default disables this option.
+\item \texttt{autoencoder}: See Section 4 for more details. The default is false.
+\item \texttt{variable\_importances}: Allows for visualization of feature importances on web interface. The default disables this feature. 
+\end{itemize}
+
+
+\end{document}
