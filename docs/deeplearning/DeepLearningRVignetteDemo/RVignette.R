@@ -63,8 +63,7 @@ test_images.hex = h2o.uploadFile(h2o_server, path = "mnist_test.csv", header = F
 
 #Train the model for digit classification
 mnist_model = h2o.deeplearning(x = 1:784, y = 785, data = train_images.hex, activation = "RectifierWithDropout", 
-hidden = c(1024,1024,2048), input_dropout_ratio = 0.2, l1 = 1e-5, validation = test_images.hex, epochs = 1, 
-variable_importances = TRUE)
+hidden = c(200,200,200), input_dropout_ratio = 0.2, l1 = 1e-5, validation = test_images.hex, epochs = 10)
 
 #Get the full details of your deep learning model
 mnist_model@model$params
@@ -105,7 +104,7 @@ mnist_checkpoint_model = h2o.deeplearning(x=1:784, y=785, data=train_images.hex,
 
 #This model should result in a test set error of 0.9% or better - runs for several hours
 #super_model = h2o.deeplearning(x=1:784, y=785, data=train_images.hex, activation="RectifierWithDropout",
-#hidden=c(1024,1024,2048), validation=test_images.hex, epochs=4000, l1=1e-5, input_dropout_ratio=0.2, 
+#hidden=c(1024,1024,2048), validation=test_images.hex, epochs=2000, l1=1e-5, input_dropout_ratio=0.2, 
 #rho=0.99, epsilon=1e-8, max_w2=15, classification_stop=-1, train_samples_per_iteration=0)
 
 

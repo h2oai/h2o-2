@@ -71,7 +71,7 @@ h2o_server = h2o.init()
 
 \end{spverbatim}
 \noindent
-With this command H2O in R will start an instance automatically at localhost:54321.
+With this command, the H2O R module will start an instance of H2O automatically at localhost:54321.
 \\
 Alternatively,  to specify a connection with an existing H2O cluster node (other than localhost at port 54321) you must explicitly state the IP address and port number in the \texttt{h2o.init()} call. An example is given below, but do not cut and paste; you should specify the IP and port number appropriate to your specific environment.
 
@@ -80,12 +80,11 @@ h2o_cluster = h2o.init(ip = "192.555.1.123", port = 12345, startH2O = FALSE)
 
 \end{spverbatim}
 \noindent
-An automatic demo is available to see h2o.deeplearning at work. Run the following command to observe an example binary classification model built through H2O's deep learning system.
+An automatic demo is available to see h2o.deeplearning at work. Run the following command to observe an example binary classification model built through H2O's Deep Learning.
 
 \begin{spverbatim}
 demo(h2o.deeplearning)
 \end{spverbatim}
-
 
 \subsection{Support}
 
@@ -119,12 +118,12 @@ Here $W$ is the collection $\left\{W_i\right\}_{1:N-1}$, where $W_i$ denotes the
 This basic framework of multi-layer neural networks can be used to accomplish deep learning tasks. Deep learning architectures are models of hierarchical feature extraction, typically involving multiple levels of nonlinearity. Such models are able to learn useful representations of raw data, and have exhibited high performance on complex data such as images, speech, and text \href{http://www.iro.umontreal.ca/~lisa/pointeurs/TR1312.pdf}{(Bengio, 2009)}. 
 
 
-\section{H2O's deep learning architecture}
+\section{H2O's Deep Learning architecture}
 
-As described above, H2O follows the model of multi-layer, feedforward neural networks for predictive modeling. This section provides a more detailed description of H2O's deep learning features, parameter configurations, and computational implementation.
+As described above, H2O follows the model of multi-layer, feedforward neural networks for predictive modeling. This section provides a more detailed description of H2O's Deep Learning features, parameter configurations, and computational implementation.
 
 \subsection{Summary of features}
-H2O's deep learning functionalities include:
+H2O's Deep Learning functionalities include:
 
 \begin{itemize}
 
@@ -285,7 +284,7 @@ Here, the weights and bias updates follow the asynchronous  $\textsc{Hogwild!}$ 
 \textsc{Specifying the number of training samples per iteration}
 \\
 \\
-The number of training examples (globally) presented to the distributed SGD worker nodes between model averaging is controlled by the important parameter \\ \texttt{train\_samples\_per\_iteration}. The default value is -1, which results in all nodes processing all their local training data per iteration. Note that if \texttt{replicate\_training\_data} is enabled (true by default), this will result in training N epochs per iteration on N nodes. Another special value is 0, which results in 1 epoch per iteration, independent of the number of compute nodes. In general, any number is permissible for this parameter. For large datasets, it might make sense to specify a fraction of the dataset. For example, if the training data contains $10$ million rows, and we specify the number of training samples per iteration as $100,000$ when running on $4$ nodes, then each node will process $25,000$ examples per iteration, and it will take $40$ such distributed iterations to process one epoch. If the value is set too high, it might take too long between synchronization and model convergence can be slow.  If the value is set too low, network communication overhead will dominate the runtime, and computational performance will suffer.
+The number of training examples (globally) presented to the distributed SGD worker nodes between model averaging is controlled by the important parameter \\ \texttt{train\_samples\_per\_iteration}. The default value is -1, which results in all nodes processing all their local training data per iteration. Note that if \texttt{replicate\_training\_data} is enabled (true by default), this will result in training N epochs per iteration on N nodes, otherwise 1 epoch will be trained per iteration. Another special value is 0, which always results in 1 epoch per iteration, independent of the number of compute nodes. In general, any user-given positive number is permissible for this parameter. For large datasets, it might make sense to specify a fraction of the dataset. For example, if the training data contains $10$ million rows, and we specify the number of training samples per iteration as $100,000$ when running on $4$ nodes, then each node will process $25,000$ examples per iteration, and it will take $40$ such distributed iterations to process one epoch. If the value is set too high, it might take too long between synchronization and model convergence can be slow.  If the value is set too low, network communication overhead will dominate the runtime, and computational performance will suffer.
 \\
 \\
 \noindent
@@ -293,7 +292,7 @@ The number of training examples (globally) presented to the distributed SGD work
 \\
 \\
 \noindent
-H2O's deep learning framework supports regularization techniques to prevent overfitting. 
+H2O's Deep Learning framework supports regularization techniques to prevent overfitting. 
 \\
 \\
 $\ell_1$ and $\ell_2$ regularization enforce the same penalties as they do with other models, that is, modifying the loss function so as to minimize some
@@ -302,9 +301,9 @@ $\ell_1$ and $\ell_2$ regularization enforce the same penalties as they do with 
 $L'(W,B$ $|$ $j) = L(W,B$ $|$ $j) + \lambda_1 R_1(W,B$ $|$ $j) + \lambda_2 R_2(W,B$ $|$ $j)$
 \end{center}
 
-For $\ell_1$ regularization, $R_1(W,B$ $|$ $j)$ represents of the sum of all $\ell_1$ norms of weights and biases in the network; $R_2(W,B$ $|$ $j)$ represents the sum of squares of all weights and biases in the network. The constants $\lambda_1$ and $\lambda_2$ are generally chosen to be very small. for example $10^{-3}$. 
+For $\ell_1$ regularization, $R_1(W,B$ $|$ $j)$ represents of the sum of all $\ell_1$ norms of the weights in the network; $R_2(W,B$ $|$ $j)$ represents the sum of squares of all the weights in the network. The constants $\lambda_1$ and $\lambda_2$ are generally chosen to be very small, for example $10^{-3}$. 
 \\
-The second type of regularization available for deep learning is a recent innovation called dropout (\href{http://arxiv.org/pdf/1207.0580.pdf}{Hinton et al., 2012}). Dropout constrains the online optimization such that during forward propagation for a given training example, each neuron in the network suppresses its activation with probability $\textsc{P}$, generally taken to be 0.1 or 0.2 for input neurons and 0.5 for hidden neurons. The effect is twofold: as with $\ell_2$ regularization, the network weight and bias values are scaled toward 0; furthermore, each training example trains a different model, albeit sharing the same global parameters. Thus dropout allows an exponentially large number of models to be averaged as an ensemble, which prevents overfitting and improves generalization. 
+The second type of regularization available for deep learning is a recent innovation called dropout (\href{http://arxiv.org/pdf/1207.0580.pdf}{Hinton et al., 2012}). Dropout constrains the online optimization such that during forward propagation for a given training example, each neuron in the network suppresses its activation with probability $\textsc{P}$, generally taken to be 0.1 or 0.2 for input neurons and 0.5 for hidden neurons. The effect is twofold: as with $\ell_2$ regularization, the network weight values are scaled toward 0; furthermore, each training example trains a different model, albeit sharing the same global parameters. Thus dropout allows an exponentially large number of models to be averaged as an ensemble, which prevents overfitting and improves generalization. 
 
 \subsection{Advanced optimization}
 H2O features both manual and automatic versions of advanced optimization. The manual mode features include momentum training and rate annealing, while automatic mode features adaptive learning rate.
@@ -359,7 +358,6 @@ Loading a dataset in R for use with H2O is slightly different from the usual met
 weather.hex = h2o.uploadFile(h2o_server, path = "weather.csv", 
 header = TRUE, sep = ",", key = "weather.hex")
 \end{spverbatim}
-
 To see a quick summary of the data, run the following command.
 \begin{spverbatim}
 summary(weather.hex)
@@ -371,13 +369,13 @@ Along with categorical encoding, H2O preprocesses data to be standardized for co
 
 \subsection{Additional parameters}
 
-This section has reviewed some background on the various parameter configurations in H2O's deep learning architecture. H2O deep learning models may seem daunting since there are dozens of possible parameter arguments when creating models. However, most parameters do not need to be tuned or experimented with; the default settings are safe and recommended. Those parameters for which experimentation is possible and perhaps necessary have mostly been discussed here but there a couple more which deserve mention.
+This section has reviewed some background on the various parameter configurations in H2O's Deep Learning architecture. H2O Deep Learning models may seem daunting since there are dozens of possible parameter arguments when creating models. However, most parameters do not need to be tuned or experimented with; the default settings are safe and recommended. Those parameters for which experimentation is possible and perhaps necessary have mostly been discussed here but there a couple more which deserve mention.
 \\
 \\
 There is no default for both hidden layer size/number as well as epochs. Practice building deep learning models with different network topologies and different datasets will lead to intuition for these parameters but two general rules of thumb should be applied. First, choose larger network sizes, as they can perform higher-level feature extraction, and techniques like dropout may train only subsets of the network at once. Second, use more epochs for greater predictive accuracy, but only when able to afford the computational cost. Many example tests can be found in the H2O \href{https://github.com/0xdata/h2o/}{Github} repository for pointers on specific values and results for these (and other) parameters.
 \\
 \\
-For a full list of H2O deep learning model parameters and default values, see Appendix A. 
+For a full list of H2O Deep Learning model parameters and default values, see Appendix A. 
 
 \section{Use case: MNIST digit classification}
 
@@ -388,21 +386,20 @@ The \href{http://yann.lecun.com/exdb/mnist/}{MNIST database} is a famous academi
 
 \begin{spverbatim}
 train_images.hex = h2o.uploadFile(h2o_server, path = "mnist_train.csv", header = FALSE, sep = ",", key = "train_images.hex")
-
 test_images.hex = h2o.uploadFile(h2o_server, path = "mnist_test.csv", header = FALSE, sep = ",", key = "test_images.hex")
 \end{spverbatim}
 
 
 \subsection{Performing a trial run}
-The trial run below is illustrative of the relative simplicity that underlies most H2O deep learning model parameter configurations, thanks to the defaults. We use the first $28^2 = 784$ values of each row to represent the full image, and the final value to denote the digit class. As mentioned before, Rectified linear activation is popular with image processing and has performed well on the MNIST database previously; and dropout has been known to enhance performance on this dataset as well -- so we use train our model accordingly. 
+The trial run below is illustrative of the relative simplicity that underlies most H2O Deep Learning model parameter configurations, thanks to the defaults. We use the first $28^2 = 784$ values of each row to represent the full image, and the final value to denote the digit class. As mentioned before, Rectified linear activation is popular with image processing and has performed well on the MNIST database previously; and dropout has been known to enhance performance on this dataset as well -- so we use train our model accordingly. 
 \begin{spverbatim}
 
 #Train the model for digit classification
-mnist_model = h2o.deeplearning(x = 1:784, y = 785, data = train_images.hex, activation = "RectifierWithDropout", hidden = c(1024,1024,2048), input_dropout_ratio = 0.2, l1 = 1e-5, validation = test_images.hex, epochs = 1, variable_importances = TRUE)
+mnist_model = h2o.deeplearning(x = 1:784, y = 785, data = train_images.hex, activation = "RectifierWithDropout", hidden = c(200,200,200), input_dropout_ratio = 0.2, l1 = 1e-5, validation = test_images.hex, epochs = 10)
 
 \end{spverbatim}
 \noindent
-The model is run for only one epoch since it is meant just as a trial run. In this trial run we also specified the validation set to be the test set, but another option is to use n-fold validation by specifying, for example, \texttt{nfolds=5} instead of \texttt{validation=test\_images}. 
+The model is run for only 10 epochs since it is meant just as a trial run. In this trial run we also specified the validation set to be the test set, but another option is to use n-fold validation by specifying, for example, \texttt{nfolds=5} instead of \texttt{validation=test\_images}. 
 
 \subsubsection{Extracting and handling the results}
 
@@ -436,7 +433,7 @@ Another important feature of the web interface is the Java (POJO) model, accessi
 
 \subsection{Grid search for model comparison}
 
-H2O supports grid search capabilities for model tuning by allowing users to tweak certain parameters and observe changes in model behavior. This is done by specifying sets of values for parameter arguments. For example, below is an example of a  
+H2O supports grid search capabilities for model tuning by allowing users to tweak certain parameters and observe changes in model behavior. This is done by specifying sets of values for parameter arguments. For example, below is an example of a grid search:
 
 \begin{spverbatim}
 #Create a set of network topologies
@@ -472,10 +469,7 @@ l1_params
 Checkpoint model keys can be used to start off where you left off, if you feel that you want to further train a particular model with more iterations, more data, different data, and so forth. If we felt that our initial model should be trained further, we can use its key (destination key) as a checkpoint argument in a new model.
 
 \begin{spverbatim}
-mnist_checkpoint_model =  h2o.deeplearning(x=1:784, y=785, data=
-train_images.hex, checkpoint= [YOUR MODEL's KEY], activation=
-"RectifierWithDropout", hidden=c(1024,1024,2048), validation=test_images.hex, epochs=100)
-
+mnist_checkpoint_model = h2o.deeplearning(x=1:784, y=785, data=train_images.hex, checkpoint=mnist_model_grid@model[[1]], validation = test_images.hex, epochs=9)
 \end{spverbatim}
 
 \noindent
