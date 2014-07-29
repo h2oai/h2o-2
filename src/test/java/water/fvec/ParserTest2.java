@@ -1281,4 +1281,128 @@ public class ParserTest2 extends TestUtil {
     testParsed(k,exp);
   }
 
+  // test 0,n,y -> NA,0,1
+  @Test public void testBinaryCol3() {
+    String data =
+            "1 A 0\n"+
+                    "2 B 0\n"+
+                    "3 C n\n"+
+                    "4 A 0\n"+
+                    "5 B 0\n"+
+                    "6 C n\n"+
+                    "7 A 0\n"+
+                    "8 B 0\n"+
+                    "9 C 0\n"+
+                    "10 A y\n"+
+                    "11 B 0\n"+
+                    "12 C 0\n";
+
+    double[][] exp = new double[][] {
+            d( 1,0,NaN),
+            d( 2,1,NaN),
+            d( 3,2,0),
+            d( 4,0,NaN),
+            d( 5,1,NaN),
+            d( 6,2,0),
+            d( 7,0,NaN),
+            d( 8,1,NaN),
+            d( 9,2,NaN),
+            d(10,0,1),
+            d(11,1,NaN),
+            d(12,2,NaN),
+    };
+    Key k = FVecTest.makeByteVec("test",data);
+    testParsed(k,exp);
+  }
+
+  // test 0,f,t -> NA,0,1
+  @Test public void testBinaryCol4() {
+    String data =
+            "1 A 0\n"+
+                    "2 B 0\n"+
+                    "3 C f\n"+
+                    "4 A 0\n"+
+                    "5 B 0\n"+
+                    "6 C f\n"+
+                    "7 A 0\n"+
+                    "8 B 0\n"+
+                    "9 C 0\n"+
+                    "10 A t\n"+
+                    "11 B 0\n"+
+                    "12 C 0\n";
+
+    double[][] exp = new double[][] {
+            d( 1,0,NaN),
+            d( 2,1,NaN),
+            d( 3,2,0),
+            d( 4,0,NaN),
+            d( 5,1,NaN),
+            d( 6,2,0),
+            d( 7,0,NaN),
+            d( 8,1,NaN),
+            d( 9,2,NaN),
+            d(10,0,1),
+            d(11,1,NaN),
+            d(12,2,NaN),
+    };
+    Key k = FVecTest.makeByteVec("test",data);
+    testParsed(k,exp);
+  }
+
+  // test 0,n,y -> NA,0,1
+  @Test public void testBinaryCol5() {
+    String data =
+            "1 A 0\n"+
+                    "2 B 0\n"+
+                    "3 C n\n"+
+                    "4 A 0\n"+
+                    "5 B 0\n"+
+                    "6 C n\n"+
+                    "7 A 0\n"+
+                    "8 B 0\n"+
+                    "9 C 0\n"+
+                    "10 A y\n"+
+                    "11 B 0\n"+
+                    "12 C 0\n";
+
+    double[][] exp = new double[][] {
+            d( 1,0,NaN),
+            d( 2,1,NaN),
+            d( 3,2,0),
+            d( 4,0,NaN),
+            d( 5,1,NaN),
+            d( 6,2,0),
+            d( 7,0,NaN),
+            d( 8,1,NaN),
+            d( 9,2,NaN),
+            d(10,0,1),
+            d(11,1,NaN),
+            d(12,2,NaN),
+    };
+    Key k = FVecTest.makeByteVec("test",data);
+    testParsed(k,exp);
+  }
+
+  // test 0,n,y -> NA,0,1
+  @Test public void testBinaryColZipped() {
+
+    Frame fr = parseFrame(null,"smalldata/test/is_NA2.csv.gz");
+    double[][] exp = new double[][] {
+            d( 1,0,NaN),
+            d( 2,1,NaN),
+            d( 3,2,0),
+            d( 4,0,NaN),
+            d( 5,1,NaN),
+            d( 6,2,0),
+            d( 7,0,NaN),
+            d( 8,1,NaN),
+            d( 9,2,NaN),
+            d(10,0,1),
+            d(11,1,NaN),
+            d(12,2,NaN),
+    };
+    Log.info(fr.toStringAll());
+    testParsed(fr,exp,12);
+  }
+
 }
