@@ -286,7 +286,8 @@ h2o.setLogPath <- function(path, type) {
   # if(prog$end_time == -1 || prog$progress == -2.0) stop("Job key ", keyName, " has been cancelled")
   if(!is.null(prog$result$val) && prog$result$val == "CANCELLED") stop("Job key ", keyName, " was cancelled by user")
   else if(!is.null(prog$result$exception) && prog$result$exception == 1) stop(prog$result$val)
-  prog$progress
+  if (prog$progress < 0 && (prog$end_time == "" || is.null(prog$end_time))) return(abs(prog$progress)/100)
+  else return(prog$progress)
 }
 
 .h2o.__allDone <- function(client) {
@@ -906,7 +907,8 @@ function(h2o, key) {
   job_key    <- params$job_key #response$job_key
   dest_key   <- key #params$destination_key
 
-  train_fr   <- h2o.getFrame(h2o, response$"_dataKey")
+  train_fr   <- new("H2OParsedData", key = "NA")
+  if (!is.null(response$"_dataKey")) train_fr <- h2o.getFrame(h2o, response$"_dataKey")
   params$importance <- !is.null(params$varimp)
   if (!is.null(params$family) && model.type == "gbm_model") {
     params$distribution <- "multinomial"
