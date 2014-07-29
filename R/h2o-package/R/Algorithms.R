@@ -1582,6 +1582,12 @@ h2o.anomaly <- function(data, model, key = "", threshold = -1.0) {
       result[[i]] = new(model_obj, key=allModels[[i]]$destination_key, data=data, model=modelOrig, valid=validation, xval=res_xval)
     }
   }
+
+  x <- pred_errs_orig <- unlist(lapply(seq_along(myModelSum),  function(x) myModelSum[[x]]$prediction_error))
+  y <- pred_errs <- sort(pred_errs_orig)
+  result <- result[order(match(x,y))]
+  myModelSum <- myModelSum[order(match(x,y))]
+
   new(grid_obj, key=dest_key, data=data, model=result, sumtable=myModelSum)
 }
 
