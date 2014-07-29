@@ -38,7 +38,7 @@
 
 \section{Introduction}
 
-This vignette presents the deep learning framework in the \href{http://cran.r-project.org/web/packages/h2o/index.html}{H2O} package. Further documentation on H2O's system and algorithms can be found at the 0xdata \href{http://docs.0xdata.com}{website} and the R package \href{http://cran.r-project.org/web/packages/h2o/h2o.pdf}{manual}. The full datasets and code of this vignette can be found at the H2O Github . This introductory section provides instructions on getting H2O started, followed by a brief overview of deep learning.
+This vignette presents the deep learning framework in the \href{http://cran.r-project.org/web/packages/h2o/index.html}{H2O} package. Further documentation on H2O's system and algorithms can be found at the 0xdata \href{http://docs.0xdata.com}{website} and the R package \href{http://cran.r-project.org/web/packages/h2o/h2o.pdf}{manual}. The full datasets and code of this vignette can be found at the H2O Github. This introductory section provides instructions on getting H2O started, followed by a brief overview of deep learning.
 
 \subsection{Installation}
 
@@ -49,7 +49,7 @@ install.packages("h2o")
 \end{spverbatim}
 \bigskip
 \noindent
-Alternatively, you can (and should for this tutorial) download the latest H2O build by following the ``Install in R" instructions in the H2O \href{http://s3.amazonaws.com/h2o-release/h2o/master/1434/index.html}{download table}. Open your R Console and run the following to install the latest H2O build in R:
+Alternatively, you can (and should for this tutorial) download the latest H2O build by following the ``Install in R" instructions in the H2O \href{http://s3.amazonaws.com/h2o-release/h2o/master/latest.html}{download table}. Open your R Console and run the following to install the latest H2O build in R:
 
 \begin{spverbatim}
 # The following two commands remove any previously installed H2O packages for R.
@@ -357,8 +357,13 @@ Typical values are between $10^{-10}$ and $10^{-4}$.
 
 Loading a dataset in R for use with H2O is slightly different from the usual methodology, as we must convert our datasets into \texttt{H2OParsedData} objects. For an example, we use a toy weather dataset which can be downloaded \href{https://raw.githubusercontent.com/0xdata/h2o/master/smalldata/weather.csv}{here}. First load the data to your current working directory in your R Console (do this henceforth for dataset downloads), and then run the following command.
 \begin{spverbatim}
-weather_data.hex = h2o.uploadFile(h2o_server, path = "weatherdata.csv", 
-header = TRUE, sep = ",", key = "weather_data.hex")
+weather.hex = h2o.uploadFile(h2o_server, path = "weather.csv", 
+header = TRUE, sep = ",", key = "weather.hex")
+\end{spverbatim}
+
+To see a quick summary of the data, run the following command.
+\begin{spverbatim}
+summary(weather.hex)
 \end{spverbatim}
 
 \subsubsection{Standardization}
@@ -436,7 +441,7 @@ H2O supports grid search capabilities for model tuning by allowing users to twea
 
 \begin{spverbatim}
 #Create a set of network topologies
-hidden_layers = list(c(1024,1024,2048), c(800,1500,2000),c(1000,2000,1600))
+hidden_layers = list(c(200,200), c(100,300,100),c(500,500,500))
 
 mnist_model_grid = h2o.deeplearning(x=1:784, y=785, data=train_images.hex, activation="RectifierWithDropout", hidden=hidden_layers, validation=
 test_images.hex, epochs=1, l1=c(1e-5,1e-7), input_dropout_ratio=0.2)
