@@ -2,10 +2,8 @@ package water;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-
-import water.Model;
 import water.Model.ModelCategory;
-import water.api.AUC;
+import water.api.AUCData;
 import water.api.ConfusionMatrix;
 import water.api.DocGen;
 import water.api.Request.API;
@@ -35,11 +33,11 @@ public final class ModelMetrics extends Iced {
   public long scoring_time = -1L;
 
   @API(help="The AUC object for this scoring run.", required=false, filter=Default.class, json=true)
-  public AUC auc = null;
+  public AUCData auc = null;
   @API(help="The ConfusionMatrix object for this scoring run.", required=false, filter=Default.class, json=true)
   public ConfusionMatrix cm = null;
 
-  public ModelMetrics(UniqueId model, ModelCategory model_category, UniqueId frame, long duration_in_ms, long scoring_time, AUC auc, ConfusionMatrix cm) {
+  public ModelMetrics(UniqueId model, ModelCategory model_category, UniqueId frame, long duration_in_ms, long scoring_time, AUCData auc, ConfusionMatrix cm) {
     this.model = model;
     this.model_category = model_category;
     this.frame = frame;

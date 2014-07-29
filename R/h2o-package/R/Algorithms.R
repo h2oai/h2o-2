@@ -198,7 +198,7 @@ h2o.glm <- function(x, y, data, key = "", family, nfolds = 0, alpha = 0.5, nlamb
                   beta_epsilon=epsilon, standardize=standardize, max_predictors = max_predictors,
                   variable_importances = variable_importances, use_all_factor_levels = use_all_factor_levels, h2o = data@h2o)
     .h2o.__waitOnJob(data@h2o, res$job_key)
-    .h2o.glm.get_model(data, res$destination_key, return_all_lambda, params)
+    h2o.getModel(h2o = data@h2o, key = as.character(res$destination_key)) #.h2o.glm.get_model(data, res$destination_key, return_all_lambda, params)
   } else
     .h2o.glm2grid.internal(x_ignore, args$y, data, key, family, nfolds, alpha, nlambda, lambda.min.ratio, lambda, epsilon,
                            standardize, prior, tweedie.p, iter.max, higher_accuracy, lambda_search, return_all_lambda,
@@ -1595,6 +1595,12 @@ h2o.anomaly <- function(data, model, key = "", threshold = -1.0) {
       result[[i]] = new(model_obj, key=allModels[[i]]$destination_key, data=data, model=modelOrig, valid=validation, xval=res_xval)
     }
   }
+
+  x <- pred_errs_orig <- unlist(lapply(seq_along(myModelSum),  function(x) myModelSum[[x]]$prediction_error))
+  y <- pred_errs <- sort(pred_errs_orig)
+  result <- result[order(match(x,y))]
+  myModelSum <- myModelSum[order(match(x,y))]
+
   new(grid_obj, key=dest_key, data=data, model=result, sumtable=myModelSum)
 }
 

@@ -55,6 +55,10 @@
 \alias{|,H2OParsedData,numeric-method}
 \alias{|,logical,H2OParsedData-method}
 \alias{|,numeric,H2OParsedData-method}
+\alias{^,H2OParsedData,numeric-method}
+\alias{^,numeric,H2OParsedData-method}
+\alias{\%/\%,H2OParsedData,numeric-method}
+\alias{\%/\%,numeric,H2OParsedData-method}
 \alias{$,H2OParsedData-method}
 \alias{$<-,H2OParsedData-method}
 \alias{abs,H2OParsedData-method}
