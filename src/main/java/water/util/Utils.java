@@ -123,6 +123,7 @@ public class Utils {
    * @return true if a and b are essentially equal, false otherwise.
    */
   public static boolean equalsWithinOneSmallUlp(float a, float b) {
+    if (Float.isInfinite(a) || Float.isInfinite(b) && (a<b || b<a)) return false;
     float ulp_a = Math.ulp(a);
     float ulp_b = Math.ulp(b);
     float small_ulp = Math.min(ulp_a, ulp_b);
@@ -131,6 +132,7 @@ public class Utils {
   }
 
   public static boolean equalsWithinOneSmallUlp(double a, double b) {
+    if (Double.isInfinite(a) || Double.isInfinite(b) && (a<b || b<a)) return false;
     double ulp_a = Math.ulp(a);
     double ulp_b = Math.ulp(b);
     double small_ulp = Math.min(ulp_a, ulp_b);
