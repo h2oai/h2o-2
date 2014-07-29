@@ -517,7 +517,7 @@ public final class ParseDataset2 extends Job {
       CustomParser.ParserSetup localSetup = ParseDataset.guessSetup(Utils.unzipBytes(bits,cpr), _setup,false)._setup;
       // Local setup: nearly the same as the global all-files setup, but maybe
       // has the header-flag changed.
-      if(!_setup.isCompatible(localSetup)) {
+      if(!localSetup.isCompatible(_setup)) {
         _parserr = "Conflicting file layouts, expecting: " + _setup + " but found "+localSetup;
         return;
       }

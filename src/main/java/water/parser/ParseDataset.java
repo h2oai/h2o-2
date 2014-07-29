@@ -83,16 +83,8 @@ public final class ParseDataset extends Job {
       if(_gSetup == null || !_gSetup._isValid){
         _empty = false;
         _gSetup = drt._gSetup;
-        if(_gSetup == null)
-          System.out.println("haha");
-//        if(_gSetup != null) {
-        try {
-          _gSetup._hdrFromFile = drt._gSetup._hdrFromFile;
-          _gSetup._setupFromFile = drt._gSetup._setupFromFile;
-//        }
-        } catch(Throwable t){
-          t.printStackTrace();
-        }
+        _gSetup._hdrFromFile = drt._gSetup._hdrFromFile;
+        _gSetup._setupFromFile = drt._gSetup._setupFromFile;
       } else if(drt._gSetup._isValid && !_gSetup._setup.isCompatible(drt._gSetup._setup) ){
         if(_conflicts.contains(_gSetup._setupFromFile) && !drt._conflicts.contains(drt._gSetup._setupFromFile)){
           _gSetup = drt._gSetup; // setups are not compatible, select random setup to send up (thus, the most common setup should make it to the top)
