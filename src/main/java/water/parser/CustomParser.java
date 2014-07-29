@@ -76,6 +76,25 @@ public abstract class CustomParser extends Iced {
     public String [] _columnNames;
     public final int _ncols;
 
+
+    public enum Coltype {
+      NUM,ZERO,STR,AUTO;
+    }
+
+    public static class TypeInfo extends Iced{
+      Coltype _type;
+      ValueString _naStr = new ValueString("NA");
+    }
+    public String [][] domains;
+    public double [] _min;
+    public double [] _max;
+    public int _nnums;
+    public int _nstr;
+    public int _missing;
+    public int _nzeros;
+
+    TypeInfo [] _types;
+
     public ParserSetup() {
       _pType = ParserType.AUTO;
       _separator = CsvParser.AUTO_SEP;
@@ -290,6 +309,107 @@ public abstract class CustomParser extends Iced {
   public String [] headers(){return null;}
 
 
+  protected static class TypeGuesserDataOut extends Iced implements DataOut {
+
+    transient private HashSet<String> [] _domains;
+    int [] _nnums;
+    int [] _nstrings;
+    int [] _nzeros;
+    int _nlines;
+    final int _ncols;
+
+    public TypeGuesserDataOut(int ncols){
+      _ncols = ncols;
+      _domains = new HashSet[ncols];
+      _nzeros = new int[ncols];
+      _nstrings = new int[ncols];
+      _nnums = new int[ncols];
+
+      for(int i = 0; i < ncols; ++i)
+        _domains[i] = new HashSet<String>();
+    }
+    // TODO: ugly quick hack, needs revisit
+    public ParserSetup.TypeInfo[] guessTypes() {
+      ParserSetup.TypeInfo [] res = new ParserSetup.TypeInfo[_ncols];
+      for(int i = 0; i < res.length; ++i)
+        res[i] = new ParserSetup.TypeInfo();
+      for(int i = 0; i < _ncols; ++i){
+        if(_domains[i].size() <= 1 && _nnums[i] >= .2) // clear number
+          res[i]._type = ParserSetup.Coltype.NUM;
+        else if(_domains[i].size() > 2 && _nstrings[i]/_nlines >= .2) // clear strting/enum
+          res[i]._type = ParserSetup.Coltype.STR;
+        else if(_domains[i].size() == 2) { // possibly enum
+          // check for special cases
+          String [] domain = _domains[i].toArray(new String[2]);
+          for (int j = 0; j < domain.length; ++j)
+            domain[j] = domain[j].toUpperCase();
+          Arrays.sort(domain);
+          if (Arrays.deepEquals(domain, new String[]{"N", "Y"})
+            || Arrays.deepEquals(domain, new String[]{"NO", "YES"})
+            || Arrays.deepEquals(domain, new String[]{"F", "T"})
+            || Arrays.deepEquals(domain, new String[]{"FALSE", "TRUE"})
+            ) {
+            res[i]._type = ParserSetup.Coltype.STR;
+            if (_nzeros[i] > 0 && _nzeros[i] + _nstrings[i] == _nlines)
+              res[i]._naStr = new ValueString("0");
+          } else { // some generic two strings, could be garbage or enums
+            if (_nstrings[i] / _nlines >= .2)
+              res[i]._type = ParserSetup.Coltype.STR;
+            else if (_nnums[i] > 0 && _nnums[i] / _nlines > .2)
+              res[i]._type = ParserSetup.Coltype.NUM;
+          }
+        }
+      }
+      return res;
+    }
+
+    @Override
+    public void setColumnNames(String[] names) {}
+
+    @Override
+    public void newLine() {
+      ++_nlines;
+    }
+
+    @Override
+    public boolean isString(int colIdx) {
+      return false;
+    }
+
+    @Override
+    public void addNumCol(int colIdx, long number, int exp) {
+      if(number == 0)
+        ++_nzeros[colIdx];
+      else
+        ++_nnums[colIdx];
+    }
+
+    @Override
+    public void addNumCol(int colIdx, double d) {
+      if(d == 0)
+        ++_nzeros[colIdx];
+      else
+        ++_nnums[colIdx];
+    }
+
+    @Override
+    public void addInvalidCol(int colIdx) {}
+
+    @Override
+    public void addStrCol(int colIdx, ValueString str) {
+      ++_nstrings[colIdx];
+      _domains[colIdx].add(str.toString());
+    }
+
+    @Override
+    public void rollbackLine() {--_nlines;}
+
+    @Override
+    public void invalidLine(String err) {}
+
+    @Override
+    public void invalidValue(int line, int col) {}
+  }
   protected static class CustomInspectDataOut extends Iced implements DataOut {
     public int _nlines;
     public int _ncols;
@@ -316,6 +436,7 @@ public abstract class CustomParser extends Iced {
       _ncols = names.length;
       _header = true;
     }
+
     @Override public void newLine() {
       ++_nlines;
     }
