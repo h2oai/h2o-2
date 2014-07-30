@@ -38,7 +38,7 @@
 
 \section{Introduction}
 
-This vignette presents the deep learning framework in the \href{http://cran.r-project.org/web/packages/h2o/index.html}{H2O} package. Further documentation on H2O's system and algorithms can be found at the 0xdata \href{http://docs.0xdata.com}{website} and the R package \href{http://cran.r-project.org/web/packages/h2o/h2o.pdf}{manual}. The full datasets and code of this vignette can be found at the H2O Github. This introductory section provides instructions on getting H2O started, followed by a brief overview of deep learning.
+This vignette presents the deep learning framework in the \href{http://cran.r-project.org/web/packages/h2o/index.html}{H2O} package. Further documentation on H2O's system and algorithms can be found at the 0xdata \href{http://docs.0xdata.com}{website} and the R package \href{http://cran.r-project.org/web/packages/h2o/h2o.pdf}{manual}. The full datasets and code of this vignette can be found at the \href{https://github.com/0xdata/h2o/tree/master/docs/deeplearning/DeepLearningRVignetteDemo}{H2O Github}. This introductory section provides instructions on getting H2O started, followed by a brief overview of deep learning.
 
 \subsection{Installation}
 
@@ -57,9 +57,9 @@ if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
 
 if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
 
-# Next, we download, install and initialize the H2O package for R (filling in the *'s with the appropriate version number)
-install.packages("h2o", repos=(c("http://s3.amazonaws.com/h2o-release/
-h2o/master/****/R", getOption("repos"))))
+# Next, we download, install and initialize the H2O package for R (filling in the *'s with the matching digits in the download table)
+install.packages("h2o", repos=(c("http://s3.amazonaws.com/h2o-release/h2o/master/
+****/R", getOption("repos"))))
 
 library(h2o)
 
@@ -72,9 +72,7 @@ h2o_server = h2o.init()
 
 \end{spverbatim}
 \noindent
-With this command, the H2O R module will start an instance of H2O automatically at localhost:54321.
-\\
-Alternatively,  to specify a connection with an existing H2O cluster node (other than localhost at port 54321) you must explicitly state the IP address and port number in the \texttt{h2o.init()} call. An example is given below, but do not cut and paste; you should specify the IP and port number appropriate to your specific environment.
+With this command, the H2O R module will start an instance of H2O automatically at localhost:54321. Alternatively,  to specify a connection with an existing H2O cluster node (other than localhost at port 54321) you must explicitly state the IP address and port number in the \texttt{h2o.init()} call. An example is given below, but do not directly paste; you should specify the IP and port number appropriate to your specific environment.
 
 \begin{spverbatim}
 h2o_cluster = h2o.init(ip = "192.555.1.123", port = 12345, startH2O = FALSE)
@@ -354,9 +352,10 @@ Typical values are between $10^{-10}$ and $10^{-4}$.
 
 Loading a dataset in R for use with H2O is slightly different from the usual methodology, as we must convert our datasets into \texttt{H2OParsedData} objects. For an example, we use a toy weather dataset which can be downloaded \href{https://raw.githubusercontent.com/0xdata/h2o/master/smalldata/weather.csv}{here}. First load the data to your current working directory in your R Console (do this henceforth for dataset downloads), and then run the following command.
 \begin{spverbatim}
-weather.hex = h2o.uploadFile(h2o_server, path = "weather.csv", 
-header = TRUE, sep = ",", key = "weather.hex")
+weather.hex = h2o.uploadFile(h2o_server, path = "weather.csv", header = TRUE, sep = ",", key = "weather.hex")
 \end{spverbatim}
+\bigskip
+\noindent
 To see a quick summary of the data, run the following command.
 \begin{spverbatim}
 summary(weather.hex)
@@ -443,7 +442,7 @@ test_images.hex, epochs=1, l1=c(1e-5,1e-7), input_dropout_ratio=0.2)
 
 \end{spverbatim}
 \noindent
-This effectively trains six different models, over the combinations of the three hidden layer configurations and two $\ell_1$ norm regularization weights. 
+Here we specified three different network topologies and two different $\ell_1$ norm weights. This grid search model effectively trains six different models, over the possible combinations of these parameters. Of course, sets of other parameters can be specified for a larger space of models. This allows for more subtle insights in the model tuning and selection process, as we inspect and compare our trained models after the grid search process is complete. To decide how and when to choose different parameter configurations in a grid search, see Appendix A for parameter descriptions and possible values.
 
 \begin{spverbatim}
 #print out all prediction errors and run times of the models
@@ -470,7 +469,7 @@ Checkpoint model keys can be used to start off where you left off, if you feel t
 \begin{spverbatim}
 mnist_checkpoint_model = h2o.deeplearning(x=1:784, y=785, data=train_images.hex, checkpoint=mnist_model_grid@model[[1]], validation = test_images.hex, epochs=9)
 \end{spverbatim}
-
+\bigskip
 \noindent
 With more epochs you will hopefully see the predictive accuracy improved further. 
 
