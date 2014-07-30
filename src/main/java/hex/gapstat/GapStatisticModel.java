@@ -71,8 +71,6 @@ public class GapStatisticModel extends Model implements Job.Progress {
     throw new UnsupportedOperationException();
   }
 
-  @Override public void delete() { super.delete(); }
-
   @Override public String toString(){
     return String.format("Gap Statistic Model (key=%s , trained on %s):\n", _key, _dataKey);
   }
