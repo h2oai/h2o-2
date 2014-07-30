@@ -14,6 +14,6 @@ Prerequisites:
 5) Check that the .csv files are in the same directory as the demo.R file.
 
 Run H2O Deep Learning in R
-5) R -f demo.R
+6) R -f demo.R
 
 Alternatively, you can run the demo line-by-line by copy & pasting it into R or RStudio.
