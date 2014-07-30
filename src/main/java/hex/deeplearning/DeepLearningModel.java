@@ -724,6 +724,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     _timeLastScoreEnter = start_time;
     model_info = new DeepLearningModelInfo(params, dinfo);
     actual_best_model_key = params.best_model_key != null ? params.best_model_key : Key.make(destKey + "_best");
+    if (params.n_folds != 0) actual_best_model_key = null;
     Object job = UKV.get(jobKey);
     if (job instanceof DeepLearning)
       get_params().state = ((DeepLearning)UKV.get(jobKey)).state; //make the job state consistent
@@ -944,7 +945,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       // But at the end of model_building, this model should still point to the overall winner
       // So before we put it into DKV, update its (actual) best model key.
       if (!keep_running && get_params().best_model_key != null && UKV.get(get_params().best_model_key) != null && actual_best_model_key == null) {
-        actual_best_model_key = get_params().best_model_key;
+        if (get_params().n_folds == 0) actual_best_model_key = get_params().best_model_key;
       }
       update(job_key);
 
