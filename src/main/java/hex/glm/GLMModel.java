@@ -85,14 +85,13 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   }
   public void unlockXvals(Key job_key){
     if(submodels != null)
-      for(Submodel sm:submodels)
-        if(sm.xvalidation != null && (sm.xvalidation instanceof GLMXValidation)){ // note: xval can be standard Validation for xval models
-          GLMXValidation xval = (GLMXValidation)sm.xvalidation;
-          for(Key k:xval.xval_models){
-            GLMModel m = DKV.get(k).get();
-            m.unlock(job_key);
-          }
+      if(submodels[0].xvalidation != null && (submodels[0].xvalidation instanceof GLMXValidation)) { // note: xval can be standard Validation for xval models
+        GLMXValidation xval = (GLMXValidation) submodels[0].xvalidation;
+        for (Key k : xval.xval_models) {
+          GLMModel m = DKV.get(k).get();
+          m.unlock(job_key);
         }
+      }
   }
   @Override public GLMModel clone(){
     GLMModel res = (GLMModel)super.clone();
