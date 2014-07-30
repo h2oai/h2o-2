@@ -40,8 +40,8 @@ h2o_server = h2o.init()
 #Check out the built-in h2o.deeplearning demo
 demo(h2o.deeplearning)
 
-#First, we unpack the data.zip file
-unzip("data.zip")
+#If not done by the user, we can unpack the data.zip file here
+#unzip("data.zip")
 
 #Section 2.4: Loading Data
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
