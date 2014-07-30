@@ -725,8 +725,9 @@ h2o.deeplearning <- function(x, y, data, key = "", classification = TRUE, nfolds
   parms$'source' = data@key
   parms$response = colargs$y
   parms$ignored_cols = colargs$x_ignore
-  parms$expert_mode = ifelse(!missing(autoencoder) && autoencoder, 1, 0)
-  
+  #parms$expert_mode = ifelse(!missing(autoencoder) && autoencoder, 1, 0)
+  parms$expert_mode = 1 #always enable expert mode from R, since all options can be set
+
   if (! missing(classification)) {
     if (! is.logical(classification)) stop('classification must be TRUE or FALSE')
     parms$classification = as.numeric(classification)
