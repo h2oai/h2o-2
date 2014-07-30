@@ -17,12 +17,20 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED, choices):
     for i in range(rowCount):
         rowData = []
         for j in range(colCount):
-            ri = random.choice(choices)
-            if ri=='0' or ri==' 0':
-                naCnt[j] += 1
+            ri = random.choice(choices[0:1])
             rowData.append(ri)
         rowDataCsv = ",".join(map(str,rowData))
         dsf.write(rowDataCsv + "\n")
+
+    # add one integer at the end. we should get one na?
+    rowData = []
+    for j in range(colCount):
+        ri = 3
+        rowData.append(ri)
+        naCnt[j] += 1
+    rowDataCsv = ",".join(map(str,rowData))
+    dsf.write(rowDataCsv + "\n")
+
     dsf.close()
     return naCnt
 
@@ -44,43 +52,22 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_summary2_NY0(self):
+    def test_mixed_int_enum(self):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         choicesList = [
-            ('N', 'Y', '0'),
-            ('n', 'y', '0'),
-            ('F', 'T', '0'),
-            ('f', 't', '0'),
-            (' N', ' Y', ' 0'),
-            (' n', ' y', ' 0'),
-            (' F', ' T', ' 0'),
-            (' f', ' t', ' 0'),
+            ('abc', 'def', '0'),
         ]
 
         # white space is stripped
         expectedList = [
-            ('N', 'Y', '0'),
-            ('n', 'y', '0'),
-            ('F', 'T', '0'),
-            ('f', 't', '0'),
-            ('N', 'Y', '0'),
-            ('n', 'y', '0'),
-            ('F', 'T', '0'),
-            ('f', 't', '0'),
+            ('abc', 'def', ''),
         ]
 
         tryList = [
             # colname, (min, 25th, 50th, 75th, max)
-            (100, 200, 'x.hex', choicesList[4], expectedList[4]),
-            (100, 200, 'x.hex', choicesList[5], expectedList[5]),
-            (100, 200, 'x.hex', choicesList[6], expectedList[6]),
-            (100, 200, 'x.hex', choicesList[7], expectedList[7]),
-            (100, 200, 'x.hex', choicesList[3], expectedList[3]),
-            (1000, 200, 'x.hex', choicesList[2], expectedList[2]),
-            (10000, 200, 'x.hex', choicesList[1], expectedList[1]),
-            (100000, 200, 'x.hex', choicesList[0], expectedList[0]),
+            (100, 200, 'x.hex', choicesList[0], expectedList[0]),
         ]
 
         timeoutSecs = 10
@@ -102,7 +89,8 @@ class Basic(unittest.TestCase):
 
             print "Creating random", csvPathname
             expectedNaCnt = write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE, choices)
-            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=10, doSummary=False)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', header=0,
+                hex_key=hex_key, timeoutSecs=10, doSummary=False)
             print "Parse result['destination_key']:", parseResult['destination_key']
 
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
