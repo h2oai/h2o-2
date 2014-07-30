@@ -331,7 +331,7 @@ public abstract class CustomParser extends Iced {
     int [] _nnums;
     int [] _nstrings;
     int [] _nzeros;
-    int [] _nlines;
+    int _nlines = 0;
     final int _ncols;
 
     public TypeGuesserDataOut(int ncols){
@@ -340,7 +340,6 @@ public abstract class CustomParser extends Iced {
       _nzeros = new int[ncols];
       _nstrings = new int[ncols];
       _nnums = new int[ncols];
-      _nlines = new int[ncols];
       for(int i = 0; i < ncols; ++i)
         _domains[i] = new HashSet<String>();
     }
@@ -352,9 +351,9 @@ public abstract class CustomParser extends Iced {
       for(int i = 0; i < _ncols; ++i){
         if(_domains[i].size() <= 1 && _nnums[i] >= .2) // clear number
           res[i]._type = ParserSetup.Coltype.NUM;
-        else if(_domains[i].size() > 2 && (double)_nstrings[i]/_nlines[i] >= .95) { // clear string/enum
+        else if(_domains[i].size() > 2 && (double)_nstrings[i]/_nlines >= .95) { // clear string/enum
           res[i]._type = ParserSetup.Coltype.STR;
-          res[i]._strongGuess = (double)_nstrings[i]/_nlines[i] >= .99;
+          res[i]._strongGuess = (double)_nstrings[i]/_nlines >= .99;
         } else if(_domains[i].size() == 2) { // possibly enum
           // check for special cases
           String [] domain = _domains[i].toArray(new String[2]);
@@ -376,13 +375,13 @@ public abstract class CustomParser extends Iced {
             ) {
             res[i]._type = ParserSetup.Coltype.STR;
             res[i]._strongGuess = true;
-            if (_nzeros[i] > 0 && _nzeros[i] + _nstrings[i] == _nlines[i])
+            if (_nzeros[i] > 0 && (Math.abs(_nzeros[i] + _nstrings[i] - _nlines) <= 1))
               res[i]._naStr = new ValueString("0");
           } else { // some generic two strings, could be garbage or enums
-            if ((double)_nstrings[i] / _nlines[i] >= .95) {
+            if ((double)_nstrings[i] / _nlines >= .95) {
               res[i]._type = ParserSetup.Coltype.STR;
-              res[i]._strongGuess = (double)_nstrings[i]/_nlines[i] >= .99;
-            } else if (_nnums[i] > 0 && (double)_nnums[i] / _nlines[i] > .2)
+              res[i]._strongGuess = (double)_nstrings[i]/_nlines >= .99;
+            } else if (_nnums[i] > 0 && (double)_nnums[i] / _nlines > .2)
               res[i]._type = ParserSetup.Coltype.NUM;
           }
         }
@@ -394,7 +393,9 @@ public abstract class CustomParser extends Iced {
     public void setColumnNames(String[] names) {}
 
     @Override
-    public void newLine() {}
+    public void newLine() {
+      ++_nlines;
+    }
 
     @Override
     public boolean isString(int colIdx) {
@@ -403,43 +404,37 @@ public abstract class CustomParser extends Iced {
 
     @Override
     public void addNumCol(int colIdx, long number, int exp) {
-      if(colIdx < _nnums.length) {
-        ++_nlines[colIdx];
+      if(colIdx < _nnums.length)
         if (number == 0)
           ++_nzeros[colIdx];
         else
           ++_nnums[colIdx];
-      }
     }
 
     @Override
     public void addNumCol(int colIdx, double d) {
-      if(colIdx < _nnums.length) {
-        ++_nlines[colIdx];
+      if(colIdx < _nnums.length)
         if (d == 0)
           ++_nzeros[colIdx];
         else
           ++_nnums[colIdx];
-      }
     }
 
     @Override
     public void addInvalidCol(int colIdx) {
-      if(colIdx < _nlines.length)
-      ++_nlines[colIdx];
+
     }
 
     @Override
     public void addStrCol(int colIdx, ValueString str) {
       if(colIdx < _nstrings.length) {
-        ++_nlines[colIdx];
         ++_nstrings[colIdx];
         _domains[colIdx].add(str.toString());
       }
     }
 
     @Override
-    public void rollbackLine() {}
+    public void rollbackLine() {--_nlines;}
 
     @Override
     public void invalidLine(String err) {}
