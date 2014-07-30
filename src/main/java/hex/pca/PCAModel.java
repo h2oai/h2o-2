@@ -74,8 +74,6 @@ public class PCAModel extends Model {
     throw new RuntimeException("TODO Auto-generated method stub");
   }
 
-  @Override public void delete() { super.delete(); }
-
   @Override public String toString(){
     StringBuilder sb = new StringBuilder("PCA Model (key=" + _key + " , trained on " + _dataKey + "):\n");
     return sb.toString();

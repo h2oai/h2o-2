@@ -80,7 +80,7 @@ h2o.deeplearning(x, y, data, key = "", checkpoint = "", classification = TRUE, n
         \item{replicate_training_data}{ Replicate the entire training dataset onto every node for faster training on small datasets}
         \item{single_node_mode}{ Run on a single node for fine-tuning of model parameters}
         \item{shuffle_training_data}{ Enable shuffling of training data (recommended if training data is replicated and train_samples_per_iteration is close to #nodes x #rows)}
-        \item{best_model_key}{ If given, store the best model so far under this key. Model performance is measured by MSE for regression and overall error rate for classification (at F1-optimal threshold for binary classification). There is no default.}
+        \item{best_model_key}{ If given, store the best model so far under this key. Model performance is measured by MSE for regression and overall error rate for classification (at F1-optimal threshold for binary classification). If none is given, a key will automatically be generated.}
         \item{sparse}{ Sparse data handling (Experimental).}
         \item{col_major}{ Use a column major weight matrix for input layer. Can speed up forward propagation, but might slow down backpropagation (Experimental).}
         %- END AUTO-GENERATED CODE

@@ -581,7 +581,7 @@ head(test_recon.hex)
 \item \texttt{replicate\_training\_data}:  Replicate the entire training dataset onto every node for faster training on small datasets. The default enables this option.
 \item \texttt{single\_node\_mode}:  Run on a single node for fine-tuning of model parameters. Can be useful for faster convergence during checkpoint resumes after training on a very large count of nodes (for fast initial convergence). The default disables this (experimental) option.
 \item \texttt{shuffle\_training\_data}: Enable shuffling of training data (on each node). This option is recommended if training data is replicated on N nodes, and the number of training samples per iteration is close to N times the dataset size, where all nodes train will (almost) all the data. It is automatically enabled if the number of training samples per iteration is set to -1 (or to N times the dataset size or larger), otherwise it is disabled by default.
-\item \texttt{best\_model\_key}: If given, store the best model so far under this key. Model performance is measured by MSE for regression and overall error rate for classification (at F1-optimal threshold for binary classification). There is no default.
+\item \texttt{best\_model\_key}: If given, store the best model so far under this key. Model performance is measured by MSE for regression and overall error rate for classification (at F1-optimal threshold for binary classification). If none is given, a key will automatically be generated.
 \end{itemize}
 
 

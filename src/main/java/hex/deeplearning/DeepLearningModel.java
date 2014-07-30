@@ -47,7 +47,9 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
   // Keep the best model so far, based on a single criterion (overall class. error or MSE)
   private float _bestError = Float.MAX_VALUE;
-  private Key _actual_best_model_key;
+
+  @API(help = "Key to the best model so far (based on overall error on scoring data set)")
+  public Key actual_best_model_key;
 
   // return the most up-to-date model metrics
   Errors last_scored() { return errors == null ? null : errors[errors.length-1]; }
@@ -695,7 +697,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     get_params().job_key = jobKey;
     get_params().destination_key = destKey;
     get_params().start_time = System.currentTimeMillis(); //for displaying the model progress
-    _actual_best_model_key = cp.get_params().best_model_key;
+    actual_best_model_key = cp.actual_best_model_key;
     start_time = cp.start_time;
     run_time = cp.run_time;
     training_rows = cp.training_rows; //copy the value to display the right number on the model page before training has started
@@ -721,6 +723,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     start_time = System.currentTimeMillis();
     _timeLastScoreEnter = start_time;
     model_info = new DeepLearningModelInfo(params, dinfo);
+    actual_best_model_key = params.best_model_key != null ? params.best_model_key : Key.make(destKey + "_best");
     Object job = UKV.get(jobKey);
     if (job instanceof DeepLearning)
       get_params().state = ((DeepLearning)UKV.get(jobKey)).state; //make the job state consistent
@@ -880,24 +883,21 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
         if (!get_params().autoencoder) {
           // always keep a copy of the best model so far (based on the following criterion)
-          if (error() < _bestError && get_params().best_model_key != null) {
-            _actual_best_model_key = get_params().best_model_key;
-            final Key bestModelKey = _actual_best_model_key;
+          if (actual_best_model_key != null &&
+                  // if we have a best_model in DKV, then compare against its error()
+                  (UKV.get(actual_best_model_key) != null && error() < UKV.<DeepLearningModel>get(actual_best_model_key).error()
+                          ||
+                          // otherwise, compare against our own _bestError
+                          (UKV.get(actual_best_model_key) == null && error() < _bestError))
+                  ) {
             if (!get_params().quiet_mode)
-              Log.info("Error reduced from " + _bestError + " to " + error() + ". Storing best model so far under key " + bestModelKey.toString() + ".");
+              Log.info("Error reduced from " + _bestError + " to " + error() + ". Storing best model so far under key " + actual_best_model_key.toString() + ".");
             _bestError = error();
-            final Key job = null;
-            final DeepLearningModel cp = this;
-            DeepLearningModel bestModel = new DeepLearningModel(cp, bestModelKey, job, model_info().data_info());
-            bestModel.delete_and_lock(job);
-            bestModel.unlock(job);
-            assert (UKV.get(bestModelKey) != null);
-            assert (bestModel.compareTo(this) <= 0);
-            assert (((DeepLearningModel) UKV.get(bestModelKey)).error() == _bestError);
+            putMeAsBestModel(actual_best_model_key);
 
             // debugging check
             if (false) {
-              bestModel = UKV.get(bestModelKey);
+              DeepLearningModel bestModel = UKV.get(actual_best_model_key);
               final Frame fr = ftest != null ? ftest : ftrain;
               final Frame bestPredict = bestModel.score(fr, ftest != null ? adaptCM : false);
               final Frame hitRatio_bestPredict = new Frame(bestPredict);
@@ -939,6 +939,12 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
               || (!isClassifier() && last_scored().train_mse <= get_params().regression_stop) ) {
         Log.info("Achieved requested predictive accuracy on the training data. Model building completed.");
         keep_running = false;
+      }
+      // During grid search, it's possible to never beat the (shared) best_model
+      // But at the end of model_building, this model should still point to the overall winner
+      // So before we put it into DKV, update its (actual) best model key.
+      if (!keep_running && get_params().best_model_key != null && UKV.get(get_params().best_model_key) != null && actual_best_model_key == null) {
+        actual_best_model_key = get_params().best_model_key;
       }
       update(job_key);
 
@@ -1173,15 +1179,14 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
     job().toHTML(sb);
     final Key val_key = get_params().validation != null ? get_params().validation._key : null;
-    final Key bestModelKey = _actual_best_model_key;
     sb.append("<div class='alert'>Actions: "
             + (jobKey != null && UKV.get(jobKey) != null && Job.isRunning(jobKey) ? "<i class=\"icon-stop\"></i>" + Cancel.link(jobKey, "Stop training") + ", " : "")
             + Inspect2.link("Inspect training data (" + _dataKey + ")", _dataKey) + ", "
             + (val_key != null ? (Inspect2.link("Inspect validation data (" + val_key + ")", val_key) + ", ") : "")
             + water.api.Predict.link(_key, "Score on dataset") + ", "
             + DeepLearning.link(_dataKey, "Compute new model", null, responseName(), val_key)
-            + (bestModelKey != null && UKV.get(bestModelKey) != null && bestModelKey != _key ? ", " + DeepLearningModelView.link("Go to best model", bestModelKey) : "")
-            + (((jobKey != null && UKV.get(jobKey) == null)) || UKV.get(jobKey) != null && Job.isEnded(jobKey) ? ", <i class=\"icon-play\"></i>" + DeepLearning.link(_dataKey, "Continue training this model", _key, responseName(), val_key) : "")
+            + (actual_best_model_key != null && UKV.get(actual_best_model_key) != null && actual_best_model_key != _key ? ", " + DeepLearningModelView.link("Go to best model", actual_best_model_key) : "")
+            + (((jobKey != null && UKV.get(jobKey) == null)) || (jobKey != null && UKV.get(jobKey) != null && Job.isEnded(jobKey)) ? ", <i class=\"icon-play\"></i>" + DeepLearning.link(_dataKey, "Continue training this model", _key, responseName(), val_key) : "")
             + "</div>");
 
     DocGen.HTML.paragraph(sb, "Model Key: " + _key);
@@ -1775,6 +1780,23 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     fileCtxSb.p(model);
     toJavaUnifyPreds(bodySb);
     toJavaFillPreds0(bodySb);
+  }
+
+  // helper to push this model to another key (for keeping good models)
+  private void putMeAsBestModel(Key bestModelKey) {
+    final Key job = null;
+    final DeepLearningModel cp = this;
+    DeepLearningModel bestModel = new DeepLearningModel(cp, bestModelKey, job, model_info().data_info());
+    bestModel.delete_and_lock(job);
+    bestModel.unlock(job);
+    assert (UKV.get(bestModelKey) != null);
+    assert (bestModel.compareTo(this) <= 0);
+    assert (((DeepLearningModel) UKV.get(bestModelKey)).error() == _bestError);
+  }
+
+  @Override public void delete( ) {
+    if (actual_best_model_key != null) DKV.remove(actual_best_model_key);
+    super.delete();
   }
 }
 
