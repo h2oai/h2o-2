@@ -53,10 +53,18 @@ class Basic(unittest.TestCase):
             ('n', 'y', '0'),
             ('F', 'T', '0'),
             ('f', 't', '0'),
+            (' N', ' Y', ' 0'),
+            (' n', ' y', ' 0'),
+            (' F', ' T', ' 0'),
+            (' f', ' t', ' 0'),
         ]
 
         tryList = [
             # colname, (min, 25th, 50th, 75th, max)
+            (100, 200, 'x.hex', choicesList[4]),
+            (100, 200, 'x.hex', choicesList[5]),
+            (100, 200, 'x.hex', choicesList[6]),
+            (100, 200, 'x.hex', choicesList[7]),
             (100, 200, 'x.hex', choicesList[3]),
             (1000, 200, 'x.hex', choicesList[2]),
             (10000, 200, 'x.hex', choicesList[1]),
