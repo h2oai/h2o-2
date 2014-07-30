@@ -500,8 +500,8 @@ We use this framework to develop an anomaly detection demonstration using a deep
 
 \begin{spverbatim}
 
-train_ecg.hex = h2o.uploadFile(localH2O, path="ecg_train.csv", header=F, sep=",", key="train_ecg.hex") 
-test_ecg.hex = h2o.uploadFile(localH2O, path="ecg_test.csv", header=F, sep=",", key="test_ecg.hex") 
+train_ecg.hex = h2o.uploadFile(h2o_server, path="ecg_train.csv", header=F, sep=",", key="train_ecg.hex") 
+test_ecg.hex = h2o.uploadFile(h2o_server, path="ecg_test.csv", header=F, sep=",", key="test_ecg.hex") 
 
 #Train deep autoencoder learning model on "normal" training data, y ignored 
 anomaly_model = h2o.deeplearning(x=1:210, y=1, train_ecg.hex, activation = "Tanh", classification=F, autoencoder=T, hidden = c(50,20,50), l1=1E-4, 
