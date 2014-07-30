@@ -2689,6 +2689,31 @@ class H2O(object):
         if self.java_extra_args is not None:
             args += ['%s' % self.java_extra_args]
 
+        if self.use_debugger:
+            # currently hardwire the base port for debugger to 8000
+            # increment by one for every node we add
+            # sence this order is different than h2o cluster order, print out the ip and port for the user
+            # we could save debugger_port state per node, but not really necessary (but would be more consistent)
+            debuggerBasePort = 8000
+            if self.node_id is None:
+                debuggerPort = debuggerBasePort
+            else:
+                debuggerPort = debuggerBasePort + self.node_id
+
+            if self.http_addr:
+                a = self.http_addr
+            else:
+                a = "localhost"
+
+            if self.port:
+                b = str(self.port)
+            else:
+                b = "h2o determined"
+
+            # I guess we always specify port?
+            print "You can attach debugger at port %s for jvm at %s:%s" % (debuggerPort, a, b)
+            args += ['-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=%s' % debuggerPort]
+
         args += ["-ea"]
 
         if self.use_maprfs:
@@ -2724,31 +2749,6 @@ class H2O(object):
             args += [
                 "--port=%d" % self.port,
             ]
-
-        if self.use_debugger:
-            # currently hardwire the base port for debugger to 8000
-            # increment by one for every node we add
-            # sence this order is different than h2o cluster order, print out the ip and port for the user
-            # we could save debugger_port state per node, but not really necessary (but would be more consistent)
-            debuggerBasePort = 8000
-            if self.node_id is None:
-                debuggerPort = debuggerBasePort
-            else:
-                debuggerPort = debuggerBasePort + self.node_id
-
-            if self.http_addr:
-                a = self.http_addr
-            else:
-                a = "localhost"
-
-            if self.port:
-                b = str(self.port)
-            else:
-                b = "h2o determined"
-
-            # I guess we always specify port?
-            print "You can attach debugger at port %s for jvm at %s:%s" % (debuggerPort, a, b)
-            args += ['-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=%s' % debuggerPort]
 
         if self.use_flatfile:
             args += [

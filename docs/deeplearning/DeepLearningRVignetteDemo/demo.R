@@ -15,8 +15,8 @@ if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
 
 version = "****" 
 
-### Opportunity to manually set the version (must be at least 1437)
-#version = "1437"
+### Opportunity to manually set the version (must be at least 1438)
+#version = "1438"
 
 # Fall-back: Automatically get the latest version
 if (version == "****") {
@@ -40,8 +40,8 @@ h2o_server = h2o.init()
 #Check out the built-in h2o.deeplearning demo
 demo(h2o.deeplearning)
 
-#First, we unpack the data.zip file
-unzip("data.zip")
+#If not done by the user, we can unpack the data.zip file here
+#unzip("data.zip")
 
 #Section 2.4: Loading Data
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -111,8 +111,8 @@ mnist_checkpoint_model = h2o.deeplearning(x=1:784, y=785, data=train_images.hex,
 #Section 4: Deep autoencoders used for anomaly detection
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-train_ecg.hex = h2o.uploadFile(localH2O, path="ecg_train.csv", header=F, sep=",", key="train_ecg.hex") 
-test_ecg.hex = h2o.uploadFile(localH2O, path="ecg_test.csv", header=F, sep=",", key="test_ecg.hex") 
+train_ecg.hex = h2o.uploadFile(h2o_server, path="ecg_train.csv", header=F, sep=",", key="train_ecg.hex") 
+test_ecg.hex = h2o.uploadFile(h2o_server, path="ecg_test.csv", header=F, sep=",", key="test_ecg.hex") 
 
 #Train deep autoencoder learning model on "normal" training data, y ignored 
 anomaly_model = h2o.deeplearning(x=1:210, y=1, train_ecg.hex, activation = "Tanh", 
