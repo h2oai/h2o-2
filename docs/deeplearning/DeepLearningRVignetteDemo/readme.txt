@@ -8,7 +8,7 @@ Please check frequently for updates.
 
 Prerequisites:
 1) R needs to be installed, upgrade to version 3.1.x if you encounter any issues.
-2) Download data.zip and demo.R to a your local folder (click on link and view as raw, then "save as").
+2) Download data.zip and demo.R to a your local folder (click on link and right-click on "view the full file" to "save as").
 3) From your terminal, change directory to your local folder that contains the .zip file and the demo.R script.
 4) Unpack the .zip file ("unzip data.zip") to obtain the .csv files. 
 5) Check that the .csv files are in the same directory as the demo.R file.
