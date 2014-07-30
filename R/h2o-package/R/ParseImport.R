@@ -407,7 +407,7 @@ h2o.saveModel <- function(object, dir="", name="", force=FALSE) {
   force = ifelse(force==TRUE, 1, 0)
   res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_SaveModel, model=object@key, path=gsub('//','/',paste(dir,name,sep='/')), force=force)
   gsub('//','/',paste(dir,name,sep='/'))
-  }
+}
 
 # ------------------- Load H2O Model from Disk ----------------------------------------------------
 #h2o.loadModel <- function(object, path="") {
