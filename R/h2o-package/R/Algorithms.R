@@ -198,7 +198,10 @@ h2o.glm <- function(x, y, data, key = "", family, nfolds = 0, alpha = 0.5, nlamb
                   beta_epsilon=epsilon, standardize=standardize, max_predictors = max_predictors,
                   variable_importances = variable_importances, use_all_factor_levels = use_all_factor_levels, h2o = data@h2o)
     .h2o.__waitOnJob(data@h2o, res$job_key)
-    h2o.getModel(h2o = data@h2o, key = as.character(res$destination_key)) #.h2o.glm.get_model(data, res$destination_key, return_all_lambda, params)
+    if (lambda_search) {
+      return(.h2o.glm.get_model(data, res$destination_key, return_all_lambda, params))
+    }
+    else h2o.getModel(h2o = data@h2o, key = as.character(res$destination_key)) #.h2o.glm.get_model(data, res$destination_key, return_all_lambda, params)
   } else
     .h2o.glm2grid.internal(x_ignore, args$y, data, key, family, nfolds, alpha, nlambda, lambda.min.ratio, lambda, epsilon,
                            standardize, prior, tweedie.p, iter.max, higher_accuracy, lambda_search, return_all_lambda,
@@ -1589,12 +1592,12 @@ h2o.anomaly <- function(data, model, key = "", threshold = -1.0) {
       resH = .h2o.__remoteSend(data@h2o, model_view, model=allModels[[i]]$destination_key)
     else
       resH = .h2o.__remoteSend(data@h2o, model_view, '_modelKey'=allModels[[i]]$destination_key)
-    
+
     myModelSum[[i]] = switch(algo, GBM = .h2o.__getGBMSummary(resH[[3]], params), KM = .h2o.__getKM2Summary(resH[[3]]), RF = .h2o.__getDRFSummary(resH[[3]]), DeepLearning = .h2o.__getDeepLearningSummary(resH[[3]]), .h2o.__getSpeeDRFSummary(resH[[3]]))
     myModelSum[[i]]$prediction_error = allErrs[[i]]
     myModelSum[[i]]$run_time = allModels[[i]]$end_time - allModels[[i]]$start_time
     modelOrig = results_fun(resH[[3]], params)
-    
+
     if(algo == "KM")
       result[[i]] = new(model_obj, key=allModels[[i]]$destination_key, data=data, model=modelOrig)
     else {
