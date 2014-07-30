@@ -40,6 +40,13 @@ public class DeepLearning extends Job.ValidatedJob {
   public Key best_model_key = null;
 
   /**
+   * If enabled, store the best model under the destination key of this model at the end of training.
+   * Only applicable if training is not cancelled.
+   */
+  @API(help = "If enabled, override the final model with the best model found so far", filter= Default.class, json = true)
+  public boolean override_with_best_model = true;
+
+  /**
    * Unlock expert mode parameters than can affect model building speed,
    * predictive accuracy and scoring. Leaving expert mode parameters at default
    * values is fine for many problems, but best results on complex datasets are often
@@ -850,6 +857,14 @@ public class DeepLearning extends Job.ValidatedJob {
       if (initial_weight_distribution == InitialWeightDistribution.UniformAdaptive) {
         Log.info("Ignoring initial_weight_scale for UniformAdaptive weight distribution.");
       }
+      if (n_folds != 0) {
+        if (best_model_key != null) {
+          Log.info("Ignoring best_model_key, since the final model is the only scored model with n-fold cross-validation.");
+        }
+        if (override_with_best_model) {
+          Log.info("Ignoring override_with_best_model, since the final model is the only scored model with n-fold cross-validation.");
+        }
+      }
     }
 
     if(loss == Loss.Automatic) {
@@ -1023,6 +1038,23 @@ public class DeepLearning extends Job.ValidatedJob {
               new DeepLearningTask2(train, model.model_info(), rowUsageFraction).invokeOnAllNodes().model_info() ) : //replicated data + multi-node mode
               new DeepLearningTask(model.model_info(), rowUsageFraction).doAll(train).model_info()); //distributed data (always in multi-node mode)
       while (model.doScoring(train, trainScoreFrame, validScoreFrame, self(), getValidAdaptor()));
+
+      // replace the model with the best model so far (if it's better)
+      if (!isCancelledOrCrashed() && override_with_best_model && model.actual_best_model_key != null && n_folds == 0) {
+        DeepLearningModel best_model = UKV.get(model.actual_best_model_key);
+        if (best_model != null && best_model.error() < model.error()) {
+          Log.info("Setting the model to be the best model so far (based on scoring history).");
+          DeepLearningModel.DeepLearningModelInfo mi = best_model.model_info().deep_clone();
+          // Don't cheat - count full amount of training samples, since that's the amount of training it took to train (without finding anything better)
+          mi.set_processed_global(model.model_info().get_processed_global());
+          mi.set_processed_local(model.model_info().get_processed_local());
+          model.set_model_info(mi);
+          model.update(self());
+          model.doScoring(train, trainScoreFrame, validScoreFrame, self(), getValidAdaptor());
+          assert(best_model.error() == model.error());
+        }
+      }
+
       Log.info(model);
       Log.info("Finished training the Deep Learning model.");
       return model;
