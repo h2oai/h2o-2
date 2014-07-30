@@ -15,8 +15,8 @@ if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
 
 version = "****" 
 
-### Opportunity to manually set the version (must be at least 1437)
-#version = "1437"
+### Opportunity to manually set the version (must be at least 1438)
+#version = "1438"
 
 # Fall-back: Automatically get the latest version
 if (version == "****") {
