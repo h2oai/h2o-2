@@ -15,7 +15,19 @@ check.deeplearning.gridlayers <- function(conn) {
   expect_equal(length(hh@model), 2)
   
   hh_params <- lapply(hh@model, function(x) { x@model$params$hidden })
-#  expect_equal(hh_params, hidden_layers)
+  expect_equal(length(hh_params), length(hidden_layers))
+  expect_true(all(hh_params %in% hidden_layers))
+
+  
+  cat("\n\n HH_PARAMS:")
+
+  print(hh_params)
+  
+  cat("\n\n HIDDEN LAYERS:")
+  
+  print(hidden_layers)
+  
+  expect_true(all(hh_params %in% hidden_layers))
   print(hh)
   
   testEnd()
