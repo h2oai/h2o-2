@@ -6,7 +6,7 @@ import water.*;
  * The empty-compression function, where data is in long-pairs for UUIDs
  */
 public class C16Chunk extends Chunk {
-  protected static final long _LO_NA = Long.MIN_VALUE;
+  protected static final long _LO_NA = Long.MAX_VALUE;
   protected static final long _HI_NA = 0;
   C16Chunk( byte[] bs ) { _mem=bs; _start = -1; _len = _mem.length>>4; }
   @Override protected final long   at8_impl( int i ) { throw new IllegalArgumentException("at8 but 16-byte UUID");  }
@@ -38,14 +38,11 @@ public class C16Chunk extends Chunk {
     return this;
   }
   @Override NewChunk inflate_impl(NewChunk nc) {
-    //nothing to inflate - just copy
-    nc._ls = MemoryManager.malloc8 (_len);
-    nc._ds = MemoryManager.malloc8d(_len);
-    nc._len = _len;
-    nc._len2 = _len;
-    for( int i=0; i<_len; i++ ) { //use unsafe?
-      nc._ls[i] =                         UDP.get8(_mem,(i<<4)  );
-      nc._ds[i] = Double.longBitsToDouble(UDP.get8(_mem,(i<<4)+8));
+    nc.set_len(nc.set_sparseLen(0));
+    for( int i=0; i< len(); i++ ) {
+      long lo = UDP.get8(_mem,(i<<4)  );
+      long hi = UDP.get8(_mem,(i << 4) + 8);
+      nc.addUUID(lo, hi);
     }
     return nc;
   }

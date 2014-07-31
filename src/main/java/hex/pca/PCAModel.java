@@ -45,15 +45,15 @@ public class PCAModel extends Model {
   int num_pc;
 
   @API(help = "Model parameters")
-  PCA params;
+  PCA parameters;
 
   public PCAModel(PCA params, Key selfKey, Key dataKey, DataInfo dinfo, GramTask gramt, double[] sdev, double[] propVar, double[] cumVar, double[][] eigVec, int rank, int num_pc) {
-    super(selfKey, dataKey, dinfo._adaptedFrame);
+    super(selfKey, dataKey, dinfo._adaptedFrame, /* priorClassDistribution */ null);
     this.sdev = sdev;
     this.propVar = propVar;
     this.cumVar = cumVar;
     this.eigVec = eigVec;
-    this.params = params;
+    this.parameters = params;
     this.catOffsets = dinfo._catOffsets;
     this.namesExp = namesExp();
     this.rank = rank;
@@ -64,7 +64,7 @@ public class PCAModel extends Model {
     this.normMul = gramt.normMul();
   }
 
-  @Override public final PCA get_params() { return params; }
+  @Override public final PCA get_params() { return parameters; }
   @Override public final Request2 job() { return get_params(); }
 
   public double[] sdev() { return sdev; }
@@ -73,8 +73,6 @@ public class PCAModel extends Model {
   @Override protected float[] score0(double[] data, float[] preds) {
     throw new RuntimeException("TODO Auto-generated method stub");
   }
-
-  @Override public void delete() { super.delete(); }
 
   @Override public String toString(){
     StringBuilder sb = new StringBuilder("PCA Model (key=" + _key + " , trained on " + _dataKey + "):\n");

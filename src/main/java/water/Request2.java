@@ -2,12 +2,14 @@ package water;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+
 import hex.GridSearch;
 import water.api.DocGen;
 import water.api.Request;
 import water.api.RequestArguments;
 import water.api.RequestBuilders.Response;
 import water.api.RequestServer.API_VERSION;
+import water.api.RequestStatics.RequestType;
 import water.fvec.Frame;
 import water.util.Log;
 import water.util.Utils;
@@ -429,6 +431,16 @@ public abstract class Request2 extends Request {
       if( !increment(counters, values) )
         break;
     }
+    // Check the validity of parameters for the first job - if something is
+    // wrong with it then reject whole grid search
+    if (jobs.size() > 0) {
+      assert type != RequestType.query;
+      Job aJob = jobs.get(0);
+      String query4job0 = aJob.checkArguments(aJob._parms, type);
+      if (query4job0!=null)
+        return wrap(server, query4job0, type);
+    }
+    // Create and serve grid search
     GridSearch grid = new GridSearch();
     grid.jobs = jobs.toArray(new Job[jobs.size()]);
     return grid.superServeGrid(server, parms, type);
@@ -498,7 +510,7 @@ public abstract class Request2 extends Request {
    * Arguments to fields casts.
    */
 
-  private static boolean compatible(Class type, Object o) {
+  private static boolean compatible(Class type, Iced o) {
     if( type == Frame.class && o instanceof ValueArray )
       return true;
     return type.isInstance(o);

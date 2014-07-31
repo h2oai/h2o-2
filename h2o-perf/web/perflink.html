@@ -79,13 +79,29 @@
                     </div>
                 </div>
             </div>
-            <div id="cpu_svg"></div>
+            <h3>NB: Graphs cover the <u><em>entire test run!</em></u></h3>
+            <div id="header_div"></div>
+            <div id="cpu_svg">
+                <div id="cpu_svg1"></div>
+                <div id="cpu_svg2"></div>
+                <div id="cpu_svg3"></div>
+                <div id="cpu_svg4"></div>
+            </div>
+
             <div id="rss_svg">
+                <div id="rss_svg1"></div>
+                <div id="rss_svg2"></div>
+                <div id="rss_svg3"></div>
+                <div id="rss_svg4"></div>
+            </div>
+
               <script>
                 var params = GetUrlValue().split('&');
-                console.log(params)
-                var test_run_id = params[0].split('=')[1]
-                var test_name = params[1].split('=')[1]
+                var test_run_id = params[0].split('=')[1];
+                var test_name = params[1].split('=')[1];
+                var num_hosts = params[2].split('=')[1];
+                var run_date  = params[3].split('=')[1];
+
                 var h2 = document.createElement("H5");
                 var h = document.createElement("H5");
                 var h3 = document.createElement("H4");
@@ -98,20 +114,19 @@
                 h2.appendChild(t2);
                 h3.appendChild(t3);
                 h4.appendChild(t4);
-                document.getElementById("cpu_svg").appendChild(h);
-                document.getElementById("cpu_svg").appendChild(h2);
+                document.getElementById("header_div").appendChild(h);
+                document.getElementById("header_div").appendChild(h2);
+                document.getElementById("header_div").appendChild(document.createElement('hr'));
+                document.getElementById("header_div").appendChild(h3);
                 document.getElementById("cpu_svg").appendChild(document.createElement('hr'));
-                document.getElementById("cpu_svg").appendChild(h3);
-                document.getElementById("cpu_svg").appendChild(document.createElement('hr'));
-                document.getElementById("rss_svg").appendChild(h4);
-                //$(document).ready(function() {
-                //  doQuery('../prototype/php/getJSON.php');
-                //});
+                document.getElementById("cpu_svg").appendChild(h4);
+
+                $(document).ready(function() {
+                    showPerfGraphs(test_name, num_hosts, run_date)
+                });
               </script>
-              </div>
               <br />
             </div>
-        </div>
     </body>
 </html>
 

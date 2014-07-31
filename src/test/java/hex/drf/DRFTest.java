@@ -1,17 +1,13 @@
 package hex.drf;
 
 import hex.drf.DRF.DRFModel;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import water.Key;
-import water.TestUtil;
-import water.UKV;
+
+import org.junit.*;
+
+import water.*;
 import water.api.DRFModelView;
 import water.fvec.Frame;
 import water.fvec.Vec;
-
-import java.util.Arrays;
 
 public class DRFTest extends TestUtil {
 
@@ -31,7 +27,6 @@ public class DRFTest extends TestUtil {
   static final long[]   a(long ...arr)   { return arr; }
   static final long[][] a(long[] ...arr) { return arr; }
 
-  //  @Ignore
   @Test public void testClassIris1() throws Throwable {
 
     // iris ntree=1
@@ -46,7 +41,6 @@ public class DRFTest extends TestUtil {
           s("Iris-setosa","Iris-versicolor","Iris-virginica") );
   }
 
-  //  @Ignore
   //[[30, 0, 0], [0, 31, 3], [0, 4, 32]], but was: [[28, 0, 0], [0, 30, 2], [0, 2, 28]]: arrays first differed at element [0]; expected:<30> but was:<28>
   @Test public void testClassIris5() throws Throwable {
     // iris ntree=50
@@ -60,18 +54,17 @@ public class DRFTest extends TestUtil {
           s("Iris-setosa","Iris-versicolor","Iris-virginica") );
   }
 
-  //  @Ignore
   @Test public void testClassCars1() throws Throwable {
     // cars ntree=1
     basicDRFTestOOBE(
         "./smalldata/cars.csv","cars.hex",
         new PrepData() { @Override int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.find("cylinders"); } },
         1,
-        a( a(5,  2, 0, 3, 1),
-           a(0, 54, 0, 0, 1),
+        a( a(1,  0, 0, 1, 0),
+           a(3, 55, 0, 1, 1),
            a(0,  0, 0, 0, 0),
-           a(0,  1, 0,16, 1),
-           a(0,  0, 0, 1,33)),
+           a(1,  2, 0,16, 2),
+           a(0,  0, 0, 2,33)),
         s("3", "4", "5", "6", "8"));
   }
 
@@ -80,11 +73,11 @@ public class DRFTest extends TestUtil {
         "./smalldata/cars.csv","cars.hex",
         new PrepData() { @Override int prep(Frame fr) { UKV.remove(fr.remove("name")._key); return fr.find("cylinders"); } },
         5,
-        a( a(5,   1, 0,  1,   0),
-           a(1, 174, 1,  3,   0),
+        a( a(3,   1, 0,  0,   0),
+           a(2, 174, 1,  3,   0),
            a(0,   2, 0,  1,   0),
-           a(0,   4, 1, 60,   2),
-           a(0,   0, 0,  0,  93)),
+           a(1,   4, 1, 60,   2),
+           a(0,   0, 0,  1,  93)),
         s("3", "4", "5", "6", "8"));
   }
 
@@ -199,6 +192,7 @@ public class DRFTest extends TestUtil {
       drf.invoke();
       // Get the model
       model = UKV.get(drf.dest());
+      Assert.assertTrue(model.get_params().state == Job.JobState.DONE); //HEX-1817
       testHTML(model);
       // And compare CMs
       assertCM(expCM, model.cms[model.cms.length-1]._arr);
@@ -217,11 +211,5 @@ public class DRFTest extends TestUtil {
       if( model != null ) model.delete(); // Remove the model
       if( pred != null ) pred.delete();
     }
-  }
-
-  void assertCM(long[][] expectedCM, long[][] givenCM) {
-    Assert.assertEquals("Confusion matrix dimension does not match", expectedCM.length, givenCM.length);
-    String m = "Expected: " + Arrays.deepToString(expectedCM) + ", but was: " + Arrays.deepToString(givenCM);
-    for (int i=0; i<expectedCM.length; i++) Assert.assertArrayEquals(m, expectedCM[i], givenCM[i]);
   }
 }

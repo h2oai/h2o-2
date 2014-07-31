@@ -10,9 +10,10 @@ H2O: Gradient Boosted Machines
 	 on a parsed data set.
 }
 \usage{
-h2o.gbm(x, y, distribution = "multinomial", data, n.trees = 10, interaction.depth = 5, 
-  n.minobsinnode = 10, shrinkage = 0.1, n.bins = 100, importance = FALSE, nfolds = 0,
-  validation, balance.classes = FALSE, max.after.balance.size = 5)
+h2o.gbm(x, y, distribution = "multinomial", data, key = "", n.trees = 10, 
+  interaction.depth = 5, n.minobsinnode = 10, shrinkage = 0.1, n.bins = 100, 
+  importance = FALSE, nfolds = 0, validation, balance.classes = FALSE, 
+  max.after.balance.size = 5)
 }
 \arguments{
   \item{x}{
@@ -26,6 +27,9 @@ The type of GBM model to be produced: classification is "multinomial" (default),
 }
   \item{data}{
 An \code{\linkS4class{H2OParsedData}} object containing the variables in the model.
+}
+  \item{key}{
+(Optional) The unique hex key assigned to the resulting model. If none is given, a key will automatically be generated.
 }
   \item{n.trees}{
 (Optional) Number of trees to grow. Must be a nonnegative integer.

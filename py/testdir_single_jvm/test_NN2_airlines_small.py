@@ -20,7 +20,7 @@ class Basic(unittest.TestCase):
         ###h2o.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_NN_mnist(self):
+    def test_NN_airlines_small(self):
         #h2b.browseTheCloud()
         h2o.beta_features = True
         csvPathname_train = 'airlines/AirlinesTrain.csv.zip'
@@ -66,8 +66,8 @@ class Basic(unittest.TestCase):
             'classification'               : 1,
             'destination_key'              : model_key,
             }
-        expectedErr = 0.50 ## expected validation error for the above model
-        relTol = 0.20 ## 20% rel. error tolerance due to Hogwild!
+        expectedErr = 0.45 ## expected validation error for the above model
+        relTol = 0.50 ## 20% rel. error tolerance due to Hogwild!
 
         timeoutSecs = 600
         start = time.time()

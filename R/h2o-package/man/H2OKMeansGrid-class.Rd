@@ -5,7 +5,7 @@
 
 \title{Class \code{"H2OKMeansGrid"}}
 \description{
-Object representing the models built by a H2O K-Means grid search on FluidVecs.
+Object representing the models built by a H2O K-Means grid search.
 }
 \section{Objects from the Class}{
 Objects can be created by calls of the form \code{new("H2OKMeansGrid", ...)}.
@@ -15,8 +15,8 @@ Objects can be created by calls of the form \code{new("H2OKMeansGrid", ...)}.
   \describe{
     \item{\code{key}:}{Object of class \code{"character"}, representing the unique hex key that identifies the model.}
     \item{\code{data}:}{Object of class \code{"H2OParsedData"}, which is the input data used to build the model.}
-    \item{\code{model}:}{Object of class \code{"list"} containing \code{"H2OKMeansModel"} objects representing the models returned by the K-Means (FluidVecs) grid search.}
-    \item{\code{sumtable}:}{Object of class \code{"list"} containing summary statistics of all the models returned by the K-Means (FluidVecs) grid search.}
+    \item{\code{model}:}{Object of class \code{"list"} containing \code{"H2OKMeansModel"} objects representing the models returned by the K-Means grid search.}
+    \item{\code{sumtable}:}{Object of class \code{"list"} containing summary statistics of all the models returned by the K-Means grid search.}
   }
 }
 \section{Extends}{

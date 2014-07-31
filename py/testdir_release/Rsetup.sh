@@ -1,5 +1,6 @@
 #!/bin/bash
 
+echo "Can use -p or -f arg, for incremental and full install, or use the commands and files below"
 #****************************************************************************************************
 CLEAN_R_STUFF=0
 REMOVE_H2O_PACKAGES=0
@@ -75,7 +76,13 @@ myPackages = rownames(installed.packages())
 if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
 # this will only remove from the first library in .libPaths()
 # may need permission to remove from other libraries
-if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
+# remove from all possible locations in .libPaths()
+if ("h2o" %in% rownames(installed.packages())) { 
+    remove.packages("h2o",.libPaths()[1]) 
+    remove.packages("h2o",.libPaths()[2]) 
+    remove.packages("h2o",.libPaths()[3]) 
+    remove.packages("h2o",.libPaths()[4]) 
+}
 !
 fi
 
@@ -83,10 +90,15 @@ if [[ $INSTALL_R_PACKAGES -eq 1 || $CREATE_FILES_ONLY -eq 1 ]]
 then 
     cat <<!  >> /tmp/libPaths.cmd
 # make the install conditional. Don't install if it's already there
+# update if allready there?
 usePackage <- function(p) {
     local({r <- getOption("repos"); r["CRAN"] <- "http://cran.us.r-project.org"; options(repos = r)})
-    if (!is.element(p, installed.packages()[,1]))
+    if (is.element(p, installed.packages()[,1])) {
+        update.packages(p, dep = TRUE)
+    }
+    else {
         install.packages(p, dep = TRUE)
+    }
     require(p, character.only = TRUE)
 }
 
@@ -107,6 +119,8 @@ usePackage("gplots")
 usePackage("ROCR")
 usePackage("digest")
 usePackage("penalized")
+usePackage("rgl")
+usePackage("randomForest")
 
 # these came from source('../findNSourceUtils.R')
 usePackage("expm")
@@ -118,6 +132,7 @@ usePackage("gbm")
 usePackage("lattice")
 # usePackage("parallel")
 usePackage("RUnit")
+usePackage("plyr")
 
 # usePackage("h2o")
 # usePackage("h2oRClient")
@@ -140,4 +155,18 @@ else
 fi
 
 echo "If RCurl didn't install, you probably need libcurl-devel. ('sudo yum install libcurl-devel' on centos). libcurl not enough?"
-echo "you might want to check 'apt-get install libatlas-dev libblas-dev' for liblinear also, and lapack for Matrix"
+echo "you might want to check 'sudo apt-get install libatlas-dev libblas-dev' for liblinear also, and lapack for Matrix"
+echo "sudo apt-get install libblas3gf"
+echo "sudo apt-get install libblas-doc"
+echo "sudo apt-get install libblas-dev"
+echo "sudo apt-get install liblapack3gf"
+echo "sudo apt-get install liblapack-doc"
+echo "sudo apt-get install liblapack-dev"
+
+echo ""
+echo "If rgl didn't install because of GL/gl.h in ubuntu, do this install first"
+echo "sudo apt-get install libglu1-mesa-dev"
+echo ""
+echo "If it complained about no package named 'h2o' you need to do a make"
+
+

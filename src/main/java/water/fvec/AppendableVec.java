@@ -1,7 +1,6 @@
 package water.fvec;
 
 import water.*;
-import water.fvec.Vec;
 import water.util.Utils;
 import java.util.Arrays;
 
@@ -49,19 +48,18 @@ public class AppendableVec extends Vec {
       _espc   = Arrays.copyOf(_espc,_espc.length<<1);
       _chunkTypes = Arrays.copyOf(_chunkTypes,_chunkTypes.length<<1);
     }
-    _espc[cidx] = chk._len2;
+    _espc[cidx] = chk._len;
     _chunkTypes[cidx] = chk.type();
     _naCnt += chk._naCnt;
     _strCnt += chk._strCnt;
     for( int i=0; i<_timCnt.length; i++ ) _timCnt[i] += chk._timCnt[i];
-    _totalCnt += chk._len2;
+    _totalCnt += chk._len;
   }
 
   // What kind of data did we find?  NA's?  Strings-only?  Floats or Ints?
   boolean shouldBeEnum() {
-    // TODO: we declare column to be string/enum only if it does not have ANY numbers in it.
-    if( _strCnt > 0 && (_strCnt + _naCnt) == _totalCnt ) return true;
-    return false;
+    // We declare column to be string/enum only if it does not have ANY numbers in it.
+    return _strCnt > 0 && (_strCnt + _naCnt) == _totalCnt;
   }
 
   // Class 'reduce' call on new vectors; to combine the roll-up info.
@@ -112,11 +110,11 @@ public class AppendableVec extends Vec {
         if(_chunkTypes[i] == ENUM)
           DKV.put(chunkKey(i), new C0DChunk(Double.NaN, (int)_espc[i]),fs);
     }
-    // enum wins over UUID
-    if( hasUUID && hasEnum ) {
-      hasUUID=false;
+    // UUID wins over enum & number
+    if( hasUUID && (hasEnum || hasNumber) ) {
+      hasEnum=hasNumber=false;
       for(int i = 0; i < nchunk; ++i)
-        if(_chunkTypes[i] == UUID)
+        if((_chunkTypes[i] & UUID)==0)
           DKV.put(chunkKey(i), new C0DChunk(Double.NaN, (int)_espc[i]),fs);
     }
 
@@ -138,8 +136,6 @@ public class AppendableVec extends Vec {
 
     // Compute elems-per-chunk.
     // Roll-up elem counts, so espc[i] is the starting element# of chunk i.
-    // TODO: Complete fail: loads all data locally - will force OOM.  Needs to be
-    // an RPC to test Key existence, and return length & other metadata
     long espc[] = new long[nchunk+1]; // Shorter array
     long x=0;                   // Total row count so far
     for( int i=0; i<nchunk; i++ ) {
@@ -172,8 +168,6 @@ public class AppendableVec extends Vec {
   int elem2ChunkIdx( long i ) { throw H2O.fail(); }
   @Override
   public long chunk2StartElem( int cidx ) { throw H2O.fail(); }
-  public long   get ( long i ) { throw H2O.fail(); }
-  public double getd( long i ) { throw H2O.fail(); }
 
   @Override
   public long byteSize() { return 0; }

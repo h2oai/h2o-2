@@ -6,14 +6,14 @@ setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 source('../findNSourceUtils.R')
 
 the_test <- function(conn){
-  df = h2o.uploadFile.FV(conn, locate('smalldata/jira/pub-569.csv'))
+  df = h2o.uploadFile(conn, locate('smalldata/jira/pub-569.csv'))
 
   metric.quantilesScore <- function(valuesArray) {
     numberOfLevels <- 100
     quantileLevels <- quantile(valuesArray, probs = seq(0, 1, by = 1/numberOfLevels))
     scores <- seq(1, numberOfLevels, 1)
     rightmost.closed = T
-    interval = findInterval(valuesArray, quantileLevels, rightmost.closed)
+    interval <- findInterval(valuesArray, quantileLevels, rightmost.closed)
     scores[interval, 1]
   }
 

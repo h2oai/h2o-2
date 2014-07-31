@@ -1,13 +1,11 @@
 \name{summary}
 \alias{summary.H2OParsedData}
-\alias{summary.H2OParsedDataVA}
 \title{ Summarizes the columns of a H2O Dataset }
 \description{
 A method for the \code{\link{summary}} generic. Summarizes the columns of an H2O parsed object or subset of columns and rows using vector notation (e.g. dataset[row, col])
 }
 \usage{
 \method{summary}{H2OParsedData}(object, \dots)
-\method{summary}{H2OParsedDataVA}(object, \dots)
 }
 \arguments{
   \item{object}{An \code{\linkS4class{H2OParsedData}} object.}

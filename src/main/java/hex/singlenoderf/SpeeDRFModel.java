@@ -15,6 +15,7 @@ import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Counter;
+import water.util.Log;
 import water.util.ModelUtils;
 
 import java.util.Arrays;
@@ -39,9 +40,10 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   @API(help = "Max depth to grow trees to")                               int max_depth;
   @API(help = "All the trees in the model.")                              Key[] t_keys;
   /* Local forests produced by nodes */                                   Key[][] local_forests;
+  /* Errors Per Tree                 */                                   long[] errorsPerTree;
   /* Total time in seconds to produce the model */                        long time;
-  /* Frame being operated on */                                           Frame fr;
-  /* Response Vector */                                                   Vec response;
+  /* Is there a validation set?*/                                         boolean validation;
+  /* Response Min    */                                                   int resp_min;
   /* Class weights */                                                     double[] weights;
   @API(help = "bin limit")                                                int nbins;
   /* Raw tree data. for faster classification passes */                   transient byte[][] trees;
@@ -50,7 +52,6 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   /* Current model status */                                              String current_status;
   @API(help = "MSE by tree")                                              float[] errs;
   /* Statistic Type */                                                    Tree.StatType statType;
-  /* Adapted Validation Frame */                                          Frame test_frame;
   @API(help = "Test Key")                                                 Key testKey;
   /* Out of bag error estimate */                                         boolean oobee;
   /* Seed */                                                              protected long zeed;
@@ -60,11 +61,14 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   /* Confusion Matrix */                                                  long[][] cm;
   @API(help = "Tree Statistics")                                          TreeStats treeStats;
   @API(help = "cmDomain")                                                 String[] cmDomain;
-  @API(help = "AUC")                                                      public AUC validAUC;
+  @API(help = "AUC")                                                      public AUCData validAUC;
   @API(help = "Variable Importance")                                      public VarImp varimp;
   /* Regression or Classification */                                      boolean regression;
   /* Score each iteration? */                                             boolean score_each;
-
+  @API(help = "CV Error")                                                 public double cv_error;
+  @API(help = "Verbose Mode")                                             public boolean verbose;
+  @API(help = "Verbose Output")                                           public String[] verbose_output;
+  @API(help = "Use non-local data")                                       public boolean useNonLocal;
   /**
    * Extra helper variables.
    */
@@ -86,39 +90,130 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   private final SpeeDRF parameters;
 
   @Override public final SpeeDRF get_params() { return parameters; }
-  @Override public final Request2 job() {
-    return get_params();
-  }
+  @Override public final Request2 job() { return get_params(); }
 
-  public SpeeDRFModel(Key selfKey, Key dataKey, Frame fr, SpeeDRF params) {
-    super(selfKey, dataKey, fr);
+  public float[] priordist() { return _priorClassDist; }
+  public float[] modeldist() { return _modelClassDist; }
+
+  public SpeeDRFModel(Key selfKey, Key dataKey, Frame fr, String[] domain, SpeeDRF params, float[] priorDist) {
+    super(selfKey, dataKey, fr, priorDist);
     this.dest_key = selfKey;
     this.parameters = params;
     score_each = params.score_each_iteration;
     regression = !(params.classification);
-    _domain = regression ? null : fr.lastVec().toEnum().domain();
   }
 
-  public Vec get_response() {
-    return response;
+  protected SpeeDRFModel(SpeeDRFModel model, double err, ConfusionMatrix cm, VarImp varimp, AUCData auc) {
+    super(model._key,model._dataKey,model._names,model._domains, model._priorClassDist,model._modelClassDist);
+    this.features = model.features;
+    this.sampling_strategy = model.sampling_strategy;
+    this.sample = model.sample;
+    this.strata_samples = model.strata_samples;
+    this.mtry = model.mtry;
+    this.node_split_features = model.node_split_features;
+    this.N = model.N;
+    this.max_depth = model.max_depth;
+    this.t_keys = model.t_keys;
+    this.local_forests = model.local_forests;
+    this.time = model.time;
+    this.weights = model.weights;
+    this.nbins = model.nbins;
+    this.trees = model.trees;
+    this.jobKey = model.jobKey;
+    this.dest_key = model.dest_key;
+    this.current_status = model.current_status;
+    this.errs = model.errs;
+    this.statType = model.statType;
+    this.testKey = model.testKey;
+    this.oobee = model.oobee;
+    this.zeed = model.zeed;
+    this.importance = model.importance;
+    this.confusion = model.confusion;
+    this.cms = Arrays.copyOf(model.cms, model.cms.length+1);
+    this.cms[this.cms.length-1] = cm;
+    this.parameters = model.parameters;
+    this.cm = cm._arr;
+    this.treeStats = model.treeStats;
+    this.cmDomain = model.cmDomain;
+    this.validAUC = auc;
+    this.varimp = varimp;
+    this.regression = model.regression;
+    this.score_each = model.score_each;
+    this.cv_error = err;
+    this.verbose = model.verbose;
+    this.verbose_output = model.verbose_output;
+    this.useNonLocal = model.useNonLocal;
+    this.errorsPerTree = model.errorsPerTree;
+    this.resp_min = model.resp_min;
+    this.validation = model.validation;
   }
 
   public int treeCount() { return t_keys.length; }
   public int size()      { return t_keys.length; }
-  public int classes()   {
-    return regression ? 1 : (int)(response.max() - response.min() + 1);
+  public int classes()   { return nclasses(); }
+
+  @Override public ConfusionMatrix cm() { return validAUC == null ? cms[cms.length-1] : validAUC.CM(); }
+
+  private void scoreOnTest(Frame fr, Vec modelResp) {
+
+    Frame scored = score(fr);
+    water.api.ConfusionMatrix cm = new water.api.ConfusionMatrix();
+    cm.vactual = fr.lastVec();
+    cm.vpredict = scored.anyVec();
+    cm.invoke();
+
+    // Regression scoring
+    if (regression) {
+      float mse = (float) cm.mse;
+      errs[errs.length - 1] = mse;
+      cms[cms.length - 1] = null;
+
+      // Classification scoring
+    } else {
+      this.cm = cm.cm;
+      errs[errs.length - 1] = -1f;
+      ConfusionMatrix new_cm = new ConfusionMatrix(this.cm);
+      cms[cms.length - 1] = new_cm;
+
+      // Create the ROC Plot
+      if (classes() == 2 && !scored.lastVec().isInt()) {
+        AUC auc_calc = new AUC();
+        auc_calc.vactual = cm.vactual;
+        auc_calc.vpredict = scored.lastVec(); // lastVec is class1
+        auc_calc.invoke();
+        validAUC = auc_calc.data(); //makeAUC(toCMArray(m.confusion._cms), ModelUtils.DEFAULT_THRESHOLDS, m.cmDomain);
+      }
+
+      // Launch a Variable Importance Task
+      if (importance && !regression)
+        varimp = doVarImpCalc(fr, this, modelResp);
+    }
   }
 
-  //FIXME: Model._domain should be used for nclasses() and classNames()
-  static String[] _domain = null;
-  @Override public int nclasses() { return classes(); }
-  @Override public String[] classNames() { return regression ? null : _domain; }
+  private void scoreOnTrain(Frame fr, Vec modelResp) {
+    final CMTask cmTask = CMTask.scoreTask(this, treeCount(), oobee, fr, modelResp);
+    if (regression) {
+      float mse = cmTask._ss / ( (float) (cmTask._rowcnt));
+      errs[errs.length - 1] = mse;
+      cms[cms.length - 1] = null;
+    } else {
+      confusion = CMTask.CMFinal.make(cmTask._matrix, this, classNames(), cmTask._errorsPerTree, oobee, cmTask._sum, cmTask._cms);
+      this.cm = cmTask._matrix._matrix;
+      errorsPerTree = cmTask._errorsPerTree;
+      errs[errs.length - 1] = confusion.mse();
+      cms[cms.length - 1] = new ConfusionMatrix(confusion._matrix);
 
-  private static boolean doScore(SpeeDRFModel m) {
-    return m.score_each || m.t_keys.length == 1 || m.t_keys.length == m.N;
+      if (classes() == 2) validAUC =  makeAUC(toCMArray(confusion._cms), ModelUtils.DEFAULT_THRESHOLDS, cmDomain);
+      if (importance && !regression) varimp = doVarImpCalc(fr, this, modelResp);
+    }
   }
 
-  public static SpeeDRFModel make(SpeeDRFModel old, Key tkey, int nodeIdx) {
+  public void scoreAllTrees(Frame fr, Vec modelResp) {
+    if (this.validation) scoreOnTest(fr, modelResp);
+    else scoreOnTrain(fr, modelResp);
+  }
+
+  public static SpeeDRFModel make(SpeeDRFModel old, Key tkey, int nodeIdx, String tString) {
 
     // Create a new model for atomic update
     SpeeDRFModel m = (SpeeDRFModel)old.clone();
@@ -129,53 +224,27 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
     // Update the local_forests
     m.local_forests[nodeIdx] = Arrays.copyOf(old.local_forests[nodeIdx],old.local_forests[nodeIdx].length+1);
-    m.local_forests[nodeIdx][m.local_forests[nodeIdx].length-1] = tkey;
 
-    // Do not score every time because it's slow and isn't necessary.
-    // Only score the first tree and when the whole forest is available.
-    boolean shouldScore = doScore(m);
-
-    if (shouldScore) {
-
-      // Gather the results
-      CMTask cmTask = new CMTask(m, m.size(), m.weights, m.oobee);
-      cmTask.doAll(m.test_frame == null ? m.fr : m.test_frame, true);
-
-      // Perform the regression scoring
-      if (m.regression) {
-        float mse = cmTask._ss / ( (float) (cmTask._rowcnt) ); //Also add in treecount?
-        m.errs = Arrays.copyOf(old.errs, old.errs.length+1);
-        m.errs[m.errs.length - 1] = mse;
-        m.cms = Arrays.copyOf(old.cms, old.cms.length+1);
-        m.cms[m.cms.length-1] = null;
-
-      // Perform the classification scoring
-      } else {
-        _domain = cmTask.domain();
-        m.confusion = CMTask.CMFinal.make(cmTask._matrix, m, cmTask.domain(), cmTask._errorsPerTree, m.oobee, cmTask._sum, cmTask._cms);
-        m.cm = cmTask._matrix._matrix;
-
-        m.errs = Arrays.copyOf(old.errs, old.errs.length+1);
-        m.errs[m.errs.length - 1] = m.confusion.mse();
-        m.cms = Arrays.copyOf(old.cms, old.cms.length+1);
-        ConfusionMatrix new_cm = new ConfusionMatrix(m.confusion._matrix);
-        m.cms[m.cms.length-1] = new_cm;
-
-        // Create the ROC Plot
-        if (m.classes() == 2) {
-          m.validAUC= makeAUC(toCMArray(m.confusion._cms), ModelUtils.DEFAULT_THRESHOLDS, m.cmDomain);
-        }
-
-        // Launch a Variable Importance Task
-        if (m.importance && !m.regression)
-          m.varimp = m.doVarImpCalc(m);
-      }
-    } else {
-      m.errs = Arrays.copyOf(old.errs, old.errs.length+1);
-      m.errs[m.errs.length - 1] = -1.f;
-      m.cms = Arrays.copyOf(old.cms, old.cms.length+1);
-      m.cms[m.cms.length-1] = null;
+    try {
+      m.local_forests[nodeIdx][m.local_forests[nodeIdx].length - 1] = tkey;
+    } catch(ArrayIndexOutOfBoundsException aioobe) {
+      Log.err("Node Index in: " + nodeIdx);
+      Log.err("Length of old: old.local_forests[nodeIdx].length: " + old.local_forests[nodeIdx].length);
+      Log.err("Length of new: m.local_forests[nodeIdx].length: "   + m.local_forests[nodeIdx].length);
+      Log.err("Appending to the node index @: m.local_forests[nodeIdx].length - 1" + (m.local_forests[nodeIdx].length - 1));
+      throw aioobe;
     }
+
+    // Update the treeStrings?
+    if (old.verbose_output.length < 2) {
+      m.verbose_output = Arrays.copyOf(old.verbose_output, old.verbose_output.length + 1);
+      m.verbose_output[m.verbose_output.length - 1] = tString;
+    }
+
+    m.errs = Arrays.copyOf(old.errs, old.errs.length+1);
+    m.errs[m.errs.length - 1] = -1.f;
+    m.cms = Arrays.copyOf(old.cms, old.cms.length+1);
+    m.cms[m.cms.length-1] = null;
 
     // Tree Statistics
     JsonObject trees = new JsonObject();
@@ -189,12 +258,12 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     double[] leaf_stats = stats(trees.get(Constants.TREE_LEAVES));
 
     if(depth_stats != null) {
-      treeStats.minDepth = (int)depth_stats[0];
-      treeStats.meanDepth = (float)depth_stats[1];
-      treeStats.maxDepth = (int)depth_stats[2];
-      treeStats.minLeaves = (int)leaf_stats[0];
+      treeStats.minDepth   = (int)depth_stats[0];
+      treeStats.meanDepth  = (float)depth_stats[1];
+      treeStats.maxDepth   = (int)depth_stats[2];
+      treeStats.minLeaves  = (int)leaf_stats[0];
       treeStats.meanLeaves = (float)leaf_stats[1];
-      treeStats.maxLeaves = (int)leaf_stats[2];
+      treeStats.maxLeaves  = (int)leaf_stats[2];
     } else {
       treeStats = null;
     }
@@ -219,8 +288,10 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
   /** Free all internal tree keys. */
   @Override public Futures delete_impl(Futures fs) {
-    for( Key k : t_keys )
-      UKV.remove(k,fs);
+    for( Key k : t_keys ) UKV.remove(k,fs);
+    if (testKey != null)  UKV.remove(testKey, fs);
+    for (Key[] ka : local_forests) for (Key k : ka) UKV.remove(k, fs);
+
     return fs;
   }
 
@@ -232,20 +303,20 @@ public class SpeeDRFModel extends Model implements Job.Progress {
    * @param modelDataMap  mapping from model/tree columns to data columns
    * @return the predicted response class, or class+1 for broken rows
    */
-  public float classify0(int tree_id, Frame fr, Chunk[] chunks, int row, int modelDataMap[], short badrow, boolean regression) {
-    return Tree.classify(new AutoBuffer(tree(tree_id)), fr, chunks, row, modelDataMap, badrow, regression);
+  public float classify0(int tree_id, Chunk[] chunks, int row, int modelDataMap[], short badrow, boolean regression) {
+    return Tree.classify(new AutoBuffer(tree(tree_id)), chunks, row, modelDataMap, badrow, regression);
   }
 
-  private void vote(Frame fr, Chunk[] chks, int row, int modelDataMap[], int[] votes) {
+  private void vote(Chunk[] chks, int row, int modelDataMap[], int[] votes) {
     int numClasses = classes();
     assert votes.length == numClasses + 1 /* +1 to catch broken rows */;
     for( int i = 0; i < treeCount(); i++ )
-      votes[(int)classify0(i, fr, chks, row, modelDataMap, (short) numClasses, false)]++;
+      votes[(int)classify0(i, chks, row, modelDataMap, (short) numClasses, false)]++;
   }
 
-  public short classify(Frame fr, Chunk[] chks, int row, int modelDataMap[], int[] votes, double[] classWt, Random rand ) {
+  public short classify(Chunk[] chks, int row, int modelDataMap[], int[] votes, double[] classWt, Random rand ) {
     // Vote all the trees for the row
-    vote(fr, chks, row, modelDataMap, votes);
+    vote(chks, row, modelDataMap, votes);
     return classify(votes, classWt, rand);
   }
 
@@ -281,7 +352,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
   /** Internal computation of depth and number of leaves. */
   public void find_leaves_depth() {
-    if( _tl != null ) return;
+//    if( _tl != null ) return;
     _td = new Counter();
     _tl = new Counter();
     for( Key tkey : t_keys ) {
@@ -302,47 +373,60 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     return -1;
   }
 
-  public int[] colMap(String[] names) {
-    int res[] = new int[fr._names.length]; //new int[names.length];
+  public int[] colMap(Frame df) {
+    int res[] = new int[df._names.length]; //new int[names.length];
     for(int i = 0; i < res.length; i++) {
-      res[i] = find(fr.names()[i], names);
+      res[i] = find(df.names()[i], _names);
     }
     return res;
   }
 
-  @Override
-  protected float[] score0(double[] data, float[] preds) {
+  @Override protected float[] score0(double[] data, float[] preds) {
     int numClasses = classes();
     if (numClasses == 1) {
       float p = 0.f;
       for (int i = 0; i < treeCount(); ++i) {
-        p += Tree.classify(new AutoBuffer(tree(i)), data, numClasses, true);
+        p += Tree.classify(new AutoBuffer(tree(i)), data, 0.0, true) / (1. * treeCount());
       }
-      return new float[]{p / (float)(1. * treeCount())};
+      return new float[]{p};
     } else {
       int votes[] = new int[numClasses + 1/* +1 to catch broken rows */];
       preds = new float[numClasses + 1];
       for( int i = 0; i < treeCount(); i++ )
         votes[(int) Tree.classify(new AutoBuffer(tree(i)), data, numClasses, false)]++;
+
       float s = 0.f;
       for (int v : votes) s += (float)v;
+
+      if (get_params().balance_classes) {
+        for (int i = 0; i  < votes.length - 1; ++i)
+          preds[i+1] = ( (float)votes[i] / treeCount());
+        return preds;
+      }
+
       for (int i = 0; i  < votes.length - 1; ++i)
-        preds[i+1] = (float)votes[i] / s;
-      preds[0] = (float) (classify(votes, null, null) + get_response().min());
+        preds[i+1] = ( (float)votes[i] / (float)treeCount());
+      preds[0] = (float) (classify(votes, null, null) + resp_min);
       return preds;
     }
   }
 
-  @Override
-  public float progress() {
-    return (float) t_keys.length / (float) N;
-  }
+  @Override public float progress() { return get_params().cv_progress(t_keys.length / (float) N); }
 
   static String[] cfDomain(final CMTask.CMFinal cm, int maxClasses) {
     String[] dom = cm.domain();
     if (dom.length > maxClasses)
       throw new IllegalArgumentException("The column has more than "+maxClasses+" values. Are you sure you have that many classes?");
     return dom;
+  }
+
+  private boolean errsNotNull() {
+    boolean allMinus1 = true;
+    if (errs == null) return false;
+    for (float err : errs) {
+      if (err > -1) allMinus1 = false;
+    }
+    return !allMinus1;
   }
 
   public void generateHTML(String title, StringBuilder sb) {
@@ -353,7 +437,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     DocGen.HTML.title(sb,title);
     sb.append("<div class=\"alert\">").append("Actions: ");
     sb.append(Inspect2.link("Inspect training data (" + _dataKey.toString() + ")", _dataKey)).append(", ");
-    if (this.test_frame != null)
+    if (validation)
       sb.append(Inspect2.link("Inspect testing data (" + testKey.toString() + ")", testKey)).append(", ");
     sb.append(Predict.link(_key, "Score on dataset" ));
     if (this.size() > 0 && this.size() < N && !Job.findJob(jobKey).isCancelledOrCrashed()) {
@@ -379,11 +463,28 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       }
     }
 
+    if (_have_cv_results) {
+      sb.append("<div class=\"alert\">Scoring results reported for ").append(this.parameters.n_folds).append("-fold cross-validated training data ").append(Inspect2.link(_dataKey.toString(), _dataKey)).append("</div>");
+    } else {
+      if (testKey != null)
+        sb.append("<div class=\"alert\">Reported on ").append(Inspect2.link(testKey.toString(), testKey)).append("</div>");
+      else
+        sb.append("<div class=\"alert\">Reported on ").append( oobee ? "OOB data" : "training" ).append(" data</div>");
+    }
+
     //build cm
-    if(!regression)
-      buildCM(sb);
+    if(!regression) {
+      if (confusion != null && confusion.valid() && (this.N * .25 > 0) && classes() > 2) {
+        buildCM(sb);
+      } else {
+        if (this.cms[this.cms.length - 1] != null && (this.N * .25 > 0 && classes() > 2) ) {
+          this.cms[this.cms.length - 1].toHTML(sb, this.cmDomain);
+        }
+      }
+    }
+
     sb.append("<br />");
-    if( errs != null && this.size() > 0) {
+    if( errsNotNull() && this.size() > 0) {
       DocGen.HTML.section(sb,"Mean Squared Error by Tree");
       DocGen.HTML.arrayHead(sb);
       sb.append("<tr style='min-width:60px'><th>Trees</th>");
@@ -404,11 +505,12 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       trees.add(Constants.TREE_DEPTH,  this.depth().toJson());
       trees.add(Constants.TREE_LEAVES, this.leaves().toJson());
     }
-    generateHTMLTreeStats(sb, trees);
 
     if (validAUC != null) {
       generateHTMLAUC(sb);
     }
+
+    generateHTMLTreeStats(sb, trees);
     if (varimp != null) {
       generateHTMLVarImp(sb);
     }
@@ -426,13 +528,13 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     double[] leaf_stats = stats(trees.get(Constants.TREE_LEAVES));
 
     sb.append("<tr><th>Depth</th>")
-            .append("<td>").append(depth_stats != null ? depth_stats[0]  : NA).append("</td>")
+            .append("<td>").append(depth_stats != null ? (int)depth_stats[0]  : NA).append("</td>")
             .append("<td>").append(depth_stats != null ? depth_stats[1] : NA).append("</td>")
-            .append("<td>").append(depth_stats != null ? depth_stats[2] : NA).append("</td></tr>");
+            .append("<td>").append(depth_stats != null ? (int)depth_stats[2] : NA).append("</td></tr>");
     sb.append("<th>Leaves</th>")
-            .append("<td>").append(leaf_stats != null ? leaf_stats[0]  : NA).append("</td>")
+            .append("<td>").append(leaf_stats != null ? (int)leaf_stats[0]  : NA).append("</td>")
             .append("<td>").append(leaf_stats != null ? leaf_stats[1] : NA).append("</td>")
-            .append("<td>").append(leaf_stats != null ? leaf_stats[2]  : NA).append("</td></tr>");
+            .append("<td>").append(leaf_stats != null ? (int)leaf_stats[2]  : NA).append("</td></tr>");
     DocGen.HTML.arrayTail(sb);
 
     if(depth_stats != null && leaf_stats != null) {
@@ -454,9 +556,9 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     } else {
       JsonObject obj = json.getAsJsonObject();
       return new double[]{
-              obj.get(Constants.MIN).getAsDouble(),
-              obj.get(Constants.MEAN).getAsDouble(),
-              obj.get(Constants.MAX).getAsDouble()};
+              Math.round(obj.get(Constants.MIN).getAsDouble() * 1000.0) / 1000.0,
+              Math.round(obj.get(Constants.MEAN).getAsDouble() * 1000.0) / 1000.0,
+              Math.round(obj.get(Constants.MAX).getAsDouble() * 1000.0) / 1000.0};
     }
   }
 
@@ -499,10 +601,6 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       // Signal end only and only if all trees were generated and confusion matrix is valid
 
       DocGen.HTML.section(sb, "Confusion Matrix:");
-      if (testKey != null)
-        sb.append("<div class=\"alert\">Reported on ").append(Inspect2.link(testKey.toString(), testKey)).append("</div>");
-      else
-        sb.append("<div class=\"alert\">Reported on ").append(cm.get(JSON_CM_TYPE).getAsString()).append(" data</div>");
 
       if (cm.has(JSON_CM_MATRIX)) {
         sb.append("<dl class='dl-horizontal'>");
@@ -569,8 +667,8 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     return res;
   }
 
-  protected static water.api.AUC makeAUC(ConfusionMatrix[] cms, float[] threshold, String[] cmDomain) {
-    return cms != null ? new AUC(cms, threshold, cmDomain) : null;
+  protected static AUCData makeAUC(ConfusionMatrix[] cms, float[] threshold, String[] cmDomain) {
+    return cms != null ? new AUC(cms, threshold, cmDomain).data() : null;
   }
 
   protected void generateHTMLAUC(StringBuilder sb) {
@@ -584,20 +682,20 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     }
   }
 
-  protected VarImp doVarImpCalc(final SpeeDRFModel model) {
-    _treeMeasuresOnOOB  = new VariableImportance.TreeVotes[model.fr.numCols() - 1];
-    _treeMeasuresOnSOOB = new VariableImportance.TreeVotes[model.fr.numCols() - 1];
-    for (int i=0; i<model.fr.numCols() - 1; i++) _treeMeasuresOnOOB[i] = new VariableImportance.TreeVotes(model.treeCount());
-    for (int i=0; i<model.fr.numCols() - 1; i++) _treeMeasuresOnSOOB[i] = new VariableImportance.TreeVotes(model.treeCount());
-    final int ncols = model.fr.numCols();
-    final int trees = model.treeCount();
+  protected VarImp doVarImpCalc(final Frame fr, final SpeeDRFModel model, final Vec resp) {
+    _treeMeasuresOnOOB  = new VariableImportance.TreeVotes[fr.numCols() - 1];
+    _treeMeasuresOnSOOB = new VariableImportance.TreeVotes[fr.numCols() - 1];
+    for (int i=0; i<fr.numCols() - 1; i++) _treeMeasuresOnOOB[i] = new VariableImportance.TreeVotes(treeCount());
+    for (int i=0; i<fr.numCols() - 1; i++) _treeMeasuresOnSOOB[i] = new VariableImportance.TreeVotes(treeCount());
+    final int ncols = fr.numCols();
+    final int trees = treeCount();
     for (int i=0; i<ncols - 1; i++) _treeMeasuresOnSOOB[i] = new VariableImportance.TreeVotes(trees);
     Futures fs = new Futures();
     for (int var=0; var<ncols - 1; var++) {
       final int variable = var;
       H2O.H2OCountedCompleter task4var = new H2O.H2OCountedCompleter() {
         @Override public void compute2() {
-          VariableImportance.TreeVotes[] cd = VariableImportance.collectVotes(trees, model.classes(), model.fr, ncols - 1, model.sample, variable, model);
+          VariableImportance.TreeVotes[] cd = VariableImportance.collectVotes(trees, classes(), fr, ncols - 1, sample, variable, model, resp);
           asVotes(_treeMeasuresOnOOB[variable]).append(cd[0]);
           asVotes(_treeMeasuresOnSOOB[variable]).append(cd[1]);
           tryComplete();
@@ -644,8 +742,10 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     return res;
   }
 
-  @Override protected void setCrossValidationError(Job.ValidatedJob job, double cv_error, water.api.ConfusionMatrix cm, water.api.AUC auc, water.api.HitRatio hr) {
+  @Override protected void setCrossValidationError(Job.ValidatedJob job, double cv_error, water.api.ConfusionMatrix cm, AUCData auc, HitRatio hr) {
     _have_cv_results = true;
-    // TODO: Update the model
+    SpeeDRFModel drfm = ((SpeeDRF)job).makeModel(this, cv_error, cm.cm == null ? null : new ConfusionMatrix(cm.cm, this.nclasses()), this.varimp, auc);
+    drfm._have_cv_results = true;
+    DKV.put(this._key, drfm); //overwrite this model
   }
 }

@@ -12,43 +12,43 @@
                 Log.info("Filtering out rows by <= from dataset poker100 and column \"2\" using value 1.0")
                      filterHex <- hex[hex[,c(2)] <= 1.0,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"2" <= 1.0,]
+                    filterHex <- hex[hex$"C2" <= 1.0,]
                 Log.info("Filtering out rows by <= from dataset poker100 and column \"8\" using value 3.51910555856")
                      filterHex <- hex[hex[,c(8)] <= 3.51910555856,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"8" <= 3.51910555856,]
+                    filterHex <- hex[hex$"C8" <= 3.51910555856,]
                 Log.info("Filtering out rows by <= from dataset poker100 and column \"6\" using value 1.0")
                      filterHex <- hex[hex[,c(6)] <= 1.0,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"6" <= 1.0,]
+                    filterHex <- hex[hex$"C6" <= 1.0,]
                 Log.info("Filtering out rows by <= from dataset poker100 and column \"10\" using value 1.67719759717")
                      filterHex <- hex[hex[,c(10)] <= 1.67719759717,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"10" <= 1.67719759717,]
+                    filterHex <- hex[hex$"C10" <= 1.67719759717,]
                 Log.info("Filtering out rows by <= from dataset poker100 and column \"2\" using value 1.0")
                      filterHex <- hex[hex[,c(2)] <= 1.0,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"2" <= 1.0,]
+                    filterHex <- hex[hex$"C2" <= 1.0,]
                 Log.info("Filtering out rows by <= from dataset poker100 and column \"4\" using value 1.0")
                      filterHex <- hex[hex[,c(4)] <= 1.0,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"4" <= 1.0,]
+                    filterHex <- hex[hex$"C4" <= 1.0,]
                 Log.info("Filtering out rows by <= from dataset poker100 and column \"10\" using value 5.95735525338")
                      filterHex <- hex[hex[,c(10)] <= 5.95735525338,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"10" <= 5.95735525338,]
+                    filterHex <- hex[hex$"C10" <= 5.95735525338,]
                 Log.info("Filtering out rows by <= from dataset poker100 and column \"10\" using value 4.30182022078")
                      filterHex <- hex[hex[,c(10)] <= 4.30182022078,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"10" <= 4.30182022078,]
+                    filterHex <- hex[hex$"C10" <= 4.30182022078,]
                 Log.info("Filtering out rows by <= from dataset poker100 and column \"7\" using value 4.87375459595")
                      filterHex <- hex[hex[,c(7)] <= 4.87375459595,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"7" <= 4.87375459595,]
+                    filterHex <- hex[hex$"C7" <= 4.87375459595,]
                 Log.info("Filtering out rows by <= from dataset poker100 and column \"9\" using value 2.02492359275")
                      filterHex <- hex[hex[,c(9)] <= 2.02492359275,]
                     Log.info("Perform filtering with the '$' sign also")
-                    filterHex <- hex[hex$"9" <= 2.02492359275,]
+                    filterHex <- hex[hex$"C9" <= 2.02492359275,]
                     Log.info("Filtering out rows by <= from dataset poker100 and column \"9\" using value 12.6402745072, and also subsetting columns.")
                      filterHex <- hex[hex[,c(9)] <= 12.6402745072, c(9)]
                     Log.info("Now do the same filter & subset, but select complement of columns.")

@@ -7,7 +7,7 @@
 Runs GLM regression on PCA results, and allows for transformation of test data to match PCA transformations of training data.  
 }
 \usage{
-h2o.pcr(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda = 1e-05, 
+h2o.pcr(x, y, data, key = "", ncomp, family, nfolds = 10, alpha = 0.5, lambda = 1e-05, 
   epsilon = 1e-05, tweedie.p)
 }
 
@@ -21,6 +21,9 @@ h2o.pcr(x, y, data, ncomp, family, nfolds = 10, alpha = 0.5, lambda = 1e-05,
   \item{data}{
     An \code{\linkS4class{H2OParsedData}} object containing the variables in the model.
   }
+    \item{key}{
+(Optional) The unique hex key assigned to the resulting model. If none is given, a key will automatically be generated.
+}
   \item{ncomp}{
     A number indicating the number of principal components to use in the regression model.
   }

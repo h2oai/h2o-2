@@ -24,7 +24,6 @@ shrinkage <- 0.1
 distribution <- "gaussian"
 train <- locate("smalldata/logreg/prostate.csv")
 test <- locate("smalldata/logreg/prostate.csv")
-x = c("sepal_len","sepal_wid","petal_len","petal_wid")
 x = c("AGE","RACE","DPROS","DCAPS","PSA","VOL","GLEASON")
 y = "CAPSULE"
 

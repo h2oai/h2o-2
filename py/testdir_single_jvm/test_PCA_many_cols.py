@@ -52,6 +52,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_PCA_many_cols(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         tryList = [
@@ -73,24 +74,14 @@ class Basic(unittest.TestCase):
             write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
 
             # PARSE ****************************************
-            h2o.beta_features = False #turn off beta_features
             start = time.time()
 
-            #h2o.beta_features = False
             modelKey = 'PCAModelKey'
             scoreKey = 'PCAScoreKey'
 
             # Parse ****************************************
-            if h2o.beta_features:
-                print "Parsing to fvec directly! Have to noPoll=true!, and doSummary=False!"
             parseResult = h2i.import_parse(bucket=None, path=csvPathname, schema='put',
-                hex_key=hex_key, timeoutSecs=timeoutSecs, noPoll=h2o.beta_features, doSummary=False)
-            # hack
-            if h2o.beta_features:
-                h2j.pollWaitJobs(timeoutSecs=timeoutSecs, pollTimeoutSecs=timeoutSecs)
-                print "Filling in the parseResult['destination_key'] for h2o"
-                parseResult['destination_key'] = trainKey
-
+                hex_key=hex_key, timeoutSecs=timeoutSecs, doSummary=False)
             elapsed = time.time() - start
             print "parse end on ", csvPathname, 'took', elapsed, 'seconds',\
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
@@ -103,17 +94,14 @@ class Basic(unittest.TestCase):
             print l
             h2o.cloudPerfH2O.message(l)
 
-            # if you set beta_features here, the fvec translate will happen with the Inspect not the PCA
-            # h2o.beta_features = True
             inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
             print "\n" + csvPathname, \
-                "    num_rows:", "{:,}".format(inspect['num_rows']), \
-                "    num_cols:", "{:,}".format(inspect['num_cols'])
-            num_rows = inspect['num_rows']
-            num_cols = inspect['num_cols']
+                "    numRows:", "{:,}".format(inspect['numRows']), \
+                "    numCols:", "{:,}".format(inspect['numCols'])
+            numRows = inspect['numRows']
+            numCols = inspect['numCols']
 
             # PCA(tolerance iterate)****************************************
-            h2o.beta_features = True
             for tolerance in [i/10.0 for i in range(11)]:
                 params = {
                     'destination_key': modelKey,
@@ -121,7 +109,6 @@ class Basic(unittest.TestCase):
                     'standardize': 1,
                 }
                 kwargs = params.copy()
-                h2o.beta_features = True
                 PCAResult = {'python_elapsed': 0, 'python_%timeout': 0}
                 start = time.time()
                 h2o_cmd.runPCA(parseResult=parseResult, timeoutSecs=timeoutSecs, noPoll=True, **kwargs)
@@ -143,7 +130,6 @@ class Basic(unittest.TestCase):
                 print l
                 h2o.cloudPerfH2O.message(l)
 
-                #h2o.beta_features = True
                 pcaInspect = pcaView
                 # errrs from end of list? is that the last tree?
                 sdevs = pcaInspect["pca_model"]["sdev"] 
@@ -154,7 +140,6 @@ class Basic(unittest.TestCase):
                 print "PCA: Proportions of variance by eigenvector are :", propVars
                 print
                 print
-                #h2o.beta_features=False
                 print
                 print
                 print 

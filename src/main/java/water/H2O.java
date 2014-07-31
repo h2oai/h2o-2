@@ -41,6 +41,9 @@ public final class H2O {
   public static int UDP_PORT; // Fast/small UDP transfers
   public static int API_PORT; // RequestServer and the new API HTTP port
 
+  // Whether to toggle to single precision as upper limit for storing floating point numbers
+  public static boolean SINGLE_PRECISION = false;
+
   // The multicast discovery port
   static MulticastSocket  CLOUD_MULTICAST_SOCKET;
   static NetworkInterface CLOUD_MULTICAST_IF;
@@ -729,24 +732,10 @@ public final class H2O {
 
 
   public static abstract class H2OCallback<T extends H2OCountedCompleter> extends H2OCountedCompleter{
-    final Job _job;
-    public H2OCallback(){this(null,null);}
-    public H2OCallback(Job j){this(j,null);}
-    public H2OCallback(Job j, H2OCountedCompleter cc){super(cc); _job = j;}
+    public H2OCallback(){}
+    public H2OCallback(H2OCountedCompleter cc){super(cc);}
     @Override public void compute2(){throw new UnsupportedOperationException();}
-    @Override public void onCompletion(CountedCompleter caller){
-      try {
-        callback((T)caller);
-      } catch(Throwable ex){
-        ex.printStackTrace();
-        completeExceptionally(ex);
-      }
-    }
-    @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
-      if(_job != null) _job.cancel(ex);
-      else ex.printStackTrace();
-      return true;
-    }
+    @Override public void onCompletion(CountedCompleter caller){callback((T) caller);}
     public abstract void callback(T t);
   }
 
@@ -781,6 +770,7 @@ public final class H2O {
     public String h = null;
     public String help = null;
     public String version = null;
+    public String single_precision = null;
     public String beta = null;
     public String mem_watchdog = null; // For developer debugging
   }
@@ -823,6 +813,11 @@ public final class H2O {
     "    -ice_root <fileSystemPath>\n" +
     "          The directory where H2O spills temporary data to disk.\n" +
     "          (The default is '" + DEFAULT_ICE_ROOT() + "'.)\n" +
+    "\n" +
+    "    -single_precision\n" +
+    "          Reduce the max. (storage) precision for floating point numbers\n" +
+    "          from double to single precision to save memory of numerical data.\n" +
+    "          (The default is double precision.)\n" +
     "\n" +
     "    -nthreads <#threads>\n" +
     "          Maximum number of threads in the low priority batch-work queue.\n" +
@@ -955,6 +950,8 @@ public final class H2O {
     if (OPT_ARGS.baseport != 0) {
       DEFAULT_PORT = OPT_ARGS.baseport;
     }
+    SINGLE_PRECISION = OPT_ARGS.single_precision != null;
+    if (SINGLE_PRECISION) Log.info("Using single precision for floating-point numbers.");
 
     // Get ice path before loading Log or Persist class
     String ice = DEFAULT_ICE_ROOT();

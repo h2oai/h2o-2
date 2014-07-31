@@ -16,7 +16,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         # a kludge
         h2o.setup_benchmark_log()
 
-        csvFilename = 'syn_sphere_gen.csv'
+        csvFilename = 'syn_sphere15_gen_26GB.csv'
         totalBytes = 183538602156
         if FROM_HDFS:
             importFolderPath = "datasets/kmeans_big"

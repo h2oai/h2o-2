@@ -13,7 +13,7 @@
             "redirect_import_folder_to_s3_path": "false", 
             "remoteH2O": "true", 
             "username": "0xcustomer", 
-            "java_heap_GB": 0, 
+            "java_heap_GB": 4, 
             "use_maprfs": false, 
             "redirect_import_folder_to_s3n_path": "false"
         }

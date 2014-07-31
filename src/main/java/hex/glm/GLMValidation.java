@@ -34,6 +34,9 @@ public class GLMValidation extends Iced {
   @API(help="")
   double auc = Double.NaN;
 
+  @API(help="corss validation models")
+  Key [] xval_models;
+
   @API(help="AIC")
   double aic;// internal aic used only for poisson family!
   @API(help="internal aic used only for poisson family!")
@@ -53,22 +56,18 @@ public class GLMValidation extends Iced {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-    @API(help="n-fold models built for cross-validation")
-    Key [] xval_models;
-    public GLMXValidation(GLMModel mainModel, GLMModel [] xvalModels, int lambdaIdx, long nobs) {
-      super(mainModel._dataKey, mainModel.ymu, mainModel.glm, mainModel.rank(lambdaIdx));
+    public GLMXValidation(GLMModel mainModel, GLMModel [] xvalModels, GLMValidation [] xvals, double lambda, long nobs) {
+      super(mainModel._dataKey, mainModel.ymu, mainModel.glm, mainModel.rank(lambda));
       xval_models = new Key[xvalModels.length];
-      double t = 0;
-      auc = 0;
-      for(int i = 0; i < xvalModels.length; ++i){
-        GLMValidation val = xvalModels[i].validation();
-        add(val);
-        t += val.best_threshold;
-        auc += val.auc();
+      for(int i = 0; i < xval_models.length; ++i)
         xval_models[i] = xvalModels[i]._key;
+      double t = 0;
+      for(int i = 0; i < xvalModels.length; ++i){
+        add(xvals[i]);
+        t += xvals[i].best_threshold;
       }
+      computeAUC();
       computeAIC();
-      auc /= xvalModels.length;
       best_threshold = (float)(t/xvalModels.length);
       this.nobs = nobs;
     }
@@ -141,20 +140,22 @@ public class GLMValidation extends Iced {
     }
     aic += 2*_rank;
   }
+
+  protected void computeAUC(){
+    if(_glm.family == Family.binomial){
+      for(ConfusionMatrix cm:_cms)cm.reComputeErrors();
+      AUC auc = new AUC(_cms,thresholds,/*TODO: add CM domain*/null);
+      this.auc = auc.data().AUC();
+      best_threshold = auc.data().threshold();
+    }
+  }
   @Override
   public String toString(){
     return "null_dev = " + null_deviance + ", res_dev = " + residual_deviance + ", auc = " + auc();
   }
 
-  protected void finalize_AIC_AUC(){
-    computeAIC();
-    if(_glm.family == Family.binomial){
-      for(ConfusionMatrix cm:_cms)cm.reComputeErrors();
-      AUC auc = new AUC(_cms,thresholds,/*TODO: add CM domain*/null);
-      this.auc = auc.AUC();
-      best_threshold = auc.threshold();
-    }
-  }
+
+
   /**
    * Computes area under the ROC curve. The ROC curve is computed from the confusion matrices
    * (there is one for each computed threshold). Area under this curve is then computed as a sum

@@ -32,12 +32,11 @@ public class DeepLearning extends Job.ValidatedJob {
   public Key checkpoint;
 
   /**
-   * If given, store the best model so far under this key.
-   * Model performance is measured by MSE for regression and overall
-   * error rate for classification (at F1-optimal threshold for binary classification).
+   * If enabled, store the best model under the destination key of this model at the end of training.
+   * Only applicable if training is not cancelled.
    */
-  @API(help = "Key to store the always-best model under", filter= Default.class, json = true)
-  public Key best_model_key = null;
+  @API(help = "If enabled, override the final model with the best model found during training", filter= Default.class, json = true)
+  public boolean override_with_best_model = true;
 
   /**
    * Unlock expert mode parameters than can affect model building speed,
@@ -47,6 +46,12 @@ public class DeepLearning extends Job.ValidatedJob {
    */
   @API(help = "Enable expert mode (to access all options from GUI)", filter = Default.class, json = true)
   public boolean expert_mode = false;
+
+  @API(help = "Auto-Encoder (Experimental)", filter= Default.class, json = true)
+  public boolean autoencoder = false;
+
+  @API(help="Use all factor levels of categorical variables. Otherwise, the first factor level is omitted (without loss of accuracy). Useful for variable importances and auto-enabled for autoencoder.",filter=Default.class, json=true, importance = ParamImportance.SECONDARY)
+  public boolean use_all_factor_levels = false;
 
   /*Neural Net Topology*/
   /**
@@ -454,6 +459,12 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Use a column major weight matrix for input layer. Can speed up forward propagation, but might slow down backpropagation (Experimental).", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
   public boolean col_major = false;
 
+  @API(help = "Average activation for sparse auto-encoder (Experimental)", filter= Default.class, json = true)
+  public double average_activation = 0;
+
+  @API(help = "Sparsity regularization (Experimental)", filter= Default.class, json = true)
+  public double sparsity_beta = 0;
+
   public enum ClassSamplingMethod {
     Uniform, Stratified
   }
@@ -479,6 +490,7 @@ public class DeepLearning extends Job.ValidatedJob {
 
   // the following parameters can only be specified in expert mode
   transient final String [] expert_options = new String[] {
+          "use_all_factor_levels",
           "loss",
           "max_w2",
           "score_training_samples",
@@ -491,9 +503,6 @@ public class DeepLearning extends Job.ValidatedJob {
           "variable_importances",
           "fast_mode",
           "score_validation_sampling",
-          "balance_classes",
-          "max_after_balance_size",
-          "max_after_balance_size",
           "ignore_const_cols",
           "force_load_balance",
           "replicate_training_data",
@@ -508,11 +517,13 @@ public class DeepLearning extends Job.ValidatedJob {
           "single_node_mode",
           "sparse",
           "col_major",
+          "autoencoder",
+          "average_activation",
+          "sparsity_beta",
   };
 
   // the following parameters can be modified when restarting from a checkpoint
   transient final String [] cp_modifiable = new String[] {
-          "best_model_key",
           "expert_mode",
           "seed",
           "epochs",
@@ -577,10 +588,6 @@ public class DeepLearning extends Job.ValidatedJob {
             ) {
       arg.disable("Using sqrt(6 / (# units + # units of previous layer)) for Uniform distribution.", inputArgs);
     }
-    if(arg._name.equals("loss") && !classification) {
-      arg.disable("Using MeanSquare loss for regression.", inputArgs);
-      loss = Loss.MeanSquare;
-    }
     if (classification) {
       if(arg._name.equals("regression_stop")) {
         arg.disable("Only for regression.", inputArgs);
@@ -635,11 +642,19 @@ public class DeepLearning extends Job.ValidatedJob {
       arg.disable("Only for multi-node operation with replication.");
       single_node_mode = false;
     }
+    if (arg._name.equals("use_all_factor_levels") && autoencoder ) {
+      arg.disable("Automatically enabled for auto-encoders.");
+      use_all_factor_levels = true;
+    }
   }
 
   /** Print model parameters as JSON */
   @Override public boolean toHTML(StringBuilder sb) {
-    return makeJsonBox(sb);
+    try {
+      return makeJsonBox(sb);
+    } catch (Throwable t) {
+      return false;
+    }
   }
 
   /**
@@ -683,16 +698,29 @@ public class DeepLearning extends Job.ValidatedJob {
   @Override public float progress(){
     if(UKV.get(dest()) == null)return 0;
     DeepLearningModel m = UKV.get(dest());
-    if (m != null && m.model_info()!=null )
-      return (float)Math.min(1, (m.epoch_counter / m.model_info().get_params().epochs));
+    if (m != null && m.model_info()!=null ) {
+      final float p = (float) Math.min(1, (m.epoch_counter / m.model_info().get_params().epochs));
+      return cv_progress(p);
+    }
     return 0;
   }
 
   @Override
   protected final void execImpl() {
-    buildModel();
-    if (n_folds > 0) CrossValUtils.crossValidate(this);
-    delete();
+    try {
+      buildModel();
+      if (n_folds > 0) CrossValUtils.crossValidate(this);
+    } finally {
+      delete();
+      state = UKV.<Job>get(self()).state;
+      new TAtomic<DeepLearningModel>() {
+        @Override
+        public DeepLearningModel atomic(DeepLearningModel m) {
+          if (m != null) m.get_params().state = state;
+          return m;
+        }
+      }.invoke(dest());
+    }
   }
 
   /**
@@ -717,7 +745,8 @@ public class DeepLearning extends Job.ValidatedJob {
       if (source == null || !Arrays.equals(source._key._kb, previous.model_info().get_params().source._key._kb)) {
         throw new IllegalArgumentException("source must be the same as for the checkpointed model.");
       }
-      if (response == null || !Arrays.equals(response._key._kb, previous.model_info().get_params().response._key._kb)) {
+      autoencoder = previous.model_info().get_params().autoencoder;
+      if (!autoencoder && (response == null || !Arrays.equals(response._key._kb, previous.model_info().get_params().response._key._kb))) {
         throw new IllegalArgumentException("response must be the same as for the checkpointed model.");
       }
       if (Utils.difference(ignored_cols, previous.model_info().get_params().ignored_cols).length != 0
@@ -797,17 +826,15 @@ public class DeepLearning extends Job.ValidatedJob {
 
     //Auto-fill defaults
     if (hidden_dropout_ratios == null) {
-      hidden_dropout_ratios = new double[hidden.length];
       if (activation == Activation.TanhWithDropout || activation == Activation.MaxoutWithDropout || activation == Activation.RectifierWithDropout) {
+        hidden_dropout_ratios = new double[hidden.length];
         if (!quiet_mode) Log.info("Automatically setting all hidden dropout ratios to 0.5.");
         Arrays.fill(hidden_dropout_ratios, 0.5);
       }
     }
     else if (hidden_dropout_ratios.length != hidden.length) throw new IllegalArgumentException("Must have " + hidden.length + " hidden layer dropout ratios.");
-    else if (hidden_dropout_ratios != null) {
-      if (activation != Activation.TanhWithDropout && activation != Activation.MaxoutWithDropout && activation != Activation.RectifierWithDropout) {
-        if (!quiet_mode) Log.info("Ignoring hidden_dropout_ratios because a non-Dropout activation function was specified.");
-      }
+    else if (activation != Activation.TanhWithDropout && activation != Activation.MaxoutWithDropout && activation != Activation.RectifierWithDropout) {
+      if (!quiet_mode) Log.info("Ignoring hidden_dropout_ratios because a non-Dropout activation function was specified.");
     }
 
     if (!quiet_mode) {
@@ -822,18 +849,47 @@ public class DeepLearning extends Job.ValidatedJob {
       if (initial_weight_distribution == InitialWeightDistribution.UniformAdaptive) {
         Log.info("Ignoring initial_weight_scale for UniformAdaptive weight distribution.");
       }
+      if (n_folds != 0) {
+        if (override_with_best_model) {
+          Log.info("Automatically setting override_with_best_model to false, since the final model is the only scored model with n-fold cross-validation.");
+          override_with_best_model = false;
+        }
+      }
     }
 
     if(loss == Loss.Automatic) {
       if (!classification) {
         if (!quiet_mode) Log.info("Automatically setting loss to MeanSquare for regression.");
         loss = Loss.MeanSquare;
-      } else {
+      }
+      else if (autoencoder) {
+        if (!quiet_mode) Log.info("Automatically setting loss to MeanSquare for auto-encoder.");
+        loss = Loss.MeanSquare;
+      }
+      else {
         if (!quiet_mode) Log.info("Automatically setting loss to Cross-Entropy for classification.");
         loss = Loss.CrossEntropy;
       }
     }
+
+    if(autoencoder && sparsity_beta > 0) {
+      if (activation == Activation.Tanh || activation == Activation.TanhWithDropout) {
+        if (average_activation >= 1 || average_activation <= -1)
+          throw new IllegalArgumentException("Tanh average activation must be in (-1,1).");
+      }
+      else if (activation == Activation.Rectifier || activation == Activation.RectifierWithDropout) {
+        if (average_activation <= 0)
+          throw new IllegalArgumentException("Rectifier average activation must be positive.");
+      }
+    }
+
     if (!classification && loss == Loss.CrossEntropy) throw new IllegalArgumentException("Cannot use CrossEntropy loss function for regression.");
+    if (autoencoder && loss != Loss.MeanSquare) throw new IllegalArgumentException("Must use MeanSquare loss function for auto-encoder.");
+    if (autoencoder && classification) { classification = false; Log.info("Using regression mode for auto-encoder.");}
+
+    // reason for the error message below is that validation might not have the same horizontalized features as the training data (or different order)
+    if (autoencoder && validation != null) throw new UnsupportedOperationException("Cannot specify a validation dataset for auto-encoder.");
+    if (autoencoder && activation == Activation.Maxout) throw new UnsupportedOperationException("Maxout activation is not supported for auto-encoder.");
 
     // make default job_key and destination_key in case they are missing
     if (dest() == null) {
@@ -858,12 +914,16 @@ public class DeepLearning extends Job.ValidatedJob {
    * @return DataInfo object
    */
   private DataInfo prepareDataInfo() {
-    final boolean del_enum_resp = (classification && !response.isEnum());
-    final Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, classification, ignore_const_cols, true /*drop >20% NA cols*/);
-    final DataInfo dinfo = new FrameTask.DataInfo(train, 1, false, true, !classification);
-    final Vec resp = dinfo._adaptedFrame.lastVec(); //convention from DataInfo: response is the last Vec
-    assert(!classification ^ resp.isEnum()) : "Must have enum response for classification!"; //either regression or enum response
-    if (del_enum_resp) ltrash(resp);
+    final boolean del_enum_resp = classification && !response.isEnum();
+    final Frame train = FrameTask.DataInfo.prepareFrame(source, autoencoder ? null : response, ignored_cols, classification, ignore_const_cols, true /*drop >20% NA cols*/);
+    final DataInfo dinfo = new FrameTask.DataInfo(train, autoencoder ? 0 : 1, autoencoder || use_all_factor_levels, //use all FactorLevels for auto-encoder
+            autoencoder ? DataInfo.TransformType.NORMALIZE : DataInfo.TransformType.STANDARDIZE, //transform predictors
+            classification ? DataInfo.TransformType.NONE : DataInfo.TransformType.STANDARDIZE);  //transform response
+    if (!autoencoder) {
+      final Vec resp = dinfo._adaptedFrame.lastVec(); //convention from DataInfo: response is the last Vec
+      assert (!classification ^ resp.isEnum()) : "Must have enum response for classification!"; //either regression or enum response
+      if (del_enum_resp) ltrash(resp);
+    }
     return dinfo;
   }
 
@@ -946,6 +1006,7 @@ public class DeepLearning extends Job.ValidatedJob {
           validScoreFrame = updateFrame(adaptedValid, sampleFrame(adaptedValid, mp.score_validation_samples, mp.seed+1));
         }
         if (mp.force_load_balance) validScoreFrame = updateFrame(validScoreFrame, reBalance(validScoreFrame, false /*always split up globally since scoring should be distributed*/));
+        model.validation_rows = validScoreFrame.numRows();
         if (!quiet_mode) Log.info("Number of chunks of the validation data: " + validScoreFrame.anyVec().nChunks());
       }
 
@@ -959,6 +1020,7 @@ public class DeepLearning extends Job.ValidatedJob {
       final float rowUsageFraction = computeRowUsageFraction(train.numRows(), mp.actual_train_samples_per_iteration, mp.replicate_training_data);
 
       if (!mp.quiet_mode) Log.info("Initial model:\n" + model.model_info());
+      if (autoencoder) model.doScoring(train, trainScoreFrame, validScoreFrame, self(), getValidAdaptor()); //get the null model reconstruction error
       Log.info("Starting to train the Deep Learning model.");
 
       //main loop
@@ -967,6 +1029,24 @@ public class DeepLearning extends Job.ValidatedJob {
               new DeepLearningTask2(train, model.model_info(), rowUsageFraction).invokeOnAllNodes().model_info() ) : //replicated data + multi-node mode
               new DeepLearningTask(model.model_info(), rowUsageFraction).doAll(train).model_info()); //distributed data (always in multi-node mode)
       while (model.doScoring(train, trainScoreFrame, validScoreFrame, self(), getValidAdaptor()));
+
+      // replace the model with the best model so far (if it's better)
+      if (!isCancelledOrCrashed() && override_with_best_model && model.actual_best_model_key != null && n_folds == 0) {
+        DeepLearningModel best_model = UKV.get(model.actual_best_model_key);
+        if (best_model != null && best_model.error() < model.error() && Arrays.equals(best_model.model_info().units, model.model_info().units)) {
+          Log.info("Setting the model to be the best model so far (based on scoring history).");
+          DeepLearningModel.DeepLearningModelInfo mi = best_model.model_info().deep_clone();
+          // Don't cheat - count full amount of training samples, since that's the amount of training it took to train (without finding anything better)
+          mi.set_processed_global(model.model_info().get_processed_global());
+          mi.set_processed_local(model.model_info().get_processed_local());
+          model.set_model_info(mi);
+          model.update(self());
+          model.doScoring(train, trainScoreFrame, validScoreFrame, self(), getValidAdaptor());
+          assert(best_model.error() == model.error());
+        }
+      }
+
+      Log.info(model);
       Log.info("Finished training the Deep Learning model.");
       return model;
     }
@@ -1008,16 +1088,6 @@ public class DeepLearning extends Job.ValidatedJob {
     cleanup();
     if (_fakejob) UKV.remove(job_key);
     remove();
-
-    // HACK: update the state of the model's Job/parameter object
-    // (since we cloned the Job/parameters several times and we're not sharing a reference)
-    Value v = DKV.get(dest());
-    if (v != null) {
-      DeepLearningModel m = v.get();
-      m.get_params().state = state;
-      DKV.put(dest(), m);
-    }
-
   }
 
   /**
@@ -1088,7 +1158,6 @@ public class DeepLearning extends Job.ValidatedJob {
   @Override public void crossValidate(Frame[] splits, Frame[] cv_preds, long[] offsets, int i) {
     // Train a clone with slightly modified parameters (to account for cross-validation)
     DeepLearning cv = (DeepLearning) this.clone();
-    cv.best_model_key = null; // model-specific stuff
     cv.genericCrossValidation(splits, offsets, i);
     cv_preds[i] = ((DeepLearningModel) UKV.get(cv.dest())).score(cv.validation);
   }

@@ -1,10 +1,12 @@
 package hex.singlenoderf;
 
 
+import hex.singlenoderf.SpeeDRF.DRFParams;
 import jsr166y.ForkJoinTask;
 import jsr166y.RecursiveAction;
 import water.Key;
 import water.Timer;
+import water.UKV;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.util.Log;
@@ -13,37 +15,32 @@ import java.util.ArrayList;
 
 
 public class DABuilder {
-    protected final SpeeDRF _drf;
-    protected final SpeeDRFModel _rfmodel;
+    protected final DRFParams    _rfParams;
+    protected final Key _rfModel;
 
-    static DABuilder create(final SpeeDRF drf, final SpeeDRFModel rf_model) {
-      switch( drf.drfParams.sampling_strategy ) {
+    static DABuilder create(final DRFParams rfParams, final Key rfModel) {
+      switch( rfParams.sampling_strategy ) {
         case RANDOM                :
-        case STRATIFIED_LOCAL      :
-        default                    : return new DABuilder(drf, rf_model);
+        default                    : return new DABuilder(rfParams, rfModel);
       }
     }
 
-    @SuppressWarnings("unused") private DABuilder() { this(null, null);}
+    DABuilder(final DRFParams rfparams, final Key rfmodel) { _rfParams = rfparams; _rfModel = rfmodel; }
 
-    DABuilder(final SpeeDRF drf, final SpeeDRFModel rf_model) { _drf = drf; _rfmodel = rf_model; }
-
-    final DataAdapter build(Frame fr) { return inhaleData(fr); }
+    final DataAdapter build(Frame fr, boolean useNonLocal) { return inhaleData(fr, useNonLocal); }
 
     /** Check that we have proper number of valid columns vs. features selected, if not cap*/
-    private void checkAndLimitFeatureUsedPerSplit() {
-      int validCols = _drf.source.numCols()-1; // for classIdx column
-      if (validCols < _drf.drfParams.num_split_features) {
-        Log.info(Log.Tag.Sys.RANDF, "Limiting features from " + _drf.drfParams.num_split_features +
+    private void checkAndLimitFeatureUsedPerSplit(Frame fr) {
+      int validCols = fr.numCols()-1; // for classIdx column
+      if (validCols < _rfParams.num_split_features) {
+        Log.info(Log.Tag.Sys.RANDF, "Limiting features from " + _rfParams.num_split_features +
                 " to " + validCols + " because there are no more valid columns in the dataset");
-        _drf.drfParams.num_split_features= validCols;
+        _rfParams.num_split_features= validCols;
       }
     }
 
     /** Return the number of rows on this node. */
-    private int getRowCount(Frame fr) {
-      return (int)fr.numRows();
-    }
+    private int getRowCount(Frame fr) { return (int)fr.numRows(); }
 
     /** Return chunk index of the first chunk on this node. Used to identify the trees built here.*/
     private long getChunkId(final Frame fr) {
@@ -73,13 +70,13 @@ public class DABuilder {
     }
 
     /** Build data adapter for given frame */
-    protected DataAdapter inhaleData(Frame fr) {
+    protected DataAdapter inhaleData(Frame fr, boolean useNonLocal) {
       long id = getChunkId(fr);
       if (id == -99999) {
         return null;
       }
       Timer t_inhale = new Timer();
-      SpeeDRFModel rfmodel = _rfmodel;
+      final SpeeDRFModel rfmodel = UKV.get(_rfModel);
       boolean[] _isByteCol = new boolean[fr.numCols()];
       long[] _naCnts = new long[fr.numCols()];
       for (int i = 0; i < _isByteCol.length; ++i) {
@@ -94,19 +91,33 @@ public class DABuilder {
       final DataAdapter dapt = new DataAdapter(fr, rfmodel, modelDataMap,
               totalRows,
               getChunkId(fr),
-              _drf.drfParams.seed,
-              _drf.drfParams.bin_limit,
-              _drf.drfParams.class_weights);
+              _rfParams.seed,
+              _rfParams.bin_limit,
+              _rfParams.class_weights);
       // Check that we have proper number of valid columns vs. features selected, if not cap.
-      checkAndLimitFeatureUsedPerSplit();
+      checkAndLimitFeatureUsedPerSplit(fr);
 
       // Collects jobs loading local chunks
       ArrayList<RecursiveAction> dataInhaleJobs = new ArrayList<RecursiveAction>();
+
+      Log.info("\n\nTotal Number of Chunks: " + fr.anyVec().nChunks()+"\n\n");
+
+      int cnter_local = 0;
+      int cnter_remote = 0;
       for(int i = 0; i < fr.anyVec().nChunks(); ++i) {
-        dataInhaleJobs.add(loadChunkAction(dapt, fr, i, _isByteCol, _naCnts, rfmodel.regression));
+        if (useNonLocal) {
+          if (fr.anyVec().chunkKey(i).home()) { cnter_local++; } else { cnter_remote++; }
+          dataInhaleJobs.add(loadChunkAction(dapt, fr, i, _isByteCol, _naCnts, rfmodel.regression));
+        } else if (fr.anyVec().chunkKey(i).home()) {
+          cnter_local++;
+          dataInhaleJobs.add(loadChunkAction(dapt, fr, i, _isByteCol, _naCnts, rfmodel.regression));
+        }
       }
-      _rfmodel.current_status = "Inhaling Data";
-      _rfmodel.update(_rfmodel.jobKey);
+
+      Log.info("\n\nTotal local  chunks to load: "+cnter_local+"\n\nTotal remote chunks to load:" +cnter_remote);
+
+      SpeeDRF.DRFTask.updateRFModelStatus(_rfModel, "Inhaling Data.");
+      Log.info(Log.Tag.Sys.RANDF,"Beginning Random Forest Inhale.");
       ForkJoinTask.invokeAll(dataInhaleJobs);
 
       // Shrink data
@@ -121,7 +132,9 @@ public class DABuilder {
           try {
             Chunk[] chks = new Chunk[fr.numCols()];
             int ncolumns = chks.length;
-            for(int i = 0; i < chks.length; ++i) { chks[i] = fr.vecs()[i].chunkForChunkIdx(cidx); }
+            for(int i = 0; i < chks.length; ++i) {
+              chks[i] = fr.vecs()[i].chunkForChunkIdx(cidx);
+            }
             for (int j = 0; j < chks[0]._len; ++j) {
               int rowNum = (int)chks[0]._start + j;
               boolean rowIsValid = false;

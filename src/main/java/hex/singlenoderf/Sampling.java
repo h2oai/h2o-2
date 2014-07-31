@@ -1,8 +1,11 @@
 package hex.singlenoderf;
 
-import water.MemoryManager;
+import water.*;
 import water.util.Utils;
 
+//import hex.singlenoderf.TreeP;
+
+import java.util.ArrayList;
 import java.util.Arrays;
 
 public abstract class Sampling {
@@ -10,14 +13,12 @@ public abstract class Sampling {
 
   /** Available sampling strategies. */
   public enum Strategy {
-    RANDOM(0),
-    STRATIFIED_LOCAL(1);
-    //    STRATIFIED_DISTRIBUTED(2);
+    RANDOM(0); //,
     int _id; // redundant id
     private Strategy(int id) { _id = id; }
   }
 
-  abstract Data sample(final Data data, long seed);
+  abstract Data sample(final Data data, long seed, Key modelKey, boolean local_mode);
 
   /** Deterministically sample the Data at the bagSizePct.  Toss out
    invalid rows (as-if not sampled), but maintain the sampling rate. */
@@ -27,8 +28,8 @@ public abstract class Sampling {
 
     public Random(double bagSizePct, int[] rowsPerChunks) { _bagSizePct = bagSizePct; _rowsPerChunks = rowsPerChunks; }
 
-    @Override
-    Data sample(final Data data, long seed) {
+    @Override Data sample(final Data data, long seed, Key modelKey, boolean local_mode) {
+      SpeeDRFModel m = UKV.get(modelKey);
       int [] sample;
       sample = sampleFair(data,seed,_rowsPerChunks);
       // add the remaining rows
@@ -64,58 +65,6 @@ public abstract class Sampling {
         }
       }
       return Arrays.copyOf(sample,j); // Trim out bad rows
-    }
-  }
-
-  /** Strata is a dataset group which corresponds to a class.
-   * Sampling is specified per strata group.
-   *
-   * Stratified sampling look only at local data stored on the node.
-   */
-  final static class StratifiedLocal extends Sampling {
-    final private float[] _strataSamples;
-    final private int     _rowsPerChunk;
-
-    public StratifiedLocal(float[] strataSamples, int rowsPerChunk) {
-      _strataSamples = strataSamples; _rowsPerChunk = rowsPerChunk;
-    }
-
-    @Override final Data sample(final Data data, long seed) {
-      int sample[] = sampleLocalStratified(data, seed, _rowsPerChunk);
-      Arrays.sort(sample);
-      return new Subset(data, sample, 0, sample.length);
-    }
-
-    private int[] sampleLocalStratified(final Data data, long seed, int rowsPerChunk) {
-      // preconditions
-      assert _strataSamples.length == data._dapt.classes() : "There is not enough number of samples for individual stratas!";
-      // precomputing - find the largest sample and compute the bag size for it
-      float largestSample = 0.0f;
-      for (float sample : _strataSamples) if (sample > largestSample) largestSample = sample;
-      // compute
-      java.util.Random rand   = null;
-      int    rows   = data.rows();
-      int[]  sample = new int[(int) (largestSample*rows)]; // be little bit more pessimistic
-      int    j      = 0;
-      int    cnt    = 0;
-      // collect samples per strata
-      for (int row=0; row<rows; row++) {
-        if( cnt--==0 ) {
-          long chunkSamplingSeed = chunkSampleSeed(seed, row);
-          rand = Utils.getDeterRNG(chunkSamplingSeed);
-          cnt  = rowsPerChunk-1;
-          if( row+2*rowsPerChunk > rows ) cnt = rows; // Last chunk is big
-        }
-        float randFloat = rand.nextFloat();
-        if (!data._dapt.hasBadValue(row, data._dapt.classColIdx())) {
-          int strata = data._dapt.classOf(row); // strata groups are represented by response classes
-          if (randFloat < _strataSamples[strata]) {
-            if( j == sample.length ) sample = Arrays.copyOfRange(sample,0,(int)(1+sample.length*1.2));
-            sample[j++] = row;
-          }
-        }
-      }
-      return Arrays.copyOf(sample,j);
     }
   }
 

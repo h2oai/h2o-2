@@ -17,11 +17,14 @@ public final class CX0Chunk extends CXIChunk {
   @Override boolean hasFloat () { return false; }
 
   @Override NewChunk inflate_impl(NewChunk nc) {
-    final int len = sparseLen();
-    nc._ls = MemoryManager.malloc8 (len);
-    Arrays.fill(nc._ls,1);
-    nc._xs = MemoryManager.malloc4 (len);
-    nc._id = nonzeros();
+    final int slen = sparseLen();
+    nc.set_sparseLen(slen);
+    nc.set_len(len());
+    nc.alloc_mantissa(slen);
+    Arrays.fill(nc.mantissa(),1);
+    nc.alloc_exponent(slen);
+    nc.alloc_indices(slen);
+    nonzeros(nc.indices());
     return nc;
   }
 

@@ -1,0 +1,67 @@
+{
+    "type":"object",
+    "properties":{
+        "Request2": { "type":"number"},
+        "pca_model": {
+            "type":"object", "properties":{
+                "_dataKey": { "type":"string"},
+                "_domains": { "type":"array", "items": { "type":"null"} },
+                "_key": { "type":"string"},
+                "_modelClassDist": { "type":"null"},
+                "_names": { "type":"array", "items": { "type":"string"} },
+                "_priorClassDist": { "type":"null"},
+                "catOffsets": { "type":"array", "items": { "type":"number"} },
+                "cumVar": { "type":"array", "items": { "type":"number"} },
+                "eigVec": { "type":"array", "items": { "type":"array"} },
+                "namesExp": { "type":"array", "items": { "type":"string"} },
+                "normMul": { "type":"array", "items": { "type":"number"} },
+                "normSub": { "type":"array", "items": { "type":"number"} },
+                "num_pc": { "type":"number"},
+                "parameters": { "type":"object", "properties":{
+                        "Request2": { "type":"number"},
+                        "description": { "type":"string"},
+                        "destination_key": { "type":"string"},
+                        "end_time": { "type":"number"},
+                        "exception": { "type":"null"},
+                        "job_key": { "type":"string"},
+                        "max_pc": { "type":"number"},
+                        "pca_model": { "type":"null"},
+                        "response_info": { "type":"object", "properties":{
+                                "h2o": { "type":"string"},
+                                "node": { "type":"string"},
+                                "redirect_url": { "type":"string"},
+                                "status": { "type":"string"},
+                                "time": { "type":"number"}
+                            }
+                        },
+                        "source": { "type":"object", "properties":{
+                                "_key": { "type":"string"}
+                            }
+                        },
+                        "standardize": { "type":"string"},
+                        "start_time": { "type":"number"},
+                        "state": { "type":"string"},
+                        "tolerance": { "type":"number"}
+                    }
+                },
+                "propVar": { "type":"array", "items":
+                        { "type":"number"}
+                },
+                "rank": { "type":"number"},
+                "sdev": { "type":"array", "items": { "type":"number"}
+                },
+                "warnings": { "type":"array"}
+            }
+        },
+        "response_info": {
+            "type":"object", "properties":{
+                "h2o": { "type":"string"},
+                "node": { "type":"string"},
+                "redirect_url": { "type":"null"},
+                "status": { "type":"string"},
+                "time": { "type":"number"}
+            }
+        }
+    }
+}
+

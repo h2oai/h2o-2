@@ -32,7 +32,7 @@ public class ModelSerializationTest extends TestUtil {
   }
 
   @Test
-  public void testGBMModel() throws IOException {
+  public void testGBMModelMultinomial() throws IOException {
     GBMModel model = null, loadedModel = null;
     try {
       model = prepareGBMModel("smalldata/iris/iris.csv", EIA, 4, true, 5);
@@ -47,10 +47,40 @@ public class ModelSerializationTest extends TestUtil {
   }
 
   @Test
-  public void testDRFModel() throws IOException {
+  public void testGBMModelBinomial() throws IOException {
+    GBMModel model = null, loadedModel = null;
+    try {
+      model = prepareGBMModel("smalldata/logreg/prostate.csv", ari(0), 1, true, 5);
+      loadedModel = saveAndLoad(model);
+      // And compare
+      assertTreeModelEquals(model, loadedModel);
+      assertModelBinaryEquals(model, loadedModel);
+    } finally {
+      if (model!=null) model.delete();
+      if (loadedModel!=null) loadedModel.delete();
+    }
+  }
+
+  @Test
+  public void testDRFModelMultinomial() throws IOException {
     DRFModel model = null, loadedModel = null;
     try {
       model = prepareDRFModel("smalldata/iris/iris.csv", EIA, 4, true, 5);
+      loadedModel = saveAndLoad(model);
+      // And compare
+      assertTreeModelEquals(model, loadedModel);
+      assertModelBinaryEquals(model, loadedModel);
+    } finally {
+      if (model!=null) model.delete();
+      if (loadedModel!=null) loadedModel.delete();
+    }
+  }
+
+  @Test
+  public void testDRFModelBinomial() throws IOException {
+    DRFModel model = null, loadedModel = null;
+    try {
+      model = prepareDRFModel("smalldata/logreg/prostate.csv", ari(0), 1, true, 5);
       loadedModel = saveAndLoad(model);
       // And compare
       assertTreeModelEquals(model, loadedModel);
@@ -113,7 +143,7 @@ public class ModelSerializationTest extends TestUtil {
     Frame f = parseFrame(dataset);
     Key modelKey = Key.make("GLM_model_for_"+dataset);
     try {
-      DataInfo dinfo = new DataInfo(f, response, false, true);
+      DataInfo dinfo = new DataInfo(f, response, false, DataInfo.TransformType.STANDARDIZE);
       GLMParams glm = new GLMParams(family,0,family.defaultLink,0);
       new GLM2("GLM test on "+dataset,Key.make(),modelKey,dinfo,glm,new double[]{0},0).fork().get();
       return DKV.get(modelKey).get();
@@ -128,7 +158,7 @@ public class ModelSerializationTest extends TestUtil {
     final VarImp varimp;
 
     public BlahModel(Key selfKey, Key dataKey, String[] names, String[][] domains) {
-      super(selfKey, dataKey, names, domains);
+      super(selfKey, dataKey, names, domains, null, null);
       keys = new Key[3];
       varimp = new VarImp.VarImpRI(arf(1f, 1f, 1f));
     }

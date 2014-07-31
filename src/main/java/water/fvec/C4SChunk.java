@@ -3,19 +3,20 @@ package water.fvec;
 import java.util.Arrays;
 import water.*;
 import water.parser.DParseTask;
+import static water.parser.DParseTask.fitsIntoInt;
 
 /**
  * The scale/bias function, where data is in SIGNED bytes before scaling.
  */
 public class C4SChunk extends Chunk {
   static private final long _NA = Integer.MIN_VALUE;
-  static final int OFF=8+4;
+  static final int OFF=8+8;
   public double _scale;
-  int _bias;
-  C4SChunk( byte[] bs, int bias, double scale ) { _mem=bs; _start = -1; _len = (_mem.length-OFF)>>2;
+  long _bias;
+  C4SChunk( byte[] bs, long bias, double scale ) { _mem=bs; _start = -1; _len = (_mem.length-OFF)>>2;
     _bias = bias; _scale = scale;
     UDP.set8d(_mem,0,scale);
-    UDP.set4 (_mem,8,bias );
+    UDP.set8(_mem, 8, bias);
   }
   @Override protected final long at8_impl( int i ) {
     long res = UDP.get4(_mem,(i<<2)+OFF);
@@ -45,18 +46,18 @@ public class C4SChunk extends Chunk {
     _start = -1;
     _len = (_mem.length-OFF)>>2;
     _scale= UDP.get8d(_mem,0);
-    _bias = UDP.get4 (_mem,8);
+    _bias = UDP.get8(_mem, 8);
     return this;
   }
   @Override NewChunk inflate_impl(NewChunk nc) {
     double dx = Math.log10(_scale);
-    assert DParseTask.fitsIntoInt(dx);
-    Arrays.fill(nc._xs = MemoryManager.malloc4(_len), (int)dx);
-    nc._ls = MemoryManager.malloc8(_len);
-    for( int i=0; i<_len; i++ ) {
+    assert fitsIntoInt(dx);
+    nc.set_len(nc.set_sparseLen(0));
+    final int len = len();
+    for( int i=0; i<len; i++ ) {
       int res = UDP.get4(_mem,(i<<2)+OFF);
-      if( res == _NA ) nc._xs[i] = Integer.MIN_VALUE;
-      else             nc._ls[i] = res+_bias;
+      if( res == _NA ) nc.addNA();
+      else nc.addNum(res+_bias,(int)dx);
     }
     return nc;
   }

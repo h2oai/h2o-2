@@ -28,25 +28,25 @@ class Basic(unittest.TestCase):
             ('chdage.dat', 'binomial', 2, 5, None),
     
             # leave out ID and birth weight
-            ('clslowbwt.dat', 'binomial', 7, 10, [1,2,3,4,5]),
-            ('icu.dat', 'binomial', 1, 10, None),
+            ('clslowbwt.dat', 'binomial', 7, 60, [1,2,3,4,5]),
+            ('icu.dat', 'binomial', 1, 60, None),
             # need to exclude col 0 (ID) and col 10 (bwt)
             # but -x doesn't work..so do 2:9...range doesn't work? FIX!
-            ('lowbwt.dat', 'binomial', 1, 10, [2,3,4,5,6,7,8,9]),
-            ('lowbwtm11.dat', 'binomial', 1, 10, None),
-            ('meexp.dat', 'gaussian', 3, 10, None),
-            ('nhanes3.dat', 'binomial', 15, 10, None),
-            ('pbc.dat', 'gaussian', 1, 10, None),
-            ('pharynx.dat', 'gaussian', 12, 10, None),
-            ('pros.dat', 'binomial', 1, 10, None),
-            ('uis.dat', 'binomial', 8, 10, None),
+            ('lowbwt.dat', 'binomial', 1, 60, [2,3,4,5,6,7,8,9]),
+            ('lowbwtm11.dat', 'binomial', 1, 60, None),
+            ('meexp.dat', 'gaussian', 3, 60, None),
+            ('nhanes3.dat', 'binomial', 15, 60, None),
+            ('pbc.dat', 'gaussian', 1, 60, None),
+            ('pharynx.dat', 'gaussian', 12, 60, None),
+            ('pros.dat', 'binomial', 1, 60, None),
+            ('uis.dat', 'binomial', 8, 60, None),
             ]
 
         trial = 0
         for i in range(3):
             for (csvFilename, family, y, timeoutSecs, x) in csvFilenameList:
                 csvPathname = "logreg/umass_statdata/" + csvFilename
-                kwargs = {'n_folds': 2, 'response': y, 'family': family, 'alpha': 1, 'lambda': 1e-4}
+                kwargs = {'n_folds': 3, 'response': y, 'family': family, 'alpha': 1, 'lambda': 1e-4}
 
 
                 parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put', 

@@ -17,7 +17,8 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         # a kludge
         h2o.setup_benchmark_log()
 
-        csvFilename = 'syn_sphere_gen.csv'
+        csvFilename = 'syn_sphere15_gen_26GB.csv'
+
         totalBytes = 183538602156
         if FROM_HDFS:
             importFolderPath = "datasets/kmeans_big"
@@ -64,11 +65,11 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             if FROM_HDFS:
                 parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', hex_key=hex_key,
                     timeoutSecs=timeoutSecs, pollTimeoutSecs=60, retryDelaySecs=2,
-                    benchmarkLogging=benchmarkLogging, **kwargs)
+                    benchmarkLogging=benchmarkLogging, doSummary=False, **kwargs)
             else:
                 parseResult = h2i.import_parse(path=csvPathname, schema='local', hex_key=hex_key,
                     timeoutSecs=timeoutSecs, pollTimeoutSecs=60, retryDelaySecs=2,
-                    benchmarkLogging=benchmarkLogging, **kwargs)
+                    benchmarkLogging=benchmarkLogging, doSummary=False, **kwargs)
 
             elapsed = time.time() - start
             fileMBS = (totalBytes/1e6)/elapsed
@@ -77,10 +78,11 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             print "\n"+l
             h2o.cloudPerfH2O.message(l)
 
-            inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
+            inspect = h2o_cmd.runInspect(key=parseResult['destination_key'], timeoutSecs=300)
             numRows = inspect['numRows']
             numCols = inspect['numCols']
-            summary = h2o_cmd.runSummary(key=parseResult['destination_key'], numRows=numRows, numCols=numCols)
+            summary = h2o_cmd.runSummary(key=parseResult['destination_key'], numRows=numRows, numCols=numCols, 
+                timeoutSecs=300)
             h2o_cmd.infoFromSummary(summary)
 
 

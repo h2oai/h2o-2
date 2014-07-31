@@ -1,7 +1,5 @@
 \name{h2o.importFolder}
 \alias{h2o.importFolder}
-\alias{h2o.importFolder.VA}
-\alias{h2o.importFolder.FV}
 \title{
 Import Local Directory of Data Files
 }
@@ -9,16 +7,7 @@ Import Local Directory of Data Files
   Imports all the files in the local directory and parses them, concatenating the data into a single H2O data matrix and returning an object containing the identifying hex key.
 }
 \usage{
-## Default method:
 h2o.importFolder(object, path, pattern = "", key = "", parse = TRUE, header, 
-  sep = "", col.names, version = 2)
-
-## Import to a ValueArray object:
-h2o.importFolder.VA(object, path, pattern = "", key = "", parse = TRUE, header, 
-  sep = "", col.names)
-
-## Import to a FluidVecs object:
-h2o.importFolder.FV(object, path, pattern = "", key = "", parse = TRUE, header, 
   sep = "", col.names)
 }
 %- maybe also 'usage' for other objects documented here.
@@ -45,23 +34,18 @@ h2o.importFolder.FV(object, path, pattern = "", key = "", parse = TRUE, header,
 (Optional) The field separator character. Values on each line of the file are separated by this character. If \code{sep = ""}, the parser will automatically detect the separator.
   }
   \item{col.names}{
-(Optional) A \code{\linkS4class{H2OParsedDataVA}} (\code{version = 1}) or \code{\linkS4class{H2OParsedData}} (\code{version = 2}) object containing a single delimited line with the column names for the file.
-  }
-  \item{version}{
-  (Optional) If \code{version = 1}, the folder of files will be imported to a ValueArray object. Otherwise, if \code{version = 2}, the files will be imported as a FluidVecs object.
+(Optional) An \code{\linkS4class{H2OParsedData}} object containing a single delimited line with the column names for the file.
   }
 }
 
 \details{
-Calling the method with \code{version = 1} is equivalent to \code{h2o.importFolder.VA}, and \code{version = 2} is equivalent to \code{h2o.importFolder.FV}.
-
-This method imports all the data files in a given folder and concatenates them together row-wise into a single matrix represented by a \code{\linkS4class{H2OParsedDataVA}} (\code{version = 1}) or \code{\linkS4class{H2OParsedData}} (\code{version = 2}) object. The data files must all have the same number of columns, and the columns must be lined up in the same order, otherwise an error will be returned.
+This method imports all the data files in a given folder and concatenates them together row-wise into a single matrix represented by a \code{\linkS4class{H2OParsedData}} object. The data files must all have the same number of columns, and the columns must be lined up in the same order, otherwise an error will be returned.
 
 WARNING: In H2O, import is lazy! Do not modify the data files on hard disk until after parsing is complete.
 }
 
 \value{
-If \code{parse = TRUE}, the function returns an object of class \code{\linkS4class{H2OParsedDataVA}} when \code{version = 1} and an object of class \code{\linkS4class{H2OParsedData}} when \code{version = 2}. Otherwise, when \code{parse = FALSE}, it returns an object of class \code{\linkS4class{H2ORawDataVA}} when \code{version = 1} and an object of class \code{\linkS4class{H2ORawData}} when \code{version = 2}.
+If \code{parse = TRUE}, the function returns an object of class \code{\linkS4class{H2OParsedData}}. Otherwise, when \code{parse = FALSE}, it returns an object of class  \code{\linkS4class{H2ORawData}}.
 }
 \seealso{
   %% ~~objects to See Also as \code{\link{help}}, ~~~
@@ -74,8 +58,6 @@ myPath = system.file("extdata", "prostate_folder", package = "h2o")
 prostate_all.hex = h2o.importFolder(localH2O, path = myPath)
 class(prostate_all.hex)
 summary(prostate_all.hex)
-prostate_all.fv = h2o.importFolder(localH2O, path = myPath, version = 2)
-class(prostate_all.fv)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

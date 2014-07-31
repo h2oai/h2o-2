@@ -1,7 +1,5 @@
 \name{h2o.glm}
 \alias{h2o.glm}
-\alias{h2o.glm.VA}
-\alias{h2o.glm.FV}
 \title{
 H2O: Generalized Linear Models
 }
@@ -9,21 +7,12 @@ H2O: Generalized Linear Models
 Fit a generalized linear model, specified by a response variable, a set of predictors, and a description of the error distribution.
 }
 \usage{
-## Default method:
-h2o.glm(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e-5, epsilon = 1e-4, 
-  standardize = TRUE, prior, tweedie.p = ifelse(family == 'tweedie', 1.5, 
-  as.numeric(NA)), thresholds, iter.max, higher_accuracy, lambda_search, version = 2)
-
-## Import to a ValueArray object:
-h2o.glm.VA(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e-5, epsilon = 1e-4, 
-  standardize = TRUE, prior, tweedie.p = ifelse(family == 'tweedie', 1.5, 
-  as.numeric(NA)), thresholds = ifelse(family == 'binomial', seq(0, 1, 0.01), 
-  as.numeric(NA)))
-
-## Import to a FluidVecs object:
-h2o.glm.FV(x, y, data, family, nfolds = 10, alpha = 0.5, lambda = 1e-5, epsilon = 1e-4, 
-  standardize = TRUE, prior, tweedie.p = ifelse(family == 'tweedie', 1.5, 
-  as.numeric(NA)), iter.max = 100, higher_accuracy = FALSE, lambda_search = FALSE)
+h2o.glm(x, y, data, key = "", family, nfolds = 0, alpha = 0.5, nlambda = -1, 
+  lambda.min.ratio = -1, lambda = 1e-5, epsilon = 1e-4, standardize = TRUE, 
+  prior, variable_importances = 1, use_all_factor_levels = 0, tweedie.p = 
+  ifelse(family == 'tweedie', 1.5, as.numeric(NA)), iter.max = 100, 
+  higher_accuracy = FALSE, lambda_search = FALSE, return_all_lambda = FALSE, 
+  max_predictors = -1)
 }
 \arguments{
   \item{x}{
@@ -33,18 +22,27 @@ A vector containing the names of the predictors in the model.
 The name of the response variable in the model.
 }
   \item{data}{
-An \code{\linkS4class{H2OParsedDataVA}} (\code{version = 1}) or \code{\linkS4class{H2OParsedData}} (\code{version = 2}) object containing the variables in the model.
+An \code{\linkS4class{H2OParsedData}} object containing the variables in the model.
+}
+  \item{key}{
+(Optional) The unique hex key assigned to the resulting model. If none is given, a key will automatically be generated.
 }
   \item{family}{
 A description of the error distribution and corresponding link function to be used in the model. Currently, Gaussian, binomial, Poisson, gamma, and Tweedie are supported. When a model is specified as Tweedie, users must also specify the appropriate Tweedie power. 
 }
   \item{nfolds}{
-(Optional) Number of folds for cross-validation. The default is 10.
+(Optional) Number of folds for cross-validation.
 }
   \item{alpha}{
 (Optional) The elastic-net mixing parameter, which must be in [0,1]. The penalty is defined to be \deqn{P(\alpha,\beta) = (1-\alpha)/2||\beta||_2^2 + \alpha||\beta||_1 = \sum_j [(1-\alpha)/2 \beta_j^2 + \alpha|\beta_j|]} so \code{alpha=1} is the lasso penalty, while \code{alpha=0} is the ridge penalty.
 }
-  \item{lambda}{The shrinkage parameter, which multiples \eqn{P(\alpha,\beta)} in the objective. The larger \code{lambda} is, the more the coefficients are shrunk toward zero (and each other).
+  \item{nlambda}{
+  The number of \code{lambda} values when performing a search.
+  }
+  \item{lambda.min.ratio}{
+  Smallest value for \code{lambda} as a fraction of \code{lambda.max}, the entry value, which is the smallest value for which all coefficients in the model are zero. 
+  }
+  \item{lambda}{The shrinkage parameter, which multiplies \eqn{P(\alpha,\beta)} in the objective. The larger \code{lambda} is, the more the coefficients are shrunk toward zero (and each other).
 }
   \item{epsilon}{
 (Optional) Number indicating the cutoff for determining if a coefficient is zero.
@@ -55,12 +53,15 @@ A description of the error distribution and corresponding link function to be us
   \item{prior}{
 (Optional) Prior probability of class 1. Only used if \code{family = "binomial"}. When omitted, prior will default to the frequency of class 1 in the response column.
   }
+  \item{variable_importances}{
+  (Optional) A numeric value either 0 or 1 to indicate whether the variable importances should be computed.  Compute variable importances for input features. NOTE: If use_all_factor_levels is off the importance of the base level will NOT be shown.
+  }
+  \item{use_all_factor_levels}{
+  (Optional) A numeric value either 0 or 1 to indicate whether all factor levels should be used. By default, first factor level is skipped from the possible set of predictors. Set this flag if you want use all of the levels. Needs sufficient regularization to solve!
+  }
   \item{tweedie.p}{
   (Optional) The index of the power variance function for the tweedie distribution. Only used if \code{family = "tweedie"}.
 }
-  \item{thresholds}{
-  (Optional) Degree to which to weight the sensitivity (the proportion of correctly classified 1's) and specificity (the proportion of correctly classified 0s). The default option is joint optimization for the overall classification rate. Changing this will alter the confusion matrix and the AUC. Only used if \code{family = "binomial"}.
-  }
   \item{iter.max}{
   (Optional) Maximum number of iterations allowed.
   }
@@ -68,17 +69,17 @@ A description of the error distribution and corresponding link function to be us
   (Optional) A logical value indicating whether to use line search. This will cause the algorithm to run slower, so generally, it should only be set to TRUE if GLM does not converge otherwise.
   }
   \item{lambda_search}{
-  (Optional) A logical value indicating whether to onduct a search over the space of lambda values, starting from lambda_max. When this is set to TRUE, \code{lambda} will be interpreted as lambda_min.
+  (Optional) A logical value indicating whether to conduct a search over the space of lambda values, starting from lambda_max. When this is set to TRUE, \code{lambda} will be interpreted as lambda_min.
   }
-  \item{version}{
-  (Optional) The version of GLM to run. If \code{version = 1}, this will run the more stable ValueArray implementation, while \code{version = 2} runs the faster, but still beta stage FluidVecs implementation.
+  \item{return_all_lambda}{
+  (Optional) A logical value indicating whether to return every model built during the lambda search. Only used if \code{lambda_search = TRUE}. If \code{return_all_lambda = FALSE}, then only the model corresponding to the optimal lambda will be returned.
   }
-}
-\details{
-IMPORTANT: Currently, to run GLM with \code{version = 1}, you must import data to a ValueArray object using \code{\link{h2o.importFile.VA}}, \code{\link{h2o.importFolder.VA}} or one of its variants. To run with \code{version = 2}, you must import data to a FluidVecs object using \code{\link{h2o.importFile.FV}}, \code{\link{h2o.importFolder.FV}} or one of its variants.
+  \item{max_predictors}{
+  (Optional) When \code{lambda_search = TRUE}, the algorithm will stop training if the number of predictors exceeds this value. Ignored when \code{lambda_search = FALSE} or \code{max_predictors = -1}.
+  }
 }
 \value{
-An object of class \code{\linkS4class{H2OGLMModelVA}} (\code{version = 1}) or \code{\linkS4class{H2OGLMModel}} (\code{version = 2}) with slots key, data, model and xval. The slot model is a list of the following components:
+An object of class \code{\linkS4class{H2OGLMModel}} with slots key, data, model and xval. The slot model is a list of the following components:
 \item{coefficients }{A named vector of the coefficients estimated in the model.}
 \item{rank }{The numeric rank of the fitted linear model.}
 \item{family }{The family of the error distribution.}
@@ -94,7 +95,7 @@ An object of class \code{\linkS4class{H2OGLMModelVA}} (\code{version = 1}) or \c
 \item{training.err }{Average training error.}
 \item{threshold }{Best threshold.}
 \item{confusion }{Confusion matrix.}
-The slot xval is a list of \code{\linkS4class{H2OGLMModel}} or \code{\linkS4class{H2OGLMModelVA}} objects representing the cross-validation models. (Each of these objects themselves has xval equal to an empty list).
+The slot xval is a list of \code{\linkS4class{H2OGLMModel}} objects representing the cross-validation models. (Each of these objects themselves has xval equal to an empty list).
 }
 \seealso{
 %% ~~objects to See Also as \code{\link{help}}, ~~~

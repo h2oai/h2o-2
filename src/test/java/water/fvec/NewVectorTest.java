@@ -23,15 +23,20 @@ public class NewVectorTest extends TestUtil {
     nv._ls = ls;
     nv._id = id;
     nv._xs = xs;
-    nv._len= nv._len2 = ls.length;
+    nv._len= nv._sparseLen = ls.length;
     Chunk bv = nv.compress();
-    bv._vec = av.close(new Futures());
+    Futures fs = new Futures();
+    bv._vec = av.close(fs);
+    fs.blockForPending();
     // Compression returns the expected compressed-type:
     assertTrue( "Found chunk class "+bv.getClass()+" but expected "+C, C.isInstance(bv) );
     assertEquals( hasFloat, bv.hasFloat() );
     // Also, we can decompress correctly
     for( int i=0; i<ls.length; i++ )
-      assertEquals(ls[i]*DParseTask.pow10(xs[i]), bv.at0(i), bv.at0(i)*EPSILON);
+      if(ls[i] == Long.MAX_VALUE && xs[i] == Integer.MIN_VALUE)
+        assertTrue(bv.isNA0(i));
+      else
+        assertEquals(ls[i]*DParseTask.pow10(xs[i]), bv.at0(i), bv.at0(i)*EPSILON);
     UKV.remove(av._key);
   }
   // Test that various collections of parsed numbers compress as expected.
@@ -48,10 +53,28 @@ public class NewVectorTest extends TestUtil {
     testImpl(new long[] {1, 0, 1},
              new int [] {0, 0, 0},
              CBSChunk.class,false);
+
+    testImpl(new long[] {0,128,255}, // 12.2, -3.0, 4.4 ==> 122e-1, -30e-1, 44e-1
+      new int [] {0,0,0},
+      C1NChunk.class, false);
+    // Scaled-byte compression
+    testImpl(new long[] {0,Long.MAX_VALUE,128,254}, // 12.2, -3.0, 4.4 ==> 122e-1, -30e-1, 44e-1
+      new int [] {0,Integer.MIN_VALUE,0,0},
+      C1Chunk.class, false);
+    testImpl(new long[] {0,Long.MAX_VALUE,128,255}, // 12.2, -3.0, 4.4 ==> 122e-1, -30e-1, 44e-1
+      new int [] {0,Integer.MIN_VALUE,0,0},
+      C2Chunk.class, false);
+    testImpl(new long[] {0,Long.MAX_VALUE,128,255, Short.MAX_VALUE-1}, // 12.2, -3.0, 4.4 ==> 122e-1, -30e-1, 44e-1
+      new int [] {0,Integer.MIN_VALUE,0,0,0},
+      C2Chunk.class, false);
     // Scaled-byte compression
     testImpl(new long[] {122,-3,44}, // 12.2, -3.0, 4.4 ==> 122e-1, -30e-1, 44e-1
              new int [] { -1, 0,-1},
              C1SChunk.class, true);
+    // Positive-scale byte compression
+    testImpl(new long[] {0,10,254}, // 1000, 2000, 3000 ==> 1e3, 2e3, 3e3
+      new int [] {   0,  0, 0},
+      C1NChunk.class,false);
     // Positive-scale byte compression
     testImpl(new long[] {1000,200,30}, // 1000, 2000, 3000 ==> 1e3, 2e3, 3e3
              new int [] {   0,  1, 2},
@@ -84,6 +107,7 @@ public class NewVectorTest extends TestUtil {
     testImpl(new long[] {1234,2345678,31415},
              new int [] {  40,     10,  -40},
              C8DChunk.class, true);
+
   }
 
   // Testing writes to an existing Chunk causing inflation
@@ -93,13 +117,13 @@ public class NewVectorTest extends TestUtil {
     NewChunk nv = new NewChunk(av,0);
     nv._ls = new long[]{0,0,0,0}; // A 4-row chunk
     nv._xs = new int []{0,0,0,0};
-    nv._len= nv._len2 = nv._ls.length;
+    nv._len= nv._sparseLen = nv._ls.length;
     long [] ls = nv._ls;
     nv.close(0,null);
     Futures fs = new Futures();
     Vec vec = av.close(fs);
     fs.blockForPending();
-    assertEquals( nv._len2, vec.length() );
+    assertEquals( nv._len, vec.length() );
     // Compression returns the expected constant-compression-type:
     Chunk c0 = vec.chunkForChunkIdx(0);
     assertTrue( "Found chunk class "+c0.getClass()+" but expected C0LChunk", c0 instanceof C0LChunk );

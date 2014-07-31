@@ -49,6 +49,7 @@ public final class ParseDataset extends Job {
   public static class GuessSetupTsk extends MRTask<GuessSetupTsk> {
     final CustomParser.ParserSetup _userSetup;
     final boolean _checkHeader;
+    boolean _empty = true;
     PSetupGuess _gSetup;
     IcedArrayList<Key> _failedSetup;
     IcedArrayList<Key> _conflicts;
@@ -61,24 +62,37 @@ public final class ParseDataset extends Job {
     }
     public static final int MAX_ERRORS = 64;
     @Override public void map(Key key) {
-      _failedSetup = new IcedArrayList<Key>();
-      _conflicts = new IcedArrayList<Key>();
       byte [] bits = Utils.getFirstUnzipedBytes(key);
-      _gSetup = ParseDataset.guessSetup(bits, _userSetup, _checkHeader);
-      if(_gSetup == null || !_gSetup._isValid)
-        _failedSetup.add(key);
-      else {
-        _gSetup._setupFromFile = key;
-        if(_checkHeader && _gSetup._setup._header)
-          _gSetup._hdrFromFile = key;
+      if(bits.length > 0) {
+        _empty = false;
+        _failedSetup = new IcedArrayList<Key>();
+        _conflicts = new IcedArrayList<Key>();
+        _gSetup = ParseDataset.guessSetup(bits, _userSetup, _checkHeader);
+        if (_gSetup == null || !_gSetup._isValid)
+          _failedSetup.add(key);
+        else {
+          _gSetup._setupFromFile = key;
+          if (_checkHeader && _gSetup._setup._header)
+            _gSetup._hdrFromFile = key;
+        }
       }
     }
 
     @Override public void reduce(GuessSetupTsk drt) {
+      if(drt._empty)return;
       if(_gSetup == null || !_gSetup._isValid){
+        _empty = false;
         _gSetup = drt._gSetup;
-        _gSetup._hdrFromFile = drt._gSetup._hdrFromFile;
-        _gSetup._setupFromFile = drt._gSetup._setupFromFile;
+        if(_gSetup == null)
+          System.out.println("haha");
+//        if(_gSetup != null) {
+        try {
+          _gSetup._hdrFromFile = drt._gSetup._hdrFromFile;
+          _gSetup._setupFromFile = drt._gSetup._setupFromFile;
+//        }
+        } catch(Throwable t){
+          t.printStackTrace();
+        }
       } else if(drt._gSetup._isValid && !_gSetup._setup.isCompatible(drt._gSetup._setup) ){
         if(_conflicts.contains(_gSetup._setupFromFile) && !drt._conflicts.contains(drt._gSetup._setupFromFile)){
           _gSetup = drt._gSetup; // setups are not compatible, select random setup to send up (thus, the most common setup should make it to the top)

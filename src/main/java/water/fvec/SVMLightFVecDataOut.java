@@ -19,9 +19,10 @@ public class SVMLightFVecDataOut extends FVecDataOut {
 
   private void addColumns(int ncols){
     if(ncols > _nCols){
-      _nvs = Arrays.copyOf(_nvs, ncols);
-      _vecs = Arrays.copyOf(_vecs, ncols);
-      for(int i = _nCols; i < ncols; ++i){
+      _nvs   = Arrays.copyOf(_nvs   , ncols);
+      _vecs  = Arrays.copyOf(_vecs  , ncols);
+      _ctypes= Arrays.copyOf(_ctypes, ncols);
+      for(int i = _nCols; i < ncols; ++i) {
         _vecs[i] = new AppendableVec(_vg.vecKey(i+1));
         _nvs[i] = new NewChunk(_vecs[i], _cidx);
         for(int j = 0; j < _nLines; ++j)

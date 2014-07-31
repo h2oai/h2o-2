@@ -25,7 +25,7 @@ class Basic(unittest.TestCase):
     def test_GLM2_covtype20x_1(self):
         h2o.beta_features = True
         csvFilenameList = [
-            ('covtype20x.data', 400),
+            ('covtype20x.data', 800),
             ]
 
         # a browser window too, just because we can

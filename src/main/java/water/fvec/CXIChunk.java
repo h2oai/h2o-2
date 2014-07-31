@@ -78,20 +78,20 @@ public class CXIChunk extends Chunk {
   @Override boolean hasFloat ()                 { return false; }
 
   @Override NewChunk inflate_impl(NewChunk nc) {
-    final int len = sparseLen();
-    nc._len2 = _len;
-    nc._len = sparseLen();
-    nc._ls = MemoryManager.malloc8 (len);
-    nc._xs = MemoryManager.malloc4 (len);
-    nc._id = MemoryManager.malloc4 (len);
+    final int slen = sparseLen();
+    nc.set_sparseLen(slen);
+    nc.set_len(len());
+    nc.alloc_mantissa(slen);
+    nc.alloc_exponent(slen);
+    nc.alloc_indices(slen);
     int off = OFF;
-    for( int i = 0; i < len; ++i, off += _ridsz + _valsz) {
-      nc._id[i] = getId(off);
+    for( int i = 0; i < slen; ++i, off += _ridsz + _valsz) {
+      nc.indices()[i] = getId(off);
       long v = getIValue(off);
       if(v == NAS[_valsz_log])
         nc.setNA_impl2(i);
       else
-        nc._ls[i] = v;
+        nc.mantissa()[i] = v;
     }
     return nc;
   }

@@ -1,12 +1,20 @@
 package water.fvec;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+import org.joda.time.DateTimeZone;
+import org.junit.BeforeClass;
 import org.junit.Test;
-import water.TestUtil;
+
 import water.Key;
+import water.TestUtil;
 
 public class ParseTimeTest extends TestUtil {
   private double[] d(double... ds) { return ds; }
+
+  @BeforeClass
+  public static void tz() { DateTimeZone.setDefault(DateTimeZone.forID("America/Los_Angeles")); }
 
   // Parse click & query times from a subset of kaggle bestbuy data
   @Test public void testTimeParse1() {
@@ -55,7 +63,7 @@ public class ParseTimeTest extends TestUtil {
       l(         3,0x6870f256e1454d75L,0xadb099ccb77d5d3aL,0),
       l(         4,0xd8da52c1d1454dffL,0xb3d1127c6eb75d40L,1),
       l(         5,0x25ce1456546d4e35L,0xbddcd571b26581eaL,0),
-      l(         6,0x2e1d193fd1da4664L,0x8a2bffdfe0aa7be3L,0), 
+      l(         6,0x2e1d193fd1da4664L,0x8a2bffdfe0aa7be3L,0),
       l(1000010407,0x89e68530422e43baL,0xbd00aa3d8f2cfcaaL,1),
       l(1000024046,0x4055a53b411f46f0L,0x9d2ecf03bc95c080L,0),
       l(1000054511,0x49d14d8e5c42439dL,0xb4a8995e25b1602fL,0),
@@ -65,7 +73,7 @@ public class ParseTimeTest extends TestUtil {
       l( 100007536,0xd8da52c1d1454dffL,0xb3d1127c6eb75d40L,1),
       l(1000079839,0x6870f256e1454d75L,0xadb099ccb77d5d3aL,0),
       l(  10000913,0xac1e1ca35ca8438aL,0x85a48175ed5bb7ecL,0),
-      l(1000104538,0x9ff4ed3a6b004130L,0x9aca2ed897305fd1L,1), 
+      l(1000104538,0x9ff4ed3a6b004130L,0x9aca2ed897305fd1L,1),
       l(         7,0x0000000000000000L,0x0000000000000000L,0),
       l(         8,0x8000000000000000L,0x0000000000000000L,0),
       l(         9,0xFFFFFFFFFFFFFFFFL,0xFFFFFFFFFFFFFFFFL,1),
@@ -106,7 +114,7 @@ public class ParseTimeTest extends TestUtil {
         System.out.println(res.toStringAll());
         String skey = env.key();
         env.subRef(res,skey);   // But then end lifetime
-      } catch( IllegalArgumentException iae ) { 
+      } catch( IllegalArgumentException iae ) {
         if( env != null ) env.remove_and_unlock();
         throw iae;
       }

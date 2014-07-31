@@ -1,7 +1,7 @@
 package hex.glm;
 
-import hex.ConfusionMatrix;
 import hex.FrameTask.DataInfo;
+import hex.VarImp;
 import hex.glm.GLMParams.Family;
 import hex.glm.GLMValidation.GLMXValidation;
 import water.*;
@@ -18,7 +18,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-  @API(help="lambda max, smallest lambda which drives all coefficients to zero")
+  @API(help="lambda_value max, smallest lambda_value which drives all coefficients to zero")
   final double  lambda_max;
   @API(help="mean of response in the training dataset")
   final double     ymu;
@@ -37,8 +37,6 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @API(help="Input data info")
   DataInfo data_info;
 
-  @API(help="warnings")
-  String []  warnings;
   @API(help="Decision threshold.")
   double     threshold;
   @API(help="glm params")
@@ -51,30 +49,38 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @API(help="column names including expanded categorical values")
   public String [] coefficients_names;
 
-  @API(help="index of lambda giving best results")
+  @API(help="index of lambda_value giving best results")
   int best_lambda_idx;
 
   public double auc(){
-    if(glm.family == Family.binomial && submodels != null && submodels[best_lambda_idx].validation != null)
-      return submodels[best_lambda_idx].validation.auc;
+    if(glm.family == Family.binomial && submodels != null && submodels[best_lambda_idx].validation != null) {
+      Submodel sm = submodels[best_lambda_idx];
+      return sm.xvalidation != null?sm.xvalidation.auc:sm.validation.auc;
+    }
     return -1;
   }
   public double aic(){
-    if(submodels != null && submodels[best_lambda_idx].validation != null)
-      return submodels[best_lambda_idx].validation.aic;
+    if(submodels != null && submodels[best_lambda_idx].validation != null){
+      Submodel sm = submodels[best_lambda_idx];
+      return sm.xvalidation != null?sm.xvalidation.aic:sm.validation.aic;
+    }
     return Double.MAX_VALUE;
   }
   public double devExplained(){
     if(submodels == null || submodels[best_lambda_idx].validation == null)
       return 0;
-    GLMValidation val = submodels[best_lambda_idx].validation;
+    Submodel sm = submodels[best_lambda_idx];
+    GLMValidation val = sm.xvalidation == null?sm.validation:sm.xvalidation;
     return 1.0 - val.residual_deviance/val.null_deviance;
   }
 
   @Override public GLMModel clone(){
     GLMModel res = (GLMModel)super.clone();
     res.submodels = submodels.clone();
-    if(warnings != null)res.warnings = warnings.clone();
+    if(warnings != null)
+      res.warnings = warnings.clone();
+    else
+      res.warnings = new String[0];
     return res;
   }
 
@@ -100,15 +106,23 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   // fully expanded beta used for scoring
   private double [] global_beta;
 
+  public void setBestSubmodel(double lambda){
+
+  }
   static class Submodel extends Iced {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+
+    @API(help="lambda_value value used for computation of this submodel")
+    final double lambda_value;
     @API(help="number of iterations computed.")
     final int        iteration;
     @API(help="running time of the algo in ms.")
     final long       run_time;
     @API(help="Validation")
     GLMValidation validation;
+    @API(help="X-Validation")
+    GLMValidation xvalidation;
     @API(help="Beta vector containing model coefficients.") double []  beta;
     @API(help="Beta vector containing normalized coefficients (coefficients obtained on normalized data).") double []  norm_beta;
 
@@ -120,7 +134,8 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     @API(help="sparseCoefFlag")
     final boolean sparseCoef;
 
-    public Submodel(double [] beta, double [] norm_beta, long run_time, int iteration, boolean sparseCoef){
+    public Submodel(double lambda , double [] beta, double [] norm_beta, long run_time, int iteration, boolean sparseCoef){
+      this.lambda_value = lambda;
       this.run_time = run_time;
       this.iteration = iteration;
       int r = 0;
@@ -145,20 +160,19 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
       rank = r;
       this.sparseCoef = sparseCoef;
     }
-    @Override
-    public Submodel clone(){return new Submodel(beta == null?null:beta.clone(),norm_beta == null?null:norm_beta.clone(),run_time,iteration,sparseCoef);}
   }
 
-  @API(help = "models computed for particular lambda values")
+  @API(help = "models computed for particular lambda_value values")
   Submodel [] submodels;
-
-  @API(help = "lambda sequence")
-  final double [] lambdas;
 
   final boolean useAllFactorLevels;
 
-  public GLMModel(GLM2 job, Key selfKey, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double lambda_max, double [] lambda, double ymu, double prior) {
-    super(selfKey,null,dinfo._adaptedFrame);
+
+  @API(help = "Variable importances", json=true)
+  VarImp variable_importances;
+
+  public GLMModel(GLM2 job, Key selfKey, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double lambda_max, double ymu, double prior) {
+    super(selfKey,job.source._key == null ? dinfo._frameKey : job.source._key,dinfo._adaptedFrame, /* priorClassDistribution */ null);
     parameters = Job.hygiene((GLM2) job.clone());
     job_key = job.self();
     this.ymu = ymu;
@@ -166,55 +180,194 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     this.glm = glm;
     threshold = 0.5;
     this.data_info = dinfo;
-    this.warnings = null;
+    this.warnings = new String[0];
     this.alpha = alpha;
     this.lambda_max = lambda_max;
-    this.lambdas = lambda;
     this.beta_eps = beta_eps;
-    submodels = new Submodel[lambda.length];
-    for(int i = 0; i < submodels.length; ++i)
-      submodels[i] = new Submodel(null, null, 0, 0,true);
+    submodels = new Submodel[0];
     run_time = 0;
     start_time = System.currentTimeMillis();
     coefficients_names = coefNames();
     useAllFactorLevels = dinfo._useAllFactorLevels;
   }
-  public void setLambdaSubmodel(int lambdaIdx, double [] beta, double [] norm_beta, int iteration, boolean sparseCoef){
-    run_time = (System.currentTimeMillis()-start_time);
-    submodels[lambdaIdx] = new Submodel(beta, norm_beta, run_time, iteration,sparseCoef);
+
+  public void pickBestModel(boolean useAuc){
+    int bestId = submodels.length-1;
+    if(submodels.length > 2) {
+      final boolean xval = submodels[1].xvalidation != null;
+      GLMValidation bestVal = xval ? submodels[1].xvalidation : submodels[1].validation;
+      for (int i = 1; i < submodels.length; ++i) {
+        GLMValidation val = xval ? submodels[i].xvalidation : submodels[i].validation;
+        if (val == null) continue;
+        if ((useAuc && val.auc > bestVal.auc)
+                || (xval && val.residual_deviance < bestVal.residual_deviance)
+                || (((bestVal.residual_deviance - val.residual_deviance) / val.null_deviance) >= 0.01)) {
+          bestVal = val;
+          bestId = i;
+        }
+      }
+    }
+    best_lambda_idx = bestId;
+    Submodel sm = submodels[bestId];
+    double[] beta = MemoryManager.malloc8d(coefficients_names.length);
+    for (int i = 0; i < sm.beta.length; ++i)
+      beta[sm.idxs[i]] = sm.beta[i];
+    global_beta = beta;
+  }
+  public static void pickBestSubmodel(H2OCountedCompleter cmp, Key modelKey, final boolean useAuc){
+    cmp.addToPendingCount(1);
+    new TAtomic<GLMModel>(cmp){
+      @Override
+      public GLMModel atomic(GLMModel old) {
+        int bestId = 0;
+        final boolean xval = old.submodels[0].xvalidation != null;
+        GLMValidation bestVal = xval?old.submodels[0].xvalidation:old.submodels[0].validation;
+        for(int i = 1; i < old.submodels.length; ++i){
+          GLMValidation val = xval?old.submodels[i].xvalidation:old.submodels[i].validation;
+          if((useAuc && val.auc > bestVal.auc)
+                  || (xval && val.residual_deviance < bestVal.residual_deviance)
+                  || (((bestVal.residual_deviance - val.residual_deviance)/val.null_deviance) >= 0.01)){
+            bestVal = val;
+            bestId = i;
+          }
+        }
+        old.best_lambda_idx = bestId;
+        Submodel sm = old.submodels[bestId];
+        double [] beta  = MemoryManager.malloc8d(old.coefficients_names.length);
+        for(int i = 0; i < sm.beta.length; ++i)
+          beta[sm.idxs[i]] = sm.beta[i];
+        old.global_beta = beta;
+        return old;
+      }
+    }.fork(modelKey);
   }
 
+  //  public static void setSubmodel(H2OCountedCompleter cmp, Key modelKey, final double lambda, double[] beta, double[] norm_beta, int iteration, long runtime, boolean sparseCoef){
+  public static void setSubmodel(H2OCountedCompleter cmp, Key modelKey, final double lambda, double[] beta, double[] norm_beta, int iteration, long runtime, boolean sparseCoef){
+    setSubmodel(cmp,modelKey,lambda,beta,norm_beta,iteration,runtime,sparseCoef,null);
+  }
+
+  public static class GetScoringModelTask extends DTask<GetScoringModelTask>{
+    final Key _modelKey;
+    final Key _jobKey;
+    final double _lambda;
+    public GLMModel _res;
+    public GetScoringModelTask(H2OCountedCompleter cmp, Key jobKey, Key modelKey, double lambda){
+      super(cmp);
+      _jobKey = jobKey;
+      _modelKey = modelKey;
+      _lambda = lambda;
+    }
+    @Override
+    public void compute2() {
+      if(_modelKey.home()){
+        Value v = H2O.get(_modelKey);
+        if(v == null && _jobKey != null){
+          assert !Job.isRunning(_jobKey):"missing model (" + _modelKey + " ) while job is still running";
+          throw new Job.JobCancelledException();
+        } else {
+          _res = (GLMModel) v.get().clone();
+          Submodel sm = _res.submodelForLambda(_lambda);
+          assert sm != null : "GLM[" + _modelKey + "]: missing submodel for lambda " + _lambda;
+          sm = (Submodel) sm.clone();
+          _res.submodels = new Submodel[]{sm};
+          _res.setSubmodelIdx(0);
+        }
+        tryComplete();
+      } else new RPC(_modelKey.home_node(),this).addCompleter(this).call();
+    }
+  }
+
+  public static void setXvalidation(H2OCountedCompleter cmp, Key modelKey, final double lambda, final GLMValidation val){
+    // expected cmp has already set correct pending count
+    new TAtomic<GLMModel>(cmp){
+      @Override
+      public GLMModel atomic(GLMModel old) {
+        if(old == null)return old; // job could've been cancelled
+        old.submodels = old.submodels.clone();
+        int id = old.submodelIdForLambda(lambda);
+        old.submodels[id] = (Submodel)old.submodels[id].clone();
+        old.submodels[id].xvalidation = val;
+        old.pickBestModel(false);
+        return old;
+      }
+    }.fork(modelKey);
+  }
+  public static void setSubmodel(H2OCountedCompleter cmp, Key modelKey, final double lambda, double[] beta, double[] norm_beta, final int iteration, long runtime, boolean sparseCoef, final GLMValidation val){
+    final Submodel sm = new Submodel(lambda,beta, norm_beta, runtime, iteration,sparseCoef);
+    sm.validation = val;
+    cmp.addToPendingCount(1);
+    new TAtomic<GLMModel>(cmp){
+      @Override
+      public GLMModel atomic(GLMModel old) {
+        if(old == null)return old; // job could've been cancelled!
+        if(old.submodels == null){
+          old.submodels = new Submodel[]{sm};
+        } else {
+          int id = old.submodelIdForLambda(lambda);
+          if (id < 0) {
+            id = -id - 1;
+            old.submodels = Arrays.copyOf(old.submodels, old.submodels.length + 1);
+            for (int i = old.submodels.length - 1; i > id; --i)
+              old.submodels[i] = old.submodels[i - 1];
+          } else if (old.submodels[id].iteration > sm.iteration)
+            return old;
+          else
+            old.submodels = old.submodels.clone();
+          old.submodels[id] = sm;
+          old.run_time = Math.max(old.run_time,sm.run_time);
+        }
+        old.pickBestModel(false);
+        return old;
+      }
+    }.fork(modelKey);
+  }
+
+  public void addSubmodel(double lambda){
+    submodels = Arrays.copyOf(submodels,submodels.length+1);
+    run_time = (System.currentTimeMillis()-start_time);
+    submodels[submodels.length-1] = new Submodel(lambda,null, null, 0, 0,true);
+  }
+  public void dropSubmodel() {
+    submodels = Arrays.copyOf(submodels,submodels.length-1);
+  }
   public double lambda(){
     if(submodels == null)return Double.NaN;
-    return lambdas[best_lambda_idx];
+    return submodels[best_lambda_idx].lambda_value;
   }
-  public double lambdaMax(){
-    return lambdas[0];
-  }
-  public double lambdaMin(){
-    return lambdas[lambdas.length-1];
-  }
+
   public GLMValidation validation(){
     return submodels[best_lambda_idx].validation;
   }
   public int iteration(){
-    int res = submodels[0].iteration;
-    for(int i = 1; i < submodels.length && submodels[i] != null && submodels[i].iteration != 0; ++i)
-      res = submodels[i].iteration;
-    return res;
+    Submodel [] sm = submodels;
+    for(int i = sm.length-1; i >= 0; --i)
+      if(sm[i] != null && sm[i].iteration != 0)
+        return sm[i].iteration;
+    return 0;
   }
   public double [] beta(){return global_beta;}
-  public double [] norm_beta(int lambdaIdx){
-    if(submodels[lambdaIdx].norm_beta == null) {
-      return beta(); // not normalized
-    }
-    double [] res = MemoryManager.malloc8d(data_info.fullN()+1);
-    int j = 0;
-    for(int i:submodels[lambdaIdx].idxs)
-      res[i] = submodels[lambdaIdx].norm_beta[j++];
-    return res;
+
+  public double [] norm_beta(double lambda){
+    int i = submodels.length-1;
+    for(;i>=0;--i)
+      if(submodels[i].lambda_value == lambda) {
+        if(submodels[i].norm_beta == null)
+          return beta(); // not normalized
+        double [] res = MemoryManager.malloc8d(beta().length);
+        int k = 0;
+        for(int j:submodels[i].idxs)
+          res[j] = submodels[i].norm_beta[k++];
+        return res;
+      }
+    throw new RuntimeException("No submodel for lambda_value = " + lambda);
   }
 
+  public void addWarning(String w){
+    final int n = warnings.length;
+    warnings = Arrays.copyOf(warnings,warnings.length+1);
+    warnings[n] = w;
+  }
   @Override protected float[] score0(double[] data, float[] preds) {
     double eta = 0.0;
     final double [] b = beta();
@@ -246,16 +399,35 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   }
   public final int ncoefs() {return beta().length;}
 
+  //  public static void setAndTestValidation(final H2OCountedCompleter cmp,final Key modelKey, final double lambda, final GLMValidation val){
+//    if(cmp != null)cmp.addToPendingCount(1);
+//    new TAtomic<GLMModel>(cmp){
+//      @Override
+//      public GLMModel atomic(GLMModel old) {
+//        if(old == null)return old;
+//        old.submodels = old.submodels.clone();
+//        Submodel sm = old.submodelForLambda(lambda);
+//        if(sm == null)return old;
+//        if(val instanceof GLMXValidation)
+//          sm.xvalidation = (GLMXValidation)val;
+//        else
+//          sm.validation = val;
+//        old.pickBestModel(false);
+//        return old;
+//      }
+//    }.fork(modelKey);
+//  }
   public static class GLMValidationTask<T extends GLMValidationTask<T>> extends MRTask2<T> {
     protected final GLMModel _model;
     protected GLMValidation _res;
-    public int _lambdaIdx;
+    public final double _lambda;
     public boolean _improved;
+    Key _jobKey;
     public static Key makeKey(){return Key.make("__GLMValidation_" + Key.make().toString());}
-    public GLMValidationTask(GLMModel model, int lambdaIdx){this(model,lambdaIdx,null);}
-    public GLMValidationTask(GLMModel model, int lambdaIdx, H2OCountedCompleter completer){super(completer); _lambdaIdx = lambdaIdx; _model = model;}
+    public GLMValidationTask(GLMModel model, double lambda){this(model,lambda,null);}
+    public GLMValidationTask(GLMModel model, double lambda, H2OCountedCompleter completer){super(completer); _lambda = lambda; _model = model;}
     @Override public void map(Chunk [] chunks){
-      _res = new GLMValidation(null,_model.ymu,_model.glm,_model.rank(_lambdaIdx));
+      _res = new GLMValidation(null,_model.ymu,_model.glm,_model.rank(_lambda));
       final int nrows = chunks[0]._len;
       double [] row   = MemoryManager.malloc8d(_model._names.length);
       float  [] preds = MemoryManager.malloc4f(_model.glm.family == Family.binomial?3:1);
@@ -273,7 +445,8 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     }
     @Override public void reduce(GLMValidationTask gval){_res.add(gval._res);}
     @Override public void postGlobal(){
-      _res.finalize_AIC_AUC();
+      _res.computeAIC();
+      _res.computeAUC();
     }
   }
   // use general score to reduce number of possible different code paths
@@ -282,15 +455,22 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     protected GLMValidation [] _xvals;
     long _nobs;
     public static Key makeKey(){return Key.make("__GLMValidation_" + Key.make().toString());}
-    public GLMXValidationTask(GLMModel mainModel,int lambdaIdx, GLMModel [] xmodels){this(mainModel,lambdaIdx,xmodels,null);}
-    public GLMXValidationTask(GLMModel mainModel,int lambdaIdx, GLMModel [] xmodels, H2OCountedCompleter completer){super(mainModel, lambdaIdx, completer); _xmodels = xmodels;}
+
+
+    public final transient  H2OCountedCompleter _cmp;
+    public GLMXValidationTask(GLMModel mainModel,double lambda, GLMModel [] xmodels){this(mainModel,lambda,xmodels,null);}
+    public GLMXValidationTask(GLMModel mainModel,double lambda, GLMModel [] xmodels, final H2OCountedCompleter completer){
+      super(mainModel, lambda,null);
+      _cmp = completer;
+      _xmodels = xmodels;
+    }
     @Override public void map(Chunk [] chunks){
       _xvals = new GLMValidation[_xmodels.length];
       for(int i = 0; i < _xmodels.length; ++i)
         _xvals[i] = new GLMValidation(null,_xmodels[i].ymu,_xmodels[i].glm,_xmodels[i].rank());
       final int nrows = chunks[0]._len;
-      double [] row   = MemoryManager.malloc8d(_model._names.length);
-      float  [] preds = MemoryManager.malloc4f(_model.glm.family == Family.binomial?3:1);
+      double [] row   = MemoryManager.malloc8d(_xmodels[0]._names.length);
+      float  [] preds = MemoryManager.malloc4f(_xmodels[0].glm.family == Family.binomial?3:1);
       OUTER:
       for(int i = 0; i < nrows; ++i){
         if(chunks[chunks.length-1].isNA0(i))continue;
@@ -312,57 +492,56 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
       for(int i = 0; i < _xvals.length; ++i)
         _xvals[i].add(gval._xvals[i]);}
 
-    @Override public void postGlobal(){
-      Futures fs = new Futures();
-      for(int i = 0; i < _xmodels.length; ++i){
-        _xvals[i].finalize_AIC_AUC();
-        _xvals[i].nobs = _nobs-_xvals[i].nobs;
-        _xmodels[i].setAndTestValidation(0, _xvals[i]);
-        DKV.put(_xmodels[i]._key, _xmodels[i],fs);
+    @Override public void postGlobal() {
+      if (_cmp != null) _cmp.addToPendingCount(_xvals.length + 1);
+      for (int i = 0; i < _xvals.length; ++i) {
+        _xvals[i].computeAIC();
+        _xvals[i].computeAUC();
+        _xvals[i].nobs = _nobs - _xvals[i].nobs;
+        GLMModel.setXvalidation(_cmp, _xmodels[i]._key, _lambda, _xvals[i]);
       }
-      _res = new GLMXValidation(_model, _xmodels,_lambdaIdx,_nobs);
-      fs.blockForPending();
+      GLMModel.setXvalidation(_cmp, _model._key, _lambda, new GLMXValidation(_model, _xmodels, _xvals, _lambda, _nobs));
+      if (_cmp != null) _cmp.tryComplete();
     }
   }
 
+
   public GLMParams getParams() {
-      return glm;
+    return glm;
   }
 
   @Override
   public String toString(){
-    final double [] beta = beta();
-    StringBuilder sb = new StringBuilder("GLM Model (key=" + _key + " , trained on " + _dataKey + ", family = " + glm.family + ", link = " + glm.link + ", #iterations = " + iteration() + "):\n");
-    final int cats = data_info._cats;
-    int k = 0;
-    for(int i = 0; i < cats; ++i) {
-      for(int j = 1; j < _domains[i].length; ++j) {
-        sb.append(_names[i] + "." + _domains[i][j] + ": " + (beta == null ? "null" : beta[k++]) + "\n");
-      }
-    }
-    if (null != beta) {
-      final int nums = beta.length-k-1;
-      for(int i = 0; i < nums; ++i)
-        sb.append(_names[cats+i] + ": " + beta[k+i] + "\n");
-      sb.append("Intercept: " + beta[beta.length-1] + "\n");
-    }
-    return sb.toString();
+    return ("GLM Model (key=" + _key + " , trained on " + _dataKey + ", family = " + glm.family + ", link = " + glm.link + ", #iterations = " + iteration() + ")");
   }
-  public int rank() {return rank(best_lambda_idx);}
-  public int rank(int lambdaIdx) {return submodels[lambdaIdx].rank;}
+  public int rank() {return rank(submodels[best_lambda_idx].lambda_value);}
 
-  public boolean setAndTestValidation(int lambdaIdx,GLMValidation val ){
-    submodels[lambdaIdx].validation = val;
-    if(best_lambda_idx == lambdaIdx || lambdaIdx == 0 || rank(lambdaIdx) == 1){
-      setLambdaIdx(lambdaIdx);
-      return true;
-    }
-    double diff = (submodels[best_lambda_idx].validation.residual_deviance - val.residual_deviance)/val.null_deviance;
-    if(diff >= 0.01) setLambdaIdx(lambdaIdx);
-    return  true;
+  public int  submodelIdForLambda(double lambda){
+    if(lambda > lambda_max)lambda = lambda_max;
+    int i = submodels.length-1;
+    for(;i >=0; --i)
+      // first condition to cover lambda == 0 case (0/0 is Inf in java!)
+      if(lambda == submodels[i].lambda_value || Math.abs(submodels[i].lambda_value - lambda)/lambda < 1e-5)
+        return i;
+      else if(submodels[i].lambda_value > lambda)
+        return -i-2;
+    return -1;
+  }
+  public Submodel  submodelForLambda(double lambda){
+    int i = submodelIdForLambda(lambda);
+    return i < 0?null:submodels[i];
+  }
+  public int rank(double lambda) {
+    Submodel sm = submodelForLambda(lambda);
+    if(sm == null)return 0;
+    return submodelForLambda(lambda).rank;
   }
 
-  public void setLambdaIdx(int l){
+  public void setValidation(GLMValidation val ){
+    submodels[submodels.length-1].validation = val;
+  }
+
+  public void setSubmodelIdx(int l){
     best_lambda_idx = l;
     threshold = submodels[l].validation.best_threshold;
     if(global_beta == null) global_beta = MemoryManager.malloc8d(this.coefficients_names.length);
@@ -384,5 +563,29 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   }
   private String [] coefNames(){
     return Utils.append(data_info.coefNames(),new String[]{"Intercept"});
+  }
+
+  public VarImp varimp() {
+    return this.variable_importances;
+  }
+
+  protected void maybeComputeVariableImportances() {
+    GLM2 params = get_params();
+    this.variable_importances = null;
+
+    // Warn if we may be returning results that might not include an important (base) level. . .
+    if (! params.use_all_factor_levels)
+      this.addWarning("Variable Importance may be missing important variables: because use_all_factor_levels is off the importance of base categorical levels will NOT be included.");
+
+    final double[] b = beta();
+    if (params.variable_importances && null != b) {
+      float[] coefs_abs_value = new float[b.length - 1]; // Don't include the Intercept
+      String[] names = new String[b.length - 1];
+      for (int i = 0; i < b.length - 1; ++i) {
+        coefs_abs_value[i] = (float)Math.abs(b[i]);
+        names[i] = coefficients_names[i];
+      }
+      this.variable_importances = new VarImp(coefs_abs_value, names);
+    }
   }
 }

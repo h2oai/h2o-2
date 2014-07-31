@@ -306,7 +306,7 @@ public class AutoBuffer {
             // Read the writer-handshake-byte.
             int x = sock.socket().getInputStream().read();
             // either TCP con was dropped or other side closed connection without reading/confirming (e.g. task was cancelled).
-            if( x == -1 ) new IOException("Other side closed connection unexpectedly.");
+            if( x == -1 ) throw new IOException("Other side closed connection unexpectedly.");
             assert x == 0xcd : "Handshake; writer expected a 0xcd from reader but got "+x;
           }
         } catch( IOException ioe ) {
@@ -326,7 +326,7 @@ public class AutoBuffer {
     } catch( IOException e ) {  // Dunno how to handle so crash-n-burn
       throw new TCPIsUnreliableException(e);
     } finally {
-      bbFree();
+      if(_bb != null) bbFree();
       _time_close_ms = System.currentTimeMillis();
       TimeLine.record_IOclose(this,_persist); // Profile AutoBuffer connections
     }
@@ -444,6 +444,7 @@ public class AutoBuffer {
     return this;
   }
 
+  public void skip( int sz ) { assert sz <= _bb.remaining() : "Requested skip: "+sz+" bytes, BUT AB contains only: "+_bb.remaining() + " bytes"; _bb.position(_bb.position()+sz); }
 
   /** Ensure the buffer has space for sz more bytes */
   private ByteBuffer getSp( int sz ) { return sz > _bb.remaining() ? getImpl(sz) : _bb; }

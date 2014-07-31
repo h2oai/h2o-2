@@ -40,53 +40,40 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
                 raise Exception(w)
 
     #****************************
-    # v2 doesn't have the response variable, so removed looking at it
-    if h2o.beta_features:
-        # if we are checking after confusion_matrix for predict, the jsonschema is different
-        if 'cm' in rfv:
-            cm = rfv['cm'] # only one
-        else:
-            cms = rfv['drf_model']['cms']
-            print "number of cms:", len(cms)
-            print "FIX! need to add reporting of h2o's _perr per class error"
-            # FIX! what if regression. is rf only classification?
-            print "cms[-1]['_arr']:", cms[-1]['_arr']
-            print "cms[-1]['_predErr']:", cms[-1]['_predErr']
-            print "cms[-1]['_classErr']:", cms[-1]['_classErr']
-            # print "cms[-1]:", h2o.dump_json(cms[-1])
-            cm = cms[-1]['_arr'] # take the last one
-        scoresList = cm
+    # if we are checking after confusion_matrix for predict, the jsonschema is different
+    if 'drf_model' in rfv:
+        rf_model = rfv['drf_model']
+    if 'speedrf_model' in rfv:
+        rf_model = rfv['speedrf_model']
+    if 'rf_model' in rfv:
+        rf_model = rfv['rf_model']
 
-        if not checkScoringOnly:
-            rf_model = rfv['drf_model']
-            used_trees = rf_model['N']
-            errs = rf_model['errs']
-            print "errs[0]:", errs[0]
-            print "errs[-1]:", errs[-1]
-            print "errs:", errs
-            # if we got the ntree for comparison. Not always there in kwargs though!
-            param_ntrees = kwargs.get('ntrees',None)
-            if (param_ntrees is not None and used_trees != param_ntrees):
-                raise Exception("used_trees should == param_ntree. used_trees: %s"  % used_trees)
-            if (used_trees+1)!=len(cms) or (used_trees+1)!=len(errs):
-                raise Exception("len(cms): %s and len(errs): %s should be one more than N %s trees" % (len(cms), len(errs), used_trees))
-
+    if 'cm' in rfv:
+        cm = rfv['cm'] # only one
     else:
-        cm = rfv['confusion_matrix']
-        header = cm['header'] # list
-        classification_error = cm['classification_error']
-        rows_skipped = cm['rows_skipped']
-        cm_type = cm['type']
-        if not noPrint: 
-            print "classification_error * 100 (pct):", classification_error * 100
-            print "rows_skipped:", rows_skipped
-            print "type:", cm_type
-        scoresList = cm['scores'] # list
-        used_trees = cm['used_trees']
+        cms = rf_model['cms']
+        print "number of cms:", len(cms)
+        print "FIX! need to add reporting of h2o's _perr per class error"
+        # FIX! what if regression. is rf only classification?
+        print "cms[-1]['_arr']:", cms[-1]['_arr']
+        print "cms[-1]['_predErr']:", cms[-1]['_predErr']
+        print "cms[-1]['_classErr']:", cms[-1]['_classErr']
+        # print "cms[-1]:", h2o.dump_json(cms[-1])
+        cm = cms[-1]['_arr'] # take the last one
+    scoresList = cm
+
+    if not checkScoringOnly:
+        used_trees = rf_model['N']
+        errs = rf_model['errs']
+        print "errs[0]:", errs[0]
+        print "errs[-1]:", errs[-1]
+        print "errs:", errs
         # if we got the ntree for comparison. Not always there in kwargs though!
-        param_ntree = kwargs.get('ntree',None)
-        if (param_ntree is not None and used_trees != param_ntree):
+        param_ntrees = kwargs.get('ntrees',None)
+        if (param_ntrees is not None and used_trees != param_ntrees):
             raise Exception("used_trees should == param_ntree. used_trees: %s"  % used_trees)
+        if (used_trees+1)!=len(cms) or (used_trees+1)!=len(errs):
+            raise Exception("len(cms): %s and len(errs): %s should be one more than N %s trees" % (len(cms), len(errs), used_trees))
 
 
     #****************************
@@ -145,79 +132,39 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
 
     #****************************
     # more testing for RFView
-    if (totalScores<=0 or totalScores>5e9):
+
+    # it's legal to get 0's for oobe error # if sample_rate = 1
+
+    sample_rate = kwargs.get('sample_rate', None)
+    validation = kwargs.get('validation', None)
+    print "kevin:", sample_rate, validation
+    if (sample_rate==1 and not validation): 
+        pass
+    elif (totalScores<=0 or totalScores>5e9):
         raise Exception("scores in RFView seems wrong. scores:", scoresList)
 
-    if h2o.beta_features:
-        varimp = rf_model['varimp']
-        treeStats = rf_model['treeStats']
-        # print "json:", h2o.dump_json(rfv)
-        data_key = rf_model['_dataKey']
-        model_key = rf_model['_key']
-        classification_error = pctWrong
+    varimp = rf_model['varimp']
+    treeStats = rf_model['treeStats']
+    # print "json:", h2o.dump_json(rfv)
+    data_key = rf_model['_dataKey']
+    model_key = rf_model['_key']
+    classification_error = pctWrong
 
-        if not noPrint: 
-            print """
-             Leaves: {0} / {1} / {2}
-              Depth: {3} / {4} / {5}
-                Err: {6:0.2f} %
-            """.format(
-                    treeStats['minLeaves'],
-                    treeStats['meanLeaves'],
-                    treeStats['maxLeaves'],
-                    treeStats['minDepth'],
-                    treeStats['meanDepth'],
-                    treeStats['maxDepth'],
-                    classification_error,
-                    )
+    if not noPrint: 
+        print """
+         Leaves: {0} / {1} / {2}
+          Depth: {3} / {4} / {5}
+            Err: {6:0.2f} %
+        """.format(
+                treeStats['minLeaves'],
+                treeStats['meanLeaves'],
+                treeStats['maxLeaves'],
+                treeStats['minDepth'],
+                treeStats['meanDepth'],
+                treeStats['maxDepth'],
+                classification_error,
+                )
     
-    else:
-        cmtype = cm['type']
-        data_key = rfv['data_key']
-        model_key = rfv['model_key']
-        ntree = rfv['ntree']
-        if (ntree<=0 or ntree>20000):
-            raise Exception("ntree in RFView seems wrong. ntree:", ntree)
-        response = rfv['response'] # Dict
-        rfv_h2o = response['h2o']
-        rfv_node = response['node']
-        status = response['status']
-        time = response['time']
-
-        trees = rfv['trees'] # Dict
-        depth = trees['depth'] # Dict
-        # zero depth okay?
-        ## if ' 0.0 ' in depth:
-        ##     raise Exception("depth in RFView seems wrong. depth:", depth)
-        leaves = trees['leaves'] # Dict
-        if ' 0.0 ' in leaves:
-            raise Exception("leaves in RFView seems wrong. leaves:", leaves)
-
-        if not noPrint: 
-            print """
-             Leaves: {0} / {1} / {2}
-              Depth: {3} / {4} / {5}
-               mtry: {6}
-               Type: {7}
-                Err: {8} %
-            """.format(
-                    rfv['trees']['leaves']['min'],
-                    rfv['trees']['leaves']['mean'],
-                    rfv['trees']['leaves']['max'],
-                    rfv['trees']['depth']['min'],
-                    rfv['trees']['depth']['mean'],
-                    rfv['trees']['depth']['max'],
-                    rfv['mtry'],
-                    rfv['confusion_matrix']['type'],
-                    rfv['confusion_matrix']['classification_error'] *100,
-                    )
-        
-        number_built = trees['number_built']
-        if (number_built<=0 or number_built>20000):
-            raise Exception("number_built in RFView seems wrong. number_built:", number_built)
-
-        h2o.verboseprint("RFView response: number_built:", number_built, "leaves:", leaves, "depth:", depth)
-
     ### modelInspect = node.inspect(model_key)
     dataInspect = h2o_cmd.runInspect(key=data_key)
     h2o.check_sandbox_for_errors()
@@ -226,10 +173,20 @@ def simpleCheckRFView(node=None, rfv=None, checkScoringOnly=False, noPrint=False
 def simpleCheckRFScore(node=None, rfv=None, noPrint=False, **kwargs):
     simpleCheckRFView(node=node, rfv=rfv, noPrint=noPrint, checkScoringOnly=True, **kwargs)
 
-def trainRF(trainParseResult, **kwargs):
+def trainRF(trainParseResult, scoreParseResult=None, **kwargs):
     # Train RF
     start = time.time()
-    trainResult = h2o_cmd.runRF(parseResult=trainParseResult, **kwargs)
+
+    if scoreParseResult:
+        trainResult = h2o_cmd.runRF(
+            parseResult=trainParseResult, 
+            validation=scoreParseResult['destination_key'],
+            **kwargs)
+    else:
+        trainResult = h2o_cmd.runRF(
+           parseResult=trainParseResult, 
+           **kwargs)
+
     rftime      = time.time()-start 
     h2o.verboseprint("RF train results: ", trainResult)
     h2o.verboseprint("RF computation took {0} sec".format(rftime))
@@ -242,45 +199,34 @@ def scoreRF(scoreParseResult, trainResult, vactual=None, timeoutSecs=120, **kwar
     # Run validation on dataset
 
     parseKey = scoreParseResult['destination_key']
-    if h2o.beta_features:
-        # this is how we're supposed to do scorin?
-        rfModelKey  = trainResult['drf_model']['_key']
-        predictKey = 'Predict.hex'
-        start = time.time()
-        predictResult = h2o_cmd.runPredict(
-            data_key=parseKey,
-            model_key=rfModelKey,
-            destination_key=predictKey,
-            timeoutSecs=timeoutSecs, **kwargs)
+    # this is how we're supposed to do scorin?
+    rfModelKey  = trainResult['drf_model']['_key']
+    predictKey = 'Predict.hex'
+    start = time.time()
+    predictResult = h2o_cmd.runPredict(
+        data_key=parseKey,
+        model_key=rfModelKey,
+        destination_key=predictKey,
+        timeoutSecs=timeoutSecs, **kwargs)
 
-        h2o_cmd.runInspect(key='Predict.hex', verbose=True)
+    h2o_cmd.runInspect(key='Predict.hex', verbose=True)
 
-        predictCMResult = h2o.nodes[0].predict_confusion_matrix(
-            actual=parseKey,
-            vactual=vactual,
-            predict=predictKey,
-            vpredict='predict', 
-            timeoutSecs=timeoutSecs, **kwargs)
-            
-        rftime      = time.time()-start 
+    predictCMResult = h2o.nodes[0].predict_confusion_matrix(
+        actual=parseKey,
+        vactual=vactual,
+        predict=predictKey,
+        vpredict='predict', 
+        timeoutSecs=timeoutSecs, **kwargs)
+        
+    rftime      = time.time()-start 
 
-        cm = predictCMResult['cm']
+    cm = predictCMResult['cm']
 
-        # These will move into the h2o_gbm.py
-        pctWrong = h2o_gbm.pp_cm_summary(cm);
-        print "\nTest\n==========\n"
-        print h2o_gbm.pp_cm(cm)
-        scoreResult = predictCMResult
-
-    else:
-        ntree = trainResult['ntree']
-        rfModelKey  = trainResult['model_key']
-        start = time.time()
-        # NOTE: response_variable is required, and passed from kwargs here
-        # out_of_bag_error_estimate=0 is required for scoring. H2O will assert if 1 and different data set
-        # compared to training
-        kwargs['out_of_bag_error_estimate'] = 0
-        scoreResult = h2o_cmd.runRFView(None, parseKey, rfModelKey, ntree=ntree, timeoutSecs=timeoutSecs, **kwargs)
+    # These will move into the h2o_gbm.py
+    pctWrong = h2o_gbm.pp_cm_summary(cm);
+    print "\nTest\n==========\n"
+    print h2o_gbm.pp_cm(cm)
+    scoreResult = predictCMResult
 
     rftime      = time.time()-start 
     h2o.verboseprint("RF score results: ", scoreResult)

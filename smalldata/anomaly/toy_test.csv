@@ -1,0 +1,14 @@
+#Same as toy_train, except for first 1 and last 2 outlier points (each has 1 different column)
+Cat1, Cat2, Real1, Real2
+0A, a, 1, 0
+A, a, 1, 0
+B, b, 2, 1
+C, c, 3, 2
+A, a, 1, 0
+B, b, 2, 1
+C, c, 3, 2
+A, a, 1, 0
+B, b, 2, 1
+C, c, 3, 2
+A, a, 2, 0
+B, a, 1, 0

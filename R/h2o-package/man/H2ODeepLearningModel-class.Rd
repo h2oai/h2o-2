@@ -16,7 +16,6 @@ Objects can be created by calls of the form \code{new("H2ODeepLearningModel", ..
   \describe{
     \item{\code{key}:}{Object of class \code{"character"}, representing the unique hex key that identifies the model.}
     \item{\code{data}:}{Object of class \code{\linkS4class{H2OParsedData}}, which is the input data used to build the model.}
-    \item{\code{valid}:}{Object of class \code{"H2OParsedData"}, representing the validation data set.}
     \item{\code{model}:}{Object of class \code{"list"} containing the following elements:
       \itemize{
         \item{\code{confusion}: The confusion matrix of the response, with actual observations as rows and predicted values as columns.}
@@ -28,6 +27,8 @@ Objects can be created by calls of the form \code{new("H2ODeepLearningModel", ..
         \item{\code{valid_cross_entropy}: Cross-entropy on the validation dataset.}
         }
     }
+    \item{\code{valid}:}{Object of class \code{"H2OParsedData"}, representing the validation data set.}
+    \item{\code{xval}:}{List of objects of class \code{"H2ODeepLearningModel"}, representing the n-fold cross-validation models.}
   }
 }
 \section{Extends}{

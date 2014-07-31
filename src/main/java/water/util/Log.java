@@ -245,14 +245,14 @@ public abstract class Log {
 
 
   /** Write different versions of E to the three outputs. */
-  private static void write(Event e, boolean printOnOut) {
+  private static void write(Event e, boolean printOnOut, boolean logToKV) {
     try {
-      write0(e,printOnOut);
+      write0(e,printOnOut,logToKV);
       if (Event.lastEvent.printMe || Event.missed > 0) {
         synchronized(Event.class){
           if ( Event.lastEvent.printMe) {
             Event ev = Event.lastEvent;
-            write0(ev,true);
+            write0(ev,true,logToKV);
             Event.lastEvent = new Event();
           }
           if (Event.missed > 0) {
@@ -377,7 +377,7 @@ public abstract class Log {
   }
 
   /** the actual write code. */
-  private static void write0(Event e, boolean printOnOut) {
+  private static void write0(Event e, boolean printOnOut, boolean logToKV) {
     org.apache.log4j.Logger l4j = getLog4jLogger();
 
     // If no logger object exists, try to build one.
@@ -431,7 +431,7 @@ public abstract class Log {
       log0(l4j, e);
     }
 
-    if( Paxos._cloudLocked ) logToKV(e.when.startAsString(), e.thread, e.kind, e.sys, e.body(0));
+    if( Paxos._cloudLocked && logToKV ) logToKV(e.when.startAsString(), e.thread, e.kind, e.sys, e.body(0));
     if(printOnOut || printAll) unwrap(System.out, e.toShortString());
     e.printMe = false;
   }
@@ -448,13 +448,13 @@ public abstract class Log {
   /** Record an exception to the log file and store. */
   static public <T extends Throwable> T err(Sys t, String msg, T exception) {
     Event e =  Event.make(t, Kind.ERRR, exception, msg );
-    write(e,true);
+    write(e,true,false);
     return exception;
   }
   /** Record a message to the log file and store. */
   static public void err(Sys t, String msg) {
     Event e =  Event.make(t, Kind.ERRR, null, msg );
-    write(e,true);
+    write(e,true,false);
   }
   /** Record an exception to the log file and store. */
   static public <T extends Throwable> T err(String msg, T exception) {
@@ -480,7 +480,7 @@ public abstract class Log {
   /** Log a warning to standard out, the log file and the store. */
   static public <T extends Throwable> T warn(Sys t, String msg, T exception) {
     Event e =  Event.make(t, Kind.WARN, exception,  msg);
-    write(e,true);
+    write(e,true,true);
     return exception;
   }
   /** Log a warning to standard out, the log file and the store. */
@@ -494,12 +494,16 @@ public abstract class Log {
   /** Log an information message to standard out, the log file and the store. */
   static public void info_no_stdout(Sys t, Object... objects) {
     Event e =  Event.make(t, Kind.INFO, null, objects);
-    write(e,false);
+    write(e,false,true);
+  }
+  static public void info_no_DKV(Sys t, Object... objects) {
+    Event e =  Event.make(t, Kind.INFO, null, objects);
+    write(e,false,false);
   }
   /** Log an information message to standard out, the log file and the store. */
   static public void info(Sys t, Object... objects) {
     Event e =  Event.make(t, Kind.INFO, null, objects);
-    write(e,true);
+    write(e,true,true);
   }
   /** Log an information message to standard out, the log file and the store. */
   static public void info_no_stdout(Object... objects) {
@@ -513,13 +517,13 @@ public abstract class Log {
   static public void debug(Object... objects) {
     if (flag(Sys.WATER) == false) return;
     Event e =  Event.make(Sys.WATER, Kind.INFO, null, objects);
-    write(e,false);
+    write(e,false,true);
   }
   /** Log a debug message to the log file and the store if the subsystem's flag is set. */
   static public void debug(Sys t, Object... objects) {
     if (flag(t) == false) return;
     Event e =  Event.make( t, Kind.INFO, null, objects);
-    write(e,false);
+    write(e,false,true);
   }
   /** Temporary log statement. Search for references to make sure they have been removed. */
   static public void tmp(Object... objects) {
@@ -598,7 +602,7 @@ public abstract class Log {
     private static String log(Locale l, boolean nl, String format, Object... args) {
       String msg = String.format(l, format, args);
       Event e =  Event.make(Sys.WATER,Kind.INFO,null, msg);
-      Log.write(e,false);
+      Log.write(e,false,true);
       return e.toShortString()+NL;
     }
 

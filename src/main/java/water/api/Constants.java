@@ -104,6 +104,7 @@ public class Constants extends Iced {
   public static final String MAX_DISK              = "max_disk" + Suffixes.BYTES;
   public static final String MAX_ITER              = "max_iter";
   public static final String MAX_MEM               = "max_mem" + Suffixes.BYTES;
+  public static final String MEM_BW                = "mem_bandwidth" + Suffixes.BYTES_PER_SECOND;
   public static final String MAX_ROWS              = "max_rows";
   public static final String MEAN                  = "mean";
   public static final String MIN                   = "min";
@@ -122,6 +123,7 @@ public class Constants extends Iced {
   public static final String NORMALIZE             = "normalize";
   public static final String NUM_COLS              = "num_cols";
   public static final String NUM_CPUS              = "num_cpus";
+  public static final String GFLOPS                = "linpack_gflops";
   public static final String NUM_KEYS              = "num_keys";
   public static final String NUM_MISSING_VALUES    = "num_missing_values";
   public static final String NUM_ROWS              = "num_rows";

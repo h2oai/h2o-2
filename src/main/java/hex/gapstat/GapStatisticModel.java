@@ -41,10 +41,10 @@ public class GapStatisticModel extends Model implements Job.Progress {
   double[] gap_stats;
 
    @API(help = "Optimal number of clusters.")
-   int k_best;
+   int k_best = 1;
 
   public GapStatisticModel(Key selfKey, Key dataKey, Frame fr, int ks, double[] wks, double[] log_wks, double[] sk, int k_max, int b_max, int k, int b) {
-    super(selfKey, dataKey, fr);
+    super(selfKey, dataKey, fr,  /* priorClassDistribution */ null);
     this.ks = ks;
     this.wks = wks;
     this.wkbs = log_wks;
@@ -64,15 +64,12 @@ public class GapStatisticModel extends Model implements Job.Progress {
   @Override
   public float progress() {
 //    float p1 = (float) ((double) (k - 1) / (double) k_max);
-    float p2 = (float) (( (double) (k - 1) /  (double) k_max ) +  (double) b / (double) ( b_max * k_max ));
-    return  p2;
+    return (float) (( (double) (k - 1) /  (double) k_max ) +  (double) b / (double) ( b_max * k_max ));
   }
 
   @Override protected float[] score0(double[] data, float[] preds) {
     throw new UnsupportedOperationException();
   }
-
-  @Override public void delete() { super.delete(); }
 
   @Override public String toString(){
     return String.format("Gap Statistic Model (key=%s , trained on %s):\n", _key, _dataKey);
@@ -183,7 +180,7 @@ public class GapStatisticModel extends Model implements Job.Progress {
       int cur_k = i + 1;
       if(gaps[cur_k] == 0) {
         kmin = 0;
-        k_best = kmin;
+        k_best = 1; //= kmin;
         break;
       }
       if (i == gaps.length - 1) {
@@ -198,16 +195,18 @@ public class GapStatisticModel extends Model implements Job.Progress {
       }
     }
 
+    if (kmin <= 0) k_best = 1;
+
     if (log_wks[log_wks.length -1] != 0) {
       DocGen.HTML.section(sb, "Best k:");
-      if (kmin <= 0) {
+      if (kmin <= 1) {
         sb.append("No optimal number of clusters found (best k = 1).");
       } else {
       sb.append("k = ").append(kmin);
       }
     } else {
       DocGen.HTML.section(sb, "Best k so far:");
-      if (kmin <= 0) {
+      if (kmin <= 1) {
         sb.append("No k computed yet...");
       } else {
       sb.append("k = ").append(kmin);

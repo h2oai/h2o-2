@@ -6,16 +6,6 @@ import java.util.Random;
 /** Computes the mse split statistics.
  *
  * For regression: Try to minimize the squared error at each split.
- *
- * Begin with the sum of the current target responses in the node, Yt. Iterate over the rows
- * for the column and choose the split that minimizes the MSE. This will be the split s* that
- * _maximizes_ the following expression:
- *
- *
- *              (Y_L^2 * weights_left) + (Y_R^2 * weights_right)
- *
- *  Where Y_i = sum of the target responses going to node i (i is L or R),
- *  and weights_i = 1 / nobs_i (number of observations in the node).
  */
 public class MSEStatistic extends Statistic {
 
@@ -35,7 +25,7 @@ public class MSEStatistic extends Statistic {
   private float[] computeDist(Data d, int colIndex) {
     float[] res = new float[d.columnArityOfClassCol()];
     for (int i = 0; i < _columnDistsRegression[colIndex].length - 1; ++i) {
-      for (int j = 0; j < _columnDistsRegression[colIndex][j].length - 1; ++j) {
+      for (int j = 0; j < _columnDistsRegression[colIndex][i].length - 1; ++j) {
         res[j] += _columnDistsRegression[colIndex][i][j];
       }
     }
@@ -71,7 +61,7 @@ public class MSEStatistic extends Statistic {
       }
     }
 
-    return bestSplit == -1
+    return (bestSplit == -1 || bestSoFar == Float.POSITIVE_INFINITY)
             ? Split.impossible(Utils.maxIndex(computeDist(d, colIndex), _random))
             : Split.split(colIndex, bestSplit, bestSoFar);
   }

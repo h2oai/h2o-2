@@ -116,8 +116,11 @@ abstract class Statistic {
     } else {
       _random = Utils.getRNG(seed);
       for (int i = 0; i < _columnDistsRegression.length; ++i)
-        if(!data.isIgnored(i))
-          _columnDistsRegression[i] = new int[data.columnArity(i)+1][data.columnArityOfClassCol()];
+        if(!data.isIgnored(i)) {
+          DataAdapter.Col c = data._dapt._c[i];
+          int colBins = c._isByte ? Utils.maxValue(c._rawB) : c._binned.length;
+          _columnDistsRegression[i] = new int[colBins + 1][ data.columnArityOfClassCol()];
+        }
       _features = new int[featuresPerSplit];
       _remembered = null;
       _classWt = data.classWt();
@@ -177,7 +180,7 @@ abstract class Statistic {
   /** Adds the given row to the statistic. Updates the column distributions for
    * the analyzed columns. */
   void addQ(Row row, boolean regression) {
-    final int cls = regression ? -1 : row.classOf();
+    final int cls = row.classOf(); //regression ? -1 : row.classOf();
     for (int f : _features)
       if ( f != -1) {
         if (row.isValid() && row.hasValidValue(f)) {
@@ -186,8 +189,11 @@ abstract class Statistic {
             _columnDists[f][val][cls]++;
           } else {
             short val = row.getEncodedColumnValue(f);
-            short val2 = row.getEncodedClassColumnValue();
-            _columnDistsRegression[f][val][val2]++; // = row.getRawClassColumnValueFromBin();
+            if (val == DataAdapter.BAD) continue;
+            int resp = row.getEncodedClassColumnValue();
+            if (resp == DataAdapter.BAD) continue;
+//            short val2 = row.getEncodedClassColumnValue();
+            _columnDistsRegression[f][val][resp]++; // = row.getRawClassColumnValueFromBin();
           }
         }
       }

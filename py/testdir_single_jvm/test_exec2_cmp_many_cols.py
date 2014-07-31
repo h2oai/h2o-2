@@ -113,7 +113,7 @@ class Basic(unittest.TestCase):
 
                 execExpr = "s=c(1); s=sum(%s==%s)" % (hex_key_0, hex_key_i)
                 resultExec, result = h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
-                execExpr = "n=c(1); n=nrow(%s)*ncol(%s))" % (hex_key, hex_key_i)
+                execExpr = "n=c(1); n=nrow(%s)*ncol(%s)" % (hex_key_0, hex_key_i)
                 resultExec, result = h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
                 execExpr = "r=c(1); r=s==n"
                 resultExec, result, h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)

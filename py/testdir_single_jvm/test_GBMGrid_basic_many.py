@@ -24,6 +24,7 @@ class Basic(unittest.TestCase):
         h2o.tear_down_cloud()
 
     def test_GBMGrid_basic_many(self):
+        h2o.beta_features = True
         csvFilename = "prostate.csv"
         print "\nStarting", csvFilename
         # columns start at 0

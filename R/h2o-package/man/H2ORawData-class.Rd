@@ -6,7 +6,7 @@
 
 \title{Class \code{"H2ORawData"}}
 \description{
-A class for representing imported FluidVecs data sets that have not been parsed.
+A class for representing imported data sets that have not been parsed.
 }
 \section{Objects from the Class}{
 Objects can be created by calls of the form \code{new("H2ORawData", ...)}.

@@ -60,7 +60,8 @@ public final class Key extends Iced implements Comparable {
   private static final AtomicLongFieldUpdater<Key> _cacheUpdater =
     AtomicLongFieldUpdater.newUpdater(Key.class, "_cache");
 
-  public final boolean isVec() { return _kb != null && _kb.length > 0 && _kb[0] == VEC; }
+  public final boolean isVec () { return _kb != null && _kb.length > 0 && _kb[0] == VEC; }
+  public final boolean isDVec() { return _kb != null && _kb.length > 0 && _kb[0] == DVEC; }
 
   // Accessors and updaters for the Cloud-specific cached stuff.
   // The Cloud index, a byte uniquely identifying the last 256 Clouds. It
@@ -268,6 +269,7 @@ public final class Key extends Iced implements Comparable {
    *
    * @return key as a printable string
    */
+  @Override
   public String toString() {
     int len = _kb.length;
     while( --len >= 0 ) {
@@ -342,5 +344,24 @@ public final class Key extends Iced implements Comparable {
   public static class Ary extends Iced {
     public final Key[] _keys;
     Ary( Key[] keys ) { _keys = keys; }
+  }
+
+  public static String toPrettyString(Key k) {
+    StringBuilder sb = new StringBuilder("Key { type: ");
+    switch( k._kb[0] ) {
+      case 0: sb.append("arraylet chunk"); break;
+      case 2: sb.append("build-in"); break;
+      case 3: sb.append("job"); break;
+      case 4: sb.append("vec"); break;
+      case 5: sb.append("dvec"); break;
+      case 6: sb.append("vgroup"); break;
+      case 7: sb.append("DFJ internal"); break;
+      case 31: sb.append("hidden user"); break;
+      case 32: sb.append("user"); break;
+      default: sb.append("UNKNOWN"); break;
+    }
+    sb.append(",replicas: ").append(k._kb[1]).append(",");
+    sb.append(k.toString()).append("}");
+    return sb.toString();
   }
 }

@@ -28,7 +28,7 @@ public class PCAScore extends FrameJob {
   @API(help = "PCA model to use for scoring", required = true, filter = Default.class)
   PCAModel model;
 
-  @API(help = "Number of principal components to return", filter = Default.class, lmin = 1, lmax = 10000)
+  @API(help = "Number of principal components to return", filter = Default.class, lmin = 1, lmax = 5000)
   int num_pc = 1;
 
   @Override protected void execImpl() {
@@ -37,7 +37,8 @@ public class PCAScore extends FrameJob {
     new Frame(destination_key, new String[0], new Vec[0]).delete_and_lock(self());
     Frame fr = model.adapt(source, true)[0];
     int nfeat = model._names.length;
-    DataInfo dinfo = new DataInfo(fr,0, false,model.normSub,model.normMul);
+    DataInfo dinfo = new DataInfo(fr, 0, false, model.normSub, model.normMul, DataInfo.TransformType.STANDARDIZE, null, null);
+
     PCAScoreTask tsk = new PCAScoreTask(this, dinfo, nfeat, num_pc, model.eigVec);
     tsk.doAll(num_pc, dinfo._adaptedFrame);
     String[] names = new String[num_pc];
@@ -81,7 +82,7 @@ public class PCAScore extends FrameJob {
     final double[][] _eigvec; // eigenvector matrix
 
     public PCAScoreTask(Job job, DataInfo dinfo, int nfeat, int ncomp, double[][] eigvec) {
-      super(job, dinfo);
+      super(job.self(), dinfo);
       _nfeat = nfeat;
       _ncomp = ncomp;
       _eigvec = eigvec;

@@ -103,11 +103,11 @@ class Basic(unittest.TestCase):
 
             inspect = h2o_cmd.runInspect(key=hex_key)
             cols = inspect['cols']
-            num_cols = inspect['num_cols']
+            numCols = inspect['numCols']
             for i,c in enumerate(cols):
-                if i < (num_cols-1): # everything except the last col (output) should be 8 byte float
+                if i < (numCols-1): # everything except the last col (output) should be 8 byte float
                     colType = c['type']
-                    self.assertEqual(colType, 'float', msg="col %d should be type Real: %s" % (i, colType))
+                    self.assertEqual(colType, 'Real', msg="col %d should be type Real: %s" % (i, colType))
         
             h2o.check_sandbox_for_errors()
 

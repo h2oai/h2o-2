@@ -21,7 +21,7 @@ public class DeepLearningTask extends FrameTask<DeepLearningTask> {
 
   public DeepLearningTask(hex.deeplearning.DeepLearningModel.DeepLearningModelInfo input, float fraction){this(input,fraction,null);}
   private DeepLearningTask(hex.deeplearning.DeepLearningModel.DeepLearningModelInfo input, float fraction, H2OCountedCompleter cmp){
-    super(input.get_params(),input.data_info(),cmp);
+    super(input.get_params().self(),input.data_info(),cmp);
     _training=true;
     _input=input;
     _useFraction=fraction;
@@ -106,37 +106,41 @@ public class DeepLearningTask extends FrameTask<DeepLearningTask> {
     // input
     neurons[0] = new Neurons.Input(dinfo.fullN(), dinfo);
     // hidden
-    for( int i = 0; i < h.length; i++ ) {
+    for( int i = 0; i < h.length + (params.autoencoder ? 1 : 0); i++ ) {
+      int n = params.autoencoder && i == h.length ? minfo.units[0] : h[i];
       switch( params.activation ) {
         case Tanh:
-          neurons[i+1] = new Neurons.Tanh(h[i]);
+          neurons[i+1] = new Neurons.Tanh(n);
           break;
         case TanhWithDropout:
-          neurons[i+1] = new Neurons.TanhDropout(h[i]);
+          neurons[i+1] = params.autoencoder && i == h.length ? new Neurons.Tanh(n) : new Neurons.TanhDropout(n);
           break;
         case Rectifier:
-          neurons[i+1] = new Neurons.Rectifier(h[i]);
+          neurons[i+1] = new Neurons.Rectifier(n);
           break;
         case RectifierWithDropout:
-          neurons[i+1] = new Neurons.RectifierDropout(h[i]);
+          neurons[i+1] = params.autoencoder && i == h.length ? new Neurons.Rectifier(n) : new Neurons.RectifierDropout(n);
           break;
         case Maxout:
-          neurons[i+1] = new Neurons.Maxout(h[i]);
+          neurons[i+1] = new Neurons.Maxout(n);
           break;
         case MaxoutWithDropout:
-          neurons[i+1] = new Neurons.MaxoutDropout(h[i]);
+          neurons[i+1] = params.autoencoder && i == h.length ? new Neurons.Maxout(n) : new Neurons.MaxoutDropout(n);
           break;
       }
     }
-    // output
-    if(params.classification)
-      neurons[neurons.length - 1] = new Neurons.Softmax(minfo.units[minfo.units.length-1]);
-    else
-      neurons[neurons.length - 1] = new Neurons.Linear(1);
+    if(!params.autoencoder) {
+      if (params.classification)
+        neurons[neurons.length - 1] = new Neurons.Softmax(minfo.units[minfo.units.length - 1]);
+      else
+        neurons[neurons.length - 1] = new Neurons.Linear(1);
+    }
 
     //copy parameters from NN, and set previous/input layer links
-    for( int i = 0; i < neurons.length; i++ )
+    for( int i = 0; i < neurons.length; i++ ) {
       neurons[i].init(neurons, i, params, minfo, training);
+      neurons[i]._input = neurons[0];
+    }
 
 //    // debugging
 //    for (Neurons n : neurons) Log.info(n.toString());
@@ -150,34 +154,41 @@ public class DeepLearningTask extends FrameTask<DeepLearningTask> {
       for (int i=1; i<neurons.length-1; ++i) {
         neurons[i].fprop(seed, training);
       }
-      if (minfo.get_params().classification) {
-        ((Neurons.Softmax)neurons[neurons.length-1]).fprop();
+      if (minfo.get_params().autoencoder) {
+        neurons[neurons.length - 1].fprop(seed, training);
         if (training) {
-          for( int i = 1; i < neurons.length - 1; i++ )
-            Arrays.fill(neurons[i]._e.raw(), 0);
-          assert((double)(int)responses[0] == responses[0]);
-          final int target_label = (int)responses[0];
-          ((Neurons.Softmax)neurons[neurons.length-1]).bprop(target_label);
+          for (int i=neurons.length-1; i>0; --i) {
+            neurons[i].bprop();
+          }
+        }
+      } else {
+        if (minfo.get_params().classification) {
+          ((Neurons.Softmax) neurons[neurons.length - 1]).fprop();
+          if (training) {
+            for (int i = 1; i < neurons.length - 1; i++)
+              Arrays.fill(neurons[i]._e.raw(), 0);
+            assert ((double) (int) responses[0] == responses[0]);
+            final int target_label = (int) responses[0];
+            ((Neurons.Softmax) neurons[neurons.length - 1]).bprop(target_label);
+          }
+        } else {
+          ((Neurons.Linear) neurons[neurons.length - 1]).fprop();
+          if (training) {
+            for (int i = 1; i < neurons.length - 1; i++)
+              Arrays.fill(neurons[i]._e.raw(), 0);
+            final float target_value = (float) responses[0];
+            ((Neurons.Linear) neurons[neurons.length - 1]).bprop(target_value);
+          }
+        }
+        if (training) {
+          for (int i=neurons.length-2; i>0; --i)
+            neurons[i].bprop();
         }
       }
-      else {
-        ((Neurons.Linear)neurons[neurons.length-1]).fprop();
-        if (training) {
-          for( int i = 1; i < neurons.length - 1; i++ )
-            Arrays.fill(neurons[i]._e.raw(), 0);
-          final float target_value = (float)responses[0];
-          ((Neurons.Linear)neurons[neurons.length-1]).bprop(target_value);
-        }
-      }
-      if (training) {
-        for (int i=neurons.length-2; i>0; --i)
-          neurons[i].bprop();
-
-        /**
-         * Let neurons know the real-time number of processed rows -> for accurate learning rate decay, etc.
-         */
-        minfo.add_processed_local(1);
-      }
+      /**
+       * Let neurons know the real-time number of processed rows -> for accurate learning rate decay, etc.
+       */
+      if (training) minfo.add_processed_local(1);
     }
     catch(RuntimeException ex) {
       Log.warn(ex.getMessage());

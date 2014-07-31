@@ -26,6 +26,7 @@ public abstract class ASTOp extends AST {
   static final public int OPP_POWER    = 13;  /* ^ */
   static final public int OPP_UPLUS    = 12;  /* + */
   static final public int OPP_UMINUS   = 12;  /* - */
+  static final public int OPP_INTDIV   = 11;  /* %/% */
   static final public int OPP_MOD      = 11;  /* %xyz% */
   static final public int OPP_MUL      = 10;  /* * */
   static final public int OPP_DIV      = 10;  /* / */
@@ -82,6 +83,7 @@ public abstract class ASTOp extends AST {
     putBinInfix(new ASTLA());
     putBinInfix(new ASTLO());
     putBinInfix(new ASTMMult());
+    putBinInfix(new ASTIntDiv());
 
     // Unary prefix ops
     putPrefix(new ASTIsNA());
@@ -159,10 +161,17 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTPrint ());
     putPrefix(new ASTLs    ());
   }
+  static private boolean isReserved(String fn) {
+    return UNI_INFIX_OPS.containsKey(fn) || BIN_INFIX_OPS.containsKey(fn) || PREFIX_OPS.containsKey(fn);
+  }
   static private void putUniInfix(ASTOp ast) { UNI_INFIX_OPS.put(ast.opStr(),ast); }
   static private void putBinInfix(ASTOp ast) { BIN_INFIX_OPS.put(ast.opStr(),ast); }
   static private void putPrefix  (ASTOp ast) {    PREFIX_OPS.put(ast.opStr(),ast); }
-  static         void putUDF     (ASTOp ast, String fn) {     UDF_OPS.put(fn,ast); }
+  static         void putUDF     (ASTOp ast, String fn) {
+    if (isReserved(fn)) throw new IllegalArgumentException("Trying to overload a reserved method: "+fn+". Must not overload a reserved method with a user-defined function.");
+    if (UDF_OPS.containsKey(fn)) removeUDF(fn);
+    UDF_OPS.put(fn,ast);
+  }
   static         void removeUDF  (String fn) { UDF_OPS.remove(fn); }
   static public ASTOp isOp(String id) {
     // This order matters. If used as a prefix OP, `+` and `-` are binary only.
@@ -332,7 +341,30 @@ class ASTCeil extends ASTUniPrefixOp { @Override String opStr(){ return "ceil"; 
 class ASTFlr  extends ASTUniPrefixOp { @Override String opStr(){ return "floor"; } @Override ASTOp make() {return new ASTFlr ();} @Override double op(double d) { return Math.floor(d);}}
 class ASTLog  extends ASTUniPrefixOp { @Override String opStr(){ return "log";   } @Override ASTOp make() {return new ASTLog ();} @Override double op(double d) { return Math.log(d);}}
 class ASTExp  extends ASTUniPrefixOp { @Override String opStr(){ return "exp";   } @Override ASTOp make() {return new ASTExp ();} @Override double op(double d) { return Math.exp(d);}}
-class ASTIsNA extends ASTUniPrefixOp { @Override String opStr(){ return "is.na"; } @Override ASTOp make() {return new ASTIsNA();} @Override double op(double d) { return Double.isNaN(d)?1:0;}}
+//class ASTIsNA extends ASTUniPrefixOp { @Override String opStr(){ return "is.na"; } @Override ASTOp make() {return new ASTIsNA();} @Override double op(double d) { return Double.isNaN(d)?1:0;}}
+class ASTIsNA extends ASTUniPrefixOp { @Override String opStr(){ return "is.na";} @Override ASTOp make() { return new ASTIsNA();} @Override double op(double d) { return Double.isNaN(d)?1:0;}
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    // Expect we can broadcast across all functions as needed.
+    if( !env.isAry() ) { env.poppush(op(env.popDbl())); return; }
+    Frame fr = env.popAry();
+    String skey = env.key();
+    final ASTUniOp uni = this;  // Final 'this' so can use in closure
+    Frame fr2 = new MRTask2() {
+      @Override public void map( Chunk chks[], NewChunk nchks[] ) {
+        for( int i=0; i<nchks.length; i++ ) {
+          NewChunk n = nchks[i];
+          Chunk c = chks[i];
+          int rlen = c._len;
+          for( int r=0; r<rlen; r++ )
+            n.addNum( c.isNA0(r) ? 1 : 0);
+        }
+      }
+    }.doAll(fr.numCols(),fr).outputFrame(fr._names, null);
+    env.subRef(fr,skey);
+    env.pop();                  // Pop self
+    env.push(fr2);
+  }
+}
 
 class ASTNrow extends ASTUniPrefixOp {
   ASTNrow() { super(VARS1,new Type[]{Type.DBL,Type.ARY}); }
@@ -422,7 +454,7 @@ class ASTCanBeCoercedToLogical extends ASTUniPrefixOp {
     Vec[] v = fr.vecs();
     for (Vec aV : v) {
       if (aV.isInt()) {
-        if (aV.min() == 0 && aV.max() == 1) {
+        if ((aV.min() == 0 && aV.max() == 1) || (aV.min() == 0 && aV.min() == aV.max()) || (aV.min() == 1 && aV.min() == aV.max())) {
           d = 1;
           break;
         }
@@ -682,9 +714,24 @@ abstract class ASTBinOp extends ASTOp {
                  !(lf && rf && chks[i+nchks.length]._vec.isEnum())) ||
                 bin instanceof ASTEQ ||
                 bin instanceof ASTNE ) {
-              for( int r=0; r<rlen; r++ )
-                n.addNum(bin.op(lf ? chks[i                      ].at0(r) : df0,
-                                rf ? chks[i+(lf ? nchks.length:0)].at0(r) : df1));
+              for( int r=0; r<rlen; r++ ) {
+                double lv; double rv;
+                if (lf) {
+                  if(vecs(i).isUUID() || (chks[i].isNA0(r) && !bin.opStr().equals("|"))) { n.addNum(Double.NaN); continue; }
+                  lv = chks[i].at0(r);
+                } else {
+                  if (Double.isNaN(df0) && !bin.opStr().equals("|")) { n.addNum(Double.NaN); continue; }
+                  lv = df0;
+                }
+                if (rf) {
+                  if(vecs(i+(lf ? nchks.length:0)).isUUID() || chks[i].isNA0(r) && !bin.opStr().equals("|")) { n.addNum(Double.NaN); continue; }
+                  rv = chks[i+(lf ? nchks.length:0)].at0(r);
+                } else {
+                  if (Double.isNaN(df1) && !bin.opStr().equals("|")) { n.addNum(Double.NaN); continue; }
+                  rv = df1;
+                }
+                n.addNum(bin.op(lv, rv));
+              }
             } else {
               for( int r=0; r<rlen; r++ )  n.addNA();
             }
@@ -715,8 +762,15 @@ class ASTGE       extends ASTBinOp { ASTGE()       { super(OPF_INFIX, OPP_GE,   
 class ASTEQ       extends ASTBinOp { ASTEQ()       { super(OPF_INFIX, OPP_EQ,     OPA_LEFT); }  @Override String opStr(){ return "==" ;} @Override ASTOp make() {return new ASTEQ  ();} @Override double op(double d0, double d1) { return Utils.equalsWithinOneSmallUlp(d0,d1)?1:0;}}
 class ASTNE       extends ASTBinOp { ASTNE()       { super(OPF_INFIX, OPP_NE,     OPA_LEFT); }  @Override String opStr(){ return "!=" ;} @Override ASTOp make() {return new ASTNE  ();} @Override double op(double d0, double d1) { return Utils.equalsWithinOneSmallUlp(d0,d1)?0:1;}}
 class ASTLA       extends ASTBinOp { ASTLA()       { super(OPF_INFIX, OPP_AND,    OPA_LEFT); }  @Override String opStr(){ return "&"  ;} @Override ASTOp make() {return new ASTLA  ();} @Override double op(double d0, double d1) { return (d0!=0 && d1!=0) ? (Double.isNaN(d0) || Double.isNaN(d1)?Double.NaN:1) :0;}}
-class ASTLO       extends ASTBinOp { ASTLO()       { super(OPF_INFIX, OPP_OR,     OPA_LEFT); }  @Override String opStr(){ return "|"  ;} @Override ASTOp make() {return new ASTLO  ();} @Override double op(double d0, double d1) { return (d0==0 && d1==0) ? (Double.isNaN(d0) || Double.isNaN(d1)?Double.NaN:0) :1;}}
+class ASTLO       extends ASTBinOp { ASTLO()       { super(OPF_INFIX, OPP_OR,     OPA_LEFT); }  @Override String opStr(){ return "|"  ;} @Override ASTOp make() {return new ASTLO  ();} @Override double op(double d0, double d1) {
+  if (d0 == 0 && Double.isNaN(d1)) { return Double.NaN; }
+  if (d1 == 0 && Double.isNaN(d0)) { return Double.NaN; }
+  if (Double.isNaN(d0) && Double.isNaN(d1)) { return Double.NaN; }
+  if (d0 == 0 && d1 == 0) { return 0; }
+  return 1;
+}}
 
+class ASTIntDiv   extends ASTBinOp { ASTIntDiv()   { super(OPF_INFIX, OPP_INTDIV, OPA_LEFT); }  @Override String opStr(){ return "%/%";} @Override ASTOp make() {return new ASTIntDiv();} @Override double op(double d0, double d1) { return Math.floor(d0/d1); }}
 // Variable length; instances will be created of required length
 abstract class ASTReducerOp extends ASTOp {
   final double _init;
@@ -822,8 +876,8 @@ class ASTCbind extends ASTOp {
         Frame fr2 = env.ary(-argcnt+1+i);
         Frame fr3 = fr.makeCompatible(fr2);
         if( fr3 != fr2 ) {      // If copied into a new Frame, need to adjust refs
-          env.addRef(fr3); 
-          env.subRef(fr2,null); 
+          env.addRef(fr3);
+          env.subRef(fr2,null);
         }
         // Take name from an embedded assign: "cbind(colNameX = some_frame, ...)"
         if( fr2.numCols()==1 && apply != null && (name = apply._args[i+1].argName()) != null )
@@ -1045,7 +1099,7 @@ class ASTSeqLen extends ASTOp {
   }
   @Override ASTOp make() { return this; }
   @Override void apply(Env env, int argcnt, ASTApply apply) {
-    int len = (int)env.popDbl();
+    long len = (long)env.popDbl();
     if (len <= 0)
       throw new IllegalArgumentException("Error in seq_len(" +len+"): argument must be coercible to positive integer");
     env.poppush(1,new Frame(new String[]{"c"}, new Vec[]{Vec.makeSeq(len)}),null);
@@ -1110,7 +1164,7 @@ class ASTRepLen extends ASTOp {
   @Override void apply(Env env, int argcnt, ASTApply apply) {
     if(env.isAry(-2)) H2O.unimpl();
     else {
-      int len = (int)env.popDbl();
+      long len = (long)env.popDbl();
       if(len <= 0)
         throw new IllegalArgumentException("Error in rep_len: argument length.out must be coercible to a positive integer");
       double x = env.popDbl();
@@ -1299,7 +1353,7 @@ class ASTVar extends ASTOp {
         sdev[i] = fr.vecs()[i].sigma();
 
       // TODO: Might be more efficient to modify DataInfo to allow for separate standardization of mean and std dev
-      DataInfo dinfo = new DataInfo(fr, 0, true, true);
+      DataInfo dinfo = new DataInfo(fr, 0, true, DataInfo.TransformType.STANDARDIZE);
       GramTask tsk = new GramTask(null, dinfo, false, false).doAll(dinfo._adaptedFrame);
       double[][] var = tsk._gram.getXX();
       long nobs = tsk._nobs;
@@ -1639,7 +1693,7 @@ class ASTCut extends ASTOp {
         @Override public void map(Chunk chk, NewChunk nchk) {
           for(int r = 0; r < chk._len; r++) {
             double x = chk.at0(r);
-            if(x <= cutoffs[0] || x > cutoffs[cutoffs.length-1])
+            if(Double.isNaN(x) || x <= cutoffs[0] || x > cutoffs[cutoffs.length-1])
               nchk.addNum(Double.NaN);
             else {
               for(int i = 1; i < cutoffs.length; i++) {

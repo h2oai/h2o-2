@@ -41,11 +41,12 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_many_cols_and_values_with_syn(self):
+    def test_many_fp_formats(self):
+        h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (100000, 10, 'cA', 30),
-            (100, 1000, 'cB', 30),
+            (100000, 10, 'cA', 180),
+            (100, 1000, 'cB', 180),
             # (100, 900, 'cC', 30),
             # (100, 500, 'cD', 30),
             # (100, 100, 'cE', 30),
@@ -64,7 +65,6 @@ class Basic(unittest.TestCase):
                 selKey2 = hex_key + "_" + str(sel)
                 parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=selKey2, 
                     timeoutSecs=timeoutSecs)
-                print csvFilename, 'parse time:', parseResult['response']['time']
                 print "Parse result['destination_key']:", parseResult['destination_key']
                 inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
                 print "\n" + csvFilename

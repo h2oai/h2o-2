@@ -1,3 +1,5 @@
+.. _RF_tutorial:
+
 Random Forest Tutorial
 ----------------------
 

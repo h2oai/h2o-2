@@ -3,7 +3,6 @@ package water.fvec;
 import jsr166y.CountedCompleter;
 import water.*;
 import water.nbhm.NonBlockingHashMapLong;
-import water.util.Log;
 import water.util.Utils;
 
 import java.util.Arrays;
@@ -103,7 +102,7 @@ public class Vec extends Iced {
     final int nchunks = nChunks();
     Key [] keys = group().addVecs(n);
     final Vec [] vs = new Vec[keys.length];
-    for(int i = 0; i < vs.length; ++i) 
+    for(int i = 0; i < vs.length; ++i)
       vs[i] = new Vec(keys[i],_espc,
                       domain == null ? null    : domain[i],
                       uuids  == null ? false   : uuids [i],
@@ -194,6 +193,7 @@ public class Vec extends Iced {
     final Vec v0 = new Vec(group().addVecs(1)[0],_espc);
     new DRemoteTask(){
       @Override public void lcompute(){
+        getFutures();
         long row=0;                 // Start row
         Key k;
         for( int i=0; i<nchunks; i++ ) {
@@ -210,25 +210,24 @@ public class Vec extends Iced {
     fs.blockForPending();
     return v0;
   }
-  public static Vec makeSeq( int len ) {
-    Futures fs = new Futures();
-    AppendableVec av = new AppendableVec(VectorGroup.VG_LEN1.addVec());
-    NewChunk nc = new NewChunk(av,0);
-    for (int r = 0; r < len; r++) nc.addNum(r+1);
-    nc.close(0,fs);
-    Vec v = av.close(fs);
-    fs.blockForPending();
-    return v;
+  public static Vec makeSeq( long len) {
+    return new MRTask2() {
+      @Override
+      public void map(Chunk[] cs) {
+        for (int i = 0; i < cs.length; i++) {
+          Chunk c = cs[i];
+          for (int r = 0; r < c._len; r++)
+            c.set0(r, r+1+c._start);
+        }
+      }
+    }.doAll(makeConSeq(0, len)).vecs(0);
   }
-  public static Vec makeConSeq(double x, int len) {
-    Futures fs = new Futures();
-    AppendableVec av = new AppendableVec(VectorGroup.VG_LEN1.addVec());
-    NewChunk nc = new NewChunk(av,0);
-    for (int r = 0; r < len; r++) nc.addNum(x);
-    nc.close(0,fs);
-    Vec v = av.close(fs);
-    fs.blockForPending();
-    return v;
+  public static Vec makeConSeq(double x, long len) {
+    int chunks = (int)Math.ceil((double)len / Vec.CHUNK_SZ);
+    long[] espc = new long[chunks+1];
+    for (int i = 1; i<=chunks; ++i)
+      espc[i] = Math.min(espc[i-1] + Vec.CHUNK_SZ, len);
+    return new Vec(VectorGroup.VG_LEN1.addVec(), espc).makeCon(x);
   }
 
   /** Create a new 1-element vector in the shared vector group for 1-element vectors. */
@@ -424,6 +423,33 @@ public class Vec extends Iced {
    * <p>Returns true if the column is full of NAs.</p>
    */
   public final boolean isBad() { return naCnt() == length(); }
+
+  public static class VecIdenticalTask extends MRTask2<VecIdenticalTask> {
+    final double fpointPrecision;
+    VecIdenticalTask(H2O.H2OCountedCompleter cc, double precision){super(cc); fpointPrecision = precision;}
+    boolean _res;
+    @Override public void map(Chunk c1, Chunk c2){
+      if(!(c1 instanceof C8DChunk) && c1.getClass().equals(c2.getClass()))
+        _res = Arrays.equals(c1._mem,c2._mem);
+      else {
+        if(c1._len != c2._len)return;
+        if(c1.hasFloat()){
+          if(!c2.hasFloat())return;
+          for(int i = 0; i < c1._len; ++i) {
+            double diff = c1.at0(i) - c2.at0(i);
+            if(diff > fpointPrecision || -diff > fpointPrecision)return;
+          }
+        } else  {
+          if(c2.hasFloat())return;
+          for(int i = 0; i < c1._len; ++i)
+             if(c1.at80(i) != c2.at80(i))return;
+        }
+        _res = true;
+      }
+    }
+    @Override public void reduce(VecIdenticalTask bt){_res = _res && bt._res;}
+  }
+
   /** Is the column contains float values. */
   public final boolean isFloat() { return !isEnum() && !isInt(); }
   public final boolean isByteVec() { return (this instanceof ByteVec); }
@@ -456,7 +482,7 @@ public class Vec extends Iced {
       throw new IllegalArgumentException("Cannot ask for roll-up stats while the vector is being actively written.");
     if( vthis._naCnt>= 0 )      // KV store has a better answer
       return vthis == this ? this : setRollupStats(vthis);
-    
+
     // KV store reports we need to recompute
     RollupStats rs = new RollupStats().dfork(this);
     if(fs != null) fs.add(rs); else setRollupStats(rs.getResult());
@@ -539,8 +565,14 @@ public class Vec extends Iced {
 
       for( int i=0; i<c._len; i++ ) {
         long l = 81985529216486895L; // 0x0123456789ABCDEF
-        if (! c.isNA0(i))
-          l = c.at80(i);
+        if (! c.isNA0(i)) {
+          if (c instanceof C16Chunk) {
+            l = c.at16l0(i);
+            l ^= (37 * c.at16h0(i));
+          } else {
+            l = c.at80(i);
+          }
+        }
         long global_row = _start + i;
 
         checksum ^= (17 * global_row);
@@ -562,7 +594,7 @@ public class Vec extends Iced {
     _naCnt = -2;
     if( !writable() ) throw new IllegalArgumentException("Vector not writable");
     // Set remotely lazily.  This will trigger a cloud-wide invalidate of the
-    // existing Vec, and eventually we'll have to load a fresh copy of the Vec
+      // existing Vec, and eventually we'll have to load a fresh copy of the Vec
     // with active writing turned on, and caching disabled.
     new TAtomic<Vec>() {
       @Override public Vec atomic(Vec v) { if( v!=null ) v._naCnt=-2; return v; }
@@ -622,8 +654,9 @@ public class Vec extends Iced {
   }
 
   /** Get a Chunk Key from a chunk-index.  Basically the index-to-key map. */
-  public Key chunkKey(int cidx ) {
-    byte [] bits = _key._kb.clone();
+  public Key chunkKey(int cidx ) { return chunkKey(_key,cidx); }
+  static public Key chunkKey(Key veckey, int cidx ) {
+    byte [] bits = veckey._kb.clone();
     bits[0] = Key.DVEC;
     UDP.set4(bits,6,cidx); // chunk#
     return Key.make(bits);
@@ -829,9 +862,11 @@ public class Vec extends Iced {
     return s+"}]";
   }
 
-  public void remove( Futures fs ) {
+  public Futures remove( Futures fs ) {
     for( int i=0; i<nChunks(); i++ )
       UKV.remove(chunkKey(i),fs);
+    DKV.remove(_key);
+    return fs;
   }
 
   @Override public boolean equals( Object o ) {

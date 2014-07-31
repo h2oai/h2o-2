@@ -99,6 +99,8 @@ public class Exec2 {
     }
 
     // Some global constants
+    global.add(new ASTId(Type.DBL,"TRUE",0,global.size())); env.push(1.0);
+    global.add(new ASTId(Type.DBL,"FALSE",0,global.size())); env.push(0.0);
     global.add(new ASTId(Type.DBL,"T",0,global.size()));  env.push(1.0);
     global.add(new ASTId(Type.DBL,"F",0,global.size()));  env.push(0.0);
     global.add(new ASTId(Type.DBL,"NA",0,global.size()));  env.push(Double.NaN);
@@ -195,6 +197,7 @@ public class Exec2 {
     if( isReserved(c) ) return null;
     // Fail on leading numeric
     if( isDigit(c) ) return null;
+    if (c == '^' && _buf[_x+1] == '-') return _str.substring(++_x -1, _x);
     _x++;                       // Accept parse of 1 char
 
     // If first char is letter, standard ID
@@ -209,6 +212,7 @@ public class Exec2 {
     // These are calls to R's matrix operators.
     if( _x+2 <= _buf.length && c == '%' && _buf[_x+1] == '%' ) {
       if( _buf[_x] == '*' ) { _x+=2; return "%*%"; }
+      if (_buf[_x] == '/' ) { _x+=2; return "%/%"; }
     }
 
     // If first char is special, accept 1 or 2 special chars.

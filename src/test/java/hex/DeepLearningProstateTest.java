@@ -5,11 +5,9 @@ import hex.deeplearning.DeepLearningModel;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import water.JUnitRunnerDebug;
-import water.Key;
-import water.TestUtil;
-import water.UKV;
+import water.*;
 import water.api.AUC;
+import water.api.AUCData;
 import water.exec.Env;
 import water.exec.Exec2;
 import water.fvec.Frame;
@@ -30,8 +28,8 @@ public class DeepLearningProstateTest extends TestUtil {
     Random rng = new Random(seed);
     String[] datasets = new String[2];
     int[][] responses = new int[datasets.length][];
-    datasets[0] = "smalldata/./logreg/prostate.csv"; responses[0] = new int[]{1,2,8};
-    datasets[1] = "smalldata/iris/iris.csv";  responses[1] = new int[]{4};
+    datasets[0] = "smalldata/./logreg/prostate.csv"; responses[0] = new int[]{1,2,8}; //CAPSULE (binomial), AGE (regression), GLEASON (multi-class)
+    datasets[1] = "smalldata/iris/iris.csv";  responses[1] = new int[]{4}; //Iris-type (multi-class)
 
     int testcount = 0;
     int count = 0;
@@ -83,7 +81,7 @@ public class DeepLearningProstateTest extends TestUtil {
                                 500, //>1 epoch per iteration
                         })
                         {
-                          for (Key best_model_key : new Key[]{null, Key.make()}) {
+                          for (boolean override_with_best_model : new boolean[]{false, true}) {
                             count++;
                             if (fraction < rng.nextFloat()) continue;
                             final double epochs = 7 + rng.nextDouble() + rng.nextInt(4);
@@ -110,7 +108,8 @@ public class DeepLearningProstateTest extends TestUtil {
 
                               p.hidden = hidden;
                               if (i == 0 && resp == 2) p.classification = false;
-                              p.best_model_key = best_model_key;
+//                                p.best_model_key = best_model_key;
+                              p.override_with_best_model = override_with_best_model;
                               p.epochs = epochs;
                               p.seed = seed;
                               p.train_samples_per_iteration = train_samples_per_iteration;
@@ -131,8 +130,8 @@ public class DeepLearningProstateTest extends TestUtil {
                             {
                               DeepLearning p = new DeepLearning();
                               final DeepLearningModel tmp_model = UKV.get(dest_tmp); //this actually *requires* frame to also still be in UKV (because of DataInfo...)
-                              assert(tmp_model != null);
-                              assert(!Arrays.equals(p.job_key._kb, tmp_model.get_params().job_key._kb));
+                              Assert.assertTrue(tmp_model.get_params().state == Job.JobState.DONE); //HEX-1817
+                              assert (tmp_model != null);
                               p.checkpoint = dest_tmp;
                               p.destination_key = dest;
 
@@ -141,7 +140,7 @@ public class DeepLearningProstateTest extends TestUtil {
                               p.response = frame.vecs()[resp];
 
                               if (i == 0 && resp == 2) p.classification = false;
-                              p.best_model_key = best_model_key;
+                              p.override_with_best_model = override_with_best_model;
                               p.epochs = epochs;
                               p.seed = seed;
                               p.train_samples_per_iteration = train_samples_per_iteration;
@@ -150,12 +149,28 @@ public class DeepLearningProstateTest extends TestUtil {
 
                             // score and check result (on full data)
                             final DeepLearningModel mymodel = UKV.get(dest); //this actually *requires* frame to also still be in UKV (because of DataInfo...)
+                            Assert.assertTrue(mymodel.get_params().state == Job.JobState.DONE); //HEX-1817
                             // test HTML
                             {
                               StringBuilder sb = new StringBuilder();
                               mymodel.generateHTML("test", sb);
                             }
-                            if (valid == null ) valid = frame;
+
+                            // score and check result of the best_model
+                            if (mymodel.actual_best_model_key != null) {
+                              final DeepLearningModel best_model = UKV.get(mymodel.actual_best_model_key);
+                              Assert.assertTrue(best_model.get_params().state == Job.JobState.DONE); //HEX-1817
+                              // test HTML
+                              {
+                                StringBuilder sb = new StringBuilder();
+                                best_model.generateHTML("test", sb);
+                              }
+                              if (override_with_best_model) {
+                                Assert.assertEquals(best_model.error(), mymodel.error(), 0);
+                              }
+                            }
+
+                            if (valid == null) valid = frame;
                             double threshold = 0;
                             if (mymodel.isClassifier()) {
                               Frame pred = mymodel.score(valid);
@@ -164,23 +179,30 @@ public class DeepLearningProstateTest extends TestUtil {
                               AUC auc = new AUC();
                               double error = 0;
                               // binary
-                              if (mymodel.nclasses()==2) {
+                              if (mymodel.nclasses() == 2) {
                                 auc.actual = valid;
+                                assert (resp == 1);
                                 auc.vactual = valid.vecs()[resp];
                                 auc.predict = pred;
                                 auc.vpredict = pred.vecs()[2];
-                                auc.threshold_criterion = AUC.ThresholdCriterion.maximum_F1;
                                 auc.invoke();
                                 auc.toASCII(sb);
-                                threshold = auc.threshold();
-                                error = auc.err();
+                                AUCData aucd = auc.data();
+                                threshold = aucd.threshold();
+                                error = aucd.err();
                                 Log.info(sb);
 
+                                // test AUC computation in more detail
+                                Assert.assertTrue(aucd.AUC > 0.75); //min val = 0.81 for long test
+                                Assert.assertTrue(aucd.AUC < 0.9);  //max val = 0.85 for long test
+                                Assert.assertTrue(aucd.threshold() > 0.1);  //min val = 0.17 for long test
+                                Assert.assertTrue(aucd.threshold() < 0.6);  //max val = 0.53 for long test
+
                                 // check that auc.cm() is the right CM
-                                Assert.assertEquals(new ConfusionMatrix(auc.cm()).err(), error, 1e-15);
+                                Assert.assertEquals(new ConfusionMatrix(aucd.cm()).err(), error, 1e-15);
 
                                 // check that calcError() is consistent as well (for CM=null, AUC!=null)
-                                Assert.assertEquals(mymodel.calcError(valid, valid.lastVec(), pred, pred, "training", false, 0, null, auc, null), error, 1e-15);
+                                Assert.assertEquals(mymodel.calcError(valid, auc.vactual, pred, pred, "training", false, 0, null, auc, null), error, 1e-15);
                               }
 
                               // Compute CM
@@ -206,7 +228,7 @@ public class DeepLearningProstateTest extends TestUtil {
                               pred2.delete_and_lock(null);
                               pred2.unlock(null);
 
-                              if (mymodel.nclasses()==2) {
+                              if (mymodel.nclasses() == 2) {
                                 // make labels with 0.5 threshold for binary classifier
                                 Env ev = Exec2.exec("pred2[,1]=pred2[,3]>=" + 0.5);
                                 pred2 = ev.popAry();
@@ -251,55 +273,6 @@ public class DeepLearningProstateTest extends TestUtil {
                               pred.delete();
                             } //classifier
 
-                            final boolean validation = (vf != 0); //p.validation != null -> DL scores based on validation data set (which can be the same as training data set)
-
-                            if (mymodel.get_params().best_model_key != null) {
-                              // get the actual best error on (potentially sampled) training data
-                              float best_err = Float.MAX_VALUE;
-                              long best_samples = 0;
-                              for (DeepLearningModel.Errors err : mymodel.scoring_history()) {
-                                float e;
-                                if (mymodel.isClassifier()) {
-                                  e = (float) (validation ? err.valid_err : err.train_err);
-                                } else {
-                                  e = (float) (validation ? err.valid_mse : err.train_mse);
-                                }
-                                if (e < best_err) {
-                                  best_err = e;
-                                  best_samples = err.training_samples;
-                                }
-                              }
-                              Log.info("Actual best error : " + best_err + ".");
-                              Log.info("Actual best training samples : " + best_samples + ".");
-
-                              // get the error reported by the stored best model
-                              DeepLearningModel bestmodel = UKV.get(mymodel.get_params().best_model_key);
-//                              Log.info("Best model\n" + bestmodel.toString());
-                              final Frame fr = valid;
-                              Frame bestPredict = bestmodel.score(fr);
-                              double bestErr = bestmodel.calcError(fr, fr.vecs()[resp], bestPredict, bestPredict, validation ? "validation" : "training",
-                                      true, bestmodel.get_params().max_confusion_matrix_size, new water.api.ConfusionMatrix(),
-                                      bestmodel.nclasses() == 2 ? new AUC() : null, null); //presence of AUC object allows optimal threshold to be used for bestErr calculation
-
-                              Log.info("Validation: " + validation);
-                              Log.info("Best_model's samples : " + bestmodel.model_info().get_processed_total() + ".");
-                              Log.info("Best_model's error : " + bestErr + ".");
-                              Assert.assertEquals(bestmodel.model_info().get_processed_total(), best_samples); //check that the model was saved at the moment with the lowest error
-
-                              if (validation && (scorevalidation != 0 || csm != DeepLearning.ClassSamplingMethod.Uniform)) {
-                                //don't test since we didn't score on the original validation data
-                              }
-                              else if (!validation && (scoretraining != 0 || balance_classes)) {
-                                // don't check results since we cannot reproduce sampling and/or class rebalancing on training data
-                              }
-                              else {
-                                Assert.assertEquals(bestErr, best_err, 1e-5);
-                              }
-
-                              // clean up
-                              bestmodel.delete();
-                              bestPredict.delete();
-                            }
                             mymodel.delete();
                             UKV.remove(dest);
                             UKV.remove(dest_tmp);

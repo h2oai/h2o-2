@@ -42,6 +42,8 @@
 \alias{==,H2OParsedData,H2OParsedData-method}
 \alias{==,H2OParsedData,numeric-method}
 \alias{==,numeric,H2OParsedData-method}
+\alias{==,H2OParsedData,character-method}
+\alias{==,character,H2OParsedData-method}
 \alias{>,H2OParsedData,H2OParsedData-method}
 \alias{>,H2OParsedData,numeric-method}
 \alias{>,numeric,H2OParsedData-method}
@@ -53,6 +55,10 @@
 \alias{|,H2OParsedData,numeric-method}
 \alias{|,logical,H2OParsedData-method}
 \alias{|,numeric,H2OParsedData-method}
+\alias{^,H2OParsedData,numeric-method}
+\alias{^,numeric,H2OParsedData-method}
+\alias{\%/\%,H2OParsedData,numeric-method}
+\alias{\%/\%,numeric,H2OParsedData-method}
 \alias{$,H2OParsedData-method}
 \alias{$<-,H2OParsedData-method}
 \alias{abs,H2OParsedData-method}
@@ -97,7 +103,7 @@
 
 \title{Class \code{"H2OParsedData"}}
 \description{
-A class for representing imported FluidVecs data sets that have been parsed.
+A class for representing imported data sets that have been parsed.
 }
 \section{Objects from the Class}{
 Objects can be created by calls of the form \code{new("H2OParsedData", ...)}.
@@ -108,6 +114,10 @@ Objects can be created by calls of the form \code{new("H2OParsedData", ...)}.
     \item{\code{h2o}:}{Object of class \code{"H2OClient"}, which is the client object that was passed into the function call.}
     \item{\code{key}:}{Object of class \code{"character"}, which is the hex key assigned to the imported data.}
     \item{\code{logic}:}{Object of class \code{"logical"}, indicating whether the \code{"H2OParsedData"} object represents logical data}
+    \item{\code{any_enum}:}{Object of class \code{"logical"}, indicating whether the frame has any factor columns.}
+    \item{\code{ncols}:}{Object of class \code{"numeric"}, holds the number of columns of the \code{"H2OParsedData"} object.}
+    \item{\code{nrows}:}{Object of class \code{"numeric"}, holds the number of rows of the \code{"H2OParsedData"} object.}
+    \item{\code{col_names}:}{Object of class \code{"vector"}, holds the column names of the \code{"H2OParsedData"} object.}
   }
 }
 \section{Methods}{
@@ -155,7 +165,9 @@ Objects can be created by calls of the form \code{new("H2OParsedData", ...)}.
     \item{>=}{\code{signature(e1 = "H2OParsedData", e2 = "H2OParsedData")}: ... }
     \item{>=}{\code{signature(e1 = "H2OParsedData", e2 = "numeric")}: ... }
     \item{>=}{\code{signature(e1 = "numeric", e2 = "H2OParsedData")}: ... }
-    \item{|}{\code{signature(e1 = "H2OParsedData", e2 = "H2OParsedData")}: ... }
+    \item{|}{\code{signature(e1 = "H2OParsedData", e2 = "H2OParsedData")}: ... }'
+    \item{^}{\code{signature(e1 = "numeric", e2 = "H2OParsedData")}: ... }
+    \item{^}{\code{signature(e1 = "H2OParsedData", e2 = "numeric")}: ... }    
     \item{|}{\code{signature(e1 = "H2OParsedData", e2 = "logical")}: ... }
     \item{|}{\code{signature(e1 = "H2OParsedData", e2 = "numeric")}: ... }
     \item{|}{\code{signature(e1 = "logical", e2 = "H2OParsedData")}: ... }

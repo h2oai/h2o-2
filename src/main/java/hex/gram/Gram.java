@@ -6,10 +6,7 @@ import hex.FrameTask;
 import hex.glm.LSMSolver.ADMMSolver.NonSPDMatrixException;
 import jsr166y.ForkJoinTask;
 import jsr166y.RecursiveAction;
-import water.Futures;
-import water.Iced;
-import water.Job;
-import water.MemoryManager;
+import water.*;
 import water.util.Log;
 import water.util.Utils;
 
@@ -19,7 +16,7 @@ public final class Gram extends Iced {
   final boolean _hasIntercept;
   public double[][] _xx;
   double[] _diag;
-  final int _diagN;
+  public final int _diagN;
   final int _denseN;
   final int _fullN;
   final static int MIN_TSKSZ=10000;
@@ -61,6 +58,14 @@ public final class Gram extends Iced {
       _xx[i][_xx[i].length - 1] += d;
   }
 
+  public double sparseness(){
+    double [][] xx = getXX();
+    double nzs = 0;
+    for(int i = 0; i < xx.length; ++i)
+      for(int j = 0; j < xx[i].length; ++j)
+        if(xx[i][j] != 0) nzs += 1;
+    return nzs/(xx.length*xx.length);
+  }
   public double diagAvg(){
     double res = 0;
     int n = 0;
@@ -332,6 +337,30 @@ public final class Gram extends Iced {
 
     }
 
+    public double[][] getXX() {
+      final int N = _xx.length+_diag.length;
+      double[][] xx = new double[N][];
+      for( int i = 0; i < N; ++i )
+        xx[i] = MemoryManager.malloc8d(N);
+      for( int i = 0; i < _diag.length; ++i )
+        xx[i][i] = _diag[i];
+      for( int i = 0; i < _xx.length; ++i ) {
+        for( int j = 0; j < _xx[i].length; ++j ) {
+          xx[i + _diag.length][j] = _xx[i][j];
+          xx[j][i + _diag.length] = _xx[i][j];
+        }
+      }
+      return xx;
+    }
+    public double sparseness(){
+      double [][] xx = getXX();
+      double nzs = 0;
+      for(int i = 0; i < xx.length; ++i)
+        for(int j = 0; j < xx[i].length; ++j)
+          if(xx[i][j] != 0) nzs += 1;
+      return nzs/(xx.length*xx.length);
+    }
+
     @Override
     public String toString() {
       return "";
@@ -452,8 +481,8 @@ public final class Gram extends Iced {
     public final boolean _hasIntercept;
     public final boolean _isWeighted; // last response is weight vector?
 
-    public GramTask(Job job, DataInfo dinfo, boolean hasIntercept, boolean isWeighted){
-      super(job,dinfo);
+    public GramTask(Key jobKey, DataInfo dinfo, boolean hasIntercept, boolean isWeighted){
+      super(jobKey,dinfo);
       _hasIntercept = hasIntercept;
       _isWeighted = isWeighted;
     }
