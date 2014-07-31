@@ -98,7 +98,7 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__PAGE_CLOUD = "Cloud.json"
 .h2o.__PAGE_GET = "GetVector.json"
 .h2o.__PAGE_EXPORTHDFS = "ExportHdfs.json"
-.h2o.__PAGE_INSPECT = "Inspect.json"
+#.h2o.__PAGE_INSPECT = "Inspect.json"
 .h2o.__PAGE_JOBS = "Jobs.json"
 .h2o.__PAGE_PARSE = "Parse.json"
 .h2o.__PAGE_PUT = "PutVector.json"
