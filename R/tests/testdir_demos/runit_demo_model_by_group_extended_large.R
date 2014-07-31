@@ -39,7 +39,7 @@ library(plyr)
 
 # Read in the data
 # Path is relative to the location that I started h2o (i.e. which dir did I java -jar in?)
-flights <- h2o.importFile(h, "../../../smalldata/airlines/allyears2k_headers.zip", "flights.hex")
+flights <- h2o.importFile(h, normalizePath("../../../smalldata/airlines/allyears2k_headers.zip"), "flights.hex")
 
 #################################################################################
 #
@@ -148,7 +148,7 @@ function(fitMethod, origins, dataset) {
 }
 
 #iterate over the fit fcns as well
-model.fit.fcns <- c(lr.fit, rf.fit, srf.fit, gbm.fit, dl.fit)
+model.fit.fcns <- c(lr.fit, srf.fit) #rf.fit, srf.fit, gbm.fit, dl.fit)
 # See the Notes section below to get insight into the following one-liner
 models.by.airport.origin <- unlist(recursive = F, lapply(model.fit.fcns, all.fit, frequent.origin.codes, flights))
 
