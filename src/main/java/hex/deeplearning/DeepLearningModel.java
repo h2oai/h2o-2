@@ -1177,7 +1177,9 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
     DocGen.HTML.title(sb, title);
 
-    if (UKV.get(get_params().source._key) != null) job().toHTML(sb);
+    if (get_params().source == null || UKV.get(get_params().source._key) == null) (Job.hygiene(get_params())).toHTML(sb);
+    else job().toHTML(sb);
+
     final Key val_key = get_params().validation != null ? get_params().validation._key : null;
     sb.append("<div class='alert'>Actions: "
             + (jobKey != null && UKV.get(jobKey) != null && Job.isRunning(jobKey) ? "<i class=\"icon-stop\"></i>" + Cancel.link(jobKey, "Stop training") + ", " : "")
@@ -1324,14 +1326,14 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     if (!error.validation) {
       if (_have_cv_results) {
         RString v_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
-        v_rs.replace("key", get_params().source._key);
+        v_rs.replace("key", get_params().source != null && get_params().source._key != null ? get_params().source._key : "");
         String cmTitle = "<div class=\"alert\">Scoring results reported for " + error.num_folds + "-fold cross-validated training data " + v_rs.toString() + ":</div>";
         sb.append("<h5>" + cmTitle);
         sb.append("</h5>");
       }
       else {
         RString t_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
-        t_rs.replace("key", get_params().source._key);
+        t_rs.replace("key", get_params().source != null && get_params().source._key != null ? get_params().source._key : "");
         String cmTitle = "<div class=\"alert\">Scoring results reported on training data " + t_rs.toString() + (fulltrain ? "" : " (" + score_train + " samples)") + ":</div>";
         sb.append("<h5>" + cmTitle);
         sb.append("</h5>");
@@ -1339,7 +1341,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     }
     else {
       RString v_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
-      v_rs.replace("key", get_params().validation._key != null ? get_params().validation._key : "");
+      v_rs.replace("key", get_params().validation != null && get_params().validation._key != null ? get_params().validation._key : "");
       String cmTitle = "<div class=\"alert\">Scoring results reported on validation data " + v_rs.toString() + (fullvalid ? "" : " (" + score_valid + " samples)") + ":</div>";
       sb.append("<h5>" + cmTitle);
       sb.append("</h5>");
