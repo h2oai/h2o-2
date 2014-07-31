@@ -945,7 +945,10 @@ h2o.getModel <- function(h2o, key) {
 #'
 #' Get the reference to a frame with the given key.
 h2o.getFrame <- function(h2o, key) {
-  if ( ! (key %in% h2o.ls(h2o)$Key)) stop( paste("The h2o instance at ", h2o@ip, ":", h2o@port, " does not have key: \"", key, "\"", sep = ""))
+  if ( ! (key %in% h2o.ls(h2o)$Key)) {
+    warning( paste("The h2o instance at ", h2o@ip, ":", h2o@port, " does not have key: \"", key, "\"", sep = ""))
+    return(new("H2OParsedData", h2o = h2o, key = key))
+  }
   .h2o.exec2(expr = key, h2o = h2o, dest_key = key)
 }
 
