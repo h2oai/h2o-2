@@ -850,6 +850,27 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           @Override public void callback(final LMAXTask t){
             _currentLambda = lambda_max = t.lmax();
             _lastResult = new IterationInfo(0,t,null,t.gradient(0,0));
+
+            GLMModel model = new GLMModel(GLM2.this, dest(), _dinfo, _glm, beta_epsilon, alpha[0], lambda_max, _ymu, prior);
+
+            if (nlambdas == -1) {
+              lambda = null;
+            } else {
+              final double d = Math.pow(lambda_min_ratio, 1.0 / (nlambdas - 1));
+              if(nlambdas == 0)throw new IllegalArgumentException("nlambdas must be > 0 when running lambda search.");
+              lambda = new double[nlambdas];
+              lambda[0] = lambda_max;
+              if(nlambdas == 1){
+                model.addWarning("Got lambda search with nlambda == 1, i.e. returning just the null model.");
+                _done = true;
+                return;
+              }
+              for (int i = 1; i < lambda.length; ++i)
+                lambda[i] = lambda[i - 1] * d;
+              lambda_min = lambda[lambda.length - 1];
+            }
+            _runAllLambdas = false;
+
             if(n_folds > 1){
               final H2OCountedCompleter futures = new H2O.H2OEmptyCompleter();
               final GLM2 [] xvals = new GLM2[n_folds+1];
@@ -893,34 +914,17 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
               _xvals = xvals;
               futures.join();
             }
-            GLMModel model = new GLMModel(GLM2.this, dest(), _dinfo, _glm, beta_epsilon, alpha[0], lambda_max, _ymu, prior);
+
             if(lambda_search) {
               _lambdaIdx = 0;
               model = addLmaxSubmodel(model,t._val);
+              model.delete_and_lock(self());
               max_iter = MAX_ITERATIONS_PER_LAMBDA*nlambdas;
               if (lambda_min_ratio == -1)
                 lambda_min_ratio = _nobs > 25 * _dinfo.fullN() ? 1e-4 : 1e-2;
               lambda_min = lambda_max * lambda_min_ratio;
               assert !Double.isNaN(lambda_max) : LogInfo("running lambda_value search, but don't know what is the lambda_value max!");
-              if (nlambdas == -1) {
-                lambda = null;
-              } else {
-                final double d = Math.pow(lambda_min_ratio, 1.0 / (nlambdas - 1));
-                if(nlambdas == 0)throw new IllegalArgumentException("nlambdas must be > 0 when running lambda search.");
-                lambda = new double[nlambdas];
-                lambda[0] = lambda_max;
-                if(nlambdas == 1){
-                  model.addWarning("Got lambda search with nlambda == 1, i.e. returning just the null model.");
-                  addLmaxSubmodel(model,t._val);
-                  _done = true;
-                  model.delete_and_lock(self());
-                  return;
-                }
-                for (int i = 1; i < lambda.length; ++i)
-                  lambda[i] = lambda[i - 1] * d;
-                lambda_min = lambda[lambda.length - 1];
-              }
-              _runAllLambdas = false;
+
             } else {
               if(lambda == null || lambda.length == 0)
                 lambda = new double[]{DEFAULT_LAMBDA};
