@@ -239,7 +239,7 @@ h2o.glm <- function(x, y, data, key = "", family, nfolds = 0, alpha = 0.5, nlamb
 
 .get.glm.model <- function(data, model_key, return_all_lambda = TRUE) {
   res <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLMModelView, '_modelKey'=model_key)
-  params <- res$parameters
+  params <- res$glm_model$parameters
   params$h2o <- data@h2o
   resModel <- res$glm_model
   destKey <- resModel$'_key'
@@ -1059,8 +1059,7 @@ h2o.pcr <- function(x, y, data, key = "", ncomp, family, nfolds = 10, alpha = 0.
   new("H2OPCAModel", key=destKey, data=data, model=result)
 }
 
-.get.pca.results<-
-function(data, json, destKey, params) {
+.get.pca.results <- function(data, json, destKey, params) {
   json$params <- params
   json$rotation <- t(matrix(unlist(json$eigVec), nrow = length(json$eigVec[[1]])))
   rownames(json$rotation) <- json$'namesExp'

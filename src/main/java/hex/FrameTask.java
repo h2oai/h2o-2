@@ -84,6 +84,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     public double [] _normRespSub;
     public int _foldId;
     public int _nfolds;
+    public Key _frameKey;
 
     public DataInfo deep_clone() {
       AutoBuffer ab = new AutoBuffer();

@@ -868,12 +868,14 @@ function(h2o, key) {
 
 #'
 #' Fetch the model from the key
-h2o.getModel<-
-function(h2o, key) {
+h2o.getModel <- function(h2o, key) {
   json <- .fetchJSON(h2o, key)
   algo <- model.type <- names(json)[3]
   if (algo == "grid") return(.getGLMGridResults(json, h2o, key, TRUE))
-  params <- json[[model.type]]$parameters #.fill.params(model.type, json)
+  if(algo == "deeplearning_model")
+    params <- json[[model.type]]$model_info$job
+  else
+    params <- json[[model.type]]$parameters #.fill.params(model.type, json)
   params$h2o <- h2o
   model_obj  <- switch(algo, gbm_model = "H2OGBMModel", drf_model = "H2ODRFModel", deeplearning_model = "H2ODeepLearningModel", speedrf_model = "H2OSpeeDRFModel", model= "H2OKMeansModel", glm_model = "H2OGLMModel", nb_model = "H2ONBModel", pca_model = "H2OPCAModel")
   results_fun <- switch(algo, gbm_model = .h2o.__getGBMResults,
@@ -891,24 +893,24 @@ function(h2o, key) {
   dest_key   <- key #params$destination_key
 
   train_fr   <- new("H2OParsedData", key = "NA")
-  if (!is.null(response$"_dataKey")) train_fr <- h2o.getFrame(h2o, response$"_dataKey")
+  if(!is.null(response$"_dataKey")) train_fr <- h2o.getFrame(h2o, response$"_dataKey")
   params$importance <- !is.null(params$varimp)
-  if (!is.null(params$family) && model.type == "gbm_model") {
+  if(!is.null(params$family) && model.type == "gbm_model") {
     params$distribution <- "multinomial"
-    if (params$family == "AUTO") {
-      if (!is.null(json[[model.type]]$validAUC)) params$distribution <- "bernoulli"
+    if(params$family == "AUTO") {
+      if(!is.null(json[[model.type]]$validAUC)) params$distribution <- "bernoulli"
     }
   }
-  if (algo == "glm_model") {
-    model <- results_fun(train_fr, key, FALSE) #TODO: return all lambdas case
+  if(algo == "glm_model") {
+    model <- results_fun(train_fr, key, FALSE) # TODO: return all lambdas case
     return(model)
   }
-  if (algo == "model") {
+  if(algo == "model") {
     newModel <- new(model_obj, key = dest_key, data = train_fr, model = results_fun(json[[model.type]], train_fr, params))
     return(newModel)
   }
 
-  if (algo == "pca_model") {
+  if(algo == "pca_model") {
     return(.get.pca.results(train_fr, json[[model.type]], key, params))
   }
   modelOrig<- results_fun(json[[model.type]], params)
@@ -924,16 +926,14 @@ function(h2o, key) {
   new(model_obj, key=dest_key, data=train_fr, model=modelOrig, valid=valid, xval=res_xval)
 }
 
-.get.glm.params <-
-function(h2o, key) {
+.get.glm.params <- function(h2o, key) {
   res <- .h2o.__remoteSend(client = h2o, page = .h2o.__PAGE_GLMModelView, '_modelKey' = key)
   params <- res$glm_model$parameters
   params$h2o <- h2o
   params
 }
 
-.get_model_params <-
-function(h2o, key) {
+.get_model_params <- function(h2o, key) {
   json <- .fetchJSON(h2o, key)
   algo <- model.type <- names(json)[3]
   if (algo == "grid") return("")

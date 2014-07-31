@@ -172,7 +172,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   VarImp variable_importances;
 
   public GLMModel(GLM2 job, Key selfKey, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double lambda_max, double ymu, double prior) {
-    super(selfKey,job.source._key,dinfo._adaptedFrame, /* priorClassDistribution */ null);
+    super(selfKey,job.source._key == null ? dinfo._frameKey : job.source._key,dinfo._adaptedFrame, /* priorClassDistribution */ null);
     parameters = Job.hygiene((GLM2) job.clone());
     job_key = job.self();
     this.ymu = ymu;
@@ -200,8 +200,8 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
         GLMValidation val = xval ? submodels[i].xvalidation : submodels[i].validation;
         if (val == null) continue;
         if ((useAuc && val.auc > bestVal.auc)
-          || (xval && val.residual_deviance < bestVal.residual_deviance)
-          || (((bestVal.residual_deviance - val.residual_deviance) / val.null_deviance) >= 0.01)) {
+                || (xval && val.residual_deviance < bestVal.residual_deviance)
+                || (((bestVal.residual_deviance - val.residual_deviance) / val.null_deviance) >= 0.01)) {
           bestVal = val;
           bestId = i;
         }
@@ -225,8 +225,8 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
         for(int i = 1; i < old.submodels.length; ++i){
           GLMValidation val = xval?old.submodels[i].xvalidation:old.submodels[i].validation;
           if((useAuc && val.auc > bestVal.auc)
-            || (xval && val.residual_deviance < bestVal.residual_deviance)
-            || (((bestVal.residual_deviance - val.residual_deviance)/val.null_deviance) >= 0.01)){
+                  || (xval && val.residual_deviance < bestVal.residual_deviance)
+                  || (((bestVal.residual_deviance - val.residual_deviance)/val.null_deviance) >= 0.01)){
             bestVal = val;
             bestId = i;
           }
@@ -242,7 +242,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     }.fork(modelKey);
   }
 
-//  public static void setSubmodel(H2OCountedCompleter cmp, Key modelKey, final double lambda, double[] beta, double[] norm_beta, int iteration, long runtime, boolean sparseCoef){
+  //  public static void setSubmodel(H2OCountedCompleter cmp, Key modelKey, final double lambda, double[] beta, double[] norm_beta, int iteration, long runtime, boolean sparseCoef){
   public static void setSubmodel(H2OCountedCompleter cmp, Key modelKey, final double lambda, double[] beta, double[] norm_beta, int iteration, long runtime, boolean sparseCoef){
     setSubmodel(cmp,modelKey,lambda,beta,norm_beta,iteration,runtime,sparseCoef,null);
   }
@@ -399,7 +399,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   }
   public final int ncoefs() {return beta().length;}
 
-//  public static void setAndTestValidation(final H2OCountedCompleter cmp,final Key modelKey, final double lambda, final GLMValidation val){
+  //  public static void setAndTestValidation(final H2OCountedCompleter cmp,final Key modelKey, final double lambda, final GLMValidation val){
 //    if(cmp != null)cmp.addToPendingCount(1);
 //    new TAtomic<GLMModel>(cmp){
 //      @Override
@@ -507,7 +507,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
 
 
   public GLMParams getParams() {
-      return glm;
+    return glm;
   }
 
   @Override
