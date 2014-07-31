@@ -192,13 +192,13 @@ public class Env extends Iced {
   public String key()     { return _key[_sp]; }
   // Pop frame from stack; lower refcnts... allowing to fall to zero without deletion.
   // Assumption is that this Frame will get pushed again shortly.
-  public Frame  popXAry()  { 
+  public Frame  popXAry()  {
     Frame fr = popAry();
     for( Vec vec : fr.vecs() ) {
       popVec(vec);
       if ( vec.masterVec() != null ) popVec(vec.masterVec());
     }
-    return fr; 
+    return fr;
   }
   public void popVec(Vec vec)  {
     int cnt = _refcnt.get(vec)._val-1;
@@ -248,7 +248,14 @@ public class Env extends Iced {
     return true;
   }
 
+  /**
+   * Subtract reference count.
+   * @param vec vector to handle
+   * @param fs future, can be null
+   * @return returns future or null if Future was
+   */
   public Futures subRef( Vec vec, Futures fs ) {
+    //assert fs != null : "Future should not be null!";
     if ( vec.masterVec() != null ) subRef(vec.masterVec(), fs);
     int cnt = _refcnt.get(vec)._val-1;
     //Log.info(" --- " + vec._key.toString()+ " RC=" + cnt);
@@ -260,15 +267,16 @@ public class Env extends Iced {
     }
     return fs;
   }
+  public void subRef(Vec vec) { subRef(vec, new Futures()); }
 
   // Lower the refcnt on all vecs in this frame.
   // Immediately free all vecs with zero count.
   // Always return a null.
   public Frame subRef( Frame fr, String key ) {
     if( fr == null ) return null;
-    Futures fs = null;
+    Futures fs = new Futures();
     for( Vec vec : fr.vecs() ) fs = subRef(vec,fs);
-    if( fs != null ) fs.blockForPending();
+    fs.blockForPending();
     return null;
   }
   // Lower refcounts on all vecs captured in the inner environment
@@ -334,7 +342,7 @@ public class Env extends Iced {
           if( refcnt > 1 ) {    // Need a deep-copy now
             Vec v2 = new Frame(v).deepSlice(null,null).vecs()[0];
             fr2.replace(i,v2);  // Replace with private deep-copy
-            subRef(v,null);     // Now lower refcnt for good assertions
+            subRef(v);     // Now lower refcnt for good assertions
             addRef(v2);
           } // But not down to zero (do not delete items in global scope)
         }

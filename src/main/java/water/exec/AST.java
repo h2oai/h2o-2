@@ -565,7 +565,7 @@ class ASTAssign extends AST {
         throw new IllegalArgumentException("Can only assign to a matching set of columns; trying to assign " + ary_rhs.numCols() + " cols over " + cs.length + " cols");
       // Replace the LHS cols with the RHS cols
       Vec rvecs[] = ary_rhs.vecs();
-      Futures fs = null;
+      Futures fs = new Futures();
       for (int i = 0; i < cs.length; i++) {
         int cidx = (int) cs[i] - 1;      // Convert 1-based to 0-based
         Vec rv = env.addRef(rvecs[rvecs.length == 1 ? 0 : i]);
@@ -573,7 +573,7 @@ class ASTAssign extends AST {
           ary.add("C" + String.valueOf(cidx + 1), rv);     // New column name created with 1-based index
         else fs = env.subRef(ary.replace(cidx, rv), fs);
       }
-      if (fs != null) fs.blockForPending();
+      fs.blockForPending();
     }
     // After slicing, pop all expressions (cannot lower refcnt till after all uses)
     int narg = 0;
