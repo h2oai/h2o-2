@@ -32,18 +32,10 @@ public class DeepLearning extends Job.ValidatedJob {
   public Key checkpoint;
 
   /**
-   * If given, store the best model so far under this key.
-   * Model performance is measured by MSE for regression and overall
-   * error rate for classification (at F1-optimal threshold for binary classification).
-   */
-  @API(help = "Key to store the always-best model under", filter= Default.class, json = true)
-  public Key best_model_key = null;
-
-  /**
    * If enabled, store the best model under the destination key of this model at the end of training.
    * Only applicable if training is not cancelled.
    */
-  @API(help = "If enabled, override the final model with the best model found so far", filter= Default.class, json = true)
+  @API(help = "If enabled, override the final model with the best model found during training", filter= Default.class, json = true)
   public boolean override_with_best_model = true;
 
   /**
@@ -532,7 +524,6 @@ public class DeepLearning extends Job.ValidatedJob {
 
   // the following parameters can be modified when restarting from a checkpoint
   transient final String [] cp_modifiable = new String[] {
-          "best_model_key",
           "expert_mode",
           "seed",
           "epochs",
@@ -659,7 +650,11 @@ public class DeepLearning extends Job.ValidatedJob {
 
   /** Print model parameters as JSON */
   @Override public boolean toHTML(StringBuilder sb) {
-    return makeJsonBox(sb);
+    try {
+      return makeJsonBox(sb);
+    } catch (Throwable t) {
+      return false;
+    }
   }
 
   /**
@@ -855,9 +850,6 @@ public class DeepLearning extends Job.ValidatedJob {
         Log.info("Ignoring initial_weight_scale for UniformAdaptive weight distribution.");
       }
       if (n_folds != 0) {
-        if (best_model_key != null) {
-          Log.info("Ignoring best_model_key, since the final model is the only scored model with n-fold cross-validation.");
-        }
         if (override_with_best_model) {
           Log.info("Ignoring override_with_best_model, since the final model is the only scored model with n-fold cross-validation.");
         }
@@ -1013,6 +1005,7 @@ public class DeepLearning extends Job.ValidatedJob {
           validScoreFrame = updateFrame(adaptedValid, sampleFrame(adaptedValid, mp.score_validation_samples, mp.seed+1));
         }
         if (mp.force_load_balance) validScoreFrame = updateFrame(validScoreFrame, reBalance(validScoreFrame, false /*always split up globally since scoring should be distributed*/));
+        model.validation_rows = validScoreFrame.numRows();
         if (!quiet_mode) Log.info("Number of chunks of the validation data: " + validScoreFrame.anyVec().nChunks());
       }
 
@@ -1039,7 +1032,7 @@ public class DeepLearning extends Job.ValidatedJob {
       // replace the model with the best model so far (if it's better)
       if (!isCancelledOrCrashed() && override_with_best_model && model.actual_best_model_key != null && n_folds == 0) {
         DeepLearningModel best_model = UKV.get(model.actual_best_model_key);
-        if (best_model != null && best_model.error() < model.error()) {
+        if (best_model != null && best_model.error() < model.error() && Arrays.equals(best_model.model_info().units, model.model_info().units)) {
           Log.info("Setting the model to be the best model so far (based on scoring history).");
           DeepLearningModel.DeepLearningModelInfo mi = best_model.model_info().deep_clone();
           // Don't cheat - count full amount of training samples, since that's the amount of training it took to train (without finding anything better)
@@ -1164,7 +1157,6 @@ public class DeepLearning extends Job.ValidatedJob {
   @Override public void crossValidate(Frame[] splits, Frame[] cv_preds, long[] offsets, int i) {
     // Train a clone with slightly modified parameters (to account for cross-validation)
     DeepLearning cv = (DeepLearning) this.clone();
-    cv.best_model_key = null; // model-specific stuff
     cv.genericCrossValidation(splits, offsets, i);
     cv_preds[i] = ((DeepLearningModel) UKV.get(cv.dest())).score(cv.validation);
   }
