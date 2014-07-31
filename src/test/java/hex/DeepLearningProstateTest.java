@@ -81,7 +81,8 @@ public class DeepLearningProstateTest extends TestUtil {
                                 500, //>1 epoch per iteration
                         })
                         {
-                          for (Key best_model_key : new Key[]{null, Key.make()}) {
+//                          for (Key best_model_key : new Key[]{null, Key.make()}) {
+                          for (Key best_model_key : new Key[]{null}) {
                             count++;
                             if (fraction < rng.nextFloat()) continue;
                             final double epochs = 7 + rng.nextDouble() + rng.nextInt(4);
@@ -155,6 +156,18 @@ public class DeepLearningProstateTest extends TestUtil {
                               StringBuilder sb = new StringBuilder();
                               mymodel.generateHTML("test", sb);
                             }
+
+                            // score and check result of the best_model (on full data)
+                            if (mymodel.actual_best_model_key != null) {
+                              final DeepLearningModel best_model = UKV.get(mymodel.actual_best_model_key);
+                              Assert.assertTrue(best_model.get_params().state == Job.JobState.DONE); //HEX-1817
+                              // test HTML
+                              {
+                                StringBuilder sb = new StringBuilder();
+                                best_model.generateHTML("test", sb);
+                              }
+                            }
+
                             if (valid == null ) valid = frame;
                             double threshold = 0;
                             if (mymodel.isClassifier()) {

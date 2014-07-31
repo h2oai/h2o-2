@@ -75,7 +75,7 @@ public class DeepLearningAutoEncoderTest extends TestUtil {
       final Vec l2_train = l2_frame_train.anyVec();
       sb.append("Mean reconstruction error: " + l2_train.mean() + "\n");
       Assert.assertEquals(mymodel.mse(), l2_train.mean(), 1e-7);
-      Assert.assertTrue(l2_train.mean() < 1e-1);
+      Assert.assertTrue(l2_train.mean() < 2e-1);
 
       // manually compute L2
       Frame reconstr = mymodel.score(train); //this creates real values in original space
