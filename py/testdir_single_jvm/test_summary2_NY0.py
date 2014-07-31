@@ -18,7 +18,7 @@ def write_syn_dataset(csvPathname, rowCount, colCount, SEED, choices):
         rowData = []
         for j in range(colCount):
             ri = random.choice(choices)
-            if ri=='0':
+            if ri=='0' or ri==' 0':
                 naCnt[j] += 1
             rowData.append(ri)
         rowDataCsv = ",".join(map(str,rowData))
@@ -53,14 +53,34 @@ class Basic(unittest.TestCase):
             ('n', 'y', '0'),
             ('F', 'T', '0'),
             ('f', 't', '0'),
+            (' N', ' Y', ' 0'),
+            (' n', ' y', ' 0'),
+            (' F', ' T', ' 0'),
+            (' f', ' t', ' 0'),
+        ]
+
+        # white space is stripped
+        expectedList = [
+            ('N', 'Y', '0'),
+            ('n', 'y', '0'),
+            ('F', 'T', '0'),
+            ('f', 't', '0'),
+            ('N', 'Y', '0'),
+            ('n', 'y', '0'),
+            ('F', 'T', '0'),
+            ('f', 't', '0'),
         ]
 
         tryList = [
             # colname, (min, 25th, 50th, 75th, max)
-            (100, 200, 'x.hex', choicesList[3]),
-            (1000, 200, 'x.hex', choicesList[2]),
-            (10000, 200, 'x.hex', choicesList[1]),
-            (100000, 200, 'x.hex', choicesList[0]),
+            (100, 200, 'x.hex', choicesList[4], expectedList[4]),
+            (100, 200, 'x.hex', choicesList[5], expectedList[5]),
+            (100, 200, 'x.hex', choicesList[6], expectedList[6]),
+            (100, 200, 'x.hex', choicesList[7], expectedList[7]),
+            (100, 200, 'x.hex', choicesList[3], expectedList[3]),
+            (1000, 200, 'x.hex', choicesList[2], expectedList[2]),
+            (10000, 200, 'x.hex', choicesList[1], expectedList[1]),
+            (100000, 200, 'x.hex', choicesList[0], expectedList[0]),
         ]
 
         timeoutSecs = 10
@@ -70,7 +90,7 @@ class Basic(unittest.TestCase):
 
         x = 0
         timeoutSecs = 60
-        for (rowCount, colCount, hex_key, choices) in tryList:
+        for (rowCount, colCount, hex_key, choices, expected) in tryList:
             # max error = half the bin size?
         
             SEEDPERFILE = random.randint(0, sys.maxint)
@@ -114,7 +134,7 @@ class Basic(unittest.TestCase):
                 hstart = column['hstart']
                 hstep = column['hstep']
                 hbrk = column['hbrk']
-                self.assertEqual(hbrk, [choices[0], choices[1]])
+                self.assertEqual(hbrk, [expected[0], expected[1]])
 
                 hcnt = column['hcnt']
 
