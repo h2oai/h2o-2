@@ -155,7 +155,6 @@ public class StableAPITest {
     regPy(DRFProgressPage.class);
     regPy(Debug.class);
     regPy(DownloadDataset.class, "src_key");
-    regPy(ExportHdfs.class);
     regPy(GBM.class, "cols", "destination_key", "learn_rate", "max_depth", "min_rows", "nbins", "ntrees", "response", "source", "validation");
     regPy(GBMModelView.class, "_modelKey");
     regPy(GBMProgressPage.class);
