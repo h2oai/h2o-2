@@ -41,6 +41,9 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   @API(help="Number of rows in training data", json = true)
   public long training_rows;
 
+  @API(help="Number of rows in validation data", json = true)
+  public long validation_rows;
+
   @API(help = "Scoring during model building")
   private Errors[] errors;
   public Errors[] scoring_history() { return errors; }
@@ -701,6 +704,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     start_time = cp.start_time;
     run_time = cp.run_time;
     training_rows = cp.training_rows; //copy the value to display the right number on the model page before training has started
+    validation_rows = cp.validation_rows; //copy the value to display the right number on the model page before training has started
     _bestError = cp._bestError;
 
     // deep clone scoring history
@@ -723,7 +727,9 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     start_time = System.currentTimeMillis();
     _timeLastScoreEnter = start_time;
     model_info = new DeepLearningModelInfo(params, dinfo);
-    actual_best_model_key = params.best_model_key != null ? params.best_model_key : Key.make(destKey + "_best");
+    actual_best_model_key = Key.makeUserHidden(Key.make());
+
+    if (params.n_folds != 0) actual_best_model_key = null;
     Object job = UKV.get(jobKey);
     if (job instanceof DeepLearning)
       get_params().state = ((DeepLearning)UKV.get(jobKey)).state; //make the job state consistent
@@ -883,13 +889,13 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
         if (!get_params().autoencoder) {
           // always keep a copy of the best model so far (based on the following criterion)
-          if (actual_best_model_key != null &&
-                  // if we have a best_model in DKV, then compare against its error()
-                  (UKV.get(actual_best_model_key) != null && error() < UKV.<DeepLearningModel>get(actual_best_model_key).error()
+          if (actual_best_model_key != null && (
+                  // if we have a best_model in DKV, then compare against its error() (unless it's a different model as judged by the network size)
+                  (UKV.get(actual_best_model_key) != null && (error() < UKV.<DeepLearningModel>get(actual_best_model_key).error() || !Arrays.equals(model_info().units, UKV.<DeepLearningModel>get(actual_best_model_key).model_info().units)))
                           ||
                           // otherwise, compare against our own _bestError
-                          (UKV.get(actual_best_model_key) == null && error() < _bestError))
-                  ) {
+                          (UKV.get(actual_best_model_key) == null && error() < _bestError)
+          ) ) {
             if (!get_params().quiet_mode)
               Log.info("Error reduced from " + _bestError + " to " + error() + ". Storing best model so far under key " + actual_best_model_key.toString() + ".");
             _bestError = error();
@@ -939,12 +945,6 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
               || (!isClassifier() && last_scored().train_mse <= get_params().regression_stop) ) {
         Log.info("Achieved requested predictive accuracy on the training data. Model building completed.");
         keep_running = false;
-      }
-      // During grid search, it's possible to never beat the (shared) best_model
-      // But at the end of model_building, this model should still point to the overall winner
-      // So before we put it into DKV, update its (actual) best model key.
-      if (!keep_running && get_params().best_model_key != null && UKV.get(get_params().best_model_key) != null && actual_best_model_key == null) {
-        actual_best_model_key = get_params().best_model_key;
       }
       update(job_key);
 
@@ -1177,7 +1177,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
     DocGen.HTML.title(sb, title);
 
-    job().toHTML(sb);
+    if (UKV.get(get_params().source._key) != null) job().toHTML(sb);
     final Key val_key = get_params().validation != null ? get_params().validation._key : null;
     sb.append("<div class='alert'>Actions: "
             + (jobKey != null && UKV.get(jobKey) != null && Job.isRunning(jobKey) ? "<i class=\"icon-stop\"></i>" + Cancel.link(jobKey, "Stop training") + ", " : "")
@@ -1186,7 +1186,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
             + water.api.Predict.link(_key, "Score on dataset") + ", "
             + DeepLearning.link(_dataKey, "Compute new model", null, responseName(), val_key)
             + (actual_best_model_key != null && UKV.get(actual_best_model_key) != null && actual_best_model_key != _key ? ", " + DeepLearningModelView.link("Go to best model", actual_best_model_key) : "")
-            + (((jobKey != null && UKV.get(jobKey) == null)) || (jobKey != null && UKV.get(jobKey) != null && Job.isEnded(jobKey)) ? ", <i class=\"icon-play\"></i>" + DeepLearning.link(_dataKey, "Continue training this model", _key, responseName(), val_key) : "")
+            + (jobKey == null || ((jobKey != null && UKV.get(jobKey) == null)) || (jobKey != null && UKV.get(jobKey) != null && Job.isEnded(jobKey)) ? ", <i class=\"icon-play\"></i>" + DeepLearning.link(_dataKey, "Continue training this model", _key, responseName(), val_key) : "")
             + "</div>");
 
     DocGen.HTML.paragraph(sb, "Model Key: " + _key);
@@ -1315,7 +1315,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     long score_train = error.score_training_samples;
     long score_valid = error.score_validation_samples;
     final boolean fulltrain = score_train==0 || score_train == training_rows;
-    final boolean fullvalid = error.validation && get_params().n_folds == 0 && (score_valid==0 || score_valid == get_params().validation.numRows());
+    final boolean fullvalid = error.validation && get_params().n_folds == 0 && (score_valid==0 || score_valid == validation_rows);
 
     final String toolarge = " Confusion matrix not shown here - too large: number of classes (" + model_info.units[model_info.units.length-1]
             + ") is greater than the specified limit of " + get_params().max_confusion_matrix_size + ".";
@@ -1402,9 +1402,9 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       }
       // validation
       if (error.validation) {
-        final long ptsv = fullvalid ? get_params().validation.numRows() : score_valid;
+        final long ptsv = fullvalid ? validation_rows : score_valid;
         String validation = "Number of validation data samples for scoring: " + (fullvalid ? "all " : "") + ptsv;
-        if (ptsv < 1000 && get_params().validation.numRows() >= 1000) validation += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
+        if (ptsv < 1000 && validation_rows >= 1000) validation += " (low, scoring might be inaccurate -> consider increasing this number in the expert mode)";
         if (ptsv > 100000 && errors[errors.length-1].scoring_time > 10000) validation += " (large, scoring can be slow -> consider reducing this number in the expert mode or scoring manually)";
         DocGen.HTML.paragraph(sb, validation);
       }

@@ -38,7 +38,7 @@ library(plyr)
 
 
 # Read in the data
-flights <- h2o.importFile(h, "../../../smalldata/airlines/allyears2k_headers.zip", "flights.hex")
+flights <- h2o.importFile(h, normalizePath("../../../smalldata/airlines/allyears2k_headers.zip"), "flights.hex")
 
 #################################################################################
 #
@@ -238,7 +238,7 @@ function(fitMethod, responses, dataset, testdata) {
 }
 
 #iterate over the fit fcns as well as the tgts
-model.fit.fcns <- c(lr.fit, rf.fit, srf.fit, gbm.fit, dl.fit)
+model.fit.fcns <- c(lr.fit, rf.fit, srf.fit, gbm.fit)#, dl.fit)
 
 # This will loop over all of the models and score for each of the responses in tgts
 models.by.tgt <- unlist(recursive = F, lapply(model.fit.fcns, all.fit, tgts, train, test))

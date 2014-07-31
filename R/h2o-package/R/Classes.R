@@ -26,7 +26,7 @@ setClass("H2OKMeansGrid", contains="H2OGrid")
 setClass("H2ODRFGrid", contains="H2OGrid")
 setClass("H2ODeepLearningGrid", contains="H2OGrid")
 setClass("H2OSpeeDRFGrid", contains="H2OGrid")
-setClass("H2OGLMModelList", representation(models="list", best_model="numeric"))
+setClass("H2OGLMModelList", representation(models="list", best_model="numeric", lambdas="numeric"))
 
 # Register finalizers for H2O data and model objects
 # setMethod("initialize", "H2ORawData", function(.Object, h2o = new("H2OClient"), key = "") {
@@ -114,7 +114,7 @@ setMethod("show", "H2OGLMModel", function(object) {
     cat("Parsed Data Key:", object@data@key, "\n\n")
     cat("GLM2 Model Key:", object@key)
     
-    model = object@model
+    model <- object@model
     cat("\n\nCoefficients:\n"); print(round(model$coefficients,5))
     if(!is.null(model$normalized_coefficients)) {
         cat("\nNormalized Coefficients:\n"); print(round(model$normalized_coefficients,5))
@@ -125,22 +125,22 @@ setMethod("show", "H2OGLMModel", function(object) {
     cat("\nDeviance Explained:", round(1-model$deviance/model$null.deviance,5), "\n")
     # cat("\nAvg Training Error Rate:", round(model$train.err,5), "\n")
     
-    family = model$params$family$family
+    family <- model$params$family$family
     if(family == "binomial") {
         cat("AUC:", round(model$auc,5), " Best Threshold:", round(model$best_threshold,5))
         cat("\n\nConfusion Matrix:\n"); print(model$confusion)
     }
-    
+
     if(length(object@xval) > 0) {
         cat("\nCross-Validation Models:\n")
         if(family == "binomial") {
-            modelXval = t(sapply(object@xval, function(x) { c(x@model$rank-1, x@model$auc, 1-x@model$deviance/x@model$null.deviance) }))
+            modelXval <- t(sapply(object@xval, function(x) { c(x@model$rank-1, x@model$auc, 1-x@model$deviance/x@model$null.deviance) }))
             colnames(modelXval) = c("Nonzeros", "AUC", "Deviance Explained")
         } else {
-            modelXval = t(sapply(object@xval, function(x) { c(x@model$rank-1, x@model$aic, 1-x@model$deviance/x@model$null.deviance) }))
+            modelXval <- t(sapply(object@xval, function(x) { c(x@model$rank-1, x@model$aic, 1-x@model$deviance/x@model$null.deviance) }))
             colnames(modelXval) = c("Nonzeros", "AIC", "Deviance Explained")
         }
-        rownames(modelXval) = paste("Model", 1:nrow(modelXval))
+        rownames(modelXval) <- paste("Model", 1:nrow(modelXval))
         print(modelXval)
     }
 })
@@ -175,7 +175,7 @@ setMethod("summary","H2OGLMModelList", function(object) {
 
 setMethod("show", "H2OGLMModelList", function(object) {
     print(summary(object))
-    cat("best model:",object@best_model)
+    cat("best model:",object@best_model, "\n")
 })
 
 setMethod("show", "H2ODeepLearningModel", function(object) {
