@@ -14,7 +14,9 @@
 \value{
 Returns path of model object saved.
 }
-
+\seealso{
+\code{\link{h2o.loadModel}, \linkS4class{H2OModel}}
+}
 \examples{
 \dontrun{
 library(h2o)
