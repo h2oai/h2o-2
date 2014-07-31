@@ -24,6 +24,6 @@ prostate.hex = h2o.importFile(localH2O, path = prosPath, key = "prostate.hex")
 prostate.glm = h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), 
   data = prostate.hex, family = "binomial", nfolds = 10, alpha = 0.5)
 glmmodel.path = h2o.saveModel(object = prostate.glm, dir = "/Users/UserName/Desktop")
-glmmodel.load = h2o.loadModel(localH2O, model_path)
+glmmodel.load = h2o.loadModel(localH2O, glmmodel.path)
 }
 }
