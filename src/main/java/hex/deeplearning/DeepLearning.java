@@ -851,7 +851,8 @@ public class DeepLearning extends Job.ValidatedJob {
       }
       if (n_folds != 0) {
         if (override_with_best_model) {
-          Log.info("Ignoring override_with_best_model, since the final model is the only scored model with n-fold cross-validation.");
+          Log.info("Automatically setting override_with_best_model to false, since the final model is the only scored model with n-fold cross-validation.");
+          override_with_best_model = false;
         }
       }
     }
