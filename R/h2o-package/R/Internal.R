@@ -870,8 +870,8 @@ function(h2o, key) {
 #' Fetch the model from the key
 h2o.getModel <- function(h2o, key) {
   json <- .fetchJSON(h2o, key)
-  response   <- json[[model.type]]
   algo <- model.type <- names(json)[3]
+  response   <- json[[model.type]]
   if (algo == "grid") return(.h2o.get.glm.grid(h2o, key, TRUE, h2o.getFrame(h2o, response$"_dataKey")))
   if(algo == "deeplearning_model")
     params <- json[[model.type]]$model_info$job
