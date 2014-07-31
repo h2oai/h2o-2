@@ -24,7 +24,7 @@
     iteration         = "iter",
     beta              = "coefficients",
     norm_beta         = "normalized_coefficients",
-    lambda_value      = "lambda",
+#    lambda_value      = "lambda",
     null_deviance     = "null.deviance",
     residual_deviance = "deviance",
     avg_err           = "train.err"),
@@ -183,6 +183,7 @@ function(h2o, key, lambda_idx = -1, return_all_lambda = TRUE, pre = "", data = N
   result <- sapply(if(.isBinomial(pre)) .glm.binomial.result else .glm.result.fields, function(x) {})
   # fill in the results
   result             <- .fill.results(result, submod, pre$json, pre$json$glm_model, valid)
+  result$lambda      <- submod$lambda_value
   result$df.residual <- max(valid$nobs-result$rank,0)  # post processing!
   result$df.null     <- valid$nobs-1                   # post processing!
   idxes <- submod$idxs + 1
@@ -194,7 +195,7 @@ function(h2o, key, lambda_idx = -1, return_all_lambda = TRUE, pre = "", data = N
     result$confusion <- .build_cm(valid$cms[[cm_ind]]$arr, c("false", "true"))
   }
   # fill in the params
-  params$lambda_all  <- sapply(pre$json$glm_model$submodels, function(x) { x$lambda })
+  params$lambda_all  <- sapply(pre$json$glm_model$submodels, function(x) { x$lambda_value })
   params$lambda_best <- params$lambda_all[[pre$json$glm_model$best_lambda_idx+1]]
   if (.isTweedie(pre))
     params$family <- .h2o.__getFamily(params$family, params$link, params$tweedie_variance_power, params$tweedie_link_power)
@@ -210,7 +211,8 @@ function(h2o, key, lambda_idx = -1, return_all_lambda = TRUE, pre = "", data = N
 .get.all.glm.models<-
 function(pre, h2o, key, num_lambda, best_lambda_idx, data) {
   models <- lapply(1:num_lambda, function(idx, h2o, key, pre, data) {.h2o.__getGLMResults(h2o, key, idx, TRUE, pre, data)}, h2o, key, pre, data)
-  new("H2OGLMModelList", models = models, best_model = best_lambda_idx)
+  lambdas <- unlist(lapply(models, function(m) m@model$lambda))
+  new("H2OGLMModelList", models = models, best_model = best_lambda_idx, lambdas = lambdas)
 }
 
 #'
@@ -220,6 +222,8 @@ function(pre, h2o, key, num_lambda, best_lambda_idx, data) {
 .h2o.get.glm<-
 function(h2o, key, return_all_lambda = TRUE) {
   pre <- .h2o.__model.preamble(h2o, key, .json.to.R.map$glm)
+  if(!is.null(pre$json$glm_model$warnings))
+      invisible(lapply(pre$json$glm_model$warnings, warning))
   submodels <- pre$json$glm_model$submodels
   best_lambda_idx <- pre$json$glm_model$best_lambda_idx+1
   data <- h2o.getFrame(h2o, pre$json$glm_model$dataKey)
@@ -229,11 +233,11 @@ function(h2o, key, return_all_lambda = TRUE) {
 
 
 #'
-#' GLM Grid Results
+#' Top-level call for retrieving GLM Grid Results
 #'
 #' Gather up the GLM Grid results
 .h2o.get.glm.grid<-
-function(h2o, key, return_all_lambda = TRUE) {
+function(h2o, key, return_all_lambda = TRUE, data) {
   grid.pre <- .h2o.__model.preamble(h2o, key, "", .h2o.__PAGE_GLM2GridView)
   modelKeys <- grid.pre$json$grid$destination_keys
   models <- list(); modelSummaries <- list()
@@ -241,14 +245,15 @@ function(h2o, key, return_all_lambda = TRUE) {
     models[[i]] <- .h2o.get.glm(h2o, as.character(modelKeys[i]), return_all_lambda)
     modelSummaries[[i]] <- .h2o.__getGLMSummary(models[[i]])
   }
-  new("H2OGLMGrid", key = key, data = models[[1]]@data, model = models, sumtable = modelSummaries)
+  new("H2OGLMGrid", key = key, data = data, model = models, sumtable = modelSummaries)
 }
 
 #'
 #' Construct a summary of the GLM.
 .h2o.__getGLMSummary<-
 function(model) {
-#  result <- sapply(if(TRUE) .glm.binomial.summary else .glm.summary, function(x) {}) # TODO .isBinomial(pre)
+  if (class(model) == "H2OGLMModelList") model <- model@models[[model@best_model]]
+  result <- list()
   result$model_key     <- model@key
   result$alpha         <- model@model$params$alpha
   result$lambda_min    <- min(model@model$params$lambda_all)

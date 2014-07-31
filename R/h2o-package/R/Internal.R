@@ -870,8 +870,9 @@ function(h2o, key) {
 #' Fetch the model from the key
 h2o.getModel <- function(h2o, key) {
   json <- .fetchJSON(h2o, key)
+  response   <- json[[model.type]]
   algo <- model.type <- names(json)[3]
-  if (algo == "grid") return(.getGLMGridResults(json, h2o, key, TRUE))
+  if (algo == "grid") return(.h2o.get.glm.grid(h2o, key, TRUE, h2o.getFrame(h2o, response$"_dataKey")))
   if(algo == "deeplearning_model")
     params <- json[[model.type]]$model_info$job
   else
@@ -886,7 +887,6 @@ h2o.getModel <- function(h2o, key) {
                               model = .h2o.__getKM2Results,
                               nb_model = .h2o.__getNBResults)
 
-  response   <- json[[model.type]]
   if(!is.null(response$warnings))
       tmp <- lapply(response$warnings, warning)
   job_key    <- params$job_key #response$job_key
@@ -902,7 +902,7 @@ h2o.getModel <- function(h2o, key) {
     }
   }
   if(algo == "glm_model") {
-    model <- results_fun(train_fr, key, FALSE) # TODO: return all lambdas case
+    model <- .h2o.get.glm(h2o, as.character(key), TRUE)
     return(model)
   }
   if(algo == "model") {
@@ -945,9 +945,13 @@ h2o.getModel <- function(h2o, key) {
 #'
 #' Get the reference to a frame with the given key.
 h2o.getFrame <- function(h2o, key) {
+  if (missing(key) || is.null(key)) {
+     warning( paste("The h2o instance at ", h2o@ip, ":", h2o@port, " missing key!", sep = ""))
+        return(new("H2OParsedData", h2o = h2o, key = "NA"))
+  }
   if ( ! (key %in% h2o.ls(h2o)$Key)) {
     warning( paste("The h2o instance at ", h2o@ip, ":", h2o@port, " does not have key: \"", key, "\"", sep = ""))
-    return(new("H2OParsedData", h2o = h2o, key = key))
+    return(new("H2OParsedData", h2o = h2o, key = "NA"))
   }
   .h2o.exec2(expr = key, h2o = h2o, dest_key = key)
 }

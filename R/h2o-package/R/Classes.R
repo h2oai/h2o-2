@@ -26,7 +26,7 @@ setClass("H2OKMeansGrid", contains="H2OGrid")
 setClass("H2ODRFGrid", contains="H2OGrid")
 setClass("H2ODeepLearningGrid", contains="H2OGrid")
 setClass("H2OSpeeDRFGrid", contains="H2OGrid")
-setClass("H2OGLMModelList", representation(models="list", best_model="numeric"))
+setClass("H2OGLMModelList", representation(models="list", best_model="numeric", lambdas="numeric"))
 
 # Register finalizers for H2O data and model objects
 # setMethod("initialize", "H2ORawData", function(.Object, h2o = new("H2OClient"), key = "") {
