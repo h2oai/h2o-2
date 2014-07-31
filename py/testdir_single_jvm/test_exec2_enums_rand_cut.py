@@ -20,8 +20,8 @@ RAND_ENUM_LENGTH = True
 CUT_EXPR_CNT = 200
 
 ROWS=1000000
-ROWS=10000
-ROWS=100
+# ROWS=10000
+# ROWS=100
 
 DO_PLOT = getpass.getuser()=='kevin'
 
