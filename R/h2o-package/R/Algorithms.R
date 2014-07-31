@@ -746,7 +746,7 @@ h2o.deeplearning <- function(x, y, data, key = "",
 
   if (missing(best_model_key)) best_model_key = ""
   if(!is.character(best_model_key)) stop("best_model_key must be of class character")
-  if(nchar(best_model_key) > 0 && regexpr("^[a-zA-Z_][a-zA-Z0-9_.]*$", key)[1] == -1)
+  if(nchar(best_model_key) > 0 && regexpr("^[a-zA-Z_][a-zA-Z0-9_.]*$", best_model_key)[1] == -1)
     stop("best model key must match the regular expression '^[a-zA-Z_][a-zA-Z0-9_.]*$'")
   parms$best_model_key = best_model_key
 
