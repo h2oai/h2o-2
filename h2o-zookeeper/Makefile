@@ -1,6 +1,6 @@
 
 build:
-	gradle build
+	./gradlew build
 	mv build/libs/h2o-zookeeper.jar ../target
 
 clean:
