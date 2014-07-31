@@ -2,15 +2,25 @@ import unittest, random, sys, time, re, getpass
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util
 import h2o_print as h2p, h2o_gbm
+import string
 
 # details:
 # we want to seed a random dictionary for our enums
 # string.ascii_uppercase string.printable string.letters string.digits string.punctuation string.whitespace
 # restricting the choices makes it easier to find the bad cases
-randChars = "abeE01" + "$%+-.;|\t "
-randChars = "abeE01" # bad..causes NAification. probably 1E0e is causing a problem
+# randChars = "abeE01" + "$%+-.;|\t "
+# randChars = "abeE01" # bad..causes NAification. probably 1E0e is causing a problem
 # randChars = "abfF01" # try this.. fails
 # randChars = "abcdef" #
+
+# randChars = string.printable
+
+# remove the comma, single quote, double quote, newline
+# randChars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!"#$%&\'()*+,-./:;?@[\\]^_`{|}~ \t\n\r\x0b\x0c'
+# second param is delete chars
+randChars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!#$%&\()*+-./:;?@[\\]^_`{|}~ \t'
+randChars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!#$%&\()*+-./:;?@[]^_`{|}~ \t'
+
 quoteChars = "\'\""
 # don't use any quote characters. We'd have to protect combinations
 quoteChars = ""
@@ -19,8 +29,7 @@ MAX_ENUM_WIDTH = 8
 RAND_ENUM_LENGTH = True
 CUT_EXPR_CNT = 200
 
-ROWS=1000000
-ROWS=10000
+# ROWS=1000000
 ROWS=100
 
 DO_PLOT = getpass.getuser()=='kevin'
@@ -84,7 +93,6 @@ def write_syn_dataset(csvPathname, rowCount, inCount=1, outCount=1, SEED='123456
             ri = "%.2f" % random.uniform(0, 10e6)
             rowData.append(ri)
 
-        # use the new Hive separator
         rowDataCsv = colSepChar.join(map(str,rowData)) + rowSepChar
         ### sys.stdout.write(rowDataCsv)
         dsf.write(rowDataCsv)

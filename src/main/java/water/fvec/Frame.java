@@ -884,9 +884,9 @@ public class Frame extends Lockable<Frame> {
           Frame slicedFrame = new DeepSlice(rows, c2, vecs()).doAll(c2.length, this.add("select_vec", v)).outputFrame(names(c2), domains(c2));
           UKV.remove(v._key);
           UKV.remove(this.remove(this.numCols()-1)._key);
-          return copyRollups(slicedFrame, rows.length == 0);
+          return copyRollups(slicedFrame, false);
         } else {
-          return copyRollups(new DeepSlice(rows, c2, vecs()).doAll(c2.length, this).outputFrame(names(c2), domains(c2)), rows.length == 0);
+          return copyRollups(new DeepSlice(rows.length == 0 ? null : rows, c2, vecs()).doAll(c2.length, this).outputFrame(names(c2), domains(c2)), rows.length == 0);
         }
       }
       // Vec'ize the index array
