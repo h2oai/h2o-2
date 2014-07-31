@@ -34,4 +34,8 @@ fatJar {
    }
 }
 
+task wrapper(type: Wrapper) {
+    gradleVersion = '2.0'
+}
+
 build.dependsOn fatJar
