@@ -228,11 +228,11 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     try {
       m.local_forests[nodeIdx][m.local_forests[nodeIdx].length - 1] = tkey;
     } catch(ArrayIndexOutOfBoundsException aioobe) {
-      Log.info("Node Index in: "+nodeIdx);
-      Log.info("Length of old local_forests[nodeIdx]: "+old.local_forests[nodeIdx].length);
-      Log.info("Length of new local_forests[nodeIdx]: "+m.local_forests[nodeIdx].length);
-      Log.info("Appending to the node index @: "+(m.local_forests[nodeIdx].length-1));
-      throw H2O.fail(aioobe.getMessage());
+      Log.err("Node Index in: " + nodeIdx);
+      Log.err("Length of old: old.local_forests[nodeIdx].length: " + old.local_forests[nodeIdx].length);
+      Log.err("Length of new: m.local_forests[nodeIdx].length: "   + m.local_forests[nodeIdx].length);
+      Log.err("Appending to the node index @: m.local_forests[nodeIdx].length - 1" + (m.local_forests[nodeIdx].length - 1));
+      throw aioobe;
     }
 
     // Update the treeStrings?
