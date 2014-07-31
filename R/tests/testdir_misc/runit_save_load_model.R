@@ -6,24 +6,8 @@
 setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 source('../findNSourceUtils.R')
 
-test.rdoc_save_model.golden <- function(conn) {
+test.save_load_dlmodel <- function(conn) {
   temp_dir = tempdir()
-  
-  # Test saving and loading of GLM model
-  Log.info("Importing prostate.csv...")
-  prostate.hex = h2o.importFile(conn, path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", key = "prostate.hex")
-  
-  Log.info("Build GLM model and save to disk")
-  prostate.glm = h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family = "binomial", nfolds = 10, alpha = 0.5)
-  prostate.glm.path = h2o.saveModel(object = prostate.glm, dir = temp_dir)
-  
-  Log.info(paste("Load GLM model saved at", prostate.glm.path))
-  prostate.glm2 = h2o.loadModel(conn, prostate.glm.path)
-  
-  expect_equal(class(prostate.glm), class(prostate.glm2))
-  expect_equal(prostate.glm@data, prostate.glm2@data)
-  expect_equal(prostate.glm@model, prostate.glm2@model)
-  expect_equal(prostate.glm@xval, prostate.glm2@xval)
   
   # Test saving and loading of Deep Learning model with validation dataset
   Log.info("Importing prostate_train.csv and prostate_test.csv...")
@@ -45,5 +29,5 @@ test.rdoc_save_model.golden <- function(conn) {
   testEnd()
 }
 
-doTest("R Doc Save Model", test.rdoc_save_model.golden)
+doTest("R Save and Load Deep Learning Model", test.save_load_dlmodel)
 
