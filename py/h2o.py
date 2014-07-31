@@ -1363,7 +1363,7 @@ class H2O(object):
     def kmeans_model_view(self, model, timeoutSecs=30, **kwargs):
         # defaults
         params_dict = {
-            'model': model,
+            '_modelKey': model,
         }
         browseAlso = kwargs.get('browseAlso', False)
         # only lets these params thru
@@ -1755,6 +1755,7 @@ class H2O(object):
                        'sampling_strategy': 'RANDOM',
                        'seed': -1.0,
                        'select_stat_type': 'ENTROPY',
+                       'importance':0,
                        'strata_samples': None,
         }
         check_params_update_kwargs(params_dict, kwargs, 'SpeeDRF', print_params)
@@ -2004,6 +2005,13 @@ class H2O(object):
         check_params_update_kwargs(params_dict, kwargs, 'gbm_search_progress', print_params)
         a = self.__do_json_request('2/GridSearchProgress.json', timeout=timeoutSecs, params=params_dict)
         print "\ngbm_search_progress result:", dump_json(a)
+        return a
+
+    def speedrf_view(self, modelKey, timeoutSecs=300, print_params=False, **kwargs):
+        params_dict = { '_modelKey': modelKey, }
+        check_params_update_kwargs(params_dict, kwargs, 'speedrf_view', print_params)
+        a = self.__do_json_request('2/SpeeDRFModelView.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint("\nspeedrf_view_result:", dump_json(a))
         return a
 
     def pca_view(self, modelKey, timeoutSecs=300, print_params=False, **kwargs):
@@ -2681,6 +2689,31 @@ class H2O(object):
         if self.java_extra_args is not None:
             args += ['%s' % self.java_extra_args]
 
+        if self.use_debugger:
+            # currently hardwire the base port for debugger to 8000
+            # increment by one for every node we add
+            # sence this order is different than h2o cluster order, print out the ip and port for the user
+            # we could save debugger_port state per node, but not really necessary (but would be more consistent)
+            debuggerBasePort = 8000
+            if self.node_id is None:
+                debuggerPort = debuggerBasePort
+            else:
+                debuggerPort = debuggerBasePort + self.node_id
+
+            if self.http_addr:
+                a = self.http_addr
+            else:
+                a = "localhost"
+
+            if self.port:
+                b = str(self.port)
+            else:
+                b = "h2o determined"
+
+            # I guess we always specify port?
+            print "You can attach debugger at port %s for jvm at %s:%s" % (debuggerPort, a, b)
+            args += ['-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=%s' % debuggerPort]
+
         args += ["-ea"]
 
         if self.use_maprfs:
@@ -2716,31 +2749,6 @@ class H2O(object):
             args += [
                 "--port=%d" % self.port,
             ]
-
-        if self.use_debugger:
-            # currently hardwire the base port for debugger to 8000
-            # increment by one for every node we add
-            # sence this order is different than h2o cluster order, print out the ip and port for the user
-            # we could save debugger_port state per node, but not really necessary (but would be more consistent)
-            debuggerBasePort = 8000
-            if self.node_id is None:
-                debuggerPort = debuggerBasePort
-            else:
-                debuggerPort = debuggerBasePort + self.node_id
-
-            if self.http_addr:
-                a = self.http_addr
-            else:
-                a = "localhost"
-
-            if self.port:
-                b = str(self.port)
-            else:
-                b = "h2o determined"
-
-            # I guess we always specify port?
-            print "You can attach debugger at port %s for jvm at %s:%s" % (debuggerPort, a, b)
-            args += ['-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=%s' % debuggerPort]
 
         if self.use_flatfile:
             args += [

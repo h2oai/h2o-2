@@ -8,7 +8,7 @@ import water.parser.Enum;
 public class SVMLightFVecDataOut extends FVecDataOut {
   protected final VectorGroup _vg;
   public SVMLightFVecDataOut(VectorGroup vg, int cidx, int ncols, int vecIdStart, Enum [] enums){
-    super(vg,cidx,0,vg.reserveKeys(10000000),enums,0);
+    super(vg,cidx,0,vg.reserveKeys(10000000),enums);
     _nvs = new NewChunk[0];
     _vg = vg;
     _col = 0;

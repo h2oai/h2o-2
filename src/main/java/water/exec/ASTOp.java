@@ -717,17 +717,17 @@ abstract class ASTBinOp extends ASTOp {
               for( int r=0; r<rlen; r++ ) {
                 double lv; double rv;
                 if (lf) {
-                  if(chks[i].isNA0(r)) { n.addNum(Double.NaN); continue; }
+                  if(vecs(i).isUUID() || (chks[i].isNA0(r) && !bin.opStr().equals("|"))) { n.addNum(Double.NaN); continue; }
                   lv = chks[i].at0(r);
                 } else {
-                  if (Double.isNaN(df0)) { n.addNum(Double.NaN); continue; }
+                  if (Double.isNaN(df0) && !bin.opStr().equals("|")) { n.addNum(Double.NaN); continue; }
                   lv = df0;
                 }
                 if (rf) {
-                  if(chks[i].isNA0(r)) { n.addNum(Double.NaN); continue; }
+                  if(vecs(i+(lf ? nchks.length:0)).isUUID() || chks[i].isNA0(r) && !bin.opStr().equals("|")) { n.addNum(Double.NaN); continue; }
                   rv = chks[i+(lf ? nchks.length:0)].at0(r);
                 } else {
-                  if (Double.isNaN(df1)) { n.addNum(Double.NaN); continue; }
+                  if (Double.isNaN(df1) && !bin.opStr().equals("|")) { n.addNum(Double.NaN); continue; }
                   rv = df1;
                 }
                 n.addNum(bin.op(lv, rv));
@@ -762,7 +762,14 @@ class ASTGE       extends ASTBinOp { ASTGE()       { super(OPF_INFIX, OPP_GE,   
 class ASTEQ       extends ASTBinOp { ASTEQ()       { super(OPF_INFIX, OPP_EQ,     OPA_LEFT); }  @Override String opStr(){ return "==" ;} @Override ASTOp make() {return new ASTEQ  ();} @Override double op(double d0, double d1) { return Utils.equalsWithinOneSmallUlp(d0,d1)?1:0;}}
 class ASTNE       extends ASTBinOp { ASTNE()       { super(OPF_INFIX, OPP_NE,     OPA_LEFT); }  @Override String opStr(){ return "!=" ;} @Override ASTOp make() {return new ASTNE  ();} @Override double op(double d0, double d1) { return Utils.equalsWithinOneSmallUlp(d0,d1)?0:1;}}
 class ASTLA       extends ASTBinOp { ASTLA()       { super(OPF_INFIX, OPP_AND,    OPA_LEFT); }  @Override String opStr(){ return "&"  ;} @Override ASTOp make() {return new ASTLA  ();} @Override double op(double d0, double d1) { return (d0!=0 && d1!=0) ? (Double.isNaN(d0) || Double.isNaN(d1)?Double.NaN:1) :0;}}
-class ASTLO       extends ASTBinOp { ASTLO()       { super(OPF_INFIX, OPP_OR,     OPA_LEFT); }  @Override String opStr(){ return "|"  ;} @Override ASTOp make() {return new ASTLO  ();} @Override double op(double d0, double d1) { return (d0==0 && d1==0) ? (Double.isNaN(d0) || Double.isNaN(d1)?Double.NaN:0) :1;}}
+class ASTLO       extends ASTBinOp { ASTLO()       { super(OPF_INFIX, OPP_OR,     OPA_LEFT); }  @Override String opStr(){ return "|"  ;} @Override ASTOp make() {return new ASTLO  ();} @Override double op(double d0, double d1) {
+  if (d0 == 0 && Double.isNaN(d1)) { return Double.NaN; }
+  if (d1 == 0 && Double.isNaN(d0)) { return Double.NaN; }
+  if (Double.isNaN(d0) && Double.isNaN(d1)) { return Double.NaN; }
+  if (d0 == 0 && d1 == 0) { return 0; }
+  return 1;
+}}
+
 class ASTIntDiv   extends ASTBinOp { ASTIntDiv()   { super(OPF_INFIX, OPP_INTDIV, OPA_LEFT); }  @Override String opStr(){ return "%/%";} @Override ASTOp make() {return new ASTIntDiv();} @Override double op(double d0, double d1) { return Math.floor(d0/d1); }}
 // Variable length; instances will be created of required length
 abstract class ASTReducerOp extends ASTOp {

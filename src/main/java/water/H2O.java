@@ -692,7 +692,6 @@ public final class H2O {
     public String single_precision = null;
     public String beta = null;
     public String mem_watchdog = null; // For developer debugging
-    public int forceEnumCol = 0; // Force this column number to be an enum; 1-based col numbering (zero means: no change)
   }
 
   public static void printHelp() {
@@ -745,9 +744,6 @@ public final class H2O {
     "\n" +
     "    -license <licenseFilePath>\n" +
     "          Path to license file on local filesystem.\n" +
-    "\n" +
-    "    -forceEnumCol <#col>\n" +
-    "          Parse this column number as an Enum, irregardless of apparent numbers.  1-based col numbering.\n" +
     "\n" +
     "Cloud formation behavior:\n" +
     "\n" +

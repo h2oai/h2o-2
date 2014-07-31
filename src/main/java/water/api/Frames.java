@@ -1,20 +1,12 @@
 package water.api;
 
-import org.apache.commons.math3.util.Pair;
-
-import java.lang.reflect.Field;
-import java.util.*;
-
 import com.google.gson.*;
-import hex.deeplearning.DeepLearning;
-import hex.drf.DRF;
-import hex.gbm.GBM;
-import hex.glm.GLM2;
+import org.apache.commons.math3.util.Pair;
 import water.*;
-import water.fvec.Frame;
-import water.util.Log;
-
 import water.api.Models.ModelSummary;
+import water.fvec.Frame;
+
+import java.util.*;
 
 public class Frames extends Request2 {
 
@@ -243,7 +235,7 @@ public class Frames extends Request2 {
                                        frame.getUniqueId(),
                                        after - before,
                                        after,
-                                       auc,
+                                       (auc == null ? null : auc.data()),
                                        cm);
 
       // Put the metrics into the KV store

@@ -115,6 +115,10 @@ def runSpeeDRF(node=None, parseResult=None, ntrees=5, max_depth=10, timeoutSecs=
     Key = parseResult['destination_key']
     return node.speedrf(Key, ntrees=ntrees, max_depth=max_depth, timeoutSecs=timeoutSecs, **kwargs)
 
+def runSpeeDRFView(node=None, modelKey=None, timeoutSecs=20, **kwargs):
+    if not node: node = h2o.nodes[0]
+    return node.speedrf_view(modelKey=modelKey, timeoutSecs=timeoutSecs, **kwargs)
+
 # rfView can be used to skip the rf completion view
 # for creating multiple rf jobs
 def runRF(node=None, parseResult=None, trees=5, timeoutSecs=20, **kwargs):

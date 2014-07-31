@@ -401,20 +401,19 @@ h2o.saveModel <- function(object, dir="", name="", force=FALSE) {
   if(!inherits(object,'H2OModel')) stop('object must be an H2O model')
   if(!is.character(dir)) stop('path must be of class character')
   if(!is.character(name)) stop('name must be of class character')
-  if(!is.logical(force)) stop('force is not a boolean')
+  if(!is.logical(force)) stop('force must be either TRUE or FALSE')
   if(name == "") name=object@key
   
   force = ifelse(force==TRUE, 1, 0)
   res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_SaveModel, model=object@key, path=gsub('//','/',paste(dir,name,sep='/')), force=force)
   gsub('//','/',paste(dir,name,sep='/'))
-  }
+}
 
 # ------------------- Load H2O Model from Disk ----------------------------------------------------
-#h2o.loadModel <- function(object, path="") {
-#  if(missing(object)) stop('Must specify object')
-#  if(class(object) != 'H2OClient') stop('object must be of class H2OClient')
-#  if(!is.character(path)) stop('path must be of class character')
-
-#  res = .h2o.__remoteSend(object, .h2o.__PAGE_LoadModel, path = path)
-#  key = model$model$parameters$destination_key
-#}
+h2o.loadModel <- function(object, path="") {
+  if(missing(object)) stop('Must specify object')
+  if(class(object) != 'H2OClient') stop('object must be of class H2OClient')
+  if(!is.character(path)) stop('path must be of class character')
+  res = .h2o.__remoteSend(object, .h2o.__PAGE_LoadModel, path = path)
+  h2o.getModel(object, res$model$'_key')
+}

@@ -28,7 +28,7 @@ public class PCAScore extends FrameJob {
   @API(help = "PCA model to use for scoring", required = true, filter = Default.class)
   PCAModel model;
 
-  @API(help = "Number of principal components to return", filter = Default.class, lmin = 1, lmax = 10000)
+  @API(help = "Number of principal components to return", filter = Default.class, lmin = 1, lmax = 5000)
   int num_pc = 1;
 
   @Override protected void execImpl() {

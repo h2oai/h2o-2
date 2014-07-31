@@ -19,14 +19,14 @@ public class PCAParams extends Iced {
   final int standardize;
 
   public PCAParams(boolean std) {
-    max_pc = 10000;
+    max_pc = 5000;
     tolerance = 0;
     // standardize = std;
     standardize = std ? 1 : 0;
   }
 
   public PCAParams(double tol, boolean std) {
-    max_pc = 10000;
+    max_pc = 5000;
     tolerance = tol;
     // standardize = std;
     standardize = std ? 1 : 0;

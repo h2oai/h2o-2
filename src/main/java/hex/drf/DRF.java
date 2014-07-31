@@ -189,6 +189,7 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
       if (n_folds > 0) CrossValUtils.crossValidate(this);
     } finally {
       remove();                   // Remove Job
+      // Ugly hack updating job state carried as parameters inside a model
       state = UKV.<Job>get(self()).state;
       new TAtomic<DRFModel>() {
         @Override
@@ -328,8 +329,8 @@ public class DRF extends SharedTreeModelBuilder<DRF.DRFModel> {
           tryComplete();
         }
       };
-      H2O.submitTask(task4var); // Fork computation
       fs.add(task4var);
+      H2O.submitTask(task4var); // Fork computation
     }
     fs.blockForPending(); // Wait for results
     // Compute varimp for individual features (_ncols)

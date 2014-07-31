@@ -84,6 +84,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     public double [] _normRespSub;
     public int _foldId;
     public int _nfolds;
+    public Key _frameKey;
 
     public DataInfo deep_clone() {
       AutoBuffer ab = new AutoBuffer();
@@ -144,7 +145,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
      * @return Frame to be used by FrameTask
      */
     public static Frame prepareFrame(Frame source, Vec response, int[] ignored_cols, boolean toEnum, boolean dropConstantCols, boolean dropNACols) {
-      Frame fr = new Frame(source._names.clone(), source.vecs().clone());
+      Frame fr = new Frame(Key.makeSystem(Key.make().toString()), source._names.clone(), source.vecs().clone());
       if (ignored_cols != null) fr.remove(ignored_cols);
       final Vec[] vecs =  fr.vecs();
 
@@ -200,7 +201,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     }
 
     public static Frame prepareFrame(Frame source, int[] ignored_cols, boolean dropConstantCols, boolean dropNACols) {
-      Frame fr = new Frame(source._names.clone(), source.vecs().clone());
+      Frame fr = new Frame(Key.makeSystem(Key.make().toString()), source._names.clone(), source.vecs().clone());
       if (ignored_cols != null) fr.remove(ignored_cols);
       final Vec[] vecs =  fr.vecs();
 
@@ -550,7 +551,8 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     OUTER:
       for(int rr = start; rr < end; ++rr){
         final int r = shuf_map != null ? (int)shuf_map[rr-start] : rr;
-        if ((_dinfo._nfolds > 0 && (r % _dinfo._nfolds) == _dinfo._foldId)
+        final long lr = r + chunks[0]._start;
+        if ((_dinfo._nfolds > 0 && (lr % _dinfo._nfolds) == _dinfo._foldId)
                 || (skip_rng != null && skip_rng.nextFloat() > _useFraction))continue;
         for(Chunk c:chunks)if(c.isNA0(r))continue OUTER; // skip rows with NAs!
         int i = 0, ncats = 0;

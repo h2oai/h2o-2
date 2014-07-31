@@ -290,7 +290,7 @@ exprListFull = [
     # "apply(r1,1,function(x){x=1;r1})",
     # doesn't work
     # "apply(r1,1,function(x){r1})",
-    "mean=function(x){apply(x,2,sum)/nrow(x)};mean(r1)",
+    "mean2=function(x){apply(x,2,sum)/nrow(x)};mean2(r1)",
     # "mean2=function(x){apply(x,1,sum)/nrow(x)};mean2(r1)",
 
     #  Conditional selection; 

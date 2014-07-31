@@ -1,13 +1,6 @@
 package water;
 
 import hex.*;
-import hex.deeplearning.DropoutTest;
-import hex.deeplearning.NeuronsTest;
-import hex.drf.DRFTest;
-import hex.drf.DRFTest2;
-import hex.gbm.GBMTest;
-import hex.singlenoderf.SpeeDRFTest;
-import hex.singlenoderf.SpeeDRFTest2;
 import org.junit.internal.TextListener;
 import org.junit.runner.Description;
 import org.junit.runner.JUnitCore;
@@ -91,6 +84,7 @@ public class JUnitRunnerDebug {
 //      tests.add(MRUtilsTest.class); //test MR sampling/rebalancing
 //      tests.add(DropoutTest.class); //test NN Dropput
 
+      tests.add(ParserTest2.ParseAllSmalldata.class);
       tests.add(GLMRandomTest.Short.class);
 //      tests.add(SpeeDRFTest.class);
 //      tests.add(SpeeDRFTest2.class);

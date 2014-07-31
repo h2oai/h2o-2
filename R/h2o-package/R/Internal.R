@@ -286,7 +286,8 @@ h2o.setLogPath <- function(path, type) {
   # if(prog$end_time == -1 || prog$progress == -2.0) stop("Job key ", keyName, " has been cancelled")
   if(!is.null(prog$result$val) && prog$result$val == "CANCELLED") stop("Job key ", keyName, " was cancelled by user")
   else if(!is.null(prog$result$exception) && prog$result$exception == 1) stop(prog$result$val)
-  prog$progress
+  if (prog$progress < 0 && (prog$end_time == "" || is.null(prog$end_time))) return(abs(prog$progress)/100)
+  else return(prog$progress)
 }
 
 .h2o.__allDone <- function(client) {
@@ -846,25 +847,6 @@ function(expr, envir = globalenv()) {
 #' Grabs all of the JSON and returns it as a named list. Do this by using the 2/Inspector.json page, which provides
 #' a redirect URL to the appropriate Model View page.
 .fetchJSON <- function(h2o, key) {
-#  if (grepl("GLMModel", key)) {
-#    print("DEBUGGING GLM MODEL PARAM GRAB!!!")
-#    print(key)
-#    res <- .h2o.__remoteSend(client = h2o, page = .h2o.__PAGE_GLMModelView, '_modelKey' = key)
-#
-#     print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-#        print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-#        print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-#        print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-#        print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-#    print(res$glm_model$parameters)
-#    print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-#    print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-#    print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-#    print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-#    print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-#    return(res$glm_model$parameters)
-##    stop(res)
-#  }
   redirect_url <- .h2o.__remoteSend(h2o, .h2o.__PAGE_INSPECTOR, src_key = key)$response_info$redirect_url
   page <- strsplit(redirect_url, '\\?')[[1]][1]                         # returns a list of two items
   page <- paste(strsplit(page, '')[[1]][-1], sep = "", collapse = "")   # strip off the leading '/'
@@ -886,12 +868,15 @@ function(h2o, key) {
 
 #'
 #' Fetch the model from the key
-h2o.getModel<-
-function(h2o, key) {
+h2o.getModel <- function(h2o, key) {
   json <- .fetchJSON(h2o, key)
   algo <- model.type <- names(json)[3]
-  if (algo == "grid") return(.getGLMGridResults(json, h2o, key, TRUE))
-  params <- json[[model.type]]$parameters #.fill.params(model.type, json)
+  response   <- json[[model.type]]
+  if (algo == "grid") return(.h2o.get.glm.grid(h2o, key, TRUE, h2o.getFrame(h2o, response$"_dataKey")))
+  if(algo == "deeplearning_model")
+    params <- json[[model.type]]$model_info$job
+  else
+    params <- json[[model.type]]$parameters #.fill.params(model.type, json)
   params$h2o <- h2o
   model_obj  <- switch(algo, gbm_model = "H2OGBMModel", drf_model = "H2ODRFModel", deeplearning_model = "H2ODeepLearningModel", speedrf_model = "H2OSpeeDRFModel", model= "H2OKMeansModel", glm_model = "H2OGLMModel", nb_model = "H2ONBModel", pca_model = "H2OPCAModel")
   results_fun <- switch(algo, gbm_model = .h2o.__getGBMResults,
@@ -902,28 +887,30 @@ function(h2o, key) {
                               model = .h2o.__getKM2Results,
                               nb_model = .h2o.__getNBResults)
 
-  response   <- json[[model.type]]
+  if(!is.null(response$warnings))
+      tmp <- lapply(response$warnings, warning)
   job_key    <- params$job_key #response$job_key
   dest_key   <- key #params$destination_key
 
-  train_fr   <- h2o.getFrame(h2o, response$"_dataKey")
+  train_fr   <- new("H2OParsedData", key = "NA")
+  if(!is.null(response$"_dataKey")) train_fr <- h2o.getFrame(h2o, response$"_dataKey")
   params$importance <- !is.null(params$varimp)
-  if (!is.null(params$family) && model.type == "gbm_model") {
+  if(!is.null(params$family) && model.type == "gbm_model") {
     params$distribution <- "multinomial"
-    if (params$family == "AUTO") {
-      if (!is.null(json[[model.type]]$validAUC)) params$distribution <- "bernoulli"
+    if(params$family == "AUTO") {
+      if(!is.null(json[[model.type]]$validAUC)) params$distribution <- "bernoulli"
     }
   }
-  if (algo == "glm_model") {
-    model <- results_fun(train_fr, key, FALSE) #TODO: return all lambdas case
+  if(algo == "glm_model") {
+    model <- .h2o.get.glm(h2o, as.character(key), TRUE)
     return(model)
   }
-  if (algo == "model") {
+  if(algo == "model") {
     newModel <- new(model_obj, key = dest_key, data = train_fr, model = results_fun(json[[model.type]], train_fr, params))
     return(newModel)
   }
 
-  if (algo == "pca_model") {
+  if(algo == "pca_model") {
     return(.get.pca.results(train_fr, json[[model.type]], key, params))
   }
   modelOrig<- results_fun(json[[model.type]], params)
@@ -939,16 +926,14 @@ function(h2o, key) {
   new(model_obj, key=dest_key, data=train_fr, model=modelOrig, valid=valid, xval=res_xval)
 }
 
-.get.glm.params <-
-function(h2o, key) {
+.get.glm.params <- function(h2o, key) {
   res <- .h2o.__remoteSend(client = h2o, page = .h2o.__PAGE_GLMModelView, '_modelKey' = key)
   params <- res$glm_model$parameters
   params$h2o <- h2o
   params
 }
 
-.get_model_params <-
-function(h2o, key) {
+.get_model_params <- function(h2o, key) {
   json <- .fetchJSON(h2o, key)
   algo <- model.type <- names(json)[3]
   if (algo == "grid") return("")
@@ -960,7 +945,14 @@ function(h2o, key) {
 #'
 #' Get the reference to a frame with the given key.
 h2o.getFrame <- function(h2o, key) {
-  if ( ! (key %in% h2o.ls(h2o)$Key)) stop( paste("The h2o instance at ", h2o@ip, ":", h2o@port, " does not have key: \"", key, "\"", sep = ""))
+  if (missing(key) || is.null(key)) {
+     warning( paste("The h2o instance at ", h2o@ip, ":", h2o@port, " missing key!", sep = ""))
+        return(new("H2OParsedData", h2o = h2o, key = "NA"))
+  }
+  if ( ! (key %in% h2o.ls(h2o)$Key)) {
+    warning( paste("The h2o instance at ", h2o@ip, ":", h2o@port, " does not have key: \"", key, "\"", sep = ""))
+    return(new("H2OParsedData", h2o = h2o, key = "NA"))
+  }
   .h2o.exec2(expr = key, h2o = h2o, dest_key = key)
 }
 
