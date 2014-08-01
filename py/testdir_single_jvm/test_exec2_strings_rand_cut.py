@@ -150,7 +150,8 @@ class Basic(unittest.TestCase):
                 cols = random.sample(range(iColCount), random.randint(1,iColCount))
                 for c in cols:
                     # possible choices within the column
-                    cel = colEnumList[c]
+                    # cel = colEnumList[c]
+                    cel = colEnumList
                     # for now the cutValues are numbers for the enum mappings
                     if 1==1:
                         # FIX! hack. don't use encoding 0, maps to NA here? h2o doesn't like
