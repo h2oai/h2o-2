@@ -6,7 +6,6 @@ import static org.junit.Assert.assertTrue;
 import org.junit.*;
 
 import water.*;
-import water.parser.DParseTask;
 
 public class NewVectorTest extends TestUtil {
   static final double EPSILON = 1e-6;
@@ -36,7 +35,7 @@ public class NewVectorTest extends TestUtil {
       if(ls[i] == Long.MAX_VALUE && xs[i] == Integer.MIN_VALUE)
         assertTrue(bv.isNA0(i));
       else
-        assertEquals(ls[i]*DParseTask.pow10(xs[i]), bv.at0(i), bv.at0(i)*EPSILON);
+        assertEquals(ls[i]*PrettyPrint.pow10(xs[i]), bv.at0(i), bv.at0(i)*EPSILON);
     UKV.remove(av._key);
   }
   // Test that various collections of parsed numbers compress as expected.

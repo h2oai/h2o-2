@@ -245,14 +245,6 @@ h2o.exportFile <- function(data, path, force = FALSE) {
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_EXPORTFILES, src_key = data@key, path = path, force = as.numeric(force))
 }
 
-h2o.exportHDFS <- function(object, path) {
-  if(!inherits(object, "H2OModel")) stop("object must be an H2O model")
-  if(!is.character(path)) stop("path must be of class character")
-  if(nchar(path) == 0) stop("path must be a non-empty string")
-  
-  res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_EXPORTHDFS, source_key = object@key, path = path)
-}
-
 h2o.downloadCSV <- function(data, filename, quiet = FALSE) {
   if( missing(data)) stop('Must specify data')
   if(class(data) != "H2OParsedData") stop('data must be an H2OParsedData object')

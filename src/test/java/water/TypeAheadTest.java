@@ -28,7 +28,7 @@ public class TypeAheadTest extends TestUtil {
     ArrayList<Key> keys = new ArrayList<Key>();
     try {
       for (int i = 0; i < 1e2; ++i) {
-        Key k = Key.makeUserHidden(Key.make());
+        Key k = Key.makeSystem(Key.rand());
         keys.add(k);
         DKV.put(k, new Value(k, new Utils.IcedInt(i)));
       }

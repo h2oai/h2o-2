@@ -1,6 +1,5 @@
 package water;
 
-import jsr166y.CountedCompleter;
 import water.DTask;
 import water.H2O.H2OCountedCompleter;
 
@@ -43,7 +42,7 @@ public abstract class Atomic<T extends Atomic> extends DTask {
       compute2();               // Also, run it blocking/now
       return null;
     } else {                    // Else run it remotely
-      return new RPC(key.home_node(),this).call();
+      return RPC.call(key.home_node(),this);
     }
   }
 

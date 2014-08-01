@@ -2,14 +2,12 @@ package water;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-
 import hex.GridSearch;
 import water.api.DocGen;
 import water.api.Request;
 import water.api.RequestArguments;
 import water.api.RequestBuilders.Response;
 import water.api.RequestServer.API_VERSION;
-import water.api.RequestStatics.RequestType;
 import water.fvec.Frame;
 import water.util.Log;
 import water.util.Utils;
@@ -59,8 +57,6 @@ public abstract class Request2 extends Request {
       if( v == null && _mustExist )
         throw new H2OIllegalArgumentException(this, "Key '" + input + "' does not exist!");
       if( _type != null ) {
-        if( v != null && !compatible(_type, v.get()) )
-          throw new H2OIllegalArgumentException(this, input + ":" + errors()[0]);
         if( v == null && _required )
           throw new H2OIllegalArgumentException(this, "Key '" + input + "' does not exist!");
       }
@@ -210,11 +206,12 @@ public abstract class Request2 extends Request {
           //
           else if( ColumnSelect.class.isAssignableFrom(api.filter()) ) {
             ColumnSelect name = (ColumnSelect) newInstance(api);
-            H2OHexKey key = null;
-            for( Argument a : _arguments )
-              if( a instanceof H2OHexKey && name._ref.equals(((H2OHexKey) a)._name) )
-                key = (H2OHexKey) a;
-            arg = new HexAllColumnSelect(f.getName(), key);
+            throw H2O.fail();
+            //H2OHexKey key = null;
+            //for( Argument a : _arguments )
+            //  if( a instanceof H2OHexKey && name._ref.equals(((H2OHexKey) a)._name) )
+            //    key = (H2OHexKey) a;
+            //arg = new HexAllColumnSelect(f.getName(), key);
           }
 
           //
@@ -431,16 +428,6 @@ public abstract class Request2 extends Request {
       if( !increment(counters, values) )
         break;
     }
-    // Check the validity of parameters for the first job - if something is
-    // wrong with it then reject whole grid search
-    if (jobs.size() > 0) {
-      assert type != RequestType.query;
-      Job aJob = jobs.get(0);
-      String query4job0 = aJob.checkArguments(aJob._parms, type);
-      if (query4job0!=null)
-        return wrap(server, query4job0, type);
-    }
-    // Create and serve grid search
     GridSearch grid = new GridSearch();
     grid.jobs = jobs.toArray(new Job[jobs.size()]);
     return grid.superServeGrid(server, parms, type);
@@ -510,28 +497,17 @@ public abstract class Request2 extends Request {
    * Arguments to fields casts.
    */
 
-  private static boolean compatible(Class type, Iced o) {
-    if( type == Frame.class && o instanceof ValueArray )
-      return true;
-    return type.isInstance(o);
-  }
-
   public void set(Argument arg, String input, Object value) {
     if( arg._field.getType() != Key.class && value instanceof Key )
       value = UKV.get((Key) value);
 
     try {
-      if( arg._field.getType() == Key.class && value instanceof ValueArray )
-        value = ((ValueArray) value)._key;
       //
-      else if( arg._field.getType() == int.class && value instanceof Long )
+      if( arg._field.getType() == int.class && value instanceof Long )
         value = ((Long) value).intValue();
       //
       else if( arg._field.getType() == float.class && value instanceof Double )
         value = ((Double) value).floatValue();
-      //
-      else if( arg._field.getType() == Frame.class && value instanceof ValueArray )
-        value = ((ValueArray) value).asFrame(input);
       //
       else if( value instanceof NumberSequence ) {
         double[] ds = ((NumberSequence) value)._arr;

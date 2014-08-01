@@ -1110,8 +1110,8 @@ public class DeepLearning extends Job.ValidatedJob {
     }
     if (!quiet_mode) Log.info("ReBalancing dataset into (at least) " + chunks + " chunks.");
 //      return MRUtils.shuffleAndBalance(fr, chunks, seed, local, shuffle_training_data);
-    Key newKey = fr._key != null ? Key.make(fr._key.toString() + ".balanced") : Key.make();
-    newKey = Key.makeUserHidden(newKey);
+    String snewKey = fr._key != null ? (fr._key.toString() + ".balanced") : Key.rand();
+    Key newKey = Key.makeSystem(snewKey);
     RebalanceDataSet rb = new RebalanceDataSet(fr, newKey, chunks);
     H2O.submitTask(rb);
     rb.join();

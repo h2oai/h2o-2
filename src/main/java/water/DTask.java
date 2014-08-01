@@ -1,6 +1,5 @@
 package water;
 
-import jsr166y.CountedCompleter;
 import water.DException.DistributedException;
 import water.H2O.H2OCountedCompleter;
 
@@ -22,52 +21,14 @@ import water.H2O.H2OCountedCompleter;
  *
  */
 public abstract class DTask<T extends DTask> extends H2OCountedCompleter implements Freezable {
-  public DTask(){}
+  protected DTask(){}
   public DTask(H2OCountedCompleter completer){super(completer);}
-  // NOTE: DTask CAN NOT have any ICED members (FetchId is DTask, causes DEADLOCK in multinode environment)
-  // exception info, it must be unrolled here
-  protected String _exception;
-  protected String _msg;
-  protected String _eFromNode; // Node where the exception originated
-  // stackTrace info
-  protected int [] _lineNum;
-  protected String [] _cls, _mth, _fname;
 
-  public void setException(Throwable ex){
-    _exception = ex.getClass().getName();
-    _msg = ex.getMessage();
-    _eFromNode = H2O.SELF.toString();
-    StackTraceElement[]  stk = ex.getStackTrace();
-    _lineNum = new int[stk.length];
-    _cls = new String[stk.length];
-    _mth = new String[stk.length];
-    _fname = new String[stk.length];
-    for(int i = 0; i < stk.length; ++i){
-      _lineNum[i] = stk[i].getLineNumber();
-      _cls[i] = stk[i].getClassName();
-      _mth[i] = stk[i].getMethodName();
-      _fname[i] = stk[i].getFileName();
-    }
-  }
-
-  public boolean hasException(){
-    return _exception != null;
-  }
-
-  public DistributedException getDException() {
-    if( !hasException() ) return null;
-    String msg = _msg;
-    if( !_exception.equals(DistributedException.class.getName()) ) {
-      msg = " from " + _eFromNode + "; " + _exception;
-      if( _msg != null ) msg = msg+": "+_msg;
-    }
-    DistributedException dex = new DistributedException(msg,null);
-    StackTraceElement [] stk = new StackTraceElement[_cls.length];
-    for(int i = 0; i < _cls.length; ++i)
-      stk[i] = new StackTraceElement(_cls[i],_mth[i], _fname[i], _lineNum[i]);
-    dex.setStackTrace(stk);
-    return dex;
-  }
+  // Return a distributed-exception
+  protected DException _ex;
+  public final boolean hasException() { return _ex != null; }
+  public synchronized void setException(Throwable ex) { if( _ex==null ) _ex = new DException(ex); }
+  public DistributedException getDException() { return _ex==null ? null : _ex.toEx(); }
 
   // Track if the reply came via TCP - which means a timeout on ACKing the TCP
   // result does NOT need to get the entire result again, just that the client
@@ -78,61 +39,31 @@ public abstract class DTask<T extends DTask> extends H2OCountedCompleter impleme
   public void dinvoke( H2ONode sender ) { compute2(); }
 
   /** 2nd top-level execution hook.  After the primary task has received a
-   * result (ACK) and before we have sent an ACKACK, this method is executed
-   * on the <em>local vm</em>.  Transients from the local vm are available here.
-   */
+   * result (ACK) and before we have sent an ACKACK, this method is executed on
+   * the <em>local vm</em>.  Transients from the local vm are available here. */
   public void onAck() {}
 
-  /** 3rd top-level execution hook.  After the original vm sent an ACKACK,
-   * this method is executed on the <em>remote</em>.  Transients from the remote
-   * vm are available here.
-   */
+  /** 3rd top-level execution hook.  After the original vm sent an ACKACK, this
+   * method is executed on the <em>remote</em>.  Transients from the remote vm
+   * are available here.  */
   public void onAckAck() {}
 
   /** Override to remove 2 lines of logging per RPC.  0.5M RPC's will lead to
-   *  1M lines of logging at about 50 bytes/line produces 50M of log file, which
-   *  will swamp all other logging output. */
+   *  1M lines of logging at about 50 bytes/line produces 50M of log file,
+   *  which will swamp all other logging output. */
   public boolean logVerbose() { return true; }
 
-  
-
-  @Override public AutoBuffer write(AutoBuffer bb) {
-    return
-        bb
-        .putStr(_exception)
-        .putStr(_msg)
-        .putStr(_eFromNode)
-        .putA4(_lineNum)
-        .putAStr(_fname)
-        .putAStr(_cls)
-        .putAStr(_mth);
-  }
-  @Override public <F extends Freezable> F read(AutoBuffer bb) {
-    _exception = bb.getStr();
-    _msg       = bb.getStr();
-    _eFromNode = bb.getStr();
-    _lineNum   = bb.getA4();
-    _fname     = bb.getAStr();
-    _cls       = bb.getAStr();
-    _mth       = bb.getAStr();
-    return (F)this;
-  }
+  @Override public AutoBuffer write(AutoBuffer bb) { return bb.put(_ex); }
+  @Override public <T extends Freezable> T read(AutoBuffer bb) { _ex = bb.get(); return (T)this; }
   @Override public <F extends Freezable> F newInstance() { throw barf("newInstance"); }
   @Override public int frozenType() {throw barf("frozeType");}
   @Override public AutoBuffer writeJSONFields(AutoBuffer bb) { return bb; }
   @Override public water.api.DocGen.FieldDoc[] toDocField() { return null; }
   public void copyOver(Freezable other) {
     DTask that = (DTask)other;
-    this._exception = that._exception;
-    this._eFromNode = that._eFromNode;
-    this._lineNum   = that._lineNum;
-    this._fname     = that._fname;
-    this._msg       = that._msg;
-    this._cls       = that._cls;
-    this._mth       = that._mth;
+    this._ex = that._ex;        // Copy verbatim semantics, replacing all fields
   }
   private RuntimeException barf(String method) {
     return new RuntimeException(H2O.SELF + ":" + getClass().toString()+ " " + method +  " should be automatically overridden in the subclass by the auto-serialization code");
   }
-
 }

@@ -48,18 +48,6 @@ public abstract class DKV {
     return DputIfMatch(key, val, old, fs, false);
   }
   static public Value DputIfMatch( Key key, Value val, Value old, Futures fs, boolean dontCache ) {
-//    System.err.println("Key: " + key);
-//    Thread.dumpStack();
-//    System.err.flush();
-
-    // TEMPORARY DURING VALUEARRAY TO FLUIDVEC TRANSITION.
-    // When ValueArray object writes occur to DKV, whack any possible associated
-    // auto-converted Frame object.
-    if (! isConvertedFrameKeyString(key.toString()) && old != null && old.isArray()) {
-      String frameKeyString = calcConvertedFrameKeyString(key.toString());
-      Key k = Key.make(frameKeyString);
-      remove(k);
-    }
 
     // First: I must block repeated remote PUTs to the same Key until all prior
     // ones complete - the home node needs to see these PUTs in order.
@@ -144,31 +132,4 @@ public abstract class DKV {
     }
   }
   static public Value get( Key key ) { return get(key,Integer.MAX_VALUE,H2O.GET_KEY_PRIORITY); }
-
-
-  /** Return the calculated name of a Frame Key given a ValueArray Key. */
-  static public String calcConvertedFrameKeyString(String valueArrayKeyString) {
-    return valueArrayKeyString + ".autoframe";
-  }
-  static public String unconvertFrameKeyString(String s) {
-    return s.substring(0,s.length()-".autoframe".length());
-  }
-
-  /** Return true if a string is a calculated Frame Key string; false otherwise. */
-  static public boolean isConvertedFrameKeyString(String s) {
-    return s.endsWith(".autoframe");
-  }
-
-  /** Return the calculated name of a ValueArray Key given a Frame Key. */
-  static public String calcConvertedVAKeyString(String valueArrayKeyString) {
-    return valueArrayKeyString + ".autoVA";
-  }
-  static public String unconvertVAKeyString(String s) {
-    return s.substring(0,s.length()-".autoVA".length());
-  }
-
-  /** Return true if a string is a calculated ValueArray Key string; false otherwise. */
-  static public boolean isConvertedVAKeyString(String s) {
-    return s.endsWith(".autoVA");
-  }
 }

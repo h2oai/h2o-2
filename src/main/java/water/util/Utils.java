@@ -19,8 +19,7 @@ import water.*;
 import water.api.DocGen;
 import water.api.DocGen.FieldDoc;
 import water.nbhm.UtilUnsafe;
-import water.parser.ParseDataset;
-import water.parser.ParseDataset.Compression;
+import water.fvec.ParseDataset2.Compression;
 
 public class Utils {
   /** Returns the index of the largest value in the array.
@@ -138,6 +137,14 @@ public class Utils {
     double small_ulp = Math.min(ulp_a, ulp_b);
     double absdiff_a_b = Math.abs(a - b); // subtraction order does not matter, due to IEEE 754 spec
     return absdiff_a_b <= small_ulp;
+  }
+
+  public static boolean compareDoubles(double a, double b) {
+    if( a==b ) return true;
+    if( ( Double.isNaN(a) && !Double.isNaN(b)) ||
+        (!Double.isNaN(a) &&  Double.isNaN(b)) ) return false;
+    if( Double.isInfinite(a) || Double.isInfinite(b) ) return false;
+    return equalsWithinOneSmallUlp(a,b);
   }
 
   public static double lnF(double what) {
@@ -649,19 +656,6 @@ public class Utils {
     }
   }
 
-  public static ValueArray loadAndParseKey(String path) {
-    return loadAndParseKey(Key.make(), path);
-  }
-
-  public static ValueArray loadAndParseKey(Key okey, String path) {
-    FileIntegrityChecker c = FileIntegrityChecker.check(new File(path),false);
-    Key k = c.syncDirectory(null,null,null,null);
-    ParseDataset.forkParseDataset(okey, new Key[] { k }, null).get();
-    UKV.remove(k);
-    ValueArray res = DKV.get(okey).get();
-    return res;
-  }
-
   public static byte [] getFirstUnzipedBytes(Key k){
     return getFirstUnzipedBytes(DKV.get(k));
   }
@@ -715,7 +709,7 @@ public class Utils {
           break;
         off += len;
         if( off == bs.length ) { // Dataset is uncompressing alot! Need more space...
-          if( bs.length >= ValueArray.CHUNK_SZ )
+          if( bs.length >= water.fvec.Vec.CHUNK_SZ )
             break; // Already got enough
           bs = Arrays.copyOf(bs, bs.length * 2);
         }
