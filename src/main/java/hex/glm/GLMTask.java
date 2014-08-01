@@ -9,7 +9,6 @@ import java.util.Arrays;
 
 import water.H2O.H2OCountedCompleter;
 import water.*;
-import water.util.ModelUtils;
 import water.util.Utils;
 
 /**
@@ -95,7 +94,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
         }
       }
     }
-    @Override protected void chunkDone(){
+    @Override protected void chunkDone(long n){
       for(int i = 0; i < _ymu.length; ++i)
         if(_nobs[i] != 0)_ymu[i] /= _nobs[i];
     }
@@ -185,7 +184,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     @Override public void chunkInit(){
       _objvals = new double[_betas.length];
     }
-    @Override public void chunkDone(){
+    @Override public void chunkDone(long n){
       for(int i = 0; i < _objvals.length; ++i)
         _objvals[i] *= _reg;
     }
@@ -341,7 +340,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
         _grad = MemoryManager.malloc8d(_dinfo.fullN()+1); // + 1 is for intercept
     }
 
-    @Override protected void chunkDone(){
+    @Override protected void chunkDone(long n){
       if(_computeGram)_gram.mul(_reg);
       for(int i = 0; i < _xy.length; ++i)
         _xy[i] *= _reg;

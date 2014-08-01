@@ -24,18 +24,15 @@ test <- function(conn) {
     
     print("Run model on 3250 columns of Arcene with strong rules off.")
         time.noSR.3250 <- system.time(model.noSR.3250 <- h2o.glm(x=c(1:3250), y="arcene.train.label", data=arcene.train.full, family="binomial", lambda_search=FALSE, alpha=1, nfolds=0, use_all_factor_levels=1, higher_accuracy=TRUE))
-        print(time.noSR.3250)
-
+        
     print("Test model on validation set.")
         predict.noSR.3250 <- h2o.predict(model.noSR.3250, arcene.valid.full)
 
     print("Check performance of predictions.")
         perf.noSR.3250 <- h2o.performance(predict.noSR.3250$"1", arcene.valid.full$"arcene.valid.label")
-        auc.noSR.3250 <- perf.noSR.3250@model$auc
-        print(auc.noSR.3250)
-        
+         
     print("Check that prediction AUC better than guessing (0.5).")
-        stopifnot(auc.noSR.3250 > 0.5)
+        stopifnot(perf.noSR.3250@model$auc > 0.5)
 
   testEnd()
 }
