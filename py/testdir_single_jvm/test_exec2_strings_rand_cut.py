@@ -2,26 +2,35 @@ import unittest, random, sys, time, re, getpass
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util
 import h2o_print as h2p, h2o_gbm
+import string
 
 # details:
 # we want to seed a random dictionary for our enums
 # string.ascii_uppercase string.printable string.letters string.digits string.punctuation string.whitespace
 # restricting the choices makes it easier to find the bad cases
-randChars = "abeE01" + "$%+-.;|\t "
-randChars = "abeE01" # bad..causes NAification. probably 1E0e is causing a problem
+# randChars = "abeE01" + "$%+-.;|\t "
+# randChars = "abeE01" # bad..causes NAification. probably 1E0e is causing a problem
 # randChars = "abfF01" # try this.. fails
 # randChars = "abcdef" #
+
+# randChars = string.printable
+
+# remove the comma, single quote, double quote, newline
+# randChars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!"#$%&\'()*+,-./:;?@[\\]^_`{|}~ \t\n\r\x0b\x0c'
+# second param is delete chars
+randChars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!#$%&\()*+-./:;?@[\\]^_`{|}~ \t'
+randChars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!#$%&\()*+-./:;?@[]^_`{|}~ \t'
+
 quoteChars = "\'\""
 # don't use any quote characters. We'd have to protect combinations
 quoteChars = ""
-MIN_ENUM_WIDTH = 2
-MAX_ENUM_WIDTH = 8
+MIN_ENUM_WIDTH = 6
+MAX_ENUM_WIDTH = 16
 RAND_ENUM_LENGTH = True
-CUT_EXPR_CNT = 200
+CUT_EXPR_CNT = 20
 
-ROWS=1000000
-# ROWS=10000
-# ROWS=100
+# ROWS=1000000
+ROWS=100000
 
 DO_PLOT = getpass.getuser()=='kevin'
 
@@ -57,11 +66,11 @@ def create_enum_list(n=4, **kwargs):
     return enumList
 
 def create_col_enum_list(inCount):
-    # create the per-column choice lists
+    # create a single choice lists
     colEnumList = []
-    for col in range(inCount):
-        enumList = create_enum_list(n=random.randint(1,4), quoteChars=quoteChars)
-        colEnumList.append(enumList)
+    # for col in range(inCount):
+    enumList = create_enum_list(n=100000, quoteChars=quoteChars)
+    colEnumList.append(enumList)
     return colEnumList
     
 
@@ -76,7 +85,8 @@ def write_syn_dataset(csvPathname, rowCount, inCount=1, outCount=1, SEED='123456
         rowData = []
         for iCol in range(inCount):
             # FIX! we should add some random NA?
-            ri = random.choice(colEnumList[iCol])
+            # ri = random.choice(colEnumList[iCol])
+            ri = random.choice(colEnumList)
             rowData.append(ri)
 
         # output columns. always 0-10e6 with 2 digits of fp precision
@@ -84,7 +94,6 @@ def write_syn_dataset(csvPathname, rowCount, inCount=1, outCount=1, SEED='123456
             ri = "%.2f" % random.uniform(0, 10e6)
             rowData.append(ri)
 
-        # use the new Hive separator
         rowDataCsv = colSepChar.join(map(str,rowData)) + rowSepChar
         ### sys.stdout.write(rowDataCsv)
         dsf.write(rowDataCsv)
@@ -182,11 +191,15 @@ class Basic(unittest.TestCase):
 
             # PARSE*******************************************************
 
-            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=30)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=30, doSummary=False)
+
             print "Parse result['destination_key']:", parseResult['destination_key']
             inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
             h2o_cmd.infoFromInspect(inspect, csvPathname)
             # print h2o.dump_json(inspect)
+
+            rSummary = h2o_cmd.runSummary(key=parseResult['destination_key'])
+            h2o_cmd.infoFromSummary(rSummary)
 
             (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
                 h2o_cmd.columnInfoFromInspect(parseResult['destination_key'], exceptionOnMissingValues=False)

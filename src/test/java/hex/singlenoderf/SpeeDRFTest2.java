@@ -8,9 +8,9 @@ import water.fvec.Vec;
 
 public class SpeeDRFTest2 extends TreeTestWithBalanceAndCrossVal {
 
-  @Override public void testWeatherDataset() { }
-  @Override public void testCarBalanceAndCrossValidation() { }
-  @Override public void testCovtypeBalanceAndCrossValidation() { }
+//  @Override public void testWeatherDataset() { }
+//  @Override public void testCarBalanceAndCrossValidation() { }
+//  @Override public void testCovtypeBalanceAndCrossValidation() { }
 
   @Override protected void testBalanceWithCrossValidation(String dataset, int response, int[] ignored_cols, int ntrees, int nfolds) {
     Frame f = parseFrame(dataset);

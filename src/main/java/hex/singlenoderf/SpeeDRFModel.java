@@ -50,7 +50,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   @API(help = "Job key")                                                  Key jobKey;
   /* Destination Key */                                                   Key dest_key;
   /* Current model status */                                              String current_status;
-  @API(help = "MSE by tree")                                              float[] errs;
+  @API(help = "MSE by tree")                                              double[] errs;
   /* Statistic Type */                                                    Tree.StatType statType;
   @API(help = "Test Key")                                                 Key testKey;
   /* Out of bag error estimate */                                         boolean oobee;
@@ -69,6 +69,9 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   @API(help = "Verbose Mode")                                             public boolean verbose;
   @API(help = "Verbose Output")                                           public String[] verbose_output;
   @API(help = "Use non-local data")                                       public boolean useNonLocal;
+
+
+  private float _ss; private float _cnt;
   /**
    * Extra helper variables.
    */
@@ -162,6 +165,8 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     cm.vpredict = scored.anyVec();
     cm.invoke();
 
+
+
     // Regression scoring
     if (regression) {
       float mse = (float) cm.mse;
@@ -170,8 +175,9 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
       // Classification scoring
     } else {
+      double mse = CMTask.MSETask.doTask(scored.add("actual", fr.lastVec()));
       this.cm = cm.cm;
-      errs[errs.length - 1] = -1f;
+      errs[errs.length - 1] = (float)mse;
       ConfusionMatrix new_cm = new ConfusionMatrix(this.cm);
       cms[cms.length - 1] = new_cm;
 
@@ -188,6 +194,8 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       if (importance && !regression)
         varimp = doVarImpCalc(fr, this, modelResp);
     }
+    scored.remove("actual");
+    scored.delete();
   }
 
   private void scoreOnTrain(Frame fr, Vec modelResp) {
@@ -242,7 +250,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     }
 
     m.errs = Arrays.copyOf(old.errs, old.errs.length+1);
-    m.errs[m.errs.length - 1] = -1.f;
+    m.errs[m.errs.length - 1] = -1.0;
     m.cms = Arrays.copyOf(old.cms, old.cms.length+1);
     m.cms[m.cms.length-1] = null;
 
@@ -407,6 +415,8 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       for (int i = 0; i  < votes.length - 1; ++i)
         preds[i+1] = ( (float)votes[i] / (float)treeCount());
       preds[0] = (float) (classify(votes, null, null) + resp_min);
+      float[] rawp = new float[preds.length + 1];
+      for (int i = 0; i < votes.length; ++i) rawp[i+1] = (float)votes[i];
       return preds;
     }
   }
@@ -423,7 +433,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   private boolean errsNotNull() {
     boolean allMinus1 = true;
     if (errs == null) return false;
-    for (float err : errs) {
+    for (double err : errs) {
       if (err > -1) allMinus1 = false;
     }
     return !allMinus1;
@@ -494,7 +504,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       sb.append("</tr>");
       sb.append("<tr style='min-width: 60px;'><th style='min-width: 60px;' class='warning'>MSE</th>");
       for( int i=last; i>=0; i-- )
-        sb.append( (!(Double.isNaN(errs[i]) || errs[i] <= 0.f)) ? String.format("<td style='min-width:60px'>%5.5f</td>",errs[i]) : "<td style='min-width:60px'>---</td>");
+        sb.append( (!(Double.isNaN(errs[i]) || errs[i] <= 0.0)) ? String.format("<td style='min-width:60px'>%5.5f</td>",errs[i]) : "<td style='min-width:60px'>---</td>");
       sb.append("</tr>");
       DocGen.HTML.arrayTail(sb);
     }
