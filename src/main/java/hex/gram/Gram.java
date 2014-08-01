@@ -7,7 +7,6 @@ import hex.glm.LSMSolver.ADMMSolver.NonSPDMatrixException;
 import jsr166y.ForkJoinTask;
 import jsr166y.RecursiveAction;
 import water.*;
-import water.util.Log;
 import water.util.Utils;
 
 import java.util.Arrays;
@@ -510,7 +509,7 @@ public final class Gram extends Iced {
       }
       ++_nobs;
     }
-    @Override protected void chunkDone(){
+    @Override protected void chunkDone(long n){
       double r = 1.0/_nobs;
       _gram.mul(r);
       if(_XY != null)for(int i = 0; i < _XY.length; ++i)

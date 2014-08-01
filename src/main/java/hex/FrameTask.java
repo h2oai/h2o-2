@@ -496,8 +496,9 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
   protected void chunkInit(){}
   /**
    * Override this to do post-chunk processing work.
+   * @param n Number of processed rows
    */
-  protected void chunkDone(){}
+  protected void chunkDone(long n){}
 
 
   /**
@@ -547,6 +548,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         shuf_map[i] = start + i;
       Utils.shuffleArray(shuf_map, new Random().nextLong());
     }
+    long num_processed_rows = 0;
     for(int rrr = 0; rrr < repeats; ++rrr) {
     OUTER:
       for(int rr = start; rr < end; ++rr){
@@ -555,6 +557,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         if ((_dinfo._nfolds > 0 && (lr % _dinfo._nfolds) == _dinfo._foldId)
                 || (skip_rng != null && skip_rng.nextFloat() > _useFraction))continue;
         for(Chunk c:chunks)if(c.isNA0(r))continue OUTER; // skip rows with NAs!
+        ++num_processed_rows;
         int i = 0, ncats = 0;
         for(; i < _dinfo._cats; ++i){
           int c = (int)chunks[i].at80(r);
@@ -577,12 +580,13 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
           response[i] = chunks[chunks.length-_dinfo._responses + i].at0(r);
           if (_dinfo._normRespMul != null) response[i] = (response[i] - _dinfo._normRespSub[i])*_dinfo._normRespMul[i];
         }
+        long seed = offset + rrr*(end-start) + r;
         if (outputs != null && outputs.length > 0)
-          processRow(offset + r, nums, ncats, cats, response, outputs);
+          processRow(seed, nums, ncats, cats, response, outputs);
         else
-          processRow(offset + r, nums, ncats, cats, response);
+          processRow(seed, nums, ncats, cats, response);
       }
     }
-    chunkDone();
+    chunkDone(num_processed_rows);
   }
 }

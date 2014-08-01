@@ -1070,4 +1070,10 @@ public abstract class Job extends Func {
     job.source = null;
     return job;
   }
+
+  public static <T extends ValidatedJob> T hygiene(T job) {
+    job.source = null;
+    job.validation = null;
+    return job;
+  }
 }

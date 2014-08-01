@@ -556,7 +556,9 @@ public class DeepLearning extends Job.ValidatedJob {
       if ( arg._name.equals("activation") || arg._name.equals("initial_weight_distribution")
               || arg._name.equals("expert_mode") || arg._name.equals("adaptive_rate")
               || arg._name.equals("replicate_training_data")
-              || arg._name.equals("balance_classes") || arg._name.equals("checkpoint")) {
+              || arg._name.equals("balance_classes")
+              || arg._name.equals("n_folds")
+              || arg._name.equals("checkpoint")) {
         arg.setRefreshOnChange();
       }
     }
@@ -645,6 +647,10 @@ public class DeepLearning extends Job.ValidatedJob {
     if (arg._name.equals("use_all_factor_levels") && autoencoder ) {
       arg.disable("Automatically enabled for auto-encoders.");
       use_all_factor_levels = true;
+    }
+    if(arg._name.equals("override_with_best_model") && n_folds != 0) {
+      arg.disable("Only without n-fold cross-validation.", inputArgs);
+      override_with_best_model = false;
     }
   }
 
@@ -851,7 +857,8 @@ public class DeepLearning extends Job.ValidatedJob {
       }
       if (n_folds != 0) {
         if (override_with_best_model) {
-          Log.info("Ignoring override_with_best_model, since the final model is the only scored model with n-fold cross-validation.");
+          Log.info("Automatically setting override_with_best_model to false, since the final model is the only scored model with n-fold cross-validation.");
+          override_with_best_model = false;
         }
       }
     }

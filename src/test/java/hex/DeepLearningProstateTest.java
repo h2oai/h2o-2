@@ -118,6 +118,8 @@ public class DeepLearningProstateTest extends TestUtil {
                               p.shuffle_training_data = shuffle;
                               p.score_training_samples = scoretraining;
                               p.score_validation_samples = scorevalidation;
+                              p.classification_stop = -1;
+                              p.regression_stop = -1;
                               p.balance_classes = balance_classes;
                               p.quiet_mode = true;
 //                              p.quiet_mode = false;
@@ -131,6 +133,7 @@ public class DeepLearningProstateTest extends TestUtil {
                               DeepLearning p = new DeepLearning();
                               final DeepLearningModel tmp_model = UKV.get(dest_tmp); //this actually *requires* frame to also still be in UKV (because of DataInfo...)
                               Assert.assertTrue(tmp_model.get_params().state == Job.JobState.DONE); //HEX-1817
+                              Assert.assertTrue(tmp_model.model_info().get_processed_total() >= frame.numRows() * epochs);
                               assert (tmp_model != null);
                               p.checkpoint = dest_tmp;
                               p.destination_key = dest;
