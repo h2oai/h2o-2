@@ -243,7 +243,12 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     if( _done ) return result(); // Fast-path shortcut
     // Use FJP ManagedBlock for this blocking-wait - so the FJP can spawn
     // another thread if needed.
-    try { ForkJoinPool.managedBlock(this); } catch( InterruptedException e ) { }
+    try {
+      try {
+        ForkJoinPool.managedBlock(this);
+      } catch (InterruptedException e) {
+      }
+    } catch(Throwable t){throw new RuntimeException(t);}
     if( _done ) return result(); // Fast-path shortcut
     assert isCancelled();
     return null;

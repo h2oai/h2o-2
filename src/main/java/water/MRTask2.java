@@ -270,8 +270,15 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
   /** Block for and get any final results from a dfork'd MRTask2.
    *  Note: the desired name 'get' is final in ForkJoinTask.  */
   public final T getResult() {
-    try { ForkJoinPool.managedBlock(this); } catch( InterruptedException e ) { }
-    return self();
+    try {
+      try {
+        ForkJoinPool.managedBlock(this);
+      } catch (InterruptedException e) {
+      }
+      return self();
+    }catch(Throwable t){
+      throw new RuntimeException(t);
+    }
   }
 
   // Return true if blocking is unnecessary, which is true if the Task isDone.
