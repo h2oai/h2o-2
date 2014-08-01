@@ -22,10 +22,10 @@ class ModelManagementTestCase(unittest.TestCase):
         localhost = h2o.decide_if_localhost()
         if (localhost):
             print "Calling h2o.build_cloud(" + str(cloud_size) + "). . ."
-            h2o.build_cloud(cloud_size, java_heap_GB=2, timeoutSecs=30)
+            h2o.build_cloud(cloud_size, java_heap_GB=2, timeoutSecs=120)
         else:
             print "Calling h2o_hosts.build_cloud_with_hosts(1). . ."
-            h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=2, timeoutSecs=30)
+            h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=2, timeoutSecs=120)
         
         # USE FVec!
         h2o.beta_features = True

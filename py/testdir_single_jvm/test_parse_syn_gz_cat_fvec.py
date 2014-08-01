@@ -6,6 +6,7 @@ import h2o_browse as h2b
 print "Create csv with lots of same data (98% 0?), so gz will have high compression ratio"
 
 ONE_RATE = 0.00001
+DOSUMMARY = False
 # ONE_RATE = 0.1
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
     # 8 random generatators, 1 per column
@@ -52,17 +53,16 @@ class Basic(unittest.TestCase):
         tryList = [
             # summary fails with 100000 cols
             # overwrite the key each time to save space?
-            # (100, 100, 'cF', 600),
-            # (100, 5000, 'cF', 600),
+            (100, 100, 'cF', 600),
+            (100, 5000, 'cF', 600),
             (100, 10000, 'cF', 600),
-            (100, 12000, 'cF', 600),
-            (100, 15000, 'cF', 600),
-            (100, 17000, 'cF', 600),
+            # (100, 12000, 'cF', 600),
+            # (100, 15000, 'cF', 600),
+            # (100, 17000, 'cF', 600),
             (100, 20000, 'cF', 600),
             (100, 40000, 'cF', 600),
             ]
 
-        DOSUMMARY = True
         # h2b.browseTheCloud()
         for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
             SEEDPERFILE = random.randint(0, sys.maxint)

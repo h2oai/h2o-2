@@ -274,7 +274,7 @@ public class SpeeDRF extends Job.ValidatedJob {
     model.varimp = null;
     model.validAUC = null;
     model.cms = new ConfusionMatrix[1];
-    model.errs = new float[]{-1.f};
+    model.errs = new double[]{-1.0};
     return model;
   }
 

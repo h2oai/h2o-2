@@ -24,13 +24,13 @@ randChars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!#$%&
 quoteChars = "\'\""
 # don't use any quote characters. We'd have to protect combinations
 quoteChars = ""
-MIN_ENUM_WIDTH = 2
-MAX_ENUM_WIDTH = 8
+MIN_ENUM_WIDTH = 6
+MAX_ENUM_WIDTH = 16
 RAND_ENUM_LENGTH = True
-CUT_EXPR_CNT = 200
+CUT_EXPR_CNT = 20
 
 # ROWS=1000000
-ROWS=100
+ROWS=100000
 
 DO_PLOT = getpass.getuser()=='kevin'
 
@@ -66,11 +66,11 @@ def create_enum_list(n=4, **kwargs):
     return enumList
 
 def create_col_enum_list(inCount):
-    # create the per-column choice lists
+    # create a single choice lists
     colEnumList = []
-    for col in range(inCount):
-        enumList = create_enum_list(n=random.randint(1,4), quoteChars=quoteChars)
-        colEnumList.append(enumList)
+    # for col in range(inCount):
+    enumList = create_enum_list(n=100000, quoteChars=quoteChars)
+    colEnumList.append(enumList)
     return colEnumList
     
 
@@ -85,7 +85,8 @@ def write_syn_dataset(csvPathname, rowCount, inCount=1, outCount=1, SEED='123456
         rowData = []
         for iCol in range(inCount):
             # FIX! we should add some random NA?
-            ri = random.choice(colEnumList[iCol])
+            # ri = random.choice(colEnumList[iCol])
+            ri = random.choice(colEnumList)
             rowData.append(ri)
 
         # output columns. always 0-10e6 with 2 digits of fp precision
@@ -149,7 +150,8 @@ class Basic(unittest.TestCase):
                 cols = random.sample(range(iColCount), random.randint(1,iColCount))
                 for c in cols:
                     # possible choices within the column
-                    cel = colEnumList[c]
+                    # cel = colEnumList[c]
+                    cel = colEnumList
                     # for now the cutValues are numbers for the enum mappings
                     if 1==1:
                         # FIX! hack. don't use encoding 0, maps to NA here? h2o doesn't like
@@ -190,11 +192,15 @@ class Basic(unittest.TestCase):
 
             # PARSE*******************************************************
 
-            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=30)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=30, doSummary=False)
+
             print "Parse result['destination_key']:", parseResult['destination_key']
             inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
             h2o_cmd.infoFromInspect(inspect, csvPathname)
             # print h2o.dump_json(inspect)
+
+            rSummary = h2o_cmd.runSummary(key=parseResult['destination_key'])
+            h2o_cmd.infoFromSummary(rSummary)
 
             (missingValuesDict, constantValuesDict, enumSizeDict, colTypeDict, colNameDict) = \
                 h2o_cmd.columnInfoFromInspect(parseResult['destination_key'], exceptionOnMissingValues=False)

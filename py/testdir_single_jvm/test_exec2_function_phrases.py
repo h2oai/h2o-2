@@ -154,7 +154,7 @@ class Basic(unittest.TestCase):
 
         # now do some triple concats of the expressions created
         for j in range (50):
-            execExpr = "a=" + random.choice(exprList) + "b=" + random.choice(exprList) + "c=" + random.choice(exprList)
+            execExpr = "a=" + random.choice(exprList) + "b=" + random.choice(exprList) + "d=" + random.choice(exprList)
             execExpr = "func4 = function(x,y,z,rhex){ " + execExpr + " }"
             h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=4)
             execExpr = "func4(0,0,0,i.hex)"
