@@ -194,6 +194,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       if (importance && !regression)
         varimp = doVarImpCalc(fr, this, modelResp);
     }
+    scored.remove("actual");
     scored.delete();
   }
 
