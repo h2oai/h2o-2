@@ -27,4 +27,4 @@ test <- function(conn) {
   testEnd()
 }
 
-doTest("Testing glm modeling performance with wide Arcene dataset with and without strong rules", test)
+doTest("Test logging time for copy", test)
