@@ -8,6 +8,7 @@ source('../findNSourceUtils.R')
 
 
 test <- function(conn) {
+
     print("Reading in original prostate data.")
         prostate.hex = h2o.uploadFile(conn, locate("smalldata/prostate/prostate.csv.zip"), key="prostate.hex", header=TRUE)
     
@@ -27,17 +28,29 @@ test <- function(conn) {
     print("Run modeling with with and without synthetic data.")
         # Test that run time is within reasonable timeframe (ie. 30 seconds)
         # GLM aborted if exceeds time frame and test fails
-        withTimeout(prostate.def.model <- h2o.glm(x=c("ID","CAPSULE","AGE","RACE","DPROS","DCAPS","PSA","VOL"), y=c("GLEASON"), prostate.train, family="gaussian", lambda_search=FALSE, alpha=1, use_all_factor_levels=1, nfolds=0),timeout=30)
-        stopifnot(exists("prostate.def.model"))
+        startTime = proc.time()
+        prostate.def.model <- h2o.glm(x=c("ID","CAPSULE","AGE","RACE","DPROS","DCAPS","PSA","VOL"), y=c("GLEASON"), prostate.train, family="gaussian", lambda_search=FALSE, alpha=1, use_all_factor_levels=1, nfolds=0)
+        endTime = proc.time()
+        elapsedTime = endTime - startTime
+        stopifnot(elapsedTime < 60)
         
-        withTimeout(prostate.bin.model <- h2o.glm(x=c("ID","CAPSULE","AGE","RACE","DPROS","DCAPS","PSA","VOL","BIN"), y=c("GLEASON"), prostate.train, family="gaussian", lambda_search=FALSE, alpha=1, use_all_factor_levels=1, nfolds=0),timeout=30)
-        stopifnot(exists("prostate.bin.model"))
+        startTime = proc.time()
+        prostate.bin.model <- h2o.glm(x=c("ID","CAPSULE","AGE","RACE","DPROS","DCAPS","PSA","VOL","BIN"), y=c("GLEASON"), prostate.train, family="gaussian", lambda_search=FALSE, alpha=1, use_all_factor_levels=1, nfolds=0)
+        endTime = proc.time()
+        elapsedTime = endTime - startTime
+        stopifnot(elapsedTime < 60)
         
-        withTimeout(prostate.float.model <- h2o.glm(x=c("ID","CAPSULE","AGE","RACE","DPROS","DCAPS","PSA","VOL","FLOAT"), y=c("GLEASON"), prostate.train, family="gaussian", lambda_search=FALSE, alpha=1, use_all_factor_levels=1, nfolds=0),timeout=30)
-        stopifnot(exists("prostate.float.model"))
+        startTime = proc.time()
+        prostate.float.model <- h2o.glm(x=c("ID","CAPSULE","AGE","RACE","DPROS","DCAPS","PSA","VOL","FLOAT"), y=c("GLEASON"), prostate.train, family="gaussian", lambda_search=FALSE, alpha=1, use_all_factor_levels=1, nfolds=0)
+        endTime = proc.time()
+        elapsedTime = endTime - startTime
+        stopifnot(elapsedTime < 60)
         
-        withTimeout(prostate.int.model <- h2o.glm(x=c("ID","CAPSULE","AGE","RACE","DPROS","DCAPS","PSA","VOL","INT"), y=c("GLEASON"), prostate.train, family="gaussian", lambda_search=FALSE, alpha=1, use_all_factor_levels=1, nfolds=0),timeout=30)
-        stopifnot(exists("prostate.int.model"))
+        startTime = proc.time()
+        prostate.int.model <- h2o.glm(x=c("ID","CAPSULE","AGE","RACE","DPROS","DCAPS","PSA","VOL","INT"), y=c("GLEASON"), prostate.train, family="gaussian", lambda_search=FALSE, alpha=1, use_all_factor_levels=1, nfolds=0)
+        endTime = proc.time()
+        elapsedTime = endTime - startTime
+        stopifnot(elapsedTime < 60)
 
     testEnd()
     }
