@@ -1,4 +1,4 @@
-# Run speedRf with oobee = FALSE. Get Mean Squared error from the model.
+# Run speedRf. Get Mean Squared error from the model.
 # Predict on the same dataset and calculate Mean Squared error in R by pulling in the predictions
 
 setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
@@ -12,8 +12,10 @@ test.pub.651 <- function(conn) {
   myY = 15
   
   print("Building SpeedRF model")
-  my.srf  = h2o.SpeeDRF(x=myX,y=myY,data=adlt_income,classification=T,ntree=50,oobee=T,seed = 123456789,validation=adlt_income)
+  my.srf  = h2o.SpeeDRF(x=myX,y=myY,data=adlt_income,classification=T,ntree=50,oobee=F,validation=adlt_income)
+  print(paste(" The SpeedRF ran with this seed: ",my.srf@model$params$seed, sep = ''))
   print(my.srf)
+  
   mse_from_model = my.srf@model$mse
   print(paste("mean squared error from model page", mse_from_model, sep = ''))
   
@@ -29,12 +31,12 @@ test.pub.651 <- function(conn) {
   ss = pred_toR[which(pred_toR$predict==ad_toR$C15),] #------rows for which labels correctly predicted
   tt = pred_toR[which(pred_toR$predict!=ad_toR$C15),] #------rows for which labels not correctly predicted
   
-  computed_mse = mean(c((1-ss[which(ss[,1]=="<=50K"),2])^2, (1-ss[which(ss[,1]==">50K"),3])^2, (1-tt[which(tt[,1]==">50K"),2])^2, (1-tt[which(tt[,1]=="<=50K"),3])^2))
+  mse_calculatedfrom_predFile = mean(c((1-ss[which(ss[,1]=="<=50K"),2])^2, (1-ss[which(ss[,1]==">50K"),3])^2, (1-tt[which(tt[,1]==">50K"),2])^2, (1-tt[which(tt[,1]=="<=50K"),3])^2))
   
   print(paste("mean squared error from model page:  ", mse_from_model, sep = ''))
-  print(paste("mean squared error as calculated from predictions file:  ", computed_mse, sep = ' '))
+  print(paste("mean squared error as calculated from prediction file probabilities:  ", mse_calculatedfrom_predFile, sep = ' '))
   print("Expect the above two to be equal")
-  expect_true( abs(mse_from_model - computed_mse) < 1e-5 )
+  expect_true( abs(mse_from_model - mse_calculatedfrom_predFile) < 1e-5 )
   testEnd()
 }
 
