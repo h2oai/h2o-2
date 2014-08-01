@@ -376,6 +376,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   private static class GLM2_ProgressUpdate extends TAtomic<GLM2_Progress> {
     @Override
     public GLM2_Progress atomic(GLM2_Progress old) {
+      if(old == null)return old;
       ++old._done;
       return old;
     }
@@ -768,14 +769,12 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     }
     @Override public boolean onExceptionalCompletion(Throwable t, CountedCompleter cmp){
       if(_cmp.compareAndSet(null, cmp)) {
-        if (!(t instanceof JobCancelledException) && (t.getMessage() == null || !t.getMessage().contains("JobCancelled"))) {
-          _done = true;
-          GLM2.this.cancel(t);
+        _done = true;
+        GLM2.this.cancel(t);
+        if(_grid){
+          _failed = true;
+          tryComplete();
         }
-      }
-      if(_grid){
-        _failed = true;
-        tryComplete();
       }
       return !_grid;
     }
@@ -997,9 +996,15 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   }
 
   void nextLambda(final double currentLambda, final H2OCountedCompleter cmp){
+    if(currentLambda > lambda_max){
+      _done = true;
+      cmp.tryComplete();
+      return;
+    }
     LogInfo("starting computation of lambda = " + currentLambda + ", previous lambda = " + _currentLambda);
     _done = false;
     final double previousLambda = _currentLambda;
+
     _currentLambda = currentLambda;
     if(n_folds > 1){ // if we're cross-validated tasks, just fork off the parallel glms and wait for result!
       for(int i = 0; i < _xvals.length; ++i)

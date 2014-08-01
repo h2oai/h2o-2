@@ -162,7 +162,17 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
       return Lockable.this;     // Freshen this
     }
   }
-
+  public static void unlock_lockable(final Key lockable, final Key job){
+    H2O.H2OEmptyCompleter cmp = new H2O.H2OEmptyCompleter();
+    new DTask.DKeyTask(cmp,lockable){
+      @Override
+      public void compute2() {
+        H2O.get(_key).<Lockable>get().unlock(job);
+        tryComplete();
+      }
+    }.forkTask();
+    cmp.join();
+  }
   // -----------
   // Atomically set a new version of self & unlock.
   public void unlock( Key job_key ) { 

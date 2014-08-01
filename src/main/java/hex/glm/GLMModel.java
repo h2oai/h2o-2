@@ -592,6 +592,8 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     return -1;
   }
   public Submodel  submodelForLambda(double lambda){
+    if(lambda > lambda_max)
+      return submodels[0];
     int i = submodelIdForLambda(lambda);
     return i < 0?null:submodels[i];
   }
