@@ -978,6 +978,9 @@ public class Frame extends Lockable<Frame> {
       for( int i=0; i<cols.length; i++ )
         _isInt[i] = (byte)(vecs[cols[i]].isInt() ? 1 : 0);
     }
+
+    @Override public boolean logVerbose() { return false; }
+
     @Override public void map( Chunk chks[], NewChunk nchks[] ) {
       long rstart = chks[0]._start;
       int rlen = chks[0]._len;  // Total row count
