@@ -44,11 +44,7 @@ public class DeepLearningTask extends FrameTask<DeepLearningTask> {
 
   @Override public final void processRow(long seed, final double [] nums, final int numcats, final int [] cats, double [] responses){
     if(_output.get_params().self() != null && !Job.isRunning(_output.get_params().self())) throw new Job.JobCancelledException();
-    if (H2O.CLOUD.size()==1) {
-      seed += model_info().get_processed_global(); //avoid periodicity
-    } else {
-      seed = new Random().nextLong(); //multi-node: no point in being reproducible - better to be "good" at being random
-    }
+    seed = new Random().nextLong(); //no point in being reproducible - better to be "good" at being random
     ((Neurons.Input)_neurons[0]).setInput(seed, nums, numcats, cats);
     step(seed, _neurons, _output, _training, responses);
   }
