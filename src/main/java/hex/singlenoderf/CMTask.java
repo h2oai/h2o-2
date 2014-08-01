@@ -537,7 +537,7 @@ public class CMTask extends MRTask2<CMTask> {
   }
 
   /** Compute the sum of squared errors */
-  private float doSSECalc(int[] votes, float[] preds, int cclass) {
+  static float doSSECalc(int[] votes, float[] preds, int cclass) {
     float err;
 
     // Get the total number of votes for the row
@@ -545,7 +545,7 @@ public class CMTask extends MRTask2<CMTask> {
 
     // No votes for the row
     if (sum == 0) {
-      err = 1f - (1f / (votes.length - 1f));
+      err = 1f - (1f / (votes.length - 0f));
       return err * err;
     }
 
@@ -556,14 +556,14 @@ public class CMTask extends MRTask2<CMTask> {
     return err * err;
   }
 
-  private float doSum(int[] votes) {
+  static float doSum(int[] votes) {
     float sum = 0f;
     for (int v : votes)
       sum += v;
     return sum;
   }
 
-  private float[] toProbs(float[] preds, float s ) {
+  static float[] toProbs(float[] preds, float s ) {
     for (int i = 1; i < preds.length; ++i) {
       preds[i] /= s;
     }
@@ -656,5 +656,26 @@ public class CMTask extends MRTask2<CMTask> {
     // End of loop over rows, return confusion matrix
     cm._rows=validation_rows;
     return cm;
+  }
+
+  public static class MSETask extends MRTask2<MSETask> {
+    //M
+    double _ss;
+
+    public static double doTask(Frame fr) {
+      MSETask tsk = new MSETask();
+      tsk.doAll(fr);
+      return tsk._ss / (double) fr.numRows();
+    }
+
+    @Override public void map(Chunk[] cks) {
+      for (int i = 0; i < cks[0]._len; ++i) {
+        int cls = (int)cks[cks.length - 1].at0(i);
+        double err = ( 1 - cks[cls+1].at0(i));
+        _ss += err * err;
+      }
+    }
+
+    @Override public void reduce(MSETask tsk) { _ss += tsk._ss; }
   }
 }
