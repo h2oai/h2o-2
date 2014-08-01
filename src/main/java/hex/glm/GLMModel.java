@@ -52,6 +52,14 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @API(help="index of lambda_value giving best results")
   int best_lambda_idx;
 
+  public Key [] xvalModels() {
+    if(submodels == null)return null;
+    for(Submodel sm:submodels)
+      if(sm.xvalidation instanceof GLMXValidation){
+        return ((GLMXValidation)sm.xvalidation).xval_models;
+      }
+    return null;
+  }
   public double auc(){
     if(glm.family == Family.binomial && submodels != null && submodels[best_lambda_idx].validation != null) {
       Submodel sm = submodels[best_lambda_idx];
@@ -74,25 +82,53 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     return 1.0 - val.residual_deviance/val.null_deviance;
   }
 
-  public void removeXvals(){
-    if(submodels != null)
-      for(Submodel sm:submodels)
-        if(sm.xvalidation != null && (sm.xvalidation instanceof GLMXValidation)){ // note: xval can be standard Validation for xval models
-          GLMXValidation xval = (GLMXValidation)sm.xvalidation;
-          for(Key k:xval.xval_models)
-            DKV.get(k).<GLMModel>get().delete();
-        }
-  }
-  public void unlockXvals(Key job_key){
-    if(submodels != null)
-      if(submodels[0].xvalidation != null && (submodels[0].xvalidation instanceof GLMXValidation)) { // note: xval can be standard Validation for xval models
-        GLMXValidation xval = (GLMXValidation) submodels[0].xvalidation;
-        for (Key k : xval.xval_models) {
-          GLMModel m = DKV.get(k).get();
-          m.unlock(job_key);
-        }
+  public static class UnlockModelTask extends DTask.DKeyTask{
+    final Key _modelKey;
+    final Key _jobKey;
+
+    public UnlockModelTask(H2OCountedCompleter cmp, Key modelKey, Key jobKey){
+      super(cmp,modelKey);
+      _modelKey = modelKey;
+      _jobKey = jobKey;
+    }
+    @Override
+    public void compute2() {
+      GLMModel m = H2O.get(_modelKey).get();
+      Key [] xvals = m.xvalModels();
+      if(xvals != null){
+        addToPendingCount(xvals.length);
+        for(int i = 0; i < xvals.length; ++i)
+          new UnlockModelTask(this,xvals[i],_jobKey).forkTask();
       }
+      m.unlock(_jobKey);
+      System.out.println(m._key + " unlocked!");
+      tryComplete();
+    }
   }
+
+  public static class DeleteModelTask extends DTask.DKeyTask{
+    final Key _modelKey;
+
+    public DeleteModelTask(H2OCountedCompleter cmp, Key modelKey){
+      super(cmp,modelKey);
+      _modelKey = modelKey;
+    }
+    @Override
+    public void compute2() {
+      if(H2O.get(_modelKey) != null) {
+        GLMModel m = H2O.get(_modelKey).get();
+        Key[] xvals = m.xvalModels();
+        if (xvals != null) {
+          addToPendingCount(xvals.length);
+          for (int i = 0; i < xvals.length; ++i)
+            new DeleteModelTask(this, xvals[i]).forkTask();
+        }
+        m.delete();
+      }
+      tryComplete();
+    }
+  }
+
   @Override public GLMModel clone(){
     GLMModel res = (GLMModel)super.clone();
     res.submodels = submodels.clone();
@@ -213,11 +249,18 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   public void pickBestModel(boolean useAuc){
     int bestId = submodels.length-1;
     if(submodels.length > 2) {
-      final boolean xval = submodels[1].xvalidation != null;
-      GLMValidation bestVal = xval ? submodels[1].xvalidation : submodels[1].validation;
+      boolean xval = false;
+      GLMValidation bestVal = null;
+      for(Submodel sm:submodels) {
+        if(sm.xvalidation != null) {
+          xval = true;
+          bestVal = sm.xvalidation;
+        }
+      }
+      if(!xval) bestVal = submodels[0].validation;
       for (int i = 1; i < submodels.length; ++i) {
         GLMValidation val = xval ? submodels[i].xvalidation : submodels[i].validation;
-        if (val == null) continue;
+        if (val == null || val == bestVal) continue;
         if ((useAuc && val.auc > bestVal.auc)
           || (xval && val.residual_deviance < bestVal.residual_deviance)
           || (((bestVal.residual_deviance - val.residual_deviance) / val.null_deviance) >= 0.01)) {
@@ -309,6 +352,10 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
         old.submodels[id].xvalidation = val;
         old.pickBestModel(false);
         return old;
+      }
+      @Override public void onSuccess( Value old ) {
+        System.out.println("set xval of " + old._key);
+        super.onSuccess(old);
       }
     }.fork(modelKey);
   }
@@ -509,6 +556,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
         _xvals[i].add(gval._xvals[i]);}
 
     @Override public void postGlobal() {
+      System.out.println("GLMXval.postGlobal");
       H2OCountedCompleter cmp = (H2OCountedCompleter)getCompleter();
       if(cmp != null)cmp.addToPendingCount(_xvals.length + 1);
       for (int i = 0; i < _xvals.length; ++i) {

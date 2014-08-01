@@ -716,7 +716,7 @@ public final class H2O {
     // Do the actually intended work
     public abstract void compute2();
     @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
-      if(!(ex instanceof JobCancelledException) && this.getCompleter() == null)
+      if(!(ex instanceof JobCancelledException) && !(ex instanceof IllegalArgumentException) && this.getCompleter() == null)
         ex.printStackTrace();
       return true;
     }
@@ -740,6 +740,8 @@ public final class H2O {
   }
 
   public static class H2OEmptyCompleter extends H2OCountedCompleter{
+    public H2OEmptyCompleter(){}
+    public H2OEmptyCompleter(H2OCountedCompleter cc){super(cc);}
     @Override public void compute2(){throw new UnsupportedOperationException();}
   }
 

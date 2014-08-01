@@ -209,34 +209,26 @@ public class GLMRandomTest extends TestUtil {
                                                         p.lambda_min_ratio = lambda_min_ratio;
                                                         p.prior = prior;
                                                         p.variable_importances = variable_importances;
+                                                        p.MAX_ITERATIONS_PER_LAMBDA = 5;
                                                         try {
                                                           p.invokeServe();
                                                           assert p._done;
+
+                                                          H2O.H2OEmptyCompleter cmp = new H2O.H2OEmptyCompleter();
+                                                          if (p.alpha.length > 1)
+                                                            new GLMGrid.DeleteGridTsk(cmp, p.destination_key).forkTask();
+                                                          else
+                                                            new GLMModel.DeleteModelTask(cmp, p.destination_key).forkTask();
+                                                          cmp.join();
+                                                          System.out.println("TEST DONE");
+                                                        }catch(DException.DistributedException dex){
+                                                          if(dex.getMessage().contains("IllegalArgument"))
+                                                            Log.info("Skipping invalid combination of arguments.");
+                                                          else throw new RuntimeException(dex);
                                                         } catch (IllegalArgumentException t) {
                                                           Log.info("Skipping invalid combination of arguments.");
                                                           // accept IllegalArgumentException, but nothing else
                                                         } finally {
-                                                          Value v = DKV.get(dest);
-                                                          if(v != null) {
-                                                            Iced ic = v.get();
-                                                            if(ic instanceof GLMGrid){
-                                                              GLMGrid grid = (GLMGrid)ic;
-                                                              for(Key k:grid.destination_keys){
-                                                                Value v2 = DKV.get(k);
-                                                                if(v2 != null) {
-                                                                  GLMModel m = v2.get();
-                                                                  m.removeXvals();
-                                                                  m.delete();
-                                                                }
-                                                              }
-                                                              UKV.remove(dest);
-                                                            } else
-                                                            if( ic instanceof GLMModel) {
-                                                              GLMModel m = v.get();
-                                                              m.removeXvals();
-                                                              m.delete();
-                                                            }
-                                                          }
                                                           frame.delete();
                                                           checkLeakedKeys();
                                                         }

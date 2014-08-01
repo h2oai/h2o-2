@@ -135,4 +135,25 @@ public abstract class DTask<T extends DTask> extends H2OCountedCompleter impleme
     return new RuntimeException(H2O.SELF + ":" + getClass().toString()+ " " + method +  " should be automatically overridden in the subclass by the auto-serialization code");
   }
 
+  /**
+   * Task to be executed at home of the given key.
+   * Calling submit will either submitTask if key is local or
+   * invoke RPC to the key's home node.
+   */
+  public static abstract class DKeyTask extends DTask {
+    protected final Key _key;
+
+    public DKeyTask(H2OCountedCompleter cmp,Key k) {
+      super(cmp);
+      _key = k;
+    }
+    public void submitTask() {
+      if (_key.home()) H2O.submitTask(this);
+      else RPC.call(_key.home_node(), this);
+    }
+    public void forkTask() {
+      if (_key.home()) fork();
+      else RPC.call(_key.home_node(), this);
+    }
+  }
 }

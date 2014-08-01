@@ -506,7 +506,7 @@ public final class ParseDataset2 extends Job {
       // Get parser setup info for this chunk
       ByteVec vec = (ByteVec) getVec(key);
       byte [] bits = vec.chunkForChunkIdx(0)._mem;
-      if(bits.length == 0){
+      if(bits == null || bits.length == 0){
         assert false:"encountered empty file during multifile parse? should've been filtered already";
         return; // should not really get here
       }

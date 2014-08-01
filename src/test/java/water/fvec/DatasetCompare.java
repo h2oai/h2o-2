@@ -15,6 +15,7 @@ import water.exec.Env;
 import water.exec.Exec2;
 import water.parser.ParseDataset;
 import water.serial.ModelSerializationTest;
+import water.suites.AllTestsSuite;
 
 public class DatasetCompare extends MRTask<DatasetCompare>{
   Frame _fr;
@@ -113,32 +114,33 @@ public class DatasetCompare extends MRTask<DatasetCompare>{
   public static void main(String [] args) throws InterruptedException, ExecutionException, Throwable {
     System.out.println("Running Parser Cmp Test with args=" + Arrays.toString(args));
     System.out.println(Arrays.equals((int[])null,(int[])null));
-    final int nnodes = 3;
+    final int nnodes = 5;
     for( int i = 1; i < nnodes; i++ ) {
       Node n = new NodeVM(args);
       n.inheritIO();
       n.start();
     }
     H2O.waitForCloudSize(nnodes,20000);
-//    new ParserTest2().testMultiFileParseSmall();
+    new JUnitRunner().main(new String[]{"water.suite.AllTestsSuite"});
 //    new GLMRandomTest.Short().run();
-//    new GLMRandomTest.Long().run();
-    for(int i = 0; i < datasets.length; i += 2){
-      File f = new File(datasets[i]);
-      if(!f.exists()) throw new RuntimeException("did not find file " + f.getAbsolutePath());
-      Key frRaw = NFSFileVec.make(f);
-      Key frHex = Key.make(datasets[i+1]);
-      ParseDataset2.parse(frHex, new Key[]{frRaw});
-    }
-    Futures fs = new Futures();
-    for(int i = 0; i < cmds.length; i += 2){
-      System.out.println("Executing: '" + cmds[i] + "'");
-      Env env = Exec2.exec(cmds[i]);
-      Frame fr = env.popAry();
-      DKV.put(Key.make(cmds[i+1]),fr,fs);
-    }
-    fs.blockForPending();
-
+//    new ParserTest2().testMultiFileParseSmall();
+//    for(int i = 0; i < datasets.length; i += 2){
+//      File f = new File(datasets[i]);
+//      if(!f.exists()) throw new RuntimeException("did not find file " + f.getAbsolutePath());
+//      Key frRaw = NFSFileVec.make(f);
+//      Key frHex = Key.make(datasets[i+1]);
+//      ParseDataset2.parse(frHex, new Key[]{frRaw});
+//    }
+//    Futures fs = new Futures();
+//    for(int i = 0; i < cmds.length; i += 2){
+//      System.out.println("Executing: '" + cmds[i] + "'");
+//      Env env = Exec2.exec(cmds[i]);
+//      Frame fr = env.popAry();
+//      DKV.put(Key.make(cmds[i+1]),fr,fs);
+//    }
+//    fs.blockForPending();
+    System.out.println("DONE");
+//    new GLMRandomTest.Short().run();
 //    new GLMTest2().testCars();
 //    File f = new File("/Users/tomasnykodym/h2o/smalldata/airlines/allyears2k_headers.csv");
 //    assert f.exists():"did not find file " + f.getPath();
@@ -157,9 +159,9 @@ public class DatasetCompare extends MRTask<DatasetCompare>{
 //    glm.init();
 //    glm.fork().get();
 //    System.out.println("glm done in " + (System.currentTimeMillis()-t1) + "ms");
-    String root = (args.length > 0)?args[0]:"smalldata";
-    System.out.println("ROOT = " + root);
-    System.out.println("Running...");
+//    String root = (args.length > 0)?args[0]:"smalldata";
+//    System.out.println("ROOT = " + root);
+//    System.out.println("Running...");
 //    new NewVectorTest().testCompression();
 ////    Map<String,Double> diffs = new TreeMap<String, Double>();
 ////    Map<String,Exception> exs = new TreeMap<String, Exception>();
@@ -175,7 +177,7 @@ public class DatasetCompare extends MRTask<DatasetCompare>{
 //    Key frRaw2 = NFSFileVec.make(f2);
 //    Key frHex2 = Key.make("allyears2k_headers.hex");
 //    ParseDataset2.parse(frHex2, new Key[]{frRaw2});
-    System.out.println("DONE");
+//    System.out.println("DONE");
 //    for(Map.Entry<String, Exception> e:exs.entrySet()){
 //      System.err.println("Exception occured while processing " + e.getKey());
 //      e.getValue().printStackTrace();
