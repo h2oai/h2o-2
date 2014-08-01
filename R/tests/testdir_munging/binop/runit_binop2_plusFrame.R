@@ -56,23 +56,17 @@ test.plus.onFrame <- function(conn) {
   fivePlusHex <- 5 + hex  
 
   Log.info("Original frame: ")
-  print(head(as.data.frame(hex)))
+  print(head(hex))
 
   Log.info("5+hex:")
-  print(head(as.data.frame(fivePlusHex)))
+  print(head(fivePlusHex))
   cat("\ndim(as.data.frame(fivePlusHex)) : ")
-  cat(dim(as.data.frame(fivePlusHex)), "\n")
-  cat("\ndim(fivePlusHex) : ")
-  cat(dim(fivePlusHex), "\n\n")
-
-  expect_that(dim(as.data.frame(fivePlusHex)), equals(dim(fivePlusHex)))
+  cat(dim(fivePlusHex), "\n")
 
   Log.info("fivePlusHex - 5: ")
-  # if(anyEnum) expect_warning(fivePlusHexMinusFive <- fivePlusHex -5)
-  # else fivePlusHexMinusFive <- fivePlusHex - 5
   fivePlusHexMinusFive <- fivePlusHex - 5
 
-  print(head(as.data.frame(fivePlusHexMinusFive)))
+  print(head(fivePlusHexMinusFive))
 
   expect_that(dim(fivePlusHex), equals(dim(hex)))
   Log.info("Expect that this frame: ")
@@ -80,19 +74,18 @@ test.plus.onFrame <- function(conn) {
   Log.info("Equals this one: ")
   fivePlusAsData <- 5 + as.data.frame(hex[1:6,])
   print(fivePlusAsData)
-  #expect_that(fivePlusHexHead, equals(fivePlusAsData))
   Log.info("Are NAs being treated properly???")
   fPHH <- as.data.frame(fivePlusHexHead)
   print(fPHH)
+
+  fPHH <- data.frame(lapply(fPHH, as.numeric))
+  fivePlusAsData <- data.frame(lapply(fivePlusAsData, as.numeric))
+  
   expect_that(fivePlusAsData, equals(fPHH))
 
 
   Log.info("Checking left and right: ")
-  # if(anyEnum) expect_warning(hexPlusFive <- hex + 5)
-  # else hexPlusFive <- hex + 5
   hexPlusFive <- hex + 5
-  # if(anyEnum) expect_warning(fivePlusHex <- 5 + hex)
-  # else fivePlusHex <- 5 + hex
   fivePlusHex <- 5 + hex
 
   Log.info("hex + 5: ")
@@ -100,20 +93,29 @@ test.plus.onFrame <- function(conn) {
   
   Log.info("5 + hex: ")
   print(head(fivePlusHex))
-  
-  expect_that(as.data.frame(hexPlusFive), equals(as.data.frame(fivePlusHex)))
+
+  hhpp <- data.frame(lapply(head(hexPlusFive), as.numeric) )
+  hfph <- data.frame(lapply(head(fivePlusHex), as.numeric) )
+ 
+  expect_that(hhpp, equals(hfph))
 
   Log.info("Try to add two frames: hex + hex")
-  hd <- as.data.frame(hex)
+  hd <- as.data.frame(head(hex))
   hexPlusHex <- hex + hex
   print(head(hexPlusHex))
   hdPlushd <- hd + hd
   print(head(hdPlushd))
-  if (sum(is.na(hd)) > 0) {
-    colCheckEquals(hdPlushd, as.data.frame(hexPlusHex))
-  } else {
-    expect_that(hdPlushd, equals(as.data.frame(hexPlusHex)))
-  }
+
+  hd  <- data.frame(lapply(head(hdPlushd), as.numeric))
+  hph <- data.frame(lapply(head(hexPlusHex), as.numeric))
+
+  Log.info("FINAL ONE:")
+  print(hd)
+
+  Log.info("HPH:")
+  print(hph)
+
+  expect_that(hd, equals(hph))
   testEnd()
 }
 
