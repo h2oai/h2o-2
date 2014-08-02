@@ -105,13 +105,13 @@ l1_params
 #Continue the model with the lowest test set error, train for 9 more epochs for illustration
 mnist_checkpoint_model = h2o.deeplearning(x=1:784, y=785, data=train_images.hex, checkpoint=mnist_model_grid@model[[1]], validation = test_images.hex, epochs=9)
 
-#Specify a model and the file path where it is to be saved
+#Specify a model and the filename where it is to be saved
 h2o.saveModel(object = mnist_model_grid@model[[1]], filename = "/tmp/mymodel", force = TRUE)
 
-#Alternatively, save the model key in some directory (here we use /tmp)
+#Alternatively, save the model under its key in some directory (here we use /tmp)
 #h2o.saveModel(object = mnist_model_grid@model[[1]], dir = "/tmp", force = TRUE))
 
-#Later, load the saved model by indicating the host and saved model file path
+#Later, load the saved model by indicating the host and saved model filename
 best_mnist_grid.load = h2o.loadModel(h2o_server, "/tmp/mymodel")
 
 #This model should result in a test set error of 0.9% or better - runs for several hours
