@@ -18,6 +18,10 @@ test.hex_1775 <- function(conn) {
   Log.info("Build GLM model and save to disk")
   prostate.glm = h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family = "binomial", nfolds = 10, alpha = 0.5)
   prostate.glm.path1 = h2o.saveModel(object = prostate.glm, dir = temp_dir)
+ 
+  curdir <- getwd()
+  print(curdir)
+  prostate.glm.pathRSANDBOX <- h2o.saveModel(object = prostate.glm, filename = paste(curdir, "/Rsandbox_runit_hex_1775_save_load.R/runitHex1775_GLM.h2o", sep =""))
   
   Log.info(paste("Copying GLM model from", prostate.glm.path1, "to", temp_subdir))
   prostate.glm.path2 = paste(temp_subdir, basename(prostate.glm.path1), sep = .Platform$file.sep)

@@ -388,17 +388,21 @@ h2o.ignoreColumns <- function(data, max_na = 0.2) {
 
 
 # ------------------- Save H2O Model to Disk ----------------------------------------------------
-h2o.saveModel <- function(object, dir="", name="", force=FALSE) {
+h2o.saveModel <- function(object, dir="", name="", filename = "", force=FALSE) {
   if(missing(object)) stop('Must specify object')
   if(!inherits(object,'H2OModel')) stop('object must be an H2O model')
   if(!is.character(dir)) stop('path must be of class character')
   if(!is.character(name)) stop('name must be of class character')
+  if(!is.character(filename)) stop('filename must be of class character')
   if(!is.logical(force)) stop('force must be either TRUE or FALSE')
   if(name == "") name=object@key
+
+  path <- if(filename != "") filename else paste(dir, name, sep='/')
+  path <- gsub('//', '/', path)
   
   force = ifelse(force==TRUE, 1, 0)
-  res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_SaveModel, model=object@key, path=gsub('//','/',paste(dir,name,sep='/')), force=force)
-  gsub('//','/',paste(dir,name,sep='/'))
+  res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_SaveModel, model=object@key, path=path, force=force)
+  path
 }
 
 # ------------------- Load H2O Model from Disk ----------------------------------------------------
