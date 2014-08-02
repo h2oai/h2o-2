@@ -570,7 +570,6 @@ class ASTUnique extends ASTddply {
   @Override ASTOp make() {return new ASTUnique();}
   @Override void apply(Env env, int argcnt, ASTApply apply) {
     Thread cThr = Thread.currentThread();
-    int priority = (cThr instanceof H2O.FJWThr) ? ((H2O.FJWThr)cThr)._priority : -1;
     Frame fr = env.peekAry();
     int cols[] = new int[fr.numCols()];
     for( int i=0; i<cols.length; i++ ) cols[i]=i;
