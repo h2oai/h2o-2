@@ -8,6 +8,7 @@ import hex.NeuralNet.Errors;
 import hex.Trainer;
 import hex.rng.MersenneTwisterRNG;
 import water.Job;
+import water.Key;
 import water.TestUtil;
 import water.fvec.AppendableVec;
 import water.fvec.Frame;
@@ -187,7 +188,7 @@ public class NeuralNetMnist extends Job {
     Vec[] vecs = new Vec[PIXELS + 1];
     NewChunk[] chunks = new NewChunk[vecs.length];
     for( int v = 0; v < vecs.length; v++ ) {
-      vecs[v] = new AppendableVec(UUID.randomUUID().toString());
+      vecs[v] = new AppendableVec(Key.make(UUID.randomUUID().toString()));
       chunks[v] = new NewChunk(vecs[v], 0);
     }
     for( int n = 0; n < count; n++ ) {
