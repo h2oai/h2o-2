@@ -4,25 +4,54 @@ import h2o, h2o_hosts, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_util
 
 # some dates are "wrong"..i.e. the date should be constrained
 # depending on month and year.. Assume 1-31 is legal
-months = [
-    ['Jan', 'JAN'],
-    ['Feb', 'FEB'],
-    ['Mar', 'MAR'],
-    ['Apr', 'APR'],
-    ['May', 'MAY'],
-    ['Jun', 'JUN'],
-    ['Jul', 'JUL'],
-    ['Aug', 'AUG'],
-    ['Sep', 'SEP'],
-    ['Oct', 'OCT'],
-    ['Nov', 'NOV'],
-    ['Dec', 'DEC']
-    ]
+
+# h2o supports these formats
+# { "yyyy-MM-dd", "yyyy-MM-dd HH:mm:ss.SSS", "dd-MMM-yy" "yyyy-MM-dd HH:mm:ss" };
+# { "yyyy-MM-dd", "yyyy-MM-dd HH:mm:ss.S", "dd-MMM-yy" "yyyy-MM-dd HH:mm:ss" };
+# { "yyyy-MM-dd", "yyyy-MM-dd HH:mm:ss.SS", "dd-MMM-yy" "yyyy-MM-dd HH:mm:ss" };
+print "test dd-MMM-yy format. caps for month?"
+print "apparently h2o NAs some cases. illegal dates in a month?"
+print "seems to be that we require leading zero in year, but it's okay to not have it in the date?"
+
+RESTRICT_TO_28 = True
+if 1==0:
+    months = [
+        ['Jan', 'JAN'],
+        ['Feb', 'FEB'],
+        ['Mar', 'MAR'],
+        ['Apr', 'APR'],
+        ['May', 'MAY'],
+        ['Jun', 'JUN'],
+        ['Jul', 'JUL'],
+        ['Aug', 'AUG'],
+        ['Sep', 'SEP'],
+        ['Oct', 'OCT'],
+        ['Nov', 'NOV'],
+        ['Dec', 'DEC']
+        ]
+else:
+    months = [
+        ['JAN'],
+        ['FEB'],
+        ['MAR'],
+        ['APR'],
+        ['MAY'],
+        ['JUN'],
+        ['JUL'],
+        ['AUG'],
+        ['SEP'],
+        ['OCT'],
+        ['NOV'],
+        ['DEC']
+        ]
 
 # increase weight for Feb
 monthWeights = [1 if i!=1 else 5 for i in range(len(months))]
 
-days = map(str, range(1,32))
+if RESTRICT_TO_28:
+    days = map(str, range(1,29))
+else:
+    days = map(str, range(1,32))
 # increase weight for picking near end of month
 dayWeights = [1 if i<27 else 8 for i in range(len(days))]
 
@@ -93,7 +122,8 @@ class Basic(unittest.TestCase):
 
         headerData = None
         colCount = 6
-        rowCount = 1000
+        # rowCount = 1000
+        rowCount = 10
         write_syn_dataset(csvPathname, rowCount, colCount, headerData)
 
         for trial in range (20):

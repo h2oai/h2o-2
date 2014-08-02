@@ -13,8 +13,10 @@ public class DException extends Iced {
 
   DException( Throwable ex ) {
     _h2o = H2O.SELF;
-    _exClass = ex.getClass().toString();
     Throwable cex = ex.getCause();
+    while( ex instanceof DistributedException && cex != null )
+      { ex = cex; cex = ex.getCause(); }
+    _exClass = ex.getClass().toString();
     _cause = cex==null ? null : new DException(cex);
     _msg = ex.getMessage();
     StackTraceElement stk[] = ex.getStackTrace();
@@ -23,7 +25,7 @@ public class DException extends Iced {
       _stk[i] = new Stk(stk[i]);
   }
 
-  public DistributedException toEx() {
+  DistributedException toEx() {
     String msg = "from "+_h2o+"; "+_exClass+": "+_msg;
     DistributedException e = new DistributedException(msg,_cause==null ? null : _cause.toEx());
     StackTraceElement stk[] = new StackTraceElement[_stk.length];

@@ -20,10 +20,8 @@ public class Cancel extends Request {
   @Override
   protected Response serve() {
     String key = _key.value();
-    Job j = Job.findJob(Key.make(key));
-    if (j==null) throw new IllegalArgumentException("Job with '"+key+"' key does not exist!");
     try {
-      j.cancel();
+      Job.findJob(Key.make(key)).cancel();
     } catch( Throwable e ) {
       return Response.error(e);
     }

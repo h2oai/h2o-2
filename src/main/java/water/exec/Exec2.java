@@ -62,23 +62,8 @@ public class Exec2 {
     ArrayList<Key>   locked = new ArrayList<Key>  ();
     Env env = new Env(locked);
     final Key [] frameKeys = H2O.KeySnapshot.globalSnapshot().filter(new H2O.KVFilter() {
-      @Override
-      public boolean filter(H2O.KeyInfo k) {
-        if(k._type == TypeMap.VALUE_ARRAY){
-          Value v = DKV.get(k._key);
-          if(v == null)return false;
-          Frame frAuto = ValueArray.asFrame(v);
-          // Rename .hex.autoframe back to .hex changing the .hex type from VA to Frame.
-          // The VA is lost.
-          Frame fr2 = new Frame(k._key,frAuto._names,frAuto.vecs());
-          frAuto.remove(0,fr2.numCols()); // Remove Vecs from frAuto without deleting Vecs
-          frAuto.delete();                // Delete frAuto without deleting Vecs
-          fr2.delete_and_lock(null).unlock(null);
-          return true;
-        } else
-          return k._type == TypeMap.FRAME;
-      }
-    }).keys();
+        @Override public boolean filter(H2O.KeyInfo k) { return k._type == TypeMap.FRAME; }
+      }).keys();
     for( Key k : frameKeys ) {      // Convert all VAs to Frames
       Value val = DKV.get(k);
       if( val == null || !val.isFrame()) continue;

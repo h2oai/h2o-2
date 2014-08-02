@@ -1,7 +1,6 @@
 package water.fvec;
 
 import water.*;
-import water.parser.DParseTask;
 
 /** A compression scheme, over a chunk - a single array of bytes.  The *actual*
  *  vector header info is in the Vec struct - which contains info to find all
@@ -230,15 +229,15 @@ public abstract class Chunk extends Iced implements Cloneable {
     long min = (long)_vec.min();
     if( min < 0 ) len++;
     long max = Math.max(Math.abs(min),Math.abs((long)_vec.max()));
-    for( int i=1; i<DParseTask.powers10i.length; i++ )
-      if( max < DParseTask.powers10i[i] )
+    for( int i=1; i<PrettyPrint.powers10i.length; i++ )
+      if( max < PrettyPrint.powers10i[i] )
         return i+len;
     return 20;
   }
   protected int pformat_len0( double scale, int lg ) {
     double dx = Math.log10(scale);
     int x = (int)dx;
-    if( DParseTask.pow10i(x) != scale ) throw H2O.unimpl();
+    if( PrettyPrint.pow10i(x) != scale ) throw H2O.unimpl();
     int w=1/*blank/sign*/+lg/*compression limits digits*/+1/*dot*/+1/*e*/+1/*neg exp*/+2/*digits of exp*/;
     return w;
   }

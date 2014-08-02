@@ -1,32 +1,35 @@
 package water;
 
 import java.util.Map;
-
-import org.junit.Test;
-
 import junit.framework.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
 import water.util.Utils;
 
 /**
  * Created by tomasnykodym on 5/30/14.
  */
 public class TestKeySnapshot extends TestUtil {
+  @BeforeClass public static void stall() { stall_till_cloudsize(3); }
+  
   @Test
   public void testGlobalKeySet(){
+    Key keys[] = new Key[100];
+    Futures fs = new Futures();
     try {
-      Futures fs = new Futures();
       for (int i = 0; i < 100; ++i)
         DKV.put(Key.make("key" + i), new Utils.IcedInt(i),fs,true);
-      for (int i = 0; i < 100; ++i)
-        DKV.put(Key.makeUserHidden(Key.make()), new Utils.IcedInt(i),fs,true);
+      for( int i = 0; i < 100; ++i)
+        DKV.put(keys[i] = Key.makeSystem(Key.rand()), new Utils.IcedInt(i),fs,true);
       fs.blockForPending();
-      Key[] keys = H2O.KeySnapshot.globalSnapshot().keys();
-      Assert.assertEquals(100, keys.length);
+      Key[] keys2 = H2O.KeySnapshot.globalSnapshot().keys();
+      Assert.assertEquals(100, keys2.length);
     } finally {
       for (int i = 0; i < 100; ++i) {
-        DKV.remove(Key.make("key" + i));
-        DKV.remove(Key.makeUserHidden(Key.make()));
+        DKV.remove(Key.make("key" + i),fs);
+        DKV.remove(keys[i],fs);
       }
+      fs.blockForPending();
     }
   }
 
@@ -37,10 +40,10 @@ public class TestKeySnapshot extends TestUtil {
     int homeKeys = 0;
     Futures fs = new Futures();
     try {
-      for(int i = 0; i < userKeys.length; ++i){
+      for( int i = 0; i < userKeys.length; ++i ) {
         DKV.put(userKeys[i] = Key.make("key" + i), new Utils.IcedInt(i),fs,true);
-        if(userKeys[i].home())++homeKeys;
-        DKV.put(systemKeys[i] = Key.makeUserHidden(Key.make()), new Utils.IcedInt(i),fs,true);
+        if( userKeys[i].home() ) ++homeKeys;
+        DKV.put(systemKeys[i] = Key.makeSystem(Key.rand()), new Utils.IcedInt(i),fs,true);
       }
       fs.blockForPending();
       Key[] keys = H2O.KeySnapshot.localSnapshot().keys();
@@ -49,9 +52,10 @@ public class TestKeySnapshot extends TestUtil {
         Assert.assertTrue(k.home());
     } finally {
       for (int i = 0; i < userKeys.length; ++i) {
-        DKV.remove(userKeys[i]);
-        DKV.remove(systemKeys[i]);
+        DKV.remove(userKeys[i],fs);
+        DKV.remove(systemKeys[i],fs);
       }
+      fs.blockForPending();
     }
   }
 
@@ -63,16 +67,16 @@ public class TestKeySnapshot extends TestUtil {
     Futures fs = new Futures();
     try {
       for(int i = 0; i < (userKeys.length >> 1); ++i){
-        DKV.put(userKeys[i] = Key.make("key" + i), new Utils.IcedInt(i),fs,false);
+        DKV.put(userKeys[i] = Key.make("key" + i), new Utils.IcedInt(i),fs);
         if(userKeys[i].home())++homeKeys;
-        systemKeys[i] = Key.makeUserHidden(Key.make());
-        DKV.put(systemKeys[i], new Value(systemKeys[i], new Utils.IcedInt(i)));
+        systemKeys[i] = Key.makeSystem(Key.rand());
+        DKV.put(systemKeys[i], new Value(systemKeys[i], new Utils.IcedInt(i)),fs);
       }
       for(int i = (userKeys.length >> 1); i < userKeys.length; ++i){
-        DKV.put(userKeys[i] = Key.make("key" + i), new Utils.IcedDouble(i),fs,false);
+        DKV.put(userKeys[i] = Key.make("key" + i), new Utils.IcedDouble(i),fs);
         if(userKeys[i].home())++homeKeys;
-        systemKeys[i] = Key.makeUserHidden(Key.make());
-        DKV.put(systemKeys[i], new Value(systemKeys[i], new Utils.IcedDouble(i)));
+        systemKeys[i] = Key.makeSystem(Key.rand());
+        DKV.put(systemKeys[i], new Value(systemKeys[i], new Utils.IcedDouble(i)),fs);
       }
       fs.blockForPending();
       H2O.KeySnapshot s = H2O.KeySnapshot.globalSnapshot();
@@ -86,8 +90,9 @@ public class TestKeySnapshot extends TestUtil {
       Assert.assertEquals(userKeys.length >> 1, doubles.size());
     } finally {
       for (int i = 0; i < userKeys.length; ++i) {
-        if(userKeys[i]   != null)DKV.remove(userKeys[i]);
-        if(systemKeys[i] != null)DKV.remove(systemKeys[i]);
+        if(userKeys[i]   != null)DKV.remove(userKeys[i],fs);
+        if(systemKeys[i] != null)DKV.remove(systemKeys[i],fs);
+        fs.blockForPending();
       }
     }
   }

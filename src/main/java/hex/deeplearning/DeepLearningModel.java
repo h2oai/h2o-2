@@ -727,7 +727,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     start_time = System.currentTimeMillis();
     _timeLastScoreEnter = start_time;
     model_info = new DeepLearningModelInfo(params, dinfo);
-    actual_best_model_key = Key.makeUserHidden(Key.make());
+    actual_best_model_key = Key.makeSystem(Key.make().toString());
 
     if (params.n_folds != 0) actual_best_model_key = null;
     Object job = UKV.get(jobKey);

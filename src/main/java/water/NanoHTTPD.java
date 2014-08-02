@@ -373,8 +373,7 @@ public class NanoHTTPD
               sendError( HTTP_BADREQUEST, "BAD REQUEST: Content type is multipart/form-data but boundary syntax error. Usage: GET /example/file.html" );
             st.nextToken();
             String boundary = st.nextToken();
-            boolean useValueArray = !Pattern.matches("/[0-9]+/.*", uri);  // For /2 and beyond, use fluid vector.
-            fileUpload(boundary,is,parms, useValueArray);
+            fileUpload(boundary,is,parms);
           } else {
             // Handle application/x-www-form-urlencoded
 
@@ -551,7 +550,7 @@ public class NanoHTTPD
       return sz;
     }
 
-    private void fileUpload(String boundary, InputStream in, Properties parms, boolean useValueArray) throws InterruptedException {
+    private void fileUpload(String boundary, InputStream in, Properties parms) throws InterruptedException {
       try {
         String line = readLine(in);
         int i = line.indexOf(boundary);
@@ -575,12 +574,7 @@ public class NanoHTTPD
             sendError( HTTP_BADREQUEST, "BAD REQUEST: Content type is multipart/form-data but no content-disposition info found. Usage: GET /example/file.html" );
           }
           String key = parms.getProperty("key");
-          if (useValueArray) {
-            ValueArray.readPut(key, new InputStreamWrapper(in, boundary.getBytes()));
-          }
-          else {
-            UploadFileVec.readPut(key, new InputStreamWrapper(in, boundary.getBytes()));
-          }
+          UploadFileVec.readPut(key, new InputStreamWrapper(in, boundary.getBytes()));
         }
       }
       catch (Exception e) {

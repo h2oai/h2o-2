@@ -912,6 +912,17 @@ setMethod("exp",     "H2OParsedData", function(x) { .h2o.__unop2("exp",   x) })
 setMethod("is.na",   "H2OParsedData", function(x) { .h2o.__unop2("is.na", x) })
 setMethod("t",       "H2OParsedData", function(x) { .h2o.__unop2("t",     x) })
 
+round.H2OParsedData <- function(x, digits = 0) {
+  if(length(digits) > 1 || !is.numeric(digits)) stop("digits must be a single number")
+  if(digits < 0) digits = 10^(-digits)
+  
+  expr <- paste("round(", paste(x@key, digits, sep = ","), ")", sep = "")
+  res <- .h2o.__exec2(x@h2o, expr)
+  if(res$num_rows == 0 && res$num_cols == 0)
+    return(res$scalar)
+  .h2o.exec2(expr = res$dest_key, h2o = x@h2o, dest_key = res$dest_key)
+}
+
 setMethod("colnames<-", signature(x="H2OParsedData", value="H2OParsedData"),
   function(x, value) {
     if(ncol(value) != ncol(x)) stop("Mismatched number of columns")
@@ -1035,17 +1046,6 @@ mean.H2OParsedData <- function(x, trim = 0, na.rm = FALSE, ...) {
   }
   if(!na.rm && .h2o.__unop2("any.na", x)) return(NA)
   .h2o.__unop2("mean", x)
-}
-
-round.H2OParsedData <- function(x, digits = 0) {
-  if(length(digits) > 1 || !is.numeric(digits)) stop("digits must be a single number")
-  if(digits < 0) digits = 10^(-digits)
-  
-  expr <- paste("round(", paste(x@key, digits, sep = ","), ")", sep = "")
-  res <- .h2o.__exec2(x@h2o, expr)
-  if(res$num_rows == 0 && res$num_cols == 0)
-    return(res$scalar)
-  .h2o.exec2(expr = res$dest_key, h2o = x@h2o, dest_key = res$dest_key)
 }
 
 setMethod("sd", "H2OParsedData", function(x, na.rm = FALSE) {
@@ -1389,24 +1389,24 @@ str.H2OParsedData <- function(object, ...) {
   
   if(ncol(object) > .MAX_INSPECT_COL_VIEW)
     warning(object@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
-  res = .h2o.__remoteSend(object@h2o, .h2o.__PAGE_INSPECT, key=object@key, max_column_display=.Machine$integer.max)
-  cat("\nH2O dataset '", object@key, "':\t", res$num_rows, " obs. of  ", (p <- res$num_cols), 
+  res = .h2o.__remoteSend(object@h2o, .h2o.__PAGE_INSPECT2, src_key=object@key)
+  cat("\nH2O dataset '", object@key, "':\t", res$numRows, " obs. of  ", (p <- res$numCols),
       " variable", if(p != 1) "s", if(p > 0) ":", "\n", sep = "")
   
   cc <- unlist(lapply(res$cols, function(y) y$name))
   width <- max(nchar(cc))
-  rows <- res$rows[1:min(res$num_rows, 10)]    # TODO: Might need to check rows > 0
+  rows <- res$rows[1:min(res$numRows, 10)]    # TODO: Might need to check rows > 0
   
   res2 = .h2o.__remoteSend(object@h2o, .h2o.__HACK_LEVELS2, source=object@key, max_ncols=.Machine$integer.max)
   for(i in 1:p) {
     cat("$ ", cc[i], rep(' ', width - nchar(cc[i])), ": ", sep = "")
     rhead <- sapply(rows, function(x) { x[i+1] })
     if(is.null(res2$levels[[i]]))
-      cat("num  ", paste(rhead, collapse = " "), if(res$num_rows > 10) " ...", "\n", sep = "")
+      cat("num  ", paste(rhead, collapse = " "), if(res$numRows > 10) " ...", "\n", sep = "")
     else {
       rlevels = res2$levels[[i]]
       cat("Factor w/ ", (count <- length(rlevels)), " level", if(count != 1) "s", ' "', paste(rlevels[1:min(count, 2)], collapse = '","'), '"', if(count > 2) ",..", ": ", sep = "")
-      cat(paste(match(rhead, rlevels), collapse = " "), if(res$num_rows > 10) " ...", "\n", sep = "")
+      cat(paste(match(rhead, rlevels), collapse = " "), if(res$numRows > 10) " ...", "\n", sep = "")
     }
   }
 }

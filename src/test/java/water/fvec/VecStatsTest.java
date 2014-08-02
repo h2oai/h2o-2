@@ -13,7 +13,7 @@ public class VecStatsTest extends TestUtil {
   @Test public void test() {
     Random random = new Random();
     Vec[] vecs = new Vec[1];
-    AppendableVec vec = new AppendableVec(UUID.randomUUID().toString());
+    AppendableVec vec = new AppendableVec(Vec.newKey());
     for( int i = 0; i < 2; i++ ) {
       NewChunk chunk = new NewChunk(vec, i);
       for( int r = 0; r < 1000; r++ )

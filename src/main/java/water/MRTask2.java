@@ -500,10 +500,12 @@ public abstract class MRTask2<T extends MRTask2<T>> extends DTask implements Clo
    *  exceptions (which is the F/J default).  Called internal by F/J.  Not
    *  expected to be user-called.  */
   @Override public final boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller ) {
-    if( _nleft != null ) _nleft.cancel(true); _nleft = null;
-    if( _nrite != null ) _nrite.cancel(true); _nrite = null;
-    _left = null;
-    _rite = null;
+    //if( _nleft != null ) _nleft.cancel(true); _nleft = null;
+    //if( _nrite != null ) _nrite.cancel(true); _nrite = null;
+    //if( _left != null ) _left.cancel(true); _left = null;
+    //if( _rite != null ) _rite.cancel(true); _rite = null;
+    _nleft = _nrite = null;
+    _left =  _rite = null;
     return super.onExceptionalCompletion(ex, caller);
   }
 

@@ -28,10 +28,6 @@ public class AppendableVec extends Vec {
   final long _timCnt[] = new long[ParseTime.TIME_PARSE.length];
   long _totalCnt;
 
-  public AppendableVec( String keyName ) {
-    this(Key.make(keyName, (byte) 0, Key.VEC));
-  }
-
   public AppendableVec( Key key) {
     super(key, (long[])null);
     _espc = new long[4];
@@ -94,8 +90,11 @@ public class AppendableVec extends Vec {
   public Vec close(Futures fs) {
     // Compute #chunks
     int nchunk = _espc.length;
-    while( nchunk > 0 && _espc[nchunk-1] == 0 ) nchunk--;
-    DKV.remove(chunkKey(nchunk)); // remove potential trailing key
+    DKV.remove(chunkKey(nchunk),fs); // remove potential trailing key
+    while( nchunk > 0 && _espc[nchunk-1] == 0 ) {
+      nchunk--;
+      DKV.remove(chunkKey(nchunk),fs); // remove potential trailing key
+    }
     boolean hasNumber = false, hasEnum = false, hasTime=false, hasUUID=false;
     for( int i = 0; i < nchunk; ++i ) {
       if( (_chunkTypes[i] & TIME  ) != 0 ) { hasNumber = true; hasTime=true; }

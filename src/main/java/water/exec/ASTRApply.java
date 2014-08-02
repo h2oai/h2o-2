@@ -333,7 +333,7 @@ class ASTddply extends ASTOp {
       _groups = m0;
       p1._groups = null;
     }
-    @Override public String toString() { return _groups.toString(); }
+    @Override public String toString() { return _groups==null ? null : _groups.toString(); }
     // Save local results for pass2
     @Override public void closeLocal() { if( _gatherRows ) PASS1TMP.put(_uniq,this); }
 

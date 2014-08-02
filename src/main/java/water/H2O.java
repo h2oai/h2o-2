@@ -74,10 +74,10 @@ public final class H2O {
   public static final int NUMCPUS = Runtime.getRuntime().availableProcessors();
 
   // Convenience error
-  public static final RuntimeException unimpl(String msg) { return new RuntimeException("unimplemented: " + msg); }
-  public static final RuntimeException unimpl() { return new RuntimeException("unimplemented"); }
-  public static final RuntimeException fail() { return new RuntimeException("do not call"); }
-  public static final RuntimeException fail(String msg) { return new RuntimeException("FAILURE: " + msg); }
+  public static RuntimeException unimpl(String msg) { return new RuntimeException("unimplemented: " + msg); }
+  public static RuntimeException unimpl() { return new RuntimeException("unimplemented"); }
+  public static RuntimeException fail() { return new RuntimeException("do not call"); }
+  public static RuntimeException fail(String msg) { return new RuntimeException("FAILURE: " + msg); }
 
   // Central /dev/null for ignored exceptions
   public static void ignore(Throwable e)             { ignore(e,"[h2o] Problem ignored: "); }
@@ -204,18 +204,6 @@ public final class H2O {
       CLOUDS[idx] = CLOUD = new H2O(h2os,hash,idx);
     }
     SELF._heartbeat._cloud_size=(char)CLOUD.size();
-    //Paxos.print("Announcing new Cloud Membership: ",_memary);
-  }
-
-  // Check if the cloud id matches with one of the old clouds
-  static boolean isIDFromPrevCloud(H2ONode h2o) {
-    if ( h2o == null ) return false;
-    HeartBeat hb = h2o._heartbeat;
-    int hash = hb._cloud_hash;
-    for( int i=0; i < 256; i++ )
-      if( CLOUDS[i] != null && hash == CLOUDS[i]._hash )
-        return true;
-    return false;
   }
 
   public final int size() { return _memary.length; }
@@ -234,64 +222,6 @@ public final class H2O {
     }
     if( H2O.CLOUD.size() < x )
       throw new RuntimeException("Cloud size under " + x);
-  }
-
-  // *Desired* distribution function on keys & replication factor. Replica #0
-  // is the master, replica #1, 2, 3, etc represent additional desired
-  // replication nodes. Note that this function is just the distribution
-  // function - it does not DO any replication, nor does it dictate any policy
-  // on how fast replication occurs. Returns -1 if the desired replica
-  // is nonsense, e.g. asking for replica #3 in a 2-Node system.
-  public int D( Key key, int repl ) {
-    if( repl >= size() ) return -1;
-
-    // Distribution of Fluid Vectors is a special case.
-    // Fluid Vectors are grouped into vector groups, each of which must have
-    // the same distribution of chunks so that MRTask2 run over group of
-    // vectors will keep data-locality.  The fluid vecs from the same group
-    // share the same key pattern + each has 4 bytes identifying particular
-    // vector in the group.  Since we need the same chunks end up on the smae
-    // node in the group, we need to skip the 4 bytes containing vec# from the
-    // hash.  Apart from that, we keep the previous mode of operation, so that
-    // ByteVec would have first 64MB distributed around cloud randomly and then
-    // go round-robin in 64MB chunks.
-    if(key._kb[0] == Key.DVEC || key._kb[0] == Key.VEC){
-      long cidx = 0;
-      int skip = water.fvec.Vec.KEY_PREFIX_LEN; // Skip both the vec# and chunk#?
-      if( key._kb[0] == Key.DVEC ) {
-        long cSz = 1L << (26 - water.fvec.Vec.LOG_CHK);
-        cidx = UDP.get4(key._kb, 1+1+4); // Chunk index
-        if( cidx > cSz ) // chunk after 64MB boundary -> go round robin according to chunk# / (64MB/chunksz)
-          cidx >>>= (26 - water.fvec.Vec.LOG_CHK);
-        else // we're in the first 64MB region, just skip the vec# bytes but keep the chunk# bytes in the hash
-          skip = 1+1+4/*+4*/;
-      } // we want vec headers from the same group to be homed on the same node, so skip the differentiating bytes
-      long hash = Key.hash(key._kb, skip, key._kb.length);
-      return (int)((cidx + (0x7FFFFFFF&hash) + repl) % size());
-    }
-    // See if this is a specifically homed DVEC Key (has shorter encoding).
-    byte[] kb = key._kb;
-    if( kb[0] == Key.DVEC && kb[1] != -1 ) {
-      throw H2O.unimpl();
-      // return kb[1]; // home is just node index byte
-    }
-
-    // See if this is a specifically homed Key
-    if( !key.user_allowed() && repl < kb[1] ) { // Asking for a replica# from the homed list?
-      assert kb[0] != Key.DVEC;
-      H2ONode h2o=null, h2otmp = new H2ONode(); // Fill in the fields from the Key
-      AutoBuffer ab = new AutoBuffer(kb,2);
-      for( int i=0; i<=repl; i++ )
-        h2o = h2otmp.read(ab);  // Read util we get the specified H2O
-      // Reverse the home to the index
-      int idx = nidx(h2o);
-      if( idx >= 0 ) return idx;
-      // Else homed to a node which is no longer in the cloud!
-      // Fall back to the normal home mode
-    }
-
-    // Easy Cheesy Stupid:
-    return ((key._hash+repl)&0x7FFFFFFF) % size();
   }
 
   // Find the node index for this H2ONode, or a negative number on a miss
@@ -529,7 +459,7 @@ public final class H2O {
   // from the STORE. If this happens, some of replication management bits in
   // the Key will be set in the wrong Key copy... leading to extra rounds of
   // replication.
-  public static final Value putIfMatch( Key key, Value val, Value old ) {
+  public static Value putIfMatch( Key key, Value val, Value old ) {
     if( old != null ) // Have an old value?
       key = old._key; // Use prior key
     if( val != null )
@@ -552,27 +482,14 @@ public final class H2O {
 
   // Raw put; no marking the memory as out-of-sync with disk. Used to import
   // initial keys from local storage, or to intern keys.
-  public static final Value putIfAbsent_raw( Key key, Value val ) {
+  public static Value putIfAbsent_raw( Key key, Value val ) {
     Value res = STORE.putIfMatchUnlocked(key,val,null);
     assert res == null;
     return res;
   }
 
   // Get the value from the store
-  public static Value get( Key key ) {
-    Value v = STORE.get(key);
-    // Lazily manifest array chunks, if the backing file exists.
-    if( v == null ) {
-      v = Value.lazyArrayChunk(key);
-      if( v == null ) return null;
-      // Insert the manifested value, as-if it existed all along
-      Value res = putIfMatch(key,v,null);
-      if( res != null ) v = res; // This happens racily, so take any prior result
-    }
-    if( v != null ) v.touch();
-    return v;
-  }
-
+  public static Value get( Key key ) { return STORE.get(key); }
   public static Value raw_get( Key key ) { return STORE.get(key); }
   public static Key getk( Key key ) { return STORE.getk(key); }
   public static Set<Key> localKeySet( ) { return STORE.keySet(); }
@@ -716,8 +633,10 @@ public final class H2O {
     // Do the actually intended work
     public abstract void compute2();
     @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
-      if(!(ex instanceof JobCancelledException) && this.getCompleter() == null)
+      if(!(ex instanceof JobCancelledException) && this.getCompleter() == null) {
+        System.err.println("onExCompletion for "+this);
         ex.printStackTrace();
+      }
       return true;
     }
     // In order to prevent deadlock, threads that block waiting for a reply
@@ -1446,9 +1365,6 @@ public final class H2O {
     public boolean isFrame(){
       return _type == TypeMap.onIce(Frame.class.getName());
     }
-    public boolean isValueArray(){
-      return _type == TypeMap.onIce(ValueArray.class.getName());
-    }
     public boolean isLockable(){
       return TypeMap.newInstance(_type) instanceof Lockable;
     }
@@ -1486,7 +1402,7 @@ public final class H2O {
       TreeMap<String, T> res = new TreeMap<String, T>();
       final int typeId = TypeMap.onIce(c.getName());
       for (KeyInfo kinfo : _keyInfos) {
-        if (kinfo._type == typeId || (!exact && c.isAssignableFrom(TypeMap.newInstance(kinfo._type).getClass()))) {
+        if (kinfo._type == typeId || (!exact && c.isAssignableFrom(TypeMap.clazz(kinfo._type)))) {
           if (offset > 0) {
             --offset;
             continue;
@@ -1655,18 +1571,6 @@ public final class H2O {
           if( val.isLockable() ) continue; // we do not want to throw out Lockables.
           boolean isChunk = p instanceof Chunk;
 
-          // ValueArrays covering large files in global filesystems such as NFS
-          // or HDFS are only made on import (right now), and not reconstructed
-          // by inspection of the Key or filesystem.... so we cannot toss them
-          // out because they will not be reconstructed merely by loading the Value.
-          if( val.isArray() &&
-              (val._persist & Value.BACKEND_MASK)!=Value.ICE ) {
-            // But can toss out a byte-array if already deserialized
-            // (no need for both forms).
-            if( m != null && p != null ) { val.freeMem(); freed += val._max; }
-            continue; // Cannot throw out
-          }
-
           // Ignore things younger than the required age.  In particular, do
           // not spill-to-disk all dirty things we find.
           long touched = val._lastAccessedTime;
@@ -1725,14 +1629,14 @@ public final class H2O {
 
     // Rules on when to write & free a Key, when not under memory pressure.
     boolean lazy_clean( Key key ) {
-      // Only arraylets are worth tossing out even lazily.
-      if( key._kb[0] != Key.ARRAYLET_CHUNK ) // Not arraylet?
+      // Only data chunks are worth tossing out even lazily.
+      if( !key.isChunkKey() ) // Not arraylet?
         return false; // Not enough savings to write it with mem-pressure to force us
       // If this is a chunk of a system-defined array, then assume it has
       // short lifetime, and we do not want to spin the disk writing it
       // unless we're under memory pressure.
-      Key arykey = ValueArray.getArrayKey(key);
-      return arykey.user_allowed(); // Write user keys but not system keys
+      Key veckey = key.getVecKey();
+      return veckey.user_allowed(); // Write user keys but not system keys
     }
 
     // Current best histogram
@@ -1792,10 +1696,6 @@ public final class H2O {
           if( p instanceof Chunk ) len -= val._max; // Do not double-count Chunks
           if( len == 0 ) continue;
           cached += len; // Accumulate total amount of cached keys
-
-          if( val.isArray() &&
-              (val._persist & Value.BACKEND_MASK)!=Value.ICE )
-            continue; // Cannot throw out (so not in histogram buckets)
 
           if( val._lastAccessedTime < oldest ) { // Found an older Value?
             vold = val; // Record oldest Value seen

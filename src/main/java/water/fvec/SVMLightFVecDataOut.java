@@ -1,12 +1,9 @@
 package water.fvec;
 
 import java.util.Arrays;
-
-import water.Futures;
 import water.fvec.ParseDataset2.FVecDataOut;
 import water.fvec.Vec.VectorGroup;
 import water.parser.Enum;
-
 
 public class SVMLightFVecDataOut extends FVecDataOut {
   protected final VectorGroup _vg;
