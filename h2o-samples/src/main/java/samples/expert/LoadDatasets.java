@@ -11,9 +11,10 @@ import java.util.Set;
 /**
  * Loads all datasets from smalldata folder for testing purposes
  */
-public class LoadDatasets extends Job {
+public class LoadDatasets extends TestUtil {
+  private static class MyJob extends Job { @Override public void execImpl() { new LoadDatasets().load(); } }
   public static void main(String[] args) throws Exception {
-    Class job = LoadDatasets.class;
+    Class job = MyJob.class;
     samples.launchers.CloudLocal.launch(job, 1);
 //    samples.launchers.CloudProcess.launch(job, 2);
     //samples.launchers.CloudConnect.launch(job, "localhost:54321");
@@ -303,10 +304,6 @@ public class LoadDatasets extends Job {
     TestUtil.parseFromH2OFolder("smalldata/./zipcodes");
     reBalanceFrames();
     testTrainSplitFrames();
-  }
-
-  @Override protected void execImpl() {
-    load();
   }
 
   public void reBalanceFrames () {
