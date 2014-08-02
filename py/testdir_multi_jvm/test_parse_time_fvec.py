@@ -129,8 +129,8 @@ def getRandomTimeStamp():
     else:
         month = str(random.randint(1,12))
         # may or may not leading zero fill the month
-        if random.randint(0,1) == 1:
-            month = month.zfill(2) 
+        # if random.randint(0,1) == 1:
+        #     month = month.zfill(2) 
 
     # may or may not leading zero fill the hour
     hour = str(random.randint(0,23))
@@ -138,8 +138,8 @@ def getRandomTimeStamp():
         hour = hour.zfill(2) 
 
     minute = str(random.randint(0,59))
-    # if random.randint(0,1) == 1:
-    #     minute = minute.zfill(2) 
+    if random.randint(0,1) == 1:
+        minute = minute.zfill(2) 
 
     second = str(random.randint(0,59))
     if random.randint(0,1) == 1:
