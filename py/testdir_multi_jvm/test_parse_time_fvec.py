@@ -101,8 +101,8 @@ def getRandomTimeStamp():
     # assume leading zero is option
     day = days[h2o_util.weighted_choice(dayWeights)]
     # may or may not leading zero fill the day
-    if random.randint(0,1) == 1:
-        day = day.zfill(2) 
+    # if random.randint(0,1) == 1:
+    #     day = day.zfill(2) 
 
     # yy year
     timestampFormat = random.randint(0,3)
@@ -138,8 +138,8 @@ def getRandomTimeStamp():
         hour = hour.zfill(2) 
 
     minute = str(random.randint(0,59))
-    if random.randint(0,1) == 1:
-        minute = minute.zfill(2) 
+    # if random.randint(0,1) == 1:
+    #     minute = minute.zfill(2) 
 
     second = str(random.randint(0,59))
     if random.randint(0,1) == 1:
