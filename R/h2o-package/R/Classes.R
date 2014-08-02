@@ -906,10 +906,22 @@ setMethod("sign",    "H2OParsedData", function(x) { .h2o.__unop2("sgn",   x) })
 setMethod("sqrt",    "H2OParsedData", function(x) { .h2o.__unop2("sqrt",  x) })
 setMethod("ceiling", "H2OParsedData", function(x) { .h2o.__unop2("ceil",  x) })
 setMethod("floor",   "H2OParsedData", function(x) { .h2o.__unop2("floor", x) })
+setMethod("trunc",   "H2OParsedData", function(x) { .h2o.__unop2("trunc", x) })
 setMethod("log",     "H2OParsedData", function(x) { .h2o.__unop2("log",   x) })
 setMethod("exp",     "H2OParsedData", function(x) { .h2o.__unop2("exp",   x) })
 setMethod("is.na",   "H2OParsedData", function(x) { .h2o.__unop2("is.na", x) })
 setMethod("t",       "H2OParsedData", function(x) { .h2o.__unop2("t",     x) })
+
+round.H2OParsedData <- function(x, digits = 0) {
+  if(length(digits) > 1 || !is.numeric(digits)) stop("digits must be a single number")
+  if(digits < 0) digits = 10^(-digits)
+  
+  expr <- paste("round(", paste(x@key, digits, sep = ","), ")", sep = "")
+  res <- .h2o.__exec2(x@h2o, expr)
+  if(res$num_rows == 0 && res$num_cols == 0)
+    return(res$scalar)
+  .h2o.exec2(expr = res$dest_key, h2o = x@h2o, dest_key = res$dest_key)
+}
 
 setMethod("colnames<-", signature(x="H2OParsedData", value="H2OParsedData"),
   function(x, value) {

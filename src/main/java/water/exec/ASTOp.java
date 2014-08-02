@@ -4,6 +4,9 @@ import hex.Quantiles;
 import hex.FrameTask.DataInfo;
 import hex.gram.Gram.GramTask;
 import hex.la.Matrix;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 import org.apache.commons.math3.util.*;
 import org.joda.time.DateTime;
@@ -95,6 +98,8 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTSqrt());
     putPrefix(new ASTCeil());
     putPrefix(new ASTFlr ());
+    putPrefix(new ASTTrun());
+    putPrefix(new ASTRound());
     putPrefix(new ASTLog ());
     putPrefix(new ASTExp ());
     putPrefix(new ASTScale());
@@ -339,6 +344,7 @@ class ASTSgn  extends ASTUniPrefixOp { @Override String opStr(){ return "sgn" ; 
 class ASTSqrt extends ASTUniPrefixOp { @Override String opStr(){ return "sqrt";  } @Override ASTOp make() {return new ASTSqrt();} @Override double op(double d) { return Math.sqrt(d);}}
 class ASTCeil extends ASTUniPrefixOp { @Override String opStr(){ return "ceil";  } @Override ASTOp make() {return new ASTCeil();} @Override double op(double d) { return Math.ceil(d);}}
 class ASTFlr  extends ASTUniPrefixOp { @Override String opStr(){ return "floor"; } @Override ASTOp make() {return new ASTFlr ();} @Override double op(double d) { return Math.floor(d);}}
+class ASTTrun extends ASTUniPrefixOp { @Override String opStr(){ return "trunc"; } @Override ASTOp make() {return new ASTTrun();} @Override double op(double d) { return d>=0?Math.floor(d):Math.ceil(d);}}
 class ASTLog  extends ASTUniPrefixOp { @Override String opStr(){ return "log";   } @Override ASTOp make() {return new ASTLog ();} @Override double op(double d) { return Math.log(d);}}
 class ASTExp  extends ASTUniPrefixOp { @Override String opStr(){ return "exp";   } @Override ASTOp make() {return new ASTExp ();} @Override double op(double d) { return Math.exp(d);}}
 //class ASTIsNA extends ASTUniPrefixOp { @Override String opStr(){ return "is.na"; } @Override ASTOp make() {return new ASTIsNA();} @Override double op(double d) { return Double.isNaN(d)?1:0;}}
@@ -363,6 +369,53 @@ class ASTIsNA extends ASTUniPrefixOp { @Override String opStr(){ return "is.na";
     env.subRef(fr,skey);
     env.pop();                  // Pop self
     env.push(fr2);
+  }
+}
+
+class ASTRound extends ASTOp {
+  @Override String opStr() { return "round"; }
+  ASTRound() { super(new String[]{"round", "x", "digits"},
+                   new Type[]{Type.dblary(), Type.dblary(), Type.DBL},
+                   OPF_PREFIX,
+                   OPP_PREFIX,
+                   OPA_RIGHT);
+  }
+  @Override ASTOp make() { return this; }
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    final int digits = (int)env.popDbl();
+    if(digits < 0)
+      throw new IllegalArgumentException("Error in round: argument digits must be a non-negative integer");
+
+    if(env.isAry()) {
+      Frame fr = env.popAry();
+      for(int i = 0; i < fr.vecs().length; i++) {
+        if(fr.vecs()[i].isEnum())
+          throw new IllegalArgumentException("Non-numeric column " + String.valueOf(i+1) + " in data frame");
+      }
+      String skey = env.key();
+      Frame fr2 = new MRTask2() {
+        @Override public void map(Chunk chks[], NewChunk nchks[]) {
+          for(int i = 0; i < nchks.length; i++) {
+            NewChunk n = nchks[i];
+            Chunk c = chks[i];
+            int rlen = c._len;
+            for(int r = 0; r < rlen; r++)
+              n.addNum(roundDigits(c.at0(r),digits));
+          }
+        }
+      }.doAll(fr.numCols(),fr).outputFrame(fr.names(),fr.domains());
+      env.subRef(fr,skey);
+      env.pop();                  // Pop self
+      env.push(fr2);
+    }
+    else
+      env.poppush(roundDigits(env.popDbl(),digits));
+  }
+  static double roundDigits(double x, int digits) {
+    if(Double.isNaN(x)) return x;
+    BigDecimal bd = new BigDecimal(x);
+    bd = bd.setScale(digits, RoundingMode.HALF_UP);
+    return bd.doubleValue();
   }
 }
 
