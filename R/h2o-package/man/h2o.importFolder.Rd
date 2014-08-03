@@ -52,12 +52,14 @@ If \code{parse = TRUE}, the function returns an object of class \code{\linkS4cla
   \code{\link{h2o.importFile}, \link{h2o.importHDFS}, \link{h2o.importURL}, \link{h2o.uploadFile}}
 }
 \examples{
+\dontrun{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 myPath = system.file("extdata", "prostate_folder", package = "h2o")
 prostate_all.hex = h2o.importFolder(localH2O, path = myPath)
 class(prostate_all.hex)
 summary(prostate_all.hex)
+}
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
