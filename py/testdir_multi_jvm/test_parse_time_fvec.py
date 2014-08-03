@@ -101,8 +101,8 @@ def getRandomTimeStamp():
     # assume leading zero is option
     day = days[h2o_util.weighted_choice(dayWeights)]
     # may or may not leading zero fill the day
-    if random.randint(0,1) == 1:
-        day = day.zfill(2) 
+    # if random.randint(0,1) == 1:
+    #     day = day.zfill(2) 
 
     # yy year
     timestampFormat = random.randint(0,3)
@@ -129,8 +129,8 @@ def getRandomTimeStamp():
     else:
         month = str(random.randint(1,12))
         # may or may not leading zero fill the month
-        if random.randint(0,1) == 1:
-            month = month.zfill(2) 
+        # if random.randint(0,1) == 1:
+        #     month = month.zfill(2) 
 
     # may or may not leading zero fill the hour
     hour = str(random.randint(0,23))

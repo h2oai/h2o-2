@@ -377,7 +377,7 @@ mnist_model
 \end{spverbatim}
 \noindent
 The latter command returns the trained model's training and validation error. The training error value is based on the parameter \texttt{score\_training\_samples}, which specifies the number of randomly sampled training points to be used for scoring; the default uses 10,000 points. The validation error is based on the parameter \texttt{score\_validation\_samples}, which controls the same value on the validation set and is set by default to be the entire validation set.
-In general choosing more sampled points leads to a better idea of the model's performance on your dataset; setting either of these parameters to 0 automatically uses the entire corresponding dataset for scoring. Either way, however, you can control the mininimum
+In general choosing more sampled points leads to a better idea of the model's performance on your dataset; setting either of these parameters to 0 automatically uses the entire corresponding dataset for scoring. Either way, however, you can control the minimum
 and maximum time spent on scoring with the \texttt{score\_interval} and \texttt{score\_duty\_cycle} parameters.
 \\
 \\
@@ -403,7 +403,7 @@ H2O R users have access to a slick web interface to mirror the model building pr
 
 \subsubsection{Variable importances} \label{3.3.1}
 
-One particularly useful visualization in the web interface is the variable importances, which can be enabled with the additional argument \texttt{variable\_importanes=TRUE}. This features allows us to witness the absolute and relative predictive strength of each feature in the classification task. For the purposes of digit classification, this aspect is less useful since each feature merely correponds to a pixel number that is not relevant to the model's more abstract feature representation; but it is useful in general for less uniform data. 
+One particularly useful visualization in the web interface is the variable importances, which can be enabled with the additional argument \texttt{variable\_importances=TRUE}. This features allows us to witness the absolute and relative predictive strength of each feature in the classification task. For the purposes of digit classification, this aspect is less useful since each feature merely correponds to a pixel number that is not relevant to the model's more abstract feature representation; but it is useful in general for less uniform data.
 
 \subsubsection{Java model} \label{3.3.2}
 
@@ -417,7 +417,7 @@ H2O supports grid search capabilities for model tuning by allowing users to twea
 #Create a set of network topologies
 hidden_layers = list(c(200,200), c(100,300,100),c(500,500,500))
 
-mnist_model_grid = h2o.deeplearning(x=1:784, y=785, data=train_images.hex, activation="RectifierWithDropout", hidden=hidden_layers, validation = test_images.hex, epochs=1, l1=c(1e-5,1e-7), input_dropout_ratio=0.2)
+mnist_model_grid = h2o.deeplearning(x = 1:784, y = 785, data = train_images.hex, activation = "RectifierWithDropout", hidden = hidden_layers, validation = test_images.hex, epochs = 1, l1 = c(1e-5,1e-7), input_dropout_ratio = 0.2)
 
 \end{spverbatim}
 \noindent
