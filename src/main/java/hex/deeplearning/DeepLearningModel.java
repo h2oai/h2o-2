@@ -1799,6 +1799,9 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
   @Override public void delete( ) {
     if (actual_best_model_key != null) DKV.remove(actual_best_model_key);
+    if (get_params().xval_models != null) {
+      for (Key k : get_params().xval_models) DKV.remove(k);
+    }
     super.delete();
   }
 }
