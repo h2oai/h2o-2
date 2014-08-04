@@ -33,7 +33,3 @@ prostate.dl = h2o.deeplearning(x = 3:9, y = 2, data = prostate.hex, autoencoder 
 prostate.anon = h2o.anomaly(prostate.hex, prostate.dl)
 head(prostate.anon)
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
-\keyword{ ~kwd1 }
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line

@@ -21,4 +21,3 @@ airlines.hex = h2o.importFile(localH2O, path = airlinesURL, key = "airlines.hex"
 h2o.ignoreColumns(airlines.hex)
 }
 }
-

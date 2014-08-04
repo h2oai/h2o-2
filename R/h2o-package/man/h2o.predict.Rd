@@ -41,7 +41,3 @@ prostate.glm = h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = 
 prostate.fit = h2o.predict(object = prostate.glm, newdata = prostate.hex)
 summary(prostate.fit)
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
-\keyword{ ~kwd1 }
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line

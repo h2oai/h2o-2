@@ -27,7 +27,3 @@ h2o.downloadAllLogs(localH2O, dirname = getwd(), filename = "h2o_logs.log")
 file.info(paste(getwd(), "h2o_logs.log", sep = .Platform$file.sep))
 file.remove(paste(getwd(), "h2o_logs.log", sep = .Platform$file.sep))
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
-\keyword{ ~kwd1 }
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line

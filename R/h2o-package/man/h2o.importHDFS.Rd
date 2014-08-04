@@ -71,7 +71,3 @@ iris_folder.hex = h2o.importHDFS(localH2O, path = paste("hdfs://192.168.1.161",
 summary(iris_folder.hex)
 }
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
-\keyword{ ~kwd1 }
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line
