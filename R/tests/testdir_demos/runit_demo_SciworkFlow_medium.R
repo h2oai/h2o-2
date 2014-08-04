@@ -87,10 +87,10 @@ for ( i in 1:num_models ) {
   pred = h2o.predict ( model, pros.test )
   perf = h2o.performance ( pred$'1', pros.test$CAPSULE, measure="F1" )
   
-  print ( paste ( pros.gbm@sumtable[[i]]$model_key, " trees:", pros.gbm@sumtable[[i]]$ntrees,
-                  " depth:", pros.gbm@sumtable[[i]]$max_depth,
-                  " shrinkage:", pros.gbm@sumtable[[i]]$learn_rate,
-                  " min row: ", pros.gbm@sumtable[[i]]$min_rows, 
+  print ( paste ( pros.gbm@sumtable[[i]]$model_key, " trees:", pros.gbm@sumtable[[i]]$n.trees,
+                  " depth:", pros.gbm@sumtable[[i]]$interaction.depth,
+                  " shrinkage:", pros.gbm@sumtable[[i]]$shrinkage,
+                  " min row: ", pros.gbm@sumtable[[i]]$n.minobsinnode, 
                   " bins:", pros.gbm@sumtable[[i]]$nbins,
                   " auc:", round(perf@model$auc, digits=4), sep=''), quote=F)
 }

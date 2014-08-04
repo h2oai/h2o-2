@@ -78,6 +78,7 @@ public class ChunkSummary extends MRTask2<ChunkSummary> {
 
   @Override
   protected void postGlobal() {
+    //special case for 0 rows (no map was ever called)
     if (chunk_counts == null || chunk_byte_sizes == null || byte_size_per_node == null) return;
 
     // compute counts and sizes
@@ -136,7 +137,7 @@ public class ChunkSummary extends MRTask2<ChunkSummary> {
               "   consider launching with -single_precision to reduce memory consumption **\n");
     }
     // if standard deviation is more than 20% of mean, then show detailed per-node distribution
-    if (byte_size_per_node_stddev > 0.2 * byte_size_per_node_mean) {
+    if (byte_size_per_node != null && byte_size_per_node_stddev > 0.2 * byte_size_per_node_mean) {
       sb.append("** Note: Dataset is not well distributed, consider rebalancing **\n");
       for (int i = 0; i < byte_size_per_node.length; ++i) {
         sb.append("     size on node " + i + " : " + display(byte_size_per_node[i]) + "\n");

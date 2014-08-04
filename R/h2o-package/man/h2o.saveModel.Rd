@@ -2,12 +2,13 @@
 \alias{h2o.saveModel}
 \title{Save a H2OModel object to disk.}
 \description{Save a H2OModel object to a disk and can be loaded back into H2O using h2o.loadModel.}
-\usage{h2o.saveModel(object, dir, name, force=FALSE)}
+\usage{h2o.saveModel(object, dir="", name="", filename = "", force=FALSE)}
 
 \arguments{
   \item{object}{ An \code{\linkS4class{H2OModel}} object.}
   \item{dir}{ Directory the model file will be written to.}
   \item{name}{ Name of the file being saved.}
+  \item{filename}{ Full path of directory and name of file being saved. Will override \code{dir} and \code{name} parameters if also given. }
   \item{force}{ (Optional) If \code{force = TRUE} any existing file will be overwritten. Otherwise if the file already exists the operation will fail.}
  }
  

@@ -62,22 +62,22 @@ test.GBM.bernoulli.SyntheticData <- function(conn) {
     num_models = length(tru.gbm@sumtable)
     print(paste("Number of gbm models created:", num_models,sep ='') )
     expect_equal(num_models,36)
-
+    
     for(i in 1:num_models){
         model = tru.gbm@model[[i]]
-        gg<-gbm(y~., data=all.data2, distribution="bernoulli", n.trees=tru.gbm@sumtable[[i]]$ntrees,
-                      interaction.depth=tru.gbm@sumtable[[i]]$max_depth,n.minobsinnode=tru.gbm@sumtable[[i]]$min_rows, 
-                      shrinkage=tru.gbm@sumtable[[i]]$learn_rate,bag.fraction=1)                # R gbm model
-        mm_y=predict.gbm(gg,newdata=test.data2,n.trees=tru.gbm@sumtable[[i]]$ntrees,type='response')  # R Predict
+        gg<-gbm(y~., data=all.data2, distribution="bernoulli", n.trees=tru.gbm@sumtable[[i]]$n.trees,
+                      interaction.depth=tru.gbm@sumtable[[i]]$interaction.depth,n.minobsinnode=tru.gbm@sumtable[[i]]$n.minobsinnode, 
+                      shrinkage=tru.gbm@sumtable[[i]]$shrinkage,bag.fraction=1)                # R gbm model             
+        mm_y=predict.gbm(gg,newdata=test.data2,n.trees=tru.gbm@sumtable[[i]]$n.trees,type='response')  # R Predict
         R_auc = round(gbm.roc.area(test.data2$y,mm_y), digits=2)
         pred = h2o.predict(model,test)                                                                #H2O Predict
         H2O_perf = h2o.performance(pred$'1',test$y,measure="F1")
         H2O_auc = round(H2O_perf@model$auc, digits=2)
         print(paste ( tru.gbm@sumtable[[i]]$model_key,
-                " trees:", tru.gbm@sumtable[[i]]$ntrees,
-                " depth:",tru.gbm@sumtable[[i]]$max_depth,
-                " shrinkage:",tru.gbm@sumtable[[i]]$learn_rate,
-                " min row: ",tru.gbm@sumtable[[i]]$min_rows, 
+                " trees:", tru.gbm@sumtable[[i]]$n.trees,
+                " depth:",tru.gbm@sumtable[[i]]$interaction.depth,
+                " shrinkage:",tru.gbm@sumtable[[i]]$shrinkage,
+                " min row: ",tru.gbm@sumtable[[i]]$n.minobsinnode, 
                 " bins:",tru.gbm@sumtable[[i]]$nbins,
                 " H2O_auc:", H2O_auc, 
                 " R_auc:", R_auc, sep=''),quote=F)
