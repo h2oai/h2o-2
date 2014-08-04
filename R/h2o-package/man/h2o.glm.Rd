@@ -109,7 +109,7 @@ localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 prostate.hex = h2o.importURL(localH2O, path = paste("https://raw.github.com", 
   "0xdata/h2o/master/smalldata/logreg/prostate.csv", sep = "/"), key = "prostate.hex")
 h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family = "binomial", 
-  nfolds = 2, alpha = 0.5)
+  nfolds = 0, alpha = 0.5, lambda_search=FALSE)
 # Run GLM of VOL ~ CAPSULE + AGE + RACE + PSA + GLEASON
 myX = setdiff(colnames(prostate.hex), c("ID", "DPROS", "DCAPS", "VOL"))
 h2o.glm(y = "VOL", x = myX, data = prostate.hex, family = "gaussian", nfolds = 2, alpha = 0.1)
