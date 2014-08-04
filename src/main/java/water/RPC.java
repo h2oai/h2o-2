@@ -134,23 +134,23 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       assert _dt.getCompleter()==null;
       _dt.setCompleter(new H2O.H2OCallback<DTask>() {
           @Override public void callback(DTask dt){
+            assert dt==_dt;
             synchronized(RPC.this) {
+              assert !_done;    // F/J guarentees called once
               _done = true;
               RPC.this.notifyAll();
             }
-            Exception e = _dt.getDException();
-            if( _fjtasks != null )
-              for( H2OCountedCompleter fjt : _fjtasks )
-                if( e==null ) fjt.tryComplete();
-                else fjt.completeExceptionally(e);
+            doAllCompletions();
           }
-          @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
-            synchronized(RPC.this) {
-              if( _done ) return true;
+          @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter dt){
+            assert dt==_dt;
+            synchronized(RPC.this) { // Might be called several times
+              if( _done ) return true; // Filter down to 1st exceptional completion
               _done = true;
+              _dt.setException(ex);
+              RPC.this.notifyAll();
             }
-            _dt.setException(ex);
-            compute2();
+            doAllCompletions();
             return true;
           }
         });
@@ -244,20 +244,8 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
   // Possibly blocks the current thread.  Returns true if isReleasable would
   // return true.  Used by the FJ Pool management to spawn threads to prevent
   // deadlock is otherwise all threads would block on waits.
-  @Override public synchronized boolean block() {
-    while( !isDone() ) { 
-      try {
-        // Wait for local to complete
-        if( _target==H2O.SELF ) { _dt.get(); _done=true; }
-        else { wait(1000); }
-      } 
-      catch( InterruptedException ignore ) { }
-      catch(   ExecutionException e ) { // Only fails for local get()
-        _dt.setException(e.getCause());
-        _done = true;
-        break;
-      }
-    }
+  @Override public synchronized boolean block() throws InterruptedException {
+    while( !isDone() ) { wait(1000); }
     return true;
   }
 
@@ -357,7 +345,13 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       while((dt = _dt) != null) { // Retry loop for broken TCP sends
         AutoBuffer ab = null;
         try {
-          ab = new AutoBuffer(_client).putTask(UDP.udp.ack,_tsknum).put1(SERVER_UDP_SEND);
+          // Start the ACK with results back to client.  If the client is
+          // asking for a class/id mapping (or any job running at FETCH_ACK
+          // priority) then return a udp.fetchack byte instead of a udp.ack.
+          // The receiver thread then knows to handle the mapping at the higher
+          // priority.
+          UDP.udp udp = dt.priority()==H2O.FETCH_ACK_PRIORITY ? UDP.udp.fetchack : UDP.udp.ack;
+          ab = new AutoBuffer(_client).putTask(udp,_tsknum).put1(SERVER_UDP_SEND);
           dt.write(ab);         // Write the DTask - could be very large write
           dt._repliedTcp = ab.hasTCP(); // Resends do not need to repeat TCP result
           ab.close();                   // Then close; send final byte
@@ -548,27 +542,31 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
         _done = true;             // Only read one (of many) response packets
         ab._h2o.taskRemove(_tasknum); // Flag as task-completed, even if the result is null
         notifyAll();              // And notify in any case
-        final Exception e = _dt.getDException();
-        // Also notify any and all pending completion-style tasks
-        if( _fjtasks != null )
-          for( final H2OCountedCompleter task : _fjtasks )
-            H2O.submitTask(new H2OCountedCompleter() {
-                @Override public void compute2() {
-                  if(e != null) // re-throw exception on this side as if it happened locally
-                    task.completeExceptionally(e);
-                  else try {
-                    task.tryComplete();
-                  } catch(Throwable e) {
-                    task.completeExceptionally(e);
-                  }
-                }
-                @Override public byte priority() { return task.priority(); }
-              });
       }
+      doAllCompletions(); // Send all tasks needing completion to the work queues
     }catch(Throwable t){
       t.printStackTrace();
     }
     return 0;
+  }
+
+  private void doAllCompletions() {
+    final Exception e = _dt.getDException();
+    // Also notify any and all pending completion-style tasks
+    if( _fjtasks != null )
+      for( final H2OCountedCompleter task : _fjtasks )
+        H2O.submitTask(new H2OCountedCompleter() {
+            @Override public void compute2() {
+              if(e != null) // re-throw exception on this side as if it happened locally
+                task.completeExceptionally(e);
+              else try {
+                  task.tryComplete();
+                } catch(Throwable e) {
+                  task.completeExceptionally(e);
+                }
+            }
+            @Override public byte priority() { return task.priority(); }
+          });
   }
 
   // ---
