@@ -216,7 +216,7 @@ class H2OCloudNode:
 
         @return: none
         """
-        retries = 30
+        retries = 60
         while (retries > 0):
             if (self.terminated):
                 return
