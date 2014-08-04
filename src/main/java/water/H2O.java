@@ -1356,6 +1356,8 @@ public final class H2O {
     public final byte _backEnd;
 
     public KeyInfo(Key k, Value v){
+      assert k!=null : "Key should be not null!";
+      assert v!=null : "Value should be not null!";
       _key = k;
       _type = v.type();
       _rawData = v.isRawData();
@@ -1426,11 +1428,18 @@ public final class H2O {
       ArrayList<KeyInfo> res = new ArrayList<KeyInfo>();
       for(int i = 2; i < kvs.length; i+= 2){
         Object ok = kvs[i], ov = kvs[i+1];
-        if( !(ok instanceof Key  ) ) continue; // Ignore tombstones and Primes and null's
-        Key key = (Key )ok;
+        if( !(ok instanceof Key  ) || ov==null ) continue; // Ignore tombstones or deleted values
+        Key key = (Key) ok;
         if(!key.user_allowed())continue;
         if(homeOnly && !key.home())continue;
-        if( !(ov instanceof Value) ) continue; // Ignore tombstones and Primes and null's
+        // Raw array can contain regular and also wrapped values into Prime marker class:
+        //  - if we see Value object, create instance of KeyInfo
+        //  - if we do not see Value object, try to unwrap it via calling STORE.get and then
+        // look at wrapped value again.
+        if (!(ov instanceof Value)) {
+          ov = H2O.get(key); // H2Oget returns Value object
+          if (ov==null) continue;
+        }
         res.add(new KeyInfo(key,(Value)ov));
       }
       final KeyInfo [] arr = res.toArray(new KeyInfo[res.size()]);
@@ -1442,7 +1451,7 @@ public final class H2O {
       KeySnapshot res = _cache;
       final long t = System.currentTimeMillis();
       if(res == null || (t - _lastUpdate) > timeTolerance)
-        res = new KeySnapshot((new GlobalUKeySetTask().invokeOnAllNodes()._res));
+        res = new KeySnapshot(new GlobalUKeySetTask().invokeOnAllNodes()._res);
       else if(t - _lastUpdate > _updateInterval)
         H2O.submitTask(new H2OCountedCompleter() {
           @Override

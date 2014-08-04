@@ -3,6 +3,7 @@ package water.exec;
 import java.util.*;
 
 import water.*;
+import water.H2O.KeyInfo;
 import water.fvec.*;
 import water.util.Utils.IcedHashMap;
 import water.util.Utils.IcedInt;
@@ -250,24 +251,23 @@ public class Env extends Iced {
 
   /**
    * Subtract reference count.
-   * @param vec vector to handle
-   * @param fs future, can be null
-   * @return returns future or null if Future was
+   * @param vec  vector to handle
+   * @param fs  future, cannot be null
+   * @return returns given Future
    */
   public Futures subRef( Vec vec, Futures fs ) {
-    //assert fs != null : "Future should not be null!";
+    assert fs != null : "Future should not be null!";
     if ( vec.masterVec() != null ) subRef(vec.masterVec(), fs);
     int cnt = _refcnt.get(vec)._val-1;
-    //Log.info(" --- " + vec._key.toString()+ " RC=" + cnt);
-    if( cnt > 0 ) _refcnt.put(vec,new IcedInt(cnt));
-    else {
-      if( fs == null ) fs = new Futures();
+    if ( cnt > 0 ) {
+      _refcnt.put(vec,new IcedInt(cnt));
+    } else {
       UKV.remove(vec._key,fs);
       _refcnt.remove(vec);
     }
     return fs;
   }
-  public void subRef(Vec vec) { subRef(vec, new Futures()); }
+  public void subRef(Vec vec) { subRef(vec, new Futures()).blockForPending(); }
 
   // Lower the refcnt on all vecs in this frame.
   // Immediately free all vecs with zero count.
@@ -275,7 +275,7 @@ public class Env extends Iced {
   public Frame subRef( Frame fr, String key ) {
     if( fr == null ) return null;
     Futures fs = new Futures();
-    for( Vec vec : fr.vecs() ) fs = subRef(vec,fs);
+    for( Vec vec : fr.vecs() ) subRef(vec,fs);
     fs.blockForPending();
     return null;
   }
@@ -350,8 +350,9 @@ public class Env extends Iced {
         else { fr2.delete_and_lock(null); _locked.add(fr2._key); } // Clear prior & set new data
         fr2.unlock(null);
         _locked.remove(fr2._key); // Unlocked already
-      } else
+      } else {
         popUncheck();
+      }
     }
     // Unlock all things that do not survive, plus also delete them
     for( Key k : _locked ) {
@@ -407,7 +408,7 @@ public class Env extends Iced {
   }
 
   public String toString(int i, boolean verbose_fcn) {
-    if( _ary[i] != null ) return _ary[i].numRows()+"x"+_ary[i].numCols();
+    if( _ary[i] != null ) return _ary[i]._key+":"+_ary[i].numRows()+"x"+_ary[i].numCols();
     else if( _fcn[i] != null ) return _fcn[i].toString(verbose_fcn);
     return Double.toString(_d[i]);
   }
