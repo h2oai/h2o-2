@@ -11,8 +11,8 @@ test.save_load_dlmodel <- function(conn) {
   
   # Test saving and loading of Deep Learning model with validation dataset
   Log.info("Importing prostate_train.csv and prostate_test.csv...")
-  prostate.train = h2o.importFile(conn, path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate_train.csv", key = "prostate.train")
-  prostate.test = h2o.importFile(conn, path = "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate_test.csv", key = "prostate.test")
+  prostate.train = h2o.uploadFile(conn, locate("smalldata/logreg/prostate_train.csv"), "prostate.train")
+  prostate.test = h2o.uploadFile(conn, locate("smalldata/logreg/prostate_test.csv"), "prostate.test")
   
   Log.info("Build Deep Learning model and save to disk")
   prostate.dl = h2o.deeplearning(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.train, validation = prostate.test)

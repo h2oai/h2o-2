@@ -414,7 +414,7 @@ class ASTRound extends ASTOp {
   static double roundDigits(double x, int digits) {
     if(Double.isNaN(x)) return x;
     BigDecimal bd = new BigDecimal(x);
-    bd = bd.setScale(digits, RoundingMode.HALF_UP);
+    bd = bd.setScale(digits, RoundingMode.HALF_EVEN);
     return bd.doubleValue();
   }
 }
