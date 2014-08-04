@@ -51,7 +51,3 @@ prostate.hex = h2o.importURL(localH2O, path = paste("https://raw.github.com",
 class(prostate.hex)
 summary(prostate.hex)
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
-\keyword{ ~kwd1 }
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line

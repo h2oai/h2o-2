@@ -30,7 +30,3 @@ prostate.gbm = h2o.gbm(x = 3:9, y = 2, data = prostate.hex)
 prostate.pred = h2o.predict(prostate.gbm)
 h2o.confusionMatrix(prostate.pred[,1], prostate.hex[,2])
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
-\keyword{ ~kwd1 }
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line

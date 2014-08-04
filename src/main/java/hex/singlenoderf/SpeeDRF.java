@@ -172,8 +172,8 @@ public class SpeeDRF extends Job.ValidatedJob {
   }
 
   @Override protected void execImpl() {
+    SpeeDRFModel rf_model = null;
     try {
-      logStart();
       source.read_lock(self());
       if (validation != null && validation != source) validation.read_lock(self());
       buildForest();

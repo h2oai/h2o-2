@@ -45,10 +45,10 @@ import static water.util.Utils.seq;
  */
 public class Vec extends Iced {
   /** Log-2 of Chunk size. */
-  public static final int LOG_CHK = ValueArray.LOG_CHK; // Same as VA to help conversions
+  public static final int LOG_CHK = 22; // Chunks are 1<<22, or 4Meg
   /** Chunk size.  Bigger increases batch sizes, lowers overhead costs, lower
    * increases fine-grained parallelism. */
-  static final int CHUNK_SZ = 1 << LOG_CHK;
+  public static final int CHUNK_SZ = 1 << LOG_CHK;
 
   /** Key mapping a Value which holds this Vec.  */
   final public Key _key;        // Top-level key
@@ -865,7 +865,7 @@ public class Vec extends Iced {
   public Futures remove( Futures fs ) {
     for( int i=0; i<nChunks(); i++ )
       UKV.remove(chunkKey(i),fs);
-    DKV.remove(_key);
+    DKV.remove(_key,fs);
     return fs;
   }
 

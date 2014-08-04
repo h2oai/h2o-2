@@ -82,7 +82,7 @@ public class PersistTachyon extends Persist<TachyonFS> {
    *  And returns both components.
    */
   private static String[] decodeKey(Key k) {
-    String s = new String((k.isDVec()) ? Arrays.copyOfRange(k._kb, Vec.KEY_PREFIX_LEN, k._kb.length):k._kb);
+    String s = new String((k.isChunkKey()) ? Arrays.copyOfRange(k._kb, Vec.KEY_PREFIX_LEN, k._kb.length):k._kb);
     return decode(s);
   }
 
@@ -104,9 +104,6 @@ public class PersistTachyon extends Persist<TachyonFS> {
   //
   // Un-implemented methods
   //
-  @Override public Value lazyArrayChunk(Key key) {
-    throw H2O.unimpl();
-  }
   @Override public String getPath() {
     throw new UnsupportedOperationException();
   }

@@ -86,7 +86,7 @@ public class PMMLParser {
     String mtag = skipWS().expect('<').token();
     ScoreModel scm = null;
     if( "Scorecard"  .equals(mtag) ) scm = ScorecardModel.parse(this);
-    if( "MiningModel".equals(mtag) ) scm =   RFScoreModel.parse(this);
+    //if( "MiningModel".equals(mtag) ) scm =   RFScoreModel.parse(this);
     skipWS().expect("</PMML>");
     return scm;
   }

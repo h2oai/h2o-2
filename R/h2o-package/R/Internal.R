@@ -96,15 +96,9 @@ h2o.setLogPath <- function(path, type) {
 # Internal functions & declarations
 .h2o.__PAGE_CANCEL = "Cancel.json"
 .h2o.__PAGE_CLOUD = "Cloud.json"
-.h2o.__PAGE_GET = "GetVector.json"
-.h2o.__PAGE_EXPORTHDFS = "ExportHdfs.json"
-.h2o.__PAGE_INSPECT = "Inspect.json"
 .h2o.__PAGE_JOBS = "Jobs.json"
-.h2o.__PAGE_PARSE = "Parse.json"
-.h2o.__PAGE_PUT = "PutVector.json"
 .h2o.__PAGE_REMOVE = "Remove.json"
 .h2o.__PAGE_REMOVEALL = "2/RemoveAll.json"
-.h2o.__PAGE_SUMMARY = "SummaryPage.json"
 .h2o.__PAGE_SHUTDOWN = "Shutdown.json"
 .h2o.__PAGE_VIEWALL = "StoreView.json"
 .h2o.__DOWNLOAD_LOGS = "LogDownload.json"
@@ -872,6 +866,13 @@ h2o.getModel <- function(h2o, key) {
   json <- .fetchJSON(h2o, key)
   algo <- model.type <- names(json)[3]
   response   <- json[[model.type]]
+
+  # Special cases: glm_model, grid, pca_model, modelw
+
+  if(algo == "glm_model") {
+      model <- .h2o.get.glm(h2o, as.character(key), TRUE)
+      return(model)
+  }
   if (algo == "grid") return(.h2o.get.glm.grid(h2o, key, TRUE, h2o.getFrame(h2o, response$"_dataKey")))
   if(algo == "deeplearning_model")
     params <- json[[model.type]]$model_info$job
@@ -881,7 +882,7 @@ h2o.getModel <- function(h2o, key) {
   model_obj  <- switch(algo, gbm_model = "H2OGBMModel", drf_model = "H2ODRFModel", deeplearning_model = "H2ODeepLearningModel", speedrf_model = "H2OSpeeDRFModel", model= "H2OKMeansModel", glm_model = "H2OGLMModel", nb_model = "H2ONBModel", pca_model = "H2OPCAModel")
   results_fun <- switch(algo, gbm_model = .h2o.__getGBMResults,
                               drf_model = .h2o.__getDRFResults,
-                              glm_model = .get.glm.model, #.h2o.glm.get_model, #.h2o.__getGLM2Results,
+                              #glm_model = .get.glm.model, #.h2o.glm.get_model, #.h2o.__getGLM2Results,
                               deeplearning_model = .h2o.__getDeepLearningResults,
                               speedrf_model = .h2o.__getSpeeDRFResults,
                               model = .h2o.__getKM2Results,
@@ -900,10 +901,6 @@ h2o.getModel <- function(h2o, key) {
     if(params$family == "AUTO") {
       if(!is.null(json[[model.type]]$validAUC)) params$distribution <- "bernoulli"
     }
-  }
-  if(algo == "glm_model") {
-    model <- .h2o.get.glm(h2o, as.character(key), TRUE)
-    return(model)
   }
   if(algo == "model") {
     newModel <- new(model_obj, key = dest_key, data = train_fr, model = results_fun(json[[model.type]], train_fr, params))

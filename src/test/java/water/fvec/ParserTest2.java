@@ -1139,7 +1139,6 @@ public class ParserTest2 extends TestUtil {
               "smalldata/test/HTWO-87-two-lines-dataset.csv",
               "smalldata/test/HTWO-87-two-unique-lines-dataset.csv",
               "smalldata/test/is_NA.csv",
-              "smalldata/test/is_NA2.csv",
               "smalldata/test/na_test.zip",
               "smalldata/test/R/titanic.csv",
 //              "smalldata/test/rmodels/covtype-rf-50tree-as-factor-X5-20k.rdata",

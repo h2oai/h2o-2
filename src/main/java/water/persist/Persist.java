@@ -67,11 +67,6 @@ public abstract class Persist<T> {
 
   public abstract void delete(Value v);
 
-  /**
-   * Lazily manifest data chunks on demand.
-   */
-  public abstract Value lazyArrayChunk(Key key);
-
   public long getUsableSpace() {
     return UNKNOWN;
   }
@@ -87,7 +82,7 @@ public abstract class Persist<T> {
   // ice are likely to be arraylet chunks
 
   static String getIceName(Value v) {
-    return getIceName(v._key, (byte) (v.isArray() ? 'A' : 'V'));
+    return getIceName(v._key, (byte) 'V');
   }
 
   static String getIceName(Key k, byte type) {
@@ -95,10 +90,7 @@ public abstract class Persist<T> {
   }
 
   static String getIceDirectory(Key key) {
-    if( key._kb[0] != Key.ARRAYLET_CHUNK ) return "not_an_arraylet";
-    // Reverse arraylet key generation
-    byte[] b = ValueArray.getArrayKeyBytes(key);
-    return escapeBytes(b, 0, new StringBuilder(b.length)).toString();
+    return "not_an_arraylet";
   }
 
   // Verify bijection of key/file-name mappings.
