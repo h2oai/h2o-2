@@ -7,7 +7,12 @@
 \arguments{
   \item{x}{ An \code{\linkS4class{H2OParsedData}} object.}
   \item{digits}{ Single number specificing decimal places to round to.}
- }
+}
+
+\details{
+This method uses the IEC 60559 standard for rounding to the even digit, so 0.5 goes to 0 and -1.5 goes to -2. See the Java documentation of \code{RoundingMode.HALF_EVEN} for more details and examples.
+}
+
 \value{
 Returns a \code{\linkS4class{H2OParsedData}} object with argument rounded as specified.
 }

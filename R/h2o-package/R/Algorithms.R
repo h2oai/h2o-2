@@ -213,8 +213,8 @@ h2o.glm <- function(x, y, data, key = "", family, nfolds = 0, alpha = 0.5, nlamb
   destKey <- resModel$'_key'
 
   model.make<-
-  function(x, data, raw_model, model_key, return_all_lambda) {
-    m <- .h2o.__getGLM2Results(raw_model, .get.glm.params(data@h2o, model_key), x)
+  function(x, data, model_key, return_all_lambda) {
+    m <- .h2o.__getGLMResults(data@h2o, model_key, x, FALSE, "", data)
     res_xval <- list()
     if(!is.null(resModel$submodels[[x]]$xvalidation)) {
       xvalKeys <- resModel$submodels[[x]]$xvalidation$xval_models
@@ -227,9 +227,9 @@ h2o.glm <- function(x, y, data, key = "", family, nfolds = 0, alpha = 0.5, nlamb
     new("H2OGLMModel", key = model_key, data = data, model = m, xval = res_xval)
   }
 
-  if (return_all_lambda) {
+  if(return_all_lambda) {
     return_all_lambda <<- FALSE
-    models <- lapply(1:length(resModel$submodels), model.make, data, resModel, model_key, return_all_lambda)
+    models <- lapply(1:length(resModel$submodels), model.make, data, model_key, return_all_lambda)
     best_model <- resModel$best_lambda_idx+1
     return(new("H2OGLMModelList", models = models, best_model = best_model))
   } else {
