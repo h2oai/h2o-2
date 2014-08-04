@@ -609,7 +609,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
 
   public void setSubmodelIdx(int l){
     best_lambda_idx = l;
-    threshold = submodels[l].validation.best_threshold;
+    threshold = submodels[l].validation == null?0.5:submodels[l].validation.best_threshold;
     if(global_beta == null) global_beta = MemoryManager.malloc8d(this.coefficients_names.length);
     else Arrays.fill(global_beta,0);
     int j = 0;

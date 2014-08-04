@@ -500,7 +500,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       newBetaDeNorm[newBetaDeNorm.length-1] -= norm;
     } else
       newBetaDeNorm = null;
-    GLMModel.setSubmodel(cmp,dest(),_currentLambda,newBetaDeNorm == null ? fullBeta : newBetaDeNorm, newBetaDeNorm == null ? null : fullBeta, (_iter + 1), System.currentTimeMillis() - start_time,_dinfo.fullN() >= sparseCoefThreshold,val);
+    GLMModel.setSubmodel(cmp, dest(), _currentLambda, newBetaDeNorm == null ? fullBeta : newBetaDeNorm, newBetaDeNorm == null ? null : fullBeta, (_iter + 1), System.currentTimeMillis() - start_time, _dinfo.fullN() >= sparseCoefThreshold, val);
     return fullBeta;
   }
 
@@ -556,7 +556,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         }
         if(constBeta) { // line search failed to progress -> converge (if we a valid solution already, otherwise fail!)
           if(_lastResult == null)throw new RuntimeException(LogInfo("GLM failed to solve! Got NaNs/Infs in the first iteration and line search did not help!"));
-          checkKKTAndComplete(_lastResult._glmt.clone(),_lastResult._glmt._beta,false);
+          checkKKTAndComplete(glmt,glmt._beta,false);
           return;
         } else // do the line search iteration
           new GLMIterationTask(GLM2.this.self(),_activeData,glmt._glm, true, true, true, glmt._beta,_ymu,1.0/_nobs,thresholds, new Iteration(getCompleter(),true)).asyncExec(_activeData._adaptedFrame);
@@ -633,10 +633,10 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         if(_glm.family == Family.gaussian || bdiff < beta_epsilon || _iter >= max_iter){ // Gaussian is non-iterative and gradient is ADMMSolver's gradient => just validate and move on to the next lambda_value
           int diff = (int)Math.log10(bdiff);
           int nzs = 0;
-          for(int i = 0; i < newBeta.length; ++i)
-            if(newBeta[i] != 0) ++nzs;
+          for(int i = 0; i < glmt._beta.length; ++i)
+            if(glmt._beta[i] != 0) ++nzs;
           LogInfo("converged (reached a fixed point with ~ 1e" + diff + " precision), got " + nzs + " nzs");
-          checkKKTAndComplete(glmt,newBeta,false);
+          checkKKTAndComplete(glmt,glmt._beta,false);
           return;
         } else { // not done yet, launch next iteration
           if(glmt._beta != null)
@@ -1023,6 +1023,10 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       final double[] grad = _lastResult.fullGrad(alpha[0],previousLambda);
       assert grad != null;
       activeCols(_currentLambda, previousLambda, grad);
+      if(_activeCols != null && _activeCols.length == 0) {
+        System.out.println("gaga");
+        activeCols(_currentLambda, previousLambda, grad);
+      }
       assert cmp.getPendingCount() == 0;
       // expand the beta
       // todo make this work again
