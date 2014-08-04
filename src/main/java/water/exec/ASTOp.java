@@ -5,12 +5,13 @@ import hex.FrameTask.DataInfo;
 import hex.gram.Gram.GramTask;
 import hex.la.Matrix;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
+import java.math.*;
 import java.util.*;
+
 import org.apache.commons.math3.util.*;
 import org.joda.time.DateTime;
 import org.joda.time.MutableDateTime;
+
 import water.*;
 import water.fvec.*;
 import water.fvec.Vec.VectorGroup;
@@ -100,6 +101,7 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTFlr ());
     putPrefix(new ASTTrun());
     putPrefix(new ASTRound());
+    putPrefix(new ASTSignif());
     putPrefix(new ASTLog ());
     putPrefix(new ASTExp ());
     putPrefix(new ASTScale());
@@ -415,6 +417,53 @@ class ASTRound extends ASTOp {
     if(Double.isNaN(x)) return x;
     BigDecimal bd = new BigDecimal(x);
     bd = bd.setScale(digits, RoundingMode.HALF_EVEN);
+    return bd.doubleValue();
+  }
+}
+
+class ASTSignif extends ASTOp {
+  @Override String opStr() { return "signif"; }
+  ASTSignif() { super(new String[]{"signif", "x", "digits"},
+                   new Type[]{Type.dblary(), Type.dblary(), Type.DBL},
+                   OPF_PREFIX,
+                   OPP_PREFIX,
+                   OPA_RIGHT);
+  }
+  @Override ASTOp make() { return this; }
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    final int digits = (int)env.popDbl();
+    if(digits < 0)
+      throw new IllegalArgumentException("Error in signif: argument digits must be a non-negative integer");
+
+    if(env.isAry()) {
+      Frame fr = env.popAry();
+      for(int i = 0; i < fr.vecs().length; i++) {
+        if(fr.vecs()[i].isEnum())
+          throw new IllegalArgumentException("Non-numeric column " + String.valueOf(i+1) + " in data frame");
+      }
+      String skey = env.key();
+      Frame fr2 = new MRTask2() {
+        @Override public void map(Chunk chks[], NewChunk nchks[]) {
+          for(int i = 0; i < nchks.length; i++) {
+            NewChunk n = nchks[i];
+            Chunk c = chks[i];
+            int rlen = c._len;
+            for(int r = 0; r < rlen; r++)
+              n.addNum(signifDigits(c.at0(r),digits));
+          }
+        }
+      }.doAll(fr.numCols(),fr).outputFrame(fr.names(),fr.domains());
+      env.subRef(fr,skey);
+      env.pop();                  // Pop self
+      env.push(fr2);
+    }
+    else
+      env.poppush(signifDigits(env.popDbl(),digits));
+  }
+  static double signifDigits(double x, int digits) {
+    if(Double.isNaN(x)) return x;
+    BigDecimal bd = new BigDecimal(x);
+    bd = bd.round(new MathContext(digits, RoundingMode.HALF_EVEN));
     return bd.doubleValue();
   }
 }

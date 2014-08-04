@@ -16,6 +16,19 @@ initList = [
         ]
 
 exprListFull = [
+        "round(r.hex[,1],0)",
+        "round(r.hex[,1],1)",
+        "round(r.hex[,1],2)",
+        # "signif(r.hex[,1],-1)",
+        # "signif(r.hex[,1],0)",
+        "signif(r.hex[,1],1)",
+        "signif(r.hex[,1],2)",
+        "signif(r.hex[,1],22)",
+        "trunc(r.hex[,1])",
+        "trunc(r.hex[,1])",
+        "trunc(r.hex[,1])",
+        "trunc(r.hex[,1])",
+
         'x= 3; r.hex[(x > 0) & (x < 4),]',    # all x values between 0 and 1
         'x= 3; r.hex[,(x > 0) & (x < 4)]',    # all x values between 0 and 1
         # 'z = if (any(r3.hex == 0) || any(r4.hex == 0)), "zero encountered"',
