@@ -41,6 +41,37 @@ for i in range(closeParen):
     deepIfElse += '))'
 
 exprListFull = [
+    # R uses the negative number. h2o takes 10*digits instead of the negative number
+    # R 
+    # > round(120,-2) 
+    # [1] 100 
+    # > round(120,-2.1) 
+    # [1] 100 
+    # 
+    # h2o 
+    # round(120,-2) 
+    # Error in round: argument digits must be a non-negative integer 
+    # round(120,0.01) 
+    # 120.0 
+    # round(120,0.013) 
+    # 120.0 
+    "round(r1$C1,0.1)",
+    "round(r1$C1,0.13)",
+    "round(r1$C1,0)",
+    "round(r1$C1,0.09)",
+    "round(r1$C1,1)",
+    "round(r1$C1,2)",
+    "round(r1$C1,2.5)",
+    # "signif(r1$C1,-1)",
+    # "signif(r1$C1,0)",
+    "signif(r1$C1,1)",
+    "signif(r1$C1,2)",
+    "signif(r1$C1,22)",
+    "trunc(r1$C1)",
+    "trunc(r1$C1)",
+    "trunc(r1$C1)",
+    "trunc(r1$C1)",
+
     deepIfElse,
     "cos(r1$C1)",
     "sin(r1$C1)",
