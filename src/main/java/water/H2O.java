@@ -1437,7 +1437,7 @@ public final class H2O {
         //  - if we do not see Value object, try to unwrap it via calling STORE.get and then
         // look at wrapped value again.
         if (!(ov instanceof Value)) {
-          ov = H2O.get(key); // H2Oget returns Value object
+          ov = H2O.get(key); // H2Oget returns already Value object or null
           if (ov==null) continue;
         }
         res.add(new KeyInfo(key,(Value)ov));
