@@ -9,6 +9,6 @@ Shutdown H2O cloud after examples run (for H2O developers only)
 \examples{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
-h2o.shutdown(localH2O, prompt = false)
+h2o.shutdown(localH2O, prompt = FALSE)
 Sys.sleep(2)
 }
