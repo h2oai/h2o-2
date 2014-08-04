@@ -28,22 +28,18 @@ myX = c("Origin", "Dest", "Distance", "UniqueCarrier", "fMonth", "fDayofMonth", 
 myY="IsDepDelayed"
 
 # DRF2
-air.rf         = h2o.randomForest(x = myX, y = myY, data = air.train, seed = 12, validation=air.valid, importance = T,
-                                  ntree = 10, depth = 20, balance.classes=F)
+air.rf         = h2o.randomForest(x = myX, y = myY, data = air.train, seed = 12, validation=air.valid, importance = T,ntree = 10, depth = 20, balance.classes=F, type = "BigData")
 print(air.rf@model)
 
-air.rf.balance = h2o.randomForest(x = myX, y = myY, data = air.train, seed = 12, validation=air.valid,
-                                  ntree = 10, depth = 20, balance.classes=T)
+air.rf.balance = h2o.randomForest(x = myX, y = myY, data = air.train, seed = 12, validation=air.valid,ntree = 10, depth = 20, balance.classes=T, type = "BigData")
 print(air.rf.balance@model)
 
-# SpeeDRF
-air.speedrf         = h2o.SpeeDRF(x = myX, y = myY, data = air.train, seed = 12, validation = air.valid, 
-                                  ntree = 10, depth = 20)
+# randomForest
+air.speedrf         = h2o.randomForest(x = myX, y = myY, data = air.train, seed = 12, validation = air.valid, ntree = 10, depth = 20, type = "fast")
 print(air.speedrf@model)
 
-# SpeeDRF
-air.speedrf.balance = h2o.SpeeDRF(x = myX, y = myY, data = air.train, seed = 12, validation = air.valid,
-                                  ntree = 10, depth = 20, balance.classes=T)
+# randomForest
+air.speedrf.balance = h2o.randomForest(x = myX, y = myY, data = air.train, seed = 12, validation = air.valid,ntree = 10, depth = 20, balance.classes=T, type = "fast")
 print(air.speedrf.balance@model)
 
 #uploading test file to h2o

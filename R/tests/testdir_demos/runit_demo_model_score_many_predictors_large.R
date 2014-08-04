@@ -168,7 +168,7 @@ rf.fit<-
 function(response, dataset, testdata) {
   print("Beginning Random Forest with 10 trees, 20 depth, and 2-fold Cross Validation\n")
   t0 <- Sys.time()
-  model <- h2o.randomForest(x = c(FlightDate, ScheduledTimes, FlightInfo), y = response, data = dataset, ntree = 10, depth = 20, nfolds = 2, balance.classes = T) 
+  model <- h2o.randomForest(x = c(FlightDate, ScheduledTimes, FlightInfo), y = response, data = dataset, ntree = 10, depth = 20, nfolds = 2, balance.classes = T, type = "BigData") 
   elapsed_seconds <- as.numeric(Sys.time() - t0) 
   modelkey <- model@key
  
@@ -185,7 +185,7 @@ srf.fit<-
 function(response, dataset, testdata) {
   print("Beginning Speedy Random Forest with 10 trees, 20 depth, and 2-fold Cross Validation\n")
   t0 <- Sys.time()
-  model <- h2o.SpeeDRF(x = c(FlightDate, ScheduledTimes, FlightInfo), y = response, data = dataset, ntree = 10, depth = 20, nfolds = 2, balance.classes = T)
+  model <- h2o.randomForest(x = c(FlightDate, ScheduledTimes, FlightInfo), y = response, data = dataset, ntree = 10, depth = 20, nfolds = 2, balance.classes = T, type = "fast")
   elapsed_seconds <- as.numeric(Sys.time() - t0) 
   modelkey <- model@key
  

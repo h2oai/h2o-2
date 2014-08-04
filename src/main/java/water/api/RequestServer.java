@@ -112,7 +112,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new PCA()),         "PCA",                      "Model");
     Request.addToNavbar(registerRequest(new GBM()),         "GBM",                      "Model");
     Request.addToNavbar(registerRequest(new DeepLearning()),"Deep Learning",            "Model");
-    Request.addToNavbar(registerRequest(new SpeeDRF()),     "Speed RF",                 "Model");
+    Request.addToNavbar(registerRequest(new SpeeDRF()),     "Random Forest",            "Model");
     Request.addToNavbar(registerRequest(new DRF()),         "BigData RF",               "Model");
     Request.addToNavbar(registerRequest(new GLM2()),        "GLM",                      "Model");
     Request.addToNavbar(registerRequest(new KMeans2()),     "KMeans",                   "Model");

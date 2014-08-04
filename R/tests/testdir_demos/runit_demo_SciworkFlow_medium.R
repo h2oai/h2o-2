@@ -73,7 +73,7 @@ print(glm_best_model)
 print("Grid search gbm")
 pros.gbm <- h2o.gbm(x = myX, y = myY, distribution = "bernoulli", data = pros.train, n.trees = c(200,100),n.minobsinnode=1, 
                     interaction.depth = c(2,3), shrinkage = c(0.01,.001), n.bins = c(20), importance = T) 
-pros.rf = h2o.randomForest(x=myX,y=myY,data=pros.train,classification=T,ntree=c(10,5),depth=10,mtries=c(2,5),importance=T)
+pros.rf = h2o.randomForest(x=myX,y=myY,data=pros.train,classification=T,ntree=c(10,5),depth=10,mtries=c(2,5),importance=T, type = "BigData")
 print(pros.gbm)
 pros.gbm@sumtable
 print("number of models built")

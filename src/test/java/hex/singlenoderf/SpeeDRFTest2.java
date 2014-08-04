@@ -23,7 +23,7 @@ public class SpeeDRFTest2 extends TreeTestWithBalanceAndCrossVal {
       spdrf.response = respVec;
       spdrf.ignored_cols = ignored_cols;
       spdrf.classification = true;
-      spdrf.num_trees = ntrees;
+      spdrf.ntrees = ntrees;
       spdrf.balance_classes = true;
       spdrf.n_folds = nfolds;
       spdrf.keep_cross_validation_splits = false;

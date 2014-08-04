@@ -11,7 +11,7 @@
 #' What this demo covers:
 #'  Algorithms:
 #'   h2o.randomForest         --The distributed random forest algorithm
-#'   h2o.SpeeDRF              --A faster random forest, but not as accurate
+#'   h2o.randomForest              --A faster random forest, but not as accurate
 #'   h2o.deeplearning         --Distributed, parallel deep learning
 #'   h2o.gbm                  --Gradient Boosted Machines (a tree-based algo)
 #'   h2o.glm                  --GLM again
@@ -95,7 +95,7 @@ function(origin, dataset) {
   dataset <- dataset[dataset$Origin == origin,]
   print("Beginning Random Forest with 50 trees, 20 depth, and 10-fold Cross Validation\n")
   t0 <- Sys.time()
-  model <- h2o.randomForest(x = c(FlightDate, ScheduledTimes, FlightInfo), y = Delayed, data = dataset, ntree = 50, depth = 20, nfolds = 10) 
+  model <- h2o.randomForest(x = c(FlightDate, ScheduledTimes, FlightInfo), y = Delayed, data = dataset, ntree = 50, depth = 20, nfolds = 10, type = "BigData") 
   elapsed_seconds <- as.numeric(Sys.time() - t0) 
   modelkey <- model@key
   result <- list(list(model, origin, elapsed_seconds))
@@ -108,7 +108,7 @@ function(origin, dataset) {
   dataset <- dataset[dataset$Origin == origin,]
   print("Beginning Speedy Random Forest with 50 trees, 20 depth, and 10-fold Cross Validation\n")
   t0 <- Sys.time()
-  model <- h2o.SpeeDRF(x = c(FlightDate, ScheduledTimes, FlightInfo), y = Delayed, data = dataset, ntree = 50, depth = 20, nfolds = 10) 
+  model <- h2o.randomForest(x = c(FlightDate, ScheduledTimes, FlightInfo), y = Delayed, data = dataset, ntree = 50, depth = 20, nfolds = 10, type = "fast")
   elapsed_seconds <- as.numeric(Sys.time() - t0) 
   modelkey <- model@key
   result <- list(list(model, origin, elapsed_seconds))

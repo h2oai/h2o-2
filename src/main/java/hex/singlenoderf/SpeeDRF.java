@@ -20,10 +20,10 @@ public class SpeeDRF extends Job.ValidatedJob {
   public static final String DOC_GET = "SpeeDRF";
 
   @API(help = "Number of trees", filter = Default.class, json = true, lmin = 1, lmax = Integer.MAX_VALUE, importance = ParamImportance.CRITICAL)
-  public int num_trees   = 50;
+  public int ntrees   = 50;
 
   @API(help = "Number of features to randomly select at each split.", filter = Default.class, json = true, lmin = -1, lmax = Integer.MAX_VALUE, importance = ParamImportance.SECONDARY)
-  public int mtry = -1;
+  public int mtries = -1;
 
   @API(help = "Max Depth", filter = Default.class, json = true, lmin = 0, lmax = Integer.MAX_VALUE, importance = ParamImportance.CRITICAL)
   public int max_depth = 20;
@@ -42,7 +42,7 @@ public class SpeeDRF extends Job.ValidatedJob {
 
 
   @API(help = "Sampling Rate at each split.", filter = Default.class, json  = true, dmin = 0, dmax = 1, importance = ParamImportance.EXPERT)
-  public double sample = 0.67;
+  public double sample_rate = 0.67;
 
 //  @API(help ="Score each iteration", filter = Default.class, json = true, importance = ParamImportance.SECONDARY)
   public boolean score_each_iteration = false;
@@ -72,7 +72,7 @@ public class SpeeDRF extends Job.ValidatedJob {
 
   /* Advanced settings */
   @API(help = "bin limit", filter = Default.class, json = true, lmin = 0, lmax = 65534, importance = ParamImportance.EXPERT)
-  public int bin_limit = 1024;
+  public int nbins = 1024;
 
   @API(help = "seed", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
   public long seed = -1;
@@ -83,7 +83,7 @@ public class SpeeDRF extends Job.ValidatedJob {
   @API(help = "split limit", importance = ParamImportance.EXPERT)
   public int _exclusiveSplitLimit = 0;
 
-  private static final Random _seedGenerator = Utils.getDeterRNG(0xd280524ad7fe0602L);
+  private static Random _seedGenerator = Utils.getDeterRNG(0xd280524ad7fe0602L);
 
   private boolean regression;
 
@@ -157,7 +157,8 @@ public class SpeeDRF extends Job.ValidatedJob {
   // Put here all precondition verification
   @Override protected void init() {
     super.init();
-    assert 0 <= num_trees && num_trees < 1000000; // Sanity check
+
+    assert 0 <= ntrees && ntrees < 1000000; // Sanity check
     // Not enough rows to run
     if (source.numRows() - response.naCnt() <=0)
       throw new IllegalArgumentException("Dataset contains too many NAs!");
@@ -166,8 +167,8 @@ public class SpeeDRF extends Job.ValidatedJob {
       throw new IllegalArgumentException("Classification cannot be performed on a float column!");
 
     if(classification) {
-      if (0.0f > sample || sample > 1.0f)
-        throw new IllegalArgumentException("Sampling rate must be in [0,1] but found " + sample);
+      if (0.0f > sample_rate || sample_rate > 1.0f)
+        throw new IllegalArgumentException("Sampling rate must be in [0,1] but found " + sample_rate);
     }
   }
 
@@ -202,6 +203,7 @@ public class SpeeDRF extends Job.ValidatedJob {
   @Override protected Response redirect() { return SpeeDRFProgressPage.redirect(this, self(), dest()); }
 
   private void buildForest() {
+    logStart();
     SpeeDRFModel model = null;
     try {
       Frame train = setTrain();
@@ -214,7 +216,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       model.start_training(null);
       model.write_lock(self());
       drfParams = DRFParams.create(train.find(resp), model.N, model.max_depth, (int) train.numRows(), model.nbins,
-              model.statType, seed, model.weights, mtry, model.sampling_strategy, (float) sample, model.strata_samples, model.verbose ? 100 : 1, _exclusiveSplitLimit, true, regression);
+              model.statType, seed, model.weights, mtries, model.sampling_strategy, (float) sample_rate, model.strata_samples, model.verbose ? 100 : 1, _exclusiveSplitLimit, true, regression);
 
       DRFTask tsk = new DRFTask(self(), train, drfParams, model._key);
       tsk.validateInputData(train);
@@ -231,8 +233,8 @@ public class SpeeDRF extends Job.ValidatedJob {
 
   public SpeeDRFModel initModel(Frame train, Frame test, float[] priorDist) {
     setStatType();
-    if (seed == -1 )setSeed();
-    if (mtry == -1) setMtry(regression, train.numCols() - 1);
+    setSeed(seed);
+    if (mtries == -1) setMtry(regression, train.numCols() - 1);
     Key src_key = source._key;
     int src_ncols = source.numCols();
 
@@ -244,7 +246,7 @@ public class SpeeDRF extends Job.ValidatedJob {
     model.confusion = null;
     model.zeed = seed;
     model.cmDomain = getCMDomain();
-    model.nbins = bin_limit;
+    model.nbins = nbins;
     model.max_depth = max_depth;
     model.oobee = validation == null && oobee;
     model.statType = regression ? Tree.StatType.MSE : stat_type;
@@ -253,14 +255,14 @@ public class SpeeDRF extends Job.ValidatedJob {
     model.regression = regression;
     model.features = src_ncols;
     model.sampling_strategy = regression ? Sampling.Strategy.RANDOM : sampling_strategy;
-    model.sample = (float) sample;
+    model.sample = (float) sample_rate;
     model.weights = regression ? null : class_weights;
     model.time = 0;
-    model.N = num_trees;
+    model.N = ntrees;
     model.useNonLocal = true;
     if (!regression) model.setModelClassDistribution(new MRUtils.ClassDist(train.lastVec()).doAll(train.lastVec()).rel_dist());
     model.resp_min = (int) train.lastVec().min();
-    model.mtry = mtry;
+    model.mtry = mtries;
     int csize = H2O.CLOUD.size();
     model.local_forests = new Key[csize][]; for(int i=0;i<csize;i++) model.local_forests[i] = new Key[0];
     model.node_split_features = new int[csize];
@@ -279,8 +281,14 @@ public class SpeeDRF extends Job.ValidatedJob {
   }
 
   private void setStatType() { if (regression) stat_type = Tree.StatType.MSE; stat_type = select_stat_type == Tree.SelectStatType.ENTROPY ? Tree.StatType.ENTROPY : Tree.StatType.GINI; }
-  private void setSeed() { seed = _seedGenerator.nextLong(); }
-  private void setMtry(boolean reg, int numCols) { mtry = reg ? (int) Math.floor((float) (numCols) / 3.0f) : (int) Math.floor(Math.sqrt(numCols)); }
+  private void setSeed(long s) {
+    if (s == -1) seed = _seedGenerator.nextLong();
+    else {
+      _seedGenerator = Utils.getDeterRNG(s);
+      seed = _seedGenerator.nextLong();
+    }
+  }
+  private void setMtry(boolean reg, int numCols) { mtries = reg ? (int) Math.floor((float) (numCols) / 3.0f) : (int) Math.floor(Math.sqrt(numCols)); }
   private Frame setTrain() { Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, !regression /*toEnum is TRUE if regression is FALSE*/, false, false); if (train.lastVec().masterVec() != null && train.lastVec() != response) gtrash(train.lastVec()); return train; }
   private Frame setTest() { Frame test = null; if (validation != null) test = FrameTask.DataInfo.prepareFrame(validation, validation.vecs()[source.find(response)], ignored_cols, !regression, false, false); if (test != null && test.lastVec().masterVec() != null) gtrash(test.lastVec()); return test; }
   private Frame setStrat(Frame train, Frame test, Vec resp) {
@@ -353,6 +361,8 @@ public class SpeeDRF extends Job.ValidatedJob {
       int[] rowsPerChunks   = howManyRPC(_fr);
       updateRFModel(_rfmodel, numSplitFeatures);
       updateRFModelStatus(_rfmodel, "Building Forest");
+      updateRFModelLocalForests(_rfmodel, ntrees);
+      Log.info("Dispalying local forest stats:");
       SpeeDRF.build(_jobKey, _rfmodel, _params, localData, ntrees, numSplitFeatures, rowsPerChunks);
       tryComplete();
     }
@@ -364,6 +374,18 @@ public class SpeeDRF extends Job.ValidatedJob {
           if(old == null) return null;
           SpeeDRFModel newModel = (SpeeDRFModel)old.clone();
           newModel.node_split_features[idx] = numSplitFeatures;
+          return newModel;
+        }
+      }.invoke(modelKey);
+    }
+
+    static void updateRFModelLocalForests(Key modelKey, final int num_trees) {
+      final int selfIdx = H2O.SELF.index();
+      new TAtomic<SpeeDRFModel>() {
+        @Override public SpeeDRFModel atomic(SpeeDRFModel old) {
+          if (old == null) return null;
+          SpeeDRFModel newModel = (SpeeDRFModel)old.clone();
+          newModel.local_forests[selfIdx] = new Key[num_trees];
           return newModel;
         }
       }.invoke(modelKey);
@@ -405,10 +427,9 @@ public class SpeeDRF extends Job.ValidatedJob {
       Arrays.sort(array);
       // Give each H2ONode ntrees/#nodes worth of trees.  Round down for later nodes,
       // and round up for earlier nodes
-      int ntrees = _params.num_trees/nodes.size();
+      int ntrees = _params.num_trees / nodes.size();
       if( Arrays.binarySearch(array, H2O.SELF) < _params.num_trees - ntrees*nodes.size() )
         ++ntrees;
-
       return ntrees;
     }
 

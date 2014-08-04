@@ -246,7 +246,8 @@ setMethod("show", "H2ODRFModel", function(object) {
 setMethod("show", "H2OSpeeDRFModel", function(object) {
   print(object@data@h2o)
   cat("Parsed Data Key:", object@data@key, "\n\n")
-  cat("SpeeDRF Model Key:", object@key)
+  cat("Random Forest Model Key:", object@key)
+  cat("\n\nSeed Used: ", object@model$params$seed)
 
   model = object@model
   cat("\n\nClassification:", model$params$classification)
