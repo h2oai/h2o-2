@@ -15,8 +15,8 @@ if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
 
 version = "****" 
 
-### Opportunity to manually set the version (must be at least 1438)
-#version = "1438"
+### Opportunity to manually set the version (must be at least 1444)
+#version = "1444"
 
 # Fall-back: Automatically get the latest version
 if (version == "****") {
@@ -105,6 +105,15 @@ l1_params
 #Continue the model with the lowest test set error, train for 9 more epochs for illustration
 mnist_checkpoint_model = h2o.deeplearning(x=1:784, y=785, data=train_images.hex, checkpoint=mnist_model_grid@model[[1]], validation = test_images.hex, epochs=9)
 
+#Specify a model and the filename where it is to be saved
+h2o.saveModel(object = mnist_model_grid@model[[1]], filename = "/tmp/mymodel", force = TRUE)
+
+#Alternatively, save the model under its key in some directory (here we use /tmp)
+#h2o.saveModel(object = mnist_model_grid@model[[1]], dir = "/tmp", force = TRUE))
+
+#Later, load the saved model by indicating the host and saved model filename
+best_mnist_grid.load = h2o.loadModel(h2o_server, "/tmp/mymodel")
+
 #This model should result in a test set error of 0.9% or better - runs for several hours
 #super_model = h2o.deeplearning(x=1:784, y=785, data=train_images.hex, activation="RectifierWithDropout",
 #hidden=c(1024,1024,2048), validation=test_images.hex, epochs=2000, l1=1e-5, input_dropout_ratio=0.2, 
@@ -121,8 +130,7 @@ test_ecg.hex = h2o.uploadFile(h2o_server, path="ecg_test.csv", header=F, sep=","
 anomaly_model = h2o.deeplearning(x=1:210, y=1, train_ecg.hex, activation = "Tanh", 
 classification=F, autoencoder=T, hidden = c(50,20,50), l1=1E-4, epochs=100)                 
 
-#Compute reconstruction error with the Anomaly detection app (MSE between
-output layer and input layer)
+#Compute reconstruction error with the Anomaly detection app (MSE between output layer and input layer)
 recon_error.hex = h2o.anomaly(test_ecg.hex, anomaly_model)
 
 #Pull reconstruction error data into R and plot to find outliers (last 3 heartbeats)

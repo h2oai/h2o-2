@@ -15,8 +15,9 @@ Objects can be created by calls of the form \code{new("H2OGLMModelList", ...)}.
 }
 \section{Slots}{
   \describe{
-    \item{\code{models}:}{Object of class \code{"list"} containing \code{"H2OGLMModel"} objects representing the models returned from the lambda search }
+    \item{\code{models}:}{Object of class \code{"list"} containing \code{"H2OGLMModel"} objects representing the models returned from the lambda search. }
     \item{\code{best_model}:}{Object of class \code{"numeric"} indicating the index of the model with the optimal lambda value in the above list. }
+    \item{\code{lambdas}:}{Object of class \code{"numeric"} indicating the optimal lambda value from the lambda search. }
   }
 }
 \section{Methods}{
