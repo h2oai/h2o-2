@@ -923,6 +923,17 @@ round.H2OParsedData <- function(x, digits = 0) {
   .h2o.exec2(expr = res$dest_key, h2o = x@h2o, dest_key = res$dest_key)
 }
 
+signif.H2OParsedData <- function(x, digits = 6) {
+  if(length(digits) > 1 || !is.numeric(digits)) stop("digits must be a single number")
+  if(digits < 0) digits = 10^(-digits)
+  
+  expr <- paste("signif(", paste(x@key, digits, sep = ","), ")", sep = "")
+  res <- .h2o.__exec2(x@h2o, expr)
+  if(res$num_rows == 0 && res$num_cols == 0)
+    return(res$scalar)
+  .h2o.exec2(expr = res$dest_key, h2o = x@h2o, dest_key = res$dest_key)
+}
+
 setMethod("colnames<-", signature(x="H2OParsedData", value="H2OParsedData"),
   function(x, value) {
     if(ncol(value) != ncol(x)) stop("Mismatched number of columns")
