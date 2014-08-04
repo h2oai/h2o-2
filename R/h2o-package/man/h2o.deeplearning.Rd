@@ -101,5 +101,5 @@ localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 irisPath = system.file("extdata", "iris.csv", package = "h2o")
 iris.hex = h2o.importFile(localH2O, path = irisPath)
 h2o.deeplearning(x = 1:4, y = 5, data = iris.hex, activation = "Tanh", 
-hidden = c(50, 50, 50), epochs = 500)
+                 hidden = c(10, 10), epochs = 5)
 }
