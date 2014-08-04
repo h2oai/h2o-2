@@ -68,16 +68,8 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                     h2o.cloudPerfH2O.message(msg)
 
                 if DO_GLM:
-                    # these are all the columns that are enums in the dataset...too many for GLM!
-                    x = range(542) # don't include the output column
                     # remove the output too! (378)
-                    ignore_x = []
-                    for i in [3,4,5,6,7,8,9,10,11,14,16,17,18,19,20,424,425,426,540,541]:
-                        x.remove(i)
-                        ignore_x.append(i)
-
-                    # plus 1 because we are no longer 0 offset
-                    x = ",".join(map(lambda x: "C" + str(x+1), x))
+                    ignore_x = [3,4,5,6,7,8,9,10,11,14,16,17,18,19,20,424,425,426,540,541]
                     ignore_x = ",".join(map(lambda x: "C" + str(x+1), ignore_x))
 
                     GLMkwargs = {
