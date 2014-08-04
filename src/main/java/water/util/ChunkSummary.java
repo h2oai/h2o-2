@@ -79,7 +79,7 @@ public class ChunkSummary extends MRTask2<ChunkSummary> {
   @Override
   protected void postGlobal() {
     //special case for 0 rows (no map was ever called)
-    if (chunk_byte_sizes == null || chunk_counts == null) return;
+    if (chunk_counts == null || chunk_byte_sizes == null || byte_size_per_node == null) return;
 
     // compute counts and sizes
     total_chunk_byte_size = 0;

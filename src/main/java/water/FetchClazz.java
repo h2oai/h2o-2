@@ -11,5 +11,5 @@ public class FetchClazz extends DTask<FetchClazz> {
     return clazz;
   }
   @Override public void compute2() { _clazz = TypeMap.className(_id); tryComplete(); }
-  @Override public byte priority() { return H2O.ACK_ACK_PRIORITY; }
+  @Override public byte priority() { return H2O.FETCH_ACK_PRIORITY; }
 }
