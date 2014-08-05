@@ -915,7 +915,6 @@ setMethod("t",       "H2OParsedData", function(x) { .h2o.__unop2("t",     x) })
 
 round.H2OParsedData <- function(x, digits = 0) {
   if(length(digits) > 1 || !is.numeric(digits)) stop("digits must be a single number")
-  if(digits < 0) digits = 10^(-digits)
   
   expr <- paste("round(", paste(x@key, digits, sep = ","), ")", sep = "")
   res <- .h2o.__exec2(x@h2o, expr)
@@ -926,7 +925,6 @@ round.H2OParsedData <- function(x, digits = 0) {
 
 signif.H2OParsedData <- function(x, digits = 6) {
   if(length(digits) > 1 || !is.numeric(digits)) stop("digits must be a single number")
-  if(digits < 0) digits = 10^(-digits)
   
   expr <- paste("signif(", paste(x@key, digits, sep = ","), ")", sep = "")
   res <- .h2o.__exec2(x@h2o, expr)
