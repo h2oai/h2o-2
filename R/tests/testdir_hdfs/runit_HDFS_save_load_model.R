@@ -32,8 +32,6 @@ if (running_inside_hexdata) {
 }
 
 #----------------------------------------------------------------------
-myIP <- "192.168.1.164"
-myPort <- 42000
 #heading("BEGIN TEST")
 conn <- new("H2OClient", ip=myIP, port=myPort)
 
