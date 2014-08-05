@@ -641,7 +641,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           for(int i = 0; i < glmt._beta.length; ++i)
             if(glmt._beta[i] != 0) ++nzs;
           LogInfo("converged (reached a fixed point with ~ 1e" + diff + " precision), got " + nzs + " nzs");
-          checkKKTAndComplete(glmt,newBeta,false);
+          checkKKTAndComplete(glmt,glmt._beta,false);
           return;
         } else { // not done yet, launch next iteration
           if(glmt._beta != null)
