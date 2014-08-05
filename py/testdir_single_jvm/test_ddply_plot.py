@@ -88,7 +88,7 @@ class Basic(unittest.TestCase):
 
             # PARSE train****************************************
             hexKey = 'r.hex'
-            parseResult = h2i.import_parse(path=csvPathname, schema='local', hex_key=hexKey)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hexKey)
 
             for resultKey, execExpr in initList:
                 h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=resultKey, timeoutSecs=60)
