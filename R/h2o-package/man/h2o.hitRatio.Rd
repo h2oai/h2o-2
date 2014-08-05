@@ -32,7 +32,3 @@ iris.gbm = h2o.gbm(x = 1:4, y = 5, data = iris.hex)
 iris.pred = h2o.predict(iris.gbm)
 h2o.hitRatio(iris.pred, iris.hex[,5], k = 3)
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
-\keyword{ ~kwd1 }
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line

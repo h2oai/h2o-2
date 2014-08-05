@@ -35,6 +35,9 @@ public class Tree extends H2OCountedCompleter {
    */
   public static final int ROWS_FORK_TRESHOLD = 1<<11;
 
+  final Key      _jobKey;          // DRF job building this tree
+  final Key      _modelKey; // A model key of the forest
+
   final StatType _type;         // Flavor of split logic
   final Data _data;         // Data source
   final hex.singlenoderf.Sampling _sampler;      // Sampling strategy
@@ -43,24 +46,21 @@ public class Tree extends H2OCountedCompleter {
   final int      _numSplitFeatures;  // Number of features to check at each splitting (~ split features)
   INode          _tree;         // Root of decision tree
   ThreadLocal<hex.singlenoderf.Statistic>[] _stats  = new ThreadLocal[2];
-  final Job      _job;          // DRF job building this tree
   final long     _seed;         // Pseudo random seed: used to playback sampling
   int            _exclusiveSplitLimit;
   int            _verbose;
-  float          _err;
   final byte     _producerId;   // Id of node producing this tree
   final boolean  _regression; // If true, will build regression tree.
-  Key            _tk;         // The tree's key.
-  int            _tree_id;    // The id of this particular tree.
   boolean        _local_mode;
 
   /**
    * Constructor used to define the specs when building the tree from the top.
    */
-  public Tree(final Job job, final Data data, byte producerId, int maxDepth, StatType stat,
+  public Tree(final Key jobKey, final Key modelKey, final Data data, byte producerId, int maxDepth, StatType stat,
               int numSplitFeatures, long seed, int treeId, int exclusiveSplitLimit,
               final hex.singlenoderf.Sampling sampler, int verbose, boolean regression, boolean local_mode) {
-    _job              = job;
+    _jobKey           = jobKey;
+    _modelKey         = modelKey;
     _data             = data;
     _type             = stat;
     _data_id          = treeId;
@@ -76,7 +76,7 @@ public class Tree extends H2OCountedCompleter {
   }
 
   // Oops, uncaught exception
-  public boolean onExceptionalCompletion( Throwable ex, CountedCompleter _) {
+  @Override public boolean onExceptionalCompletion( Throwable ex, CountedCompleter _) {
     ex.printStackTrace();
     return true;
   }
@@ -130,11 +130,11 @@ public class Tree extends H2OCountedCompleter {
 
   // Actually build the tree
   @Override public void compute2() {
-    if(Job.isRunning(_job.self())) {
+    if(Job.isRunning(_jobKey)) {
       Timer timer    = new Timer();
       _stats[0]      = new ThreadLocal<hex.singlenoderf.Statistic>();
       _stats[1]      = new ThreadLocal<hex.singlenoderf.Statistic>();
-      Data d = _sampler.sample(_data, _seed, _job.dest(), _local_mode);
+      Data d = _sampler.sample(_data, _seed, _modelKey, _local_mode);
       hex.singlenoderf.Statistic left = getStatistic(0, d, _seed, _exclusiveSplitLimit);
       // calculate the split
       for( Row r : d ) left.addQ(r, _regression);
@@ -152,15 +152,12 @@ public class Tree extends H2OCountedCompleter {
         _tree = new FJBuild (spl, d, 0, _seed).compute();
       }
 
-//      if (_verbose > 1)  Log.info(Sys.RANDF,computeStatistics().toString());
       _stats = null; // GC
 
       // Atomically improve the Model as well
       Key tkey = toKey();
-      TreeP tp = _local_mode ? new TreeP(d.rows(), -1, d.nonOOB(), tkey) : null;
-      appendKey(_job.dest(), tkey, _verbose > 10 ? _tree.toString(new StringBuilder(""), Integer.MAX_VALUE).toString() : "", tp);
-      // added
-//      appendKey(_job.dest(), tkey, _verbose > 10 ? _tree.toJava(new StringBuilder(""), Integer.MAX_VALUE).toString() : "", tp);
+
+      appendKey(_modelKey, tkey, _verbose > 10 ? _tree.toString(new StringBuilder(""), Integer.MAX_VALUE).toString() : "", _data_id);
       StringBuilder sb = new StringBuilder("[RF] Tree : ").append(_data_id+1);
       sb.append(" d=").append(_tree.depth()).append(" leaves=").append(_tree.leaves()).append(" done in ").append(timer).append('\n');
       Log.info(sb.toString());
@@ -169,18 +166,18 @@ public class Tree extends H2OCountedCompleter {
         Log.info(Sys.RANDF, _tree.toJava(sb, Integer.MAX_VALUE).toString());
       }
     }
-    // Wait for completation
+    // Wait for completion
     tryComplete();
   }
 
   // Stupid static method to make a static anonymous inner class
   // which serializes "for free".
-  static void appendKey(Key model, final Key tKey, final String tString, final TreeP tp) {
+  static void appendKey(Key model, final Key tKey, final String tString, final int tree_id) {
     final int selfIdx = H2O.SELF.index();
     new TAtomic<SpeeDRFModel>() {
       @Override public SpeeDRFModel atomic(SpeeDRFModel old) {
         if(old == null) return null;
-        return SpeeDRFModel.make(old, tKey, selfIdx, tString, tp);
+        return SpeeDRFModel.make(old, tKey, selfIdx, tString, tree_id);
       }
     }.invoke(model);
   }
@@ -594,11 +591,11 @@ public class Tree extends H2OCountedCompleter {
   public static long depth_leaves( AutoBuffer tbits, boolean regression ) {
     return new TreeVisitor<RuntimeException>(tbits, regression) {
       int _maxdepth, _depth, _leaves;
-      protected TreeVisitor leafFloat(float fl) { _leaves++; if(_depth > _maxdepth) _maxdepth = _depth; return this; }
-      protected TreeVisitor leaf(int tclass ) { _leaves++; if( _depth > _maxdepth ) _maxdepth = _depth; return this; }
-      protected TreeVisitor pre (int col, float fcmp, int off0, int offl, int offr ) { _depth++; return this; }
-      protected TreeVisitor post(int col, float fcmp ) { _depth--; return this; }
-      long result( ) {return ((long)_maxdepth<<32) | _leaves; }
+      @Override protected TreeVisitor leafFloat(float fl) { _leaves++; if(_depth > _maxdepth) _maxdepth = _depth; return this; }
+      @Override protected TreeVisitor leaf(int tclass ) { _leaves++; if( _depth > _maxdepth ) _maxdepth = _depth; return this; }
+      @Override protected TreeVisitor pre (int col, float fcmp, int off0, int offl, int offr ) { _depth++; return this; }
+      @Override protected TreeVisitor post(int col, float fcmp ) { _depth--; return this; }
+      @Override long result( ) {return ((long)_maxdepth<<32) | _leaves; }
     }.visit().result();
   }
 
@@ -618,25 +615,22 @@ public class Tree extends H2OCountedCompleter {
 }
 
 
-class TreeP extends Iced {
-  int    _trainSize;
-  long   _numErrs;
-  long[] _nonOOB_indexes;
-  int    _tree_id;
-  Key    _tk;
-  public TreeP(int train, long numErr, long[] nonOOB, Key tk) {
-    _trainSize = train;
-    _numErrs = numErr;
-    _nonOOB_indexes = nonOOB;
-    _tk = tk;
-  }
-
-  public boolean isOOB(Row r) { return !contains(_nonOOB_indexes, r._index); }
-  public boolean isOOB(int r) { return !contains(_nonOOB_indexes, r); }
-  public long get_numErrs()  { return _numErrs;   }
-  public int get_trainSize() { return _trainSize; }
-  public boolean contains(final long[] array, final long key) { return Arrays.asList(array).contains(key); }
-
-
-
-}
+//class TreeP extends Iced {
+//  int    _trainSize;
+//  long   _numErrs;
+//  long[] _nonOOB_indexes;
+//  int    _tree_id;
+//  Key    _tk;
+//  public TreeP(int train, long numErr, long[] nonOOB, Key tk) {
+//    _trainSize = train;
+//    _numErrs = numErr;
+//    _nonOOB_indexes = nonOOB;
+//    _tk = tk;
+//  }
+//
+//  public boolean isOOB(Row r) { return !contains(_nonOOB_indexes, r._index); }
+//  public boolean isOOB(int r) { return !contains(_nonOOB_indexes, r); }
+//  public long get_numErrs()  { return _numErrs;   }
+//  public int get_trainSize() { return _trainSize; }
+//  public boolean contains(final long[] array, final long key) { return Arrays.asList(array).contains(key); }
+//}

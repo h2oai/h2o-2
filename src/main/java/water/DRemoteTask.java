@@ -182,20 +182,7 @@ public abstract class DRemoteTask<T extends DRemoteTask> extends DTask<T> implem
     return new RPC(keys.get(0).home_node(), rpc).addCompleter(this).call();
   }
 
-  private static Key[] flatten( Key[] args ) {
-    if( args.length==1 ) {
-      Value val = DKV.get(args[0]);
-      // Arraylet: expand into the chunk keys
-      if( val != null && val.isArray() ) {
-        ValueArray ary = val.get();
-        Key[] keys = new Key[(int)ary.chunks()];
-        for( int i=0; i<keys.length; i++ )
-          keys[i] = ary.getChunkKey(i);
-        return keys;
-      }
-    }
-    return args;
-  }
+  private static Key[] flatten( Key[] args ) { return args; }
 
   public Futures getFutures() {
     if( _fs == null ) synchronized(this) { if( _fs == null ) _fs = new Futures(); }

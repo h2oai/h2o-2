@@ -11,7 +11,7 @@
 #' What this demo covers:
 #'  Algorithms:
 #'   h2o.randomForest         --The distributed random forest algorithm
-#'   h2o.SpeeDRF              --A faster random forest, but not as accurate
+#'   h2o.randomForest              --A faster random forest, but not as accurate
 #'   h2o.deeplearning         --Distributed, parallel deep learning
 #'   h2o.gbm                  --Gradient Boosted Machines (a tree-based algo)
 #'   h2o.glm                  --GLM again
@@ -39,7 +39,7 @@ library(plyr)
 
 # Read in the data
 # Path is relative to the location that I started h2o (i.e. which dir did I java -jar in?)
-flights <- h2o.importFile(h, "../../../smalldata/airlines/allyears2k_headers.zip", "flights.hex")
+flights <- h2o.importFile(h, normalizePath("../../../smalldata/airlines/allyears2k_headers.zip"), "flights.hex")
 
 #################################################################################
 #
@@ -95,7 +95,7 @@ function(origin, dataset) {
   dataset <- dataset[dataset$Origin == origin,]
   print("Beginning Random Forest with 50 trees, 20 depth, and 10-fold Cross Validation\n")
   t0 <- Sys.time()
-  model <- h2o.randomForest(x = c(FlightDate, ScheduledTimes, FlightInfo), y = Delayed, data = dataset, ntree = 50, depth = 20, nfolds = 10) 
+  model <- h2o.randomForest(x = c(FlightDate, ScheduledTimes, FlightInfo), y = Delayed, data = dataset, ntree = 50, depth = 20, nfolds = 10, type = "BigData") 
   elapsed_seconds <- as.numeric(Sys.time() - t0) 
   modelkey <- model@key
   result <- list(list(model, origin, elapsed_seconds))
@@ -108,7 +108,7 @@ function(origin, dataset) {
   dataset <- dataset[dataset$Origin == origin,]
   print("Beginning Speedy Random Forest with 50 trees, 20 depth, and 10-fold Cross Validation\n")
   t0 <- Sys.time()
-  model <- h2o.SpeeDRF(x = c(FlightDate, ScheduledTimes, FlightInfo), y = Delayed, data = dataset, ntree = 50, depth = 20, nfolds = 10) 
+  model <- h2o.randomForest(x = c(FlightDate, ScheduledTimes, FlightInfo), y = Delayed, data = dataset, ntree = 50, depth = 20, nfolds = 10, type = "fast")
   elapsed_seconds <- as.numeric(Sys.time() - t0) 
   modelkey <- model@key
   result <- list(list(model, origin, elapsed_seconds))
@@ -148,7 +148,7 @@ function(fitMethod, origins, dataset) {
 }
 
 #iterate over the fit fcns as well
-model.fit.fcns <- c(lr.fit, rf.fit, srf.fit, gbm.fit, dl.fit)
+model.fit.fcns <- c(lr.fit, srf.fit) #rf.fit, srf.fit, gbm.fit, dl.fit)
 # See the Notes section below to get insight into the following one-liner
 models.by.airport.origin <- unlist(recursive = F, lapply(model.fit.fcns, all.fit, frequent.origin.codes, flights))
 

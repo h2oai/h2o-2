@@ -26,7 +26,6 @@ dataSet <- doSelect()
 dataName <- names(dataSet)
 print(dataName)
 print(dataSet)
-q()
 
 
 test.slice.div <- function(conn) {
@@ -44,10 +43,11 @@ test.slice.div <- function(conn) {
   anyEnum <- FALSE
   if(any(dd$TYPES == "enum")) anyEnum <- TRUE
 
+  #hex <- as.h2o(conn, iris)
   Log.info("Try /ing a scalar to a numeric column: 5 / hex[,col]")
-  #col <- sample(colnames[colTypes != "enum"], 1)
-  #col <- ifelse(is.na(suppressWarnings(as.numeric(col))), col, as.numeric(col) + 1)
-  #col <- ifelse(is.na(suppressWarnings(as.numeric(col))), col, paste("C", sep = "", collapse = ""))
+  col <- sample(colnames[colTypes != "enum"], 1)
+  col <- ifelse(is.na(suppressWarnings(as.numeric(col))), col, as.numeric(col) + 1)
+  col <- ifelse(is.na(suppressWarnings(as.numeric(col))), col, paste("C", sep = "", collapse = ""))
   df <- head(hex)
   col <- sample(colnames(df[!sapply(df, is.factor)]), 1)
   if (!(grepl("\\.", col))) {
@@ -65,7 +65,7 @@ test.slice.div <- function(conn) {
     col <- which(col == colnames(df))
   }
   Log.info(paste("Using column: ", col))
- 
+
   sliced <- hex[,col]
   Log.info("Placing key \"sliced.hex\" into User Store")
   sliced <- h2o.assign(sliced, "sliced.hex")
@@ -101,10 +101,29 @@ test.slice.div <- function(conn) {
   print(head(hexDivHex))
   Log.info("head(as.data.frame(fiveDivSliced)/as.data.frame(slicedDivFive))")
   print(head(as.data.frame(fiveDivSliced)/as.data.frame(slicedDivFive)))
-  A <- data.frame(na.omit(as.data.frame(hexDivHex)))
-  B <- data.frame(na.omit(as.data.frame(fiveDivSliced)) / na.omit(as.data.frame(slicedDivFive) ) )
-  C <- sum(A == B)
-  expect_that(C, equals(nrow(A)))
+  A <- na.omit(data.frame(na.omit(as.data.frame(hexDivHex))))
+  B <- na.omit(data.frame(na.omit(as.data.frame(fiveDivSliced)) / na.omit(as.data.frame(slicedDivFive) ) ))
+
+  cat("\n\n\n FRAME A:")
+  print(A)
+  cat("\n\n\n FRAME B:")
+  print(B)
+  cat("\n\n\n")
+
+  if (dim(A)[1] == 0 || dim(B) == 0) {
+    # all NAs in the datasets...
+    expect_true(dim(A)[1] == dim(B)[1])
+    expect_true(dim(A)[2] == dim(B)[2])
+  } else {
+    D <- cbind(A,B)
+    C <- sum(A == B)
+    print(C)
+    print(A[A != B,])
+    print(B[A != B,])
+
+    res <- sum(na.omit(D[,1] - D[,2]))
+    expect_true( res < 1E-4 || C == nrow(A))
+  }
 
   testEnd()
 }

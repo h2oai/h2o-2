@@ -1,12 +1,11 @@
 package water.api;
 
-import hex.DGLM.GLMModel;
 import hex.nb.NBModel;
 import hex.pca.PCAModel;
 import hex.*;
-import hex.rf.RFModel;
 
 import water.*;
+import water.fvec.Frame;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonPrimitive;
@@ -40,10 +39,19 @@ public class TypeaheadKeysRequest extends TypeaheadRequest {
   }
 
   protected boolean matchesType(H2O.KeyInfo ki) {
+    // No type filtering
+    if( _typeid == 0 && _cname == null ) return true;
     // One-shot monotonic racey update from 0 to the known fixed typeid.
     // Since all writers write the same typeid, there is no race.
-    if( _typeid == 0 && _cname != null ) _typeid = TypeMap.onIce(_cname);
-    return _typeid == 0 || ki._type == _typeid;
+    if( _typeid == 0 ) _typeid = TypeMap.onIce(_cname);
+    if( ki._type == _typeid ) return true;
+    // Class Model is abstract, and TypeMap clazz() does not handle that well.
+    // Also, want to allow both OldModel & Model.
+    // Hack: check for water.Model and name the class directly.
+    Class kclz = TypeMap.clazz(ki._type);
+    if( TypeMap.className(_typeid).equals("water.Model") )
+      return Model.class.isAssignableFrom(kclz);
+    return TypeMap.clazz(_typeid).isAssignableFrom(kclz);
   }
 
   // By default, all keys passing filters
@@ -55,31 +63,7 @@ class TypeaheadModelKeyRequest extends TypeaheadKeysRequest {
   public TypeaheadModelKeyRequest() {
     super("Provides a simple JSON array of filtered keys known to the "+
           "current node that are Models at the time of calling.",
-          "Model_",null);
-  }
-}
-
-class TypeaheadGLMModelKeyRequest extends TypeaheadKeysRequest {
-  public TypeaheadGLMModelKeyRequest() {
-    super("Provides a simple JSON array of filtered keys known to the "+
-          "current node that are GLMModels at the time of calling.",
-          null,GLMModel.class);
-  }
-}
-
-class TypeaheadRFModelKeyRequest extends TypeaheadKeysRequest {
-  public TypeaheadRFModelKeyRequest() {
-    super("Provides a simple JSON array of filtered keys known to the "+
-          "current node that are RFModels at the time of calling.",
-          null,RFModel.class);
-  }
-}
-
-class TypeaheadKMeansModelKeyRequest extends TypeaheadKeysRequest {
-  public TypeaheadKMeansModelKeyRequest() {
-    super("Provides a simple JSON array of filtered keys known to the "+
-          "current node that are KMeansModels at the time of calling.",
-          null,KMeansModel.class);
+          null,Model.class);
   }
 }
 
@@ -102,11 +86,11 @@ class TypeaheadNBModelKeyRequest extends TypeaheadKeysRequest {
 class TypeaheadHexKeyRequest extends TypeaheadKeysRequest {
   public TypeaheadHexKeyRequest() {
     super("Provides a simple JSON array of filtered keys known to the "+
-          "current node that are ValueArrays at the time of calling.",
-          null,ValueArray.class);
+          "current node that are Frames at the time of calling.",
+          null,Frame.class);
   }
 
   @Override protected boolean matchesType(H2O.KeyInfo kinfo) {
-    return !kinfo._rawData && (kinfo._type == TypeMap.FRAME || kinfo._type == TypeMap.VALUE_ARRAY);
+    return !kinfo._rawData && (kinfo._type == TypeMap.FRAME);
   }
 }

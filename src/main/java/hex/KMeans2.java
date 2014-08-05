@@ -1,7 +1,6 @@
 package hex;
 
 import hex.FrameTask.DataInfo;
-import hex.KMeans.Initialization;
 import water.*;
 import water.Job.ColumnsJob;
 import water.api.DocGen;
@@ -27,6 +26,9 @@ public class KMeans2 extends ColumnsJob {
   static final int API_WEAVER = 1;
   static public DocGen.FieldDoc[] DOC_FIELDS;
   static final String DOC_GET = "k-means";
+  public enum Initialization {
+    None, PlusPlus, Furthest
+  };
 
   @API(help = "Cluster initialization: None - chooses initial centers at random; Plus Plus - choose first center at random, subsequent centers chosen from probability distribution weighted so that points further from first center are more likey to be selected; Furthest - chooses initial point at random, subsequent point taken as the point furthest from prior point.", filter = Default.class, json=true)
   public Initialization initialization = Initialization.None;
@@ -46,132 +48,155 @@ public class KMeans2 extends ColumnsJob {
   @API(help = "Drop columns with more than 20% missing values", filter = Default.class)
   public boolean drop_na_cols = true;
 
+  // Make a link that lands on this page
+  public static String link(Key k, String content) {
+    RString rs = new RString("<a href='KMeans2.query?%key_param=%$key'>%content</a>");
+    rs.replace("key_param", SOURCE_KEY);
+    rs.replace("key", k.toString());
+    rs.replace("content", content);
+    return rs.toString();
+  }
+
   public KMeans2() {
     description = "K-means";
   }
 
   @Override protected void execImpl() {
-    logStart();
-    source.read_lock(self());
-    String sourceArg = input("source");
-    Key sourceKey = null;
-    if( sourceArg != null )
-      sourceKey = Key.make(sourceArg);
+    KMeans2Model model = null;
+    try {
+      logStart();
+      source.read_lock(self());
+      String sourceArg = input("source");
+      Key sourceKey = null;
+      if (sourceArg != null)
+        sourceKey = Key.make(sourceArg);
 
-    // Drop ignored cols and, if user asks for it, cols with too many NAs
-    Frame fr = DataInfo.prepareFrame(source, ignored_cols, false, drop_na_cols);
-    String[] names = fr.names();
-    Vec[] vecs = fr.vecs();
-    if(vecs == null || vecs.length == 0)
-      throw new IllegalArgumentException("No columns selected. Check that selected columns have not been dropped due to too many NAs.");
-    DataInfo dinfo = new DataInfo(fr, 0, false, DataInfo.TransformType.STANDARDIZE, DataInfo.TransformType.NONE);
+      // Drop ignored cols and, if user asks for it, cols with too many NAs
+      Frame fr = DataInfo.prepareFrame(source, ignored_cols, false, drop_na_cols);
+      String[] names = fr.names();
+      Vec[] vecs = fr.vecs();
+      if (vecs == null || vecs.length == 0)
+        throw new IllegalArgumentException("No columns selected. Check that selected columns have not been dropped due to too many NAs.");
+      DataInfo dinfo = new DataInfo(fr, 0, false, DataInfo.TransformType.STANDARDIZE, DataInfo.TransformType.NONE);
 
-    // Fill-in response based on K99
-    String[] domain = new String[k];
-    for( int i = 0; i < domain.length; i++ )
-      domain[i] = "Cluster " + i;
-    String[] namesResp = Utils.append(names, "response");
-    String[][] domaiResp = (String[][]) Utils.append((new Frame(names, vecs)).domains(), (Object) domain);
-    KMeans2Model model = new KMeans2Model(this, destination_key, sourceKey, namesResp, domaiResp);
-    model.delete_and_lock(self());
-    model.k = k; model.normalized = normalize; model.max_iter = max_iter;
+      // Fill-in response based on K99
+      String[] domain = new String[k];
+      for (int i = 0; i < domain.length; i++)
+        domain[i] = "Cluster " + i;
+      String[] namesResp = Utils.append(names, "response");
+      String[][] domaiResp = (String[][]) Utils.append((new Frame(names, vecs)).domains(), (Object) domain);
+      model = new KMeans2Model(this, destination_key, sourceKey, namesResp, domaiResp);
+      model.delete_and_lock(self());
+      model.k = k;
+      model.normalized = normalize;
+      model.max_iter = max_iter;
 
-    // TODO remove when stats are propagated with vecs?
-    double[] means = new double[vecs.length];
-    double[] mults = normalize ? new double[vecs.length] : null;
-    for( int i = 0; i < vecs.length; i++ ) {
-      means[i] = (float) vecs[i].mean();
-      if( mults != null ) {
-        double sigma = vecs[i].sigma();
-        mults[i] = normalize(sigma) ? 1.0 / sigma : 1.0;
+      // TODO remove when stats are propagated with vecs?
+      double[] means = new double[vecs.length];
+      double[] mults = normalize ? new double[vecs.length] : null;
+      for (int i = 0; i < vecs.length; i++) {
+        means[i] = (float) vecs[i].mean();
+        if (mults != null) {
+          double sigma = vecs[i].sigma();
+          mults[i] = normalize(sigma) ? 1.0 / sigma : 1.0;
+        }
       }
-    }
 
-    // -1 to be different from all chunk indexes (C.f. Sampler)
-    Random rand = Utils.getRNG(seed - 1);
-    double[][] clusters;
-    if( initialization == Initialization.None ) {
-      // Initialize all clusters to random rows
-      clusters = new double[k][vecs.length];
-      for (double[] cluster : clusters)
-        randomRow(vecs, rand, cluster, means, mults);
-    } else {
-      // Initialize first cluster to random row
-      clusters = new double[1][];
-      clusters[0] = new double[vecs.length];
-      randomRow(vecs, rand, clusters[0], means, mults);
+      // -1 to be different from all chunk indexes (C.f. Sampler)
+      Random rand = Utils.getRNG(seed - 1);
+      double[][] clusters;
+      if (initialization == Initialization.None) {
+        // Initialize all clusters to random rows
+        clusters = new double[k][vecs.length];
+        for (double[] cluster : clusters)
+          randomRow(vecs, rand, cluster, means, mults);
+      } else {
+        // Initialize first cluster to random row
+        clusters = new double[1][];
+        clusters[0] = new double[vecs.length];
+        randomRow(vecs, rand, clusters[0], means, mults);
 
-      while( model.iterations < 5 ) {
-        // Sum squares distances to clusters
-        SumSqr sqr = new SumSqr();
-        sqr._clusters = clusters;
-        sqr._means = means;
-        sqr._mults = mults;
-        sqr.doAll(vecs);
+        while (model.iterations < 5) {
+          // Sum squares distances to clusters
+          SumSqr sqr = new SumSqr();
+          sqr._clusters = clusters;
+          sqr._means = means;
+          sqr._mults = mults;
+          sqr.doAll(vecs);
 
-        // Sample with probability inverse to square distance
-        Sampler sampler = new Sampler();
-        sampler._clusters = clusters;
-        sampler._sqr = sqr._sqr;
-        sampler._probability = k * 3; // Over-sampling
-        sampler._seed = seed;
-        sampler._means = means;
-        sampler._mults = mults;
-        sampler.doAll(vecs);
-        clusters = Utils.append(clusters, sampler._sampled);
+          // Sample with probability inverse to square distance
+          Sampler sampler = new Sampler();
+          sampler._clusters = clusters;
+          sampler._sqr = sqr._sqr;
+          sampler._probability = k * 3; // Over-sampling
+          sampler._seed = seed;
+          sampler._means = means;
+          sampler._mults = mults;
+          sampler.doAll(vecs);
+          clusters = Utils.append(clusters, sampler._sampled);
 
-        if( !isRunning(self()) )
-          return;
-        model.centers = normalize ? denormalize(clusters, vecs) : clusters;
-        model.total_within_SS = sqr._sqr;
+          if (!isRunning(self()))
+            return;
+          model.centers = normalize ? denormalize(clusters, vecs) : clusters;
+          model.total_within_SS = sqr._sqr;
+          model.iterations++;
+          model.update(self());
+        }
+
+        clusters = recluster(clusters, k, rand, initialization);
+      }
+
+      for (; ; ) {
+        Lloyds task = new Lloyds();
+        task._clusters = clusters;
+        task._means = means;
+        task._mults = mults;
+        task._ncats = dinfo._cats;
+        task._nnums = dinfo._nums;
+        task.doAll(vecs);
+
+        model.centers = clusters = normalize ? denormalize(task._cMeans, vecs) : task._cMeans;
+        model.between_cluster_variances = task._betwnSqrs;
+        double[] variances = new double[task._cSqrs.length];
+        for (int clu = 0; clu < task._cSqrs.length; clu++)
+          for (int col = 0; col < task._cSqrs[clu].length; col++)
+            variances[clu] += task._cSqrs[clu][col];
+        double between_cluster_SS = 0.0;
+        for (int clu = 0; clu < task._betwnSqrs.length; clu++)
+          between_cluster_SS += task._betwnSqrs[clu];
+        model.between_cluster_SS = between_cluster_SS;
+        model.within_cluster_variances = variances;
+        model.total_within_SS = task._sqr;
+        model.total_SS = model.total_within_SS + model.between_cluster_SS;
+        model.size = task._rows;
         model.iterations++;
         model.update(self());
+        if (model.iterations >= max_iter) {
+          Clusters cc = new Clusters();
+          cc._clusters = clusters;
+          cc._means = means;
+          cc._mults = mults;
+          cc.doAll(1, vecs);
+          Frame fr2 = cc.outputFrame(model._clustersKey, new String[]{"Cluster ID"}, new String[][]{Utils.toStringMap(0, cc._clusters.length - 1)});
+          fr2.delete_and_lock(self()).unlock(self());
+          break;
+        }
+        if (!isRunning(self()))
+          break;
       }
-
-      clusters = recluster(clusters, k, rand, initialization);
+    } finally {
+      if (model != null) model.unlock(self());
+      source.unlock(self());
+      remove();                   // Remove Job
+      state = UKV.<Job>get(self()).state;
+      new TAtomic<KMeans2Model>() {
+        @Override
+        public KMeans2Model atomic(KMeans2Model m) {
+          if (m != null) m.get_params().state = state;
+          return m;
+        }
+      }.invoke(dest());
     }
-
-    for( ;; ) {
-      Lloyds task = new Lloyds();
-      task._clusters = clusters;
-      task._means = means;
-      task._mults = mults;
-      task._ncats = dinfo._cats;
-      task._nnums = dinfo._nums;
-      task.doAll(vecs);
-
-      model.centers = clusters = normalize ? denormalize(task._cMeans, vecs) : task._cMeans;
-      model.between_cluster_variances = task._betwnSqrs;
-      double[] variances = new double[task._cSqrs.length];
-      for( int clu = 0; clu < task._cSqrs.length; clu++ )
-        for( int col = 0; col < task._cSqrs[clu].length; col++ )
-          variances[clu] += task._cSqrs[clu][col];
-      double between_cluster_SS = 0.0;
-      for (int clu = 0; clu < task._betwnSqrs.length; clu++)
-          between_cluster_SS += task._betwnSqrs[clu];
-      model.between_cluster_SS = between_cluster_SS;
-      model.within_cluster_variances = variances;
-      model.total_within_SS = task._sqr;
-      model.total_SS = model.total_within_SS + model.between_cluster_SS;
-      model.size = task._rows;
-      model.iterations++;
-      model.update(self());
-      if( model.iterations >= max_iter ) {
-        Clusters cc = new Clusters();
-        cc._clusters = clusters;
-        cc._means = means;
-        cc._mults = mults;
-        cc.doAll(1, vecs);
-        Frame fr2 = cc.outputFrame(model._clustersKey,new String[]{"Cluster ID"}, new String[][] { Utils.toStringMap(0,cc._clusters.length-1) } );
-        fr2.delete_and_lock(self()).unlock(self());
-        break;
-      }
-      if( !isRunning(self()) )
-        break;
-    }
-    model.unlock(self());
-    source.unlock(self());
-    return;
   }
 
   @Override protected Response redirect() {
@@ -198,15 +223,21 @@ public class KMeans2 extends ColumnsJob {
     @API(help = "KMeans2 Model", json = true, filter = Default.class)
     public KMeans2Model model;
 
+    @API(help="KMeans2 Model Key", required = true, filter = KMeans2Filter.class)
+    Key _modelKey;
+    class KMeans2Filter extends H2OKey { public KMeans2Filter() { super("",true); } }
+
     public static String link(String txt, Key model) {
-      return "<a href='" + new KMeans2ModelView().href() + ".html?model=" + model + "'>" + txt + "</a>";
+      return "<a href='" + new KMeans2ModelView().href() + ".html?_modelKey=" + model + "'>" + txt + "</a>";
     }
 
     public static Response redirect(Request req, Key model) {
-      return Response.redirect(req, new KMeans2ModelView().href(), "model", model);
+      return Response.redirect(req, "/2/KMeans2ModelView", "_modelKey", model);
+//      return Response.redirect(req, new KMeans2ModelView().href(), "_modelKey", model);
     }
 
     @Override protected Response serve() {
+      model = DKV.get(_modelKey).get();
       return Response.done(this);
     }
 
@@ -353,6 +384,9 @@ public class KMeans2 extends ColumnsJob {
       parameters = params;
       _clustersKey = Key.make(selfKey.toString() + "_clusters");
     }
+
+    @Override public final KMeans2 get_params() { return parameters; }
+    @Override public final Request2 job() { return get_params(); }
 
     @Override public double mse() { return total_within_SS; }
 

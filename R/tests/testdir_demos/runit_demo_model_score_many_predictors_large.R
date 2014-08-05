@@ -38,7 +38,7 @@ library(plyr)
 
 
 # Read in the data
-flights <- h2o.importFile(h, "../../../smalldata/airlines/allyears2k_headers.zip", "flights.hex")
+flights <- h2o.importFile(h, normalizePath("../../../smalldata/airlines/allyears2k_headers.zip"), "flights.hex")
 
 #################################################################################
 #
@@ -168,7 +168,7 @@ rf.fit<-
 function(response, dataset, testdata) {
   print("Beginning Random Forest with 10 trees, 20 depth, and 2-fold Cross Validation\n")
   t0 <- Sys.time()
-  model <- h2o.randomForest(x = c(FlightDate, ScheduledTimes, FlightInfo), y = response, data = dataset, ntree = 10, depth = 20, nfolds = 2, balance.classes = T) 
+  model <- h2o.randomForest(x = c(FlightDate, ScheduledTimes, FlightInfo), y = response, data = dataset, ntree = 10, depth = 20, nfolds = 2, balance.classes = T, type = "BigData") 
   elapsed_seconds <- as.numeric(Sys.time() - t0) 
   modelkey <- model@key
  
@@ -185,7 +185,7 @@ srf.fit<-
 function(response, dataset, testdata) {
   print("Beginning Speedy Random Forest with 10 trees, 20 depth, and 2-fold Cross Validation\n")
   t0 <- Sys.time()
-  model <- h2o.SpeeDRF(x = c(FlightDate, ScheduledTimes, FlightInfo), y = response, data = dataset, ntree = 10, depth = 20, nfolds = 2, balance.classes = T)
+  model <- h2o.randomForest(x = c(FlightDate, ScheduledTimes, FlightInfo), y = response, data = dataset, ntree = 10, depth = 20, nfolds = 2, balance.classes = T, type = "fast")
   elapsed_seconds <- as.numeric(Sys.time() - t0) 
   modelkey <- model@key
  
@@ -238,7 +238,7 @@ function(fitMethod, responses, dataset, testdata) {
 }
 
 #iterate over the fit fcns as well as the tgts
-model.fit.fcns <- c(lr.fit, rf.fit, srf.fit, gbm.fit, dl.fit)
+model.fit.fcns <- c(lr.fit, rf.fit, srf.fit, gbm.fit)#, dl.fit)
 
 # This will loop over all of the models and score for each of the responses in tgts
 models.by.tgt <- unlist(recursive = F, lapply(model.fit.fcns, all.fit, tgts, train, test))

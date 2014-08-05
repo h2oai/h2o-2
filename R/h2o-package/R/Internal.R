@@ -96,15 +96,9 @@ h2o.setLogPath <- function(path, type) {
 # Internal functions & declarations
 .h2o.__PAGE_CANCEL = "Cancel.json"
 .h2o.__PAGE_CLOUD = "Cloud.json"
-.h2o.__PAGE_GET = "GetVector.json"
-.h2o.__PAGE_EXPORTHDFS = "ExportHdfs.json"
-.h2o.__PAGE_INSPECT = "Inspect.json"
 .h2o.__PAGE_JOBS = "Jobs.json"
-.h2o.__PAGE_PARSE = "Parse.json"
-.h2o.__PAGE_PUT = "PutVector.json"
 .h2o.__PAGE_REMOVE = "Remove.json"
 .h2o.__PAGE_REMOVEALL = "2/RemoveAll.json"
-.h2o.__PAGE_SUMMARY = "SummaryPage.json"
 .h2o.__PAGE_SHUTDOWN = "Shutdown.json"
 .h2o.__PAGE_VIEWALL = "StoreView.json"
 .h2o.__DOWNLOAD_LOGS = "LogDownload.json"
@@ -160,6 +154,8 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__PAGE_NBModelView = "2/NBModelView.json"
 .h2o.__PAGE_CreateFrame = "2/CreateFrame.json"
 .h2o.__PAGE_SplitFrame = "2/FrameSplitPage.json"
+.h2o.__PAGE_SaveModel = "2/SaveModel.json"
+.h2o.__PAGE_LoadModel = "2/LoadModel.json"
 
 # client -- Connection object returned from h2o.init().
 # page   -- URL to access within the H2O server.
@@ -284,7 +280,8 @@ h2o.setLogPath <- function(path, type) {
   # if(prog$end_time == -1 || prog$progress == -2.0) stop("Job key ", keyName, " has been cancelled")
   if(!is.null(prog$result$val) && prog$result$val == "CANCELLED") stop("Job key ", keyName, " was cancelled by user")
   else if(!is.null(prog$result$exception) && prog$result$exception == 1) stop(prog$result$val)
-  prog$progress
+  if (prog$progress < 0 && (prog$end_time == "" || is.null(prog$end_time))) return(abs(prog$progress)/100)
+  else return(prog$progress)
 }
 
 .h2o.__allDone <- function(client) {
@@ -404,7 +401,8 @@ function(expr, envir) {
   else
     res <- .h2o.__exec2_dest_key(h2o, expr, dest_key)
   key <- res$dest_key
-  new("H2OParsedData", h2o = h2o, key = key, col_names = .getColNames(res), nrows = .getRows(res), ncols = .getCols(res), any_enum = .getAnyEnum(res))
+  newFrame <- new("H2OParsedData", h2o = h2o, key = key, col_names = .getColNames(res), nrows = .getRows(res), ncols = .getCols(res), any_enum = .getAnyEnum(res))
+  return(newFrame)
 }
 
 #'
@@ -472,6 +470,7 @@ function(expr) {
 #'
 .back_to_expr<-
 function(some_expr_list) {
+  if (!is.list(some_expr_list) && length(some_expr_list == 1)) return(some_expr_list)
   len <- length(some_expr_list)
   while(len > 1) {
     num_sub_lists <- 0
@@ -501,6 +500,7 @@ function(some_expr_list) {
 function(object, envir) {
   assign("SERVER", get(as.character(object), envir = envir)@h2o, envir = .pkg.env)
   assign("CURKEY", get(as.character(object), envir = envir)@key, envir = .pkg.env)
+  assign("CURS4",  as.character(object), envir = .pkg.env)
   if ( !exists("COLNAMES", .pkg.env)) {
     assign("COLNAMES", colnames(get(as.character(object), envir = envir)), .pkg.env)
   }
@@ -526,15 +526,15 @@ function(object, envir) {
 }
 
 .lookUp<-
-function(object) {
- cnt <- 1
- object <- as.character(object)
- if (!exists(object, globalenv())) { return(-1) }
- if (exists(object, parent.frame(cnt))) {
-    return(1 + cnt)
- } else {
-    return(.lookUp(object) + 1)
- }
+function(object, envir = parent.frame()) {
+  if (identical(envir, emptyenv())) {
+    NULL
+#    stop("No such variable name: ", object, call. = FALSE)
+  } else if (exists(object, envir = envir, inherits = FALSE)) {
+    envir
+  } else {
+    .lookUp(object, parent.env(envir))
+  }
 }
 
 #'
@@ -664,11 +664,16 @@ function(some_expr_list, envir) {
   # Have a single column sliced out that we want to a) replace -OR- b) create
   if (identical(l[[1]], quote(`$`)) || identical(l[[1]], quote(`[`))) {
     l[[1]] <- quote(`[`)  # This handles both cases (unkown and known colnames... should just work!)
-    cols <- colnames(get(as.character(l[[2]]), envir = envir))
+    cols <- .h2o.exec2(h2o = get(as.character(l[[2]]), envir = envir)@h2o, expr = get(as.character(l[[2]]), envir = envir)@key, dest_key = get(as.character(l[[2]]), envir = envir)@key)@col_names
     numCols <- length(cols)
     colname <- tryCatch(
-        if(length(l) == 3) as.character(eval(l[[3]], envir = envir)) else as.character(eval(as.expression(.back_to_expr(l[[4]])), envir = envir)),
-        error = function(e) { return(if(length(l) == 3) as.character(l[[3]]) else as.character(l[[4]]))})
+        if(length(l) == 3) as.character(eval(l[[3]], envir = envir))
+        else if (!is.list(l[[4]]) && length(l[[4]]) == 1) {
+          as.character(eval(l[[4]], envir = envir))
+        } else {
+          as.character(eval(as.expression(.back_to_expr(l[[4]])), envir = envir))
+        },
+        error = function(e) {return(if(length(l) == 3) as.character(l[[3]]) else as.character(l[[4]]))})
 
     if (! (colname %in% cols)) {
       assign("NEWCOL", colname, envir = .pkg.env)
@@ -840,7 +845,8 @@ function(expr, envir = globalenv()) {
   page <- strsplit(redirect_url, '\\?')[[1]][1]                         # returns a list of two items
   page <- paste(strsplit(page, '')[[1]][-1], sep = "", collapse = "")   # strip off the leading '/'
   key  <- strsplit(strsplit(redirect_url, '\\?')[[1]][2], '=')[[1]][2]  # split the second item into a list of two items
-  .h2o.__remoteSend(h2o, page, '_modelKey' = key)
+  if (grepl("GLMGrid", page)) .h2o.__remoteSend(client = h2o, page = page, grid_key = key)
+  else .h2o.__remoteSend(client = h2o, page = page, '_modelKey' = key)
 }
 
 #'
@@ -855,9 +861,95 @@ function(h2o, key) {
 }
 
 #'
+#' Fetch the model from the key
+h2o.getModel <- function(h2o, key) {
+  json <- .fetchJSON(h2o, key)
+  algo <- model.type <- names(json)[3]
+  response   <- json[[model.type]]
+
+  # Special cases: glm_model, grid, pca_model, modelw
+
+  if(algo == "glm_model") {
+      model <- .h2o.get.glm(h2o, as.character(key), TRUE)
+      return(model)
+  }
+  if (algo == "grid") return(.h2o.get.glm.grid(h2o, key, TRUE, h2o.getFrame(h2o, response$"_dataKey")))
+  if(algo == "deeplearning_model")
+    params <- json[[model.type]]$model_info$job
+  else
+    params <- json[[model.type]]$parameters #.fill.params(model.type, json)
+  params$h2o <- h2o
+  model_obj  <- switch(algo, gbm_model = "H2OGBMModel", drf_model = "H2ODRFModel", deeplearning_model = "H2ODeepLearningModel", speedrf_model = "H2OSpeeDRFModel", model= "H2OKMeansModel", glm_model = "H2OGLMModel", nb_model = "H2ONBModel", pca_model = "H2OPCAModel")
+  results_fun <- switch(algo, gbm_model = .h2o.__getGBMResults,
+                              drf_model = .h2o.__getDRFResults,
+                              #glm_model = .get.glm.model, #.h2o.glm.get_model, #.h2o.__getGLM2Results,
+                              deeplearning_model = .h2o.__getDeepLearningResults,
+                              speedrf_model = .h2o.__getSpeeDRFResults,
+                              model = .h2o.__getKM2Results,
+                              nb_model = .h2o.__getNBResults)
+
+  if(!is.null(response$warnings))
+      tmp <- lapply(response$warnings, warning)
+  job_key    <- params$job_key #response$job_key
+  dest_key   <- key #params$destination_key
+
+  train_fr   <- new("H2OParsedData", key = "NA")
+  if(!is.null(response$"_dataKey")) train_fr <- h2o.getFrame(h2o, response$"_dataKey")
+  params$importance <- !is.null(params$varimp)
+  if(!is.null(params$family) && model.type == "gbm_model") {
+    params$distribution <- "multinomial"
+    if(params$family == "AUTO") {
+      if(!is.null(json[[model.type]]$validAUC)) params$distribution <- "bernoulli"
+    }
+  }
+  if(algo == "model") {
+    newModel <- new(model_obj, key = dest_key, data = train_fr, model = results_fun(json[[model.type]], train_fr, params))
+    return(newModel)
+  }
+
+  if(algo == "pca_model") {
+    return(.get.pca.results(train_fr, json[[model.type]], key, params))
+  }
+  modelOrig<- results_fun(json[[model.type]], params)
+  res_xval <- list()
+  if (algo == "gbm_model") algo <- "GBM"
+  if (algo == "drf_model") algo <- "RF"
+  if (algo == "deeplearning_model") algo <- "DeepLearning"
+  if (algo == "speedrf_model") algo <- "SpeeDRF"
+  if (algo == "glm_model") algo <- "GLM"
+  if (algo %in% c("GBM", "RF", "DeepLearning", "SpeeDRF", "GLM") && !is.null(params$n_folds)) res_xval <- .h2o.crossvalidation(algo, train_fr, json[[model.type]], params$n_folds, params)
+  if (is.null(params$validation)) valid <- new("H2OParsedData", key=as.character(NA))
+  else valid <- .h2o.exec2(h2o = h2o, expr = params$validation$"_key", dest_key = params$validation$"_key")
+  new(model_obj, key=dest_key, data=train_fr, model=modelOrig, valid=valid, xval=res_xval)
+}
+
+.get.glm.params <- function(h2o, key) {
+  res <- .h2o.__remoteSend(client = h2o, page = .h2o.__PAGE_GLMModelView, '_modelKey' = key)
+  params <- res$glm_model$parameters
+  params$h2o <- h2o
+  params
+}
+
+.get_model_params <- function(h2o, key) {
+  json <- .fetchJSON(h2o, key)
+  algo <- model.type <- names(json)[3]
+  if (algo == "grid") return("")
+  params <- json[[model.type]]$parameters
+  params$h2o <- h2o
+  params
+}
+
+#'
 #' Get the reference to a frame with the given key.
 h2o.getFrame <- function(h2o, key) {
-  if ( ! (key %in% h2o.ls(h2o)$Key)) stop( paste("The h2o instance at ", h2o@ip, ":", h2o@port, " does not have key: \"", key, "\"", sep = ""))
+  if (missing(key) || is.null(key)) {
+     warning( paste("The h2o instance at ", h2o@ip, ":", h2o@port, " missing key!", sep = ""))
+        return(new("H2OParsedData", h2o = h2o, key = "NA"))
+  }
+  if ( ! (key %in% h2o.ls(h2o)$Key)) {
+    warning( paste("The h2o instance at ", h2o@ip, ":", h2o@port, " does not have key: \"", key, "\"", sep = ""))
+    return(new("H2OParsedData", h2o = h2o, key = "NA"))
+  }
   .h2o.exec2(expr = key, h2o = h2o, dest_key = key)
 }
 

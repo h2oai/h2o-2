@@ -2,8 +2,6 @@ package water.fvec;
 
 import java.util.Arrays;
 import water.*;
-import water.parser.DParseTask;
-import static water.parser.DParseTask.fitsIntoInt;
 
 /**
  * The scale/bias function, where data is in SIGNED bytes before scaling.
@@ -50,7 +48,7 @@ public class C1SChunk extends Chunk {
   }
   @Override NewChunk inflate_impl(NewChunk nc) {
     double dx = Math.log10(_scale);
-    assert fitsIntoInt(dx);
+    assert PrettyPrint.fitsIntoInt(dx);
     nc.set_len(nc.set_sparseLen(0));
     final int len = len();
     for( int i=0; i<len; i++ ) {

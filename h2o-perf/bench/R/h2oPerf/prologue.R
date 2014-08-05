@@ -157,18 +157,18 @@ function(optional = FALSE) {
 
 .h2oSetup<- 
 function() {
-  if (!"h2o" %in% rownames(installed.packages())) {
-      envPath  <- Sys.getenv("H2OWrapperDir")
-      wrapDir  <- ifelse(envPath == "", defaultPath, envPath)
-      wrapName <- list.files(wrapDir, pattern  = "h2o")[1]
-      wrapPath <- paste(wrapDir, wrapName, sep = "/")
-
-      if (!file.exists(wrapPath))
-        stop(paste("h2o package does not exist at", wrapPath));
-      print(paste("Installing h2o package from", wrapPath))
-      .installDepPkgs()
-      install.packages(wrapPath, repos = NULL, type = "source")
-    }
+#  if (!"h2o" %in% rownames(installed.packages())) {
+#      envPath  <- Sys.getenv("H2OWrapperDir")
+#      wrapDir  <- ifelse(envPath == "", defaultPath, envPath)
+#      wrapName <- list.files(wrapDir, pattern  = "h2o")[1]
+#      wrapPath <- paste(wrapDir, wrapName, sep = "/")
+#
+#      if (!file.exists(wrapPath))
+#        stop(paste("h2o package does not exist at", wrapPath));
+#      print(paste("Installing h2o package from", wrapPath))
+#      .installDepPkgs()
+#      install.packages(wrapPath, repos = NULL, type = "source")
+#    }
  
   .installDepPkgs()
   library(h2o)

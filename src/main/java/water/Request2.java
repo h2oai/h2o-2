@@ -57,8 +57,6 @@ public abstract class Request2 extends Request {
       if( v == null && _mustExist )
         throw new H2OIllegalArgumentException(this, "Key '" + input + "' does not exist!");
       if( _type != null ) {
-        if( v != null && !compatible(_type, v.get()) )
-          throw new H2OIllegalArgumentException(this, input + ":" + errors()[0]);
         if( v == null && _required )
           throw new H2OIllegalArgumentException(this, "Key '" + input + "' does not exist!");
       }
@@ -208,11 +206,12 @@ public abstract class Request2 extends Request {
           //
           else if( ColumnSelect.class.isAssignableFrom(api.filter()) ) {
             ColumnSelect name = (ColumnSelect) newInstance(api);
-            H2OHexKey key = null;
-            for( Argument a : _arguments )
-              if( a instanceof H2OHexKey && name._ref.equals(((H2OHexKey) a)._name) )
-                key = (H2OHexKey) a;
-            arg = new HexAllColumnSelect(f.getName(), key);
+            throw H2O.fail();
+            //H2OHexKey key = null;
+            //for( Argument a : _arguments )
+            //  if( a instanceof H2OHexKey && name._ref.equals(((H2OHexKey) a)._name) )
+            //    key = (H2OHexKey) a;
+            //arg = new HexAllColumnSelect(f.getName(), key);
           }
 
           //
@@ -498,28 +497,17 @@ public abstract class Request2 extends Request {
    * Arguments to fields casts.
    */
 
-  private static boolean compatible(Class type, Object o) {
-    if( type == Frame.class && o instanceof ValueArray )
-      return true;
-    return type.isInstance(o);
-  }
-
   public void set(Argument arg, String input, Object value) {
     if( arg._field.getType() != Key.class && value instanceof Key )
       value = UKV.get((Key) value);
 
     try {
-      if( arg._field.getType() == Key.class && value instanceof ValueArray )
-        value = ((ValueArray) value)._key;
       //
-      else if( arg._field.getType() == int.class && value instanceof Long )
+      if( arg._field.getType() == int.class && value instanceof Long )
         value = ((Long) value).intValue();
       //
       else if( arg._field.getType() == float.class && value instanceof Double )
         value = ((Double) value).floatValue();
-      //
-      else if( arg._field.getType() == Frame.class && value instanceof ValueArray )
-        value = ((ValueArray) value).asFrame(input);
       //
       else if( value instanceof NumberSequence ) {
         double[] ds = ((NumberSequence) value)._arr;

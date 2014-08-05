@@ -13,7 +13,7 @@ the_test <- function(conn){
     quantileLevels <- quantile(valuesArray, probs = seq(0, 1, by = 1/numberOfLevels))
     scores <- seq(1, numberOfLevels, 1)
     rightmost.closed = T
-    interval = findInterval(valuesArray, quantileLevels, rightmost.closed)
+    interval <- findInterval(valuesArray, quantileLevels, rightmost.closed)
     scores[interval, 1]
   }
 

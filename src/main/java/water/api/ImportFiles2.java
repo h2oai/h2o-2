@@ -57,6 +57,17 @@ public class ImportFiles2 extends Request2 {
   @API(help="Prior Keys that matched a prefix of the imported path, and were removed prior to (re)importing")
   String[] dels;
 
+  public static Key[] importPath(String path){
+    File f = new File(path);
+    assert f.exists():"file not found: " + f.getAbsolutePath();
+    ImportFiles2 imp = new ImportFiles2();
+    imp.path = path;
+    imp.serve();
+    Key [] res = new Key[imp.keys.length];
+    for(int i = 0; i < res.length; ++i)
+      res[i] = Key.make(imp.keys[i]);
+    return res;
+  }
   /**
    * Iterates over fields and their annotations, and creates argument handlers.
    */
@@ -135,7 +146,7 @@ public class ImportFiles2 extends Request2 {
     ArrayList<String> akeys  = new ArrayList();
     ArrayList<String> afails = new ArrayList();
     ArrayList<String> adels  = new ArrayList();
-    FileIntegrityChecker.check(f,true).syncDirectory(afiles,akeys,afails,adels);
+    FileIntegrityChecker.check(f).syncDirectory(afiles,akeys,afails,adels);
     files = afiles.toArray(new String[0]);
     keys  = akeys .toArray(new String[0]);
     fails = afails.toArray(new String[0]);

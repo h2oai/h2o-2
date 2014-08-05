@@ -2,57 +2,175 @@ import unittest, random, time, sys
 sys.path.extend(['.','..','py'])
 import h2o, h2o_hosts, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_util
 
-# some dates are "wrong"..i.e. the date should be constrained
-# depending on month and year.. Assume 1-31 is legal
-months = [
-    ['Jan', 'JAN'],
-    ['Feb', 'FEB'],
-    ['Mar', 'MAR'],
-    ['Apr', 'APR'],
-    ['May', 'MAY'],
-    ['Jun', 'JUN'],
-    ['Jul', 'JUL'],
-    ['Aug', 'AUG'],
-    ['Sep', 'SEP'],
-    ['Oct', 'OCT'],
-    ['Nov', 'NOV'],
-    ['Dec', 'DEC']
-    ]
+print "have to add leading/trailing whitespace and single/double quotes?"
+
+# A time token is built up from the definition of the time subtokens
+# A time token can have single quote/double quote/white space like any 
+# other string/number token, and is stripped of that before parsing.
+# # I'd like to see this rule met. Not sure if it's possible.
+# If the type for the column is guessed to be Time, 
+# then anything that doesn't match the time token definition must be NA'ed by h2o.
+# 
+# 
+# In all cases where there are multiple integer digits, leading zeroes can be present or individually dropped.
+# This could be one or two leading zeroes in some cases. Dropping all zeroes to create nothing, is not legal.
+# 
+# dd :  two digit day, from 00 to 31. Is there any checking for the day being legal for the particular month and year?
+# MMM: three character month. Legal:
+#     months = [
+#         ['Jan', 'JAN', 'jan'],
+#         ['Feb', 'FEB', 'feb'],
+#         ['Mar', 'MAR', 'mar'],
+#         ['Apr', 'APR', 'apr'],
+#         ['May', 'MAY', 'may'],
+#         ['Jun', 'JUN', 'jun'],
+#         ['Jul', 'JUL', 'jul'],
+#         ['Aug', 'AUG', 'aug'],
+#         ['Sep', 'SEP', 'sep'],
+#         ['Oct', 'OCT', 'oct'],
+#         ['Nov', 'NOV', 'nov'],
+#         ['Dec', 'DEC', 'dec']
+#         ]
+# 
+# yy: two digit year, from 00 to 99.
+# MM: two digit month, from 00 to 12.
+# HH: two digit hour, from 00 to 23.
+# MM: two digit minute, from 00 to 59.
+# SS: two digit second, from 00 to 59.
+# SSS: three digit millisecond, from 000 to 999. (note here that one or two leading zeroes can be dropped).
+# 
+# Subtokens can then be combined in these 4 formats. Note the "-", ":" or "." in the particular format is never optional.
+# Anything that doesn't match these formats, or has a subtoken that doesn't match the legal cases, should be NA'ed.
+# 
+# dd-MMM-yy
+# yyyy-MM-dd
+# yyyy-MM-dd HH:mm:ss
+# yyyy-MM-dd HH:mm:ss.SSSS
+ 
+print "test dd-MMM-yy format. caps for month?"
+print "apparently h2o NAs some cases. illegal dates in a month?"
+print "seems to be that we require leading zero in year, but it's okay to not have it in the date?"
+
+ROWS = 5
+RESTRICT_TO_28 = True
+RESTRICT_MONTH_TO_UPPER = True
+
+if RESTRICT_MONTH_TO_UPPER:
+    months = [
+        ['Jan', 'JAN', 'jan'],
+        ['Feb', 'FEB', 'feb'],
+        ['Mar', 'MAR', 'mar'],
+        ['Apr', 'APR', 'apr'],
+        ['May', 'MAY', 'may'],
+        ['Jun', 'JUN', 'jun'],
+        ['Jul', 'JUL', 'jul'],
+        ['Aug', 'AUG', 'aug'],
+        ['Sep', 'SEP', 'sep'],
+        ['Oct', 'OCT', 'oct'],
+        ['Nov', 'NOV', 'nov'],
+        ['Dec', 'DEC', 'dec']
+        ]
+else:
+    months = [
+        ['JAN'],
+        ['FEB'],
+        ['MAR'],
+        ['APR'],
+        ['MAY'],
+        ['JUN'],
+        ['JUL'],
+        ['AUG'],
+        ['SEP'],
+        ['OCT'],
+        ['NOV'],
+        ['DEC']
+        ]
 
 # increase weight for Feb
 monthWeights = [1 if i!=1 else 5 for i in range(len(months))]
 
-days = map(str, range(1,32))
+if RESTRICT_TO_28:
+    days = map(str, range(1,29))
+else:
+    days = map(str, range(1,32))
 # increase weight for picking near end of month
 dayWeights = [1 if i<27 else 8 for i in range(len(days))]
 
-years = map(str, range(100))
 
-def getRandomDate():
+def getRandomTimeStamp():
     # assume leading zero is option
     day = days[h2o_util.weighted_choice(dayWeights)]
-    if random.randint(0,1) == 1:
-        day = day.zfill(2) 
+    # may or may not leading zero fill the day
+    # if random.randint(0,1) == 1:
+    #     day = day.zfill(2) 
 
-    year = random.choice(years)
-    if random.randint(0,1) == 1:
-        year = year.zfill(2) 
+    # yy year
+    timestampFormat = random.randint(0,3)
+    if timestampFormat==0:
+        # 1 or 2 digit
+        year = str(random.randint(0, 99))
+        # may or may not leading zero fill the year
+        if random.randint(0,1) == 1:
+            year = year.zfill(2) 
+    # yyyy year
+    else:
+        # always 4 digit
+        year = str(random.randint(1900, 2016))
 
-    # randomly decide on number or translation for month
+    # randomly decide on overall format
     ### if random.randint(0,1) == 1:
     # FIX! H2O currently only supports the translate months
-    if 1==1:
+
+    timestampFormat = random.randint(0,5)
+    
+    if timestampFormat==0:
+        # once we pick the month, we have to pick from the choices for the name of the month
         month = random.choice(months[h2o_util.weighted_choice(monthWeights)])
     else:
         month = str(random.randint(1,12))
-        if random.randint(0,1) == 1:
-            month = month.zfill(2) 
+        # may or may not leading zero fill the month
+        # if random.randint(0,1) == 1:
+        #     month = month.zfill(2) 
 
-    a  = "%s-%s-%s" % (day, month, year)
+    # may or may not leading zero fill the hour
+    hour = str(random.randint(0,23))
+    if random.randint(0,1) == 1:
+        hour = hour.zfill(2) 
+
+    minute = str(random.randint(0,59))
+    if random.randint(0,1) == 1:
+        minute = minute.zfill(2) 
+
+    second = str(random.randint(0,59))
+    if random.randint(0,1) == 1:
+        second = second.zfill(2) 
+
+    milli = str(random.randint(0,999))
+    # can be zero filled to 2 if <= 99
+    r = random.randint(0,2) == 1
+    if r==1:
+        milli = milli.zfill(2) 
+    elif r==2:
+        milli = milli.zfill(3) 
+    
+    # "dd-MMM-yy" 
+    # "yyyy-MM-dd", 
+    # "yyyy-MM-dd HH:mm:ss" };
+    # "yyyy-MM-dd HH:mm:ss.SSS", 
+
+    if timestampFormat==0:
+        a  = "%s-%s-%s" % (day, month, year)
+    elif timestampFormat==1:
+        a  = "%s-%s-%s" % (year, month, day)
+    elif timestampFormat==2:
+        a  = "%s-%s-%s %s:%s:%s" % (year, month, day, hour, minute, second)
+    # elif timestampFormat==3:
+    else:
+        a  = "%s-%s-%s %s:%s:%s:%s" % (year, month, day, hour, minute, second, milli)
     return a
 
 def rand_rowData(colCount=6):
-    a = [getRandomDate() for fields in range(colCount)]
+    a = [getRandomTimeStamp() for fields in range(colCount)]
     # put a little white space in!
     b = ", ".join(map(str,a))
     return b
@@ -93,7 +211,8 @@ class Basic(unittest.TestCase):
 
         headerData = None
         colCount = 6
-        rowCount = 1000
+        # rowCount = 1000
+        rowCount = ROWS
         write_syn_dataset(csvPathname, rowCount, colCount, headerData)
 
         for trial in range (20):

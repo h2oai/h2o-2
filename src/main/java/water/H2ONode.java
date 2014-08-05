@@ -3,6 +3,7 @@ package water;
 import water.nbhm.NonBlockingHashMap;
 import water.nbhm.NonBlockingHashMapLong;
 import water.util.Log;
+import water.util.UnsafeUtils;
 
 import java.io.IOException;
 import java.net.*;
@@ -106,6 +107,14 @@ public class H2ONode extends Iced implements Comparable {
     return h2o;
   }
   public static final H2ONode intern( InetAddress ip, int port ) { return intern(new H2Okey(ip,port)); }
+
+  public static H2ONode intern( byte[] bs, int off ) {
+    byte[] b = new byte[4];
+    UnsafeUtils.set4(b, 0, UnsafeUtils.get4(bs, off));
+    int port = UnsafeUtils.get2(bs,off+4)&0xFFFF;
+    try { return intern(InetAddress.getByAddress(b),port); } 
+    catch( UnknownHostException e ) { throw Log.errRTExcept(e); }
+  }
 
   public static final H2ONode intern( int ip, int port ) {
     byte[] b = new byte[4];
@@ -291,7 +300,7 @@ public class H2ONode extends Iced implements Comparable {
   // Recorded here, so if the client misses our ACK response we can resend the
   // same answer back.
   void record_task_answer( RPC.RPCCall rpcall ) {
-    assert rpcall._started == 0;
+    assert rpcall._started == 0 || rpcall._dt.hasException();
     rpcall._started = System.currentTimeMillis();
     rpcall._retry = RPC.RETRY_MS; // Start the timer on when to resend
     AckAckTimeOutThread.PENDING.add(rpcall);

@@ -133,12 +133,8 @@ public final class PersistHdfs extends Persist {
     final byte[] b = MemoryManager.malloc1(v._max);
     long skip = 0;
     Key k = v._key;
-    if( k._kb[0] == Key.ARRAYLET_CHUNK ) {
-      skip = ValueArray.getChunkOffset(k); // The offset
-      k = ValueArray.getArrayKey(k);       // From the base file key
-    } else if(k._kb[0] == Key.DVEC){
+    if(k._kb[0] == Key.DVEC)
       skip = water.fvec.NFSFileVec.chunkOffset(k); // The offset
-    }
     final Path p = _iceRoot == null?new Path(getPathForKey(k)):new Path(_iceRoot, getIceName(v));
     final long skip_ = skip;
     run(new Callable() {
@@ -197,11 +193,6 @@ public final class PersistHdfs extends Persist {
         Path p = new Path(_iceRoot, getIceName(v));
         FileSystem fs = FileSystem.get(p.toUri(), CONF);
         fs.delete(p, true);
-        if( v.isArray() ) { // Also nuke directory if the top-level ValueArray dies
-          p = new Path(_iceRoot, getIceDirectory(v._key));
-          fs = FileSystem.get(p.toUri(), CONF);
-          fs.delete(p, true);
-        }
         return null;
       }
     }, false, 0);
@@ -209,26 +200,6 @@ public final class PersistHdfs extends Persist {
 
   private static class Size {
     int _value;
-  }
-
-  @Override public Value lazyArrayChunk(final Key key) {
-    final Key arykey = ValueArray.getArrayKey(key);  // From the base file key
-    final long off = (_iceRoot != null)?0:ValueArray.getChunkOffset(key); // The offset
-    final Path p = (_iceRoot != null)
-        ?new Path(_iceRoot, getIceName(key, (byte) 'V'))
-        :new Path(arykey.toString());
-    final Size sz = new Size();
-    run(new Callable() {
-      @Override public Object call() throws Exception {
-        FileSystem fs = FileSystem.get(p.toUri(), CONF);
-        long rem = fs.getFileStatus(p).getLen() - off;
-        sz._value = (rem > ValueArray.CHUNK_SZ*2)?(int)ValueArray.CHUNK_SZ:(int)rem;
-        return null;
-      }
-    }, true, 0);
-    Value val = new Value(key, sz._value, Value.HDFS);
-    val.setdsk(); // But its already on disk.
-    return val;
   }
 
   private static void run(Callable c, boolean read, int size) {
@@ -332,31 +303,8 @@ public final class PersistHdfs extends Persist {
         } else {
           Key k = Key.make(pfs.toString());
           long size = file.getLen();
-          Value val = null;
-          if( pfs.getName().endsWith(Extensions.JSON) ) {
-            JsonParser parser = new JsonParser();
-            JsonObject json = parser.parse(new InputStreamReader(fs.open(pfs))).getAsJsonObject();
-            JsonElement v = json.get(Constants.VERSION);
-            if( v == null ) throw new RuntimeException("Missing version");
-            JsonElement type = json.get(Constants.TYPE);
-            if( type == null ) throw new RuntimeException("Missing type");
-            Class c = Class.forName(type.getAsString());
-            OldModel model = (OldModel) c.newInstance();
-            model.fromJson(json);
-          } else if( pfs.getName().endsWith(Extensions.HEX) ) { // Hex file?
-            FSDataInputStream s = fs.open(pfs);
-            int sz = (int) Math.min(1L << 20, size); // Read up to the 1st meg
-            byte[] mem = MemoryManager.malloc1(sz);
-            s.readFully(mem);
-            // Convert to a ValueArray (hope it fits in 1Meg!)
-            ValueArray ary = new ValueArray(k, 0).read(new AutoBuffer(mem));
-            val = new Value(k, ary, Value.HDFS);
-          } else if( size >= 2 * ValueArray.CHUNK_SZ ) {
-            val = new Value(k, new ValueArray(k, size), Value.HDFS); // ValueArray byte wrapper over a large file
-          } else {
-            val = new Value(k, (int) size, Value.HDFS); // Plain Value
-            val.setdsk();
-          }
+          Value val = new Value(k, (int) size, Value.HDFS); // Plain Value
+          val.setdsk();
           DKV.put(k, val);
           Log.info("PersistHdfs: DKV.put(" + k + ")");
           JsonObject o = new JsonObject();

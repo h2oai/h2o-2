@@ -15,18 +15,18 @@ initList = [
 
         # ('x', 'x=r1[,1]; rcnt=nrow(x)-sum(is.na(x))'),
         # ('x', 'x=r1[,1]; total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x))'),
-        # ('x', 'x=r1[,1]; total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt'),
-        # ('x', 'x=r1[,1]; total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt; x=ifelse(is.na(x),mean,x)'),
+        # ('x', 'x=r1[,1]; total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean2=total / rcnt'),
+        # ('x', 'x=r1[,1]; total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean2=total / rcnt; x=ifelse(is.na(x),mean2,x)'),
         ]
 
 # apply: return vector or array or list of values..applying function to margins of array or matrix
 # margins: either rows(1), columns(2) or both(1:2)
-# "apply(r1,2,function(x){total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=0.0; ifelse(is.na(x),mean,x)})",
+# "apply(r1,2,function(x){total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean2=0.0; ifelse(is.na(x),mean2,x)})",
 # doesn't work. Should work according to earl
 # 'r1[is.na(r1)]<-0',
 # works
 # 'r1=apply(r1,2,function(x){ifelse(is.na(x),0,x)})',
-# "mean=function(x){apply(x,2,sum)/nrow(x)};mean(r1)",
+# "mean2=function(x){apply(x,2,sum)/nrow(x)};mean2(r1)",
 
 deepIfElse = ""
 closeParen = 0
@@ -41,6 +41,37 @@ for i in range(closeParen):
     deepIfElse += '))'
 
 exprListFull = [
+    # R uses the negative number. h2o takes 10*digits instead of the negative number
+    # R 
+    # > round(120,-2) 
+    # [1] 100 
+    # > round(120,-2.1) 
+    # [1] 100 
+    # 
+    # h2o 
+    # round(120,-2) 
+    # Error in round: argument digits must be a non-negative integer 
+    # round(120,0.01) 
+    # 120.0 
+    # round(120,0.013) 
+    # 120.0 
+    "round(r1$C1,0.1)",
+    "round(r1$C1,0.13)",
+    "round(r1$C1,0)",
+    "round(r1$C1,0.09)",
+    "round(r1$C1,1)",
+    "round(r1$C1,2)",
+    "round(r1$C1,2.5)",
+    # "signif(r1$C1,-1)",
+    # "signif(r1$C1,0)",
+    "signif(r1$C1,1)",
+    "signif(r1$C1,2)",
+    "signif(r1$C1,22)",
+    "trunc(r1$C1)",
+    "trunc(r1$C1)",
+    "trunc(r1$C1)",
+    "trunc(r1$C1)",
+
     deepIfElse,
     "cos(r1$C1)",
     "sin(r1$C1)",
@@ -132,7 +163,7 @@ exprListFull = [
 
     "s1=c(1); s2=c(2); s3=c(3); s4=c(4); s5=s1+s2+s3+s4;"
     "s.hex = r1[!is.na(r1[,13]),]",
-    "apply(r1,2,function(x){total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt; ifelse(is.na(x),mean,x)})",
+    "apply(r1,2,function(x){total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean2=total / rcnt; ifelse(is.na(x),mean2,x)})",
     "s.hex = r1[!is.na(r1[,13]),]",
     'r1=apply(r1,2,function(x){ifelse(is.na(x),0,x)})',
     'cct.hex=runif(r1, -1);rTrain=r1[cct.hex<=0.9,];rTest=r1[cct.hex>0.9,]',
@@ -290,8 +321,8 @@ exprListFull = [
     # "apply(r1,1,function(x){x=1;r1})",
     # doesn't work
     # "apply(r1,1,function(x){r1})",
-    "mean=function(x){apply(x,2,sum)/nrow(x)};mean(r1)",
-    # "mean=function(x){apply(x,1,sum)/nrow(x)};mean(r1)",
+    "mean2=function(x){apply(x,2,sum)/nrow(x)};mean2(r1)",
+    # "mean2=function(x){apply(x,1,sum)/nrow(x)};mean2(r1)",
 
     #  Conditional selection; 
     "ifelse(0,1,2)",
@@ -300,7 +331,7 @@ exprListFull = [
     "ifelse(0,+,*)(1,2)",      #  Select functions
     #  Impute the mean
     # doesn't work
-    # "apply(r1,2,function(x){total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt; ifelse(is.na(x),mean,x)})",
+    # "apply(r1,2,function(x){total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean2=total / rcnt; ifelse(is.na(x),mean2,x)})",
     "factor(r1[,5])",
     "factor(r1$C1)",
 

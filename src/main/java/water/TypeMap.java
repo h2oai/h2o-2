@@ -10,7 +10,6 @@ public class TypeMap {
   static public final short PRIM_B = 1;
   static public final short C1NCHUNK;
   static public final short FRAME;
-  static public final short VALUE_ARRAY;
   static final public String BOOTSTRAP_CLASSES[] = {
     " BAD",
     "[B",
@@ -24,6 +23,7 @@ public class TypeMap {
     "water.Value",        // Needed to write that first Key
     "water.TaskGetKey",   // Read that first Key
     "water.Job$List",     // First Key which locks the cloud for all JUnit tests
+    "water.DException",   // Do not fetch clazz during distributed exception reporting
   };
   // String -> ID mapping
   static private final NonBlockingHashMap<String, Integer> MAP = new NonBlockingHashMap();
@@ -42,7 +42,6 @@ public class TypeMap {
     IDS = id;
     C1NCHUNK    = (short)onIce("water.fvec.C1NChunk");
     FRAME       = (short)onIce("water.fvec.Frame");
-    VALUE_ARRAY = (short)onIce("water.ValueArray");
   }
 
   // During first Icing, get a globally unique class ID for a className
@@ -85,7 +84,7 @@ public class TypeMap {
     Iced f = (Iced) GOLD[id];
     if( f == null ) {
       try { GOLD[id] = f = (Iced) Class.forName(CLAZZES[id]).newInstance(); }
-      catch( Exception e ) { throw Log.errRTExcept(e); }
+      catch( Exception e ) { Log.err("Failed newinstance for class "+className(id)); throw Log.errRTExcept(e); }
     }
     return f.newInstance();
   }

@@ -88,8 +88,6 @@ public class NBModel extends Model {
     return preds;
   }
 
-  @Override public void delete() { super.delete(); }
-
   @Override public String toString(){
     StringBuilder sb = new StringBuilder("Naive Bayes Model (key=" + _key + " , trained on " + _dataKey + "):\n");
     return sb.toString();

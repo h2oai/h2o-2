@@ -1,5 +1,6 @@
 package hex.singlenoderf;
 
+import org.junit.Assert;
 import static org.junit.Assert.assertEquals;
 import org.junit.BeforeClass;
 import water.*;
@@ -42,7 +43,7 @@ public class SpeeDRFTest extends TestUtil {
     spdrf.source = fr;
     spdrf.response = response;
     spdrf.ignored_cols = ignored_cols;
-    spdrf.num_trees = 3;
+    spdrf.ntrees = 3;
     spdrf.max_depth = 30;
     spdrf.select_stat_type = Tree.SelectStatType.GINI;
     spdrf.seed = 42;
@@ -51,6 +52,8 @@ public class SpeeDRFTest extends TestUtil {
 
     spdrf.invoke();
     SpeeDRFModel m = UKV.get(spdrf.dest());
+    Assert.assertTrue(m.get_params().state == Job.JobState.DONE); //HEX-1817
+    testHTML(m);
 
     assertEquals("Number of classes", 2,  m.classes());
     assertEquals("Number of trees", 3, m.size());
@@ -70,13 +73,15 @@ public class SpeeDRFTest extends TestUtil {
     SpeeDRF spdrf = new SpeeDRF();
     spdrf.source = fr;
     spdrf.response = response;
-    spdrf.num_trees = 8;
+    spdrf.ntrees = 8;
     spdrf.max_depth = 999;
     spdrf.select_stat_type = Tree.SelectStatType.ENTROPY;
     spdrf.seed = 42;
 
     spdrf.invoke();
     SpeeDRFModel m = UKV.get(spdrf.dest());
+    Assert.assertTrue(m.get_params().state == Job.JobState.DONE); //HEX-1817
+    testHTML(m);
 
     assertEquals("Number of classes", 7,  m.classes());
     assertEquals("Number of trees", 8, m.size());

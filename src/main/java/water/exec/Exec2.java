@@ -62,23 +62,8 @@ public class Exec2 {
     ArrayList<Key>   locked = new ArrayList<Key>  ();
     Env env = new Env(locked);
     final Key [] frameKeys = H2O.KeySnapshot.globalSnapshot().filter(new H2O.KVFilter() {
-      @Override
-      public boolean filter(H2O.KeyInfo k) {
-        if(k._type == TypeMap.VALUE_ARRAY){
-          Value v = DKV.get(k._key);
-          if(v == null)return false;
-          Frame frAuto = ValueArray.asFrame(v);
-          // Rename .hex.autoframe back to .hex changing the .hex type from VA to Frame.
-          // The VA is lost.
-          Frame fr2 = new Frame(k._key,frAuto._names,frAuto.vecs());
-          frAuto.remove(0,fr2.numCols()); // Remove Vecs from frAuto without deleting Vecs
-          frAuto.delete();                // Delete frAuto without deleting Vecs
-          fr2.delete_and_lock(null).unlock(null);
-          return true;
-        } else
-          return k._type == TypeMap.FRAME;
-      }
-    }).keys();
+        @Override public boolean filter(H2O.KeyInfo k) { return k._type == TypeMap.FRAME; }
+      }).keys();
     for( Key k : frameKeys ) {      // Convert all VAs to Frames
       Value val = DKV.get(k);
       if( val == null || !val.isFrame()) continue;
@@ -99,6 +84,8 @@ public class Exec2 {
     }
 
     // Some global constants
+    global.add(new ASTId(Type.DBL,"TRUE",0,global.size())); env.push(1.0);
+    global.add(new ASTId(Type.DBL,"FALSE",0,global.size())); env.push(0.0);
     global.add(new ASTId(Type.DBL,"T",0,global.size()));  env.push(1.0);
     global.add(new ASTId(Type.DBL,"F",0,global.size()));  env.push(0.0);
     global.add(new ASTId(Type.DBL,"NA",0,global.size()));  env.push(Double.NaN);
@@ -195,6 +182,7 @@ public class Exec2 {
     if( isReserved(c) ) return null;
     // Fail on leading numeric
     if( isDigit(c) ) return null;
+    if (c == '^' && _buf[_x+1] == '-') return _str.substring(++_x -1, _x);
     _x++;                       // Accept parse of 1 char
 
     // If first char is letter, standard ID

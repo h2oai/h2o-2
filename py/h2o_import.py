@@ -258,7 +258,7 @@ def import_only(node=None, schema='local', bucket=None, path=None,
                 print "ERROR: Something was missing for s3 on the java -jar cmd line when the cloud was built"
 
             if importParentDir:
-                importResult = node.import_file(folderURI, timeoutSecs=timeoutSecs)
+                importResult = node.import_files(folderURI, timeoutSecs=timeoutSecs)
             else:
                 importResult = node.import_files(folderURI + "/" + pattern, timeoutSecs=timeoutSecs)
 
@@ -447,9 +447,12 @@ def delete_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=120):
     # this will be interesting if the others don't have a complete set
     # theoretically, the deletes should be 0 after the first node 
     # since the deletes should be global
-    for node in reversed(h2o.nodes):
-        deletedCnt = delete_keys(node, pattern=pattern, timeoutSecs=timeoutSecs)
-        totalDeletedCnt += deletedCnt
+    # for node in reversed(h2o.nodes):
+
+    # new: only use the directed node (node[0] typically)
+    # h2o storeview should have a global view now.
+    deletedCnt = delete_keys(node, pattern=pattern, timeoutSecs=timeoutSecs)
+    totalDeletedCnt += deletedCnt
 
     if pattern:
         print "Total: Deleted", totalDeletedCnt, "keys with filter=", pattern, "at", len(h2o.nodes), "nodes"

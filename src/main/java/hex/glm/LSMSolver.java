@@ -163,7 +163,6 @@ public abstract class LSMSolver extends Iced{
   public static final class ADMMSolver extends LSMSolver {
     //public static final double DEFAULT_LAMBDA = 1e-5;
     public static final double DEFAULT_ALPHA = 0.5;
-    public double _orlx = 1.4;
     public double _rho = Double.NaN;
     public double [] _wgiven;
     public double _proximalPenalty;
@@ -171,7 +170,8 @@ public abstract class LSMSolver extends Iced{
     private static final double GLM1_RHO = 1.0e-3;
 
     public double gerr = Double.POSITIVE_INFINITY;
-
+    public int iterations = 0;
+    public long decompTime;
     public boolean normalize() {return _lambda != 0;}
 
     public double _addedL2;
@@ -245,7 +245,7 @@ public abstract class LSMSolver extends Iced{
         gram.addDiag(_lambda*(1-_alpha) + _addedL2);
       double rho = _rho;
       if(_alpha > 0 && _lambda > 0){
-        if(Double.isNaN(_rho)) rho = _lambda*_alpha;// find rho value as min diag element + constant
+        if(Double.isNaN(_rho)) rho = _lambda*_alpha;
         gram.addDiag(rho);
       }
       if(_proximalPenalty > 0 && _wgiven != null){
@@ -261,12 +261,11 @@ public abstract class LSMSolver extends Iced{
       while(!chol.isSPD() && attempts < 10){
         if(_addedL2 == 0) _addedL2 = 1e-5;
         else _addedL2 *= 10;
-        Log.info("GLM ADMM: BUMPED UP RHO TO " + rho + _addedL2);
         ++attempts;
         gram.addDiag(_addedL2); // try to add L2 penalty to make the Gram issp
         gram.cholesky(chol);
       }
-      long decompTime = (t2-t1);
+      decompTime = (t2-t1);
 
       if(!chol.isSPD()){
         throw new NonSPDMatrixException(gram);
@@ -291,6 +290,7 @@ public abstract class LSMSolver extends Iced{
       int max_iter = (int)(10000*(250.0/(1+xy.length)));
       final int round = (int)(max_iter*0.01);
       int k = round;
+      double orlx = 1.8; // over-relaxation
       for(i = 0; i < max_iter; ++i ) {
         // first compute the x update
         // add rho*(z-u) to A'*y
@@ -301,7 +301,7 @@ public abstract class LSMSolver extends Iced{
         // compute u and z updateADMM
         for( int j = 0; j < N-1; ++j ) {
           double x_hat = xyPrime[j];
-          x_hat = x_hat * _orlx + (1 - _orlx) * z[j];
+          x_hat = x_hat * orlx + (1 - orlx) * z[j];
           z[j] = shrinkage(x_hat + u[j], kappa);
           u[j] += x_hat - z[j];
         }
@@ -314,20 +314,27 @@ public abstract class LSMSolver extends Iced{
             if(err < _gradientEps)
               break;
           }
-          // did not converge, check if we can converge in reasonable time
-          double diff = Math.abs(lastErr - err);
-          if ((err / diff) > max_iter) { // we won't ever converge with this setup (maybe change rho and try again?)
+          boolean allzeros = true;
+          for (int x = 0; allzeros && x < z.length - 1; ++x)
+            allzeros = z[x] == 0;
+          if (!allzeros) { // only want this check if we're past the warm up period (there can be many iterations with all zeros!)
+            // did not converge, check if we can converge in reasonable time
+            double diff = Math.abs(lastErr - err);
+            if (err < 5e-2 && (err / diff) > max_iter) { // we won't ever converge with this setup (maybe change rho and try again?)
               break;
-          }
+            }
+            orlx = (1 + 15*orlx)*0.0625;
+          } else
+            orlx = 1.8;
+
           lastErr = err;
           k = i + round;
         }
       }
       gram.addDiag(-gram._diagAdded + d);
       assert gram._diagAdded == d;
-      long solveTime = System.currentTimeMillis()-t;
       this.gerr = bestErr;
-      Log.info("ADMM finished in " + i + " iterations and (" + decompTime + " + " + solveTime+ ")ms, max |subgradient| = " + bestErr);
+      iterations = i;
       return _converged = (gerr < _gradientEps);
     }
     @Override

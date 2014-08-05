@@ -2,10 +2,8 @@ package water;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-
-import water.Model;
 import water.Model.ModelCategory;
-import water.api.AUC;
+import water.api.AUCData;
 import water.api.ConfusionMatrix;
 import water.api.DocGen;
 import water.api.Request.API;
@@ -35,11 +33,11 @@ public final class ModelMetrics extends Iced {
   public long scoring_time = -1L;
 
   @API(help="The AUC object for this scoring run.", required=false, filter=Default.class, json=true)
-  public AUC auc = null;
+  public AUCData auc = null;
   @API(help="The ConfusionMatrix object for this scoring run.", required=false, filter=Default.class, json=true)
   public ConfusionMatrix cm = null;
 
-  public ModelMetrics(UniqueId model, ModelCategory model_category, UniqueId frame, long duration_in_ms, long scoring_time, AUC auc, ConfusionMatrix cm) {
+  public ModelMetrics(UniqueId model, ModelCategory model_category, UniqueId frame, long duration_in_ms, long scoring_time, AUCData auc, ConfusionMatrix cm) {
     this.model = model;
     this.model_category = model_category;
     this.frame = frame;
@@ -50,20 +48,16 @@ public final class ModelMetrics extends Iced {
     this.cm = cm;
   }
 
-  private static Key makeKey(String keyName) {
-    return Key.makeUserHidden(Key.make(keyName));
-  }
-
   public static Key buildKey(Model model, Frame frame) {
-    return makeKey("modelmetrics_" + model.getUniqueId().getId() + "_on_" + frame.getUniqueId().getId());
+    return Key.makeSystem("modelmetrics_" + model.getUniqueId().getId() + "_on_" + frame.getUniqueId().getId());
   }
 
   public static Key buildKey(UniqueId model, UniqueId frame) {
-    return makeKey("modelmetrics_" + model.getId() + "_on_" + frame.getId());
+    return Key.makeSystem("modelmetrics_" + model.getId() + "_on_" + frame.getId());
   }
 
   public Key buildKey() {
-    return makeKey("modelmetrics_" + this.model.getId() + "_on_" + this.frame.getId());
+    return Key.makeSystem("modelmetrics_" + this.model.getId() + "_on_" + this.frame.getId());
   }
 
   public void putInDKV() {

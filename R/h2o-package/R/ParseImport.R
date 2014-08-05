@@ -155,8 +155,6 @@ h2o.importFolder <- function(object, path, pattern = "", key = "", parse = TRUE,
       if(substr(path, nchar(path), nchar(path)) == .Platform$file.sep)
         path <- substr(path, 1, nchar(path)-1)
       regPath = paste(path, pattern, sep=.Platform$file.sep)
-      if(.Platform$OS.type == "windows")
-        regPath = gsub("/", "\\\\", regPath)
       srcKey = ifelse(length(res$keys) == 1, res$keys[[1]], paste("*", regPath, "*", sep=""))
       rawData = new("H2ORawData", h2o=object, key=srcKey)
       h2o.parseRaw(data=rawData, key=key, header=header, sep=sep, col.names=col.names) 
@@ -245,14 +243,6 @@ h2o.exportFile <- function(data, path, force = FALSE) {
     if(!is.logical(force)) stop("force must be of class logical")
     
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_EXPORTFILES, src_key = data@key, path = path, force = as.numeric(force))
-}
-
-h2o.exportHDFS <- function(object, path) {
-  if(!inherits(object, "H2OModel")) stop("object must be an H2O model")
-  if(!is.character(path)) stop("path must be of class character")
-  if(nchar(path) == 0) stop("path must be a non-empty string")
-  
-  res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_EXPORTHDFS, source_key = object@key, path = path)
 }
 
 h2o.downloadCSV <- function(data, filename, quiet = FALSE) {
@@ -366,10 +356,10 @@ h2o.downloadAllLogs <- function(client, dirname = ".", filename = NULL) {
 
 # ------------------- Show H2O recommended columns to ignore ----------------------------------------------------
 h2o.ignoreColumns <- function(data, max_na = 0.2) {
-  digits = 12L
   if(ncol(data) > .MAX_INSPECT_COL_VIEW)
     warning(data@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
-  
+  if(missing(data)) stop('Must specify object')
+  if(class(data) != 'H2OParsedData') stop('object not a h2o data type')
   numRows = nrow(data)
   naThreshold = numRows * max_na
   cardinalityThreshold = numRows
@@ -394,4 +384,32 @@ h2o.ignoreColumns <- function(data, max_na = 0.2) {
   }
   )
   unlist(ignore)
+}
+
+
+# ------------------- Save H2O Model to Disk ----------------------------------------------------
+h2o.saveModel <- function(object, dir="", name="", filename = "", force=FALSE) {
+  if(missing(object)) stop('Must specify object')
+  if(!inherits(object,'H2OModel')) stop('object must be an H2O model')
+  if(!is.character(dir)) stop('path must be of class character')
+  if(!is.character(name)) stop('name must be of class character')
+  if(!is.character(filename)) stop('filename must be of class character')
+  if(!is.logical(force)) stop('force must be either TRUE or FALSE')
+  if(name == "") name=object@key
+
+  path <- if(filename != "") filename else paste(dir, name, sep='/')
+  path <- gsub('//', '/', path)
+  
+  force = ifelse(force==TRUE, 1, 0)
+  res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_SaveModel, model=object@key, path=path, force=force)
+  path
+}
+
+# ------------------- Load H2O Model from Disk ----------------------------------------------------
+h2o.loadModel <- function(object, path="") {
+  if(missing(object)) stop('Must specify object')
+  if(class(object) != 'H2OClient') stop('object must be of class H2OClient')
+  if(!is.character(path)) stop('path must be of class character')
+  res = .h2o.__remoteSend(object, .h2o.__PAGE_LoadModel, path = path)
+  h2o.getModel(object, res$model$'_key')
 }

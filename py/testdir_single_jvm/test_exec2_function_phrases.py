@@ -13,7 +13,7 @@ DO_IRIS = False
 #        "a=rhex; function(x){x=a;a=3;nrow(x)*a}(a)",
 #        "function(x){y=x*2; y+1}(2)",
 #        "a=1; a=2; function(x){x=a;a=3}",
-#        "mean=function(x){apply(x,1,sum)/nrow(x)};mean(rhex)",
+#        "mean2=function(x){apply(x,1,sum)/nrow(x)};mean2(rhex)",
 phrasesCompound = [
         "aa=!0; x=!0",
         "aa=0; x=0",
@@ -29,6 +29,19 @@ phrasesCompound = [
 ]
 
 phrases = [
+        "round(rhex[,1],0)",
+        "round(rhex[,1],1)",
+        "round(rhex[,1],2)",
+        # "signif(rhex[,1],-1)",
+        # "signif(rhex[,1],0)",
+        "signif(rhex[,1],1)",
+        "signif(rhex[,1],2)",
+        "signif(rhex[,1],22)",
+        "trunc(rhex[,1])",
+        "trunc(rhex[,1])",
+        "trunc(rhex[,1])",
+        "trunc(rhex[,1])",
+
         "ifelse(1,0,2)",
         "ifelse(0,0,2)",
         "!1.23",
@@ -154,7 +167,7 @@ class Basic(unittest.TestCase):
 
         # now do some triple concats of the expressions created
         for j in range (50):
-            execExpr = "a=" + random.choice(exprList) + "b=" + random.choice(exprList) + "c=" + random.choice(exprList)
+            execExpr = "a=" + random.choice(exprList) + "b=" + random.choice(exprList) + "d=" + random.choice(exprList)
             execExpr = "func4 = function(x,y,z,rhex){ " + execExpr + " }"
             h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=4)
             execExpr = "func4(0,0,0,i.hex)"

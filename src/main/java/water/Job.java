@@ -1003,15 +1003,6 @@ public abstract class Job extends Func {
   /**
    *
    */
-  public static abstract class HexJob extends Job {
-    static final int API_WEAVER = 1;
-    static public DocGen.FieldDoc[] DOC_FIELDS;
-
-    @API(help = "Source key", required = true, filter = source_keyFilter.class)
-    public Key source_key;
-    class source_keyFilter extends H2OHexKey { public source_keyFilter() { super(""); } }
-  }
-
   public interface Progress {
     float progress();
   }
@@ -1052,6 +1043,12 @@ public abstract class Job extends Func {
   /** Hygienic method to prevent accidental capture of non desired values. */
   public static <T extends FrameJob> T hygiene(T job) {
     job.source = null;
+    return job;
+  }
+
+  public static <T extends ValidatedJob> T hygiene(T job) {
+    job.source = null;
+    job.validation = null;
     return job;
   }
 }

@@ -2,7 +2,7 @@
 library(h2o)
 
 # Start 1-node H2O cluster on localhost
-?h2o.init
+#?h2o.init
 h2o_server = h2o.init()
 
 # Import data into H2O cluster and run Summary
@@ -14,7 +14,7 @@ train = h2o.importFile(h2o_server,
 summary(train)
 
 # Train a DeepLearning model on the H2O cluster using 3 hidden layers with 10 neurons each, Tanh activation function, 10000 epochs, predict CAPSULE from other predictors (ignore column 1: ID)
-?h2o.deeplearning
+#?h2o.deeplearning
 model = h2o.deeplearning(x = 3:8, y = 2, 
                               data = train, 
                               activation = "Tanh", 
@@ -31,8 +31,8 @@ head(pred)
 tail(pred)
 
 # Check performance of binary classification model and return the probability threshold ("Best Cutoff") for optimal F1 score
-?h2o.performance
-per = h2o.performance(prediction[,1], train[,2], measure = "F1")
+#?h2o.performance
+per = h2o.performance(prediction[,3], train[,2], measure = "F1")
 per
 
 ######## END
