@@ -327,8 +327,8 @@ fast_mode=TRUE,
 ignore_const_cols=TRUE, 
 force_load_balance=TRUE, 
 replicate_training_data=TRUE, 
-single_node_mode=FALSE, 
-shuffle_training_data=FALSE) {
+single_node_mode=FALSE,
+shuffle_training_data=FALSE, ...) {
   data <- h2o.getFrame(h2o = h, key = "parsed.hex") 
   model <<- h2o.deeplearning(x = x, y = y, data = data, nfolds = nfolds,
       activation=activation,
@@ -367,7 +367,7 @@ shuffle_training_data=FALSE) {
       force_load_balance=force_load_balance,
       replicate_training_data=replicate_training_data,
       single_node_mode=single_node_mode,
-      shuffle_training_data=shuffle_training_data)
+      shuffle_training_data=shuffle_training_data, ...)
   
   model.json <<- .h2o.__remoteSend(h, .h2o.__PAGE_DeepLearningModelView, '_modelKey'= model@key)
 }
