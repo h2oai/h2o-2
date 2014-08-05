@@ -254,7 +254,7 @@ def import_only(node=None, schema='local', bucket=None, path=None,
             # FIX! hack for now...when we change import folder to import s3, point to unique bucket name for h2o
             # should probably deal with this up in the bucket resolution 
             # this may change other cases, but smalldata should only exist as a "bucket" for us?
-            re.sub("smalldata", "h2o-smalldata", folderOffset)
+            folderOffset = re.sub("smalldata", "h2o-smalldata", folderOffset)
             folderURI = "s3://" + folderOffset
             if not n.aws_credentials:
                 print "aws_credentials: %s" % n.aws_credentials
@@ -270,7 +270,7 @@ def import_only(node=None, schema='local', bucket=None, path=None,
             # FIX! hack for now...when we change import folder to import s3, point to unique bucket name for h2o
             # should probably deal with this up in the bucket resolution 
             # this may change other cases, but smalldata should only exist as a "bucket" for us?
-            re.sub("smalldata", "h2o-smalldata", folderOffset)
+            folderOffset = re.sub("smalldata", "h2o-smalldata", folderOffset)
             if not (n.use_hdfs and ((n.hdfs_version and n.hdfs_name_node) or n.hdfs_config)):
                 print "use_hdfs: %s hdfs_version: %s hdfs_name_node: %s hdfs_config: %s" % \
                     (n.use_hdfs, n.hdfs_version, n.hdfs_name_node, n.hdfs_config)
