@@ -30,7 +30,7 @@ function(conn) {
   expect_that(first_xval@model$params$family$family, equals(main_model@model$params$family$family))
   
   Log.info("Expect that the xval model has standardize set to FALSE as it is in the main model.")
-  expect_that(first_xval@model$params$standardize, equals("false"))
+  expect_that(first_xval@model$params$standardize, equals("FALSE"))
   expect_that(as.logical(first_xval@model$params$standardize), equals(main_model@model$params$standardize))
   testEnd()
 }
