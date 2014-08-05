@@ -10,7 +10,7 @@ if(!"R.utils" %in% rownames(installed.packages())) install.packages("R.utils")
 
 options(echo=TRUE)
 TEST_ROOT_DIR <- ".."
-#source(sprintf("%s/%s", TEST_ROOT_DIR, "findNSourceUtils.R"))
+source(sprintf("%s/%s", TEST_ROOT_DIR, "findNSourceUtils.R"))
 
 #----------------------------------------------------------------------
 # Parameters for the test.
