@@ -12,7 +12,7 @@ conn <- new("H2OClient", ip=myIP, port=myPort)
 
 # Data frame size 
 rows = c(1e3,1e4) 
-cols = c(1e1,1e2,4e2) 
+cols = c(1e1,1e2) 
 #rows = c(1e4,1e6) 
 #cols = c(1e1,1e2,300,400,1e3) 
 rows 
