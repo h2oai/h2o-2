@@ -359,9 +359,14 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   }
   private static double beta_diff(double[] b1, double[] b2) {
     if(b1 == null)return Double.MAX_VALUE;
-    double res = Math.abs(b1[0] - b2[0]);
-    for( int i = 1; i < b1.length; ++i )
-      res = Math.max(res, Math.abs(b1[i] - b2[i]));
+    double res = b1[0] >= b2[0]?b1[0] - b2[0]:b2[0] - b1[0];
+    for( int i = 1; i < b1.length; ++i ) {
+      double diff = b1[i] - b2[i];
+      if(diff > res)
+        res = diff;
+      else if( -diff > res)
+        res = -diff;
+    }
     return res;
   }
   private static class GLM2_Progress extends Iced{
@@ -543,7 +548,6 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
             constBeta &= glmt._beta[i] < beta_epsilon;
           }
         } else {
-          assert !Arrays.equals(glmt._beta,_lastResult._glmt._beta);
           double [] lastBeta = resizeVec(_lastResult._glmt._beta,_activeCols,_lastResult._activeCols);
           if(lastBeta != null)
             for (int i = 0; i < glmt._beta.length; ++i) {
@@ -631,12 +635,13 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       } else {
         final double bdiff = beta_diff(glmt._beta,newBeta);
         if(_glm.family == Family.gaussian || bdiff < beta_epsilon || _iter >= max_iter){ // Gaussian is non-iterative and gradient is ADMMSolver's gradient => just validate and move on to the next lambda_value
+          LogInfo("bdiff = " + bdiff);
           int diff = (int)Math.log10(bdiff);
           int nzs = 0;
           for(int i = 0; i < glmt._beta.length; ++i)
             if(glmt._beta[i] != 0) ++nzs;
           LogInfo("converged (reached a fixed point with ~ 1e" + diff + " precision), got " + nzs + " nzs");
-          checkKKTAndComplete(glmt,glmt._beta,false);
+          checkKKTAndComplete(glmt,newBeta,false);
           return;
         } else { // not done yet, launch next iteration
           if(glmt._beta != null)
@@ -657,8 +662,36 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         public void callback(final GLMIterationTask glmt2) {
           // first check KKT conditions!
           final double [] grad = glmt2.gradient(alpha[0],_currentLambda);
+          if(Utils.hasNaNsOrInfs(grad)){
+            double [] newBeta2 = newBeta.clone();
+            LogInfo("Got NaNs/Infs in gradient during KKT check, invoking line-search");
+            setHighAccuracy();
+            boolean constBeta = true;
+            double [] lastBeta = glmt._beta;
+            if(lastBeta != null)
+              for (int i = 0; i < newBeta2.length; ++i) {
+                newBeta2[i] = 0.5 * (newBeta2[i] + lastBeta[i]);
+                double diff = (newBeta2[i] - lastBeta[i]);
+                constBeta &= (-beta_epsilon < diff && diff < 1e-2*beta_epsilon);
+              } else for (int i = 0; i < newBeta2.length; ++i) {
+                newBeta2[i] *= 0.5;
+                constBeta &= newBeta2[i] < 1e-2*beta_epsilon;
+              }
+            if(constBeta) {
+              if (_lastResult == null)
+                throw new RuntimeException("can't solve!");
+              newBeta2 = resizeVec(_lastResult._glmt._beta,_activeCols,_lastResult._activeCols);
+              if(Arrays.equals(newBeta,newBeta2)) {
+                System.out.println("grad = " + Arrays.toString(_lastResult.fullGrad(0,0)));
+                throw new RuntimeException("can not solve");
+              }
+            }
+            getCompleter().addToPendingCount(1);
+            checkKKTAndComplete(glmt,newBeta2,true);
+            return;
+          }
           glmt._val = glmt2._val;
-          _lastResult = new IterationInfo(_iter,glmt,_activeCols,glmt2.gradient(alpha[0],0));
+          _lastResult = new IterationInfo(_iter,glmt2,null,glmt2.gradient(alpha[0],0));
           // check the KKT conditions and filter data for next lambda_value
           // check the gradient
           double[] subgrad = grad.clone();

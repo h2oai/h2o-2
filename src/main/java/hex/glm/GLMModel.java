@@ -101,7 +101,6 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
           new UnlockModelTask(this,xvals[i],_jobKey).forkTask();
       }
       m.unlock(_jobKey);
-      System.out.println(m._key + " unlocked!");
       tryComplete();
     }
   }
@@ -353,10 +352,6 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
         old.pickBestModel(false);
         return old;
       }
-      @Override public void onSuccess( Value old ) {
-        System.out.println("set xval of " + old._key);
-        super.onSuccess(old);
-      }
     }.fork(modelKey);
   }
   public static void setSubmodel(H2OCountedCompleter cmp, Key modelKey, final double lambda, double[] beta, double[] norm_beta, final int iteration, long runtime, boolean sparseCoef, final GLMValidation val){
@@ -556,7 +551,6 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
         _xvals[i].add(gval._xvals[i]);}
 
     @Override public void postGlobal() {
-      System.out.println("GLMXval.postGlobal");
       H2OCountedCompleter cmp = (H2OCountedCompleter)getCompleter();
       if(cmp != null)cmp.addToPendingCount(_xvals.length + 1);
       for (int i = 0; i < _xvals.length; ++i) {
