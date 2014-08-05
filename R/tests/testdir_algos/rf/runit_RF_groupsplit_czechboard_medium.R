@@ -11,11 +11,11 @@ test.DRF.Czechboard <- function(conn) {
   
   # Train H2O DRF Model:
   Log.info("H2O DRF (Naive Split) with parameters:\nclassification = TRUE, ntree = 50, depth = 20, nbins = 500\n")
-  drfmodel.nogrp <- h2o.randomForest(x = c("C1", "C2"), y = "C3", data = board.hex, classification = TRUE, ntree = 50, depth = 20, nbins = 500, doGrpSplit = FALSE)
+  drfmodel.nogrp <- h2o.randomForest(x = c("C1", "C2"), y = "C3", data = board.hex, classification = TRUE, ntree = 50, depth = 20, nbins = 500, doGrpSplit = FALSE, type = "BigData")
   print(drfmodel.nogrp)
   
   Log.info("H2O DRF (Group Split) with parameters:\nclassification = TRUE, ntree = 50, depth = 20, nbins = 500\n")
-  drfmodel.grpsplit <- h2o.randomForest(x = c("C1", "C2"), y = "C3", data = board.hex, classification = TRUE, ntree = 50, depth = 20, nbins = 500, doGrpSplit = TRUE)
+  drfmodel.grpsplit <- h2o.randomForest(x = c("C1", "C2"), y = "C3", data = board.hex, classification = TRUE, ntree = 50, depth = 20, nbins = 500, doGrpSplit = TRUE, type = "BigData")
   print(drfmodel.grpsplit)
   
   expect_true(drfmodel.grpsplit@model$auc >= drfmodel.nogrp@model$auc)

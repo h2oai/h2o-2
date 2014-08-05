@@ -12,7 +12,7 @@ test.pub.651 <- function(conn) {
   myY = 15
   
   print("Building SpeedRF model")
-  my.srf  = h2o.SpeeDRF(x=myX,y=myY,data=adlt_income,classification=T,ntree=50,oobee=F,validation=adlt_income)
+  my.srf  = h2o.randomForest(x=myX,y=myY,data=adlt_income,classification=T,ntree=50,oobee=F,validation=adlt_income)
   print(paste(" The SpeedRF ran with this seed: ",my.srf@model$params$seed, sep = ''))
   print(my.srf)
   

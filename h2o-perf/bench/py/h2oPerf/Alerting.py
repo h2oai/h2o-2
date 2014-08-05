@@ -354,7 +354,7 @@ class Alerter:
                 self.correct_alert.add_to_alert_list(name, "Failed correctness.")
 
             if self.speed_alert.should_alert(name):
-                self.speed_alert.add_to_alert_list(name, "Failed timinng.")
+                self.speed_alert.add_to_alert_list(name, "Failed timing.")
 
             if self.infrastructure_alert.should_alert(name):
                 self.infrastructure_alert.add_to_alert_list(name, "Test failed to run.")
@@ -374,7 +374,7 @@ class Alerter:
             f.write('\n')
             if len(self.correct_alert.alert_list) > 0:
                 for key in self.correct_alert.alert_list:
-                    f.write("Test " + key + " failed:  " + self.correct_alert.alert_list[key])
+                    f.write("FAIL		" + key + " failed:  " + self.correct_alert.alert_list[key])
                     f.write('\n')
             else:
                 f.write("All tests were correct.")
@@ -385,7 +385,7 @@ class Alerter:
             f.write('\n')
             if len(self.speed_alert.alert_list) > 0:
                 for key in self.speed_alert.alert_list:
-                    f.write("Test " + key + " failed:  " + self.speed_alert.alert_list[key])
+                    f.write("FAIL		" + key + " failed:  " + self.speed_alert.alert_list[key])
                     f.write('\n')
             else:
                 f.write("No tests failed due to untimeliness.")
@@ -396,7 +396,7 @@ class Alerter:
             f.write('\n')
             if len(self.infrastructure_alert.alert_list) > 0:
                 for key in self.infrastructure_alert.alert_list:
-                    f.write("Test " + key + " failed:  " + self.infrastructure_alert.alert_list[key])
+                    f.write("FAIL		" + key + " failed:  " + self.infrastructure_alert.alert_list[key])
                     f.write('\n')
             else:
                 f.write("All tests ran.")

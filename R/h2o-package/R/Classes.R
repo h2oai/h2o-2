@@ -246,7 +246,8 @@ setMethod("show", "H2ODRFModel", function(object) {
 setMethod("show", "H2OSpeeDRFModel", function(object) {
   print(object@data@h2o)
   cat("Parsed Data Key:", object@data@key, "\n\n")
-  cat("SpeeDRF Model Key:", object@key)
+  cat("Random Forest Model Key:", object@key)
+  cat("\n\nSeed Used: ", object@model$params$seed)
 
   model = object@model
   cat("\n\nClassification:", model$params$classification)
@@ -914,7 +915,6 @@ setMethod("t",       "H2OParsedData", function(x) { .h2o.__unop2("t",     x) })
 
 round.H2OParsedData <- function(x, digits = 0) {
   if(length(digits) > 1 || !is.numeric(digits)) stop("digits must be a single number")
-  if(digits < 0) digits = 10^(-digits)
   
   expr <- paste("round(", paste(x@key, digits, sep = ","), ")", sep = "")
   res <- .h2o.__exec2(x@h2o, expr)
@@ -925,7 +925,6 @@ round.H2OParsedData <- function(x, digits = 0) {
 
 signif.H2OParsedData <- function(x, digits = 6) {
   if(length(digits) > 1 || !is.numeric(digits)) stop("digits must be a single number")
-  if(digits < 0) digits = 10^(-digits)
   
   expr <- paste("signif(", paste(x@key, digits, sep = ","), ")", sep = "")
   res <- .h2o.__exec2(x@h2o, expr)

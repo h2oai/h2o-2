@@ -56,12 +56,14 @@ test.GBM.bernoulli.SyntheticData <- function(conn) {
 
     #  Run H2O-GBM grid job
     print("H2O GBM grid search")
-    system.time(tru.gbm <- h2o.gbm(x = myX, y = myY, distribution = "bernoulli", data = alldata, n.trees = c(50,100,150),
+    system.time(tru.gbm <- h2o.gbm(x = myX, y = myY, distribution = "bernoulli", data = alldata, n.trees = c(150),
                                n.minobsinnode=1, interaction.depth = c(1,2,3,4), shrinkage = c(1,.1,.01), n.bins = c(20), importance = F) )
 
     num_models = length(tru.gbm@sumtable)
     print(paste("Number of gbm models created:", num_models,sep ='') )
-    expect_equal(num_models,36)
+    expect_equal(num_models,12)
+    print("GBM models summary")
+    print(tru.gbm)
     
     for(i in 1:num_models){
         model = tru.gbm@model[[i]]
@@ -69,10 +71,10 @@ test.GBM.bernoulli.SyntheticData <- function(conn) {
                       interaction.depth=tru.gbm@sumtable[[i]]$interaction.depth,n.minobsinnode=tru.gbm@sumtable[[i]]$n.minobsinnode, 
                       shrinkage=tru.gbm@sumtable[[i]]$shrinkage,bag.fraction=1)                # R gbm model             
         mm_y=predict.gbm(gg,newdata=test.data2,n.trees=tru.gbm@sumtable[[i]]$n.trees,type='response')  # R Predict
-        R_auc = round(gbm.roc.area(test.data2$y,mm_y), digits=2)
+        R_auc = round(gbm.roc.area(test.data2$y,mm_y), digits=3)
         pred = h2o.predict(model,test)                                                                #H2O Predict
         H2O_perf = h2o.performance(pred$'1',test$y,measure="F1")
-        H2O_auc = round(H2O_perf@model$auc, digits=2)
+        H2O_auc = round(H2O_perf@model$auc, digits=3)
         print(paste ( tru.gbm@sumtable[[i]]$model_key,
                 " trees:", tru.gbm@sumtable[[i]]$n.trees,
                 " depth:",tru.gbm@sumtable[[i]]$interaction.depth,

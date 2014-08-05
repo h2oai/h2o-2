@@ -42,10 +42,10 @@ test.pub.767 <- function(conn) {
   cnts <- h2o::ddply(cov, .("V55"), nrow)
   print(as.data.frame(cnts))
  
-  m <- h2o.SpeeDRF(x = 1:54, y = 55, data = cov, ntree = 10, depth = 100) 
+  m <- h2o.randomForest(x = 1:54, y = 55, data = cov, ntree = 10, depth = 100) 
 
   print(m)  
   testEnd()
 }
 
-doTest("PUB-767: SpeeDRF on discontinuous integer classes.", test.pub.767)
+doTest("PUB-767: randomForest on discontinuous integer classes.", test.pub.767)

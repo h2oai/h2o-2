@@ -6,7 +6,7 @@ iris_train.hex <- h2o.uploadFile(conn, train)
 
 heading("Creating DRF model in H2O")
 balance_classes <- if (exists("balance_classes")) balance_classes else FALSE
-iris.rf.h2o <- h2o.randomForest(x = x, y = y, data = iris_train.hex, ntree = ntree, depth = depth, nodesize = nodesize, balance.classes = balance_classes, seed = 42)
+iris.rf.h2o <- h2o.randomForest(x = x, y = y, data = iris_train.hex, ntree = ntree, depth = depth, nodesize = nodesize, balance.classes = balance_classes, seed = 42, type = "BigData")
 print(iris.rf.h2o)
 
 heading("Downloading Java prediction model code from H2O")

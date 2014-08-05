@@ -1,3 +1,4 @@
+library(h2o)
 #----------------------------------------------------------------------
 # Purpose:  Test save/load of H2O GLM models to/from HDFS
 #----------------------------------------------------------------------
@@ -31,23 +32,22 @@ if (running_inside_hexdata) {
 }
 
 #----------------------------------------------------------------------
-
-heading("BEGIN TEST")
+#heading("BEGIN TEST")
 conn <- new("H2OClient", ip=myIP, port=myPort)
 
 #----------------------------------------------------------------------
 # Single file cases.
 #----------------------------------------------------------------------
 
-heading("Testing single file importHDFS")
+#heading("Testing single file importHDFS")
 url <- sprintf("hdfs://%s%s", hdfs_name_node, hdfs_covtype_file)
 covtype.hex <- h2o.importFile(conn, url)
-
-heading("Running covtype GLM")
-covtype.glm <- h2o.glm(y = 55, x = setdiff(1:54, c(21,29)), data = covtype.hex, family = "binomial", nfolds = 2, alpha = 0, lambda = 0)
+covtype.hex[,55] <- ifelse(covtype.hex[,55] == 1, 1, 0)
+#heading("Running covtype GLM")
+covtype.glm <- h2o.glm(y = 55, x = setdiff(1:54, c(21,29)), data = covtype.hex, family = "gaussian", nfolds = 2, alpha = 0, lambda = 0)
 covtype.glm
 
-covtype.glm.path <- h2o.saveModel(covtype.glm, dir = hdfs_temp_dir)
+covtype.glm.path <- h2o.saveModel(covtype.glm, dir = hdfs_tmp_dir)
 covtype.glm2 <- h2o.loadModel(conn, covtype.glm.path)
 
 expect_equal(class(covtype.glm), class(covtype.glm2))

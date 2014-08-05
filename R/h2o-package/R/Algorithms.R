@@ -804,7 +804,14 @@ h2o.pcr <- function(x, y, data, key = "", ncomp, family, nfolds = 10, alpha = 0.
 }
 
 # ----------------------------------- Random Forest --------------------------------- #
-h2o.randomForest <- function(x, y, data, key="", classification=TRUE, ntree=50, depth=20, mtries = -1, sample.rate=2/3, nbins=100, seed=-1, importance=FALSE, nfolds=0, validation, nodesize=1, balance.classes=FALSE, max.after.balance.size=5, doGrpSplit=TRUE) {
+h2o.randomForest <- function(x, y, data, key="", classification=TRUE, ntree=50, depth=20, mtries = -1, sample.rate=2/3,
+                             nbins=100, seed=-1, importance=FALSE, nfolds=0, validation, nodesize=1,
+                             balance.classes=FALSE, max.after.balance.size=5, doGrpSplit=TRUE, verbose = FALSE,
+                             oobee = TRUE, stat.type = "ENTROPY", type = "fast") {
+  if (type == "fast") {
+    return(h2o.SpeeDRF(x, y, data, key, classification, nfolds, validation, mtries, ntree, depth, sample.rate, oobee,
+                       importance, nbins, seed, stat.type, balance.classes, verbose))
+  }
   args <- .verify_dataxy(data, x, y)
   
   if(!is.character(key)) stop("key must be of class character")
@@ -916,7 +923,7 @@ h2o.randomForest <- function(x, y, data, key="", classification=TRUE, ntree=50, 
 
 # -------------------------- SpeeDRF -------------------------- #
 h2o.SpeeDRF <- function(x, y, data, key="", classification=TRUE, nfolds=0, validation,
-                        mtry=-1, 
+                        mtries=-1,
                         ntree=50, 
                         depth=20,
                         sample.rate=2/3,
@@ -928,8 +935,8 @@ h2o.SpeeDRF <- function(x, y, data, key="", classification=TRUE, nfolds=0, valid
                         balance.classes=FALSE,
                         verbose=FALSE
     ) {
+  nbins <- max(nbins, 1024)
   args <- .verify_dataxy(data, x, y)
-  
   if(!is.character(key)) stop("key must be of class character")
   if(nchar(key) > 0 && regexpr("^[a-zA-Z_][a-zA-Z0-9_.]*$", key)[1] == -1)
     stop("key must match the regular expression '^[a-zA-Z_][a-zA-Z0-9_.]*$'")
@@ -954,26 +961,26 @@ h2o.SpeeDRF <- function(x, y, data, key="", classification=TRUE, nfolds=0, valid
   if(!is.logical(verbose)) stop("verbose must be a logical value")
 
   if (missing(validation) && nfolds == 0 && oobee) {
-    res <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, balance_classes = as.numeric(balance.classes), num_trees=ntree, max_depth=depth, importance=as.numeric(importance),
-                                sample=sample.rate, bin_limit=nbins, seed=seed, select_stat_type = stat.type, oobee=as.numeric(oobee), sampling_strategy="RANDOM", verbose = as.numeric(verbose))
+    res <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, balance_classes = as.numeric(balance.classes), ntrees=ntree, max_depth=depth, importance=as.numeric(importance),
+                                sample_rate=sample.rate, nbins=nbins, seed=seed, select_stat_type = stat.type, oobee=as.numeric(oobee), sampling_strategy="RANDOM", verbose = as.numeric(verbose))
 
   } else if(missing(validation) && nfolds >= 2 && oobee) {
-        res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, num_trees=ntree, balance_classes = as.numeric(balance.classes), max_depth=depth, n_folds=nfolds, importance=as.numeric(importance),
-                                sample=sample.rate, bin_limit=nbins, seed=seed, select_stat_type=stat.type, oobee=as.numeric(oobee), sampling_strategy="RANDOM", verbose = as.numeric(verbose))
+        res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, ntrees=ntree, balance_classes = as.numeric(balance.classes), max_depth=depth, n_folds=nfolds, importance=as.numeric(importance),
+                                sample_rate=sample.rate, nbins=nbins, seed=seed, select_stat_type=stat.type, oobee=as.numeric(oobee), sampling_strategy="RANDOM", verbose = as.numeric(verbose))
 
   } else if(missing(validation) && nfolds == 0) {
     # Default to using training data as validation if oobee is false...
     validation = data
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, balance_classes = as.numeric(balance.classes), num_trees=ntree, max_depth=depth, validation=data@key, importance=as.numeric(importance),
-                            sample=sample.rate, bin_limit=nbins, seed=seed, select_stat_type = stat.type, oobee=as.numeric(oobee), sampling_strategy="RANDOM", verbose = as.numeric(verbose))
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, balance_classes = as.numeric(balance.classes), ntrees=ntree, max_depth=depth, validation=data@key, importance=as.numeric(importance),
+                            sample_rate=sample.rate, nbins=nbins, seed=seed, select_stat_type = stat.type, oobee=as.numeric(oobee), sampling_strategy="RANDOM", verbose = as.numeric(verbose))
   } else if(missing(validation) && nfolds >= 2) {
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, num_trees=ntree, balance_classes = as.numeric(balance.classes), max_depth=depth, n_folds=nfolds, importance=as.numeric(importance),
-                            sample=sample.rate, bin_limit=nbins, seed=seed, select_stat_type=stat.type, oobee=as.numeric(oobee), sampling_strategy="RANDOM", verbose = as.numeric(verbose))
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, ntrees=ntree, balance_classes = as.numeric(balance.classes), max_depth=depth, n_folds=nfolds, importance=as.numeric(importance),
+                            sample_rate=sample.rate, nbins=nbins, seed=seed, select_stat_type=stat.type, oobee=as.numeric(oobee), sampling_strategy="RANDOM", verbose = as.numeric(verbose))
   } else if(!missing(validation) && nfolds == 0) {
-    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, balance_classes = as.numeric(balance.classes), num_trees=ntree, max_depth=depth, validation=validation@key, importance=as.numeric(importance),
-                            sample=sample.rate, bin_limit=nbins, seed=seed, select_stat_type = stat.type, oobee=as.numeric(oobee), sampling_strategy="RANDOM", verbose = as.numeric(verbose))
+    res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SpeeDRF, source=data@key, destination_key=key, response=args$y, ignored_cols=args$x_ignore, balance_classes = as.numeric(balance.classes), ntrees=ntree, max_depth=depth, validation=validation@key, importance=as.numeric(importance),
+                            sample_rate=sample.rate, nbins=nbins, seed=seed, select_stat_type = stat.type, oobee=as.numeric(oobee), sampling_strategy="RANDOM", verbose = as.numeric(verbose))
   } else stop("Cannot set both validation and nfolds at the same time")
-  params = list(x=args$x, y=args$y, ntree=ntree, depth=depth, sample.rate=sample.rate, bin_limit=nbins, stat.type = stat.type, balance_classes = as.numeric(balance.classes),
+  params = list(x=args$x, y=args$y, ntree=ntree, depth=depth, sample.rate=sample.rate, nbins=nbins, stat.type = stat.type, balance_classes = as.numeric(balance.classes),
                 sampling_strategy="RANDOM", seed=seed, oobee=oobee, nfolds=nfolds, importance=importance, verbose = as.numeric(verbose), h2o = data@h2o)
   
   if(.is_singlerun("SpeeDRF", params))
@@ -988,7 +995,7 @@ h2o.SpeeDRF <- function(x, y, data, key="", classification=TRUE, nfolds=0, valid
   mySum$ntrees = res$N
   mySum$max_depth = res$max_depth
   mySum$min_rows = res$min_rows
-  mySum$nbins = res$bin_limit
+  mySum$nbins = res$nbins
   
   # temp = matrix(unlist(res$cm), nrow = length(res$cm))
   # mySum$prediction_error = 1-sum(diag(temp))/sum(temp)
@@ -1039,7 +1046,7 @@ h2o.SpeeDRF <- function(x, y, data, key="", classification=TRUE, nfolds=0, valid
     #    }
     #
     #    if (!is.null(rrr)) {raw_cms <- rrr}
-    
+
     result$confusion = .build_cm(raw_cms, class_names)
   }
   
@@ -1054,6 +1061,9 @@ h2o.SpeeDRF <- function(x, y, data, key="", classification=TRUE, nfolds=0, valid
   extra_json <- .fetchJSON(params$h2o, res$'_key')
   result$priorDistribution <- extra_json$speedrf_model$"_priorClassDist"
   result$modelDistribution <- extra_json$speedrf_model$"_modelClassDist"
+  result$params$seed <- params$seed
+  if (params$seed == -1)
+    result$params$seed <- extra_json$speedrf_model$parameters$seed
   
   return(result)
 }
@@ -1378,7 +1388,7 @@ h2o.anomaly <- function(data, model, key = "", threshold = -1.0) {
   else if(algo == "RF")
     my_params <- list(params$ntree, params$depth, params$nodesize, params$sample.rate, params$nbins, params$max.after.balance.size)
   else if(algo == "SpeeDRF")
-    my_params <- list(params$ntree, params$depth, params$sample.rate, params$bin_limit)
+    my_params <- list(params$ntree, params$depth, params$sample.rate, params$nbins)
   
   isSingle <- all(sapply(my_params, function(x) { length(x) == 1 }))
   return(isSingle)

@@ -33,7 +33,7 @@ myY="CAPSULE"
 
 #GLM
 print("Build GLM model")   
-my.glm = h2o.glm(x=myX, y=myY, data=pros.train, family="binomial",standardize=T,use_all_factor_levels=1,higher_accuracy=T,lambda_search=T,return_all_lambda=T,variable_importances=1)
+my.glm = h2o.glm(x=myX, y=myY, data=pros.train, family="binomial",standardize=T,use_all_factor_levels=1,higher_accuracy=T,lambda_search=T,return_all_lambda=T,variable_importances=0)
 print(my.glm)
 
 print("This is the best model")
@@ -71,9 +71,9 @@ print(glm_best_model)
 
 #GBM
 print("Grid search gbm")
-pros.gbm <- h2o.gbm(x = myX, y = myY, distribution = "bernoulli", data = pros.train, n.trees = c(200,100),n.minobsinnode=1, 
-                    interaction.depth = c(2,3), shrinkage = c(0.01,.001), n.bins = c(20), importance = T) 
-pros.rf = h2o.randomForest(x=myX,y=myY,data=pros.train,classification=T,ntree=c(10,5),depth=10,mtries=c(2,5),importance=T)
+pros.gbm <- h2o.gbm(x = myX, y = myY, distribution = "bernoulli", data = pros.train, n.trees = c(50,100),n.minobsinnode=1, 
+                    interaction.depth = c(2,3), shrinkage = c(0.01,.001), n.bins = c(20), importance = F) 
+pros.rf = h2o.randomForest(x=myX,y=myY,data=pros.train,classification=T,ntree=c(5,10),depth=10,mtries=c(2,5),importance=F, type = "BigData")
 print(pros.gbm)
 pros.gbm@sumtable
 print("number of models built")

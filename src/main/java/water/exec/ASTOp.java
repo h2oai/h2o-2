@@ -385,9 +385,6 @@ class ASTRound extends ASTOp {
   @Override ASTOp make() { return this; }
   @Override void apply(Env env, int argcnt, ASTApply apply) {
     final int digits = (int)env.popDbl();
-    if(digits < 0)
-      throw new IllegalArgumentException("Error in round: argument digits must be a non-negative integer");
-
     if(env.isAry()) {
       Frame fr = env.popAry();
       for(int i = 0; i < fr.vecs().length; i++) {
