@@ -311,6 +311,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 
   @Override public void init(){
     super.init();
+    if(nlambdas == -1)
+      nlambdas = 100;
     if(lambda_search && lambda.length > 1)
       throw new IllegalArgumentException("Can not supply both lambda_search and multiple lambdas. If lambda_search is on, GLM expects only one value of lambda_value, representing the lambda_value min (smallest lambda_value in the lambda_value search).");
     // check the response
@@ -372,7 +374,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   private static class GLM2_Progress extends Iced{
     final long _total;
     double _done;
-    public GLM2_Progress(int total){_total = total; assert _total > 0;}
+    public GLM2_Progress(int total){_total = total;
+      assert _total > 0:"total = " + _total;
+    }
     public float progess(){
       return 0.01f*((int)(100*_done/(double)_total));
     }
@@ -635,13 +639,12 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       } else {
         final double bdiff = beta_diff(glmt._beta,newBeta);
         if(_glm.family == Family.gaussian || bdiff < beta_epsilon || _iter >= max_iter){ // Gaussian is non-iterative and gradient is ADMMSolver's gradient => just validate and move on to the next lambda_value
-          LogInfo("bdiff = " + bdiff);
           int diff = (int)Math.log10(bdiff);
           int nzs = 0;
           for(int i = 0; i < glmt._beta.length; ++i)
             if(glmt._beta[i] != 0) ++nzs;
           LogInfo("converged (reached a fixed point with ~ 1e" + diff + " precision), got " + nzs + " nzs");
-          checkKKTAndComplete(glmt,glmt._beta,false);
+          checkKKTAndComplete(glmt,newBeta,false);
           return;
         } else { // not done yet, launch next iteration
           if(glmt._beta != null)
@@ -823,7 +826,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     int total = max_iter;
     if(lambda_search)
       total = 3*nlambdas;
-    GLM2_Progress progress = new GLM2_Progress(total*(n_folds+1));
+    GLM2_Progress progress = new GLM2_Progress(total*(n_folds > 1?(n_folds+1):1));
     LogInfo("created progress " + progress);
     DKV.put(_progressKey,progress,fs);
     fs.blockForPending();
