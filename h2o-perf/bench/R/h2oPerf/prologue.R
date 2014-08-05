@@ -270,11 +270,11 @@ function(tol = 0, standardize = TRUE, retx = FALSE) {
 
 runRF<-
 function(x, y, ntree=50, depth=50, nodesize=1, nfolds = 0,
-         sample.rate=2/3, nbins=100, seed=-1, mtries = -1, type, ...) {
+         sample.rate=2/3, nbins=100, seed=-1, mtries = -1, type="fast",...) {
   data <- h2o.getFrame(h2o = h, key = "parsed.hex")
   model <<- h2o.randomForest(x = x, y = y, data = data, ntree = ntree, nfolds = nfolds, mtries = mtry,
                                 depth = depth, nodesize = nodesize,
-                                sample.rate = sample.rate, nbins = nbins, seed = seed, ...)
+                                sample.rate = sample.rate, nbins = nbins, seed = seed, tyoe = type, ...)
   page <- .h2o.__PAGE_SpeeDRFModelView
   if (type != "fast") page <- .h2o.__PAGE_DRFModelView
   model.json <<- .h2o.__remoteSend(h, page, '_modelKey'= model@key)
