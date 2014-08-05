@@ -91,6 +91,14 @@ public class SpeeDRF extends Job.ValidatedJob {
 
   Tree.StatType stat_type;
 
+  /** Return the query link to this page */
+  public static String link(Key k, String content) {
+    RString rs = new RString("<a href='/2/SpeeDRF.query?source=%$key'>%content</a>");
+    rs.replace("key", k.toString());
+    rs.replace("content", content);
+    return rs.toString();
+  }
+
   protected SpeeDRFModel makeModel( SpeeDRFModel model, double err, ConfusionMatrix cm, VarImp varimp, AUCData validAUC) {
     return new SpeeDRFModel(model, err, cm, varimp, validAUC);
   }
