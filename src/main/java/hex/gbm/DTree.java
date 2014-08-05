@@ -44,7 +44,15 @@ public class DTree extends Iced {
   public DTree( String[] names, int ncols, char nbins, char nclass, int min_rows ) { this(names,ncols,nbins,nclass,min_rows,-1); }
   public DTree( String[] names, int ncols, char nbins, char nclass, int min_rows, long seed ) {
     _names = names; _ncols = ncols; _nbins=nbins; _nclass=nclass; _min_rows = min_rows; _ns = new Node[1]; _seed = seed; }
-
+  //yiran.zhang
+//  public DTree( Tree tree) {
+//    // temporarily assign random values.
+//    _names = null; _ncols = 0; _nbins = 0; _nclass = 'c'; _min_rows = 1; _ns = new Node[1]; _seed = -1;
+//    // then I need to transform all the nodes;
+//    //_ns[0] = new Node(); //root
+//    final int pid=0; final int nid = 2;
+//    _ns[0] = new
+//  }
   public final Node root() { return _ns[0]; }
   // One-time local init after wire transfer
   void init_tree( ) { for( int j=0; j<_len; j++ ) _ns[j]._tree = this; }

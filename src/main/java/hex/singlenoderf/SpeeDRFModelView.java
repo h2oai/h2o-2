@@ -31,6 +31,8 @@ public class SpeeDRFModelView extends Request2 {
     return true;
   }
 
+  @Override public void toJava(StringBuilder sb) { speedrf_model.toJavaHtml(sb); }
+
   @Override protected Response serve() {
     speedrf_model = DKV.get(_modelKey).get();
     return Response.done(this);

@@ -17,6 +17,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 
+import hex.gbm.DTree.*;
+
 public class Tree extends H2OCountedCompleter {
 
   static public enum SelectStatType {ENTROPY, GINI};
@@ -259,6 +261,7 @@ public class Tree extends H2OCountedCompleter {
     int _size;                  // Byte-size in serialized form
     final int size( ) { return _size==0 ? (_size=size_impl()) : _size;  }
     abstract int size_impl();
+    AutoBuffer compress(AutoBuffer ab) { return ab;} // TODO: should throw it hasn't been implemented yet
   }
 
   /** Leaf node that for any row returns its the data class it belongs to. */
@@ -303,6 +306,18 @@ public class Tree extends H2OCountedCompleter {
         return 5;
       }
       return 2; } // 2 bytes in serialized form
+
+    /**
+     * Compress a leaf node
+     * @param ab
+     * @return
+     */
+    @Override
+    AutoBuffer compress(AutoBuffer ab) {
+      assert !Float.isNaN(classify( null ));
+      // a little hacky here
+      return ab.put4f(classify( null ));
+    }
   }
 
   /** Gini classifier node. */
@@ -320,6 +335,14 @@ public class Tree extends H2OCountedCompleter {
       _split = split;
       _originalSplit = originalSplit;
     }
+
+    @Override AutoBuffer compress(AutoBuffer ab) {
+      // TODO: splitnode compress method
+      int pos = ab.position();
+
+      return ab;
+    }
+
 
     static class SplitInfo implements Comparable<SplitInfo> {
       /**first node which introduce split*/
@@ -578,6 +601,20 @@ public class Tree extends H2OCountedCompleter {
       long result( ) {return ((long)_maxdepth<<32) | _leaves; }
     }.visit().result();
   }
+
+  // Build a compressed-tree struct
+  public TreeModel.CompressedTree compress() {
+    // TODO: find the size of the root
+    int sz = 4; // 4 should be size of the node
+    if( _tree instanceof LeafNode) sz += 3; // Oops - tree-stump ?? why is 3 more bytes ??
+    AutoBuffer ab = new AutoBuffer(sz);
+    if( _tree instanceof LeafNode) // Oops - tree-stump    The whole tree does nothing but predict a single value.
+      ab.put1(0).put2((char)65535); // Flag it special so the decompress doesn't look for top-level decision
+    _tree.compress(ab);      // Compress whole tree
+    assert ab.position() == sz;
+    // TODO: get the _nclass and _seed for Tree
+    return new TreeModel.CompressedTree(ab.buf(),_nclass,_seed);
+  }
 }
 
 
@@ -599,4 +636,7 @@ class TreeP extends Iced {
   public long get_numErrs()  { return _numErrs;   }
   public int get_trainSize() { return _trainSize; }
   public boolean contains(final long[] array, final long key) { return Arrays.asList(array).contains(key); }
+
+
+
 }
