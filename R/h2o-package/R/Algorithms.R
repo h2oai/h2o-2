@@ -935,6 +935,7 @@ h2o.SpeeDRF <- function(x, y, data, key="", classification=TRUE, nfolds=0, valid
                         balance.classes=FALSE,
                         verbose=FALSE
     ) {
+  nbins <- max(nbins, 1024)
   args <- .verify_dataxy(data, x, y)
   if(!is.character(key)) stop("key must be of class character")
   if(nchar(key) > 0 && regexpr("^[a-zA-Z_][a-zA-Z0-9_.]*$", key)[1] == -1)
