@@ -56,12 +56,14 @@ test.GBM.bernoulli.SyntheticData <- function(conn) {
 
     #  Run H2O-GBM grid job
     print("H2O GBM grid search")
-    system.time(tru.gbm <- h2o.gbm(x = myX, y = myY, distribution = "bernoulli", data = alldata, n.trees = c(10,20,40),
-                               n.minobsinnode=1, interaction.depth = c(2,3,4,5), shrinkage = c(1,.1,.01), n.bins = c(20), importance = F) )
+    system.time(tru.gbm <- h2o.gbm(x = myX, y = myY, distribution = "bernoulli", data = alldata, n.trees = c(150),
+                               n.minobsinnode=1, interaction.depth = c(1,2,3,4), shrinkage = c(1,.1,.01), n.bins = c(20), importance = F) )
 
     num_models = length(tru.gbm@sumtable)
     print(paste("Number of gbm models created:", num_models,sep ='') )
-    expect_equal(num_models,36)
+    expect_equal(num_models,12)
+    print("GBM models summary")
+    print(tru.gbm)
     
     for(i in 1:num_models){
         model = tru.gbm@model[[i]]
