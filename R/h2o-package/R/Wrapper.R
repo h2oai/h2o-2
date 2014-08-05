@@ -2,16 +2,25 @@
 # 1) If can't connect and user doesn't want to start H2O, stop immediately
 # 2) If user does want to start H2O and running locally, attempt to bring up H2O launcher
 # 3) If user does want to start H2O, but running non-locally, print an error
-h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, forceDL = FALSE, Xmx = "1g", beta = FALSE, assertion = TRUE, license = NULL) {
+h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, forceDL = FALSE, Xmx,
+                     beta = FALSE, assertion = TRUE, license = NULL, max_mem_size = "1g", min_mem_size = "1g") {
   if(!is.character(ip)) stop("ip must be of class character")
   if(!is.numeric(port)) stop("port must be of class numeric")
   if(!is.logical(startH2O)) stop("startH2O must be of class logical")
   if(!is.logical(forceDL)) stop("forceDL must be of class logical")
   if(!is.character(Xmx)) stop("Xmx must be of class character")
+  if(!is.character(max_mem_size)) stop("max_mem_size must be of class character")
+  if(!is.character(min_mem_size)) stop("min_mem_size must be of class character")
   if(!regexpr("^[1-9][0-9]*[gGmM]$", Xmx)) stop("Xmx option must be like 1g or 1024m")
   if(!is.logical(beta)) stop("beta must be of class logical")
   if(!is.logical(assertion)) stop("assertion must be of class logical")
   if(!is.null(license) && !is.character(license)) stop("license must be of class character")
+
+  if(!missing(Xmx)) {
+    warning("Xmx is a deprecated parameter. Use `max_mem_size` and `min_mem_size` to set the memory boundaries. Using `Xmx` to set these.")
+    max_mem_size <- Xmx
+    min_mem_size <- Xmx
+  }
 
   myURL = paste("http://", ip, ":", port, sep="")
   if(!url.exists(myURL)) {
@@ -19,7 +28,7 @@ h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, forceDL = 
       stop(paste("Cannot connect to H2O server. Please check that H2O is running at", myURL))
     else if(ip == "localhost" || ip == "127.0.0.1") {
       cat("\nH2O is not running yet, starting it now...\n")
-      .h2o.startJar(memory = Xmx, beta = beta, assertion = assertion, forceDL = forceDL, license = license)
+      .h2o.startJar(max_memory = max_mem_size, min_memory = min_mem_size, beta = beta, assertion = assertion, forceDL = forceDL, license = license)
       count = 0; while(!url.exists(myURL) && count < 60) { Sys.sleep(1); count = count + 1 }
       if(!url.exists(myURL)) stop("H2O failed to start, stopping execution.")
     } else stop("Can only start H2O launcher if IP address is localhost.")
@@ -189,7 +198,7 @@ h2o.clusterStatus <- function(client) {
 #     h2o.shutdown(new("H2OClient", ip=ip, port=port), prompt = FALSE)
 # }
 
-.h2o.startJar <- function(memory = "1g", beta = FALSE, assertion = TRUE, forceDL = FALSE, license = NULL) {
+.h2o.startJar <- function(max_memory = "1g", min_memory = "1g", beta = FALSE, assertion = TRUE, forceDL = FALSE, license = NULL) {
   command <- .h2o.checkJava()
 
   if (! is.null(license)) {
@@ -208,8 +217,8 @@ h2o.clusterStatus <- function(client) {
   jar_file <- paste('"', jar_file, '"', sep = "")
 
   # Compose args
-  args <- c(paste("-Xms", memory, sep=""),
-            paste("-Xmx", memory, sep=""))
+  args <- c(paste("-Xms", min_memory, sep=""),
+            paste("-Xmx", max_memory, sep=""))
   if(assertion) args <- c(args, "-ea")
   args <- c(args, "-jar", jar_file)
   args <- c(args, "-name", "H2O_started_from_R")
