@@ -42,7 +42,7 @@ conn <- new("H2OClient", ip=myIP, port=myPort)
 #heading("Testing single file importHDFS")
 url <- sprintf("hdfs://%s%s", hdfs_name_node, hdfs_covtype_file)
 covtype.hex <- h2o.importFile(conn, url)
-covtype[,55] <- ifelse(covtype[,55] == 1, 1, 0)
+covtype.hex[,55] <- ifelse(covtype.hex[,55] == 1, 1, 0)
 #heading("Running covtype GLM")
 covtype.glm <- h2o.glm(y = 55, x = setdiff(1:54, c(21,29)), data = covtype.hex, family = "gaussian", nfolds = 2, alpha = 0, lambda = 0)
 covtype.glm
