@@ -1,5 +1,6 @@
 package water;
 
+import jsr166y.CountedCompleter;
 import water.DException.DistributedException;
 import water.H2O.H2OCountedCompleter;
 
@@ -72,43 +73,34 @@ public abstract class DTask<T extends DTask> extends H2OCountedCompleter impleme
    * Basically a wrapper around DTask which enables us to bypass
    * remote/local distinction (RPC versus submitTask).
    */
-  public static abstract class DKeyTask<T extends DKeyTask,V extends Iced> extends Iced{
-    private transient H2OCountedCompleter _task;
+  public static abstract class DKeyTask<T extends DKeyTask,V extends Iced> extends DTask<DKeyTask>{
+    private final Key _key;
     public DKeyTask(final Key k) {this(null,k);}
     public DKeyTask(H2OCountedCompleter cmp,final Key k) {
-      final DKeyTask dk = this;
-
-      final DTask dt = new DTask(cmp) {
-        @Override
-        public void compute2() {
-          Value val = H2O.get(k);
-          if(val != null) {
-            V v = val.get();
-            dk._task = this;
-            dk.map(v);
-          }
-          tryComplete();
-        }
-      };
-      if(k.home()) _task = dt;
-      else {
-        _task = new H2OCountedCompleter() {
-          @Override
-          public void compute2() {
-            new RPC(k.home_node(),dt).addCompleter(this).call();
-          }
-        };
-      }
+      super(cmp);
+      _key = k;
     }
-    protected H2OCountedCompleter getCurrentTask(){ return _task;}
+    // override this
     protected abstract void map(V v);
-    public void submitTask() {H2O.submitTask(_task);}
-    public void forkTask() {_task.fork();}
 
+    @Override public final void compute2(){
+      if(_key.home()){
+        Value val = H2O.get(_key);
+        if(val != null) {
+          V v = val.get();
+          map(v);
+        }
+        tryComplete();
+      } else new RPC(_key.home_node(),this).addCompleter(this).call();
+    }
+    // onCompletion must be empty here, may be invoked twice (on remote and local)
+    @Override public void onCompletion(CountedCompleter cc){}
+
+    public void submitTask() {H2O.submitTask(this);}
+    public void forkTask() {fork();}
     public T invokeTask() {
-      assert _task.getCompleter() == null;
-      submitTask();
-      _task.join();
+      H2O.submitTask(this);
+      join();
       return (T)this;
     }
   }

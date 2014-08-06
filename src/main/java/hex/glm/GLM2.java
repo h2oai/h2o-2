@@ -1173,10 +1173,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       }
       @Override
       public void map(GLMGrid g) {
-        H2OCountedCompleter t = getCurrentTask();
-        t.addToPendingCount(g.destination_keys.length);
+        addToPendingCount(g.destination_keys.length);
         for(Key k:g.destination_keys)
-          new GLMModel.UnlockModelTask(t,k,_jobKey).forkTask();
+          new GLMModel.UnlockModelTask(this,k,_jobKey).forkTask();
         g.unlock(_jobKey);
       }
     }
@@ -1187,10 +1186,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       }
       @Override
       public void map(GLMGrid g) {
-        H2OCountedCompleter t = getCurrentTask();
-        t.addToPendingCount(g.destination_keys.length);
+        addToPendingCount(g.destination_keys.length);
         for(Key k:g.destination_keys)
-          new GLMModel.DeleteModelTask(t,k).forkTask();
+          new GLMModel.DeleteModelTask(this,k).forkTask();
         assert g.is_unlocked():"not unlocked??";
         g.delete();
       }

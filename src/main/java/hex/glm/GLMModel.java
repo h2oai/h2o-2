@@ -92,10 +92,9 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     public void map(GLMModel m) {
       Key [] xvals = m.xvalModels();
       if(xvals != null){
-        H2OCountedCompleter t = getCurrentTask();
-        t.addToPendingCount(xvals.length);
+        addToPendingCount(xvals.length);
         for(int i = 0; i < xvals.length; ++i)
-          new UnlockModelTask(t,xvals[i],_jobKey).forkTask();
+          new UnlockModelTask(this,xvals[i],_jobKey).forkTask();
       }
       m.unlock(_jobKey);
     }
@@ -112,10 +111,9 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     public void map(GLMModel m) {
       Key[] xvals = m.xvalModels();
       if (xvals != null) {
-        H2OCountedCompleter t = getCurrentTask();
-        t.addToPendingCount(xvals.length);
+        addToPendingCount(xvals.length);
         for (int i = 0; i < xvals.length; ++i)
-          new DeleteModelTask(t, xvals[i]).forkTask();
+          new DeleteModelTask(this, xvals[i]).forkTask();
       }
       m.delete();
     }
