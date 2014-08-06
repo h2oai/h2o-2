@@ -70,7 +70,7 @@ class Basic(unittest.TestCase):
             for trial in range(5):
                 hex_key = orig_hex_key + str(trial)
                 start = time.time()
-                parseResult = h2i.import_parse(path=csvPathname + "*", schema='local', hex_key=hex_key, delete_on_done=1,
+                parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, delete_on_done=1,
                     timeoutSecs=timeoutSecs, doSummary=False)
                 print "Parse:", parseResult['destination_key'], "took", time.time() - start, "seconds"
 
