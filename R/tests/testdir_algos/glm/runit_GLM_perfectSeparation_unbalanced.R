@@ -12,7 +12,7 @@ source('../../findNSourceUtils.R')
 
 test <- function(conn) {
 
-    print("Read in synthetic balanced dataset")
+    print("Read in synthetic unbalanced dataset")
         data.u.hex <- h2o.uploadFile(conn, locate("smalldata/synthetic_perfect_separation/unbalanced.csv"), key="data.u.hex")
 
     print("Fit model on dataset.")
