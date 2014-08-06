@@ -29,7 +29,7 @@ public final class ParseDataset2 extends Job {
   // --------------------------------------------------------------------------
   // Parse an array of csv input/file keys into an array of distributed output Vecs
   public static Frame parse(Key okey, Key [] keys) {
-    return parse(okey,keys,new ParseDataset.GuessSetupTsk(new ParserSetup(),true).invoke(keys)._gSetup._setup,true);
+    return parse(okey,keys,new GuessSetup.GuessSetupTsk(new ParserSetup(),true).invoke(keys)._gSetup._setup,true);
   }
 
   public static Frame parse(Key okey, Key[] keys, CustomParser.ParserSetup globalSetup, boolean delete_on_done) {
