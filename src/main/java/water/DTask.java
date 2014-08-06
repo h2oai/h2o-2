@@ -137,23 +137,47 @@ public abstract class DTask<T extends DTask> extends H2OCountedCompleter impleme
 
   /**
    * Task to be executed at home of the given key.
-   * Calling submit will either submitTask if key is local or
-   * invoke RPC to the key's home node.
+   * Basically a wrapper around DTask which enables us to bypass
+   * remote/local distinction (RPC versus submitTask).
    */
-  public static abstract class DKeyTask extends DTask {
-    protected final Key _key;
+  public static abstract class DKeyTask<T extends DKeyTask,V extends Iced> extends Iced{
+    private transient H2OCountedCompleter _task;
+    public DKeyTask(final Key k) {this(null,k);}
+    public DKeyTask(H2OCountedCompleter cmp,final Key k) {
+      final DKeyTask dk = this;
 
-    public DKeyTask(H2OCountedCompleter cmp,Key k) {
-      super(cmp);
-      _key = k;
+      final DTask dt = new DTask(cmp) {
+        @Override
+        public void compute2() {
+          Value val = H2O.get(k);
+          if(val != null) {
+            V v = val.get();
+            dk._task = this;
+            dk.map(v);
+          }
+          tryComplete();
+        }
+      };
+      if(k.home()) _task = dt;
+      else {
+        _task = new H2OCountedCompleter() {
+          @Override
+          public void compute2() {
+            new RPC(k.home_node(),dt).addCompleter(this).call();
+          }
+        };
+      }
     }
-    public void submitTask() {
-      if (_key.home()) H2O.submitTask(this);
-      else RPC.call(_key.home_node(), this);
-    }
-    public void forkTask() {
-      if (_key.home()) fork();
-      else RPC.call(_key.home_node(), this);
+    protected H2OCountedCompleter getCurrentTask(){ return _task;}
+    protected abstract void map(V v);
+    public void submitTask() {H2O.submitTask(_task);}
+    public void forkTask() {_task.fork();}
+
+    public T invokeTask() {
+      assert _task.getCompleter() == null;
+      submitTask();
+      _task.join();
+      return (T)this;
     }
   }
 }

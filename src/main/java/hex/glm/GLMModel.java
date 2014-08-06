@@ -82,30 +82,26 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     return 1.0 - val.residual_deviance/val.null_deviance;
   }
 
-  public static class UnlockModelTask extends DTask.DKeyTask{
-    final Key _modelKey;
+  public static class UnlockModelTask extends DTask.DKeyTask<UnlockModelTask,GLMModel>{
     final Key _jobKey;
-
     public UnlockModelTask(H2OCountedCompleter cmp, Key modelKey, Key jobKey){
       super(cmp,modelKey);
-      _modelKey = modelKey;
       _jobKey = jobKey;
     }
     @Override
-    public void compute2() {
-      GLMModel m = H2O.get(_modelKey).get();
+    public void map(GLMModel m) {
       Key [] xvals = m.xvalModels();
       if(xvals != null){
-        addToPendingCount(xvals.length);
+        H2OCountedCompleter t = getCurrentTask();
+        t.addToPendingCount(xvals.length);
         for(int i = 0; i < xvals.length; ++i)
-          new UnlockModelTask(this,xvals[i],_jobKey).forkTask();
+          new UnlockModelTask(t,xvals[i],_jobKey).forkTask();
       }
       m.unlock(_jobKey);
-      tryComplete();
     }
   }
 
-  public static class DeleteModelTask extends DTask.DKeyTask{
+  public static class DeleteModelTask extends DTask.DKeyTask<DeleteModelTask,GLMModel>{
     final Key _modelKey;
 
     public DeleteModelTask(H2OCountedCompleter cmp, Key modelKey){
@@ -113,18 +109,15 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
       _modelKey = modelKey;
     }
     @Override
-    public void compute2() {
-      if(H2O.get(_modelKey) != null) {
-        GLMModel m = H2O.get(_modelKey).get();
-        Key[] xvals = m.xvalModels();
-        if (xvals != null) {
-          addToPendingCount(xvals.length);
-          for (int i = 0; i < xvals.length; ++i)
-            new DeleteModelTask(this, xvals[i]).forkTask();
-        }
-        m.delete();
+    public void map(GLMModel m) {
+      Key[] xvals = m.xvalModels();
+      if (xvals != null) {
+        H2OCountedCompleter t = getCurrentTask();
+        t.addToPendingCount(xvals.length);
+        for (int i = 0; i < xvals.length; ++i)
+          new DeleteModelTask(t, xvals[i]).forkTask();
       }
-      tryComplete();
+      m.delete();
     }
   }
 
@@ -308,34 +301,21 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     setSubmodel(cmp,modelKey,lambda,beta,norm_beta,iteration,runtime,sparseCoef,null);
   }
 
-  public static class GetScoringModelTask extends DTask<GetScoringModelTask>{
-    final Key _modelKey;
-    final Key _jobKey;
+  public static class GetScoringModelTask extends DTask.DKeyTask<GetScoringModelTask,GLMModel> {
     final double _lambda;
     public GLMModel _res;
-    public GetScoringModelTask(H2OCountedCompleter cmp, Key jobKey, Key modelKey, double lambda){
-      super(cmp);
-      _jobKey = jobKey;
-      _modelKey = modelKey;
+    public GetScoringModelTask(H2OCountedCompleter cmp, Key modelKey, double lambda){
+      super(cmp,modelKey);
       _lambda = lambda;
     }
     @Override
-    public void compute2() {
-      if(_modelKey.home()){
-        Value v = H2O.get(_modelKey);
-        if(v == null && _jobKey != null){
-          assert !Job.isRunning(_jobKey):"missing model (" + _modelKey + " ) while job is still running";
-          throw new Job.JobCancelledException();
-        } else {
-          _res = (GLMModel) v.get().clone();
-          Submodel sm = _res.submodelForLambda(_lambda);
-          assert sm != null : "GLM[" + _modelKey + "]: missing submodel for lambda " + _lambda;
-          sm = (Submodel) sm.clone();
-          _res.submodels = new Submodel[]{sm};
-          _res.setSubmodelIdx(0);
-        }
-        tryComplete();
-      } else new RPC(_modelKey.home_node(),this).call();
+    public void map(GLMModel m) {
+      _res = m.clone();
+      Submodel sm = _res.submodelForLambda(_lambda);
+      assert sm != null : "GLM[" + m._key + "]: missing submodel for lambda " + _lambda;
+      sm = (Submodel) sm.clone();
+      _res.submodels = new Submodel[]{sm};
+      _res.setSubmodelIdx(0);
     }
   }
 

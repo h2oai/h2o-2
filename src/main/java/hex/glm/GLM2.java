@@ -874,7 +874,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       };
       c.addToPendingCount(tasks.length-1);
       for(int i = 0; i < tasks.length; ++i)
-        (tasks[i] = new GLMModel.GetScoringModelTask(c,pgs._glms[i].self(),pgs._glms[i].dest(),curentLambda)).fork();
+        (tasks[i] = new GLMModel.GetScoringModelTask(c,pgs._glms[i].dest(),curentLambda)).forkTask();
     }
   }
 
@@ -1161,7 +1161,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       _startTime = System.currentTimeMillis();
     }
 
-    public static class UnlockGridTsk extends DTask.DKeyTask {
+    public static class UnlockGridTsk extends DTask.DKeyTask<UnlockGridTsk,GLMGrid> {
       final Key _jobKey;
 
       public UnlockGridTsk(Key gridKey, Key jobKey, H2OCountedCompleter cc){
@@ -1169,29 +1169,27 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         _jobKey = jobKey;
       }
       @Override
-      public void compute2() {
-        GLMGrid g = H2O.get(_key).get();
-        addToPendingCount(g.destination_keys.length);
+      public void map(GLMGrid g) {
+        H2OCountedCompleter t = getCurrentTask();
+        t.addToPendingCount(g.destination_keys.length);
         for(Key k:g.destination_keys)
-          new GLMModel.UnlockModelTask(this,k,_jobKey).forkTask();
+          new GLMModel.UnlockModelTask(t,k,_jobKey).forkTask();
         g.unlock(_jobKey);
-        tryComplete();
       }
     }
 
-    public static class DeleteGridTsk extends DTask.DKeyTask {
+    public static class DeleteGridTsk extends DTask.DKeyTask<DeleteGridTsk,GLMGrid> {
       public DeleteGridTsk(H2OCountedCompleter cc, Key gridKey){
         super(cc,gridKey);
       }
       @Override
-      public void compute2() {
-        GLMGrid g = H2O.get(_key).get();
-        addToPendingCount(g.destination_keys.length);
+      public void map(GLMGrid g) {
+        H2OCountedCompleter t = getCurrentTask();
+        t.addToPendingCount(g.destination_keys.length);
         for(Key k:g.destination_keys)
-          new GLMModel.DeleteModelTask(this,k).forkTask();
+          new GLMModel.DeleteModelTask(t,k).forkTask();
         assert g.is_unlocked():"not unlocked??";
         g.delete();
-        tryComplete();
       }
     }
     @Override

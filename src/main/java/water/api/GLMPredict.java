@@ -35,16 +35,12 @@ public class GLMPredict extends Request2 {
       if( model == null )
         throw new IllegalArgumentException("Model is required to perform validation!");
       final Key predictionKey = ( prediction == null )?Key.make("__Prediction_" + Key.make()):prediction;
-      GLMModel.GetScoringModelTask task = new GLMModel.GetScoringModelTask(null,null, model,lambda);
-      H2O.submitTask(task);
-      task.get();
-      GLMModel model= task._res;
+      GLMModel m = new GLMModel.GetScoringModelTask(null, model,lambda).invokeTask()._res;
       // Create a new random key
       if ( prediction == null )
         prediction = Key.make("__Prediction_" + Key.make());
       Frame fr = new Frame(prediction,new String[0],new Vec[0]).delete_and_lock(null);
-      if( model instanceof Model )
-        fr = ((   Model)model).score(data);
+      fr = m.score(data);
       fr = new Frame(prediction,fr._names,fr.vecs()); // Jam in the frame key
       fr.unlock(null);
       return Inspect2.redirect(this, prediction.toString());
