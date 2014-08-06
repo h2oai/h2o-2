@@ -1,5 +1,7 @@
 package water.parser;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.util.*;
 import water.fvec.ParseTime;
 
@@ -122,7 +124,10 @@ NEXT_CHAR:
             assert _str.get_buf() != bits;
             _str.addBuff(bits);
           }
-          dout.addStrCol(colIdx, _str);
+          if(_setup._types != null && _str.equals(_setup._types[colIdx]._naStr))
+            dout.addInvalidCol(colIdx);
+          else
+            dout.addStrCol(colIdx, _str);
           _str.set(null, 0, 0);
           ++colIdx;
           state = SEPARATOR_OR_EOL;
@@ -204,7 +209,7 @@ NEXT_CHAR:
           // fallthrough to TOKEN
         // ---------------------------------------------------------------------
         case TOKEN:
-          if( dout.isString(colIdx) ) { // Forced already to a string col?
+          if(_setup._types != null && _setup._types[colIdx]._type == ParserSetup.Coltype.STR){
             state = STRING; // Do not attempt a number parse, just do a string parse
             _str.set(bits, offset, 0);
             continue MAIN_LOOP;
@@ -732,7 +737,17 @@ NEXT_CHAR:
       err = new String[errors.size()];
       errors.toArray(err);
     }
-    return new PSetupGuess(resSetup,lines.size()-ilines,ilines,data,setup.isSpecified() || lines.size() > ilines, err);
+    PSetupGuess res = new PSetupGuess(resSetup,lines.size()-ilines,ilines,data,setup.isSpecified() || lines.size() > ilines, err);
+    if(res._isValid){ // now guess the types
+      InputStream is = new ByteArrayInputStream(bits);
+      CsvParser p = new CsvParser(res._setup);
+      TypeGuesserDataOut dout = new TypeGuesserDataOut(res._setup._ncols);
+      try{
+        p.streamParse(is, dout);
+        res._setup._types = dout.guessTypes();
+      }catch(Throwable e){}
+    }
+    return res;
   }
 
   @Override public boolean isCompatible(CustomParser p) {
