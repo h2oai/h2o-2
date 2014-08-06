@@ -26,14 +26,7 @@ public final class ParseDataset2 extends Job {
   private MultiFileParseTask _mfpt; // Access to partially built vectors for cleanup after parser crash
   public static enum Compression { NONE, ZIP, GZIP }
 
-  // --------------------------------------------------------------------------
-  // Parse an array of csv input/file keys into an array of distributed output Vecs
-  public static Frame parse(Key okey, Key [] keys) {
-    return parse(okey,keys,new GuessSetup.GuessSetupTsk(new ParserSetup(),true).invoke(keys)._gSetup._setup,true);
-  }
-
-  public static Frame parse(Key okey, Key[] keys, CustomParser.ParserSetup globalSetup, boolean delete_on_done) {
-    // keep the files in alphabetical order
+  private static Key [] filterEmptyFiles(Key [] keys){
     Arrays.sort(keys);
     // first check if there are any empty files and if so remove them
     Vec [] vecs = new Vec [keys.length];
@@ -53,8 +46,18 @@ public final class ParseDataset2 extends Job {
           ++j;
         }
       keys = ks;
-      vecs = vs;
     }
+    return keys;
+  }
+  // --------------------------------------------------------------------------
+  // Parse an array of csv input/file keys into an array of distributed output Vecs
+  public static Frame parse(Key okey, Key [] keys) {
+    keys = filterEmptyFiles(keys);
+    return parse(okey,keys,new GuessSetup.GuessSetupTsk(new ParserSetup(),true).invoke(keys)._gSetup._setup,true);
+  }
+
+  public static Frame parse(Key okey, Key[] keys, CustomParser.ParserSetup globalSetup, boolean delete_on_done) {
+    keys = filterEmptyFiles(keys);    
     if( globalSetup._ncols == 0 ) throw new java.lang.IllegalArgumentException(globalSetup.toString());
     return forkParseDataset(okey, keys, globalSetup, delete_on_done).get();
   }
