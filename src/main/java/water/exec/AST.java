@@ -11,6 +11,7 @@ import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.NewChunk;
 import water.fvec.Vec;
+import water.util.Log;
 
 /** Parse a generic R string and build an AST, in the context of an H2O Cloud
  *  @author cliffc@0xdata.com
@@ -571,7 +572,14 @@ class ASTAssign extends AST {
         Vec rv = env.addRef(rvecs[rvecs.length == 1 ? 0 : i]);
         if (cidx == ary.numCols())
           ary.add("C" + String.valueOf(cidx + 1), rv);     // New column name created with 1-based index
-        else fs = env.subRef(ary.replace(cidx, rv), fs);
+        else {
+          if (!(rv.group().equals(ary.anyVec().group())) && rv.length() == ary.anyVec().length()) {
+            env.subRef(rv);
+            rv = ary.anyVec().align(rv);
+            env.addRef(rv);
+          }
+          fs = env.subRef(ary.replace(cidx, rv), fs);
+        }
       }
       fs.blockForPending();
     }
