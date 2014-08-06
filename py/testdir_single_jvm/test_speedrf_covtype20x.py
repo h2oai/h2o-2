@@ -85,7 +85,7 @@ class Basic(unittest.TestCase):
         # params is mutable. This is default.
         paramDict = drf2ParamDict
         params = {
-            'num_trees': 20,
+            'ntrees': 20,
             'destination_key': 'RF_model',
             'response': "C55",
         }
@@ -93,7 +93,7 @@ class Basic(unittest.TestCase):
         # colX = h2o_rf.pickRandRfParams(paramDict, params)
 
         kwargs = params.copy()
-        timeoutSecs = 30 + kwargs['num_trees'] * 60
+        timeoutSecs = 30 + kwargs['ntrees'] * 60
 
         start = time.time()
         h2o_cmd.runSpeeDRF(parseResult=parseResultTrain,
@@ -102,7 +102,7 @@ class Basic(unittest.TestCase):
 
         print "\nRFView start after job completion"
         model_key = kwargs['destination_key']
-        ntree = kwargs['num_trees']
+        ntree = kwargs['ntrees']
 
         start = time.time()
         # this does the RFModel view for v2. but only model_key is used. Data doesn't matter? (nor ntree)

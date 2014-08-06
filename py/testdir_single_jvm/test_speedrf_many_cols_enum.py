@@ -123,9 +123,9 @@ class Basic(unittest.TestCase):
             ntrees = 10
             for max_depth in [5,10,20,40]:
                 params = {
-                    'bin_limit': 1024,
+                    'nbins': 1024,
                     'classification': 1,
-                    'num_trees': ntrees,
+                    'ntrees': ntrees,
                     'max_depth': max_depth,
                     'response': 'C' + str(numCols-1),
                     'ignored_cols_by_name': None,
