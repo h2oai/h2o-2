@@ -112,5 +112,5 @@ h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, f
   nfolds = 0, alpha = 0.5, lambda_search=FALSE)
 # Run GLM of VOL ~ CAPSULE + AGE + RACE + PSA + GLEASON
 myX = setdiff(colnames(prostate.hex), c("ID", "DPROS", "DCAPS", "VOL"))
-h2o.glm(y = "VOL", x = myX, data = prostate.hex, family = "gaussian", nfolds = 2, alpha = 0.1)
+h2o.glm(y = "VOL", x = myX, data = prostate.hex, family = "gaussian", nfolds = 0, alpha = 0.1)
 }
