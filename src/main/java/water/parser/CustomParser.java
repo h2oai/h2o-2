@@ -79,7 +79,7 @@ public abstract class CustomParser extends Iced {
 
     public static class TypeInfo extends Iced{
       Coltype _type;
-      ValueString _naStr = new ValueString("NA");
+      ValueString _naStr = new ValueString("");
       boolean _strongGuess;
 
       public void merge(TypeInfo tinfo){
