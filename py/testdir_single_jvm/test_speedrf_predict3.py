@@ -188,7 +188,7 @@ class Basic(unittest.TestCase):
         kwargs = {
             'destination_key': 'rf_model',
             'response': response,
-            'num_trees': trees,
+            'ntrees': trees,
             'classification': 1,
             }
 
