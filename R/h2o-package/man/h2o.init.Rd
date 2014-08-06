@@ -8,9 +8,6 @@ h2o.init(ip = "127.0.0.1", port = 54321, startH2O = TRUE, forceDL = FALSE, Xmx,
         beta = FALSE, assertion = TRUE, license = NULL, 
         max_mem_size = "1g", min_mem_size = "1g")}
 
-ip = "127.0.0.1", port = 54321, startH2O = TRUE, forceDL = FALSE, Xmx,
-                     beta = FALSE, assertion = TRUE, license = NULL, max_mem_size = "1g", min_mem_size = "1g"
-
 \arguments{
   \item{ip}{Object of class \code{"character"} representing the IP address of the server where H2O is running.}
   \item{port}{Object of class \code{"numeric"} representing the port number of the H2O server.}
