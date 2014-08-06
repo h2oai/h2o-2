@@ -88,6 +88,7 @@ public abstract class ASTOp extends AST {
     putBinInfix(new ASTLO());
     putBinInfix(new ASTMMult());
     putBinInfix(new ASTIntDiv());
+    putBinInfix(new ASTColSeq());
 
     // Unary prefix ops
     putPrefix(new ASTIsNA());
@@ -1202,6 +1203,50 @@ class ASTSeqLen extends ASTOp {
     if (len <= 0)
       throw new IllegalArgumentException("Error in seq_len(" +len+"): argument must be coercible to positive integer");
     env.poppush(1,new Frame(new String[]{"c"}, new Vec[]{Vec.makeSeq(len)}),null);
+  }
+}
+class ASTColSeq extends ASTOp {
+  @Override String opStr() { return ":"; }
+  ASTColSeq() { super(new String[]{":", "from", "to"},
+          new Type[]{Type.dblary(), Type.DBL, Type.DBL},
+          OPF_PREFIX,
+          OPP_PREFIX,
+          OPA_RIGHT);
+  }
+  @Override ASTOp make() { return this; }
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    double by = 1.0;
+    double to = env.popDbl();
+    double from = env.popDbl();
+
+    double delta = to - from;
+    if(delta == 0 && to == 0)
+      env.poppush(to);
+    else {
+      double n = delta/by;
+      if(n < 0)
+        throw new IllegalArgumentException("wrong sign in 'by' argument");
+      else if(n > Double.MAX_VALUE)
+        throw new IllegalArgumentException("'by' argument is much too small");
+
+      double dd = Math.abs(delta)/Math.max(Math.abs(from), Math.abs(to));
+      if(dd < 100*Double.MIN_VALUE)
+        env.poppush(from);
+      else {
+        Key k = new Vec.VectorGroup().addVec();
+        Futures fs = new Futures();
+        AppendableVec av = new AppendableVec(k);
+        NewChunk nc = new NewChunk(av, 0);
+        int len = (int)n + 1;
+        for (int r = 0; r < len; r++) nc.addNum(from + r*by);
+        // May need to adjust values = by > 0 ? min(values, to) : max(values, to)
+        nc.close(0, fs);
+        Vec vec = av.close(fs);
+        fs.blockForPending();
+        vec._domain = null;
+        env.poppush(1, new Frame(new String[] {"C1"}, new Vec[] {vec}), null);
+      }
+    }
   }
 }
 

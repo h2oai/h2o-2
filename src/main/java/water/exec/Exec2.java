@@ -179,7 +179,7 @@ public class Exec2 {
     if( _x>=_buf.length ) return null; // No characters to parse
     char c = _buf[_x];
     // Fail on special chars in the grammar
-    if( isReserved(c) ) return null;
+    if( isReserved(c) && c != ':') return null;
     // Fail on leading numeric
     if( isDigit(c) ) return null;
     if (c == '^' && _buf[_x+1] == '-') return _str.substring(++_x -1, _x);

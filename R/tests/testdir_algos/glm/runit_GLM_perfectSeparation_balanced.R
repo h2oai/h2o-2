@@ -12,20 +12,9 @@ source('../../findNSourceUtils.R')
 
 test <- function(conn) {
 
-    print("Generate balanced dataset by column in R")
-        y.a = sample(0:0, 200, replace=T)
-        y.b = sample(1:1, 200, replace=T)
-        x1.a = sample(-1203:-1, 200, replace=T)
-        x1.b = sample(1:1, 200, replace=T)
-        x2.a = sample(0:0, 200, replace=T)
-        x2.b = sample(1:1203, 200, replace=T)
-        data.a = cbind(y.a, x1.a, x2.a)
-        data.b = cbind(y.b, x1.b, x2.b)
-        data.balanced = rbind(data.a, data.b)
-        colnames(data.balanced) <- c("y", "x1", "x2")
+    print("Read in synthetic balanced dataset")
+        data.b.hex <- h2o.uploadFile(conn, locate("smalldata/synthetic_perfect_separation/balanced.csv"), key="data.b.hex")
 
-    print("Read data into H20.")
-        data.b.hex <- as.h2o(conn, as.data.frame(data.balanced), "data.b.hex")
     print("Fit model on dataset.")
         model.balanced <- h2o.glm(x=c("x1", "x2"), y="y", data.b.hex, family="binomial", lambda_search=TRUE, use_all_factor_levels=1, alpha=0.5, nfolds=0, higher_accuracy=TRUE, lambda=0)
     print("Check line search invoked even with higher_accuracy off")

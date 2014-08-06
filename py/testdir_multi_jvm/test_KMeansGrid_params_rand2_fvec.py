@@ -76,7 +76,7 @@ class Basic(unittest.TestCase):
                 elapsed = time.time() - start
                 print "FIX! how do we get results..need redirect_url"
                 print "Have to inspect different models? (grid)"
-                print "kmeans grid end on ", csvPathname, 'took', elapsed, 'seconds.', \
+                print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.', \
                     "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
                 # h2o_kmeans.simpleCheckKMeans(self, kmeans, **kwargs)
 

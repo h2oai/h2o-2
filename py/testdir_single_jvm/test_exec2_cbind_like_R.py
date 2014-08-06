@@ -67,7 +67,7 @@ class Basic(unittest.TestCase):
         hex_key = "df"
         csvPathname = SYNDATASETS_DIR + "/" + "df.csv"
         write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE)
-        parseResult = h2i.import_parse(path=csvPathname, schema='local', 
+        parseResult = h2i.import_parse(path=csvPathname, schema='put', 
             hex_key=hex_key, timeoutSecs=3000, retryDelaySecs=2, doSummary=False)
 
         colCount = 1
