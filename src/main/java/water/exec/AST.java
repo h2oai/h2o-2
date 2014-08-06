@@ -570,8 +570,12 @@ class ASTAssign extends AST {
       for (int i = 0; i < cs.length; i++) {
         int cidx = (int) cs[i] - 1;      // Convert 1-based to 0-based
         Vec rv = env.addRef(rvecs[rvecs.length == 1 ? 0 : i]);
-        if (cidx == ary.numCols())
+        if (cidx == ary.numCols()) {
+          env.subRef(rv);
+          rv = ary.anyVec().align(rv);
+          env.addRef(rv);
           ary.add("C" + String.valueOf(cidx + 1), rv);     // New column name created with 1-based index
+        }
         else {
           if (!(rv.group().equals(ary.anyVec().group())) && rv.length() == ary.anyVec().length()) {
             env.subRef(rv);
