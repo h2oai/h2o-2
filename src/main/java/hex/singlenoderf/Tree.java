@@ -336,7 +336,22 @@ public class Tree extends H2OCountedCompleter {
     @Override AutoBuffer compress(AutoBuffer ab) {
       // TODO: splitnode compress method
       int pos = ab.position();
+      //
+      byte _nodetype=0; //
 
+      ab.put1(_nodetype);
+      assert _column != -1;
+      ab.put2((short)_column);
+
+      ab.put4f(_originalSplit); // assuming we only have _equal == 0 or 1 which is binary split
+
+
+      // split value or group
+
+      //write subtree
+      _l.compress(ab);
+      _r.compress(ab);
+      // some assertion
       return ab;
     }
 
@@ -602,7 +617,7 @@ public class Tree extends H2OCountedCompleter {
   // Build a compressed-tree struct
   public TreeModel.CompressedTree compress() {
     // TODO: find the size of the root
-    int sz = 4; // 4 should be size of the node
+    int sz = _tree.size(); // 4 should be size of the node
     if( _tree instanceof LeafNode) sz += 3; // Oops - tree-stump ?? why is 3 more bytes ??
     AutoBuffer ab = new AutoBuffer(sz);
     if( _tree instanceof LeafNode) // Oops - tree-stump    The whole tree does nothing but predict a single value.
@@ -610,6 +625,7 @@ public class Tree extends H2OCountedCompleter {
     _tree.compress(ab);      // Compress whole tree
     assert ab.position() == sz;
     // TODO: get the _nclass and _seed for Tree
+    char _nclass = (char)_data.classes();
     return new TreeModel.CompressedTree(ab.buf(),_nclass,_seed);
   }
 }
