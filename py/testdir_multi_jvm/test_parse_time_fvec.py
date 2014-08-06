@@ -52,26 +52,13 @@ print "apparently h2o NAs some cases. illegal dates in a month?"
 print "seems to be that we require leading zero in year, but it's okay to not have it in the date?"
 
 ROWS = 5
-RESTRICT_TO_28 = True
+COLS = 20
+RESTRICT_TO_28 = False
 RESTRICT_MONTH_TO_UPPER = True
 
 if RESTRICT_MONTH_TO_UPPER:
     months = [
-        ['Jan', 'JAN', 'jan'],
-        ['Feb', 'FEB', 'feb'],
-        ['Mar', 'MAR', 'mar'],
-        ['Apr', 'APR', 'apr'],
-        ['May', 'MAY', 'may'],
-        ['Jun', 'JUN', 'jun'],
-        ['Jul', 'JUL', 'jul'],
-        ['Aug', 'AUG', 'aug'],
-        ['Sep', 'SEP', 'sep'],
-        ['Oct', 'OCT', 'oct'],
-        ['Nov', 'NOV', 'nov'],
-        ['Dec', 'DEC', 'dec']
-        ]
-else:
-    months = [
+        ['nullForZero'],
         ['JAN'],
         ['FEB'],
         ['MAR'],
@@ -85,6 +72,22 @@ else:
         ['NOV'],
         ['DEC']
         ]
+else:
+    months = [
+        ['nullForZero'],
+        ['Jan', 'JAN', 'jan'],
+        ['Feb', 'FEB', 'feb'],
+        ['Mar', 'MAR', 'mar'],
+        ['Apr', 'APR', 'apr'],
+        ['May', 'MAY', 'may'],
+        ['Jun', 'JUN', 'jun'],
+        ['Jul', 'JUL', 'jul'],
+        ['Aug', 'AUG', 'aug'],
+        ['Sep', 'SEP', 'sep'],
+        ['Oct', 'OCT', 'oct'],
+        ['Nov', 'NOV', 'nov'],
+        ['Dec', 'DEC', 'dec']
+        ]
 
 # increase weight for Feb
 monthWeights = [1 if i!=1 else 5 for i in range(len(months))]
@@ -93,6 +96,7 @@ if RESTRICT_TO_28:
     days = map(str, range(1,29))
 else:
     days = map(str, range(1,32))
+
 # increase weight for picking near end of month
 dayWeights = [1 if i<27 else 8 for i in range(len(days))]
 
@@ -105,32 +109,45 @@ def getRandomTimeStamp():
     #     day = day.zfill(2) 
 
     # yy year
-    timestampFormat = random.randint(0,3)
+    timestampFormat = random.randint(0,5)
+    timestampFormat = 0
+    # always 4 digit
+    yearInt = random.randint(1970, 2016)
+    yearStr = str(yearInt)
     if timestampFormat==0:
-        # 1 or 2 digit
-        year = str(random.randint(0, 99))
         # may or may not leading zero fill the year
         if random.randint(0,1) == 1:
-            year = year.zfill(2) 
+            if str(yearStr[-2])=='0':
+                # drop the leading zero
+                year = int(str(yearStr)[-1:])
+            else:
+                # keep leading zzero
+                year = int(str(yearStr)[-2:])
+        else:
+            # last two digits. (always zero filled)
+            year = int(str(yearStr)[-2:])
+
     # yyyy year
     else:
-        # always 4 digit
-        year = str(random.randint(1900, 2016))
+        year = yearInt
 
-    # randomly decide on overall format
-    ### if random.randint(0,1) == 1:
-    # FIX! H2O currently only supports the translate months
 
-    timestampFormat = random.randint(0,5)
-    
     if timestampFormat==0:
         # once we pick the month, we have to pick from the choices for the name of the month
-        month = random.choice(months[h2o_util.weighted_choice(monthWeights)])
+        # monthIndex = range(1,13)[h2o_util.weighted_choice(monthWeights)]
+        monthIndex = random.randint(1,12)
+        month = random.choice(months[monthIndex])
     else:
         month = str(random.randint(1,12))
         # may or may not leading zero fill the month
         # if random.randint(0,1) == 1:
         #     month = month.zfill(2) 
+
+    # use calendar to make sure the day is legal for that month/year
+    import calendar
+    legalDays = calendar.monthrange(yearInt, monthIndex)[1]
+    if day > legalDays:
+        day = legalDays
 
     # may or may not leading zero fill the hour
     hour = str(random.randint(0,23))
@@ -194,7 +211,7 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(2,java_heap_GB=10,use_flatfile=True)
+            h2o.build_cloud(1,java_heap_GB=10,use_flatfile=True)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -210,7 +227,7 @@ class Basic(unittest.TestCase):
         csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
         headerData = None
-        colCount = 6
+        colCount = COLS
         # rowCount = 1000
         rowCount = ROWS
         write_syn_dataset(csvPathname, rowCount, colCount, headerData)
