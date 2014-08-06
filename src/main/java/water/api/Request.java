@@ -1,10 +1,7 @@
 package water.api;
 
-import hex.KMeansModel;
-import hex.glm.GLMModel;
 import hex.nb.NBModel;
 import hex.pca.PCAModel;
-import hex.rf.RFModel;
 
 import java.io.InputStream;
 import java.lang.annotation.*;
@@ -352,15 +349,9 @@ public abstract class Request extends RequestBuilders {
         return TypeaheadPCAModelKeyRequest.class;
       if( NBModel.class.isAssignableFrom(c) )
         return TypeaheadNBModelKeyRequest.class;
-      if( GLMModel.class.isAssignableFrom(c))
-        return TypeaheadGLMModelKeyRequest.class;
-      if( RFModel.class.isAssignableFrom(c))
-        return TypeaheadRFModelKeyRequest.class;
-      if( KMeansModel.class.isAssignableFrom(c))
-        return TypeaheadKMeansModelKeyRequest.class;
       if( Model.class.isAssignableFrom(c))
         return TypeaheadModelKeyRequest.class;
-      if( Frame.class.isAssignableFrom(c) || ValueArray.class.isAssignableFrom(c) )
+      if( Frame.class.isAssignableFrom(c) )
         return TypeaheadHexKeyRequest.class;
     }
     return TypeaheadKeysRequest.class;

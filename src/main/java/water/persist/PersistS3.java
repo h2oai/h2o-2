@@ -77,23 +77,8 @@ public final class PersistS3 extends Persist {
   public static Key loadKey(S3ObjectSummary obj) throws IOException {
     Key k = encodeKey(obj.getBucketName(), obj.getKey());
     long size = obj.getSize();
-    Value val = null;
-    if( obj.getKey().endsWith(Extensions.HEX) ) { // Hex file?
-      int sz = (int) Math.min(ValueArray.CHUNK_SZ, size);
-      byte[] mem = MemoryManager.malloc1(sz); // May stall a long time to get memory
-      S3ObjectInputStream is = getObjectForKey(k, 0, ValueArray.CHUNK_SZ).getObjectContent();
-      int off = 0;
-      while( off < sz )
-        off += is.read(mem, off, sz - off);
-      ValueArray ary = new ValueArray(k, sz).read(new AutoBuffer(mem));
-      val = new Value(k, ary, Value.S3);
-    } else if( size >= 2 * ValueArray.CHUNK_SZ ) {
-      // ValueArray byte wrapper over a large file
-      val = new Value(k, new ValueArray(k, size), Value.S3);
-    } else {
-      val = new Value(k, (int) size, Value.S3); // Plain Value
-      val.setdsk();
-    }
+    Value val = new Value(k, (int) size, Value.S3); // Plain Value
+    val.setdsk();
     DKV.put(k, val);
     return k;
   }
@@ -109,15 +94,6 @@ public final class PersistS3 extends Persist {
     byte[] b = MemoryManager.malloc1(v._max);
     Key k = v._key;
     long skip = 0;
-    // Convert an arraylet chunk into a long-offset from the base file.
-    if( k._kb[0] == Key.ARRAYLET_CHUNK ) {
-      skip = ValueArray.getChunkOffset(k); // The offset
-      k = ValueArray.getArrayKey(k); // From the base file key
-      if( k.toString().endsWith(Extensions.HEX) ) { // Hex file?
-        int value_len = DKV.get(k).memOrLoad().length; // How long is the ValueArray header?
-        skip += value_len;    // Skip header
-      }
-    }
     // Too complicate matters, S3 likes to reset connections when H2O hits it
     // too hard.  We "fix" this by just trying again, assuming we're getting
     // hit with a bogus resource limit (H2O doing a parse looks like a DDOS to
@@ -158,30 +134,7 @@ public final class PersistS3 extends Persist {
   // Store Value v to disk.
   @Override public void store(Value v) {
     if( !v._key.home() ) return;
-    // Never store arraylets on S3, instead we'll store the entire array.
-    assert !v.isArray();
-
-    Key dest = PersistS3Task.init(v);
-    PersistS3Task.run(dest, v, null, null);
-  }
-
-  @Override public Value lazyArrayChunk(Key key) {
-    Key arykey = ValueArray.getArrayKey(key); // From the base file key
-    long off = ValueArray.getChunkOffset(key); // The offset
-    long size = getObjectMetadataForKey(arykey).getContentLength();
-
-    long rem = size - off; // Remainder to be read
-    if( arykey.toString().endsWith(Extensions.HEX) ) { // Hex file?
-      int value_len = DKV.get(arykey).memOrLoad().length; // How long is the
-      // ValueArray header?
-      rem -= value_len;
-    }
-    // the last chunk can be fat, so it got packed into the earlier chunk
-    if( rem < ValueArray.CHUNK_SZ && off > 0 ) return null;
-    int sz = (rem >= ValueArray.CHUNK_SZ * 2) ? (int) ValueArray.CHUNK_SZ : (int) rem;
-    Value val = new Value(key, sz, Value.S3);
-    val.setdsk(); // But its already on disk.
-    return val;
+    throw H2O.unimpl();         // VA only
   }
 
   /**

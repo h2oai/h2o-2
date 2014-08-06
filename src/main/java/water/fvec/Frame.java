@@ -884,14 +884,14 @@ public class Frame extends Lockable<Frame> {
           Frame slicedFrame = new DeepSlice(rows, c2, vecs()).doAll(c2.length, this.add("select_vec", v)).outputFrame(names(c2), domains(c2));
           UKV.remove(v._key);
           UKV.remove(this.remove(this.numCols()-1)._key);
-          return copyRollups(slicedFrame, rows.length == 0);
+          return copyRollups(slicedFrame, false);
         } else {
-          return copyRollups(new DeepSlice(rows, c2, vecs()).doAll(c2.length, this).outputFrame(names(c2), domains(c2)), rows.length == 0);
+          return copyRollups(new DeepSlice(rows.length == 0 ? null : rows, c2, vecs()).doAll(c2.length, this).outputFrame(names(c2), domains(c2)), rows.length == 0);
         }
       }
       // Vec'ize the index array
       Futures fs = new Futures();
-      AppendableVec av = new AppendableVec("rownames");
+      AppendableVec av = new AppendableVec(Vec.newKey(Key.make("rownames")));
       int r = 0;
       int c = 0;
       while (r < rows.length) {
@@ -978,6 +978,9 @@ public class Frame extends Lockable<Frame> {
       for( int i=0; i<cols.length; i++ )
         _isInt[i] = (byte)(vecs[cols[i]].isInt() ? 1 : 0);
     }
+
+    @Override public boolean logVerbose() { return false; }
+
     @Override public void map( Chunk chks[], NewChunk nchks[] ) {
       long rstart = chks[0]._start;
       int rlen = chks[0]._len;  // Total row count

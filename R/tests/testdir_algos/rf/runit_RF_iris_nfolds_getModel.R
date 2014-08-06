@@ -3,7 +3,7 @@ source('../../findNSourceUtils.R')
 
 test.RF.nfolds <- function(conn) {
   iris.hex <- h2o.uploadFile(conn, locate( "smalldata/iris/iris.csv"), "iris.hex")
-  iris.nfolds  <- h2o.randomForest(y = 5, x = seq(1,4), data = iris.hex, ntree = 50, nfolds = 5) 
+  iris.nfolds  <- h2o.randomForest(y = 5, x = seq(1,4), data = iris.hex, ntree = 50, nfolds = 5, type = "BigData")
   print(iris.nfolds)
 
   iris.nfolds <- h2o.getModel(conn, iris.nfolds@key)
@@ -13,7 +13,7 @@ test.RF.nfolds <- function(conn) {
   print("")
   
   # Can't specify both nfolds >= 2 and validation = H2OParsedData at once
-  expect_error(h2o.randomForest(y = 5, x = seq(1,4), data = iris.hex, ntree = 50, nfolds = 5, validation = iris.hex))
+  expect_error(h2o.randomForest(y = 5, x = seq(1,4), data = iris.hex, ntree = 50, nfolds = 5, validation = iris.hex, type = "BigData"))
   testEnd()
 }
 

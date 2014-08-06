@@ -97,6 +97,6 @@ h2o.gbm(y = dependent, x = independent, data = australia.hex, n.trees = 10, inte
   n.minobsinnode = 2, shrinkage = 0.2, distribution= "gaussian")
 
 # Run multinomial classification GBM on australia data 
-h2o.gbm(y = dependent, x = independent, data = australia.hex, n.trees = 15, interaction.depth = 5, 
+h2o.gbm(y = dependent, x = independent, data = australia.hex, n.trees = 10, interaction.depth = 3, 
   n.minobsinnode = 2, shrinkage = 0.01, distribution= "multinomial")
 }

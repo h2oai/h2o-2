@@ -22,13 +22,17 @@ import water.util.Log;
  * @author <a href="mailto:cliffc@0xdata.com"></a>
  */
 public class AutoBuffer {
-  public static final int TCP_WRITE_ATTEMPTS = 2;
-  // The direct ByteBuffer for schlorping data about
-  public ByteBuffer _bb;
+  // The direct ByteBuffer for schlorping data about.
+  // Set to null to indicate the AutoBuffer is closed.
+  ByteBuffer _bb;
+  public boolean isClosed() { return _bb == null ; }
 
-  // The ByteChannel for schlorping more data in or out.  Could be a
-  // SocketChannel (for a TCP connection) or a FileChannel (spill-to-disk) or a
-  // DatagramChannel (for a UDP connection).
+  // The ByteChannel for moving data in or out.  Could be a SocketChannel (for
+  // a TCP connection) or a FileChannel (spill-to-disk) or a DatagramChannel
+  // (for a UDP connection).  Null on closed AutoBuffers.  Null on initial
+  // remote-writing AutoBuffers which are still deciding UDP vs TCP.  Not-null
+  // for open AutoBuffers doing file i/o or reading any TCP/UDP or having
+  // written at least one buffer to TCP/UDP.
   private ByteChannel _chan;
 
   // If we need a SocketChannel, raise the priority so we get the I/O over
@@ -41,36 +45,37 @@ public class AutoBuffer {
   // Where to send or receive data via TCP or UDP (choice made as we discover
   // how big the message is); used to lazily create a Channel.  If NULL, then
   // _chan should be a pre-existing Channel, such as a FileChannel.
-  public final H2ONode _h2o;
+  final H2ONode _h2o;
 
   // TRUE for read-mode.  FALSE for write-mode.  Can be flipped for rapid turnaround.
   private boolean _read;
 
   // TRUE if this AutoBuffer has never advanced past the first "page" of data.
   // The UDP-flavor, port# and task fields are only valid until we read over
-  // them when flipping the ByteBuffer to the next chunk of data.
+  // them when flipping the ByteBuffer to the next chunk of data.  Used in
+  // asserts all over the place.
   private boolean _firstPage;
 
   // Total size written out from 'new' to 'close'.  Only updated when actually
   // reading or writing data, or after close().  For profiling only.
-  public int _size, _zeros, _arys;
+  int _size, _zeros, _arys;
   // More profiling: start->close msec, plus nano's spent in blocking I/O
   // calls.  The difference between (close-start) and i/o msec is the time the
   // i/o thread spends doing other stuff (e.g. allocating Java objects or
   // (de)serializing).
-  public long _time_start_ms, _time_close_ms, _time_io_ns;
-  // I/O persistence flavor: Value.ICE, NFS, HDFS, S3, TCP
-  public final byte _persist;
+  long _time_start_ms, _time_close_ms, _time_io_ns;
+  // I/O persistence flavor: Value.ICE, NFS, HDFS, S3, TCP.  Used to record I/O time.
+  final byte _persist;
 
   // The assumed max UDP packetsize
-  public static final int MTU = 1500-8/*UDP packet header size*/;
+  static final int MTU = 1500-8/*UDP packet header size*/;
 
   // Enable this to test random TCP fails on open or write
   static final Random RANDOM_TCP_DROP = null; //new Random();
 
   // Incoming UDP request.  Make a read-mode AutoBuffer from the open Channel,
   // figure the originating H2ONode from the first few bytes read.
-  public AutoBuffer( DatagramChannel sock ) throws IOException {
+  AutoBuffer( DatagramChannel sock ) throws IOException {
     _chan = null;
     _bb = bbMake();
     _read = true;               // Reading by default
@@ -97,7 +102,7 @@ public class AutoBuffer {
 
   // Incoming TCP request.  Make a read-mode AutoBuffer from the open Channel,
   // figure the originating H2ONode from the first few bytes read.
-  public AutoBuffer( SocketChannel sock ) throws IOException {
+  AutoBuffer( SocketChannel sock ) throws IOException {
     _chan = sock;
     raisePriority();            // Make TCP priority high
     _bb = bbMake();
@@ -115,7 +120,7 @@ public class AutoBuffer {
   // Make an AutoBuffer to write to an H2ONode.  Requests for full buffer will
   // open a TCP socket and roll through writing to the target.  Smaller
   // requests will send via UDP.
-  public AutoBuffer( H2ONode h2o ) {
+  AutoBuffer( H2ONode h2o ) {
     _bb = bbMake();
     _chan = null;               // Channel made lazily only if we write alot
     _h2o = h2o;
@@ -138,7 +143,7 @@ public class AutoBuffer {
   }
 
   // Read from UDP multicast.  Same as the byte[]-read variant, except there is an H2O.
-  public AutoBuffer( DatagramPacket pack ) {
+  AutoBuffer( DatagramPacket pack ) {
     _size = pack.getLength();
     _bb = ByteBuffer.wrap(pack.getData(), 0, pack.getLength()).order(ByteOrder.nativeOrder());
     _bb.position(0);
@@ -152,7 +157,7 @@ public class AutoBuffer {
   /** Read from a fixed byte[]; should not be closed. */
   public AutoBuffer( byte[] buf ) { this(buf,0); }
   /** Read from a fixed byte[]; should not be closed. */
-  public AutoBuffer( byte[] buf, int off ) {
+  AutoBuffer( byte[] buf, int off ) {
     assert buf != null : "null fed to ByteBuffer.wrap";
     _bb = ByteBuffer.wrap(buf).order(ByteOrder.nativeOrder());
     _bb.position(off);
@@ -187,8 +192,7 @@ public class AutoBuffer {
     _persist = 0;               // No persistance
   }
 
-  @Override
-  public String toString() {
+  @Override public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("[AB ").append(_read ? "read " : "write ");
     sb.append(_firstPage?"first ":"2nd ").append(_h2o);
@@ -208,7 +212,7 @@ public class AutoBuffer {
   private static final AtomicInteger BBFREE = new AtomicInteger(0);
   private static final AtomicInteger BBCACHE= new AtomicInteger(0);
   private static final LinkedBlockingDeque<ByteBuffer> BBS = new LinkedBlockingDeque<ByteBuffer>();
-  public static final int BBSIZE = 64*1024; // Bytebuffer "common big size"
+  static final int BBSIZE = 64*1024; // Bytebuffer "common big size"
   private static void bbstats( AtomicInteger ai ) {
     if( !DEBUG ) return;
     if( (ai.incrementAndGet()&511)==511 ) {
@@ -216,11 +220,11 @@ public class AutoBuffer {
     }
   }
 
-  private static final ByteBuffer bbMake() {
+  private static ByteBuffer bbMake() {
     while( true ) {             // Repeat loop for DBB OutOfMemory errors
-      ByteBuffer bb = null;
+      ByteBuffer bb;
       try { bb = BBS.pollFirst(0,TimeUnit.SECONDS); }
-      catch( InterruptedException e ) { throw  Log.errRTExcept(e); }
+      catch( InterruptedException e ) { throw Log.errRTExcept(e); }
       if( bb != null ) {
         bbstats(BBCACHE);
         return bb;
@@ -233,18 +237,18 @@ public class AutoBuffer {
         // java.lang.OutOfMemoryError: Direct buffer memory
         if( !"Direct buffer memory".equals(oome.getMessage()) ) throw oome;
         System.out.println("Sleeping & retrying");
-        try { Thread.sleep(100); } catch( InterruptedException ie ) { }
+        try { Thread.sleep(100); } catch( InterruptedException ignore ) { }
       }
     }
   }
-  private static final void bbFree(ByteBuffer bb) {
+  private static void bbFree(ByteBuffer bb) {
     bbstats(BBFREE);
     bb.clear();
     BBS.offerFirst(bb);
   }
 
-  private final int bbFree() {
-    if( _bb.isDirect() ) bbFree(_bb);
+  private int bbFree() {
+    if( _bb != null && _bb.isDirect() ) bbFree(_bb);
     _bb = null;
     return 0;                   // Flow-coding
   }
@@ -255,9 +259,9 @@ public class AutoBuffer {
   // ByteBuffer write.  It *appears* that the reader is unaware that a writer
   // was told "go ahead and write" by the TCP stack, so all these fails are
   // only on the writer-side.
-  public static class TCPIsUnreliableException extends RuntimeException {
+  static class AutoBufferException extends RuntimeException {
     final IOException _ioe;
-    TCPIsUnreliableException( IOException ioe ) { _ioe = ioe; }
+    AutoBufferException( IOException ioe ) { _ioe = ioe; }
   }
 
   // For reads, just assert all was read and close and release resources.
@@ -265,19 +269,10 @@ public class AutoBuffer {
   // bytes out.  If the write is to an H2ONode and is short, send via UDP.
   // AutoBuffer close calls order; i.e. a reader close() will block until the
   // writer does a close().
-  public final int close() { return close(true,false); }
-  public final int close(boolean expect_tcp, boolean failed) {
+  public final int close() {
     //if( _size > 2048 ) System.out.println("Z="+_zeros+" / "+_size+", A="+_arys);
+    if( isClosed() ) return 0;            // Already closed
     assert _h2o != null || _chan != null; // Byte-array backed should not be closed
-    // Extra asserts on closing TCP channels: we should always know & expect
-    // TCP channels, and read them fully.  If we close a TCP channel that is
-    // not fully read then the writer will assert and we will silently run on.
-    // Note: this assert is essentially redundant with the extra read/write of
-    // 0xab below; closing a TCP read-channel early will read 1 more byte -
-    // which probably will not be 0xab.
-    final boolean tcp = hasTCP();
-    assert !tcp    || expect_tcp; // If we have   TCP, we fully expect it
-    assert !failed || expect_tcp; // If we failed TCP, we expect TCP
     try {
       if( _chan == null ) {     // No channel?
         if( _read ) return 0;
@@ -289,46 +284,47 @@ public class AutoBuffer {
       // Force AutoBuffer 'close' calls to order; i.e. block readers until
       // writers do a 'close' - by writing 1 more byte in the close-call which
       // the reader will have to wait for.
-      if( tcp ) {               // TCP connection?
-        SocketChannel sock = (SocketChannel)_chan;
+      if( hasTCP() ) {          // TCP connection?
         try {
-          if( failed ) throw new IOException("failed before tcp close");
           if( _read ) {         // Reader?
             int x = get1();     // Read 1 more byte
             assert x == 0xab : "AB.close instead of 0xab sentinel got "+x+", "+this;
+            assert _chan != null; // chan set by incoming reader, since we KNOW it is a TCP
             // Write the reader-handshake-byte.
-            sock.socket().getOutputStream().write(0xcd);
+            ((SocketChannel)_chan).socket().getOutputStream().write(0xcd);
             // do not close actually reader socket; recycle it in TCPReader thread
           } else {              // Writer?
-            put1(0xab);         // Write one-more byte
-            sendPartial();      // Finish partial writes
-            sock = (SocketChannel)_chan; // Reload, in-case _chan was null and is not set
+            put1(0xab);         // Write one-more byte  ; might set _chan from null to not-null
+            sendPartial();      // Finish partial writes; might set _chan from null to not-null
+            assert _chan != null; // _chan is set not-null now!
             // Read the writer-handshake-byte.
-            int x = sock.socket().getInputStream().read();
+            int x = ((SocketChannel)_chan).socket().getInputStream().read();
             // either TCP con was dropped or other side closed connection without reading/confirming (e.g. task was cancelled).
-            if( x == -1 ) throw new IOException("Other side closed connection unexpectedly.");
+            if( x == -1 ) throw new IOException("Other side closed connection before handshake byte read");
             assert x == 0xcd : "Handshake; writer expected a 0xcd from reader but got "+x;
           }
         } catch( IOException ioe ) {
           try { _chan.close(); } catch( IOException ignore ) {} // Silently close
-          sock = null;
+          _chan = null;         // No channel now, since i/o error
           throw ioe;            // Rethrow after close
         } finally {
-          if( !_read ) _h2o.freeTCPSocket(sock); // Recycle writeable TCP channel
+          if( !_read ) _h2o.freeTCPSocket((SocketChannel)_chan); // Recycle writable TCP channel
           restorePriority();        // And if we raised priority, lower it back
         }
 
       } else {                      // FileChannel
         if( !_read ) sendPartial(); // Finish partial file-system writes
         _chan.close();
+        _chan = null;           // Closed file channel
       }
 
     } catch( IOException e ) {  // Dunno how to handle so crash-n-burn
-      throw new TCPIsUnreliableException(e);
+      throw new AutoBufferException(e);
     } finally {
-      if(_bb != null) bbFree();
+      bbFree();
       _time_close_ms = System.currentTimeMillis();
       TimeLine.record_IOclose(this,_persist); // Profile AutoBuffer connections
+      assert isClosed();
     }
     return 0;
   }
@@ -342,15 +338,18 @@ public class AutoBuffer {
     _chan = _h2o.getTCPSocket();
     raisePriority();
   }
-  // Just close the channel here without reading anything. Without the task object at hand we do not know what (how many bytes) should
-  // we read from the channel. And since the other side will try to read confirmation from us in before closing the channel,
-  // we can not read till the end. So we just close the channel and let the other side to deal with it and figure out the task has been cancelled
-  // (still sending ack ack back).
-  public void drainClose() {
+
+  // Just close the channel here without reading anything.  Without the task
+  // object at hand we do not know what (how many bytes) should we read from
+  // the channel.  And since the other side will try to read confirmation from
+  // us before closing the channel, we can not read till the end.  So we just
+  // close the channel and let the other side to deal with it and figure out
+  // the task has been cancelled (still sending ack ack back).
+  void drainClose() {
     try {
-      try {
-        Log.info("drain-closing channel to " + ((SocketChannel) _chan).socket().getInetAddress());
-      }catch(Throwable t){Log.info("drain-closing channel to unknown node");}
+      // Appears to work reasonably now; removing noisy printout
+      //try {              Log.info("drainClose channel to " + ((SocketChannel) _chan).socket().getInetAddress()); }
+      //catch(Throwable t){Log.info("drainClose channel to unknown node");}
       _chan.close();
       restorePriority();        // And if we raised priority, lower it back
       bbFree();
@@ -360,7 +359,7 @@ public class AutoBuffer {
   }
 
   // True if we opened a TCP channel, or will open one to close-and-send
-  boolean hasTCP() { return _chan instanceof SocketChannel || (_chan==null && _h2o!=null && _bb != null && _bb.position() >= MTU); }
+  boolean hasTCP() { assert !isClosed(); return _chan instanceof SocketChannel || (_h2o!=null && _bb.position() >= MTU); }
 
   // True if we are in read-mode
   boolean readMode() { return _read; }
@@ -369,19 +368,12 @@ public class AutoBuffer {
   int zeros() { return _zeros; }
 
   // Available bytes in this buffer to read
-  public int remaining() { return _bb.remaining(); }
   public int position () { return _bb.position (); }
   public void position(int pos) { _bb.position(pos); }
-  public int limit() { return _bb.limit(); }
-
-  public void positionWithResize(int value) {
-    putSp(value - position());
-    position(value);
-  }
 
   // Return byte[] from a writable AutoBuffer
   public final byte[] buf() {
-    assert _h2o==null && _chan==null && _read==false && !_bb.isDirect();
+    assert _h2o==null && _chan==null && !_read && !_bb.isDirect();
     return MemoryManager.arrayCopyOfRange(_bb.array(), _bb.arrayOffset(), _bb.position());
   }
   public final byte[] bufClose() {
@@ -389,7 +381,7 @@ public class AutoBuffer {
     bbFree();
     return res;
   }
-  public final boolean eof() {
+  final boolean eof() {
     assert _h2o==null && _chan==null;
     return _bb.position()==_bb.limit();
   }
@@ -428,8 +420,8 @@ public class AutoBuffer {
   }
 
   // Flip to write-mode
-  public AutoBuffer clearForWriting() {
-    assert _read == true;
+  AutoBuffer clearForWriting() {
+    assert _read;
     _read = false;
     _bb.clear();
     _firstPage = true;
@@ -437,7 +429,7 @@ public class AutoBuffer {
   }
   // Flip to read-mode
   public AutoBuffer flipForReading() {
-    assert _read == false;
+    assert !_read;
     _read = true;
     _bb.flip();
     _firstPage = true;
@@ -472,17 +464,17 @@ public class AutoBuffer {
         // However, if a TCP connection fails mid-read we'll get a short-read.
         // This is indistinguishable from a mis-alignment between the writer and reader!
         if( res == -1 )
-          throw new TCPIsUnreliableException(new EOFException("Reading "+sz+" bytes, AB="+this));
+          throw new AutoBufferException(new EOFException("Reading "+sz+" bytes, AB="+this));
         if( res ==  0 ) throw new RuntimeException("Reading zero bytes - so no progress?");
         _size += res;            // What we read
       } catch( IOException e ) { // Dunno how to handle so crash-n-burn
         // Linux/Ubuntu message for a reset-channel
         if( e.getMessage().equals("An existing connection was forcibly closed by the remote host") )
-          throw new TCPIsUnreliableException(e);
+          throw new AutoBufferException(e);
         // Windows message for a reset-channel
         if( e.getMessage().equals("An established connection was aborted by the software in your host machine") )
-          throw new TCPIsUnreliableException(e);
-        throw  Log.errRTExcept(e);
+          throw new AutoBufferException(e);
+        throw Log.errRTExcept(e);
       }
     }
     _time_io_ns += (System.nanoTime()-ns);
@@ -535,7 +527,7 @@ public class AutoBuffer {
       // disk i/o & UDP writes; this exception only happens on a failed TCP
       // write - and we don't want to make the other AutoBuffer users have to
       // declare (and then ignore) this exception.
-      throw new TCPIsUnreliableException(e);
+      throw new AutoBufferException(e);
     }
     if( _bb.capacity() < 16*1024 ) _bb = bbMake();
     _firstPage = false;
@@ -543,12 +535,6 @@ public class AutoBuffer {
     return _bb;
   }
 
-  public int peek1() {
-    if (eof())
-      return 0;
-    getSp(1);
-    return get1(position());
-  }
   public String getStr(int off, int len) {
     return new String(_bb.array(), _bb.arrayOffset()+off, len);
   }
@@ -619,13 +605,13 @@ public class AutoBuffer {
   // Int will take 1+4 bytes, and bigger values 1+8 bytes.  This compression is
   // optimized for small integers (including -1 which is often used as a "array
   // is null" flag when passing the array length).
-  public AutoBuffer putInt( int x ) {
+  AutoBuffer putInt( int x ) {
     if( 0 <= (x+1)&& (x+1) <= 253 ) return put1(x+1);
     if( Short.MIN_VALUE <= x && x <= Short.MAX_VALUE ) return put1(255).put2((short)x);
     return put1(254).put4(x);
   }
   // Get a (compressed) integer.  See above for the compression strategy and reasoning.
-  public int getInt( ) {
+  int getInt( ) {
     int x = get1();
     if( x <= 253 ) return x-1;
     if( x==255 ) return (short)get2();
@@ -639,7 +625,7 @@ public class AutoBuffer {
   //    putInt(# of leading nulls)
   //    putInt(# of non-nulls)
   //    If # of non-nulls is > 0, putInt( # of trailing nulls)
-  public long putZA( Object[] A ) {
+  long putZA( Object[] A ) {
     if( A==null ) { putInt(-1); return 0; }
     int x=0; for( ; x<A.length; x++ ) if( A[x  ]!=null ) break;
     int y=A.length; for( ; y>x; y-- ) if( A[y-1]!=null ) break;
@@ -653,7 +639,7 @@ public class AutoBuffer {
   // Returns -1 if null.
   // Returns a long of (leading zeros | middle non-zeros).
   // If there are non-zeros, caller has to read the trailing zero-length.
-  public long getZA( ) {
+  long getZA( ) {
     int x=getInt();             // Length of leading zeros
     if( x == -1 ) return -1;    // or a null
     int nz=getInt();            // Non-zero in the middle
@@ -802,16 +788,16 @@ public class AutoBuffer {
   // -----------------------------------------------
   // Utility functions to handle common UDP packet tasks.
   // Get the 1st control byte
-  public int  getCtrl( ) { return getSz(1).get(0)&0xFF; }
+  int  getCtrl( ) { return getSz(1).get(0)&0xFF; }
   // Get the port in next 2 bytes
-  public int  getPort( ) { return getSz(1+2).getChar(1); }
+  int  getPort( ) { return getSz(1+2).getChar(1); }
   // Get the task# in the next 4 bytes
-  public int  getTask( ) { return getSz(1+2+4).getInt(1+2); }
+  int  getTask( ) { return getSz(1+2+4).getInt(1+2); }
   // Get the flag in the next 1 byte
-  public int  getFlag( ) { return getSz(1+2+4+1).get(1+2+4); }
+  int  getFlag( ) { return getSz(1+2+4+1).get(1+2+4); }
 
   // Set the ctrl, port, task.  Ready to write more bytes afterwards
-  public AutoBuffer putUdp (UDP.udp type) {
+  AutoBuffer putUdp (UDP.udp type) {
     assert _bb.position()==0;
     putSp(1+2);
     _bb.put    ((byte)type.ordinal());
@@ -820,10 +806,10 @@ public class AutoBuffer {
     return this;
   }
 
-  public AutoBuffer putTask(UDP.udp type, int tasknum) {
+  AutoBuffer putTask(UDP.udp type, int tasknum) {
     return putUdp(type).put4(tasknum);
   }
-  public AutoBuffer putTask(int ctrl, int tasknum) {
+  AutoBuffer putTask(int ctrl, int tasknum) {
     assert _bb.position()==0;
     putSp(1+2+4);
     _bb.put((byte)ctrl).putChar((char)H2O.UDP_PORT).putInt(tasknum);
@@ -908,7 +894,7 @@ public class AutoBuffer {
     case 2: for( int i=x; i<x+y; i++ ) buf[i] = (short)get2(); return buf;
     case 4: for( int i=x; i<x+y; i++ ) buf[i] =        get4(); return buf;
     case 8: break;
-    default: H2O.fail();
+    default: throw H2O.fail();
     }
 
     int sofar = x;
@@ -1058,7 +1044,7 @@ public class AutoBuffer {
     }
     return this;
   }
-  public AutoBuffer putA2( short[] ary ) {
+  AutoBuffer putA2( short[] ary ) {
     _arys++;
     if( ary == null ) return putInt(-1);
     putInt(ary.length);
@@ -1161,7 +1147,7 @@ public class AutoBuffer {
     return this;
   }
 
-  public AutoBuffer putAA1( byte[][] ary ) {
+  AutoBuffer putAA1( byte[][] ary ) {
     _arys++;
     long xy = putZA(ary);
     if( xy == -1 ) return this;
@@ -1170,7 +1156,7 @@ public class AutoBuffer {
     for( int i=x; i<x+y; i++ ) putA1(ary[i]);
     return this;
   }
-  public AutoBuffer putAA2( short[][] ary ) {
+  AutoBuffer putAA2( short[][] ary ) {
     _arys++;
     long xy = putZA(ary);
     if( xy == -1 ) return this;
@@ -1215,7 +1201,7 @@ public class AutoBuffer {
     for( int i=x; i<x+y; i++ ) putA8d(ary[i]);
     return this;
   }
-  public AutoBuffer putAAA4( int[][][] ary ) {
+  AutoBuffer putAAA4( int[][][] ary ) {
     _arys++;
     long xy = putZA(ary);
     if( xy == -1 ) return this;

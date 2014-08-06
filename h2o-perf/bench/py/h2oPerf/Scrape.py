@@ -311,21 +311,21 @@ class PredictScraper(Scraper):
         """
         self.insert_phase_result()
         predict_type = ""
-        with open(self.output_file_name, "r") as f:
-            flag = False
-            for line in f:
-                if flag:
-                    print "---------------------------------"
-                    print line
-                    print "---------------------------------"
-                    predict_type = self.__get_predict_type__(line.strip())[0]
-                    flag = False
-                    break
-                if "PREDICT TYPE" in line and "print" not in line:
-                    flag = True
-        self.result_type = predict_type
-        print "GOT RESULT TYPE:     " + predict_type
-        self.__switch__()
+        # with open(self.output_file_name, "r") as f:
+        #     flag = False
+        #     for line in f:
+        #         if flag:
+        #             print "---------------------------------"
+        #             print line
+        #             print "---------------------------------"
+        #             predict_type = self.__get_predict_type__(line.strip())[0]
+        #             flag = False
+        #             break
+        #         if "PREDICT TYPE" in line and "print" not in line:
+        #             flag = True
+        # self.result_type = predict_type
+        # print "GOT RESULT TYPE:     " + predict_type
+        # self.__switch__()
         return None
 
     def insert_phase_result(self):

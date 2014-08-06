@@ -3,7 +3,7 @@ source('../../findNSourceUtils.R')
 
 test.speedrf.balance.5K <- function(conn) {
   iris.hex <- h2o.uploadFile(conn, locate( "smalldata/iris/iris.csv"), "iris.hex")
-  iris.rf  <- h2o.SpeeDRF(y = 5, x = 1:4, data = iris.hex, ntree = 5000, depth = 100)
+  iris.rf  <- h2o.randomForest(y = 5, x = 1:4, data = iris.hex, ntree = 5000, depth = 100)
   print(iris.rf)
   print(iris.rf@model$confusion)
   print(iris.rf@model$confusion[4,1:3])

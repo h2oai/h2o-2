@@ -1,7 +1,6 @@
 package water.api;
 
 import water.*;
-import water.ValueArray.CsvVAStream;
 import water.fvec.Frame;
 
 import java.io.InputStream;
@@ -34,14 +33,13 @@ public class DownloadDataset extends Request2 {
     checkArguments(args, type);
     if (DKV.get(src_key) == null) throw new IllegalArgumentException(src_key.toString() + " not found.");
     Object value = DKV.get(src_key).get();
-    InputStream csv = value instanceof ValueArray ? new CsvVAStream((ValueArray) value, null) : ((Frame) value).toCSV(true, hex_string);
+    InputStream csv = ((Frame) value).toCSV(true, hex_string);
     NanoHTTPD.Response res = server.new Response(NanoHTTPD.HTTP_OK,NanoHTTPD.MIME_DEFAULT_BINARY, csv);
     // Clean up Key name back to something resembling a file system name.  Hope
     // the user's browser actually asks for what to do with the suggested
     // filename.  Without this code, my FireFox would claim something silly
     // like "no helper app installed", then fail the download.
     String s = src_key.toString();
-    if( DKV.isConvertedFrameKeyString(s) ) s = DKV.unconvertFrameKeyString(s);
     int x = s.length()-1;
     boolean dot=false;
     for( ; x >= 0; x-- )

@@ -31,7 +31,3 @@ prostate.glm = prostate.glm = h2o.glm(x = c("RACE","PSA","DCAPS"), y = "AGE",
 prostate.pred = h2o.predict(prostate.glm)
 h2o.mse(prostate.pred[,1], prostate.hex[,2])
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
-\keyword{ ~kwd1 }
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line

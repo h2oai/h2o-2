@@ -157,18 +157,18 @@ function(optional = FALSE) {
 
 .h2oSetup<- 
 function() {
-  if (!"h2o" %in% rownames(installed.packages())) {
-      envPath  <- Sys.getenv("H2OWrapperDir")
-      wrapDir  <- ifelse(envPath == "", defaultPath, envPath)
-      wrapName <- list.files(wrapDir, pattern  = "h2o")[1]
-      wrapPath <- paste(wrapDir, wrapName, sep = "/")
-
-      if (!file.exists(wrapPath))
-        stop(paste("h2o package does not exist at", wrapPath));
-      print(paste("Installing h2o package from", wrapPath))
-      .installDepPkgs()
-      install.packages(wrapPath, repos = NULL, type = "source")
-    }
+#  if (!"h2o" %in% rownames(installed.packages())) {
+#      envPath  <- Sys.getenv("H2OWrapperDir")
+#      wrapDir  <- ifelse(envPath == "", defaultPath, envPath)
+#      wrapName <- list.files(wrapDir, pattern  = "h2o")[1]
+#      wrapPath <- paste(wrapDir, wrapName, sep = "/")
+#
+#      if (!file.exists(wrapPath))
+#        stop(paste("h2o package does not exist at", wrapPath));
+#      print(paste("Installing h2o package from", wrapPath))
+#      .installDepPkgs()
+#      install.packages(wrapPath, repos = NULL, type = "source")
+#    }
  
   .installDepPkgs()
   library(h2o)
@@ -270,12 +270,14 @@ function(tol = 0, standardize = TRUE, retx = FALSE) {
 
 runRF<-
 function(x, y, ntree=50, depth=50, nodesize=1, nfolds = 0,
-         sample.rate=2/3, nbins=100, seed=-1, mtry = -1) {
+         sample.rate=2/3, nbins=100, seed=-1, mtries = -1, type="fast",...) {
   data <- h2o.getFrame(h2o = h, key = "parsed.hex")
   model <<- h2o.randomForest(x = x, y = y, data = data, ntree = ntree, nfolds = nfolds, mtries = mtry,
                                 depth = depth, nodesize = nodesize,
-                                sample.rate = sample.rate, nbins = nbins, seed = seed)
-  model.json <<- .h2o.__remoteSend(h, .h2o.__PAGE_DRFModelView, '_modelKey'= model@key)
+                                sample.rate = sample.rate, nbins = nbins, seed = seed, tyoe = type, ...)
+  page <- .h2o.__PAGE_SpeeDRFModelView
+  if (type != "fast") page <- .h2o.__PAGE_DRFModelView
+  model.json <<- .h2o.__remoteSend(h, page, '_modelKey'= model@key)
 }
 
 runSRF<-
@@ -327,8 +329,8 @@ fast_mode=TRUE,
 ignore_const_cols=TRUE, 
 force_load_balance=TRUE, 
 replicate_training_data=TRUE, 
-single_node_mode=FALSE, 
-shuffle_training_data=FALSE) {
+single_node_mode=FALSE,
+shuffle_training_data=FALSE, ...) {
   data <- h2o.getFrame(h2o = h, key = "parsed.hex") 
   model <<- h2o.deeplearning(x = x, y = y, data = data, nfolds = nfolds,
       activation=activation,
@@ -367,7 +369,7 @@ shuffle_training_data=FALSE) {
       force_load_balance=force_load_balance,
       replicate_training_data=replicate_training_data,
       single_node_mode=single_node_mode,
-      shuffle_training_data=shuffle_training_data)
+      shuffle_training_data=shuffle_training_data, ...)
   
   model.json <<- .h2o.__remoteSend(h, .h2o.__PAGE_DeepLearningModelView, '_modelKey'= model@key)
 }
@@ -413,6 +415,9 @@ function(expected_results=NULL, type=NULL) {
   .predict(model)
   if (!is.null(expected_results)) {
     if (type == "cm") {
+      print("CONFUSION MATRIX DATA")
+      print(confusion_matrix)
+      print(dim(confusion_matrix))
       rr <- confusion_matrix[,dim(confusion_matrix)[2]]
       rr <- data.frame(rr)[,1]
       rr <- rr[1:(length(rr) - 2)] # -2 becuase the last row is totals, and the penultimate row is bogus fill by R

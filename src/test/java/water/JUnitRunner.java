@@ -38,12 +38,12 @@ public class JUnitRunner {
     tests.remove(ParseFolderTestBig.class);
     // Too slow
     tests.remove(ConcurrentKeyTest.class);
-    tests.remove(ValueArrayToFrameTestAll.class);
     tests.remove(DeepLearningIrisTest.Long.class);
     tests.remove(DeepLearningProstateTest.Long.class);
     tests.remove(GLMRandomTest.Short.class);
     tests.remove(GLMRandomTest.Long.class);
     tests.remove(ParserTest2.ParseAllSmalldata.class);
+    tests.remove(TestKeySnapshotLong.class);
     // Skip abstract test
     tests.remove(TreeTestWithBalanceAndCrossVal.class);
 

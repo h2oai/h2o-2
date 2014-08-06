@@ -23,11 +23,7 @@ localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 prosPath = system.file("extdata", "prostate.csv", package = "h2o")
 prostate.hex = h2o.importFile(localH2O, path = prosPath)
 prostate.srch = h2o.glm(x = 3:9, y = 2, data = prostate.hex, family = "binomial", 
-  nlambda = 50, lambda_search = TRUE, nfolds = 2)
+  nlambda = 3, lambda_search = TRUE, nfolds = 2)
 random_lambda = sample(prostate.srch@model$params$lambda_all, 1)
 random_model = h2o.getGLMLambdaModel(prostate.srch, random_lambda)
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
-\keyword{ ~kwd1 }
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line

@@ -163,11 +163,9 @@ public class ModelUtils {
     double probsum=0;
     for( int c=1; c<scored.length; c++ ) {
       final double original_fraction = priorClassDist[c-1];
-      assert(original_fraction > 0) : "original fraction should be > 0, but is " + original_fraction + ": not using enough training data?";
       final double oversampled_fraction = modelClassDist[c-1];
-      assert(oversampled_fraction > 0) : "oversampled fraction should be > 0, but is " + oversampled_fraction + ": not using enough training data?";
       assert(!Double.isNaN(scored[c]));
-      scored[c] *= original_fraction / oversampled_fraction;
+      if (original_fraction != 0 && oversampled_fraction != 0) scored[c] *= original_fraction / oversampled_fraction;
       probsum += scored[c];
     }
     if (probsum>0) for (int i=1;i<scored.length;++i) scored[i] /= probsum;

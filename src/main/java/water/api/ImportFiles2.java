@@ -146,7 +146,7 @@ public class ImportFiles2 extends Request2 {
     ArrayList<String> akeys  = new ArrayList();
     ArrayList<String> afails = new ArrayList();
     ArrayList<String> adels  = new ArrayList();
-    FileIntegrityChecker.check(f,true).syncDirectory(afiles,akeys,afails,adels);
+    FileIntegrityChecker.check(f).syncDirectory(afiles,akeys,afails,adels);
     files = afiles.toArray(new String[0]);
     keys  = akeys .toArray(new String[0]);
     fails = afails.toArray(new String[0]);

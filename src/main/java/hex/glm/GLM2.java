@@ -127,6 +127,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   @API(help = "", json=true, importance = ParamImportance.SECONDARY)
   private boolean _runAllLambdas = true;
 
+  private Key _srcKey;
+
 
   @API(help = "Tweedie link power", json=true, importance = ParamImportance.SECONDARY)
   double tweedie_link_power;
@@ -228,12 +230,12 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     this(desc,jobKey,dest,dinfo,glm,lambda,0.5,nfolds,DEFAULT_BETA_EPS);
   }
   public GLM2(String desc, Key jobKey, Key dest, DataInfo dinfo, GLMParams glm, double [] lambda, double alpha,int nfolds, double betaEpsilon){
-    this(desc,jobKey,dest,dinfo,glm,lambda,alpha,nfolds,betaEpsilon,null);
+    this(desc,jobKey,dest,dinfo,glm,lambda,alpha,nfolds,betaEpsilon,null, null);
   }
-  public GLM2(String desc, Key jobKey, Key dest, DataInfo dinfo, GLMParams glm, double [] lambda, double alpha, int nfolds, double betaEpsilon, Key parentJob){
-    this(desc,jobKey,dest,dinfo,glm,lambda,alpha,nfolds,betaEpsilon,parentJob, null,false,-1,0,null,Double.NaN);
+  public GLM2(String desc, Key jobKey, Key dest, DataInfo dinfo, GLMParams glm, double [] lambda, double alpha, int nfolds, double betaEpsilon, Key parentJob, Key src_key){
+    this(desc,jobKey,dest,dinfo,glm,lambda,alpha,nfolds,betaEpsilon,parentJob, null,false,-1,0,null,Double.NaN, src_key);
   }
-  public GLM2(String desc, Key jobKey, Key dest, DataInfo dinfo, GLMParams glm, double [] lambda, double alpha, int nfolds, double betaEpsilon, Key parentJob, double [] beta, boolean highAccuracy, double prior, double proximalPenalty, int [] activeCols, double lambda_max) {
+  public GLM2(String desc, Key jobKey, Key dest, DataInfo dinfo, GLMParams glm, double [] lambda, double alpha, int nfolds, double betaEpsilon, Key parentJob, double [] beta, boolean highAccuracy, double prior, double proximalPenalty, int [] activeCols, double lambda_max, Key src_key) {
     assert beta == null || beta.length == (dinfo.fullN()+1):"unexpected size of beta, got length " + beta.length + ", expected " + dinfo.fullN();
     job_key = jobKey;
     description = desc;
@@ -259,6 +261,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     } else
       _activeData = _dinfo;
     this.lambda_max = lambda_max;
+    _srcKey = src_key;
   }
 
   static String arrayToString (double[] arr) {
@@ -442,8 +445,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     if(Double.isNaN(objval))return true; // needed for gamma (and possibly others...)
     assert _lastResult._glmt._grad != null:"missing gradient in last result!";
     final double [] grad = Arrays.equals(_activeCols,_lastResult._activeCols)
-      ?_lastResult._glmt.gradient(alpha[0],_currentLambda)
-      :contractVec(_lastResult.fullGrad(alpha[0],_currentLambda),_activeCols);
+            ?_lastResult._glmt.gradient(alpha[0],_currentLambda)
+            :contractVec(_lastResult.fullGrad(alpha[0],_currentLambda),_activeCols);
     // line search
     double f_hat = 0;
     ADMMSolver.subgrad(alpha[0],_currentLambda,beta,grad);
@@ -760,7 +763,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     public void callback(H2OCountedCompleter h2OCountedCompleter) {
       // check if we're done otherwise launch next lambda computation
       _done = _currentLambda <= lambda_min
-        || (max_predictors != -1 && nzs(_lastResult._glmt._beta) > max_predictors); // _iter < max_iter && (improved || _runAllLambdas) && _lambdaIdx < (lambda_value.length-1);;
+              || (max_predictors != -1 && nzs(_lastResult._glmt._beta) > max_predictors); // _iter < max_iter && (improved || _runAllLambdas) && _lambdaIdx < (lambda_value.length-1);;
       if(!_done) {
         H2OCountedCompleter cmp = (H2OCountedCompleter)getCompleter();
         cmp.addToPendingCount(1);
@@ -1066,14 +1069,14 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 //        new Iteration(cmp, false).callback(_lastResult._glmt);
 //        _lastResult._glmt.tryComplete();  // shortcut to reuse the last gram if same active columns
 //      } else
-       new GLMIterationTask(GLM2.this.self(), _activeData, _glm, true, false, false, resizeVec(_lastResult._glmt._beta, _activeCols, _lastResult._activeCols), _ymu, 1.0 / _nobs, thresholds, new Iteration(cmp,false)).asyncExec(_activeData._adaptedFrame);;
+      new GLMIterationTask(GLM2.this.self(), _activeData, _glm, true, false, false, resizeVec(_lastResult._glmt._beta, _activeCols, _lastResult._activeCols), _ymu, 1.0 / _nobs, thresholds, new Iteration(cmp,false)).asyncExec(_activeData._adaptedFrame);;
     }
   }
 
   private final double l2pen(){return 0.5*_currentLambda*(1-alpha[0]);}
   private final double l1pen(){return _currentLambda*alpha[0];}
 
-//  // filter the current active columns using the strong rules
+  //  // filter the current active columns using the strong rules
 //  // note: strong rules are update so tha they keep all previous coefficients in, to prevent issues with line-search
   private double pickNextLambda(){
     final double[] grad = _lastResult.fullGrad(alpha[0],_currentLambda);

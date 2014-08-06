@@ -20,6 +20,8 @@ RAND_ENUM_LENGTH = True
 CUT_EXPR_CNT = 200
 
 ROWS=1000000
+# ROWS=10000
+# ROWS=100
 
 DO_PLOT = getpass.getuser()=='kevin'
 
@@ -131,7 +133,7 @@ class Basic(unittest.TestCase):
 
             # create 100 possible cut expressions here, so we don't waste time below
             rowExprList = []
-            for i in range(CUT_EXPR_CNT):
+            for j in range(CUT_EXPR_CNT):
                 print "Creating", CUT_EXPR_CNT, 'cut expressions'
                 # init cutValue. None means no compare
                 cutValue = [None for i in range(iColCount)]

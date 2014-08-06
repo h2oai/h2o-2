@@ -150,13 +150,11 @@ public class Tree extends H2OCountedCompleter {
         _tree = new FJBuild (spl, d, 0, _seed).compute();
       }
 
-//      if (_verbose > 1)  Log.info(Sys.RANDF,computeStatistics().toString());
       _stats = null; // GC
 
       // Atomically improve the Model as well
       Key tkey = toKey();
-//      TreeP tp = _local_mode ? new TreeP(d.rows(), -1, d.nonOOB(), tkey) : null;
-      appendKey(_modelKey, tkey, _verbose > 10 ? _tree.toString(new StringBuilder(""), Integer.MAX_VALUE).toString() : "");
+      appendKey(_modelKey, tkey, _verbose > 10 ? _tree.toString(new StringBuilder(""), Integer.MAX_VALUE).toString() : "", _data_id);
       StringBuilder sb = new StringBuilder("[RF] Tree : ").append(_data_id+1);
       sb.append(" d=").append(_tree.depth()).append(" leaves=").append(_tree.leaves()).append(" done in ").append(timer).append('\n');
       Log.info(sb.toString());
@@ -170,12 +168,12 @@ public class Tree extends H2OCountedCompleter {
 
   // Stupid static method to make a static anonymous inner class
   // which serializes "for free".
-  static void appendKey(Key model, final Key tKey, final String tString) {
+  static void appendKey(Key model, final Key tKey, final String tString, final int tree_id) {
     final int selfIdx = H2O.SELF.index();
     new TAtomic<SpeeDRFModel>() {
       @Override public SpeeDRFModel atomic(SpeeDRFModel old) {
         if(old == null) return null;
-        return SpeeDRFModel.make(old, tKey, selfIdx, tString);
+        return SpeeDRFModel.make(old, tKey, selfIdx, tString, tree_id);
       }
     }.invoke(model);
   }

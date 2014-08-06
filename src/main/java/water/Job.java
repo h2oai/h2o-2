@@ -155,20 +155,9 @@ public abstract class Job extends Func {
   public void cancel() {
     cancel((String)null, JobState.CANCELLED);
   }
-
-  public static class JobCancelTask extends  TAtomic<Job> {
-    public boolean _res;
-    final Job _job;
-    public JobCancelTask(Job j){ _job = j;}
-    @Override
-    public Job atomic(Job old) {
-      if(!old.isCancelledOrCrashed()) {
-        _res = true;
-        return _job;
-      }
-      return old;
-    }
-  };
+  /** Signal exceptional cancellation of this job.
+   * @param ex exception causing the termination of job.
+   */
   public void cancel(Throwable ex){
     if(ex instanceof JobCancelledException || ex.getMessage() != null && ex.getMessage().contains("job was cancelled"))
       return;
@@ -731,9 +720,6 @@ public abstract class Job extends Func {
       // Check if it make sense to build a model
       if (source.numRows()==0)
         throw new H2OIllegalArgumentException(find("source"), "Cannot build a model on empty dataset!");
-      // Check if there is a response
-      if (response == null)
-        throw new H2OIllegalArgumentException(find("response"), "Response is not specified!");
       // Does not alter the Response to an Enum column if Classification is
       // asked for: instead use the classification flag to decide between
       // classification or regression.
@@ -1023,15 +1009,6 @@ public abstract class Job extends Func {
   /**
    *
    */
-  public static abstract class HexJob extends Job {
-    static final int API_WEAVER = 1;
-    static public DocGen.FieldDoc[] DOC_FIELDS;
-
-    @API(help = "Source key", required = true, filter = source_keyFilter.class)
-    public Key source_key;
-    class source_keyFilter extends H2OHexKey { public source_keyFilter() { super(""); } }
-  }
-
   public interface Progress {
     float progress();
   }
@@ -1072,6 +1049,12 @@ public abstract class Job extends Func {
   /** Hygienic method to prevent accidental capture of non desired values. */
   public static <T extends FrameJob> T hygiene(T job) {
     job.source = null;
+    return job;
+  }
+
+  public static <T extends ValidatedJob> T hygiene(T job) {
+    job.source = null;
+    job.validation = null;
     return job;
   }
 }

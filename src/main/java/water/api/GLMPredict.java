@@ -10,7 +10,7 @@ public class GLMPredict extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-  @API(help = "Model key", required = true, filter = Default.class)
+  @API(help = "Model", required = true, filter = Default.class)
   public Key model; // Type to Model when retired OldModel
 
   @API(help="lambda",required=false,filter=Default.class)

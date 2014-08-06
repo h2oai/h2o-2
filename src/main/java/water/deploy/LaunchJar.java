@@ -29,19 +29,20 @@ public class LaunchJar extends Request2 {
       String[] splits = jars.split(",");
       for( int i = 0; i < splits.length; i++ ) {
         Key key = Key.make(splits[i]);
-        ValueArray va = UKV.get(key);
-        File file = File.createTempFile("h2o", ".jar");
-        Utils.writeFileAndClose(file, va.openStream());
-        DKV.remove(key);
-        pool.appendClassPath(file.getPath());
-
-        JarFile jar = new JarFile(file);
-        Enumeration e = jar.entries();
-        while( e.hasMoreElements() ) {
-          JarEntry entry = (JarEntry) e.nextElement();
-          entries.add(entry);
-        }
-        jar.close();
+        throw H2O.unimpl();
+        //ValueArray va = UKV.get(key);
+        //File file = File.createTempFile("h2o", ".jar");
+        //Utils.writeFileAndClose(file, va.openStream());
+        //DKV.remove(key);
+        //pool.appendClassPath(file.getPath());
+        //
+        //JarFile jar = new JarFile(file);
+        //Enumeration e = jar.entries();
+        //while( e.hasMoreElements() ) {
+        //  JarEntry entry = (JarEntry) e.nextElement();
+        //  entries.add(entry);
+        //}
+        //jar.close();
       }
 
       // Append UID to class names so allow multiple invocations
