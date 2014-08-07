@@ -37,7 +37,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM2_tweedie_rand2(self):
+    def test_NOPASS_GLM2_tweedie_rand2(self):
         h2o.beta_features = True
         if 1==1:
             csvPathname = 'standard/covtype.data'
