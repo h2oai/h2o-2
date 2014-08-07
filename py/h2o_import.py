@@ -194,7 +194,7 @@ def import_only(node=None, schema='local', bucket=None, path=None,
     if schema=='put':
         # to train users
         if re.search(r"[/\*<>{}[\]~`]", pattern):
-           raise Exception("h2o putfile basename %s can't be regex. path= was %s" % (pattern, path))
+            raise Exception("h2o putfile basename %s can't be regex. path= was %s" % (pattern, path))
 
         if not path: 
             raise Exception("path= didn't say what file to put")
