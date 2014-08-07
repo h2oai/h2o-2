@@ -97,7 +97,7 @@ abstract public class Parse extends Request {
       }
       boolean checkHeader = !_header.specified();
       boolean hasHeader = _header.value();
-      CustomParser.ParserSetup userSetup =  new CustomParser.ParserSetup(_parserType.value(),_separator.value(),hasHeader);
+      CustomParser.ParserSetup userSetup =  new CustomParser.ParserSetup(_parserType.value(),_separator.value(),hasHeader, _sQuotes.value());
       CustomParser.PSetupGuess setup = null;
       try {
        setup = GuessSetup.guessSetup(keys, hKey, userSetup,checkHeader);

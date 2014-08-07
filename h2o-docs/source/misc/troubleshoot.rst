@@ -188,6 +188,40 @@ Users may find this page on installing dependencies helpful:
 
 http://stat.ethz.ch/R-manual/R-devel/library/utils/html/install.packages.html
 
+
+**Common Question: Why is only one CPU being used when I start H2O from R?**
+
+Depending on how you got your version of R, it may be configured to run with only one CPU by default.
+This is particularly common for Linux installations.  This can affect H\ :sub:`2`\ O when you use the
+h2o.init() function to start H\ :sub:`2`\ O from R.
+
+You can tell if this is happening by looking in /proc/<nnnnn>/status at the Cpus_allowed bitmask (where nnnnn is the PID of R).
+
+::
+
+  (/proc/<nnnnn>/status: This configuration is BAD!)
+  Cpus_allowed:   00000001
+  Cpus_allowed_list:      0
+
+If you see a bitmask with only one CPU allowed, then any H\ :sub:`2`\ O process forked by R will inherit this limitation.
+To work around this, set the following environment variable before starting R:
+
+::
+
+  $ export OPENBLAS_MAIN_FREE=1
+  $ R
+
+Now you should see something like the following in /proc/<nnnnn>/status
+
+::
+
+  (/proc/<nnnnn>/status: This configuration is good.)
+  Cpus_allowed:   ffffffff
+  Cpus_allowed_list:      0-31
+
+At this point, the h2o.init() function will start an H2O that can use more than one CPU.
+
+
 **Internal Server Error in R**
    
 

@@ -70,7 +70,7 @@ class Basic(unittest.TestCase):
         print "This is the same format/data file used by test_same_parse, but the non-gzed version"
         print "\nSchmoo the # of rows"
         # failed around 50 trials..python memory problem
-        for trial in range (20):
+        for trial in range (5):
             rowData = rand_rowData()
             num = random.randint(4096, 10096)
             append_syn_dataset(csvPathname, rowData, num)
