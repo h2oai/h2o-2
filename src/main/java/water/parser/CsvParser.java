@@ -209,7 +209,7 @@ NEXT_CHAR:
           // fallthrough to TOKEN
         // ---------------------------------------------------------------------
         case TOKEN:
-          if(_setup._types != null && _setup._types[colIdx]._type == ParserSetup.Coltype.STR){
+          if( dout.isString(colIdx) ){
             state = STRING; // Do not attempt a number parse, just do a string parse
             _str.set(bits, offset, 0);
             continue MAIN_LOOP;

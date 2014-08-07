@@ -851,7 +851,7 @@ public final class ParseDataset2 extends Job {
     @Override public final void addInvalidCol(int colIdx) {
       if(colIdx < _nCols) _nvs[_col = colIdx].addNA();
     }
-    @Override public final boolean isString(int colIdx) { return false; }
+    @Override public final boolean isString(int colIdx) { return ((colIdx < _nCols) ?  _ctypes[colIdx]==ECOL : false);}
 
     @Override public final void addStrCol(int colIdx, ValueString str) {
       if(colIdx < _nvs.length){
