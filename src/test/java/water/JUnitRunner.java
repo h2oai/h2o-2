@@ -43,7 +43,6 @@ public class JUnitRunner {
     tests.remove(GLMRandomTest.Short.class);
     tests.remove(GLMRandomTest.Long.class);
     tests.remove(ParserTest2.ParseAllSmalldata.class);
-    tests.remove(TestKeySnapshotLong.class);
     // Skip abstract test
     tests.remove(TreeTestWithBalanceAndCrossVal.class);
 
