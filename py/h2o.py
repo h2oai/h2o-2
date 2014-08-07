@@ -871,11 +871,11 @@ def verify_cloud_size(nodeList=None, verbose=False, timeoutSecs=10, ignoreHealth
 
 
 def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25, noExtraErrorCheck=False):
-    node.wait_for_node_to_accept_connections(timeoutSecs, noExtraErrorCheck=noExtraErrorCheck)
+    node.wait_for_node_to_accept_connections(timeoutSecs=timeoutSecs, noExtraErrorCheck=noExtraErrorCheck)
 
     # want node saying cloud = expected size, plus thinking everyone agrees with that.
-    def test(n, tries=None):
-        c = n.get_cloud(noExtraErrorCheck=True)
+    def test(n, tries=None, timeoutSecs=14.0):
+        c = n.get_cloud(noExtraErrorCheck=True, timeoutSecs=timeoutSecs)
         # don't want to check everything. But this will check that the keys are returned!
         consensus = c['consensus']
         locked = c['locked']
@@ -2626,7 +2626,7 @@ class H2O(object):
         start = time.time()
         numberOfRetries = 0
         while time.time() - start < timeoutSecs:
-            if test_func(self, tries=numberOfRetries):
+            if test_func(self, tries=numberOfRetries, timeoutSecs=timeoutSecs):
                 break
             time.sleep(retryDelaySecs)
             numberOfRetries += 1
@@ -2647,9 +2647,9 @@ class H2O(object):
     def wait_for_node_to_accept_connections(self, timeoutSecs=15, noExtraErrorCheck=False):
         verboseprint("wait_for_node_to_accept_connections")
 
-        def test(n, tries=None):
+        def test(n, tries=None, timeoutSecs=timeoutSecs):
             try:
-                n.get_cloud(noExtraErrorCheck=noExtraErrorCheck)
+                n.get_cloud(noExtraErrorCheck=noExtraErrorCheck, timeoutSecs=timeoutSecs)
                 return True
             except requests.ConnectionError, e:
                 # Now using: requests 1.1.0 (easy_install --upgrade requests) 2/5/13

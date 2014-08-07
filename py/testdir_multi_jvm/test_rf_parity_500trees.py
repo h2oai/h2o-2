@@ -24,7 +24,7 @@ class Basic(unittest.TestCase):
 
         # always match the run below!
         # just using one file for now
-        for x in [1000]:
+        for x in [500]:
             shCmdString = "perl " + h2o.find_file("syn_scripts/parity.pl") + " 128 4 "+ str(x) + " quad " + SYNDATASETS_DIR
             h2o.spawn_cmd_and_wait('parity.pl', shCmdString.split(),4)
             csvFilename = "parity_128_4_" + str(x) + "_quad.data"  
