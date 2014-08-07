@@ -160,7 +160,7 @@ public class KMeans2Test extends TestUtil {
 
   @Test public void testSphere() {
     Key dest = Key.make("dest");
-    Frame frame = parseFrame(dest, "smalldata/syn_sphere3.csv");
+    Frame frame = parseFrame(dest, "smalldata/syn_sphere2.csv");
     KMeans2 algo = new KMeans2();
     algo.source = frame;
     algo.k = 3;
