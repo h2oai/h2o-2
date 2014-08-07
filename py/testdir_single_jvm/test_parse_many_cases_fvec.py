@@ -253,7 +253,7 @@ class Basic(unittest.TestCase):
                     else:
                         single_quotes = 0
                     parseResult = h2i.import_parse(path=csvPathname, schema='put', single_quotes=single_quotes,
-                        noPrint=not h2o.verbose)
+                        noPrint=not h2o.verbose, retryDelaySecs=0.1)
 
                     if DO_RF:
                         h2o_cmd.runRF(parseResult=parseResult, trees=1,

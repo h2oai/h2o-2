@@ -1,21 +1,23 @@
 package water.api;
 
-import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.google.gson.JsonObject;
-
 import water.*;
 import water.Request2.TypeaheadKey;
 import water.api.Request.Filter;
 import water.api.Request.Validator;
 import water.fvec.Frame;
 import water.fvec.Vec;
-import water.util.*;
+import water.util.Check;
+import water.util.RString;
+import water.util.Utils;
 
 import java.io.File;
 import java.lang.reflect.Field;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Properties;
 
 /** All arguments related classes are defined in this guy.
  *
@@ -818,7 +820,7 @@ public class RequestArguments extends RequestStatics {
 
       StringBuilder sb = new StringBuilder();
       sb.append("<select multiple");
-      sb.append(" size='").append(Math.min(10, values.length)).append("'");
+      sb.append(" size='").append(Math.min(20, values.length)).append("'");
       sb.append(" id='").append(_name).append("' >");
       for (int i = 0 ; i < values.length; ++i) {
         sb.append("<option value='").append(values[i]).append("' ");
