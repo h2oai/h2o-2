@@ -407,28 +407,35 @@ h2o.ignoreColumns <- function(data, max_na = 0.2) {
 
 
 # ------------------- Save H2O Model to Disk ----------------------------------------------------
-h2o.saveModel <- function(object, dir="", name="", filename = "", save_cv=FALSE, force=FALSE) {
-  if(missing(object)) stop('Must specify object')
-  if(!inherits(object,'H2OModel')) stop('object must be an H2O model')
-  if(!is.character(dir)) stop('path must be of class character')
-  if(!is.character(name)) stop('name must be of class character')
-  if(!is.character(filename)) stop('filename must be of class character')
-  if(!is.logical(force)) stop('force must be either TRUE or FALSE')
-  if(name == "") name=object@key
-
-  path <- if(filename != "") filename else paste(dir, name, sep='/')
-  path <- gsub('//', '/', path)
-  
-  force = ifelse(force==TRUE, 1, 0)
-  res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_SaveModel, model=object@key, path=path, force=force)
-  path
+h2o.saveModel <- function(object, dir="", name="", filename="", save_cv=FALSE, force=FALSE) {
+    if(missing(object)) stop('Must specify object')
+    if(!inherits(object,'H2OModel')) stop('object must be an H2O model')
+    if(!is.character(dir)) stop('path must be of class character')
+    if(!is.character(name)) stop('name must be of class character')
+    if(!is.character(filename)) stop('filename must be of class character')
+    if(!is.logical(force)) stop('force must be either TRUE or FALSE')
+    if(!is.logical(save_cv)) stop('save_cv must be either TRUE or FALSE')
+    if(nchar(name) == 0) name = object@key
+    
+    path <- if(filename != "") filename else paste(dir, name, sep='/')
+    
+    force = ifelse(force==TRUE, 1, 0)
+    res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_SaveModel, model=object@key, path=path, force=force)
+    
+    xval_keys = sapply(object@xval,function(model) model@key )
+    if(save_cv & (length(xval_keys)==0)) stop('No cross validation models found')
+    for (xval_key in xval_keys) .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_SaveModel, model=xval_key, path=paste(dirname(path), xval_key ,sep = '/'), force=force)
+    
+    res$path
 }
 
 # ------------------- Load H2O Model from Disk ----------------------------------------------------
 h2o.loadModel <- function(object, path="") {
-  if(missing(object)) stop('Must specify object')
-  if(class(object) != 'H2OClient') stop('object must be of class H2OClient')
-  if(!is.character(path)) stop('path must be of class character')
-  res = .h2o.__remoteSend(object, .h2o.__PAGE_LoadModel, path = path)
-  h2o.getModel(object, res$model$'_key')
+    if(missing(object)) stop('Must specify object')
+    if(class(object) != 'H2OClient') stop('object must be of class H2OClient')
+    if(!is.character(path)) stop('path must be of class character')
+    res = .h2o.__remoteSend(object, .h2o.__PAGE_LoadModel, path = path)
+    xval_keys = res$model$submodels[[1]]$xvalidation$xval_models
+    if(length(xval_keys)>0) for (xval_key in xval_keys) .h2o.__remoteSend(object, .h2o.__PAGE_LoadModel, path = paste(dirname(path), xval_key, sep='/') )
+    h2o.getModel(object, res$model$'_key')
 }
