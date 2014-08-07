@@ -279,7 +279,7 @@ public class DeepLearningIrisTest extends TestUtil {
 //                          }
                                 }
                               } finally {
-                                fpreds.delete();
+                                if (fpreds != null) fpreds.delete();
                               }
                               Log.info("Predicted values: PASS");
 
@@ -317,7 +317,7 @@ public class DeepLearningIrisTest extends TestUtil {
                                   Log.info("Best_model's error : " + bestErr * 100 + "%.");
                                   compareVal(bestErr, best_err, abseps, releps);
                                 } finally {
-                                  bestPredict.delete();
+                                  if (bestPredict != null) bestPredict.delete();
                                 }
                               }
 
