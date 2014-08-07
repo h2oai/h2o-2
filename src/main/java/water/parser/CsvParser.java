@@ -124,7 +124,7 @@ NEXT_CHAR:
             assert _str.get_buf() != bits;
             _str.addBuff(bits);
           }
-          if(_setup._types != null && _str.equals(_setup._types[colIdx]._naStr))
+          if(_setup._types != null && colIdx < _setup._types.length && _str.equals(_setup._types[colIdx]._naStr))
             dout.addInvalidCol(colIdx);
           else
             dout.addStrCol(colIdx, _str);
