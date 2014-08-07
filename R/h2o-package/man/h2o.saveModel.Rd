@@ -2,7 +2,7 @@
 \alias{h2o.saveModel}
 \title{Save a H2OModel object to disk.}
 \description{Save a H2OModel object to a disk and can be loaded back into H2O using h2o.loadModel.}
-\usage{h2o.saveModel(object, dir="", name="", filename = "", force=FALSE)}
+\usage{h2o.saveModel(object, dir="", name="", filename = "", save_cv = FALSE, force=FALSE)}
 
 \arguments{
   \item{object}{ An \code{\linkS4class{H2OModel}} object.}
@@ -27,6 +27,6 @@ prostate.hex = h2o.importFile(localH2O, path = paste("https://raw.github.com",
   "0xdata/h2o/master/smalldata/logreg/prostate.csv", sep = "/"), key = "prostate.hex")
 prostate.glm = h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), 
   data = prostate.hex, family = "binomial", nfolds = 10, alpha = 0.5)
-h2o.saveModel(object = prostate.glm, dir = "/Users/UserName/Desktop")
+h2o.saveModel(object = prostate.glm, dir = "/Users/UserName/Desktop", save_cv = TRUE, force = TRUE)
 }
 }
