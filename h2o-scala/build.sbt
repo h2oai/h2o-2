@@ -4,7 +4,7 @@ version := "2.5-SNAPSHOT"
 
 organization := "ai.h2o"
 
-scalaVersion := "2.10.3"
+scalaVersion := "2.10.4"
 
 mainClass in Compile := Some("water.api.dsl.ShalalaRepl")
 
@@ -26,11 +26,11 @@ libraryDependencies += "ai.h2o" % "h2o-core" % "2.5-SNAPSHOT"
 
 libraryDependencies += "com.github.wookietreiber" %% "scala-chart" % "latest.integration"
 
-libraryDependencies <+= scalaVersion { v => "org.scala-lang" % "scala-library" % v }
+libraryDependencies += "org.scala-lang" % "scala-library" % scalaVersion.value
 
-libraryDependencies <+= scalaVersion { v => "org.scala-lang" % "scala-compiler" % v }
+libraryDependencies += "org.scala-lang" % "scala-compiler" % scalaVersion.value 
 
-libraryDependencies <+= scalaVersion { v => "org.scala-lang" % "jline" % v }
+libraryDependencies += ("org.scala-lang" % "jline" % scalaVersion.value).exclude("org.fusesource.jansi", "jansi")
 
 
 // Test dependencies
