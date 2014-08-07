@@ -44,30 +44,8 @@ test.binop2.pipe <- function(conn) {
   #col <- ifelse(is.na(suppressWarnings(as.numeric(col))), col, as.numeric(col))
   #col <- ifelse(is.na(suppressWarnings(as.numeric(col))), col, paste("C", col+1, sep = "", collapse = ""))
   df <- head(hex)
-  col <- sample(colnames(df[!sapply(df, is.factor)]), 1)
-  if (!(grepl("\\.", col))) {
-    col <- gsub("\\.", " ", sample(colnames(df[!sapply(df, is.factor)]), 1)) 
-  }
 
-  print(which(col == colnames(df)))
-
-  print(colnames(hex))
-  print(col)
-
-  print(col %in% colnames(hex))
-  print(col %in% colnames(df))
-
-  if (!(col %in% colnames(hex))) {
-    col <- which(col == colnames(df))
-  }
-
-  if(length(colnames(hex)) == 1) {
-    Log.info(paste("Using column: ", colnames(hex)))
-    col <- colnames(hex)
-  } else {
-    Log.info(paste("Using column: ", col))
-  }
- 
+  col <- sample(ncol(hex), 1)
 
   sliced <- hex[,col]
   Log.info("Placing key \"sliced.hex\" into User Store")
@@ -84,14 +62,8 @@ test.binop2.pipe <- function(conn) {
 
   expect_that(dim(newHex), equals(dim(sliced)))
 
-  expect_that(dim(newHex), equals(dim(data.frame(as.data.frame(sliced) | 5))))
-  Log.info("ANDed hex (should be a column of 1s)")
   print(head(newHex))
-  Log.info("Expected result: as.data.frame(sliced) | 5")
   print(head(as.data.frame(sliced) | 5))
-
-  df <- data.frame(h2o = as.data.frame(newHex), R = data.frame(as.data.frame(sliced) | 5))
-  expect_that(sum(apply(df,1,assertEquals)), equals(nrow(df)))
   
   testEnd()
 }
