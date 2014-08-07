@@ -386,10 +386,13 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   }
 
   private static class GLM2_ProgressUpdate extends TAtomic<GLM2_Progress> {
+    final int _i;
+    public GLM2_ProgressUpdate(){_i = 1;}
+    public GLM2_ProgressUpdate(int i){_i = i;}
     @Override
     public GLM2_Progress atomic(GLM2_Progress old) {
       if(old == null)return old;
-      ++old._done;
+      old._done += _i;
       return old;
     }
   }
@@ -399,7 +402,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     Value v = DKV.get(_progressKey);
     if(v == null)return 0;
     float res = v.<GLM2_Progress>get().progess();
-    assert res >= 0 && res <= 1:"progress out of range: " + res;
+    if(res > 1f)
+      res = 1f;
     return res;
   }
 
@@ -741,6 +745,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
               return;
             }
           }
+          int diff = MAX_ITERATIONS_PER_LAMBDA - _iter + _iter1;
+          if(diff > 0)
+            new GLM2_ProgressUpdate(diff).fork(_progressKey); // update progress
           GLM2.this.setSubmodel(newBeta, glmt2._val,(H2OCountedCompleter)getCompleter().getCompleter());
           _done = true;
           LogInfo("computation of current lambda done in " + (System.currentTimeMillis() - GLM2.this.start_time) + "ms");
@@ -828,7 +835,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     _progressKey = Key.make(dest().toString() + "_progress", (byte) 1, Key.HIDDEN_USER_KEY, dest().home_node());
     int total = max_iter;
     if(lambda_search)
-      total = 3*nlambdas;
+      total = MAX_ITERATIONS_PER_LAMBDA*nlambdas;
     GLM2_Progress progress = new GLM2_Progress(total*(n_folds > 1?(n_folds+1):1));
     LogInfo("created progress " + progress);
     DKV.put(_progressKey,progress,fs);
@@ -1032,12 +1039,14 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     return (lambda == null)?pickNextLambda():lambda[++_lambdaIdx];
   }
 
+  private transient int _iter1 = 0;
   void nextLambda(final double currentLambda, final H2OCountedCompleter cmp){
     if(currentLambda > lambda_max){
       _done = true;
       cmp.tryComplete();
       return;
     }
+    _iter1 = _iter;
     LogInfo("starting computation of lambda = " + currentLambda + ", previous lambda = " + _currentLambda);
     _done = false;
     final double previousLambda = _currentLambda;
