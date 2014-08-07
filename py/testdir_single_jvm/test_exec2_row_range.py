@@ -84,7 +84,7 @@ class Basic(unittest.TestCase):
 
                 execExpr = "%s=%s[1:%s,]" % (hex_key_i, hex_key, rowCount-10)
                 resultExec, result = h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
-                inspect = h2o_cmd.runInspect(None, hex_key_i, timeoutSecs=timeoutSecs2)
+                inspect = h2o_cmd.runInspect(None, hex_key_i, timeoutSecs=timeoutSecs)
                 h2o_cmd.infoFromInspect(inspect, hex_key_i)
                 print "\n" + hex_key_i, \
                     "    numRows:", "{:,}".format(inspect['numRows']), \

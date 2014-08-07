@@ -89,7 +89,7 @@ public class GLMModelView extends Request2 {
           firstRow.append("\t\t<td><b>" + DFORMAT2.format(glm_model.submodels[i].lambda_value) + "</b></td>\n");
         else
           firstRow.append("\t\t<td>" + link(DFORMAT2.format(glm_model.submodels[i].lambda_value), glm_model._key, glm_model.submodels[i].lambda_value) + "</td>\n");
-        secondRow.append("\t\t<td>" + (sm.rank - 1) + "</td>\n");
+        secondRow.append("\t\t<td>" + Math.max(0,(sm.rank - 1)) + "</td>\n"); // rank counts intercept, that's why -1 is there, however, intercept can be 0 as well, so just prevent -1
         if(sm.xvalidation != null){
           thirdRow.append("\t\t<td>"  + DFORMAT.format(1 - sm.xvalidation.residual_deviance / sm.xvalidation.null_deviance) + "<sub>x</sub>(" + DFORMAT.format(1 - sm.validation.residual_deviance / sm.validation.null_deviance) + ")" + "</td>\n");
           fourthRow.append("\t\t<td>" + DFORMAT.format(glm_model.glm.family == Family.binomial ? sm.xvalidation.auc : sm.xvalidation.aic) + "<sub>x</sub>("+ DFORMAT.format(glm_model.glm.family == Family.binomial ? sm.validation.auc : sm.validation.aic) + ")</td>\n");
