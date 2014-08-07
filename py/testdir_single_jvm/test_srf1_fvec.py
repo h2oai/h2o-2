@@ -32,7 +32,7 @@ class Basic(unittest.TestCase):
         timeoutSecs = 20
         csvPathname = 'iris/iris2.csv'
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
-        h2o_cmd.runSpeeDRF(parseResult=parseResult, num_trees=trees, timeoutSecs=timeoutSecs)
+        h2o_cmd.runSpeeDRF(parseResult=parseResult, ntrees=trees, timeoutSecs=timeoutSecs)
 
     def notest_RF_poker100(self):
         h2o.beta_features = True
@@ -40,7 +40,7 @@ class Basic(unittest.TestCase):
         timeoutSecs = 20
         csvPathname = 'poker/poker100'
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
-        h2o_cmd.runSpeeDRF(parseResult=parseResult, num_trees=trees, timeoutSecs=timeoutSecs)
+        h2o_cmd.runSpeeDRF(parseResult=parseResult, ntrees=trees, timeoutSecs=timeoutSecs)
 
     def test_GenParity1(self):
         h2o.beta_features = True
@@ -70,7 +70,7 @@ class Basic(unittest.TestCase):
             csvFilename = "parity_128_4_" + str(x) + "_quad.data"
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
             parseResult = h2i.import_parse(path=csvPathname, schema='put')
-            h2o_cmd.runSpeeDRF(parseResult=parseResult, response=8, num_trees=trees, timeoutSecs=timeoutSecs)
+            h2o_cmd.runSpeeDRF(parseResult=parseResult, response=8, ntrees=trees, timeoutSecs=timeoutSecs)
 
             trees += 10
             timeoutSecs += 2

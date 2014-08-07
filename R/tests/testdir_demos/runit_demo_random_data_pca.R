@@ -1,6 +1,6 @@
 #----------------------------------------------------------------------
 # Purpose:  Create random data and run 20 iterations of GLM on it.
-# Compared to timings for R's pca on same data
+# Compared to timings for R's pca on same data (#R#)
 #----------------------------------------------------------------------
 
 setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
@@ -12,7 +12,7 @@ conn <- new("H2OClient", ip=myIP, port=myPort)
 
 # Data frame size 
 rows = c(1e3,1e4) 
-cols = c(1e1,1e2,4e2) 
+cols = c(1e1,1e2) 
 #rows = c(1e4,1e6) 
 #cols = c(1e1,1e2,300,400,1e3) 
 rows 
@@ -21,8 +21,8 @@ cols
 create_frm_time = matrix(NA, nrow = length(rows), ncol = length(cols)) 
 frm_size = matrix(NA, nrow=length(rows), ncol = length(cols)) 
 algo_run_time = matrix(NA, nrow = length(rows), ncol = length(cols))  
-algo_run_time_R = matrix(NA, nrow = length(rows), ncol = length(cols))  
-algo_run_time_cmp = matrix(NA, nrow = length(rows), ncol = length(cols)) 
+#R# algo_run_time_R = matrix(NA, nrow = length(rows), ncol = length(cols))  
+#R# algo_run_time_cmp = matrix(NA, nrow = length(rows), ncol = length(cols)) 
 col_grid = rep(NA,length(cols)) 
 row_grid = rep(NA,length(rows)) 
 names <- c() 
@@ -53,14 +53,14 @@ for(i in 1:length(rows)){ # changing number of rows
     algo_run_time[i,j] = aat[3] 
 
     #Run R's  PCA on same data
-    myframe.R <- as.data.frame(myframe)
-    myframe.R <- sapply(myframe.R, as.numeric)
-    myframe.R <- as.data.frame(myframe.R)
-    aat.R = system.time(myframe.Rpca<-prcomp(~., myframe.R, scale=T))
-    algo_run_time_R[i,j] = aat.R[3]
+    #R# myframe.R <- as.data.frame(myframe)
+    #R# myframe.R <- sapply(myframe.R, as.numeric)
+    #R# myframe.R <- as.data.frame(myframe.R)
+    #R# aat.R = system.time(myframe.Rpca<-prcomp(~., myframe.R, scale=T))
+    #R# algo_run_time_R[i,j] = aat.R[3]
 
     #Record differences between R and h2o
-    algo_run_time_cmp[i,j] = algo_run_time[i,j] - algo_run_time_R[i,j]
+    #R# algo_run_time_cmp[i,j] = algo_run_time[i,j] - algo_run_time_R[i,j]
   } 
 } 
 myframe = NULL 
@@ -80,15 +80,15 @@ data = algo_run_time
 dimnames(data)<-list(row_grid,col_grid) 
 
 #format timing data from R 
-data_R = algo_run_time_R 
-dimnames(data_R)<-list(row_grid,col_grid) 
+#R# data_R = algo_run_time_R 
+#R# dimnames(data_R)<-list(row_grid,col_grid) 
 
 # Report timing results 
 data  
-data_R
+#R# data_R
 
 # Report comparision, relative to h2o (h2o - R) 
-algo_run_time_cmp
+#R# algo_run_time_cmp
 
 # Visualization 
 #library(rgl) 

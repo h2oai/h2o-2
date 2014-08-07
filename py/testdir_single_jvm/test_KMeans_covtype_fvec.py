@@ -39,12 +39,13 @@ class Basic(unittest.TestCase):
 
             for trial in range(3):
                 kwargs = {
-                    'source': u'covtype.hex', 
-                    'destination_key': 'covtype.data_2.hex', 
-                    'initialization': 'Furthest', 
-                    # 'max_iter': 20, 
-                    'max_iter': 50, 
-                    'k': 2,
+                    'k': 3,
+                    'initialization': 'Furthest',
+                    'ignored_cols': range(11, inspect['numCols']),
+                    'max_iter': 10,
+                    # 'normalize': 0,
+                    # reuse the same seed, to get deterministic results
+                    'seed': 265211114317615310
                 }
 
                 start = time.time()

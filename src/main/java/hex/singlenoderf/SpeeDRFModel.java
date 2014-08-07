@@ -516,7 +516,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     printCrossValidationModelsHTML(sb);
   }
 
-  public DTree.TreeModel dummyParamParser() {
+  public DTree.TreeModel transform2DTreeModel() {
     Key key = Key.make();
     Key dataKey = _dataKey;
     Key testKey = null;
@@ -532,17 +532,25 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     int num_folds = 0; // TODO:
     float[] priorClassDist = null;
     float[] classDist = null;
+    Key[][] treeKeys = null;
+    TreeStats tstats = null;
 
-    SpeeDRFModel_Dtree newModel = new SpeeDRFModel_Dtree(key,dataKey,testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, mtries, num_folds, priorClassDist, classDist);
+    // dummy model
+    SpeeDRFModel_DTree newModel = new SpeeDRFModel_DTree(key,dataKey,testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, mtries, num_folds, priorClassDist, classDist);
+    // update the model
+    newModel = new SpeeDRFModel_DTree(newModel, treeKeys);
     return newModel;
   }
 
-  public static class SpeeDRFModel_Dtree extends DTree.TreeModel {
+  public static class SpeeDRFModel_DTree extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
 
-    public SpeeDRFModel_Dtree(Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, int mtries, int num_folds, float[] priorClassDist, float[] classDist) {
+    public SpeeDRFModel_DTree(Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, int mtries, int num_folds, float[] priorClassDist, float[] classDist) {
       super(key,dataKey,testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, num_folds, priorClassDist, classDist);
+    }
 
+    public SpeeDRFModel_DTree(SpeeDRFModel_DTree prior, Key[][] treeKeys) {
+      super(prior, treeKeys, null, Utils.append(prior.cms, null), null, null, null);
     }
 
     @Override

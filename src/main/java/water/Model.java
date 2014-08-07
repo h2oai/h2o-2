@@ -17,8 +17,6 @@ import water.util.Log.Tag.Sys;
 
 import java.util.*;
 
-import org.apache.commons.math3.random.CorrelatedRandomVectorGenerator;
-
 /**
  * A Model models reality (hopefully).
  * A model can be used to 'score' a row, or a collection of rows on any

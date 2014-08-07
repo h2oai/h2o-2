@@ -336,22 +336,40 @@ public class Tree extends H2OCountedCompleter {
     @Override AutoBuffer compress(AutoBuffer ab) {
       // TODO: splitnode compress method
       int pos = ab.position();
-      //
-      byte _nodetype=0; //
 
-      ab.put1(_nodetype);
+      byte _nodeType=0; //
+      // 1,2 bits: skip tree size size? skip tree size can be 1,2,3,4 bytes, these two bytes will tell how many bytes we need
+      // operator: always "<=" which should corresponds to "<" in DTree's concept. So it is always 0
+
+      // 5th and 6th bits are tree flag:0 for subtree and 3 for leaf
+      if (_l instanceof LeafNode) _nodeType |= 0x30; // 00110000 = 0x30
+
+      int leftSize = _l.size(); // size of the left child
+      if (leftSize < 256)             _nodeType |= 0x00;
+      else if (leftSize < 65535)      _nodeType |= 0x01;
+      else if (leftSize < (1<<24))    _nodeType |= 0x02;
+      else                            _nodeType |= 0x03;
+
+      // 7th and 8th bits
+      if (_r instanceof LeafNode) _nodeType |= 0xC0; // 11000000 = 0xC0
+      ab.put1(_nodeType);
+
       assert _column != -1;
       ab.put2((short)_column);
-
       ab.put4f(_originalSplit); // assuming we only have _equal == 0 or 1 which is binary split
 
-
-      // split value or group
+      // have to duplicate similar block because _nodeType is not known before hand
+      if( (_nodeType&48) == 0 ) { // Size bits are optional for left leaves !
+        if(leftSize < 256)            ab.put1(       leftSize);
+        else if (leftSize < 65535)    ab.put2((short)leftSize);
+        else if (leftSize < (1<<24))  ab.put3(       leftSize);
+        else                          ab.put4(       leftSize); // 1<<31-1
+      }
 
       //write subtree
       _l.compress(ab);
       _r.compress(ab);
-      // some assertion
+      // TODO: some assertion
       return ab;
     }
 
