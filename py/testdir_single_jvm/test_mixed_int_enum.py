@@ -52,7 +52,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_mixed_int_enum(self):
+    def test_NOPASS_mixed_int_enum(self):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
