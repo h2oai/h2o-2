@@ -2,8 +2,8 @@ package hex;
 
 import water.Iced;
 import water.Model;
+import water.api.API;
 import water.api.DocGen;
-import water.api.Request.API;
 import water.util.UIUtils;
 import water.util.Utils;
 

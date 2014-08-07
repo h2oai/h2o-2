@@ -7,6 +7,7 @@ import java.util.jar.*;
 
 import javassist.*;
 import water.*;
+import water.api.API;
 import water.api.DocGen;
 import water.util.Utils;
 

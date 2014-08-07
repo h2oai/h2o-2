@@ -1,16 +1,17 @@
 package hex.singlenoderf;
 
 import static hex.singlenoderf.VariableImportance.asVotes;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+
 import hex.ConfusionMatrix;
 import hex.VarImp;
 import hex.gbm.DTree.TreeModel.TreeStats;
 import water.*;
 import water.api.*;
-import water.api.Request.API;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;

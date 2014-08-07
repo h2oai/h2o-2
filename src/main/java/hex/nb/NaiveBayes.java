@@ -3,6 +3,7 @@ package hex.nb;
 import hex.FrameTask.DataInfo;
 import water.*;
 import water.Job.ColumnsResJob;
+import water.api.API;
 import water.api.DocGen;
 import water.fvec.*;
 import water.util.RString;

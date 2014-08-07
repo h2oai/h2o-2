@@ -7,7 +7,6 @@ import hex.gbm.DTree.TreeModel.CompressedTree;
 import hex.gbm.DTree.TreeModel.TreeVisitor;
 import water.*;
 import water.api.*;
-import water.api.Request.API;
 import water.fvec.Chunk;
 import water.license.LicenseManager;
 import water.util.*;

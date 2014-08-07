@@ -4,8 +4,8 @@ import org.junit.*;
 
 import com.google.gson.JsonObject;
 
+import water.api.API;
 import water.api.DocGen;
-import water.api.Request.API;
 import water.util.JsonUtil;
 
 public class AutoBuffer2JSONTest extends TestUtil {

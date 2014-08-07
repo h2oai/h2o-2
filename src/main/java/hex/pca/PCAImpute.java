@@ -1,6 +1,7 @@
 package hex.pca;
 
 import water.Job.FrameJob;
+import water.api.API;
 import water.api.DocGen;
 import water.fvec.Frame;
 

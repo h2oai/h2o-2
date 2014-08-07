@@ -1,6 +1,7 @@
 package hex;
 
 import water.*;
+import water.api.API;
 import water.api.DocGen;
 import water.fvec.*;
 import water.util.RString;

@@ -6,8 +6,8 @@ import hex.glm.GLMParams.Family;
 import hex.glm.GLMValidation.GLMXValidation;
 import water.*;
 import water.H2O.H2OCountedCompleter;
+import water.api.API;
 import water.api.DocGen;
-import water.api.Request.API;
 import water.fvec.Chunk;
 import water.util.Utils;
 

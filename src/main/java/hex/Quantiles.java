@@ -2,7 +2,6 @@ package hex;
 
 import water.*;
 import water.api.*;
-import water.api.Request.API;
 import water.fvec.*;
 import water.util.Utils;
 import water.util.Log;

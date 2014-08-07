@@ -5,8 +5,8 @@ import hex.FrameTask;
 import water.H2O;
 import water.Iced;
 import water.MemoryManager;
+import water.api.API;
 import water.api.DocGen;
-import water.api.Request.API;
 
 public final class GLMParams extends Iced {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields

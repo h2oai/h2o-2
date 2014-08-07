@@ -2,10 +2,10 @@ package water;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+
 import org.apache.commons.codec.binary.Hex;
 
 import water.api.DocGen;
-import water.api.Request.API;
 import water.api.Request.Default;
 import water.fvec.Frame;
 

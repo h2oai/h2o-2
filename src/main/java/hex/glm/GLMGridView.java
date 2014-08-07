@@ -2,12 +2,13 @@ package hex.glm;
 
 import hex.glm.GLM2.GLMGrid;
 import hex.glm.GLMParams.Family;
+
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+
 import water.*;
-import water.api.DocGen;
-import water.api.Request;
+import water.api.*;
 
 public class GLMGridView extends Request2 {
   public GLMGridView(){}

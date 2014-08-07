@@ -2,11 +2,13 @@ package hex.gapstat;
 
 import hex.KMeans2;
 import water.*;
-import water.Job;
+import water.api.API;
 import water.api.DocGen;
 import water.fvec.*;
 import water.util.Log;
+
 import java.util.Random;
+
 import static water.util.Utils.getDeterRNG;
 
 

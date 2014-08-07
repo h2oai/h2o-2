@@ -4,7 +4,7 @@ import hex.FrameTask;
 import hex.deeplearning.DeepLearning.Loss;
 import water.Iced;
 import water.MemoryManager;
-import water.api.Request.API;
+import water.api.API;
 import water.util.Log;
 import water.util.Utils;
 

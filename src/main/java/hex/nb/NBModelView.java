@@ -1,8 +1,7 @@
 package hex.nb;
 
 import water.*;
-import water.api.DocGen;
-import water.api.Request;
+import water.api.*;
 
 public class NBModelView extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields

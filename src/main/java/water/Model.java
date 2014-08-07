@@ -6,7 +6,6 @@ import static water.util.Utils.contains;
 import hex.ConfusionMatrix;
 import hex.VarImp;
 import javassist.*;
-import water.api.Request.API;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.TransfVec;

@@ -1,8 +1,7 @@
 package hex.glm;
 
 import water.*;
-import water.api.DocGen;
-import water.api.Request;
+import water.api.*;
 
 public class GLMModelUpdate extends Request2 {
 

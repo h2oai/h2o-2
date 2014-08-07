@@ -5,9 +5,7 @@ import hex.Layer.*;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.Job.ValidatedJob;
-import water.api.DocGen;
-import water.api.NeuralNetProgressPage;
-import water.api.RequestServer;
+import water.api.*;
 import water.fvec.*;
 import water.util.*;
 

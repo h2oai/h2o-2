@@ -3,8 +3,7 @@ package hex.gapstat;
 import water.DKV;
 import water.Key;
 import water.Request2;
-import water.api.DocGen;
-import water.api.Request;
+import water.api.*;
 
 
 public class GapStatisticModelView extends Request2 {

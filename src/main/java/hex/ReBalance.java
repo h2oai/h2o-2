@@ -4,9 +4,7 @@ import water.H2O;
 import water.Key;
 import water.Request2;
 import water.UKV;
-import water.api.DocGen;
-import water.api.Request;
-import water.api.RequestBuilders;
+import water.api.*;
 import water.fvec.Frame;
 import water.fvec.RebalanceDataSet;
 import water.util.RString;
@@ -20,16 +18,16 @@ public class ReBalance extends Request2 {
   static final int API_WEAVER=1; // This file has auto-gen'd doc & json fields
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
-  @Request.API(help = "Frame to rebalance", required = true, filter = Request.Default.class, json=true)
+  @API(help = "Frame to rebalance", required = true, filter = Request.Default.class, json=true)
   public Frame source;
 
-  @Request.API(help = "Random number seed", filter = Request.Default.class, json=true)
+  @API(help = "Random number seed", filter = Request.Default.class, json=true)
   public long seed = new Random().nextLong();
 
-  @Request.API(help = "Key for rebalanced frame", filter = Request.Default.class, json=true)
+  @API(help = "Key for rebalanced frame", filter = Request.Default.class, json=true)
   public String after = source != null ? source._key.toString() + ".balanced" : null;
 
-  @Request.API(help = "Number of chunks", filter = Request.Default.class, json=true)
+  @API(help = "Number of chunks", filter = Request.Default.class, json=true)
   public int chunks = H2O.CLOUD.size() * H2O.NUMCPUS * 4;
 
   @Override public RequestBuilders.Response serve() {

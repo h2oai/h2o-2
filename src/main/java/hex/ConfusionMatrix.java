@@ -2,10 +2,12 @@ package hex;
 
 import static water.api.DocGen.FieldDoc;
 import static water.util.Utils.printConfusionMatrix;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonPrimitive;
+
 import water.Iced;
-import water.api.Request.API;
+import water.api.API;
 
 import java.util.Arrays;
 

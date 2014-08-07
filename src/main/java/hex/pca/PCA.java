@@ -6,6 +6,7 @@ import hex.FrameTask.DataInfo;
 import hex.gram.Gram.GramTask;
 import water.Job.ColumnsJob;
 import water.*;
+import water.api.API;
 import water.api.DocGen;
 import water.fvec.Frame;
 import water.fvec.Vec;

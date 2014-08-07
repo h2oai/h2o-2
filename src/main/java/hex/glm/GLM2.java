@@ -1,6 +1,7 @@
 package hex.glm;
 
 import com.google.gson.JsonObject;
+
 import hex.FrameTask.DataInfo;
 import hex.GridSearch.GridSearchProgress;
 import hex.glm.GLMModel.GLMXValidationTask;
@@ -14,13 +15,13 @@ import jsr166y.CountedCompleter;
 import water.*;
 import water.H2O.H2OCallback;
 import water.H2O.H2OCountedCompleter;
-import water.api.DocGen;
-import water.api.ParamImportance;
+import water.api.*;
 import water.fvec.Frame;
 import water.util.Log;
 import water.util.ModelUtils;
 import water.util.RString;
 import water.util.Utils;
+
 import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.Properties;

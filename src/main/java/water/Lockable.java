@@ -1,7 +1,7 @@
 package water;
 
+import water.api.API;
 import water.api.DocGen;
-import water.api.Request.API;
 import water.util.Log;
 
 import java.util.Arrays;

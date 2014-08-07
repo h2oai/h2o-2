@@ -7,7 +7,6 @@ import hex.nb.NaiveBayes.NBTask;
 import water.Key;
 import water.Model;
 import water.api.*;
-import water.api.Request.API;
 import water.api.Request.Default;
 import water.api.RequestBuilders.ElementBuilder;
 

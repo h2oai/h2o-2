@@ -17,7 +17,6 @@ import org.junit.*;
 
 import water.*;
 import water.api.LogView.LogDownload;
-import water.api.Request.API;
 import water.api.RequestArguments.Argument;
 import water.api.Upload.PostFile;
 

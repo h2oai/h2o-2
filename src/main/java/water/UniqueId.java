@@ -1,8 +1,8 @@
 package water;
 
 import com.google.gson.JsonObject;
-import water.api.DocGen;
-import water.api.Request.API;
+
+import water.api.*;
 import water.api.Request.Default;
 
 import java.util.UUID;

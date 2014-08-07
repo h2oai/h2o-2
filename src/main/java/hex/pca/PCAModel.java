@@ -6,8 +6,7 @@ import water.Key;
 import water.MemoryManager;
 import water.Model;
 import water.Request2;
-import water.api.DocGen;
-import water.api.Request.API;
+import water.api.*;
 import water.api.RequestBuilders.ElementBuilder;
 
 public class PCAModel extends Model {

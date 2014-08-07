@@ -3,8 +3,8 @@ package hex.gapstat;
 import water.Job;
 import water.Key;
 import water.Model;
+import water.api.API;
 import water.api.DocGen;
-import water.api.Request.API;
 import water.fvec.Frame;
 import water.util.D3Plot;
 

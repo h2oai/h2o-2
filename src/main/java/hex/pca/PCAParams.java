@@ -1,8 +1,8 @@
 package hex.pca;
 
 import water.Iced;
+import water.api.API;
 import water.api.DocGen;
-import water.api.Request.API;
 
 public class PCAParams extends Iced {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields

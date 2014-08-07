@@ -1,8 +1,8 @@
 package hex;
 
 import water.*;
+import water.api.API;
 import water.api.DocGen;
-import water.api.Request.API;
 import water.fvec.Chunk;
 import water.fvec.Vec;
 import water.util.Utils;

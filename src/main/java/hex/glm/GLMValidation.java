@@ -4,9 +4,7 @@ import hex.ConfusionMatrix;
 import hex.glm.GLMParams.Family;
 import water.Iced;
 import water.Key;
-import water.api.AUC;
-import water.api.DocGen;
-import water.api.Request.API;
+import water.api.*;
 import water.util.ModelUtils;
 
 /**

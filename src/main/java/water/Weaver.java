@@ -6,7 +6,7 @@ import javassist.*;
 import javassist.bytecode.*;
 import javassist.bytecode.SignatureAttribute.ClassSignature;
 import javassist.bytecode.SignatureAttribute.TypeArgument;
-import water.api.Request.API;
+import water.api.API;
 import water.util.Log;
 import water.util.Log.Tag.Sys;
 

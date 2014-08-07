@@ -3,8 +3,7 @@ package hex.pca;
 import water.DKV;
 import water.Key;
 import water.Request2;
-import water.api.DocGen;
-import water.api.Request;
+import water.api.*;
 
 public class PCAModelView extends Request2 {
   static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields

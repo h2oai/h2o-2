@@ -5,7 +5,6 @@ import hex.FrameTask.DataInfo;
 import hex.VarImp;
 import water.*;
 import water.api.*;
-import water.api.Request.API;
 import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;

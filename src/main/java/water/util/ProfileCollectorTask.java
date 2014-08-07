@@ -3,8 +3,8 @@ package water.util;
 import water.DRemoteTask;
 import water.H2O;
 import water.Iced;
+import water.api.API;
 import water.api.DocGen;
-import water.api.Request;
 
 import java.util.*;
 import java.util.Map.Entry;
@@ -22,9 +22,9 @@ public class ProfileCollectorTask extends DRemoteTask<ProfileCollectorTask> {
       stacktraces = new String[len];
       counts = new int[len];
     }
-    @Request.API(help="Stack traces")
+    @API(help="Stack traces")
     public String[] stacktraces;
-    @Request.API(help="Stack trace counts")
+    @API(help="Stack trace counts")
     public int[] counts;
   }
 

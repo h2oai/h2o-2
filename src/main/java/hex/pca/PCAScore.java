@@ -5,6 +5,7 @@ import hex.FrameTask.DataInfo;
 import water.Job;
 import water.Job.FrameJob;
 import water.Key;
+import water.api.API;
 import water.api.DocGen;
 import water.fvec.Frame;
 import water.fvec.NewChunk;
