@@ -580,7 +580,7 @@ public class NewChunk extends Chunk {
       double d = l*PrettyPrint.pow10(x);
       if( d < min ) { min = d; llo=l; xlo=x; }
       if( d > max ) { max = d; lhi=l; xhi=x; }
-      floatOverflow = l < Integer.MIN_VALUE+1 && l > Integer.MAX_VALUE;
+      floatOverflow = l < Integer.MIN_VALUE+1 || l > Integer.MAX_VALUE;
       xmin = Math.min(xmin,x);
     }
 
@@ -654,10 +654,10 @@ public class NewChunk extends Chunk {
     if( fpoint ) {
       if( (int)lemin == lemin && (int)lemax == lemax ) {
         if(lemax-lemin < 255) // Fits in scaled biased byte?
-          return new C1SChunk( bufX(lemin,xmin,C1SChunk.OFF,0),(int)lemin,PrettyPrint.pow10(xmin));
+          return new C1SChunk( bufX(lemin,xmin,C1SChunk.OFF,0),lemin,PrettyPrint.pow10(xmin));
         if(lemax-lemin < 65535) { // we use signed 2B short, add -32k to the bias!
           long bias = 32767 + lemin;
-          return new C2SChunk( bufX(bias,xmin,C2SChunk.OFF,1),(int)bias,PrettyPrint.pow10(xmin));
+          return new C2SChunk( bufX(bias,xmin,C2SChunk.OFF,1),bias,PrettyPrint.pow10(xmin));
         }
       }
       if(lemax-lemin < 4294967295l) {
@@ -674,7 +674,7 @@ public class NewChunk extends Chunk {
     if( lemax-lemin < 255 ) {    // Span fits in a byte?
       if(0 <= min && max < 255 ) // Span fits in an unbiased byte?
         return new C1Chunk( bufX(0,0,C1Chunk.OFF,0));
-      return new C1SChunk( bufX(lemin,xmin,C1SChunk.OFF,0),(int)lemin,PrettyPrint.pow10i(xmin));
+      return new C1SChunk( bufX(lemin,xmin,C1SChunk.OFF,0),lemin,PrettyPrint.pow10i(xmin));
     }
 
     // Compress column into a short

@@ -119,6 +119,14 @@ public abstract class CustomParser extends Iced {
       _columnNames = null;
       _ncols = 0;
     }
+    public ParserSetup(ParserType t, byte sep, boolean header, boolean singleQuotes) {
+      _pType = t;
+      _separator = sep;
+      _header = header;
+      _columnNames = null;
+      _ncols = 0;
+      _singleQuotes = singleQuotes;
+    }
     public ParserSetup(ParserType t, byte sep, int ncolumns, boolean header, String [] columnNames, boolean singleQuotes) {
       _pType = t;
       _separator = sep;

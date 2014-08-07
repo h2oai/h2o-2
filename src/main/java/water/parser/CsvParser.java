@@ -124,7 +124,7 @@ NEXT_CHAR:
             assert _str.get_buf() != bits;
             _str.addBuff(bits);
           }
-          if(_setup._types != null && _str.equals(_setup._types[colIdx]._naStr))
+          if(_setup._types != null && colIdx < _setup._types.length && _str.equals(_setup._types[colIdx]._naStr))
             dout.addInvalidCol(colIdx);
           else
             dout.addStrCol(colIdx, _str);
@@ -209,7 +209,7 @@ NEXT_CHAR:
           // fallthrough to TOKEN
         // ---------------------------------------------------------------------
         case TOKEN:
-          if(_setup._types != null && _setup._types[colIdx]._type == ParserSetup.Coltype.STR){
+          if(_setup._types != null && colIdx < _setup._types.length && _setup._types[colIdx]._type == ParserSetup.Coltype.STR){
             state = STRING; // Do not attempt a number parse, just do a string parse
             _str.set(bits, offset, 0);
             continue MAIN_LOOP;

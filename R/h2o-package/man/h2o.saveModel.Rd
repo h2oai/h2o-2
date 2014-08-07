@@ -9,6 +9,7 @@
   \item{dir}{ Directory the model file will be written to.}
   \item{name}{ Name of the file being saved.}
   \item{filename}{ Full path of directory and name of file being saved. Will override \code{dir} and \code{name} parameters if also given. }
+  \item{save_cv}{ (Optional) If \code{save_cv = TRUE} all associated cross validation will be saved in the same base directory as the main model. If you don't save cross validation models, there will be warnings when loading the model.}
   \item{force}{ (Optional) If \code{force = TRUE} any existing file will be overwritten. Otherwise if the file already exists the operation will fail.}
  }
  
