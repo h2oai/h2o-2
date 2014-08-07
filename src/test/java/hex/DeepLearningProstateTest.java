@@ -4,6 +4,7 @@ import hex.deeplearning.DeepLearning;
 import hex.deeplearning.DeepLearningModel;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import water.*;
 import water.api.AUC;
@@ -15,7 +16,6 @@ import water.fvec.NFSFileVec;
 import water.fvec.ParseDataset2;
 import water.util.Log;
 
-import java.util.Arrays;
 import java.util.Random;
 
 public class DeepLearningProstateTest extends TestUtil {
@@ -237,7 +237,7 @@ public class DeepLearningProstateTest extends TestUtil {
                                     pred2.delete_and_lock(null);
                                     pred2.unlock(null);
 
-                                    if (mymodel.nclasses() == 2 && true) {
+                                    if (mymodel.nclasses() == 2) {
                                       // make labels with 0.5 threshold for binary classifier
                                       Env ev = Exec2.exec("pred2[,1]=pred2[,3]>=" + 0.5);
                                       try {
@@ -320,7 +320,9 @@ public class DeepLearningProstateTest extends TestUtil {
   }
 
   public static class Long extends DeepLearningProstateTest {
-    @Test public void run() throws Exception { runFraction(0.01f); }
+    @Test
+    @Ignore
+    public void run() throws Exception { runFraction(0.01f); }
   }
 
   public static class Short extends DeepLearningProstateTest {

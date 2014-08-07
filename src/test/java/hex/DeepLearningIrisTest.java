@@ -1,5 +1,6 @@
 package hex;
 
+import org.junit.Ignore;
 import static water.util.ModelUtils.getPrediction;
 import hex.deeplearning.DeepLearning;
 import hex.deeplearning.DeepLearningModel;
@@ -11,7 +12,6 @@ import org.junit.Test;
 import water.JUnitRunnerDebug;
 import water.Key;
 import water.TestUtil;
-import water.UKV;
 import water.fvec.Frame;
 import water.fvec.NFSFileVec;
 import water.fvec.ParseDataset2;
@@ -348,7 +348,9 @@ public class DeepLearningIrisTest extends TestUtil {
   }
 
   public static class Long extends DeepLearningIrisTest {
-    @Test public void run() throws Exception { runFraction(1.0f); }
+    @Test
+    @Ignore
+    public void run() throws Exception { runFraction(0.1f); }
   }
 
   public static class Short extends DeepLearningIrisTest {
