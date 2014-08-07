@@ -294,10 +294,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 
   private transient AtomicBoolean _jobdone = new AtomicBoolean(false);
 
-  @Override public void cancel(Throwable ex){
-    LogInfo(ex.toString());
+  @Override public void cancel(String msg){
+    source.unlock(self());
     DKV.remove(_progressKey);
-//    Lockable.delete_lockable(destination_key);
     Value v = DKV.get(destination_key);
     if(v != null){
       GLMModel m = v.get();
@@ -308,9 +307,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       DKV.remove(destination_key);
     }
     DKV.remove(destination_key);
-    super.cancel(ex);
-
+    super.cancel(msg);
   }
+
 
   @Override public void init(){
     super.init();
@@ -789,6 +788,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     }
     private transient boolean _failed;
     @Override public void onCompletion(CountedCompleter cmp){
+      if(!_grid)source.unlock(self());
       if(!_failed) {
         LogInfo("GLM " + self() + " completed by " + cmp.getClass().getName() + ", " + cmp.toString());
         assert _cmp.compareAndSet(null, cmp) : "double completion, first from " + _cmp.get().getClass().getName() + ", second from " + cmp.getClass().getName();
@@ -830,6 +830,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   public GLM2 fork(){return fork(null);}
 
   public GLM2 fork(H2OCountedCompleter cc){
+    if(!_grid)source.read_lock(self());
     // keep *this* separate from what's stored in K/V as job (will be changing it!)
     Futures fs = new Futures();
     _progressKey = Key.make(dest().toString() + "_progress", (byte) 1, Key.HIDDEN_USER_KEY, dest().home_node());
@@ -1242,11 +1243,13 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       return sum/_jobs.length;
     }
     @Override public void cancel(String msg){
+      source.unlock(self());
       for(GLM2 g:_jobs) g.cancel();
       DKV.remove(destination_key);
     }
     @Override
     public GLMGridSearch fork(){
+      source.read_lock(self());
       Futures fs = new Futures();
       new GLMGrid(destination_key,self(),_jobs).delete_and_lock(self());
       // keep *this* separate from what's stored in K/V as job (will be changing it!)
@@ -1261,6 +1264,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         @Override
         public void callback(ParallelGLMs parallelGLMs) {
           _glm2._done = true;
+          source.unlock(self());
           Lockable.unlock_lockable(destination_key,self());
           remove();
         }
