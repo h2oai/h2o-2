@@ -10,6 +10,7 @@ import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.NewChunk;
 import water.fvec.Vec;
+import water.util.Log;
 import water.util.RString;
 import water.util.Utils;
 
@@ -130,6 +131,7 @@ public class KMeans2 extends ColumnsJob {
           sampler._sqr = sqr._sqr;
           sampler._probability = k * 3; // Over-sampling
           sampler._seed = seed;
+          sampler._ncats = dinfo._cats;
           sampler._means = means;
           sampler._mults = mults;
           sampler.doAll(vecs);
@@ -146,6 +148,7 @@ public class KMeans2 extends ColumnsJob {
         clusters = recluster(clusters, k, rand, initialization);
       }
 
+      LOOP:
       for (; ; ) {
         Lloyds task = new Lloyds();
         task._clusters = clusters;
@@ -154,6 +157,27 @@ public class KMeans2 extends ColumnsJob {
         task._ncats = dinfo._cats;
         task._nnums = dinfo._nums;
         task.doAll(vecs);
+
+        // Handle the case where some clusters go dry.  Rescue only 1 cluster
+        // per iteration ('cause we only tracked the 1 worse row)
+        boolean badrow=false;
+        for( int clu=0; clu<k; clu++ )
+          if( task._rows[clu]==0 ) {
+            // If we see 2 or more bad rows, just re-run Lloyds to get the
+            // next-worse row.  We don't count this as an iteration, because
+            // we're not really adjusting the centers, we're trying to get
+            // some centers *at-all*.
+            if( badrow ) {
+              Log.warn("KMeans: Re-running Lloyds to re-init another cluster");
+              model.iterations--; // Do not count against iterations
+              continue LOOP;  // Rerun Lloyds
+            }
+            long row = task._worse_row;
+            Log.warn("KMeans: Re-initing cluster "+clu+" to row "+row);
+            data(clusters[clu]=task._cMeans[clu], vecs, row, means, mults);
+            task._rows[clu] = 1;
+            badrow = true;
+          }
 
         model.centers = clusters = normalize ? denormalize(task._cMeans, vecs) : task._cMeans;
         model.between_cluster_variances = task._betwnSqrs;
@@ -395,38 +419,45 @@ public class KMeans2 extends ColumnsJob {
     }
 
     @Override protected float[] score0(Chunk[] chunks, int rowInChunk, double[] tmp, float[] preds) {
-      // If only one cluster, then everything is trivially assigned to it
-      if(preds.length == 1) {
-        preds[0] = 0;
-        return preds;
-      }
-      double[][] cs = centers;
-      int numInputCols = tmp.length-1; // -1 as there is no response column here
-      if( normalized && _normClust == null )
-        cs = _normClust = normalize(centers, chunks);
-      if( _means == null ) {
-        _means = new double[numInputCols];
-        for( int i = 0; i < numInputCols; i++ )
-          _means[i] = chunks[i]._vec.mean();
-      }
-      if( normalized && _mults == null ) {
-        _mults = new double[numInputCols];
-        for( int i = 0; i < numInputCols; i++ ) {
-          double sigma = chunks[i]._vec.sigma();
-          _mults[i] = normalize(sigma) ? 1 / sigma : 1;
-        }
-      }
-      data(tmp, chunks, rowInChunk, _means, _mults);
-      Arrays.fill(preds, 0);
-      // int cluster = closest(cs, tmp, new ClusterDist())._cluster;
-      int cluster = closest(cs, tmp, _ncats, new ClusterDist())._cluster;
-      preds[0] = cluster;       // prediction in preds[0]
-      preds[1+cluster] = 1;     // class distribution
-      return preds;
+      assert chunks.length>=_names.length;
+      for( int i=0; i<_names.length; i++ )
+        tmp[i] = chunks[i].at0(rowInChunk);
+      return score0(tmp,preds);
+
+//      // If only one cluster, then everything is trivially assigned to it
+//      if(preds.length == 1) {
+//        preds[0] = 0;
+//        return preds;
+//      }
+//      double[][] cs = centers;
+//      int numInputCols = tmp.length-1; // -1 as there is no response column here
+//      if( normalized && _normClust == null )
+//        cs = _normClust = normalize(centers, chunks);
+//      if( _means == null ) {
+//        _means = new double[numInputCols];
+//        for( int i = 0; i < numInputCols; i++ )
+//          _means[i] = chunks[i]._vec.mean();
+//      }
+//      if( normalized && _mults == null ) {
+//        _mults = new double[numInputCols];
+//        for( int i = 0; i < numInputCols; i++ ) {
+//          double sigma = chunks[i]._vec.sigma();
+//          _mults[i] = normalize(sigma) ? 1 / sigma : 1;
+//        }
+//      }
+//      data(tmp, chunks, rowInChunk, _means, _mults);
+//      Arrays.fill(preds, 0);
+//      // int cluster = closest(cs, tmp, new ClusterDist())._cluster;
+//      int cluster = closest(cs, tmp, _ncats, new ClusterDist())._cluster;
+//      preds[0] = cluster;       // prediction in preds[0]
+//      preds[1+cluster] = 1;     // class distribution
+//      return preds;
     }
 
     @Override protected float[] score0(double[] data, float[] preds) {
-      throw new UnsupportedOperationException();
+      preds[0] = closest(centers,data,_ncats);
+      return preds;
+//      throw new UnsupportedOperationException();
     }
 
     /** Remove any Model internal Keys */
@@ -484,6 +515,7 @@ public class KMeans2 extends ColumnsJob {
     // IN
     double[][] _clusters;
     double _sqr;           // Min-square-error
+    int _ncats;
     double _probability;   // Odds to select this point
     long _seed;
     double[] _means, _mults; // Normalization
@@ -499,7 +531,7 @@ public class KMeans2 extends ColumnsJob {
 
       for( int row = 0; row < cs[0]._len; row++ ) {
         data(values, cs, row, _means, _mults);
-        double sqr = minSqr(_clusters, values, cd);
+        double sqr = minSqr(_clusters, values, _ncats, cd);
         if( _probability * sqr > rand.nextDouble() * _sqr )
           list.add(values.clone());
       }
@@ -527,6 +559,8 @@ public class KMeans2 extends ColumnsJob {
     double[] _gm;               // Grand Mean (mean of means)
     long[] _rows;               // Rows per cluster
     double _sqr;                // Total sqr distance
+    long _worse_row;            // Row with max err
+    double _worse_err;          // Max-err-row's max-err
 
     @Override public void map(Chunk[] cs) {
       _cMeans = new double[_clusters.length][_clusters[0].length];
@@ -534,6 +568,8 @@ public class KMeans2 extends ColumnsJob {
       _betwnSqrs = new double[_clusters.length];
       _rows = new long[_clusters.length];
       _gm = new double[_clusters[0].length];
+
+      _worse_err = 0;
 
       // Find closest cluster for each row
       double[] values = new double[_clusters[0].length];
@@ -545,13 +581,16 @@ public class KMeans2 extends ColumnsJob {
         closest(_clusters, values, _ncats, cd);
         int clu = clusters[row] = cd._cluster;
         _sqr += cd._dist;
-        if( clu == -1 )
-          continue; // Ignore broken row
+        assert(clu != -1);
+//        if( clu == -1 )
+//          continue; // Ignore broken row
 
         // Add values and increment counter for chosen cluster
         for( int col = 0; col < values.length; col++ )
           _cMeans[clu][col] += values[col];
         _rows[clu]++;
+        // Track worse row
+        if( cd._dist > _worse_err ) { _worse_err = cd._dist; _worse_row = cs[0]._start+row; }
       }
       int[] validMeans = new int[_gm.length];
       for( int clu = 0; clu < _cMeans.length; clu++ )
@@ -591,12 +630,18 @@ public class KMeans2 extends ColumnsJob {
         Layer.Stats.reduce(_cMeans[clu], _cSqrs[clu], _rows[clu], mr._cMeans[clu], mr._cSqrs[clu], mr._rows[clu]);
       Utils.add(_rows, mr._rows);
       _sqr += mr._sqr;
+      // track global worse-row
+      if( _worse_err < mr._worse_err ) { _worse_err = mr._worse_err; _worse_row = mr._worse_row; }
     }
   }
 
   private static final class ClusterDist {
     int _cluster;
     double _dist;
+  }
+
+  private static double minSqr(double[][] clusters, double[] point, int ncats, ClusterDist cd) {
+    return closest(clusters, point, ncats, cd, clusters.length)._dist;
   }
 
   private static double minSqr(double[][] clusters, double[] point, ClusterDist cd) {
@@ -628,46 +673,61 @@ public class KMeans2 extends ColumnsJob {
     int min = -1;
     double minSqr = Double.MAX_VALUE;
     for( int cluster = 0; cluster < count; cluster++ ) {
-      double sqr = 0;           // Sum of dimensional distances
-      int pts = point.length;   // Count of valid points
-
-      // Expand categoricals into binary indicator cols
-      for(int column = 0; column < ncats; column++) {
-        double d = point[column];
-        if(Double.isNaN(d))
-          pts--;
-        else {
-          // TODO: What is the distance between unequal categoricals?
-          if(d != clusters[cluster][column])
-             sqr += 2 * dist * dist;
-        }
-      }
-
-      for( int column = ncats; column < clusters[cluster].length; column++ ) {
-        double d = point[column];
-        if( Double.isNaN(d) ) { // Bad data?
-          pts--;                // Do not count
-        } else {
-          double delta = d - clusters[cluster][column];
-          sqr += delta * delta;
-        }
-      }
-      // Scale distance by ratio of valid dimensions to all dimensions - since
-      // we did not add any error term for the missing point, the sum of errors
-      // is small - ratio up "as if" the missing error term is equal to the
-      // average of other error terms.  Same math another way:
-      //   double avg_dist = sqr / pts; // average distance per feature/column/dimension
-      //   sqr = sqr * point.length;    // Total dist is average*#dimensions
-      if( 0 < pts && pts < point.length )
-        sqr *= point.length / pts;
-      if( sqr < minSqr ) {
+      double sqr = distance(clusters[cluster],point,ncats,dist);
+      if( sqr < minSqr ) {      // Record nearest cluster
         min = cluster;
         minSqr = sqr;
       }
     }
     cd._cluster = min;          // Record nearest cluster
     cd._dist = minSqr;          // Record square-distance
-    return cd;                  // Return for flow-coding
+    return cd;
+  }
+
+  private static double distance(double[] cluster, double[] point, int ncats, double dist) {
+    double sqr = 0;             // Sum of dimensional distances
+    int pts = point.length;     // Count of valid points
+
+    // Categorical columns first.  Only equals/unequals matters (i.e., distance is either 0 or 1).
+    for(int column = 0; column < ncats; column++) {
+      double d = point[column];
+      if( Double.isNaN(d) ) pts--;
+      else if( d != cluster[column] )
+        sqr += 1.0;           // Manhattan distance
+    }
+    // Numeric column distance
+    for( int column = ncats; column < cluster.length; column++ ) {
+      double d = point[column];
+      if( Double.isNaN(d) ) pts--; // Do not count
+      else {
+        double delta = d - cluster[column];
+        sqr += delta * delta;
+      }
+    }
+    // Scale distance by ratio of valid dimensions to all dimensions - since
+    // we did not add any error term for the missing point, the sum of errors
+    // is small - ratio up "as if" the missing error term is equal to the
+    // average of other error terms.  Same math another way:
+    //   double avg_dist = sqr / pts; // average distance per feature/column/dimension
+    //   sqr = sqr * point.length;    // Total dist is average*#dimensions
+    if( 0 < pts && pts < point.length )
+      sqr *= point.length / pts;
+    return sqr;
+  }
+
+
+  // For KMeansModel scoring; just the closest cluster
+  static int closest(double[][] clusters, double[] point, int ncats) {
+    int min = -1;
+    double minSqr = Double.MAX_VALUE;
+    for( int cluster = 0; cluster < clusters.length; cluster++ ) {
+      double sqr = distance(clusters[cluster],point,ncats,1.0);
+      if( sqr < minSqr ) {      // Record nearest cluster
+        min = cluster;
+        minSqr = sqr;
+      }
+    }
+    return min;
   }
 
   // KMeans++ re-clustering

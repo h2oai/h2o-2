@@ -18,7 +18,6 @@ public class KMeans2RandomTest extends TestUtil {
   }
 
   @Test
-  @Ignore //currently fails
   public void run() {
     long seed = 0xDECAF;
     Random rng = new Random(seed);
@@ -39,53 +38,61 @@ public class KMeans2RandomTest extends TestUtil {
       Key vfile = NFSFileVec.make(find_test_file(dataset));
       Frame vframe = ParseDataset2.parse(Key.make(), new Key[]{vfile});
 
-      for (int clusters : new int[]{1,10}) {
-        for (int max_iter : new int[]{1,10,100}) {
-          for (boolean normalize : new boolean[]{false, true}) {
-            for (boolean drop_na_cols : new boolean[]{false, true}) {
-              for (KMeans2.Initialization init : new KMeans2.Initialization[]{
-                      KMeans2.Initialization.Furthest,
-                      KMeans2.Initialization.None,
-                      KMeans2.Initialization.PlusPlus}) {
-                count++;
+      try {
+        for (int clusters : new int[]{1, 10}) {
+          for (int max_iter : new int[]{1, 10, 100}) {
+            for (boolean normalize : new boolean[]{false, true}) {
+              for (boolean drop_na_cols : new boolean[]{false, true}) {
+                for (KMeans2.Initialization init : new KMeans2.Initialization[]{
+                        KMeans2.Initialization.Furthest,
+                        KMeans2.Initialization.None,
+                        KMeans2.Initialization.PlusPlus}) {
+                  count++;
 
-                KMeans2 k = new KMeans2();
-                k.k = clusters;
-                k.initialization = init;
-                k.destination_key = Key.make();
-                k.seed = 0xC0FFEE;
-                k.source = frame;
-                k.max_iter = max_iter;
-                k.normalize = normalize;
-                k.drop_na_cols = drop_na_cols;
-                k.invoke();
+                  KMeans2 k = new KMeans2();
+                  k.k = clusters;
+                  k.initialization = init;
+                  k.destination_key = Key.make();
+                  k.seed = 0xC0FFEE;
+                  k.source = frame;
+                  k.max_iter = max_iter;
+                  k.normalize = normalize;
+                  k.drop_na_cols = drop_na_cols;
+                  k.invoke();
 
-                KMeans2.KMeans2Model m = UKV.get(k.dest());
-                for (double d : m.between_cluster_variances) Assert.assertFalse(Double.isNaN(d));
-                for (double d : m.within_cluster_variances) Assert.assertFalse(Double.isNaN(d));
-                Assert.assertFalse(Double.isNaN(m.between_cluster_SS));
-                Assert.assertFalse(Double.isNaN(m.total_SS));
-                Assert.assertFalse(Double.isNaN(m.total_within_SS));
-                for (long o : m.size) Assert.assertTrue(o > 0); //have at least one point per centroid
-                for (double[] dc : m.centers) for (double d : dc) Assert.assertFalse(Double.isNaN(d));
+                  KMeans2.KMeans2Model m = null;
+                  Frame score = null;
+                  try {
+                    m = UKV.get(k.dest());
+                    for (double d : m.between_cluster_variances) Assert.assertFalse(Double.isNaN(d));
+                    for (double d : m.within_cluster_variances) Assert.assertFalse(Double.isNaN(d));
+                    Assert.assertFalse(Double.isNaN(m.between_cluster_SS));
+                    Assert.assertFalse(Double.isNaN(m.total_SS));
+                    Assert.assertFalse(Double.isNaN(m.total_within_SS));
+                    for (long o : m.size) Assert.assertTrue(o > 0); //have at least one point per centroid
+                    for (double[] dc : m.centers) for (double d : dc) Assert.assertFalse(Double.isNaN(d));
 
-                // make prediction (cluster assignment)
-                Frame score = m.score(frame);
-                for (long j=0; j<score.numRows(); ++j) org.junit.Assert.assertTrue(score.anyVec().at8(j) >= 0 && score.anyVec().at8(j) < clusters);
-                score.delete();
+                    // make prediction (cluster assignment)
+                    score = m.score(frame);
+                    for (long j = 0; j < score.numRows(); ++j)
+                      org.junit.Assert.assertTrue(score.anyVec().at8(j) >= 0 && score.anyVec().at8(j) < clusters);
 
-                Log.info("Parameters combination " + count + ": PASS");
-                testcount++;
+                    Log.info("Parameters combination " + count + ": PASS");
+                    testcount++;
 
-                m.delete();
+                  } finally {
+                    if (m != null) m.delete();
+                    if (score != null) score.delete();
+                  }
+                }
               }
             }
           }
         }
+      } finally {
+        frame.delete();
+        vframe.delete();
       }
-
-      frame.delete();
-      vframe.delete();
     }
     Log.info("\n\n=============================================");
     Log.info("Tested " + testcount + " out of " + count + " parameter combinations.");
