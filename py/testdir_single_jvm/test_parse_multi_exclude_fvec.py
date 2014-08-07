@@ -86,7 +86,7 @@ class Basic(unittest.TestCase):
             fileList = os.listdir(SYNDATASETS_DIR)
             for f in fileList:
                 print f
-                h2i.import_only(path=SYNDATASETS_DIR + "/" + f)
+                h2i.import_only(path=SYNDATASETS_DIR + "/" + f, schema='put')
 
             # pattern match all, then use exclude
             parseResult = h2i.parse_only(pattern="*/syn_*",

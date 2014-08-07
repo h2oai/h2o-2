@@ -54,7 +54,7 @@ class Basic(unittest.TestCase):
                 msg="actual col name: %s expected col name %s" % (actual, expected))
 
         # make it fail with this one (skip)
-        execExpr = 's.hex[,%s] = r.hex[,%s]' % (101, 1),
+        execExpr = 's.hex[,%s] = r.hex[,%s]' % (2, 1),
         h2e.exec_expr(h2o.nodes[0], execExpr, resultKey='s.hex', timeoutSecs=10)
 
         inspect = h2o_cmd.runInspect(key='s.hex')

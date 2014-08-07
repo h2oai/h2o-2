@@ -415,6 +415,9 @@ function(expected_results=NULL, type=NULL) {
   .predict(model)
   if (!is.null(expected_results)) {
     if (type == "cm") {
+      print("CONFUSION MATRIX DATA")
+      print(confusion_matrix)
+      print(dim(confusion_matrix))
       rr <- confusion_matrix[,dim(confusion_matrix)[2]]
       rr <- data.frame(rr)[,1]
       rr <- rr[1:(length(rr) - 2)] # -2 becuase the last row is totals, and the penultimate row is bogus fill by R

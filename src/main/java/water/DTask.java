@@ -1,5 +1,6 @@
 package water;
 
+import jsr166y.CountedCompleter;
 import water.DException.DistributedException;
 import water.H2O.H2OCountedCompleter;
 
@@ -66,4 +67,42 @@ public abstract class DTask<T extends DTask> extends H2OCountedCompleter impleme
   private RuntimeException barf(String method) {
     return new RuntimeException(H2O.SELF + ":" + getClass().toString()+ " " + method +  " should be automatically overridden in the subclass by the auto-serialization code");
   }
+
+  /**
+   * Task to be executed at home of the given key.
+   * Basically a wrapper around DTask which enables us to bypass
+   * remote/local distinction (RPC versus submitTask).
+   */
+  public static abstract class DKeyTask<T extends DKeyTask,V extends Iced> extends DTask<DKeyTask>{
+    private final Key _key;
+    public DKeyTask(final Key k) {this(null,k);}
+    public DKeyTask(H2OCountedCompleter cmp,final Key k) {
+      super(cmp);
+      _key = k;
+    }
+    // override this
+    protected abstract void map(V v);
+
+    @Override public final void compute2(){
+      if(_key.home()){
+        Value val = H2O.get(_key);
+        if(val != null) {
+          V v = val.get();
+          map(v);
+        }
+        tryComplete();
+      } else new RPC(_key.home_node(),this).addCompleter(this).call();
+    }
+    // onCompletion must be empty here, may be invoked twice (on remote and local)
+    @Override public void onCompletion(CountedCompleter cc){}
+
+    public void submitTask() {H2O.submitTask(this);}
+    public void forkTask() {fork();}
+    public T invokeTask() {
+      H2O.submitTask(this);
+      join();
+      return (T)this;
+    }
+  }
+
 }

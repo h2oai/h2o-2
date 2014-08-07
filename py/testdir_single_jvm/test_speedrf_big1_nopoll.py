@@ -47,12 +47,12 @@ class Basic(unittest.TestCase):
                 model_key = 'SRF_model'
             else:
                 model_key = 'SRF_model' + str(jobDispatch)
-            kwargs['num_trees'] = 1
+            kwargs['ntrees'] = 1
 
             if OVERWRITE_RF_MODEL:
                 print "Change the number of trees, while keeping the rf model key name the same"
                 print "Checks that we correctly overwrite previous rf model"
-                kwargs['num_trees'] += 1
+                kwargs['ntrees'] += 1
 
             kwargs['seed'] = random.randint(0, sys.maxint)
             kwargs['response'] = "C107"
@@ -77,7 +77,7 @@ class Basic(unittest.TestCase):
             print "Checking completed job:", rfView
             print "rfView", h2o.dump_json(rfView)
             model_key = rfView["speedrf_model"]['_key']
-            ntree = rfView["speedrf_model"]["parameters"]['num_trees']
+            ntree = rfView["speedrf_model"]["parameters"]['ntrees']
             print "Temporary hack: need to do two rf views minimum, to complete a RF (confusion matrix creation)"
             # allow it to poll to complete
             rfViewResult = h2o_cmd.runSpeeDRFView(None, model_key, timeoutSecs=60)

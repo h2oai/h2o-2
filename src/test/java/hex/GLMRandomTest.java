@@ -1,6 +1,7 @@
 package hex;
 
 import hex.glm.GLM2;
+import hex.glm.GLMModel;
 import hex.glm.GLMParams;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -30,6 +31,7 @@ public class GLMRandomTest extends TestUtil {
       int count = 0;
       int jobId = 0;
 
+      final Key dest = Key.make("DEST");
       for (int rows : new int[]{
         10,
         100,
@@ -122,7 +124,7 @@ public class GLMRandomTest extends TestUtil {
                               }) {
                                 for (double[] lambda : new double[][]{
                                   new double[]{1e-4},
-                                  new double[]{1e-5, 1e-3},
+                                  new double[]{1e-3, 1e-3},
                                 }) {
                                   for (double beta_epsilon : new double[]{
                                     0,
@@ -151,14 +153,11 @@ public class GLMRandomTest extends TestUtil {
                                               for (int nlambdas : new int[]{
                                                 1,
                                                 5,
-                                                50,
-                                                100
+                                                50
                                               }) {
                                                 for (double lambda_min_ratio : new double[]{
-                                                  -1,
                                                   1e-2,
                                                   1e-4,
-                                                  1e-5
                                                 }) {
                                                   for (double prior : new double[]{
                                                     -1,
@@ -170,7 +169,6 @@ public class GLMRandomTest extends TestUtil {
                                                     }) {
                                                       count++;
                                                       if (fraction < rng.nextFloat()) continue;
-
                                                       CreateFrame cf = new CreateFrame();
                                                       cf.key = "random";
                                                       cf.rows = rows;
@@ -187,8 +185,6 @@ public class GLMRandomTest extends TestUtil {
                                                       Log.info("**************************)");
                                                       Log.info("Starting test #" + count);
                                                       Log.info("**************************)");
-
-                                                      Key dest = Key.make();
                                                       {
                                                         GLM2Test p = new GLM2Test();
                                                         p.job_key = Key.make("RandomGLM_" + jobId++);
@@ -213,14 +209,28 @@ public class GLMRandomTest extends TestUtil {
                                                         p.lambda_min_ratio = lambda_min_ratio;
                                                         p.prior = prior;
                                                         p.variable_importances = variable_importances;
+                                                        p.MAX_ITERATIONS_PER_LAMBDA = 5;
                                                         try {
                                                           p.invokeServe();
+                                                          assert p._done;
+
+                                                          H2O.H2OEmptyCompleter cmp = new H2O.H2OEmptyCompleter();
+                                                          if (p.alpha.length > 1)
+                                                            new GLMGrid.DeleteGridTsk(cmp, p.destination_key).forkTask();
+                                                          else
+                                                            new GLMModel.DeleteModelTask(cmp, p.destination_key).forkTask();
+                                                          cmp.join();
+                                                          System.out.println("TEST DONE");
+                                                        }catch(DException.DistributedException dex){
+                                                          if(dex.getMessage().contains("IllegalArgument"))
+                                                            Log.info("Skipping invalid combination of arguments.");
+                                                          else throw new RuntimeException(dex);
                                                         } catch (IllegalArgumentException t) {
                                                           Log.info("Skipping invalid combination of arguments.");
                                                           // accept IllegalArgumentException, but nothing else
                                                         } finally {
-                                                          UKV.remove(dest);
                                                           frame.delete();
+                                                          checkLeakedKeys();
                                                         }
                                                       }
                                                       Log.info("Parameters combination " + count + ": PASS");

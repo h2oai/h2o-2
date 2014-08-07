@@ -26,12 +26,7 @@ public final class ParseDataset2 extends Job {
   private MultiFileParseTask _mfpt; // Access to partially built vectors for cleanup after parser crash
   public static enum Compression { NONE, ZIP, GZIP }
 
-  // --------------------------------------------------------------------------
-  // Parse an array of csv input/file keys into an array of distributed output Vecs
-  public static Frame parse(Key okey, Key[] keys) {return parse(okey,keys,new ParserSetup(),true);}
-
-  public static Frame parse(Key okey, Key[] keys, CustomParser.ParserSetup globalSetup, boolean delete_on_done) {
-    // keep the files in alphabetical order
+  private static Key [] filterEmptyFiles(Key [] keys){
     Arrays.sort(keys);
     // first check if there are any empty files and if so remove them
     Vec [] vecs = new Vec [keys.length];
@@ -51,12 +46,18 @@ public final class ParseDataset2 extends Job {
           ++j;
         }
       keys = ks;
-      vecs = vs;
     }
-    ByteVec v = (ByteVec)vecs[0];
-    byte [] bits = v.chunkForChunkIdx(0).getBytes();
-    Compression cpr = Utils.guessCompressionMethod(bits);
-    globalSetup = GuessSetup.guessSetup(Utils.unzipBytes(bits,cpr), globalSetup,true)._setup;
+    return keys;
+  }
+  // --------------------------------------------------------------------------
+  // Parse an array of csv input/file keys into an array of distributed output Vecs
+  public static Frame parse(Key okey, Key [] keys) {
+    keys = filterEmptyFiles(keys);
+    return parse(okey,keys,new GuessSetup.GuessSetupTsk(new ParserSetup(),true).invoke(keys)._gSetup._setup,true);
+  }
+
+  public static Frame parse(Key okey, Key[] keys, CustomParser.ParserSetup globalSetup, boolean delete_on_done) {
+    keys = filterEmptyFiles(keys);    
     if( globalSetup._ncols == 0 ) throw new java.lang.IllegalArgumentException(globalSetup.toString());
     return forkParseDataset(okey, keys, globalSetup, delete_on_done).get();
   }
@@ -512,7 +513,7 @@ public final class ParseDataset2 extends Job {
       // Get parser setup info for this chunk
       ByteVec vec = (ByteVec) getVec(key);
       byte [] bits = vec.chunkForChunkIdx(0)._mem;
-      if(bits.length == 0){
+      if(bits == null || bits.length == 0){
         assert false:"encountered empty file during multifile parse? should've been filtered already";
         return; // should not really get here
       }
@@ -521,7 +522,7 @@ public final class ParseDataset2 extends Job {
       CustomParser.ParserSetup localSetup = GuessSetup.guessSetup(Utils.unzipBytes(bits,cpr), _setup,false)._setup;
       // Local setup: nearly the same as the global all-files setup, but maybe
       // has the header-flag changed.
-      if(!_setup.isCompatible(localSetup)) {
+      if(!localSetup.isCompatible(_setup)) {
         _parserr = "Conflicting file layouts, expecting: " + _setup + " but found "+localSetup;
         return;
       }

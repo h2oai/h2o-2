@@ -7,7 +7,6 @@ import org.junit.runner.JUnitCore;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
 import water.deploy.NodeCL;
-import water.fvec.*;
 import water.util.Log;
 import water.util.Utils;
 
@@ -84,8 +83,10 @@ public class JUnitRunnerDebug {
 //      tests.add(MRUtilsTest.class); //test MR sampling/rebalancing
 //      tests.add(DropoutTest.class); //test NN Dropput
 
-      tests.add(ParserTest2.ParseAllSmalldata.class);
-      tests.add(GLMRandomTest.Short.class);
+//      tests.add(ParserTest2.class);
+//      tests.add(ParserTest2.ParseAllSmalldata.class);
+      tests.add(KMeans2RandomTest.class);
+//      tests.add(GLMRandomTest.Short.class);
 //      tests.add(SpeeDRFTest.class);
 //      tests.add(SpeeDRFTest2.class);
 ////      tests.add(GLMTest2.class);

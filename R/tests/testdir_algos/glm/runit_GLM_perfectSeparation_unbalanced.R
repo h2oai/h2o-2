@@ -12,15 +12,9 @@ source('../../findNSourceUtils.R')
 
 test <- function(conn) {
 
-    print("Generate unbalanced dataset by column in R")
-        y = sample(0:0, 10000, replace=T)
-        x1 = sample(-1:-10, 10000, replace=T)
-        x2 = sample(6:10, 10000, replace=T)
-        data = cbind(y, x1, x2)
-        data.unbalanced = rbind(data, c(1, 30, 7))
+    print("Read in synthetic unbalanced dataset")
+        data.u.hex <- h2o.uploadFile(conn, locate("smalldata/synthetic_perfect_separation/unbalanced.csv"), key="data.u.hex")
 
-    print("Read data into H20.")
-        data.u.hex <- as.h2o(conn, as.data.frame(data.unbalanced), "data.u.hex")
     print("Fit model on dataset.")
         model.unbalanced <- h2o.glm(x=c("x1", "x2"), y="y", data.u.hex, family="binomial", lambda_search=TRUE, use_all_factor_levels=1, alpha=0.5, nfolds=0, higher_accuracy=TRUE, lambda=0)
     print("Check line search invoked even with higher_accuracy off")
