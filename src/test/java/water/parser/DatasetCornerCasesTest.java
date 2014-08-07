@@ -1,18 +1,16 @@
 package water.parser;
 
 import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertTrue;
 
-import java.io.File;
 import java.util.ArrayList;
 import org.junit.Test;
+import org.junit.BeforeClass;
 import water.*;
 import water.api.Constants.Extensions;
 import water.fvec.*;
-import water.parser.CustomParser;
-import water.parser.GuessSetup;
 
 public class DatasetCornerCasesTest extends TestUtil {
+  @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
   /* The following tests deal with one line dataset ended by different number of newlines. */
 
@@ -33,9 +31,9 @@ public class DatasetCornerCasesTest extends TestUtil {
     final String test_dir    = "smalldata/test/";
     final String test_prefix = "HTWO-87-one-line-dataset-";
 
-    for (int i = 0; i < tests.length; i++) {
-      String datasetFilename = test_dir + test_prefix + tests[i] + ".csv";
-      String keyname     = test_prefix + tests[i] + Extensions.HEX;
+    for( String s : tests ) {
+      String datasetFilename = test_dir + test_prefix + s + ".csv";
+      String keyname     = test_prefix + s + Extensions.HEX;
       testOneLineDataset(datasetFilename, keyname);
     }
   }
@@ -55,8 +53,8 @@ public class DatasetCornerCasesTest extends TestUtil {
   // Tests handling of extra columns showing up late in the parse
   @Test public void testExtraCols() {
     Key okey = Key.make("extra.hex");
-    Key nfs = NFSFileVec.make(new File("smalldata/test/test_parse_extra_cols.csv"));
-    ArrayList al = new ArrayList();
+    Key nfs = load_test_file("smalldata/test/test_parse_extra_cols.csv");
+    ArrayList<Key> al = new ArrayList<Key>();
     al.add(nfs);
     //CustomParser.ParserSetup setup = new CustomParser.ParserSetup(CustomParser.ParserType.CSV, (byte)',', 8, true, null, false);
     CustomParser.ParserSetup setup0 = new CustomParser.ParserSetup();
