@@ -405,7 +405,8 @@ H2O R users have access to a slick web interface to mirror the model building pr
 
 \subsubsection{Variable importances} \label{3.3.1}
 
-One particularly useful visualization in the web interface is the variable importances, which can be enabled with the additional argument \texttt{variable\_importances=TRUE}. This features allows us to witness the absolute and relative predictive strength of each feature in the classification task. For the purposes of digit classification, this aspect is less useful since each feature merely correponds to a pixel number that is not relevant to the model's more abstract feature representation; but it is useful in general for less uniform data.
+One useful feature is the variable importances option, which can be enabled with the additional argument \texttt{variable\_importances=TRUE}. This features allows us to view the absolute and relative predictive strength of each feature in the prediction task. From R, you can access these strengths with the command \texttt{mnist\_model@model\$varimp}. You can also view a visualization of the variable
+importances on the web interface.
 
 \subsubsection{Java model} \label{3.3.2}
 
