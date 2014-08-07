@@ -152,9 +152,7 @@ h2o.importFolder <- function(object, path, pattern = "", key = "", parse = TRUE,
   # Return only the files that successfully imported
   if(length(res$files) > 0) {
     if(parse) {
-      if(substr(path, nchar(path), nchar(path)) == .Platform$file.sep)
-        path <- substr(path, 1, nchar(path)-1)
-      regPath = paste(path, pattern, sep=.Platform$file.sep)
+      regPath = paste(res$prefix, pattern, sep="")
       srcKey = ifelse(length(res$keys) == 1, res$keys[[1]], paste("*", regPath, "*", sep=""))
       rawData = new("H2ORawData", h2o=object, key=srcKey)
       h2o.parseRaw(data=rawData, key=key, header=header, sep=sep, col.names=col.names) 

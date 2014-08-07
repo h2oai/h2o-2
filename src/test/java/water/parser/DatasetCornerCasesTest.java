@@ -3,12 +3,14 @@ package water.parser;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertTrue;
 
+import java.io.File;
+import java.util.ArrayList;
 import org.junit.Test;
-
 import water.*;
-import water.fvec.Frame;
-import water.fvec.ParseDataset2;
 import water.api.Constants.Extensions;
+import water.fvec.*;
+import water.parser.CustomParser;
+import water.parser.GuessSetup;
 
 public class DatasetCornerCasesTest extends TestUtil {
 
@@ -47,6 +49,21 @@ public class DatasetCornerCasesTest extends TestUtil {
     assertEquals(filename + ": number of rows   == 2", 2, fr.numRows());
     assertEquals(filename + ": number of cols   == 9", 9, fr.numCols());
 
+    fr.delete();
+  }
+
+  // Tests handling of extra columns showing up late in the parse
+  @Test public void testExtraCols() {
+    Key okey = Key.make("extra.hex");
+    Key nfs = NFSFileVec.make(new File("smalldata/test/test_parse_extra_cols.csv"));
+    ArrayList al = new ArrayList();
+    al.add(nfs);
+    //CustomParser.ParserSetup setup = new CustomParser.ParserSetup(CustomParser.ParserType.CSV, (byte)',', 8, true, null, false);
+    CustomParser.ParserSetup setup0 = new CustomParser.ParserSetup();
+    setup0._header = true; // Force header; file actually has 8 cols of header and 10 cols of data
+    CustomParser.ParserSetup setup1 = GuessSetup.guessSetup(al,null,setup0,false)._setup;
+
+    Frame fr = ParseDataset2.parse(okey,new Key[]{nfs},setup1,true);
     fr.delete();
   }
 }

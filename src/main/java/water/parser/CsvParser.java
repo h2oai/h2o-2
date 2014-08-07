@@ -209,7 +209,7 @@ NEXT_CHAR:
           // fallthrough to TOKEN
         // ---------------------------------------------------------------------
         case TOKEN:
-          if(_setup._types != null && _setup._types[colIdx]._type == ParserSetup.Coltype.STR){
+          if(_setup._types != null && colIdx < _setup._types.length && _setup._types[colIdx]._type == ParserSetup.Coltype.STR){
             state = STRING; // Do not attempt a number parse, just do a string parse
             _str.set(bits, offset, 0);
             continue MAIN_LOOP;

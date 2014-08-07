@@ -63,7 +63,7 @@ class Basic(unittest.TestCase):
         tryList = [
             (100, 100, 'cA', 300),
             (100000, 100, 'cB', 300),
-            (100, 10000, 'cC', 300),
+            (100, 1000, 'cC', 300),
             ]
 
         # h2b.browseTheCloud()
