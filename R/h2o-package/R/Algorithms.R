@@ -663,6 +663,12 @@ h2o.deeplearning <- function(x, y, data, key = "",
     hit_ratios <- errs$valid_hitratio$hit_ratios
     result$hit_ratios <- data.frame(k = 1:max_k, hit_ratios = hit_ratios)
   }
+  
+  if(!is.null(errs$variable_importances)) {
+    result$varimp <- errs$variable_importances$varimp
+    names(result$varimp) <- errs$variable_importances$variables
+    result$varimp <- sort(result$varimp, decreasing = TRUE)
+  }
   return(result)
 }
 

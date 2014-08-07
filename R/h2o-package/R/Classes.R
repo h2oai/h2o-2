@@ -205,6 +205,9 @@ setMethod("show", "H2ODeepLearningModel", function(object) {
     cat("\nHit Ratios for Multi-class Classification:\n")
     print(model$hit_ratios)
   }
+  if(!is.null(model$varimp)) {
+    cat("\nRelative Variable Importance:\n"); print(model$varimp)
+  }
   
   if(!is.null(object@xval) && length(object@xval) > 0) {
     cat("\nCross-Validation Models:\n")
