@@ -416,9 +416,9 @@ class H2OCloudNode:
         @return: none
         """
         try:
-            requests.get("http://" + self.ip + ":" + self.port + "/Shutdown.html", timeout=1)
+            requests.get("http://" + self.ip + ":" + str(self.port) + "/Shutdown.html", timeout=1)
             try:
-                r2 = requests.get("http://" + self.ip + ":" + self.port + "/Cloud.html", timeout=2)
+                r2 = requests.get("http://" + self.ip + ":" + str(self.port) + "/Cloud.html", timeout=2)
             except Exception, e:
                 pass
         except Exception, e:
@@ -436,7 +436,7 @@ class H2OCloudNode:
         except OSError:
             pass
         try:
-            requests.get("http://" + self.ip + ":" + self.port + "/Shutdown.html", timeout=1)
+            requests.get("http://" + self.ip + ":" + str(self.port) + "/Shutdown.html", timeout=1)
         except Exception, e:
             print "Got Exception trying to shutdown H2O:"
             print e
@@ -453,7 +453,7 @@ class H2OCloudNode:
         """
         #TODO: terminate self.child
         try:
-            requests.get(self.ip + ":" + self.port + "/Shutdown.html")
+            requests.get(self.ip + ":" + str(self.port) + "/Shutdown.html")
         except Exception, e:
             pass
         self.pid = -1
