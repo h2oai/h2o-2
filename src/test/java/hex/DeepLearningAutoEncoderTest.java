@@ -67,9 +67,9 @@ public class DeepLearningAutoEncoderTest extends TestUtil {
         Frame l2_frame_train=null, l2_frame_test=null;
 
         // Verification of results
+        StringBuilder sb = new StringBuilder();
         try {
 
-          StringBuilder sb = new StringBuilder();
           sb.append("Verifying results.\n");
 
           // Training data
@@ -80,7 +80,7 @@ public class DeepLearningAutoEncoderTest extends TestUtil {
           final Vec l2_train = l2_frame_train.anyVec();
           sb.append("Mean reconstruction error: " + l2_train.mean() + "\n");
           Assert.assertEquals(mymodel.mse(), l2_train.mean(), 1e-7);
-          Assert.assertTrue(l2_train.mean() < 3e-1);
+          Assert.assertTrue("too big reconstruction error: " + l2_train.mean(), l2_train.mean() < 3e-1);
 
           // manually compute L2
           Frame reconstr = mymodel.score(train); //this creates real values in original space
@@ -126,7 +126,6 @@ public class DeepLearningAutoEncoderTest extends TestUtil {
               sb.append(String.format("row %d : l2 error = %5f\n", i, l2_test.at(i)));
             }
           }
-          Log.info(sb);
 
           // check that the all outliers are found (and nothing else)
           Assert.assertTrue(outliers.contains(new Long(20)));
@@ -134,6 +133,7 @@ public class DeepLearningAutoEncoderTest extends TestUtil {
           Assert.assertTrue(outliers.contains(new Long(22)));
           Assert.assertTrue(outliers.size() == 3);
         } finally {
+          Log.info(sb);
           // cleanup
           if (p!=null) p.delete();
           if (mymodel!=null) mymodel.delete();
