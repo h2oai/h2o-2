@@ -76,7 +76,7 @@ public class DeepLearningProstateTest extends TestUtil {
                                 -1, //different validation frame
                         }) {
                           for (int n_folds : new int[]{
-                                  0,
+//                                  0,
                                   2,
                           }) {
                             if (n_folds != 0 && vf != 0) continue;
@@ -90,15 +90,15 @@ public class DeepLearningProstateTest extends TestUtil {
                                 }) {
                                   DeepLearningModel mymodel = null;
                                   Key dest = null, dest_tmp = null;
-                                  try {
-                                    count++;
-                                    if (fraction < rng.nextFloat()) continue;
-                                    final double epochs = 7 + rng.nextDouble() + rng.nextInt(4);
-                                    final int[] hidden = new int[]{1 + rng.nextInt(4), 1 + rng.nextInt(6)};
+                                  count++;
+                                  if (fraction < rng.nextFloat()) continue;
 
+                                  try {
                                     Log.info("**************************)");
                                     Log.info("Starting test #" + count);
                                     Log.info("**************************)");
+                                    final double epochs = 7 + rng.nextDouble() + rng.nextInt(4);
+                                    final int[] hidden = new int[]{1 + rng.nextInt(4), 1 + rng.nextInt(6)};
                                     Frame valid = null; //no validation
                                     if (vf == 1) valid = frame; //use the same frame for validation
                                     else if (vf == -1) valid = vframe; //different validation frame (here: from the same file)
@@ -119,7 +119,7 @@ public class DeepLearningProstateTest extends TestUtil {
 
                                       p.hidden = hidden;
                                       if (i == 0 && resp == 2) p.classification = false;
-//                                p.best_model_key = best_model_key;
+//                                      p.best_model_key = best_model_key;
                                       p.override_with_best_model = override_with_best_model;
                                       p.epochs = epochs;
                                       p.n_folds = n_folds;
@@ -135,7 +135,7 @@ public class DeepLearningProstateTest extends TestUtil {
                                       p.regression_stop = -1;
                                       p.balance_classes = balance_classes;
                                       p.quiet_mode = true;
-//                              p.quiet_mode = false;
+//                                      p.quiet_mode = false;
                                       p.score_validation_sampling = csm;
                                       try {
                                         p.invoke();
@@ -145,18 +145,21 @@ public class DeepLearningProstateTest extends TestUtil {
                                       }
 
                                       if (n_folds != 0)
-                                      // test HTML
+                                      // test HTML of cv models
                                       {
                                         for (Key k : p.xval_models) {
                                           DeepLearningModel cv_model = UKV.get(k);
                                           StringBuilder sb = new StringBuilder();
                                           cv_model.generateHTML("cv", sb);
                                         }
+                                        mymodel = UKV.get(dest_tmp);
+                                        // remove just the x-val models now to avoid memory leak
+                                        if (mymodel!=null) mymodel.delete_xval_models();
                                       }
                                     }
 
                                     // Do some more training via checkpoint restart
-                                    // For n_folds, continue without n_folds (not yet implemented)
+                                    // For n_folds, continue without n_folds (not yet implemented) - from now on, mymodel will have n_folds=0...
                                     dest = Key.make();
                                     DeepLearning p = new DeepLearning();
                                     final DeepLearningModel tmp_model = UKV.get(dest_tmp); //this actually *requires* frame to also still be in UKV (because of DataInfo...)
@@ -266,7 +269,7 @@ public class DeepLearningProstateTest extends TestUtil {
                                         pred2.delete_and_lock(null);
                                         pred2.unlock(null);
 
-                                        if (mymodel.nclasses() == 2) {
+                                        if (mymodel.nclasses() == 2 && false) {
                                           // make labels with 0.5 threshold for binary classifier
                                           Env ev = Exec2.exec("pred2[,1]=pred2[,3]>=" + 0.5);
                                           try {
@@ -322,6 +325,9 @@ public class DeepLearningProstateTest extends TestUtil {
                                     } //classifier
                                     Log.info("Parameters combination " + count + ": PASS");
                                     testcount++;
+                                  } catch (Throwable t) {
+                                    t.printStackTrace();
+                                    throw new RuntimeException(t);
                                   } finally {
                                     if (mymodel != null) mymodel.delete();
                                     if (dest != null) UKV.remove(dest);
