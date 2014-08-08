@@ -294,8 +294,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 
   private transient AtomicBoolean _jobdone = new AtomicBoolean(false);
 
-  @Override public void cancel(String msg){
-    source.unlock(self());
+  @Override public void cancel(){
+    if(!_grid)
+      source.unlock(self());
     DKV.remove(_progressKey);
     Value v = DKV.get(destination_key);
     if(v != null){
@@ -307,7 +308,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       DKV.remove(destination_key);
     }
     DKV.remove(destination_key);
-    super.cancel(msg);
+    super.cancel();
   }
 
 
@@ -1242,13 +1243,18 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       for(GLM2 g:_jobs)sum += g.progress();
       return sum/_jobs.length;
     }
-    @Override public void cancel(String msg){
+    private transient boolean _cancelled;
+    @Override public void cancel(){
+      _cancelled = true;
+      for(GLM2 g:_jobs)
+        g.cancel();
       source.unlock(self());
-      for(GLM2 g:_jobs) g.cancel();
       DKV.remove(destination_key);
+      super.cancel();
     }
     @Override
     public GLMGridSearch fork(){
+      System.out.println("read-locking " + source._key + " by job " + self());
       source.read_lock(self());
       Futures fs = new Futures();
       new GLMGrid(destination_key,self(),_jobs).delete_and_lock(self());
@@ -1264,9 +1270,12 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         @Override
         public void callback(ParallelGLMs parallelGLMs) {
           _glm2._done = true;
-          source.unlock(self());
-          Lockable.unlock_lockable(destination_key,self());
-          remove();
+          // we're gonna get success-callback after cancelling forked tasks since forked glms do not propagate exception if part of grid search
+          if(!_cancelled) {
+            source.unlock(self());
+            Lockable.unlock_lockable(destination_key, self());
+            remove();
+          }
         }
         @Override public boolean onExceptionalCompletion(Throwable t, CountedCompleter cmp){
           if(!(t instanceof JobCancelledException) && (t.getMessage() == null || !t.getMessage().contains("job was cancelled"))) {
