@@ -220,6 +220,14 @@ class H2OCloudNode:
                 break
 
             m += 1
+            time.sleep(2)
+            try:
+                os.system("ps -efww | grep H2O_perfTest_jenkins | awk '{print $2}' | xargs kill")
+                os.system("ssh -l jenkins 192.168.1.161 'ps -efww | grep H2O_perfTest_jenkins | awk '{print $2}' | xargs kill'")
+                os.system("ssh -l jenkins 192.168.1.162 'ps -efww | grep H2O_perfTest_jenkins | awk '{print $2}' | xargs kill'")
+                os.system("ssh -l jenkins 192.168.1.163 'ps -efww | grep H2O_perfTest_jenkins | awk '{print $2}' | xargs kill'")
+            except:
+                print "TRIED TO ANY RUNNING PERF JENKINS!"
             time.sleep(1)
 
         if not (got_url_proc and got_url_sys):
@@ -416,9 +424,9 @@ class H2OCloudNode:
         @return: none
         """
         try:
-            requests.get("http://" + self.ip + ":" + self.port + "/Shutdown.html", timeout=1)
+            requests.get("http://" + self.ip + ":" + str(self.port) + "/Shutdown.html", timeout=1)
             try:
-                r2 = requests.get("http://" + self.ip + ":" + self.port + "/Cloud.html", timeout=2)
+                r2 = requests.get("http://" + self.ip + ":" + str(self.port) + "/Cloud.html", timeout=2)
             except Exception, e:
                 pass
         except Exception, e:
@@ -436,7 +444,7 @@ class H2OCloudNode:
         except OSError:
             pass
         try:
-            requests.get("http://" + self.ip + ":" + self.port + "/Shutdown.html", timeout=1)
+            requests.get("http://" + self.ip + ":" + str(self.port) + "/Shutdown.html", timeout=1)
         except Exception, e:
             print "Got Exception trying to shutdown H2O:"
             print e
@@ -453,7 +461,7 @@ class H2OCloudNode:
         """
         #TODO: terminate self.child
         try:
-            requests.get(self.ip + ":" + self.port + "/Shutdown.html")
+            requests.get(self.ip + ":" + str(self.port) + "/Shutdown.html")
         except Exception, e:
             pass
         self.pid = -1

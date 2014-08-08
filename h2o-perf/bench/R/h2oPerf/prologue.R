@@ -29,6 +29,8 @@ source("../../../../../R/h2o-package/R/Internal.R")
 source("../../../../../R/h2o-package/R/Algorithms.R")
 source("../../../../../R/h2o-package/R/Classes.R")
 source("../../../../../R/h2o-package/R/ParseImport.R")
+source("../../../../../R/h2o-package/R/models.R")
+
 
 
 #GLOBALS
@@ -272,9 +274,9 @@ runRF<-
 function(x, y, ntree=50, depth=50, nodesize=1, nfolds = 0,
          sample.rate=2/3, nbins=100, seed=-1, mtries = -1, type="fast",...) {
   data <- h2o.getFrame(h2o = h, key = "parsed.hex")
-  model <<- h2o.randomForest(x = x, y = y, data = data, ntree = ntree, nfolds = nfolds, mtries = mtry,
+  model <<- h2o.randomForest(x = x, y = y, data = data, ntree = ntree, nfolds = nfolds, mtries = mtries,
                                 depth = depth, nodesize = nodesize,
-                                sample.rate = sample.rate, nbins = nbins, seed = seed, tyoe = type, ...)
+                                sample.rate = sample.rate, nbins = nbins, seed = seed, type = type, ...)
   page <- .h2o.__PAGE_SpeeDRFModelView
   if (type != "fast") page <- .h2o.__PAGE_DRFModelView
   model.json <<- .h2o.__remoteSend(h, page, '_modelKey'= model@key)

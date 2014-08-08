@@ -320,6 +320,7 @@ public class DeepLearningIrisTest extends TestUtil {
                                   if (bestPredict != null) bestPredict.delete();
                                 }
                               }
+                              Log.info("Parameters combination " + num_runs + ": PASS");
 
                             } finally{
                               // cleanup
@@ -331,7 +332,6 @@ public class DeepLearningIrisTest extends TestUtil {
                               if (p != null) p.delete();
                               if (trainPredict != null) trainPredict.delete();
                               if (testPredict != null) testPredict.delete();
-                              Log.info("Parameters combination " + num_runs + ": PASS");
                             }
                           }
                         }
