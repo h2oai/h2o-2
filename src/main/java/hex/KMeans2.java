@@ -185,9 +185,11 @@ public class KMeans2 extends ColumnsJob {
         double ssq = 0;       // sum squared error
         for( int i=0; i<k; i++ ) {
           ssq += model.within_cluster_variances[i]; // sum squared error all clusters
-          model.within_cluster_variances[i] /= task._rows[i]; // mse per-cluster
+//          model.within_cluster_variances[i] /= task._rows[i]; // mse per-cluster
         }
-        model.total_within_SS = ssq/fr.numRows(); // mse total
+//        model.total_within_SS = ssq/fr.numRows(); // mse total
+        model.total_within_SS = ssq; //total within sum of squares
+
         model.update(self()); // Update model in K/V store
 
         // Compute change in clusters centers
@@ -289,7 +291,7 @@ public class KMeans2 extends ColumnsJob {
           rows[i][0] = model.within_cluster_variances[i];
         columnHTMLlong(sb, "Cluster Size", model.size);
         DocGen.HTML.section(sb, "Cluster Variances: ");
-        table(sb, "Clusters", new String[]{"Within Cluster Variances"}, rows);
+        table(sb, "Clusters", new String[]{"Within Cluster Sum of Squares"}, rows);
 //        columnHTML(sb, "Between Cluster Variances", model.between_cluster_variances);
         sb.append("<br />");
         DocGen.HTML.section(sb, "Overall Totals: ");
@@ -406,7 +408,10 @@ public class KMeans2 extends ColumnsJob {
     public int iterations;
 
     @API(help = "Within cluster sum of squares per cluster")
-    public double[] within_cluster_variances;
+    public double[] within_cluster_variances; //Warning: See note below
+    //Note: The R wrapper interprets this as withinss (sum of squares), so that's what we compute here, and NOT the variances.
+    //FIXME: => wrong name, should be within_cluster_sum_of_squares, but leaving to be backward-compatible with REST API
+
 
 //    @API(help = "Between Cluster square distances per cluster")
 //    public double[] between_cluster_variances;

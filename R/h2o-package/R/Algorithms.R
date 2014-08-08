@@ -333,8 +333,8 @@ h2o.kmeans <- function(data, centers, cols = '', key = "", iter.max = 10, normal
   result$centers = t(matrix(unlist(res$centers), ncol = res$parameters$k))
   dimnames(result$centers) = list(seq(1,res$parameters$k), feat)
   #result$totss <- res$total_SS
-  result$withinss <- res$within_cluster_variances
-  #result$tot.withinss <- res$total_within_SS
+  result$withinss <- res$within_cluster_variances ## FIXME: sum of squares != variances (bad name of the latter)
+  result$tot.withinss <- res$total_within_SS
   #result$betweenss <- res$between_cluster_SS
   result$size <- res$size
   result$iter <- res$iterations
