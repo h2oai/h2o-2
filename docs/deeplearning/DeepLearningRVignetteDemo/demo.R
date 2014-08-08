@@ -71,8 +71,9 @@ mnist_model@model$params
 #Examine the performance of the trained model
 mnist_model
 
-#Examine variable importances (note: here, variables are simply pixel indices)
-mnist_model@model$varimp
+#Access variable importances (note: here, variables are pixel indices)
+vi = mnist_model@model$varimp
+head(vi)
 
 #Perform classification on the test set
 prediction = h2o.predict(mnist_model, newdata=test_images.hex)
