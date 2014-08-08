@@ -20,24 +20,6 @@ zeroList = [
         'ColumnRes3 = cA[,1]',
         ]
 
-zeroList2 = [
-        # this is an error case
-        # 'ScalarRes0 = cC[0,0]',
-
-        # shouldn't this create a key?
-        # 'ScalarRes0 = cC[1,1]',
-        'ScalarRes0 = c(cC[1,1])',
-        'ScalarRes1 = c(cC[1,1])',
-        'ScalarRes2 = c(cC[1,1])',
-        'ScalarRes3 = c(cC[1,1])',
-        # this is an error case
-        # 'ColumnRes0 = cC[,0]',
-        'ColumnRes0 = cC[,1]',
-        'ColumnRes1 = cC[,1]',
-        'ColumnRes2 = cC[,1]',
-        'ColumnRes3 = cC[,1]',
-        ]
-
 # 'randomBitVector'
 # 'randomFilter'
 # 'log"
@@ -88,17 +70,11 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         # make the timeout variable per dataset. it can be 10 secs for covtype 20x (col key creation)
         # so probably 10x that for covtype200
-        if localhost:
-            maxTrials = 200
-            csvFilenameAll = [
-                ("covtype.data", "cA", 15),
-            ]
-        else:
-            maxTrials = 20
-            csvFilenameAll = [
-                ("covtype.data", "cA", 15),
-                ("covtype20x.data", "cC", 60),
-            ]
+        maxTrials = 20
+        csvFilenameAll = [
+            ("covtype.data", 15),
+            ("covtype20x.data", 60),
+        ]
 
         ### csvFilenameList = random.sample(csvFilenameAll,1)
         csvFilenameList = csvFilenameAll
@@ -106,7 +82,9 @@ class Basic(unittest.TestCase):
         lenNodes = len(h2o.nodes)
         importFolderPath = "standard"
 
-        for (csvFilename, hex_key, timeoutSecs) in csvFilenameList:
+        # just always use the same hex_key, so the zeroList is right all the time
+        hex_key = 'cA'
+        for (csvFilename, timeoutSecs) in csvFilenameList:
             SEEDPERFILE = random.randint(0, sys.maxint)
             # creates csvFilename.hex from file in importFolder dir 
             csvPathname = importFolderPath + "/" + csvFilename
@@ -116,7 +94,7 @@ class Basic(unittest.TestCase):
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
 
             print "\n" + csvFilename
-            h2e.exec_zero_list(zeroList) if hex_key == "cA" else h2e.exec_zero_list(zeroList2)
+            h2e.exec_zero_list(zeroList)
             h2e.exec_expr_list_rand(lenNodes, exprList, hex_key, 
                 maxCol=54, maxRow=400000, maxTrials=maxTrials, timeoutSecs=timeoutSecs)
 
