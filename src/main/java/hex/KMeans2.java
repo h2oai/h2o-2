@@ -195,9 +195,10 @@ public class KMeans2 extends ColumnsJob {
           sum += distance(clusters[clu],task._cMeans[clu],ncats);
         sum /= N;             // Average change per feature
         Log.info("KMeans: Change in cluster centers="+sum);
-        if( sum < 1e-6 ) done = true;  // Model appears to be stable
+        done = ( sum < 1e-6 || model.iterations == max_iter-1);
 
-        if (model.iterations >= max_iter || done) {
+        if (done) {
+          Log.info("Writing clusters to key " + model._clustersKey);
           Clusters cc = new Clusters();
           cc._clusters = clusters;
           cc._means = means;
@@ -402,13 +403,11 @@ public class KMeans2 extends ColumnsJob {
     @API(help = "The row-by-row cluster assignments")
     public final Key _clustersKey;
 
-    // Normalization caches
-    private transient double[][] _normClust;
-    private transient double[] _means, _mults;
-    private transient int _ncats, _nnums;
+    private transient int _ncats;
 
     public KMeans2Model(KMeans2 params, Key selfKey, Key dataKey, String names[], String domains[][]) {
       super(selfKey, dataKey, names, domains, /* priorClassDistribution */ null, /* modelClassDistribution */ null);
+      _ncats = params._ncats;
       parameters = params;
       _clustersKey = Key.make(selfKey.toString() + "_clusters");
     }
