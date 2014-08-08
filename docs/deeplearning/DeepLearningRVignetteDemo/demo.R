@@ -63,13 +63,16 @@ test_images.hex = h2o.uploadFile(h2o_server, path = "mnist_test.csv", header = F
 
 #Train the model for digit classification
 mnist_model = h2o.deeplearning(x = 1:784, y = 785, data = train_images.hex, activation = "RectifierWithDropout",
-hidden = c(200,200,200), input_dropout_ratio = 0.2, l1 = 1e-5, validation = test_images.hex, epochs = 10)
+hidden = c(200,200,200), input_dropout_ratio = 0.2, l1 = 1e-5, validation = test_images.hex, epochs = 10, variable_importances = TRUE)
 
 #View the specified parameters of your deep learning model
 mnist_model@model$params
 
 #Examine the performance of the trained model
 mnist_model
+
+#Examine variable importances (note: here, variables are simply pixel indices)
+mnist_model@model$varimp
 
 #Perform classification on the test set
 prediction = h2o.predict(mnist_model, newdata=test_images.hex)
