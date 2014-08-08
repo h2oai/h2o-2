@@ -786,7 +786,7 @@ public abstract class Model extends Lockable<Model> {
       }
     }
 
-    // Now score the model on the
+    // Now score the model on the N folds
     try {
       AUC auc = nclasses() == 2 ? new AUC() : null;
       water.api.ConfusionMatrix cm = new water.api.ConfusionMatrix();
