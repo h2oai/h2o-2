@@ -158,24 +158,29 @@ function(h2o, key, model.names = "", page = "") {
 #'
 #' Fill in the xvalidation results if there are any
 .fill.xvals<-
-function(submod, h2o, lambda_idx, return_all_lambda) {
+function(submod, h2o, lambda_idx, return_all_lambda, data) {
   res_xval <- list()
   if (!is.null(submod$xvalidation)) {
     xvalKeys <- submod$xvalidation$xval_models  # fill in the xvalidation results
     if (!is.null(xvalKeys) && length(xvalKeys) >= 2) {
-      res_xval <- lapply(xvalKeys, function(key, h2o, idx, ret_all) { .h2o.__getGLMResults(h2o, key, idx, ret_all) }, h2o, lambda_idx, return_all_lambda)
+      res_xval <- lapply(xvalKeys,
+            function(key, h2o, idx, ret_all) {
+              .h2o.__getGLMResults(h2o, key, idx, ret_all, "", data)
+            }, h2o, lambda_idx, return_all_lambda)
     }
   }
   res_xval
 }
 
 #'
-#' Fill in a single GLM Result
+#' Fill in a _single_ GLM Result
 .h2o.__getGLMResults<-
-function(h2o, key, lambda_idx = -1, return_all_lambda = TRUE, pre = "", data = NULL) {
+function(h2o, key, lambda_idx = -1, return_all_lambda = TRUE, pre = "", data = NULL, res_xval = NULL) {
   pre    <- if(length(pre) <= 1) .h2o.__model.preamble(h2o, key, .json.to.R.map$glm, page = .h2o.__PAGE_GLMModelView) else pre
   params <- pre$params
-  if (grepl("xval", pre$json$glm_model$dataKey) || is.null(data)) data <- h2o.getFrame(h2o, pre$json$glm_model$dataKey)
+  if (grepl("xval", pre$json$glm_model$dataKey) || is.null(data)) {
+    if (is.null(data)) data <- h2o.getFrame(h2o, pre$json$glm_model$dataKey)
+  }
   if (lambda_idx == -1 || !return_all_lambda) lambda_idx <- pre$json$glm_model$best_lambda_idx+1
   submod <- pre$json$glm_model$submodels[[lambda_idx]]
   valid  <- if(is.null(submod$xvalidation)) submod$validation else submod$xvalidation
@@ -201,16 +206,18 @@ function(h2o, key, lambda_idx = -1, return_all_lambda = TRUE, pre = "", data = N
     params$family <- .h2o.__getFamily(params$family, params$link, params$tweedie_variance_power, params$tweedie_link_power)
   else
     params$family <- .h2o.__getFamily(params$family, params$link)
-  result$params <- params                                                         # Fill in the parameters
-  res_xval      <- .fill.xvals(submod, h2o, lambda_idx, return_all_lambda)        # Fill in the xvalidations
-  new("H2OGLMModel", key = key, data = data, model = result, xval = res_xval)     # Return a new GLMModel
+  result$params   <- params                                                        # Fill in the parameters
+  if (is.null(res_xval))
+    res_xval      <- .fill.xvals(submod, h2o, lambda_idx, return_all_lambda, data) # Fill in the xvalidations
+  new("H2OGLMModel", key = key, data = data, model = result, xval = res_xval)      # Return a new GLMModel
 }
 
 #'
 #' Return all lambdas case
 .get.all.glm.models<-
 function(pre, h2o, key, num_lambda, best_lambda_idx, data) {
-  models <- lapply(1:num_lambda, function(idx, h2o, key, pre, data) {.h2o.__getGLMResults(h2o, key, idx, TRUE, pre, data)}, h2o, key, pre, data)
+  xvals   <- .h2o.__getGLMResults(h2o, key, best_lambda_idx, FALSE, pre, data)@xval
+  models  <- lapply(1:num_lambda, function(idx, h2o, key, pre, data) {.h2o.__getGLMResults(h2o, key, idx, TRUE, pre, data, xvals)}, h2o, key, pre, data)
   lambdas <- unlist(lapply(models, function(m) m@model$lambda))
   new("H2OGLMModelList", models = models, best_model = best_lambda_idx, lambdas = lambdas)
 }
@@ -230,7 +237,6 @@ function(h2o, key, return_all_lambda = TRUE) {
   if (!return_all_lambda || length(submodels) == 1) .h2o.__getGLMResults(h2o, key, best_lambda_idx, FALSE, "", data)
   else .get.all.glm.models(pre, h2o, key, length(submodels), best_lambda_idx, data)
 }
-
 
 #'
 #' Top-level call for retrieving GLM Grid Results
