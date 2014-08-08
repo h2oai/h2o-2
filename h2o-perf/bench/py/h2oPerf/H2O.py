@@ -220,6 +220,14 @@ class H2OCloudNode:
                 break
 
             m += 1
+            time.sleep(2)
+            try:
+                os.system("ps -efww | grep H2O_perfTest_jenkins | awk '{print $2}' | xargs kill")
+                os.system("ssh -l jenkins 192.168.1.161 'ps -efww | grep H2O_perfTest_jenkins | awk '{print $2}' | xargs kill'")
+                os.system("ssh -l jenkins 192.168.1.162 'ps -efww | grep H2O_perfTest_jenkins | awk '{print $2}' | xargs kill'")
+                os.system("ssh -l jenkins 192.168.1.163 'ps -efww | grep H2O_perfTest_jenkins | awk '{print $2}' | xargs kill'")
+            except:
+                print "TRIED TO ANY RUNNING PERF JENKINS!"
             time.sleep(1)
 
         if not (got_url_proc and got_url_sys):
