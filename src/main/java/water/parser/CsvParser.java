@@ -124,7 +124,7 @@ NEXT_CHAR:
             assert _str.get_buf() != bits;
             _str.addBuff(bits);
           }
-          if(_setup._types != null && _str.equals(_setup._types[colIdx]._naStr))
+          if(_setup._types != null && colIdx < _setup._types.length && _str.equals(_setup._types[colIdx]._naStr))
             dout.addInvalidCol(colIdx);
           else
             dout.addStrCol(colIdx, _str);
@@ -330,7 +330,11 @@ NEXT_CHAR:
             if (number >= LARGEST_DIGIT_NUMBER) {
               if (decimal)
                 fractionDigits = offset - 1 - fractionDigits;
-              state = NUMBER_SKIP;
+              if (exp == -1) {
+                number = -number;
+              }
+              exp = 0;
+              state = NUMBER_SKIP_NO_DOT;
             } else {
               number = (number*10)+(c-'0');
             }

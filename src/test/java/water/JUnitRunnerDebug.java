@@ -7,6 +7,7 @@ import org.junit.runner.JUnitCore;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
 import water.deploy.NodeCL;
+import water.exec.Expr2Test;
 import water.util.Log;
 import water.util.Utils;
 
@@ -85,6 +86,7 @@ public class JUnitRunnerDebug {
 
 //      tests.add(ParserTest2.class);
 //      tests.add(ParserTest2.ParseAllSmalldata.class);
+      tests.add(KMeans2Test.class);
       tests.add(KMeans2RandomTest.class);
 //      tests.add(GLMRandomTest.Short.class);
 //      tests.add(SpeeDRFTest.class);

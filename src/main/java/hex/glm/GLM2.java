@@ -294,10 +294,10 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 
   private transient AtomicBoolean _jobdone = new AtomicBoolean(false);
 
-  @Override public void cancel(Throwable ex){
-    LogInfo(ex.toString());
+  @Override public void cancel(){
+    if(!_grid)
+      source.unlock(self());
     DKV.remove(_progressKey);
-//    Lockable.delete_lockable(destination_key);
     Value v = DKV.get(destination_key);
     if(v != null){
       GLMModel m = v.get();
@@ -308,9 +308,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       DKV.remove(destination_key);
     }
     DKV.remove(destination_key);
-    super.cancel(ex);
-
+    super.cancel();
   }
+
 
   @Override public void init(){
     super.init();
@@ -386,10 +386,13 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   }
 
   private static class GLM2_ProgressUpdate extends TAtomic<GLM2_Progress> {
+    final int _i;
+    public GLM2_ProgressUpdate(){_i = 1;}
+    public GLM2_ProgressUpdate(int i){_i = i;}
     @Override
     public GLM2_Progress atomic(GLM2_Progress old) {
       if(old == null)return old;
-      ++old._done;
+      old._done += _i;
       return old;
     }
   }
@@ -399,7 +402,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     Value v = DKV.get(_progressKey);
     if(v == null)return 0;
     float res = v.<GLM2_Progress>get().progess();
-    assert res >= 0 && res <= 1:"progress out of range: " + res;
+    if(res > 1f)
+      res = 1f;
     return res;
   }
 
@@ -741,6 +745,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
               return;
             }
           }
+          int diff = MAX_ITERATIONS_PER_LAMBDA - _iter + _iter1;
+          if(diff > 0)
+            new GLM2_ProgressUpdate(diff).fork(_progressKey); // update progress
           GLM2.this.setSubmodel(newBeta, glmt2._val,(H2OCountedCompleter)getCompleter().getCompleter());
           _done = true;
           LogInfo("computation of current lambda done in " + (System.currentTimeMillis() - GLM2.this.start_time) + "ms");
@@ -782,6 +789,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     }
     private transient boolean _failed;
     @Override public void onCompletion(CountedCompleter cmp){
+      if(!_grid)source.unlock(self());
       if(!_failed) {
         LogInfo("GLM " + self() + " completed by " + cmp.getClass().getName() + ", " + cmp.toString());
         assert _cmp.compareAndSet(null, cmp) : "double completion, first from " + _cmp.get().getClass().getName() + ", second from " + cmp.getClass().getName();
@@ -823,12 +831,13 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   public GLM2 fork(){return fork(null);}
 
   public GLM2 fork(H2OCountedCompleter cc){
+    if(!_grid)source.read_lock(self());
     // keep *this* separate from what's stored in K/V as job (will be changing it!)
     Futures fs = new Futures();
     _progressKey = Key.make(dest().toString() + "_progress", (byte) 1, Key.HIDDEN_USER_KEY, dest().home_node());
     int total = max_iter;
     if(lambda_search)
-      total = 3*nlambdas;
+      total = MAX_ITERATIONS_PER_LAMBDA*nlambdas;
     GLM2_Progress progress = new GLM2_Progress(total*(n_folds > 1?(n_folds+1):1));
     LogInfo("created progress " + progress);
     DKV.put(_progressKey,progress,fs);
@@ -1032,12 +1041,14 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     return (lambda == null)?pickNextLambda():lambda[++_lambdaIdx];
   }
 
+  private transient int _iter1 = 0;
   void nextLambda(final double currentLambda, final H2OCountedCompleter cmp){
     if(currentLambda > lambda_max){
       _done = true;
       cmp.tryComplete();
       return;
     }
+    _iter1 = _iter;
     LogInfo("starting computation of lambda = " + currentLambda + ", previous lambda = " + _currentLambda);
     _done = false;
     final double previousLambda = _currentLambda;
@@ -1232,12 +1243,19 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       for(GLM2 g:_jobs)sum += g.progress();
       return sum/_jobs.length;
     }
-    @Override public void cancel(String msg){
-      for(GLM2 g:_jobs) g.cancel();
+    private transient boolean _cancelled;
+    @Override public void cancel(){
+      _cancelled = true;
+      for(GLM2 g:_jobs)
+        g.cancel();
+      source.unlock(self());
       DKV.remove(destination_key);
+      super.cancel();
     }
     @Override
     public GLMGridSearch fork(){
+      System.out.println("read-locking " + source._key + " by job " + self());
+      source.read_lock(self());
       Futures fs = new Futures();
       new GLMGrid(destination_key,self(),_jobs).delete_and_lock(self());
       // keep *this* separate from what's stored in K/V as job (will be changing it!)
@@ -1252,8 +1270,12 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         @Override
         public void callback(ParallelGLMs parallelGLMs) {
           _glm2._done = true;
-          Lockable.unlock_lockable(destination_key,self());
-          remove();
+          // we're gonna get success-callback after cancelling forked tasks since forked glms do not propagate exception if part of grid search
+          if(!_cancelled) {
+            source.unlock(self());
+            Lockable.unlock_lockable(destination_key, self());
+            remove();
+          }
         }
         @Override public boolean onExceptionalCompletion(Throwable t, CountedCompleter cmp){
           if(!(t instanceof JobCancelledException) && (t.getMessage() == null || !t.getMessage().contains("job was cancelled"))) {
