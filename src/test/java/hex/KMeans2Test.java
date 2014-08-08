@@ -19,7 +19,7 @@ public class KMeans2Test extends TestUtil {
   private static final long SEED = 8683452581122892189L;
   private static final double SIGMA = 3;
 
-  private final void testHTML(KMeans2Model m) {
+  public static final void testHTML(KMeans2Model m) {
     StringBuilder sb = new StringBuilder();
     KMeans2.KMeans2ModelView kmv = new KMeans2.KMeans2ModelView();
     kmv.model = m;
@@ -48,6 +48,7 @@ public class KMeans2Test extends TestUtil {
       algo.seed = SEED;
       algo.invoke();
       KMeans2Model res = UKV.get(algo.dest());
+      Assert.assertTrue(res != null);
       testHTML(res);
       Assert.assertTrue(res.get_params().state == Job.JobState.DONE); //HEX-1817
       double[][] clusters = res.centers;
