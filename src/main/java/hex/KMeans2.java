@@ -71,6 +71,7 @@ public class KMeans2 extends ColumnsJob {
 
       logStart();
       source.read_lock(self());
+      if ( source.numRows() < k) throw new IllegalArgumentException("Cannot make " + k + " clusters out of " + source.numRows() + " rows.");
 
       // Drop ignored cols and, if user asks for it, cols with too many NAs
       fr = FrameTask.DataInfo.prepareFrame(source, ignored_cols, false, drop_na_cols);
