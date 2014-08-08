@@ -324,18 +324,18 @@ h2o.kmeans <- function(data, centers, cols = '', key = "", iter.max = 10, normal
   clusters_key <- paste(res$'_clustersKey', sep = "")
   
   result = list()
-  params$centers = res$k
-  params$iter.max = res$max_iter
+  params$centers = res$parameters$k
+  params$iter.max = res$parameters$max_iter
   result$params = params
   
   result$cluster = .h2o.exec2(clusters_key, h2o = data@h2o, clusters_key)
-  feat = res$'_names'[-length(res$'_names')]     # Get rid of response column name
-  result$centers = t(matrix(unlist(res$centers), ncol = res$k))
-  dimnames(result$centers) = list(seq(1,res$k), feat)
-  result$totss <- res$total_SS
+  feat = res$'_names'
+  result$centers = t(matrix(unlist(res$centers), ncol = res$parameters$k))
+  dimnames(result$centers) = list(seq(1,res$parameters$k), feat)
+  #result$totss <- res$total_SS
   result$withinss <- res$within_cluster_variances
-  result$tot.withinss <- res$total_within_SS
-  result$betweenss <- res$between_cluster_SS
+  #result$tot.withinss <- res$total_within_SS
+  #result$betweenss <- res$between_cluster_SS
   result$size <- res$size
   result$iter <- res$iterations
   return(result)
