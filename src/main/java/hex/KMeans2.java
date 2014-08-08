@@ -388,8 +388,17 @@ public class KMeans2 extends ColumnsJob {
 //    @API(help = "Total Sum of squares = total_within_SS + betwen_cluster_SS")
 //    public double total_SS;
 
+    @API(help = "Number of clusters")
+    public int k;
+
     @API(help = "Numbers of observations in each cluster.")
     public long[] size;
+
+    @API(help = "Whether data was normalized")
+    public boolean normalized;
+
+    @API(help = "Maximum number of iterations before stopping")
+    public int max_iter = 100;
 
     @API(help = "Iterations the algorithm ran")
     public int iterations;
@@ -409,6 +418,12 @@ public class KMeans2 extends ColumnsJob {
       super(selfKey, dataKey, names, domains, /* priorClassDistribution */ null, /* modelClassDistribution */ null);
       _ncats = params._ncats;
       parameters = params;
+
+      // only for backward-compatibility of JSON response
+      k = params.k;
+      normalized = params.normalize;
+      max_iter = params.max_iter;
+
       _clustersKey = Key.make(selfKey.toString() + "_clusters");
     }
 
