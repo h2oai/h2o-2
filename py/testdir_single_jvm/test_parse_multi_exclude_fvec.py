@@ -89,7 +89,7 @@ class Basic(unittest.TestCase):
                 h2i.import_only(path=SYNDATASETS_DIR + "/" + f, schema='put')
 
             # pattern match all, then use exclude
-            parseResult = h2i.parse_only(pattern="*/syn_*",
+            parseResult = h2i.parse_only(pattern="*syn_*",
                 hex_key=hex_key, exclude=excludePattern, header=1, timeoutSecs=timeoutSecs)
             print "parseResult['destination_key']: " + parseResult['destination_key']
 

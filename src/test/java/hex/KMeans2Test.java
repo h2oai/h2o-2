@@ -19,7 +19,7 @@ public class KMeans2Test extends TestUtil {
   private static final long SEED = 8683452581122892189L;
   private static final double SIGMA = 3;
 
-  private final void testHTML(KMeans2Model m) {
+  public static final void testHTML(KMeans2Model m) {
     StringBuilder sb = new StringBuilder();
     KMeans2.KMeans2ModelView kmv = new KMeans2.KMeans2ModelView();
     kmv.model = m;
@@ -37,7 +37,7 @@ public class KMeans2Test extends TestUtil {
     for( int i = 0; i < rows.length; i++ )
       rows[i][0] = data[i];
     Frame frame = frame(new String[] { "C0" }, rows);
-    KMeans2 algo = null;
+    KMeans2 algo;
 
     try {
       algo = new KMeans2();
@@ -71,7 +71,7 @@ public class KMeans2Test extends TestUtil {
     for( int i = 0; i < names.length; i++ )
       names[i] = "C" + i;
     Frame frame = frame(names, array);
-    KMeans2 algo = null;
+    KMeans2 algo;
 
     try {
       algo = new KMeans2();

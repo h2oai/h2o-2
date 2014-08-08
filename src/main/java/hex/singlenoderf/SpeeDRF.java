@@ -83,7 +83,7 @@ public class SpeeDRF extends Job.ValidatedJob {
   @API(help = "split limit", importance = ParamImportance.EXPERT)
   public int _exclusiveSplitLimit = 0;
 
-  private static Random _seedGenerator = Utils.getDeterRNG(0xd280524ad7fe0602L);
+  private static Random _seedGenerator = Utils.getDeterRNG( new Random().nextLong() );//0xd280524ad7fe0602L);
 
   private boolean regression;
 

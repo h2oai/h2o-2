@@ -160,7 +160,7 @@ def find_folder_and_filename(bucket, pathWithRegex, schema='put', returnFullPath
 # src_key= only used if for put file key name (optional)
 # path should point to a file or regex of files. (maybe folder works? but unnecessary
 def import_only(node=None, schema='local', bucket=None, path=None,
-    timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=0.5, pollTimeoutSecs=180, noise=None,
+    timeoutSecs=30, retryDelaySecs=0.1, initialDelaySecs=0, pollTimeoutSecs=180, noise=None,
     benchmarkLogging=None, noPoll=False, doSummary=True, src_key=None, noPrint=False, 
     importParentDir=True, **kwargs):
 
@@ -329,7 +329,7 @@ def import_only(node=None, schema='local', bucket=None, path=None,
 #****************************************************************************************
 # can take header, header_from_file, exclude params
 def parse_only(node=None, pattern=None, hex_key=None,
-    timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=0.5, pollTimeoutSecs=180, noise=None,
+    timeoutSecs=30, retryDelaySecs=0.1, initialDelaySecs=0, pollTimeoutSecs=180, noise=None,
     benchmarkLogging=None, noPoll=False, **kwargs):
 
     if not node: node = h2o.nodes[0]
@@ -346,7 +346,7 @@ def parse_only(node=None, pattern=None, hex_key=None,
 #****************************************************************************************
 def import_parse(node=None, schema='local', bucket=None, path=None,
     src_key=None, hex_key=None, 
-    timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=0.5, pollTimeoutSecs=180, noise=None,
+    timeoutSecs=30, retryDelaySecs=0.1, initialDelaySecs=0, pollTimeoutSecs=180, noise=None,
     benchmarkLogging=None, noPoll=False, doSummary=True, noPrint=True, 
     importParentDir=True, **kwargs):
 
