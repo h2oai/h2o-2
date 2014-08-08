@@ -223,6 +223,7 @@ public class KMeans2 extends ColumnsJob {
       t.printStackTrace();
       cancel(t);
     } finally {
+      remove();                   // Remove Job
       if( model != null ) model.unlock(self());
       source.unlock(self());
       state = UKV.<Job>get(self()).state;
