@@ -37,7 +37,7 @@ public class KMeans2Test extends TestUtil {
     for( int i = 0; i < rows.length; i++ )
       rows[i][0] = data[i];
     Frame frame = frame(new String[] { "C0" }, rows);
-    KMeans2 algo = null;
+    KMeans2 algo;
 
     try {
       algo = new KMeans2();
@@ -48,7 +48,6 @@ public class KMeans2Test extends TestUtil {
       algo.seed = SEED;
       algo.invoke();
       KMeans2Model res = UKV.get(algo.dest());
-      Assert.assertTrue(res != null);
       testHTML(res);
       Assert.assertTrue(res.get_params().state == Job.JobState.DONE); //HEX-1817
       double[][] clusters = res.centers;
@@ -72,7 +71,7 @@ public class KMeans2Test extends TestUtil {
     for( int i = 0; i < names.length; i++ )
       names[i] = "C" + i;
     Frame frame = frame(names, array);
-    KMeans2 algo = null;
+    KMeans2 algo;
 
     try {
       algo = new KMeans2();
