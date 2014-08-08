@@ -86,7 +86,7 @@ public abstract class Model extends Lockable<Model> {
     this.uniqueId = new UniqueId(_key);
     if( domains == null ) domains=new String[names.length+1][];
     assert domains.length==names.length;
-    assert names.length > 1;
+    assert names.length >= 1;
     assert names[names.length-1] != null; // Have a valid response-column name?
     _dataKey = dataKey;
     _names   = names;
@@ -131,6 +131,8 @@ public abstract class Model extends Lockable<Model> {
       this.warnings[this.warnings.length-1] = warning;
     }
   }
+
+  public boolean isSupervised() { return true; }
 
   public UniqueId getUniqueId() {
     return this.uniqueId;
@@ -222,10 +224,12 @@ public abstract class Model extends Lockable<Model> {
    *         one column with predicted values.
    */
   public final Frame score(Frame fr, boolean adapt) {
-    int ridx = fr.find(responseName());
-    if (ridx != -1) { // drop the response for scoring!
-      fr = new Frame(fr);
-      fr.remove(ridx);
+    if (isSupervised()) {
+      int ridx = fr.find(responseName());
+      if (ridx != -1) { // drop the response for scoring!
+        fr = new Frame(fr);
+        fr.remove(ridx);
+      }
     }
     // Adapt the Frame layout - returns adapted frame and frame containing only
     // newly created vectors
@@ -248,10 +252,12 @@ public abstract class Model extends Lockable<Model> {
    * @return
    */
   protected Frame scoreImpl(Frame adaptFrm) {
-    int ridx = adaptFrm.find(responseName());
-    assert ridx == -1 : "Adapted frame should not contain response in scoring method!";
-    assert nfeatures() == adaptFrm.numCols() : "Number of model features " + nfeatures() + " != number of test set columns: " + adaptFrm.numCols();
-    assert adaptFrm.vecs().length == _names.length-1 : "Scoring data set contains wrong number of columns: " + adaptFrm.vecs().length  + " instead of " + (_names.length-1);
+    if (isSupervised()) {
+      int ridx = adaptFrm.find(responseName());
+      assert ridx == -1 : "Adapted frame should not contain response in scoring method!";
+      assert nfeatures() == adaptFrm.numCols() : "Number of model features " + nfeatures() + " != number of test set columns: " + adaptFrm.numCols();
+      assert adaptFrm.vecs().length == nfeatures() : "Scoring data set contains wrong number of columns: " + adaptFrm.vecs().length + " instead of " + nfeatures();
+    }
 
     // Create a new vector for response
     // If the model produces a classification/enum, copy the domain into the
@@ -265,20 +271,21 @@ public abstract class Model extends Lockable<Model> {
       for( int c=0; c<nclasses(); c++ )
         adaptFrm.add(prefix+classNames()[c],adaptFrm.anyVec().makeZero());
     }
+    final int num_features = nfeatures();
     new MRTask2() {
       @Override public void map( Chunk chks[] ) {
-        double tmp [] = new double[_names.length-1]; // We do not need the last field representing response
+        double tmp [] = new double[num_features]; // We do not need the last field representing response
         float preds[] = new float [nclasses()==1?1:nclasses()+1];
         int len = chks[0]._len;
         for( int row=0; row<len; row++ ) {
           float p[] = score0(chks,row,tmp,preds);
           for( int c=0; c<preds.length; c++ )
-            chks[_names.length-1+c].set0(row,p[c]);
+            chks[num_features+c].set0(row,p[c]);
         }
       }
     }.doAll(adaptFrm);
     // Return just the output columns
-    int x=_names.length-1, y=adaptFrm.numCols();
+    int x=num_features, y=adaptFrm.numCols();
     return adaptFrm.extractFrame(x, y);
   }
 
@@ -374,7 +381,7 @@ public abstract class Model extends Lockable<Model> {
   public Frame[] adapt( final Frame fr, boolean exact, boolean haveResponse) {
     Frame vfr = new Frame(fr); // To avoid modification of original frame fr
     int n = _names.length;
-    if (haveResponse) {
+    if (haveResponse && isSupervised()) {
       int ridx = vfr.find(_names[_names.length - 1]);
       if (ridx != -1 && ridx != vfr._names.length - 1) { // Unify frame - put response to the end
         String name = vfr._names[ridx];
@@ -382,7 +389,7 @@ public abstract class Model extends Lockable<Model> {
       }
       n = ridx == -1 ? _names.length - 1 : _names.length;
     }
-    String [] names = Arrays.copyOf(_names, n);
+    String [] names = isSupervised() ? Arrays.copyOf(_names, n) : _names.clone();
     Frame  [] subVfr;
     // replace missing columns with NaNs (or 0s for DeepLearning with sparse data)
     subVfr = vfr.subframe(names, missingColumnsType());
@@ -468,7 +475,7 @@ public abstract class Model extends Lockable<Model> {
    *  subclass scoring logic. */
   protected float[] score0( Chunk chks[], int row_in_chunk, double[] tmp, float[] preds ) {
     assert chks.length>=_names.length; // Last chunk is for the response
-    for( int i=0; i<_names.length-1; i++ ) // Do not include last value since it can contains a response
+    for( int i=0; i<nfeatures(); i++ ) // Do not include last value since it can contains a response
       tmp[i] = chks[i].at0(row_in_chunk);
     float[] scored = score0(tmp,preds);
     // Correct probabilities obtained from training on oversampled data back to original distribution

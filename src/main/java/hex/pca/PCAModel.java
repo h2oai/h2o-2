@@ -66,6 +66,9 @@ public class PCAModel extends Model {
 
   @Override public final PCA get_params() { return parameters; }
   @Override public final Request2 job() { return get_params(); }
+  @Override public int nfeatures() { return _names.length; }
+  @Override public boolean isSupervised() { return false; }
+  @Override public String responseName() { throw new IllegalArgumentException("PCA doesn't have a response."); }
 
   public double[] sdev() { return sdev; }
   public double[][] eigVec() { return eigVec; }
