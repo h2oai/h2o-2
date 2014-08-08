@@ -25,7 +25,7 @@ object H2ODsl extends H2ODslImplicitConv with T_R_Env[DFrame] with T_H2O_Env[Hex
   def load(k:HexKey) = new DFrame(get(k))
   def save(k:HexKey, d:DFrame) = put(k,d)
   
-  def example():DFrame = example(System.getProperty("user.dir") + "/../../")
+  def example():DFrame = example(System.getProperty("user.dir") + "/../")
 
   def example(topdir:String):DFrame = {
     println("topdir is: " + topdir)

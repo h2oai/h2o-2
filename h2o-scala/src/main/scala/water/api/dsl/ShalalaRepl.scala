@@ -54,7 +54,7 @@ object ShalalaRepl {
     addThunk(intp.beQuietDuring {
       intp.addImports("water.api.dsl.H2ODsl._")
       intp.addImports("water.api.dsl._")
-      intp.addImports("water.api.Request.API")
+      intp.addImports("water.api.API")
       intp.addImports("hex.deeplearning.DeepLearning")
       intp.addImports("hex.deeplearning.DeepLearning.ClassSamplingMethod")
     })
