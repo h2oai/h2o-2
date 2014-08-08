@@ -659,11 +659,18 @@ h2o.deeplearning <- function(x, y, data, key = "",
     result$confusion = .build_cm(cm, confusion$domain)
   }
   
-  result$train_class_error = as.numeric(errs$train_err)
-  result$train_sqr_error = as.numeric(errs$train_mse)
-  result$valid_class_error = as.numeric(errs$valid_err)
-  result$valid_sqr_error = as.numeric(errs$valid_mse)
-  
+  if (result$params$classification == 0) {
+    result$train_sqr_error = as.numeric(errs$train_mse)
+    result$valid_sqr_error = as.numeric(errs$valid_mse)
+    result$train_class_error = NULL
+    result$valid_class_error = NULL
+  } else {
+    result$train_sqr_error = NULL
+    result$valid_sqr_error = NULL
+    result$train_class_error = as.numeric(errs$train_err)
+    result$valid_class_error = as.numeric(errs$valid_err)
+  }
+
   if(!is.null(errs$validAUC)) {
     tmp <- .h2o.__getPerfResults(errs$validAUC)
     tmp$confusion <- NULL 
