@@ -4,8 +4,6 @@
 # Testing glm cross validation performance with adult dataset 
 ##
 
-stop("Skip actual run for failing NOPASS test")
-
 setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 source('../findNSourceUtils.R')
 

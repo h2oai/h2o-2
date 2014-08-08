@@ -119,6 +119,14 @@ public abstract class CustomParser extends Iced {
       _columnNames = null;
       _ncols = 0;
     }
+    public ParserSetup(ParserType t, byte sep, boolean header, boolean singleQuotes) {
+      _pType = t;
+      _separator = sep;
+      _header = header;
+      _columnNames = null;
+      _ncols = 0;
+      _singleQuotes = singleQuotes;
+    }
     public ParserSetup(ParserType t, byte sep, int ncolumns, boolean header, String [] columnNames, boolean singleQuotes) {
       _pType = t;
       _separator = sep;
@@ -345,7 +353,7 @@ public abstract class CustomParser extends Iced {
       for(int i = 0; i < res.length; ++i)
         res[i] = new ParserSetup.TypeInfo();
       for(int i = 0; i < _ncols; ++i){
-        if(_domains[i].size() <= 1 && _nnums[i] >= .2) // clear number
+        if(_domains[i].size() <= 1 && (double)_nnums[i] / _nlines >= .2) // clear number
           res[i]._type = ParserSetup.Coltype.NUM;
         else if(_domains[i].size() > 2 && (double)_nstrings[i]/_nlines >= .95) { // clear string/enum
           res[i]._type = ParserSetup.Coltype.STR;

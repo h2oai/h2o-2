@@ -19,7 +19,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_mixed_causes_NA(self):
+    def test_NOPASS_mixed_causes_NA(self):
         csvFilename = 'mixed_causes_NA.csv'
         parseResult = h2i.import_parse(bucket='smalldata', path=csvFilename, timeoutSecs=15, schema='put')
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])

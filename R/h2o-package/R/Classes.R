@@ -184,10 +184,13 @@ setMethod("show", "H2ODeepLearningModel", function(object) {
   cat("Deep Learning Model Key:", object@key)
 
   model = object@model
-  cat("\n\nTraining classification error:", model$train_class_error)
-  cat("\nTraining mean square error:", model$train_sqr_error)
-  cat("\n\nValidation classification error:", model$valid_class_error)
-  cat("\nValidation square error:", model$valid_sqr_error)
+  if (model$params$classification == 1) {
+    cat("\n\nTraining classification error:", model$train_class_error)
+    if (!is.null(model$valid_class_error)) cat("\n\nValidation classification error:", model$valid_class_error)
+  } else {
+    cat("\nTraining mean square error:", model$train_sqr_error)
+    if (!is.null(model$valid_sqr_error)) cat("\nValidation mean square error:", model$valid_sqr_error)
+  }
   
   if(!is.null(model$confusion)) {
     cat("\n\nConfusion matrix:\n")
@@ -393,8 +396,10 @@ as.h2o <- function(client, object, key = "", header, sep = "") {
     return(.h2o.exec2(res$dest_key, h2o = client, res$dest_key))
   } else {
     tmpf <- tempfile(fileext=".csv")
+    toFactor <- names(which(unlist(lapply(object, is.factor))))
     write.csv(object, file=tmpf, quote = TRUE, row.names = FALSE)
     h2f <- h2o.uploadFile(client, tmpf, key=key, header=header, sep=sep)
+    invisible(lapply(toFactor, function(a) { h2o.exec(h2f[,a] <- factor(h2f[,a])) }))
     unlink(tmpf)
     return(h2f)
   }

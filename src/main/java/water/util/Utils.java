@@ -61,6 +61,12 @@ public class Utils {
       if (from[i]>from[result]) result = i;
     return result;
   }
+  public static int maxIndex(long[] from) {
+    int result = 0;
+    for (int i = 1; i<from.length; ++i)
+      if (from[i]>from[result]) result = i;
+    return result;
+  }
   public static int maxIndex(float[] from) {
     int result = 0;
     for (int i = 1; i<from.length; ++i)
@@ -566,6 +572,10 @@ public class Utils {
   }
   public static double[][] add(double[][] a, double[][] b) {
     for(int i = 0; i < a.length; i++ ) a[i] = add(a[i],b[i]);
+    return a;
+  }
+  public static long[][][] add(long[][][] a, long[][][] b) {
+    for(int i = 0; i < a.length; i++ ) add(a[i],b[i]);
     return a;
   }
 

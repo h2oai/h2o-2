@@ -44,10 +44,12 @@ If \code{parse = TRUE}, the function returns an object of class \code{\linkS4cla
 \code{\link{h2o.importFile}, \link{h2o.importFolder}, \link{h2o.importHDFS}, \link{h2o.uploadFile}}
 }
 \examples{
+\dontrun{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 prostate.hex = h2o.importURL(localH2O, path = paste("https://raw.github.com", 
   "0xdata/h2o/master/smalldata/logreg/prostate.csv", sep = "/"), key = "prostate.hex")
 class(prostate.hex)
 summary(prostate.hex)
+}
 }
