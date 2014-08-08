@@ -176,14 +176,14 @@ def getRandomTimeStamp():
     # "yyyy-MM-dd HH:mm:ss.SSS", 
 
     if timestampFormat==0:
-        a  = "%s-%s-%s" % (day, month, year)
+        a  = "%s-%s-%02d" % (day, month, year)
     elif timestampFormat==1:
-        a  = "%s-%s-%s" % (year, month, day)
+        a  = "%04d-%s-%s" % (year, month, day)
     elif timestampFormat==2:
-        a  = "%s-%s-%s %s:%s:%s" % (year, month, day, hour, minute, second)
+        a  = "%04d-%s-%s %s:%s:%s" % (year, month, day, hour, minute, second)
     # elif timestampFormat==3:
     else:
-        a  = "%s-%s-%s %s:%s:%s:%s" % (year, month, day, hour, minute, second, milli)
+        a  = "%04d-%s-%s %s:%s:%s:%s" % (year, month, day, hour, minute, second, milli)
     return a
 
 def rand_rowData(colCount=6):
@@ -211,7 +211,7 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1,java_heap_GB=10,use_flatfile=True)
+            h2o.build_cloud(1,java_heap_GB=1,use_flatfile=True)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
