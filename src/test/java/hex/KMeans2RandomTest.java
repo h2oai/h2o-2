@@ -2,7 +2,6 @@ package hex;
 
 import junit.framework.Assert;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import water.*;
 import water.fvec.Frame;
@@ -53,7 +52,7 @@ public class KMeans2RandomTest extends TestUtil {
                   k.k = clusters;
                   k.initialization = init;
                   k.destination_key = Key.make();
-                  k.seed = 0xC0FFEE;
+                  k.seed = rng.nextLong();
                   k.source = frame;
                   k.max_iter = max_iter;
                   k.normalize = normalize;
@@ -64,13 +63,11 @@ public class KMeans2RandomTest extends TestUtil {
                   Frame score = null;
                   try {
                     m = UKV.get(k.dest());
-                    for (double d : m.between_cluster_variances) Assert.assertFalse(Double.isNaN(d));
                     for (double d : m.within_cluster_variances) Assert.assertFalse(Double.isNaN(d));
-                    Assert.assertFalse(Double.isNaN(m.between_cluster_SS));
-                    Assert.assertFalse(Double.isNaN(m.total_SS));
                     Assert.assertFalse(Double.isNaN(m.total_within_SS));
                     for (long o : m.size) Assert.assertTrue(o > 0); //have at least one point per centroid
                     for (double[] dc : m.centers) for (double d : dc) Assert.assertFalse(Double.isNaN(d));
+                    KMeans2Test.testHTML(m);
 
                     // make prediction (cluster assignment)
                     score = m.score(frame);
