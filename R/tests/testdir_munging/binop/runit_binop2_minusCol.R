@@ -50,7 +50,6 @@ test.minus <- function(conn) {
 
   Log.info("Minisuing 5 from sliced.hex")
   slicedMinusFive <- sliced - 5
-  slicedMinusFive <- h2o.assign(slicedMinusFive, "slicedMinusFive.hex")
 
   Log.info("Original sliced: ")
   print(head((sliced)))
@@ -59,11 +58,7 @@ test.minus <- function(conn) {
   print(head((slicedMinusFive)))
 
   Log.info("Checking left and right: ")
-  slicedMinusFive <- sliced - 5
   fiveMinusSliced <- 5 - sliced
-
-  Log.info("sliced - 5: ")
-  print(head(slicedMinusFive))
 
   Log.info("5 - sliced: ")
   print(head(fiveMinusSliced))
