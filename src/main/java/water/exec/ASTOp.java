@@ -5,12 +5,13 @@ import hex.FrameTask.DataInfo;
 import hex.gram.Gram.GramTask;
 import hex.la.Matrix;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
+import java.math.*;
 import java.util.*;
+
 import org.apache.commons.math3.util.*;
 import org.joda.time.DateTime;
 import org.joda.time.MutableDateTime;
+
 import water.*;
 import water.fvec.*;
 import water.fvec.Vec.VectorGroup;
@@ -87,6 +88,7 @@ public abstract class ASTOp extends AST {
     putBinInfix(new ASTLO());
     putBinInfix(new ASTMMult());
     putBinInfix(new ASTIntDiv());
+    putBinInfix(new ASTColSeq());
 
     // Unary prefix ops
     putPrefix(new ASTIsNA());
@@ -100,6 +102,7 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTFlr ());
     putPrefix(new ASTTrun());
     putPrefix(new ASTRound());
+    putPrefix(new ASTSignif());
     putPrefix(new ASTLog ());
     putPrefix(new ASTExp ());
     putPrefix(new ASTScale());
@@ -383,9 +386,6 @@ class ASTRound extends ASTOp {
   @Override ASTOp make() { return this; }
   @Override void apply(Env env, int argcnt, ASTApply apply) {
     final int digits = (int)env.popDbl();
-    if(digits < 0)
-      throw new IllegalArgumentException("Error in round: argument digits must be a non-negative integer");
-
     if(env.isAry()) {
       Frame fr = env.popAry();
       for(int i = 0; i < fr.vecs().length; i++) {
@@ -414,7 +414,54 @@ class ASTRound extends ASTOp {
   static double roundDigits(double x, int digits) {
     if(Double.isNaN(x)) return x;
     BigDecimal bd = new BigDecimal(x);
-    bd = bd.setScale(digits, RoundingMode.HALF_UP);
+    bd = bd.setScale(digits, RoundingMode.HALF_EVEN);
+    return bd.doubleValue();
+  }
+}
+
+class ASTSignif extends ASTOp {
+  @Override String opStr() { return "signif"; }
+  ASTSignif() { super(new String[]{"signif", "x", "digits"},
+                   new Type[]{Type.dblary(), Type.dblary(), Type.DBL},
+                   OPF_PREFIX,
+                   OPP_PREFIX,
+                   OPA_RIGHT);
+  }
+  @Override ASTOp make() { return this; }
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    final int digits = (int)env.popDbl();
+    if(digits < 0)
+      throw new IllegalArgumentException("Error in signif: argument digits must be a non-negative integer");
+
+    if(env.isAry()) {
+      Frame fr = env.popAry();
+      for(int i = 0; i < fr.vecs().length; i++) {
+        if(fr.vecs()[i].isEnum())
+          throw new IllegalArgumentException("Non-numeric column " + String.valueOf(i+1) + " in data frame");
+      }
+      String skey = env.key();
+      Frame fr2 = new MRTask2() {
+        @Override public void map(Chunk chks[], NewChunk nchks[]) {
+          for(int i = 0; i < nchks.length; i++) {
+            NewChunk n = nchks[i];
+            Chunk c = chks[i];
+            int rlen = c._len;
+            for(int r = 0; r < rlen; r++)
+              n.addNum(signifDigits(c.at0(r),digits));
+          }
+        }
+      }.doAll(fr.numCols(),fr).outputFrame(fr.names(),fr.domains());
+      env.subRef(fr,skey);
+      env.pop();                  // Pop self
+      env.push(fr2);
+    }
+    else
+      env.poppush(signifDigits(env.popDbl(),digits));
+  }
+  static double signifDigits(double x, int digits) {
+    if(Double.isNaN(x)) return x;
+    BigDecimal bd = new BigDecimal(x);
+    bd = bd.round(new MathContext(digits, RoundingMode.HALF_EVEN));
     return bd.doubleValue();
   }
 }
@@ -1156,6 +1203,50 @@ class ASTSeqLen extends ASTOp {
     if (len <= 0)
       throw new IllegalArgumentException("Error in seq_len(" +len+"): argument must be coercible to positive integer");
     env.poppush(1,new Frame(new String[]{"c"}, new Vec[]{Vec.makeSeq(len)}),null);
+  }
+}
+class ASTColSeq extends ASTOp {
+  @Override String opStr() { return ":"; }
+  ASTColSeq() { super(new String[]{":", "from", "to"},
+          new Type[]{Type.dblary(), Type.DBL, Type.DBL},
+          OPF_PREFIX,
+          OPP_PREFIX,
+          OPA_RIGHT);
+  }
+  @Override ASTOp make() { return this; }
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    double by = 1.0;
+    double to = env.popDbl();
+    double from = env.popDbl();
+
+    double delta = to - from;
+    if(delta == 0 && to == 0)
+      env.poppush(to);
+    else {
+      double n = delta/by;
+      if(n < 0)
+        throw new IllegalArgumentException("wrong sign in 'by' argument");
+      else if(n > Double.MAX_VALUE)
+        throw new IllegalArgumentException("'by' argument is much too small");
+
+      double dd = Math.abs(delta)/Math.max(Math.abs(from), Math.abs(to));
+      if(dd < 100*Double.MIN_VALUE)
+        env.poppush(from);
+      else {
+        Key k = new Vec.VectorGroup().addVec();
+        Futures fs = new Futures();
+        AppendableVec av = new AppendableVec(k);
+        NewChunk nc = new NewChunk(av, 0);
+        int len = (int)n + 1;
+        for (int r = 0; r < len; r++) nc.addNum(from + r*by);
+        // May need to adjust values = by > 0 ? min(values, to) : max(values, to)
+        nc.close(0, fs);
+        Vec vec = av.close(fs);
+        fs.blockForPending();
+        vec._domain = null;
+        env.poppush(1, new Frame(new String[] {"C1"}, new Vec[] {vec}), null);
+      }
+    }
   }
 }
 

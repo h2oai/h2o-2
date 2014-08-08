@@ -44,6 +44,7 @@ If \code{parse = TRUE}, the function returns an object of class \code{\linkS4cla
 \code{\link{h2o.importFile}, \link{h2o.importFolder}, \link{h2o.importHDFS}, \link{h2o.uploadFile}}
 }
 \examples{
+\dontrun{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 prostate.hex = h2o.importURL(localH2O, path = paste("https://raw.github.com", 
@@ -51,7 +52,4 @@ prostate.hex = h2o.importURL(localH2O, path = paste("https://raw.github.com",
 class(prostate.hex)
 summary(prostate.hex)
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
-\keyword{ ~kwd1 }
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line
+}

@@ -6,17 +6,20 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import water.*;
+import water.fvec.FVecTest;
 import water.fvec.Frame;
+import water.fvec.ParseDataset2;
 import water.util.Log;
 import water.util.Log.Tag.Sys;
 
+import java.util.Arrays;
 import java.util.Random;
 
 public class KMeans2Test extends TestUtil {
   private static final long SEED = 8683452581122892189L;
   private static final double SIGMA = 3;
 
-  private final void testHTML(KMeans2Model m) {
+  public static final void testHTML(KMeans2Model m) {
     StringBuilder sb = new StringBuilder();
     KMeans2.KMeans2ModelView kmv = new KMeans2.KMeans2ModelView();
     kmv.model = m;
@@ -34,7 +37,7 @@ public class KMeans2Test extends TestUtil {
     for( int i = 0; i < rows.length; i++ )
       rows[i][0] = data[i];
     Frame frame = frame(new String[] { "C0" }, rows);
-    KMeans2 algo = null;
+    KMeans2 algo;
 
     try {
       algo = new KMeans2();
@@ -68,7 +71,7 @@ public class KMeans2Test extends TestUtil {
     for( int i = 0; i < names.length; i++ )
       names[i] = "C" + i;
     Frame frame = frame(names, array);
-    KMeans2 algo = null;
+    KMeans2 algo;
 
     try {
       algo = new KMeans2();
@@ -157,7 +160,7 @@ public class KMeans2Test extends TestUtil {
 
   @Test public void testSphere() {
     Key dest = Key.make("dest");
-    Frame frame = parseFrame(dest, "smalldata/syn_sphere3.csv");
+    Frame frame = parseFrame(dest, "smalldata/syn_sphere2.csv");
     KMeans2 algo = new KMeans2();
     algo.source = frame;
     algo.k = 3;
@@ -172,5 +175,62 @@ public class KMeans2Test extends TestUtil {
     Assert.assertEquals(algo.k, res.centers.length);
     frame.delete();
     res.delete();
+  }
+
+  private double[] d(double... ds) { return ds; }
+
+  boolean close(double[] a, double[] b) {
+    for (int i=0;i<a.length;++i) {
+      if (Math.abs(a[i]-b[i]) > 1e-8) return false;
+    }
+    return true;
+  }
+
+  @Test public void testCentroids(){
+    String data =
+            "1, 0, 0\n" +
+                    "0, 1, 0\n" +
+                    "0, 0, 1\n";
+    Frame fr = null;
+    try {
+      Key k = FVecTest.makeByteVec("yada", data);
+      fr = ParseDataset2.parse(Key.make(), new Key[]{k});
+
+      for( int i=0; i<10; i++ ) {
+        for( boolean normalize : new boolean[]{false, true}) {
+          for( Initialization init : new Initialization[]{Initialization.None, Initialization.PlusPlus, Initialization.Furthest}) {
+            KMeans2 parms = new KMeans2();
+            parms.source = fr;
+            parms.k = 3;
+            parms.normalize = normalize;
+            parms.max_iter = 100;
+            parms.initialization = init;
+            parms.seed = 0;
+            parms.invoke();
+            KMeans2Model kmm = UKV.get(parms.dest());
+
+            double[][] exp1 = new double[][]{ d(1, 0, 0), d(0, 1, 0), d(0, 0, 1), };
+            double[][] exp2 = new double[][]{ d(0, 1, 0), d(1, 0, 0), d(0, 0, 1), };
+            double[][] exp3 = new double[][]{ d(0, 1, 0), d(0, 0, 1), d(1, 0, 0), };
+            double[][] exp4 = new double[][]{ d(1, 0, 0), d(0, 0, 1), d(0, 1, 0), };
+            double[][] exp5 = new double[][]{ d(0, 0, 1), d(1, 0, 0), d(0, 1, 0), };
+            double[][] exp6 = new double[][]{ d(0, 0, 1), d(0, 1, 0), d(1, 0, 0), };
+
+            boolean gotit = false;
+            for (int j = 0; j < parms.k; ++j) gotit |= close(exp1[j], kmm.centers[j]);
+            for (int j = 0; j < parms.k; ++j) gotit |= close(exp2[j], kmm.centers[j]);
+            for (int j = 0; j < parms.k; ++j) gotit |= close(exp3[j], kmm.centers[j]);
+            for (int j = 0; j < parms.k; ++j) gotit |= close(exp4[j], kmm.centers[j]);
+            for (int j = 0; j < parms.k; ++j) gotit |= close(exp5[j], kmm.centers[j]);
+            for (int j = 0; j < parms.k; ++j) gotit |= close(exp6[j], kmm.centers[j]);
+            Assert.assertTrue(gotit);
+            kmm.delete();
+          }
+        }
+      }
+
+    } finally {
+      if( fr  != null ) fr.delete();
+    }
   }
 }

@@ -155,7 +155,7 @@ class Basic(unittest.TestCase):
                 kwargs = {
                     'destination_key': modelKey,
                     'response': y,
-                    'num_trees': 1,
+                    'ntrees': 1,
                     'max_depth': 100,
                     'oobee': 1,
                     'seed': 123456789,

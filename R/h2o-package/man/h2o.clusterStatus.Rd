@@ -50,7 +50,3 @@ library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 h2o.clusterStatus(localH2O)
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
-\keyword{ cluster }
-\keyword{ cloud }% __ONLY ONE__ keyword per line

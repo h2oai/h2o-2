@@ -1,16 +1,16 @@
 package water.parser;
 
 import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertTrue;
 
+import java.util.ArrayList;
 import org.junit.Test;
-
+import org.junit.BeforeClass;
 import water.*;
-import water.fvec.Frame;
-import water.fvec.ParseDataset2;
 import water.api.Constants.Extensions;
+import water.fvec.*;
 
 public class DatasetCornerCasesTest extends TestUtil {
+  @BeforeClass public static void stall() { stall_till_cloudsize(1); }
 
   /* The following tests deal with one line dataset ended by different number of newlines. */
 
@@ -31,9 +31,9 @@ public class DatasetCornerCasesTest extends TestUtil {
     final String test_dir    = "smalldata/test/";
     final String test_prefix = "HTWO-87-one-line-dataset-";
 
-    for (int i = 0; i < tests.length; i++) {
-      String datasetFilename = test_dir + test_prefix + tests[i] + ".csv";
-      String keyname     = test_prefix + tests[i] + Extensions.HEX;
+    for( String s : tests ) {
+      String datasetFilename = test_dir + test_prefix + s + ".csv";
+      String keyname     = test_prefix + s + Extensions.HEX;
       testOneLineDataset(datasetFilename, keyname);
     }
   }
@@ -47,6 +47,21 @@ public class DatasetCornerCasesTest extends TestUtil {
     assertEquals(filename + ": number of rows   == 2", 2, fr.numRows());
     assertEquals(filename + ": number of cols   == 9", 9, fr.numCols());
 
+    fr.delete();
+  }
+
+  // Tests handling of extra columns showing up late in the parse
+  @Test public void testExtraCols() {
+    Key okey = Key.make("extra.hex");
+    Key nfs = load_test_file("smalldata/test/test_parse_extra_cols.csv");
+    ArrayList<Key> al = new ArrayList<Key>();
+    al.add(nfs);
+    //CustomParser.ParserSetup setup = new CustomParser.ParserSetup(CustomParser.ParserType.CSV, (byte)',', 8, true, null, false);
+    CustomParser.ParserSetup setup0 = new CustomParser.ParserSetup();
+    setup0._header = true; // Force header; file actually has 8 cols of header and 10 cols of data
+    CustomParser.ParserSetup setup1 = GuessSetup.guessSetup(al,null,setup0,false)._setup;
+
+    Frame fr = ParseDataset2.parse(okey,new Key[]{nfs},setup1,true);
     fr.delete();
   }
 }

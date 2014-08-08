@@ -221,7 +221,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     else scoreOnTrain(fr, modelResp);
   }
 
-  public static SpeeDRFModel make(SpeeDRFModel old, Key tkey, int nodeIdx, String tString) {
+  public static SpeeDRFModel make(SpeeDRFModel old, Key tkey, int nodeIdx, String tString, int tree_id) {
 
     // Create a new model for atomic update
     SpeeDRFModel m = (SpeeDRFModel)old.clone();
@@ -231,17 +231,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     m.t_keys[m.t_keys.length-1] = tkey;
 
     // Update the local_forests
-    m.local_forests[nodeIdx] = Arrays.copyOf(old.local_forests[nodeIdx],old.local_forests[nodeIdx].length+1);
-
-    try {
-      m.local_forests[nodeIdx][m.local_forests[nodeIdx].length - 1] = tkey;
-    } catch(ArrayIndexOutOfBoundsException aioobe) {
-      Log.err("Node Index in: " + nodeIdx);
-      Log.err("Length of old: old.local_forests[nodeIdx].length: " + old.local_forests[nodeIdx].length);
-      Log.err("Length of new: m.local_forests[nodeIdx].length: "   + m.local_forests[nodeIdx].length);
-      Log.err("Appending to the node index @: m.local_forests[nodeIdx].length - 1" + (m.local_forests[nodeIdx].length - 1));
-      throw aioobe;
-    }
+    m.local_forests[nodeIdx][tree_id] = tkey;
 
     // Update the treeStrings?
     if (old.verbose_output.length < 2) {

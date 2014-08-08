@@ -70,16 +70,16 @@ class Basic(unittest.TestCase):
         localhost = h2o.decide_if_localhost()
         if (localhost):
             pass
-            h2o.build_cloud(2,java_heap_GB=10,use_flatfile=True)
+            h2o.build_cloud(1,java_heap_GB=2,use_flatfile=True)
         else:
             h2o_hosts.build_cloud_with_hosts()
-        h2b.browseTheCloud()
+        #h2b.browseTheCloud()
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud(h2o.nodes)
     
-    def test_parse_time_rand_fvec(self):
+    def test_parse_time_rand_fvec_NOPASS(self):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilename = "syn_time.csv"

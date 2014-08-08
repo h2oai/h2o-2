@@ -11,7 +11,7 @@ test.DRF.groupsplit <- function(conn) {
   
   # Train H2O DRF Model:
   Log.info(paste("H2O DRF with parameters:\nclassification = TRUE, ntree = 50, depth = 20, nbins = 500\n", sep = ""))
-  drfmodel.h2o <- h2o.randomForest(x = c("x1", "x2"), y = "y", data = train.hex, classification = TRUE, ntree = 50, depth = 20, nbins = 500)
+  drfmodel.h2o <- h2o.randomForest(x = c("x1", "x2"), y = "y", data = train.hex, classification = TRUE, ntree = 50, depth = 20, nbins = 500, type = "BigData")
   print(drfmodel.h2o) 
  
   # Test dataset has all 50 categories cat1 through cat50

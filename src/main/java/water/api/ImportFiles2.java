@@ -44,6 +44,8 @@ public class ImportFiles2 extends Request2 {
   @API(help="Path to file/folder on either local disk/hdfs/s3",required=true,filter=GeneralFile.class,gridable=false)
   String path;
 
+  @API(help="Common prefix for all successfully imported file keys")
+  String prefix;
 
   @API(help="successfully imported files")
   String [] files;
@@ -151,6 +153,7 @@ public class ImportFiles2 extends Request2 {
     keys  = akeys .toArray(new String[0]);
     fails = afails.toArray(new String[0]);
     dels  = adels .toArray(new String[0]);
+    prefix = getCommonPrefix(keys);
   }
 
   protected void serveHttp() {
@@ -215,12 +218,27 @@ public class ImportFiles2 extends Request2 {
     keys = new String[0];
   }
 
+  private String getCommonPrefix(String[] keys) {
+    String prefix = new String();
+    if(keys.length > 0) prefix = keys[0];
+
+    for(int i = 1; i < keys.length; i++) {
+      String tmp = keys[i];
+      int j = 0;
+      for(; j < Math.min(prefix.length(), tmp.length()); j++) {
+        if(prefix.charAt(j) != tmp.charAt(j)) break;
+      }
+      prefix = prefix.substring(0, j);
+    }
+    return prefix;
+  }
+
   // HTML builder
   @Override public boolean toHTML( StringBuilder sb ) {
     if(files == null)return false;
     if( files != null && files.length > 1 )
       sb.append("<div class='alert'>")
-        .append(parseLink("*"+path+"*", "Parse all into hex format"))
+        .append(parseLink("*"+prefix+"*", "Parse all into hex format"))
         .append(" </div>");
 
     DocGen.HTML.title(sb,"files");

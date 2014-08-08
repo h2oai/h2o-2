@@ -43,7 +43,7 @@ class Basic(unittest.TestCase):
         # h2o.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_parse_500_cols_fvec(self):
+    def test_NOPASS_parse_500_cols_fvec(self):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
@@ -70,7 +70,7 @@ class Basic(unittest.TestCase):
             for trial in range(5):
                 hex_key = orig_hex_key + str(trial)
                 start = time.time()
-                parseResult = h2i.import_parse(path=csvPathname + "*", schema='local', hex_key=hex_key, delete_on_done=1,
+                parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, delete_on_done=1,
                     timeoutSecs=timeoutSecs, doSummary=False)
                 print "Parse:", parseResult['destination_key'], "took", time.time() - start, "seconds"
 

@@ -8,7 +8,7 @@ Performs single-node random forest classification on a data set.
 }
 \usage{
 h2o.SpeeDRF(x, y, data, key = "", classification = TRUE, nfolds = 0, validation, 
-  mtry = -1, ntree = 50, depth = 50, sample.rate = 2/3, oobee = TRUE, 
+  mtries = -1, ntree = 50, depth = 20, sample.rate = 2/3, oobee = TRUE, 
   importance = FALSE, nbins = 1024, seed = -1, stat.type = "ENTROPY", 
   balance.classes = FALSE, verbose = FALSE)
 }
@@ -34,7 +34,7 @@ An \code{\linkS4class{H2OParsedData}} object containing the variables in the mod
 }
   \item{validation}{
   (Optional) An \code{\linkS4class{H2OParsedData}} object indicating the validation dataset used to construct confusion matrix. If left blank, this defaults to the training data when \code{nfolds = 0}.}
-  \item{mtry}{
+  \item{mtries}{
   (Optional) Number of features to randomly select at each split in the tree. If set to the default of -1, this will be set to \code{sqrt(ncol(data))}, rounded down to the nearest integer.
   }
   \item{ntree}{
@@ -100,7 +100,3 @@ iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
 h2o.SpeeDRF(x = c(2,3,4), y = 5, data = iris.hex, ntree = 50, depth = 100)
 }
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
-\keyword{ ~kwd1 }
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line

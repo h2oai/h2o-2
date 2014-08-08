@@ -216,7 +216,7 @@ class H2OCloudNode:
 
         @return: none
         """
-        retries = 30
+        retries = 60
         while (retries > 0):
             if (self.terminated):
                 return
@@ -1061,6 +1061,7 @@ class RUnitRunner:
     def _log(self, s):
         f = self._get_summary_filehandle_for_appending()
         print(s)
+        sys.stdout.flush()
         f.write(s + "\n")
         f.close()
 

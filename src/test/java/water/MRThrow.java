@@ -14,7 +14,7 @@ import water.util.Utils;
 
 public class MRThrow extends TestUtil {
 
-  @BeforeClass public static void stall() { stall_till_cloudsize(1); }
+  @BeforeClass public static void stall() { stall_till_cloudsize(3); }
 
   // ---
   // Map in h2o.jar - a multi-megabyte file - into Arraylets.

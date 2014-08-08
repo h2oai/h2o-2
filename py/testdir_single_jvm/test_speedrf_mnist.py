@@ -76,12 +76,12 @@ class Basic(unittest.TestCase):
             params = {
                 'response': y,
                 'ignored_cols_by_name': ignore_x,
-                'num_trees': ntrees,
-                'mtry': 28, # fix because we ignore some cols, which will change the srt(cols) calc?
+                'ntrees': ntrees,
+                'mtries': 28, # fix because we ignore some cols, which will change the srt(cols) calc?
                 'max_depth': 15,
-                'sample': 0.67,
+                'sample_rate': 0.67,
                 'destination_key': 'SpeeDRF_model',
-                'bin_limit': 1024,
+                'nbins': 1024,
                 'seed': 784834182943470027,
                 'oobee': 1,
                 }

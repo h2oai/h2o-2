@@ -967,6 +967,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     last_scored().valid_confusion_matrix = cm;
     last_scored().validAUC = auc;
     last_scored().valid_hitratio = hr;
+    DKV.put(this._key, this); //overwrite this model
   }
 
   @Override public String toString() {

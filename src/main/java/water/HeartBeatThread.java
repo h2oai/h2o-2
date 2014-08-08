@@ -73,11 +73,18 @@ public class HeartBeatThread extends Thread {
       hb._keys       = (H2O.STORE.size ());
       hb.set_valsz     (myHisto.histo(false)._cached);
       hb._num_cpus   = (char)run.availableProcessors();
-      if (counter % 300 == 2) {
-        //run mini-benchmark every 5 mins
-        hb._gflops   = Linpack.run();
-        hb._membw    = MemoryBandwidth.run();
-      }
+
+// FIXME:  Comment this out for now, since it's killing H2O running on Linux spawned by R.
+//         For some reason we haven't resolved yet, R does a sched_setaffinity on itself and limits itself
+//         to 1 cpu.  Forked H2O inherits that limitation.
+//         Running a 32-core linpack under that scenario is really bad.
+//
+//      if (counter % 300 == 2) {
+//        //run mini-benchmark every 5 mins
+//        hb._gflops   = Linpack.run();
+//        hb._membw    = MemoryBandwidth.run();
+//      }
+
       Object load = null;
       try {
         load = mbs.getAttribute(os, "SystemLoadAverage");
@@ -110,13 +117,13 @@ public class HeartBeatThread extends Thread {
         hb._system_idle_ticks = lpfr.getSystemIdleTicks();
         hb._system_total_ticks = lpfr.getSystemTotalTicks();
         hb._process_total_ticks = lpfr.getProcessTotalTicks();
-	hb._process_num_open_fds = lpfr.getProcessNumOpenFds();
+	    hb._process_num_open_fds = lpfr.getProcessNumOpenFds();
       }
       else {
         hb._system_idle_ticks = -1;
         hb._system_total_ticks = -1;
         hb._process_total_ticks = -1;
-	hb._process_num_open_fds = -1;
+	    hb._process_num_open_fds = -1;
       }
       hb._pid = lpfr.getProcessID();
 

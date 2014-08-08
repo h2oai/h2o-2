@@ -116,7 +116,7 @@ abstract public class GuessSetup {
   public static class GuessSetupTsk extends MRTask<GuessSetupTsk> {
     final CustomParser.ParserSetup _userSetup;
     final boolean _checkHeader;
-    PSetupGuess _gSetup;
+    public PSetupGuess _gSetup;
     IcedArrayList<Key> _failedSetup;
     IcedArrayList<Key> _conflicts;
 

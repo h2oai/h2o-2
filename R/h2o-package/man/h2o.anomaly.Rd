@@ -28,11 +28,8 @@ library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 prosPath = system.file("extdata", "prostate.csv", package = "h2o")
 prostate.hex = h2o.importFile(localH2O, path = prosPath)
-prostate.dl = h2o.deeplearning(x = 3:9, y = 2, data = prostate.hex, autoencoder = TRUE)
+prostate.dl = h2o.deeplearning(x = 3:9, y = 2, data = prostate.hex, autoencoder = TRUE,
+                               hidden = c(10, 10), epochs = 5)
 prostate.anon = h2o.anomaly(prostate.hex, prostate.dl)
 head(prostate.anon)
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
-\keyword{ ~kwd1 }
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line

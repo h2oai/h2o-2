@@ -13,11 +13,11 @@ paramDict = {
     # 'ntrees': 1,
     # 'max_depth': 30,
     # 'nbins': 100,
-    'num_trees': 10,
+    'ntrees': 10,
     'max_depth': 20,
-    'bin_limit': 200,
-    'mtry': None,
-    'sample': 0.66,
+    'nbins': 200,
+    'mtries': None,
+    'sample_rate': 0.66,
     'importance': 0,
     'seed': None,
     }
@@ -25,8 +25,8 @@ paramDict = {
 DO_OOBE = False
 DO_PLOT = True
 # TRY = 'max_depth'
-# TRY = 'num_trees'
-TRY = 'bin_limit'
+# TRY = 'ntrees'
+TRY = 'nbins'
 
 
 class Basic(unittest.TestCase):
@@ -79,9 +79,9 @@ class Basic(unittest.TestCase):
 
         if TRY == 'max_depth':
             tryList = depthList
-        elif TRY == 'num_trees':
+        elif TRY == 'ntrees':
             tryList = ntreesList
-        elif TRY == 'bin_limit':
+        elif TRY == 'nbins':
             tryList = nbinsList
         else:
             raise Exception("huh? %s" % TRY)
@@ -89,10 +89,10 @@ class Basic(unittest.TestCase):
         for d in tryList:
             if TRY == 'max_depth':
                 paramDict['max_depth'] = d
-            elif TRY == 'num_trees':
-                paramDict['num_trees'] = d
-            elif TRY == 'bin_limit':
-                paramDict['bin_limit'] = d
+            elif TRY == 'ntrees':
+                paramDict['ntrees'] = d
+            elif TRY == 'nbins':
+                paramDict['nbins'] = d
             else:
                 raise Exception("huh? %s" % TRY)
 
@@ -103,7 +103,7 @@ class Basic(unittest.TestCase):
             else:
                 paramDict['validation'] = parseTestResult['destination_key']
 
-            timeoutSecs = 30 + paramDict['num_trees'] * 200
+            timeoutSecs = 30 + paramDict['ntrees'] * 200
 
 
             # do ten starts, to see the bad id problem?
@@ -176,10 +176,10 @@ class Basic(unittest.TestCase):
             if DO_PLOT:
                 if TRY == 'max_depth':
                     xLabel = 'max_depth'
-                elif TRY == 'num_trees':
-                    xLabel = 'num_trees'
-                elif TRY == 'bin_limit':
-                    xLabel = 'bin_limit'
+                elif TRY == 'ntrees':
+                    xLabel = 'ntrees'
+                elif TRY == 'nbins':
+                    xLabel = 'nbins'
                 else:
                     raise Exception("huh? %s" % TRY)
                 xList.append(paramDict[xLabel])
