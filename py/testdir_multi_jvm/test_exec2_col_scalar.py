@@ -20,6 +20,24 @@ zeroList = [
         'ColumnRes3 = cA[,1]',
         ]
 
+zeroList2 = [
+        # this is an error case
+        # 'ScalarRes0 = cC[0,0]',
+
+        # shouldn't this create a key?
+        # 'ScalarRes0 = cC[1,1]',
+        'ScalarRes0 = c(cC[1,1])',
+        'ScalarRes1 = c(cC[1,1])',
+        'ScalarRes2 = c(cC[1,1])',
+        'ScalarRes3 = c(cC[1,1])',
+        # this is an error case
+        # 'ColumnRes0 = cC[,0]',
+        'ColumnRes0 = cC[,1]',
+        'ColumnRes1 = cC[,1]',
+        'ColumnRes2 = cC[,1]',
+        'ColumnRes3 = cC[,1]',
+        ]
+
 # 'randomBitVector'
 # 'randomFilter'
 # 'log"
@@ -98,7 +116,7 @@ class Basic(unittest.TestCase):
             inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
 
             print "\n" + csvFilename
-            h2e.exec_zero_list(zeroList)
+            h2e.exec_zero_list(zeroList) if hex_key == "cA" else h2e.exec_zero_list(zeroList2)
             h2e.exec_expr_list_rand(lenNodes, exprList, hex_key, 
                 maxCol=54, maxRow=400000, maxTrials=maxTrials, timeoutSecs=timeoutSecs)
 
