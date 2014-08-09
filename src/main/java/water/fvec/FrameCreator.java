@@ -41,6 +41,7 @@ public class FrameCreator extends H2O.H2OCountedCompleter {
 
     // create domains for categorical variables
     if (_createFrame.randomize) {
+      assert(_createFrame.response_factors >= 1);
       _domain = new String[_createFrame.cols+1][];
       _domain[0] = _createFrame.response_factors == 1 ? null : new String[_createFrame.response_factors];
       if (_domain[0] != null) {
