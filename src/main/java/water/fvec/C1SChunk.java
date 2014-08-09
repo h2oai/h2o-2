@@ -7,13 +7,13 @@ import water.*;
  * The scale/bias function, where data is in SIGNED bytes before scaling.
  */
 public class C1SChunk extends Chunk {
-  static final int OFF=8+4;
+  static final int OFF=8+8;
   public double _scale;
-  int _bias;
-  C1SChunk( byte[] bs, int bias, double scale ) { _mem=bs; _start = -1; _len = _mem.length-OFF;
+  long _bias;
+  C1SChunk( byte[] bs, long bias, double scale ) { _mem=bs; _start = -1; _len = _mem.length-OFF;
     _bias = bias; _scale = scale;
     UDP.set8d(_mem,0,scale);
-    UDP.set4 (_mem,8,bias );
+    UDP.set8 (_mem,8,bias );
   }
   @Override protected final long at8_impl( int i ) {
     long res = 0xFF&_mem[i+OFF];
@@ -43,7 +43,7 @@ public class C1SChunk extends Chunk {
     _start = -1;
     _len = _mem.length-OFF;
     _scale= UDP.get8d(_mem,0);
-    _bias = UDP.get4 (_mem,8);
+    _bias = UDP.get8 (_mem,8);
     return this;
   }
   @Override NewChunk inflate_impl(NewChunk nc) {
@@ -54,7 +54,7 @@ public class C1SChunk extends Chunk {
     for( int i=0; i<len; i++ ) {
       int res = 0xFF&_mem[i+OFF];
       if( res == C1Chunk._NA ) nc.addNA();
-      else nc.addNum((long)(res+_bias),(int)dx);
+      else nc.addNum((res+_bias),(int)dx);
     }
     return nc;
   }

@@ -186,22 +186,22 @@ class H2OCloudNode:
             if m != 0:
                 print "DEBUG: Restarting serve_proc!"
                 print "Stopping service"
-                cmd_serve = "ps -efww | grep 0xdiag | awk '{print %2}' | xargs kill"
-                tryKill = self.open_channel()
-                tryKill.exec_command(cmd_serve)
+                # cmd_serve = "ps -efww | grep 0xdiag | awk '{print %2}' | xargs kill"
+                # tryKill = self.open_channel()
+                # tryKill.exec_command(cmd_serve)
                 
                 print "Starting service"
-                cmd_serve = ["python", "/home/0xdiag/serve_proc.py"]
-                self.channelServe = self.open_channel()
-                self.channelServe.exec_command(' '.join(cmd_serve))
+                # cmd_serve = ["python", "/home/0xdiag/serve_proc.py"]
+                # self.channelServe = self.open_channel()
+                # self.channelServe.exec_command(' '.join(cmd_serve))
             r_sys = ""
             r_proc = ""
             print "Performing try : " + str(m) + " out of total tries = " + str(max_retries)
             url_sys = "http://{}:{}/stat".format(self.ip, 8000)
             url_proc = "http://{}:{}/{}/stat".format(self.ip, 8000, self.pid)
             try:
-              r_sys = requests.get(url_sys, timeout=10).text.split('\n')[0]
-              r_proc = requests.get(url_proc, timeout=10).text.strip().split()
+              r_sys = requests.get(url_sys, timeout=5).text.split('\n')[0]
+              r_proc = requests.get(url_proc, timeout=5).text.strip().split()
             except:
               m += 1
               continue  # usually timeout, but just catch all and continue, error out downstream.
@@ -220,6 +220,14 @@ class H2OCloudNode:
                 break
 
             m += 1
+            time.sleep(2)
+            try:
+                os.system("ps -efww | grep H2O_perfTest_jenkins | awk '{print $2}' | xargs kill")
+                os.system("ssh -l jenkins 192.168.1.161 'ps -efww | grep H2O_perfTest_jenkins | awk '{print $2}' | xargs kill'")
+                os.system("ssh -l jenkins 192.168.1.162 'ps -efww | grep H2O_perfTest_jenkins | awk '{print $2}' | xargs kill'")
+                os.system("ssh -l jenkins 192.168.1.163 'ps -efww | grep H2O_perfTest_jenkins | awk '{print $2}' | xargs kill'")
+            except:
+                print "TRIED TO ANY RUNNING PERF JENKINS!"
             time.sleep(1)
 
         if not (got_url_proc and got_url_sys):
@@ -229,8 +237,8 @@ class H2OCloudNode:
 
         url_sys = "http://{}:{}/stat".format(self.ip, 8000)
         url_proc = "http://{}:{}/{}/stat".format(self.ip, 8000, self.pid)
-        r_sys = requests.get(url_sys, timeout=120).text.split('\n')[0]
-        r_proc = requests.get(url_proc, timeout=120).text.strip().split()
+        r_sys = requests.get(url_sys, timeout=10).text.split('\n')[0]
+        r_proc = requests.get(url_proc, timeout=10).text.strip().split()
 
         sys_user = int(r_sys.split()[1])
         sys_nice = int(r_sys.split()[2])
@@ -416,9 +424,9 @@ class H2OCloudNode:
         @return: none
         """
         try:
-            requests.get("http://" + self.ip + ":" + self.port + "/Shutdown.html", timeout=1)
+            requests.get("http://" + self.ip + ":" + str(self.port) + "/Shutdown.html", timeout=1)
             try:
-                r2 = requests.get("http://" + self.ip + ":" + self.port + "/Cloud.html", timeout=2)
+                r2 = requests.get("http://" + self.ip + ":" + str(self.port) + "/Cloud.html", timeout=2)
             except Exception, e:
                 pass
         except Exception, e:
@@ -436,7 +444,7 @@ class H2OCloudNode:
         except OSError:
             pass
         try:
-            requests.get("http://" + self.ip + ":" + self.port + "/Shutdown.html", timeout=1)
+            requests.get("http://" + self.ip + ":" + str(self.port) + "/Shutdown.html", timeout=1)
         except Exception, e:
             print "Got Exception trying to shutdown H2O:"
             print e
@@ -453,7 +461,7 @@ class H2OCloudNode:
         """
         #TODO: terminate self.child
         try:
-            requests.get(self.ip + ":" + self.port + "/Shutdown.html")
+            requests.get(self.ip + ":" + str(self.port) + "/Shutdown.html")
         except Exception, e:
             pass
         self.pid = -1

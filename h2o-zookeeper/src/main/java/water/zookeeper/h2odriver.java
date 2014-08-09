@@ -23,19 +23,19 @@ public class h2odriver {
   public static boolean g_start = false;
   public static boolean g_wait = false;
 
-  void setZk(String v) {
+  public void setZk(String v) {
     _zk = v;
   }
 
-  void setZkroot(String v) {
+  public void setZkroot(String v) {
     _zkroot = v;
   }
 
-  void setNumNodes(int v) {
+  public void setNumNodes(int v) {
     _numNodes = v;
   }
 
-  void setCloudFormationTimeoutSeconds(int v) {
+  public void setCloudFormationTimeoutSeconds(int v) {
     _cloudFormationTimeoutSeconds = v;
   }
 

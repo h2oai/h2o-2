@@ -199,7 +199,7 @@ class Basic(unittest.TestCase):
             # create 100 possible cut expressions here, so we don't waste time below
             rowExprList = []
             print "Creating", CUT_EXPR_CNT, 'cut expressions'
-            for i in range(CUT_EXPR_CNT):
+            for j in range(CUT_EXPR_CNT):
                 # init cutValue. None means no compare
                 cutValue = [None for i in range(iColCount)]
                 # build up a random cut expression

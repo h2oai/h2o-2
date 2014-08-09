@@ -20,7 +20,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_GLM2_weight_nan_fail(self):
+    def test_NOPASS_GLM2_weight_nan_fail(self):
         h2o.beta_features = True
         csvPathname = 'covtype/covtype.20k.data'
         hex_key = 'covtype.20k.hex'

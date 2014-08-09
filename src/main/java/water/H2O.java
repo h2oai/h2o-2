@@ -522,15 +522,15 @@ public final class H2O {
   // done, the next lower level jobs get unblocked, etc.
   public static final byte        MAX_PRIORITY = Byte.MAX_VALUE-1;
   public static final byte    ACK_ACK_PRIORITY = MAX_PRIORITY-0;
-  public static final byte        ACK_PRIORITY = MAX_PRIORITY-1;
-  public static final byte   DESERIAL_PRIORITY = MAX_PRIORITY-2;
-  public static final byte INVALIDATE_PRIORITY = MAX_PRIORITY-2;
-  public static final byte    ARY_KEY_PRIORITY = MAX_PRIORITY-2;
-  public static final byte    GET_KEY_PRIORITY = MAX_PRIORITY-3;
-  public static final byte    PUT_KEY_PRIORITY = MAX_PRIORITY-4;
-  public static final byte     ATOMIC_PRIORITY = MAX_PRIORITY-5;
-  public static final byte        GUI_PRIORITY = MAX_PRIORITY-6;
-  public static final byte     MIN_HI_PRIORITY = MAX_PRIORITY-6;
+  public static final byte  FETCH_ACK_PRIORITY = MAX_PRIORITY-1;
+  public static final byte        ACK_PRIORITY = MAX_PRIORITY-2;
+  public static final byte   DESERIAL_PRIORITY = MAX_PRIORITY-3;
+  public static final byte INVALIDATE_PRIORITY = MAX_PRIORITY-3;
+  public static final byte    GET_KEY_PRIORITY = MAX_PRIORITY-4;
+  public static final byte    PUT_KEY_PRIORITY = MAX_PRIORITY-5;
+  public static final byte     ATOMIC_PRIORITY = MAX_PRIORITY-6;
+  public static final byte        GUI_PRIORITY = MAX_PRIORITY-7;
+  public static final byte     MIN_HI_PRIORITY = MAX_PRIORITY-7;
   public static final byte        MIN_PRIORITY = 0;
 
   // F/J threads that remember the priority of the last task they started
@@ -557,7 +557,7 @@ public final class H2O {
   }
 
   // A standard FJ Pool, with an expected priority level.
-  private static class ForkJoinPool2 extends ForkJoinPool {
+  static class ForkJoinPool2 extends ForkJoinPool {
     final int _priority;
     private ForkJoinPool2(int p, int cap) { super(NUMCPUS,new FJWThrFact(cap),null,p<MIN_HI_PRIORITY); _priority = p; }
     private H2OCountedCompleter poll2() { return (H2OCountedCompleter)pollSubmission(); }
@@ -595,9 +595,9 @@ public final class H2O {
   // entire node for lack of some small piece of data).  So each attempt to do
   // lower-priority F/J work starts with an attempt to work & drain the
   // higher-priority queues.
-  public static abstract class H2OCountedCompleter extends CountedCompleter implements Cloneable {
+  public static abstract class H2OCountedCompleter<T extends H2OCountedCompleter> extends CountedCompleter implements Cloneable {
     public H2OCountedCompleter(){}
-    public H2OCountedCompleter(H2OCountedCompleter completer){super(completer);}
+    protected H2OCountedCompleter(H2OCountedCompleter completer){super(completer);}
 
     // Once per F/J task, drain the high priority queue before doing any low
     // priority work.
@@ -609,12 +609,13 @@ public final class H2O {
       try {
         assert  priority() == pp; // Job went to the correct queue?
         assert t._priority <= pp; // Thread attempting the job is only a low-priority?
-        for( int p = MAX_PRIORITY; p > pp; p-- ) {
+        final int p2 = Math.max(pp,MIN_HI_PRIORITY);
+        for( int p = MAX_PRIORITY; p > p2; p-- ) {
           if( FJPS[p] == null ) continue;
           h2o = FJPS[p].poll2();
           if( h2o != null ) {     // Got a hi-priority job?
             t._priority = p;      // Set & do it now!
-            Thread.currentThread().setPriority(Thread.MAX_PRIORITY-1);
+            t.setPriority(Thread.MAX_PRIORITY-1);
             h2o.compute2();       // Do it ahead of normal F/J work
             p++;                  // Check again the same queue
           }
@@ -623,9 +624,10 @@ public final class H2O {
         // If the higher priority job popped an exception, complete it
         // exceptionally...  but then carry on and do the lower priority job.
         if( h2o != null ) h2o.onExceptionalCompletion(ex, h2o.getCompleter());
+        else ex.printStackTrace();
       } finally {
         t._priority = pp;
-        if( pp == MIN_PRIORITY ) Thread.currentThread().setPriority(Thread.NORM_PRIORITY-1);
+        if( pp == MIN_PRIORITY ) t.setPriority(Thread.NORM_PRIORITY-1);
       }
       // Now run the task as planned
       compute2();
@@ -633,18 +635,16 @@ public final class H2O {
     // Do the actually intended work
     public abstract void compute2();
     @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller) {
-      if(!(ex instanceof JobCancelledException) && this.getCompleter() == null) {
-        System.err.println("onExCompletion for "+this);
+      if(!(ex instanceof JobCancelledException) && !(ex instanceof IllegalArgumentException) && this.getCompleter() == null)
         ex.printStackTrace();
-      }
       return true;
     }
     // In order to prevent deadlock, threads that block waiting for a reply
     // from a remote node, need the remote task to run at a higher priority
     // than themselves.  This field tracks the required priority.
     public byte priority() { return MIN_PRIORITY; }
-    @Override public H2OCountedCompleter clone(){
-      try { return (H2OCountedCompleter)super.clone(); }
+    @Override public T clone(){
+      try { return (T)super.clone(); }
       catch( CloneNotSupportedException e ) { throw water.util.Log.errRTExcept(e); }
     }
   }
@@ -659,6 +659,8 @@ public final class H2O {
   }
 
   public static class H2OEmptyCompleter extends H2OCountedCompleter{
+    public H2OEmptyCompleter(){}
+    public H2OEmptyCompleter(H2OCountedCompleter cc){super(cc);}
     @Override public void compute2(){throw new UnsupportedOperationException();}
   }
 
@@ -1354,6 +1356,8 @@ public final class H2O {
     public final byte _backEnd;
 
     public KeyInfo(Key k, Value v){
+      assert k!=null : "Key should be not null!";
+      assert v!=null : "Value should be not null!";
       _key = k;
       _type = v.type();
       _rawData = v.isRawData();
@@ -1424,11 +1428,18 @@ public final class H2O {
       ArrayList<KeyInfo> res = new ArrayList<KeyInfo>();
       for(int i = 2; i < kvs.length; i+= 2){
         Object ok = kvs[i], ov = kvs[i+1];
-        if( !(ok instanceof Key  ) ) continue; // Ignore tombstones and Primes and null's
-        Key key = (Key )ok;
+        if( !(ok instanceof Key  ) || ov==null ) continue; // Ignore tombstones or deleted values
+        Key key = (Key) ok;
         if(!key.user_allowed())continue;
         if(homeOnly && !key.home())continue;
-        if( !(ov instanceof Value) ) continue; // Ignore tombstones and Primes and null's
+        // Raw array can contain regular and also wrapped values into Prime marker class:
+        //  - if we see Value object, create instance of KeyInfo
+        //  - if we do not see Value object, try to unwrap it via calling STORE.get and then
+        // look at wrapped value again.
+        if (!(ov instanceof Value)) {
+          ov = H2O.get(key); // H2Oget returns already Value object or null
+          if (ov==null) continue;
+        }
         res.add(new KeyInfo(key,(Value)ov));
       }
       final KeyInfo [] arr = res.toArray(new KeyInfo[res.size()]);
@@ -1440,7 +1451,7 @@ public final class H2O {
       KeySnapshot res = _cache;
       final long t = System.currentTimeMillis();
       if(res == null || (t - _lastUpdate) > timeTolerance)
-        res = new KeySnapshot((new GlobalUKeySetTask().invokeOnAllNodes()._res));
+        res = new KeySnapshot(new GlobalUKeySetTask().invokeOnAllNodes()._res);
       else if(t - _lastUpdate > _updateInterval)
         H2O.submitTask(new H2OCountedCompleter() {
           @Override

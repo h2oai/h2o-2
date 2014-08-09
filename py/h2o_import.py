@@ -160,7 +160,7 @@ def find_folder_and_filename(bucket, pathWithRegex, schema='put', returnFullPath
 # src_key= only used if for put file key name (optional)
 # path should point to a file or regex of files. (maybe folder works? but unnecessary
 def import_only(node=None, schema='local', bucket=None, path=None,
-    timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=0.5, pollTimeoutSecs=180, noise=None,
+    timeoutSecs=30, retryDelaySecs=0.1, initialDelaySecs=0, pollTimeoutSecs=180, noise=None,
     benchmarkLogging=None, noPoll=False, doSummary=True, src_key=None, noPrint=False, 
     importParentDir=True, **kwargs):
 
@@ -194,7 +194,7 @@ def import_only(node=None, schema='local', bucket=None, path=None,
     if schema=='put':
         # to train users
         if re.search(r"[/\*<>{}[\]~`]", pattern):
-           raise Exception("h2o putfile basename %s can't be regex. path= was %s" % (pattern, path))
+            raise Exception("h2o putfile basename %s can't be regex. path= was %s" % (pattern, path))
 
         if not path: 
             raise Exception("path= didn't say what file to put")
@@ -251,6 +251,10 @@ def import_only(node=None, schema='local', bucket=None, path=None,
 
         n = h2o.nodes[0]
         if schema=='s3' or node.redirect_import_folder_to_s3_path:
+            # FIX! hack for now...when we change import folder to import s3, point to unique bucket name for h2o
+            # should probably deal with this up in the bucket resolution 
+            # this may change other cases, but smalldata should only exist as a "bucket" for us?
+            folderOffset = re.sub("smalldata", "h2o-smalldata", folderOffset)
             folderURI = "s3://" + folderOffset
             if not n.aws_credentials:
                 print "aws_credentials: %s" % n.aws_credentials
@@ -263,6 +267,10 @@ def import_only(node=None, schema='local', bucket=None, path=None,
                 importResult = node.import_files(folderURI + "/" + pattern, timeoutSecs=timeoutSecs)
 
         elif schema=='s3n' or node.redirect_import_folder_to_s3n_path:
+            # FIX! hack for now...when we change import folder to import s3, point to unique bucket name for h2o
+            # should probably deal with this up in the bucket resolution 
+            # this may change other cases, but smalldata should only exist as a "bucket" for us?
+            folderOffset = re.sub("smalldata", "h2o-smalldata", folderOffset)
             if not (n.use_hdfs and ((n.hdfs_version and n.hdfs_name_node) or n.hdfs_config)):
                 print "use_hdfs: %s hdfs_version: %s hdfs_name_node: %s hdfs_config: %s" % \
                     (n.use_hdfs, n.hdfs_version, n.hdfs_name_node, n.hdfs_config)
@@ -321,7 +329,7 @@ def import_only(node=None, schema='local', bucket=None, path=None,
 #****************************************************************************************
 # can take header, header_from_file, exclude params
 def parse_only(node=None, pattern=None, hex_key=None,
-    timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=0.5, pollTimeoutSecs=180, noise=None,
+    timeoutSecs=30, retryDelaySecs=0.1, initialDelaySecs=0, pollTimeoutSecs=180, noise=None,
     benchmarkLogging=None, noPoll=False, **kwargs):
 
     if not node: node = h2o.nodes[0]
@@ -338,7 +346,7 @@ def parse_only(node=None, pattern=None, hex_key=None,
 #****************************************************************************************
 def import_parse(node=None, schema='local', bucket=None, path=None,
     src_key=None, hex_key=None, 
-    timeoutSecs=30, retryDelaySecs=0.5, initialDelaySecs=0.5, pollTimeoutSecs=180, noise=None,
+    timeoutSecs=30, retryDelaySecs=0.1, initialDelaySecs=0, pollTimeoutSecs=180, noise=None,
     benchmarkLogging=None, noPoll=False, doSummary=True, noPrint=True, 
     importParentDir=True, **kwargs):
 
@@ -447,9 +455,12 @@ def delete_keys_at_all_nodes(node=None, pattern=None, timeoutSecs=120):
     # this will be interesting if the others don't have a complete set
     # theoretically, the deletes should be 0 after the first node 
     # since the deletes should be global
-    for node in reversed(h2o.nodes):
-        deletedCnt = delete_keys(node, pattern=pattern, timeoutSecs=timeoutSecs)
-        totalDeletedCnt += deletedCnt
+    # for node in reversed(h2o.nodes):
+
+    # new: only use the directed node (node[0] typically)
+    # h2o storeview should have a global view now.
+    deletedCnt = delete_keys(node, pattern=pattern, timeoutSecs=timeoutSecs)
+    totalDeletedCnt += deletedCnt
 
     if pattern:
         print "Total: Deleted", totalDeletedCnt, "keys with filter=", pattern, "at", len(h2o.nodes), "nodes"

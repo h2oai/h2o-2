@@ -5,7 +5,7 @@ import Jama.SingularValueDecomposition;
 import hex.FrameTask.DataInfo;
 import hex.gram.Gram.GramTask;
 import water.Job.ColumnsJob;
-import water.Key;
+import water.*;
 import water.api.DocGen;
 import water.fvec.Frame;
 import water.fvec.Vec;
@@ -83,6 +83,15 @@ public class PCA extends ColumnsJob {
     PCAModel myModel = buildModel(dinfo, tsk);
     myModel.delete_and_lock(self());
     myModel.unlock(self());
+    remove();                   // Close/remove job
+    final JobState state = UKV.<Job>get(self()).state;
+    new TAtomic<PCAModel>() {
+      @Override
+      public PCAModel atomic(PCAModel m) {
+        if (m != null) m.get_params().state = state;
+        return m;
+      }
+    }.invoke(dest());
   }
 
   @Override protected void init() {

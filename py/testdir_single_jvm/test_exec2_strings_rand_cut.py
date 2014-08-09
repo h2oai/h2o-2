@@ -29,8 +29,7 @@ MAX_ENUM_WIDTH = 16
 RAND_ENUM_LENGTH = True
 CUT_EXPR_CNT = 20
 
-# ROWS=1000000
-ROWS=100000
+ROWS=1000000
 
 DO_PLOT = getpass.getuser()=='kevin'
 
@@ -67,16 +66,12 @@ def create_enum_list(n=4, **kwargs):
 
 def create_col_enum_list(inCount):
     # create a single choice lists
-    colEnumList = []
-    # for col in range(inCount):
-    enumList = create_enum_list(n=100000, quoteChars=quoteChars)
-    colEnumList.append(enumList)
+    colEnumList = create_enum_list(n=1000, quoteChars=quoteChars)
     return colEnumList
     
 
 def write_syn_dataset(csvPathname, rowCount, inCount=1, outCount=1, SEED='12345678', 
         colSepChar=",", rowSepChar="\n", quoteChars="", colEnumList=None):
-    r1 = random.Random(SEED)
 
     dsf = open(csvPathname, "w+")
     for row in range(rowCount):
@@ -124,9 +119,8 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
-        n = ROWS
         tryList = [
-            (n, 10, 9, 'cE', 300), 
+            (ROWS, 3, 2, 'cE', 300), 
             ]
 
         # create key names to use for exec
@@ -142,7 +136,7 @@ class Basic(unittest.TestCase):
 
             # create 100 possible cut expressions here, so we don't waste time below
             rowExprList = []
-            for i in range(CUT_EXPR_CNT):
+            for j in range(CUT_EXPR_CNT):
                 print "Creating", CUT_EXPR_CNT, 'cut expressions'
                 # init cutValue. None means no compare
                 cutValue = [None for i in range(iColCount)]
@@ -181,6 +175,7 @@ class Basic(unittest.TestCase):
                 print "rowExpr:", rowExpr
                 rowExprList.append(rowExpr)
 
+                print "j:", j
 
             # CREATE DATASET*******************************************
             SEEDPERFILE = random.randint(0, sys.maxint)
@@ -192,7 +187,7 @@ class Basic(unittest.TestCase):
 
             # PARSE*******************************************************
 
-            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=30, doSummary=False)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=30, doSummary=False, header=0)
 
             print "Parse result['destination_key']:", parseResult['destination_key']
             inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])

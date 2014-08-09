@@ -575,6 +575,18 @@ public class Frame extends Lockable<Frame> {
     return sum;
   }
 
+
+  // Allow sorting of columns based on some function
+  public void swap( int lo, int hi ) {
+    assert 0 <= lo && lo < _keys.length;
+    assert 0 <= hi && hi < _keys.length;
+    if( lo==hi ) return;
+    Vec vecs[] = vecs();
+    Vec v   = vecs [lo]; vecs  [lo] = vecs  [hi]; vecs  [hi] = v;
+    Key k   = _keys[lo]; _keys [lo] = _keys [hi]; _keys [hi] = k;
+    String n=_names[lo]; _names[lo] = _names[hi]; _names[hi] = n;
+  }
+
   @Override public String toString() {
     // Across
     Vec vecs[] = _vecs;

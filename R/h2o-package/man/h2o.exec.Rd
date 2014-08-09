@@ -31,7 +31,3 @@ res3<- h2o.exec(hex$nc<- ifelse(hex[,1]<5,log(hex[,3]+1),hex[,"Petal.Width"]/hex
 head(res3)
 head(hex)
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
-\keyword{ ~kwd1 }
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line

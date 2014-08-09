@@ -184,10 +184,13 @@ setMethod("show", "H2ODeepLearningModel", function(object) {
   cat("Deep Learning Model Key:", object@key)
 
   model = object@model
-  cat("\n\nTraining classification error:", model$train_class_error)
-  cat("\nTraining mean square error:", model$train_sqr_error)
-  cat("\n\nValidation classification error:", model$valid_class_error)
-  cat("\nValidation square error:", model$valid_sqr_error)
+  if (model$params$classification == 1) {
+    cat("\n\nTraining classification error:", model$train_class_error)
+    if (!is.null(model$valid_class_error)) cat("\n\nValidation classification error:", model$valid_class_error)
+  } else {
+    cat("\nTraining mean square error:", model$train_sqr_error)
+    if (!is.null(model$valid_sqr_error)) cat("\nValidation mean square error:", model$valid_sqr_error)
+  }
   
   if(!is.null(model$confusion)) {
     cat("\n\nConfusion matrix:\n")
@@ -204,6 +207,9 @@ setMethod("show", "H2ODeepLearningModel", function(object) {
   if(!is.null(model$hit_ratios)) {
     cat("\nHit Ratios for Multi-class Classification:\n")
     print(model$hit_ratios)
+  }
+  if(!is.null(model$varimp)) {
+    cat("\nRelative Variable Importance:\n"); print(model$varimp)
   }
   
   if(!is.null(object@xval) && length(object@xval) > 0) {
@@ -246,7 +252,8 @@ setMethod("show", "H2ODRFModel", function(object) {
 setMethod("show", "H2OSpeeDRFModel", function(object) {
   print(object@data@h2o)
   cat("Parsed Data Key:", object@data@key, "\n\n")
-  cat("SpeeDRF Model Key:", object@key)
+  cat("Random Forest Model Key:", object@key)
+  cat("\n\nSeed Used: ", object@model$params$seed)
 
   model = object@model
   cat("\n\nClassification:", model$params$classification)
@@ -389,8 +396,10 @@ as.h2o <- function(client, object, key = "", header, sep = "") {
     return(.h2o.exec2(res$dest_key, h2o = client, res$dest_key))
   } else {
     tmpf <- tempfile(fileext=".csv")
+    toFactor <- names(which(unlist(lapply(object, is.factor))))
     write.csv(object, file=tmpf, quote = TRUE, row.names = FALSE)
     h2f <- h2o.uploadFile(client, tmpf, key=key, header=header, sep=sep)
+    invisible(lapply(toFactor, function(a) { h2o.exec(h2f[,a] <- factor(h2f[,a])) }))
     unlink(tmpf)
     return(h2f)
   }
@@ -914,9 +923,18 @@ setMethod("t",       "H2OParsedData", function(x) { .h2o.__unop2("t",     x) })
 
 round.H2OParsedData <- function(x, digits = 0) {
   if(length(digits) > 1 || !is.numeric(digits)) stop("digits must be a single number")
-  if(digits < 0) digits = 10^(-digits)
   
   expr <- paste("round(", paste(x@key, digits, sep = ","), ")", sep = "")
+  res <- .h2o.__exec2(x@h2o, expr)
+  if(res$num_rows == 0 && res$num_cols == 0)
+    return(res$scalar)
+  .h2o.exec2(expr = res$dest_key, h2o = x@h2o, dest_key = res$dest_key)
+}
+
+signif.H2OParsedData <- function(x, digits = 6) {
+  if(length(digits) > 1 || !is.numeric(digits)) stop("digits must be a single number")
+  
+  expr <- paste("signif(", paste(x@key, digits, sep = ","), ")", sep = "")
   res <- .h2o.__exec2(x@h2o, expr)
   if(res$num_rows == 0 && res$num_cols == 0)
     return(res$scalar)

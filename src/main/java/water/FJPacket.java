@@ -1,4 +1,5 @@
 package water;
+
 import water.H2O.H2OCountedCompleter;
 
 /**
@@ -9,7 +10,7 @@ import water.H2O.H2OCountedCompleter;
  * @author <a href="mailto:cliffc@0xdata.com"></a>
  * @version 1.0
  */
-public class FJPacket extends H2OCountedCompleter {
+class FJPacket extends H2OCountedCompleter {
   final AutoBuffer _ab;
   final int _ctrl;              // 1st byte of packet
   FJPacket( AutoBuffer ab, int ctrl ) { _ab = ab; _ctrl = ctrl; }
@@ -29,6 +30,7 @@ public class FJPacket extends H2OCountedCompleter {
                H2O.MAX_PRIORITY,    // Rebooted
                H2O.MAX_PRIORITY,    // Timeline
                H2O.ACK_ACK_PRIORITY,// Ack Ack
+               H2O.FETCH_ACK_PRIORITY, // Class/ID mapping ACK
                H2O.ACK_PRIORITY,    // Ack
                H2O.DESERIAL_PRIORITY}; // Exec is very high, so we deserialize early
   @Override public byte priority() { return UDP_PRIORITIES[_ctrl]; }

@@ -159,6 +159,12 @@ public abstract class Job extends Func {
    * @param ex exception causing the termination of job.
    */
   public void cancel(Throwable ex){
+    if(ex instanceof JobCancelledException || ex.getMessage() != null && ex.getMessage().contains("job was cancelled"))
+      return;
+    if(ex instanceof  IllegalArgumentException || ex.getCause() instanceof IllegalArgumentException) {
+      cancel("Illegal argument: " + ex.getMessage());
+      return;
+    }
     StringWriter sw = new StringWriter();
     PrintWriter pw = new PrintWriter(sw);
     ex.printStackTrace(pw);

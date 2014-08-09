@@ -41,7 +41,3 @@ prostate.perf = h2o.performance(prostate.pred[,3], prostate.hex$CAPSULE, measure
 plot(prostate.perf, type = "cutoffs")     # Plot precision vs. thresholds
 plot(prostate.perf, type = "roc")         # Plot ROC curve
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
-\keyword{ ~kwd1 }
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line

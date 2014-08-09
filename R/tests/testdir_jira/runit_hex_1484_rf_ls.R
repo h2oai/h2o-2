@@ -16,7 +16,7 @@ path = locate("smalldata/logreg/prostate.csv")
 prostate.hex = h2o.uploadFile(conn, path, key="prostate.hex")
 h2o.ls(conn)
     
-rf = h2o.randomForest(x=c(1,4), y="CAPSULE", data=prostate.hex, ntree=5)
+rf = h2o.randomForest(x=c(1,4), y="CAPSULE", data=prostate.hex, ntree=5, type = "BigData")
 h2o.ls(conn)
 
 PASS_BANNER()

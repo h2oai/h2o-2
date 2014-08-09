@@ -31,7 +31,7 @@ class Basic(unittest.TestCase):
 
         # always match the gen above!
         trial = 1
-        for x in xrange (1,10,1):
+        for x in range (1):
             sys.stdout.write('.')
             sys.stdout.flush()
 

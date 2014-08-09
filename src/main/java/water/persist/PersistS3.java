@@ -8,6 +8,7 @@ import java.util.Properties;
 import water.*;
 import water.Job.ProgressMonitor;
 import water.api.Constants.Extensions;
+import water.fvec.FileVec;
 import water.fvec.Vec;
 import water.util.Log;
 import water.util.RIStream;
@@ -94,6 +95,9 @@ public final class PersistS3 extends Persist {
     byte[] b = MemoryManager.malloc1(v._max);
     Key k = v._key;
     long skip = 0;
+    // Skip offset based on chunk number
+    if(k._kb[0] == Key.DVEC)
+      skip = FileVec.chunkOffset(k); // The offset
     // Too complicate matters, S3 likes to reset connections when H2O hits it
     // too hard.  We "fix" this by just trying again, assuming we're getting
     // hit with a bogus resource limit (H2O doing a parse looks like a DDOS to

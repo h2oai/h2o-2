@@ -22,7 +22,7 @@
 \textsc{\small{Arno Candel \hspace{40pt} Viraj Parmar}}
 \\
 \bigskip
-\textsc{July 2014}
+\textsc{August 2014}
 \end{center}
 
 \tableofcontents
@@ -175,6 +175,8 @@ Maxout & $f(\cdot) = \max (w_i x_i + b) \text{, rescale if} \max f(\cdot) \geq 1
 \\
 The $\tanh$ function is a rescaled and shifted logistic function and its symmetry around 0 allows the training algorithm to converge faster. The rectified linear activation function has demonstrated high performance on image recognition tasks, and is a more biologically accurate model of neuron activations (\href{http://yann.lecun.com/exdb/publis/pdf/lecun-98b.pdf}{LeCun et al, 1998}). Maxout activation works particularly well with dropout, a regularization method discussed later in this vignette (\href{http://arxiv.org/pdf/1302.4389.pdf}{Goodfellow et al, 2013}). It is difficult to determine a ``best" activation function to use; each may outperform the others in separate scenarios, but grid search models (also described later) can help to compare activation functions and other parameters. The default activation is the $\tanh$ function. Each of these activation functions also has options in conjunction with dropout.
 \\
+\\
+\bigskip
 \\
 The following choices for the loss function $L(W,B$ $|$ $ j)$ are summarized in Table 2. The system default enforces the table's typical use rule based on whether regression or classification is being performed. Note here that $t^{(j)}$ and $o^{(j)}$ are the target output and actual output, respectively, for training example $j$; further, let $y$ denote the output units and $O$ the output layer.  
 \\
@@ -377,7 +379,7 @@ mnist_model
 \end{spverbatim}
 \noindent
 The latter command returns the trained model's training and validation error. The training error value is based on the parameter \texttt{score\_training\_samples}, which specifies the number of randomly sampled training points to be used for scoring; the default uses 10,000 points. The validation error is based on the parameter \texttt{score\_validation\_samples}, which controls the same value on the validation set and is set by default to be the entire validation set.
-In general choosing more sampled points leads to a better idea of the model's performance on your dataset; setting either of these parameters to 0 automatically uses the entire corresponding dataset for scoring. Either way, however, you can control the mininimum
+In general choosing more sampled points leads to a better idea of the model's performance on your dataset; setting either of these parameters to 0 automatically uses the entire corresponding dataset for scoring. Either way, however, you can control the minimum
 and maximum time spent on scoring with the \texttt{score\_interval} and \texttt{score\_duty\_cycle} parameters.
 \\
 \\
@@ -403,7 +405,8 @@ H2O R users have access to a slick web interface to mirror the model building pr
 
 \subsubsection{Variable importances} \label{3.3.1}
 
-One particularly useful visualization in the web interface is the variable importances, which can be enabled with the additional argument \texttt{variable\_importanes=TRUE}. This features allows us to witness the absolute and relative predictive strength of each feature in the classification task. For the purposes of digit classification, this aspect is less useful since each feature merely correponds to a pixel number that is not relevant to the model's more abstract feature representation; but it is useful in general for less uniform data. 
+One useful feature is the variable importances option, which can be enabled with the additional argument \texttt{variable\_importances=TRUE}. This features allows us to view the absolute and relative predictive strength of each feature in the prediction task. From R, you can access these strengths with the command \texttt{mnist\_model@model\$varimp}. You can also view a visualization of the variable
+importances on the web interface.
 
 \subsubsection{Java model} \label{3.3.2}
 
@@ -417,8 +420,7 @@ H2O supports grid search capabilities for model tuning by allowing users to twea
 #Create a set of network topologies
 hidden_layers = list(c(200,200), c(100,300,100),c(500,500,500))
 
-mnist_model_grid = h2o.deeplearning(x=1:784, y=785, data=train_images.hex, activation="RectifierWithDropout", hidden=hidden_layers, validation=
-test_images.hex, epochs=1, l1=c(1e-5,1e-7), input_dropout_ratio=0.2)
+mnist_model_grid = h2o.deeplearning(x = 1:784, y = 785, data = train_images.hex, activation = "RectifierWithDropout", hidden = hidden_layers, validation = test_images.hex, epochs = 1, l1 = c(1e-5,1e-7), input_dropout_ratio = 0.2)
 
 \end{spverbatim}
 \noindent
@@ -444,14 +446,39 @@ l1_params
 
 \subsection{Checkpoint model} \label{3.5}
 
-Checkpoint model keys can be used to start off where you left off, if you feel that you want to further train a particular model with more iterations, more data, different data, and so forth. If we felt that our initial model should be trained further, we can use it (or its key) as a checkpoint argument in a new model. Note that the training and validation datasets and the response column etc. have to match for checkpoint restarts.
+Checkpoint model keys can be used to start off where you left off, if you feel that you want to further train a particular model with more iterations, more data, different data, and so forth. If we felt that our initial model should be trained further, we can use it (or its key) as a checkpoint argument in a new model.
+In the command below, \texttt{mnist\_model\_grid@model[[1]]} indicates the highest performance model from the grid search that we wish to train further. Note that the training and validation datasets and the response column etc. have to match for checkpoint restarts.
 
 \begin{spverbatim}
 mnist_checkpoint_model = h2o.deeplearning(x=1:784, y=785, data=train_images.hex, checkpoint=mnist_model_grid@model[[1]], validation = test_images.hex, epochs=9)
+
 \end{spverbatim}
-\bigskip
 \noindent
-With more epochs you will hopefully see the predictive accuracy improved further. 
+Checkpoint models are also applicable for the case when we wish to reload existing models that were saved to disk in a previous session. For example, we can save and later load the best model from the grid search by running the following commands.
+
+\begin{spverbatim}
+#Specify a model and the file path where it is to be saved
+h2o.saveModel(object = mnist_model_grid@model[[1]], filename = "/tmp/mymodel", force = TRUE)
+
+#Alternatively, save the model key in some directory (here we use /tmp)
+#h2o.saveModel(object = mnist_model_grid@model[[1]], dir = "/tmp", force = TRUE)
+
+\end{spverbatim}
+\noindent
+Later (e.g., after restarting  H2O) we can load the saved model by indicating the host and saved model file path. This assumes the saved model was saved with a compatible H2O version (no changes to the H2O model implementation).
+
+\begin{spverbatim}
+best_mnist_grid.load = h2o.loadModel(h2o_server, "/tmp/mymodel")
+
+\end{spverbatim}
+\noindent
+Additionally, you can also use the command
+\begin{spverbatim}
+model = h2o.getModel(h2o_server, key)
+
+\end{spverbatim}
+\noindent
+to retrieve a model from its H2O key. This command is useful, for example, if you have created an H2O model using the web interface and wish to proceed with the modeling process in R.
 
 \subsection{Achieving state-of-the-art performance} \label{3.6}
 
@@ -540,12 +567,12 @@ head(test_recon.hex)
 \item \texttt{l1}: The default is 0. See \ref{2.3} for more details.
 \item \texttt{l2}: The default is 0. See \ref{2.3} for more details.
 \item \texttt{max\_w2}: A maximum on the sum of the squared incoming weights into any one neuron. This tuning parameter is especially useful for unbound activation functions such as Maxout or Rectifier. The default leaves this maximum unbounded.
-\item \texttt{initial\_weight\_distribution}:The distribution from which initial weights are to be drawn. The default is the uniform adaptive option. See \ref{2.2.1} for more details.
+\item \texttt{initial\_weight\_distribution}:The distribution from which initial weights are to be drawn. The default is the uniform adaptive option. Other options are Uniform and Normal distributions. See \ref{2.2.1} for more details.
 \item \texttt{initial\_weight\_scale}: The scale of the distribution function for Uniform or Normal distributions. For Uniform, the values are drawn uniformly from (-initial\_weight\_scale, initial\_weight\_scale). For Normal, the values are drawn from a Normal distribution with a standard deviation of initial\_weight\_scale. The default is 1.0. See \ref{2.2.1} for more details.
 \item \texttt{loss}: The default is automatic based on the particular learning problem. See \ref{2.2.2} for more details.
 \item \texttt{score\_interval}: The minimum time (in seconds) to elapse between model scoring. The actual interval is determined by the number of training samples per iteration and the scoring duty cycle. Default is 5.
 \item \texttt{score\_training\_samples}: The number of training dataset points to be used for scoring. Will be randomly sampled. Use 0 for selecting the entire training dataset. Default is 10000.
-\item \texttt{score\_validation\_samples}: The number of validation dataset points to be used for scoring. Can be randomly sampled or stratified (if "balance classes" is set and "score validation sampling" is set to stratify). Use 0 for selecting the entire training dataset (this is also the default).
+\item \texttt{score\_validation\_samples}: The number of validation dataset points to be used for scoring. Can be randomly sampled or stratified (if ``balance classes" is set and ``score validation sampling" is set to stratify). Use 0 for selecting the entire training dataset (this is also the default).
 \item \texttt{score\_duty\_cycle}: Maximum fraction of wall clock time spent on model scoring on training and validation samples, and on diagnostics such as computation of feature importances (i.e., not on training). Default is 0.1.
 \item \texttt{classification\_stop}: The stopping criteria in terms of classification error (1-accuracy) on the training data scoring dataset. When the error is at or below this threshold, training stops. Default is 0.
 \item \texttt{regression\_stop}: The stopping criteria in terms of regression error (MSE) on the training data scoring dataset. When the error is at or below this threshold, training stops. Default is 1e-6.
@@ -554,7 +581,7 @@ head(test_recon.hex)
 \item \texttt{max\_hit\_ratio\_k}: The maximum number (top K) of predictions to use for hit ratio computation (for multi-class only, 0 to disable). Default is 10.
 \item \texttt{balance\_classes}: For imbalanced data, balance training data class counts via over/under-sampling. This can result in improved predictive accuracy. Default is false.
 \item \texttt{max\_after\_balance\_size}: When classes are balanced, limit the resulting dataset size to the specified multiple of the original dataset size. This is the maximum relative size of the training data after balancing class counts (can be less than 1.0). Default is 5.0.
-\item \texttt{score\_validation\_sampling}: The number of validation dataset points to be used for scoring. Can be randomly sampled or stratified (if "balance classes" is set and "score validation sampling" is set to stratify). Use 0 for selecting the entire training dataset. Default is 0.
+\item \texttt{score\_validation\_sampling}: Method used to sample validation dataset for scoring. The possible methods are Uniform and Stratified. Default is Uniform.
 \item \texttt{diagnostics}: Gather diagnostics for hidden layers, such as mean and RMS values of learning rate, momentum, weights and biases. Default is true.
 \item \texttt{variable\_importances}: Whether to compute variable importances for input features. The implementation considers the weights connecting the input features to the first two hidden layers. Default is false.
 \item \texttt{fast\_mode}: Enable fast mode (minor approximation in back-propagation), should not affect results significantly. Default is true.

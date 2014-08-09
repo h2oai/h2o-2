@@ -6,7 +6,7 @@ iris_train.hex <- h2o.uploadFile(conn, train)
 
 heading("Creating DRF model in H2O")
 balance_classes <- if (exists("balance_classes")) balance_classes else FALSE
-iris.rf.h2o <- h2o.randomForest(x = x, y = y, data = iris_train.hex, ntree = ntree, depth = depth, nodesize = nodesize, balance.classes = balance_classes, seed = 42)
+iris.rf.h2o <- h2o.randomForest(x = x, y = y, data = iris_train.hex, ntree = ntree, depth = depth, nodesize = nodesize, balance.classes = balance_classes, seed = 42, type = "BigData")
 print(iris.rf.h2o)
 
 heading("Downloading Java prediction model code from H2O")
@@ -40,11 +40,11 @@ if(is.null(ncol(iris_test_without_response))) {
 write.csv(iris_test_without_response, file = sprintf("%s/in.csv", tmpdir_name), row.names=F, quote=F)
 cmd <- sprintf("cp PredictCSV.java %s", tmpdir_name)
 safeSystem(cmd)
-cmd <- sprintf("javac -cp %s/h2o-model.jar -J-Xmx2g -J-XX:MaxPermSize=128m %s/PredictCSV.java %s/%s.java", H2O_JAR_DIR, tmpdir_name, tmpdir_name, model_key)
+cmd <- sprintf("javac -cp %s/h2o-model.jar -J-Xmx4g -J-XX:MaxPermSize=256m %s/PredictCSV.java %s/%s.java", H2O_JAR_DIR, tmpdir_name, tmpdir_name, model_key)
 safeSystem(cmd)
 
 heading("Predicting with Java POJO")
-cmd <- sprintf("java -ea -cp %s/h2o-model.jar:%s -Xmx2g -XX:MaxPermSize=256m -XX:ReservedCodeCacheSize=256m PredictCSV --header --model %s --input %s/in.csv --output %s/out_pojo.csv", H2O_JAR_DIR, tmpdir_name, model_key, tmpdir_name, tmpdir_name)
+cmd <- sprintf("java -ea -cp %s/h2o-model.jar:%s -Xmx4g -XX:MaxPermSize=256m -XX:ReservedCodeCacheSize=256m PredictCSV --header --model %s --input %s/in.csv --output %s/out_pojo.csv", H2O_JAR_DIR, tmpdir_name, model_key, tmpdir_name, tmpdir_name)
 safeSystem(cmd)
 
 heading("Comparing predictions between H2O and Java POJO")

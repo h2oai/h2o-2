@@ -14,7 +14,7 @@ test.pub.767 <- function(conn) {
   Log.info('Print head of dataset')
   Log.info(head(prostate))
 
-  m <- h2o.SpeeDRF(x = 3:8, y = 2, data = prostate, ntree = 500, depth = 100) 
+  m <- h2o.randomForest(x = 3:8, y = 2, data = prostate, ntree = 500, depth = 100) 
 
   Log.info("Number of rows in the confusion matrix for AUC:")
   print(sum(m@model$confusion[3,1:2]))
@@ -28,4 +28,4 @@ test.pub.767 <- function(conn) {
   testEnd()
 }
 
-doTest("PUB-767: SpeeDRF on discontinuous integer classes.", test.pub.767)
+doTest("PUB-767: randomForest on discontinuous integer classes.", test.pub.767)

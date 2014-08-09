@@ -10,7 +10,7 @@ def checkH2OLogs(timeoutSecs=3, expectedMinLines=12):
     logNameList = ["h2o_" + str(n.http_addr) + "_" + str(n.port) + ".log" for n in h2o.nodes]
     lineCountList = []
     for logName in logNameList:
-        lineCount = h2o_util.file_line_count("sandbox/" + logName)
+        lineCount = h2o_util.file_line_count(h2o.LOG_DIR + "/" + logName)
         print logName, "lineCount:", lineCount
         lineCountList.append(lineCount)
 

@@ -216,8 +216,7 @@ public class ParserTest2 extends TestUtil {
     for (char separator : SEPARATORS) {
       String[] dataset = getDataForSeparator(separator, data);
       Key k = FVecTest.makeByteVec("ChunkBoundariesMixedLineEndings",dataset);
-      testParsed(k,exp);
-      checkLeakedKeys();
+      testParsed(k, exp);
     }
   }
 
@@ -259,7 +258,6 @@ public class ParserTest2 extends TestUtil {
       Assert.assertEquals("two",cd[3]);
       testParsed(fr, expDouble,expDouble.length);
     }
-    checkLeakedKeys();
   }
 
   @Test public void testNumberFormats(){
@@ -757,22 +755,30 @@ public class ParserTest2 extends TestUtil {
 
   @Test public void testMultiFileParseSmall(){
     Key [] files = null,files2 = null;
-    Frame f1 = null,f2 = null;
+    Frame f1 = null,f2 = null, f3=null;
     try {
       files = ImportFiles2.importPath("smalldata/parse_folder_test");
       f1 = ParseDataset2.parse(Key.make("multifile"), files);
       files2 = ImportFiles2.importPath("smalldata/glm_test/prostate_cat_replaced.csv");
-      f2 = f1.makeCompatible(ParseDataset2.parse(Key.make("singleFile"), files2));
+      f3 = ParseDataset2.parse(Key.make("singleFile"), files2);
+      f2 = f1.makeCompatible(f3);
       DKV.put(f2._key,f2); // annoyingly, have to put the frame back into KV
       // can not assert on bit-identity, enums will generally have different types depending on how they were created,
       // since during parse they are first numbered racily (so the initial compression does not have to be optimal!)
-      // and then renumbered later, but not recompressed (if they fit within the original compresison scheme)
+      // and then renumbered later, but not recompressed (if they fit within the original compression scheme)
       assertTrue(f1.isIdentical(f2));
     } finally {
-      if(f1 != null) f1.delete();
+      if(f1 != null)f1.delete();
       if(f2 != null)f2.delete();
-      if(files != null) for(Key k:files)UKV.remove(k);
-      if(files2 != null) for(Key k:files2)UKV.remove(k);
+      if(f3 != null)f3.delete();
+      if(files != null) for(Key k:files) {
+        Frame f = UKV.get(k);
+        if (f!=null) f.delete();
+      }
+      if(files2 != null) for(Key k:files2) {
+        Frame f = UKV.get(k);
+        if (f!=null) f.delete();
+      }
     }
   }
   void runTests(){
@@ -796,7 +802,6 @@ public class ParserTest2 extends TestUtil {
     testNumberFormats();
     System.out.println("testNAs");
     testNAs();
-    checkLeakedKeys();
     System.out.println("DONE!!!");
   }
 
@@ -1139,7 +1144,6 @@ public class ParserTest2 extends TestUtil {
               "smalldata/test/HTWO-87-two-lines-dataset.csv",
               "smalldata/test/HTWO-87-two-unique-lines-dataset.csv",
               "smalldata/test/is_NA.csv",
-              "smalldata/test/is_NA2.csv",
               "smalldata/test/na_test.zip",
               "smalldata/test/R/titanic.csv",
 //              "smalldata/test/rmodels/covtype-rf-50tree-as-factor-X5-20k.rdata",
@@ -1197,14 +1201,326 @@ public class ParserTest2 extends TestUtil {
               "smalldata/zipcodes",
       };
       for (String f : files) {
+        Frame fr=null;
         try {
           Log.info("Trying to parse " + f);
           Key fkey = NFSFileVec.make(find_test_file(f));
-          ParseDataset2.parse(Key.make(), new Key[]{fkey});
-        } catch (Throwable t) {
-          t.printStackTrace();
+          fr = ParseDataset2.parse(Key.make(), new Key[]{fkey});
+        } finally {
+          if (fr != null) fr.delete();
         }
       }
     }
+   }
+
+  // test 0,N,Y -> NA,0,1
+  @Test public void testBinaryCol1() {
+    String data =
+                  "1 A 0\n"+
+                  "2 B 0\n"+
+                  "3 C N\n"+
+                  "4 A 0\n"+
+                  "5 B 0\n"+
+                  "6 C N\n"+
+                  "7 A 0\n"+
+                  "8 B 0\n"+
+                  "9 C 0\n"+
+                 "10 A Y\n"+
+                 "11 B 0\n"+
+                 "12 C 0\n";
+
+    double[][] exp = new double[][] {
+            d( 1,0,NaN),
+            d( 2,1,NaN),
+            d( 3,2,0),
+            d( 4,0,NaN),
+            d( 5,1,NaN),
+            d( 6,2,0),
+            d( 7,0,NaN),
+            d( 8,1,NaN),
+            d( 9,2,NaN),
+            d(10,0,1),
+            d(11,1,NaN),
+            d(12,2,NaN),
+    };
+    Key k = FVecTest.makeByteVec("test",data);
+    testParsed(k,exp);
   }
+
+  // test 0,F,T -> NA,0,1
+  @Test public void testBinaryCol2() {
+    String data =
+            "1 A 0\n"+
+                    "2 B 0\n"+
+                    "3 C F\n"+
+                    "4 A 0\n"+
+                    "5 B 0\n"+
+                    "6 C F\n"+
+                    "7 A 0\n"+
+                    "8 B 0\n"+
+                    "9 C 0\n"+
+                    "10 A T\n"+
+                    "11 B 0\n"+
+                    "12 C 0\n";
+
+    double[][] exp = new double[][] {
+            d( 1,0,NaN),
+            d( 2,1,NaN),
+            d( 3,2,0),
+            d( 4,0,NaN),
+            d( 5,1,NaN),
+            d( 6,2,0),
+            d( 7,0,NaN),
+            d( 8,1,NaN),
+            d( 9,2,NaN),
+            d(10,0,1),
+            d(11,1,NaN),
+            d(12,2,NaN),
+    };
+    Key k = FVecTest.makeByteVec("test",data);
+    testParsed(k,exp);
+  }
+
+  // test 0,n,y -> NA,0,1
+  @Test public void testBinaryCol3() {
+    String data =
+            "1 A 0\n"+
+                    "2 B 0\n"+
+                    "3 C n\n"+
+                    "4 A 0\n"+
+                    "5 B 0\n"+
+                    "6 C n\n"+
+                    "7 A 0\n"+
+                    "8 B 0\n"+
+                    "9 C 0\n"+
+                    "10 A y\n"+
+                    "11 B 0\n"+
+                    "12 C 0\n";
+
+    double[][] exp = new double[][] {
+            d( 1,0,NaN),
+            d( 2,1,NaN),
+            d( 3,2,0),
+            d( 4,0,NaN),
+            d( 5,1,NaN),
+            d( 6,2,0),
+            d( 7,0,NaN),
+            d( 8,1,NaN),
+            d( 9,2,NaN),
+            d(10,0,1),
+            d(11,1,NaN),
+            d(12,2,NaN),
+    };
+    Key k = FVecTest.makeByteVec("test",data);
+    testParsed(k,exp);
+  }
+
+  // test 0,f,t -> NA,0,1
+  @Test public void testBinaryCol4() {
+    String data =
+            "1 A 0\n"+
+                    "2 B 0\n"+
+                    "3 C f\n"+
+                    "4 A 0\n"+
+                    "5 B 0\n"+
+                    "6 C f\n"+
+                    "7 A 0\n"+
+                    "8 B 0\n"+
+                    "9 C 0\n"+
+                    "10 A t\n"+
+                    "11 B 0\n"+
+                    "12 C 0\n";
+
+    double[][] exp = new double[][] {
+            d( 1,0,NaN),
+            d( 2,1,NaN),
+            d( 3,2,0),
+            d( 4,0,NaN),
+            d( 5,1,NaN),
+            d( 6,2,0),
+            d( 7,0,NaN),
+            d( 8,1,NaN),
+            d( 9,2,NaN),
+            d(10,0,1),
+            d(11,1,NaN),
+            d(12,2,NaN),
+    };
+    Key k = FVecTest.makeByteVec("test",data);
+    testParsed(k,exp);
+  }
+
+  // test 0,n,y -> NA,0,1
+  @Test public void testBinaryCol5() {
+    String data =
+            "1 A 0\n"+
+                    "2 B 0\n"+
+                    "3 C n\n"+
+                    "4 A 0\n"+
+                    "5 B 0\n"+
+                    "6 C n\n"+
+                    "7 A 0\n"+
+                    "8 B 0\n"+
+                    "9 C 0\n"+
+                    "10 A y\n"+
+                    "11 B 0\n"+
+                    "12 C 0\n";
+
+    double[][] exp = new double[][] {
+            d( 1,0,NaN),
+            d( 2,1,NaN),
+            d( 3,2,0),
+            d( 4,0,NaN),
+            d( 5,1,NaN),
+            d( 6,2,0),
+            d( 7,0,NaN),
+            d( 8,1,NaN),
+            d( 9,2,NaN),
+            d(10,0,1),
+            d(11,1,NaN),
+            d(12,2,NaN),
+    };
+    Key k = FVecTest.makeByteVec("test",data);
+    testParsed(k,exp);
+  }
+
+  // test 0,n,y -> NA,0,1 with single quotes
+  @Test public void testBinaryCol6() {
+    String data =
+            "1 A 0\n"+
+                    "2 B 0\n"+
+                    "3 C 'n'\n"+
+                    "4 A 0\n"+
+                    "5 B 0\n"+
+                    "6 C 'n'\n"+
+                    "7 A 0\n"+
+                    "8 B 0\n"+
+                    "9 C 0\n"+
+                    "10 A 'y'\n"+
+                    "11 B 0\n"+
+                    "12 C 0\n";
+
+    double[][] exp = new double[][] {
+            d( 1,0,NaN),
+            d( 2,1,NaN),
+            d( 3,2,0),
+            d( 4,0,NaN),
+            d( 5,1,NaN),
+            d( 6,2,0),
+            d( 7,0,NaN),
+            d( 8,1,NaN),
+            d( 9,2,NaN),
+            d(10,0,1),
+            d(11,1,NaN),
+            d(12,2,NaN),
+    };
+    Key k = FVecTest.makeByteVec("test",data);
+    testParsed(k,exp);
+  }
+
+  // test 0,n,y -> NA,0,1 with double quotes
+  @Test public void testBinaryCol7() {
+    String data =
+            "1 A 0\n"+
+                    "2 B 0\n"+
+                    "3 C \"n\"\n"+
+                    "4 A 0\n"+
+                    "5 B 0\n"+
+                    "6 C \"n\"\n"+
+                    "7 A 0\n"+
+                    "8 B 0\n"+
+                    "9 C 0\n"+
+                    "10 A \"y\"\n"+
+                    "11 B 0\n"+
+                    "12 C 0\n";
+
+    double[][] exp = new double[][] {
+            d( 1,0,NaN),
+            d( 2,1,NaN),
+            d( 3,2,0),
+            d( 4,0,NaN),
+            d( 5,1,NaN),
+            d( 6,2,0),
+            d( 7,0,NaN),
+            d( 8,1,NaN),
+            d( 9,2,NaN),
+            d(10,0,1),
+            d(11,1,NaN),
+            d(12,2,NaN),
+    };
+    Key k = FVecTest.makeByteVec("test",data);
+    testParsed(k,exp);
+  }
+
+  // test 0,n,y -> NA,0,1
+  @Test public void testBinaryColZipped() {
+
+    Frame fr = parseFrame(null,"smalldata/test/is_NA2.csv.gz");
+    double[][] exp = new double[][] {
+            d( 1,0,NaN),
+            d( 2,1,NaN),
+            d( 3,2,0),
+            d( 4,0,NaN),
+            d( 5,1,NaN),
+            d( 6,2,0),
+            d( 7,0,NaN),
+            d( 8,1,NaN),
+            d( 9,2,NaN),
+            d(10,0,1),
+            d(11,1,NaN),
+            d(12,2,NaN),
+    };
+    Log.info(fr.toStringAll());
+    testParsed(fr,exp,12);
+  }
+
+
+  // test 0,n,y -> NA,0,1
+  @Test public void testBinaryColMultiFile() {
+    Key [] files = ImportFiles2.importPath("smalldata/test/binaryCol");
+    Frame f1 = ParseDataset2.parse(Key.make("multifile"), files);
+
+    double[][] exp = new double[][] {
+            d( 1,0,NaN),
+            d( 2,1,NaN),
+            d( 3,2,NaN),
+            d( 4,0,NaN),
+            d( 5,1,NaN),
+            d( 6,2,NaN),
+            d( 7,0,NaN),
+            d( 8,1,NaN),
+            d( 9,2,NaN),
+            d(10,0,NaN),
+            d(11,1,NaN),
+            d(12,2,NaN),
+
+            d( 1,0,NaN),
+            d( 2,1,NaN),
+            d( 3,2,0),
+            d( 4,0,NaN),
+            d( 5,1,NaN),
+            d( 6,2,0),
+            d( 7,0,NaN),
+            d( 8,1,NaN),
+            d( 9,2,NaN),
+            d(10,0,1),
+            d(11,1,NaN),
+            d(12,2,NaN),
+
+            d( 1,0,NaN),
+            d( 2,1,NaN),
+            d( 3,2,0),
+            d( 4,0,NaN),
+            d( 5,1,NaN),
+            d( 6,2,0),
+            d( 7,0,NaN),
+            d( 8,1,NaN),
+            d( 9,2,NaN),
+            d(10,0,0),
+            d(11,1,NaN),
+            d(12,2,NaN),
+    };
+    Log.info(f1.toStringAll());
+    testParsed(f1,exp,36);
+  }
+
 }

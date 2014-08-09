@@ -57,7 +57,7 @@ public class Timeline extends Request {
       long l0 = event.dataLo();
       long h8 = event.dataHi();
       int udp_type = (int)(l0&0xff); // First byte is UDP packet type
-      UDP.udp e = UDP.udp.UDPS[udp_type];
+      UDP.udp e = UDP.getUdp(udp_type);
 
       // Accumulate repeated heartbeats
       if( e == UDP.udp.heartbeat ) {

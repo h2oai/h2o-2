@@ -3,6 +3,7 @@ package water.exec;
 import java.util.*;
 
 import water.*;
+import water.H2O.KeyInfo;
 import water.fvec.*;
 import water.util.Utils.IcedHashMap;
 import water.util.Utils.IcedInt;
@@ -192,13 +193,13 @@ public class Env extends Iced {
   public String key()     { return _key[_sp]; }
   // Pop frame from stack; lower refcnts... allowing to fall to zero without deletion.
   // Assumption is that this Frame will get pushed again shortly.
-  public Frame  popXAry()  { 
+  public Frame  popXAry()  {
     Frame fr = popAry();
     for( Vec vec : fr.vecs() ) {
       popVec(vec);
       if ( vec.masterVec() != null ) popVec(vec.masterVec());
     }
-    return fr; 
+    return fr;
   }
   public void popVec(Vec vec)  {
     int cnt = _refcnt.get(vec)._val-1;
@@ -248,27 +249,34 @@ public class Env extends Iced {
     return true;
   }
 
+  /**
+   * Subtract reference count.
+   * @param vec  vector to handle
+   * @param fs  future, cannot be null
+   * @return returns given Future
+   */
   public Futures subRef( Vec vec, Futures fs ) {
+    assert fs != null : "Future should not be null!";
     if ( vec.masterVec() != null ) subRef(vec.masterVec(), fs);
     int cnt = _refcnt.get(vec)._val-1;
-    //Log.info(" --- " + vec._key.toString()+ " RC=" + cnt);
-    if( cnt > 0 ) _refcnt.put(vec,new IcedInt(cnt));
-    else {
-      if( fs == null ) fs = new Futures();
+    if ( cnt > 0 ) {
+      _refcnt.put(vec,new IcedInt(cnt));
+    } else {
       UKV.remove(vec._key,fs);
       _refcnt.remove(vec);
     }
     return fs;
   }
+  public void subRef(Vec vec) { subRef(vec, new Futures()).blockForPending(); }
 
   // Lower the refcnt on all vecs in this frame.
   // Immediately free all vecs with zero count.
   // Always return a null.
   public Frame subRef( Frame fr, String key ) {
     if( fr == null ) return null;
-    Futures fs = null;
-    for( Vec vec : fr.vecs() ) fs = subRef(vec,fs);
-    if( fs != null ) fs.blockForPending();
+    Futures fs = new Futures();
+    for( Vec vec : fr.vecs() ) subRef(vec,fs);
+    fs.blockForPending();
     return null;
   }
   // Lower refcounts on all vecs captured in the inner environment
@@ -334,7 +342,7 @@ public class Env extends Iced {
           if( refcnt > 1 ) {    // Need a deep-copy now
             Vec v2 = new Frame(v).deepSlice(null,null).vecs()[0];
             fr2.replace(i,v2);  // Replace with private deep-copy
-            subRef(v,null);     // Now lower refcnt for good assertions
+            subRef(v);     // Now lower refcnt for good assertions
             addRef(v2);
           } // But not down to zero (do not delete items in global scope)
         }
@@ -342,8 +350,9 @@ public class Env extends Iced {
         else { fr2.delete_and_lock(null); _locked.add(fr2._key); } // Clear prior & set new data
         fr2.unlock(null);
         _locked.remove(fr2._key); // Unlocked already
-      } else
+      } else {
         popUncheck();
+      }
     }
     // Unlock all things that do not survive, plus also delete them
     for( Key k : _locked ) {
@@ -399,7 +408,7 @@ public class Env extends Iced {
   }
 
   public String toString(int i, boolean verbose_fcn) {
-    if( _ary[i] != null ) return _ary[i].numRows()+"x"+_ary[i].numCols();
+    if( _ary[i] != null ) return _ary[i]._key+":"+_ary[i].numRows()+"x"+_ary[i].numCols();
     else if( _fcn[i] != null ) return _fcn[i].toString(verbose_fcn);
     return Double.toString(_d[i]);
   }

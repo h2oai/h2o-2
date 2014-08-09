@@ -1,5 +1,6 @@
 package water.api;
 
+import hex.glm.GLMModel;
 import water.*;
 import water.fvec.Frame;
 import water.fvec.Vec;
@@ -30,11 +31,9 @@ public class Predict extends Request2 {
     try {
       if( model == null )
         throw new IllegalArgumentException("Model is required to perform validation!");
-
       // Create a new random key
       if ( prediction == null )
         prediction = Key.make("__Prediction_" + Key.make());
-
       fr = new Frame(prediction,new String[0],new Vec[0]).delete_and_lock(null);
       fr = model.score(data);
       fr = new Frame(prediction,fr._names,fr.vecs()); // Jam in the frame key

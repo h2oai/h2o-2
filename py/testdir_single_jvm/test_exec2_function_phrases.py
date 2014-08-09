@@ -29,6 +29,19 @@ phrasesCompound = [
 ]
 
 phrases = [
+        "round(rhex[,1],0)",
+        "round(rhex[,1],1)",
+        "round(rhex[,1],2)",
+        # "signif(rhex[,1],-1)",
+        # "signif(rhex[,1],0)",
+        "signif(rhex[,1],1)",
+        "signif(rhex[,1],2)",
+        "signif(rhex[,1],22)",
+        "trunc(rhex[,1])",
+        "trunc(rhex[,1])",
+        "trunc(rhex[,1])",
+        "trunc(rhex[,1])",
+
         "ifelse(1,0,2)",
         "ifelse(0,0,2)",
         "!1.23",
