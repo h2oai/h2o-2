@@ -88,7 +88,7 @@ class Basic(unittest.TestCase):
             if DO_INSPECT:
                 h2o_cmd.runInspect(key='temp1000.hex')
 
-            h2o_cmd.runSummary(key='temp1000.hex')
+            h2o_cmd.runSummary(key='temp1000.hex', timeoutSecs=300)
             print h2o.dump_json(cfResult)
     
             print "Trial #", trial, "completed"
