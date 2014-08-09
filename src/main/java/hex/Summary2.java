@@ -550,9 +550,23 @@ public class Summary2 extends Iced {
     }
 
     int binIdxInt = (int) binIdx;
-    assert (_start <= val) : "Why is val < _start? val:"+val+" _start:";
-    assert (binIdxInt >= 0 && binIdx < hcnt.length) : 
-        "binIdxInt bad for hcnt2. binIdxInt:"+binIdxInt+" hcnt.length:"+hcnt.length+" val:"+val+" _start:"+_start+" _binsz:"+_binsz;
+
+    // FIXME:
+    //
+    // If there is more than one histogram bucket, do some assertion checks.
+    // Otherwise, just increment the one bucket we have.
+    //
+    // Note that test test_create_frame_rand1.py calling
+    //     GET  /2/CreateFrame.json randomize=1 integer_fraction=0 real_range=1234567890 response_factors=0 factors=1
+    // was able to create a frame that tripped this assertion.
+    //
+    // This may or may not be OK.
+    if (hcnt.length > 0) {
+      assert (_start <= val) : "Why is val < _start? val:" + val + " _start:" + _start;
+      assert (binIdxInt >= 0 && binIdx < hcnt.length) :
+              "binIdxInt bad for hcnt2. binIdxInt:" + binIdxInt + " hcnt.length:" + hcnt.length + " val:" + val + " _start:" + _start + " _binsz:" + _binsz;
+    }
+
     ++hcnt[binIdxInt];
   }
 
@@ -873,15 +887,19 @@ public class Summary2 extends Iced {
     for (int i = 0; i < _maxs.length; i++) _maxs[i] = i;
     int mini = 0, maxi = 0;
     for( int i = 0; i < hcnt.length; i++ ) {
-      if (hcnt[i] < hcnt[(int)_mins[mini]]) {
-        _mins[mini] = i;
-        for (int j = 0; j < _mins.length; j++)
-          if (hcnt[(int)_mins[j]] > hcnt[(int)_mins[mini]]) mini = j;
+      if (_mins.length > 0) {
+        if (hcnt[i] < hcnt[(int) _mins[mini]]) {
+          _mins[mini] = i;
+          for (int j = 0; j < _mins.length; j++)
+            if (hcnt[(int) _mins[j]] > hcnt[(int) _mins[mini]]) mini = j;
+        }
       }
-      if (hcnt[i] > hcnt[(int)_maxs[maxi]]) {
-        _maxs[maxi] = i;
-        for (int j = 0; j < _maxs.length; j++)
-          if (hcnt[(int)_maxs[j]] < hcnt[(int)_maxs[maxi]]) maxi = j;
+      if (_maxs.length > 0) {
+        if (hcnt[i] > hcnt[(int) _maxs[maxi]]) {
+          _maxs[maxi] = i;
+          for (int j = 0; j < _maxs.length; j++)
+            if (hcnt[(int) _maxs[j]] < hcnt[(int) _maxs[maxi]]) maxi = j;
+        }
       }
     }
     for (int i = 0; i < _mins.length - 1; i++)
