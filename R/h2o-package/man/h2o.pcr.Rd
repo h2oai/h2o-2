@@ -74,6 +74,7 @@ This method standardizes the data, obtains the first \code{ncomp} principal comp
 \code{\link{h2o.prcomp}, \link{h2o.glm}}
 }
 \examples{
+\dontrun{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 
@@ -83,4 +84,4 @@ prostate.hex = h2o.importURL(localH2O, path = paste("https://raw.github.com",
 h2o.pcr(x = c("AGE","RACE","PSA","DCAPS"), y = "CAPSULE", data = prostate.hex, family = "binomial", 
   nfolds = 0, alpha = 0.5, ncomp = 2)
 }
-
+}
