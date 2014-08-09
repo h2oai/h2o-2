@@ -388,7 +388,7 @@ h2o.ignoreColumns <- function(data, max_na = 0.2) {
 
 
 # ------------------- Save H2O Model to Disk ----------------------------------------------------
-h2o.saveModel <- function(object, dir="", name="", filename = "", force=FALSE) {
+h2o.saveModel <- function(object, dir="", name="", filename = "", save_cv=FALSE, force=FALSE) {
   if(missing(object)) stop('Must specify object')
   if(!inherits(object,'H2OModel')) stop('object must be an H2O model')
   if(!is.character(dir)) stop('path must be of class character')

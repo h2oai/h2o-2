@@ -17,7 +17,7 @@ paramDict = {
     'integer_fraction': [None, 0.1, 1.0], # Fraction of integer columns (for randomize=true)
     'integer_range': [None, 0, 1, 1234567890], # -range to range
     'missing_fraction': [None, 0.1, 1.0],
-    'response_factors': [None, 0, 1, 2, 10], # Number of factor levels of the first column (1=real, 2=binomial, N=multinomial)
+    'response_factors': [None, 1, 2, 10], # Number of factor levels of the first column (1=real, 2=binomial, N=multinomial)
 }
 
 class Basic(unittest.TestCase):
@@ -88,7 +88,7 @@ class Basic(unittest.TestCase):
             if DO_INSPECT:
                 h2o_cmd.runInspect(key='temp1000.hex')
 
-            h2o_cmd.runSummary(key='temp1000.hex')
+            h2o_cmd.runSummary(key='temp1000.hex', timeoutSecs=300)
             print h2o.dump_json(cfResult)
     
             print "Trial #", trial, "completed"

@@ -93,10 +93,12 @@ australia.hex = h2o.importFile(localH2O, path = ausPath)
 independent <- c("premax", "salmax","minairtemp", "maxairtemp", "maxsst", 
   "maxsoilmoist", "Max_czcs")
 dependent <- "runoffnew"
-h2o.gbm(y = dependent, x = independent, data = australia.hex, n.trees = 5, interaction.depth = 3, 
+h2o.gbm(y = dependent, x = independent, data = australia.hex, n.trees = 3, interaction.depth = 3, 
   n.minobsinnode = 2, shrinkage = 0.2, distribution= "gaussian")
 
+\dontrun{
 # Run multinomial classification GBM on australia data 
-h2o.gbm(y = dependent, x = independent, data = australia.hex, n.trees = 5, interaction.depth = 3, 
+h2o.gbm(y = dependent, x = independent, data = australia.hex, n.trees = 3, interaction.depth = 3, 
   n.minobsinnode = 2, shrinkage = 0.01, distribution= "multinomial")
+}
 }

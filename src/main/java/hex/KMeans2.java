@@ -282,7 +282,7 @@ public class KMeans2 extends ColumnsJob {
     }
 
     @Override public boolean toHTML(StringBuilder sb) {
-      if( model != null ) {
+      if( model != null && model.centers != null && model.within_cluster_variances != null) {
         model.parameters.makeJsonBox(sb);
         DocGen.HTML.section(sb, "Cluster Centers: "); //"Total Within Cluster Sum of Squares: " + model.total_within_SS);
         table(sb, "Clusters", model._names, model.centers);
