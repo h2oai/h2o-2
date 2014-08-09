@@ -260,39 +260,9 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
       }
     }
     best_lambda_idx = bestId;
-    Submodel sm = submodels[bestId];
-    double[] beta = MemoryManager.malloc8d(coefficients_names.length);
-    for (int i = 0; i < sm.beta.length; ++i)
-      beta[sm.idxs[i]] = sm.beta[i];
-    global_beta = beta;
+    setSubmodelIdx(bestId);
   }
-  public static void pickBestSubmodel(H2OCountedCompleter cmp, Key modelKey, final boolean useAuc){
-    cmp.addToPendingCount(1);
-    new TAtomic<GLMModel>(cmp){
-      @Override
-      public GLMModel atomic(GLMModel old) {
-        int bestId = 0;
-        final boolean xval = old.submodels[0].xvalidation != null;
-        GLMValidation bestVal = xval?old.submodels[0].xvalidation:old.submodels[0].validation;
-        for(int i = 1; i < old.submodels.length; ++i){
-          GLMValidation val = xval?old.submodels[i].xvalidation:old.submodels[i].validation;
-          if((useAuc && val.auc > bestVal.auc)
-                  || (xval && val.residual_deviance < bestVal.residual_deviance)
-                  || (((bestVal.residual_deviance - val.residual_deviance)/val.null_deviance) >= 0.01)){
-            bestVal = val;
-            bestId = i;
-          }
-        }
-        old.best_lambda_idx = bestId;
-        Submodel sm = old.submodels[bestId];
-        double [] beta  = MemoryManager.malloc8d(old.coefficients_names.length);
-        for(int i = 0; i < sm.beta.length; ++i)
-          beta[sm.idxs[i]] = sm.beta[i];
-        old.global_beta = beta;
-        return old;
-      }
-    }.fork(modelKey);
-  }
+
 
   //  public static void setSubmodel(H2OCountedCompleter cmp, Key modelKey, final double lambda, double[] beta, double[] norm_beta, int iteration, long runtime, boolean sparseCoef){
   public static void setSubmodel(H2OCountedCompleter cmp, Key modelKey, final double lambda, double[] beta, double[] norm_beta, int iteration, long runtime, boolean sparseCoef){
@@ -309,7 +279,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     @Override
     public void map(GLMModel m) {
       _res = m.clone();
-      Submodel sm = _res.submodelForLambda(_lambda);
+      Submodel sm = Double.isNaN(_lambda)?_res.submodels[_res.best_lambda_idx]:_res.submodelForLambda(_lambda);
       assert sm != null : "GLM[" + m._key + "]: missing submodel for lambda " + _lambda;
       sm = (Submodel) sm.clone();
       _res.submodels = new Submodel[]{sm};

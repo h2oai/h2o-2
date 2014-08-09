@@ -315,10 +315,13 @@ public class Summary2 extends Iced {
       _start2 = 0;
       _binsz = 1;
       _binsz2 = 1;
-      hcnt = new long[_domain.length];
-      hcnt2 = new long[_domain.length];
-      hcnt2_min = new double[_domain.length];
-      hcnt2_max = new double[_domain.length];
+      // hack for now. if there are no enum values, keep these length 1, for consistency
+      // in asserts below
+      int dlength = _domain.length==0 ? 1 : _domain.length;
+      hcnt = new long[dlength];
+      hcnt2 = new long[dlength];
+      hcnt2_min = new double[dlength];
+      hcnt2_max = new double[dlength];
     } 
     else if ( !(Double.isNaN(stat0._min2) || Double.isNaN(stat0._max2)) ) {
       // guard against improper parse (date type) or zero c._sigma

@@ -4,7 +4,8 @@ import h2o, h2o_cmd, h2o_hosts, h2o_kmeans, h2o_import as h2i, h2o_util
 
 def define_create_frame_params(SEED):
     paramDict = {
-        'rows': [1, 100, 1000],
+        # minimum of 5 rows to cover the 5 cluster case
+        'rows': [5, 100, 1000],
         'cols': [1, 10, 100], # Number of data columns (in addition to the first response column)
         'seed': [None, 1234],
         'randomize': [None, 0, 1],

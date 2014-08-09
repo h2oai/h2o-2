@@ -792,7 +792,7 @@ abstract class ASTBinOp extends ASTOp {
       if( fr1 != null ) {
         if( fr0.numCols() != fr1.numCols() ||
             fr0.numRows() != fr1.numRows() )
-          throw new IllegalArgumentException("Arrays must be same size: "+fr0+" vs "+fr1);
+          throw new IllegalArgumentException("Arrays must be same size: LHS FRAME NUM ROWS/COLS: "+fr0.numRows()+"/"+fr0.numCols() +" vs RHS FRAME NUM ROWS/COLS: "+fr1.numRows()+"/"+fr1.numCols());
         fr = new Frame(fr0).add(fr1,true);
       } else {
         fr = fr0;
