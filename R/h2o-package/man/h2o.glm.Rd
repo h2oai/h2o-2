@@ -117,11 +117,11 @@ localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 # Run GLM of CAPSULE ~ AGE + RACE + PSA + DCAPS
 prostate.hex = h2o.importURL(localH2O, path = paste("https://raw.github.com", 
   "0xdata/h2o/master/smalldata/logreg/prostate.csv", sep = "/"), key = "prostate.hex")
-h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family = "binomial", 
-  nfolds = 0, alpha = 0.5, lambda_search = FALSE, use_all_factor_levels = 0,   variable_importances = 0,
-  higher_accuracy = FALSE)
+h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family = "binomial"
+        , nfolds = 0, alpha = 0.5, lambda_search = FALSE, use_all_factor_levels = 0, variable_importances = 0, higher_accuracy = FALSE)
 # Run GLM of VOL ~ CAPSULE + AGE + RACE + PSA + GLEASON
 myX = setdiff(colnames(prostate.hex), c("ID", "DPROS", "DCAPS", "VOL"))
 h2o.glm(y = "VOL", x = myX, data = prostate.hex, family = "gaussian", nfolds = 0, alpha = 0.1,
-        lambda_search = FALSE, use_all_factor_levels = 0, variable_importances = 0, higher_accuracy = FALSE)
+        lambda_search = FALSE, use_all_factor_levels = 0, variable_importances = 0, 
+        higher_accuracy = FALSE)
 }
