@@ -22,7 +22,6 @@ public class HeartBeat extends Iced {
   public long _process_total_ticks;
   public int _process_num_open_fds;
   public String _pid;
-  public boolean _cpus_is_limited;  // Is number of CPUs allowed limited to 1?
 
   // Scaled by K or by M setters & getters.
   private int _free_mem;         // Free memory in K (goes up and down with GC)

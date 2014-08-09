@@ -4,8 +4,6 @@ import java.io.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.lang.SystemUtils;
-
 /**
  * Linux /proc file reader.
  *
@@ -20,7 +18,6 @@ import org.apache.commons.lang.SystemUtils;
 public class LinuxProcFileReader {
   private String _systemData;
   private String _processData;
-  private String _processStatus;
   private String _pid;
 
   private long _systemIdleTicks = -1;
@@ -30,7 +27,6 @@ public class LinuxProcFileReader {
   private long _processRss = -1;
 
   private int _processNumOpenFds = -1;
-  private int _processCpusAllowed = -1;
 
   /**
    * Constructor.
@@ -68,15 +64,6 @@ public class LinuxProcFileReader {
    * @return process id for this node as a String.
    */
   public String getProcessID() { return _pid; }
-
-  /**
-   * @return whether number of CPUs allowed is limited in Linux.
-   */
-  public boolean getCpusAllowedIsLimited() {
-    if(!SystemUtils.IS_OS_LINUX) return false;
-    assert _processCpusAllowed > 0;   return _processCpusAllowed == 1;
-  }
-
   /**
    * Read and parse data from /proc/stat and /proc/&lt;pid&gt;/stat.
    * If this doesn't work for some reason, the values will be -1.
@@ -98,10 +85,8 @@ public class LinuxProcFileReader {
       readSystemProcFile();
       readProcessProcFile(pid);
       readProcessNumOpenFds(pid);
-      readProcessStatusFile(pid);
       parseSystemProcFile(_systemData);
       parseProcessProcFile(_processData);
-      parseProcessStatusFile(_processStatus);
     }
     catch (Exception xe) {}
   }
@@ -231,28 +216,6 @@ public class LinuxProcFileReader {
       if (arr != null) {
         _processNumOpenFds = arr.length;
       }
-    }
-    catch (Exception xe) {}
-  }
-
-  private void readProcessStatusFile(String pid) {
-    try {
-      String s = "/proc/" + pid + "/status";
-      _processStatus = readFile(new File(s));
-    }
-    catch (Exception xe) {}
-  }
-
-  private void parseProcessStatusFile(String s) {
-    if (s == null) return;
-    try {
-      Pattern p = Pattern.compile("Cpus_allowed:\\s+([A-fa-f0-9]+)");
-      Matcher m = p.matcher(s);
-      boolean b = m.find();
-      if (! b) {
-        return;
-      }
-      _processCpusAllowed = Integer.parseInt(m.group(1),16);
     }
     catch (Exception xe) {}
   }
