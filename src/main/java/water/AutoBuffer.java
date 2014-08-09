@@ -1147,7 +1147,7 @@ public class AutoBuffer {
     return this;
   }
 
-  AutoBuffer putAA1( byte[][] ary ) {
+  public AutoBuffer putAA1( byte[][] ary ) {
     _arys++;
     long xy = putZA(ary);
     if( xy == -1 ) return this;
