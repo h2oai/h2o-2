@@ -52,7 +52,11 @@ h2o.clusterInfo <- function(client) {
   cat("    H2O cluster total nodes:  ", res$cloud_size, "\n")
   cat("    H2O cluster total memory: ", sprintf("%.2f GB", maxMem), "\n")
   cat("    H2O cluster total cores:  ", numCPU, "\n")
-  cat("    H2O cluster healthy:      ", clusterHealth, "\n")  
+  cat("    H2O cluster healthy:      ", clusterHealth, "\n")
+  
+  isLimited = sapply(nodeInfo,function(x) { !is.null(x[['cpus_is_limited']]) && x[['cpus_is_limited']] })
+  if(any(isLimited))
+    warning("Number of CPUs allowed has been limited to one core. To get rid of this limit, set 'export OPENBLAS_MAIN_FREE=1' in R.")
 }
 
 h2o.ls <- function(object, pattern = "") {
