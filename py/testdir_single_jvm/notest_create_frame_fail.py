@@ -27,7 +27,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_create_frame_fail(self):
+    def test_NOPASS_create_frame_fail(self):
         h2o.beta_features = True
 
         for trial in range(20):
