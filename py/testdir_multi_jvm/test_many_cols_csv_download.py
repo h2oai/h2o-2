@@ -43,14 +43,19 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (5000, 10000, 'cK', 60),
-            (10000, 10000, 'cL', 60),
-            (100, 8500, 'cF', 15),
-            (100, 9000, 'cG', 15),
-            (100, 10000, 'cI', 15),
-            (100, 11000, 'cH', 15),
-            (1000, 10000, 'cI', 15),
-            (3000, 10000, 'cJ', 15),
+            # nrow  ncol   key   timeoutSecs
+            (100,   100,   'cA', 60),
+            (90,    1000,  'cB', 60),
+            (110,   10000, 'cC', 60),
+            (1000,  100,   'cD', 60),
+            (9000,  1000,  'cE', 60),
+            (1100,  10000, 'cF', 60),
+            (10000, 100,   'cG', 60),
+            (9000,  1000,  'cH', 60),
+            (11000, 2000,  'cI', 60),
+            #
+            # Note:  10000 x 10000 works, but is slow.  disable for now.
+            # (10000, 10000, 'cJ', 60),
             ]
 
         ### h2b.browseTheCloud()
@@ -66,7 +71,7 @@ class Basic(unittest.TestCase):
             write_syn_dataset(csvPathname, rowCount, colCount, SEED)
 
             start = time.time()
-            parseResultA = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=timeoutSecs)
+            parseResultA = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=2*timeoutSecs)
             print "\nA Trial #", trial, "rowCount:", rowCount, "colCount:", colCount, "parse end on ", \
                 csvFilename, 'took', time.time() - start, 'seconds'
 
@@ -80,7 +85,7 @@ class Basic(unittest.TestCase):
             csvDownloadPathname = SYNDATASETS_DIR + "/csvDownload.csv"
             print "\nStarting csv download to",  csvDownloadPathname, "rowCount:", rowCount, "colCount:", colCount
             start = time.time()
-            h2o.nodes[0].csv_download(src_key=hex_key, csvPathname=csvDownloadPathname)
+            h2o.nodes[0].csv_download(src_key=hex_key, csvPathname=csvDownloadPathname, timeoutSecs=5*timeoutSecs)
             print "csv_download end.", 'took', time.time() - start, 'seconds. Originally from:', csvFilename
 
             # remove the original parsed key. source was already removed by h2o
