@@ -15,7 +15,7 @@ def define_create_frame_params(SEED):
         'factors': [None, 2, 10], # Factor levels for categorical variables
         'integer_fraction': [None, 0.1, 1.0], # Fraction of integer columns (for randomize=true)
         'integer_range': [None, 0, 1, 1234567890], # -range to range
-        'missing_fraction': [None, 0.1, 1.0],
+        'missing_fraction': [None, 0.1],
         'response_factors': [None, 1, 2, 10], # Number of factor levels of the first column (1=real, 2=binomial, N=multinomial)
     }
     return paramDict
