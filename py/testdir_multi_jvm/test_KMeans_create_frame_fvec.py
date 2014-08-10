@@ -28,7 +28,7 @@ def define_KMeans_params(SEED):
         'ignored_cols': [None, "0", "3", "0,2"],
         'seed': [None, 12345678, SEED],
         'normalize': [None, 0, 1],
-        'max_iter': [10,20,50],
+        'max_iter': [1,14],
         # 'destination_key:': "junk",
         
         }
