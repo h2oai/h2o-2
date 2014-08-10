@@ -52,8 +52,7 @@ public class KMeans2 extends ColumnsJob {
 
   // Make a link that lands on this page
   public static String link(Key k, String content) {
-    RString rs = new RString("<a href='KMeans2.query?%key_param=%$key'>%content</a>");
-    rs.replace("key_param", SOURCE_KEY);
+    RString rs = new RString("<a href='KMeans2.query?source=%$key'>%content</a>");
     rs.replace("key", k.toString());
     rs.replace("content", content);
     return rs.toString();
