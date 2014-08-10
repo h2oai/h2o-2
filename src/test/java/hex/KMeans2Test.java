@@ -246,20 +246,22 @@ public class KMeans2Test extends TestUtil {
           Key k = FVecTest.makeByteVec("yada", data);
           fr = ParseDataset2.parse(Key.make(), new Key[]{k});
 
-          for (boolean normalize : new boolean[]{false, /*true*/}) {
-            for (Initialization init : new Initialization[]{Initialization.None, /*Initialization.PlusPlus, Initialization.Furthest*/}) {
-              KMeans2 parms = new KMeans2();
-              parms.source = fr;
-              parms.k = 3;
-              parms.normalize = normalize;
-              parms.max_iter = 100;
-              parms.initialization = init;
-              parms.drop_na_cols = true;
-              parms.seed = 0;
-              parms.invoke();
-              KMeans2Model kmm = UKV.get(parms.dest());
-              testHTML(kmm);
-              kmm.delete();
+          for (boolean drop_na : new boolean[]{false, true}) {
+            for (boolean normalize : new boolean[]{false, true}) {
+              for (Initialization init : new Initialization[]{Initialization.None, Initialization.PlusPlus, Initialization.Furthest}) {
+                KMeans2 parms = new KMeans2();
+                parms.source = fr;
+                parms.k = 3;
+                parms.normalize = normalize;
+                parms.max_iter = 100;
+                parms.initialization = init;
+                parms.drop_na_cols = drop_na;
+                parms.seed = 0;
+                parms.invoke();
+                KMeans2Model kmm = UKV.get(parms.dest());
+                testHTML(kmm);
+                kmm.delete();
+              }
             }
           }
         } finally {
