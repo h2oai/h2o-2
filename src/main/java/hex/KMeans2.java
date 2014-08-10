@@ -44,7 +44,7 @@ public class KMeans2 extends ColumnsJob {
   @API(help = "Seed for the random number generator", filter = Default.class, json=true)
   public long seed = new Random().nextLong();
 
-  @API(help = "Drop columns with more than 20% missing values", filter = Default.class)
+  @API(help = "Drop columns with more than 20% missing values", filter = Default.class, json=true)
   public boolean drop_na_cols = true;
 
   // Number of categorical columns
@@ -75,6 +75,7 @@ public class KMeans2 extends ColumnsJob {
       // Drop ignored cols and, if user asks for it, cols with too many NAs
       fr = FrameTask.DataInfo.prepareFrame(source, ignored_cols, false, drop_na_cols);
 //      fr = source;
+      if (fr.numCols() == 0) throw new IllegalArgumentException("No columns left to work with.");
 
       // Sort columns, so the categoricals are all up front.  They use a
       // different distance metric than numeric columns.
