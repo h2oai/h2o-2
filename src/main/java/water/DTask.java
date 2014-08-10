@@ -57,7 +57,7 @@ public abstract class DTask<T extends DTask> extends H2OCountedCompleter impleme
   @Override public AutoBuffer write(AutoBuffer bb) { return bb.put(_ex); }
   @Override public <T extends Freezable> T read(AutoBuffer bb) { _ex = bb.get(); return (T)this; }
   @Override public <F extends Freezable> F newInstance() { throw barf("newInstance"); }
-  @Override public int frozenType() {throw barf("frozeType");}
+  @Override public int frozenType() {throw barf("frozenType");}
   @Override public AutoBuffer writeJSONFields(AutoBuffer bb) { return bb; }
   @Override public water.api.DocGen.FieldDoc[] toDocField() { return null; }
   public void copyOver(Freezable other) {
