@@ -34,7 +34,7 @@ class Basic(unittest.TestCase):
             sys.stdout.write('.')
             sys.stdout.flush()
 
-            csvFilename = "parity_128_4_" + str(1000) + "_quad.data"  
+            csvFilename = "parity_128_4_" + str(500) + "_quad.data"
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
             hex_key = csvFilename + "_" + str(trial) + ".hex"
