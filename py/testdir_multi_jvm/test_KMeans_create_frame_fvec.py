@@ -58,8 +58,8 @@ class Basic(unittest.TestCase):
             cfParamDict = define_create_frame_params(SEED)
             # default
             params = {
-                'rows': 1,
-                'cols': 1
+                'rows': 5,
+                'cols': 10
             }
             h2o_util.pickRandParams(cfParamDict, params)
             i = params.get('integer_fraction', None)
