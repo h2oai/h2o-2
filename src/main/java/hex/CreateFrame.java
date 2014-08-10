@@ -41,8 +41,7 @@ public class CreateFrame extends Request2 {
   @API(help = "Fraction of categorical columns (for randomize=true)", filter = Default.class, dmin = 0, dmax = 1, json=true)
   public double categorical_fraction = 0.2;
 
-  //@API(help = "Factor levels for categorical variables", filter = Default.class, lmin = 2, json=true)
-  @API(help = "Factor levels for categorical variables", filter = Default.class, json=true)
+  @API(help = "Factor levels for categorical variables", filter = Default.class, lmin = 2, json=true)
   public int factors = 100;
 
   @API(help = "Fraction of integer columns (for randomize=true)", filter = Default.class, dmin = 0, dmax = 1, json=true)
@@ -65,6 +64,7 @@ public class CreateFrame extends Request2 {
       if (Math.abs(missing_fraction) > 1) throw new IllegalArgumentException("Missing fraction must be between 0 and 1.");
       if (Math.abs(integer_fraction) > 1) throw new IllegalArgumentException("Integer fraction must be between 0 and 1.");
       if (Math.abs(categorical_fraction) > 1) throw new IllegalArgumentException("Categorical fraction must be between 0 and 1.");
+      if (categorical_fraction > 0 && factors <= 1) throw new IllegalArgumentException("Factors must be larger than 2 for categorical data.");
       if (response_factors < 1) throw new IllegalArgumentException("Response factors must be either 1 (real-valued response), or >=2 (factor levels).");
       if (cols <= 0 || rows <= 0) throw new IllegalArgumentException("Must have number of rows > 0 and columns > 1.");
 
