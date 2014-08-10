@@ -124,7 +124,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_exec2_function_phrases(self):
+    def test_NOPASS_exec2_function_phrases(self):
         if DO_IRIS:
             bucket = 'smalldata'
             csvPathname = 'iris/iris2.csv'
