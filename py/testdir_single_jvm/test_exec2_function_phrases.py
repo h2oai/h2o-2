@@ -7,7 +7,7 @@ initList = [
 ]
 
 DO_COMPOUND = True
-DO_IRIS = False
+DO_IRIS = True
 
 # since a function definition has to be on it's own line, you can't redefine functions within a function
 #        "a=rhex; function(x){x=a;a=3;nrow(x)*a}(a)",
@@ -17,7 +17,7 @@ DO_IRIS = False
 phrasesCompound = [
         "aa=!0; x=!0",
         "aa=0; x=0",
-        "aa=c(11,22,33,44,55,66); aa[c(2,6,1),]",
+        "bb=c(11,22,33,44,55,66); bb[c(2,6,1),]",
         "rhex[1,-1]; rhex[1,-1]; rhex[1,-1]",
         # can't assign to rhex param?
         # "rhex[,1]=3.3; rhex",
