@@ -1,3 +1,262 @@
+Release 2.6.0.2 (Lagrange build 2)
+==================================
+
+* [Download this release](http://s3.amazonaws.com/h2o-release/h2o/rel-lagrange/2/index.html)
+* [Query JIRAs for this release](https://0xdata.atlassian.net/issues/?jql=fixVersion%20%3D%20lagrange%20and%20resolution%20is%20not%20empty)
+
+Technical task
+--------------
+    * [PUB-729] - Remove hard-coded path to demo files
+    * [PUB-783] - Add support for categorical data for auto-encoder
+    * [PUB-843] - SpeeDRF Tests on large datasets (singlenode)
+    * [PUB-844] - SpeeDRF Tests on large datasets (multinode)
+    * [PUB-846] - Enhance SpeeDRF Predictive Performance
+    * [PUB-847] - SpeeDRF comparison with scikit-learn
+    * [PUB-848] - SpeeDRF comparison with R's randomForest
+    * [PUB-849] - Distributed System Test
+    * [PUB-850] - SpeeDRF local mode 
+    * [PUB-900] - Replace GLM Model Getter (glm, grid,  all lambdas, single lambda)
+    * [PUB-911] - Rename SpeeDRF(beta)
+
+Bug
+---
+    * [PUB-145] - parse turns factors/strings into zeros
+    * [PUB-166] - Gamma vs. gamma in R
+    * [PUB-168] - can't operate on factors from R
+    * [PUB-171] - R: assigning colnames broken
+    * [PUB-172] - R/h2o doesn't correctly handle logicals
+    * [PUB-174] - R/cut is broken
+    * [PUB-175] - R/table return value is in the wrong data type
+    * [PUB-189] - There is no lock on the dataset while a grid job is in progress, so when i delete the dataset when the grid is in progress get -java.lang.IllegalArgumentException: Nothing to lock!
+    * [PUB-212] - R: h2o key assigned to the wrong data
+    * [PUB-213] - R: ifelse, >, < operators wrong: don't handle NA
+    * [PUB-220] - header not automatically deduced for case with single quotes on header and data. single_quotes=0. header apparently not deduced
+    * [PUB-222] - single_quotes=1 should strip single quotes from tokens before creating the value (it doesn't). both header and data
+    * [PUB-281] - constant assign to a row is unsupported in Exec
+    * [PUB-286] - does h2o exec get TRUE and FALSE passed thru from R?
+    * [PUB-346] - h2o.R breaks R's internal list datastructure
+    * [PUB-382] - exec: this exec seems to result in 'empty' which gives us bad inspect results, okay if tweaked so result is not empty..i.e. what's the exec result supposed to be, if num rows = 0 
+    * [PUB-386] - K means: won't model on factors (good); won't take correctly specified numeric columns - claims numbers are factors (bad)
+    * [PUB-387] - summary stops working in R after data munging, str(data) says df is OK
+    * [PUB-388] - str returns non-specific VA/FV for data frames
+    * [PUB-397] - GLM2 job getting cancelled. Polling says 'user cancelled'. Jobs list says CANCELLED. I didn't cancel it. Think it's getting cancelled during cross-validation
+    * [PUB-404] - Exec2: seems like if result is 'empty' and the result type is data frame when not empty, that num_cols should be 0 (num_rows is 0). cols also should be empty?
+    * [PUB-415] - [shalala] java.lang.IncompatibleClassChangeError: JLine incompatibility detected for sbt 0.12
+    * [PUB-417] - GLM2: case_mode '=' case_val '-1' ...response C13.. ok if gaussian doesn't like it if binomial
+    * [PUB-426] - GBM failing on AIOOBE for large number of trees
+    * [PUB-436] - R: reloading datasets broken
+    * [PUB-440] - AAIOBE during fvec parse on 164
+    * [PUB-451] - Separate AUC values from AUC rest call. 
+    * [PUB-455] - exec: testing is.na() and ifelse() on covtype..eventually get a AIOOBE
+    * [PUB-456] - Exec assertion ...column vector == scalar being used in the select of ?
+    * [PUB-466] - If play with the dataset a bit and try to overwrite or delete prediction key, action fails and prediction key remains locked.
+    * [PUB-486] - nested ifelse gets AIOOBE r[,1]=ifelse(r[,1],r[,2], ifelse(r[,1],r[,2], r[,1]))
+    * [PUB-487] - exec: binary op on frame or row, doesn't work; binary op on cols works. java.lang.AssertionError: 10 at water.fvec.Frame.add(Frame.java:120) 
+    * [PUB-505] - big number incorrect in h2o. (R shown for comparison)
+    * [PUB-506] - adding some (two to ten) numbers thru col sum gets different answer than adding them as scalars (in console). R gets exact same answer in both cases.
+    * [PUB-507] - extending .000 on data to force a parse to reals, can cause wrong number into h2o (sign wrong, value wrong by 10x)
+    * [PUB-508] - parser is off by one on the exponent for a parsed number (it's a big number, but no trailing zeros)
+    * [PUB-513] - curl to get DRF2 model produces ArrayIndexOutOfBoundsException: null
+    * [PUB-532] - exec: seems like it doesn't take a ^ -b  ..it doesn't like the - in the exponent (R says fine)
+    * [PUB-534] - Exec doesn't support R modulo, integer division or the alternate '**' exponentiation operator
+    * [PUB-536] - variable importance graph for one variable shows nothing
+    * [PUB-547] - score validation appears twice in DL GUI
+    * [PUB-553] - exec: java.util.IllegalFormatConversionException: e != java.lang.Long .......................is it thinking the - is part of the frame name (no spaces)
+    * [PUB-554] - exec. NPE in this expression. not sure why (part of a longer test)
+    * [PUB-555] - exec: AIOOBE. is ifelse() legal? I'm assuming isna() is
+    * [PUB-556] - exec, a different AIOOBE ..maybe it's around the user of a ? b : c
+    * [PUB-558] - GLM2 gets this AAIOBE in py/testdir_multi_jvm/test_GLM2_many_cols_int2cat.py
+    * [PUB-562] - When click on Store view page from browser, after driving H2O from R for quite some time, get : error Not enough keys - request offset is 8 but K/V contains 0 keys.
+    * [PUB-568] - We need to be able to specify the model key from the R calls 
+    * [PUB-570] - GLM2 silent regularization
+    * [PUB-575] - exec ternary op with assign (lhs) in the selected phrase, gets poppush assertion
+    * [PUB-589] - doing a list of functions with ddply. stack trace on "is.factor"
+    * [PUB-599] - seem to have issues more than 1 ternary expression in a exec str=
+    * [PUB-600] - FrameSplitPage should cause error to browser/json, not assertion when 0 rows for the split (also 50% split of 18 rows shouldn't be a failure?)
+    * [PUB-604] - DownloadDataset of non-existing hex gets NPE
+    * [PUB-606] - exec getting AIOOBE in this expression for some reason
+    * [PUB-607] - Not sure why this Exec is getting NPE. uses ternary op, maybe apply is not legal?
+    * [PUB-621] - return value of H2O objective function in GUI and R
+    * [PUB-633] - DRF fvec  Got exception 'class java.lang.AssertionError', with msg 'col_data Infinity out of range FirstName	:-Infinity-Infinity step=Infinity nbins=20 isInt=0
+    * [PUB-634] - GLM2 apparently is reporting a best_threshold=0.175 when the values in threshold are 0.17 then 0.18, no 0.175
+    * [PUB-636] - exec AAIOBE on a case with interesting column reference
+    * [PUB-637] - exec: adding two 10x10 data frames doesn't work (single jvm)
+    * [PUB-668] - R: ifelse() with apply() causes Error in rep(no, length.out = length(ans)) :    attempt to replicate an object of type 'S4'
+    * [PUB-669] - Installation of H2O package in R on Windows failing on Statmod dependency
+    * [PUB-671] - should throw error (descriptive) when you select a non-existent col
+    * [PUB-682] - head() of empty data frame (in h2o) causes exec2 exception
+    * [PUB-685] - H2O doesn't support c(1,2) for apply as R suggests, should return unsupported
+    * [PUB-696] - cbind() of something that was created by rep_len() fails, but cbind() of something created with c() works?
+    * [PUB-697] - bad key name in exec causes assertion (4.1$C1)
+    * [PUB-698] - %*% ...exec illegal argumetn says Matrices do not match: [581012x1] * [581012x1]",  which doesn't make sense. Error is probably that single col is not supported?
+    * [PUB-699] - row exclude (negatives) doesn't seem to work (exec), works for columns
+    * [PUB-704] - 1B rep_len(), then runif() I think the runif is getting the stack trace here (exec)
+    * [PUB-705] - null/empty frame in h2o can't pass to R 
+    * [PUB-706] - push csv from R to h2o, strings are not double-quoted..so comma in string doesn't work
+    * [PUB-712] - the small files that are the backing for chunks in the ice dir, show up in the storeview (view all)
+    * [PUB-719] - SHA256 slows down vec rollups too much
+    * [PUB-760] - Create h2o.objectFromKey
+    * [PUB-766] - Speed RF with Stratified sampling and VI  on covtype throws :java.util.concurrent.ExecutionException: java.lang.ArrayIndexOutOfBoundsException: -1'
+    * [PUB-774] - Random Forest confusion matrix for multiclass has actual count for class 0 way too high
+    * [PUB-775] - SpeedRF: model links on grid page are broken and grid page does not display prediction error
+    * [PUB-776] - cbind(df, df) hits assertion failure
+    * [PUB-782] - h2o.deeplearning should return the parameter list 
+    * [PUB-786] - DException did not produce full Stack trace on HTML or goto the logfile
+    * [PUB-793] - NewChunk: Array index out of range: 8388608
+    * [PUB-795] - GLM2: using lambda_search=1 seems to cause hang
+    * [PUB-797] - GLM2 binomial with covtype20k (small data) java.lang.AssertionError: mu out of bounds<0,1>:1.3432060071386123
+    * [PUB-809] - GLM2: Gaussian on Airlines Data with IsDepDelayed as Y fails "Invalid response variable, trying to run regression with categorical response!"
+    * [PUB-810] - Predict on GLM2 produces null prediction for airlines test dataset
+    * [PUB-817] - DeepLearning via R needs grid search over hidden layer combinations
+    * [PUB-821] - SpeedRF: regression seems broken. On British car insurance data get ArrayIndexOutOfBoundsException
+    * [PUB-822] - GLM From R : return all lambdas returns the lambda values but does not correctly chooses the right model when try to predict on a model with a selected lambda value
+    * [PUB-823] - h2o.glm: nfold default should be set to 0.
+    * [PUB-825] - performance test for classification error on weather data for all algos
+    * [PUB-829] - Training data is used as validation data in DeepLearning when called from R
+    * [PUB-831] - GLM through R sometimes runs but never finishes
+    * [PUB-832] - Cbind raises vector group error
+    * [PUB-835] - DRF: model (on california housing data) with 1000 trees finishes fine but hangs and does not display 
+    * [PUB-838] - Inaccurate error message: h2o.performance() 
+    * [PUB-840] - MSE not retrieved from h2o.confusionMatrix for regression models
+    * [PUB-842] - Promote SpeeDRF from Beta
+    * [PUB-852] - h2o.performance in Help raises error in R
+    * [PUB-853] - Early termination in glm resulting in underfitting
+    * [PUB-856] - NullPointerException but model still created
+    * [PUB-857] - GLM models differ on data after shuffling
+    * [PUB-858] - assertion error in AutoBuffer.java/gbm tree model tree score (DTree.java)
+    * [PUB-862] - ddply should support anonymous functions
+    * [PUB-863] - disallow addFunction of functions that already exist
+    * [PUB-864] - allow addFunction functions to be executed more than once
+    * [PUB-869] - SRF reports wrong tree statistics on the model page
+    * [PUB-870] - Multi model scoring does not work on SRF grid job
+    * [PUB-872] - SRF: for multi class classification, error rate on model page and confusion matrix page does not match
+    * [PUB-873] - GLM with Cross Validation: ArrayIndexOutOfBoundsException: 89
+    * [PUB-874] - Discrepancy Reporting GLM Cross Validation Models in R
+    * [PUB-875] - R: parameter names inconsistency in h2o.gbm when print the grid job summary
+    * [PUB-876] - h2o.glm with cross val, stops polling even when the model in still building in h2o
+    * [PUB-880] - AIOOBE in Parse
+    * [PUB-881] - h2o.glm: grid search summary table does not display best lambda and displays wrong iteration numbers
+    * [PUB-882] - auc and cm fields in /2/Models recently became empty, breaking multi-model scoring
+    * [PUB-883] - SRF: does not display the java model 
+    * [PUB-884] - SRF grid with cross validation, reports NANs for the prediction error on grid page
+    * [PUB-889] - 16 JVMS on 4 machines && 4 JVMs per machine 
+    * [PUB-890] - GLM: With lambda search, the parameter summary table gives a nonzero predictors =  -1 for the first model . 
+    * [PUB-891] - GLM: wrong AIC reporting on adult_income dataset for the 1st model
+    * [PUB-895] - Exec2 loop transforming a dataset columns into factors is failing on 3JVMs.
+    * [PUB-897] - GLM: class java.lang.AssertionError', with msg 'beta.length != dinfo.fullN(), beta = 721 dinfo = 744' java.lang.AssertionError: beta.length != dinfo.fullN(), beta = 721 dinfo = 744 on airlines_all
+    * [PUB-899] - Parse fails with  water.parser.DParseTask.pow10i(DParseTask.java:697)
+    * [PUB-907] - Logging time in copy operator
+    * [PUB-913] - GLM: grid search with lambda search, when try to set a lambda value throws 'key already in use' error 
+    * [PUB-914] - java.lang.AssertionError', with msg 'GLMModel cannot be unlocked
+    * [PUB-916] - Make memory specification in h2o.init() a bit more friendly
+    * [PUB-917] - Different predict error on training and test with same dataset as both GLM
+    * [PUB-918] - ArrayIndexOutOfBoundsException at SpeeDRFModel.java:237
+    * [PUB-925] - DeepLearning R unit test sees worse results with balance_classes=T
+    * [PUB-928] - When run GLM with xval from R, h2o takes too long to fetch all the lambda models
+
+Improvement
+-----------
+    * [PUB-700] - Might be nice to have R trunc/round/signif functions for precision control in exec (both for compression reasons and customer code issues?)
+    * [PUB-754] - Add bitset based splitting of categorical columns in RF modelling
+    * [PUB-755] - Add bitset based splitting of categorical columns for RF in-h2o scoring
+    * [PUB-756] - Add bitset based splitting of categorical columns for gbm pojo scoring
+    * [PUB-757] - Test bitset based splitting of categorical columns in gbm
+    * [PUB-767] - speedrf should do something about non-continous output response ranges (maybe just better warning?)
+    * [PUB-781] - Return Models for all Lambda when lambda_search = TRUE
+    * [PUB-824] - Return complete DeepLearning model parameters in JSON
+    * [PUB-836] - Improve collection of logs
+    * [PUB-841] - Add extensive JUnit tests for Chunks
+    * [PUB-855] - error messaging should be more explicit when a key of the wrong kind is fed to a parameter (data frame where model key is needed)
+    * [PUB-865] - Add -single_precision flag
+    * [PUB-866] - Add summary of created chunks after parsing
+    * [PUB-885] - Warn R user if they have gcj java
+
+New Feature
+-----------
+    * [PUB-525] - PCA: Standard Deviations are possibly incorrect
+    * [PUB-526] - PCA: Exceeded timeoutSecs: 300 secs while polling.
+    * [PUB-677] - Deprecate VA from H2O
+    * [PUB-741] - Zookeeper Integration
+    * [PUB-745] - Parse JSON AST passed in from front end
+    * [PUB-746] - Evaluate a simple AST
+    * [PUB-813] - Auto-Encoder for Anomoly Detection
+    * [PUB-814] - Scoring Engine for DeepLearning
+    * [PUB-830] - Add R wrapper for Anomaly model
+    * [PUB-833] - Add use_all_factor_levels flag to DeepLearning
+
+
+Task
+----
+    * [PUB-651] - Test predictions on SpeeDRF
+    * [PUB-791] - Remove all VA References in R
+    * [PUB-792] - Remove VA References in R Docs and Tests
+    * [PUB-819] - Add use_all_factor_levels option for GLM in R
+    * [PUB-910] - h2o.SpeedRF does not report  seed used by the model from R. It just reports a -1
+    * [PUB-924] - h2o.dl is missing variable importance
+
+Technical task
+--------------
+    * [HEX-1698] - Update Java POJO to do probability correction for balanced_classes = true
+
+Bug
+---
+    * [HEX-1714] - Typeahead performance is poor for large FV datasets
+    * [HEX-1720] - NullPointerException for bad exec expression (non-existent col name on rhs?)
+    * [HEX-1734] - Perf harness should alert when failures occur
+    * [HEX-1743] - Implement GLM2 model persistence
+    * [HEX-1745] - UUIDs in the data are not imported if the # of unique values is larger than ~64000
+    * [HEX-1748] - java.lang.RuntimeException: java.lang.IllegalArgumentException: Found 1112 classes: Response column must be an integer in the interval [2,254]
+    * [HEX-1755] - GLM: When run collective data without lambda search, throws error  Too many predictors! 
+    * [HEX-1757] - auc calculation from R broken
+    * [HEX-1778] - UUID parsing/ special case missing
+    * [HEX-1779] - cbind of h2o object and non-h2o object: no error raised
+    * [HEX-1780] - Assertion hit in score code in DRF
+    * [HEX-1782] - Add R Vignette
+    * [HEX-1789] - UUID column is preventing a test / train split.
+    * [HEX-1791] - Class Balancing crashed H2O for GBM
+    * [HEX-1792] - Cannot calculate AUC on collective dataset as columns with >10% NAs get ignored    
+    * [HEX-1793] - Strong_rules error even with lambda_search on
+    * [HEX-1794] - is.na() inconsistent behavior on UUID col (sometimes crashing)
+    * [HEX-1797] - parse ArrayIndexOutOfBoundsException
+    * [HEX-1801] - H2O cluster dies in hadoop running deep learning
+    * [HEX-1817] - RF/GBM/SpeeDRF/GLM2/KMeans2 model parameters always in "Running" mode
+    * [HEX-1819] - Vec.makeConSeq breaking
+    * [HEX-1820] - Parse interpreting NAs wrongly
+    * [HEX-1821] - Parse2 json: Failed to guess parser setup
+    * [HEX-1824] - NullPointerException when testing for need line search
+    * [HEX-1826] - Figure out how to handle windows paths from R
+    * [HEX-1832] - Parse hits exception failing to find joda timezone resource
+    * [HEX-1838] - Unlock validation dataset
+    * [HEX-1839] - CRAN submission:: Windows bug
+    * [HEX-1840] - Parse fails  water.parser.DParseTask.pow10i (DParseTask.java:697)
+    * [HEX-1845] - Cloud formation times out in Jenkins with >= 5 node clouds
+    * [HEX-1846] - Jenkins shows green when there are failing tests
+
+Improvement
+-----------
+    * [HEX-1652] - Parity with R glm and glmnet model accuracy.
+    * [HEX-1796] - Add Java POJO scoring code for DeepLearning
+    * [HEX-1823] - Handle special parse requirement
+
+New Feature
+-----------
+    * [HEX-1653] - Reasonable memory requirements on large, sparse datasets.
+    * [HEX-1679] - Add exportHDFS alias to mimic exportFile("hdfs://")
+    * [HEX-1711] - Design and scope capability to save and deploy models in the H2O environment.
+
+Task
+----
+    * [HEX-1727] - Bernoulli GBM testing complete
+    * [HEX-1750] - Add RUnit test for Strong Rules Memory
+    * [HEX-1751] - Add RUnit test for Strong Rules time
+    * [HEX-1773] - Add RUnit test for UUID column
+    * [HEX-1774] - Add R bindings for model save restore.
+    * [HEX-1775] - Add RUnit test for model save and restore.
+    * [HEX-1776] - Add R bindings for GLM2 to get models for each lambda in a lambda search
+    * [HEX-1825] - Create RUnit test demonstrating how to access lambda search model auc
+
+
+
 Release 2.4.4.3 (Kolmogorov build 3)
 ====================================
 
