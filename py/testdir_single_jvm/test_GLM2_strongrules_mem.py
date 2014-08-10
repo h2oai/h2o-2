@@ -45,7 +45,7 @@ class Basic(unittest.TestCase):
                 }
         kwargs = params.copy()
         starttime = time.time()
-        glmtest_SR = h2o_cmd.runGLM(timeoutSecs=300, parseResult=data, **kwargs)
+        glmtest_SR = h2o_cmd.runGLM(timeoutSecs=600, parseResult=data, **kwargs)
         elapsedtime = time.time() - starttime 
         print("GLM modelling completes in %0.4f " % elapsedtime)
         
