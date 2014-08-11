@@ -37,8 +37,9 @@ class Basic(unittest.TestCase):
         parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put')
         paramDict = define_params()
         for trial in range(1):
+            response = 'C55'
             params = {
-                'response': 54, 
+                'response': response, 
                 }
 
             colX = h2o_util.pickRandParams(paramDict, params)
@@ -73,8 +74,8 @@ class Basic(unittest.TestCase):
             h2o.nodes[0].generate_predictions(model_key=model_key, data_key='covtype.hex', prediction='Predict.hex')
 
             # just get a predict and AUC on the same data. has to be binomial result
-            resultAUC = h2o.nodes[0].generate_auc(thresholds=None, actual=hexKey, predict='Predict.hex',
-                vactual=y, vpredict=1)
+            resultAUC = h2o.nodes[0].generate_auc(thresholds=None, actual='covtype.hex', predict='Predict.hex',
+                vactual=response, vpredict=1)
             print "AUC result:", h2o.dump_json(resultAUC)
 
 
