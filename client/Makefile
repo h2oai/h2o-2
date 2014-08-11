@@ -293,7 +293,7 @@ debug: node
 	@node --debug-brk $(DIST)/steam.node.js
 
 pytest: node
-	(cd ../py && python testdir_single_jvm/test_model_management.py -ccj localhost.json ApiTestCase.test_steam)
+	(cd ../py && python testdir_multi_jvm/test_model_management.py -ccj localhost.json ApiTestCase.test_steam)
 
 coverage: node
 	@mkdir -p $(BUILD)/coverage
