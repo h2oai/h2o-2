@@ -26,7 +26,7 @@ public final class ParseDataset2 extends Job {
   private MultiFileParseTask _mfpt; // Access to partially built vectors for cleanup after parser crash
   public static enum Compression { NONE, ZIP, GZIP }
 
-  private static Key [] filterEmptyFiles(Key [] keys){
+  public static Key [] filterEmptyFiles(Key [] keys){
     Arrays.sort(keys);
     // first check if there are any empty files and if so remove them
     Vec [] vecs = new Vec [keys.length];
@@ -62,7 +62,8 @@ public final class ParseDataset2 extends Job {
     return forkParseDataset(okey, keys, globalSetup, delete_on_done).get();
   }
   // Same parse, as a backgroundable Job
-  public static ParseDataset2 forkParseDataset(final Key dest, final Key[] keys, final CustomParser.ParserSetup setup, boolean delete_on_done) {
+  public static ParseDataset2 forkParseDataset(final Key dest, Key[] keys, final CustomParser.ParserSetup setup, boolean delete_on_done) {
+    keys = filterEmptyFiles(keys);
     setup.checkDupColumnNames();
     // Some quick sanity checks: no overwriting your input key, and a resource check.
     long sum=0;

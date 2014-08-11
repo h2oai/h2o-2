@@ -8,8 +8,11 @@ import org.junit.Test;
 
 import water.*;
 import water.api.ImportFiles2;
+import water.api.Parse2;
 import water.deploy.Node;
 import water.deploy.NodeVM;
+import water.parser.CustomParser;
+import water.parser.GuessSetup;
 import water.util.Log;
 
 public class ParserTest2 extends TestUtil {
@@ -758,6 +761,8 @@ public class ParserTest2 extends TestUtil {
     Frame f1 = null,f2 = null, f3=null;
     try {
       files = ImportFiles2.importPath("smalldata/parse_folder_test");
+      // test we can run guess setup task (run by gui)
+      new GuessSetup.GuessSetupTsk(new CustomParser.ParserSetup(),true).invoke(files);
       f1 = ParseDataset2.parse(Key.make("multifile"), files);
       files2 = ImportFiles2.importPath("smalldata/glm_test/prostate_cat_replaced.csv");
       f3 = ParseDataset2.parse(Key.make("singleFile"), files2);
@@ -781,6 +786,7 @@ public class ParserTest2 extends TestUtil {
       }
     }
   }
+
   void runTests(){
     System.out.println("testBasic");
     testBasic();
