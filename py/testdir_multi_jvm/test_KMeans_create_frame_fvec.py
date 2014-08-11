@@ -6,17 +6,17 @@ def define_create_frame_params(SEED):
     paramDict = {
         # minimum of 5 rows to cover the 5 cluster case
         'rows': [5, 100, 1000],
-        'cols': [1, 10, 100], # Number of data columns (in addition to the first response column)
+        'cols': [10, 100], # Number of data columns (in addition to the first response column)
         'seed': [None, 1234],
         'randomize': [None, 0, 1],
         'value': [None, 0, 1234567890, 1e6, -1e6], # Constant value (for randomize=false)
         'real_range': [None, 0, 1234567890, 1e6, -1e6], # -range to range
         'categorical_fraction': [None, 0.1, 1.0], # Fraction of integer columns (for randomize=true)
-        'factors': [None, 0, 1], # Factor levels for categorical variables
+        'factors': [None, 2, 10], # Factor levels for categorical variables
         'integer_fraction': [None, 0.1, 1.0], # Fraction of integer columns (for randomize=true)
         'integer_range': [None, 0, 1, 1234567890], # -range to range
-        'missing_fraction': [None, 0.1, 1.0],
-        'response_factors': [None, 0, 1, 2, 10], # Number of factor levels of the first column (1=real, 2=binomial, N=multinomial)
+        'missing_fraction': [None, 0.1],
+        'response_factors': [None, 1, 2, 10], # Number of factor levels of the first column (1=real, 2=binomial, N=multinomial)
     }
     return paramDict
 
@@ -25,10 +25,10 @@ def define_KMeans_params(SEED):
     paramDict = {
         'k': [2, 5], # seems two slow tih 12 clusters if all cols
         'initialization': ['None', 'PlusPlus', 'Furthest'],
-        'ignored_cols': [None, "0", "3", "0,1,2,3,4"],
+        'ignored_cols': [None, "0", "3", "0,2"],
         'seed': [None, 12345678, SEED],
         'normalize': [None, 0, 1],
-        'max_iter': [10,20,50],
+        'max_iter': [1,14],
         # 'destination_key:': "junk",
         
         }
@@ -58,8 +58,8 @@ class Basic(unittest.TestCase):
             cfParamDict = define_create_frame_params(SEED)
             # default
             params = {
-                'rows': 1,
-                'cols': 1
+                'rows': 5,
+                'cols': 10
             }
             h2o_util.pickRandParams(cfParamDict, params)
             i = params.get('integer_fraction', None)

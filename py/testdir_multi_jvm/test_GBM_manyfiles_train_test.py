@@ -72,7 +72,7 @@ class Basic(unittest.TestCase):
 
             # Make col 378 it something we can do binomial regression on!
             execExpr = '%s[,378+1]=%s[,378+1]>15' % (trainKey, trainKey)
-            resultExec = h2o_cmd.runExec(str=execExpr, timeoutSecs=60)
+            resultExec = h2o_cmd.runExec(str=execExpr, timeoutSecs=120)
 
             # Parse (test)****************************************
             parseTestResult = h2i.import_parse(bucket=bucket, path=importFolderPath + "/" + testFilename, schema='local',
@@ -84,7 +84,7 @@ class Basic(unittest.TestCase):
 
             # Make col 378 it something we can do binomial regression on!
             execExpr = '%s[,378+1]=%s[,378+1]>15' % (testKey, testKey)
-            resultExec = h2o_cmd.runExec(str=execExpr, timeoutSecs=60)
+            resultExec = h2o_cmd.runExec(str=execExpr, timeoutSecs=120)
 
             # Note ..no inspect of test data here..so translate happens later?
 
