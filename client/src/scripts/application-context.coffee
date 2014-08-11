@@ -66,11 +66,13 @@ Steam.ApplicationContext = ->
     displayEmpty: do edge$
 
     loadFrames: do edge$
+    refreshFrames: do edge$
     framesLoaded: do edge$
     displayFrame: do edge$
     promptForFrame: do edge$
 
     loadModels: do edge$
+    refreshModels: do edge$
     displayModel: do edge$
     modelSelectionChanged: do edge$
     modelSelectionCleared: do edge$

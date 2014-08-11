@@ -155,7 +155,10 @@ else
 fi
 
 echo "If RCurl didn't install, you probably need libcurl-devel. ('sudo yum install libcurl-devel' on centos). libcurl not enough?"
-echo "you might want to check 'sudo apt-get install libatlas-dev libblas-dev' for liblinear also, and lapack for Matrix"
+echo "On ubuntu:"
+echo "sudo apt-get install libcurl4-openssl-dev"
+echo ""
+echo "Probably want these for liblinear etc"
 echo "sudo apt-get install libblas3gf"
 echo "sudo apt-get install libblas-doc"
 echo "sudo apt-get install libblas-dev"
@@ -165,7 +168,9 @@ echo "sudo apt-get install liblapack-dev"
 
 echo ""
 echo "If rgl didn't install because of GL/gl.h in ubuntu, do this install first"
-echo "sudo apt-get install libglu1-mesa-dev"
+echo "sudo apt-get install r-base-dev xorg-dev libglu1-mesa-dev"
+echo "or maybe"
+echo "sudo apt-get build-dep r-cran-rgl"
 echo ""
 echo "If it complained about no package named 'h2o' you need to do a make"
 
