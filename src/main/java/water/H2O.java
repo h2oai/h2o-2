@@ -1352,7 +1352,7 @@ public final class H2O {
     public final Key _key;
     public final int _type;
     public final boolean _rawData;
-    public final int _sz;
+    public final long _sz;
     public final byte _backEnd;
 
     public KeyInfo(Key k, Value v){
@@ -1361,7 +1361,11 @@ public final class H2O {
       _key = k;
       _type = v.type();
       _rawData = v.isRawData();
-      _sz = v._max;
+      if(v.isFrame()){
+        Frame f = v.get();
+        _sz = f.byteSize();
+      } else
+        _sz = v._max;
       _backEnd = v.backend();
     }
     @Override public int compareTo(KeyInfo ki){ return _key.compareTo(ki._key);}
