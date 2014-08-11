@@ -375,7 +375,7 @@ public class Tree extends H2OCountedCompleter {
       int skip = _l.size(); // Drop down the amount to skip over the left column
       if( skip <= 254 )  bs.put1(skip);
       else { bs.put1(0);
-        if (! ((-1<<24) <= skip && skip < (1<<24))) throw H2O.fail("Trees have grown too deep. Use BigData RF or limit the tree depth for your model. For more information, contact support: support@0xdata.com");
+        if (! ((-1<<24) <= skip && skip < (1<<24))) throw H2O.fail("Trees have grown too deep. Use BigData RF or limit the tree depth of your model. For more information, contact support: support@0xdata.com");
         bs.put3(skip);
       }
       _l.write(bs);
