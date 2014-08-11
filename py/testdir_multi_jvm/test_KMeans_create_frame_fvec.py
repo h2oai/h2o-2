@@ -8,7 +8,7 @@ def define_create_frame_params(SEED):
         'rows': [5, 100, 1000],
         'cols': [10, 100], # Number of data columns (in addition to the first response column)
         'seed': [None, 1234],
-        'randomize': [None, 0, 1],
+        'randomize': [None, 1], # Avoid all constant (randomize=0) -> all points would be the same (except for NAs) -> can't find K clusters
         'value': [None, 0, 1234567890, 1e6, -1e6], # Constant value (for randomize=false)
         'real_range': [None, 0, 1234567890, 1e6, -1e6], # -range to range
         'categorical_fraction': [None, 0.1, 1.0], # Fraction of integer columns (for randomize=true)
