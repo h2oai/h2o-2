@@ -684,7 +684,7 @@ public class Summary2 extends Iced {
     long targetCntInt = (long) Math.floor(targetCntFull);
     double targetCntFract = targetCntFull  - (double) targetCntInt;
     assert (targetCntFract>=0) && (targetCntFract<=1);
-    Log.debug("QS_ targetCntInt: "+targetCntInt+" targetCntFract: "+targetCntFract);
+    // Log.debug("QS_ targetCntInt: "+targetCntInt+" targetCntFract: "+targetCntFract);
       
     // walk thru and find out what bin to look inside
     int k = 0;
@@ -700,8 +700,8 @@ public class Summary2 extends Iced {
 
 
     assert hcnt2[k]!=0;
-    Log.debug("QS_ Found k (approx): "+threshold+" "+k+" "+currentCnt+" "+targetCntInt+
-      " "+_gprows+" "+hcnt2[k]+" "+hcnt2_min[k]+" "+hcnt2_max[k]);
+    // Log.debug("QS_ Found k (approx): "+threshold+" "+k+" "+currentCnt+" "+targetCntInt+
+    //  " "+_gprows+" "+hcnt2[k]+" "+hcnt2_min[k]+" "+hcnt2_max[k]);
 
     assert (currentCnt + hcnt2[k]) > targetCntInt : targetCntInt+" "+currentCnt+" "+k+" "+" "+maxBinCnt;
     assert hcnt2[k]!=1 || hcnt2_min[k]==hcnt2_max[k];
@@ -728,7 +728,7 @@ public class Summary2 extends Iced {
       else {
         guess = hcnt2_max[k];
         done = true;
-        Log.debug("QS_ Guess M "+guess);
+        // Log.debug("QS_ Guess M "+guess);
       }
     }
     else if ( inMidOfBin ) {
@@ -736,7 +736,7 @@ public class Summary2 extends Iced {
       // we never need to interpolate (only allowed when min=max
       guess = hcnt2_min[k];
       done = true;
-      Log.debug("QS_ Guess N "+guess);
+      // Log.debug("QS_ Guess N "+guess);
     }
 
     if ( !done && atStartOfBin ) {
@@ -744,7 +744,7 @@ public class Summary2 extends Iced {
       if ( hcnt2[k]>2 && (hcnt2_min[k]==hcnt2_max[k]) ) { 
         guess = hcnt2_min[k];
         done = true;
-        Log.debug("QS_ Guess A "+guess);
+        // Log.debug("QS_ Guess A "+guess);
       } 
       // min/max can be equal or not equal here
       else if ( hcnt2[k]==2 ) { // interpolate between min/max for the two value bin
@@ -757,14 +757,14 @@ public class Summary2 extends Iced {
 
         done = true;
         interpolated = true;
-        Log.debug("QS_ Guess B "+guess+" targetCntFract: "+targetCntFract);
+        // Log.debug("QS_ Guess B "+guess+" targetCntFract: "+targetCntFract);
       } 
       // no interpolation needed
       else if ( (hcnt2[k]==1) && (targetCntFract==0) ) {
         assert hcnt2_min[k]==hcnt2_max[k];
         guess = hcnt2_min[k];
         done = true;
-        Log.debug("QS_ Guess C "+guess);
+        // Log.debug("QS_ Guess C "+guess);
       } 
     }
 
@@ -775,10 +775,10 @@ public class Summary2 extends Iced {
     if ( !done ) {
       if ( hcnt2[k]==1 ) {
         assert hcnt2_min[k]==hcnt2_max[k];
-        Log.debug("QS_ Single value in this bin, but fractional means we need to interpolate to next non-zero");
+        // Log.debug("QS_ Single value in this bin, but fractional means we need to interpolate to next non-zero");
       }
       if ( interpolateEndNeeded ) {
-        Log.debug("QS_ Interpolating off the end of a bin!");
+        // Log.debug("QS_ Interpolating off the end of a bin!");
       }
 
       double nextVal;
@@ -786,13 +786,13 @@ public class Summary2 extends Iced {
       // if we're at the end
       assert k < maxBinCnt : k+" "+maxBinCnt;
       if ( (k+1)==maxBinCnt) {
-        Log.debug("QS_ Using valEnd for approx interpolate: "+valEnd);
+        // Log.debug("QS_ Using valEnd for approx interpolate: "+valEnd);
         nextVal = valEnd; // just in case the binning didn't max in a bin before the last
       } 
       else {
         nextK = k + 1;
         nextVal = hcnt2_min[nextK];
-        Log.debug("QS_ Using nextK for interpolate: "+nextK+" "+hcnt2_min[nextK]);
+        // Log.debug("QS_ Using nextK for interpolate: "+nextK+" "+hcnt2_min[nextK]);
         // hcnt2[nextK] may be zero here if we backfilled
       }
 
@@ -803,9 +803,9 @@ public class Summary2 extends Iced {
         guess = hcnt2_max[k] + (targetCntFract * dDiff);
         interpolated = true;
         done = true; //  has to be one above us when needed. (or we're at end)
-        Log.debug("QS_ Guess D "+guess+" "+nextVal+" "+hcnt2_min[k]+" "+hcnt2_max[k]+" "+hcnt2[k]+" "+nextVal+
-          " targetCntFull: "+targetCntFull+" targetCntFract: "+targetCntFract+
-          " _gprows: " + _gprows+" "+stillCanGetIt);
+        // Log.debug("QS_ Guess D "+guess+" "+nextVal+" "+hcnt2_min[k]+" "+hcnt2_max[k]+" "+hcnt2[k]+" "+nextVal+
+        //   " targetCntFull: "+targetCntFull+" targetCntFract: "+targetCntFract+
+        //   " _gprows: " + _gprows+" "+stillCanGetIt);
 
       }
       else { // single pass approx..with unresolved bin
@@ -815,9 +815,9 @@ public class Summary2 extends Iced {
         guess = hcnt2_min[k] + (targetCntFull-currentCnt) * dDiff;
         interpolated = true;
         done = true; //  has to be one above us when needed. (or we're at end)
-        Log.debug("QS_ Guess E "+guess+" "+nextVal+" "+hcnt2_min[k]+" "+hcnt2_max[k]+" "+hcnt2[k]+" "+nextVal+
-          " targetCntFull: "+targetCntFull+" targetCntFract: "+targetCntFract+
-          " _gprows: " + _gprows);
+        // Log.debug("QS_ Guess E "+guess+" "+nextVal+" "+hcnt2_min[k]+" "+hcnt2_max[k]+" "+hcnt2[k]+" "+nextVal+
+        //   " targetCntFull: "+targetCntFull+" targetCntFract: "+targetCntFract+
+        //   " _gprows: " + _gprows);
       }
     }
     assert !Double.isNaN(guess); // covers positive/negative inf also (if we divide by 0)

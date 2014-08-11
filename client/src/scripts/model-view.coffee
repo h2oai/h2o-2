@@ -143,7 +143,6 @@ computeCumulativeScaledValues = (varImp) ->
 
   varImp.hasCumulativeScaledValues = yes
 
-  console.log varImp
   return
 
 createVariableImportanceModel = (inputColumnNames, variableImportances) ->

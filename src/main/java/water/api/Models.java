@@ -1,7 +1,9 @@
 package water.api;
 
-import static water.util.ParamUtils.*;
-
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import hex.VarImp;
 import hex.deeplearning.DeepLearning;
 import hex.drf.DRF;
@@ -9,17 +11,14 @@ import hex.gbm.GBM;
 import hex.glm.GLM2;
 import hex.glm.GLMModel;
 import hex.singlenoderf.SpeeDRF;
-
-import java.util.*;
-
 import org.apache.commons.math3.util.Pair;
-
 import water.*;
 import water.api.Frames.FrameSummary;
 import water.fvec.Frame;
 
-import com.google.gson.*;
-import water.util.Log;
+import java.util.*;
+
+import static water.util.ParamUtils.*;
 
 public class Models extends Request2 {
 
@@ -199,6 +198,7 @@ public class Models extends Request2 {
 
     // model.job() is a local copy; on multinode clusters we need to get from the DKV
     Key job_key = ((Job)model.job()).self();
+    if (null == job_key) throw H2O.fail("Null job key for model: " + (model == null ? "null model" : model._key)); // later when we deserialize models from disk we'll relax this constraint
     Job job = DKV.get(job_key).get();
     summary.state = job.getState();
     summary.model_category = model.getModelCategory();

@@ -29,7 +29,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_exec2_empty_result(self):
+    def test_NOPASS_exec2_empty_result(self):
         h2o.beta_features = True
         bucket = 'smalldata'
         csvPathname = 'iris/iris2.csv'
