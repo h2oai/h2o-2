@@ -1,0 +1,73 @@
+
+# example of first result
+{
+  "Request2": 0, 
+  "description": "NaiveBayes", 
+  "destination_key": "NaiveBayes_917fa8525f38bfa171a5a9c7514b4784", 
+  "end_time": 0, 
+  "exception": null, 
+  "job_key": "$0301c0a8002232d4ffffffff$_a24728433e6636cb93ba0a9e9bcd4516", 
+  "laplace": 0, 
+  "response": {}, 
+  "response_info": {
+    "h2o": "pytest-kevin-8798", 
+    "node": "/192.168.0.34:54321", 
+    "redirect_url": "/2/NBProgressPage.json?job_key=%240301c0a8002232d4ffffffff%24_a24728433e6636cb93ba0a9e9bcd4516&destination_key=NaiveBayes_917fa8525f38bfa171a5a9c7514b4784", 
+    "status": "redirect", 
+    "time": 1
+  }, 
+  "source": {
+    "_key": "covtype.hex"
+  }, 
+  "start_time": 1407789364379, 
+  "state": "RUNNING"
+}
+
+
+# final
+
+{
+    "type":"object",
+    "properties":{
+        "Request2": { "type":"number" },
+        "nb_model": { "type":"object",
+            "properties":{
+                "_dataKey": { "type":"string" },
+                "_domains": { "type":"array", "items":[ 
+                        { "type":"null" },
+                        { "type":"array" },
+                    ]
+                },
+                "_key": { "type":"string" },
+                "_modelClassDist": { "type":"null" },
+                "_names": { "type":"array", "items":
+                        { "type":"string" }
+                },
+                "_priorClassDist": { "type":"null" },
+                "laplace": { "type":"number" },
+                "ncats": { "type":"number" },
+                "nnums": { "type":"number" },
+                "pcond": { "type":"array", "items":
+                        { "type":"array" }
+                },
+                "pprior": { "type":"array", "items":
+                        { "type":"number" }
+                },
+                "rescnt": { "type":"array", "items":
+                        { "type":"number" }
+                },
+                "warnings": { "type":"array" }
+            }
+        },
+        "response_info": {
+            "type":"object", "properties":{
+                "h2o": { "type":"string" },
+                "node": { "type":"string" },
+                "redirect_url": { "type":"null" },
+                "status": { "type":"string" },
+                "time": { "type":"number" }
+            }
+        }
+    }
+}
+
