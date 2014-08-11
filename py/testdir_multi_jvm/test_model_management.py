@@ -369,9 +369,10 @@ class ModelManagementTestCase(unittest.TestCase):
 
         found_problem = False
         for a_node in h2o.nodes:
+            print "  Checking: " + a_node.http_addr + ":" + str(a_node.port)
             models = a_node.models()
             got = len(models['models'])
-            print "For node: " + a_node.http_addr + ":" + str(a_node.port) + " checking that we got ",str(num_models), " models. . ."
+            print "For node: " + a_node.http_addr + ":" + str(a_node.port) + " checking that we got ", str(num_models), " models. . ."
             if num_models != got:
                 print "p00p, not enough. . ."
                 found_problem = True
