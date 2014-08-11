@@ -216,7 +216,7 @@ class H2OCloudNode:
 
         @return: none
         """
-        retries = 30
+        retries = 60
         while (retries > 0):
             if (self.terminated):
                 return
@@ -308,8 +308,8 @@ class H2OCloud:
         self.xmx = xmx
         self.output_dir = output_dir
 
-        # Randomly choose a five digit cloud number.
-        n = random.randint(10000, 99999)
+        # Randomly choose a seven digit cloud number.
+        n = random.randint(1000000, 9999999)
         user = getpass.getuser()
         user = ''.join(user.split())
 
@@ -1061,6 +1061,7 @@ class RUnitRunner:
     def _log(self, s):
         f = self._get_summary_filehandle_for_appending()
         print(s)
+        sys.stdout.flush()
         f.write(s + "\n")
         f.close()
 
@@ -1185,7 +1186,7 @@ def usage():
     print("                  'failed.txt' file from the output directory).")
     print("")
     print("    --testgroup   Test a group of tests by function:")
-    print("                  pca, glm, kmeans, gbm, rf, algos, golden, munging")
+    print("                  pca, glm, kmeans, gbm, rf, deeplearning, algos, golden, munging")
     print("")
     print("    --testsize    Sizes (and by extension length) of tests to run:")
     print("                  s=small (seconds), m=medium (a minute or two), l=large (longer)")
@@ -1349,9 +1350,6 @@ def parse_args(argv):
             unknown_arg(s)
 
         i += 1
-
-    if ((g_num_clouds > 1) and (g_nodes_per_cloud > 1)):
-        error("num clouds and nodes per cloud cannot both be greater than 1")
 
 
 def wipe_output_dir():

@@ -1207,7 +1207,7 @@ public class DTree extends Iced {
         if( _dataKey != null ) {
           Value dataval = DKV.get(_dataKey);
           if (dataval != null) {
-            water.fvec.Frame frdata = ValueArray.asFrame(dataval);
+            water.fvec.Frame frdata = dataval.get();
             water.fvec.Frame frsub = frdata.subframe(_names);
             JCodeGen.toClass(fileContextSB, "// Sample of data used by benchmark\nclass DataSample", "DATA", frsub, 10, "Sample test data.");
           }
@@ -1301,7 +1301,7 @@ public class DTree extends Iced {
   }
 
   private Key defaultTreeKey() {
-    return Key.makeUserHidden(Key.make("__Tree_"+Key.rand()));
+    return Key.makeSystem("__Tree_"+Key.rand());
   }
 
   private static final SB TO_JAVA_BENCH_FUNC = new SB().

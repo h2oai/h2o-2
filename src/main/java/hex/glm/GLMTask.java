@@ -9,7 +9,6 @@ import java.util.Arrays;
 
 import water.H2O.H2OCountedCompleter;
 import water.*;
-import water.util.ModelUtils;
 import water.util.Utils;
 
 /**
@@ -84,6 +83,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
           _ymax = t._ymax;
         } else {
           for(int i = 0; i < _nfolds+1; ++i) {
+            if(_nobs[i] + t._nobs[i] == 0)continue;
             _ymu[i] = _ymu[i] * ((double) _nobs[i] / (_nobs[i] + t._nobs[i])) + t._ymu[i] * t._nobs[i] / (_nobs[i] + t._nobs[i]);
             _nobs[i] += t._nobs[i];
             if(t._ymax[i] > _ymax[i])
@@ -94,9 +94,9 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
         }
       }
     }
-    @Override protected void chunkDone(){
+    @Override protected void chunkDone(long n){
       for(int i = 0; i < _ymu.length; ++i)
-        _ymu[i] /= _nobs[i];
+        if(_nobs[i] != 0)_ymu[i] /= _nobs[i];
     }
     public double ymu(){return ymu(-1);}
     public long nobs(){return nobs(-1);}
@@ -184,7 +184,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     @Override public void chunkInit(){
       _objvals = new double[_betas.length];
     }
-    @Override public void chunkDone(){
+    @Override public void chunkDone(long n){
       for(int i = 0; i < _objvals.length; ++i)
         _objvals[i] *= _reg;
     }
@@ -270,7 +270,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
 
     public GLMIterationTask(Key jobKey, DataInfo dinfo, GLMParams glm, boolean computeGram, boolean validate, boolean computeGradient, double [] beta, double ymu, double reg, float [] thresholds, H2OCountedCompleter cmp) {
       super(jobKey, dinfo,glm,cmp);
-      assert beta == null || beta.length == dinfo.fullN()+1:"beta.leng != dinfo.fullN(), beta = " + beta.length + " dinfo = " + dinfo.fullN();
+      assert beta == null || beta.length == dinfo.fullN()+1:"beta.length != dinfo.fullN(), beta = " + beta.length + " dinfo = " + dinfo.fullN();
       _beta = beta;
       _ymu = ymu;
       _reg = reg;
@@ -340,7 +340,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
         _grad = MemoryManager.malloc8d(_dinfo.fullN()+1); // + 1 is for intercept
     }
 
-    @Override protected void chunkDone(){
+    @Override protected void chunkDone(long n){
       if(_computeGram)_gram.mul(_reg);
       for(int i = 0; i < _xy.length; ++i)
         _xy[i] *= _reg;

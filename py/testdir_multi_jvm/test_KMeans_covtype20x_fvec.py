@@ -67,8 +67,9 @@ class Basic(unittest.TestCase):
             h2o_kmeans.simpleCheckKMeans(self, kmeans, **kwargs)
             (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseResult, 'd', **kwargs)
 
-            gs = h2o.nodes[0].gap_statistic(source=hex_key, k_max=8)
-            print "gap_statistic:", h2o.dump_json(gs)
+            #gap statistic will work, but is slow and is not officially supported right now
+            #gs = h2o.nodes[0].gap_statistic(source=hex_key, k_max=8, timeoutSecs=1200)
+            #print "gap_statistic:", h2o.dump_json(gs)
 
 
 if __name__ == '__main__':

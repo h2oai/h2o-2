@@ -17,7 +17,7 @@ public class Anomaly extends Job.FrameJob {
   public static DocGen.FieldDoc[] DOC_FIELDS;
   public static final String DOC_GET = "Anomaly Detection via Deep Learning";
 
-  @API(help = "Deep Learning Auto-Encoder Model ", filter= Default.class, json = true)
+  @API(help = "Deep Learning Auto-Encoder Model ", required=true, filter= Default.class, json = true)
   public Key dl_autoencoder_model;
 
   @API(help = "(Optional) Threshold of reconstruction error for rows to be displayed in logs (default: 10x training MSE)", filter= Default.class, json = true)
@@ -25,6 +25,7 @@ public class Anomaly extends Job.FrameJob {
 
   @Override
   protected final void execImpl() {
+    if (dl_autoencoder_model == null) throw new IllegalArgumentException("Deep Learning Model must be specified.");
     DeepLearningModel dlm = UKV.get(dl_autoencoder_model);
     if (dlm == null) throw new IllegalArgumentException("Deep Learning Model not found.");
     if (!dlm.get_params().autoencoder) throw new IllegalArgumentException("Deep Learning Model must be build with autoencoder = true.");

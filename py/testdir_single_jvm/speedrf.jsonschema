@@ -16,13 +16,13 @@
                 "errs": { "type":"array", "items": { "type":"number" } },
                 "jobKey": { "type":"string" },
                 "max_depth": { "type":"number" },
-                "mtry": { "type":"number" },
+                "mtries": { "type":"number" },
                 "nbins": { "type":"number" },
                 "parameters": { "type":"object", "properties": {
                         "Request2": { "type":"number" },
                         "_exclusiveSplitLimit": { "type":"number" },
                         "_useNonLocalData": { "type":"string" },
-                        "bin_limit": { "type":"number" },
+                        "nbins": { "type":"number" },
                         "class_weights": { "type":"array", "items": { "type":"number" } },
                         "classification": { "type":"string" },
                         "description": { "type":"string" },
@@ -33,9 +33,9 @@
                         "job_key": { "type":"string" },
                         "keep_cross_validation_splits": { "type":"string" },
                         "max_depth": { "type":"number" },
-                        "mtry": { "type":"number" },
+                        "mtries": { "type":"number" },
                         "n_folds": { "type":"number" },
-                        "num_trees": { "type":"number" },
+                        "ntrees": { "type":"number" },
                         "oobee": { "type":"string" },
                         "response_info": { "type":"object", "properties": {
                                 "h2o": { "type":"string" },
@@ -46,7 +46,7 @@
                             }
                         },
                         "response": { "type":"object" },
-                        "sample": { "type":"number" },
+                        "sample_rate": { "type":"number" },
                         "sampling_strategy": { "type":"string" },
                         "seed": { "type":"number" },
                         "source": { "type":"object", "properties": {
@@ -62,7 +62,7 @@
                         "xval_models": { "type":"array" }
                     }
                 },
-                "sample": { "type":"number" },
+                "sample_rate": { "type":"number" },
                 "strata_samples": { "type":"array", "items": { "type":"number" } },
                 "t_keys": { "type":"array", "items": { "type":"string" } },
                 "testKey": { "type":"null" },

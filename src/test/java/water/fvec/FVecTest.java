@@ -5,7 +5,6 @@ import java.io.File;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import water.*;
-import water.parser.ParseDataset;
 
 public class FVecTest extends TestUtil {
   static final double EPSILON = 1e-6;
@@ -113,48 +112,6 @@ public class FVecTest extends TestUtil {
     @Override public void map( Chunk in, NewChunk out ) {
       for( int i=0; i<in._len; i++ )
         out.append2( in.at8(i)+(in.at8(i) >= ' ' ? 1 : 0),0);
-    }
-  }
-
-  // ==========================================================================
-  @Test public void testParse() {
-    //File file = TestUtil.find_test_file("./smalldata/airlines/allyears2k_headers.zip");
-    //File file = TestUtil.find_test_file("../datasets/UCI/UCI-large/covtype/covtype.data");
-    //File file = TestUtil.find_test_file("./smalldata/hhp.cut3.214.data.gz");
-    File file = TestUtil.find_test_file("./smalldata/logreg/prostate_long.csv.gz");
-    Key fkey = NFSFileVec.make(file);
-    Key dest = Key.make("pro1.hex");
-    Frame fr = ParseDataset2.parse(dest, new Key[]{fkey});
-
-    Key rkey = load_test_file(file,"pro2.data");
-    Key vkey = Key.make("pro2.hex");
-    ParseDataset.parse(vkey, new Key[]{rkey});
-    UKV.remove(rkey);
-    ValueArray ary = UKV.get(vkey);
-    assertEquals(ary.numRows(),fr.vecs()[0].length());
-
-    try {
-      int errs=0;
-      long rows = ary.numRows();
-      for( long i=0; i<rows; i++ ) {
-        if( errs > 1 ) break;
-        for( int j=0; j<ary._cols.length; j++ ) {
-          double d1 = fr.vecs()[j].at(i);
-          double d2 = ary.datad(i,j);
-          if( Math.abs((d1-d2)/d1) > 0.0000001  ) {
-            System.out.println("Row "+i);
-            System.out.println("FVec= "+fr .toString(i));
-            System.out.println("VAry= "+ary.toString(i));
-            errs++;
-            break;
-          }
-        }
-      }
-      assertEquals(0,errs);
-
-    } finally {
-      fr.delete();
-      ary.delete();
     }
   }
 

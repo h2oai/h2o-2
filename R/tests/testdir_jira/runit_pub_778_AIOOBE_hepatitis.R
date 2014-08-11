@@ -18,7 +18,7 @@ test.colapply <- function(conn) {
   Log.info('Print head of dataset')
   Log.info(head(hep))
  
-  m <- h2o.SpeeDRF(x = c("C9", "C12", "C13", "C15", "C16", "C18"), y = "C1", data = hep, ntree = 10, depth = 100, importance = T) 
+  m <- h2o.randomForest(x = c("C9", "C12", "C13", "C15", "C16", "C18"), y = "C1", data = hep, ntree = 10, depth = 100, importance = T) 
 
   print(m)  
   testEnd()

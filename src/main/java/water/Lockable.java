@@ -162,7 +162,12 @@ public abstract class Lockable<T extends Lockable<T>> extends Iced {
       return Lockable.this;     // Freshen this
     }
   }
-
+  public static void unlock_lockable(final Key lockable, final Key job){
+    new DTask.DKeyTask<DTask.DKeyTask,Lockable>(null,lockable){
+      @Override
+      public void map(Lockable l) { l.unlock(job);}
+    }.invokeTask();
+  }
   // -----------
   // Atomically set a new version of self & unlock.
   public void unlock( Key job_key ) { 

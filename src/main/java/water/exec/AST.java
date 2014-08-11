@@ -11,6 +11,7 @@ import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.NewChunk;
 import water.fvec.Vec;
+import water.util.Log;
 
 /** Parse a generic R string and build an AST, in the context of an H2O Cloud
  *  @author cliffc@0xdata.com
@@ -285,7 +286,7 @@ class ASTSlice extends AST {
     if( ary.numRows() == len && vec.min()>=0 && vec.max()<=1 && vec.isInt() )
       return ary;    // Boolean vector selection.
     // Convert single vector to a list of longs selecting rows
-    if(ary.numRows() > 100000) throw H2O.fail("Unimplemented: Cannot explicitly select > 100000 rows in slice.");
+    if(ary.numRows() > 10000000) throw H2O.fail("Unimplemented: Cannot explicitly select > 100000 rows in slice.");
     cols = MemoryManager.malloc8((int)ary.numRows());
     for(int i = 0; i < cols.length; ++i){
       if(vec.isNA(i))throw new IllegalArgumentException("Can not use NA as index!");
@@ -565,15 +566,28 @@ class ASTAssign extends AST {
         throw new IllegalArgumentException("Can only assign to a matching set of columns; trying to assign " + ary_rhs.numCols() + " cols over " + cs.length + " cols");
       // Replace the LHS cols with the RHS cols
       Vec rvecs[] = ary_rhs.vecs();
-      Futures fs = null;
+      Futures fs = new Futures();
       for (int i = 0; i < cs.length; i++) {
         int cidx = (int) cs[i] - 1;      // Convert 1-based to 0-based
         Vec rv = env.addRef(rvecs[rvecs.length == 1 ? 0 : i]);
-        if (cidx == ary.numCols())
+        if (cidx == ary.numCols()) {
+          if (!rv.group().equals(ary.anyVec().group())) {
+            env.subRef(rv);
+            rv = ary.anyVec().align(rv);
+            env.addRef(rv);
+          }
           ary.add("C" + String.valueOf(cidx + 1), rv);     // New column name created with 1-based index
-        else fs = env.subRef(ary.replace(cidx, rv), fs);
+        }
+        else {
+          if (!(rv.group().equals(ary.anyVec().group())) && rv.length() == ary.anyVec().length()) {
+            env.subRef(rv);
+            rv = ary.anyVec().align(rv);
+            env.addRef(rv);
+          }
+          fs = env.subRef(ary.replace(cidx, rv), fs);
+        }
       }
-      if (fs != null) fs.blockForPending();
+      fs.blockForPending();
     }
     // After slicing, pop all expressions (cannot lower refcnt till after all uses)
     int narg = 0;

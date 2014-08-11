@@ -26,7 +26,7 @@ setClass("H2OKMeansGrid", contains="H2OGrid")
 setClass("H2ODRFGrid", contains="H2OGrid")
 setClass("H2ODeepLearningGrid", contains="H2OGrid")
 setClass("H2OSpeeDRFGrid", contains="H2OGrid")
-setClass("H2OGLMModelList", representation(models="list", best_model="numeric"))
+setClass("H2OGLMModelList", representation(models="list", best_model="numeric", lambdas="numeric"))
 
 # Register finalizers for H2O data and model objects
 # setMethod("initialize", "H2ORawData", function(.Object, h2o = new("H2OClient"), key = "") {
@@ -114,7 +114,7 @@ setMethod("show", "H2OGLMModel", function(object) {
     cat("Parsed Data Key:", object@data@key, "\n\n")
     cat("GLM2 Model Key:", object@key)
     
-    model = object@model
+    model <- object@model
     cat("\n\nCoefficients:\n"); print(round(model$coefficients,5))
     if(!is.null(model$normalized_coefficients)) {
         cat("\nNormalized Coefficients:\n"); print(round(model$normalized_coefficients,5))
@@ -125,22 +125,22 @@ setMethod("show", "H2OGLMModel", function(object) {
     cat("\nDeviance Explained:", round(1-model$deviance/model$null.deviance,5), "\n")
     # cat("\nAvg Training Error Rate:", round(model$train.err,5), "\n")
     
-    family = model$params$family$family
+    family <- model$params$family$family
     if(family == "binomial") {
         cat("AUC:", round(model$auc,5), " Best Threshold:", round(model$best_threshold,5))
         cat("\n\nConfusion Matrix:\n"); print(model$confusion)
     }
-    
+
     if(length(object@xval) > 0) {
         cat("\nCross-Validation Models:\n")
         if(family == "binomial") {
-            modelXval = t(sapply(object@xval, function(x) { c(x@model$rank-1, x@model$auc, 1-x@model$deviance/x@model$null.deviance) }))
+            modelXval <- t(sapply(object@xval, function(x) { c(x@model$rank-1, x@model$auc, 1-x@model$deviance/x@model$null.deviance) }))
             colnames(modelXval) = c("Nonzeros", "AUC", "Deviance Explained")
         } else {
-            modelXval = t(sapply(object@xval, function(x) { c(x@model$rank-1, x@model$aic, 1-x@model$deviance/x@model$null.deviance) }))
+            modelXval <- t(sapply(object@xval, function(x) { c(x@model$rank-1, x@model$aic, 1-x@model$deviance/x@model$null.deviance) }))
             colnames(modelXval) = c("Nonzeros", "AIC", "Deviance Explained")
         }
-        rownames(modelXval) = paste("Model", 1:nrow(modelXval))
+        rownames(modelXval) <- paste("Model", 1:nrow(modelXval))
         print(modelXval)
     }
 })
@@ -175,7 +175,7 @@ setMethod("summary","H2OGLMModelList", function(object) {
 
 setMethod("show", "H2OGLMModelList", function(object) {
     print(summary(object))
-    cat("best model:",object@best_model)
+    cat("best model:",object@best_model, "\n")
 })
 
 setMethod("show", "H2ODeepLearningModel", function(object) {
@@ -184,10 +184,13 @@ setMethod("show", "H2ODeepLearningModel", function(object) {
   cat("Deep Learning Model Key:", object@key)
 
   model = object@model
-  cat("\n\nTraining classification error:", model$train_class_error)
-  cat("\nTraining mean square error:", model$train_sqr_error)
-  cat("\n\nValidation classification error:", model$valid_class_error)
-  cat("\nValidation square error:", model$valid_sqr_error)
+  if (model$params$classification == 1) {
+    cat("\n\nTraining classification error:", model$train_class_error)
+    if (!is.null(model$valid_class_error)) cat("\n\nValidation classification error:", model$valid_class_error)
+  } else {
+    cat("\nTraining mean square error:", model$train_sqr_error)
+    if (!is.null(model$valid_sqr_error)) cat("\nValidation mean square error:", model$valid_sqr_error)
+  }
   
   if(!is.null(model$confusion)) {
     cat("\n\nConfusion matrix:\n")
@@ -204,6 +207,9 @@ setMethod("show", "H2ODeepLearningModel", function(object) {
   if(!is.null(model$hit_ratios)) {
     cat("\nHit Ratios for Multi-class Classification:\n")
     print(model$hit_ratios)
+  }
+  if(!is.null(model$varimp)) {
+    cat("\nRelative Variable Importance:\n"); print(model$varimp)
   }
   
   if(!is.null(object@xval) && length(object@xval) > 0) {
@@ -246,7 +252,8 @@ setMethod("show", "H2ODRFModel", function(object) {
 setMethod("show", "H2OSpeeDRFModel", function(object) {
   print(object@data@h2o)
   cat("Parsed Data Key:", object@data@key, "\n\n")
-  cat("SpeeDRF Model Key:", object@key)
+  cat("Random Forest Model Key:", object@key)
+  cat("\n\nSeed Used: ", object@model$params$seed)
 
   model = object@model
   cat("\n\nClassification:", model$params$classification)
@@ -389,8 +396,10 @@ as.h2o <- function(client, object, key = "", header, sep = "") {
     return(.h2o.exec2(res$dest_key, h2o = client, res$dest_key))
   } else {
     tmpf <- tempfile(fileext=".csv")
+    toFactor <- names(which(unlist(lapply(object, is.factor))))
     write.csv(object, file=tmpf, quote = TRUE, row.names = FALSE)
     h2f <- h2o.uploadFile(client, tmpf, key=key, header=header, sep=sep)
+    invisible(lapply(toFactor, function(a) { h2o.exec(h2f[,a] <- factor(h2f[,a])) }))
     unlink(tmpf)
     return(h2f)
   }
@@ -906,10 +915,31 @@ setMethod("sign",    "H2OParsedData", function(x) { .h2o.__unop2("sgn",   x) })
 setMethod("sqrt",    "H2OParsedData", function(x) { .h2o.__unop2("sqrt",  x) })
 setMethod("ceiling", "H2OParsedData", function(x) { .h2o.__unop2("ceil",  x) })
 setMethod("floor",   "H2OParsedData", function(x) { .h2o.__unop2("floor", x) })
+setMethod("trunc",   "H2OParsedData", function(x) { .h2o.__unop2("trunc", x) })
 setMethod("log",     "H2OParsedData", function(x) { .h2o.__unop2("log",   x) })
 setMethod("exp",     "H2OParsedData", function(x) { .h2o.__unop2("exp",   x) })
 setMethod("is.na",   "H2OParsedData", function(x) { .h2o.__unop2("is.na", x) })
 setMethod("t",       "H2OParsedData", function(x) { .h2o.__unop2("t",     x) })
+
+round.H2OParsedData <- function(x, digits = 0) {
+  if(length(digits) > 1 || !is.numeric(digits)) stop("digits must be a single number")
+  
+  expr <- paste("round(", paste(x@key, digits, sep = ","), ")", sep = "")
+  res <- .h2o.__exec2(x@h2o, expr)
+  if(res$num_rows == 0 && res$num_cols == 0)
+    return(res$scalar)
+  .h2o.exec2(expr = res$dest_key, h2o = x@h2o, dest_key = res$dest_key)
+}
+
+signif.H2OParsedData <- function(x, digits = 6) {
+  if(length(digits) > 1 || !is.numeric(digits)) stop("digits must be a single number")
+  
+  expr <- paste("signif(", paste(x@key, digits, sep = ","), ")", sep = "")
+  res <- .h2o.__exec2(x@h2o, expr)
+  if(res$num_rows == 0 && res$num_cols == 0)
+    return(res$scalar)
+  .h2o.exec2(expr = res$dest_key, h2o = x@h2o, dest_key = res$dest_key)
+}
 
 setMethod("colnames<-", signature(x="H2OParsedData", value="H2OParsedData"),
   function(x, value) {
@@ -1377,24 +1407,24 @@ str.H2OParsedData <- function(object, ...) {
   
   if(ncol(object) > .MAX_INSPECT_COL_VIEW)
     warning(object@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
-  res = .h2o.__remoteSend(object@h2o, .h2o.__PAGE_INSPECT, key=object@key, max_column_display=.Machine$integer.max)
-  cat("\nH2O dataset '", object@key, "':\t", res$num_rows, " obs. of  ", (p <- res$num_cols), 
+  res = .h2o.__remoteSend(object@h2o, .h2o.__PAGE_INSPECT2, src_key=object@key)
+  cat("\nH2O dataset '", object@key, "':\t", res$numRows, " obs. of  ", (p <- res$numCols),
       " variable", if(p != 1) "s", if(p > 0) ":", "\n", sep = "")
   
   cc <- unlist(lapply(res$cols, function(y) y$name))
   width <- max(nchar(cc))
-  rows <- res$rows[1:min(res$num_rows, 10)]    # TODO: Might need to check rows > 0
+  rows <- res$rows[1:min(res$numRows, 10)]    # TODO: Might need to check rows > 0
   
   res2 = .h2o.__remoteSend(object@h2o, .h2o.__HACK_LEVELS2, source=object@key, max_ncols=.Machine$integer.max)
   for(i in 1:p) {
     cat("$ ", cc[i], rep(' ', width - nchar(cc[i])), ": ", sep = "")
     rhead <- sapply(rows, function(x) { x[i+1] })
     if(is.null(res2$levels[[i]]))
-      cat("num  ", paste(rhead, collapse = " "), if(res$num_rows > 10) " ...", "\n", sep = "")
+      cat("num  ", paste(rhead, collapse = " "), if(res$numRows > 10) " ...", "\n", sep = "")
     else {
       rlevels = res2$levels[[i]]
       cat("Factor w/ ", (count <- length(rlevels)), " level", if(count != 1) "s", ' "', paste(rlevels[1:min(count, 2)], collapse = '","'), '"', if(count > 2) ",..", ": ", sep = "")
-      cat(paste(match(rhead, rlevels), collapse = " "), if(res$num_rows > 10) " ...", "\n", sep = "")
+      cat(paste(match(rhead, rlevels), collapse = " "), if(res$numRows > 10) " ...", "\n", sep = "")
     }
   }
 }

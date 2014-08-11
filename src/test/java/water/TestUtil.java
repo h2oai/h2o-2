@@ -17,7 +17,6 @@ import org.junit.runners.model.Statement;
 import water.Job.JobState;
 import water.deploy.*;
 import water.fvec.*;
-import water.parser.ParseDataset;
 import water.util.*;
 
 public class TestUtil {
@@ -79,7 +78,7 @@ public class TestUtil {
       DKV.remove(job.job_key);
     }
     DKV.remove(Job.LIST);         // Remove all keys
-    DKV.remove(Log.LOG_KEY);
+    if (Log.LOG_KEY!=null) DKV.remove(Log.LOG_KEY); // The job key does not need to be created if the test does not print into logs
     DKV.write_barrier();
     int leaked_keys = H2O.store_size() - _initial_keycnt;
     int nvecs = 0, nchunks = 0, nframes = 0, nmodels = 0, nothers = 0;
@@ -93,7 +92,7 @@ public class TestUtil {
           leaked_keys--;
         else {
           System.err.println("Leaked key: " + k + " = " + o);
-          if (k.isDVec()) nchunks++;
+          if (k.isChunkKey()) nchunks++;
           else if (k.isVec()) nvecs++;
           else if (o instanceof Frame) nframes++;
           else if (o instanceof Model) nmodels++;
@@ -131,8 +130,18 @@ public class TestUtil {
     return file;
   }
 
-  public static Key[] load_test_folder(String fname) {
-    return load_test_folder(find_test_file(fname));
+
+  // Old VA-style wrappers for tests
+  public static Key load_test_file(String fname) {
+    return load_test_file(find_test_file(fname));
+  }
+
+  public static Key load_test_file(File file) { return NFSFileVec.make(file); }
+
+  public static Key loadAndParseFile(String keyName, String path) {
+    Key okey = Key.make(keyName);
+    ParseDataset2.parse(okey, new Key[]{load_test_file(path)});
+    return okey;
   }
 
   public static Key[] load_test_folder(File folder) {
@@ -147,218 +156,12 @@ public class TestUtil {
     return res;
   }
 
-  public static Key load_test_file(String fname, String key) {
-    return load_test_file(find_test_file(fname), key);
-  }
-
-  public static Key load_test_file(String fname) {
-    return load_test_file(find_test_file(fname));
-  }
-
-  public static Key load_test_file(File file, String keyname) {
-    Key key = VAUtils.loadFile(file, keyname);
-    if( key == null )
-      fail("failed load to " + file.getName());
-    return key;
-  }
-
-  public static Key load_test_file(File file) {
-    Key key = VAUtils.loadFile(file);
-    if( key == null )
-      fail("failed load to " + file.getName());
-    return key;
-  }
-
-  public static Key loadAndParseFile(String keyName, String path) {
-    Key fkey = load_test_file(path);
-    Key okey = Key.make(keyName);
-    ParseDataset.parse(okey, new Key[] { fkey });
-    return okey;
-  }
-
-  public static Key loadAndParseFolder(String keyName, String path) {
-    Key[] keys = load_test_folder(path);
+  public static Key loadAndParseFolder(String keyname, String path) {
+    Key[] keys = load_test_folder(new File(path));
     Arrays.sort(keys);
-    Key okey = Key.make(keyName);
-    ParseDataset.parse(okey, keys);
+    Key okey = Key.make(keyname);
+    ParseDataset2.parse(okey, keys);
     return okey;
-  }
-
-  public static ValueArray parse_test_key(Key fileKey, Key parsedKey) {
-    return VAUtils.parseKey(fileKey, parsedKey);
-  }
-
-  // --------
-  // Build a ValueArray from a collection of normal arrays.
-  // The arrays must be all the same length.
-  public static ValueArray va_maker(Key key, Object... arys) {
-    new ValueArray(key,0).delete_and_lock(null);
-    // Gather basic column info, 1 column per array
-    ValueArray.Column cols[] = new ValueArray.Column[arys.length];
-    char off = 0;
-    int numrows = -1;
-    for( int i = 0; i < arys.length; i++ ) {
-      ValueArray.Column col = cols[i] = new ValueArray.Column();
-      col._name = "C" + Integer.toString(i+1);
-      col._off = off;
-      col._scale = 1;
-      col._min = Double.MAX_VALUE;
-      col._max = Double.MIN_VALUE;
-      col._mean = 0.0;
-      Object ary = arys[i];
-      if( ary instanceof byte[] ) {
-        col._size = 1;
-        col._n = ((byte[]) ary).length;
-      } else if( ary instanceof float[] ) {
-        col._size = -4;
-        col._n = ((float[]) ary).length;
-      } else if( ary instanceof double[] ) {
-        col._size = -8;
-        col._n = ((double[]) ary).length;
-      } else if( ary instanceof String[] ) {
-        col._size = 2; // Catagorical: assign size==2
-        col._n = ((String[]) ary).length;
-        col._domain = new String[0];
-      } else if( ary instanceof short[] ) {
-        // currently using size==2 (shorts) for Enums instead
-        throw H2O.unimpl();
-      } else {
-        throw H2O.unimpl();
-      }
-      off += Math.abs(col._size);
-      if( numrows == -1 )
-        numrows = (int) col._n;
-      else
-        assert numrows == col._n;
-    }
-
-    Futures fs = new Futures();
-    int rowsize = off;
-    ValueArray ary = new ValueArray(key, numrows, rowsize, cols);
-    int row = 0;
-
-    for( int chunk = 0; chunk < ary.chunks(); chunk++ ) {
-      // Compact data into VA format, and compute min/max/mean
-      int rpc = ary.rpc(chunk);
-      int limit = row + rpc;
-      AutoBuffer ab = new AutoBuffer(rpc * rowsize);
-
-      for( ; row < limit; row++ ) {
-        for( int j = 0; j < arys.length; j++ ) {
-          ValueArray.Column col = cols[j];
-          double d;
-          float f;
-          byte b;
-          switch( col._size ) {
-          // @formatter:off
-          case  1: ab.put1 (b = ((byte  [])arys[j])[row]);  d = b;  break;
-          case -4: ab.put4f(f = ((float [])arys[j])[row]);  d = f;  break;
-          case -8: ab.put8d(d = ((double[])arys[j])[row]);          break;
-          // @formatter:on
-            case 2: // Categoricals or enums
-              String s = ((String[]) arys[j])[row];
-              String[] dom = col._domain;
-              int k = index(dom, s);
-              if( k == dom.length ) {
-                col._domain = dom = Arrays.copyOf(dom, k + 1);
-                dom[k] = s;
-              }
-              ab.put2((short) k);
-              d = k;
-              break;
-            default:
-              throw H2O.unimpl();
-          }
-          if( d > col._max )
-            col._max = d;
-          if( d < col._min )
-            col._min = d;
-          col._mean += d;
-        }
-      }
-
-      Key ckey = ary.getChunkKey(chunk);
-      DKV.put(ckey, new Value(ckey, ab.bufClose()), fs);
-    }
-
-    // Sum to mean
-    for( ValueArray.Column col : cols )
-      col._mean /= col._n;
-
-    // 2nd pass for sigma. Sum of squared errors, then divide by n and sqrt
-    for( int i = 0; i < numrows; i++ ) {
-      for( int j = 0; j < arys.length; j++ ) {
-        ValueArray.Column col = cols[j];
-        double d;
-        switch( col._size ) {
-        // @formatter:off
-          case  1: d = ((byte  [])arys[j])[i];  break;
-          case  2: d = index(col._domain,((String[])arys[j])[i]);  break;
-          case -4: d = ((float [])arys[j])[i];  break;
-          case -8: d = ((double[])arys[j])[i];  break;
-          default: throw H2O.unimpl();
-          // @formatter:on
-        }
-        col._sigma += (d - col._mean) * (d - col._mean);
-      }
-    }
-    // RSS to sigma
-    for( ValueArray.Column col : cols )
-      col._sigma = Math.sqrt(col._sigma / (col._n - 1));
-
-    // Write out data & keys
-    ary.unlock(null);
-    fs.blockForPending();
-    return ary;
-  }
-
-  static int index(String[] dom, String s) {
-    for( int k = 0; k < dom.length; k++ )
-      if( dom[k].equals(s) )
-        return k;
-    return dom.length;
-  }
-
-  // Make a M-dimensional data grid, with N points on each dimension running
-  // from 0 to N-1. The grid is flattened, so all N^M points are in the same
-  // ValueArray. Add a final column which is computed by running an expression
-  // over the other columns, typically this final column is the input to GLM
-  // which then attempts to recover the expression.
-  public abstract static class DataExpr {
-    public abstract double expr(byte[] cols);
-  }
-
-  @SuppressWarnings("cast") public ValueArray va_maker(Key key, int M, int N, DataExpr expr) {
-    if( N <= 0 || N > 127 || M <= 0 )
-      throw H2O.unimpl();
-    long Q = 1;
-    for( int i = 0; i < M; i++ ) {
-      Q *= N;
-      if( (long) (int) Q != Q )
-        throw H2O.unimpl();
-    }
-    byte[][] x = new byte[M][(int) Q];
-    double[] d = new double[(int) Q];
-
-    byte[] bs = new byte[M];
-    int q = 0;
-    int idx = M - 1;
-    d[q++] = expr.expr(bs);
-    while( idx >= 0 ) {
-      if( ++bs[idx] >= N ) {
-        bs[idx--] = 0;
-      } else {
-        idx = M - 1;
-        for( int i = 0; i < M; i++ )
-          x[i][q] = bs[i];
-        d[q++] = expr.expr(bs);
-      }
-    }
-    Object[] arys = new Object[M + 1];
-    for( int i = 0; i < M; i++ )
-      arys[i] = x[i];
-    arys[M] = d;
-    return va_maker(key, arys);
   }
 
   // Fluid Vectors

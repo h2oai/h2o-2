@@ -46,7 +46,3 @@ prostate.raw = h2o.importFile(localH2O, path = prosPath, parse = FALSE)
 prostate.hex = h2o.parseRaw(data = prostate.raw, key = "prostate.hex")
 # After parsing, it is okay to modify or delete prostate.csv
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
-\keyword{ ~kwd1 }
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line

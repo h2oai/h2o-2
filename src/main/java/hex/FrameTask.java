@@ -84,6 +84,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     public double [] _normRespSub;
     public int _foldId;
     public int _nfolds;
+    public Key _frameKey;
 
     public DataInfo deep_clone() {
       AutoBuffer ab = new AutoBuffer();
@@ -144,7 +145,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
      * @return Frame to be used by FrameTask
      */
     public static Frame prepareFrame(Frame source, Vec response, int[] ignored_cols, boolean toEnum, boolean dropConstantCols, boolean dropNACols) {
-      Frame fr = new Frame(source._names.clone(), source.vecs().clone());
+      Frame fr = new Frame(Key.makeSystem(Key.make().toString()), source._names.clone(), source.vecs().clone());
       if (ignored_cols != null) fr.remove(ignored_cols);
       final Vec[] vecs =  fr.vecs();
 
@@ -200,7 +201,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     }
 
     public static Frame prepareFrame(Frame source, int[] ignored_cols, boolean dropConstantCols, boolean dropNACols) {
-      Frame fr = new Frame(source._names.clone(), source.vecs().clone());
+      Frame fr = new Frame(Key.makeSystem(Key.make().toString()), source._names.clone(), source.vecs().clone());
       if (ignored_cols != null) fr.remove(ignored_cols);
       final Vec[] vecs =  fr.vecs();
 
@@ -495,8 +496,9 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
   protected void chunkInit(){}
   /**
    * Override this to do post-chunk processing work.
+   * @param n Number of processed rows
    */
-  protected void chunkDone(){}
+  protected void chunkDone(long n){}
 
 
   /**
@@ -546,13 +548,16 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         shuf_map[i] = start + i;
       Utils.shuffleArray(shuf_map, new Random().nextLong());
     }
+    long num_processed_rows = 0;
     for(int rrr = 0; rrr < repeats; ++rrr) {
     OUTER:
       for(int rr = start; rr < end; ++rr){
         final int r = shuf_map != null ? (int)shuf_map[rr-start] : rr;
-        if ((_dinfo._nfolds > 0 && (r % _dinfo._nfolds) == _dinfo._foldId)
+        final long lr = r + chunks[0]._start;
+        if ((_dinfo._nfolds > 0 && (lr % _dinfo._nfolds) == _dinfo._foldId)
                 || (skip_rng != null && skip_rng.nextFloat() > _useFraction))continue;
         for(Chunk c:chunks)if(c.isNA0(r))continue OUTER; // skip rows with NAs!
+        ++num_processed_rows;
         int i = 0, ncats = 0;
         for(; i < _dinfo._cats; ++i){
           int c = (int)chunks[i].at80(r);
@@ -575,12 +580,13 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
           response[i] = chunks[chunks.length-_dinfo._responses + i].at0(r);
           if (_dinfo._normRespMul != null) response[i] = (response[i] - _dinfo._normRespSub[i])*_dinfo._normRespMul[i];
         }
+        long seed = offset + rrr*(end-start) + r;
         if (outputs != null && outputs.length > 0)
-          processRow(offset + r, nums, ncats, cats, response, outputs);
+          processRow(seed, nums, ncats, cats, response, outputs);
         else
-          processRow(offset + r, nums, ncats, cats, response);
+          processRow(seed, nums, ncats, cats, response);
       }
     }
-    chunkDone();
+    chunkDone(num_processed_rows);
   }
 }

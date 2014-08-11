@@ -89,12 +89,12 @@ class Basic(unittest.TestCase):
             ntree = 2
             kwargs = {
                 'response': 'AGE',
-                'num_trees': ntree,
-                'mtry': None,
+                'ntrees': ntree,
+                'mtries': None,
                 'max_depth': 20,
-                'sample': 0.67,
+                'sample_rate': 0.67,
                 'destination_key': None,
-                'bin_limit': 1024,
+                'nbins': 1024,
                 'seed': 784834182943470027,
             }
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, doSummary=True)

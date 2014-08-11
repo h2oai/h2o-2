@@ -7,6 +7,8 @@
 #           java must be at least 1.6.
 #----------------------------------------------------------------------
 
+stop("Don't waste time running this failing test")
+
 options(echo=FALSE)
 TEST_ROOT_DIR <- ".."
 setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))

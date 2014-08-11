@@ -27,7 +27,3 @@ model <- h2o.randomForest(x = 1:4, y = 5, data = iris.hex)
 model.retrieved <- h2o.getModel(localH2O, model@key)
 h2o.shutdown(localH2O)
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
-\keyword{ ~kwd1 }
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line

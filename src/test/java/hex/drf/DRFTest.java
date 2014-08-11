@@ -81,8 +81,7 @@ public class DRFTest extends TestUtil {
         s("3", "4", "5", "6", "8"));
   }
 
-  @Test
-  public void testConstantCols() throws Throwable {
+  @Test public void testConstantCols() throws Throwable {
     try {
       basicDRFTestOOBE(
         "./smalldata/poker/poker100","poker.hex",
@@ -95,6 +94,16 @@ public class DRFTest extends TestUtil {
         null);
       Assert.fail();
     } catch( IllegalArgumentException iae ) { /*pass*/ }
+  }
+
+  @Test public void testBadData() throws Throwable {
+    basicDRFTestOOBE(
+        "./smalldata/test/drf_infinitys.csv","infinitys.hex",
+        new PrepData() { @Override int prep(Frame fr) { return fr.find("DateofBirth"); } },
+        1,
+        a( a(6, 0),
+           a(7, 0)),
+        s("0", "1"));
   }
 
   //@Test

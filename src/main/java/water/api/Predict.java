@@ -1,5 +1,6 @@
 package water.api;
 
+import hex.glm.GLMModel;
 import water.*;
 import water.fvec.Frame;
 import water.fvec.Vec;
@@ -10,7 +11,7 @@ public class Predict extends Request2 {
   static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
   @API(help = "Model", required = true, filter = Default.class)
-  public Iced model; // Type to Model when retired OldModel
+  public Model model; // Type to Model when retired OldModel
 
   @API(help = "Data frame", required = true, filter = Default.class)
   public Frame data;
@@ -30,15 +31,11 @@ public class Predict extends Request2 {
     try {
       if( model == null )
         throw new IllegalArgumentException("Model is required to perform validation!");
-
       // Create a new random key
       if ( prediction == null )
         prediction = Key.make("__Prediction_" + Key.make());
-
       fr = new Frame(prediction,new String[0],new Vec[0]).delete_and_lock(null);
-      if( model instanceof Model )
-           fr = ((   Model)model).score(data);
-      else fr = ((OldModel)model).score(data);
+      fr = model.score(data);
       fr = new Frame(prediction,fr._names,fr.vecs()); // Jam in the frame key
       return Inspect2.redirect(this, prediction.toString());
     } catch( Throwable t ) {

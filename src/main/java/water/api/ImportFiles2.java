@@ -44,6 +44,8 @@ public class ImportFiles2 extends Request2 {
   @API(help="Path to file/folder on either local disk/hdfs/s3",required=true,filter=GeneralFile.class,gridable=false)
   String path;
 
+  @API(help="Common prefix for all successfully imported file keys")
+  String prefix;
 
   @API(help="successfully imported files")
   String [] files;
@@ -57,6 +59,17 @@ public class ImportFiles2 extends Request2 {
   @API(help="Prior Keys that matched a prefix of the imported path, and were removed prior to (re)importing")
   String[] dels;
 
+  public static Key[] importPath(String path){
+    File f = new File(path);
+    assert f.exists():"file not found: " + f.getAbsolutePath();
+    ImportFiles2 imp = new ImportFiles2();
+    imp.path = path;
+    imp.serve();
+    Key [] res = new Key[imp.keys.length];
+    for(int i = 0; i < res.length; ++i)
+      res[i] = Key.make(imp.keys[i]);
+    return res;
+  }
   /**
    * Iterates over fields and their annotations, and creates argument handlers.
    */
@@ -135,11 +148,12 @@ public class ImportFiles2 extends Request2 {
     ArrayList<String> akeys  = new ArrayList();
     ArrayList<String> afails = new ArrayList();
     ArrayList<String> adels  = new ArrayList();
-    FileIntegrityChecker.check(f,true).syncDirectory(afiles,akeys,afails,adels);
+    FileIntegrityChecker.check(f).syncDirectory(afiles,akeys,afails,adels);
     files = afiles.toArray(new String[0]);
     keys  = akeys .toArray(new String[0]);
     fails = afails.toArray(new String[0]);
     dels  = adels .toArray(new String[0]);
+    prefix = getCommonPrefix(keys);
   }
 
   protected void serveHttp() {
@@ -204,12 +218,27 @@ public class ImportFiles2 extends Request2 {
     keys = new String[0];
   }
 
+  private String getCommonPrefix(String[] keys) {
+    String prefix = new String();
+    if(keys.length > 0) prefix = keys[0];
+
+    for(int i = 1; i < keys.length; i++) {
+      String tmp = keys[i];
+      int j = 0;
+      for(; j < Math.min(prefix.length(), tmp.length()); j++) {
+        if(prefix.charAt(j) != tmp.charAt(j)) break;
+      }
+      prefix = prefix.substring(0, j);
+    }
+    return prefix;
+  }
+
   // HTML builder
   @Override public boolean toHTML( StringBuilder sb ) {
     if(files == null)return false;
     if( files != null && files.length > 1 )
       sb.append("<div class='alert'>")
-        .append(parseLink("*"+path+"*", "Parse all into hex format"))
+        .append(parseLink("*"+prefix+"*", "Parse all into hex format"))
         .append(" </div>");
 
     DocGen.HTML.title(sb,"files");

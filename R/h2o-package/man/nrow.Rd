@@ -30,7 +30,3 @@ iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
 nrow(iris.hex)
 ncol(iris.hex)
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
-\keyword{ ~kwd1 }
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line

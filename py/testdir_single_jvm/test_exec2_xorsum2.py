@@ -139,7 +139,7 @@ class Basic(unittest.TestCase):
                 expectedUllSumAsDouble = h2o_util.unsignedLongLongToDouble(expectedUllSum)
                 expectedFpSumAsLongLong = h2o_util.doubleToUnsignedLongLong(expectedFpSum)
 
-                parseResult = h2i.import_parse(path=csvPathname, schema='local', hex_key=hex_key, 
+                parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, 
                     timeoutSecs=3000, retryDelaySecs=2)
                 inspect = h2o_cmd.runInspect(key=hex_key)
                 print "numRows:", inspect['numRows']

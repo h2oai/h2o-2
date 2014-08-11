@@ -70,6 +70,8 @@ public class Futures {
       throw  Log.errRTExcept(e);
     } catch( ExecutionException e ) {
       throw  Log.errRTExcept(e);
+    } catch(Throwable t){
+      throw new RuntimeException(t);
     }
   }
 }

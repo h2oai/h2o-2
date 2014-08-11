@@ -333,7 +333,7 @@ class ASTddply extends ASTOp {
       _groups = m0;
       p1._groups = null;
     }
-    @Override public String toString() { return _groups.toString(); }
+    @Override public String toString() { return _groups==null ? null : _groups.toString(); }
     // Save local results for pass2
     @Override public void closeLocal() { if( _gatherRows ) PASS1TMP.put(_uniq,this); }
 
@@ -570,7 +570,6 @@ class ASTUnique extends ASTddply {
   @Override ASTOp make() {return new ASTUnique();}
   @Override void apply(Env env, int argcnt, ASTApply apply) {
     Thread cThr = Thread.currentThread();
-    int priority = (cThr instanceof H2O.FJWThr) ? ((H2O.FJWThr)cThr)._priority : -1;
     Frame fr = env.peekAry();
     int cols[] = new int[fr.numCols()];
     for( int i=0; i<cols.length; i++ ) cols[i]=i;

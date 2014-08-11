@@ -22,33 +22,33 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_rf_libsvm_fvec(self):
+    def test_NOPASS_rf_libsvm_fvec(self):
         h2o.beta_features = True
         # just do the import folder once
 
         # make the timeout variable per dataset. it can be 10 secs for covtype 20x (col key creation)
         # so probably 10x that for covtype200
         csvFilenameList = [
-            ("mnist_train.svm", "cM", 30, 1),
+            ("mnist_train.svm", "cM", 30, 1, 1),
             # FIX! fails KMeansScore
             # not integer output
-            # ("colon-cancer.svm",   "cA", 30, 1),
-            ("connect4.svm",       "cB", 30, 1),
-            ("syn_6_1000_10.svm",  "cK", 30, 1),
+            # ("colon-cancer.svm",   "cA", 30, 1, 1),
+            ("connect4.svm",       "cB", 30, 1, 1),
+            ("syn_6_1000_10.svm",  "cK", 30, 1, 0),
             # float response requires regression
-            # ("syn_0_100_1000.svm", "cL", 30, 1),
-            ("mushrooms.svm",      "cG", 30, 1),
+            ("syn_0_100_1000.svm", "cL", 30, 1, 0),
+            ("mushrooms.svm",      "cG", 30, 1, 1),
             # rf doesn't like reals
-            # ("duke.svm",           "cD", 30, 1),
+            # ("duke.svm",           "cD", 30, 1, 1),
             # too many features? 150K inspect timeout?
-            # ("E2006.train.svm",    "cE", 30, 1),
-            ("gisette_scale.svm",  "cF", 30, 1),
+            # ("E2006.train.svm",    "cE", 30, 1, 1),
+            ("gisette_scale.svm",  "cF", 30, 1, 1),
             # too big for rf (memory error)
-            # ("news20.svm",         "cH", 30, 1),
+            # ("news20.svm",         "cH", 30, 1, 1),
 
             # multiclass format ..don't support
-            # ("tmc2007_train.svm",  "cJ", 30, 1),
-            ("covtype.binary.svm", "cC", 30, 1),
+            # ("tmc2007_train.svm",  "cJ", 30, 1, 1),
+            ("covtype.binary.svm", "cC", 30, 1, 1),
             # normal csv
         ]
 
@@ -57,7 +57,7 @@ class Basic(unittest.TestCase):
         lenNodes = len(h2o.nodes)
 
         firstDone = False
-        for (csvFilename, hex_key, timeoutSecs, resultMult) in csvFilenameList:
+        for (csvFilename, hex_key, timeoutSecs, resultMult, classification) in csvFilenameList:
             # have to import each time, because h2o deletes source after parse
             bucket = "home-0xdiag-datasets"
             csvPathname = "libsvm/" + csvFilename
@@ -76,6 +76,7 @@ class Basic(unittest.TestCase):
             kwargs = {
                 'ntrees': 1,
                 'response': 0,
+                'classification': classification,
             }
 
             timeoutSecs = 600

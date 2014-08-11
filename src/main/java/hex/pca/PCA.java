@@ -5,10 +5,11 @@ import Jama.SingularValueDecomposition;
 import hex.FrameTask.DataInfo;
 import hex.gram.Gram.GramTask;
 import water.Job.ColumnsJob;
-import water.Key;
+import water.*;
 import water.api.DocGen;
 import water.fvec.Frame;
 import water.fvec.Vec;
+import water.util.Log;
 import water.util.RString;
 
 import java.util.ArrayList;
@@ -26,13 +27,13 @@ public class PCA extends ColumnsJob {
   static public DocGen.FieldDoc[] DOC_FIELDS;
   static final String DOC_GET = "pca";
 
-  static final int MAX_COL = 10000;
+  static final int MAX_COL = 5000;
 
   @API(help = "The PCA Model")
   public PCAModel pca_model;
 
-  @API(help = "Maximum number of principal components to return.", filter = Default.class, lmin = 1, lmax = 10000, json=true)
-  int max_pc = 10000;
+  @API(help = "Maximum number of principal components to return.", filter = Default.class, lmin = 1, lmax = 5000, json=true)
+  int max_pc = 5000;
 
   @API(help = "Omit components with std dev <= tol times std dev of first component.", filter = Default.class, lmin = 0, lmax = 1, json=true)
   double tolerance = 0;
@@ -43,7 +44,7 @@ public class PCA extends ColumnsJob {
   public PCA() {}
 
   public PCA(String desc, Key dest, Frame src, double tolerance, boolean standardize) {
-    this(desc, dest, src, 10000, tolerance, standardize);
+    this(desc, dest, src, 5000, tolerance, standardize);
   }
 
   public PCA(String desc, Key dest, Frame src, int max_pc, double tolerance, boolean standardize) {
@@ -82,11 +83,22 @@ public class PCA extends ColumnsJob {
     PCAModel myModel = buildModel(dinfo, tsk);
     myModel.delete_and_lock(self());
     myModel.unlock(self());
+    remove();                   // Close/remove job
+    final JobState state = UKV.<Job>get(self()).state;
+    new TAtomic<PCAModel>() {
+      @Override
+      public PCAModel atomic(PCAModel m) {
+        if (m != null) m.get_params().state = state;
+        return m;
+      }
+    }.invoke(dest());
   }
 
   @Override protected void init() {
     super.init();
-    if(selectFrame(source).numExpCols() > MAX_COL)
+    int num_ecols = selectFrame(source).numExpCols();
+    Log.info("Running PCA on dataset with " + num_ecols + " expanded columns in Gram matrix");
+    if(num_ecols > MAX_COL)
       throw new IllegalArgumentException("Cannot process more than " + MAX_COL + " columns, taking into account expanded categoricals");
   }
 

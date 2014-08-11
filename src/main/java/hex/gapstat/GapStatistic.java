@@ -1,6 +1,5 @@
 package hex.gapstat;
 
-import hex.KMeans;
 import hex.KMeans2;
 import water.*;
 import water.Job;
@@ -52,7 +51,7 @@ public class GapStatistic extends Job.ColumnsJob {
       double[] wks = new double[ks];
       double[] wkbs = new double[ks];
       double[] sk = new double[ks];
-      return new GapStatisticModel(destination_key, source._key, source, k_max, wks, wkbs, sk, k_max, b_max, 0, 0);
+      return new GapStatisticModel(destination_key, source._key, source, k_max, wks, wkbs, sk, k_max, b_max, 1, 0);
     }
     finally {
       source.unlock(self());
@@ -73,7 +72,7 @@ public class GapStatistic extends Job.ColumnsJob {
         km.cols = cols;
         km.max_iter = max_iter;
         km.k = k;
-        km.initialization = KMeans.Initialization.Furthest;
+        km.initialization = KMeans2.Initialization.Furthest;
         km.invoke();
         KMeans2.KMeans2Model res = UKV.get(km.dest());
         Futures fs = new Futures();
@@ -110,7 +109,7 @@ public class GapStatistic extends Job.ColumnsJob {
           km_bs.cols = cols;
           km_bs.max_iter = max_iter;
           km_bs.k = k;
-          km_bs.initialization = KMeans.Initialization.Furthest;
+          km_bs.initialization = KMeans2.Initialization.Furthest;
           km_bs.invoke();
           KMeans2.KMeans2Model res_bs = UKV.get(km_bs.dest());
           fs = new Futures();

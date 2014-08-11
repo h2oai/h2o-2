@@ -27,7 +27,3 @@ h2o.ls(localH2O)
 iris.hex = h2o.getFrame(localH2O, "iris.hex")
 h2o.shutdown(localH2O)
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
-\keyword{ ~kwd1 }
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line

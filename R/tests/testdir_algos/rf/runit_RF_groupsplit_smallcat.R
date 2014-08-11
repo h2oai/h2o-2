@@ -21,11 +21,11 @@ test.DRF.smallcat <- function(conn) {
   
   # Train H2O DRF Model:
   Log.info("H2O DRF (Naive Split) with parameters:\nclassification = TRUE, ntree = 1, depth = 1, nbins = 100\n")
-  drfmodel.nogrp <- h2o.randomForest(x = "X", y = "y", data = alphabet.hex, classification = TRUE, ntree = 1, depth = 1, nbins = 100, doGrpSplit = FALSE)
+  drfmodel.nogrp <- h2o.randomForest(x = "X", y = "y", data = alphabet.hex, classification = TRUE, ntree = 1, depth = 1, nbins = 100, doGrpSplit = FALSE, type="BigData")
   print(drfmodel.nogrp)
   
   Log.info("H2O DRF (Group Split) with parameters:\nclassification = TRUE, ntree = 1, depth = 1, nbins = 100\n")
-  drfmodel.grpsplit <- h2o.randomForest(x = "X", y = "y", data = alphabet.hex, classification = TRUE, ntree = 1, depth = 1, nbins = 100, doGrpSplit = TRUE)
+  drfmodel.grpsplit <- h2o.randomForest(x = "X", y = "y", data = alphabet.hex, classification = TRUE, ntree = 1, depth = 1, nbins = 100, doGrpSplit = TRUE, type="BigData")
   print(drfmodel.grpsplit)
   
   # Check AUC and overall prediction error at least as good with group split than without

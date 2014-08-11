@@ -15,130 +15,143 @@ DO_FUNCTION = False
 DO_FORCE_LHS_ON_MULTI = True
 
 exprList = [
-        'x= 3; r.hex[(x > 0) & (x < 4),]',    # all x values between 0 and 1
-        'x= 3; r.hex[,(x > 0) & (x < 4)]',    # all x values between 0 and 1
-        # 'z = if (any(r3.hex == 0) || any(r4.hex == 0)), "zero encountered"',
+    "round(r.hex[,1],0)",
+    "round(r.hex[,1],1)",
+    "round(r.hex[,1],2)",
+    # "signif(r.hex[,1],-1)",
+    # "signif(r.hex[,1],0)",
+    "signif(r.hex[,1],1)",
+    "signif(r.hex[,1],2)",
+    "signif(r.hex[,1],22)",
+    "trunc(r.hex[,1])",
+    "trunc(r.hex[,1])",
+    "trunc(r.hex[,1])",
+    "trunc(r.hex[,1])",
 
-        # FALSE and TRUE don't exist?
-        # 'x <- c(NA, FALSE, TRUE)',
+    'x= 3; r.hex[(x > 0) & (x < 4),]',    # all x values between 0 and 1
+    'x= 3; r.hex[,(x > 0) & (x < 4)]',    # all x values between 0 and 1
+    # 'z = if (any(r3.hex == 0) || any(r4.hex == 0)), "zero encountered"',
 
-        # 'names(x) <- as.character(x)'
-        # outer(x, x, "&")## AND table
-        # outer(x, x, "|")## OR  table
-        "1.23",
-        "!1.23",
+    # FALSE and TRUE don't exist?
+    # 'x <- c(NA, FALSE, TRUE)',
 
-        "1.23<2.34",
-        "!1.23<2.34",
-        "!1.23<!2.34",
-        "1.23<!2.34",
+    # 'names(x) <- as.character(x)'
+    # outer(x, x, "&")## AND table
+    # outer(x, x, "|")## OR  table
+    "1.23",
+    "!1.23",
 
-        "1.23<=2.34",
-        "1.23>2.34",
-        "1.23>=2.34",
-        "1.23==2.34",
-        "1.23!=2.34",
+    "1.23<2.34",
+    "!1.23<2.34",
+    "!1.23<!2.34",
+    "1.23<!2.34",
 
-        "r.hex",
-        "!r.hex",
+    "1.23<=2.34",
+    "1.23>2.34",
+    "1.23>=2.34",
+    "1.23==2.34",
+    "1.23!=2.34",
 
-        # Not supported
-        # "+(1.23,2.34)",
-        "x=0; x+2",
-        "x=!0; !x+2",
-        "x=!0; x+!2",
+    "r.hex",
+    "!r.hex",
 
-        "x=1",
-        "x=!1",
+    # Not supported
+    # "+(1.23,2.34)",
+    "x=0; x+2",
+    "x=!0; !x+2",
+    "x=!0; x+!2",
 
-        "x<-1",
-        "x<-!1",
-        "c(1,3,5)",
-        "!c(1,3,5)",
-        "!c(!1,3,5)",
-        "!c(1,!3,5)",
-        "!c(1,3,!5)",
+    "x=1",
+    "x=!1",
 
-        "a=0; x=0",
-        "a=!0; x=!0",
+    "x<-1",
+    "x<-!1",
+    "c(1,3,5)",
+    "!c(1,3,5)",
+    "!c(!1,3,5)",
+    "!c(1,!3,5)",
+    "!c(1,3,!5)",
 
-        "r.hex[2,3]",
-        # "r.hex[!2,3]",
-        # no cols selectd
-        # "r.hex[2,!3]",
+    "a=0; x=0",
+    "a=!0; x=!0",
 
-        "r.hex[2+4,-4]",
-        "r.hex[1,-1]; r.hex[1,-1]; r.hex[1,-1]",
-        "r.hex[1,]",
-        "r.hex+1",
-        "r.hex[,1]",
-        "r.hex[,1]+1",
+    "r.hex[2,3]",
+    # "r.hex[!2,3]",
+    # no cols selectd
+    # "r.hex[2,!3]",
 
-        "r.hex-r.hex",
-        "1.23+(r.hex-r.hex)",
-        "(1.23+r.hex)-r.hex",
+    "r.hex[2+4,-4]",
+    "r.hex[1,-1]; r.hex[1,-1]; r.hex[1,-1]",
+    "r.hex[1,]",
+    "r.hex+1",
+    "r.hex[,1]",
+    "r.hex[,1]+1",
 
-        "is.na(r.hex)",
+    "r.hex-r.hex",
+    "1.23+(r.hex-r.hex)",
+    "(1.23+r.hex)-r.hex",
 
-        "nrow(r.hex)*3",
-        "r.hex[nrow(r.hex)-1,ncol(r.hex)-1]",
-        "r.hex[nrow(r.hex),]",
-        "r.hex[,ncol(r.hex)+1]=4",
-        "r.hex[,1]=3.3; r.hex",
-        "r.hex[,1]=r.hex[,1]+1",
+    "is.na(r.hex)",
 
-
-        # doesn't work
-        # "cbind(c(1), c(2), c(3))",
-        # "cbind(c(1,2,3), c(4,5,6))",
-        # "cbind(c(1,2,3), c(4,5,6), c(7,8,9))",
-        # "cbind(c(1,2,3,4), c(5,6,7))",
-        # "cbind(c(1,2,3), c(4,5,6,7))",
-        "cbind(c(1,2,3,4), c(5,6,7,8))",
-
-        "r.hex[c(1,3,5),]",
-        "a=c(11,22,33,44,55,66); a[c(2,6,1),]",
-
-        # fails?
-        # "a=c(1,2,3); a[a[,1]>10,1]",
+    "nrow(r.hex)*3",
+    "r.hex[nrow(r.hex)-1,ncol(r.hex)-1]",
+    "r.hex[nrow(r.hex),]",
+    "r.hex[,ncol(r.hex)+1]=4",
+    "r.hex[,1]=3.3; r.hex",
+    "r.hex[,1]=r.hex[,1]+1",
 
 
+    # doesn't work
+    # "cbind(c(1), c(2), c(3))",
+    # "cbind(c(1,2,3), c(4,5,6))",
+    # "cbind(c(1,2,3), c(4,5,6), c(7,8,9))",
+    # "cbind(c(1,2,3,4), c(5,6,7))",
+    # "cbind(c(1,2,3), c(4,5,6,7))",
+    "cbind(c(1,2,3,4), c(5,6,7,8))",
 
-        "sum(1,2)",
-        "sum(1,2,3)",
-        "sum(c(1,3,5))",
-        "sum(4,c(1,3,5),2,6)",
-        "sum(1,r.hex,3)",
+    "r.hex[c(1,3,5),]",
+    "a=c(11,22,33,44,55,66); a[c(2,6,1),]",
 
-        "min(1,2)",
-        # doesn't work
-        # "min(1,2,3)",
-        # doesn't work. only 2 params?
-        # "min(c(1,3,5))",
-        # doesn't work. only 2 params?
-        # "min(4,c(1,3,5),2,6)",
-        # doesn't work
-        # "min(1,r.hex,3)",
+    # fails?
+    # "a=c(1,2,3); a[a[,1]>10,1]",
 
-        "max(1,23)",
-        # doesn't work
-        # Passed 3 args but expected 2
-        # "max(1,2,3)",
-        # doesn't work
-        # "max(c(1,3,5))",
 
-        # doesn't work
-        # Passed 4 args but expected 2
-        # "max(4,c(1,3,5),2,6)",
-        # doesn't work
-        # "max(1,r.hex,3)",
 
-        "factor(r.hex[,5])",
-        "r.hex[,1]==1.0",
-        "runif(r.hex[,1], -1)",
-        "r.hex[,3]=4",
+    "sum(1,2)",
+    "sum(1,2,3)",
+    "sum(c(1,3,5))",
+    "sum(4,c(1,3,5),2,6)",
+    "sum(1,r.hex,3)",
 
-        ]
+    "min(1,2)",
+    # doesn't work
+    # "min(1,2,3)",
+    # doesn't work. only 2 params?
+    # "min(c(1,3,5))",
+    # doesn't work. only 2 params?
+    # "min(4,c(1,3,5),2,6)",
+    # doesn't work
+    # "min(1,r.hex,3)",
+
+    "max(1,23)",
+    # doesn't work
+    # Passed 3 args but expected 2
+    # "max(1,2,3)",
+    # doesn't work
+    # "max(c(1,3,5))",
+
+    # doesn't work
+    # Passed 4 args but expected 2
+    # "max(4,c(1,3,5),2,6)",
+    # doesn't work
+    # "max(1,r.hex,3)",
+
+    "factor(r.hex[,5])",
+    "r.hex[,1]==1.0",
+    "runif(r.hex[,1], -1)",
+    "r.hex[,3]=4",
+
+    ]
 
 
 if DO_APPLY:
@@ -162,10 +175,8 @@ if DO_FUNCTION:
         "function(funy){function(x){funy(x)*funy(x)}}(sgn)(-2)",
         "a=1; a=2; function(x){x=a;a=3}",
         "a=r.hex; function(x){x=a;a=3;nrow(x)*a}(a)",
-        # "mean=function(x){apply(x,1,sum)/nrow(x)};mean(r.hex)",
-        # "mean=function(x){apply(x,2,sum)/nrow(x)};mean(r.hex)",
-        "mean=function(x){99/nrow(x)};mean(r.hex)",
-        "mean=function(x){99/nrow(x)}",
+        # "mean2=function(x){apply(x,1,sum)/nrow(x)};mean2(r.hex)",
+        # "mean2=function(x){apply(x,2,sum)/nrow(x)};mean2(r.hex)",
         "mean2=function(x){99/nrow(x)};mean2(r.hex)",
         "mean2=function(x){99/nrow(x)}",
         # what happens if you rename a function in a single string

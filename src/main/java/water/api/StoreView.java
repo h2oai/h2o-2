@@ -89,36 +89,6 @@ public class StoreView extends Request {
     int cols = -1;
     String str = "";
 
-    // See if this is a structured ValueArray. Report results from a total parse.
-    if( val.isArray() ) {
-      ValueArray ary = val.get();
-      if( ary._cols.length > 1 || ary._cols[0]._size != 1 ) {
-        rows = ary._numrows;
-        cols = ary._cols.length;
-        result.addProperty(ROWS,rows); // exact rows
-        result.addProperty(COLS,cols); // exact cols
-        for( int i = 0; i < jcols.length; ++i ) {
-          JsonObject col = new JsonObject();
-          if (i < cols) {
-            ValueArray.Column c = ary._cols[i];
-            if (c._size!=0) {
-              col.addProperty(HEADER,c._name);
-              if( c._domain==null ) {
-                col.addProperty(MIN , noNaN(c._min ));
-                col.addProperty(MEAN, noNaN(c._mean));
-                col.addProperty(MAX , noNaN(c._max ));
-              } else if( c._domain.length > 0 ) {
-                int max = c._domain.length;
-                col.addProperty(MIN , c._domain[0]);
-                col.addProperty(MEAN, c._domain[max/2]);
-                col.addProperty(MAX , c._domain[max-1]);
-              }
-            }
-          }
-          jcols[i] = col;
-        }
-      }
-    }
     if(val.isFrame()){
       Frame fr = val.get();
       rows = fr.numRows();

@@ -142,6 +142,7 @@ if (distance < 0) {
     source(paste(path, "h2o-package/R/Classes.R", sep = ""))
     source(paste(path, "h2o-package/R/ParseImport.R", sep = ""))
     source(paste(path, "h2o-package/R/Algorithms.R", sep = ""))
+    source(paste(path, "h2o-package/R/models.R", sep = ""))
 } else {
     dots     <- genDots(distance)
     source(paste(dots, "Utils/h2oR.R", sep = ""))
@@ -159,6 +160,7 @@ if (distance < 0) {
     source(paste(rdots, "h2o-package/R/Classes.R", sep = ""))
     source(paste(rdots, "h2o-package/R/ParseImport.R", sep = ""))
     source(paste(rdots, "h2o-package/R/Algorithms.R", sep = ""))
+    source(paste(rdots, "h2o-package/R/models.R", sep = ""))
 }
 
 #The master seed is set by the runnerSetup.R script.

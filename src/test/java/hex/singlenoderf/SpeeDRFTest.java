@@ -43,7 +43,7 @@ public class SpeeDRFTest extends TestUtil {
     spdrf.source = fr;
     spdrf.response = response;
     spdrf.ignored_cols = ignored_cols;
-    spdrf.num_trees = 3;
+    spdrf.ntrees = 3;
     spdrf.max_depth = 30;
     spdrf.select_stat_type = Tree.SelectStatType.GINI;
     spdrf.seed = 42;
@@ -73,7 +73,7 @@ public class SpeeDRFTest extends TestUtil {
     SpeeDRF spdrf = new SpeeDRF();
     spdrf.source = fr;
     spdrf.response = response;
-    spdrf.num_trees = 8;
+    spdrf.ntrees = 8;
     spdrf.max_depth = 999;
     spdrf.select_stat_type = Tree.SelectStatType.ENTROPY;
     spdrf.seed = 42;

@@ -1,20 +1,13 @@
 package water;
 
 import hex.*;
-import hex.deeplearning.DropoutTest;
-import hex.deeplearning.NeuronsTest;
-import hex.drf.DRFTest;
-import hex.drf.DRFTest2;
-import hex.gbm.GBMTest;
-import hex.singlenoderf.SpeeDRFTest;
-import hex.singlenoderf.SpeeDRFTest2;
 import org.junit.internal.TextListener;
 import org.junit.runner.Description;
 import org.junit.runner.JUnitCore;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
 import water.deploy.NodeCL;
-import water.fvec.*;
+import water.exec.Expr2Test;
 import water.util.Log;
 import water.util.Utils;
 
@@ -91,7 +84,11 @@ public class JUnitRunnerDebug {
 //      tests.add(MRUtilsTest.class); //test MR sampling/rebalancing
 //      tests.add(DropoutTest.class); //test NN Dropput
 
-      tests.add(GLMRandomTest.Short.class);
+//      tests.add(ParserTest2.class);
+//      tests.add(ParserTest2.ParseAllSmalldata.class);
+      tests.add(KMeans2Test.class);
+      tests.add(KMeans2RandomTest.class);
+//      tests.add(GLMRandomTest.Short.class);
 //      tests.add(SpeeDRFTest.class);
 //      tests.add(SpeeDRFTest2.class);
 ////      tests.add(GLMTest2.class);

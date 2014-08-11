@@ -17,18 +17,18 @@ initList = [
 
         # ('x', 'x=r.hex[,1]; rcnt=nrow(x)-sum(is.na(x))'),
         # ('x', 'x=r.hex[,1]; total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x))'),
-        # ('x', 'x=r.hex[,1]; total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt'),
-        # ('x', 'x=r.hex[,1]; total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt; x=ifelse(is.na(x),mean,x)'),
+        # ('x', 'x=r.hex[,1]; total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean2=total / rcnt'),
+        # ('x', 'x=r.hex[,1]; total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean2=total / rcnt; x=ifelse(is.na(x),mean2,x)'),
         ]
 
 # apply: return vector or array or list of values..applying function to margins of array or matrix
 # margins: either rows(1), columns(2) or both(1:2)
-# "apply(r.hex,2,function(x){total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=0.0; ifelse(is.na(x),mean,x)})",
+# "apply(r.hex,2,function(x){total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean2=0.0; ifelse(is.na(x),mean2,x)})",
 # doesn't work. Should work according to earl
 # 'r.hex[is.na(r.hex)]<-0',
 # works
 # 'r1.hex=apply(r.hex,2,function(x){ifelse(is.na(x),0,x)})',
-# "mean=function(x){apply(x,2,sum)/nrow(x)};mean(r.hex)",
+# "mean2=function(x){apply(x,2,sum)/nrow(x)};mean2(r.hex)",
 
 exprListFull = [
     # "quantile(r.hex[,4],c(0.001,.05,0.3,0.55,0.7,0.95,0.99))",
@@ -248,14 +248,14 @@ exprListFull = [
     # "apply(r.hex,2,function(x){x=1;r.hex})",
     # "apply(r.hex,2,function(x){r.hex})",
     "apply(r.hex,2,function(x){sum(x)/nrow(x)})",
-    "mean=function(x){apply(x,2,sum)/nrow(x)};mean(r.hex)",
+    "mean2=function(x){apply(x,2,sum)/nrow(x)};mean2(r.hex)",
     "ifelse(0,1,2)",
     "ifelse(0,r.hex+1,r.hex+2)",
     "ifelse(r.hex>3,3,r.hex)",
     "ifelse(0,+,*)(1,2)",
     "(0 ? + : *)(1,2)",
     "(1? r.hex : (r.hex+1))[1,2]",
-    "apply(r.hex,2,function(x){total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean=total / rcnt; ifelse(is.na(x),mean,x)})",
+    "apply(r.hex,2,function(x){total=sum(ifelse(is.na(x),0,x)); rcnt=nrow(x)-sum(is.na(x)); mean2=total / rcnt; ifelse(is.na(x),mean2,x)})",
     "factor(r.hex[,5])",
     "r.hex[,2]",
     "r.hex[,2]+1",

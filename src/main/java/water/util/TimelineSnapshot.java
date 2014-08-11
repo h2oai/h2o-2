@@ -150,7 +150,7 @@ public final class TimelineSnapshot implements
 
     public String toString() {
       int udp_type = (int) (dataLo() & 0xff); // First byte is UDP packet type
-      UDP.udp udpType = UDP.udp.UDPS[udp_type];
+      UDP.udp udpType = UDP.getUdp(udp_type);
       String operation = isSend() ? " SEND " : " RECV ";
       String host1 = addrString();
       String host2 = recoH2O().toString();
@@ -183,7 +183,7 @@ public final class TimelineSnapshot implements
       int ev_udp_type = (int) (evl0 & 0xff); // first byte is udp type
       if (my_udp_type != ev_udp_type)
         return false;
-      UDP.udp e = UDP.udp.UDPS[my_udp_type];
+      UDP.udp e = UDP.getUdp(my_udp_type);
       switch (e) {
       case rebooted:
       case timeline:

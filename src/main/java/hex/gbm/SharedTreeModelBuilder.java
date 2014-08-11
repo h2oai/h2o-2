@@ -291,8 +291,6 @@ public abstract class SharedTreeModelBuilder<TM extends DTree.TreeModel> extends
     // Remove temp vectors; cleanup the Frame
     while( fr.numCols() > _ncols+1/*Do not delete the response vector*/ )
       UKV.remove(fr.remove(fr.numCols()-1)._key);
-    // If we made a response column with toEnum, nuke it.
-    //if( _gen_enum ) UKV.remove(response._key);
 
     // Unlock the input datasets against deletes
     source.unlock(self());

@@ -71,7 +71,8 @@ class Basic(unittest.TestCase):
             # every other one
             single_quotes = 1
 
-            parseResult = h2i.import_parse(path=csvPathname, schema='put', single_quotes=single_quotes,
+            # force header=1 to make it not fail (doesn't deduce correctly)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', single_quotes=single_quotes, header=1,
                 hex_key="trial" + str(i) + ".hex")
             inspect = h2o_cmd.runInspect(key=parseResult['destination_key'])
             print "\n" + csvPathname, \

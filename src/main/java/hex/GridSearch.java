@@ -173,7 +173,7 @@ public class GridSearch extends Job {
             if (info._model instanceof SpeeDRFModel)
               link = SpeeDRFModelView.link(link, info._job.dest());
             else
-              link = Inspect.link(link, info._job.dest());
+              link = Inspect2.link(link, info._job.dest());
           }
           sb.append("<td>").append(link).append("</td>");
 

@@ -52,6 +52,14 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   @API(help="index of lambda_value giving best results")
   int best_lambda_idx;
 
+  public Key [] xvalModels() {
+    if(submodels == null)return null;
+    for(Submodel sm:submodels)
+      if(sm.xvalidation instanceof GLMXValidation){
+        return ((GLMXValidation)sm.xvalidation).xval_models;
+      }
+    return null;
+  }
   public double auc(){
     if(glm.family == Family.binomial && submodels != null && submodels[best_lambda_idx].validation != null) {
       Submodel sm = submodels[best_lambda_idx];
@@ -72,6 +80,43 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     Submodel sm = submodels[best_lambda_idx];
     GLMValidation val = sm.xvalidation == null?sm.validation:sm.xvalidation;
     return 1.0 - val.residual_deviance/val.null_deviance;
+  }
+
+  public static class UnlockModelTask extends DTask.DKeyTask<UnlockModelTask,GLMModel>{
+    final Key _jobKey;
+    public UnlockModelTask(H2OCountedCompleter cmp, Key modelKey, Key jobKey){
+      super(cmp,modelKey);
+      _jobKey = jobKey;
+    }
+    @Override
+    public void map(GLMModel m) {
+      Key [] xvals = m.xvalModels();
+      if(xvals != null){
+        addToPendingCount(xvals.length);
+        for(int i = 0; i < xvals.length; ++i)
+          new UnlockModelTask(this,xvals[i],_jobKey).forkTask();
+      }
+      m.unlock(_jobKey);
+    }
+  }
+
+  public static class DeleteModelTask extends DTask.DKeyTask<DeleteModelTask,GLMModel>{
+    final Key _modelKey;
+
+    public DeleteModelTask(H2OCountedCompleter cmp, Key modelKey){
+      super(cmp,modelKey);
+      _modelKey = modelKey;
+    }
+    @Override
+    public void map(GLMModel m) {
+      Key[] xvals = m.xvalModels();
+      if (xvals != null) {
+        addToPendingCount(xvals.length);
+        for (int i = 0; i < xvals.length; ++i)
+          new DeleteModelTask(this, xvals[i]).forkTask();
+      }
+      m.delete();
+    }
   }
 
   @Override public GLMModel clone(){
@@ -172,7 +217,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   VarImp variable_importances;
 
   public GLMModel(GLM2 job, Key selfKey, DataInfo dinfo, GLMParams glm, double beta_eps, double alpha, double lambda_max, double ymu, double prior) {
-    super(selfKey,job.source._key,dinfo._adaptedFrame, /* priorClassDistribution */ null);
+    super(selfKey,job.source._key == null ? dinfo._frameKey : job.source._key,dinfo._adaptedFrame, /* priorClassDistribution */ null);
     parameters = Job.hygiene((GLM2) job.clone());
     job_key = job.self();
     this.ymu = ymu;
@@ -194,87 +239,51 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   public void pickBestModel(boolean useAuc){
     int bestId = submodels.length-1;
     if(submodels.length > 2) {
-      final boolean xval = submodels[1].xvalidation != null;
-      GLMValidation bestVal = xval ? submodels[1].xvalidation : submodels[1].validation;
+      boolean xval = false;
+      GLMValidation bestVal = null;
+      for(Submodel sm:submodels) {
+        if(sm.xvalidation != null) {
+          xval = true;
+          bestVal = sm.xvalidation;
+        }
+      }
+      if(!xval) bestVal = submodels[0].validation;
       for (int i = 1; i < submodels.length; ++i) {
         GLMValidation val = xval ? submodels[i].xvalidation : submodels[i].validation;
-        if (val == null) continue;
+        if (val == null || val == bestVal) continue;
         if ((useAuc && val.auc > bestVal.auc)
-          || (xval && val.residual_deviance < bestVal.residual_deviance)
-          || (((bestVal.residual_deviance - val.residual_deviance) / val.null_deviance) >= 0.01)) {
+                || (xval && val.residual_deviance < bestVal.residual_deviance)
+                || (((bestVal.residual_deviance - val.residual_deviance) / val.null_deviance) >= 0.01)) {
           bestVal = val;
           bestId = i;
         }
       }
     }
     best_lambda_idx = bestId;
-    Submodel sm = submodels[bestId];
-    double[] beta = MemoryManager.malloc8d(coefficients_names.length);
-    for (int i = 0; i < sm.beta.length; ++i)
-      beta[sm.idxs[i]] = sm.beta[i];
-    global_beta = beta;
-  }
-  public static void pickBestSubmodel(H2OCountedCompleter cmp, Key modelKey, final boolean useAuc){
-    cmp.addToPendingCount(1);
-    new TAtomic<GLMModel>(cmp){
-      @Override
-      public GLMModel atomic(GLMModel old) {
-        int bestId = 0;
-        final boolean xval = old.submodels[0].xvalidation != null;
-        GLMValidation bestVal = xval?old.submodels[0].xvalidation:old.submodels[0].validation;
-        for(int i = 1; i < old.submodels.length; ++i){
-          GLMValidation val = xval?old.submodels[i].xvalidation:old.submodels[i].validation;
-          if((useAuc && val.auc > bestVal.auc)
-            || (xval && val.residual_deviance < bestVal.residual_deviance)
-            || (((bestVal.residual_deviance - val.residual_deviance)/val.null_deviance) >= 0.01)){
-            bestVal = val;
-            bestId = i;
-          }
-        }
-        old.best_lambda_idx = bestId;
-        Submodel sm = old.submodels[bestId];
-        double [] beta  = MemoryManager.malloc8d(old.coefficients_names.length);
-        for(int i = 0; i < sm.beta.length; ++i)
-          beta[sm.idxs[i]] = sm.beta[i];
-        old.global_beta = beta;
-        return old;
-      }
-    }.fork(modelKey);
+    setSubmodelIdx(bestId);
   }
 
-//  public static void setSubmodel(H2OCountedCompleter cmp, Key modelKey, final double lambda, double[] beta, double[] norm_beta, int iteration, long runtime, boolean sparseCoef){
+
+  //  public static void setSubmodel(H2OCountedCompleter cmp, Key modelKey, final double lambda, double[] beta, double[] norm_beta, int iteration, long runtime, boolean sparseCoef){
   public static void setSubmodel(H2OCountedCompleter cmp, Key modelKey, final double lambda, double[] beta, double[] norm_beta, int iteration, long runtime, boolean sparseCoef){
     setSubmodel(cmp,modelKey,lambda,beta,norm_beta,iteration,runtime,sparseCoef,null);
   }
 
-  public static class GetScoringModelTask extends DTask<GetScoringModelTask>{
-    final Key _modelKey;
-    final Key _jobKey;
+  public static class GetScoringModelTask extends DTask.DKeyTask<GetScoringModelTask,GLMModel> {
     final double _lambda;
     public GLMModel _res;
-    public GetScoringModelTask(H2OCountedCompleter cmp, Key jobKey, Key modelKey, double lambda){
-      super(cmp);
-      _jobKey = jobKey;
-      _modelKey = modelKey;
+    public GetScoringModelTask(H2OCountedCompleter cmp, Key modelKey, double lambda){
+      super(cmp,modelKey);
       _lambda = lambda;
     }
     @Override
-    public void compute2() {
-      if(_modelKey.home()){
-        Value v = H2O.get(_modelKey);
-        if(v == null && _jobKey != null){
-          assert !Job.isRunning(_jobKey):"missing model (" + _modelKey + " ) while job is still running";
-          throw new Job.JobCancelledException();
-        } else {
-          _res = (GLMModel) v.get().clone();
-          Submodel sm = _res.submodelForLambda(_lambda);
-          assert sm != null : "GLM[" + _modelKey + "]: missing submodel for lambda " + _lambda;
-          sm = (Submodel) sm.clone();
-          _res.submodels = new Submodel[]{sm};
-          _res.setSubmodelIdx(0);
-        }
-        tryComplete();
-      } else new RPC(_modelKey.home_node(),this).addCompleter(this).call();
+    public void map(GLMModel m) {
+      _res = m.clone();
+      Submodel sm = Double.isNaN(_lambda)?_res.submodels[_res.best_lambda_idx]:_res.submodelForLambda(_lambda);
+      assert sm != null : "GLM[" + m._key + "]: missing submodel for lambda " + _lambda;
+      sm = (Submodel) sm.clone();
+      _res.submodels = new Submodel[]{sm};
+      _res.setSubmodelIdx(0);
     }
   }
 
@@ -399,7 +408,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
   }
   public final int ncoefs() {return beta().length;}
 
-//  public static void setAndTestValidation(final H2OCountedCompleter cmp,final Key modelKey, final double lambda, final GLMValidation val){
+  //  public static void setAndTestValidation(final H2OCountedCompleter cmp,final Key modelKey, final double lambda, final GLMValidation val){
 //    if(cmp != null)cmp.addToPendingCount(1);
 //    new TAtomic<GLMModel>(cmp){
 //      @Override
@@ -456,12 +465,9 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     long _nobs;
     public static Key makeKey(){return Key.make("__GLMValidation_" + Key.make().toString());}
 
-
-    public final transient  H2OCountedCompleter _cmp;
     public GLMXValidationTask(GLMModel mainModel,double lambda, GLMModel [] xmodels){this(mainModel,lambda,xmodels,null);}
     public GLMXValidationTask(GLMModel mainModel,double lambda, GLMModel [] xmodels, final H2OCountedCompleter completer){
-      super(mainModel, lambda,null);
-      _cmp = completer;
+      super(mainModel, lambda,completer);
       _xmodels = xmodels;
     }
     @Override public void map(Chunk [] chunks){
@@ -493,21 +499,21 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
         _xvals[i].add(gval._xvals[i]);}
 
     @Override public void postGlobal() {
-      if (_cmp != null) _cmp.addToPendingCount(_xvals.length + 1);
+      H2OCountedCompleter cmp = (H2OCountedCompleter)getCompleter();
+      if(cmp != null)cmp.addToPendingCount(_xvals.length + 1);
       for (int i = 0; i < _xvals.length; ++i) {
         _xvals[i].computeAIC();
         _xvals[i].computeAUC();
         _xvals[i].nobs = _nobs - _xvals[i].nobs;
-        GLMModel.setXvalidation(_cmp, _xmodels[i]._key, _lambda, _xvals[i]);
+        GLMModel.setXvalidation(cmp, _xmodels[i]._key, _lambda, _xvals[i]);
       }
-      GLMModel.setXvalidation(_cmp, _model._key, _lambda, new GLMXValidation(_model, _xmodels, _xvals, _lambda, _nobs));
-      if (_cmp != null) _cmp.tryComplete();
+      GLMModel.setXvalidation(cmp, _model._key, _lambda, new GLMXValidation(_model, _xmodels, _xvals, _lambda, _nobs));
     }
   }
 
 
   public GLMParams getParams() {
-      return glm;
+    return glm;
   }
 
   @Override
@@ -528,6 +534,8 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     return -1;
   }
   public Submodel  submodelForLambda(double lambda){
+    if(lambda > lambda_max)
+      return submodels[0];
     int i = submodelIdForLambda(lambda);
     return i < 0?null:submodels[i];
   }
@@ -543,7 +551,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
 
   public void setSubmodelIdx(int l){
     best_lambda_idx = l;
-    threshold = submodels[l].validation.best_threshold;
+    threshold = submodels[l].validation == null?0.5:submodels[l].validation.best_threshold;
     if(global_beta == null) global_beta = MemoryManager.malloc8d(this.coefficients_names.length);
     else Arrays.fill(global_beta,0);
     int j = 0;

@@ -3,7 +3,6 @@ package water.fvec;
 import jsr166y.CountedCompleter;
 import water.*;
 import water.nbhm.NonBlockingHashMapLong;
-import water.util.Log;
 import water.util.Utils;
 
 import java.util.Arrays;
@@ -46,10 +45,10 @@ import static water.util.Utils.seq;
  */
 public class Vec extends Iced {
   /** Log-2 of Chunk size. */
-  public static final int LOG_CHK = ValueArray.LOG_CHK; // Same as VA to help conversions
+  public static final int LOG_CHK = 22; // Chunks are 1<<22, or 4Meg
   /** Chunk size.  Bigger increases batch sizes, lowers overhead costs, lower
    * increases fine-grained parallelism. */
-  static final int CHUNK_SZ = 1 << LOG_CHK;
+  public static final int CHUNK_SZ = 1 << LOG_CHK;
 
   /** Key mapping a Value which holds this Vec.  */
   final public Key _key;        // Top-level key
@@ -424,6 +423,33 @@ public class Vec extends Iced {
    * <p>Returns true if the column is full of NAs.</p>
    */
   public final boolean isBad() { return naCnt() == length(); }
+
+  public static class VecIdenticalTask extends MRTask2<VecIdenticalTask> {
+    final double fpointPrecision;
+    VecIdenticalTask(H2O.H2OCountedCompleter cc, double precision){super(cc); fpointPrecision = precision;}
+    boolean _res;
+    @Override public void map(Chunk c1, Chunk c2){
+      if(!(c1 instanceof C8DChunk) && c1.getClass().equals(c2.getClass()))
+        _res = Arrays.equals(c1._mem,c2._mem);
+      else {
+        if(c1._len != c2._len)return;
+        if(c1.hasFloat()){
+          if(!c2.hasFloat())return;
+          for(int i = 0; i < c1._len; ++i) {
+            double diff = c1.at0(i) - c2.at0(i);
+            if(diff > fpointPrecision || -diff > fpointPrecision)return;
+          }
+        } else  {
+          if(c2.hasFloat())return;
+          for(int i = 0; i < c1._len; ++i)
+             if(c1.at80(i) != c2.at80(i))return;
+        }
+        _res = true;
+      }
+    }
+    @Override public void reduce(VecIdenticalTask bt){_res = _res && bt._res;}
+  }
+
   /** Is the column contains float values. */
   public final boolean isFloat() { return !isEnum() && !isInt(); }
   public final boolean isByteVec() { return (this instanceof ByteVec); }
@@ -839,7 +865,7 @@ public class Vec extends Iced {
   public Futures remove( Futures fs ) {
     for( int i=0; i<nChunks(); i++ )
       UKV.remove(chunkKey(i),fs);
-    DKV.remove(_key);
+    DKV.remove(_key,fs);
     return fs;
   }
 
@@ -861,7 +887,7 @@ public class Vec extends Iced {
    */
   public Vec align(final Vec vec) {
     assert ! this.group().equals(vec.group()) : "Vector align expects a vector from different vector group";
-    assert this._size == vec._size : "Trying to align vectors with different length!";
+    assert this.length()== vec.length() : "Trying to align vectors with different length!";
     Vec avec = makeZero(); // aligned vector
     new MRTask2() {
       @Override public void map(Chunk c0) {

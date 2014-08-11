@@ -13,6 +13,19 @@ initList = [
         ]
 
 exprList = [
+    "round(r.hex[,1],0)",
+    "round(r.hex[,1],1)",
+    "round(r.hex[,1],2)",
+    # "signif(r.hex[,1],-1)",
+    # "signif(r.hex[,1],0)",
+    "signif(r.hex[,1],1)",
+    "signif(r.hex[,1],2)",
+    "signif(r.hex[,1],22)",
+    "trunc(r.hex[,1])",
+    "trunc(r.hex[,1])",
+    "trunc(r.hex[,1])",
+    "trunc(r.hex[,1])",
+
     ## Compute row and column sums for a matrix:
     # 'x <- cbind(x1 = 3, x2 = c(4:1, 2:5))',
 

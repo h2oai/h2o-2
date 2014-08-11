@@ -14,12 +14,8 @@ public abstract class CustomParser extends Iced {
   public static final byte CHAR_LF = 10;
   public static final byte CHAR_SPACE = ' ';
   public static final byte CHAR_CR = 13;
-  public static final byte CHAR_VT = 11;
-  public static final byte CHAR_FF = 12;
   public static final byte CHAR_DOUBLE_QUOTE = '"';
   public static final byte CHAR_SINGLE_QUOTE = '\'';
-  public static final byte CHAR_NULL = 0;
-  public static final byte CHAR_COMMA = ',';
 
   public final static int MAX_PREVIEW_COLS  = 100;
   public final static int MAX_PREVIEW_LINES = 50;
@@ -75,7 +71,36 @@ public abstract class CustomParser extends Iced {
     public boolean _singleQuotes;
     public String [] _columnNames;
     public final int _ncols;
-    public final int _forceEnumCol;
+
+
+    public enum Coltype {
+      NUM,ZERO,STR,AUTO,INVALID;
+    }
+
+    public static class TypeInfo extends Iced{
+      Coltype _type;
+      ValueString _naStr = new ValueString("");
+      boolean _strongGuess;
+
+      public void merge(TypeInfo tinfo){
+        if(_type == Coltype.AUTO || !_strongGuess && tinfo._strongGuess){ // copy over stuff from the other
+          _type = tinfo._type;
+          _naStr = tinfo._naStr;
+          _strongGuess = tinfo._strongGuess;
+        } else if(tinfo._type != Coltype.AUTO && !_strongGuess){
+          tinfo._type = Coltype.INVALID;
+        } // else just keep mine
+      }
+    }
+    public String [][] domains;
+    public double [] _min;
+    public double [] _max;
+    public int _nnums;
+    public int _nstr;
+    public int _missing;
+    public int _nzeros;
+
+    TypeInfo [] _types;
 
     public ParserSetup() {
       _pType = ParserType.AUTO;
@@ -83,10 +108,9 @@ public abstract class CustomParser extends Iced {
       _header = false;
       _ncols = 0;
       _columnNames = null;
-      _forceEnumCol = H2O.OPT_ARGS.forceEnumCol;
     }
     protected ParserSetup(ParserType t) {
-      this(t,CsvParser.AUTO_SEP,0,false,null,false,H2O.OPT_ARGS.forceEnumCol);
+      this(t,CsvParser.AUTO_SEP,0,false,null,false);
     }
     public ParserSetup(ParserType t, byte sep, boolean header) {
       _pType = t;
@@ -94,16 +118,22 @@ public abstract class CustomParser extends Iced {
       _header = header;
       _columnNames = null;
       _ncols = 0;
-      _forceEnumCol = H2O.OPT_ARGS.forceEnumCol;
     }
-    public ParserSetup(ParserType t, byte sep, int ncolumns, boolean header, String [] columnNames, boolean singleQuotes, int forceEnumCol) {
+    public ParserSetup(ParserType t, byte sep, boolean header, boolean singleQuotes) {
+      _pType = t;
+      _separator = sep;
+      _header = header;
+      _columnNames = null;
+      _ncols = 0;
+      _singleQuotes = singleQuotes;
+    }
+    public ParserSetup(ParserType t, byte sep, int ncolumns, boolean header, String [] columnNames, boolean singleQuotes) {
       _pType = t;
       _separator = sep;
       _ncols = ncolumns;
       _header = header;
       _columnNames = columnNames;
       _singleQuotes = singleQuotes;
-      _forceEnumCol = forceEnumCol;
     }
     public boolean isSpecified(){
       return _pType != ParserType.AUTO && _separator != CsvParser.AUTO_SEP && (_header || _ncols > 0);
@@ -123,12 +153,17 @@ public abstract class CustomParser extends Iced {
       return conflictingNames;
     }
     @Override public ParserSetup clone(){
-      return new ParserSetup(_pType, _separator, _ncols,_header,null,_singleQuotes,_forceEnumCol);
+      return new ParserSetup(_pType, _separator, _ncols,_header,null,_singleQuotes);
     }
     public boolean isCompatible(ParserSetup other){
       if(other == null || _pType != other._pType)return false;
       if(_pType == ParserType.CSV && (_separator != other._separator || _ncols != other._ncols))
         return false;
+      if(_types == null) _types = other._types;
+      else if(other._types != null){
+        for(int i = 0; i < _types.length; ++i)
+          _types[i].merge(other._types[i]);
+      }
       return true;
     }
     public CustomParser parser(){
@@ -294,6 +329,123 @@ public abstract class CustomParser extends Iced {
   public String [] headers(){return null;}
 
 
+  protected static class TypeGuesserDataOut extends Iced implements DataOut {
+
+    transient private HashSet<String> [] _domains;
+    int [] _nnums;
+    int [] _nstrings;
+    int [] _nzeros;
+    int _nlines = 0;
+    final int _ncols;
+
+    public TypeGuesserDataOut(int ncols){
+      _ncols = ncols;
+      _domains = new HashSet[ncols];
+      _nzeros = new int[ncols];
+      _nstrings = new int[ncols];
+      _nnums = new int[ncols];
+      for(int i = 0; i < ncols; ++i)
+        _domains[i] = new HashSet<String>();
+    }
+    // TODO: ugly quick hack, needs revisit
+    public ParserSetup.TypeInfo[] guessTypes() {
+      ParserSetup.TypeInfo [] res = new ParserSetup.TypeInfo[_ncols];
+      for(int i = 0; i < res.length; ++i)
+        res[i] = new ParserSetup.TypeInfo();
+      for(int i = 0; i < _ncols; ++i){
+        if(_domains[i].size() <= 1 && (double)_nnums[i] / _nlines >= .2) // clear number
+          res[i]._type = ParserSetup.Coltype.NUM;
+        else if(_domains[i].size() > 2 && (double)_nstrings[i]/_nlines >= .95) { // clear string/enum
+          res[i]._type = ParserSetup.Coltype.STR;
+          res[i]._strongGuess = (double)_nstrings[i]/_nlines >= .99;
+        } else if(_domains[i].size() == 2) { // possibly enum
+          // check for special cases
+          String [] domain = _domains[i].toArray(new String[2]);
+          for (int j = 0; j < domain.length; ++j)
+            domain[j] = domain[j].toUpperCase();
+          Arrays.sort(domain);
+          if (Arrays.deepEquals(domain, new String[]{"N", "Y"})
+            || Arrays.deepEquals(domain, new String[]{"'N'", "'Y'"})
+            || Arrays.deepEquals(domain, new String[]{"\"N\"", "\"Y\""})
+            || Arrays.deepEquals(domain, new String[]{"NO", "YES"})
+            || Arrays.deepEquals(domain, new String[]{"'NO'", "'YES'"})
+            || Arrays.deepEquals(domain, new String[]{"\"NO\"", "\"YES'"})
+            || Arrays.deepEquals(domain, new String[]{"F", "T"})
+            || Arrays.deepEquals(domain, new String[]{"'F'", "'T'"})
+            || Arrays.deepEquals(domain, new String[]{"\"F\"", "\"T\""})
+            || Arrays.deepEquals(domain, new String[]{"FALSE", "TRUE"})
+            || Arrays.deepEquals(domain, new String[]{"'FALSE'", "'TRUE'"})
+            || Arrays.deepEquals(domain, new String[]{"\"FALSE\"", "\"TRUE\""})
+            ) {
+            res[i]._type = ParserSetup.Coltype.STR;
+            res[i]._strongGuess = true;
+            if (_nzeros[i] > 0 && (Math.abs(_nzeros[i] + _nstrings[i] - _nlines) <= 1))
+              res[i]._naStr = new ValueString("0");
+          } else { // some generic two strings, could be garbage or enums
+            if ((double)_nstrings[i] / _nlines >= .95) {
+              res[i]._type = ParserSetup.Coltype.STR;
+              res[i]._strongGuess = (double)_nstrings[i]/_nlines >= .99;
+            } else if (_nnums[i] > 0 && (double)_nnums[i] / _nlines > .2)
+              res[i]._type = ParserSetup.Coltype.NUM;
+          }
+        }
+      }
+      return res;
+    }
+
+    @Override
+    public void setColumnNames(String[] names) {}
+
+    @Override
+    public void newLine() {
+      ++_nlines;
+    }
+
+    @Override
+    public boolean isString(int colIdx) {
+      return false;
+    }
+
+    @Override
+    public void addNumCol(int colIdx, long number, int exp) {
+      if(colIdx < _nnums.length)
+        if (number == 0)
+          ++_nzeros[colIdx];
+        else
+          ++_nnums[colIdx];
+    }
+
+    @Override
+    public void addNumCol(int colIdx, double d) {
+      if(colIdx < _nnums.length)
+        if (d == 0)
+          ++_nzeros[colIdx];
+        else
+          ++_nnums[colIdx];
+    }
+
+    @Override
+    public void addInvalidCol(int colIdx) {
+
+    }
+
+    @Override
+    public void addStrCol(int colIdx, ValueString str) {
+      if(colIdx < _nstrings.length) {
+        ++_nstrings[colIdx];
+        _domains[colIdx].add(str.toString());
+      }
+    }
+
+    @Override
+    public void rollbackLine() {--_nlines;}
+
+    @Override
+    public void invalidLine(String err) {}
+
+    @Override
+    public void invalidValue(int line, int col) {}
+  }
   protected static class CustomInspectDataOut extends Iced implements DataOut {
     public int _nlines;
     public int _ncols;
@@ -320,18 +472,21 @@ public abstract class CustomParser extends Iced {
       _ncols = names.length;
       _header = true;
     }
+
     @Override public void newLine() {
       ++_nlines;
     }
     @Override public boolean isString(int colIdx) {return false;}
     @Override public void addNumCol(int colIdx, long number, int exp) {
       if(colIdx < _ncols && _nlines < MAX_PREVIEW_LINES)
-        _data[_nlines][colIdx] = Double.toString(number*DParseTask.pow10(exp));
+        _data[_nlines][colIdx] = Double.toString(number*PrettyPrint.pow10(exp));
     }
     @Override public void addNumCol(int colIdx, double d) {
-      _ncols = Math.max(_ncols,colIdx);
-      if(_nlines < MAX_PREVIEW_LINES && colIdx < MAX_PREVIEW_COLS)
-        _data[_nlines][colIdx] = Double.toString(d);
+      if(colIdx < _ncols) {
+        _ncols = Math.max(_ncols, colIdx);
+        if (_nlines < MAX_PREVIEW_LINES && colIdx < MAX_PREVIEW_COLS)
+          _data[_nlines][colIdx] = Double.toString(d);
+      }
     }
     @Override public void addInvalidCol(int colIdx) {
       if(colIdx < _ncols && _nlines < MAX_PREVIEW_LINES)

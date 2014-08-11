@@ -55,8 +55,10 @@ public class KeyDemo {
 		Log.info("UKV okey after parse:" + UKV.get(okey));
 		Log.info("DKV okey after parse:" + DKV.get(okey));
 		Log.info("DKV okey get        :" + DKV.get(okey).get());
-		
-		Log.info("Global Keyset count :" + H2O.globalKeySet(null).size());
+
+        H2O.KeySnapshot ks = H2O.KeySnapshot.globalSnapshot();
+        long keyCount = ks.keys().length;
+		Log.info("Global Keyset count :" + keyCount);
 		Log.info("Sanity check:key count after a few prints should not change anything;But not so straightforward if more than 1 nodes: "+H2O.store_size());
 		//Log.info(H2O.STORE.toString());
 		

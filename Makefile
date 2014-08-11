@@ -98,7 +98,7 @@ build:
 	$(MAKE) build_h2o PROJECT_VERSION=$(PROJECT_VERSION)
 
 	@echo
-	@echo "PHASE: Building hadoop driver..."
+	@echo "PHASE: Building Hadoop driver..."
 	@echo
 	$(MAKE) -C hadoop build PROJECT_VERSION=$(PROJECT_VERSION) 1> target/logs/hadoop_build.log
 
@@ -118,6 +118,11 @@ build:
 	@echo "PHASE: Building zip package..."
 	@echo
 	$(MAKE) build_package PROJECT_VERSION=$(PROJECT_VERSION) 1> target/logs/package_build.log
+
+	@echo
+	@echo "PHASE: Building ZooKeeper jar..."
+	@echo
+	$(MAKE) -C h2o-zookeeper PROJECT_VERSION=$(PROJECT_VERSION) 1> target/logs/zookeeper_build.log
 
 BUILD_BRANCH=$(shell git branch | grep '*' | sed 's/* //')
 BUILD_HASH=$(shell git log -1 --format="%H")
@@ -200,6 +205,8 @@ build_package:
 	cp -p LICENSE.txt target/h2o-$(PROJECT_VERSION)
 	mkdir target/h2o-$(PROJECT_VERSION)/ec2
 	cp -p ec2/*.py ec2/*.sh ec2/README.txt target/h2o-$(PROJECT_VERSION)/ec2
+	mkdir target/h2o-$(PROJECT_VERSION)/spark
+	cp -p spark/* target/h2o-$(PROJECT_VERSION)/spark
 	(cd target; zip -q -r h2o-$(PROJECT_VERSION).zip h2o-$(PROJECT_VERSION))
 	rm -fr target/h2o-$(PROJECT_VERSION)
 	rm -fr target/ci
@@ -304,6 +311,7 @@ clean:
 	$(MAKE) -C client clean
 	$(MAKE) -C h2o-scala clean
 	$(MAKE) -C hadoop clean
+	$(MAKE) -C h2o-zookeeper clean
 	$(MAKE) -C R clean
 	$(MAKE) -C launcher clean
 	$(MAKE) -C installer clean

@@ -14,7 +14,7 @@ phrasesCompound = [
     # "a=1; a=2; function(x){x=a;a=3}",
     # "a=r.hex; function(x){x=a;a=3;nrow(x)*a}(a)",
     # "function(x){y=x*2; y+1}(2)",
-    # "mean=function(x){apply(x,1,sum)/nrow(x)};mean(r.hex)",
+    # "mean2=function(x){apply(x,1,sum)/nrow(x)};mean2(r.hex)",
 ]
 
 badPhrases = [
@@ -104,6 +104,9 @@ class Basic(unittest.TestCase):
                 (None, "func4=function(x) { mean( x[,%s]) }" % col), 
                 (None, "func5=function(x) { sd( x[,%s]) }" % col), 
                 (None, "func6=function(x) { quantile(x[,%s] , c(0.9) ) }" % col),
+                (None, "func7=function(x) { round( x[,%s], 1) }" % col), 
+                (None, "func8=function(x) { signif( x[,%s], 1) }" % col), 
+                (None, "func9=function(x) { trunc( x[,%s]) }" % col), 
             ]
             for resultKey, execExpr in initList:
                 h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=resultKey, timeoutSecs=60)

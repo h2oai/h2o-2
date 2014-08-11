@@ -47,7 +47,7 @@ public class DeepLearningSpiralsTest extends TestUtil {
           p.source = frame;
           p.response = frame.lastVec();
           p.validation = null;
-          p.score_interval = 10;
+          p.score_interval = 2;
           p.ignored_cols = null;
           p.train_samples_per_iteration = 0; //sync once per period
           p.quiet_mode = true;
@@ -83,8 +83,8 @@ public class DeepLearningSpiralsTest extends TestUtil {
           CM.toASCII(sb);
           double error = new ConfusionMatrix(CM.cm).err();
           Log.info(sb);
-          if (error >= 0.02) {
-            Assert.fail("Classification error is not less than 0.02, but " + error + ".");
+          if (error >= 0.025) {
+            Assert.fail("Classification error is not less than 0.025, but " + error + ".");
           }
           pred.delete();
           mymodel.delete();

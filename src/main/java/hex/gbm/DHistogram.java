@@ -105,6 +105,9 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
   // Interpolate d to find bin#
   int bin( float col_data ) {
     if( Float.isNaN(col_data) ) return 0; // Always NAs to bin 0
+    if (Float.isInfinite(col_data)) // Put infinity to most left/right bin
+      if (col_data<0) return 0;
+      else return _bins.length-1;
     // When the model is exposed to new test data, we could have data that is
     // out of range of any bin - however this binning call only happens during
     // model-building.
@@ -136,12 +139,14 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
   // Compute response mean & variance.
   abstract void incr0( int b, double y );
   final void incr( float col_data, double y ) {
-    assert Float.isNaN(col_data) || (_min <= col_data && col_data < _maxEx) : "col_data "+col_data+" out of range "+this;
+    assert Float.isNaN(col_data) || Float.isInfinite(col_data) || (_min <= col_data && col_data < _maxEx) : "col_data "+col_data+" out of range "+this;
     int b = bin(col_data);      // Compute bin# via linear interpolation
     Utils.AtomicIntArray.incr(_bins,b); // Bump count in bin
     // Track actual lower/upper bound per-bin
-    setMin(col_data);
-    setMax(col_data);
+    if (!Float.isInfinite(col_data)) {
+      setMin(col_data);
+      setMax(col_data);
+    }
     if( y != 0 ) incr0(b,y);
   }
 
@@ -181,10 +186,12 @@ public abstract class DHistogram<TDH extends DHistogram> extends Iced {
     Vec vecs[] = fr.vecs();
     for( int c=0; c<ncols; c++ ) {
       Vec v = vecs[c];
-      final float maxIn = (float)v.max();
-      final float maxEx = find_maxEx(maxIn,v.isInt()?1:0);
-      hs[c] = v.naCnt()==v.length() || v.min()==v.max() ? null :
-        make(fr._names[c],nbins,(byte)(v.isEnum() ? 2 : (v.isInt()?1:0)),(float)v.min(),maxEx,v.length(),doGrpSplit,isBinom);
+      final float minIn = (float)Math.max(v.min(),-Float.MAX_VALUE); // inclusive vector min
+      final float maxIn = (float)Math.min(v.max(), Float.MAX_VALUE); // inclusive vector max
+      final float maxEx = find_maxEx(maxIn,v.isInt()?1:0); // smallest exclusive max
+      final long vlen = v.length();
+      hs[c] = v.naCnt()==vlen || v.min()==v.max() ? null :
+        make(fr._names[c],nbins,(byte)(v.isEnum() ? 2 : (v.isInt()?1:0)),minIn,maxEx,vlen,doGrpSplit,isBinom);
     }
     return hs;
   }

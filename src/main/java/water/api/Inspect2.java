@@ -1,10 +1,12 @@
 package water.api;
 
+import hex.KMeans2;
 import hex.ReBalance;
 import hex.deeplearning.DeepLearning;
 import hex.drf.DRF;
 import hex.gbm.GBM;
 import hex.glm.GLM2;
+import hex.singlenoderf.SpeeDRF;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
@@ -108,11 +110,13 @@ public class Inspect2 extends Request2 {
               //"<br/> Expand factors using " + OneHot.link(skey, "One Hot Expansion") +
               //"View " + SummaryPage2.link(key, "Summary") +
               "<br/>Build models using " +
-              DRF.link(skey, "Distributed Random Forest") +", "+
+              SpeeDRF.link(skey, "Random Forest") +", "+
+              DRF.link(skey, "BigData Random Forest") +", "+
               GBM.link(skey, "Distributed GBM") +", "+
               GLM2.link(skey, "Generalized Linear Modeling") +", "+
               DeepLearning.link(skey, "Deep Learning") +", "+
-              hex.LR2.link(skey, "Linear Regression") + "<br>"+
+              hex.LR2.link(skey, "Linear Regression") + ", " +
+              KMeans2.link(skey, "K-Means") + "<br>"+
               SummaryPage2.link(skey,"Summary")+", "+
               DownloadDataset.link(skey, "Download as CSV")+", "+
               ExportFiles.link(skey, "Export to file")+", "+

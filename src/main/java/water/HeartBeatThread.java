@@ -33,10 +33,6 @@ public class HeartBeatThread extends Thread {
   // to remove him.  This must be strictly greater than the TIMEOUT.
   static final int SUSPECT = TIMEOUT+500;
 
-  // Receive queue depth count before we decide a Node is suspect, and call for a vote
-  // to remove him.
-  static public final int QUEUEDEPTH = 100;
-
   // My Histogram. Called from any thread calling into the MM.
   // Singleton, allocated now so I do not allocate during an OOM event.
   static private final H2O.Cleaner.Histo myHisto = new H2O.Cleaner.Histo();
@@ -63,7 +59,7 @@ public class HeartBeatThread extends Thread {
       // Once per second, for the entire cloud a Node will multi-cast publish
       // itself, so other unrelated Clouds discover each other and form up.
       try { Thread.sleep(SLEEP); } // Only once-sec per entire Cloud
-      catch( InterruptedException e ) { }
+      catch( InterruptedException ignore ) { }
 
       // Update the interesting health self-info for publication also
       H2O cloud = H2O.CLOUD;
@@ -77,11 +73,18 @@ public class HeartBeatThread extends Thread {
       hb._keys       = (H2O.STORE.size ());
       hb.set_valsz     (myHisto.histo(false)._cached);
       hb._num_cpus   = (char)run.availableProcessors();
-      if (counter % 300 == 2) {
-        //run mini-benchmark every 5 mins
-        hb._gflops   = Linpack.run();
-        hb._membw    = MemoryBandwidth.run();
-      }
+
+// FIXME:  Comment this out for now, since it's killing H2O running on Linux spawned by R.
+//         For some reason we haven't resolved yet, R does a sched_setaffinity on itself and limits itself
+//         to 1 cpu.  Forked H2O inherits that limitation.
+//         Running a 32-core linpack under that scenario is really bad.
+//
+//      if (counter % 300 == 2) {
+//        //run mini-benchmark every 5 mins
+//        hb._gflops   = Linpack.run();
+//        hb._membw    = MemoryBandwidth.run();
+//      }
+
       Object load = null;
       try {
         load = mbs.getAttribute(os, "SystemLoadAverage");

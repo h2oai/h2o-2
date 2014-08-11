@@ -871,11 +871,11 @@ def verify_cloud_size(nodeList=None, verbose=False, timeoutSecs=10, ignoreHealth
 
 
 def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25, noExtraErrorCheck=False):
-    node.wait_for_node_to_accept_connections(timeoutSecs, noExtraErrorCheck=noExtraErrorCheck)
+    node.wait_for_node_to_accept_connections(timeoutSecs=timeoutSecs, noExtraErrorCheck=noExtraErrorCheck)
 
     # want node saying cloud = expected size, plus thinking everyone agrees with that.
-    def test(n, tries=None):
-        c = n.get_cloud(noExtraErrorCheck=True)
+    def test(n, tries=None, timeoutSecs=14.0):
+        c = n.get_cloud(noExtraErrorCheck=True, timeoutSecs=timeoutSecs)
         # don't want to check everything. But this will check that the keys are returned!
         consensus = c['consensus']
         locked = c['locked']
@@ -1310,7 +1310,7 @@ class H2O(object):
         # defaults
         params_dict = {
             'destination_key': destination_key,
-            'model_key': model_key,
+            '_modelKey': model_key,
             'data_key': data_key,
         }
         browseAlso = kwargs.get('browseAlso', False)
@@ -1342,7 +1342,7 @@ class H2O(object):
         # defaults
         params_dict = {
             'key': key,
-            'model_key': model_key,
+            '_modelKey': model_key,
         }
         browseAlso = kwargs.get('browseAlso', False)
         # only lets these params thru
@@ -1363,7 +1363,7 @@ class H2O(object):
     def kmeans_model_view(self, model, timeoutSecs=30, **kwargs):
         # defaults
         params_dict = {
-            'model': model,
+            '_modelKey': model,
         }
         browseAlso = kwargs.get('browseAlso', False)
         # only lets these params thru
@@ -1745,16 +1745,17 @@ class H2O(object):
                        'ignored_cols_by_name': None,
                        'classification': 1,
                        'validation': None,
-                       'bin_limit': 1024.0,
+                       'nbins': 1024.0,
                        'class_weights': None,
                        'max_depth': max_depth,
-                       'mtry': -1.0,
-                       'num_trees': ntrees,
+                       'mtries': -1.0,
+                       'ntrees': ntrees,
                        'oobee': 0,
-                       'sample': 0.67,
+                       'sample_rate': 0.67,
                        'sampling_strategy': 'RANDOM',
                        'seed': -1.0,
                        'select_stat_type': 'ENTROPY',
+                       'importance':0,
                        'strata_samples': None,
         }
         check_params_update_kwargs(params_dict, kwargs, 'SpeeDRF', print_params)
@@ -1947,19 +1948,27 @@ class H2O(object):
         verboseprint("\nquantiles result:", dump_json(a))
         return a
 
-    def naive_bayes(self, timeoutSecs=300, print_params=True, **kwargs):
+    def naive_bayes(self, timeoutSecs=300, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30,
+        noPoll=False, print_params=True, benchmarkLogging=None, **kwargs):
         params_dict = {
             'destination_key': None,
-            'source_key': None,
+            'source': None,
             'response': None,
             'cols': None,
             'ignored_cols': None,
             'ignored_cols_by_name': None,
-            'classification': None,
             'laplace': None,
+            'drop_na_cols': None,
         }
         check_params_update_kwargs(params_dict, kwargs, 'naive_bayes', print_params)
         a = self.__do_json_request('2/NaiveBayes.json', timeout=timeoutSecs, params=params_dict)
+
+        if noPoll:
+            return a
+
+        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, benchmarkLogging=benchmarkLogging,
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
+
         verboseprint("\nnaive_bayes result:", dump_json(a))
         return a
 
@@ -2004,6 +2013,13 @@ class H2O(object):
         check_params_update_kwargs(params_dict, kwargs, 'gbm_search_progress', print_params)
         a = self.__do_json_request('2/GridSearchProgress.json', timeout=timeoutSecs, params=params_dict)
         print "\ngbm_search_progress result:", dump_json(a)
+        return a
+
+    def speedrf_view(self, modelKey, timeoutSecs=300, print_params=False, **kwargs):
+        params_dict = { '_modelKey': modelKey, }
+        check_params_update_kwargs(params_dict, kwargs, 'speedrf_view', print_params)
+        a = self.__do_json_request('2/SpeeDRFModelView.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint("\nspeedrf_view_result:", dump_json(a))
         return a
 
     def pca_view(self, modelKey, timeoutSecs=300, print_params=False, **kwargs):
@@ -2618,7 +2634,7 @@ class H2O(object):
         start = time.time()
         numberOfRetries = 0
         while time.time() - start < timeoutSecs:
-            if test_func(self, tries=numberOfRetries):
+            if test_func(self, tries=numberOfRetries, timeoutSecs=timeoutSecs):
                 break
             time.sleep(retryDelaySecs)
             numberOfRetries += 1
@@ -2639,9 +2655,9 @@ class H2O(object):
     def wait_for_node_to_accept_connections(self, timeoutSecs=15, noExtraErrorCheck=False):
         verboseprint("wait_for_node_to_accept_connections")
 
-        def test(n, tries=None):
+        def test(n, tries=None, timeoutSecs=timeoutSecs):
             try:
-                n.get_cloud(noExtraErrorCheck=noExtraErrorCheck)
+                n.get_cloud(noExtraErrorCheck=noExtraErrorCheck, timeoutSecs=timeoutSecs)
                 return True
             except requests.ConnectionError, e:
                 # Now using: requests 1.1.0 (easy_install --upgrade requests) 2/5/13
@@ -2681,6 +2697,31 @@ class H2O(object):
         if self.java_extra_args is not None:
             args += ['%s' % self.java_extra_args]
 
+        if self.use_debugger:
+            # currently hardwire the base port for debugger to 8000
+            # increment by one for every node we add
+            # sence this order is different than h2o cluster order, print out the ip and port for the user
+            # we could save debugger_port state per node, but not really necessary (but would be more consistent)
+            debuggerBasePort = 8000
+            if self.node_id is None:
+                debuggerPort = debuggerBasePort
+            else:
+                debuggerPort = debuggerBasePort + self.node_id
+
+            if self.http_addr:
+                a = self.http_addr
+            else:
+                a = "localhost"
+
+            if self.port:
+                b = str(self.port)
+            else:
+                b = "h2o determined"
+
+            # I guess we always specify port?
+            print "You can attach debugger at port %s for jvm at %s:%s" % (debuggerPort, a, b)
+            args += ['-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=%s' % debuggerPort]
+
         args += ["-ea"]
 
         if self.use_maprfs:
@@ -2716,31 +2757,6 @@ class H2O(object):
             args += [
                 "--port=%d" % self.port,
             ]
-
-        if self.use_debugger:
-            # currently hardwire the base port for debugger to 8000
-            # increment by one for every node we add
-            # sence this order is different than h2o cluster order, print out the ip and port for the user
-            # we could save debugger_port state per node, but not really necessary (but would be more consistent)
-            debuggerBasePort = 8000
-            if self.node_id is None:
-                debuggerPort = debuggerBasePort
-            else:
-                debuggerPort = debuggerBasePort + self.node_id
-
-            if self.http_addr:
-                a = self.http_addr
-            else:
-                a = "localhost"
-
-            if self.port:
-                b = str(self.port)
-            else:
-                b = "h2o determined"
-
-            # I guess we always specify port?
-            print "You can attach debugger at port %s for jvm at %s:%s" % (debuggerPort, a, b)
-            args += ['-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=%s' % debuggerPort]
 
         if self.use_flatfile:
             args += [

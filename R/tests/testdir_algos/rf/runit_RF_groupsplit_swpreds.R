@@ -15,11 +15,11 @@ test.DRF.SWpreds <- function(conn) {
   # Train H2O DRF without Noise Column
   Log.info("Distributed Random Forest with only Predictor Column")
   Log.info("H2O DRF (Naive Split) with parameters:\nclassification = TRUE, ntree = 50, depth = 20, nbins = 500\n")
-  drfmodel.nogrp <- h2o.randomForest(x = "X1", y = "y", data = swpreds.hex, classification = TRUE, ntree = 50, depth = 20, nbins = 500, doGrpSplit = FALSE)
+  drfmodel.nogrp <- h2o.randomForest(x = "X1", y = "y", data = swpreds.hex, classification = TRUE, ntree = 50, depth = 20, nbins = 500, doGrpSplit = FALSE, type = "BigData")
   print(drfmodel.nogrp)
   
   Log.info("H2O DRF (Group Split) with parameters:\nclassification = TRUE, ntree = 50, depth = 20, nbins = 500\n")
-  drfmodel.grpsplit <- h2o.randomForest(x = "X1", y = "y", data = swpreds.hex, classification = TRUE, ntree = 50, depth = 20, nbins = 500, doGrpSplit = TRUE)
+  drfmodel.grpsplit <- h2o.randomForest(x = "X1", y = "y", data = swpreds.hex, classification = TRUE, ntree = 50, depth = 20, nbins = 500, doGrpSplit = TRUE, type = "BigData")
   print(drfmodel.grpsplit)
   
   # Check AUC and overall prediction error at least as good with group split than without
@@ -30,11 +30,11 @@ test.DRF.SWpreds <- function(conn) {
   # Train H2O DRF Model including Noise Column:
   Log.info("Distributed Random Forest including Noise Column")
   Log.info("H2O DRF (Naive Split) with parameters:\nclassification = TRUE, ntree = 50, depth = 20, nbins = 500\n")
-  drfmodel.nogrp2 <- h2o.randomForest(x = c("X1", "X2"), y = "y", data = swpreds.hex, classification = TRUE, ntree = 50, depth = 20, nbins = 500, doGrpSplit = FALSE)
+  drfmodel.nogrp2 <- h2o.randomForest(x = c("X1", "X2"), y = "y", data = swpreds.hex, classification = TRUE, ntree = 50, depth = 20, nbins = 500, doGrpSplit = FALSE, type = "BigData")
   print(drfmodel.nogrp2)
   
   Log.info("H2O DRF (Group Split) with parameters:\nclassification = TRUE, ntree = 50, depth = 20, nbins = 500\n")
-  drfmodel.grpsplit2 <- h2o.randomForest(x = c("X1", "X2"), y = "y", data = swpreds.hex, classification = TRUE, ntree = 50, depth = 20, nbins = 500, doGrpSplit = TRUE)
+  drfmodel.grpsplit2 <- h2o.randomForest(x = c("X1", "X2"), y = "y", data = swpreds.hex, classification = TRUE, ntree = 50, depth = 20, nbins = 500, doGrpSplit = TRUE, type ="BigData")
   print(drfmodel.grpsplit2)
   
   # BUG? With noise, seems like AUC and/or prediction error can be slightly better with naive rather than group split
