@@ -122,6 +122,13 @@ Steam.MainView = (_) ->
   switchPageView = (view) -> switchView _pageViews, view
   switchModalView = (view) -> switchView _modalViews, view
   fixDialogPlacement = (element) -> _.positionDialog element
+  refresh = ->
+    switch _topic()
+      when _frameTopic
+        _.refreshFrames()
+      when _modelTopic
+        _.refreshModels()
+    return
 
   #
   # Status bar
@@ -239,6 +246,7 @@ Steam.MainView = (_) ->
   isViewMasked: _isViewMasked
   isInspectorHidden: _isInspectorHidden
   inspectorViews: _inspectorViews
+  refresh: refresh
   help: _help
   navigateHelpHome: navigateHelpHome
   canNavigateHelpBack: _canNavigateHelpBack
