@@ -795,7 +795,6 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     @Override public void onCompletion(CountedCompleter cmp){
       if(!_grid)source.unlock(self());
       if(!_failed) {
-        LogInfo("GLM " + self() + " completed by " + cmp.getClass().getName() + ", " + cmp.toString());
         assert _cmp.compareAndSet(null, cmp) : "double completion, first from " + _cmp.get().getClass().getName() + ", second from " + cmp.getClass().getName();
         _done = true;
         GLMModel model = DKV.get(dest()).get();

@@ -595,7 +595,8 @@ public final class H2O {
   // entire node for lack of some small piece of data).  So each attempt to do
   // lower-priority F/J work starts with an attempt to work & drain the
   // higher-priority queues.
-  public static abstract class H2OCountedCompleter<T extends H2OCountedCompleter> extends CountedCompleter implements Cloneable {
+  public static abstract class
+    H2OCountedCompleter<T extends H2OCountedCompleter> extends CountedCompleter implements Cloneable {
     public H2OCountedCompleter(){}
     protected H2OCountedCompleter(H2OCountedCompleter completer){super(completer);}
 

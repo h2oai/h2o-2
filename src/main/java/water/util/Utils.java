@@ -673,7 +673,9 @@ public class Utils {
     byte [] bits = v.getFirstBytes();
     try{
       return unzipBytes(bits, guessCompressionMethod(bits));
-    } catch(Exception e){return null;}
+    } catch(Exception e){
+      throw new RuntimeException(e);
+    }
   }
 
   public static Compression guessCompressionMethod(byte [] bits){
