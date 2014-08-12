@@ -1,8 +1,11 @@
 package water.util;
 
 import java.io.*;
+import java.util.BitSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import org.apache.commons.lang.SystemUtils;
 
 /**
  * Linux /proc file reader.
@@ -18,6 +21,7 @@ import java.util.regex.Pattern;
 public class LinuxProcFileReader {
   private String _systemData;
   private String _processData;
+  private String _processStatus;
   private String _pid;
 
   private long _systemIdleTicks = -1;
@@ -25,6 +29,7 @@ public class LinuxProcFileReader {
   private long _processTotalTicks = -1;
 
   private long _processRss = -1;
+  private String _processCpusAllowed = "";
 
   private int _processNumOpenFds = -1;
 
@@ -53,6 +58,16 @@ public class LinuxProcFileReader {
    * @return resident set size (RSS) of this process.
    */
   public long getProcessRss()        { assert _processRss > 0;         return _processRss; }
+
+  /**
+   * @return whether number of CPUs allowed is limited.
+   */
+  public boolean getCpusAllowedIsLimited() {
+    if(!SystemUtils.IS_OS_LINUX) return false;
+    assert _processCpusAllowed.length() > 0;
+    int cores = Runtime.getRuntime().availableProcessors();
+    return (cores > 1 && numSetBitsHex(_processCpusAllowed) == 1);
+  }
 
   /**
    * @return number of currently open fds of this process.
@@ -85,8 +100,10 @@ public class LinuxProcFileReader {
       readSystemProcFile();
       readProcessProcFile(pid);
       readProcessNumOpenFds(pid);
+      readProcessStatusFile(pid);
       parseSystemProcFile(_systemData);
       parseProcessProcFile(_processData);
+      parseProcessStatusFile(_processStatus);
     }
     catch (Exception xe) {}
   }
@@ -97,6 +114,22 @@ public class LinuxProcFileReader {
   public boolean valid() {
     return ((_systemIdleTicks >= 0) && (_systemTotalTicks >= 0) && (_processTotalTicks >= 0) &&
             (_processNumOpenFds >= 0));
+  }
+
+  /**
+   * @return number of set bits in hexadecimal string (chars must be 0-F)
+   */
+  public static int numSetBitsHex(String s) {
+    // Look-up table for num set bits in 4-bit char
+    final int[] bits_set = {0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4};
+
+    int nset = 0;
+    for(int i = 0; i < s.length(); i++) {
+      Character ch = s.charAt(i);
+      int x = Integer.parseInt(ch.toString(), 16);
+      nset += bits_set[x];
+    }
+    return nset;
   }
 
   private static String getProcessId() throws Exception {
@@ -216,6 +249,28 @@ public class LinuxProcFileReader {
       if (arr != null) {
         _processNumOpenFds = arr.length;
       }
+    }
+    catch (Exception xe) {}
+  }
+
+  private void readProcessStatusFile(String pid) {
+    try {
+      String s = "/proc/" + pid + "/status";
+      _processStatus = readFile(new File(s));
+    }
+    catch (Exception xe) {}
+  }
+
+  private void parseProcessStatusFile(String s) {
+    if(s == null) return;
+    try {
+      Pattern p = Pattern.compile("Cpus_allowed:\\s+([A-Fa-f0-9]+)");
+      Matcher m = p.matcher(s);
+      boolean b = m.find();
+      if (! b) {
+        return;
+      }
+      _processCpusAllowed = m.group(1);
     }
     catch (Exception xe) {}
   }

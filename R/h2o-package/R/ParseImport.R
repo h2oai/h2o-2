@@ -38,6 +38,10 @@ h2o.clusterInfo <- function(client) {
       Sys.sleep(threeSeconds)
       res = fromJSON(postForm(myURL, style = "POST"))
     }
+    
+    cpusLimited = sapply(nodeInfo, function(x) { !is.null(x[['cpus_is_limited']]) && x[['cpus_is_limited']] })
+    if(any(cpusLimited))
+      warning("Number of CPUs allowed is limited to 1 on some nodes. To remove this limit, set 'export OPENBLAS_MAIN_FREE = 1' in R.")
   }
   
   nodeInfo = res$nodes
