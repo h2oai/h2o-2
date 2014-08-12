@@ -264,7 +264,7 @@ public class Models extends Request2 {
     // add generic fields such as column names
     summarizeModelCommonFields(summary, model);
 
-    summary.model_algorithm = "DRF";
+    summary.model_algorithm = "BigData RF";
 
     JsonObject all_params = (model.get_params()).toJSON();
     summary.critical_parameters = whitelistJsonObject(all_params, DRF_critical_params);
@@ -286,7 +286,7 @@ public class Models extends Request2 {
     // add generic fields such as column names
     summarizeModelCommonFields(summary, model);
 
-    summary.model_algorithm = "SpeeDRF";
+    summary.model_algorithm = "Random Forest";
 
     JsonObject all_params = (model.get_params()).toJSON();
     summary.critical_parameters = whitelistJsonObject(all_params, SpeeDRF_critical_params);
