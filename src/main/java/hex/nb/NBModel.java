@@ -74,9 +74,10 @@ public class NBModel extends Model {
         // Two ways to get non-zero std deviation HEX-1852
 //        double stddev = pcond[col][rlevel][1] > 0 ? pcond[col][rlevel][1] : min_std_dev; //only use the placeholder for critically low data
         double stddev = Math.max(pcond[col][rlevel][1], min_std_dev); // more stable for almost constant data
-
-        NormalDistribution nd = new NormalDistribution(pcond[col][rlevel][0], stddev);
-        num *= nd.density(data[col]);
+        double mean = pcond[col][rlevel][0];
+        double x = data[col];
+        num *= Math.exp(-((x-mean)*(x-mean)/(2.*stddev*stddev)))/stddev/Math.sqrt(2.*Math.PI); // faster
+//        num *= new NormalDistribution(mean, stddev).density(data[col]); //slower
       }
 
       num *= pprior[rlevel];    // p(x,y) = p(x|y)*p(y)
