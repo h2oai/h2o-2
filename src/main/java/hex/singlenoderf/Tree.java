@@ -75,7 +75,7 @@ public class Tree extends H2OCountedCompleter {
 
   // Oops, uncaught exception
   @Override public boolean onExceptionalCompletion( Throwable ex, CountedCompleter cc) {
-    ex.printStackTrace();
+//    ex.printStackTrace();
     return true;
   }
 
@@ -151,6 +151,7 @@ public class Tree extends H2OCountedCompleter {
       }
 
       _stats = null; // GC
+      if(_jobKey != null && !Job.isRunning(_jobKey)) throw new Job.JobCancelledException();
 
       // Atomically improve the Model as well
       Key tkey = toKey();
@@ -161,9 +162,7 @@ public class Tree extends H2OCountedCompleter {
       if (_verbose > 10) {
         Log.info(Sys.RANDF, _tree.toString(sb, Integer.MAX_VALUE).toString());
       }
-    } else {
-      if(_jobKey != null && !Job.isRunning(_jobKey)) throw new Job.JobCancelledException();
-    }
+    } else throw new Job.JobCancelledException();
     // Wait for completion
     tryComplete();
   }
@@ -193,6 +192,7 @@ public class Tree extends H2OCountedCompleter {
     @Override public INode compute() {
       hex.singlenoderf.Statistic left = getStatistic(0,_data, _seed + LTSS_INIT, _exclusiveSplitLimit); // first get the statistics
       hex.singlenoderf.Statistic rite = getStatistic(1,_data, _seed + RTSS_INIT, _exclusiveSplitLimit);
+      if(_jobKey != null && !Job.isRunning(_jobKey)) throw new Job.JobCancelledException();
       Data[] res = new Data[2]; // create the data, node and filter the data
       int c = _split._column, s = _split._split;
       assert c != _data.columns()-1; // Last column is the class column
@@ -203,6 +203,7 @@ public class Tree extends H2OCountedCompleter {
       FJBuild fj0 = null, fj1 = null;
       hex.singlenoderf.Statistic.Split ls = left.split(res[0], _depth >= _maxDepth); // get the splits
       hex.singlenoderf.Statistic.Split rs = rite.split(res[1], _depth >= _maxDepth);
+      if(_jobKey != null && !Job.isRunning(_jobKey)) throw new Job.JobCancelledException();
       if (ls.isLeafNode() || ls.isImpossible()) {
         if (_regression) {
           float av = res[0].computeAverage();
