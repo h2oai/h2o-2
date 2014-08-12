@@ -1959,6 +1959,7 @@ class H2O(object):
             'ignored_cols_by_name': None,
             'laplace': None,
             'drop_na_cols': None,
+            'min_std_dev': None,
         }
         check_params_update_kwargs(params_dict, kwargs, 'naive_bayes', print_params)
         a = self.__do_json_request('2/NaiveBayes.json', timeout=timeoutSecs, params=params_dict)

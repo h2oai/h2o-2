@@ -10,6 +10,7 @@ def define_params():
         # between 0 and 100000
         'laplace': [None, 0, 1, 10, 1e5],
         'drop_na_cols': [None, 0, 1],
+        'min_std_dev': [None, 1e-5],
         }
     return paramDict
 
