@@ -54,7 +54,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_NOPASS_parse_multi_exclude_fvec(self):
+    def test_parse_multi_exclude_fvec(self):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         translateList = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u']
@@ -89,7 +89,7 @@ class Basic(unittest.TestCase):
                 h2i.import_only(path=SYNDATASETS_DIR + "/" + f, schema='put')
 
             # pattern match all, then use exclude
-            parseResult = h2i.parse_only(pattern="*/syn_*",
+            parseResult = h2i.parse_only(pattern="*syn_*",
                 hex_key=hex_key, exclude=excludePattern, header=1, timeoutSecs=timeoutSecs)
             print "parseResult['destination_key']: " + parseResult['destination_key']
 

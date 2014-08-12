@@ -234,10 +234,10 @@ public class DeepLearningProstateTest extends TestUtil {
                                           Log.info(sb);
 
                                           // test AUC computation in more detail
-                                          Assert.assertTrue(aucd.AUC > 0.75); //min val = 0.81 for long test
-                                          Assert.assertTrue(aucd.AUC < 0.9);  //max val = 0.85 for long test
-                                          Assert.assertTrue(aucd.threshold() > 0.1);  //min val = 0.17 for long test
-                                          Assert.assertTrue(aucd.threshold() < 0.6);  //max val = 0.53 for long test
+                                          Assert.assertTrue(aucd.AUC > 0.7);
+                                          Assert.assertTrue(aucd.AUC < 0.95);
+                                          Assert.assertTrue(aucd.threshold() > 0.1);
+                                          Assert.assertTrue(aucd.threshold() < 0.7);
 
                                           // check that auc.cm() is the right CM
                                           Assert.assertEquals(new ConfusionMatrix(aucd.cm()).err(), error, 1e-15);
@@ -269,7 +269,7 @@ public class DeepLearningProstateTest extends TestUtil {
                                         pred2.delete_and_lock(null);
                                         pred2.unlock(null);
 
-                                        if (mymodel.nclasses() == 2 && false) {
+                                        if (mymodel.nclasses() == 2) {
                                           // make labels with 0.5 threshold for binary classifier
                                           Env ev = Exec2.exec("pred2[,1]=pred2[,3]>=" + 0.5);
                                           try {
@@ -359,7 +359,7 @@ public class DeepLearningProstateTest extends TestUtil {
   public static class Long extends DeepLearningProstateTest {
     @Test
     @Ignore
-    public void run() throws Exception { runFraction(0.01f); }
+    public void run() throws Exception { runFraction(1f); }
   }
 
   public static class Short extends DeepLearningProstateTest {

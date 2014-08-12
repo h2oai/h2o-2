@@ -27,11 +27,11 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_create_frame_fail(self):
+    def test_NOPASS_create_frame_fail(self):
         h2o.beta_features = True
 
         for trial in range(20):
-            kwargs = {'integer_range': None, 'missing_fraction': 0.1, 'cols': 10, 'response_factors': 0, 'seed': 1234, 'randomize': 1, 'categorical_fraction': 0, 'rows': 1, 'factors': 0, 'real_range': 0, 'value': None, 'integer_fraction': 0}
+            kwargs = {'integer_range': None, 'missing_fraction': 0.1, 'cols': 10, 'response_factors': 1, 'seed': 1234, 'randomize': 1, 'categorical_fraction': 0, 'rows': 1, 'factors': 0, 'real_range': 0, 'value': None, 'integer_fraction': 0}
 
             print kwargs
             timeoutSecs = 300

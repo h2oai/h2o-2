@@ -133,11 +133,11 @@ def exec_expr(node=None, execExpr=None, resultKey=None, timeoutSecs=10, ignoreH2
     return resultExec, result
 
 
-def exec_zero_list(zeroList):
+def exec_zero_list(zeroList,timeoutSecs=60):
     # zero the list of Results using node[0]
     for exprTemplate in zeroList:
         execExpr = fill_in_expr_template(exprTemplate,0, 0, 0, None)
-        (resultExec, result) = exec_expr(h2o.nodes[0], execExpr, None)
+        (resultExec, result) = exec_expr(h2o.nodes[0], execExpr, None,timeoutSecs)
 
 
 def exec_expr_list_rand(lenNodes, exprList, keyX, 

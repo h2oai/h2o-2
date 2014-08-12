@@ -1948,19 +1948,27 @@ class H2O(object):
         verboseprint("\nquantiles result:", dump_json(a))
         return a
 
-    def naive_bayes(self, timeoutSecs=300, print_params=True, **kwargs):
+    def naive_bayes(self, timeoutSecs=300, retryDelaySecs=1, initialDelaySecs=5, pollTimeoutSecs=30,
+        noPoll=False, print_params=True, benchmarkLogging=None, **kwargs):
         params_dict = {
             'destination_key': None,
-            'source_key': None,
+            'source': None,
             'response': None,
             'cols': None,
             'ignored_cols': None,
             'ignored_cols_by_name': None,
-            'classification': None,
             'laplace': None,
+            'drop_na_cols': None,
         }
         check_params_update_kwargs(params_dict, kwargs, 'naive_bayes', print_params)
         a = self.__do_json_request('2/NaiveBayes.json', timeout=timeoutSecs, params=params_dict)
+
+        if noPoll:
+            return a
+
+        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs, benchmarkLogging=benchmarkLogging,
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
+
         verboseprint("\nnaive_bayes result:", dump_json(a))
         return a
 
@@ -2491,6 +2499,7 @@ class H2O(object):
             'max_iter': None,
             'standardize': None,
             'family': None,
+            'link': None,
             'alpha': None,
             'lambda': None,
             'beta_epsilon': None, # GLMGrid doesn't use this name

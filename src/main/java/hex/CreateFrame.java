@@ -20,10 +20,10 @@ public class CreateFrame extends Request2 {
   @API(help = "Name (Key) of frame to be created", required = true, filter = Default.class, json=true)
   public String key;
 
-  @API(help = "Number of rows", required = true, filter = Default.class, json=true)
+  @API(help = "Number of rows", required = true, filter = Default.class, lmin = 1, json=true)
   public long rows = 10000;
 
-  @API(help = "Number of data columns (in addition to the first response column)", required = true, filter = Default.class, json=true)
+  @API(help = "Number of data columns (in addition to the first response column)", required = true, filter = Default.class, lmin = 1, json=true)
   public int cols = 10;
 
   @API(help = "Random number seed", filter = Default.class, json=true)
@@ -38,33 +38,35 @@ public class CreateFrame extends Request2 {
   @API(help = "Range for real variables (-range ... range)", filter = Default.class, json=true)
   public long real_range = 100;
 
-  @API(help = "Fraction of categorical columns (for randomize=true)", filter = Default.class, json=true)
+  @API(help = "Fraction of categorical columns (for randomize=true)", filter = Default.class, dmin = 0, dmax = 1, json=true)
   public double categorical_fraction = 0.2;
 
-  @API(help = "Factor levels for categorical variables", filter = Default.class, json=true)
+  @API(help = "Factor levels for categorical variables", filter = Default.class, lmin = 2, json=true)
   public int factors = 100;
 
-  @API(help = "Fraction of integer columns (for randomize=true)", filter = Default.class, json=true)
+  @API(help = "Fraction of integer columns (for randomize=true)", filter = Default.class, dmin = 0, dmax = 1, json=true)
   public double integer_fraction = 0.2;
 
   @API(help = "Range for integer variables (-range ... range)", filter = Default.class, json=true)
   public long integer_range = 100;
 
-  @API(help = "Fraction of missing values", filter = Default.class, json=true)
+  @API(help = "Fraction of missing values", filter = Default.class, dmin = 0, dmax = 1, json=true)
   public double missing_fraction = 0.01;
 
-  @API(help = "Number of factor levels of the first column (1=real, 2=binomial, N=multinomial)", filter = Default.class, json=true)
+  @API(help = "Number of factor levels of the first column (1=real, 2=binomial, N=multinomial)", filter = Default.class, lmin = 1, json=true)
   public int response_factors = 2;
 
   public boolean positive_response; // only for response_factors=1
 
   @Override public Response serve() {
     try {
-      if (integer_fraction + categorical_fraction > 1)
-        throw new IllegalArgumentException("Integer and categorical fractions must add up to <= 1.");
-
-      if (cols <= 0 || rows <= 0)
-        throw new IllegalArgumentException("Must have number of rows > 0 and columns > 1.");
+      if (integer_fraction + categorical_fraction > 1) throw new IllegalArgumentException("Integer and categorical fractions must add up to <= 1.");
+      if (Math.abs(missing_fraction) > 1) throw new IllegalArgumentException("Missing fraction must be between 0 and 1.");
+      if (Math.abs(integer_fraction) > 1) throw new IllegalArgumentException("Integer fraction must be between 0 and 1.");
+      if (Math.abs(categorical_fraction) > 1) throw new IllegalArgumentException("Categorical fraction must be between 0 and 1.");
+      if (categorical_fraction > 0 && factors <= 1) throw new IllegalArgumentException("Factors must be larger than 2 for categorical data.");
+      if (response_factors < 1) throw new IllegalArgumentException("Response factors must be either 1 (real-valued response), or >=2 (factor levels).");
+      if (cols <= 0 || rows <= 0) throw new IllegalArgumentException("Must have number of rows > 0 and columns > 1.");
 
       if (!randomize) {
         if (integer_fraction != 0 || categorical_fraction != 0)

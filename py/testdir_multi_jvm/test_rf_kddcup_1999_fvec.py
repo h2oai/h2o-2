@@ -32,7 +32,7 @@ class Basic(unittest.TestCase):
         print "Parse result['destination_key']:", parseResult['destination_key']
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
 
-        for trials in range(3):
+        for trials in range(1):
             print "\n" + csvFilename, "Trial #", trials
             start = time.time()
 
@@ -53,7 +53,7 @@ class Basic(unittest.TestCase):
                 kwargs['validation'] 
 
             start = time.time()
-            RFview = h2o_cmd.runRF(parseResult=parseResult, ntrees=1, timeoutSecs=300, retryDelaySecs=1.0, **kwargs)
+            RFview = h2o_cmd.runRF(parseResult=parseResult, ntrees=1, timeoutSecs=800, retryDelaySecs=1.0, **kwargs)
             print "RF end on ", csvFilename, 'took', time.time() - start, 'seconds'
 
             ### h2b.browseJsonHistoryAsUrlLastMatch("RFView")

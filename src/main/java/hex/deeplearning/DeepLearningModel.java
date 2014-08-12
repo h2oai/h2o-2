@@ -1791,6 +1791,8 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     final Key job = null;
     final DeepLearningModel cp = this;
     DeepLearningModel bestModel = new DeepLearningModel(cp, bestModelKey, job, model_info().data_info());
+    bestModel.get_params().state = Job.JobState.DONE;
+    bestModel.get_params().job_key = get_params().self();
     bestModel.delete_and_lock(job);
     bestModel.unlock(job);
     assert (UKV.get(bestModelKey) != null);

@@ -36,7 +36,7 @@ class Basic(unittest.TestCase):
             csvFilename = "parity_128_4_" + str(x) + "_quad.data"  
 
         trees = 6
-        timeoutSecs = 20
+        timeoutSecs = 60
         # always match the gen above!
         # reduce to get intermittent failures to lessen, for now
         for x in xrange (11,60,10):
