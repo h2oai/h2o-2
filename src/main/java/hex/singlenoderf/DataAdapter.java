@@ -1,6 +1,8 @@
 package hex.singlenoderf;
 
 
+import water.Job;
+import water.Key;
 import water.MemoryManager;
 import water.fvec.Frame;
 import water.fvec.Vec;
@@ -34,17 +36,20 @@ final class DataAdapter  {
   /** Use regression */
   public final boolean _regression;
 
+  public Key _jobKey;
+
   DataAdapter(Frame fr, SpeeDRFModel model, int[] modelDataMap, int rows,
               long unique, long seed, int binLimit, double[] classWt) {
 //    assert model._dataKey == fr._key;
     _seed       = seed+(unique<<16); // This is important to preserve sampling selection!!!
     /* Maximum arity for a column (not a hard limit) */
     _numRows    = rows;
+    _jobKey     = model.jobKey;
     _numClasses = model.regression ? 1 : model.classes();
     _regression = model.regression;
-
     _c = new Col[fr.numCols()];
     for( int i = 0; i < _c.length; i++ ) {
+      if(model.jobKey != null && !Job.isRunning(model.jobKey)) throw new Job.JobCancelledException();
       assert fr._names[modelDataMap[i]].equals(fr._names[i]);
       Vec v = fr.vecs()[i];
       if( isByteCol(v,rows, i == _c.length-1, _regression) ) // we do not bin for small values
@@ -107,6 +112,7 @@ final class DataAdapter  {
   }
 
   public void shrink() {
+    if(_jobKey != null && !Job.isRunning(_jobKey)) throw new Job.JobCancelledException();
     for ( Col c: _c) c.shrink();
   }
 

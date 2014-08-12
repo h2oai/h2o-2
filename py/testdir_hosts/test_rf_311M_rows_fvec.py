@@ -26,14 +26,14 @@ class Basic(unittest.TestCase):
 
         for trials in range(2):
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', 
-                timeoutSecs=500)
+                timeoutSecs=1400, retryDelaySecs=5)
             print "Parse result['destination_key']:", parseResult['destination_key']
             inspect = h2o_cmd.runInspect(None,parseResult['destination_key'])
 
             print "\n" + csvFilename
             start = time.time()
             RFview = h2o_cmd.runRF(parseResult=parseResult, ntrees=2, max_depth=5,
-                timeoutSecs=800, retryDelaySecs=10.0)
+                timeoutSecs=800, retryDelaySecs=20)
             print "RF end on ", csvFilename, 'took', time.time() - start, 'seconds'
 
 if __name__ == '__main__':

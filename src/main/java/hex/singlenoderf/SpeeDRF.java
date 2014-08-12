@@ -187,6 +187,11 @@ public class SpeeDRF extends Job.ValidatedJob {
       if (validation != null && validation != source) validation.read_lock(self());
       buildForest();
       if (n_folds > 0) CrossValUtils.crossValidate(this);
+    } catch (JobCancelledException ex){
+      rf_model = UKV.get(dest());
+      state = JobState.CANCELLED; //for JSON REST response
+      rf_model.get_params().state = state; //for parameter JSON on the HTML page
+      Log.info("Random Forest was cancelled.");
     } catch(Exception ex) {
       ex.printStackTrace();
       throw new RuntimeException(ex);
