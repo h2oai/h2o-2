@@ -294,9 +294,11 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 
   private transient AtomicBoolean _jobdone = new AtomicBoolean(false);
 
-  @Override public void cancel(){
-    if(!_grid)
+
+  @Override public void cancel(String msg){
+    if(!_grid) {
       source.unlock(self());
+    }
     DKV.remove(_progressKey);
     Value v = DKV.get(destination_key);
     if(v != null){
@@ -308,7 +310,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       DKV.remove(destination_key);
     }
     DKV.remove(destination_key);
-    super.cancel();
+    super.cancel(msg);
   }
 
 
@@ -566,10 +568,12 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
               double diff = (glmt._beta[i] - lastBeta[i]);
               constBeta &= (-beta_epsilon < diff && diff < beta_epsilon);
             }
-          else for (int i = 0; i < glmt._beta.length; ++i)
+          else for (int i = 0; i < glmt._beta.length; ++i) {
             glmt._beta[i] *= 0.5;
+            constBeta &= glmt._beta[i] < beta_epsilon;
+          }
         }
-        if(constBeta) { // line search failed to progress -> converge (if we a valid solution already, otherwise fail!)
+        if(constBeta || _iter >= max_iter) { // line search failed to progress -> converge (if we a valid solution already, otherwise fail!)
           if(_lastResult == null)throw new RuntimeException(LogInfo("GLM failed to solve! Got NaNs/Infs in the first iteration and line search did not help!"));
           checkKKTAndComplete(glmt,glmt._beta,false);
           return;
