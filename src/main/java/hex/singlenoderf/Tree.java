@@ -74,7 +74,7 @@ public class Tree extends H2OCountedCompleter {
   }
 
   // Oops, uncaught exception
-  @Override public boolean onExceptionalCompletion( Throwable ex, CountedCompleter _) {
+  @Override public boolean onExceptionalCompletion( Throwable ex, CountedCompleter cc) {
     ex.printStackTrace();
     return true;
   }
@@ -161,6 +161,8 @@ public class Tree extends H2OCountedCompleter {
       if (_verbose > 10) {
         Log.info(Sys.RANDF, _tree.toString(sb, Integer.MAX_VALUE).toString());
       }
+    } else {
+      if(_jobKey != null && !Job.isRunning(_jobKey)) throw new Job.JobCancelledException();
     }
     // Wait for completion
     tryComplete();
@@ -375,7 +377,7 @@ public class Tree extends H2OCountedCompleter {
       int skip = _l.size(); // Drop down the amount to skip over the left column
       if( skip <= 254 )  bs.put1(skip);
       else { bs.put1(0);
-        if (! ((-1<<24) <= skip && skip < (1<<24))) throw H2O.fail("Trees have grown too deep. Use BigData RF or limit the tree depth of your model. For more information, contact support: support@0xdata.com");
+        if (! ((-1<<24) <= skip && skip < (1<<24))) throw H2O.fail("Trees have grown too deep. Use BigData RF or limit the tree depth for your model. For more information, contact support: support@0xdata.com");
         bs.put3(skip);
       }
       _l.write(bs);
@@ -417,10 +419,7 @@ public class Tree extends H2OCountedCompleter {
       bs.put4f(split_value());
       int skip = _l.size(); // Drop down the amount to skip over the left column
       if( skip <= 254 )  bs.put1(skip);
-      else { bs.put1(0);
-        if (! ((-1<<24) <= skip && skip < (1<<24))) throw H2O.fail("Trees have grown too deep. Use BigData RF or limit the tree depth for your model. For more information, contact support: support@0xdata.com");
-        bs.put3(skip);
-      }
+      else { bs.put1(0); bs.put3(skip); }
       _l.write(bs);
       _r.write(bs);
     }
