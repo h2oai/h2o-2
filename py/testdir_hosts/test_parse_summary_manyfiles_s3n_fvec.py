@@ -25,7 +25,7 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         # these will be used as directory imports/parse
         csvDirlist = [
-            ("manyfiles-nflx-gz",   600),
+            ("manyfiles-nflx-gz", 1200),
         ]
         trial = 0
         for (csvDirname, timeoutSecs) in csvDirlist:
