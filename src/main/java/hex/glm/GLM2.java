@@ -794,6 +794,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         LogInfo("GLM " + self() + " completed by " + cmp.getClass().getName() + ", " + cmp.toString());
         assert _cmp.compareAndSet(null, cmp) : "double completion, first from " + _cmp.get().getClass().getName() + ", second from " + cmp.getClass().getName();
         _done = true;
+        // TODO: move these updates to Model into a DKeyTask so that it runs remotely on the model's home
         GLMModel model = DKV.get(dest()).get();
         model.maybeComputeVariableImportances();
         model.stop_training();
@@ -905,6 +906,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     // just fork off the nfolds+1 tasks and wait for the results
     assert alpha.length == 1;
     start_time = System.currentTimeMillis();
+
     if(nlambdas == -1)nlambdas = 100;
     if(lambda_search && nlambdas <= 1)
       throw new IllegalArgumentException(LogInfo("GLM2: nlambdas must be > 1 when running with lambda search."));
@@ -945,6 +947,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
             _lastResult = new IterationInfo(0,t,null,t.gradient(0,0));
 
             GLMModel model = new GLMModel(GLM2.this, dest(), _dinfo, _glm, beta_epsilon, alpha[0], lambda_max, _ymu, prior);
+            model.start_training(start_time);
             if(lambda_search) {
               assert !Double.isNaN(lambda_max) : LogInfo("running lambda_value search, but don't know what is the lambda_value max!");
               model = addLmaxSubmodel(model, t._val);
