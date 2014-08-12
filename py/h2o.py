@@ -2499,6 +2499,7 @@ class H2O(object):
             'max_iter': None,
             'standardize': None,
             'family': None,
+            'link': None,
             'alpha': None,
             'lambda': None,
             'beta_epsilon': None, # GLMGrid doesn't use this name
