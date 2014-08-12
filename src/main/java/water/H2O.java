@@ -1362,8 +1362,10 @@ public final class H2O {
       _type = v.type();
       _rawData = v.isRawData();
       if(v.isFrame()){
-        Frame f = v.get();
-        _sz = f.byteSize();
+        // NOTE: can't get byteSize here as it may invoke RollupStats! :(
+//        Frame f = v.get();
+//        _sz = f.byteSize();
+        _sz = v._max;
       } else
         _sz = v._max;
       _backEnd = v.backend();
