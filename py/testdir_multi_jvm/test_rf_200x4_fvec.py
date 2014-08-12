@@ -10,7 +10,7 @@ class Basic(unittest.TestCase):
     def setUpClass(cls):
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(4)
+            h2o.build_cloud(3, java_heap_GB=4)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -22,10 +22,10 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         csvPathname = 'hhp.cut3.214.data.gz'
 
-        print "RF start on ", csvPathname, "this will probably take 1 minute.."
+        print "RF start on ", csvPathname
         start = time.time()
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
-        h2o_cmd.runRF(parseResult=parseResult, ntrees=5,
+        h2o_cmd.runRF(parseResult=parseResult, ntrees=3,
                 timeoutSecs=1200, retryDelaySecs=15)
         print "RF end on ", csvPathname, 'took', time.time() - start, 'seconds'
 

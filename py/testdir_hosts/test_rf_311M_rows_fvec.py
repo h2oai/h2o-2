@@ -26,7 +26,7 @@ class Basic(unittest.TestCase):
 
         for trials in range(2):
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', 
-                timeoutSecs=700, retryDelaySecs=5)
+                timeoutSecs=1400, retryDelaySecs=5)
             print "Parse result['destination_key']:", parseResult['destination_key']
             inspect = h2o_cmd.runInspect(None,parseResult['destination_key'])
 
