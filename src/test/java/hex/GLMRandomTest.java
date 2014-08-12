@@ -24,9 +24,9 @@ public class GLMRandomTest extends TestUtil {
     }
 
     public static void runFraction(float fraction) throws Throwable {
-      long seed = 0xDECAF;
+      long seed = new Random().nextLong();
+      Log.info("GLMRadnomTest: seed = " + seed);
       Random rng = new Random(seed);
-
       int testcount = 0;
       int count = 0;
       int jobId = 0;
