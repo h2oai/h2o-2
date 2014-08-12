@@ -1352,7 +1352,9 @@ public final class H2O {
     public final Key _key;
     public final int _type;
     public final boolean _rawData;
-    public final long _sz;
+    public final int _sz;
+    public final int _ncols;
+    public final long _nrows;
     public final byte _backEnd;
 
     public KeyInfo(Key k, Value v){
@@ -1362,12 +1364,19 @@ public final class H2O {
       _type = v.type();
       _rawData = v.isRawData();
       if(v.isFrame()){
+        Frame f = v.get();
         // NOTE: can't get byteSize here as it may invoke RollupStats! :(
-//        Frame f = v.get();
+
 //        _sz = f.byteSize();
         _sz = v._max;
-      } else
+        // do at least nrows/ncols instead
+        _ncols = f.numCols();
+        _nrows = f.numRows();
+      } else {
         _sz = v._max;
+        _ncols = 0;
+        _nrows = 0;
+      }
       _backEnd = v.backend();
     }
     @Override public int compareTo(KeyInfo ki){ return _key.compareTo(ki._key);}
