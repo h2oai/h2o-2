@@ -80,7 +80,7 @@ abstract public class Parse extends Request {
       final Key [] keyAry = H2O.KeySnapshot.globalSnapshot().filter(new H2O.KVFilter() {
         @Override
         public boolean filter(H2O.KeyInfo k) {
-          if(k._rawData) {
+          if(k._rawData && k._nrows > 0) {
             String ks = k._key.toString();
             return (p.matcher(ks).matches() && (exclude == null || !exclude.matcher(ks).matches()));
           }
