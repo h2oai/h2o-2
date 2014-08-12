@@ -73,7 +73,7 @@ class Basic(unittest.TestCase):
             kwargs = {'ntrees': 3, 'max_depth': 20, 'seed': seed}
             start = time.time()
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=90)
-            h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=200, pollTimeoutSecs=180, **kwargs)
+            h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=600, pollTimeoutSecs=180, **kwargs)
             print "trial #", trial, "rowCount:", rowCount, "colCount:", colCount, "RF end on ", csvFilename, \
                 'took', time.time() - start, 'seconds'
 
