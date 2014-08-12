@@ -213,13 +213,10 @@ public class GLMRandomTest extends TestUtil {
                                                         try {
                                                           p.invokeServe();
                                                           assert p._done;
-
-                                                          H2O.H2OEmptyCompleter cmp = new H2O.H2OEmptyCompleter();
                                                           if (p.alpha.length > 1)
-                                                            new GLMGrid.DeleteGridTsk(cmp, p.destination_key).forkTask();
+                                                            new GLMGrid.DeleteGridTsk(null, p.destination_key).submitTask();
                                                           else
-                                                            new GLMModel.DeleteModelTask(cmp, p.destination_key).forkTask();
-                                                          cmp.join();
+                                                            new GLMModel.DeleteModelTask(null, p.destination_key).submitTask();
                                                           System.out.println("TEST DONE");
                                                         }catch(DException.DistributedException dex){
                                                           if(dex.getMessage().contains("IllegalArgument"))
@@ -230,7 +227,6 @@ public class GLMRandomTest extends TestUtil {
                                                           // accept IllegalArgumentException, but nothing else
                                                         } finally {
                                                           frame.delete();
-                                                          checkLeakedKeys();
                                                         }
                                                       }
                                                       Log.info("Parameters combination " + count + ": PASS");
