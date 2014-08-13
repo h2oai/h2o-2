@@ -1959,6 +1959,7 @@ class H2O(object):
             'ignored_cols_by_name': None,
             'laplace': None,
             'drop_na_cols': None,
+            'min_std_dev': None,
         }
         check_params_update_kwargs(params_dict, kwargs, 'naive_bayes', print_params)
         a = self.__do_json_request('2/NaiveBayes.json', timeout=timeoutSecs, params=params_dict)
@@ -2499,6 +2500,7 @@ class H2O(object):
             'max_iter': None,
             'standardize': None,
             'family': None,
+            'link': None,
             'alpha': None,
             'lambda': None,
             'beta_epsilon': None, # GLMGrid doesn't use this name

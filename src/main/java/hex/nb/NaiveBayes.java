@@ -26,7 +26,7 @@ public class NaiveBayes extends Job.ModelJobWithoutClassificationField {
   public int laplace = 0;
 
   @API(help = "Min. standard deviation to use for observations with not enough data", filter = Default.class, dmin = 1e-10, json = true)
-  public double min_std_dev = 1e-5;
+  public double min_std_dev = 1e-3;
 
   @API(help = "Drop columns with more than 20% missing values", filter = Default.class)
   public boolean drop_na_cols = true;
@@ -118,6 +118,7 @@ public class NaiveBayes extends Job.ModelJobWithoutClassificationField {
 
       String[][] domains = dinfo._adaptedFrame.domains();
       int ncol = dinfo._adaptedFrame.numCols();
+      assert ncol-1 == dinfo._nums + dinfo._cats;   // ncol-1 because we drop response col
       _nres = domains[ncol-1].length;
 
       _rescnt = new double[_nres];
@@ -148,9 +149,10 @@ public class NaiveBayes extends Job.ModelJobWithoutClassificationField {
 
         // Record sum for each pair of numerical predictors and response
         for(int col = 0; col < _dinfo._nums; col++) {
-          double x = chks[col + _dinfo._cats].at0(row);
-          _jntcnt[col][rlevel][0] += x;
-          _jntcnt[col][rlevel][1] += x*x;
+          int cidx = _dinfo._cats + col;
+          double x = chks[cidx].at0(row);
+          _jntcnt[cidx][rlevel][0] += x;
+          _jntcnt[cidx][rlevel][1] += x*x;
         }
         _rescnt[rlevel]++;
         _nobs++;

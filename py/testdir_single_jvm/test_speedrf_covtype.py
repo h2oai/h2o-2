@@ -54,7 +54,7 @@ class Basic(unittest.TestCase):
         csvTrainFilename = 'covtype.data'
         csvTrainPathname = importFolderPath + "/" + csvTrainFilename
         hex_key = csvTrainFilename + ".hex"
-        parseTrainResult = h2i.import_parse(bucket='home-0xdiag-imitation', path=csvTrainPathname, hex_key=hex_key,
+        parseTrainResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvTrainPathname, hex_key=hex_key,
                                             timeoutSecs=180, doSummary=False)
         inspect = h2o_cmd.runInspect(None, parseTrainResult['destination_key'])
 
@@ -62,7 +62,7 @@ class Basic(unittest.TestCase):
         csvTestFilename = 'covtype.data'
         csvTestPathname = importFolderPath + "/" + csvTestFilename
         hex_key = csvTestFilename + ".hex"
-        parseTestResult = h2i.import_parse(bucket='home-0xdiag-imitation', path=csvTestPathname, hex_key=hex_key,
+        parseTestResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvTestPathname, hex_key=hex_key,
                                            timeoutSecs=180)
         inspect = h2o_cmd.runInspect(None, parseTestResult['destination_key'])
 
