@@ -156,9 +156,9 @@ setMethod("summary","H2OGLMModelList", function(object) {
         for(m in object@models) {
             model = m@model
             if(is.null(summary)) {
-                summary = t(as.matrix(c(model$lambda, model$df.null-model$df.residual,round((1-model$deviance/model$null.deviance),2),round(model$auc,2))))
+                summary = t(as.matrix(c(model$lambda, max(0,model$df.null-model$df.residual),round((1-model$deviance/model$null.deviance),2),round(model$auc,2))))
             } else {
-                summary = rbind(summary,c(model$lambda,model$df.null-model$df.residual,round((1-model$deviance/model$null.deviance),2),round(model$auc,2)))
+                summary = rbind(summary,c(model$lambda,max(0,model$df.null-model$df.residual),round((1-model$deviance/model$null.deviance),2),round(model$auc,2)))
             }
         }
         summary = cbind(1:nrow(summary),summary)
