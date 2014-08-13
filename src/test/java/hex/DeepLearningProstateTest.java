@@ -157,6 +157,7 @@ public class DeepLearningProstateTest extends TestUtil {
                                 // score and check result (on full data)
                                 mymodel = UKV.get(dest); //this actually *requires* frame to also still be in UKV (because of DataInfo...)
                                 Assert.assertTrue(mymodel.get_params().state == Job.JobState.DONE); //HEX-1817
+                                Assert.assertTrue(mymodel.model_info().get_processed_total() >= epochs * 0.99*frame.numRows());
                                 // test HTML
                                 {
                                   StringBuilder sb = new StringBuilder();
