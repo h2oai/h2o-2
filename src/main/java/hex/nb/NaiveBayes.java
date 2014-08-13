@@ -26,7 +26,7 @@ public class NaiveBayes extends Job.ModelJobWithoutClassificationField {
   public int laplace = 0;
 
   @API(help = "Min. standard deviation to use for observations with not enough data", filter = Default.class, dmin = 1e-10, json = true)
-  public double min_std_dev = 1e-5;
+  public double min_std_dev = 1e-3;
 
   @API(help = "Drop columns with more than 20% missing values", filter = Default.class)
   public boolean drop_na_cols = true;
