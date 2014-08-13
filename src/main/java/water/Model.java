@@ -264,7 +264,9 @@ public abstract class Model extends Lockable<Model> {
     // If the model produces a classification/enum, copy the domain into the
     // result vector.
     int nc = nclasses();
-    Vec [] newVecs = adaptFrm.anyVec().makeZeros(1 + (nc > 1?nc:0));
+    Vec [] newVecs = new Vec[]{adaptFrm.anyVec().makeZero(classNames())};
+    if(nc > 1)
+      newVecs = Utils.join(newVecs,adaptFrm.anyVec().makeZeros(nc));
     String [] names = new String[newVecs.length];
     names[0] = "predict";
     for(int i = 1; i < names.length; ++i)
