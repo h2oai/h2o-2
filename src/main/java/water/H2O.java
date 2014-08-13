@@ -917,17 +917,10 @@ public final class H2O {
     Log.POST(380,"");
   }
 
-  // Default location of the AWS credentials file
-  public static final String DEFAULT_CREDENTIALS_LOCATION = "AwsCredentials.properties";
-  public static PropertiesCredentials getAWSCredentials() throws IOException {
-    File credentials = new File(Objects.firstNonNull(OPT_ARGS.aws_credentials, DEFAULT_CREDENTIALS_LOCATION));
-    return new PropertiesCredentials(credentials);
-  }
-
   /** Starts the local k-v store.
-* Initializes the local k-v store, local node and the local cloud with itself
-* as the only member.
-*/
+   * Initializes the local k-v store, local node and the local cloud with itself
+   * as the only member.
+   */
   private static void startLocalNode() {
     // Figure self out; this is surprisingly hard
     initializeNetworkSockets();
