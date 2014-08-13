@@ -74,7 +74,7 @@ public class Cloud extends Request {
       if (! h2o._node_healthy) {
         cloudHealthy = false;
       }
-      node.addProperty("cpus_is_limited", hb._cpus_is_limited);
+      node.addProperty("cpus_allowed", hb._cpus_allowed);
       node.addProperty("PID", hb._pid);
 
       JsonArray fjth = new JsonArray();

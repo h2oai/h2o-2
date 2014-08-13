@@ -22,7 +22,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_NOPASS_rf_libsvm_fvec(self):
+    def test_rf_libsvm_fvec(self):
         h2o.beta_features = True
         # just do the import folder once
 
