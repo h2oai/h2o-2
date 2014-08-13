@@ -123,7 +123,7 @@ setMethod("show", "H2OGLMModel", function(object) {
     cat("\nNull Deviance:    ", round(model$null.deviance,1))
     #Return AIC NaN while calculations for tweedie/gamma not implemented; keep R from throwing error
     if (class(model$aic) != "numeric") {
-      cat("\nResidual Deviance:", round(model$deviance,1), " AIC: NaN")
+      cat("\nResidual Deviance:", round(model$deviance,1), " AIC: Missing implementation for", model$params$family$family, "family")
     } else {
       cat("\nResidual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1))
     }
