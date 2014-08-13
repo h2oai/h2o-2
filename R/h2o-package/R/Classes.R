@@ -121,7 +121,12 @@ setMethod("show", "H2OGLMModel", function(object) {
     }
     cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual")
     cat("\nNull Deviance:    ", round(model$null.deviance,1))
-    cat("\nResidual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1))
+    #Return AIC NaN while calculations for tweedie/gamma not implemented; keep R from throwing error
+    if (class(model$aic) != "numeric") {
+      cat("\nResidual Deviance:", round(model$deviance,1), " AIC: NaN")
+    } else {
+      cat("\nResidual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1))
+    }
     cat("\nDeviance Explained:", round(1-model$deviance/model$null.deviance,5), "\n")
     # cat("\nAvg Training Error Rate:", round(model$train.err,5), "\n")
     
