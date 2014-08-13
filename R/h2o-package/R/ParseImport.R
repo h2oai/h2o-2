@@ -43,6 +43,7 @@ h2o.clusterInfo <- function(client) {
   nodeInfo = res$nodes
   maxMem = sum(sapply(nodeInfo,function(x) as.numeric(x['max_mem_bytes']))) / (1024 * 1024 * 1024)
   numCPU = sum(sapply(nodeInfo,function(x) as.numeric(x['num_cpus'])))
+  allowedCPU = sum(sapply(nodeInfo,function(x) as.numeric(x['cpus_allowed'])))
   clusterHealth =  all(sapply(nodeInfo,function(x) as.logical(x['num_cpus']))==TRUE)
   
   cat("R is connected to H2O cluster:\n")
@@ -52,9 +53,10 @@ h2o.clusterInfo <- function(client) {
   cat("    H2O cluster total nodes:  ", res$cloud_size, "\n")
   cat("    H2O cluster total memory: ", sprintf("%.2f GB", maxMem), "\n")
   cat("    H2O cluster total cores:  ", numCPU, "\n")
+  cat("    H2O cluster allowed cpus: ", allowedCPU, "\n")
   cat("    H2O cluster healthy:      ", clusterHealth, "\n")
   
-  cpusLimited = sapply(nodeInfo, function(x) { !is.null(x[['cpus_is_limited']]) && x[['cpus_is_limited']] })
+  cpusLimited = sapply(nodeInfo, function(x) { x[['num_cpus']] > 1 && x[['cpus_allowed']] == 1 })
   if(any(cpusLimited))
     warning("Number of CPUs allowed is limited to 1 on some nodes. To remove this limit, set 'export OPENBLAS_MAIN_FREE = 1' in R.")
 }

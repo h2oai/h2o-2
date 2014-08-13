@@ -29,7 +29,7 @@ public class LinuxProcFileReader {
   private long _processTotalTicks = -1;
 
   private long _processRss = -1;
-  private String _processCpusAllowed = "";
+  private int _processCpusAllowed = -1;
 
   private int _processNumOpenFds = -1;
 
@@ -60,13 +60,11 @@ public class LinuxProcFileReader {
   public long getProcessRss()        { assert _processRss > 0;         return _processRss; }
 
   /**
-   * @return whether number of CPUs allowed is limited.
+   * @return number of CPUs allowed by this process.
    */
-  public boolean getCpusAllowedIsLimited() {
-    if(!SystemUtils.IS_OS_LINUX) return false;
-    assert _processCpusAllowed.length() > 0;
-    int cores = Runtime.getRuntime().availableProcessors();
-    return (cores > 1 && numSetBitsHex(_processCpusAllowed) == 1);
+  public int getProcessCpusAllowed() {
+    if(!SystemUtils.IS_OS_LINUX) return Runtime.getRuntime().availableProcessors();
+    assert _processCpusAllowed > 0;   return _processCpusAllowed;
   }
 
   /**
@@ -270,7 +268,7 @@ public class LinuxProcFileReader {
       if (! b) {
         return;
       }
-      _processCpusAllowed = m.group(1);
+      _processCpusAllowed = numSetBitsHex(m.group(1));
     }
     catch (Exception xe) {}
   }
