@@ -19,7 +19,9 @@ public class DeepLearningTask extends FrameTask<DeepLearningTask> {
 
   int _chunk_node_count = 1;
 
-  @Override protected boolean skipMissing() { return false; }
+  @Override protected boolean skipMissing() {
+    return _output.get_params().missing_values_handling == DeepLearning.MissingValuesHandling.Skip;
+  }
 
   public DeepLearningTask(hex.deeplearning.DeepLearningModel.DeepLearningModelInfo input, float fraction){this(input,fraction,null);}
   private DeepLearningTask(hex.deeplearning.DeepLearningModel.DeepLearningModelInfo input, float fraction, H2OCountedCompleter cmp){
