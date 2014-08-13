@@ -316,6 +316,20 @@ class ModelManagementTestCase(unittest.TestCase):
         h2o_glm.simpleCheckGLM(self, glm_AirlinesTrain_A, None, **glm_AirlinesTrain_A_params)
 
 
+        print "##############################################################################################"
+        print "Generating AirlinesTrain Naive Bayes binary classification model. . ."
+        # R equivalent: h2o.naive_bayes(y = "IsDepDelayed", x = c("Origin", "Dest", "fDayofMonth", "fYear", "UniqueCarrier", "fDayOfWeek", "fMonth", "DepTime", "ArrTime", "Distance"), data = airlines_train.hex, family = "binomial", alpha=0.05, lambda=1.0e-2, standardize=FALSE, nfolds=0)
+        before = time.time() * 1000
+        nb_AirlinesTrain_params = {
+            'destination_key': 'nb_AirlinesTrain_binary_1',
+            'response': 'IsDepDelayed', 
+            'ignored_cols': 'IsDepDelayed_REC_recoded, IsDepDelayed_REC', 
+        }
+        nb_AirlinesTrain = node.naive_bayes(source=airlines_train_hex, timeoutSecs=120, **nb_AirlinesTrain_params)
+        durations['nb_AirlinesTrain_binary_1'] = time.time() * 1000 - before
+        num_models = num_models + 1
+
+
         print "#########################################################"
         print "Generating Prostate GLM2 binary classification model. . ."
         # R equivalent: h2o.glm.FV(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family = "binomial", nfolds = 0, alpha = 0.5)

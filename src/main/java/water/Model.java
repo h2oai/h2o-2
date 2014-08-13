@@ -1,11 +1,9 @@
 package water;
 
-import water.api.*;
-import static water.util.JCodeGen.toStaticVar;
-import static water.util.Utils.contains;
 import hex.ConfusionMatrix;
 import hex.VarImp;
 import javassist.*;
+import water.api.*;
 import water.api.Request.API;
 import water.fvec.Chunk;
 import water.fvec.Frame;
@@ -15,9 +13,13 @@ import water.serial.AutoBufferSerializer;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashMap;
 
-import org.apache.commons.math3.random.CorrelatedRandomVectorGenerator;
+import static water.util.JCodeGen.toStaticVar;
+import static water.util.Utils.contains;
 
 /**
  * A Model models reality (hopefully).
@@ -544,7 +546,10 @@ public abstract class Model extends Lockable<Model> {
           cm.cm[1][0] = aucd.cm()[1][0];
           cm.cm[0][1] = aucd.cm()[0][1];
           cm.cm[1][1] = aucd.cm()[1][1];
-          assert(new hex.ConfusionMatrix(cm.cm).err() == aucd.err()); //check consistency with AUC-computed error
+          double cm_err = new hex.ConfusionMatrix(cm.cm).err();
+          double auc_err = aucd.err();
+          if (! (Double.isNaN(cm_err) && Double.isNaN(auc_err))) // NOTE: NaN != NaN
+            assert(cm_err == auc_err); //check consistency with AUC-computed error
         } else {
           error = new hex.ConfusionMatrix(cm.cm).err(); //only set error if AUC didn't already set the error
         }

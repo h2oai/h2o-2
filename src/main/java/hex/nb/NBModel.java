@@ -1,14 +1,14 @@
 package hex.nb;
 
-import org.apache.commons.math3.distribution.NormalDistribution;
-
 import hex.FrameTask.DataInfo;
 import hex.nb.NaiveBayes.NBTask;
+import org.apache.commons.math3.distribution.NormalDistribution;
 import water.Key;
 import water.Model;
-import water.api.*;
+import water.Request2;
+import water.api.DocGen;
+import water.api.Predict;
 import water.api.Request.API;
-import water.api.Request.Default;
 import water.api.RequestBuilders.ElementBuilder;
 
 /**
@@ -39,9 +39,15 @@ public class NBModel extends Model {
   @API(help = "Min. standard deviation to use for observations with not enough data")
   final double min_std_dev;
 
+  @API(help = "Model parameters", json = true)
+  private Request2 job;
+  @Override public final NaiveBayes get_params() { return (NaiveBayes)job; }
+  @Override public final Request2 job() { return job; }
+
   public NBModel(Key selfKey, Key dataKey, DataInfo dinfo, NBTask tsk, double[] pprior, double[][][] pcond, double laplace, double min_std_dev) {
     super(selfKey, dataKey, dinfo._adaptedFrame, /* priorClassDistribution */ null);
     this.rescnt = tsk._rescnt;
+    this.job= tsk._job;
     this.pprior = pprior;
     this.pcond = pcond;
     this.ncats = dinfo._cats;
