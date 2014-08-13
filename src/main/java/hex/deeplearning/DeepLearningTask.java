@@ -19,6 +19,8 @@ public class DeepLearningTask extends FrameTask<DeepLearningTask> {
 
   int _chunk_node_count = 1;
 
+  @Override protected boolean skipMissing() { return false; }
+
   public DeepLearningTask(hex.deeplearning.DeepLearningModel.DeepLearningModelInfo input, float fraction){this(input,fraction,null);}
   private DeepLearningTask(hex.deeplearning.DeepLearningModel.DeepLearningModelInfo input, float fraction, H2OCountedCompleter cmp){
     super(input.get_params().self(),input.data_info(),cmp);
@@ -44,11 +46,6 @@ public class DeepLearningTask extends FrameTask<DeepLearningTask> {
 
   @Override public final void processRow(long seed, final double [] nums, final int numcats, final int [] cats, double [] responses){
     if(_output.get_params().self() != null && !Job.isRunning(_output.get_params().self())) throw new Job.JobCancelledException();
-//    if (H2O.CLOUD.size()==1) {
-//      seed += model_info().get_processed_global(); //avoid periodicity
-//    } else {
-//      seed = new Random().nextLong(); //multi-node: no point in being reproducible - better to be "good" at being random
-//    }
     seed = new Random().nextLong();
     ((Neurons.Input)_neurons[0]).setInput(seed, nums, numcats, cats);
     step(seed, _neurons, _output, _training, responses);
@@ -172,8 +169,13 @@ public class DeepLearningTask extends FrameTask<DeepLearningTask> {
           if (training) {
             for (int i = 1; i < neurons.length - 1; i++)
               Arrays.fill(neurons[i]._e.raw(), 0);
-            assert ((double) (int) responses[0] == responses[0]);
-            final int target_label = (int) responses[0];
+            int target_label;
+            if (Double.isNaN(responses[0])) { //missing response
+              target_label = Neurons.missing_int_value;
+            } else {
+              assert ((double) (int) responses[0] == responses[0]); //classification -> integer labels expected
+              target_label = (int) responses[0];
+            }
             ((Neurons.Softmax) neurons[neurons.length - 1]).bprop(target_label);
           }
         } else {
@@ -181,7 +183,12 @@ public class DeepLearningTask extends FrameTask<DeepLearningTask> {
           if (training) {
             for (int i = 1; i < neurons.length - 1; i++)
               Arrays.fill(neurons[i]._e.raw(), 0);
-            final float target_value = (float) responses[0];
+            float target_value;
+            if (Double.isNaN(responses[0])) { //missing response
+              target_value = Neurons.missing_real_value;
+            } else {
+              target_value = (float) responses[0];
+            }
             ((Neurons.Linear) neurons[neurons.length - 1]).bprop(target_value);
           }
         }

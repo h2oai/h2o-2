@@ -173,7 +173,6 @@ public class DeepLearningProstateTest extends TestUtil {
                                     p.source = frame;
                                     p.validation = valid;
                                     p.response = frame.vecs()[resp];
-
                                     if (i == 0 && resp == 2) p.classification = false;
                                     p.override_with_best_model = override_with_best_model;
                                     p.epochs = epochs;

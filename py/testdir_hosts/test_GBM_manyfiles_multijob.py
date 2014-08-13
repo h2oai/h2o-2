@@ -82,7 +82,7 @@ class Basic(unittest.TestCase):
             if not DO_FAIL:
                 execExpr +=  "; factor(%s[, 378+1]);" % (trainKey)
 
-            resultExec = h2o_cmd.runExec(str=execExpr, timeoutSecs=60)
+            resultExec = h2o_cmd.runExec(str=execExpr, timeoutSecs=180)
 
             # Parse (test)****************************************
             csvPathname = importFolderPath + "/" + testFilename
@@ -98,7 +98,7 @@ class Basic(unittest.TestCase):
             execExpr = '%s[,378+1]=%s[,378+1]>15' % (testKey, testKey)
             if not DO_FAIL:
                 execExpr +=  "; factor(%s[, 378+1]);" % (testKey)
-            resultExec = h2o_cmd.runExec(str=execExpr, timeoutSecs=60)
+            resultExec = h2o_cmd.runExec(str=execExpr, timeoutSecs=180)
 
             # Note ..no inspect of test data here..so translate happens later?
 

@@ -210,6 +210,7 @@ public class DeepLearningIrisTest extends TestUtil {
 
                               // Train H2O
                               mymodel = p.trainModel(mymodel);
+                              Assert.assertTrue(mymodel.model_info().get_processed_total() == epoch * fr.numRows());
 
                               /**
                                * Tolerances (should ideally be super tight -> expect the same double/float precision math inside both algos)

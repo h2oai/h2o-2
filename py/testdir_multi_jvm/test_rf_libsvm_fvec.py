@@ -22,19 +22,21 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_NOPASS_rf_libsvm_fvec(self):
+    def test_rf_libsvm_fvec(self):
         h2o.beta_features = True
         # just do the import folder once
 
         # make the timeout variable per dataset. it can be 10 secs for covtype 20x (col key creation)
         # so probably 10x that for covtype200
         csvFilenameList = [
+            ("gisette_scale.svm",  "cF", 30, 1, 0),
+            ("covtype.binary.svm", "cC", 30, 1, 1),
             ("mnist_train.svm", "cM", 30, 1, 1),
             # FIX! fails KMeansScore
             # not integer output
             # ("colon-cancer.svm",   "cA", 30, 1, 1),
             ("connect4.svm",       "cB", 30, 1, 1),
-            ("syn_6_1000_10.svm",  "cK", 30, 1, 0),
+            # ("syn_6_1000_10.svm",  "cK", 30, 1, 0),   Bad libsvm file has the same column multiple times.
             # float response requires regression
             ("syn_0_100_1000.svm", "cL", 30, 1, 0),
             ("mushrooms.svm",      "cG", 30, 1, 1),
@@ -42,13 +44,11 @@ class Basic(unittest.TestCase):
             # ("duke.svm",           "cD", 30, 1, 1),
             # too many features? 150K inspect timeout?
             # ("E2006.train.svm",    "cE", 30, 1, 1),
-            ("gisette_scale.svm",  "cF", 30, 1, 1),
             # too big for rf (memory error)
             # ("news20.svm",         "cH", 30, 1, 1),
 
             # multiclass format ..don't support
             # ("tmc2007_train.svm",  "cJ", 30, 1, 1),
-            ("covtype.binary.svm", "cC", 30, 1, 1),
             # normal csv
         ]
 
@@ -77,6 +77,7 @@ class Basic(unittest.TestCase):
                 'ntrees': 1,
                 'response': 0,
                 'classification': classification,
+                'importance': 0,
             }
 
             timeoutSecs = 600
