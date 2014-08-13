@@ -1,6 +1,5 @@
 package hex.singlenoderf;
 
-import static hex.singlenoderf.VariableImportance.asVotes;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -15,11 +14,12 @@ import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.Counter;
-import water.util.Log;
 import water.util.ModelUtils;
 
 import java.util.Arrays;
 import java.util.Random;
+
+import static hex.singlenoderf.VariableImportance.asVotes;
 
 
 public class SpeeDRFModel extends Model implements Job.Progress {
@@ -94,6 +94,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
   @Override public final SpeeDRF get_params() { return parameters; }
   @Override public final Request2 job() { return get_params(); }
+  @Override public final VarImp varimp() { return varimp; }
 
   public float[] priordist() { return _priorClassDist; }
   public float[] modeldist() { return _modelClassDist; }
