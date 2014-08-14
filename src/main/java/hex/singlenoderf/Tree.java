@@ -646,6 +646,49 @@ public class Tree extends H2OCountedCompleter {
     char _nclass = (char)_data.classes();
     return new TreeModel.CompressedTree(ab.buf(),_nclass,_seed);
   }
+
+  /**
+   * @param tree binary form of a singlenoderf.Tree
+   * @return AutoBuffer that contain all bytes in the singlenoderf.Tree
+   */
+  public static byte[] toDTreeCompressedTreeAB(byte[] tree) {
+    AutoBuffer ab = new AutoBuffer(tree);
+    return toDTreeCompressedTree(ab).buf();
+  }
+
+  /**
+   * @param ab AutoBuffer that contains the remaining tree nodes that we want to serialize.
+   * @return binary form of a DTree.CompressedTree as a AutoBuffer
+   */
+  public static AutoBuffer toDTreeCompressedTree(AutoBuffer ab) {
+    AutoBuffer result = new AutoBuffer();
+    byte _nodeType = 0;
+
+    // S for split and [ for leaf
+    char currentNodeType = (char) ab.get1();
+    if (currentNodeType == 'S') { }
+    else if (currentNodeType == '[') { }
+    short _col = (short) ab.get2();
+    float splitValue = ab.get4f();
+    int skipSize = ab.get1();
+    int skip;
+    if (skipSize > 0) {
+      // 4 bytes total
+      _nodeType |= 0x02; // 3 bytes to store skip
+      skip = ab.get3();
+    } else {/* single byte for left size */ skip=skipSize; /* 1 byte to store skip*/}
+
+    // TODO: update _nodeType
+    result.put1(_nodeType);
+    result.put2(_col);
+    result.put4f(splitValue);
+    if () result.put1(skip);
+    else result.put3(skip);
+    // TODO: get the type of the children, will need to switch back and forth.
+    // Want to cut the buffer to where it is, so that we can run it recursively. Do we have to?
+
+    return null;
+  }
 }
 
 

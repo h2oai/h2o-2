@@ -532,8 +532,9 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     int num_folds = 0; // TODO:
     float[] priorClassDist = null;
     float[] classDist = null;
-    Key[][] treeKeys = null;
     TreeStats tstats = null;
+    // TODO: instantiate trees.
+    Key[][] treeKeys = null;
 
     // dummy model
     SpeeDRFModel_DTree newModel = new SpeeDRFModel_DTree(key,dataKey,testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, mtries, num_folds, priorClassDist, classDist);
