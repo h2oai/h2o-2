@@ -562,7 +562,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         ++num_processed_rows;
         int i = 0, ncats = 0;
         for(; i < _dinfo._cats; ++i){
-          int c = (int)chunks[i].at80(r); //turns missing values into 0, which happens to be the majority factor, which is what we want for imputation
+          int c = chunks[i].isNA0(r) ? 0 : (int)chunks[i].at80(r); //turns missing values into 0, which happens to be the majority factor, which is what we want for imputation
           if(_dinfo._catLvls != null){ // some levels are ignored?
             c = Arrays.binarySearch(_dinfo._catLvls[i],c);
             if(c >= 0)
