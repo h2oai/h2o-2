@@ -123,7 +123,7 @@ setMethod("show", "H2OGLMModel", function(object) {
     cat("\nNull Deviance:    ", round(model$null.deviance,1))
     #Return AIC NaN while calculations for tweedie/gamma not implemented; keep R from throwing error
     if (class(model$aic) != "numeric") {
-      cat("\nResidual Deviance:", round(model$deviance,1), " AIC: NaN")
+      cat("\nResidual Deviance:", round(model$deviance,1), " AIC: Missing implementation for", model$params$family$family, "family")
     } else {
       cat("\nResidual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1))
     }
@@ -156,9 +156,9 @@ setMethod("summary","H2OGLMModelList", function(object) {
         for(m in object@models) {
             model = m@model
             if(is.null(summary)) {
-                summary = t(as.matrix(c(model$lambda, model$df.null-model$df.residual,round((1-model$deviance/model$null.deviance),2),round(model$auc,2))))
+                summary = t(as.matrix(c(model$lambda, max(0,model$df.null-model$df.residual),round((1-model$deviance/model$null.deviance),2),round(model$auc,2))))
             } else {
-                summary = rbind(summary,c(model$lambda,model$df.null-model$df.residual,round((1-model$deviance/model$null.deviance),2),round(model$auc,2)))
+                summary = rbind(summary,c(model$lambda,max(0,model$df.null-model$df.residual),round((1-model$deviance/model$null.deviance),2),round(model$auc,2)))
             }
         }
         summary = cbind(1:nrow(summary),summary)

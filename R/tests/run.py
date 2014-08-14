@@ -740,7 +740,7 @@ class RUnitRunner:
 
                 if (test_group is not None):
                     test_short_dir = self._calc_test_short_dir(os.path.join(root, f))
-                    if test_group.lower() not in test_short_dir:
+                    if (test_group.lower() not in test_short_dir) and test_group.lower() not in f:
                         continue
 
                 self.add_test(os.path.join(root, f))
