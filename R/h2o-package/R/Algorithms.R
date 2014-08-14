@@ -1218,6 +1218,7 @@ h2o.performance <- function(data, reference, measure = "accuracy", thresholds) {
   result$F1 = res$F1_for_criteria[[idx]]
   result$F2 = res$F2_for_criteria[[idx]]
   result$accuracy = res$accuracy_for_criteria[[idx]]
+  result$error <- 1 - result$accuracy
   result$precision = res$precision_for_criteria[[idx]]
   result$recall = res$recall_for_criteria[[idx]]
   result$specificity = res$specificity_for_criteria[[idx]]
