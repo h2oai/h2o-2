@@ -23,7 +23,7 @@ test <- function(conn) {
         arcene.valid.full = h2o.assign(data=(cbind(arcene.valid,arcene.valid.label)),key="arcene.valid.full")
     
     print("Run model on 3250 columns of Arcene with strong rules off.")
-        time.noSR.3250 <- system.time(model.noSR.3250 <- h2o.glm(x=c(1:3250), y="arcene.train.label", data=arcene.train.full, family="binomial", lambda_search=FALSE, alpha=1, nfolds=0, use_all_factor_levels=1, higher_accuracy=TRUE))
+        time.noSR.3250 <- system.time(model.noSR.3250 <- h2o.glm(x=c(1:3250), y="arcene.train.label", data=arcene.train.full, family="binomial", lambda_search=FALSE, alpha=1, nfolds=0, use_all_factor_levels=TRUE, higher_accuracy=TRUE))
         
     print("Test model on validation set.")
         predict.noSR.3250 <- h2o.predict(model.noSR.3250, arcene.valid.full)

@@ -32,10 +32,13 @@ public class NaiveBayes extends Job.ModelJobWithoutClassificationField {
   public boolean drop_na_cols = true;
 
   @Override protected void execImpl() {
+    long before = System.currentTimeMillis();
     Frame fr = DataInfo.prepareFrame(source, response, ignored_cols, false, true /*drop const*/, drop_na_cols);
     DataInfo dinfo = new DataInfo(fr, 1, false, DataInfo.TransformType.NONE, DataInfo.TransformType.NONE);
     NBTask tsk = new NBTask(this, dinfo).doAll(dinfo._adaptedFrame);
     NBModel myModel = buildModel(dinfo, tsk, laplace, min_std_dev);
+    myModel.start_training(before);
+    myModel.stop_training();
     myModel.delete_and_lock(self());
     myModel.unlock(self());
   }

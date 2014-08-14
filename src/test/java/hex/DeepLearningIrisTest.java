@@ -210,6 +210,7 @@ public class DeepLearningIrisTest extends TestUtil {
 
                               // Train H2O
                               mymodel = p.trainModel(mymodel);
+                              Assert.assertTrue(mymodel.model_info().get_processed_total() == epoch * fr.numRows());
 
                               /**
                                * Tolerances (should ideally be super tight -> expect the same double/float precision math inside both algos)
@@ -325,7 +326,10 @@ public class DeepLearningIrisTest extends TestUtil {
 
                             } finally{
                               // cleanup
-                              if (mymodel != null) mymodel.delete();
+                              if (mymodel != null) {
+                                mymodel.delete_best_model();
+                                mymodel.delete();
+                              }
                               if (_train != null) _train.delete();
                               if (_test != null) _test.delete();
                               if (frame != null) frame.delete();

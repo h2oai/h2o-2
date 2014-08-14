@@ -1,11 +1,9 @@
 package water;
 
-import water.api.*;
-import static water.util.JCodeGen.toStaticVar;
-import static water.util.Utils.contains;
 import hex.ConfusionMatrix;
 import hex.VarImp;
 import javassist.*;
+import water.api.*;
 import water.api.Request.API;
 import water.fvec.Chunk;
 import water.fvec.Frame;
@@ -15,9 +13,13 @@ import water.serial.AutoBufferSerializer;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashMap;
 
-import org.apache.commons.math3.random.CorrelatedRandomVectorGenerator;
+import static water.util.JCodeGen.toStaticVar;
+import static water.util.Utils.contains;
 
 /**
  * A Model models reality (hopefully).
@@ -258,19 +260,17 @@ public abstract class Model extends Lockable<Model> {
       assert nfeatures() == adaptFrm.numCols() : "Number of model features " + nfeatures() + " != number of test set columns: " + adaptFrm.numCols();
       assert adaptFrm.vecs().length == nfeatures() : "Scoring data set contains wrong number of columns: " + adaptFrm.vecs().length + " instead of " + nfeatures();
     }
-
     // Create a new vector for response
     // If the model produces a classification/enum, copy the domain into the
     // result vector.
-    Vec v = adaptFrm.anyVec().makeZero(classNames());
-    adaptFrm.add("predict",v);
-    if( nclasses() > 1 ) {
-      String prefix = "";
-      for( int c=0; c<nclasses(); c++ ) // if any class is the same as column name in frame, then prefix all classnames
-        if (contains(adaptFrm._names, classNames()[c])) { prefix = "class_"; break; }
-      for( int c=0; c<nclasses(); c++ )
-        adaptFrm.add(prefix+classNames()[c],adaptFrm.anyVec().makeZero());
-    }
+    int nc = nclasses();
+    Vec [] newVecs = new Vec[]{adaptFrm.anyVec().makeZero(classNames())};
+    if(nc > 1)
+      newVecs = Utils.join(newVecs,adaptFrm.anyVec().makeZeros(nc));
+    String [] names = new String[newVecs.length];
+    names[0] = "predict";
+    for(int i = 1; i < names.length; ++i)
+      names[i] = classNames()[i-1];
     final int num_features = nfeatures();
     new MRTask2() {
       @Override public void map( Chunk chks[] ) {
@@ -283,10 +283,9 @@ public abstract class Model extends Lockable<Model> {
             chks[num_features+c].set0(row,p[c]);
         }
       }
-    }.doAll(adaptFrm);
+    }.doAll(Utils.join(adaptFrm.vecs(),newVecs));
     // Return just the output columns
-    int x=num_features, y=adaptFrm.numCols();
-    return adaptFrm.extractFrame(x, y);
+    return new Frame(names,newVecs);
   }
 
   /** Single row scoring, on a compatible Frame.  */
@@ -544,7 +543,10 @@ public abstract class Model extends Lockable<Model> {
           cm.cm[1][0] = aucd.cm()[1][0];
           cm.cm[0][1] = aucd.cm()[0][1];
           cm.cm[1][1] = aucd.cm()[1][1];
-          assert(new hex.ConfusionMatrix(cm.cm).err() == aucd.err()); //check consistency with AUC-computed error
+          double cm_err = new hex.ConfusionMatrix(cm.cm).err();
+          double auc_err = aucd.err();
+          if (! (Double.isNaN(cm_err) && Double.isNaN(auc_err))) // NOTE: NaN != NaN
+            assert(cm_err == auc_err); //check consistency with AUC-computed error
         } else {
           error = new hex.ConfusionMatrix(cm.cm).err(); //only set error if AUC didn't already set the error
         }

@@ -5,7 +5,6 @@ import hex.deeplearning.DeepLearning.Loss;
 import water.Iced;
 import water.MemoryManager;
 import water.api.Request.API;
-import water.util.Log;
 import water.util.Utils;
 
 import java.util.Arrays;
@@ -89,16 +88,8 @@ public abstract class Neurons {
 
   public DenseVector _avg_a;
 
-//  /**
-//   * We need a way to encode a missing value in the neural net forward/back-propagation scheme.
-//   * For simplicity and performance, we simply use the largest values to encode a missing value.
-//   * If we run into exactly one of those values with regular neural net updates, then we're very
-//   * likely also running into overflow problems, which will trigger a NaN somewhere, which will be
-//   * caught and lead to automatic job cancellation.
-//   */
-//  public static final int missing_int_value = Integer.MAX_VALUE; //encode missing label or target
-//  public static final double missing_double_value = Double.MAX_VALUE; //encode missing input
-
+  public static final int missing_int_value = Integer.MAX_VALUE; //encode missing label
+  public static final Float missing_real_value = Float.NaN; //encode missing regression target
 
   /**
    * Helper to check sanity of Neuron layers
@@ -928,7 +919,7 @@ public abstract class Neurons {
      * @param target actual class label
      */
     protected void bprop(int target) {
-//      if (target == missing_int_value) return; //ignore missing response values
+      assert (target != missing_int_value); // no correction of weights/biases for missing label
       float m = momentum();
       float r = _minfo.adaDelta() ? 0 : rate(_minfo.get_processed_total()) * (1f - m);
       float g; //partial derivative dE/dy * dy/dnet
@@ -966,7 +957,7 @@ public abstract class Neurons {
      * @param target floating-point target value
      */
     protected void bprop(float target) {
-//      if (target == missing_double_value) return;
+      assert (target != missing_real_value);
       if (params.loss != Loss.MeanSquare) throw new UnsupportedOperationException("Regression is only implemented for MeanSquare error.");
       final int row = 0;
       // Computing partial derivative: dE/dnet = dE/dy * dy/dnet = dE/dy * 1

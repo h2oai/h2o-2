@@ -121,7 +121,12 @@ setMethod("show", "H2OGLMModel", function(object) {
     }
     cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual")
     cat("\nNull Deviance:    ", round(model$null.deviance,1))
-    cat("\nResidual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1))
+    #Return AIC NaN while calculations for tweedie/gamma not implemented; keep R from throwing error
+    if (class(model$aic) != "numeric") {
+      cat("\nResidual Deviance:", round(model$deviance,1), " AIC: Missing implementation for", model$params$family$family, "family")
+    } else {
+      cat("\nResidual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1))
+    }
     cat("\nDeviance Explained:", round(1-model$deviance/model$null.deviance,5), "\n")
     # cat("\nAvg Training Error Rate:", round(model$train.err,5), "\n")
     
@@ -151,9 +156,9 @@ setMethod("summary","H2OGLMModelList", function(object) {
         for(m in object@models) {
             model = m@model
             if(is.null(summary)) {
-                summary = t(as.matrix(c(model$lambda, model$df.null-model$df.residual,round((1-model$deviance/model$null.deviance),2),round(model$auc,2))))
+                summary = t(as.matrix(c(model$lambda, max(0,model$df.null-model$df.residual),round((1-model$deviance/model$null.deviance),2),round(model$auc,2))))
             } else {
-                summary = rbind(summary,c(model$lambda,model$df.null-model$df.residual,round((1-model$deviance/model$null.deviance),2),round(model$auc,2)))
+                summary = rbind(summary,c(model$lambda,max(0,model$df.null-model$df.residual),round((1-model$deviance/model$null.deviance),2),round(model$auc,2)))
             }
         }
         summary = cbind(1:nrow(summary),summary)
@@ -346,7 +351,7 @@ setMethod("show", "H2OPerfModel", function(object) {
     criterion = "MCC"
   else
     criterion = paste(toupper(substring(object@perf, 1, 1)), substring(object@perf, 2), sep = "")
-  rownames(tmp) = c("AUC", "Gini", paste("Best Cutoff for", criterion), "F1", "Accuracy", "Error", "Precision", "Recall", "Specificity", "MCC", "Max per Class Error")
+  rownames(tmp) = c("AUC", "Gini", paste("Best Cutoff for", criterion), "F1", "F2", "Accuracy", "Error", "Precision", "Recall", "Specificity", "MCC", "Max per Class Error")
   colnames(tmp) = "Value"; print(tmp)
   cat("\n\nConfusion matrix:\n"); print(model$confusion)
 })
