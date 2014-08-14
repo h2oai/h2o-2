@@ -23,7 +23,7 @@ test.linkFunctions <- function(conn) {
 
 	print("Create models with canonical link: LOGIT")
 	model.h2o.binomial.logit <- h2o.glm(x=myX, y=myY, data=h2o.data, family="binomial", link="logit",alpha=0.5, lambda=0, nfolds=0)
-	model.R.binomial.logit <- glm(formula=R.formula, data=R.data[,3:9], family=binomial(link=logit), na.action=na.omit)
+	model.R.binomial.logit <- glm(formula=R.formula, data=R.data[,4:10], family=binomial(link=logit), na.action=na.omit)
 
 	print("Compare model deviances for link function logit")
 	deviance.h2o.logit = model.h2o.binomial.logit@model$deviance / model.h2o.binomial.logit@model$null
@@ -35,15 +35,18 @@ test.linkFunctions <- function(conn) {
 		checkTrue(difference <= 0.01, "h2o's model's residualDeviance/nullDeviance is more than 0.01 lower than R's model's")
 	}
 
+	print("")
 	print("|=======================================================|")
 	print("WARNING: Additonal log functions in tests skipped over")
+	print("The following is associated with PUB-965")
 	print("|=======================================================|")
+	print("")
 	
 	#Issue with unspecified start values:
 
 	# print("Create models with link: LOG")
 	# model.h2o.binomial.log <- h2o.glm(x=myX, y=myY, data=h2o.data, family="binomial", link="log",alpha=0.5, lambda=0, nfolds=0)
-	# model.R.binomial.log <- glm(formula=R.formula, data=R.data[,3:9], family=binomial(link=log), na.action=na.omit)
+	# model.R.binomial.log <- glm(formula=R.formula, data=R.data[,4:10], family=binomial(link=log), na.action=na.omit)
 
 	# print("Compare model deviances for link function log")
 	# deviance.h2o.log = model.h2o.binomial.log@model$deviance / model.h2o.binomial.log@model$null

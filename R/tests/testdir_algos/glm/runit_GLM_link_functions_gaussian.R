@@ -13,6 +13,7 @@ test.linkFunctions <- function(conn) {
 
 	print("Read in prostate data.")
 	h2o.data = h2o.uploadFile(conn, locate("smalldata/prostate/prostate_complete.csv.zip"), key="h2o.data")    
+	print(head(h2o.data))
 	R.data = as.data.frame(as.matrix(h2o.data))
 	
 	print("Testing for family: GAUSSIAN")
@@ -24,7 +25,7 @@ test.linkFunctions <- function(conn) {
 
 	print("Create models with canonical link: IDENTITY")
 	model.h2o.gaussian.identity <- h2o.glm(x=myX, y=myY, data=h2o.data, family="gaussian", link="identity",alpha=0.5, lambda=0, nfolds=0)
-	model.R.gaussian.identity <- glm(formula=R.formula, data=R.data[,1:8], family=gaussian(link=identity), na.action=na.omit)
+	model.R.gaussian.identity <- glm(formula=R.formula, data=R.data[,2:9], family=gaussian(link=identity), na.action=na.omit)
 	
 	print("Compare model deviances for link function identity")
 	deviance.h2o.identity = model.h2o.gaussian.identity@model$deviance / model.h2o.gaussian.identity@model$null
@@ -36,15 +37,18 @@ test.linkFunctions <- function(conn) {
 		checkTrue(difference <= 0.01, "h2o's model's residualDeviance/nullDeviance is more than 0.01 lower than R's model's")
 	}
 
+	print("")
 	print("|=======================================================|")
-	print("WARNING: Additonal log functions in tests skipped over")
+	print("WARNING: Additonal log functions in tests skipped over.")
+	print("The following is associated with PUB-965")
 	print("|=======================================================|")
+	print("")
 	
 	#Issue with unspecified start values:
 
 	# print("Create models with link: LOG")
 	# model.h2o.gaussian.log <- h2o.glm(x=myX, y=myY, data=h2o.data, family="gaussian", link="log",alpha=0.5, lambda=0, nfolds=0)
-	# model.R.gaussian.log <- glm(formula=R.formula, data=R.data[,1:8], family=gaussian(link=log), na.action=na.omit)
+	# model.R.gaussian.log <- glm(formula=R.formula, data=R.data[,2:9], family=gaussian(link=log), na.action=na.omit)
 	
 	# print("Compare model deviances for link function log")
 	# deviance.h2o.log = model.h2o.gaussian.log@model$deviance / model.h2o.gaussian.log@model$null
@@ -61,7 +65,7 @@ test.linkFunctions <- function(conn) {
 
 	# print("Create models with link: INVERSE")
 	# model.h2o.gaussian.inverse <- h2o.glm(x=myX, y=myY, data=h2o.data, family="gaussian", link="inverse",alpha=0.5, lambda=0, nfolds=0)
-	# model.R.gaussian.inverse <- glm(formula=R.formula, data=R.data[,1:8], family=gaussian(link=inverse), na.action=na.omit)
+	# model.R.gaussian.inverse <- glm(formula=R.formula, data=R.data[,2:9], family=gaussian(link=inverse), na.action=na.omit)
 	
 	# print("Compare model deviances for link function inverse")
 	# deviance.h2o.inverse = model.h2o.gaussian.inverse@model$deviance / model.h2o.gaussian.inverse@model$null
