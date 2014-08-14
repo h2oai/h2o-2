@@ -76,8 +76,8 @@ public class DeepLearningProstateTest extends TestUtil {
                                 -1, //different validation frame
                         }) {
                           for (int n_folds : new int[]{
-//                                  0,
-                                  2,
+                                  0,
+//                                  2,
                           }) {
                             if (n_folds != 0 && vf != 0) continue;
                             for (boolean keep_cv_splits : new boolean[]{false}) { //otherwise it leaks
@@ -88,7 +88,7 @@ public class DeepLearningProstateTest extends TestUtil {
                                         rng.nextInt(100), // <1 epoch per iteration
                                         500, //>1 epoch per iteration
                                 }) {
-                                  DeepLearningModel mymodel = null;
+                                  DeepLearningModel model1 = null, model2 = null;
                                   Key dest = null, dest_tmp = null;
                                   count++;
                                   if (fraction < rng.nextFloat()) continue;
@@ -104,9 +104,7 @@ public class DeepLearningProstateTest extends TestUtil {
                                     else if (vf == -1) valid = vframe; //different validation frame (here: from the same file)
 
                                     // build the model, with all kinds of shuffling/rebalancing/sampling
-
-                                    // build the model, with all kinds of shuffling/rebalancing/sampling
-                                    dest_tmp = Key.make();
+                                    dest_tmp = Key.make("first");
                                     {
                                       Log.info("Using seed: " + seed);
                                       DeepLearning p = new DeepLearning();
@@ -144,6 +142,8 @@ public class DeepLearningProstateTest extends TestUtil {
                                         throw new RuntimeException(t);
                                       }
 
+                                      model1 = UKV.get(dest_tmp);
+
                                       if (n_folds != 0)
                                       // test HTML of cv models
                                       {
@@ -151,21 +151,25 @@ public class DeepLearningProstateTest extends TestUtil {
                                           DeepLearningModel cv_model = UKV.get(k);
                                           StringBuilder sb = new StringBuilder();
                                           cv_model.generateHTML("cv", sb);
+                                          UKV.remove(k);
                                         }
-                                        mymodel = UKV.get(dest_tmp);
-                                        // remove just the x-val models now to avoid memory leak
-                                        if (mymodel!=null) mymodel.delete_xval_models();
+//                                        // remove just the x-val models now to avoid memory leak
+//                                        if (model1!=null) {
+//                                          model1.delete_xval_models();
+//                                        }
                                       }
                                     }
+                                    Key best1 = model1.actual_best_model_key;
 
                                     // Do some more training via checkpoint restart
-                                    // For n_folds, continue without n_folds (not yet implemented) - from now on, mymodel will have n_folds=0...
-                                    dest = Key.make();
+                                    // For n_folds, continue without n_folds (not yet implemented) - from now on, model2 will have n_folds=0...
+                                    dest = Key.make("restart");
                                     DeepLearning p = new DeepLearning();
                                     final DeepLearningModel tmp_model = UKV.get(dest_tmp); //this actually *requires* frame to also still be in UKV (because of DataInfo...)
                                     Assert.assertTrue(tmp_model.get_params().state == Job.JobState.DONE); //HEX-1817
                                     Assert.assertTrue(tmp_model.model_info().get_processed_total() >= frame.numRows() * epochs);
                                     assert (tmp_model != null);
+
                                     p.checkpoint = dest_tmp;
                                     p.destination_key = dest;
                                     p.n_folds = 0;
@@ -186,17 +190,17 @@ public class DeepLearningProstateTest extends TestUtil {
                                     }
 
                                     // score and check result (on full data)
-                                    mymodel = UKV.get(dest); //this actually *requires* frame to also still be in UKV (because of DataInfo...)
-                                    Assert.assertTrue(mymodel.get_params().state == Job.JobState.DONE); //HEX-1817
+                                    model2 = UKV.get(dest); //this actually *requires* frame to also still be in UKV (because of DataInfo...)
+                                    Assert.assertTrue(model2.get_params().state == Job.JobState.DONE); //HEX-1817
                                     // test HTML
                                     {
                                       StringBuilder sb = new StringBuilder();
-                                      mymodel.generateHTML("test", sb);
+                                      model2.generateHTML("test", sb);
                                     }
 
                                     // score and check result of the best_model
-                                    if (mymodel.actual_best_model_key != null) {
-                                      final DeepLearningModel best_model = UKV.get(mymodel.actual_best_model_key);
+                                    if (model2.actual_best_model_key != null) {
+                                      final DeepLearningModel best_model = UKV.get(model2.actual_best_model_key);
                                       Assert.assertTrue(best_model.get_params().state == Job.JobState.DONE); //HEX-1817
                                       // test HTML
                                       {
@@ -204,22 +208,23 @@ public class DeepLearningProstateTest extends TestUtil {
                                         best_model.generateHTML("test", sb);
                                       }
                                       if (override_with_best_model) {
-                                        Assert.assertEquals(best_model.error(), mymodel.error(), 0);
+                                        Assert.assertEquals(best_model.error(), model2.error(), 0);
                                       }
+                                      UKV.remove(model2.actual_best_model_key);
                                     }
 
                                     if (valid == null) valid = frame;
                                     double threshold = 0;
-                                    if (mymodel.isClassifier()) {
+                                    if (model2.isClassifier()) {
                                       Frame pred = null, pred2 = null;
                                       try {
-                                        pred = mymodel.score(valid);
+                                        pred = model2.score(valid);
                                         StringBuilder sb = new StringBuilder();
 
                                         AUC auc = new AUC();
                                         double error = 0;
                                         // binary
-                                        if (mymodel.nclasses() == 2) {
+                                        if (model2.nclasses() == 2) {
                                           auc.actual = valid;
                                           assert (resp == 1);
                                           auc.vactual = valid.vecs()[resp];
@@ -242,7 +247,7 @@ public class DeepLearningProstateTest extends TestUtil {
                                           Assert.assertEquals(new ConfusionMatrix(aucd.cm()).err(), error, 1e-15);
 
                                           // check that calcError() is consistent as well (for CM=null, AUC!=null)
-                                          Assert.assertEquals(mymodel.calcError(valid, auc.vactual, pred, pred, "training", false, 0, null, auc, null), error, 1e-15);
+                                          Assert.assertEquals(model2.calcError(valid, auc.vactual, pred, pred, "training", false, 0, null, auc, null), error, 1e-15);
                                         }
 
                                         // Compute CM
@@ -268,7 +273,7 @@ public class DeepLearningProstateTest extends TestUtil {
                                         pred2.delete_and_lock(null);
                                         pred2.unlock(null);
 
-                                        if (mymodel.nclasses() == 2) {
+                                        if (model2.nclasses() == 2) {
                                           // make labels with 0.5 threshold for binary classifier
                                           Env ev = Exec2.exec("pred2[,1]=pred2[,3]>=" + 0.5);
                                           try {
@@ -320,6 +325,7 @@ public class DeepLearningProstateTest extends TestUtil {
                                       } finally {
                                         if (pred != null) pred.delete();
                                         if (pred2 != null) pred2.delete();
+                                        if (best1 != null) DKV.remove(best1);
                                       }
                                     } //classifier
                                     Log.info("Parameters combination " + count + ": PASS");
@@ -328,7 +334,16 @@ public class DeepLearningProstateTest extends TestUtil {
                                     t.printStackTrace();
                                     throw new RuntimeException(t);
                                   } finally {
-                                    if (mymodel != null) mymodel.delete();
+                                    if (model1 != null) {
+                                      model1.delete_best_model();
+                                      model1.delete_xval_models();
+                                      model1.delete();
+                                    }
+                                    if (model2 != null) {
+                                      model2.delete_best_model();
+                                      model2.delete_xval_models();
+                                      model2.delete();
+                                    }
                                     if (dest != null) UKV.remove(dest);
                                     if (dest_tmp != null) UKV.remove(dest_tmp);
                                   }

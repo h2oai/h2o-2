@@ -750,7 +750,7 @@ public class DeepLearning extends Job.ValidatedJob {
       if (previous == null) throw new IllegalArgumentException("Checkpoint not found.");
       Log.info("Resuming from checkpoint.");
       if (n_folds != 0) {
-        throw new UnsupportedOperationException("n_folds must be 0: Cross-validation is not supproted during checkpoint restarts.");
+        throw new UnsupportedOperationException("n_folds must be 0: Cross-validation is not supported during checkpoint restarts.");
       }
       else {
         ((ValidatedJob)previous.job()).xval_models = null; //remove existing cross-validation keys after checkpoint restart
