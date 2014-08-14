@@ -67,6 +67,7 @@ public class CreateFrame extends Request2 {
       if (categorical_fraction > 0 && factors <= 1) throw new IllegalArgumentException("Factors must be larger than 2 for categorical data.");
       if (response_factors < 1) throw new IllegalArgumentException("Response factors must be either 1 (real-valued response), or >=2 (factor levels).");
       if (cols <= 0 || rows <= 0) throw new IllegalArgumentException("Must have number of rows > 0 and columns > 1.");
+      if (key.length() == 0) throw new IllegalArgumentException("Output key must be provided.");
 
       if (!randomize) {
         if (integer_fraction != 0 || categorical_fraction != 0)

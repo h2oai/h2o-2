@@ -5,6 +5,7 @@ import com.google.common.io.Closeables;
 
 import hex.CreateFrame;
 import hex.GridSearch.GridSearchProgress;
+import hex.InsertMissingValues;
 import hex.KMeans2;
 import hex.KMeans2.KMeans2ModelView;
 import hex.KMeans2.KMeans2Progress;
@@ -159,6 +160,7 @@ public class RequestServer extends NanoHTTPD {
       registerRequest(new NFoldFrameExtractPage());
       registerRequest(new GapStatistic());
       registerRequest(new CreateFrame());
+      registerRequest(new InsertMissingValues());
       registerRequest(new KillMinus3());
       registerRequest(new SaveModel());
       registerRequest(new LoadModel());
@@ -169,6 +171,7 @@ public class RequestServer extends NanoHTTPD {
       Request.addToNavbar(registerRequest(new Console()),              "Console",              "Beta");
       Request.addToNavbar(registerRequest(new GapStatistic()),         "Gap Statistic",        "Beta");
       Request.addToNavbar(registerRequest(new CreateFrame()),          "Create Frame",         "Beta");
+      Request.addToNavbar(registerRequest(new InsertMissingValues()),  "Insert missing values","Beta");
       Request.addToNavbar(registerRequest(new KillMinus3()),           "Kill Minus 3",         "Beta");
       Request.addToNavbar(registerRequest(new SaveModel()),            "Save Model",           "Beta");
       Request.addToNavbar(registerRequest(new LoadModel()),            "Load Model",           "Beta");
