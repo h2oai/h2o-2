@@ -148,9 +148,15 @@ public class FrameCreator extends H2O.H2OCountedCompleter {
 
 
 
-  private static class MissingInserter extends MRTask2<MissingInserter> {
+  public static class MissingInserter extends MRTask2<MissingInserter> {
     final long _seed;
     final double _frac;
+
+    public MissingInserter(long seed, double frac){
+      super(null);
+      _seed = seed;
+      _frac = frac;
+    }
 
     public MissingInserter(H2O.H2OCountedCompleter cmp, long seed, double frac){
       super(cmp);
