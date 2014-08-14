@@ -19,7 +19,7 @@ public class KMeans2Test extends TestUtil {
   private static final long SEED = 8683452581122892189L;
   private static final double SIGMA = 3;
 
-  private final void testHTML(KMeans2Model m) {
+  public static final void testHTML(KMeans2Model m) {
     StringBuilder sb = new StringBuilder();
     KMeans2.KMeans2ModelView kmv = new KMeans2.KMeans2ModelView();
     kmv.model = m;
@@ -37,7 +37,7 @@ public class KMeans2Test extends TestUtil {
     for( int i = 0; i < rows.length; i++ )
       rows[i][0] = data[i];
     Frame frame = frame(new String[] { "C0" }, rows);
-    KMeans2 algo = null;
+    KMeans2 algo;
 
     try {
       algo = new KMeans2();
@@ -71,7 +71,7 @@ public class KMeans2Test extends TestUtil {
     for( int i = 0; i < names.length; i++ )
       names[i] = "C" + i;
     Frame frame = frame(names, array);
-    KMeans2 algo = null;
+    KMeans2 algo;
 
     try {
       algo = new KMeans2();
@@ -196,41 +196,77 @@ public class KMeans2Test extends TestUtil {
       Key k = FVecTest.makeByteVec("yada", data);
       fr = ParseDataset2.parse(Key.make(), new Key[]{k});
 
-      for( int i=0; i<10; i++ ) {
-        for( boolean normalize : new boolean[]{false, true}) {
-          for( Initialization init : new Initialization[]{Initialization.None, Initialization.PlusPlus, Initialization.Furthest}) {
-            KMeans2 parms = new KMeans2();
-            parms.source = fr;
-            parms.k = 3;
-            parms.normalize = normalize;
-            parms.max_iter = 100;
-            parms.initialization = init;
-            parms.seed = 0;
-            parms.invoke();
-            KMeans2Model kmm = UKV.get(parms.dest());
-
-            double[][] exp1 = new double[][]{ d(1, 0, 0), d(0, 1, 0), d(0, 0, 1), };
-            double[][] exp2 = new double[][]{ d(0, 1, 0), d(1, 0, 0), d(0, 0, 1), };
-            double[][] exp3 = new double[][]{ d(0, 1, 0), d(0, 0, 1), d(1, 0, 0), };
-            double[][] exp4 = new double[][]{ d(1, 0, 0), d(0, 0, 1), d(0, 1, 0), };
-            double[][] exp5 = new double[][]{ d(0, 0, 1), d(1, 0, 0), d(0, 1, 0), };
-            double[][] exp6 = new double[][]{ d(0, 0, 1), d(0, 1, 0), d(1, 0, 0), };
-
-            boolean gotit = false;
-            for (int j = 0; j < parms.k; ++j) gotit |= close(exp1[j], kmm.centers[j]);
-            for (int j = 0; j < parms.k; ++j) gotit |= close(exp2[j], kmm.centers[j]);
-            for (int j = 0; j < parms.k; ++j) gotit |= close(exp3[j], kmm.centers[j]);
-            for (int j = 0; j < parms.k; ++j) gotit |= close(exp4[j], kmm.centers[j]);
-            for (int j = 0; j < parms.k; ++j) gotit |= close(exp5[j], kmm.centers[j]);
-            for (int j = 0; j < parms.k; ++j) gotit |= close(exp6[j], kmm.centers[j]);
-            Assert.assertTrue(gotit);
-            kmm.delete();
-          }
+      for( boolean normalize : new boolean[]{false, true}) {
+        for( Initialization init : new Initialization[]{Initialization.None, Initialization.PlusPlus, Initialization.Furthest}) {
+          KMeans2 parms = new KMeans2();
+          parms.source = fr;
+          parms.k = 3;
+          parms.normalize = normalize;
+          parms.max_iter = 100;
+          parms.initialization = init;
+          parms.seed = 0;
+          parms.invoke();
+          KMeans2Model kmm = UKV.get(parms.dest());
+          Assert.assertTrue(kmm.centers[0][0] + kmm.centers[0][1] + kmm.centers[0][2] == 1);
+          Assert.assertTrue(kmm.centers[1][0] + kmm.centers[1][1] + kmm.centers[1][2] == 1);
+          Assert.assertTrue(kmm.centers[2][0] + kmm.centers[2][1] + kmm.centers[2][2] == 1);
+          Assert.assertTrue(kmm.centers[0][0] + kmm.centers[1][0] + kmm.centers[2][0] == 1);
+          Assert.assertTrue(kmm.centers[0][0] + kmm.centers[1][0] + kmm.centers[2][0] == 1);
+          Assert.assertTrue(kmm.centers[0][0] + kmm.centers[1][0] + kmm.centers[2][0] == 1);
+          testHTML(kmm);
+          kmm.delete();
         }
       }
 
     } finally {
       if( fr  != null ) fr.delete();
+    }
+  }
+
+  @Test public void testNAColLast(){
+    String[] datas = new String[]{
+            new String(
+                    "1, 0, ?\n" + //33% NA in col 3
+                            "0, 2, 0\n" +
+                            "0, 0, 3\n"
+            ),
+            new String(
+                    "1, ?, 0\n" + //33% NA in col 2
+                            "0, 2, 0\n" +
+                            "0, 0, 3\n"
+            ),
+            new String(
+                    "?, 0, 0\n" + //33% NA in col 1
+                            "0, 2, 0\n" +
+                            "0, 0, 3\n"
+    )};
+    Frame fr = null;
+      for (String data : datas){
+        try {
+          Key k = FVecTest.makeByteVec("yada", data);
+          fr = ParseDataset2.parse(Key.make(), new Key[]{k});
+
+          for (boolean drop_na : new boolean[]{false, true}) {
+            for (boolean normalize : new boolean[]{false, true}) {
+              for (Initialization init : new Initialization[]{Initialization.None, Initialization.PlusPlus, Initialization.Furthest}) {
+                KMeans2 parms = new KMeans2();
+                parms.source = fr;
+                parms.k = 3;
+                parms.normalize = normalize;
+                parms.max_iter = 100;
+                parms.initialization = init;
+                parms.drop_na_cols = drop_na;
+                parms.seed = 0;
+                parms.invoke();
+                KMeans2Model kmm = UKV.get(parms.dest());
+                testHTML(kmm);
+                kmm.delete();
+              }
+            }
+          }
+        } finally {
+        if( fr  != null ) fr.delete();
+      }
     }
   }
 }

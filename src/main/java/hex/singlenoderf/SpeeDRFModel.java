@@ -1,6 +1,5 @@
 package hex.singlenoderf;
 
-import static hex.singlenoderf.VariableImportance.asVotes;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -16,9 +15,13 @@ import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.fvec.Vec;
 import water.util.*;
+import water.util.Counter;
+import water.util.ModelUtils;
 
 import java.util.Arrays;
 import java.util.Random;
+
+import static hex.singlenoderf.VariableImportance.asVotes;
 
 
 public class SpeeDRFModel extends Model implements Job.Progress {
@@ -93,6 +96,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
   @Override public final SpeeDRF get_params() { return parameters; }
   @Override public final Request2 job() { return get_params(); }
+  @Override public final VarImp varimp() { return varimp; }
 
   public float[] priordist() { return _priorClassDist; }
   public float[] modeldist() { return _modelClassDist; }
@@ -186,12 +190,8 @@ public class SpeeDRFModel extends Model implements Job.Progress {
         auc_calc.vactual = cm.vactual;
         auc_calc.vpredict = scored.lastVec(); // lastVec is class1
         auc_calc.invoke();
-        validAUC = auc_calc.data(); //makeAUC(toCMArray(m.confusion._cms), ModelUtils.DEFAULT_THRESHOLDS, m.cmDomain);
+        validAUC = auc_calc.data();
       }
-
-      // Launch a Variable Importance Task
-      if (importance && !regression)
-        varimp = doVarImpCalc(fr, this, modelResp);
     }
     scored.remove("actual");
     scored.delete();
@@ -209,16 +209,16 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       errorsPerTree = cmTask._errorsPerTree;
       errs[errs.length - 1] = confusion.mse();
       cms[cms.length - 1] = new ConfusionMatrix(confusion._matrix);
-
       if (classes() == 2) validAUC =  makeAUC(toCMArray(confusion._cms), ModelUtils.DEFAULT_THRESHOLDS, cmDomain);
-      if (importance && !regression) varimp = doVarImpCalc(fr, this, modelResp);
     }
   }
 
-  public void scoreAllTrees(Frame fr, Vec modelResp) {
+  void scoreAllTrees(Frame fr, Vec modelResp) {
     if (this.validation) scoreOnTest(fr, modelResp);
     else scoreOnTrain(fr, modelResp);
   }
+
+  void variableImportanceCalc(Frame fr, Vec modelResp) { varimp = doVarImpCalc(fr, this, modelResp); }
 
   public static SpeeDRFModel make(SpeeDRFModel old, Key tkey, int nodeIdx, String tString, int tree_id) {
 
@@ -451,7 +451,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
     if (this.size() > 0 && this.size() < N) sb.append("Current Status: ").append("Building Random Forest");
     else {
-      if (this.size() == N) {
+      if (this.size() == N && !this.current_status.equals("Performing Variable Importance Calculation.")) {
         sb.append("Current Status: ").append("Complete.");
       } else  {
         if( Job.findJob(jobKey).isCancelledOrCrashed()) {
@@ -473,12 +473,12 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
     //build cm
     if(!regression) {
-      if (confusion != null && confusion.valid() && (this.N * .25 > 0) && classes() > 2) {
-        buildCM(sb);
-      } else {
-        if (this.cms[this.cms.length - 1] != null && (this.N * .25 > 0 && classes() > 2) ) {
-          this.cms[this.cms.length - 1].toHTML(sb, this.cmDomain);
-        }
+//      if (confusion != null && confusion.valid() && (this.N * .25 > 0) && classes() >= 2) {
+//        buildCM(sb);
+//      } else {
+      if (this.cms[this.cms.length - 1] != null && (this.N * .25 > 0 && classes() >= 2) ) {
+        this.cms[this.cms.length - 1].toHTML(sb, this.cmDomain);
+//        }
       }
     }
 

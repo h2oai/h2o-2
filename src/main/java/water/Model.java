@@ -1,11 +1,9 @@
 package water;
 
-import water.api.*;
-import static water.util.JCodeGen.toStaticVar;
-import static water.util.Utils.contains;
 import hex.ConfusionMatrix;
 import hex.VarImp;
 import javassist.*;
+import water.api.*;
 import water.api.Request.API;
 import water.fvec.Chunk;
 import water.fvec.Frame;
@@ -15,7 +13,14 @@ import water.serial.AutoBufferSerializer;
 import water.util.*;
 import water.util.Log.Tag.Sys;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashMap;
+
+
+import static water.util.JCodeGen.toStaticVar;
+import static water.util.Utils.contains;
 
 /**
  * A Model models reality (hopefully).
@@ -84,7 +89,7 @@ public abstract class Model extends Lockable<Model> {
     this.uniqueId = new UniqueId(_key);
     if( domains == null ) domains=new String[names.length+1][];
     assert domains.length==names.length;
-    assert names.length > 1;
+    assert names.length >= 1;
     assert names[names.length-1] != null; // Have a valid response-column name?
     _dataKey = dataKey;
     _names   = names;
@@ -129,6 +134,8 @@ public abstract class Model extends Lockable<Model> {
       this.warnings[this.warnings.length-1] = warning;
     }
   }
+
+  public boolean isSupervised() { return true; }
 
   public UniqueId getUniqueId() {
     return this.uniqueId;
@@ -220,10 +227,12 @@ public abstract class Model extends Lockable<Model> {
    *         one column with predicted values.
    */
   public final Frame score(Frame fr, boolean adapt) {
-    int ridx = fr.find(responseName());
-    if (ridx != -1) { // drop the response for scoring!
-      fr = new Frame(fr);
-      fr.remove(ridx);
+    if (isSupervised()) {
+      int ridx = fr.find(responseName());
+      if (ridx != -1) { // drop the response for scoring!
+        fr = new Frame(fr);
+        fr.remove(ridx);
+      }
     }
     // Adapt the Frame layout - returns adapted frame and frame containing only
     // newly created vectors
@@ -246,38 +255,38 @@ public abstract class Model extends Lockable<Model> {
    * @return
    */
   protected Frame scoreImpl(Frame adaptFrm) {
-    int ridx = adaptFrm.find(responseName());
-    assert ridx == -1 : "Adapted frame should not contain response in scoring method!";
-    assert nfeatures() == adaptFrm.numCols() : "Number of model features " + nfeatures() + " != number of test set columns: " + adaptFrm.numCols();
-    assert adaptFrm.vecs().length == _names.length-1 : "Scoring data set contains wrong number of columns: " + adaptFrm.vecs().length  + " instead of " + (_names.length-1);
-
+    if (isSupervised()) {
+      int ridx = adaptFrm.find(responseName());
+      assert ridx == -1 : "Adapted frame should not contain response in scoring method!";
+      assert nfeatures() == adaptFrm.numCols() : "Number of model features " + nfeatures() + " != number of test set columns: " + adaptFrm.numCols();
+      assert adaptFrm.vecs().length == nfeatures() : "Scoring data set contains wrong number of columns: " + adaptFrm.vecs().length + " instead of " + nfeatures();
+    }
     // Create a new vector for response
     // If the model produces a classification/enum, copy the domain into the
     // result vector.
-    Vec v = adaptFrm.anyVec().makeZero(classNames());
-    adaptFrm.add("predict",v);
-    if( nclasses() > 1 ) {
-      String prefix = "";
-      for( int c=0; c<nclasses(); c++ ) // if any class is the same as column name in frame, then prefix all classnames
-        if (contains(adaptFrm._names, classNames()[c])) { prefix = "class_"; break; }
-      for( int c=0; c<nclasses(); c++ )
-        adaptFrm.add(prefix+classNames()[c],adaptFrm.anyVec().makeZero());
-    }
+    int nc = nclasses();
+    Vec [] newVecs = new Vec[]{adaptFrm.anyVec().makeZero(classNames())};
+    if(nc > 1)
+      newVecs = Utils.join(newVecs,adaptFrm.anyVec().makeZeros(nc));
+    String [] names = new String[newVecs.length];
+    names[0] = "predict";
+    for(int i = 1; i < names.length; ++i)
+      names[i] = classNames()[i-1];
+    final int num_features = nfeatures();
     new MRTask2() {
       @Override public void map( Chunk chks[] ) {
-        double tmp [] = new double[_names.length-1]; // We do not need the last field representing response
+        double tmp [] = new double[num_features]; // We do not need the last field representing response
         float preds[] = new float [nclasses()==1?1:nclasses()+1];
         int len = chks[0]._len;
         for( int row=0; row<len; row++ ) {
           float p[] = score0(chks,row,tmp,preds);
           for( int c=0; c<preds.length; c++ )
-            chks[_names.length-1+c].set0(row,p[c]);
+            chks[num_features+c].set0(row,p[c]);
         }
       }
-    }.doAll(adaptFrm);
+    }.doAll(Utils.join(adaptFrm.vecs(),newVecs));
     // Return just the output columns
-    int x=_names.length-1, y=adaptFrm.numCols();
-    return adaptFrm.extractFrame(x, y);
+    return new Frame(names,newVecs);
   }
 
   /** Single row scoring, on a compatible Frame.  */
@@ -372,7 +381,7 @@ public abstract class Model extends Lockable<Model> {
   public Frame[] adapt( final Frame fr, boolean exact, boolean haveResponse) {
     Frame vfr = new Frame(fr); // To avoid modification of original frame fr
     int n = _names.length;
-    if (haveResponse) {
+    if (haveResponse && isSupervised()) {
       int ridx = vfr.find(_names[_names.length - 1]);
       if (ridx != -1 && ridx != vfr._names.length - 1) { // Unify frame - put response to the end
         String name = vfr._names[ridx];
@@ -380,7 +389,7 @@ public abstract class Model extends Lockable<Model> {
       }
       n = ridx == -1 ? _names.length - 1 : _names.length;
     }
-    String [] names = Arrays.copyOf(_names, n);
+    String [] names = isSupervised() ? Arrays.copyOf(_names, n) : _names.clone();
     Frame  [] subVfr;
     // replace missing columns with NaNs (or 0s for DeepLearning with sparse data)
     subVfr = vfr.subframe(names, missingColumnsType());
@@ -466,7 +475,7 @@ public abstract class Model extends Lockable<Model> {
    *  subclass scoring logic. */
   protected float[] score0( Chunk chks[], int row_in_chunk, double[] tmp, float[] preds ) {
     assert chks.length>=_names.length; // Last chunk is for the response
-    for( int i=0; i<_names.length-1; i++ ) // Do not include last value since it can contains a response
+    for( int i=0; i<nfeatures(); i++ ) // Do not include last value since it can contains a response
       tmp[i] = chks[i].at0(row_in_chunk);
     float[] scored = score0(tmp,preds);
     // Correct probabilities obtained from training on oversampled data back to original distribution
@@ -535,7 +544,10 @@ public abstract class Model extends Lockable<Model> {
           cm.cm[1][0] = aucd.cm()[1][0];
           cm.cm[0][1] = aucd.cm()[0][1];
           cm.cm[1][1] = aucd.cm()[1][1];
-          assert(new hex.ConfusionMatrix(cm.cm).err() == aucd.err()); //check consistency with AUC-computed error
+          double cm_err = new hex.ConfusionMatrix(cm.cm).err();
+          double auc_err = aucd.err();
+          if (! (Double.isNaN(cm_err) && Double.isNaN(auc_err))) // NOTE: NaN != NaN
+            assert(cm_err == auc_err); //check consistency with AUC-computed error
         } else {
           error = new hex.ConfusionMatrix(cm.cm).err(); //only set error if AUC didn't already set the error
         }
@@ -777,7 +789,7 @@ public abstract class Model extends Lockable<Model> {
       }
     }
 
-    // Now score the model on the
+    // Now score the model on the N folds
     try {
       AUC auc = nclasses() == 2 ? new AUC() : null;
       water.api.ConfusionMatrix cm = new water.api.ConfusionMatrix();

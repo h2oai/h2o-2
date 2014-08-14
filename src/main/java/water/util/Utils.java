@@ -61,6 +61,12 @@ public class Utils {
       if (from[i]>from[result]) result = i;
     return result;
   }
+  public static int maxIndex(long[] from) {
+    int result = 0;
+    for (int i = 1; i<from.length; ++i)
+      if (from[i]>from[result]) result = i;
+    return result;
+  }
   public static int maxIndex(float[] from) {
     int result = 0;
     for (int i = 1; i<from.length; ++i)
@@ -568,6 +574,10 @@ public class Utils {
     for(int i = 0; i < a.length; i++ ) a[i] = add(a[i],b[i]);
     return a;
   }
+  public static long[][][] add(long[][][] a, long[][][] b) {
+    for(int i = 0; i < a.length; i++ ) add(a[i],b[i]);
+    return a;
+  }
 
   public static double[][] append(double[][] a, double[][] b) {
     double[][] res = new double[a.length + b.length][];
@@ -663,7 +673,9 @@ public class Utils {
     byte [] bits = v.getFirstBytes();
     try{
       return unzipBytes(bits, guessCompressionMethod(bits));
-    } catch(Exception e){return null;}
+    } catch(Exception e){
+      throw new RuntimeException(e);
+    }
   }
 
   public static Compression guessCompressionMethod(byte [] bits){

@@ -119,8 +119,9 @@ class Basic(unittest.TestCase):
             allowedDelta = (0.01, 0.01, 0.01) 
             h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, trial=trial)
 
-            gs = h2o.nodes[0].gap_statistic(source=hex_key, k_max=5, timeoutSecs=3000)
-            print "gap_statistic:", h2o.dump_json(gs)
+            #too slow
+            #gs = h2o.nodes[0].gap_statistic(source=hex_key, k_max=5, timeoutSecs=3000)
+            #print "gap_statistic:", h2o.dump_json(gs)
 
 
 if __name__ == '__main__':

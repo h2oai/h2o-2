@@ -12,7 +12,7 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1)
+            h2o.build_cloud(java_heap_GB=12)
         else:
             # all hdfs info is done thru the hdfs_config michal's ec2 config sets up?
             h2o_hosts.build_cloud_with_hosts()
@@ -25,12 +25,13 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         # these will be used as directory imports/parse
         csvDirlist = [
-            ("manyfiles-nflx-gz",   600),
+            ("manyfiles-nflx-gz", 1200),
         ]
         trial = 0
         for (csvDirname, timeoutSecs) in csvDirlist:
 
-            csvPathname = csvDirname + "/file_[2][0-9][0-9].dat.gz"
+            # 100 files? change to 50
+            csvPathname = csvDirname + "/file_[2][0-4][0-9].dat.gz"
             (importHDFSResult, importPattern) = h2i.import_only(bucket='home-0xdiag-datasets', path=csvPathname, schema='s3n', timeoutSecs=timeoutSecs)
 
             print "\nTrying StoreView after the import hdfs"

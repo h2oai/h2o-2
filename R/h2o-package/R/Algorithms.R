@@ -120,8 +120,8 @@ h2o.gbm <- function(x, y, distribution = 'multinomial', data, key = "", n.trees 
 }
 
 # -------------------------- Generalized Linear Models (GLM) ------------------------ #
-h2o.glm <- function(x, y, data, key = "", family, nfolds = 0, alpha = 0.5, nlambda = -1, lambda.min.ratio = -1, lambda = 1e-5,
-                    epsilon = 1e-4, standardize = TRUE, prior, variable_importances = 1, use_all_factor_levels = 0,
+h2o.glm <- function(x, y, data, key = "", family, link, nfolds = 0, alpha = 0.5, nlambda = -1, lambda.min.ratio = -1, lambda = 1e-5,
+                    epsilon = 1e-4, standardize = TRUE, prior, variable_importances = TRUE, use_all_factor_levels = FALSE,
                     tweedie.p = ifelse(family == "tweedie", 1.5, as.numeric(NA)), iter.max = 100,
                     higher_accuracy = FALSE, lambda_search = FALSE, return_all_lambda = FALSE, max_predictors=-1) {
   args <- .verify_dataxy(data, x, y)
@@ -129,8 +129,8 @@ h2o.glm <- function(x, y, data, key = "", family, nfolds = 0, alpha = 0.5, nlamb
   if(!is.character(key)) stop("key must be of class character")
   if(nchar(key) > 0 && regexpr("^[a-zA-Z_][a-zA-Z0-9_.]*$", key)[1] == -1)
     stop("key must match the regular expression '^[a-zA-Z_][a-zA-Z0-9_.]*$'")
-  if(!(variable_importances %in% c(0,1)))  stop(paste("variable_importances must be either 0 or 1. Got: ", variable_importances, sep = ""))
-  if(!(use_all_factor_levels %in% c(0,1))) stop(paste("use_all_factor_levels must be either 0 or 1. Got: ", use_all_factor_levels, sep = ""))
+  if(!is.logical(variable_importances))  stop("variable_importances must be logical")
+  if(!is.logical(use_all_factor_levels)) stop("use_all_factor_levels must be logical")
   if(!is.numeric(nfolds)) stop('nfolds must be numeric')
   if( nfolds < 0 ) stop('nfolds must be >= 0')
   if(!is.numeric(alpha)) stop('alpha must be numeric')
@@ -159,7 +159,15 @@ h2o.glm <- function(x, y, data, key = "", family, nfolds = 0, alpha = 0.5, nlamb
   if(!is.logical(lambda_search)) stop("lambda_search must be logical")
   if(lambda_search && length(lambda) > 1) stop("When automatically searching, must specify single numeric value as lambda, which is interpreted as minimum lambda in generated sequence")
   if(!is.logical(return_all_lambda)) stop("return_all_lambda must be logical")
-  
+  if(!missing(link)) {
+    if(!is.character(link)) stop("link must be of class character")
+    if((family == 'gaussian') && !(link %in% c('identity', 'log', 'inverse'))) stop("Only identity, log, and inverse links are allowed for family=gaussian.")
+    if((family == 'binomial') && !(link %in% c('logit', 'log'))) stop("Only logit and log links are allowed for family=binomial.")
+    if((family == 'poisson') && !(link %in% c('log', 'identity'))) stop("Only log and identity links are allowed for family=poisson.")
+    if((family == 'gamma') && !(link %in% c('inverse', 'log', 'identity'))) stop("Only inverse, log, and identity links are allowed for family=gamma.")
+    if((family == 'tweedie') && !(link == 'tweedie')) stop("Only tweedie link allowed for family=tweedie.")
+  } else {link = "family_default"}
+
   x_ignore = setdiff(1:ncol(data), c(args$x_i, args$y_i)) - 1
   if(length(x_ignore) == 0) x_ignore = ''
   
@@ -171,8 +179,8 @@ h2o.glm <- function(x, y, data, key = "", family, nfolds = 0, alpha = 0.5, nlamb
                               lambda = lambda, beta_epsilon = epsilon, standardize = as.numeric(standardize),
                               max_iter = iter.max, higher_accuracy = as.numeric(higher_accuracy),
                               lambda_search = as.numeric(lambda_search), tweedie_variance_power = tweedie.p,
-                              max_predictors = max_predictors, variable_importances = variable_importances,
-                              use_all_factor_levels = use_all_factor_levels)
+                              max_predictors = max_predictors, variable_importances = as.numeric(variable_importances),
+                              use_all_factor_levels = as.numeric(use_all_factor_levels), link = link)
     else if(family == "binomial") {
       if(missing(prior)) prior = -1
       res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, destination_key = key,
@@ -181,8 +189,8 @@ h2o.glm <- function(x, y, data, key = "", family, nfolds = 0, alpha = 0.5, nlamb
                               lambda = lambda, beta_epsilon = epsilon, standardize = as.numeric(standardize),
                               max_iter = iter.max, higher_accuracy = as.numeric(higher_accuracy),
                               lambda_search = as.numeric(lambda_search), prior = prior,
-                              max_predictors = max_predictors, variable_importances = variable_importances,
-                              use_all_factor_levels = use_all_factor_levels)
+                              max_predictors = max_predictors, variable_importances = as.numeric(variable_importances),
+                              use_all_factor_levels = as.numeric(use_all_factor_levels), link = link)
     } else
       res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, destination_key = key,
                               response = args$y, ignored_cols = paste(x_ignore, sep="", collapse=","), family = family,
@@ -190,22 +198,23 @@ h2o.glm <- function(x, y, data, key = "", family, nfolds = 0, alpha = 0.5, nlamb
                               lambda = lambda, beta_epsilon = epsilon, standardize = as.numeric(standardize),
                               max_iter = iter.max, higher_accuracy = as.numeric(higher_accuracy),
                               lambda_search = as.numeric(lambda_search),
-                              max_predictors = max_predictors, variable_importances = variable_importances,
-                              use_all_factor_levels = use_all_factor_levels)
+                              max_predictors = max_predictors, variable_importances = as.numeric(variable_importances),
+                              use_all_factor_levels = as.numeric(use_all_factor_levels), link = link)
 
     params = list(x=args$x, y=args$y, family = .h2o.__getFamily(family, tweedie.var.p=tweedie.p), nfolds=nfolds,
                   alpha=alpha, nlambda=nlambda, lambda.min.ratio=lambda.min.ratio, lambda=lambda,
                   beta_epsilon=epsilon, standardize=standardize, max_predictors = max_predictors,
-                  variable_importances = variable_importances, use_all_factor_levels = use_all_factor_levels, h2o = data@h2o)
+                  variable_importances = variable_importances, use_all_factor_levels = use_all_factor_levels, h2o = data@h2o,
+                  link = link)
     .h2o.__waitOnJob(data@h2o, res$job_key)
     .h2o.get.glm(data@h2o, as.character(res$destination_key), return_all_lambda)
   } else
-    .h2o.glm2grid.internal(x_ignore, args$y, data, key, family, nfolds, alpha, nlambda, lambda.min.ratio, lambda, epsilon,
+    .h2o.glm2grid.internal(x_ignore, args$y, data, key, family, link,nfolds, alpha, nlambda, lambda.min.ratio, lambda, epsilon,
                            standardize, prior, tweedie.p, iter.max, higher_accuracy, lambda_search, return_all_lambda,
                            variable_importances = variable_importances, use_all_factor_levels = use_all_factor_levels)
 }
 
-.h2o.glm2grid.internal <- function(x_ignore, y, data, key, family, nfolds, alpha, nlambda, lambda.min.ratio, lambda, epsilon, standardize, prior, tweedie.p, iter.max, higher_accuracy, lambda_search, return_all_lambda,
+.h2o.glm2grid.internal <- function(x_ignore, y, data, key, family, link, nfolds, alpha, nlambda, lambda.min.ratio, lambda, epsilon, standardize, prior, tweedie.p, iter.max, higher_accuracy, lambda_search, return_all_lambda,
                                    variable_importances, use_all_factor_levels) {
   if(family == "tweedie")
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, destination_key = key, response = y,
@@ -213,17 +222,17 @@ h2o.glm <- function(x, y, data, key = "", family, nfolds = 0, alpha = 0.5, nlamb
                             alpha = alpha, nlambdas = nlambda, lambda_min_ratio = lambda.min.ratio, lambda = lambda,
                             beta_epsilon = epsilon, standardize = as.numeric(standardize), max_iter = iter.max,
                             higher_accuracy = as.numeric(higher_accuracy), lambda_search = as.numeric(lambda_search),
-                            tweedie_variance_power = tweedie.p,
-                            variable_importances = variable_importances, use_all_factor_levels = use_all_factor_levels)
+                            tweedie_variance_power = tweedie.p, variable_importances = as.numeric(variable_importances), 
+                            use_all_factor_levels = as.numeric(use_all_factor_levels), link = link)
   else if(family == "binomial") {
     if(missing(prior)) prior = -1
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, destination_key = key, response = y,
                             ignored_cols = paste(x_ignore, sep="", collapse=","), family = family, n_folds = nfolds,
                             alpha = alpha, nlambdas = nlambda, lambda_min_ratio = lambda.min.ratio, lambda = lambda,
                             beta_epsilon = epsilon, standardize = as.numeric(standardize), max_iter = iter.max,
-                            higher_accuracy = as.numeric(higher_accuracy),
-                            lambda_search = as.numeric(lambda_search), prior = prior,
-                            variable_importances = variable_importances, use_all_factor_levels = use_all_factor_levels)
+                            higher_accuracy = as.numeric(higher_accuracy), lambda_search = as.numeric(lambda_search), prior = prior,
+                            variable_importances = as.numeric(variable_importances), use_all_factor_levels = as.numeric(use_all_factor_levels),
+                            link = link)
   }
   else
     res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_GLM2, source = data@key, destination_key = key, response = y,
@@ -231,10 +240,11 @@ h2o.glm <- function(x, y, data, key = "", family, nfolds = 0, alpha = 0.5, nlamb
                             alpha = alpha, nlambdas = nlambda, lambda_min_ratio = lambda.min.ratio, lambda = lambda,
                             beta_epsilon = epsilon, standardize = as.numeric(standardize), max_iter = iter.max,
                             higher_accuracy = as.numeric(higher_accuracy), lambda_search = as.numeric(lambda_search),
-                            variable_importances = variable_importances, use_all_factor_levels = use_all_factor_levels)
+                            variable_importances = as.numeric(variable_importances), use_all_factor_levels = as.numeric(use_all_factor_levels), 
+                            link = link)
 
-  params = list(x=setdiff(colnames(data)[-(x_ignore+1)], y), y=y,
-                family=.h2o.__getFamily(family, tweedie.var.p=tweedie.p), nfolds=nfolds, alpha=alpha, nlambda=nlambda,
+  params = list(x=setdiff(colnames(data)[-(x_ignore+1)], y), y=y, family=.h2o.__getFamily(family, tweedie.var.p=tweedie.p), 
+                link = link, nfolds=nfolds, alpha=alpha, nlambda=nlambda,
                 lambda.min.ratio=lambda.min.ratio, lambda=lambda, beta_epsilon=epsilon, standardize=standardize,
                 variable_importances = variable_importances, use_all_factor_levels = use_all_factor_levels, h2o = data@h2o)
   
@@ -312,18 +322,18 @@ h2o.kmeans <- function(data, centers, cols = '', key = "", iter.max = 10, normal
   clusters_key <- paste(res$'_clustersKey', sep = "")
   
   result = list()
-  params$centers = res$k
-  params$iter.max = res$max_iter
+  params$centers = res$parameters$k
+  params$iter.max = res$parameters$max_iter
   result$params = params
   
   result$cluster = .h2o.exec2(clusters_key, h2o = data@h2o, clusters_key)
-  feat = res$'_names'[-length(res$'_names')]     # Get rid of response column name
-  result$centers = t(matrix(unlist(res$centers), ncol = res$k))
-  dimnames(result$centers) = list(seq(1,res$k), feat)
-  result$totss <- res$total_SS
-  result$withinss <- res$within_cluster_variances
+  feat = res$'_names'
+  result$centers = t(matrix(unlist(res$centers), ncol = res$parameters$k))
+  dimnames(result$centers) = list(seq(1,res$parameters$k), feat)
+  #result$totss <- res$total_SS
+  result$withinss <- res$within_cluster_variances ## FIXME: sum of squares != variances (bad name of the latter)
   result$tot.withinss <- res$total_within_SS
-  result$betweenss <- res$between_cluster_SS
+  #result$betweenss <- res$between_cluster_SS
   result$size <- res$size
   result$iter <- res$iterations
   return(result)
@@ -647,11 +657,18 @@ h2o.deeplearning <- function(x, y, data, key = "",
     result$confusion = .build_cm(cm, confusion$domain)
   }
   
-  result$train_class_error = as.numeric(errs$train_err)
-  result$train_sqr_error = as.numeric(errs$train_mse)
-  result$valid_class_error = as.numeric(errs$valid_err)
-  result$valid_sqr_error = as.numeric(errs$valid_mse)
-  
+  if (result$params$classification == 0) {
+    result$train_sqr_error = as.numeric(errs$train_mse)
+    result$valid_sqr_error = as.numeric(errs$valid_mse)
+    result$train_class_error = NULL
+    result$valid_class_error = NULL
+  } else {
+    result$train_sqr_error = NULL
+    result$valid_sqr_error = NULL
+    result$train_class_error = as.numeric(errs$train_err)
+    result$valid_class_error = as.numeric(errs$valid_err)
+  }
+
   if(!is.null(errs$validAUC)) {
     tmp <- .h2o.__getPerfResults(errs$validAUC)
     tmp$confusion <- NULL 
@@ -1201,6 +1218,7 @@ h2o.performance <- function(data, reference, measure = "accuracy", thresholds) {
   result$F1 = res$F1_for_criteria[[idx]]
   result$F2 = res$F2_for_criteria[[idx]]
   result$accuracy = res$accuracy_for_criteria[[idx]]
+  result$error <- 1 - result$accuracy
   result$precision = res$precision_for_criteria[[idx]]
   result$recall = res$recall_for_criteria[[idx]]
   result$specificity = res$specificity_for_criteria[[idx]]

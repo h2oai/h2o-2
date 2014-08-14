@@ -1,14 +1,14 @@
 package hex.nb;
 
-import org.apache.commons.math3.distribution.NormalDistribution;
-
 import hex.FrameTask.DataInfo;
 import hex.nb.NaiveBayes.NBTask;
+import org.apache.commons.math3.distribution.NormalDistribution;
 import water.Key;
 import water.Model;
-import water.api.*;
+import water.Request2;
+import water.api.DocGen;
+import water.api.Predict;
 import water.api.Request.API;
-import water.api.Request.Default;
 import water.api.RequestBuilders.ElementBuilder;
 
 /**
@@ -33,17 +33,27 @@ public class NBModel extends Model {
   @API(help = "Number of numeric predictor variables")
   final int nnums;
 
-  @API(help = "Laplace smoothing parameter", required = true, filter = Default.class, lmin = 0, lmax = 100000, json = true)
+  @API(help = "Laplace smoothing parameter")
   final double laplace;
 
-  public NBModel(Key selfKey, Key dataKey, DataInfo dinfo, NBTask tsk, double[] pprior, double[][][] pcond, double laplace) {
+  @API(help = "Min. standard deviation to use for observations with not enough data")
+  final double min_std_dev;
+
+  @API(help = "Model parameters", json = true)
+  private Request2 job;
+  @Override public final NaiveBayes get_params() { return (NaiveBayes)job; }
+  @Override public final Request2 job() { return job; }
+
+  public NBModel(Key selfKey, Key dataKey, DataInfo dinfo, NBTask tsk, double[] pprior, double[][][] pcond, double laplace, double min_std_dev) {
     super(selfKey, dataKey, dinfo._adaptedFrame, /* priorClassDistribution */ null);
     this.rescnt = tsk._rescnt;
+    this.job= tsk._job;
     this.pprior = pprior;
     this.pcond = pcond;
     this.ncats = dinfo._cats;
     this.nnums = dinfo._nums;
     this.laplace = laplace;
+    this.min_std_dev = min_std_dev;
   }
 
   public double[] pprior() { return pprior; }
@@ -66,8 +76,14 @@ public class NBModel extends Model {
       // For numeric predictors, assume Gaussian distribution with sample mean and variance from model
       for(int col = ncats; col < data.length; col++) {
         if(Double.isNaN(data[col])) continue;
-        NormalDistribution nd = new NormalDistribution(pcond[col][rlevel][0], pcond[col][rlevel][1]);
-        num *= nd.density(data[col]);
+
+        // Two ways to get non-zero std deviation HEX-1852
+//        double stddev = pcond[col][rlevel][1] > 0 ? pcond[col][rlevel][1] : min_std_dev; //only use the placeholder for critically low data
+        double stddev = Math.max(pcond[col][rlevel][1], min_std_dev); // more stable for almost constant data
+        double mean = pcond[col][rlevel][0];
+        double x = data[col];
+        num *= Math.exp(-((x-mean)*(x-mean)/(2.*stddev*stddev)))/stddev/Math.sqrt(2.*Math.PI); // faster
+//        num *= new NormalDistribution(mean, stddev).density(data[col]); //slower
       }
 
       num *= pprior[rlevel];    // p(x,y) = p(x|y)*p(y)

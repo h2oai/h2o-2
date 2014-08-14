@@ -51,7 +51,7 @@ public class GapStatistic extends Job.ColumnsJob {
       double[] wks = new double[ks];
       double[] wkbs = new double[ks];
       double[] sk = new double[ks];
-      return new GapStatisticModel(destination_key, source._key, source, k_max, wks, wkbs, sk, k_max, b_max, 0, 0);
+      return new GapStatisticModel(destination_key, source._key, source, k_max, wks, wkbs, sk, k_max, b_max, 1, 0);
     }
     finally {
       source.unlock(self());

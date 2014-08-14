@@ -330,7 +330,11 @@ NEXT_CHAR:
             if (number >= LARGEST_DIGIT_NUMBER) {
               if (decimal)
                 fractionDigits = offset - 1 - fractionDigits;
-              state = NUMBER_SKIP;
+              if (exp == -1) {
+                number = -number;
+              }
+              exp = 0;
+              state = NUMBER_SKIP_NO_DOT;
             } else {
               number = (number*10)+(c-'0');
             }

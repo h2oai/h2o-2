@@ -967,6 +967,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     last_scored().valid_confusion_matrix = cm;
     last_scored().validAUC = auc;
     last_scored().valid_hitratio = hr;
+    DKV.put(this._key, this); //overwrite this model
   }
 
   @Override public String toString() {
@@ -1790,6 +1791,8 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     final Key job = null;
     final DeepLearningModel cp = this;
     DeepLearningModel bestModel = new DeepLearningModel(cp, bestModelKey, job, model_info().data_info());
+    bestModel.get_params().state = Job.JobState.DONE;
+    bestModel.get_params().job_key = get_params().self();
     bestModel.delete_and_lock(job);
     bestModel.unlock(job);
     assert (UKV.get(bestModelKey) != null);
@@ -1797,9 +1800,14 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     assert (((DeepLearningModel) UKV.get(bestModelKey)).error() == _bestError);
   }
 
-  @Override public void delete( ) {
-    if (actual_best_model_key != null) DKV.remove(actual_best_model_key);
-    super.delete();
+  public void delete_best_model( ) {
+    if (actual_best_model_key != null && actual_best_model_key != _key) DKV.remove(actual_best_model_key);
+  }
+
+  public void delete_xval_models( ) {
+    if (get_params().xval_models != null) {
+      for (Key k : get_params().xval_models) DKV.remove(k);
+    }
   }
 }
 

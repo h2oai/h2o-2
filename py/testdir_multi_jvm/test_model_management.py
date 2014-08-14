@@ -167,10 +167,12 @@ class ModelManagementTestCase(unittest.TestCase):
         node = h2o.nodes[0]
 
         num_models = 0
+        durations = {}
 
         print "##############################################################"
         print "Generating AirlinesTrain GLM2 binary classification model. . ."
         # R equivalent: h2o.glm.FV(y = "IsDepDelayed", x = c("Origin", "Dest", "fDayofMonth", "fYear", "UniqueCarrier", "fDayOfWeek", "fMonth", "DepTime", "ArrTime", "Distance"), data = airlines_train.hex, family = "binomial", alpha=0.05, lambda=1.0e-2, standardize=FALSE, nfolds=0)
+        before = time.time() * 1000
         glm_AirlinesTrain_1_params = {
             'destination_key': 'glm_AirlinesTrain_binary_1',
             'response': 'IsDepDelayed', 
@@ -183,6 +185,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'use_all_factor_levels': 1
         }
         glm_AirlinesTrain_1 = node.GLM(airlines_train_hex, **glm_AirlinesTrain_1_params)
+        durations['glm_AirlinesTrain_binary_1'] = time.time() * 1000 - before
         num_models = num_models + 1
         h2o_glm.simpleCheckGLM(self, glm_AirlinesTrain_1, None, **glm_AirlinesTrain_1_params)
 
@@ -190,6 +193,7 @@ class ModelManagementTestCase(unittest.TestCase):
         print "####################################################################"
         print "Generating AirlinesTrain simple GBM binary classification model. . ."
         # R equivalent: h2o.gbm(y = "IsDepDelayed", x = c("Origin", "Dest", "fDayofMonth", "fYear", "UniqueCarrier", "fDayOfWeek", "fMonth", "DepTime", "ArrTime", "Distance"), data = airlines_train.hex, n.trees=3, interaction.depth=1, distribution="multinomial", n.minobsinnode=2, shrinkage=.1)
+        before = time.time() * 1000
         gbm_AirlinesTrain_1_params = {
             'destination_key': 'gbm_AirlinesTrain_binary_1',
             'response': 'IsDepDelayed', 
@@ -200,12 +204,14 @@ class ModelManagementTestCase(unittest.TestCase):
             # TODO: what about minobsinnode and shrinkage?!
         }
         gbm_AirlinesTrain_1 = node.gbm(airlines_train_hex, **gbm_AirlinesTrain_1_params)
+        durations['gbm_AirlinesTrain_binary_1'] = time.time() * 1000 - before
         num_models = num_models + 1
 
 
         print "#####################################################################"
         print "Generating AirlinesTrain complex GBM binary classification model. . ."
         # R equivalent: h2o.gbm(y = "IsDepDelayed", x = c("Origin", "Dest", "fDayofMonth", "fYear", "UniqueCarrier", "fDayOfWeek", "fMonth", "DepTime", "ArrTime", "Distance"), data = airlines_train.hex, n.trees=50, interaction.depth=5, distribution="multinomial", n.minobsinnode=2, shrinkage=.1)
+        before = time.time() * 1000
         gbm_AirlinesTrain_2_params = {
             'destination_key': 'gbm_AirlinesTrain_binary_2',
             'response': 'IsDepDelayed', 
@@ -216,12 +222,14 @@ class ModelManagementTestCase(unittest.TestCase):
             # TODO: what about minobsinnode and shrinkage?!
         }
         gbm_AirlinesTrain_2 = node.gbm(airlines_train_hex, **gbm_AirlinesTrain_2_params)
+        durations['gbm_AirlinesTrain_binary_2'] = time.time() * 1000 - before
         num_models = num_models + 1
 
 
         print "####################################################################"
         print "Generating AirlinesTrain simple DRF binary classification model. . ."
         # R equivalent: h2o.randomForest.FV(y = "IsDepDelayed", x = c("Origin", "Dest", "fDayofMonth", "fYear", "UniqueCarrier", "fDayOfWeek", "fMonth", "DepTime", "ArrTime", "Distance"), data = airlines_train.hex, ntree=5, depth=2)
+        before = time.time() * 1000
         rf_AirlinesTrain_1_params = {
             'destination_key': 'rf_AirlinesTrain_binary_1',
             'response': 'IsDepDelayed', 
@@ -231,12 +239,14 @@ class ModelManagementTestCase(unittest.TestCase):
             'classification': 1
         }
         rf_AirlinesTrain_1 = node.random_forest(airlines_train_hex, **rf_AirlinesTrain_1_params)
+        durations['rf_AirlinesTrain_binary_1'] = time.time() * 1000 - before
         num_models = num_models + 1
 
 
         print "#####################################################################"
         print "Generating AirlinesTrain complex DRF binary classification model. . ."
         # R equivalent: h2o.randomForest.FV(y = "IsDepDelayed", x = c("Origin", "Dest", "fDayofMonth", "fYear", "UniqueCarrier", "fDayOfWeek", "fMonth", "DepTime", "ArrTime", "Distance"), data = airlines_train.hex, ntree=50, depth=10)
+        before = time.time() * 1000
         rf_AirlinesTrain_2_params = {
             'destination_key': 'rf_AirlinesTrain_binary_2',
             'response': 'IsDepDelayed', 
@@ -246,28 +256,33 @@ class ModelManagementTestCase(unittest.TestCase):
             'classification': 1
         }
         rf_AirlinesTrain_2 = node.random_forest(airlines_train_hex, **rf_AirlinesTrain_2_params)
+        durations['rf_AirlinesTrain_binary_2'] = time.time() * 1000 - before
         num_models = num_models + 1
 
 
         print "#####################################################################"
         print "Generating AirlinesTrain complex SpeeDRF binary classification model. . ."
         # what is the R binding?
+        before = time.time() * 1000
         speedrf_AirlinesTrain_1_params = {
             'destination_key': 'speedrf_AirlinesTrain_binary_1',
             'response': 'IsDepDelayed', 
             'ignored_cols_by_name': 'IsDepDelayed_REC, IsDepDelayed_REC_recoded', 
             'ntrees': 50,
             'max_depth': 10,
-            'classification': 1
+            'classification': 1,
+            'importance': 1
         }
         # Fails to complete in multinode
         speedrf_AirlinesTrain_1 = node.speedrf(airlines_train_hex, **speedrf_AirlinesTrain_1_params)
+        durations['speedrf_AirlinesTrain_binary_1'] = time.time() * 1000 - before
         num_models = num_models + 1
 
 
         print "######################################################################"
         print "Generating AirlinesTrain DeepLearning binary classification model. . ."
         # R equivalent: h2o.deeplearning(y = "IsDepDelayed", x = c("Origin", "Dest", "fDayofMonth", "fYear", "UniqueCarrier", "fDayOfWeek", "fMonth", "DepTime", "ArrTime", "Distance"), data = airlines_train.hex, classification=TRUE, hidden=c(10, 10))
+        before = time.time() * 1000
         dl_AirlinesTrain_1_params = {
             'destination_key': 'dl_AirlinesTrain_binary_1',
             'response': 'IsDepDelayed', 
@@ -277,12 +292,14 @@ class ModelManagementTestCase(unittest.TestCase):
             'variable_importances': 1
         }
         dl_AirlinesTrain_1 = node.deep_learning(airlines_train_hex, **dl_AirlinesTrain_1_params)
+        durations['dl_AirlinesTrain_binary_1'] = time.time() * 1000 - before
         num_models = num_models + 1
 
 
         print "##############################################################################################"
         print "Generating AirlinesTrain GLM2 binary classification model with different response column. . ."
         # R equivalent: h2o.glm.FV(y = "IsDepDelayed_REC", x = c("Origin", "Dest", "fDayofMonth", "fYear", "UniqueCarrier", "fDayOfWeek", "fMonth", "DepTime", "ArrTime", "Distance"), data = airlines_train.hex, family = "binomial", alpha=0.05, lambda=1.0e-2, standardize=FALSE, nfolds=0)
+        before = time.time() * 1000
         glm_AirlinesTrain_A_params = {
             'destination_key': 'glm_AirlinesTrain_binary_A',
             'response': 'IsDepDelayed_REC_recoded', 
@@ -295,13 +312,29 @@ class ModelManagementTestCase(unittest.TestCase):
             'use_all_factor_levels': 1
         }
         glm_AirlinesTrain_A = node.GLM(airlines_train_hex, **glm_AirlinesTrain_A_params)
+        durations['glm_AirlinesTrain_binary_A'] = time.time() * 1000 - before
         num_models = num_models + 1
         h2o_glm.simpleCheckGLM(self, glm_AirlinesTrain_A, None, **glm_AirlinesTrain_A_params)
+
+
+        print "##############################################################################################"
+        print "Generating AirlinesTrain Naive Bayes binary classification model. . ."
+        # R equivalent: h2o.naive_bayes(y = "IsDepDelayed", x = c("Origin", "Dest", "fDayofMonth", "fYear", "UniqueCarrier", "fDayOfWeek", "fMonth", "DepTime", "ArrTime", "Distance"), data = airlines_train.hex, family = "binomial", alpha=0.05, lambda=1.0e-2, standardize=FALSE, nfolds=0)
+        before = time.time() * 1000
+        nb_AirlinesTrain_params = {
+            'destination_key': 'nb_AirlinesTrain_binary_1',
+            'response': 'IsDepDelayed', 
+            'ignored_cols': 'IsDepDelayed_REC_recoded, IsDepDelayed_REC', 
+        }
+        nb_AirlinesTrain = node.naive_bayes(source=airlines_train_hex, timeoutSecs=120, **nb_AirlinesTrain_params)
+        durations['nb_AirlinesTrain_binary_1'] = time.time() * 1000 - before
+        num_models = num_models + 1
 
 
         print "#########################################################"
         print "Generating Prostate GLM2 binary classification model. . ."
         # R equivalent: h2o.glm.FV(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family = "binomial", nfolds = 0, alpha = 0.5)
+        before = time.time() * 1000
         glm_Prostate_1_params = {
             'destination_key': 'glm_Prostate_binary_1',
             'response': 'CAPSULE', 
@@ -312,6 +345,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'use_all_factor_levels': 0 # should get warning about variable importances!
         }
         glm_Prostate_1 = node.GLM(prostate_hex, **glm_Prostate_1_params)
+        durations['glm_Prostate_binary_1'] = time.time() * 1000 - before
         num_models = num_models + 1
         h2o_glm.simpleCheckGLM(self, glm_Prostate_1, None, **glm_Prostate_1_params)
 
@@ -319,6 +353,7 @@ class ModelManagementTestCase(unittest.TestCase):
         print "###############################################################"
         print "Generating Prostate simple DRF binary classification model. . ."
         # R equivalent: h2o.randomForest.FV(y = "CAPSULE", x = c("AGE","RACE","DCAPS"), data = prostate.hex, ntree=10, depth=5)
+        before = time.time() * 1000
         rf_Prostate_1_params = {
             'destination_key': 'rf_Prostate_binary_1',
             'response': 'CAPSULE', 
@@ -328,27 +363,31 @@ class ModelManagementTestCase(unittest.TestCase):
             'classification': 1
         }
         rf_Prostate_1 = node.random_forest(prostate_hex, **rf_Prostate_1_params)
+        durations['rf_Prostate_binary_1'] = time.time() * 1000 - before
         num_models = num_models + 1
 
 
         print "#####################################################################"
         print "Generating Prostate complex SpeeDRF binary classification model. . ."
+        before = time.time() * 1000
         speedrf_Prostate_1_params = {
             'destination_key': 'speedrf_Prostate_binary_1',
             'response': 'CAPSULE', 
             'ignored_cols_by_name': None, 
             'ntrees': 50,
             'max_depth': 10,
-            'classification': 1
+            'classification': 1,
+            'importance': 1
         }
-# TODO: put back; fails to complete in multinode
-#        speedrf_Prostate_1 = node.speedrf(prostate_hex, **speedrf_Prostate_1_params)
-#        num_models = num_models + 1
+        speedrf_Prostate_1 = node.speedrf(prostate_hex, **speedrf_Prostate_1_params)
+        num_models = num_models + 1
+        durations['speedrf_Prostate_binary_1'] = time.time() * 1000 - before
 
 
         print "##############################################"
         print "Generating Prostate GLM2 regression model. . ."
         # R equivalent: h2o.glm.FV(y = "AGE", x = c("CAPSULE","RACE","PSA","DCAPS"), data = prostate.hex, family = "gaussian", nfolds = 0, alpha = 0.5)
+        before = time.time() * 1000
         glm_Prostate_regression_1_params = {
             'destination_key': 'glm_Prostate_regression_1',
             'response': 'AGE', 
@@ -359,6 +398,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'use_all_factor_levels': 1
         }
         glm_Prostate_regression_1 = node.GLM(prostate_hex, **glm_Prostate_regression_1_params)
+        durations['glm_Prostate_regression_1'] = time.time() * 1000 - before
         num_models = num_models + 1
         h2o_glm.simpleCheckGLM(self, glm_Prostate_regression_1, None, **glm_Prostate_regression_1_params)
 
@@ -369,9 +409,10 @@ class ModelManagementTestCase(unittest.TestCase):
 
         found_problem = False
         for a_node in h2o.nodes:
+            print "  Checking: " + a_node.http_addr + ":" + str(a_node.port)
             models = a_node.models()
             got = len(models['models'])
-            print "For node: " + a_node.http_addr + ":" + str(a_node.port) + " checking that we got ",str(num_models), " models. . ."
+            print "For node: " + a_node.http_addr + ":" + str(a_node.port) + " checking that we got ", str(num_models), " models. . ."
             if num_models != got:
                 print "p00p, not enough. . ."
                 found_problem = True
@@ -380,6 +421,7 @@ class ModelManagementTestCase(unittest.TestCase):
 
             for key, value in models['models'].iteritems():
                 self.assertEquals(value['state'], 'DONE', "Expected state to be DONE for model: " + key)
+                self.assertTrue(value['training_duration_in_ms'] < durations[key], "Expected training duration as computed by the server (" + str(value['training_duration_in_ms']) + ") to be less than we compute in the test  (" + str(durations[key]) + ") for model: " + key)
         self.assertNotEqual(found_problem, True, "Missing models on at least one node.")
 
 
@@ -622,6 +664,9 @@ class ApiTestCase(ModelManagementTestCase):
                 compatible_frames = models['models'][model_key]['compatible_frames']
                 self.assertKeysExist(models, 'models/' + model_key, ['training_duration_in_ms'])
                 self.assertNotEqual(models['models'][model_key]['training_duration_in_ms'], 0, "Expected non-zero training time for model: " + model_key)
+                if models['models'][model_key]['model_algorithm'] != 'Naive Bayes':
+                    self.assertKeysExistAndNonNull(models, 'models/' + model_key, ['variable_importances'])
+                    self.assertKeysExistAndNonNull(models, 'models/' + model_key + '/variable_importances', ['varimp', 'method', 'max_var', 'scaled'])
 
                 for frame_key in compatible_frames:
                     print "Scoring: /2/Models?key=" + model_key + "&score_frame=" + frame_key

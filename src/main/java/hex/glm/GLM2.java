@@ -294,10 +294,12 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 
   private transient AtomicBoolean _jobdone = new AtomicBoolean(false);
 
-  @Override public void cancel(Throwable ex){
-    LogInfo(ex.toString());
+
+  @Override public void cancel(String msg){
+    if(!_grid) {
+      source.unlock(self());
+    }
     DKV.remove(_progressKey);
-//    Lockable.delete_lockable(destination_key);
     Value v = DKV.get(destination_key);
     if(v != null){
       GLMModel m = v.get();
@@ -308,9 +310,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       DKV.remove(destination_key);
     }
     DKV.remove(destination_key);
-    super.cancel(ex);
-
+    super.cancel(msg);
   }
+
 
   @Override public void init(){
     super.init();
@@ -566,10 +568,12 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
               double diff = (glmt._beta[i] - lastBeta[i]);
               constBeta &= (-beta_epsilon < diff && diff < beta_epsilon);
             }
-          else for (int i = 0; i < glmt._beta.length; ++i)
+          else for (int i = 0; i < glmt._beta.length; ++i) {
             glmt._beta[i] *= 0.5;
+            constBeta &= glmt._beta[i] < beta_epsilon;
+          }
         }
-        if(constBeta) { // line search failed to progress -> converge (if we a valid solution already, otherwise fail!)
+        if(constBeta || _iter >= max_iter) { // line search failed to progress -> converge (if we a valid solution already, otherwise fail!)
           if(_lastResult == null)throw new RuntimeException(LogInfo("GLM failed to solve! Got NaNs/Infs in the first iteration and line search did not help!"));
           checkKKTAndComplete(glmt,glmt._beta,false);
           return;
@@ -789,10 +793,11 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     }
     private transient boolean _failed;
     @Override public void onCompletion(CountedCompleter cmp){
+      if(!_grid)source.unlock(self());
       if(!_failed) {
-        LogInfo("GLM " + self() + " completed by " + cmp.getClass().getName() + ", " + cmp.toString());
         assert _cmp.compareAndSet(null, cmp) : "double completion, first from " + _cmp.get().getClass().getName() + ", second from " + cmp.getClass().getName();
         _done = true;
+        // TODO: move these updates to Model into a DKeyTask so that it runs remotely on the model's home
         GLMModel model = DKV.get(dest()).get();
         model.maybeComputeVariableImportances();
         model.stop_training();
@@ -830,6 +835,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   public GLM2 fork(){return fork(null);}
 
   public GLM2 fork(H2OCountedCompleter cc){
+    if(!_grid)source.read_lock(self());
     // keep *this* separate from what's stored in K/V as job (will be changing it!)
     Futures fs = new Futures();
     _progressKey = Key.make(dest().toString() + "_progress", (byte) 1, Key.HIDDEN_USER_KEY, dest().home_node());
@@ -903,6 +909,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     // just fork off the nfolds+1 tasks and wait for the results
     assert alpha.length == 1;
     start_time = System.currentTimeMillis();
+
     if(nlambdas == -1)nlambdas = 100;
     if(lambda_search && nlambdas <= 1)
       throw new IllegalArgumentException(LogInfo("GLM2: nlambdas must be > 1 when running with lambda search."));
@@ -943,6 +950,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
             _lastResult = new IterationInfo(0,t,null,t.gradient(0,0));
 
             GLMModel model = new GLMModel(GLM2.this, dest(), _dinfo, _glm, beta_epsilon, alpha[0], lambda_max, _ymu, prior);
+            model.start_training(start_time);
             if(lambda_search) {
               assert !Double.isNaN(lambda_max) : LogInfo("running lambda_value search, but don't know what is the lambda_value max!");
               model = addLmaxSubmodel(model, t._val);
@@ -1241,12 +1249,19 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       for(GLM2 g:_jobs)sum += g.progress();
       return sum/_jobs.length;
     }
-    @Override public void cancel(String msg){
-      for(GLM2 g:_jobs) g.cancel();
+    private transient boolean _cancelled;
+    @Override public void cancel(){
+      _cancelled = true;
+      for(GLM2 g:_jobs)
+        g.cancel();
+      source.unlock(self());
       DKV.remove(destination_key);
+      super.cancel();
     }
     @Override
     public GLMGridSearch fork(){
+      System.out.println("read-locking " + source._key + " by job " + self());
+      source.read_lock(self());
       Futures fs = new Futures();
       new GLMGrid(destination_key,self(),_jobs).delete_and_lock(self());
       // keep *this* separate from what's stored in K/V as job (will be changing it!)
@@ -1261,8 +1276,12 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         @Override
         public void callback(ParallelGLMs parallelGLMs) {
           _glm2._done = true;
-          Lockable.unlock_lockable(destination_key,self());
-          remove();
+          // we're gonna get success-callback after cancelling forked tasks since forked glms do not propagate exception if part of grid search
+          if(!_cancelled) {
+            source.unlock(self());
+            Lockable.unlock_lockable(destination_key, self());
+            remove();
+          }
         }
         @Override public boolean onExceptionalCompletion(Throwable t, CountedCompleter cmp){
           if(!(t instanceof JobCancelledException) && (t.getMessage() == null || !t.getMessage().contains("job was cancelled"))) {

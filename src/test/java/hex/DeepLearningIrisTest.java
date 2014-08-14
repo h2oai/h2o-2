@@ -33,7 +33,7 @@ public class DeepLearningIrisTest extends TestUtil {
     if (Double.compare(a, b) == 0) {
     }
     // check for small relative error
-    else if (Math.abs(a-b)/Math.max(a,b) < releps) {
+    else if (Math.abs((a-b)/Math.max(a,b)) < releps) {
     }
     // check for small absolute error
     else if (Math.abs(a - b) <= abseps) {
@@ -176,6 +176,7 @@ public class DeepLearningIrisTest extends TestUtil {
                               p.shuffle_training_data = false;
                               p.classification_stop = -1; //don't stop early -> need to compare against reference, which doesn't stop either
                               p.force_load_balance = false; //keep just 1 chunk for reproducibility
+                              p.override_with_best_model = false; //keep just 1 chunk for reproducibility
                               p.replicate_training_data = false;
                               p.single_node_mode = true;
                               p.sparse = sparse;
@@ -209,6 +210,7 @@ public class DeepLearningIrisTest extends TestUtil {
 
                               // Train H2O
                               mymodel = p.trainModel(mymodel);
+                              Assert.assertTrue(mymodel.model_info().get_processed_total() == epoch * fr.numRows());
 
                               /**
                                * Tolerances (should ideally be super tight -> expect the same double/float precision math inside both algos)
@@ -320,10 +322,14 @@ public class DeepLearningIrisTest extends TestUtil {
                                   if (bestPredict != null) bestPredict.delete();
                                 }
                               }
+                              Log.info("Parameters combination " + num_runs + ": PASS");
 
                             } finally{
                               // cleanup
-                              if (mymodel != null) mymodel.delete();
+                              if (mymodel != null) {
+                                mymodel.delete_best_model();
+                                mymodel.delete();
+                              }
                               if (_train != null) _train.delete();
                               if (_test != null) _test.delete();
                               if (frame != null) frame.delete();
@@ -331,7 +337,6 @@ public class DeepLearningIrisTest extends TestUtil {
                               if (p != null) p.delete();
                               if (trainPredict != null) trainPredict.delete();
                               if (testPredict != null) testPredict.delete();
-                              Log.info("Parameters combination " + num_runs + ": PASS");
                             }
                           }
                         }

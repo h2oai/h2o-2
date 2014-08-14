@@ -76,8 +76,8 @@ public class Tree extends H2OCountedCompleter {
   }
 
   // Oops, uncaught exception
-  @Override public boolean onExceptionalCompletion( Throwable ex, CountedCompleter _) {
-    ex.printStackTrace();
+  @Override public boolean onExceptionalCompletion( Throwable ex, CountedCompleter cc) {
+//    ex.printStackTrace();
     return true;
   }
 
@@ -153,6 +153,7 @@ public class Tree extends H2OCountedCompleter {
       }
 
       _stats = null; // GC
+      if(_jobKey != null && !Job.isRunning(_jobKey)) throw new Job.JobCancelledException();
 
       // Atomically improve the Model as well
       Key tkey = toKey();
@@ -165,7 +166,7 @@ public class Tree extends H2OCountedCompleter {
         Log.info(Sys.RANDF, _tree.toString(sb, Integer.MAX_VALUE).toString());
         Log.info(Sys.RANDF, _tree.toJava(sb, Integer.MAX_VALUE).toString());
       }
-    }
+    } else throw new Job.JobCancelledException();
     // Wait for completion
     tryComplete();
   }
@@ -195,6 +196,7 @@ public class Tree extends H2OCountedCompleter {
     @Override public INode compute() {
       hex.singlenoderf.Statistic left = getStatistic(0,_data, _seed + LTSS_INIT, _exclusiveSplitLimit); // first get the statistics
       hex.singlenoderf.Statistic rite = getStatistic(1,_data, _seed + RTSS_INIT, _exclusiveSplitLimit);
+      if(_jobKey != null && !Job.isRunning(_jobKey)) throw new Job.JobCancelledException();
       Data[] res = new Data[2]; // create the data, node and filter the data
       int c = _split._column, s = _split._split;
       assert c != _data.columns()-1; // Last column is the class column
@@ -205,6 +207,7 @@ public class Tree extends H2OCountedCompleter {
       FJBuild fj0 = null, fj1 = null;
       hex.singlenoderf.Statistic.Split ls = left.split(res[0], _depth >= _maxDepth); // get the splits
       hex.singlenoderf.Statistic.Split rs = rite.split(res[1], _depth >= _maxDepth);
+      if(_jobKey != null && !Job.isRunning(_jobKey)) throw new Job.JobCancelledException();
       if (ls.isLeafNode() || ls.isImpossible()) {
         if (_regression) {
           float av = res[0].computeAverage();
@@ -449,13 +452,17 @@ public class Tree extends H2OCountedCompleter {
     }
 
     @Override void write( AutoBuffer bs ) {
+
       bs.put1('S');             // Node indicator
       assert Short.MIN_VALUE <= _column && _column < Short.MAX_VALUE;
       bs.put2((short) _column);
       bs.put4f(split_value());
       int skip = _l.size(); // Drop down the amount to skip over the left column
       if( skip <= 254 )  bs.put1(skip);
-      else { bs.put1(0); bs.put3(skip); }
+      else { bs.put1(0);
+        if (! ((-1<<24) <= skip && skip < (1<<24))) throw H2O.fail("Trees have grown too deep. Use BigData RF or limit the tree depth for your model. For more information, contact support: support@0xdata.com");
+        bs.put3(skip);
+      }
       _l.write(bs);
       _r.write(bs);
     }

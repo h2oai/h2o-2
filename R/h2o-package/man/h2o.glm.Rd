@@ -7,9 +7,9 @@ H2O: Generalized Linear Models
 Fit a generalized linear model, specified by a response variable, a set of predictors, and a description of the error distribution.
 }
 \usage{
-h2o.glm(x, y, data, key = "", family, nfolds = 0, alpha = 0.5, nlambda = -1, 
+h2o.glm(x, y, data, key = "", family, link, nfolds = 0, alpha = 0.5, nlambda = -1, 
   lambda.min.ratio = -1, lambda = 1e-5, epsilon = 1e-4, standardize = TRUE, 
-  prior, variable_importances = 1, use_all_factor_levels = 0, tweedie.p = 
+  prior, variable_importances = TRUE, use_all_factor_levels = FALSE, tweedie.p = 
   ifelse(family == 'tweedie', 1.5, as.numeric(NA)), iter.max = 100, 
   higher_accuracy = FALSE, lambda_search = FALSE, return_all_lambda = FALSE, 
   max_predictors = -1)
@@ -29,6 +29,15 @@ An \code{\linkS4class{H2OParsedData}} object containing the variables in the mod
 }
   \item{family}{
 A description of the error distribution and corresponding link function to be used in the model. Currently, Gaussian, binomial, Poisson, gamma, and Tweedie are supported. When a model is specified as Tweedie, users must also specify the appropriate Tweedie power. 
+}
+  \item{link}{
+(Optional) The link function relates the linear predictor to the distribution function. Default is the canonical link for the specified family. The full list of supported links: \cr
+\cr
+gaussian: identity, log, inverse \cr
+binomial: logit, log \cr
+poisson: log, identity \cr
+gamma: inverse, log, identity \cr
+tweedie: tweedie \cr
 }
   \item{nfolds}{
 (Optional) Number of folds for cross-validation.
@@ -106,11 +115,15 @@ library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
 
 # Run GLM of CAPSULE ~ AGE + RACE + PSA + DCAPS
-prostate.hex = h2o.importURL(localH2O, path = paste("https://raw.github.com", 
-  "0xdata/h2o/master/smalldata/logreg/prostate.csv", sep = "/"), key = "prostate.hex")
-h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family = "binomial", 
-  nfolds = 0, alpha = 0.5, lambda_search=FALSE)
+prostatePath = system.file("extdata", "prostate.csv", package = "h2o")
+prostate.hex = h2o.importFile(localH2O, path = prostatePath, key = "prostate.hex")
+h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, 
+        family = "binomial", nfolds = 0, alpha = 0.5, lambda_search = FALSE, 
+        use_all_factor_levels = FALSE, variable_importances = FALSE, higher_accuracy = FALSE)
+
 # Run GLM of VOL ~ CAPSULE + AGE + RACE + PSA + GLEASON
 myX = setdiff(colnames(prostate.hex), c("ID", "DPROS", "DCAPS", "VOL"))
-h2o.glm(y = "VOL", x = myX, data = prostate.hex, family = "gaussian", nfolds = 0, alpha = 0.1)
+h2o.glm(y = "VOL", x = myX, data = prostate.hex, family = "gaussian", nfolds = 0, alpha = 0.1,
+        lambda_search = FALSE, use_all_factor_levels = FALSE, variable_importances = FALSE, 
+        higher_accuracy = FALSE)
 }

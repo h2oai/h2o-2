@@ -3,6 +3,8 @@ sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
 import h2o_util
 
+DO_BYTESIZE_COMPARE = False
+
 def write_syn_dataset(csvPathname, rowCount, colCount, SEEDPERFILE):
     start = time.time()
     r = random.Random(SEEDPERFILE)
@@ -60,7 +62,7 @@ class Basic(unittest.TestCase):
         tryList = [
             (5000, 10000, 'cK', 60),
             (10000, 10000, 'cL', 60),
-            (50000, 10000, 'cM', 60),
+            (50000, 10000, 'cM', 300),
             ]
 
         ### h2b.browseTheCloud()
@@ -112,8 +114,10 @@ class Basic(unittest.TestCase):
                 "numCols mismatches after re-parse of downloadCsv result %d %d" % (numColsA, numColsB))
             self.assertEqual(numRowsA, numRowsB,
                 "numRows mismatches after re-parse of downloadCsv result %d %d" % (numRowsA, numRowsB))
-            self.assertEqual(byteSizeA, byteSizeB,
-                "byteSize mismatches after re-parse of downloadCsv result %d %d" % (byteSizeA, byteSizeB))
+
+            if DO_BYTESIZE_COMPARE:
+                self.assertEqual(byteSizeA, byteSizeB,
+                    "byteSize mismatches after re-parse of downloadCsv result %d %d" % (byteSizeA, byteSizeB))
 
             h2o.check_sandbox_for_errors()
 

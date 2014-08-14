@@ -121,7 +121,12 @@ setMethod("show", "H2OGLMModel", function(object) {
     }
     cat("\nDegrees of Freedom:", model$df.null, "Total (i.e. Null); ", model$df.residual, "Residual")
     cat("\nNull Deviance:    ", round(model$null.deviance,1))
-    cat("\nResidual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1))
+    #Return AIC NaN while calculations for tweedie/gamma not implemented; keep R from throwing error
+    if (class(model$aic) != "numeric") {
+      cat("\nResidual Deviance:", round(model$deviance,1), " AIC: Missing implementation for", model$params$family$family, "family")
+    } else {
+      cat("\nResidual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1))
+    }
     cat("\nDeviance Explained:", round(1-model$deviance/model$null.deviance,5), "\n")
     # cat("\nAvg Training Error Rate:", round(model$train.err,5), "\n")
     
@@ -151,9 +156,9 @@ setMethod("summary","H2OGLMModelList", function(object) {
         for(m in object@models) {
             model = m@model
             if(is.null(summary)) {
-                summary = t(as.matrix(c(model$lambda, model$df.null-model$df.residual,round((1-model$deviance/model$null.deviance),2),round(model$auc,2))))
+                summary = t(as.matrix(c(model$lambda, max(0,model$df.null-model$df.residual),round((1-model$deviance/model$null.deviance),2),round(model$auc,2))))
             } else {
-                summary = rbind(summary,c(model$lambda,model$df.null-model$df.residual,round((1-model$deviance/model$null.deviance),2),round(model$auc,2)))
+                summary = rbind(summary,c(model$lambda,max(0,model$df.null-model$df.residual),round((1-model$deviance/model$null.deviance),2),round(model$auc,2)))
             }
         }
         summary = cbind(1:nrow(summary),summary)
@@ -184,10 +189,13 @@ setMethod("show", "H2ODeepLearningModel", function(object) {
   cat("Deep Learning Model Key:", object@key)
 
   model = object@model
-  cat("\n\nTraining classification error:", model$train_class_error)
-  cat("\nTraining mean square error:", model$train_sqr_error)
-  cat("\n\nValidation classification error:", model$valid_class_error)
-  cat("\nValidation square error:", model$valid_sqr_error)
+  if (model$params$classification == 1) {
+    cat("\n\nTraining classification error:", model$train_class_error)
+    if (!is.null(model$valid_class_error)) cat("\n\nValidation classification error:", model$valid_class_error)
+  } else {
+    cat("\nTraining mean square error:", model$train_sqr_error)
+    if (!is.null(model$valid_sqr_error)) cat("\nValidation mean square error:", model$valid_sqr_error)
+  }
   
   if(!is.null(model$confusion)) {
     cat("\n\nConfusion matrix:\n")
@@ -343,7 +351,7 @@ setMethod("show", "H2OPerfModel", function(object) {
     criterion = "MCC"
   else
     criterion = paste(toupper(substring(object@perf, 1, 1)), substring(object@perf, 2), sep = "")
-  rownames(tmp) = c("AUC", "Gini", paste("Best Cutoff for", criterion), "F1", "Accuracy", "Error", "Precision", "Recall", "Specificity", "MCC", "Max per Class Error")
+  rownames(tmp) = c("AUC", "Gini", paste("Best Cutoff for", criterion), "F1", "F2", "Accuracy", "Error", "Precision", "Recall", "Specificity", "MCC", "Max per Class Error")
   colnames(tmp) = "Value"; print(tmp)
   cat("\n\nConfusion matrix:\n"); print(model$confusion)
 })
@@ -393,8 +401,10 @@ as.h2o <- function(client, object, key = "", header, sep = "") {
     return(.h2o.exec2(res$dest_key, h2o = client, res$dest_key))
   } else {
     tmpf <- tempfile(fileext=".csv")
+    toFactor <- names(which(unlist(lapply(object, is.factor))))
     write.csv(object, file=tmpf, quote = TRUE, row.names = FALSE)
     h2f <- h2o.uploadFile(client, tmpf, key=key, header=header, sep=sep)
+    invisible(lapply(toFactor, function(a) { h2o.exec(h2f[,a] <- factor(h2f[,a])) }))
     unlink(tmpf)
     return(h2f)
   }

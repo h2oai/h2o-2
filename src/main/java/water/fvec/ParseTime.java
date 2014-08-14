@@ -99,13 +99,14 @@ public abstract class ParseTime {
     return encodeTimePat(new DateTime(yy,MM,dd,HH,mm,ss).getMillis()+SS,1);
   }
 
+  // DD-MMM-YY
   private static long attemptTimeParse_2( ValueString str ) {
     final byte[] buf = str.get_buf();
     int i=str.get_off();
     final int end = i+str.get_length();
     while( i < end && buf[i] == ' ' ) i++;
     if   ( i < end && buf[i] == '"' ) i++;
-    if( (end-i) < 8 ) return Long.MIN_VALUE;
+    if( (end-i) < 8 ) return Long.MIN_VALUE; // Shortest date: d-mm-yy, only 7 chars
     int yy=0, MM=0, dd=0;
     dd = digit(dd,buf[i++]);
     if( buf[i] != '-' ) dd = digit(dd,buf[i++]);
@@ -129,8 +130,10 @@ public abstract class ParseTime {
     MM++;                       // 1-based month
     if( buf[i++] != '-' ) return Long.MIN_VALUE;
     yy = digit(yy,buf[i++]);    // 2-digit year
+    if( i >= buf.length ) return Long.MIN_VALUE;
     yy = digit(yy,buf[i++]);
     if( end-i>=2 && buf[i] != '"' ) {
+      if( i >= buf.length+1 ) return Long.MIN_VALUE;
       yy = digit(yy,buf[i++]);  // 4-digit year
       yy = digit(yy,buf[i++]);
     } else {

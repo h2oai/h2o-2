@@ -21,6 +21,7 @@ public class HeartBeat extends Iced {
   public long _system_total_ticks;
   public long _process_total_ticks;
   public int _process_num_open_fds;
+  public int _cpus_allowed;   // Number of CPUs allowed by process
   public String _pid;
 
   // Scaled by K or by M setters & getters.

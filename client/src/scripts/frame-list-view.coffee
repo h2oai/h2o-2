@@ -84,6 +84,8 @@ Steam.FrameListView = (_) ->
     else
       displayActiveItem()
 
+  link$ _.refreshFrames, -> loadFrames _predicate()
+
   items: _items
   predicateCaption: _predicateCaption
   clearPredicate: clearPredicate

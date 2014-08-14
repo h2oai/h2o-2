@@ -2,7 +2,6 @@ package hex.nb;
 
 import hex.FrameTask.DataInfo;
 import water.*;
-import water.Job.ColumnsResJob;
 import water.api.DocGen;
 import water.fvec.*;
 import water.util.RString;
@@ -26,14 +25,20 @@ public class NaiveBayes extends Job.ModelJobWithoutClassificationField {
   @API(help = "Laplace smoothing parameter", filter = Default.class, lmin = 0, lmax = 100000, json = true)
   public int laplace = 0;
 
+  @API(help = "Min. standard deviation to use for observations with not enough data", filter = Default.class, dmin = 1e-10, json = true)
+  public double min_std_dev = 1e-3;
+
   @API(help = "Drop columns with more than 20% missing values", filter = Default.class)
   public boolean drop_na_cols = true;
 
   @Override protected void execImpl() {
-    Frame fr = DataInfo.prepareFrame(source, response, ignored_cols, false, false, drop_na_cols);
+    long before = System.currentTimeMillis();
+    Frame fr = DataInfo.prepareFrame(source, response, ignored_cols, false, true /*drop const*/, drop_na_cols);
     DataInfo dinfo = new DataInfo(fr, 1, false, DataInfo.TransformType.NONE, DataInfo.TransformType.NONE);
     NBTask tsk = new NBTask(this, dinfo).doAll(dinfo._adaptedFrame);
-    NBModel myModel = buildModel(dinfo, tsk, laplace);
+    NBModel myModel = buildModel(dinfo, tsk, laplace, min_std_dev);
+    myModel.start_training(before);
+    myModel.stop_training();
     myModel.delete_and_lock(self());
     myModel.unlock(self());
   }
@@ -42,6 +47,8 @@ public class NaiveBayes extends Job.ModelJobWithoutClassificationField {
     super.init();
     if(!response.isEnum())
       throw new IllegalArgumentException("Response must be a categorical column");
+    if (laplace < 0) throw new IllegalArgumentException("Laplace smoothing must be an integer >= 0.");
+    if (min_std_dev <= 1e-10) throw new IllegalArgumentException("Min. standard deviation must be at least 1e-10.");
   }
 
   @Override protected Response redirect() {
@@ -56,11 +63,7 @@ public class NaiveBayes extends Job.ModelJobWithoutClassificationField {
     return rs.toString();
   }
 
-  public NBModel buildModel(DataInfo dinfo, NBTask tsk) {
-    return buildModel(dinfo, tsk, 0);
-  }
-
-  public NBModel buildModel(DataInfo dinfo, NBTask tsk, double laplace) {
+  public NBModel buildModel(DataInfo dinfo, NBTask tsk, double laplace, double min_std_dev) {
     logStart();
     double[] pprior = tsk._rescnt.clone();
     double[][][] pcond = tsk._jntcnt.clone();
@@ -95,7 +98,7 @@ public class NaiveBayes extends Job.ModelJobWithoutClassificationField {
     }
 
     Key dataKey = input("source") == null ? null : Key.make(input("source"));
-    return new NBModel(destination_key, dataKey, dinfo, tsk, pprior, pcond, laplace);
+    return new NBModel(destination_key, dataKey, dinfo, tsk, pprior, pcond, laplace, min_std_dev);
   }
 
   // Note: NA handling differs from R for efficiency purposes
@@ -118,6 +121,7 @@ public class NaiveBayes extends Job.ModelJobWithoutClassificationField {
 
       String[][] domains = dinfo._adaptedFrame.domains();
       int ncol = dinfo._adaptedFrame.numCols();
+      assert ncol-1 == dinfo._nums + dinfo._cats;   // ncol-1 because we drop response col
       _nres = domains[ncol-1].length;
 
       _rescnt = new double[_nres];
@@ -148,9 +152,10 @@ public class NaiveBayes extends Job.ModelJobWithoutClassificationField {
 
         // Record sum for each pair of numerical predictors and response
         for(int col = 0; col < _dinfo._nums; col++) {
-          double x = chks[col + _dinfo._cats].at0(row);
-          _jntcnt[col][rlevel][0] += x;
-          _jntcnt[col][rlevel][1] += x*x;
+          int cidx = _dinfo._cats + col;
+          double x = chks[cidx].at0(row);
+          _jntcnt[cidx][rlevel][0] += x;
+          _jntcnt[cidx][rlevel][1] += x*x;
         }
         _rescnt[rlevel]++;
         _nobs++;
