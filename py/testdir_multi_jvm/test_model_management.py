@@ -270,7 +270,8 @@ class ModelManagementTestCase(unittest.TestCase):
             'ignored_cols_by_name': 'IsDepDelayed_REC, IsDepDelayed_REC_recoded', 
             'ntrees': 50,
             'max_depth': 10,
-            'classification': 1
+            'classification': 1,
+            'importance': 1
         }
         # Fails to complete in multinode
         speedrf_AirlinesTrain_1 = node.speedrf(airlines_train_hex, **speedrf_AirlinesTrain_1_params)
@@ -375,7 +376,8 @@ class ModelManagementTestCase(unittest.TestCase):
             'ignored_cols_by_name': None, 
             'ntrees': 50,
             'max_depth': 10,
-            'classification': 1
+            'classification': 1,
+            'importance': 1
         }
         speedrf_Prostate_1 = node.speedrf(prostate_hex, **speedrf_Prostate_1_params)
         num_models = num_models + 1
@@ -662,6 +664,9 @@ class ApiTestCase(ModelManagementTestCase):
                 compatible_frames = models['models'][model_key]['compatible_frames']
                 self.assertKeysExist(models, 'models/' + model_key, ['training_duration_in_ms'])
                 self.assertNotEqual(models['models'][model_key]['training_duration_in_ms'], 0, "Expected non-zero training time for model: " + model_key)
+                if models['models'][model_key]['model_algorithm'] != 'Naive Bayes':
+                    self.assertKeysExistAndNonNull(models, 'models/' + model_key, ['variable_importances'])
+                    self.assertKeysExistAndNonNull(models, 'models/' + model_key + '/variable_importances', ['varimp', 'method', 'max_var', 'scaled'])
 
                 for frame_key in compatible_frames:
                     print "Scoring: /2/Models?key=" + model_key + "&score_frame=" + frame_key
