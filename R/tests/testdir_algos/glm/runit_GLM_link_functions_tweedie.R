@@ -22,7 +22,7 @@ test.linkFunctions <- function(conn) {
 
 	print("Create models with canonical link: TWEEDIE")
 	model.h2o.tweedie.tweedie <- h2o.glm(x=myX, y=myY, data=h2o.data, family="tweedie", link="tweedie",alpha=0.5, lambda=0, nfolds=0)
-	model.R.tweedie.tweedie <- glm(formula=R.formula, data=R.data[,3:9], family=tweedie, na.action=na.omit)
+	model.R.tweedie.tweedie <- glm(formula=R.formula, data=R.data[,4:10], family=tweedie, na.action=na.omit)
 
 	print("Compare model deviances for link function tweedie")
 	deviance.h2o.tweedie = model.h2o.tweedie.tweedie@model$deviance / model.h2o.tweedie.tweedie@model$null
