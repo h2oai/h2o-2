@@ -873,6 +873,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
         assert _xvals[i]._lastResult._glmt._val != null:LogInfo("last result missing validation!");
       }
       _iter = _xvals[0]._iter;
+      thresholds = _xvals[0].thresholds;
       _lastResult = (IterationInfo)pgs._glms[0]._lastResult.clone();
       final GLMModel [] xvalModels = new GLMModel[_xvals.length-1];
       final double curentLambda = _currentLambda;
