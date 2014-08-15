@@ -154,6 +154,7 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__PAGE_NBModelView = "2/NBModelView.json"
 .h2o.__PAGE_CreateFrame = "2/CreateFrame.json"
 .h2o.__PAGE_SplitFrame = "2/FrameSplitPage.json"
+.h2o.__PAGE_MissingVals = "2/InsertMissingValues.json"
 .h2o.__PAGE_SaveModel = "2/SaveModel.json"
 .h2o.__PAGE_LoadModel = "2/LoadModel.json"
 
