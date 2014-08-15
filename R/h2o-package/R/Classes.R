@@ -1391,8 +1391,6 @@ setMethod("apply", "H2OParsedData", function(X, MARGIN, FUN, ...) {
 
   # Substitute in function name: FUN <- match.fun(FUN)
   if(identical(as.list(substitute(FUN))[[1]], quote(`function`))) {
-    print("DEBUG")
-    print("ANON FUNCTION!?!?!")
     body(FUN) <- .replace_with_keys(body(FUN), parent.frame(), TRUE)
   }
   myfun <- deparse(substitute(FUN))
