@@ -190,6 +190,52 @@ class ModelManagementTestCase(unittest.TestCase):
         h2o_glm.simpleCheckGLM(self, glm_AirlinesTrain_1, None, **glm_AirlinesTrain_1_params)
 
 
+        print "#########################################################################################"
+        print "Generating AirlinesTrain GLM2 binary classification model with nfold crossvalidation. . ."
+        # R equivalent: h2o.glm.FV(y = "IsDepDelayed", x = c("Origin", "Dest", "fDayofMonth", "fYear", "UniqueCarrier", "fDayOfWeek", "fMonth", "DepTime", "ArrTime", "Distance"), data = airlines_train.hex, family = "binomial", alpha=0.05, lambda=1.0e-2, standardize=FALSE, nfolds=3)
+        before = time.time() * 1000
+        glm_AirlinesTrain_3fold_params = {
+            'destination_key': 'glm_AirlinesTrain_binary_3fold',
+            'response': 'IsDepDelayed', 
+            'ignored_cols': 'IsDepDelayed_REC, IsDepDelayed_REC_recoded', 
+            'family': 'binomial', 
+            'alpha': 0.5, 
+            'standardize': 0, 
+            'lambda': 1.0e-2, 
+            'n_folds': 3,
+            'use_all_factor_levels': 1
+        }
+        glm_AirlinesTrain_3fold = node.GLM(airlines_train_hex, **glm_AirlinesTrain_3fold_params)
+        durations['glm_AirlinesTrain_binary_3fold'] = time.time() * 1000 - before
+        num_models = num_models + 1 # TODO: interesting that the xval models aren't visible as they are in GBM
+        h2o_glm.simpleCheckGLM(self, glm_AirlinesTrain_3fold, None, **glm_AirlinesTrain_3fold_params)
+
+
+
+
+        # print "##############################################################"
+        # print "Grid search: Generating AirlinesTrain GLM2 binary classification models. . ."
+        # before = time.time() * 1000
+        # glm_AirlinesTrain_grid_params = {
+        #         'destination_key': 'glm_AirlinesTrain_binary_grid_',
+        #     'response': 'IsDepDelayed', 
+        #     'ignored_cols': 'IsDepDelayed_REC, IsDepDelayed_REC_recoded', 
+        #     'family': 'binomial', 
+        #     'alpha': '0.5, 1.0', 
+        #     'standardize': 0, 
+        #     'lambda': '1.0e-2,1.0e-3,1.0e-4', 
+        #     'n_folds': 2,
+        #     'use_all_factor_levels': 1
+        # }
+        # glm_AirlinesTrain_grid = node.GLMGrid(airlines_train_hex, **glm_AirlinesTrain_grid_params)
+        # durations['glm_AirlinesTrain_binary_grid'] = time.time() * 1000 - before
+        # num_models = num_models + 6
+        # h2o_glm.simpleCheckGLMGrid(self, glm_AirlinesTrain_grid, None, **glm_AirlinesTrain_grid_params)
+
+
+
+
+
         print "####################################################################"
         print "Generating AirlinesTrain simple GBM binary classification model. . ."
         # R equivalent: h2o.gbm(y = "IsDepDelayed", x = c("Origin", "Dest", "fDayofMonth", "fYear", "UniqueCarrier", "fDayOfWeek", "fMonth", "DepTime", "ArrTime", "Distance"), data = airlines_train.hex, n.trees=3, interaction.depth=1, distribution="multinomial", n.minobsinnode=2, shrinkage=.1)
@@ -200,7 +246,8 @@ class ModelManagementTestCase(unittest.TestCase):
             'ignored_cols_by_name': 'IsDepDelayed_REC, IsDepDelayed_REC_recoded', 
             'ntrees': 3,
             'max_depth': 1,
-            'classification': 1
+            'classification': 1,
+            'n_folds': 0
             # TODO: what about minobsinnode and shrinkage?!
         }
         gbm_AirlinesTrain_1 = node.gbm(airlines_train_hex, **gbm_AirlinesTrain_1_params)
@@ -218,12 +265,32 @@ class ModelManagementTestCase(unittest.TestCase):
             'ignored_cols_by_name': 'IsDepDelayed_REC, IsDepDelayed_REC_recoded', 
             'ntrees': 50,
             'max_depth': 5,
-            'classification': 1
+            'classification': 1,
+            'n_folds': 0
             # TODO: what about minobsinnode and shrinkage?!
         }
         gbm_AirlinesTrain_2 = node.gbm(airlines_train_hex, **gbm_AirlinesTrain_2_params)
         durations['gbm_AirlinesTrain_binary_2'] = time.time() * 1000 - before
         num_models = num_models + 1
+
+
+        print "###############################################################################################"
+        print "Generating AirlinesTrain simple GBM binary classification model with nfold crossvalidation. . ."
+        # R equivalent: h2o.gbm(y = "IsDepDelayed", x = c("Origin", "Dest", "fDayofMonth", "fYear", "UniqueCarrier", "fDayOfWeek", "fMonth", "DepTime", "ArrTime", "Distance"), data = airlines_train.hex, n.trees=3, interaction.depth=1, distribution="multinomial", n.minobsinnode=2, shrinkage=.1)
+        before = time.time() * 1000
+        gbm_AirlinesTrain_3fold_params = {
+            'destination_key': 'gbm_AirlinesTrain_binary_3fold',
+            'response': 'IsDepDelayed', 
+            'ignored_cols_by_name': 'IsDepDelayed_REC, IsDepDelayed_REC_recoded', 
+            'ntrees': 3,
+            'max_depth': 1,
+            'classification': 1,
+            'n_folds': 3
+            # TODO: what about minobsinnode and shrinkage?!
+        }
+        gbm_AirlinesTrain_3fold = node.gbm(airlines_train_hex, **gbm_AirlinesTrain_3fold_params)
+        durations['gbm_AirlinesTrain_binary_3fold'] = time.time() * 1000 - before
+        num_models = num_models + 4 # 1 main model and 3 xval models
 
 
         print "####################################################################"
@@ -260,6 +327,24 @@ class ModelManagementTestCase(unittest.TestCase):
         num_models = num_models + 1
 
 
+        print "###############################################################################################"
+        print "Generating AirlinesTrain simple DRF binary classification model with nfold crossvalidation. . ."
+        # R equivalent: h2o.randomForest.FV(y = "IsDepDelayed", x = c("Origin", "Dest", "fDayofMonth", "fYear", "UniqueCarrier", "fDayOfWeek", "fMonth", "DepTime", "ArrTime", "Distance"), data = airlines_train.hex, ntree=5, depth=2)
+        before = time.time() * 1000
+        rf_AirlinesTrain_3fold_params = {
+            'destination_key': 'rf_AirlinesTrain_binary_3fold',
+            'response': 'IsDepDelayed', 
+            'ignored_cols_by_name': 'IsDepDelayed_REC, IsDepDelayed_REC_recoded', 
+            'ntrees': 5,
+            'max_depth': 2,
+            'classification': 1,
+            'n_folds': 3
+        }
+        rf_AirlinesTrain_3fold = node.random_forest(airlines_train_hex, **rf_AirlinesTrain_3fold_params)
+        durations['rf_AirlinesTrain_binary_3fold'] = time.time() * 1000 - before
+        num_models = num_models + 4
+
+
         print "#####################################################################"
         print "Generating AirlinesTrain complex SpeeDRF binary classification model. . ."
         # what is the R binding?
@@ -273,10 +358,28 @@ class ModelManagementTestCase(unittest.TestCase):
             'classification': 1,
             'importance': 1
         }
-        # Fails to complete in multinode
         speedrf_AirlinesTrain_1 = node.speedrf(airlines_train_hex, **speedrf_AirlinesTrain_1_params)
         durations['speedrf_AirlinesTrain_binary_1'] = time.time() * 1000 - before
         num_models = num_models + 1
+
+
+        print "####################################################################################################"
+        print "Generating AirlinesTrain complex SpeeDRF binary classification model with nfold crossvalidation. . ."
+        # what is the R binding?
+        before = time.time() * 1000
+        speedrf_AirlinesTrain_3fold_params = {
+            'destination_key': 'speedrf_AirlinesTrain_binary_3fold',
+            'response': 'IsDepDelayed', 
+            'ignored_cols_by_name': 'IsDepDelayed_REC, IsDepDelayed_REC_recoded', 
+            'ntrees': 50,
+            'max_depth': 10,
+            'classification': 1,
+            'importance': 1,
+            'n_folds': 3
+        }
+        speedrf_AirlinesTrain_3fold = node.speedrf(airlines_train_hex, **speedrf_AirlinesTrain_3fold_params)
+        durations['speedrf_AirlinesTrain_binary_3fold'] = time.time() * 1000 - before
+        num_models = num_models + 4 # 1 main model and 3 xval models
 
 
         print "######################################################################"
@@ -315,6 +418,24 @@ class ModelManagementTestCase(unittest.TestCase):
         durations['glm_AirlinesTrain_binary_A'] = time.time() * 1000 - before
         num_models = num_models + 1
         h2o_glm.simpleCheckGLM(self, glm_AirlinesTrain_A, None, **glm_AirlinesTrain_A_params)
+
+
+        print "#################################################################################################"
+        print "Generating AirlinesTrain DeepLearning binary classification model with nfold crossvalidation. . ."
+        # R equivalent: h2o.deeplearning(y = "IsDepDelayed", x = c("Origin", "Dest", "fDayofMonth", "fYear", "UniqueCarrier", "fDayOfWeek", "fMonth", "DepTime", "ArrTime", "Distance"), data = airlines_train.hex, classification=TRUE, hidden=c(10, 10), nfolds=3)
+        before = time.time() * 1000
+        dl_AirlinesTrain_3fold_params = {
+            'destination_key': 'dl_AirlinesTrain_binary_3fold',
+            'response': 'IsDepDelayed', 
+            'ignored_cols': 'IsDepDelayed_REC, IsDepDelayed_REC_recoded', 
+            'hidden': [10, 10],
+            'classification': 1,
+            'variable_importances': 1,
+            'n_folds': 3
+        }
+        dl_AirlinesTrain_3fold = node.deep_learning(airlines_train_hex, **dl_AirlinesTrain_3fold_params)
+        durations['dl_AirlinesTrain_binary_3fold'] = time.time() * 1000 - before
+        num_models = num_models + 4 # 1 main model and 3 xval models
 
 
         print "##############################################################################################"
@@ -421,7 +542,13 @@ class ModelManagementTestCase(unittest.TestCase):
 
             for key, value in models['models'].iteritems():
                 self.assertEquals(value['state'], 'DONE', "Expected state to be DONE for model: " + key)
-                self.assertTrue(value['training_duration_in_ms'] < durations[key], "Expected training duration as computed by the server (" + str(value['training_duration_in_ms']) + ") to be less than we compute in the test  (" + str(durations[key]) + ") for model: " + key)
+                idx = key.find('_xval')
+                # For cross-validation models use the time for the parent model, since we should be less
+                if -1 == idx:
+                    expected = durations[key]
+                else:
+                    expected = durations[key[0:idx]]
+                self.assertTrue(value['training_duration_in_ms'] < expected, "Expected training duration as computed by the server (" + str(value['training_duration_in_ms']) + ") to be less than we compute in the test  (" + str(expected) + ") for model: " + key)
         self.assertNotEqual(found_problem, True, "Missing models on at least one node.")
 
 

@@ -1773,6 +1773,7 @@ class H2O(object):
                        'select_stat_type': 'ENTROPY',
                        'importance':0,
                        'strata_samples': None,
+                       'n_folds': None
         }
         check_params_update_kwargs(params_dict, kwargs, 'SpeeDRF', print_params)
 
@@ -1824,6 +1825,7 @@ class H2O(object):
             'score_each_iteration': None,
             'seed': None,
             'validation': None,
+            'n_folds': None
         }
         if 'model_key' in kwargs:
             kwargs['destination_key'] = kwargs['model_key'] # hmm..should we switch test to new param?
@@ -2179,6 +2181,7 @@ class H2O(object):
             'classification': None,
             'score_each_iteration': None,
             'grid_parallelism': None,
+            'n_folds': None,
         }
 
         # only lets these params thru
@@ -2396,6 +2399,7 @@ class H2O(object):
             'replicate_training_data': None,
             'single_node_mode': None,
             'shuffle_training_data': None,
+            'n_folds': None,
         }
         # only lets these params thru
         check_params_update_kwargs(params_dict, kwargs, 'deep_learning', print_params)
@@ -2554,27 +2558,6 @@ class H2O(object):
         if (browseAlso | browse_json):
             print "Viewing the GLM result through the browser"
             h2b.browseJsonHistoryAsUrlLastMatch('GLMProgressPage')
-            time.sleep(5)
-        return a
-
-    def GLMGrid(self, key,
-                timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
-                noise=None, benchmarkLogging=None, noPoll=False, **kwargs):
-
-        a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLMGrid", **kwargs)
-
-        if noPoll:
-            return a
-
-        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
-            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
-            noise=noise, benchmarkLogging=benchmarkLogging)
-        verboseprint("GLMGrid done:", dump_json(a))
-
-        browseAlso = kwargs.get('browseAlso', False)
-        if (browseAlso | browse_json):
-            print "Viewing the GLM grid result through the browser"
-            h2b.browseJsonHistoryAsUrlLastMatch('GLMGridProgress')
             time.sleep(5)
         return a
 
