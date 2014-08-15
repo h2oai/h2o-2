@@ -87,7 +87,7 @@ public class DeepLearningMissingTest extends TestUtil {
             t.printStackTrace();
             throw new RuntimeException(t);
           } finally {
-            if (p != null) p.delete();
+            p.delete();
           }
 
           // Extract the scoring on validation set from the model
