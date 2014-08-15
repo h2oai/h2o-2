@@ -5,17 +5,16 @@ import water.util.Utils;
 
 public class MemoryBandwidth {
   public static void main(String[] args) {
-    double membw = run();
     int num_threads = Runtime.getRuntime().availableProcessors();
+    double membw = run(num_threads);
     Log.info("Memory bandwidth (" + num_threads + " cores) : " + membw + " GB/s.");
   }
 
   /**
    * Compute memory bandwidth in bytes / second
    */
-  static double run() {
+  static double run(int num_threads) {
 
-    int num_threads = Runtime.getRuntime().availableProcessors();
     final double membw[] = new double[num_threads];
     Thread[] threads = new Thread[num_threads];
     for (int t=0;t<num_threads;++t) {

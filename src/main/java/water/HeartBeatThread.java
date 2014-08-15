@@ -74,16 +74,11 @@ public class HeartBeatThread extends Thread {
       hb.set_valsz     (myHisto.histo(false)._cached);
       hb._num_cpus   = (char)run.availableProcessors();
 
-// FIXME:  Comment this out for now, since it's killing H2O running on Linux spawned by R.
-//         For some reason we haven't resolved yet, R does a sched_setaffinity on itself and limits itself
-//         to 1 cpu.  Forked H2O inherits that limitation.
-//         Running a 32-core linpack under that scenario is really bad.
-//
-//      if (counter % 300 == 2) {
-//        //run mini-benchmark every 5 mins
-//        hb._gflops   = Linpack.run();
-//        hb._membw    = MemoryBandwidth.run();
-//      }
+      if (counter % 300 == 2) {
+        //run mini-benchmark every 5 mins
+        hb._gflops   = Linpack.run(hb._cpus_allowed);
+        hb._membw    = MemoryBandwidth.run(hb._cpus_allowed);
+      }
 
       Object load = null;
       try {
