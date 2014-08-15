@@ -697,7 +697,7 @@ function(some_expr_list, envir) {
 #' Discover the destination key (if there is one), the client, and sub in the actual key name for the R variable
 #' that contains the pointer to the key in H2O.
 .replace_with_keys<-
-function(expr, envir = globalenv()) {
+function(expr, envir = globalenv(), expr_only = FALSE) {
   dest_key <- ""
   assign("NEWCOL", "", envir = .pkg.env)
   assign("NUMCOLS", "", envir = .pkg.env)
@@ -728,6 +728,7 @@ function(expr, envir = globalenv()) {
 
     # return the modified expression
     tryCatch(rm("COLNAMES", envir = .pkg.env), warning = function(w) { invisible(w)}, error = function(e) { invisible(e)})
+    if (expr_only) return(.back_to_expr(l))
     as.name(as.character(as.expression(.back_to_expr(l))))
   }
 }

@@ -1373,25 +1373,30 @@ setMethod("apply", "H2OParsedData", function(X, MARGIN, FUN, ...) {
     stop("MARGIN must be either 1 (rows), 2 (cols), or a vector containing both")
   if(missing(FUN) || !is.function(FUN))
     stop("FUN must be an R function")
-  
+
   myList <- list(...)
   if(length(myList) > 0) {
     stop("Unimplemented")
-    tmp = sapply(myList, function(x) { !class(x) %in% c("H2OParsedData", "numeric") } )
+    tmp <- sapply(myList, function(x) { !class(x) %in% c("H2OParsedData", "numeric") } )
     if(any(tmp)) stop("H2O only recognizes H2OParsedData and numeric objects")
-    
-    idx = which(sapply(myList, function(x) { class(x) == "H2OParsedData" }))
+
+    idx <- which(sapply(myList, function(x) { class(x) == "H2OParsedData" }))
     # myList <- lapply(myList, function(x) { if(class(x) == "H2OParsedData") x@key else x })
     myList[idx] <- lapply(myList[idx], function(x) { x@key })
-    
+
     # TODO: Substitute in key name for H2OParsedData objects and push over wire to console
     if(any(names(myList) == ""))
       stop("Must specify corresponding variable names of ", myList[names(myList) == ""])
   }
-  
+
   # Substitute in function name: FUN <- match.fun(FUN)
-  myfun = deparse(substitute(FUN))
-  len = length(myfun)
+  if(identical(as.list(substitute(FUN))[[1]], quote(`function`))) {
+    print("DEBUG")
+    print("ANON FUNCTION!?!?!")
+    body(FUN) <- .replace_with_keys(body(FUN), parent.frame(), TRUE)
+  }
+  myfun <- deparse(substitute(FUN))
+  len <- length(myfun)
   if(len > 3 && substr(myfun[1], nchar(myfun[1]), nchar(myfun[1])) == "{" && myfun[len] == "}")
     myfun = paste(myfun[1], paste(myfun[2:(len-1)], collapse = ";"), "}")
   else
