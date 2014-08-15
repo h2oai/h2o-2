@@ -34,9 +34,9 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1,java_heap_GB=1, base_port=54325)
+            h2o.build_cloud(3, java_heap_GB=4, base_port=54325)
         else:
-            h2o_hosts.build_cloud_with_hosts()
+            h2o_hosts.build_cloud_with_hosts(java_heap_GB=4, base_port=54325)
 
 
     @classmethod
@@ -49,13 +49,17 @@ class Basic(unittest.TestCase):
         tryList = [
             # (100, 11000, 0, 'cA', 180),
             # (100, 10000, 1, 'cB', 180),
-            # (100, 9000, 0, 'cC', 180),
             # (100, 8000, 1, 'cD', 180),
             # (100, 7000, 0, 'cE', 180),
             # (100, 6000, 1, 'cF', 180),
-            # (100, 5000, 0, 'cG', 180),
             (100, 1000, 0, 'cH', 120),
             (100, 1000, 1, 'cI', 120),
+            (100, 2000, 1, 'cI', 120),
+            (100, 3000, 1, 'cI', 120),
+            (100, 4000, 1, 'cI', 120),
+            (100, 5000, 0, 'cG', 180),
+            (100, 9000, 0, 'cC', 180),
+            (100, 10000, 1, 'cB', 180),
             ]
 
         ### h2b.browseTheCloud()
@@ -73,7 +77,7 @@ class Basic(unittest.TestCase):
             write_syn_dataset(csvPathname, rowCount, colCount, header, SEED)
 
             parseResult = h2i.import_parse(path=csvPathname, schema='put', header=header, 
-                hex_key=hex_key, timeoutSecs=60)
+                hex_key=hex_key, timeoutSecs=timeoutSecs)
             print "Parse result['destination_key']:", parseResult['destination_key']
 
             # We should be able to see the parse result?
