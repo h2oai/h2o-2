@@ -1806,7 +1806,10 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
   public void delete_xval_models( ) {
     if (get_params().xval_models != null) {
-      for (Key k : get_params().xval_models) DKV.remove(k);
+      for (Key k : get_params().xval_models) {
+        UKV.<DeepLearningModel>get(k).delete_best_model();
+        UKV.<DeepLearningModel>get(k).delete();
+      }
     }
   }
 }
