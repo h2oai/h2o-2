@@ -1383,6 +1383,18 @@ public class Utils {
     return res;
   }
 
+  public static float[] join(float[] a, float[] b) {
+    float[] res = Arrays.copyOf(a, a.length+b.length);
+    System.arraycopy(b, 0, res, a.length, b.length);
+    return res;
+  }
+
+  public static double[] join(double[] a, double[] b) {
+    double[] res = Arrays.copyOf(a, a.length+b.length);
+    System.arraycopy(b, 0, res, a.length, b.length);
+    return res;
+  }
+
   /** Returns number of strings which represents a number. */
   public static int numInts(String... a) {
     int cnt = 0;
