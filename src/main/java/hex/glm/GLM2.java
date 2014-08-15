@@ -598,8 +598,13 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
             return;
           }
         }
+      if(glmt._newThresholds != null) {
+        thresholds = Utils.join(ModelUtils.DEFAULT_THRESHOLDS,Utils.join(glmt._newThresholds[0], glmt._newThresholds[1]));
+        Arrays.sort(thresholds);
+        for(int i = 0; i < thresholds.length; i += 2)
+          thresholds[i >> 1] = thresholds[i];
+        thresholds = Arrays.copyOf(thresholds,thresholds.length>>1);
       }
-
       if(glmt._val != null && glmt._computeGradient){ // check gradient
         final double [] grad = glmt.gradient(alpha[0],_currentLambda);
         ADMMSolver.subgrad(alpha[0], _currentLambda, glmt._beta, grad);
