@@ -79,11 +79,13 @@ public abstract class Model extends Lockable<Model> {
    *  to match columns later for future datasets.
    */
   public Model( Key selfKey, Key dataKey, Frame fr, float[] priorClassDist ) {
-    this(selfKey,dataKey,fr.names(),fr.domains(), priorClassDist, null);
+    this(selfKey,dataKey,fr.names(),fr.domains(), priorClassDist, null, 0, 0);
   }
-
+  public Model( Key selfKey, Key dataKey, String names[], String domains[][], float[] priorClassDist, float[] modelClassDist) {
+    this(selfKey,dataKey,names,domains,priorClassDist,modelClassDist,0,0);
+  }
   /** Full constructor */
-  public Model( Key selfKey, Key dataKey, String names[], String domains[][], float[] priorClassDist, float[] modelClassDist ) {
+  public Model( Key selfKey, Key dataKey, String names[], String domains[][], float[] priorClassDist, float[] modelClassDist, long training_start_time, long training_duration_in_ms ) {
     super(selfKey);
     this.uniqueId = new UniqueId(_key);
     if( domains == null ) domains=new String[names.length+1][];
@@ -95,6 +97,8 @@ public abstract class Model extends Lockable<Model> {
     _domains = domains;
     _priorClassDist = priorClassDist;
     _modelClassDist = modelClassDist;
+    this.training_duration_in_ms = training_duration_in_ms;
+    this.training_start_time = training_start_time;
   }
 
   // Currently only implemented by GLM2, DeepLearning, GBM and DRF:
@@ -103,9 +107,6 @@ public abstract class Model extends Lockable<Model> {
   // NOTE: this is a local copy of the Job; to get the real state you need to get it from the DKV.
   // Currently only implemented by GLM2, DeepLearning, GBM and DRF:
   public Request2 job() { throw new UnsupportedOperationException("job() has not yet been implemented in class: " + this.getClass()); }
-
-  /** Simple shallow copy constructor to a new Key */
-  public Model( Key selfKey, Model m ) { this(selfKey,m._dataKey,m._names,m._domains, m._priorClassDist, m._modelClassDist); }
 
   public enum ModelCategory {
     Unknown,

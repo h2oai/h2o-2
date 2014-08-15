@@ -604,7 +604,7 @@ public class DTree extends Iced {
     }
     // Simple copy ctor, null value of parameter means copy from prior-model
     protected TreeModel(TreeModel prior, Key[][] treeKeys, double[] errs, ConfusionMatrix[] cms, TreeStats tstats, VarImp varimp, AUCData validAUC) {
-      super(prior._key,prior._dataKey,prior._names,prior._domains,prior._priorClassDist, prior._modelClassDist);
+      super(prior._key,prior._dataKey,prior._names,prior._domains, prior._priorClassDist,prior._modelClassDist,prior.training_start_time,prior.training_duration_in_ms);
       this.N = prior.N;
       this.testKey   = prior.testKey;
       this.max_depth = prior.max_depth;
