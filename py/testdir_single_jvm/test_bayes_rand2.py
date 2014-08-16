@@ -10,6 +10,7 @@ def define_params():
         # between 0 and 100000
         'laplace': [None, 0, 1, 10, 1e5],
         'drop_na_cols': [None, 0, 1],
+        'min_std_dev': [None, 1e-5],
         }
     return paramDict
 
@@ -47,7 +48,7 @@ class Basic(unittest.TestCase):
 
             timeoutSecs = 120
             # chagne response to factor
-            execExpr = 'covtype.hex[,54+1] = factor(covtype.hex[,54+1])'
+            execExpr = 'covtype.hex[,54+1] = factor(covtype.hex[,54+1] != 5)' # turn 7-class problem into binomial such that AUC can work below..
             resultExec, ncols = h2e.exec_expr(execExpr=execExpr)
 
             start = time.time()

@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.*;
 import water.fvec.ParseTime;
+import water.util.Log;
 
 public class CsvParser extends CustomParser {
 
@@ -416,7 +417,10 @@ NEXT_CHAR:
           // If we are mid-parse of something, act like we saw a LF to end the
           // current token.
           if ((state != EXPECT_COND_LF) && (state != POSSIBLE_EMPTY_LINE)) {
-            c = CHAR_LF;  continue MAIN_LOOP;
+            c = CHAR_LF;
+            Log.warn("Unexpected end of row, adding NA's for remaining column values.");
+            if (!firstChunk) Log.warn("Row entry exceeded 4MB in size, exceeded current parse limit.");
+            continue MAIN_LOOP;
           }
           break MAIN_LOOP;      // Else we are just done
         }

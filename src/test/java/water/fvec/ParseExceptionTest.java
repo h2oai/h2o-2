@@ -5,6 +5,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import java.io.File;
 import water.*;
+import water.parser.CustomParser;
+import water.parser.GuessSetup;
 
 public class ParseExceptionTest extends TestUtil {
   @BeforeClass public static void stall() { stall_till_cloudsize(3); }
@@ -12,15 +14,17 @@ public class ParseExceptionTest extends TestUtil {
   @Test public void testParserRecoversFromException() {
     Throwable ex = null;
     Key fkey0=null,fkey1=null,fkey2=null,okey=null;
+    CustomParser.ParserSetup setup = null;
     try {
       okey = Key.make("junk.hex");
       fkey0 = NFSFileVec.make(new File("smalldata/parse_folder_test/prostate_0.csv"));
       fkey1 = NFSFileVec.make(new File("smalldata/parse_folder_test/prostate_1.csv"));
       fkey2 = NFSFileVec.make(new File("smalldata/parse_folder_test/prostate_2.csv"));
+      setup = new GuessSetup.GuessSetupTsk(new CustomParser.ParserSetup(), true).invoke(fkey0, fkey1, fkey2)._gSetup._setup;
       // Now "break" one of the files.  Globally.
       new Break(fkey1).invokeOnAllNodes();
 
-      ParseDataset2.parse(okey, new Key[]{fkey0,fkey1,fkey2});
+      ParseDataset2.parse(okey, new Key[]{fkey0,fkey1,fkey2},setup,true);
 
     } catch( Throwable e2 ) {
       ex = e2;                  // Record expected exception

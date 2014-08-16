@@ -6,6 +6,7 @@ import java.util.*;
 import org.apache.commons.codec.binary.Base64;
 
 import water.H2O;
+import water.persist.PersistS3;
 import water.util.Log;
 import water.util.Utils;
 
@@ -63,17 +64,8 @@ public class EC2 {
    * Create or terminate EC2 instances. Uses their Name tag to find existing ones.
    */
   public Cloud resize() throws Exception {
-    PropertiesCredentials credentials;
-    try {
-      credentials = H2O.getAWSCredentials();
-    } catch( Exception ex ) {
-      System.out.println("Please provide your AWS credentials in './AwsCredentials.properties'");
-      System.out.println("File format is:");
-      System.out.println("accessKey=XXXXXXXXXXXXXXXXXXXX");
-      System.out.println("secretKey=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
-      throw ex;
-    }
-    AmazonEC2Client ec2 = new AmazonEC2Client(credentials);
+
+    AmazonEC2Client ec2 = new AmazonEC2Client(new PersistS3.H2OAWSCredentialsProviderChain());
     ec2.setEndpoint("ec2." + region + ".amazonaws.com");
     DescribeInstancesResult describeInstancesResult = ec2.describeInstances();
     List<Reservation> reservations = describeInstancesResult.getReservations();

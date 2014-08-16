@@ -25,6 +25,8 @@ public class LoadDatasets extends TestUtil {
     // load these first
     String[] files = new String[]{
             "smalldata/logreg/prostate.csv",
+            "smalldata/covtype/covtype.20k.data",
+            "smalldata/covtype/covtype.altered.gz",
             "smalldata/weather.csv",
             "smalldata/iris/iris.csv",
             "smalldata/mnist/train.csv.gz",
@@ -124,8 +126,6 @@ public class LoadDatasets extends TestUtil {
             "smalldata/chess/chess_8x8x1000/R/test.csv",
             "smalldata/chess/chess_8x8x1000/R/train.csv",
             "smalldata/constantColumn.csv",
-            "smalldata/covtype/covtype.20k.data",
-            "smalldata/covtype/covtype.altered.gz",
             "smalldata/cuse.data.csv",
             "smalldata/cusedataREADME.rtf",
             "smalldata/cuseexpanded.csv",
@@ -353,7 +353,6 @@ public class LoadDatasets extends TestUtil {
             "smalldata/test/HTWO-87-two-lines-dataset.csv",
             "smalldata/test/HTWO-87-two-unique-lines-dataset.csv",
             "smalldata/test/is_NA.csv",
-            "smalldata/test/is_NA2.csv",
             "smalldata/test/na_test.zip",
             "smalldata/test/R/titanic.csv",
 //              "smalldata/test/rmodels/covtype-rf-50tree-as-factor-X5-20k.rdata",

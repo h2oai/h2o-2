@@ -44,16 +44,15 @@ import water.util.Utils;
 public class Linpack {
 
   public static void main(String[] args) {
-    double sumgflops = run();
     int num_threads = Runtime.getRuntime().availableProcessors();
+    double sumgflops = run(num_threads);
     Log.info("CPU speed (" + num_threads + " cores) : " + sumgflops + " Gflops.");
   }
 
   /**
    * Compute system CPU speed in Gflops
    */
-  public static double run() {
-    int num_threads = Runtime.getRuntime().availableProcessors();
+  public static double run(int num_threads) {
     final double gflops[] = new double[num_threads];
     Thread[] threads = new Thread[num_threads];
     for (int t=0;t<num_threads;++t) {

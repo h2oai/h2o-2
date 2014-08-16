@@ -595,7 +595,8 @@ public final class H2O {
   // entire node for lack of some small piece of data).  So each attempt to do
   // lower-priority F/J work starts with an attempt to work & drain the
   // higher-priority queues.
-  public static abstract class H2OCountedCompleter<T extends H2OCountedCompleter> extends CountedCompleter implements Cloneable {
+  public static abstract class
+    H2OCountedCompleter<T extends H2OCountedCompleter> extends CountedCompleter implements Cloneable {
     public H2OCountedCompleter(){}
     protected H2OCountedCompleter(H2OCountedCompleter completer){super(completer);}
 
@@ -916,17 +917,10 @@ public final class H2O {
     Log.POST(380,"");
   }
 
-  // Default location of the AWS credentials file
-  public static final String DEFAULT_CREDENTIALS_LOCATION = "AwsCredentials.properties";
-  public static PropertiesCredentials getAWSCredentials() throws IOException {
-    File credentials = new File(Objects.firstNonNull(OPT_ARGS.aws_credentials, DEFAULT_CREDENTIALS_LOCATION));
-    return new PropertiesCredentials(credentials);
-  }
-
   /** Starts the local k-v store.
-* Initializes the local k-v store, local node and the local cloud with itself
-* as the only member.
-*/
+   * Initializes the local k-v store, local node and the local cloud with itself
+   * as the only member.
+   */
   private static void startLocalNode() {
     // Figure self out; this is surprisingly hard
     initializeNetworkSockets();
@@ -1353,6 +1347,8 @@ public final class H2O {
     public final int _type;
     public final boolean _rawData;
     public final int _sz;
+    public final int _ncols;
+    public final long _nrows;
     public final byte _backEnd;
 
     public KeyInfo(Key k, Value v){
@@ -1361,7 +1357,20 @@ public final class H2O {
       _key = k;
       _type = v.type();
       _rawData = v.isRawData();
-      _sz = v._max;
+      if(v.isFrame()){
+        Frame f = v.get();
+        // NOTE: can't get byteSize here as it may invoke RollupStats! :(
+
+//        _sz = f.byteSize();
+        _sz = v._max;
+        // do at least nrows/ncols instead
+        _ncols = f.numCols();
+        _nrows = f.numRows();
+      } else {
+        _sz = v._max;
+        _ncols = 0;
+        _nrows = 0;
+      }
       _backEnd = v.backend();
     }
     @Override public int compareTo(KeyInfo ki){ return _key.compareTo(ki._key);}

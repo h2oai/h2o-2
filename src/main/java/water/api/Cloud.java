@@ -2,6 +2,7 @@ package water.api;
 
 import com.google.gson.*;
 import water.*;
+import water.util.Log;
 
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -74,6 +75,7 @@ public class Cloud extends Request {
       if (! h2o._node_healthy) {
         cloudHealthy = false;
       }
+      node.addProperty("cpus_allowed", hb._cpus_allowed);
       node.addProperty("PID", hb._pid);
 
       JsonArray fjth = new JsonArray();
@@ -143,6 +145,8 @@ public class Cloud extends Request {
     response.add(NODES,nodes);
     response.addProperty(CONSENSUS, Paxos._commonKnowledge); // Cloud is globally accepted
     response.addProperty(LOCKED, Paxos._cloudLocked); // Cloud is locked against changes
+    Log.info("H2O Cloud Status:");
+    for (String s : response.toString().split("[{}]")) if (!s.equals(",") && s.length()>0) Log.info(s); // Log the cloud status to stdout
     Response r = Response.done(response);
     r.setBuilder(CONSENSUS, new BooleanStringBuilder("","Voting new members"));
     r.setBuilder(LOCKED, new BooleanStringBuilder("Locked","Accepting new members"));

@@ -13,11 +13,12 @@ import water.fvec.Vec;
 import water.util.Log;
 import water.util.RIStream;
 
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.Protocol;
+import com.amazonaws.*;
+import com.amazonaws.auth.*;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.*;
+import com.google.common.base.Objects;
 import com.google.common.io.ByteStreams;
 
 /** Persistence backend for S3 */
@@ -35,7 +36,7 @@ public final class PersistS3 extends Persist {
       synchronized( _lock ) {
         if( _s3 == null ) {
           try {
-            _s3 = new AmazonS3Client(H2O.getAWSCredentials(), s3ClientCfg());
+            _s3 = new AmazonS3Client(new H2OAWSCredentialsProviderChain(), s3ClientCfg());
           } catch( Throwable e ) {
             StringBuilder msg = new StringBuilder();
             msg.append(e.getMessage() + "\n");
@@ -47,6 +48,43 @@ public final class PersistS3 extends Persist {
       }
     }
     return _s3;
+  }
+
+  /** Modified version of default credentials provider which includes H2O-specific
+   * credentials provider.
+   */
+  public static class H2OAWSCredentialsProviderChain extends AWSCredentialsProviderChain {
+    public H2OAWSCredentialsProviderChain() {
+      super(new H2OArgCredentialsProvider(),
+            new InstanceProfileCredentialsProvider(),
+            new EnvironmentVariableCredentialsProvider(),
+            new SystemPropertiesCredentialsProvider());
+    }
+  }
+
+  /** A simple credentials provider reading file-based credentials from given
+   * command argument <code>--aws_credentials</code>.
+   */
+  static class H2OArgCredentialsProvider implements AWSCredentialsProvider {
+
+    // Default location of the AWS credentials file
+    public static final String DEFAULT_CREDENTIALS_LOCATION = "AwsCredentials.properties";
+
+    @Override public AWSCredentials getCredentials() {
+      File credentials = new File(Objects.firstNonNull(H2O.OPT_ARGS.aws_credentials, DEFAULT_CREDENTIALS_LOCATION));
+      try {
+        return new PropertiesCredentials(credentials);
+      } catch (IOException e) {
+        throw new AmazonClientException("Unable to load AWS credentials from file " + credentials);
+      }
+    }
+
+    @Override public void refresh() {}
+
+    @Override
+    public String toString() {
+        return getClass().getSimpleName();
+    }
   }
 
   public static final class H2SO3InputStream extends RIStream {

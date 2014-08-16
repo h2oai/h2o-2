@@ -24,7 +24,7 @@ class Basic(unittest.TestCase):
         csvFilename = 'new-poker-hand.full.311M.txt.gz'
         csvPathname = importFolderPath + "/" + csvFilename
 
-        for trials in range(2):
+        for trials in range(1):
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='local', 
                 timeoutSecs=1400, retryDelaySecs=5)
             print "Parse result['destination_key']:", parseResult['destination_key']
@@ -32,8 +32,14 @@ class Basic(unittest.TestCase):
 
             print "\n" + csvFilename
             start = time.time()
-            RFview = h2o_cmd.runRF(parseResult=parseResult, ntrees=2, max_depth=5,
-                timeoutSecs=800, retryDelaySecs=20)
+
+            kwargs = {
+                'ntrees': 1,
+                'max_depth': 5,
+                'importance': 0,
+            }
+
+            RFview = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=800, retryDelaySecs=20.0, **kwargs)
             print "RF end on ", csvFilename, 'took', time.time() - start, 'seconds'
 
 if __name__ == '__main__':

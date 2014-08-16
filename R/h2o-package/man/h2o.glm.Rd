@@ -9,7 +9,7 @@ Fit a generalized linear model, specified by a response variable, a set of predi
 \usage{
 h2o.glm(x, y, data, key = "", family, link, nfolds = 0, alpha = 0.5, nlambda = -1, 
   lambda.min.ratio = -1, lambda = 1e-5, epsilon = 1e-4, standardize = TRUE, 
-  prior, variable_importances = 1, use_all_factor_levels = 0, tweedie.p = 
+  prior, variable_importances = TRUE, use_all_factor_levels = FALSE, tweedie.p = 
   ifelse(family == 'tweedie', 1.5, as.numeric(NA)), iter.max = 100, 
   higher_accuracy = FALSE, lambda_search = FALSE, return_all_lambda = FALSE, 
   max_predictors = -1)
@@ -119,11 +119,11 @@ prostatePath = system.file("extdata", "prostate.csv", package = "h2o")
 prostate.hex = h2o.importFile(localH2O, path = prostatePath, key = "prostate.hex")
 h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, 
         family = "binomial", nfolds = 0, alpha = 0.5, lambda_search = FALSE, 
-        use_all_factor_levels = 0, variable_importances = 0, higher_accuracy = FALSE)
+        use_all_factor_levels = FALSE, variable_importances = FALSE, higher_accuracy = FALSE)
 
 # Run GLM of VOL ~ CAPSULE + AGE + RACE + PSA + GLEASON
 myX = setdiff(colnames(prostate.hex), c("ID", "DPROS", "DCAPS", "VOL"))
 h2o.glm(y = "VOL", x = myX, data = prostate.hex, family = "gaussian", nfolds = 0, alpha = 0.1,
-        lambda_search = FALSE, use_all_factor_levels = 0, variable_importances = 0, 
+        lambda_search = FALSE, use_all_factor_levels = FALSE, variable_importances = FALSE, 
         higher_accuracy = FALSE)
 }

@@ -453,6 +453,9 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Enable shuffling of training data (recommended if training data is replicated and train_samples_per_iteration is close to #nodes x #rows)", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
   public boolean shuffle_training_data = false;
 
+//  @API(help = "Handling of missing values", filter= Default.class, json = true)
+  public MissingValuesHandling missing_values_handling = MissingValuesHandling.MeanImpute;
+
   @API(help = "Sparse data handling (Experimental).", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
   public boolean sparse = false;
 
@@ -464,6 +467,10 @@ public class DeepLearning extends Job.ValidatedJob {
 
   @API(help = "Sparsity regularization (Experimental)", filter= Default.class, json = true)
   public double sparsity_beta = 0;
+
+  public enum MissingValuesHandling {
+    Skip, MeanImpute
+  }
 
   public enum ClassSamplingMethod {
     Uniform, Stratified
@@ -743,7 +750,7 @@ public class DeepLearning extends Job.ValidatedJob {
       if (previous == null) throw new IllegalArgumentException("Checkpoint not found.");
       Log.info("Resuming from checkpoint.");
       if (n_folds != 0) {
-        throw new UnsupportedOperationException("n_folds must be 0: Cross-validation is not supproted during checkpoint restarts.");
+        throw new UnsupportedOperationException("n_folds must be 0: Cross-validation is not supported during checkpoint restarts.");
       }
       else {
         ((ValidatedJob)previous.job()).xval_models = null; //remove existing cross-validation keys after checkpoint restart

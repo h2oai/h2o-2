@@ -25,11 +25,11 @@ test <- function(conn) {
   myY = "label"
   
   print("Creating model without CV")
-  system.time(h2o.glm <- h2o.glm(x=myX, y=myY, data=adult.train, key="h2o.glm.adult", family="binomial", alpha=1, higher_accuracy=T, lambda_search=T, nfolds=0, variable_importances=1, use_all_factor_levels=1))
-  h2o.glm
+  system.time(h2o.glm.model <- h2o.glm(x=myX, y=myY, data=adult.train, key="h2o.glm.adult", family="binomial", alpha=1, higher_accuracy=T, lambda_search=T, nfolds=0, variable_importances=TRUE, use_all_factor_levels=TRUE))
+  h2o.glm.model
   
   print("Creating model with CV")
-  system.time(h2o.glm.CV <- h2o.glm(x=myX, y=myY, data=adult.train, key="h2o.glm.CV.adult", family="binomial", alpha=1, higher_accuracy=T, lambda_search=T, nfolds=5, variable_importances=1, use_all_factor_levels=1))    # This line is failing
+  system.time(h2o.glm.CV <- h2o.glm(x=myX, y=myY, data=adult.train, key="h2o.glm.CV.adult", family="binomial", alpha=1, higher_accuracy=T, lambda_search=T, nfolds=5, variable_importances=TRUE, use_all_factor_levels=TRUE))    # This line is failing
   h2o.glm.CV
   
   testEnd()
