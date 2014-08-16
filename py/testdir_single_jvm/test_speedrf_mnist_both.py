@@ -94,7 +94,7 @@ class Basic(unittest.TestCase):
                 'destination_key': 'RF_model',
                 'nbins': 1024,
                 # 'seed': 784834182943470027,
-               #  'class_weights': '0=1.0,1=1.0,2=1.0,3=1.0,4=1.0,5=1.0,6=1.0,7=1.0,8=1.0,9=1.0',
+                # 'class_weights': '0=1.0,1=1.0,2=1.0,3=1.0,4=1.0,5=1.0,6=1.0,7=1.0,8=1.0,9=1.0',
                 }
 
             if rfSeed is None:
@@ -114,7 +114,6 @@ class Basic(unittest.TestCase):
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             # RFView (score on test)****************************************
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(None, rfView, **params)
-            print "classification error is expected to be low because we included the test data in with the training!"
             self.assertAlmostEqual(classification_error, 2.84, delta=0.5, 
                 msg="Classification error %s differs too much" % classification_error)
        
