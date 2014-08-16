@@ -102,7 +102,9 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='',
         regex2 = re.compile('Caused',re.IGNORECASE)
         # regex3 = re.compile('warn|info|TCP', re.IGNORECASE)
         # FIX! temp to avoid the INFO in jan's latest logging. don't print any info?
-        regex3 = re.compile('warn|TCP', re.IGNORECASE)
+        # don't want the tcp_active in the cloud status. Ok to not look for tcp stuff now
+        # regex3 = re.compile('warn|TCP', re.IGNORECASE)
+        regex3 = re.compile('warn', re.IGNORECASE)
 
         # many hdfs/apache messages have 'error' in the text. treat as warning if they have '[WARN]'
         # i.e. they start with:
