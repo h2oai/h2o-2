@@ -418,8 +418,7 @@ NEXT_CHAR:
           // current token.
           if ((state != EXPECT_COND_LF) && (state != POSSIBLE_EMPTY_LINE)) {
             c = CHAR_LF;
-            Log.warn("Unexpected end of row, adding NA's for remaining column values.");
-            if (!firstChunk) Log.warn("Row entry exceeded 4MB in size, exceeded current parse limit.");
+            if (!firstChunk) Log.warn("Row entry exceeded " + bits.length + " bytes in size, exceeded current parse limit.");
             continue MAIN_LOOP;
           }
           break MAIN_LOOP;      // Else we are just done

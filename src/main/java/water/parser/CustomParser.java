@@ -218,7 +218,7 @@ public abstract class CustomParser extends Iced {
   // ------------------------------------------------------------------------
   // Zipped file; no parallel decompression; decompress into local chunks,
   // parse local chunks; distribute chunks later.
-  public DataOut streamParse( final InputStream is, final StreamDataOut dout) throws IOException {
+  public DataOut streamParse2( final InputStream is, final StreamDataOut dout) throws IOException {
     // All output into a fresh pile of NewChunks, one per column
     if(_setup._pType.parallelParseSupported){
       StreamData din = new StreamData(is);

@@ -618,9 +618,12 @@ public final class ParseDataset2 extends Job {
       FVecDataOut dout = new FVecDataOut(_vg, chunkStartIdx, localSetup._ncols, vecIdStart, enums(_eKey,localSetup._ncols));
       CustomParser p = localSetup.parser();
       // assume 2x inflation rate
+      //if( localSetup._pType.parallelParseSupported )
       if( localSetup._pType.parallelParseSupported )
-        try{p.streamParse(is, dout);}catch(IOException e){throw new RuntimeException(e);}
-      
+        try{p.streamParse2(is, dout);}catch(IOException e){throw new RuntimeException(e);}
+      else
+        try{p.streamParse(is, dout);}catch(Exception e){throw new RuntimeException(e);}
+
       // Parse all internal "chunks", until we drain the zip-stream dry.  Not
       // real chunks, just flipping between 32K buffers.  Fills up the single
       // very large NewChunk.
