@@ -186,6 +186,7 @@ build_rcran:
 	cd target/Rcran && tar zxvf tmp.tar.gz
 	rm -f target/Rcran/tmp.tar.gz
 	rm -f target/Rcran/h2o/inst/java/h2o.jar
+	cd target/Rcran/h2o && python ../../../scripts/dontrun_r_examples.py
 	cd target/Rcran && tar zcvf $(H2O_R_SOURCE_FILE) h2o
 	rm -fr target/Rcran/h2o
 
