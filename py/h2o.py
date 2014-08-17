@@ -814,9 +814,14 @@ def tear_down_cloud(nodeList=None, sandboxIgnoreErrors=False):
 
     if not nodeList: nodeList = nodes
     try:
-        for n in nodeList:
-            n.terminate()
-            verboseprint("tear_down_cloud n:", n)
+        # only send the shutdown to one node now. h2o has an api watchdog that might complain
+        if 1==0:
+            for n in nodeList:
+                n.terminate()
+                verboseprint("tear_down_cloud n:", n)
+        else:
+            nodeList[0].terminate()
+            verboseprint("h2o shutdown using node 0:")
     finally:
         check_sandbox_for_errors(sandboxIgnoreErrors=sandboxIgnoreErrors, python_test_name=python_test_name)
         nodeList[:] = []
@@ -3199,14 +3204,17 @@ class RemoteH2O(H2O):
 
     def terminate_self_only(self):
         self.channel.close()
-        time.sleep(1) # a little delay needed?
-        # kbn: it should be dead now? want to make sure we don't have zombies
-        # we should get a connection error. doing a is_alive subset.
-        try:
-            gc_output = self.get_cloud(noExtraErrorCheck=True)
-            raise Exception("get_cloud() should fail after we terminate a node. It isn't. %s %s" % (self, gc_output))
-        except:
-            return True
+
+        # Don't check afterwards. api watchdog in h2o might complain
+        if 1==0:
+            time.sleep(1) # a little delay needed?
+            # kbn: it should be dead now? want to make sure we don't have zombies
+            # we should get a connection error. doing a is_alive subset.
+            try:
+                gc_output = self.get_cloud(noExtraErrorCheck=True)
+                raise Exception("get_cloud() should fail after we terminate a node. It isn't. %s %s" % (self, gc_output))
+            except:
+                return True
 
     def terminate(self):
         self.shutdown_all()
