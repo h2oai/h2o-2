@@ -133,7 +133,6 @@ public class DeepLearningProstateTest extends TestUtil {
                                       p.regression_stop = -1;
                                       p.balance_classes = balance_classes;
                                       p.quiet_mode = true;
-//                                      p.quiet_mode = false;
                                       p.score_validation_sampling = csm;
                                       try {
                                         p.invoke();
