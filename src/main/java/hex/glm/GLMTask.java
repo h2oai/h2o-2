@@ -287,12 +287,12 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     }
 
     private void sampleThresholds(int yi){
-      if(_ti[yi] > (_newThresholds.length >> 1)) {
+      if(_ti[yi] > (_newThresholds.length >> 2)) {
         Arrays.sort(_newThresholds[yi]);
         for (int i = 0; i < _ti[yi]; i += 2) {
           _newThresholds[yi][i >> 1] = _newThresholds[yi][i];
         }
-        _ti[yi] = _newThresholds.length >> 1;
+        _ti[yi] = _newThresholds.length >> 2;
         for(int i = _ti[yi]; i < _newThresholds[yi].length;++i)
           _newThresholds[yi][i] = Float.POSITIVE_INFINITY;
       }
@@ -357,7 +357,13 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       _xy = MemoryManager.malloc8d(_dinfo.fullN()+1); // + 1 is for intercept
       int rank = 0;
       if(_beta != null)for(double d:_beta)if(d != 0)++rank;
-      if(_validate)_val = new GLMValidation(null,_ymu, _glm,rank, _thresholds);
+      if(_validate){
+        _val = new GLMValidation(null,_ymu, _glm,rank, _thresholds);
+        if(_glm.family == Family.binomial){
+          _ti = new int[2];
+          _newThresholds = new float[2][N_THRESHOLDS << 2];
+        }
+      }
       if(_computeGradient)
         _grad = MemoryManager.malloc8d(_dinfo.fullN()+1); // + 1 is for intercept
     }
