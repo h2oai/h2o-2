@@ -687,7 +687,9 @@ def build_cloud(node_count=1, base_port=54321, hosts=None,
         check_sandbox_for_errors(python_test_name=python_test_name)
 
     except:
-        if cleanup:
+        # nodeList might be empty in some exception cases?
+        # no shutdown issued first, though
+        if cleanup and nodeList:
             for n in nodeList: n.terminate()
         else:
             nodes[:] = nodeList
@@ -813,15 +815,21 @@ def tear_down_cloud(nodeList=None, sandboxIgnoreErrors=False):
         sleep(3600)
 
     if not nodeList: nodeList = nodes
+    # could the nodeList still be empty in some exception cases? Assume not for now
     try:
-        # only send the shutdown to one node now. h2o has an api watchdog that might complain
-        if 1==0:
-            for n in nodeList:
-                n.terminate()
-                verboseprint("tear_down_cloud n:", n)
-        else:
-            nodeList[0].terminate()
-            verboseprint("h2o shutdown using node 0:")
+        # update: send a shutdown to all nodes. h2o maybe doesn't progagate well if sent to one node
+        # the api watchdog shouldn't complain about this?
+        for n in nodeList:
+            n.shutdown_all()
+
+        # FIX! should we wait a bit for a clean shutdown, before we process kill? It can take more than 1 sec though.
+        time.sleep(2)
+        # I took the time delay out of the shutdown_all() below
+        
+        for n in nodeList:
+            n.terminate()
+            verboseprint("tear_down_cloud n:", n)
+
     finally:
         check_sandbox_for_errors(sandboxIgnoreErrors=sandboxIgnoreErrors, python_test_name=python_test_name)
         nodeList[:] = []
@@ -1117,7 +1125,10 @@ class H2O(object):
             self.__do_json_request('Shutdown.json', noExtraErrorCheck=True)
         except:
             pass
-        time.sleep(1) # a little delay needed?
+        # don't want delayes between sending these to each node
+        # if you care, wait after you send them to each node
+        # Seems like it's not so good to just send to one node
+        # time.sleep(1) # a little delay needed?
         return (True)
 
     def put_value(self, value, key=None, repl=None):
@@ -2975,9 +2986,11 @@ class LocalH2O(H2O):
         # send a shutdown request first.
         # since local is used for a lot of buggy new code, also do the ps kill.
         # try/except inside shutdown_all now
-        self.shutdown_all()
+        # new: moved this out..anyone using this should do h2o.nodes[0].shutdown_all first
+        if 1==0:
+            self.shutdown_all()
         if self.is_alive():
-            print "\nShutdown didn't work for local node? : %s. Will kill though" % self
+            print "\nShutdown didn't work fast enough for local node? : %s. Will kill though" % self
         self.terminate_self_only()
 
     def wait(self, timeout=0):
@@ -3217,7 +3230,9 @@ class RemoteH2O(H2O):
                 return True
 
     def terminate(self):
-        self.shutdown_all()
+        # new, moved this out. anyone using terminate should send h2o shutdown once before this
+        if 1==0:
+            self.shutdown_all()
         self.terminate_self_only()
 
 #*****************************************************************
