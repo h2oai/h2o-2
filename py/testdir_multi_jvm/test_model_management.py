@@ -303,7 +303,8 @@ class ModelManagementTestCase(unittest.TestCase):
             'ignored_cols_by_name': 'IsDepDelayed_REC, IsDepDelayed_REC_recoded', 
             'ntrees': 5,
             'max_depth': 2,
-            'classification': 1
+            'classification': 1,
+            'seed': 1234567890123456789L
         }
         rf_AirlinesTrain_1 = node.random_forest(airlines_train_hex, **rf_AirlinesTrain_1_params)
         durations['rf_AirlinesTrain_binary_1'] = time.time() * 1000 - before
@@ -320,7 +321,8 @@ class ModelManagementTestCase(unittest.TestCase):
             'ignored_cols_by_name': 'IsDepDelayed_REC, IsDepDelayed_REC_recoded', 
             'ntrees': 50,
             'max_depth': 10,
-            'classification': 1
+            'classification': 1,
+            'seed': 1234567890123456789L
         }
         rf_AirlinesTrain_2 = node.random_forest(airlines_train_hex, **rf_AirlinesTrain_2_params)
         durations['rf_AirlinesTrain_binary_2'] = time.time() * 1000 - before
@@ -338,6 +340,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'ntrees': 5,
             'max_depth': 2,
             'classification': 1,
+            'seed': 1234567890123456789L,
             'n_folds': 3
         }
         rf_AirlinesTrain_3fold = node.random_forest(airlines_train_hex, **rf_AirlinesTrain_3fold_params)
@@ -356,7 +359,8 @@ class ModelManagementTestCase(unittest.TestCase):
             'ntrees': 50,
             'max_depth': 10,
             'classification': 1,
-            'importance': 1
+            'importance': 1,
+            'seed': 1234567890123456789L
         }
         speedrf_AirlinesTrain_1 = node.speedrf(airlines_train_hex, **speedrf_AirlinesTrain_1_params)
         durations['speedrf_AirlinesTrain_binary_1'] = time.time() * 1000 - before
@@ -375,6 +379,7 @@ class ModelManagementTestCase(unittest.TestCase):
             'max_depth': 10,
             'classification': 1,
             'importance': 1,
+            'seed': 1234567890123456789L,
             'n_folds': 3
         }
         speedrf_AirlinesTrain_3fold = node.speedrf(airlines_train_hex, **speedrf_AirlinesTrain_3fold_params)
@@ -481,7 +486,8 @@ class ModelManagementTestCase(unittest.TestCase):
             'ignored_cols_by_name': None, 
             'ntrees': 10,
             'max_depth': 5,
-            'classification': 1
+            'classification': 1,
+            'seed': 1234567890123456789L
         }
         rf_Prostate_1 = node.random_forest(prostate_hex, **rf_Prostate_1_params)
         durations['rf_Prostate_binary_1'] = time.time() * 1000 - before
@@ -498,7 +504,8 @@ class ModelManagementTestCase(unittest.TestCase):
             'ntrees': 50,
             'max_depth': 10,
             'classification': 1,
-            'importance': 1
+            'importance': 1,
+            'seed': 1234567890123456789L
         }
         speedrf_Prostate_1 = node.speedrf(prostate_hex, **speedrf_Prostate_1_params)
         num_models = num_models + 1
@@ -523,8 +530,11 @@ class ModelManagementTestCase(unittest.TestCase):
         num_models = num_models + 1
         h2o_glm.simpleCheckGLM(self, glm_Prostate_regression_1, None, **glm_Prostate_regression_1_params)
 
+        
+        # Done building models!
         # We were getting different results for each node.  Bad, bad bad. . .
-        print "Checking " + str(len(h2o.nodes)) + " nodes for models: "
+        print "########################################################"
+        print "Checking " + str(len(h2o.nodes)) + " nodes for " + str(num_models) + " models: "
         for a_node in h2o.nodes:
             print "  " + a_node.http_addr + ":" + str(a_node.port)
 
@@ -549,6 +559,13 @@ class ModelManagementTestCase(unittest.TestCase):
                 else:
                     expected = durations[key[0:idx]]
                 self.assertTrue(value['training_duration_in_ms'] < expected, "Expected training duration as computed by the server (" + str(value['training_duration_in_ms']) + ") to be less than we compute in the test  (" + str(expected) + ") for model: " + key)
+
+                self.assertKeysExistAndNonNull(value, "", ['expert_parameters'])
+                # TODO: put back when Long serialization is fixed (probably not until h2o-dev)
+                # if 'seed' in value['expert_parameters']:
+                #     self.assertEquals(long(value['expert_parameters']['seed']), 1234567890123456789L, "Seed incorrect for model: " + key + ".  Expected: 1234567890123456789; got: " + str(long(value['expert_parameters']['seed'])))
+                # if '_seed' in value['expert_parameters']:
+                #     self.assertEquals(long(value['expert_parameters']['_seed']), 1234567890123456789L, "Seed incorrect for model: " + key + ".  Expected: 1234567890123456789; got: " + str(long(value['expert_parameters']['_seed'])))
         self.assertNotEqual(found_problem, True, "Missing models on at least one node.")
 
 
