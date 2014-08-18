@@ -47,6 +47,7 @@ public abstract class LSMSolver extends Iced{
 
 
   public static void subgrad(final double alpha, final double lambda, final double [] beta, final double [] grad){
+    if(beta == null)return;
     final double l1pen = lambda*alpha;
     for(int i = 0; i < grad.length-1; ++i) {// add l2 reg. term to the gradient
       if(beta[i] < 0) grad[i] -= l1pen;
