@@ -147,11 +147,31 @@ def get_ip_address():
     return ip
 
 
+# used to rename the sandbox when running multiple tests in same dir (in different shells)
 def get_sandbox_name():
     if os.environ.has_key("H2O_SANDBOX_NAME"):
-        return os.environ["H2O_SANDBOX_NAME"]
+        a = os.environ["H2O_SANDBOX_NAME"]
+        print "H2O_SANDBOX_NAME", a
+        return a
     else:
         return "sandbox"
+
+# used to shift ports when running multiple tests on same machine in parallel (in different shells)
+def get_port_offset():
+    if os.environ.has_key("H2O_PORT_OFFSET"):
+        # this will fail if it's not an integer
+        a = int(os.environ["H2O_PORT_OFFSET"])
+        # some of the tests select a number 54321, 54323, or 54327, so want to be at least 8 or so apart 
+        # for multiple test runs.
+        # (54321, 54323, 54325 and 54327 are used in testdir_single_jvm)
+        # if we're running multi-node with a config json, then obviously the gap needs to be cognizant 
+        # of the number of nodes
+        print "H2O_PORT_OFFSET", a
+        if a<8 or a>256:
+            raise Exception("The H2O_PORT_OFFSET os env variable should be either not set, or between 8 and 256")
+        return a
+    else:
+        return 0
 
 
 def unit_main():
@@ -447,21 +467,22 @@ nodes = []
 # but it uses hosts, so if that got shuffled, we got it covered?
 # the i in xrange part is not shuffled. maybe create the list first, for possible random shuffle
 # FIX! default to random_shuffle for now..then switch to not.
-def write_flatfile(node_count=2, base_port=54321, hosts=None, rand_shuffle=True):
+def write_flatfile(node_count=2, base_port=54321, hosts=None, rand_shuffle=True, port_offset=0):
     # always create the flatfile.
     ports_per_node = 2
     pff = open(flatfile_name(), "w+")
     # doing this list outside the loops so we can shuffle for better test variation
     hostPortList = []
+
     if hosts is None:
         ip = python_cmd_ip
         for i in range(node_count):
-            hostPortList.append(ip + ":" + str(base_port + ports_per_node * i))
+            hostPortList.append(ip + ":" + str(port_offset + base_port + ports_per_node * i))
     else:
         for h in hosts:
             for i in range(node_count):
                 # removed leading "/"
-                hostPortList.append(h.addr + ":" + str(base_port + ports_per_node * i))
+                hostPortList.append(h.addr + ":" + str(port_offset + base_port + ports_per_node * i))
 
     # note we want to shuffle the full list of host+port
     if rand_shuffle:
@@ -595,6 +616,8 @@ def setup_benchmark_log():
 def build_cloud(node_count=1, base_port=54321, hosts=None,
                 timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=True,
                 conservative=False, create_json=False, clone_cloud=None, **kwargs):
+
+
     # redirect to build_cloud_with_json if a command line arg
     # wants to force a test to ignore it's build_cloud/build_cloud_with_hosts
     # (both come thru here)
@@ -626,17 +649,22 @@ def build_cloud(node_count=1, base_port=54321, hosts=None,
 
     ports_per_node = 2
     nodeList = []
+    # see if we need to shift the port used to run groups of tests on the same machine
+    # at the same time
+    port_offset = get_port_offset()
     try:
         # if no hosts list, use psutil method on local host.
         totalNodes = 0
         # doing this list outside the loops so we can shuffle for better test variation
         # this jvm startup shuffle is independent from the flatfile shuffle
-        portList = [base_port + ports_per_node * i for i in range(node_count)]
+        portList = [port_offset + base_port + ports_per_node * i for i in range(node_count)]
         if hosts is None:
             # if use_flatfile, we should create it,
             # because tests will just call build_cloud with use_flatfile=True
             # best to just create it all the time..may or may not be used
-            write_flatfile(node_count=node_count, base_port=base_port)
+
+            # port_offset is added in write_flatfile()
+            write_flatfile(node_count=node_count, base_port=base_port, port_offset=port_offset)
             hostCount = 1
             if rand_shuffle:
                 random.shuffle(portList)
