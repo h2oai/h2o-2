@@ -1726,6 +1726,18 @@ class H2O(object):
         verboseprint("\ncreate_frame result:", dump_json(a))
         return a
 
+    def insert_missing_values(self, timeoutSecs=120, **kwargs):
+        params_dict = {
+            'key': None,
+            'seed': None,
+            'missing_fraction': None,
+        }
+        browseAlso = kwargs.pop('browseAlso', False)
+        check_params_update_kwargs(params_dict, kwargs, 'insert_missing_values', print_params=True)
+        a = self.__do_json_request('2/InsertMissingValues.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint("\ninsert_missing_values result:", dump_json(a))
+        return a
+
     def frame_split(self, timeoutSecs=120, **kwargs):
         params_dict = {
             'source': None,
@@ -1737,16 +1749,16 @@ class H2O(object):
         verboseprint("\nframe_split result:", dump_json(a))
         return a
 
-    def frame_nfold_extract(self, timeoutSecs=120, **kwargs):
+    def nfold_frame_extract(self, timeoutSecs=120, **kwargs):
         params_dict = {
             'source': None,
             'nfolds': None,
             'afold': None, # Split to extract
         }
         browseAlso = kwargs.pop('browseAlso', False)
-        check_params_update_kwargs(params_dict, kwargs, 'frame_nfold_extract', print_params=True)
+        check_params_update_kwargs(params_dict, kwargs, 'nfold_frame_extract', print_params=True)
         a = self.__do_json_request('2/NFoldFrameExtractPage.json', timeout=timeoutSecs, params=params_dict)
-        verboseprint("\nframe_nfold_extract result:", dump_json(a))
+        verboseprint("\nnfold_frame_extract result:", dump_json(a))
         return a
 
     def gap_statistic(self, timeoutSecs=120, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
