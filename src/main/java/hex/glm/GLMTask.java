@@ -170,6 +170,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     }
     GLMIterationTask [] _glmts;
     @Override public void chunkInit(){
+      _glmts = _glmts.clone();
       for(int i = 0; i < _glmts.length; ++i)
         (_glmts[i] = _glmts[i].clone()).chunkInit();
     }
@@ -333,12 +334,13 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     }
 
     private void sampleThresholds(int yi){
-      if(_ti[yi] > (_newThresholds.length >> 2)) {
-        Arrays.sort(_newThresholds[yi]);
-        for (int i = 0; i < _ti[yi]; i += 4)
-          _newThresholds[yi][i >> 2] = _newThresholds[yi][i];
-        _ti[yi] = _newThresholds.length >> 2;
-      }
+      _ti[yi] = (_newThresholds[yi].length >> 2);
+      try{ Arrays.sort(_newThresholds[yi]);} catch(Throwable t){
+        System.out.println("got AIOOB during sort?! ary = " + Arrays.toString(_newThresholds[yi]));
+        return;
+      } // sort throws AIOOB sometimes!
+      for (int i = 0; i < _newThresholds.length; i += 4)
+        _newThresholds[yi][i >> 2] = _newThresholds[yi][i];
     }
     @Override public void processRow(long gid, final double [] nums, final int ncats, final int [] cats, double [] responses){
       ++_nobs;
@@ -368,10 +370,14 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       if(_validate) {
         _val.add(y, mu);
         if(_glm.family == Family.binomial) {
-          int yi = (int) y;
-          if (_ti[yi] == _newThresholds[yi].length)
-            sampleThresholds(yi);
-          _newThresholds[yi][_ti[yi]++] = (float) mu;
+          try {
+            int yi = (int) y;
+            if (_ti[yi] == _newThresholds[yi].length)
+              sampleThresholds(yi);
+            _newThresholds[yi][_ti[yi]++] = (float) mu;
+          } catch(Throwable t){
+            System.out.println("how did I get here?!!!");
+          }
         }
       }
 
