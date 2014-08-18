@@ -48,7 +48,7 @@ class Basic(unittest.TestCase):
         # time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_NOPASS_parse_syn_gz_cat(self):
+    def test_parse_syn_gz_cat(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             # summary fails with 100000 cols

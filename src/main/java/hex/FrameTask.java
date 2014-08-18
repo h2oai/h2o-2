@@ -558,8 +558,8 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         final long lr = r + chunks[0]._start;
         if ((_dinfo._nfolds > 0 && (lr % _dinfo._nfolds) == _dinfo._foldId)
                 || (skip_rng != null && skip_rng.nextFloat() > _useFraction))continue;
+        ++num_processed_rows; //count rows with missing values even if they are skipped
         for(Chunk c:chunks)if(skipMissing() && c.isNA0(r))continue OUTER; // skip rows with NAs!
-        ++num_processed_rows;
         int i = 0, ncats = 0;
         for(; i < _dinfo._cats; ++i){
           int c = chunks[i].isNA0(r) ? 0 : (int)chunks[i].at80(r); //turns missing values into 0, which happens to be the majority factor, which is what we want for imputation

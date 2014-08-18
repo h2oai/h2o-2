@@ -12,6 +12,7 @@ exprList = [
 
 ROWS = 1000000
 STOP_ON_ERROR = True
+DO_BUG = True
 
 #********************************************************************************
 def write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax, SEEDPERFILE, sel):
@@ -42,7 +43,9 @@ def write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax,
                 # could h2o compress if values are outside that kind of dynamic range ?
 
                 # we want a big exponent?
-                exp = random.randint(40,71)
+                # was
+                # exp = random.randint(40,71)
+                exp = random.randint(0,120)
                 # skip over the current bug around int boundaries?
                 # have a fixed base
                 value = random.random() + (2 ** exp) 
@@ -74,7 +77,12 @@ def write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax,
                 # s = h2o_util.fp_format(value, sel=None) # random
                 s = h2o_util.fp_format(value, sel=sel, only='e') # use same case for all numbers
                 # FIX! strip the trailing zeroes for now because they trigger a bug
-                s = s.rstrip("0")
+                if DO_BUG:
+                    pass
+                else:
+                    s = s.rstrip("0")
+
+            
                 # now our string formatting will lead to different values when we parse and use it 
                 # so we move the expected value generation down here..i.e after we've formatted the string
                 # we'll suck it back in as a fp number
@@ -173,7 +181,7 @@ class Basic(unittest.TestCase):
 
                         # ullResult and expectedUllSum are Q ints, (64-bit) so can subtract them.
                         # I guess we don't even care about sign, since we zero the first 4 bits (xorsum) to avoid nan/inf issues
-                        ALLOWED_BIT_ERR = 0x1f # seeing this amount of error!
+                        ALLOWED_BIT_ERR = 0x1fff # seeing this amount of error!
                         if ullResult!=expectedUllSum and (abs(ullResult-expectedUllSum)>ALLOWED_BIT_ERR):
                             emsg = "h2o didn't get the same xorsum as python. 0x%0.16x 0x%0.16x" % (ullResult, expectedUllSum)
                             if STOP_ON_ERROR:

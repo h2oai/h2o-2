@@ -19,7 +19,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_frame_nfold_extract(self):
+    def test_nfold_frame_extract(self):
         h2o.beta_features = True
 
         csvFilename = 'covtype.data'
@@ -28,7 +28,7 @@ class Basic(unittest.TestCase):
 
         parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, hex_key=hex_key, schema='local', timeoutSecs=10)
 
-        print "Just frame_nfold_extract away and see if anything blows up"
+        print "Just nfold_frame_extract away and see if anything blows up"
         splitMe = hex_key
         inspect = h2o_cmd.runInspect(key=splitMe)
         origNumRows = inspect['numRows']
@@ -39,7 +39,7 @@ class Basic(unittest.TestCase):
             numCols = inspect['numCols']
 
             # FIX! should check if afold is outside of nfold range allowance
-            fs = h2o.nodes[0].frame_nfold_extract(source=splitMe, nfolds=2, afold=random.randint(0,1))
+            fs = h2o.nodes[0].nfold_frame_extract(source=splitMe, nfolds=2, afold=random.randint(0,1))
             print "fs", h2o.dump_json(fs)
 
             split0_key = fs['split_keys'][0]

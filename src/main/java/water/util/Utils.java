@@ -1,8 +1,16 @@
 package water.util;
 
-import hex.rng.*;
+import hex.rng.H2ORandomRNG;
 import hex.rng.H2ORandomRNG.RNGKind;
 import hex.rng.H2ORandomRNG.RNGType;
+import hex.rng.MersenneTwisterRNG;
+import hex.rng.XorShiftRNG;
+import sun.misc.Unsafe;
+import water.*;
+import water.api.DocGen;
+import water.api.DocGen.FieldDoc;
+import water.fvec.ParseDataset2.Compression;
+import water.nbhm.UtilUnsafe;
 
 import java.io.*;
 import java.net.Socket;
@@ -11,15 +19,12 @@ import java.text.DecimalFormat;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.zip.*;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+import java.util.zip.ZipInputStream;
 
 import static java.lang.Double.isNaN;
-import sun.misc.Unsafe;
-import water.*;
-import water.api.DocGen;
-import water.api.DocGen.FieldDoc;
-import water.nbhm.UtilUnsafe;
-import water.fvec.ParseDataset2.Compression;
 
 public class Utils {
   /** Returns the index of the largest value in the array.
@@ -813,6 +818,16 @@ public class Utils {
     @Override public int hashCode() { return (int)Double.doubleToLongBits(_val); }
     @Override public String toString() { return Double.toString(_val); }
   }
+  public static class IcedString extends Iced {
+    public final String _val;
+    public IcedString(String v){_val = v;}
+    @Override public boolean equals( Object o ) {
+      if( !(o instanceof IcedString) ) return false;
+      return ((IcedString)o)._val.equals(_val);
+    }
+    @Override public int hashCode() { return _val.hashCode(); }
+    @Override public String toString() { return _val; }
+  }
   public static class IcedBitSet extends Iced {
     public final byte[] _val;
     public final int _nbits;
@@ -1379,6 +1394,18 @@ public class Utils {
 
   public static <T> T[] join(T[] a, T[] b) {
     T[] res = Arrays.copyOf(a, a.length+b.length);
+    System.arraycopy(b, 0, res, a.length, b.length);
+    return res;
+  }
+
+  public static float[] join(float[] a, float[] b) {
+    float[] res = Arrays.copyOf(a, a.length+b.length);
+    System.arraycopy(b, 0, res, a.length, b.length);
+    return res;
+  }
+
+  public static double[] join(double[] a, double[] b) {
+    double[] res = Arrays.copyOf(a, a.length+b.length);
     System.arraycopy(b, 0, res, a.length, b.length);
     return res;
   }

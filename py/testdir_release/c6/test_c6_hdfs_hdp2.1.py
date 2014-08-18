@@ -53,11 +53,12 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         ]
 
         # find_cloud.py won't set these correctly. Let's just set them here
+        # update: look in the runner*sh ..the find_cloud.py has args now to get it right
         # we have two cdh's though. I guess we're going to use whatever got setup
         # h2o.nodes[0].use_maprfs = False
         # h2o.nodes[0].use_hdfs = True
-        # h2o.nodes[0].hdfs_version = 'cdh3'
-        # h2o.nodes[0].hdfs_name_node = '192.168.1.176'
+        # h2o.nodes[0].hdfs_version = 'hdp2.1'
+        # h2o.nodes[0].hdfs_name_node = '192.168.1.186'
 
         h2o.setup_benchmark_log()
 
