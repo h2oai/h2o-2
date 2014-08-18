@@ -13,16 +13,14 @@ def write_syn_dataset(csvPathname, rowCount, headerData, rList):
         dsf.write(r + "\n")
     dsf.close()
 
-def rand_rowData(totalCols):
-    rowData1 = str(random.randint(0,7))
-    for i in range(totalCols):
-        rowData1 = rowData1 + "," + str(random.randint(0,7))
+def rand_rowData(inputCols):
+    rowData1 = [str(random.randint(0,7)) for i in range(inputCols)]
+    rowData2 = [str(random.randint(0,7)) for i in range(inputCols)]
 
-    rowData2 = str(random.randint(0,7))
-    for i in range(totalCols):
-        rowData2 = rowData2 + "," + str(random.randint(0,7))
-    # RF will complain if all inputs are the same
-    r = [rowData1, rowData2]
+    # make them comma separated strings now, and return the pair
+    r = [",".join(rowData1), ",".join(rowData2)]
+    print "\nrandom row 0:", r[0]
+    print "random row 1:", r[1]
     return r
 
 class Basic(unittest.TestCase):
@@ -44,17 +42,18 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud(h2o.nodes)
     
-    def test_parse_header_rows_mismatch_fvec(self):
+    def test_NOPASS_parse_header_rows_mismatch_fvec(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         csvFilename = "syn_ints.csv"
         csvPathname = SYNDATASETS_DIR + '/' + csvFilename
 
         # headerData = "ID,CAPSULE,AGE,RACE,DPROS,DCAPS,PSA,VOL,GLEASON"
+        # note the output response col doesn't have a header..h2o currently drops the col if so
         headerData = "ID,CAPSULE,AGE,RACE,DPROS,DCAPS,PSA,VOL"
 
-        totalCols = 8
+        inputCols = 8
         totalRows = 10000
-        rList = rand_rowData(totalCols)
+        rList = rand_rowData(inputCols)
         write_syn_dataset(csvPathname, totalRows, headerData, rList)
 
         for trial in range (2):
@@ -74,9 +73,12 @@ class Basic(unittest.TestCase):
             print "\n" + csvPathname, \
                 "    numRows:", "{:,}".format(inspect['numRows']), \
                 "    numCols:", "{:,}".format(inspect['numCols'])
-            # should match # of cols in header or ??
-            self.assertEqual(inspect['numCols'], totalCols, 
-                "parse created result with the wrong number of cols %s %s" % (inspect['numCols'], totalCols))
+            # the header matches niputCols. Inspect should return inputCols+1 for the output 
+            # the output is appended in write_syn_dataset
+        
+            expectedCols = inputCols + 1
+            self.assertEqual(inspect['numCols'], expectedCols,
+                "parse created result with the wrong number of cols %s %s" % (inspect['numCols'], expectedCols))
             self.assertEqual(inspect['numRows'], totalRows,
                 "parse created result with the wrong number of rows (header shouldn't count) %s %s" % (inspect['numRows'], totalRows))
 

@@ -270,7 +270,8 @@ class ModelManagementTestCase(unittest.TestCase):
             'ignored_cols_by_name': 'IsDepDelayed_REC, IsDepDelayed_REC_recoded', 
             'ntrees': 50,
             'max_depth': 10,
-            'classification': 1
+            'classification': 1,
+            'importance': 1
         }
         # Fails to complete in multinode
         speedrf_AirlinesTrain_1 = node.speedrf(airlines_train_hex, **speedrf_AirlinesTrain_1_params)
@@ -314,6 +315,20 @@ class ModelManagementTestCase(unittest.TestCase):
         durations['glm_AirlinesTrain_binary_A'] = time.time() * 1000 - before
         num_models = num_models + 1
         h2o_glm.simpleCheckGLM(self, glm_AirlinesTrain_A, None, **glm_AirlinesTrain_A_params)
+
+
+        print "##############################################################################################"
+        print "Generating AirlinesTrain Naive Bayes binary classification model. . ."
+        # R equivalent: h2o.naive_bayes(y = "IsDepDelayed", x = c("Origin", "Dest", "fDayofMonth", "fYear", "UniqueCarrier", "fDayOfWeek", "fMonth", "DepTime", "ArrTime", "Distance"), data = airlines_train.hex, family = "binomial", alpha=0.05, lambda=1.0e-2, standardize=FALSE, nfolds=0)
+        before = time.time() * 1000
+        nb_AirlinesTrain_params = {
+            'destination_key': 'nb_AirlinesTrain_binary_1',
+            'response': 'IsDepDelayed', 
+            'ignored_cols': 'IsDepDelayed_REC_recoded, IsDepDelayed_REC', 
+        }
+        nb_AirlinesTrain = node.naive_bayes(source=airlines_train_hex, timeoutSecs=120, **nb_AirlinesTrain_params)
+        durations['nb_AirlinesTrain_binary_1'] = time.time() * 1000 - before
+        num_models = num_models + 1
 
 
         print "#########################################################"
@@ -361,7 +376,8 @@ class ModelManagementTestCase(unittest.TestCase):
             'ignored_cols_by_name': None, 
             'ntrees': 50,
             'max_depth': 10,
-            'classification': 1
+            'classification': 1,
+            'importance': 1
         }
         speedrf_Prostate_1 = node.speedrf(prostate_hex, **speedrf_Prostate_1_params)
         num_models = num_models + 1
@@ -648,6 +664,9 @@ class ApiTestCase(ModelManagementTestCase):
                 compatible_frames = models['models'][model_key]['compatible_frames']
                 self.assertKeysExist(models, 'models/' + model_key, ['training_duration_in_ms'])
                 self.assertNotEqual(models['models'][model_key]['training_duration_in_ms'], 0, "Expected non-zero training time for model: " + model_key)
+                if models['models'][model_key]['model_algorithm'] != 'Naive Bayes':
+                    self.assertKeysExistAndNonNull(models, 'models/' + model_key, ['variable_importances'])
+                    self.assertKeysExistAndNonNull(models, 'models/' + model_key + '/variable_importances', ['varimp', 'method', 'max_var', 'scaled'])
 
                 for frame_key in compatible_frames:
                     print "Scoring: /2/Models?key=" + model_key + "&score_frame=" + frame_key

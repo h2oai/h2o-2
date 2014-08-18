@@ -91,7 +91,15 @@ public class TestUtil {
         if( o instanceof Vec.VectorGroup )
           leaked_keys--;
         else {
-          System.err.println("Leaked key: " + k + " = " + o);
+          try {
+            System.err.println("Leaked key: " + k + " = " + o);
+          } catch (NullPointerException t) {
+            System.err.println("Leaked key: " + k + " = " + o.getClass().getSimpleName() + " with missing data");
+          } catch (Throwable t) {
+            t.printStackTrace();
+            throw new RuntimeException(t);
+          }
+
           if (k.isChunkKey()) nchunks++;
           else if (k.isVec()) nvecs++;
           else if (o instanceof Frame) nframes++;

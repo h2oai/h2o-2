@@ -66,8 +66,8 @@ DOIT=../testdir_single_jvm/n0.doit
 $DOIT c1/test_c1_rel.py || true
 # $DOIT c2/test_c2_rel.py || true
 # $DOIT c3/test_c3_rel.py || true
-# $DOIT c4/test_c4_four_billion_rows.py || true
-# $DOIT c6/test_c6_hdfs.py || true
+# $DOIT c4/test_c4_four_billion_rows_fvec.py || true
+# $DOIT c6/test_c6_hdfs_fvec.py || true
 # $DOIT c8/test_c8_rf_airlines_hdfs.py || true
 # fails with summary
 # $DOIT c7/test_c7_rel.py || true

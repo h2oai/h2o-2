@@ -52,7 +52,7 @@ public abstract class DTask<T extends DTask> extends H2OCountedCompleter impleme
   /** Override to remove 2 lines of logging per RPC.  0.5M RPC's will lead to
    *  1M lines of logging at about 50 bytes/line produces 50M of log file,
    *  which will swamp all other logging output. */
-  public boolean logVerbose() { return true; }
+  public boolean logVerbose() { return false; }
 
   @Override public AutoBuffer write(AutoBuffer bb) { return bb.put(_ex); }
   @Override public <T extends Freezable> T read(AutoBuffer bb) { _ex = bb.get(); return (T)this; }

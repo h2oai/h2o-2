@@ -37,22 +37,28 @@ h2o.clusterInfo <- function(client) {
       threeSeconds = 3
       Sys.sleep(threeSeconds)
       res = fromJSON(postForm(myURL, style = "POST"))
-    }
+    }  
   }
   
   nodeInfo = res$nodes
   maxMem = sum(sapply(nodeInfo,function(x) as.numeric(x['max_mem_bytes']))) / (1024 * 1024 * 1024)
   numCPU = sum(sapply(nodeInfo,function(x) as.numeric(x['num_cpus'])))
+  allowedCPU = sum(sapply(nodeInfo,function(x) as.numeric(x['cpus_allowed'])))
   clusterHealth =  all(sapply(nodeInfo,function(x) as.logical(x['num_cpus']))==TRUE)
   
   cat("R is connected to H2O cluster:\n")
-  cat("    H2O cluster uptime:       ", .readableTime(as.numeric(res$cloud_uptime_millis)), "\n")
-  cat("    H2O cluster version:      ", res$version, "\n")
-  cat("    H2O cluster name:         ", res$cloud_name, "\n")
-  cat("    H2O cluster total nodes:  ", res$cloud_size, "\n")
-  cat("    H2O cluster total memory: ", sprintf("%.2f GB", maxMem), "\n")
-  cat("    H2O cluster total cores:  ", numCPU, "\n")
-  cat("    H2O cluster healthy:      ", clusterHealth, "\n")  
+  cat("    H2O cluster uptime:        ", .readableTime(as.numeric(res$cloud_uptime_millis)), "\n")
+  cat("    H2O cluster version:       ", res$version, "\n")
+  cat("    H2O cluster name:          ", res$cloud_name, "\n")
+  cat("    H2O cluster total nodes:   ", res$cloud_size, "\n")
+  cat("    H2O cluster total memory:  ", sprintf("%.2f GB", maxMem), "\n")
+  cat("    H2O cluster total cores:   ", numCPU, "\n")
+  cat("    H2O cluster allowed cores: ", allowedCPU, "\n")
+  cat("    H2O cluster healthy:       ", clusterHealth, "\n")
+  
+  cpusLimited = sapply(nodeInfo, function(x) { x[['num_cpus']] > 1 && x[['cpus_allowed']] == 1 })
+  if(any(cpusLimited))
+    warning("Number of CPU cores allowed is limited to 1 on some nodes.  To remove this limit, set environment variable 'OPENBLAS_MAIN_FREE=1' before starting R.")
 }
 
 h2o.ls <- function(object, pattern = "") {
@@ -100,8 +106,8 @@ h2o.assign <- function(data, key) {
 
 h2o.createFrame <- function(object, key, rows, cols, seed, randomize, value, real_range, categorical_fraction, factors, integer_fraction, integer_range, missing_fraction, response_factors) {
   if(!is.numeric(rows)) stop("rows must be a numeric value")
-  if(!is.numeric(cols)) stop("rows must be a numeric value")
-  if(!is.numeric(seed)) stop("rows must be a numeric value")
+  if(!is.numeric(cols)) stop("cols must be a numeric value")
+  if(!is.numeric(seed)) stop("seed must be a numeric value")
   if(!is.logical(randomize)) stop("randomize must be a boolean value")
   if(!is.numeric(value)) stop("value must be a numeric value")
   if(!is.numeric(real_range)) stop("real_range must be a numeric value")
@@ -126,6 +132,19 @@ h2o.splitFrame <- function(data, ratios = 0.75, shuffle = FALSE) {
   
   res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SplitFrame, source = data@key, ratios = ratios, shuffle = as.numeric(shuffle))
   lapply(res$split_keys, function(key) { .h2o.exec2(expr = key, h2o = data@h2o, dest_key = key) })
+}
+
+h2o.insertMissingValues <- function(data, fraction = 0.01, seed = -1) {
+  if(class(data) != "H2OParsedData") stop("data must be of class H2OParsedData")
+  if(!is.numeric(fraction)) stop("fraction must be numeric")
+  if(any(fraction <= 0 | fraction > 1)) stop("fraction must be in (0,1]")
+  if(!missing(seed) && !is.numeric(seed)) stop("seed must be numeric")
+  
+  if(missing(seed) || seed == -1)
+    res <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_MissingVals, key = data@key, missing_fraction = fraction)
+  else
+    res <- .h2o.__remoteSend(data@h2o, .h2o.__PAGE_MissingVals, key = data@key, seed = seed, missing_fraction = fraction)
+  .h2o.exec2(expr = data@key, h2o = data@h2o, dest_key = data@key)
 }
 
 # ----------------------------------- File Import Operations --------------------------------- #

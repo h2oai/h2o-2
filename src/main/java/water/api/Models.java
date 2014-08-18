@@ -11,6 +11,8 @@ import hex.gbm.GBM;
 import hex.glm.GLM2;
 import hex.glm.GLMModel;
 import hex.singlenoderf.SpeeDRF;
+import hex.nb.NaiveBayes;
+import hex.nb.NBModel;
 import org.apache.commons.math3.util.Pair;
 import water.*;
 import water.api.Frames.FrameSummary;
@@ -174,6 +176,8 @@ public class Models extends Request2 {
       summarizeGBMModel(summary, (hex.gbm.GBM.GBMModel) model);
     } else if (model instanceof hex.singlenoderf.SpeeDRFModel) {
       summarizeSpeeDRFModel(summary, (hex.singlenoderf.SpeeDRFModel) model);
+    } else if (model instanceof NBModel) {
+      summarizeNBModel(summary, (NBModel) model);
     } else {
       // catch-all
       summarizeModelCommonFields(summary, model);
@@ -336,6 +340,28 @@ public class Models extends Request2 {
     summary.critical_parameters = whitelistJsonObject(all_params, GBM_critical_params);
     summary.secondary_parameters = whitelistJsonObject(all_params, GBM_secondary_params);
     summary.expert_parameters = whitelistJsonObject(all_params, GBM_expert_params);
+  }
+
+  /******
+   * NB
+   ******/
+  private static final Set<String> NB_critical_params = getCriticalParamNames(NaiveBayes.DOC_FIELDS);
+  private static final Set<String> NB_secondary_params = getSecondaryParamNames(NaiveBayes.DOC_FIELDS);
+  private static final Set<String> NB_expert_params = getExpertParamNames(NaiveBayes.DOC_FIELDS);
+
+  /**
+   * Summarize fields which are specific to hex.nb.NBModel.
+   */
+  private static void summarizeNBModel(ModelSummary summary, hex.nb.NBModel model) {
+    // add generic fields such as column names
+    summarizeModelCommonFields(summary, model);
+
+    summary.model_algorithm = "Naive Bayes";
+
+    JsonObject all_params = (model.get_params()).toJSON();
+    summary.critical_parameters = whitelistJsonObject(all_params, NB_critical_params);
+    summary.secondary_parameters = whitelistJsonObject(all_params, NB_secondary_params);
+    summary.expert_parameters = whitelistJsonObject(all_params, NB_expert_params);
   }
 
   /**

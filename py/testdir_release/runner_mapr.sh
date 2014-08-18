@@ -129,7 +129,7 @@ myPy c6 test_c6_maprfs_fvec.py
 
 myPy c2 test_c2_rel.py
 # myPy c3 test_c3_rel.py
-# myPy c4 test_c4_four_billion_rows.py
+# myPy c4 test_c4_four_billion_rows_fvec.py
 
 # If this one fails, fail this script so the bash dies 
 # We don't want to hang waiting for the cloud to terminate.

@@ -7,6 +7,7 @@ import hex.ConfusionMatrix;
 
 import java.util.*;
 
+import org.apache.commons.lang.ArrayUtils;
 import water.*;
 import water.Timer;
 import water.api.*;
@@ -234,8 +235,18 @@ public class SpeeDRF extends Job.ValidatedJob {
       DRFTask tsk = new DRFTask(self(), train, drfParams, model._key);
       tsk.validateInputData(train);
       tsk.invokeOnAllNodes();
+      Log.info("Tree building complete. Scoring...");
       model = UKV.get(dest());
       model.scoreAllTrees(test == null ? train : test, resp);
+      // Launch a Variable Importance Task
+      if (importance && !regression) {
+        Log.info("Scoring complete. Performing Variable Importance Calculations.");
+        model.current_status = "Performing Variable Importance Calculation.";
+        Timer VITimer = new Timer();
+        model.variableImportanceCalc(train, resp);
+        Log.info("Variable Importance on "+(train.numCols()-1)+" variables and "+ ntrees +" trees done in " + VITimer);
+      }
+      model.current_status = "Model Complete";
     } finally {
       if (model != null) {
         model.unlock(self());
@@ -303,7 +314,17 @@ public class SpeeDRF extends Job.ValidatedJob {
   }
   private void setMtry(boolean reg, int numCols) { mtries = reg ? (int) Math.floor((float) (numCols) / 3.0f) : (int) Math.floor(Math.sqrt(numCols)); }
   private Frame setTrain() { Frame train = FrameTask.DataInfo.prepareFrame(source, response, ignored_cols, !regression /*toEnum is TRUE if regression is FALSE*/, false, false); if (train.lastVec().masterVec() != null && train.lastVec() != response) gtrash(train.lastVec()); return train; }
-  private Frame setTest() { Frame test = null; if (validation != null) test = FrameTask.DataInfo.prepareFrame(validation, validation.vecs()[source.find(response)], ignored_cols, !regression, false, false); if (test != null && test.lastVec().masterVec() != null) gtrash(test.lastVec()); return test; }
+  private Frame setTest() {
+    if (validation == null) return null;
+    Frame test = null;
+    ArrayList<Integer> v_ignored_cols = new ArrayList<Integer>();
+    for (int ignored_col : ignored_cols) if (validation.find(source.names()[ignored_col]) != -1) v_ignored_cols.add(ignored_col);
+    int[] v_ignored = new int[v_ignored_cols.size()];
+    for (int i = 0; i < v_ignored.length; ++i) v_ignored[i] = v_ignored_cols.get(i);
+    if (validation != null) test = FrameTask.DataInfo.prepareFrame(validation, validation.vecs()[validation.find(source.names()[source.find(response)])], v_ignored, !regression, false, false);
+    if (test != null && test.lastVec().masterVec() != null) gtrash(test.lastVec());
+    return test;
+  }
   private Frame setStrat(Frame train, Frame test, Vec resp) {
     Frame fr = train;
     float[] trainSamplingFactors;

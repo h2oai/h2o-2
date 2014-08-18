@@ -265,8 +265,11 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     long _nobs;
     final boolean _validate;
     final float [] _thresholds;
+    float [][] _newThresholds;
+    int [] _ti;
     final boolean _computeGradient;
     final boolean _computeGram;
+    public static final int N_THRESHOLDS = 50;
 
     public GLMIterationTask(Key jobKey, DataInfo dinfo, GLMParams glm, boolean computeGram, boolean validate, boolean computeGradient, double [] beta, double ymu, double reg, float [] thresholds, H2OCountedCompleter cmp) {
       super(jobKey, dinfo,glm,cmp);
@@ -283,6 +286,17 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       assert !_computeGradient || validate;
     }
 
+    private void sampleThresholds(int yi){
+      if(_ti[yi] > (_newThresholds.length >> 2)) {
+        Arrays.sort(_newThresholds[yi]);
+        for (int i = 0; i < _ti[yi]; i += 2) {
+          _newThresholds[yi][i >> 1] = _newThresholds[yi][i];
+        }
+        _ti[yi] = _newThresholds.length >> 2;
+        for(int i = _ti[yi]; i < _newThresholds[yi].length;++i)
+          _newThresholds[yi][i] = Float.POSITIVE_INFINITY;
+      }
+    }
     @Override public void processRow(long gid, final double [] nums, final int ncats, final int [] cats, double [] responses){
       ++_nobs;
       final double y = responses[0];
@@ -308,8 +322,16 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
         z = eta + (y-mu)*d;
         w = 1.0/(var*d*d);
       }
-      if(_validate)
+      if(_validate) {
         _val.add(y, mu);
+        if(_glm.family == Family.binomial) {
+          int yi = (int) y;
+          if (_ti[yi] == _newThresholds[yi].length)
+            sampleThresholds(yi);
+          _newThresholds[yi][_ti[yi]++] = (float) mu;
+        }
+      }
+
       assert w >= 0 : "invalid weight " + w;
       final double wz = w * z;
       _yy += wz * z;
@@ -335,7 +357,13 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       _xy = MemoryManager.malloc8d(_dinfo.fullN()+1); // + 1 is for intercept
       int rank = 0;
       if(_beta != null)for(double d:_beta)if(d != 0)++rank;
-      if(_validate)_val = new GLMValidation(null,_ymu, _glm,rank, _thresholds);
+      if(_validate){
+        _val = new GLMValidation(null,_ymu, _glm,rank, _thresholds);
+        if(_glm.family == Family.binomial){
+          _ti = new int[2];
+          _newThresholds = new float[2][N_THRESHOLDS << 2];
+        }
+      }
       if(_computeGradient)
         _grad = MemoryManager.malloc8d(_dinfo.fullN()+1); // + 1 is for intercept
     }
@@ -348,6 +376,10 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
         for(int i = 0; i < _grad.length; ++i)
           _grad[i] *= _reg;
       _yy *= _reg;
+      if(_validate && _glm.family == Family.binomial) {
+        _newThresholds[0] = Arrays.copyOf(_newThresholds[0],Math.min(_ti[0],_newThresholds[0].length >> 1));
+        _newThresholds[1] = Arrays.copyOf(_newThresholds[1],Math.min(_ti[1],_newThresholds[1].length >> 1));
+      }
     }
     @Override
     public void reduce(GLMIterationTask git){
@@ -358,6 +390,22 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
         _nobs += git._nobs;
         if (_validate) _val.add(git._val);
         if (_computeGradient) Utils.add(_grad, git._grad);
+        if(_validate && _glm.family == Family.binomial) {
+          _newThresholds[0] = Utils.join(_newThresholds[0], git._newThresholds[0]);
+          _newThresholds[1] = Utils.join(_newThresholds[1], git._newThresholds[1]);
+          if (_newThresholds[0].length >= 2 * N_THRESHOLDS) {
+            for (int i = 0; i < 2 * N_THRESHOLDS; i += 2)
+              _newThresholds[0][i >> 1] = _newThresholds[0][i];
+          }
+          if (_newThresholds[0].length > N_THRESHOLDS)
+            _newThresholds[0] = Arrays.copyOf(_newThresholds[0], N_THRESHOLDS);
+          if (_newThresholds[1].length >= 2 * N_THRESHOLDS) {
+            for (int i = 0; i < 2 * N_THRESHOLDS; i += 2)
+              _newThresholds[1][i >> 1] = _newThresholds[1][i];
+          }
+          if (_newThresholds[1].length > N_THRESHOLDS)
+            _newThresholds[1] = Arrays.copyOf(_newThresholds[1], N_THRESHOLDS);
+        }
         super.reduce(git);
       }
     }

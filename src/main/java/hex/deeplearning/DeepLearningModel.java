@@ -1800,9 +1800,17 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     assert (((DeepLearningModel) UKV.get(bestModelKey)).error() == _bestError);
   }
 
-  @Override public void delete( ) {
-    if (actual_best_model_key != null) DKV.remove(actual_best_model_key);
-    super.delete();
+  public void delete_best_model( ) {
+    if (actual_best_model_key != null && actual_best_model_key != _key) DKV.remove(actual_best_model_key);
+  }
+
+  public void delete_xval_models( ) {
+    if (get_params().xval_models != null) {
+      for (Key k : get_params().xval_models) {
+        UKV.<DeepLearningModel>get(k).delete_best_model();
+        UKV.<DeepLearningModel>get(k).delete();
+      }
+    }
   }
 }
 
