@@ -4,9 +4,12 @@ import Jama.CholeskyDecomposition;
 import Jama.Matrix;
 import hex.FrameTask;
 import hex.glm.LSMSolver.ADMMSolver.NonSPDMatrixException;
+import jsr166y.CountedCompleter;
 import jsr166y.ForkJoinTask;
 import jsr166y.RecursiveAction;
+import sun.misc.Unsafe;
 import water.*;
+import water.nbhm.UtilUnsafe;
 import water.util.Utils;
 
 import java.util.Arrays;
@@ -365,6 +368,196 @@ public final class Gram extends Iced {
       return "";
     }
 
+
+
+    public static abstract class DelayedTask  extends RecursiveAction {
+      private static final Unsafe U;
+      private static final long PENDING;
+      private int _pending;
+
+      static {
+        try {
+          U = UtilUnsafe.getUnsafe();;
+          PENDING = U.objectFieldOffset
+            (CountedCompleter.class.getDeclaredField("pending"));
+        } catch (Exception e) {
+          throw new Error(e);
+        }
+      }
+
+      public DelayedTask(int pending){ _pending = pending;}
+
+      public final void tryFork(){
+        int c = _pending;
+        while(c != 0 && !U.compareAndSwapInt(this,PENDING,c,c-1))
+          c = _pending;
+//        System.out.println(" tryFork of " + this + ". c = " + c);
+        if(c == 0) fork();
+      }
+    }
+
+    private final class BackSolver extends CountedCompleter {
+      final int _blocksz;
+      final int _kRem;
+      final int _iRem;
+      final int _diagLen;
+      final double[] _y;
+
+      final DelayedTask [][] _tasks;
+
+      BackSolver(double [] y, int blocksz){
+        final int n = y.length;
+        _y = y; _blocksz = blocksz;
+        _kRem = _xx.length % _blocksz;
+        _iRem = (_y.length - _kRem) % _blocksz;
+        int M = _xx.length/blocksz + (_kRem == 0?0:1);;
+        int N = n / blocksz  + (_kRem == 0?0:1); // iRem is added to the diagonal block
+        _tasks = new DelayedTask[M][];
+        int rsz = N-1;
+        for(int i = M-1; i >= 0; --i)
+          _tasks[i] = new DelayedTask[rsz--];
+        _diagLen = _diag == null?0:_diag.length;
+        int firstBlockSz = _kRem == 0?_blocksz:_kRem;
+        // Solve L'*X = Y;
+        int kfrom = _diagLen + _xx.length-1;
+        int kto = kfrom - firstBlockSz + 1;
+        int ifrom = _y.length - _iRem - firstBlockSz;
+        int pending = 0;
+        for( int k = _tasks.length-1; k >= 0; --k) {
+          _tasks[k][_tasks[k].length-1] = new BackSolveDiagTsk(0,kfrom,kto,ifrom);
+          for(int i = 0; i < _tasks[k].length-1; ++i)
+            _tasks[k][i] = new BackSolveInnerTsk(pending,kfrom,kto, i*blocksz);
+          kfrom = kto-1;
+          kto -= blocksz;
+          ifrom -= blocksz;
+          pending = 1;
+        }
+        addToPendingCount(_tasks[0].length-1);
+      }
+
+      @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
+        try {
+          for (ForkJoinTask[] ary : _tasks)
+            for (ForkJoinTask fjt : ary)
+              fjt.cancel(true);
+        } catch(Throwable t){}
+        return true;
+      }
+      @Override
+      public void compute() {
+        _tasks[_tasks.length-1][_tasks[_tasks.length-1].length-1].fork(); }
+
+      final class BackSolveDiagTsk extends DelayedTask {
+        final int _kfrom, _kto,_ifrom;
+
+        public BackSolveDiagTsk(int pending, int kfrom, int kto, int ifrom) {
+          super(pending);
+          _kfrom = kfrom;
+          _kto = kto;
+          _ifrom = ifrom;
+        }
+        @Override
+        protected void compute() {
+          if(BackSolver.this.isCompletedAbnormally())
+            return;
+          try {
+            // same as single threaded solve,
+            // except we do only a (lower diagonal) square block here
+            // and we (try to) launch dependents in the end
+            for (int k = _kfrom; k >= _kto; --k) {
+              _y[k] /= _xx[k - _diagLen][k];
+              for (int i = _ifrom; i < k; ++i)
+                _y[i] -= _y[k] * _xx[k - _diagLen][i];
+            }
+            // now try to launch dependent tasks
+            // (tryFork will fork task t iff all of it's dependencies are done)
+            final int row = (_kto - _diagLen) / _blocksz;
+            final int col = _ifrom / _blocksz;
+//            System.out.println("done with diagonal task at  row " + row + " and col " + col + " ifrom = " + _ifrom + ", kto = " + _kto);
+            // the last row of task completes the parent
+            if (row == 0) tryComplete();
+            // try to fork the whole row to the left
+            for (int i = 0; i < _tasks[row].length - 1; ++i)
+              _tasks[row][i].tryFork();
+          } catch(Throwable t){
+            t.printStackTrace();
+            BackSolver.this.completeExceptionally(t);
+          }
+        }
+        @Override public String toString(){
+          return ("DiagTsk, ifrom = " + _ifrom + ", kto = " + _kto);
+        }
+      }
+      final class BackSolveInnerTsk extends DelayedTask {
+        final int _kfrom, _kto, _ifrom;
+        public BackSolveInnerTsk(int pending,int kfrom, int kto, int ifrom) {
+          super(pending);
+          _kfrom = kfrom;
+          _kto = kto;
+          _ifrom = ifrom;
+        }
+        @Override
+        public void compute() {
+          if(BackSolver.this.isCompletedAbnormally())
+            return;
+          try {
+            // same as single threaded solve,
+            // except we do only a (lower diagonal) square block here
+            // and we (try to) launch dependents in the end
+            for (int k = _kfrom; k >= _kto; --k) {
+              final double yk = _y[k];
+              final double [] x = _xx[k-_diagLen];
+              for (int i = _ifrom; i < (_ifrom+_blocksz); ++i)
+                _y[i] -= yk * x[i];
+            }
+            // now try to launch dependent tasks
+            // (tryFork will fork task t iff all of it's dependencies are done)
+            final int row = (_kto - _diagLen) / _blocksz;
+            final int col = _ifrom / _blocksz;
+            // the last row of task completes the parent
+            if (row == 0) tryComplete();
+              // try to fork task directly above
+            else _tasks[row - 1][col].tryFork();
+          } catch(Throwable t){
+            t.printStackTrace();
+            BackSolver.this.completeExceptionally(t);
+          }
+        }
+        @Override public String toString(){
+          return ("InnerTsk, ifrom = " + _ifrom + ", kto = " + _kto);
+        }
+      }
+    }
+
+    /**
+     * Find solution to A*x = y.
+     *
+     * Result is stored in the y input vector. May throw NonSPDMatrix exception in case Gram is not
+     * positive definite.
+     *
+     * @param y
+     */
+    public final void  psolve(double[] y) {
+      if( !isSPD() ) throw new NonSPDMatrixException();
+      assert _xx.length + _diag.length == y.length:"" + _xx.length + " + " + _diag.length + " != " + y.length;
+      // diagonal
+      for( int k = 0; k < _diag.length; ++k )
+        y[k] /= _diag[k];
+      // rest
+      final int n = y.length;
+      // Solve L*Y = B;
+      for( int k = _diag.length; k < n; ++k ) {
+        double d = 0;
+        for( int i = 0; i < k; i++ )
+          d += y[i] * _xx[k - _diag.length][i];
+        y[k] = (y[k]-d)/_xx[k - _diag.length][k];
+      }
+      // do the dense bit in parallel
+      new BackSolver(y,10).invoke();
+      // diagonal
+      for( int k = _diag.length - 1; k >= 0; --k )
+        y[k] /= _diag[k];
+    }
     /**
      * Find solution to A*x = y.
      *
