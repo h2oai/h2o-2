@@ -6,14 +6,18 @@ paramDict = {
     # 2 new
     'destination_key': ['model_keyA', '012345', '__hello'],
     'cols': [None, None, None, None, None, '0,1,2,3,4,5,6,7,8','C1,C2,C3,C4,C5,C6,C7,C8'],
-    # exclusion handled below
+    # exclusion handled below, otherwise exception:
+    # ...Arguments 'cols', 'ignored_cols_by_name', and 'ignored_cols' are exclusive
+
     'ignored_cols_by_name': [None, None, None, None, 'C1','C2','C3','C4','C5','C6','C7','C8','C9'],
     # probably can't deal with mixtures of cols and ignore, so just use cols for now
     # could handle exclusion below
     # 'ignored_cols': [None, None, None, None, None, '0,1,2,3,4,5,6,7,8','C1,C2,C3,C4,C5,C6,C7,C8'],
     'n_folds': [None, 2, 5], # has to be >= 2?
     'keep_cross_validation_splits': [None, 0, 1],
-    'classification': [None, 0, 1],
+    # 'classification': [None, 0, 1],
+    # doesn't support regression yet
+    'classification': [None, 1],
     'balance_classes': [None, 0, 1],
     'max_after_balance_size': [None, .1, 1, 2],
     'oobee': [None, 0, 1],
@@ -59,7 +63,9 @@ class Basic(unittest.TestCase):
             params = {'response': 'C55', 'ntrees': 1, 'mtries': 7, 'balance_classes': 0, 'importance': 0}
             colX = h2o_util.pickRandParams(paramDict, params)
             if 'cols' in params and params['cols']:
-                pass
+                # exclusion
+                if 'ignored_cols_by_name' in params:
+                    params['ignored_cols_by_name'] = None
             else:
                 if 'ignored_cols_by_name' in params and params['ignored_cols_by_name']:
                     params['mtries'] = random.randint(1,53)
