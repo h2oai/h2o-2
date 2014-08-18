@@ -298,7 +298,16 @@ public abstract class LSMSolver extends Iced{
         for( int j = 0; j < N-1; ++j )xyPrime[j] = xy[j] + rho*(z[j] - u[j]);
         xyPrime[N-1] = xy[N-1];
         // updated x
+        long tt = System.currentTimeMillis();
+        double [] xyPrime2 = xyPrime.clone();
         chol.solve(xyPrime);
+        if(1==1) {
+          System.out.println("Chol.solve done in " + (System.currentTimeMillis() - tt) + "ms");
+          tt = System.currentTimeMillis();
+          chol.psolve(xyPrime2);
+          System.out.println("Chol.psolve done in " + (System.currentTimeMillis() - tt) + "ms");
+          System.out.println("par-solved correctly? " + Arrays.equals(xyPrime, xyPrime2));
+        }
         // compute u and z updateADMM
         for( int j = 0; j < N-1; ++j ) {
           double x_hat = xyPrime[j];
