@@ -114,7 +114,8 @@ class Basic(unittest.TestCase):
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
             # RFView (score on test)****************************************
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(None, rfView, **params)
-            self.assertAlmostEqual(classification_error, 2.84, delta=0.5, 
+            # was 2.84
+            self.assertAlmostEqual(classification_error, 1.6, delta=0.5, 
                 msg="Classification error %s differs too much" % classification_error)
        
             treeStats = rfView['speedrf_model']['treeStats'] 

@@ -1753,16 +1753,20 @@ class H2O(object):
                 noise=None, benchmarkLogging=None, noPoll=False,
                 print_params=True, noPrint=False, **kwargs):
 
+
         params_dict = {'destination_key': None,
                        'source': data_key,
                        'response': None,
                        'cols': None,
                        'ignored_cols': None,
                        'ignored_cols_by_name': None,
+                       'verbose': None,
+                       'balance_classes': None,
+                       'max_after_balance_size': None,
+                       'keep_cross_validation_splits': None,
                        'classification': 1,
                        'validation': None,
                        'nbins': 1024.0,
-                       'class_weights': None,
                        'max_depth': max_depth,
                        'mtries': -1.0,
                        'ntrees': ntrees,
@@ -1771,8 +1775,7 @@ class H2O(object):
                        'sampling_strategy': 'RANDOM',
                        'seed': -1.0,
                        'select_stat_type': 'ENTROPY',
-                       'importance':0,
-                       'strata_samples': None,
+                       'importance': 0,
                        'n_folds': None
         }
         check_params_update_kwargs(params_dict, kwargs, 'SpeeDRF', print_params)
