@@ -71,9 +71,7 @@ class Basic(unittest.TestCase):
                 'destination_key': modelKey
                 }
 
-            # for c in [0,1,2,3,4,5,6,7,8,9]:
-            # just do a couple digits
-            for c in [0,7]:
+            for c in [5]:
                 print "Trying binomial with case:", c
                 execExpr="A.hex=%s;A.hex[,%s]=(A.hex[,%s]==%s)" % (trainKey, y+1, y+1, c)
                 h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
