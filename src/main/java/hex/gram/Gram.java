@@ -398,8 +398,6 @@ public final class Gram extends Iced {
 
     private final class BackSolver extends CountedCompleter {
       final int _blocksz;
-      final int _kRem;
-      final int _iRem;
       final int _diagLen;
       final double[] _y;
 
@@ -408,28 +406,43 @@ public final class Gram extends Iced {
       BackSolver(double [] y, int blocksz){
         final int n = y.length;
         _y = y; _blocksz = blocksz;
-        _kRem = _xx.length % _blocksz;
-        _iRem = (_y.length - _kRem) % _blocksz;
-        int M = _xx.length/blocksz + (_kRem == 0?0:1);;
-        int N = n / blocksz  + (_kRem == 0?0:1); // iRem is added to the diagonal block
+        int kRem = _xx.length % _blocksz;
+
+        int M = _xx.length/blocksz + (kRem == 0?0:1);;
+        int N = n / blocksz + (kRem == 0?0:1); // iRem is added to the diagonal block
         _tasks = new DelayedTask[M][];
-        int rsz = N-1;
+        int rsz = N;
         for(int i = M-1; i >= 0; --i)
           _tasks[i] = new DelayedTask[rsz--];
         _diagLen = _diag == null?0:_diag.length;
-        int firstBlockSz = _kRem == 0?_blocksz:_kRem;
+
         // Solve L'*X = Y;
-        int kfrom = _diagLen + _xx.length-1;
-        int kto = kfrom - firstBlockSz + 1;
-        int ifrom = _y.length - _iRem - firstBlockSz;
+        int kFrom = _diagLen + _xx.length-1;
+        int kTo = _diagLen + _xx.length;
+        int iFrom = n;
         int pending = 0;
-        for( int k = _tasks.length-1; k >= 0; --k) {
-          _tasks[k][_tasks[k].length-1] = new BackSolveDiagTsk(0,kfrom,kto,ifrom);
+        int rem = 0;
+
+        if(kRem > 0){
+          rem = 1;
+          int k = _tasks.length-1;
+          int i = _tasks[k].length-1;
+          int iRem = (n - kRem) % _blocksz;
+          iFrom = n - kRem - iRem;
+          kTo = kFrom - kRem + 1;
+          _tasks[k][i] = new BackSolveDiagTsk(0,kFrom,kTo,iFrom);
+          for(int j = 0; j < _tasks[k].length-1; ++j)
+            _tasks[k][j] = new BackSolveInnerTsk(pending,kFrom,kTo, j*blocksz);
+          pending = 1;
+        }
+        for( int k = _tasks.length-1-rem; k >= 0; --k) {
+          kFrom = kTo -1;
+          kTo -= blocksz;
+          iFrom -= blocksz;
+          iFrom -= iFrom % blocksz;
+          _tasks[k][_tasks[k].length-1] = new BackSolveDiagTsk(0,kFrom,kTo,iFrom);
           for(int i = 0; i < _tasks[k].length-1; ++i)
-            _tasks[k][i] = new BackSolveInnerTsk(pending,kfrom,kto, i*blocksz);
-          kfrom = kto-1;
-          kto -= blocksz;
-          ifrom -= blocksz;
+            _tasks[k][i] = new BackSolveInnerTsk(pending,kFrom,kTo, i*blocksz);
           pending = 1;
         }
         addToPendingCount(_tasks[0].length-1);
@@ -538,6 +551,7 @@ public final class Gram extends Iced {
      * @param y
      */
     public final void  psolve(double[] y) {
+      long t = System.currentTimeMillis();
       if( !isSPD() ) throw new NonSPDMatrixException();
       assert _xx.length + _diag.length == y.length:"" + _xx.length + " + " + _diag.length + " != " + y.length;
       // diagonal
@@ -552,8 +566,9 @@ public final class Gram extends Iced {
           d += y[i] * _xx[k - _diag.length][i];
         y[k] = (y[k]-d)/_xx[k - _diag.length][k];
       }
+      System.out.println("singleThreaded solve part done in " + (System.currentTimeMillis() - t) + "ms");
       // do the dense bit in parallel
-      new BackSolver(y,10).invoke();
+      new BackSolver(y,200).invoke();
       // diagonal
       for( int k = _diag.length - 1; k >= 0; --k )
         y[k] /= _diag[k];
