@@ -93,7 +93,7 @@ then
     # myPy c3 test_c3_rel.py
     myPy c3 test_c3_exec_copy.py
     myPy c3 test_c3_nongz_fvec.py
-    # myPy c4 test_c4_four_billion_rows.py
+    # myPy c4 test_c4_four_billion_rows_fvec.py
     # known failure last
     myPy c5 test_c5_KMeans_sphere_26GB_fvec.py
     myPy c6 test_c6_hdfs_fvec.py
