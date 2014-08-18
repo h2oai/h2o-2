@@ -145,6 +145,52 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     }
   }
 
+
+  public static class GLMLineSearchTask2 extends GLMTask<GLMLineSearchTask2> {
+    public GLMLineSearchTask2(Key jobKey, DataInfo dinfo, GLMParams glm, double [] oldBeta, double [] newBeta, double betaEps, double ymu, long nobs, H2OCountedCompleter cmp) {
+      super(jobKey, dinfo, glm, cmp);
+      ArrayList<double[]> betas = new ArrayList<double[]>();
+      double diff = 1;
+      while(diff > betaEps && betas.size() < 100){
+        diff = 0;
+        double [] b = MemoryManager.malloc8d(oldBeta.length);
+        for(int i = 0; i < oldBeta.length; ++i) {
+          b[i] = 0.5 * (oldBeta[i] + newBeta[i]);
+          double d = b[i] - oldBeta[i];
+          if(d > diff) diff = d;
+          else if(d < -diff) diff = -d;
+        }
+        betas.add(b);
+        newBeta = b;
+      }
+      // public GLMIterationTask(Key jobKey, DataInfo dinfo, GLMParams glm, boolean computeGram, boolean validate, boolean computeGradient, double [] beta, double ymu, double reg, float [] thresholds, H2OCountedCompleter cmp) {
+      _glmts = new GLMIterationTask[betas.size()];
+      for(int i = 0; i < _glmts.length; ++i)
+        _glmts[i] = new GLMIterationTask(jobKey,dinfo,glm,false,true,true,betas.get(i),ymu,1.0/nobs,new float[]{0} /* don't really want CMs!*/,null);
+    }
+    GLMIterationTask [] _glmts;
+    @Override public void chunkInit(){
+      for(int i = 0; i < _glmts.length; ++i)
+        (_glmts[i] = _glmts[i].clone()).chunkInit();
+    }
+    @Override public void chunkDone(long n){
+      for(int i = 0; i < _glmts.length; ++i)
+        _glmts[i].chunkDone(n);
+    }
+    @Override public void postGlobal(){
+      for(int i = 0; i < _glmts.length; ++i)
+        _glmts[i].postGlobal();
+    }
+    @Override public final void processRow(long gid, final double [] nums, final int ncats, final int [] cats, double [] responses){
+      for(int i = 0; i < _glmts.length; ++i)
+        _glmts[i].processRow(gid,nums,ncats,cats,responses);
+    }
+    @Override
+    public void reduce(GLMLineSearchTask2 git){
+      for(int i = 0; i < _glmts.length; ++i)
+        _glmts[i].reduce(git._glmts[i]);
+    }
+  }
   /**
    * One iteration of glm, computes weighted gram matrix and t(x)*y vector and t(y)*y scalar.
    *
@@ -289,12 +335,9 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     private void sampleThresholds(int yi){
       if(_ti[yi] > (_newThresholds.length >> 2)) {
         Arrays.sort(_newThresholds[yi]);
-        for (int i = 0; i < _ti[yi]; i += 2) {
-          _newThresholds[yi][i >> 1] = _newThresholds[yi][i];
-        }
+        for (int i = 0; i < _ti[yi]; i += 4)
+          _newThresholds[yi][i >> 2] = _newThresholds[yi][i];
         _ti[yi] = _newThresholds.length >> 2;
-        for(int i = _ti[yi]; i < _newThresholds[yi].length;++i)
-          _newThresholds[yi][i] = Float.POSITIVE_INFINITY;
       }
     }
     @Override public void processRow(long gid, final double [] nums, final int ncats, final int [] cats, double [] responses){
@@ -351,6 +394,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
         _xy[numStart + _dinfo._nums] += wz;
         if(_computeGram)_gram.addRow(nums, ncats, cats, w);
       }
+
     }
     @Override protected void chunkInit(){
       if(_computeGram)_gram = new Gram(_dinfo.fullN(), _dinfo.largestCat(), _dinfo._nums, _dinfo._cats,true);
@@ -366,6 +410,10 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       }
       if(_computeGradient)
         _grad = MemoryManager.malloc8d(_dinfo.fullN()+1); // + 1 is for intercept
+      if(_glm.family == Family.binomial && _validate){
+        _ti = new int[2];
+        _newThresholds = new float[2][4*N_THRESHOLDS];
+      }
     }
 
     @Override protected void chunkDone(long n){
@@ -377,8 +425,8 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
           _grad[i] *= _reg;
       _yy *= _reg;
       if(_validate && _glm.family == Family.binomial) {
-        _newThresholds[0] = Arrays.copyOf(_newThresholds[0],Math.min(_ti[0],_newThresholds[0].length >> 1));
-        _newThresholds[1] = Arrays.copyOf(_newThresholds[1],Math.min(_ti[1],_newThresholds[1].length >> 1));
+        _newThresholds[0] = Arrays.copyOf(_newThresholds[0],Math.min(_ti[0],_newThresholds[0].length >> 2));
+        _newThresholds[1] = Arrays.copyOf(_newThresholds[1],Math.min(_ti[1],_newThresholds[1].length >> 2));
       }
     }
     @Override
