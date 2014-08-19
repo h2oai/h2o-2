@@ -852,8 +852,6 @@ def tear_down_cloud(nodeList=None, sandboxIgnoreErrors=False):
 
         # FIX! should we wait a bit for a clean shutdown, before we process kill? It can take more than 1 sec though.
         time.sleep(2)
-        # I took the time delay out of the shutdown_all() below
-        
         for n in nodeList:
             n.terminate()
             verboseprint("tear_down_cloud n:", n)
