@@ -51,7 +51,6 @@
 ./n0.doit test_export_import.py
 ./n0.doit test_failswith512chunk.py
 ./n0.doit test_fp_many_cols_fvec.py
-./n0.doit test_frame_nfold_extract.py
 ./n0.doit test_frame_split_iris.py
 ./n0.doit test_frame_split.py
 ./n0.doit test_from_import_fvec.py
@@ -103,6 +102,7 @@
 ./n0.doit test_GLM2_many_enums.py
 ./n0.doit test_GLM2_many_rooz_enums.py
 ./n0.doit test_GLM2_mnist.py
+./n0.doit test_GLM2_mnist_reals_5_only.py
 ./n0.doit test_GLM2_mnist_reals.py
 ./n0.doit test_GLM2_mnist_short.py
 ./n0.doit test_GLM2_model_key_unique.py
@@ -126,6 +126,7 @@
 ./n0.doit test_hex-443.py
 ./n0.doit test_import_file.py
 ./n0.doit test_import_only_loop.py
+./n0.doit test_insert_na.py
 ./n0.doit test_KMeans2_basic.py
 ./n0.doit test_KMeans2_enum.py
 ./n0.doit test_KMeans_basic_fvec.py
@@ -137,6 +138,7 @@
 ./n0.doit test_KMeans_twit_fvec.py
 ./n0.doit test_many_cols_enum.py
 ./n0.doit test_many_cols.py
+./n0.doit test_nfold_frame_extract.py
 ./n0.doit test_NN2_airlines_small.py
 ./n0.doit test_NN2_covtype.py
 ./n0.doit test_NN2_mnist.py
@@ -205,9 +207,11 @@
 ./n0.doit test_speedrf_change_data_key.py
 ./n0.doit test_speedrf_covtype20x.py
 ./n0.doit test_speedrf_covtype.py
+./n0.doit test_speedrf_float_bigexp.py
 ./n0.doit test_speedrf_many_cols_enum.py
 ./n0.doit test_speedrf_mnist_both.py
 ./n0.doit test_speedrf_mnist.py
+./n0.doit test_speedrf_params_rand2.py
 ./n0.doit test_speedrf_predict3.py
 ./n0.doit test_srf1_fvec.py
 ./n0.doit test_store_view.py
