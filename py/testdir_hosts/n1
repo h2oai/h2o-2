@@ -77,7 +77,7 @@
 ./n1.doit test_many_fp_formats.py
 ./n1.doit test_many_rows_long_enums.py
 ./n1.doit test_model_management.py
-./n1.doit test_multi_with_a_browser.py
+# ./n1.doit test_multi_with_a_browser.py
 ./n1.doit test_NN2_mnist_multi.py
 ./n1.doit test_parse_bounds_csv_fvec.py
 ./n1.doit test_parse_csv_download_fvec.py

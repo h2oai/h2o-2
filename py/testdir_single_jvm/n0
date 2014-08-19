@@ -227,4 +227,4 @@
 ./n0.doit test_summary2_uniform_int_w_NA.py
 ./n0.doit test_summary2_uniform.py
 ./n0.doit test_summary2_uniform_w_NA.py
-./n0.doit test_with_a_browser.py
+# ./n0.doit test_with_a_browser.py
