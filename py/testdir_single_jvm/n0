@@ -24,7 +24,6 @@
 ./n0.doit test_exec2_env_pop_fail.py
 ./n0.doit test_exec2_filter_slice.py
 ./n0.doit test_exec2_frame_fail.py
-./n0.doit test_exec2_ifelse_phrases.py
 ./n0.doit test_exec2_log_like_R.py
 ./n0.doit test_exec2_na2mean.py
 ./n0.doit test_exec2_na_chop.py
