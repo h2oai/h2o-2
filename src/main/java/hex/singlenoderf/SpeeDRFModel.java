@@ -534,7 +534,11 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     float[] classDist = null;
     TreeStats tstats = null;
     // TODO: instantiate trees.
-    Key[][] treeKeys = null;
+    Key[][] treeKeys = new Key[1][t_keys.length];
+    for (int i=0; i<t_keys.length; i++) {
+//      treeKeys[i] = new Key(); // TODO: transform the original tree and instantiate the KV pair.
+    }
+
 
     // dummy model
     SpeeDRFModel_DTree newModel = new SpeeDRFModel_DTree(key,dataKey,testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, mtries, num_folds, priorClassDist, classDist);
@@ -545,6 +549,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
   public static class SpeeDRFModel_DTree extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
+    static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
 
     public SpeeDRFModel_DTree(Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, int mtries, int num_folds, float[] priorClassDist, float[] classDist) {
       super(key,dataKey,testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, num_folds, priorClassDist, classDist);
@@ -557,85 +562,6 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     @Override
     protected void generateModelDescription(StringBuilder sb) { }
   }
-
-  public void toJavaHtml( StringBuilder sb ) {
-    // 1) transform the speedrf model to a drf model
-    // 2) use the transformed object's toJavaHtml
-    // or
-    // 1)
-  }
-//  //TODO: implement the methods within the commented toJavaHtml and toJavaPredictBody
-//
-//  public void toJavaHtml( StringBuilder sb ) {
-//    if( treeStats == null ) return; // No trees yet
-//    sb.append("<br /><br /><div class=\"pull-right\"><a href=\"#\" onclick=\'$(\"#javaModel\").toggleClass(\"hide\");\'" +
-//            "class=\'btn btn-inverse btn-mini\'>Java Model</a></div><br /><div class=\"hide\" id=\"javaModel\">");
-//
-//    boolean featureAllowed = isFeatureAllowed();
-//    if (! featureAllowed) {
-//      sb.append("<br/><div id=\'javaModelWarningBlock\' class=\"alert\" style=\"background:#eedd20;color:#636363;text-shadow:none;\">");
-//      sb.append("<b>You have requested a premium feature (> 10 trees) and your H<sub>2</sub>O software is unlicensed.</b><br/><br/>");
-//      sb.append("Please enter your email address below, and we will send you a trial license shortly.<br/>");
-//      sb.append("This will also temporarily enable downloading Java models.<br/>");
-//      sb.append("<form class=\'form-inline\'><input id=\"emailForJavaModel\" class=\"span5\" type=\"text\" placeholder=\"Email\"/> ");
-//      sb.append("<a href=\"#\" onclick=\'processJavaModelLicense();\' class=\'btn btn-inverse\'>Send</a></form></div>");
-//      sb.append("<div id=\"javaModelSource\" class=\"hide\">");
-//    }
-//    if( ntrees() * treeStats.meanLeaves > 5000 ) {
-//      String modelName = JCodeGen.toJavaId(_key.toString());
-//      sb.append("<pre style=\"overflow-y:scroll;\"><code class=\"language-java\">");
-//      sb.append("/* Java code is too large to display, download it directly.\n");
-//      sb.append("   To obtain the code please invoke in your terminal:\n");
-//      sb.append("     curl http:/").append(H2O.SELF.toString()).append("/h2o-model.jar > h2o-model.jar\n");
-//      sb.append("     curl http:/").append(H2O.SELF.toString()).append("/2/").append(this.getClass().getSimpleName()).append("View.java?_modelKey=").append(_key).append(" > ").append(modelName).append(".java\n");
-//      sb.append("     javac -cp h2o-model.jar -J-Xmx2g -J-XX:MaxPermSize=128m ").append(modelName).append(".java\n");
-//      if (GEN_BENCHMARK_CODE)
-//        sb.append("     java -cp h2o-model.jar:. -Xmx2g -XX:MaxPermSize=256m -XX:ReservedCodeCacheSize=256m ").append(modelName).append('\n');
-//      sb.append("*/");
-//      sb.append("</code></pre>");
-//    } else {
-//      sb.append("<pre style=\"overflow-y:scroll;\"><code class=\"language-java\">");
-//      DocGen.HTML.escape(sb, toJava());
-//      sb.append("</code></pre>");
-//    }
-//    if (!featureAllowed) sb.append("</div>"); // close license blog
-//    sb.append("</div>");
-//    sb.append("<script type=\"text/javascript\">$(document).ready(showOrHideJavaModel);</script>");
-//  }
-//
-//  // Convert Tree model to Java
-//  @Override protected void toJavaPredictBody( final SB bodySb, final SB classCtxSb, final SB fileCtxSb) {
-//    // AD-HOC maximal number of trees in forest - in fact constant pool size for Forest class (all UTF String + references to static classes).
-//    // TODO: in future this parameter can be a parameter for generator, as well as maxIters
-//    final int maxfsize = 4000;
-//    int fidx = 0; // forest index
-//    int treesInForest = 0;
-//    SB forest = new SB();
-//    // divide trees into small forests per 100 trees
-//      /* DEBUG line */ bodySb.i().p("// System.err.println(\"Row (gencode.predict): \" + java.util.Arrays.toString(data));").nl();
-//    bodySb.i().p("java.util.Arrays.fill(preds,0f);").nl();
-//    for( int c=0; c<nclasses(); c++ ) {
-//      toJavaForestBegin(bodySb, forest, c, fidx++, maxfsize);
-//      for( int i=0; i < treeKeys.length; i++ ) {
-//        CompressedTree cts[] = ctree(i);
-//        if( cts[c] == null ) continue;
-//        forest.i().p("if (iters-- > 0) pred").p(" +=").p(" Tree_").p(i).p("_class_").p(c).p(".predict(data);").nl();
-//        // append representation of tree predictor
-//        toJavaTreePredictFct(fileCtxSb, cts[c], i, c);
-//        if (++treesInForest == maxfsize) {
-//          toJavaForestEnd(bodySb, forest, c, fidx);
-//          toJavaForestBegin(bodySb, forest, c, fidx++, maxfsize);
-//          treesInForest = 0;
-//        }
-//      }
-//      toJavaForestEnd(bodySb, forest, c, fidx);
-//      treesInForest = 0;
-//      fidx = 0;
-//    }
-//    fileCtxSb.p(forest);
-//    toJavaUnifyPreds(bodySb);
-//    toJavaFillPreds0(bodySb);
-//  }
 
   static final String NA = "---";
   public void generateHTMLTreeStats(StringBuilder sb, JsonObject trees) {

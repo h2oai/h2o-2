@@ -4,6 +4,7 @@ import hex.singlenoderf.Data.Row;
 import hex.singlenoderf.Tree.SplitNode.SplitInfo;
 import jsr166y.CountedCompleter;
 import jsr166y.RecursiveTask;
+import org.apache.commons.lang.ObjectUtils;
 import water.*;
 import water.H2O.H2OCountedCompleter;
 import water.fvec.Chunk;
@@ -16,6 +17,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import hex.gbm.DTree.*;
 
@@ -658,43 +661,83 @@ public class Tree extends H2OCountedCompleter {
    * @param tree binary form of a singlenoderf.Tree
    * @return AutoBuffer that contain all bytes in the singlenoderf.Tree
    */
-  public static byte[] toDTreeCompressedTreeAB(byte[] tree) {
+  public static byte[] toDTreeCompressedTreeAB(byte[] tree, boolean regression) {
     AutoBuffer ab = new AutoBuffer(tree);
-    return toDTreeCompressedTree(ab).buf();
+    AutoBuffer result = new AutoBuffer();
+    return toDTreeCompressedTree(ab, regression).buf();
   }
 
   /**
    * @param ab AutoBuffer that contains the remaining tree nodes that we want to serialize.
    * @return binary form of a DTree.CompressedTree as a AutoBuffer
    */
-  public static AutoBuffer toDTreeCompressedTree(AutoBuffer ab) {
+  public static AutoBuffer toDTreeCompressedTree(AutoBuffer ab, boolean regression) {
     AutoBuffer result = new AutoBuffer();
-    byte _nodeType = 0;
+    int cap=0;
+    String abString = ab.toString();
+    Pattern pattern = Pattern.compile("<= .* <= (.*?) <=");
+    Matcher matcher = pattern.matcher(abString);
+    if (matcher.find()) {
+      System.out.println(matcher.group(1));
+      cap = Integer.valueOf(matcher.group(1));
+    }
 
-    // S for split and [ for leaf
-    char currentNodeType = (char) ab.get1();
-    if (currentNodeType == 'S') { }
-    else if (currentNodeType == '[') { }
-    short _col = (short) ab.get2();
-    float splitValue = ab.get4f();
-    int skipSize = ab.get1();
-    int skip;
-    if (skipSize > 0) {
-      // 4 bytes total
-      _nodeType |= 0x02; // 3 bytes to store skip
-      skip = ab.get3();
-    } else {/* single byte for left size */ skip=skipSize; /* 1 byte to store skip*/}
+    ab.get4();    // Skip tree-id
+    ab.get8();    // Skip seed
+    ab.get1();    // Skip producer id
 
-    // TODO: update _nodeType
-    result.put1(_nodeType);
-    result.put2(_col);
-    result.put4f(splitValue);
-    if () result.put1(skip);
-    else result.put3(skip);
-    // TODO: get the type of the children, will need to switch back and forth.
-    // Want to cut the buffer to where it is, so that we can run it recursively. Do we have to?
+    while (ab.position() < cap) {
+      byte _nodeType = 0;
+      byte currentNodeType = (byte) ab.get1();
 
-    return null;
+//    while ( currentNodeType )
+      // S for split and [ for leaf
+      if (currentNodeType == 'S') {
+        int _col =  ab.get2();
+        float splitValue = ab.get4f();
+        int skipSize = ab.get1();
+        int skip;
+        if (skipSize == 0) {
+          // 4 bytes total
+          _nodeType |= 0x02; // 3 bytes to store skip
+          skip = ab.get3();
+        } else {/* single byte for left size */ skip=skipSize; /* 1 byte to store skip*/}
+
+        int currentPosition = ab.position();
+        byte leftType = (byte) ab.get1();
+        ab.position(currentPosition+skip); // jump to the right child.
+        byte rightType = (byte) ab.get1();
+        ab.position(currentPosition);
+        if (leftType == '[') { _nodeType |= 0x30;}
+        if (rightType == '[') { _nodeType |= 0xC0; }
+
+        result.put1(_nodeType);
+        result.put2((short) _col);
+        result.put4f(splitValue);
+        if (skipSize != 0) {
+          if (leftType == '[') skip = 8;
+          result.put1(skip);
+        }
+        else result.put3(skip);
+      }
+      else if (currentNodeType == '[') {
+        // TODO: handle the nodetype as before
+        result.put1(0).put2((short)65535); // if leaf then over look top level
+        if (regression) { result.put4f(ab.get4f());}
+        else { result.put4f((float)ab.get1());}
+
+      }
+      else if (currentNodeType == 'E') { /* TODO: Handle exclusive node */}
+      else { /* running out of the buffer*/ return result;}
+    }
+    return result;
+  }
+
+  public static void main() {
+    String treeString = "";
+    byte [] treeBytes = treeString.getBytes();
+    toDTreeCompressedTreeAB(treeBytes, false);
+
   }
 }
 
