@@ -346,7 +346,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       for(int i = 0; i < ncats; ++i){
         Vec v = (vecs2[i] = vecs[cats[i]]);
         names[i] = fr._names[cats[i]];
-        _catOffsets[i+1] = (len += v.domain().length - (useAllFactorLevels?0:1));
+        _catOffsets[i+1] = (len += v.domain().length - (useAllFactorLevels?0:1) + (v.naCnt()>0?1:0)); //missing values turn into a new factor level
       }
       if(predictor_transform != TransformType.NONE) {
         _normSub = MemoryManager.malloc8d(nnums);
@@ -436,9 +436,11 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       final int n = fullN();
       String [] res = new String[n];
       final Vec [] vecs = _adaptedFrame.vecs();
-      for(int i = 0; i < _cats; ++i)
-        for(int j = _useAllFactorLevels?0:1; j < vecs[i]._domain.length; ++j)
+      for(int i = 0; i < _cats; ++i) {
+        for (int j = _useAllFactorLevels ? 0 : 1; j < vecs[i]._domain.length; ++j)
           res[k++] = _adaptedFrame._names[i] + "." + vecs[i]._domain[j];
+        if (vecs[i].naCnt() > 0) res[k++] = _adaptedFrame._names[i] + ".missing(NA)";
+      }
       final int nums = n-k;
       System.arraycopy(_adaptedFrame._names, _cats, res, k, nums);
       return res;
@@ -558,11 +560,13 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         final long lr = r + chunks[0]._start;
         if ((_dinfo._nfolds > 0 && (lr % _dinfo._nfolds) == _dinfo._foldId)
                 || (skip_rng != null && skip_rng.nextFloat() > _useFraction))continue;
+        ++num_processed_rows; //count rows with missing values even if they are skipped
         for(Chunk c:chunks)if(skipMissing() && c.isNA0(r))continue OUTER; // skip rows with NAs!
-        ++num_processed_rows;
         int i = 0, ncats = 0;
         for(; i < _dinfo._cats; ++i){
-          int c = chunks[i].isNA0(r) ? 0 : (int)chunks[i].at80(r); //turns missing values into 0, which happens to be the majority factor, which is what we want for imputation
+          int c = chunks[i].isNA0(r) ?
+                  _dinfo._catOffsets[i+1]-_dinfo._catOffsets[i]-1 // missing categoricals are their own factor (the last one)
+                  : (int)chunks[i].at80(r);
           if(_dinfo._catLvls != null){ // some levels are ignored?
             c = Arrays.binarySearch(_dinfo._catLvls[i],c);
             if(c >= 0)

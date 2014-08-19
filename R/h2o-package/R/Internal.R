@@ -154,6 +154,7 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__PAGE_NBModelView = "2/NBModelView.json"
 .h2o.__PAGE_CreateFrame = "2/CreateFrame.json"
 .h2o.__PAGE_SplitFrame = "2/FrameSplitPage.json"
+.h2o.__PAGE_MissingVals = "2/InsertMissingValues.json"
 .h2o.__PAGE_SaveModel = "2/SaveModel.json"
 .h2o.__PAGE_LoadModel = "2/LoadModel.json"
 
@@ -697,7 +698,7 @@ function(some_expr_list, envir) {
 #' Discover the destination key (if there is one), the client, and sub in the actual key name for the R variable
 #' that contains the pointer to the key in H2O.
 .replace_with_keys<-
-function(expr, envir = globalenv()) {
+function(expr, envir = globalenv(), expr_only = FALSE) {
   dest_key <- ""
   assign("NEWCOL", "", envir = .pkg.env)
   assign("NUMCOLS", "", envir = .pkg.env)
@@ -728,6 +729,7 @@ function(expr, envir = globalenv()) {
 
     # return the modified expression
     tryCatch(rm("COLNAMES", envir = .pkg.env), warning = function(w) { invisible(w)}, error = function(e) { invisible(e)})
+    if (expr_only) return(.back_to_expr(l))
     as.name(as.character(as.expression(.back_to_expr(l))))
   }
 }

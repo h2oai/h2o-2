@@ -561,7 +561,7 @@ public final class ParseDataset2 extends Job {
           ZipEntry ze = zis.getNextEntry(); // Get the *FIRST* entry
           // There is at least one entry in zip file and it is not a directory.
           if( ze != null && !ze.isDirectory() ) 
-            _dout = streamParse(zis,localSetup, _vecIdStart, chunkStartIdx,pmon);
+            _dout = streamParse(zis,localSetup, _vecIdStart, chunkStartIdx, pmon);
           else zis.close();       // Confused: which zipped file to decompress
           // set this node as the one which rpocessed all the chunks
           for(int i = 0; i < vec.nChunks(); ++i)
@@ -571,7 +571,7 @@ public final class ParseDataset2 extends Job {
         case GZIP:
           // Zipped file; no parallel decompression;
           ParseProgressMonitor pmon = new ParseProgressMonitor(_progress);
-          _dout = streamParse(new GZIPInputStream(vec.openStream(pmon)),localSetup,_vecIdStart, chunkStartIdx,pmon);
+          _dout = streamParse(new GZIPInputStream(vec.openStream(pmon)),localSetup,_vecIdStart, chunkStartIdx, pmon);
           // set this node as the one which processed all the chunks
           for(int i = 0; i < vec.nChunks(); ++i)
             _chunk2Enum[chunkStartIdx + i] = H2O.SELF.index();
@@ -618,10 +618,12 @@ public final class ParseDataset2 extends Job {
       FVecDataOut dout = new FVecDataOut(_vg, chunkStartIdx, localSetup._ncols, vecIdStart, enums(_eKey,localSetup._ncols));
       CustomParser p = localSetup.parser();
       // assume 2x inflation rate
+      //if( localSetup._pType.parallelParseSupported )
       if( localSetup._pType.parallelParseSupported )
-        try{p.streamParse(is, dout,pmon);}catch(IOException e){throw new RuntimeException(e);}
+        try{p.streamParse(is, dout, pmon);}catch(IOException e){throw new RuntimeException(e);}
       else
         try{p.streamParse(is, dout);}catch(Exception e){throw new RuntimeException(e);}
+
       // Parse all internal "chunks", until we drain the zip-stream dry.  Not
       // real chunks, just flipping between 32K buffers.  Fills up the single
       // very large NewChunk.

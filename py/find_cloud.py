@@ -9,7 +9,7 @@ parser.add_argument('-f', '--flatfile',
     type=str)
 
 parser.add_argument('-hdfs_version', '--hdfs_version', 
-    choices=['0.20.2', 'cdh3', 'cdh4', 'cdh4_yarn', 'mapr2.1.3', 'mapr3.0.1'],
+    choices=['0.20.2', 'cdh3', 'cdh4', 'cdh4_yarn', 'mapr2.1.3', 'mapr3.0.1', 'hdp2.1'],
     default='cdh3', 
     help="Use this for setting hdfs_version in the cloned cloud", 
     type=str)

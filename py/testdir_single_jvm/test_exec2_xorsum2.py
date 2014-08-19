@@ -10,11 +10,50 @@ exprList = [
     'h=c(1); h = xorsum(r1[,1])',
 ]
 
-ROWS = 1000000
+ROWS = 2000000
 STOP_ON_ERROR = True
+DO_BUG = True
+DO_NEGATIVE = True
+RANDOM_E_FP_FORMATS = True
+CHUNKING_CNT = 100000
+# subtracting hex numbers below and using this for max delta
+ALLOWED_DELTA= 0x7fff
+
+# interesting lsb diff in right format, leads to larger mantissa error on left
+# mask -0x7ff from mantissa for mostly-right comparison (theoreticaly can flip lots of mantissa and exp)
+# we actually do a sub and look at delta below (not mask) (I guess the hex gets interpreted differently than IEEE but that's okay)
+# alright if we're mostly right..looking to catch catastrophic error in h2o
+
+#      ullResult (0.16x): 0x01faad3090cdb9d8   3.98339643735e-299
+# expectedUllSum (0.16x): 0x01faad3090cd88d7   3.98339643734e-299
+#  expectedFpSum (0.16x): 0x48428c76f4d986cf   1.26235843623e+40
+
+# http://babbage.cs.qc.cuny.edu/IEEE-754.old/64bit.html
+# 10 digits of precision on the right..They both agree
+# But the left is what the ieee fp representation is inside h2o (64-bit real)
+# 
+#  0x0d9435c98b2bc489   2.9598664472e-243
+#  0x0d9435c98b2bd40b   2.9598664472e-243
+# 
+# 
+# With more precision you can see the difference
+# 
+# hex: 0d9435c98b2bc489
+# is: 2.9598664471952256e-243
+# 
+# hex: 0d9435c98b2bd40b
+# is: 2.9598664471972913e-243
 
 #********************************************************************************
 def write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax, SEEDPERFILE, sel):
+    # this only does the sum stuff for single cols right now
+    if colCount!=1:
+        raise Exception("only support colCount == 1 here right now %s", colCount)
+
+    NUM_CASES = h2o_util.fp_format()
+    if sel and (sel<0 or sel>=NUM_CASES):
+        raise Exception("sel used to select from possible fp formats is out of range: %s %s", (sel, NUM_CASES))
+
     dsf = open(csvPathname, 'w')
     expectedRange = (expectedMax - expectedMin)
     expectedFpSum = float(0)
@@ -22,10 +61,23 @@ def write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax,
     for row in range(rowCount):
         rowData = []
         for j in range(colCount):
-            value = expectedMin + (random.random() * expectedRange)
-            if 1==1:
-                # value = row * 2
 
+            # Be Nasty!. We know fp compression varies per chunk
+            # so...adjust the random fp data, depending on what rows your are at
+            # i.e. cluster results per chunk, smaller variance within chunk, larger variance outside of chunk
+
+            # Actually: generate "different" data depending on where you are in the rows
+            method = row % CHUNKING_CNT
+            
+            if method==1:
+                value = expectedMin + (random.random() * expectedRange)
+            elif method==2:
+                value = random.randint(1,1e6)
+            elif method==3:
+                value = 5555555555555 + row
+            else: # method == 0 and > 3
+
+                # value = row * 2
                 # bad sum
                 # value = 5555555555555 + row
                 # bad
@@ -42,7 +94,9 @@ def write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax,
                 # could h2o compress if values are outside that kind of dynamic range ?
 
                 # we want a big exponent?
-                exp = random.randint(40,71)
+                # was
+                # exp = random.randint(40,71)
+                exp = random.randint(0,120)
                 # skip over the current bug around int boundaries?
                 # have a fixed base
                 value = random.random() + (2 ** exp) 
@@ -50,43 +104,46 @@ def write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax,
                 # value = -1 * value
                 # value = 2e9 + row
                 # value = 3 * row
-            r = random.randint(0,1)
-            if False and r==0:
+
+            r = random.randint(0,4)
+            # 20% negative
+            if DO_NEGATIVE and r==0:
                 value = -1 * value
-            # hack
 
             # print "%30s" % "expectedUllSum (0.16x):", "0x%0.16x" % expectedUllSum
 
             # Now that you know how many decimals you want, 
             # say, 15, just use a rstrip("0") to get rid of the unnecessary 0s:
-            # fix. can't rstrip if .16e is used because trailing +00 becomes +, causes NA
-            if 1==0:
-                # get the expected patterns from python
-                fpResult = float(value)
-                expectedUllSum ^= h2o_util.doubleToUnsignedLongLong(fpResult)
-                expectedFpSum += fpResult
-                s = ("%.16f" % value).rstrip("0")
-                # since we're printing full fp precision always here, we shouldn't have 
-                # to suck the formatted fp string (shorter?) back in
+            # old bugs was: can't rstrip if .16e is used because trailing +00 becomes +, causes NA
+
             # use a random fp format (string). use sel to force one you like
+
+            # only keeps it to formats with "e"
+            if RANDOM_E_FP_FORMATS:
+                # s = h2o_util.fp_format(value, sel=sel) # this is e/f/g formats for a particular sel within each group
+                # s = h2o_util.fp_format(value, sel=None) # this would be random
+                s = h2o_util.fp_format(value, sel=None, only='e') # this would be random, within 'e' only
             else:
-                NUM_CASES = h2o_util.fp_format()
-                # s = h2o_util.fp_format(value, sel=None) # random
-                s = h2o_util.fp_format(value, sel=sel, only='e') # use same case for all numbers
-                # FIX! strip the trailing zeroes for now because they trigger a bug
+                s = h2o_util.fp_format(value, sel=sel, only='e') # use same format for all numbers
+
+            # FIX! strip the trailing zeroes for now because they trigger a bug
+            if DO_BUG:
+                pass
+            else:
                 s = s.rstrip("0")
-                # now our string formatting will lead to different values when we parse and use it 
-                # so we move the expected value generation down here..i.e after we've formatted the string
-                # we'll suck it back in as a fp number
-                # get the expected patterns from python
-                fpResult = float(s)
-                expectedUllSum ^= h2o_util.doubleToUnsignedLongLong(fpResult)
-                expectedFpSum += fpResult
+
+            # now our string formatting will lead to different values when we parse and use it 
+            # so we move the expected value generation down here..i.e after we've formatted the string
+            # we'll suck it back in as a fp number
+            # get the expected patterns from python
+            fpResult = float(s)
+            expectedUllSum ^= h2o_util.doubleToUnsignedLongLong(fpResult)
+            expectedFpSum += fpResult
             # s = ("%.16e" % value)
             rowData.append(s)
 
-        rowDataCsv = ",".join(map(str,rowData))
-        dsf.write(rowDataCsv + "\n")
+            rowDataCsv = ",".join(map(str,rowData))
+            dsf.write(rowDataCsv + "\n")
 
     dsf.close()
     # zero the upper 4 bits of xorsum like h2o does to prevent inf/nan
@@ -173,8 +230,7 @@ class Basic(unittest.TestCase):
 
                         # ullResult and expectedUllSum are Q ints, (64-bit) so can subtract them.
                         # I guess we don't even care about sign, since we zero the first 4 bits (xorsum) to avoid nan/inf issues
-                        ALLOWED_BIT_ERR = 0x1f # seeing this amount of error!
-                        if ullResult!=expectedUllSum and (abs(ullResult-expectedUllSum)>ALLOWED_BIT_ERR):
+                        if ullResult!=expectedUllSum and (abs(ullResult-expectedUllSum)>ALLOWED_DELTA):
                             emsg = "h2o didn't get the same xorsum as python. 0x%0.16x 0x%0.16x" % (ullResult, expectedUllSum)
                             if STOP_ON_ERROR:
                                 raise Exception(emsg)

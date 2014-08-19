@@ -102,7 +102,9 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='',
         regex2 = re.compile('Caused',re.IGNORECASE)
         # regex3 = re.compile('warn|info|TCP', re.IGNORECASE)
         # FIX! temp to avoid the INFO in jan's latest logging. don't print any info?
-        regex3 = re.compile('warn|TCP', re.IGNORECASE)
+        # don't want the tcp_active in the cloud status. Ok to not look for tcp stuff now
+        # regex3 = re.compile('warn|TCP', re.IGNORECASE)
+        regex3 = re.compile('warn', re.IGNORECASE)
 
         # many hdfs/apache messages have 'error' in the text. treat as warning if they have '[WARN]'
         # i.e. they start with:
@@ -141,6 +143,10 @@ def check_sandbox_for_errors(LOG_DIR=None, python_test_name='',
                 # don't detect these class loader info messags as errors
                 #[Loaded java.lang.Error from /usr/lib/jvm/java-7-oracle/jre/lib/rt.jar]
                 foundBad = regex1.search(line) and not (
+                    ('INFO WATER: Error on' in line) or
+                    # temporary hack. getting these on shutdown in multi-machine
+                    # ApiWatch  ERRR WATER: ApiPortWatchdog: Failed trying to connect to REST API IP and Port (/10.73.149.39:54323, 30000 ms)
+                    ('ApiPortWatchdog' in line) or
                     ('Error reduced' in line) or
                     ('out-of-bag error estimation' in line) or
                     ('reconstruction error' in line) or

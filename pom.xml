@@ -105,7 +105,7 @@
     <dependency>
       <groupId>com.google.code.gson</groupId>
       <artifactId>gson</artifactId>
-      <version>2.2.2</version>
+      <version>2.3</version>
       <scope>compile</scope>
     </dependency>
     <!-- ==Jama is given explicitely - it was modified and compiled by @tomas == -->

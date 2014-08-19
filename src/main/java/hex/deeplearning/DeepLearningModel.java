@@ -64,7 +64,8 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
   public float error() { return (float) (isClassifier() ? cm().err() : mse()); }
 
-  @Override
+  @Override public boolean isClassifier() { return super.isClassifier() && !model_info.get_params().autoencoder; }
+
   public int compareTo(DeepLearningModel o) {
     if (o.isClassifier() != isClassifier()) throw new UnsupportedOperationException("Cannot compare classifier against regressor.");
     if (o.nclasses() != nclasses()) throw new UnsupportedOperationException("Cannot compare models with different number of classes.");
@@ -1465,7 +1466,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     sb.append("<th>Training Time</th>");
     sb.append("<th>Training Epochs</th>");
     sb.append("<th>Training Samples</th>");
-    if (isClassifier() && !get_params().autoencoder) {
+    if (isClassifier()) {
 //      sb.append("<th>Training MCE</th>");
       sb.append("<th>Training Error</th>");
       if (nclasses()==2) sb.append("<th>Training AUC</th>");
@@ -1806,7 +1807,10 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
   public void delete_xval_models( ) {
     if (get_params().xval_models != null) {
-      for (Key k : get_params().xval_models) DKV.remove(k);
+      for (Key k : get_params().xval_models) {
+        UKV.<DeepLearningModel>get(k).delete_best_model();
+        UKV.<DeepLearningModel>get(k).delete();
+      }
     }
   }
 }

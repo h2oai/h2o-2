@@ -188,15 +188,17 @@ public abstract class Log {
       if( buf.indexOf("\n") != -1 ) {
         String s = buf.toString();
         String[] lines = s.split("\n");
-        StringBuilder buf2 = new StringBuilder(2 * buf.length());
-        buf2.append(lines[0]);
-        for( int i = 1; i < lines.length; i++ ) {
-          buf2.append(NL).append("+");
-          for( int j = 1; j < headroom; j++ )
-            buf2.append(" ");
-          buf2.append(lines[i]);
+        if (lines.length > 0) { //gracefully handle s = "\n"
+          StringBuilder buf2 = new StringBuilder(2 * buf.length());
+          buf2.append(lines[0]);
+          for (int i = 1; i < lines.length; i++) {
+            buf2.append(NL).append("+");
+            for (int j = 1; j < headroom; j++)
+              buf2.append(" ");
+            buf2.append(lines[i]);
+          }
+          buf = buf2;
         }
-        buf = buf2;
       }
       if( ouch != null ) {
         buf.append(NL);

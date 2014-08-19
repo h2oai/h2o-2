@@ -110,7 +110,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   }
 
   protected SpeeDRFModel(SpeeDRFModel model, double err, ConfusionMatrix cm, VarImp varimp, AUCData auc) {
-    super(model._key,model._dataKey,model._names,model._domains, model._priorClassDist,model._modelClassDist);
+    super(model._key,model._dataKey,model._names,model._domains, model._priorClassDist,model._modelClassDist,model.training_start_time,model.training_duration_in_ms);
     this.features = model.features;
     this.sampling_strategy = model.sampling_strategy;
     this.sample = model.sample;
