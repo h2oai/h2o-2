@@ -50,7 +50,7 @@ class Basic(unittest.TestCase):
         h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)
 
         paramDict = define_params()
-        for trial in range(20):
+        for trial in range(8):
             params = {}
             colX = h2o_glm.pickRandGlmParams(paramDict, params)
             # override choices with these
