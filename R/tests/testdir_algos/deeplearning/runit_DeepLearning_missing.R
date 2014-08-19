@@ -2,7 +2,7 @@ setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 source('../../findNSourceUtils.R')
 
 check.deeplearning_missing <- function(conn) {
-  Log.info("Test checks if Deep Learning works fine with a categorical dataset")
+  Log.info("Test checks if Deep Learning works fine with a categorical dataset that has many missing values (in both train & test splits)")
 
   missing_ratios = c(0, 0.1, 0.25, 0.5, 0.75, 1.0)
   errors = c(0, 0, 0, 0, 0, 0)
@@ -23,6 +23,7 @@ check.deeplearning_missing <- function(conn) {
       data = cbind(data_missing, resp)
     }
 
+    # split into train + test datasets
     splits=h2o.splitFrame(data,ratios=c(.75),shuffle=T)
     train = splits[[1]]
     test  = splits[[2]]
@@ -33,7 +34,7 @@ check.deeplearning_missing <- function(conn) {
   }
 
   for(i in 1:length(missing_ratios)) {
-    print(paste("missing ratio: ", missing_ratios[i]*100, "% --> accuracy: ", errors[i]))
+    print(paste("missing ratio: ", missing_ratios[i]*100, "% --> classification error: ", errors[i]))
   }
   checkTrue(sum(errors) < 2, "Sum of classification errors is too large!")
 
