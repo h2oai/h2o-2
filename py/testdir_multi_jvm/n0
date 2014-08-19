@@ -83,6 +83,7 @@
 ./n0.doit test_parse_csv_download_fvec.py
 ./n0.doit test_parse_file_loop_fvec.py
 ./n0.doit test_parse_fs_schmoo_fvec.py
+./n0.doit test_parse_libsvm_fvec.py
 ./n0.doit test_parse_many_cols_fvec.py
 ./n0.doit test_parse_manyfiles_fvec.py
 ./n0.doit test_parse_multiprocess_fvec.py
