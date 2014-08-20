@@ -115,9 +115,16 @@ class Basic(unittest.TestCase):
             print "execResult", h2o.dump_json(execResult)
 
             # should be same answer in both cases
-            execExpr = "d=sum(a1!=a2)==0"
+            execExpr = "s=c(0); s=(a1!=a2); d=sum(a1!=a2)==0"
             (execResult, result) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=60)
             print "execResult", h2o.dump_json(execResult)
+            
+            a1dump = h2o_cmd.runInspect(key="a1")
+            a2dump = h2o_cmd.runInspect(key="a2")
+            sdump = h2o_cmd.runInspect(key="s")
+            print "a1", h2o.dump_json(a1dump)
+            print "a2", h2o.dump_json(a2dump)
+            print "s", h2o.dump_json(sdump)
             self.assertEqual(result, 1, "a1 and a2 weren't equal? Maybe ddply can vary execution order (fp error? so multiple ddply() can have different answer. %s %s %s" % (FUNC_PHRASE, result, h2o.dump_json(execResult)))
 
             # xList.append(ntrees)
