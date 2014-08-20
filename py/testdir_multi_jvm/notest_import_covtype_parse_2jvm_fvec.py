@@ -15,18 +15,18 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_import_covtype_parse_3jvm_fvec(self):
+    def test_import_covtype_parse_2jvm_fvec(self):
         h2o.beta_features = True
         csvFilename = "covtype.data"
         importFolderPath = "standard"
         trialMax = 2
-        for tryHeap in [4,3,2,1]:
-            print "\n", tryHeap,"GB heap, 3 jvms, import folder, then loop parsing 'covtype.data' to unique keys"
+        for tryHeap in [1]:
+            print "\n", tryHeap,"GB heap, 2 jvms, import folder, then loop parsing 'covtype.data' to unique keys"
             localhost = h2o.decide_if_localhost()
             if (localhost):
-                h2o.build_cloud(node_count=3, java_heap_GB=tryHeap)
+                h2o.build_cloud(2, java_heap_GB=tryHeap)
             else:
-                h2o_hosts.build_cloud_with_hosts(node_count=3, java_heap_GB=tryHeap)
+                h2o_hosts.build_cloud_with_hosts(node_count=2, java_heap_GB=tryHeap)
 
             for trial in range(trialMax):
                 # import each time, because h2o deletes source file after parse
@@ -35,10 +35,9 @@ class Basic(unittest.TestCase):
                 parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, hex_key=hex_key, timeoutSecs=20)
             # sticky ports?
             h2o.tear_down_cloud()
-            time.sleep(5)
-
-        print "Waiting 60 secs for TIME_WAIT sockets to go away"
-        time.sleep(60)
+            time.sleep(3)
+            # print "Waiting 60 secs for TIME_WAIT sockets to go away"
+            # time.sleep(60)
 
 
 if __name__ == '__main__':

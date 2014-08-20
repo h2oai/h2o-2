@@ -73,7 +73,7 @@ class Basic(unittest.TestCase):
                 'destination_key': 'benign_k.hex',
                 'max_iter': 10,
             }
-            kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=5, **kwargs)
+            kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=15, **kwargs)
             h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseResult, 'd', **kwargs)
 
 if __name__ == '__main__':
