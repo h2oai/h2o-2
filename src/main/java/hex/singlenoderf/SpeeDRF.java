@@ -179,6 +179,8 @@ public class SpeeDRF extends Job.ValidatedJob {
       if (0.0f > sample_rate || sample_rate > 1.0f)
         throw new IllegalArgumentException("Sampling rate must be in [0,1] but found " + sample_rate);
     }
+
+    if(regression) throw new IllegalArgumentException("SpeeDRF does not currently support regression.");
   }
 
   @Override protected void execImpl() {
