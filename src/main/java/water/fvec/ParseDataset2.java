@@ -549,7 +549,7 @@ public final class ParseDataset2 extends Job {
               _chunk2Enum[chunkStartIdx + i] = vec.chunkKey(i).home_node().index();
           } else {
             ParseProgressMonitor pmon = new ParseProgressMonitor(_progress);
-            _dout = streamParse(vec.openStream(pmon), localSetup, _vecIdStart, chunkStartIdx);
+            _dout = streamParse(vec.openStream(pmon), localSetup, _vecIdStart, chunkStartIdx, pmon);
             for(int i = 0; i < vec.nChunks(); ++i)
               _chunk2Enum[chunkStartIdx + i] = H2O.SELF.index();
           }
@@ -561,7 +561,7 @@ public final class ParseDataset2 extends Job {
           ZipEntry ze = zis.getNextEntry(); // Get the *FIRST* entry
           // There is at least one entry in zip file and it is not a directory.
           if( ze != null && !ze.isDirectory() ) 
-            _dout = streamParse(zis,localSetup, _vecIdStart, chunkStartIdx);
+            _dout = streamParse(zis,localSetup, _vecIdStart, chunkStartIdx, pmon);
           else zis.close();       // Confused: which zipped file to decompress
           // set this node as the one which rpocessed all the chunks
           for(int i = 0; i < vec.nChunks(); ++i)
@@ -571,7 +571,7 @@ public final class ParseDataset2 extends Job {
         case GZIP:
           // Zipped file; no parallel decompression;
           ParseProgressMonitor pmon = new ParseProgressMonitor(_progress);
-          _dout = streamParse(new GZIPInputStream(vec.openStream(pmon)),localSetup,_vecIdStart, chunkStartIdx);
+          _dout = streamParse(new GZIPInputStream(vec.openStream(pmon)),localSetup,_vecIdStart, chunkStartIdx, pmon);
           // set this node as the one which processed all the chunks
           for(int i = 0; i < vec.nChunks(); ++i)
             _chunk2Enum[chunkStartIdx + i] = H2O.SELF.index();
@@ -613,14 +613,14 @@ public final class ParseDataset2 extends Job {
     // ------------------------------------------------------------------------
     // Zipped file; no parallel decompression; decompress into local chunks,
     // parse local chunks; distribute chunks later.
-    private FVecDataOut streamParse( final InputStream is, final CustomParser.ParserSetup localSetup, int vecIdStart, int chunkStartIdx) throws IOException {
+    private FVecDataOut streamParse( final InputStream is, final CustomParser.ParserSetup localSetup, int vecIdStart, int chunkStartIdx, ParseProgressMonitor pmon) throws IOException {
       // All output into a fresh pile of NewChunks, one per column
       FVecDataOut dout = new FVecDataOut(_vg, chunkStartIdx, localSetup._ncols, vecIdStart, enums(_eKey,localSetup._ncols));
       CustomParser p = localSetup.parser();
       // assume 2x inflation rate
       //if( localSetup._pType.parallelParseSupported )
       if( localSetup._pType.parallelParseSupported )
-        try{p.streamParse2(is, dout);}catch(IOException e){throw new RuntimeException(e);}
+        try{p.streamParse(is, dout, pmon);}catch(IOException e){throw new RuntimeException(e);}
       else
         try{p.streamParse(is, dout);}catch(Exception e){throw new RuntimeException(e);}
 

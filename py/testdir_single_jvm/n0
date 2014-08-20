@@ -24,8 +24,6 @@
 ./n0.doit test_exec2_env_pop_fail.py
 ./n0.doit test_exec2_filter_slice.py
 ./n0.doit test_exec2_frame_fail.py
-./n0.doit test_exec2_function_phrases.py
-./n0.doit test_exec2_ifelse_phrases.py
 ./n0.doit test_exec2_log_like_R.py
 ./n0.doit test_exec2_na2mean.py
 ./n0.doit test_exec2_na_chop.py
@@ -54,7 +52,6 @@
 ./n0.doit test_frame_split_iris.py
 ./n0.doit test_frame_split.py
 ./n0.doit test_from_import_fvec.py
-./n0.doit test_from_putfile.py
 ./n0.doit test_GBM_basic.py
 ./n0.doit test_GBMGrid_basic_class.py
 ./n0.doit test_GBMGrid_basic_many.py
