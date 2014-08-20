@@ -2,9 +2,11 @@ package hex.deeplearning;
 
 import hex.FrameTask;
 import hex.deeplearning.DeepLearning.Loss;
+import org.apache.commons.lang.ArrayUtils;
 import water.Iced;
 import water.MemoryManager;
 import water.api.Request.API;
+import water.util.Log;
 import water.util.Utils;
 
 import java.util.Arrays;
@@ -645,18 +647,28 @@ public abstract class Neurons {
      *             from to be mapped into the input neuron layer
      */
     public void setInput(long seed, final double[] data) {
+//      Log.info("Data: " + ArrayUtils.toString(data));
       assert(_dinfo != null);
       double [] nums = MemoryManager.malloc8d(_dinfo._nums); // a bit wasteful - reallocated each time
       int    [] cats = MemoryManager.malloc4(_dinfo._cats); // a bit wasteful - reallocated each time
       int i = 0, ncats = 0;
       for(; i < _dinfo._cats; ++i){
-        // Gracefully handle NaN input values -> don't activate any of the horizontalized input features
-        // (can occur when testing data has categorical levels that are not part of training)
-        if (!Double.isNaN(data[i])) {
-          int c = (int) data[i];
+        // This can occur when testing data has categorical levels that are not part of training (or if there's a missing value)
+        if (Double.isNaN(data[i])) {
+          if (_dinfo._catMissing[i]!=0) cats[ncats++] = (_dinfo._catOffsets[i+1]-1); //use the extra level made during training
+          else {
+            if (!_dinfo._useAllFactorLevels)
+              throw new IllegalArgumentException("Model was built without missing categorical factors in column "
+                      + _dinfo.coefNames()[i] + ", but found unknown (or missing) categorical factors during scoring."
+                      + "\nThe model needs to be built with use_all_factor_levels=true for this to work.");
+            // else just leave all activations at 0, and since all factor levels were enabled,
+            // this is OK (missing or new categorical doesn't activate any levels seen during training)
+          }
+        } else {
+          int c = (int)data[i];
           if (_dinfo._useAllFactorLevels)
             cats[ncats++] = c + _dinfo._catOffsets[i];
-          else if (c != 0)
+          else if (c!=0)
             cats[ncats++] = c + _dinfo._catOffsets[i] - 1;
         }
       }
@@ -664,7 +676,7 @@ public abstract class Neurons {
       for(;i < n;++i){
         double d = data[i];
         if(_dinfo._normMul != null) d = (d - _dinfo._normSub[i-_dinfo._cats])*_dinfo._normMul[i-_dinfo._cats];
-        nums[i-_dinfo._cats] = d;
+        nums[i-_dinfo._cats] = d; //can be NaN for missing numerical data
       }
       setInput(seed, nums, ncats, cats);
     }
@@ -681,7 +693,8 @@ public abstract class Neurons {
       _a = _dvec;
       Arrays.fill(_a.raw(), 0f);
       for (int i=0; i<numcat; ++i) _a.set(cats[i], 1f);
-      for (int i=0; i<nums.length; ++i) _a.set(_dinfo.numStart() + i, Double.isNaN(nums[i]) ? 0f : (float) nums[i]);
+      for (int i=0; i<nums.length; ++i) _a.set(_dinfo.numStart() + i, Double.isNaN(nums[i]) ? 0f /*Always do MeanImputation during scoring*/ : (float) nums[i]);
+//      Log.info("Input Layer: " + ArrayUtils.toString(_a.raw()));
 
       // Input Dropout
       if (_dropout == null) return;

@@ -51,7 +51,7 @@ public class DeepLearning extends Job.ValidatedJob {
   public boolean autoencoder = false;
 
   @API(help="Use all factor levels of categorical variables. Otherwise, the first factor level is omitted (without loss of accuracy). Useful for variable importances and auto-enabled for autoencoder.",filter=Default.class, json=true, importance = ParamImportance.SECONDARY)
-  public boolean use_all_factor_levels = false;
+  public boolean use_all_factor_levels = true;
 
   /*Neural Net Topology*/
   /**
@@ -453,8 +453,8 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Enable shuffling of training data (recommended if training data is replicated and train_samples_per_iteration is close to #nodes x #rows)", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
   public boolean shuffle_training_data = false;
 
-//  @API(help = "Handling of missing values", filter= Default.class, json = true)
-  public MissingValuesHandling missing_values_handling = MissingValuesHandling.MeanImpute;
+//  @API(help = "Handling of missing values. Either Skip or MeanImputation.", filter= Default.class, json = true)
+  public MissingValuesHandling missing_values_handling = MissingValuesHandling.MeanImputation;
 
   @API(help = "Sparse data handling (Experimental).", filter = Default.class, json = true, importance = ParamImportance.EXPERT)
   public boolean sparse = false;
@@ -469,7 +469,7 @@ public class DeepLearning extends Job.ValidatedJob {
   public double sparsity_beta = 0;
 
   public enum MissingValuesHandling {
-    Skip, MeanImpute
+    Skip, MeanImputation
   }
 
   public enum ClassSamplingMethod {

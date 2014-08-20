@@ -58,16 +58,13 @@ allowedJobsX = [
 
 allowedJobsE = [
     'h2o.tests.single.jvm',
-    'h2o.tests.single.jvm.fvec',
     'h2o.multi.vm.temporary',
     'h2o.tests.ec2.multi.jvm',
-    'h2o.tests.ec2.multi.jvm.fvec',
     'h2o.tests.ec2.hosts',
 ]
 
 allowedJobsS = [
     'sm_testdir_single_jvm',
-    'sm_testdir_single_jvm_fvec',
     'sm_testdir_multi_jvm',
     'sm_testdir_hosts',
     'sm_test_NN2_mnist',

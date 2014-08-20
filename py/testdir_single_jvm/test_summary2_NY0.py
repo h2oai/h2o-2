@@ -2,11 +2,6 @@ import unittest, time, sys, random, math, getpass
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_util, h2o_print as h2p
 
-# fails with 1M and NA
-
-print "Same as test_summary2_uniform.py except for every data row,"
-print "5 rows of synthetic NA rows are added. results should be the same for quantiles"
-
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED, choices):
     r1 = random.Random(SEED)
     dsf = open(csvPathname, "w+")

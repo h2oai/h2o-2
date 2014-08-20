@@ -13,7 +13,7 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1)
+            h2o.build_cloud(java_heap_GB=12)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -65,13 +65,15 @@ class Basic(unittest.TestCase):
                 'family': 'binomial',
                 'lambda': 1.0E-5,
                 'alpha': 0.0,
-                'max_iter': 5,
+                'max_iter': 10,
                 'n_folds': 1,
                 'beta_epsilon': 1.0E-4,
                 'destination_key': modelKey
                 }
 
-            for c in [0,1,2,3,4,5,6,7,8,9]:
+            # for c in [0,1,2,3,4,5,6,7,8,9]:
+            # just do a couple digits
+            for c in [0,7]:
                 print "Trying binomial with case:", c
                 execExpr="A.hex=%s;A.hex[,%s]=(A.hex[,%s]==%s)" % (trainKey, y+1, y+1, c)
                 h2e.exec_expr(execExpr=execExpr, timeoutSecs=30)

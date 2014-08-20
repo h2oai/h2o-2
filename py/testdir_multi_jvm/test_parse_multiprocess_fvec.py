@@ -177,7 +177,7 @@ class Basic(unittest.TestCase):
                     uploader.join()
                     # don't need him any more
                     uploader.terminate()
-                    (importPattern, hex_key) = uploader_resultq.get(timeout=2)
+                    (importPattern, hex_key) = uploader_resultq.get(timeout=10)
                 except KeyboardInterrupt:
                     print 'parent received ctrl-c'
                     for uploader in uploaders:
