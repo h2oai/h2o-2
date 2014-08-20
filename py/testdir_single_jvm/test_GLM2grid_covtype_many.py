@@ -22,7 +22,7 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         csvFilename = 'covtype.data'
         csvPathname = 'standard/' + csvFilename
-        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put', timeoutSecs=10)
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put', timeoutSecs=20)
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
         print "\n" + csvPathname, \
             "    numRows:", "{:,}".format(inspect['numRows']), \
