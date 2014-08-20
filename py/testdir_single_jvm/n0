@@ -107,6 +107,7 @@
 ./n0.doit test_GLM2_poisson_1.py
 ./n0.doit test_GLM2_poisson_fail.py
 ./n0.doit test_GLM2_poisson_goalies.py
+./n0.doit test_GLM2_poisson_normalize.py
 ./n0.doit test_GLM2_poisson_rand2.py
 ./n0.doit test_GLM2_poisson_timeout_fail.py
 ./n0.doit test_GLM2_princeton.py
@@ -223,4 +224,4 @@
 ./n0.doit test_summary2_uniform_int_w_NA.py
 ./n0.doit test_summary2_uniform.py
 ./n0.doit test_summary2_uniform_w_NA.py
-./n0.doit test_with_a_browser.py
+# ./n0.doit test_with_a_browser.py

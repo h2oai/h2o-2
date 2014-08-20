@@ -77,12 +77,13 @@
 ./n1.doit test_many_fp_formats.py
 ./n1.doit test_many_rows_long_enums.py
 ./n1.doit test_model_management.py
-./n1.doit test_multi_with_a_browser.py
+# ./n1.doit test_multi_with_a_browser.py
 ./n1.doit test_NN2_mnist_multi.py
 ./n1.doit test_parse_bounds_csv_fvec.py
 ./n1.doit test_parse_csv_download_fvec.py
 ./n1.doit test_parse_file_loop_fvec.py
 ./n1.doit test_parse_fs_schmoo_fvec.py
+./n1.doit test_parse_libsvm_fvec.py
 ./n1.doit test_parse_many_cols_fvec.py
 ./n1.doit test_parse_manyfiles_fvec.py
 ./n1.doit test_parse_multiprocess_fvec.py
