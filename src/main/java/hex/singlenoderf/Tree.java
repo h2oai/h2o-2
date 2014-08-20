@@ -673,6 +673,7 @@ public class Tree extends H2OCountedCompleter {
    */
   public static AutoBuffer toDTreeCompressedTree(AutoBuffer ab, boolean regression) {
     AutoBuffer result = new AutoBuffer();
+    // get the length of the buffer
     int cap=0;
     String abString = ab.toString();
     Pattern pattern = Pattern.compile("<= .* <= (.*?) <=");
@@ -682,6 +683,7 @@ public class Tree extends H2OCountedCompleter {
       cap = Integer.valueOf(matcher.group(1));
     }
 
+    // skip meta data of the tree
     ab.get4();    // Skip tree-id
     ab.get8();    // Skip seed
     ab.get1();    // Skip producer id
@@ -690,38 +692,35 @@ public class Tree extends H2OCountedCompleter {
       byte _nodeType = 0;
       byte currentNodeType = (byte) ab.get1();
 
-//    while ( currentNodeType )
-      // S for split and [ for leaf
       if (currentNodeType == 'S') {
         int _col =  ab.get2();
         float splitValue = ab.get4f();
         int skipSize = ab.get1();
         int skip;
+        // TODO: modify the skip size since dtree and singlenodetree has different skipsize.
         if (skipSize == 0) {
           // 4 bytes total
           _nodeType |= 0x02; // 3 bytes to store skip
           skip = ab.get3();
         } else {/* single byte for left size */ skip=skipSize; /* 1 byte to store skip*/}
+        // iterate through the left child to see how many leaves are there.
 
         int currentPosition = ab.position();
         byte leftType = (byte) ab.get1();
         ab.position(currentPosition+skip); // jump to the right child.
         byte rightType = (byte) ab.get1();
         ab.position(currentPosition);
-        if (leftType == '[') { _nodeType |= 0x30;}
+        if (leftType == '[') { _nodeType |= 0x30; }
         if (rightType == '[') { _nodeType |= 0xC0; }
-
+        int leftLeaves = getNumLeaves(ab, skip); // number of left leaves.
+        skip += 5 * leftLeaves;
         result.put1(_nodeType);
         result.put2((short) _col);
         result.put4f(splitValue);
-        if (skipSize != 0) {
-          if (leftType == '[') skip = 8;
-          result.put1(skip);
-        }
-        else result.put3(skip);
+        if (skip <= 255) { result.put1(skip); }
+        else { result.put3(skip); }
       }
       else if (currentNodeType == '[') {
-        // TODO: handle the nodetype as before
         result.put1(0).put2((short)65535); // if leaf then over look top level
         if (regression) { result.put4f(ab.get4f());}
         else { result.put4f((float)ab.get1());}
@@ -730,6 +729,24 @@ public class Tree extends H2OCountedCompleter {
       else if (currentNodeType == 'E') { /* TODO: Handle exclusive node */}
       else { /* running out of the buffer*/ return result;}
     }
+    return result;
+  }
+
+  public static int getNumLeaves(AutoBuffer ab, int leftSize) {
+    int result = 0;
+    int startPos = ab.position();
+    while (ab.position() < startPos + leftSize) {
+      byte currentNodeType = (byte) ab.get1();
+      if (currentNodeType == 'S') {
+        ab.get2(); ab.get4f(); // skip col and split value.
+        int skipSize = ab.get1();
+        if (skipSize == 0) { ab.get3();}
+      } else if (currentNodeType == '[') {
+        result ++;
+        ab.get4f();
+      }
+    }
+    ab.position(startPos); // return to the original position so the buffer seems untouched.
     return result;
   }
 
