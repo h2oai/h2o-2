@@ -76,7 +76,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                         'ignored_cols': ignore_x, 
                         'family': 'binomial',
                         'response': 'C379', 
-                        'max_iter': 4, 
+                        'max_iter': 10, 
                         'n_folds': 1, 
                         'family': 'binomial',
                         'alpha': 0.2, 

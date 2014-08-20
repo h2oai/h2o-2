@@ -4,10 +4,11 @@ import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_gbm, h
 import h2o_exec as h2e, h2o_util
 
 
-DO_PLOT = True
+DO_PLOT = False
 COL = 1
 PHRASE = "func1"
 FUNC_PHRASE = "func1=function(x){max(x[,%s])}" % COL
+REPEAT = 20
 
 initList = [
     (None, FUNC_PHRASE),
@@ -19,6 +20,7 @@ initList = [
     # (None, "func6=function(x) { quantile(x[,%s] , c(0.9) ) }" % COL),
 ]
 
+print "Data is all integers, minInt to maxInt..so it shouldn't have fp roundoff errors while summing the row counts I use?"
 def write_syn_dataset(csvPathname, rowCount, colCount, minInt, maxInt, SEED):
     r1 = random.Random(SEED)
     dsf = open(csvPathname, "w+")
@@ -26,6 +28,7 @@ def write_syn_dataset(csvPathname, rowCount, colCount, minInt, maxInt, SEED):
     for i in range(rowCount):
         rowData = []
         for j in range(colCount):
+            # maybe do a significatly smaller range than min/max ints.
             ri = r1.randint(minInt,maxInt)
             rowData.append(ri)
 
@@ -60,13 +63,11 @@ class Basic(unittest.TestCase):
         tryList = [
             (1000000, 5, 'cD', 0, 10, 30), 
             (1000000, 5, 'cD', 0, 20, 30), 
-            (1000000, 5, 'cD', 0, 30, 30), 
             (1000000, 5, 'cD', 0, 40, 30), 
             (1000000, 5, 'cD', 0, 50, 30), 
-            (1000000, 5, 'cD', 0, 70, 30), 
-            (1000000, 5, 'cD', 0, 100, 30), 
-            (1000000, 5, 'cD', 0, 130, 30), 
+            (1000000, 5, 'cD', 0, 80, 30), 
             (1000000, 5, 'cD', 0, 160, 30), 
+            (1000000, 5, 'cD', 0, 320, 30), 
             # (1000000, 5, 'cD', 0, 320, 30), 
             # starts to fail here. too many groups?
             # (1000000, 5, 'cD', 0, 640, 30), 
@@ -134,7 +135,6 @@ class Basic(unittest.TestCase):
             xList.append(groups)
             eList.append(ddplyElapsed)
             fList.append(ddplyElapsed)
-            
 
         if DO_PLOT:
             xLabel = 'groups'

@@ -286,7 +286,7 @@ class ASTSlice extends AST {
     if( ary.numRows() == len && vec.min()>=0 && vec.max()<=1 && vec.isInt() )
       return ary;    // Boolean vector selection.
     // Convert single vector to a list of longs selecting rows
-    if(ary.numRows() > 10000000) throw H2O.fail("Unimplemented: Cannot explicitly select > 100000 rows in slice.");
+    if(ary.numRows() > 10000000) throw H2O.fail("Unimplemented: Cannot explicitly select > 10000000 rows in slice.");
     cols = MemoryManager.malloc8((int)ary.numRows());
     for(int i = 0; i < cols.length; ++i){
       if(vec.isNA(i))throw new IllegalArgumentException("Can not use NA as index!");

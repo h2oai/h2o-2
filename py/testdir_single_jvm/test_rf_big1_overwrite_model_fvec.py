@@ -33,7 +33,7 @@ class Basic(unittest.TestCase):
         hex_key = csvFilename + ".hex"
         print "\n" + csvFilename
         parseResult = h2i.import_parse(bucket='smalldata', path=csvFilename, 
-            hex_key=hex_key, timeoutSecs=15, schema='put')
+            hex_key=hex_key, timeoutSecs=20, schema='put')
         firstRfView = None
         # dispatch multiple jobs back to back
         for jobDispatch in range(3):

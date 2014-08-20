@@ -63,7 +63,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             'family': 'binomial',
             'lambda': 1.0E-5,
             'alpha': 0.5,
-            'max_iter': 4,
+            'max_iter': 10,
             # 'thresholds': 0.5,
             'n_folds': 1,
             'beta_epsilon': 1.0E-4,

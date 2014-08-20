@@ -136,7 +136,7 @@ class Basic(unittest.TestCase):
 
         for execExpr in exprList:
             bigExprList.append(execExpr)
-            h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=4)
+            h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=10)
 
         # now do some double concats of the expressions created
         #for j in range (50):
