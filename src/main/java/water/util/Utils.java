@@ -105,6 +105,12 @@ public class Utils {
       if (from[i]>result) result = from[i];
     return result;
   }
+  public static double minValue(double[] from) {
+    double result = from[0];
+    for (int i = 1; i<from.length; ++i)
+      if (from[i]<result) result = from[i];
+    return result;
+  }
   public static float minValue(float[] from) {
     float result = from[0];
     for (int i = 1; i<from.length; ++i)

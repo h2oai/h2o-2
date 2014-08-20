@@ -20,7 +20,7 @@ class Basic(unittest.TestCase):
         csvFilename = "covtype.data"
         importFolderPath = "standard"
         trialMax = 2
-        for tryHeap in [4,3,2,1]:
+        for tryHeap in [1]:
             print "\n", tryHeap,"GB heap, 4 jvms, import folder, then loop parsing 'covtype.data' to unique keys"
             localhost = h2o.decide_if_localhost()
             if (localhost):
@@ -37,8 +37,9 @@ class Basic(unittest.TestCase):
             h2o.tear_down_cloud()
             time.sleep(5)
 
-        print "Waiting 60 secs for TIME_WAIT sockets to go away"
-        time.sleep(60)
+        # print "Waiting 60 secs for TIME_WAIT sockets to go away"
+        # time.sleep(60)
+        time.sleep(2)
 
 
 

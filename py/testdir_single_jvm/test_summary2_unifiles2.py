@@ -51,7 +51,7 @@ class Basic(unittest.TestCase):
             # colname, (min, 25th, 50th, 75th, max)
             ('breadth.csv', 'b.hex', False, [ ('C1', None, None, None, None, None)], 'smalldata', 'quantiles'),
             # ('wonkysummary.csv', 'b.hex', False, [ ('X1', 7, 22, 876713, 100008, 1000046)], 'smalldata', None),
-            ('wonkysummary.csv', 'b.hex', True, [ ('X1', None, None, None, None, None)], 'smalldata', None),
+            ('wonkysummary.csv', 'b.hex', True, [ ('X1', 7.00, None, None, None, 1000046.0)], 'smalldata', None),
             ('covtype.data', 'c.hex', False, [ ('C1', None, None, None, None, None)], 'home-0xdiag-datasets', 'standard'),
 
         ]
@@ -155,6 +155,23 @@ class Basic(unittest.TestCase):
                 if expected[5]:
                     h2o_util.assertApproxEqual(maxs[0], expected[5], rel=0.02, msg='max is not approx. expected')
 
+
+                # figure out the expected max error
+                # use this for comparing to sklearn/sort
+                if expected[1] and expected[5]:
+                    expectedRange = expected[5] - expected[1]
+                    # because of floor and ceil effects due we potentially lose 2 bins (worst case)
+                    # the extra bin for the max value, is an extra bin..ignore
+                    expectedBin = expectedRange/(MAX_QBINS-2)
+                    maxErr = 0.5 * expectedBin # should we have some fuzz for fp?
+                    # hack?
+                    maxErr = maxErr * 2
+                    print "maxErr:", maxErr
+
+                else:
+                    print "Test won't calculate max expected error"
+                    maxErr = 0
+
                 hstart = column['hstart']
                 hstep = column['hstep']
                 hbrk = column['hbrk']
@@ -194,6 +211,7 @@ class Basic(unittest.TestCase):
                             h2oSummary2=pctile[5 if DO_MEDIAN else OTHER_Q_SUMM_INDEX],
                             h2oQuantilesApprox=qresult_single,
                             h2oQuantilesExact=qresult,
+                            h2oSummary2MaxErr=maxErr,
                             )
 
                 scipyCol += 1

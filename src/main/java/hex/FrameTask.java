@@ -80,6 +80,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     public int _nums;
     public int _cats;
     public int [] _catOffsets;
+    public int [] _catMissing;
     public double [] _normMul;
     public double [] _normSub;
     public double [] _normRespMul;
@@ -106,6 +107,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       _cats = dinfo._cats;
       _adaptedFrame = dinfo._adaptedFrame;
       _catOffsets = dinfo._catOffsets;
+      _catMissing = dinfo._catMissing;
       _normMul = dinfo._normMul;
       _normSub = dinfo._normSub;
       _normRespMul = dinfo._normRespMul;
@@ -253,6 +255,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     private DataInfo(Frame fr, int[][] catLevels, int responses, TransformType predictor_transform, TransformType response_transform, int foldId, int nfolds){
       _adaptedFrame = fr;
       _catOffsets = MemoryManager.malloc4(catLevels.length+1);
+      _catMissing = new int[catLevels.length];
       int s = 0;
 
       for(int i = 0; i < catLevels.length; ++i){
@@ -341,11 +344,13 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       Vec [] vecs2 = vecs.clone();
       String [] names = fr._names.clone();
       _catOffsets = MemoryManager.malloc4(ncats+1);
+      _catMissing = new int[ncats];
       int len = _catOffsets[0] = 0;
 
       for(int i = 0; i < ncats; ++i){
         Vec v = (vecs2[i] = vecs[cats[i]]);
         names[i] = fr._names[cats[i]];
+        _catMissing[i] = v.naCnt() > 0 ? 1 : 0; //needed for test time
         _catOffsets[i+1] = (len += v.domain().length - (useAllFactorLevels?0:1) + (v.naCnt()>0?1:0)); //missing values turn into a new factor level
       }
       if(predictor_transform != TransformType.NONE) {
@@ -564,17 +569,20 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
         for(Chunk c:chunks)if(skipMissing() && c.isNA0(r))continue OUTER; // skip rows with NAs!
         int i = 0, ncats = 0;
         for(; i < _dinfo._cats; ++i){
-          int c = chunks[i].isNA0(r) ?
-                  _dinfo._catOffsets[i+1]-_dinfo._catOffsets[i]-1 // missing categoricals are their own factor (the last one)
-                  : (int)chunks[i].at80(r);
-          if(_dinfo._catLvls != null){ // some levels are ignored?
-            c = Arrays.binarySearch(_dinfo._catLvls[i],c);
-            if(c >= 0)
+          int c;
+          if (chunks[i].isNA0(r)) {
+            cats[ncats++] = (_dinfo._catOffsets[i+1]-1); //missing value turns into extra (last) factor
+          } else {
+            c = (int) chunks[i].at80(r);
+            if (_dinfo._catLvls != null) { // some levels are ignored?
+              c = Arrays.binarySearch(_dinfo._catLvls[i], c);
+              if (c >= 0)
+                cats[ncats++] = c + _dinfo._catOffsets[i];
+            } else if (_dinfo._useAllFactorLevels)
               cats[ncats++] = c + _dinfo._catOffsets[i];
-          } else if(_dinfo._useAllFactorLevels)
-            cats[ncats++] = c + _dinfo._catOffsets[i];
-          else if(c != 0)
-            cats[ncats++] = c + _dinfo._catOffsets[i]-1;
+            else if (c != 0)
+              cats[ncats++] = c + _dinfo._catOffsets[i] - 1;
+          }
         }
         final int n = chunks.length-_dinfo._responses;
         for(;i < n;++i){
