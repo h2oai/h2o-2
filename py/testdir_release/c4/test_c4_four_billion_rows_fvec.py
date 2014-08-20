@@ -56,7 +56,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             kwargs = {
                 'k': 3,
                 'initialization': 'Furthest',
-                'max_iter': 4,
+                'max_iter': 10,
                 'normalize': 0,
                 'destination_key': 'junk.hex',
                 'seed': 265211114317615310,
