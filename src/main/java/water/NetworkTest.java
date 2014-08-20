@@ -71,7 +71,7 @@ public class NetworkTest extends Func {
       H2ONode node = H2O.CLOUD._memary[i];
       Timer t = new Timer();
       for (int l = 0; l < repeats; ++l) {
-        new RPC(node, ppt).call().get(); //blocking send
+        new RPC<PingPongTask>(node, ppt).call().get(); //blocking send
       }
       times[i] = (double) t.nanos() / repeats;
     }
@@ -86,9 +86,9 @@ public class NetworkTest extends Func {
       sb.append("<table cellpadding='10'>");
       sb.append("<tr>");
       sb.append("<th>Destination / Message Size</th>");
-      for (int m = 0; m < msg_sizes.length; ++m) {
+      for (int msg_size : msg_sizes) {
         sb.append("<th>");
-        sb.append(PrettyPrint.bytes(msg_sizes[m]));
+        sb.append(PrettyPrint.bytes(msg_size));
         sb.append("</th>");
       }
       for (int n = 0; n < microseconds[0].length; ++n) {
@@ -100,8 +100,8 @@ public class NetworkTest extends Func {
         sb.append("</td>");
         for (int m = 0; m < msg_sizes.length; ++m) {
           sb.append("<td>");
-          sb.append(PrettyPrint.usecs((long) microseconds[m][n]) + ", "
-                  + PrettyPrint.bytesPerSecond((long)bandwidths[m][n]));
+          sb.append(PrettyPrint.usecs((long) microseconds[m][n])).append(", ").
+                  append(PrettyPrint.bytesPerSecond((long)bandwidths[m][n]));
           sb.append("</td>");
         }
       }
