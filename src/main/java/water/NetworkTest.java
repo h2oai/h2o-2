@@ -29,11 +29,12 @@ public class NetworkTest extends Func {
     microseconds = new float[msg_sizes.length][];
     bandwidths = new float[msg_sizes.length][];
     for (int i=0; i<msg_sizes.length; ++i) {
-      microseconds[i] = scatter(msg_sizes[i], repeats);
-      Utils.div(microseconds[i], 1e3f);
+      microseconds[i] = send_recv_all(msg_sizes[i], repeats); //nanoseconds
+      Utils.div(microseconds[i], 1e3f); //microseconds
       bandwidths[i] = new float[microseconds[i].length];
       for (int j=0; j< microseconds[i].length; ++j) {
-        bandwidths[i][j] = msg_sizes[i] / microseconds[i][j];
+        //send and receive the same message -> 2x, units: bytes/microseconds = MB/s
+        bandwidths[i][j] = (2 * msg_sizes[i]) / microseconds[i][j];
       }
     }
     nodes = new String[H2O.CLOUD.size()];
@@ -58,21 +59,20 @@ public class NetworkTest extends Func {
   }
 
   /**
-   * Send a message from this node to all nodes (including self)
+   * Send a message from this node to all nodes in serial (including self), and receive it back
    * @param msg_size message size in bytes
    * @return Time in nanoseconds that it took to send the message (one per node)
    */
-  private static float[] scatter(int msg_size, int repeats) {
+  private static float[] send_recv_all(int msg_size, int repeats) {
     PingPongTask ppt = new PingPongTask(msg_size); //same payload for all nodes
     float[] times = new float[H2O.CLOUD.size()];
     for (int i=0; i<H2O.CLOUD.size(); ++i) { //loop over compute nodes
       H2ONode node = H2O.CLOUD._memary[i];
+      Timer t = new Timer();
       for (int l=0; l<repeats; ++l) {
-        Timer t = new Timer();
         new RPC(node, ppt).call().get(); //blocking send
-        times[i] += (float) t.nanos();
       }
-      times[i] /= repeats;
+      times[i] = (float) t.nanos();
     }
     return times;
   }
