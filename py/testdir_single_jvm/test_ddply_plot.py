@@ -7,9 +7,10 @@ import h2o_exec as h2e, h2o_util
 DO_PLOT = True
 COL = 1
 PHRASE = "func1"
+FUNC_PHRASE = "func1=function(x){max(x[,%s])}" % COL
 
 initList = [
-    (None, "func1=function(x){max(x[,%s])}" % COL),
+    (None, FUNC_PHRASE),
     # (None, "func2=function(x){a=3;nrow(x[,%s])*a}" % COL),
     # (None, "func3=function(x){apply(x[,%s],2,sum)/nrow(x[,%s])}" % (COL, col) ),
     # (None, "function(x) { cbind( mean(x[,1]), mean(x[,%s]) ) }" % COL),
@@ -117,7 +118,7 @@ class Basic(unittest.TestCase):
             execExpr = "d=sum(a1!=a2)==0"
             (execResult, result) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=60)
             print "execResult", h2o.dump_json(execResult)
-            self.assertEqual(result, 1, "a1 and a2 weren't equal? %s" % result)
+            self.assertEqual(result, 1, "a1 and a2 weren't equal? Maybe ddply can vary execution order (fp error? so multiple ddply() can have different answer. %s %s %s" % (FUNC_PHRASE, result, h2o.dump_json(execResult)))
 
             # xList.append(ntrees)
             trial += 1

@@ -36,7 +36,7 @@ public class DeepLearningMissingTest extends TestUtil {
 
     StringBuilder sb = new StringBuilder();
     for (DeepLearning.MissingValuesHandling mvh : new DeepLearning.MissingValuesHandling[]{
-            DeepLearning.MissingValuesHandling.Skip, DeepLearning.MissingValuesHandling.MeanImpute
+            DeepLearning.MissingValuesHandling.Skip, DeepLearning.MissingValuesHandling.MeanImputation
     }) {
       double sumerr = 0;
       Map<Double,Double> map = new TreeMap<Double, Double>();
@@ -61,7 +61,7 @@ public class DeepLearningMissingTest extends TestUtil {
             DKV.put(frtmp._key, frtmp);
             InsertMissingValues imv = new InsertMissingValues();
             imv.missing_fraction = missing_fraction;
-            imv.seed = seed; //use the same seed for Skip and MeanImpute!
+            imv.seed = seed; //use the same seed for Skip and MeanImputation!
             imv.key = frtmp._key;
             imv.serve();
             DKV.remove(frtmp._key); //just remove the Frame header (not the chunks)
@@ -124,8 +124,8 @@ public class DeepLearningMissingTest extends TestUtil {
       sumErr.put(mvh, sumerr);
     }
     Log.info(sb.toString());
-    Assert.assertTrue(sumErr.get(DeepLearning.MissingValuesHandling.Skip) > sumErr.get(DeepLearning.MissingValuesHandling.MeanImpute));
-    Assert.assertTrue(sumErr.get(DeepLearning.MissingValuesHandling.MeanImpute) < 2); //this holds true for both datasets
+    Assert.assertTrue(sumErr.get(DeepLearning.MissingValuesHandling.Skip) > sumErr.get(DeepLearning.MissingValuesHandling.MeanImputation));
+    Assert.assertTrue(sumErr.get(DeepLearning.MissingValuesHandling.MeanImputation) < 2); //this holds true for both datasets
   }
 }
 

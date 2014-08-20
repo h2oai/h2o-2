@@ -237,7 +237,7 @@ public abstract class Chunk extends Iced implements Cloneable {
   protected int pformat_len0( double scale, int lg ) {
     double dx = Math.log10(scale);
     int x = (int)dx;
-    if( PrettyPrint.pow10i(x) != scale ) throw H2O.unimpl();
+    if( x >= 0 && PrettyPrint.pow10i(x) != scale ) throw H2O.unimpl();
     int w=1/*blank/sign*/+lg/*compression limits digits*/+1/*dot*/+1/*e*/+1/*neg exp*/+2/*digits of exp*/;
     return w;
   }

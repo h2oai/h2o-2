@@ -28,10 +28,7 @@ import hex.pca.PCAScore;
 import hex.singlenoderf.SpeeDRF;
 import hex.singlenoderf.SpeeDRFModelView;
 import hex.singlenoderf.SpeeDRFProgressPage;
-import water.AutoBuffer;
-import water.Boot;
-import water.H2O;
-import water.NanoHTTPD;
+import water.*;
 import water.api.Upload.PostFile;
 import water.api.handlers.ModelBuildersMetadataHandlerV1;
 import water.deploy.LaunchJar;
@@ -40,7 +37,6 @@ import water.schemas.HTTP500V1;
 import water.schemas.Schema;
 import water.util.Log;
 import water.util.Log.Tag.Sys;
-import water.util.RString;
 import water.util.Utils.ExpectedExceptionForDebug;
 
 import java.io.ByteArrayInputStream;
@@ -50,12 +46,10 @@ import java.lang.reflect.Method;
 import java.net.ServerSocket;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.regex.PatternSyntaxException;
 
 /** This is a simple web server. */
 public class RequestServer extends NanoHTTPD {
@@ -141,6 +135,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new Debug()),       "Debug Dump",               "Admin");
     Request.addToNavbar(registerRequest(new LogView()),     "Inspect Log",              "Admin");
     Request.addToNavbar(registerRequest(new UnlockKeys()),  "Unlock Keys",              "Admin");
+    Request.addToNavbar(registerRequest(new NetworkTest()),"Network Test",            "Admin");
     Request.addToNavbar(registerRequest(new Shutdown()),    "Shutdown",                 "Admin");
 
     // Help and Tutorials
