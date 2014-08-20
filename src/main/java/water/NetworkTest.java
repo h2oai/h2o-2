@@ -19,7 +19,7 @@ public class NetworkTest extends Func {
   @API(help = "Latencies in microseconds (for each message size, for each node)", json=true)
   public float[][] microseconds; //OUTPUT
 
-  @API(help = "Bandwidths in MB/s (for each message size, for each node)", json=true)
+  @API(help = "Bi-directional bandwidths in MegaBytes/s (for each message size, for each node)", json=true)
   public float[][] bandwidths; //OUTPUT
 
   @API(help = "Nodes", json=true)
@@ -34,7 +34,7 @@ public class NetworkTest extends Func {
       bandwidths[i] = new float[microseconds[i].length];
       for (int j=0; j< microseconds[i].length; ++j) {
         //send and receive the same message -> 2x, units: bytes/microseconds = MB/s
-        bandwidths[i][j] = (2 * msg_sizes[i]) / microseconds[i][j];
+        bandwidths[i][j] = (2f * msg_sizes[i]) / microseconds[i][j];
       }
     }
     nodes = new String[H2O.CLOUD.size()];
@@ -61,7 +61,7 @@ public class NetworkTest extends Func {
   /**
    * Send a message from this node to all nodes in serial (including self), and receive it back
    * @param msg_size message size in bytes
-   * @return Time in nanoseconds that it took to send the message (one per node)
+   * @return Time in nanoseconds that it took to send and receive the message (one per node)
    */
   private static float[] send_recv_all(int msg_size, int repeats) {
     PingPongTask ppt = new PingPongTask(msg_size); //same payload for all nodes
@@ -72,7 +72,7 @@ public class NetworkTest extends Func {
       for (int l=0; l<repeats; ++l) {
         new RPC(node, ppt).call().get(); //blocking send
       }
-      times[i] = (float) t.nanos();
+      times[i] = (float) t.nanos()/repeats;
     }
     return times;
   }
