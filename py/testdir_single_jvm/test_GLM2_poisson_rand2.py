@@ -11,6 +11,7 @@ def define_params():
         'lambda': [1e-8, 1e-4],
         'alpha': [0, 0.5],
         'max_iter': [5, 10, 19],
+        'link': ["identify", "logit", "log", "inverse", "tweedie"]
         }
     return paramDict
 
