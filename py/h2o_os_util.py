@@ -54,7 +54,7 @@ def show_h2o_processes():
         if username=='jenkins' or username=='kevin' or username=='michal':
             import psutil
             # print "get_users:", psutil.get_users()
-            print "total physical dram: %0.2f GB", (psutil.TOTAL_PHYMEM+0)/(1024*1024)
+            print "total physical dram:" , (psutil.TOTAL_PHYMEM+0)/(1024*1024), "GB"
             print "max cpu threads:", psutil.NUM_CPUS
 
             print "\nReporting on h2o"
