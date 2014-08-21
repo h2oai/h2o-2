@@ -1170,8 +1170,18 @@ public class DeepLearning extends Job.ValidatedJob {
    */
   @Override public void crossValidate(Frame[] splits, Frame[] cv_preds, long[] offsets, int i) {
     // Train a clone with slightly modified parameters (to account for cross-validation)
-    DeepLearning cv = (DeepLearning) this.clone();
+    final DeepLearning cv = (DeepLearning) this.clone();
     cv.genericCrossValidation(splits, offsets, i);
     cv_preds[i] = ((DeepLearningModel) UKV.get(cv.dest())).score(cv.validation);
+    new TAtomic<DeepLearningModel>() {
+      @Override public DeepLearningModel atomic(DeepLearningModel m) {
+        if (!keep_cross_validation_splits && /*paranoid*/cv.dest().toString().contains("xval")) {
+          m.get_params().source = null;
+          m.get_params().validation=null;
+          m.get_params().response=null;
+        }
+        return m;
+      }
+    }.invoke(cv.dest());
   }
 }

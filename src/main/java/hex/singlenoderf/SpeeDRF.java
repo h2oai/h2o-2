@@ -184,7 +184,7 @@ public class SpeeDRF extends Job.ValidatedJob {
   }
 
   @Override protected void execImpl() {
-    SpeeDRFModel rf_model = null;
+    SpeeDRFModel rf_model;
     try {
       source.read_lock(self());
       if (validation != null && validation != source) validation.read_lock(self());
@@ -211,6 +211,7 @@ public class SpeeDRF extends Job.ValidatedJob {
           return m;
         }
       }.invoke(dest());
+
       emptyLTrash();
       cleanup();
     }
@@ -656,8 +657,18 @@ public class SpeeDRF extends Job.ValidatedJob {
    */
   @Override public void crossValidate(Frame[] splits, Frame[] cv_preds, long[] offsets, int i) {
     // Train a clone with slightly modified parameters (to account for cross-validation)
-    SpeeDRF cv = (SpeeDRF) this.clone();
+    final SpeeDRF cv = (SpeeDRF) this.clone();
     cv.genericCrossValidation(splits, offsets, i);
     cv_preds[i] = ((SpeeDRFModel) UKV.get(cv.dest())).score(cv.validation);
+    new TAtomic<SpeeDRFModel>() {
+      @Override public SpeeDRFModel atomic(SpeeDRFModel m) {
+        if (!keep_cross_validation_splits && /*paranoid*/ cv.dest().toString().contains("xval")) {
+          m.get_params().source = null;
+          m.get_params().validation=null;
+          m.get_params().response=null;
+        }
+        return m;
+      }
+    }.invoke(cv.dest());
   }
 }
