@@ -54,7 +54,7 @@ def show_h2o_processes():
         if username=='jenkins' or username=='kevin' or username=='michal':
             import psutil
             # print "get_users:", psutil.get_users()
-            print "total physical dram: %0.2f GB", (psutil.TOTAL_PHYMEM+0)/(1024*1024)
+            print "total physical dram:" , (psutil.TOTAL_PHYMEM+0)/(1024*1024), "GB"
             print "max cpu threads:", psutil.NUM_CPUS
 
             print "\nReporting on h2o"
@@ -63,13 +63,32 @@ def show_h2o_processes():
             h2oFound = False
             for p in psutil.process_iter():
                 h2oProcess = False
-                if 'java' in p.name:
-                    users.add(p.username)
+                # psutil 2.x requirs name(). prior psutil didn't
+                # hack. psutil 2.x needs function reference
+                # psutil 1.x needs object reference
+                if hasattr(p.name, '__call__'):
+                    pname = p.name()
+                    pcmdline = p.cmdline()
+                    pusername = p.username()
+                    pstatus = p.status()
+                else:
+                    pname = p.name
+                    pcmdline = p.cmdline
+                    pusername = p.username
+                    pstatus = p.status
+
+                if hasattr(p.pid, '__call__'):
+                    ppid = p.pid()
+                else:
+                    ppid = p.pid
+
+                if 'java' in pname:
+                    users.add(pusername)
                     # now iterate through the cmdline, to see if it's got 'h2o
-                    for c in p.cmdline:
+                    for c in pcmdline:
                         if 'h2o' in c: 
                             h2oProcess = True
-                            h2oUsers.add(p.username)
+                            h2oUsers.add(pusername)
                             break
 
                 if h2oProcess:
@@ -78,12 +97,12 @@ def show_h2o_processes():
                     print p
                     # process could disappear while we're looking? (fast h2o version java process?)
                     try:
-                        print "pid:", p.pid
-                        print "cmdline:", p.cmdline
+                        print "pid:", ppid
+                        print "cmdline:", pcmdline
                         # AccessDenied problem?
                         # print p.getcwd()
-                        print "status:", p.status
-                        print "username:", p.username
+                        print "status:", pstatus
+                        print "username:", pusername
                         print "cpu_percent:", p.get_cpu_percent(interval=1.0)
                         print "memory_percent:", p.get_memory_percent()
                         print p.get_memory_info()
@@ -97,10 +116,10 @@ def show_h2o_processes():
                         pass
                 
 
-    if h2oFound:
-        print "\n#**********************************************"
-    else:
-        print "No h2o processes found."
-    print "users running java:", list(users)
-    print "users running h2o java:", list(h2oUsers)
+        if h2oFound:
+            print "\n#**********************************************"
+        else:
+            print "No h2o processes found."
+        print "users running java:", list(users)
+        print "users running h2o java:", list(h2oUsers)
 
