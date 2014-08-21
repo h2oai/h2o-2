@@ -9,7 +9,6 @@ setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 source('../findNSourceUtils.R')
 
 test.hex_1775 <- function(conn) {
-  conn = h2o.init()
   temp_dir = tempdir()
   temp_subdir = paste(temp_dir, "tmp", sep = .Platform$file.sep)
   temp_subdir2 = paste(temp_dir, "tmp2", sep = .Platform$file.sep)
