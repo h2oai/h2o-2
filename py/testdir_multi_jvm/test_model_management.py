@@ -112,6 +112,7 @@ class ModelManagementTestCase(unittest.TestCase):
         test_hash_before = -1
         train_hash_before = -1
         for a_node in h2o.nodes:
+            print "  Checking " + a_node.http_addr + ":" + str(a_node.port)
             frames = a_node.frames()
             self.assertKeysExist(frames, 'frames', ['airlines_train.hex'])
             self.assertKeysExist(frames, 'frames', ['airlines_test.hex'])
@@ -189,6 +190,10 @@ class ModelManagementTestCase(unittest.TestCase):
         num_models = num_models + 1
         h2o_glm.simpleCheckGLM(self, glm_AirlinesTrain_1, None, **glm_AirlinesTrain_1_params)
 
+        for a_node in h2o.nodes:
+            print "Checking /Frames and /Models on: " + a_node.http_addr + ":" + str(a_node.port)
+            dummy = a_node.frames()
+            dummy = a_node.models()
 
         print "#########################################################################################"
         print "Generating AirlinesTrain GLM2 binary classification model with nfold crossvalidation. . ."
@@ -210,6 +215,10 @@ class ModelManagementTestCase(unittest.TestCase):
         num_models = num_models + 1 # TODO: interesting that the xval models aren't visible as they are in GBM
         h2o_glm.simpleCheckGLM(self, glm_AirlinesTrain_3fold, None, **glm_AirlinesTrain_3fold_params)
 
+        for a_node in h2o.nodes:
+            print "Checking /Frames and /Models on: " + a_node.http_addr + ":" + str(a_node.port)
+            dummy = a_node.frames()
+            dummy = a_node.models()
 
 
 
@@ -232,6 +241,10 @@ class ModelManagementTestCase(unittest.TestCase):
         # num_models = num_models + 6
         # h2o_glm.simpleCheckGLMGrid(self, glm_AirlinesTrain_grid, None, **glm_AirlinesTrain_grid_params)
 
+        # for a_node in h2o.nodes:
+        #     print "Checking /Frames and /Models on: " + a_node.http_addr + ":" + str(a_node.port)
+        #     dummy = a_node.frames()
+        #     dummy = a_node.models()
 
 
 
@@ -254,6 +267,10 @@ class ModelManagementTestCase(unittest.TestCase):
         durations['gbm_AirlinesTrain_binary_1'] = time.time() * 1000 - before
         num_models = num_models + 1
 
+        for a_node in h2o.nodes:
+            print "Checking /Frames and /Models on: " + a_node.http_addr + ":" + str(a_node.port)
+            dummy = a_node.frames()
+            dummy = a_node.models()
 
         print "#####################################################################"
         print "Generating AirlinesTrain complex GBM binary classification model. . ."
@@ -273,6 +290,10 @@ class ModelManagementTestCase(unittest.TestCase):
         durations['gbm_AirlinesTrain_binary_2'] = time.time() * 1000 - before
         num_models = num_models + 1
 
+        for a_node in h2o.nodes:
+            print "Checking /Frames and /Models on: " + a_node.http_addr + ":" + str(a_node.port)
+            dummy = a_node.frames()
+            dummy = a_node.models()
 
         print "###############################################################################################"
         print "Generating AirlinesTrain simple GBM binary classification model with nfold crossvalidation. . ."
@@ -292,6 +313,10 @@ class ModelManagementTestCase(unittest.TestCase):
         durations['gbm_AirlinesTrain_binary_3fold'] = time.time() * 1000 - before
         num_models = num_models + 4 # 1 main model and 3 xval models
 
+        for a_node in h2o.nodes:
+            print "Checking /Frames and /Models on: " + a_node.http_addr + ":" + str(a_node.port)
+            dummy = a_node.frames()
+            dummy = a_node.models()
 
         print "####################################################################"
         print "Generating AirlinesTrain simple DRF binary classification model. . ."
@@ -310,6 +335,10 @@ class ModelManagementTestCase(unittest.TestCase):
         durations['rf_AirlinesTrain_binary_1'] = time.time() * 1000 - before
         num_models = num_models + 1
 
+        for a_node in h2o.nodes:
+            print "Checking /Frames and /Models on: " + a_node.http_addr + ":" + str(a_node.port)
+            dummy = a_node.frames()
+            dummy = a_node.models()
 
         print "#####################################################################"
         print "Generating AirlinesTrain complex DRF binary classification model. . ."
@@ -328,6 +357,10 @@ class ModelManagementTestCase(unittest.TestCase):
         durations['rf_AirlinesTrain_binary_2'] = time.time() * 1000 - before
         num_models = num_models + 1
 
+        for a_node in h2o.nodes:
+            print "Checking /Frames and /Models on: " + a_node.http_addr + ":" + str(a_node.port)
+            dummy = a_node.frames()
+            dummy = a_node.models()
 
         print "###############################################################################################"
         print "Generating AirlinesTrain simple DRF binary classification model with nfold crossvalidation. . ."
@@ -347,6 +380,10 @@ class ModelManagementTestCase(unittest.TestCase):
         durations['rf_AirlinesTrain_binary_3fold'] = time.time() * 1000 - before
         num_models = num_models + 4
 
+        for a_node in h2o.nodes:
+            print "Checking /Frames and /Models on: " + a_node.http_addr + ":" + str(a_node.port)
+            dummy = a_node.frames()
+            dummy = a_node.models()
 
         print "#####################################################################"
         print "Generating AirlinesTrain complex SpeeDRF binary classification model. . ."
@@ -366,6 +403,10 @@ class ModelManagementTestCase(unittest.TestCase):
         durations['speedrf_AirlinesTrain_binary_1'] = time.time() * 1000 - before
         num_models = num_models + 1
 
+        for a_node in h2o.nodes:
+            print "Checking /Frames and /Models on: " + a_node.http_addr + ":" + str(a_node.port)
+            dummy = a_node.frames()
+            dummy = a_node.models()
 
         print "####################################################################################################"
         print "Generating AirlinesTrain complex SpeeDRF binary classification model with nfold crossvalidation. . ."
@@ -386,6 +427,10 @@ class ModelManagementTestCase(unittest.TestCase):
         durations['speedrf_AirlinesTrain_binary_3fold'] = time.time() * 1000 - before
         num_models = num_models + 4 # 1 main model and 3 xval models
 
+        for a_node in h2o.nodes:
+            print "Checking /Frames and /Models on: " + a_node.http_addr + ":" + str(a_node.port)
+            dummy = a_node.frames()
+            dummy = a_node.models()
 
         print "######################################################################"
         print "Generating AirlinesTrain DeepLearning binary classification model. . ."
@@ -403,6 +448,10 @@ class ModelManagementTestCase(unittest.TestCase):
         durations['dl_AirlinesTrain_binary_1'] = time.time() * 1000 - before
         num_models = num_models + 1
 
+        for a_node in h2o.nodes:
+            print "Checking /Frames and /Models on: " + a_node.http_addr + ":" + str(a_node.port)
+            dummy = a_node.frames()
+            dummy = a_node.models()
 
         print "##############################################################################################"
         print "Generating AirlinesTrain GLM2 binary classification model with different response column. . ."
@@ -424,6 +473,10 @@ class ModelManagementTestCase(unittest.TestCase):
         num_models = num_models + 1
         h2o_glm.simpleCheckGLM(self, glm_AirlinesTrain_A, None, **glm_AirlinesTrain_A_params)
 
+        for a_node in h2o.nodes:
+            print "Checking /Frames and /Models on: " + a_node.http_addr + ":" + str(a_node.port)
+            dummy = a_node.frames()
+            dummy = a_node.models()
 
         print "#################################################################################################"
         print "Generating AirlinesTrain DeepLearning binary classification model with nfold crossvalidation. . ."
@@ -442,6 +495,10 @@ class ModelManagementTestCase(unittest.TestCase):
         durations['dl_AirlinesTrain_binary_3fold'] = time.time() * 1000 - before
         num_models = num_models + 4 # 1 main model and 3 xval models
 
+        for a_node in h2o.nodes:
+            print "Checking /Frames and /Models on: " + a_node.http_addr + ":" + str(a_node.port)
+            dummy = a_node.frames()
+            dummy = a_node.models()
 
         print "##############################################################################################"
         print "Generating AirlinesTrain Naive Bayes binary classification model. . ."
@@ -456,6 +513,10 @@ class ModelManagementTestCase(unittest.TestCase):
         durations['nb_AirlinesTrain_binary_1'] = time.time() * 1000 - before
         num_models = num_models + 1
 
+        for a_node in h2o.nodes:
+            print "Checking /Frames and /Models on: " + a_node.http_addr + ":" + str(a_node.port)
+            dummy = a_node.frames()
+            dummy = a_node.models()
 
         print "#########################################################"
         print "Generating Prostate GLM2 binary classification model. . ."
@@ -475,6 +536,10 @@ class ModelManagementTestCase(unittest.TestCase):
         num_models = num_models + 1
         h2o_glm.simpleCheckGLM(self, glm_Prostate_1, None, **glm_Prostate_1_params)
 
+        for a_node in h2o.nodes:
+            print "Checking /Frames and /Models on: " + a_node.http_addr + ":" + str(a_node.port)
+            dummy = a_node.frames()
+            dummy = a_node.models()
 
         print "###############################################################"
         print "Generating Prostate simple DRF binary classification model. . ."
@@ -493,6 +558,10 @@ class ModelManagementTestCase(unittest.TestCase):
         durations['rf_Prostate_binary_1'] = time.time() * 1000 - before
         num_models = num_models + 1
 
+        for a_node in h2o.nodes:
+            print "Checking /Frames and /Models on: " + a_node.http_addr + ":" + str(a_node.port)
+            dummy = a_node.frames()
+            dummy = a_node.models()
 
         print "#####################################################################"
         print "Generating Prostate complex SpeeDRF binary classification model. . ."
@@ -511,6 +580,10 @@ class ModelManagementTestCase(unittest.TestCase):
         num_models = num_models + 1
         durations['speedrf_Prostate_binary_1'] = time.time() * 1000 - before
 
+        for a_node in h2o.nodes:
+            print "Checking /Frames and /Models on: " + a_node.http_addr + ":" + str(a_node.port)
+            dummy = a_node.frames()
+            dummy = a_node.models()
 
         print "##############################################"
         print "Generating Prostate GLM2 regression model. . ."
@@ -530,6 +603,10 @@ class ModelManagementTestCase(unittest.TestCase):
         num_models = num_models + 1
         h2o_glm.simpleCheckGLM(self, glm_Prostate_regression_1, None, **glm_Prostate_regression_1_params)
 
+        for a_node in h2o.nodes:
+            print "Checking /Frames and /Models on: " + a_node.http_addr + ":" + str(a_node.port)
+            dummy = a_node.frames()
+            dummy = a_node.models()
         
         # Done building models!
         # We were getting different results for each node.  Bad, bad bad. . .
