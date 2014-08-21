@@ -49,7 +49,7 @@ def check_port_group(base_port):
 # I suppose we should use psutil here. since everyone has it installed?
 # and it should work on windows?
 def show_h2o_processes():
-    if 1==0:
+    if 1==1:
         username = getpass.getuser()
         if username=='jenkins' or username=='kevin' or username=='michal':
             import psutil
@@ -64,13 +64,28 @@ def show_h2o_processes():
             for p in psutil.process_iter():
                 h2oProcess = False
                 # psutil 2.x requirs name(). prior psutil didn't
-                if 'java' in p.name():
-                    users.add(p.username)
+                # hack. psutil 2.x needs function reference
+                # psutil 1.x needs object reference
+                if hasattr(p.name, '__call__'):
+                    pname = p.name()
+                    pcmdline = p.cmdline()
+                    pusername = p.username()
+                    pstatus = p.status()
+                    ppid = p.pid()
+                else:
+                    pname = p.name
+                    pcmdline = p.cmdline
+                    pusername = p.username
+                    pstatus = p.status
+                    ppid = p.pid
+
+                if 'java' in pname:
+                    users.add(pusername)
                     # now iterate through the cmdline, to see if it's got 'h2o
-                    for c in p.cmdline:
+                    for c in pcmdline:
                         if 'h2o' in c: 
                             h2oProcess = True
-                            h2oUsers.add(p.username)
+                            h2oUsers.add(pusername)
                             break
 
                 if h2oProcess:
@@ -79,12 +94,12 @@ def show_h2o_processes():
                     print p
                     # process could disappear while we're looking? (fast h2o version java process?)
                     try:
-                        print "pid:", p.pid
-                        print "cmdline:", p.cmdline
+                        print "pid:", ppid
+                        print "cmdline:", pcmdline
                         # AccessDenied problem?
                         # print p.getcwd()
-                        print "status:", p.status
-                        print "username:", p.username
+                        print "status:", pstatus
+                        print "username:", pusername
                         print "cpu_percent:", p.get_cpu_percent(interval=1.0)
                         print "memory_percent:", p.get_memory_percent()
                         print p.get_memory_info()
