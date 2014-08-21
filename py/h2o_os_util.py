@@ -71,12 +71,15 @@ def show_h2o_processes():
                     pcmdline = p.cmdline()
                     pusername = p.username()
                     pstatus = p.status()
-                    ppid = p.pid()
                 else:
                     pname = p.name
                     pcmdline = p.cmdline
                     pusername = p.username
                     pstatus = p.status
+
+                if hasattr(p.pid, '__call__'):
+                    ppid = p.pid()
+                else:
                     ppid = p.pid
 
                 if 'java' in pname:
