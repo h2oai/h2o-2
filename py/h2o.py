@@ -2976,6 +2976,8 @@ class LocalH2O(H2O):
         self.remoteH2O = False # so we can tell if we're remote or local
 
         h2o_os_util.check_port_group(self.port)
+        h2o_os_util.show_h2o_processes()
+
         if self.node_id is not None:
             logPrefix = 'local-h2o-' + str(self.node_id)
         else:
