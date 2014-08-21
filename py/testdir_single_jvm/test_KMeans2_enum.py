@@ -44,13 +44,13 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (100, 11, 'cA', 5),
-            (100, 10, 'cB', 5),
-            (100, 9, 'cC', 5),
-            (100, 8, 'cD', 5),
-            (100, 7, 'cE', 5),
-            (100, 6, 'cF', 5),
-            (100, 5, 'cG', 5),
+            (100, 11, 'cA', 10),
+            (100, 10, 'cB', 10),
+            (100, 9, 'cC', 10),
+            (100, 8, 'cD', 10),
+            (100, 7, 'cE', 10),
+            (100, 6, 'cF', 10),
+            (100, 5, 'cG', 10),
             ]
 
         ### h2b.browseTheCloud()
@@ -73,7 +73,7 @@ class Basic(unittest.TestCase):
                 'destination_key': 'benign_k.hex',
                 'max_iter': 10,
             }
-            kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=15, **kwargs)
+            kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseResult, 'd', **kwargs)
 
 if __name__ == '__main__':
