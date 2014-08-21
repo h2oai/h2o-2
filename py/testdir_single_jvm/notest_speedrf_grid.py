@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_jobs
 
 
 class Basic(unittest.TestCase):
@@ -22,23 +22,36 @@ class Basic(unittest.TestCase):
 
     def notest_RF_iris2(self):
         h2o.beta_features = True
-        trees = "1,2,3,4,5,6"
+        trees = ",".join(map(str,range(1,4)))
         timeoutSecs = 20
         csvPathname = 'iris/iris2.csv'
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
         h2o_cmd.runSpeeDRF(parseResult=parseResult, ntrees=trees, timeoutSecs=timeoutSecs)
 
     def test_RF_poker100(self):
-        h2o.beta_features = True
+        MISSING_RESPONSE = True
         trees = ",".join(map(str,range(1,4)))
+        trees = "1,2"
         timeoutSecs = 20
         csvPathname = 'poker/poker100'
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
-        rfResult = h2o_cmd.runSpeeDRF(parseResult=parseResult, ntrees=trees, timeoutSecs=timeoutSecs)
-        job_key = rfResult['job_key']
-        model_key = rfResult['destination_key']
-        gridResult = h2o.nodes[0].speedrf_grid_view(job_key=job_key, destination_key=model_key)
-        print "speedrf grid result:", h2o.dump_json(gridResult)
+        jobs = []
+        for i in range(1):
+            if MISSING_RESPONSE:
+                rfResult = h2o_cmd.runSpeeDRF(parseResult=parseResult, ntrees=trees, timeoutSecs=timeoutSecs)
+            else:
+                rfResult = h2o_cmd.runSpeeDRF(parseResult=parseResult, response='C11', ntrees=trees, timeoutSecs=timeoutSecs)
+            job_key = rfResult['job_key']
+            model_key = rfResult['destination_key']
+            jobs.append( (job_key, model_key) )
+
+        h2o_jobs.pollWaitJobs(timeoutSecs=300)
+
+        for job_key, model_key  in jobs:
+            gridResult = h2o.nodes[0].speedrf_grid_view(job_key=job_key, destination_key=model_key)
+            # h2o_rf.showRFGridResults(GBMResult, 15)
+
+            print "speedrf grid result for %s:", model_key, h2o.dump_json(gridResult)
 
 
     def notest_GenParity1(self):

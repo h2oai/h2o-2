@@ -53,7 +53,7 @@ def kmeans_doit(self, csvFilename, bucket, csvPathname, numRows, timeoutSecs=30)
     # inspect doesn't work
     # inspect = h2o_cmd.runInspect(None, key=kmeans['model']['_key'])
     # KMeansModel = inspect['KMeansModel']
-    modelView = h2o.nodes[0].kmeans_model_view(model='KMeansModel.hex')
+    modelView = h2o.nodes[0].kmeans_view(model='KMeansModel.hex')
     h2o.verboseprint("KMeans2ModelView:", h2o.dump_json(modelView))
     model = modelView['model']
     clusters = model['centers']

@@ -1,6 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i
+import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_jobs
 
 
 class Basic(unittest.TestCase):
@@ -20,27 +20,50 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_RF_iris2(self):
+    def notest_RF_iris2(self):
+        h2o.beta_features = True
         trees = ",".join(map(str,range(1,4)))
         timeoutSecs = 20
         csvPathname = 'iris/iris2.csv'
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
-        rfResult = h2o_cmd.runSpeeDRF(parseResult=parseResult, ntrees=trees, timeoutSecs=timeoutSecs)
-        job_key = rfResult['job_key']
-        model_key = rfResult['destination_key']
-        gridResult = h2o.nodes[0].speedrf_grid_view(job_key=job_key, destination_key=model_key)
-        print "speedrf grid result:", h2o.dump_json(gridResult)
+        h2o_cmd.runSpeeDRF(parseResult=parseResult, ntrees=trees, timeoutSecs=timeoutSecs)
 
     def test_RF_poker100(self):
-        trees = ",".join(map(str,range(1,4)))
+        MISSING_RESPONSE = False
+        DO_MODEL_INSPECT = False
+        trees = ",".join(map(str,range(10,50,2)))
         timeoutSecs = 20
         csvPathname = 'poker/poker100'
         parseResult = h2i.import_parse(bucket='smalldata', path=csvPathname, schema='put')
-        rfResult = h2o_cmd.runSpeeDRF(parseResult=parseResult, ntrees=trees, timeoutSecs=timeoutSecs)
-        job_key = rfResult['job_key']
-        model_key = rfResult['destination_key']
-        gridResult = h2o.nodes[0].speedrf_grid_view(job_key=job_key, destination_key=model_key)
-        print "speedrf grid result:", h2o.dump_json(gridResult)
+        jobs = []
+        for i in range(1):
+            if MISSING_RESPONSE:
+                rfResult = h2o_cmd.runSpeeDRF(parseResult=parseResult, ntrees=trees, timeoutSecs=timeoutSecs)
+            else:
+                rfResult = h2o_cmd.runSpeeDRF(parseResult=parseResult, response='C11', ntrees=trees, timeoutSecs=timeoutSecs)
+            job_key = rfResult['job_key']
+            model_key = rfResult['destination_key']
+            jobs.append( (job_key, model_key) )
+
+        h2o_jobs.pollWaitJobs(timeoutSecs=300)
+
+        for job_key, model_key  in jobs:
+
+            gridResult = h2o.nodes[0].speedrf_grid_view(job_key=job_key, destination_key=model_key)
+            print "speedrf grid result for %s:", h2o.dump_json(gridResult)
+
+            print "speedrf grid result errors:", gridResult['prediction_errors']
+            for i,j in enumerate(gridResult['jobs']):
+                if DO_MODEL_INSPECT:
+                    print "\nspeedrf result %s:" % i, h2o.dump_json(h2o_cmd.runInspect(key=j['destination_key']))
+                else:
+                    # model = h2o.nodes[0].speedrf_view(modelKey=j['destination_key'])
+                    model = h2o.nodes[0].speedrf_view(modelKey=j['destination_key'])
+                    print "model:", h2o.dump_json(model)
+
+
+            # h2o_rf.showRFGridResults(GBMResult, 15)
+
 
 
     def notest_GenParity1(self):
