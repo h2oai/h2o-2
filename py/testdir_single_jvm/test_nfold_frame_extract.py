@@ -26,7 +26,7 @@ class Basic(unittest.TestCase):
         csvPathname = 'standard/' + csvFilename
         hex_key = "covtype.hex"
 
-        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, hex_key=hex_key, schema='local', timeoutSecs=10)
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, hex_key=hex_key, schema='local', timeoutSecs=30)
 
         print "Just nfold_frame_extract away and see if anything blows up"
         splitMe = hex_key
