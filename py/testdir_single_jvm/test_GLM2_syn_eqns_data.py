@@ -222,7 +222,7 @@ class Basic(unittest.TestCase):
                 deltaCoeff = 0.1
                 deltaIntcpt = 0.2
             else: # poisson needs more? 
-                deltaCoeff = 0.4
+                deltaCoeff = 0.5
                 deltaIntcpt = 1.0
 
             for i,c in enumerate(coefficients):
