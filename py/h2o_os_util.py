@@ -49,7 +49,7 @@ def check_port_group(base_port):
 # I suppose we should use psutil here. since everyone has it installed?
 # and it should work on windows?
 def show_h2o_processes():
-    if 1==1:
+    if 1==0:
         username = getpass.getuser()
         if username=='jenkins' or username=='kevin' or username=='michal':
             import psutil
@@ -63,7 +63,8 @@ def show_h2o_processes():
             h2oFound = False
             for p in psutil.process_iter():
                 h2oProcess = False
-                if 'java' in p.name:
+                # psutil 2.x requirs name(). prior psutil didn't
+                if 'java' in p.name():
                     users.add(p.username)
                     # now iterate through the cmdline, to see if it's got 'h2o
                     for c in p.cmdline:
