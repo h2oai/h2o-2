@@ -21,7 +21,8 @@ def ping_host_if_verbose(host):
     # if (h2o.verbose) 
     if 1==1:
         username = getpass.getuser()
-        if username=='jenkins' or username=='kevin' or username=='michal':
+        # if username=='jenkins' or username=='kevin' or username=='michal':
+        if username=='jenkins' or username=='kevin':
             ping = subprocess.Popen( ["ping", "-c", "4", host])
             ping.communicate()
 
@@ -29,7 +30,8 @@ def check_port_group(base_port):
     # disabled
     if 1==1:
         username = getpass.getuser()
-        if username=='jenkins' or username=='kevin' or username=='michal':
+        # if username=='jenkins' or username=='kevin' or username=='michal':
+        if username=='jenkins' or username=='kevin':
             # assumes you want to know about 3 ports starting at base_port
             command1Split = ['netstat', '-anp']
             command2Split = ['egrep']
@@ -54,7 +56,8 @@ def show_h2o_processes():
         h2oFound = False
         users = set()
         h2oUsers = set()
-        if username=='jenkins' or username=='kevin' or username=='michal':
+        # if username=='jenkins' or username=='kevin' or username=='michal':
+        if username=='jenkins' or username=='kevin':
             import psutil
             # print "get_users:", psutil.get_users()
             print "total physical dram:" , (psutil.TOTAL_PHYMEM+0)/(1024*1024), "GB"

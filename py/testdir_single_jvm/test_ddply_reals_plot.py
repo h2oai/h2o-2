@@ -2,6 +2,7 @@ import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_gbm, h2o_jobs as h2j, h2o_import
 import h2o_exec as h2e, h2o_util
+import math
 
 
 DO_PLOT = False
@@ -29,8 +30,10 @@ def write_syn_dataset(csvPathname, rowCount, colCount, minInt, maxInt, SEED):
         rowData = []
         for j in range(colCount):
             # maybe do a significatly smaller range than min/max ints.
-            ri = r1.randint(minInt,maxInt)
-            rowData.append(ri)
+            # divide by pi to get some non-integerness
+            ri = r1.randint(minInt,maxInt) / math.pi
+            # make it a real?
+            rowData.append("%+e" % ri)
 
         rowDataCsv = ",".join(map(str,rowData))
         dsf.write(rowDataCsv + "\n")
