@@ -1060,13 +1060,10 @@ public final class H2O {
 
         // If the user specified the -ip flag, honor it for the Web UI interface bind.
         // Otherwise bind to all interfaces.
-        if (OPT_ARGS.ip != null) {
-          int defaultBacklog = -1;
-          _apiSocket = new ServerSocket(API_PORT, defaultBacklog, SELF_ADDRESS);
-        }
-        else {
-          _apiSocket = new ServerSocket(API_PORT);
-        }
+        _apiSocket = OPT_ARGS.ip == null
+          ? new ServerSocket(API_PORT)
+          : new ServerSocket(API_PORT, -1/*defaultBacklog*/, SELF_ADDRESS);
+        _apiSocket.setReuseAddress(true);
 
         _udpSocket = DatagramChannel.open();
         _udpSocket.socket().setReuseAddress(true);
