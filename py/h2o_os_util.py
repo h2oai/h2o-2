@@ -51,6 +51,9 @@ def check_port_group(base_port):
 def show_h2o_processes():
     if 1==1:
         username = getpass.getuser()
+        h2oFound = False
+        users = set()
+        h2oUsers = set()
         if username=='jenkins' or username=='kevin' or username=='michal':
             import psutil
             # print "get_users:", psutil.get_users()
