@@ -266,18 +266,13 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       if(_validate) {
         _val.add(y, mu);
         if(_glm.family == Family.binomial) {
-          try {
-            int yi = (int) y;
-            if (_ti[yi] == _newThresholds[yi].length)
-              sampleThresholds(yi);
-            _newThresholds[yi][_ti[yi]++] = (float) mu;
-          } catch(Throwable t){
-            System.out.println("how did I get here?!!!");
-          }
+          int yi = (int) y;
+          if (_ti[yi] == _newThresholds[yi].length)
+            sampleThresholds(yi);
+          _newThresholds[yi][_ti[yi]++] = (float) mu;
         }
       }
-
-      assert w >= 0 : "invalid weight " + w;
+      assert w >= 0|| Double.isNaN(w) : "invalid weight " + w; // allow NaNs - can occur if line-search is needed!
       final double wz = w * z;
       _yy += wz * z;
       if(_computeGradient || _computeGram){
