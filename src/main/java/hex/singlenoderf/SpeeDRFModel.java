@@ -71,6 +71,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   @API(help = "Verbose Mode")                                             public boolean verbose;
   @API(help = "Verbose Output")                                           public String[] verbose_output;
   @API(help = "Use non-local data")                                       public boolean useNonLocal;
+  @API(help = "Dtree keys")                                               public Key[/*ntree*/][/*nclass*/] dtreeKeys;
 
 
   private float _ss; private float _cnt;
@@ -220,7 +221,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
   void variableImportanceCalc(Frame fr, Vec modelResp) { varimp = doVarImpCalc(fr, this, modelResp); }
 
-  public static SpeeDRFModel make(SpeeDRFModel old, Key tkey, int nodeIdx, String tString, int tree_id) {
+  public static SpeeDRFModel make(SpeeDRFModel old, Key tkey, Key dtKey, int nodeIdx, String tString, int tree_id) {
 
     // Create a new model for atomic update
     SpeeDRFModel m = (SpeeDRFModel)old.clone();
@@ -228,6 +229,14 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     // Update the tree keys with the new one (tkey)
     m.t_keys = Arrays.copyOf(old.t_keys, old.t_keys.length + 1);
     m.t_keys[m.t_keys.length-1] = tkey;
+
+    // Update the dtree keys with the new one (dtkey)
+    if (old.dtreeKeys == null) { m.dtreeKeys = new Key[1][m.nclasses()]; }
+    else {
+      m.dtreeKeys = Arrays.copyOf(old.dtreeKeys, old.dtreeKeys.length + 1);
+      m.dtreeKeys[m.dtreeKeys.length-1] = new Key[m.nclasses()];
+    }
+    m.dtreeKeys[m.dtreeKeys.length-1][0] = dtKey;
 
     // Update the local_forests
     m.local_forests[nodeIdx][tree_id] = tkey;
@@ -523,8 +532,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     String[] names = _names;
     String[][] domains = _domains;
     String[] cmDomain = this.cmDomain;
-    int ntrees = 0; // TODO: get the number of trees in the model
-    //max_depth
+    int ntrees = treeCount();
     int min_rows = 0;
     int nbins = this.nbins;
     int mtries = this.mtry;
@@ -532,18 +540,26 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     int num_folds = 0; // TODO:
     float[] priorClassDist = null;
     float[] classDist = null;
-    TreeStats tstats = null;
-    // TODO: instantiate trees.
-    Key[][] treeKeys = new Key[1][t_keys.length];
-    for (int i=0; i<t_keys.length; i++) {
-//      treeKeys[i] = new Key(); // TODO: transform the original tree and instantiate the KV pair.
-    }
-
-
+//    Key[][] treeKeys = new Key[t_keys.length][nclasses()];
+//
+//    for (int i=0; i<t_keys.length; i++) {
+//      byte[] singleTree = DKV.get(t_keys[i]).memOrLoad();
+//      byte[] dtree = Tree.toDTreeCompressedTreeAB(singleTree, false);
+////      UKV.put(treeKeys[i][0], dtreeValue, new Futures());
+//      for (int j=0; j<nclasses(); j++) {
+//        treeKeys[i][j] = Key.make((byte)1,Key.DFJ_INTERNAL_USER, H2O.SELF);
+//        Futures fs = new Futures();
+//        UKV.put(treeKeys[i][j], new Value(treeKeys[i][j], dtree), fs);
+//        fs.blockForPending();
+//        UKV.get(treeKeys[i][j]);
+//      }
+//      Log.info(Log.Tag.Sys.RANDF, "tree "+i+" is transformed");
+//
+//    }
     // dummy model
     SpeeDRFModel_DTree newModel = new SpeeDRFModel_DTree(key,dataKey,testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, mtries, num_folds, priorClassDist, classDist);
     // update the model
-    newModel = new SpeeDRFModel_DTree(newModel, treeKeys);
+    newModel = new SpeeDRFModel_DTree(newModel, dtreeKeys, treeStats);
     return newModel;
   }
 
@@ -555,8 +571,8 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       super(key,dataKey,testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, num_folds, priorClassDist, classDist);
     }
 
-    public SpeeDRFModel_DTree(SpeeDRFModel_DTree prior, Key[][] treeKeys) {
-      super(prior, treeKeys, null, Utils.append(prior.cms, null), null, null, null);
+    public SpeeDRFModel_DTree(SpeeDRFModel_DTree prior, Key[][] treeKeys, TreeStats tstats) {
+      super(prior, treeKeys, null, prior.cms, tstats, null, null);
     }
 
     @Override

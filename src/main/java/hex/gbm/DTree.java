@@ -1224,7 +1224,7 @@ public class DTree extends Iced {
       return sb;
     }
     // Convert Tree model to Java
-    @Override protected void toJavaPredictBody( final SB bodySb, final SB classCtxSb, final SB fileCtxSb) {
+    @Override protected void  toJavaPredictBody( final SB bodySb, final SB classCtxSb, final SB fileCtxSb) {
       // AD-HOC maximal number of trees in forest - in fact constant pool size for Forest class (all UTF String + references to static classes).
       // TODO: in future this parameter can be a parameter for generator, as well as maxIters
       final int maxfsize = 4000;
