@@ -565,9 +565,10 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 
   private double [] lastBeta(){
     final double [] b;
-    if(_lastResult == null) {
-      b = MemoryManager.malloc8d(_activeCols.length);
-      b[b.length-1] = _glm.linkInv(_ymu);
+    if(_lastResult == null || _lastResult._glmt._beta == null) {
+      int bsz = _activeCols == null?_dinfo.fullN()+1:_activeCols.length+1;
+      b = MemoryManager.malloc8d(bsz);
+      b[bsz-1] = _glm.linkInv(_ymu);
     } else
       b = resizeVec(_lastResult._glmt._beta, _activeCols, _lastResult._activeCols);
     return b;
