@@ -385,8 +385,12 @@ public abstract class Log {
     if ((l4j == null) && !loggerCreateWasCalled && !H2O.DEBUG) {
       if (H2O.SELF != null) {
         File dir;
+        boolean windowsPath = H2O.ICE_ROOT.toString().matches("^[a-zA-Z]:.*");
+
         // Use ice folder if local, or default
-        if( H2O.ICE_ROOT.getScheme() == null || Schemes.FILE.equals(H2O.ICE_ROOT.getScheme()) )
+        if (windowsPath)
+          dir = new File(H2O.ICE_ROOT.toString());
+        else if( H2O.ICE_ROOT.getScheme() == null || Schemes.FILE.equals(H2O.ICE_ROOT.getScheme()) )
           dir = new File(H2O.ICE_ROOT.getPath());
         else
           dir = new File(H2O.DEFAULT_ICE_ROOT());
