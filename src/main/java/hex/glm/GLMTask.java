@@ -146,8 +146,8 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
   }
 
 
-  public static class GLMLineSearchTask2 extends GLMTask<GLMLineSearchTask2> {
-    public GLMLineSearchTask2(Key jobKey, DataInfo dinfo, GLMParams glm, double [] oldBeta, double [] newBeta, double betaEps, double ymu, long nobs, H2OCountedCompleter cmp) {
+  public static class GLMLineSearchTask extends GLMTask<GLMLineSearchTask> {
+    public GLMLineSearchTask(Key jobKey, DataInfo dinfo, GLMParams glm, double[] oldBeta, double[] newBeta, double betaEps, double ymu, long nobs, H2OCountedCompleter cmp) {
       super(jobKey, dinfo, glm, cmp);
       ArrayList<double[]> betas = new ArrayList<double[]>();
       double diff = 1;
@@ -185,113 +185,11 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
         _glmts[i].processRow(gid,nums,ncats,cats,responses);
     }
     @Override
-    public void reduce(GLMLineSearchTask2 git){
+    public void reduce(GLMLineSearchTask git){
       for(int i = 0; i < _glmts.length; ++i)
         _glmts[i].reduce(git._glmts[i]);
     }
   }
-  /**
-   * One iteration of glm, computes weighted gram matrix and t(x)*y vector and t(y)*y scalar.
-   *
-   * @author tomasnykodym
-   *
-   */
-  public static class GLMLineSearchTask extends GLMTask<GLMLineSearchTask> {
-    double [][] _betas;
-    double []   _objvals;
-    double _caseVal = 0;
-    final double _l1pen;
-    final double _l2pen;
-    final double _reg;
-    public GLMLineSearchTask(Key jobKey, DataInfo dinfo, GLMParams glm, double [] oldBeta, double [] newBeta, double betaEps, long nobs, double alpha, double lambda, H2OCountedCompleter cmp){
-      super(jobKey,dinfo,glm,cmp);
-      _l2pen = 0.5*(1-alpha)*lambda;
-      _l1pen = alpha*lambda;
-      _reg = 1.0/nobs;
-      ArrayList<double[]> betas = new ArrayList<double[]>();
-      double diff = 1;
-      while(diff > betaEps && betas.size() < 100){
-        diff = 0;
-        double [] b = MemoryManager.malloc8d(oldBeta.length);
-        for(int i = 0; i < oldBeta.length; ++i) {
-          b[i] = 0.5 * (oldBeta[i] + newBeta[i]);
-          double d = b[i] - oldBeta[i];
-          if(d > diff) diff = d;
-          else if(d < -diff) diff = -d;
-        }
-        betas.add(b);
-        newBeta = b;
-      }
-      _betas = new double[betas.size()][];
-      betas.toArray(_betas);
-    }
-
-    @Override public void chunkInit(){
-      _objvals = new double[_betas.length];
-    }
-    @Override public void chunkDone(long n){
-      for(int i = 0; i < _objvals.length; ++i)
-        _objvals[i] *= _reg;
-    }
-    @Override public void postGlobal(){
-      for(int i = 0; i < _objvals.length; ++i)
-        for(double d:_betas[i])
-          _objvals[i] += d*d*_l2pen + (d>=0?d:-d)*_l1pen;
-    }
-    @Override public final void processRow(long gid, final double [] nums, final int ncats, final int [] cats, double [] responses){
-      for(int i = 0; i < _objvals.length; ++i){
-        final double [] beta = _betas[i];
-        double y = responses[0];
-        _objvals[i] += _glm.deviance(y,_glm.linkInv(computeEta(ncats, cats,nums,beta)));
-      }
-    }
-    @Override
-    public void reduce(GLMLineSearchTask git){Utils.add(_objvals,git._objvals);}
-  }
-
-//  public static final class LMIterationTask extends FrameTask<LMIterationTask>{
-//    public final int n_folds;
-//    public long _n;
-//    Gram [] _gram;
-//    double [][] _xy;
-//    public LMIterationTask(Key jobKey, DataInfo dinfo,int nfolds, H2OCountedCompleter cmp){
-//      super(jobKey, dinfo, cmp);
-//      n_folds = Math.max(1,nfolds);
-//    }
-//    @Override public void chunkInit(){
-//      _gram = new Gram[n_folds];
-//      _xy = new double[n_folds][];
-//      for(int i = 0; i < n_folds; ++i){
-//        _gram[i] = new Gram(_dinfo.fullN(), _dinfo.largestCat(), _dinfo._nums, _dinfo._cats,true);
-//        _xy[i] = MemoryManager.malloc8d(_dinfo.fullN()+1); // + 1 is for intercept
-//      }
-//    }
-//    @Override public final void processRow(long gid, final double [] nums, final int ncats, final int [] cats, double [] responses){
-//      final int fold = n_folds == 1?0:(int)_n % n_folds;
-//      final double y = responses[0];
-//      _gram[fold].addRow(nums, ncats, cats, 1);
-//      for(int i = 0; i < ncats; ++i){
-//        final int ii = cats[i];
-//        _xy[fold][ii] += responses[0];
-//      }
-//      final int numStart = _dinfo.numStart();
-//      for(int i = 0; i < nums.length; ++i){
-//        _xy[fold][numStart+i] += y*nums[i];
-//      }
-//      ++_n;
-//    }
-//
-//    @Override public void chunkDone(){
-//
-//    }
-//
-//    @Override public void reduce(LMIterationTask lmit){
-//      for(int i = 0; i < n_folds; ++i){
-//        _gram[i].add(lmit._gram[i]);
-//        Utils.add(_xy[i],lmit._xy[i]);
-//      }
-//    }
-//  }
 
   /**
    * One iteration of glm, computes weighted gram matrix and t(x)*y vector and t(y)*y scalar.
