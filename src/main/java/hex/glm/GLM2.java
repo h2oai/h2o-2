@@ -534,7 +534,11 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 
 
   private double [] setSubmodel(final double[] newBeta, GLMValidation val, H2OCountedCompleter cmp){
-    final double [] fullBeta = (_activeCols == null || newBeta == null)?newBeta:expandVec(newBeta,_activeCols);
+    double [] fullBeta = (_activeCols == null || newBeta == null)?newBeta:expandVec(newBeta,_activeCols);
+    if(fullBeta == null){
+      fullBeta = MemoryManager.malloc8d(_dinfo.fullN()+1);
+      fullBeta[fullBeta.length-1] = _glm.linkInv(_ymu);
+    }
     final double [] newBetaDeNorm;
     if(_dinfo._predictor_transform == DataInfo.TransformType.STANDARDIZE) {
       newBetaDeNorm = fullBeta.clone();
