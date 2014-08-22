@@ -44,7 +44,7 @@ class Basic(unittest.TestCase):
             for exprTemplate in exprList:
                 execExpr = h2e.fill_in_expr_template(exprTemplate, colX=0, n=0, row=1, keyX=hex_key, m=2)
                 execResultInspect, min_value = h2e.exec_expr(h2o.nodes[nodeX], execExpr, 
-                    resultKey=None, timeoutSecs=4)
+                    resultKey=None, timeoutSecs=10)
 
                 print "min_value:", min_value, "execExpr:", execExpr
                 h2o.verboseprint("min: ", min_value, "trial:", trial)

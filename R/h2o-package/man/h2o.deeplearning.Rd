@@ -41,7 +41,7 @@ h2o.deeplearning(x, y, data, key = "",override_with_best_model, classification =
         \item{autoencoder}{ Enable auto-encoder for model building.}
         \item{use_all_factor_levels}{ Use all factor levels of categorical variables. Otherwise, the first factor level is omitted (without loss of accuracy). Useful for variable importances and auto-enabled for autoencoder. }
         \item{epochs}{ How many times the dataset should be iterated (streamed), can be fractional}
-        \item{train_samples_per_iteration}{ Number of training samples (globally) per MapReduce iteration. Special values are 0: one epoch, -1: all available data (e.g., replicated training data)}
+        \item{train_samples_per_iteration}{ Number of training samples (globally) per MapReduce iteration. Special values are 0: one epoch, -1: all available data (e.g., replicated training data), -2: auto-tuning (default)}
         \item{seed}{ Seed for random numbers (affects sampling) - Note: only reproducible when running single threaded}
         \item{adaptive_rate}{ Adaptive learning rate (ADADELTA)}
         \item{rho}{ Adaptive learning rate time decay factor (similarity to prior updates)}

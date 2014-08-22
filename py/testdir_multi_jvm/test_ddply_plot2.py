@@ -17,7 +17,7 @@ DO_KNOWN_FAIL2 = False
 DO_MANY = True
 DO_REALS = False
 
-CLOUD_SIZE = 1
+CLOUD_SIZE = 2
 
 initList = [
     (None, FUNC_PHRASE),
@@ -75,7 +75,7 @@ class Basic(unittest.TestCase):
         ### time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_ddply_plot(self):
+    def test_ddply_plot2(self):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
 

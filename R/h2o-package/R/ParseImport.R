@@ -412,13 +412,13 @@ h2o.saveModel <- function(object, dir="", name="",save_cv=FALSE, force=FALSE) {
     if(!inherits(object,'H2OModel')) stop('object must be an H2O model')
     if(!is.character(dir)) stop('path must be of class character')
     if(!is.character(name)) stop('name must be of class character')
+    #filename taken out because models save in own directory with its cross-valid models
     #if(!is.character(filename)) stop('filename must be of class character')
     if(!is.logical(force)) stop('force must be either TRUE or FALSE')
     if(!is.logical(save_cv)) stop('save_cv must be either TRUE or FALSE')
     if(nchar(name) == 0) name = object@key
 
-    force = ifelse(force==TRUE, 1, 0)
-    
+    force = ifelse(force==TRUE, 1, 0)    
     # Create a model directory for each model saved that will include main model
     # any cross validation models and a meta text file with all the model names listed
     model_dir <- paste(dir, name, sep=.Platform$file.sep)

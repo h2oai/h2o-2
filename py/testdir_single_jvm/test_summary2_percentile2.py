@@ -70,7 +70,7 @@ class Basic(unittest.TestCase):
             write_syn_dataset(csvPathname, rowCount, colCount, expectedMin, expectedMax, SEEDPERFILE)
             h2o.beta_features = False
             csvPathnameFull = h2i.find_folder_and_filename(None, csvPathname, returnFullPath=True)
-            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=10, doSummary=False)
+            parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, timeoutSecs=30, doSummary=False)
             print "Parse result['destination_key']:", parseResult['destination_key']
 
             # We should be able to see the parse result?
