@@ -31,7 +31,7 @@ check.deeplearning_imbalanced <- function(conn) {
       print("")
       print("--------------------")
   }
-  checkTrue(class_6_err_imbalanced >= 0.8*class_6_err_balanced, "balance_classes makes it at least 20% worse!")
+  checkTrue(class_6_err_imbalanced >= 0.7*class_6_err_balanced, "balance_classes makes it at least 30% worse!")
 
   testEnd()
 }

@@ -79,6 +79,7 @@ public class JUnitRunnerDebug {
 //      tests.add(DeepLearningIrisTest.Short.class); //compare Deep Learning vs reference
 //      tests.add(DeepLearningIrisTest.Long.class); //compare Deep Learning vs reference
       tests.add(DeepLearningProstateTest.Short.class); //test Deep Learning
+//      tests.add(DeepLearningMissingTest.class); //test Deep Learning
 //      tests.add(DeepLearningProstateTest.Long.class); //test Deep Learning
 //      tests.add(NeuronsTest.class); //test Deep Learning
 //      tests.add(MRUtilsTest.class); //test MR sampling/rebalancing

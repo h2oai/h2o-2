@@ -1,17 +1,23 @@
 package samples.expert;
 
-import java.io.*;
-
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.internal.Streams;
+import com.google.gson.stream.JsonWriter;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.PostMethod;
-import org.apache.commons.httpclient.methods.multipart.*;
-
+import org.apache.commons.httpclient.methods.multipart.FilePart;
+import org.apache.commons.httpclient.methods.multipart.MultipartRequestEntity;
+import org.apache.commons.httpclient.methods.multipart.Part;
 import water.util.Utils;
 
-import com.google.gson.*;
-import com.google.gson.internal.Streams;
-import com.google.gson.stream.JsonWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.InputStreamReader;
+
 
 /**
  * Invokes H2O functionality through the Web API.

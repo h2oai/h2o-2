@@ -134,11 +134,14 @@ def build_cloud_with_hosts(node_count=None, **kwargs):
     paramsToUse.pop('key_filename')
    
     # handles hosts=None correctly
+
     h2o.write_flatfile(
         node_count=paramsToUse['h2o_per_host'],
+        # let the env variable H2O_PORT_OFFSET add in there
         base_port=paramsToUse['base_port'],
         hosts=hosts,
-        rand_shuffle=paramsToUse['rand_shuffle']
+        rand_shuffle=paramsToUse['rand_shuffle'],
+        port_offset=h2o.get_port_offset(),
         )
 
     if hosts is not None:

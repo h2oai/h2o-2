@@ -65,7 +65,7 @@ class Basic(unittest.TestCase):
             kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=5, **kwargs)
 
             ## h2o.verboseprint("kmeans result:", h2o.dump_json(kmeans))
-            modelView = h2o.nodes[0].kmeans_model_view(model='benign_k.hex')
+            modelView = h2o.nodes[0].kmeans_view(model='benign_k.hex')
             h2o.verboseprint("KMeans2ModelView:", h2o.dump_json(modelView))
             model = modelView['model']
             clusters = model['centers']
@@ -124,7 +124,7 @@ class Basic(unittest.TestCase):
             ### print "kmeans result:", h2o.dump_json(kmeans)
             # can't do this
             # inspect = h2o_cmd.runInspect(key='prostate_k.hex')
-            modelView = h2o.nodes[0].kmeans_model_view(model='prostate_k.hex')
+            modelView = h2o.nodes[0].kmeans_view(model='prostate_k.hex')
             h2o.verboseprint("KMeans2ModelView:", h2o.dump_json(modelView))
 
             model = modelView['model']

@@ -64,7 +64,8 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
   public float error() { return (float) (isClassifier() ? cm().err() : mse()); }
 
-  @Override
+  @Override public boolean isClassifier() { return super.isClassifier() && !model_info.get_params().autoencoder; }
+
   public int compareTo(DeepLearningModel o) {
     if (o.isClassifier() != isClassifier()) throw new UnsupportedOperationException("Cannot compare classifier against regressor.");
     if (o.nclasses() != nclasses()) throw new UnsupportedOperationException("Cannot compare models with different number of classes.");
@@ -1306,7 +1307,12 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     DocGen.HTML.paragraph(sb, "Epochs: " + String.format("%.3f", epoch_counter) + " / " + String.format("%.3f", get_params().epochs));
     int cores = 0; for (H2ONode n : H2O.CLOUD._memary) cores += n._heartbeat._num_cpus;
     DocGen.HTML.paragraph(sb, "Number of compute nodes: " + (model_info.get_params().single_node_mode ? ("1 (" + H2O.NUMCPUS + " threads)") : (H2O.CLOUD.size() + " (" + cores + " threads)")));
-    DocGen.HTML.paragraph(sb, "Training samples per iteration: " + String.format("%,d", get_params().actual_train_samples_per_iteration));
+    DocGen.HTML.paragraph(sb, "Training samples per iteration" + (
+            get_params().train_samples_per_iteration == -2 ? " (-2 -> auto-tuning): " :
+            get_params().train_samples_per_iteration == -1 ? " (-1 -> max. available data): " :
+            get_params().train_samples_per_iteration == 0 ? " (0 -> one epoch): " : " (user-given): ")
+                    + String.format("%,d", get_params().actual_train_samples_per_iteration));
+
     final boolean isEnded = get_params().self() == null || (UKV.get(get_params().self()) != null && Job.isEnded(get_params().self()));
     final long time_so_far = isEnded ? run_time : run_time + System.currentTimeMillis() - _timeLastScoreEnter;
     if (time_so_far > 0) {
@@ -1465,7 +1471,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     sb.append("<th>Training Time</th>");
     sb.append("<th>Training Epochs</th>");
     sb.append("<th>Training Samples</th>");
-    if (isClassifier() && !get_params().autoencoder) {
+    if (isClassifier()) {
 //      sb.append("<th>Training MCE</th>");
       sb.append("<th>Training Error</th>");
       if (nclasses()==2) sb.append("<th>Training AUC</th>");

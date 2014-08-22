@@ -58,25 +58,26 @@ allowedJobsX = [
 
 allowedJobsE = [
     'h2o.tests.single.jvm',
-    'h2o.tests.single.jvm.fvec',
     'h2o.multi.vm.temporary',
     'h2o.tests.ec2.multi.jvm',
-    'h2o.tests.ec2.multi.jvm.fvec',
     'h2o.tests.ec2.hosts',
 ]
 
 allowedJobsS = [
-    'sm_testdir_single_jvm',
-    'sm_testdir_single_jvm_fvec',
-    'sm_testdir_multi_jvm',
-    'sm_testdir_hosts',
-    'sm_test_NN2_mnist',
+    'testdir_multi_jvm_1_of_5',
+    'testdir_multi_jvm_2_of_5',
+    'testdir_multi_jvm_3_of_5',
+    'testdir_single_jvm_1_of_5',
+    'testdir_single_jvm_2_of_5',
+    'testdir_single_jvm_3_of_5',
+    'testdir_single_jvm_4_of_5',
+    'testdir_single_jvm_5_of_5',
 ]
 
 allUrls = {
     'ec2': 'http://test.0xdata.com',
     '164': 'http://192.168.1.164:8080',
-    'sm': 'http://10.71.0.163:8080',
+    '184': 'http://192.168.1.184:8080',
 }
 
 all164Jobs = ['do all', 'h2o_master_test', 'h2o_master_test2', 'h2o_perf_test', 'h2o_private_json_vers_Runit', 'h2o_release_Runit', 'h2o_release_tests', 'h2o_release_tests2', 'h2o_release_tests_164', 'h2o_release_tests_c10_only', 'h2o_release_tests_cdh3', 'h2o_release_tests_cdh4', 'h2o_release_tests_cdh4_yarn', 'h2o_release_tests_cdh5', 'h2o_release_tests_cdh5_yarn', 'h2o_release_tests_hdp1.3', 'h2o_release_tests_hdp2.0.6', 'h2o_release_tests_mapr', 'selenium12']
@@ -84,12 +85,15 @@ all164Jobs = ['do all', 'h2o_master_test', 'h2o_master_test2', 'h2o_perf_test', 
 
 allEc2Jobs = ['generic.h2o.build.branch', 'h2o.branch.api-dev', 'h2o.branch.cliffc-drf', 'h2o.branch.hilbert', 'h2o.branch.jobs', 'h2o.branch.jobs1', 'h2o.branch.json_versioning', 'h2o.branch.rel-ito', 'h2o.build', 'h2o.build.api-dev', 'h2o.build.gauss', 'h2o.build.godel', 'h2o.build.h2oscala', 'h2o.build.hilbert', 'h2o.build.jobs', 'h2o.build.master', 'h2o.build.rel-ito', 'h2o.build.rel-ivory', 'h2o.build.rel-iwasawa', 'h2o.build.rel-jacobi', 'h2o.build.rel-jordan', 'h2o.build.rest_api_versioning', 'h2o.build.ux-client', 'h2o.build.va_defaults_renamed', 'h2o.clone', 'h2o.datasets', 'h2o.download.latest', 'h2o.ec2.start', 'h2o.ec2.stop', 'h2o.findbugs', 'h2o.multi.vm.temporary', 'h2o.multi.vm.temporary.cliffc-no-limits', 'h2o.nightly', 'h2o.nightly.1', 'h2o.nightly.cliffc-lock', 'h2o.nightly.ec2', 'h2o.nightly.ec2.cliffc-no-limits', 'h2o.nightly.ec2.erdos', 'h2o.nightly.ec2.hilbert', 'h2o.nightly.ec2.rel-ito', 'h2o.nightly.ec2.rel-jacobi', 'h2o.nightly.ec2.rel-jordan', 'h2o.nightly.fourier', 'h2o.nightly.godel', 'h2o.nightly.multi.vm', 'h2o.nightly.rel-ivory', 'h2o.nightly.rel-iwasawa', 'h2o.nightly.rel-jacobi', 'h2o.nightly.rel-jordan', 'h2o.nightly.va_defaults_renamed', 'h2o.post.push', 'h2o.private.nightly', 'h2o.tests.ec2', 'h2o.tests.ec2.hosts', 'h2o.tests.ec2.multi.jvm', 'h2o.tests.ec2.multi.jvm.fvec', 'h2o.tests.golden', 'h2o.tests.junit', 'h2o.tests.multi.jvm', 'h2o.tests.multi.jvm.fvec', 'h2o.tests.single.jvm', 'h2o.tests.single.jvm.fvec', 'h2o.tests.test']
 
-allSmJobs = [
-    'sm_testdir_single_jvm',
-    'sm_testdir_single_jvm_fvec',
-    'sm_testdir_multi_jvm',
-    'sm_testdir_hosts',
-    'sm_test_NN2_mnist',
+all184Jobs = [
+    'testdir_multi_jvm_1_of_5',
+    'testdir_multi_jvm_2_of_5',
+    'testdir_multi_jvm_3_of_5',
+    'testdir_single_jvm_1_of_5',
+    'testdir_single_jvm_2_of_5',
+    'testdir_single_jvm_3_of_5',
+    'testdir_single_jvm_4_of_5',
+    'testdir_single_jvm_5_of_5',
 ]
 
 
@@ -144,8 +148,7 @@ if not (args.jobname or args.x or args.e or args.s):
     eDone = False
     xDone = False
     while not jobname: 
-        # allAllowedJobs = allowedJobsE + allowedJobsX + allowedJobsS
-        allAllowedJobs = allowedJobsE + allowedJobsX
+        allAllowedJobs = allowedJobsE + allowedJobsX + allowedJobsS
         for j, job in enumerate(allAllowedJobs):
             # first boundary
             if not eDone and j==(subtract + len(allowedJobsE)):
@@ -170,11 +173,13 @@ if jobname in allEc2Jobs:
     machine = 'ec2'
 elif jobname in all164Jobs:
     machine = '164'
-elif jobname in allSmJobs:
-    machine = 'sm'
-    print "Setting up proxy server for sm"
-    os.environ['HTTP_PROXY'] = 'http://172.16.0.3:8888'
-    os.environ['HTTPS_PROXY'] = 'https://172.16.0.3:8888'
+elif jobname in all184Jobs:
+    # we're always building. current build doesn't have stats
+    DO_LAST_GOOD = True
+    machine = '184'
+    # print "Setting up proxy server for sm"
+    # os.environ['HTTP_PROXY'] = 'http://172.16.0.3:8888'
+    # os.environ['HTTPS_PROXY'] = 'https://172.16.0.3:8888'
 
 else:
     raise Exception("%s not in lists of known jobs" % jobname)

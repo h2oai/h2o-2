@@ -1288,8 +1288,13 @@ h2o.anomaly <- function(data, model, key = "", threshold = -1.0) {
     y_i <- y
     y <- cc[ y ]
   }
-  if (!missing(autoencoder) && !autoencoder) if( y %in% x ) stop(paste(y, 'is both an explanatory and dependent variable'))
-  
+
+  if (!missing(autoencoder) && !autoencoder) if( y %in% x ) {
+    # stop(paste(y, 'is both an explanatory and dependent variable'))
+    warning("Response variable in explanatory variables")
+    x <- setdiff(x,y)
+  }
+
   x_ignore <- setdiff(setdiff( cc, x ), y)
   if( length(x_ignore) == 0 ) x_ignore <- ''
   list(x=x, y=y, x_i=x_i, x_ignore=x_ignore, y_i=y_i)
