@@ -9,6 +9,7 @@ import random
 import getpass
 import re
 import subprocess
+import ConfigParser
 
 
 class H2OUseCloudNode:
@@ -597,13 +598,15 @@ class RUnitRunner:
 
     def __init__(self,
                  test_root_dir,
-                 use_cloud, use_ip, use_port,
+                 use_cloud, use_cloud2, cloud_config, use_ip, use_port,
                  num_clouds, nodes_per_cloud, h2o_jar, base_port, xmx, output_dir, failed_output_dir):
         """
         Create a runner.
 
         @param test_root_dir: h2o/R/tests directory.
         @param use_cloud: Use this one user-specified cloud.  Overrides num_clouds.
+        @param use_cloud2: Use the cloud_config to define the list of H2O clouds.
+        @param cloud_config: (if use_cloud2) the config file listing the H2O clouds.
         @param use_ip: (if use_cloud) IP of one cloud to use.
         @param use_port: (if use_cloud) Port of one cloud to use.
         @param num_clouds: Number of H2O clouds to start.
@@ -617,6 +620,7 @@ class RUnitRunner:
         self.test_root_dir = test_root_dir
 
         self.use_cloud = use_cloud
+        self.use_cloud2 = use_cloud2
 
         # Valid if use_cloud is True
         self.use_ip = use_ip
@@ -644,6 +648,13 @@ class RUnitRunner:
             node_num = 0
             cloud = H2OUseCloud(node_num, use_ip, use_port)
             self.clouds.append(cloud)
+        elif (use_cloud2):
+            clouds = RUnitRunner.read_config(cloud_config)
+            node_num = 0
+            for c in clouds:
+                cloud = H2OUseCloud(node_num,c[0],c[1])
+                self.clouds.append(cloud)
+                node_num += 1
         else:
             for i in range(self.num_clouds):
                 cloud = H2OCloud(i, self.nodes_per_cloud, h2o_jar, self.base_port, xmx, self.output_dir)
@@ -670,6 +681,17 @@ class RUnitRunner:
         print("ERROR: Test does not exist: " + test_to_run)
         print("")
         sys.exit(1)
+
+    @staticmethod
+    def read_config(config_file):
+        clouds = []  # a list of lists. Inner lists have [node_num, ip, port]
+        cfg = ConfigParser.RawConfigParser()
+        cfg.read(config_file)
+        for s in cfg.sections():
+            items = cfg.items(s)
+            cloud = [items[0][1], int(items[1][1])]
+            clouds.append(cloud)
+        return clouds
 
     def read_test_list_file(self, test_list_file):
         """
@@ -814,12 +836,15 @@ class RUnitRunner:
             out = open(out_file_name, "w")
             cloud = self.clouds[0]
             port = cloud.get_port()
+            ip = "127.0.0.1:"
+            if (g_use_cloud2):
+                ip = cloud.get_ip()+":"
             cmd = ["R",
                    "--quiet",
                    "-f",
                    os.path.join(self.test_root_dir, "Utils/runnerSetupPackage.R"),
                    "--args",
-                   "127.0.0.1:" + str(port)]
+                   ip + str(port)]
             child = subprocess.Popen(args=cmd,
                                      stdout=out,
                                      stderr=subprocess.STDOUT)
@@ -839,6 +864,8 @@ class RUnitRunner:
         self._log("")
         if (self.use_cloud):
             self._log("Starting {} tests...".format(num_tests))
+        elif (self.use_cloud2):
+            self._log("Starting {} tests on {} clouds...".format(num_tests, len(self.clouds)))
         else:
             self._log("Starting {} tests on {} clouds with {} total H2O nodes...".format(num_tests,
                                                                                          self.num_clouds,
@@ -846,7 +873,9 @@ class RUnitRunner:
         self._log("")
 
         # Start the first n tests, where n is the lesser of the total number of tests and the total number of clouds.
-        start_count = min(len(self.tests_not_started), len(self.clouds))
+        start_count = min(len(self.tests_not_started), len(self.clouds), 30)
+        if (g_use_cloud2):
+            start_count = min(start_count, 75)  # only open up 30 processes locally
         for i in range(start_count):
             cloud = self.clouds[i]
             ip = cloud.get_ip()
@@ -883,7 +912,7 @@ class RUnitRunner:
         if (self.terminated):
             return
 
-        if (self.use_cloud):
+        if (self.use_cloud or self.use_cloud2):
             print("")
             print("All tests completed...")
             print("")
@@ -1110,6 +1139,8 @@ g_run_small = True
 g_run_medium = True
 g_run_large = True
 g_use_cloud = False
+g_use_cloud2 = False
+g_config = None
 g_use_ip = None
 g_use_port = None
 g_no_run = False
@@ -1195,6 +1226,9 @@ def usage():
     print("    --usecloud    ip:port of cloud to send tests to instead of starting clouds.")
     print("                  (When this is specified, numclouds is ignored.)")
     print("")
+    print("    --usecloud2   cloud.config: Use a set clouds defined in cloud.config to run tests on.")
+    print("                  (When this is specified, numclouds, numnodes, and usecloud are ignored.)")
+    print("")
     print("    --norun       Perform side effects like wipe, but don't actually run tests.")
     print("")
     print("    --jvm.xmx     Configure size of launched JVM running H2O. E.g. '--jvm.xmx 3g'")
@@ -1267,6 +1301,8 @@ def parse_args(argv):
     global g_run_medium
     global g_run_large
     global g_use_cloud
+    global g_use_cloud2
+    global g_config
     global g_use_ip
     global g_use_port
     global g_no_run
@@ -1337,6 +1373,15 @@ def parse_args(argv):
             g_use_ip = m.group(1)
             port_string = m.group(2)
             g_use_port = int(port_string)
+        elif (s == "--usecloud2"):
+            i += 1
+            if (i > len(argv)):
+                usage()
+            s = argv[i]
+            if (s is None):
+                unknown_arg(s)
+            g_use_cloud2 = True
+            g_config = s
         elif (s == "--jvm.xmx"):
             i += 1
             if (i > len(argv)):
@@ -1439,7 +1484,7 @@ def main(argv):
         g_num_clouds = 1
 
     g_runner = RUnitRunner(test_root_dir,
-                           g_use_cloud, g_use_ip, g_use_port,
+                           g_use_cloud, g_use_cloud2, g_config, g_use_ip, g_use_port,
                            g_num_clouds, g_nodes_per_cloud, h2o_jar, g_base_port, g_jvm_xmx,
                            g_output_dir, g_failed_output_dir)
 
