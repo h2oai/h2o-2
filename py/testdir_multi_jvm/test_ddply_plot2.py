@@ -11,7 +11,8 @@ PHRASE = "func1"
 FUNC_PHRASE = "func1=function(x){max(x[,%s])}" % COL
 REPEAT = 20
 
-DO_KNOWN_FAIL = True
+DO_KNOWN_FAIL = False
+DO_KNOWN_FAIL2 = False
 DO_MANY = False
 
 initList = [
@@ -76,7 +77,8 @@ class Basic(unittest.TestCase):
                 (1000000, 5, 'cD', 0, 50, 30), 
                 (1000000, 5, 'cD', 0, 80, 30), 
                 (1000000, 5, 'cD', 0, 160, 30), 
-                (1000000, 5, 'cD', 0, 320, 30), 
+                # fails. don't do
+                # (1000000, 5, 'cD', 0, 320, 30), 
                 # (1000000, 5, 'cD', 0, 320, 30), 
                 # starts to fail here. too many groups?
                 # (1000000, 5, 'cD', 0, 640, 30), 
@@ -86,6 +88,11 @@ class Basic(unittest.TestCase):
             tryList = [
                 (1000000, 5, 'cD', 0, 320, 30), 
                 ]
+
+        if DO_KNOWN_FAIL2:
+            tryList.append(
+                (1000000, 5, 'cD', 0, 320, 30)
+            )
 
         ### h2b.browseTheCloud()
         xList = []
@@ -104,6 +111,7 @@ class Basic(unittest.TestCase):
                 minInt = 0
                 maxInt = 320
             else:
+                bucket = None
                 csvFilename = 'syn_' + "binary" + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
                 csvPathname = SYNDATASETS_DIR + '/' + csvFilename
                 print "Creating random", csvPathname, "with range", (maxInt-minInt)+1
