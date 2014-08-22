@@ -2,6 +2,7 @@ package water;
 
 import water.api.DocGen;
 import water.fvec.Vec;
+import water.util.Log;
 import water.util.Utils;
 
 import java.util.Random;
@@ -39,6 +40,7 @@ public class NetworkTest extends Func {
   public String[] nodes; //OUTPUT
 
   @Override protected void execImpl() {
+    logStart();
     microseconds = new double[msg_sizes.length][];
     microseconds_collective = new double[msg_sizes.length];
     NetworkTester nt = new NetworkTester(msg_sizes, microseconds, microseconds_collective, repeats, serial, collective);
@@ -64,6 +66,9 @@ public class NetworkTest extends Func {
     nodes = new String[H2O.CLOUD.size()];
     for (int i=0; i<nodes.length; ++i)
       nodes[i] = H2O.CLOUD._memary[i]._key.toString();
+    StringBuilder sb = new StringBuilder();
+    toASCII(sb);
+    Log.info(sb);
   }
 
   // Helper class to run the actual test
