@@ -1226,7 +1226,7 @@ def usage():
     print("    --usecloud    ip:port of cloud to send tests to instead of starting clouds.")
     print("                  (When this is specified, numclouds is ignored.)")
     print("")
-    print("    --usecloud2   cloud.config: Use a set clouds defined in cloud.config to run tests on.")
+    print("    --usecloud2   cloud.cfg: Use a set clouds defined in cloud.config to run tests on.")
     print("                  (When this is specified, numclouds, numnodes, and usecloud are ignored.)")
     print("")
     print("    --norun       Perform side effects like wipe, but don't actually run tests.")
