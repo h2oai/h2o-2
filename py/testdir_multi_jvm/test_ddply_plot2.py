@@ -2,6 +2,7 @@ import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_gbm, h2o_jobs as h2j, h2o_import
 import h2o_exec as h2e, h2o_util
+import math
 
 
 print "Copy a version of this to a two cloud test. different failure mode"
@@ -14,6 +15,9 @@ REPEAT = 20
 DO_KNOWN_FAIL = False
 DO_KNOWN_FAIL2 = False
 DO_MANY = True
+DO_REALS = False
+
+CLOUD_SIZE = 2
 
 initList = [
     (None, FUNC_PHRASE),
@@ -32,10 +36,20 @@ def write_syn_dataset(csvPathname, rowCount, colCount, minInt, maxInt, SEED):
 
     for i in range(rowCount):
         rowData = []
-        for j in range(colCount):
-            # maybe do a significatly smaller range than min/max ints.
-            ri = r1.randint(minInt,maxInt)
-            rowData.append(ri)
+
+        if DO_REALS:
+            for j in range(colCount):
+                # maybe do a significatly smaller range than min/max ints.
+                # divide by pi to get some non-integerness
+                ri = r1.randint(minInt,maxInt) / math.pi
+                # make it a real?
+                rowData.append("%+e" % ri)
+        else:
+            for j in range(colCount):
+                # maybe do a significatly smaller range than min/max ints.
+                ri = r1.randint(minInt,maxInt)
+                rowData.append(ri)
+
 
         rowDataCsv = ",".join(map(str,rowData))
         dsf.write(rowDataCsv + "\n")
@@ -52,7 +66,7 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(2,java_heap_GB=6)
+            h2o.build_cloud(CLOUD_SIZE,java_heap_GB=12/CLOUD_SIZE)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -61,7 +75,7 @@ class Basic(unittest.TestCase):
         ### time.sleep(3600)
         h2o.tear_down_cloud()
 
-    def test_ddply_plot(self):
+    def test_ddply_plot2(self):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
@@ -77,7 +91,7 @@ class Basic(unittest.TestCase):
                 # (1000000, 5, 'cD', 0, 50, 30), 
                 (1000000, 5, 'cD', 0, 80, 30), 
                 (1000000, 5, 'cD', 0, 160, 30), 
-                # fails. don't do
+                # fails..don't do
                 # (1000000, 5, 'cD', 0, 320, 30), 
                 # (1000000, 5, 'cD', 0, 320, 30), 
                 # starts to fail here. too many groups?
@@ -91,9 +105,9 @@ class Basic(unittest.TestCase):
 
         if DO_KNOWN_FAIL2:
             tryList.append(
+                (1000000, 5, 'cD', 0, 160, 30), 
                 (1000000, 5, 'cD', 0, 320, 30)
             )
-
         ### h2b.browseTheCloud()
         xList = []
         eList = []
@@ -135,7 +149,7 @@ class Basic(unittest.TestCase):
                 # do it twice..to get the optimal cached delay for time?
                 execExpr = "a1 = ddply(r.hex, c(1,2), " + PHRASE + ")"
                 start = time.time()
-                (execResult, result) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=60)
+                (execResult, result) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=90)
                 groups = execResult['num_rows']
                 # this is a coarse comparision, statistically not valid for small rows, and certain ranges?
                 h2o_util.assertApproxEqual(groups, maxExpectedGroups,  rel=0.2, 
@@ -154,7 +168,7 @@ class Basic(unittest.TestCase):
 
                 execExpr = "a2 = ddply(r.hex, c(1,2), " + PHRASE + ")"
                 start = time.time()
-                (execResult, result) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=60)
+                (execResult, result) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=90)
                 groups = execResult['num_rows']
                 # this is a coarse comparision, statistically not valid for small rows, and certain ranges?
                 h2o_util.assertApproxEqual(groups, maxExpectedGroups,  rel=0.2, 
@@ -172,9 +186,9 @@ class Basic(unittest.TestCase):
                 #*****************************************************************************************
                 # should be same answer in both cases
                 execExpr = "sum(a1!=a2)==0"
-                (execResult, result) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=60)
+                (execResult, result) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=90)
                 execExpr = "s=c(0); s=(a1!=a2)"
-                (execResult1, result1) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=60)
+                (execResult1, result1) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=90)
                 print "execResult", h2o.dump_json(execResult)
 
                 #*****************************************************************************************

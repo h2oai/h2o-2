@@ -2,6 +2,7 @@ import unittest, random, sys, time
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_gbm, h2o_jobs as h2j, h2o_import
 import h2o_exec as h2e, h2o_util
+import math
 
 
 print "Copy a version of this to a two cloud test. different failure mode"
@@ -14,6 +15,9 @@ REPEAT = 20
 DO_KNOWN_FAIL = False
 DO_KNOWN_FAIL2 = False
 DO_MANY = True
+DO_REALS = False
+
+CLOUD_SIZE = 1
 
 initList = [
     (None, FUNC_PHRASE),
@@ -32,10 +36,20 @@ def write_syn_dataset(csvPathname, rowCount, colCount, minInt, maxInt, SEED):
 
     for i in range(rowCount):
         rowData = []
-        for j in range(colCount):
-            # maybe do a significatly smaller range than min/max ints.
-            ri = r1.randint(minInt,maxInt)
-            rowData.append(ri)
+
+        if DO_REALS:
+            for j in range(colCount):
+                # maybe do a significatly smaller range than min/max ints.
+                # divide by pi to get some non-integerness
+                ri = r1.randint(minInt,maxInt) / math.pi
+                # make it a real?
+                rowData.append("%+e" % ri)
+        else:
+            for j in range(colCount):
+                # maybe do a significatly smaller range than min/max ints.
+                ri = r1.randint(minInt,maxInt)
+                rowData.append(ri)
+
 
         rowDataCsv = ",".join(map(str,rowData))
         dsf.write(rowDataCsv + "\n")
@@ -52,7 +66,7 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1,java_heap_GB=12)
+            h2o.build_cloud(CLOUD_SIZE,java_heap_GB=12/CLOUD_SIZE)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
