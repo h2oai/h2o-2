@@ -13,7 +13,7 @@ REPEAT = 20
 
 DO_KNOWN_FAIL = False
 DO_KNOWN_FAIL2 = False
-DO_MANY = False
+DO_MANY = True
 
 initList = [
     (None, FUNC_PHRASE),
@@ -71,10 +71,10 @@ class Basic(unittest.TestCase):
             ]
         elif DO_MANY:
             tryList = [
-                (1000000, 5, 'cD', 0, 10, 30), 
-                (1000000, 5, 'cD', 0, 20, 30), 
-                (1000000, 5, 'cD', 0, 40, 30), 
-                (1000000, 5, 'cD', 0, 50, 30), 
+                # (1000000, 5, 'cD', 0, 10, 30), 
+                # (1000000, 5, 'cD', 0, 20, 30), 
+                # (1000000, 5, 'cD', 0, 40, 30), 
+                # (1000000, 5, 'cD', 0, 50, 30), 
                 (1000000, 5, 'cD', 0, 80, 30), 
                 (1000000, 5, 'cD', 0, 160, 30), 
                 # fails..don't do
@@ -91,6 +91,7 @@ class Basic(unittest.TestCase):
 
         if DO_KNOWN_FAIL2:
             tryList.append(
+                (1000000, 5, 'cD', 0, 160, 30), 
                 (1000000, 5, 'cD', 0, 320, 30)
             )
         ### h2b.browseTheCloud()
