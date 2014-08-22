@@ -483,9 +483,9 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     f_hat += objval(_lastResult._glmt);
     return objval > f_hat;
   }
-  private class LineSearchIteration extends H2OCallback<GLMTask.GLMLineSearchTask2> {
+  private class LineSearchIteration extends H2OCallback<GLMTask.GLMLineSearchTask> {
     LineSearchIteration(CountedCompleter cmp){super((H2OCountedCompleter)cmp); cmp.addToPendingCount(1);}
-    @Override public void callback(final GLMTask.GLMLineSearchTask2 glmt) {
+    @Override public void callback(final GLMTask.GLMLineSearchTask glmt) {
       assert getCompleter().getPendingCount() == 1:"unexpected pending count, expected 1, got " + getCompleter().getPendingCount();
       double step = 0.5;
       for(int i = 0; i < glmt._glmts.length; ++i){
@@ -584,7 +584,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
             LogInfo("Check KKT got NaNs. Invoking line search");
             setHighAccuracy();
             getCompleter().addToPendingCount(1);
-            new GLMTask.GLMLineSearchTask2(self(), _activeData, _glm, lastBeta(), glmt._beta, beta_epsilon, _ymu, _nobs, new LineSearchIteration(getCompleter())).asyncExec(_activeData._adaptedFrame);
+            new GLMTask.GLMLineSearchTask(self(), _activeData, _glm, lastBeta(), glmt._beta, beta_epsilon, _ymu, _nobs, new LineSearchIteration(getCompleter())).asyncExec(_activeData._adaptedFrame);
             return;
           } else {
             // TODO: add warning and break th lambda search? Or throw Exception?
@@ -669,7 +669,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 
       if(needLineSearch(glmt,_lineSearchStep)){
         LogInfo("invoking line search");
-        new GLMTask.GLMLineSearchTask2(GLM2.this.self(),_activeData,_glm, lastBeta() ,glmt._beta,1e-4,_ymu,_nobs, new LineSearchIteration(getCompleter())).asyncExec(_activeData._adaptedFrame);
+        new GLMTask.GLMLineSearchTask(GLM2.this.self(),_activeData,_glm, lastBeta() ,glmt._beta,1e-4,_ymu,_nobs, new LineSearchIteration(getCompleter())).asyncExec(_activeData._adaptedFrame);
         return;
       }
       if(glmt._newThresholds != null) {
