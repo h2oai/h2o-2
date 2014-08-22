@@ -1188,7 +1188,7 @@ public class DeepLearning extends Job.ValidatedJob {
 
       // If the number is close to a multiple of epochs, use that -> prettier scoring
       if (tspi > numRows && Math.abs(tspi % numRows)/(double)numRows < 0.2)  tspi = tspi - tspi % numRows;
-      tspi = Math.min(tspi, (long)(mp.epochs * numRows)); //limit to number of epochs desired
+      tspi = Math.min(tspi, (long)(mp.epochs * numRows / 10)); //limit to number of epochs desired, but at least 10 iterations total
       tspi = Math.max(1, tspi); //at least 1 point
 
       if (!mp.quiet_mode) {
