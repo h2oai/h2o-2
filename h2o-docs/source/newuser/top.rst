@@ -11,5 +11,4 @@ New Users
 
   
    quickstart_jar
-   ec2
    java_help

@@ -1,22 +1,7 @@
-.. _EC2:
+.. _EC2_Glossary:
 
-
-H\ :sub:`2`\ O on EC2
-=====================
-
-The H\ :sub:`2`\ O platform is tested nightly in EC2
-for both single-node and multi-node configurations.
-
-For users who want to quickly give H\ :sub:`2`\ O a try, we provide
-an Amazon Machine Image to serve as an easy starting point.
-
-The README.txt file embedded below describes scripts that can be found
-in the EC2 directory of the downloadable zip file
-:ref:`GettingStartedFromaZipFile`, or in the EC2 directory of the
-Github repository :ref:`QuickstartGit`.
-
-Glossery of Parameters for Launching EC2 Instances
-""""""""""""""""""""""""""""""""""""""""""""""""""
+EC2 Glossary
+============
 
 **AMI ID/Image ID**
   The ID of the AMI image to launch and run, only change this when switching between preferances between different AWS virtualization (HVM vs Paravirtualization).
@@ -33,7 +18,7 @@ Glossery of Parameters for Launching EC2 Instances
 
 ::
 
-  { 
+  {
    "Version": "2012-10-17",
    "Statement": [
      {
@@ -43,7 +28,7 @@ Glossery of Parameters for Launching EC2 Instances
      }
    ]
   }
-  
+
 **IAM Profile Resource Name**
   The resource name of the IAM Instance profile to associate to the instance. This can be used instead of IAM Profile Name.
 
@@ -58,8 +43,3 @@ Glossery of Parameters for Launching EC2 Instances
   The names of the EC2 security groups with which to associate the instance.
 
 
-.. raw:: html
-
-    <div style="margin-top:10px;">
-      <iframe width=900 height=900 src="../bits/ec2/README.txt" frameborder="0" allowfullscreen></iframe>
-    </div>
