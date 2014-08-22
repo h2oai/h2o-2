@@ -100,12 +100,25 @@ class Basic(unittest.TestCase):
 
 
             # do it twice..to get the optimal cached delay for time?
+            #***************************************************************
             execExpr = "a1 = ddply(r.hex, c(1,2), " + PHRASE + ")"
             start = time.time()
-            h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=60)
+            (execResult, result) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=60)
+            groups = execResult['num_rows']
+            maxExpectedGroups = ((maxInt - minInt) + 1) ** 2
+            h2o_util.assertApproxEqual(groups, maxExpectedGroups,  rel=0.2, 
+                msg="groups %s isn't close to expected amount %s" % (groups, maxExpectedGroups))
             ddplyElapsed = time.time() - start
             print "ddplyElapsed:", ddplyElapsed
+            print "execResult", h2o.dump_json(execResult)
 
+            a1dump = h2o_cmd.runInspect(key="a1")
+            print "a1", h2o.dump_json(a1dump)
+            # should never have any NAs in this result
+            missingValuesList = h2o_cmd.infoFromInspect(a1dump, "a1")
+            self.assertEqual(missingValuesList, [], "a1 should have no NAs: %s" % missingValuesList)
+
+            #***************************************************************
             execExpr = "a2 = ddply(r.hex, c(1,2), " + PHRASE + ")"
             start = time.time()
             (execResult, result) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=60)
@@ -113,24 +126,28 @@ class Basic(unittest.TestCase):
             maxExpectedGroups = ((maxInt - minInt) + 1) ** 2
             h2o_util.assertApproxEqual(groups, maxExpectedGroups,  rel=0.2, 
                 msg="groups %s isn't close to expected amount %s" % (groups, maxExpectedGroups))
-
             ddplyElapsed = time.time() - start
             print "ddplyElapsed:", ddplyElapsed
             print "execResult", h2o.dump_json(execResult)
 
+            a2dump = h2o_cmd.runInspect(key="a2")
+            print "a2", h2o.dump_json(a2dump)
+            # should never have any NAs in this result
+            missingValuesList = h2o_cmd.infoFromInspect(a2dump, "a2")
+            self.assertEqual(missingValuesList, [], "a2 should have no NAs: %s" % missingValuesList)
+
+            #***************************************************************
             # should be same answer in both cases
             execExpr = "sum(a1!=a2)==0"
             (execResult, result) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=60)
             execExpr = "s=c(0); s=(a1!=a2)"
             (execResult1, result1) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=60)
             print "execResult", h2o.dump_json(execResult)
-            
-            a1dump = h2o_cmd.runInspect(key="a1")
-            a2dump = h2o_cmd.runInspect(key="a2")
+
+            # should never have any NAs in this result
             sdump = h2o_cmd.runInspect(key="s")
-            print "a1", h2o.dump_json(a1dump)
-            print "a2", h2o.dump_json(a2dump)
             print "s", h2o.dump_json(sdump)
+
             self.assertEqual(result, 1, "a1 and a2 weren't equal? Maybe ddply can vary execution order (fp error? so multiple ddply() can have different answer. %s %s %s" % (FUNC_PHRASE, result, h2o.dump_json(execResult)))
 
             # xList.append(ntrees)
