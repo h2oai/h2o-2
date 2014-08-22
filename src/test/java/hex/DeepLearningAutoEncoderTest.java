@@ -49,6 +49,7 @@ public class DeepLearningAutoEncoderTest extends TestUtil {
         p.seed = seed;
         p.hidden = new int[]{100, 100};
         p.adaptive_rate = true;
+        p.train_samples_per_iteration = -1;
         p.sparsity_beta = sparsity_beta;
         p.average_activation = -0.7;
         p.l1 = 1e-4;
