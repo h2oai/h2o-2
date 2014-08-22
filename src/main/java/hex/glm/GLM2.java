@@ -696,8 +696,12 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       ADMMSolver slvr = new ADMMSolver(_currentLambda,alpha[0], _gradientEps, _addedL2);
       slvr.solve(glmt._gram,glmt._xy,glmt._yy,newBeta,_currentLambda*alpha[0]);
       if(_lineSearchStep < 1){
-         for(int i = 0; i < newBeta.length; ++i)
-           newBeta[i] = glmt._beta[i]*(1-_lineSearchStep) + _lineSearchStep*newBeta[i];
+         if(glmt._beta != null)
+           for(int i = 0; i < newBeta.length; ++i)
+             newBeta[i] = glmt._beta[i]*(1-_lineSearchStep) + _lineSearchStep*newBeta[i];
+        else
+           for(int i = 0; i < newBeta.length; ++i)
+             newBeta[i] *= _lineSearchStep;
       }
       // print all info about iteration
       LogInfo("Gram computed in " + (_callbackStart - _iterationStartTime) + "ms, " + (Double.isNaN(gerr)?"":"gradient = " + gerr + ",") + ", step = " + _lineSearchStep + ", ADMM: " + slvr.iterations + " iterations, " + (System.currentTimeMillis() - t1) + "ms (" + slvr.decompTime + "), subgrad_err=" + slvr.gerr);
