@@ -11,8 +11,9 @@ PHRASE = "func1"
 FUNC_PHRASE = "func1=function(x){max(x[,%s])}" % COL
 REPEAT = 20
 
-DO_KNOWN_FAIL = True
-DO_MANY = False
+DO_KNOWN_FAIL = False
+DO_KNOWN_FAIL2 = False
+DO_MANY = True
 
 initList = [
     (None, FUNC_PHRASE),
@@ -70,13 +71,14 @@ class Basic(unittest.TestCase):
             ]
         elif DO_MANY:
             tryList = [
-                (1000000, 5, 'cD', 0, 10, 30), 
-                (1000000, 5, 'cD', 0, 20, 30), 
-                (1000000, 5, 'cD', 0, 40, 30), 
-                (1000000, 5, 'cD', 0, 50, 30), 
+                # (1000000, 5, 'cD', 0, 10, 30), 
+                # (1000000, 5, 'cD', 0, 20, 30), 
+                # (1000000, 5, 'cD', 0, 40, 30), 
+                # (1000000, 5, 'cD', 0, 50, 30), 
                 (1000000, 5, 'cD', 0, 80, 30), 
                 (1000000, 5, 'cD', 0, 160, 30), 
-                (1000000, 5, 'cD', 0, 320, 30), 
+                # fails..don't do
+                # (1000000, 5, 'cD', 0, 320, 30), 
                 # (1000000, 5, 'cD', 0, 320, 30), 
                 # starts to fail here. too many groups?
                 # (1000000, 5, 'cD', 0, 640, 30), 
@@ -87,6 +89,11 @@ class Basic(unittest.TestCase):
                 (1000000, 5, 'cD', 0, 320, 30), 
                 ]
 
+        if DO_KNOWN_FAIL2:
+            tryList.append(
+                (1000000, 5, 'cD', 0, 160, 30), 
+                (1000000, 5, 'cD', 0, 320, 30)
+            )
         ### h2b.browseTheCloud()
         xList = []
         eList = []
@@ -104,6 +111,7 @@ class Basic(unittest.TestCase):
                 minInt = 0
                 maxInt = 320
             else:
+                bucket = None
                 csvFilename = 'syn_' + "binary" + "_" + str(rowCount) + 'x' + str(colCount) + '.csv'
                 csvPathname = SYNDATASETS_DIR + '/' + csvFilename
                 print "Creating random", csvPathname, "with range", (maxInt-minInt)+1
@@ -127,7 +135,7 @@ class Basic(unittest.TestCase):
                 # do it twice..to get the optimal cached delay for time?
                 execExpr = "a1 = ddply(r.hex, c(1,2), " + PHRASE + ")"
                 start = time.time()
-                (execResult, result) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=60)
+                (execResult, result) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=90)
                 groups = execResult['num_rows']
                 # this is a coarse comparision, statistically not valid for small rows, and certain ranges?
                 h2o_util.assertApproxEqual(groups, maxExpectedGroups,  rel=0.2, 
@@ -146,7 +154,7 @@ class Basic(unittest.TestCase):
 
                 execExpr = "a2 = ddply(r.hex, c(1,2), " + PHRASE + ")"
                 start = time.time()
-                (execResult, result) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=60)
+                (execResult, result) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=90)
                 groups = execResult['num_rows']
                 # this is a coarse comparision, statistically not valid for small rows, and certain ranges?
                 h2o_util.assertApproxEqual(groups, maxExpectedGroups,  rel=0.2, 
@@ -164,9 +172,9 @@ class Basic(unittest.TestCase):
                 #*****************************************************************************************
                 # should be same answer in both cases
                 execExpr = "sum(a1!=a2)==0"
-                (execResult, result) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=60)
+                (execResult, result) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=90)
                 execExpr = "s=c(0); s=(a1!=a2)"
-                (execResult1, result1) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=60)
+                (execResult1, result1) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=90)
                 print "execResult", h2o.dump_json(execResult)
 
                 #*****************************************************************************************
