@@ -96,12 +96,13 @@ public class DeepLearning extends Job.ValidatedJob {
    * process 2,500 rows per iteration, sampling randomly from their local data.
    * Then, model averaging between the nodes takes place, and scoring can happen
    * (dependent on scoring interval and duty factor). Special values are 0 for
-   * one epoch per iteration and -1 for processing the maximum amount of data
-   * per iteration. If **replicate training data** is enabled, N epochs
-   * will be trained per iteration on N nodes, otherwise one epoch.
+   * one epoch per iteration, -1 for processing the maximum amount of data
+   * per iteration (if **replicate training data** is enabled, N epochs
+   * will be trained per iteration on N nodes, otherwise one epoch). Special value
+   * of -2 turns on automatic mode (auto-tuning).
    */
-  @API(help = "Number of training samples (globally) per MapReduce iteration. Special values are 0: one epoch, -1: all available data (e.g., replicated training data)", filter = Default.class, lmin = -1, json = true, importance = ParamImportance.SECONDARY)
-  public long train_samples_per_iteration = -1;
+  @API(help = "Number of training samples (globally) per MapReduce iteration. Special values are 0: one epoch, -1: all available data (e.g., replicated training data), -2: automatic", filter = Default.class, lmin = -2, json = true, importance = ParamImportance.SECONDARY)
+  public long train_samples_per_iteration = -2;
   public long actual_train_samples_per_iteration;
 
   /**
@@ -1024,9 +1025,9 @@ public class DeepLearning extends Job.ValidatedJob {
       }
 
       // Set train_samples_per_iteration size (cannot be done earlier since this depends on whether stratified sampling is done)
-      mp.actual_train_samples_per_iteration = computeTrainSamplesPerIteration(mp.train_samples_per_iteration, train.numRows(), mp.replicate_training_data, mp.quiet_mode);
+      mp.actual_train_samples_per_iteration = computeTrainSamplesPerIteration(mp, train.numRows(), model.model_info().size());
       // Determine whether shuffling is enforced
-      if(mp.replicate_training_data && (mp.actual_train_samples_per_iteration == train.numRows()*H2O.CLOUD.size()) && !mp.shuffle_training_data && H2O.CLOUD.size() > 1) {
+      if(mp.replicate_training_data && (mp.actual_train_samples_per_iteration == train.numRows()*(mp.single_node_mode?1:H2O.CLOUD.size())) && !mp.shuffle_training_data && H2O.CLOUD.size() > 1) {
         Log.warn("Enabling training data shuffling, because all nodes train on the full dataset (replicated training data).");
         mp.shuffle_training_data = true;
       }
@@ -1127,23 +1128,83 @@ public class DeepLearning extends Job.ValidatedJob {
 
   /**
    * Compute the actual train_samples_per_iteration size from the user-given parameter
-   * @param train_samples_per_iteration user-given train_samples_per_iteration size
+   * @param mp Model parameter (DeepLearning object)
    * @param numRows number of training rows
-   * @param replicate_training_data whether or not the training data is replicated on each node
+   * @param model_size Size of the model in #weights and #biases
    * @return The total number of training rows to be processed per iteration (summed over on all nodes)
    */
-  private static long computeTrainSamplesPerIteration(final long train_samples_per_iteration, final long numRows, final boolean replicate_training_data, final boolean quiet_mode) {
-    long tspi = train_samples_per_iteration;
-    assert(tspi == 0 || tspi == -1 || tspi >= 1);
-    if (tspi == 0 || (!replicate_training_data && tspi == -1) ) {
+  private static long computeTrainSamplesPerIteration(final DeepLearning mp, final long numRows, long model_size) {
+    long tspi = mp.train_samples_per_iteration;
+    assert(tspi == 0 || tspi == -1 || tspi == -2 || tspi >= 1);
+    if (tspi == 0 || (!mp.replicate_training_data && tspi == -1) ) {
       tspi = numRows;
-      if (!quiet_mode) Log.info("Setting train_samples_per_iteration (" + train_samples_per_iteration + ") to one epoch: #rows (" + tspi + ").");
+      if (!mp.quiet_mode) Log.info("Setting train_samples_per_iteration (" + mp.train_samples_per_iteration + ") to one epoch: #rows (" + tspi + ").");
     }
     else if (tspi == -1) {
-      tspi = H2O.CLOUD.size() * numRows;
-      if (!quiet_mode) Log.info("Setting train_samples_per_iteration (" + train_samples_per_iteration + ") to #nodes x #rows (" + tspi + ").");
+      tspi = (mp.single_node_mode ? 1 : H2O.CLOUD.size()) * numRows;
+      if (!mp.quiet_mode) Log.info("Setting train_samples_per_iteration (" + mp.train_samples_per_iteration + ") to #nodes x #rows (" + tspi + ").");
+    } else if (tspi == -2) {
+      // automatic tuning based on CPU speed, network speed and model size
+
+      // measure cpu speed
+      double total_gflops = 0;
+      for (H2ONode h2o : H2O.CLOUD._memary) {
+        HeartBeat hb = h2o._heartbeat;
+        total_gflops += hb._gflops;
+      }
+      if (mp.single_node_mode) total_gflops /= H2O.CLOUD.size();
+      if (total_gflops == 0) {
+        total_gflops = Linpack.run(H2O.SELF._heartbeat._cpus_allowed) * (mp.single_node_mode ? 1 : H2O.CLOUD.size());
+      }
+
+      int[] msg_sizes = new int[]{ (int)(model_size*4) == (model_size*4) ? (int)(model_size*4) : Integer.MAX_VALUE };
+      double[] microseconds_collective = new double[msg_sizes.length];
+      NetworkTest.NetworkTester nt = new NetworkTest.NetworkTester(msg_sizes,null,microseconds_collective,model_size>1e6 ? 1 : 5 /*repeats*/,false,true /*only collectives*/);
+      nt.compute2();
+
+      //length of the network traffic queue based on log-tree rollup (2 log(nodes))
+      int network_queue_length = mp.single_node_mode || H2O.CLOUD.size() == 1? 1 : 2*(int)Math.floor(Math.log(H2O.CLOUD.size())/Math.log(2));
+
+      // heuristics
+      double flops_overhead_per_row = 30;
+      if (mp.activation == Activation.Maxout || mp.activation == Activation.MaxoutWithDropout) {
+        flops_overhead_per_row *= 8;
+      } else if (mp.activation == Activation.Tanh || mp.activation == Activation.TanhWithDropout) {
+        flops_overhead_per_row *= 5;
+      }
+
+      // target fraction of comm vs cpu time: 5%
+      double fraction = mp.single_node_mode || H2O.CLOUD.size() == 1 ? 1e-3 : 0.05; //one single node mode, there's no model averaging effect, so less need to shorten the M/R iteration
+
+      // estimate the time for communication (network) and training (compute)
+      double time_comm_us = (H2O.CLOUD.size() == 1 ? 1e4 /* add 10ms for single-node */ : 0) + network_queue_length * microseconds_collective[0];
+      double time_per_row_us  = flops_overhead_per_row * model_size / (total_gflops * 1e9) / H2O.SELF._heartbeat._cpus_allowed * 1e6;
+
+      // compute the optimal number of training rows per iteration
+      // fraction := time_comm_us / (time_comm_us + tspi * time_per_row_us)  ==>  tspi = (time_comm_us/fraction - time_comm_us)/time_per_row_us
+      tspi = (long)((time_comm_us / fraction - time_comm_us)/ time_per_row_us);
+
+      tspi = Math.max(1, tspi); //at least 1 point
+      tspi = Math.min(tspi, (mp.single_node_mode ? 1 : H2O.CLOUD.size()) * numRows * 10); //not more than 10x of what train_samples_per_iteration=-1 would do
+
+      // If the number is close to a multiple of epochs, use that -> prettier scoring
+      if (tspi > numRows && Math.abs(tspi % numRows)/(double)numRows < 0.2)  tspi = tspi - tspi % numRows;
+      tspi = Math.min(tspi, (long)(mp.epochs * numRows)); //limit to number of epochs desired
+
+      if (!mp.quiet_mode) {
+        Log.info("Auto-tuning parameter 'train_samples_per_iteration':");
+        Log.info("Estimated compute power : " + (int)total_gflops + " GFlops");
+        Log.info("Estimated time for comm : " + PrettyPrint.usecs((long)time_comm_us));
+        Log.info("Estimated time per row  : " + ((long)time_per_row_us > 0 ? PrettyPrint.usecs((long)time_per_row_us) : time_per_row_us + " usecs"));
+        Log.info("Estimated training speed: " + (int)(1e6/time_per_row_us) + " rows/sec");
+        Log.info("Setting train_samples_per_iteration (" + mp.train_samples_per_iteration + ") to auto-tuned value: " + tspi);
+      }
+
+    } else {
+      // limit user-given value to number of epochs desired
+      tspi = Math.min(tspi, (long)(mp.epochs * numRows));
     }
-    assert(tspi != 0 && tspi != -1 && tspi >= 1);
+    assert(tspi != 0 && tspi != -1 && tspi != -2 && tspi >= 1);
     return tspi;
   }
 
