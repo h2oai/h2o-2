@@ -153,15 +153,13 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       double diff = 1;
       while(diff > betaEps && betas.size() < 100){
         diff = 0;
-        double [] b = MemoryManager.malloc8d(oldBeta.length);
         for(int i = 0; i < oldBeta.length; ++i) {
-          b[i] = 0.5 * (oldBeta[i] + newBeta[i]);
-          double d = b[i] - oldBeta[i];
+          newBeta[i] = 0.5 * (oldBeta[i] + newBeta[i]);
+          double d = newBeta[i] - oldBeta[i];
           if(d > diff) diff = d;
           else if(d < -diff) diff = -d;
         }
-        betas.add(b);
-        newBeta = b;
+        betas.add(newBeta.clone());
       }
       // public GLMIterationTask(Key jobKey, DataInfo dinfo, GLMParams glm, boolean computeGram, boolean validate, boolean computeGradient, double [] beta, double ymu, double reg, float [] thresholds, H2OCountedCompleter cmp) {
       _glmts = new GLMIterationTask[betas.size()];
@@ -431,10 +429,13 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
           _grad[i] *= _reg;
       _yy *= _reg;
       if(_validate && _glm.family == Family.binomial) {
-        _newThresholds[0] = Arrays.copyOf(_newThresholds[0],Math.min(_ti[0],_newThresholds[0].length >> 2));
-        _newThresholds[1] = Arrays.copyOf(_newThresholds[1],Math.min(_ti[1],_newThresholds[1].length >> 2));
+        _newThresholds[0] = Arrays.copyOf(_newThresholds[0],_ti[0]);
+        _newThresholds[1] = Arrays.copyOf(_newThresholds[1],_ti[1]);
+        Arrays.sort(_newThresholds[0]);
+        Arrays.sort(_newThresholds[1]);
       }
     }
+
     @Override
     public void reduce(GLMIterationTask git){
       if(_jobKey == null || Job.isRunning(_jobKey)) {
@@ -469,6 +470,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
         _val.computeAIC();
         _val.computeAUC();
       }
+
     }
     public double [] gradient(double alpha, double lambda){
       final double [] res = _grad.clone();
