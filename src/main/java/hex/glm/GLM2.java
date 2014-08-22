@@ -453,6 +453,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 //  protected boolean needLineSearch(final double [] beta,double objval, double step){
   protected boolean needLineSearch(final GLMIterationTask glmt){ return needLineSearch(glmt,1);}
   protected boolean needLineSearch(final GLMIterationTask glmt, double step) {
+    if(_glm.family == Family.gaussian)
+      return false;
     if(glmt._beta == null)
       return false;
     if (Utils.hasNaNsOrInfs(glmt._xy) || (glmt._grad != null && Utils.hasNaNsOrInfs(glmt._grad)) || (glmt._gram != null && glmt._gram.hasNaNsOrInfs()))
