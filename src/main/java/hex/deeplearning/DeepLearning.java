@@ -1184,12 +1184,12 @@ public class DeepLearning extends Job.ValidatedJob {
       // fraction := time_comm_us / (time_comm_us + tspi * time_per_row_us)  ==>  tspi = (time_comm_us/fraction - time_comm_us)/time_per_row_us
       tspi = (long)((time_comm_us / fraction - time_comm_us)/ time_per_row_us);
 
-      tspi = Math.max(1, tspi); //at least 1 point
       tspi = Math.min(tspi, (mp.single_node_mode ? 1 : H2O.CLOUD.size()) * numRows * 10); //not more than 10x of what train_samples_per_iteration=-1 would do
 
       // If the number is close to a multiple of epochs, use that -> prettier scoring
       if (tspi > numRows && Math.abs(tspi % numRows)/(double)numRows < 0.2)  tspi = tspi - tspi % numRows;
       tspi = Math.min(tspi, (long)(mp.epochs * numRows)); //limit to number of epochs desired
+      tspi = Math.max(1, tspi); //at least 1 point
 
       if (!mp.quiet_mode) {
         Log.info("Auto-tuning parameter 'train_samples_per_iteration':");
