@@ -36,6 +36,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 
   // API input parameters BEGIN ------------------------------------------------------------
 
+  double [] beta_start = null;
   @API(help = "max-iterations", filter = Default.class, lmin=1, lmax=1000000, json=true, importance = ParamImportance.CRITICAL)
   public int max_iter = 100;
 
@@ -410,11 +411,13 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   }
 
   protected double l2norm(double[] beta){
+    if(_beta == null)return 0;
     double l2 = 0;
     for (double aBeta : beta) l2 += aBeta * aBeta;
     return l2;
   }
   protected double l1norm(double[] beta){
+    if(_beta == null)return 0;
     double l2 = 0;
     for (double aBeta : beta) l2 += Math.abs(aBeta);
     return l2;
@@ -447,7 +450,23 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     if(activeCols == null)return full;
     return contractVec(full,activeCols);
   }
+//  protected boolean needLineSearch(final double [] beta,double objval, double step){
+  protected boolean needLineSearch(final GLMIterationTask glmt){ return needLineSearch(glmt,1);}
+  protected boolean needLineSearch(final GLMIterationTask glmt, double step) {
+    if(_glm.family == Family.gaussian)
+      return false;
+    if(glmt._beta == null)
+      return false;
+    if (Utils.hasNaNsOrInfs(glmt._xy) || (glmt._grad != null && Utils.hasNaNsOrInfs(glmt._grad)) || (glmt._gram != null && glmt._gram.hasNaNsOrInfs()))
+      return true;
+    if(glmt._val != null && (glmt._val.residual_deviance > glmt._val.null_deviance))
+      return true;
+    if(glmt._val == null) // no validation info, no way to decide
+      return false;
+    return needLineSearch(glmt._beta, objval(glmt), step);
+  }
   protected boolean needLineSearch(final double [] beta,double objval, double step){
+    assert beta != null;
     if(Double.isNaN(objval))return true; // needed for gamma (and possibly others...)
     assert _lastResult._glmt._grad != null:"missing gradient in last result!";
     final double [] grad = Arrays.equals(_activeCols,_lastResult._activeCols)
@@ -455,15 +474,15 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
             :contractVec(_lastResult.fullGrad(alpha[0],_currentLambda),_activeCols);
     // line search
     double f_hat = 0;
-    ADMMSolver.subgrad(alpha[0],_currentLambda,beta,grad);
+//    ADMMSolver.subgrad(alpha[0],_currentLambda,beta,grad);
     final double [] oldBeta = resizeVec(_lastResult._glmt._beta, _activeCols,_lastResult._activeCols);
-    if(oldBeta == null)
-      f_hat += l2norm(beta);
-    else for(int i = 0; i < beta.length; ++i){
-      double diff = beta[i] - oldBeta[i];
-      f_hat += grad[i]*diff;
+    if(oldBeta == null) for(int i = 0; i < beta.length; ++i)
+      f_hat += step*grad[i] * beta[i] + 0.5*beta[i]*beta[i];
+    else for(int i = 0; i < beta.length; ++i) {
+      double diff = (beta[i] - oldBeta[i]);
+      f_hat += step * grad[i] * diff + .5*diff*diff;
     }
-    f_hat = objval(_lastResult._glmt) + 0.25*step*f_hat;
+    f_hat += objval(_lastResult._glmt);
     return objval > f_hat;
   }
   private class LineSearchIteration extends H2OCallback<GLMTask.GLMLineSearchTask> {
@@ -471,16 +490,30 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
     @Override public void callback(final GLMTask.GLMLineSearchTask glmt) {
       assert getCompleter().getPendingCount() == 1:"unexpected pending count, expected 1, got " + getCompleter().getPendingCount();
       double step = 0.5;
-      for(int i = 0; i < glmt._objvals.length; ++i){
-        if(!needLineSearch(glmt._betas[i],glmt._objvals[i],step)){
-          LogInfo("line search: found admissible step = " + step);
-          new GLMIterationTask(GLM2.this.self(),_activeData,_glm,true,true,true,glmt._betas[i],_ymu,1.0/_nobs,thresholds, new Iteration(getCompleter(),true,false,step)).asyncExec(_activeData._adaptedFrame);
+      for(int i = 0; i < glmt._glmts.length; ++i){
+        if(!needLineSearch(glmt._glmts[i],step)){
+          LogInfo("line search: found admissible step = " + step + ",  objval = " + objval(glmt._glmts[i]));
+          setHighAccuracy();
+          new GLMIterationTask(GLM2.this.self(),_activeData,_glm,true,true,true,glmt._glmts[i]._beta,_ymu,1.0/_nobs,thresholds, new Iteration(getCompleter(),false,step)).asyncExec(_activeData._adaptedFrame);
           return;
         }
         step *= 0.5;
       } // no line step worked converge
-      LogInfo("Line search did not find feasible step, going forward with step = " + step + ".");
-      new GLMIterationTask(GLM2.this.self(),_activeData,_glm,true,true,true,glmt._betas[glmt._betas.length-1],_ymu,1.0/_nobs,thresholds, new Iteration(getCompleter(),false,false,step)).asyncExec(_activeData._adaptedFrame);
+      if(!highAccuracy()){ // start from scratch
+        setHighAccuracy();
+        int add2iter = (_iter - _iter1);
+        LogInfo("Line search failed to progress, rerunning current lambda from scratch with high accuracy on, adding " + add2iter + " to max iterations");
+        max_iter += add2iter;
+        new GLMIterationTask(GLM2.this.self(),_activeData,_glm,true,true,true,beta_start,_ymu,1.0/_nobs,thresholds, new Iteration(getCompleter(),false,step)).asyncExec(_activeData._adaptedFrame);
+        return;
+      }
+      LogInfo("Line search did not find feasible step, converged.");
+      GLMIterationTask res = _lastResult._glmt;
+      if(_activeCols != _lastResult._activeCols && !Arrays.equals(_activeCols,_lastResult._activeCols)) {
+        _activeCols = _lastResult._activeCols;
+        _activeData = _dinfo.filterExpandedColumns(_activeCols);
+      }
+      checkKKTAndComplete(getCompleter(),res,res._beta,true);
     }
   }
 
@@ -503,7 +536,11 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 
 
   private double [] setSubmodel(final double[] newBeta, GLMValidation val, H2OCountedCompleter cmp){
-    final double [] fullBeta = (_activeCols == null || newBeta == null)?newBeta:expandVec(newBeta,_activeCols);
+    double [] fullBeta = (_activeCols == null || newBeta == null)?newBeta:expandVec(newBeta,_activeCols);
+    if(fullBeta == null){
+      fullBeta = MemoryManager.malloc8d(_dinfo.fullN()+1);
+      fullBeta[fullBeta.length-1] = _glm.linkInv(_ymu);
+    }
     final double [] newBetaDeNorm;
     if(_dinfo._predictor_transform == DataInfo.TransformType.STANDARDIZE) {
       newBetaDeNorm = fullBeta.clone();
@@ -526,129 +563,173 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   private transient double _rho_mul = 1.0;
   private transient double _gradientEps = ADMM_GRAD_EPS;
 
+  private double [] lastBeta(){
+    final double [] b;
+    if(_lastResult == null || _lastResult._glmt._beta == null) {
+      int bsz = _activeCols == null?_dinfo.fullN()+1:_activeCols.length+1;
+      b = MemoryManager.malloc8d(bsz);
+      b[bsz-1] = _glm.linkInv(_ymu);
+    } else
+      b = resizeVec(_lastResult._glmt._beta, _activeCols, _lastResult._activeCols);
+    return b;
+  }
 
+  protected void checkKKTAndComplete(CountedCompleter cc, final GLMIterationTask glmt, final double [] newBeta, final boolean failedLineSearch){
+    H2OCountedCompleter cmp = (H2OCountedCompleter)cc;
+    final double [] fullBeta = newBeta == null?MemoryManager.malloc8d(_dinfo.fullN()+1):expandVec(newBeta,_activeCols);
+    // now we need full gradient (on all columns) using this beta
+    new GLMIterationTask(GLM2.this.self(),_dinfo,_glm,false,true,true,fullBeta,_ymu,1.0/_nobs,thresholds, new H2OCallback<GLMIterationTask>(cmp) {
+      @Override public String toString(){
+        return "checkKKTAndComplete.Callback, completer = " + getCompleter() == null?"null":getCompleter().toString();
+      }
+      @Override
+      public void callback(final GLMIterationTask glmt2) {
+        // first check KKT conditions!
+        final double [] grad = glmt2.gradient(alpha[0],_currentLambda);
+        if(Utils.hasNaNsOrInfs(grad)){
+          if(!failedLineSearch) {
+            LogInfo("Check KKT got NaNs. Invoking line search");
+            setHighAccuracy();
+            getCompleter().addToPendingCount(1);
+            new GLMTask.GLMLineSearchTask(self(), _activeData, _glm, lastBeta(), glmt._beta, beta_epsilon, _ymu, _nobs, new LineSearchIteration(getCompleter())).asyncExec(_activeData._adaptedFrame);
+            return;
+          } else {
+            // TODO: add warning and break th lambda search? Or throw Exception?
+            LogInfo("got NaNs/Infs in gradient at lambda " + _currentLambda);
+          }
+        }
+        glmt._val = glmt2._val;
+        _lastResult = new IterationInfo(_iter,glmt2,null,glmt2.gradient(alpha[0],0));
+        // check the KKT conditions and filter data for next lambda_value
+        // check the gradient
+        double[] subgrad = grad.clone();
+        ADMMSolver.subgrad(alpha[0], _currentLambda, fullBeta, subgrad);
+        double err = GLM_GRAD_EPS;
+        if (!failedLineSearch &&_activeCols != null) {
+          for (int c : _activeCols)
+            if (subgrad[c] > err) err = subgrad[c];
+            else if (subgrad[c] < -err) err = -subgrad[c];
+          int[] failedCols = new int[64];
+          int fcnt = 0;
+          double grad_eps = GLM_GRAD_EPS;
+          for (int c : _activeCols)
+            if (subgrad[c] > grad_eps)
+              grad_eps = subgrad[c];
+            else if (subgrad[c] < -grad_eps)
+              grad_eps = -subgrad[c];
+          for (int i = 0; i < grad.length - 1; ++i) {
+            if (Arrays.binarySearch(_activeCols, i) >= 0) continue;
+            if (subgrad[i] > grad_eps || -subgrad[i] > grad_eps) {
+              if (fcnt == failedCols.length)
+                failedCols = Arrays.copyOf(failedCols, failedCols.length << 1);
+              failedCols[fcnt++] = i;
+            }
+          }
+          if (fcnt > 0) {
+            final int n = _activeCols.length;
+            final int[] oldActiveCols = _activeCols;
+            _activeCols = Arrays.copyOf(_activeCols, _activeCols.length + fcnt);
+            for (int i = 0; i < fcnt; ++i)
+              _activeCols[n + i] = failedCols[i];
+            Arrays.sort(_activeCols);
+            LogInfo(fcnt + " variables failed KKT conditions check! Adding them to the model and continuing computation.(grad_eps = " + grad_eps + ", activeCols = " + (_activeCols.length > 100?"lost":Arrays.toString(_activeCols)));
+            _activeData = _dinfo.filterExpandedColumns(_activeCols);
+            // NOTE: tricky completer game here:
+            // We expect 0 pending in this method since this is the end-point, ( actually it's racy, can be 1 with pending 1 decrement from the original Iteration callback, end result is 0 though)
+            // while iteration expects pending count of 1, so we need to increase it here (Iteration itself adds 1 but 1 will be subtracted when we leave this method since we're in the callback which is called by onCompletion!
+            // [unlike at the start of nextLambda call when we're not inside onCompletion]))
+            getCompleter().addToPendingCount(1);
+            new GLMIterationTask(GLM2.this.self(), _activeData, _glm, true, true, true, resizeVec(newBeta, _activeCols, oldActiveCols), glmt._ymu, glmt._reg, thresholds, new Iteration(getCompleter())).asyncExec(_activeData._adaptedFrame);
+            return;
+          }
+        }
+        int diff = MAX_ITERATIONS_PER_LAMBDA - _iter + _iter1;
+        if(diff > 0)
+          new GLM2_ProgressUpdate(diff).fork(_progressKey); // update progress
+        GLM2.this.setSubmodel(newBeta, glmt2._val,(H2OCountedCompleter)getCompleter().getCompleter());
+        _done = true;
+        LogInfo("computation of current lambda done in " + (System.currentTimeMillis() - GLM2.this.start_time) + "ms");
+        assert _lastResult._fullGrad != null;
+      }
+    }).asyncExec(_dinfo._adaptedFrame);
+  }
   private class Iteration extends H2OCallback<GLMIterationTask> {
     public final long _iterationStartTime;
-    final boolean _doLineSearch;
     final boolean _countIteration;
     final double _lineSearchStep;
-    public Iteration(CountedCompleter cmp, boolean doLineSearch){ this(cmp,doLineSearch,true,1.0);}
-    public Iteration(CountedCompleter cmp, boolean doLineSearch, boolean countIteration,double lineSearchStep){
+    public Iteration(CountedCompleter cmp){ this(cmp,true,1.0);}
+    public Iteration(CountedCompleter cmp, boolean countIteration,double lineSearchStep){
       super((H2OCountedCompleter)cmp);
       _lineSearchStep = lineSearchStep;
       cmp.addToPendingCount(1);
-      _doLineSearch = doLineSearch;
+
       _countIteration = countIteration;
       _iterationStartTime = System.currentTimeMillis(); }
-    @Override public void callback(final GLMIterationTask glmt) {
-      assert _activeCols == null || glmt._beta == null || glmt._beta.length == (_activeCols.length + 1) : LogInfo("betalen = " + glmt._beta.length + ", activecols = " + _activeCols.length);
+
+    @Override public void callback(final GLMIterationTask glmt){
+      if( !isRunning(self()) )  throw new JobCancelledException();
+      assert _activeCols == null || glmt._beta == null || glmt._beta.length == (_activeCols.length+1):LogInfo("betalen = " + glmt._beta.length + ", activecols = " + _activeCols.length);
       assert _activeCols == null || _activeCols.length == _activeData.fullN();
       assert getCompleter().getPendingCount() >= 1 : LogInfo("unexpected pending count, expected >=  1, got " + getCompleter().getPendingCount()); // will be decreased by 1 after we leave this callback
       if (_countIteration) ++_iter;
       _callbackStart = System.currentTimeMillis();
-      LogInfo("iteration done in " + (_callbackStart - _iterationStartTime) + "ms");
-      if (!isRunning(self())) throw new JobCancelledException();
-      boolean gotNaNsorInfs = Utils.hasNaNsOrInfs(glmt._xy) || glmt._gram.hasNaNsOrInfs();
-      boolean constBeta = true;
-      if (gotNaNsorInfs) {
-        LogInfo("got NaNs/Infs, invoking line-search.");
-        setHighAccuracy();
-        if (_lastResult == null) {
-          if (glmt._beta == null) // failed in first iteration! throw an error
-            throw new RuntimeException(LogInfo("GLM2: can not solve. Got NaNs/Infs in the first iteration"));
-          for (int i = 0; i < glmt._beta.length; ++i) {
-            glmt._beta[i] *= 0.5;
-            constBeta &= glmt._beta[i] < beta_epsilon;
-          }
-        } else {
-          double[] lastBeta = resizeVec(_lastResult._glmt._beta, _activeCols, _lastResult._activeCols);
-          if (lastBeta != null)
-            for (int i = 0; i < glmt._beta.length; ++i) {
-              glmt._beta[i] = 0.5 * (glmt._beta[i] + lastBeta[i]);
-              double diff = (glmt._beta[i] - lastBeta[i]);
-              constBeta &= (-beta_epsilon < diff && diff < beta_epsilon);
-            }
-          else for (int i = 0; i < glmt._beta.length; ++i) {
-            glmt._beta[i] *= 0.5;
-            constBeta &= glmt._beta[i] < beta_epsilon;
-          }
-        }
-        if (constBeta || _iter >= max_iter) { // line search failed to progress -> converge (if we a valid solution already, otherwise fail!)
-          if (_lastResult == null)
-            throw new RuntimeException(LogInfo("GLM failed to solve! Got NaNs/Infs in the first iteration and line search did not help!"));
-          checkKKTAndComplete(glmt, glmt._beta, false);
-          return;
-        } else // do the line search iteration
-          new GLMIterationTask(GLM2.this.self(), _activeData, glmt._glm, true, true, true, glmt._beta, _ymu, 1.0 / _nobs, thresholds, new Iteration(getCompleter(), true)).asyncExec(_activeData._adaptedFrame);
+
+      if(needLineSearch(glmt,_lineSearchStep)){
+        LogInfo("invoking line search");
+        new GLMTask.GLMLineSearchTask(GLM2.this.self(),_activeData,_glm, lastBeta() ,glmt._beta,1e-4,_ymu,_nobs, new LineSearchIteration(getCompleter())).asyncExec(_activeData._adaptedFrame);
         return;
       }
-      if (glmt._val != null) {
-        if (family != Family.gaussian && !(glmt._val.residual_deviance <= glmt._val.null_deviance)) { // complete fail, look if we can restart with higher_accuracy on
-          if (!highAccuracy()) {
-            LogInfo("reached negative explained deviance without line-search, rerunning with high accuracy settings.");
-            setHighAccuracy();
-            _iter = 0;
-            if (_lastResult != null && Arrays.equals(_lastResult._activeCols, _activeCols)) {
-              double[] beta = _lastResult._glmt._beta;
-              _lastResult = null;
-              new GLMIterationTask(GLM2.this.self(), _activeData, glmt._glm, true, true, true, beta, _ymu, 1.0 / _nobs, thresholds, new Iteration(getCompleter(), false)).asyncExec(_activeData._adaptedFrame);
-            } else { // no sane solution to go back to, start from scratch!
-              _lastResult = null;
-              new GLMIterationTask(GLM2.this.self(), _activeData, glmt._glm, true, false, false, null, _ymu, 1.0 / _nobs, thresholds, new Iteration(getCompleter(), false)).asyncExec(_activeData._adaptedFrame);
-            }
-            return;
-          }
-        }
-        if (glmt._newThresholds != null) {
-          thresholds = Utils.join(ModelUtils.DEFAULT_THRESHOLDS, Utils.join(glmt._newThresholds[0], glmt._newThresholds[1]));
-          Arrays.sort(thresholds);
-          for (int i = 0; i < thresholds.length; i += 2)
-            thresholds[i >> 1] = thresholds[i];
-          thresholds = Arrays.copyOf(thresholds, thresholds.length >> 1);
-        }
+      if(glmt._newThresholds != null) {
+        thresholds = Utils.join(glmt._newThresholds[0], glmt._newThresholds[1]);
+        Arrays.sort(thresholds);
       }
+      double gerr = Double.NaN;
       if (glmt._val != null && glmt._computeGradient) { // check gradient
+        _lastResult = new IterationInfo(_iter,glmt,_activeCols,null);
         final double[] grad = glmt.gradient(alpha[0], _currentLambda);
         ADMMSolver.subgrad(alpha[0], _currentLambda, glmt._beta, grad);
-        double err = 0;
+        gerr = 0;
         for (double d : grad)
-          if (d > err) err = d;
-          else if (d < -err) err = -d;
-        LogInfo("gradient after " + _iter + " iterations = " + err);
-        if (_doLineSearch && err <= GLM_GRAD_EPS) {
-          LogInfo("converged by reaching small enough gradient, with max |subgradient| = " + err);
-          checkKKTAndComplete(glmt, glmt._beta, false);
+          if (d > gerr) gerr = d;
+          else if (d < -gerr) gerr = -d;
+        if(gerr <= GLM_GRAD_EPS){
+          LogInfo("converged by reaching small enough gradient, with max |subgradient| = " + gerr );
+          checkKKTAndComplete(getCompleter(),glmt, glmt._beta,false);
           return;
         }
       }
-      if (glmt._beta != null && glmt._val != null && glmt._computeGradient && _glm.family != Family.tweedie) {
-        if (_lastResult != null && needLineSearch(glmt._beta, objval(glmt), _lineSearchStep)) {
-          if (!_doLineSearch) { // no progress, converge
-            checkKKTAndComplete(glmt, glmt._beta, true);
-            return;
-          }
-          if (!highAccuracy()) {
-            setHighAccuracy();
-            if (_lastResult._iter < (_iter - 2)) { // there is a gap form last result...return to it and start again
-              final double[] prevBeta = _lastResult._activeCols != _activeCols ? resizeVec(_lastResult._glmt._beta, _activeCols, _lastResult._activeCols) : _lastResult._glmt._beta;
-              new GLMIterationTask(GLM2.this.self(), _activeData, glmt._glm, true, true, true, prevBeta, _ymu, 1.0 / _nobs, thresholds, new Iteration(getCompleter(), false)).asyncExec(_activeData._adaptedFrame);
-              return;
-            }
-          }
-          final double[] b = resizeVec(_lastResult._glmt._beta, _activeCols, _lastResult._activeCols);
-          assert b == null || (b.length == glmt._beta.length) : LogInfo(b.length + " != " + glmt._beta.length + ", pickNextLambda = " + _activeCols.length);
-          new GLMTask.GLMLineSearchTask(GLM2.this.self(), _activeData, _glm, b, glmt._beta, 1e-4, glmt._nobs, alpha[0], _currentLambda, new LineSearchIteration(getCompleter())).asyncExec(_activeData._adaptedFrame);
-          return;
-        }
-        _lastResult = new IterationInfo(GLM2.this._iter - 1, glmt, _activeCols, null);
-      }
-      final double[] newBeta = MemoryManager.malloc8d(glmt._xy.length);
-      ADMMSolver slvr = new ADMMSolver(_currentLambda, alpha[0], _gradientEps, _addedL2);
-      slvr._rho = _currentLambda * alpha[0] * _rho_mul;
+      final double [] newBeta = MemoryManager.malloc8d(glmt._xy.length);
       long t1 = System.currentTimeMillis();
-      slvr.solve(glmt._gram, glmt._xy, glmt._yy, newBeta);
+      ADMMSolver slvr = new ADMMSolver(_currentLambda,alpha[0], _gradientEps, _addedL2);
+      slvr.solve(glmt._gram,glmt._xy,glmt._yy,newBeta,_currentLambda*alpha[0]);
+      if(_lineSearchStep < 1){
+         if(glmt._beta != null)
+           for(int i = 0; i < newBeta.length; ++i)
+             newBeta[i] = glmt._beta[i]*(1-_lineSearchStep) + _lineSearchStep*newBeta[i];
+        else
+           for(int i = 0; i < newBeta.length; ++i)
+             newBeta[i] *= _lineSearchStep;
+      }
+      // print all info about iteration
+      LogInfo("Gram computed in " + (_callbackStart - _iterationStartTime) + "ms, " + (Double.isNaN(gerr)?"":"gradient = " + gerr + ",") + ", step = " + _lineSearchStep + ", ADMM: " + slvr.iterations + " iterations, " + (System.currentTimeMillis() - t1) + "ms (" + slvr.decompTime + "), subgrad_err=" + slvr.gerr);
+//      int [] iBlocks = new int[]{8,16,32,64,128,256,512,1024};
+//      int [] rBlocks = new int[]{1,2,4,8,16,32,64,128};
+//      for(int i:iBlocks)
+//        for(int r:rBlocks){
+//          long ttx = System.currentTimeMillis();
+//          try {
+//            slvr.gerr = Double.POSITIVE_INFINITY;
+//            ADMMSolver.ParallelSolver pslvr = slvr.parSolver(glmt._gram, glmt._xy, newBeta, _currentLambda * alpha[0] * _rho_mul, i, r);
+//            pslvr.invoke();
+//            System.out.println("iBlock = " + i + ", rBlocsk = " + r + "ms");
+//            LogInfo("ADMM: " + pslvr._iter + " iterations, " + (System.currentTimeMillis() - ttx) + "ms (" + slvr.decompTime + "), subgrad_err=" + slvr.gerr);
+//          } catch(Throwable t){
+//            System.out.println("iBlock = " + i + ", rBlocsk = " + r + " failed! err = " + t);
+//          }
+//        }
+
       if (slvr._addedL2 > _addedL2) LogInfo("added " + (slvr._addedL2 - _addedL2) + "L2 penalty");
-      LogInfo("ADMM: " + slvr.iterations + " iterationss, " + (System.currentTimeMillis() - t1) + "ms (" + slvr.decompTime + "), subgrad_err=" + slvr.gerr);
+
       new GLM2_ProgressUpdate().fork(_progressKey); // update progress
       _gradientEps = Math.max(ADMM_GRAD_EPS, Math.min(slvr.gerr, 0.01));
       _addedL2 = slvr._addedL2;
@@ -662,109 +743,15 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           for (int i = 0; i < glmt._beta.length; ++i)
             if (glmt._beta[i] != 0) ++nzs;
           LogInfo("converged (reached a fixed point with ~ 1e" + diff + " precision), got " + nzs + " nzs");
-          checkKKTAndComplete(glmt, newBeta, false);
+          checkKKTAndComplete(getCompleter(),glmt, newBeta, false);
           return;
         } else { // not done yet, launch next iteration
           if (glmt._beta != null)
             setSubmodel(glmt._beta, glmt._val, (H2OCountedCompleter) getCompleter().getCompleter()); // update current intermediate result
           final boolean validate = higher_accuracy || (_iter % 5) == 0;
-          new GLMIterationTask(GLM2.this.self(), _activeData, glmt._glm, true, validate, validate, newBeta, _ymu, 1.0 / _nobs, thresholds, new Iteration(getCompleter(), validate && _lastResult != null)).asyncExec(_activeData._adaptedFrame);
+          new GLMIterationTask(GLM2.this.self(),_activeData,glmt._glm, true, validate, validate, newBeta,_ymu,1.0/_nobs,thresholds, new Iteration(getCompleter(),true,Math.min(1,2*_lineSearchStep))).asyncExec(_activeData._adaptedFrame);
         }
       }
-    }
-    private void checkKKTAndComplete(final GLMIterationTask glmt, final double [] newBeta, final boolean failedLineSearch){
-      final double [] fullBeta = newBeta == null?MemoryManager.malloc8d(_dinfo.fullN()+1):expandVec(newBeta,_activeCols);
-      // now we need full gradient (on all columns) using this beta
-      new GLMIterationTask(GLM2.this.self(),_dinfo,_glm,false,true,true,fullBeta,_ymu,1.0/_nobs,thresholds, new H2OCallback<GLMIterationTask>((H2OCountedCompleter)getCompleter()) {
-        @Override public String toString(){
-          return "checkKKTAndComplete.Callback, completer = " + getCompleter() == null?"null":getCompleter().toString();
-        }
-        @Override
-        public void callback(final GLMIterationTask glmt2) {
-          // first check KKT conditions!
-          final double [] grad = glmt2.gradient(alpha[0],_currentLambda);
-          if(Utils.hasNaNsOrInfs(grad)){
-            double [] newBeta2 = newBeta.clone();
-            LogInfo("Got NaNs/Infs in gradient during KKT check, invoking line-search");
-            setHighAccuracy();
-            boolean constBeta = true;
-            double [] lastBeta = glmt._beta;
-            if(lastBeta != null)
-              for (int i = 0; i < newBeta2.length; ++i) {
-                newBeta2[i] = 0.5 * (newBeta2[i] + lastBeta[i]);
-                double diff = (newBeta2[i] - lastBeta[i]);
-                constBeta &= (-beta_epsilon < diff && diff < 1e-2*beta_epsilon);
-              } else for (int i = 0; i < newBeta2.length; ++i) {
-                newBeta2[i] *= 0.5;
-                constBeta &= newBeta2[i] < 1e-2*beta_epsilon;
-              }
-            if(constBeta) {
-              if (_lastResult == null)
-                throw new RuntimeException("can't solve!");
-              newBeta2 = resizeVec(_lastResult._glmt._beta,_activeCols,_lastResult._activeCols);
-              if(Arrays.equals(newBeta,newBeta2)) {
-                System.out.println("grad = " + Arrays.toString(_lastResult.fullGrad(0,0)));
-                throw new RuntimeException("can not solve");
-              }
-            }
-            getCompleter().addToPendingCount(1);
-            checkKKTAndComplete(glmt,newBeta2,true);
-            return;
-          }
-          glmt._val = glmt2._val;
-          _lastResult = new IterationInfo(_iter,glmt2,null,glmt2.gradient(alpha[0],0));
-          // check the KKT conditions and filter data for next lambda_value
-          // check the gradient
-          double[] subgrad = grad.clone();
-          ADMMSolver.subgrad(alpha[0], _currentLambda, fullBeta, subgrad);
-          double err = GLM_GRAD_EPS;
-          if (!failedLineSearch &&_activeCols != null) {
-            for (int c : _activeCols)
-              if (subgrad[c] > err) err = subgrad[c];
-              else if (subgrad[c] < -err) err = -subgrad[c];
-            int[] failedCols = new int[64];
-            int fcnt = 0;
-            double grad_eps = GLM_GRAD_EPS;
-            for (int c : _activeCols)
-              if (subgrad[c] > grad_eps)
-                grad_eps = subgrad[c];
-              else if (subgrad[c] < -grad_eps)
-                grad_eps = -subgrad[c];
-            for (int i = 0; i < grad.length - 1; ++i) {
-              if (Arrays.binarySearch(_activeCols, i) >= 0) continue;
-              if (subgrad[i] > grad_eps || -subgrad[i] > grad_eps) {
-                if (fcnt == failedCols.length)
-                  failedCols = Arrays.copyOf(failedCols, failedCols.length << 1);
-                failedCols[fcnt++] = i;
-              }
-            }
-            if (fcnt > 0) {
-              final int n = _activeCols.length;
-              final int[] oldActiveCols = _activeCols;
-              _activeCols = Arrays.copyOf(_activeCols, _activeCols.length + fcnt);
-              for (int i = 0; i < fcnt; ++i)
-                _activeCols[n + i] = failedCols[i];
-              Arrays.sort(_activeCols);
-              LogInfo(fcnt + " variables failed KKT conditions check! Adding them to the model and continuing computation.(grad_eps = " + grad_eps + ", activeCols = " + (_activeCols.length > 100?"lost":Arrays.toString(_activeCols)));
-              _activeData = _dinfo.filterExpandedColumns(_activeCols);
-              // NOTE: tricky completer game here:
-              // We expect 0 pending in this method since this is the end-point, ( actually it's racy, can be 1 with pending 1 decrement from the original Iteration callback, end result is 0 though)
-              // while iteration expects pending count of 1, so we need to increase it here (Iteration itself adds 1 but 1 will be subtracted when we leave this method since we're in the callback which is called by onCompletion!
-              // [unlike at the start of nextLambda call when we're not inside onCompletion]))
-              getCompleter().addToPendingCount(1);
-              new GLMIterationTask(GLM2.this.self(), _activeData, _glm, true, true, true, resizeVec(newBeta, _activeCols, oldActiveCols), glmt._ymu, glmt._reg, thresholds, new Iteration(getCompleter(),false)).asyncExec(_activeData._adaptedFrame);
-              return;
-            }
-          }
-          int diff = MAX_ITERATIONS_PER_LAMBDA - _iter + _iter1;
-          if(diff > 0)
-            new GLM2_ProgressUpdate(diff).fork(_progressKey); // update progress
-          GLM2.this.setSubmodel(newBeta, glmt2._val,(H2OCountedCompleter)getCompleter().getCompleter());
-          _done = true;
-          LogInfo("computation of current lambda done in " + (System.currentTimeMillis() - GLM2.this.start_time) + "ms");
-          assert _lastResult._fullGrad != null;
-        }
-      }).asyncExec(_dinfo._adaptedFrame);
     }
   }
 
@@ -893,7 +880,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
           for(int i = 1; i < tasks.length; ++i)
             xvalModels[i-1] = tasks[i]._res;
           mainCmp.addToPendingCount(1);
-          new GLMXValidationTask(tasks[0]._res, curentLambda, xvalModels, mainCmp).asyncExec(_dinfo._adaptedFrame);
+          new GLMXValidationTask(tasks[0]._res, curentLambda, xvalModels, thresholds,mainCmp).asyncExec(_dinfo._adaptedFrame);
         }
       };
       c.addToPendingCount(tasks.length-1);
@@ -1062,6 +1049,8 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       cmp.tryComplete();
       return;
     }
+    if(_beta != null)
+      beta_start = _beta;
     _iter1 = _iter;
     LogInfo("starting computation of lambda = " + currentLambda + ", previous lambda = " + _currentLambda);
     _done = false;
@@ -1094,7 +1083,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
 //        new Iteration(cmp, false).callback(_lastResult._glmt);
 //        _lastResult._glmt.tryComplete();  // shortcut to reuse the last gram if same active columns
 //      } else
-      new GLMIterationTask(GLM2.this.self(), _activeData, _glm, true, false, false, resizeVec(_lastResult._glmt._beta, _activeCols, _lastResult._activeCols), _ymu, 1.0 / _nobs, thresholds, new Iteration(cmp,false)).asyncExec(_activeData._adaptedFrame);;
+      new GLMIterationTask(GLM2.this.self(), _activeData, _glm, true, false, false, resizeVec(_lastResult._glmt._beta, _activeCols, _lastResult._activeCols), _ymu, 1.0 / _nobs, thresholds, new Iteration(cmp)).asyncExec(_activeData._adaptedFrame);;
     }
   }
 

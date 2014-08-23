@@ -145,108 +145,51 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     }
   }
 
-  /**
-   * One iteration of glm, computes weighted gram matrix and t(x)*y vector and t(y)*y scalar.
-   *
-   * @author tomasnykodym
-   *
-   */
+
   public static class GLMLineSearchTask extends GLMTask<GLMLineSearchTask> {
-    double [][] _betas;
-    double []   _objvals;
-    double _caseVal = 0;
-    final double _l1pen;
-    final double _l2pen;
-    final double _reg;
-    public GLMLineSearchTask(Key jobKey, DataInfo dinfo, GLMParams glm, double [] oldBeta, double [] newBeta, double betaEps, long nobs, double alpha, double lambda, H2OCountedCompleter cmp){
-      super(jobKey,dinfo,glm,cmp);
-      _l2pen = 0.5*(1-alpha)*lambda;
-      _l1pen = alpha*lambda;
-      _reg = 1.0/nobs;
+    public GLMLineSearchTask(Key jobKey, DataInfo dinfo, GLMParams glm, double[] oldBeta, double[] newBeta, double betaEps, double ymu, long nobs, H2OCountedCompleter cmp) {
+      super(jobKey, dinfo, glm, cmp);
       ArrayList<double[]> betas = new ArrayList<double[]>();
       double diff = 1;
       while(diff > betaEps && betas.size() < 100){
         diff = 0;
-        double [] b = MemoryManager.malloc8d(oldBeta.length);
         for(int i = 0; i < oldBeta.length; ++i) {
-          b[i] = 0.5 * (oldBeta[i] + newBeta[i]);
-          double d = b[i] - oldBeta[i];
+          newBeta[i] = 0.5 * (oldBeta[i] + newBeta[i]);
+          double d = newBeta[i] - oldBeta[i];
           if(d > diff) diff = d;
           else if(d < -diff) diff = -d;
         }
-        betas.add(b);
-        newBeta = b;
+        betas.add(newBeta.clone());
       }
-      _betas = new double[betas.size()][];
-      betas.toArray(_betas);
+      // public GLMIterationTask(Key jobKey, DataInfo dinfo, GLMParams glm, boolean computeGram, boolean validate, boolean computeGradient, double [] beta, double ymu, double reg, float [] thresholds, H2OCountedCompleter cmp) {
+      _glmts = new GLMIterationTask[betas.size()];
+      for(int i = 0; i < _glmts.length; ++i)
+        _glmts[i] = new GLMIterationTask(jobKey,dinfo,glm,false,true,true,betas.get(i),ymu,1.0/nobs,new float[]{0} /* don't really want CMs!*/,null);
     }
-
+    GLMIterationTask [] _glmts;
     @Override public void chunkInit(){
-      _objvals = new double[_betas.length];
+      _glmts = _glmts.clone();
+      for(int i = 0; i < _glmts.length; ++i)
+        (_glmts[i] = _glmts[i].clone()).chunkInit();
     }
     @Override public void chunkDone(long n){
-      for(int i = 0; i < _objvals.length; ++i)
-        _objvals[i] *= _reg;
+      for(int i = 0; i < _glmts.length; ++i)
+        _glmts[i].chunkDone(n);
     }
     @Override public void postGlobal(){
-      for(int i = 0; i < _objvals.length; ++i)
-        for(double d:_betas[i])
-          _objvals[i] += d*d*_l2pen + (d>=0?d:-d)*_l1pen;
+      for(int i = 0; i < _glmts.length; ++i)
+        _glmts[i].postGlobal();
     }
     @Override public final void processRow(long gid, final double [] nums, final int ncats, final int [] cats, double [] responses){
-      for(int i = 0; i < _objvals.length; ++i){
-        final double [] beta = _betas[i];
-        double y = responses[0];
-        _objvals[i] += _glm.deviance(y,_glm.linkInv(computeEta(ncats, cats,nums,beta)));
-      }
+      for(int i = 0; i < _glmts.length; ++i)
+        _glmts[i].processRow(gid,nums,ncats,cats,responses);
     }
     @Override
-    public void reduce(GLMLineSearchTask git){Utils.add(_objvals,git._objvals);}
+    public void reduce(GLMLineSearchTask git){
+      for(int i = 0; i < _glmts.length; ++i)
+        _glmts[i].reduce(git._glmts[i]);
+    }
   }
-
-//  public static final class LMIterationTask extends FrameTask<LMIterationTask>{
-//    public final int n_folds;
-//    public long _n;
-//    Gram [] _gram;
-//    double [][] _xy;
-//    public LMIterationTask(Key jobKey, DataInfo dinfo,int nfolds, H2OCountedCompleter cmp){
-//      super(jobKey, dinfo, cmp);
-//      n_folds = Math.max(1,nfolds);
-//    }
-//    @Override public void chunkInit(){
-//      _gram = new Gram[n_folds];
-//      _xy = new double[n_folds][];
-//      for(int i = 0; i < n_folds; ++i){
-//        _gram[i] = new Gram(_dinfo.fullN(), _dinfo.largestCat(), _dinfo._nums, _dinfo._cats,true);
-//        _xy[i] = MemoryManager.malloc8d(_dinfo.fullN()+1); // + 1 is for intercept
-//      }
-//    }
-//    @Override public final void processRow(long gid, final double [] nums, final int ncats, final int [] cats, double [] responses){
-//      final int fold = n_folds == 1?0:(int)_n % n_folds;
-//      final double y = responses[0];
-//      _gram[fold].addRow(nums, ncats, cats, 1);
-//      for(int i = 0; i < ncats; ++i){
-//        final int ii = cats[i];
-//        _xy[fold][ii] += responses[0];
-//      }
-//      final int numStart = _dinfo.numStart();
-//      for(int i = 0; i < nums.length; ++i){
-//        _xy[fold][numStart+i] += y*nums[i];
-//      }
-//      ++_n;
-//    }
-//
-//    @Override public void chunkDone(){
-//
-//    }
-//
-//    @Override public void reduce(LMIterationTask lmit){
-//      for(int i = 0; i < n_folds; ++i){
-//        _gram[i].add(lmit._gram[i]);
-//        Utils.add(_xy[i],lmit._xy[i]);
-//      }
-//    }
-//  }
 
   /**
    * One iteration of glm, computes weighted gram matrix and t(x)*y vector and t(y)*y scalar.
@@ -287,15 +230,13 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
     }
 
     private void sampleThresholds(int yi){
-      if(_ti[yi] > (_newThresholds.length >> 2)) {
-        Arrays.sort(_newThresholds[yi]);
-        for (int i = 0; i < _ti[yi]; i += 2) {
-          _newThresholds[yi][i >> 1] = _newThresholds[yi][i];
-        }
-        _ti[yi] = _newThresholds.length >> 2;
-        for(int i = _ti[yi]; i < _newThresholds[yi].length;++i)
-          _newThresholds[yi][i] = Float.POSITIVE_INFINITY;
-      }
+      _ti[yi] = (_newThresholds[yi].length >> 2);
+      try{ Arrays.sort(_newThresholds[yi]);} catch(Throwable t){
+        System.out.println("got AIOOB during sort?! ary = " + Arrays.toString(_newThresholds[yi]));
+        return;
+      } // sort throws AIOOB sometimes!
+      for (int i = 0; i < _newThresholds.length; i += 4)
+        _newThresholds[yi][i >> 2] = _newThresholds[yi][i];
     }
     @Override public void processRow(long gid, final double [] nums, final int ncats, final int [] cats, double [] responses){
       ++_nobs;
@@ -331,8 +272,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
           _newThresholds[yi][_ti[yi]++] = (float) mu;
         }
       }
-
-      assert w >= 0 : "invalid weight " + w;
+      assert w >= 0|| Double.isNaN(w) : "invalid weight " + w; // allow NaNs - can occur if line-search is needed!
       final double wz = w * z;
       _yy += wz * z;
       if(_computeGradient || _computeGram){
@@ -351,6 +291,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
         _xy[numStart + _dinfo._nums] += wz;
         if(_computeGram)_gram.addRow(nums, ncats, cats, w);
       }
+
     }
     @Override protected void chunkInit(){
       if(_computeGram)_gram = new Gram(_dinfo.fullN(), _dinfo.largestCat(), _dinfo._nums, _dinfo._cats,true);
@@ -366,6 +307,10 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
       }
       if(_computeGradient)
         _grad = MemoryManager.malloc8d(_dinfo.fullN()+1); // + 1 is for intercept
+      if(_glm.family == Family.binomial && _validate){
+        _ti = new int[2];
+        _newThresholds = new float[2][4*N_THRESHOLDS];
+      }
     }
 
     @Override protected void chunkDone(long n){
@@ -377,10 +322,13 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
           _grad[i] *= _reg;
       _yy *= _reg;
       if(_validate && _glm.family == Family.binomial) {
-        _newThresholds[0] = Arrays.copyOf(_newThresholds[0],Math.min(_ti[0],_newThresholds[0].length >> 1));
-        _newThresholds[1] = Arrays.copyOf(_newThresholds[1],Math.min(_ti[1],_newThresholds[1].length >> 1));
+        _newThresholds[0] = Arrays.copyOf(_newThresholds[0],_ti[0]);
+        _newThresholds[1] = Arrays.copyOf(_newThresholds[1],_ti[1]);
+        Arrays.sort(_newThresholds[0]);
+        Arrays.sort(_newThresholds[1]);
       }
     }
+
     @Override
     public void reduce(GLMIterationTask git){
       if(_jobKey == null || Job.isRunning(_jobKey)) {
@@ -415,6 +363,7 @@ public abstract class GLMTask<T extends GLMTask<T>> extends FrameTask<T> {
         _val.computeAIC();
         _val.computeAUC();
       }
+
     }
     public double [] gradient(double alpha, double lambda){
       final double [] res = _grad.clone();

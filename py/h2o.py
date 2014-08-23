@@ -944,6 +944,8 @@ def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25, noE
                 "\n" +
                 "\nUPDATE: building cloud size of 2 with 127.0.0.1 may temporarily report 3 incorrectly, with no zombie?"
             )
+            for ci in c['nodes']:
+                emsg += "\n" + ci['name']
             raise Exception(emsg)
 
         a = (cloud_size == node_count) and consensus
@@ -1534,6 +1536,11 @@ class H2O(object):
 
     def jstack(self, timeoutSecs=30):
         return self.__do_json_request("JStack.json", timeout=timeoutSecs)
+
+    def network_test(self, tdepth=5, timeoutSecs=30):
+        a = self.__do_json_request("2/NetworkTest.json", params={}, timeout=timeoutSecs)
+        verboseprint("\n network test:", dump_json(a))
+        return(a)
 
     def jprofile(self, depth=5, timeoutSecs=30):
         return self.__do_json_request("2/JProfile.json", params={'depth': depth}, timeout=timeoutSecs)
