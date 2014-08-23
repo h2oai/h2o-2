@@ -117,7 +117,7 @@ class Basic(unittest.TestCase):
                 timeoutSecs=timeoutSecs, retryDelaySecs=1)
 
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfv, ntree=used_trees)
-            h2o_util.assertApproxEqual(classification_error, 6.0, rel=.2,
+            h2o_util.assertApproxEqual(classification_error, 6.0, tol=3,
                 msg="Classification error %s too big" % classification_error)
 
             predict = h2o.nodes[0].generate_predictions(model_key=model_key, data_key=dataKeyTest)
