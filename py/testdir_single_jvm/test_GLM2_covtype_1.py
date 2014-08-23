@@ -26,7 +26,7 @@ class Basic(unittest.TestCase):
         csvPathname = 'standard/' + csvFilename
         hex_key = "covtype.hex"
 
-        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, hex_key=hex_key, schema='local', timeoutSecs=10)
+        parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, hex_key=hex_key, schema='local', timeoutSecs=20)
 
         print "Gratuitous use of frame splitting. result not used"
         fs = h2o.nodes[0].frame_split(source=hex_key, ratios=0.75)
