@@ -161,7 +161,7 @@ class Basic(unittest.TestCase):
                 # (10000, 30, 'cD', 300), 
                 # 200 passed
                 (500, 30, 'cD', 300), 
-                (500, 30, 'cD', 300), 
+                (5000, 30, 'cD', 300), 
                 ]
 
         ### h2b.browseTheCloud()
@@ -203,9 +203,12 @@ class Basic(unittest.TestCase):
             y = colCount
             print "GLM is ignoring the thresholds I give it? deciding what's best?"
             kwargs = {
+                    'standardize': 0,
+                    # link is default
+                    # 'link': 
                     'family': ALGO,
                     'response': y, 
-                    'max_iter': 10, 
+                    'max_iter': 25, 
                     'lambda': 0,
                     'alpha': 0,
                     'n_folds': 0,
@@ -222,7 +225,7 @@ class Basic(unittest.TestCase):
                 deltaCoeff = 0.1
                 deltaIntcpt = 0.2
             else: # poisson needs more? 
-                deltaCoeff = 0.4
+                deltaCoeff = 0.5
                 deltaIntcpt = 1.0
 
             for i,c in enumerate(coefficients):

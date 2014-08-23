@@ -14,7 +14,7 @@ import h2o, h2o_cmd, h2o_glm, h2o_util, h2o_hosts, h2o_import as h2i
 
 def glm_doit(self, csvFilename, bucket, csvPathname, timeoutSecs=30):
     print "\nStarting parse of", csvFilename
-    parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='put', hex_key=csvFilename + ".hex", timeoutSecs=10)
+    parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='put', hex_key=csvFilename + ".hex", timeoutSecs=20)
     y = "10"
     # NOTE: hastie has two values, -1 and 1. To make H2O work if two valued and not 0,1 have
     kwargs = {

@@ -74,7 +74,7 @@ class Basic(unittest.TestCase):
                 
             kwargs = params.copy()
             # adjust timeoutSecs with the number of trees
-            timeoutSecs = 30 + ((kwargs['ntrees']*80) * max(1,kwargs['mtries']/60) )
+            timeoutSecs = 80 + ((kwargs['ntrees']*80) * max(1,kwargs['mtries']/60) )
             start = time.time()
             parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put', hex_key=hex_key)
             h2o_cmd.runSpeeDRF(parseResult=parseResult, timeoutSecs=timeoutSecs, retryDelaySecs=1, **kwargs)

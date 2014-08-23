@@ -1402,14 +1402,14 @@ class H2O(object):
         return a
 
     # this is only for 2 (fvec)
-    def kmeans_model_view(self, model, timeoutSecs=30, **kwargs):
+    def kmeans_view(self, model, timeoutSecs=30, **kwargs):
         # defaults
         params_dict = {
             '_modelKey': model,
         }
         browseAlso = kwargs.get('browseAlso', False)
         # only lets these params thru
-        check_params_update_kwargs(params_dict, kwargs, 'kmeans_model_view', print_params=True)
+        check_params_update_kwargs(params_dict, kwargs, 'kmeans_view', print_params=True)
         print "\nKMeans2ModelView params list:", params_dict
         a = self.__do_json_request('2/KMeans2ModelView.json', timeout=timeoutSecs, params=params_dict)
 
@@ -2070,9 +2070,9 @@ class H2O(object):
             'destination_key': None,
         }
         # only lets these params thru
-        check_params_update_kwargs(params_dict, kwargs, 'gbm_search_progress', print_params)
+        check_params_update_kwargs(params_dict, kwargs, 'gbm_grid_view', print_params)
         a = self.__do_json_request('2/GridSearchProgress.json', timeout=timeoutSecs, params=params_dict)
-        print "\ngbm_search_progress result:", dump_json(a)
+        print "\ngbm_grid_view result:", dump_json(a)
         return a
 
     def speedrf_view(self, modelKey, timeoutSecs=300, print_params=False, **kwargs):
@@ -2080,6 +2080,17 @@ class H2O(object):
         check_params_update_kwargs(params_dict, kwargs, 'speedrf_view', print_params)
         a = self.__do_json_request('2/SpeeDRFModelView.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("\nspeedrf_view_result:", dump_json(a))
+        return a
+
+    def speedrf_grid_view(self, timeoutSecs=300, print_params=False, **kwargs):
+        params_dict = {
+            'job_key': None,
+            'destination_key': None,
+        }
+        # only lets these params thru
+        check_params_update_kwargs(params_dict, kwargs, 'speedrf_grid_view', print_params)
+        a = self.__do_json_request('2/GridSearchProgress.json', timeout=timeoutSecs, params=params_dict)
+        print "\nspeedrf_grid_view result:", dump_json(a)
         return a
 
     def pca_view(self, modelKey, timeoutSecs=300, print_params=False, **kwargs):
@@ -2976,6 +2987,8 @@ class LocalH2O(H2O):
         self.remoteH2O = False # so we can tell if we're remote or local
 
         h2o_os_util.check_port_group(self.port)
+        h2o_os_util.show_h2o_processes()
+
         if self.node_id is not None:
             logPrefix = 'local-h2o-' + str(self.node_id)
         else:

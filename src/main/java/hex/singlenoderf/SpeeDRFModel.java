@@ -560,6 +560,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     SpeeDRFModel_DTree newModel = new SpeeDRFModel_DTree(key,dataKey,testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, mtries, num_folds, priorClassDist, classDist);
     // update the model
     newModel = new SpeeDRFModel_DTree(newModel, dtreeKeys, treeStats);
+    newModel.isFromSpeeDRF=true; // tells the toJava method the model is translated from a speedrf model.
     return newModel;
   }
 

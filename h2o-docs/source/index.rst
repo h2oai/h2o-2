@@ -14,11 +14,11 @@ Getting Started with H\ :sub:`2`\ O
 
 This section is for new users. Here you can find information on
 getting started from downloaded versions of  H\ :sub:`2`\ O, and using  H\
-:sub:`2`\ O with R. 
+:sub:`2`\ O with R.
 
 .. toctree::
     :maxdepth: 1
-    
+
     newuser/top
     Ruser/top
     userguide/top
@@ -33,7 +33,7 @@ Tutorials in H\ :sub:`2`\ O
 
     tutorial/top
     tutorial/videos
-    
+
 
 Deployment and Big Data Management
 ==================================
@@ -43,6 +43,7 @@ Deployment and Big Data Management
 
     deployment/hadoop
     deployment/multinode
+    deployment/ec2
 
 Helpful Resources
 =================
@@ -52,7 +53,7 @@ in the public domain.
 
 .. toctree::
     :maxdepth: 1
-   
+
     resources/glossary
     resources/algoroadmap
     resources/publicdata

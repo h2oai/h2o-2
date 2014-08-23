@@ -585,6 +585,7 @@ public class DTree extends Iced {
     @API(help="Variable importance for individual input variables.")                  public final VarImp          varimp; // NOTE: in future we can have an array of different variable importance measures (per method)
     @API(help="Tree statistics")                                                      public final TreeStats       treeStats;
     @API(help="AUC for validation dataset")                                           public final AUCData         validAUC;
+    @API(help="Whether this is transformed from speedrf")                             public       boolean         isFromSpeeDRF=false;
 
     private final int num_folds;
     private transient volatile CompressedTree[/*N*/][/*nclasses OR 1 for regression*/] _treeBitsCache;
@@ -1234,12 +1235,22 @@ public class DTree extends Iced {
       // divide trees into small forests per 100 trees
       /* DEBUG line */ bodySb.i().p("// System.err.println(\"Row (gencode.predict): \" + java.util.Arrays.toString(data));").nl();
       bodySb.i().p("java.util.Arrays.fill(preds,0f);").nl();
+
+      if (isFromSpeeDRF) {
+        bodySb.i().p("// Call forest predicting class ").p(0).nl();
+        bodySb.i().p("preds").p(" =").p(" Forest_").p(fidx).p("_class_").p(0).p(".predict(data, maxIters - " + fidx * maxfsize + ");").nl();
+        bodySb.i().p("preds[0]=").nl();
+      }
       for( int c=0; c<nclasses(); c++ ) {
         toJavaForestBegin(bodySb, forest, c, fidx++, maxfsize);
         for( int i=0; i < treeKeys.length; i++ ) {
           CompressedTree cts[] = ctree(i);
           if( cts[c] == null ) continue;
-          forest.i().p("if (iters-- > 0) pred").p(" +=").p(" Tree_").p(i).p("_class_").p(c).p(".predict(data);").nl();
+          if (!isFromSpeeDRF) {
+            forest.i().p("if (iters-- > 0) pred").p(" +=").p(" Tree_").p(i).p("_class_").p(c).p(".predict(data);").nl();
+          } else {
+            forest.i().p("pred[(int)").p(" Tree_").p(i).p("_class_").p(c).p(".predict(data) + 1] += 1;").nl();
+          }
           // append representation of tree predictor
           toJavaTreePredictFct(fileCtxSb, cts[c], i, c);
           if (++treesInForest == maxfsize) {
@@ -1261,13 +1272,23 @@ public class DTree extends Iced {
     static final String PRED_TYPE = "float";
 
     private void toJavaForestBegin(SB predictBody, SB forest, int c, int fidx, int maxTreesInForest) {
-      predictBody.i().p("// Call forest predicting class ").p(c).nl();
-      predictBody.i().p("preds[").p(c+1).p("] +=").p(" Forest_").p(fidx).p("_class_").p(c).p(".predict(data, maxIters - "+fidx*maxTreesInForest+");").nl();
-      forest.i().p("// Forest representing a subset of trees scoring class ").p(c).nl();
-      forest.i().p("class Forest_").p(fidx).p("_class_").p(c).p(" {").nl().ii(1);
-      forest.i().p("public static ").p(PRED_TYPE).p(" predict(double[] data, int maxIters) {").nl().ii(1);
-      forest.i().p(PRED_TYPE).p(" pred  = 0;").nl();
-      forest.i().p("int   iters = maxIters;").nl();
+      // ugly hack here
+      if (!isFromSpeeDRF) {
+        predictBody.i().p("// Call forest predicting class ").p(c).nl();
+        predictBody.i().p("preds[").p(c + 1).p("] +=").p(" Forest_").p(fidx).p("_class_").p(c).p(".predict(data, maxIters - " + fidx * maxTreesInForest + ");").nl();
+        forest.i().p("// Forest representing a subset of trees scoring class ").p(c).nl();
+        forest.i().p("class Forest_").p(fidx).p("_class_").p(c).p(" {").nl().ii(1);
+        forest.i().p("public static ").p(PRED_TYPE).p(" predict(double[] data, int maxIters) {").nl().ii(1);
+        forest.i().p(PRED_TYPE).p(" pred  = 0;").nl();
+        forest.i().p("int   iters = maxIters;").nl();
+      } else {
+        forest.i().p("// Forest representing a subset of trees scoring class ").p(c).nl();
+        forest.i().p("class Forest_").p(fidx).p("_class_").p(c).p(" {").nl().ii(1);
+        forest.i().p("public static ").p(PRED_TYPE).p("[] predict(double[] data, int maxIters) {").nl().ii(1);
+        forest.i().p(PRED_TYPE).p("[] pred;").nl();
+        forest.i().p("java.util.Arrays.fill(preds,0f);").nl();
+        forest.i().p("int   iters = maxIters;").nl();
+      }
     }
     private void toJavaForestEnd(SB predictBody, SB forest, int c, int fidx) {
       forest.i().p("return pred;").nl();

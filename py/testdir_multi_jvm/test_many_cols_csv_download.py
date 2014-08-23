@@ -44,14 +44,9 @@ class Basic(unittest.TestCase):
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
             # nrow  ncol   key   timeoutSecs
-            (100,   100,   'cA', 60),
-            (90,    1000,  'cB', 60),
-            (110,   10000, 'cC', 60),
+            (100,   10000, 'cC', 60),
             (1000,  100,   'cD', 60),
-            (9000,  1000,  'cE', 60),
-            (1100,  10000, 'cF', 60),
             (10000, 100,   'cG', 60),
-            (9000,  1000,  'cH', 60),
             (11000, 2000,  'cI', 60),
             #
             # Note:  10000 x 10000 works, but is slow.  disable for now.

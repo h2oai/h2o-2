@@ -127,16 +127,16 @@ myPy() {
     # rm -f sandbox/*log
 }
 
-# myPy c5 test_c5_KMeans_sphere15_180GB.py
 
 # don't run this until we know whether 0xcustomer permissions also exist for the hadoop job
 # myPy c1 test_c1_rel.py
 
 # worked
-# myPy c2 test_c2_rel.py
-# myPy c3 test_c3_rel.py
-
-myPy c4 test_c4_four_billion_rows_fvec.py
+myPy c2 test_c2_rel.py
+myPy c3 test_c3_rel.py
+test_c8_rf_airlines_hdfs_fvec.py
+test_c4_four_billion_rows_fvec.py
+# myPy c5 test_c5_KMeans_sphere15_180GB.py
 
 # have to update this to poit to the right hdfs?
 # myPy c6 test_c6_hdfs_fvec.py
