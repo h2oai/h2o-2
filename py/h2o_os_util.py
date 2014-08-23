@@ -69,8 +69,8 @@ def show_h2o_processes():
             h2oFound = False
             for p in psutil.process_iter():
                 h2oProcess = False
-                # psutil 2.x requirs name(). prior psutil didn't
-                # hack. psutil 2.x needs function reference
+                # hack.
+                # psutil 2.x needs function reference
                 # psutil 1.x needs object reference
                 if hasattr(p.name, '__call__'):
                     pname = p.name()
