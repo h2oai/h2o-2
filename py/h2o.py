@@ -61,12 +61,12 @@ def sleep(secs):
     # due to left over h2o.sleep(3600)
     time.sleep(period)
 
-# The cloud is uniquely named per user (only)
-# Fine to uniquely identify the flatfile by name only also?
+# The cloud is uniquely named per user (only) and pid
+# do the flatfile the same way
 # Both are the user that runs the test. The config might have a different username on the
 # remote machine (0xdiag, say, or hduser)
 def flatfile_name():
-    return ('pytest_flatfile-%s' % getpass.getuser())
+    return ('pytest_flatfile-%s-%s' % (getpass.getuser(), os.getpid()))
 
 # only usable after you've built a cloud (junit, watch out)
 def cloud_name():
