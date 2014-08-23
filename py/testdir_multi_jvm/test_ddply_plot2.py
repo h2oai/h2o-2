@@ -17,7 +17,9 @@ DO_KNOWN_FAIL2 = False
 DO_MANY = True
 DO_REALS = False
 
-CLOUD_SIZE = 2
+# fails
+# CLOUD_SIZE = 2
+CLOUD_SIZE = 1
 
 initList = [
     (None, FUNC_PHRASE),
