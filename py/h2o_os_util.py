@@ -123,9 +123,9 @@ def show_h2o_processes():
                 
 
         if h2oFound:
-            print "\n#**********************************************"
+            print "\n\n#**********************************************************************************************"
         else:
             print "No h2o processes found."
-        print "users running java:", list(users)
+        print "\nusers running java:", list(users)
         print "users running h2o java:", list(h2oUsers)
 
