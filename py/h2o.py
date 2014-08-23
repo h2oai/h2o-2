@@ -944,6 +944,8 @@ def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25, noE
                 "\n" +
                 "\nUPDATE: building cloud size of 2 with 127.0.0.1 may temporarily report 3 incorrectly, with no zombie?"
             )
+            for ci in c['nodes']:
+                emsg += "\n" + ci['name']
             raise Exception(emsg)
 
         a = (cloud_size == node_count) and consensus
