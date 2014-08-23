@@ -1535,6 +1535,11 @@ class H2O(object):
     def jstack(self, timeoutSecs=30):
         return self.__do_json_request("JStack.json", timeout=timeoutSecs)
 
+    def network_test(self, tdepth=5, timeoutSecs=30):
+        a = self.__do_json_request("2/NetworkTest.json", params={}, timeout=timeoutSecs)
+        verboseprint("\n network test:", dump_json(a))
+        return(a)
+
     def jprofile(self, depth=5, timeoutSecs=30):
         return self.__do_json_request("2/JProfile.json", params={'depth': depth}, timeout=timeoutSecs)
 
