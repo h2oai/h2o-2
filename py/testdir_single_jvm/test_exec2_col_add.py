@@ -25,9 +25,9 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1, java_heap_GB=12, java_extra_args='-XX:+PrintGCDetails', base_port=54321)
+            h2o.build_cloud(java_heap_GB=12, java_extra_args='-XX:+PrintGCDetails')
         else:
-            h2o_hosts.build_cloud_with_hosts(1, java_heap_GB=28, java_extra_args='-XX:+PrintGCDetails', base_port=54321)
+            h2o_hosts.build_cloud_with_hosts(java_heap_GB=28, java_extra_args='-XX:+PrintGCDetails')
 
 
     @classmethod
