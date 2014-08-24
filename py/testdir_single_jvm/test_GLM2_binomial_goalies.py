@@ -44,7 +44,7 @@ class Basic(unittest.TestCase):
 
 
         paramDict = define_params()
-        for trial in range(20):
+        for trial in range(5):
             # params is mutable. This is default.
             # FIX! does it never end if we don't have alpha specified?
             params = {
