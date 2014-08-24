@@ -76,8 +76,8 @@ public class DeepLearningProstateTest extends TestUtil {
                                 -1, //different validation frame
                         }) {
                           for (int n_folds : new int[]{
-                                  0,
-//                                  2,
+//                                  0,
+                                  2,
                           }) {
                             if (n_folds != 0 && vf != 0) continue;
                             for (boolean keep_cv_splits : new boolean[]{false}) { //otherwise it leaks
@@ -379,6 +379,6 @@ public class DeepLearningProstateTest extends TestUtil {
   }
 
   public static class Short extends DeepLearningProstateTest {
-    @Test public void run() throws Exception { runFraction(0.003f); }
+    @Test public void run() throws Exception { runFraction(0.001f); }
   }
 }
