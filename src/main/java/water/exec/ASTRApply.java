@@ -6,6 +6,7 @@ import water.*;
 import water.fvec.*;
 import water.nbhm.NonBlockingHashMap;
 import water.util.FrameUtils;
+import water.util.Log;
 
 /** Parse a generic R string and build an AST, in the context of an H2O Cloud
  *  @author cliffc@0xdata.com
@@ -212,12 +213,19 @@ class ASTddply extends ASTOp {
       Frame fg = new Frame(fr._names,gvecs);
       // Non-blocking, send a group to a remote node for execution
       final int nidx = g.hashCode()%csz;
-      fs.add(RPC.call(H2O.CLOUD._memary[nidx],(re=new RemoteExec(nlocals[nidx]++,p2._nlocals[nidx],g._ds,fg,envkey))));
+      re = new RemoteExec(nlocals[nidx]++,p2._nlocals[nidx],g._ds,fg,envkey);
+//      if (nidx != H2O.SELF.index()) fs.add((new RPC(H2O.CLOUD._memary[nidx], re).addCompleter(re).call()));
+      fs.add(RPC.call(H2O.CLOUD._memary[nidx],(re)));
     }
     fs.blockForPending();       // Wait for all functions to finish
 
+    ArrayList<Integer> nodes = new ArrayList<Integer>();
+    for (int i = 0; i < nlocals.length; ++i) if (nlocals[i]!=0) nodes.add(i);
+    int[] idxs = new int[nodes.size()];
+    for (int i = 0; i < nodes.size(); ++i ) idxs[i] = nodes.get(i);
+
     // Pass 4: Fold together all results; currently stored in NewChunk[]s per node
-    Vec vres[] = new ddplyPass4(envkey,cols.length,re._ncols).invokeOnAllNodes().close();
+    Vec vres[] = new ddplyPass4(envkey,cols.length,re._ncols, nlocals, numgrps).invokeOnAllNodes().close();
 
     // Result Frame
     String[] names = new String[cols.length+re._ncols];
@@ -226,8 +234,30 @@ class ASTddply extends ASTOp {
       vres[i]._domain = fr.vecs()[cols[i]]._domain;
     }
     for( int i = cols.length; i < names.length; i++) names[i] = "C"+(i-cols.length+1);
-    Frame res = new Frame(names,vres);
+    Frame ff = new Frame(names,vres);
 
+    // Cleanup pass: Drop NAs (groups with no data and NA groups, basically does na.omit: drop rows with NA)
+    Frame res = new MRTask2() {
+      @Override public void map(Chunk[] cs, NewChunk[] nc) {
+        int rows = cs[0].len();
+        int cols = cs.length;
+        boolean[] NACols = new boolean[cols];
+        ArrayList<Integer> xrows = new ArrayList<Integer>();
+        for (int i = 0; i < cols; ++i) NACols[i] = (cs[i]._vec.naCnt() != 0);
+        for (int r = 0; r < rows; ++r)
+          for (int c = 0; c < cols; ++c)
+            if (NACols[c])
+              if (cs[c].isNA0(r)) { xrows.add(r); break;}
+        for (int r = 0; r < rows; ++r) {
+          if (xrows.contains(r)) continue;
+          for (int c = 0; c < cols; ++c) {
+            if (cs[c]._vec.isEnum()) nc[c].addEnum((int) cs[c].at80(r));
+            else nc[c].addNum(cs[c].at0(r));
+          }
+        }
+      }
+    }.doAll(ff.numCols(), ff).outputFrame(null, ff.names(), ff.domains());
+    ff.delete();
     // Delete the group row vecs
     for( Vec v : vecs ) UKV.remove(v._key);
     UKV.remove(envkey);
@@ -498,7 +528,7 @@ class ASTddply extends ASTOp {
       for( int i=0; i<_ds.length; i++ ) nchks[i].set_impl(_grpnum,_ds[i]); // The group data
       Vec vecs[] = fr==null ? null : fr.vecs();
       for( int i=0; i<_ncols; i++ ) // The group results
-        nchks[_ds.length+i].set_impl(_grpnum,fr==null ? env.dbl(-1) : vecs[i].at(0));
+        nchks[_ds.length+i].set_impl(_grpnum,fr==null ? env.dbl(-1) : fr.vecs()[i].at(0));
       if( fr != null ) fr.delete();
 
       // No need to return any results here.
@@ -518,34 +548,52 @@ class ASTddply extends ASTOp {
     Key _envkey;
     // One new Vec per result column
     AppendableVec _avs[];
-    ddplyPass4( Key envkey, int ccols, int ncols ) {
+    boolean _hasGrps = false;
+    int[] _nlocals;
+    int _numgrps;
+    ddplyPass4( Key envkey, int ccols, int ncols, int[] nlocals, int numgrps) {
+      _nlocals = nlocals;
       _envkey = envkey;
+      _numgrps = numgrps;
       // Result AppendableVecs
-      Key keys[] = Vec.VectorGroup.VG_LEN1.addVecs(ccols+ncols);
-      _avs = new AppendableVec[ccols+ncols];
-      for( int i=0; i<_avs.length; i++ )
+      Key keys[] = Vec.VectorGroup.VG_LEN1.addVecs(ccols + ncols);
+      _avs = new AppendableVec[ccols + ncols];
+      for (int i = 0; i < _avs.length; i++)
         _avs[i] = new AppendableVec(keys[i]);
     }
     // Local (per-Node) work.  Gather the chunks together into the Vecs
     @Override public void lcompute() {
-      NewChunk nchks[] = RemoteExec._results.remove(_envkey);
-      if( nchks != null ) {
-        if( nchks.length != _avs.length )
-          throw new IllegalArgumentException("Results of ddply must return the same column count, but one group returned "+nchks.length+" columns and this group is returning "+_avs.length);
+      _hasGrps = _nlocals[H2O.SELF.index()] != 0;
+      if (_hasGrps) {
+        NewChunk nchks[] = RemoteExec._results.get(_envkey);
+        if (nchks != null) {
+          if (nchks.length != _avs.length)
+            throw new IllegalArgumentException("Results of ddply must return the same column count, but one group returned " + nchks.length + " columns and this group is returning " + _avs.length);
+          Futures fs = new Futures();
+          for (int i = 0; i < _avs.length; i++) {
+            NewChunk nc = nchks[i];
+            nc._vec = _avs[i];      // Assign a proper vector
+            nc.close(fs);           // Close & compress chunk
+          }
+          fs.blockForPending();
+        }
+        _envkey = null;           // No need to return these
+      } else {
+        NewChunk[] nchks = new NewChunk[_avs.length];
+        for (int i = 0; i < nchks.length; ++i ) nchks[i] = new NewChunk(null,H2O.SELF.index(),_numgrps);
         Futures fs = new Futures();
-        for( int i=0; i<_avs.length; i++ ) {
+        for (int i = 0; i < _avs.length; i++) {
           NewChunk nc = nchks[i];
           nc._vec = _avs[i];      // Assign a proper vector
           nc.close(fs);           // Close & compress chunk
         }
         fs.blockForPending();
       }
-      _envkey = null;           // No need to return these
       tryComplete();
     }
     @Override public void reduce( ddplyPass4 p4 ) {
-      for( int i=0; i<_avs.length; i++ )
-        _avs[i].reduce(p4._avs[i]);
+        for (int i = 0; i < _avs.length; i++)
+          _avs[i].reduce(p4._avs[i]);
     }
     // Close all the AppendableVecs & return normal Vecs.
     Vec[] close() {
@@ -565,7 +613,7 @@ class ASTddply extends ASTOp {
 
 class ASTUnique extends ASTddply {
   static final String VARS[] = new String[]{ "", "ary"};
-  ASTUnique( ) { super(VARS, new Type[]{ Type.ARY, Type.ARY }); }
+  ASTUnique( ) { super(VARS, new Type[]{Type.ARY, Type.ARY}); }
   @Override String opStr(){ return "unique";}
   @Override ASTOp make() {return new ASTUnique();}
   @Override void apply(Env env, int argcnt, ASTApply apply) {
