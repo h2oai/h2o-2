@@ -2,7 +2,7 @@ import time, os, stat, json, signal, tempfile, shutil, datetime, inspect, thread
 import requests, psutil, argparse, sys, unittest, glob
 import h2o_browse as h2b, h2o_perf, h2o_util, h2o_cmd, h2o_os_util
 import h2o_sandbox, h2o_print as h2p
-import re, webbrowser, random
+import re, random
 # used in shutil.rmtree permission hack for windows
 import errno
 # use to unencode the urls sent to h2o?
