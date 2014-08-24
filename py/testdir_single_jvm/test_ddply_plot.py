@@ -13,8 +13,7 @@ FUNC_PHRASE = "func1=function(x){max(x[,%s])}" % COL
 REPEAT = 20
 
 DO_KNOWN_FAIL = False
-DO_KNOWN_FAIL2 = False
-DO_MANY = True
+DO_APPEND_KNOWN_FAIL2 = True
 DO_REALS = False
 
 CLOUD_SIZE = 1
@@ -83,7 +82,7 @@ class Basic(unittest.TestCase):
             tryList = [
                 (1000000, 5, 'cD', 0, 320, 30), 
             ]
-        elif DO_MANY:
+        else:
             tryList = [
                 # (1000000, 5, 'cD', 0, 10, 30), 
                 # (1000000, 5, 'cD', 0, 20, 30), 
@@ -98,15 +97,13 @@ class Basic(unittest.TestCase):
                 # (1000000, 5, 'cD', 0, 640, 30), 
                 # (1000000, 5, 'cD', 0, 1280, 30), 
                 ]
-        else:
-            tryList = [
-                (1000000, 5, 'cD', 0, 320, 30), 
-                ]
 
-        if DO_KNOWN_FAIL2:
+        if DO_APPEND_KNOWN_FAIL2:
             tryList.append(
                 (1000000, 5, 'cD', 0, 160, 30), 
-                (1000000, 5, 'cD', 0, 320, 30)
+            )
+            tryList.append(
+                (1000000, 5, 'cD', 0, 320, 30), 
             )
         ### h2b.browseTheCloud()
         xList = []
