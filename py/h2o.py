@@ -849,16 +849,22 @@ def tear_down_cloud(nodeList=None, sandboxIgnoreErrors=False):
         # the api watchdog shouldn't complain about this?
         for n in nodeList:
             n.shutdown_all()
-
-        # FIX! should we wait a bit for a clean shutdown, before we process kill? It can take more than 1 sec though.
+    except:
+        pass
+    # ah subtle. we might get excepts in issuing the shutdown, don't abort out
+    # of trying the process kills if we get any shutdown exception (remember we go to all nodes)
+    # so we might? nodes are shutting down?
+    # FIX! should we wait a bit for a clean shutdown, before we process kill? It can take more than 1 sec though.
+    try:
         time.sleep(2)
         for n in nodeList:
             n.terminate()
             verboseprint("tear_down_cloud n:", n)
+    except:
+        pass
 
-    finally:
-        check_sandbox_for_errors(sandboxIgnoreErrors=sandboxIgnoreErrors, python_test_name=python_test_name)
-        nodeList[:] = []
+    check_sandbox_for_errors(sandboxIgnoreErrors=sandboxIgnoreErrors, python_test_name=python_test_name)
+    nodeList[:] = []
 
 # don't need any more?
 # Used before to make sure cloud didn't go away between unittest defs
