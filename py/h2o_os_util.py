@@ -33,7 +33,8 @@ def check_port_group(base_port):
         # if username=='jenkins' or username=='kevin' or username=='michal':
         if username=='jenkins' or username=='kevin':
             # assumes you want to know about 3 ports starting at base_port
-            command1Split = ['netstat', '-anp']
+            # can't use p, not root
+            command1Split = ['netstat', '-an']
             command2Split = ['egrep']
             # colon so only match ports. space at end? so no submatches
             command2Split.append("(%s | %s)" % (base_port, base_port+1) )
