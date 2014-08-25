@@ -1137,7 +1137,7 @@ class H2O(object):
         ))
         return a
 
-    def h2o_log_msg(self, message=None):
+    def h2o_log_msg(self, message=None, timeoutSecs=15):
         if 1 == 0:
             return
         if not message:
@@ -1146,7 +1146,7 @@ class H2O(object):
             message += "\npython_test_name: " + python_test_name
             message += "\n#***********************"
         params = {'message': message}
-        self.__do_json_request('2/LogAndEcho', params=params)
+        self.__do_json_request('2/LogAndEcho', params=params, timeout=timeoutSecs)
 
     def get_timeline(self):
         return self.__do_json_request('Timeline.json')
