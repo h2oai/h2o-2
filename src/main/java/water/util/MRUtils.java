@@ -196,18 +196,25 @@ public class MRUtils {
       }
       assert(sampling_ratios.length == dist.length);
       for (int i=0; i<dist.length;++i) {
-        sampling_ratios[i] = ((float)fr.numRows() / label.domain().length) / dist[i]; // prior^-1 / num_classes
+        if (dist[i] == 0) {
+          Log.warn("No rows of class " + label.domain()[i] + " found.");
+        }
+        sampling_ratios[i] = dist[i] == 0 ? 1 // don't sample if there's no rows of a certain class (avoid division by 0)
+                : ((float)fr.numRows() / label.domain().length) / dist[i]; // prior^-1 / num_classes
+        assert(sampling_ratios[i] >= 0);
       }
       final float inv_scale = Utils.minValue(sampling_ratios); //majority class has lowest required oversampling factor to achieve balance
       if (!Float.isNaN(inv_scale) && !Float.isInfinite(inv_scale))
         Utils.div(sampling_ratios, inv_scale); //want sampling_ratio 1.0 for majority class (no downsampling)
     }
+    for (float s : sampling_ratios) assert(!Float.isNaN(s) && !Float.isInfinite(s));
 
     if (!allowOversampling) {
       for (int i=0; i<sampling_ratios.length; ++i) {
         sampling_ratios[i] = Math.min(1.0f, sampling_ratios[i]);
       }
     }
+    for (float s : sampling_ratios) assert(!Float.isNaN(s) && !Float.isInfinite(s));
 
     // given these sampling ratios, and the original class distribution, this is the expected number of resulting rows
     float numrows = 0;
@@ -219,15 +226,20 @@ public class MRUtils {
     Log.info("Stratified sampling to a total of " + String.format("%,d", actualnumrows) + " rows.");
 
     if (actualnumrows != numrows) {
+      assert(numrows > 0);
       Utils.mult(sampling_ratios, (float)actualnumrows/numrows); //adjust the sampling_ratios by the global rescaling factor
       if (verbose)
         Log.info("Downsampling majority class by " + (float)actualnumrows/numrows
                 + " to limit number of rows to " + String.format("%,d", maxrows));
     }
-    Log.info("Majority class (" + label.domain()[Utils.minIndex(sampling_ratios)].toString()
-            + ") sampling ratio: " + Utils.minValue(sampling_ratios));
-    Log.info("Minority class (" + label.domain()[Utils.maxIndex(sampling_ratios)].toString()
-            + ") sampling ratio: " + Utils.maxValue(sampling_ratios));
+    if (Utils.minIndex(sampling_ratios) == Utils.maxIndex(sampling_ratios)) {
+      Log.info("All classes are sampled with sampling ratio: " + Utils.minValue(sampling_ratios));
+    } else {
+      Log.info("Majority class (" + label.domain()[Utils.minIndex(sampling_ratios)].toString()
+              + ") sampling ratio: " + Utils.minValue(sampling_ratios));
+      Log.info("Minority class (" + label.domain()[Utils.maxIndex(sampling_ratios)].toString()
+              + ") sampling ratio: " + Utils.maxValue(sampling_ratios));
+    }
 
     return sampleFrameStratified(fr, label, sampling_ratios, seed, verbose);
   }
@@ -251,6 +263,7 @@ public class MRUtils {
     if (fr == null) return null;
     assert(label.isEnum());
     assert(sampling_ratios != null && sampling_ratios.length == label.domain().length);
+    for (float s : sampling_ratios) assert(!Float.isNaN(s));
     final int labelidx = fr.find(label); //which column is the label?
     assert(labelidx >= 0);
 
@@ -279,12 +292,14 @@ public class MRUtils {
         }
       }
     }.doAll(fr.numCols(), fr).outputFrame(fr.names(), fr.domains());
+    assert(r.numCols() == fr.numCols());
 
     // Confirm the validity of the distribution
     long[] dist = new ClassDist(r.vecs()[labelidx]).doAll(r.vecs()[labelidx]).dist();
 
     // if there are no training labels in the test set, then there is no point in sampling the test set
-    if (dist == null) return fr;
+    if (dist == null)
+      return fr;
 
     if (debug) {
       long sumdist = Utils.sum(dist);
