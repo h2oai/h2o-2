@@ -1003,8 +1003,7 @@ public class DeepLearning extends Job.ValidatedJob {
         model.setModelClassDistribution(new MRUtils.ClassDist(train.lastVec()).doAll(train.lastVec()).rel_dist());
       }
       model.training_rows = train.numRows();
-      trainScoreFrame = sampleFrame(train, mp.score_training_samples, mp.seed); //training scoring dataset is always sampled uniformly from the training dataset
-      if (train != trainScoreFrame) ltrash(trainScoreFrame);
+      trainScoreFrame = updateFrame(train, sampleFrame(train, mp.score_training_samples, mp.seed)); //training scoring dataset is always sampled uniformly from the training dataset
 
       if (!quiet_mode) Log.info("Number of chunks of the training data: " + train.anyVec().nChunks());
       if (validation != null) {
