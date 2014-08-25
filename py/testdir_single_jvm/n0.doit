@@ -25,7 +25,8 @@ if [[ "$H2O_SANDBOX_NAME" == '' ]]; then
 else
    SANDBOX=$H2O_SANDBOX_NAME
 fi
-echo $SANDBOX
+
+# echo $SANDBOX
 
 # only do the artifacts if you're jenkins
 if [[ $USER != 'jenkins' ]]; then
@@ -39,8 +40,8 @@ ARCHIVE+="_"
 ARCHIVE+=$TEST
 
 # remove the target copy directory if it exists
-echo $1
-echo $ARCHIVE
+# echo $1
+# echo $ARCHIVE
 rm -f -r $ARCHIVE
 mkdir $ARCHIVE
 
