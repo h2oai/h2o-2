@@ -842,6 +842,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
             final Frame validPredict = score(ftest, adaptCM);
             final Frame hitratio_validPredict = new Frame(validPredict);
+            Vec orig_label = validPredict.vecs()[0];
             // Adapt output response domain, in case validation domain is different from training domain
             // Note: doesn't change predictions, just the *possible* label domain
             if (adaptCM) {
@@ -860,6 +861,8 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
             if (trainAUC != null) err.validAUC = validAUC.data();
             else err.valid_mse = validErr;
             validPredict.delete();
+            //also delete the replaced label
+            if (adaptCM) orig_label.remove(new Futures()).blockForPending();
           }
 
           if (get_params().variable_importances) {
@@ -939,8 +942,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
         }
       }
       if (model_info().unstable()) {
-        Log.err("Canceling job since the model is unstable (exponential growth observed).");
-        Log.err("Try a bounded activation function or regularization with L1, L2 or max_w2 and/or use a smaller learning rate or faster annealing.");
+        Log.warn(unstable_msg);
         keep_running = false;
       } else if ( (isClassifier() && last_scored().train_err <= get_params().classification_stop)
               || (!isClassifier() && last_scored().train_mse <= get_params().regression_stop) ) {
@@ -1041,6 +1043,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
    */
   @Override public float[] score0(double[] data, float[] preds) {
     if (model_info().unstable()) {
+      Log.warn(unstable_msg);
       throw new UnsupportedOperationException("Trying to predict with an unstable model.");
     }
     Neurons[] neurons = DeepLearningTask.makeNeuronsForTesting(model_info);
@@ -1119,6 +1122,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   private double score_autoencoder(double[] data, float[] preds, Neurons[] neurons) {
     assert(model_info().get_params().autoencoder);
     if (model_info().unstable()) {
+      Log.warn(unstable_msg);
       throw new UnsupportedOperationException("Trying to predict with an unstable model.");
     }
     ((Neurons.Input)neurons[0]).setInput(-1, data); // expands categoricals inside
@@ -1203,10 +1207,8 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     DocGen.HTML.paragraph(sb, "Number of model parameters (weights/biases): " + String.format("%,d", model_info().size()));
 
     if (model_info.unstable()) {
-      final String msg = "Job was aborted due to observed numerical instability (exponential growth)."
-              + " Try a bounded activation function or regularization with L1, L2 or max_w2 and/or use a smaller learning rate or faster annealing.";
       DocGen.HTML.section(sb, "=======================================================================================");
-      DocGen.HTML.section(sb, msg);
+      DocGen.HTML.section(sb, unstable_msg.replace("\n"," "));
       DocGen.HTML.section(sb, "=======================================================================================");
     }
 
@@ -1818,5 +1820,10 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
       }
     }
   }
+
+  private final String unstable_msg = "Job was aborted due to observed numerical instability (exponential growth)."
+          + "\nTry a different initial distribution, a bounded activation function or adding"
+          + "\nregularization with L1, L2 or max_w2 and/or use a smaller learning rate or faster annealing.";
+
 }
 
