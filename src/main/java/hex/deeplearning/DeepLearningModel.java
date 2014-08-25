@@ -842,6 +842,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
             final Frame validPredict = score(ftest, adaptCM);
             final Frame hitratio_validPredict = new Frame(validPredict);
+            Vec orig_label = validPredict.vecs()[0];
             // Adapt output response domain, in case validation domain is different from training domain
             // Note: doesn't change predictions, just the *possible* label domain
             if (adaptCM) {
@@ -860,6 +861,8 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
             if (trainAUC != null) err.validAUC = validAUC.data();
             else err.valid_mse = validErr;
             validPredict.delete();
+            //also delete the replaced label
+            if (adaptCM) orig_label.remove(new Futures()).blockForPending();
           }
 
           if (get_params().variable_importances) {
