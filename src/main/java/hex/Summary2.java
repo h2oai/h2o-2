@@ -180,7 +180,6 @@ public class Summary2 extends Iced {
         _basicStats[c].add(other._basicStats[c]);
     }
     public PrePass finishUp() {
-      if(_basicStats == null) return this;
       for (BasicStat stat : _basicStats) stat.finishUp();
       return this;
     }
