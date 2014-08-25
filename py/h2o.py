@@ -3030,6 +3030,7 @@ class LocalH2O(H2O):
 
         waitingForKill = False
         try:
+            # we already sent h2o shutdown and waited a second. Don't bother checking if alive still.
             # send terminate...wait up to 3 secs, then send kill
             self.ps.terminate()
             gone, alive = wait_procs(procs=[self.ps], timeout=3, callback=on_terminate)
