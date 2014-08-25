@@ -80,7 +80,7 @@ class Basic(unittest.TestCase):
         ]
 
 
-        timeoutSecs = 10
+        timeoutSecs = 15
         trial = 1
         n = h2o.nodes[0]
         lenNodes = len(h2o.nodes)
