@@ -298,8 +298,10 @@ public class MRUtils {
     long[] dist = new ClassDist(r.vecs()[labelidx]).doAll(r.vecs()[labelidx]).dist();
 
     // if there are no training labels in the test set, then there is no point in sampling the test set
-    if (dist == null)
+    if (dist == null) {
+      r.delete();
       return fr;
+    }
 
     if (debug) {
       long sumdist = Utils.sum(dist);
