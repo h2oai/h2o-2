@@ -4,7 +4,7 @@ source('../findNSourceUtils.R')
 test.pub_474_ddply_should_return_void_for_void_functions <- function(localH2O) {
 
 covtype.hex <- h2o.importFile(localH2O, normalizePath(locate("smalldata/covtype/covtype.20k.data")), "cov")
-covtype.local = as.data.frame(covtype.hex)
+covtype.local <- as.data.frame(covtype.hex)
 
 # Are we in the right universe?
 expect_equal(20000, dim(covtype.hex)[1])
@@ -18,7 +18,7 @@ expect_equal(0, dim(d)[2])
 
 # currently fails:
 h2o.addFunction(object = localH2O, fun = zzz, name = "zzz" )
-d = as.data.frame(h2o.ddply(covtype.hex, c(1), zzz))
+d <- head(h2o.ddply(covtype.hex, c(1), function(x) {}))
 expect_equal(0, dim(d)[1])
 expect_equal(0, dim(d)[2])
 

@@ -46,7 +46,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_rf_covtype_fvec(self):
+    def test_speedrf_covtype_fvec(self):
         h2o.beta_features = True  # fvec
         importFolderPath = "standard"
 
