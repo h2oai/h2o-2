@@ -238,12 +238,6 @@ public class DeepLearningProstateTest extends TestUtil {
                                           error = aucd.err();
                                           Log.info(sb);
 
-                                          // test AUC computation in more detail
-//                                          Assert.assertTrue(aucd.AUC > 0.5);
-//                                          Assert.assertTrue(aucd.AUC < 0.95);
-//                                          Assert.assertTrue(aucd.threshold() > 0.1);
-//                                          Assert.assertTrue(aucd.threshold() < 0.7);
-
                                           // check that auc.cm() is the right CM
                                           Assert.assertEquals(new ConfusionMatrix(aucd.cm()).err(), error, 1e-15);
 
@@ -374,7 +368,12 @@ public class DeepLearningProstateTest extends TestUtil {
     public void run() throws Exception { runFraction(1f); }
   }
 
+  public static class Mid extends DeepLearningProstateTest {
+    @Test
+    public void run() throws Exception { runFraction(0.01f); } //for nightly tests
+  }
+
   public static class Short extends DeepLearningProstateTest {
-    @Test public void run() throws Exception { runFraction(0.003f); }
+    @Test public void run() throws Exception { runFraction(0.001f); }
   }
 }
