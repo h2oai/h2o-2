@@ -76,7 +76,7 @@ class Basic(unittest.TestCase):
 
         #### Now score using the model, and check the validation error
         expectedErr = 0.046
-        relTol = 0.2
+        relTol = 0.35 # allow 35% tolerance. kbn
         predict_key = 'Predict.hex'
 
         kwargs = {
