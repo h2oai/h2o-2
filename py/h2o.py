@@ -3025,16 +3025,23 @@ class LocalH2O(H2O):
         return self.wait(0) is None
 
     def terminate_self_only(self):
+        def on_terminate(proc):
+            print("process {} terminated".format(proc))
+
         waitingForKill = False
         try:
-            if self.is_alive(): self.ps.kill()
-            if self.is_alive(): self.ps.terminate()
+            # send terminate...wait up to 3 secs, then send kill
+            self.ps.terminate()
+            gone, alive = wait_procs(procs=[self.ps], timeout=3, callback=on_terminate)
+            if alive:
+                self.ps.kill()
             # from http://code.google.com/p/psutil/wiki/Documentation: wait(timeout=None) Wait for process termination 
             # If the process is already terminated does not raise NoSuchProcess exception but just return None immediately. 
             # If timeout is specified and process is still alive raises TimeoutExpired exception. 
             # hmm. maybe we're hitting the timeout
             waitingForKill = True
-            return self.wait(2) # was 0.5. increase to 2
+            return self.wait(timeout=3)
+
         except psutil.NoSuchProcess:
             return -1
         except:
@@ -3048,10 +3055,10 @@ class LocalH2O(H2O):
             # hack. 
             # psutil 2.x needs function reference
             # psutil 1.x needs object reference
-            if hasattr(p.cmdline, '__call__'):
-                pcmdline = p.cmdline()
+            if hasattr(self.ps.cmdline, '__call__'):
+                pcmdline = self.ps.cmdline()
             else:
-                pcmdline = p.cmdline
+                pcmdline = self.ps.cmdline
             print "process cmdline:", pcmdline
             return -1
 
