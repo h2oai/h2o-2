@@ -64,10 +64,12 @@ public class DeepLearningProstateTest extends TestUtil {
                   }) {
                     for (int scoretraining : new int[]{
                             200,
+                            20,
                             0,
                     }) {
                       for (int scorevalidation : new int[]{
                               200,
+                              20,
                               0,
                       }) {
                         for (int vf : new int[]{
@@ -76,7 +78,7 @@ public class DeepLearningProstateTest extends TestUtil {
                                 -1, //different validation frame
                         }) {
                           for (int n_folds : new int[]{
-//                                  0,
+                                  0,
                                   2,
                           }) {
                             if (n_folds != 0 && vf != 0) continue;
@@ -153,14 +155,11 @@ public class DeepLearningProstateTest extends TestUtil {
                                           DeepLearningModel cv_model = UKV.get(k);
                                           StringBuilder sb = new StringBuilder();
                                           cv_model.generateHTML("cv", sb);
-                                        }
-                                        // remove just the x-val models now to avoid memory leak
-                                        if (model1!=null) {
-                                          model1.delete_xval_models();
+                                          cv_model.delete_best_model();
+                                          cv_model.delete();
                                         }
                                       }
                                     }
-                                    Key best1 = model1.actual_best_model_key;
 
                                     // Do some more training via checkpoint restart
                                     // For n_folds, continue without n_folds (not yet implemented) - from now on, model2 will have n_folds=0...
@@ -327,7 +326,6 @@ public class DeepLearningProstateTest extends TestUtil {
                                       } finally {
                                         if (pred != null) pred.delete();
                                         if (pred2 != null) pred2.delete();
-                                        if (best1 != null) DKV.remove(best1);
                                       }
                                     } //classifier
                                     Log.info("Parameters combination " + count + ": PASS");
@@ -346,8 +344,6 @@ public class DeepLearningProstateTest extends TestUtil {
                                       model2.delete_best_model();
                                       model2.delete();
                                     }
-                                    if (dest != null) UKV.remove(dest);
-                                    if (dest_tmp != null) UKV.remove(dest_tmp);
                                   }
                                 }
                               }
@@ -379,6 +375,6 @@ public class DeepLearningProstateTest extends TestUtil {
   }
 
   public static class Short extends DeepLearningProstateTest {
-    @Test public void run() throws Exception { runFraction(0.001f); }
+    @Test public void run() throws Exception { runFraction(0.003f); }
   }
 }
