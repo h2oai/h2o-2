@@ -35,9 +35,9 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(node_count=1, base_port=54321)
+            h2o.build_cloud()
         else:
-            h2o_hosts.build_cloud_with_hosts(node_count=1)
+            h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
     def tearDownClass(cls):
