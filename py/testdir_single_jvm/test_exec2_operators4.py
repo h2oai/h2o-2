@@ -221,7 +221,7 @@ class Basic(unittest.TestCase):
         parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='put', hex_key=hexKey)
 
         for resultKey, execExpr in initList:
-            h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=resultKey, timeoutSecs=4)
+            h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=resultKey, timeoutSecs=10)
         start = time.time()
         h2e.exec_expr_list_rand(len(h2o.nodes), exprList, None, maxTrials=200, timeoutSecs=10)
 
@@ -234,7 +234,7 @@ class Basic(unittest.TestCase):
         for t in range(200):
             execExpr = random.choice(exprList)
             bigExecExpr += execExpr + ";"
-            h2e.exec_expr(h2o.nodes[0], bigExecExpr, resultKey=None, timeoutSecs=4)
+            h2e.exec_expr(h2o.nodes[0], bigExecExpr, resultKey=None, timeoutSecs=10)
             expCnt += 1
             # limit to 2 expressions. 
             # Also: functions must be solitary

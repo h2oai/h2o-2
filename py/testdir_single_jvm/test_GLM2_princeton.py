@@ -26,10 +26,10 @@ class Basic(unittest.TestCase):
         # filename, y, timeoutSecs
         # these are all counts? using gaussian?
         csvFilenameList = [
-            ('cuse.dat', 'gaussian', 3, 5), # notUsing
-            ('cuse.dat', 'gaussian', 4, 5), # using
-            ('copen.dat', 'gaussian', 4, 5),
-            ('housing.raw', 'gaussian', 4, 5),
+            ('cuse.dat', 'gaussian', 3, 10), # notUsing
+            ('cuse.dat', 'gaussian', 4, 10), # using
+            ('copen.dat', 'gaussian', 4, 10),
+            ('housing.raw', 'gaussian', 4, 10),
             ]
 
         trial = 0
