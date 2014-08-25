@@ -470,7 +470,6 @@ public final class Gram extends Iced {
           _tasks[r] = new FrontSolverTsk[(r*_rBlock+_rem)/ _cBlock];
           CountedCompleter cmp = this;
           if(r != 0 && _tasks[r-1].length < _tasks[r].length) {
-            System.out.println("rr = " + r + ", previous pending cnt = " + ((rr != _tasks.length)?_tasks[rr][0].getPendingCount():"N/A"));
             rr = r;
           } else if(rr != _tasks.length)
             cmp = _tasks[rr][0];
@@ -478,7 +477,6 @@ public final class Gram extends Iced {
           for(int c = 1; c < _tasks[r].length; ++c)
             _tasks[r][c] = new FrontSolverTsk(_tasks[r][(c >> 1) - ((c&1) ^ 1)],r, c);
         }
-        System.out.println("previous pending cnt = " + ((rr != _tasks.length)?_tasks[rr][0].getPendingCount():"N/A"));
         // compute the first (diagonal) block (minimal size of iBlock*iBlock)
         for( int k = _diag.length; k < _rem; ++k ) {
           double d = 0;
@@ -489,6 +487,7 @@ public final class Gram extends Iced {
         // fork the first column
         for(int i = 0; i < _tasks.length; ++i)
            _tasks[i][0].fork();
+        tryComplete();
       }
       @Override public void onCompletion(CountedCompleter caller){
         _tasks = null;
@@ -535,19 +534,13 @@ public final class Gram extends Iced {
             for (int kOff = 0; kOff < _rBlock; ++kOff) {
               double d = _d[kOff];
               int k = kStart + kOff + _diag.length;
-              try {
-                for (int i = _col * _cBlock; i < k; i++)
-                  d += y[i] * _xx[k - _diag.length][i];
-                y[k] = (y[k] - d) / _xx[k - _diag.length][k];
-              } catch(Throwable t){
-                t.printStackTrace();
-              }
+              for (int i = _col * _cBlock; i < k; i++)
+                d += y[i] * _xx[k - _diag.length][i];
+              y[k] = (y[k] - d) / _xx[k - _diag.length][k];
             }
-            System.out.println("row " + _row + " done. rem = " + kStart % _cBlock);
             int c = kStart/ _cBlock;
             _tasks[_row] = null;
             if((_cBlock - kStart% _cBlock) <= _rBlock) {
-              System.out.println("forking col " + c + " from " + _row + " down.");
               // fork all tasks in the column below
               for (int r = _tasks.length - 1; r > _row; --r)
                 _tasks[r][c].fork();
