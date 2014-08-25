@@ -7,13 +7,10 @@ import hex.glm.LSMSolver.ADMMSolver.NonSPDMatrixException;
 import jsr166y.CountedCompleter;
 import jsr166y.ForkJoinTask;
 import jsr166y.RecursiveAction;
-import sun.misc.Unsafe;
 import water.*;
-import water.nbhm.UtilUnsafe;
 import water.util.Utils;
 
 import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicIntegerArray;
 
 public final class Gram extends Iced {
   final boolean _hasIntercept;
@@ -335,34 +332,35 @@ public final class Gram extends Iced {
 
     public Cholesky(Gram gram) {
       _xx = gram._xx.clone();
-      for( int i = 0; i < _xx.length; ++i )
+      for (int i = 0; i < _xx.length; ++i)
         _xx[i] = gram._xx[i].clone();
       _diag = gram._diag.clone();
 
     }
 
     public double[][] getXX() {
-      final int N = _xx.length+_diag.length;
+      final int N = _xx.length + _diag.length;
       double[][] xx = new double[N][];
-      for( int i = 0; i < N; ++i )
+      for (int i = 0; i < N; ++i)
         xx[i] = MemoryManager.malloc8d(N);
-      for( int i = 0; i < _diag.length; ++i )
+      for (int i = 0; i < _diag.length; ++i)
         xx[i][i] = _diag[i];
-      for( int i = 0; i < _xx.length; ++i ) {
-        for( int j = 0; j < _xx[i].length; ++j ) {
+      for (int i = 0; i < _xx.length; ++i) {
+        for (int j = 0; j < _xx[i].length; ++j) {
           xx[i + _diag.length][j] = _xx[i][j];
           xx[j][i + _diag.length] = _xx[i][j];
         }
       }
       return xx;
     }
-    public double sparseness(){
-      double [][] xx = getXX();
+
+    public double sparseness() {
+      double[][] xx = getXX();
       double nzs = 0;
-      for(int i = 0; i < xx.length; ++i)
-        for(int j = 0; j < xx[i].length; ++j)
-          if(xx[i][j] != 0) nzs += 1;
-      return nzs/(xx.length*xx.length);
+      for (int i = 0; i < xx.length; ++i)
+        for (int j = 0; j < xx[i].length; ++j)
+          if (xx[i][j] != 0) nzs += 1;
+      return nzs / (xx.length * xx.length);
     }
 
     @Override
@@ -370,54 +368,28 @@ public final class Gram extends Iced {
       return "";
     }
 
-
-
-    public static abstract class DelayedTask  extends RecursiveAction {
-      private static final Unsafe U;
-      private static final long PENDING;
-      private int _pending;
-
-      static {
-        try {
-          U = UtilUnsafe.getUnsafe();;
-          PENDING = U.objectFieldOffset
-            (CountedCompleter.class.getDeclaredField("pending"));
-        } catch (Exception e) {
-          throw new Error(e);
-        }
-      }
-
-      public DelayedTask(int pending){ _pending = pending;}
-
-      public final void tryFork(){
-        int c = _pending;
-        while(c != 0 && !U.compareAndSwapInt(this,PENDING,c,c-1))
-          c = _pending;
-//        System.out.println(" tryFork of " + this + ". c = " + c);
-        if(c == 0) fork();
-      }
-    }
-
     private final class BackSolver2 extends CountedCompleter {
-//      private final AtomicIntegerArray _rowPtrs;
+      //      private final AtomicIntegerArray _rowPtrs;
 //      private final int [] _rowPtrs;
-      final BackSolver2 [] _tasks;
+      final BackSolver2[] _tasks;
       volatile private int _endPtr;
-      final double [] _y;
+      final double[] _y;
       final int _row;
       private final int _blocksz;
       private final int _rblocksz;
       private final CountedCompleter _cmp;
-      public BackSolver2(CountedCompleter cmp, double [] y, int blocksz, int rBlock){
-        this(cmp,y.length-1,y,new BackSolver2[(y.length-_diag.length)/rBlock],blocksz,rBlock,(y.length-_diag.length)/rBlock-1);
-        _cmp.addToPendingCount(_tasks.length-1);
+
+      public BackSolver2(CountedCompleter cmp, double[] y, int blocksz, int rBlock) {
+        this(cmp, y.length - 1, y, new BackSolver2[(y.length - _diag.length) / rBlock], blocksz, rBlock, (y.length - _diag.length) / rBlock - 1);
+        _cmp.addToPendingCount(_tasks.length - 1);
         int row = _diag.length + (y.length - _diag.length) % _rblocksz + _rblocksz - 1;
-        for(int i = 0; i < _tasks.length-1; ++i, row += _rblocksz)
-          _tasks[i] = new BackSolver2(_cmp, row, _y, _tasks, _blocksz,rBlock,i);
-        assert row == y.length-1;
-        _tasks[_tasks.length-1] = this;
+        for (int i = 0; i < _tasks.length - 1; ++i, row += _rblocksz)
+          _tasks[i] = new BackSolver2(_cmp, row, _y, _tasks, _blocksz, rBlock, i);
+        assert row == y.length - 1;
+        _tasks[_tasks.length - 1] = this;
       }
-      public BackSolver2(CountedCompleter cmp,int row,double [] y, BackSolver2 [] tsks, int iBlock, int rBlock, int tid){
+
+      public BackSolver2(CountedCompleter cmp, int row, double[] y, BackSolver2[] tsks, int iBlock, int rBlock, int tid) {
         super(cmp);
         _cmp = cmp;
         _row = row;
@@ -425,183 +397,162 @@ public final class Gram extends Iced {
         _tasks = tsks;
         _blocksz = iBlock;
         _rblocksz = rBlock;
-        _endPtr = _row+1;
-        _tid =tid;
+        _endPtr = _row + 1;
+        _tid = tid;
       }
+
       final int _tid;
+
       @Override
       public void compute() {
         int rEnd = _row - _rblocksz;
-        if(rEnd < _diag.length + _rblocksz)
+        if (rEnd < _diag.length + _rblocksz)
           rEnd = _diag.length;
-        int bStart = Math.max(0,rEnd - rEnd % _blocksz);
-        assert _tid == _tasks.length-1 || bStart >= _tasks[_tid+1]._endPtr;
-        for(int i = 0; i < _rblocksz; ++i) {
-          final double [] x = _xx[_row-_diag.length-i];
+        int bStart = Math.max(0, rEnd - rEnd % _blocksz);
+        assert _tid == _tasks.length - 1 || bStart >= _tasks[_tid + 1]._endPtr;
+        for (int i = 0; i < _rblocksz; ++i) {
+          final double[] x = _xx[_row - _diag.length - i];
           final double yr = _y[_row - i] /= x[_row - i];
-          for(int j = bStart; j < (_row-i); ++j)
+          for (int j = bStart; j < (_row - i); ++j)
             _y[j] -= yr * x[j];
         }
         boolean first = true;
-        for(; bStart >= _blocksz; bStart -= _blocksz){
+        for (; bStart >= _blocksz; bStart -= _blocksz) {
           final int bEnd = bStart - _blocksz;
-          if(_tid != _tasks.length-1)
-            while(_tasks[_tid+1]._endPtr > bEnd)
+          if (_tid != _tasks.length - 1)
+            while (_tasks[_tid + 1]._endPtr > bEnd)
               Thread.yield(); // synchronization :/
-          for(int r = _row; r >= rEnd; --r){
-            final double [] x = _xx[r-_diag.length];
+          for (int r = _row; r >= rEnd; --r) {
+            final double[] x = _xx[r - _diag.length];
             final double yr = _y[r];
-            for(int i = bStart-1; i >= bEnd; --i)
+            for (int i = bStart - 1; i >= bEnd; --i)
               _y[i] -= _y[r] * x[i];
           }
           _endPtr = bEnd;
-          if (first && _tid > 0 && (bEnd <= _row - 2*_rblocksz - _blocksz)) { // first go -> launch next row
+          if (first && _tid > 0 && (bEnd <= _row - 2 * _rblocksz - _blocksz)) { // first go -> launch next row
             _tasks[_tid - 1].fork();
             first = false;
           }
         }
-        assert  bStart == 0;
+        assert bStart == 0;
         tryComplete();
       }
-      @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter cc){
+
+      @Override
+      public boolean onExceptionalCompletion(Throwable ex, CountedCompleter cc) {
         return true;
       }
     }
-    private final class BackSolver extends CountedCompleter {
-      final int _diagLen;
-      final double[] _y;
 
-      final DelayedTask [][] _tasks;
-
-      BackSolver(double [] y, int kBlocksz, int iBlocksz){
-        final int n = y.length;
-        _y = y;
-        int kRem = _xx.length % kBlocksz;
-
-        int M = _xx.length/kBlocksz + (kRem == 0?0:1);;
-        int N = n / iBlocksz; // iRem is added to the diagonal block
-        _tasks = new DelayedTask[M][];
-        int rsz = N;
-        for(int i = M-1; i >= 0; --i)
-          _tasks[i] = new DelayedTask[rsz--];
-        _diagLen = _diag == null?0:_diag.length;
-
-        // Solve L'*X = Y;
-        int kFrom = _diagLen + _xx.length-1;
-        int kTo = _diagLen + _xx.length;
-        int iFrom = n;
-        int pending = 0;
-        int rem = 0;
-
-        if(kRem > 0){
-          rem = 1;
-          int k = _tasks.length-1;
-          int i = _tasks[k].length-1;
-          iFrom = i*iBlocksz;
-          kTo = kFrom - kRem + 1;
-          _tasks[k][i] = new BackSolveDiagTsk(0,k,kFrom,kTo,iFrom);
-          for(int j = 0; j < _tasks[k].length-1; ++j)
-            _tasks[k][j] = new BackSolveInnerTsk(pending,M-1,j,kFrom,kTo, j*iBlocksz,(j+1)*iBlocksz);
-          pending = 1;
-        }
-        for( int k = _tasks.length-1-rem; k >= 0; --k) {
-          kFrom = kTo -1;
-          kTo -= kBlocksz;
-          int ii = _tasks[k].length-1;
-          iFrom = ii*iBlocksz;
-          _tasks[k][_tasks[k].length-1] = new BackSolveDiagTsk(0,k,kFrom,kTo,iFrom);
-          for(int i = 0; i < _tasks[k].length-1; ++i)
-            _tasks[k][i] = new BackSolveInnerTsk(pending,k,i,i+iBlocksz,kFrom,kTo, i*iBlocksz);
-          pending = 1;
-        }
-        addToPendingCount(_tasks[0].length-1);
+    public final class FrontSolver extends CountedCompleter {
+      FrontSolverTsk[][] _tasks;
+      final double[] y;
+      final int _rBlock, _cBlock, _rem; // row block size, col block sz, first block (square) size
+      public FrontSolver(CountedCompleter cmp,double[] y, int rBlock, int cBlock) {
+        super(cmp);
+        this.y = y;
+        _cBlock = cBlock;
+        _rBlock = rBlock;
+        int rem = (y.length-_diag.length) % _rBlock;
+        while(rem < _cBlock + _rBlock)
+          rem += _rBlock;
+        _rem = rem;
+        int M = (y.length-_diag.length-rem)/_rBlock;
+        _tasks = new FrontSolverTsk[M][];
       }
 
-      @Override public boolean onExceptionalCompletion(Throwable ex, CountedCompleter caller){
-        try {
-          for (ForkJoinTask[] ary : _tasks)
-            for (ForkJoinTask fjt : ary)
-              fjt.cancel(true);
-        } catch(Throwable t){}
-        return true;
-      }
       @Override
       public void compute() {
-        _tasks[_tasks.length-1][_tasks[_tasks.length-1].length-1].fork(); }
-
-      final class BackSolveDiagTsk extends DelayedTask {
-        final int _kfrom, _kto,_ifrom, _row;
-
-        public BackSolveDiagTsk(int pending, int row, int kfrom, int kto, int ifrom) {
-          super(pending);
-          _row = row;
-          _kfrom = kfrom;
-          _kto = kto;
-          _ifrom = ifrom;
+        int rr = _tasks.length;
+        for(int r = _tasks.length-1; r >= 0; --r)
+          _tasks[r] = new FrontSolverTsk[(r*_rBlock+_rem)/ _cBlock];
+        for(int r = _tasks.length-1; r >= 0; --r){
+          _tasks[r] = new FrontSolverTsk[(r*_rBlock+_rem)/ _cBlock];
+          CountedCompleter cmp = this;
+          if(r != 0 && _tasks[r-1].length < _tasks[r].length) {
+            System.out.println("rr = " + r + ", previous pending cnt = " + ((rr != _tasks.length)?_tasks[rr][0].getPendingCount():"N/A"));
+            rr = r;
+          } else if(rr != _tasks.length)
+            cmp = _tasks[rr][0];
+          _tasks[r][0] = new FrontSolverTsk(cmp,r, 0);
+          for(int c = 1; c < _tasks[r].length; ++c)
+            _tasks[r][c] = new FrontSolverTsk(_tasks[r][(c >> 1) - ((c&1) ^ 1)],r, c);
         }
-        @Override
-        protected void compute() {
-          if(BackSolver.this.isCompletedAbnormally())
-            return;
-          try {
-            // same as single threaded solve,
-            // except we do only a (lower diagonal) square block here
-            // and we (try to) launch dependents in the end
-            for (int k = _kfrom; k >= _kto; --k) {
-              _y[k] /= _xx[k - _diagLen][k];
-              for (int i = _ifrom; i < k; ++i)
-                _y[i] -= _y[k] * _xx[k - _diagLen][i];
-            }
-
-            if (_row == 0) tryComplete(); // the last row of task completes the parent
-            // try to fork the whole row to the left
-            // (tryFork will fork task t iff all of it's dependencies are done)
-            for (int i = 0; i < _tasks[_row].length - 1; ++i)
-              _tasks[_row][i].tryFork();
-          } catch(Throwable t){
-            t.printStackTrace();
-            BackSolver.this.completeExceptionally(t);
-          }
+        System.out.println("previous pending cnt = " + ((rr != _tasks.length)?_tasks[rr][0].getPendingCount():"N/A"));
+        // compute the first (diagonal) block (minimal size of iBlock*iBlock)
+        for( int k = _diag.length; k < _rem; ++k ) {
+          double d = 0;
+          for( int i = 0; i < k; i++ )
+            d += y[i] * _xx[k - _diag.length][i];
+          y[k] = (y[k]-d)/_xx[k - _diag.length][k];
         }
-        @Override public String toString(){
-          return ("DiagTsk, ifrom = " + _ifrom + ", kto = " + _kto);
-        }
+        // fork the first column
+        for(int i = 0; i < _tasks.length; ++i)
+           _tasks[i][0].fork();
       }
-      final class BackSolveInnerTsk extends DelayedTask {
-        final int _kfrom, _kto, _ifrom, _ito, _row, _col;
-        public BackSolveInnerTsk(int pending,int row, int col, int kfrom, int kto, int ifrom, int ito) {
-          super(pending);
-          _kfrom = kfrom;
-          _kto = kto;
-          _ifrom = ifrom;
-          _ito = ito;
-          _col = col;
-          _row = row;
+      @Override public void onCompletion(CountedCompleter caller){
+        _tasks = null;
+        new BackSolver2(getCompleter(),y, _cBlock,_rBlock).fork();
+      }
+
+      public final class FrontSolverTsk extends CountedCompleter {
+        final int _row, _col;
+        final double [] _d;
+
+        public FrontSolverTsk(CountedCompleter cmp, int i, int j) {
+          super(cmp);
+          cmp.addToPendingCount(1);
+          _row = i;
+          _col = j;
+          _d = new double[_rBlock];
         }
         @Override
         public void compute() {
-          if(BackSolver.this.isCompletedAbnormally())
-            return;
-          try {
-            // same as single threaded solve,
-            // except we do only a (lower diagonal) square block here
-            // and we (try to) launch dependents in the end
-            for (int k = _kfrom; k >= _kto; --k) {
-              final double yk = _y[k];
-              final double [] x = _xx[k-_diagLen];
-              for (int i = _ifrom; i < _ito; ++i)
-                _y[i] -= yk * x[i];
-            }
-            if (_row == 0) tryComplete();
-              // try to fork task directly above
-            else _tasks[_row - 1][_col].tryFork();
-          } catch(Throwable t){
-            t.printStackTrace();
-            BackSolver.this.completeExceptionally(t);
+          final int kStart = _row *_rBlock;
+          final int cStart = _col * _cBlock;
+          for(int r = 0; r < _rBlock; ++r){
+            double d = 0;
+            final double [] x = _xx[kStart + r];
+            for(int c = cStart; c < (cStart+ _cBlock); ++c)
+              d += y[c] * x[c];
+            _d[r] = d;
           }
+          tryComplete();
         }
-        @Override public String toString(){
-          return ("InnerTsk, ifrom = " + _ifrom + ", kto = " + _kto);
+        @Override
+        public void onCompletion(CountedCompleter cc){
+          final int left = _col *2 + 1;
+          final int rite = _col *2 + 2;
+          if(_tasks[_row].length > rite)
+            for(int i = 0; i < _d.length; ++i)
+              _d[i] += _tasks[_row][left]._d[i] + _tasks[_row][rite]._d[i];
+          else if(_tasks[_row].length > left)
+            for (int i = 0; i < _d.length; ++i)
+              _d[i] += _tasks[_row][left]._d[i];
+          if(_col == 0) { // root -> compute remaining xs + diagonal
+
+            final int kStart = _rem + _row *_rBlock;
+            for (int kOff = 0; kOff < _rBlock; ++kOff) {
+              double d = _d[kOff];
+              int k = kStart + kOff + _diag.length;
+              try {
+                for (int i = _col * _cBlock; i < k; i++)
+                  d += y[i] * _xx[k - _diag.length][i];
+                y[k] = (y[k] - d) / _xx[k - _diag.length][k];
+              } catch(Throwable t){
+                t.printStackTrace();
+              }
+            }
+            System.out.println("row " + _row + " done. rem = " + kStart % _cBlock);
+            int c = kStart/ _cBlock;
+            _tasks[_row] = null;
+            if((_cBlock - kStart% _cBlock) <= _rBlock) {
+              System.out.println("forking col " + c + " from " + _row + " down.");
+              // fork all tasks in the column below
+              for (int r = _tasks.length - 1; r > _row; --r)
+                _tasks[r][c].fork();
+            }
+          }
         }
       }
     }
@@ -626,27 +577,26 @@ public final class Gram extends Iced {
           y[k] /= _diag[k];
         // rest
         final int n = y.length;
-        // Solve L*Y = B;
-        for( int k = _diag.length; k < n; ++k ) {
-          double d = 0;
-          for( int i = 0; i < k; i++ )
-            d += y[i] * _xx[k - _diag.length][i];
-          y[k] = (y[k]-d)/_xx[k - _diag.length][k];
-        }
-//        System.out.println("st part done in " + (System.currentTimeMillis()-t));
-        // do the dense bit in parallel
         if(y.length >= 0) {
           addToPendingCount(1);
-          new BackSolver2(this, y, _iBlock,_rBlock).fork();
+          new FrontSolver(this,y,_rBlock,_iBlock).fork();
+          return;
         } else { // too small, solve single threaded
+          // Solve L*Y = B;
+          for( int k = _diag.length; k < n; ++k ) {
+            double d = 0;
+            for( int i = 0; i < k; i++ )
+              d += y[i] * _xx[k - _diag.length][i];
+            y[k] = (y[k]-d)/_xx[k - _diag.length][k];
+          }
           // Solve L'*X = Y;
           for( int k = n - 1; k >= _diag.length; --k ) {
             y[k] /= _xx[k - _diag.length][k];
             for( int i = 0; i < k; ++i )
               y[i] -= y[k] * _xx[k - _diag.length][i];
           }
+          tryComplete();
         }
-        tryComplete();
       }
       @Override public void onCompletion(CountedCompleter caller){
         // diagonal

@@ -701,7 +701,10 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
       final double [] newBeta = MemoryManager.malloc8d(glmt._xy.length);
       long t1 = System.currentTimeMillis();
       ADMMSolver slvr = new ADMMSolver(_currentLambda,alpha[0], _gradientEps, _addedL2);
-      slvr.solve(glmt._gram,glmt._xy,glmt._yy,newBeta,_currentLambda*alpha[0]);
+//      slvr.solve(glmt._gram,glmt._xy,glmt._yy,newBeta,_currentLambda*alpha[0]);
+      ADMMSolver.ParallelSolver pslvr = slvr.parSolver(glmt._gram, glmt._xy, newBeta, _currentLambda * alpha[0] * _rho_mul, 128, 16);
+      pslvr.invoke();
+
       if(_lineSearchStep < 1){
          if(glmt._beta != null)
            for(int i = 0; i < newBeta.length; ++i)
