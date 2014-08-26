@@ -594,7 +594,7 @@ h2o.deeplearning <- function(x, y, data, key = "",
 
 .h2o.__getDeepLearningSummary <- function(res) {
   mySum = list()
-  resP = res$parameters
+  resP = res$model_info$job
   
   mySum$model_key = resP$destination_key
   mySum$activation = resP$activation
