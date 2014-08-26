@@ -34,8 +34,6 @@ public class KMeans2RandomTest extends TestUtil {
       String dataset = datasets[i];
       Key file = NFSFileVec.make(find_test_file(dataset));
       Frame frame = ParseDataset2.parse(Key.make(), new Key[]{file});
-      Key vfile = NFSFileVec.make(find_test_file(dataset));
-      Frame vframe = ParseDataset2.parse(Key.make(), new Key[]{vfile});
 
       try {
         for (int clusters : new int[]{1, 10}) {
@@ -93,7 +91,6 @@ public class KMeans2RandomTest extends TestUtil {
         }
       } finally {
         frame.delete();
-        vframe.delete();
       }
     }
     Log.info("\n\n=============================================");
