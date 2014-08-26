@@ -1239,7 +1239,7 @@ public class DTree extends Iced {
       if (isFromSpeeDRF) {
         bodySb.i().p("// Call forest predicting class ").p(0).nl();
         bodySb.i().p("preds").p(" =").p(" Forest_").p(fidx).p("_class_").p(0).p(".predict(data, maxIters - " + fidx * maxfsize + ");").nl();
-        bodySb.i().p("preds[0]=").nl();
+//        bodySb.i().p("System.out.println(\"-----The prediction is:    \"+preds);").nl();
       }
       for( int c=0; c<nclasses(); c++ ) {
         toJavaForestBegin(bodySb, forest, c, fidx++, maxfsize);
@@ -1285,15 +1285,26 @@ public class DTree extends Iced {
         forest.i().p("// Forest representing a subset of trees scoring class ").p(c).nl();
         forest.i().p("class Forest_").p(fidx).p("_class_").p(c).p(" {").nl().ii(1);
         forest.i().p("public static ").p(PRED_TYPE).p("[] predict(double[] data, int maxIters) {").nl().ii(1);
-        forest.i().p(PRED_TYPE).p("[] pred;").nl();
-        forest.i().p("java.util.Arrays.fill(preds,0f);").nl();
+        forest.i().p(PRED_TYPE).p("[] pred = new float["+(nclasses()+1)+"];").nl();
+        forest.i().p("java.util.Arrays.fill(pred,0f);").nl();
         forest.i().p("int   iters = maxIters;").nl();
       }
     }
     private void toJavaForestEnd(SB predictBody, SB forest, int c, int fidx) {
-      forest.i().p("return pred;").nl();
-      forest.i().p("}").di(1).nl(); // end of function
-      forest.i().p("}").di(1).nl(); // end of forest classs
+      if (!isFromSpeeDRF) {
+        forest.i().p("return pred;").nl();
+        forest.i().p("}").di(1).nl(); // end of function
+        forest.i().p("}").di(1).nl(); // end of forest classs
+      } else {
+        if (c ==0) {
+          forest.i().p("float sum = 0;").nl();
+          forest.i().p("for (int i=1; i <= " + nclasses() + "; i++) {").p("sum += pred[i];").p("}").nl();
+          forest.i().p("for (int i=1; i <= " + nclasses() + "; i++) {").p("pred[i] /= sum;").p("}").nl();
+        }
+        forest.i().p("return pred;").nl();
+        forest.i().p("}").di(1).nl(); // end of function
+        forest.i().p("}").di(1).nl(); // end of forest classs
+      }
     }
 
     // Produce prediction code for one tree

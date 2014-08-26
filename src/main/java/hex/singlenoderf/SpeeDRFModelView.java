@@ -3,6 +3,7 @@ package hex.singlenoderf;
 import water.DKV;
 import water.Key;
 import water.Request2;
+import water.UKV;
 import water.api.DocGen;
 import water.api.Request;
 
@@ -36,5 +37,14 @@ public class SpeeDRFModelView extends Request2 {
   @Override protected Response serve() {
     speedrf_model = DKV.get(_modelKey).get();
     return Response.done(this);
+  }
+
+  @Override public String serveJava() {
+    SpeeDRFModel m = UKV.get(_modelKey);
+    if (m!=null) {
+      return m.transform2DTreeModel().toJava();
+    } else {
+      return "";
+    }
   }
 }

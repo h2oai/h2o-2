@@ -527,6 +527,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
   public DTree.TreeModel transform2DTreeModel() {
     Key key = Key.make();
+    Key model_key = _key;
     Key dataKey = _dataKey;
     Key testKey = null;
     String[] names = _names;
@@ -557,7 +558,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 //
 //    }
     // dummy model
-    SpeeDRFModel_DTree newModel = new SpeeDRFModel_DTree(key,dataKey,testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, mtries, num_folds, priorClassDist, classDist);
+    SpeeDRFModel_DTree newModel = new SpeeDRFModel_DTree(model_key, model_key, dataKey,testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, mtries, num_folds, priorClassDist, classDist);
     // update the model
     newModel = new SpeeDRFModel_DTree(newModel, dtreeKeys, treeStats);
     newModel.isFromSpeeDRF=true; // tells the toJava method the model is translated from a speedrf model.
@@ -567,9 +568,11 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   public static class SpeeDRFModel_DTree extends DTree.TreeModel {
     static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
     static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+    Key modelKey;
 
-    public SpeeDRFModel_DTree(Key key, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, int mtries, int num_folds, float[] priorClassDist, float[] classDist) {
+    public SpeeDRFModel_DTree(Key key, Key modelKey, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, int mtries, int num_folds, float[] priorClassDist, float[] classDist) {
       super(key,dataKey,testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, num_folds, priorClassDist, classDist);
+      this.modelKey = modelKey;
     }
 
     public SpeeDRFModel_DTree(SpeeDRFModel_DTree prior, Key[][] treeKeys, TreeStats tstats) {

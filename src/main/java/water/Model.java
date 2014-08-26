@@ -700,7 +700,7 @@ public abstract class Model extends Lockable<Model> {
     ccsb.p("  // Jam predictions into the preds[] array; preds[0] is reserved for the").nl();
     ccsb.p("  // main prediction (class for classifiers or value for regression),").nl();
     ccsb.p("  // and remaining columns hold a probability distribution for classifiers.").nl();
-    ccsb.p("  public final float[] predict( double[] data, float[] preds) { return predict( data, preds, "+toJavaDefaultMaxIters()+"); }").nl();
+    ccsb.p("  public final float[] predict( double[] data, float[] preds) { preds = predict( data, preds, "+toJavaDefaultMaxIters()+"); return preds; }").nl();
     ccsb.p("  public final float[] predict( double[] data, float[] preds, int maxIters ) {").nl();
     SB classCtxSb = new SB();
     toJavaPredictBody(ccsb.ii(1), classCtxSb, fileCtxSb); ccsb.di(1);
