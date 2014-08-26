@@ -79,6 +79,24 @@ class Basic(unittest.TestCase):
             nn = h2o_cmd.runDeepLearning(timeoutSecs=500, parseResult=parseResult, **kwargs)
             print "nn result:", h2o.dump_json(nn)
             h2o.check_sandbox_for_errors()
+
+
+            deeplearning_model = nn['deeplearning_model']
+            errors = deeplearning_model['errors']
+            # print "errors", h2o.dump_json(errors)
+            # print "errors, classification", errors['classification']
+
+            # assert 1==0
+            # unstable = nn['model_info']['unstable']
+
+            # unstable case caused by : 
+            # normal initial distribution with amplitude 1 and input_dropout_ratio=1.  
+            # blowing up numerically during propagation of all zeroes as input repeatedly.  
+            # arnon added logging to stdout in addition to html in 7899b92ad67.  
+            # Will have to check that first before making predictions.
+
+            # print "unstable:", unstable
+
             # FIX! simple check?
 
             print "Deep Learning end on ", csvPathname, 'took', time.time() - start, 'seconds'
