@@ -1203,7 +1203,6 @@ summary.H2OParsedData <- function(object, ...) {
   if(ncol(object) > .MAX_INSPECT_COL_VIEW)
     warning(object@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
   res <- .h2o.__remoteSend(object@h2o, .h2o.__PAGE_SUMMARY2, source=object@key, max_ncols=.Machine$integer.max)
-  if(is.null(res$summaries)) return(table(NA, NA))
   cols <- sapply(res$summaries, function(col) {
     if(col$stats$type != 'Enum') { # numeric column
       if(is.null(col$stats$mins) || length(col$stats$mins) == 0) col$stats$mins = NaN
