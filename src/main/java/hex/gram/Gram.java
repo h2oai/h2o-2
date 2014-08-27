@@ -507,7 +507,7 @@ public final class Gram extends Iced {
         }
         @Override
         public void compute() {
-          final int kStart = _row *_rBlock;
+          final int kStart = _rem + _row *_rBlock;
           final int cStart = _col * _cBlock;
           for(int r = 0; r < _rBlock; ++r){
             double d = 0;
@@ -529,14 +529,14 @@ public final class Gram extends Iced {
             for (int i = 0; i < _d.length; ++i)
               _d[i] += _tasks[_row][left]._d[i];
           if(_col == 0) { // root -> compute remaining xs + diagonal
-
             final int kStart = _rem + _row *_rBlock;
             for (int kOff = 0; kOff < _rBlock; ++kOff) {
               double d = _d[kOff];
-              int k = kStart + kOff + _diag.length;
-              for (int i = _col * _cBlock; i < k; i++)
-                d += y[i] * _xx[k - _diag.length][i];
-              y[k] = (y[k] - d) / _xx[k - _diag.length][k];
+              final int xk = kStart + kOff;
+              final int yk = xk + _diag.length;
+              for (int i = _tasks[_row].length * _cBlock; i < yk; i++)
+                d += y[i] * _xx[xk][i];
+              y[yk] = (y[yk] - d) / _xx[xk][yk];
             }
             int c = kStart/ _cBlock;
             _tasks[_row] = null;
