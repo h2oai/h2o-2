@@ -400,11 +400,6 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       preds = new float[numClasses + 1];
       for( int i = 0; i < treeCount(); i++ ) {
         DTree.TreeModel.CompressedTree t = UKV.get(dtreeKeys[i][0]);
-        if ((int) Tree.classify(new AutoBuffer(tree(i)), data, numClasses, false) != (int) t.score(data)) {
-          Log.info(Log.Tag.Sys.RANDF, "Shit is happening");
-          Log.info(Log.Tag.Sys.RANDF, "Which tree:" + i);
-        }
-//        assert (int) Tree.classify(new AutoBuffer(tree(i)), data, numClasses, false) == (int) t.score(data): "h2o and pojo prediction does not agree!! T^T ";
         votes[(int) Tree.classify(new AutoBuffer(tree(i)), data, numClasses, false)]++;
       }
 
