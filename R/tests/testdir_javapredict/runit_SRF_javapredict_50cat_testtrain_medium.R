@@ -4,7 +4,7 @@
 #           java correctly splits categorical predictors into non-
 #           contiguous groups at each node.
 #
-# Notes:    Assumes unix environment.
+# Notes:    Assumes unix environmen.
 #           curl, javac, java must be installed.
 #           java must be at least 1.6.
 #----------------------------------------------------------------------
