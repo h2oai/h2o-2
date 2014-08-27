@@ -33,8 +33,7 @@ EC2 Glossary
   The resource name of the IAM Instance profile to associate to the instance. This can be used instead of IAM Profile Name.
 
 **Instance Type**
-  The type of instances you want to run, refer to Amazon's EC2 Documentation
-   for information on memory usage and pricing.
+  The type of instances you want to run, refer to Amazon's EC2 Documentation for information on memory usage and pricing.
 
 **Key Name**
   The name of the key pair with which to launch instances. Pass in the path to the pem file or change the value in the launch script.

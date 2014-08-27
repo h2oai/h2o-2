@@ -20,3 +20,4 @@ Github repository :ref:`QuickstartGit`.
 
    ec2_glossary
    ec2_tutorial_cli
+   ec2_build_ami
