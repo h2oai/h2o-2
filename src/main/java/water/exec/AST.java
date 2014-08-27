@@ -140,6 +140,14 @@ class ASTApply extends AST {
         while( true ) {
           if( (args[i++] = parseCXExpr(E,false)) == null )
             E.throwErr("Missing argument",E._x);
+          if (args[i-1] instanceof ASTAssign) {
+            ASTAssign a = (ASTAssign)args[i-1];
+            if (a._lhs.argName() != null && a._lhs.argName().equals("na.rm")) {
+              ASTReducerOp op = (ASTReducerOp)args[0];
+              op._narm = (a._eval.argName().equals("T") || a._eval.argName().equals("TRUE") || a._eval.toString().equals("1.0"));
+              args[0] = op;
+            }
+          }
           if( E.peek(')') ) break;
           E.xpeek(',',E._x,null);
           if( i==args.length ) args = Arrays.copyOf(args,args.length<<1);

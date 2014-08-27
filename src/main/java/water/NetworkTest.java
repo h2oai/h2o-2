@@ -2,6 +2,7 @@ package water;
 
 import water.api.DocGen;
 import water.fvec.Vec;
+import water.util.Log;
 import water.util.Utils;
 
 import java.util.Random;
@@ -39,10 +40,12 @@ public class NetworkTest extends Func {
   public String[] nodes; //OUTPUT
 
   @Override protected void execImpl() {
+    logStart();
     microseconds = new double[msg_sizes.length][];
     microseconds_collective = new double[msg_sizes.length];
     NetworkTester nt = new NetworkTester(msg_sizes, microseconds, microseconds_collective, repeats, serial, collective);
-    nt.compute2();
+    H2O.submitTask(nt);
+    nt.join();
 
     // compute bandwidths from timing results
     bandwidths = new double[msg_sizes.length][];
@@ -64,6 +67,9 @@ public class NetworkTest extends Func {
     nodes = new String[H2O.CLOUD.size()];
     for (int i=0; i<nodes.length; ++i)
       nodes[i] = H2O.CLOUD._memary[i]._key.toString();
+    StringBuilder sb = new StringBuilder();
+    toASCII(sb);
+    Log.info(sb);
   }
 
   // Helper class to run the actual test
@@ -74,11 +80,6 @@ public class NetworkTest extends Func {
     public int repeats = 10;
     boolean serial;
     boolean collective;
-
-    @Override
-    public byte priority() {
-      return H2O.MIN_HI_PRIORITY;
-    }
 
     public NetworkTester(int[] msg, double[][] res, double[] res_collective, int rep, boolean serial, boolean collective) {
       microseconds = res;
@@ -115,9 +116,8 @@ public class NetworkTest extends Func {
   private static class PingPongTask extends DTask<PingPongTask> {
     private final byte[] _payload;
 
-    public PingPongTask(int msg_size){
-      _payload = new byte[msg_size];
-      new Random().nextBytes(_payload);
+    public PingPongTask(byte[] payload) {
+      _payload = payload;
     }
     @Override public void compute2() {
       tryComplete();
@@ -134,13 +134,15 @@ public class NetworkTest extends Func {
    * @return Time in nanoseconds that it took to send and receive the message (one per node)
    */
   private static double[] send_recv_all(int msg_size, int repeats) {
-    PingPongTask ppt = new PingPongTask(msg_size); //same payload for all nodes
+    byte[] payload = new byte[msg_size];
+    new Random().nextBytes(payload);
     final int siz = H2O.CLOUD.size();
     double[] times = new double[siz];
     for (int i = 0; i < siz; ++i) { //loop over compute nodes
       H2ONode node = H2O.CLOUD._memary[i];
       Timer t = new Timer();
       for (int l = 0; l < repeats; ++l) {
+        PingPongTask ppt = new PingPongTask(payload); //same payload for all nodes
         new RPC<PingPongTask>(node, ppt).call().get(); //blocking send
       }
       times[i] = (double) t.nanos() / repeats;
@@ -222,6 +224,42 @@ public class NetworkTest extends Func {
       }
       sb.append("</tr>");
       sb.append("</table>");
+    } catch (Throwable t) {
+      return false;
+    }
+    return true;
+  }
+
+  public boolean toASCII(StringBuilder sb) {
+    try {
+      sb.append("Origin: " + H2O.SELF._key);
+
+      sb.append("\n");
+      sb.append("Destination / Message Size\t");
+      for (int msg_size : msg_sizes) {
+        sb.append("        ").append(PrettyPrint.bytes(msg_size)).append("             ");
+      }
+
+      sb.append("\n");
+      sb.append("All (broadcast & reduce)");
+      sb.append("\t");
+      for (int m = 0; m < msg_sizes.length; ++m) {
+        sb.append("    ").append(PrettyPrint.usecs((long) microseconds_collective[m])).append(", ").
+                append(PrettyPrint.bytesPerSecond((long)bandwidths_collective[m])).append("    ");
+        sb.append("\t");
+      }
+
+      for (int n = 0; n < H2O.CLOUD._memary.length; ++n) {
+
+        sb.append("\n");
+        sb.append(H2O.CLOUD._memary[n]._key);
+        sb.append("    \t");
+        for (int m = 0; m < msg_sizes.length; ++m) {
+          sb.append("    ").append(PrettyPrint.usecs((long) microseconds[m][n])).append(", ").
+                  append(PrettyPrint.bytesPerSecond((long)bandwidths[m][n])).append("   ");
+          sb.append("\t");
+        }
+      }
     } catch (Throwable t) {
       return false;
     }

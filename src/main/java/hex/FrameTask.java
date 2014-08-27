@@ -388,20 +388,22 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
     }
 
     public DataInfo filterExpandedColumns(int [] cols){
+      if(cols == null)return this;
       int i = 0, j = 0, ignoredCnt = 0;
       //public DataInfo(Frame fr, int hasResponses, boolean useAllFactorLvls, double [] normSub, double [] normMul, double [] normRespSub, double [] normRespMul){
       int [][] catLvls = new int[_cats][];
       int [] ignoredCols = MemoryManager.malloc4(_nums + _cats);
       // first do categoricals...
-      while(i < cols.length && cols[i] < _catOffsets[_catOffsets.length-1]){
-        int [] levels = MemoryManager.malloc4(_catOffsets[j+1] - _catOffsets[j]);
-        int k = 0;
-        while(i < cols.length && cols[i] < _catOffsets[j+1])
-          levels[k++] = cols[i++]-_catOffsets[j];
-        if(k > 0)
-          catLvls[j] = Arrays.copyOf(levels, k);
-        ++j;
-      }
+      if(_catOffsets != null)
+        while(i < cols.length && cols[i] < _catOffsets[_catOffsets.length-1]){
+          int [] levels = MemoryManager.malloc4(_catOffsets[j+1] - _catOffsets[j]);
+          int k = 0;
+          while(i < cols.length && cols[i] < _catOffsets[j+1])
+            levels[k++] = cols[i++]-_catOffsets[j];
+          if(k > 0)
+            catLvls[j] = Arrays.copyOf(levels, k);
+          ++j;
+        }
       for(int k =0; k < catLvls.length; ++k)
         if(catLvls[k] == null)ignoredCols[ignoredCnt++] = k;
       if(ignoredCnt > 0){

@@ -10,9 +10,9 @@ def define_params():
         'beta_epsilon': [None, 0.0001],
         'family': [None, 'gaussian', 'binomial', 'poisson'],
         'lambda': [0,1e-8,1e-4,1e-3],
-        'alpha': [0,0.8,0.75],
+        'alpha': [0,0.2,0.4],
         'ignored_cols': [1,'C1','1,2','C1,C2'],
-        'max_iter': [None, 10],
+        'max_iter': [None, 25],
         'higher_accuracy': [None, 0, 1],
         'use_all_factor_levels': [None, 0, 1],
         'lambda_search': [None, 0], # FIX! what if lambda is set when lambda_search=1

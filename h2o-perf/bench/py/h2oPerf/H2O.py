@@ -311,7 +311,7 @@ class H2OCloudNode:
                #"-ea",
                "-jar", self.uploaded[self.h2o_jar],
                "-name", self.cloud_name,
-               "-baseport", str(self.my_base_port)]
+               "-port", str(self.my_base_port)]
 
         # Add S3N credentials to cmd if they exist.
         ec2_hdfs_config_file_name = os.path.expanduser("/home/spencer/.ec2/core-site.xml")

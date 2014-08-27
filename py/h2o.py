@@ -2,7 +2,7 @@ import time, os, stat, json, signal, tempfile, shutil, datetime, inspect, thread
 import requests, psutil, argparse, sys, unittest, glob
 import h2o_browse as h2b, h2o_perf, h2o_util, h2o_cmd, h2o_os_util
 import h2o_sandbox, h2o_print as h2p
-import re, webbrowser, random
+import re, random
 # used in shutil.rmtree permission hack for windows
 import errno
 # use to unencode the urls sent to h2o?
@@ -61,12 +61,12 @@ def sleep(secs):
     # due to left over h2o.sleep(3600)
     time.sleep(period)
 
-# The cloud is uniquely named per user (only)
-# Fine to uniquely identify the flatfile by name only also?
+# The cloud is uniquely named per user (only) and pid
+# do the flatfile the same way
 # Both are the user that runs the test. The config might have a different username on the
 # remote machine (0xdiag, say, or hduser)
 def flatfile_name():
-    return ('pytest_flatfile-%s' % getpass.getuser())
+    return ('pytest_flatfile-%s-%s' % (getpass.getuser(), os.getpid()))
 
 # only usable after you've built a cloud (junit, watch out)
 def cloud_name():
@@ -849,16 +849,22 @@ def tear_down_cloud(nodeList=None, sandboxIgnoreErrors=False):
         # the api watchdog shouldn't complain about this?
         for n in nodeList:
             n.shutdown_all()
-
-        # FIX! should we wait a bit for a clean shutdown, before we process kill? It can take more than 1 sec though.
+    except:
+        pass
+    # ah subtle. we might get excepts in issuing the shutdown, don't abort out
+    # of trying the process kills if we get any shutdown exception (remember we go to all nodes)
+    # so we might? nodes are shutting down?
+    # FIX! should we wait a bit for a clean shutdown, before we process kill? It can take more than 1 sec though.
+    try:
         time.sleep(2)
         for n in nodeList:
             n.terminate()
             verboseprint("tear_down_cloud n:", n)
+    except:
+        pass
 
-    finally:
-        check_sandbox_for_errors(sandboxIgnoreErrors=sandboxIgnoreErrors, python_test_name=python_test_name)
-        nodeList[:] = []
+    check_sandbox_for_errors(sandboxIgnoreErrors=sandboxIgnoreErrors, python_test_name=python_test_name)
+    nodeList[:] = []
 
 # don't need any more?
 # Used before to make sure cloud didn't go away between unittest defs
@@ -944,6 +950,8 @@ def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25, noE
                 "\n" +
                 "\nUPDATE: building cloud size of 2 with 127.0.0.1 may temporarily report 3 incorrectly, with no zombie?"
             )
+            for ci in c['nodes']:
+                emsg += "\n" + ci['name']
             raise Exception(emsg)
 
         a = (cloud_size == node_count) and consensus
@@ -1129,7 +1137,7 @@ class H2O(object):
         ))
         return a
 
-    def h2o_log_msg(self, message=None):
+    def h2o_log_msg(self, message=None, timeoutSecs=15):
         if 1 == 0:
             return
         if not message:
@@ -1138,7 +1146,7 @@ class H2O(object):
             message += "\npython_test_name: " + python_test_name
             message += "\n#***********************"
         params = {'message': message}
-        self.__do_json_request('2/LogAndEcho', params=params)
+        self.__do_json_request('2/LogAndEcho', params=params, timeout=timeoutSecs)
 
     def get_timeline(self):
         return self.__do_json_request('Timeline.json')
@@ -1534,6 +1542,11 @@ class H2O(object):
 
     def jstack(self, timeoutSecs=30):
         return self.__do_json_request("JStack.json", timeout=timeoutSecs)
+
+    def network_test(self, tdepth=5, timeoutSecs=30):
+        a = self.__do_json_request("2/NetworkTest.json", params={}, timeout=timeoutSecs)
+        verboseprint("\n network test:", dump_json(a))
+        return(a)
 
     def jprofile(self, depth=5, timeoutSecs=30):
         return self.__do_json_request("2/JProfile.json", params={'depth': depth}, timeout=timeoutSecs)
@@ -3012,11 +3025,42 @@ class LocalH2O(H2O):
         return self.wait(0) is None
 
     def terminate_self_only(self):
+        def on_terminate(proc):
+            print("process {} terminated".format(proc))
+
+        waitingForKill = False
         try:
-            if self.is_alive(): self.ps.kill()
-            if self.is_alive(): self.ps.terminate()
-            return self.wait(0.5)
+            # we already sent h2o shutdown and waited a second. Don't bother checking if alive still.
+            # send terminate...wait up to 3 secs, then send kill
+            self.ps.terminate()
+            gone, alive = wait_procs(procs=[self.ps], timeout=3, callback=on_terminate)
+            if alive:
+                self.ps.kill()
+            # from http://code.google.com/p/psutil/wiki/Documentation: wait(timeout=None) Wait for process termination 
+            # If the process is already terminated does not raise NoSuchProcess exception but just return None immediately. 
+            # If timeout is specified and process is still alive raises TimeoutExpired exception. 
+            # hmm. maybe we're hitting the timeout
+            waitingForKill = True
+            return self.wait(timeout=3)
+
         except psutil.NoSuchProcess:
+            return -1
+        except:
+            if waitingForKill:
+                # this means we must have got the exception on the self.wait()
+                # just print a message
+                print "\nUsed psutil to kill h2o process...but"
+                print "It didn't die within 2 secs. Maybe will die soon. Maybe not! At: %s" % self.http_addr
+            else:
+                print "Unexpected exception in terminate_self_only: ignoring"
+            # hack. 
+            # psutil 2.x needs function reference
+            # psutil 1.x needs object reference
+            if hasattr(self.ps.cmdline, '__call__'):
+                pcmdline = self.ps.cmdline()
+            else:
+                pcmdline = self.ps.cmdline
+            print "process cmdline:", pcmdline
             return -1
 
     def terminate(self):

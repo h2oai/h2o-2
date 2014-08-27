@@ -164,7 +164,7 @@ build_rjar:
 	mkdir -p target/Rjar/tmp
 	cp target/h2o.jar target/Rjar/tmp/h2o_full.jar
 	(cd target/Rjar/tmp && jar xf h2o_full.jar)
-	(cd target/Rjar/tmp && rm -fr hadoop/0.* hadoop/1.* hadoop/cdh[35]* hadoop/cdh4_yarn)
+	(cd target/Rjar/tmp && rm -fr hadoop/0.* hadoop/1.* hadoop/cdh[35]* hadoop/cdh4_yarn hadoop/hdp*)
 	(cd target/Rjar/tmp && rm -f h2o_full.jar)
 	(cd target/Rjar/tmp && cp META-INF/MANIFEST.MF ..)
 	(cd target/Rjar/tmp && rm -fr META-INF)
