@@ -23,7 +23,7 @@ mkdir -p sandbox
 # resource manager is still on 162
 # yarn.resourcemanager.address  8032
 CDH4_YARN_JOBTRACKER=192.168.1.162:8032
-CDH4_YARN_NODES=6
+CDH4_YARN_NODES=1
 # FIX! we fail if you ask for two much memory? 7g worked. 8g doesn't work
 echo "can't get more than 7g for now. boost the node count to 6"
 CDH4_YARN_HEAP=7g
@@ -65,7 +65,6 @@ $REMOTE_SCP $H2O_DOWNLOADED/$H2O_JAR $REMOTE_USER:$REMOTE_HOME
 
 # exchange keys so jenkins can do this?
 # background!
-cat /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 cat /tmp/h2o_on_hadoop_$REMOTE_IP.sh | $REMOTE_SSH_USER &
 #*********************************************************************************
 

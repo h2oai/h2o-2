@@ -23,8 +23,8 @@ mkdir -p sandbox
 # now resource manager is at 8050?
 HDP_JOBTRACKER=192.168.1.187:8050
 
-HDP_NODES=16
-HDP_HEAP=20g
+HDP_NODES=8
+HDP_HEAP=60g
 HDP_JAR=h2odriver_hdp2.0.6.jar
 
 H2O_DOWNLOADED=../../h2o-downloaded
@@ -53,7 +53,7 @@ set +e
 echo "hadoop dfs -rmr /user/0xcustomer/$HDFS_OUTPUT" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 set -e
 
-echo "Don't conflict with jenkins using all sorts of ports starting at 54321 (it can multiple jobs..so can use 8*10 or so port). start looking at 55821
+echo "Don't conflict with jenkins using all sorts of ports starting at 54321 (it can multiple jobs..so can use 8*10 or so port). start looking at 55821"
 echo "hadoop jar $HDP_JAR water.hadoop.h2odriver -jt $HDP_JOBTRACKER -libjars $H2O_JAR -baseport 55821 -mapperXmx $HDP_HEAP -nodes $HDP_NODES -output $HDFS_OUTPUT -notify h2o_one_node " >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 
 # copy the script, just so we have it there too
@@ -90,6 +90,7 @@ rm -fr h2o-nodes.json
 echo "h2o-nodes.json should now exist"
 ls -ltr h2o-nodes.json
 # cp it to sandbox? not sure if anything is, for this setup
+# sandbox might not exist?
 cp -f h2o-nodes.json sandbox
 cp -f h2o_one_node sandbox
 
@@ -125,7 +126,9 @@ myPy() {
     # think of h2o.check_sandbox_for_errors()
     rm -f -r sandbox/$1
     mkdir -p sandbox/$1
-    cp -f sandbox/*log sandbox/$1
+
+    # running on hadoop, no local logs?
+    # cp -f sandbox/*log sandbox/$1
     # rm -f sandbox/*log
 }
 
@@ -135,10 +138,10 @@ myPy() {
 
 # worked
 myPy c2 test_c2_rel.py
-myPy c3 test_c3_rel.py
-test_c8_rf_airlines_hdfs_fvec.py
-test_c4_four_billion_rows_fvec.py
-# myPy c5 test_c5_KMeans_sphere15_180GB.py
+# myPy c3 test_c3_rel.py
+# test_c8_rf_airlines_hdfs_fvec.py
+# test_c4_four_billion_rows_fvec.py
+myPy c5 test_c5_KMeans_sphere15_180GB_fvec.py
 
 # have to update this to poit to the right hdfs?
 # myPy c6 test_c6_hdfs_fvec.py
