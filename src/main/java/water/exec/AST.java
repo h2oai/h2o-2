@@ -142,7 +142,7 @@ class ASTApply extends AST {
             E.throwErr("Missing argument",E._x);
           if (args[i-1] instanceof ASTAssign) {
             ASTAssign a = (ASTAssign)args[i-1];
-            if (a._lhs.argName().equals("na.rm")) {
+            if (a._lhs.argName() != null && a._lhs.argName().equals("na.rm")) {
               ASTReducerOp op = (ASTReducerOp)args[0];
               op._narm = (a._eval.argName().equals("T") || a._eval.argName().equals("TRUE") || a._eval.toString().equals("1.0"));
               args[0] = op;
