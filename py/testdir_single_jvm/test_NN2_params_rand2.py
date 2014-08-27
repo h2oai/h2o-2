@@ -11,7 +11,7 @@ def define_params():
         # 'mode'                         : [None, 'SingleNode', 'SingleThread', 'MapReduce'], 
         'activation'                   : [None, 'Tanh', 'TanhWithDropout', 'Rectifier', 'RectifierWithDropout', 
                                             'Maxout', 'MaxoutWithDropout'],
-        'input_dropout_ratio'          : [None, 0, 1],
+        'input_dropout_ratio'          : [None, 0, 0.5, .99], # 1 is illegal
         'hidden'                       : [None, 1, '100,50'],
         'adaptive_rate'                : [None, 0, 1],
         'rate'                         : [None, 0.005, 0.010],
