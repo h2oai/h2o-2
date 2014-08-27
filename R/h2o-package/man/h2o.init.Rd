@@ -6,7 +6,7 @@ Connects to a running H2O instance and checks the local H2O R package is the cor
 \usage{
 h2o.init(ip = "127.0.0.1", port = 54321, startH2O = TRUE, forceDL = FALSE, Xmx, 
         beta = FALSE, assertion = TRUE, license = NULL, 
-        max_mem_size = "1g", min_mem_size = "1g")}
+        max_mem_size, min_mem_size, ice_root = NULL)}
 
 \arguments{
   \item{ip}{Object of class \code{"character"} representing the IP address of the server where H2O is running.}
@@ -19,6 +19,7 @@ h2o.init(ip = "127.0.0.1", port = 54321, startH2O = TRUE, forceDL = FALSE, Xmx,
   \item{license}{(Optional) A string value specifying the full path of the license file.}
   \item{max_mem_size}{(Optional) A string specifying the maximum size, in bytes, of the memory allocation pool to H2O. This value must a multiple of 1024 greater than 2MB. Append the letter m or M to indicate megabytes, or g or G to indicate gigabytes.}
   \item{min_mem_size}{(Optional) A string specifying the minimum size, in bytes, of the memory allocation pool to H2O. This value must a multiple of 1024 greater than 2MB. Append the letter m or M to indicate megabytes, or g or G to indicate gigabytes.}
+  \item{ice_root}{(Optional) A directory specifying where H2O should spill to disk if it needs to.  Default is tempdir().}
 }
 \details{
 This method first checks if H2O is connectible. If it cannot connect and \code{startH2O = TRUE} with IP of localhost, it will attempt to start an instance of H2O with IP = localhost, port = 54321. Otherwise, it stops immediately with an error.
@@ -45,4 +46,7 @@ Once the package is successfully installed, this method will load it and return 
 # Try to create a localhost connection to H2O. 
 localH2O = h2o.init()
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = FALSE)
+\dontrun{
+localH2O = h2o.init(max_mem_size = "5g")
+}
 }

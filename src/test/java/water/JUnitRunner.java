@@ -41,7 +41,7 @@ public class JUnitRunner {
     tests.remove(ConcurrentKeyTest.class);
     tests.remove(DeepLearningIrisTest.Long.class);
     tests.remove(DeepLearningProstateTest.Long.class);
-//    tests.remove(GLMRandomTest.Short.class);
+    tests.remove(DeepLearningProstateTest.Mid.class);
     tests.remove(GLMRandomTest.Long.class);
     tests.remove(ParserTest2.ParseAllSmalldata.class);
     tests.remove(ParseExceptionTest.class);

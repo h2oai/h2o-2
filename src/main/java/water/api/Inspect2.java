@@ -48,6 +48,7 @@ public class Inspect2 extends Request2 {
       this.min  = vec.isEnum() ? Double.NaN : vec.min();
       this.max  = vec.isEnum() ? Double.NaN : vec.max();
       this.mean = vec.isEnum() ? Double.NaN : vec.mean();
+      this.sdev = vec.isEnum() ? Double.NaN : vec.sigma();
       this.naCnt= vec.naCnt();
       this.cardinality = vec.cardinality();
     }
@@ -56,6 +57,7 @@ public class Inspect2 extends Request2 {
     @API(help="min."             ) final double  min;
     @API(help="max."             ) final double  max;
     @API(help="mean."            ) final double  mean;
+    @API(help="std deviation."   ) final double  sdev;
     @API(help="Missing elements.") final long    naCnt;
     @API(help="Cardinality.")      final long    cardinality;
   }
@@ -200,9 +202,18 @@ public class Inspect2 extends Request2 {
     sb.append("<td>").append("Mean").append("</td>");
     for( int i=0; i<cols.length; i++ )
       sb.append("<td>").append((cols[i].type == ColType.Enum) ||
-                               (cols[i].type == ColType.UUID) 
-                               ? NA 
+                               (cols[i].type == ColType.UUID)
+                               ? NA
                                : mean_dformat.format(cols[i].mean)).append("</td>");
+    sb.append("</tr>");
+
+    sb.append("<tr class='warning'>");
+    sb.append("<td>").append("Std Dev").append("</td>");
+    for( int i=0; i<cols.length; i++ )
+      sb.append("<td>").append((cols[i].type == ColType.Enum) ||
+                               (cols[i].type == ColType.UUID)
+                               ? NA
+                               : mean_dformat.format(cols[i].sdev)).append("</td>");
     sb.append("</tr>");
 
     // Cardinality row is shown only if dataset contains enum-column
@@ -268,7 +279,7 @@ public class Inspect2 extends Request2 {
 
   // ---
   // Return a well-formatted string for this kind of Vec
-  public static String x0( Vec v, long row ) { 
+  public static String x0( Vec v, long row ) {
     if( !v.isUUID() ) return x1(v,row,v.at(row));
     // UUID handling
     if( v.isNA(row) ) return x1(v,row,Double.NaN);

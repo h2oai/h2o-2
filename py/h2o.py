@@ -2,7 +2,7 @@ import time, os, stat, json, signal, tempfile, shutil, datetime, inspect, thread
 import requests, psutil, argparse, sys, unittest, glob
 import h2o_browse as h2b, h2o_perf, h2o_util, h2o_cmd, h2o_os_util
 import h2o_sandbox, h2o_print as h2p
-import re, webbrowser, random
+import re, random
 # used in shutil.rmtree permission hack for windows
 import errno
 # use to unencode the urls sent to h2o?
@@ -61,12 +61,12 @@ def sleep(secs):
     # due to left over h2o.sleep(3600)
     time.sleep(period)
 
-# The cloud is uniquely named per user (only)
-# Fine to uniquely identify the flatfile by name only also?
+# The cloud is uniquely named per user (only) and pid
+# do the flatfile the same way
 # Both are the user that runs the test. The config might have a different username on the
 # remote machine (0xdiag, say, or hduser)
 def flatfile_name():
-    return ('pytest_flatfile-%s' % getpass.getuser())
+    return ('pytest_flatfile-%s-%s' % (getpass.getuser(), os.getpid()))
 
 # only usable after you've built a cloud (junit, watch out)
 def cloud_name():
@@ -147,11 +147,31 @@ def get_ip_address():
     return ip
 
 
+# used to rename the sandbox when running multiple tests in same dir (in different shells)
 def get_sandbox_name():
     if os.environ.has_key("H2O_SANDBOX_NAME"):
-        return os.environ["H2O_SANDBOX_NAME"]
+        a = os.environ["H2O_SANDBOX_NAME"]
+        print "H2O_SANDBOX_NAME", a
+        return a
     else:
         return "sandbox"
+
+# used to shift ports when running multiple tests on same machine in parallel (in different shells)
+def get_port_offset():
+    if os.environ.has_key("H2O_PORT_OFFSET"):
+        # this will fail if it's not an integer
+        a = int(os.environ["H2O_PORT_OFFSET"])
+        # some of the tests select a number 54321, 54323, or 54327, so want to be at least 8 or so apart 
+        # for multiple test runs.
+        # (54321, 54323, 54325 and 54327 are used in testdir_single_jvm)
+        # if we're running multi-node with a config json, then obviously the gap needs to be cognizant 
+        # of the number of nodes
+        print "H2O_PORT_OFFSET", a
+        if a<8 or a>256:
+            raise Exception("The H2O_PORT_OFFSET os env variable should be either not set, or between 8 and 256")
+        return a
+    else:
+        return 0
 
 
 def unit_main():
@@ -447,21 +467,22 @@ nodes = []
 # but it uses hosts, so if that got shuffled, we got it covered?
 # the i in xrange part is not shuffled. maybe create the list first, for possible random shuffle
 # FIX! default to random_shuffle for now..then switch to not.
-def write_flatfile(node_count=2, base_port=54321, hosts=None, rand_shuffle=True):
+def write_flatfile(node_count=2, base_port=54321, hosts=None, rand_shuffle=True, port_offset=0):
     # always create the flatfile.
     ports_per_node = 2
     pff = open(flatfile_name(), "w+")
     # doing this list outside the loops so we can shuffle for better test variation
     hostPortList = []
+
     if hosts is None:
         ip = python_cmd_ip
         for i in range(node_count):
-            hostPortList.append(ip + ":" + str(base_port + ports_per_node * i))
+            hostPortList.append(ip + ":" + str(port_offset + base_port + ports_per_node * i))
     else:
         for h in hosts:
             for i in range(node_count):
                 # removed leading "/"
-                hostPortList.append(h.addr + ":" + str(base_port + ports_per_node * i))
+                hostPortList.append(h.addr + ":" + str(port_offset + base_port + ports_per_node * i))
 
     # note we want to shuffle the full list of host+port
     if rand_shuffle:
@@ -595,6 +616,8 @@ def setup_benchmark_log():
 def build_cloud(node_count=1, base_port=54321, hosts=None,
                 timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=True,
                 conservative=False, create_json=False, clone_cloud=None, **kwargs):
+
+
     # redirect to build_cloud_with_json if a command line arg
     # wants to force a test to ignore it's build_cloud/build_cloud_with_hosts
     # (both come thru here)
@@ -626,17 +649,22 @@ def build_cloud(node_count=1, base_port=54321, hosts=None,
 
     ports_per_node = 2
     nodeList = []
+    # see if we need to shift the port used to run groups of tests on the same machine
+    # at the same time
+    port_offset = get_port_offset()
     try:
         # if no hosts list, use psutil method on local host.
         totalNodes = 0
         # doing this list outside the loops so we can shuffle for better test variation
         # this jvm startup shuffle is independent from the flatfile shuffle
-        portList = [base_port + ports_per_node * i for i in range(node_count)]
+        portList = [port_offset + base_port + ports_per_node * i for i in range(node_count)]
         if hosts is None:
             # if use_flatfile, we should create it,
             # because tests will just call build_cloud with use_flatfile=True
             # best to just create it all the time..may or may not be used
-            write_flatfile(node_count=node_count, base_port=base_port)
+
+            # port_offset is added in write_flatfile()
+            write_flatfile(node_count=node_count, base_port=base_port, port_offset=port_offset)
             hostCount = 1
             if rand_shuffle:
                 random.shuffle(portList)
@@ -821,18 +849,22 @@ def tear_down_cloud(nodeList=None, sandboxIgnoreErrors=False):
         # the api watchdog shouldn't complain about this?
         for n in nodeList:
             n.shutdown_all()
-
-        # FIX! should we wait a bit for a clean shutdown, before we process kill? It can take more than 1 sec though.
+    except:
+        pass
+    # ah subtle. we might get excepts in issuing the shutdown, don't abort out
+    # of trying the process kills if we get any shutdown exception (remember we go to all nodes)
+    # so we might? nodes are shutting down?
+    # FIX! should we wait a bit for a clean shutdown, before we process kill? It can take more than 1 sec though.
+    try:
         time.sleep(2)
-        # I took the time delay out of the shutdown_all() below
-        
         for n in nodeList:
             n.terminate()
             verboseprint("tear_down_cloud n:", n)
+    except:
+        pass
 
-    finally:
-        check_sandbox_for_errors(sandboxIgnoreErrors=sandboxIgnoreErrors, python_test_name=python_test_name)
-        nodeList[:] = []
+    check_sandbox_for_errors(sandboxIgnoreErrors=sandboxIgnoreErrors, python_test_name=python_test_name)
+    nodeList[:] = []
 
 # don't need any more?
 # Used before to make sure cloud didn't go away between unittest defs
@@ -918,6 +950,8 @@ def stabilize_cloud(node, node_count, timeoutSecs=14.0, retryDelaySecs=0.25, noE
                 "\n" +
                 "\nUPDATE: building cloud size of 2 with 127.0.0.1 may temporarily report 3 incorrectly, with no zombie?"
             )
+            for ci in c['nodes']:
+                emsg += "\n" + ci['name']
             raise Exception(emsg)
 
         a = (cloud_size == node_count) and consensus
@@ -1103,7 +1137,7 @@ class H2O(object):
         ))
         return a
 
-    def h2o_log_msg(self, message=None):
+    def h2o_log_msg(self, message=None, timeoutSecs=15):
         if 1 == 0:
             return
         if not message:
@@ -1112,7 +1146,7 @@ class H2O(object):
             message += "\npython_test_name: " + python_test_name
             message += "\n#***********************"
         params = {'message': message}
-        self.__do_json_request('2/LogAndEcho', params=params)
+        self.__do_json_request('2/LogAndEcho', params=params, timeout=timeoutSecs)
 
     def get_timeline(self):
         return self.__do_json_request('Timeline.json')
@@ -1376,14 +1410,14 @@ class H2O(object):
         return a
 
     # this is only for 2 (fvec)
-    def kmeans_model_view(self, model, timeoutSecs=30, **kwargs):
+    def kmeans_view(self, model, timeoutSecs=30, **kwargs):
         # defaults
         params_dict = {
             '_modelKey': model,
         }
         browseAlso = kwargs.get('browseAlso', False)
         # only lets these params thru
-        check_params_update_kwargs(params_dict, kwargs, 'kmeans_model_view', print_params=True)
+        check_params_update_kwargs(params_dict, kwargs, 'kmeans_view', print_params=True)
         print "\nKMeans2ModelView params list:", params_dict
         a = self.__do_json_request('2/KMeans2ModelView.json', timeout=timeoutSecs, params=params_dict)
 
@@ -1508,6 +1542,11 @@ class H2O(object):
 
     def jstack(self, timeoutSecs=30):
         return self.__do_json_request("JStack.json", timeout=timeoutSecs)
+
+    def network_test(self, tdepth=5, timeoutSecs=30):
+        a = self.__do_json_request("2/NetworkTest.json", params={}, timeout=timeoutSecs)
+        verboseprint("\n network test:", dump_json(a))
+        return(a)
 
     def jprofile(self, depth=5, timeoutSecs=30):
         return self.__do_json_request("2/JProfile.json", params={'depth': depth}, timeout=timeoutSecs)
@@ -1698,6 +1737,18 @@ class H2O(object):
         verboseprint("\ncreate_frame result:", dump_json(a))
         return a
 
+    def insert_missing_values(self, timeoutSecs=120, **kwargs):
+        params_dict = {
+            'key': None,
+            'seed': None,
+            'missing_fraction': None,
+        }
+        browseAlso = kwargs.pop('browseAlso', False)
+        check_params_update_kwargs(params_dict, kwargs, 'insert_missing_values', print_params=True)
+        a = self.__do_json_request('2/InsertMissingValues.json', timeout=timeoutSecs, params=params_dict)
+        verboseprint("\ninsert_missing_values result:", dump_json(a))
+        return a
+
     def frame_split(self, timeoutSecs=120, **kwargs):
         params_dict = {
             'source': None,
@@ -1709,16 +1760,16 @@ class H2O(object):
         verboseprint("\nframe_split result:", dump_json(a))
         return a
 
-    def frame_nfold_extract(self, timeoutSecs=120, **kwargs):
+    def nfold_frame_extract(self, timeoutSecs=120, **kwargs):
         params_dict = {
             'source': None,
             'nfolds': None,
             'afold': None, # Split to extract
         }
         browseAlso = kwargs.pop('browseAlso', False)
-        check_params_update_kwargs(params_dict, kwargs, 'frame_nfold_extract', print_params=True)
+        check_params_update_kwargs(params_dict, kwargs, 'nfold_frame_extract', print_params=True)
         a = self.__do_json_request('2/NFoldFrameExtractPage.json', timeout=timeoutSecs, params=params_dict)
-        verboseprint("\nframe_nfold_extract result:", dump_json(a))
+        verboseprint("\nnfold_frame_extract result:", dump_json(a))
         return a
 
     def gap_statistic(self, timeoutSecs=120, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
@@ -1753,16 +1804,20 @@ class H2O(object):
                 noise=None, benchmarkLogging=None, noPoll=False,
                 print_params=True, noPrint=False, **kwargs):
 
+
         params_dict = {'destination_key': None,
                        'source': data_key,
                        'response': None,
                        'cols': None,
                        'ignored_cols': None,
                        'ignored_cols_by_name': None,
+                       'verbose': None,
+                       'balance_classes': None,
+                       'max_after_balance_size': None,
+                       'keep_cross_validation_splits': None,
                        'classification': 1,
                        'validation': None,
                        'nbins': 1024.0,
-                       'class_weights': None,
                        'max_depth': max_depth,
                        'mtries': -1.0,
                        'ntrees': ntrees,
@@ -1771,8 +1826,8 @@ class H2O(object):
                        'sampling_strategy': 'RANDOM',
                        'seed': -1.0,
                        'select_stat_type': 'ENTROPY',
-                       'importance':0,
-                       'strata_samples': None,
+                       'importance': 0,
+                       'n_folds': None
         }
         check_params_update_kwargs(params_dict, kwargs, 'SpeeDRF', print_params)
 
@@ -1824,6 +1879,7 @@ class H2O(object):
             'score_each_iteration': None,
             'seed': None,
             'validation': None,
+            'n_folds': None
         }
         if 'model_key' in kwargs:
             kwargs['destination_key'] = kwargs['model_key'] # hmm..should we switch test to new param?
@@ -2027,9 +2083,9 @@ class H2O(object):
             'destination_key': None,
         }
         # only lets these params thru
-        check_params_update_kwargs(params_dict, kwargs, 'gbm_search_progress', print_params)
+        check_params_update_kwargs(params_dict, kwargs, 'gbm_grid_view', print_params)
         a = self.__do_json_request('2/GridSearchProgress.json', timeout=timeoutSecs, params=params_dict)
-        print "\ngbm_search_progress result:", dump_json(a)
+        print "\ngbm_grid_view result:", dump_json(a)
         return a
 
     def speedrf_view(self, modelKey, timeoutSecs=300, print_params=False, **kwargs):
@@ -2037,6 +2093,17 @@ class H2O(object):
         check_params_update_kwargs(params_dict, kwargs, 'speedrf_view', print_params)
         a = self.__do_json_request('2/SpeeDRFModelView.json', timeout=timeoutSecs, params=params_dict)
         verboseprint("\nspeedrf_view_result:", dump_json(a))
+        return a
+
+    def speedrf_grid_view(self, timeoutSecs=300, print_params=False, **kwargs):
+        params_dict = {
+            'job_key': None,
+            'destination_key': None,
+        }
+        # only lets these params thru
+        check_params_update_kwargs(params_dict, kwargs, 'speedrf_grid_view', print_params)
+        a = self.__do_json_request('2/GridSearchProgress.json', timeout=timeoutSecs, params=params_dict)
+        print "\nspeedrf_grid_view result:", dump_json(a)
         return a
 
     def pca_view(self, modelKey, timeoutSecs=300, print_params=False, **kwargs):
@@ -2179,6 +2246,7 @@ class H2O(object):
             'classification': None,
             'score_each_iteration': None,
             'grid_parallelism': None,
+            'n_folds': None,
         }
 
         # only lets these params thru
@@ -2396,6 +2464,7 @@ class H2O(object):
             'replicate_training_data': None,
             'single_node_mode': None,
             'shuffle_training_data': None,
+            'n_folds': None,
         }
         # only lets these params thru
         check_params_update_kwargs(params_dict, kwargs, 'deep_learning', print_params)
@@ -2554,27 +2623,6 @@ class H2O(object):
         if (browseAlso | browse_json):
             print "Viewing the GLM result through the browser"
             h2b.browseJsonHistoryAsUrlLastMatch('GLMProgressPage')
-            time.sleep(5)
-        return a
-
-    def GLMGrid(self, key,
-                timeoutSecs=300, retryDelaySecs=1.0, initialDelaySecs=None, pollTimeoutSecs=180,
-                noise=None, benchmarkLogging=None, noPoll=False, **kwargs):
-
-        a = self.GLM_shared(key, timeoutSecs, retryDelaySecs, initialDelaySecs, parentName="GLMGrid", **kwargs)
-
-        if noPoll:
-            return a
-
-        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
-            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
-            noise=noise, benchmarkLogging=benchmarkLogging)
-        verboseprint("GLMGrid done:", dump_json(a))
-
-        browseAlso = kwargs.get('browseAlso', False)
-        if (browseAlso | browse_json):
-            print "Viewing the GLM grid result through the browser"
-            h2b.browseJsonHistoryAsUrlLastMatch('GLMGridProgress')
             time.sleep(5)
         return a
 
@@ -2952,6 +3000,8 @@ class LocalH2O(H2O):
         self.remoteH2O = False # so we can tell if we're remote or local
 
         h2o_os_util.check_port_group(self.port)
+        h2o_os_util.show_h2o_processes()
+
         if self.node_id is not None:
             logPrefix = 'local-h2o-' + str(self.node_id)
         else:
@@ -2975,11 +3025,42 @@ class LocalH2O(H2O):
         return self.wait(0) is None
 
     def terminate_self_only(self):
+        def on_terminate(proc):
+            print("process {} terminated".format(proc))
+
+        waitingForKill = False
         try:
-            if self.is_alive(): self.ps.kill()
-            if self.is_alive(): self.ps.terminate()
-            return self.wait(0.5)
+            # we already sent h2o shutdown and waited a second. Don't bother checking if alive still.
+            # send terminate...wait up to 3 secs, then send kill
+            self.ps.terminate()
+            gone, alive = wait_procs(procs=[self.ps], timeout=3, callback=on_terminate)
+            if alive:
+                self.ps.kill()
+            # from http://code.google.com/p/psutil/wiki/Documentation: wait(timeout=None) Wait for process termination 
+            # If the process is already terminated does not raise NoSuchProcess exception but just return None immediately. 
+            # If timeout is specified and process is still alive raises TimeoutExpired exception. 
+            # hmm. maybe we're hitting the timeout
+            waitingForKill = True
+            return self.wait(timeout=3)
+
         except psutil.NoSuchProcess:
+            return -1
+        except:
+            if waitingForKill:
+                # this means we must have got the exception on the self.wait()
+                # just print a message
+                print "\nUsed psutil to kill h2o process...but"
+                print "It didn't die within 2 secs. Maybe will die soon. Maybe not! At: %s" % self.http_addr
+            else:
+                print "Unexpected exception in terminate_self_only: ignoring"
+            # hack. 
+            # psutil 2.x needs function reference
+            # psutil 1.x needs object reference
+            if hasattr(self.ps.cmdline, '__call__'):
+                pcmdline = self.ps.cmdline()
+            else:
+                pcmdline = self.ps.cmdline
+            print "process cmdline:", pcmdline
             return -1
 
     def terminate(self):

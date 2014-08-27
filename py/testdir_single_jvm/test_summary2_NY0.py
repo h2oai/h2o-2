@@ -2,11 +2,6 @@ import unittest, time, sys, random, math, getpass
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_util, h2o_print as h2p
 
-# fails with 1M and NA
-
-print "Same as test_summary2_uniform.py except for every data row,"
-print "5 rows of synthetic NA rows are added. results should be the same for quantiles"
-
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED, choices):
     r1 = random.Random(SEED)
     dsf = open(csvPathname, "w+")
@@ -36,9 +31,9 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(node_count=1, base_port=54327)
+            h2o.build_cloud()
         else:
-            h2o_hosts.build_cloud_with_hosts(node_count=1)
+            h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
     def tearDownClass(cls):

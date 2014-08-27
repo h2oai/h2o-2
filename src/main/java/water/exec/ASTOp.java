@@ -874,7 +874,7 @@ class ASTIntDiv   extends ASTBinOp { ASTIntDiv()   { super(OPF_INFIX, OPP_INTDIV
 // Variable length; instances will be created of required length
 abstract class ASTReducerOp extends ASTOp {
   final double _init;
-  final boolean _narm;        // na.rm in R
+  boolean _narm;        // na.rm in R
   ASTReducerOp( double init, boolean narm ) {
     super(new String[]{"","dbls"},
           new Type[]{Type.DBL,Type.varargs(Type.dblary())},

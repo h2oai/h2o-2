@@ -140,6 +140,14 @@ class ASTApply extends AST {
         while( true ) {
           if( (args[i++] = parseCXExpr(E,false)) == null )
             E.throwErr("Missing argument",E._x);
+          if (args[i-1] instanceof ASTAssign) {
+            ASTAssign a = (ASTAssign)args[i-1];
+            if (a._lhs.argName() != null && a._lhs.argName().equals("na.rm")) {
+              ASTReducerOp op = (ASTReducerOp)args[0];
+              op._narm = (a._eval.argName().equals("T") || a._eval.argName().equals("TRUE") || a._eval.toString().equals("1.0"));
+              args[0] = op;
+            }
+          }
           if( E.peek(')') ) break;
           E.xpeek(',',E._x,null);
           if( i==args.length ) args = Arrays.copyOf(args,args.length<<1);
@@ -286,7 +294,7 @@ class ASTSlice extends AST {
     if( ary.numRows() == len && vec.min()>=0 && vec.max()<=1 && vec.isInt() )
       return ary;    // Boolean vector selection.
     // Convert single vector to a list of longs selecting rows
-    if(ary.numRows() > 10000000) throw H2O.fail("Unimplemented: Cannot explicitly select > 100000 rows in slice.");
+    if(ary.numRows() > 10000000) throw H2O.fail("Unimplemented: Cannot explicitly select > 10000000 rows in slice.");
     cols = MemoryManager.malloc8((int)ary.numRows());
     for(int i = 0; i < cols.length; ++i){
       if(vec.isNA(i))throw new IllegalArgumentException("Can not use NA as index!");

@@ -218,16 +218,18 @@ public abstract class CustomParser extends Iced {
   // ------------------------------------------------------------------------
   // Zipped file; no parallel decompression; decompress into local chunks,
   // parse local chunks; distribute chunks later.
-  public DataOut streamParse2( final InputStream is, final StreamDataOut dout) throws IOException {
+  public DataOut streamParse( final InputStream is, final StreamDataOut dout, ParseProgressMonitor pmon) throws IOException {
     // All output into a fresh pile of NewChunks, one per column
     if(_setup._pType.parallelParseSupported){
       StreamData din = new StreamData(is);
       int cidx=0;
       StreamDataOut nextChunk = dout;
+      long lastProgress = pmon.progress();
       while( is.available() > 0 ){
-        if(dout != nextChunk) {
+        if (pmon.progress() > lastProgress) {
+          lastProgress = pmon.progress();
           nextChunk.close();
-          dout.reduce(nextChunk);
+          if(dout != nextChunk) dout.reduce(nextChunk);
           nextChunk = nextChunk.nextChunk();
         }
         parallelParse(cidx++,din,nextChunk);
@@ -282,8 +284,8 @@ public abstract class CustomParser extends Iced {
 
   public static class StreamData implements CustomParser.DataIn {
     final transient InputStream _is;
-    private byte[] _bits0 = new byte[4*1024*1024]; //allows for row lengths up to 4M
-    private byte[] _bits1 = new byte[4*1024*1024];
+    private byte[] _bits0 = new byte[2*1024*1024]; //allows for row lengths up to 2M
+    private byte[] _bits1 = new byte[2*1024*1024];
     private int _cidx0=-1, _cidx1=-1; // Chunk #s
     private int _coff0=-1, _coff1=-1; // Last used byte in a chunk
     public StreamData(InputStream is){_is = is;}

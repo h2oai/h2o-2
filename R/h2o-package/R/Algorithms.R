@@ -572,7 +572,19 @@ h2o.deeplearning <- function(x, y, data, key = "",
   
   res = .h2o.__remoteSendWithParms(data@h2o, .h2o.__PAGE_DeepLearning, parms)
   parms$h2o <- data@h2o
-  noGrid = missing(hidden) || !(is.list(hidden) && length(hidden) > 1)
+  parms$h2o <- data@h2o
+  noGrid <- missing(hidden) || !(is.list(hidden) && length(hidden) > 1)
+  noGrid <- noGrid && (missing(l1) || length(l1) == 1)
+  noGrid <- noGrid && (missing(l2) || length(l2) == 1)
+  noGrid <- noGrid && (missing(activation) || length(activation) == 1)
+  noGrid <- noGrid && (missing(rho) || length(rho) == 1) && (missing(epsilon) || length(epsilon) == 1)
+  noGrid <- noGrid && (missing(epochs) || length(epochs) == 1) && (missing(train_samples_per_iteration) || length(train_samples_per_iteration) == 1)
+  noGrid <- noGrid && (missing(adaptive_rate) || length(adaptive_rate) == 1) && (missing(rate_annealing) || length(rate_annealing) == 1)
+  noGrid <- noGrid && (missing(rate_decay) || length(rate_decay) == 1)
+  noGrid <- noGrid && (missing(momentum_ramp) || length(momentum_ramp) == 1)
+  noGrid <- noGrid && (missing(momentum_stable) || length(momentum_stable) == 1)
+  noGrid <- noGrid && (missing(momentum_start) || length(momentum_start) == 1)
+  noGrid <- noGrid && (missing(nesterov_accelerated_gradient) || length(nesterov_accelerated_gradient) == 1)
   if(noGrid)
     .h2o.singlerun.internal("DeepLearning", data, res, nfolds, validation, parms)
   else {
@@ -582,7 +594,7 @@ h2o.deeplearning <- function(x, y, data, key = "",
 
 .h2o.__getDeepLearningSummary <- function(res) {
   mySum = list()
-  resP = res$parameters
+  resP = res$model_info$job
   
   mySum$model_key = resP$destination_key
   mySum$activation = resP$activation
@@ -1288,8 +1300,13 @@ h2o.anomaly <- function(data, model, key = "", threshold = -1.0) {
     y_i <- y
     y <- cc[ y ]
   }
-  if (!missing(autoencoder) && !autoencoder) if( y %in% x ) stop(paste(y, 'is both an explanatory and dependent variable'))
-  
+
+  if (!missing(autoencoder) && !autoencoder) if( y %in% x ) {
+    # stop(paste(y, 'is both an explanatory and dependent variable'))
+    warning("Response variable in explanatory variables")
+    x <- setdiff(x,y)
+  }
+
   x_ignore <- setdiff(setdiff( cc, x ), y)
   if( length(x_ignore) == 0 ) x_ignore <- ''
   list(x=x, y=y, x_i=x_i, x_ignore=x_ignore, y_i=y_i)
@@ -1353,7 +1370,6 @@ h2o.anomaly <- function(data, model, key = "", threshold = -1.0) {
   grid_obj = switch(algo, GBM = "H2OGBMGrid", KM = "H2OKMeansGrid", RF = "H2ODRFGrid", DeepLearning = "H2ODeepLearningGrid", SpeeDRF = "H2OSpeeDRFGrid")
   model_view = switch(algo, GBM = .h2o.__PAGE_GBMModelView, KM = .h2o.__PAGE_KM2ModelView, RF = .h2o.__PAGE_DRFModelView, DeepLearning = .h2o.__PAGE_DeepLearningModelView, SpeeDRF = .h2o.__PAGE_SpeeDRFModelView)
   results_fun = switch(algo, GBM = .h2o.__getGBMResults, KM = .h2o.__getKM2Results, RF = .h2o.__getDRFResults, DeepLearning = .h2o.__getDeepLearningResults, SpeeDRF = .h2o.__getSpeeDRFResults)
-  
   result = list(); myModelSum = list()
   for(i in 1:length(allModels)) {
     if(algo == "KM")

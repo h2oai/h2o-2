@@ -45,8 +45,8 @@ class Basic(unittest.TestCase):
             h2o_cmd.runRF(parseResult=parseResult, trees=1000, max_depth=2, timeoutSecs=600, retryDelaySecs=3)
             print "RF #", trial,  "end on ", csvFilename, 'took', time.time() - start, 'seconds'
 
-        print "Waiting 60 secs for TIME_WAIT sockets to go away"
-        time.sleep(60)
+        # print "Waiting 60 secs for TIME_WAIT sockets to go away"
+        # time.sleep(60)
 
 if __name__ == '__main__':
     h2o.unit_main()

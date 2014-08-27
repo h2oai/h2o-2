@@ -41,6 +41,7 @@ public class DeepLearningAutoEncoderCategoricalTest extends TestUtil {
     p.adaptive_rate = true;
     p.l1 = 1e-4;
     p.activation = DeepLearning.Activation.Tanh;
+    p.train_samples_per_iteration = -1;
     p.loss = DeepLearning.Loss.MeanSquare;
     p.epochs = 2;
 //    p.shuffle_training_data = true;

@@ -68,10 +68,15 @@ def bigCheckResults(self, kmeans, csvPathname, parseResult, applyDestinationKey,
     
     tupleResultList = []
     print "\nerror: ", error
+
+    if (len(centers)!=len(rows_per_cluster) or len(centers)!=len(sqr_error_per_cluster)):
+        raise Exception("centers, rows_per_cluster, sqr_error_per_cluster should all be same length %s, %s, %s" % \
+            (len(centers), len(rows_per_cluster), len(sqr_error_per_cluster)))
+            
     for i,c in enumerate(centers):
-        print "\ncenters["+str(i)+"]: ", [round(c,2) for c in centers[i]]
-        print "rows_per_cluster["+str(i)+"]: ", rows_per_cluster[i]
-        print "sqr_error_per_cluster["+str(i)+"]: ", sqr_error_per_cluster[i]
+        print "\ncenters[%s]: " % i, [round(c,2) for c in centers[i]]
+        print "rows_per_cluster[%s]: " % i, rows_per_cluster[i]
+        print "sqr_error_per_cluster[%s]: " % i, sqr_error_per_cluster[i]
         tupleResultList.append( (centers[i], rows_per_cluster[i], sqr_error_per_cluster[i]) )
 
     return (centers, tupleResultList)

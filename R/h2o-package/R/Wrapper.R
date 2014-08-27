@@ -3,25 +3,31 @@
 # 2) If user does want to start H2O and running locally, attempt to bring up H2O launcher
 # 3) If user does want to start H2O, but running non-locally, print an error
 h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, forceDL = FALSE, Xmx,
-                     beta = FALSE, assertion = TRUE, license = NULL, max_mem_size = "1g", min_mem_size = "1g") {
+                     beta = FALSE, assertion = TRUE, license = NULL, max_mem_size = NULL, min_mem_size = NULL,
+                     ice_root = NULL) {
   if(!is.character(ip)) stop("ip must be of class character")
   if(!is.numeric(port)) stop("port must be of class numeric")
   if(!is.logical(startH2O)) stop("startH2O must be of class logical")
   if(!is.logical(forceDL)) stop("forceDL must be of class logical")
   if(!missing(Xmx) && !is.character(Xmx)) stop("Xmx must be of class character")
-  if(!is.character(max_mem_size)) stop("max_mem_size must be of class character")
-  if(!is.character(min_mem_size)) stop("min_mem_size must be of class character")
-  if(!regexpr("^[1-9][0-9]*[gGmM]$", max_mem_size)) stop("max_mem_size option must be like 1g or 1024m")
-  if(!regexpr("^[1-9][0-9]*[gGmM]$", min_mem_size)) stop("min_mem_size option must be like 1g or 1024m")
-  if(!missing(Xmx) &&   !regexpr("^[1-9][0-9]*[gGmM]$", Xmx)) stop("Xmx option must be like 1g or 1024m")
+  if(!is.null(max_mem_size) && !is.character(max_mem_size)) stop("max_mem_size must be of class character")
+  if(!is.null(min_mem_size) && !is.character(min_mem_size)) stop("min_mem_size must be of class character")
+  if(!is.null(max_mem_size) && !regexpr("^[1-9][0-9]*[gGmM]$", max_mem_size)) stop("max_mem_size option must be like 1g or 1024m")
+  if(!is.null(min_mem_size) && !regexpr("^[1-9][0-9]*[gGmM]$", min_mem_size)) stop("min_mem_size option must be like 1g or 1024m")
+  if(!missing(Xmx) && !regexpr("^[1-9][0-9]*[gGmM]$", Xmx)) stop("Xmx option must be like 1g or 1024m")
   if(!is.logical(beta)) stop("beta must be of class logical")
   if(!is.logical(assertion)) stop("assertion must be of class logical")
   if(!is.null(license) && !is.character(license)) stop("license must be of class character")
+  if(!is.null(ice_root) && !is.character(ice_root)) stop("ice_root must be of class character")
 
   if(!missing(Xmx)) {
     warning("Xmx is a deprecated parameter. Use `max_mem_size` and `min_mem_size` to set the memory boundaries. Using `Xmx` to set these.")
     max_mem_size <- Xmx
     min_mem_size <- Xmx
+  }
+
+  if (is.null(ice_root)) {
+    ice_root = tempdir()
   }
 
   myURL = paste("http://", ip, ":", port, sep="")
@@ -30,7 +36,7 @@ h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, forceDL = 
       stop(paste("Cannot connect to H2O server. Please check that H2O is running at", myURL))
     else if(ip == "localhost" || ip == "127.0.0.1") {
       cat("\nH2O is not running yet, starting it now...\n")
-      .h2o.startJar(max_memory = max_mem_size, min_memory = min_mem_size, beta = beta, assertion = assertion, forceDL = forceDL, license = license)
+      .h2o.startJar(max_memory = max_mem_size, min_memory = min_mem_size, beta = beta, assertion = assertion, forceDL = forceDL, license = license, ice_root = ice_root)
       count = 0; while(!url.exists(myURL) && count < 60) { Sys.sleep(1); count = count + 1 }
       if(!url.exists(myURL)) stop("H2O failed to start, stopping execution.")
     } else stop("Can only start H2O launcher if IP address is localhost.")
@@ -200,7 +206,7 @@ h2o.clusterStatus <- function(client) {
 #     h2o.shutdown(new("H2OClient", ip=ip, port=port), prompt = FALSE)
 # }
 
-.h2o.startJar <- function(max_memory = "1g", min_memory = "1g", beta = FALSE, assertion = TRUE, forceDL = FALSE, license = NULL) {
+.h2o.startJar <- function(max_memory = NULL, min_memory = NULL, beta = FALSE, assertion = TRUE, forceDL = FALSE, license = NULL, ice_root) {
   command <- .h2o.checkJava()
 
   if (! is.null(license)) {
@@ -218,32 +224,59 @@ h2o.clusterStatus <- function(client) {
   jar_file <- .h2o.downloadJar(overwrite = forceDL)
   jar_file <- paste('"', jar_file, '"', sep = "")
 
+  if (missing(ice_root)) {
+    stop("ice_root must be specified for .h2o.startJar");
+  }
+
+  if (.Platform$OS.type == "windows") {
+    slashes_fixed_ice_root = gsub("\\\\", "/", ice_root)
+  }
+  else {
+    slashes_fixed_ice_root = ice_root
+  }
+
   # Compose args
-  args <- c(paste("-Xms", min_memory, sep=""),
-            paste("-Xmx", max_memory, sep=""))
+  mem_args <- c()
+  if(!is.null(min_memory)) mem_args <- c(mem_args, paste("-Xms", min_memory, sep=""))
+  if(!is.null(max_memory)) mem_args <- c(mem_args, paste("-Xmx", max_memory, sep=""))
+
+  args <- mem_args
   if(assertion) args <- c(args, "-ea")
   args <- c(args, "-jar", jar_file)
   args <- c(args, "-name", "H2O_started_from_R")
   args <- c(args, "-ip", "127.0.0.1")
   args <- c(args, "-port", "54321")
+  args <- c(args, "-ice_root", slashes_fixed_ice_root)
   if(beta) args <- c(args, "-beta")
   if(!is.null(license)) args <- c(args, "-license", license)
 
   cat("\n")
   cat(        "Note:  In case of errors look at the following log files:\n")
-  cat(sprintf("           %s\n", stdout))
-  cat(sprintf("           %s\n", stderr))
+  cat(sprintf("    %s\n", stdout))
+  cat(sprintf("    %s\n", stderr))
   cat("\n")
   
   # Throw an error if GNU Java is being used
   jver <- system2(command, "-version", stdout = TRUE, stderr = TRUE)
   if(any(grepl("GNU libgcj", jver))) {
-    stop("Sorry, GNU Java is not supported for H2O.\n
-          Please download the latest Java SE JDK 7 from the following URL:\n
-          http://www.oracle.com/technetwork/java/javase/downloads/jdk7-downloads-1880260.html")
+    stop("
+Sorry, GNU Java is not supported for H2O.
+Please download the latest Java SE JDK 7 from the following URL:
+http://www.oracle.com/technetwork/java/javase/downloads/jdk7-downloads-1880260.html")
   }
-  system2(command, c("-version"))
+
+  if(any(grepl("Client VM", jver))) {
+    warning("
+You have a 32-bit version of Java.  H2O works best with 64-bit Java.
+Please download the latest Java SE JDK 7 from the following URL:
+http://www.oracle.com/technetwork/java/javase/downloads/jdk7-downloads-1880260.html")
+  }
+
+  # Print a java -version to the console
+  system2(command, c(mem_args, "-version"))
   cat("\n")
+
+  # Run the real h2o java command
   rc = system2(command,
                args=args,
                stdout=stdout,
@@ -257,29 +290,19 @@ h2o.clusterStatus <- function(client) {
 .h2o.getTmpFile <- function(type) {
   if(missing(type) || !type %in% c("stdout", "stderr", "pid"))
     stop("type must be one of 'stdout', 'stderr', or 'pid'")
-  
+
   if(.Platform$OS.type == "windows") {
-    default_path <- paste("C:", "TMP", sep = .Platform$file.sep)
-    if(file.exists(default_path))
-      tmp_path <- default_path
-    else if(file.exists(paste("C:", "TEMP", sep = .Platform$file.sep)))
-      tmp_path <- paste("C:", "TEMP", sep = .Platform$file.sep)
-    else if(file.exists(Sys.getenv("APPDATA")))
-      tmp_path <- Sys.getenv("APPDATA")
-    else
-      stop("Error: Cannot log Java output. Please create the directory ", default_path, ", ensure it is writable, and re-initialize H2O")
     usr <- gsub("[^A-Za-z0-9]", "_", Sys.getenv("USERNAME"))
   } else {
-    tmp_path <- paste(.Platform$file.sep, "tmp", sep = "")
     usr <- gsub("[^A-Za-z0-9]", "_", Sys.getenv("USER"))
   }
-  
+
   if(type == "stdout")
-    paste(tmp_path, paste("h2o", usr, "started_from_r.out", sep="_"), sep = .Platform$file.sep)
+    paste(tempdir(), paste("h2o", usr, "started_from_r.out", sep="_"), sep = .Platform$file.sep)
   else if(type == "stderr")
-    paste(tmp_path, paste("h2o", usr, "started_from_r.err", sep="_"), sep = .Platform$file.sep)
+    paste(tempdir(), paste("h2o", usr, "started_from_r.err", sep="_"), sep = .Platform$file.sep)
   else
-    paste(tmp_path, paste("h2o", usr, "started_from_r.pid", sep="_"), sep = .Platform$file.sep)
+    paste(tempdir(), paste("h2o", usr, "started_from_r.pid", sep="_"), sep = .Platform$file.sep)
 }
 
 .h2o.startedH2O <- function() {

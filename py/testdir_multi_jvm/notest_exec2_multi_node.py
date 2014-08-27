@@ -55,13 +55,11 @@ class Basic(unittest.TestCase):
         localhost = h2o.decide_if_localhost()
         h2o.beta_features = True # for the beta tab in the browser
         if (localhost):
-            h2o.build_cloud(node_count=NODES, java_heap_GB=4, base_port=54323,
+            h2o.build_cloud(node_count=NODES, java_heap_GB=4)
                 # use_hdfs=True, hdfs_name_node='192.168.1.176', hdfs_version='cdh3'
-            )
         else:
-            h2o_hosts.build_cloud_with_hosts(java_heap_GB=4, base_port=54321,
+            h2o_hosts.build_cloud_with_hosts(java_heap_GB=4)
                 # use_hdfs=True, hdfs_name_node='192.168.1.176', hdfs_version='cdh3'
-            )
 
     @classmethod
     def tearDownClass(cls):

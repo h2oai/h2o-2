@@ -33,7 +33,7 @@ class Basic(unittest.TestCase):
         hex_key = csvFilename + ".hex"
         print "\n" + csvFilename
         parseResult = h2i.import_parse(bucket='smalldata', path=csvFilename, 
-            hex_key=hex_key, timeoutSecs=15, schema='put')
+            hex_key=hex_key, timeoutSecs=60, schema='put')
         firstRfView = None
         # dispatch multiple jobs back to back
         for jobDispatch in range(3):
@@ -56,7 +56,7 @@ class Basic(unittest.TestCase):
                 kwargs['seed'] = random.randint(0, sys.maxint)
 
             # FIX! what model keys do these get?
-            randomNode = h2o.nodes[random.randint(0,len(h2o.nodes)-1)]
+            randomNode = h2o.nodes[random.randint(0, len(h2o.nodes)-1)]
             h2o_cmd.runRF(node=randomNode, parseResult=parseResult, destination_key=model_key, timeoutSecs=300,
                  noPoll=True, **kwargs)
             # FIX! are these already in there?
