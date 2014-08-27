@@ -1821,7 +1821,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     }
   }
 
-  private final String unstable_msg = "Job was aborted due to observed numerical instability (exponential growth)."
+  transient private final String unstable_msg = "Job was aborted due to observed numerical instability (exponential growth)."
           + "\nTry a different initial distribution, a bounded activation function or adding"
           + "\nregularization with L1, L2 or max_w2 and/or use a smaller learning rate or faster annealing.";
 
