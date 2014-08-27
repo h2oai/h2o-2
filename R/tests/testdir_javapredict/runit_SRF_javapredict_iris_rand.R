@@ -19,7 +19,7 @@ source(paste(TEST_ROOT_DIR, "findNSourceUtils.R"  , sep="/"))
     
 heading("Choose random parameters" )
     
-ntree <- sample(20 ,1 )
+ntree <- sample(999 ,1 )
 print(paste(    "ntrees"     , ntree))    
 
 depth <- sample(   999     ,    1     )    

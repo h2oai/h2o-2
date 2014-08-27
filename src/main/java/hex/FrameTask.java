@@ -552,6 +552,7 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       }
     }
 
+    // shuf_map is a permutation of list 1..end-start
     long[] shuf_map = null;
     if (_shuffle) {
       shuf_map = new long[end-start];

@@ -11,6 +11,7 @@ import water.fvec.Chunk;
 import water.fvec.Frame;
 import water.util.Log;
 import water.util.Log.Tag.Sys;
+import water.util.SB;
 import water.util.Utils;
 
 import java.io.IOException;
@@ -55,6 +56,7 @@ public class Tree extends H2OCountedCompleter {
   final byte     _producerId;   // Id of node producing this tree
   final boolean  _regression; // If true, will build regression tree.
   boolean        _local_mode;
+  public TreeModel.CompressedTree compressedTree;
 
   /**
    * Constructor used to define the specs when building the tree from the top.
@@ -187,7 +189,43 @@ public class Tree extends H2OCountedCompleter {
     }.invoke(model);
   }
 
-  private class FJBuild extends RecursiveTask<INode> {
+  public static String deserialize(byte[] bytes) {
+    AutoBuffer ab = new AutoBuffer(bytes);
+    SB sb = new SB();
+    // skip meta data of the tree
+    ab.get4();    // Skip tree-id
+    ab.get8();    // Skip seed
+    ab.get1();    // Skip producer id
+
+    int cap = 0;
+    String abString = ab.toString();
+    Pattern pattern = Pattern.compile("<= .* <= (.*?) <=");
+    Matcher matcher = pattern.matcher(abString);
+    if (matcher.find()) {
+      System.out.println(matcher.group(1));
+      cap = Integer.valueOf(matcher.group(1));
+    }
+
+    // skip meta data of the tree
+    ab.get4();    // Skip tree-id
+    ab.get8();    // Skip seed
+    ab.get1();    // Skip producer id
+
+    while (ab.position() < cap) {
+      byte currentNodeType = (byte) ab.get1();
+      if (currentNodeType == 'S') {
+        int _col = ab.get2();
+        float splitValue = ab.get4f();
+        sb.p("C").p(_col).p(" <= ").p(splitValue).p("(");
+      } else if (currentNodeType == '[') {
+        int cls = ab.get1();
+        sb.p("["+cls+"]");
+      }
+    }
+    return sb.toString();
+  }
+
+    private class FJBuild extends RecursiveTask<INode> {
     final hex.singlenoderf.Statistic.Split _split;
     final Data _data;
     final int _depth;
@@ -382,7 +420,8 @@ public class Tree extends H2OCountedCompleter {
       ab.put2((short)_column);
       ab.put4f(_originalSplit); // assuming we only have _equal == 0 or 1 which is binary split
 
-      if( _l instanceof LeafNode ) { // don't have skip size if left child is leaf.
+      if( _l instanceof LeafNode ) { /* don't have skip size if left child is leaf.*/}
+      else {
         if(leftSize < 256)            {ab.put1(       leftSize); size += 1;}
         else if (leftSize < 65535)    {ab.put2((short)leftSize); size += 2;}
         else if (leftSize < (1<<24))  {ab.put3(       leftSize); size += 3;}
@@ -548,8 +587,9 @@ public class Tree extends H2OCountedCompleter {
   // Write the Tree as a compressedTree  to a random Key homed here
   public Key toCompressedKey() {
     AutoBuffer bs = new AutoBuffer();
-    _tree.compress(bs);
-    TreeModel.CompressedTree compressedTree = new TreeModel.CompressedTree(bs.buf(),3,-1);
+//    _tree.compress(bs);
+//    TreeModel.CompressedTree compressedTree = new TreeModel.CompressedTree(bs.buf(),3,-1);
+    TreeModel.CompressedTree compressedTree = compress();
     Key key = Key.make((byte)1,Key.DFJ_INTERNAL_USER, H2O.SELF);
     UKV.put(key, new Value(key, compressedTree));
     return key;
@@ -597,11 +637,11 @@ public class Tree extends H2OCountedCompleter {
       assert b == '(' || b == 'S' || b == 'E';
       int col = ts.get2(); // Column number in model-space
       float fcmp = ts.get4f();  // Float to compare against
+      float fdat;
       if( Double.isNaN(ds[col]) )
       {
-        return badat;
-      }
-      float fdat = (float)ds[col];
+        fdat = fcmp -1;
+      }else fdat = (float)ds[col];
       int skip = (ts.get1()&0xFF);
       if( skip == 0 ) skip = ts.get3();
       if (b == 'E') {
@@ -670,6 +710,7 @@ public class Tree extends H2OCountedCompleter {
 
   // Build a compressed-tree struct
   public TreeModel.CompressedTree compress() {
+    Log.info(Sys.RANDF, _tree.toString(new StringBuilder(), Integer.MAX_VALUE).toString());
     int size = _tree.dtreeSize();
     if (_tree instanceof LeafNode) {
       size += 3;
@@ -678,9 +719,15 @@ public class Tree extends H2OCountedCompleter {
     if( _tree instanceof LeafNode)
       ab.put1(0).put2((char)65535);
     _tree.compress(ab);
-    assert ab.position() == size;
+    assert ab.position() == size: "Actual size doesn't agree calculated size.";
     char _nclass = (char)_data.classes();
     return new TreeModel.CompressedTree(ab.buf(),_nclass,_seed);
+  }
+
+  public TreeModel.CompressedTree getCompressedTree() {
+    if (compressedTree!=null) { return compressedTree; }
+    else { compressedTree = compress(); }
+    return compressedTree;
   }
 
   /**
