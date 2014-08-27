@@ -109,6 +109,11 @@ class PerfRunner:
         # Do _one_ test at a time
         while len(self.tests_not_started) > 0:
             test = self.tests_not_started.pop(0)
+            if "multinode" in test.test_name:
+                print
+                print "Skipping multinode test " + test.test_name
+                print
+                continue
             print
             print "Beginning test " + test.test_name
             print

@@ -124,7 +124,7 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed()
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1, java_heap_GB=tryHeap, enable_benchmark_log=True, base_port=54321)
+            h2o.build_cloud(java_heap_GB=tryHeap, enable_benchmark_log=True)
         else:
             h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=True)
 

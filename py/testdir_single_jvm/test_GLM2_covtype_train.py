@@ -12,9 +12,9 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(node_count=1, java_heap_GB=10, base_port=54333)
+            h2o.build_cloud(java_heap_GB=10)
         else:
-            h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=10)
+            h2o_hosts.build_cloud_with_hosts(java_heap_GB=10)
 
     @classmethod
     def tearDownClass(cls):

@@ -488,7 +488,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   private class LineSearchIteration extends H2OCallback<GLMTask.GLMLineSearchTask> {
     LineSearchIteration(CountedCompleter cmp){super((H2OCountedCompleter)cmp); cmp.addToPendingCount(1);}
     @Override public void callback(final GLMTask.GLMLineSearchTask glmt) {
-      assert getCompleter().getPendingCount() == 1:"unexpected pending count, expected 1, got " + getCompleter().getPendingCount();
+      assert getCompleter().getPendingCount() >= 1:"unexpected pending count, expected 1, got " + getCompleter().getPendingCount();
       double step = 0.5;
       for(int i = 0; i < glmt._glmts.length; ++i){
         if(!needLineSearch(glmt._glmts[i],step)){

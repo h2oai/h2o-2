@@ -34,7 +34,7 @@ class Basic(unittest.TestCase):
         csvPathname = 'standard/covtype.data'
         hex_key = "c.hex"
         parseResult = h2i.import_parse(bucket='home-0xdiag-datasets', path=csvPathname, schema='put', hex_key=hex_key, 
-            timeoutSecs=10)
+            timeoutSecs=20)
         print "Parse result['desination_key']:", parseResult['destination_key']
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
 

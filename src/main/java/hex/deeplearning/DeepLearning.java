@@ -850,6 +850,9 @@ public class DeepLearning extends Job.ValidatedJob {
     else if (activation != Activation.TanhWithDropout && activation != Activation.MaxoutWithDropout && activation != Activation.RectifierWithDropout) {
       if (!quiet_mode) Log.info("Ignoring hidden_dropout_ratios because a non-Dropout activation function was specified.");
     }
+    if (input_dropout_ratio < 0 || input_dropout_ratio >= 1) {
+      throw new IllegalArgumentException("Input dropout must be in [0,1).");
+    }
 
     if (!quiet_mode) {
       if (adaptive_rate) {
@@ -1003,8 +1006,7 @@ public class DeepLearning extends Job.ValidatedJob {
         model.setModelClassDistribution(new MRUtils.ClassDist(train.lastVec()).doAll(train.lastVec()).rel_dist());
       }
       model.training_rows = train.numRows();
-      trainScoreFrame = sampleFrame(train, mp.score_training_samples, mp.seed); //training scoring dataset is always sampled uniformly from the training dataset
-      if (train != trainScoreFrame) ltrash(trainScoreFrame);
+      trainScoreFrame = updateFrame(train, sampleFrame(train, mp.score_training_samples, mp.seed)); //training scoring dataset is always sampled uniformly from the training dataset
 
       if (!quiet_mode) Log.info("Number of chunks of the training data: " + train.anyVec().nChunks());
       if (validation != null) {

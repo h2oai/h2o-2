@@ -33,7 +33,8 @@ def check_port_group(base_port):
         # if username=='jenkins' or username=='kevin' or username=='michal':
         if username=='jenkins' or username=='kevin':
             # assumes you want to know about 3 ports starting at base_port
-            command1Split = ['netstat', '-anp']
+            # can't use p, not root
+            command1Split = ['netstat', '-an']
             command2Split = ['egrep']
             # colon so only match ports. space at end? so no submatches
             command2Split.append("(%s | %s)" % (base_port, base_port+1) )
@@ -69,8 +70,8 @@ def show_h2o_processes():
             h2oFound = False
             for p in psutil.process_iter():
                 h2oProcess = False
-                # psutil 2.x requirs name(). prior psutil didn't
-                # hack. psutil 2.x needs function reference
+                # hack.
+                # psutil 2.x needs function reference
                 # psutil 1.x needs object reference
                 if hasattr(p.name, '__call__'):
                     pname = p.name()
@@ -123,9 +124,9 @@ def show_h2o_processes():
                 
 
         if h2oFound:
-            print "\n#**********************************************"
+            print "\n\n#**********************************************************************************************"
         else:
             print "No h2o processes found."
-        print "users running java:", list(users)
+        print "\nusers running java:", list(users)
         print "users running h2o java:", list(h2oUsers)
 

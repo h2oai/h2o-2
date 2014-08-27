@@ -6,7 +6,7 @@ Connects to a running H2O instance and checks the local H2O R package is the cor
 \usage{
 h2o.init(ip = "127.0.0.1", port = 54321, startH2O = TRUE, forceDL = FALSE, Xmx, 
         beta = FALSE, assertion = TRUE, license = NULL, 
-        max_mem_size = "1g", min_mem_size = "1g", ice_root = NULL)}
+        max_mem_size, min_mem_size, ice_root = NULL)}
 
 \arguments{
   \item{ip}{Object of class \code{"character"} representing the IP address of the server where H2O is running.}
@@ -46,4 +46,7 @@ Once the package is successfully installed, this method will load it and return 
 # Try to create a localhost connection to H2O. 
 localH2O = h2o.init()
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = FALSE)
+\dontrun{
+localH2O = h2o.init(max_mem_size = "5g")
+}
 }

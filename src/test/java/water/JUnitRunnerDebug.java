@@ -79,7 +79,7 @@ public class JUnitRunnerDebug {
 //      tests.add(DeepLearningSpiralsTest.class); //test Deep Learning convergence
 //      tests.add(DeepLearningIrisTest.Short.class); //compare Deep Learning vs reference
 //      tests.add(DeepLearningIrisTest.Long.class); //compare Deep Learning vs reference
-//      tests.add(DeepLearningProstateTest.Short.class); //test Deep Learning
+      tests.add(DeepLearningProstateTest.Short.class); //test Deep Learning
 //      tests.add(DeepLearningMissingTest.class); //test Deep Learning
 //      tests.add(DeepLearningProstateTest.Long.class); //test Deep Learning
 //      tests.add(NeuronsTest.class); //test Deep Learning
@@ -99,7 +99,7 @@ public class JUnitRunnerDebug {
 //      tests.add(GBMTest.class);
 //      tests.add(KMeans2Test.class);
 //      tests.add(PCATest.class);
-      tests.add(NetworkTestTest.class);
+//      tests.add(NetworkTestTest.class);
 
       // Uncomment this to sleep here and use the browser.
       // try { Thread.sleep(10000000); } catch (Exception _) {}
