@@ -1359,7 +1359,7 @@ class H2O(object):
         return response
 
     # this is only for 2 (fvec)
-    def kmeans_view(self, model, timeoutSecs=30, **kwargs):
+    def kmeans_view(self, model=None, timeoutSecs=30, **kwargs):
         # defaults
         params_dict = {
             '_modelKey': model,
@@ -1383,8 +1383,8 @@ class H2O(object):
     # don't need to include in params_dict it doesn't need a default
     # FIX! cols should be renamed in test for fvec
     def kmeans(self, key, key2=None,
-               timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
-               noise=None, benchmarkLogging=None, noPoll=False, **kwargs):
+        timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
+        noise=None, benchmarkLogging=None, noPoll=False, **kwargs):
         # defaults
         # KMeans has more params than shown here
         # KMeans2 has these params?
@@ -1409,18 +1409,25 @@ class H2O(object):
         algo = '2/KMeans2'
 
         print "\n%s params list:" % algo, params_dict
-        a = self.__do_json_request(algo + '.json',
-                                   timeout=timeoutSecs, params=params_dict)
+        a1 = self.__do_json_request(algo + '.json',
+            timeout=timeoutSecs, params=params_dict)
 
         if noPoll:
-            return a
+            return a1
 
-        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
-                          initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
-                          noise=noise, benchmarkLogging=benchmarkLogging)
-        # verboseprint("\n%s result:" % algo, dump_json(a))
-        print "For now, always dumping the last result ..are the centers good"
-        print "\n%s result:" % algo, dump_json(a)
+        a1 = self.poll_url(a1, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
+            noise=noise, benchmarkLogging=benchmarkLogging)
+        print "For now, always dumping the last polled kmeans result ..are the centers good"
+        print "\n%s result:" % algo, dump_json(a1)
+
+        # if we want to return the model view like the browser
+        if 1==0:
+            # HACK! always do a model view. kmeans last result isn't good? (at least not always)
+            a = self.kmeans_view(model=a1['model']['_key'], timeoutSecs=30)
+            verboseprint("\n%s model view result:" % algo, dump_json(a))
+        else:
+            a = a1
 
         if (browseAlso | browse_json):
             print "Redoing the %s through the browser, no results saved though" % algo
