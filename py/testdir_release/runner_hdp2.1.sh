@@ -23,7 +23,7 @@ mkdir -p sandbox
 # now resource manager is at 8050?
 HDP_JOBTRACKER=192.168.1.187:8050
 
-HDP_NODES=8
+HDP_NODES=1
 HDP_HEAP=60g
 HDP_JAR=h2odriver_hdp2.0.6.jar
 
@@ -141,7 +141,8 @@ myPy c2 test_c2_rel.py
 # myPy c3 test_c3_rel.py
 # test_c8_rf_airlines_hdfs_fvec.py
 # test_c4_four_billion_rows_fvec.py
-myPy c5 test_c5_KMeans_sphere15_180GB_fvec.py
+# myPy c5 test_c5_KMeans_sphere15_180GB_fvec.py
+myPy c5 test_c5_KMeans_sphere_h1m_fvec.py
 
 # have to update this to poit to the right hdfs?
 # myPy c6 test_c6_hdfs_fvec.py

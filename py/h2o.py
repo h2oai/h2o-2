@@ -1354,61 +1354,6 @@ class H2O(object):
             verboseprint(msgUsed, urlUsed, paramsUsedStr, "Response:", dump_json(response))
         return response
 
-    def kmeans_apply(self, data_key, model_key, destination_key,
-                     timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
-                     **kwargs):
-        # defaults
-        params_dict = {
-            'destination_key': destination_key,
-            '_modelKey': model_key,
-            'data_key': data_key,
-        }
-        browseAlso = kwargs.get('browseAlso', False)
-        # only lets these params thru
-        check_params_update_kwargs(params_dict, kwargs, 'kmeans_apply', print_params=True)
-
-        print "\nKMeansApply params list:", params_dict
-        a = self.__do_json_request('KMeansApply.json', timeout=timeoutSecs, params=params_dict)
-
-        # Check that the response has the right Progress url it's going to steer us to.
-        if a['response']['redirect_request'] != 'Progress':
-            print dump_json(a)
-            raise Exception('H2O kmeans redirect is not Progress. KMeansApply json response precedes.')
-        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
-                          initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
-        verboseprint("\nKMeansApply result:", dump_json(a))
-
-        if (browseAlso | browse_json):
-            print "Redoing the KMeansApply through the browser, no results saved though"
-            h2b.browseJsonHistoryAsUrlLastMatch('KMeansApply')
-            time.sleep(5)
-        return a
-
-    # model_key
-    # key
-    def kmeans_score(self, key, model_key,
-                     timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
-                     **kwargs):
-        # defaults
-        params_dict = {
-            'key': key,
-            '_modelKey': model_key,
-        }
-        browseAlso = kwargs.get('browseAlso', False)
-        # only lets these params thru
-        check_params_update_kwargs(params_dict, kwargs, 'kmeans_score', print_params=True)
-        print "\nKMeansScore params list:", params_dict
-        a = self.__do_json_request('KMeansScore.json', timeout=timeoutSecs, params=params_dict)
-
-        # kmeans_score doesn't need polling?
-        verboseprint("\nKMeansScore result:", dump_json(a))
-
-        if (browseAlso | browse_json):
-            print "Redoing the KMeansScore through the browser, no results saved though"
-            h2b.browseJsonHistoryAsUrlLastMatch('KMeansScore')
-            time.sleep(5)
-        return a
-
     # this is only for 2 (fvec)
     def kmeans_view(self, model, timeoutSecs=30, **kwargs):
         # defaults
@@ -1469,7 +1414,9 @@ class H2O(object):
         a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
                           initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
                           noise=noise, benchmarkLogging=benchmarkLogging)
-        verboseprint("\n%s result:" % algo, dump_json(a))
+        # verboseprint("\n%s result:" % algo, dump_json(a))
+        print "For now, always dumping the last result ..are the centers good"
+        print "\n%s result:" % algo, dump_json(a)
 
         if (browseAlso | browse_json):
             print "Redoing the %s through the browser, no results saved though" % algo
