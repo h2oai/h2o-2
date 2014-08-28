@@ -17,3 +17,228 @@
     }
 }
 
+
+# when done
+{
+    "type":"object", "properties":{
+        "Request2": { "type":"number" },
+        "deeplearning_model": {
+            "type":"object",
+            "properties":{ "_dataKey": { "type":"string" },
+                "_domains": {
+                    "type":"array", "items": [
+                        { "type":"null" },
+                        { "type":"null" },
+                        { "type":"array" }
+                    ]
+                },
+                "_key": { "type":"string" },
+                "_modelClassDist": { "type":"null" },
+                "_names": { "type":"array", "items": { "type":"string" } },
+                "_priorClassDist": { "type":"array", "items": { "type":"number" } },
+                "actual_best_model_key": { "type":"string" },
+                "epoch_counter": { "type":"number" },
+                "errors": { "type":"array", "items": [
+                        { "type":"object", "properties":{
+                                "classification": { "type":"string" },
+                                "epoch_counter": { "type":"number" },
+                                "num_folds": { "type":"number" },
+                                "score_training_samples": { "type":"number" },
+                                "score_validation_samples": { "type":"number" },
+                                "scoring_time": { "type":"number" },
+                                "trainAUC": { "type":"null" },
+                                "train_confusion_matrix": { "type":"null" },
+                                "train_err": { "type":"number" },
+                                "train_hitratio": { "type":"null" },
+                                "train_mse": { "type":"string" },
+                                "training_samples": { "type":"number" },
+                                "training_time_ms": { "type":"number" },
+                                "validAUC": { "type":"null" },
+                                "valid_confusion_matrix": { "type":"null" },
+                                "valid_err": { "type":"number" },
+                                "valid_hitratio": { "type":"null" },
+                                "valid_mse": { "type":"string" },
+                                "validation": { "type":"string" },
+                                "variable_importances": { "type":"null" }
+                            }
+                        },
+                        { "type":"object", "properties":{
+                                "classification": { "type":"string" },
+                                "epoch_counter": { "type":"number" },
+                                "num_folds": { "type":"number" },
+                                "score_training_samples": { "type":"number" },
+                                "score_validation_samples": { "type":"number" },
+                                "scoring_time": { "type":"number" },
+                                "trainAUC": { "type":"null" },
+                                "train_confusion_matrix": { "type":"object", "properties":{
+                                        "Request2": { "type":"number" },
+                                        "actual_domain": { "type":"array", "items": { "type":"string" } },
+                                        "cm": { "type":"array", "items": { "type":"array" } },
+                                        "domain": { "type":"array", "items": { "type":"string" } },
+                                        "mse": { "type":"string" },
+                                        "predicted_domain": { "type":"array", "items": { "type":"string" } },
+                                        "response_info": { "type":"null" }
+                                    }
+                                },
+                                "train_err": { "type":"number" },
+                                "train_hitratio": { "type":"object", "properties":{
+                                        "Request2": { "type":"number" },
+                                        "actual_domain": { "type":"array", "items": { "type":"string" } },
+                                        "actual": { "type":"object", "properties":{ "_key": { "type":"null" } } },
+                                        "hit_ratios": { "type":"array", "items": { "type":"number" } },
+                                        "max_k": { "type":"number" },
+                                        "predict": { "type":"object", "properties":{ "_key": { "type":"null" } } },
+                                        "response_info": { "type":"null" },
+                                        "seed": { "type":"number" },
+                                        "vactual": { "type":"object" }
+                                    }
+                                },
+                                "train_mse": { "type":"number", },
+                                "training_samples": { "type":"number", },
+                                "training_time_ms": { "type":"number", },
+                                "validAUC": { "type":"null", },
+                                "valid_confusion_matrix": { "type":"object", "properties":{
+                                        "Request2": { "type":"number" },
+                                        "actual_domain": { "type":"array", "items": { "type":"string" } },
+                                        "cm": { "type":"array", "items": { "type":"array" } },
+                                        "domain": { "type":"array", "items": { "type":"string" } },
+                                        "mse": { "type":"string" },
+                                        "predicted_domain": { "type":"array", "items": { "type":"string" } },
+                                        "response_info": { "type":"null" }
+                                    }
+                                },
+                                "valid_err": { "type":"number" },
+                                "valid_hitratio": { "type":"object", "properties":{
+                                        "Request2": { "type":"number" },
+                                        "actual_domain": { "type":"array", "items": { "type":"string" } },
+                                        "actual": { "type":"object", "properties":{ "_key": { "type":"string" } } },
+                                        "hit_ratios": { "type":"array", "items": { "type":"number" } },
+                                        "max_k": { "type":"number" },
+                                        "predict": { "type":"object", "properties":{ "_key": { "type":"null" } } },
+                                        "response_info": { "type":"null" },
+                                        "seed": { "type":"number" },
+                                        "vactual": { "type":"object" }
+                                    }
+                                },
+                                "valid_mse": { "type":"number" },
+                                "validation": { "type":"string" },
+                                "variable_importances": { "type":"null" }
+                            }
+                        }
+                    ]
+                },
+                "jobKey": { "type":"string" },
+                "model_info": { "type":"object", "properties":{
+                        "data_info": { "type":"object" },
+                        "job": { "type":"object", "properties":{
+                                "Request2": { "type":"number" },
+                                "activation": { "type":"string" },
+                                "adaptive_rate": { "type":"string" },
+                                "autoencoder": { "type":"string" },
+                                "average_activation": { "type":"number" },
+                                "balance_classes": { "type":"string" },
+                                "checkpoint": { "type":"null" },
+                                "classification_stop": { "type":"number" },
+                                "classification": { "type":"string" },
+                                "col_major": { "type":"string" },
+                                "description": { "type":"string" },
+                                "destination_key": { "type":"string" },
+                                "diagnostics": { "type":"string" },
+                                "end_time": { "type":"number" },
+                                "epochs": { "type":"number" },
+                                "epsilon": { "type":"number" },
+                                "exception": { "type":"null" },
+                                "expert_mode": { "type":"string" },
+                                "fast_mode": { "type":"string" },
+                                "force_load_balance": { "type":"string" },
+                                "hidden_dropout_ratios": { "type":"null" },
+                                "hidden": { "type":"array", "items": { "type":"number" } },
+                                "ignore_const_cols": { "type":"string" },
+                                "initial_weight_distribution": { "type":"string" },
+                                "initial_weight_scale": { "type":"number" },
+                                "input_dropout_ratio": { "type":"number" },
+                                "job_key": { "type":"string" },
+                                "keep_cross_validation_splits": { "type":"string" },
+                                "l1": { "type":"number" },
+                                "l2": { "type":"number" },
+                                "loss": { "type":"string" },
+                                "max_after_balance_size": { "type":"number" },
+                                "max_confusion_matrix_size": { "type":"number" },
+                                "max_hit_ratio_k": { "type":"number" },
+                                "max_w2": { "type":"number" },
+                                "momentum_ramp": { "type":"number" },
+                                "momentum_stable": { "type":"number" },
+                                "momentum_start": { "type":"number" },
+                                "n_folds": { "type":"number" },
+                                "nesterov_accelerated_gradient": { "type":"string" },
+                                "override_with_best_model": { "type":"string" },
+                                "quiet_mode": { "type":"string" },
+                                "rate_annealing": { "type":"number" },
+                                "rate_decay": { "type":"number" },
+                                "rate": { "type":"number" },
+                                "regression_stop": { "type":"number" },
+                                "replicate_training_data": { "type":"string" },
+                                "response_info": { "type":"object", "properties":{
+                                        "h2o": { "type":"string" },
+                                        "node": { "type":"string" },
+                                        "redirect_url": { "type":"string" },
+                                        "status": { "type":"string" },
+                                        "time": { "type":"number" }
+                                    }
+                                },
+                                "response": { "type":"object" },
+                                "rho": { "type":"number" },
+                                "score_duty_cycle": { "type":"number" },
+                                "score_interval": { "type":"number" },
+                                "score_training_samples": { "type":"number" },
+                                "score_validation_samples": { "type":"number" },
+                                "score_validation_sampling": { "type":"string" },
+                                "seed": { "type":"number" },
+                                "shuffle_training_data": { "type":"string" },
+                                "single_node_mode": { "type":"string" },
+                                "source": { "type":"object", "properties":{ "_key": { "type":"string" } } },
+                                "sparse": { "type":"string" },
+                                "sparsity_beta": { "type":"number" },
+                                "start_time": { "type":"number" },
+                                "state": { "type":"string" },
+                                "train_samples_per_iteration": { "type":"number" },
+                                "use_all_factor_levels": { "type":"string" },
+                                "validation": { "type":"object", "properties":{
+                                        "_key": { "type":"string" }
+                                    }
+                                },
+                                "variable_importances": { "type":"string" },
+                                "xval_models": { "type":"array" }
+                            }
+                        },
+                        "mean_a": { "type":"null" },
+                        "mean_bias": { "type":"array", "items": { "type":"number" } },
+                        "mean_rate": { "type":"array", "items": { "type":"number" } },
+                        "mean_weight": { "type":"array", "items": { "type":"number" } },
+                        "processed_global": { "type":"number" },
+                        "rms_bias": { "type":"array", "items": { "type":"number" } },
+                        "rms_rate": { "type":"array", "items": { "type":"number" } },
+                        "rms_weight": { "type":"array", "items": { "type":"number" } },
+                        "unstable": { "type":"string" }
+                    }
+                },
+                "run_time": { "type":"number" },
+                "training_rows": { "type":"number" },
+                "validation_rows": { "type":"number" },
+                "warnings": { "type":"array" }
+            }
+        },
+        "python_%timeout": { "type":"number" },
+        "python_elapsed": { "type":"number" },
+        "response_info": {
+            "type":"object", "properties":{
+                "h2o": { "type":"string" },
+                "node": { "type":"string" },
+                "redirect_url": { "type":"null" },
+                "status": { "type":"string" },
+                "time": { "type":"number" }
+            }
+        }
+    }
+}
+
