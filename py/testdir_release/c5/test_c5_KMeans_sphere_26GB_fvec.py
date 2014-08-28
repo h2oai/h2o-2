@@ -94,7 +94,8 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             kwargs = {
                 'k': 15, 
                 'max_iter': 10,
-                'normalize': 1,
+                # 'normalize': 1,
+                'normalize': 0, # temp try
                 'initialization': 'Furthest',
                 'destination_key': 'junk.hex', 
                 # we get NaNs if whole col is NA

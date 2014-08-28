@@ -96,6 +96,7 @@ h2o.setLogPath <- function(path, type) {
 # Internal functions & declarations
 .h2o.__PAGE_CANCEL = "Cancel.json"
 .h2o.__PAGE_CLOUD = "Cloud.json"
+.h2o.__PAGE_UP = "Up.json"
 .h2o.__PAGE_JOBS = "Jobs.json"
 .h2o.__PAGE_REMOVE = "Remove.json"
 .h2o.__PAGE_REMOVEALL = "2/RemoveAll.json"
@@ -227,6 +228,11 @@ h2o.setLogPath <- function(path, type) {
   res
 }
 
+.h2o.__checkUp <- function(client) {
+  myUpURL = paste("http://", client@ip, ":", client@port, "/", .h2o.__PAGE_UP, sep = "")
+  if(!url.exists(myUpURL)) stop("Cannot connect to H2O instance at ", myURL)
+}
+
 .h2o.__cloudSick <- function(node_name = NULL, client) {
   url <- paste("http://", client@ip, ":", client@port, "/Cloud.html", sep = "")
   m1 <- "Attempting to execute action on an unhealthy cluster!\n"
@@ -240,8 +246,8 @@ h2o.setLogPath <- function(path, type) {
   grabCloudStatus <- function(client) {
     ip <- client@ip
     port <- client@port
-    url <- paste("http://", ip, ":", port, "/", .h2o.__PAGE_CLOUD, sep = "")
-    if(!url.exists(url)) stop(paste("H2O connection has been severed. Instance no longer up at address ", ip, ":", port, "/", sep = "", collapse = ""))
+    .h2o.__checkUp(client)
+    url <- paste("http://", ip, ":", port, "/", .h2o.__PAGE_CLOUD, "?quiet=true&skip_ticks=true", sep = "")
     fromJSON(getURLContent(url))
   }
   checker <- function(node, client) {
@@ -970,7 +976,7 @@ h2o.getFrame <- function(h2o, key) {
 }
 
 .h2o.__version <- function(client) {
-  res = .h2o.__remoteSend(client, .h2o.__PAGE_CLOUD)
+  res = .h2o.__remoteSendWithParms(client, .h2o.__PAGE_CLOUD, list(quiet="true", skip_ticks="true"))
   res$version
 }
 

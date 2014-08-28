@@ -1,10 +1,12 @@
 import unittest, random, sys, time, os
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_glm, h2o_browse as h2b, h2o_import as h2i, h2o_exec as h2e
+import h2o, h2o_cmd, h2o_hosts, h2o_glm, h2o_import as h2i, h2o_exec as h2e
 
 # FIX!. enums may only work if 0 based
 # try -5,5 etc
 # maybe call GLM on it after doing factor (check # of coefficients)
+
+DO_CASE = 1
 
 def write_syn_dataset(csvPathname, rowCount, colCount, SEED):
     r1 = random.Random(SEED)
@@ -57,40 +59,41 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (1000,  10, 'cA', 100),
-            (1000,  20, 'cB', 100),
-            (1000,  30, 'cC', 100),
-            (1000,  40, 'cD', 100),
-            (1000,  10, 'cE', 100),
-            (1000,  20, 'cF', 100),
-            (1000,  30, 'cG', 100),
-            (1000,  40, 'cH', 100),
+            (100000,  10, 'cA', 100),
+            (100000,  20, 'cB', 100),
+            (100000,  30, 'cC', 100),
             ]
 
-        ### h2b.browseTheCloud()
         # we're going to do a special exec across all the columns to turn them into enums
         # including the duplicate of the output!
-        exprList = [
-                '<keyX>[,<col2>] = factor(<keyX>[,<col1>]);',
-                '<keyX>[,<col1>] = factor(<keyX>[,1]);',
-                '<keyX>[,1] = factor(<keyX>[,<col2>]);',
-                '<keyX>[,<col2>] = factor(<keyX>[,<col1>]);',
-                '<keyX>[,<col1>] = factor(<keyX>[,1]);',
-                '<keyX>[,1] = factor(<keyX>[,<col2>]);' \
-                ]
 
-        exprList = [
-                '<keyX>[,<col1>] = factor(<keyX>[,<col1>]);',
-                '<keyX>[,<col1>] = factor(<keyX>[,1]);',
-                '<keyX>[,1] = factor(<keyX>[,<col2>]);',
-                '<keyX>[,<col1>] = factor(<keyX>[,<col1>]);',
-                '<keyX>[,<col1>] = factor(<keyX>[,1]);',
-                '<keyX>[,1] = factor(<keyX>[,<col2>]);' \
-                ]
+        if DO_CASE==0:
+            exprList = [
+                    '<keyX>[,<col2>] = factor(<keyX>[,<col1>]);',
+                    '<keyX>[,<col1>] = factor(<keyX>[,1]);',
+                    '<keyX>[,1] = factor(<keyX>[,<col2>]);',
+                    '<keyX>[,<col2>] = factor(<keyX>[,<col1>]);',
+                    '<keyX>[,<col1>] = factor(<keyX>[,1]);',
+                    '<keyX>[,1] = factor(<keyX>[,<col2>]);' \
+                    ]
 
-        exprList = [
-                '<keyX>[,2] = factor(<keyX>[,2])',
-                ]
+        elif DO_CASE==1:
+            exprList = [
+                    '<keyX>[,<col1>] = factor(<keyX>[,<col1>]);',
+                    '<keyX>[,<col1>] = factor(<keyX>[,1]);',
+                    '<keyX>[,1] = factor(<keyX>[,<col2>]);',
+                    '<keyX>[,<col1>] = factor(<keyX>[,<col1>]);',
+                    '<keyX>[,<col1>] = factor(<keyX>[,1]);',
+                    '<keyX>[,1] = factor(<keyX>[,<col2>]);' \
+                    ]
+
+        elif DO_CASE==2:
+            exprList = [
+                    '<keyX>[,2] = factor(<keyX>[,2])',
+                    ]
+        
+        else:
+            raise Exception("Bad case: %s" % DO_CASE)
 
         for (rowCount, colCount, hex_key, timeoutSecs) in tryList:
             SEEDPERFILE = random.randint(0, sys.maxint)
@@ -109,9 +112,6 @@ class Basic(unittest.TestCase):
                 timeoutSecs=30, incrementingResult=False)
             print "\nexec colResultList", colResultList
 
-            if not h2o.browse_disable:
-                h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
-                time.sleep(3)
 
 if __name__ == '__main__':
     h2o.unit_main()

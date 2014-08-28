@@ -20,12 +20,13 @@
 
 h2o.clusterInfo <- function(client) {
   if(missing(client) || class(client) != "H2OClient") stop("client must be a H2OClient object")
+
+  .h2o.__checkUp(client)
   myURL = paste("http://", client@ip, ":", client@port, "/", .h2o.__PAGE_CLOUD, sep = "")
-  if(!url.exists(myURL)) stop("Cannot connect to H2O instance at ", myURL)
 
   res = NULL
   {
-    res = fromJSON(postForm(myURL, style = "POST"))
+    res = fromJSON(postForm(myURL, .params = list(quiet="true", skip_ticks="true"), style = "POST"))
 
     nodeInfo = res$nodes
     numCPU = sum(sapply(nodeInfo,function(x) as.numeric(x['num_cpus'])))
@@ -44,7 +45,7 @@ h2o.clusterInfo <- function(client) {
   maxMem = sum(sapply(nodeInfo,function(x) as.numeric(x['max_mem_bytes']))) / (1024 * 1024 * 1024)
   numCPU = sum(sapply(nodeInfo,function(x) as.numeric(x['num_cpus'])))
   allowedCPU = sum(sapply(nodeInfo,function(x) as.numeric(x['cpus_allowed'])))
-  clusterHealth =  all(sapply(nodeInfo,function(x) as.logical(x['num_cpus']))==TRUE)
+  clusterHealth = all(sapply(nodeInfo,function(x) as.logical(x['num_cpus']))==TRUE)
   
   cat("R is connected to H2O cluster:\n")
   cat("    H2O cluster uptime:        ", .readableTime(as.numeric(res$cloud_uptime_millis)), "\n")
@@ -326,52 +327,6 @@ h2o.downloadAllLogs <- function(client, dirname = ".", filename = NULL) {
   # download.file(url, destfile = myPath)
   writeBin(tempfile, myPath)
 }
-
-# ----------------------- Deprecated ----------------------- #
-# h2o.checkClient <- function(object) {
-#   if(class(object) != "H2OClient") stop("object must be of class H2OClient")
-#   
-#   myURL = paste("http://", object@ip, ":", object@port, sep="")
-#   if(!url.exists(myURL)) {
-#     print("H2O is not running yet, launching it now.")
-#     h2o.startLauncher()
-#     invisible(readline("Start H2O, then hit <Return> to continue: "))
-#     if(!url.exists(myURL)) stop("H2O failed to start, stopping execution.")
-#   } else { 
-#     cat("Successfully connected to", myURL, "\n")
-#     if("h2oRClient" %in% rownames(installed.packages()) && (pv=packageVersion("h2oRClient")) != (sv=.h2o.__version(object)))
-#       warning(paste("Version mismatch! Server running H2O version", sv, "but R package is version", pv))
-#   }
-# }
-# 
-# h2o.startLauncher <- function() {
-#   myOS = Sys.info()["sysname"]
-#   
-#   if(myOS == "Windows") verPath = paste(Sys.getenv("APPDATA"), "h2o", sep=.Platform$file.sep)
-#   else verPath = paste(Sys.getenv("HOME"), "Library/Application Support/h2o", sep=.Platform$file.sep)
-#   myFiles = list.files(verPath)
-#   if(length(myFiles) == 0) stop("Cannot find location of H2O launcher. Please check that your H2O installation is complete.")
-#   # TODO: Must trim myFiles so all have format 1.2.3.45678.txt (use regexpr)!
-#   
-#   # Get H2O with latest version number
-#   # If latest isn't working, maybe go down list to earliest until one executes?
-#   fileName = paste(verPath, tail(myFiles, n=1), sep=.Platform$file.sep)
-#   myVersion = strsplit(tail(myFiles, n=1), ".txt")[[1]]
-#   launchPath = readChar(fileName, file.info(fileName)$size)
-#   if(is.null(launchPath) || launchPath == "")
-#     stop(paste("No H2O launcher matching H2O version", myVersion, "found"))
-#   
-#   if(myOS == "Windows") {
-#     tempPath = paste(launchPath, "windows/h2o.bat", sep=.Platform$file.sep)
-#     if(!file.exists(tempPath)) stop(paste("Cannot open H2OLauncher.jar! Please check if it exists at", tempPath))
-#     shell.exec(tempPath)
-#   }
-#   else {
-#     tempPath = paste(launchPath, "Contents/MacOS/h2o", sep=.Platform$file.sep)
-#     if(!file.exists(tempPath)) stop(paste("Cannot open H2OLauncher.jar! Please check if it exists at", tempPath))
-#     system(paste("bash ", tempPath))
-#   }
-# }
 
 # ------------------- Show H2O recommended columns to ignore ----------------------------------------------------
 h2o.ignoreColumns <- function(data, max_na = 0.2) {

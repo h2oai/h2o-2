@@ -82,6 +82,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
             print "col 0 is enum in " + csvFilename + " but KMeans should skip that automatically?? or no?"
             kwargs = {
+                'max_iter': 5,
                 'k': 15, 
                 'initialization': 'Furthest',
                 'cols': None, 

@@ -122,6 +122,7 @@ class Basic(unittest.TestCase):
         for trial in range(10):
             seed = random.randint(0, sys.maxint)
             kwargs = {
+                'seed': seed,
                 'k': len(genCenters), 
                 'initialization': 'PlusPlus', 
                 'destination_key': 'k.hex', 
@@ -136,14 +137,10 @@ class Basic(unittest.TestCase):
                 "kmeans first center doesn't have same # of values as dataset row %s %s" % (len(genCenters[0]), len(centers[0])))
             h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, trial=trial)
 
-            if h2o.beta_features:
-                error = kmeans['model']['total_within_SS']
-                within_cluster_variances = kmeans['model']['within_cluster_variances']
-                print "trial:", trial, "within_cluster_variances:", within_cluster_variances
-            else:
-                model_key = kmeans["_key"]
-                kmeansResult = h2o_cmd.runInspect(key=model_key)
-                error = kmeansResult['KMeansModel']['error']
+            error = kmeans['model']['total_within_SS']
+            within_cluster_variances = kmeans['model']['within_cluster_variances']
+            print "trial:", trial, "within_cluster_variances:", within_cluster_variances
+
             # compute the sum of the squares of the distance for each cluster
             # for each row, we 
             # returns a tuple of numers for each center

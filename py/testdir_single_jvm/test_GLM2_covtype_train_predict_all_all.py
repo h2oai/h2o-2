@@ -79,6 +79,7 @@ class Basic(unittest.TestCase):
             validation = submodels[-1]['validation']
             best_threshold = validation['best_threshold']
             thresholds = validation['thresholds']
+
             # have to look up the index for the cm, from the thresholds list
             best_index = None
             for i,t in enumerate(thresholds):

@@ -65,8 +65,8 @@ def sleep(secs):
 # do the flatfile the same way
 # Both are the user that runs the test. The config might have a different username on the
 # remote machine (0xdiag, say, or hduser)
-def flatfile_name():
-    return ('pytest_flatfile-%s-%s' % (getpass.getuser(), os.getpid()))
+def flatfile_pathname():
+    return (LOG_DIR + '/pytest_flatfile-%s' % getpass.getuser())
 
 # only usable after you've built a cloud (junit, watch out)
 def cloud_name():
@@ -145,7 +145,6 @@ def get_ip_address():
     # set it back to default higher timeout (None would be no timeout?)
     socket.setdefaulttimeout(5)
     return ip
-
 
 # used to rename the sandbox when running multiple tests in same dir (in different shells)
 def get_sandbox_name():
@@ -470,7 +469,8 @@ nodes = []
 def write_flatfile(node_count=2, base_port=54321, hosts=None, rand_shuffle=True, port_offset=0):
     # always create the flatfile.
     ports_per_node = 2
-    pff = open(flatfile_name(), "w+")
+    print "hello:", flatfile_pathname()
+    pff = open(flatfile_pathname(), "w+")
     # doing this list outside the loops so we can shuffle for better test variation
     hostPortList = []
 
@@ -490,6 +490,7 @@ def write_flatfile(node_count=2, base_port=54321, hosts=None, rand_shuffle=True,
     for hp in hostPortList:
         pff.write(hp + "\n")
     pff.close()
+    print "hello2:", flatfile_pathname()
 
 
 def check_h2o_version():
@@ -615,7 +616,7 @@ def setup_benchmark_log():
 # node_count is per host if hosts is specified.
 def build_cloud(node_count=1, base_port=54321, hosts=None,
                 timeoutSecs=30, retryDelaySecs=1, cleanup=True, rand_shuffle=True,
-                conservative=False, create_json=False, clone_cloud=None, **kwargs):
+                conservative=False, create_json=False, clone_cloud=None, init_sandbox=True, **kwargs):
 
 
     # redirect to build_cloud_with_json if a command line arg
@@ -631,7 +632,10 @@ def build_cloud(node_count=1, base_port=54321, hosts=None,
         return nodeList
 
     # moved to here from unit_main. so will run with nosetests too!
-    clean_sandbox()
+    # Normally do this. Don't do it if build_cloud_with_hosts() did and put a flatfile in there already!
+    if init_sandbox:
+        clean_sandbox()
+
     log("#*********************************************************************")
     log("Starting new test: " + python_test_name + " at build_cloud()")
     log("#*********************************************************************")
@@ -803,13 +807,13 @@ def upload_jar_to_remote_hosts(hosts, slow_connection=False):
             f = find_file('target/h2o.jar')
             h.upload_file(f, progress=prog)
             # skipping progress indicator for the flatfile
-            h.upload_file(flatfile_name())
+            h.upload_file(flatfile_pathname())
     else:
         f = find_file('target/h2o.jar')
         hosts[0].upload_file(f, progress=prog)
         hosts[0].push_file_to_remotes(f, hosts[1:])
 
-        f = find_file(flatfile_name())
+        f = find_file(flatfile_pathname())
         hosts[0].upload_file(f, progress=prog)
         hosts[0].push_file_to_remotes(f, hosts[1:])
 
@@ -1354,63 +1358,8 @@ class H2O(object):
             verboseprint(msgUsed, urlUsed, paramsUsedStr, "Response:", dump_json(response))
         return response
 
-    def kmeans_apply(self, data_key, model_key, destination_key,
-                     timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
-                     **kwargs):
-        # defaults
-        params_dict = {
-            'destination_key': destination_key,
-            '_modelKey': model_key,
-            'data_key': data_key,
-        }
-        browseAlso = kwargs.get('browseAlso', False)
-        # only lets these params thru
-        check_params_update_kwargs(params_dict, kwargs, 'kmeans_apply', print_params=True)
-
-        print "\nKMeansApply params list:", params_dict
-        a = self.__do_json_request('KMeansApply.json', timeout=timeoutSecs, params=params_dict)
-
-        # Check that the response has the right Progress url it's going to steer us to.
-        if a['response']['redirect_request'] != 'Progress':
-            print dump_json(a)
-            raise Exception('H2O kmeans redirect is not Progress. KMeansApply json response precedes.')
-        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
-                          initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs)
-        verboseprint("\nKMeansApply result:", dump_json(a))
-
-        if (browseAlso | browse_json):
-            print "Redoing the KMeansApply through the browser, no results saved though"
-            h2b.browseJsonHistoryAsUrlLastMatch('KMeansApply')
-            time.sleep(5)
-        return a
-
-    # model_key
-    # key
-    def kmeans_score(self, key, model_key,
-                     timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
-                     **kwargs):
-        # defaults
-        params_dict = {
-            'key': key,
-            '_modelKey': model_key,
-        }
-        browseAlso = kwargs.get('browseAlso', False)
-        # only lets these params thru
-        check_params_update_kwargs(params_dict, kwargs, 'kmeans_score', print_params=True)
-        print "\nKMeansScore params list:", params_dict
-        a = self.__do_json_request('KMeansScore.json', timeout=timeoutSecs, params=params_dict)
-
-        # kmeans_score doesn't need polling?
-        verboseprint("\nKMeansScore result:", dump_json(a))
-
-        if (browseAlso | browse_json):
-            print "Redoing the KMeansScore through the browser, no results saved though"
-            h2b.browseJsonHistoryAsUrlLastMatch('KMeansScore')
-            time.sleep(5)
-        return a
-
     # this is only for 2 (fvec)
-    def kmeans_view(self, model, timeoutSecs=30, **kwargs):
+    def kmeans_view(self, model=None, timeoutSecs=30, **kwargs):
         # defaults
         params_dict = {
             '_modelKey': model,
@@ -1434,8 +1383,8 @@ class H2O(object):
     # don't need to include in params_dict it doesn't need a default
     # FIX! cols should be renamed in test for fvec
     def kmeans(self, key, key2=None,
-               timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
-               noise=None, benchmarkLogging=None, noPoll=False, **kwargs):
+        timeoutSecs=300, retryDelaySecs=0.2, initialDelaySecs=None, pollTimeoutSecs=180,
+        noise=None, benchmarkLogging=None, noPoll=False, **kwargs):
         # defaults
         # KMeans has more params than shown here
         # KMeans2 has these params?
@@ -1460,16 +1409,25 @@ class H2O(object):
         algo = '2/KMeans2'
 
         print "\n%s params list:" % algo, params_dict
-        a = self.__do_json_request(algo + '.json',
-                                   timeout=timeoutSecs, params=params_dict)
+        a1 = self.__do_json_request(algo + '.json',
+            timeout=timeoutSecs, params=params_dict)
 
         if noPoll:
-            return a
+            return a1
 
-        a = self.poll_url(a, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
-                          initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
-                          noise=noise, benchmarkLogging=benchmarkLogging)
-        verboseprint("\n%s result:" % algo, dump_json(a))
+        a1 = self.poll_url(a1, timeoutSecs=timeoutSecs, retryDelaySecs=retryDelaySecs,
+            initialDelaySecs=initialDelaySecs, pollTimeoutSecs=pollTimeoutSecs,
+            noise=noise, benchmarkLogging=benchmarkLogging)
+        print "For now, always dumping the last polled kmeans result ..are the centers good"
+        print "\n%s result:" % algo, dump_json(a1)
+
+        # if we want to return the model view like the browser
+        if 1==0:
+            # HACK! always do a model view. kmeans last result isn't good? (at least not always)
+            a = self.kmeans_view(model=a1['model']['_key'], timeoutSecs=30)
+            verboseprint("\n%s model view result:" % algo, dump_json(a))
+        else:
+            a = a1
 
         if (browseAlso | browse_json):
             print "Redoing the %s through the browser, no results saved though" % algo
@@ -2996,7 +2954,7 @@ class LocalH2O(H2O):
         self.rc = None
         # FIX! no option for local /home/username ..always the sandbox (LOG_DIR)
         self.ice = tmp_dir('ice.')
-        self.flatfile = flatfile_name()
+        self.flatfile = flatfile_pathname()
         self.remoteH2O = False # so we can tell if we're remote or local
 
         h2o_os_util.check_port_group(self.port)
@@ -3015,7 +2973,7 @@ class LocalH2O(H2O):
 
     def get_flatfile(self):
         return self.flatfile
-        # return find_file(flatfile_name())
+        # return find_file(flatfile_pathname())
 
     def get_ice_dir(self):
         return self.ice
@@ -3129,7 +3087,7 @@ class RemoteHost(object):
                 #         (self, self.channel.closed, self.channel.exit_status_ready()))
 
                 if e.errno == errno.ENOENT: # no such file or directory
-                    verboseprint("{0} uploading file {1}.".format(self, f))
+                    verboseprint("{0} uploading file {1}".format(self, f))
                     sftp.put(f, dest, callback=progress)
                     # if you want to track upload times
                     ### print "\n{0:.3f} seconds".format(time.time() - start)
@@ -3219,7 +3177,7 @@ class RemoteH2O(H2O):
         self.remoteH2O = True # so we can tell if we're remote or local
         self.jar = host.upload_file('target/h2o.jar')
         # need to copy the flatfile. We don't always use it (depends on h2o args)
-        self.flatfile = host.upload_file(flatfile_name())
+        self.flatfile = host.upload_file(flatfile_pathname())
         # distribute AWS credentials
         if self.aws_credentials:
             self.aws_credentials = host.upload_file(self.aws_credentials)

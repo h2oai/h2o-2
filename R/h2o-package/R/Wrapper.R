@@ -3,22 +3,23 @@
 # 2) If user does want to start H2O and running locally, attempt to bring up H2O launcher
 # 3) If user does want to start H2O, but running non-locally, print an error
 h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, forceDL = FALSE, Xmx,
-                     beta = FALSE, assertion = TRUE, license = NULL, max_mem_size = "1g", min_mem_size = "1g",
-                     ice_root = NULL) {
+                     beta = FALSE, assertion = TRUE, license = NULL, max_mem_size = NULL, min_mem_size = NULL,
+                     ice_root = NULL, strict_version_check = TRUE) {
   if(!is.character(ip)) stop("ip must be of class character")
   if(!is.numeric(port)) stop("port must be of class numeric")
   if(!is.logical(startH2O)) stop("startH2O must be of class logical")
   if(!is.logical(forceDL)) stop("forceDL must be of class logical")
   if(!missing(Xmx) && !is.character(Xmx)) stop("Xmx must be of class character")
-  if(!is.character(max_mem_size)) stop("max_mem_size must be of class character")
-  if(!is.character(min_mem_size)) stop("min_mem_size must be of class character")
-  if(!regexpr("^[1-9][0-9]*[gGmM]$", max_mem_size)) stop("max_mem_size option must be like 1g or 1024m")
-  if(!regexpr("^[1-9][0-9]*[gGmM]$", min_mem_size)) stop("min_mem_size option must be like 1g or 1024m")
-  if(!missing(Xmx) &&   !regexpr("^[1-9][0-9]*[gGmM]$", Xmx)) stop("Xmx option must be like 1g or 1024m")
+  if(!is.null(max_mem_size) && !is.character(max_mem_size)) stop("max_mem_size must be of class character")
+  if(!is.null(min_mem_size) && !is.character(min_mem_size)) stop("min_mem_size must be of class character")
+  if(!is.null(max_mem_size) && !regexpr("^[1-9][0-9]*[gGmM]$", max_mem_size)) stop("max_mem_size option must be like 1g or 1024m")
+  if(!is.null(min_mem_size) && !regexpr("^[1-9][0-9]*[gGmM]$", min_mem_size)) stop("min_mem_size option must be like 1g or 1024m")
+  if(!missing(Xmx) && !regexpr("^[1-9][0-9]*[gGmM]$", Xmx)) stop("Xmx option must be like 1g or 1024m")
   if(!is.logical(beta)) stop("beta must be of class logical")
   if(!is.logical(assertion)) stop("assertion must be of class logical")
   if(!is.null(license) && !is.character(license)) stop("license must be of class character")
   if(!is.null(ice_root) && !is.character(ice_root)) stop("ice_root must be of class character")
+  if(!is.logical(strict_version_check)) stop("strict_version_check must be of class logical")
 
   if(!missing(Xmx)) {
     warning("Xmx is a deprecated parameter. Use `max_mem_size` and `min_mem_size` to set the memory boundaries. Using `Xmx` to set these.")
@@ -30,8 +31,9 @@ h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, forceDL = 
     ice_root = tempdir()
   }
 
+  myUpURL = paste("http://", ip, ":", port, "/Up.json", sep="")
   myURL = paste("http://", ip, ":", port, sep="")
-  if(!url.exists(myURL)) {
+  if(!url.exists(myUpURL)) {
     if(!startH2O)
       stop(paste("Cannot connect to H2O server. Please check that H2O is running at", myURL))
     else if(ip == "localhost" || ip == "127.0.0.1") {
@@ -45,9 +47,17 @@ h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, forceDL = 
   H2Oserver = new("H2OClient", ip = ip, port = port)
   # Sys.sleep(0.5)    # Give cluster time to come up
   h2o.clusterInfo(H2Oserver); cat("\n")
-  
-  if((verH2O = .h2o.__version(H2Oserver)) != (verPkg = packageVersion("h2o")))
-    stop("Version mismatch! H2O is running version ", verH2O, " but R package is version ", toString(verPkg), "\n")
+
+  if((verH2O = .h2o.__version(H2Oserver)) != (verPkg = packageVersion("h2o"))) {
+    message = sprintf("Version mismatch! H2O is running version % but R package is version %s", verH2O, toString(verPkg))
+    if (strict_version_check) {
+      stop(message)
+    }
+    else {
+      warning(message)
+    }
+  }
+
   assign("SERVER", H2Oserver, .pkg.env)
   return(H2Oserver)
 }
@@ -86,9 +96,9 @@ h2o.shutdown <- function(client, prompt = TRUE) {
 
 h2o.clusterStatus <- function(client) {
   if(missing(client) || class(client) != "H2OClient") stop("client must be a H2OClient object")
+  .h2o.__checkUp(client)
   myURL = paste("http://", client@ip, ":", client@port, "/", .h2o.__PAGE_CLOUD, sep = "")
-  if(!url.exists(myURL)) stop("Cannot connect to H2O instance at ", myURL)
-  res = fromJSON(postForm(myURL, style = "POST"))
+  res = fromJSON(postForm(myURL, .params = list(quiet="true", skip_ticks="true"), style = "POST"))
   
   cat("Version:", res$version, "\n")
   cat("Cloud name:", res$cloud_name, "\n")
@@ -206,7 +216,7 @@ h2o.clusterStatus <- function(client) {
 #     h2o.shutdown(new("H2OClient", ip=ip, port=port), prompt = FALSE)
 # }
 
-.h2o.startJar <- function(max_memory = "1g", min_memory = "1g", beta = FALSE, assertion = TRUE, forceDL = FALSE, license = NULL, ice_root) {
+.h2o.startJar <- function(max_memory = NULL, min_memory = NULL, beta = FALSE, assertion = TRUE, forceDL = FALSE, license = NULL, ice_root) {
   command <- .h2o.checkJava()
 
   if (! is.null(license)) {
@@ -215,17 +225,35 @@ h2o.clusterStatus <- function(client) {
     }
   }
 
+  if (missing(ice_root)) {
+    stop("ice_root must be specified for .h2o.startJar");
+  }
+
   # Note: Logging to stdout and stderr in Windows only works for R version 3.0.2 or later!
   stdout <- .h2o.getTmpFile("stdout")
   stderr <- .h2o.getTmpFile("stderr")
   write(Sys.getpid(), .h2o.getTmpFile("pid"), append = FALSE)   # Write PID to file to track if R started H2O
   
-  # jar_file <- paste(.h2o.pkg.path, "java", "h2o.jar", sep = .Platform$file.sep)
   jar_file <- .h2o.downloadJar(overwrite = forceDL)
   jar_file <- paste('"', jar_file, '"', sep = "")
 
-  if (missing(ice_root)) {
-    stop("ice_root must be specified for .h2o.startJar");
+  # Throw an error if GNU Java is being used
+  jver <- system2(command, "-version", stdout = TRUE, stderr = TRUE)
+  if(any(grepl("GNU libgcj", jver))) {
+    stop("
+Sorry, GNU Java is not supported for H2O.
+Please download the latest Java SE JDK 7 from the following URL:
+http://www.oracle.com/technetwork/java/javase/downloads/jdk7-downloads-1880260.html")
+  }
+
+  if(any(grepl("Client VM", jver))) {
+    warning("
+You have a 32-bit version of Java.  H2O works best with 64-bit Java.
+Please download the latest Java SE JDK 7 from the following URL:
+http://www.oracle.com/technetwork/java/javase/downloads/jdk7-downloads-1880260.html")
+
+    # Set default max_memory to be 1g for 32-bit JVM.
+    if(is.null(max_memory)) max_memory = "1g"
   }
 
   if (.Platform$OS.type == "windows") {
@@ -236,8 +264,11 @@ h2o.clusterStatus <- function(client) {
   }
 
   # Compose args
-  args <- c(paste("-Xms", min_memory, sep=""),
-            paste("-Xmx", max_memory, sep=""))
+  mem_args <- c()
+  if(!is.null(min_memory)) mem_args <- c(mem_args, paste("-Xms", min_memory, sep=""))
+  if(!is.null(max_memory)) mem_args <- c(mem_args, paste("-Xmx", max_memory, sep=""))
+
+  args <- mem_args
   if(assertion) args <- c(args, "-ea")
   args <- c(args, "-jar", jar_file)
   args <- c(args, "-name", "H2O_started_from_R")
@@ -249,19 +280,15 @@ h2o.clusterStatus <- function(client) {
 
   cat("\n")
   cat(        "Note:  In case of errors look at the following log files:\n")
-  cat(sprintf("           %s\n", stdout))
-  cat(sprintf("           %s\n", stderr))
+  cat(sprintf("    %s\n", stdout))
+  cat(sprintf("    %s\n", stderr))
   cat("\n")
-  
-  # Throw an error if GNU Java is being used
-  jver <- system2(command, "-version", stdout = TRUE, stderr = TRUE)
-  if(any(grepl("GNU libgcj", jver))) {
-    stop("Sorry, GNU Java is not supported for H2O.\n
-          Please download the latest Java SE JDK 7 from the following URL:\n
-          http://www.oracle.com/technetwork/java/javase/downloads/jdk7-downloads-1880260.html")
-  }
-  system2(command, c("-version"))
+
+  # Print a java -version to the console
+  system2(command, c(mem_args, "-version"))
   cat("\n")
+
+  # Run the real h2o java command
   rc = system2(command,
                args=args,
                stdout=stdout,
@@ -383,63 +410,3 @@ h2o.clusterStatus <- function(client) {
   }
   return(dest_file)
 }
-
-#-------------------------------- Deprecated --------------------------------#
-# NB: if H2OVersion matches \.99999$ is a development version, so pull package info out of file.  yes this is a hack
-#     but it makes development versions properly prompt upgrade
-# .h2o.checkPackage <- function(myURL, silentUpgrade, promptUpgrade) {
-#   h2oWrapper.__formatError <- function(error, prefix="  ") {
-#     result = ""
-#     items = strsplit(error,"\n")[[1]];
-#     for (i in 1:length(items))
-#       result = paste(result, prefix, items[i], "\n", sep="")
-#     result
-#   }
-#   
-#   temp = postForm(paste(myURL, .h2o.__PAGE_RPACKAGE, sep="/"), style = "POST")
-#   res = fromJSON(temp)
-#   if (!is.null(res$error))
-#     stop(paste(myURL," returned the following error:\n", h2oWrapper.__formatError(res$error)))
-#   
-#   H2OVersion = res$version
-#   myFile = res$filename
-#   
-#   if( grepl('\\.99999$', H2OVersion) ){
-#     H2OVersion <- sub('\\.tar\\.gz$', '', sub('.*_', '', myFile))
-#   }
-#   
-#   # sigh. I so wish people would occasionally listen to me; R expects a version to be %d.%d.%d.%d and will ignore anything after
-#   myPackages <- installed.packages()[,1]
-#   needs_upgrade <- F
-#   if( 'h2oRClient' %in% myPackages ){
-#     ver <- unclass( packageVersion('h2oRClient') )
-#     ver <- paste( ver[[1]], collapse='.' )
-#     needs_upgrade <- !(ver == H2OVersion)
-#   }
-#   
-#   if("h2oRClient" %in% myPackages && !needs_upgrade )
-#     cat("H2O R package and server version", H2OVersion, "match\n")
-#   else if(.h2o.shouldUpgrade(silentUpgrade, promptUpgrade, H2OVersion)) {
-#     if("h2oRClient" %in% myPackages) {
-#       cat("Removing old H2O R package version", toString(packageVersion("h2oRClient")), "\n")
-#       if("package:h2oRClient" %in% search())
-#         detach("package:h2oRClient", unload=TRUE)
-#       remove.packages("h2oRClient")
-#     }
-#     cat("Downloading and installing H2O R package version", H2OVersion, "\n")
-#     install.packages("h2oRClient", repos = c(H2O = paste(myURL, "R", sep = "/"), getOption("repos")))
-#   }
-# }
-# 
-# Check if user wants to install H2O R package matching version on server
-# Note: silentUpgrade supercedes promptUpgrade
-# .h2o.shouldUpgrade <- function(silentUpgrade, promptUpgrade, H2OVersion) {
-#   if(silentUpgrade) return(TRUE)
-#   if(promptUpgrade) {
-#     ans = readline(paste("Do you want to install H2O R package version", H2OVersion, "from the server (Y/N)? "))
-#     temp = substr(ans, 1, 1)
-#     if(temp == "Y" || temp == "y") return(TRUE)
-#     else if(temp == "N" || temp == "n") return(FALSE)
-#     else stop("Invalid answer! Please enter Y for yes or N for no")
-#   } else return(FALSE)
-# }

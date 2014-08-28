@@ -6,17 +6,23 @@ import socket
 print "Assumes you ran ../build_for_clone.py in this directory"
 print "Using h2o-nodes.json. Also the sandbox dir"
 
+DELETE_KEYS_EACH_ITER = True
 DO_KMEANS = True
 # assumes the cloud was built with CDH3? maybe doesn't matter as long as the file is there
 FROM_HDFS = 'CDH3'
+DO_REAL = True
 class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
-    def test_c5_KMeans_sphere_26GB(self):
-        h2o.beta_features = False
+    def test_c5_KMeans_sphere_h1m(self):
+        h2o.beta_features = True
         # a kludge
         h2o.setup_benchmark_log()
 
-        csvFilename = 'syn_sphere15_gen_26GB.csv'
+        if DO_REAL:
+            csvFilename = 'syn_sphere_gen_real_1.49M.csv'
+        else:
+            csvFilename = 'syn_sphere_gen_h1m.csv'
+
         totalBytes = 183538602156
         if FROM_HDFS:
             importFolderPath = "datasets/kmeans_big"
@@ -63,11 +69,11 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             if FROM_HDFS:
                 parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', hex_key=hex_key,
                     timeoutSecs=timeoutSecs, pollTimeoutSecs=60, retryDelaySecs=2,
-                    benchmarkLogging=benchmarkLogging, **kwargs)
+                    benchmarkLogging=benchmarkLogging, doSummary=False, **kwargs)
             else:
                 parseResult = h2i.import_parse(path=csvPathname, schema='local', hex_key=hex_key,
                     timeoutSecs=timeoutSecs, pollTimeoutSecs=60, retryDelaySecs=2,
-                    benchmarkLogging=benchmarkLogging, **kwargs)
+                    benchmarkLogging=benchmarkLogging, doSummary=False, **kwargs)
 
             elapsed = time.time() - start
             fileMBS = (totalBytes/1e6)/elapsed
@@ -75,6 +81,14 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 len(h2o.nodes), h2o.nodes[0].java_heap_GB, 'Parse', csvPathname, fileMBS, elapsed)
             print "\n"+l
             h2o.cloudPerfH2O.message(l)
+
+            inspect = h2o_cmd.runInspect(key=parseResult['destination_key'], timeoutSecs=300)
+            numRows = inspect['numRows']
+            numCols = inspect['numCols']
+            summary = h2o_cmd.runSummary(key=parseResult['destination_key'], numRows=numRows, numCols=numCols, 
+                timeoutSecs=300)
+            h2o_cmd.infoFromSummary(summary)
+
 
             # KMeans ****************************************
             if not DO_KMEANS:
@@ -84,11 +98,12 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             kwargs = {
                 'k': 15, 
                 'max_iter': 10,
-                'normalize': 1,
+                # 'normalize': 1,
+                'normalize': 0, # temp try
                 'initialization': 'Furthest',
                 'destination_key': 'junk.hex', 
                 # we get NaNs if whole col is NA
-                'cols': 'C1, C2, C3, C4, C5, C6, C7',
+                'ignored_cols': 'C1',
                 # reuse the same seed, to get deterministic results
                 'seed': 265211114317615310,
                 }
@@ -120,7 +135,9 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
             # all are multipliers of expected tuple value
             allowedDelta = (0.01, 0.01, 0.01) 
             h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, allowError=True, trial=trial)
-            h2i.delete_keys_at_all_nodes()
+
+            if DELETE_KEYS_EACH_ITER:
+                h2i.delete_keys_at_all_nodes()
 
 
 if __name__ == '__main__':
