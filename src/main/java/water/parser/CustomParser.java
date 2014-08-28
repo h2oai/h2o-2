@@ -353,20 +353,14 @@ public abstract class CustomParser extends Iced {
       for(int i = 0; i < res.length; ++i)
         res[i] = new ParserSetup.TypeInfo();
       for(int i = 0; i < _ncols; ++i){
-        if(_domains[i].size() <= 1 && (double)_nnums[i] / _nlines >= .2) // clear number
+        if(_domains[i].size() <= 1) // only consider enums with multiple strings (otherwise it's probably garbage on NA)
           res[i]._type = ParserSetup.Coltype.NUM;
-        else if(_domains[i].size() >= 2 && (_nzeros[i] > 0 && (Math.abs(_nzeros[i] + _nstrings[i] - _nlines) <= 1))) { // clear string/enum
+        else if(_nzeros[i] > 0 && (Math.abs(_nzeros[i] + _nstrings[i] - _nlines) <= 1)) { // enum with 0s for NAs
           res[i]._naStr = new ValueString("0");
           res[i]._type = ParserSetup.Coltype.STR;
           res[i]._strongGuess = true;
-        } else if(_domains[i].size() >= 0 && (_nstrings[i]/(double)_nlines) > .9) {
+        } else if(_nstrings[i] >= 9*(_nnums[i]+_nzeros[i])) { // probably generic enum
           res[i]._type = ParserSetup.Coltype.STR;
-        } else { // some generic two strings, could be garbage or enums
-          if ((double)_nstrings[i] / _nlines >= .95) {
-            res[i]._type = ParserSetup.Coltype.STR;
-            res[i]._strongGuess = (double)_nstrings[i]/_nlines >= .99;
-          } else if (_nnums[i] > 0 && (double)_nnums[i] / _nlines > .2)
-            res[i]._type = ParserSetup.Coltype.NUM;
         }
       }
       return res;
