@@ -221,6 +221,7 @@ class ASTddply extends ASTOp {
       Key grpkey = Key.make("ddply_grpkey_"+(grpnum-1));
       Frame fg = new Frame(grpkey, fr._names,gvecs);
       Futures gfs = new Futures(); DKV.put(grpkey, fg, gfs); gfs.blockForPending();
+      fg.anyVec().rollupStats();
       // Non-blocking, send a group to a remote node for execution
       final int nidx = g.hashCode()%csz;
       fs.add(RPC.call(H2O.CLOUD._memary[nidx],(re=new RemoteExec((grpnum-1),p2._nlocals[nidx],g._ds,fg,envkey))));
@@ -527,9 +528,12 @@ class ASTddply extends ASTOp {
       // Clone a private copy of the environment for local execution
       Env env = shared_env.capture(true);
       ASTOp op = env.fcn(-1);
-
+      Key fr_key = Key.make("ddply_grpkey_"+_grpnum);
+      Frame aa = DKV.get(fr_key).get();
+      Frame fv = new Frame(null, aa.names(), aa.vecs().clone());
+//      fv.anyVec().rollupStats();
       env.push(op);
-      env.push(_fr);
+      env.push(fv);
 
       op.apply(env,2/*1-arg function*/,null);
 
@@ -555,6 +559,7 @@ class ASTddply extends ASTOp {
 
       // No need to return any results here.
       _fr.delete();
+      aa.delete();
       _fr = null;
       _ds = null;
       _envkey= null;
