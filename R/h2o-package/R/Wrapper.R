@@ -86,9 +86,9 @@ h2o.shutdown <- function(client, prompt = TRUE) {
 
 h2o.clusterStatus <- function(client) {
   if(missing(client) || class(client) != "H2OClient") stop("client must be a H2OClient object")
+  .h2o.__checkUp(client)
   myURL = paste("http://", client@ip, ":", client@port, "/", .h2o.__PAGE_CLOUD, sep = "")
-  if(!url.exists(myURL)) stop("Cannot connect to H2O instance at ", myURL)
-  res = fromJSON(postForm(myURL, style = "POST"))
+  res = fromJSON(postForm(myURL, .params = list(quiet="true", skip_ticks="true"), style = "POST"))
   
   cat("Version:", res$version, "\n")
   cat("Cloud name:", res$cloud_name, "\n")

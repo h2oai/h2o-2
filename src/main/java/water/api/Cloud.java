@@ -7,6 +7,10 @@ import water.util.Log;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Cloud extends Request {
+  protected final Bool _quiet = new Bool("quiet", false, "");
+  protected final Bool _skip_ticks = new Bool("skip_ticks", false, "");
+
+
   /**
    * Data structure to store last tick counts from a given node.
    */
@@ -22,6 +26,8 @@ public class Cloud extends Request {
     }
   }
 
+
+
   /**
    * Store last tick counts for each node.
    *
@@ -34,6 +40,8 @@ public class Cloud extends Request {
    * Note there is no attempt to distinguish between REST API sessions.  Every call updates the last tick count info.
    */
   private static transient ConcurrentHashMap<String,LastTicksEntry> ticksHashMap = new ConcurrentHashMap<String, LastTicksEntry>();
+
+  private static volatile boolean lastCloudHealthy = false;
 
   public Cloud() {
     _requestHelp = "Displays the information about the current cloud. For each"
@@ -109,7 +117,7 @@ public class Cloud extends Request {
       // which usually means one core.
       int my_cpu_pct = -1;
       int sys_cpu_pct = -1;
-      {
+      if (! _skip_ticks.value()) {
         LastTicksEntry lte = ticksHashMap.get(h2o.toString());
         if (lte != null) {
           long system_total_ticks_delta = hb._system_total_ticks - lte._system_total_ticks;
@@ -145,8 +153,15 @@ public class Cloud extends Request {
     response.add(NODES,nodes);
     response.addProperty(CONSENSUS, Paxos._commonKnowledge); // Cloud is globally accepted
     response.addProperty(LOCKED, Paxos._cloudLocked); // Cloud is locked against changes
-    Log.info("H2O Cloud Status:");
-    for (String s : response.toString().split("[{}]")) if (!s.equals(",") && s.length()>0) Log.info(s); // Log the cloud status to stdout
+
+    boolean logCloudStatus = (!cloudHealthy) || (cloudHealthy != lastCloudHealthy) || (!_quiet.value());
+    lastCloudHealthy = cloudHealthy;
+    if (logCloudStatus) {
+      Log.info("H2O Cloud Status:");
+      for (String s : response.toString().split("[{}]"))
+        if (!s.equals(",") && s.length() > 0) Log.info(s); // Log the cloud status to stdout
+    }
+
     Response r = Response.done(response);
     r.setBuilder(CONSENSUS, new BooleanStringBuilder("","Voting new members"));
     r.setBuilder(LOCKED, new BooleanStringBuilder("Locked","Accepting new members"));

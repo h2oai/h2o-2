@@ -20,12 +20,13 @@
 
 h2o.clusterInfo <- function(client) {
   if(missing(client) || class(client) != "H2OClient") stop("client must be a H2OClient object")
+
+  .h2o.__checkUp(client)
   myURL = paste("http://", client@ip, ":", client@port, "/", .h2o.__PAGE_CLOUD, sep = "")
-  if(!url.exists(myURL)) stop("Cannot connect to H2O instance at ", myURL)
 
   res = NULL
   {
-    res = fromJSON(postForm(myURL, style = "POST"))
+    res = fromJSON(postForm(myURL, .params = list(quiet="true", skip_ticks="true"), style = "POST"))
 
     nodeInfo = res$nodes
     numCPU = sum(sapply(nodeInfo,function(x) as.numeric(x['num_cpus'])))
@@ -44,7 +45,7 @@ h2o.clusterInfo <- function(client) {
   maxMem = sum(sapply(nodeInfo,function(x) as.numeric(x['max_mem_bytes']))) / (1024 * 1024 * 1024)
   numCPU = sum(sapply(nodeInfo,function(x) as.numeric(x['num_cpus'])))
   allowedCPU = sum(sapply(nodeInfo,function(x) as.numeric(x['cpus_allowed'])))
-  clusterHealth =  all(sapply(nodeInfo,function(x) as.logical(x['num_cpus']))==TRUE)
+  clusterHealth = all(sapply(nodeInfo,function(x) as.logical(x['num_cpus']))==TRUE)
   
   cat("R is connected to H2O cluster:\n")
   cat("    H2O cluster uptime:        ", .readableTime(as.numeric(res$cloud_uptime_millis)), "\n")

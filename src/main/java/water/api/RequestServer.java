@@ -172,6 +172,7 @@ public class RequestServer extends NanoHTTPD {
       Request.addToNavbar(registerRequest(new LoadModel()),            "Load Model",           "Beta");
     }
 
+    registerRequest(new Up());
     registerRequest(new Get()); // Download
     //Column Expand
     registerRequest(new OneHot());
@@ -385,6 +386,7 @@ public class RequestServer extends NanoHTTPD {
       if (uri.endsWith("LogAndEcho.json")) return;
       if (uri.contains("Progress")) return;
       if (uri.startsWith("/Jobs.json")) return;
+      if (uri.startsWith("/Up.json")) return;
     }
 
     String log = String.format("%-4s %s", method, uri);
