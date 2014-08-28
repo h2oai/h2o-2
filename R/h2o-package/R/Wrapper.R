@@ -4,7 +4,7 @@
 # 3) If user does want to start H2O, but running non-locally, print an error
 h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, forceDL = FALSE, Xmx,
                      beta = FALSE, assertion = TRUE, license = NULL, max_mem_size = NULL, min_mem_size = NULL,
-                     ice_root = NULL) {
+                     ice_root = NULL, strict_version_check = TRUE) {
   if(!is.character(ip)) stop("ip must be of class character")
   if(!is.numeric(port)) stop("port must be of class numeric")
   if(!is.logical(startH2O)) stop("startH2O must be of class logical")
@@ -19,6 +19,7 @@ h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, forceDL = 
   if(!is.logical(assertion)) stop("assertion must be of class logical")
   if(!is.null(license) && !is.character(license)) stop("license must be of class character")
   if(!is.null(ice_root) && !is.character(ice_root)) stop("ice_root must be of class character")
+  if(!is.logical(strict_version_check)) stop("strict_version_check must be of class logical")
 
   if(!missing(Xmx)) {
     warning("Xmx is a deprecated parameter. Use `max_mem_size` and `min_mem_size` to set the memory boundaries. Using `Xmx` to set these.")
@@ -30,8 +31,9 @@ h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, forceDL = 
     ice_root = tempdir()
   }
 
+  myUpURL = paste("http://", ip, ":", port, "/Up.json", sep="")
   myURL = paste("http://", ip, ":", port, sep="")
-  if(!url.exists(myURL)) {
+  if(!url.exists(myUpURL)) {
     if(!startH2O)
       stop(paste("Cannot connect to H2O server. Please check that H2O is running at", myURL))
     else if(ip == "localhost" || ip == "127.0.0.1") {
@@ -45,9 +47,17 @@ h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, forceDL = 
   H2Oserver = new("H2OClient", ip = ip, port = port)
   # Sys.sleep(0.5)    # Give cluster time to come up
   h2o.clusterInfo(H2Oserver); cat("\n")
-  
-  if((verH2O = .h2o.__version(H2Oserver)) != (verPkg = packageVersion("h2o")))
-    stop("Version mismatch! H2O is running version ", verH2O, " but R package is version ", toString(verPkg), "\n")
+
+  if((verH2O = .h2o.__version(H2Oserver)) != (verPkg = packageVersion("h2o"))) {
+    message = sprintf("Version mismatch! H2O is running version % but R package is version %s", verH2O, toString(verPkg))
+    if (strict_version_check) {
+      stop(message)
+    }
+    else {
+      warning(message)
+    }
+  }
+
   assign("SERVER", H2Oserver, .pkg.env)
   return(H2Oserver)
 }
@@ -215,17 +225,35 @@ h2o.clusterStatus <- function(client) {
     }
   }
 
+  if (missing(ice_root)) {
+    stop("ice_root must be specified for .h2o.startJar");
+  }
+
   # Note: Logging to stdout and stderr in Windows only works for R version 3.0.2 or later!
   stdout <- .h2o.getTmpFile("stdout")
   stderr <- .h2o.getTmpFile("stderr")
   write(Sys.getpid(), .h2o.getTmpFile("pid"), append = FALSE)   # Write PID to file to track if R started H2O
   
-  # jar_file <- paste(.h2o.pkg.path, "java", "h2o.jar", sep = .Platform$file.sep)
   jar_file <- .h2o.downloadJar(overwrite = forceDL)
   jar_file <- paste('"', jar_file, '"', sep = "")
 
-  if (missing(ice_root)) {
-    stop("ice_root must be specified for .h2o.startJar");
+  # Throw an error if GNU Java is being used
+  jver <- system2(command, "-version", stdout = TRUE, stderr = TRUE)
+  if(any(grepl("GNU libgcj", jver))) {
+    stop("
+Sorry, GNU Java is not supported for H2O.
+Please download the latest Java SE JDK 7 from the following URL:
+http://www.oracle.com/technetwork/java/javase/downloads/jdk7-downloads-1880260.html")
+  }
+
+  if(any(grepl("Client VM", jver))) {
+    warning("
+You have a 32-bit version of Java.  H2O works best with 64-bit Java.
+Please download the latest Java SE JDK 7 from the following URL:
+http://www.oracle.com/technetwork/java/javase/downloads/jdk7-downloads-1880260.html")
+
+    # Set default max_memory to be 1g for 32-bit JVM.
+    if(is.null(max_memory)) max_memory = "1g"
   }
 
   if (.Platform$OS.type == "windows") {
@@ -255,22 +283,6 @@ h2o.clusterStatus <- function(client) {
   cat(sprintf("    %s\n", stdout))
   cat(sprintf("    %s\n", stderr))
   cat("\n")
-  
-  # Throw an error if GNU Java is being used
-  jver <- system2(command, "-version", stdout = TRUE, stderr = TRUE)
-  if(any(grepl("GNU libgcj", jver))) {
-    stop("
-Sorry, GNU Java is not supported for H2O.
-Please download the latest Java SE JDK 7 from the following URL:
-http://www.oracle.com/technetwork/java/javase/downloads/jdk7-downloads-1880260.html")
-  }
-
-  if(any(grepl("Client VM", jver))) {
-    warning("
-You have a 32-bit version of Java.  H2O works best with 64-bit Java.
-Please download the latest Java SE JDK 7 from the following URL:
-http://www.oracle.com/technetwork/java/javase/downloads/jdk7-downloads-1880260.html")
-  }
 
   # Print a java -version to the console
   system2(command, c(mem_args, "-version"))
