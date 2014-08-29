@@ -16,6 +16,7 @@ public class Type extends Iced {
   final static private int FCN0   = 4; // Return type in _ts[0], args in _ts[1...];
   final static private int DBLARY0= 5; // Type is either DBL or ARY but not FCN
   final static private int ANYARY0= 6; // Type is ARY if any ts[] is an ARY, else DBL
+  final static private int STR0   = 7;
   final static private int VARARGS=32; // OR'd onto last type in a fcn, allows zero or more of this type
   int _t;                       // One of the above #s
   static private int UNIQUE;    // Unique ID handy for debugging
@@ -49,6 +50,7 @@ public class Type extends Iced {
   // Make some base types
   static Type DBL = new Type(DBL0,null);
   static Type ARY = new Type(ARY0,null);
+  static Type STR = new Type(STR0, null);
   public static Type unbound() { return new Type(UNBOUND,new Type[1]); }
   public static Type fcn(Type[] ts) { return new Type(FCN0,ts); }
   public static Type varargs(Type t) { return new Type(t._t,t._ts,1f);}
@@ -104,7 +106,7 @@ public class Type extends Iced {
         t.union(fun); t=fun=t.find();
       } else {
         if( t._t == FCN0 ) fun = t;
-        if( t._t != DBL0 &&     // Keep non-DBL
+        if( t._t != DBL0 && t._t != STR0 &&  // Keep non-DBL & non-STR
             !dupType(len,t) )   // But remove dups
           _ts[len++] = t;
       }
@@ -181,8 +183,9 @@ public class Type extends Iced {
   boolean isAry()    { Type t=find(); return t._t==ARY0; }
   boolean isDbl()    { Type t=find(); return t._t==DBL0; }
   boolean isFcn()    { Type t=find(); return t._t==FCN0; }
-  boolean isNotFun() { Type t=find(); return t._t==DBL0 || t._t==ARY0 || t._t==DBLARY0; }
+  boolean isNotFun() { Type t=find(); return t._t==DBL0 || t._t==ARY0 || t._t==DBLARY0 || t._t==STR0; }
   boolean isDblAry() { Type t=find(); return t._t==DBL0 || t._t==ARY0; }
+  boolean isStr()    { Type t=find(); return t._t==STR0; }
   // Return type of functions
   public Type ret()  { Type t=find(); assert t._t == FCN0; return t._ts[0].find(); }
 
@@ -195,6 +198,7 @@ public class Type extends Iced {
     case DBL0:    s = "dbl";    break;
     case ARY0:    s = "ary";    break;
     case DBLARY0: s = "dblary"; break;
+    case STR0:    s = "str";    break;
     case ANYARY0: {
       s = "anyary{"; 
       for( Type t : _ts ) s += t+",";
