@@ -15,7 +15,7 @@ echo "Setting up sandbox, since no cloud build here will clear it out! (unlike o
 rm -fr sandbox
 mkdir -p sandbox
 
-SET_JAVA_HOME="export JAVA_HOME=/usr/lib/jvm/java-7-oracle"
+SET_JAVA_HOME="export JAVA_HOME=/usr/lib/jvm/java-7-oracle; "
 # alternately could use this
 # SET_JAVA_HOME="export JAVA_HOME=/usr/bin/java"
 
@@ -191,7 +191,7 @@ $REMOTE_SSH_USER "ps aux | grep h2odriver"
 echo "The background job with the remote ssh that does h2odriver should be gone. It was pid $CLOUD_PID"
 echo "The h2odriver job should be gone. It was pid $CLOUD_PID"
 echo "The hadoop job(s) should be gone?"
-$REMOTE_SSH_USER_WITH_JAVA "mapred job -list"
+$REMOTE_SSH_USER_WITH_JAVA 'mapred job -list'
 
 
 echo "Another hack because h2o nodes don't seem to want to shutdown"

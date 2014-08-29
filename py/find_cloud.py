@@ -142,7 +142,7 @@ def probe_node(line, h2oNodes):
     # print "http_addr:", http_addr, "port:", port
 
     probes = []
-    gc = do_json_request(http_addr, port, 'Cloud.json', timeout=3)
+    gc = do_json_request(http_addr, port, 'Cloud.json', timeout=10)
     if gc is None:
         return probes
         
