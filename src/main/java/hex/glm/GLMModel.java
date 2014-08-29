@@ -583,12 +583,13 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     GLM2 params = get_params();
     this.variable_importances = null;
 
-    // Warn if we may be returning results that might not include an important (base) level. . .
-    if (! params.use_all_factor_levels)
-      this.addWarning("Variable Importance may be missing important variables: because use_all_factor_levels is off the importance of base categorical levels will NOT be included.");
-
     final double[] b = beta();
     if (params.variable_importances && null != b) {
+
+      // Warn if we may be returning results that might not include an important (base) level. . .
+      if (! params.use_all_factor_levels)
+        this.addWarning("Variable Importance may be missing important variables: because use_all_factor_levels is off the importance of base categorical levels will NOT be included.");
+
       float[] coefs_abs_value = new float[b.length - 1]; // Don't include the Intercept
       String[] names = new String[b.length - 1];
       for (int i = 0; i < b.length - 1; ++i) {

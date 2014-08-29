@@ -2557,6 +2557,7 @@ class H2O(object):
             'beta_eps': None,
             'higher_accuracy': None,
             'use_all_factor_levels': None,
+            'variable_importances': None,
         }
 
         check_params_update_kwargs(params_dict, kwargs, parentName, print_params=True)

@@ -75,7 +75,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
   protected boolean higher_accuracy;
 
   @API(help="By default, first factor level is skipped from the possible set of predictors. Set this flag if you want use all of the levels. Needs sufficient regularization to solve!",filter=Default.class, importance = ParamImportance.SECONDARY)
-  protected boolean use_all_factor_levels;
+  protected boolean use_all_factor_levels = false;
 
 
   @API(help="use lambda search starting at lambda max, given lambda is then interpreted as lambda min",filter=Default.class, importance = ParamImportance.SECONDARY)
@@ -109,7 +109,7 @@ public class GLM2 extends Job.ModelJobWithoutClassificationField {
    * appear if !use_all_factor_levels.
    */
   @API(help = "Compute variable importances for input features.  NOTE: If use_all_factor_levels is off the importance of the base level will NOT be shown.", filter = Default.class, json=true, importance = ParamImportance.SECONDARY)
-  public boolean variable_importances = true;
+  public boolean variable_importances = false;
 
 
   // API input parameters END ------------------------------------------------------------
