@@ -6,14 +6,14 @@ import math
 
 
 print "Copy a version of this to a two cloud test. different failure mode"
-DO_PLOT = False
+DO_PLOT = True
 COL = 1
 PHRASE = "func1"
 FUNC_PHRASE = "func1=function(x){max(x[,%s])}" % COL
 REPEAT = 20
 
 DO_KNOWN_FAIL = False
-DO_APPEND_KNOWN_FAIL2 = True
+DO_APPEND_KNOWN_FAIL2 = False
 DO_REALS = False
 
 CLOUD_SIZE = 2
@@ -86,10 +86,10 @@ class Basic(unittest.TestCase):
             tryList = [
                 (1000000, 5, 'cD', 0, 10, 30), 
                 (1000000, 5, 'cD', 0, 20, 30), 
-                #(1000000, 5, 'cD', 0, 40, 30), 
-                #(1000000, 5, 'cD', 0, 50, 30), 
+                (1000000, 5, 'cD', 0, 40, 30), 
+                (1000000, 5, 'cD', 0, 50, 30), 
                 (1000000, 5, 'cD', 0, 80, 30), 
-                #(1000000, 5, 'cD', 0, 160, 30), 
+                # (1000000, 5, 'cD', 0, 160, 30), 
                 # fails..don't do
                 # (1000000, 5, 'cD', 0, 320, 30), 
                 # (1000000, 5, 'cD', 0, 320, 30), 
@@ -128,10 +128,10 @@ class Basic(unittest.TestCase):
                 print "Creating random", csvPathname, "with range", (maxInt-minInt)+1
                 write_syn_dataset(csvPathname, rowCount, colCount, minInt, maxInt, SEEDPERFILE)
 
-            for lll in range(3):
+            for lll in range(1):
                 # PARSE train****************************************
                 hexKey = 'r.hex'
-                parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local', hex_key=hexKey)
+                parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='put', hex_key=hexKey)
                 inspect = h2o_cmd.runInspect(key=hexKey)
                 missingValuesList = h2o_cmd.infoFromInspect(inspect, csvFilename)
                 self.assertEqual(missingValuesList, [], "a1 should have no NAs in parsed dataset: %s" % missingValuesList)

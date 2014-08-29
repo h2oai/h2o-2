@@ -469,7 +469,6 @@ nodes = []
 def write_flatfile(node_count=2, base_port=54321, hosts=None, rand_shuffle=True, port_offset=0):
     # always create the flatfile.
     ports_per_node = 2
-    print "hello:", flatfile_pathname()
     pff = open(flatfile_pathname(), "w+")
     # doing this list outside the loops so we can shuffle for better test variation
     hostPortList = []
@@ -490,7 +489,6 @@ def write_flatfile(node_count=2, base_port=54321, hosts=None, rand_shuffle=True,
     for hp in hostPortList:
         pff.write(hp + "\n")
     pff.close()
-    print "hello2:", flatfile_pathname()
 
 
 def check_h2o_version():
