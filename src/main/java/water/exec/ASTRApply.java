@@ -384,7 +384,7 @@ class ASTddply extends ASTOp {
       for( Group g : m1.keySet() ) {
         NewChunk nc0 = m0.get(g);
         NewChunk nc1 = m1.get(g);
-        if( nc0 == null ) m0.put(g,nc1);
+        if( nc0 == null || nc0._len == 0) m0.put(g,nc1);
         // unimplemented: expected to blow out on large row counts, where we
         // actually need a collection of chunks, not 1 uber-chunk
         else if( _gatherRows ) {
