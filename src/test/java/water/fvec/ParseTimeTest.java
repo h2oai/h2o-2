@@ -48,9 +48,9 @@ public class ParseTimeTest extends TestUtil {
 
   @Test public void testTimeParse2() {
     double[][] exp = new double[][] {
-      d(1     ,     115200000L, 1136275200000L, 1136275200000L, 1 ),
-      d(1500  ,  129625200000L, 1247641200000L, 1247641200000L, 0 ),
-      d(15000 , 1296028800000L, 1254294000000L, 1254294000000L, 2 ),
+      d(1     ,     115200000L, 1136275200000L, 1136275200000L, 1, 1, 1, 1, 19700102, 0),
+      d(1500  ,  129625200000L, 1247641200000L, 1247641200000L, 0, 0, 0, 0, 19740209, 1),
+      d(15000 , 1296028800000L, 1254294000000L, 1254294000000L, 2, 2, 2, 2, 20110126, 2),
     };
     ParserTest2.testParsed(TestUtil.parseFrame(null,"smalldata/jira/v-11.csv"),exp,exp.length);
   }
