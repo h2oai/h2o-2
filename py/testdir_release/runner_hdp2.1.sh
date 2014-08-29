@@ -1,7 +1,7 @@
 #!/bin/bash
-
 echo "you can use -n argument to skip the s3 download if you did it once" 
 echo "files are unzipped to ../../h2o-downloaded"
+
 # This is critical:
 # Ensure that all your children are truly dead when you yourself are killed.
 # trap "kill -- -$BASHPID" INT TERM EXIT
@@ -10,7 +10,6 @@ trap "kill -- -$BASHPID" INT TERM
 echo "BASHPID: $BASHPID"
 echo "current PID: $$"
 
-source ./runner_setup.sh "$@"
 echo "Do we have to clean out old ice_root dirs somewhere?"
 
 echo "Setting up sandbox, since no cloud build here will clear it out! (unlike other runners)"
@@ -18,29 +17,41 @@ rm -fr sandbox
 mkdir -p sandbox
 
 # Should we do this cloud build with the sh2junit.py? to get logging, xml etc.
-# I suppose we could just have a test verify the request cloud size, after buildingk
-# HDP_JOBTRACKER=192.168.1.154:8021
-# now resource manager is at 8050?
+# I suppose we could just have a test verify the request cloud size, after building
+# Now resource manager is at 8050?
 HDP_JOBTRACKER=192.168.1.187:8050
 
-HDP_NODES=1
+HDP_NODES=8
 HDP_HEAP=60g
 HDP_JAR=h2odriver_hdp2.0.6.jar
+H2O_JAR=h2o.jar
+
+# build.sh removes the h2odriver stuff. 
+# if we do make, we shouldn't have to use the downloaded
 
 H2O_DOWNLOADED=../../h2o-downloaded
-H2O_HADOOP=$H2O_DOWNLOADED/hadoop
-H2O_JAR=h2o.jar
+H2O_BUILT=../../target
+
+source ./runner_setup.sh "$@"
+# HDP_JAR_USED=$H2O_DOWNLOADED/hadoop/$HDP_JAR
+# HDP_JAR_USED=$H2O_DOWNLOADED/$HDP_JAR
+
+H2O_JAR_USED=$H2O_BUILT/$H2O_JAR
+HDP_JAR_USED=$H2O_BUILT/hadoop/$HDP_JAR
+
 HDFS_OUTPUT=hdfsOutputDirName
 
 # file created by the h2o on hadoop h2odriver*jar
 REMOTE_HOME=/home/0xcustomer
 REMOTE_IP=192.168.1.187
 REMOTE_USER=0xcustomer@$REMOTE_IP
-REMOTE_SCP="scp -i $HOME/.0xcustomer/0xcustomer_id_rsa"
+REMOTE_SCP="scp -p -i $HOME/.0xcustomer/0xcustomer_id_rsa "
 # FIX! I shouldn't have to specify JAVA_HOME for a non-iteractive shell running the hadoop command?
 # but not getting it otherwise on these machines
-# REMOTE_SSH_USER="ssh -i $HOME/.0xcustomer/0xcustomer_id_rsa $REMOTE_USER export JAVA_HOME=/usr/lib/jvm/java-7-oracle;"
+# REMOTE_SSH_USER="ssh -i $HOME/.0xcustomer/0xcustomer_id_rsa $REMOTE_USER"
 REMOTE_SSH_USER="ssh -i $HOME/.0xcustomer/0xcustomer_id_rsa $REMOTE_USER"
+# can't use this with -i 
+REMOTE_SSH_USER_WITH_JAVA="$REMOTE_SSH_USER export JAVA_HOME=/usr/lib/jvm/java-7-oracle; "
 
 # source ./kill_hadoop_jobs.sh
 
@@ -51,6 +62,7 @@ echo "rm -fr h2o_one_node" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 set +e
 # remember to update this, to match whatever user kicks off the h2o on hadoop
 echo "hadoop dfs -rmr /user/0xcustomer/$HDFS_OUTPUT" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
+chmod +x /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 set -e
 
 echo "Don't conflict with jenkins using all sorts of ports starting at 54321 (it can multiple jobs..so can use 8*10 or so port). start looking at 55821"
@@ -63,11 +75,11 @@ $REMOTE_SCP /tmp/h2o_on_hadoop_$REMOTE_IP.sh $REMOTE_USER:$REMOTE_HOME
 # it needs the right hadoop client setup. This is easier than installing hadoop client stuff here.
 # do the jars last, so we can see the script without waiting for the copy
 echo "scp some jars"
-$REMOTE_SCP $H2O_HADOOP/$HDP_JAR  $REMOTE_USER:$REMOTE_HOME
-$REMOTE_SCP $H2O_DOWNLOADED/$H2O_JAR $REMOTE_USER:$REMOTE_HOME
+$REMOTE_SCP $HDP_JAR_USED $REMOTE_USER:$REMOTE_HOME
+$REMOTE_SCP $H2O_JAR_USED $REMOTE_USER:$REMOTE_HOME
 
 # exchange keys so jenkins can do this?
-# background!
+# background ..we could just ssh the file we copied over there?
 cat /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 cat /tmp/h2o_on_hadoop_$REMOTE_IP.sh | $REMOTE_SSH_USER &
 #*********************************************************************************
@@ -75,6 +87,7 @@ cat /tmp/h2o_on_hadoop_$REMOTE_IP.sh | $REMOTE_SSH_USER &
 CLOUD_PID=$!
 jobs -l
 
+rm -f h2o_one_node # local copy
 source ./wait_for_h2o_on_hadoop.sh
 
 # use these args when we do Runit
@@ -167,4 +180,9 @@ echo ""
 
 echo "The h2odriver job should be gone. It was pid $CLOUD_PID"
 echo "The hadoop job(s) should be gone?"
-$REMOTE_SSH_USER "export JAVA_HOME=/usr/lib/jvm/java-7-oracle; mapred job -list"
+$REMOTE_SSH_USER_WITH_JAVA "mapred job -list"
+
+
+echo "Another crappy hack because h2o nodes don't seem to want to shutdown"
+echo "Maybe I need a clean terminate of the background h2odriver? But why aren't all nodes processing sent h2o shutdown requests?"
+./kill_0xcustomer_hadoop_jobs_on_187.sh 

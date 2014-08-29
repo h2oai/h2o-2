@@ -183,7 +183,8 @@ class ModelManagementTestCase(unittest.TestCase):
             'standardize': 0, 
             'lambda': 1.0e-2, 
             'n_folds': 0,
-            'use_all_factor_levels': 1
+            'use_all_factor_levels': 1,
+            'variable_importances': 1
         }
         glm_AirlinesTrain_1 = node.GLM(airlines_train_hex, **glm_AirlinesTrain_1_params)
         durations['glm_AirlinesTrain_binary_1'] = time.time() * 1000 - before
@@ -208,7 +209,8 @@ class ModelManagementTestCase(unittest.TestCase):
             'standardize': 0, 
             'lambda': 1.0e-2, 
             'n_folds': 3,
-            'use_all_factor_levels': 1
+            'use_all_factor_levels': 1,
+            'variable_importances': 1
         }
         glm_AirlinesTrain_3fold = node.GLM(airlines_train_hex, **glm_AirlinesTrain_3fold_params)
         durations['glm_AirlinesTrain_binary_3fold'] = time.time() * 1000 - before
@@ -234,7 +236,8 @@ class ModelManagementTestCase(unittest.TestCase):
         #     'standardize': 0, 
         #     'lambda': '1.0e-2,1.0e-3,1.0e-4', 
         #     'n_folds': 2,
-        #     'use_all_factor_levels': 1
+        #     'use_all_factor_levels': 1,
+        #     'variable_importances': 1
         # }
         # glm_AirlinesTrain_grid = node.GLMGrid(airlines_train_hex, **glm_AirlinesTrain_grid_params)
         # durations['glm_AirlinesTrain_binary_grid'] = time.time() * 1000 - before
@@ -466,7 +469,8 @@ class ModelManagementTestCase(unittest.TestCase):
             'standardize': 0, 
             'lambda': 1.0e-2, 
             'n_folds': 0,
-            'use_all_factor_levels': 1
+            'use_all_factor_levels': 1,
+            'variable_importances': 1
         }
         glm_AirlinesTrain_A = node.GLM(airlines_train_hex, **glm_AirlinesTrain_A_params)
         durations['glm_AirlinesTrain_binary_A'] = time.time() * 1000 - before
@@ -518,28 +522,239 @@ class ModelManagementTestCase(unittest.TestCase):
             dummy = a_node.frames()
             dummy = a_node.models()
 
+        # These Prostate GLM models are also used to test that we get a warning only if variable_importances == 1 and use_all_factor_levels = 0.  The defaults for these are now both 0.  There are 9 combinations to test:
+        # num	variable_importances	use_all_factor_levels	warning expected?
+        # -----------------------------------------------------------------------
+        # 00	0			0			False
+        # 01	0			1			False
+        # 10	1			0			True
+        # 11	1			1			False
+        # xx	default (0)		default (0)		False
+        # x0	default (0)		0			False
+        # x1	default (0)		1			False
+        # 0x	0			default (0)		False
+        # 1x	1			default (0)		True
+
         print "#########################################################"
-        print "Generating Prostate GLM2 binary classification model. . ."
+        print "Generating Prostate GLM2 binary classification model with variable_importances false and use_all_factor_levels false (should have no warnings) . . ."
         # R equivalent: h2o.glm.FV(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family = "binomial", nfolds = 0, alpha = 0.5)
         before = time.time() * 1000
-        glm_Prostate_1_params = {
-            'destination_key': 'glm_Prostate_binary_1',
+        glm_Prostate_00_params = {
+            'destination_key': 'glm_Prostate_binary_00',
             'response': 'CAPSULE', 
             'ignored_cols': None, 
             'family': 'binomial', 
             'alpha': 0.5, 
             'n_folds': 0,
-            'use_all_factor_levels': 0 # should get warning about variable importances!
+            'variable_importances': 0,
+            'use_all_factor_levels': 0
         }
-        glm_Prostate_1 = node.GLM(prostate_hex, **glm_Prostate_1_params)
-        durations['glm_Prostate_binary_1'] = time.time() * 1000 - before
+        glm_Prostate_00 = node.GLM(prostate_hex, **glm_Prostate_00_params)
+        durations['glm_Prostate_binary_00'] = time.time() * 1000 - before
         num_models = num_models + 1
-        h2o_glm.simpleCheckGLM(self, glm_Prostate_1, None, **glm_Prostate_1_params)
+        h2o_glm.simpleCheckGLM(self, glm_Prostate_00, None, **glm_Prostate_00_params)
 
         for a_node in h2o.nodes:
             print "Checking /Frames and /Models on: " + a_node.http_addr + ":" + str(a_node.port)
             dummy = a_node.frames()
             dummy = a_node.models()
+
+        print "#########################################################"
+        print "Generating Prostate GLM2 binary classification model with variable_importances false and use_all_factor_levels true (should have no warnings) . . ."
+        # R equivalent: h2o.glm.FV(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family = "binomial", nfolds = 0, alpha = 0.5)
+        before = time.time() * 1000
+        glm_Prostate_01_params = {
+            'destination_key': 'glm_Prostate_binary_01',
+            'response': 'CAPSULE', 
+            'ignored_cols': None, 
+            'family': 'binomial', 
+            'alpha': 0.5, 
+            'n_folds': 0,
+            'variable_importances': 0,
+            'use_all_factor_levels': 1
+        }
+        glm_Prostate_01 = node.GLM(prostate_hex, **glm_Prostate_01_params)
+        durations['glm_Prostate_binary_01'] = time.time() * 1000 - before
+        num_models = num_models + 1
+        h2o_glm.simpleCheckGLM(self, glm_Prostate_01, None, **glm_Prostate_01_params)
+
+        for a_node in h2o.nodes:
+            print "Checking /Frames and /Models on: " + a_node.http_addr + ":" + str(a_node.port)
+            dummy = a_node.frames()
+            dummy = a_node.models()
+
+        print "#########################################################"
+        print "Generating Prostate GLM2 binary classification model with variable_importances true and use_all_factor_levels false (should have a warning) . . ."
+        # R equivalent: h2o.glm.FV(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family = "binomial", nfolds = 0, alpha = 0.5)
+        before = time.time() * 1000
+        glm_Prostate_10_params = {
+            'destination_key': 'glm_Prostate_binary_10',
+            'response': 'CAPSULE', 
+            'ignored_cols': None, 
+            'family': 'binomial', 
+            'alpha': 0.5, 
+            'n_folds': 0,
+            'variable_importances': 1,
+            'use_all_factor_levels': 0
+        }
+        glm_Prostate_10 = node.GLM(prostate_hex, **glm_Prostate_10_params)
+        durations['glm_Prostate_binary_10'] = time.time() * 1000 - before
+        num_models = num_models + 1
+        h2o_glm.simpleCheckGLM(self, glm_Prostate_10, None, **glm_Prostate_10_params)
+
+        for a_node in h2o.nodes:
+            print "Checking /Frames and /Models on: " + a_node.http_addr + ":" + str(a_node.port)
+            dummy = a_node.frames()
+            dummy = a_node.models()
+
+        print "#########################################################"
+        print "Generating Prostate GLM2 binary classification model with variable_importances true and use_all_factor_levels true (should have no warnings) . . ."
+        # R equivalent: h2o.glm.FV(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family = "binomial", nfolds = 0, alpha = 0.5)
+        before = time.time() * 1000
+        glm_Prostate_11_params = {
+            'destination_key': 'glm_Prostate_binary_11',
+            'response': 'CAPSULE', 
+            'ignored_cols': None, 
+            'family': 'binomial', 
+            'alpha': 0.5, 
+            'n_folds': 0,
+            'variable_importances': 1,
+            'use_all_factor_levels': 1
+        }
+        glm_Prostate_11 = node.GLM(prostate_hex, **glm_Prostate_11_params)
+        durations['glm_Prostate_binary_11'] = time.time() * 1000 - before
+        num_models = num_models + 1
+        h2o_glm.simpleCheckGLM(self, glm_Prostate_11, None, **glm_Prostate_11_params)
+
+        for a_node in h2o.nodes:
+            print "Checking /Frames and /Models on: " + a_node.http_addr + ":" + str(a_node.port)
+            dummy = a_node.frames()
+            dummy = a_node.models()
+
+        print "#########################################################"
+        print "Generating Prostate GLM2 binary classification model with variable_importances default (should default to false) and use_all_factor_levels default (should default to false), should have no warnings . . ."
+        # R equivalent: h2o.glm.FV(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family = "binomial", nfolds = 0, alpha = 0.5)
+        before = time.time() * 1000
+        glm_Prostate_xx_params = {
+            'destination_key': 'glm_Prostate_binary_xx',
+            'response': 'CAPSULE', 
+            'ignored_cols': None, 
+            'family': 'binomial', 
+            'alpha': 0.5, 
+            'n_folds': 0,
+            # 'variable_importances': 0,
+            # 'use_all_factor_levels': 0
+        }
+        glm_Prostate_xx = node.GLM(prostate_hex, **glm_Prostate_xx_params)
+        durations['glm_Prostate_binary_xx'] = time.time() * 1000 - before
+        num_models = num_models + 1
+        h2o_glm.simpleCheckGLM(self, glm_Prostate_xx, None, **glm_Prostate_xx_params)
+
+        for a_node in h2o.nodes:
+            print "Checking /Frames and /Models on: " + a_node.http_addr + ":" + str(a_node.port)
+            dummy = a_node.frames()
+            dummy = a_node.models()
+
+        print "#########################################################"
+        print "Generating Prostate GLM2 binary classification model with variable_importances default (should default to false) and use_all_factor_levels false (should have no warnings) . . ."
+        # R equivalent: h2o.glm.FV(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family = "binomial", nfolds = 0, alpha = 0.5)
+        before = time.time() * 1000
+        glm_Prostate_x0_params = {
+            'destination_key': 'glm_Prostate_binary_x0',
+            'response': 'CAPSULE', 
+            'ignored_cols': None, 
+            'family': 'binomial', 
+            'alpha': 0.5, 
+            'n_folds': 0,
+            # 'variable_importances': 0,
+            'use_all_factor_levels': 0
+        }
+        glm_Prostate_x0 = node.GLM(prostate_hex, **glm_Prostate_x0_params)
+        durations['glm_Prostate_binary_x0'] = time.time() * 1000 - before
+        num_models = num_models + 1
+        h2o_glm.simpleCheckGLM(self, glm_Prostate_x0, None, **glm_Prostate_x0_params)
+
+        for a_node in h2o.nodes:
+            print "Checking /Frames and /Models on: " + a_node.http_addr + ":" + str(a_node.port)
+            dummy = a_node.frames()
+            dummy = a_node.models()
+
+        print "#########################################################"
+        print "Generating Prostate GLM2 binary classification model with variable_importances default (should default to false) and use_all_factor_levels true (should have no warnings) . . ."
+        # R equivalent: h2o.glm.FV(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family = "binomial", nfolds = 0, alpha = 0.5)
+        before = time.time() * 1000
+        glm_Prostate_x1_params = {
+            'destination_key': 'glm_Prostate_binary_x1',
+            'response': 'CAPSULE', 
+            'ignored_cols': None, 
+            'family': 'binomial', 
+            'alpha': 0.5, 
+            'n_folds': 0,
+            # 'variable_importances': 0,
+            'use_all_factor_levels': 1
+        }
+        glm_Prostate_x1 = node.GLM(prostate_hex, **glm_Prostate_x1_params)
+        durations['glm_Prostate_binary_x1'] = time.time() * 1000 - before
+        num_models = num_models + 1
+        h2o_glm.simpleCheckGLM(self, glm_Prostate_x1, None, **glm_Prostate_x1_params)
+
+        for a_node in h2o.nodes:
+            print "Checking /Frames and /Models on: " + a_node.http_addr + ":" + str(a_node.port)
+            dummy = a_node.frames()
+            dummy = a_node.models()
+
+        print "#########################################################"
+        print "Generating Prostate GLM2 binary classification model with variable_importances false and use_all_factor_levels default (should default to false), should have no warnings . . ."
+        # R equivalent: h2o.glm.FV(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family = "binomial", nfolds = 0, alpha = 0.5)
+        before = time.time() * 1000
+        glm_Prostate_0x_params = {
+            'destination_key': 'glm_Prostate_binary_0x',
+            'response': 'CAPSULE', 
+            'ignored_cols': None, 
+            'family': 'binomial', 
+            'alpha': 0.5, 
+            'n_folds': 0,
+            'variable_importances': 0,
+            # 'use_all_factor_levels': 0
+        }
+        glm_Prostate_0x = node.GLM(prostate_hex, **glm_Prostate_0x_params)
+        durations['glm_Prostate_binary_0x'] = time.time() * 1000 - before
+        num_models = num_models + 1
+        h2o_glm.simpleCheckGLM(self, glm_Prostate_0x, None, **glm_Prostate_0x_params)
+
+        for a_node in h2o.nodes:
+            print "Checking /Frames and /Models on: " + a_node.http_addr + ":" + str(a_node.port)
+            dummy = a_node.frames()
+            dummy = a_node.models()
+
+        print "#########################################################"
+        print "Generating Prostate GLM2 binary classification model with variable_importances True and use_all_factor_levels default (should default to false), should have a warning . . ."
+        # R equivalent: h2o.glm.FV(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family = "binomial", nfolds = 0, alpha = 0.5)
+        before = time.time() * 1000
+        glm_Prostate_1x_params = {
+            'destination_key': 'glm_Prostate_binary_1x',
+            'response': 'CAPSULE', 
+            'ignored_cols': None, 
+            'family': 'binomial', 
+            'alpha': 0.5, 
+            'n_folds': 0,
+            'variable_importances': 1,
+            # 'use_all_factor_levels': 0
+        }
+        glm_Prostate_1x = node.GLM(prostate_hex, **glm_Prostate_1x_params)
+        durations['glm_Prostate_binary_1x'] = time.time() * 1000 - before
+        num_models = num_models + 1
+        h2o_glm.simpleCheckGLM(self, glm_Prostate_1x, None, **glm_Prostate_1x_params)
+
+        for a_node in h2o.nodes:
+            print "Checking /Frames and /Models on: " + a_node.http_addr + ":" + str(a_node.port)
+            dummy = a_node.frames()
+            dummy = a_node.models()
+
+        #
+        # END OF 9 PROSTATE GLM2 VARIATIONS
+        #
+
 
         print "###############################################################"
         print "Generating Prostate simple DRF binary classification model. . ."
@@ -596,7 +811,8 @@ class ModelManagementTestCase(unittest.TestCase):
             'family': 'gaussian', 
             'alpha': 0.5, 
             'n_folds': 0,
-            'use_all_factor_levels': 1
+            'use_all_factor_levels': 1,
+            'variable_importances': 1
         }
         glm_Prostate_regression_1 = node.GLM(prostate_hex, **glm_Prostate_regression_1_params)
         durations['glm_Prostate_regression_1'] = time.time() * 1000 - before
@@ -786,7 +1002,7 @@ class ApiTestCase(ModelManagementTestCase):
         print "Testing /2/Frames list. . ."
         frames = node.frames()
         self.assertKeysExist(frames, 'frames', ['airlines_train.hex', 'airlines_test.hex', 'prostate.hex'])
-        self.assertKeysDontExist(frames, 'frames', ['glm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_2', 'rf_AirlinesTrain_binary_1', 'rf_AirlinesTrain_binary_2', 'dl_AirlinesTrain_binary_1', 'glm_AirlinesTrain_binary_A', 'glm_Prostate_binary_1', 'rf_Prostate_binary_1', 'glm_Prostate_regression_1'])
+        self.assertKeysDontExist(frames, 'frames', ['glm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_2', 'rf_AirlinesTrain_binary_1', 'rf_AirlinesTrain_binary_2', 'dl_AirlinesTrain_binary_1', 'glm_AirlinesTrain_binary_A', 'glm_Prostate_binary_xx', 'rf_Prostate_binary_1', 'glm_Prostate_regression_1'])
         self.assertKeysDontExist(frames, '', ['models'])
 
 
@@ -794,7 +1010,7 @@ class ApiTestCase(ModelManagementTestCase):
         print "Testing /2/Frames?key=airlines_test.hex. . ."
         frames = node.frames(key='airlines_test.hex')
         self.assertKeysExist(frames, 'frames', ['airlines_test.hex'])
-        self.assertKeysDontExist(frames, 'frames', ['glm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_2', 'rf_AirlinesTrain_binary_1', 'rf_AirlinesTrain_binary_2', 'dl_AirlinesTrain_binary_1', 'glm_AirlinesTrain_binary_A', 'glm_Prostate_binary_1', 'rf_Prostate_binary_1', 'glm_Prostate_regression_1', 'airlines_train.hex', 'prostate.hex'])
+        self.assertKeysDontExist(frames, 'frames', ['glm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_2', 'rf_AirlinesTrain_binary_1', 'rf_AirlinesTrain_binary_2', 'dl_AirlinesTrain_binary_1', 'glm_AirlinesTrain_binary_A', 'glm_Prostate_binary_xx', 'rf_Prostate_binary_1', 'glm_Prostate_regression_1', 'airlines_train.hex', 'prostate.hex'])
         self.assertKeysDontExist(frames, '', ['models'])
         self.assertKeysExist(frames, 'frames/airlines_test.hex', ['creation_epoch_time_millis', 'id', 'key', 'column_names', 'compatible_models'])
         self.assertEqual(frames['frames']['airlines_test.hex']['id'], "fffffffffffff38d", msg="The airlines_test.hex frame hash should be deterministic.  Expected fffffffffffff38d, got: " + frames['frames']['airlines_test.hex']['id'])
@@ -805,11 +1021,11 @@ class ApiTestCase(ModelManagementTestCase):
         print "Testing /2/Frames?key=airlines_test.hex&find_compatible_models=true. . ."
         frames = node.frames(key='airlines_test.hex', find_compatible_models=1)
         self.assertKeysExist(frames, 'frames', ['airlines_test.hex'])
-        self.assertKeysDontExist(frames, 'frames', ['glm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_2', 'rf_AirlinesTrain_binary_1', 'rf_AirlinesTrain_binary_2', 'dl_AirlinesTrain_binary_1', 'glm_AirlinesTrain_binary_A', 'glm_Prostate_binary_1', 'rf_Prostate_binary_1', 'glm_Prostate_regression_1', 'airlines_train.hex', 'prostate.hex'])
+        self.assertKeysDontExist(frames, 'frames', ['glm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_2', 'rf_AirlinesTrain_binary_1', 'rf_AirlinesTrain_binary_2', 'dl_AirlinesTrain_binary_1', 'glm_AirlinesTrain_binary_A', 'glm_Prostate_binary_xx', 'rf_Prostate_binary_1', 'glm_Prostate_regression_1', 'airlines_train.hex', 'prostate.hex'])
 
         self.assertKeysExist(frames, '', ['models'])
         self.assertKeysExist(frames, 'models', ['glm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_2', 'rf_AirlinesTrain_binary_1', 'rf_AirlinesTrain_binary_2', 'dl_AirlinesTrain_binary_1', 'glm_AirlinesTrain_binary_A'])
-        self.assertKeysDontExist(frames, 'models', ['glm_Prostate_binary_1', 'rf_Prostate_binary_1', 'glm_Prostate_regression_1', 'airlines_train.hex', 'airlines_train.hex', 'airlines_test.hex', 'prostate.hex'])
+        self.assertKeysDontExist(frames, 'models', ['glm_Prostate_binary_xx', 'rf_Prostate_binary_1', 'glm_Prostate_regression_1', 'airlines_train.hex', 'airlines_train.hex', 'airlines_test.hex', 'prostate.hex'])
 
 
         print "##############################################"
@@ -821,7 +1037,7 @@ class ApiTestCase(ModelManagementTestCase):
         print "##############################################"
         print "Testing /2/Models list. . ."
         models = node.models()
-        self.assertKeysExist(models, 'models', ['glm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_2', 'rf_AirlinesTrain_binary_1', 'rf_AirlinesTrain_binary_2', 'dl_AirlinesTrain_binary_1', 'glm_AirlinesTrain_binary_A', 'glm_Prostate_binary_1', 'rf_Prostate_binary_1', 'glm_Prostate_regression_1'])
+        self.assertKeysExist(models, 'models', ['glm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_2', 'rf_AirlinesTrain_binary_1', 'rf_AirlinesTrain_binary_2', 'dl_AirlinesTrain_binary_1', 'glm_AirlinesTrain_binary_A', 'glm_Prostate_binary_xx', 'rf_Prostate_binary_1', 'glm_Prostate_regression_1'])
         self.assertKeysExist(models, 'models/glm_AirlinesTrain_binary_1', ['id', 'key', 'creation_epoch_time_millis', 'model_category', 'state', 'input_column_names', 'response_column_name', 'critical_parameters', 'secondary_parameters', 'expert_parameters', 'compatible_frames', 'warnings'])
         self.assertEqual(0, len(models['models']['glm_AirlinesTrain_binary_1']['warnings']), msg="Expect no warnings for glm_AirlinesTrain_binary_1.")
         self.assertEqual(models['models']['glm_AirlinesTrain_binary_1']['key'], 'glm_AirlinesTrain_binary_1', "key should equal our key: " + "glm_AirlinesTrain_binary_1")
@@ -835,7 +1051,7 @@ class ApiTestCase(ModelManagementTestCase):
         self.assertKeysExist(models, 'models', ['rf_Prostate_binary_1'])
         self.assertKeysExist(models, 'models/rf_Prostate_binary_1', ['warnings'])
         self.assertEqual(0, len(models['models']['rf_Prostate_binary_1']['warnings']), msg="Expect no warnings for rf_Prostate_binary_1.")
-        self.assertKeysDontExist(models, 'models', ['airlines_train.hex', 'airlines_test.hex', 'prostate.hex', 'glm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_2', 'rf_AirlinesTrain_binary_1', 'rf_AirlinesTrain_binary_2', 'dl_AirlinesTrain_binary_1', 'glm_AirlinesTrain_binary_A', 'glm_Prostate_binary_1', 'glm_Prostate_regression_1'])
+        self.assertKeysDontExist(models, 'models', ['airlines_train.hex', 'airlines_test.hex', 'prostate.hex', 'glm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_2', 'rf_AirlinesTrain_binary_1', 'rf_AirlinesTrain_binary_2', 'dl_AirlinesTrain_binary_1', 'glm_AirlinesTrain_binary_A', 'glm_Prostate_binary_xx', 'glm_Prostate_regression_1'])
         self.assertKeysDontExist(models, '', ['frames'])
 
 
@@ -843,7 +1059,7 @@ class ApiTestCase(ModelManagementTestCase):
         print "Testing /2/Models?key=rf_Prostate_binary_1&find_compatible_frames=true. . ."
         models = node.models(key='rf_Prostate_binary_1', find_compatible_frames=1)
         self.assertKeysExist(models, 'models', ['rf_Prostate_binary_1'])
-        self.assertKeysDontExist(models, 'models', ['airlines_train.hex', 'airlines_test.hex', 'prostate.hex', 'glm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_2', 'rf_AirlinesTrain_binary_1', 'rf_AirlinesTrain_binary_2', 'dl_AirlinesTrain_binary_1', 'glm_AirlinesTrain_binary_A', 'glm_Prostate_binary_1', 'glm_Prostate_regression_1'])
+        self.assertKeysDontExist(models, 'models', ['airlines_train.hex', 'airlines_test.hex', 'prostate.hex', 'glm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_1', 'gbm_AirlinesTrain_binary_2', 'rf_AirlinesTrain_binary_1', 'rf_AirlinesTrain_binary_2', 'dl_AirlinesTrain_binary_1', 'glm_AirlinesTrain_binary_A', 'glm_Prostate_binary_xx', 'glm_Prostate_regression_1'])
 
         self.assertKeysExist(models, '', ['frames'])
         self.assertKeysExist(models, 'frames', ['prostate.hex'])
@@ -851,12 +1067,22 @@ class ApiTestCase(ModelManagementTestCase):
 
 
         print "##############################################"
-        print "Testing /2/Models?key=glm_Prostate_binary_1 variable importance warning. . ."
-        models = node.models(key='glm_Prostate_binary_1')
-        self.assertKeysExist(models, 'models', ['glm_Prostate_binary_1'])
-        self.assertKeysExist(models, 'models/glm_Prostate_binary_1', ['warnings'])
-        self.assertEqual(1, len(models['models']['glm_Prostate_binary_1']['warnings']), msg="Expect one warning for glm_Prostate_binary_1.")
-        self.assertTrue("use_all_factor_levels" in models['models']['glm_Prostate_binary_1']['warnings'][0], "Expect variable importances warning since we aren't using use_all_factor_levels.")
+        print "Testing /2/Models?key=glm_Prostate_binary_* variable importance warnings. . ."
+        should_have_warnings = ['glm_Prostate_binary_10', 'glm_Prostate_binary_1x']
+        should_not_have_warnings = ['glm_Prostate_binary_00', 'glm_Prostate_binary_01', 'glm_Prostate_binary_11', 'glm_Prostate_binary_xx', 'glm_Prostate_binary_x0', 'glm_Prostate_binary_x1', 'glm_Prostate_binary_0x']
+
+        for m in should_have_warnings:
+            models = node.models(key=m)
+            self.assertKeysExist(models, 'models', [m])
+            self.assertKeysExist(models, 'models/' + m, ['warnings'])
+            self.assertEqual(1, len(models['models'][m]['warnings']), msg="Expect one warning for " + m + ": " + repr(models['models'][m]['warnings']))
+            self.assertTrue("use_all_factor_levels" in models['models'][m]['warnings'][0], "Expect variable importances warning since we aren't using use_all_factor_levels.")
+
+        for m in should_not_have_warnings:
+            models = node.models(key=m)
+            self.assertKeysExist(models, 'models', [m])
+            self.assertKeysExist(models, 'models/' + m, ['warnings'])
+            self.assertEqual(0, len(models['models'][m]['warnings']), msg="Expect zero warnings for " + m + ": " + repr(models['models'][m]['warnings']))
 
 
     def test_binary_classifiers(self):
@@ -885,7 +1111,9 @@ class ApiTestCase(ModelManagementTestCase):
                 compatible_frames = models['models'][model_key]['compatible_frames']
                 self.assertKeysExist(models, 'models/' + model_key, ['training_duration_in_ms'])
                 self.assertNotEqual(models['models'][model_key]['training_duration_in_ms'], 0, "Expected non-zero training time for model: " + model_key)
-                if models['models'][model_key]['model_algorithm'] != 'Naive Bayes':
+
+                should_not_have_varimp = ['glm_Prostate_binary_00', 'glm_Prostate_binary_01', 'glm_Prostate_binary_0x', 'glm_Prostate_binary_xx', 'glm_Prostate_binary_x0', 'glm_Prostate_binary_x1']
+                if models['models'][model_key]['model_algorithm'] != 'Naive Bayes' and model_key not in should_not_have_varimp:
                     self.assertKeysExistAndNonNull(models, 'models/' + model_key, ['variable_importances'])
                     self.assertKeysExistAndNonNull(models, 'models/' + model_key + '/variable_importances', ['varimp', 'method', 'max_var', 'scaled'])
 

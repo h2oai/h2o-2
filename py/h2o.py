@@ -593,6 +593,8 @@ def build_cloud_with_json(h2o_nodes_json='h2o-nodes.json'):
         nodeStateList = cloneJson['h2o_nodes']
 
     nodeList = []
+    if not nodeStateList:
+        raise Exception("nodeStateList is empty. %s file must be empty/corrupt" % h2o_nodes_json)
     for nodeState in nodeStateList:
         print "Cloning state for node", nodeState['node_id'], 'from', h2o_nodes_json
 
@@ -2555,6 +2557,7 @@ class H2O(object):
             'beta_eps': None,
             'higher_accuracy': None,
             'use_all_factor_levels': None,
+            'variable_importances': None,
         }
 
         check_params_update_kwargs(params_dict, kwargs, parentName, print_params=True)

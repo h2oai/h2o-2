@@ -121,7 +121,7 @@ h2o.gbm <- function(x, y, distribution = 'multinomial', data, key = "", n.trees 
 
 # -------------------------- Generalized Linear Models (GLM) ------------------------ #
 h2o.glm <- function(x, y, data, key = "", family, link, nfolds = 0, alpha = 0.5, nlambda = -1, lambda.min.ratio = -1, lambda = 1e-5,
-                    epsilon = 1e-4, standardize = TRUE, prior, variable_importances = TRUE, use_all_factor_levels = FALSE,
+                    epsilon = 1e-4, standardize = TRUE, prior, variable_importances = FALSE, use_all_factor_levels = FALSE,
                     tweedie.p = ifelse(family == "tweedie", 1.5, as.numeric(NA)), iter.max = 100,
                     higher_accuracy = FALSE, lambda_search = FALSE, return_all_lambda = FALSE, max_predictors=-1) {
   args <- .verify_dataxy(data, x, y)
