@@ -1,6 +1,5 @@
 #!/bin/bash
-
-echo "you can use -n argument to skip the s3 download if you did it once" 
+echo "You can use -n argument to skip the s3 download if you did it once" 
 echo "files are unzipped to ../../h2o-downloaded"
 # This is critical:
 # Ensure that all your children are truly dead when you yourself are killed.
@@ -17,6 +16,10 @@ echo "Setting up sandbox, since no cloud build here will clear it out! (unlike o
 rm -fr sandbox
 mkdir -p sandbox
 
+SET_JAVA_HOME="export JAVA_HOME=/usr/lib/jvm/java-7-oracle"
+# alternately could use this
+# SET_JAVA_HOME="export JAVA_HOME=/usr/bin/java"
+
 # Should we do this cloud build with the sh2junit.py? to get logging, xml etc.
 # I suppose we could just have a test verify the request cloud size, after buildingk
 # HDP_JOBTRACKER=192.168.1.154:8021
@@ -28,7 +31,11 @@ HDP_HEAP=60g
 HDP_JAR=h2odriver_hdp2.0.6.jar
 
 H2O_DOWNLOADED=../../h2o-downloaded
+H2O_TARGET=../../target
+
+# how come we can't build this locally?
 H2O_HADOOP=$H2O_DOWNLOADED/hadoop
+
 H2O_JAR=h2o.jar
 HDFS_OUTPUT=hdfsOutputDirName
 
@@ -39,8 +46,7 @@ REMOTE_USER=0xcustomer@$REMOTE_IP
 REMOTE_SCP="scp -i $HOME/.0xcustomer/0xcustomer_id_rsa"
 # FIX! I shouldn't have to specify JAVA_HOME for a non-iteractive shell running the hadoop command?
 # but not getting it otherwise on these machines
-# REMOTE_SSH_USER="ssh -i $HOME/.0xcustomer/0xcustomer_id_rsa $REMOTE_USER export JAVA_HOME=/usr/lib/jvm/java-7-oracle;"
-REMOTE_SSH_USER="ssh -i $HOME/.0xcustomer/0xcustomer_id_rsa $REMOTE_USER"
+REMOTE_SSH_USER="ssh -i $HOME/.0xcustomer/0xcustomer_id_rsa $REMOTE_USER $SET_JAVA_HOME"
 
 # source ./kill_hadoop_jobs.sh
 
@@ -59,19 +65,25 @@ echo "hadoop jar $HDP_JAR water.hadoop.h2odriver -jt $HDP_JOBTRACKER -libjars $H
 # copy the script, just so we have it there too
 $REMOTE_SCP /tmp/h2o_on_hadoop_$REMOTE_IP.sh $REMOTE_USER:$REMOTE_HOME
 
-# have to copy the downloaded h2o stuff over to xxx to execute with the ssh
+# Have to copy the downloaded h2o stuff over to xxx to execute with the ssh
+# Actually now, this script is using the local build in target (R and h2o.jar)
+
 # it needs the right hadoop client setup. This is easier than installing hadoop client stuff here.
 # do the jars last, so we can see the script without waiting for the copy
-echo "scp some jars"
+echo "scp the downloaded h2o driver jar over to the remote machine"
 $REMOTE_SCP $H2O_HADOOP/$HDP_JAR  $REMOTE_USER:$REMOTE_HOME
-$REMOTE_SCP $H2O_DOWNLOADED/$H2O_JAR $REMOTE_USER:$REMOTE_HOME
+echo "scp the h2o jar we're going to use over to the remote machine"
+# $REMOTE_SCP $H2O_DOWNLOADED/$H2O_JAR $REMOTE_USER:$REMOTE_HOME
+echo "WARNING: using the local build, not the downloaded h2o jar"
+$REMOTE_SCP $H2O_TARGET/$H2O_JAR $REMOTE_USER:$REMOTE_HOME
 
 # exchange keys so jenkins can do this?
-# background!
+# background job, the remote ssh that does h2odriver
 cat /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 cat /tmp/h2o_on_hadoop_$REMOTE_IP.sh | $REMOTE_SSH_USER &
 #*********************************************************************************
 
+echo "check on jobs I backgrounded locally"
 CLOUD_PID=$!
 jobs -l
 
@@ -160,11 +172,18 @@ then
     # may take a second?
     sleep 1
 fi
-ps aux | grep h2odriver
 
-jobs -l
 echo ""
+echo "Check if the background ssh/hadoop/cloud job is still running here"
+ps aux | grep 0xcustomer_id_rsa
+echo "check on jobs I backgrounded locally"
+jobs -l
 
-echo "The h2odriver job should be gone. It was pid $CLOUD_PID"
-echo "The hadoop job(s) should be gone?"
-$REMOTE_SSH_USER "export JAVA_HOME=/usr/lib/jvm/java-7-oracle; mapred job -list"
+echo ""
+echo "Check if h2odriver is running on the remote machine"
+$REMOTE_SSH_USER "ps aux | grep h2odriver"
+
+echo ""
+echo "The background job with the remote ssh that does h2odriver should be gone. It was pid $CLOUD_PID"
+echo "The hadoop job(s) should be gone as a result?"
+$REMOTE_SSH_USER "mapred job -list"
