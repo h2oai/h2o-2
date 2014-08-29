@@ -42,7 +42,7 @@ abstract public class AST extends Iced {
     if( (ast = ASTId   .parse(E)) != null ) return ast;
     if( (ast = ASTNum  .parse(E)) != null ) return ast;
     if( (ast = ASTOp   .parse(E)) != null ) return ast;
-    if( E.peek('"',EOS) ) E.throwErr("The current Exec does not handle strings",E._x);
+    if( (ast = ASTStr  .parse(E)) != null ) return ast;
     return null;
   }
   abstract void exec(Env env);
@@ -140,6 +140,14 @@ class ASTApply extends AST {
         while( true ) {
           if( (args[i++] = parseCXExpr(E,false)) == null )
             E.throwErr("Missing argument",E._x);
+          if (args[i-1] instanceof ASTAssign) {
+            ASTAssign a = (ASTAssign)args[i-1];
+            if (a._lhs.argName() != null && a._lhs.argName().equals("na.rm")) {
+              ASTReducerOp op = (ASTReducerOp)args[0];
+              op._narm = (a._eval.argName().equals("T") || a._eval.argName().equals("TRUE") || a._eval.toString().equals("1.0"));
+              args[0] = op;
+            }
+          }
           if( E.peek(')') ) break;
           E.xpeek(',',E._x,null);
           if( i==args.length ) args = Arrays.copyOf(args,args.length<<1);
@@ -225,7 +233,9 @@ class ASTSlice extends AST {
     AST rows=E.xpeek(',',(x=E._x),parseCXExpr(E, false));
     if( rows != null && !rows._t.union(Type.dblary()) ) E.throwErr("Must be scalar or array",x);
     AST cols=E.xpeek(']',(x=E._x),parseCXExpr(E, false));
-    if( cols != null && !cols._t.union(Type.dblary()) ) E.throwErr("Must be scalar or array",x);
+    if( cols != null && !cols._t.union(Type.dblary()) )
+      if (cols._t.isStr()) E.throwErr("The current Exec does not handle strings",x);
+      else E.throwErr("Must be scalar or array",x);
     Type t =                    // Provable scalars will type as a scalar
       rows != null && rows.isPosConstant() &&
       cols != null && cols.isPosConstant() ? Type.DBL : Type.ARY;
@@ -381,6 +391,22 @@ class ASTId extends AST {
   }
   @Override String argName() { return _id; }
   @Override public String toString() { return _id; }
+}
+
+class ASTStr extends AST {
+  final String _str;
+  ASTStr(String str) { super(Type.STR); _str=str; }
+  // Parse a string, or throw a parse error
+  static ASTStr parse(Exec2 E) {
+    String str = E.isString();
+    if (str != null) {
+      E._x += str.length()+2; //str + quotes
+      return new ASTStr(str);
+    }
+    return null;
+  }
+  @Override void exec(Env env) { env.push(_str); }
+  @Override public String toString() { return _str; }
 }
 
 // --------------------------------------------------------------------------

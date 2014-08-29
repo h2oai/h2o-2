@@ -46,11 +46,13 @@ public class Frame extends Lockable<Frame> {
     _names=names;
     _vecs=vecs;
     _keys = new Key[vecs.length];
+    Futures fs = new Futures();
     for( int i=0; i<vecs.length; i++ ) {
       Key k = _keys[i] = vecs[i]._key;
       if( DKV.get(k)==null )    // If not already in KV, put it there
-        DKV.put(k,vecs[i]);
+        DKV.put(k,vecs[i], fs);
     }
+    fs.blockForPending();
     assert checkCompatible();
   }
 

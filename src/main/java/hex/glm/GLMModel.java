@@ -463,17 +463,19 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     protected final GLMModel [] _xmodels;
     protected GLMValidation [] _xvals;
     long _nobs;
+    final float [] _thresholds;
     public static Key makeKey(){return Key.make("__GLMValidation_" + Key.make().toString());}
 
-    public GLMXValidationTask(GLMModel mainModel,double lambda, GLMModel [] xmodels){this(mainModel,lambda,xmodels,null);}
-    public GLMXValidationTask(GLMModel mainModel,double lambda, GLMModel [] xmodels, final H2OCountedCompleter completer){
+    public GLMXValidationTask(GLMModel mainModel,double lambda, GLMModel [] xmodels, float [] thresholds){this(mainModel,lambda,xmodels,thresholds,null);}
+    public GLMXValidationTask(GLMModel mainModel,double lambda, GLMModel [] xmodels, float [] thresholds, final H2OCountedCompleter completer){
       super(mainModel, lambda,completer);
       _xmodels = xmodels;
+      _thresholds = thresholds;
     }
     @Override public void map(Chunk [] chunks){
       _xvals = new GLMValidation[_xmodels.length];
       for(int i = 0; i < _xmodels.length; ++i)
-        _xvals[i] = new GLMValidation(null,_xmodels[i].ymu,_xmodels[i].glm,_xmodels[i].rank());
+        _xvals[i] = new GLMValidation(null,_xmodels[i].ymu,_xmodels[i].glm,_xmodels[i].rank(),_thresholds);
       final int nrows = chunks[0]._len;
       double [] row   = MemoryManager.malloc8d(_xmodels[0]._names.length);
       float  [] preds = MemoryManager.malloc4f(_xmodels[0].glm.family == Family.binomial?3:1);
@@ -507,7 +509,7 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
         _xvals[i].nobs = _nobs - _xvals[i].nobs;
         GLMModel.setXvalidation(cmp, _xmodels[i]._key, _lambda, _xvals[i]);
       }
-      GLMModel.setXvalidation(cmp, _model._key, _lambda, new GLMXValidation(_model, _xmodels, _xvals, _lambda, _nobs));
+      GLMModel.setXvalidation(cmp, _model._key, _lambda, new GLMXValidation(_model, _xmodels, _xvals, _lambda, _nobs,_thresholds));
     }
   }
 
@@ -581,12 +583,13 @@ public class GLMModel extends Model implements Comparable<GLMModel> {
     GLM2 params = get_params();
     this.variable_importances = null;
 
-    // Warn if we may be returning results that might not include an important (base) level. . .
-    if (! params.use_all_factor_levels)
-      this.addWarning("Variable Importance may be missing important variables: because use_all_factor_levels is off the importance of base categorical levels will NOT be included.");
-
     final double[] b = beta();
     if (params.variable_importances && null != b) {
+
+      // Warn if we may be returning results that might not include an important (base) level. . .
+      if (! params.use_all_factor_levels)
+        this.addWarning("Variable Importance may be missing important variables: because use_all_factor_levels is off the importance of base categorical levels will NOT be included.");
+
       float[] coefs_abs_value = new float[b.length - 1]; // Don't include the Intercept
       String[] names = new String[b.length - 1];
       for (int i = 0; i < b.length - 1; ++i) {

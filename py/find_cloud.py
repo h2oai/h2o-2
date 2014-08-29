@@ -53,7 +53,16 @@ def handleRemoveError(func, path, exc):
     except OSError:
         pass
 
-LOG_DIR = 'sandbox'
+def get_sandbox_name():
+    if os.environ.has_key("H2O_SANDBOX_NAME"):
+        a = os.environ["H2O_SANDBOX_NAME"]
+        print "H2O_SANDBOX_NAME", a
+        return a
+    else:
+        return "sandbox"
+
+LOG_DIR = get_sandbox_name()
+
 # Create a clean sandbox, like the normal cloud builds...because tests
 # expect it to exist (they write to sandbox/commands.log)
 # find_cloud.py creates h2o-node.json for tests to use with -ccj
@@ -133,7 +142,7 @@ def probe_node(line, h2oNodes):
     # print "http_addr:", http_addr, "port:", port
 
     probes = []
-    gc = do_json_request(http_addr, port, 'Cloud.json', timeout=3)
+    gc = do_json_request(http_addr, port, 'Cloud.json', timeout=10)
     if gc is None:
         return probes
         
@@ -206,11 +215,12 @@ def probe_node(line, h2oNodes):
     return probes # might be empty!
 
 #********************************************************************
-def flatfile_name():
+def flatfile_pathname():
     if args.flatfile:
         a = args.flatfile
     else:
-        a = 'pytest_flatfile-%s' %getpass.getuser()
+        print "New: match h2o.py in getting it by default from LOG_DIR (sandbox) if not specified."
+        a = LOG_DIR + '/pytest_flatfile-%s' %getpass.getuser()
     print "Starting with contents of ", a
     return a
 
@@ -218,7 +228,7 @@ def flatfile_name():
 # hostPortList.append("/" + h.addr + ":" + str(port + ports_per_node*i))
 # partition returns a 3-tuple as (LHS, separator, RHS) if the separator is found, 
 # (original_string, '', '') if the separator isn't found
-with open(flatfile_name(), 'r') as f:
+with open(flatfile_pathname(), 'r') as f:
     possMembers = f.readlines()
 f.close()
 

@@ -12,10 +12,9 @@ import org.apache.commons.math3.util.*;
 import org.joda.time.DateTime;
 import org.joda.time.MutableDateTime;
 
+import org.joda.time.format.DateTimeFormatter;
 import water.*;
 import water.fvec.*;
-import water.fvec.Vec.VectorGroup;
-import water.util.Log;
 import water.util.Utils;
 
 /** Parse a generic R string and build an AST, in the context of an H2O Cloud
@@ -133,6 +132,7 @@ public abstract class ASTOp extends AST {
     putPrefix(new ASTMinute());
     putPrefix(new ASTSecond());
     putPrefix(new ASTMillis());
+    putPrefix(new ASTasDate());
 
     // Time series operations
     putPrefix(new ASTDiff  ());
@@ -712,6 +712,44 @@ class ASTMinute extends ASTTimeOp { @Override String opStr(){return "minute";} @
 class ASTSecond extends ASTTimeOp { @Override String opStr(){return "second";} @Override ASTOp make() {return new ASTSecond();} @Override long op(MutableDateTime dt) { return dt.getSecondOfMinute();}}
 class ASTMillis extends ASTTimeOp { @Override String opStr(){return "millis";} @Override ASTOp make() {return new ASTMillis();} @Override long op(MutableDateTime dt) { return dt.getMillisOfSecond();}}
 
+class ASTasDate extends ASTOp {
+  ASTasDate() { super(new String[]{"as.Date", "x", "format"},
+          new Type[]{Type.ARY, Type.ARY, Type.STR},
+          OPF_PREFIX,
+          OPP_PREFIX,OPA_RIGHT); }
+  @Override String opStr() { return "as.Date"; }
+  @Override ASTOp make() {return new ASTasDate();}
+  @Override void apply(Env env, int argcnt, ASTApply apply) {
+    final String format = env.popStr();
+    if (format.isEmpty()) throw new IllegalArgumentException("as.Date requires a non-empty format string");
+    // check the format string more?
+
+    Frame fr = env.ary(-1);
+
+    if( fr.vecs().length != 1 || !fr.vecs()[0].isEnum() )
+      throw new IllegalArgumentException("as.Date requires a single column of factors");
+
+    Frame fr2 = new MRTask2() {
+      @Override public void map( Chunk chks[], NewChunk nchks[] ) {
+        //done on each node in lieu of rewriting DateTimeFormatter as Iced
+        DateTimeFormatter dtf = ParseTime.forStrptimePattern(format);
+        for( int i=0; i<nchks.length; i++ ) {
+          NewChunk n =nchks[i];
+          Chunk c = chks[i];
+          int rlen = c._len;
+          for( int r=0; r<rlen; r++ ) {
+            if (!c.isNA0(r)) {
+              String date = c._vec.domain((long)c.at0(r));
+              n.addNum(DateTime.parse(date, dtf).getMillis(), 0);
+            } else n.addNA();
+          }
+        }
+      }
+    }.doAll(fr.numCols(),fr).outputFrame(fr._names, null);
+    env.poppush(2, fr2, null);
+  }
+}
+
 // Finite backward difference for user-specified lag
 // http://en.wikipedia.org/wiki/Finite_difference
 class ASTDiff extends ASTOp {
@@ -874,7 +912,7 @@ class ASTIntDiv   extends ASTBinOp { ASTIntDiv()   { super(OPF_INFIX, OPP_INTDIV
 // Variable length; instances will be created of required length
 abstract class ASTReducerOp extends ASTOp {
   final double _init;
-  final boolean _narm;        // na.rm in R
+  boolean _narm;        // na.rm in R
   ASTReducerOp( double init, boolean narm ) {
     super(new String[]{"","dbls"},
           new Type[]{Type.DBL,Type.varargs(Type.dblary())},

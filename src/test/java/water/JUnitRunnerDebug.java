@@ -1,6 +1,7 @@
 package water;
 
 import hex.*;
+import hex.deeplearning.NeuronsTest;
 import org.junit.internal.TextListener;
 import org.junit.runner.Description;
 import org.junit.runner.JUnitCore;
@@ -15,12 +16,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class JUnitRunnerDebug {
-  public static final int NODES = 1;
+  public static final int NODES = 3;
 
   public static void main(String[] args) throws Exception {
     int[] ports = new int[NODES];
     for( int i = 0; i < ports.length; i++ )
-      ports[i] = 54321 + i * 2;
+      ports[i] = 64321 + i * 2;
 
     String flat = "";
     for( int i = 0; i < ports.length; i++ )
@@ -98,6 +99,7 @@ public class JUnitRunnerDebug {
 //      tests.add(GBMTest.class);
 //      tests.add(KMeans2Test.class);
 //      tests.add(PCATest.class);
+//      tests.add(NetworkTestTest.class);
 
       // Uncomment this to sleep here and use the browser.
       // try { Thread.sleep(10000000); } catch (Exception _) {}

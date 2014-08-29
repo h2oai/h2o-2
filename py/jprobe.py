@@ -36,7 +36,8 @@ parse = argparse.ArgumentParser()
 group = parse.add_mutually_exclusive_group()
 group.add_argument('-e', help="job number from a list of ec2 known jobs",  type=int, action='store', default=None)
 group.add_argument('-x', help="job number from a list of 164 known jobs",  type=int, action='store', default=None)
-group.add_argument('-s', help="job number from a list of sm known jobs",  type=int, action='store', default=None)
+group.add_argument('-s', help="job number from a list of 174 known jobs",  type=int, action='store', default=None)
+group.add_argument('-s2', help="job number from a list of 190 known jobs",  type=int, action='store', default=None)
 group.add_argument('-j', '--jobname', help="jobname. Correct url is found",  action='store', default=None)
 parse.add_argument('-l', '--logging', help="turn on logging.DEBUG msgs to see allUrls used",  action='store_true')
 parse.add_argument('-v', '--verbose', help="dump the last N stdout from the failed jobs",  action='store_true')
@@ -73,6 +74,16 @@ allowedJobsS = [
     'testdir_single_jvm_4_of_5',
     'testdir_single_jvm_5_of_5',
 ]
+allowedJobsS2 = [
+    'testdir_multi_jvm_1_of_5',
+    'testdir_multi_jvm_2_of_5',
+    'testdir_multi_jvm_3_of_5',
+    'testdir_single_jvm_1_of_5',
+    'testdir_single_jvm_2_of_5',
+    'testdir_single_jvm_3_of_5',
+    'testdir_single_jvm_4_of_5',
+    'testdir_single_jvm_5_of_5',
+]
 
 allUrls = {
     'ec2': 'http://test.0xdata.com',
@@ -86,6 +97,16 @@ all164Jobs = ['do all', 'h2o_master_test', 'h2o_master_test2', 'h2o_perf_test', 
 allEc2Jobs = ['generic.h2o.build.branch', 'h2o.branch.api-dev', 'h2o.branch.cliffc-drf', 'h2o.branch.hilbert', 'h2o.branch.jobs', 'h2o.branch.jobs1', 'h2o.branch.json_versioning', 'h2o.branch.rel-ito', 'h2o.build', 'h2o.build.api-dev', 'h2o.build.gauss', 'h2o.build.godel', 'h2o.build.h2oscala', 'h2o.build.hilbert', 'h2o.build.jobs', 'h2o.build.master', 'h2o.build.rel-ito', 'h2o.build.rel-ivory', 'h2o.build.rel-iwasawa', 'h2o.build.rel-jacobi', 'h2o.build.rel-jordan', 'h2o.build.rest_api_versioning', 'h2o.build.ux-client', 'h2o.build.va_defaults_renamed', 'h2o.clone', 'h2o.datasets', 'h2o.download.latest', 'h2o.ec2.start', 'h2o.ec2.stop', 'h2o.findbugs', 'h2o.multi.vm.temporary', 'h2o.multi.vm.temporary.cliffc-no-limits', 'h2o.nightly', 'h2o.nightly.1', 'h2o.nightly.cliffc-lock', 'h2o.nightly.ec2', 'h2o.nightly.ec2.cliffc-no-limits', 'h2o.nightly.ec2.erdos', 'h2o.nightly.ec2.hilbert', 'h2o.nightly.ec2.rel-ito', 'h2o.nightly.ec2.rel-jacobi', 'h2o.nightly.ec2.rel-jordan', 'h2o.nightly.fourier', 'h2o.nightly.godel', 'h2o.nightly.multi.vm', 'h2o.nightly.rel-ivory', 'h2o.nightly.rel-iwasawa', 'h2o.nightly.rel-jacobi', 'h2o.nightly.rel-jordan', 'h2o.nightly.va_defaults_renamed', 'h2o.post.push', 'h2o.private.nightly', 'h2o.tests.ec2', 'h2o.tests.ec2.hosts', 'h2o.tests.ec2.multi.jvm', 'h2o.tests.ec2.multi.jvm.fvec', 'h2o.tests.golden', 'h2o.tests.junit', 'h2o.tests.multi.jvm', 'h2o.tests.multi.jvm.fvec', 'h2o.tests.single.jvm', 'h2o.tests.single.jvm.fvec', 'h2o.tests.test']
 
 all184Jobs = [
+    'testdir_multi_jvm_1_of_5',
+    'testdir_multi_jvm_2_of_5',
+    'testdir_multi_jvm_3_of_5',
+    'testdir_single_jvm_1_of_5',
+    'testdir_single_jvm_2_of_5',
+    'testdir_single_jvm_3_of_5',
+    'testdir_single_jvm_4_of_5',
+    'testdir_single_jvm_5_of_5',
+]
+all190Jobs = [
     'testdir_multi_jvm_1_of_5',
     'testdir_multi_jvm_2_of_5',
     'testdir_multi_jvm_3_of_5',
@@ -112,8 +133,8 @@ all184Jobs = [
 if args.logging:
     logging.basicConfig(level=logging.DEBUG)
 
-if args.jobname and (args.e or args.x or args.s):
-    raise Exception("Don't use both -j and -x or -e or -s args")
+if args.jobname and (args.e or args.x or args.s or args.s2):
+    raise Exception("Don't use both -j and -x or -e or -s args or -s2 args")
 
 # default ec2 0
 jobname = None
@@ -135,31 +156,49 @@ if args.s is not None:
             (args.s, len(allowedJobsS)-1))
     jobname = allowedJobsS[args.s]
 
+if args.s2 is not None:
+    if args.s2<0 or args.s2>(len(allowedJobsS2)-1):
+        raise Exception("sm job number %s is outside allowed range: 0-%s" % \
+            (args.s2, len(allowedJobsS2)-1))
+    jobname = allowedJobsS2[args.s2]
+
 if args.jobname:
     if args.jobname not in allowedJobs:
         raise Exception("%s not in list of legal jobs" % args.jobname)
     jobname = args.jobname
 
 
-if not (args.jobname or args.x or args.e or args.s):
+if not (args.jobname or args.x or args.e or args.s or args.s2):
     # prompt the user
     subtract = 0
     prefix = "-e"
     eDone = False
     xDone = False
+    sDone = False
+    s2Done = False
     while not jobname: 
-        allAllowedJobs = allowedJobsE + allowedJobsX + allowedJobsS
+        allAllowedJobs = allowedJobsE + allowedJobsX + allowedJobsS + allowedJobsS2
         for j, job in enumerate(allAllowedJobs):
             # first boundary
             if not eDone and j==(subtract + len(allowedJobsE)):
                 subtract += len(allowedJobsE)
-                prefix = "-x"
                 eDone = True
+                prefix = "-x"
             # second boundary
             if not xDone and j==(subtract + len(allowedJobsX)):
                 subtract += len(allowedJobsX)
-                prefix = "-s"
                 xDone = True
+                prefix = "-s"
+            # third boundary
+            if not sDone and j==(subtract + len(allowedJobsS)):
+                subtract += len(allowedJobsS)
+                sDone = True
+                prefix = "-s2"
+            # fourth boundary
+            if not s2Done and j==(subtract + len(allowedJobsS2)):
+                subtract += len(allowedJobsS2)
+                prefix = "-??"
+                s2Done = True
             
 
             print prefix, j-subtract, " [%s]: %s" % (j, job)
@@ -180,6 +219,9 @@ elif jobname in all184Jobs:
     # print "Setting up proxy server for sm"
     # os.environ['HTTP_PROXY'] = 'http://172.16.0.3:8888'
     # os.environ['HTTPS_PROXY'] = 'https://172.16.0.3:8888'
+elif jobname in all190Jobs:
+    DO_LAST_GOOD = True
+    machine = '190'
 
 else:
     raise Exception("%s not in lists of known jobs" % jobname)
@@ -274,6 +316,11 @@ if DO_LAST_GOOD:
 else:
     print "Using last_buildnumber %s for result set" % job.get_last_buildnumber()
     build = job.get_build(job.get_last_buildnumber())
+
+# print out info about the job
+# print "build:", build
+# mjn = build.get_master_job_name()
+# print "mjn:", mjn
 
 af = build.get_artifacts()
 dict_af = build.get_artifact_dict()

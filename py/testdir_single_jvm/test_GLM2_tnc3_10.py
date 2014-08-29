@@ -1,7 +1,6 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_import as h2i
-import h2o_browse as h2b
 import h2o_exec as h2e
 
 print "colswap doesn't seem like it can update a col with NAs correctly."
@@ -29,9 +28,9 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(node_count=1)
+            h2o.build_cloud()
         else:
-            h2o_hosts.build_cloud_with_hosts(node_count=1)
+            h2o_hosts.build_cloud_with_hosts()
 
     @classmethod
     def tearDownClass(cls):
@@ -42,12 +41,10 @@ class Basic(unittest.TestCase):
         csvFilename = 'tnc3_10.csv'
         print "\n" + csvFilename
         hex_key = "tnc3.hex"
-        h2b.browseTheCloud()
 
         parseResult = h2i.import_parse(bucket='smalldata', path=csvFilename, schema='put', hex_key=hex_key, timeoutSecs=10)
         print "Parse result['Key']:", parseResult['destination_key']
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
-        h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
         ### time.sleep(10)
 
         if (1==0):
@@ -69,9 +66,6 @@ class Basic(unittest.TestCase):
 
 
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
-        ### h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
-        ### time.sleep(3600)
-        h2b.browseJsonHistoryAsUrlLastMatch("RFView")
 
         #******************
         if (1==0):
@@ -87,14 +81,6 @@ class Basic(unittest.TestCase):
             print "glm end on ", csvFilename, 'took', time.time() - start, 'seconds'
 
         inspect = h2o_cmd.runInspect(None, parseResult['destination_key'])
-        ### h2b.browseJsonHistoryAsUrlLastMatch("Inspect")
-        ### time.sleep(3600)
-        h2b.browseJsonHistoryAsUrlLastMatch("RFView")
-
-        if not h2o.browse_disable:
-            ### print "\n <ctrl-C> to quit sleeping here"
-            ### time.sleep(1500)
-            pass
 
 if __name__ == '__main__':
     h2o.unit_main()

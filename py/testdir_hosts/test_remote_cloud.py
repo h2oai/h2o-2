@@ -1,6 +1,6 @@
-import unittest, time, sys,
+import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b
+import h2o_cmd, h2o, h2o_hosts, h2o_browse as h2b, h2o_os_util
 
 node_count = 5
 global base_port
@@ -37,7 +37,7 @@ class Basic(unittest.TestCase):
         # so we don't repeatedly copy the jar
         # have to make sure base_port is the same on both!
         print "base_port:", base_port
-        h2o.check_port_group(base_port)
+        h2o_os_util.check_port_group(base_port)
         start = time.time()
         # writes it's own flatfile
         h2o_hosts.build_cloud_with_hosts(node_count, base_port=base_port, 

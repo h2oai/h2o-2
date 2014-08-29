@@ -14,26 +14,20 @@ echo "current PID: $$"
 # do some bash parameters, just in case we have future expansion
 # -n is no download of the jar
 NO_DOWNLOAD=1
-USE_EXISTING=1
 BRANCH=master
 VERSION=
 TESTDIR=
 TEST=
-while getopts v:hsnb:d:t: flag
+while getopts v:hnb:d:t: flag
 do
     case $flag in
         v)
             VERSION=$OPTARG
             echo "version is $VERSION"
             ;;
-        s)
-            echo "download from s3"
-            NO_DOWNLOAD=0
-            USE_EXISTING=0
-            ;;
         n)
-            echo "Won't download the h2o.jar from S3, but will copy to target/h2o.jar"
             NO_DOWNLOAD=1
+            echo "Don't download the h2o.jar from S3, but copy from h2o-downloaded to target/h2o.jar and hadoop/target/*"
             ;;
         b)
             BRANCH=$OPTARG

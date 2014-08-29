@@ -123,7 +123,7 @@ setMethod("show", "H2OGLMModel", function(object) {
     cat("\nNull Deviance:    ", round(model$null.deviance,1))
     #Return AIC NaN while calculations for tweedie/gamma not implemented; keep R from throwing error
     if (class(model$aic) != "numeric") {
-      cat("\nResidual Deviance:", round(model$deviance,1), " AIC: Missing implementation for", model$params$family$family, "family")
+      cat("\nResidual Deviance:", round(model$deviance,1), " AIC: NaN")
     } else {
       cat("\nResidual Deviance:", round(model$deviance,1), " AIC:", round(model$aic,1))
     }
@@ -156,9 +156,9 @@ setMethod("summary","H2OGLMModelList", function(object) {
         for(m in object@models) {
             model = m@model
             if(is.null(summary)) {
-                summary = t(as.matrix(c(model$lambda, max(0,model$df.null-model$df.residual),round((1-model$deviance/model$null.deviance),2),round(model$auc,2))))
+                summary = t(as.matrix(c(model$lambda, model$df.null-model$df.residual,round((1-model$deviance/model$null.deviance),2),round(model$auc,2))))
             } else {
-                summary = rbind(summary,c(model$lambda,max(0,model$df.null-model$df.residual),round((1-model$deviance/model$null.deviance),2),round(model$auc,2)))
+                summary = rbind(summary,c(model$lambda,model$df.null-model$df.residual,round((1-model$deviance/model$null.deviance),2),round(model$auc,2)))
             }
         }
         summary = cbind(1:nrow(summary),summary)
@@ -375,6 +375,16 @@ year <- function(x) UseMethod('year', x)
 year.H2OParsedData <- h2o.year
 month <- function(x) UseMethod('month', x)
 month.H2OParsedData <- h2o.month
+
+as.Date.H2OParsedData <- function(x, format, ...) {
+  if(!is.character(format)) stop("format must be a string")
+
+  expr = paste("as.Date(", paste(x@key, deparse(substitute(format)), sep = ","), ")", sep = "")
+  res = .h2o.__exec2(x@h2o, expr)
+  res <- .h2o.exec2(res$dest_key, h2o = x@h2o, res$dest_key)
+  res@logic <- FALSE
+  return(res)
+}
 
 diff.H2OParsedData <- function(x, lag = 1, differences = 1, ...) {
   if(!is.numeric(lag)) stop("lag must be numeric")
@@ -1373,28 +1383,25 @@ setMethod("apply", "H2OParsedData", function(X, MARGIN, FUN, ...) {
     stop("MARGIN must be either 1 (rows), 2 (cols), or a vector containing both")
   if(missing(FUN) || !is.function(FUN))
     stop("FUN must be an R function")
-
+  
   myList <- list(...)
   if(length(myList) > 0) {
     stop("Unimplemented")
-    tmp <- sapply(myList, function(x) { !class(x) %in% c("H2OParsedData", "numeric") } )
+    tmp = sapply(myList, function(x) { !class(x) %in% c("H2OParsedData", "numeric") } )
     if(any(tmp)) stop("H2O only recognizes H2OParsedData and numeric objects")
-
-    idx <- which(sapply(myList, function(x) { class(x) == "H2OParsedData" }))
+    
+    idx = which(sapply(myList, function(x) { class(x) == "H2OParsedData" }))
     # myList <- lapply(myList, function(x) { if(class(x) == "H2OParsedData") x@key else x })
     myList[idx] <- lapply(myList[idx], function(x) { x@key })
-
+    
     # TODO: Substitute in key name for H2OParsedData objects and push over wire to console
     if(any(names(myList) == ""))
       stop("Must specify corresponding variable names of ", myList[names(myList) == ""])
   }
-
+  
   # Substitute in function name: FUN <- match.fun(FUN)
-  if(identical(as.list(substitute(FUN))[[1]], quote(`function`))) {
-    body(FUN) <- .replace_with_keys(body(FUN), parent.frame(), TRUE)
-  }
-  myfun <- deparse(substitute(FUN))
-  len <- length(myfun)
+  myfun = deparse(substitute(FUN))
+  len = length(myfun)
   if(len > 3 && substr(myfun[1], nchar(myfun[1]), nchar(myfun[1])) == "{" && myfun[len] == "}")
     myfun = paste(myfun[1], paste(myfun[2:(len-1)], collapse = ";"), "}")
   else

@@ -27,6 +27,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
         # FIX! put right values in
         # will there be different expected for random vs the other inits?
+        # removed 0's from first col because we set "ignored_cols"
         expected = [
             ([0.0, -113.00566692375459, -89.99595447985321, -455.9970643424373, 4732.0, 49791778.0, 36800.0], 248846122, 1308149283316.2988) ,
             ([0.0, 1.0, 1.0, -525.0093818313685, 2015.001629398412, 25654042.00592703, 28304.0], 276924291, 1800760152555.98) ,
@@ -82,6 +83,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
             print "col 0 is enum in " + csvFilename + " but KMeans should skip that automatically?? or no?"
             kwargs = {
+                'max_iter': 30,
                 'k': 15, 
                 'initialization': 'Furthest',
                 'cols': None, 

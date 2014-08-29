@@ -34,8 +34,6 @@ public class KMeans2RandomTest extends TestUtil {
       String dataset = datasets[i];
       Key file = NFSFileVec.make(find_test_file(dataset));
       Frame frame = ParseDataset2.parse(Key.make(), new Key[]{file});
-      Key vfile = NFSFileVec.make(find_test_file(dataset));
-      Frame vframe = ParseDataset2.parse(Key.make(), new Key[]{vfile});
 
       try {
         for (int clusters : new int[]{1, 10}) {
@@ -61,6 +59,7 @@ public class KMeans2RandomTest extends TestUtil {
 
                   KMeans2.KMeans2Model m = null;
                   Frame score = null;
+                  Frame ref = null;
                   try {
                     m = UKV.get(k.dest());
                     for (double d : m.within_cluster_variances) Assert.assertFalse(Double.isNaN(d));
@@ -71,8 +70,11 @@ public class KMeans2RandomTest extends TestUtil {
 
                     // make prediction (cluster assignment)
                     score = m.score(frame);
-                    for (long j = 0; j < score.numRows(); ++j)
-                      org.junit.Assert.assertTrue(score.anyVec().at8(j) >= 0 && score.anyVec().at8(j) < clusters);
+                    ref = UKV.get(m._clustersKey);
+                    for (long j = 0; j < score.numRows(); ++j) {
+                      org.junit.Assert.assertTrue(score.anyVec().at8(j) >= 0 && score.anyVec().at8(j) < clusters); //check sanity first
+//                      org.junit.Assert.assertTrue(score.anyVec().at8(j) == ref.anyVec().at8(j)); //check actual cluster assignment PUB-992
+                    }
 
                     Log.info("Parameters combination " + count + ": PASS");
                     testcount++;
@@ -80,6 +82,7 @@ public class KMeans2RandomTest extends TestUtil {
                   } finally {
                     if (m != null) m.delete();
                     if (score != null) score.delete();
+                    if (ref != null) ref.delete();
                   }
                 }
               }
@@ -88,7 +91,6 @@ public class KMeans2RandomTest extends TestUtil {
         }
       } finally {
         frame.delete();
-        vframe.delete();
       }
     }
     Log.info("\n\n=============================================");
