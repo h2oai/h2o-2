@@ -2,8 +2,8 @@
 ./n0.doit test_badchars.py
 ./n0.doit test_bayes_rand2.py
 ./n0.doit test_billion_rows_fvec.py
-./n0.doit test_create_frame_rand1.py
 ./n0.doit test_ddply_plot.py
+./n0.doit test_ddply_reals_plot.py
 ./n0.doit test_delete_all_keys.py
 ./n0.doit test_enum_multi_permission.py
 ./n0.doit test_exec2_100_quantiles.py
@@ -68,7 +68,6 @@
 ./n0.doit test_GLM2_basic_predict.py
 ./n0.doit test_GLM2_basic.py
 ./n0.doit test_GLM2_big1.py
-./n0.doit test_GLM2_binomial_goalies.py
 ./n0.doit test_GLM2_clslowbwt.py
 ./n0.doit test_GLM2_convergence_1_noise.py
 ./n0.doit test_GLM2_convergence_1.py
@@ -133,6 +132,7 @@
 ./n0.doit test_KMeans_enum_fvec.py
 ./n0.doit test_KMeans_fuzzy_centers_fvec.py
 ./n0.doit test_KMeans_hastie_shuffle_fvec.py
+./n0.doit test_KMeans_predict3.py
 ./n0.doit test_KMeans_twit_fvec.py
 ./n0.doit test_many_cols_enum.py
 ./n0.doit test_many_cols.py
@@ -142,10 +142,10 @@
 ./n0.doit test_NN2_mnist.py
 ./n0.doit test_NN2_params_rand2.py
 ./n0.doit test_NN2_twovalues.py
+./n0.doit test_nothing.py
 ./n0.doit test_nulls_fvec.py
 ./n0.doit test_parity_128_4_2_quad.py
 ./n0.doit test_parse_100k_cols_fvec.py
-./n0.doit test_parse_200k_cols_fvec.py
 ./n0.doit test_parse_65k_cols_01_fvec.py
 ./n0.doit test_parse_find_enums_fvec.py
 ./n0.doit test_parse_many_cases_fvec.py
@@ -205,6 +205,7 @@
 ./n0.doit test_speedrf_covtype20x.py
 ./n0.doit test_speedrf_covtype.py
 ./n0.doit test_speedrf_float_bigexp.py
+./n0.doit test_speedrf_grid2.py
 ./n0.doit test_speedrf_many_cols_enum.py
 ./n0.doit test_speedrf_mnist_both.py
 ./n0.doit test_speedrf_mnist.py
