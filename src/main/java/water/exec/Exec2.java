@@ -170,6 +170,7 @@ public class Exec2 {
   static boolean isLetter2(char c) {
     return c=='.' || c==':' || c=='\\' || isDigit(c) || isLetter(c);
   }
+  static boolean isQuote(char c) { return c=='"' || c=='\''; }
 
   // Return an ID string, or null if we get weird stuff or numbers.  Valid IDs
   // include all the operators, except parens (function application) and assignment.
@@ -220,6 +221,18 @@ public class Exec2 {
       else return _str.substring(_x-1,_x);
     _x++;                       // Else accept e.g. <= >= ++ != == etc...
     return _str.substring(_x-2,_x);
+  }
+
+  String isString() {  // returns string value without enclosing quotes
+    if( _x>=_buf.length ) return null; // No characters to parse
+    char c = _buf[_x];
+
+    if( isQuote(c) ) {
+      int x=_x+1;
+      while( x < _buf.length && _buf[x] != c )x++;
+      return _str.substring(_x+1,x);
+    }
+    return null;
   }
 
   // isID specifically does not parse "=" or "<-".  This guy does.
