@@ -375,33 +375,25 @@ h2o.downloadAllLogs <- function(client, dirname = ".", filename = NULL) {
 
 # ------------------- Show H2O recommended columns to ignore ----------------------------------------------------
 h2o.ignoreColumns <- function(data, max_na = 0.2) {
-  if(ncol(data) > .MAX_INSPECT_COL_VIEW)
-    warning(data@key, " has greater than ", .MAX_INSPECT_COL_VIEW, " columns. This may take awhile...")
   if(missing(data)) stop('Must specify object')
   if(class(data) != 'H2OParsedData') stop('object not a h2o data type')
-  numRows = nrow(data)
+  
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_INSPECT2, src_key=data@key)
+  
+  numRows = res$numRows
   naThreshold = numRows * max_na
   cardinalityThreshold = numRows
   
-  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SUMMARY2, source=data@key, max_ncols=.Machine$integer.max)
-  columns = res$summaries
-  ignore = sapply(columns, function(col) {
-    if(col$stats$type != 'Enum'){# Numeric Column
-      if(col$stats$min==col$stats$max || col$nacnt >= naThreshold){
-        # If min=max then only one value in entire column
-        # If naCnt is higher than 20% of all entries
-        col$colname
-      }
-    }
-    else { # Categorical Column
-      if(col$stats$cardinality==cardinalityThreshold || col$nacnt >= naThreshold ){
-        # If only entry is a unique entry
-        # If naCnt is higher than 20% of all entries
-        col$colname
-      }
+  columns = res$cols
+  foo <- function(col){
+    if(col$type != 'Enum'){ #If Numeric Column
+      # If min=max, only one value in entire column, if naCnt higher than 20% of entries
+      if(col$min==col$max || col$naCnt >= naThreshold) col$name
+    } else{ #If Categorical Column
+      if(col$cardinality==cardinalityThreshold || col$naCnt >= naThreshold) col$name
     }
   }
-  )
+  ignore = sapply(columns, foo)
   unlist(ignore)
 }
 
