@@ -7,6 +7,7 @@ import hex.ConfusionMatrix;
 
 import java.util.*;
 
+import hex.drf.DRF;
 import org.apache.commons.lang.ArrayUtils;
 import water.*;
 import water.Timer;
@@ -235,7 +236,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       drfParams = DRFParams.create(train.find(resp), model.N, model.max_depth, (int) train.numRows(), model.nbins,
               model.statType, seed, model.weights, mtries, model.sampling_strategy, (float) sample_rate, model.strata_samples, model.verbose ? 100 : 1, _exclusiveSplitLimit, true, regression);
 
-      DRFTask tsk = new DRFTask(self(), train, drfParams, model._key);
+      DRFTask tsk = new DRFTask(self(), train, drfParams, model._key, model.src_key);
       tsk.validateInputData(train);
       tsk.invokeOnAllNodes();
       Log.info("Tree building complete. Scoring...");
@@ -268,6 +269,7 @@ public class SpeeDRF extends Job.ValidatedJob {
     SpeeDRFModel model = new SpeeDRFModel(dest(), src_key, train, regression ? null : train.lastVec().domain(), this, priorDist);
 
     // Model INPUTS
+    model.src_key = src_key.toString();
     model.verbose = verbose; model.verbose_output = new String[]{""};
     model.validation = test != null;
     model.confusion = null;
@@ -379,9 +381,10 @@ public class SpeeDRF extends Job.ValidatedJob {
     /** RF parameters. */
     private final DRFParams _params;
     private final Frame _fr;
+    private final String _key;
 
-    DRFTask(Key jobKey, Frame frameKey, DRFParams params, Key rfmodel) {
-      _jobKey = jobKey; _fr = frameKey; _params = params; _rfmodel = rfmodel;
+    DRFTask(Key jobKey, Frame frameKey, DRFParams params, Key rfmodel, String src_key) {
+      _jobKey = jobKey; _fr = frameKey; _params = params; _rfmodel = rfmodel; _key = src_key;
     }
 
     /**Inhale the data, build a DataAdapter and kick-off the computation.
@@ -491,11 +494,11 @@ public class SpeeDRF extends Job.ValidatedJob {
       ChunkAllocInfo cai = new ChunkAllocInfo();
       boolean can_load_all = canLoadAll(fr, cai);
       if (_params._useNonLocalData && !can_load_all) {
-        Log.warn("Cannot load all data from remote nodes - " +
-                "the node " + cai.node + " requires " + PrettyPrint.bytes(cai.requiredMemory) + " to load all data and perform computation but there is only " + PrettyPrint.bytes(cai.availableMemory) + " of available memory. " +
-                "Please provide more memory for JVMs or disable the option '"+ Constants.USE_NON_LOCAL_DATA+"' (however, it may affect resulting accuracy).");
-        Log.warn("Automatically disabling fast mode.");
-        throw new IllegalArgumentException("Cannot compute fast RF: Use big data Random Forest.");
+        String heap_warning = "This algorithm requires loading of all data from remote nodes." +
+                "\nThe node " + cai.node + " requires " + PrettyPrint.bytes(cai.requiredMemory) + " more memory to load all data and perform computation but there is only " + PrettyPrint.bytes(cai.availableMemory) + " of available memory." +
+                "\n\nPlease provide more memory for JVMs \n\n-OR-\n\n Try Big Data Random Forest: ";
+        Log.warn(heap_warning);
+        throw new IllegalArgumentException(heap_warning + DRF.link(Key.make(_key), "Big Data Random Forest") );
       }
 
       if (can_load_all) {
@@ -519,7 +522,8 @@ public class SpeeDRF extends Job.ValidatedJob {
         long nodeFreeMemory = (long)( (hb.get_max_mem()-(hb.get_tot_mem()-hb.get_free_mem())) * OVERHEAD_MAGIC);
         Log.debug(Log.Tag.Sys.RANDF, i + ": computed available mem: " + PrettyPrint.bytes(nodeFreeMemory));
         Log.debug(Log.Tag.Sys.RANDF, i + ": remote chunks require: " + PrettyPrint.bytes(memForNonLocal));
-        if (nodeFreeMemory - memForNonLocal <= 0) {
+        if (nodeFreeMemory - memForNonLocal <= 0 || (nodeFreeMemory <= TWO_HUNDRED_MB && memForNonLocal >= ONE_FIFTY_MB)) {
+          Log.info("Node free memory raw: "+nodeFreeMemory);
           cai.node = H2O.CLOUD._memary[i];
           cai.availableMemory = nodeFreeMemory;
           cai.requiredMemory = memForNonLocal;
@@ -537,6 +541,8 @@ public class SpeeDRF extends Job.ValidatedJob {
     }
 
     static final float OVERHEAD_MAGIC = 3/8.f; // memory overhead magic
+    static final long TWO_HUNDRED_MB = 200 * 1024 * 1024;
+    static final long ONE_FIFTY_MB = 150 * 1024 * 1024;
 
     @Override
     public void reduce(DRemoteTask drt) { }

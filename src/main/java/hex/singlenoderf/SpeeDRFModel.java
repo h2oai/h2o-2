@@ -32,6 +32,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
    */
   /* Number of features these trees are built for */                      int features;
   /* Sampling strategy used for model */                                  Sampling.Strategy sampling_strategy;
+  /* Key name */                                                          String src_key;
   @API(help = " Sampling rate used when building trees.")                 float sample;
   @API(help = "Strata sampling rate used for local-node strata-sampling") float[] strata_samples;
   @API(help = "Number of split features defined by user.")                int mtry;
@@ -150,6 +151,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     this.errorsPerTree = model.errorsPerTree;
     this.resp_min = model.resp_min;
     this.validation = model.validation;
+    this.src_key = model.src_key;
   }
 
   public int treeCount() { return t_keys.length; }
