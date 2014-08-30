@@ -108,7 +108,7 @@ done < h2o_one_node
 
 rm -fr h2o-nodes.json
 # NOTE: keep this hdfs info in sync with the json used to build the cloud above
-../find_cloud.py -f h2o_one_node -hdfs_version hdp2.1 -hdfs_name_node 192.168.1.186 -expected_size $MAPR_NODES
+../find_cloud.py -f h2o_one_node -hdfs_version mapr2.1.3 -hdfs_name_node 192.168.1.186 -expected_size $MAPR_NODES
 
 echo "h2o-nodes.json should now exist"
 ls -ltr h2o-nodes.json
@@ -151,6 +151,8 @@ myPy() {
 
 # don't run this until we know whether 0xcustomer permissions also exist for the hadoop job
 # myPy c1 test_c1_rel.py
+myPy c6 test_c6_maprfs.py
+myPy c6 test_c6_maprfs_fvec.py
 
 # worked
 myPy c2 test_c2_rel.py
