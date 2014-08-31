@@ -174,8 +174,8 @@ class Basic(unittest.TestCase):
                 print 'auc', auc
 
                 h2o_glm.simpleCheckGLM(self, glm, None, **kwargs)
-                if iteration > 20:
-                    raise Exception("Why take so many iterations:  %s in this glm2 training?" % iterations)
+                if iteration > 30:
+                    raise Exception("Why take so many iterations:  %s in this glm2 training?" % iteration)
 
                # Score **********************************************
                 print "Problems with test data having different enums than train? just use train for now"
