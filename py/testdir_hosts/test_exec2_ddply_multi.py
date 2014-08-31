@@ -59,7 +59,7 @@ class Basic(unittest.TestCase):
         # h2e.exec_expr_list_rand(len(h2o.nodes), exprList, 'r1.hex', maxTrials=200, timeoutSecs=10)
         for execExpr in exprList:
             start = time.time()
-            (resultExec, result) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=30)
+            (resultExec, result) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=200)
             print "exec end took", time.time() - start, "seconds"
             print "result:", result
             print "resultExec:", h2o.dump_json(resultExec)
