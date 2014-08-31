@@ -103,7 +103,9 @@ public class DeepLearning extends Job.ValidatedJob {
    */
   @API(help = "Number of training samples (globally) per MapReduce iteration. Special values are 0: one epoch, -1: all available data (e.g., replicated training data), -2: automatic", filter = Default.class, lmin = -2, json = true, importance = ParamImportance.SECONDARY)
   public long train_samples_per_iteration = -2;
-  public long actual_train_samples_per_iteration;
+
+//  @API(help = "Target ratio of communication overhead to computation. Only for multi-node operation and train_samples_per_iteration=-2 (auto-tuning)", filter = Default.class, dmin = 1e-3, dmax=0.999, json = true, importance = ParamImportance.SECONDARY)
+  public double target_ratio_comm_to_comp = 0.02;
 
   /**
    * The random seed controls sampling and initialization. Reproducible
@@ -537,6 +539,7 @@ public class DeepLearning extends Job.ValidatedJob {
           "epochs",
           "score_interval",
           "train_samples_per_iteration",
+          "target_ratio_comm_to_comp",
           "score_duty_cycle",
           "classification_stop",
           "regression_stop",
@@ -1010,6 +1013,7 @@ public class DeepLearning extends Job.ValidatedJob {
 
       if (!quiet_mode) Log.info("Number of chunks of the training data: " + train.anyVec().nChunks());
       if (validation != null) {
+        model.validation_rows = validation.numRows();
         Frame adaptedValid = getValidation();
         if (getValidAdaptor().needsAdaptation2CM()) {
           adaptedValid.add(getValidAdaptor().adaptedValidationResponse(_responseName), getValidAdaptor().getAdaptedValidationResponse2CM());
@@ -1022,28 +1026,31 @@ public class DeepLearning extends Job.ValidatedJob {
           validScoreFrame = updateFrame(adaptedValid, sampleFrame(adaptedValid, mp.score_validation_samples, mp.seed+1));
         }
         if (mp.force_load_balance) validScoreFrame = updateFrame(validScoreFrame, reBalance(validScoreFrame, false /*always split up globally since scoring should be distributed*/));
-        model.validation_rows = validScoreFrame.numRows();
         if (!quiet_mode) Log.info("Number of chunks of the validation data: " + validScoreFrame.anyVec().nChunks());
       }
 
       // Set train_samples_per_iteration size (cannot be done earlier since this depends on whether stratified sampling is done)
-      mp.actual_train_samples_per_iteration = computeTrainSamplesPerIteration(mp, train.numRows(), model.model_info().size());
+      model.actual_train_samples_per_iteration = computeTrainSamplesPerIteration(mp, train.numRows(), model);
       // Determine whether shuffling is enforced
-      if(mp.replicate_training_data && (mp.actual_train_samples_per_iteration == train.numRows()*(mp.single_node_mode?1:H2O.CLOUD.size())) && !mp.shuffle_training_data && H2O.CLOUD.size() > 1) {
+      if(mp.replicate_training_data && (model.actual_train_samples_per_iteration == train.numRows()*(mp.single_node_mode?1:H2O.CLOUD.size())) && !mp.shuffle_training_data && H2O.CLOUD.size() > 1) {
         Log.warn("Enabling training data shuffling, because all nodes train on the full dataset (replicated training data).");
         mp.shuffle_training_data = true;
       }
-      final float rowUsageFraction = computeRowUsageFraction(train.numRows(), mp.actual_train_samples_per_iteration, mp.replicate_training_data);
+
+      model._timeLastScoreEnter = System.currentTimeMillis(); //to keep track of time per iteration, must be called before first call to doScoring
+
 
       if (!mp.quiet_mode) Log.info("Initial model:\n" + model.model_info());
       if (autoencoder) model.doScoring(train, trainScoreFrame, validScoreFrame, self(), getValidAdaptor()); //get the null model reconstruction error
+      // put the initial version of the model into DKV
+      model.update(self());
       Log.info("Starting to train the Deep Learning model.");
 
       //main loop
       do model.set_model_info(H2O.CLOUD.size() > 1 && mp.replicate_training_data ? ( mp.single_node_mode ?
-              new DeepLearningTask2(train, model.model_info(), rowUsageFraction).invoke(Key.make()).model_info() : //replicated data + single node mode
-              new DeepLearningTask2(train, model.model_info(), rowUsageFraction).invokeOnAllNodes().model_info() ) : //replicated data + multi-node mode
-              new DeepLearningTask(model.model_info(), rowUsageFraction).doAll(train).model_info()); //distributed data (always in multi-node mode)
+              new DeepLearningTask2(train, model.model_info(), rowFraction(train, mp, model)).invoke(Key.make()).model_info() : //replicated data + single node mode
+              new DeepLearningTask2(train, model.model_info(), rowFraction(train, mp, model)).invokeOnAllNodes().model_info() ) : //replicated data + multi-node mode
+              new DeepLearningTask(model.model_info(), rowFraction(train, mp, model)).doAll(train).model_info()); //distributed data (always in multi-node mode)
       while (model.doScoring(train, trainScoreFrame, validScoreFrame, self(), getValidAdaptor()));
 
       // replace the model with the best model so far (if it's better)
@@ -1132,10 +1139,10 @@ public class DeepLearning extends Job.ValidatedJob {
    * Compute the actual train_samples_per_iteration size from the user-given parameter
    * @param mp Model parameter (DeepLearning object)
    * @param numRows number of training rows
-   * @param model_size Size of the model in #weights and #biases
+   * @param model DL Model
    * @return The total number of training rows to be processed per iteration (summed over on all nodes)
    */
-  private static long computeTrainSamplesPerIteration(final DeepLearning mp, final long numRows, long model_size) {
+  private static long computeTrainSamplesPerIteration(final DeepLearning mp, final long numRows, DeepLearningModel model) {
     long tspi = mp.train_samples_per_iteration;
     assert(tspi == 0 || tspi == -1 || tspi == -2 || tspi >= 1);
     if (tspi == 0 || (!mp.replicate_training_data && tspi == -1) ) {
@@ -1159,6 +1166,7 @@ public class DeepLearning extends Job.ValidatedJob {
         total_gflops = Linpack.run(H2O.SELF._heartbeat._cpus_allowed) * (mp.single_node_mode ? 1 : H2O.CLOUD.size());
       }
 
+      final long model_size = model.model_info().size();
       int[] msg_sizes = new int[]{ (int)(model_size*4) == (model_size*4) ? (int)(model_size*4) : Integer.MAX_VALUE };
       double[] microseconds_collective = new double[msg_sizes.length];
       NetworkTest.NetworkTester nt = new NetworkTest.NetworkTester(msg_sizes,null,microseconds_collective,model_size>1e6 ? 1 : 5 /*repeats*/,false,true /*only collectives*/);
@@ -1179,12 +1187,12 @@ public class DeepLearning extends Job.ValidatedJob {
       double fraction = mp.single_node_mode || H2O.CLOUD.size() == 1 ? 1e-3 : 0.05; //one single node mode, there's no model averaging effect, so less need to shorten the M/R iteration
 
       // estimate the time for communication (network) and training (compute)
-      double time_comm_us = (H2O.CLOUD.size() == 1 ? 1e4 /* add 10ms for single-node */ : 0) + network_queue_length * microseconds_collective[0];
+      model.time_for_communication_us = (H2O.CLOUD.size() == 1 ? 1e4 /* add 10ms for single-node */ : 0) + network_queue_length * microseconds_collective[0];
       double time_per_row_us  = flops_overhead_per_row * model_size / (total_gflops * 1e9) / H2O.SELF._heartbeat._cpus_allowed * 1e6;
 
       // compute the optimal number of training rows per iteration
       // fraction := time_comm_us / (time_comm_us + tspi * time_per_row_us)  ==>  tspi = (time_comm_us/fraction - time_comm_us)/time_per_row_us
-      tspi = (long)((time_comm_us / fraction - time_comm_us)/ time_per_row_us);
+      tspi = (long)((model.time_for_communication_us / fraction - model.time_for_communication_us)/ time_per_row_us);
 
       tspi = Math.min(tspi, (mp.single_node_mode ? 1 : H2O.CLOUD.size()) * numRows * 10); //not more than 10x of what train_samples_per_iteration=-1 would do
 
@@ -1196,7 +1204,7 @@ public class DeepLearning extends Job.ValidatedJob {
       if (!mp.quiet_mode) {
         Log.info("Auto-tuning parameter 'train_samples_per_iteration':");
         Log.info("Estimated compute power : " + (int)total_gflops + " GFlops");
-        Log.info("Estimated time for comm : " + PrettyPrint.usecs((long)time_comm_us));
+        Log.info("Estimated time for comm : " + PrettyPrint.usecs((long)model.time_for_communication_us));
         Log.info("Estimated time per row  : " + ((long)time_per_row_us > 0 ? PrettyPrint.usecs((long)time_per_row_us) : time_per_row_us + " usecs"));
         Log.info("Estimated training speed: " + (int)(1e6/time_per_row_us) + " rows/sec");
         Log.info("Setting train_samples_per_iteration (" + mp.train_samples_per_iteration + ") to auto-tuned value: " + tspi);
@@ -1222,6 +1230,9 @@ public class DeepLearning extends Job.ValidatedJob {
     if (replicate_training_data) rowUsageFraction /= H2O.CLOUD.size();
     assert(rowUsageFraction > 0);
     return rowUsageFraction;
+  }
+  private static float rowFraction(Frame train, DeepLearning p, DeepLearningModel m) {
+    return computeRowUsageFraction(train.numRows(), m.actual_train_samples_per_iteration, p.replicate_training_data);
   }
 
   /**
