@@ -19,7 +19,8 @@ paramDict = {
     # doesn't support regression yet
     'classification': [None, 1],
     'balance_classes': [None, 0, 1],
-    'max_after_balance_size': [None, .1, 1, 2],
+    # never run with unconstrained balance_classes size if random sets balance_classes..too slow
+    'max_after_balance_size': [.1, 1, 2],
     'oobee': [None, 0, 1],
     'sampling_strategy': [None, 'RANDOM'],
     'select_stat_type': [None, 'ENTROPY', 'GINI'],
@@ -53,14 +54,20 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_rf_params_rand2_fvec(self):
+    def test_speedrf_params_rand2_fvec(self):
         h2o.beta_features = True
         csvPathname = 'standard/covtype.data'
         hex_key = 'covtype.data.hex'
         for trial in range(10):
             # params is mutable. This is default.
             # response is required for SpeeERF
-            params = {'response': 'C55', 'ntrees': 1, 'mtries': 7, 'balance_classes': 0, 'importance': 0}
+            params = {
+                'response': 'C55', 
+                'ntrees': 1, 'mtries': 7, 
+                'balance_classes': 0, 
+                # never run with unconstrained balance_classes size if random sets balance_classes..too slow
+                'max_after_balance_size': 2,
+                'importance': 0}
             colX = h2o_util.pickRandParams(paramDict, params)
             if 'cols' in params and params['cols']:
                 # exclusion
