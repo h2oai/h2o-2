@@ -174,24 +174,31 @@ if not (args.jobname or args.x or args.e or args.s or args.s2):
     prefix = "-e"
     eDone = False
     xDone = False
+    sDone = False
+    s2Done = False
     while not jobname: 
         allAllowedJobs = allowedJobsE + allowedJobsX + allowedJobsS + allowedJobsS2
         for j, job in enumerate(allAllowedJobs):
             # first boundary
             if not eDone and j==(subtract + len(allowedJobsE)):
                 subtract += len(allowedJobsE)
-                prefix = "-x"
                 eDone = True
+                prefix = "-x"
             # second boundary
             if not xDone and j==(subtract + len(allowedJobsX)):
                 subtract += len(allowedJobsX)
+                xDone = True
                 prefix = "-s"
-                xDone = True
             # third boundary
-            if not xDone and j==(subtract + len(allowedJobsS)):
+            if not sDone and j==(subtract + len(allowedJobsS)):
                 subtract += len(allowedJobsS)
+                sDone = True
                 prefix = "-s2"
-                xDone = True
+            # fourth boundary
+            if not s2Done and j==(subtract + len(allowedJobsS2)):
+                subtract += len(allowedJobsS2)
+                prefix = "-??"
+                s2Done = True
             
 
             print prefix, j-subtract, " [%s]: %s" % (j, job)

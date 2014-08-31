@@ -6,14 +6,14 @@ import math
 
 
 print "Copy a version of this to a two cloud test. different failure mode"
-DO_PLOT = False
+DO_PLOT = True
 COL = 1
 PHRASE = "func1"
 FUNC_PHRASE = "func1=function(x){max(x[,%s])}" % COL
 REPEAT = 20
 
 DO_KNOWN_FAIL = False
-DO_APPEND_KNOWN_FAIL2 = True
+DO_APPEND_KNOWN_FAIL2 = False
 DO_REALS = False
 
 CLOUD_SIZE = 2
@@ -84,12 +84,12 @@ class Basic(unittest.TestCase):
             ]
         else:
             tryList = [
-                # (1000000, 5, 'cD', 0, 10, 30), 
-                # (1000000, 5, 'cD', 0, 20, 30), 
-                # (1000000, 5, 'cD', 0, 40, 30), 
-                # (1000000, 5, 'cD', 0, 50, 30), 
+                (1000000, 5, 'cD', 0, 10, 30), 
+                (1000000, 5, 'cD', 0, 20, 30), 
+                (1000000, 5, 'cD', 0, 40, 30), 
+                (1000000, 5, 'cD', 0, 50, 30), 
                 (1000000, 5, 'cD', 0, 80, 30), 
-                (1000000, 5, 'cD', 0, 160, 30), 
+                # (1000000, 5, 'cD', 0, 160, 30), 
                 # fails..don't do
                 # (1000000, 5, 'cD', 0, 320, 30), 
                 # (1000000, 5, 'cD', 0, 320, 30), 
@@ -102,9 +102,9 @@ class Basic(unittest.TestCase):
             tryList.append(
                 (1000000, 5, 'cD', 0, 160, 30), 
             )
-            tryList.append(
-                (1000000, 5, 'cD', 0, 320, 30), 
-            )
+            #tryList.append(
+            #    (1000000, 5, 'cD', 0, 320, 30), 
+            #)
         ### h2b.browseTheCloud()
         xList = []
         eList = []
@@ -128,10 +128,10 @@ class Basic(unittest.TestCase):
                 print "Creating random", csvPathname, "with range", (maxInt-minInt)+1
                 write_syn_dataset(csvPathname, rowCount, colCount, minInt, maxInt, SEEDPERFILE)
 
-            for lll in range(5):
+            for lll in range(1):
                 # PARSE train****************************************
                 hexKey = 'r.hex'
-                parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local', hex_key=hexKey)
+                parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='put', hex_key=hexKey)
                 inspect = h2o_cmd.runInspect(key=hexKey)
                 missingValuesList = h2o_cmd.infoFromInspect(inspect, csvFilename)
                 self.assertEqual(missingValuesList, [], "a1 should have no NAs in parsed dataset: %s" % missingValuesList)
@@ -146,7 +146,7 @@ class Basic(unittest.TestCase):
                 # do it twice..to get the optimal cached delay for time?
                 execExpr = "a1 = ddply(r.hex, c(1,2), " + PHRASE + ")"
                 start = time.time()
-                (execResult, result) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=90)
+                (execResult, result) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=500)
                 groups = execResult['num_rows']
                 # this is a coarse comparision, statistically not valid for small rows, and certain ranges?
                 h2o_util.assertApproxEqual(groups, maxExpectedGroups,  rel=0.2, 
@@ -165,7 +165,7 @@ class Basic(unittest.TestCase):
 
                 execExpr = "a2 = ddply(r.hex, c(1,2), " + PHRASE + ")"
                 start = time.time()
-                (execResult, result) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=90)
+                (execResult, result) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=500)
                 groups = execResult['num_rows']
                 # this is a coarse comparision, statistically not valid for small rows, and certain ranges?
                 h2o_util.assertApproxEqual(groups, maxExpectedGroups,  rel=0.2, 
@@ -183,9 +183,9 @@ class Basic(unittest.TestCase):
                 #*****************************************************************************************
                 # should be same answer in both cases
                 execExpr = "sum(a1!=a2)==0"
-                (execResult, result) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=90)
+                (execResult, result) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=500)
                 execExpr = "s=c(0); s=(a1!=a2)"
-                (execResult1, result1) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=90)
+                (execResult1, result1) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=500)
                 print "execResult", h2o.dump_json(execResult)
 
                 #*****************************************************************************************

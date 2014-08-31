@@ -6,7 +6,7 @@ import math
 
 
 print "Copy a version of this to a two cloud test. different failure mode"
-DO_PLOT = False
+DO_PLOT = True
 COL = 1
 PHRASE = "func1"
 FUNC_PHRASE = "func1=function(x){max(x[,%s])}" % COL
@@ -84,10 +84,10 @@ class Basic(unittest.TestCase):
             ]
         else:
             tryList = [
-                # (1000000, 5, 'cD', 0, 10, 30), 
-                # (1000000, 5, 'cD', 0, 20, 30), 
-                # (1000000, 5, 'cD', 0, 40, 30), 
-                # (1000000, 5, 'cD', 0, 50, 30), 
+                (1000000, 5, 'cD', 0, 10, 30), 
+                (1000000, 5, 'cD', 0, 20, 30), 
+                (1000000, 5, 'cD', 0, 40, 30), 
+                (1000000, 5, 'cD', 0, 50, 30), 
                 (1000000, 5, 'cD', 0, 80, 30), 
                 (1000000, 5, 'cD', 0, 160, 30), 
                 # fails..don't do
@@ -128,7 +128,7 @@ class Basic(unittest.TestCase):
                 print "Creating random", csvPathname, "with range", (maxInt-minInt)+1
                 write_syn_dataset(csvPathname, rowCount, colCount, minInt, maxInt, SEEDPERFILE)
 
-            for lll in range(5):
+            for lll in range(1):
                 # PARSE train****************************************
                 hexKey = 'r.hex'
                 parseResult = h2i.import_parse(bucket=bucket, path=csvPathname, schema='local', hex_key=hexKey)

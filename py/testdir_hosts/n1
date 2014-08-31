@@ -1,3 +1,4 @@
+./n1.doit test_0_NA_2enum.py
 ./n1.doit test_allstate_claim_prediction.py
 ./n1.doit test_basics.py
 # ./n1.doit test_big_local_cloud.py
@@ -7,7 +8,9 @@
 # ./n1.doit test_cloud_5_loop.py
 # ./n1.doit test_cloud.py
 # ./n1.doit test_cloud_udp_drop.py
+./n1.doit test_create_frame_rand1.py
 ./n1.doit test_csv_download_libsvm.py
+./n1.doit test_ddply_plot2.py
 ./n1.doit test_dead_node_status.py
 ./n1.doit test_elapsed_time.py
 ./n1.doit test_exec2_2.py
@@ -44,13 +47,8 @@
 ./n1.doit test_GLM2_many_cols_tridist.py
 ./n1.doit test_GLM2_prob_cols_4.py
 ./n1.doit test_GLM2.py
-./n1.doit test_import_covtype_parse_1jvm_fvec.py
-./n1.doit test_import_covtype_parse_2jvm_fvec.py
-./n1.doit test_import_covtype_parse_3jvm_fvec.py
-./n1.doit test_import_covtype_parse_4jvm_fvec.py
 ./n1.doit test_inspect.py
 ./n1.doit test_iostatus.py
-./n1.doit test_jprofile.py
 ./n1.doit test_jstack.py
 ./n1.doit test_KMeans2_sphere100.py
 ./n1.doit test_KMeans2_sphere5_bad_inits.py
@@ -76,8 +74,10 @@
 ./n1.doit test_many_fp_formats_libsvm_fvec.py
 ./n1.doit test_many_fp_formats.py
 ./n1.doit test_many_rows_long_enums.py
+./n1.doit test_mixed_int_enum_many.py
 ./n1.doit test_model_management.py
 # ./n1.doit test_multi_with_a_browser.py
+./n1.doit test_network.py
 ./n1.doit test_NN2_mnist_multi.py
 ./n1.doit test_parse_bounds_csv_fvec.py
 ./n1.doit test_parse_csv_download_fvec.py
@@ -86,7 +86,7 @@
 ./n1.doit test_parse_libsvm_fvec.py
 ./n1.doit test_parse_many_cols_fvec.py
 ./n1.doit test_parse_manyfiles_fvec.py
-./n1.doit test_parse_multiprocess_fvec.py
+./n1.doit test_parse_mnist_rebalance.py
 ./n1.doit test_parse_rand_schmoo2_fvec.py
 ./n1.doit test_parse_rand_schmoo3_fvec.py
 ./n1.doit test_parse_rand_schmoo_fvec.py
@@ -95,6 +95,7 @@
 ./n1.doit test_poisson_covtype20x.py
 ./n1.doit test_putfile2_fvec.py
 ./n1.doit test_putfile_fvec.py
+./n1.doit test_rebalance_int2enum.py
 ./n1.doit test_rf_1ktrees_job_cancel_3_fvec.py
 ./n1.doit test_rf_1ktrees_job_cancel_fvec.py
 ./n1.doit test_rf_1ktrees_job_cancel_many_fvec.py

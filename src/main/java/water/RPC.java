@@ -146,8 +146,8 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
             assert dt==_dt;
             synchronized(RPC.this) { // Might be called several times
               if( _done ) return true; // Filter down to 1st exceptional completion
-              _done = true;
               _dt.setException(ex);
+              _done = true; // must be set as the last thing before notify, the waiting thread can wake up any at any time!
               RPC.this.notifyAll();
             }
             doAllCompletions();

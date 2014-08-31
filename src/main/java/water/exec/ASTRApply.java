@@ -221,6 +221,7 @@ class ASTddply extends ASTOp {
       Key grpkey = Key.make("ddply_grpkey_"+(grpnum-1));
       Frame fg = new Frame(grpkey, fr._names,gvecs);
       Futures gfs = new Futures(); DKV.put(grpkey, fg, gfs); gfs.blockForPending();
+      fg.anyVec().rollupStats();
       // Non-blocking, send a group to a remote node for execution
       final int nidx = g.hashCode()%csz;
       fs.add(RPC.call(H2O.CLOUD._memary[nidx],(re=new RemoteExec((grpnum-1),p2._nlocals[nidx],g._ds,fg,envkey))));
@@ -263,27 +264,36 @@ class ASTddply extends ASTOp {
     Frame ff = new Frame(names,vres);
 
     // Cleanup pass: Drop NAs (groups with no data and NA groups, basically does na.omit: drop rows with NA)
-    Frame res = new MRTask2() {
-      @Override public void map(Chunk[] cs, NewChunk[] nc) {
-        int rows = cs[0].len();
-        int cols = cs.length;
-        boolean[] NACols = new boolean[cols];
-        ArrayList<Integer> xrows = new ArrayList<Integer>();
-        for (int i = 0; i < cols; ++i) NACols[i] = (cs[i]._vec.naCnt() != 0);
-        for (int r = 0; r < rows; ++r)
-          for (int c = 0; c < cols; ++c)
-            if (NACols[c])
-              if (cs[c].isNA0(r)) { xrows.add(r); break;}
-        for (int r = 0; r < rows; ++r) {
-          if (xrows.contains(r)) continue;
-          for (int c = 0; c < cols; ++c) {
-            if (cs[c]._vec.isEnum()) nc[c].addEnum((int) cs[c].at80(r));
-            else nc[c].addNum(cs[c].at0(r));
+    boolean anyNA = false;
+    Frame res = ff;
+    for (Vec v : ff.vecs()) if (v.naCnt() != 0) { anyNA = true; break; } // stop on first vec with naCnt != 0
+    if (anyNA) {
+      res = new MRTask2() {
+        @Override
+        public void map(Chunk[] cs, NewChunk[] nc) {
+          int rows = cs[0]._len;
+          int cols = cs.length;
+          boolean[] NACols = new boolean[cols];
+          ArrayList<Integer> xrows = new ArrayList<Integer>();
+          for (int i = 0; i < cols; ++i) NACols[i] = (cs[i]._vec.naCnt() != 0);
+          for (int r = 0; r < rows; ++r)
+            for (int c = 0; c < cols; ++c)
+              if (NACols[c])
+                if (cs[c].isNA0(r)) {
+                  xrows.add(r);
+                  break;
+                }
+          for (int r = 0; r < rows; ++r) {
+            if (xrows.contains(r)) continue;
+            for (int c = 0; c < cols; ++c) {
+              if (cs[c]._vec.isEnum()) nc[c].addEnum((int) cs[c].at80(r));
+              else nc[c].addNum(cs[c].at0(r));
+            }
           }
         }
-      }
-    }.doAll(ff.numCols(), ff).outputFrame(null, ff.names(), ff.domains());
-    ff.delete();
+      }.doAll(ff.numCols(), ff).outputFrame(null, ff.names(), ff.domains());
+      ff.delete();
+    }
     // Delete the group row vecs
     UKV.remove(envkey);
     env.poppush(4,res,null);
@@ -383,7 +393,7 @@ class ASTddply extends ASTOp {
       for( Group g : m1.keySet() ) {
         NewChunk nc0 = m0.get(g);
         NewChunk nc1 = m1.get(g);
-        if( nc0 == null ) m0.put(g,nc1);
+        if( nc0 == null || nc0._len == 0) m0.put(g,nc1);
         // unimplemented: expected to blow out on large row counts, where we
         // actually need a collection of chunks, not 1 uber-chunk
         else if( _gatherRows ) {
@@ -527,9 +537,12 @@ class ASTddply extends ASTOp {
       // Clone a private copy of the environment for local execution
       Env env = shared_env.capture(true);
       ASTOp op = env.fcn(-1);
-
+      Key fr_key = Key.make("ddply_grpkey_"+_grpnum);
+      Frame aa = DKV.get(fr_key).get();
+      Frame fv = new Frame(null, aa.names(), aa.vecs().clone());
+//      fv.anyVec().rollupStats();
       env.push(op);
-      env.push(_fr);
+      env.push(fv);
 
       op.apply(env,2/*1-arg function*/,null);
 
@@ -555,6 +568,7 @@ class ASTddply extends ASTOp {
 
       // No need to return any results here.
       _fr.delete();
+      aa.delete();
       _fr = null;
       _ds = null;
       _envkey= null;

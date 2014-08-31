@@ -96,7 +96,7 @@ class Basic(unittest.TestCase):
             parseResult = h2i.import_parse(path=csvPathname, schema='put', hex_key=hex_key, doSummary=True)
 
             start = time.time()
-            rfView = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=15, pollTimeoutSecs=5, **kwargs)
+            rfView = h2o_cmd.runRF(parseResult=parseResult, timeoutSecs=30, pollTimeoutSecs=15, **kwargs)
             print "trial #", trial, "totalRows:", totalRows, "num:", num, "RF end on ", csvFilename, \
                 'took', time.time() - start, 'seconds'
             (classification_error, classErrorPctList, totalScores) = h2o_rf.simpleCheckRFView(rfv=rfView, ntree=ntree)

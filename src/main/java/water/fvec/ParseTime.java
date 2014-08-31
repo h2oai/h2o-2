@@ -1,7 +1,10 @@
 package water.fvec;
 
 import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.DateTimeFormatterBuilder;
 import water.parser.ValueString;
+import water.util.Log;
 
 public abstract class ParseTime {
   // Deduce if we are looking at a Date/Time value, or not.
@@ -217,5 +220,201 @@ public abstract class ParseTime {
   public static long badUUID( ValueString str ) {
     str.setOff(-1);
     return Long.MIN_VALUE; 
+  }
+
+  /**
+   * Factory to create a formatter from a strptime pattern string.
+   * This models the commonly supported features of strftime from POSIX
+   * (where it can).
+   * <p>
+   * The format may contain locale specific output, and this will change as
+   * you change the locale of the formatter.
+   * Call DateTimeFormatter.withLocale(Locale) to switch the locale.
+   * For example:
+   * <pre>
+   * DateTimeFormat.forPattern(pattern).withLocale(Locale.FRANCE).print(dt);
+   * </pre>
+   *
+   * @param pattern  pattern specification
+   * @return the formatter
+   *  @throws IllegalArgumentException if the pattern is invalid
+   */
+  public static DateTimeFormatter forStrptimePattern(String pattern) {
+    if (pattern == null || pattern.length() == 0)
+      throw new IllegalArgumentException("Empty date time pattern specification");
+
+    DateTimeFormatterBuilder builder = new DateTimeFormatterBuilder();
+    parseToBuilder(builder, pattern);
+    DateTimeFormatter formatter = builder.toFormatter();
+
+    return formatter;
+  }
+
+  //-----------------------------------------------------------------------
+  /**
+   * Parses the given pattern and appends the rules to the given
+   * DateTimeFormatterBuilder. See strptime man page for valid patterns.
+   *
+   * @param pattern  pattern specification
+   * @throws IllegalArgumentException if the pattern is invalid
+   */
+  private static void parseToBuilder(DateTimeFormatterBuilder builder, String pattern) {
+    int length = pattern.length();
+    int[] indexRef = new int[1];
+
+    for (int i=0; i<length; i++) {
+      indexRef[0] = i;
+      String token = parseToken(pattern, indexRef);
+      i = indexRef[0];
+
+      int tokenLen = token.length();
+      if (tokenLen == 0) {
+        break;
+      }
+      char c = token.charAt(0);
+
+      if (c == '%' && token.charAt(1) != '%') {
+        c = token.charAt(1);
+        switch(c) {
+          case 'a':
+            builder.appendDayOfWeekShortText();
+            break;
+          case 'A':
+            builder.appendDayOfWeekText();
+            break;
+          case 'b':
+            builder.appendMonthOfYearShortText();
+            break;
+          case 'B':
+            builder.appendMonthOfYearText();
+            break;
+          case 'C':
+            builder.appendDayOfWeekShortText();
+            builder.appendLiteral(' ');
+            builder.appendMonthOfYearShortText();
+            builder.appendLiteral(' ');
+            builder.appendDayOfMonth(2);
+            builder.appendLiteral(' ');
+            builder.appendHourOfDay(2);
+            builder.appendLiteral(':');
+            builder.appendMinuteOfHour(2);
+            builder.appendLiteral(':');
+            builder.appendSecondOfMinute(2);
+            builder.appendLiteral(' ');
+            builder.appendYear(4,4);
+            break;
+          case 'd':
+            builder.appendDayOfMonth(2);
+            break;
+          case 'H':
+            builder.appendHourOfDay(2);
+            break;
+          case 'I':
+            builder.appendHourOfHalfday(2);
+            break;
+          case 'j':
+            builder.appendDayOfYear(3);
+            break;
+          case 'm':
+            builder.appendMonthOfYear(2);
+            break;
+          case 'M':
+            builder.appendMinuteOfHour(2);
+            break;
+          case 'p':
+            builder.appendHalfdayOfDayText();
+            break;
+          case 'S':
+            builder.appendSecondOfMinute(2);
+            break;
+          case 'U':  //FIXME Joda does not support US week start (Sun), this will be wrong
+            builder.appendWeekOfWeekyear(2);
+            break;
+          case 'w':
+            builder.appendDayOfWeek(1);
+            break;
+          case 'W':
+            builder.appendWeekOfWeekyear(2);
+            break;
+          case 'x':
+            builder.appendYearOfCentury(2,2);
+            builder.appendLiteral('/');
+            builder.appendMonthOfYear(2);
+            builder.appendLiteral('/');
+            builder.appendDayOfMonth(2);
+            break;
+          case 'X':
+            builder.appendHourOfDay(2);
+            builder.appendLiteral(':');
+            builder.appendMinuteOfHour(2);
+            builder.appendLiteral(':');
+            builder.appendSecondOfMinute(2);
+            break;
+          case 'y': //POSIX 2004 & 2008 says 69-99 -> 1900s, 00-68 -> 2000s
+            builder.appendTwoDigitWeekyear(2019);
+            break;
+          case 'Y':
+            builder.appendYear(4,4);
+            break;
+          case 'z':
+            builder.appendTimeZoneOffset(null, "z", false, 2, 2);
+            break;
+          case 'Z':
+            builder.appendTimeZoneName();
+            break;
+          default:  // No match, ignore
+            builder.appendLiteral('\'');
+            builder.appendLiteral(token);
+            Log.warn(token + "is not acceptted as a parse token, treating as a literal");
+        }
+      } else {
+        if (c == '\'') {
+          String sub = token.substring(1);
+          if (sub.length() > 0) {
+            // Create copy of sub since otherwise the temporary quoted
+            // string would still be referenced internally.
+            builder.appendLiteral(new String(sub));
+          }
+        } else throw new IllegalArgumentException("Unexpected token encountered parsing format string:" + c);
+      }
+    }
+  }
+  /**
+   * Parses an individual token.
+   *
+   * @param pattern  the pattern string
+   * @param indexRef  a single element array, where the input is the start
+   *  location and the output is the location after parsing the token
+   * @return the parsed token
+   */
+  private static String parseToken(String pattern, int[] indexRef) {
+    StringBuilder buf = new StringBuilder();
+
+    int i = indexRef[0];
+    int length = pattern.length();
+
+    char c = pattern.charAt(i);
+    if (c == '%' && i + 1 < length && pattern.charAt(i+1) != '%') {
+      //Grab pattern tokens
+      c = pattern.charAt(++i);
+      //0 is ignored for input, and this ignores alternative religious eras
+      if ((c == '0' || c == 'E') && i + 1 >= length) c = pattern.charAt(++i);
+      buf.append('%');
+      buf.append(c);
+    } else { // Grab all else as text
+      buf.append('\'');  // mark literals with ' in first place
+      buf.append(c);
+      for (i++; i < length;i++) {
+        c = pattern.charAt(i);
+        if (c == '%' ) { // consume literal % otherwise break
+          if (i + 1 < length && pattern.charAt(i + 1) == '%') i++;
+          else { i--; break; }
+        }
+        buf.append(c);
+      }
+    }
+
+    indexRef[0] = i;
+    return buf.toString();
   }
 }
