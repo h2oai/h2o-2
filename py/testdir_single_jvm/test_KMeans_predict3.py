@@ -49,7 +49,6 @@ class Basic(unittest.TestCase):
         SYNDATASETS_DIR = h2o.make_syn_dir()
 
         timeoutSecs = 600
-        predictHexKey = 'predict_0.hex'
         predictCsv = 'predict_0.csv'
         actualCsv = 'actual_0.csv'
 
@@ -63,9 +62,10 @@ class Basic(unittest.TestCase):
             bucket = 'smalldata'
             csvPathname = 'iris/iris2.csv'
             hexKey = 'iris2.csv.hex'
-            # translate = {'setosa': 0.0, 'versicolor': 1.0, 'virginica': 2.0}
+            # Huh...now we apparently need the translate. Used to be:
             # No translate because we're using an Exec to get the data out?, and that loses the encoding?
-            translate = None
+            #  translate = None
+            translate = {'setosa': 0.0, 'versicolor': 1.0, 'virginica': 2.0}
             # one wrong will be 0.66667. I guess with random, that can happen?
             expectedPctWrong = 0.7
 
@@ -128,7 +128,7 @@ class Basic(unittest.TestCase):
         # for using below in csv reader
         csvFullname = h2i.find_folder_and_filename(bucket, csvPathname, schema='put', returnFullPath=True)
 
-        def predict_and_compare_csvs(model_key, hex_key, translate=None, y=0):
+        def predict_and_compare_csvs(model_key, hex_key, predictHexKey, translate=None, y=0):
             # have to slice out col 0 (the output) and feed result to predict
             # cols are 0:784 (1 output plus 784 input features
             # h2e.exec_expr(execExpr="P.hex="+hex_key+"[1:784]", timeoutSecs=30)
@@ -142,12 +142,18 @@ class Basic(unittest.TestCase):
                 dataKey = hex_key
 
             # +1 col index because R-like
+            # FIX! apparently we lose the enum mapping when we slice out, and then csv download? we just get the number?
+            # OH NO..it looks like we actually preserve the enum..it's in the csv downloaded
+            # the prediction is the one that doesn't have it, because it's realated to clusters, which have no
+            # notion of output classes
             h2e.exec_expr(execExpr="Z.hex="+hex_key+"[,"+str(y+1)+"]", timeoutSecs=30)
 
             start = time.time()
-            predict = h2o.nodes[0].generate_predictions(model_key=model_key,
-                                                        data_key=hexKey, destination_key=predictHexKey)
+            predictResult = h2o.nodes[0].generate_predictions(model_key=model_key,
+                data_key=hexKey, destination_key=predictHexKey)
             print "generate_predictions end on ", hexKey, " took", time.time() - start, 'seconds'
+            print "predictResult:", h2o.dump_json(predictResult)
+
             h2o.check_sandbox_for_errors()
             inspect = h2o_cmd.runInspect(key=predictHexKey)
             h2o_cmd.infoFromInspect(inspect, 'predict.hex')
@@ -202,16 +208,41 @@ class Basic(unittest.TestCase):
         # should pass seed
         # want to ignore the response col? we compare that to predicted
 
+        # if we tell kmeans to ignore a column here, and then use the model on the same dataset to predict
+        # does the column get ignored? (this is last col, trickier if first col. (are the centers "right"
         kwargs = {
             'ignored_cols_by_name': response,
             'seed': seed,
+            # "seed": 4294494033083512223, 
             'k': outputClasses,
             'initialization': 'PlusPlus',
             'destination_key': 'kmeans_model',
             'max_iter': 1000 }
 
         kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=60, **kwargs)
+        # this is what the size of each cluster was, when reported by training
+        size = kmeans['model']['size']
+
+        # tupleResultList is created like this: ( (centers[i], rows_per_cluster[i], sqr_error_per_cluster[i]) )
+        # THIS DOES A PREDICT in it (we used to have to do the predict to get more training result info?)
         (centers, tupleResultList) = h2o_kmeans.bigCheckResults(self, kmeans, csvPathname, parseResult, 'd', **kwargs)
+
+        # the tupleResultList has the size during predict? compare it to the sizes during training
+        # I assume they're in the same order.
+        size2 = [t[1] for t in tupleResultList]
+        if size!=size2:
+            raise Exception("training cluster sizes: %s are not the same as what we got from predict on same data: %s", (size, size2))
+
+        # hack...hardwire for iris here
+        # keep this with sizes sorted
+        expectedSizes = [
+            [39, 50, 61],
+            [38, 50, 62],
+        ]
+        sortedSize = sorted(size)
+        if sortedSize not in expectedSizes:
+            raise Exception("I got cluster sizes %s but expected one of these: %s " % (sortedSize, expectedSizes))
+        
 
         # check center list (first center) has same number of cols as source data
         print "centers:", centers
@@ -232,7 +263,16 @@ class Basic(unittest.TestCase):
         print "don't you need one less column (the last is output?)"
         print "WARNING: max_iter set to 8 for benchmark comparisons"
         print "y=", y # zero-based index matches response col name
-        pctWrong = predict_and_compare_csvs(model_key='kmeans_model', hex_key=hexKey, translate=translate, y=y)
+
+        print ""
+        print "oh I see why I can't compare predict to actual, in kmeans"
+        print "the cluster order doesn't have to match the output class enum order"
+        print "so I don't know what cluster, each output class will be (kmeans)"
+        print "all I can say is that the prediction distribution should match the original source distribution"
+        print "have to figure out what to do"
+        predictHexKey = 'predict_0.hex'
+        pctWrong = predict_and_compare_csvs(model_key='kmeans_model', hex_key=hexKey, predictHexKey=predictHexKey, 
+            translate=translate, y=y)
 
         # we are predicting using training data...so error is really low
         # self.assertAlmostEqual(pctWrong, classification_error, delta = 0.2, 

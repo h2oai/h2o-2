@@ -213,6 +213,11 @@ def import_only(node=None, schema='local', bucket=None, path=None,
             raise Exception("Aborting due to abort_after_import (-aai) argument's effect in import_only()")
     
         key = node.put_file(filePath, key=src_key, timeoutSecs=timeoutSecs)
+
+        # hmm.. what should importResult be in the put case
+        # set it to None. No import is done, and shouldn't be used if you're doing schema='put'
+        importResult = None
+        
         return (None, key)
 
     if schema=='local' and not \

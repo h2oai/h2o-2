@@ -10,7 +10,6 @@ DO_PLOT = True
 COL = 1
 PHRASE = "func1"
 FUNC_PHRASE = "func1=function(x){max(x[,%s])}" % COL
-REPEAT = 20
 
 DO_KNOWN_FAIL = False
 DO_APPEND_KNOWN_FAIL2 = False

@@ -1,9 +1,7 @@
 import unittest, time, sys
 sys.path.extend(['.','..','py'])
-import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_exec as h2e, h2o_jobs
+import h2o, h2o_cmd, h2o_hosts, h2o_import as h2i, h2o_exec as h2e
 
-print "overlap the parse (not the putfile) of the next one, with the exec of the last one"
-print ""
 print "Was getting a failure trying to write lock iris2_1.hex during the exec for iris2_2.hex"
 print "Was it the GLM's locks on iris2_1.hex (prior) or the prior exec on iris2_1.hex. Dunno"
 print "Focus on just fast back to back execs here..get rid of the glm"
@@ -28,7 +26,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_exec2_fast_locks_overlap(self):
+    def test_exec2_fast_locks(self):
         csvPathname = 'iris/iris2.csv'
         src_key='iris.csv'
         if not AVOID_BUG:
@@ -40,7 +38,6 @@ class Basic(unittest.TestCase):
             print "importPattern:", h2o.dump_json(importPattern)
         y = 4
 
-        lastHexKey = None
         for trial in range (1, 100):
             if AVOID_BUG:
                 # need the key name (pattern) to feed to parse)
@@ -54,22 +51,12 @@ class Basic(unittest.TestCase):
             hex_key = "iris2_" + str(trial) + ".hex"
             # what if we kicked off another parse without waiting for it? I think the src key gets locked
             # so we'd get lock issues on the src_key
-            parseResult = h2i.parse_only(pattern=src_key, hex_key=hex_key, noPoll=True,
+            parseResult = h2i.parse_only(pattern=src_key, hex_key=hex_key,
                 delete_on_done=1 if AVOID_BUG else 0, timeoutSecs=10)
-
-            # wait until iteration 2, when lastHexKey is available, so you can operate on that
-            if lastHexKey:
-                execExpr="%s[,%s]=(%s[,%s]==%s)" % (lastHexKey, y+1, lastHexKey, y+1, 1)
-                h2e.exec_expr(execExpr=execExpr, timeoutSecs=10)
-
-            lastHexKey = hex_key
-
-            # since we are using the same source file, and potentially re-uploading if AVOID_BUG
-            # we have to synchronize here. I guess we have to make sure the parse is done too, since we're going to 
-            # use it next iteration
-            h2o_jobs.pollWaitJobs(timeoutSecs=10)
+            execExpr="%s[,%s]=(%s[,%s]==%s)" % (hex_key, y+1, hex_key, y+1, 1)
+            h2e.exec_expr(execExpr=execExpr, timeoutSecs=10)
             
-        # just show the jobs still going. Shouldn't be any
+        # just show the jobs still going, if any. maybe none, because short (iris)
         a = h2o.nodes[0].jobs_admin()
         h2o.verboseprint("jobs_admin():", h2o.dump_json(a))
 
