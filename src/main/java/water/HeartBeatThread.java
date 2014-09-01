@@ -74,8 +74,10 @@ public class HeartBeatThread extends Thread {
       hb.set_valsz     (myHisto.histo(false)._cached);
       hb._num_cpus   = (char)run.availableProcessors();
 
-      if (counter % 300 == 2) {
-        //run mini-benchmark every 5 mins
+      // Run mini-benchmark every 5 mins.  However, on startup - do not have
+      // all JVMs immediately launch a all-core benchmark - they will fight
+      // with each other.  Stagger them using the hashcode.
+      if( (counter+H2O.SELF.hashCode()) % 300 == 2) {
         hb._gflops   = Linpack.run(hb._cpus_allowed);
         hb._membw    = MemoryBandwidth.run(hb._cpus_allowed);
       }
