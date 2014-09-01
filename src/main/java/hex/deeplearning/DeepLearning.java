@@ -65,7 +65,7 @@ public class DeepLearning extends Job.ValidatedJob {
    *      once, and can improve generalization.
    */
   @API(help = "Activation function", filter = Default.class, json = true, importance = ParamImportance.CRITICAL)
-  public Activation activation = Activation.Tanh;
+  public Activation activation = Activation.Rectifier;
 
   /**
    * The number and size of each hidden layer in the model.
