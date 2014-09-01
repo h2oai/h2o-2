@@ -571,6 +571,10 @@ public abstract class Neurons {
                    float partial_grad, final float avg_grad2, float rate, final float momentum) {
     final boolean have_momenta = _minfo.has_momenta();
     final boolean have_ada = _minfo.adaDelta();
+    final float l1 = (float)params.l1;
+    final float l2 = (float)params.l2;
+    final float bias = _b.get(row);
+    partial_grad -= Math.signum(bias) * l1 + bias * l2;
 
     if (have_ada) {
       final float rho = (float)params.rho;
