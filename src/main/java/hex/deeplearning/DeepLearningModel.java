@@ -1204,7 +1204,8 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
     DocGen.HTML.title(sb, title);
 
-    if (get_params().source == null || UKV.get(get_params().source._key) == null) (Job.hygiene(get_params())).toHTML(sb);
+    if (get_params().source == null || DKV.get(get_params().source._key) == null ||
+            (get_params().validation != null && DKV.get(get_params().validation._key) == null)) (Job.hygiene(get_params())).toHTML(sb);
     else job().toHTML(sb);
 
     final Key val_key = get_params().validation != null ? get_params().validation._key : null;
