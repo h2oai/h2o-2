@@ -332,7 +332,7 @@ public abstract class ParseTime {
             break;
           case 'g':
           case 'G':
-            break; //accepted and ignored
+            break; //for output only, accepted and ignored for input
           case 'H':
             builder.appendHourOfDay(2);
             break;
@@ -342,11 +342,11 @@ public abstract class ParseTime {
           case 'j':
             builder.appendDayOfYear(3);
             break;
-          case 'k':  //Joda automatically handles preceding blanks
+          case 'k':
             builder.appendOptional(DateTimeFormat.forPattern("' '").getParser());
             builder.appendHourOfDay(2);
             break;
-          case 'l': //Joda automatically handles preceding blanks
+          case 'l':
             builder.appendOptional(DateTimeFormat.forPattern("' '").getParser());
             builder.appendClockhourOfHalfday(2);
             break;

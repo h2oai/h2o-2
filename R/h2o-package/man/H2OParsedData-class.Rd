@@ -65,6 +65,7 @@
 \alias{apply,H2OParsedData-method}
 \alias{as.data.frame,H2OParsedData-method}
 \alias{as.factor,H2OParsedData-method}
+\alias{as.Date,H2OParsedData-method}
 \alias{ceiling,H2OParsedData-method}
 \alias{colMeans,H2OParsedData-method}
 \alias{colnames,H2OParsedData-method}
