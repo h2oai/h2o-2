@@ -101,7 +101,7 @@ class Basic(unittest.TestCase):
                 'normalize': 0,
                 'k': CLUSTERS, 
                 'max_iter': 50,
-                'initialization': 'Furthest', 
+                'initialization': 'PlusPlus',
                 'destination_key': 'syn_spheres100.hex', 
                 'seed': SEED
             }
