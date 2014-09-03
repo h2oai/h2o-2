@@ -379,7 +379,7 @@ month.H2OParsedData <- h2o.month
 as.Date.H2OParsedData <- function(x, format, ...) {
   if(!is.character(format)) stop("format must be a string")
 
-  expr = paste("as.Date(", paste(x@key, deparse(substitute(format)), sep = ","), ")", sep = "")
+  expr = paste("as.Date(", paste(x@key, deparse(eval(format, envir = parent.frame())), sep = ","), ")", sep = "")
   res = .h2o.__exec2(x@h2o, expr)
   res <- .h2o.exec2(res$dest_key, h2o = x@h2o, res$dest_key)
   res@logic <- FALSE
