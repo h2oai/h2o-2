@@ -37,6 +37,7 @@ def write_spheres_dataset(csvPathname, CLUSTERS, n):
     centersList = []
     currentCenter = None
     totalRows = 0
+    print ""
     for sphereCnt in range(CLUSTERS):
         R = 10 * (sphereCnt+1)
         newOffset = [3*R,3*R,3*R]
@@ -97,6 +98,7 @@ class Basic(unittest.TestCase):
         for trial in range(5):
             # pass SEED so it's repeatable
             kwargs = {
+                'normalize': 0,
                 'k': CLUSTERS, 
                 'max_iter': 10,
                 'initialization': 'Furthest', 
