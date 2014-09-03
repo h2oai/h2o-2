@@ -9,6 +9,9 @@ from operator import itemgetter
 # he offers the exact solution: http://stackoverflow.com/questions/918736/random-number-generator-that-produces-a-power-law-distribution/918782#918782
 # In spherical coordinates, taking advantage of the sampling rule:
 # http://stackoverflow.com/questions/2106503/pseudorandom-number-generator-exponential-distribution/2106568#2106568
+
+BAD_SEED = 5010213207974401134
+
 def get_xyz_sphere(R):
     phi = random.uniform(0, 2 * math.pi)
     costheta = random.uniform(-1,1)
@@ -66,7 +69,8 @@ class Basic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         global SEED, localhost
-        SEED = h2o.setup_random_seed()
+        # use the known bad seed if it's set. otherwise should be None
+        SEED = h2o.setup_random_seed(seed=BAD_SEED)
         localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(2)
