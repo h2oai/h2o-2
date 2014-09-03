@@ -94,7 +94,7 @@ test 'requestFramesAndCompatibleModels', (t) ->
   _ = Steam.ApplicationContext()
   Steam.Xhr _
   Steam.H2OProxy _
-  t.plan 61
+  t.plan 69
   _.requestFramesAndCompatibleModels (error, result) ->
     typecheckFramesResult t, error, result
     { frames } = result
@@ -151,7 +151,7 @@ test 'requestModelsAndCompatibleFrames', (t) ->
   _ = Steam.ApplicationContext()
   Steam.Xhr _
   Steam.H2OProxy _
-  t.plan 62
+  t.plan 70
   _.requestModelsAndCompatibleFrames (error, result) ->
     typecheckModelsResult t, error, result
     { models } = result

@@ -100,5 +100,17 @@ h2o.gbm(y = dependent, x = independent, data = australia.hex, n.trees = 3, inter
 # Run multinomial classification GBM on australia data 
 h2o.gbm(y = dependent, x = independent, data = australia.hex, n.trees = 3, interaction.depth = 3, 
   n.minobsinnode = 2, shrinkage = 0.01, distribution= "multinomial")
+
+# GBM variable importance
+# Also see: https://github.com/0xdata/h2o/blob/master/R/tests/testdir_demos/runit_demo_VI_all_algos.R
+data.hex = h2o.importFile(h, path = "https://raw.github.com/0xdata/h2o/master/smalldata/bank-additional-full.csv", key="data.hex")
+myX = 1:20
+myY="y"
+my.gbm <- h2o.gbm(x = myX, y = myY, distribution = "bernoulli", data = data.hex, n.trees =100,
+                  interaction.depth = 2, shrinkage = 0.01, importance = T)
+gbm.VI = my.gbm@model$varimp
+print(gbm.VI)
+par(mfrow=c(2,2))
+barplot(t(gbm.VI[1]),las=2,main="VI from GBM")
 }
 }

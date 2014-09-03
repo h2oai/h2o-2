@@ -72,12 +72,6 @@ echo "Used to run as 0xcust.., with multi-node targets (possibly)"
 myPy() {
     DOIT=../testdir_single_jvm/n0.doit
     $DOIT $1/$2 || true
-    # try moving all the logs created by this test in sandbox to a subdir to isolate test failures
-    # think of h2o.check_sandbox_for_errors()
-    rm -f -r sandbox/$1
-    mkdir -p sandbox/$1
-    cp -f sandbox/*log sandbox/$1
-    # rm -f sandbox/*log
 }
 
 
