@@ -517,6 +517,8 @@ public class SpeeDRF extends Job.ValidatedJob {
         }
       }
       long memForNonLocal = fr.byteSize() - localBytes;
+      // Also must add in the RF internal data structure overhead
+      memForNonLocal += fr.numRows() * fr.numCols();
       for(int i = 0; i < H2O.CLOUD._memary.length; i++) {
         HeartBeat hb = H2O.CLOUD._memary[i]._heartbeat;
         long nodeFreeMemory = (long)( (hb.get_max_mem()-(hb.get_tot_mem()-hb.get_free_mem())) * OVERHEAD_MAGIC);
