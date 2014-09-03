@@ -566,6 +566,56 @@ public class Tree extends H2OCountedCompleter {
       _r.write(bs);
     }
     public boolean isIn(Row row) { return row.getEncodedColumnValue(_column) == _split; }
+
+    @Override AutoBuffer compress(AutoBuffer ab) {
+      int pos = ab.position();
+      int size = 7;
+      byte _nodeType= 0x04; // 00000100
+      // left child type
+      if (_l instanceof LeafNode) _nodeType |= 0x30; // 00110000 = 0x30
+      int leftSize = _l.dtreeSize(); // size of the left child
+      size += leftSize;
+      if (leftSize < 256)             _nodeType |= 0x00;
+      else if (leftSize < 65535)      _nodeType |= 0x01;
+      else if (leftSize < (1<<24))    _nodeType |= 0x02;
+      else                            _nodeType |= 0x03;
+      // right child type
+      if (_r instanceof LeafNode) _nodeType |= 0xC0; // 11000000 = 0xC0
+      ab.put1(_nodeType);
+      assert _column != -1;
+      ab.put2((short)_column);
+      ab.put4f(_originalSplit); // assuming we only have _equal == 0 or 1 which is binary split
+
+      if( _l instanceof LeafNode ) { /* don't have skip size if left child is leaf.*/}
+      else {
+        if(leftSize < 256)            {ab.put1(       leftSize); size += 1;}
+        else if (leftSize < 65535)    {ab.put2((short)leftSize); size += 2;}
+        else if (leftSize < (1<<24))  {ab.put3(       leftSize); size += 3;}
+        else                          {ab.put4(       leftSize); size += 4;}// 1<<31-1
+      }
+      size += _r.dtreeSize();
+      _l.compress(ab);
+      _r.compress(ab);
+      assert size == ab.position()-pos:"reported size = " + size + " , real size = " + (ab.position()-pos);
+      return ab;
+    }
+
+    @Override
+    public int dtreeSize() {
+      int result = 1+2+4;
+      int skip = _l.dtreeSize();
+      result += skip;
+      result += _r.dtreeSize();
+      if ( _l instanceof LeafNode) { skip=0;}
+      else {
+        if (skip < 256) skip=1;
+        else if (skip < 65535) skip=2;
+        else if (skip < (1<<24)) skip=3;
+        else skip=4;
+      }
+      result += skip;
+      return result;
+    }
   }
 
   public float classify(Row r) { return _tree.classify(r); }
@@ -768,7 +818,7 @@ public class Tree extends H2OCountedCompleter {
 
       if (currentNodeType == 'S' || currentNodeType == 'E') {
         if (currentNodeType == 'E') {
-          _nodeType |= 0x08; // currently the only difference for exclusion node.
+          _nodeType |= 0x04; // 00000100
         }
         int _col =  ab.get2();
         float splitValue = ab.get4f();
@@ -786,9 +836,7 @@ public class Tree extends H2OCountedCompleter {
         byte rightType = (byte) ab.get1();
         ab.position(currentPosition);
         if (leftType == '[') { _nodeType |= 0x30; }
-        else if (leftType == 'E') { _nodeType |= 0x10; }
         if (rightType == '[') { _nodeType |= 0xC0; }
-        else if (rightType == 'E') { _nodeType |= 0x40; }
 //        int leftLeaves = getNumLeaves(ab, skip, regression); // number of left leaves.
         int skipModify = getSkip(ab, skip, regression);
         skip += skipModify;
@@ -807,11 +855,7 @@ public class Tree extends H2OCountedCompleter {
 //        result.put1(0).put2((short)65535); // if leaf then over look top level
         if (regression) { result.put4f(ab.get4f());}
         else { result.put4f((float)ab.get1());}
-      }
-      else if (currentNodeType == 'E') {
-        throw new NotImplementedException();
-      }
-      else { /* running out of the buffer*/ return result;}
+      } else { /* running out of the buffer*/ return result;}
     }
     return result;
   }

@@ -542,26 +542,11 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     int min_rows = 0;
     int nbins = this.nbins;
     int mtries = this.mtry;
-    long seed = -1; // TODO: get the desired seed if needed
-    int num_folds = 0; // TODO:
+    long seed = -1;
+    int num_folds = 0;
     float[] priorClassDist = null;
     float[] classDist = null;
-//    Key[][] treeKeys = new Key[t_keys.length][nclasses()];
-//
-//    for (int i=0; i<t_keys.length; i++) {
-//      byte[] singleTree = DKV.get(t_keys[i]).memOrLoad();
-//      byte[] dtree = Tree.toDTreeCompressedTreeAB(singleTree, false);
-////      UKV.put(treeKeys[i][0], dtreeValue, new Futures());
-//      for (int j=0; j<nclasses(); j++) {
-//        treeKeys[i][j] = Key.make((byte)1,Key.DFJ_INTERNAL_USER, H2O.SELF);
-//        Futures fs = new Futures();
-//        UKV.put(treeKeys[i][j], new Value(treeKeys[i][j], dtree), fs);
-//        fs.blockForPending();
-//        UKV.get(treeKeys[i][j]);
-//      }
-//      Log.info(Log.Tag.Sys.RANDF, "tree "+i+" is transformed");
-//
-//    }
+
     // dummy model
     SpeeDRFModel_DTree newModel = new SpeeDRFModel_DTree(model_key, model_key, dataKey,testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, mtries, num_folds, priorClassDist, classDist);
     // update the model
