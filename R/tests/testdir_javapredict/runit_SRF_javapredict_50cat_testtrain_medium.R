@@ -31,7 +31,8 @@ print(paste( "nodesize", nodesize))
 train <- locate("smalldata/histogram_test/50_cattest_train.csv")
 print(paste(    "train"     , train))    
 
-test <- locate("smalldata/histogram_test/50_cattest_test.csv")
+# test <- locate("smalldata/histogram_test/50_cattest_test.csv")
+test <- locate("smalldata/histogram_test/50_cattest_test_limiteddigits.csv")
 print(paste(    "test"     , test))    
 
 x = c("x1", "x2")

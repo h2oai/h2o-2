@@ -4,6 +4,7 @@ import hex.singlenoderf.Data.Row;
 import hex.singlenoderf.Tree.SplitNode.SplitInfo;
 import jsr166y.CountedCompleter;
 import jsr166y.RecursiveTask;
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.lang.ObjectUtils;
 import water.*;
 import water.H2O.H2OCountedCompleter;
@@ -765,7 +766,10 @@ public class Tree extends H2OCountedCompleter {
       byte _nodeType = 0;
       byte currentNodeType = (byte) ab.get1();
 
-      if (currentNodeType == 'S') {
+      if (currentNodeType == 'S' || currentNodeType == 'E') {
+        if (currentNodeType == 'E') {
+          _nodeType |= 0x08; // currently the only difference for exclusion node.
+        }
         int _col =  ab.get2();
         float splitValue = ab.get4f();
         int skipSize = ab.get1();
@@ -782,7 +786,9 @@ public class Tree extends H2OCountedCompleter {
         byte rightType = (byte) ab.get1();
         ab.position(currentPosition);
         if (leftType == '[') { _nodeType |= 0x30; }
+        else if (leftType == 'E') { _nodeType |= 0x10; }
         if (rightType == '[') { _nodeType |= 0xC0; }
+        else if (rightType == 'E') { _nodeType |= 0x40; }
 //        int leftLeaves = getNumLeaves(ab, skip, regression); // number of left leaves.
         int skipModify = getSkip(ab, skip, regression);
         skip += skipModify;
@@ -791,7 +797,7 @@ public class Tree extends H2OCountedCompleter {
         result.put2((short) _col);
         result.put4f(splitValue);
         if (skip <= 255) {
-          if (leftType == 'S') result.put1(skip);
+          if (leftType == 'S' || leftType == 'E') result.put1(skip); // leaf will have no skip size because its size is fixed.
         }
         else {
           result.put3(skip);
@@ -801,9 +807,10 @@ public class Tree extends H2OCountedCompleter {
 //        result.put1(0).put2((short)65535); // if leaf then over look top level
         if (regression) { result.put4f(ab.get4f());}
         else { result.put4f((float)ab.get1());}
-
       }
-      else if (currentNodeType == 'E') { /* TODO: Handle exclusive node */}
+      else if (currentNodeType == 'E') {
+        throw new NotImplementedException();
+      }
       else { /* running out of the buffer*/ return result;}
     }
     return result;
@@ -814,7 +821,7 @@ public class Tree extends H2OCountedCompleter {
     int startPos = ab.position();
     while (ab.position() < startPos + leftSize) {
       byte currentNodeType = (byte) ab.get1();
-      if (currentNodeType == 'S') {
+      if (currentNodeType == 'S' || currentNodeType == 'E') {
         ab.get2(); ab.get4f(); // skip col and split value.
         int skipSize = ab.get1();
         if (skipSize == 0) { ab.get3();}
@@ -822,6 +829,8 @@ public class Tree extends H2OCountedCompleter {
         result ++;
         if (regression) ab.get4f();
         else ab.get1();
+      } else {
+        throw new NotImplementedException();
       }
     }
     ab.position(startPos); // return to the original position so the buffer seems untouched.
@@ -835,7 +844,7 @@ public class Tree extends H2OCountedCompleter {
     boolean prevIsS = false;
     while (ab.position() < startPos + leftSize) {
       byte currentNodeType = (byte) ab.get1();
-      if (currentNodeType == 'S') {
+      if (currentNodeType == 'S' || currentNodeType == 'E') {
         ab.get2(); ab.get4f(); // skip col and split value.
         int skipSize = ab.get1();
         if (skipSize == 0) { ab.get3();}
@@ -846,6 +855,8 @@ public class Tree extends H2OCountedCompleter {
         else ab.get1();
         if (prevIsS) numLeftLeaves++;
         prevIsS = false;
+      } else {
+        throw new NotImplementedException();
       }
     }
     ab.position(startPos);

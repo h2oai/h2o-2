@@ -37,6 +37,7 @@ if(is.null(ncol(iris_test_without_response))) {
   iris_test_without_response <- data.frame(iris_test_without_response)
   colnames(iris_test_without_response) <- x
 }
+
 write.csv(iris_test_without_response, file = sprintf("%s/in.csv", tmpdir_name), row.names=F, quote=F)
 cmd <- sprintf("cp PredictCSV.java %s", tmpdir_name)
 safeSystem(cmd)
