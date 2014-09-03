@@ -72,6 +72,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   @API(help = "Verbose Output")                                           public String[] verbose_output;
   @API(help = "Use non-local data")                                       public boolean useNonLocal;
   @API(help = "Dtree keys")                                               public Key[/*ntree*/][/*nclass*/] dtreeKeys;
+  @API(help = "DTree Model")                                              public SpeeDRFModel_DTree dtreeTreeModel = null;
 
 
   private float _ss; private float _cnt;
@@ -531,6 +532,9 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   }
 
   public DTree.TreeModel transform2DTreeModel() {
+    if (dtreeTreeModel != null) {
+      return dtreeTreeModel;
+    }
     Key key = Key.make();
     Key model_key = _key;
     Key dataKey = _dataKey;
@@ -548,11 +552,11 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     float[] classDist = null;
 
     // dummy model
-    SpeeDRFModel_DTree newModel = new SpeeDRFModel_DTree(model_key, model_key, dataKey,testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, mtries, num_folds, priorClassDist, classDist);
+    dtreeTreeModel = new SpeeDRFModel_DTree(model_key, model_key, dataKey,testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, mtries, num_folds, priorClassDist, classDist);
     // update the model
-    newModel = new SpeeDRFModel_DTree(newModel, dtreeKeys, treeStats);
-    newModel.isFromSpeeDRF=true; // tells the toJava method the model is translated from a speedrf model.
-    return newModel;
+    dtreeTreeModel = new SpeeDRFModel_DTree(dtreeTreeModel, dtreeKeys, treeStats);
+    dtreeTreeModel.isFromSpeeDRF=true; // tells the toJava method the model is translated from a speedrf model.
+    return dtreeTreeModel;
   }
 
   public static class SpeeDRFModel_DTree extends DTree.TreeModel {
