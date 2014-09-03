@@ -1,6 +1,8 @@
 package water.fvec;
 
 import org.joda.time.DateTime;
+import org.joda.time.chrono.ISOChronology;
+import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.DateTimeFormatterBuilder;
 import water.parser.ValueString;
@@ -283,12 +285,13 @@ public abstract class ParseTime {
             builder.appendDayOfWeekText();
             break;
           case 'b':
+          case 'h':
             builder.appendMonthOfYearShortText();
             break;
           case 'B':
             builder.appendMonthOfYearText();
             break;
-          case 'C':
+          case 'c':
             builder.appendDayOfWeekShortText();
             builder.appendLiteral(' ');
             builder.appendMonthOfYearShortText();
@@ -303,17 +306,49 @@ public abstract class ParseTime {
             builder.appendLiteral(' ');
             builder.appendYear(4,4);
             break;
+          case 'C':
+            builder.appendCenturyOfEra(1,2);
+            break;
           case 'd':
             builder.appendDayOfMonth(2);
             break;
+          case 'D':
+            builder.appendMonthOfYear(2);
+            builder.appendLiteral('/');
+            builder.appendDayOfMonth(2);
+            builder.appendLiteral('/');
+            builder.appendTwoDigitYear(2019);
+            break;
+          case 'e':
+            builder.appendOptional(DateTimeFormat.forPattern("' '").getParser());
+            builder.appendDayOfMonth(2);
+            break;
+          case 'F':
+            builder.appendYear(4,4);
+            builder.appendLiteral('-');
+            builder.appendMonthOfYear(2);
+            builder.appendLiteral('-');
+            builder.appendDayOfMonth(2);
+            break;
+          case 'g':
+          case 'G':
+            break; //accepted and ignored
           case 'H':
             builder.appendHourOfDay(2);
             break;
           case 'I':
-            builder.appendHourOfHalfday(2);
+            builder.appendClockhourOfHalfday(2);
             break;
           case 'j':
             builder.appendDayOfYear(3);
+            break;
+          case 'k':  //Joda automatically handles preceding blanks
+            builder.appendOptional(DateTimeFormat.forPattern("' '").getParser());
+            builder.appendHourOfDay(2);
+            break;
+          case 'l': //Joda automatically handles preceding blanks
+            builder.appendOptional(DateTimeFormat.forPattern("' '").getParser());
+            builder.appendClockhourOfHalfday(2);
             break;
           case 'm':
             builder.appendMonthOfYear(2);
@@ -321,23 +356,53 @@ public abstract class ParseTime {
           case 'M':
             builder.appendMinuteOfHour(2);
             break;
+          case 'n':
+            break;
           case 'p':
             builder.appendHalfdayOfDayText();
+            break;
+          case 'r':
+            builder.appendClockhourOfHalfday(2);
+            builder.appendLiteral(':');
+            builder.appendMinuteOfHour(2);
+            builder.appendLiteral(':');
+            builder.appendSecondOfMinute(2);
+            builder.appendLiteral(' ');
+            builder.appendHalfdayOfDayText();
+            break;
+          case 'R':
+            builder.appendHourOfDay(2);
+            builder.appendLiteral(':');
+            builder.appendMinuteOfHour(2);
             break;
           case 'S':
             builder.appendSecondOfMinute(2);
             break;
-          case 'U':  //FIXME Joda does not support US week start (Sun), this will be wrong
-            builder.appendWeekOfWeekyear(2);
+          case 't':
             break;
-          case 'w':
+          case 'T':
+            builder.appendHourOfDay(2);
+            builder.appendLiteral(':');
+            builder.appendMinuteOfHour(2);
+            builder.appendLiteral(':');
+            builder.appendSecondOfMinute(2);
+            break;
+/*          case 'U':  //FIXME Joda does not support US week start (Sun), this will be wrong
+            builder.appendWeekOfYear(2);
+            break;
+          case 'u':
+            builder.appendDayOfWeek(1);
+            break;*/
+          case 'V':
+            break; //accepted and ignored
+/*          case 'w':  //FIXME Joda does not support US week start (Sun), this will be wrong
             builder.appendDayOfWeek(1);
             break;
           case 'W':
-            builder.appendWeekOfWeekyear(2);
-            break;
+            builder.appendWeekOfYear(2);
+            break;*/
           case 'x':
-            builder.appendYearOfCentury(2,2);
+            builder.appendTwoDigitYear(2019);
             builder.appendLiteral('/');
             builder.appendMonthOfYear(2);
             builder.appendLiteral('/');
@@ -351,7 +416,7 @@ public abstract class ParseTime {
             builder.appendSecondOfMinute(2);
             break;
           case 'y': //POSIX 2004 & 2008 says 69-99 -> 1900s, 00-68 -> 2000s
-            builder.appendTwoDigitWeekyear(2019);
+            builder.appendTwoDigitYear(2019);
             break;
           case 'Y':
             builder.appendYear(4,4);
@@ -360,8 +425,7 @@ public abstract class ParseTime {
             builder.appendTimeZoneOffset(null, "z", false, 2, 2);
             break;
           case 'Z':
-            builder.appendTimeZoneName();
-            break;
+            break;  //for output only, accepted and ignored for input
           default:  // No match, ignore
             builder.appendLiteral('\'');
             builder.appendLiteral(token);
