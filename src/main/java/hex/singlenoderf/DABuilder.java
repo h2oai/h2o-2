@@ -72,6 +72,7 @@ public class DABuilder {
 
     /** Build data adapter for given frame */
     protected DataAdapter inhaleData(Frame fr, boolean useNonLocal) {
+      Log.info("Prepping for data inhale.");
       long id = getChunkId(fr);
       if (id == -99999) {
         return null;
