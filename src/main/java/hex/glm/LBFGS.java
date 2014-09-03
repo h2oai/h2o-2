@@ -10,6 +10,7 @@ import water.deploy.NodeVM;
 import water.fvec.Frame;
 import water.fvec.NFSFileVec;
 import water.fvec.ParseDataset2;
+import water.fvec.Vec;
 import water.util.ModelUtils;
 
 import java.io.File;
@@ -46,7 +47,9 @@ public class LBFGS {
 
   // to be parsed when cloud is up
   private static String [] datasets = new String[] {
-    /* TODO: put your dataset here as: path, key*/"yourpath","mydata",
+    /* TODO: put your dataset here as: path, key*/"" +
+          "" +
+          "smalldata/airlines/AirlinesTrain.csv.zip","airline",
 //    "/Users/tomasnykodym/h2o/smalldata/logreg/prostate.csv","prostate",
 //    "/Users/tomasnykodym/h2o/smalldata/mnist/train.csv.gz","mtrain",
 ////      "/Users/tomasnykodym/mydata/arcene/arcene_train.data","train_raw",
@@ -78,12 +81,18 @@ public class LBFGS {
       Key frHex = Key.make(datasets[i+1]);
       ParseDataset2.parse(frHex, new Key[]{frRaw});
     }
-    Key k = Key.make("mydata");
+    Key k = Key.make("airline");
     Frame f = DKV.get(k).get();
 
     //TODO: finish these
-    // f = DataInfo.prepareFrame(...)
+//    f = DataInfo.prepareFrame(...)
+    int [] ignored_cols = null;
+    boolean toEnum = false;
+    boolean dropConstantCols = false;
+    Vec response = null;
+    f = DataInfo.prepareFrame(f, response, ignored_cols, toEnum, dropConstantCols);
     // DataInfo dinfo = new DataInfo(f,...);
+    DataInfo dinfo = new DataInfo(f,);
     // run(null,dinfo,params);
     System.out.println("DONE");
   }
