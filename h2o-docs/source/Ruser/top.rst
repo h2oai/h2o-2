@@ -1,10 +1,7 @@
-
-.. -*- mode: rst -*-
-
 .. _R_user:
 
-Documentation For R Users (Console and Studio)
-===============================================
+R On H\ :sub:`2`\ O
+===================
 
 .. toctree::
    :maxdepth: 1
@@ -12,3 +9,4 @@ Documentation For R Users (Console and Studio)
    Rinstall
    Rinstallgit
    Rpackage
+   rtutorial
