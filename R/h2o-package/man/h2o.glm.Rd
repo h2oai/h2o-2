@@ -63,10 +63,10 @@ tweedie: tweedie \cr
 (Optional) Prior probability of class 1. Only used if \code{family = "binomial"}. When omitted, prior will default to the frequency of class 1 in the response column.
   }
   \item{variable_importances}{
-  (Optional) A numeric value either 0 or 1 to indicate whether the variable importances should be computed.  Compute variable importances for input features. NOTE: If use_all_factor_levels is off the importance of the base level will NOT be shown.
+  (Optional) A logical value either TRUE or FALSE to indicate whether the variable importances should be computed.  Compute variable importances for input features. NOTE: If use_all_factor_levels is off the importance of the base level will NOT be shown.
   }
   \item{use_all_factor_levels}{
-  (Optional) A numeric value either 0 or 1 to indicate whether all factor levels should be used. By default, first factor level is skipped from the possible set of predictors. Set this flag if you want use all of the levels. Needs sufficient regularization to solve!
+  (Optional) A logical value either TRUE or FALSE to indicate whether all factor levels should be used. By default, first factor level is skipped from the possible set of predictors. Set this flag if you want use all of the levels. Needs sufficient regularization to solve!
   }
   \item{tweedie.p}{
   (Optional) The index of the power variance function for the tweedie distribution. Only used if \code{family = "tweedie"}.

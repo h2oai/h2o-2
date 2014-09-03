@@ -110,7 +110,6 @@ my.gbm <- h2o.gbm(x = myX, y = myY, distribution = "bernoulli", data = data.hex,
                   interaction.depth = 2, shrinkage = 0.01, importance = T)
 gbm.VI = my.gbm@model$varimp
 print(gbm.VI)
-par(mfrow=c(2,2))
 barplot(t(gbm.VI[1]),las=2,main="VI from GBM")
 }
 }
