@@ -100,25 +100,27 @@ class Basic(unittest.TestCase):
             kwargs = {
                 'normalize': 0,
                 'k': CLUSTERS, 
-                'max_iter': 10,
+                'max_iter': 50,
                 'initialization': 'Furthest', 
                 'destination_key': 'syn_spheres100.hex', 
                 'seed': SEED
             }
             timeoutSecs = 30
             start = time.time()
-            kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+            kmeansResult = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.',\
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
 
+            # see if we took the full limit to get an answer
+            
             # inspect of model doesn't work
             # kmeansResult = h2o_cmd.runInspect(key='syn_spheres100.hex')
             ### print h2o.dump_json(kmeans)
             ### print h2o.dump_json(kmeansResult)
-            h2o_kmeans.simpleCheckKMeans(self, kmeans, **kwargs)
+            h2o_kmeans.simpleCheckKMeans(self, kmeansResult, **kwargs)
 
-            model = kmeans['model']
+            model = kmeansResult['model']
             clusters = model["centers"]
             cluster_variances = model["within_cluster_variances"]
             error = model["total_within_SS"]
@@ -126,6 +128,11 @@ class Basic(unittest.TestCase):
             normalized = model["normalized"]
             max_iter = model["max_iter"]
 
+            if iterations >= (max_iter-1): # h2o hits the limit at max_iter-1..shouldn't hit it
+                raise Exception("KMeans unexpectedly took %s iterations..which was the full amount allowed by max_iter %s", 
+                    (iterations, max_iter))
+
+            print "iterations", iterations
             clustersSorted = sorted(clusters, key=itemgetter(0))
             ### print clustersSorted
 
@@ -144,6 +151,8 @@ class Basic(unittest.TestCase):
                 self.assertAlmostEqual(a[0], b[0], delta=1, msg=aStr+"!="+bStr+". Sorted cluster center "+iStr+" x not correct.")
                 self.assertAlmostEqual(a[1], b[1], delta=1, msg=aStr+"!="+bStr+". Sorted cluster center "+iStr+" y not correct.")
                 self.assertAlmostEqual(a[2], b[2], delta=1, msg=aStr+"!="+bStr+". Sorted cluster center "+iStr+" z not correct.")
+
+
 
             print "Trial #", trial, "completed"
 
