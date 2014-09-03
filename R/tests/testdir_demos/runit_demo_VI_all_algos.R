@@ -7,24 +7,30 @@ source('../findNSourceUtils.R')
 
 test <- function(h) {
 
+# If you want to cut and paste code from this test, you can just create the connection yourself up front.
+# h = h2o.init()
 
 # Parse data into H2O
 print("Parsing data into H2O")
-m_data = h2o.importFile(h,normalizePath(locate("smalldata/bank-additional-full.csv")), key="m_data")
+# From an h2o git workspace.
+data.hex = h2o.importFile(h, normalizePath(locate("smalldata/bank-additional-full.csv")), key="data.hex")
+# Or directly from github.
+# data.hex = h2o.importFile(h, path = "https://raw.github.com/0xdata/h2o/master/smalldata/bank-additional-full.csv", key="data.hex")
+
 print("Expectation: All Algos should pick the predictor - 'duration' as the most important variable")
 
 # Run summary
-summary(m_data)
+summary(data.hex)
 
 #Print Column names
-colnames(m_data)
+colnames(data.hex)
 
 # Specify predictors and response
 myX = 1:20
 myY="y"
 
 # Run GBM with variable importance
-my.gbm <- h2o.gbm(x = myX, y = myY, distribution = "bernoulli", data = m_data, n.trees =100,
+my.gbm <- h2o.gbm(x = myX, y = myY, distribution = "bernoulli", data = data.hex, n.trees =100,
                   interaction.depth = 2, shrinkage = 0.01, importance = T) 
 
 # Access Variable Importance from the built model
@@ -38,7 +44,7 @@ barplot(t(gbm.VI[1]),las=2,main="VI from GBM")
 
 #--------------------------------------------------
 # Run random Forest with variable importance
-my.rf = h2o.randomForest(x=myX,y=myY,data=m_data,classification=T,ntree=100,importance=T)
+my.rf = h2o.randomForest(x=myX,y=myY,data=data.hex,classification=T,ntree=100,importance=T)
 
 # Access Variable Importance from the built model
 rf.VI = my.rf@model$varimp
@@ -62,7 +68,7 @@ barplot(t(nrf.VI[1,]),beside=T,names.arg=row.names(t(nrf.VI[1,])),las=2,main="VI
 
 #--------------------------------------------------
 # Run GLM with variable importance, lambda search and using all factor levels
-my.glm = h2o.glm(x=myX, y=myY, data=m_data, family="binomial",standardize=T,use_all_factor_levels=T,higher_accuracy=T,lambda_search=T,return_all_lambda=T,variable_importances=T)
+my.glm = h2o.glm(x=myX, y=myY, data=data.hex, family="binomial",standardize=T,use_all_factor_levels=T,higher_accuracy=T,lambda_search=T,return_all_lambda=T,variable_importances=T)
 
 # Select the best model picked by glm
 best_model = my.glm@best_model
@@ -82,7 +88,7 @@ barplot(glm.VI[1:20],las=2,main="VI from GLM")
 
 #--------------------------------------------------
 # Run deeplearning with variable importance
-my.dl = h2o.deeplearning(x=myX,y=myY,data=m_data,classification=T,activation="Tanh",hidden=c(10,10,10),epochs=12,variable_importances=T)
+my.dl = h2o.deeplearning(x=myX,y=myY,data=data.hex,classification=T,activation="Tanh",hidden=c(10,10,10),epochs=12,variable_importances=T)
 
 # Access Variable Importance from the built model
 dl.VI =my.dl@model$varimp
