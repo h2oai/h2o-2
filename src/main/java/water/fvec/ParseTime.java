@@ -111,7 +111,7 @@ public abstract class ParseTime {
     final int end = i+str.get_length();
     while( i < end && buf[i] == ' ' ) i++;
     if   ( i < end && buf[i] == '"' ) i++;
-    if( (end-i) < 8 ) return Long.MIN_VALUE; // Shortest date: d-mm-yy, only 7 chars
+    if( (end-i) < 7 ) return Long.MIN_VALUE; // Shortest date: d-mm-yy, only 7 chars
     int yy=0, MM=0, dd=0;
     dd = digit(dd,buf[i++]);
     if( buf[i] != '-' ) dd = digit(dd,buf[i++]);
