@@ -1,3 +1,139 @@
+Release 2.6.1.1 (Lambert build 1)
+==================================
+
+* [Download this release](http://s3.amazonaws.com/h2o-release/h2o/rel-lambert/1/index.html)
+* [Query JIRAs for this release](https://0xdata.atlassian.net/issues/?jql=fixVersion%20%3D%20lambert%20and%20resolution%20is%20not%20empty)
+
+
+
+Technical task
+--------------
+    * [PUB-666] - Make sure that MVN/Gradle is using correct Javassist version witch works with Java8
+    * [PUB-806] - Create anomaly detection app
+
+Bug
+---
+    * [PUB-219] - add hdp2.1 for -hdfs_version support (originally was about cdh5 support)
+    * [PUB-302] - k-means broken on categoricals
+    * [PUB-342] - svm light broken in import2/parse2
+    * [PUB-430] - sum(X, na.rm=T) doesn't work inside h2o
+    * [PUB-450] - ddply on all_yr_airlines dataset gives, Array index out of bound exception
+    * [PUB-474] - exec2 functions shouldn't return 0 when they return nothing
+    * [PUB-482] - ava.lang.ArrayIndexOutOfBoundsException: 3 	at hex.ConfusionMatrix.add(ConfusionMatrix.java:72) maybe all NaNs in dataset?
+    * [PUB-492] - Heartbeat assertion error on startup
+    * [PUB-503] - GLM2: on smalldata/airlines nfold = 10 get java.lang.AssertionError at water.H2O.submitTask(H2O.java:668)
+    * [PUB-521] - GLM2: seems like ROC curve is inverted on model page. A bad model is giving good predictions.
+    * [PUB-549] - ddply on all yrs airlines data gives - java.lang.NullPointerException
+    * [PUB-552] - exception in at water.TypeMap.newInstance(TypeMap.java:88) is showing up a lot in multi-machine fvec parses
+    * [PUB-564] - (During parse) java.lang.NullPointerException: null while mapping key
+    * [PUB-595] - ddply: two successive identical don't get same answer? (largish # of groups) (most do). Appears that sometimes I get nacnt!=0 in the result (58), when normally I don't.
+    * [PUB-761] - fvec import/parse using s3 and zip or gz file has stack trace. oddly s3n seems okay (they do blocks differently. maybe a factor?)
+    * [PUB-808] - R: h2o.glm does not have an option to use_all_factor_levels and on the help page, there is no explanation for return_all_lambda and max_predictors options
+    * [PUB-877] - h2o.glm inconsistency in flags:The flags for var_importance and use_all_factor_level is set to 0,1 instead of a T or F.
+    * [PUB-892] - h2o. perf: Reporting incorrect Accuracy and error
+    * [PUB-894] - H20 not compatible with YARN(hadoop 2.4.1)
+    * [PUB-898] - SRF: java.lang.AssertionError at water.AutoBuffer.put3(AutoBuffer.java:574) on airlines_all
+    * [PUB-923] - kmeans sometimes gets NaN in cluster center (zero members) and doesn't recover. When I ask for 3 clusters, I should get 3 non-empty clusters
+    * [PUB-930] - runit_DeepLearning_imbalance_large.R fails with worse results using balance_classes
+    * [PUB-937] - h2o.glm:  when run with lambda search, shows  number of predictors = -1 in the summary table for the first model. Looks fine in the browser.
+    * [PUB-939] - SVMLight parse problem
+    * [PUB-940] - KMeans2 re-inits clusters forever on this trivial dataset
+    * [PUB-943] - Binary Ops Online in EQ3
+    * [PUB-953] - SpeedRF cancel takes way too long
+    * [PUB-957] - SRF: When run on ecology dataset with validation set specified, gives Illegal argument: java.lang.IllegalArgumentException: Enum conversion only works on integer columns
+    * [PUB-961] - Illegal argument: Duplicate name 'predict' in Frame
+    * [PUB-964] - RuntimeException while running DL on a dataset..
+    * [PUB-972] - H2O Steam: the show more tab for listing the params does not work on steam's scoring page
+    * [PUB-975] - Warning about variable importance and factor levels occurs for default GLM parameters
+    * [PUB-976] - water.fvec.NewChunk.append2slow ArrayIndexOutOfBoundsException
+    * [PUB-977] - GBM predictions are unexpectedly centered at 0.
+    * [PUB-980] - summary on key with no values (after filter by exec) gets NPE (probably the enum?)
+    * [PUB-987] - Giving -ice_root of c:/ results in an exception instead of a message
+    * [PUB-990] - AIOOBE during rebalance
+    * [PUB-991] - GLM warns about variable importance too much
+    * [PUB-993] - R Client throws on running algos: "Error: Internal Server Error"
+    * [PUB-999] - Incomplete Deeplearning Grid Results in R
+
+
+
+Improvement
+-----------
+    * [PUB-265] - Arno idea: to have a small set of performance benchmarks executed on the start of H2O
+    * [PUB-294] - Should models have sticky error messages?  Errors during training, do they just output in jobs list or training completion. Or should all "bad' GLM models be deleted (bad due to error)
+    * [PUB-624] - starting h2o from R, if some dirs used already exist with wrong permissions...nothing good happens. maybe could test/report
+    * [PUB-681] - Add variance or standard deviation to inspect and summary pages
+    * [PUB-837] - On-demand cluster performance check
+    * [PUB-927] - Add a warning message to h2o.init() if your H2O is crippled with only one core
+    * [PUB-997] - Document use of variableImportance from h2o.randomForest h2o.gbm ..
+    * [PUB-998] - New user experience with default heap size and big datasets
+
+New Feature
+-----------
+    * [PUB-531] - h2o exec incorrectly says there's a missing paren in the middle of this expression
+    * [PUB-962] - NaiveBayes does not compute variable importances
+    * [PUB-963] - SpeeDRF variable importances not appearing in Steam
+    * [PUB-989] - Add automatic determination of train_samples_per_iteration
+
+Story
+-----
+    * [PUB-727] - Transfer data from Spark to H2O
+    * [PUB-730] - Transfer results from H2O to Spark
+
+Task
+----
+    * [PUB-642] - Parse2 failed on parsing empty file
+    * [PUB-942] - Set default logVerbose to false in DRemoteTask
+    * [PUB-956] - Re-enable linpack and memory bandwidth tests
+
+Technical task
+--------------
+    * [HEX-1781] - Create RUnit tests for imbalanced data handling.
+    * [HEX-1861] - Add tests for mean imputation of missing values in Deep Learning
+    * [HEX-1862] - Add InsertMissingValues app (Beta) to R
+
+Bug
+---
+    * [HEX-642] - The job is shown as cancelled even if it crashed - we need additional Job state "INVALID"
+    * [HEX-800] - return unable to solve as json/browser error/warning not stack trace
+    * [HEX-1358] - Separator Tab was being picked instead of Space 
+    * [HEX-1723] - Looping multifile parse results in YARN killing an H2O node (too much mem)
+    * [HEX-1756] - GLM: cross validation is broken
+    * [HEX-1759] - R: can't mix column indexing types
+    * [HEX-1768] - exec2 needs sapply + lexically scoped functions
+    * [HEX-1783] - R <simpleError: C stack usage is too close to the limit> when running GLM
+    * [HEX-1799] - GLM nfolds not passing along model params
+    * [HEX-1850] - NPE inside NonBlockingHashMap called by /2/Models in multi-jvm
+    * [HEX-1852] - h2o.predict on Naive Bayes model fails with java.lang.RuntimeException: org.apache.commons.math3.exception.NotStrictlyPositiveException: standard deviation (0)
+    * [HEX-1853] - model training time is off (either 0 or >>>> 0) for many model types
+    * [HEX-1854] - The SpeeDRF -> Random Forest / DRF -> BigData RF name change isn't in Steam
+    * [HEX-1855] - steam fails to show when an ill-formed model or unsupported model is built
+    * [HEX-1870] - test_model_management.py: ERRR WATER: Missing vector #1 (fMonth) during Frame fetch: $04ff02000000ffffffff$_bcd826a77fc96e2fda1c0a6396164154
+    * [HEX-1873] - Cross validated GBM save/restore needs a test
+
+
+
+Improvement
+-----------
+    * [HEX-635] - interrogating the result from the json Jobs, it's not clear how you tell a job has completed?
+    * [HEX-871] - Remove VA->FVec converter wiring that I wrote
+    * [HEX-1676] - Need to be able to get a checksum of all the Vecs in a Frame to detect changes.
+    * [HEX-1860] - Add automatic mean imputation for missing values in Deep Learning
+
+New Feature
+-----------
+    * [HEX-1841] - Need a way to handle customer-pp's (and hopefully others') date values
+    * [HEX-1858] - Add jira.0xdata.com to the bottom of h2o web ui
+
+Story
+-----
+    * [HEX-1645] - Collect cpu, memory, network, disk in perf runs
+
+Task
+----
+    * [HEX-1680] - Test GLM2 model persistence
+
+
+
 Release 2.6.0.2 (Lagrange build 2)
 ==================================
 
