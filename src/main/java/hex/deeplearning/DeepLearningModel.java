@@ -1339,7 +1339,9 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     final boolean isEnded = get_params().self() == null || (UKV.get(get_params().self()) != null && Job.isEnded(get_params().self()));
     final long time_so_far = isEnded ? run_time : run_time + System.currentTimeMillis() - _timeLastScoreEnter;
     if (time_so_far > 0) {
-      DocGen.HTML.paragraph(sb, "Training speed: " + String.format("%,d", model_info().get_processed_total() * 1000 / time_so_far) + " samples/s");
+      long time_for_speed = isEnded || H2O.CLOUD.size() > 1 ? run_time : time_so_far;
+      if (time_for_speed > 0)
+        DocGen.HTML.paragraph(sb, "Training speed: " + String.format("%,d", model_info().get_processed_total() * 1000 / time_for_speed) + " samples/s");
     }
     DocGen.HTML.paragraph(sb, "Training time: " + PrettyPrint.msecs(time_so_far, true));
     if (progress > 0 && !isEnded)

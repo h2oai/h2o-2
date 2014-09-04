@@ -9,6 +9,9 @@ from operator import itemgetter
 # he offers the exact solution: http://stackoverflow.com/questions/918736/random-number-generator-that-produces-a-power-law-distribution/918782#918782
 # In spherical coordinates, taking advantage of the sampling rule:
 # http://stackoverflow.com/questions/2106503/pseudorandom-number-generator-exponential-distribution/2106568#2106568
+
+BAD_SEED = 5010213207974401134
+
 def get_xyz_sphere(R):
     phi = random.uniform(0, 2 * math.pi)
     costheta = random.uniform(-1,1)
@@ -34,6 +37,7 @@ def write_spheres_dataset(csvPathname, CLUSTERS, n):
     centersList = []
     currentCenter = None
     totalRows = 0
+    print ""
     for sphereCnt in range(CLUSTERS):
         R = 10 * (sphereCnt+1)
         newOffset = [3*R,3*R,3*R]
@@ -66,7 +70,8 @@ class Basic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         global SEED, localhost
-        SEED = h2o.setup_random_seed()
+        # use the known bad seed if it's set. otherwise should be None
+        SEED = h2o.setup_random_seed(seed=BAD_SEED)
         localhost = h2o.decide_if_localhost()
         if (localhost):
             h2o.build_cloud(2)
@@ -93,26 +98,29 @@ class Basic(unittest.TestCase):
         for trial in range(5):
             # pass SEED so it's repeatable
             kwargs = {
+                'normalize': 0,
                 'k': CLUSTERS, 
-                'max_iter': 10,
-                'initialization': 'Furthest', 
+                'max_iter': 50,
+                'initialization': 'PlusPlus',
                 'destination_key': 'syn_spheres100.hex', 
                 'seed': SEED
             }
             timeoutSecs = 30
             start = time.time()
-            kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
+            kmeansResult = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=timeoutSecs, **kwargs)
             elapsed = time.time() - start
             print "kmeans end on ", csvPathname, 'took', elapsed, 'seconds.',\
                 "%d pct. of timeout" % ((elapsed/timeoutSecs) * 100)
 
+            # see if we took the full limit to get an answer
+            
             # inspect of model doesn't work
             # kmeansResult = h2o_cmd.runInspect(key='syn_spheres100.hex')
             ### print h2o.dump_json(kmeans)
             ### print h2o.dump_json(kmeansResult)
-            h2o_kmeans.simpleCheckKMeans(self, kmeans, **kwargs)
+            h2o_kmeans.simpleCheckKMeans(self, kmeansResult, **kwargs)
 
-            model = kmeans['model']
+            model = kmeansResult['model']
             clusters = model["centers"]
             cluster_variances = model["within_cluster_variances"]
             error = model["total_within_SS"]
@@ -120,6 +128,11 @@ class Basic(unittest.TestCase):
             normalized = model["normalized"]
             max_iter = model["max_iter"]
 
+            if iterations >= (max_iter-1): # h2o hits the limit at max_iter-1..shouldn't hit it
+                raise Exception("KMeans unexpectedly took %s iterations..which was the full amount allowed by max_iter %s", 
+                    (iterations, max_iter))
+
+            print "iterations", iterations
             clustersSorted = sorted(clusters, key=itemgetter(0))
             ### print clustersSorted
 
@@ -138,6 +151,8 @@ class Basic(unittest.TestCase):
                 self.assertAlmostEqual(a[0], b[0], delta=1, msg=aStr+"!="+bStr+". Sorted cluster center "+iStr+" x not correct.")
                 self.assertAlmostEqual(a[1], b[1], delta=1, msg=aStr+"!="+bStr+". Sorted cluster center "+iStr+" y not correct.")
                 self.assertAlmostEqual(a[2], b[2], delta=1, msg=aStr+"!="+bStr+". Sorted cluster center "+iStr+" z not correct.")
+
+
 
             print "Trial #", trial, "completed"
 

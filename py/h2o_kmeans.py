@@ -28,14 +28,15 @@ def simpleCheckKMeans(self, kmeans, **kwargs):
     kmeansResult = kmeans
 
     model = kmeansResult['model']
-    clusters = model["centers"]
+    centers = model["centers"]
+    size = model["size"]
     cluster_variances = model["within_cluster_variances"]
     error = model["total_within_SS"]
     iterations = model["iterations"]
     normalized = model["normalized"]
     max_iter = model["max_iter"]
 
-    for i,c in enumerate(clusters):
+    for i,c in enumerate(centers):
         for n in c:
             if math.isnan(float(n)):
                 raise Exception("center", i, "has NaN:", n, "center:", c)
@@ -52,8 +53,12 @@ def bigCheckResults(self, kmeans, csvPathname, parseResult, applyDestinationKey,
     model = kmeans['model']
     model_key = model['_key']
     centers = model['centers']
+    size = model["size"]
     cluster_variances = model["within_cluster_variances"]
     error = model["total_within_SS"]
+    iterations = model["iterations"]
+    normalized = model["normalized"]
+    max_iter = model["max_iter"]
     kmeansResult = kmeans
 
     # no scoring on Kmeans2?..just reuse
@@ -73,10 +78,12 @@ def bigCheckResults(self, kmeans, csvPathname, parseResult, applyDestinationKey,
         raise Exception("centers, rows_per_cluster, sqr_error_per_cluster should all be same length %s, %s, %s" % \
             (len(centers), len(rows_per_cluster), len(sqr_error_per_cluster)))
             
+    print "Did iterations: %s  given max_iter: %s" % (iterations, max_iter)
     for i,c in enumerate(centers):
         print "\ncenters[%s]: " % i, [round(c,2) for c in centers[i]]
         print "rows_per_cluster[%s]: " % i, rows_per_cluster[i]
         print "sqr_error_per_cluster[%s]: " % i, sqr_error_per_cluster[i]
+        print "size[%s]:" % i, size[i]
         tupleResultList.append( (centers[i], rows_per_cluster[i], sqr_error_per_cluster[i]) )
 
     return (centers, tupleResultList)

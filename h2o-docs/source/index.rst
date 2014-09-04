@@ -20,12 +20,11 @@ getting started from downloaded versions of  H\ :sub:`2`\ O, and using  H\
     :maxdepth: 1
 
     newuser/top
-    Ruser/top
     userguide/top
 
 
 Tutorials in H\ :sub:`2`\ O
-=============================
+===========================
 
 
 .. toctree::
@@ -34,6 +33,15 @@ Tutorials in H\ :sub:`2`\ O
     tutorial/top
     tutorial/videos
 
+H\ :sub:`2`\ O APIs
+===================
+
+Overview and walkthroughs for the different APIs to H\ :sub:`2`\ O.
+
+.. toctree::
+   :maxdepth: 1
+
+   Ruser/top
 
 Deployment and Big Data Management
 ==================================
@@ -41,9 +49,9 @@ Deployment and Big Data Management
 .. toctree::
     :maxdepth: 1
 
+    deployment/ec2
     deployment/hadoop
     deployment/multinode
-    deployment/ec2
 
 Helpful Resources
 =================
@@ -60,17 +68,6 @@ in the public domain.
     resources/h2odatasheet
     subjectindex
 
-
-
-H\ :sub:`2`\ O User Guide
-=========================
-
-Details about starting H\ :sub:`2`\ O and the different menus and screens.
-
-.. toctree::
-    :maxdepth: 1
-
-    Ruser/Rpackage
 
 Data Science
 ============
