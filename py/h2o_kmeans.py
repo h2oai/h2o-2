@@ -90,7 +90,7 @@ def bigCheckResults(self, kmeans, csvPathname, parseResult, applyDestinationKey,
 # ]
 # delta is a tuple of multipliers against the tupleResult for abs delta
 # allowedDelta = (0.01, 0.1, 0.01)
-def compareResultsToExpected(self, tupleResultList, expected=None, allowedDelta=None, allowError=False, trial=0):
+def compareResultsToExpected(self, tupleResultList, expected=None, allowedDelta=None, allowError=False, allowRowError=False, trial=0):
     # sort the tuple list by center for the comparison. (this will be visible to the caller?)
     from operator import itemgetter
     tupleResultList.sort(key=itemgetter(0))
@@ -116,9 +116,45 @@ def compareResultsToExpected(self, tupleResultList, expected=None, allowedDelta=
                 self.assertAlmostEqual(a, b, delta=absAllowedDelta,
                     msg="Trial %d Center value expected: %s actual: %s delta > %s" % (trial, a, b, absAllowedDelta))
 
-            absAllowedDelta = abs(allowedDelta[1] * expRows)
-            self.assertAlmostEqual(expRows, actRows, delta=absAllowedDelta,
-                msg="Trial %d Rows expected: %s actual: %s delta > %s" % (trial, expRows, actRows, absAllowedDelta))
+            if not allowRowError: # allow error in row count? 
+                absAllowedDelta = abs(allowedDelta[1] * expRows)
+                self.assertAlmostEqual(expRows, actRows, delta=absAllowedDelta,
+                    msg="Trial %d Rows expected: %s actual: %s delta > %s" % (trial, expRows, actRows, absAllowedDelta))
+
+            # fix, we don't compare the actual error # (what is it?)
+
+# just print info on the distribution
+def showClusterDistribution(self, tupleResultList, expected=None, allowedDelta=None, allowError=False, trial=0):
+    # sort the tuple list by center for the comparison. (this will be visible to the caller?)
+    from operator import itemgetter
+    if expected is not None:
+        # sort expected, just in case, for the comparison
+        expected.sort(key=itemgetter(0))
+        # get total row and total error
+        totalRows = 0
+        totalError = 0
+        print "\nExpected distribution, rows and error:"
+        for i, (expCenter, expRows, expError)  in enumerate(expected):
+            totalRows += expRows
+            totalError += expError
+        # now go thru again and print percentages
+        print "totalRows:", totalRows, "totalError:", totalError
+        for i, (expCenter, expRows, expError)  in enumerate(expected):
+            print expCenter, "pctRows: %0.2f" % (expRows/(totalRows+0.0)), "pctError: %0.2f" % (expError/(totalError+0.0))
+
+    if tupleResultList is not None:
+        tupleResultList.sort(key=itemgetter(0))
+        totalRows = 0
+        totalError = 0
+        print "\nActual distribution, rows and error:"
+        for i, (actCenter, actRows, actError)  in enumerate(tupleResultList):
+            totalRows += actRows
+            totalError += actError
+        # now go thru again and print percentages
+        print "totalRows:", totalRows, "totalError:", totalError
+        for i, (actCenter, actRows, actError)  in enumerate(tupleResultList):
+            print actCenter, "pctRows: %0.2f" % (actRows/(totalRows+0.0)), "pctError: %0.2f" % (actError/(totalError+0.0))
+
 
 # compare this clusters to last one. since the files are concatenations, 
 # the results should be similar? 10% of first is allowed delta
