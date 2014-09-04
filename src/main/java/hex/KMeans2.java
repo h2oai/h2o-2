@@ -124,14 +124,14 @@ public class KMeans2 extends ColumnsJob {
         // Initialize first cluster to random row
         randomRow(vecs, rand, clusters[0], means, mults);
 
-        // kbn. while( model.iterations < 5 ) {
-        while( model.iterations < k ) {
+        while( model.iterations < 5 ) {
+        // kbn. while( model.iterations < k ) {
           // Sum squares distances to clusters
           SumSqr sqr = new SumSqr(clusters,means,mults,_ncats).doAll(vecs);
 
           // Sample with probability inverse to square distance
+          Sampler sampler = new Sampler(clusters, means, mults, _ncats, sqr._sqr, k * 3, seed).doAll(vecs);
           // kbn. Sampler sampler = new Sampler(clusters, means, mults, _ncats, sqr._sqr, 1, seed).doAll(vecs);
-          Sampler sampler = new Sampler(clusters, means, mults, _ncats, sqr._sqr, 1, seed).doAll(vecs);
           clusters = Utils.append(clusters,sampler._sampled);
 
           // Fill in sample clusters into the model
