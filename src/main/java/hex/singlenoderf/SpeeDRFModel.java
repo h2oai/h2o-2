@@ -12,6 +12,7 @@ import water.api.*;
 import water.api.Request.API;
 import water.fvec.Chunk;
 import water.fvec.Frame;
+import water.fvec.NewChunk;
 import water.fvec.Vec;
 import water.util.Counter;
 import water.util.ModelUtils;
@@ -178,6 +179,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
       // Classification scoring
     } else {
+      Vec lv = scored.lastVec();
       double mse = CMTask.MSETask.doTask(scored.add("actual", fr.lastVec()));
       this.cm = cm.cm;
       errs[errs.length - 1] = (float)mse;
@@ -185,12 +187,29 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       cms[cms.length - 1] = new_cm;
 
       // Create the ROC Plot
-      if (classes() == 2 && !scored.lastVec().isInt()) {
+      if (classes() == 2) {
+        Vec v = null;
+        Frame fa = null;
+        if (lv.isInt()) {
+          fa = new MRTask2() {
+            @Override public void map(Chunk[] cs, NewChunk nchk) {
+              int rows = cs[0]._len;
+              int cols = cs.length - 1;
+              for (int r = 0; r < rows; ++r) {
+                nchk.addNum(cs[cols].at0(r) == 0 ? 1e-10 : 1.0 - 1e-10);
+              }
+            }
+          }.doAll(1, scored).outputFrame(null,null);
+          v = fa.anyVec();
+        }
         AUC auc_calc = new AUC();
         auc_calc.vactual = cm.vactual;
-        auc_calc.vpredict = scored.lastVec(); // lastVec is class1
+        auc_calc.vpredict = v == null ? lv : v; // lastVec is class1
         auc_calc.invoke();
         validAUC = auc_calc.data();
+        if (v != null) UKV.remove(v._key);
+        if (fa != null) fa.delete();
+        UKV.remove(lv._key);
       }
     }
     scored.remove("actual");
