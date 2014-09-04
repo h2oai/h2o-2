@@ -408,13 +408,13 @@ public abstract class ParseTime {
             builder.appendLiteral('/');
             builder.appendDayOfMonth(2);
             break;
-          case 'X':
+/*          case 'X':  //Results differ between OSX and Linux
             builder.appendHourOfDay(2);
             builder.appendLiteral(':');
             builder.appendMinuteOfHour(2);
             builder.appendLiteral(':');
             builder.appendSecondOfMinute(2);
-            break;
+            break;*/
           case 'y': //POSIX 2004 & 2008 says 69-99 -> 1900s, 00-68 -> 2000s
             builder.appendTwoDigitYear(2019);
             break;

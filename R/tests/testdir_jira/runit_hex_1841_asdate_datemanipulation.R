@@ -119,7 +119,7 @@ datetest <- function(conn){
   
   ## Col 1-10 test all different parse options, rows test some corner cases
   ## Row 1/2 test 1969/2068 inference
-  formats = c("%c %z", "%a %d %m %y %H:%M:%S %z", "%A %m %d %Y %k", "%b %d %C %y %I %p", "%e %B, %Y %l %p", "%h-%e, %y %r", "%D %H_%M", "%F %H", "%X %j %Y", "%d_%m_%y %T", "%d%m%y %R")
+  formats = c("%c %z", "%a %d %m %y %H:%M:%S %z", "%A %m %d %Y %k", "%b %d %C %y %I %p", "%e %B, %Y %l %p", "%h-%e, %y %r", "%D %H_%M", "%F %H", "%H:%M %j %Y", "%d_%m_%y %T", "%d%m%y %R")
   c1 = c("Fri Jan 10 00:00:00 1969 -0800", "Tue Jan 10 04:00:00 2068 -0800", "Mon Dec 30 01:00:00 2002 -0800", "Wed Jan 1 12:00:00 2003 -0800")
   c1dt = strptime(c1, formats[1], tz="America/Los_Angeles")
   c2 = strftime(c1dt, formats[2], tz="America/Los_Angeles")
