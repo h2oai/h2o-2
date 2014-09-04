@@ -1,10 +1,13 @@
 package samples.expert;
 
+import hex.CreateFrame;
 import water.*;
 import water.api.FrameSplitPage;
 import water.fvec.Frame;
 import water.fvec.RebalanceDataSet;
 import water.util.Log;
+
+import java.util.Random;
 
 /**
  * Loads all datasets from smalldata folder for testing purposes
@@ -13,7 +16,7 @@ public class LoadDatasets extends TestUtil {
   private static class MyJob extends Job { @Override public void execImpl() { new LoadDatasets().load(); } }
   public static void main(String[] args) throws Exception {
     Class job = MyJob.class;
-    samples.launchers.CloudLocal.launch(job, 1);
+    samples.launchers.CloudLocal.launch(job, 3);
 //    samples.launchers.CloudProcess.launch(job, 2);
     //samples.launchers.CloudConnect.launch(job, "localhost:54321");
 //    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162", "192.168.1.163", "192.168.1.164");
@@ -24,13 +27,17 @@ public class LoadDatasets extends TestUtil {
   void load() {
     // load these first
     String[] files = new String[]{
-            "smalldata/logreg/prostate.csv",
+//            "smalldata/../../Higgs/HIGGS.csv",
+//            "smalldata/../../Higgs/HIGGS_train.csv",
+//            "smalldata/../../Higgs/HIGGS_test.csv",
+//            "smalldata/../../home-0xdiag-datasets/standard/covtype.data",
+//            "smalldata/logreg/prostate.csv",
             "smalldata/covtype/covtype.20k.data",
-            "smalldata/covtype/covtype.altered.gz",
-            "smalldata/weather.csv",
-            "smalldata/iris/iris.csv",
-            "smalldata/mnist/train.csv.gz",
-            "smalldata/mnist/test.csv.gz",
+//            "smalldata/covtype/covtype.altered.gz",
+//            "smalldata/weather.csv",
+//            "smalldata/iris/iris.csv",
+//            "smalldata/mnist/train.csv.gz",
+//            "smalldata/mnist/test.csv.gz",
     };
 
     //for i in `find smalldata -type f`; do echo \"$i\",; done
@@ -411,6 +418,24 @@ public class LoadDatasets extends TestUtil {
     };
     for (String f : files) { TestUtil.parseFromH2OFolder(f); }
 
+//    long seed = new Random().nextLong();
+//    Log.info("seed: " + seed);
+//    CreateFrame cf = new CreateFrame();
+//    cf.key = "random";
+//    cf.rows = (long)(new Random(seed).nextFloat()*100000f + 1);
+//    cf.cols = (int)(new Random(seed).nextFloat()*1000f + 1);
+//    cf.categorical_fraction = 0;
+//    cf.integer_fraction = new Random(seed).nextFloat();
+//    cf.integer_range = 1 + new Random(seed).nextInt(5);
+//    cf.value = 0;
+//    cf.randomize = true;
+//    cf.missing_fraction = new Random(seed).nextFloat();
+//    cf.factors = 2;
+//    cf.response_factors = 1;
+//    cf.positive_response = true;
+//    cf.seed = seed;
+//    cf.serve();
+
 //    for (String f : files2) { TestUtil.parseFromH2OFolder(f); }
 //    reBalanceFrames();
 //    testTrainSplitFrames();
@@ -443,12 +468,14 @@ public class LoadDatasets extends TestUtil {
       if (val == null || !val.isFrame()) continue;
       final Frame fr = val.get();
       if (!fr._key.toString().contains("_part")) {
-        Log.info("Splitting frame under key '" + fr._key.toString() + "' into 75%/25% train/test splits.");
         try {
           FrameSplitPage fsp = new FrameSplitPage();
           fsp.source = fr;
-          fsp.ratios = new float[]{0.75f};
-          fsp.split_keys = null;
+          long seed = new Random().nextLong();
+          Log.info("seed: " + seed);
+          fsp.ratios = new float[]{0.001f + new Random(seed).nextFloat()*0.99f};
+          Log.info("Splitting frame under key '" + fr._key.toString() + "' into " + fsp.ratios[0] + ".");
+          fsp.split_keys = new Key[]{Key.make(), Key.make()};
           fsp.split_rows = null;
           fsp.split_ratios = null;
           fsp.invoke();
