@@ -91,6 +91,7 @@ public class LBFGS {
     System.out.println("val = " + currentIter._val.toString());
   }
 
+  // The two-loop search direction algo, see p178 of Numerical Optimization, Jorge Nocedal, Stephen j Wright second edition for detail.
   public static double[] getSearchDirection(int k, double[] q) {
     double[] alpha = new double[m]; // alpha[i] is actually alpha[-i+k]
     for (int i = m-1 ; i >= 0; i--) {
@@ -109,12 +110,14 @@ public class LBFGS {
     return MatrixUtils.scalarProduct(-1, r);
   }
 
+  // TODO: needs to be integrated with linesearchIteration.
   public static double lineSearch() {
     double stepSize = 0.1;
 
     return stepSize;
   }
 
+  // some scaling parameter needed for the search direction.
   public static double rho(int i) {
     int m = LBFGS.m;
     assert 0<=i && m>i: "Index out of range getting rho";
@@ -168,7 +171,7 @@ public class LBFGS {
     Vec response = f.vec("IsDepDelayed_REC");
     int nResponses = 1;
     boolean useAllFactors = true;
-    GLMParams params = new GLMParams(GLMParams.Family.gaussian);
+    GLMParams params = new GLMParams(GLMParams.Family.binomial);
 
     f = DataInfo.prepareFrame(f, response, ignored_cols, toEnum, dropConstantCols);
     DataInfo dinfo = new DataInfo(f, nResponses, useAllFactors, DataInfo.TransformType.NORMALIZE);
