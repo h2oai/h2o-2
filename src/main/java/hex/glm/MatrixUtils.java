@@ -55,4 +55,14 @@ public class MatrixUtils {
     return result;
   }
 
+  public static double max(double[] x) {
+    double result = Double.NEGATIVE_INFINITY;
+    for (int i = 0; i < x.length; i++) {
+      if (x[i] > result) {
+        result = x[i];
+      }
+    }
+    return result;
+  }
+
 }

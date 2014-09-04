@@ -55,7 +55,7 @@ public class LBFGS {
 
     // LBFGS impl goes here
     int iter = 0;
-    double alpha = 0; // TODO
+    double alpha = 0;
     double lambda = 10;
     GLMIterationTask currentIter = null;
     int k = 0;
@@ -81,7 +81,7 @@ public class LBFGS {
       double obj = val.residualDeviance();
       g_cur = currentIter.gradient(alpha,lambda);
       if (k>m-1) { y.remove(0); } y.add(MatrixUtils.minus(g_cur, g_old));
-      Log.info("After Iteration:  "+k+"  val=  "+currentIter._val.toString());
+      Log.info("After Iteration:  "+k+"  val=  "+currentIter._val.toString()+ "Max component of gradient is:  "+MatrixUtils.max(g_cur));
       x_old = x_cur;
       g_old = g_cur;
       k++;
@@ -103,14 +103,14 @@ public class LBFGS {
     for (int i = 0; i < m; i++) {
       if (k-m+i >= 0 && i<k) {
         double b = rho(i) * MatrixUtils.innerProduct(y.get(i),r);
-        r = MatrixUtils.add(r, MatrixUtils.scalarProduct(b-alpha[i], s.get(i)));
+        r = MatrixUtils.add(r, MatrixUtils.scalarProduct(alpha[i]-b, s.get(i)));
       }
     }
     return MatrixUtils.scalarProduct(-1, r);
   }
 
   public static double lineSearch() {
-    double stepSize = 1;
+    double stepSize = 0.1;
 
     return stepSize;
   }
