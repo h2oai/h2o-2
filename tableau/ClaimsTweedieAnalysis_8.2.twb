@@ -1,0 +1,1569 @@
+<?xml version='1.0' encoding='utf-8' ?>
+
+<workbook source-platform='win' version='8.3' xmlns:user='http://www.tableausoftware.com/xml/user'>
+  <!-- build 8200.14.0819.2015                                -->
+  <preferences>
+  </preferences>
+  <datasources>
+    <datasource hasconnection='false' inline='true' name='Parameters' version='8.3'>
+      <aliases enabled='yes' />
+      <column caption='H2O Port' datatype='integer' name='[Parameter 1]' param-domain-type='any' role='measure' type='quantitative' value='54321'>
+        <calculation class='tableau' formula='54321' />
+      </column>
+      <column caption='H2O IP' datatype='string' name='[Parameter 2]' param-domain-type='any' role='measure' type='nominal' value='&quot;localhost&quot;'>
+        <calculation class='tableau' formula='&quot;localhost&quot;' />
+      </column>
+      <column caption='H2O Max Memory Size' datatype='string' name='[Parameter 3]' param-domain-type='any' role='measure' type='nominal' value='&quot;4g&quot;'>
+        <calculation class='tableau' formula='&quot;4g&quot;' />
+      </column>
+      <column caption='Claims Data File' datatype='string' name='[Parameter 4]' param-domain-type='any' role='measure' type='nominal' value='&quot;d:\\claimsdata.csv&quot;'>
+        <calculation class='tableau' formula='&quot;d:\claimsdata.csv&quot;' />
+      </column>
+    </datasource>
+    <datasource caption='claims_coefficients' inline='true' name='textscan.41886.636795671293' version='8.3'>
+      <connection class='textscan' directory='D:/' filename='claims_coefficients.csv'>
+        <relation name='claims_coefficients#csv' table='[claims_coefficients#csv]' type='table'>
+          <columns character-set='UTF-8' header='yes' locale='en_US'>
+            <column datatype='string' name='Coefficients' ordinal='0' />
+          </columns>
+        </relation>
+        <metadata-records>
+          <metadata-record class='column'>
+            <remote-name>Coefficients</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[Coefficients]</local-name>
+            <parent-name>[claims_coefficients#csv]</parent-name>
+            <remote-alias>Coefficients</remote-alias>
+            <ordinal>0</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <scale>1</scale>
+            <width>1073741823</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='LEN_RUS' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteCollation'>&quot;en_US&quot;</attribute>
+              <attribute datatype='string' name='DebugRemoteMetadata (compression)'>&quot;heap&quot;</attribute>
+              <attribute datatype='integer' name='DebugRemoteMetadata (size)'>4294967292</attribute>
+              <attribute datatype='integer' name='DebugRemoteMetadata (storagewidth)'>8</attribute>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;str&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='capability'>
+            <remote-name></remote-name>
+            <remote-type>0</remote-type>
+            <parent-name>[claims_coefficients#csv]</parent-name>
+            <remote-alias></remote-alias>
+            <aggregation>Count</aggregation>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='character-set'>&quot;UTF-8&quot;</attribute>
+              <attribute datatype='string' name='header-row'>&quot;true&quot;</attribute>
+              <attribute datatype='string' name='locale'>&quot;en_US&quot;</attribute>
+              <attribute datatype='string' name='single-char'>&quot;&quot;</attribute>
+            </attributes>
+          </metadata-record>
+        </metadata-records>
+      </connection>
+      <aliases enabled='yes' />
+      <column caption='Coefficient Name' datatype='string' name='[Coefficients]' role='dimension' type='nominal'>
+      </column>
+      <column caption='Normalized Value' datatype='real' name='[Number of Claims Filed (copy) 1]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='SCRIPT_REAL(&#13;&#10;&apos;&#13;&#10;tweedie.vi[.arg1]&#13;&#10;&apos;,&#13;&#10;MAX([Coefficients]))' scope-isolation='false'>
+          <table-calc ordering-type='Rows' />
+        </calculation>
+      </column>
+      <column datatype='integer' name='[Number of Records]' role='measure' type='quantitative' user:auto-column='numrec'>
+        <calculation class='tableau' formula='1' />
+      </column>
+      <layout dim-ordering='alphabetic' dim-percentage='0.472789' measure-ordering='alphabetic' measure-percentage='0.309524' show-structure='true' />
+      <semantic-values>
+        <semantic-value key='[Country].[Name]' value='&quot;United States&quot;' />
+      </semantic-values>
+    </datasource>
+    <datasource caption='claims_metadata' inline='true' name='textscan.41885.651995601853' version='8.3'>
+      <connection class='textscan' directory='D:/' filename='claims_losscodes.csv'>
+        <relation name='claims_metadata#csv' table='[claims_metadata#csv]' type='table'>
+          <columns character-set='UTF-8' header='yes' locale='en_US' separator=','>
+            <column datatype='date' name='MonthlyDate' ordinal='0' />
+            <column datatype='string' name='StateName' ordinal='1' />
+            <column datatype='string' name='LossCode' ordinal='2' />
+          </columns>
+        </relation>
+        <metadata-records>
+          <metadata-record class='column'>
+            <remote-name>MonthlyDate</remote-name>
+            <remote-type>133</remote-type>
+            <local-name>[MonthlyDate]</local-name>
+            <parent-name>[claims_metadata#csv]</parent-name>
+            <remote-alias>MonthlyDate</remote-alias>
+            <ordinal>0</ordinal>
+            <local-type>date</local-type>
+            <aggregation>Year</aggregation>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='integer' name='DebugRemoteMetadata (size)'>4</attribute>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;date&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>StateName</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[StateName]</local-name>
+            <parent-name>[claims_metadata#csv]</parent-name>
+            <remote-alias>StateName</remote-alias>
+            <ordinal>1</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <scale>1</scale>
+            <width>1073741823</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteCollation'>&quot;binary&quot;</attribute>
+              <attribute datatype='string' name='DebugRemoteMetadata (compression)'>&quot;heap&quot;</attribute>
+              <attribute datatype='integer' name='DebugRemoteMetadata (size)'>4294967292</attribute>
+              <attribute datatype='integer' name='DebugRemoteMetadata (storagewidth)'>8</attribute>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;str&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>LossCode</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[LossCode]</local-name>
+            <parent-name>[claims_metadata#csv]</parent-name>
+            <remote-alias>LossCode</remote-alias>
+            <ordinal>2</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <scale>1</scale>
+            <width>1073741823</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteCollation'>&quot;binary&quot;</attribute>
+              <attribute datatype='string' name='DebugRemoteMetadata (compression)'>&quot;heap&quot;</attribute>
+              <attribute datatype='integer' name='DebugRemoteMetadata (size)'>4294967292</attribute>
+              <attribute datatype='integer' name='DebugRemoteMetadata (storagewidth)'>8</attribute>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;str&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='capability'>
+            <remote-name></remote-name>
+            <remote-type>0</remote-type>
+            <parent-name>[claims_metadata#csv]</parent-name>
+            <remote-alias></remote-alias>
+            <aggregation>Count</aggregation>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='character-set'>&quot;UTF-8&quot;</attribute>
+              <attribute datatype='string' name='field-delimiter'>&quot;,&quot;</attribute>
+              <attribute datatype='string' name='header-row'>&quot;true&quot;</attribute>
+              <attribute datatype='string' name='locale'>&quot;en_US&quot;</attribute>
+              <attribute datatype='string' name='single-char'>&quot;&quot;</attribute>
+            </attributes>
+          </metadata-record>
+        </metadata-records>
+      </connection>
+      <aliases enabled='yes' />
+      <column caption='H2O Initialization' datatype='boolean' name='[Calculation_1010902082708389]' role='measure' type='nominal'>
+        <calculation class='tableau' formula='SCRIPT_BOOL(&#13;&#10;&apos;&#13;&#10;myh2oCleaner &lt;- function(pattern = &quot;Last.value.&quot;)&#13;&#10;{&#13;&#10;  keys &lt;- h2o.ls(h2oHandle, pattern = pattern)$Key&#13;&#10;  if (!is.null(keys))&#13;&#10;    h2o.rm(h2oHandle, keys)&#13;&#10;  invisible(keys)&#13;&#10;}&#13;&#10;&#13;&#10;if (!exists(&quot;h2oHandle&quot;, globalenv()))&#13;&#10;{&#13;&#10;  library(h2o)&#13;&#10;  h2oHandle &lt;- h2o.init(ip = .arg1, port = .arg2, max_mem_size = .arg3)&#13;&#10;}&#13;&#10;&#13;&#10;if (length(h2o.ls(h2oHandle, pattern = &quot;claims.dat&quot;)) == 0L)&#13;&#10;{&#13;&#10;  claims.dat &lt;- h2o.importFile(h2oHandle, path = .arg4, key = &quot;claims.dat&quot;)&#13;&#10;&#13;&#10;  # Create indicator variables for claim payout percentages&#13;&#10;  invisible(&#13;&#10;    h2o.exec(claims.dat$ClaimPaidRatio &lt;- claims.dat$TotalPaid / claims.dat$TotalClaim)&#13;&#10;  )&#13;&#10;&#13;&#10;  payoutThreshold &lt;- 1&#13;&#10;  invisible(&#13;&#10;    h2o.exec(claims.dat$HighClaimPaid &lt;- claims.dat$ClaimPaidRatio &gt; payoutThreshold)&#13;&#10;  )&#13;&#10;&#13;&#10;  # Create log transformed variables&#13;&#10;  invisible(&#13;&#10;    h2o.exec(claims.dat$logDeduct &lt;- log(claims.dat$Deduct + 1))&#13;&#10;  )&#13;&#10;&#13;&#10;  invisible(&#13;&#10;    h2o.exec(claims.dat$logFees &lt;- log(claims.dat$Fees + 1))&#13;&#10;  )&#13;&#10;&#13;&#10;  invisible(&#13;&#10;    h2o.exec(claims.dat$logTotalClaim &lt;- log(claims.dat$TotalClaim + 1))&#13;&#10;  )&#13;&#10;&#13;&#10;  invisible(&#13;&#10;    h2o.exec(claims.dat$NonNegPaid &lt;- ifelse(claims.dat$TotalPaid &lt; 0,&#13;&#10;                                             0, claims.dat$TotalPaid))&#13;&#10;  )&#13;&#10;&#13;&#10;  invisible(&#13;&#10;    h2o.exec(claims.dat$logTotalPaid &lt;- log(claims.dat$NonNegPaid + 1))&#13;&#10;  )&#13;&#10;&#13;&#10;  # Convert some numeric columns to factor&#13;&#10;  for (j in c(&quot;CallCenterPostalCode&quot;))&#13;&#10;    claims.dat[[j]] &lt;- as.factor(claims.dat[[j]])&#13;&#10;&#13;&#10;  myh2oCleaner()&#13;&#10;&#13;&#10;  # Limit analysis to &quot;Claim Complete&quot;&#13;&#10;  completed.claims.dat &lt;-&#13;&#10;    claims.dat[claims.dat$ResponseStatus == &quot;Claim Complete&quot;, ]&#13;&#10;  completed.claims.dat &lt;-&#13;&#10;    h2o.assign(completed.claims.dat, &quot;completed.claims.dat&quot;)&#13;&#10;  myh2oCleaner()&#13;&#10;&#13;&#10;  xvars &lt;- c(&quot;CallCenterPostalCode&quot;, &quot;Demographics_AgeGroup&quot;,&#13;&#10;             &quot;Demographics_Gender&quot;, &quot;FirstClaim&quot;, &quot;INStype&quot;,&#13;&#10;             &quot;LossCode&quot;, &quot;MonthlyDate&quot;, &quot;SourceCode&quot;,&#13;&#10;             &quot;StateName&quot;, &quot;logDeduct&quot;, &quot;logFees&quot;,&#13;&#10;             &quot;logTotalClaim&quot;)&#13;&#10;&#13;&#10;  tweedie.final &lt;- h2o.glm(xvars, &quot;NonNegPaid&quot;, completed.claims.dat,&#13;&#10;                           key = &quot;tweedie.final&quot;, family = &quot;tweedie&quot;,&#13;&#10;                           tweedie.p = 1.75, alpha = 0, lambda = 12,&#13;&#10;                           variable_importances = TRUE)&#13;&#10;&#13;&#10;  tweedie.vi &lt;- sort(abs(tweedie.final@model$normalized_coefficients), decreasing = TRUE)&#13;&#10;  tweedie.vi &lt;- tweedie.vi[names(tweedie.vi) != &quot;Intercept&quot;]&#13;&#10;&#13;&#10;  myh2oCleaner(pattern = &quot;GLM2Job__&quot;)&#13;&#10;&#13;&#10;  completed.claims.dat$predicted &lt;-&#13;&#10;    h2o.predict(tweedie.final,  completed.claims.dat)&#13;&#10;&#13;&#10;  myh2oCleaner(pattern = &quot;GLM2Predict_&quot;)&#13;&#10;&#13;&#10;  library(tweedie)&#13;&#10;  completed.claims.dat$deviance &lt;-&#13;&#10;    tweedie.dev(y  = completed.claims.dat$NonNegPaid,&#13;&#10;                mu = completed.claims.dat$predicted,&#13;&#10;                power = 1.75)&#13;&#10;&#13;&#10;  claims.tweediedev.dat &lt;-&#13;&#10;    completed.claims.dat[!is.na(completed.claims.dat$deviance), ]&#13;&#10;  claims.tweediedev.dat &lt;-&#13;&#10;    h2o.assign(claims.tweediedev.dat, &quot;claims.tweediedev.dat&quot;)&#13;&#10;  myh2oCleaner()&#13;&#10;&#13;&#10;  devAggrFun &lt;- function(x)&#13;&#10;  {&#13;&#10;    cbind(N = nrow(x),&#13;&#10;          SumTotalPaid = sum(x$TotalPaid),&#13;&#10;          SumPredicted = sum(x$predicted),&#13;&#10;          MinDeviance  = min(x$deviance),&#13;&#10;          MeanDeviance = mean(x$deviance),&#13;&#10;          MaxDeviance  = max(x$deviance))&#13;&#10;  }&#13;&#10;  h2o.addFunction(h2oHandle, devAggrFun)&#13;&#10;&#13;&#10;  devAggr &lt;-&#13;&#10;    as.data.frame(h2o.ddply(claims.tweediedev.dat,&#13;&#10;                            c(&quot;MonthlyDate&quot;, &quot;StateName&quot;, &quot;LossCode&quot;),&#13;&#10;                            devAggrFun))&#13;&#10;  devAggr[[1L]] &lt;-&#13;&#10;    as.Date(as.character(devAggr[[1L]]), &quot;%m/%d/%Y&quot;)&#13;&#10;  devAggr[[4L]] &lt;- as.integer(devAggr[[4L]])&#13;&#10;  colnames(devAggr)[-(1:3)] &lt;-&#13;&#10;    c(&quot;N&quot;, &quot;SumTotalPaid&quot;, &quot;SumPredicted&quot;,&#13;&#10;      &quot;MinDeviance&quot;, &quot;MeanDeviance&quot;, &quot;MaxDeviance&quot;)&#13;&#10;  print(head(devAggr, 10))&#13;&#10;&#13;&#10;  myh2oCleaner()&#13;&#10;}&#13;&#10;&#13;&#10;TRUE&#13;&#10;&apos;,&#13;&#10;[Parameters].[Parameter 2], [Parameters].[Parameter 1], [Parameters].[Parameter 3], [Parameters].[Parameter 4])' scope-isolation='false'>
+          <table-calc ordering-type='Rows' />
+        </calculation>
+      </column>
+      <column caption='Loss Code' datatype='string' name='[LossCode]' role='dimension' type='nominal'>
+      </column>
+      <column caption='Min Deviance' datatype='real' name='[Max Deviance (copy 2)]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='SCRIPT_REAL(&#13;&#10;&apos;&#13;&#10;args &lt;- data.frame(MonthlyDate =  as.Date(.arg1, &quot;%Y-%m-%d&quot;),&#13;&#10;                   StateName   = .arg2,&#13;&#10;                   LossCode    = .arg3,&#13;&#10;                   stringsAsFactors = FALSE)&#13;&#10;ans &lt;- rep(NA_real_, nrow(args))&#13;&#10;for (i in seq_along(ans))&#13;&#10;{&#13;&#10;  val &lt;- &#13;&#10;    subset(devAggr,&#13;&#10;           MonthlyDate == args[i, 1L] &amp; StateName == args[i, 2L] &amp; LossCode == args[i, 3L],&#13;&#10;           &quot;MinDeviance&quot;,&#13;&#10;           drop = TRUE)&#13;&#10;  if (length(val) == 1L)&#13;&#10;    ans[i] &lt;- val&#13;&#10;}&#13;&#10;ans&#13;&#10;&apos;,&#13;&#10;MAX([MonthlyDate]), MAX([StateName]), MAX([LossCode]))' scope-isolation='false'>
+          <table-calc ordering-type='Rows' />
+        </calculation>
+      </column>
+      <column caption='Number of Completed Claims' datatype='integer' name='[Max Deviance (copy)]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='SCRIPT_INT(&#13;&#10;&apos;&#13;&#10;args &lt;- data.frame(MonthlyDate =  as.Date(.arg1, &quot;%Y-%m-%d&quot;),&#13;&#10;                   StateName   = .arg2,&#13;&#10;                   LossCode    = .arg3,&#13;&#10;                   stringsAsFactors = FALSE)&#13;&#10;ans &lt;- rep(NA_integer_, nrow(args))&#13;&#10;for (i in seq_along(ans))&#13;&#10;{&#13;&#10;  val &lt;- &#13;&#10;    subset(devAggr,&#13;&#10;           MonthlyDate == args[i, 1L] &amp; StateName == args[i, 2L] &amp; LossCode == args[i, 3L],&#13;&#10;           &quot;N&quot;,&#13;&#10;           drop = TRUE)&#13;&#10;  if (length(val) == 1L)&#13;&#10;    ans[i] &lt;- val&#13;&#10;}&#13;&#10;ans&#13;&#10;&apos;,&#13;&#10;MAX([MonthlyDate]), MAX([StateName]), MAX([LossCode]))' scope-isolation='false'>
+          <table-calc ordering-type='Rows' />
+        </calculation>
+      </column>
+      <column caption='Actual Payout' datatype='real' name='[Mean Deviance (copy)]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='SCRIPT_REAL(&#13;&#10;&apos;&#13;&#10;args &lt;- data.frame(MonthlyDate =  as.Date(.arg1, &quot;%Y-%m-%d&quot;),&#13;&#10;                   StateName   = .arg2,&#13;&#10;                   LossCode    = .arg3,&#13;&#10;                   stringsAsFactors = FALSE)&#13;&#10;ans &lt;- rep(NA_real_, nrow(args))&#13;&#10;for (i in seq_along(ans))&#13;&#10;{&#13;&#10;  val &lt;- &#13;&#10;    subset(devAggr,&#13;&#10;           MonthlyDate == args[i, 1L] &amp; StateName == args[i, 2L] &amp; LossCode == args[i, 3L],&#13;&#10;           &quot;SumTotalPaid&quot;,&#13;&#10;           drop = TRUE)&#13;&#10;  if (length(val) == 1L)&#13;&#10;    ans[i] &lt;- val&#13;&#10;}&#13;&#10;ans&#13;&#10;&apos;,&#13;&#10;MAX([MonthlyDate]), MAX([StateName]), MAX([LossCode]))' scope-isolation='false'>
+          <table-calc ordering-type='Rows' />
+        </calculation>
+      </column>
+      <column caption='Claim Date' datatype='date' name='[MonthlyDate]' role='dimension' type='ordinal'>
+      </column>
+      <column caption='Max Deviance' datatype='real' name='[Number of Claims Filed (copy) 1 1]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='SCRIPT_REAL(&#13;&#10;&apos;&#13;&#10;args &lt;- data.frame(MonthlyDate =  as.Date(.arg1, &quot;%Y-%m-%d&quot;),&#13;&#10;                   StateName   = .arg2,&#13;&#10;                   LossCode    = .arg3,&#13;&#10;                   stringsAsFactors = FALSE)&#13;&#10;ans &lt;- rep(NA_real_, nrow(args))&#13;&#10;for (i in seq_along(ans))&#13;&#10;{&#13;&#10;  val &lt;- &#13;&#10;    subset(devAggr,&#13;&#10;           MonthlyDate == args[i, 1L] &amp; StateName == args[i, 2L] &amp; LossCode == args[i, 3L],&#13;&#10;           &quot;MaxDeviance&quot;,&#13;&#10;           drop = TRUE)&#13;&#10;  if (length(val) == 1L)&#13;&#10;    ans[i] &lt;- val&#13;&#10;}&#13;&#10;ans&#13;&#10;&apos;,&#13;&#10;MAX([MonthlyDate]), MAX([StateName]), MAX([LossCode]))' scope-isolation='false'>
+          <table-calc ordering-type='Rows' />
+        </calculation>
+      </column>
+      <column caption='Mean Deviance' datatype='real' name='[Number of Claims Filed (copy) 1]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='SCRIPT_REAL(&#13;&#10;&apos;&#13;&#10;args &lt;- data.frame(MonthlyDate =  as.Date(.arg1, &quot;%Y-%m-%d&quot;),&#13;&#10;                   StateName   = .arg2,&#13;&#10;                   LossCode    = .arg3,&#13;&#10;                   stringsAsFactors = FALSE)&#13;&#10;ans &lt;- rep(NA_real_, nrow(args))&#13;&#10;for (i in seq_along(ans))&#13;&#10;{&#13;&#10;  val &lt;- &#13;&#10;    subset(devAggr,&#13;&#10;           MonthlyDate == args[i, 1L] &amp; StateName == args[i, 2L] &amp; LossCode == args[i, 3L],&#13;&#10;           &quot;MeanDeviance&quot;,&#13;&#10;           drop = TRUE)&#13;&#10;  if (length(val) == 1L)&#13;&#10;    ans[i] &lt;- val&#13;&#10;}&#13;&#10;ans&#13;&#10;&apos;,&#13;&#10;MAX([MonthlyDate]), MAX([StateName]), MAX([LossCode]))' scope-isolation='false'>
+          <table-calc ordering-type='Rows' />
+        </calculation>
+      </column>
+      <column datatype='integer' name='[Number of Records]' role='measure' type='quantitative' user:auto-column='numrec'>
+        <calculation class='tableau' formula='1' />
+      </column>
+      <column caption='State Name' datatype='string' name='[StateName]' role='dimension' semantic-role='[State].[Name]' type='nominal'>
+      </column>
+      <column caption='Predicted Payout' datatype='real' name='[Sum Total Paid (copy)]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='SCRIPT_REAL(&#13;&#10;&apos;&#13;&#10;args &lt;- data.frame(MonthlyDate =  as.Date(.arg1, &quot;%Y-%m-%d&quot;),&#13;&#10;                   StateName   = .arg2,&#13;&#10;                   LossCode    = .arg3,&#13;&#10;                   stringsAsFactors = FALSE)&#13;&#10;ans &lt;- rep(NA_real_, nrow(args))&#13;&#10;for (i in seq_along(ans))&#13;&#10;{&#13;&#10;  val &lt;- &#13;&#10;    subset(devAggr,&#13;&#10;           MonthlyDate == args[i, 1L] &amp; StateName == args[i, 2L] &amp; LossCode == args[i, 3L],&#13;&#10;           &quot;SumPredicted&quot;,&#13;&#10;           drop = TRUE)&#13;&#10;  if (length(val) == 1L)&#13;&#10;    ans[i] &lt;- val&#13;&#10;}&#13;&#10;ans&#13;&#10;&apos;,&#13;&#10;MAX([MonthlyDate]), MAX([StateName]), MAX([LossCode]))' scope-isolation='false'>
+          <table-calc ordering-type='Rows' />
+        </calculation>
+      </column>
+      <column-instance column='[LossCode]' derivation='Attribute' name='[attr:LossCode:nk]' pivot='key' type='nominal' />
+      <column-instance column='[LossCode]' derivation='None' name='[none:LossCode:nk]' pivot='key' type='nominal' />
+      <column-instance column='[Mean Deviance (copy)]' derivation='User' name='[usr:Mean Deviance (copy):qk]' pivot='key' type='quantitative'>
+        <table-calc ordering-type='Rows' />
+      </column-instance>
+      <column-instance column='[Sum Total Paid (copy)]' derivation='User' name='[usr:Sum Total Paid (copy):qk]' pivot='key' type='quantitative'>
+        <table-calc ordering-type='Rows' />
+      </column-instance>
+      <layout dim-ordering='alphabetic' dim-percentage='0.472789' measure-ordering='alphabetic' measure-percentage='0.282313' show-structure='true' />
+      <style>
+        <style-rule element='mark'>
+          <encoding attr='color' field='[attr:LossCode:nk]' type='palette'>
+            <map to='#17becf'>
+              <bucket>&quot;medlr&quot;</bucket>
+            </map>
+            <map to='#1f77b4'>
+              <bucket>&quot;accer&quot;</bucket>
+            </map>
+            <map to='#1f77b4'>
+              <bucket>&quot;nglhr&quot;</bucket>
+            </map>
+            <map to='#2ca02c'>
+              <bucket>&quot;dep&quot;</bucket>
+            </map>
+            <map to='#2ca02c'>
+              <bucket>&quot;pulb&quot;</bucket>
+            </map>
+            <map to='#7f7f7f'>
+              <bucket>&quot;hemn&quot;</bucket>
+            </map>
+            <map to='#8c564b'>
+              <bucket>&quot;flr&quot;</bucket>
+            </map>
+            <map to='#8c564b'>
+              <bucket>&quot;tort&quot;</bucket>
+            </map>
+            <map to='#9467bd'>
+              <bucket>&quot;er-mt&quot;</bucket>
+            </map>
+            <map to='#9467bd'>
+              <bucket>&quot;suit&quot;</bucket>
+            </map>
+            <map to='#98df8a'>
+              <bucket>&quot;emt&quot;</bucket>
+            </map>
+            <map to='#98df8a'>
+              <bucket>&quot;pulhr&quot;</bucket>
+            </map>
+            <map to='#9edae5'>
+              <bucket>&quot;medpa&quot;</bucket>
+            </map>
+            <map to='#aec7e8'>
+              <bucket>&quot;carr&quot;</bucket>
+            </map>
+            <map to='#aec7e8'>
+              <bucket>&quot;nurf&quot;</bucket>
+            </map>
+            <map to='#bcbd22'>
+              <bucket>&quot;inf&quot;</bucket>
+            </map>
+            <map to='#c49c94'>
+              <bucket>&quot;flrf&quot;</bucket>
+            </map>
+            <map to='#c5b0d5'>
+              <bucket>&quot;er-x&quot;</bucket>
+            </map>
+            <map to='#c5b0d5'>
+              <bucket>&quot;surmp&quot;</bucket>
+            </map>
+            <map to='#c7c7c7'>
+              <bucket>&quot;impay&quot;</bucket>
+            </map>
+            <map to='#d62728'>
+              <bucket>&quot;er-&quot;</bucket>
+            </map>
+            <map to='#d62728'>
+              <bucket>&quot;revm&quot;</bucket>
+            </map>
+            <map to='#dbdb8d'>
+              <bucket>&quot;medh&quot;</bucket>
+            </map>
+            <map to='#e377c2'>
+              <bucket>&quot;flron&quot;</bucket>
+            </map>
+            <map to='#f7b6d2'>
+              <bucket>&quot;flrst&quot;</bucket>
+            </map>
+            <map to='#ff7f0e'>
+              <bucket>&quot;cheh&quot;</bucket>
+            </map>
+            <map to='#ff7f0e'>
+              <bucket>&quot;obgor&quot;</bucket>
+            </map>
+            <map to='#ff9896'>
+              <bucket>&quot;er-ag&quot;</bucket>
+            </map>
+            <map to='#ff9896'>
+              <bucket>&quot;sui&quot;</bucket>
+            </map>
+            <map to='#ffbb78'>
+              <bucket>&quot;dc-&quot;</bucket>
+            </map>
+            <map to='#ffbb78'>
+              <bucket>&quot;oth&quot;</bucket>
+            </map>
+          </encoding>
+          <encoding attr='color' field='[none:LossCode:nk]' type='palette'>
+            <map to='#17becf'>
+              <bucket>&quot;medlr&quot;</bucket>
+            </map>
+            <map to='#1f77b4'>
+              <bucket>&quot;accer&quot;</bucket>
+            </map>
+            <map to='#1f77b4'>
+              <bucket>&quot;nglhr&quot;</bucket>
+            </map>
+            <map to='#2ca02c'>
+              <bucket>&quot;dep&quot;</bucket>
+            </map>
+            <map to='#2ca02c'>
+              <bucket>&quot;pulb&quot;</bucket>
+            </map>
+            <map to='#7f7f7f'>
+              <bucket>&quot;hemn&quot;</bucket>
+            </map>
+            <map to='#8c564b'>
+              <bucket>&quot;flr&quot;</bucket>
+            </map>
+            <map to='#8c564b'>
+              <bucket>&quot;tort&quot;</bucket>
+            </map>
+            <map to='#9467bd'>
+              <bucket>&quot;er-mt&quot;</bucket>
+            </map>
+            <map to='#9467bd'>
+              <bucket>&quot;suit&quot;</bucket>
+            </map>
+            <map to='#98df8a'>
+              <bucket>&quot;emt&quot;</bucket>
+            </map>
+            <map to='#98df8a'>
+              <bucket>&quot;pulhr&quot;</bucket>
+            </map>
+            <map to='#9edae5'>
+              <bucket>&quot;medpa&quot;</bucket>
+            </map>
+            <map to='#aec7e8'>
+              <bucket>&quot;carr&quot;</bucket>
+            </map>
+            <map to='#aec7e8'>
+              <bucket>&quot;nurf&quot;</bucket>
+            </map>
+            <map to='#bcbd22'>
+              <bucket>&quot;inf&quot;</bucket>
+            </map>
+            <map to='#c49c94'>
+              <bucket>&quot;flrf&quot;</bucket>
+            </map>
+            <map to='#c5b0d5'>
+              <bucket>&quot;er-x&quot;</bucket>
+            </map>
+            <map to='#c5b0d5'>
+              <bucket>&quot;surmp&quot;</bucket>
+            </map>
+            <map to='#c7c7c7'>
+              <bucket>&quot;impay&quot;</bucket>
+            </map>
+            <map to='#d62728'>
+              <bucket>&quot;er-&quot;</bucket>
+            </map>
+            <map to='#d62728'>
+              <bucket>&quot;revm&quot;</bucket>
+            </map>
+            <map to='#dbdb8d'>
+              <bucket>&quot;medh&quot;</bucket>
+            </map>
+            <map to='#e377c2'>
+              <bucket>&quot;flron&quot;</bucket>
+            </map>
+            <map to='#f7b6d2'>
+              <bucket>&quot;flrst&quot;</bucket>
+            </map>
+            <map to='#ff7f0e'>
+              <bucket>&quot;cheh&quot;</bucket>
+            </map>
+            <map to='#ff7f0e'>
+              <bucket>&quot;obgor&quot;</bucket>
+            </map>
+            <map to='#ff9896'>
+              <bucket>&quot;er-ag&quot;</bucket>
+            </map>
+            <map to='#ff9896'>
+              <bucket>&quot;sui&quot;</bucket>
+            </map>
+            <map to='#ffbb78'>
+              <bucket>&quot;dc-&quot;</bucket>
+            </map>
+            <map to='#ffbb78'>
+              <bucket>&quot;oth&quot;</bucket>
+            </map>
+          </encoding>
+          <encoding attr='color' field='[:Measure Names]' type='palette'>
+            <map to='#1f77b4'>
+              <bucket>&quot;[textscan.41885.651995601853].[usr:Sum Total Paid (copy):qk]&quot;</bucket>
+            </map>
+            <map to='#d62728'>
+              <bucket>&quot;[textscan.41885.651995601853].[usr:Mean Deviance (copy):qk]&quot;</bucket>
+            </map>
+          </encoding>
+        </style-rule>
+      </style>
+      <semantic-values>
+        <semantic-value key='[Country].[Name]' value='&quot;United States&quot;' />
+      </semantic-values>
+      <datasource-dependencies datasource='Parameters'>
+        <column caption='H2O Port' datatype='integer' name='[Parameter 1]' param-domain-type='any' role='measure' type='quantitative' value='54321'>
+          <calculation class='tableau' formula='54321' />
+        </column>
+        <column caption='H2O IP' datatype='string' name='[Parameter 2]' param-domain-type='any' role='measure' type='nominal' value='&quot;localhost&quot;'>
+          <calculation class='tableau' formula='&quot;localhost&quot;' />
+        </column>
+        <column caption='H2O Max Memory Size' datatype='string' name='[Parameter 3]' param-domain-type='any' role='measure' type='nominal' value='&quot;4g&quot;'>
+          <calculation class='tableau' formula='&quot;4g&quot;' />
+        </column>
+        <column caption='Claims Data File' datatype='string' name='[Parameter 4]' param-domain-type='any' role='measure' type='nominal' value='&quot;d:\\claimsdata.csv&quot;'>
+          <calculation class='tableau' formula='&quot;d:\claimsdata.csv&quot;' />
+        </column>
+      </datasource-dependencies>
+    </datasource>
+  </datasources>
+  <mapsources>
+    <mapsource name='Tableau' />
+  </mapsources>
+  <worksheets>
+    <worksheet name='Deviance Analysis'>
+      <table>
+        <view>
+          <datasources>
+            <datasource caption='claims_metadata' name='textscan.41885.651995601853' />
+            <datasource name='Parameters' />
+          </datasources>
+          <mapsources>
+            <mapsource name='Tableau' />
+          </mapsources>
+          <datasource-dependencies datasource='textscan.41885.651995601853'>
+            <column caption='H2O Initialization' datatype='boolean' name='[Calculation_1010902082708389]' role='measure' type='nominal'>
+              <calculation class='tableau' formula='SCRIPT_BOOL(&#13;&#10;&apos;&#13;&#10;myh2oCleaner &lt;- function(pattern = &quot;Last.value.&quot;)&#13;&#10;{&#13;&#10;  keys &lt;- h2o.ls(h2oHandle, pattern = pattern)$Key&#13;&#10;  if (!is.null(keys))&#13;&#10;    h2o.rm(h2oHandle, keys)&#13;&#10;  invisible(keys)&#13;&#10;}&#13;&#10;&#13;&#10;if (!exists(&quot;h2oHandle&quot;, globalenv()))&#13;&#10;{&#13;&#10;  library(h2o)&#13;&#10;  h2oHandle &lt;- h2o.init(ip = .arg1, port = .arg2, max_mem_size = .arg3)&#13;&#10;}&#13;&#10;&#13;&#10;if (length(h2o.ls(h2oHandle, pattern = &quot;claims.dat&quot;)) == 0L)&#13;&#10;{&#13;&#10;  claims.dat &lt;- h2o.importFile(h2oHandle, path = .arg4, key = &quot;claims.dat&quot;)&#13;&#10;&#13;&#10;  # Create indicator variables for claim payout percentages&#13;&#10;  invisible(&#13;&#10;    h2o.exec(claims.dat$ClaimPaidRatio &lt;- claims.dat$TotalPaid / claims.dat$TotalClaim)&#13;&#10;  )&#13;&#10;&#13;&#10;  payoutThreshold &lt;- 1&#13;&#10;  invisible(&#13;&#10;    h2o.exec(claims.dat$HighClaimPaid &lt;- claims.dat$ClaimPaidRatio &gt; payoutThreshold)&#13;&#10;  )&#13;&#10;&#13;&#10;  # Create log transformed variables&#13;&#10;  invisible(&#13;&#10;    h2o.exec(claims.dat$logDeduct &lt;- log(claims.dat$Deduct + 1))&#13;&#10;  )&#13;&#10;&#13;&#10;  invisible(&#13;&#10;    h2o.exec(claims.dat$logFees &lt;- log(claims.dat$Fees + 1))&#13;&#10;  )&#13;&#10;&#13;&#10;  invisible(&#13;&#10;    h2o.exec(claims.dat$logTotalClaim &lt;- log(claims.dat$TotalClaim + 1))&#13;&#10;  )&#13;&#10;&#13;&#10;  invisible(&#13;&#10;    h2o.exec(claims.dat$NonNegPaid &lt;- ifelse(claims.dat$TotalPaid &lt; 0,&#13;&#10;                                             0, claims.dat$TotalPaid))&#13;&#10;  )&#13;&#10;&#13;&#10;  invisible(&#13;&#10;    h2o.exec(claims.dat$logTotalPaid &lt;- log(claims.dat$NonNegPaid + 1))&#13;&#10;  )&#13;&#10;&#13;&#10;  # Convert some numeric columns to factor&#13;&#10;  for (j in c(&quot;CallCenterPostalCode&quot;))&#13;&#10;    claims.dat[[j]] &lt;- as.factor(claims.dat[[j]])&#13;&#10;&#13;&#10;  myh2oCleaner()&#13;&#10;&#13;&#10;  # Limit analysis to &quot;Claim Complete&quot;&#13;&#10;  completed.claims.dat &lt;-&#13;&#10;    claims.dat[claims.dat$ResponseStatus == &quot;Claim Complete&quot;, ]&#13;&#10;  completed.claims.dat &lt;-&#13;&#10;    h2o.assign(completed.claims.dat, &quot;completed.claims.dat&quot;)&#13;&#10;  myh2oCleaner()&#13;&#10;&#13;&#10;  xvars &lt;- c(&quot;CallCenterPostalCode&quot;, &quot;Demographics_AgeGroup&quot;,&#13;&#10;             &quot;Demographics_Gender&quot;, &quot;FirstClaim&quot;, &quot;INStype&quot;,&#13;&#10;             &quot;LossCode&quot;, &quot;MonthlyDate&quot;, &quot;SourceCode&quot;,&#13;&#10;             &quot;StateName&quot;, &quot;logDeduct&quot;, &quot;logFees&quot;,&#13;&#10;             &quot;logTotalClaim&quot;)&#13;&#10;&#13;&#10;  tweedie.final &lt;- h2o.glm(xvars, &quot;NonNegPaid&quot;, completed.claims.dat,&#13;&#10;                           key = &quot;tweedie.final&quot;, family = &quot;tweedie&quot;,&#13;&#10;                           tweedie.p = 1.75, alpha = 0, lambda = 12,&#13;&#10;                           variable_importances = TRUE)&#13;&#10;&#13;&#10;  tweedie.vi &lt;- sort(abs(tweedie.final@model$normalized_coefficients), decreasing = TRUE)&#13;&#10;  tweedie.vi &lt;- tweedie.vi[names(tweedie.vi) != &quot;Intercept&quot;]&#13;&#10;&#13;&#10;  myh2oCleaner(pattern = &quot;GLM2Job__&quot;)&#13;&#10;&#13;&#10;  completed.claims.dat$predicted &lt;-&#13;&#10;    h2o.predict(tweedie.final,  completed.claims.dat)&#13;&#10;&#13;&#10;  myh2oCleaner(pattern = &quot;GLM2Predict_&quot;)&#13;&#10;&#13;&#10;  library(tweedie)&#13;&#10;  completed.claims.dat$deviance &lt;-&#13;&#10;    tweedie.dev(y  = completed.claims.dat$NonNegPaid,&#13;&#10;                mu = completed.claims.dat$predicted,&#13;&#10;                power = 1.75)&#13;&#10;&#13;&#10;  claims.tweediedev.dat &lt;-&#13;&#10;    completed.claims.dat[!is.na(completed.claims.dat$deviance), ]&#13;&#10;  claims.tweediedev.dat &lt;-&#13;&#10;    h2o.assign(claims.tweediedev.dat, &quot;claims.tweediedev.dat&quot;)&#13;&#10;  myh2oCleaner()&#13;&#10;&#13;&#10;  devAggrFun &lt;- function(x)&#13;&#10;  {&#13;&#10;    cbind(N = nrow(x),&#13;&#10;          SumTotalPaid = sum(x$TotalPaid),&#13;&#10;          SumPredicted = sum(x$predicted),&#13;&#10;          MinDeviance  = min(x$deviance),&#13;&#10;          MeanDeviance = mean(x$deviance),&#13;&#10;          MaxDeviance  = max(x$deviance))&#13;&#10;  }&#13;&#10;  h2o.addFunction(h2oHandle, devAggrFun)&#13;&#10;&#13;&#10;  devAggr &lt;-&#13;&#10;    as.data.frame(h2o.ddply(claims.tweediedev.dat,&#13;&#10;                            c(&quot;MonthlyDate&quot;, &quot;StateName&quot;, &quot;LossCode&quot;),&#13;&#10;                            devAggrFun))&#13;&#10;  devAggr[[1L]] &lt;-&#13;&#10;    as.Date(as.character(devAggr[[1L]]), &quot;%m/%d/%Y&quot;)&#13;&#10;  devAggr[[4L]] &lt;- as.integer(devAggr[[4L]])&#13;&#10;  colnames(devAggr)[-(1:3)] &lt;-&#13;&#10;    c(&quot;N&quot;, &quot;SumTotalPaid&quot;, &quot;SumPredicted&quot;,&#13;&#10;      &quot;MinDeviance&quot;, &quot;MeanDeviance&quot;, &quot;MaxDeviance&quot;)&#13;&#10;  print(head(devAggr, 10))&#13;&#10;&#13;&#10;  myh2oCleaner()&#13;&#10;}&#13;&#10;&#13;&#10;TRUE&#13;&#10;&apos;,&#13;&#10;[Parameters].[Parameter 2], [Parameters].[Parameter 1], [Parameters].[Parameter 3], [Parameters].[Parameter 4])' scope-isolation='false'>
+                <table-calc ordering-type='Rows' />
+              </calculation>
+            </column>
+            <column caption='Loss Code' datatype='string' name='[LossCode]' role='dimension' type='nominal'>
+            </column>
+            <column caption='Number of Completed Claims' datatype='integer' name='[Max Deviance (copy)]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='SCRIPT_INT(&#13;&#10;&apos;&#13;&#10;args &lt;- data.frame(MonthlyDate =  as.Date(.arg1, &quot;%Y-%m-%d&quot;),&#13;&#10;                   StateName   = .arg2,&#13;&#10;                   LossCode    = .arg3,&#13;&#10;                   stringsAsFactors = FALSE)&#13;&#10;ans &lt;- rep(NA_integer_, nrow(args))&#13;&#10;for (i in seq_along(ans))&#13;&#10;{&#13;&#10;  val &lt;- &#13;&#10;    subset(devAggr,&#13;&#10;           MonthlyDate == args[i, 1L] &amp; StateName == args[i, 2L] &amp; LossCode == args[i, 3L],&#13;&#10;           &quot;N&quot;,&#13;&#10;           drop = TRUE)&#13;&#10;  if (length(val) == 1L)&#13;&#10;    ans[i] &lt;- val&#13;&#10;}&#13;&#10;ans&#13;&#10;&apos;,&#13;&#10;MAX([MonthlyDate]), MAX([StateName]), MAX([LossCode]))' scope-isolation='false'>
+                <table-calc ordering-type='Rows' />
+              </calculation>
+            </column>
+            <column caption='Claim Date' datatype='date' name='[MonthlyDate]' role='dimension' type='ordinal'>
+            </column>
+            <column caption='Max Deviance' datatype='real' name='[Number of Claims Filed (copy) 1 1]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='SCRIPT_REAL(&#13;&#10;&apos;&#13;&#10;args &lt;- data.frame(MonthlyDate =  as.Date(.arg1, &quot;%Y-%m-%d&quot;),&#13;&#10;                   StateName   = .arg2,&#13;&#10;                   LossCode    = .arg3,&#13;&#10;                   stringsAsFactors = FALSE)&#13;&#10;ans &lt;- rep(NA_real_, nrow(args))&#13;&#10;for (i in seq_along(ans))&#13;&#10;{&#13;&#10;  val &lt;- &#13;&#10;    subset(devAggr,&#13;&#10;           MonthlyDate == args[i, 1L] &amp; StateName == args[i, 2L] &amp; LossCode == args[i, 3L],&#13;&#10;           &quot;MaxDeviance&quot;,&#13;&#10;           drop = TRUE)&#13;&#10;  if (length(val) == 1L)&#13;&#10;    ans[i] &lt;- val&#13;&#10;}&#13;&#10;ans&#13;&#10;&apos;,&#13;&#10;MAX([MonthlyDate]), MAX([StateName]), MAX([LossCode]))' scope-isolation='false'>
+                <table-calc ordering-type='Rows' />
+              </calculation>
+            </column>
+            <column caption='Mean Deviance' datatype='real' name='[Number of Claims Filed (copy) 1]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='SCRIPT_REAL(&#13;&#10;&apos;&#13;&#10;args &lt;- data.frame(MonthlyDate =  as.Date(.arg1, &quot;%Y-%m-%d&quot;),&#13;&#10;                   StateName   = .arg2,&#13;&#10;                   LossCode    = .arg3,&#13;&#10;                   stringsAsFactors = FALSE)&#13;&#10;ans &lt;- rep(NA_real_, nrow(args))&#13;&#10;for (i in seq_along(ans))&#13;&#10;{&#13;&#10;  val &lt;- &#13;&#10;    subset(devAggr,&#13;&#10;           MonthlyDate == args[i, 1L] &amp; StateName == args[i, 2L] &amp; LossCode == args[i, 3L],&#13;&#10;           &quot;MeanDeviance&quot;,&#13;&#10;           drop = TRUE)&#13;&#10;  if (length(val) == 1L)&#13;&#10;    ans[i] &lt;- val&#13;&#10;}&#13;&#10;ans&#13;&#10;&apos;,&#13;&#10;MAX([MonthlyDate]), MAX([StateName]), MAX([LossCode]))' scope-isolation='false'>
+                <table-calc ordering-type='Rows' />
+              </calculation>
+            </column>
+            <column caption='State Name' datatype='string' name='[StateName]' role='dimension' semantic-role='[State].[Name]' type='nominal'>
+            </column>
+            <column-instance column='[MonthlyDate]' derivation='MY' name='[my:MonthlyDate:ok]' pivot='key' type='ordinal' />
+            <column-instance column='[LossCode]' derivation='None' name='[none:LossCode:nk]' pivot='key' type='nominal' />
+            <column-instance column='[StateName]' derivation='None' name='[none:StateName:nk]' pivot='key' type='nominal' />
+            <column-instance column='[Calculation_1010902082708389]' derivation='User' name='[usr:Calculation_1010902082708389:nk]' pivot='key' type='nominal'>
+              <table-calc ordering-type='Rows' />
+            </column-instance>
+            <column-instance column='[Max Deviance (copy)]' derivation='User' name='[usr:Max Deviance (copy):qk]' pivot='key' type='quantitative'>
+              <table-calc ordering-type='Rows' />
+            </column-instance>
+            <column-instance column='[Number of Claims Filed (copy) 1 1]' derivation='User' name='[usr:Number of Claims Filed (copy) 1 1:qk]' pivot='key' type='quantitative'>
+              <table-calc ordering-type='Rows' />
+            </column-instance>
+            <column-instance column='[Number of Claims Filed (copy) 1]' derivation='User' name='[usr:Number of Claims Filed (copy) 1:qk]' pivot='key' type='quantitative'>
+              <table-calc ordering-type='Rows' />
+            </column-instance>
+          </datasource-dependencies>
+          <filter class='categorical' column='[textscan.41885.651995601853].[my:MonthlyDate:ok]'>
+            <groupfilter function='member' level='[my:MonthlyDate:ok]' member='201005' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
+          </filter>
+          <filter class='categorical' column='[textscan.41885.651995601853].[none:LossCode:nk]'>
+            <groupfilter function='member' level='[none:LossCode:nk]' member='&quot;dep&quot;' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
+          </filter>
+          <slices>
+            <column>[textscan.41885.651995601853].[my:MonthlyDate:ok]</column>
+            <column>[textscan.41885.651995601853].[none:LossCode:nk]</column>
+          </slices>
+          <aggregation value='true' />
+        </view>
+        <style>
+          <style-rule element='mark'>
+            <encoding attr='color' field='[textscan.41885.651995601853].[usr:Number of Claims Filed (copy) 1 1:qk]' max='156.0' min='0.0' type='interpolated' />
+          </style-rule>
+          <style-rule element='worksheet'>
+            <format attr='in-tooltip' field='[textscan.41885.651995601853].[usr:Calculation_1010902082708389:nk]' value='false' />
+          </style-rule>
+          <style-rule element='map-layer'>
+            <format attr='enabled' id='tab_base' value='true' />
+            <format attr='enabled' id='um_lcover' value='true' />
+            <format attr='enabled' id='tab_coastline' value='false' />
+            <format attr='enabled' id='pp2_line' value='false' />
+            <format attr='enabled' id='light_adm0_bnd' value='false' />
+            <format attr='enabled' id='light_adm0_lbl' value='false' />
+            <format attr='enabled' id='um_adm0_bnd' value='true' />
+            <format attr='enabled' id='um_adm0_lbl' value='true' />
+            <format attr='enabled' id='light_pp2_statebounds' value='false' />
+            <format attr='enabled' id='light_pp2_statelabels' value='false' />
+            <format attr='enabled' id='pp2_adminlabels' value='false' />
+            <format attr='enabled' id='pp2_statebounds' value='true' />
+            <format attr='enabled' id='pp2_statelabels' value='true' />
+            <format attr='enabled' id='countybounds' value='false' />
+            <format attr='enabled' id='countylabels' value='false' />
+            <format attr='enabled' id='zipbounds' value='false' />
+            <format attr='enabled' id='ziplabels' value='false' />
+            <format attr='enabled' id='tab_areabounds' value='false' />
+            <format attr='enabled' id='tab_arealabels' value='false' />
+            <format attr='enabled' id='tab_msabounds' value='false' />
+            <format attr='enabled' id='tab_msalabels' value='false' />
+          </style-rule>
+          <style-rule element='map'>
+            <format attr='washout' value='0.0' />
+          </style-rule>
+          <style-rule element='quick-filter'>
+            <format attr='title' field='[textscan.41885.651995601853].[my:MonthlyDate:ok]' value='Claim Date'>
+              <formatted-text>
+                <run>Claim Date</run>
+              </formatted-text>
+            </format>
+          </style-rule>
+        </style>
+        <panes>
+          <pane>
+            <view>
+              <breakdown value='auto' />
+            </view>
+            <mark class='Automatic' />
+            <encodings>
+              <color column='[textscan.41885.651995601853].[usr:Number of Claims Filed (copy) 1 1:qk]' />
+              <lod column='[textscan.41885.651995601853].[none:StateName:nk]' />
+              <lod column='[textscan.41885.651995601853].[usr:Calculation_1010902082708389:nk]' />
+              <tooltip column='[textscan.41885.651995601853].[usr:Max Deviance (copy):qk]' />
+              <tooltip column='[textscan.41885.651995601853].[usr:Number of Claims Filed (copy) 1:qk]' />
+              <geometry column='[textscan.41885.651995601853].[Geometry (generated)]' />
+            </encodings>
+          </pane>
+        </panes>
+        <rows>[textscan.41885.651995601853].[Latitude (generated)]</rows>
+        <cols>[textscan.41885.651995601853].[Longitude (generated)]</cols>
+      </table>
+    </worksheet>
+    <worksheet name='Payments by Loss Code'>
+      <table>
+        <view>
+          <datasources>
+            <datasource caption='claims_metadata' name='textscan.41885.651995601853' />
+          </datasources>
+          <datasource-dependencies datasource='textscan.41885.651995601853'>
+            <column caption='Loss Code' datatype='string' name='[LossCode]' role='dimension' type='nominal'>
+            </column>
+            <column caption='Actual Payout' datatype='real' name='[Mean Deviance (copy)]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='SCRIPT_REAL(&#13;&#10;&apos;&#13;&#10;args &lt;- data.frame(MonthlyDate =  as.Date(.arg1, &quot;%Y-%m-%d&quot;),&#13;&#10;                   StateName   = .arg2,&#13;&#10;                   LossCode    = .arg3,&#13;&#10;                   stringsAsFactors = FALSE)&#13;&#10;ans &lt;- rep(NA_real_, nrow(args))&#13;&#10;for (i in seq_along(ans))&#13;&#10;{&#13;&#10;  val &lt;- &#13;&#10;    subset(devAggr,&#13;&#10;           MonthlyDate == args[i, 1L] &amp; StateName == args[i, 2L] &amp; LossCode == args[i, 3L],&#13;&#10;           &quot;SumTotalPaid&quot;,&#13;&#10;           drop = TRUE)&#13;&#10;  if (length(val) == 1L)&#13;&#10;    ans[i] &lt;- val&#13;&#10;}&#13;&#10;ans&#13;&#10;&apos;,&#13;&#10;MAX([MonthlyDate]), MAX([StateName]), MAX([LossCode]))' scope-isolation='false'>
+                <table-calc ordering-type='Rows' />
+              </calculation>
+            </column>
+            <column caption='Claim Date' datatype='date' name='[MonthlyDate]' role='dimension' type='ordinal'>
+            </column>
+            <column caption='State Name' datatype='string' name='[StateName]' role='dimension' semantic-role='[State].[Name]' type='nominal'>
+            </column>
+            <column caption='Predicted Payout' datatype='real' name='[Sum Total Paid (copy)]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='SCRIPT_REAL(&#13;&#10;&apos;&#13;&#10;args &lt;- data.frame(MonthlyDate =  as.Date(.arg1, &quot;%Y-%m-%d&quot;),&#13;&#10;                   StateName   = .arg2,&#13;&#10;                   LossCode    = .arg3,&#13;&#10;                   stringsAsFactors = FALSE)&#13;&#10;ans &lt;- rep(NA_real_, nrow(args))&#13;&#10;for (i in seq_along(ans))&#13;&#10;{&#13;&#10;  val &lt;- &#13;&#10;    subset(devAggr,&#13;&#10;           MonthlyDate == args[i, 1L] &amp; StateName == args[i, 2L] &amp; LossCode == args[i, 3L],&#13;&#10;           &quot;SumPredicted&quot;,&#13;&#10;           drop = TRUE)&#13;&#10;  if (length(val) == 1L)&#13;&#10;    ans[i] &lt;- val&#13;&#10;}&#13;&#10;ans&#13;&#10;&apos;,&#13;&#10;MAX([MonthlyDate]), MAX([StateName]), MAX([LossCode]))' scope-isolation='false'>
+                <table-calc ordering-type='Rows' />
+              </calculation>
+            </column>
+            <column-instance column='[MonthlyDate]' derivation='MY' name='[my:MonthlyDate:ok]' pivot='key' type='ordinal' />
+            <column-instance column='[LossCode]' derivation='None' name='[none:LossCode:nk]' pivot='key' type='nominal' />
+            <column-instance column='[StateName]' derivation='None' name='[none:StateName:nk]' pivot='key' type='nominal' />
+            <column-instance column='[Mean Deviance (copy)]' derivation='User' name='[usr:Mean Deviance (copy):qk]' pivot='key' type='quantitative'>
+              <table-calc ordering-type='Rows' />
+            </column-instance>
+            <column-instance column='[Sum Total Paid (copy)]' derivation='User' name='[usr:Sum Total Paid (copy):qk]' pivot='key' type='quantitative'>
+              <table-calc ordering-type='Rows' />
+            </column-instance>
+          </datasource-dependencies>
+          <filter class='categorical' column='[textscan.41885.651995601853].[my:MonthlyDate:ok]'>
+            <groupfilter function='member' level='[my:MonthlyDate:ok]' member='201005' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
+          </filter>
+          <filter class='categorical' column='[textscan.41885.651995601853].[none:StateName:nk]'>
+            <groupfilter function='member' level='[none:StateName:nk]' member='&quot;Wisconsin&quot;' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
+          </filter>
+          <slices>
+            <column>[textscan.41885.651995601853].[my:MonthlyDate:ok]</column>
+            <column>[textscan.41885.651995601853].[none:StateName:nk]</column>
+          </slices>
+          <aggregation value='true' />
+        </view>
+        <style>
+          <style-rule element='axis'>
+            <format attr='title' class='0' field='[textscan.41885.651995601853].[usr:Sum Total Paid (copy):qk]' scope='rows' value='' />
+            <format attr='subtitle' class='0' field='[textscan.41885.651995601853].[usr:Sum Total Paid (copy):qk]' scope='rows' value='' />
+            <format attr='auto-subtitle' class='0' field='[textscan.41885.651995601853].[usr:Sum Total Paid (copy):qk]' scope='rows' value='false' />
+            <encoding attr='space' class='0' field='[textscan.41885.651995601853].[usr:Sum Total Paid (copy):qk]' field-type='quantitative' fold='true' scope='rows' synchronized='true' type='space' />
+            <format attr='title' class='0' field='[textscan.41885.651995601853].[usr:Mean Deviance (copy):qk]' scope='rows' value='Payment ($)' />
+            <format attr='subtitle' class='0' field='[textscan.41885.651995601853].[usr:Mean Deviance (copy):qk]' scope='rows' value='' />
+            <format attr='auto-subtitle' class='0' field='[textscan.41885.651995601853].[usr:Mean Deviance (copy):qk]' scope='rows' value='true' />
+          </style-rule>
+          <style-rule element='legend-title-text'>
+            <format attr='color' field='[textscan.41885.651995601853].[:Measure Names]' value='Total Payments'>
+              <formatted-text>
+                <run>Total Payments</run>
+              </formatted-text>
+            </format>
+          </style-rule>
+        </style>
+        <panes>
+          <pane>
+            <view>
+              <breakdown value='auto' />
+            </view>
+            <mark class='Line' />
+            <encodings>
+              <color column='[textscan.41885.651995601853].[:Measure Names]' />
+            </encodings>
+          </pane>
+          <pane id='1' y-axis-name='[textscan.41885.651995601853].[usr:Mean Deviance (copy):qk]'>
+            <view>
+              <breakdown value='auto' />
+            </view>
+            <mark class='Line' />
+            <encodings>
+              <color column='[textscan.41885.651995601853].[:Measure Names]' />
+            </encodings>
+          </pane>
+          <pane id='2' y-axis-name='[textscan.41885.651995601853].[usr:Sum Total Paid (copy):qk]'>
+            <view>
+              <breakdown value='auto' />
+            </view>
+            <mark class='Line' />
+            <encodings>
+              <color column='[textscan.41885.651995601853].[:Measure Names]' />
+            </encodings>
+          </pane>
+        </panes>
+        <rows>([textscan.41885.651995601853].[usr:Mean Deviance (copy):qk] + [textscan.41885.651995601853].[usr:Sum Total Paid (copy):qk])</rows>
+        <cols>[textscan.41885.651995601853].[none:LossCode:nk]</cols>
+      </table>
+    </worksheet>
+    <worksheet name='Variable Importance'>
+      <table>
+        <view>
+          <datasources>
+            <datasource caption='claims_coefficients' name='textscan.41886.636795671293' />
+            <datasource name='Parameters' />
+            <datasource caption='claims_metadata' name='textscan.41885.651995601853' />
+          </datasources>
+          <datasource-dependencies datasource='textscan.41885.651995601853'>
+            <column caption='H2O Initialization' datatype='boolean' name='[Calculation_1010902082708389]' role='measure' type='nominal'>
+              <calculation class='tableau' formula='SCRIPT_BOOL(&#13;&#10;&apos;&#13;&#10;myh2oCleaner &lt;- function(pattern = &quot;Last.value.&quot;)&#13;&#10;{&#13;&#10;  keys &lt;- h2o.ls(h2oHandle, pattern = pattern)$Key&#13;&#10;  if (!is.null(keys))&#13;&#10;    h2o.rm(h2oHandle, keys)&#13;&#10;  invisible(keys)&#13;&#10;}&#13;&#10;&#13;&#10;if (!exists(&quot;h2oHandle&quot;, globalenv()))&#13;&#10;{&#13;&#10;  library(h2o)&#13;&#10;  h2oHandle &lt;- h2o.init(ip = .arg1, port = .arg2, max_mem_size = .arg3)&#13;&#10;}&#13;&#10;&#13;&#10;if (length(h2o.ls(h2oHandle, pattern = &quot;claims.dat&quot;)) == 0L)&#13;&#10;{&#13;&#10;  claims.dat &lt;- h2o.importFile(h2oHandle, path = .arg4, key = &quot;claims.dat&quot;)&#13;&#10;&#13;&#10;  # Create indicator variables for claim payout percentages&#13;&#10;  invisible(&#13;&#10;    h2o.exec(claims.dat$ClaimPaidRatio &lt;- claims.dat$TotalPaid / claims.dat$TotalClaim)&#13;&#10;  )&#13;&#10;&#13;&#10;  payoutThreshold &lt;- 1&#13;&#10;  invisible(&#13;&#10;    h2o.exec(claims.dat$HighClaimPaid &lt;- claims.dat$ClaimPaidRatio &gt; payoutThreshold)&#13;&#10;  )&#13;&#10;&#13;&#10;  # Create log transformed variables&#13;&#10;  invisible(&#13;&#10;    h2o.exec(claims.dat$logDeduct &lt;- log(claims.dat$Deduct + 1))&#13;&#10;  )&#13;&#10;&#13;&#10;  invisible(&#13;&#10;    h2o.exec(claims.dat$logFees &lt;- log(claims.dat$Fees + 1))&#13;&#10;  )&#13;&#10;&#13;&#10;  invisible(&#13;&#10;    h2o.exec(claims.dat$logTotalClaim &lt;- log(claims.dat$TotalClaim + 1))&#13;&#10;  )&#13;&#10;&#13;&#10;  invisible(&#13;&#10;    h2o.exec(claims.dat$NonNegPaid &lt;- ifelse(claims.dat$TotalPaid &lt; 0,&#13;&#10;                                             0, claims.dat$TotalPaid))&#13;&#10;  )&#13;&#10;&#13;&#10;  invisible(&#13;&#10;    h2o.exec(claims.dat$logTotalPaid &lt;- log(claims.dat$NonNegPaid + 1))&#13;&#10;  )&#13;&#10;&#13;&#10;  # Convert some numeric columns to factor&#13;&#10;  for (j in c(&quot;CallCenterPostalCode&quot;))&#13;&#10;    claims.dat[[j]] &lt;- as.factor(claims.dat[[j]])&#13;&#10;&#13;&#10;  myh2oCleaner()&#13;&#10;&#13;&#10;  # Limit analysis to &quot;Claim Complete&quot;&#13;&#10;  completed.claims.dat &lt;-&#13;&#10;    claims.dat[claims.dat$ResponseStatus == &quot;Claim Complete&quot;, ]&#13;&#10;  completed.claims.dat &lt;-&#13;&#10;    h2o.assign(completed.claims.dat, &quot;completed.claims.dat&quot;)&#13;&#10;  myh2oCleaner()&#13;&#10;&#13;&#10;  xvars &lt;- c(&quot;CallCenterPostalCode&quot;, &quot;Demographics_AgeGroup&quot;,&#13;&#10;             &quot;Demographics_Gender&quot;, &quot;FirstClaim&quot;, &quot;INStype&quot;,&#13;&#10;             &quot;LossCode&quot;, &quot;MonthlyDate&quot;, &quot;SourceCode&quot;,&#13;&#10;             &quot;StateName&quot;, &quot;logDeduct&quot;, &quot;logFees&quot;,&#13;&#10;             &quot;logTotalClaim&quot;)&#13;&#10;&#13;&#10;  tweedie.final &lt;- h2o.glm(xvars, &quot;NonNegPaid&quot;, completed.claims.dat,&#13;&#10;                           key = &quot;tweedie.final&quot;, family = &quot;tweedie&quot;,&#13;&#10;                           tweedie.p = 1.75, alpha = 0, lambda = 12,&#13;&#10;                           variable_importances = TRUE)&#13;&#10;&#13;&#10;  tweedie.vi &lt;- sort(abs(tweedie.final@model$normalized_coefficients), decreasing = TRUE)&#13;&#10;  tweedie.vi &lt;- tweedie.vi[names(tweedie.vi) != &quot;Intercept&quot;]&#13;&#10;&#13;&#10;  myh2oCleaner(pattern = &quot;GLM2Job__&quot;)&#13;&#10;&#13;&#10;  completed.claims.dat$predicted &lt;-&#13;&#10;    h2o.predict(tweedie.final,  completed.claims.dat)&#13;&#10;&#13;&#10;  myh2oCleaner(pattern = &quot;GLM2Predict_&quot;)&#13;&#10;&#13;&#10;  library(tweedie)&#13;&#10;  completed.claims.dat$deviance &lt;-&#13;&#10;    tweedie.dev(y  = completed.claims.dat$NonNegPaid,&#13;&#10;                mu = completed.claims.dat$predicted,&#13;&#10;                power = 1.75)&#13;&#10;&#13;&#10;  claims.tweediedev.dat &lt;-&#13;&#10;    completed.claims.dat[!is.na(completed.claims.dat$deviance), ]&#13;&#10;  claims.tweediedev.dat &lt;-&#13;&#10;    h2o.assign(claims.tweediedev.dat, &quot;claims.tweediedev.dat&quot;)&#13;&#10;  myh2oCleaner()&#13;&#10;&#13;&#10;  devAggrFun &lt;- function(x)&#13;&#10;  {&#13;&#10;    cbind(N = nrow(x),&#13;&#10;          SumTotalPaid = sum(x$TotalPaid),&#13;&#10;          SumPredicted = sum(x$predicted),&#13;&#10;          MinDeviance  = min(x$deviance),&#13;&#10;          MeanDeviance = mean(x$deviance),&#13;&#10;          MaxDeviance  = max(x$deviance))&#13;&#10;  }&#13;&#10;  h2o.addFunction(h2oHandle, devAggrFun)&#13;&#10;&#13;&#10;  devAggr &lt;-&#13;&#10;    as.data.frame(h2o.ddply(claims.tweediedev.dat,&#13;&#10;                            c(&quot;MonthlyDate&quot;, &quot;StateName&quot;, &quot;LossCode&quot;),&#13;&#10;                            devAggrFun))&#13;&#10;  devAggr[[1L]] &lt;-&#13;&#10;    as.Date(as.character(devAggr[[1L]]), &quot;%m/%d/%Y&quot;)&#13;&#10;  devAggr[[4L]] &lt;- as.integer(devAggr[[4L]])&#13;&#10;  colnames(devAggr)[-(1:3)] &lt;-&#13;&#10;    c(&quot;N&quot;, &quot;SumTotalPaid&quot;, &quot;SumPredicted&quot;,&#13;&#10;      &quot;MinDeviance&quot;, &quot;MeanDeviance&quot;, &quot;MaxDeviance&quot;)&#13;&#10;  print(head(devAggr, 10))&#13;&#10;&#13;&#10;  myh2oCleaner()&#13;&#10;}&#13;&#10;&#13;&#10;TRUE&#13;&#10;&apos;,&#13;&#10;[Parameters].[Parameter 2], [Parameters].[Parameter 1], [Parameters].[Parameter 3], [Parameters].[Parameter 4])' scope-isolation='false'>
+                <table-calc ordering-type='Rows' />
+              </calculation>
+            </column>
+            <column-instance column='[Calculation_1010902082708389]' derivation='User' name='[usr:Calculation_1010902082708389:nk]' pivot='key' type='nominal'>
+              <table-calc ordering-type='Rows' />
+            </column-instance>
+          </datasource-dependencies>
+          <datasource-dependencies datasource='textscan.41886.636795671293'>
+            <column caption='Coefficient Name' datatype='string' name='[Coefficients]' role='dimension' type='nominal'>
+            </column>
+            <column caption='Normalized Value' datatype='real' name='[Number of Claims Filed (copy) 1]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='SCRIPT_REAL(&#13;&#10;&apos;&#13;&#10;tweedie.vi[.arg1]&#13;&#10;&apos;,&#13;&#10;MAX([Coefficients]))' scope-isolation='false'>
+                <table-calc ordering-type='Rows' />
+              </calculation>
+            </column>
+            <column-instance column='[Coefficients]' derivation='None' name='[none:Coefficients:nk]' pivot='key' type='nominal' />
+            <column-instance column='[Number of Claims Filed (copy) 1]' derivation='User' name='[usr:Number of Claims Filed (copy) 1:qk]' pivot='key' type='quantitative'>
+              <table-calc ordering-type='Rows' />
+            </column-instance>
+          </datasource-dependencies>
+          <sort class='natural' column='[textscan.41886.636795671293].[none:Coefficients:nk]' direction='ASC' />
+          <aggregation value='true' />
+        </view>
+        <style>
+        </style>
+        <panes>
+          <pane>
+            <view>
+              <breakdown value='auto' />
+            </view>
+            <mark class='Automatic' />
+            <encodings>
+              <lod column='[textscan.41885.651995601853].[usr:Calculation_1010902082708389:nk]' />
+            </encodings>
+          </pane>
+        </panes>
+        <rows>[textscan.41886.636795671293].[usr:Number of Claims Filed (copy) 1:qk]</rows>
+        <cols>[textscan.41886.636795671293].[none:Coefficients:nk]</cols>
+      </table>
+    </worksheet>
+  </worksheets>
+  <dashboards>
+    <dashboard name='Predicted vs Actual'>
+      <style>
+      </style>
+      <size maxheight='800' maxwidth='1000' minheight='800' minwidth='1000' />
+      <zones>
+        <zone h='100000' id='2' type='layout-basic' w='100000' x='0' y='0'>
+          <zone h='100000' id='5' param='horz' type='layout-flow' w='100000' x='0' y='0'>
+            <zone h='100000' id='3' type='layout-basic' w='84000' x='0' y='0'>
+              <zone h='50000' id='16' name='Deviance Analysis' show-title='true' w='84000' x='0' y='0'>
+              </zone>
+              <zone h='50000' id='24' name='Payments by Loss Code' show-title='true' w='84000' x='0' y='50000'>
+              </zone>
+            </zone>
+            <zone fixed-size='160' h='100000' id='14' is-fixed='true' type='layout-basic' w='16000' x='84000' y='0'>
+              <zone h='100000' id='27' type='layout-basic' w='16000' x='84000' y='0'>
+                <zone h='50000' id='15' param='vert' type='layout-flow' w='16000' x='84000' y='0'>
+                  <zone h='7125' id='17' mode='dropdown' name='Deviance Analysis' param='[textscan.41885.651995601853].[my:MonthlyDate:ok]' show-all='false' type='filter' w='16000' x='84000' y='0'>
+                  </zone>
+                  <zone h='6625' id='18' mode='dropdown' name='Deviance Analysis' param='[textscan.41885.651995601853].[none:LossCode:nk]' show-all='false' type='filter' w='16000' x='84000' y='7125'>
+                  </zone>
+                  <zone h='6625' id='19' name='Deviance Analysis' pane-specification-id='0' param='[textscan.41885.651995601853].[usr:Number of Claims Filed (copy) 1 1:qk]' type='color' w='16000' x='84000' y='13750'>
+                  </zone>
+                  <zone h='6375' id='20' mode='type_in' param='[Parameters].[Parameter 4]' type='paramctrl' w='16000' x='84000' y='20375'>
+                  </zone>
+                  <zone h='6375' id='21' mode='type_in' param='[Parameters].[Parameter 2]' type='paramctrl' w='16000' x='84000' y='26750'>
+                  </zone>
+                  <zone h='6375' id='22' mode='type_in' param='[Parameters].[Parameter 3]' type='paramctrl' w='16000' x='84000' y='33125'>
+                  </zone>
+                  <zone fixed-size='76' h='10500' id='23' is-fixed='true' mode='type_in' param='[Parameters].[Parameter 1]' type='paramctrl' w='16000' x='84000' y='39500'>
+                  </zone>
+                </zone>
+                <zone h='50000' id='28' param='vert' type='layout-flow' w='16000' x='84000' y='50000'>
+                  <zone h='6875' id='25' mode='dropdown' name='Payments by Loss Code' param='[textscan.41885.651995601853].[none:StateName:nk]' show-all='false' type='filter' w='16000' x='84000' y='50000'>
+                  </zone>
+                  <zone h='8250' id='26' name='Payments by Loss Code' pane-specification-id='1' param='[textscan.41885.651995601853].[:Measure Names]' type='color' w='16000' x='84000' y='56875'>
+                  </zone>
+                </zone>
+              </zone>
+            </zone>
+          </zone>
+        </zone>
+      </zones>
+    </dashboard>
+  </dashboards>
+  <windows>
+    <window class='schema' source-height='-1' />
+    <window auto-hidden='0' class='dashboard' maximized='1' name='Predicted vs Actual'>
+      <zones>
+        <zone name='Deviance Analysis'>
+          <viewpoint>
+            <zoom type='entire-view' />
+          </viewpoint>
+        </zone>
+        <zone name='Payments by Loss Code'>
+          <viewpoint>
+            <zoom type='entire-view' />
+          </viewpoint>
+        </zone>
+        <zone mode='dropdown' name='Deviance Analysis' param='[textscan.41885.651995601853].[my:MonthlyDate:ok]' show-all='false' type='filter' />
+        <zone mode='dropdown' name='Deviance Analysis' param='[textscan.41885.651995601853].[none:LossCode:nk]' show-all='false' type='filter' />
+        <zone name='Deviance Analysis' pane-specification-id='0' param='[textscan.41885.651995601853].[usr:Number of Claims Filed (copy) 1 1:qk]' type='color' />
+        <zone mode='type_in' name='' param='[Parameters].[Parameter 4]' type='paramctrl' />
+        <zone mode='type_in' name='' param='[Parameters].[Parameter 2]' type='paramctrl' />
+        <zone mode='type_in' name='' param='[Parameters].[Parameter 3]' type='paramctrl' />
+        <zone mode='type_in' name='' param='[Parameters].[Parameter 1]' type='paramctrl' />
+        <zone mode='dropdown' name='Payments by Loss Code' param='[textscan.41885.651995601853].[none:StateName:nk]' show-all='false' type='filter' />
+        <zone name='Payments by Loss Code' pane-specification-id='1' param='[textscan.41885.651995601853].[:Measure Names]' type='color' />
+      </zones>
+    </window>
+    <window auto-hidden='0' class='worksheet' maximized='0' name='Variable Importance'>
+      <cards>
+        <edge name='left'>
+          <strip size='160'>
+            <card type='pages' />
+            <card type='filters' />
+            <card type='marks' />
+          </strip>
+        </edge>
+        <edge name='top'>
+          <strip size='31'>
+            <card type='columns' />
+          </strip>
+          <strip size='31'>
+            <card type='rows' />
+          </strip>
+        </edge>
+        <edge name='right'>
+          <strip size='160'>
+            <card mode='type_in' param='[Parameters].[Parameter 4]' type='parameter' />
+            <card mode='type_in' param='[Parameters].[Parameter 2]' type='parameter' />
+            <card mode='type_in' param='[Parameters].[Parameter 3]' type='parameter' />
+            <card mode='type_in' param='[Parameters].[Parameter 1]' type='parameter' />
+          </strip>
+        </edge>
+      </cards>
+      <highlight>
+        <color-one-way>
+          <field>[textscan.41885.651995601853].[usr:Calculation_1010902082708389:nk]</field>
+          <field>[textscan.41886.636795671293].[none:Coefficients:nk]</field>
+        </color-one-way>
+      </highlight>
+    </window>
+    <window class='hidden-worksheet' name='Deviance Analysis'>
+      <cards>
+        <edge name='left'>
+          <strip size='160'>
+            <card type='pages' />
+            <card type='filters' />
+            <card type='marks' />
+            <card pane-specification-id='0' param='[textscan.41885.651995601853].[usr:Number of Claims Filed (copy) 1 1:qk]' type='color' />
+          </strip>
+        </edge>
+        <edge name='top'>
+          <strip size='31'>
+            <card type='columns' />
+          </strip>
+          <strip size='31'>
+            <card type='rows' />
+          </strip>
+        </edge>
+        <edge name='right'>
+          <strip size='160'>
+            <card mode='dropdown' param='[textscan.41885.651995601853].[my:MonthlyDate:ok]' show-all='false' type='filter' />
+            <card mode='dropdown' param='[textscan.41885.651995601853].[none:LossCode:nk]' show-all='false' type='filter' />
+            <card mode='type_in' param='[Parameters].[Parameter 4]' type='parameter' />
+            <card mode='type_in' param='[Parameters].[Parameter 2]' type='parameter' />
+            <card mode='type_in' param='[Parameters].[Parameter 3]' type='parameter' />
+            <card mode='type_in' param='[Parameters].[Parameter 1]' type='parameter' />
+          </strip>
+        </edge>
+      </cards>
+      <viewpoint>
+      </viewpoint>
+      <highlight>
+        <color-one-way>
+          <field>[textscan.41885.651995601853].[my:MonthlyDate:ok]</field>
+          <field>[textscan.41885.651995601853].[none:LossCode:nk]</field>
+          <field>[textscan.41885.651995601853].[none:Region:nk]</field>
+          <field>[textscan.41885.651995601853].[usr:Calculation_1010902082708389:nk]</field>
+          <field>[textscan.41885.651995601853].[yr:MonthlyDate:ok]</field>
+        </color-one-way>
+      </highlight>
+      <selection-collection>
+      </selection-collection>
+    </window>
+    <window class='hidden-worksheet' name='Payments by Loss Code'>
+      <cards>
+        <edge name='left'>
+          <strip size='160'>
+            <card type='pages' />
+            <card type='filters' />
+            <card type='marks' />
+          </strip>
+        </edge>
+        <edge name='top'>
+          <strip size='31'>
+            <card type='columns' />
+          </strip>
+          <strip size='31'>
+            <card type='rows' />
+          </strip>
+        </edge>
+        <edge name='right'>
+          <strip size='160'>
+            <card mode='dropdown' param='[textscan.41885.651995601853].[my:MonthlyDate:ok]' show-all='false' type='filter' />
+            <card mode='dropdown' param='[textscan.41885.651995601853].[none:StateName:nk]' show-all='false' type='filter' />
+            <card pane-specification-id='1' param='[textscan.41885.651995601853].[:Measure Names]' type='color' />
+          </strip>
+        </edge>
+      </cards>
+      <viewpoint>
+      </viewpoint>
+      <highlight>
+        <color-one-way>
+          <field>[textscan.41885.651995601853].[my:MonthlyDate:ok]</field>
+          <field>[textscan.41885.651995601853].[none:LossCode:nk]</field>
+          <field>[textscan.41885.651995601853].[none:StateName:nk]</field>
+        </color-one-way>
+      </highlight>
+      <selection-collection>
+      </selection-collection>
+    </window>
+  </windows>
+  <thumbnails>
+    <thumbnail height='192' name='Predicted vs Actual' width='192'>
+      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
+      h1ndmD968Yntzfx4+MRnme7unsL3+JO84+8+hvPyy7O+EwwG3nfHDfzm+cNZ/kyiuxuDy83r
+      AYENDR489rkTSE4HRo8na/+tPxaKvq0nH/0NVfXLzupN8m5cX8Pu9TvwZTjDyf5+pu67j+4P
+      fYZqt42VVW4EQeDOK5r42udu4p63f5rv/MePmP7FLxfsHH9vZxvv7HiJC+4sPFjXWOagvKGa
+      Q33zr12TSzIl8eVf7ONfP7QN97XX5D1nVUsdw3GFyV0va8d8Dz9M6ftv54ev9PCxbfnTjXWK
+      oCySSCSy2EuWlJQoKe/+zqtK/yf/SkkODSlSLKb0fOCDSqyrS7n1nteUsUBs7jWSpHxjZ7vy
+      3o9/XTn2kY8roZdfUWRZzlt+cmREefPv/1l5z9eeVlLB4Lz1OfDc68qnfrJv0c/xv7/dr/z4
+      8f3znnf3i53KDz/0t4oUiylSNKr03P5+5ciQX/ncQ28s+p46imK866677lqMwqRSKczmM9PN
+      5sNgENjTM83KpirMu18l+OSTeG65mWdNdbisJq5bVz33GkHgsuZySpqb+Em8gq0drzN9770Y
+      vd701pmCgCJJ+H7yUybvvpuv12zjsx/YTkN18ZFYgIoSOw99/zdcdMWFlDotC3qGtr2H+dkR
+      H1/8wOXzBhZqPXa+/2IHV/XvJzUygrW5hf8ZNPMX25vnTSHWmcs5sTr0jRdU80r5KkJPPYXR
+      5cZ63fX86LVePrG9eETi7RfU0NDayM5rP0D9//4P0f376fvQh/A9/DD9d34ERZaY/NL/Yl2z
+      hi0LXWajvJw7zGN876WFLR6V6OvjXx/Zxxdvu7jg7KtM6kvtKJdczvjr+/D97EEiV9+AP5pk
+      fZ1nQffTyWGxXcbZZgIpiqLEkqJy6z2vKbGjRxU5mVS+t6tL+ekfehd0bUqUlA/+4HXl4IBf
+      URRFEX0+ZfL+H6XNKVlWbrvnNWXIF11Ufca/+S3lPZ/9gTLiL36dFIko9/z1vylfe7ptUeX/
+      +LUe5YGfPqtMfPdu5d9+d0R5qX18UdfrzHJO9AA2s5Fyp4WpmuUEUgpPHR4puKJALiajgf++
+      bSP/+uhhArEURq+X8o/cibmujl/tH+SKlgrqvAtPDwdwbb+K2wJHufflnoLnKIpC27/9J0/U
+      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
+    </thumbnail>
+    <thumbnail height='192' name='Variable Importance' width='192'>
+      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
+      SUVORK5CYII=
+    </thumbnail>
+  </thumbnails>
+</workbook>

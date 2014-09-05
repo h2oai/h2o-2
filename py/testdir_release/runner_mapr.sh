@@ -22,9 +22,9 @@ SET_JAVA_HOME="export JAVA_HOME=/usr/lib/jvm/java-7-oracle; "
 # Should we do this cloud build with the sh2junit.py? to get logging, xml etc.
 # I suppose we could just have a test verify the request cloud size, after building
 # Now resource manager is at 8050?
-MAPR_JOBTRACKER=192.168.1.173:9001
-MAPR_NODES=5
-MAPR_HEAP=3g
+MAPR_JOBTRACKER=192.168.1.172:9001
+MAPR_NODES=1
+MAPR_HEAP=1g
 # MAPR_JAR=h2odriver_mapr2.1.3.jar
 MAPR_JAR=h2odriver_mapr2.1.3.jar
 H2O_JAR=h2o.jar
@@ -46,7 +46,7 @@ HDFS_OUTPUT=hdfsOutputDirName
 
 # file created by the h2o on hadoop h2odriver*jar
 REMOTE_HOME=/home/0xcustomer
-REMOTE_IP=192.168.1.173
+REMOTE_IP=192.168.1.172
 REMOTE_USER=0xcustomer@$REMOTE_IP
 REMOTE_SCP="scp -p -i $HOME/.0xcustomer/0xcustomer_id_rsa "
 
@@ -181,13 +181,13 @@ fi
 
 echo ""
 echo "Check if the background ssh/hadoop/cloud job is still running here"
-ps aux | grep 0xcustomer_id_rsa
+ps aux | grep 0xcustomer_id_rsa | grep -v 'grep'
 echo "check on jobs I backgrounded locally"
 jobs -l
 
 echo ""
 echo "Check if h2odriver is running on the remote machine"
-$REMOTE_SSH_USER "ps aux | grep h2odriver"
+$REMOTE_SSH_USER "ps aux | grep h2odriver | grep -v 'grep'"
 
 echo "The background job with the remote ssh that does h2odriver should be gone. It was pid $CLOUD_PID"
 echo "The h2odriver job should be gone. It was pid $CLOUD_PID"

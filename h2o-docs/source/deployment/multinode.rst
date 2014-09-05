@@ -2,7 +2,7 @@
 
 
 H\ :sub:`2`\ O on a Multi-Node Cluster
-=======================================
+======================================
 
 The purpose of this walk-through is to show users how to set up 
 an H\ :sub:`2`\ O multi-node cluster. Begin by locating a set of hosts to make up our cluster (a host could be a server, an EC2 instance, or your laptop.)

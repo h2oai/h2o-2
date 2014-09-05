@@ -19,7 +19,7 @@ mkdir -p sandbox
 
 # Should we do this cloud build with the sh2junit.py? to get logging, xml etc.
 # I suppose we could just have a test verify the request cloud size, after buildingk
-CDH3_JOBTRACKER=192.168.1.176:8021
+CDH3_JOBTRACKER=192.168.1.175:8021
 CDH3_NODES=4
 CDH3_HEAP=20g
 CDH3_JAR=h2odriver_cdh3.jar
@@ -32,7 +32,7 @@ HDFS_OUTPUT=hdfsOutputDirName
 
 # file created by the h2o on hadoop h2odriver*jar
 REMOTE_HOME=/home/0xcustomer
-REMOTE_IP=192.168.1.176
+REMOTE_IP=192.168.1.175
 REMOTE_USER=0xcustomer@$REMOTE_IP
 REMOTE_SCP="scp -i $HOME/.0xcustomer/0xcustomer_id_rsa"
 REMOTE_SSH_USER="ssh -i $HOME/.0xcustomer/0xcustomer_id_rsa $REMOTE_USER"
