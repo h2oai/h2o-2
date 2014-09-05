@@ -31,6 +31,7 @@ public class C4FChunkTest extends TestUtil {
         Assert.assertTrue(cc.isNA(vals.length + l));
 
         nc = cc.inflate_impl(new NewChunk(null, 0));
+        nc.values(0, nc.len());
         Assert.assertEquals(vals.length + 1 + l, nc.len());
         Assert.assertTrue(nc.isNA0(0));
         Assert.assertTrue(nc.isNA(0));
