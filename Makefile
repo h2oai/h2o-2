@@ -208,6 +208,8 @@ build_package:
 	cp -p ec2/*.py ec2/*.sh ec2/README.txt target/h2o-$(PROJECT_VERSION)/ec2
 	mkdir target/h2o-$(PROJECT_VERSION)/spark
 	cp -p spark/* target/h2o-$(PROJECT_VERSION)/spark
+	cp -rp tableau target/h2o-$(PROJECT_VERSION)
+	cp -rp docs/TableauTutorial_8.1.docx target/h2o-$(PROJECT_VERSION)/tableau
 	(cd target; zip -q -r h2o-$(PROJECT_VERSION).zip h2o-$(PROJECT_VERSION))
 	rm -fr target/h2o-$(PROJECT_VERSION)
 	rm -fr target/ci

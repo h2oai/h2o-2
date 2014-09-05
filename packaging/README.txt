@@ -24,6 +24,12 @@ This package contains:
     ec2/README.txt           Read this for instructions on how to run H2O
                              on EC2.
 
+    spark/                   Directory containing information about how to
+                             find Sparkling Water.
+
+    tableau/                 Directory containing example Tableau workbooks
+                             for H2O.
+
 
 To try out H2O from the command line, type: 
     $ java -Xmx2g -jar h2o.jar
