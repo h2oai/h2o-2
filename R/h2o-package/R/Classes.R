@@ -203,7 +203,8 @@ setMethod("show", "H2ODeepLearningModel", function(object) {
       if(model$params$nfolds == 0)
         cat("Reported on", object@data@key, "\n")
       else
-        cat("Reported on", paste(model$params$nfolds, "-fold cross-validated data", sep = ""), "\n")
+        if (object@model$params$nfolds >= 2)
+          cat("Reported on", paste(model$params$nfolds, "-fold cross-validated data", sep = ""), "\n")
     } else
       cat("Reported on", object@valid@key, "\n")
     print(model$confusion)
@@ -236,7 +237,9 @@ setMethod("show", "H2ODRFModel", function(object) {
   if(model$params$classification) {
     cat("\nConfusion matrix:\n")
     if(is.na(object@valid@key))
-      cat("Reported on", paste(object@model$params$nfolds, "-fold cross-validated data", sep = ""), "\n")
+      if (object@model$params$nfolds >= 2)
+        cat("Reported on", paste(object@model$params$nfolds, "-fold cross-validated data", sep = ""), "\n")
+      else cat("Reported on training data.")
     else
       cat("Reported on", object@valid@key, "\n")
     print(model$confusion)
@@ -258,25 +261,18 @@ setMethod("show", "H2OSpeeDRFModel", function(object) {
   print(object@data@h2o)
   cat("Parsed Data Key:", object@data@key, "\n\n")
   cat("Random Forest Model Key:", object@key)
-  cat("\n\nSeed Used: ", object@model$params$seed)
+  cat("\n\nSeed Used: ", format(object@model$params$seed, digits = 20))
 
   model = object@model
   cat("\n\nClassification:", model$params$classification)
   cat("\nNumber of trees:", model$params$ntree)
-  
-  if(FALSE){ #model$params$oobee) {
-    cat("\nConfusion matrix:\n"); cat("Reported on oobee from", object@valid@key, "\n")
-    if(is.na(object@valid@key))
-      cat("Reported on oobee from", paste(object@model$params$nfolds, "-fold cross-validated data", sep = ""), "\n")
-    else
-      cat("Reported on oobee from", object@valid@key, "\n")
-  } else {
-    cat("\nConfusion matrix:\n");
-    if(is.na(object@valid@key))
+
+  cat("\nConfusion matrix:\n");
+  if(is.na(object@valid@key)) {
+    if (object@model$params$nfolds >= 2)
       cat("Reported on", paste(object@model$params$nfolds, "-fold cross-validated data", sep = ""), "\n")
-    else
-      cat("Reported on", object@valid@key, "\n")
-  }
+    else cat("Reported on training data.")
+  } else cat("Reported on", object@valid@key, "\n")
   print(model$confusion)
  
   if(!is.null(model$varimp)) {
