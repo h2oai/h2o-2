@@ -8,9 +8,9 @@ Launch scripts are available on our Github repository :ref:`QuickstartGit`
 
 Prerequisite - Install boto python library. In order to run the scripts you must have the boto library installed, references available are available on boto and amazon's website.
 
-    http://boto.readthedocs.org/en/latest/
+   `Python Boto Documentation <http://boto.readthedocs.org/en/latest/>`_
 
-    http://www.amazon.com/Python-and-AWS-Cookbook-ebook/dp/B005ZTO0UW/ref=sr_1_1?ie=UTF8&qid=1379879111&sr=8-1&keywords=python+aws
+   `Amazon AWS Text <http://www.amazon.com/Python-and-AWS-Cookbook-ebook/dp/B005ZTO0UW/ref=sr_1_1?ie=UTF8&qid=1379879111&sr=8-1&keywords=python+aws>`_
 
 **Step 2**
 
