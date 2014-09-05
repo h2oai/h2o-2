@@ -44,7 +44,15 @@ public class DTree extends Iced {
   public DTree( String[] names, int ncols, char nbins, char nclass, int min_rows ) { this(names,ncols,nbins,nclass,min_rows,-1); }
   public DTree( String[] names, int ncols, char nbins, char nclass, int min_rows, long seed ) {
     _names = names; _ncols = ncols; _nbins=nbins; _nclass=nclass; _min_rows = min_rows; _ns = new Node[1]; _seed = seed; }
-
+  //yiran.zhang
+//  public DTree( Tree tree) {
+//    // temporarily assign random values.
+//    _names = null; _ncols = 0; _nbins = 0; _nclass = 'c'; _min_rows = 1; _ns = new Node[1]; _seed = -1;
+//    // then I need to transform all the nodes;
+//    //_ns[0] = new Node(); //root
+//    final int pid=0; final int nid = 2;
+//    _ns[0] = new
+//  }
   public final Node root() { return _ns[0]; }
   // One-time local init after wire transfer
   void init_tree( ) { for( int j=0; j<_len; j++ ) _ns[j]._tree = this; }
@@ -577,6 +585,7 @@ public class DTree extends Iced {
     @API(help="Variable importance for individual input variables.")                  public final VarImp          varimp; // NOTE: in future we can have an array of different variable importance measures (per method)
     @API(help="Tree statistics")                                                      public final TreeStats       treeStats;
     @API(help="AUC for validation dataset")                                           public final AUCData         validAUC;
+    @API(help="Whether this is transformed from speedrf")                             public       boolean         isFromSpeeDRF=false;
 
     private final int num_folds;
     private transient volatile CompressedTree[/*N*/][/*nclasses OR 1 for regression*/] _treeBitsCache;
@@ -1216,7 +1225,7 @@ public class DTree extends Iced {
       return sb;
     }
     // Convert Tree model to Java
-    @Override protected void toJavaPredictBody( final SB bodySb, final SB classCtxSb, final SB fileCtxSb) {
+    @Override protected void  toJavaPredictBody( final SB bodySb, final SB classCtxSb, final SB fileCtxSb) {
       // AD-HOC maximal number of trees in forest - in fact constant pool size for Forest class (all UTF String + references to static classes).
       // TODO: in future this parameter can be a parameter for generator, as well as maxIters
       final int maxfsize = 4000;
@@ -1226,12 +1235,22 @@ public class DTree extends Iced {
       // divide trees into small forests per 100 trees
       /* DEBUG line */ bodySb.i().p("// System.err.println(\"Row (gencode.predict): \" + java.util.Arrays.toString(data));").nl();
       bodySb.i().p("java.util.Arrays.fill(preds,0f);").nl();
+
+      if (isFromSpeeDRF) {
+        bodySb.i().p("// Call forest predicting class ").p(0).nl();
+        bodySb.i().p("preds").p(" =").p(" Forest_").p(fidx).p("_class_").p(0).p(".predict(data, maxIters - " + fidx * maxfsize + ");").nl();
+//        bodySb.i().p("System.out.println(\"-----The prediction is:    \"+preds);").nl();
+      }
       for( int c=0; c<nclasses(); c++ ) {
         toJavaForestBegin(bodySb, forest, c, fidx++, maxfsize);
         for( int i=0; i < treeKeys.length; i++ ) {
           CompressedTree cts[] = ctree(i);
           if( cts[c] == null ) continue;
-          forest.i().p("if (iters-- > 0) pred").p(" +=").p(" Tree_").p(i).p("_class_").p(c).p(".predict(data);").nl();
+          if (!isFromSpeeDRF) {
+            forest.i().p("if (iters-- > 0) pred").p(" +=").p(" Tree_").p(i).p("_class_").p(c).p(".predict(data);").nl();
+          } else {
+            forest.i().p("pred[(int)").p(" Tree_").p(i).p("_class_").p(c).p(".predict(data) + 1] += 1;").nl();
+          }
           // append representation of tree predictor
           toJavaTreePredictFct(fileCtxSb, cts[c], i, c);
           if (++treesInForest == maxfsize) {
@@ -1253,18 +1272,39 @@ public class DTree extends Iced {
     static final String PRED_TYPE = "float";
 
     private void toJavaForestBegin(SB predictBody, SB forest, int c, int fidx, int maxTreesInForest) {
-      predictBody.i().p("// Call forest predicting class ").p(c).nl();
-      predictBody.i().p("preds[").p(c+1).p("] +=").p(" Forest_").p(fidx).p("_class_").p(c).p(".predict(data, maxIters - "+fidx*maxTreesInForest+");").nl();
-      forest.i().p("// Forest representing a subset of trees scoring class ").p(c).nl();
-      forest.i().p("class Forest_").p(fidx).p("_class_").p(c).p(" {").nl().ii(1);
-      forest.i().p("public static ").p(PRED_TYPE).p(" predict(double[] data, int maxIters) {").nl().ii(1);
-      forest.i().p(PRED_TYPE).p(" pred  = 0;").nl();
-      forest.i().p("int   iters = maxIters;").nl();
+      // ugly hack here
+      if (!isFromSpeeDRF) {
+        predictBody.i().p("// Call forest predicting class ").p(c).nl();
+        predictBody.i().p("preds[").p(c + 1).p("] +=").p(" Forest_").p(fidx).p("_class_").p(c).p(".predict(data, maxIters - " + fidx * maxTreesInForest + ");").nl();
+        forest.i().p("// Forest representing a subset of trees scoring class ").p(c).nl();
+        forest.i().p("class Forest_").p(fidx).p("_class_").p(c).p(" {").nl().ii(1);
+        forest.i().p("public static ").p(PRED_TYPE).p(" predict(double[] data, int maxIters) {").nl().ii(1);
+        forest.i().p(PRED_TYPE).p(" pred  = 0;").nl();
+        forest.i().p("int   iters = maxIters;").nl();
+      } else {
+        forest.i().p("// Forest representing a subset of trees scoring class ").p(c).nl();
+        forest.i().p("class Forest_").p(fidx).p("_class_").p(c).p(" {").nl().ii(1);
+        forest.i().p("public static ").p(PRED_TYPE).p("[] predict(double[] data, int maxIters) {").nl().ii(1);
+        forest.i().p(PRED_TYPE).p("[] pred = new float["+(nclasses()+1)+"];").nl();
+        forest.i().p("java.util.Arrays.fill(pred,0f);").nl();
+        forest.i().p("int   iters = maxIters;").nl();
+      }
     }
     private void toJavaForestEnd(SB predictBody, SB forest, int c, int fidx) {
-      forest.i().p("return pred;").nl();
-      forest.i().p("}").di(1).nl(); // end of function
-      forest.i().p("}").di(1).nl(); // end of forest classs
+      if (!isFromSpeeDRF) {
+        forest.i().p("return pred;").nl();
+        forest.i().p("}").di(1).nl(); // end of function
+        forest.i().p("}").di(1).nl(); // end of forest classs
+      } else {
+        if (c ==0) {
+          forest.i().p("float sum = 0;").nl();
+          forest.i().p("for (int i=1; i <= " + nclasses() + "; i++) {").p("sum += pred[i];").p("}").nl();
+          forest.i().p("for (int i=1; i <= " + nclasses() + "; i++) {").p("pred[i] /= sum;").p("}").nl();
+        }
+        forest.i().p("return pred;").nl();
+        forest.i().p("}").di(1).nl(); // end of function
+        forest.i().p("}").di(1).nl(); // end of forest classs
+      }
     }
 
     // Produce prediction code for one tree
@@ -1417,7 +1457,11 @@ public class DTree extends Iced {
       // All NAs are going always to the left
       _sb.p(" (Double.isNaN(data[").p(col).p("]) || ");
       if(equal == 0 || equal == 1)
-        _sb.p("(float) data[").p(col).p(" /* ").p(_tm._names[col]).p(" */").p("] ").p(equal==1?"!= ":"< ").pj(fcmp); // then left and then right (left is !=)
+        if (!_tm.isFromSpeeDRF) {
+          _sb.p("(float) data[").p(col).p(" /* ").p(_tm._names[col]).p(" */").p("] ").p(equal == 1 ? "!= " : "< ").pj(fcmp); // then left and then right (left is !=)
+        } else {
+          _sb.p("(float) data[").p(col).p(" /* ").p(_tm._names[col]).p(" */").p("] ").p(equal == 1 ? "!= " : "<= ").pj(fcmp); // then left and then right (left is !=)
+        }
       else {
         _sb.p("!water.genmodel.GeneratedModel.grpContains(GRPSPLIT").p(_grpcnt).p(", ").p(gcmp._offset).p(", (int) data[").p(col).p(" /* ").p(_tm._names[col]).p(" */").p("])");
         _grpcnt++;
