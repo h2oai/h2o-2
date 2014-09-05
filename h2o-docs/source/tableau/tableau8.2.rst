@@ -1,6 +1,5 @@
 .. _Tableau_8.2:
 
-
 Tableau 8.2
 ===========
 
@@ -57,6 +56,7 @@ names of the actual data set, this column will help populate certain parameters 
   Dest                  	    	        18		            EV	        SEA     Seattle
   Distance              	    	        19		            DH	        SJC     San Jose
 
+
 Create R, Tableau, and Data Connections
 """""""""""""""""""""""""""""""""""""""
 
@@ -107,17 +107,23 @@ Execute Scripts
 
 Move a calculated field under Measures to the worksheet in order to execute the R script in the field:
 
-#. Move "01 Start H2O & Parse Data" to the *Row* shelf which will trigger an execution.
+**Step 1**
+
+Move "01 Start H2O & Parse Data" to the *Row* shelf which will trigger an execution.
 
 .. image:: tableau_execute3.png
    :width: 40%
 
-#. Right click the field sitting on the *Row* shelf and select Remove to remove it from the worksheet.
+**Step 2**
+
+Right click the field sitting on the *Row* shelf and select Remove to remove it from the worksheet.
 
 .. image:: tableau_execute4.png
    :width: 40%
 
-#. Repeat this calculated field "02 Execute Aggregation with H2O's ddply" and "03 Run GLM" to finish all the calculations necessary for the dashboard.
+**Step 3**
+
+Repeat this calculated field "02 Execute Aggregation with H2O's ddply" and "03 Run GLM" to finish all the calculations necessary for the dashboard.
 
 .. image:: tableau_execute2.png
    :width: 40%

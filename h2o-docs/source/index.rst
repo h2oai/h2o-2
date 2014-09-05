@@ -42,7 +42,7 @@ Overview and walkthroughs for the different APIs to H\ :sub:`2`\ O.
    :maxdepth: 1
 
    Ruser/top
-   Tableau/top
+   tableau/top
 
 Deployment and Big Data Management
 ==================================
