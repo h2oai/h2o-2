@@ -1,7 +1,7 @@
 .. _Rfromdownload:
 
 H\ :sub:`2`\ O Installation in R From Download Table
-===============================================================
+====================================================
 
 
 These instructions assume you are using R  2.14.0 or later.  

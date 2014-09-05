@@ -137,10 +137,6 @@ Index By Subject
 
   * :ref:`SUMmath`
 
-**Troubleshooting**
-
-  * :ref:`Troubleshooting`
-
 **Tutorials**
 
   * :ref:`GLM_tutorial`

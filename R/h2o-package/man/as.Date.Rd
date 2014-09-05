@@ -11,7 +11,7 @@
   \item{format}{A character string.} 
 }
 \details{
-Supports all parse tokens specified for \code{\link{strptime}}, except \code{\%u, \%U, \%w, \%W, and \%0Sn}.
+Supports all parse tokens specified for \code{\link{strptime}}, except \code{\%u, \%U, \%w, \%W, \%X and \%0Sn}.
 Format also supports local variables that evaluate to a string.
 }
 \value{

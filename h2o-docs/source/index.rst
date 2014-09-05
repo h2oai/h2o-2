@@ -1,8 +1,8 @@
 
 
-=================================================
+=========================================
 Welcome to H\ :sub:`2`\ O's Documentation
-=================================================
+=========================================
 
 H\ :sub:`2`\ O brings better algorithms to Big Data. This
 documentation is here to help guide and inform users. Users looking
@@ -42,6 +42,7 @@ Overview and walkthroughs for the different APIs to H\ :sub:`2`\ O.
    :maxdepth: 1
 
    Ruser/top
+   tableau/top
 
 Deployment and Big Data Management
 ==================================

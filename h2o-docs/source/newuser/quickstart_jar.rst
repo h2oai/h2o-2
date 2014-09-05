@@ -1,7 +1,7 @@
 .. _GettingStartedFromaZipFile: 
 
 Getting Started From a Downloaded Zip File
-===========================================
+==========================================
  
 
 Quick Step-by-Step
