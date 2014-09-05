@@ -69,6 +69,8 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
   @Override public boolean isClassifier() { return super.isClassifier() && !model_info.get_params().autoencoder; }
 
+  @Override public int nfeatures() { return model_info.get_params().autoencoder ? _names.length : _names.length - 1; }
+
   public int compareTo(DeepLearningModel o) {
     if (o.isClassifier() != isClassifier()) throw new UnsupportedOperationException("Cannot compare classifier against regressor.");
     if (o.nclasses() != nclasses()) throw new UnsupportedOperationException("Cannot compare models with different number of classes.");

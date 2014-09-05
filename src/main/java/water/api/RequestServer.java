@@ -11,6 +11,7 @@ import hex.KMeans2.KMeans2ModelView;
 import hex.KMeans2.KMeans2Progress;
 import hex.ReBalance;
 import hex.anomaly.Anomaly;
+import hex.deepfeatures.DeepFeatures;
 import hex.deeplearning.DeepLearning;
 import hex.drf.DRF;
 import hex.gapstat.GapStatistic;
@@ -113,6 +114,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new KMeans2()),     "KMeans",                   "Model");
     Request.addToNavbar(registerRequest(new NaiveBayes()),  "Naive Bayes (Beta)",       "Model");
     Request.addToNavbar(registerRequest(new Anomaly()),     "Anomaly Detection (Beta)", "Model");
+    Request.addToNavbar(registerRequest(new DeepFeatures()),"Deep Feature Extractor (Beta)", "Model");
 
 
     // FVec scoring
