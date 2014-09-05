@@ -16,7 +16,8 @@ import water.fvec.NewChunk;
 import water.fvec.Vec;
 import water.util.Counter;
 import water.util.ModelUtils;
-
+import hex.gbm.DTree;
+import water.util.*;
 import java.util.Arrays;
 import java.util.Random;
 
@@ -71,7 +72,8 @@ public class SpeeDRFModel extends Model implements Job.Progress {
   @API(help = "Verbose Mode")                                             public boolean verbose;
   @API(help = "Verbose Output")                                           public String[] verbose_output;
   @API(help = "Use non-local data")                                       public boolean useNonLocal;
-
+  @API(help = "Dtree keys")                                               public Key[/*ntree*/][/*nclass*/] dtreeKeys;
+  @API(help = "DTree Model")                                              public SpeeDRFModel_DTree dtreeTreeModel = null;
 
   private float _ss; private float _cnt;
   /**
@@ -239,7 +241,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
   void variableImportanceCalc(Frame fr, Vec modelResp) { varimp = doVarImpCalc(fr, this, modelResp); }
 
-  public static SpeeDRFModel make(SpeeDRFModel old, Key tkey, int nodeIdx, String tString, int tree_id) {
+  public static SpeeDRFModel make(SpeeDRFModel old, Key tkey, Key dtKey, int nodeIdx, String tString, int tree_id) {
 
     // Create a new model for atomic update
     SpeeDRFModel m = (SpeeDRFModel)old.clone();
@@ -247,6 +249,14 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     // Update the tree keys with the new one (tkey)
     m.t_keys = Arrays.copyOf(old.t_keys, old.t_keys.length + 1);
     m.t_keys[m.t_keys.length-1] = tkey;
+
+    // Update the dtree keys with the new one (dtkey)
+    if (old.dtreeKeys == null) { m.dtreeKeys = new Key[1][m.nclasses()]; }
+    else {
+      m.dtreeKeys = Arrays.copyOf(old.dtreeKeys, old.dtreeKeys.length + 1);
+      m.dtreeKeys[m.dtreeKeys.length-1] = new Key[m.nclasses()];
+    }
+    m.dtreeKeys[m.dtreeKeys.length-1][0] = dtKey;
 
     // Update the local_forests
     m.local_forests[nodeIdx][tree_id] = tkey;
@@ -408,8 +418,10 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     } else {
       int votes[] = new int[numClasses + 1/* +1 to catch broken rows */];
       preds = new float[numClasses + 1];
-      for( int i = 0; i < treeCount(); i++ )
+      for( int i = 0; i < treeCount(); i++ ) {
+        DTree.TreeModel.CompressedTree t = UKV.get(dtreeKeys[i][0]);
         votes[(int) Tree.classify(new AutoBuffer(tree(i)), data, numClasses, false)]++;
+      }
 
       float s = 0.f;
       for (int v : votes) s += (float)v;
@@ -422,7 +434,8 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
       for (int i = 0; i  < votes.length - 1; ++i)
         preds[i+1] = ( (float)votes[i] / (float)treeCount());
-      preds[0] = (float) (classify(votes, null, null) + resp_min);
+//      preds[0] = (float) (classify(votes, null, null) + resp_min);
+      preds[0] = ModelUtils.getPrediction(preds, data);
       float[] rawp = new float[preds.length + 1];
       for (int i = 0; i < votes.length; ++i) rawp[i+1] = (float)votes[i];
       return preds;
@@ -533,6 +546,52 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       generateHTMLVarImp(sb);
     }
     printCrossValidationModelsHTML(sb);
+  }
+
+  public DTree.TreeModel transform2DTreeModel() {
+    if (dtreeTreeModel != null) {
+      return dtreeTreeModel;
+    }
+    Key key = Key.make();
+    Key model_key = _key;
+    Key dataKey = _dataKey;
+    Key testKey = null;
+    String[] names = _names;
+    String[][] domains = _domains;
+    String[] cmDomain = this.cmDomain;
+    int ntrees = treeCount();
+    int min_rows = 0;
+    int nbins = this.nbins;
+    int mtries = this.mtry;
+    long seed = -1;
+    int num_folds = 0;
+    float[] priorClassDist = null;
+    float[] classDist = null;
+
+    // dummy model
+    dtreeTreeModel = new SpeeDRFModel_DTree(model_key, model_key, dataKey,testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, mtries, num_folds, priorClassDist, classDist);
+    // update the model
+    dtreeTreeModel = new SpeeDRFModel_DTree(dtreeTreeModel, dtreeKeys, treeStats);
+    dtreeTreeModel.isFromSpeeDRF=true; // tells the toJava method the model is translated from a speedrf model.
+    return dtreeTreeModel;
+  }
+
+  public static class SpeeDRFModel_DTree extends DTree.TreeModel {
+    static final int API_WEAVER = 1; // This file has auto-gen'd doc & json fields
+    static public DocGen.FieldDoc[] DOC_FIELDS; // Initialized from Auto-Gen code.
+    Key modelKey;
+
+    public SpeeDRFModel_DTree(Key key, Key modelKey, Key dataKey, Key testKey, String names[], String domains[][], String[] cmDomain, int ntrees, int max_depth, int min_rows, int nbins, int mtries, int num_folds, float[] priorClassDist, float[] classDist) {
+      super(key,dataKey,testKey,names,domains,cmDomain,ntrees, max_depth, min_rows, nbins, num_folds, priorClassDist, classDist);
+      this.modelKey = modelKey;
+    }
+
+    public SpeeDRFModel_DTree(SpeeDRFModel_DTree prior, Key[][] treeKeys, TreeStats tstats) {
+      super(prior, treeKeys, null, prior.cms, tstats, null, null);
+    }
+
+    @Override
+    protected void generateModelDescription(StringBuilder sb) { }
   }
 
   static final String NA = "---";
