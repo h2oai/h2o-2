@@ -135,7 +135,9 @@ setMethod("show", "H2OGLMModel", function(object) {
         cat(" Best Threshold:", round(model$best_threshold,5))
         cat("\n\nConfusion Matrix:\n"); print(model$confusion)
     if (!is.null(model$auc)) {
-        trainOrTest <- ifelse(is.na(object@valid@key), "train)", "test)")
+        if(.hasSlot(object, "valid"))
+          trainOrTest <- ifelse(is.na(object@valid@key), "train)", "test)")
+        else trainOrTest <- "train)"
         cat("\nAUC = ", model$auc, "(on", trainOrTest ,"\n")
       }
     }
@@ -207,7 +209,7 @@ setMethod("show", "H2ODeepLearningModel", function(object) {
       if(model$params$nfolds == 0)
         cat("Reported on", object@data@key, "\n")
       else
-        if (object@model$params$nfolds >= 2)
+        if (!is.null(object@model$params$nfolds) && object@model$params$nfolds >= 2)
           cat("Reported on", paste(model$params$nfolds, "-fold cross-validated data", sep = ""), "\n")
     } else
       cat("Reported on", object@valid@key, "\n")
@@ -251,7 +253,7 @@ setMethod("show", "H2ODRFModel", function(object) {
   if(model$params$classification) {
     cat("\nConfusion matrix:\n")
     if(is.na(object@valid@key))
-      if (object@model$params$nfolds >= 2)
+      if (!is.null(object@model$params$nfolds) && object@model$params$nfolds >= 2)
         cat("Reported on", paste(object@model$params$nfolds, "-fold cross-validated data", sep = ""), "\n")
       else cat("Reported on training data.")
     else
@@ -287,7 +289,7 @@ setMethod("show", "H2OSpeeDRFModel", function(object) {
 
   cat("\nConfusion matrix:\n");
   if(is.na(object@valid@key)) {
-    if (object@model$params$nfolds >= 2)
+    if (!is.null(object@model$params$nfolds) && object@model$params$nfolds >= 2)
       cat("Reported on", paste(object@model$params$nfolds, "-fold cross-validated data", sep = ""), "\n")
     else cat("Reported on training data.")
   } else cat("Reported on", object@valid@key, "\n")

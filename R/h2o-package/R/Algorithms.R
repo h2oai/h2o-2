@@ -626,7 +626,6 @@ h2o.deeplearning <- function(x, y, data, key = "",
   #   params$mom_ramp = model_params$momentum_ramp
   #   params$mom_stable = model_params$momentum_stable
   #   params$epochs = model_params$epochs
-  
   # result$params = params
   # model_params = res$model_info$parameters
   model_params = res$model_info$job
@@ -1072,7 +1071,7 @@ h2o.SpeeDRF <- function(x, y, data, key="", classification=TRUE, nfolds=0, valid
       raw_cms[[length(raw_cms)]] = NULL
     raw_cms <- lapply(raw_cms, function(x) { if(length(x) > dom_len) x = x[1:dom_len]; return(x) })
 
-    
+
     #    rrr <- NULL
     #    if ( res$parameters$n_folds <= 0) {
     #      f <- function(o) { o[-length(o)] }
