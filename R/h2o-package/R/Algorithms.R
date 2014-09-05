@@ -626,7 +626,6 @@ h2o.deeplearning <- function(x, y, data, key = "",
   #   params$mom_ramp = model_params$momentum_ramp
   #   params$mom_stable = model_params$momentum_stable
   #   params$epochs = model_params$epochs
-  
   # result$params = params
   # model_params = res$model_info$parameters
   model_params = res$model_info$job
@@ -686,7 +685,9 @@ h2o.deeplearning <- function(x, y, data, key = "",
     tmp$confusion <- NULL 
     result <- c(result, tmp) 
   }
-  
+
+  result$train_auc <- res$errors[[length(res$errors)]]$trainAUC$AUC
+
   if(!is.null(errs$valid_hitratio)) {
     max_k <- errs$valid_hitratio$max_k
     hit_ratios <- errs$valid_hitratio$hit_ratios
@@ -1069,8 +1070,8 @@ h2o.SpeeDRF <- function(x, y, data, key="", classification=TRUE, nfolds=0, valid
     if(length(raw_cms) > dom_len)
       raw_cms[[length(raw_cms)]] = NULL
     raw_cms <- lapply(raw_cms, function(x) { if(length(x) > dom_len) x = x[1:dom_len]; return(x) })
-    
-    
+
+
     #    rrr <- NULL
     #    if ( res$parameters$n_folds <= 0) {
     #      f <- function(o) { o[-length(o)] }

@@ -132,8 +132,14 @@ setMethod("show", "H2OGLMModel", function(object) {
     
     family <- model$params$family$family
     if(family == "binomial") {
-        cat("AUC:", round(model$auc,5), " Best Threshold:", round(model$best_threshold,5))
+        cat(" Best Threshold:", round(model$best_threshold,5))
         cat("\n\nConfusion Matrix:\n"); print(model$confusion)
+    if (!is.null(model$auc)) {
+        if(.hasSlot(object, "valid"))
+          trainOrTest <- ifelse(is.na(object@valid@key), "train)", "test)")
+        else trainOrTest <- "train)"
+        cat("\nAUC = ", model$auc, "(on", trainOrTest ,"\n")
+      }
     }
 
     if(length(object@xval) > 0) {
@@ -203,7 +209,8 @@ setMethod("show", "H2ODeepLearningModel", function(object) {
       if(model$params$nfolds == 0)
         cat("Reported on", object@data@key, "\n")
       else
-        cat("Reported on", paste(model$params$nfolds, "-fold cross-validated data", sep = ""), "\n")
+        if (!is.null(object@model$params$nfolds) && object@model$params$nfolds >= 2)
+          cat("Reported on", paste(model$params$nfolds, "-fold cross-validated data", sep = ""), "\n")
     } else
       cat("Reported on", object@valid@key, "\n")
     print(model$confusion)
@@ -221,6 +228,16 @@ setMethod("show", "H2ODeepLearningModel", function(object) {
     cat("\nCross-Validation Models:\n")
     temp = lapply(object@xval, function(x) { cat(" ", x@key, "\n") })
   }
+
+  if (!is.null(model$train_auc)) {
+    trainOrTest <- "train)"
+    cat("\nAUC = ", model$auc, "(on", trainOrTest)
+  }
+
+  if (!is.null(model$auc)) {
+      trainOrTest <- ifelse(is.na(object@valid@key), "train)", "test)")
+      cat("\nAUC = ", model$auc, "(on", trainOrTest ,"\n")
+  }
 })
 
 setMethod("show", "H2ODRFModel", function(object) {
@@ -236,13 +253,19 @@ setMethod("show", "H2ODRFModel", function(object) {
   if(model$params$classification) {
     cat("\nConfusion matrix:\n")
     if(is.na(object@valid@key))
-      cat("Reported on", paste(object@model$params$nfolds, "-fold cross-validated data", sep = ""), "\n")
+      if (!is.null(object@model$params$nfolds) && object@model$params$nfolds >= 2)
+        cat("Reported on", paste(object@model$params$nfolds, "-fold cross-validated data", sep = ""), "\n")
+      else cat("Reported on training data.")
     else
       cat("Reported on", object@valid@key, "\n")
     print(model$confusion)
     
-    if(!is.null(model$auc) && !is.null(model$gini))
-      cat("\nAUC:", model$auc, "\nGini:", model$gini, "\n")
+    if(!is.null(model$gini))
+      cat("\nGini:", model$gini, "\n")
+  }
+  if (!is.null(model$auc)) {
+    trainOrTest <- ifelse(is.na(object@valid@key), "train)", "test)")
+    cat("\nAUC = ", model$auc, "(on", trainOrTest ,"\n")
   }
   if(!is.null(model$varimp)) {
     cat("\nVariable importance:\n"); print(model$varimp)
@@ -258,25 +281,18 @@ setMethod("show", "H2OSpeeDRFModel", function(object) {
   print(object@data@h2o)
   cat("Parsed Data Key:", object@data@key, "\n\n")
   cat("Random Forest Model Key:", object@key)
-  cat("\n\nSeed Used: ", object@model$params$seed)
+  cat("\n\nSeed Used: ", format(object@model$params$seed, digits = 20))
 
   model = object@model
   cat("\n\nClassification:", model$params$classification)
   cat("\nNumber of trees:", model$params$ntree)
-  
-  if(FALSE){ #model$params$oobee) {
-    cat("\nConfusion matrix:\n"); cat("Reported on oobee from", object@valid@key, "\n")
-    if(is.na(object@valid@key))
-      cat("Reported on oobee from", paste(object@model$params$nfolds, "-fold cross-validated data", sep = ""), "\n")
-    else
-      cat("Reported on oobee from", object@valid@key, "\n")
-  } else {
-    cat("\nConfusion matrix:\n");
-    if(is.na(object@valid@key))
+
+  cat("\nConfusion matrix:\n");
+  if(is.na(object@valid@key)) {
+    if (!is.null(object@model$params$nfolds) && object@model$params$nfolds >= 2)
       cat("Reported on", paste(object@model$params$nfolds, "-fold cross-validated data", sep = ""), "\n")
-    else
-      cat("Reported on", object@valid@key, "\n")
-  }
+    else cat("Reported on training data.")
+  } else cat("Reported on", object@valid@key, "\n")
   print(model$confusion)
  
   if(!is.null(model$varimp)) {
@@ -293,6 +309,12 @@ setMethod("show", "H2OSpeeDRFModel", function(object) {
     cat("\nCross-Validation Models:\n")
     print(sapply(object@xval, function(x) x@key))
   }
+
+  if (!is.null(model$auc)) {
+    trainOrTest <- ifelse(is.na(object@valid@key), "train)", "test)")
+    cat("\nAUC = ", model$auc, "(on", trainOrTest ,"\n")
+  }
+
 })
 
 setMethod("show", "H2OPCAModel", function(object) {
@@ -329,8 +351,13 @@ setMethod("show", "H2OGBMModel", function(object) {
       cat("Reported on", object@valid@key, "\n")
     print(model$confusion)
     
-    if(!is.null(model$auc) && !is.null(model$gini))
-      cat("\nAUC:", model$auc, "\nGini:", model$gini, "\n")
+    if(!is.null(model$gini))
+      cat("\nGini:", model$gini, "\n")
+
+    if (!is.null(model$auc)) {
+      trainOrTest <- ifelse(is.na(object@valid@key), "train)", "test)")
+      cat("\nAUC = ", model$auc, "(on", trainOrTest ,"\n")
+    }
   }
   
   if(!is.null(model$varimp)) {
