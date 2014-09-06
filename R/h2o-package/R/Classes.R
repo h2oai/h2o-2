@@ -231,7 +231,7 @@ setMethod("show", "H2ODeepLearningModel", function(object) {
 
   if (!is.null(model$train_auc)) {
     trainOrTest <- "train)"
-    cat("\nAUC = ", model$auc, "(on", trainOrTest)
+    cat("\nAUC = ", model$train_auc, "(on", trainOrTest, "\n")
   }
 
   if (!is.null(model$auc)) {
