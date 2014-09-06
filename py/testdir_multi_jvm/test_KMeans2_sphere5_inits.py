@@ -14,19 +14,13 @@ import collections
 
 # let h2o randomize seed
 BAD_SEED = None
-# BAD_SEED = 5010213207974401134
-MAX_ITER = 100
+MAX_ITER = 500
 TRIALS = 4
 # INIT='Furthest'
 INIT='PlusPlus'
-# random doesn't seem to get good answer?
 # INIT=''
-
-# since the init is using unnormalized values for sum of squares calcs, 
-# biasing the count for large numbers for some spheres will mess it up
-NOT_SO_BAD = True
-# NOT_SO_BAD = False
-
+TEST_CASE = 1
+# BAD_SEED = 5010213207974401134
 
 def get_xyz_sphere(R):
     phi = random.uniform(0, 2 * math.pi)
@@ -55,25 +49,36 @@ def write_spheres_dataset(csvPathname, CLUSTERS, n):
     totalRows = 0
     print ""
     for sphereCnt in range(CLUSTERS):
-        R = 10 * (sphereCnt+1)
-        newOffset = [3*R,3*R,3*R]
+
+        if TEST_CASE==1:
+            R = 0.0
+            newOffset = [0.0, 0.0, 10.0]
+        else:
+            R = 10 * (sphereCnt+1)
+            newOffset = [3*R, 3*R, 3*R]
+
         # figure out the next center
         if currentCenter is None:
-            currentCenter = [0,0,0]
+            currentCenter = [0.0, 0.0, 0.0]
         else:
             currentCenter  = [a+b for a,b in zip(currentCenter, newOffset)] 
         expectedCenters.append(currentCenter)
 
         # build a sphere at that center
-        # pick a random # of points, from .5n to 1.5n
-        if NOT_SO_BAD:
-            numPts = random.randint(int(.5*n), int(1.5*n))
+        if TEST_CASE==1:
+            numPts = 10
         else:
-            numPts = n
+            # pick a random # of points, from .5n to 1.5n
+            numPts = random.randint(int(.5*n), int(1.5*n))
+
         print "currentCenter:", currentCenter, "R:", R, "numPts", numPts
         for i in range(numPts):
-            xyz = get_xyz_sphere(R)
-            xyzShifted  = [a+b for a,b in zip(xyz,currentCenter)] 
+            if TEST_CASE==1:
+                xyzShifted = (0.0, 0.0, sphereCnt*10.0)
+            else:
+                xyz = get_xyz_sphere(R)
+                xyzShifted  = [a+b for a,b in zip(xyz,currentCenter)] 
+
             dsf.write(",".join(map(str,xyzShifted))+"\n")
             totalRows += 1
 
@@ -93,7 +98,7 @@ class Basic(unittest.TestCase):
         SEED = h2o.setup_random_seed(seed=BAD_SEED)
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(2)
+            h2o.build_cloud(3)
         else:
             h2o_hosts.build_cloud_with_hosts()
 
@@ -101,7 +106,7 @@ class Basic(unittest.TestCase):
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_KMeans2_sphere5_bad_inits(self):
+    def test_KMeans2_sphere5_inits(self):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         CLUSTERS = 5
@@ -119,7 +124,7 @@ class Basic(unittest.TestCase):
             'trial clusters size cluster_variances error iterations normalized max_iter clustersSorted')
 
         # save the best for comparison. Print messages when we update best
-        sameAsBest = 1
+        sameAsBest = 0
         # big number? to init
         bestResult = Result(None, None, None, None, None, None, None, None, None)
         for trial in range(TRIALS):
@@ -158,7 +163,7 @@ class Basic(unittest.TestCase):
             iterations = model["iterations"]
             normalized = model["normalized"]
             max_iter = model["max_iter"]
-            # clustersSorted = sorted(clusters, key=itemgetter(0))
+            # clustersSorted = sorted(clusters, key=itemgetter(2))
             clustersSorted = sorted(clusters)
 
             r = Result (
@@ -218,9 +223,9 @@ class Basic(unittest.TestCase):
             aStr = ",".join(map(str,a))
             bStr = ",".join(map(str,b))
             iStr = str(i)
-            self.assertAlmostEqual(a[0], b[0], delta=2, msg=aStr+"!="+bStr+". Sorted cluster center "+iStr+"; x not correct.")
-            self.assertAlmostEqual(a[1], b[1], delta=2, msg=aStr+"!="+bStr+". Sorted cluster center "+iStr+"; y not correct.")
-            self.assertAlmostEqual(a[2], b[2], delta=2, msg=aStr+"!="+bStr+". Sorted cluster center "+iStr+"; z not correct.")
+            self.assertAlmostEqual(a[0], b[0], delta=1, msg=aStr+"!="+bStr+". Sorted cluster center "+iStr+"; x not correct.")
+            self.assertAlmostEqual(a[1], b[1], delta=1, msg=aStr+"!="+bStr+". Sorted cluster center "+iStr+"; y not correct.")
+            self.assertAlmostEqual(a[2], b[2], delta=1, msg=aStr+"!="+bStr+". Sorted cluster center "+iStr+"; z not correct.")
 
             # fix: should check size too. Really should format expected into the tuple that the h2o_kmeans checker uses
             # the c5 testdir_release stuff has a checker..for centers, size, error?
