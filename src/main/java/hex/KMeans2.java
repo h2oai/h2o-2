@@ -32,7 +32,11 @@ public class KMeans2 extends ColumnsJob {
   };
 
   @API(help = "Cluster initialization: None - chooses initial centers at random; Plus Plus - choose first center at random, subsequent centers chosen from probability distribution weighted so that points further from first center are more likey to be selected; Furthest - chooses initial point at random, subsequent point taken as the point furthest from prior point.", filter = Default.class, json=true)
-  public Initialization initialization = Initialization.None;
+  // public Initialization initialization = Initialization.None;
+  public Initialization initialization = Initialization.Furthest;
+  // default Initialization is Furthest. Better results for hard cases, especially with just one trial
+  // in the browser. PlusPlus can be biased, so Furthest can be best, again especially if just one trial
+  // Random should never be better than Furthest.
 
   @API(help = "Number of clusters", required = true, filter = Default.class, lmin = 1, lmax = 100000, json=true)
   public int k = 2;
