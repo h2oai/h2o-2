@@ -231,7 +231,7 @@ setMethod("show", "H2ODeepLearningModel", function(object) {
 
   if (!is.null(model$train_auc)) {
     trainOrTest <- "train)"
-    cat("\nAUC = ", model$auc, "(on", trainOrTest)
+    cat("\nAUC = ", model$train_auc, "(on", trainOrTest, "\n")
   }
 
   if (!is.null(model$auc)) {
@@ -270,7 +270,7 @@ setMethod("show", "H2ODRFModel", function(object) {
   if(!is.null(model$varimp)) {
     cat("\nVariable importance:\n"); print(model$varimp)
   }
-  cat("\nMean-squared Error by tree:\n"); print(model$mse)
+  cat("\nOverall Mean-squared Error: ", model$err[[length(model$err)]], "\n")
   if(length(object@xval) > 0) {
     cat("\nCross-Validation Models:\n")
     print(sapply(object@xval, function(x) x@key))
@@ -363,7 +363,7 @@ setMethod("show", "H2OGBMModel", function(object) {
   if(!is.null(model$varimp)) {
     cat("\nVariable importance:\n"); print(model$varimp)
   }
-  cat("\nMean-squared Error by tree:\n"); print(model$err)
+  cat("\nOverall Mean-squared Error: ", model$err[[length(model$err)]], "\n")
   if(length(object@xval) > 0) {
     cat("\nCross-Validation Models:\n")
     print(sapply(object@xval, function(x) x@key))
