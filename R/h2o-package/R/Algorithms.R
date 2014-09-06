@@ -1264,8 +1264,22 @@ h2o.anomaly <- function(data, model, key = "", threshold = -1.0) {
   if(class(model) != "H2ODeepLearningModel") stop("model must be an H2O deep learning model")
   if(!is.character(key)) stop("key must be of class character")
   if(!is.numeric(threshold)) stop("threshold must be of class numeric")
-  
+
   res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_ANOMALY, source = data@key, dl_autoencoder_model = model@key, destination_key = key, thresh = threshold)
+  .h2o.__waitOnJob(data@h2o, res$job_key)
+  .h2o.exec2(res$destination_key, h2o = data@h2o, res$destination_key)
+}
+
+h2o.deepfeatures <- function(data, model, key = "", layer = -1) {
+  if(missing(data)) stop("Must specify data")
+  if(class(data) != "H2OParsedData") stop("data must be an H2O parsed dataset")
+  if(missing(model)) stop("Must specify model")
+  if(class(model) != "H2ODeepLearningModel") stop("model must be an H2O deep learning model")
+  if(!is.character(key)) stop("key must be of class character")
+  if(!is.numeric(layer)) stop("layer must be of class numeric")
+
+  if (layer != -1) layer = layer - 1; #index translation (R index is from 1..N, Java expects 0..N-1)
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DEEPFEATURES, source = data@key, dl_model = model@key, destination_key = key, layer = layer)
   .h2o.__waitOnJob(data@h2o, res$job_key)
   .h2o.exec2(res$destination_key, h2o = data@h2o, res$destination_key)
 }
