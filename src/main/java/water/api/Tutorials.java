@@ -25,6 +25,13 @@ public class Tutorials extends HTMLOnlyRequest {
     + "<div class='row'>"
 
     + "<div class='span2 col'>"
+    + "<h2>Use H<sub>2</sub>O from R</h2>"
+    + "<div style='background-color:#006dcc;color:white;background-image:linear-gradient(to bottom,#08c,#04c);text-align:center;font-size:70px;font-weight:bold;height:100px;line-height:100px;border-radius:15px;max-width:110px;margin-bottom:5px'>R</div>"
+    + "<p>H<sub>2</sub>O supports both R and R Studio.</p>"
+    +   "<a href='" + documentationUrl + "#R' class='btn btn-primary'>Try it!</a>"
+    + "</div>"
+
+    + "<div class='span2 col'>"
     + "  <h2>Random Forest</h2>"
     +   "<p>Random Forest is a classical machine learning method for classification and regression. Learn how to use it with H<sub>2</sub>O for better predictions.</it></p>"
     +   "<a href='/TutorialRFIris.html' class='btn btn-primary'>Try it!</a>"
@@ -52,13 +59,6 @@ public class Tutorials extends HTMLOnlyRequest {
     + "<h2>Deep Learning</h2>"
     + "<p>H<sub>2</sub>O's distributed Deep Learning gives you the power of deep neural networks for highest accuracy for classification and regression.</p>"
     +   "<a href='/TutorialDeepLearning.html' class='btn btn-primary'>Try it!</a>"
-    + "</div>"
-
-    + "<div class='span2 col'>"
-    + "<h2>Use H<sub>2</sub>O from R</h2>"
-    + "<div style='background-color:#006dcc;color:white;background-image:linear-gradient(to bottom,#08c,#04c);text-align:center;font-size:70px;font-weight:bold;height:100px;line-height:100px;border-radius:15px;max-width:110px;margin-bottom:5px'>R</div>"
-    + "<p>H<sub>2</sub>O supports both R and R Studio.</p>"
-    +   "<a href='" + documentationUrl + "#R' class='btn btn-primary'>Try it!</a>"
     + "</div>"
 
     + "</div>"
