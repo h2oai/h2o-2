@@ -19,6 +19,9 @@ cdh4_yarn_JARS=$(cdh4_yarn_JAR_DIR)/common/hadoop-common-2.0.0-cdh4.3.0.jar${SEP
 mapr2.1.3_JAR_DIR=../lib/hadoop/mapr2.1.3
 mapr2.1.3_JARS=$(mapr2.1.3_JAR_DIR)/hadoop-0.20.2-dev-core.jar
 
+mapr3.1.1_JAR_DIR=../lib/hadoop/mapr3.1.1
+mapr3.1.1_JARS=$(mapr3.1.1_JAR_DIR)/hadoop-0.20.2-dev-core.jar
+
 hdp1.3.2_JAR_DIR=../lib/hadoop/hdp1.3.2
 hdp1.3.2_JARS=$(hdp1.3.2_JAR_DIR)/hadoop-core-1.2.0.1.3.2.0-111.jar
 
@@ -74,6 +77,7 @@ build: clean
 	mkdir classes
 	mkdir target
 	$(MAKE) build_inner HADOOP_VERSION=mapr2.1.3 YARN=false
+	$(MAKE) build_inner HADOOP_VERSION=mapr3.1.1 YARN=false
 	$(MAKE) build_inner HADOOP_VERSION=cdh3      YARN=false
 	$(MAKE) build_inner HADOOP_VERSION=cdh4      YARN=false
 	$(MAKE) build_inner HADOOP_VERSION=cdh4_yarn YARN=true
