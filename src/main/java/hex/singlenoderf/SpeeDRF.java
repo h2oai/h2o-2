@@ -91,6 +91,8 @@ public class SpeeDRF extends Job.ValidatedJob {
 
   public DRFParams drfParams;
 
+  private long use_seed;
+
   Tree.StatType stat_type;
 
   /** Return the query link to this page */
@@ -234,7 +236,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       model.start_training(null);
       model.write_lock(self());
       drfParams = DRFParams.create(train.find(resp), model.N, model.max_depth, (int) train.numRows(), model.nbins,
-              model.statType, seed, model.weights, mtries, model.sampling_strategy, (float) sample_rate, model.strata_samples, model.verbose ? 100 : 1, _exclusiveSplitLimit, true, regression);
+              model.statType, use_seed, model.weights, mtries, model.sampling_strategy, (float) sample_rate, model.strata_samples, model.verbose ? 100 : 1, _exclusiveSplitLimit, true, regression);
 
       DRFTask tsk = new DRFTask(self(), train, drfParams, model._key, model.src_key);
       tsk.validateInputData(train);
@@ -273,7 +275,7 @@ public class SpeeDRF extends Job.ValidatedJob {
     model.verbose = verbose; model.verbose_output = new String[]{""};
     model.validation = test != null;
     model.confusion = null;
-    model.zeed = seed;
+    model.zeed = use_seed;
     model.cmDomain = getCMDomain();
     model.nbins = nbins;
     model.max_depth = max_depth;
@@ -311,10 +313,10 @@ public class SpeeDRF extends Job.ValidatedJob {
 
   private void setStatType() { if (regression) stat_type = Tree.StatType.MSE; stat_type = select_stat_type == Tree.SelectStatType.ENTROPY ? Tree.StatType.ENTROPY : Tree.StatType.GINI; }
   private void setSeed(long s) {
-    if (s == -1) seed = _seedGenerator.nextLong();
+    if (s == -1) { seed = _seedGenerator.nextLong(); use_seed = seed; }
     else {
       _seedGenerator = Utils.getDeterRNG(s);
-      seed = _seedGenerator.nextLong();
+      use_seed = _seedGenerator.nextLong();
     }
   }
   private void setMtry(boolean reg, int numCols) { mtries = reg ? (int) Math.floor((float) (numCols) / 3.0f) : (int) Math.floor(Math.sqrt(numCols)); }
@@ -340,7 +342,7 @@ public class SpeeDRF extends Job.ValidatedJob {
       int response_idx = fr.find(_responseName);
       fr.replace(response_idx, resp);
       trainSamplingFactors = new float[resp.domain().length]; //leave initialized to 0 -> will be filled up below
-      Frame stratified = sampleFrameStratified(fr, resp, trainSamplingFactors, (long) (max_after_balance_size * fr.numRows()), seed, true, false);
+      Frame stratified = sampleFrameStratified(fr, resp, trainSamplingFactors, (long) (max_after_balance_size * fr.numRows()), use_seed, true, false);
       if (stratified != fr) {
         fr = stratified;
         gtrash(stratified);

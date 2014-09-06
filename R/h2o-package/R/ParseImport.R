@@ -192,13 +192,13 @@ h2o.importFile <- function(object, path, key = "", parse = TRUE, header, sep = "
 
 # ----------------------------------- Import URL --------------------------------- #
 h2o.importURL <- function(object, path, key = "", parse = TRUE, header, sep = "", col.names) {
-  print("This function has been deprecated in FluidVecs. In the future, please use h2o.importFile with a http:// prefix instead.")
+  print("This function has been deprecated. In the future, please use h2o.importFile with a http:// prefix instead.")
   h2o.importFile(object, path, key, parse, header, sep, col.names)
 }
 
 # ----------------------------------- Import HDFS --------------------------------- #
 h2o.importHDFS <- function(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names) {
-  print("This function has been deprecated in FluidVecs. In the future, please use h2o.importFolder with a hdfs:// prefix instead.")
+  print("This function has been deprecated. In the future, please use h2o.importFolder with a hdfs:// prefix instead.")
   h2o.importFolder(object, path, pattern, key, parse, header, sep, col.names)
 }
 

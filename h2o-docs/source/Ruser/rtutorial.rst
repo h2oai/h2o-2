@@ -1,131 +1,110 @@
-
-
-.. -*- mode: rst -*-
-
-
+.. _R_Tutorial:
 
 R Tutorial
--------------
+==========
 
-The purpose of this tutorial is to walk the new user through 
-examples demonstrating the use of H\ :sub:`2`\ O through R.  The objective is to  
-learn the basic syntax of H\ :sub:`2`\ O, including importing and 
-parsing files, specifying a model, and obtaining model output. 
+The purpose of this tutorial is to give a sample workflow for new users of H\ :sub:`2`\ O's R API.
+The objective is to learn the basic syntax of H\ :sub:`2`\ O, including importing and parsing files,
+specifying a model, and obtaining model output.
 
-Those who have never used H\ :sub:`2`\ O before should see the quick
-start guide for additional instructions on how to run H\ :sub:`2`\ O. 
-Additionally, users who are using H\ :sub:`2`\ O through R for the
-first time will need to install the R package, available in our
-download package at: http://0xdata.com/downloadtable/. 
-
-It is highly recommended that users review the getting started section
-before proceeding to other sections for examples. At a minimum users
-should run the following commands before running any other examples,
-as the H\ :sub:`2`\ O library and H\ :sub:`2`\ O object (named “localH2O” in examples is
-required in R for most examples to work.
-
-
-::
-
-  library(h2o)
-  localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
-
-
-In this tutorial you can find information on: 
-Getting Started (establishing a connection between H\ :sub:`2`\ O and R),
-Importing Data, Data Manipulation, Running Models, Obtaining
-Predictions, Other Useful Functions. 
-
+Those who have never used H\ :sub:`2`\ O before should see the quick start guide for additional
+instructions on how to run H\ :sub:`2`\ O. The following tutorial will follow the assumption that the user was
+able to install H\ :sub:`2`\ O in R.
 
 Getting Started
 """""""""""""""
 
-**Installing and Starting H2O**
+R uses an REST API to send directives to H\ :sub:`2`\ O which means that we need a reference object in R to the H\ :sub: `2`\ O instance.
+The user can either start H\ :sub:`2`\ O outside of R and connect to it after or the user can launch directly from R and when the R session
+closes the H\ :sub:`2`\ O instance will be killed with it. The client object will later be used to direct R to datasets and models sitting in
+H\ :sub:`2`\ O.
 
-  Before beginning, be sure to have an instance of H\ :sub:`2`\ O
-  running. Additionally, users who are using H\ :sub:`2`\ O for the
-  first time can find help for installing the R package at 
-  http://docs.0xdata.com/Ruser/Rinstall.html.
+**Launch From R**
 
-  **Step 1**
-
-  Call the H\ :sub:`2`\ O package, and initialize H\ :sub:`2`\ O
-  in R. Note that an object “localh2o” is created. Assigning the
-  H\ :sub:`2`\ O initialization to an object is important, because the
-  connection will be used later to tell R where to send data sets, model
-  specification, and where to find results.  
+By default if the argument max_mem_size is not specified when running h2o.init() the heap size of the H\ :sub:`2`\ O running on 32-bit Java is
+1g and on 64-bit Java is 1/4 of the total memory available on the machine. If the user is using a 32-bit version the function will run a check
+and suggest an upgrade.
 
 ::
 
   library(h2o)
-  localH2O <- h2o.init(ip = "localhost", port = 54321)
+  localH2O <- h2o.init(ip = 'localhost', port = 54321, max_mem_size = '4g')
 
-Users may see a response message in R indicating that the instance of
-H\ :sub:`2`\ O running is a different version than that of the corresponding 
-H\ :sub:`2`\ O R package. This error will look similar to the picture below. 
-If you get this error, it can be resolved by downloading the correct version of 
-H\ :sub:`2`\ O from http://0xdata.com/downloadtable/. Users should follow the 
-installation instructions on the download page. 
+
+**Launch From Command Line**
+
+Launch an instance from the command line on your desktop, on ec2 instances, or Hadoop servers by following one of the deployment tutorials.
+Once the H\ :sub:`2`\ O cluster is launched, simply initialize the connection by taking one node in the cluster and run h2o.init with its
+IP Address and port.
+
+::
+
+  library(h2o)
+  localH2O <- h2o.init(ip = '192.168.1.161', port =54321)
+
+.. WARNING::
+  If the version of H\ :sub:`2`\ O instance running is different from the package version loaded in R,
+  a warning message indicating a version mismatch will appear. To fix this issue either update the R package
+  or launch an H\ :sub:`2`\ O instance using the jar file from the installed package.
 
 .. image:: UpdateR.png
    :width: 70%
 
 
-
-
 **Cluster Info**
 
-  Used to check that the H\ :sub:`2`\ O instance is running and healthy. 
+At any point if the user want to check on the status and health of the H\ :sub:`2`\ O cluster h2o.clusterInfo() returns an easy to read
+list of information on the cluster.
 
 ::
 
   library(h2o)
-  localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
-  h2o.checkClient(localH2O)
+  localH2O = h2o.init(ip = 'localhost', port = 54321)
+  h2o.clusterInfo(localH2O)
+
 
 Importing Data
-"""""""""""""""
+""""""""""""""
 
 **Import File**
 
-  Use this call when importing a data set that exists in a single file. 
-
+H\ :sub:`2`\ O's package has consolidated all the different import functions supported. Although h2o.importFolder and h2o.importHDFS will still work,
+it should be noted that these functions are deprecated and should be updated to h2o.importFile.
 
 ::
 
+  ## To import small iris data file from H\ :sub:`2`\ O's package
   irisPath = system.file("extdata", "iris.csv", package="h2o")
   iris.hex = h2o.importFile(localH2O, path = irisPath, key = "iris.hex")
   summary(iris.hex)
 
-**Import Folder**
+  ## To import an entire folder of files as one data object
+  pathToFolder = "/Users/Amy/0xdata/data/airlines/"
+  airlines.hex = h2o.importFile(localH2O, path = pathToFolder, key = "airlines.hex")
+  summary(airlines.hex)
 
-  Use this call when importing a data set that exists in multiple files. 
+  ## To import from HDFS
+  pathToData = "hdfs://mr-0xd6.0xdata.loc/datasets/airlines_all.csv"
+  airlines.hex = h2o.importFile(localH2O, path = pathToData, key = "airlines.hex")
+  summary(airlines.hex)
 
-::
 
-  myPath = system.file("extdata", "prostate_folder", package = "h2o")
-  prostate_all.hex = h2o.importFolder(localH2O, path = myPath)
-  class(prostate_all.hex)
-  summary(prostate_all.hex)
-  prostate_all.fv = h2o.importFolder(localH2O, path = myPath, version = 2)
+**Upload File**
 
-**Import URL** 
-
-  Use this call when data are stored at a website accessible from the machine on which the 
-  instance of H\ :sub:`2`\ O is running. 
+To upload a file from your local disk you can run upload file, however importFile is recommend if applicable.
 
 ::
 
-  prostate.hex = h2o.importURL(localH2O, path = paste("https://raw.github.com", 
-  "0xdata/h2o/master/smalldata/logreg/prostate.csv", sep = "/"), key = "prostate.hex")
-  class(prostate.hex)
-  summary(prostate.hex)
+  irisPath = system.file("extdata", "iris.csv", package="h2o")
+  iris.hex = h2o.uploadFile(localH2O, path = irisPath, key = "iris.hex")
+  summary(iris.hex)
+
 
 Data Manipulation and Description
-""""""""""""""""""""""""""""""""""
+"""""""""""""""""""""""""""""""""
 **Any Factor**
 
-  Used to determine if any column in a data set is a factor. 
+  Used to determine if any column in a data set is a factor.
 
 ::
 
@@ -133,7 +112,7 @@ Data Manipulation and Description
   iris.hex = h2o.importFile(localH2O, path = irisPath)
   h2o.anyFactor(iris.hex)
 
-  
+
 **As Data Frame**
 
   Used to convert an H\ :sub:`2`\ O parsed data object into an R data frame
@@ -144,13 +123,12 @@ Data Manipulation and Description
   equivalently well in R. 
 
 ::
- 
-   prosPath <- system.file("extdata", "prostate.csv", package="h2o")
-   prostate.hex = h2o.importFile(localH2O, path = prosPath)
-   prostate.data.frame<- as.data.frame(prostate.hex)
-   summary(prostate.data.frame)
-   head(prostate.data.frame)
 
+  prosPath <- system.file("extdata", "prostate.csv", package="h2o")
+  prostate.hex = h2o.importFile(localH2O, path = prosPath)
+  prostate.data.frame<- as.data.frame(prostate.hex)
+  summary(prostate.data.frame)
+  head(prostate.data.frame)
 
 
 **As Factor**
@@ -165,6 +143,7 @@ Data Manipulation and Description
   prostate.hex[,4] = as.factor(prostate.hex[,4])
   summary(prostate.hex)
 
+
 **As H2O** 
 
   Used to pass a data frame from inside of the R environment to the H\ :sub:`2`\ O instance.
@@ -176,7 +155,6 @@ Data Manipulation and Description
   iris.r <- iris
   iris.h2o <- as.h2o(localH2O, iris.r, key="iris.h2o")
   class(iris.h2o)
-
 
 
 **Assign H2O**
@@ -221,6 +199,7 @@ Data Manipulation and Description
   min(australia.hex)
   min(c(-1, 0.5, 0.2), FALSE, australia.hex[,1:4])
 
+
 **Quantiles**
 
   Used to request quantiles for an H\ :sub:`2`\ O parsed data set. When requested
@@ -251,6 +230,7 @@ Data Manipulation and Description
    summary(prostate.hex$GLEASON)
    summary(prostate.hex[,4:6])
 
+
 **H2O Table**
 
   Used to summarize information in data. Note that because H\ :sub:`2`\ O handles such large data sets, 
@@ -264,8 +244,9 @@ Data Manipulation and Description
 
   head(h2o.table(prostate.hex[,3]))
   head(h2o.table(prostate.hex[,c(3,4)]))
- 
-**Test Train Split and generating Random Numbers**
+
+
+**Generate Random Uniformly Distributed Numbers**
 
   Runif is used to append a column of random numbers to an H\ :sub:`2`\ O data
   frame and facilitate creating test/ train splits of data for
@@ -285,15 +266,32 @@ Data Manipulation and Description
   nrow(prostate.train) + nrow(prostate.test)
 
 
+**Split Frame**
+
+  The function generates two subset of an existing H2O data set according to user-specified ratios which can be used as test/train sets.
+  This is the preferred method of splitting a data frame as it's faster and more stable than running runif across entire data however runif
+  can be used for customized frame splitting.
+
+::
+
+  prosPath = system.file("extdata", "prostate.csv", package="h2o")
+  prostate.hex = h2o.importFile(localH2O, path = prosPath, key = "prostate.hex")
+  prostate.split = h2o.splitFrame(data = prostate.hex , ratios = 0.75)
+  prostate.train = prostate.split[1]
+  prostate.test = prostate.split[2]
+  summary(prostate.train)
+  summary(prostate.test)
+
+
 Running Models
-"""""""""""""""
+""""""""""""""
 
 **GBM**
 
   Gradient Boosted Models. For information on the GBM algorithm see :ref:`GBMmath`
 
 ::
-  
+
   ausPath = system.file("extdata", "australia.csv", package="h2o")
   australia.hex = h2o.importFile(localH2O, path = ausPath)
   independent <- c("premax", "salmax","minairtemp", "maxairtemp",
@@ -302,6 +300,7 @@ Running Models
   h2o.gbm(y = dependent, x = independent, data = australia.hex,
   n.trees = 10, interaction.depth = 3, 
      n.minobsinnode = 2, shrinkage = 0.2, distribution= "gaussian")
+
 
 *Run multinomial classification GBM on abalone data*
 
@@ -312,7 +311,7 @@ Running Models
    n.minobsinnode = 2, shrinkage = 0.01, distribution= "multinomial")
 
 
-**Generalized Linear Models**
+**GLM**
 
   Generalized linear models, which are used to develop linear models
   for exponential distributions. Regularization can be applied. For
@@ -321,16 +320,15 @@ Running Models
 
 ::
 
-  prostate.hex = h2o.importURL.VA(localH2O, path =
+  prostate.hex = h2o.importFile(localH2O, path =
   "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", 
   key = "prostate.hex")
   h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data =
   prostate.hex, family = "binomial", nfolds = 10, alpha = 0.5)
 
 
-
 ::
-  
+
   myX = setdiff(colnames(prostate.hex), c("ID", "DPROS", "DCAPS", "VOL"))
   h2o.glm(y = "VOL", x = myX, data = prostate.hex, family = "gaussian", nfolds = 5, alpha = 0.1)
 
@@ -341,16 +339,12 @@ Running Models
   data. This algorithm does not rely on a dependent variable. For
   information on the K-Means algorithm see :ref:`KMmath`
 
-
 ::
 
   prosPath = system.file("extdata", "prostate.csv", package="h2o")
   prostate.hex = h2o.importFile(localH2O, path = prosPath)
-  h2o.kmeans(data = prostate.hex, centers = 10, cols = c("AGE", "RACE", "VOL", "GLEASON"))
-  covPath = system.file("extdata", "covtype.csv", package="h2o")
-  covtype.hex = h2o.importFile(localH2O, path = covPath)
-  covtype.km = h2o.kmeans(data = covtype.hex, centers = 5, cols = c(1, 2, 3))
-  print(covtype.km)
+  prostate.km = h2o.kmeans(data = prostate.hex, centers = 10, cols = c("AGE", "RACE", "VOL", "GLEASON"))
+  print(prostate.km)
 
 
 **Principal Components Analysis**
@@ -380,9 +374,8 @@ Running Models
 
 ::
 
-  prostate.hex = h2o.importFile(localH2O, 
-  path =
-  "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", 
+  prostate.hex = h2o.importFile(localH2O, path =
+    "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv",
   key = "prostate.hex")
   h2o.pcr(x = c("AGE","RACE","PSA","DCAPS"), y = "CAPSULE", data =
   prostate.hex, family = "binomial", 
@@ -390,7 +383,7 @@ Running Models
 
   
 Obtaining Predictions
-""""""""""""""""""""""
+"""""""""""""""""""""
 
 **Predict**
 
@@ -401,10 +394,8 @@ Obtaining Predictions
 
 ::
 
-  prostate.hex = h2o.importURL.VA(localH2O, 
-  path =
-  "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", 
-  key = "prostate.hex")
+  prostate.hex = h2o.importFile(localH2O, path =
+    "https://raw.github.com/0xdata/h2o/master/smalldata/logreg/prostate.csv", key = "prostate.hex")
   prostate.glm = h2o.glm(y = "CAPSULE", x =
   c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, 
   family = "binomial", nfolds = 10, alpha = 0.5)
@@ -412,17 +403,31 @@ Obtaining Predictions
   summary(prostate.fit)
 
 
+Other Useful Functions
+""""""""""""""""""""""
+
+**Get Frame**
+
+  For users that alternate between using the web interface and the R API or for multiple users accessing the same H\ :sub:`2`\ O,
+  this function gives the user the option to create a reference object for a data frame sitting in H\ :sub:`2`\ O. Assuming there's a
+  prostate.hex sitting in the KV store.
 
 ::
-  
-  covPath = system.file("extdata", "covtype.csv", package="h2o")
-  covtype.hex = h2o.importFile(localH2O, path = covPath)
-  covtype.km = h2o.kmeans(data = covtype.hex, centers = 5, cols = c(1, 2, 3))
-  covtype.clusters = h2o.predict(object = covtype.km, newdata = covtype.hex)
+
+  prostate.hex = h2o.getFrame(h2o = localH2O, key = "prostate.hex")
+  summary(prostate.hex)
 
 
-Other Useful Functions
-"""""""""""""""""""""""
+**Get Model**
+
+  For users that alternate between using the web interface and the R API, this function gives the user the option create a reference object
+  for a data frame sitting in H\ :sub:`2`\ O. Assuming there's a GLMModel__ba724fe4f6d6d5b8b6370f776df94e47 model sitting in the KV store.
+
+::
+
+  glm.model = h2o.getModel(h2o = localH2O, key = "GLMModel__ba724fe4f6d6d5b8b6370f776df94e47")
+  glm.model
+
 
 **List all H2O Objects**
 
@@ -432,8 +437,8 @@ Other Useful Functions
 ::
 
   prostate.hex = h2o.importFile(localH2O, path = prosPath, key = "prostate.hex")
-  s = runif(nrow(prostate.hex))
-  prostate.train = prostate.hex[s <= 0.8,]
+  prostate.split = h2o.splitFrame(prostate.hex , ratio = 0.8)
+  prostate.train = prostate.split[1]
   prostate.train = h2o.assign(prostate.train, "prostate.train")
   h2o.ls(localH2O)
 
@@ -444,17 +449,14 @@ Other Useful Functions
   is to also remove the object in the R environment.
 
 ::
-  
+
   localH2O = h2o.init()
   prosPath = system.file("extdata", "prostate.csv", package="h2o")
   prostate.hex = h2o.importFile(localH2O, path = prosPath, key = "prostate.hex")
-  s = runif(nrow(prostate.hex))
-  prostate.train = prostate.hex[s <= 0.8,]
+  prostate.split = h2o.splitFrame(prostate.hex , ratio = 0.8)
+  prostate.train = prostate.split[1]
   prostate.train = h2o.assign(prostate.train, "prostate.train")
   h2o.ls(localH2O)
-  h2o.rm(object= localH2O, keys= "Last.value.0")
+  h2o.rm(object= localH2O, keys= "prostate.train")
   h2o.ls(localH2O)
-
-
-
 

@@ -478,7 +478,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     sb.append("</div>");
     DocGen.HTML.paragraph(sb,"Model Key: "+_key);
     DocGen.HTML.paragraph(sb,"Max max_depth: "+max_depth+", Nbins: "+nbins+", Trees: " + this.size());
-    DocGen.HTML.paragraph(sb, "Sample Rate: "+sample + ", Seed: "+zeed+", mtry: "+mtry);
+    DocGen.HTML.paragraph(sb, "Sample Rate: "+sample + ", User Seed: "+get_params().seed+ ", Internal Seed: "+zeed+", mtry: "+mtry);
     sb.append("</pre>");
 
     if (this.size() > 0 && this.size() < N) sb.append("Current Status: ").append("Building Random Forest");

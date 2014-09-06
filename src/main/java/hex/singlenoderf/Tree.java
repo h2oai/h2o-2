@@ -169,8 +169,8 @@ public class Tree extends H2OCountedCompleter {
       sb.append(" d=").append(_tree.depth()).append(" leaves=").append(_tree.leaves()).append(" done in ").append(timer).append('\n');
       Log.info(sb.toString());
       if (_verbose > 10) {
-        Log.info(Sys.RANDF, _tree.toString(sb, Integer.MAX_VALUE).toString());
-        Log.info(Sys.RANDF, _tree.toJava(sb, Integer.MAX_VALUE).toString());
+//        Log.info(Sys.RANDF, _tree.toString(sb, Integer.MAX_VALUE).toString());
+//        Log.info(Sys.RANDF, _tree.toJava(sb, Integer.MAX_VALUE).toString());
       }
     } else throw new Job.JobCancelledException();
     // Wait for completion
@@ -201,7 +201,7 @@ public class Tree extends H2OCountedCompleter {
     Pattern pattern = Pattern.compile("<= .* <= (.*?) <=");
     Matcher matcher = pattern.matcher(abString);
     if (matcher.find()) {
-      System.out.println(matcher.group(1));
+//      System.out.println(matcher.group(1));
       cap = Integer.valueOf(matcher.group(1));
     }
     // skip meta data of the tree
@@ -733,7 +733,7 @@ public class Tree extends H2OCountedCompleter {
 
   // Build a compressed-tree struct
   public TreeModel.CompressedTree compress() {
-    Log.info(Sys.RANDF, _tree.toString(new StringBuilder(), Integer.MAX_VALUE).toString());
+//    Log.info(Sys.RANDF, _tree.toString(new StringBuilder(), Integer.MAX_VALUE).toString());
     int size = _tree.dtreeSize();
     if (_tree instanceof LeafNode) {
       size += 3;
@@ -775,7 +775,7 @@ public class Tree extends H2OCountedCompleter {
     Pattern pattern = Pattern.compile("<= .* <= (.*?) <=");
     Matcher matcher = pattern.matcher(abString);
     if (matcher.find()) {
-      System.out.println(matcher.group(1));
+//      System.out.println(matcher.group(1));
       cap = Integer.valueOf(matcher.group(1));
     }
 
