@@ -129,11 +129,17 @@ h2o.glm(y = "VOL", x = myX, data = prostate.hex, family = "gaussian", nfolds = 0
 
 \dontrun{
 # GLM variable importance
-# Also see: https://github.com/0xdata/h2o/blob/master/R/tests/testdir_demos/runit_demo_VI_all_algos.R
-data.hex = h2o.importFile(h, path = "https://raw.github.com/0xdata/h2o/master/smalldata/bank-additional-full.csv", key="data.hex")
+# Also see:
+#   https://github.com/0xdata/h2o/blob/master/R/tests/testdir_demos/runit_demo_VI_all_algos.R
+data.hex = h2o.importFile(
+  localH2O,
+  path = "https://raw.github.com/0xdata/h2o/master/smalldata/bank-additional-full.csv",
+  key = "data.hex")
 myX = 1:20
 myY="y"
-my.glm = h2o.glm(x=myX, y=myY, data=data.hex, family="binomial",standardize=T,use_all_factor_levels=T,higher_accuracy=T,lambda_search=T,return_all_lambda=T,variable_importances=T)
+my.glm = h2o.glm(x=myX, y=myY, data=data.hex, family="binomial",standardize=T,
+                 use_all_factor_levels=T,higher_accuracy=T,lambda_search=T,
+                 return_all_lambda=T,variable_importances=T)
 best_model = my.glm@best_model
 n_coeff = abs(my.glm@models[[best_model]]@model$normalized_coefficients)
 VI = abs(n_coeff[-length(n_coeff)])
