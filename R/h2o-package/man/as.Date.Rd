@@ -23,7 +23,10 @@ Note that resulting values are in milliseconds and not the seconds stored by the
 \examples{
 library(h2o)
 localH2O = h2o.init(ip = "localhost", port = 54321, startH2O = TRUE)
-dates = c("Fri Jan 10 00:00:00 1969 -0800", "Tue Jan 10 04:00:00 2068 -0800", "Mon Dec 30 01:00:00 2002 -0800", "Wed Jan 1 12:00:00 2003 -0800")
+dates = c("Fri Jan 10 00:00:00 1969 -0800",
+          "Tue Jan 10 04:00:00 2068 -0800",
+          "Mon Dec 30 01:00:00 2002 -0800",
+          "Wed Jan 1 12:00:00 2003 -0800")
 df = data.frame(dates)
 hdf = as.h2o(localH2O, df, "hdf", TRUE)
 hdf$dates = as.Date(hdf$dates, "\%c \%z")
