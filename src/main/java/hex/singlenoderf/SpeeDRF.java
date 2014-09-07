@@ -298,6 +298,7 @@ public class SpeeDRF extends Job.ValidatedJob {
     model.local_forests = new Key[csize][]; for(int i=0;i<csize;i++) model.local_forests[i] = new Key[0];
     model.node_split_features = new int[csize];
     model.t_keys = new Key[0];
+    model.dtreeKeys = new Key[ntrees][regression ? 1 : model.classes()];
     model.time = 0;
     for( Key tkey : model.t_keys ) assert DKV.get(tkey)!=null;
     model.jobKey = self();
