@@ -403,7 +403,7 @@ year.H2OParsedData <- h2o.year
 month <- function(x) UseMethod('month', x)
 month.H2OParsedData <- h2o.month
 
-as.Date.H2OParsedData <- function(x, format, ...) {
+setMethod("as.Date", "H2OParsedData", function(x, format, ...) {
   if(!is.character(format)) stop("format must be a string")
 
   expr = paste("as.Date(", paste(x@key, deparse(eval(format, envir = parent.frame())), sep = ","), ")", sep = "")
@@ -411,7 +411,7 @@ as.Date.H2OParsedData <- function(x, format, ...) {
   res <- .h2o.exec2(res$dest_key, h2o = x@h2o, res$dest_key)
   res@logic <- FALSE
   return(res)
-}
+})
 
 diff.H2OParsedData <- function(x, lag = 1, differences = 1, ...) {
   if(!is.numeric(lag)) stop("lag must be numeric")

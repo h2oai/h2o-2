@@ -936,6 +936,8 @@ public class DTree extends Iced {
           meanLeaves = ((float)sumLeaves / numTrees);
         }
       }
+
+      public void setNumTrees(int i) { numTrees = i; }
     }
 
     // --------------------------------------------------------------------------

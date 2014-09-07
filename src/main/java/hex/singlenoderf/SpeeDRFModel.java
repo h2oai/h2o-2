@@ -621,6 +621,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       treeStats.minLeaves = (int)leaf_stats[0];
       treeStats.meanLeaves = (float)leaf_stats[1];
       treeStats.maxLeaves = (int)leaf_stats[2];
+      treeStats.setNumTrees(N);
     } else {
       treeStats = null;
     }

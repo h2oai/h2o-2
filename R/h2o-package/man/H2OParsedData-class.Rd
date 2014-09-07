@@ -179,6 +179,7 @@ Objects can be created by calls of the form \code{new("H2OParsedData", ...)}.
     \item{abs}{\code{signature(x = "H2OParsedData")}: ... }
     \item{apply}{\code{signature(X = "H2OParsedData")}: ... }
     \item{as.data.frame}{\code{signature(x = "H2OParsedData")}: ... }
+    \item{as.Date}{\code{signature(x = "H2OParsedData", format = "character")}: ... }
     \item{as.factor}{\code{signature(x = "H2OParsedData")}: ... }
     \item{ceiling}{\code{signature(x = "H2OParsedData")}: ... }
     \item{colMeans}{\code{signature(x = "H2OParsedData")}: ... }
