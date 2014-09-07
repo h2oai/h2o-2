@@ -12,7 +12,8 @@ public class Tutorials extends HTMLOnlyRequest {
     AbstractBuildVersion abv = H2O.getBuildVersion();
     String branchName = abv.branchName();
     String buildNumber = abv.buildNumber();
-    String documentationUrl = "http://s3.amazonaws.com/h2o-release/h2o/" + branchName + "/" + buildNumber + "/docs-website/index.html";
+    String documentationUrl = "http://s3.amazonaws.com/h2o-release/h2o/" + branchName + "/" + buildNumber + "/docs-website";
+    String RPackageDocumentationUrl = documentationUrl + "/Ruser/top.html";
     return "<div class='container'><div class='hero-unit' style='overflow: hidden'>"
     + "<style scoped='scoped'>"
     + "  h2 { font-size:18px; }"
@@ -28,7 +29,7 @@ public class Tutorials extends HTMLOnlyRequest {
     + "<h2>Use H<sub>2</sub>O from R</h2>"
     + "<div style='background-color:#006dcc;color:white;background-image:linear-gradient(to bottom,#08c,#04c);text-align:center;font-size:70px;font-weight:bold;height:100px;line-height:100px;border-radius:15px;max-width:110px;margin-bottom:5px'>R</div>"
     + "<p>H<sub>2</sub>O supports both R and R Studio.</p>"
-    +   "<a href='" + documentationUrl + "#R' class='btn btn-primary'>Try it!</a>"
+    +   "<a href='" + RPackageDocumentationUrl + "' class='btn btn-primary'>Try it!</a>"
     + "</div>"
 
     + "<div class='span2 col'>"
