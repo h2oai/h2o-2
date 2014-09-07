@@ -177,7 +177,7 @@ def compareToFirstKMeans(self, clusters, firstclusters):
         kList  = [clusters]
         firstkList = [firstclusters]
 
-    print "kbn:", kList, firstkList
+    print "kList:", kList, "firstkList:", firstkList
     for k, firstk in zip(kList, firstkList):
         # delta must be a positive number?
         # too bad we can't do an assertAlmostEqual on the list directly..have to break them out

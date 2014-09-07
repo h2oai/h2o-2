@@ -6,6 +6,7 @@ import h2o, h2o_cmd, h2o_glm, h2o_hosts, h2o_kmeans, h2o_browse as h2b, h2o_impo
 #PCA performed to collect data into 2 rows.
 #3 groups, small & easy
 
+OLD_KMEANS = False
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -37,10 +38,11 @@ class Basic(unittest.TestCase):
 
         kwargs = {
             'initialization': 'Furthest',
-            'max_iter': 15,
+            # 'initialization': '',
+            # 'initialization': 'PlusPlus',
+            'max_iter': 50,
             'k': 3,
-            # reuse the same seed, to get deterministic results (otherwise sometimes fails
-            'seed': 265211114317615310,
+            'seed': '265211114317615310',
         }
 
         timeoutSecs = 480
@@ -62,12 +64,22 @@ class Basic(unittest.TestCase):
 
             # now compare expected vs actual. By sorting on center, we should be able to compare
             # since the centers should be separated enough to have the order be consistent
-            expected = [
-                ([-2.25977535371875, -0.8631572635625001], 64, 83.77800617624794) ,
-                ([0.16232721958461543, 1.7626161107230771], 65, 111.64440134649745) ,
-                ([2.7362112930204074, -1.2107751495102044], 49, 62.6290553489474) ,
-            ]
+            if OLD_KMEANS:
+                expected = [
+                    ([-2.25977535371875, -0.8631572635625001], 64, 83.77800617624794),
+                    ([0.16232721958461543, 1.7626161107230771], 65, 111.64440134649745),
+                    ([2.7362112930204074, -1.2107751495102044], 49, 62.6290553489474),
+                    ]
+            else:
+                # error:  258.051462872
+                expected = [
+                    ([-2.23406681758209, -0.7729819755373136], 67, 96.85372611195429),
+                    ([0.25174392601612905, 1.792222172419355], 62, 99.21823733913352),
+                    ([2.7362112930204074, -1.2107751495102044], 49, 62.6290553489474),
+                        ]
+
             # multipliers on the expected values for allowed
+            # within 2% of best with random seeds?
             allowedDelta = (0.01, 0.01, 0.01)
             h2o_kmeans.compareResultsToExpected(self, tupleResultList, expected, allowedDelta, trial)
 	    

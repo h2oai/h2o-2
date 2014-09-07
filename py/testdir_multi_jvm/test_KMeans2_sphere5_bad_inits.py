@@ -13,18 +13,21 @@ import collections
 # http://stackoverflow.com/questions/2106503/pseudorandom-number-generator-exponential-distribution/2106568#2106568
 
 # let h2o randomize seed
-BAD_SEED = None
+CLUSTERS = 5
+SPHERE_PTS = 100000
+# BAD_SEED = None
 # BAD_SEED = 5010213207974401134
-MAX_ITER = 100
-TRIALS = 4
-# INIT='Furthest'
-INIT='PlusPlus'
+BAD_SEED = 815071896901582303
+MAX_ITER = 1000
+TRIALS = 1
+INIT='Furthest'
+# INIT='PlusPlus'
 # random doesn't seem to get good answer?
 # INIT=''
 
 # since the init is using unnormalized values for sum of squares calcs, 
 # biasing the count for large numbers for some spheres will mess it up
-NOT_SO_BAD = True
+NOT_SO_BAD = False
 # NOT_SO_BAD = False
 
 
@@ -104,8 +107,6 @@ class Basic(unittest.TestCase):
     def test_KMeans2_sphere5_bad_inits(self):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
-        CLUSTERS = 5
-        SPHERE_PTS = 10000
         csvFilename = 'syn_spheres100.csv'
         csvPathname = SYNDATASETS_DIR + '/' + csvFilename
         expectedCenters = write_spheres_dataset(csvPathname, CLUSTERS, SPHERE_PTS)
