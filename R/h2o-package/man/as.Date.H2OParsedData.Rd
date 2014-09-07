@@ -1,14 +1,17 @@
-\name{as.Date}
-\alias{as.Date}
+\name{as.Date.H2OParsedData}
+\alias{as.Date.H2OParsedData}
 \title{Converts a column from factor to date}
-\description{ 
-Converts a column from factor to date.
+\description{
+\code{as.Date.H2OParsedData}, Converts a column from factor to date.
 }
-\usage{as.Date(x, format = "")}
+\usage{
+\method{as.Date}{H2OParsedData}(x, format, \dots)
+}
 
 \arguments{
   \item{x}{A factor column in an object of class \code{\linkS4class{H2OParsedData}}, or data frame to be converted.}
-  \item{format}{A character string.} 
+  \item{format}{A character string.}
+  \item{\dots}{Additional arguments to pass to the as.Date method}
 }
 \details{
 Supports all parse tokens specified for \code{\link{strptime}}, except \code{\%u, \%U, \%w, \%W, \%X and \%0Sn}.
