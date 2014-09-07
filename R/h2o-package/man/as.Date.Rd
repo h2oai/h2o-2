@@ -2,8 +2,8 @@
 \alias{as.Date}
 \title{Converts a column from factor to date}
 \description{ 
-		
-	}
+Converts a column from factor to date.
+}
 \usage{as.Date(x, format = "")}
 
 \arguments{
