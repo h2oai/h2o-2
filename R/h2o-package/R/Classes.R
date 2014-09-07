@@ -392,7 +392,7 @@ h2o.year <- function(x) {
   .h2o.__binop2("-", res1, 1900)
 }
 
-h2o.month <- function(x){
+h2o.month <- function(x) {
   if(missing(x)) stop('must specify x')
   if(class(x) != 'H2OParsedData') stop('x must be an H2OParsedData object')
   .h2o.__unop2('month', x)
@@ -403,7 +403,7 @@ year.H2OParsedData <- h2o.year
 month <- function(x) UseMethod('month', x)
 month.H2OParsedData <- h2o.month
 
-setMethod("as.Date", "H2OParsedData", function(x, format, ...) {
+as.Date.H2OParsedData <- function(x, format, ...) {
   if(!is.character(format)) stop("format must be a string")
 
   expr = paste("as.Date(", paste(x@key, deparse(eval(format, envir = parent.frame())), sep = ","), ")", sep = "")
@@ -411,7 +411,7 @@ setMethod("as.Date", "H2OParsedData", function(x, format, ...) {
   res <- .h2o.exec2(res$dest_key, h2o = x@h2o, res$dest_key)
   res@logic <- FALSE
   return(res)
-})
+}
 
 diff.H2OParsedData <- function(x, lag = 1, differences = 1, ...) {
   if(!is.numeric(lag)) stop("lag must be numeric")

@@ -47,7 +47,7 @@ def simpleCheckKMeans(self, kmeans, **kwargs):
     return warnings
 
 
-def bigCheckResults(self, kmeans, csvPathname, parseResult, applyDestinationKey, **kwargs):
+def bigCheckResults(self, kmeans, csvPathname, parseResult, predictKey, **kwargs):
     simpleCheckKMeans(self, kmeans, **kwargs)
     # can't use inspect on a model key? now?
     model = kmeans['model']
@@ -61,9 +61,6 @@ def bigCheckResults(self, kmeans, csvPathname, parseResult, applyDestinationKey,
     max_iter = model["max_iter"]
     kmeansResult = kmeans
 
-    # no scoring on Kmeans2?..just reuse
-    # cols/max_ncols params?
-    predictKey = applyDestinationKey
     predictResult = h2o.nodes[0].generate_predictions(data_key=parseResult['destination_key'], model_key=model_key, destination_key=predictKey)
     summaryResult = h2o.nodes[0].summary_page(key=predictKey)
     hcnt = summaryResult['summaries'][0]['hcnt'] # histogram

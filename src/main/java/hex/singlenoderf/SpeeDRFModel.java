@@ -251,12 +251,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
     m.t_keys[m.t_keys.length-1] = tkey;
 
     // Update the dtree keys with the new one (dtkey)
-    if (old.dtreeKeys == null) { m.dtreeKeys = new Key[1][m.nclasses()]; }
-    else {
-      m.dtreeKeys = Arrays.copyOf(old.dtreeKeys, old.dtreeKeys.length + 1);
-      m.dtreeKeys[m.dtreeKeys.length-1] = new Key[m.nclasses()];
-    }
-    m.dtreeKeys[m.dtreeKeys.length-1][0] = dtKey;
+    m.dtreeKeys[tree_id][0] = dtKey;
 
     // Update the local_forests
     m.local_forests[nodeIdx][tree_id] = tkey;
@@ -419,7 +414,7 @@ public class SpeeDRFModel extends Model implements Job.Progress {
       int votes[] = new int[numClasses + 1/* +1 to catch broken rows */];
       preds = new float[numClasses + 1];
       for( int i = 0; i < treeCount(); i++ ) {
-        DTree.TreeModel.CompressedTree t = UKV.get(dtreeKeys[i][0]);
+//        DTree.TreeModel.CompressedTree t = UKV.get(dtreeKeys[i][0]);
         votes[(int) Tree.classify(new AutoBuffer(tree(i)), data, numClasses, false)]++;
       }
 
