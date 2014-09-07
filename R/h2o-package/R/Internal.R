@@ -230,6 +230,7 @@ h2o.setLogPath <- function(path, type) {
 }
 
 .h2o.__checkUp <- function(client) {
+  myURL   = paste("http://", client@ip, ":", client@port, sep = "")
   myUpURL = paste("http://", client@ip, ":", client@port, "/", .h2o.__PAGE_UP, sep = "")
   if(!url.exists(myUpURL)) stop("Cannot connect to H2O instance at ", myURL)
 }

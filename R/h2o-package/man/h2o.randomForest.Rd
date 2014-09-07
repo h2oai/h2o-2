@@ -95,8 +95,12 @@ h2o.randomForest(y = 5, x = c(2,3,4), data = iris.hex, ntree = 50, depth = 100)
 
 \dontrun{
 # RF variable importance
-# Also see: https://github.com/0xdata/h2o/blob/master/R/tests/testdir_demos/runit_demo_VI_all_algos.R
-data.hex = h2o.importFile(h, path = "https://raw.github.com/0xdata/h2o/master/smalldata/bank-additional-full.csv", key="data.hex")
+# Also see:
+#   https://github.com/0xdata/h2o/blob/master/R/tests/testdir_demos/runit_demo_VI_all_algos.R
+data.hex = h2o.importFile(
+  localH2O,
+  path = "https://raw.github.com/0xdata/h2o/master/smalldata/bank-additional-full.csv",
+  key = "data.hex")
 myX = 1:20
 myY="y"
 my.rf = h2o.randomForest(x=myX,y=myY,data=data.hex,classification=T,ntree=100,importance=T)

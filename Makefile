@@ -122,7 +122,7 @@ build:
 	@echo
 	@echo "PHASE: Building ZooKeeper jar..."
 	@echo
-	$(MAKE) -C h2o-zookeeper PROJECT_VERSION=$(PROJECT_VERSION) 1> target/logs/zookeeper_build.log
+	$(MAKE) -C h2o-zookeeper PROJECT_VERSION=$(PROJECT_VERSION) 1> target/logs/zookeeper_build.log 2> target/logs/zookeeper_build.err
 
 BUILD_BRANCH=$(shell git branch | grep '*' | sed 's/* //')
 BUILD_HASH=$(shell git log -1 --format="%H")
