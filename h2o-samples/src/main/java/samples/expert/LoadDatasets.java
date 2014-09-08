@@ -16,7 +16,7 @@ public class LoadDatasets extends TestUtil {
   private static class MyJob extends Job { @Override public void execImpl() { new LoadDatasets().load(); } }
   public static void main(String[] args) throws Exception {
     Class job = MyJob.class;
-    samples.launchers.CloudLocal.launch(job, 3);
+    samples.launchers.CloudLocal.launch(job, 1);
 //    samples.launchers.CloudProcess.launch(job, 2);
     //samples.launchers.CloudConnect.launch(job, "localhost:54321");
 //    samples.launchers.CloudRemote.launchIPs(job, "192.168.1.161", "192.168.1.162", "192.168.1.163", "192.168.1.164");
@@ -27,17 +27,13 @@ public class LoadDatasets extends TestUtil {
   void load() {
     // load these first
     String[] files = new String[]{
-//            "smalldata/../../Higgs/HIGGS.csv",
-//            "smalldata/../../Higgs/HIGGS_train.csv",
-//            "smalldata/../../Higgs/HIGGS_test.csv",
-//            "smalldata/../../home-0xdiag-datasets/standard/covtype.data",
-//            "smalldata/logreg/prostate.csv",
+            "smalldata/logreg/prostate.csv",
             "smalldata/covtype/covtype.20k.data",
-//            "smalldata/covtype/covtype.altered.gz",
-//            "smalldata/weather.csv",
-//            "smalldata/iris/iris.csv",
-//            "smalldata/mnist/train.csv.gz",
-//            "smalldata/mnist/test.csv.gz",
+            "smalldata/covtype/covtype.altered.gz",
+            "smalldata/weather.csv",
+            "smalldata/iris/iris.csv",
+            "smalldata/mnist/train.csv.gz",
+            "smalldata/mnist/test.csv.gz",
     };
 
     //for i in `find smalldata -type f`; do echo \"$i\",; done
