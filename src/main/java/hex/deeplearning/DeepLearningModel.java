@@ -72,6 +72,8 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
   @Override public boolean isClassifier() { return super.isClassifier() && !model_info.get_params().autoencoder; }
 
+  @Override public int nfeatures() { return model_info.get_params().autoencoder ? _names.length : _names.length - 1; }
+
   public int compareTo(DeepLearningModel o) {
     if (o.isClassifier() != isClassifier()) throw new UnsupportedOperationException("Cannot compare classifier against regressor.");
     if (o.nclasses() != nclasses()) throw new UnsupportedOperationException("Cannot compare models with different number of classes.");
@@ -1127,6 +1129,62 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     final Frame l2 = adaptFrm.extractFrame(x, y);
     onlyAdaptFrm.delete();
     return l2;
+  }
+
+  /**
+   * Score auto-encoded reconstruction (on-the-fly, without allocating the reconstruction as done in Frame score(Frame fr))
+   * @param frame Original data (can contain response, will be ignored)
+   * @return Frame containing one Vec with reconstruction error (MSE) of each reconstructed row, caller is responsible for deletion
+   */
+  public Frame scoreDeepFeatures(Frame frame, final int layer) {
+    assert(layer >= 0 && layer < model_info().get_params().hidden.length);
+    final int len = nfeatures();
+    Vec resp = null;
+    if (isSupervised()) {
+      int ridx = frame.find(responseName());
+      if (ridx != -1) { // drop the response for scoring!
+        frame = new Frame(frame);
+        resp = frame.vecs()[ridx];
+        frame.remove(ridx);
+      }
+    }
+    // Adapt the Frame layout - returns adapted frame and frame containing only
+    // newly created vectors
+    Frame[] adaptFrms = adapt(frame,false,false/*no response*/);
+    // Adapted frame containing all columns - mix of original vectors from fr
+    // and newly created vectors serving as adaptors
+    Frame adaptFrm = adaptFrms[0];
+    // Contains only newly created vectors. The frame eases deletion of these vectors.
+    Frame onlyAdaptFrm = adaptFrms[1];
+    //create new features, will be dense
+    final int features = model_info().get_params().hidden[layer];
+    Vec[] vecs = adaptFrm.anyVec().makeZeros(features);
+    for (int j=0; j<features; ++j) {
+      adaptFrm.add("DF.C" + (j+1), vecs[j]);
+    }
+    new MRTask2() {
+      @Override public void map( Chunk chks[] ) {
+        double tmp [] = new double[len];
+        float df[] = new float [features];
+        final Neurons[] neurons = DeepLearningTask.makeNeuronsForTesting(model_info);
+        for( int row=0; row<chks[0]._len; row++ ) {
+          for( int i=0; i<len; i++ )
+            tmp[i] = chks[i].at0(row);
+          ((Neurons.Input)neurons[0]).setInput(-1, tmp);
+          DeepLearningTask.step(-1, neurons, model_info, false, null);
+          float[] out = neurons[layer+1]._a.raw(); //extract the layer-th hidden feature
+          for( int c=0; c<df.length; c++ )
+            chks[_names.length+c].set0(row,out[c]);
+        }
+      }
+    }.doAll(adaptFrm);
+
+    // Return just the output columns
+    int x=_names.length, y=adaptFrm.numCols();
+    Frame ret = adaptFrm.extractFrame(x, y);
+    onlyAdaptFrm.delete();
+    if (resp != null) ret.prepend(responseName(), resp);
+    return ret;
   }
 
   // Make (potentially expanded) reconstruction

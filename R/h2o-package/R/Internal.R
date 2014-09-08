@@ -124,6 +124,7 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__PAGE_QUANTILES = "2/QuantilesPage.json"
 .h2o.__PAGE_INSPECTOR = "2/Inspector.json"
 .h2o.__PAGE_ANOMALY = "2/Anomaly.json"
+.h2o.__PAGE_DEEPFEATURES = "2/DeepFeatures.json"
 
 .h2o.__PAGE_DRF = "2/DRF.json"
 .h2o.__PAGE_DRFProgress = "2/DRFProgressPage.json"
@@ -229,6 +230,7 @@ h2o.setLogPath <- function(path, type) {
 }
 
 .h2o.__checkUp <- function(client) {
+  myURL   = paste("http://", client@ip, ":", client@port, sep = "")
   myUpURL = paste("http://", client@ip, ":", client@port, "/", .h2o.__PAGE_UP, sep = "")
   if(!url.exists(myUpURL)) stop("Cannot connect to H2O instance at ", myURL)
 }

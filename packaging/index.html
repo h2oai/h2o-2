@@ -188,17 +188,23 @@
         var zipPanel = document.getElementById('quickstart-zip');
         var rTab = document.getElementById('quickstart-r-tab');
         var rPanel = document.getElementById('quickstart-r');
-        zipTab.onclick = function() {
+        var showZipTab = function() {
           zipPanel.style.display = 'block';
           zipTab.className = 'active';
           rPanel.style.display = 'none';
           rTab.className = '';
-        }
-        rTab.onclick = function() {
+        };
+        var showRTab = function() {
           rPanel.style.display = 'block';
           rTab.className = 'active';
           zipPanel.style.display = 'none';
           zipTab.className = '';
+        };
+        zipTab.onclick = showZipTab
+        rTab.onclick = showRTab
+        var hash = window.location.hash;
+        if(hash && hash.indexOf('#R') == 0) {
+          showRTab();
         }
       }
       <!-- DOM 0 style without jquery -->

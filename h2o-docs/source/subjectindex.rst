@@ -1,7 +1,7 @@
 .. _Subject_Index:
 
 Index By Subject
-=================
+================
 
 **Algorithms Roadmap**
 
@@ -99,11 +99,6 @@ Index By Subject
   
   * :ref:`PCAmath`
 
-**R Console** 
-  
-  * :ref:`Rfromdownload`
-  * :ref:`Rforgit`
-
 **R**
 
   * :ref:`R_user`
@@ -112,12 +107,7 @@ Index By Subject
 
   * :ref:`R_pdf`
 
-**R Studio**
-   
-   * :ref:`Rfromdownload`
-   * :ref:`Rforgit`
-
-**Random Forest** 
+**Random Forest**
   
   * :ref:`RFmath`
 
@@ -136,10 +126,6 @@ Index By Subject
 **Summary (summary statistics on data)**
 
   * :ref:`SUMmath`
-
-**Troubleshooting**
-
-  * :ref:`Troubleshooting`
 
 **Tutorials**
 

@@ -58,7 +58,7 @@ class Basic(unittest.TestCase):
             init_choices = ['Furthest', 'PlusPlus']
             kwargs['initialization'] = init_choices[trial % len(init_choices)]
 
-            kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=5, **kwargs)
+            kmeans = h2o_cmd.runKMeans(parseResult=parseResult, timeoutSecs=15, **kwargs)
             # can't inspect a kmeans2 model?
             # inspect = h2o_cmd.runInspect(None, key=kmeans['model']['_key'], verbose=True)
 

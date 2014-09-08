@@ -1,7 +1,7 @@
 .. _GBM_tutorial:
 
 GBM Tutorial
-==============
+============
 
 The purpose of this tutorial is to walk the new user through 
 a GBM analysis in H\ :sub:`2`\ O

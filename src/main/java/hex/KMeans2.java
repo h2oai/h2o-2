@@ -15,6 +15,8 @@ import water.util.Utils;
 
 import java.util.ArrayList;
 import java.util.Random;
+import java.util.Arrays;
+
 
 /**
  * Scalable K-Means++ (KMeans||)<br>
@@ -30,7 +32,11 @@ public class KMeans2 extends ColumnsJob {
   };
 
   @API(help = "Cluster initialization: None - chooses initial centers at random; Plus Plus - choose first center at random, subsequent centers chosen from probability distribution weighted so that points further from first center are more likey to be selected; Furthest - chooses initial point at random, subsequent point taken as the point furthest from prior point.", filter = Default.class, json=true)
-  public Initialization initialization = Initialization.None;
+  // public Initialization initialization = Initialization.None;
+  public Initialization initialization = Initialization.Furthest;
+  // default Initialization is Furthest. Better results for hard cases, especially with just one trial
+  // in the browser. PlusPlus can be biased, so Furthest can be best, again especially if just one trial
+  // Random should never be better than Furthest.
 
   @API(help = "Number of clusters", required = true, filter = Default.class, lmin = 1, lmax = 100000, json=true)
   public int k = 2;
@@ -115,10 +121,15 @@ public class KMeans2 extends ColumnsJob {
       Random rand = Utils.getRNG(seed - 1);
       double clusters[][];    // Normalized cluster centers
       if( initialization == Initialization.None ) {
-        // Initialize all clusters to random rows
-        clusters = model.centers = new double[k][fr.numCols()];
+        // Initialize all clusters to random rows. Get 3x the number needed
+        clusters = model.centers = new double[k*3][fr.numCols()];
         for( double[] cluster : clusters )
           randomRow(vecs, rand, cluster, means, mults);
+        // for( int i=0; i<model.centers.length; i++ ) {
+        //   Log.info("random model.centers["+i+"]: "+Arrays.toString(model.centers[i]));
+        // }
+        // Recluster down to K normalized clusters. 
+        clusters = recluster(clusters, rand);
       } else {
         clusters = new double[1][vecs.length];
         // Initialize first cluster to random row
@@ -127,25 +138,36 @@ public class KMeans2 extends ColumnsJob {
         while( model.iterations < 5 ) {
           // Sum squares distances to clusters
           SumSqr sqr = new SumSqr(clusters,means,mults,_ncats).doAll(vecs);
+          // Log.info("iteration: "+model.iterations+" sqr: "+sqr._sqr);
 
           // Sample with probability inverse to square distance
-          Sampler sampler = new Sampler(clusters, means, mults, _ncats, sqr._sqr, k * 3, seed).doAll(vecs);
+          long randomSeed = (long) rand.nextDouble();
+          Sampler sampler = new Sampler(clusters, means, mults, _ncats, sqr._sqr, k * 3, randomSeed).doAll(vecs);
           clusters = Utils.append(clusters,sampler._sampled);
 
           // Fill in sample clusters into the model
           if( !isRunning() ) return; // Stopped/cancelled
           model.centers = denormalize(clusters, ncats, means, mults);
-          model.total_within_SS = sqr._sqr/fr.numRows();
-
+          // see below. this is sum of squared error now
+          model.total_within_SS = sqr._sqr;
           model.iterations++;     // One iteration done
 
-          // This doesn't count towards model building (we didn't account these iterations as work to be done during construction)
-          // update(1);          // One unit of work
+          // Log.info("\nKMeans Centers during init models.iterations: "+model.iterations);
+          // for( int i=0; i<model.centers.length; i++ ) {
+          //   Log.info("model.centers["+i+"]: "+Arrays.toString(model.centers[i]));
+          // }
+          // Log.info("model.total_within_SS: "+model.total_within_SS);
 
+          // Don't count these iterations as work for model building
           model.update(self()); // Early version of model is visible
+
+          // Recluster down to K normalized clusters. 
+          // makes more sense to recluster each iteration, since the weighted k*3 effect on sqr vs _sqr
+          // reflects the k effect on _sqr? ..if there are too many "centers" (samples) then _sqr (sum of all) is too 
+          // big relative to sqr (possible new point, and we don't gather any more samples? 
+          // (so the centers won't change during the init)
+          clusters = recluster(clusters, rand);
         }
-        // Recluster down to K normalized clusters
-        clusters = recluster(clusters, rand);
       }
       model.iterations = 0;     // Reset iteration count
 
@@ -562,9 +584,13 @@ public class KMeans2 extends ColumnsJob {
       for( int row = 0; row < cs[0].len(); row++ ) {
         data(values, cs, row, _means, _mults);
         double sqr = minSqr(_clusters, values, _ncats, cd);
-        if( _probability * sqr > rand.nextDouble() * _sqr )
+        if( _probability * sqr > rand.nextDouble() * _sqr ) {
           list.add(values.clone());
+          // Log.info("Sampler map adding to the list used for an init iteration values: "+
+          //   Arrays.toString(values)+" _probability: "+_probability+" sqr: "+sqr+" _sqr: "+_sqr);
+        }
       }
+      // Log.info("Sampler map summary: that's another "+list.size()+" to the list used for an init iteration values");
 
       _sampled = new double[list.size()][];
       list.toArray(_sampled);
@@ -738,8 +764,6 @@ public class KMeans2 extends ColumnsJob {
     int count = 1;
     ClusterDist cd = new ClusterDist();
     switch( initialization ) {
-      case None:
-        break;
       case PlusPlus: { // k-means++
         while( count < res.length ) {
           double sum = 0;
@@ -754,6 +778,8 @@ public class KMeans2 extends ColumnsJob {
         }
         break;
       }
+      // if we oversampled for initialization=None, recluster using the Furthest criteria down to k
+      case None:
       case Furthest: { // Takes cluster further from any already chosen ones
         while( count < res.length ) {
           double max = 0;

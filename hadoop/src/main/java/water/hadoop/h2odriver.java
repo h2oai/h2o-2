@@ -53,7 +53,11 @@ public class h2odriver extends Configured implements Tool {
   static boolean enablePrintGCDetails = false;
   static boolean enablePrintGCTimeStamps = false;
   static boolean enableVerboseClass = false;
+  static boolean enablePrintCompilation = false;
   static boolean enableExcludeMethods = false;
+  static boolean enableDebug = false;
+  static boolean enableSuspend = false;
+  static int debugPort = 5005;    // 5005 is the default from IDEA
   static String licenseFileName = null;
 
   // State filled in as a result of handling options.
@@ -550,8 +554,24 @@ public class h2odriver extends Configured implements Tool {
       else if (s.equals("-verbose:class")) {
         enableVerboseClass = true;
       }
+      else if (s.equals("-XX:+PrintCompilation")) {
+        enablePrintCompilation = true;
+      }
       else if (s.equals("-exclude")) {
         enableExcludeMethods = true;
+      }
+      else if (s.equals("-debug")) {
+        enableDebug = true;
+      }
+      else if (s.equals("-suspend")) {
+        enableSuspend = true;
+      }
+      else if (s.equals("-debugport")) {
+        i++; if (i >= args.length) { usage(); }
+        debugPort = Integer.parseInt(args[i]);
+        if ((debugPort < 0) || (debugPort > 65535)) {
+          error("Debug port must be between 1 and 65535");
+        }
       }
       else if (s.equals("-XX:+PrintGCDetails")) {
         enablePrintGCDetails = true;
@@ -798,7 +818,9 @@ public class h2odriver extends Configured implements Tool {
               + (enablePrintGCDetails ? " -XX:+PrintGCDetails" : "")
               + (enablePrintGCTimeStamps ? " -XX:+PrintGCTimeStamps" : "")
               + (enableVerboseClass ? " -verbose:class" : "")
+              + (enablePrintCompilation ? " -XX:+PrintCompilation" : "")
               + (enableExcludeMethods ? " -XX:CompileCommand=exclude,water/fvec/NewChunk.append2slowd" : "")
+              + (enableDebug ? " -agentlib:jdwp=transport=dt_socket,server=y,suspend=" + (enableSuspend ? "y" : "n") + ",address=" + debugPort : "")
               ;
       conf.set("mapred.child.java.opts", mapChildJavaOpts);
       conf.set("mapred.map.child.java.opts", mapChildJavaOpts);       // MapR 2.x requires this.

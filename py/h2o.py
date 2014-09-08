@@ -1400,6 +1400,7 @@ class H2O(object):
             'ignored_cols_by_name': None,
             'max_iter': None,
             'normalize': None,
+            'drop_na_cols': None,
         }
 
         if key2 is not None: params_dict['destination_key'] = key2

@@ -25,7 +25,7 @@ SET_JAVA_HOME="export JAVA_HOME=/usr/lib/jvm/java-7-oracle; "
 HDP_JOBTRACKER=192.168.1.187:8050
 
 HDP_NODES=8
-HDP_HEAP=60g
+HDP_HEAP=40g
 
 HDP_JAR=h2odriver_hdp2.0.6.jar
 H2O_JAR=h2o.jar
@@ -45,7 +45,6 @@ HDP_JAR_USED=$H2O_BUILT/hadoop/$HDP_JAR
 
 HDFS_OUTPUT=hdfsOutputDirName
 
-# file created by the h2o on hadoop h2odriver*jar
 REMOTE_HOME=/home/0xcustomer
 REMOTE_IP=192.168.1.187
 REMOTE_USER=0xcustomer@$REMOTE_IP
@@ -64,6 +63,7 @@ REMOTE_SSH_USER_WITH_JAVA="$REMOTE_SSH_USER $SET_JAVA_HOME"
 rm -f /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 echo "$SET_JAVA_HOME" > /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 echo "cd /home/0xcustomer" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
+# h2o_one_node is the file created by the h2odriver
 echo "rm -fr h2o_one_node" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 set +e
 # remember to update this, to match whatever user kicks off the h2o on hadoop
@@ -158,8 +158,9 @@ myPy c2 test_c2_rel.py
 # myPy c3 test_c3_rel.py
 # test_c8_rf_airlines_hdfs_fvec.py
 # test_c4_four_billion_rows_fvec.py
+# myPy c5 test_c5_KMeans_sphere_h1m_fvec.py
+myPy c5 test_c5_KMeans_sphere_26GB_fvec.py
 # myPy c5 test_c5_KMeans_sphere15_180GB_fvec.py
-myPy c5 test_c5_KMeans_sphere_h1m_fvec.py
 
 # have to update this to poit to the right hdfs?
 # myPy c6 test_c6_hdfs_fvec.py
@@ -180,19 +181,18 @@ fi
 
 echo ""
 echo "Check if the background ssh/hadoop/cloud job is still running here"
-ps aux | grep 0xcustomer_id_rsa
+ps aux | grep 0xcustomer_id_rsa | grep -v 'grep'
 echo "check on jobs I backgrounded locally"
 jobs -l
 
 echo ""
 echo "Check if h2odriver is running on the remote machine"
-$REMOTE_SSH_USER "ps aux | grep h2odriver"
+$REMOTE_SSH_USER "ps aux | grep h2odriver | grep -v 'grep'"
 
 echo "The background job with the remote ssh that does h2odriver should be gone. It was pid $CLOUD_PID"
 echo "The h2odriver job should be gone. It was pid $CLOUD_PID"
 echo "The hadoop job(s) should be gone?"
 $REMOTE_SSH_USER_WITH_JAVA 'mapred job -list'
-
 
 echo "Another hack because h2o nodes don't seem to want to shutdown"
 echo "Maybe I need a clean terminate of the background h2odriver? But why aren't all nodes processing sent h2o shutdown requests?"

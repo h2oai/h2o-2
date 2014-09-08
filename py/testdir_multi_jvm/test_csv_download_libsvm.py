@@ -60,8 +60,8 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         SYNDATASETS_DIR = h2o.make_syn_dir()
         tryList = [
-            (5000, 10000, 'cK', 60),
-            (10000, 10000, 'cL', 60),
+            (5000, 10000, 'cK', 120),
+            (10000, 10000, 'cL', 120),
             (50000, 10000, 'cM', 300),
             ]
 

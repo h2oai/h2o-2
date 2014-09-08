@@ -116,6 +116,52 @@ datetest <- function(conn){
   expect_that( ldf$idx9, equals(idx[,9]) )
   expect_that( ldf$idx10, equals(idx[,10]) )
 
+  
+  ## Col 1-10 test all different parse options, rows test some corner cases
+  ## Row 1/2 test 1969/2068 inference
+  formats = c("%c %z", "%a %d %m %y %H:%M:%S %z", "%A %m %d %Y %k", "%b %d %C %y %I %p", "%e %B, %Y %l %p", "%h-%e, %y %r", "%D %H_%M", "%F %H", "%H:%M %j %Y", "%d_%m_%y %T", "%d%m%y %R")
+  c1 = c("Fri Jan 10 00:00:00 1969 -0800", "Tue Jan 10 04:00:00 2068 -0800", "Mon Dec 30 01:00:00 2002 -0800", "Wed Jan 1 12:00:00 2003 -0800")
+  c1dt = strptime(c1, formats[1], tz="America/Los_Angeles")
+  c2 = strftime(c1dt, formats[2], tz="America/Los_Angeles")
+  c3 = strftime(c1dt, formats[3])
+  c4 = strftime(c1dt, formats[4])
+  c5 = strftime(c1dt, formats[5])
+  c6 = strftime(c1dt, formats[6])
+  c7 = strftime(c1dt, formats[7])
+  c8 = strftime(c1dt, formats[8])
+  c9 = strftime(c1dt, formats[9])
+  c10 = strftime(c1dt, formats[10])
+  c11 = strftime(c1dt, formats[11])
+  
+  ldf = data.frame(c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11)
+  hdf = as.h2o(conn, ldf, "hdf", TRUE)
+  hdf$c1 = as.Date(hdf$c1, formats[1])
+  hdf$c2 = as.Date(hdf$c2, formats[2])
+  hdf$c3 = as.Date(hdf$c3, formats[3])
+  hdf$c4 = as.Date(hdf$c4, formats[4])
+  hdf$c5 = as.Date(hdf$c5, formats[5])
+  hdf$c6 = as.Date(hdf$c6, formats[6])
+  hdf$c7 = as.Date(hdf$c7, formats[7])
+  hdf$c8 = as.Date(hdf$c8, formats[8])
+  hdf$c9 = as.Date(hdf$c9, formats[9])
+  hdf$c10 = as.Date(hdf$c10, formats[10])
+  hdf$c11 = as.Date(hdf$c11, formats[11])
+                   
+  lmillis = data.frame(as.vector(unclass(as.POSIXct(c1dt, formats[1], tz="America/Los_Angeles")) * 1000))
+  #res = h2o.getFrame(conn, "hdf")
+  res = as.data.frame(hdf)
+  expect_that(lmillis[,1], equals(res[,1]))
+  expect_that(lmillis[,1], equals(res[,2]))
+  expect_that(lmillis[,1], equals(res[,3]))
+  expect_that(lmillis[,1], equals(res[,4]))
+  expect_that(lmillis[,1], equals(res[,5]))
+  expect_that(lmillis[,1], equals(res[,6]))
+  expect_that(lmillis[,1], equals(res[,7]))
+  expect_that(lmillis[,1], equals(res[,8]))
+  expect_that(lmillis[,1], equals(res[,9]))
+  expect_that(lmillis[,1], equals(res[,10]))
+  expect_that(lmillis[,1], equals(res[,11]))
+  
   testEnd()
 }
 

@@ -192,13 +192,13 @@ h2o.importFile <- function(object, path, key = "", parse = TRUE, header, sep = "
 
 # ----------------------------------- Import URL --------------------------------- #
 h2o.importURL <- function(object, path, key = "", parse = TRUE, header, sep = "", col.names) {
-  print("This function has been deprecated in FluidVecs. In the future, please use h2o.importFile with a http:// prefix instead.")
+  print("This function has been deprecated. In the future, please use h2o.importFile with a http:// prefix instead.")
   h2o.importFile(object, path, key, parse, header, sep, col.names)
 }
 
 # ----------------------------------- Import HDFS --------------------------------- #
 h2o.importHDFS <- function(object, path, pattern = "", key = "", parse = TRUE, header, sep = "", col.names) {
-  print("This function has been deprecated in FluidVecs. In the future, please use h2o.importFolder with a hdfs:// prefix instead.")
+  print("This function has been deprecated. In the future, please use h2o.importFolder with a hdfs:// prefix instead.")
   h2o.importFolder(object, path, pattern, key, parse, header, sep, col.names)
 }
 
@@ -373,12 +373,16 @@ h2o.saveModel <- function(object, dir="", name="",save_cv=FALSE, force=FALSE) {
     
     # Save main model
     path <- paste(model_dir, object@key, sep=.Platform$file.sep)
-    res = .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_SaveModel, model=object@key, path=path, force=force)
+    res <- .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_SaveModel, model=object@key, path=path, force=force)
     
     # Save all cross validation models
-    xval_keys = sapply(object@xval,function(model) model@key )
-    if(save_cv & (length(xval_keys)==0)) stop('No cross validation models found')
-    if(save_cv) for (xval_key in xval_keys) .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_SaveModel, model=xval_key, path=paste(model_dir, xval_key, sep=.Platform$file.sep), force=force)
+    if (.hasSlot(object, "xval")) {
+      xval_keys <- sapply(object@xval,function(model) model@key )
+      if(save_cv & (length(xval_keys)==0)) stop('No cross validation models found')
+      if(save_cv) for (xval_key in xval_keys) .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_SaveModel, model=xval_key, path=paste(model_dir, xval_key, sep=.Platform$file.sep), force=force)
+    } else {
+      save_cv <- FALSE  # do not save CV results if they do not exist
+    }
     
     # Create new file called model_names and write all model names to file
     fileConn <- file(paste(model_dir, "model_names", sep=.Platform$file.sep))

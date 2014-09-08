@@ -626,7 +626,6 @@ h2o.deeplearning <- function(x, y, data, key = "",
   #   params$mom_ramp = model_params$momentum_ramp
   #   params$mom_stable = model_params$momentum_stable
   #   params$epochs = model_params$epochs
-  
   # result$params = params
   # model_params = res$model_info$parameters
   model_params = res$model_info$job
@@ -686,7 +685,9 @@ h2o.deeplearning <- function(x, y, data, key = "",
     tmp$confusion <- NULL 
     result <- c(result, tmp) 
   }
-  
+
+  result$train_auc <- res$errors[[length(res$errors)]]$trainAUC$AUC
+
   if(!is.null(errs$valid_hitratio)) {
     max_k <- errs$valid_hitratio$max_k
     hit_ratios <- errs$valid_hitratio$hit_ratios
@@ -1069,8 +1070,8 @@ h2o.SpeeDRF <- function(x, y, data, key="", classification=TRUE, nfolds=0, valid
     if(length(raw_cms) > dom_len)
       raw_cms[[length(raw_cms)]] = NULL
     raw_cms <- lapply(raw_cms, function(x) { if(length(x) > dom_len) x = x[1:dom_len]; return(x) })
-    
-    
+
+
     #    rrr <- NULL
     #    if ( res$parameters$n_folds <= 0) {
     #      f <- function(o) { o[-length(o)] }
@@ -1263,8 +1264,22 @@ h2o.anomaly <- function(data, model, key = "", threshold = -1.0) {
   if(class(model) != "H2ODeepLearningModel") stop("model must be an H2O deep learning model")
   if(!is.character(key)) stop("key must be of class character")
   if(!is.numeric(threshold)) stop("threshold must be of class numeric")
-  
+
   res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_ANOMALY, source = data@key, dl_autoencoder_model = model@key, destination_key = key, thresh = threshold)
+  .h2o.__waitOnJob(data@h2o, res$job_key)
+  .h2o.exec2(res$destination_key, h2o = data@h2o, res$destination_key)
+}
+
+h2o.deepfeatures <- function(data, model, key = "", layer = -1) {
+  if(missing(data)) stop("Must specify data")
+  if(class(data) != "H2OParsedData") stop("data must be an H2O parsed dataset")
+  if(missing(model)) stop("Must specify model")
+  if(class(model) != "H2ODeepLearningModel") stop("model must be an H2O deep learning model")
+  if(!is.character(key)) stop("key must be of class character")
+  if(!is.numeric(layer)) stop("layer must be of class numeric")
+
+  if (layer != -1) layer = layer - 1; #index translation (R index is from 1..N, Java expects 0..N-1)
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DEEPFEATURES, source = data@key, dl_model = model@key, destination_key = key, layer = layer)
   .h2o.__waitOnJob(data@h2o, res$job_key)
   .h2o.exec2(res$destination_key, h2o = data@h2o, res$destination_key)
 }
