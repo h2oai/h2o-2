@@ -73,7 +73,7 @@ air.dl = h2o.deeplearning(data = air.train, validation = air.valid,
                           x = myX, y = myY,
                           classification = TRUE,
                           activation = c("Tanh", "Rectifier"),
-                          hidden = c(10,10),
+                          hidden = list(c(5, 5), c(10,10)),
                           use_all_factor_levels = TRUE, variable_importances = TRUE)
 
 # Scrub out Last.value's so the Store View isn't cluttered.
