@@ -19,6 +19,8 @@ if (TRUE) {
 
   source('../findNSourceUtils.R')
   options(echo=TRUE)
+  filePath <- normalizePath(locate("smalldata/airlines/AirlinesTrain.csv.zip"))
+  testFilePath <- normalizePath(locate("smalldata/airlines/AirlinesTest.csv.zip"))
 } else {
   stop("need to hardcode ip and port")
   # myIP = "127.0.0.1"
@@ -26,12 +28,13 @@ if (TRUE) {
 
   library(h2o)
   PASS_BANNER <- function() { cat("\nPASS\n\n") }
+  filePath <- "https://raw.github.com/0xdata/h2o/master/smalldata/airlines/AirlinesTrain.csv.zip"
+  testFilePath <-"https://raw.github.com/0xdata/h2o/master/smalldata/airlines/AirlinesTest.csv.zip"
 }
 
 conn <- h2o.init(ip=myIP, port=myPort, startH2O=FALSE)
 
 #uploading data file to h2o
-filePath <- "https://raw.github.com/0xdata/h2o/master/smalldata/airlines/AirlinesTrain.csv.zip"
 air = h2o.importFile(conn, filePath, "air")
 
 
@@ -55,7 +58,6 @@ air.rf=h2o.randomForest(x=myX,y=myY,data=air.train,ntree=10,depth=20,seed=12,imp
 print(air.rf@model)
 
 #uploading test file to h2o
-testFilePath <-"https://raw.github.com/0xdata/h2o/master/smalldata/airlines/AirlinesTest.csv.zip"
 air.test=h2o.importFile(conn,testFilePath,key="air.test")
 
 model_object=air.rf #air.glm air.rf air.dl
