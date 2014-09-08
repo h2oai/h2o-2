@@ -1250,6 +1250,16 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     return qp.result;
   }
 
+  @Override public ModelAutobufferSerializer getModelSerializer() {
+    // Return a serializer which knows how to serialize keys
+    return new ModelAutobufferSerializer() {
+      @Override protected AutoBuffer postLoad(Model m, AutoBuffer ab) {
+        Job.hygiene(((DeepLearningModel)m).get_params());
+        return ab;
+      }
+    };
+  }
+
   public boolean generateHTML(String title, StringBuilder sb) {
     if (_key == null) {
       DocGen.HTML.title(sb, "No model yet");
@@ -1271,15 +1281,14 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
             (get_params().validation != null && DKV.get(get_params().validation._key) == null)) (Job.hygiene(get_params())).toHTML(sb);
     else job().toHTML(sb);
 
-    final Key val_key = get_params().validation != null ? get_params().validation._key : null;
     sb.append("<div class='alert'>Actions: "
             + (jobKey != null && UKV.get(jobKey) != null && Job.isRunning(jobKey) ? "<i class=\"icon-stop\"></i>" + Cancel.link(jobKey, "Stop training") + ", " : "")
             + Inspect2.link("Inspect training data (" + _dataKey + ")", _dataKey) + ", "
-            + (val_key != null ? (Inspect2.link("Inspect validation data (" + val_key + ")", val_key) + ", ") : "")
+            + (_validationKey != null ? (Inspect2.link("Inspect validation data (" + _validationKey + ")", _validationKey) + ", ") : "")
             + water.api.Predict.link(_key, "Score on dataset") + ", "
-            + DeepLearning.link(_dataKey, "Compute new model", null, responseName(), val_key)
+            + DeepLearning.link(_dataKey, "Compute new model", null, responseName(), _validationKey)
             + (actual_best_model_key != null && UKV.get(actual_best_model_key) != null && actual_best_model_key != _key ? ", " + DeepLearningModelView.link("Go to best model", actual_best_model_key) : "")
-            + (jobKey == null || ((jobKey != null && UKV.get(jobKey) == null)) || (jobKey != null && UKV.get(jobKey) != null && Job.isEnded(jobKey)) ? ", <i class=\"icon-play\"></i>" + DeepLearning.link(_dataKey, "Continue training this model", _key, responseName(), val_key) : "") + ", "
+            + (jobKey == null || ((jobKey != null && UKV.get(jobKey) == null)) || (jobKey != null && UKV.get(jobKey) != null && Job.isEnded(jobKey)) ? ", <i class=\"icon-play\"></i>" + DeepLearning.link(_dataKey, "Continue training this model", _key, responseName(), _validationKey) : "") + ", "
             + UIUtils.qlink(SaveModel.class, "model", _key, "Save model") + ", "
             + "</div>");
 
