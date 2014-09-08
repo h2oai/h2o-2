@@ -31,6 +31,9 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   @API(help="Job that built the model", json = true)
   final private Key jobKey;
 
+  @API(help="Validation dataset used for model building", json = true)
+  public final Key _validationKey;
+
   @API(help="Time to build the model", json = true)
   private long run_time;
   final private long start_time;
@@ -690,6 +693,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     super(destKey, cp._dataKey, dataInfo._adaptedFrame.names(), dataInfo._adaptedFrame.domains(), cp._priorClassDist != null ? cp._priorClassDist.clone() : null, null);
     final boolean store_best_model = (jobKey == null);
     this.jobKey = jobKey;
+    this._validationKey = cp._validationKey;
     if (store_best_model) {
       model_info = cp.model_info.deep_clone(); //don't want to interfere with model being built, just make a deep copy and store that
       model_info.data_info = dataInfo.deep_clone(); //replace previous data_info with updated version that's passed in (contains enum for classification)
@@ -727,6 +731,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   public DeepLearningModel(final Key destKey, final Key jobKey, final Key dataKey, final DataInfo dinfo, final DeepLearning params, final float[] priorDist) {
     super(destKey, dataKey, dinfo._adaptedFrame, priorDist);
     this.jobKey = jobKey;
+    this._validationKey = params.validation != null ? params.validation._key : null;
     run_time = 0;
     start_time = System.currentTimeMillis();
     _timeLastScoreEnter = start_time;
@@ -1359,24 +1364,19 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
     if (!error.validation) {
       if (_have_cv_results) {
-        RString v_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
-        v_rs.replace("key", get_params().source != null && get_params().source._key != null ? get_params().source._key : "");
-        String cmTitle = "<div class=\"alert\">Scoring results reported for " + error.num_folds + "-fold cross-validated training data " + v_rs.toString() + ":</div>";
+        String cmTitle = "<div class=\"alert\">Scoring results reported for " + error.num_folds + "-fold cross-validated training data " + Inspect2.link(_dataKey) + ":</div>";
         sb.append("<h5>" + cmTitle);
         sb.append("</h5>");
       }
       else {
-        RString t_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
-        t_rs.replace("key", get_params().source != null && get_params().source._key != null ? get_params().source._key : "");
-        String cmTitle = "<div class=\"alert\">Scoring results reported on training data " + t_rs.toString() + (fulltrain ? "" : " (" + score_train + " samples)") + ":</div>";
+        String cmTitle = "<div class=\"alert\">Scoring results reported on training data " + Inspect2.link(_dataKey) + (fulltrain ? "" : " (" + score_train + " samples)") + ":</div>";
         sb.append("<h5>" + cmTitle);
         sb.append("</h5>");
       }
     }
     else {
       RString v_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
-      v_rs.replace("key", get_params().validation != null && get_params().validation._key != null ? get_params().validation._key : "");
-      String cmTitle = "<div class=\"alert\">Scoring results reported on validation data " + v_rs.toString() + (fullvalid ? "" : " (" + score_valid + " samples)") + ":</div>";
+      String cmTitle = "<div class=\"alert\">Scoring results reported on validation data " + Inspect2.link(_validationKey) + (fullvalid ? "" : " (" + score_valid + " samples)") + ":</div>";
       sb.append("<h5>" + cmTitle);
       sb.append("</h5>");
     }
