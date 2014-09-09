@@ -16,6 +16,8 @@ import collections
 BAD_SEED = None
 MAX_ITER = 500
 TRIALS = 4
+# INIT = "PlusPlus"
+INIT = "Furthest"
 # BAD_SEED = 5010213207974401134
 
 def get_xyz_sphere(R):
@@ -115,8 +117,7 @@ class Basic(unittest.TestCase):
                 'normalize': 0,
                 'k': CLUSTERS, 
                 'max_iter': MAX_ITER, 
-                'initialization': 'Furthest',
-                # 'initialization': 'PlusPlus',
+                'initialization': INIT,
                 'destination_key': 'syn_spheres100.hex', 
                 'seed': SEED
             }
@@ -176,7 +177,7 @@ class Basic(unittest.TestCase):
                 sameAsBest += 1
                 # we can check that if it has the same error, the sizes should be the same (integer) and reflects centers?
                 # should 
-                if r.size!=bestResult.size:
+                if sorted(r.size)!=sorted(bestResult.size):
                     raise Exception("Would expect that if two trials got the same error (rounded to int), the cluster sizes would likely be the same? %s %s" % 
                         (r.size, bestResult.size))
 
