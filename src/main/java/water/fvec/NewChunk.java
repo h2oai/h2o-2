@@ -3,6 +3,7 @@ package water.fvec;
 import java.util.*;
 
 import water.*;
+import water.util.Log;
 
 // An uncompressed chunk of data, supporting an append operation
 public class NewChunk extends Chunk {
@@ -77,31 +78,59 @@ public class NewChunk extends Chunk {
   }
 
   public Iterator<Value> values(int fromIdx, int toIdx){
-    final int lId, gId;
-    final int to = Math.min(toIdx,_len);
+    try {
+      final int lId, gId;
+      final int to = Math.min(toIdx, _len);
 
-    if(sparse()){
-      int x = Arrays.binarySearch(_id,0,_sparseLen,fromIdx);
-      if(x < 0) x = -x -1;
-      lId = x;
-      gId = x == _sparseLen?_len:_id[x];
-    } else
-      lId = gId = fromIdx;
-    final Value v = new Value(lId,gId);
-    final Value next = new Value(lId,gId);
-    return new Iterator<Value>(){
-      @Override public final boolean hasNext(){return next._gId < to;}
-      @Override public final Value next(){
-        if(!hasNext())throw new NoSuchElementException();
-        v._gId = next._gId; v._lId = next._lId;
-        next._lId++;
-        if(sparse()) next._gId = next._lId < _sparseLen?_id[next._lId]:_len;
-        else next._gId++;
-        return v;
-      }
-      @Override
-      public void remove() {throw new UnsupportedOperationException();}
-    };
+      if (sparse()) {
+        int x = Arrays.binarySearch(_id, 0, _sparseLen, fromIdx);
+        if (x < 0) x = -x - 1;
+        lId = x;
+        gId = x == _sparseLen ? _len : _id[x];
+      } else
+        lId = gId = fromIdx;
+      final Value v = new Value(lId, gId);
+      final Value next = new Value(lId, gId);
+      return new Iterator<Value>() {
+        @Override
+        public final boolean hasNext() {
+          return next._gId < to;
+        }
+
+        @Override
+        public final Value next() {
+          if (!hasNext()) throw new NoSuchElementException();
+          v._gId = next._gId;
+          v._lId = next._lId;
+          next._lId++;
+          if (sparse()) next._gId = next._lId < _sparseLen ? _id[next._lId] : _len;
+          else next._gId++;
+          return v;
+        }
+
+        @Override
+        public void remove() {
+          throw new UnsupportedOperationException();
+        }
+      };
+    }catch(RuntimeException t){
+      try {
+        StringBuilder sb = new StringBuilder("NewChunk: got exception during values() call, _len = " + _len + " _sparseLen = " + _sparseLen + " _isSparse = " + isSparse() + ", isDouble = " + (_ds != null) + "\n");
+        // print first 10 elems
+        for (int i = 0; i < Math.min(len(),10); ++i)
+          sb.append(i + ": rowId = " + (_id == null ? i : _id[i]) + ", value = " + (_ds == null ? (_ds[i]) : (_ls[i] + " e" + _xs[i])) + "\n");
+        // print last 10
+        if(len() > 10) {
+          sb.append("...");
+          for(int i = Math.max(10,len()-10); i < len(); ++i)
+            sb.append(i + ": rowId = " + (_id == null ? i : _id[i]) + ", value = " + (_ds == null ? (_ds[i]) : (_ls[i] + " e" + _xs[i])) + "\n");
+        }
+        Log.err(sb.toString());
+      } catch(Throwable tt){
+        Log.err(tt);
+      } // just in case there is a bug in my printout, don't mask original exception!
+      throw t;
+    }
   }
 
 
@@ -467,6 +496,8 @@ public class NewChunk extends Chunk {
 
   Chunk compress() {
     Chunk res = compress2();
+    assert _len == res.len();
+    assert !sparse() || !res.isSparse() || sparseLen() == res.sparseLen();
     // force everything to null after compress to free up the memory
     _id = null;
     _xs = null;
