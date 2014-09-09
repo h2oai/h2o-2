@@ -651,11 +651,11 @@ h2o.deeplearning <- function(x, y, data, key = "",
   result$params$nfolds = model_params$n_folds
   result$params$n_folds = NULL
   extra_json <- .fetchJSON(params$h2o, res$'_key')
+  result$validationKey <- extra_json$deeplearning_model$"_validationKey"
   result$priorDistribution <- extra_json$deeplearning_model$"_priorClassDist"
   result$modelDistribution <- extra_json$deeplearning_model$"_modelClassDist"
   errs = tail(res$errors, 1)[[1]]
 
-  # BUG: Why is the confusion matrix returning an extra row and column with all zeroes?
   if(is.null(errs$valid_confusion_matrix))
     confusion = errs$train_confusion_matrix
   else
@@ -1364,7 +1364,8 @@ h2o.deepfeatures <- function(data, model, key = "", layer = -1) {
   # while(!.h2o.__isDone(data@h2o, algo, response)) { Sys.sleep(1) }
   res2 = .h2o.__remoteSend(data@h2o, model_view, '_modelKey'=dest_key)
   modelOrig = results_fun(res2[[3]], params)
-  
+  if (algo == "DeepLearning" && !is.null(modelOrig$validationKey)) validation@key = modelOrig$validationKey
+
   res_xval = .h2o.crossvalidation(algo, data, res2[[3]], nfolds, params)
   new(model_obj, key=dest_key, data=data, model=modelOrig, valid=validation, xval=res_xval)
 }

@@ -759,21 +759,24 @@ public class DeepLearning extends Job.ValidatedJob {
       else {
         ((ValidatedJob)previous.job()).xval_models = null; //remove existing cross-validation keys after checkpoint restart
       }
-      if (source == null || !Arrays.equals(source._key._kb, previous.model_info().get_params().source._key._kb)) {
+      if (source == null || (previous.model_info().get_params().source != null && !Arrays.equals(source._key._kb, previous.model_info().get_params().source._key._kb))) {
         throw new IllegalArgumentException("source must be the same as for the checkpointed model.");
       }
       autoencoder = previous.model_info().get_params().autoencoder;
-      if (!autoencoder && (response == null || !Arrays.equals(response._key._kb, previous.model_info().get_params().response._key._kb))) {
+      if (!autoencoder && (response == null || !source.names()[source.find(response)].equals(previous.responseName()))) {
         throw new IllegalArgumentException("response must be the same as for the checkpointed model.");
       }
+//      if (!autoencoder && (response == null || !Arrays.equals(response._key._kb, previous.model_info().get_params().response._key._kb))) {
+//        throw new IllegalArgumentException("response must be the same as for the checkpointed model.");
+//      }
       if (Utils.difference(ignored_cols, previous.model_info().get_params().ignored_cols).length != 0
               || Utils.difference(previous.model_info().get_params().ignored_cols, ignored_cols).length != 0) {
         ignored_cols = previous.model_info().get_params().ignored_cols;
         Log.warn("Automatically re-using ignored_cols from the checkpointed model.");
       }
-      if ((validation == null) == (previous.model_info().get_params().validation != null)
-              || (validation != null && validation._key != null && previous.model_info().get_params().validation._key != null
-              && !Arrays.equals(validation._key._kb, previous.model_info().get_params().validation._key._kb))) {
+      if ((validation == null) == (previous._validationKey != null)
+              || (validation != null && validation._key != null && previous._validationKey != null
+              && !Arrays.equals(validation._key._kb, previous._validationKey._kb))) {
         throw new IllegalArgumentException("validation must be the same as for the checkpointed model.");
       }
       if (classification != previous.model_info().get_params().classification) {
