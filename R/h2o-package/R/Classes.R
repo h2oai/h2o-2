@@ -136,9 +136,9 @@ setMethod("show", "H2OGLMModel", function(object) {
         cat("\n\nConfusion Matrix:\n"); print(model$confusion)
     if (!is.null(model$auc)) {
         if(.hasSlot(object, "valid"))
-          trainOrTest <- ifelse(is.na(object@valid@key), "train)", "test)")
-        else trainOrTest <- "train)"
-        cat("\nAUC = ", model$auc, "(on", trainOrTest ,"\n")
+          trainOrValidation <- ifelse(is.na(object@valid@key), "train)", "validation)")
+        else trainOrValidation <- "train)"
+        cat("\nAUC = ", model$auc, "(on", trainOrValidation ,"\n")
       }
     }
 
@@ -230,13 +230,13 @@ setMethod("show", "H2ODeepLearningModel", function(object) {
   }
 
   if (!is.null(model$train_auc)) {
-    trainOrTest <- "train)"
-    cat("\nAUC = ", model$train_auc, "(on", trainOrTest, "\n")
+    trainOrValidation <- "train)"
+    cat("\nAUC = ", model$train_auc, "(on", trainOrValidation, "\n")
   }
 
   if (!is.null(model$auc)) {
-      trainOrTest <- ifelse(is.na(object@valid@key), "train)", "test)")
-      cat("\nAUC = ", model$auc, "(on", trainOrTest ,"\n")
+      trainOrValidation <- ifelse(is.na(object@valid@key), "train)", "validation)")
+      cat("\nAUC = ", model$auc, "(on", trainOrValidation ,"\n")
   }
 })
 
@@ -246,7 +246,7 @@ setMethod("show", "H2ODRFModel", function(object) {
   cat("Distributed Random Forest Model Key:", object@key)
 
   model = object@model
-  cat("\n\nClasification:", model$params$classification)
+  cat("\n\nClassification:", model$params$classification)
   cat("\nNumber of trees:", model$params$ntree)
   cat("\nTree statistics:\n"); print(model$forest)
   
@@ -264,8 +264,8 @@ setMethod("show", "H2ODRFModel", function(object) {
       cat("\nGini:", model$gini, "\n")
   }
   if (!is.null(model$auc)) {
-    trainOrTest <- ifelse(is.na(object@valid@key), "train)", "test)")
-    cat("\nAUC = ", model$auc, "(on", trainOrTest ,"\n")
+    trainOrValidation <- ifelse(is.na(object@valid@key), "train)", "validation)")
+    cat("\nAUC = ", model$auc, "(on", trainOrValidation ,"\n")
   }
   if(!is.null(model$varimp)) {
     cat("\nVariable importance:\n"); print(model$varimp)
@@ -311,8 +311,8 @@ setMethod("show", "H2OSpeeDRFModel", function(object) {
   }
 
   if (!is.null(model$auc)) {
-    trainOrTest <- ifelse(is.na(object@valid@key), "train)", "test)")
-    cat("\nAUC = ", model$auc, "(on", trainOrTest ,"\n")
+    trainOrValidation <- ifelse(is.na(object@valid@key), "train)", "validation)")
+    cat("\nAUC = ", model$auc, "(on", trainOrValidation ,"\n")
   }
 
 })
@@ -355,8 +355,8 @@ setMethod("show", "H2OGBMModel", function(object) {
       cat("\nGini:", model$gini, "\n")
 
     if (!is.null(model$auc)) {
-      trainOrTest <- ifelse(is.na(object@valid@key), "train)", "test)")
-      cat("\nAUC = ", model$auc, "(on", trainOrTest ,"\n")
+      trainOrValidation <- ifelse(is.na(object@valid@key), "train)", "validation)")
+      cat("\nAUC = ", model$auc, "(on", trainOrValidation ,"\n")
     }
   }
   
