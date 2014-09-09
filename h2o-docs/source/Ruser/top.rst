@@ -7,6 +7,5 @@ R On H\ :sub:`2`\ O
    :maxdepth: 1
 
    Rinstall
-   Rinstallgit
    Rpackage
    rtutorial

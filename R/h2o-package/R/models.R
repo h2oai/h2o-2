@@ -197,6 +197,10 @@ function(h2o, key, lambda_idx = -1, return_all_lambda = TRUE, pre = "", data = N
     names(result$normalized_coefficients) <- pre$json$glm_model$coefficients_names[idxes]
   if(.isBinomial(pre)) {  # build and set the confusion matrix
     cm_ind <- trunc(100*result$best_threshold) + 1
+    if ( trunc(100 * result$best_threshold) + 1 > length(valid$cms)) {
+      threshs <- pre$json$glm_model$submodels[[lambda_idx]]$validation$thresholds
+      cm_ind <- which(threshs == result$best_threshold)
+    }
     result$confusion <- .build_cm(valid$cms[[cm_ind]]$arr, c("false", "true"))
   }
   # fill in the params

@@ -244,7 +244,9 @@ public abstract class Chunk extends Iced implements Cloneable {
 
 
   @Override public Chunk clone() { return (Chunk)super.clone(); }
-  @Override public String toString() { return getClass().getSimpleName(); }
+  @Override public String toString() {
+    return getClass().getSimpleName() + "(start = " + _start + ", len = " + _len + ")";
+  }
 
   public long byteSize() {
     long s= _mem == null ? 0 : _mem.length;

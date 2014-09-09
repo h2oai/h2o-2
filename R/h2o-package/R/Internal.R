@@ -124,6 +124,7 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__PAGE_QUANTILES = "2/QuantilesPage.json"
 .h2o.__PAGE_INSPECTOR = "2/Inspector.json"
 .h2o.__PAGE_ANOMALY = "2/Anomaly.json"
+.h2o.__PAGE_DEEPFEATURES = "2/DeepFeatures.json"
 
 .h2o.__PAGE_DRF = "2/DRF.json"
 .h2o.__PAGE_DRFProgress = "2/DRFProgressPage.json"
@@ -229,6 +230,7 @@ h2o.setLogPath <- function(path, type) {
 }
 
 .h2o.__checkUp <- function(client) {
+  myURL   = paste("http://", client@ip, ":", client@port, sep = "")
   myUpURL = paste("http://", client@ip, ":", client@port, "/", .h2o.__PAGE_UP, sep = "")
   if(!url.exists(myUpURL)) stop("Cannot connect to H2O instance at ", myURL)
 }
@@ -926,8 +928,15 @@ h2o.getModel <- function(h2o, key) {
   if (algo == "speedrf_model") algo <- "SpeeDRF"
   if (algo == "glm_model") algo <- "GLM"
   if (algo %in% c("GBM", "RF", "DeepLearning", "SpeeDRF", "GLM") && !is.null(params$n_folds)) res_xval <- .h2o.crossvalidation(algo, train_fr, json[[model.type]], params$n_folds, params)
-  if (is.null(params$validation)) valid <- new("H2OParsedData", key=as.character(NA))
-  else valid <- .h2o.exec2(h2o = h2o, expr = params$validation$"_key", dest_key = params$validation$"_key")
+  if (is.null(params$validation)) {
+    if (algo == "DeepLearning" && !is.null(modelOrig$validationKey)) {
+      valid <- .h2o.exec2(h2o = h2o, expr = modelOrig$validationKey, dest_key = modelOrig$validationKey)
+    } else {
+      valid <- new("H2OParsedData", key=as.character(NA))
+    }
+  } else {
+    valid <- .h2o.exec2(h2o = h2o, expr = params$validation$"_key", dest_key = params$validation$"_key")
+  }
   new(model_obj, key=dest_key, data=train_fr, model=modelOrig, valid=valid, xval=res_xval)
 }
 

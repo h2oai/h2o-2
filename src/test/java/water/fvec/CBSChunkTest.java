@@ -112,6 +112,7 @@ public class CBSChunkTest extends TestUtil {
 
       nc = new NewChunk(null, 0);
       cc.inflate_impl(nc);
+      nc.values(0, nc.len());
       Assert.assertEquals(vals.length+l+1, nc.sparseLen());
       Assert.assertEquals(vals.length+l+1, nc.len());
 

@@ -11,7 +11,7 @@ Perquisites :
 
     - 64-bit Oracle Java 1.6+
     - Tableau 8.1 installed
-    - H\ :sub:`2`\ O installed in R (follow download guide :ref:`Rfromdownload`)
+    - H\ :sub:`2`\ O installed in R (follow download guide :ref:`R_Installation`)
 
 Metadata
 """"""""

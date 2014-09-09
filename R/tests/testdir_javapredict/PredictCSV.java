@@ -178,7 +178,8 @@ class PredictCSV {
             for (; j< numInputColumns; j++) row[j] = Double.NaN;
 
             // Do the prediction.
-            model.predict(row, preds);
+            //model.predict(row, preds);
+            preds = model.predict(row, preds);
 
             // Emit the result to the output file.
             for (int i = 0; i < preds.length; i++) {

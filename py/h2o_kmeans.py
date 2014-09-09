@@ -47,7 +47,7 @@ def simpleCheckKMeans(self, kmeans, **kwargs):
     return warnings
 
 
-def bigCheckResults(self, kmeans, csvPathname, parseResult, applyDestinationKey, **kwargs):
+def bigCheckResults(self, kmeans, csvPathname, parseResult, predictKey, **kwargs):
     simpleCheckKMeans(self, kmeans, **kwargs)
     # can't use inspect on a model key? now?
     model = kmeans['model']
@@ -61,9 +61,6 @@ def bigCheckResults(self, kmeans, csvPathname, parseResult, applyDestinationKey,
     max_iter = model["max_iter"]
     kmeansResult = kmeans
 
-    # no scoring on Kmeans2?..just reuse
-    # cols/max_ncols params?
-    predictKey = applyDestinationKey
     predictResult = h2o.nodes[0].generate_predictions(data_key=parseResult['destination_key'], model_key=model_key, destination_key=predictKey)
     summaryResult = h2o.nodes[0].summary_page(key=predictKey)
     hcnt = summaryResult['summaries'][0]['hcnt'] # histogram
@@ -177,7 +174,7 @@ def compareToFirstKMeans(self, clusters, firstclusters):
         kList  = [clusters]
         firstkList = [firstclusters]
 
-    print "kbn:", kList, firstkList
+    print "kList:", kList, "firstkList:", firstkList
     for k, firstk in zip(kList, firstkList):
         # delta must be a positive number?
         # too bad we can't do an assertAlmostEqual on the list directly..have to break them out

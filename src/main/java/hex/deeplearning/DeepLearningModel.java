@@ -31,6 +31,9 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   @API(help="Job that built the model", json = true)
   final private Key jobKey;
 
+  @API(help="Validation dataset used for model building", json = true)
+  public final Key _validationKey;
+
   @API(help="Time to build the model", json = true)
   private long run_time;
   final private long start_time;
@@ -68,6 +71,8 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   public float error() { return (float) (isClassifier() ? cm().err() : mse()); }
 
   @Override public boolean isClassifier() { return super.isClassifier() && !model_info.get_params().autoencoder; }
+
+  @Override public int nfeatures() { return model_info.get_params().autoencoder ? _names.length : _names.length - 1; }
 
   public int compareTo(DeepLearningModel o) {
     if (o.isClassifier() != isClassifier()) throw new UnsupportedOperationException("Cannot compare classifier against regressor.");
@@ -690,6 +695,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     super(destKey, cp._dataKey, dataInfo._adaptedFrame.names(), dataInfo._adaptedFrame.domains(), cp._priorClassDist != null ? cp._priorClassDist.clone() : null, null);
     final boolean store_best_model = (jobKey == null);
     this.jobKey = jobKey;
+    this._validationKey = cp._validationKey;
     if (store_best_model) {
       model_info = cp.model_info.deep_clone(); //don't want to interfere with model being built, just make a deep copy and store that
       model_info.data_info = dataInfo.deep_clone(); //replace previous data_info with updated version that's passed in (contains enum for classification)
@@ -727,6 +733,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
   public DeepLearningModel(final Key destKey, final Key jobKey, final Key dataKey, final DataInfo dinfo, final DeepLearning params, final float[] priorDist) {
     super(destKey, dataKey, dinfo._adaptedFrame, priorDist);
     this.jobKey = jobKey;
+    this._validationKey = params.validation != null ? params.validation._key : null;
     run_time = 0;
     start_time = System.currentTimeMillis();
     _timeLastScoreEnter = start_time;
@@ -1124,6 +1131,62 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     return l2;
   }
 
+  /**
+   * Score auto-encoded reconstruction (on-the-fly, without allocating the reconstruction as done in Frame score(Frame fr))
+   * @param frame Original data (can contain response, will be ignored)
+   * @return Frame containing one Vec with reconstruction error (MSE) of each reconstructed row, caller is responsible for deletion
+   */
+  public Frame scoreDeepFeatures(Frame frame, final int layer) {
+    assert(layer >= 0 && layer < model_info().get_params().hidden.length);
+    final int len = nfeatures();
+    Vec resp = null;
+    if (isSupervised()) {
+      int ridx = frame.find(responseName());
+      if (ridx != -1) { // drop the response for scoring!
+        frame = new Frame(frame);
+        resp = frame.vecs()[ridx];
+        frame.remove(ridx);
+      }
+    }
+    // Adapt the Frame layout - returns adapted frame and frame containing only
+    // newly created vectors
+    Frame[] adaptFrms = adapt(frame,false,false/*no response*/);
+    // Adapted frame containing all columns - mix of original vectors from fr
+    // and newly created vectors serving as adaptors
+    Frame adaptFrm = adaptFrms[0];
+    // Contains only newly created vectors. The frame eases deletion of these vectors.
+    Frame onlyAdaptFrm = adaptFrms[1];
+    //create new features, will be dense
+    final int features = model_info().get_params().hidden[layer];
+    Vec[] vecs = adaptFrm.anyVec().makeZeros(features);
+    for (int j=0; j<features; ++j) {
+      adaptFrm.add("DF.C" + (j+1), vecs[j]);
+    }
+    new MRTask2() {
+      @Override public void map( Chunk chks[] ) {
+        double tmp [] = new double[len];
+        float df[] = new float [features];
+        final Neurons[] neurons = DeepLearningTask.makeNeuronsForTesting(model_info);
+        for( int row=0; row<chks[0]._len; row++ ) {
+          for( int i=0; i<len; i++ )
+            tmp[i] = chks[i].at0(row);
+          ((Neurons.Input)neurons[0]).setInput(-1, tmp);
+          DeepLearningTask.step(-1, neurons, model_info, false, null);
+          float[] out = neurons[layer+1]._a.raw(); //extract the layer-th hidden feature
+          for( int c=0; c<df.length; c++ )
+            chks[_names.length+c].set0(row,out[c]);
+        }
+      }
+    }.doAll(adaptFrm);
+
+    // Return just the output columns
+    int x=_names.length, y=adaptFrm.numCols();
+    Frame ret = adaptFrm.extractFrame(x, y);
+    onlyAdaptFrm.delete();
+    if (resp != null) ret.prepend(responseName(), resp);
+    return ret;
+  }
+
   // Make (potentially expanded) reconstruction
   private float[] score_autoencoder(Chunk[] chks, int row_in_chunk, double[] tmp, float[] preds, Neurons[] neurons) {
     assert(get_params().autoencoder);
@@ -1187,6 +1250,16 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
     return qp.result;
   }
 
+  @Override public ModelAutobufferSerializer getModelSerializer() {
+    // Return a serializer which knows how to serialize keys
+    return new ModelAutobufferSerializer() {
+      @Override protected AutoBuffer postLoad(Model m, AutoBuffer ab) {
+        Job.hygiene(((DeepLearningModel)m).get_params());
+        return ab;
+      }
+    };
+  }
+
   public boolean generateHTML(String title, StringBuilder sb) {
     if (_key == null) {
       DocGen.HTML.title(sb, "No model yet");
@@ -1204,18 +1277,18 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
     DocGen.HTML.title(sb, title);
 
-    if (get_params().source == null || UKV.get(get_params().source._key) == null) (Job.hygiene(get_params())).toHTML(sb);
+    if (get_params().source == null || DKV.get(get_params().source._key) == null ||
+            (get_params().validation != null && DKV.get(get_params().validation._key) == null)) (Job.hygiene(get_params())).toHTML(sb);
     else job().toHTML(sb);
 
-    final Key val_key = get_params().validation != null ? get_params().validation._key : null;
     sb.append("<div class='alert'>Actions: "
             + (jobKey != null && UKV.get(jobKey) != null && Job.isRunning(jobKey) ? "<i class=\"icon-stop\"></i>" + Cancel.link(jobKey, "Stop training") + ", " : "")
             + Inspect2.link("Inspect training data (" + _dataKey + ")", _dataKey) + ", "
-            + (val_key != null ? (Inspect2.link("Inspect validation data (" + val_key + ")", val_key) + ", ") : "")
+            + (_validationKey != null ? (Inspect2.link("Inspect validation data (" + _validationKey + ")", _validationKey) + ", ") : "")
             + water.api.Predict.link(_key, "Score on dataset") + ", "
-            + DeepLearning.link(_dataKey, "Compute new model", null, responseName(), val_key)
+            + DeepLearning.link(_dataKey, "Compute new model", null, responseName(), _validationKey)
             + (actual_best_model_key != null && UKV.get(actual_best_model_key) != null && actual_best_model_key != _key ? ", " + DeepLearningModelView.link("Go to best model", actual_best_model_key) : "")
-            + (jobKey == null || ((jobKey != null && UKV.get(jobKey) == null)) || (jobKey != null && UKV.get(jobKey) != null && Job.isEnded(jobKey)) ? ", <i class=\"icon-play\"></i>" + DeepLearning.link(_dataKey, "Continue training this model", _key, responseName(), val_key) : "") + ", "
+            + (jobKey == null || ((jobKey != null && UKV.get(jobKey) == null)) || (jobKey != null && UKV.get(jobKey) != null && Job.isEnded(jobKey)) ? ", <i class=\"icon-play\"></i>" + DeepLearning.link(_dataKey, "Continue training this model", _key, responseName(), _validationKey) : "") + ", "
             + UIUtils.qlink(SaveModel.class, "model", _key, "Save model") + ", "
             + "</div>");
 
@@ -1358,24 +1431,19 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
 
     if (!error.validation) {
       if (_have_cv_results) {
-        RString v_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
-        v_rs.replace("key", get_params().source != null && get_params().source._key != null ? get_params().source._key : "");
-        String cmTitle = "<div class=\"alert\">Scoring results reported for " + error.num_folds + "-fold cross-validated training data " + v_rs.toString() + ":</div>";
+        String cmTitle = "<div class=\"alert\">Scoring results reported for " + error.num_folds + "-fold cross-validated training data " + Inspect2.link(_dataKey) + ":</div>";
         sb.append("<h5>" + cmTitle);
         sb.append("</h5>");
       }
       else {
-        RString t_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
-        t_rs.replace("key", get_params().source != null && get_params().source._key != null ? get_params().source._key : "");
-        String cmTitle = "<div class=\"alert\">Scoring results reported on training data " + t_rs.toString() + (fulltrain ? "" : " (" + score_train + " samples)") + ":</div>";
+        String cmTitle = "<div class=\"alert\">Scoring results reported on training data " + Inspect2.link(_dataKey) + (fulltrain ? "" : " (" + score_train + " samples)") + ":</div>";
         sb.append("<h5>" + cmTitle);
         sb.append("</h5>");
       }
     }
     else {
       RString v_rs = new RString("<a href='Inspect2.html?src_key=%$key'>%key</a>");
-      v_rs.replace("key", get_params().validation != null && get_params().validation._key != null ? get_params().validation._key : "");
-      String cmTitle = "<div class=\"alert\">Scoring results reported on validation data " + v_rs.toString() + (fullvalid ? "" : " (" + score_valid + " samples)") + ":</div>";
+      String cmTitle = "<div class=\"alert\">Scoring results reported on validation data " + Inspect2.link(_validationKey) + (fullvalid ? "" : " (" + score_valid + " samples)") + ":</div>";
       sb.append("<h5>" + cmTitle);
       sb.append("</h5>");
     }

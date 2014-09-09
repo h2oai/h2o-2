@@ -651,11 +651,11 @@ h2o.deeplearning <- function(x, y, data, key = "",
   result$params$nfolds = model_params$n_folds
   result$params$n_folds = NULL
   extra_json <- .fetchJSON(params$h2o, res$'_key')
+  result$validationKey <- extra_json$deeplearning_model$"_validationKey"
   result$priorDistribution <- extra_json$deeplearning_model$"_priorClassDist"
   result$modelDistribution <- extra_json$deeplearning_model$"_modelClassDist"
   errs = tail(res$errors, 1)[[1]]
 
-  # BUG: Why is the confusion matrix returning an extra row and column with all zeroes?
   if(is.null(errs$valid_confusion_matrix))
     confusion = errs$train_confusion_matrix
   else
@@ -1264,8 +1264,22 @@ h2o.anomaly <- function(data, model, key = "", threshold = -1.0) {
   if(class(model) != "H2ODeepLearningModel") stop("model must be an H2O deep learning model")
   if(!is.character(key)) stop("key must be of class character")
   if(!is.numeric(threshold)) stop("threshold must be of class numeric")
-  
+
   res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_ANOMALY, source = data@key, dl_autoencoder_model = model@key, destination_key = key, thresh = threshold)
+  .h2o.__waitOnJob(data@h2o, res$job_key)
+  .h2o.exec2(res$destination_key, h2o = data@h2o, res$destination_key)
+}
+
+h2o.deepfeatures <- function(data, model, key = "", layer = -1) {
+  if(missing(data)) stop("Must specify data")
+  if(class(data) != "H2OParsedData") stop("data must be an H2O parsed dataset")
+  if(missing(model)) stop("Must specify model")
+  if(class(model) != "H2ODeepLearningModel") stop("model must be an H2O deep learning model")
+  if(!is.character(key)) stop("key must be of class character")
+  if(!is.numeric(layer)) stop("layer must be of class numeric")
+
+  if (layer != -1) layer = layer - 1; #index translation (R index is from 1..N, Java expects 0..N-1)
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_DEEPFEATURES, source = data@key, dl_model = model@key, destination_key = key, layer = layer)
   .h2o.__waitOnJob(data@h2o, res$job_key)
   .h2o.exec2(res$destination_key, h2o = data@h2o, res$destination_key)
 }
@@ -1350,7 +1364,8 @@ h2o.anomaly <- function(data, model, key = "", threshold = -1.0) {
   # while(!.h2o.__isDone(data@h2o, algo, response)) { Sys.sleep(1) }
   res2 = .h2o.__remoteSend(data@h2o, model_view, '_modelKey'=dest_key)
   modelOrig = results_fun(res2[[3]], params)
-  
+  if (algo == "DeepLearning" && !is.null(modelOrig$validationKey)) validation@key = modelOrig$validationKey
+
   res_xval = .h2o.crossvalidation(algo, data, res2[[3]], nfolds, params)
   new(model_obj, key=dest_key, data=data, model=modelOrig, valid=validation, xval=res_xval)
 }
