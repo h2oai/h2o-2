@@ -12,7 +12,6 @@ import collections
 # In spherical coordinates, taking advantage of the sampling rule:
 # http://stackoverflow.com/questions/2106503/pseudorandom-number-generator-exponential-distribution/2106568#2106568
 
-# let h2o randomize seed
 CLUSTERS = 5
 SPHERE_PTS = 100000
 # BAD_SEED = None
@@ -191,7 +190,7 @@ class Basic(unittest.TestCase):
                 sameAsBest += 1
                 # we can check that if it has the same error, the sizes should be the same (integer) and reflects centers?
                 # should 
-                if r.size!=bestResult.size:
+                if sorted(r.size)!=sorted(bestResult.size):
                     raise Exception("Would expect that if two trials got the same error (rounded to int), the cluster sizes would likely be the same? %s %s" % 
                         (r.size, bestResult.size))
 
