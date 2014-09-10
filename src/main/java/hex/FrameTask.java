@@ -257,6 +257,10 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       _catOffsets = MemoryManager.malloc4(catLevels.length+1);
       _catMissing = new int[catLevels.length];
       int s = 0;
+      // compute rollupstats in parallel
+      Futures fs = new Futures();
+      for (Vec v : fr.vecs()) v.rollupStats(fs);
+      fs.blockForPending();
 
       for(int i = 0; i < catLevels.length; ++i){
         _catOffsets[i] = s;
@@ -320,6 +324,11 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       _useAllFactorLevels = useAllFactorLevels;
       _catLvls = null;
       final Vec [] vecs = fr.vecs();
+      // compute rollupstats in parallel
+      Futures fs = new Futures();
+      for (Vec v : vecs) v.rollupStats(fs);
+      fs.blockForPending();
+
       final int n = vecs.length-_responses;
       if (n < 1) throw new IllegalArgumentException("Training data must have at least one column.");
       int [] nums = MemoryManager.malloc4(n);
