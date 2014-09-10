@@ -593,41 +593,36 @@ h2o.deeplearning <- function(x, y, data, key = "",
 }
 
 .h2o.__getDeepLearningSummary <- function(res) {
-  mySum = list()
-  resP = res$model_info$job
-  
-  mySum$model_key = resP$destination_key
-  mySum$activation = resP$activation
-  mySum$hidden = resP$hidden
-  mySum$rate = resP$rate
-  mySum$rate_annealing = resP$rate_annealing
-  mySum$momentum_start = resP$momentum_start
-  mySum$momentum_ramp = resP$momentum_ramp
-  mySum$momentum_stable = resP$momentum_stable
-  mySum$l1_reg = resP$l1
-  mySum$l2_reg = resP$l2
-  mySum$epochs = resP$epochs
-  
-  # temp = matrix(unlist(res$confusion_matrix), nrow = length(res$confusion_matrix))
-  # mySum$prediction_error = 1-sum(diag(temp))/sum(temp)
-  return(mySum)
+    result = list()
+    model_params = res$model_info$job
+    model_params$Request2 = NULL; model_params$response_info = NULL
+    model_params$'source' = NULL; model_params$validation = NULL
+    model_params$job_key = NULL;
+    model_params$start_time = NULL; model_params$end_time = NULL
+    model_params$response = NULL; model_params$description = NULL
+    if(!is.null(model_params$exception)) stop(model_params$exception)
+    model_params$exception = NULL; model_params$state = NULL
+
+    # Remove all NULL elements and cast to logical value
+    if(length(model_params) > 0)
+      model_params = model_params[!sapply(model_params, is.null)]
+    for(i in 1:length(model_params)) {
+      x = model_params[[i]]
+      if(length(x) == 1 && is.character(x))
+        model_params[[i]] = switch(x, true = TRUE, false = FALSE, "Inf" = Inf, "-Inf" = -Inf, x)
+    }
+    result = model_params
+
+    #for backward-compatibility
+    result$l1_reg = result$l1
+    result$l2_reg = result$l2
+    result$model_key = result$destination_key
+
+    return(result)
 }
 
 .h2o.__getDeepLearningResults <- function(res, params = list()) {
   result = list()
-  #   model_params = res$model_info$parameters
-  #   params$activation = model_params$activation
-  #   params$rate = model_params$rate
-  #   params$rate = model_params$rate
-  #   params$annealing_rate = model_params$rate_annealing
-  #   params$l1_reg = model_params$l1
-  #   params$l2_reg = model_params$l2
-  #   params$mom_start = model_params$momentum_start
-  #   params$mom_ramp = model_params$momentum_ramp
-  #   params$mom_stable = model_params$momentum_stable
-  #   params$epochs = model_params$epochs
-  # result$params = params
-  # model_params = res$model_info$parameters
   model_params = res$model_info$job
   model_params$Request2 = NULL; model_params$response_info = NULL
   model_params$'source' = NULL; model_params$validation = NULL
