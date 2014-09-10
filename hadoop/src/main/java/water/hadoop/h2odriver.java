@@ -55,6 +55,7 @@ public class h2odriver extends Configured implements Tool {
   static boolean enableVerboseClass = false;
   static boolean enablePrintCompilation = false;
   static boolean enableExcludeMethods = false;
+  static boolean enableLog4jDefaultInitOverride = h2odriver_config.overrideLog4jInit();
   static boolean enableDebug = false;
   static boolean enableSuspend = false;
   static int debugPort = 5005;    // 5005 is the default from IDEA
@@ -560,6 +561,9 @@ public class h2odriver extends Configured implements Tool {
       else if (s.equals("-exclude")) {
         enableExcludeMethods = true;
       }
+      else if (s.equals("-Dlog4j.defaultInitOverride=true")) {
+        enableLog4jDefaultInitOverride = true;
+      }
       else if (s.equals("-debug")) {
         enableDebug = true;
       }
@@ -811,8 +815,8 @@ public class h2odriver extends Configured implements Tool {
 
       // MRv1 standard options, but also required for YARN.
       String mapChildJavaOpts =
-              "-Xms"
-              + mapperXmx + " -Xmx" + mapperXmx
+              "-Xms" + mapperXmx
+              + " -Xmx" + mapperXmx
               + (enableExceptions ? " -ea" : "")
               + (enableVerboseGC ? " -verbose:gc" : "")
               + (enablePrintGCDetails ? " -XX:+PrintGCDetails" : "")
@@ -820,6 +824,7 @@ public class h2odriver extends Configured implements Tool {
               + (enableVerboseClass ? " -verbose:class" : "")
               + (enablePrintCompilation ? " -XX:+PrintCompilation" : "")
               + (enableExcludeMethods ? " -XX:CompileCommand=exclude,water/fvec/NewChunk.append2slowd" : "")
+              + (enableLog4jDefaultInitOverride ? " -Dlog4j.defaultInitOverride=true" : "")
               + (enableDebug ? " -agentlib:jdwp=transport=dt_socket,server=y,suspend=" + (enableSuspend ? "y" : "n") + ",address=" + debugPort : "")
               ;
       conf.set("mapred.child.java.opts", mapChildJavaOpts);
