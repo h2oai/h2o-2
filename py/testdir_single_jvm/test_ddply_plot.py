@@ -84,11 +84,11 @@ class Basic(unittest.TestCase):
             ]
         else:
             tryList = [
-                (1000000, 5, 'cD', 0, 10, 30), 
+                # (1000000, 5, 'cD', 0, 10, 30), 
                 (1000000, 5, 'cD', 0, 20, 30), 
-                (1000000, 5, 'cD', 0, 40, 30), 
+                # (1000000, 5, 'cD', 0, 40, 30), 
                 (1000000, 5, 'cD', 0, 50, 30), 
-                (1000000, 5, 'cD', 0, 80, 30), 
+                # (1000000, 5, 'cD', 0, 80, 30), 
                 (1000000, 5, 'cD', 0, 160, 30), 
                 # fails..don't do
                 # (1000000, 5, 'cD', 0, 320, 30), 
@@ -185,7 +185,7 @@ class Basic(unittest.TestCase):
                 execExpr = "sum(a1!=a2)==0"
                 (execResult, result) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=90)
                 execExpr = "s=c(0); s=(a1!=a2)"
-                (execResult1, result1) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=90)
+                (execResult1, result1) = h2e.exec_expr(h2o.nodes[0], execExpr, resultKey=None, timeoutSecs=120)
                 print "execResult", h2o.dump_json(execResult)
 
                 #*****************************************************************************************
