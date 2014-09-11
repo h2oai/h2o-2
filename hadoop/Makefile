@@ -64,6 +64,7 @@ build_inner:
 	@echo "package water.hadoop;" >> $(F)
 	@echo "class h2odriver_config {" >> $(F)
 	@echo "    public static boolean usingYarn() { return $(YARN); }" >> $(F)
+	@echo "    public static boolean overrideLog4jInit() { return $(L4JOVR); }" >> $(F)
 	@echo "}" >> $(F)
 	mkdir classes/$(HADOOP_VERSION)
 	javac -Xlint:-deprecation -source 1.6 -target 1.6 -sourcepath src/main/java -classpath "$(COMMON_JARS)${SEP}$(HADOOP_JARS)" -d classes/$(HADOOP_VERSION) src/main/java/water/hadoop/*.java
@@ -76,15 +77,15 @@ clean:
 build: clean
 	mkdir classes
 	mkdir target
-	$(MAKE) build_inner HADOOP_VERSION=mapr2.1.3 YARN=false
-	$(MAKE) build_inner HADOOP_VERSION=mapr3.1.1 YARN=false
-	$(MAKE) build_inner HADOOP_VERSION=cdh3      YARN=false
-	$(MAKE) build_inner HADOOP_VERSION=cdh4      YARN=false
-	$(MAKE) build_inner HADOOP_VERSION=cdh4_yarn YARN=true
-	$(MAKE) build_inner HADOOP_VERSION=cdh5      YARN=false
-	$(MAKE) build_inner HADOOP_VERSION=hdp1.3.2  YARN=false
-	$(MAKE) build_inner HADOOP_VERSION=hdp2.0.6  YARN=false
-	$(MAKE) build_inner HADOOP_VERSION=hdp2.1    YARN=false
+	$(MAKE) build_inner HADOOP_VERSION=mapr2.1.3 YARN=false L4JOVR=false
+	$(MAKE) build_inner HADOOP_VERSION=mapr3.1.1 YARN=false L4JOVR=true
+	$(MAKE) build_inner HADOOP_VERSION=cdh3      YARN=false L4JOVR=false
+	$(MAKE) build_inner HADOOP_VERSION=cdh4      YARN=false L4JOVR=false
+	$(MAKE) build_inner HADOOP_VERSION=cdh4_yarn YARN=true  L4JOVR=false
+	$(MAKE) build_inner HADOOP_VERSION=cdh5      YARN=false L4JOVR=false
+	$(MAKE) build_inner HADOOP_VERSION=hdp1.3.2  YARN=false L4JOVR=false
+	$(MAKE) build_inner HADOOP_VERSION=hdp2.0.6  YARN=false L4JOVR=false
+	$(MAKE) build_inner HADOOP_VERSION=hdp2.1    YARN=false L4JOVR=false
 	rm -rf ../target/hadoop
 	mkdir ../target/hadoop
 	cp README.txt ../target/hadoop
