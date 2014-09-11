@@ -43,13 +43,14 @@ class Basic(unittest.TestCase):
                 "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
             print "\n#******************************************************************************" 
-            for trial in range(4):
+            for trial in range(1):
                 rb_key = "rb_%s_%s" % (trial, hex_key)
                 SEEDPERFILE = random.randint(0, sys.maxint)
                 randChunks = random.randint(1, 100)
                 start = time.time()
                 print "Trial %s: Rebalancing %s to %s with %s chunks" % (trial, hex_key, rb_key, randChunks)
                 rebalanceResult = h2o.nodes[0].rebalance(source=hex_key, after=rb_key, seed=SEEDPERFILE, chunks=randChunks)
+                elapsed = time.time() - start
                 print "rebalance end on ", csvFilename, 'took', elapsed, 'seconds',\
                 h2o_cmd.runSummary(key=rb_key)
                 print "\nInspecting the original parsed result"

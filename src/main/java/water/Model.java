@@ -813,8 +813,10 @@ public abstract class Model extends Lockable<Model> {
       sb.append("<table class='table table-bordered table-condensed'>");
       sb.append("<tr><th>Model</th></tr>");
       for (Key k : job.xval_models) {
+        Model m = UKV.get(k);
+        Job j = m != null ? (Job)m.job() : null;
         sb.append("<tr>");
-        sb.append("<td>" + (UKV.get(k) != null ? Inspector.link(k.toString(), k.toString()) : "Pending") + "</td>");
+        sb.append("<td>" + (m != null ? Inspector.link(k.toString(), k.toString()) : "Pending") + (j != null ? ", Progress: " + Utils.formatPct(j.progress()) : "") + "</td>");
         sb.append("</tr>");
       }
       sb.append("</table>");
