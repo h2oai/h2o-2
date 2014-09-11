@@ -20,15 +20,15 @@ mkdir -p sandbox
 # Should we do this cloud build with the sh2junit.py? to get logging, xml etc.
 # I suppose we could just have a test verify the request cloud size, after buildingk
 
-# resource manager is still on 162
 # yarn.resourcemanager.address  8032
+NAME_NODE=192.168.1.180
 CDH5_YARN_JOBTRACKER=192.168.1.180:8032
-CDH5_YARN_NODES=1
+CDH5_YARN_NODES=3
 # FIX! we fail if you ask for two much memory? 7g worked. 8g doesn't work
 echo "can't get more than 5g for now. node count 2"
 echo "need to adjust the cdh5 cloudera config (yarn memory?)"
-CDH5_YARN_HEAP=5g
-CDH5_YARN_JAR=h2odriver_cdh4_yarn.jar
+CDH5_YARN_HEAP=8g
+CDH5_YARN_JAR=h2odriver_cdh5.jar
 
 H2O_DOWNLOADED=../../h2o-downloaded
 H2O_HADOOP=$H2O_DOWNLOADED/hadoop
@@ -84,7 +84,7 @@ done < h2o_one_node
 rm -fr h2o-nodes.json
 # NOTE: keep this hdfs info in sync with the json used to build the cloud above
 echo "Make sure you update this to point to the right name node, which can be different than the resource manager"
-../find_cloud.py -f h2o_one_node -hdfs_version cdh4_yarn -hdfs_name_node 192.168.1.180 -expected_size $CDH5_YARN_NODES
+../find_cloud.py -f h2o_one_node -hdfs_version cdh5 -hdfs_name_node $NAME_NODE -expected_size $CDH5_YARN_NODES
 
 echo "h2o-nodes.json should now exist"
 ls -ltr h2o-nodes.json
@@ -97,7 +97,7 @@ cp -f h2o_one_node sandbox
 echo "Touch all the 0xcustomer-datasets mnt points, to get autofs to mount them."
 echo "Permission rights extend to the top level now, so only 0xcustomer can automount them"
 echo "okay to ls the top level here...no secret info..do all the machines hadoop (cdh3) might be using"
-for mr in 161 162 163 
+for mr in 178 179 180
 do
     ssh -i $HOME/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.$mr 'cd /mnt/0xcustomer-datasets'
 done

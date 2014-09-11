@@ -22,6 +22,7 @@ SET_JAVA_HOME="export JAVA_HOME=/usr/lib/jvm/java-7-oracle; "
 # Should we do this cloud build with the sh2junit.py? to get logging, xml etc.
 # I suppose we could just have a test verify the request cloud size, after building
 # Now resource manager is at 8050?
+NAME_NODE=192.168.1.186
 HDP_JOBTRACKER=192.168.1.187:8050
 
 HDP_NODES=8
@@ -109,7 +110,7 @@ done < h2o_one_node
 
 rm -fr h2o-nodes.json
 # NOTE: keep this hdfs info in sync with the json used to build the cloud above
-../find_cloud.py -f h2o_one_node -hdfs_version hdp2.1 -hdfs_name_node 192.168.1.186 -expected_size $HDP_NODES
+../find_cloud.py -f h2o_one_node -hdfs_version hdp2.1 -hdfs_name_node $NAME_NODE -expected_size $HDP_NODES
 
 echo "h2o-nodes.json should now exist"
 ls -ltr h2o-nodes.json
@@ -148,7 +149,6 @@ myPy() {
     $DOIT $1/$2 || true
     # sandbox log copying to special dir per test is done in n0.doit
 }
-
 
 # don't run this until we know whether 0xcustomer permissions also exist for the hadoop job
 # myPy c1 test_c1_rel.py
