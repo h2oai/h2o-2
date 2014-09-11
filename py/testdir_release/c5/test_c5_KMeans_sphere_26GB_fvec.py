@@ -182,7 +182,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                 print h2o.nodes[0].http_addr
                 print h2o.nodes[0].port
 
-            if 1==0: # debug
+            if 1==1: # debug
                 print "sleeping"
                 h2o.sleep(3600)
 

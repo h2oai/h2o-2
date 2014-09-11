@@ -277,8 +277,9 @@ def import_only(node=None, schema='local', bucket=None, path=None,
             # this may change other cases, but smalldata should only exist as a "bucket" for us?
             folderOffset = re.sub("smalldata", "h2o-smalldata", folderOffset)
             if not (n.use_hdfs and ((n.hdfs_version and n.hdfs_name_node) or n.hdfs_config)):
-                print "use_hdfs: %s hdfs_version: %s hdfs_name_node: %s hdfs_config: %s" % \
-                    (n.use_hdfs, n.hdfs_version, n.hdfs_name_node, n.hdfs_config)
+                print "use_hdfs: %s hdfs_version: %s hdfs_name_node: %s" % (n.use_hdfs, n.hdfs_version, n.hdfs_name_node)
+                if n.hdfs_config:
+                    print "hdfs_config: %s" % n.hdfs_config
                 # raise Exception("Something was missing for s3n on the java -jar cmd line when the cloud was built")
                 print "ERROR: Something was missing for s3n on the java -jar cmd line when the cloud was built"
             folderURI = "s3n://" + folderOffset
@@ -309,8 +310,9 @@ def import_only(node=None, schema='local', bucket=None, path=None,
             # check that some state from the cloud building time was right
             # the requirements for this may change and require updating
             if not (n.use_hdfs and ((n.hdfs_version and n.hdfs_name_node) or n.hdfs_config)):
-                print "use_hdfs: %s hdfs_version: %s hdfs_name_node: %s hdfs_config: %s" % \
-                    (n.use_hdfs, n.hdfs_version, n.hdfs_name_node, n.hdfs_config)
+                print "use_hdfs: %s hdfs_version: %s hdfs_name_node: %s" % (n.use_hdfs, n.hdfs_version, n.hdfs_name_node)
+                if n.hdfs_config:
+                    print "hdfs_config: %s" % n.hdfs_config
                 # raise Exception("Something was missing for hdfs on the java -jar cmd line when the cloud was built")
                 print "ERROR: Something was missing for hdfs on the java -jar cmd line when the cloud was built"
 
