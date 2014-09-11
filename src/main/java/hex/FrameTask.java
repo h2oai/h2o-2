@@ -152,6 +152,10 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       Frame fr = new Frame(Key.makeSystem(Key.make().toString()), source._names.clone(), source.vecs().clone());
       if (ignored_cols != null) fr.remove(ignored_cols);
       final Vec[] vecs =  fr.vecs();
+      // compute rollupstats in parallel
+      Futures fs = new Futures();
+      for (Vec v : vecs) v.rollupStats(fs);
+      fs.blockForPending();
 
       // put response to the end (if not already)
       if (response != null) {
@@ -208,6 +212,10 @@ public abstract class FrameTask<T extends FrameTask<T>> extends MRTask2<T>{
       Frame fr = new Frame(Key.makeSystem(Key.make().toString()), source._names.clone(), source.vecs().clone());
       if (ignored_cols != null) fr.remove(ignored_cols);
       final Vec[] vecs =  fr.vecs();
+      // compute rollupstats in parallel
+      Futures fs = new Futures();
+      for (Vec v : vecs) v.rollupStats(fs);
+      fs.blockForPending();
 
       ArrayList<Integer> constantOrNAs = new ArrayList<Integer>();
       {
