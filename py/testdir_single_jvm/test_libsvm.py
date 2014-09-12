@@ -64,16 +64,12 @@ class Basic(unittest.TestCase):
 
         for trial in range(2):
             csvFilename = "syn_ints.csv"
+            hex_key = "1.hex"
             csvPathname = SYNDATASETS_DIR + '/' + csvFilename
             write_syn_dataset(csvPathname, trial)
-
-            importFolderPath = "/home/kevin/h2o/py"
-            csvFilename = "1.txt"
-            hex_key = "1.hex"
             timeoutSecs = 10
         
             # have to import each time, because h2o deletes source after parse
-            csvPathname = importFolderPath + "/" + csvFilename
 
             # PARSE******************************************
             # creates csvFilename.hex from file in importFolder dir 
