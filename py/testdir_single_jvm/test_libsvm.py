@@ -10,7 +10,7 @@ PARSER_TYPE = 'SVMLight'
 print "This parses as enum if parser_type=SVMLight isn't specified"
 print "Gets error if parser_type=SVMLight is specified"
 
-def write_syn_dataset(csvPathname):
+def write_syn_dataset(csvPathname, trial):
     dsf = open(csvPathname, "w+")
 
     # test data from customer with multiple spaces removed
@@ -29,7 +29,13 @@ def write_syn_dataset(csvPathname):
 0.0     0:1.0   1:1.0   2:1.0   3:0.0   4:0.0   5:0.0   6:0.0   7:0.0   8:0.0   9:0.0   10:0.0  11:0.0  12:1.0
 0.0     1:1.0   2:1.0   3:0.0   4:25.0  5:0.0   6:0.0   7:1.0   8:0.0   9:0.0   10:0.0  11:0.0  12:27.0 13:1.0
 """
-    rowData = rowData1
+
+    # alternate between the two cases
+    if trial%2 == 0:
+        rowData = rowData1
+    else:
+        rowData = rowData2
+
     dsf.write(rowData)
     dsf.close()
 
@@ -55,16 +61,17 @@ class Basic(unittest.TestCase):
 
     def test_libsvm(self):
         SYNDATASETS_DIR = h2o.make_syn_dir()
-        csvFilename = "syn_ints.csv"
-        csvPathname = SYNDATASETS_DIR + '/' + csvFilename
-        write_syn_dataset(csvPathname)
 
-        importFolderPath = "/home/kevin/h2o/py"
-        csvFilename = "1.txt"
-        hex_key = "1.hex"
-        timeoutSecs = 10
+        for trial in range(2):
+            csvFilename = "syn_ints.csv"
+            csvPathname = SYNDATASETS_DIR + '/' + csvFilename
+            write_syn_dataset(csvPathname, trial)
+
+            importFolderPath = "/home/kevin/h2o/py"
+            csvFilename = "1.txt"
+            hex_key = "1.hex"
+            timeoutSecs = 10
         
-        for trial in range(1):
             # have to import each time, because h2o deletes source after parse
             csvPathname = importFolderPath + "/" + csvFilename
 
