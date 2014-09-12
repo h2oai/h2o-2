@@ -37,6 +37,9 @@ The complete URL or normalized file path of the file to be imported. Each row of
   \item{silent}{
 (Optional) A logical value indicating whether or not to display an upload progress bar.
 }
+\item{parser_type}{
+(Optional) Specify the type of data to be parsed. parser_type = "AUTO" is the default, other acceptable values are "SVMLight", "XLS", and "CSV".
+  }
 }
 
 \details{
