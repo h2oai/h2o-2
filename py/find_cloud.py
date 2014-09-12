@@ -9,7 +9,7 @@ parser.add_argument('-f', '--flatfile',
     type=str)
 
 parser.add_argument('-hdfs_version', '--hdfs_version', 
-    choices=['0.20.2', 'cdh3', 'cdh4', 'cdh4_yarn', 'mapr2.1.3', 'mapr3.0.1', 'hdp2.1'],
+    choices=['0.20.2', 'cdh3', 'cdh4', 'cdh4_yarn', 'cdh5', 'mapr2.1.3', 'mapr3.0.1', 'mapr3.1.1', 'hdp2.1'],
     default='cdh3', 
     help="Use this for setting hdfs_version in the cloned cloud", 
     type=str)
@@ -204,6 +204,7 @@ def probe_node(line, h2oNodes):
             'h2o_remote_buckets_root': 'false',
             'hdfs_version': args.hdfs_version, # something is checking for this. I guess we could set this in tests as a hack
             'hdfs_name_node': args.hdfs_name_node, # hmm. do we have to set this to do hdfs url generation correctly?
+            'hdfs_config': args.hdfs_config,
         }
 
         # this is the total list so far

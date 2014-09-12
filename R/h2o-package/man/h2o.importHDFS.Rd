@@ -36,6 +36,9 @@ h2o.importHDFS(object, path, pattern = "", key = "", parse = TRUE, header,
   \item{col.names}{
 (Optional) A \code{\linkS4class{H2OParsedData}} object containing a single delimited line with the column names for the file.
   }
+  \item{parser_type}{
+  (Optional) Specify the type of data to be parsed. parser_type = "AUTO" is the default, other acceptable values are "SVMLight", "XLS", and "CSV".
+    }
 }
 
 \details{

@@ -216,6 +216,9 @@ class Basic(unittest.TestCase):
             # "seed": 4294494033083512223, 
             'k': outputClasses,
             'initialization': 'PlusPlus',
+            # sometimes get [24, 29, 97] result with PlusPlus.
+            # change to Furthest. maybe have to fix the seed above, but we'll see
+            # I provide two legal results below
             'destination_key': 'kmeans_model',
             'max_iter': 1000 }
 
