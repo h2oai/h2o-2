@@ -9,7 +9,7 @@ Uploads a file from the local drive and parses it, returning an object containin
 }
 \usage{
 h2o.uploadFile(object, path, key = "", parse = TRUE, header, 
-  sep = "", col.names, silent = TRUE)
+  sep = "", col.names, silent = TRUE, parser_type="AUTO")
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
