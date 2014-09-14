@@ -558,9 +558,9 @@ public class DeepLearning extends Job.ValidatedJob {
           "sparse",
           "col_major",
           // Allow modification of the regularization parameters after a checkpoint restart
-//          "l1",
-//          "l2",
-//          "max_w2",
+          "l1",
+          "l2",
+          "max_w2",
   };
 
   /**
