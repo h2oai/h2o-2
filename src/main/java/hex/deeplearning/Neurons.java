@@ -2,17 +2,12 @@ package hex.deeplearning;
 
 import hex.FrameTask;
 import hex.deeplearning.DeepLearning.Loss;
-import org.apache.commons.lang.ArrayUtils;
 import water.Iced;
 import water.MemoryManager;
 import water.api.Request.API;
-import water.util.Log;
 import water.util.Utils;
 
-import java.util.Arrays;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
+import java.util.*;
 
 /**
  * This class implements the concept of a Neuron layer in a Neural Network
@@ -705,11 +700,39 @@ public abstract class Neurons {
      * @param cats Array of indices, the first numcat values are the input layer unit (==column) indices for the non-zero categorical values
      *             (This allows this array to be re-usable by the caller, without re-allocating each time)
      */
+    static float[] matrix = null;
     public void setInput(long seed, final double[] nums, final int numcat, final int[] cats) {
       _a = _dvec;
       Arrays.fill(_a.raw(), 0f);
-      for (int i=0; i<numcat; ++i) _a.set(cats[i], 1f);
-      for (int i=0; i<nums.length; ++i) _a.set(_dinfo.numStart() + i, Double.isNaN(nums[i]) ? 0f /*Always do MeanImputation during scoring*/ : (float) nums[i]);
+
+      // random projection from fullN down to max_input_layer_size
+      if (params.max_input_layer_size < _dinfo.fullN()) {
+        final int N = _dinfo.fullN();
+        final int M = params.max_input_layer_size;
+        assert(_a.size() == M);
+        DenseVector orig = new DenseVector(N);
+        for (int i = 0; i < numcat; ++i) orig.set(cats[i], 1f);
+        for (int i = 0; i < nums.length; ++i)
+          orig.set(_dinfo.numStart() + i, Double.isNaN(nums[i]) ? 0f /*Always do MeanImputation during scoring*/ : (float) nums[i]);
+        if (matrix == null) {
+          Random rng = new Random(params.seed);
+          matrix = new float[N*M];
+          for (int i = 0; i<M; ++i) {
+            for (int j = 0; j<N; ++j) {
+              matrix[i*N+j] = rng.nextFloat();
+            }
+          }
+        }
+        for (int i = 0; i<M; ++i) {
+          for (int j = 0; j<N; ++j) {
+            _a.add(i, orig.get(j) * matrix[i*N+j]);
+          }
+        }
+      } else {
+        for (int i = 0; i < numcat; ++i) _a.set(cats[i], 1f);
+        for (int i = 0; i < nums.length; ++i)
+          _a.set(_dinfo.numStart() + i, Double.isNaN(nums[i]) ? 0f /*Always do MeanImputation during scoring*/ : (float) nums[i]);
+      }
 //      Log.info("Input Layer: " + ArrayUtils.toString(_a.raw()));
 
       // Input Dropout

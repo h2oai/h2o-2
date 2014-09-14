@@ -471,6 +471,9 @@ public class DeepLearning extends Job.ValidatedJob {
   @API(help = "Sparsity regularization (Experimental)", filter= Default.class, json = true)
   public double sparsity_beta = 0;
 
+//  @API(help = "Maximum size of input layer (Experimental)", filter= Default.class, json = true)
+  public int max_input_layer_size = Integer.MAX_VALUE;
+
   public enum MissingValuesHandling {
     Skip, MeanImputation
   }
@@ -554,6 +557,10 @@ public class DeepLearning extends Job.ValidatedJob {
           "single_node_mode",
           "sparse",
           "col_major",
+          // Allow modification of the regularization parameters after a checkpoint restart
+//          "l1",
+//          "l2",
+//          "max_w2",
   };
 
   /**
