@@ -8,7 +8,7 @@
 }
 \usage{
 h2o.importHDFS(object, path, pattern = "", key = "", parse = TRUE, header, 
-  sep = "", col.names)
+  sep = "", col.names, parser_type="AUTO")
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{

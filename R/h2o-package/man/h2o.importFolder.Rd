@@ -8,7 +8,7 @@ Import Local Directory of Data Files
 }
 \usage{
 h2o.importFolder(object, path, pattern = "", key = "", parse = TRUE, header, 
-  sep = "", col.names)
+  sep = "", col.names, parser_type="AUTO")
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{

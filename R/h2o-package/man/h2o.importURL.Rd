@@ -7,7 +7,8 @@ Import Data from URL
 Imports a file from the URL and parses it, returning an object containing the identifying hex key.
 }
 \usage{
-h2o.importURL(object, path, key = "", parse = TRUE, header, sep = "", col.names)
+h2o.importURL(object, path, key = "", parse = TRUE, header, sep = "", col.names,
+              parser_type="AUTO")
 }
 
 \arguments{
