@@ -1,20 +1,20 @@
-#if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
-#if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
-#install.packages("h2o", repos=(c("file:///Users/arno/h2o/target/R", getOption("repos"))))
+if ("package:h2o" %in% search()) { detach("package:h2o", unload=TRUE) }
+if ("h2o" %in% rownames(installed.packages())) { remove.packages("h2o") }
+install.packages("h2o", repos=(c("file:///Users/arno/h2o/target/R", getOption("repos"))))
 #install.packages("h2o", repos=(c("file:///home/arno/h2o/target/R", getOption("repos"))))
 
 suppressMessages(library(h2o))
-localH2O <- h2o.init(ip="mr-0xd1", port = 63322)
+localH2O <- h2o.init(ip="mr-0xd1", port = 53322)
 #localH2O <- h2o.init(max_mem_size = '8g', beta=T)
 
-suppressMessages(if (!require(h2o)) install.packages("caret"))
-suppressMessages(library(caret))
+#suppressMessages(if (!require(h2o)) install.packages("caret"))
+#suppressMessages(library(caret))
 
 # Import data
 path_cloud <- "~/"
-# path_train <- paste0(path_cloud, "h2o/smalldata/mnist/train.csv.gz")
-# path_test <- paste0(path_cloud, "h2o/smalldata/mnist/test.csv.gz")
-# path_output <- paste0(path_cloud, "/blending_mnist/outputs")
+#path_train <- paste0(path_cloud, "h2o/smalldata/mnist/train.csv.gz")
+#path_test <- paste0(path_cloud, "h2o/smalldata/mnist/test.csv.gz")
+#path_output <- paste0(path_cloud, "/blending_mnist/outputs")
 path_train <- paste0(path_cloud, "/kaggle_africasoil/data/training_shuf.csv.gz")
 path_test <- paste0(path_cloud, "/kaggle_africasoil/data/sorted_test.csv.gz")
 path_output <- paste0(path_cloud, "/kaggle_africasoil/outputs")
@@ -36,7 +36,7 @@ vars <- colnames(train_hex)
 #predictors <- vars[1:784] 
 #targets <- vars[785]
 
-spectra_hi <- vars[seq(2,2500,by=25)] # cheap way of binning: just take every 10-th column
+spectra_hi <- vars[seq(2,2500,by=10)] # cheap way of binning: just take every 10-th column
 spectra_omit <- vars[seq(2501,2670,by=10)] # cheap way of binning: just take every 10-th column
 spectra_low <- vars[seq(2671,3579,by=10)] # cheap way of binning: just take every 10-th column
 extra <- vars[3580:3595]
@@ -45,15 +45,15 @@ allpredictors <- c(2:2500, 2671:3579, extra)
 targets <- vars[3596:3600]
 
 ## Parameters for run
-validation = T ## use cross-validation to determine best model parameters
-grid = F ## do a grid search
-submit = F ## whether to create a model on the full training data for submission 
-submission = 15 ## submission index
-blend = F
+validation = F ## use cross-validation to determine best model parameters
+grid = T ## do a grid search
+submit = T ## whether to create a model on the full training data for submission 
+submission = 16 ## submission index
+blend = T
 
 ## Settings
 n_loop <- 1
-n_fold <- 5
+n_fold <- 10
 
 ## Train a DL model
 errs = 0
@@ -71,13 +71,14 @@ for (resp in 1:length(targets)) {
         h2o.deeplearning(x = predictors,
                          y = targets[resp],
                          data = train_hex,
-                         nfolds = 3,
+                         nfolds = n_fold,
                          classification = F,
                          score_training_samples = 0,
                          score_validation_samples = 0,
-                         score_duty_cycle = 0,
+                         score_duty_cycle = 1,
+                         score_interval = 1e-1,
                          max_w2 = 10, 
-                         activation=c("RectifierWithDropout","Tanh"), input_dropout_ratio = c(0,0.2), hidden = c(300,300,300), epochs = 1000, l1 = c(0,1e-5,1e-3), l2 = c(0,1e-5,1e-3), train_samples_per_iteration = 10000
+                         activation="Rectifier", hidden = c(300,300,300), epochs = 1000, l1 = c(1e-5,1e-3), l2 = c(0,1e-5,1e-3), rho = c(0.99, 0.95, 0.9), epsilon = c(1e-6,1e-8,1e-10), train_samples_per_iteration = 10000
                          
         )
       print(gridmodel)
@@ -95,7 +96,7 @@ for (resp in 1:length(targets)) {
         h2o.deeplearning(x = predictors, y = targets[resp],
                          data = train_hex,
                          classification = F, 
-                         nfolds = 5,
+                         nfolds = n_fold,
                          score_training_samples = 0,
                          score_validation_samples = 0,
                          score_duty_cycle = 1,
@@ -156,14 +157,18 @@ for (resp in 1:length(targets)) {
             ##
             cat("\n\nNow training loop", n, "/", n_loop, "model", nn, "/", n_fold, "for ", targets[resp], "...\n")
             
-            ## Split
-            row_train <- as.integer(unlist(rand_folds[-nn]))
-            row_valid <- as.integer(unlist(rand_folds[nn]))
+            folds <- h2o.nFoldExtractor(train_hex, nfolds=n_fold, fold_to_extract=nn)
+            train <- folds[[1]]
+            valid <- folds[[2]]
+            
+            response_folds <- h2o.nFoldExtractor(train_hex[,targets[resp]], nfolds=n_fold, fold_to_extract=nn)
+            train_resp <- response_folds[[1]]
+            valid_resp <- response_folds[[2]]
             
             # build final model blend components with validated parameters
             model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_blend_", n , "_", nn), 
-                                      data = train_hex[row_train,],
-                                      validation = train_hex[row_valid,],
+                                      data = train,
+                                      validation = valid,
                                       classification = F, 
                                       score_training_samples = 0,
                                       score_validation_samples = 0,
@@ -171,8 +176,8 @@ for (resp in 1:length(targets)) {
                                       activation = p$activation, input_dropout_ratio = p$input_dropout_ratio, hidden = p$hidden, epochs = p$epochs, l1 = p$l1, l2 = p$l2, max_w2 = p$max_w2, train_samples_per_iteration = p$train_samples_per_iteration)
             
             ## Use the model and store results
-            yy_temp_train <- as.data.frame(h2o.predict(model, train_hex[row_train]))
-            yy_temp_valid <- as.data.frame(h2o.predict(model, train_hex[row_valid]))
+            yy_temp_train <- as.data.frame(h2o.predict(model, train))
+            yy_temp_valid <- as.data.frame(h2o.predict(model, valid))
             yy_temp_test <- as.data.frame(h2o.predict(model, test_hex))
             
             ## Store
@@ -182,9 +187,8 @@ for (resp in 1:length(targets)) {
               yy_test_all <- cbind(yy_test_all, matrix(yy_temp_test[, 1], ncol = 1))
             }
             print(model)
-            
-            msetrain <- mean((yy_temp_train - y[row_train,])^2)
-            sevalid <- (yy_temp_valid - y[row_valid,])^2
+            msetrain <- mean((yy_temp_train - as.data.frame(train_resp))^2)
+            sevalid <- (yy_temp_valid - as.data.frame(valid_resp))^2
             msevalid <- mean(sevalid)
             holdout_valid_se[resp] <- holdout_valid_se[resp] + sum(sevalid)
             
@@ -218,78 +222,60 @@ for (resp in 1:length(targets)) {
     }
     else {
       if (blend) {
-        # blending
-        y <- as.matrix(train_hex[, targets[resp]])
+        # for blending scoring
+#        blend_holdout_train_preds <- as.data.frame(matrix(0, nrow = 0, ncol = n_loop)) ## empty vectors to be filled with n-fold holdout predictions, one vector per n_loop
         
         ## Loops
         for (n in 1:n_loop) {
-          
-          ## CV
-          set.seed(n)
-          rand_folds <- createFolds(y, k = n_fold)
-          
+  
           ## Main Loop
           for (nn in 1:n_fold) {
             
             ##
             cat("\n\nNow training loop", n, "/", n_loop, "model", nn, "/", n_fold, "for ", targets[resp], "...\n")
+    
+            folds <- h2o.nFoldExtractor(train_hex, nfolds=n_fold, fold_to_extract=nn)
+            train <- folds[[1]]
+            valid <- folds[[2]]
             
-            ## Split
-            row_train <- as.integer(unlist(rand_folds[-nn]))
-            row_valid <- as.integer(unlist(rand_folds[nn]))
-            
+            response_folds <- h2o.nFoldExtractor(train_hex[,targets[resp]], nfolds=n_fold, fold_to_extract=nn)
+            train_resp <- response_folds[[1]]
+            valid_resp <- response_folds[[2]]
+           
             # build final model blend components with hardcoded parameters
-            if (resp == 2) #P most difficult
-              model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_blend_", n , "_", nn), 
-                                        data = train_hex[row_train,],
-                                        validation = train_hex[row_valid,],
-                                        classification = F, 
-                                        score_training_samples = 0,
-                                        score_validation_samples = 0,
-                                        score_duty_cycle = 1,
-                                        score_interval = 1,
-                                        activation="RectifierWithDropout", hidden_dropout_ratios=c(0.2,0.4,0.5), hidden = c(800,800,800),
-                                        epochs = 200, l1 = 0, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000)        
-            else if (resp == 1 | resp == 3 | resp == 4) #Ca, pH, SOC
-              model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_blend_", n , "_", nn), 
-                                        data = train_hex[row_train,],
-                                        validation = train_hex[row_valid,],
-                                        classification = F, 
-                                        score_training_samples = 0,
-                                        score_validation_samples = 0,
-                                        score_duty_cycle = 1,
-                                        score_interval = 1,
-                                        activation="Rectifier", hidden = c(800,800,800),
-                                        epochs = 200, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000)        
-            #             else #SAND
-            #               model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_blend_", n , "_", nn), 
-            #                                         data = train_hex[row_train,],
-            #                                         validation = train_hex[row_valid,],
-            #                                         classification = F, 
-            #                                         score_training_samples = 0,
-            #                                         score_validation_samples = 0,
-            #                                         score_duty_cycle = 1,
-            #                                         score_interval = 1,
-            #                                         activation="Rectifier", hidden = c(800,800,800),
-            #                                         epochs = 500, l1 = 1e-5, l2 = 0, rho = 0.99, epsilon = 1e-8, train_samples_per_iteration = 1000)        
-            #             
-            
-            
+            model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_blend_", n , "_", nn), 
+                                      data = train,
+                                      validation = valid,
+                                      classification = F, 
+                                      score_training_samples = 0,
+                                      score_validation_samples = 0,
+                                      score_duty_cycle = 1,
+                                      score_interval = 1,
+                                      activation="Rectifier", hidden = c(300,300,300),
+                                      epochs = 1000, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 50000)        
+           
+                                
             ## Use the model and store results
-            yy_temp_train <- as.data.frame(h2o.predict(model, train_hex[row_train,]))
-            yy_temp_valid <- as.data.frame(h2o.predict(model, train_hex[row_valid,]))
+            yy_temp_train <- as.data.frame(h2o.predict(model, train))
+            yy_temp_valid <- as.data.frame(h2o.predict(model, valid))
             yy_temp_test <- as.data.frame(h2o.predict(model, test_hex))
             
+            ## For blending, stitch together the predictions for the validation holdout, after n_folds models are done, this will be the predictions on the full training data and can be scored
+            ## For each n_loop, there's a new vector in this frame, so we can blend it together with GLM
+            #blend_holdout_train_preds[,n] <- rbind(blend_holdout_train_preds[,n], yy_temp_valid)
+            #blend_holdout_train_preds
+
             ## Store
             if ((n == 1) & (nn == 1)) {
               yy_test_all <- matrix(yy_temp_test[, 1], ncol = 1)
             } else {
               yy_test_all <- cbind(yy_test_all, matrix(yy_temp_test[, 1], ncol = 1))
             }
-            msetrain <- mean((yy_temp_train - y[row_train,])^2)
-            sevalid <- (yy_temp_valid - y[row_valid,])^2
+            msetrain <- mean((yy_temp_train - as.data.frame(train_resp))^2)
+            sevalid <- (yy_temp_valid - as.data.frame(valid_resp))^2
             msevalid <- mean(sevalid)
             holdout_valid_se[resp] <- holdout_valid_se[resp] + sum(sevalid)
+            
             # print blending results to file
             sink(paste0(path_output, "/submission_", submission, "_", targets[resp], "_blend_loop", n, "_fold", nn))
             print(model)
@@ -309,6 +295,9 @@ for (resp in 1:length(targets)) {
         holdout_valid_se[resp] <- holdout_valid_se[resp]/n_loop
         holdout_valid_mse[resp] <- holdout_valid_se[resp]/nrow(train_hex) ## total number of (cross-)validation rows = # training rows
         cat("\nOverall", n_fold, "-fold cross-validated MSE on training dataset for", targets[resp], ":", holdout_valid_mse[resp], "\n")
+        
+        #cat("\nStitched together (cross-check, used for blending):", mean((blend_holdout_train_preds - y)^2), "\n")
+        
       } else {
         # build final model on full training data with hardcoded parameters
         model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_hardcoded"), data = train_hex, classification = F, score_training_samples = 0,

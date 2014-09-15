@@ -124,13 +124,23 @@ h2o.createFrame <- function(object, key, rows, cols, seed, randomize, value, rea
   .h2o.exec2(expr = key, h2o = object, dest_key = key)
 }
 
+h2o.rebalance <- function(data, seed, key, chunks) {
+  if(class(data) != "H2OParsedData") stop("data must be of class H2OParsedData")
+  if(!is.numeric(seed)) stop("seed must be a numeric value")
+  if(!is.numeric(chunks)) stop("chunks must be a numeric value")
+  if(chunks < 1) stop("chunks cannot be < 1")
+
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_ReBalance, source = data@key, seed = seed, after = key, chunks = chunks)
+  lapply(res$split_keys, function(key) { .h2o.exec2(expr = key, h2o = data@h2o, dest_key = key) })
+}
+
 h2o.splitFrame <- function(data, ratios = 0.75, shuffle = FALSE) {
   if(class(data) != "H2OParsedData") stop("data must be of class H2OParsedData")
   if(!is.numeric(ratios)) stop("ratios must be numeric")
   if(any(ratios < 0 | ratios > 1)) stop("ratios must be between 0 and 1 exclusive")
   if(sum(ratios) >= 1) stop("sum of ratios must be strictly less than 1")
   if(!is.logical(shuffle)) stop("shuffle must be a logical value")
-  
+
   res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_SplitFrame, source = data@key, ratios = ratios, shuffle = as.numeric(shuffle))
   lapply(res$split_keys, function(key) { .h2o.exec2(expr = key, h2o = data@h2o, dest_key = key) })
 }
