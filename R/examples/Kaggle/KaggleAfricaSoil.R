@@ -45,9 +45,9 @@ allpredictors <- c(2:2500, 2671:3579, extra)
 targets <- vars[3596:3600]
 
 ## Parameters for run
-validation = F ## use cross-validation to determine best model parameters
+validation = T ## use cross-validation to determine best model parameters
 grid = F ## do a grid search
-submit = T ## whether to create a model on the full training data for submission 
+submit = F ## whether to create a model on the full training data for submission 
 submission = 15 ## submission index
 blend = F
 
@@ -93,8 +93,7 @@ for (resp in 1:length(targets)) {
       # run one model with n-fold cross-validation
       cvmodel <- 
         h2o.deeplearning(x = predictors, y = targets[resp],
-                         data = train_hex[row_train,],
-                         validation = train_hex[row_valid,],
+                         data = train_hex,
                          classification = F, 
                          nfolds = 5,
                          score_training_samples = 0,
@@ -320,7 +319,7 @@ for (resp in 1:length(targets)) {
                                   #activation="Rectifier", hidden = c(300,300,300), epochs = 500, l1 = 1e-5, l2=0, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 100000 #submission 5 - 0.47247
                                   #activation="Rectifier", hidden = c(300,300,300), epochs = 2000, l1 = 1e-5, l2=0, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 100000 #submission 6 - 0.45016
                                   #activation="Rectifier", hidden = c(500,500,500), epochs = 3000, l1 = 1e-5, l2=0, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 100000 #submission 12 0.54
-                                  activation="Rectifier", hidden = c(300,300,300), epochs = 1000, l1 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 10000 #submission 15
+                                  activation="Rectifier", hidden = c(300,300,300), epochs = 1000, l1 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 10000 #submission 15 0.482
         )
       }
     }
