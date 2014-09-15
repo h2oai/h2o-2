@@ -3,6 +3,9 @@ We embed gson 2.3 into h2o and change the package name to avoid colliding with o
 In particular, MapR 3.x has an ancient version of gson it includes in the classpath.
 
 
+Note:  Before trying the steps below, I tried using 'jarjar' and didn't get it to work.
+
+
 Steps:
 
 Get gson sources into a fresh directory.
