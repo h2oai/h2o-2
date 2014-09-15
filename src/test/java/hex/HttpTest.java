@@ -10,7 +10,7 @@ import org.junit.Test;
 import water.Key;
 import water.TestUtil;
 
-import com.google.gson.Gson;
+import dontweave.gson.Gson;
 
 public class HttpTest extends TestUtil {
   HttpClient _client = new HttpClient();

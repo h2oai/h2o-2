@@ -1,9 +1,9 @@
 package water.api;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
+import dontweave.gson.Gson;
+import dontweave.gson.GsonBuilder;
+import dontweave.gson.JsonElement;
+import dontweave.gson.JsonObject;
 import hex.VarImp;
 import hex.deeplearning.DeepLearning;
 import hex.drf.DRF;

@@ -5,7 +5,7 @@ import java.util.Properties;
 
 import water.NanoHTTPD;
 
-import com.google.gson.JsonObject;
+import dontweave.gson.JsonObject;
 
 /** Request that only supports browser (html, query, help, wiki) request types.
  *

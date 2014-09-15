@@ -1,6 +1,6 @@
 package water;
 
-import com.google.gson.*;
+import dontweave.gson.*;
 import org.junit.*;
 
 // Weeny speed-test harness.  Not intended for use with any real testing.

@@ -1,7 +1,7 @@
 package water;
 
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import dontweave.gson.JsonObject;
+import dontweave.gson.JsonParser;
 import water.Model.ModelCategory;
 import water.api.AUCData;
 import water.api.ConfusionMatrix;

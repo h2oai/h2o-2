@@ -11,8 +11,8 @@ import water.*;
 import water.util.*;
 import water.util.Log.LogStr;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
+import dontweave.gson.JsonArray;
+import dontweave.gson.JsonObject;
 
 public class LogView extends Request {
   @Override protected Response serve() {

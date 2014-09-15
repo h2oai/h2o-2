@@ -1,6 +1,6 @@
 package water.api;
 
-import com.google.gson.JsonObject;
+import dontweave.gson.JsonObject;
 import water.Job;
 import water.util.Log;
 import water.util.RemoveAllKeysTask;

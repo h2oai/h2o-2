@@ -7,8 +7,8 @@ import hex.*;
 import water.*;
 import water.fvec.Frame;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonPrimitive;
+import dontweave.gson.JsonArray;
+import dontweave.gson.JsonPrimitive;
 
 public class TypeaheadKeysRequest extends TypeaheadRequest {
   final String _cname;

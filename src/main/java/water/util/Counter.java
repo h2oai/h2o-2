@@ -2,7 +2,7 @@ package water.util;
 
 import water.api.Constants;
 
-import com.google.gson.JsonObject;
+import dontweave.gson.JsonObject;
 
 public class Counter {
   double _min = Double.MAX_VALUE, _max = Double.MIN_VALUE;
