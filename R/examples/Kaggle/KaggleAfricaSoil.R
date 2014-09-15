@@ -41,14 +41,15 @@ spectra_omit <- vars[seq(2501,2670,by=10)] # cheap way of binning: just take eve
 spectra_low <- vars[seq(2671,3579,by=10)] # cheap way of binning: just take every 10-th column
 extra <- vars[3580:3595]
 predictors <- c(spectra_hi, spectra_low, extra)
+allpredictors <- c(2:2500, 2671:3579, extra)
 targets <- vars[3596:3600]
 
 ## Parameters for run
 validation = F ## use cross-validation to determine best model parameters
 grid = F ## do a grid search
 submit = T ## whether to create a model on the full training data for submission 
-submission = 14 ## submission index
-blend = T
+submission = 15 ## submission index
+blend = F
 
 ## Settings
 n_loop <- 1
@@ -91,16 +92,17 @@ for (resp in 1:length(targets)) {
       cat("\n\nTraining cv model for ", targets[resp], "...\n")
       # run one model with n-fold cross-validation
       cvmodel <- 
-        h2o.deeplearning(x = predictors,
-                         y = targets[resp],
-                         data = train_hex,
-                         nfolds = 3,
-                         classification = F,
+        h2o.deeplearning(x = predictors, y = targets[resp],
+                         data = train_hex[row_train,],
+                         validation = train_hex[row_valid,],
+                         classification = F, 
+                         nfolds = 5,
                          score_training_samples = 0,
                          score_validation_samples = 0,
-                         score_duty_cycle = 0,
-                         max_w2 = 10, 
-                         activation=c("Rectifier"), hidden = c(100,100,100), epochs = 2, l1 = 0, l2 = 1e-5, train_samples_per_iteration = 10000
+                         score_duty_cycle = 1,
+                         score_interval = 1e-1,
+                         activation="Rectifier", hidden = c(800,800,800),
+                         epochs = 200, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000) 
         )
       print(cvmodel)
       
@@ -237,7 +239,7 @@ for (resp in 1:length(targets)) {
             row_valid <- as.integer(unlist(rand_folds[nn]))
             
             # build final model blend components with hardcoded parameters
-            if (resp == 2)
+            if (resp == 2) #P most difficult
               model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_blend_", n , "_", nn), 
                                         data = train_hex[row_train,],
                                         validation = train_hex[row_valid,],
@@ -246,11 +248,9 @@ for (resp in 1:length(targets)) {
                                         score_validation_samples = 0,
                                         score_duty_cycle = 1,
                                         score_interval = 1,
-                                        #activation="RectifierWithDropout", hidden_dropout_ratios=c(0.2,0.4,0.5), hidden = c(800,800,800),
-                                        #epochs = 1000, l1 = 0, l2 = 0, rho = c(0.8,0.9,0.95,0.99), epsilon = c(1e-2,1e-4,1e-6,1e-8,1e-10), train_samples_per_iteration = 10000)        
                                         activation="RectifierWithDropout", hidden_dropout_ratios=c(0.2,0.4,0.5), hidden = c(800,800,800),
                                         epochs = 200, l1 = 0, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000)        
-            else
+            else if (resp == 1 | resp == 3 | resp == 4) #Ca, pH, SOC
               model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_blend_", n , "_", nn), 
                                         data = train_hex[row_train,],
                                         validation = train_hex[row_valid,],
@@ -261,7 +261,18 @@ for (resp in 1:length(targets)) {
                                         score_interval = 1,
                                         activation="Rectifier", hidden = c(800,800,800),
                                         epochs = 200, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000)        
-            
+#             else #SAND
+#               model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_blend_", n , "_", nn), 
+#                                         data = train_hex[row_train,],
+#                                         validation = train_hex[row_valid,],
+#                                         classification = F, 
+#                                         score_training_samples = 0,
+#                                         score_validation_samples = 0,
+#                                         score_duty_cycle = 1,
+#                                         score_interval = 1,
+#                                         activation="Rectifier", hidden = c(800,800,800),
+#                                         epochs = 500, l1 = 1e-5, l2 = 0, rho = 0.99, epsilon = 1e-8, train_samples_per_iteration = 1000)        
+#             
             
             
             ## Use the model and store results
@@ -308,6 +319,7 @@ for (resp in 1:length(targets)) {
                                   #activation="Rectifier", hidden = c(300,300,300), epochs = 500, l1 = 1e-5, l2=0, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 100000 #submission 5 - 0.47247
                                   #activation="Rectifier", hidden = c(300,300,300), epochs = 2000, l1 = 1e-5, l2=0, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 100000 #submission 6 - 0.45016
                                   activation="Rectifier", hidden = c(500,500,500), epochs = 3000, l1 = 1e-5, l2=0, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 100000 #submission 12 0.54
+                                  activation="Rectifier", hidden = c(1000,1000,1000,1000), epochs = 2000, l1 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 10000 #submission 15
         )
       }
     }
@@ -371,4 +383,4 @@ print(Sys.info())
 
 #1/5*(sqrt(0.089)+sqrt(0.79)+sqrt(0.179)+sqrt(0.1109)+sqrt(0.1437)) # 0.4644653 submission 1 (CV-values using 3 folds)
 1/5*(sqrt(0.094)+sqrt(0.90)+sqrt(0.174)+sqrt(0.108)+sqrt(0.142)) # 0.47 submission 1 repro 3 fold #2
-1/5*(sqrt(0.06)+sqrt(0.75)+sqrt(0.12)+sqrt(0.07)+sqrt(0.1)) # 0.40 submission 1 repro 3 fold #2
+1/5*(sqrt(0.0553)+sqrt(0.898)+sqrt(0.1686)+sqrt(0.1035)+sqrt(0.1215)) # 0.452, but scored 0.50223 on their test set holdout!! submission 14 (5 ensemble cv models)
