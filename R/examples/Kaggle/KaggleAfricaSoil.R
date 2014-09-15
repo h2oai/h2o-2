@@ -101,8 +101,9 @@ for (resp in 1:length(targets)) {
                          score_validation_samples = 0,
                          score_duty_cycle = 1,
                          score_interval = 1e-1,
-                         activation="Rectifier", hidden = c(800,800,800),
-                         epochs = 200, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000) 
+                         #activation="Rectifier", hidden = c(800,800,800),
+                         #epochs = 200, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000
+                         activation="Rectifier", hidden = c(300,300,300), epochs = 1000, l1 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 10000
         )
       print(cvmodel)
       
@@ -187,7 +188,7 @@ for (resp in 1:length(targets)) {
             sevalid <- (yy_temp_valid - y[row_valid,])^2
             msevalid <- mean(sevalid)
             holdout_valid_se[resp] <- holdout_valid_se[resp] + sum(sevalid)
-      
+            
             cat("\nMSE on holdout training dataset for", targets[resp], ":", msetrain, "\n")
             cat("\nRMSE on holdout training dataset for", targets[resp], ":", sqrt(msetrain), "\n")
             cat("\nMSE on holdout validation dataset for", targets[resp], ":", msevalid, "\n")
@@ -261,25 +262,25 @@ for (resp in 1:length(targets)) {
                                         score_interval = 1,
                                         activation="Rectifier", hidden = c(800,800,800),
                                         epochs = 200, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000)        
-#             else #SAND
-#               model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_blend_", n , "_", nn), 
-#                                         data = train_hex[row_train,],
-#                                         validation = train_hex[row_valid,],
-#                                         classification = F, 
-#                                         score_training_samples = 0,
-#                                         score_validation_samples = 0,
-#                                         score_duty_cycle = 1,
-#                                         score_interval = 1,
-#                                         activation="Rectifier", hidden = c(800,800,800),
-#                                         epochs = 500, l1 = 1e-5, l2 = 0, rho = 0.99, epsilon = 1e-8, train_samples_per_iteration = 1000)        
-#             
+            #             else #SAND
+            #               model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_blend_", n , "_", nn), 
+            #                                         data = train_hex[row_train,],
+            #                                         validation = train_hex[row_valid,],
+            #                                         classification = F, 
+            #                                         score_training_samples = 0,
+            #                                         score_validation_samples = 0,
+            #                                         score_duty_cycle = 1,
+            #                                         score_interval = 1,
+            #                                         activation="Rectifier", hidden = c(800,800,800),
+            #                                         epochs = 500, l1 = 1e-5, l2 = 0, rho = 0.99, epsilon = 1e-8, train_samples_per_iteration = 1000)        
+            #             
             
             
             ## Use the model and store results
             yy_temp_train <- as.data.frame(h2o.predict(model, train_hex[row_train,]))
             yy_temp_valid <- as.data.frame(h2o.predict(model, train_hex[row_valid,]))
             yy_temp_test <- as.data.frame(h2o.predict(model, test_hex))
-                        
+            
             ## Store
             if ((n == 1) & (nn == 1)) {
               yy_test_all <- matrix(yy_temp_test[, 1], ncol = 1)
@@ -298,7 +299,7 @@ for (resp in 1:length(targets)) {
             cat("\nMSE on holdout validation dataset for", targets[resp], ":", msevalid, "\n")
             cat("\nRMSE on holdout validation dataset for", targets[resp], ":", sqrt(msevalid), "\n")
             sink()
-
+            
             print(model)
             cat("\nMSE on holdout training dataset for", targets[resp], ":", msetrain, "\n")
             cat("\nRMSE on holdout training dataset for", targets[resp], ":", sqrt(msetrain), "\n")
@@ -318,12 +319,12 @@ for (resp in 1:length(targets)) {
                                   #activation="Rectifier", hidden = c(300,300,300), epochs = 2000, l1 = 0, l2 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 100000 #submission 4 - 0.44199
                                   #activation="Rectifier", hidden = c(300,300,300), epochs = 500, l1 = 1e-5, l2=0, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 100000 #submission 5 - 0.47247
                                   #activation="Rectifier", hidden = c(300,300,300), epochs = 2000, l1 = 1e-5, l2=0, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 100000 #submission 6 - 0.45016
-                                  activation="Rectifier", hidden = c(500,500,500), epochs = 3000, l1 = 1e-5, l2=0, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 100000 #submission 12 0.54
-                                  activation="Rectifier", hidden = c(1000,1000,1000,1000), epochs = 2000, l1 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 10000 #submission 15
+                                  #activation="Rectifier", hidden = c(500,500,500), epochs = 3000, l1 = 1e-5, l2=0, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 100000 #submission 12 0.54
+                                  activation="Rectifier", hidden = c(300,300,300), epochs = 1000, l1 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 10000 #submission 15
         )
       }
     }
-
+    
     ## Now create submission
     print(model)
     if (!blend) {
