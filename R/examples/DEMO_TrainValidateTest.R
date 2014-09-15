@@ -10,19 +10,19 @@
 library(h2o)
 library(plyr)
 
+# Assumes h2o started elsewhere
 ip <- "127.0.0.1"
-#ip <- "172.16.2.181"
-port <- 30023
-#max_mem_size <- "10g"
-#h <- h2o.init(ip = ip, port = port, max_mem_size = max_mem_size)
+port <- 54321
 h <- h2o.init(ip = ip, port = port)
 
 
 # **PATHS**
+
+# For 181:
 #AIRLINES_ALL_PATH <- "/home/0xdiag/datasets/airlines/airlines_all.csv"
 #EXPORT_PREDS_PATH <- "/home/spencer/pp_demo/preds.csv"
-#EXPORT_PREDS_PATH <- "/location/to/save/preds"
 
+# For local git:
 #AIRLINES_ALL_PATH <- "/Users/spencer/master/h2o/smalldata/airlines/allyears2k_headers.zip"
 #EXPORT_PREDS_PATH <- "/Users/spencer/pp_demo/preds.csv"
 
