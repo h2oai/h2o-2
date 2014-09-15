@@ -135,6 +135,18 @@ h2o.splitFrame <- function(data, ratios = 0.75, shuffle = FALSE) {
   lapply(res$split_keys, function(key) { .h2o.exec2(expr = key, h2o = data@h2o, dest_key = key) })
 }
 
+h2o.nFoldExtractor <- function(data, nfolds, fold_to_extract) {
+  if(class(data) != "H2OParsedData") stop("data must be of class H2OParsedData")
+  if(!is.numeric(nfolds)) stop("nfolds must be numeric")
+  if(nfolds <= 1) stop("nfolds must be greater or equal to 2")
+  if(!is.numeric(fold_to_extract)) stop("fold_to_extract must be numeric")
+  if(fold_to_extract < 1) stop("fold_to_extract must be greater or equal to 1")
+  if(fold_to_extract > nfolds) stop("fold_to_extract must be less or equal to nfolds")
+
+  res = .h2o.__remoteSend(data@h2o, .h2o.__PAGE_NFoldExtractor, source = data@key, nfolds = nfolds, afold = fold_to_extract - 1 ) #R indexing is 1-based, Java is 0-based
+  lapply(res$split_keys, function(key) { .h2o.exec2(expr = key, h2o = data@h2o, dest_key = key) })
+}
+
 h2o.insertMissingValues <- function(data, fraction = 0.01, seed = -1) {
   if(class(data) != "H2OParsedData") stop("data must be of class H2OParsedData")
   if(!is.numeric(fraction)) stop("fraction must be numeric")
