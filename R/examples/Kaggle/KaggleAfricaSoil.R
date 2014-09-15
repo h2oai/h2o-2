@@ -4,7 +4,7 @@
 #install.packages("h2o", repos=(c("file:///home/arno/h2o/target/R", getOption("repos"))))
 
 suppressMessages(library(h2o))
-localH2O <- h2o.init(ip="mr-0xd1", port = 53322)
+localH2O <- h2o.init(ip="mr-0xd1", port = 63322)
 #localH2O <- h2o.init(max_mem_size = '8g', beta=T)
 
 suppressMessages(if (!require(h2o)) install.packages("caret"))
@@ -36,20 +36,18 @@ vars <- colnames(train_hex)
 #predictors <- vars[1:784] 
 #targets <- vars[785]
 
-spectra_hi <- vars[2:2500] 
-spectra_omit <- vars[2501:2670] 
-spectra_low <- vars[2671:3579] 
+spectra_hi <- vars[seq(2,2500,by=25)] # cheap way of binning: just take every 10-th column
+spectra_omit <- vars[seq(2501,2670,by=10)] # cheap way of binning: just take every 10-th column
+spectra_low <- vars[seq(2671,3579,by=10)] # cheap way of binning: just take every 10-th column
 extra <- vars[3580:3595]
-predictors <- c(spectra_hi, spectra_omit, spectra_low, extra)
+predictors <- c(spectra_hi, spectra_low, extra)
 targets <- vars[3596:3600]
-
-
 
 ## Parameters for run
 validation = F ## use cross-validation to determine best model parameters
 grid = F ## do a grid search
 submit = T ## whether to create a model on the full training data for submission 
-submission = 1 ## submission index
+submission = 14 ## submission index
 blend = T
 
 ## Settings
@@ -78,7 +76,7 @@ for (resp in 1:length(targets)) {
                          score_validation_samples = 0,
                          score_duty_cycle = 0,
                          max_w2 = 10, 
-                         activation=c("Rectifier"), hidden = c(100,100,100), epochs = 2, l1 = c(0,1e-5), l2 = c(0,1e-5), train_samples_per_iteration = 10000
+                         activation=c("RectifierWithDropout","Tanh"), input_dropout_ratio = c(0,0.2), hidden = c(300,300,300), epochs = 1000, l1 = c(0,1e-5,1e-3), l2 = c(0,1e-5,1e-3), train_samples_per_iteration = 10000
                          
         )
       print(gridmodel)
@@ -239,14 +237,31 @@ for (resp in 1:length(targets)) {
             row_valid <- as.integer(unlist(rand_folds[nn]))
             
             # build final model blend components with hardcoded parameters
-            model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_blend_", n , "_", nn), 
-                                      data = train_hex[row_train,],
-                                      validation = train_hex[row_valid,],
-                                      classification = F, 
-                                      score_training_samples = 0,
-                                      score_validation_samples = 0,
-                                      score_duty_cycle = 1,
-                                      activation="Rectifier", hidden = c(300,300,300), epochs = 1000, l1 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 100000)
+            if (resp == 2)
+              model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_blend_", n , "_", nn), 
+                                        data = train_hex[row_train,],
+                                        validation = train_hex[row_valid,],
+                                        classification = F, 
+                                        score_training_samples = 0,
+                                        score_validation_samples = 0,
+                                        score_duty_cycle = 1,
+                                        score_interval = 1,
+                                        #activation="RectifierWithDropout", hidden_dropout_ratios=c(0.2,0.4,0.5), hidden = c(800,800,800),
+                                        #epochs = 1000, l1 = 0, l2 = 0, rho = c(0.8,0.9,0.95,0.99), epsilon = c(1e-2,1e-4,1e-6,1e-8,1e-10), train_samples_per_iteration = 10000)        
+                                        activation="RectifierWithDropout", hidden_dropout_ratios=c(0.2,0.4,0.5), hidden = c(800,800,800),
+                                        epochs = 200, l1 = 0, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000)        
+            else
+              model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_blend_", n , "_", nn), 
+                                        data = train_hex[row_train,],
+                                        validation = train_hex[row_valid,],
+                                        classification = F, 
+                                        score_training_samples = 0,
+                                        score_validation_samples = 0,
+                                        score_duty_cycle = 1,
+                                        score_interval = 1,
+                                        activation="Rectifier", hidden = c(800,800,800),
+                                        epochs = 200, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000)        
+            
             
             
             ## Use the model and store results
@@ -355,3 +370,5 @@ print(sessionInfo())
 print(Sys.info())
 
 #1/5*(sqrt(0.089)+sqrt(0.79)+sqrt(0.179)+sqrt(0.1109)+sqrt(0.1437)) # 0.4644653 submission 1 (CV-values using 3 folds)
+1/5*(sqrt(0.094)+sqrt(0.90)+sqrt(0.174)+sqrt(0.108)+sqrt(0.142)) # 0.47 submission 1 repro 3 fold #2
+1/5*(sqrt(0.06)+sqrt(0.75)+sqrt(0.12)+sqrt(0.07)+sqrt(0.1)) # 0.40 submission 1 repro 3 fold #2
