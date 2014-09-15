@@ -6,6 +6,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import hex.ConfusionMatrix;
 import hex.VarImp;
+import hex.gbm.DTree;
 import hex.gbm.DTree.TreeModel.TreeStats;
 import water.*;
 import water.api.*;
@@ -16,8 +17,7 @@ import water.fvec.NewChunk;
 import water.fvec.Vec;
 import water.util.Counter;
 import water.util.ModelUtils;
-import hex.gbm.DTree;
-import water.util.*;
+
 import java.util.Arrays;
 import java.util.Random;
 
@@ -587,6 +587,42 @@ public class SpeeDRFModel extends Model implements Job.Progress {
 
     @Override
     protected void generateModelDescription(StringBuilder sb) { }
+  }
+
+  @Override public ModelAutobufferSerializer getModelSerializer() {
+    // Return a serializer which knows how to serialize keys
+    return new ModelAutobufferSerializer() {
+      @Override protected AutoBuffer postSave(Model m, AutoBuffer ab) {
+        int ntrees = N;
+        ab.put4(ntrees);
+        // must fill out t_keys and dtreeKeys
+        for (int i = 0; i < ntrees; ++i) {
+          byte[] bits = tree(i);
+          ab.putA1(bits);
+          for (int j = 0; j < nclasses(); ++j) {
+            if (dtreeKeys[i][j] == null) continue;
+            Value v = DKV.get(dtreeKeys[i][j]);
+            if (v == null) continue;
+            DTree.TreeModel.CompressedTree t = v.get();
+            ab.put(t);
+          }
+        }
+        return ab;
+      }
+      @Override protected AutoBuffer postLoad(Model m, AutoBuffer ab) {
+        int ntrees = ab.get4();
+        Futures fs = new Futures();
+        for (int i = 0; i < ntrees; ++i) {
+          DKV.put(t_keys[i],new Value(t_keys[i],ab.getA1()), fs);
+          for (int j = 0; j < nclasses(); ++j) {
+            if (dtreeKeys[i][j] == null) continue;
+            UKV.put(dtreeKeys[i][j], new Value(dtreeKeys[i][j], ab.get(DTree.TreeModel.CompressedTree.class)), fs);
+          }
+        }
+        fs.blockForPending();
+        return ab;
+      }
+    };
   }
 
   static final String NA = "---";
