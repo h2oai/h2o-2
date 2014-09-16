@@ -11,8 +11,6 @@ import water.fvec.Frame;
 import water.fvec.RebalanceDataSet;
 import water.util.RString;
 
-import java.util.Random;
-
 /**
  * Rebalance a Frame
  */
@@ -22,9 +20,6 @@ public class ReBalance extends Request2 {
 
   @Request.API(help = "Frame to rebalance", required = true, filter = Request.Default.class, json=true)
   public Frame source;
-
-  @Request.API(help = "Random number seed", filter = Request.Default.class, json=true)
-  public long seed = new Random().nextLong();
 
   @Request.API(help = "Key for rebalanced frame", filter = Request.Default.class, json=true)
   public String after = source != null ? source._key.toString() + ".balanced" : null;
