@@ -21,16 +21,16 @@ SET_JAVA_HOME="export JAVA_HOME=/usr/lib/jvm/java-7-oracle; "
 
 # Should we do this cloud build with the sh2junit.py? to get logging, xml etc.
 # I suppose we could just have a test verify the request cloud size, after building
-# CDH4_YARN_JOBTRACKER=172.16.2.117:8032
+# CDH4_YARN_JOBTRACKER=172.16.2.177:8032
 
 # hack! use the old port
-CDH4_YARN_JOBTRACKER=172.16.2.117:8021
+CDH4_YARN_JOBTRACKER=172.16.2.177:8021
 
 CDH4_YARN_NODES=2
 CDH4_YARN_HEAP=4g
 
 CDH4_YARN_JAR=h2odriver_cdh4_yarn.jar
-NAME_NODE=172.16.2.116
+NAME_NODE=172.16.2.176
 H2O_JAR=h2o.jar
 
 # build.sh removes the h2odriver stuff a 'make' creates
@@ -49,7 +49,7 @@ CDH4_YARN_JAR_USED=$H2O_BUILT/hadoop/$CDH4_YARN_JAR
 HDFS_OUTPUT=hdfsOutputDirName
 
 REMOTE_HOME=/home/0xcustomer
-REMOTE_IP=172.16.2.117
+REMOTE_IP=172.16.2.177
 REMOTE_USER=0xcustomer@$REMOTE_IP
 REMOTE_SCP="scp -p -i $HOME/.0xcustomer/0xcustomer_id_rsa "
 
@@ -70,12 +70,12 @@ echo "cd /home/0xcustomer" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 echo "rm -fr h2o_one_node" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 set +e
 # remember to update this, to match whatever user kicks off the h2o on hadoop
-echo "hadoop dfs -rmr /user/0xcustomer/$HDFS_OUTPUT" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
+echo "hdfs dfs -rmr /user/0xcustomer/$HDFS_OUTPUT" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 chmod +x /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 set -e
 
 echo "port: start looking at 55821. Don't conflict with jenkins using all sorts of ports starting at 54321 (it can multiple jobs..so can use 8*10 or so port)"
-echo "hadoop jar $CDH4_YARN_JAR water.hadoop.h2odriver -jt $CDH4_YARN_JOBTRACKER -libjars $H2O_JAR -baseport 55821 -mapperXmx $CDH4_YARN_HEAP -nodes $CDH4_YARN_NODES -output $HDFS_OUTPUT -notify h2o_one_node " >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
+echo "yarn jar $CDH4_YARN_JAR water.hadoop.h2odriver -jt $CDH4_YARN_JOBTRACKER -libjars $H2O_JAR -baseport 55821 -mapperXmx $CDH4_YARN_HEAP -nodes $CDH4_YARN_NODES -output $HDFS_OUTPUT -notify h2o_one_node " >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 
 # copy the script, just so we have it there too
 $REMOTE_SCP /tmp/h2o_on_hadoop_$REMOTE_IP.sh $REMOTE_USER:$REMOTE_HOME
