@@ -44,12 +44,12 @@ targets <- vars[3596:3600]
 validation = F ## use cross-validation to determine best model parameters
 grid = F ## do a grid search
 submit = T ## whether to create a model on the full training data for submission 
-submission = 18 ## submission index
+submission = 19 ## submission index
 blend = T
 
 ## Settings
 n_loop <- 1
-n_fold <- 10
+n_fold <- 5
 
 ## Train a DL model
 errs = 0
@@ -251,7 +251,7 @@ for (resp in 1:length(targets)) {
                                       score_interval = 0.1,
                                       force_load_balance=F,
                                       activation="Rectifier", hidden = c(300,300,300,300),
-                                      epochs = 1000, l1 = 1e-4, l2 = 1e-4, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 5000)        
+                                      epochs = 1000, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 5000)        
            
                                 
             ## Use the model and store results
@@ -336,11 +336,13 @@ for (resp in 1:length(targets)) {
     }
     
     ## Make predictions
-    if (blend & validation) {
+    if (blend) {
+      cat("\nBlending results\n")
       yy_test_avg <- matrix("test_target", nrow = nrow(yy_test_all), ncol = 1)
       yy_test_avg <- rowMeans(yy_test_all) ### TODO: Use GLM to find best blending factors based on yy_fulltrain_all?
       pred <- as.data.frame(yy_test_avg)
     } else {
+      cat("\nWARNING: NOT blending results\n")
       pred <- as.data.frame(h2o.predict(model, test_hex))
     }
     colnames(pred)[1] <- targets[resp]
