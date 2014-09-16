@@ -690,7 +690,7 @@ h2o.deeplearning <- function(x, y, data, key = "",
   }
   
   if(!is.null(errs$variable_importances)) {
-    result$varimp <- errs$variable_importances$varimp
+    result$varimp <- as.data.frame(t(errs$variable_importances$varimp))
     names(result$varimp) <- errs$variable_importances$variables
     result$varimp <- sort(result$varimp, decreasing = TRUE)
   }
