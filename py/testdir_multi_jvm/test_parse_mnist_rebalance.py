@@ -52,7 +52,7 @@ class Basic(unittest.TestCase):
                 rebalanceResult = h2o.nodes[0].rebalance(source=hex_key, after=rb_key, seed=SEEDPERFILE, chunks=randChunks)
                 elapsed = time.time() - start
                 print "rebalance end on ", csvFilename, 'took', elapsed, 'seconds',\
-                h2o_cmd.runSummary(key=rb_key)
+                h2o_cmd.runSummary(key=rb_key, timeoutSecs=timeoutSecs)
                 print "\nInspecting the original parsed result"
                 inspect = h2o_cmd.runInspect(key=hex_key)
                 h2o_cmd.infoFromInspect(inspect=inspect)
