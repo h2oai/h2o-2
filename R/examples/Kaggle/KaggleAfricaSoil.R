@@ -22,13 +22,9 @@ path_output <- paste0(path_cloud, "/kaggle_africasoil/outputs")
 train_hex <- h2o.uploadFile(localH2O, path = path_train)
 test_hex <- h2o.uploadFile(localH2O, path = path_test)
 
+h2o.rebalance(train_hex, key = "train_rebalanced", chunks=160)
+train_hex <- h2o.getFrame(localH2O, key = "train_rebalanced")
 
-# if rebalanced, use this:
-#train_hex <- h2o.getFrame(localH2O, key = "train_rebalanced")
-
-#train_splits <- h2o.splitFrame(train_hex, 0.75, shuffle = T)
-#train <- train_splits[[1]]
-#valid <- train_splits[[2]]
 
 # group features
 vars <- colnames(train_hex)
@@ -45,10 +41,10 @@ allpredictors <- c(2:2500, 2671:3579, extra)
 targets <- vars[3596:3600]
 
 ## Parameters for run
-validation = F ## use cross-validation to determine best model parameters
-grid = T ## do a grid search
-submit = T ## whether to create a model on the full training data for submission 
-submission = 16 ## submission index
+validation = T ## use cross-validation to determine best model parameters
+grid = F ## do a grid search
+submit = F ## whether to create a model on the full training data for submission 
+submission = 17 ## submission index
 blend = T
 
 ## Settings
@@ -68,6 +64,7 @@ for (resp in 1:length(targets)) {
       
       # run grid search with n-fold cross-validation
       gridmodel <- 
+
         h2o.deeplearning(x = predictors,
                          y = targets[resp],
                          data = train_hex,
@@ -77,7 +74,8 @@ for (resp in 1:length(targets)) {
                          score_validation_samples = 0,
                          score_duty_cycle = 1,
                          score_interval = 1e-1,
-                         max_w2 = 10, 
+                         max_w2 = 10,
+                         force_load_balance=F,
                          activation="Rectifier", hidden = c(300,300,300), epochs = 1000, l1 = c(1e-5,1e-3), l2 = c(0,1e-5,1e-3), rho = c(0.99, 0.95, 0.9), epsilon = c(1e-6,1e-8,1e-10), train_samples_per_iteration = 10000
                          
         )
@@ -101,9 +99,8 @@ for (resp in 1:length(targets)) {
                          score_validation_samples = 0,
                          score_duty_cycle = 1,
                          score_interval = 1e-1,
-                         #activation="Rectifier", hidden = c(800,800,800),
-                         #epochs = 200, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000
-                         activation="Rectifier", hidden = c(300,300,300), epochs = 1000, l1 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 10000
+                         force_load_balance=F,
+                         activation="Rectifier", hidden = c(300,300,300), epochs = 1000, l1 = 1e-5, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 50000
         )
       print(cvmodel)
       
@@ -173,6 +170,7 @@ for (resp in 1:length(targets)) {
                                       score_training_samples = 0,
                                       score_validation_samples = 0,
                                       score_duty_cycle = 1,
+                                      force_load_balance=F,
                                       activation = p$activation, input_dropout_ratio = p$input_dropout_ratio, hidden = p$hidden, epochs = p$epochs, l1 = p$l1, l2 = p$l2, max_w2 = p$max_w2, train_samples_per_iteration = p$train_samples_per_iteration)
             
             ## Use the model and store results
@@ -251,6 +249,7 @@ for (resp in 1:length(targets)) {
                                       score_validation_samples = 0,
                                       score_duty_cycle = 1,
                                       score_interval = 1,
+                                      force_load_balance=F,
                                       activation="Rectifier", hidden = c(300,300,300),
                                       epochs = 1000, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 50000)        
            
@@ -300,7 +299,7 @@ for (resp in 1:length(targets)) {
         
       } else {
         # build final model on full training data with hardcoded parameters
-        model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_hardcoded"), data = train_hex, classification = F, score_training_samples = 0,
+        model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_hardcoded"), data = train_hex, classification = F, score_training_samples = 0, force_load_balance=F,
                                   #activation="Rectifier", hidden = c(300,300,300), epochs = 1000, l1 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 100000 #submission 1 - 0.42727
                                   #activation="RectifierWithDropout",input_dropout_ratio = 0.2, hidden = c(500,500,500), epochs = 500, l1 = 1e-5, l2 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 50000 #submission 2 - 0.684
                                   #activation="Rectifier", hidden = c(500,500,500), epochs = 1000, l1 = 1e-5, l2 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 10000 #submission 3 - 0.45212
