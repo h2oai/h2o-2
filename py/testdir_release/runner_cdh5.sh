@@ -21,8 +21,8 @@ mkdir -p sandbox
 # I suppose we could just have a test verify the request cloud size, after buildingk
 
 # yarn.resourcemanager.address  8032
-NAME_NODE=192.168.1.180
-CDH5_YARN_JOBTRACKER=192.168.1.180:8032
+NAME_NODE=172.16.2.180
+CDH5_YARN_JOBTRACKER=172.16.2.180:8032
 CDH5_YARN_NODES=3
 # FIX! we fail if you ask for two much memory? 7g worked. 8g doesn't work
 echo "can't get more than 5g for now. node count 2"
@@ -37,7 +37,7 @@ HDFS_OUTPUT=hdfsOutputDirName
 
 # file created by the h2o on hadoop h2odriver*jar
 REMOTE_HOME=/home/0xcustomer
-REMOTE_IP=192.168.1.179
+REMOTE_IP=172.16.2.179
 REMOTE_USER=0xcustomer@$REMOTE_IP
 REMOTE_SCP="scp -i $HOME/.0xcustomer/0xcustomer_id_rsa"
 REMOTE_SSH_USER="ssh -i $HOME/.0xcustomer/0xcustomer_id_rsa $REMOTE_USER"
@@ -99,7 +99,7 @@ echo "Permission rights extend to the top level now, so only 0xcustomer can auto
 echo "okay to ls the top level here...no secret info..do all the machines hadoop (cdh3) might be using"
 for mr in 178 179 180
 do
-    ssh -i $HOME/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.$mr 'cd /mnt/0xcustomer-datasets'
+    ssh -i $HOME/.0xcustomer/0xcustomer_id_rsa 0xcustomer@172.16.2.$mr 'cd /mnt/0xcustomer-datasets'
 done
 
 # We now have the h2o-nodes.json, that means we started the jvms
