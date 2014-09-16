@@ -41,10 +41,10 @@ allpredictors <- c(2:2500, 2671:3579, extra)
 targets <- vars[3596:3600]
 
 ## Parameters for run
-validation = T ## use cross-validation to determine best model parameters
+validation = F ## use cross-validation to determine best model parameters
 grid = F ## do a grid search
-submit = F ## whether to create a model on the full training data for submission 
-submission = 17 ## submission index
+submit = T ## whether to create a model on the full training data for submission 
+submission = 18 ## submission index
 blend = T
 
 ## Settings
@@ -248,10 +248,10 @@ for (resp in 1:length(targets)) {
                                       score_training_samples = 0,
                                       score_validation_samples = 0,
                                       score_duty_cycle = 1,
-                                      score_interval = 1,
+                                      score_interval = 0.1,
                                       force_load_balance=F,
-                                      activation="Rectifier", hidden = c(300,300,300),
-                                      epochs = 1000, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 50000)        
+                                      activation="Rectifier", hidden = c(300,300,300,300),
+                                      epochs = 1000, l1 = 1e-4, l2 = 1e-4, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 5000)        
            
                                 
             ## Use the model and store results
@@ -372,3 +372,8 @@ print(Sys.info())
 #1/5*(sqrt(0.089)+sqrt(0.79)+sqrt(0.179)+sqrt(0.1109)+sqrt(0.1437)) # 0.4644653 submission 1 (CV-values using 3 folds)
 1/5*(sqrt(0.094)+sqrt(0.90)+sqrt(0.174)+sqrt(0.108)+sqrt(0.142)) # 0.47 submission 1 repro 3 fold #2
 1/5*(sqrt(0.0553)+sqrt(0.898)+sqrt(0.1686)+sqrt(0.1035)+sqrt(0.1215)) # 0.452, but scored 0.50223 on their test set holdout!! submission 14 (5 ensemble cv models)
+1/5*(sqrt(0.0758)+sqrt(0.6847)+sqrt(0.1553)+sqrt(0.0874)+sqrt(0.118)) #submission 16 should be 0.4273, but scored 0.48375 (10-fold cv models blend)
+1/5*(sqrt(0.0600)+?) #submission 17 (50-fold cv models blend)
+#Overall 10 -fold cross-validated MSE on training dataset: 0.05225971 0.6752378 0.1674132 0.07708522 0.2251007 #submission 18 should be 0.4423, but scored 0.620!!!!
+
+
