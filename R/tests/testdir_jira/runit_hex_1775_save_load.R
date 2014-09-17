@@ -5,10 +5,8 @@
 
 setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 # setwd("/Users/tomk/0xdata/ws/h2o/R/tests/testdir_jira")
-#setwd("/Users/Amy/Documents/h2o/R/tests/testdir_jira")
 
 source('../findNSourceUtils.R')
-conn = h2o.init()
 
 test.hex_1775 <- function(conn) {
   temp_dir = tempdir()
@@ -26,7 +24,7 @@ test.hex_1775 <- function(conn) {
   prostate.glm = h2o.glm(y = "CAPSULE", x = c("AGE","RACE","PSA","DCAPS"), data = prostate.hex, family = "binomial", nfolds = 0, alpha = 0.5)
   Log.info("Build GBM model")
   prostate.gbm = h2o.gbm(y = 2, x = 3:9, data = prostate.hex, nfolds = 5)
-# Log.info("Build Speedy Random Forest Model")
+  Log.info("Build Speedy Random Forest Model")
   iris.speedrf = h2o.randomForest(x = c(2,3,4), y = 5, data = iris.hex, ntree = 10, depth = 20, type = "fast")
   Log.info("Build BigData Random Forest Model")
   iris.rf = h2o.randomForest(x = c(2,3,4), y = 5, data = iris.hex, ntree = 10, depth = 20, nfolds = 5, type = "BigData")
@@ -67,7 +65,6 @@ test.hex_1775 <- function(conn) {
   file.rename(temp_subdir1, temp_subdir2)
     
   model_paths = c(prostate.glm.path, prostate.gbm.path, iris.speedrf.path, iris.rf.path, iris.nb.path, iris.dl.path)
-#  model_paths = c(prostate.glm.path, prostate.gbm.path, iris.rf.path, iris.nb.path, iris.dl.path)
   new_model_paths = {}
   for (path in model_paths) {
     new_path = paste(temp_subdir2,basename(path),sep = .Platform$file.sep)

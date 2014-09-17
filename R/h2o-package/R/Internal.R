@@ -104,6 +104,7 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__PAGE_VIEWALL = "StoreView.json"
 .h2o.__DOWNLOAD_LOGS = "LogDownload.json"
 .h2o.__DOMAIN_MAPPING = "2/DomainMapping.json"
+.h2o.__PAGE_ALLMODELS = "2/Models.json"
 
 .h2o.__PAGE_EXEC2 = "2/Exec2.json"
 .h2o.__PAGE_IMPORTFILES2 = "2/ImportFiles2.json"
