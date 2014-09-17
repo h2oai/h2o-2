@@ -22,9 +22,7 @@ path_output <- paste0(path_cloud, "/kaggle_africasoil/outputs")
 train_hex <- h2o.uploadFile(localH2O, path = path_train)
 test_hex <- h2o.uploadFile(localH2O, path = path_test)
 
-h2o.rebalance(train_hex, key = "train_rebalanced", chunks=160)
-train_hex <- h2o.getFrame(localH2O, key = "train_rebalanced")
-
+#train_hex <- h2o.rebalance(train_hex, key = "train_rebalanced", chunks=160) #problem with this is that splitFrame only shuffles intra-chunk -> avoid doing this here.
 
 # group features
 vars <- colnames(train_hex)
@@ -33,23 +31,28 @@ vars <- colnames(train_hex)
 #targets <- vars[785]
 
 spectra_hi <- vars[seq(2,2500,by=25)] # cheap way of binning: just take every 25-th column
+spectra_hi_all <- vars[seq(2,2500,by=1)]
+spectra_hi_lots <- vars[seq(2,2500,by=5)]
 spectra_omit <- vars[seq(2501,2670,by=10)] # cheap way of binning: just take every 10-th column
 spectra_low <- vars[seq(2671,3579,by=10)] # cheap way of binning: just take every 10-th column
+spectra_low_all <- vars[seq(2671,3579,by=1)]
+spectra_low_lots <- vars[seq(2671,3579,by=5)]
 extra <- vars[3580:3595]
 predictors <- c(spectra_hi, spectra_low, extra)
-allpredictors <- c(2:2500, 2671:3579, extra)
+allpredictors <- c(spectra_hi_all, spectra_low_all, extra)
+lotspredictors <- c(spectra_hi_lots, spectra_low_lots, extra)
 targets <- vars[3596:3600]
 
 ## Parameters for run
 validation = F ## use cross-validation to determine best model parameters
 grid = F ## do a grid search
 submit = T ## whether to create a submission 
-submission = 20 ## submission index
+submission = 21 ## submission index
 blend = T
 
 ## Settings
-n_loop <- 1
-n_fold <- 10
+n_loop <- 5
+n_fold <- 3 #determines train/validation split
 
 ## Train a DL model
 errs = 0
@@ -64,8 +67,7 @@ for (resp in 1:length(targets)) {
       
       # run grid search with n-fold cross-validation
       gridmodel <- 
-
-        h2o.deeplearning(x = predictors,
+        h2o.deeplearning(x = morepredictors,
                          y = targets[resp],
                          data = train_hex,
                          nfolds = n_fold,
@@ -75,10 +77,10 @@ for (resp in 1:length(targets)) {
                          score_duty_cycle = 1,
                          score_interval = 1e-1,
                          max_w2 = 10,
-                         force_load_balance=F,
-                         activation="Rectifier", hidden = c(100,100,100), epochs = 500, l1 = c(1e-5,1e-3), l2 = c(0,1e-5,1e-3), rho = c(0.99, 0.95, 0.9), epsilon = c(1e-6,1e-8,1e-10), train_samples_per_iteration = 10000
-                         
-        )
+                         force_load_balance=T,
+                         activation="RectifierWithDropout", input_dropout_ratio = 0.1, hidden_dropout_ratios = list(c(0.1,0.1),c(0.2,0.2)), 
+                         hidden = list(c(50,50), c(300,300)), epochs = 200, l1 = 0, l2 = 1e-5, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 10000 
+              )
       print(gridmodel)
       
       # print grid search results to file
@@ -99,7 +101,7 @@ for (resp in 1:length(targets)) {
                          score_validation_samples = 0,
                          score_duty_cycle = 1,
                          score_interval = 1e-1,
-                         force_load_balance=F,
+                         force_load_balance=T,
                          activation="Rectifier", hidden = c(100,100,100), epochs = 500, l1 = 1e-5, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 10000
         )
       print(cvmodel)
@@ -145,22 +147,27 @@ for (resp in 1:length(targets)) {
         for (n in 1:n_loop) {
           
           ## CV
-          set.seed(n)
-          rand_folds <- createFolds(y, k = n_fold)
+          #set.seed(n)
+          #rand_folds <- createFolds(y, k = n_fold)
           
           ## Main Loop
           for (nn in 1:n_fold) {
             
             ##
             cat("\n\nNow training loop", n, "/", n_loop, "model", nn, "/", n_fold, "for ", targets[resp], "...\n")
+             
+#             folds <- h2o.nFoldExtractor(train_hex, nfolds=n_fold, fold_to_extract=nn)
+#             train <- folds[[1]]
+#             valid <- folds[[2]]    
+#             response_folds <- h2o.nFoldExtractor(train_hex[,targets[resp]], nfolds=n_fold, fold_to_extract=nn)
+#             train_resp <- response_folds[[1]]
+#             valid_resp <- response_folds[[2]]
             
-            folds <- h2o.nFoldExtractor(train_hex, nfolds=n_fold, fold_to_extract=nn)
-            train <- folds[[1]]
-            valid <- folds[[2]]
-            
-            response_folds <- h2o.nFoldExtractor(train_hex[,targets[resp]], nfolds=n_fold, fold_to_extract=nn)
-            train_resp <- response_folds[[1]]
-            valid_resp <- response_folds[[2]]
+            splits <- h2o.splitFrame(train_hex, ratios = 1.-1./n_fold, shuffle=T)
+            train <- splits[[1]]
+            valid <- splits[[2]]
+            train_resp <- train[,targets[resp]]
+            valid_resp <- valid[,targets[resp]]
             
             # build final model blend components with validated parameters
             model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_blend_", n , "_", nn), 
@@ -171,7 +178,7 @@ for (resp in 1:length(targets)) {
                                       score_validation_samples = 0,
                                       score_duty_cycle = 1,
                                       score_interval = 1e-1,
-                                      force_load_balance=F,
+                                      force_load_balance=T,
                                       activation = p$activation, input_dropout_ratio = p$input_dropout_ratio, hidden = p$hidden, epochs = p$epochs, l1 = p$l1, l2 = p$l2, max_w2 = p$max_w2, train_samples_per_iteration = p$train_samples_per_iteration)
             
             ## Use the model and store results
@@ -232,53 +239,72 @@ for (resp in 1:length(targets)) {
             
             ##
             cat("\n\nNow training loop", n, "/", n_loop, "model", nn, "/", n_fold, "for ", targets[resp], "...\n")
-    
-            folds <- h2o.nFoldExtractor(train_hex, nfolds=n_fold, fold_to_extract=nn)
-            train <- folds[[1]]
-            valid <- folds[[2]]
             
-            response_folds <- h2o.nFoldExtractor(train_hex[,targets[resp]], nfolds=n_fold, fold_to_extract=nn)
-            train_resp <- response_folds[[1]]
-            valid_resp <- response_folds[[2]]
-           
+            #             folds <- h2o.nFoldExtractor(train_hex, nfolds=n_fold, fold_to_extract=nn)
+            #             train <- folds[[1]]
+            #             valid <- folds[[2]]
+            #             response_folds <- h2o.nFoldExtractor(train_hex[,targets[resp]], nfolds=n_fold, fold_to_extract=nn)
+            #             train_resp <- response_folds[[1]]
+            #             valid_resp <- response_folds[[2]]
+            
+            splits <- h2o.splitFrame(train_hex, ratios = 1.-1./n_fold, shuffle=T)
+            train <- splits[[1]]
+            valid <- splits[[2]]
+            train_resp <- train[,targets[resp]]
+            valid_resp <- valid[,targets[resp]]
+            
             # build final model blend components with hardcoded parameters
-            if (resp == 1)
-              model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_blend_", n , "_", nn), 
-                                        data = train,
-                                        validation = valid,
-                                        classification = F, 
-                                        score_training_samples = 0,
-                                        score_validation_samples = 0,
-                                        score_duty_cycle = 1,
-                                        score_interval = 0.1,
-                                        force_load_balance=F,
-                                        activation="Rectifier", hidden = c(800,800,800),
-                                        epochs = 50, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000)        
-            else if (resp == 2)
-              model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_blend_", n , "_", nn), 
-                                        data = train,
-                                        validation = valid,
-                                        classification = F, 
-                                        score_training_samples = 0,
-                                        score_validation_samples = 0,
-                                        score_duty_cycle = 1,
-                                        score_interval = 0.1,
-                                        force_load_balance=F,
-                                        activation="Rectifier", hidden = c(300,300,300,300),
-                                        epochs = 50, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000)        
-            else 
-              model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_blend_", n , "_", nn), 
-                                        data = train,
-                                        validation = valid,
-                                        classification = F, 
-                                        score_training_samples = 0,
-                                        score_validation_samples = 0,
-                                        score_duty_cycle = 1,
-                                        score_interval = 0.1,
-                                        force_load_balance=F,
-                                        activation="Rectifier", hidden = c(300,300,300),
-                                        epochs = 50, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000) 
             
+            if (resp==1 | resp ==4) #Ca 0.06  SOC 0.08
+              model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_blend_", n , "_", nn), 
+                                        data = train,
+                                        validation = valid,
+                                        classification = F, 
+                                        score_training_samples = 0,
+                                        score_validation_samples = 0,
+                                        score_duty_cycle = 1,
+                                        score_interval = 0.1,
+                                        force_load_balance=T,
+                                        activation="Rectifier", hidden = c(50,50,50),
+                                        epochs = 500, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 10000) 
+            
+            else  if (resp == 2) #P
+              model <- h2o.deeplearning(x = lotspredictors, y = targets[resp], key = paste0(targets[resp], submission, "_blend_", n , "_", nn), 
+                                        data = train,
+                                        validation = valid,
+                                        classification = F, 
+                                        score_training_samples = 0,
+                                        score_validation_samples = 0,
+                                        score_duty_cycle = 1,
+                                        score_interval = 0.1,
+                                        force_load_balance=T,
+                                        activation="Rectifier", hidden = c(300,300,300), epochs = 1000, l1 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 10000)        
+            
+            else if (resp == 3) #pH 0.156
+              model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_blend_", n , "_", nn), 
+                                        data = train,
+                                        validation = valid,
+                                        classification = F, 
+                                        score_training_samples = 0,
+                                        score_validation_samples = 0,
+                                        score_duty_cycle = 1,
+                                        score_interval = 0.1,
+                                        force_load_balance=T,
+                                        activation=c("Rectifier"), hidden = c(300,300,300),
+                                        epochs = 500, l1 = c(1e-5), l2 = c(0), rho = c(0.99), epsilon = c(1e-10), train_samples_per_iteration = 10000)
+                                        
+            else if (resp == 5) #Sand FIXME
+              model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_blend_", n , "_", nn), 
+                                        data = train,
+                                        validation = valid,
+                                        classification = F, 
+                                        score_training_samples = 0,
+                                        score_validation_samples = 0,
+                                        score_duty_cycle = 1,
+                                        score_interval = 0.1,
+                                        force_load_balance=T,
+                                        activation="Rectifier", hidden = c(50,50,50),
+                                        epochs = 500, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 10000) 
             
             ## Use the model and store results
             yy_temp_train <- as.data.frame(h2o.predict(model, train))
@@ -296,6 +322,7 @@ for (resp in 1:length(targets)) {
             } else {
               yy_test_all <- cbind(yy_test_all, matrix(yy_temp_test[, 1], ncol = 1))
             }
+            print(head(yy_test_all))
             msetrain <- mean((yy_temp_train - as.data.frame(train_resp))^2)
             sevalid <- (yy_temp_valid - as.data.frame(valid_resp))^2
             msevalid <- mean(sevalid)
@@ -325,7 +352,7 @@ for (resp in 1:length(targets)) {
         
       } else {
         # build final model on full training data with hardcoded parameters
-        model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_hardcoded"), data = train_hex, classification = F, score_training_samples = 0, force_load_balance=F,
+        model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_hardcoded"), data = train_hex, classification = F, score_training_samples = 0, force_load_balance=T,
                                   #activation="Rectifier", hidden = c(300,300,300), epochs = 1000, l1 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 100000 #submission 1 - 0.42727
                                   #activation="RectifierWithDropout",input_dropout_ratio = 0.2, hidden = c(500,500,500), epochs = 500, l1 = 1e-5, l2 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 50000 #submission 2 - 0.684
                                   #activation="Rectifier", hidden = c(500,500,500), epochs = 1000, l1 = 1e-5, l2 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 10000 #submission 3 - 0.45212
@@ -405,5 +432,7 @@ print(Sys.info())
 1/5*(sqrt(0.0600)+?) #submission 17 (50-fold cv models blend)
 #Overall 10 -fold cross-validated MSE on training dataset: 0.05225971 0.6752378 0.1674132 0.07708522 0.2251007 #submission 18 should be 0.4423, but scored 0.620!!!!
 #Overall 5 -fold cross-validated MSE on training dataset: 0.07033987 0.6485939 0.1662352 0.09940603 0.1279225 #submission 19, should be 0.43, but scored 0.47
-#Overall 10 -fold cross-validated MSE on training dataset: 0.06074805 0.6604369 0.1668773 0.08833406 0.1117856 #submission 20, should be 0.419, but scored
+#Overall 10 -fold cross-validated MSE on training dataset: 0.06074805 0.6604369 0.1668773 0.08833406 0.1117856 #submission 20, should be 0.419, but scored 0.44
 
+#GOAL: 1/5*(sqrt(0.06)+sqrt(0.64)+sqrt(0.15)+sqrt(0.07)+sqrt(0.09))
+#BEST: 
