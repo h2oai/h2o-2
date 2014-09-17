@@ -9,6 +9,7 @@ setwd(normalizePath(dirname(R.utils::commandArgs(asValues=TRUE)$"f")))
 source('../findNSourceUtils.R')
 
 test.hex_1908 <- function(conn) {
+  h2o.removeAll(conn)
   temp_dir = tempdir()
   temp_subdir1 = paste(temp_dir, "tmp", sep = .Platform$file.sep)
   temp_subdir2 = paste(temp_dir, "tmp2", sep = .Platform$file.sep)
@@ -52,29 +53,25 @@ test.hex_1908 <- function(conn) {
   # Proving we can move files from one directory to another and not affect the load of the model
   Log.info(paste("Moving models from", temp_subdir1, "to", temp_subdir2))
   file.rename(temp_subdir1, temp_subdir2)
-    
-  new_model_paths = {}
-  for (path in model_paths) {
-    new_path = paste(temp_subdir2,basename(path),sep = .Platform$file.sep)
-    new_model_paths = append(new_model_paths, new_path)
-  }
 
   # Check to make sure predictions made on loaded model is the same as glm.pred
   airlines.hex = h2o.importFile(conn, normalizePath(locate('smalldata/airlines/AirlinesTrain.csv.zip')))
   
+  # Load model back into H2O
   Log.info(paste("Model saved in", temp_subdir2))
-  
-  reloaded_models = {}
-  for(path in new_model_paths) {
-    Log.info(paste("Loading model from",path,sep=" "))
-    model_obj = h2o.loadModel(conn, path)
-    reloaded_models = append(x = reloaded_models, values = model_obj)
-  }
+  reloaded_models = h2o.loadAll(object = conn, dir = temp_subdir2)
   
   Log.info("Running Predictions for Loaded Models")
+  new_keys = lapply(reloaded_models, function(model) model@key)
+  
   gbm_xval2 = reloaded_models[[1]]
-  glm2 = reloaded_models[[2]]
-  glm_xval2 = reloaded_models[[3]]
+  if(length(reloaded_models[[2]]@xval) == 0 ) {
+    glm2 = reloaded_models[[2]]
+    glm_xval2 = reloaded_models[[3]]
+  } else {
+    glm2 = reloaded_models[[3]]
+    glm_xval2 = reloaded_models[[2]]
+  }
   
   glm.pred2 = pred_df(object = glm2, newdata = airlines.hex)
   glm_xval.pred2 = pred_df(object = glm_xval2, newdata = airlines.hex)
@@ -91,7 +88,8 @@ test.hex_1908 <- function(conn) {
   expect_equal(nrow(gbm_xval.pred), 24421)
   expect_equal(gbm_xval.pred, gbm_xval.pred2)
   expect_equal(glm.pred, glm_xval.pred)
-
+  
+  h2o.removeAll(conn)
   testEnd()
 }
 

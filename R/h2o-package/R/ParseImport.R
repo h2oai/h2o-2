@@ -438,3 +438,22 @@ h2o.loadModel <- function(object, path="") {
     if(length(model_names)>0) for (key in model_names) .h2o.__remoteSend(object, .h2o.__PAGE_LoadModel, path = paste(path, key, sep=.Platform$file.sep) )
     h2o.getModel(object, model_names[1])
 }
+
+
+# ------------------- Load All H2O Model in a directory from Disk -----------------------------------------------
+h2o.loadAll <- function(object, dir="") {
+  if(missing(object)) stop('Must specify object')
+  if(class(object) != 'H2OClient') stop('object must be of class H2OClient')
+  if(!is.character(dir)) stop('dir must be of class character')
+    
+  model_dirs = setdiff(list.dirs(dir), dir)
+  model_objs = {}
+  for(model_dir in model_dirs) {
+    print(paste("Loading ", basename(model_dir), "....",sep = ""))
+    temp_model = h2o.loadModel(object, path = model_dir)
+    model_objs = append(x = model_objs, values = temp_model)
+  }
+  
+  model_objs
+}
+

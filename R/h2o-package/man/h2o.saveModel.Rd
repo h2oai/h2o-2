@@ -16,7 +16,7 @@
 Returns path of model object saved.
 }
 \seealso{
-\code{\link{h2o.loadModel}, \linkS4class{H2OModel}}
+\code{\link{h2o.saveAll}, \link{h2o.loadModel}, \link{h2o.loadAll}, \linkS4class{H2OModel}}
 }
 \examples{
 \dontrun{
