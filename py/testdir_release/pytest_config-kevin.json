@@ -10,7 +10,7 @@
     "h2o_per_host": 1, 
     "java_heap_GB": 100, 
 
-    "hdfs_name_node": "192.168.1.176",
+    "hdfs_name_node": "172.16.2.176",
     "hdfs_version": "cdh3",
     "delete_keys_at_teardown": "true",
     "use_hdfs": true,
@@ -20,7 +20,7 @@
     "cloud_name": "kevin-where",
 
     "ip": [
-        "192.168.1.164"
+        "172.16.2.164"
     ]
 }
 

@@ -91,7 +91,7 @@ class Basic(unittest.TestCase):
         print "\nIf the test fails, you'll have to fix iptables to be how you want them"
         print "Typically 'iptables -F' should be enough."
 
-        print "\nDon't run this on 192.168.1.151 which has sshguard enabled in its iptables"
+        print "\nDon't run this on 172.16.2.151 which has sshguard enabled in its iptables"
         print "Only for linux. hopefully centos and ubuntu. don't know about mac"
 
         print "\nNormally you'll want this to run with -v to see hangs in cloud building"

@@ -45,7 +45,7 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
         # h2o.nodes[0].use_maprfs = True
         # h2o.nodes[0].use_hdfs = False
         # h2o.nodes[0].hdfs_version = 'mapr3.0.1',
-        # h2o.nodes[0].hdfs_name_node = '192.168.1.171:7222'
+        # h2o.nodes[0].hdfs_name_node = '172.16.2.171:7222'
 
         h2o.setup_benchmark_log()
 

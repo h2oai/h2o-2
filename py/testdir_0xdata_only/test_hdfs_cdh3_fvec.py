@@ -12,15 +12,15 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1, use_hdfs=True, hdfs_version='cdh3', hdfs_name_node='192.168.1.176')
+            h2o.build_cloud(1, use_hdfs=True, hdfs_version='cdh4', hdfs_name_node='172.16.2.176')
         else:
-            h2o_hosts.build_cloud_with_hosts(1, use_hdfs=True, hdfs_version='cdh3', hdfs_name_node='192.168.1.176')
+            h2o_hosts.build_cloud_with_hosts(1, use_hdfs=True, hdfs_version='cdh4', hdfs_name_node='172.16.2.176')
 
     @classmethod
     def tearDownClass(cls):
         h2o.tear_down_cloud()
 
-    def test_hdfs_cdh3_fvec(self):
+    def test_hdfs_cdh4_fvec(self):
         h2o.beta_features = True
         print "\nLoad a list of files from HDFS, parse and do 1 RF tree"
         print "\nYou can try running as hduser/hduser if fail"

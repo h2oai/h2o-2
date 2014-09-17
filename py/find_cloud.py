@@ -9,8 +9,8 @@ parser.add_argument('-f', '--flatfile',
     type=str)
 
 parser.add_argument('-hdfs_version', '--hdfs_version', 
-    choices=['0.20.2', 'cdh3', 'cdh4', 'cdh4_yarn', 'cdh5', 'mapr2.1.3', 'mapr3.0.1', 'mapr3.1.1', 'hdp2.1'],
-    default='cdh3', 
+    choices=['0.20.2', 'cdh4', 'cdh4', 'cdh4_yarn', 'cdh5', 'mapr2.1.3', 'mapr3.0.1', 'mapr3.1.1', 'hdp2.1'],
+    default='cdh4', 
     help="Use this for setting hdfs_version in the cloned cloud", 
     type=str)
 
@@ -20,7 +20,7 @@ parser.add_argument('-hdfs_config', '--hdfs_config',
     type=str)
 
 parser.add_argument('-hdfs_name_node', '--hdfs_name_node', 
-    default='192.168.1.176',
+    default='172.16.2.176',
     help="Use this for setting hdfs_name_node in the cloned cloud. Can be ip, ip:port, hostname, hostname:port", 
     type=str)
 
@@ -31,9 +31,9 @@ parser.add_argument('-expected_size', '--expected_size',
 
 args = parser.parse_args()
 
-#            "hdfs_version": "cdh3", 
+#            "hdfs_version": "cdh4", 
 #            "hdfs_config": "None", 
-#            "hdfs_name_node": "192.168.1.176", 
+#            "hdfs_name_node": "172.16.2.176", 
 #********************************************************************
 # shutil.rmtree doesn't work on windows if the files are read only.
 # On unix the parent dir has to not be readonly too.
@@ -123,9 +123,9 @@ def do_json_request(addr=None, port=None,  jsonRequest=None, params=None, timeou
 # everything should just work then...the runner*sh know what hdfs clusters they're targeting
 # so can tell us (and they built the cloud anyhow!..so they are the central place that's deciding
 # hdfs_config is only used on ec2, but we'll support it in case find_cloud.py is used there.
-#            "hdfs_version": "cdh3", 
+#            "hdfs_version": "cdh4", 
 #            "hdfs_config": "None", 
-#            "hdfs_name_node": "192.168.1.176", 
+#            "hdfs_name_node": "172.16.2.176", 
 # force these to the right state, although I should update h2o*py stuff, so they're not necessary
 # they force the prior settings to be ignore (we used to do stuff if hdfs was enabled, writing to hdfs
 # this was necessary to override the settings above that caused that to happen
@@ -180,7 +180,7 @@ def probe_node(line, h2oNodes):
         node_id = len(h2oNodes)
 
         use_maprfs = 'mapr' in args.hdfs_version
-        use_hdfs = not use_maprfs # we default to enabling cdh3 on 192.168.1.176
+        use_hdfs = not use_maprfs # we default to enabling cdh4 on 172.16.2.176
         node = { 
             'http_addr': ip, 
             'port': int(port),  # print it as a number for the clone ingest

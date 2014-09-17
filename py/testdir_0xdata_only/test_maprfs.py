@@ -15,20 +15,21 @@ class Basic(unittest.TestCase):
         # hdfs_config='/opt/mapr/conf/mapr-clusters.conf', 
         #        # hdfs_name_node='mr-0x1.0xdata.loc:7222')
         #        hdfs_version='mapr2.1.3',
+        print "This doesn't work. we don't package mapr files with h2o"
         if (localhost):
             h2o.build_cloud(1, 
                 java_heap_GB=15,
                 enable_benchmark_log=True,
                 use_maprfs=True, 
-                hdfs_version='mapr3.0.1',
-                hdfs_name_node='192.168.1.171:7222')
+                hdfs_version='mapr_3.1.1',
+                hdfs_name_node='172.16.2.171:7222')
         else:
             h2o_hosts.build_cloud_with_hosts(1, 
                 java_heap_GB=15,
                 enable_benchmark_log=True,
                 use_maprfs=True, 
-                hdfs_version='mapr3.0.1',
-                hdfs_name_node='192.168.1.171:7222')
+                hdfs_version='mapr_3.1.1',
+                hdfs_name_node='172.16.2.171:7222')
 
     @classmethod
     def tearDownClass(cls):
@@ -114,8 +115,8 @@ class Basic(unittest.TestCase):
 
             #  "succeeded": [
             #    {
-            #      "file": "maprfs://192.168.1.171:7222/datasets/prostate_long_1G.csv", 
-            #      "key": "maprfs://192.168.1.171:7222/datasets/prostate_long_1G.csv", 
+            #      "file": "maprfs://172.16.2.171:7222/datasets/prostate_long_1G.csv", 
+            #      "key": "maprfs://172.16.2.171:7222/datasets/prostate_long_1G.csv", 
             #      "value_size_bytes": 1115287100
             #    },
 

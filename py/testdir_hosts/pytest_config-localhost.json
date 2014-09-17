@@ -5,7 +5,7 @@
     "h2o_per_host": 2, 
     "java_heap_GB": 7, 
 
-    "hdfs_name_node": "192.168.1.176",
+    "hdfs_name_node": "172.16.2.176",
     "hdfs_version": "cdh3",
     "use_hdfs": true,
 

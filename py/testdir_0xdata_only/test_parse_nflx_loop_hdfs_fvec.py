@@ -25,14 +25,14 @@ class Basic(unittest.TestCase):
 
         trialMax = 2
         for tryHeap in [24]:
-            print "\n", tryHeap,"GB heap, 1 jvm per host, import 192.168.1.176 hdfs, then parse"
+            print "\n", tryHeap,"GB heap, 1 jvm per host, import 172.16.2.176 hdfs, then parse"
             localhost = h2o.decide_if_localhost()
             if (localhost):
                 h2o.build_cloud(node_count=1, java_heap_GB=tryHeap,
-                    use_hdfs=True, hdfs_name_node='192.168.1.176', hdfs_version='cdh3')
+                    use_hdfs=True, hdfs_name_node='172.16.2.176', hdfs_version='cdh4')
             else:
                 h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=tryHeap,
-                    use_hdfs=True, hdfs_name_node='192.168.1.176', hdfs_version='cdh3')
+                    use_hdfs=True, hdfs_name_node='172.16.2.176', hdfs_version='cdh4')
 
             # don't raise exception if we find something bad in h2o stdout/stderr?
             # h2o.nodes[0].sandboxIgnoreErrors = True
@@ -42,7 +42,7 @@ class Basic(unittest.TestCase):
             for trial in range(trialMax):
                 hex_key = csvFilename + "_" + str(trial) + ".hex"
                 csvFilePattern = 'file_1.dat.gz'
-                # "key": "hdfs://192.168.1.176/datasets/manyfiles-nflx-gz/file_99.dat.gz", 
+                # "key": "hdfs://172.16.2.176/datasets/manyfiles-nflx-gz/file_99.dat.gz", 
 
                 time.sleep(5)
                 csvPathname = importFolderPath + "/" + csvFilePattern

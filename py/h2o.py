@@ -2841,8 +2841,8 @@ class H2O(object):
                  use_this_ip_addr=None, port=54321, capture_output=True,
                  use_debugger=None, classpath=None,
                  use_hdfs=False, use_maprfs=False,
-                 # hdfs_version="cdh4", hdfs_name_node="192.168.1.151",
-                 # hdfs_version="cdh3", hdfs_name_node="192.168.1.176",
+                 # hdfs_version="cdh4", hdfs_name_node="172.16.2.151",
+                 # hdfs_version="cdh4", hdfs_name_node="172.16.2.176",
                  hdfs_version=None, hdfs_name_node=None, hdfs_config=None,
                  aws_credentials=None,
                  use_flatfile=False, java_heap_GB=None, java_heap_MB=None, java_extra_args=None,
@@ -2861,7 +2861,7 @@ class H2O(object):
             # see if we can touch a 0xdata machine
             try:
                 # long timeout in ec2...bad
-                a = requests.get('http://192.168.1.176:80', timeout=1)
+                a = requests.get('http://172.16.2.176:80', timeout=1)
                 hdfs_0xdata_visible = True
             except:
                 hdfs_0xdata_visible = False
@@ -2869,13 +2869,13 @@ class H2O(object):
             # different defaults, depending on where we're running
             if hdfs_name_node is None:
                 if hdfs_0xdata_visible:
-                    hdfs_name_node = "192.168.1.176"
+                    hdfs_name_node = "172.16.2.176"
                 else: # ec2
                     hdfs_name_node = "10.78.14.235:9000"
 
             if hdfs_version is None:
                 if hdfs_0xdata_visible:
-                    hdfs_version = "cdh3"
+                    hdfs_version = "cdh4"
                 else: # ec2
                     hdfs_version = "0.20.2"
 
@@ -3049,7 +3049,7 @@ class LocalH2O(H2O):
 #*****************************************************************
 class RemoteHost(object):
     def upload_file(self, f, progress=None):
-        # FIX! we won't find it here if it's hdfs://192.168.1.151/ file
+        # FIX! we won't find it here if it's hdfs://172.16.2.151/ file
         f = find_file(f)
         if f not in self.uploaded:
             start = time.time()

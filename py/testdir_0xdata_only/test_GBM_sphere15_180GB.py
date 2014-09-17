@@ -30,10 +30,10 @@ class Basic(unittest.TestCase):
         else:
             if FROM_HDFS == 'CDH3':
                 h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=True,
-                    use_hdfs=True, hdfs_version='cdh3', hdfs_name_node="192.168.1.176") # override the config file
+                    use_hdfs=True, hdfs_version='cdh4', hdfs_name_node="172.16.2.176") # override the config file
             elif FROM_HDFS == 'CDH4':
                 h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=True,
-                    use_hdfs=True, hdfs_version='cdh4', hdfs_name_node="192.168.1.161") # override the config file
+                    use_hdfs=True, hdfs_version='cdh4', hdfs_name_node="172.16.2.161") # override the config file
             else:
                 h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=True)
 
