@@ -28,7 +28,7 @@ class Basic(unittest.TestCase):
             print "\n", tryHeap,"GB heap, 1 jvm per host, import mr-0x6 hdfs, then parse"
             localhost = h2o.decide_if_localhost()
             if (localhost):
-                h2o.build_cloud(node_count=1, java_heap_GB=tryHeap,
+                h2o.build_cloud(base_port=55930, java_heap_GB=tryHeap, random_udp_drop=True,
                     use_hdfs=True, hdfs_name_node='mr-0x6', hdfs_version='cdh4')
             else:
                 h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=tryHeap,
