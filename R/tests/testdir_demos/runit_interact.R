@@ -7,6 +7,7 @@ source('../findNSourceUtils.R')
 options(echo=TRUE)
 
 
+remove_tmps <- function(h) h2o.rm(h, grep(pattern = "Last.value", x = h2o.ls(h)$Key, value = TRUE))
 
 # Interaction Method Code
 interact.helper <- function(r_level, l_level, l_vec, r_vec) {
@@ -31,11 +32,10 @@ inner.names <- function(l_level, r_levels) lapply(r_levels, get.name, l_level)
 interact <- function(l_vec, r_vec) {
    terms <- unlist(lapply(levels(l_vec), inner, levels(r_vec), l_vec, r_vec))
    terms <- Reduce(cbind, terms, accumulate=T)
-   res <- terms[[length(terms)]]
-   terms <- terms[-length(terms)]
-   invisible(lapply(terms, remove_tmp, h))
+   res <- h2o.assign(terms[[length(terms)]], "interactions")
    colnames(res) <- unlist(inner.names(levels(l_vec), levels(r_vec)))
    lapply(colnames(res), remove_tmp2, h)
+   remove_tmps(h)
    res
 }
 
@@ -54,13 +54,13 @@ hex$GLEASON <- as.factor(hex$GLEASON)
 
 print(levels(hex$RACE))
 print(levels(hex$GLEASON))
-h2o.rm(h, grep(pattern = "Last.value", x = h2o.ls(h)$Key, value = TRUE))
 
 interaction.matrix <- interact(hex$RACE, hex$GLEASON)
 
 print(interaction.matrix)
 
-augmented_data_set <- cbind(hex, interaction.matrix)
+augmented_data_set <- h2o.assign(cbind(hex, interaction.matrix), "augmented")
+remove_tmps(h)
 
 print(augmented_data_set)
 PASS_BANNER()
