@@ -56,7 +56,7 @@ set +e
 # remember to update this, to match whatever user kicks off the h2o on hadoop
 echo "hadoop dfs -rmr /user/0xcustomer/$HDFS_OUTPUT" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 set -e
-echo "hadoop jar $CDH3_JAR water.hadoop.h2odriver -jt $CDH3_JOBTRACKER -libjars $H2O_JAR -mapperXmx $CDH3_HEAP -nodes $CDH3_NODES -output $HDFS_OUTPUT -notify h2o_one_node " >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
+echo "hadoop jar $CDH3_JAR water.hadoop.h2odriver -jt $CDH3_JOBTRACKER -libjars $H2O_JAR -mapperXmx $CDH3_HEAP -nodes $CDH3_NODES -output $HDFS_OUTPUT -notify h2o_one_node -ea" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 
 # copy the script, just so we have it there too
 $REMOTE_SCP /tmp/h2o_on_hadoop_$REMOTE_IP.sh $REMOTE_USER:$REMOTE_HOME
