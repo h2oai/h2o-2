@@ -142,7 +142,7 @@ class Alert:
         self.order = order
 
         # Setup a connection to the db
-        self.host = '192.168.1.171'
+        self.host = 'mr-0x1'
         self.db = MySQLdb.connect(host=self.host,
                                   user="spencer",
                                   passwd="spencer",

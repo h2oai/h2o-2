@@ -81,7 +81,7 @@ plot(perf,type="roc")
 PASS_BANNER()
 
 if (FALSE) {
-    h = h2o.init(ip="192.168.1.161", port=60024)
+    h = h2o.init(ip="mr-0xb1", port=60024)
     df = h2o.importFile(h, "/home/tomk/airlines_all.csv")
     nrow(df)
     ncol(df)
