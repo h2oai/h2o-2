@@ -31,7 +31,10 @@ h2o.init <- function(ip = "127.0.0.1", port = 54321, startH2O = TRUE, forceDL = 
     ice_root = tempdir()
   }
 
-  myUpURL = paste("http://", ip, ":", port, "/Up.json", sep="")
+  # Disable Up.json for now, since it doesn't exist in most builds.
+  # Re-enable this sometime a few months from now.
+  # myUpURL = paste("http://", ip, ":", port, "/Up.json", sep="")
+  myUpURL = paste("http://", ip, ":", port, sep="")
   myURL = paste("http://", ip, ":", port, sep="")
   if(!url.exists(myUpURL)) {
     if(!startH2O)

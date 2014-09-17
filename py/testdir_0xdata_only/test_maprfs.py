@@ -21,15 +21,15 @@ class Basic(unittest.TestCase):
                 java_heap_GB=15,
                 enable_benchmark_log=True,
                 use_maprfs=True, 
-                hdfs_version='mapr_3.1.1',
-                hdfs_name_node='172.16.2.171:7222')
+                hdfs_version='mapr3.1.1',
+                hdfs_name_node='mr-0x2:7222')
         else:
             h2o_hosts.build_cloud_with_hosts(1, 
                 java_heap_GB=15,
                 enable_benchmark_log=True,
                 use_maprfs=True, 
-                hdfs_version='mapr_3.1.1',
-                hdfs_name_node='172.16.2.171:7222')
+                hdfs_version='mapr3.1.1',
+                hdfs_name_node='mr-0x2:7222')
 
     @classmethod
     def tearDownClass(cls):

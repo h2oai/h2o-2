@@ -25,14 +25,14 @@ class Basic(unittest.TestCase):
 
         trialMax = 2
         for tryHeap in [24]:
-            print "\n", tryHeap,"GB heap, 1 jvm per host, import 172.16.2.176 hdfs, then parse"
+            print "\n", tryHeap,"GB heap, 1 jvm per host, import mr-0x6 hdfs, then parse"
             localhost = h2o.decide_if_localhost()
             if (localhost):
-                h2o.build_cloud(node_count=1, java_heap_GB=tryHeap,
-                    use_hdfs=True, hdfs_name_node='172.16.2.176', hdfs_version='cdh4')
+                h2o.build_cloud(base_port=55930, java_heap_GB=tryHeap, random_udp_drop=True,
+                    use_hdfs=True, hdfs_name_node='mr-0x6', hdfs_version='cdh4')
             else:
                 h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=tryHeap,
-                    use_hdfs=True, hdfs_name_node='172.16.2.176', hdfs_version='cdh4')
+                    use_hdfs=True, hdfs_name_node='mr-0x6', hdfs_version='cdh4')
 
             # don't raise exception if we find something bad in h2o stdout/stderr?
             # h2o.nodes[0].sandboxIgnoreErrors = True

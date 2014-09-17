@@ -7,7 +7,7 @@ import socket
 # -rw-rw-r-- 1 0xdiag 0xdiag 183538602156 Aug 24 11:43 syn_sphere15_2711545732row_6col_180GB_from_7x.csv
 # -rwxrwxr-x 1 0xdiag 0xdiag         1947 Aug 24 12:21 sphere15_makeit
 DO_KMEANS = True
-FROM_HDFS = 'CDH3'
+FROM_HDFS = 'CDH4'
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -28,10 +28,10 @@ class Basic(unittest.TestCase):
         else:
             if FROM_HDFS == 'CDH3':
                 h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=True,
-                    use_hdfs=True, hdfs_version='cdh4', hdfs_name_node="172.16.2.176") # override the config file
+                    use_hdfs=True, hdfs_version='cdh3', hdfs_name_node="mr-0x6") # override the config file
             elif FROM_HDFS == 'CDH4':
                 h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=True,
-                    use_hdfs=True, hdfs_version='cdh4', hdfs_name_node="172.16.2.161") # override the config file
+                    use_hdfs=True, hdfs_version='cdh4', hdfs_name_node="mr-0x6") # override the config file
             else:
                 h2o_hosts.build_cloud_with_hosts(enable_benchmark_log=True)
 

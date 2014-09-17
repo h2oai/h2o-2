@@ -126,9 +126,9 @@ cp -f h2o_one_node sandbox
 # echo "Touch all the 0xcustomer-datasets mnt points, to get autofs to mount them."
 # echo "Permission rights extend to the top level now, so only 0xcustomer can automount them"
 # echo "okay to ls the top level here...no secret info..do all the machines hadoop (cdh3) might be using"
-# for mr in 111 112 113 114 115 116 117 118 119 120
+# for mr in 171 172 173 174 175 176 177 178 179 180
 # do
-#     ssh -i $HOME/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.$mr 'cd /mnt/0xcustomer-datasets'
+#     ssh -i $HOME/.0xcustomer/0xcustomer_id_rsa 0xcustomer@172.16.2.$mr 'cd /mnt/0xcustomer-datasets'
 # done
 
 # We now have the h2o-nodes.json, that means we started the jvms

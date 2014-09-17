@@ -28,7 +28,8 @@ HDP_JOBTRACKER=172.16.2.187:8050
 HDP_NODES=8
 HDP_HEAP=40g
 
-HDP_JAR=h2odriver_hdp2.0.6.jar
+# HDP_JAR=h2odriver_hdp2.0.6.jar
+HDP_JAR=h2odriver_hdp2.1.jar
 H2O_JAR=h2o.jar
 
 # build.sh removes the h2odriver stuff a 'make' creates
@@ -155,11 +156,16 @@ myPy() {
 
 # worked
 myPy c2 test_c2_rel.py
+myPy c9 test_c9_GLM_airlines_hdfs_multi.py
+
 # myPy c3 test_c3_rel.py
 # test_c8_rf_airlines_hdfs_fvec.py
 # test_c4_four_billion_rows_fvec.py
 # myPy c5 test_c5_KMeans_sphere_h1m_fvec.py
-myPy c5 test_c5_KMeans_sphere_26GB_fvec.py
+
+# GOOD!
+# myPy c5 test_c5_KMeans_sphere_26GB_fvec.py
+
 # myPy c5 test_c5_KMeans_sphere15_180GB_fvec.py
 
 # have to update this to poit to the right hdfs?

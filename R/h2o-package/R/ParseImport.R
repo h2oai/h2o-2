@@ -354,7 +354,7 @@ h2o.ignoreColumns <- function(data, max_na = 0.2) {
 
 
 # ------------------- Save H2O Model to Disk ----------------------------------------------------
-h2o.saveModel <- function(object, dir="", name="",save_cv=FALSE, force=FALSE) {
+h2o.saveModel <- function(object, dir="", name="",save_cv=TRUE, force=FALSE) {
     if(missing(object)) stop('Must specify object')
     if(!inherits(object,'H2OModel')) stop('object must be an H2O model')
     if(!is.character(dir)) stop('path must be of class character')
@@ -369,7 +369,7 @@ h2o.saveModel <- function(object, dir="", name="",save_cv=FALSE, force=FALSE) {
     # Create a model directory for each model saved that will include main model
     # any cross validation models and a meta text file with all the model names listed
     model_dir <- paste(dir, name, sep=.Platform$file.sep)
-    dir.create(model_dir)
+    dir.create(model_dir,showWarnings = F)
     
     # Save main model
     path <- paste(model_dir, object@key, sep=.Platform$file.sep)
@@ -378,12 +378,15 @@ h2o.saveModel <- function(object, dir="", name="",save_cv=FALSE, force=FALSE) {
     # Save all cross validation models
     if (.hasSlot(object, "xval")) {
       xval_keys <- sapply(object@xval,function(model) model@key )
-      if(save_cv & (length(xval_keys)==0)) stop('No cross validation models found')
-      if(save_cv) for (xval_key in xval_keys) .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_SaveModel, model=xval_key, path=paste(model_dir, xval_key, sep=.Platform$file.sep), force=force)
+      if(save_cv & !(length(xval_keys)==0)) {
+        for (xval_key in xval_keys) .h2o.__remoteSend(object@data@h2o, .h2o.__PAGE_SaveModel, model=xval_key, path=paste(model_dir, xval_key, sep=.Platform$file.sep), force=force)
+      } else {
+        save_cv <- FALSE # do not save CV results if they do not exist
+      }
     } else {
-      save_cv <- FALSE  # do not save CV results if they do not exist
+      save_cv <- FALSE # if no xval slot (Naive Bayes) no CV models
     }
-    
+
     # Create new file called model_names and write all model names to file
     fileConn <- file(paste(model_dir, "model_names", sep=.Platform$file.sep))
     if(save_cv) {writeLines(text = c(object@key, xval_keys), con = fileConn)
@@ -394,6 +397,30 @@ h2o.saveModel <- function(object, dir="", name="",save_cv=FALSE, force=FALSE) {
     
     dirname(res$path)
 }
+
+# ------------------- Save All H2O Model to Disk --------------------------------------------------
+
+h2o.saveAll <- function(object, dir="", save_cv=TRUE, force=FALSE) {
+  if(missing(object)) stop('Must specify object')
+  if(class(object) != 'H2OClient') stop('object must be of class H2OClient')
+  
+  ## Grab all the model keys in H2O
+  res = .h2o.__remoteSend(client = object, page = .h2o.__PAGE_ALLMODELS)
+  keys = names(res$models)
+  
+  ## Delete Duplicate Keys (this will avoid saving cross validation models multiple times for non-GLM models)
+  duplicates = {}
+  for(key in keys) { dups = grep(pattern = paste(key, "_", sep = ""), x = keys)
+    duplicates = append(x = duplicates, values = dups)
+  }
+  keys = keys[-duplicates]
+  
+  ## Create H2OModel objects in R (To grab the cross validation models)
+  models = lapply(keys, function(model_key) h2o.getModel(h2o = object, key = model_key))
+  m_path = sapply(models, function(model_obj) h2o.saveModel(model_obj, dir=dir, save_cv=save_cv, force=force) )
+  m_path
+}
+
 
 # ------------------- Load H2O Model from Disk ----------------------------------------------------
 h2o.loadModel <- function(object, path="") {
