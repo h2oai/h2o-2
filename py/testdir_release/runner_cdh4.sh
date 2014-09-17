@@ -67,12 +67,12 @@ echo "cd /home/0xcustomer" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 echo "rm -fr h2o_one_node" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 set +e
 # remember to update this, to match whatever user kicks off the h2o on hadoop
-echo "hadoop dfs -rmr /user/0xcustomer/$HDFS_OUTPUT" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
+echo "hdfs dfs -rmr /user/0xcustomer/$HDFS_OUTPUT" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 chmod +x /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 set -e
 
 echo "port: start looking at 55821. Don't conflict with jenkins using all sorts of ports starting at 54321 (it can multiple jobs..so can use 8*10 or so port)"
-echo "hadoop jar $CDH4_JAR water.hadoop.h2odriver -jt $CDH4_JOBTRACKER -libjars $H2O_JAR -baseport 55821 -mapperXmx $CDH4_HEAP -nodes $CDH4_NODES -output $HDFS_OUTPUT -notify h2o_one_node " >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
+echo "yarn jar $CDH4_JAR water.hadoop.h2odriver -jt $CDH4_JOBTRACKER -libjars $H2O_JAR -baseport 55821 -mapperXmx $CDH4_HEAP -nodes $CDH4_NODES -output $HDFS_OUTPUT -notify h2o_one_node " >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 
 # copy the script, just so we have it there too
 $REMOTE_SCP /tmp/h2o_on_hadoop_$REMOTE_IP.sh $REMOTE_USER:$REMOTE_HOME

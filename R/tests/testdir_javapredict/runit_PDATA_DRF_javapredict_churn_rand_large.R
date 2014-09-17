@@ -17,11 +17,11 @@ source(paste(TEST_ROOT_DIR, "findNSourceUtils.R"  , sep="/"))
 # stay consistent with the check we use for hdfs tests
 # Note this should fail on home networks, since 176 is not likely to exist
 # also should fail in ec2.
-running_inside_hexdata = url.exists("http://192.168.1.176:80", timeout=1)
+running_inside_hexdata = url.exists("mr-0x6", timeout=1)
 
 if (running_inside_hexdata) {
     # cdh3 cluster
-    hdfs_name_node = "192.168.1.176"
+    hdfs_name_node = "mr-0x6"
 } else {
     stop("Not running on 0xdata internal network. Assume no access to /mnt/0xcustomer-datasets.")
 }

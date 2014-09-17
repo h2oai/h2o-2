@@ -1,7 +1,7 @@
 .. _GLM_tutorial:
 
 GLM Tutorial
-==============
+============
 
 The purpose of this tutorial is to walk the new user through 
 Generalized Linear Analysis (GLM)  using   H\ :sub:`2`\ O.  

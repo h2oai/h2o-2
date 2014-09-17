@@ -12,7 +12,7 @@ class PerfDB:
     and hence this object begins and commits/rolls back transactions.
     """
     def __init__(self):
-        db_host = '192.168.1.171'
+        db_host = 'mr-0x1'
         self.host = db_host
         #self.host = "localhost"
         #if( socket.gethostbyname_ex(socket.gethostname())[2][0] == db_host):
