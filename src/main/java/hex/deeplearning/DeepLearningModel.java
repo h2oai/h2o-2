@@ -1524,7 +1524,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
                 "classification error on training data").generate(sb);
 
         // Plot validation error
-        if (get_params().validation != null) {
+        if (error.validation) {
           for (int i=0; i<err.length; ++i) {
             err[i] = (float)errors[i].valid_err;
           }
@@ -1545,7 +1545,7 @@ public class DeepLearningModel extends Model implements Comparable<DeepLearningM
                 "regression error on training data").generate(sb);
 
         // Plot validation MSE
-        if (get_params().validation != null) {
+        if (error.validation) {
           for (int i=0; i<err.length; ++i) {
             err[i] = (float)errors[i+1].valid_mse;
           }
