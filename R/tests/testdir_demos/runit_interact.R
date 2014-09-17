@@ -8,7 +8,7 @@ options(echo=TRUE)
 
 
 
-# Interaction Methods:
+# Interaction Method Code
 interact.helper <- function(r_level, l_level, l_vec, r_vec) {
    v1 <- l_vec == l_level;
    v2 <- r_vec == r_level;
@@ -39,6 +39,7 @@ interact <- function(l_vec, r_vec) {
    res
 }
 
+# End Interaction Method Code
 
 
 # Begin Demo #
