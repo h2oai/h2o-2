@@ -141,6 +141,7 @@ public class RequestServer extends NanoHTTPD {
     Request.addToNavbar(registerRequest(new LogView()),     "Inspect Log",              "Admin");
     Request.addToNavbar(registerRequest(new UnlockKeys()),  "Unlock Keys",              "Admin");
     Request.addToNavbar(registerRequest(new Shutdown()),    "Shutdown",                 "Admin");
+    Request.addToNavbar(registerRequest(new TaskStatus()),"TaskInfo","Admin");
 
     // Help and Tutorials
     Request.addToNavbar(registerRequest(new Documentation()),       "H2O Documentation",      "Help", USE_NEW_TAB);

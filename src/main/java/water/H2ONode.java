@@ -1,5 +1,7 @@
 package water;
 
+import water.RPC.RPCCall;
+import water.api.TaskStatus.GetTaskInfo;
 import water.nbhm.NonBlockingHashMap;
 import water.nbhm.NonBlockingHashMapLong;
 import water.util.Log;
@@ -10,6 +12,7 @@ import java.net.*;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SocketChannel;
 import java.util.*;
+import java.util.Map.Entry;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -267,7 +270,49 @@ public class H2ONode extends Iced implements Comparable {
   // tracked separately.
   private final RPC.RPCCall _removed_task = new RPC.RPCCall(null,this,0);
 
-  RPC.RPCCall has_task( int tnum ) {
+  public int removed(){return _removed_task_ids.get();}
+
+  public enum task_status {INIT, CMP, DONE, RTCP,RUDP}
+
+  public static class TaskInfo extends Iced {
+    public final String task;
+    public final long taskId;
+    public final int  nodeId;
+    public final int  retriesCnt;
+
+    public final task_status taskStatus;
+
+    public TaskInfo(DTask task,long tid, int nid, task_status ts, int retriesCnt){
+      this.task = task == null?"null":task.toString();
+      taskId = tid;
+      nodeId = nid;
+      taskStatus = ts;
+      this.retriesCnt = retriesCnt;
+    }
+    @Override
+    public String toString(){
+      return task +"#" + taskId +" [" + taskStatus + ", " + retriesCnt+"]";
+    }
+
+  }
+  public TaskInfo [] currentTasksInfo() {
+    Set<Entry<Long,RPCCall>> s = _work.entrySet();
+    TaskInfo [] res = new TaskInfo[s.size()];
+    int i = 0;
+    for(Entry<Long,RPCCall> e:s){
+      RPCCall rpc = e.getValue();
+      if(rpc._dt instanceof GetTaskInfo)
+        continue;
+      if(i < res.length) {
+        DTask dt = rpc._dt;
+        if(dt != null) // else we got ackack -> not interested!
+          res[i++] = new TaskInfo(rpc._dt, e.getKey(), _unique_idx, rpc._computedAndReplied ? (dt._repliedTcp ? task_status.RTCP : task_status.RUDP) : rpc._computed ? task_status.DONE : rpc._started > 0 ? task_status.CMP : task_status.INIT,rpc._callCnt);
+      }
+    }
+    return Arrays.copyOf(res,i);
+  }
+
+  RPC.RPCCall has_task ( int tnum ) {
     if( tnum <= _removed_task_ids.get() ) return _removed_task;
     return _work.get(tnum);
   }

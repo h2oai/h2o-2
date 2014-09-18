@@ -15,6 +15,10 @@ public class UDPTimeOutThread extends Thread {
   // fail-out if the target has died.
   static DelayQueue<RPC> PENDING = new DelayQueue<RPC>();
 
+  public static final RPC[] pendingRPCs(){
+    return PENDING.toArray(new RPC[0]);
+  }
+
   // The Run Method.
 
   // Started by main() on a single thread, handle timing-out UDP packets

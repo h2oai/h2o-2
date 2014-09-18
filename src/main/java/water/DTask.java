@@ -53,6 +53,7 @@ public abstract class DTask<T extends DTask> extends H2OCountedCompleter impleme
    *  which will swamp all other logging output. */
   public boolean logVerbose() { return true; }
 
+  @Override public String toString(){return getClass().getSimpleName();}
   @Override public AutoBuffer write(AutoBuffer bb) { return bb.put(_ex); }
   @Override public <T extends Freezable> T read(AutoBuffer bb) { _ex = bb.get(); return (T)this; }
   @Override public <F extends Freezable> F newInstance() { throw barf("newInstance"); }
