@@ -2,8 +2,8 @@ import unittest
 import random, sys, time, re
 sys.path.extend(['.','..','py'])
 
-DO_GLM = False
-PARSE_ITERATIONS = 10
+DO_GLM = True
+PARSE_ITERATIONS = 1
 
 import h2o, h2o_cmd, h2o_hosts, h2o_browse as h2b, h2o_import as h2i, h2o_glm, h2o_util, h2o_rf, h2o_jobs as h2j
 import h2o_common, h2o_gbm
@@ -27,6 +27,10 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
                  ('datasets/airlines_multi', '*', 'airlines_all.05pK.hex', 1800, 'IsDepDelayed'),
                  ('datasets/airlines_multi', '*', 'airlines_all.05pL.hex', 1800, 'IsDepDelayed'),
                  ('datasets/airlines_multi', '*', 'airlines_all.05pM.hex', 1800, 'IsDepDelayed'),
+                ]
+
+        files = [
+                 ('datasets/airlines_multi', '*', 'airlines_all.05pA.hex', 1800, 'IsDepDelayed'),
                 ]
 
         for importFolderPath, csvFilename, trainKey, timeoutSecs, response in files:

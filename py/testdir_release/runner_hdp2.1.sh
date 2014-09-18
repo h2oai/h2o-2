@@ -197,7 +197,7 @@ myPy c9 test_c9_GLM_airlines_hdfs_multi.py
 # myPy c5 test_c5_KMeans_sphere_h1m_fvec.py
 
 # GOOD!
-# myPy c5 test_c5_KMeans_sphere_26GB_fvec.py
+myPy c5 test_c5_KMeans_sphere_26GB_fvec.py
 
 # myPy c5 test_c5_KMeans_sphere15_180GB_fvec.py
 
