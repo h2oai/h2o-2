@@ -127,3 +127,9 @@ If the numeric values in the column were meant to be additional factor levels th
    3     3   A i13 i18
    4     4   C i14 i19
    5     5 i10 i15 i20
+
+
+**Why does as.h2o(localH2O, data) generate the error: Column domain is too large to be represented as an enum : 10001>10000?**
+
+as.h2o like h2o.uploadFile uses a limited push method where the user initiates a request for information transfer; so it is recommended for bigger data files or files with more than 10000 enumerators in a column to
+save the file as a csv and import the data frame using h2o.importFile(localH2O, pathToData).

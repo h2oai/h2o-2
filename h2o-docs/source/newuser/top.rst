@@ -4,7 +4,7 @@
 .. _Newuser:
 
 New Users
-=============
+=========
 
 .. toctree::
    :maxdepth: 2
