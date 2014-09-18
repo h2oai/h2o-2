@@ -2,10 +2,19 @@
 
 Getting Started From a Downloaded Zip File
 ==========================================
- 
 
-Quick Step-by-Step
-""""""""""""""""""
+
+Quick Start Video
+"""""""""""""""""
+
+.. raw:: html
+
+	<object width="425" height="344"><param name="movie" value="http://www.youtube.com/v/ZpTydwTWocQ&hl=en&fs=1"></param><param name="allowFullScreen" value="true"></param><embed src="http://www.youtube.com/v/ZpTydwTWocQ&hl=en&fs=1" type="application/x-shockwave-flash" allowfullscreen="true" width="425" height="344"></embed></object>
+
+
+
+Step-by-Step Walk-Through
+"""""""""""""""""""""""""
 1. Download the latest release of H\ :sub:`2`\ O as a .zip file from the
    H\ :sub:`2`\ O `downloads page <http://0xdata.com/download/>`_.
 

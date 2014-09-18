@@ -2,7 +2,7 @@
 
 
 K Means Tutorial
-==================
+================
 
 The purpose of this tutorial is to walk through a K-Means analysis
 beginning to end. By the end of this tutorial the user should know how
@@ -12,6 +12,13 @@ Those who have never used H\ :sub:`2`\ O before should see the quick start guide
 for additional instructions on how to run H\ :sub:`2`\ O. 
 
 Interested users can find details on the math behind K Means at: :ref:`KMmath`.
+
+Quick Start Video
+"""""""""""""""""
+
+.. raw:: html
+
+  <object width="420" height="315"><param name="movie" value="http://www.youtube.com/v/KVeKfoMRMyQ?version=3&amp;hl=en_US"></param><param name="allowFullScreen" value="true"></param><param name="allowscriptaccess" value="always"></param><embed src="http://www.youtube.com/v/KVeKfoMRMyQ?version=3&amp;hl=en_US" type="application/x-shockwave-flash" width="420" height="315" allowscriptaccess="always" allowfullscreen="true"></embed></object>
 
 Getting Started
 """""""""""""""

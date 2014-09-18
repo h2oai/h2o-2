@@ -31,7 +31,6 @@ Tutorials in H\ :sub:`2`\ O
     :maxdepth: 1
 
     tutorial/top
-    tutorial/videos
 
 H\ :sub:`2`\ O APIs
 ===================
