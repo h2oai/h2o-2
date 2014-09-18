@@ -48,6 +48,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
   // disappears or we cancel things (hence not final).
   H2ONode _target;
 
+  public transient int _callCnt;
   // The distributed Task to execute.  Think: code-object+args while this RPC
   // is a call-in-progress (i.e. has an 'execution stack')
   final V _dt;
@@ -59,6 +60,10 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
   // they hand back with the response packet.  These *never* repeat, so that we
   // can tell when a reply-packet points to e.g. a dead&gone task.
   int _tasknum;
+
+  public final DTask task(){return _dt;}
+  public final int taskNum(){return _tasknum;}
+  public final H2ONode target(){return _target;}
 
   // Time we started this sucker up.  Controls re-send behavior.
   final long _started;
@@ -117,6 +122,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
   // Make an initial RPC, or re-send a packet.  Always called on 1st send; also
   // called on a timeout.
   public synchronized RPC<V> call() {
+    ++_callCnt;
     // completer will not be carried over to remote
     // add it to the RPC call.
     if(_dt.getCompleter() != null){
@@ -301,6 +307,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     final int _tsknum;
     long _started;              // Retry fields for the ackack
     long _retry;
+    transient int _callCnt;
     volatile boolean _computedAndReplied; // One time transition from false to true
     volatile boolean _computed; // One time transition from false to true
     transient AtomicBoolean _firstException = new AtomicBoolean(false);
@@ -312,6 +319,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       _client = client;
       _tsknum = tsknum;
       if( _dt == null ) _computedAndReplied = true; // Only for Golden Completed Tasks (see H2ONode.java)
+      _callCnt = 1;
     }
 
     @Override public void compute2() {
@@ -443,9 +451,8 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
     // TCP but the UDP packet has arrived ahead of the TCP.  Just drop the UDP
     // and wait for the TCP to appear.
     if( old == null && flag == CLIENT_TCP_SEND ) {
-      if(ab.hasTCP())TimeLine.printMyTimeLine();
-      assert !ab.hasTCP():"ERROR: got tcp with existing task #, FROM " + ab._h2o.toString() + " AB: " +  UDP.printx16(lo,hi);      // All the resends should be UDP only
-      // DROP PACKET
+      if(ab.hasTCP())
+        throw new RuntimeException("Message is flagged as CLIENT_TCP_SEND but has tcp (CLIENT_TCP_SEND is actually marker for UDP packets used when data has been sent by tcp)");
     } else if( old == null ) {  // New task?
       RPCCall rpc;
       try {
@@ -476,6 +483,7 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       // This packet has not been fully computed.  Hence it's still a work-in-
       // progress locally.  We have no answer to reply but we do not want to
       // re-offer the packet for repeated work.  Just ignore the packet.
+      ++old._callCnt;
       if(ab.hasTCP())TimeLine.printMyTimeLine();
       assert !ab.hasTCP():"ERROR: got tcp resend with existing in-progress task #, FROM " + ab._h2o.toString() + " AB: " +  UDP.printx16(lo,hi); // All the resends should be UDP only
       // DROP PACKET
@@ -543,17 +551,27 @@ public class RPC<V extends DTask> implements Future<V>, Delayed, ForkJoinPool.Ma
       synchronized(this) {        // Install the answer under lock
         if( _done ) return ab.close(); // Ignore duplicate response packet
         UDPTimeOutThread.PENDING.remove(this);
-        _dt.read(ab);             // Read the answer (under lock?)
-        _size_rez = ab.size();    // Record received size
-        ab.close();               // Also finish the read (under lock?)
-        _dt.onAck();              // One time only execute (before sending ACKACK)
+        try {
+          _dt.read(ab);             // Read the answer (under lock?)
+          _size_rez = ab.size();    // Record received size
+          ab.close();               // Also finish the read (under lock?)
+        } catch (Throwable t) { // catch network errors here! we need to add the task back on the retry and bail out
+          Log.err(t);
+          UDPTimeOutThread.PENDING.add(this);
+          return 0;
+        }
+        try {
+          _dt.onAck();              // One time only execute (before sending ACKACK)
+        } catch(Throwable ex) {
+          _dt.setException(ex); // user error, rethrow at the caller
+        }
         _done = true;             // Only read one (of many) response packets
         ab._h2o.taskRemove(_tasknum); // Flag as task-completed, even if the result is null
         notifyAll();              // And notify in any case
       }
       doAllCompletions(); // Send all tasks needing completion to the work queues
-    }catch(Throwable t){
-      t.printStackTrace();
+    } catch(Throwable t){
+      Log.err(t);
     }
     return 0;
   }
