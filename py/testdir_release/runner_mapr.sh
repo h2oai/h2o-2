@@ -22,8 +22,8 @@ SET_JAVA_HOME="export JAVA_HOME=/usr/lib/jvm/java-7-oracle; "
 # Should we do this cloud build with the sh2junit.py? to get logging, xml etc.
 # I suppose we could just have a test verify the request cloud size, after building
 # Now resource manager is at 8050?
-NAME_NODE=192.168.1.172
-MAPR_JOBTRACKER=192.168.1.172:9001
+NAME_NODE=172.16.2.172
+MAPR_JOBTRACKER=172.16.2.172:9001
 MAPR_NODES=4
 MAPR_HEAP=16g
 # MAPR_JAR=h2odriver_mapr2.1.3.jar
@@ -47,7 +47,7 @@ HDFS_OUTPUT=hdfsOutputDirName
 
 # file created by the h2o on hadoop h2odriver*jar
 REMOTE_HOME=/home/0xcustomer
-REMOTE_IP=192.168.1.172
+REMOTE_IP=172.16.2.172
 REMOTE_USER=0xcustomer@$REMOTE_IP
 REMOTE_SCP="scp -p -i $HOME/.0xcustomer/0xcustomer_id_rsa "
 
@@ -122,10 +122,10 @@ cp -f h2o_one_node sandbox
 
 echo "Touch all the 0xcustomer-datasets mnt points, to get autofs to mount them."
 echo "Permission rights extend to the top level now, so only 0xcustomer can automount them"
-echo "okay to ls the top level here...no secret info..do all the machines hadoop (cdh3) might be using"
+echo "okay to ls the top level here...no secret info..do all the machines hadoop (cdh4) might be using"
 for mr in 172 173 174 175
 do
-    ssh -i $HOME/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.$mr 'cd /mnt/0xcustomer-datasets'
+    ssh -i $HOME/.0xcustomer/0xcustomer_id_rsa 0xcustomer@172.16.2.$mr 'cd /mnt/0xcustomer-datasets'
 done
 
 # We now have the h2o-nodes.json, that means we started the jvms
