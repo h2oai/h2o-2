@@ -66,11 +66,11 @@ targets <- vars[3596:3600]
 validation = F ## use cross-validation to determine best model parameters
 grid = F ## do a grid search
 submit = T ## whether to create a submission 
-submission = 23 ## submission index
+submission = 24 ## submission index
 blend = F
 
 ## Settings
-n_loop <- 10
+n_loop <- 50 
 n_fold <- 5 # must be <= 5!!
 ensemble = (n_loop > 1) # only used if blend = F and submit = T
 
@@ -96,10 +96,13 @@ for (resp in 1:length(targets)) {
                          score_validation_samples = 0,
                          score_duty_cycle = 0.1,
                          score_interval = 5,
-                         max_w2 = 10,
                          force_load_balance=T,
-                         activation="RectifierWithDropout", hidden_dropout_ratios = c(0.1,0.1), 
-                         hidden = c(100,100), epochs = 200, l1 = 0, l2 = 1e-5, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000 
+                         activation="Rectifier", hidden = c(300,300,300), epochs = 1000, l1 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 100000
+  #                       activation="RectifierWithDropout", hidden_dropout_ratios = c(0.1,0.1), 
+  #                       hidden = c(100,100), epochs = 200, l1 = 0, l2 = 1e-5, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000
+                          #activation="Rectifier", hidden = c(20,20,20), epochs = 200, l1 = 0, l2 = 0, rho = 0.99, epsilon = 1e-8, max_w2 = 1, train_samples_per_iteration = 1000 
+                       #  activation="Rectifier", hidden = c(800,800,800),epochs = 200, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000
+                         #activation="Rectifier", hidden = list(c(200,200), c(50,50,50)), epochs = 200, l1 = c(0,1e-5), l2 =c(0,1e-5), rho = c(0.95,0.99), epsilon = c(1e-6,1e-8), max_w2 = 1, train_samples_per_iteration = 1000
         )
       print(gridmodel)
       
@@ -314,7 +317,12 @@ for (resp in 1:length(targets)) {
                                         score_interval = 0.1,
                                         force_load_balance=F,
                                         override_with_best_model=T,
-                                        activation="Rectifier", hidden = c(100,100,100), epochs = 100, l1 = 1e-5, l2 = 0, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 5000) #0.06
+                                        #activation="Rectifier", hidden = c(300,300,300), epochs = 1000, l1 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 100000
+                                        #activation="Rectifier", hidden = c(800,800,800), epochs = 50, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000  0.10    
+                                        activation="Rectifier", hidden = c(100,100,100), epochs = 100, l1 = 1e-5, l2 = 0, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 5000 #0.10
+                                        #activation="Rectifier", hidden = c(800,800,800),epochs = 200, l1 = 1e-5, l2 = 0, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000     #0.08
+                                        #activation="Rectifier", hidden = c(20,20,20), epochs = 200, l1 = 0, l2 = 0, rho = 0.99, epsilon = 1e-8, max_w2 = 1, train_samples_per_iteration = 1000  #0.10 nice   
+                                      )
             else if (resp == 2) #P
               model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_blend_", n , "_", nn), 
                                         data = train,
@@ -364,10 +372,10 @@ for (resp in 1:length(targets)) {
                                         override_with_best_model=T,
                                         activation="Rectifier", hidden = c(100,100,100), epochs = 100, l1 = 1e-5, l2 = 0, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 5000) #0.12
  
-              ## Use the model and store results
-              yy_temp_train <- as.data.frame(h2o.predict(model, train))
-            yy_temp_valid <- as.data.frame(h2o.predict(model, valid))
-            yy_temp_test <- as.data.frame(h2o.predict(model, test_hex))
+            ## Use the model and store results
+            yy_temp_train <- h2o.predict(model, train)
+            yy_temp_valid <- h2o.predict(model, valid)
+            yy_temp_test <- h2o.predict(model, test_hex)
             
             ## For blending, stitch together the predictions for the validation holdout, after n_folds models are done, this will be the predictions on the full training data and can be scored
             ## For each n_loop, there's a new vector in this frame, so we can blend it together with GLM
@@ -376,15 +384,15 @@ for (resp in 1:length(targets)) {
             
             ## Store
             if ((n == 1) & (nn == 1)) {
-              yy_test_all <- matrix(yy_temp_test[, 1], ncol = 1)
+              yy_test_all <- yy_temp_test
             } else {
-              yy_test_all <- cbind(yy_test_all, matrix(yy_temp_test[, 1], ncol = 1))
+              yy_test_all <- cbind(yy_test_all, yy_temp_test[, 1])
             }
             print(head(yy_test_all))
-            msetrain <- mean((yy_temp_train - as.data.frame(train_resp))^2)
-            sevalid <- (yy_temp_valid - as.data.frame(valid_resp))^2
-            msevalid <- mean(sevalid)
-            holdout_valid_se[resp] <- holdout_valid_se[resp] + sum(sevalid)
+            msetrain <- h2o.exec(localH2O,expr=mean((yy_temp_train - train_resp)^2))
+            sevalid <- h2o.exec(localH2O,expr=(yy_temp_valid - valid_resp)^2)
+            msevalid <- h2o.exec(localH2O,expr=mean(sevalid))
+            holdout_valid_se[resp] <- holdout_valid_se[resp] + h2o.exec(localH2O,expr=sum(sevalid))
             
             # print blending results to file
             sink(paste0(path_output, "/submission_", submission, "_", targets[resp], "_blend_loop", n, "_fold", nn))
@@ -422,8 +430,8 @@ for (resp in 1:length(targets)) {
                                     #activation="Rectifier", hidden = c(500,500,500), epochs = 3000, l1 = 1e-5, l2=0, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 100000 #submission 12 0.54
                                     activation="Rectifier", hidden = c(300,300,300), epochs = 1000, l1 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 10000 #submission 15 0.482                  
           )
-          yy_temp_test <- as.data.frame(h2o.predict(model, test_hex))
-          yy_test_all <- matrix(yy_temp_test[, 1], ncol = 1) 
+          yy_temp_test <- h2o.predict(model, test_hex)
+          yy_test_all <- yy_temp_test
         } else {
           for (n in 1:n_loop) {
             #ensemble model on full training data without holdout validation
@@ -449,11 +457,11 @@ for (resp in 1:length(targets)) {
                                         activation="Rectifier", hidden = c(100,100,100), epochs = 100, l1 = 0, l2 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 5000)                           
             
             
-            yy_temp_test <- as.data.frame(h2o.predict(model, test_hex))
+            yy_temp_test <- h2o.predict(model, test_hex)
             if (n == 1) {
-              yy_test_all <- matrix(yy_temp_test[, 1], ncol = 1)
+              yy_test_all = yy_temp_test
             } else {
-              yy_test_all <- cbind(yy_test_all, matrix(yy_temp_test[, 1], ncol = 1))
+              yy_test_all <- cbind(yy_test_all, yy_temp_test[,1])
             }
           }
         }
@@ -483,13 +491,13 @@ for (resp in 1:length(targets)) {
       sink()
     }
     
-    ## Make predictions
+    ## Make predictions (bring them to R)
     if (blend) cat("\nBlending results\n") 
     else if (ensemble) cat("\nEnsemble average\n")
     
     cat (paste0("\n Number of models: ",ncol(yy_test_all)))
     yy_test_avg <- matrix("test_target", nrow = nrow(yy_test_all), ncol = 1)
-    yy_test_avg <- rowMeans(yy_test_all) ### TODO: Use GLM to find best blending factors based on yy_fulltrain_all?
+    yy_test_avg <- rowMeans(as.data.frame(yy_test_all)) ### TODO: Use GLM to find best blending factors based on yy_fulltrain_all?
     pred <- as.data.frame(yy_test_avg)
     
     colnames(pred)[1] <- targets[resp]
@@ -529,6 +537,7 @@ print(Sys.info())
 #Overall 10 -fold cross-validated MSE on training dataset: 0.06074805 0.6604369 0.1668773 0.08833406 0.1117856 #submission 20, should be 0.419, but scored 0.447 Early stopping on 10% validation was noisy
 #Overall 3 -fold cross-validated MSE on training dataset: 0.06258908 1.091812 0.1782126 0.09278491 0.1400748 #submission 21, should be 0.479 
 #Overall 5 -fold cross-validated MSE on training dataset: 0.101359 0.77772 0.1644998 0.06177728 0.1256438 # submission 22, should be 0.4417, scored 0.43439! Finally working logic after shuffling properly!
+#Overall 5 -fold cross-validated MSE on training dataset: 0.1000461 0.7913372 0.161784 0.06879418 0.1249119 # submission 23, should be 0.4447, scored 0.43 as 10-ensemble (same as submission 22 on holdout blend) -> consistent!
 
 #GOAL: 1/5*(sqrt(0.06)+sqrt(0.64)+sqrt(0.15)+sqrt(0.07)+sqrt(0.09))
-#CURRENT 0.42: 1/5*(sqrt(0.06)+sqrt(0.77)+sqrt(0.16)+sqrt(0.06)+sqrt(0.12))
+#CURRENT 0.42: 1/5*(sqrt(0.08)+sqrt(0.77)+sqrt(0.16)+sqrt(0.06)+sqrt(0.12))
