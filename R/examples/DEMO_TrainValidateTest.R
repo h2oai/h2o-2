@@ -23,8 +23,8 @@ h <- h2o.init(ip = ip, port = port)
 #EXPORT_PREDS_PATH <- "/home/spencer/pp_demo/preds.csv"
 
 # For local git:
-#AIRLINES_ALL_PATH <- "/Users/spencer/master/h2o/smalldata/airlines/allyears2k_headers.zip"
-#EXPORT_PREDS_PATH <- "/Users/spencer/pp_demo/preds.csv"
+AIRLINES_ALL_PATH <- "/Users/spencer/master/h2o/smalldata/airlines/allyears2k_headers.zip"
+EXPORT_PREDS_PATH <- "/Users/spencer/pp_demo/preds.csv"
 
 
 # Read in the data
@@ -64,11 +64,10 @@ ArrivalDelayed <- vars[30]         # "IsArrDelayed"
 ############################################################################################
 
 # Split the flights data into train/validation/test splits of (60/10/30)
-
-splits <- h2o.splitFrame(flights, ratios = c(.6,.1), shuffle = TRUE)
-train  <- splits[[1]]
-valid  <- splits[[2]]
-test   <- splits[[3]]
+s <- h2o.runif(flights, seed = 123456789)
+train <- flights[s < .6,]
+valid <- flights[s >= .6 & s < .7,]
+test  <- flights[s >= .7,]
 
 cat("\nTRAINING ROWS: ", nrow(train))
 cat("\nVALIDATION ROWS: ", nrow(valid))
@@ -178,7 +177,7 @@ print(models.sort.by.auc)
 
 # score the best model on the test data
 best_model <- h2o.getModel(h, models.sort.by.auc[1,1])
-test_auc <- test_performance(best_model, test, Delayed)
+test_auc <- test_performance(best_model, test, Delayed)  # Swap out test to any datset to do the final scoring on.
 cat("\n-------------------------------\n")
 cat("\n Best Model Performance On Final Testing Data:\n")
 cat("\n AUC = ", test_auc, "\n")
@@ -189,7 +188,7 @@ preds <- h2o.predict(best_model, test)
 h2o.exportFile(preds, EXPORT_PREDS_PATH, force = TRUE)
 
 # save the model
-h2o.saveModel(best_model, dir = "/home/spencer/pp_demo/", name = "best_model", force = TRUE)
+#h2o.saveModel(best_model, dir = "/home/spencer/pp_demo/", name = "best_model", force = TRUE)
 
 # load model: h2o.loadModel(h, PATH_TO_SAVED_MODEL)
 
