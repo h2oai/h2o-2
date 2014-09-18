@@ -16,7 +16,7 @@ h2o.deeplearning(x, y, data, key = "",override_with_best_model, classification =
     initial_weight_distribution, initial_weight_scale, loss,
     score_interval, score_training_samples, score_validation_samples,
     score_duty_cycle, classification_stop, regression_stop, quiet_mode,
-    max_confusion_matrix_size, max_hit_ratio_k, balance_classes,
+    max_confusion_matrix_size, max_hit_ratio_k, balance_classes, class_sampling_factors,
     max_after_balance_size, score_validation_sampling, diagnostics,
     variable_importances, fast_mode, ignore_const_cols, force_load_balance,
     replicate_training_data, single_node_mode, shuffle_training_data,
@@ -71,6 +71,7 @@ h2o.deeplearning(x, y, data, key = "",override_with_best_model, classification =
         \item{max_confusion_matrix_size}{ Max. size (number of classes) for confusion matrices to be shown}
         \item{max_hit_ratio_k}{ Max. number (top K) of predictions to use for hit ratio computation (for multi-class only, 0 to disable)}
         \item{balance_classes}{ Balance training data class counts via over/under-sampling (for imbalanced data)}
+        \item{class_sampling_factors}{ Desired over/under-sampling ratios per class (lexicographic order). }
         \item{max_after_balance_size}{ Maximum relative size of the training data after balancing class counts (can be less than 1.0)}
         \item{score_validation_sampling}{ Method used to sample validation dataset for scoring}
         \item{diagnostics}{ Enable diagnostics for hidden layers}
