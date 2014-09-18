@@ -23,8 +23,8 @@ SET_JAVA_HOME="export JAVA_HOME=/usr/lib/jvm/java-7-oracle; "
 # I suppose we could just have a test verify the request cloud size, after building
 CDH4_JOBTRACKER=172.16.2.177:8021
 
-CDH4_NODES=1
-CDH4_HEAP=1g
+CDH4_NODES=2
+CDH4_HEAP=8g
 
 CDH4_JAR=h2odriver_cdh4.jar
 NAME_NODE=172.16.2.176
@@ -154,6 +154,8 @@ myPy() {
 
 # worked
 myPy c2 test_c2_rel.py
+myPy c9 test_c9_GLM_airlines_hdfs_multi.py
+
 # myPy c3 test_c3_rel.py
 # test_c8_rf_airlines_hdfs_fvec.py
 # test_c4_four_billion_rows_fvec.py

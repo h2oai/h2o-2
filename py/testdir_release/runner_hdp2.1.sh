@@ -74,7 +74,40 @@ chmod +x /tmp/h2o_on_hadoop_$REMOTE_IP.sh
 set -e
 
 echo "port: start looking at 55821. Don't conflict with jenkins using all sorts of ports starting at 54321 (it can multiple jobs..so can use 8*10 or so port)"
-echo "hadoop jar $HDP_JAR water.hadoop.h2odriver -jt $HDP_JOBTRACKER -libjars $H2O_JAR -baseport 55821 -mapperXmx $HDP_HEAP -nodes $HDP_NODES -output $HDFS_OUTPUT -notify h2o_one_node -ea" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
+
+# EA=" -ea"
+# ApiWatchdog fail if I use -ea?
+EA=""
+# FIX! how to pass -random_udp_drop thru h2odriver?
+# Limit cores to see what happens
+# h2o checks that it's >=4
+# does this has to be greater than the # of jvms? it's a total, not a per jvm total?
+# THREADS=" -nthreads 8"
+# THREADS=" -nthreads 200"
+echo "hadoop jar $HDP_JAR water.hadoop.h2odriver -jt $HDP_JOBTRACKER -libjars $H2O_JAR -baseport 55821 -mapperXmx $HDP_HEAP -nodes $HDP_NODES -output $HDFS_OUTPUT -notify h2o_one_node $EA" >> /tmp/h2o_on_hadoop_$REMOTE_IP.sh
+
+# Usage: h2odriver
+#           -libjars <.../h2o.jar>
+#           [other generic Hadoop ToolRunner options]
+#           [-h | -help]
+#           [-jobname <name of job in jobtracker (defaults to: 'H2O_nnnnn')>]
+#               (Note nnnnn is chosen randomly to produce a unique name)
+#           [-driverif <ip address of mapper->driver callback interface>]
+#           [-driverport <port of mapper->driver callback interface>]
+#           [-network <IPv4network1Specification>[,<IPv4network2Specification> ...]
+#           [-timeout <seconds>]
+#           [-disown]
+#           [-notify <notification file name>]
+#           -mapperXmx <per mapper Java Xmx heap size>
+#           [-extramempercent <0 to 20>]
+#           -n | -nodes <number of H2O nodes (i.e. mappers) to create>
+#           [-nthreads <maximum typical worker threads, i.e. cpus to use>]
+#           [-baseport <starting HTTP port for H2O nodes; default is 54321>]
+#           [-ea]
+#           [-verbose:gc]
+#           [-XX:+PrintGCDetails]
+#           [-license <license file name (local filesystem, not hdfs)>]
+#           -o | -output <hdfs output dir>
 
 # copy the script, just so we have it there too
 $REMOTE_SCP /tmp/h2o_on_hadoop_$REMOTE_IP.sh $REMOTE_USER:$REMOTE_HOME

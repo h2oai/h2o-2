@@ -31,3 +31,5 @@ do
     done
 
 done
+echo "now do this (scrapes created sandbox dir):"
+echo "python ~/h2o/py/h2o_sandbox.py"

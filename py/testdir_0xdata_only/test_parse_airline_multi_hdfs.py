@@ -2,6 +2,15 @@ import unittest, sys, random, time
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_hosts
 
+print "random_udp_drop!!"
+RANDOM_UDP_DROP = True
+# NAME_NODE = 'mr-0x6'
+# VERSION = 'cdh4'
+NAME_NODE = 'mr-0xd6'
+VERSION = 'hdp2.1'
+
+print "Using", VERSION, "on", NAME_NODE
+
 class Basic(unittest.TestCase):
     def tearDown(self):
         h2o.check_sandbox_for_errors()
@@ -20,30 +29,28 @@ class Basic(unittest.TestCase):
         h2o.beta_features = True
         print "Using the -.gz files from hdfs"
         # hdfs://<name node>/datasets/manyfiles-nflx-gz/file_1.dat.gz
-        csvFilename = "file_10.dat.gz"
-        csvFilepattern = "file_1[0-9].dat.gz"
+        csvFilename = "hex_10"
+        csvFilePattern = '*' # all files in the folder
 
         trialMax = 2
         for tryHeap in [24]:
             print "\n", tryHeap,"GB heap, 1 jvm per host, import mr-0x6 hdfs, then parse"
             localhost = h2o.decide_if_localhost()
             if (localhost):
-                h2o.build_cloud(base_port=55930, java_heap_GB=tryHeap, random_udp_drop=True,
-                    use_hdfs=True, hdfs_name_node='mr-0x6', hdfs_version='cdh4')
+                h2o.build_cloud(java_heap_GB=tryHeap, random_udp_drop=RANDOM_UDP_DROP, base_port=55930,
+                    use_hdfs=True, hdfs_name_node=NAME_NODE, hdfs_version=VERSION)
             else:
-                h2o_hosts.build_cloud_with_hosts(node_count=1, java_heap_GB=tryHeap,
-                    use_hdfs=True, hdfs_name_node='mr-0x6', hdfs_version='cdh4')
+                h2o_hosts.build_cloud_with_hosts(java_heap_GB=tryHeap, random_udp_drop=RANDOM_UDP_DROP, base_port=55600,
+                    use_hdfs=True, hdfs_name_node=NAME_NODE, hdfs_version=VERSION)
 
             # don't raise exception if we find something bad in h2o stdout/stderr?
             # h2o.nodes[0].sandboxIgnoreErrors = True
 
             timeoutSecs = 500
-            importFolderPath = "datasets/manyfiles-nflx-gz"
+            importFolderPath = "datasets/airlines_multi"
+
             for trial in range(trialMax):
                 hex_key = csvFilename + "_" + str(trial) + ".hex"
-                csvFilePattern = 'file_1.dat.gz'
-                # "key": "hdfs://172.16.2.176/datasets/manyfiles-nflx-gz/file_99.dat.gz", 
-
                 csvPathname = importFolderPath + "/" + csvFilePattern
                 start = time.time()
                 parseResult = h2i.import_parse(path=csvPathname, schema='hdfs', hex_key=hex_key,
@@ -55,6 +62,7 @@ class Basic(unittest.TestCase):
                     "%d pct. of timeout" % ((elapsed*100)/timeoutSecs)
 
                 h2o_cmd.runStoreView()
+                # we don't delete the hex key. it will start spilling? slow
 
             h2o.tear_down_cloud()
             # sticky ports? wait a bit.

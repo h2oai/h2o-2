@@ -15,18 +15,18 @@ class releaseTest(h2o_common.ReleaseCommon, unittest.TestCase):
 
         files = [
                  ('datasets/airlines_multi', '*', 'airlines_all.05pA.hex', 1800, 'IsDepDelayed'),
-                 ('datasets/airlines_multi', '*', 'airlines_all.05pA.hex', 1800, 'IsDepDelayed'),
-                 ('datasets/airlines_multi', '*', 'airlines_all.05pA.hex', 1800, 'IsDepDelayed'),
-                 ('datasets/airlines_multi', '*', 'airlines_all.05pA.hex', 1800, 'IsDepDelayed'),
-                 ('datasets/airlines_multi', '*', 'airlines_all.05pA.hex', 1800, 'IsDepDelayed'),
-                 ('datasets/airlines_multi', '*', 'airlines_all.05pA.hex', 1800, 'IsDepDelayed'),
-                 ('datasets/airlines_multi', '*', 'airlines_all.05pA.hex', 1800, 'IsDepDelayed'),
-                 ('datasets/airlines_multi', '*', 'airlines_all.05pA.hex', 1800, 'IsDepDelayed'),
-                 ('datasets/airlines_multi', '*', 'airlines_all.05pA.hex', 1800, 'IsDepDelayed'),
-                 ('datasets/airlines_multi', '*', 'airlines_all.05pA.hex', 1800, 'IsDepDelayed'),
-                 ('datasets/airlines_multi', '*', 'airlines_all.05pA.hex', 1800, 'IsDepDelayed'),
-                 ('datasets/airlines_multi', '*', 'airlines_all.05pA.hex', 1800, 'IsDepDelayed'),
-                 ('datasets/airlines_multi', '*', 'airlines_all.05pA.hex', 1800, 'IsDepDelayed'),
+                 ('datasets/airlines_multi', '*', 'airlines_all.05pB.hex', 1800, 'IsDepDelayed'),
+                 ('datasets/airlines_multi', '*', 'airlines_all.05pC.hex', 1800, 'IsDepDelayed'),
+                 ('datasets/airlines_multi', '*', 'airlines_all.05pD.hex', 1800, 'IsDepDelayed'),
+                 ('datasets/airlines_multi', '*', 'airlines_all.05pE.hex', 1800, 'IsDepDelayed'),
+                 ('datasets/airlines_multi', '*', 'airlines_all.05pF.hex', 1800, 'IsDepDelayed'),
+                 ('datasets/airlines_multi', '*', 'airlines_all.05pG.hex', 1800, 'IsDepDelayed'),
+                 ('datasets/airlines_multi', '*', 'airlines_all.05pH.hex', 1800, 'IsDepDelayed'),
+                 ('datasets/airlines_multi', '*', 'airlines_all.05pI.hex', 1800, 'IsDepDelayed'),
+                 ('datasets/airlines_multi', '*', 'airlines_all.05pJ.hex', 1800, 'IsDepDelayed'),
+                 ('datasets/airlines_multi', '*', 'airlines_all.05pK.hex', 1800, 'IsDepDelayed'),
+                 ('datasets/airlines_multi', '*', 'airlines_all.05pL.hex', 1800, 'IsDepDelayed'),
+                 ('datasets/airlines_multi', '*', 'airlines_all.05pM.hex', 1800, 'IsDepDelayed'),
                 ]
 
         for importFolderPath, csvFilename, trainKey, timeoutSecs, response in files:
