@@ -2,8 +2,9 @@ import unittest, sys, random, time
 sys.path.extend(['.','..','py'])
 import h2o, h2o_cmd, h2o_browse as h2b, h2o_import as h2i, h2o_hosts, h2o_jobs as h2j
 
-print "random_udp_drop!!"
-RANDOM_UDP_DROP = True
+RANDOM_UDP_DROP = False
+if RANDOM_UDP_DROP:
+    print "random_udp_drop!!"
 # NAME_NODE = 'mr-0x6'
 # VERSION = 'cdh4'
 NAME_NODE = 'mr-0xd6'
