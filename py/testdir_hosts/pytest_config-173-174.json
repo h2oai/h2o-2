@@ -4,24 +4,21 @@
 
     "username": "0xdiag", 
     "password": "0xdiag", 
-    "h2o_remote_buckets_root": "/home/0xdiag",
     "use_home_for_ice": true,
 
     "h2o_per_host": 1, 
+    "sigar": true,
     "java_heap_GB": 28, 
 
     "hdfs_name_node": "172.16.2.176",
     "hdfs_version": "cdh4",
-    "use_hdfs": true,
+    "use_hdfs": false,
 
     "use_flatfile": true,
 
     "ip": [
-        "172.16.2.171",
-        "172.16.2.172",
         "172.16.2.173",
-        "172.16.2.174",
-        "172.16.2.175"
+        "172.16.2.174"
     ]
 }
 

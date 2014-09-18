@@ -29,7 +29,7 @@ then
     for mr in 172 173 174 175 176 177 178 179 180
     do
         # only do older dirs, to avoid collisions on running jobs
-        ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.$mr  \
+        ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@172.16.2.$mr  \
         'find /home/0xcustomer/ice* -ctime +3 | xargs rm -rf; cd /mnt/0xcustomer-datasets'
     done
 

@@ -11,7 +11,7 @@
     "java_heap_GB": 220, 
 
     "hdfs_name_node": "172.16.2.176",
-    "hdfs_version": "cdh3",
+    "hdfs_version": "cdh4",
     "use_hdfs": true,
 
     "use_flatfile": true,

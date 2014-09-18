@@ -37,7 +37,7 @@ else
         # for mr in 171 172 173 174 175 176 177 178 179 180
         for mr in 172 173 174 175 176 177 178 179 180
         do
-            ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@192.168.1.$mr  \
+            ssh -i ~/.0xcustomer/0xcustomer_id_rsa 0xcustomer@172.16.2.$mr  \
                 'find /home/0xcustomer/ice* -ctime +3 | xargs rm -rf; cd /mnt/0xcustomer-datasets'
         done
 
@@ -111,6 +111,7 @@ then
     #    myPy c9 test_c9_GBM_airlines_hdfs.py
     #    myPy c9 test_c9_GLM_airlines_hdfs_fvec.py
     #    myPy c10  test_c10_rel_gbm.py
+    myPy c5 test_c5_KMeans_sphere_26GB_fvec.py
     myPy c8 test_c8_rf_airlines_hdfs_fvec.py
     # myPy c9 test_c9_GLM_rc_fvec.py
 
