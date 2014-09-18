@@ -683,8 +683,7 @@ public final class H2O {
     public String aws_credentials; // properties file for aws credentials
     public String keepice; // Do not delete ice on startup
     public String soft = null; // soft launch for demos
-    // public String random_udp_drop = null; // test only, randomly drop udp incoming
-    public String random_udp_drop = "true"; // test only, randomly drop udp incoming
+    public String random_udp_drop = null; // test only, randomly drop udp incoming
     public int pparse_limit = Integer.MAX_VALUE;
     public String no_requests_log = null; // disable logging of Web requests
     public boolean check_rest_params = true; // enable checking unused/unknown REST params e.g., -check_rest_params=false disable control of unknown rest params
@@ -923,6 +922,11 @@ public final class H2O {
    * as the only member.
    */
   private static void startLocalNode() {
+    // Print this first, so if any network stuff is affected it's clear this is going on.
+    if (OPT_ARGS.random_udp_drop != null) {
+      Log.warn("Debugging option RANDOM UDP DROP is ENABLED, make sure you really meant it");
+    }
+
     // Figure self out; this is surprisingly hard
     initializeNetworkSockets();
     // Do not forget to put SELF into the static configuration (to simulate

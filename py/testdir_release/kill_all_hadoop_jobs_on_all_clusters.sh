@@ -56,7 +56,7 @@ remote_list
 # remote_setup mr-0xd7
 # remote_kill
 # remote_list
-# cdh3
+# cdh4
 #remote_setup 
 #remote_kill
 #remote_list

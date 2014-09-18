@@ -48,6 +48,7 @@ public class h2odriver extends Configured implements Tool {
   static int nthreads = -1;
   static int basePort = -1;
   static boolean beta = false;
+  static boolean enableRandomUdpDrop = false;
   static boolean enableExceptions = false;
   static boolean enableVerboseGC = false;
   static boolean enablePrintGCDetails = false;
@@ -546,6 +547,9 @@ public class h2odriver extends Configured implements Tool {
       else if (s.equals("-beta")) {
         beta = true;
       }
+      else if (s.equals("-random_udp_drop")) {
+        enableRandomUdpDrop = true;
+      }
       else if (s.equals("-ea")) {
         enableExceptions = true;
       }
@@ -874,6 +878,9 @@ public class h2odriver extends Configured implements Tool {
     }
     if (beta) {
         conf.set(h2omapper.H2O_BETA_KEY, "-beta");
+    }
+    if (enableRandomUdpDrop) {
+      conf.set(h2omapper.H2O_RANDOM_UDP_DROP_KEY, "-random_udp_drop");
     }
     if (licenseData != null) {
         conf.set(h2omapper.H2O_LICENSE_DATA_KEY, licenseData);
