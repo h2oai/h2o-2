@@ -22,7 +22,7 @@
 \textsc{\small{Arno Candel \hspace{40pt} Viraj Parmar}}
 \\
 \bigskip
-\textsc{August 2014}
+\textsc{September 2014}
 \end{center}
 
 \tableofcontents
@@ -581,6 +581,7 @@ head(test_recon.hex)
 \item \texttt{max\_confusion\_matrix\_size}: For classification models, the maximum size (in terms of classes) of the confusion matrix for it to be printed. This option is meant to avoid printing extremely large confusion matrices. Default is 20.
 \item \texttt{max\_hit\_ratio\_k}: The maximum number (top K) of predictions to use for hit ratio computation (for multi-class only, 0 to disable). Default is 10.
 \item \texttt{balance\_classes}: For imbalanced data, balance training data class counts via over/under-sampling. This can result in improved predictive accuracy. Default is false.
+\item \texttt{class\_sampling\_factors}: Desired over/under-sampling ratios per class (lexicographic order). Only when balance\_classes is enabled. If not specified, they will be automatically computed to obtain class balance during training.
 \item \texttt{max\_after\_balance\_size}: When classes are balanced, limit the resulting dataset size to the specified multiple of the original dataset size. This is the maximum relative size of the training data after balancing class counts (can be less than 1.0). Default is 5.0.
 \item \texttt{score\_validation\_sampling}: Method used to sample validation dataset for scoring. The possible methods are Uniform and Stratified. Default is Uniform.
 \item \texttt{diagnostics}: Gather diagnostics for hidden layers, such as mean and RMS values of learning rate, momentum, weights and biases. Default is true.
