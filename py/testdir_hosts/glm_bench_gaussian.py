@@ -15,8 +15,8 @@ ec2_files = {
     'airlines':'s3n://h2o-airlines-unpacked/allyears.csv'
 }
 local_files = {
-    'allstate': 'hdfs://192.168.1.176/datasets/allstate/train_set.zip',
-    'airlines':'hdfs://192.168.1.176/datasets/airlines_all.csv'
+    'allstate': 'hdfs://172.16.2.176/datasets/allstate/train_set.zip',
+    'airlines':'hdfs://172.16.2.176/datasets/airlines_all.csv'
 }
 
 def is_ec2():

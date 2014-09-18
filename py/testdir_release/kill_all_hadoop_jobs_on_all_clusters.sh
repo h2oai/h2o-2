@@ -38,16 +38,25 @@ remote_kill() {
 }
 
 # mapr
-remote_setup 192.168.1.173
+remote_setup mr-0x2
 remote_kill
 remote_list
 
 # cdh4
-remote_setup 192.168.1.161
+remote_setup mr-0x6
 remote_kill
 remote_list
 
-# cdh3
-remote_setup 192.168.1.176
+# cdh4
+remote_setup mr-0x10
 remote_kill
 remote_list
+
+# hdp2.1
+# remote_setup mr-0xd7
+# remote_kill
+# remote_list
+# cdh4
+#remote_setup 
+#remote_kill
+#remote_list

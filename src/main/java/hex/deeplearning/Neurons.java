@@ -770,7 +770,7 @@ public abstract class Neurons {
       }
       else {
         super.fprop(seed, false);
-        Utils.mult(_a.raw(), (float)params.hidden_dropout_ratios[_index]);
+        Utils.mult(_a.raw(), (float)(1-params.hidden_dropout_ratios[_index]));
       }
     }
   }
@@ -855,7 +855,7 @@ public abstract class Neurons {
       }
       else {
         super.fprop(seed, false);
-        Utils.mult(_a.raw(), (float)params.hidden_dropout_ratios[_index]);
+        Utils.mult(_a.raw(), (float)(1-params.hidden_dropout_ratios[_index]));
       }
     }
   }
@@ -906,7 +906,7 @@ public abstract class Neurons {
       }
       else {
         super.fprop(seed, false);
-        Utils.mult(_a.raw(), (float)params.hidden_dropout_ratios[_index]);
+        Utils.mult(_a.raw(), (float)(1-params.hidden_dropout_ratios[_index]));
       }
     }
   }

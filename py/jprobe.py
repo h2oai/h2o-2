@@ -87,11 +87,11 @@ allowedJobsS2 = [
 
 allUrls = {
     'ec2': 'http://test.0xdata.com',
-    '164': 'http://192.168.1.164:8080',
-    '184': 'http://192.168.1.184:8080',
+    '164': 'http://172.16.2.164:8080',
+    '184': 'http://172.16.2.184:8080',
 }
 
-all164Jobs = ['do all', 'h2o_master_test', 'h2o_master_test2', 'h2o_perf_test', 'h2o_private_json_vers_Runit', 'h2o_release_Runit', 'h2o_release_tests', 'h2o_release_tests2', 'h2o_release_tests_164', 'h2o_release_tests_c10_only', 'h2o_release_tests_cdh3', 'h2o_release_tests_cdh4', 'h2o_release_tests_cdh4_yarn', 'h2o_release_tests_cdh5', 'h2o_release_tests_cdh5_yarn', 'h2o_release_tests_hdp1.3', 'h2o_release_tests_hdp2.0.6', 'h2o_release_tests_mapr', 'selenium12']
+all164Jobs = ['do all', 'h2o_master_test', 'h2o_master_test2', 'h2o_perf_test', 'h2o_private_json_vers_Runit', 'h2o_release_Runit', 'h2o_release_tests', 'h2o_release_tests2', 'h2o_release_tests_164', 'h2o_release_tests_c10_only', 'h2o_release_tests_cdh4', 'h2o_release_tests_cdh4', 'h2o_release_tests_cdh4_yarn', 'h2o_release_tests_cdh5', 'h2o_release_tests_cdh5_yarn', 'h2o_release_tests_hdp1.3', 'h2o_release_tests_hdp2.0.6', 'h2o_release_tests_mapr', 'selenium12']
 
 
 allEc2Jobs = ['generic.h2o.build.branch', 'h2o.branch.api-dev', 'h2o.branch.cliffc-drf', 'h2o.branch.hilbert', 'h2o.branch.jobs', 'h2o.branch.jobs1', 'h2o.branch.json_versioning', 'h2o.branch.rel-ito', 'h2o.build', 'h2o.build.api-dev', 'h2o.build.gauss', 'h2o.build.godel', 'h2o.build.h2oscala', 'h2o.build.hilbert', 'h2o.build.jobs', 'h2o.build.master', 'h2o.build.rel-ito', 'h2o.build.rel-ivory', 'h2o.build.rel-iwasawa', 'h2o.build.rel-jacobi', 'h2o.build.rel-jordan', 'h2o.build.rest_api_versioning', 'h2o.build.ux-client', 'h2o.build.va_defaults_renamed', 'h2o.clone', 'h2o.datasets', 'h2o.download.latest', 'h2o.ec2.start', 'h2o.ec2.stop', 'h2o.findbugs', 'h2o.multi.vm.temporary', 'h2o.multi.vm.temporary.cliffc-no-limits', 'h2o.nightly', 'h2o.nightly.1', 'h2o.nightly.cliffc-lock', 'h2o.nightly.ec2', 'h2o.nightly.ec2.cliffc-no-limits', 'h2o.nightly.ec2.erdos', 'h2o.nightly.ec2.hilbert', 'h2o.nightly.ec2.rel-ito', 'h2o.nightly.ec2.rel-jacobi', 'h2o.nightly.ec2.rel-jordan', 'h2o.nightly.fourier', 'h2o.nightly.godel', 'h2o.nightly.multi.vm', 'h2o.nightly.rel-ivory', 'h2o.nightly.rel-iwasawa', 'h2o.nightly.rel-jacobi', 'h2o.nightly.rel-jordan', 'h2o.nightly.va_defaults_renamed', 'h2o.post.push', 'h2o.private.nightly', 'h2o.tests.ec2', 'h2o.tests.ec2.hosts', 'h2o.tests.ec2.multi.jvm', 'h2o.tests.ec2.multi.jvm.fvec', 'h2o.tests.golden', 'h2o.tests.junit', 'h2o.tests.multi.jvm', 'h2o.tests.multi.jvm.fvec', 'h2o.tests.single.jvm', 'h2o.tests.single.jvm.fvec', 'h2o.tests.test']

@@ -105,6 +105,7 @@ public class ImportFiles2 extends Request2 {
     keys = succ.toArray(new String[succ.size()]);
     files = keys;
     fails = fail.toArray(new String[fail.size()]);
+    this.prefix = getCommonPrefix(keys);
     DKV.write_barrier();
   }
 
@@ -139,6 +140,7 @@ public class ImportFiles2 extends Request2 {
     keys = succ.toArray(new String[succ.size()]);
     files = keys;
     fails = fail.toArray(new String[fail.size()]);
+    this.prefix = getCommonPrefix(keys);
   }
 
   private void serveLocalDisk() {
@@ -171,6 +173,7 @@ public class ImportFiles2 extends Request2 {
       files = filesArr;
       String[] keysArr = { k.toString() };
       keys = keysArr;
+      this.prefix = getCommonPrefix(keys);
     }
     catch( Throwable e) {
       String[] arr = { path };
@@ -205,6 +208,7 @@ public class ImportFiles2 extends Request2 {
       keys = succ.toArray(new String[succ.size()]);
       files = keys;
       fails = fail.toArray(new String[fail.size()]);
+      this.prefix = getCommonPrefix(keys);
     } catch (IOException e) {
       fillEmpty("Cannot access specified file(s) on tachyon FS, because " + e.getMessage());
     } finally {

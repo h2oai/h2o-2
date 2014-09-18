@@ -11,9 +11,8 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1,java_heap_GB=4,
-                # use_hdfs=True, hdfs_version='cdh3', hdfs_name_node='192.168.1.176')
-                use_hdfs=True)
+            h2o.build_cloud(base_port=59300, java_heap_GB=4, random_udp_drop=True, 
+                use_hdfs=True, hdfs_version='cdh4', hdfs_name_node='mr-0x6')
         else:
             h2o_hosts.build_cloud_with_hosts()
 

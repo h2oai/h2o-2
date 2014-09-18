@@ -12,9 +12,9 @@ class Basic(unittest.TestCase):
         global localhost
         localhost = h2o.decide_if_localhost()
         if (localhost):
-            h2o.build_cloud(1, use_hdfs=True, hdfs_version='cdh3', hdfs_name_node='192.168.1.176')
+            h2o.build_cloud(1, use_hdfs=True, hdfs_version='cdh4', hdfs_name_node='mr-0x6')
         else:
-            h2o_hosts.build_cloud_with_hosts(1, use_hdfs=True, hdfs_version='cdh3', hdfs_name_node='192.168.1.176')
+            h2o_hosts.build_cloud_with_hosts(1, use_hdfs=True, hdfs_version='cdh4', hdfs_name_node='mr-0x6')
 
     @classmethod
     def tearDownClass(cls):
@@ -25,7 +25,7 @@ class Basic(unittest.TestCase):
         # pop open a browser on the cloud
         # h2b.browseTheCloud()
         # defaults to /datasets
-        parseResult = h2i.import_parse(csvPathname='datasets/manyfiles-nflx-gz/*', schema='hdfs', hex_key='manyfiles.hex', 
+        parseResult = h2i.import_parse(path='datasets/manyfiles-nflx-gz/*', schema='hdfs', hex_key='manyfiles.hex', 
             exclude=None, header=None, timeoutSecs=600)
         print "*copies* regex to hdfs /datasets", 'parse time:', parseResult['response']['time']
         print "parse result:", parseResult['destination_key']

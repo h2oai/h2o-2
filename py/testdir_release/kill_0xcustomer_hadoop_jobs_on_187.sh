@@ -45,7 +45,11 @@ remote_kill() {
 }
 
 # hdp2.1
-remote_setup 192.168.1.187
+remote_setup mr-0xd7
+# shouldn't it kill more than one at a time?
+remote_kill
+remote_kill
+remote_kill
 remote_kill
 remote_list
 

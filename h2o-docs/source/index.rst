@@ -31,7 +31,6 @@ Tutorials in H\ :sub:`2`\ O
     :maxdepth: 1
 
     tutorial/top
-    tutorial/videos
 
 H\ :sub:`2`\ O APIs
 ===================
@@ -92,6 +91,17 @@ H\ :sub:`2`\ O is open source, which means you have the opportunity to contribut
     developuser/top_developer
     developuser/h2o_sw_arch
 
+Troubleshooting
+===============
+
+For answers to frequently asked questions and compilation of solution to error message:
+
+.. toctree::
+    :maxdepth: 1
+
+    faq/top
+
+
 Miscellaneous
 =============
 
@@ -102,7 +112,6 @@ A few more things that you might be interested in...
 
     resources/community
     misc/license
-    misc/troubleshoot
     misc/contactus
     misc/highavail
 

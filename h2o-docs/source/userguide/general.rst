@@ -2,7 +2,7 @@ General
 =======
 
 H\ :sub:`2`\ O System Requirements
------------------------------------
+----------------------------------
 
 64-bit Java 1.6 or higher (Java 1.7 is fine, for example)
 
@@ -45,7 +45,7 @@ H\ :sub:`2`\ O can also be used via the H\ :sub:`2`\ O for R package,
 available from 0xdata. This package uses H\ :sub:`2`\ O's REST API
 under the hood. Users can install the R package from the  H\ :sub:`2`\
 O maintained cran. The H\ :sub:`2`\ O zip file, and R+ H\ :sub:`2`\ O
-installation details are available at: http://0xdata.com/downloadtable/. 
+installation details are available on our `download page <http://0xdata.com/download/>`_.
 
 Data sets are not transmitted directly through the REST API. Instead,
 the user sends a command (containing an HDFS path to the data set,
@@ -56,7 +56,7 @@ The data set is assigned a KEY in H\ :sub:`2`\ O that the user may refer to in
 the future commands to the web server. 
 
 How Data is Ingested into H\ :sub:`2`\ O
------------------------------------------
+----------------------------------------
 
 For step by step instructions on how to carry out data ingestion and
 parse, please see the **Data** section of this User Guide: :ref:`Data`. 
@@ -66,7 +66,7 @@ Excel (XLS), ARFF, SVM-Light, HIVE file format, and others.
 
 
 Using H\ :sub:`2`\ O
------------------------
+--------------------
 
 Step by step instructions on how to use each of the algorithms and
 tools can be found in tutorials . Users have a variety of options for

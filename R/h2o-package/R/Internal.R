@@ -104,6 +104,7 @@ h2o.setLogPath <- function(path, type) {
 .h2o.__PAGE_VIEWALL = "StoreView.json"
 .h2o.__DOWNLOAD_LOGS = "LogDownload.json"
 .h2o.__DOMAIN_MAPPING = "2/DomainMapping.json"
+.h2o.__PAGE_ALLMODELS = "2/Models.json"
 
 .h2o.__PAGE_EXEC2 = "2/Exec2.json"
 .h2o.__PAGE_IMPORTFILES2 = "2/ImportFiles2.json"
@@ -884,10 +885,13 @@ h2o.getModel <- function(h2o, key) {
       return(model)
   }
   if (algo == "grid") return(.h2o.get.glm.grid(h2o, key, TRUE, h2o.getFrame(h2o, response$"_dataKey")))
-  if(algo == "deeplearning_model")
+  if(algo == "deeplearning_model"){
     params <- json[[model.type]]$model_info$job
-  else
+  } else if (algo == "nb_model") {
+    params <- json[[model.type]]$job
+  } else {
     params <- json[[model.type]]$parameters #.fill.params(model.type, json)
+  }
   params$h2o <- h2o
   model_obj  <- switch(algo, gbm_model = "H2OGBMModel", drf_model = "H2ODRFModel", deeplearning_model = "H2ODeepLearningModel", speedrf_model = "H2OSpeeDRFModel", model= "H2OKMeansModel", glm_model = "H2OGLMModel", nb_model = "H2ONBModel", pca_model = "H2OPCAModel")
   results_fun <- switch(algo, gbm_model = .h2o.__getGBMResults,
@@ -920,13 +924,18 @@ h2o.getModel <- function(h2o, key) {
   if(algo == "pca_model") {
     return(.get.pca.results(train_fr, json[[model.type]], key, params))
   }
-  modelOrig<- results_fun(json[[model.type]], params)
+  if(algo == "nb_model"){
+    modelOrig<- results_fun(json[[model.type]])
+  } else {
+    modelOrig<- results_fun(json[[model.type]], params)
+  }
   res_xval <- list()
   if (algo == "gbm_model") algo <- "GBM"
   if (algo == "drf_model") algo <- "RF"
   if (algo == "deeplearning_model") algo <- "DeepLearning"
   if (algo == "speedrf_model") algo <- "SpeeDRF"
   if (algo == "glm_model") algo <- "GLM"
+  if (algo == "nb_model") algo <- "NaiveBayes"
   if (algo %in% c("GBM", "RF", "DeepLearning", "SpeeDRF", "GLM") && !is.null(params$n_folds)) res_xval <- .h2o.crossvalidation(algo, train_fr, json[[model.type]], params$n_folds, params)
   if (is.null(params$validation)) {
     if (algo == "DeepLearning" && !is.null(modelOrig$validationKey)) {
@@ -937,7 +946,11 @@ h2o.getModel <- function(h2o, key) {
   } else {
     valid <- .h2o.exec2(h2o = h2o, expr = params$validation$"_key", dest_key = params$validation$"_key")
   }
+  if(algo == "NaiveBayes") {
+    new(model_obj, key=dest_key, data=train_fr, model=modelOrig)
+  } else {
   new(model_obj, key=dest_key, data=train_fr, model=modelOrig, valid=valid, xval=res_xval)
+  }
 }
 
 .get.glm.params <- function(h2o, key) {

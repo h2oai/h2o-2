@@ -86,7 +86,7 @@ class Basic(unittest.TestCase):
         #
         ## this will get it from hdfs. the hdfs_name_node and hdfs_version for hdfs will 
         # have been passed at build_cloud, either from the test, or the <config>.json.
-        ## It defaults to the local 192.168.1.176 cdh3 hdfs
+        ## It defaults to the local 172.16.2.176 cdh4 hdfs
         ## I guess -hdfs_root behavior works, but shouldn't be necessary (full path will be sent to h2o)
         #import(path=junkdir/junk.csv, bucket="home-0xdiag-datasets", schema="hdfs")
         #

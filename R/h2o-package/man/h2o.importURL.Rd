@@ -7,7 +7,8 @@ Import Data from URL
 Imports a file from the URL and parses it, returning an object containing the identifying hex key.
 }
 \usage{
-h2o.importURL(object, path, key = "", parse = TRUE, header, sep = "", col.names)
+h2o.importURL(object, path, key = "", parse = TRUE, header, sep = "", col.names,
+              parser_type="AUTO")
 }
 
 \arguments{
@@ -32,6 +33,9 @@ The complete URL of the file to be imported. Each row of data appears as one lin
   \item{col.names}{
 (Optional) A \code{\linkS4class{H2OParsedData}} object containing a single delimited line with the column names for the file.
   }
+  \item{parser_type}{
+  (Optional) Specify the type of data to be parsed. parser_type = "AUTO" is the default, other acceptable values are "SVMLight", "XLS", and "CSV".
+    }
 }
 \details{
 WARNING: In H2O, import is lazy! Do not modify the data on hard disk until after parsing is complete.
