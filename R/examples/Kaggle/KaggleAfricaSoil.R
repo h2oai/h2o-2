@@ -57,20 +57,20 @@ spectra_low <- vars[seq(2671,3579,by=10)] # cheap way of binning: just take ever
 spectra_low_all <- vars[seq(2671,3579,by=1)]
 spectra_low_lots <- vars[seq(2671,3579,by=5)]
 extra <- vars[3580:3595]
-predictors <- c(spectra_hi, spectra_low, extra)
-allpredictors <- c(spectra_hi_all, spectra_low_all, extra)
-lotspredictors <- c(spectra_hi_lots, spectra_low_lots, extra)
+predictors <- c(spectra_hi, spectra_omit, spectra_low, extra)
+allpredictors <- c(spectra_hi_all, spectra_omit, spectra_low_all, extra)
+lotspredictors <- c(spectra_hi_lots, spectra_omit, spectra_low_lots, extra)
 targets <- vars[3596:3600]
 
 ## Parameters for run
 validation = F ## use cross-validation to determine best model parameters
 grid = F ## do a grid search
 submit = T ## whether to create a submission 
-submission = 24 ## submission index
+submission = 25 ## submission index
 blend = F
 
 ## Settings
-n_loop <- 10
+n_loop <- 5
 n_fold <- 5 # must be <= 5!!
 ensemble = (n_loop > 1) # only used if blend = F and submit = T
 
@@ -87,17 +87,18 @@ for (resp in 1:length(targets)) {
       
       # run grid search with n-fold cross-validation
       gridmodel <- 
-        h2o.deeplearning(x = predictors,
+        h2o.deeplearning(x = allpredictors,
                          y = targets[resp],
-                         data = train_hex,
+                         data = train_hex1,
                          nfolds = n_fold,
                          classification = F,
                          score_training_samples = 0,
                          score_validation_samples = 0,
                          score_duty_cycle = 0.1,
                          score_interval = 5,
-                         force_load_balance=T,
-                         activation="Rectifier", hidden = c(300,300,300), epochs = 1000, l1 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 100000
+                         force_load_balance=F,
+                         single_node_mode=F,
+                         activation="Rectifier", hidden = c(300,300,300), epochs=1000, l1 = 1e-5, l2 = 0, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 50000
   #                       activation="RectifierWithDropout", hidden_dropout_ratios = c(0.1,0.1), 
   #                       hidden = c(100,100), epochs = 200, l1 = 0, l2 = 1e-5, rho = 0.95, epsilon = 1e-6, train_samples_per_iteration = 1000
                           #activation="Rectifier", hidden = c(20,20,20), epochs = 200, l1 = 0, l2 = 0, rho = 0.99, epsilon = 1e-8, max_w2 = 1, train_samples_per_iteration = 1000 
@@ -169,9 +170,7 @@ for (resp in 1:length(targets)) {
         for (n in 1:n_loop) {
           
           ## CV
-          #set.seed(n)
-          #rand_folds <- createFolds(y, k = n_fold)
-          
+
           ## Main Loop
           for (nn in 1:n_fold) {
             
@@ -197,7 +196,7 @@ for (resp in 1:length(targets)) {
             train_resp <- train[,targets[resp]]
             valid_resp <- valid[,targets[resp]]
             
-            # build final model blend components with validated parameters
+            # build final model blend components with validated parameters, do early stopping based on validation error
             model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_blend_", n , "_", nn), 
                                       data = train,
                                       validation = valid,
@@ -206,26 +205,29 @@ for (resp in 1:length(targets)) {
                                       score_validation_samples = 0,
                                       score_duty_cycle = 1,
                                       score_interval = 1e-1,
-                                      force_load_balance=T,
+                                      force_load_balance=F,
                                       activation = p$activation, input_dropout_ratio = p$input_dropout_ratio, hidden = p$hidden, epochs = p$epochs, l1 = p$l1, l2 = p$l2, max_w2 = p$max_w2, train_samples_per_iteration = p$train_samples_per_iteration)
             
             ## Use the model and store results
-            yy_temp_train <- as.data.frame(h2o.predict(model, train))
-            yy_temp_valid <- as.data.frame(h2o.predict(model, valid))
-            yy_temp_test <- as.data.frame(h2o.predict(model, test_hex))
+            yy_temp_train <- h2o.predict(model, train)
+            yy_temp_valid <- h2o.predict(model, valid)
+            yy_temp_test <- h2o.predict(model, test_hex)
             
             ## Store
             if ((n == 1) & (nn == 1)) {
-              yy_test_all <- matrix(yy_temp_test[, 1], ncol = 1)
+              yy_test_all <- yy_temp_test
             } else {
-              yy_test_all <- cbind(yy_test_all, matrix(yy_temp_test[, 1], ncol = 1))
+              yy_test_all <- cbind(yy_test_all, yy_temp_test[, 1])
             }
-            print(model)
-            msetrain <- mean((yy_temp_train - as.data.frame(train_resp))^2)
-            sevalid <- (yy_temp_valid - as.data.frame(valid_resp))^2
-            msevalid <- mean(sevalid)
-            holdout_valid_se[resp] <- holdout_valid_se[resp] + sum(sevalid)
             
+            print(head(yy_test_all))
+            print(var(yy_test_all))
+            msetrain <- h2o.exec(localH2O,expr=mean((yy_temp_train - train_resp)^2))
+            sevalid <- h2o.exec(localH2O,expr=(yy_temp_valid - valid_resp)^2)
+            msevalid <- h2o.exec(localH2O,expr=mean(sevalid))
+            holdout_valid_se[resp] <- holdout_valid_se[resp] + h2o.exec(localH2O,expr=sum(sevalid))
+            
+            print(model)
             cat("\nMSE on training dataset for", targets[resp], ":", msetrain, "\n")
             cat("\nRMSE on training dataset for", targets[resp], ":", sqrt(msetrain), "\n")
             cat("\nMSE on holdout validation dataset for", targets[resp], ":", msevalid, "\n")
@@ -305,7 +307,7 @@ for (resp in 1:length(targets)) {
             train_resp <- train[,targets[resp]]
             valid_resp <- valid[,targets[resp]]
 
-            # build final model blend components with hardcoded parameters
+            # build final model blend components with hardcoded parameters, early stopping based on validation error
             if (resp == 1) #Ca
               model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_blend_", n , "_", nn), 
                                         data = train,
@@ -440,35 +442,38 @@ for (resp in 1:length(targets)) {
           yy_test_all <- yy_temp_test
         } else {
           for (n in 1:n_loop) {
-            #ensemble model on full training data without holdout validation
-            if (resp == 1 | resp == 4)
-            model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_ensemble", n, "_of_", n_loop), 
-                                      data = train_hex,
-                                      classification = F, 
-                                      score_training_samples = 0,
-                                      score_validation_samples = 0,
-                                      score_duty_cycle = 0,
-                                      force_load_balance=F,
-                                      override_with_best_model=T,
-                                      activation="Rectifier", hidden = c(100,100,100), epochs = 100, l1 = 1e-5, l2 = 0, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 5000)   
-            else if (resp == 3 | resp ==5)
-              model <- h2o.glm(x = predictors, y = targets[resp], data=train, nfolds=10, family="gaussian", lambda_search=F)
-            else
-              model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_ensemble", n, "_of_", n_loop), 
-                                        data = train_hex,
-                                        classification = F, 
-                                        score_training_samples = 0,
-                                        score_validation_samples = 0,
-                                        score_duty_cycle = 0,
-                                        force_load_balance=F,
-                                        override_with_best_model=T,
-                                        activation="Rectifier", hidden = c(100,100,100), epochs = 100, l1 = 0, l2 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 5000)                           
+            
+            model <- h2o.deeplearning(x = allpredictors, y = targets[resp], key = paste0(targets[resp], submission, "_ensemble", n, "_of_", n_loop), data = train_hex, classification = F, force_load_balance=F,
+                                      activation="Rectifier", hidden = c(500,500,500,500), epochs = 2000, l1 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 100000)
             
             
+#             #ensemble model on full training data without holdout validation
+#             if (resp == 1 | resp == 4)
+#             model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_ensemble", n, "_of_", n_loop), 
+#                                       data = train_hex,
+#                                       classification = F, 
+#                                       score_training_samples = 0,
+#                                       score_validation_samples = 0,
+#                                       score_duty_cycle = 0,
+#                                       force_load_balance=F,
+#                                       override_with_best_model=T,
+#                                       activation="Rectifier", hidden = c(100,100,100), epochs = 100, l1 = 1e-5, l2 = 0, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 5000)   
+#             else if (resp == 3 | resp ==5)
+#               model <- h2o.glm(x = predictors, y = targets[resp], data=train, nfolds=10, family="gaussian", lambda_search=F)
+#             else
+#               model <- h2o.deeplearning(x = predictors, y = targets[resp], key = paste0(targets[resp], submission, "_ensemble", n, "_of_", n_loop), 
+#                                         data = train_hex,
+#                                         classification = F, 
+#                                         score_training_samples = 0,
+#                                         score_validation_samples = 0,
+#                                         score_duty_cycle = 0,
+#                                         force_load_balance=F,
+#                                         override_with_best_model=T,
+#                                         activation="Rectifier", hidden = c(100,100,100), epochs = 100, l1 = 0, l2 = 1e-5, rho = 0.99, epsilon = 1e-8, max_w2 = 10, train_samples_per_iteration = 5000)                           
             yy_temp_test <- h2o.predict(model, test_hex)
             if (n == 1) {
               yy_test_all = yy_temp_test
-              if (resp==3 | resp==5) break #no need for ensemble for GLM
+              #if (resp==3 | resp==5) break #no need for ensemble for GLM
             } else {
               yy_test_all <- cbind(yy_test_all, yy_temp_test[,1])
             }
@@ -518,6 +523,10 @@ for (resp in 1:length(targets)) {
     print(head(preds))
     ## Save the model as well
     #h2o.saveModel(object = model, dir = path_output, name = paste0("submission_", submission, targets[resp]), force = T)
+    if (submit) {
+      ## Write partial submission
+      write.csv(preds, file = paste0(path_output, "/submission_partial_", submission, ".csv"), quote = F, row.names=F)
+    }
   }
 }
 
@@ -532,7 +541,6 @@ if (submit) {
 ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ## System and Session Info
 ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 print(sessionInfo())
 print(Sys.info())
 
