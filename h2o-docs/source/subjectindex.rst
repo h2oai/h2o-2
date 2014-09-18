@@ -18,10 +18,6 @@ Index By Subject
   * :ref:`NBmath`
   * :ref:`KMmath`
 
-**Contact H2O**
-
-  * :ref:`ContactUs`
-
 **Data Science** 
 
    * :ref:`Data_Science`
@@ -79,10 +75,6 @@ Index By Subject
  * :ref:`KMmath`
  * :ref:`KM_tutorial`
 
-**License**
-
- * :ref:`License`
-
 **Machine Learning**
 
   * :ref:`Machlearn`
@@ -116,8 +108,6 @@ Index By Subject
   * :ref:`References`
 
 **Scala**
-
-
 
 **Stochastic Gradient Descent** 
 
